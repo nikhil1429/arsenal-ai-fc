@@ -112,7 +112,7 @@ The Manager reads whatever is present and **skips what isn't** — so every futu
 
 - **`readiness.json`** (Goalkeeper — verdict, ceiling, work-type overlay, timing, intake-note, **signal-confidence tags**). *Live.*
 - **`timeaudit.json`** (Time-Auditor — buckets, Building%, Meta%, on-track note). *Live.*
-- `weaknesses.json` (Nemesis/Manager — ranked recurring gaps). *Manager is the writer.*
+- `weaknesses.json` (Nemesis — ranked recurring gaps). *Nemesis is the writer of the FILE (Fork A3); the Manager consumes it and writes the team-sheet LINE — FSRS→cards.json / Calibration→calibration.json precedent.*
 - `calibration.json` (Calibration coach — Brier gap + danger-zone confident-wrong topics).
 - `cards` due (FSRS — count + hardest due).
 - `learning_state.json` (Maidan formation + Re-Jirah per-axis decay + Python fluency-states — the learning layer's positional map; see §6.5). *Rides existing learning-layer instrumentation; schema-fied at first R1.*
@@ -166,7 +166,7 @@ KAL-LINE → {tomorrow's pre-decided first move — welds the loop}
 [captain reply: {any captain_note reply, tagged "unverified" if a claim I can't check}]
 ```
 
-**C) `weaknesses.json`** — forward-compat `{id, topic, evidence[], recurrence, last_seen, status}`. Updated on graded misses.
+**C) `weaknesses.json`** — forward-compat `{id, topic, evidence[], recurrence, last_seen, status}`. Updated on graded misses. *Written by NEMESIS per Fork A3 (see §4); listed here for schema reference only — the Manager READS it, does not write it.*
 
 ---
 
