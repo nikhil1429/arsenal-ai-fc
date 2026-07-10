@@ -30,9 +30,11 @@ INBOX = '/content/drive/MyDrive/arsenal/reps_inbox'
 os.makedirs(INBOX, exist_ok=True)
 _REPS = []
 
-def log_rep(skill, question, confidence, correct, aided=False, latency_ms=None, note=None):
+def log_rep(skill, question, confidence, correct, aided=False, latency_ms=None, confused_with=None, edge=None, note=None):
     """Log ONE Python (skill) rep. Colab = track:'skill' (NO axis). Commit `confidence`
-    — 'knew' | 'shaky' | 'guessed' — BEFORE you check. aided: False=from memory, True=looked it up."""
+    — 'knew' | 'shaky' | 'guessed' — BEFORE you check. aided: False=from memory, True=looked it up.
+    confused_with (v3, optional): if you mixed it up with another skill/concept. edge (v3, optional):
+    honest knowledge-boundary text, e.g. 'can write basic models, shaky on validators'."""
     assert confidence in ("knew", "shaky", "guessed"), "confidence must be 'knew', 'shaky', or 'guessed'"
     assert isinstance(correct, bool) and isinstance(aided, bool), "correct/aided must be True/False"
     rep = {
@@ -40,6 +42,7 @@ def log_rep(skill, question, confidence, correct, aided=False, latency_ms=None, 
         "surface": "colab", "track": "skill", "concept": skill, "axis": None,
         "question": question, "confidence": confidence, "correct": correct,
         "aided": aided, "latency_ms": latency_ms,
+        "confused_with": confused_with, "edge": edge,
     }
     if note:
         rep["note"] = note
@@ -73,7 +76,9 @@ You are my drill coach for AI-engineering CONCEPTS. For EVERY question, follow t
 2. First make me commit ONE gut-word — "Knew", "Shaky", or "Guessed" (how sure I
    am I'll get it right) BEFORE you show anything. Wait for my word.
 3. THEN reveal the answer and tell me if I was correct (true / false).
-4. Keep a running log of every rep (concept + axis + my word + correct?).
+4. If I was WRONG, ask "kisse confuse hua?" (which concept did I mix it up with?) — record it as `confused_with` (or null if nothing specific).
+5. When we CLOSE a concept, you may ask my honest edge — where my knowledge stops ("can explain X, not Y") — record it as `edge` on that rep (else null).
+6. Keep a running log of every rep (concept + axis + my word + correct? + confused_with + edge).
 
 The 9 AXES — pick the ONE the question tests:
   a kya+analogy · b kyun/first-principles · c mechanism · d math+range · e limits/failure-modes
@@ -83,8 +88,8 @@ When I say "end session" (or "report"), output ONLY a fenced JSON array — no p
 before or after — one object per rep, in this exact shape:
 
 [
-  {"ts":"2026-07-11T09:00:00Z","surface":"gem","track":"concept","concept":"chunking","axis":"f","question":"fixed vs semantic chunking — the tradeoff?","confidence":"shaky","correct":true,"note":"missed overlap"},
-  {"ts":"2026-07-11T09:04:00Z","surface":"gem","track":"concept","concept":"retrieval","axis":"c","question":"how does reranking work?","confidence":"guessed","correct":false}
+  {"ts":"2026-07-11T09:00:00Z","surface":"gem","track":"concept","concept":"chunking","axis":"f","question":"fixed vs semantic chunking — the tradeoff?","confidence":"shaky","correct":true,"edge":"can size chunks, shaky on overlap tradeoffs","note":"missed overlap"},
+  {"ts":"2026-07-11T09:04:00Z","surface":"gem","track":"concept","concept":"retrieval","axis":"c","question":"how does reranking work?","confidence":"guessed","correct":false,"confused_with":"embeddings"}
 ]
 
 Rules:
@@ -93,6 +98,8 @@ Rules:
 - confidence = the gut-word I gave BEFORE seeing the answer: "knew", "shaky", or "guessed".
 - correct = true/false. ts = when asked, ISO-8601 UTC. surface always "gem".
 - concept = the short topic; question = the exact question text. note optional.
+- confused_with (v3, optional) = on a WRONG rep, the concept I mixed it up with (else omit/null).
+- edge (v3, optional) = my honest knowledge-boundary on that concept when we close it (else omit/null).
 - Output the array and NOTHING else, so I can paste it straight into capture.mjs.
 ```
 

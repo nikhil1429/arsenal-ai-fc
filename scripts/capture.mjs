@@ -29,6 +29,8 @@
 //     question:string, confidence:"knew"|"shaky"|"guessed", correct:boolean,
 //     latency_ms:int>=0|null,               // optional
 //     aided:boolean|null,                   // optional — ONLY track:"skill"
+//     confused_with:string|null,            // v3 optional — canonicalized like concept (feeds confusion-pairs)
+//     edge:string|null,                     // v3 optional — verbatim knowledge-boundary text (feeds edge-map)
 //     note?:string }
 //   Enriched-on-write: concept→canonical, unregistered:boolean (unknown concept is
 //   still appended with unregistered:true — SOFT, never hard-rejected).
@@ -139,6 +141,18 @@ function validateRep(o, reg = EMPTY_REG) {
     if (typeof o.aided !== "boolean") return { ok: false, error: "aided not boolean/null" };
     aided = o.aided;
   }
+  // confused_with (v3): optional; null or a canonicalized concept/skill id (SAME path as `concept`)
+  let confused_with = null;
+  if (o.confused_with !== undefined && o.confused_with !== null) {
+    if (typeof o.confused_with !== "string" || o.confused_with.trim() === "") return { ok: false, error: "confused_with not string" };
+    confused_with = canonicalize(o.confused_with, o.track, reg).canonical;
+  }
+  // edge (v3): optional; null or free-text string stored VERBATIM (not canonicalized)
+  let edge = null;
+  if (o.edge !== undefined && o.edge !== null) {
+    if (typeof o.edge !== "string") return { ok: false, error: "edge not string" };
+    edge = o.edge;
+  }
   if (o.note !== undefined && typeof o.note !== "string") return { ok: false, error: "note not string" };
 
   // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged)
@@ -146,7 +160,7 @@ function validateRep(o, reg = EMPTY_REG) {
   const rep = {
     ts: o.ts, surface: o.surface, track: o.track, concept: canonical,
     axis: o.axis, question: o.question, confidence: o.confidence, correct: o.correct,
-    latency_ms, aided, unregistered,
+    latency_ms, aided, unregistered, confused_with, edge,
   };
   if (o.note !== undefined) rep.note = o.note;
   return { ok: true, rep };
@@ -281,6 +295,17 @@ function selftest() {
   assert("aided-only-on-skill: concept+aided ⇒ reject", ingest(p, [rep({ ts: "2026-07-11T11:08:00Z", question: "ca", aided: true })], reg).rejected === 1);
   ingest(p, [rep({ ts: "2026-07-11T11:09:00Z", question: "sa", surface: "colab", track: "skill", concept: "pydantic", axis: null, aided: true })], reg);
   assert("aided accepted on skill", findQ("sa")?.aided === true);
+
+  // --- v3: confused_with (canonicalized like concept) + edge (verbatim) ---
+  ingest(p, [rep({ ts: "2026-07-11T11:13:00Z", question: "cw", confused_with: "BPE" })], reg);  // alias of tokenization
+  assert("confused_with accept + canonicalizes (BPE→tokenization)", findQ("cw")?.confused_with === "tokenization");
+  assert("confused_with null/absent ⇒ null", findQ("ax_a")?.confused_with === null);
+  assert("confused_with non-string ⇒ reject", ingest(p, [rep({ ts: "2026-07-11T11:14:00Z", question: "cwbad", confused_with: 123 })], reg).rejected === 1);
+  ingest(p, [rep({ ts: "2026-07-11T11:15:00Z", question: "eg", edge: "can size chunks, shaky on overlap tradeoffs" })], reg);
+  assert("edge accept (verbatim)", findQ("eg")?.edge === "can size chunks, shaky on overlap tradeoffs");
+  assert("edge null/absent ⇒ null", findQ("ax_a")?.edge === null);
+  assert("edge non-string ⇒ reject", ingest(p, [rep({ ts: "2026-07-11T11:16:00Z", question: "egbad", edge: 5 })], reg).rejected === 1);
+
   // registry: alias resolves; unknown ⇒ unregistered:true (not dropped)
   ingest(p, [rep({ ts: "2026-07-11T11:10:00Z", question: "alias", concept: "BPE" })], reg);
   assert("registered alias ⇒ canonical + unregistered:false", findQ("alias")?.concept === "tokenization" && findQ("alias")?.unregistered === false);
