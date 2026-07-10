@@ -1,0 +1,19 @@
+{
+  "name": "arsenal-ai-fc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arsenal AI FC — deterministic multi-agent accountability + execution system (Node 22, ESM).",
+  "type": "module",
+  "scripts": {
+    "fsrs": "node scripts/fsrs.mjs recompute",
+    "fsrs:selftest": "node scripts/fsrs.mjs selftest",
+    "capture:selftest": "node scripts/capture.mjs selftest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikhil1429/arsenal-ai-fc.git"
+  },
+  "dependencies": {
+    "ts-fsrs": "^5.4.1"
+  }
+}

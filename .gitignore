@@ -33,3 +33,7 @@ dressing-room/state/timeaudit.json
 dressing-room/state/reps_log.jsonl
 # machine-local capture config (this PC's Google Drive inbox path — not canonical)
 dressing-room/state/capture_config.json
+
+# --- FSRS agent outputs (derived personal study data: concepts + schedule) ---
+dressing-room/state/cards.json
+dressing-room/state/fsrs_store.json
