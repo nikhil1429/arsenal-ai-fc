@@ -14,8 +14,9 @@ Node 22). Agents read/write a JSON **state bus** at `dressing-room/state/*.json`
 ## Build order (STRICT — one agent at a time, sequential)
 1. **Goalkeeper** (Oura readiness coach) — v2 recalibrated, DONE, pending live run.
 2. **Time-Auditor** (ActivityWatch tracker) — DONE.
-3. **The Manager** (roster Dugout #1; 3rd in build order) — **NEXT: M-1** =
-   `manager.mjs` deterministic wrapper, **no LLM**, testable on dummy data.
+3. **Signal-source agents** (§4 inputs: Nemesis · Calibration · FSRS · learning-state) — **built first**, each proven green before the next.
+4. **The Manager** (roster Dugout #1) — **built LAST, the capstone.** M-1 =
+   `manager.mjs` deterministic wrapper, **no LLM**, is **already built + tested green in a web sandbox = reference-only**; place + re-test it against **real agent JSONs (not dummy)** when the Manager's turn comes → M-2→M-5.
 Do not start a new agent until the current one is proven (see "unrun" below).
 
 ## Non-negotiable principles
