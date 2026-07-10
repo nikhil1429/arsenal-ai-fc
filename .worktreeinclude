@@ -1,0 +1,5 @@
+# Gitignored files that Code worktrees must still see (Oura OAuth).
+# These are ignored by .gitignore (secrets/tokens, public repo) but the
+# Goalkeeper needs them at runtime, so worktrees copy them in.
+scripts/oura_secrets.json
+scripts/oura_tokens.json
