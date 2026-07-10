@@ -22,7 +22,7 @@
 //
 // INPUT CONTRACT (one rep, one JSON object):
 //   { ts:string(ISO), surface:"gem"|"colab", concept:string, question:string,
-//     confidence:int 0-100, correct:boolean, note?:string }
+//     confidence:"knew"|"shaky"|"guessed", correct:boolean, note?:string }
 //   Dedup key = ts + question. Malformed reps are REJECTED (never coerced).
 //
 // OUTPUT SCHEMA: dressing-room/state/reps_log.jsonl — append-only JSONL, single
@@ -66,13 +66,14 @@ function resolveInbox() {
 // validation — a rep is accepted ONLY if every required field is well-typed.
 // ---------------------------------------------------------------------------
 const SURFACES = new Set(["gem", "colab"]);
+const CONFIDENCE = new Set(["knew", "shaky", "guessed"]);   // one gut-word, committed BEFORE the answer is revealed
 function validateRep(o) {
   if (o === null || typeof o !== "object" || Array.isArray(o)) return { ok: false, error: "not an object" };
   if (typeof o.ts !== "string" || o.ts.trim() === "") return { ok: false, error: "ts missing/not-string" };
   if (!SURFACES.has(o.surface)) return { ok: false, error: `surface not gem|colab (${o.surface})` };
   if (typeof o.concept !== "string" || o.concept.trim() === "") return { ok: false, error: "concept missing/empty" };
   if (typeof o.question !== "string" || o.question.trim() === "") return { ok: false, error: "question missing/empty" };
-  if (!Number.isInteger(o.confidence) || o.confidence < 0 || o.confidence > 100) return { ok: false, error: `confidence not int 0-100 (${o.confidence})` };
+  if (!CONFIDENCE.has(o.confidence)) return { ok: false, error: `confidence not knew|shaky|guessed (${o.confidence})` };
   if (typeof o.correct !== "boolean") return { ok: false, error: "correct not boolean" };
   if (o.note !== undefined && typeof o.note !== "string") return { ok: false, error: "note not string" };
   // clean rep — only schema fields, in fixed order
@@ -169,7 +170,7 @@ function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
 
-  const rep = (over) => ({ ts: "2026-07-11T09:00:00Z", surface: "gem", concept: "TDS", question: "what rate on 194C?", confidence: 60, correct: true, ...over });
+  const rep = (over) => ({ ts: "2026-07-11T09:00:00Z", surface: "gem", concept: "TDS", question: "what rate on 194C?", confidence: "knew", correct: true, ...over });
 
   // 1) empty-safe: load a non-existent log
   assert("empty-safe: missing log loads as 0 reps", loadReps(p).length === 0);
@@ -178,11 +179,11 @@ function selftest() {
   let r = ingest(p, [rep(), rep({ ts: "2026-07-11T09:05:00Z", question: "q2" })]);
   assert("valid-append: 2 valid reps appended", r.appended === 2 && loadReps(p).length === 2);
 
-  // 3) malformed-reject (missing ts, bad confidence range, non-int confidence, bad surface, missing concept, non-bool correct, note wrong type)
+  // 3) malformed-reject (missing ts, out-of-set confidence string, legacy numeric confidence, bad surface, missing concept, non-bool correct, note wrong type)
   const bad = [
     rep({ ts: undefined, question: "b1" }),
-    rep({ confidence: 150, question: "b2" }),
-    rep({ confidence: 55.5, question: "b3" }),
+    rep({ confidence: "sure", question: "b2" }),   // out-of-set enum value
+    rep({ confidence: 90, question: "b3" }),        // legacy numeric — now invalid
     rep({ surface: "notebook", question: "b4" }),
     rep({ concept: "", question: "b5" }),
     rep({ correct: "yes", question: "b6" }),
@@ -191,6 +192,14 @@ function selftest() {
   const before = loadReps(p).length;
   r = ingest(p, [rep({ ts: "2026-07-11T09:10:00Z", question: "good1" }), ...bad]);
   assert("malformed-reject: 7 rejected, only 1 valid appended", r.rejected === 7 && r.appended === 1 && loadReps(p).length === before + 1);
+
+  // 3b) confidence enum: an out-of-set gut-word is REJECTED
+  const er = ingest(p, [rep({ ts: "2026-07-11T09:12:00Z", question: "enumcheck", confidence: "sorta" })]);
+  assert("enum-reject: confidence outside {knew,shaky,guessed} rejected", er.rejected === 1 && er.appended === 0);
+
+  // 3c) all three enum gut-words accepted
+  const okAll = ["knew", "shaky", "guessed"].every((c, i) => ingest(p, [rep({ ts: `2026-07-11T10:0${i}:00Z`, question: `enumok${i}`, confidence: c })]).appended === 1);
+  assert("enum-accept: knew/shaky/guessed all valid", okAll);
 
   // 4) dedup (same ts+question)
   const dupRep = rep({ ts: "2026-07-11T09:00:00Z", question: "what rate on 194C?" });

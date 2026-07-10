@@ -3,19 +3,15 @@
 This is the **only** wiring Claude Code can't do for you (it can't reach Gemini/Colab). Two paste-once blocks make **Colab** and the **Drill Gem** feed `scripts/capture.mjs` (Agent #0). After this, capture is automatic — you log nothing by hand beyond one paste (Gems) or zero (Colab, once Drive is wired).
 
 **The rep schema both blocks MUST emit** (matches `capture.mjs` exactly):
-`{ "ts": ISO-8601 string, "surface": "gem" | "colab", "concept": string, "question": string, "confidence": int 0–100, "correct": true|false, "note": string (optional) }`
-Dedup is on `ts + question`. Malformed reps are rejected, never coerced. **Confidence is the number you commit BEFORE seeing the answer** — that's what makes the Calibration agent real.
+`{ "ts": ISO-8601 string, "surface": "gem" | "colab", "concept": string, "question": string, "confidence": "knew" | "shaky" | "guessed", "correct": true|false, "note": string (optional) }`
+Dedup is on `ts + question`. Malformed reps are rejected, never coerced. **Confidence is one gut-word — `knew` / `shaky` / `guessed` — committed BEFORE the answer is revealed.** That honest gut-read (not a made-up number) is what makes the Calibration agent real.
 
 ---
 
 ## 0. Prereqs (once)
 
 - **Gems (paste path)** — nothing to install. At session end the Gem prints a JSON array; you hand it to Claude Code, which runs `node scripts/capture.mjs paste`.
-- **Colab (auto-pull path, Option B)** — install **Google Drive for Desktop**, sign in, let **My Drive** sync to this PC. Create the folder `My Drive\arsenal\reps_inbox`. Then enable the dormant task:
-  ```
-  schtasks /Change /TN ArsenalFC-CapturePull /ENABLE
-  ```
-  Until Drive is wired, the Colab block still works — reps wait in Drive and `capture.mjs pull` ingests them the moment the task is enabled. (Task is created **disabled** today because Drive for Desktop isn't installed yet.)
+- **Colab (auto-pull path, Option B) — LIVE.** Google Drive for Desktop is installed + synced (My Drive at `G:`); the inbox `G:\My Drive\arsenal\reps_inbox` is wired via `capture_config.json`. The task `ArsenalFC-CapturePull` runs `capture.mjs pull` **hourly, 09:00–22:00 daily** (Status: Ready). Nothing to do — your Colab reps flow in automatically once `flush_reps()` writes them to the inbox.
 
 ---
 
@@ -32,8 +28,8 @@ os.makedirs(INBOX, exist_ok=True)
 _REPS = []
 
 def log_rep(concept, question, confidence, correct, note=None):
-    """Log ONE drill rep. Commit `confidence` (int 0-100) BEFORE you check the answer."""
-    assert isinstance(confidence, int) and 0 <= confidence <= 100, "confidence must be int 0-100"
+    """Log ONE drill rep. Commit `confidence` — 'knew' | 'shaky' | 'guessed' — BEFORE you check the answer."""
+    assert confidence in ("knew", "shaky", "guessed"), "confidence must be 'knew', 'shaky', or 'guessed'"
     assert isinstance(correct, bool), "correct must be True/False"
     rep = {
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -59,8 +55,8 @@ def flush_reps():
 ```
 
 **Use:** after each Python drill, call
-`log_rep("list comprehensions", "flatten a nested list?", 55, True, note="forgot the order")`
-— predicting `confidence` **before** you verify. At the end of the notebook, call `flush_reps()` once. Done. (No Drive yet? The reps still write to the mounted Drive folder and sync down when you install Drive for Desktop.)
+`log_rep("list comprehensions", "flatten a nested list?", "shaky", True, note="forgot the order")`
+— committing your gut-word `confidence` **before** you verify. At the end of the notebook, call `flush_reps()` once. Done. (No Drive yet? The reps still write to the mounted Drive folder and sync down when you install Drive for Desktop.)
 
 ---
 
@@ -69,8 +65,8 @@ def flush_reps():
 ```
 You are my drill coach. For EVERY question, follow this loop exactly:
 1. Ask ONE question. Do NOT reveal the answer or any hint yet.
-2. First make me commit a CONFIDENCE from 0 to 100 (how sure I am I'll get it
-   right) BEFORE you show anything. Wait for my number.
+2. First make me commit ONE gut-word — "Knew", "Shaky", or "Guessed" (how sure I
+   am I'll get it right) BEFORE you show anything. Wait for my word.
 3. THEN reveal the answer and tell me if I was correct (true / false).
 4. Keep a running log of every rep.
 
@@ -78,12 +74,12 @@ When I say "end session" (or "report"), output ONLY a fenced JSON array — no p
 before or after — one object per rep, in this exact shape:
 
 [
-  {"ts":"2026-07-11T09:00:00Z","surface":"gem","concept":"TDS 194C","question":"what rate and threshold apply?","confidence":60,"correct":true,"note":"mixed up the threshold"},
-  {"ts":"2026-07-11T09:04:00Z","surface":"gem","concept":"reconciliation","question":"what is a 3-way match?","confidence":40,"correct":false}
+  {"ts":"2026-07-11T09:00:00Z","surface":"gem","concept":"TDS 194C","question":"what rate and threshold apply?","confidence":"shaky","correct":true,"note":"mixed up the threshold"},
+  {"ts":"2026-07-11T09:04:00Z","surface":"gem","concept":"reconciliation","question":"what is a 3-way match?","confidence":"guessed","correct":false}
 ]
 
 Rules:
-- confidence = the number I gave BEFORE seeing the answer (int 0–100).
+- confidence = the gut-word I gave BEFORE seeing the answer: "knew", "shaky", or "guessed".
 - correct = whether my answer was right (true/false).
 - ts = when the question was asked, ISO-8601 UTC (e.g. 2026-07-11T09:00:00Z).
 - surface is always "gem".
