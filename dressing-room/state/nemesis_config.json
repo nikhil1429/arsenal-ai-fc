@@ -1,0 +1,8 @@
+{
+  "_comment": "Canon config for nemesis.mjs (Agent #3) — committable, tunable, NOT PII. axis_cluster_min_concepts = distinct concepts needed on one axis before the cross-concept 'kind of thinking' pattern surfaces. recency_halflife_days = decay for the recency-weighted score (older misses sink). warming_up_min_reps = the single volume gate (below it: low_confidence + axis_pattern suppressed). healed_clean_streak = clean reps on a topic before it closes (beaten opponent). closed_prune_days = drop long-stale closed entries so the list never grows endless. A deliberate SEED — retune from real data. nemesis.mjs READS this only (single-writer preserved); if missing, these same values are the built-in defaults.",
+  "axis_cluster_min_concepts": 3,
+  "recency_halflife_days": 10,
+  "warming_up_min_reps": 20,
+  "healed_clean_streak": 3,
+  "closed_prune_days": 30
+}

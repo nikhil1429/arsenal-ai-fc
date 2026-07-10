@@ -40,3 +40,6 @@ dressing-room/state/fsrs_store.json
 
 # --- Calibration agent output (derived personal study data: gap + danger topics) ---
 dressing-room/state/calibration.json
+
+# --- Nemesis agent output (derived personal study data: weak topics + receipts) ---
+dressing-room/state/weaknesses.json

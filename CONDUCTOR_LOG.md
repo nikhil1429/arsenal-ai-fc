@@ -82,10 +82,30 @@ Build order (CONDUCTOR §3): **#0 Shared Capture Layer → #1 FSRS → #2 Calibr
 - Deviations / notes: reads BOTH tracks per capsule (a knew-wrong on Python is a blind spot too). `danger_zone` SUPPRESSED below `min_reps` (Fork-4 bias-to-silence — an early false alarm teaches the captain to distrust the agent). ECE = Fork-1 scalar; full per-bucket breakdown kept (Fork-2 intent, nothing discarded). No new npm deps.
 - Commit: Calibration build — this commit (see `git log`).
 
-## 3. Nemesis (`nemesis.mjs`) — DESIGN LOCKED-SO-FAR · build PENDING (Fork A open) · 2026-07-10
-NOT built yet. Design brainstormed + mostly locked; ONE fork open (captain's call) before the build capsule. A fresh thread CONTINUES from here — not from scratch.
+## 3. Nemesis (`nemesis.mjs`) — green · BUILT (Fork A resolved = A3) · 2026-07-10
+BUILT + selftest green (Fork A resolved = A3). The locked design below drove the build and is retained for provenance; build details + build-capsule fixes are appended at the end of this block.
 - REFRAME (locked, god-tier): Nemesis is NOT a ranked shame-list (harmful for ADHD-PI + redundant — recurrence=FSRS's job, confident-wrong=Calibration's). Its UNIQUE signal (no per-card view can make it) = CROSS-CONCEPT AXIS PATTERN: "misses on tokenization+chunking+retrieval all cluster on axis-e (failure-modes)" → your nemesis is a KIND OF THINKING, not a topic. This is the payoff for capturing `axis` from day 1. Frame = self-SCOUT (OPPONENT_SCOUT/DOSSIER idiom), never shame. No 10x/hype in output (compounding frame).
 - Principles (locked): (1) signal = RELAPSE (broke AFTER learned) or confident-wrong — NOT mere wrong≥3 (else it repeats FSRS). (2) ONE headline nemesis ("today's #1 opponent"), full list collapsed below (ADHD single-focus). (3) receipts/evidence per entry (§10 evidence:[...]) — scouting report, not taunt. (4) healed/closed visible (beaten opponent = trophy; list never endless). (5) cold-start honest — cross-concept pattern needs volume, near-silent day-1 BY DESIGN; FLOOR = per-concept relapse (simple), CEILING = cross-concept axis meta-pattern (emerges over weeks). bias-to-silence.
 - Forks LOCKED: B (miss-signal) = relapse OR confident-wrong OR shaky-wrong, grouped per topic+axis (this is where the shaky-wrong deliberately kept OUT of Calibration flows in). C (ranking) = headline one primary nemesis + the cross-concept axis pattern; recency-weighted recurrence, decay so stale/healed sink. D (healed) = last 3 clean on a topic + no knew-wrong ⇒ status:"closed" (kept in history, off active rank; no alarm-fatigue).
 - Fork A — OPEN (resolve FIRST next thread): who writes weaknesses.json? THE_MANAGER §4 says "Manager is the writer"; CONDUCTOR §13 Fork-2 leaves it open. A1 = Nemesis writes ranked weaknesses.json directly (conflicts §4 wording). A2 = Nemesis writes raw nemesis_events.json, Manager derives ranked file at capstone. A3 = Nemesis is sole writer of weaknesses.json incl. rank, Manager only consumes (reconcile §4 as "Manager writes the team-sheet LINE, Nemesis writes the FILE" — consistent with FSRS→cards.json, Calibration→calibration.json). Chat-Claude lean = A3. Captain must pick, THEN the full build capsule is written.
 - Schema target: THE_MANAGER §4/§10 weaknesses.json { weaknesses:[{id,topic,recurrence,last_seen,status,evidence[]}] } + additive axis-pattern field. Empty-safe (status:"awaiting_data"), single-writer, deterministic zero-LLM, output gitignored (derived PII), reads reps_log (both tracks) + calibration.json.
+
+--- BUILD (2026-07-10) ---
+- Files: `scripts/nemesis.mjs` · `dressing-room/state/nemesis_config.json` (canon, trackable) · `.gitignore` (+`weaknesses.json`) · scheduled task `ArsenalFC-Nemesis` (daily 08:43, after Calibration 08:42 / before Manager 08:45).
+- **Fork A RESOLVED = A3:** Nemesis is the SOLE writer of `weaknesses.json` (incl. rank); the Manager consumes it + writes the team-sheet LINE (FSRS→cards.json / Calibration→calibration.json precedent). Post-green THE_MANAGER §4 one-line canon clarification pending — human-gated, not mid-build.
+- **Build-capsule fixes baked:** [A] `id` = stable topic slug (never positional — history/evidence survive recompute) · [B] `recurrence` = RAW int, `score` = separate recency-weighted float · [C] **`calibration.json` NOT read** — clean 2-input consumer (`reps_log` + `concepts.json`); confident-wrong is re-derived here, no coupling. *(Supersedes the design line above that said "reads … + calibration.json".)* · [D] `axis_pattern.strength` = distinct-concept cluster size; single volume gate reused (`warming_up_min_reps`, no extra knob).
+- Selftest (`node scripts/nemesis.mjs selftest`, verbatim tail; exit 0):
+  ```
+  ✓ healed ⇒ status closed, retained, not headline
+  ✓ single-focus: exactly one headline object
+  ✓ receipts: every real entry has non-empty evidence[]
+  ✓ schema: {id,topic,recurrence,last_seen,status,evidence[]} present
+  ✓ concepts.json absent ⇒ axis null + no axis_pattern
+
+  ALL CHECKS PASSED
+  ```
+  (17 checks: empty-safe · relapse-vs-never-learned · confident-wrong · shaky-wrong · guessed-wrong-excluded · recency-weighting · id-stability · recurrence-int/score-float · axis-cluster+mixed-null · volume-gate · skill-relapse-no-axis · healed-closed · single-headline · receipts · schema · registry-missing.) Live: 3 reps → `warming_up` headline (chunking relapse axis f + async skill), axis_pattern suppressed; cleaned to `awaiting_data`.
+- Output schema: `weaknesses.json` canonical `{id,topic,recurrence,last_seen,status,evidence[]}` + additive `{date,generated_at,total_reps,status,low_confidence,headline,axis_pattern{axis,concepts,strength,note}, per-entry axis,score}` — §4/§5/§10 present + extras. matches: yes.
+- Empty-state: 0 reps → `status:"awaiting_data"`, weaknesses [], headline/axis_pattern null; never fabricates. yes.
+- Secrets/PII: `weaknesses.json` gitignored + `git check-ignore` VERIFIED (weak topics + receipts). `nemesis_config.json` = canon, trackable. yes.
+- Commit: Nemesis build — this commit (see `git log`).
