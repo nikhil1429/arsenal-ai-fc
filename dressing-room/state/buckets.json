@@ -1,0 +1,32 @@
+{
+  "_comment": "Time-Auditor bucket config. Edit apps/domains anytime; no code change needed. Matching is case-insensitive substring.",
+  "workBlock": { "start": "09:00", "end": "19:00" },
+  "targets": {
+    "buildingPctMin": 60,
+    "metaPctMax": 25
+  },
+  "browsers": ["chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi"],
+  "default": "Meta",
+  "rules": {
+    "Learning": {
+      "apps": ["claude", "notebooklm", "obsidian", "notion", "acrobat", "sumatrapdf", "okular", "preview"],
+      "domains": ["claude.ai", "gemini.google.com", "docs.anthropic.com", "docs.claude.com", "support.claude.com", "notebooklm.google.com", "arxiv.org", "deeplearning.ai", "coursera.org", "developer.mozilla.org", "realpython.com", "docs.python.org", "pydantic.dev", "fastapi.tiangolo.com"]
+    },
+    "Building": {
+      "apps": ["code", "cursor", "windowsterminal", "cmd", "powershell", "pwsh", "node", "python", "githubdesktop", "git", "wt", "conhost", "windowsterminalpreview"],
+      "domains": ["colab.research.google.com", "github.com", "gist.github.com", "localhost", "127.0.0.1", "supabase.com", "vercel.com", "stackoverflow.com", "aistudio.google.com", "console.anthropic.com", "platform.openai.com"]
+    },
+    "Meta": {
+      "apps": ["youtube", "whatsapp", "telegram", "discord", "slack", "outlook", "spotify", "explorer", "settings", "taskmgr"],
+      "domains": ["youtube.com", "twitter.com", "x.com", "reddit.com", "instagram.com", "linkedin.com/feed", "mail.google.com", "web.whatsapp.com", "netflix.com"]
+    }
+  },
+  "claudeDesktop": {
+    "_note": "Claude Desktop is mixed (learning vs building agents). Defaults to Learning. app-level cannot split these; the Manager + your honest review catch build-drift.",
+    "bucket": "Learning"
+  },
+  "ntfy": {
+    "enabled": false,
+    "topic": "nikhil-jarvis"
+  }
+}
