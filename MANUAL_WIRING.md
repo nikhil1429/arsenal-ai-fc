@@ -3,8 +3,11 @@
 This is the **only** wiring Claude Code can't do for you (it can't reach Gemini/Colab). Two paste-once blocks make **Colab** and the **Drill Gem** feed `scripts/capture.mjs` (Agent #0). After this, capture is automatic — you log nothing by hand beyond one paste (Gems) or zero (Colab, once Drive is wired).
 
 **The rep schema both blocks MUST emit** (matches `capture.mjs` exactly):
-`{ "ts": ISO-8601 string, "surface": "gem" | "colab", "concept": string, "question": string, "confidence": "knew" | "shaky" | "guessed", "correct": true|false, "note": string (optional) }`
-Dedup is on `ts + question`. Malformed reps are rejected, never coerced. **Confidence is one gut-word — `knew` / `shaky` / `guessed` — committed BEFORE the answer is revealed.** That honest gut-read (not a made-up number) is what makes the Calibration agent real.
+`{ "ts": ISO, "surface": "gem"|"colab", "track": "concept"|"skill", "concept": string, "axis": "a".."i"|null, "question": string, "confidence": "knew"|"shaky"|"guessed", "correct": true|false, "latency_ms": int|null (optional), "aided": true|false|null (optional), "note": string (optional) }`
+Dedup is on `ts + question`. Malformed reps are rejected, never coerced (but an **unknown concept is still logged**, flagged `unregistered`). **Confidence is one gut-word — `knew` / `shaky` / `guessed` — committed BEFORE the answer is revealed.** That honest gut-read is what makes Calibration real.
+- **`track`**: `"concept"` = an AI concept (gets an `axis`, becomes an FSRS card) · `"skill"` = Python (axis MUST be `null`, `aided` optional, NOT an FSRS card).
+- **`axis`** (concept only) — which of the 9 drill lenses the question tested: `a` kya+analogy · `b` kyun/first-principles · `c` mechanism · `d` math+range · `e` limits/failure-modes · `f` tradeoffs · `g` FinOps-spot · `h` scale/cost · `i` 3-ways. Use `null` only if a rep isn't axis-specific.
+- **`aided`** (skill only) — `false` = answered from memory · `true` = looked it up.
 
 ---
 
@@ -27,19 +30,21 @@ INBOX = '/content/drive/MyDrive/arsenal/reps_inbox'
 os.makedirs(INBOX, exist_ok=True)
 _REPS = []
 
-def log_rep(concept, question, confidence, correct, note=None):
-    """Log ONE drill rep. Commit `confidence` — 'knew' | 'shaky' | 'guessed' — BEFORE you check the answer."""
+def log_rep(skill, question, confidence, correct, aided=False, latency_ms=None, note=None):
+    """Log ONE Python (skill) rep. Colab = track:'skill' (NO axis). Commit `confidence`
+    — 'knew' | 'shaky' | 'guessed' — BEFORE you check. aided: False=from memory, True=looked it up."""
     assert confidence in ("knew", "shaky", "guessed"), "confidence must be 'knew', 'shaky', or 'guessed'"
-    assert isinstance(correct, bool), "correct must be True/False"
+    assert isinstance(correct, bool) and isinstance(aided, bool), "correct/aided must be True/False"
     rep = {
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "surface": "colab", "concept": concept, "question": question,
-        "confidence": confidence, "correct": correct,
+        "surface": "colab", "track": "skill", "concept": skill, "axis": None,
+        "question": question, "confidence": confidence, "correct": correct,
+        "aided": aided, "latency_ms": latency_ms,
     }
     if note:
         rep["note"] = note
     _REPS.append(rep)
-    print(f"logged #{len(_REPS)}: {concept} · conf {confidence} · {'right' if correct else 'wrong'}")
+    print(f"logged #{len(_REPS)}: {skill} · conf {confidence} · {'right' if correct else 'wrong'} · {'lookup' if aided else 'memory'}")
 
 def flush_reps():
     """Write this session's reps to the Drive inbox as one .jsonl; capture.mjs pull ingests it."""
@@ -55,36 +60,39 @@ def flush_reps():
 ```
 
 **Use:** after each Python drill, call
-`log_rep("list comprehensions", "flatten a nested list?", "shaky", True, note="forgot the order")`
-— committing your gut-word `confidence` **before** you verify. At the end of the notebook, call `flush_reps()` once. Done. (No Drive yet? The reps still write to the mounted Drive folder and sync down when you install Drive for Desktop.)
+`log_rep("async", "await inside a loop — gotcha?", "shaky", True, aided=False, note="forgot gather")`
+— committing your gut-word `confidence` **before** you verify (`aided=True` if you looked it up). At the end of the notebook, call `flush_reps()` once. Done. (Colab is your Python / skill surface — every rep is `track:"skill"`, no axis.)
 
 ---
 
 ## 2. THE DRILL GEM — paste this into the Gem's system instructions
 
 ```
-You are my drill coach. For EVERY question, follow this loop exactly:
-1. Ask ONE question. Do NOT reveal the answer or any hint yet.
+You are my drill coach for AI-engineering CONCEPTS. For EVERY question, follow this loop:
+1. Ask ONE question, aimed at a specific AXIS (the 9 axes are below). Do NOT reveal answer/hint yet.
 2. First make me commit ONE gut-word — "Knew", "Shaky", or "Guessed" (how sure I
    am I'll get it right) BEFORE you show anything. Wait for my word.
 3. THEN reveal the answer and tell me if I was correct (true / false).
-4. Keep a running log of every rep.
+4. Keep a running log of every rep (concept + axis + my word + correct?).
+
+The 9 AXES — pick the ONE the question tests:
+  a kya+analogy · b kyun/first-principles · c mechanism · d math+range · e limits/failure-modes
+  · f tradeoffs · g FinOps-spot · h scale/cost · i 3-ways
 
 When I say "end session" (or "report"), output ONLY a fenced JSON array — no prose
 before or after — one object per rep, in this exact shape:
 
 [
-  {"ts":"2026-07-11T09:00:00Z","surface":"gem","concept":"TDS 194C","question":"what rate and threshold apply?","confidence":"shaky","correct":true,"note":"mixed up the threshold"},
-  {"ts":"2026-07-11T09:04:00Z","surface":"gem","concept":"reconciliation","question":"what is a 3-way match?","confidence":"guessed","correct":false}
+  {"ts":"2026-07-11T09:00:00Z","surface":"gem","track":"concept","concept":"chunking","axis":"f","question":"fixed vs semantic chunking — the tradeoff?","confidence":"shaky","correct":true,"note":"missed overlap"},
+  {"ts":"2026-07-11T09:04:00Z","surface":"gem","track":"concept","concept":"retrieval","axis":"c","question":"how does reranking work?","confidence":"guessed","correct":false}
 ]
 
 Rules:
+- track is always "concept" (this Gem drills concepts, not Python).
+- axis = the single letter a–i the question tested (use null only if truly not axis-specific).
 - confidence = the gut-word I gave BEFORE seeing the answer: "knew", "shaky", or "guessed".
-- correct = whether my answer was right (true/false).
-- ts = when the question was asked, ISO-8601 UTC (e.g. 2026-07-11T09:00:00Z).
-- surface is always "gem".
-- concept = the short topic; question = the exact question text.
-- note is optional (one short line); omit it if there's nothing to add.
+- correct = true/false. ts = when asked, ISO-8601 UTC. surface always "gem".
+- concept = the short topic; question = the exact question text. note optional.
 - Output the array and NOTHING else, so I can paste it straight into capture.mjs.
 ```
 
@@ -104,4 +112,5 @@ Colab flush_reps() ─▶ Drive inbox ─(Drive for Desktop sync)─▶ capture.
 
 - **You touch:** one paste per Gem session; nothing per Colab session (once Drive is wired).
 - **Never logged by hand:** the reps themselves — the Gem and the Colab cell emit them.
+- **Ontology:** Gem reps are `track:"concept"` (carry an axis a–i, become FSRS cards); Colab reps are `track:"skill"` (Python fluency, NOT cards — that signal lives in #4 learning-state). An unknown concept is still logged, flagged `unregistered` — register it by adding it to `dressing-room/state/concepts.json` (canon vocab), and it retro-registers on next load.
 - **Privacy:** `reps_log.jsonl` is gitignored (your study data never hits the public repo).
