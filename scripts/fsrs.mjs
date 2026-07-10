@@ -24,6 +24,10 @@
 //   correct + shaky   → Good  (3)
 //   correct + knew    → Easy  (4)
 //
+// TRACK FILTER (v2): ONLY reps with track=="concept" become FSRS cards.
+//   track=="skill" (Python) reps are IGNORED — canon: Python is fluency (a #4
+//   learning-state signal), not a decay-prone spaced-recall card.
+//
 // OUTPUTS (single writer = this file; both gitignored — personal study data):
 //   dressing-room/state/cards.json      → { date, engine, request_retention,
 //       total_cards, due_today, overdue, hardest_due:[concept...], status,
@@ -78,7 +82,8 @@ function validRep(r) {
     && typeof r.ts === "string" && !Number.isNaN(Date.parse(r.ts))
     && typeof r.concept === "string" && r.concept.trim() !== ""
     && typeof r.correct === "boolean"
-    && CONF.has(r.confidence);
+    && CONF.has(r.confidence)
+    && r.track === "concept";   // CONCEPT-track only — skill (Python) reps are NOT cards (fluency = #4)
 }
 
 function ratingOf(r) {
@@ -181,14 +186,14 @@ function selftest() {
 
   // --- FSRS replay: sustained-correct lengthens interval; a lapse resets it ---
   const growth = [
-    { ts: "2026-07-01T09:00:00Z", surface: "gem", concept: "growth", question: "g1", confidence: "knew",  correct: true },
-    { ts: "2026-07-05T09:00:00Z", surface: "gem", concept: "growth", question: "g2", confidence: "shaky", correct: true },
-    { ts: "2026-07-15T09:00:00Z", surface: "gem", concept: "growth", question: "g3", confidence: "knew",  correct: true },
+    { ts: "2026-07-01T09:00:00Z", surface: "gem", track: "concept", concept: "growth", question: "g1", confidence: "knew",  correct: true },
+    { ts: "2026-07-05T09:00:00Z", surface: "gem", track: "concept", concept: "growth", question: "g2", confidence: "shaky", correct: true },
+    { ts: "2026-07-15T09:00:00Z", surface: "gem", track: "concept", concept: "growth", question: "g3", confidence: "knew",  correct: true },
   ];
   const lapse = [
-    { ts: "2026-07-01T09:00:00Z", surface: "gem", concept: "lapse", question: "l1", confidence: "knew",    correct: true },
-    { ts: "2026-07-05T09:00:00Z", surface: "gem", concept: "lapse", question: "l2", confidence: "shaky",   correct: true },
-    { ts: "2026-07-15T09:00:00Z", surface: "gem", concept: "lapse", question: "l3", confidence: "guessed", correct: false }, // lapse
+    { ts: "2026-07-01T09:00:00Z", surface: "gem", track: "concept", concept: "lapse", question: "l1", confidence: "knew",    correct: true },
+    { ts: "2026-07-05T09:00:00Z", surface: "gem", track: "concept", concept: "lapse", question: "l2", confidence: "shaky",   correct: true },
+    { ts: "2026-07-15T09:00:00Z", surface: "gem", track: "concept", concept: "lapse", question: "l3", confidence: "guessed", correct: false }, // lapse
   ];
   const store = buildStore([...growth, ...lapse], f);
   const gC = store.find((c) => c.id === "growth");
@@ -196,6 +201,12 @@ function selftest() {
   assert("correct reviews lengthen interval (growth interval ≥ 7d)", intervalDays(gC) >= 7);
   assert("incorrect resets interval (lapse interval < 2d)", intervalDays(lC) < 2);
   assert("sustained-correct interval > lapsed interval", intervalDays(gC) > intervalDays(lC));
+
+  // --- v2: skill-track reps are IGNORED by FSRS (Python fluency ≠ spaced-recall card) ---
+  const skill = [{ ts: "2026-07-01T09:00:00Z", surface: "colab", track: "skill", concept: "pydantic", question: "s1", confidence: "knew", correct: true }];
+  const storeSkill = buildStore([...growth, ...skill], f);
+  assert("skill-track rep ⇒ ZERO cards", !storeSkill.some((c) => c.id === "pydantic"));
+  assert("concept-track mocks still produce cards", storeSkill.some((c) => c.id === "growth"));
 
   // --- bucketize: due / overdue counts ---
   const now = new Date(2026, 7, 1, 12, 0, 0); // Aug 1 2026, local noon
