@@ -28,3 +28,6 @@ dressing-room/state/intake_log.json
 
 # --- per-run OUTPUT state (data, not code — regenerated every run) ---
 dressing-room/state/timeaudit.json
+
+# --- capture data: study/drill reps (personal learning data, not code) ---
+dressing-room/state/reps_log.jsonl
