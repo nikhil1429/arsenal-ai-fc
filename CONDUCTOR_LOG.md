@@ -57,3 +57,27 @@ Build order (CONDUCTOR §3): **#0 Shared Capture Layer → #1 FSRS → #2 Calibr
 - Deviations / notes: introduces the repo's **first npm dependency** (`ts-fsrs`) — deliberate, per the captain's stated preference for a vetted impl; `package.json`/`package-lock.json` committed, `node_modules` gitignored (a fresh clone runs `npm install`). Recompute scheduled daily **08:40**; the optional "recompute after each capture pull" hook was left UNwired to keep `capture.mjs` single-purpose (can be added to the CapturePull task action later).
 - Commit: FSRS build — STEP-2 commit `0361a6e`.
 - **Fix (10 Jul, capture-v2 lockstep) — track-filter:** `validRep` now requires `track === "concept"`; `track:"skill"` (Python) reps are IGNORED by FSRS (canon: fluency is a #4 signal, not a spaced-recall card). Baked selftest mocks updated with `track:"concept"`; ADDED assertions `skill-track ⇒ ZERO cards` + `concept-track mocks still produce cards`. Rating map unchanged. Selftest **9 checks ALL CHECKS PASSED**; live proof: mixed concept+skill reps → only the concept card (`bpe`→`tokenization`). Commit: fsrs track-filter (see `git log`).
+
+## 2. Calibration (`calibration.mjs`) — green · 2026-07-10
+- Design capsule: CONSUMER of `reps_log.jsonl` (BOTH tracks — self-knowledge is domain-general). `calibration_gap` = **ECE** vs target accuracies `{knew:0.95, shaky:0.65, guessed:0.30}`; `overconfidence_rate` = P(wrong|knew); per-topic `danger_zone` (knew-WRONG only: ≥3 knew reps AND knew-accuracy < 0.67) with concept-track axis-sharpen; rep-count trend windows; reliability floor (`awaiting_data`/`warming_up`/`ok`) **biased to SILENCE**. Deterministic, zero-LLM. Single writer `calibration.json`.
+- Files written: `scripts/calibration.mjs` · `dressing-room/state/calibration_config.json` (canon config) · `.gitignore` (+`calibration.json`) · scheduled task `ArsenalFC-Calibration` (daily 08:42, after FSRS 08:40 / before Manager 08:45).
+- Selftest (`node scripts/calibration.mjs selftest`, verbatim tail; exit 0):
+  ```
+  ✓ axis-sharpen: shared axis ⇒ axis f
+  ✓ axis-sharpen: mixed axes ⇒ no axis
+  ✓ domain-general: skill (Python) topic CAN enter danger, no axis
+  ✓ trend narrowing (2 full windows, gap shrinks)
+  ✓ trend holding steady (delta < trend_delta)
+  ✓ trend establishing baseline (<40 reps)
+  ✓ config missing ⇒ defaults
+  ✓ concepts.json missing ⇒ topic = raw normalized id
+
+  ALL CHECKS PASSED
+  ```
+  (19 checks total: empty-safe · warming_up-suppresses-danger · ECE=0.2125 · overconf+null · buckets+empty-null · danger low/mid · gates 2-knew/shaky-wrong · axis-sharpen · domain-general · trend ×3 · config/registry-missing.) Live proof: 5 reps → `warming_up` (gap 0.5, overconf 0.67), danger **suppressed** even though chunking qualifies; cleaned to `awaiting_data`.
+- Output schema: `calibration.json` `{date, calibration_gap(ECE), trend, overconfidence_rate, buckets{knew,shaky,guessed:{n,accuracy}}, danger_zone[{topic,confidence,accuracy,axis?,note}], total_reps, status, low_confidence, generated_at}` — §10 required (date/gap/trend/danger_zone) present + additive extras. matches: yes.
+- Empty-state: 0 reps → `status:"awaiting_data"`, gap null, danger []; never fabricates. yes.
+- Capture-hook: n/a — consumer of Agent #0's `reps_log.jsonl`.
+- Secrets/PII: `calibration.json` gitignored + `git check-ignore` VERIFIED (derived study data: gap + confident-wrong topics). `calibration_config.json` = canon, trackable. yes.
+- Deviations / notes: reads BOTH tracks per capsule (a knew-wrong on Python is a blind spot too). `danger_zone` SUPPRESSED below `min_reps` (Fork-4 bias-to-silence — an early false alarm teaches the captain to distrust the agent). ECE = Fork-1 scalar; full per-bucket breakdown kept (Fork-2 intent, nothing discarded). No new npm deps.
+- Commit: Calibration build — this commit (see `git log`).

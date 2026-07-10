@@ -1,0 +1,8 @@
+{
+  "_comment": "Canon config for calibration.mjs (Agent #2) — committable, tunable, NOT PII. targets = the accuracy each gut-word SHOULD map to (knew≈0.95, shaky≈0.65, guessed≈0.30); ECE measures how far actual accuracy drifts from these. window_size/min_reps/trend_delta/danger are the reliability + danger-zone knobs. A deliberate SEED, not sacred — retune from real data. calibration.mjs READS this only (single-writer preserved); if missing, these same values are the built-in defaults.",
+  "targets": { "knew": 0.95, "shaky": 0.65, "guessed": 0.30 },
+  "window_size": 20,
+  "min_reps": 20,
+  "trend_delta": 0.02,
+  "danger": { "min_knew_reps": 3, "accuracy_low": 0.5, "accuracy_mid": 0.67 }
+}

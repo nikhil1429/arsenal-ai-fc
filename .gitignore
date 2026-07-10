@@ -37,3 +37,6 @@ dressing-room/state/capture_config.json
 # --- FSRS agent outputs (derived personal study data: concepts + schedule) ---
 dressing-room/state/cards.json
 dressing-room/state/fsrs_store.json
+
+# --- Calibration agent output (derived personal study data: gap + danger topics) ---
+dressing-room/state/calibration.json
