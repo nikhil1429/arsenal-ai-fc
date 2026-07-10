@@ -47,10 +47,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const REPS_LOG  = join(STATE_DIR, "reps_log.jsonl");
 
-// Colab→Drive inbox (Option B). Overridable via env; default = standard Google
-// Drive for Desktop "My Drive" location once the captain installs + syncs it.
-const INBOX = process.env.ARSENAL_REPS_INBOX ||
-  join(process.env.USERPROFILE || process.env.HOME || "", "My Drive", "arsenal", "reps_inbox");
+// Colab→Drive inbox (Option B). Resolved from CONFIG, never a hardcoded user path:
+//   1) env ARSENAL_REPS_INBOX  →  2) capture_config.json {"inbox":"..."}  →  3) unset = dormant.
+// capture_config.json is machine-local (gitignored) — it holds THIS PC's My Drive path.
+const CONFIG_PATH = join(STATE_DIR, "capture_config.json");
+function resolveInbox() {
+  if (process.env.ARSENAL_REPS_INBOX && process.env.ARSENAL_REPS_INBOX.trim()) return process.env.ARSENAL_REPS_INBOX.trim();
+  try {
+    if (existsSync(CONFIG_PATH)) {
+      const cfg = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+      if (cfg && typeof cfg.inbox === "string" && cfg.inbox.trim()) return cfg.inbox.trim();
+    }
+  } catch { /* malformed config → treat as unconfigured, never crash */ }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // validation — a rep is accepted ONLY if every required field is well-typed.
@@ -232,9 +242,14 @@ function main() {
   }
 
   if (mode === "pull") {
-    const r = pullFromInbox(INBOX, REPS_LOG);
+    const inbox = resolveInbox();
+    if (!inbox) {
+      console.log("pull: inbox not configured — set env ARSENAL_REPS_INBOX or capture_config.json {inbox:...}; nothing pulled.");
+      process.exit(0);
+    }
+    const r = pullFromInbox(inbox, REPS_LOG);
     console.log(`pull: ${r.note}` + (r.wired ? ` (rejected ${r.rejected || 0}, duplicates ${r.duplicates || 0})` : ""));
-    if (!r.wired) console.log(`  to enable: install Google Drive for Desktop, create ${INBOX} (or set ARSENAL_REPS_INBOX), then enable task ArsenalFC-CapturePull.`);
+    if (!r.wired) console.log(`  to enable: create ${inbox} (or fix ARSENAL_REPS_INBOX / capture_config.json), then enable task ArsenalFC-CapturePull.`);
     process.exit(0);
   }
 

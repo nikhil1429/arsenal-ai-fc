@@ -31,3 +31,5 @@ dressing-room/state/timeaudit.json
 
 # --- capture data: study/drill reps (personal learning data, not code) ---
 dressing-room/state/reps_log.jsonl
+# machine-local capture config (this PC's Google Drive inbox path — not canonical)
+dressing-room/state/capture_config.json
