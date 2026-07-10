@@ -1,66 +1,91 @@
-# ⚪🔴 ARSENAL AI FC — OPS_STATE
-**THE thread-agnostic anchor. A fresh thread reads this ONE file (+ MASTERPLAN for design) and knows everything: the pipeline, what's done, what's pending. No zip, ever.**
-Keep BOUNDED (~1.5 pages). Resolved items compress to one line. This is STATE, not a log — history lives in git commits.
+⚪🔴 ARSENAL AI FC — OPS_STATE
+THE thread-agnostic anchor. A fresh thread reads this ONE file (+ MASTERPLAN for design, + THE_MANAGER & THE_GAFFER for the Manager build) and knows everything: the pipeline, what's done, what's pending. No zip, ever. Keep BOUNDED (~2 pages). Resolved items compress to one line. This is STATE, not a log — history lives in git commits.
 
-_Last updated: 2026-07-08 · Branch: `main`_
+Last updated: 2026-07-10 (v2.4 — Goalkeeper LIVE-CONFIRMED (GREEN, flip proven on real data) → CLOSED; SPRINT: close agents today, Claude Desktop does all plumbing, zero manual labour) · Branch: main · Captain & #14: Nikhil (GitHub: nikhil1429)
 
----
+⚡ WHERE WE ARE (one glance)
+Phase 0 — deterministic referees. DESIGN IS CLOSED (v2) + AUDIT IS CLOSED (v2.1, 10 Jul). The two doors that reopened after v1 — the Pep×Arteta two-brain coach and the Governor calibration — are researched, settled, and baked into the canon. A fresh thread then audited all four files word-by-word against the full conversation history and web-verified the load-bearing canon (title · best defence · MotS · Budapest 4-3 pens · Gabriel over the bar · 226-games stat · Pep's May-2026 Joe Hart confession) — all held; small drift fixed (see DONE). No further research pass is needed. Time-Auditor ✅ live · Goalkeeper = ✅ CLOSED — v2 §12 built + tested + committed + pushed + LIVE-CONFIRMED: node oura_coach.mjs ran on real data 10 Jul → 🟢 GREEN, and it proved the fix (readiness_raw 65 + week_mean 66.5 + 13h sleep-debt all coexisting with GREEN — legacy would've forced RED; v2 correctly refused a lone-signal RED) · Agent 1 The Manager = DESIGN-COMPLETE (v2.1, god-tier) → next build is M-1 wrapper. From here it is BUILD only — no more design.
 
-## ⚡ WHERE WE ARE (one glance)
-**Phase 0 — deterministic referees.** Goalkeeper ✅ live · Time-Auditor ✅ live · **NEXT = Agent 3 The Manager.**
+👤 THE CAPTAIN (identity)
+#14 — the captain (Henry's number; changed from #10 on 09 Jul 2026). Not an agent; the one human the whole squad is built around — and himself a player on the team-sheet (read, rotated, rested, coached like anyone). "Teammates set up the chance; #14 takes every shot."
 
-## THE 2-FILE RULE (kills the zip / repeating problem)
-New thread reads exactly two files — no zip:
-1. `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/ARSENAL_AI_FC_MASTERPLAN.md` — design + philosophy (static)
-2. `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/OPS_STATE.md` — this (live state)
+THE 2-FILE → 4-FILE RULE (kills the zip / repeating problem)
+Repo is PUBLIC (captain's call, fast-track) — but OPS_STATE canon stays on Google Drive (account nikhil.panwar2914@gmail.com), NOT in the public repo; Claude reads state from Drive. Sensitive data (oura_secrets/tokens, readiness.json, intake_log.json, *.log) is gitignored + confirmed out of the repo. Drive canon — MASTERPLAN + THE_MANAGER + THE_GAFFER = v2.1 (audit-closed 10 Jul); OPS_STATE stays live (this = v2.3):
 
-**New-thread opener (copy-paste):**
-> Read arsenal-ai-fc via raw URLs: MASTERPLAN (design) + OPS_STATE.md (current state). Then continue from ▶ NEXT ACTION.
+OPS_STATE.md (this) — live state. Read EVERY thread.
+ARSENAL_AI_FC_MASTERPLAN.md — v2.1 design + philosophy (two-brain coach + recalibrated Governor + all 33 agents + drift reconciled). Read for deep/design work.
+THE_MANAGER__Master_Prompt.md — v2.1 the Manager's brain (two-brain anchor-model + formation-read + learning↔execution merge + closed loop + precedence + state-bus + Season Arc + §7.5 voice + wrapper split + dummy data + worked examples). Read for the Manager build.
+THE_GAFFER.md — v2.1 the Manager's voice/soul (verified Arteta + Pep canon incl. the Hart confession, recalibrated Governor lens, 3 honesty-overrides, self-bench rule). Read for the Manager build. Claude finds them by Drive search + downloads them. Code stays in the private repo. No zip, ever.
 
-**Write discipline:** each thread-end, Claude drafts the OPS_STATE delta → Nikhil `git s` (add+commit+push). Transport later fully automated by the AutoPush referee (Pipeline Phase 0).
+New-thread opener (copy-paste):
 
----
+Read my Google Drive OPS_STATE.md (Arsenal AI FC) and continue from ▶ NEXT ACTION. Pull MASTERPLAN v2.1 + THE_MANAGER v2.1 + THE_GAFFER v2.1 from Drive too — design + audit are CLOSED, this thread BUILDS.
 
-## 🎯 THE PIPELINE (what's coming — masterplan §17 has full detail)
-- **Phase 0 — Deterministic referees** (zero LLM tokens, cron-driven): Goalkeeper ✅ · Time-Auditor ✅ · **AutoPush** (git auto-commit/push) · FSRS + calibration. ◀ we are here
-- **Phase 1 — Playable XI:** The Manager (team-sheet + post-match) + 1 Gemini generator + 1 Claude grader.
-- **Phase 2 — Midfield + first eval:** FSRS/retrieval/calibration + FinOps RAGAS harness.
-- **Phase 3 — Decisive signing + jury:** Eval Prosecutor + dual-judge jury.
-- **Phase 4 — Full attack + Nemesis:** remaining interviewers + overnight Nemesis.
-- **Phase 5 — Ship the trophy:** FinOps Copilot → live API + eval CI gates. (= the ₹20–25 LPA offer.)
-- **Phase 6 — Recruitment dept.** · **Phase 7 — Depth/rotation.**
+Read vs write:
 
-## ✅ DONE (across previous threads)
-- Repo `nikhil1429/arsenal-ai-fc` — **PUBLIC**, local `C:\Users\nikhi\GitHub\arsenal-ai-fc` (off OneDrive), branch `main`.
-- `ARSENAL_AI_FC_MASTERPLAN.md` + `README.md` pushed. `dressing-room/` scaffold + `constitution.md` built.
-- **Goalkeeper** (`scripts/oura_coach.mjs`): ✅ LIVE + auto. Task `ArsenalFC-Goalkeeper`, daily 08:30, `StartWhenAvailable`. First verdict AMBER (sleep-debt 44.5h). Oura OAuth + dev-mode-401-skip + ESM-entry bugs fixed.
-- **Time-Auditor** (`scripts/timeaudit.mjs`): ✅ LIVE + auto. Tasks `ArsenalFC-TimeAuditor-Pulse` (12/15/18) + `-Full` (21:00). Pulls real ActivityWatch data → Learning/Building/Meta + on-track. `buckets.json` calibrated (claude.ai + gemini.google.com = Learning).
-- **OPS_STATE.md** (this) — thread-agnostic anchor established; zip workflow retired.
+READ = automated by Claude, every thread, from Drive. (Private-safe.)
+WRITE = Claude CANNOT write Drive files (confirmed 09 Jul: both create + replace fail). So at thread-end Claude hands the updated file → Nikhil drag-drop replaces it on Drive (~10 sec). This also satisfies the human-gate (auto-approve nothing).
 
-## ⏳ PENDING (ordered)
-1. **AutoPush referee** — Windows scheduled task: nightly `git add -A && commit && push` in repo. Deterministic, thread-agnostic transport (state pushes itself). Quick Phase-0 add.
-2. **Agent 3 — The Manager** (Claude Opus): reads `readiness.json` + `timeaudit.json` → morning team-sheet (what to do, what energy, on-track). Resolves the claude.ai learn-vs-build ambiguity app-level can't. ~06:00 + ~21:30.
-3. Playable XI → rest of §17 phases.
+🎯 THE PIPELINE (masterplan §17 has full detail; CALENDAR COMPRESSED — see LOCKED)
+Phase 0 — Deterministic referees (zero LLM, cron): Time-Auditor ✅ · Goalkeeper ✅ CLOSED (v2 §12, live-confirmed GREEN 10 Jul) · AutoPush (pending) · FSRS + calibration. ◀ we are here
+Phase 1 — The Manager (two-brain coach): team-sheet (08:45) + post-match + 1 Gemini generator + 1 Claude grader. Whole squad set up phase-by-phase — no stalling on a "Playable XI."
+Phase 2 — Learning-layer optimization + first eval (immediately post-Manager): schema-fy the Forge/Maidan + Re-Jirah controller + Python fluency-states (the deferred "first R1 run" — now PINNED to right-after-the-Manager, the Phase-2 lead) + FSRS/retrieval/calibration + FinOps RAGAS harness. (Compounds, not exponential — multiplier = consistency; no "10x".)
+Phase 3 — Decisive signing + jury: Eval Prosecutor + dual-judge jury.
+Phase 4 — Full attack + Nemesis.
+Phase 5 — Ship the trophy: FinOps Copilot → live API + eval CI gates. (= the ₹20–25 LPA offer.) Apply in parallel once M-1 is demo-able.
+Phase 6 — Recruitment dept. · Phase 7 — Depth/rotation (the 9 bench agents).
+✅ DONE (across previous threads)
+Repo nikhil1429/arsenal-ai-fc — PUBLIC, local C:\Users\nikhi\GitHub\arsenal-ai-fc (moved off OneDrive), branch main. dressing-room/ scaffold + constitution.md + README.md built.
+Time-Auditor (scripts/timeaudit.mjs): ✅ LIVE + auto. Pulls real ActivityWatch → Learning/Building/Meta + on-track; buckets.json calibrated. (Reuses the accountability-rig's AW connection; reconciliation parked.)
+OPS_STATE.md — thread-agnostic anchor established; zip workflow retired.
+🆕 v2 DESIGN-CLOSURE BAKED (09 Jul). Two open doors shut:
+ARSENAL_AI_FC_MASTERPLAN.md → v2.0 — two-brain coach (Pep×Arteta anchor-fix), formation-read, learning↔execution merge, closed loop, §12 Governor FULLY recalibrated (engagement-not-hours, confidence-tiers, convergence-only RED, softened auto-deload, akathisia caveat, honor-the-grind), all 33 agents (24 named + 9 bench), all drift reconciled (#14, 08:45, GitHub path, Goalkeeper conflict, agent-numbering).
+THE_MANAGER__Master_Prompt.md → v2.0 + THE_GAFFER.md → v2.0 — the Manager's brain + soul, two-brain anchor-model + recalibrated-Governor lens baked, verified Arteta + Pep canon byte-for-byte, verification-friendly (per-section "why," old-vs-new markers). Design locked — only code remains.
+🆕 v2.1 AUDIT-CLOSE (10 Jul). A fresh thread read every file + the full conversation exports word-by-word, then web-verified the load-bearing canon — 2025/26 title + 22-yr drought, best defence, Barclays MotS, Budapest PSG 1-1 (4-3 pens), Gabriel's fifth kick over the bar, most-European-games-without-the-cup (226), and Pep's May-2026 farewell confession ("I didn't give a chance to Joe Hart… sometimes I'm not fair enough") — all confirmed. Fixes baked: MANAGER §7.5 THE VOICE restored (was dropped from v1) + broken §6 cross-ref fixed + on_track dummy field restored · GAFFER anchor-wording corrected (Pep is NOT amputated from the human — mirror-error of the killed split) + Hart confession added to §1.5 verified canon · MASTERPLAN hostname + 9–9/overnight windows + legacy task-name restored. Arteta-fix research pass = NOT needed — the anchor-model is a settled design decision; its facts are now inline-verified.
+🆕 GOALKEEPER RECALIBRATED (v2 §12) — BUILT + TESTED (10 Jul). oura_coach.mjs v2: legacy engine frozen as analyzeLegacy (layering principle — nothing deleted), new §12 analyze on top. Three bugs fixed & proven: (1) GREEN now reachable when resilience 401s (was structurally impossible — every verdict fell to AMBER/RED); (2) RED only on multi-day convergence (deep+REM collapse + a 2nd axis) — a lone readiness/HR/temp reading can't trigger RED, which killed the 07-10 false RED; (3) sleep-debt from Oura's own sleep_balance contributor (its personal 2wk-vs-2mo baseline), not hardcoded 8h — respects his 6–7h band (test: 33.6h → 8.7h). test_coach_v2.mjs = all v2 checks pass (7 blocks V2-1…V2-7; script prints ALL V2 CHECKS PASSED — not a literal 13/13 counter, ~15 individual ✓); his real 07-10 numbers flip LEGACY RED → V2 GREEN (faithful, his baseline rhr~76 / hrv~23). Files placed + COMMITTED + PUSHED to GitHub via Claude Code (commit 097121b, Goalkeeper v2): CLAUDE.md + GOALKEEPER_v2_migration.md + root .gitignore at repo root · scripts/oura_coach.mjs (v2 overwrote v1) · scripts/test_coach_v2.mjs. Old test_coach.mjs deleted (was never git-tracked). ⚠️ Root .gitignore shipped with readiness.json/intake_log.json COMMENTED OUT — Claude Code caught it + uncommented, so biometrics/med-log are confirmed IGNORED on the public repo. LIVE first-verdict run DONE (node oura_coach.mjs on Claude Code, 10 Jul): 🟢 GREEN, engine v2-recalibrated, 30 nights. Proof the recalibration works — readiness_raw 65 + week_mean_readiness 66.5 + 13h 14-day sleep-debt ALL coexist with GREEN (legacy < 70 would've forced RED); v2 refused the lone-signal RED = exact §12 behaviour. Dev-mode 401s (resilience, cardiovascular_age) skipped gracefully, exit 0. readiness.json confirmed gitignored (never tracked). "hypothesis" → PROVEN.
+🆕 CORE SOURCE NOW IN GIT (10 Jul, commit 4b3c377). Time-Auditor + Oura-auth source + buckets config committed (scripts/timeaudit.mjs, scripts/oura_auth.mjs, dressing-room/state/buckets.json); per-run output timeaudit.json + biometrics + logs stay gitignored. Branch was diverged (local 2 / origin 1) → rebased clean onto origin, pushed → local + origin/main SYNCED, linear history. (OPS_STATE.md deletion in the repo working tree left untouched — separate decision; canon lives on Drive regardless.)
+⏳ PENDING (ordered — this is BUILD, design is CLOSED)
+Agent 1 — The Manager: IMPLEMENT M-1→M-5 (design done; two-brain coach). Build order (THE_MANAGER "build order" + masterplan §17):
+M-1 manager.mjs (deterministic wrapper, no LLM): glob dressing-room/state/*.json + staleness + all math (Building%, gaps, season_day, matches_played, day-N, weekly-consistency%, phase §6) + formation-read assembly (weak handoff / out of position / free man) + prompt-assembly + 1-turn Opus call + output-validate (template / line-cap / no-invented-number) + write team_sheet.md + fallback skeleton + atomic writes. Fully testable with THE_MANAGER §10 dummy data, LLM-free.
+M-2 dressing-room/manager/system.md = THE_MANAGER + THE_GAFFER content — Nikhil approves the soul line-by-line.
+M-3 claude -p wiring + billing LIVE-verify (guards: ANTHROPIC_API_KEY NEVER set + Extra-Usage OFF = hard $100 ceiling).
+M-4 sandbox the §11 worked scenarios (Introduction Day-1, Partnership AMBER, fast post-match, + RED-override + missing-readiness).
+M-5 scheduled tasks (morning team-sheet 08:45 after GK 08:30 + fast evening post-match) + ntfy push.
+AutoPush referee — nightly git add -A && commit && push. Needs git credentials fixed (Desktop auth or PAT). Code alongside the Manager (M-1).
+Rest of §17 phases → whole squad, one layer leak-free before the next.
+▶ NEXT ACTION (single finish line)
+BUILD — SPRINT (captain's call, 10 Jul: close agents today; Claude Desktop/Code does ALL plumbing, Nikhil does zero manual labour). Goalkeeper ✅ CLOSED. → Agent 1 The Manager: M-1 manager.mjs (deterministic wrapper, no LLM) tested against THE_MANAGER §10 dummy data → M-2 system.md (soul) → M-3 claude -p + billing guards → M-4 sandbox §11 scenarios → M-5 scheduled tasks + ntfy. AutoPush referee coded alongside M-1. Design is CLOSED (MASTERPLAN v2 + THE_MANAGER v2 + THE_GAFFER v2) — BUILD, not design; quality per agent never cut for speed (each built + tested + live before close). Human-gate stays lightweight: Claude Code does the doing, stops before commit/push, Nikhil says go (auto-approve nothing — public repo). Explain every file (what + why).
 
-## ▶ NEXT ACTION (single finish line)
-**Agent 3 — The Manager.** (Or AutoPush first if we want transport hands-free before Manager — Nikhil's call.)
+🔒 LOCKED DECISIONS (do NOT re-litigate)
+🆕 SPRINT — CLOSE AGENTS TODAY, ZERO MANUAL LABOUR (captain's call, 10 Jul). Nikhil does NO terminal / file-moves / git — Claude Desktop/Code does every bit of the plumbing (place, run, test, commit, push). Human-gate stays lightweight: Claude does the doing and stops before commit/push for a one-word go (auto-approve nothing — the repo is PUBLIC). Momentum order: Goalkeeper ✅ → The Manager M-1→M-5 + AutoPush → onward through the squad. Speed = Claude carrying the labour, NOT skimming — every agent is built + tested + live before it's called closed.
+🆕 LEARNING-LAYER OPTIMIZATION = FIRST POST-MANAGER PUSH (captain's call, 10 Jul). The learning layer's deep optimization — Forge/Maidan + Re-Jirah controller + fluency-states schema-fy (the "first R1 run") — is sequenced as the FIRST milestone immediately after the Manager is finalized (Phase-2 lead), not an unpinned "someday R1". Framing stays compounds-not-exponential; no "10x".
+🆕 TWO-BRAIN COACH + ANCHOR-FIX (v2). The Manager is two complete game+human managers fused into one coach — Pep-brain (game-anchored: serves the human through the game) + Arteta-brain (human-anchored: serves the game through the human). "Pep = game, Arteta = human" is DEAD — Arteta is elite on the game too (22-yr drought, best defence, positional-play master). Fusion = two complete intelligences with different anchors, NOT specialist + specialist. One reconciler, ONE output, never two competing sheets. It compounds, not exponential — multiplier = Nikhil's consistency; ceiling is biology. Full spec: THE_MANAGER + THE_GAFFER.
+🆕 GOVERNOR RECALIBRATED (v2 §12). Authority UNCHANGED (still above everything, can cancel the day); trigger recalibrated: metric = engagement-quality + baseline-deviation, NEVER hours; signals confidence-tiered (HR/HRV/temp = LOW / med-confounded → can't drive RED alone; sleep-architecture-trend + resilience + output = HIGH); athletic auto-deload softened for cognitive work; RED = multi-day convergence of HIGH-confidence signals only (never a single reading, never hours); akathisia caveat (any mood/agitation flag → "show your doctor," never self-interpreted); grind honored by default; hard medical-advice boundary (data-interpretation only). Governor + 3 honesty-overrides never soften across Season-Arc phases.
+🆕 AGENT-NUMBERING CONVENTION (never flatten). Roster/org-chart (masterplan §8): Manager = #1 (Dugout #1), Assistant #2, Goalkeeper #3, Time-Auditor #4… Build/online order (separate axis): Goalkeeper 1st → Time-Auditor 2nd → Manager 3rd. "Agent 1 = Manager" (roster) and "Manager is the 3rd build" are both true.
+Captain = #14 (Henry's number). Was #10. (Overrides masterplan v1 header "#10".)
+SLEEP BASELINE (Goalkeeper): Nikhil sleeps 6–7h/night — his NORMAL, not debt. Sleep-need ≈ 6.5h (NOT textbook 8h); compute debt vs HIS 6–7h band. Do NOT flag standard 6–7h as under-recovery. Only a drop BELOW his own band counts.
+⚠️ KNOWN-ISSUE (10 Jul live run, not blocking): the engine's computed personal_sleep_need settled at ~4.45h — BELOW the locked 6–7h band, so it judges "on track" against too-low a bar (still logged 13h debt at GREEN). This is an ENGINE calibration flag (the baseline calc, not his sleep) — it should anchor to the 6–7h band, not a data-driven ~4.45h floor. Revisit as a small tune; do NOT re-tune mid-sprint.
+COMPRESSED SEASON (captain's call): ≈30–45 days to the trophy · FinOps ship ≤45–60 days · burnout guarded by strict Sunday off. The calendar + rollout + audit-ceremony compress; biology (reps × time × sleep) does NOT → the 45-day trophy = FinOps live + eval-passing + defensible (winnable); full fluency keeps compounding after the offer. Governor + Sunday-off + never-zero floor = turbo, NOT brakes. Squad never invokes calendar pressure; pace is the captain's.
+AUDITS MINIMISED (instrument protected). ActivityWatch + Oura capture stays ON (the ADHD external brain, never off). Minimised = the ceremony: mid-day Time-Auditor pulses silenced, evening post-match = fast ~30-sec read (HIT/MISS + one signal + KAL-line), heavy self-audit = light, Sunday-only.
+THE SEASON ARC (evolving bond). Deepens with accumulated shared history (matches_played + notebook depth), not calendar. 4 wrapper-gated phases: 🤝 Introduction (0–1) → 🌱 Building Trust (2–~8) → 🤜 Partnership (~9–~25) → ⚔️ Brotherhood (~26+). Honesty-overrides + Governor never soften; regression honoured. Full spec = THE_MANAGER §6.
+Half-time = KEEP AS-IS. No new nudge. (Captain explicitly rejected adding a mid-session nudge.)
+Cadence: Goalkeeper 08:30 once/day (orthosomnia). Manager team-sheet 08:45 (after GK) + fast evening post-match. Time-Auditor captures continuously; pulses silenced.
+Brain-rotation (budget law): Sonnet routine / Opus complex. The Manager's daily reconciliation is the complex case → Opus (single daily Opus spend + post-match); claude -p, never API key. Guards: ANTHROPIC_API_KEY never set + Extra-Usage OFF = hard $100 ceiling.
+Buckets: Learning / Building / Meta — Claude (desktop + claude.ai) + gemini.google.com → Learning · YouTube → Meta · Colab/GitHub/docs → Building/Learning · terminal/VS Code/GitHub Desktop → Building. Targets Building ≥60%, Meta ≤25%. Editable in buckets.json. Music-while-coding = non-issue (AW logs focused tab only). NO per-URL Gemini classification (breaks deterministic zero-token design). Gemini = bulk drills + end-of-build visualization only.
+Meds: no hardcoded timings; Nikhil logs each dose in intake_log.json (older days sparse OK). Psychiatrist-managed; HR signals low-confidence; doctor-referral + akathisia safety flags; DATA-interpretation only, never med advice.
+Finance concepts (TDS, invoice, reconciliation) taught from ZERO — Zomato finance ~5+ yrs stale, no assumed recall.
+Push/human-gate: in-chat Claude has NO Drive write + no GitHub write + no cross-thread persistence → drafts only, hands files. Claude CODE (Desktop) CAN place/commit/push on the machine (it did the Goalkeeper v2 commit + push) — but under the human-gate: it stops before commit/push and Nikhil gives the go. Drive updates still = Claude hands file → Nikhil drag-drop replaces. Auto-approve nothing.
+🧠 ENV FACTS / LESSONS (carry-forward)
+Windows PowerShell 5.1. ESM entry-check MUST use pathToFileURL(process.argv[1]) (else silent exit). cmd/start splits URLs on & → print, don't auto-open. Log files show UTF-8 emoji as gibberish (cosmetic).
+Two systems coexist: accountability-rig (C:\Users\nikhi\accountability-rig, ActivityWatch MCP connected; server at C:\Users\nikhi\activitywatch-mcp-server) + arsenal-ai-fc (canonical). Reuse rig's AW connection; reconcile don't duplicate (§15). Reconciliation = parked.
+Oura: dev-mode endpoints (resilience, cardiovascular_age, vo2_max) may 401 → skip gracefully. Data lags 1–2 days until phone syncs. Must be logged into correct Oura account in browser before OAuth consent. daily_readiness contributors (verified from real API, all 0–100): activity_balance, body_temperature, hrv_balance, previous_day_activity, previous_night, recovery_index, resting_heart_rate, sleep_balance — sleep_balance is itself Oura's personal 2wk-vs-2mo sleep-debt signal (used for the bug-3 fix, no invented baseline needed). Secret leaked in a screenshot → captain chose NOT to regenerate; gitignored (confirmed out of repo). Repo is PUBLIC — secrets/tokens/biometrics/logs gitignored + verified; but source code IS public: oura_coach.mjs names his meds (methylphenidate, aripiprazole, venlafaxine, caffeine) = personal health info visible to anyone. Captain's call, flagged once — not re-raised.
+.gitignore lesson (Windows): a dot-prefixed file can silently save as _gitignore → git then ignores nothing; ensure the exact name .gitignore at repo ROOT. gitignore only stops UNtracked files — already-committed secrets need git rm --cached to leave git (file stays on disk). AND: the v2 .gitignore shipped with readiness.json/intake_log.json COMMENTED OUT — always VERIFY sensitive files actually resolve to ignored (git check-ignore / git status), never trust the file's comments.
+Legacy Goalkeeper scheduled task = ArsenalFC-Goalkeeper (daily 08:30, StartWhenAvailable) — the recalibrated build UPDATES/REPLACES this task, no duplicates.
+Claude CANNOT write to Drive (create + replace both fail, confirmed 09 Jul). Drive updates = Claude hands file → Nikhil drag-drop replaces.
+Goalkeeper live-vs-rebuild conflict = CLOSED: v2 §12 recalibrate built + tested + committed; legacy engine preserved as analyzeLegacy inside oura_coach.mjs (layering). v2 code is now on the machine (overwrote v1) → the 08:30 task runs v2; the pending live-run is just the one manual node oura_coach.mjs to confirm the flip.
+📦 END-OF-BUILD TASKS (do ONLY when all agents are live — anti-procrastination gate §18)
+Modify project files + OS instructions wherever the new squad needs wiring.
+Send ALL text/state data → Gemini Pro / NotebookLM for VISUALIZATION. Nikhil's ADHD brain can't read walls of text — the whole system's status/output must render as visuals/dashboards, not markdown. (Video-prompt vehicle drafted: GEMINI_VIDEO_PROMPT.md.) This is the intended daily-consumption surface.
 
-## 🔒 LOCKED DECISIONS (do NOT re-litigate)
-- **Cadence:** Goalkeeper 08:30 once/day (orthosomnia). Time-Auditor pulse 12/15/18 + full 21:00 (auto).
-- **Buckets:** Learning / Building / Meta. Claude (desktop + `claude.ai`) → Learning; `gemini.google.com` → Learning; YouTube → Meta; Chrome by domain (Colab/GitHub/docs → Building/Learning); terminal/VS Code/GitHub Desktop → Building. Targets: Building ≥60%, Meta ≤25%. Editable in `buckets.json`.
-- **Music-while-coding = non-issue:** ActivityWatch logs the FOCUSED tab only; background YouTube while VS Code is front counts as Building.
-- **NO per-URL Gemini classification** (breaks deterministic zero-token design). Semantic nuance (e.g. claude.ai learn-vs-build) = BATCHED once/day in the Manager. **Gemini = bulk drills + end-of-build visualization ONLY.**
-- **Meds:** no hardcoded timings; Nikhil logs each dose in `intake_log.json`; older days sparse OK. Psychiatrist-managed; HR signals low-confidence; doctor-referral safety flag; DATA-interpretation only, never med advice.
-- **Push/human-gate:** Claude has NO github write in-chat + no cross-thread persistence → cannot auto-push. Claude drafts state; Nikhil (or the AutoPush cron) pushes. Auto-approve nothing (masterplan §20).
-
-## 🧠 ENV FACTS / LESSONS (carry-forward)
-- Windows PowerShell 5.1. ESM entry-check MUST use `pathToFileURL(process.argv[1])` (else silent exit). `cmd`/`start` splits URLs on `&` → print, don't auto-open. Log files show UTF-8 emoji as gibberish (cosmetic).
-- Two systems coexist: `accountability-rig` (`C:\Users\nikhi\accountability-rig`, ActivityWatch MCP already connected; MCP server at `C:\Users\nikhi\activitywatch-mcp-server`) + `arsenal-ai-fc` (canonical). Reuse rig's AW connection; reconcile don't duplicate (§15). Reconciliation = parked.
-- Oura: dev-mode endpoints (resilience, cardiovascular_age, vo2_max) 401 → skipped. Data lags 1-2 days until phone app syncs. Must be logged into correct Oura account in browser before OAuth consent.
-
-## 📦 END-OF-BUILD TASKS (do ONLY when all agents are live — anti-procrastination gate §18)
-1. **Modify project files + OS instructions** wherever the new squad needs wiring.
-2. **Send ALL text/state data → Gemini Pro for VISUALIZATION.** Nikhil's ADHD brain can't read walls of text — the whole system's status/output must render as visuals, not markdown. (Bundle state JSONs + OPS_STATE → send-path to Gemini Pro → dashboards/visuals.) This is the intended daily-consumption surface.
-
-## 🚨 GATE (§18 — read when the urge to design returns)
-System-maintenance time > study/ship time in ActivityWatch → **FREEZE new agents.** When in doubt: ship a feature, run a mock — don't add an agent. Log every med/caffeine dose daily.
+🚨 GATE (§18 — read when the urge to design returns)
+System-maintenance time > study/ship time in ActivityWatch → FREEZE new agents. When in doubt: ship a feature, run a mock — don't add an agent. DESIGN IS CLOSED (v2) — the two doors (Pep-merge + Governor-calibration) are shut. The next thread BUILDS (Goalkeeper live-run → Manager M-1); it does not redesign.
