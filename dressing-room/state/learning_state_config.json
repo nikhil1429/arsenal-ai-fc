@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "_comment": "Canon config for learning_state.mjs (Agent #4) — committable, tunable, NOT PII. thresholds = v0 SEED (structure real; latency/runnable numbers are HYPOTHESES calibrated at first R1 run — edit + re-run, lossless since everything derives from reps_log). maidan.stages cross-check concepts.json buckets; maidan.handoffs = real RAG data-flow (domain architecture, NOT a pedagogical prereq-graph — that is Nidhi's domain, deferred). learning_state.mjs READS this only (single-writer preserved); missing ⇒ these defaults.",
+  "thresholds": {
+    "held_streak": 2,
+    "fluent_streak": 3,
+    "latency_fast_ms": 8000,
+    "stage_runnable_frac": 0.75,
+    "warming_up_min_reps": 12,
+    "stall_reps": 6
+  },
+  "maidan": {
+    "stages": [
+      { "id": "fundamentals", "label": "Fundamentals", "order": 1, "concepts": ["tokenization"] },
+      { "id": "rag_pipeline", "label": "RAG pipeline", "order": 2, "concepts": ["chunking", "embeddings", "retrieval", "rag_eval"] },
+      { "id": "agents", "label": "Agents", "order": 3, "concepts": ["tool_use"] }
+    ],
+    "handoffs": [
+      { "from": "tokenization", "to": "embeddings", "label": "text → vectors" },
+      { "from": "chunking", "to": "embeddings", "label": "chunks → vectors" },
+      { "from": "embeddings", "to": "retrieval", "label": "vectors → top-k" },
+      { "from": "retrieval", "to": "rag_eval", "label": "results → eval" }
+    ]
+  }
+}

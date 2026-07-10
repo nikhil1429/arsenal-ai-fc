@@ -43,3 +43,6 @@ dressing-room/state/calibration.json
 
 # --- Nemesis agent output (derived personal study data: weak topics + receipts) ---
 dressing-room/state/weaknesses.json
+
+# --- Learning-state agent output (derived personal study data: fluency map + edges) ---
+dressing-room/state/learning_state.json

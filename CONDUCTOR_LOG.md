@@ -109,3 +109,28 @@ BUILT + selftest green (Fork A resolved = A3). The locked design below drove the
 - Empty-state: 0 reps → `status:"awaiting_data"`, weaknesses [], headline/axis_pattern null; never fabricates. yes.
 - Secrets/PII: `weaknesses.json` gitignored + `git check-ignore` VERIFIED (weak topics + receipts). `nemesis_config.json` = canon, trackable. yes.
 - Commit: Nemesis build — this commit (see `git log`).
+
+## 4. learning-state (`learning_state.mjs`) — green · 2026-07-10
+- Design capsule: the fluency / positional map (the **Maidan**). CONSUMER of `reps_log` (both tracks) + `fsrs_store.json` (join `due`→`rejirah_due`) + `concepts.json` (axis/bucket/**core**) + `learning_state_config.json` (thresholds + Maidan). Emits per concept/skill fluency 🔴🟡🟢 + velocity/trajectory + per-axis rollup + rejirah_due + edge-map + confusion-pairs + Maidan stages/handoffs + core_vs_light. Deterministic, zero-LLM. Single writer `learning_state.json`.
+- **PART A `capture-v3`** (prior commit `6fe8df2`): `reps_log` gained `confused_with` (canonicalized like concept) + `edge` (verbatim) — the permanent raw inputs feeding edge-map + confusion-pairs. All prior capture checks + the 3 consumers stayed green.
+- Files (PART B): `scripts/learning_state.mjs` · `learning_state_config.json` (canon) · `concepts.json` (+`core` flag on every entry) · `.gitignore` (+`learning_state.json`) · scheduled `ArsenalFC-LearningState` (daily 08:44, after FSRS/Cal/Nemesis, before Manager 08:45).
+- LOCKED decisions honored: Maidan = **v0 SEED** (stage/handoff structure real domain architecture; latency/runnable thresholds are v0 hypotheses, R1-calibrated, lossless re-run) · **aided-gating IN** (skill 🟢 requires `aided:false`) · velocity IN · edge-map + confusion-pairs fed by real capture-v3 data · rejirah_due **joins** FSRS decay + axis (no decay re-impl — single-responsibility) · **DEFERRED to R1 (NOT built):** threshold calibration, drill-mechanics, pedagogical prereq-graph · Nidhi boundary: outcomes/state only.
+- Selftest (`node scripts/learning_state.mjs selftest`, verbatim tail; exit 0):
+  ```
+  ✓ Maidan: weak_connection surfaces at ok volume
+  ✓ warming_up: <min_reps ⇒ low_confidence + weak_connection null (suppressed)
+  ✓ Manager surface fields present
+  ✓ registry missing ⇒ graceful (raw id, bare axis letter, no crash)
+
+  ALL CHECKS PASSED
+  ```
+  (20 checks: empty-safe · fluency-ladder · held≠fluent · regression · aided-gating true⇒not🟢/false⇒🟢 · latency-absent proxy · velocity improving/stalling · per-axis rollup · rejirah_due join + fsrs-missing⇒[] · edge-map-latest · confusion-pairs+attach · Maidan runnable+weak_connection · warming_up-suppress · Manager-surface-fields · registry-graceful.) **Ripple:** all 5 agents' selftests green after `concepts.json` `core` add. Live: 4 reps → chunking 🟢, pydantic 🔴, edge + core_vs_light populated; cleaned to awaiting_data.
+- Output schema: `learning_state.json` — Manager §10 surface (`maidan_stage_focus, weak_connection, python_fluency, rejirah_due, core_vs_light`) + additive (`concepts[], axes[], maidan{}, edge_map, confusion_pairs`, envelope). matches: yes.
+- Empty-state: 0 reps → `awaiting_data`, rep-derived lists `[]`, surface null/`{}`, `maidan.stages` skeleton from config (`runnable_frac:0`, `awaiting_data`); never fabricates a rep-derived value. yes.
+- Capture-hook: n/a — consumer (capture-v3 added its two raw fields at the #0 layer).
+- Secrets/PII: `learning_state.json` gitignored + `git check-ignore` VERIFIED. `learning_state_config.json` + `concepts.json` = canon, trackable. yes.
+- Deviations / notes: registry-missing ⇒ **bare axis letter** (no label) + raw id — graceful, not null (learning-state keeps the rep's axis; concepts.json only supplies the label). Single volume gate (`warming_up_min_reps`) suppresses the `weak_connection`/`maidan_stage_focus` headline. No npm dep.
+- Commit: learning-state build — this commit (see `git log`).
+
+---
+**SIGNAL-SOURCE AGENTS COMPLETE.** #0 Capture · #1 FSRS · #2 Calibration · #3 Nemesis · #4 learning-state — all built + selftest-green + scheduled (08:40–08:44) + outputs gitignored. Next & LAST = **the Manager capstone** (M-1 wrapper reference → M-2 soul → M-3 `claude -p` + billing guards → M-4 sandbox §11 → M-5 tasks), integrated + re-tested on the REAL agent JSONs now present.

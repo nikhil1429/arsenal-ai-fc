@@ -13,18 +13,18 @@
     "i": "3-ways"
   },
   "concepts": {
-    "tokenization": { "bucket": "1-fundamentals", "aliases": ["tokenizer", "bpe"] },
-    "embeddings": { "bucket": "2-rag", "aliases": [] },
-    "chunking": { "bucket": "2-rag", "aliases": ["chunking tradeoffs"] },
-    "retrieval": { "bucket": "2-rag", "aliases": ["top-k", "hybrid search", "reranking"] },
-    "rag_eval": { "bucket": "2-rag", "aliases": ["ragas"] },
-    "tool_use": { "bucket": "3-agents", "aliases": ["function calling"] }
+    "tokenization": { "bucket": "1-fundamentals", "core": true, "aliases": ["tokenizer", "bpe"] },
+    "embeddings": { "bucket": "2-rag", "core": true, "aliases": [] },
+    "chunking": { "bucket": "2-rag", "core": true, "aliases": ["chunking tradeoffs"] },
+    "retrieval": { "bucket": "2-rag", "core": true, "aliases": ["top-k", "hybrid search", "reranking"] },
+    "rag_eval": { "bucket": "2-rag", "core": true, "aliases": ["ragas"] },
+    "tool_use": { "bucket": "3-agents", "core": true, "aliases": ["function calling"] }
   },
   "skills": {
-    "pydantic": { "aliases": [] },
-    "fastapi": { "aliases": [] },
-    "async": { "aliases": ["asyncio"] },
-    "api_error_handling": { "aliases": [] },
-    "parsers": { "aliases": [] }
+    "pydantic": { "core": true, "aliases": [] },
+    "fastapi": { "core": true, "aliases": [] },
+    "async": { "core": true, "aliases": ["asyncio"] },
+    "api_error_handling": { "core": true, "aliases": [] },
+    "parsers": { "core": true, "aliases": [] }
   }
 }
