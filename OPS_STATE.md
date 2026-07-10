@@ -10,21 +10,21 @@ Phase 0 — deterministic referees. DESIGN IS CLOSED (v2) + AUDIT IS CLOSED (v2.
 #14 — the captain (Henry's number; changed from #10 on 09 Jul 2026). Not an agent; the one human the whole squad is built around — and himself a player on the team-sheet (read, rotated, rested, coached like anyone). "Teammates set up the chance; #14 takes every shot."
 
 THE 2-FILE → 4-FILE RULE (kills the zip / repeating problem)
-Repo is PUBLIC (captain's call, fast-track) — but OPS_STATE canon stays on Google Drive (account nikhil.panwar2914@gmail.com), NOT in the public repo; Claude reads state from Drive. Sensitive data (oura_secrets/tokens, readiness.json, intake_log.json, *.log) is gitignored + confirmed out of the repo. Drive canon — MASTERPLAN + THE_MANAGER + THE_GAFFER = v2.1 (audit-closed 10 Jul); OPS_STATE stays live (this = v2.3):
+Repo is PUBLIC (captain's call, fast-track) — canon now lives IN the public git repo (git is the single canonical source; Google Drive retired); Claude reads canon from the GitHub raw URLs (raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/<file>). Sensitive data (oura_secrets/tokens, readiness.json, intake_log.json, *.log) is gitignored + confirmed out of the repo. Repo canon — MASTERPLAN + THE_MANAGER + THE_GAFFER = v2.1 (audit-closed 10 Jul); OPS_STATE stays live (this = v2.3):
 
 OPS_STATE.md (this) — live state. Read EVERY thread.
 ARSENAL_AI_FC_MASTERPLAN.md — v2.1 design + philosophy (two-brain coach + recalibrated Governor + all 33 agents + drift reconciled). Read for deep/design work.
 THE_MANAGER__Master_Prompt.md — v2.1 the Manager's brain (two-brain anchor-model + formation-read + learning↔execution merge + closed loop + precedence + state-bus + Season Arc + §7.5 voice + wrapper split + dummy data + worked examples). Read for the Manager build.
-THE_GAFFER.md — v2.1 the Manager's voice/soul (verified Arteta + Pep canon incl. the Hart confession, recalibrated Governor lens, 3 honesty-overrides, self-bench rule). Read for the Manager build. Claude finds them by Drive search + downloads them. Code stays in the private repo. No zip, ever.
+THE_GAFFER.md — v2.1 the Manager's voice/soul (verified Arteta + Pep canon incl. the Hart confession, recalibrated Governor lens, 3 honesty-overrides, self-bench rule). Read for the Manager build. Claude reads them from the GitHub raw URLs (raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/<file>). Code + canon both live in the public repo. No zip, ever.
 
 New-thread opener (copy-paste):
 
-Read my Google Drive OPS_STATE.md (Arsenal AI FC) and continue from ▶ NEXT ACTION. Pull MASTERPLAN v2.1 + THE_MANAGER v2.1 + THE_GAFFER v2.1 from Drive too — design + audit are CLOSED, this thread BUILDS.
+Read OPS_STATE.md from the GitHub repo (raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/OPS_STATE.md) and continue from ▶ NEXT ACTION. Pull MASTERPLAN v2.1 + THE_MANAGER v2.1 + THE_GAFFER v2.1 from the same repo raw URLs too — design + audit are CLOSED, this thread BUILDS.
 
 Read vs write:
 
-READ = automated by Claude, every thread, from Drive. (Private-safe.)
-WRITE = Claude CANNOT write Drive files (confirmed 09 Jul: both create + replace fail). So at thread-end Claude hands the updated file → Nikhil drag-drop replaces it on Drive (~10 sec). This also satisfies the human-gate (auto-approve nothing).
+READ = automated by Claude, every thread, from the GitHub raw URLs (raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/<file>). (Canon is public; secrets/biometrics stay gitignored.)
+WRITE = Claude Code edits + commits the canon files directly in the repo. At thread-end it stages the change and STOPS before commit/push for Nikhil's go — the human-gate (auto-approve nothing). No more Drive drag-drop.
 
 🎯 THE PIPELINE (masterplan §17 has full detail; CALENDAR COMPRESSED — see LOCKED)
 Phase 0 — Deterministic referees (zero LLM, cron): Time-Auditor ✅ · Goalkeeper ✅ CLOSED (v2 §12, live-confirmed GREEN 10 Jul) · AutoPush (pending) · FSRS + calibration. ◀ we are here
@@ -74,14 +74,14 @@ Brain-rotation (budget law): Sonnet routine / Opus complex. The Manager's daily 
 Buckets: Learning / Building / Meta — Claude (desktop + claude.ai) + gemini.google.com → Learning · YouTube → Meta · Colab/GitHub/docs → Building/Learning · terminal/VS Code/GitHub Desktop → Building. Targets Building ≥60%, Meta ≤25%. Editable in buckets.json. Music-while-coding = non-issue (AW logs focused tab only). NO per-URL Gemini classification (breaks deterministic zero-token design). Gemini = bulk drills + end-of-build visualization only.
 Meds: no hardcoded timings; Nikhil logs each dose in intake_log.json (older days sparse OK). Psychiatrist-managed; HR signals low-confidence; doctor-referral + akathisia safety flags; DATA-interpretation only, never med advice.
 Finance concepts (TDS, invoice, reconciliation) taught from ZERO — Zomato finance ~5+ yrs stale, no assumed recall.
-Push/human-gate: in-chat Claude has NO Drive write + no GitHub write + no cross-thread persistence → drafts only, hands files. Claude CODE (Desktop) CAN place/commit/push on the machine (it did the Goalkeeper v2 commit + push) — but under the human-gate: it stops before commit/push and Nikhil gives the go. Drive updates still = Claude hands file → Nikhil drag-drop replaces. Auto-approve nothing.
+Push/human-gate: in-chat Claude has NO Drive write + no GitHub write + no cross-thread persistence → drafts only, hands files. Claude CODE (Desktop) CAN place/commit/push on the machine (it did the Goalkeeper v2 commit + push) — but under the human-gate: it stops before commit/push and Nikhil gives the go. Canon updates = the same Claude Code commit under that gate — no Drive drag-drop. Auto-approve nothing.
 🧠 ENV FACTS / LESSONS (carry-forward)
 Windows PowerShell 5.1. ESM entry-check MUST use pathToFileURL(process.argv[1]) (else silent exit). cmd/start splits URLs on & → print, don't auto-open. Log files show UTF-8 emoji as gibberish (cosmetic).
 Two systems coexist: accountability-rig (C:\Users\nikhi\accountability-rig, ActivityWatch MCP connected; server at C:\Users\nikhi\activitywatch-mcp-server) + arsenal-ai-fc (canonical). Reuse rig's AW connection; reconcile don't duplicate (§15). Reconciliation = parked.
 Oura: dev-mode endpoints (resilience, cardiovascular_age, vo2_max) may 401 → skip gracefully. Data lags 1–2 days until phone syncs. Must be logged into correct Oura account in browser before OAuth consent. daily_readiness contributors (verified from real API, all 0–100): activity_balance, body_temperature, hrv_balance, previous_day_activity, previous_night, recovery_index, resting_heart_rate, sleep_balance — sleep_balance is itself Oura's personal 2wk-vs-2mo sleep-debt signal (used for the bug-3 fix, no invented baseline needed). Secret leaked in a screenshot → captain chose NOT to regenerate; gitignored (confirmed out of repo). Repo is PUBLIC — secrets/tokens/biometrics/logs gitignored + verified; but source code IS public: oura_coach.mjs names his meds (methylphenidate, aripiprazole, venlafaxine, caffeine) = personal health info visible to anyone. Captain's call, flagged once — not re-raised.
 .gitignore lesson (Windows): a dot-prefixed file can silently save as _gitignore → git then ignores nothing; ensure the exact name .gitignore at repo ROOT. gitignore only stops UNtracked files — already-committed secrets need git rm --cached to leave git (file stays on disk). AND: the v2 .gitignore shipped with readiness.json/intake_log.json COMMENTED OUT — always VERIFY sensitive files actually resolve to ignored (git check-ignore / git status), never trust the file's comments.
 Legacy Goalkeeper scheduled task = ArsenalFC-Goalkeeper (daily 08:30, StartWhenAvailable) — the recalibrated build UPDATES/REPLACES this task, no duplicates.
-Claude CANNOT write to Drive (create + replace both fail, confirmed 09 Jul). Drive updates = Claude hands file → Nikhil drag-drop replaces.
+Canon files are edited + committed directly in the git repo by Claude Code, human-gated (stops before commit/push for Nikhil's go). No more Drive drag-drop — Drive retired from the loop.
 Goalkeeper live-vs-rebuild conflict = CLOSED: v2 §12 recalibrate built + tested + committed; legacy engine preserved as analyzeLegacy inside oura_coach.mjs (layering). v2 code is now on the machine (overwrote v1) → the 08:30 task runs v2; the pending live-run is just the one manual node oura_coach.mjs to confirm the flip.
 📦 END-OF-BUILD TASKS (do ONLY when all agents are live — anti-procrastination gate §18)
 Modify project files + OS instructions wherever the new squad needs wiring.
