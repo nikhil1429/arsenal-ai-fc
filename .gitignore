@@ -1,0 +1,27 @@
+# ============================================================
+# Arsenal AI FC — .gitignore
+# IMPORTANT: this file must be named ".gitignore" (WITH the dot),
+# at the REPO ROOT (C:\Users\nikhi\GitHub\arsenal-ai-fc\.gitignore).
+# On Windows, make sure it didn't save as "_gitignore" or ".gitignore.txt".
+# ============================================================
+
+# --- SECRETS & TOKENS — never commit (repo is public) ---
+# These hold your Oura client_secret + access/refresh tokens.
+oura_secrets.json
+oura_tokens.json
+# (also match them anywhere, just in case they move)
+**/oura_secrets.json
+**/oura_tokens.json
+
+# --- logs ---
+*.log
+
+# --- node ---
+node_modules/
+
+# --- OPTIONAL: personal health / medication data ---
+# This repo is PUBLIC. The two files below contain your Oura biometrics
+# (sleep, HRV, readiness) and your medication-intake timing. If you'd
+# rather those NOT be public, uncomment them (or make the repo private):
+dressing-room/state/readiness.json
+dressing-room/state/intake_log.json
