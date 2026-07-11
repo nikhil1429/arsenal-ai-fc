@@ -56,7 +56,15 @@ M-4 sandbox the §11 worked scenarios (Introduction Day-1, Partnership AMBER, fa
 M-5 scheduled tasks (morning team-sheet 08:45 after GK 08:30 + fast evening post-match) + ntfy push.
 Rest of §17 phases → whole squad, one layer leak-free before the next.
 ▶ NEXT ACTION (single finish line)
-BUILD — SPRINT under STANDING AUTONOMY (captain's grant, 10 Jul): Claude Code creates/edits/runs/selftests/commits/pushes EVERYTHING autonomously after a pre-push secret-check; the captain does ZERO manual labour and only brainstorms design + pastes approved capsules. Goalkeeper ✅ CLOSED. → build order (CONDUCTOR §3): #0 Shared Capture Layer ✅ (capture.mjs) → #1 FSRS ✅ (fsrs.mjs — ts-fsrs FSRS-6, selftest green, committed) → #2 Calibration ✅ (calibration.mjs — ECE + danger-zone, selftest green) → #3 Nemesis ✅ (nemesis.mjs — axis-pattern scout, selftest green) → #4 learning-state ✅ → the Manager as the capstone ◀ NEXT (M-1 wrapper reference + M-2→M-5) (M-2→M-5; M-1 wrapper = web-sandbox reference, re-tested on REAL agent JSONs, not §10 dummy). Each agent built + selftested green (ALL CHECKS PASSED) + logged to CONDUCTOR_LOG.md before the next. Stop-and-ask ONLY on: secret-leak / ambiguous-uncovered-design / selftest-cannot-green. Design is CLOSED — BUILD, not design; quality per agent never cut for speed; explain every file (what + why).
+BUILD, Manager capstone · M-2 IN PROGRESS (elevated/ceiling build of the Gaffer soul).
+dressing-room/manager/system.md = THE_MANAGER v2.1 + THE_GAFFER v2.1 DISTILLED into the
+runtime Opus system-prompt, section-by-section, captain-approved line-by-line. LOCKED +
+committed: #1 IDENTITY · #2 THE INVIOLABLE LAW. Resume from #3 HOW YOU THINK EACH MORNING
+→ #4 RECONCILIATION → #5 FORMATION-READ → #6 PRECEDENCE → #7 SEASON ARC → #8 SOUL/VOICE
+(+governor-lens; meds-PII decision) → #9 VERIFIED CANON+FLAGS → #10 OUTPUT CONTRACT →
+#11 EXEMPLARS. Then strip build-scaffolding + light-tighten #1 → M-3 claude -p + billing
+guards → M-4 sandbox §11 → M-5 task 08:45 + ntfy. (Signal-source #0–#4 + M-1 wrapper =
+all green; season.json created.) Full M-2 design + progress = CONDUCTOR_LOG.
 
 🔒 LOCKED DECISIONS (do NOT re-litigate)
 🆕 LABOUR DIVISION + PASTE-PROTOCOL (locked, thread-agnostic — 10 Jul). All repo code/files are WRITTEN + RUN + COMMITTED by Claude Code, human-gated: Claude Code STOPS before every commit/push and waits for the captain's "go" (auto-approve nothing). Web/in-chat Claude does NOT hand off repo files — it SPECS each build and VALIDATES the output, and owns design · architecture · visualization · prototype-and-prove (any web sandbox prototype is reference-only, never the repo artifact). Workflow per agent: (1) web Claude emits one paste-able "CLAUDE CODE COMMAND" block; (2) captain pastes it into Claude Code; (3) Claude Code reads canon, writes the file matching CLAUDE.md + scripts/timeaudit.mjs conventions, runs its selftest/dryrun, prints output; (4) captain pastes that output back to web Claude to validate; (5) on the captain's "go", Claude Code commits/pushes. Each agent is built + selftested + shown-green before the next is started.
