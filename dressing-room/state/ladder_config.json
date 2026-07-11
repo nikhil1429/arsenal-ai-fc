@@ -1,0 +1,29 @@
+{
+  "_comment": "THE AUTONOMIC LADDER — the Governor's verdict as a systemic parameter (THE ORGANISM §VIII). Every organ that shapes demands reads this mapping. The verdict itself comes ONLY from readiness.json (Goalkeeper v2, untouched, untouchable). Medical rules and Goalkeeper thresholds are constitutionally OUTSIDE the genome — this file maps verdict → demands, it never produces verdicts. Withholdings are always disclosed at post-match (adaptation disclosed, never hidden).",
+  "version": 1,
+  "GREEN": {
+    "drill_modes_allowed": ["recall", "reconstruct", "defend", "novel", "negative_space"],
+    "max_drills": 3,
+    "sheet_scope": "full",
+    "nemesis_headline": "show",
+    "due_cards_may_slide": false,
+    "first_ball": "winnable_green"
+  },
+  "AMBER": {
+    "drill_modes_allowed": ["recall"],
+    "max_drills": 2,
+    "sheet_scope": "floor_plus_one",
+    "nemesis_headline": "show",
+    "due_cards_may_slide": true,
+    "first_ball": "winnable_green"
+  },
+  "RED": {
+    "drill_modes_allowed": ["floor_touch"],
+    "max_drills": 1,
+    "sheet_scope": "floor_only",
+    "nemesis_headline": "withhold_disclose_at_postmatch",
+    "due_cards_may_slide": true,
+    "first_ball": "five_minute_floor_touch"
+  },
+  "missing_readiness": "treat_as_GREEN_per_manager_M1_precedent"
+}

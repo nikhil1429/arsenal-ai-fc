@@ -53,3 +53,43 @@ dressing-room/state/manager_notes.json
 dressing-room/state/season.json
 dressing-room/state/captain_note.md
 dressing-room/state/post_match/
+
+# --- THE ORGANISM (organism-final) — per-run outputs + personal derived data ---
+# capsule mirror (his learning content, verbatim)
+dressing-room/state/capsules/
+dressing-room/state/mirror_manifest.json
+# throw-ins (his raw thoughts) + topic secret + routing state
+dressing-room/state/loose_balls.jsonl
+dressing-room/state/throwin_topic.txt
+dressing-room/state/throwin_state.json
+dressing-room/state/routed_balls.json
+# sensory pass + proprioception
+dressing-room/state/pulse.json
+dressing-room/state/loop_vitals.json
+# the twin (the book on the captain)
+dressing-room/state/twin.json
+dressing-room/state/predictions.jsonl
+# touchline reads
+dressing-room/state/pitch_read.json
+dressing-room/state/pitch_read_history.jsonl
+# set-piece drills + evening scorer ledgers
+dressing-room/state/drills.json
+dressing-room/state/slip.jsonl
+dressing-room/state/trust_tiers.json
+# advance scout + doubt engine
+dressing-room/state/scout.json
+dressing-room/state/doubt_grammar.json
+dressing-room/state/lexicon.json
+dressing-room/state/tape_room.json
+# genome runtime (proposals + personal changelog; forge_profile.json IS committed canon)
+dressing-room/state/mutations.jsonl
+SEASON_CHANGELOG.md
+# post-match sibling files
+dressing-room/state/notebook.json
+# the club wall (renders personal data)
+dressing-room/state/wall_data.json
+dressing-room/club/
+# the brain runtime (usage ledger + generated artifacts)
+dressing-room/state/brain_ledger.jsonl
+dressing-room/state/brain_queue.json
+dressing-room/state/brain_out/
