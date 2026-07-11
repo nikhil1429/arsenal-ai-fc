@@ -23,12 +23,19 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 
 ## Status
 - **Branch:** organism-final (created from main @ fcb007f)
-- **Phase:** 0 — REPO READ (in progress)
+- **Phase:** 1 — DESIGN PASS (in progress)
 
 ## Phase plan
 - [x] P0a Branch + build log seeded
-- [ ] P0b Full repo read (multi-agent map: canon, vision docs, scripts, contracts, graveyard)
+- [x] P0b Full repo read — 7 parallel readers mapped every tracked file; digests at
+      scratchpad map_agent_{0..6}.md (0=trilogy 1=scripts-signal 2=gemini-rig
+      3=canon-ops 4=masterplan-manager 5=forge-learning 6=scripts-body).
+      THE_ORGANISM.md read in full by builder. Environment probed: Node 22,
+      claude CLI present, NO gemini CLI (setup pack installs), 8 live ArsenalFC-*
+      schtasks (GK 08:30, FSRS 08:40, Cal 08:42, Nem 08:43, LS 08:44, CapturePull
+      09:00 hourly, TimeAuditor 12:00/21:00).
 - [ ] P1 Design pass — fresh deepest metacognitive pass; final organ list (BUILT vs [LEAP])
+      → output: ORGANISM_ANATOMY.md (committed). Builder authors it directly.
 - [ ] P2 Build — organs, brain runtime, Manager-orchestrator, visualization, arsenal
 - [ ] P3 Setup pack (`setup/`) — Colab, Gems, NotebookLM, Gemini Pro, Oura/AW/ntfy/Supabase/GitHub
 - [ ] P4 Selftests — ALL old + new, run + shown
