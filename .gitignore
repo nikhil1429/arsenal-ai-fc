@@ -46,3 +46,10 @@ dressing-room/state/weaknesses.json
 
 # --- Learning-state agent output (derived personal study data: fluency map + edges) ---
 dressing-room/state/learning_state.json
+
+# --- Manager (Agent #1) outputs + personal inputs (team sheet / notes / season / captain note / post-match) ---
+dressing-room/state/team_sheet.md
+dressing-room/state/manager_notes.json
+dressing-room/state/season.json
+dressing-room/state/captain_note.md
+dressing-room/state/post_match/
