@@ -1,0 +1,10 @@
+{
+  "_comment": "THE TWIN config (canon, committed). Three unconditioned daily binary markets — the honest statistics of n=1 demand humility. Constitutional clamps live in twin.mjs code, not here: win-only voicing, cold-start gag (30 scored resolutions + beats-base-rate before ANY voice), dead-market pruning, and NO dread-class markets (any market id matching abandon/fail/dread/quit/stall is structurally stripped at load).",
+  "markets": [
+    { "id": "first_focus_by_0930", "desc": "first Learning-bucket focus lands by 09:30" },
+    { "id": "floor_touched", "desc": "the never-zero floor is touched today" },
+    { "id": "session_happened", "desc": "a real study session happens today" }
+  ],
+  "voice_min_resolutions": 30,
+  "dead_market_min": 30
+}
