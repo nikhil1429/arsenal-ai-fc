@@ -97,6 +97,7 @@ function assembleWallData(bus, now = new Date()) {
     kal_line: bus.kal_line || null,
     drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({ kind: d.kind, emoji: d.probe_type_emoji })) : [],
     twin_voice: twin ? twin.voice : null,
+    media: bus.media || null,   // {teamtalk_am,teamtalk_pm,poster,filmkit} — presence flags only
     // THE NOW STRIP (captain's call, high-dopamine): live odometers that only
     // count UP + the struggle verdict in forge-framing. No quota bars, no
     // wall-minutes daily meter (that law stands), hidden entirely on RED.
@@ -252,6 +253,51 @@ function renderNow(d) {
     </div>`);
 }
 
+// MEDIA — the club's channel (media engine): today's team talks as playable
+// audio, the daily poster, the film kit. Renders nothing when nothing exists.
+function renderMedia(d) {
+  const m = d.media || {};
+  if (!m.teamtalk_am && !m.teamtalk_pm && !m.poster && !m.filmkit) return "";
+  const audio = (label, src) => `<div style="margin:6px 0"><div style="font-size:11px;color:${C.dim}">${esc(label)}</div><audio controls preload="none" style="width:100%;height:32px" src="${esc(src)}"></audio></div>`;
+  let inner = "";
+  if (m.teamtalk_am) inner += audio("morning team talk", `media/teamtalk_${d.date}_am.mp3`);
+  if (m.teamtalk_pm) inner += audio("evening team talk", `media/teamtalk_${d.date}_pm.mp3`);
+  const links = [];
+  if (m.poster) links.push(`<a href="poster.svg" style="color:${C.amber}">today's poster</a>`);
+  if (m.filmkit) links.push(`<a href="filmkit_${d.date}.md" style="color:${C.amber}">film kit (NotebookLM source)</a>`);
+  links.push(`<a href="prompts/season_film.md" style="color:${C.gold}">Veo prompt</a>`);
+  inner += `<div style="font-size:12px;margin-top:6px">${links.join(" · ")}</div>`;
+  return panel("Media — the club's channel", inner);
+}
+
+// THE FILM KIT — one-click season film: a NotebookLM-ready source doc in true
+// numbers (his single tap on their side = Generate Video Overview). Veo API
+// stays money-gated; this is the honest ceiling, automated to one click.
+function buildFilmKit(d, notebook) {
+  const L = [];
+  L.push(`# Arsenal AI FC — Season Film Source · ${d.date}`);
+  L.push("");
+  L.push("Source document for a NotebookLM **Video Overview**. Upload this file (or point NotebookLM at the Drive copy), choose Video Overview, generate. That's the whole ritual.");
+  L.push("");
+  L.push(`## The season, in true numbers (as of ${d.date})`);
+  L.push(`- Matches played: ${safe(d.season.matches_played, 0)}`);
+  L.push(`- Doubts retired: ${d.doubts_retired} · rematches still waiting: ${d.tape_queue}`);
+  if (d.season.weekly_consistency_pct !== null) L.push(`- Weekly consistency: ${d.season.weekly_consistency_pct}%`);
+  if (d.calibration) L.push(`- Calibration gap: ${safe(d.calibration.gap)} (${d.calibration.trend || "—"})`);
+  if (d.maidan && Array.isArray(d.maidan.stages)) L.push(`- Maidan stages runnable: ${d.maidan.stages.filter(s => s.status === "runnable").length} of ${d.maidan.stages.length}`);
+  if (d.kal_line) L.push(`- Tomorrow's first move, in his own words: "${d.kal_line}"`);
+  const moments = notebook && Array.isArray(notebook.moments) ? notebook.moments.slice(-10) : [];
+  if (moments.length) {
+    L.push("");
+    L.push("## Real moments from the season notebook");
+    for (const mo of moments) L.push(`- ${mo.date}: ${mo.line}${mo.result ? ` (${mo.result})` : ""}`);
+  }
+  L.push("");
+  L.push("## Tone laws (constitutional — the film obeys the club)");
+  L.push("Quiet, earned, no triumphalism. Honest frame: compounding, never hype. No countdowns, no deadlines. Cracks are data, not verdicts. A lone footballer training under floodlights is the recurring image. End on the crest and the words \"kal phir\".");
+  return L.join("\n") + "\n";
+}
+
 function renderWall(data, insights) {
   const red = data.verdict === "RED";
   const head = `<meta http-equiv="refresh" content="300"><header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
@@ -268,7 +314,7 @@ function renderWall(data, insights) {
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
       renderNow(data) + renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
-      renderDrills(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
+      renderDrills(data) + renderMedia(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
   }
   return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
 <body style="margin:0;background:${C.bg};font-family:'Segoe UI',system-ui,sans-serif;padding-bottom:30px">${head}${body}
@@ -412,6 +458,17 @@ async function selftest() {
   assert("sanitizer rejects event handlers", sanitizeGemini("<svg onload=alert(1)></svg>") === null);
   assert("sanitizer rejects non-artifacts", sanitizeGemini("Here is your dashboard, captain!") === null);
 
+  // MEDIA ENGINE — the club's channel
+  const mediaData = assembleWallData({ ...bus, media: { teamtalk_am: true, teamtalk_pm: false, poster: true, filmkit: true } }, now);
+  const mediaHtml = renderWall(mediaData, null);
+  assert("MEDIA panel: team talk playable + poster + film kit links", mediaHtml.includes("<audio") && mediaHtml.includes("teamtalk_2026-07-12_am.mp3") && mediaHtml.includes("poster.svg") && mediaHtml.includes("filmkit_2026-07-12.md"));
+  assert("MEDIA panel absent when nothing exists (no empty shell)", !renderWall(assembleWallData(bus, now), null).includes("the club's channel"));
+  assert("MEDIA panel hidden on RED (minimal wall law wins)", !renderWall(assembleWallData({ ...bus, readiness: { verdict: "RED" }, media: { teamtalk_am: true } }, now), null).includes("<audio"));
+  const kit = buildFilmKit(mediaData, { moments: [{ date: "2026-07-10", line: "the Tuesday you thought you'd break and didn't", result: "HIT" }] });
+  assert("film kit: NotebookLM source doc in true numbers", kit.includes("Video Overview") && kit.includes("Doubts retired: 24") && kit.includes("Matches played: 12"));
+  assert("film kit folds real notebook moments", kit.includes("the Tuesday you thought"));
+  assert("film kit carries the tone laws, zero hype", kit.includes("kal phir") && !/10x|exponential|on steroids|countdown to/i.test(kit));
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -448,7 +505,27 @@ async function main() {
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === today).length,
   };
+  // MEDIA ENGINE: poster fold (through the sanitizer, always) + film kit + presence flags
+  let posterOk = false;
+  const posterPath = join(STATE_DIR, "brain_out", "poster", today + ".md");
+  if (existsSync(posterPath)) {
+    const cleanPoster = sanitizeGemini(readFileSync(posterPath, "utf8"));
+    if (cleanPoster && /^<svg/i.test(cleanPoster)) { writeAtomic(join(CLUB_DIR, "poster.svg"), cleanPoster); posterOk = true; }
+  }
+  bus.media = {
+    teamtalk_am: existsSync(join(CLUB_DIR, "media", `teamtalk_${today}_am.mp3`)),
+    teamtalk_pm: existsSync(join(CLUB_DIR, "media", `teamtalk_${today}_pm.mp3`)),
+    poster: posterOk || existsSync(join(CLUB_DIR, "poster.svg")),
+    filmkit: true,   // written below, every render
+  };
   const data = assembleWallData(bus, now);
+  // film kit: club copy + Drive copy (one-click NotebookLM lane; G: optional)
+  const kit = buildFilmKit(data, readJson(join(STATE_DIR, "notebook.json")));
+  writeAtomic(join(CLUB_DIR, `filmkit_${today}.md`), kit);
+  try {
+    const gdir = "G:\\My Drive\\arsenal";
+    if (existsSync(gdir)) writeFileSync(join(gdir, `filmkit_${today}.md`), kit);
+  } catch { }
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
   const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
   writeAtomic(WALL_DATA, data);
@@ -475,4 +552,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { assembleWallData, renderWall, validateInsights, allowedNumbers, promptPack, sanitizeGemini };
+export { assembleWallData, renderWall, validateInsights, allowedNumbers, promptPack, sanitizeGemini, renderMedia, buildFilmKit };

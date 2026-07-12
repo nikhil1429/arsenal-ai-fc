@@ -351,7 +351,8 @@ async function runJob(job, cfg, deps) {
     if (!dry && res.source === "llm" && (cfg.ntfy.push_after || []).includes(job.id)) {
       const sheetPath = join(STATE_DIR, "team_sheet.md");
       const head = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n") : "sheet ready";
-      await pushNtfy(cfg, "⚪🔴 Team sheet is up", head + "\n…full sheet on the wall.");
+      const tt = teamtalkLine("am", now);
+      await pushNtfy(cfg, "⚪🔴 Team sheet is up", head + "\n…full sheet on the wall." + (tt ? "\n" + tt : ""));
     }
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
   }
@@ -370,9 +371,34 @@ async function runJob(job, cfg, deps) {
     const v = validateOutput(job, r.text, inputs, cfg);
     if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written` };
     if (!dry) writeAtomic(join(OUT_DIR, job.out || job.id, today + ".md"), r.text);
-    return { usage: r, note: `→ brain_out/${job.out || job.id}/${today}.md` };
+    let note = `→ brain_out/${job.out || job.id}/${today}.md`;
+    // MEDIA ENGINE: speak_to jobs render their validated text to an mp3 in
+    // club/media/ (speak.mjs synthToFile — earClean inside). Offline = honest
+    // skip; the text output stands either way.
+    if (!dry && job.speak_to) {
+      try {
+        const { synthToFile } = await import("./speak.mjs");
+        const target = join(STATE_DIR, "..", "club", "media", job.speak_to.replace(/DATE/g, serveDate(job, now)));
+        const sp = await synthToFile(r.text, target);
+        note += sp.wrote ? ` · 🎙 ${job.speak_to.replace(/DATE/g, serveDate(job, now))}` : ` · mp3 skipped (${sp.error})`;
+      } catch (e) { note += ` · mp3 skipped (${String(e.message).slice(0, 60)})`; }
+    }
+    return { usage: r, note };
   }
   return { usage: r, note: r.limit_hit ? "PLAN LIMIT observed — ceiling recorded, backing off" : `failed: ${r.error}` };
+}
+
+// which date an audio artifact SERVES: overnight-compiled morning talks are
+// for tomorrow (when run in the evening half of the night), else today.
+function serveDate(job, now) {
+  return job.serve === "next_morning" && now.getHours() >= 15 ? localDate(new Date(now.getTime() + 86400000)) : localDate(now);
+}
+
+// "team talk taiyaar" rides INSIDE the two sanctioned utterances (never a
+// third push): the 08:45 sheet gets the am line, the 21:30 bell the pm line.
+function teamtalkLine(slot, now = new Date(), dir = join(STATE_DIR, "..", "club", "media")) {
+  const f = `teamtalk_${localDate(now)}_${slot}.mp3`;
+  return existsSync(join(dir, f)) ? `🎙 team talk taiyaar — club/media/${f}` : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -426,6 +452,22 @@ async function selftest() {
   const cfg = loadConfig();   // committed config is the fixture — it must parse
   assert("committed brain_config.json parses with jobs", cfg.jobs.length >= 10);
   assert("day cartridge job wired (L3: slow brain programs the fast brain)", cfg.jobs.some(j => j.id === "day_cartridge" && j.window === "overnight" && j.validate === "no_new_numbers" && String(j._note).includes("second person")));
+
+  // MEDIA ENGINE — team talks: validated text → mp3 in club/media/
+  const ttam = cfg.jobs.find(j => j.id === "teamtalk_am"), ttpm = cfg.jobs.find(j => j.id === "teamtalk_pm");
+  assert("teamtalk jobs wired with speak_to + no-new-numbers validator", !!ttam && !!ttpm && ttam.speak_to === "teamtalk_DATE_am.mp3" && ttpm.speak_to === "teamtalk_DATE_pm.mp3" && ttam.validate === "no_new_numbers" && ttpm.validate === "no_new_numbers");
+  assert("morning talk compiled overnight SERVES tomorrow", serveDate({ serve: "next_morning" }, new Date(2026, 6, 12, 23, 15)) === "2026-07-13");
+  assert("after-midnight compile serves the same morning", serveDate({ serve: "next_morning" }, new Date(2026, 6, 13, 2, 0)) === "2026-07-13");
+  assert("evening talk serves the same day", serveDate({}, new Date(2026, 6, 12, 20, 45)) === "2026-07-12");
+  {
+    const { mkdtempSync } = await import("node:fs");
+    const osm = await import("node:os");
+    const td = mkdtempSync(join(osm.tmpdir(), "brain-tt-"));
+    assert("no mp3 → no line (the push never lies)", teamtalkLine("am", new Date(2026, 6, 12, 8, 45), td) === null);
+    writeFileSync(join(td, "teamtalk_2026-07-12_am.mp3"), "x");
+    const line = teamtalkLine("am", new Date(2026, 6, 12, 8, 45), td);
+    assert("mp3 present → 'team talk taiyaar' rides the sanctioned push", !!line && line.includes("teamtalk_2026-07-12_am.mp3"));
+  }
 
   // budget math
   const now = (h, m) => new Date(2026, 6, 12, h, m, 0);
@@ -531,7 +573,8 @@ async function main() {
     const kind = (process.argv[3] || "fulltime").toLowerCase();
     const bell = BELLS[kind];
     if (!bell) { console.log(`brain: no bell '${kind}'`); process.exit(1); }
-    const r = await pushNtfy(cfg, bell.title, bell.body);
+    const tt = teamtalkLine("pm", now);   // rides INSIDE the bell — never a third utterance
+    const r = await pushNtfy(cfg, bell.title, bell.body + (tt ? "\n" + tt : ""));
     console.log(`brain: bell '${kind}' ${r.sent ? "rang on the phone" : "silent (" + r.why + ")"}`);
     return;
   }
@@ -561,4 +604,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt };
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine };
