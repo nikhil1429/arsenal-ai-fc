@@ -125,3 +125,40 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
    want it public as an interview artifact.
 5. **The Twelfth Player** — nothing built; decision doc for you and Nidhi at
    setup/12TH_PLAYER_DECISION.md.
+
+## NEXT SESSION — THE DUGOUT CEILING (captain-approved brainstorm, 12 Jul night)
+**P0 — mic bug:** page shows "allow microphone" but no prompt. Check order:
+(1) Windows Settings → Privacy & security → Microphone → ON + "Let desktop
+apps access" ON; (2) browser address bar 🔒 → Site settings → Microphone →
+Allow for localhost:4114; (3) F12 console — capture red errors (AudioWorklet
+blob or getUserMedia rejection); (4) try Edge if Chrome blocks. Fix, then
+verify full round-trip (speak → hear reply → tool call fires).
+**THE LIVE-API-EVERYWHERE PLAN (build order):**
+1. VOICE FULL-TIME + SPOKEN APPROVALS — new tools: run_postmatch(hit,signal,
+   kal) via postmatch.mjs CLI; approve_genome(id) via bootroom.mjs approve
+   ("haan, chalao" BY VOICE — the constitutional gates become speakable);
+   route_throwins. The whole evening ritual conversational.
+2. PROACTIVE SESSION MODE — Live proactivity config: Gaffer stays silent
+   while he works (bias-to-silence), speaks only at stoppages he declares
+   ("done" → hears → serves next drill by voice). KICKOFF/GROUND/FULL-TIME
+   conducted as one stitched audio membrane.
+3. THE ORAL SCRIMMAGE — examiner persona flag: timed 5-probe mock with REAL
+   interruptions mid-answer; hedge-density counted from input transcription
+   (scrimmage = the ear's one legal surface). Closes the modality gap: his
+   interviews are voice; until now his drills were text.
+4. BOLO CAPTURE MODE — capture-only: his spoken Bolo transcribed verbatim →
+   proposed to the capsule bolo field (batch-go). LAW: no scoring, no hedge
+   math on FORGE-Bolo — the ear stays exiled; capture ≠ judgment.
+5. MATCHDAY COMMENTATOR — screen-frame coaching: sample 1 frame/2-3s of his
+   Colab/Gem screen (image mode dodges the 2-min video cap); the Gaffer
+   watches him solve and coaches live (spinning caught in real time,
+   Pehle-Guess whispered, derby called when two concepts blur on screen).
+6. LAN FLAG — bridge binds to home-wifi IP → the Dugout on his PHONE browser:
+   voice throw-ins and rematches while pacing the house.
+**REJECTED AT THE CLAMP WALL (permanent):** prosody/emotion from native-audio
+models NEVER feeds the Governor/ladder/verdicts (mood → "show your doctor",
+never self-interpreted); no always-on ambient mic (12th-player-class decision
+for him and Nidhi).
+**QUOTA CEILING:** audio-only 15-min stitched sessions; frame-mode for vision;
+key-pool across all his free projects; dugout_ledger informs the brain
+scheduler to shift text jobs off Gemini when voice needs the pool.
