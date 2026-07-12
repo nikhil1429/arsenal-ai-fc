@@ -1,0 +1,12 @@
+{
+  "_comment": "THE HEARTBEAT config (canon, committed). One sensory pass, fixed order — the four signal agents + capture pull + a timeaudit pulse, shelled in sequence (each isolated; one failure never aborts the beat). heartbeat.mjs writes pulse.json only; every agent keeps sole ownership of its own file.",
+  "order": [
+    { "name": "capture",        "script": "capture.mjs",        "args": ["pull"] },
+    { "name": "fsrs",           "script": "fsrs.mjs",           "args": [] },
+    { "name": "calibration",    "script": "calibration.mjs",    "args": [] },
+    { "name": "nemesis",        "script": "nemesis.mjs",        "args": [] },
+    { "name": "learning_state", "script": "learning_state.mjs", "args": [] },
+    { "name": "timeaudit",      "script": "timeaudit.mjs",      "args": ["pulse"] }
+  ],
+  "timeout_ms": 120000
+}
