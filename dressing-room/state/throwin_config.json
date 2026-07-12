@@ -1,0 +1,6 @@
+{
+  "_comment": "THE THROW-IN config (canon, committed). The topic name is a SECRET — a long random string that lives ONLY in env ARSENAL_NTFY_TOPIC or the gitignored dressing-room/state/throwin_topic.txt (see setup/NTFY_SETUP.md). It is never committed and never printed. This organ NEVER counts or coaches throw-in usage — it is a reflex, not a duty.",
+  "server": "https://ntfy.sh",
+  "topic_env": "ARSENAL_NTFY_TOPIC",
+  "timeout_ms": 15000
+}
