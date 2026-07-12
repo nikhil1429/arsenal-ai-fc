@@ -1,0 +1,5 @@
+{
+  "_comment": "THE SET-PIECE COACH config (canon, committed). max_drills is hard-capped at 3 in code (three drills, no more — THE_ORGANISM §II). The first ball is winnable by law; the autonomic ladder (ladder_config.json) dampens AMBER/RED days; every withholding is disclosed at post-match.",
+  "max_drills": 3,
+  "floor_touch_minutes": 5
+}
