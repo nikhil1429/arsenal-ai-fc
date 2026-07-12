@@ -315,11 +315,13 @@ ${fingerprint}`;
   return head + body;
 }
 
-function gatherInputs(job) {
+function gatherInputs(job, now = new Date()) {
   const inputs = {};
-  for (const name of (job.inputs || [])) {
+  for (const raw of (job.inputs || [])) {
+    const name = raw.replace(/TODAY/g, localDate(now));   // date-tokened paths (e.g. dugout transcripts)
     const p = join(STATE_DIR, name);
     if (name.endsWith(".jsonl")) inputs[name] = readLines(p).slice(-200);
+    else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = existsSync(p) ? readFileSync(p, "utf8").slice(-20000) : null;
     else inputs[name] = readJson(p);
   }
   return inputs;

@@ -150,3 +150,22 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
 - maidan_poster upgraded to DAILY; render-class jobs use viz's prompt files
   (not the analysis head); FILM_SETUP.md — NotebookLM Video Overviews as the
   season-film engine (Veo = 8s trailer lane; Veo API = money-gated, not built).
+
+## THE DUGOUT — metamorphosis chamber (12 Jul 2026, fifth order) — BUILT, bridge live-verified
+- dugout.mjs: local bridge (localhost:4114) + in-memory page (mic ⇄ Gemini
+  Live free tier ⇄ speakers). Sub-second, interruptible, session-resumption
+  stitching + context compression (one conversation until quota), KEY-POOL
+  rotation (GEMINI_API_KEY_2/_3… in ~/.gemini/.env), minutes ledger, honest
+  bench to talk.mjs when dry. Selftest 11/11; live smoke: config + real
+  tool call served his actual tape room.
+- LIVE TOOLS INTO THE BODY mid-sentence: get_today · get_tape_room ·
+  retire_doubt (via doubtminer, owner-writes) · log_reps (VOICE REPS through
+  capture.mjs's real contract — gut-word-before-answer law enforced in the
+  constitution AND validated in code) · take_note · get_calibration.
+- THE METAMORPHOSIS LOOP: transcripts → brain_out/dugout/ → nightly
+  dugout_digest (opus) mines them into capsule-doubt proposals (cold-reader,
+  his words, batch-'go'), spoken-anchor candidates, genome evidence.
+  Talking is training; conversations become curriculum.
+- Voice hierarchy final: DUGOUT primary · talk.mjs/speak.mjs bench ·
+  Voice Gaffer Gem retired unbuilt. Preview-protocol caveat logged (Google
+  may drift the WS schema; page surfaces raw errors for fast repair).
