@@ -49,20 +49,48 @@
 //        node scripts/dugout.mjs selftest
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import os from "node:os";
-import { buildFingerprint } from "./brain.mjs";
+import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const OUT_DIR   = join(STATE_DIR, "brain_out", "dugout");
 const NOTES     = join(STATE_DIR, "dugout_notes.jsonl");
 const DLEDGER   = join(STATE_DIR, "dugout_ledger.jsonl");
+const STAMPS    = join(STATE_DIR, "dugout_stamps.jsonl");
+const ACK_DIR   = join(__dirname, "..", "dressing-room", "club", "media", "ack");
 const PORT = 4114;                                 // the captain's number
+
+// ACK fillers (JARVIS pattern): cached lines played the instant a tool call
+// lands — perceived latency near-zero. Short, honest, zero hype (law-checked
+// in selftest). Generated once via speak.mjs synthToFile; offline = skipped.
+const ACK_LINES = ["Haan.", "Dekh raha hoon.", "Ek second, records nikal raha hoon.", "Ruko, book kholta hoon.", "Haan, check karta hoon."];
+const BANNED = ["10x", "exponential", "on steroids", "god-tier", "time is short"];
+
+// bridge runtime state (in-memory; the page feeds it via /stamps)
+const runtime = { last_think_ms: null };
+
+function listAcks() {
+  try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort().map((f, i) => "/ack/" + i); } catch { return []; }
+}
+async function ensureAcks(log = console.log) {
+  try {
+    const { synthToFile } = await import("./speak.mjs");
+    let made = 0;
+    for (let i = 0; i < ACK_LINES.length; i++) {
+      const p = join(ACK_DIR, `ack_${i}.mp3`);
+      if (existsSync(p)) continue;
+      const r = await synthToFile(ACK_LINES[i], p);
+      if (r.wrote) made++;
+    }
+    if (made) log(`dugout: ${made} ACK filler(s) synthesized → club/media/ack/`);
+  } catch (e) { log(`dugout: ACK synthesis skipped (${String(e.message).slice(0, 80)})`); }
+}
 
 const DEFAULT_MODEL = "gemini-3.1-flash-live-preview";
 const DEFAULT_VOICE = "Charon";                    // JARVIS's literal voice — continuity for the captain
@@ -160,10 +188,12 @@ function execTool(name, args, deps = {}) {
     if (name === "log_reps") {
       const valid = (args.reps || []).filter(r => ["knew", "shaky", "guessed"].includes(r.confidence));
       if (!valid.length) return { ok: false, error: "no valid reps (gut-word missing)" };
+      const rt = deps.runtime || runtime;
+      const note = "dugout-voice" + (rt.last_think_ms ? ` think:${rt.last_think_ms}ms` : "");
       const batch = valid.map(r => ({
         ts: new Date().toISOString(), surface: "gem", track: "concept",
         concept: r.concept, axis: /^[a-i]$/.test(r.axis || "") ? r.axis : null,
-        question: r.question, confidence: r.confidence, correct: !!r.correct, note: "dugout-voice",
+        question: r.question, confidence: r.confidence, correct: !!r.correct, note,
       }));
       const tmp = join(os.tmpdir(), `dugout-reps-${Date.now()}.json`);
       writeFileSync(tmp, JSON.stringify(batch));
@@ -212,6 +242,7 @@ function buildConfig(keys) {
     system: buildSystemInstruction(),
     tools: [{ functionDeclarations: TOOL_DECLS }],
     vad: { onset_db_over_noise: 12, min_db: -55, hangover_ms: 900, preroll_ms: 500, idle_disconnect_ms: 90000, batch_ms: 100 },
+    acks: listAcks(),
     minutes_today: readLines(DLEDGER).filter(l => String(l.ts || "").slice(0, 10) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
   };
 }
@@ -239,6 +270,10 @@ async function selftest() {
   assert("GUT-WORD LAW — rep without knew/shaky/guessed rejected", bad.ok === false);
   const good = execTool("log_reps", { reps: [{ concept: "embeddings", axis: "c", question: "cosine kyun", confidence: "shaky", correct: true }] }, { sh });
   assert("voice reps route through capture.mjs paste (the real contract)", good.ok === true && calls.some(c => c.script === "capture.mjs" && c.argv[0] === "paste"));
+  execTool("log_reps", { reps: [{ concept: "attention", question: "q", confidence: "knew", correct: true }] }, { sh, runtime: { last_think_ms: 4200 } });
+  const lastPaste = calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop();
+  const pasted = JSON.parse(readFileSync(lastPaste.argv[1], "utf8"));
+  assert("THINK-TIME rides the rep note (true latency, repaired)", pasted[0].note === "dugout-voice think:4200ms");
   assert("unknown tool → error not crash", "error" in execTool("nope", {}, { sh }));
 
   execTool("take_note", { text: "socha tha embeddings deterministic hote" }, { sh, append });
@@ -266,6 +301,10 @@ async function selftest() {
   assert("constitution wires the checkpoint match-record", cfg.system.includes("silently call checkpoint"));
   assert("Charon rides the config (the Gaffer's voice identity)", cfg.voice === "Charon" && typeof cfg.vad.idle_disconnect_ms === "number");
   assert("minutes ledger math safe on empty", typeof cfg.minutes_today === "number");
+  assert("ACK filler list rides the config (empty-safe)", Array.isArray(cfg.acks));
+  assert("ACK lines obey the no-hype law (banned-phrase check)", ACK_LINES.every(l => bannedPhraseCheck(l, BANNED).length === 0 && l.length < 60));
+  assert("think-time stamps wired: page measures both directions", PAGE.includes("captain_think") && PAGE.includes("gaffer_respond") && PAGE.includes("/stamps"));
+  assert("ACK plays on toolCall, never over live audio", PAGE.includes("maybeAck") && PAGE.includes("liveSrcs.length)return"));
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
   assert("wire shape: modalities+speechConfig NESTED in generationConfig", PAGE.includes("generationConfig:{responseModalities:['AUDIO'],speechConfig"));
@@ -308,13 +347,27 @@ const unb64=s=>{const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin
 function nextKey(){keyIdx=(keyIdx+1)%CFG.keys.length;return keyIdx===0?null:CFG.keys[keyIdx]}
 
 // SPEAKERS — native-rate output context; 24k PCM buffers, browser resamples (scar: never lock out-ctx to 24k)
-let playT=0,liveSrcs=[];
+let playT=0,liveSrcs=[],lastPlayEnd=0,awaitThink=false,segEndAt=0,awaitGaffer=false;
 function playPCM(buf){if(!acOut)return;const i16=new Int16Array(buf),f32=new Float32Array(i16.length);
 for(let i=0;i<i16.length;i++)f32[i]=i16[i]/32768;const b=acOut.createBuffer(1,f32.length,24000);b.copyToChannel(f32,0);
 const src=acOut.createBufferSource();src.buffer=b;src.connect(acOut.destination);
+if(awaitGaffer&&segEndAt){stamp('gaffer_respond',Date.now()-segEndAt);awaitGaffer=false}
 playT=Math.max(playT,acOut.currentTime);src.start(playT);playT+=b.duration;
-liveSrcs.push(src);src.onended=()=>{liveSrcs=liveSrcs.filter(s=>s!==src)}}
+liveSrcs.push(src);src.onended=()=>{liveSrcs=liveSrcs.filter(s=>s!==src);
+ if(!liveSrcs.length){lastPlayEnd=Date.now();awaitThink=true}}}
 function stopPlayback(){for(const s of liveSrcs){try{s.stop()}catch(e){}}liveSrcs=[];playT=0}
+
+// THINK-TIME STAMPS — true latency from the wire, batched to the bridge
+let stampBuf=[];
+function stamp(kind,ms){stampBuf.push({kind:kind,ms:ms});if(stampBuf.length>=4)sendStamps()}
+function sendStamps(){if(!stampBuf.length)return;fetch('/stamps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stamps:stampBuf.splice(0)})})}
+setInterval(sendStamps,20000);
+
+// ACK FILLERS — a cached line the instant a tool call lands (perceived latency ≈ 0)
+let lastAckAt=0;
+function maybeAck(){if(!CFG||!CFG.acks||!CFG.acks.length||liveSrcs.length)return;
+ const n=Date.now();if(n-lastAckAt<8000)return;lastAckAt=n;
+ try{new Audio(CFG.acks[(Math.random()*CFG.acks.length)|0]).play()}catch(e){}}
 
 async function toolCall(fc){const r=await fetch('/tool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fc.name,args:fc.args||{}})});
 return {id:fc.id,name:fc.name,response:{result:await r.json()}}}
@@ -338,7 +391,7 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
  if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable)resumeHandle=m.sessionResumptionUpdate.newHandle;
  if(m.goAway){log('· session rotating (goAway) — stitching…');return}
- if(m.toolCall){const rs=await Promise.all(m.toolCall.functionCalls.map(toolCall));
+ if(m.toolCall){maybeAck();const rs=await Promise.all(m.toolCall.functionCalls.map(toolCall));
   if(ws&&ws.readyState===1)ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}));log('⚙ '+m.toolCall.functionCalls.map(f=>f.name).join(', '));return}
  const sc=m.serverContent;if(!sc)return;
  if(sc.interrupted)stopPlayback();
@@ -366,6 +419,7 @@ function vadFrame(i16){let s=0;for(let i=0;i<i16.length;i++){const v=i16[i]/3276
 function onFrame(i16){const voiced=vadFrame(i16),now=Date.now();
  if(voiced){lastVoice=now;
   if(!talking){talking=true;segOpen=true;outQ=preroll.splice(0);
+   if(awaitThink&&lastPlayEnd){stamp('captain_think',now-lastPlayEnd);awaitThink=false}
    if(!ws||ws.readyState>1){st('connecting…');connect()}}}
  if(talking){outQ.push(i16);
   if(now-lastVoice>CFG.vad.hangover_ms){talking=false;flushAudio();endSegment()}}
@@ -376,6 +430,7 @@ function sendAudio(i16){const msg=JSON.stringify({realtimeInput:{audio:{data:b64
  if(ws&&ws.readyState===1&&setupDone)ws.send(msg);else{pending.push(msg);if(pending.length>120)pending.shift()}}
 function flushAudio(){if(!outQ.length)return;sendAudio(concatFrames(outQ.splice(0)))}
 function endSegment(){if(!segOpen)return;segOpen=false;
+ segEndAt=Date.now();awaitGaffer=true;
  const m=JSON.stringify({realtimeInput:{audioStreamEnd:true}});
  if(ws&&ws.readyState===1&&setupDone)ws.send(m);else pending.push(m)}
 function flushPending(){if(!ws||ws.readyState!==1)return;for(const m of pending.splice(0))ws.send(m)}
@@ -387,7 +442,7 @@ let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0)})})}
 setInterval(flush,15000);
 function mins(){if(!t0)return;fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10})});t0=Date.now()}
-setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins()});
+setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins();sendStamps()});
 
 // MIC P0 — every failure SURFACED with the fix, never swallowed
 function micHelp(e){
@@ -441,11 +496,19 @@ async function main() {
   const keys = loadKeys();
   if (!keys.length) { console.log("dugout: no GEMINI_API_KEY found (~/.gemini/.env) — wire setup/GEMINI_CLI_SETUP.md first"); process.exit(1); }
   mkdirSync(OUT_DIR, { recursive: true });
+  ensureAcks();   // fire-and-forget; offline = honest skip line
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
       if (req.method === "GET" && req.url === "/") return send(200, PAGE, "text/html");
       if (req.method === "GET" && req.url === "/config") return send(200, buildConfig(keys));
+      if (req.method === "GET" && /^\/ack\/\d+$/.test(req.url || "")) {
+        const files = (() => { try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort(); } catch { return []; } })();
+        const f = files[Number(req.url.split("/")[2])];
+        if (!f) return send(404, { error: "no such ack" });
+        res.writeHead(200, { "Content-Type": "audio/mpeg" });
+        return res.end(readFileSync(join(ACK_DIR, f)));
+      }
       if (req.method === "POST") {
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
@@ -456,6 +519,18 @@ async function main() {
         }
         if (req.url === "/minutes") {
           appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), minutes: body.minutes || 0 }) + "\n");
+          return send(200, { ok: true });
+        }
+        if (req.url === "/stamps") {
+          // true think-time from the wire (L4 sense — highest data-ROI):
+          // captain_think = Gaffer's audio ends → his voice starts
+          // gaffer_respond = his segment ends → first reply audio
+          for (const s of (body.stamps || [])) {
+            const ms = Number(s.ms);
+            if (!Number.isFinite(ms) || ms <= 0 || ms > 120000) continue;   // walked away ≠ thought
+            appendFileSync(STAMPS, JSON.stringify({ ts: new Date().toISOString(), kind: String(s.kind).slice(0, 24), ms: Math.round(ms) }) + "\n");
+            if (s.kind === "captain_think") runtime.last_think_ms = Math.round(ms);
+          }
           return send(200, { ok: true });
         }
       }

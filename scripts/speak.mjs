@@ -11,9 +11,11 @@
 //        sanitized for the ear (markdown/emoji stripped). Never called on a
 //        schedule except the two sanctioned utterances.
 // MODES: node scripts/speak.mjs "text to say" [--robot] · selftest
+//        node scripts/speak.mjs "text" --to-file <path.mp3>   (no playback —
+//        the MEDIA ENGINE lane: team talks, ACK fillers)
 // ============================================================================
 
-import { writeFileSync, existsSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, existsSync, unlinkSync, mkdirSync, rmSync, copyFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -56,6 +58,25 @@ function sayRobot(text) {
   execFileSync("powershell", ["-NoProfile", "-Command", ps], { windowsHide: true, timeout: 120000 });
 }
 
+// public: synthesize to an mp3 file (no playback) — the MEDIA ENGINE's lane
+// (team talks, ACK fillers). Neural only; returns {wrote:false} offline.
+async function synthToFile(text, outPath) {
+  const clean = earClean(text);
+  if (!clean) return { wrote: false, error: "empty text" };
+  try {
+    const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const tmp = join(os.tmpdir(), `arsenal-say-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+    mkdirSync(tmp, { recursive: true });
+    const { audioFilePath } = await tts.toFile(tmp, clean);
+    mkdirSync(dirname(outPath), { recursive: true });
+    copyFileSync(audioFilePath, outPath);
+    try { rmSync(tmp, { recursive: true, force: true }); } catch { }
+    return { wrote: true, path: outPath };
+  } catch (e) { return { wrote: false, error: String(e.message).slice(0, 120) }; }
+}
+
 // public: speak text; neural first, robot fallback; never throws.
 async function say(text, { forceRobot = false } = {}) {
   const clean = earClean(text);
@@ -79,6 +100,8 @@ async function selftest() {
   assert("earClean caps length for the ear", earClean("a ".repeat(2000)).length <= 1200);
   assert("empty text → silent, no crash", (await say("", {})).spoke === false);
   assert("neural voice configured (coach register)", VOICE.includes("Neural"));
+  assert("synthToFile lane exists (media engine's mouth)", typeof synthToFile === "function");
+  assert("synthToFile refuses empty text without touching disk", (await synthToFile("  ", "X:/nope.mp3")).wrote === false);
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -87,11 +110,19 @@ async function selftest() {
 async function main() {
   const arg = process.argv[2];
   if ((arg || "").toLowerCase() === "selftest") { process.exit((await selftest()) ? 0 : 1); }
-  if (!arg) { console.log('usage: node scripts/speak.mjs "text" [--robot] | selftest'); process.exit(1); }
+  if (!arg) { console.log('usage: node scripts/speak.mjs "text" [--robot] [--to-file <path>] | selftest'); process.exit(1); }
+  const tf = process.argv.indexOf("--to-file");
+  if (tf >= 0) {
+    const out = process.argv[tf + 1];
+    if (!out) { console.log("speak: --to-file needs a path"); process.exit(1); }
+    const r = await synthToFile(arg, out);
+    console.log(r.wrote ? `speak: wrote ${r.path}` : `speak: could not write (${r.error})`);
+    process.exit(r.wrote ? 0 : 1);
+  }
   const r = await say(arg, { forceRobot: process.argv.includes("--robot") });
   console.log(`speak: ${r.spoke ? "spoke (" + r.engine + ")" : "silent"}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { say, earClean };
+export { say, earClean, synthToFile };
