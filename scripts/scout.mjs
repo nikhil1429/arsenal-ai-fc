@@ -124,8 +124,29 @@ function edgeSplit(ls, registry, dossier, cfg) {
   return { learn, ratify };
 }
 
-function buildScout(staged, edges, now) {
-  const any = staged.length || edges.learn.length || edges.ratify.length;
+// WAR-ROOM (compressed-season protocol): the captain logs interview_dates in
+// season.json; inside the taper window the whole body shifts — short sharp
+// mocks, DEFEND/NOVEL polish, no first-exposure, sleep-first. CONSTITUTIONAL:
+// the flag carries NO date and NO days-remaining — the body prepares; it never
+// counts down at him.
+function warRoomRead(season, cfg, now) {
+  const dates = season && Array.isArray(season.interview_dates) ? season.interview_dates : [];
+  const taperDays = (cfg.war_room && cfg.war_room.taper_days) || 10;
+  for (const d of dates) {
+    const t = new Date(String(d).slice(0, 10));
+    if (Number.isNaN(t.getTime())) continue;
+    const ahead = (t - now) / 86400000;
+    if (ahead >= 0 && ahead <= taperDays) return { active: true, mode: "taper" };
+  }
+  return { active: false, mode: null };
+}
+
+// APPLY WINDOW: canon — apply in parallel the moment M1 is demo-able. A door
+// that opens, never a deadline.
+const applyWindow = (staged) => ({ open: staged.some(s => s.kind === "finops_milestone") });
+
+function buildScout(staged, edges, now, war_room = { active: false, mode: null }) {
+  const any = staged.length || edges.learn.length || edges.ratify.length || war_room.active;
   return {
     date: localDate(now),
     status: any ? "ok" : "awaiting_data",
@@ -133,6 +154,8 @@ function buildScout(staged, edges, now) {
     generated_at: now.toISOString(),
     staged,
     edges,
+    war_room,
+    apply_window: applyWindow(staged),
     note: edges.learn.length + edges.ratify.length
       ? "edge split is a proposal — your word decides what enters the queue and what becomes a declared boundary"
       : null,
@@ -179,6 +202,16 @@ async function selftest() {
   const scout = buildScout(staged, edges, now);
   assert("split marked as a proposal (captain decides)", /proposal/.test(scout.note));
 
+  // WAR-ROOM — compressed-season protocol
+  const wrCfg = { ...cfg, war_room: { taper_days: 10 } };
+  const wrOn = warRoomRead({ interview_dates: ["2026-07-18"] }, wrCfg, new Date(2026, 6, 12));
+  assert("war-room activates inside the taper window", wrOn.active === true && wrOn.mode === "taper");
+  assert("war-room silent outside the window", warRoomRead({ interview_dates: ["2026-09-20"] }, wrCfg, new Date(2026, 6, 12)).active === false);
+  assert("war-room safe on garbage dates / no season", warRoomRead({ interview_dates: ["soon"] }, wrCfg, now).active === false && warRoomRead(null, wrCfg, now).active === false);
+  const wrScout = buildScout(staged, edges, now, wrOn);
+  assert("NO-COUNTDOWN LAW — war_room carries no date/days field", !JSON.stringify(wrScout.war_room).match(/\d{4}-\d{2}-\d{2}|days|until|left/i));
+  assert("apply window opens with the finops door", wrScout.apply_window.open === true);
+
   // NO-DATES LAW — structural: no forbidden field names, no date strings
   // outside the envelope.
   const json = JSON.stringify(scout);
@@ -205,11 +238,12 @@ async function main() {
   const registry = readJson(join(STATE_DIR, "concepts.json"));
   const dossier = readJson(join(STATE_DIR, "dossier_weights.json"));
   const season = readJson(join(STATE_DIR, "season.json"));
-  const out = buildScout(stageTriggers(ls, cfg, dossier, season), edgeSplit(ls, registry, dossier, cfg), now);
+  const staged = stageTriggers(ls, cfg, dossier, season);
+  const out = buildScout(staged, edgeSplit(ls, registry, dossier, cfg), now, warRoomRead(season, cfg, now));
   writeAtomic(OUT, out);
-  console.log(`scout: ${out.staged.length} staged · learn=${out.edges.learn.length} ratify=${out.edges.ratify.length} → ${OUT}`);
+  console.log(`scout: ${out.staged.length} staged · learn=${out.edges.learn.length} ratify=${out.edges.ratify.length}${out.war_room.active ? " · WAR-ROOM taper" : ""} → ${OUT}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { stageTriggers, edgeSplit, buildScout, loadConfig };
+export { stageTriggers, edgeSplit, buildScout, warRoomRead, loadConfig };

@@ -199,6 +199,32 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
 
   let pool = candidates(world, dossier);
 
+  // DOSSIER-WEIGHTED SELECTION (compressed season): a drill whose concepts sit
+  // on heavier interview rounds outranks equal candidates. Weights from
+  // dossier_weights.json via concepts.json buckets — measured ground, not vibes.
+  if (dossier && dossier.rounds && world.registry) {
+    const roundW = Object.fromEntries(dossier.rounds.map(r => [r.id, r.weight]));
+    const weightOf = (concept) => {
+      const c = world.registry.concepts && world.registry.concepts[concept];
+      const buckets = c && c.bucket ? [c.bucket] : (world.registry.skills && world.registry.skills[concept] ? ["skills"] : []);
+      return buckets.flatMap(b => (dossier.bucket_round_map && dossier.bucket_round_map[b]) || [])
+        .reduce((a, r) => a + (roundW[r] || 0), 0);
+    };
+    pool = pool.map((d, i) => ({ d, i, w: Math.max(0, ...(d.concepts || []).map(weightOf)) }))
+      .sort((a, b) => b.w - a.w || a.i - b.i)      // weight first, stable on ties
+      .map(x => x.d);
+  }
+
+  // WAR-ROOM (scout.json flag, captain-logged interview inside taper window):
+  // short sharp match-conditions only — DEFEND/NOVEL/NEGATIVE-SPACE polish and
+  // rematches; nothing first-exposure. Voiced as taper, never as countdown.
+  const warRoom = !!(world.scout && world.scout.war_room && world.scout.war_room.active) && verdict === "GREEN";
+  if (warRoom) {
+    const dropped = pool.filter(d => !["defend", "novel", "negative_space"].includes(d.mode) && d.kind !== "tape_room");
+    if (dropped.length) withheld.push("war-room taper: first-exposure and long grinds benched — short sharp mocks; sleep is training now");
+    pool = pool.filter(d => ["defend", "novel", "negative_space"].includes(d.mode) || d.kind === "tape_room");
+  }
+
   // AMBER: recall-weight only (low executive load), nemesis headline still shown
   // per ladder_config, but heavy modes drop; cap per tier.
   if (verdict === "AMBER") {
@@ -283,6 +309,16 @@ async function selftest() {
   const empty = compile({}, cfg, ladderCfg, dossier, now);
   assert("bloodless world → awaiting_data, zero drills, no crash", empty.status === "awaiting_data" && empty.drills.length === 0);
 
+  // WAR-ROOM taper + DOSSIER weighting (compressed season)
+  const registry = { concepts: { context: { bucket: "2-rag" }, chunking: { bucket: "2-rag" } }, skills: {} };
+  const wrWorld = { ...world, registry, scout: { war_room: { active: true, mode: "taper" } } };
+  const wr = compile(wrWorld, cfg, ladderCfg, dossier, now);
+  assert("war-room: only match-condition drills survive (defend/novel/⚫/rematch)", wr.drills.slice(1).every(d => ["defend", "novel", "negative_space"].includes(d.mode) || d.kind === "tape_room"));
+  assert("war-room taper disclosed, voiced as taper never countdown", wr.withheld.some(w => w.includes("sleep is training")) && !JSON.stringify(wr).match(/days (left|remaining)|countdown/i));
+  assert("war-room defers to the ladder (AMBER body still wins)", compile({ ...wrWorld, readiness: { verdict: "AMBER" } }, cfg, ladderCfg, dossier, now).drills.slice(1).every(d => d.mode === "recall" || d.kind === "opener"));
+  const weighted = compile({ ...world, registry }, cfg, ladderCfg, dossier, now);
+  assert("dossier weighting runs without breaking the winnable-first law", weighted.drills[0].winnable === true);
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -305,6 +341,8 @@ async function main() {
     weaknesses: readJson(join(STATE_DIR, "weaknesses.json")),
     pitch_read: readJson(join(STATE_DIR, "pitch_read.json")),
     cards: readJson(join(STATE_DIR, "cards.json")),
+    scout: readJson(join(STATE_DIR, "scout.json")),
+    registry: readJson(join(STATE_DIR, "concepts.json")),
   };
   const out = compile(world, cfg, ladderCfg, dossier, new Date());
   writeAtomic(OUT, out);

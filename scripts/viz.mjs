@@ -251,10 +251,12 @@ function renderWall(data, insights) {
 // ---------------------------------------------------------------------------
 const PROMPT_LAWS = `LAWS (constitutional, travel with every render): every number must come from the JSON below — invent nothing; no hype words (10x/exponential/on steroids); no streak counts (weekly consistency only); no raw biometrics (verdict color only); no dates-as-deadlines; cold steel warm core palette — deep charcoal #0c0e13 base, warm amber #e8915a accents, off-white #e9e7e2 text, muted gold #c9a06a secondary; football register welcome (the Maidan is a pitch, confusions are derbies, healed weaknesses are trophies); ONE glance = ONE story; output ONLY the artifact, no commentary.`;
 
-function promptPack(data) {
+function promptPack(data, renderNotes = null) {
   const json = JSON.stringify(data, null, 1);
+  const notes = renderNotes && renderNotes.trim()
+    ? `\n\nRENDER NOTES from the design coach (last night's critique — apply them):\n${renderNotes.trim().slice(0, 1500)}\n` : "";
   return {
-    "wall_painter.md": `# Wall-Painter — tonight's render (auto-written by the organism)\n\nCreate ONE dense, beautiful, dark single-file HTML dashboard (inline SVG, no external anything) from this state. Sections: the Maidan as a real pitch diagram (stages = zones, fluency colors, the weak connection drawn as a frayed pass) · season strip (matches, doubts retired, weekly consistency) · calibration curve vs targets · derby table · tomorrow's set pieces · body verdict band · brain meter ("got sharper while you slept").\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
+    "wall_painter.md": `# Wall-Painter — tonight's render (auto-written by the organism)\n\nCreate ONE dense, beautiful, dark single-file HTML dashboard (inline SVG, no external anything) from this state. Sections: the Maidan as a real pitch diagram (stages = zones, fluency colors, the weak connection drawn as a frayed pass) · season strip (matches, doubts retired, weekly consistency) · calibration curve vs targets · derby table · tomorrow's set pieces · body verdict band · brain meter ("got sharper while you slept").${notes}\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
     "match_poster.md": `# Match Poster — this week (auto-written by the organism)\n\nCreate ONE portrait SVG poster (print-worthy, 3:4) of this week as a football match: headline = the biggest true number in the data (doubts retired, matches played, or a derby settled); sub-line = the weekly consistency; one visual motif from the Maidan. Understated, premium, cold-steel-warm-core.\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
     "season_film.md": `# Season Film — Veo prompt (auto-written; paste into the Gemini app's video tool)\n\nWrite me a 30-second cinematic video-generation prompt: a lone footballer training under floodlights at dawn, ONE scene per true milestone in the JSON (matches played, doubts retired, stages runnable) — rendered as scoreboard glimpses and pitch markings, never text-heavy. Tone: quiet, earned, no triumphalism. End on the crest ⚪🔴 and the words "kal phir".\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
   };
@@ -330,6 +332,9 @@ async function selftest() {
   // GEMINI LANE
   const pack = promptPack(data);
   assert("prompt pack: three prompts auto-written", Object.keys(pack).length === 3 && pack["wall_painter.md"].includes("frayed pass"));
+  const packNoted = promptPack(data, "1. The derby table drowned the Maidan — shrink it.\n2. More whitespace at the top.");
+  assert("CLAUDE↔GEMINI LOOP — render notes feed the next night's prompt", packNoted["wall_painter.md"].includes("RENDER NOTES") && packNoted["wall_painter.md"].includes("derby table drowned"));
+  assert("no notes → clean prompt (no empty section)", !pack["wall_painter.md"].includes("RENDER NOTES"));
   assert("prompt pack embeds the real numbers", pack["match_poster.md"].includes('"doubts_retired": 24'));
   assert("prompt pack carries the laws", Object.values(pack).every(p => p.includes("invent nothing") && p.includes("#0c0e13")));
   assert("sanitizer accepts clean inline SVG", sanitizeGemini("<svg viewBox='0 0 10 10'><rect/></svg>") !== null);
@@ -377,8 +382,15 @@ async function main() {
   const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
   writeAtomic(WALL_DATA, data);
   writeAtomic(WALL_HTML, renderWall(data, insights));
-  // the Gemini lane: write tonight's ready-made prompts + fold in any render
-  const pack = promptPack(data);
+  // the Gemini lane: write tonight's ready-made prompts (with last night's
+  // design-coach critique folded in — the Claude↔Gemini loop) + fold in renders
+  let renderNotes = null;
+  for (let i = 0; i <= 2; i++) {
+    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const p = join(STATE_DIR, "brain_out", "wall_review", d + ".md");
+    if (existsSync(p)) { renderNotes = readFileSync(p, "utf8"); break; }
+  }
+  const pack = promptPack(data, renderNotes);
   for (const [name, text] of Object.entries(pack)) writeAtomic(join(CLUB_DIR, "prompts", name), text);
   let geminiNote = "";
   const gPath = join(STATE_DIR, "brain_out", "gemini_wall", today + ".md");

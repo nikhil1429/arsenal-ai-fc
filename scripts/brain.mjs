@@ -268,9 +268,38 @@ function sliceSheet(text) {
 // ---------------------------------------------------------------------------
 const clip = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stringify(s, null, 1); return t.length > n ? t.slice(0, n) + "\n…[clipped]" : t; };
 
-function buildAnalysisPrompt(job, inputs) {
+// THE COGNITIVE FINGERPRINT — every LLM call this brain makes is conditioned
+// on the captain's MEASURED mind, not an assumed one: his own metaphor
+// anchors (Ghar-ki-Boli), his wrong-prior shapes (the Decoy Map, machine-side
+// — used to design, never shown pre-guess), his live calibration bias, his
+// fluency map. Assembled deterministically; empty parts simply absent.
+function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
+  const parts = [];
+  if (lexicon && Array.isArray(lexicon.anchors) && lexicon.anchors.length)
+    parts.push(`HIS ANCHOR METAPHORS (reach for these FIRST; verbatim from his own Bolo): ${lexicon.anchors.slice(0, 8).map(a => `"${a.phrase}"`).join(" · ")}`);
+  if (grammar && grammar.shape_counts) {
+    const top = Object.entries(grammar.shape_counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 2);
+    if (top.length) parts.push(`HIS WRONG-PRIOR SHAPES (machine-side — design probes around these, NEVER name them to him): ${top.map(([s, n]) => `${s}(${n})`).join(", ")}`);
+  }
+  if (calibration && typeof calibration.overconfidence_rate === "number")
+    parts.push(`CALIBRATION: overconfidence P(wrong|knew)=${calibration.overconfidence_rate}; trend ${calibration.trend || "—"}.`);
+  if (ls && ls.weak_connection) parts.push(`THE FRAYING PASS: ${ls.weak_connection}.`);
+  parts.push("FIXED TRAITS: ADHD-PI, ~4 working-memory slots, visual-first, Hinglish welds, walls of text = shutdown, finance-ops instincts (Zomato/Blinkit) — teach through business impact.");
+  return parts.length ? "THE CAPTAIN'S COGNITIVE FINGERPRINT (measured, not assumed):\n" + parts.map(p => "  · " + p).join("\n") : "";
+}
+function gatherFingerprint() {
+  return buildFingerprint({
+    lexicon: readJson(join(STATE_DIR, "lexicon.json")),
+    grammar: readJson(join(STATE_DIR, "doubt_grammar.json")),
+    calibration: readJson(join(STATE_DIR, "calibration.json")),
+    ls: readJson(join(STATE_DIR, "learning_state.json")),
+  });
+}
+
+function buildAnalysisPrompt(job, inputs, fingerprint = gatherFingerprint()) {
   const head = `You are an organ of ARSENAL AI FC — the captain's exocortex. Job: ${job.id}. ${job._note || ""}
-LAWS: honest frame only (compounding, never "10x/exponential"); no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.`;
+LAWS: honest frame only (compounding, never "10x/exponential"); no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.
+${fingerprint}`;
   const body = Object.entries(inputs).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
   return head + body;
 }
@@ -423,6 +452,19 @@ async function selftest() {
   const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
+  // cognitive fingerprint — 2050-grade personalization, measured not assumed
+  const fp = buildFingerprint({
+    lexicon: { anchors: [{ phrase: "warehouse wala naksha" }] },
+    grammar: { shape_counts: { finance_analogy_overreach: 4, determinism_assumption: 1 } },
+    calibration: { overconfidence_rate: 0.21, trend: "narrowing" },
+    ls: { weak_connection: "tokenization → embeddings" },
+  });
+  assert("fingerprint carries his anchors verbatim", fp.includes('"warehouse wala naksha"'));
+  assert("fingerprint carries wrong-prior shapes as machine-side design input", fp.includes("finance_analogy_overreach") && fp.includes("NEVER name them"));
+  assert("fingerprint carries measured calibration + fraying pass", fp.includes("0.21") && fp.includes("tokenization → embeddings"));
+  assert("fingerprint enters every analysis prompt", buildAnalysisPrompt({ id: "x" }, {}, fp).includes("COGNITIVE FINGERPRINT"));
+  assert("empty world → fixed-traits fingerprint only, no crash", buildFingerprint({}).includes("ADHD-PI"));
+
   // ntfy mouth — secret topic never in committed config; two utterances only
   const cfgNtfyOn = { ...cfg, ntfy: { enabled: true, topic: "", push_after: ["formation_read"] } };
   assert("ntfy topic resolves from env fallback (config stays secret-free)", resolveNtfyTopic({ ntfy: { topic: "" } }, { ARSENAL_NTFY_TOPIC: "sekrit" }) === "sekrit");
@@ -494,4 +536,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy };
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt };
