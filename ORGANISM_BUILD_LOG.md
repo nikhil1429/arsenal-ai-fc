@@ -23,7 +23,8 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 
 ## Status
 - **Branch:** organism-final (created from main @ fcb007f)
-- **Phase:** 1 — DESIGN PASS (in progress)
+- **Phase:** COMPLETE — full body + brain built, 22/22 selftest suites green
+  (8 original + 14 new), setup pack + runbook + ledger + revert doc delivered.
 
 ## Phase plan
 - [x] P0a Branch + build log seeded
@@ -81,8 +82,27 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
   all gitignored — clean rule, zero leak risk).
 - Untracked `arsenal_ai_fc_squad.png` left untouched (captain's file, not mine).
 
-## Money-gate list (needs captain + Nidhi)
-- (none yet)
+## Money-gate list (needs captain + Nidhi — NOT done, would cost new money)
+1. **ntfy Pro (~$5/mo)** — true access-control (reserved topics) for the
+   throw-in channel. Built instead: free long-random secret topic
+   (security-by-obscurity, honest note in setup/NTFY_SETUP.md).
+2. **Nothing else.** Claude Max 5x + Gemini AI Pro cover everything built;
+   Gemini CLI, ntfy free tier, Supabase free tier, ActivityWatch, schtasks
+   are all free-at-the-margin.
 
-## Flags for captain
-- (none yet)
+## Flags for captain (no money, your call)
+1. **system.md sections #6–#11 deliberately NOT drafted** — the repo's own
+   anti-corruption law forbids writing soul sections at the tail of a heavy
+   thread. The brain's 08:45 formation_read runs on the 5 LOCKED sections
+   (the operative core) with the wrapper's validator + fallback guaranteeing
+   the sheet. Resume M-2 at #6 in a fresh session — the one soul task left.
+2. **Oura client secret** (pre-existing flag) — leaked in a screenshot once;
+   regeneration is free, 2 minutes (setup/SURFACES.md).
+3. **timeaudit.mjs IST date bug** (pre-existing) — stamps yesterday's date via
+   toISOString; heartbeat's bridge works around it without touching the green
+   script. One-line fix available whenever you want it.
+4. **SEASON_CHANGELOG.md is gitignored** (privacy-first default) — it will
+   contain your study-performance evidence lines; flip to committed if you
+   want it public as an interview artifact.
+5. **The Twelfth Player** — nothing built; decision doc for you and Nidhi at
+   setup/12TH_PLAYER_DECISION.md.
