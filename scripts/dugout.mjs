@@ -66,6 +66,7 @@ const OUT_DIR   = join(STATE_DIR, "brain_out", "dugout");
 const NOTES     = join(STATE_DIR, "dugout_notes.jsonl");
 const DLEDGER   = join(STATE_DIR, "dugout_ledger.jsonl");
 const STAMPS    = join(STATE_DIR, "dugout_stamps.jsonl");
+const REMINDERS = join(STATE_DIR, "dugout_reminders.jsonl");
 const ACK_DIR   = join(__dirname, "..", "dressing-room", "club", "media", "ack");
 const PORT = 4114;                                 // the captain's number
 
@@ -77,6 +78,40 @@ const BANNED = ["10x", "exponential", "on steroids", "god-tier", "time is short"
 
 // bridge runtime state (in-memory; the page feeds it via /stamps)
 const runtime = { last_think_ms: null };
+
+// ---------------------------------------------------------------------------
+// HIS-VOICE REMINDERS (U3a) — GATE-EXEMPT by law: his own spoken words echoed
+// back at the time he named is not a ping; it is his voice, delayed. Verbatim
+// only, once, then done. Exempt from the shadow-gate AND the RED mute (both
+// gates govern the ORGANISM's ideas, not his own).
+// ---------------------------------------------------------------------------
+function computeDueAt(args, now = new Date()) {
+  if (Number.isFinite(Number(args.in_minutes)) && Number(args.in_minutes) > 0)
+    return new Date(now.getTime() + Number(args.in_minutes) * 60000);
+  const m = String(args.at || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const d = new Date(now); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  if (d <= now) d.setDate(d.getDate() + 1);          // past time → next occurrence
+  return d;
+}
+function dueReminders(lines, now = new Date()) {
+  return lines.filter(r => !r.fired && r.due_at && new Date(r.due_at) <= now);
+}
+async function fireReminders(deps = {}) {
+  const read = deps.read || (() => readLines(REMINDERS));
+  const write = deps.write || ((ls) => writeFileSync(REMINDERS, ls.map(l => JSON.stringify(l)).join("\n") + (ls.length ? "\n" : "")));
+  const now = deps.now || new Date();
+  const lines = read();
+  const due = dueReminders(lines, now);
+  if (!due.length) return 0;
+  for (const r of due) {
+    const speakFn = deps.speak || (async (t) => { try { const { say } = await import("./speak.mjs"); await say(t); } catch { } });
+    await speakFn(`Yaad dilana tha — tumhare apne words: ${r.text}`);
+    r.fired = true; r.fired_at = now.toISOString();
+  }
+  write(lines);
+  return due.length;
+}
 
 function listAcks() {
   try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort().map((f, i) => "/ack/" + i); } catch { return []; }
@@ -206,6 +241,8 @@ TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doub
 
 RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first, honest verdicts, log_reps at the end. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
 
+HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT words (never your paraphrase) and the time he named. At fire time his own words come back through you — once, warm, done. Never add advice to a reminder.
+
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
 
 THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are watching his PAPER (whiteboard mode) or his working SCREEN (commentator mode). Coach live and SHORT — spinning caught early ("same crack, different door"), Pehle-Guess whispered BEFORE he reads an answer on screen, a derby called the moment two concepts blur in his work. Frames are context, not a slideshow: speak only when it changes his next 30 seconds; his silence while sketching is work, not an invitation.
@@ -224,6 +261,7 @@ const TOOL_DECLS = [
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "checkpoint", description: "Match record: one-line summary of what you just said. Call silently after each substantive reply; never mention it.", parameters: { type: "OBJECT", properties: { summary: { type: "STRING" } }, required: ["summary"] } },
   { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
@@ -323,6 +361,14 @@ function execTool(name, args, deps = {}) {
       const ids = Array.isArray(args.ids) && args.ids.length ? args.ids.map(String) : null;
       const said = sh("postmatch.mjs", ids ? ["route", ...ids] : ["route", "all"]);
       return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
+    if (name === "set_reminder") {
+      const text = String(args.text || "").trim();
+      if (!text) return { ok: false, error: "no words to echo — capture his phrasing verbatim" };
+      const due = computeDueAt(args, now);
+      if (!due) return { ok: false, error: "no time — need at:'HH:MM' or in_minutes" };
+      append(REMINDERS, JSON.stringify({ ts: new Date().toISOString(), due_at: due.toISOString(), text, fired: false }) + "\n");
+      return { ok: true, due_at: due.toISOString(), echo: "his words, verbatim, once" };
     }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
@@ -450,9 +496,25 @@ async function selftest() {
   const gt = execTool("get_today", {}, { sh });
   assert("get_today drills carry modality (voice routes to the Dugout)", (gt.drills || []).every(d => ["voice", "screen"].includes(d.modality)));
 
+  // HIS-VOICE REMINDERS (U3a) — gate-exempt, verbatim, once
+  const nowFix = new Date(2026, 6, 12, 14, 0, 0);
+  const dueAt = computeDueAt({ at: "15:30" }, nowFix);
+  assert("reminder at HH:MM lands today when still ahead", dueAt.getHours() === 15 && dueAt.getDate() === 12);
+  assert("past HH:MM rolls to next occurrence (never fires stale)", computeDueAt({ at: "09:00" }, nowFix).getDate() === 13);
+  assert("in_minutes lane works", computeDueAt({ in_minutes: 20 }, nowFix).getTime() === nowFix.getTime() + 20 * 60000);
+  const remSet = execTool("set_reminder", { text: "paani ke saath dawai", at: "15:30" }, { sh, append, now: nowFix });
+  assert("set_reminder stores his words VERBATIM (own file)", remSet.ok === true && appends.some(a => a.path === REMINDERS && a.text.includes("paani ke saath dawai") && a.text.includes('"fired":false')));
+  assert("no words → no reminder (verbatim law)", execTool("set_reminder", { text: " ", at: "15:30" }, { sh, append }).ok === false);
+  const remLines = [{ due_at: new Date(nowFix.getTime() - 60000).toISOString(), text: "call the bank", fired: false }, { due_at: new Date(nowFix.getTime() + 9e6).toISOString(), text: "later", fired: false }];
+  const spoken = []; let written = null;
+  await fireReminders({ read: () => remLines, write: (ls) => { written = ls; }, speak: async (t) => spoken.push(t), now: nowFix });
+  assert("due reminder fires ONCE, in his words, marked fired", spoken.length === 1 && spoken[0].includes("tumhare apne words: call the bank") && written[0].fired === true);
+  assert("future reminder stays queued (not fired)", written[1].fired === false);
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 12);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 13);
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
+  assert("his-voice reminder law travels (verbatim, once, no advice)", cfg.system.includes("HIS-VOICE REMINDERS") && cfg.system.includes("Never add advice"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
   assert("constitution travels: no-hype + gut-word + RED law in-instruction", cfg.system.includes("never say 10x") && cfg.system.includes("BEFORE he answers") && cfg.system.includes("RED"));
   assert("constitution wires the checkpoint match-record", cfg.system.includes("silently call checkpoint"));
@@ -708,6 +770,7 @@ async function main() {
   if (!keys.length) { console.log("dugout: no GEMINI_API_KEY found (~/.gemini/.env) — wire setup/GEMINI_CLI_SETUP.md first"); process.exit(1); }
   mkdirSync(OUT_DIR, { recursive: true });
   ensureAcks();   // fire-and-forget; offline = honest skip line
+  setInterval(() => fireReminders().then(n => { if (n) console.log(`dugout: ${n} his-voice reminder(s) echoed`); }).catch(() => { }), 30000);
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
