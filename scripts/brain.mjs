@@ -150,6 +150,9 @@ function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
     // aside (the voice needs the free-tier pool); they run overnight anyway.
     if (j.engine === "gemini" && daytime && cfg.dugout_pool && cfg.dugout_pool.enabled &&
         voiceMinToday !== null && voiceMinToday >= cfg.dugout_pool.gemini_defer_threshold_min) return false;
+    // EVENT-TRIGGERED jobs (U4): eligible ONLY while their trigger is armed
+    // (brain.mjs trigger <name> "<reason>"); the tick consumes it on success.
+    if (j.trigger && !(queueState && queueState.triggers && queueState.triggers[j.trigger])) return false;
     if (j.at) return nowHM >= j.at && inRange(nowHM, ...(windows[j.window] || windows.any));
     return inRange(nowHM, ...(windows[j.window] || windows.any));
   }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -443,6 +446,7 @@ async function tick(cfg, deps) {
     // (e.g. gemini before the captain's one-time login, or a transient claude
     // error). Success is what spends the slot.
     if (usage.ok) queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
+    if (usage.ok && job.trigger && queueState.triggers) delete queueState.triggers[job.trigger];   // consumed
     if (usage.limit_hit && cfg.budget.self_tune) {
       queueState.observed_window_ceiling = Math.max(1, windowUsage(ledger, now, cfg.budget.window_hours));
       ran.push({ job: job.id, note, ledgerRow: row });
@@ -600,6 +604,24 @@ async function main() {
     const tt = teamtalkLine("pm", now);   // rides INSIDE the bell — never a third utterance
     const r = await pushNtfy(cfg, bell.title, bell.body + (tt ? "\n" + tt : ""));
     console.log(`brain: bell '${kind}' ${r.sent ? "rang on the phone" : "silent (" + r.why + ")"}`);
+    return;
+  }
+  if (mode === "trigger") {
+    // EVENT-TRIGGERED RE-ANALYSIS (U4): milestone/crisis arms a trigger; the
+    // next tick runs the matching job once, then consumes it.
+    const name = process.argv[3];
+    if (!name) { console.log("brain: trigger <name> [reason]"); process.exit(1); }
+    const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+    q.triggers = q.triggers || {};
+    if ((process.argv[4] || "").toLowerCase() === "off") {
+      delete q.triggers[name];
+      writeAtomic(QUEUE, q);
+      console.log(`brain: trigger '${name}' disarmed`);
+      return;
+    }
+    q.triggers[name] = { ts: now.toISOString(), reason: process.argv.slice(4).join(" ") || null };
+    writeAtomic(QUEUE, q);
+    console.log(`brain: trigger '${name}' armed — the next tick fires the matching job once`);
     return;
   }
   if (mode === "status") {

@@ -98,6 +98,7 @@ function assembleWallData(bus, now = new Date()) {
     drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({ kind: d.kind, emoji: d.probe_type_emoji })) : [],
     twin_voice: twin ? twin.voice : null,
     media: bus.media || null,   // {teamtalk_am,teamtalk_pm,poster,filmkit} — presence flags only
+    commitments: Array.isArray(bus.commitments) ? bus.commitments.slice(-7) : [],   // kal-lines, kept (U4)
     // THE NOW STRIP (captain's call, high-dopamine): live odometers that only
     // count UP + the struggle verdict in forge-framing. No quota bars, no
     // wall-minutes daily meter (that law stands), hidden entirely on RED.
@@ -298,6 +299,20 @@ function buildFilmKit(d, notebook) {
   return L.join("\n") + "\n";
 }
 
+// COMMITMENTS — his own kal-lines and what happened next. Won days get the
+// tick; a miss reads "went again" (no-shame law); the newest waits unjudged.
+function renderCommitments(d) {
+  if (!d.commitments || !d.commitments.length) return "";
+  const WON = new Set(["HIT", "PARTIAL", "LOAD-MANAGED"]);
+  const rows = d.commitments.map(c => {
+    const mark = c.next_result === null || c.next_result === undefined ? `<span style="color:${C.dim}">·</span>`
+      : WON.has(String(c.next_result).toUpperCase()) ? `<span style="color:${C.green}">✓</span>`
+      : `<span style="color:${C.dim}">↻ went again</span>`;
+    return `<div style="font-size:12px;color:${C.body};margin:4px 0">${mark} <span style="color:${C.dim}">${esc(c.date)}</span> "${esc(c.kal)}"</div>`;
+  }).join("");
+  return panel("Commitments — your own words", rows);
+}
+
 function renderWall(data, insights) {
   const red = data.verdict === "RED";
   const head = `<meta http-equiv="refresh" content="300"><header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
@@ -314,7 +329,7 @@ function renderWall(data, insights) {
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
       renderNow(data) + renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
-      renderDrills(data) + renderMedia(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
+      renderDrills(data) + renderMedia(data) + renderCommitments(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
   }
   return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
 <body style="margin:0;background:${C.bg};font-family:'Segoe UI',system-ui,sans-serif;padding-bottom:30px">${head}${body}
@@ -469,6 +484,18 @@ async function selftest() {
   assert("film kit folds real notebook moments", kit.includes("the Tuesday you thought"));
   assert("film kit carries the tone laws, zero hype", kit.includes("kal phir") && !/10x|exponential|on steroids|countdown to/i.test(kit));
 
+  // COMMITMENTS VIEW (U4) — kal-lines, kept; no shame ever
+  const cData = assembleWallData({ ...bus, commitments: [
+    { date: "2026-07-09", kal: "pehla move: parser test", next_result: "HIT" },
+    { date: "2026-07-10", kal: "context Re-Jirah first", next_result: "MISS" },
+    { date: "2026-07-11", kal: "one green ball at 09:00", next_result: null },
+  ] }, now);
+  const cHtml = renderWall(cData, null);
+  assert("commitments panel: his words + won-day tick", cHtml.includes("Commitments") && cHtml.includes("parser test") && cHtml.includes("✓"));
+  assert("NO-SHAME — a missed kal-line reads 'went again', never failure", cHtml.includes("went again") && !/fail|broke your|streak/i.test(cHtml.split("Commitments")[1].split("</section>")[0]));
+  assert("newest commitment waits unjudged", cHtml.split("Commitments")[1].split("</section>")[0].includes("·"));
+  assert("no commitments → no panel", !renderWall(assembleWallData(bus, now), null).includes("Commitments"));
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -505,6 +532,21 @@ async function main() {
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === today).length,
   };
+  // COMMITMENTS (U4): last week of kal-lines + what the next day said
+  const commitments = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const p = join(STATE_DIR, "post_match", d + ".md");
+    if (!existsSync(p)) continue;
+    const txt = readFileSync(p, "utf8");
+    const km = txt.match(/KAL-?LINE\s*→\s*(.+)/i);
+    if (!km) continue;
+    const np = join(STATE_DIR, "post_match", localDate(new Date(now.getTime() - (i - 1) * 86400000)) + ".md");
+    let next_result = null;
+    if (i > 0 && existsSync(np)) { const rm = readFileSync(np, "utf8").match(/RESULT:\s*(LOAD-MANAGED|HIT|MISS|PARTIAL)/i); if (rm) next_result = rm[1].toUpperCase(); }
+    commitments.push({ date: d, kal: km[1].trim(), next_result });
+  }
+  bus.commitments = commitments;
   // MEDIA ENGINE: poster fold (through the sanitizer, always) + film kit + presence flags
   let posterOk = false;
   const posterPath = join(STATE_DIR, "brain_out", "poster", today + ".md");

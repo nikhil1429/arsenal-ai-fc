@@ -980,9 +980,18 @@ async function main() {
       send(404, { error: "not found" });
     } catch (e) { send(500, { error: String(e.message).slice(0, 200) }); }
   });
-  server.listen(PORT, "127.0.0.1", () => {
+  // --lan (U4): the Dugout on his PHONE browser while pacing the house.
+  // Home-wifi only; localhost stays the default. Phone mic on plain http
+  // needs the documented one-time browser flag (setup/VOICE_SETUP.md §LAN).
+  const lan = process.argv.includes("--lan");
+  server.listen(PORT, lan ? "0.0.0.0" : "127.0.0.1", () => {
     console.log(`dugout: LIVE bridge on http://localhost:${PORT} — ${keys.length} key(s) in the pool. Open it, press START, talk.`);
-    if (!process.env.DUGOUT_NO_OPEN) { try { execFileSync("cmd", ["/c", "start", "", `http://localhost:${PORT}`], { windowsHide: true }); } catch { } }
+    if (lan) {
+      const ips = Object.values(os.networkInterfaces()).flat().filter(i => i && i.family === "IPv4" && !i.internal).map(i => i.address);
+      console.log(`dugout: LAN mode — phone browser: http://${ips[0] || "<your-ip>"}:${PORT}`);
+      console.log(`dugout: phone mic needs a one-time flag — chrome://flags/#unsafely-treat-insecure-origin-as-secure → add http://${ips[0] || "<your-ip>"}:${PORT} (see setup/VOICE_SETUP.md)`);
+    }
+    if (!process.env.DUGOUT_NO_OPEN && !lan) { try { execFileSync("cmd", ["/c", "start", "", `http://localhost:${PORT}`], { windowsHide: true }); } catch { } }
   });
 }
 

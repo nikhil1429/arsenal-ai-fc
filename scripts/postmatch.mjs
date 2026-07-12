@@ -194,7 +194,10 @@ async function main() {
     const which = !rest.length || rest[0].toLowerCase() === "all" ? "all" : "ids";
     const routedPrev = readJson(ROUTED) || { routed: [] };
     const routedIds = new Set(routedPrev.routed.map(r => r.id));
-    const pending = readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id));
+    const pending = [
+      ...readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id)),
+      ...readLines(join(STATE_DIR, "dugout_notes.jsonl")).filter(n => !n.routed && n.text && !routedIds.has("note:" + n.ts)).map(n => ({ id: "note:" + n.ts, text: String(n.text) })),
+    ];
     const pick = pickBallsToRoute(pending, which, rest);
     if (!pick.length) { console.log("postmatch: no pending throw-ins to route"); return; }
     writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pick.map(b => ({ id: b.id, routed_on: localDate(new Date()) }))) });
@@ -225,7 +228,12 @@ async function main() {
   ];
   const routedPrev = readJson(ROUTED) || { routed: [] };
   const routedIds = new Set(routedPrev.routed.map(r => r.id));
-  const pendingBalls = readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id));
+  // throw-ins + dugout notes ride the same routing gate (U4): notes he voiced
+  // to the Gaffer surface here verbatim, keyed note:<ts> in routed_balls
+  const pendingBalls = [
+    ...readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id)),
+    ...readLines(join(STATE_DIR, "dugout_notes.jsonl")).filter(n => !n.routed && n.text && !routedIds.has("note:" + n.ts)).map(n => ({ id: "note:" + n.ts, text: String(n.text) + " 〔dugout〕" })),
+  ];
 
   const season = readJson(SEASON);
   const matchday = ((season && season.matches_played) || 0) + 1;
@@ -236,8 +244,16 @@ async function main() {
     return;
   }
   writeAtomic(join(PM_DIR, dateStr + ".md"), md);
-  writeAtomic(SEASON, updateSeason(season, hit, dateStr));
+  const newSeason = updateSeason(season, hit, dateStr);
+  writeAtomic(SEASON, newSeason);
   writeAtomic(NOTEBOOK, updateNotebook(readJson(NOTEBOOK), signal, hit, dateStr));
+  // milestone → arm the brain's deep re-analysis (U4; every 30th matchday)
+  if (newSeason.matches_played > 0 && newSeason.matches_played % 30 === 0 && WON_DAY.has(hit)) {
+    try {
+      const { execFileSync } = await import("node:child_process");
+      execFileSync(process.execPath, [join(__dirname, "brain.mjs"), "trigger", "reanalysis", `matchday ${newSeason.matches_played} milestone`], { windowsHide: true, timeout: 15000 });
+    } catch { }
+  }
   // evening shadow-scoring (U3b): resolve today's would-have-spoken moments —
   // owner-writes via shadow.mjs; best-effort, never blocks the ritual
   try {

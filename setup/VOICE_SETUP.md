@@ -53,6 +53,18 @@ schtasks /Create /F /TN "ArsenalFC-Speak" /TR "powershell -ExecutionPolicy Bypas
 Bias-to-silence law: it speaks the two sanctioned utterances only — never
 anything else, never mid-day.
 
+## LAN — the Dugout on your phone (U4)
+Start the bridge with the flag, on your home wifi only:
+```
+node scripts/dugout.mjs --lan
+```
+It prints your laptop's LAN address (e.g. `http://192.168.1.7:4114`). Open
+that in the phone's Chrome. **One-time mic unlock** (phone browsers block the
+mic on plain http): open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`,
+add exactly `http://<that-ip>:4114`, relaunch Chrome, then START TALKING.
+Honest note: that flag lowers one browser guardrail for that one address on
+your own wifi — remove it any time. Localhost (no flag) stays the default.
+
 ## What stays gated (honest)
 Always-listening ambient voice (wake-word, room mic) = new hardware/services
 and a privacy surface — money-gate + a you-and-Nidhi decision, not a build.
