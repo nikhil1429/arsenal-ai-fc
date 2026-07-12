@@ -128,3 +128,25 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
   voice ~day 10, genome ~day 10–14, Apni Ghadi ~week 4–5 — all reachable
   inside the season; body-archive (84d) stays correctly silent. No gate was
   loosened: honest gates, compatible season.
+
+## THE VOICE + LIVING WALL PASS (12 Jul 2026, fourth order) — BUILT, live-verified
+- SECOND BRAIN AUTH SOLVED: Google killed personal OAuth (Jun 18 2026);
+  new-format auth key (AQ.*) + v0.50 settings schema (security.auth.selectedType)
+  + ~/.gemini/.env + junk Jarvis GOOGLE_API_KEY removed. Live: "second brain
+  online" · first real render (7.5k tok) FOLDED into club/wall_gemini.html
+  through the sanitizer (which correctly rejected twice first — gate is real).
+- speak.mjs — neural voice (msedge-tts, free, keyless; System.Speech fallback);
+  LIVE-VERIFIED audible ("spoke (neural)"). Rung 1 of voice.
+- talk.mjs — TALK MODE: Win+H in, neural voice out, LIVE bus re-read every
+  turn + cognitive fingerprint; 3-sentence spoken clamp in code; ledger-logged.
+  Rungs 2+3 v1 (the push-to-talk daemon with local STT remains the [LEAP]
+  upgrade path; Win+H is the STT until then).
+- /talk skill — any Claude Code session becomes the speaking organism.
+- LIVING WALL: re-renders every 30 min (ArsenalFC-Wall-Live) + self-refreshing
+  page (meta 300s) + THE NOW STRIP (captain's explicit call): reps/learning/
+  building odometers (count UP only, no quota bars) + forge-framed struggle
+  verdict; hidden on RED; wall-minutes daily meter still excluded (that law
+  stands, disclosed).
+- maidan_poster upgraded to DAILY; render-class jobs use viz's prompt files
+  (not the analysis head); FILM_SETUP.md — NotebookLM Video Overviews as the
+  season-film engine (Veo = 8s trailer lane; Veo API = money-gated, not built).

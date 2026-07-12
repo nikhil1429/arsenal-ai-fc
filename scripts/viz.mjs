@@ -97,6 +97,15 @@ function assembleWallData(bus, now = new Date()) {
     kal_line: bus.kal_line || null,
     drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({ kind: d.kind, emoji: d.probe_type_emoji })) : [],
     twin_voice: twin ? twin.voice : null,
+    // THE NOW STRIP (captain's call, high-dopamine): live odometers that only
+    // count UP + the struggle verdict in forge-framing. No quota bars, no
+    // wall-minutes daily meter (that law stands), hidden entirely on RED.
+    now: {
+      struggle: bus.pitch_read && bus.pitch_read.date === today ? bus.pitch_read.struggle.verdict : "no_data",
+      learning_min: bus.timeaudit && bus.timeaudit.buckets && bus.timeaudit.buckets.Learning ? Math.round(bus.timeaudit.buckets.Learning.minutes || 0) : 0,
+      building_min: bus.timeaudit && bus.timeaudit.buckets && bus.timeaudit.buckets.Building ? Math.round(bus.timeaudit.buckets.Building.minutes || 0) : 0,
+      reps_today: bus.repsToday || 0,
+    },
   };
 }
 
@@ -222,10 +231,31 @@ function renderDrills(d) {
     `<span style="font-size:14px;margin-right:12px">${esc(x.emoji || "")} ${esc(x.kind)}</span>`).join(""));
 }
 
+const FORGE_FRAME = {
+  productive: ["the forge is working", "#7fb069"],
+  spinning: ["same crack — a different door is queued", "#d9b45a"],
+  cruising: ["cruising — room to interleave harder", "#7fb069"],
+  no_data: ["quiet pitch", "#5a6070"],
+};
+function renderNow(d) {
+  const [label, col] = FORGE_FRAME[d.now.struggle] || FORGE_FRAME.no_data;
+  return panel("Right now", `
+    <div style="display:flex;gap:26px;align-items:baseline;flex-wrap:wrap">
+      <div><span style="font-size:28px;color:${C.amber};font-weight:700">${d.now.reps_today}</span>
+        <div style="font-size:11px;color:${C.dim}">reps today</div></div>
+      <div><span style="font-size:28px;color:${C.body};font-weight:700">${d.now.learning_min}</span>
+        <div style="font-size:11px;color:${C.dim}">learning min</div></div>
+      <div><span style="font-size:28px;color:${C.body};font-weight:700">${d.now.building_min}</span>
+        <div style="font-size:11px;color:${C.dim}">building min</div></div>
+      <div><span style="font-size:14px;color:${col}">● ${esc(label)}</span>
+        <div style="font-size:11px;color:${C.dim}">odometers only — they count up, never against you</div></div>
+    </div>`);
+}
+
 function renderWall(data, insights) {
   const red = data.verdict === "RED";
-  const head = `<header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
-    <div style="font-size:20px;color:${C.body};font-weight:700">⚪🔴 THE CLUB WALL</div>
+  const head = `<meta http-equiv="refresh" content="300"><header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
+    <div style="font-size:20px;color:${C.body};font-weight:700">⚪🔴 THE CLUB WALL <span style="font-size:10px;color:${C.dim}">· living — refreshes itself</span></div>
     <div style="font-size:12px;color:${C.dim}">${esc(data.date)}</div></header>`;
   const kal = data.kal_line ? `<div style="margin:6px 22px;padding:12px 16px;background:#161a24;border-left:3px solid ${C.amber};color:${C.body};font-size:15px">${esc(data.kal_line)}</div>` : "";
   let body;
@@ -237,7 +267,7 @@ function renderWall(data, insights) {
       ? panel("The read", insights.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join("")) : "";
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
-      renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
+      renderNow(data) + renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
       renderDrills(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
   }
   return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
@@ -293,7 +323,10 @@ function sanitizeGemini(text) {
   const t = text.trim().replace(/^```(html|svg|xml)?/i, "").replace(/```$/,"").trim();
   const looksRight = /^<!doctype html/i.test(t) || /^<html/i.test(t) || /^<svg/i.test(t);
   if (!looksRight) return null;
-  if (/<script|javascript:|on\w+\s*=|https?:\/\/|@import|<iframe|<object|<embed|<link/i.test(t)) return null;
+  // W3C namespace URIs are mandatory in inline SVG — exempt them, then hunt
+  // real network refs. \b on the handler check ("content=" is not "onload=").
+  const scan = t.replace(/https?:\/\/www\.w3\.org\/[^"'\s>]*/gi, "W3C_NS");
+  if (/<script|javascript:|\bon\w+\s*=|https?:\/\/|@import|<iframe|<object|<embed|<link/i.test(scan)) return null;
   return t;
 }
 
@@ -340,11 +373,19 @@ async function selftest() {
   assert("KAL-line front and center", html.includes("pehla move: context Re-Jirah"));
   assert("wall trend weekly-only wording", html.includes("wall-minutes this week") && html.includes("never a daily meter"));
 
+  // NOW strip (captain's call) + living refresh
+  const nowData = assembleWallData({ ...bus, pitch_read: { date: "2026-07-12", struggle: { verdict: "productive" } }, timeaudit: { buckets: { Learning: { minutes: 95 }, Building: { minutes: 40 } } }, repsToday: 7 }, now);
+  const nowHtml = renderWall(nowData, null);
+  assert("NOW strip renders odometers + forge-framed verdict", nowHtml.includes("reps today") && nowHtml.includes(">7<") && nowHtml.includes("the forge is working"));
+  assert("NOW strip has no quota/target bars (odometers only)", !/target|quota|%\s*of/i.test(nowHtml.split("Right now")[1].split("</section>")[0]));
+  assert("wall is LIVING — meta refresh present", nowHtml.includes('http-equiv="refresh"'));
+
   // RED-day minimal wall
   const redData = assembleWallData({ ...bus, readiness: { verdict: "RED" } }, now);
   const redHtml = renderWall(redData, null);
   assert("RED wall = KAL-line + floor only", redHtml.includes("Rotation day") && !redHtml.includes("Calibration"));
   assert("RED wall hides the wall trend entirely", !redHtml.includes("wall-minutes"));
+  assert("RED wall hides the NOW strip too (never a loss before he looks)", !redHtml.includes("Right now"));
 
   // insights validation
   assert("insight with real numbers passes", validateInsights("24 doubts retired and the gap sits at 0.14 — the book is honest.", data) !== null);
@@ -363,6 +404,8 @@ async function selftest() {
   assert("prompt pack embeds the real numbers", pack["match_poster.md"].includes('"doubts_retired": 24'));
   assert("visual prompts carry the render laws", ["wall_painter.md", "match_poster.md", "season_film.md"].every(k => pack[k].includes("invent nothing") && pack[k].includes("#0c0e13")));
   assert("sanitizer accepts clean inline SVG", sanitizeGemini("<svg viewBox='0 0 10 10'><rect/></svg>") !== null);
+  assert("sanitizer allows the W3C svg namespace (not a network ref)", sanitizeGemini('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>') !== null);
+  assert("sanitizer allows content= (no false handler match)", sanitizeGemini('<html><meta name="viewport" content="width=device-width"><body>x</body></html>') !== null);
   assert("sanitizer strips code fences", sanitizeGemini("```html\n<html><body>ok</body></html>\n```") !== null);
   assert("sanitizer rejects scripts", sanitizeGemini("<html><script>alert(1)</script></html>") === null);
   assert("sanitizer rejects external refs", sanitizeGemini("<svg><image href='https://x.test/a.png'/></svg>") === null);
@@ -401,6 +444,9 @@ async function main() {
     drills: readJson(join(STATE_DIR, "drills.json")),
     twin: readJson(join(STATE_DIR, "twin.json")),
     kal_line: kal,
+    pitch_read: readJson(join(STATE_DIR, "pitch_read.json")),
+    timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
+    repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === today).length,
   };
   const data = assembleWallData(bus, now);
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");

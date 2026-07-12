@@ -214,7 +214,18 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000) {
 function geminiExec(prompt, binary, timeoutMs = 300000) {
   const t0 = Date.now();
   try {
-    const stdout = execFileSync(binary, ["-p", prompt.slice(0, 100000)], { timeout: timeoutMs, encoding: "utf8", windowsHide: true });
+    // Windows: npm installs gemini as a .cmd shim (bare "gemini" ENOENTs from
+    // execFile). Prompt goes via STDIN (argv would hit length limits + quoting).
+    // The junk legacy GOOGLE_API_KEY is stripped from the child env — the
+    // organism's Gemini lane authenticates via ~/.gemini/.env only.
+    const shim = process.platform === "win32" && process.env.APPDATA
+      ? join(process.env.APPDATA, "npm", binary + ".cmd") : binary;
+    const cmd = existsSync(shim) ? shim : binary;
+    const env = { ...process.env, GEMINI_CLI_TRUST_WORKSPACE: "true" };
+    delete env.GOOGLE_API_KEY;
+    // Node 22 requires shell:true to spawn .cmd shims (CVE-2024-27980 guard);
+    // safe here: zero argv, prompt rides stdin, path is fixed and space-free.
+    const stdout = execFileSync(cmd, [], { input: prompt.slice(0, 200000), timeout: timeoutMs, encoding: "utf8", windowsHide: true, env, shell: cmd.endsWith(".cmd") });
     return { ok: true, text: stdout, total_tokens: Math.ceil((prompt.length + stdout.length) / 4), duration_ms: Date.now() - t0, limit_hit: false, error: null };
   } catch (e) {
     return { ok: false, text: null, total_tokens: 0, duration_ms: Date.now() - t0, limit_hit: false, error: String(e.message).slice(0, 200) };
@@ -343,9 +354,15 @@ async function runJob(job, cfg, deps) {
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
   }
 
-  // analysis-class job
+  // analysis-class job — render-class jobs use viz's auto-written prompt file
+  // (it carries the render laws + the design-coach critique), never the
+  // analysis head (which would ask for markdown, not an artifact).
   const inputs = gatherInputs(job);
-  const prompt = buildAnalysisPrompt(job, inputs);
+  let prompt;
+  if (job.kind === "render" && job.prompt_file) {
+    const pf = join(STATE_DIR, "..", "club", "prompts", job.prompt_file);
+    prompt = existsSync(pf) ? readFileSync(pf, "utf8") + "\nOutput ONLY the artifact — first character '<'." : buildAnalysisPrompt(job, inputs);
+  } else prompt = buildAnalysisPrompt(job, inputs);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args);
   if (r.ok && r.text) {
     const v = validateOutput(job, r.text, inputs, cfg);

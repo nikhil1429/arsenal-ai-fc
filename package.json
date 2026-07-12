@@ -21,6 +21,7 @@
     "url": "git+https://github.com/nikhil1429/arsenal-ai-fc.git"
   },
   "dependencies": {
+    "msedge-tts": "^2.0.7",
     "ts-fsrs": "^5.4.1"
   }
 }
