@@ -23,6 +23,9 @@
 //        · realtimeInput.text works at runtime (audio reply verified);
 //          clientContent is history-seeding only.
 //        · audioStreamEnd accepted (VAD segment ends).
+//        · realtimeInput.video{data,mimeType:image/jpeg} accepted + answered;
+//          mediaChunks DEPRECATED (explicit 1007); responseModalities:["TEXT"]
+//          rejected outright — this preview model is audio-out only.
 //        · Client side (scar, in full): dual AudioContext — 16kHz in,
 //          NATIVE-rate out (never lock the output context to 24k) · local
 //          VAD + connect-on-voice + park-on-idle (an always-on WS
@@ -176,6 +179,8 @@ THE MOCK (run it exactly):
 4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
 5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
 ${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}
+WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DESIGN ON PAPER — ask for the sketch first, then attack the sketch (the frayed handoff, the missing failure path, "where does this fall over at scale?").
+
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
 }
 
@@ -200,6 +205,8 @@ VOICE REPS (the metamorphosis — talking is training): when he wants drilling, 
 TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
 
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
+
+THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are watching his PAPER (whiteboard mode) or his working SCREEN (commentator mode). Coach live and SHORT — spinning caught early ("same crack, different door"), Pehle-Guess whispered BEFORE he reads an answer on screen, a derby called the moment two concepts blur in his work. Frames are context, not a slideshow: speak only when it changes his next 30 seconds; his silence while sketching is work, not an invitation.
 
 SPOKEN GATES (constitutional — his word IS the signature): FULL-TIME by voice: when he says full time / din khatam / done for today, run the 30-second ritual — result (HIT/MISS/PARTIAL/REST), one signal worth naming, then his KAL-line VERBATIM (tomorrow's pre-decided first move, his words not yours). Read the three back. Only his explicit go-word — "haan, chalao", "lock it" — calls run_postmatch. GENOME: read the mutation aloud (target, predicted effect, revert plan); only his explicit approval word calls approve_genome — hesitation is a no. Throw-ins route only on his word (route_throwins). NEVER call a gate tool from your own inference; no word, no write.
 
@@ -407,6 +414,15 @@ async function selftest() {
   const scfg = buildConfig(["k1"], "scrimmage");
   assert("scrimmage config: examiner soul, cold start (no rehydrate)", scfg.mode === "scrimmage" && scfg.system.includes("EXAMINER") && scfg.rehydrate === null);
   assert("page carries MODE end-to-end (config, tools, transcript)", PAGE.includes("mode:MODE") && PAGE.includes("/config?mode="));
+  assert("scrimmage: whiteboard round wired (system design on paper)", scfg.system.includes("SYSTEM DESIGN ON PAPER"));
+
+  // THE TOUCHLINE EYES (U2b) — frame-mode vision, empirically-probed wire shape
+  assert("vision sends realtimeInput.video (probed live; mediaChunks deprecated)", PAGE.includes("realtimeInput:{video:{data:") && !PAGE.includes("mediaChunks"));
+  assert("whiteboard = camera, commentator = getDisplayMedia, both toggles", PAGE.includes("getDisplayMedia") && PAGE.includes("toggleVision('camera')") && PAGE.includes("toggleVision('screen')"));
+  assert("frame-mode cadence (quota-friendly, dodges video cap)", PAGE.includes("2500"));
+  assert("eyes hold the line open (no idle-park while he sketches)", PAGE.includes("!vidKind&&CFG"));
+  assert("vision errors surfaced like mic errors", PAGE.includes("VISION "));
+  assert("Gaffer eyes law travels: coach short, silence is work", buildConfig(["k1"]).system.includes("TOUCHLINE EYES") && buildConfig(["k1"]).system.includes("his next 30 seconds"));
 
   const cfg = buildConfig(["k1"]);
   assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 11);
@@ -459,6 +475,11 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>THE DUGOUT
 <div id="st" style="margin:14px;color:#5a6070">loading…</div>
 <div id="meter" style="width:220px;height:6px;background:#161a24;border-radius:3px;overflow:hidden;display:none"><div id="meterbar" style="height:100%;width:0%;background:#7fb069"></div></div>
 <button id="go" style="font-size:20px;padding:14px 44px;border-radius:12px;border:1px solid #e8915a;background:#161a24;color:#e8915a;cursor:pointer;margin-top:12px">START TALKING</button>
+<div id="modes" style="margin-top:10px;display:none">
+<button id="wb" style="font-size:13px;padding:8px 18px;border-radius:9px;border:1px solid #2c3444;background:#161a24;color:#c9a06a;cursor:pointer;margin:0 6px">📷 WHITEBOARD</button>
+<button id="scr" style="font-size:13px;padding:8px 18px;border-radius:9px;border:1px solid #2c3444;background:#161a24;color:#c9a06a;cursor:pointer;margin:0 6px">🖥 SCREEN</button>
+</div>
+<video id="vid" muted playsinline style="display:none"></video>
 <div id="mins" style="margin-top:10px;font-size:12px;color:#5a6070"></div>
 <div id="diag" style="margin-top:12px;max-width:640px;font-size:13px;color:#e07a5f;white-space:pre-wrap"></div>
 <div id="log" style="margin-top:18px;max-width:640px;font-size:13px;color:#c9a06a;white-space:pre-wrap"></div>
@@ -490,6 +511,34 @@ let stampBuf=[];
 function stamp(kind,ms){stampBuf.push({kind:kind,ms:ms});if(stampBuf.length>=4)sendStamps()}
 function sendStamps(){if(!stampBuf.length)return;fetch('/stamps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stamps:stampBuf.splice(0)})})}
 setInterval(sendStamps,20000);
+
+// THE TOUCHLINE EYES — frame-mode vision (dodges the video-minute cap; scar):
+// whiteboard = camera on his paper · screen = commentator on his working screen.
+// realtimeInput.video probed live (the legacy chunk-array field is dead on the wire).
+let vidStream=null,vidTimer=null,vidKind=null;
+async function startVision(kind){
+ stopVision();
+ try{
+  vidStream = kind==='screen' ? await navigator.mediaDevices.getDisplayMedia({video:{frameRate:2}})
+    : await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+ }catch(e){diag('VISION '+(e.name||'')+': '+(e.message||e));return}
+ vidKind=kind;
+ vidStream.getVideoTracks()[0].onended=()=>stopVision();
+ const vid=document.getElementById('vid');vid.srcObject=vidStream;await vid.play();
+ const cv=document.createElement('canvas');
+ vidTimer=setInterval(()=>{
+  if(!ws||ws.readyState!==1||!setupDone||!vid.videoWidth)return;
+  cv.width=Math.min(1024,vid.videoWidth);cv.height=Math.round(cv.width*vid.videoHeight/vid.videoWidth);
+  cv.getContext('2d').drawImage(vid,0,0,cv.width,cv.height);
+  ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',0.6).split(',')[1],mimeType:'image/jpeg'}}}));
+ },2500);
+ if(!ws||ws.readyState>1)connect();
+ st(kind==='screen'?'🖥 commentator ON — the Gaffer watches you solve':'📷 whiteboard ON — show the paper');
+ log('· eyes on ('+kind+') — 1 frame / 2.5s, quota-friendly')}
+function stopVision(){if(vidTimer){clearInterval(vidTimer);vidTimer=null}
+ if(vidStream){for(const t of vidStream.getTracks())t.stop();vidStream=null}
+ if(vidKind){log('· eyes off');vidKind=null;st(setupDone?'🎙 LIVE — talk.':'🎤 armed — bolo')}}
+function toggleVision(kind){vidKind===kind?stopVision():startVision(kind)}
 
 // ACK FILLERS — a cached line the instant a tool call lands (perceived latency ≈ 0)
 let lastAckAt=0;
@@ -567,7 +616,7 @@ function endSegment(){if(!segOpen)return;segOpen=false;
  if(ws&&ws.readyState===1&&setupDone)ws.send(m);else pending.push(m)}
 function flushPending(){if(!ws||ws.readyState!==1)return;for(const m of pending.splice(0))ws.send(m)}
 setInterval(()=>{if(talking)flushAudio()},100);
-setInterval(()=>{if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
+setInterval(()=>{if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
  parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
@@ -610,6 +659,9 @@ document.getElementById('go').onclick=async()=>{
    src.connect(sp);sp.connect(micCtx.destination);
   }
   lastVoice=Date.now();
+  document.getElementById('modes').style.display='block';
+  document.getElementById('wb').onclick=()=>toggleVision('camera');
+  document.getElementById('scr').onclick=()=>toggleVision('screen');
   st('🎤 armed — bolo; the line connects on your voice');
  }catch(e){diag('SETUP ERROR '+(e.name||'')+': '+(e.message||e));st('setup failed — details above')}
 };
