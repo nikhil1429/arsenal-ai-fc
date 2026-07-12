@@ -1,0 +1,346 @@
+#!/usr/bin/env node
+// ============================================================================
+// viz.mjs · ARSENAL AI FC — THE ORGANISM: THE CLUB WALL (visualization organ)
+// ----------------------------------------------------------------------------
+// WHAT:  Visualization as a first-class organ (ORGANISM_ANATOMY §6). One
+//        self-contained dark HTML file — inline SVG only, zero network, opens
+//        offline from disk — rendering the whole body as living pictures: the
+//        Maidan pitch, the season arc, calibration, the derby table,
+//        doubts_retired, the wall trend, the body strip, the brain meter,
+//        and ≤3 validated brain insights. He is ADHD-PI and thinks in
+//        pictures; the wall is the daily-consumption surface OPS_STATE always
+//        intended.
+// CONSTITUTIONAL (each selftested):
+//   · NEVER FAKE DATA — empty states render as honest, handsome "awaiting
+//     blood" panels; no NaN/null/undefined ever leaks into the HTML.
+//   · NO STREAKS — weekly-consistency % only; the word "streak" never renders.
+//   · NO RAW BIOMETRICS — the body strip shows verdict + tier only; no
+//     hrv/rhr/temp numbers on a rendered surface.
+//   · WALL TREND is weekly-only and hidden entirely on RED days; RED days
+//     render the minimal wall (KAL-line + floor) — his own wall never shows
+//     him a loss before he's chosen to look.
+//   · Brain insights render only if EVERY number in them exists in wall_data
+//     (the Manager's zero-invented-numbers law, reused).
+//
+// INPUT (read-only): the whole bus. OUTPUT: wall_data.json +
+//   dressing-room/club/wall.html (sole writer of both).
+// MODES:  run (default) · selftest
+// ============================================================================
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
+const CLUB_DIR  = join(__dirname, "..", "dressing-room", "club");
+const WALL_DATA = join(STATE_DIR, "wall_data.json");
+const WALL_HTML = join(CLUB_DIR, "wall.html");
+
+const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readLines = (p) => {
+  const out = [];
+  try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
+  return out;
+};
+function writeAtomic(path, text) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, typeof text === "string" ? text : JSON.stringify(text, null, 2) + "\n");
+  renameSync(tmp, path);
+}
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const safe = (v, fallback = "—") => (v === null || v === undefined || (typeof v === "number" && Number.isNaN(v))) ? fallback : v;
+
+// ---------------------------------------------------------------------------
+// data assembly (pure)
+// ---------------------------------------------------------------------------
+function assembleWallData(bus, now = new Date()) {
+  const { learning_state, season, calibration, tape_room, history, readiness, brainLedger, vitals, drills, twin } = bus;
+  const verdict = readiness && readiness.verdict ? String(readiness.verdict).toUpperCase() : "GREEN";
+
+  // weekly consistency: won-days / days-elapsed over last 7 recorded days
+  const days = (history || []).slice(-7);
+  const weekly_consistency_pct = days.length
+    ? Math.round(100 * days.filter(d => d.struggle && d.struggle !== "no_data").length / days.length) : null;
+
+  // wall trend: weekly aggregate ONLY
+  const wall_week_minutes = (history || []).slice(-7).reduce((a, d) => a + (d.wall_minutes || 0), 0);
+
+  // brain meter from ledger
+  const today = localDate(now);
+  const todayCalls = (brainLedger || []).filter(l => String(l.ts || "").slice(0, 10) === today);
+  const overnight = todayCalls.filter(l => { const h = new Date(l.ts).getHours(); return h >= 22 || h < 8; });
+
+  return {
+    date: today, generated_at: now.toISOString(), verdict,
+    maidan: learning_state && learning_state.maidan ? learning_state.maidan : null,
+    weak_connection: learning_state ? learning_state.weak_connection : null,
+    season: {
+      matches_played: season ? safe(season.matches_played, 0) : 0,
+      trophy_state: season ? safe(season.trophy_state, "unlit") : "unlit",
+      weekly_consistency_pct,
+    },
+    calibration: calibration && calibration.status === "ok" ? {
+      gap: calibration.calibration_gap, trend: calibration.trend,
+      buckets: calibration.buckets, danger: (calibration.danger_zone || []).map(d => d.topic),
+    } : null,
+    derby: learning_state && Array.isArray(learning_state.confusion_pairs) ? learning_state.confusion_pairs.slice(0, 5) : [],
+    doubts_retired: tape_room ? safe(tape_room.doubts_retired, 0) : 0,
+    tape_queue: tape_room && Array.isArray(tape_room.queue) ? tape_room.queue.length : 0,
+    wall_week_minutes,
+    body: { verdict },                                    // verdict ONLY — never raw biometrics
+    bleeds: vitals && Array.isArray(vitals.bleeds) ? vitals.bleeds.map(b => b.kind) : [],
+    brain: { calls_today: todayCalls.length, overnight_calls: overnight.length,
+             tokens_today: todayCalls.reduce((a, l) => a + (l.total_tokens || 0), 0) },
+    kal_line: bus.kal_line || null,
+    drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({ kind: d.kind, emoji: d.probe_type_emoji })) : [],
+    twin_voice: twin ? twin.voice : null,
+  };
+}
+
+// numbers whitelist (Manager's law, reused) for insight validation
+function allowedNumbers(data) {
+  const s = new Set();
+  (function walk(v) {
+    if (typeof v === "number" && Number.isFinite(v)) { s.add(String(v)); s.add(String(Math.round(v))); }
+    else if (typeof v === "string") for (const m of v.match(/\d+(\.\d+)?/g) || []) s.add(m);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  })(data);
+  for (let i = 0; i <= 31; i++) s.add(String(i));
+  return s;
+}
+function validateInsights(text, data) {
+  if (!text || !text.trim()) return null;
+  const allowed = allowedNumbers(data);
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 3);
+  const stripped = lines.join(" ").replace(/\d{4}-\d{2}-\d{2}/g, "").replace(/\d{1,2}:\d{2}/g, "");
+  for (const n of stripped.match(/\d+(\.\d+)?/g) || []) if (!allowed.has(n)) return null;   // reject-and-omit
+  if (/10x|exponential|on steroids/i.test(stripped)) return null;
+  return lines;
+}
+
+// ---------------------------------------------------------------------------
+// render (pure) — cold steel, warm core
+// ---------------------------------------------------------------------------
+const C = { bg: "#0c0e13", panel: "#12151d", amber: "#e8915a", body: "#e9e7e2", gold: "#c9a06a", dim: "#5a6070", green: "#7fb069", red: "#c05a5a", yellow: "#d9b45a" };
+
+function panel(title, inner) {
+  return `<section style="background:${C.panel};border:1px solid #1c2030;border-radius:10px;padding:16px 18px;margin:10px;flex:1;min-width:280px">
+  <h2 style="font-size:11px;letter-spacing:2px;color:${C.gold};margin:0 0 10px;text-transform:uppercase">${esc(title)}</h2>${inner}</section>`;
+}
+const awaiting = (what) => `<div style="color:${C.dim};font-size:13px;padding:8px 0">awaiting blood — ${esc(what)} flows in with your first reps</div>`;
+const fluColor = (f) => String(f).includes("🟢") ? C.green : String(f).includes("🟡") ? C.yellow : C.red;
+
+function renderMaidan(d) {
+  if (!d.maidan || !Array.isArray(d.maidan.stages) || !d.maidan.stages.length) return panel("The Maidan — your field", awaiting("the fluency map"));
+  const stages = d.maidan.stages;
+  const W = 640, H = 180, gap = W / (stages.length + 1);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;background:#0e1410;border-radius:8px">
+    <rect x="4" y="4" width="${W - 8}" height="${H - 8}" fill="none" stroke="#1e3325" stroke-width="2" rx="6"/>
+    <line x1="${W / 2}" y1="4" x2="${W / 2}" y2="${H - 4}" stroke="#1e3325"/>
+    <circle cx="${W / 2}" cy="${H / 2}" r="26" fill="none" stroke="#1e3325"/>`;
+  stages.forEach((s, i) => {
+    const x = gap * (i + 1), y = H / 2 + (i % 2 ? -34 : 34);
+    const col = s.status === "runnable" ? C.green : s.status === "building" ? C.yellow : C.dim;
+    svg += `<circle cx="${x}" cy="${y}" r="14" fill="${col}" opacity="0.85"/>
+      <text x="${x}" y="${y + 30}" text-anchor="middle" font-size="10" fill="${C.body}">${esc(s.label || s.id)}</text>`;
+    if (i > 0) {
+      const px = gap * i, py = H / 2 + ((i - 1) % 2 ? -34 : 34);
+      const frayed = d.weak_connection && d.weak_connection.includes(String(s.id));
+      svg += `<line x1="${px}" y1="${py}" x2="${x}" y2="${y}" stroke="${frayed ? C.red : "#2c4434"}" stroke-width="2" ${frayed ? 'stroke-dasharray="4 4"' : ""}/>`;
+    }
+  });
+  svg += "</svg>";
+  const weak = d.weak_connection ? `<div style="color:${C.red};font-size:12px;margin-top:8px">frayed pass: ${esc(d.weak_connection)}</div>` : "";
+  return panel("The Maidan — your field", svg + weak);
+}
+
+function renderSeason(d) {
+  const s = d.season;
+  const cons = s.weekly_consistency_pct === null ? "—" : s.weekly_consistency_pct + "%";
+  return panel("Season", `
+    <div style="display:flex;gap:24px;align-items:baseline">
+      <div><span style="font-size:34px;color:${C.amber};font-weight:700">${safe(s.matches_played, 0)}</span>
+        <div style="font-size:11px;color:${C.dim}">matches played</div></div>
+      <div><span style="font-size:34px;color:${C.amber};font-weight:700">${d.doubts_retired}</span>
+        <div style="font-size:11px;color:${C.dim}">doubts retired · ${d.tape_queue} rematches waiting</div></div>
+      <div><span style="font-size:22px;color:${C.body}">${esc(cons)}</span>
+        <div style="font-size:11px;color:${C.dim}">weekly consistency</div></div>
+      <div><span style="font-size:22px">${s.trophy_state === "lit" ? "🏆" : "🔒"}</span>
+        <div style="font-size:11px;color:${C.dim}">the cabinet ${esc(s.trophy_state)}</div></div>
+    </div>`);
+}
+
+function renderCalibration(d) {
+  if (!d.calibration) return panel("Calibration — the book on your knowing", awaiting("calibration"));
+  const c = d.calibration;
+  const bucket = (name, b, target) => {
+    const acc = b && b.accuracy !== null && b.n ? Math.round(b.accuracy * 100) : null;
+    return `<div style="margin:4px 0;font-size:12px;color:${C.body}">${name}: ${acc === null ? "—" : acc + "%"} <span style="color:${C.dim}">(target ${Math.round(target * 100)}%, n=${b ? b.n : 0})</span></div>`;
+  };
+  return panel("Calibration — the book on your knowing",
+    `<div style="font-size:26px;color:${C.amber};font-weight:700">${safe(c.gap)}</div>
+     <div style="font-size:11px;color:${C.dim};margin-bottom:8px">${esc(safe(c.trend, ""))}</div>` +
+    bucket("knew", c.buckets && c.buckets.knew, 0.95) + bucket("shaky", c.buckets && c.buckets.shaky, 0.65) + bucket("guessed", c.buckets && c.buckets.guessed, 0.30) +
+    (c.danger && c.danger.length ? `<div style="color:${C.red};font-size:12px;margin-top:8px">danger: ${esc(c.danger.join(", "))}</div>` : ""));
+}
+
+function renderDerby(d) {
+  if (!d.derby.length) return panel("Derby table — confusions", awaiting("confusion pairs"));
+  return panel("Derby table — confusions", d.derby.map(p =>
+    `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(p.from)} <span style="color:${C.amber}">vs</span> ${esc(p.to)} <span style="color:${C.dim}">×${p.count}</span></div>`).join(""));
+}
+
+function renderBody(d) {
+  const col = d.verdict === "GREEN" ? C.green : d.verdict === "AMBER" ? C.yellow : C.red;
+  const bleeds = d.bleeds.length ? `<div style="color:${C.yellow};font-size:12px;margin-top:6px">physio: ${esc(d.bleeds.join(", "))}</div>` : "";
+  return panel("The body", `<div style="display:flex;align-items:center;gap:10px">
+    <div style="width:16px;height:16px;border-radius:50%;background:${col}"></div>
+    <div style="font-size:18px;color:${C.body}">${esc(d.verdict)}</div>
+    <div style="font-size:11px;color:${C.dim}">verdict only — the numbers stay with the Goalkeeper</div></div>${bleeds}`);
+}
+
+function renderBrain(d) {
+  return panel("The brain — got sharper while you slept",
+    `<div style="font-size:13px;color:${C.body}">${d.brain.calls_today} call(s) today · ${d.brain.overnight_calls} overnight</div>
+     <div style="font-size:11px;color:${C.dim};margin-top:4px">${d.brain.tokens_today.toLocaleString()} tokens metabolized</div>`);
+}
+
+function renderWallTrend(d) {
+  if (d.verdict === "RED") return "";                                  // hidden entirely on RED
+  return panel("The wall — weekly trend only",
+    `<div style="font-size:13px;color:${C.body}">${d.wall_week_minutes} wall-minutes this week</div>
+     <div style="font-size:11px;color:${C.dim};margin-top:4px">a stat you watch shrink — never a daily meter</div>`);
+}
+
+function renderDrills(d) {
+  if (!d.drills_tomorrow.length) return panel("Tomorrow's set pieces", awaiting("compiled drills"));
+  return panel("Tomorrow's set pieces", d.drills_tomorrow.map(x =>
+    `<span style="font-size:14px;margin-right:12px">${esc(x.emoji || "")} ${esc(x.kind)}</span>`).join(""));
+}
+
+function renderWall(data, insights) {
+  const red = data.verdict === "RED";
+  const head = `<header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
+    <div style="font-size:20px;color:${C.body};font-weight:700">⚪🔴 THE CLUB WALL</div>
+    <div style="font-size:12px;color:${C.dim}">${esc(data.date)}</div></header>`;
+  const kal = data.kal_line ? `<div style="margin:6px 22px;padding:12px 16px;background:#161a24;border-left:3px solid ${C.amber};color:${C.body};font-size:15px">${esc(data.kal_line)}</div>` : "";
+  let body;
+  if (red) {
+    // minimal wall: KAL-line + floor only — never a loss before he chooses to look
+    body = kal + panel("Today", `<div style="font-size:15px;color:${C.body}">Rotation day. One five-minute floor-touch is the whole match. The rest of the wall waits for you.</div>`);
+  } else {
+    const insightHtml = insights && insights.length
+      ? panel("The read", insights.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join("")) : "";
+    const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
+    body = kal + `<div style="display:flex;flex-wrap:wrap">` +
+      renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
+      renderDrills(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
+  }
+  return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
+<body style="margin:0;background:${C.bg};font-family:'Segoe UI',system-ui,sans-serif;padding-bottom:30px">${head}${body}
+<footer style="padding:14px 22px;color:${C.dim};font-size:11px">the loop wastes nothing you generate, loses nothing you are · COYG</footer></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// selftest — fixtures only
+// ---------------------------------------------------------------------------
+async function selftest() {
+  const checks = [];
+  const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
+  const now = new Date(2026, 6, 12, 22, 0, 0);
+
+  // bloodless world
+  const empty = assembleWallData({ history: [] }, now);
+  const emptyHtml = renderWall(empty, null);
+  assert("bloodless wall renders honest awaiting-blood panels", emptyHtml.includes("awaiting blood"));
+  assert("NEVER-FAKE — no NaN/undefined/null leaks", !/NaN|undefined|null</.test(emptyHtml));
+  assert("NO-STREAK LAW — the word streak never renders", !/streak/i.test(emptyHtml));
+
+  // full world
+  const bus = {
+    learning_state: {
+      maidan: { stages: [{ id: "fundamentals", label: "fundamentals", status: "runnable" }, { id: "rag_pipeline", label: "rag pipeline", status: "building" }, { id: "agents", label: "agents", status: "awaiting_data" }] },
+      weak_connection: "tokenization → embeddings (edge cold)",
+      confusion_pairs: [{ from: "tokenization", to: "embeddings", count: 4 }],
+    },
+    season: { matches_played: 12, trophy_state: "unlit" },
+    calibration: { status: "ok", calibration_gap: 0.14, trend: "narrowing (0.19 → 0.14)", buckets: { knew: { n: 30, accuracy: 0.9 }, shaky: { n: 12, accuracy: 0.6 }, guessed: { n: 5, accuracy: 0.4 } }, danger_zone: [{ topic: "context" }] },
+    tape_room: { doubts_retired: 24, queue: Array(88).fill({}) },
+    history: [{ wall_minutes: 24, struggle: "productive" }, { wall_minutes: 10, struggle: "productive" }],
+    readiness: { verdict: "GREEN", hrv: 22.7, rhr: 76.4 },
+    brainLedger: [{ ts: "2026-07-12T02:10:00", total_tokens: 52000 }, { ts: "2026-07-12T13:30:00", total_tokens: 8000 }],
+    vitals: { bleeds: [{ kind: "effort_uncaptured" }] },
+    drills: { drills: [{ kind: "tape_room", probe_type_emoji: "🟣" }] },
+    twin: { voice: null },
+    kal_line: "pehla move: context Re-Jirah",
+  };
+  const data = assembleWallData(bus, now);
+  const html = renderWall(data, null);
+  assert("Maidan pitch SVG renders with frayed pass", html.includes("<svg") && html.includes("frayed pass"));
+  assert("doubts_retired + matches_played render big", html.includes(">24<") && html.includes(">12<"));
+  assert("NO RAW BIOMETRICS — hrv/rhr numbers never render", !html.includes("22.7") && !html.includes("76.4"));
+  assert("body strip carries verdict only", html.includes("GREEN") && html.includes("verdict only"));
+  assert("brain meter shows overnight sharpening", html.includes("overnight") && html.includes("60,000"));
+  assert("KAL-line front and center", html.includes("pehla move: context Re-Jirah"));
+  assert("wall trend weekly-only wording", html.includes("wall-minutes this week") && html.includes("never a daily meter"));
+
+  // RED-day minimal wall
+  const redData = assembleWallData({ ...bus, readiness: { verdict: "RED" } }, now);
+  const redHtml = renderWall(redData, null);
+  assert("RED wall = KAL-line + floor only", redHtml.includes("Rotation day") && !redHtml.includes("Calibration"));
+  assert("RED wall hides the wall trend entirely", !redHtml.includes("wall-minutes"));
+
+  // insights validation
+  assert("insight with real numbers passes", validateInsights("24 doubts retired and the gap sits at 0.14 — the book is honest.", data) !== null);
+  assert("insight with INVENTED number rejected (omitted)", validateInsights("Your recall jumped 97% this week.", data) === null);
+  assert("hype in insights rejected", validateInsights("You are on a 10x trajectory.", data) === null);
+  assert("insights capped at 3 lines", (validateInsights("a\nb\nc\nd", data) || []).length <= 3);
+
+  const passed = checks.every(c => c[1]);
+  console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
+  return passed;
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+async function main() {
+  const mode = (process.argv[2] || "run").toLowerCase();
+  if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  const now = new Date();
+  const today = localDate(now);
+  // KAL-line from yesterday's post-match (the sheet's first-touch law, on the wall too)
+  let kal = null;
+  for (let i = 0; i <= 1; i++) {
+    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const p = join(STATE_DIR, "post_match", d + ".md");
+    if (existsSync(p)) { const m = readFileSync(p, "utf8").match(/KAL-?LINE\s*→\s*(.+)/i); if (m) { kal = m[1].trim(); break; } }
+  }
+  const bus = {
+    learning_state: readJson(join(STATE_DIR, "learning_state.json")),
+    season: readJson(join(STATE_DIR, "season.json")),
+    calibration: readJson(join(STATE_DIR, "calibration.json")),
+    tape_room: readJson(join(STATE_DIR, "tape_room.json")),
+    history: readLines(join(STATE_DIR, "pitch_read_history.jsonl")),
+    readiness: readJson(join(STATE_DIR, "readiness.json")),
+    brainLedger: readLines(join(STATE_DIR, "brain_ledger.jsonl")),
+    vitals: readJson(join(STATE_DIR, "loop_vitals.json")),
+    drills: readJson(join(STATE_DIR, "drills.json")),
+    twin: readJson(join(STATE_DIR, "twin.json")),
+    kal_line: kal,
+  };
+  const data = assembleWallData(bus, now);
+  const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
+  const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
+  writeAtomic(WALL_DATA, data);
+  writeAtomic(WALL_HTML, renderWall(data, insights));
+  console.log(`viz: wall rendered (${data.verdict}${insights ? ", " + insights.length + " insights" : ""}) → ${WALL_HTML}`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+
+export { assembleWallData, renderWall, validateInsights, allowedNumbers };
