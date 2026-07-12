@@ -110,3 +110,23 @@ frozen week-1 ghost · nearest-neighbor coaching retrieval · twin scoreline ·
 dread-class markets (structurally stripped in twin.mjs) · any 'exponential' claim.
 
 *Unrun system = hypothesis. Everything in BUILT has run. COYG.* ⚪🔴
+
+## COMPRESSED-SEASON + 2050 PASS (12 Jul 2026, third order) — all BUILT, suites green
+- WAR-ROOM PROTOCOL (scout.mjs + setpiece.mjs): captain logs interview_dates in
+  season.json once → final-week taper auto-engages (DEFEND/NOVEL/⚫ + rematches
+  only, no first-exposure, "sleep is training now") — NO date or countdown ever
+  rendered (dedicated asserts). The ladder still outranks it (AMBER body wins).
+- APPLY-WINDOW DOOR (scout.mjs): M1-demo-able trigger → apply_window.open —
+  canon's "apply in parallel" as a door, never a deadline.
+- DOSSIER-WEIGHTED SELECTION (setpiece.mjs): drill slots prefer concepts on the
+  heaviest interview rounds (round-weights × concepts.json buckets).
+- COGNITIVE FINGERPRINT (brain.mjs): every LLM call now conditioned on his
+  MEASURED mind — verbatim anchors, wrong-prior shapes (machine-side), live
+  overconfidence rate, the fraying pass, fixed ADHD-PI traits.
+- CLAUDE↔GEMINI SELF-IMPROVING WALL LOOP (wall_review job + viz.mjs): Gemini
+  renders nightly → Claude critiques against his design laws → critique feeds
+  the next night's auto-written prompt. The wall improves itself, zero taps.
+- Volume-gates audited against the 30–45-day season at 10–40 reps/day: twin
+  voice ~day 10, genome ~day 10–14, Apni Ghadi ~week 4–5 — all reachable
+  inside the season; body-archive (84d) stays correctly silent. No gate was
+  loosened: honest gates, compatible season.
