@@ -1,0 +1,425 @@
+#!/usr/bin/env node
+// ============================================================================
+// brain.mjs · ARSENAL AI FC — THE ORGANISM: THE BRAIN (hot runtime)
+// ----------------------------------------------------------------------------
+// WHAT:  The crown (ORGANISM_ANATOMY §5). A deterministic job runtime that
+//        runs the organism's intelligence HOT — as many `claude -p` calls as
+//        it takes to stay sharp around the clock, deliberately exhausting the
+//        Max 5x plan (captain's standing order, 12 Jul 2026), weighted to the
+//        overnight idle hours, while PROTECTING his study hours so he is
+//        never locked out of his own plan. Two brains: Claude (judgment,
+//        coaching, the hard reads) and Gemini CLI (visualization, long-context
+//        — free on his Google account; flagged off until wired).
+// HOW (the Manager tracking tokens, mechanically):
+//   · every call logs usage to brain_ledger.jsonl; the rolling 5h window and
+//     7d week are summed from the ledger — the budget is measured, not vibed.
+//   · Anthropic publishes no exact caps, so capacity estimates SELF-TUNE:
+//     an observed limit event records the true ceiling (observed_window_
+//     ceiling in brain_queue.json) and the runtime re-fits. The ledger learns
+//     the plan's real shape instead of pretending to know it.
+//   · STUDY HOURS (09:00–21:00): spend at most day_reserve_frac of the window
+//     estimate — the captain can always open Claude and work on top.
+//   · OVERNIGHT (22:00–07:30): queue-drain toward overnight_target_frac.
+//     Unused capacity is wasted sharpness.
+//   · M-3, finally: the formation_read job passes a real llm into the
+//     runManager({llm}) socket manager.mjs shipped with. manager.mjs is NOT
+//     edited — the plug meets the socket (layering, never replace).
+// GUARDS (each selftested):
+//   · ANTHROPIC_API_KEY set ⇒ REFUSE to run LLM calls (hard $100 ceiling:
+//     subscription only, ever).
+//   · banned-phrase validator (no 10x/exponential/on-steroids — hype in
+//     output is a bug); no_new_numbers validator for insight-class jobs
+//     (the Manager's zero-invented-numbers law, reused).
+//   · deterministic organs never blocked: the brain enriches; it is never
+//     load-bearing for the sheet (fallback skeleton law lives in manager.mjs).
+//
+// INPUT:  brain_config.json (canon) · the bus (read-only) ·
+//         dressing-room/manager/system.md (the Opus soul)
+// OUTPUT: brain_ledger.jsonl · brain_queue.json · brain_out/<job>/<date>.md
+//         (formation_read writes through manager.mjs's own validated writer)
+// MODES:  tick (default) · run <job_id> · status · selftest
+// ============================================================================
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
+import { runManager } from "./manager.mjs";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
+const CFG_PATH  = join(STATE_DIR, "brain_config.json");
+const LEDGER    = join(STATE_DIR, "brain_ledger.jsonl");
+const QUEUE     = join(STATE_DIR, "brain_queue.json");
+const OUT_DIR   = join(STATE_DIR, "brain_out");
+const SYSTEM_MD = join(__dirname, "..", "dressing-room", "manager", "system.md");
+
+const DEFAULTS = {
+  budget: { window_hours: 5, window_capacity_est_tokens: 800000, weekly_capacity_est_tokens: 12000000, day_reserve_frac: 0.25, overnight_target_frac: 0.95, self_tune: true },
+  study_hours: { start: "09:00", end: "21:00" },
+  overnight: { start: "22:00", end: "07:30" },
+  guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids", "god-tier", "time is short"] },
+  ntfy: { enabled: false, topic: "", push_after: ["formation_read"] },
+  gemini: { enabled: false, binary: "gemini" },
+  jobs: [],
+};
+
+const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+const hhmm = (now) => `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+function loadConfig(path = CFG_PATH) {
+  try {
+    if (existsSync(path)) {
+      const j = JSON.parse(readFileSync(path, "utf8"));
+      return {
+        budget: { ...DEFAULTS.budget, ...(j.budget || {}) },
+        study_hours: { ...DEFAULTS.study_hours, ...(j.study_hours || {}) },
+        overnight: { ...DEFAULTS.overnight, ...(j.overnight || {}) },
+        guards: { ...DEFAULTS.guards, ...(j.guards || {}) },
+        ntfy: { ...DEFAULTS.ntfy, ...(j.ntfy || {}) },
+        gemini: { ...DEFAULTS.gemini, ...(j.gemini || {}) },
+        jobs: Array.isArray(j.jobs) ? j.jobs : [],
+      };
+    }
+  } catch { /* malformed → defaults */ }
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+
+function writeAtomic(path, obj) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, typeof obj === "string" ? obj : JSON.stringify(obj, null, 2) + "\n");
+  renameSync(tmp, path);
+}
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readLines = (p) => {
+  const out = [];
+  try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
+  return out;
+};
+
+// ---------------------------------------------------------------------------
+// BUDGET GOVERNOR (pure)
+// ---------------------------------------------------------------------------
+function windowUsage(ledger, now, hours) {
+  const cutoff = now.getTime() - hours * 3600000;
+  return ledger.filter(l => l.engine === "claude" && new Date(l.ts).getTime() >= cutoff)
+    .reduce((a, l) => a + (l.total_tokens || 0), 0);
+}
+const weekUsage = (ledger, now) => windowUsage(ledger, now, 24 * 7);
+
+function inRange(nowHM, start, end) {
+  return start <= end ? (nowHM >= start && nowHM < end) : (nowHM >= start || nowHM < end);
+}
+
+// how many tokens may we spend RIGHT NOW?
+function headroom(cfg, ledger, queueState, now) {
+  const cap0 = (queueState && queueState.observed_window_ceiling) || cfg.budget.window_capacity_est_tokens;
+  const used = windowUsage(ledger, now, cfg.budget.window_hours);
+  const weekly = weekUsage(ledger, now);
+  const weeklyCap = cfg.budget.weekly_capacity_est_tokens;
+  const nowHM = hhmm(now);
+  let cap;
+  if (inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end)) cap = cap0 * cfg.budget.day_reserve_frac;          // protect his study
+  else if (inRange(nowHM, cfg.overnight.start, cfg.overnight.end)) cap = cap0 * cfg.budget.overnight_target_frac;    // exhaust deliberately
+  else cap = cap0 * 0.6;                                                                                              // shoulder hours
+  return { allowed: Math.max(0, Math.min(cap - used, weeklyCap - weekly)), used, cap: Math.round(cap), phase: inRange(nowHM, cfg.overnight.start, cfg.overnight.end) ? "overnight" : inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end) ? "study" : "shoulder" };
+}
+
+// which jobs are eligible now?
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function eligibleJobs(cfg, queueState, now) {
+  const today = localDate(now);
+  const nowHM = hhmm(now);
+  const ran = (queueState && queueState.jobs_run && queueState.jobs_run[today]) || {};
+  const windows = { morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] };
+  return cfg.jobs.filter(j => {
+    if (j.enabled === false) return false;
+    if ((ran[j.id] || 0) >= (j.max_per_day || 1)) return false;
+    if (Array.isArray(j.days) && !j.days.includes(DOW[now.getDay()])) return false;
+    if (j.engine === "gemini" && !cfg.gemini.enabled) return false;
+    if (j.at) return nowHM >= j.at && inRange(nowHM, ...(windows[j.window] || windows.any));
+    return inRange(nowHM, ...(windows[j.window] || windows.any));
+  }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+}
+
+// ---------------------------------------------------------------------------
+// VALIDATORS
+// ---------------------------------------------------------------------------
+function bannedPhraseCheck(text, banned) {
+  const hay = String(text || "").toLowerCase();
+  return banned.filter(b => hay.includes(String(b).toLowerCase()));
+}
+function allowedNumbers(data) {
+  const s = new Set();
+  (function walk(v) {
+    if (typeof v === "number" && Number.isFinite(v)) { s.add(String(v)); s.add(String(Math.round(v * 10000) / 10000)); }
+    else if (typeof v === "string") for (const m of v.match(/\d+(\.\d+)?/g) || []) s.add(m);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  })(data);
+  for (let i = 0; i <= 31; i++) s.add(String(i));
+  return s;
+}
+function noNewNumbers(text, inputData) {
+  const allowed = allowedNumbers(inputData);
+  const stripped = String(text || "").replace(/\d{4}-\d{2}-\d{2}/g, "").replace(/\d{1,2}:\d{2}/g, "");
+  for (const n of stripped.match(/\d+(\.\d+)?/g) || []) if (!allowed.has(n)) return { ok: false, bad: n };
+  return { ok: true };
+}
+function validateOutput(job, text, inputData, cfg) {
+  const banned = bannedPhraseCheck(text, cfg.guards.banned_phrases);
+  if (banned.length) return { ok: false, reason: `banned phrase: ${banned.join(", ")}` };
+  if (job.validate === "no_new_numbers") {
+    const v = noNewNumbers(text, inputData);
+    if (!v.ok) return { ok: false, reason: `invented number: ${v.bad}` };
+  }
+  if (job.validate === "quotes_only") {
+    // v0: every quoted segment ≥12 chars must appear verbatim in the input
+    const hay = JSON.stringify(inputData);
+    for (const m of String(text).match(/"([^"]{12,})"/g) || []) {
+      if (!hay.includes(m.slice(1, -1))) return { ok: false, reason: `non-verbatim quote: ${m.slice(0, 40)}…` };
+    }
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// EXECUTORS (injectable for selftest)
+// ---------------------------------------------------------------------------
+const LIMIT_RE = /limit|overloaded|rate.?limit|resets \d/i;
+
+function claudeExec(prompt, model, timeoutMs = 300000) {
+  const t0 = Date.now();
+  try {
+    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet"],
+      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    let text = stdout, inTok = null, outTok = null, isErr = false;
+    try {
+      const j = JSON.parse(stdout);
+      text = j.result !== undefined ? String(j.result) : stdout;
+      isErr = j.is_error === true;
+      if (j.usage) { inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null; }
+    } catch { /* non-json → raw text */ }
+    const total = (inTok || 0) + (outTok || 0) || Math.ceil((prompt.length + text.length) / 4);
+    const limit_hit = isErr && LIMIT_RE.test(text);
+    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null };
+  } catch (e) {
+    const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
+    return { ok: false, text: null, input_tokens: null, output_tokens: null, total_tokens: Math.ceil(prompt.length / 4),
+      duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) };
+  }
+}
+
+function geminiExec(prompt, binary, timeoutMs = 300000) {
+  const t0 = Date.now();
+  try {
+    const stdout = execFileSync(binary, ["-p", prompt.slice(0, 100000)], { timeout: timeoutMs, encoding: "utf8", windowsHide: true });
+    return { ok: true, text: stdout, total_tokens: Math.ceil((prompt.length + stdout.length) / 4), duration_ms: Date.now() - t0, limit_hit: false, error: null };
+  } catch (e) {
+    return { ok: false, text: null, total_tokens: 0, duration_ms: Date.now() - t0, limit_hit: false, error: String(e.message).slice(0, 200) };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PROMPT BUILDERS
+// ---------------------------------------------------------------------------
+const clip = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stringify(s, null, 1); return t.length > n ? t.slice(0, n) + "\n…[clipped]" : t; };
+
+function buildAnalysisPrompt(job, inputs) {
+  const head = `You are an organ of ARSENAL AI FC — the captain's exocortex. Job: ${job.id}. ${job._note || ""}
+LAWS: honest frame only (compounding, never "10x/exponential"); no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.`;
+  const body = Object.entries(inputs).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+
+function gatherInputs(job) {
+  const inputs = {};
+  for (const name of (job.inputs || [])) {
+    const p = join(STATE_DIR, name);
+    if (name.endsWith(".jsonl")) inputs[name] = readLines(p).slice(-200);
+    else inputs[name] = readJson(p);
+  }
+  return inputs;
+}
+
+// ---------------------------------------------------------------------------
+// JOB RUNNER
+// ---------------------------------------------------------------------------
+async function runJob(job, cfg, deps) {
+  const { exec, gexec, now, dry } = deps;
+  const today = localDate(now);
+
+  if (job.kind === "manager_m3") {
+    // M-3: the plug meets the socket. manager.mjs validates + writes the sheet
+    // itself (zero-invented-numbers + fallback skeleton — never depends on us).
+    const system = existsSync(SYSTEM_MD) ? readFileSync(SYSTEM_MD, "utf8") : "";
+    let usage = null;
+    const llm = async (prompt) => {
+      const r = exec(system + "\n\n=== TODAY'S WRAPPER FEATURES (the only numbers that exist) ===\n\n" + prompt, job.model);
+      usage = r;
+      if (!r.ok) throw new Error(r.error || "llm failed");
+      return r.text;
+    };
+    const res = dry ? { source: "dry" } : await runManager({ llm });
+    return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
+  }
+
+  // analysis-class job
+  const inputs = gatherInputs(job);
+  const prompt = buildAnalysisPrompt(job, inputs);
+  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model);
+  if (r.ok && r.text) {
+    const v = validateOutput(job, r.text, inputs, cfg);
+    if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written` };
+    if (!dry) writeAtomic(join(OUT_DIR, job.out || job.id, today + ".md"), r.text);
+    return { usage: r, note: `→ brain_out/${job.out || job.id}/${today}.md` };
+  }
+  return { usage: r, note: r.limit_hit ? "PLAN LIMIT observed — ceiling recorded, backing off" : `failed: ${r.error}` };
+}
+
+// ---------------------------------------------------------------------------
+// TICK — the deterministic heartbeat of the hot brain
+// ---------------------------------------------------------------------------
+async function tick(cfg, deps) {
+  const { now } = deps;
+  if (cfg.guards.refuse_if_api_key_env && process.env.ANTHROPIC_API_KEY) {
+    console.log("brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing risk). Unset it; the brain runs on the Max subscription only.");
+    return { ran: [], refused: true };
+  }
+  const ledger = readLines(LEDGER);
+  const queueState = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+  const today = localDate(now);
+  queueState.jobs_run[today] = queueState.jobs_run[today] || {};
+
+  const ran = [];
+  for (const job of eligibleJobs(cfg, queueState, now)) {
+    const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow)), queueState, now);
+    if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
+    const { usage, note } = await runJob(job, cfg, deps);
+    const row = {
+      ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
+      input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
+      total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0,
+      ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
+    };
+    if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(row) + "\n");
+    queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
+    if (usage.limit_hit && cfg.budget.self_tune) {
+      queueState.observed_window_ceiling = Math.max(1, windowUsage(ledger, now, cfg.budget.window_hours));
+      ran.push({ job: job.id, note, ledgerRow: row });
+      break;                                                    // back off the moment the plan says stop
+    }
+    ran.push({ job: job.id, note, ledgerRow: row });
+  }
+  queueState.last_tick = now.toISOString();
+  if (!deps.dry) writeAtomic(QUEUE, queueState);
+  return { ran, refused: false };
+}
+
+// ---------------------------------------------------------------------------
+// selftest — mock executors; tmp state; no real LLM calls, no real writes
+// ---------------------------------------------------------------------------
+async function selftest() {
+  const checks = [];
+  const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
+  const cfg = loadConfig();   // committed config is the fixture — it must parse
+  assert("committed brain_config.json parses with jobs", cfg.jobs.length >= 10);
+
+  // budget math
+  const now = (h, m) => new Date(2026, 6, 12, h, m, 0);
+  const L = (hoursAgo, tokens, engine = "claude") => ({ ts: new Date(now(23, 0).getTime() - hoursAgo * 3600000).toISOString(), engine, total_tokens: tokens });
+  const ledger = [L(1, 100000), L(2, 200000), L(6, 500000), L(3, 50000, "gemini")];
+  assert("window usage sums 5h of CLAUDE tokens only", windowUsage(ledger, now(23, 0), 5) === 300000);
+  assert("gemini tokens never count against the Claude window", windowUsage(ledger, now(23, 0), 5) < 350000);
+
+  const qEmpty = { observed_window_ceiling: null, jobs_run: {} };
+  const hStudy = headroom(cfg, ledger, qEmpty, now(14, 0));
+  assert("STUDY HOURS — cap = day_reserve_frac (protect the captain)", hStudy.phase === "study" && hStudy.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.day_reserve_frac));
+  const hNight = headroom(cfg, ledger, qEmpty, now(23, 30));
+  assert("OVERNIGHT — cap = overnight_target_frac (exhaust deliberately)", hNight.phase === "overnight" && hNight.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac));
+  assert("self-tuned ceiling overrides the estimate", headroom(cfg, ledger, { observed_window_ceiling: 400000 }, now(23, 30)).cap === Math.round(400000 * cfg.budget.overnight_target_frac));
+
+  // eligibility
+  const q = { jobs_run: { "2026-07-12": { formation_read: 1 } } };
+  const elig845 = eligibleJobs(cfg, { jobs_run: {} }, now(8, 45));
+  assert("formation_read eligible at 08:45", elig845.some(j => j.id === "formation_read"));
+  assert("max_per_day dedup — second run same day blocked", !eligibleJobs(cfg, q, now(9, 0)).some(j => j.id === "formation_read"));
+  assert("overnight jobs ineligible mid-day", !eligibleJobs(cfg, { jobs_run: {} }, now(14, 0)).some(j => j.window === "overnight"));
+  const eligNight = eligibleJobs(cfg, { jobs_run: {} }, now(23, 30));
+  assert("overnight queue rich at 23:30 (≥4 jobs)", eligNight.filter(j => j.window === "overnight").length >= 4);
+  assert("Sunday-only job honors days[] (2026-07-12 IS a Sunday)", eligNight.some(j => j.id === "season_review"));
+  assert("gemini job skipped while gemini.enabled=false", !eligNight.some(j => j.engine === "gemini"));
+  assert("priority ordering (formation > insights)", elig845.length === 0 || elig845[0].priority >= (elig845[1] ? elig845[1].priority : 0));
+
+  // validators
+  assert("banned-phrase validator rejects hype", validateOutput({ validate: null }, "this is a 10x week", {}, cfg).ok === false);
+  assert("no_new_numbers rejects invented numbers", validateOutput({ validate: "no_new_numbers" }, "you did 97 reps", { reps: 12 }, cfg).ok === false);
+  assert("no_new_numbers passes grounded numbers", validateOutput({ validate: "no_new_numbers" }, "12 reps, gap 0.14", { reps: 12, gap: 0.14 }, cfg).ok === true);
+  assert("quotes_only rejects non-verbatim quotes", validateOutput({ validate: "quotes_only" }, 'anchor: "a phrase he never said anywhere"', { bolo: "warehouse wala naksha" }, cfg).ok === false);
+  assert("quotes_only passes verbatim quotes", validateOutput({ validate: "quotes_only" }, 'anchor: "warehouse wala naksha"', { bolo: "warehouse wala naksha socho" }, cfg).ok === true);
+
+  // API-key guard
+  process.env.ANTHROPIC_API_KEY = "sk-test-guard";
+  const refused = await tick(cfg, { exec: () => ({ ok: true }), gexec: () => ({ ok: true }), now: now(23, 0), dry: true });
+  assert("API-KEY GUARD — brain refuses when key present", refused.refused === true);
+  delete process.env.ANTHROPIC_API_KEY;
+
+  // tick with mock executor: runs jobs, respects budget, self-tunes on limit
+  const calls = [];
+  const mockExec = (prompt, model) => { calls.push({ model, len: prompt.length }); return { ok: true, text: "Sharp read. 2 drills stand.", total_tokens: 50000, duration_ms: 10, limit_hit: false, error: null }; };
+  const t1 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: mockExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+  assert("overnight tick drains multiple jobs", t1.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length >= 3);
+  const limitExec = () => ({ ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "You've hit your session limit · resets 7am" });
+  const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+  assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
+
+  // M-3 socket smoke: runManager with a stub llm in a hermetic state dir
+  const os = await import("node:os");
+  const { mkdtempSync } = await import("node:fs");
+  const tmp = mkdtempSync(join(os.tmpdir(), "brain-m3-"));
+  const res = await runManager({ llm: async () => null, stateDir: tmp });
+  assert("M-3 SOCKET — runManager import works; fallback law intact", res && res.source === "fallback" && existsSync(join(tmp, "team_sheet.md")));
+
+  const passed = checks.every(c => c[1]);
+  console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
+  return passed;
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+async function main() {
+  const mode = (process.argv[2] || "tick").toLowerCase();
+  if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  const cfg = loadConfig();
+  const now = new Date();
+  const deps = { exec: claudeExec, gexec: geminiExec, now, dry: process.argv.includes("--dry") };
+
+  if (mode === "status") {
+    const ledger = readLines(LEDGER);
+    const q = readJson(QUEUE) || {};
+    const h = headroom(cfg, ledger, q, now);
+    console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · eligible now: ${eligibleJobs(cfg, q, now).map(j => j.id).join(", ") || "none"}`);
+    return;
+  }
+  if (mode === "run") {
+    const id = process.argv[3];
+    const job = cfg.jobs.find(j => j.id === id);
+    if (!job) { console.log(`brain: no job ${id}`); process.exit(1); }
+    if (cfg.guards.refuse_if_api_key_env && process.env.ANTHROPIC_API_KEY) { console.log("brain: REFUSING — ANTHROPIC_API_KEY set."); process.exit(1); }
+    const { usage, note } = await runJob(job, cfg, deps);
+    if (!deps.dry) appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit }) + "\n");
+    console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
+    return;
+  }
+  // tick
+  const { ran, refused } = await tick(cfg, deps);
+  if (refused) process.exit(1);
+  const done = ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
+  console.log(`brain: tick — ${done} job(s) ran, ${ran.length - done} skipped/failed [${ran.map(r => r.job + (r.skipped ? ":skip" : "")).join(", ") || "idle"}] → ${LEDGER}`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig };
