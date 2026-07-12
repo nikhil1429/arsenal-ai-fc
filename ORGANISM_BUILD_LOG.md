@@ -21,6 +21,35 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 - Commits small + labelled, on branch only. No push to main. Merge = captain's review.
 - Revert = `git checkout main` + delete branch.
 
+## 🏟 MERGED + E2E-PROVEN (12 Jul 2026 evening, captain's order)
+**main = THE FINAL ORGANISM** (merge 953a77e; organism-final synced to same tip).
+Full end-to-end test executed from scratch on merged main: 26/26 selftest
+suites · all 26 scheduled tasks enumerated, commands verified against this
+tree, morning tasks live-fired through the real scheduler (result 0) · full
+pipeline live-fired (mirror→heartbeat→physio→touchline→setpiece→viz→shadow→
+throwin) · Dugout HTTP surface green (constitution carries cartridge+day-
+thread+shadow-gate; real semantic recall; hedge ear; acks; stamps) · throw-in
+lane proven byte-verbatim (publish→poll→ball→route) · both brain engines
+live-fired post-merge (claude insights validated OK after fixes; gemini
+poster folded through the sanitizer onto the wall) · bus fresh across the
+board · public-repo secrets audit clean.
+**FOUR REAL BUGS FOUND LIVE AND FIXED (e42a241→129cac9):**
+1. BATTERY KILL — schtasks defaults silently queued/killed ALL 26 tasks on
+   battery (laptop was discharging during test; Mirror stuck 'Queued').
+   Cleared on every task + installer now clears at install.
+2. ECHO LOOP — the organism's own pushes (same ntfy topic) re-ingested as
+   throw-ins (the bell text sat in loose_balls). Both utterances now sign
+   titles with the badge; poller drops badge-titled messages.
+3. RENDER REJECT LOOP — gemini posters imported Google Fonts → sanitizer
+   (correctly) rejected nightly, tokens burned, nothing landed. PROMPT_LAWS
+   now forbids external refs; poster proven landing.
+4. INSIGHTS DERIVATION — sonnet summed true numbers (402+113=515) → validator
+   (correctly) rejected nightly. Job note bans derived figures; proven OK.
+Also: deprecated Tier-2 ntfy topic redacted from historical docs (public
+repo); captain should unsubscribe the phone from the old nikhil-* topic.
+Positive immune-system proof: zero-invented-numbers validator and the
+sanitizer both fired correctly on REAL bad output before the fixes.
+
 ## Status
 - **Branch:** organism-final (created from main @ fcb007f)
 - **Phase: FINAL BUILD SESSION EXECUTED (sixth order) — DESIGN FROZEN until
