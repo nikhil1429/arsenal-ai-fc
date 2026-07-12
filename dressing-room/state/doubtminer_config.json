@@ -1,0 +1,12 @@
+{
+  "_comment": "THE DOUBT ENGINE config (canon, committed). Shape taxonomy v0 = marker heuristics over the mandatory 'maine-socha-X-phir-Y' doubt structure (FORGE_SPEC §3 makes doubts machine-parseable by construction). Shapes are MACHINE-SIDE: they seed probe design and are never shown pre-Pehle-Guess. Lexicon anchors are verbatim extraction only — Claude never invents his metaphors; breaking-points are the captain's to declare.",
+  "shapes": [
+    { "id": "finance_analogy_overreach", "markers": ["₹", "invoice", "recon", "zomato", "blinkit", "ledger", "paisa", "vendor", "warehouse"] },
+    { "id": "mechanism_conflation", "markers": ["same as", "confuse", "mix", "ya phir", "dono ek", "same cheez", "farak kya"] },
+    { "id": "scale_intuition_failure", "markers": ["scale", "lakh", "million", "billion", "bada", "volume", "cost", "crore"] },
+    { "id": "determinism_assumption", "markers": ["always", "hamesha", "fixed", "deterministic", "guarantee", "pakka", "exact same"] }
+  ],
+  "gates": { "min_capsules": 4, "min_doubts": 60 },
+  "tape_room": { "min_age_days": 14 },
+  "lexicon": { "min_ngram": 2, "max_ngram": 5, "min_count": 2 }
+}
