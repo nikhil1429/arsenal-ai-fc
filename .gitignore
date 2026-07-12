@@ -102,6 +102,8 @@ dressing-room/state/dugout_reminders.jsonl
 # the shadow engine (earned proactivity — personal behavioral data)
 dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
+# semantic recall index (his words, embedded)
+dressing-room/state/recall_index.jsonl
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

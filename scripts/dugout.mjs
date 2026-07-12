@@ -67,6 +67,7 @@ const NOTES     = join(STATE_DIR, "dugout_notes.jsonl");
 const DLEDGER   = join(STATE_DIR, "dugout_ledger.jsonl");
 const STAMPS    = join(STATE_DIR, "dugout_stamps.jsonl");
 const REMINDERS = join(STATE_DIR, "dugout_reminders.jsonl");
+const RECALL    = join(STATE_DIR, "recall_index.jsonl");
 const ACK_DIR   = join(__dirname, "..", "dressing-room", "club", "media", "ack");
 const PORT = 4114;                                 // the captain's number
 
@@ -219,6 +220,97 @@ WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DE
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
 }
 
+// ---------------------------------------------------------------------------
+// THE DAY THREAD (U3c) — KICKOFF / GROUND / FULL-TIME: one stitched audio
+// membrane across the day; the phase shapes the register, never the laws.
+// ---------------------------------------------------------------------------
+function dayPhase(now = new Date()) {
+  const hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return hm < "10:30" ? "KICKOFF" : hm < "20:30" ? "GROUND" : "FULL-TIME";
+}
+function buildDayThreadSection(now = new Date()) {
+  const lines = {
+    KICKOFF: "KICKOFF (now): open from the KAL-line — his own words start the day; serve the winnable first ball; set the day in one breath, no lists.",
+    GROUND: "GROUND (now): you are a work companion — bias-to-silence. Serve at stoppages HE declares ('done', 'next'); take throw-ins verbatim; flow is sacred.",
+    "FULL-TIME": "FULL-TIME (now): walk him into the 30-second ritual — result, one signal, KAL-line, his go-word, run_postmatch. Reflect in his numbers, then let the day end.",
+  };
+  return `THE DAY THREAD: one conversation, three phases — KICKOFF / GROUND / FULL-TIME, stitched by session resumption. ${lines[dayPhase(now)]}`;
+}
+
+// ---------------------------------------------------------------------------
+// SEMANTIC RECALL (U3c) — "when did I last mention X": his own words indexed
+// as embeddings (free tier, key pool), cosine search, dates surfaced. The
+// index grows from what HE said — transcripts, notes, throw-ins, notebook.
+// ---------------------------------------------------------------------------
+function cosine(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return na && nb ? dot / Math.sqrt(na * nb) : 0;
+}
+const textHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(16); };
+
+async function embedTexts(texts, keys = loadKeys(), fetchFn = fetch) {
+  if (!texts.length) return [];
+  const model = process.env.DUGOUT_EMBED_MODEL || "gemini-embedding-001";   // probed live 12 Jul 2026: text-embedding-004 is 404 on v1beta now
+  for (const key of keys) {
+    try {
+      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${encodeURIComponent(key)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: String(t).slice(0, 1500) }] } })) }),
+      });
+      if (!r.ok) continue;                          // quota/key error → rotate pool
+      const j = await r.json();
+      const vecs = (j.embeddings || []).map(e => e.values);
+      if (vecs.length) return vecs;
+    } catch { }
+  }
+  return null;                                      // every key dry → honest null
+}
+
+function gatherRecallSources() {
+  const items = [];
+  for (const n of readLines(NOTES)) if (n.text) items.push({ ts: n.ts, source: "note", text: String(n.text) });
+  for (const b of readLines(join(STATE_DIR, "loose_balls.jsonl"))) if (b.text) items.push({ ts: b.ts, source: "throwin", text: String(b.text) });
+  const nb = readJson(join(STATE_DIR, "notebook.json"));
+  for (const m of (nb && nb.moments) || []) if (m.line) items.push({ ts: m.date, source: "notebook", text: String(m.line) });
+  try {
+    for (const f of readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)))
+      for (const line of readFileSync(join(OUT_DIR, f), "utf8").split("\n"))
+        if (line.startsWith("CAPTAIN: ")) items.push({ ts: f.slice(0, 10), source: "dugout", text: line.slice(9) });
+  } catch { }
+  return items;
+}
+
+async function indexRecall(deps = {}) {
+  const embed = deps.embed || embedTexts;
+  const file = deps.file || RECALL;
+  const sources = (deps.sources || gatherRecallSources()).filter(i => String(i.text).trim().length >= 20);
+  const seen = new Set(readLines(file).map(e => e.h));
+  const fresh = [];
+  for (const i of sources) { const h = textHash(String(i.text)); if (!seen.has(h)) { seen.add(h); fresh.push({ ...i, h }); } }
+  const batch = fresh.slice(0, 100);
+  if (!batch.length) return 0;
+  const vecs = await embed(batch.map(i => i.text));
+  if (!vecs) return 0;
+  let n = 0;
+  for (let i = 0; i < batch.length; i++) if (vecs[i]) {
+    appendFileSync(file, JSON.stringify({ h: batch[i].h, ts: batch[i].ts, source: batch[i].source, text: String(batch[i].text).slice(0, 300), vec: vecs[i] }) + "\n"); n++;
+  }
+  return n;
+}
+
+async function execRecall(args, deps = {}) {
+  const embed = deps.embed || embedTexts;
+  const index = deps.index || readLines(RECALL);
+  if (!index.length) return { hits: [], note: "recall index empty — it grows as you talk" };
+  const q = await embed([String(args.query || "")]);
+  if (!q || !q[0]) return { hits: [], note: "embedding lane dry (keys/quota) — try later" };
+  const hits = index.map(e => ({ date: String(e.ts || "").slice(0, 10), source: e.source, text: e.text, score: Math.round(cosine(q[0], e.vec) * 100) / 100 }))
+    .sort((a, b) => b.score - a.score).slice(0, 3).filter(h => h.score >= 0.3);
+  return { hits, note: hits.length ? undefined : "nothing close enough — honest miss" };
+}
+
 // EARNED PROACTIVITY (U3b, L2) — the shadow-gate section, assembled live from
 // the proactivity ledger. Voice = proven hit-rate + his one-time ratification.
 function buildProactivitySection(led = readJson(join(STATE_DIR, "proactivity_ledger.json"))) {
@@ -252,6 +344,10 @@ RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rej
 
 HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT words (never your paraphrase) and the time he named. At fire time his own words come back through you — once, warm, done. Never add advice to a reminder.
 
+${buildDayThreadSection()}
+
+MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recall; answer with the date and his own words, never a reconstruction.
+
 ${buildProactivitySection()}
 
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
@@ -274,6 +370,7 @@ const TOOL_DECLS = [
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
+  { name: "semantic_recall", description: "\"When did I last mention X / maine kab bola tha\" — semantic search over HIS OWN past words (transcripts, notes, throw-ins, notebook). Returns dates + verbatim snippets.", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
   { name: "checkpoint", description: "Match record: one-line summary of what you just said. Call silently after each substantive reply; never mention it.", parameters: { type: "OBJECT", properties: { summary: { type: "STRING" } }, required: ["summary"] } },
   { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
@@ -536,9 +633,30 @@ async function selftest() {
   const rat = execTool("ratify_interruption", { type: "wall_breaker" }, { sh });
   assert("ratification routes through shadow.mjs (owner writes the ledger)", rat.ok === true && calls.some(c => c.script === "shadow.mjs" && c.argv.join(" ") === "ratify wall_breaker"));
 
+  // THE DAY THREAD + SEMANTIC RECALL (U3c)
+  assert("day phases: kickoff / ground / full-time boundaries", dayPhase(new Date(2026, 6, 12, 8, 0)) === "KICKOFF" && dayPhase(new Date(2026, 6, 12, 14, 0)) === "GROUND" && dayPhase(new Date(2026, 6, 12, 21, 30)) === "FULL-TIME");
+  assert("ground phase = bias-to-silence work companion", buildDayThreadSection(new Date(2026, 6, 12, 14, 0)).includes("bias-to-silence"));
+  assert("full-time phase walks him into the ritual", buildDayThreadSection(new Date(2026, 6, 12, 21, 0)).includes("run_postmatch"));
+  assert("cosine honest: identical=1, orthogonal=0, mismatch=0", Math.abs(cosine([1, 0], [1, 0]) - 1) < 1e-9 && cosine([1, 0], [0, 1]) === 0 && cosine([1], [1, 2]) === 0);
+  {
+    const osm = await import("node:os"); const { mkdtempSync } = await import("node:fs");
+    const tf = join(mkdtempSync(join(osm.tmpdir(), "dugout-recall-")), "idx.jsonl");
+    const mockEmbed = async (texts) => texts.map(t => /token/i.test(t) ? [1, 0] : [0, 1]);
+    const srcs = [{ ts: "2026-07-10", source: "note", text: "tokenization confusion — subwords kyun better hai" }, { ts: "2026-07-11", source: "throwin", text: "cosine distance vs dot product same cheez?" }, { ts: "2026-07-10", source: "note", text: "tokenization confusion — subwords kyun better hai" }];
+    const n1 = await indexRecall({ embed: mockEmbed, file: tf, sources: srcs });
+    assert("index dedupes his repeated words (2 of 3 indexed)", n1 === 2);
+    assert("re-index adds nothing (idempotent)", (await indexRecall({ embed: mockEmbed, file: tf, sources: srcs })) === 0);
+    const rec = await execRecall({ query: "when did I talk tokens" }, { embed: mockEmbed, index: readLines(tf) });
+    assert("recall surfaces date + his verbatim words, best first", rec.hits.length >= 1 && rec.hits[0].date === "2026-07-10" && rec.hits[0].text.includes("subwords kyun"));
+    const dry = await execRecall({ query: "x" }, { embed: async () => null, index: readLines(tf) });
+    assert("keys dry → honest note, never a fake answer", dry.hits.length === 0 && dry.note.includes("dry"));
+    assert("empty index → honest note", (await execRecall({ query: "x" }, { embed: mockEmbed, index: [] })).note.includes("empty"));
+  }
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 14);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 15);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
+  assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
   assert("his-voice reminder law travels (verbatim, once, no advice)", cfg.system.includes("HIS-VOICE REMINDERS") && cfg.system.includes("Never add advice"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
@@ -792,6 +910,11 @@ document.getElementById('go').onclick=async()=>{
 // ---------------------------------------------------------------------------
 async function main() {
   if ((process.argv[2] || "").toLowerCase() === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if ((process.argv[2] || "").toLowerCase() === "index") {
+    const n = await indexRecall();
+    console.log(`dugout: recall index +${n} new chunk(s) of his words`);
+    return;
+  }
   const keys = loadKeys();
   if (!keys.length) { console.log("dugout: no GEMINI_API_KEY found (~/.gemini/.env) — wire setup/GEMINI_CLI_SETUP.md first"); process.exit(1); }
   mkdirSync(OUT_DIR, { recursive: true });
@@ -800,6 +923,8 @@ async function main() {
   // the shadow engine trains while the voice surface is alive (detection is
   // silent by construction; the mouth needs no wire to stay shut)
   setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
+  indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} of his words`); }).catch(() => { });
+  setInterval(() => indexRecall().catch(() => { }), 3600000);   // his words become findable, hourly
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
@@ -818,7 +943,10 @@ async function main() {
       if (req.method === "POST") {
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
-        if (req.url === "/tool") return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
+        if (req.url === "/tool") {
+          if (body.name === "semantic_recall") return send(200, await execRecall(body.args || {}));   // the one async tool
+          return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
+        }
         if (req.url === "/transcript") {
           appendFileSync(join(OUT_DIR, localDate() + ".md"), body.lines.join("\n") + "\n");
           // THE EAR'S ONE LEGAL SURFACE — hedge-density, scrimmage mode only,
@@ -860,4 +988,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE };
+export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase };
