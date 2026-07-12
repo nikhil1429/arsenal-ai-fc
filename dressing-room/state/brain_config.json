@@ -17,7 +17,7 @@
     "banned_phrases": ["10x", "exponential", "on steroids", "god-tier", "time is short"],
     "_note": "Hype in output is a bug (CONDUCTOR §1). The API-key guard keeps the hard $100 ceiling: subscription only, ever."
   },
-  "ntfy": { "enabled": false, "topic": "", "push_after": ["formation_read"], "_note": "Morning sheet push only. Nothing else ever pings. Enable via setup/NTFY_SETUP.md." },
+  "ntfy": { "enabled": true, "topic": "", "push_after": ["formation_read"], "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed." },
   "gemini": { "enabled": false, "binary": "gemini", "_note": "Second brain — visualization + long-context. Free CLI on his Google account (Pro sub raises limits). Enable via setup/GEMINI_CLI_SETUP.md. Degrades gracefully while absent." },
   "jobs": [
     { "id": "formation_read", "engine": "claude", "model": "opus", "window": "morning", "at": "08:45", "priority": 100, "enabled": true, "max_per_day": 1, "kind": "manager_m3", "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless." },

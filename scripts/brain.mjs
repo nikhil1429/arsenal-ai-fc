@@ -221,6 +221,37 @@ function geminiExec(prompt, binary, timeoutMs = 300000) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// NTFY — the organism's mouth on the captain's phone. Two utterances ONLY:
+// the 08:45 sheet (after formation_read) and the 21:30 full-time bell.
+// Nothing else ever pings (constitutional). The topic is a SECRET: config
+// holds "" and resolution falls back to env → gitignored throwin_topic.txt.
+// ---------------------------------------------------------------------------
+function resolveNtfyTopic(cfg, env = process.env) {
+  if (cfg.ntfy && cfg.ntfy.topic) return cfg.ntfy.topic;
+  const fromEnv = env.ARSENAL_NTFY_TOPIC;
+  if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim();
+  try {
+    const p = join(STATE_DIR, "throwin_topic.txt");
+    if (existsSync(p)) { const t = readFileSync(p, "utf8").trim(); if (t) return t; }
+  } catch { }
+  return null;
+}
+async function pushNtfy(cfg, title, body, fetchFn = fetch) {
+  if (!cfg.ntfy || !cfg.ntfy.enabled) return { sent: false, why: "disabled" };
+  const topic = resolveNtfyTopic(cfg);
+  if (!topic) return { sent: false, why: "no topic" };
+  try {
+    const res = await fetchFn(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+      method: "POST", body, headers: { Title: title, Tags: "soccer" },
+    });
+    return { sent: res && (res.ok || res.status === 200), why: null };
+  } catch (e) { return { sent: false, why: "network" }; }
+}
+const BELLS = {
+  fulltime: { title: "Full-time, captain", body: "30 seconds, then sleep: npm run postmatch\n(HIT/MISS · one signal · KAL-line — the weld that wins tomorrow's morning.) COYG" },
+};
+
 // the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
 // to "help". Deterministic slice: from the FIRST badge to the END of the LAST
 // badge. No badge ⇒ return as-is (the wrapper's validator will judge it).
@@ -274,6 +305,12 @@ async function runJob(job, cfg, deps) {
       return sliceSheet(r.text);
     };
     const res = dry ? { source: "dry" } : await runManager({ llm });
+    // the one sanctioned morning push: the sheet lands on his phone unasked
+    if (!dry && res.source === "llm" && (cfg.ntfy.push_after || []).includes(job.id)) {
+      const sheetPath = join(STATE_DIR, "team_sheet.md");
+      const head = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n") : "sheet ready";
+      await pushNtfy(cfg, "⚪🔴 Team sheet is up", head + "\n…full sheet on the wall.");
+    }
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
   }
 
@@ -386,6 +423,17 @@ async function selftest() {
   const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
+  // ntfy mouth — secret topic never in committed config; two utterances only
+  const cfgNtfyOn = { ...cfg, ntfy: { enabled: true, topic: "", push_after: ["formation_read"] } };
+  assert("ntfy topic resolves from env fallback (config stays secret-free)", resolveNtfyTopic({ ntfy: { topic: "" } }, { ARSENAL_NTFY_TOPIC: "sekrit" }) === "sekrit");
+  assert("ntfy disabled ⇒ never sends", (await pushNtfy({ ntfy: { enabled: false } }, "t", "b", async () => { throw new Error("must not be called"); })).sent === false);
+  let pushed = null;
+  const okFetch = async (url, opts) => { pushed = { url, body: opts.body, title: opts.headers.Title }; return { ok: true, status: 200 }; };
+  const bellRes = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, BELLS.fulltime.body, okFetch);
+  assert("full-time bell sends the postmatch cue", bellRes.sent === true && pushed.body.includes("npm run postmatch"));
+  assert("bell carries no shame/streak/hype language", !/streak|fail|10x|hurry|late/i.test(pushed.body));
+  assert("only two utterances exist (bell registry + push_after)", Object.keys(BELLS).length === 1 && cfgNtfyOn.ntfy.push_after.length === 1);
+
   // sheet slicing — the agentic-CLI chatter guard
   assert("sliceSheet strips preamble + epilogue chatter", sliceSheet("Sure! Here it is:\n⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴\nLet me know!") === "⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴");
   assert("sliceSheet passes badge-less text through to the validator", sliceSheet("no badge here") === "no badge here");
@@ -412,6 +460,14 @@ async function main() {
   const now = new Date();
   const deps = { exec: claudeExec, gexec: geminiExec, now, dry: process.argv.includes("--dry") };
 
+  if (mode === "bell") {
+    const kind = (process.argv[3] || "fulltime").toLowerCase();
+    const bell = BELLS[kind];
+    if (!bell) { console.log(`brain: no bell '${kind}'`); process.exit(1); }
+    const r = await pushNtfy(cfg, bell.title, bell.body);
+    console.log(`brain: bell '${kind}' ${r.sent ? "rang on the phone" : "silent (" + r.why + ")"}`);
+    return;
+  }
   if (mode === "status") {
     const ledger = readLines(LEDGER);
     const q = readJson(QUEUE) || {};
@@ -438,4 +494,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet };
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy };

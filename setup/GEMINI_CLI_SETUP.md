@@ -9,6 +9,9 @@ npm install -g @google/gemini-cli
 gemini          # first run opens browser → sign in with YOUR Google account
 ```
 Choose **"Login with Google"** (NOT an API key — same law as Claude).
+**⚠️ ACCOUNT:** sign in with the Google account that carries the AI Pro plan —
+the **…2914** address, NOT the default …1429 one. Wrong account = free-tier
+limits and the overnight renders will starve.
 
 ## Verify
 ```powershell
