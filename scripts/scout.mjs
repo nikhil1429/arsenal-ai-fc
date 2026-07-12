@@ -148,7 +148,7 @@ async function selftest() {
   const cfg = loadConfig("__no_such__");
   const dossier = JSON.parse(readFileSync(join(STATE_DIR, "dossier_weights.json"), "utf8"));
   const now = new Date(2026, 6, 12, 22, 0, 0);
-  const registry = { concepts: { tokenization: { bucket: "1-fundamentals" }, chunking: { bucket: "2-rag" }, embeddings: { bucket: "2-rag" } }, skills: { pydantic: {}, fastapi: {}, async: {} } };
+  const registry = { concepts: { tokenization: { bucket: "1-fundamentals" }, chunking: { bucket: "2-rag" }, embeddings: { bucket: "2-rag" }, jagged: { bucket: "0-light" } }, skills: { pydantic: {}, fastapi: {}, async: {} } };
 
   const ls = {
     concepts: [
@@ -160,7 +160,7 @@ async function selftest() {
       { id: "fastapi", track: "skill", fluency: "🟢 fluent" },
       { id: "async", track: "skill", fluency: "🟡 held" },
     ],
-    edge_map: { chunking: "can size chunks, shaky on overlap tradeoffs", tokenization: "byte-level BPE internals beyond me, don't need them" },
+    edge_map: { chunking: "can size chunks, shaky on overlap tradeoffs", jagged: "jagged-frontier internals beyond me, don't need them" },
   };
 
   const staged = stageTriggers(ls, cfg, dossier, { pipeline_item: "M1 parser" });
@@ -173,7 +173,7 @@ async function selftest() {
 
   const edges = edgeSplit(ls, registry, dossier, cfg);
   assert("edge on high-weight ground → LEARN", edges.learn.some(e => e.concept === "chunking"));
-  assert("edge on low-weight ground → RATIFY with negative-space line", edges.ratify.some(e => e.concept === "tokenization" && e.negative_space_line.includes("yeh main nahi karta")));
+  assert("edge on low-weight ground → RATIFY with negative-space line", edges.ratify.some(e => e.concept === "jagged" && e.negative_space_line.includes("yeh main nahi karta")));
   assert("edge text carried VERBATIM", edges.learn[0].edge_verbatim === "can size chunks, shaky on overlap tradeoffs");
 
   const scout = buildScout(staged, edges, now);
