@@ -1,0 +1,11 @@
+{
+  "_comment": "THE TOUCHLINE config (canon, committed). Sensing is not interrupting: this organ never pings; it acts only through files. The MIXED-ZONE EAR is exiled by constitution — touchline.mjs hardcodes {enabled:false, surface:'scrimmage_only'} and ignores any attempt to enable it here; FORGE-Bolo remains unmeasured ground, forever. Thresholds are v0 hypotheses (tunable at R1, lossless re-run).",
+  "aw_base_env": "AW_API_BASE",
+  "aw_default": "http://localhost:5600",
+  "kickoff": "09:00",
+  "tunnel": { "window_min": 45, "min_switches": 11, "max_learning_min": 5 },
+  "struggle": { "last_n": 6, "spin_axis_repeat": 3, "fast_ms": 8000 },
+  "tank": { "above_line": 6 },
+  "weak_foot": { "deferral_streak": 3 },
+  "ear": { "enabled": false, "surface": "scrimmage_only" }
+}
