@@ -259,7 +259,30 @@ function promptPack(data, renderNotes = null) {
     "wall_painter.md": `# Wall-Painter — tonight's render (auto-written by the organism)\n\nCreate ONE dense, beautiful, dark single-file HTML dashboard (inline SVG, no external anything) from this state. Sections: the Maidan as a real pitch diagram (stages = zones, fluency colors, the weak connection drawn as a frayed pass) · season strip (matches, doubts retired, weekly consistency) · calibration curve vs targets · derby table · tomorrow's set pieces · body verdict band · brain meter ("got sharper while you slept").${notes}\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
     "match_poster.md": `# Match Poster — this week (auto-written by the organism)\n\nCreate ONE portrait SVG poster (print-worthy, 3:4) of this week as a football match: headline = the biggest true number in the data (doubts retired, matches played, or a derby settled); sub-line = the weekly consistency; one visual motif from the Maidan. Understated, premium, cold-steel-warm-core.\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
     "season_film.md": `# Season Film — Veo prompt (auto-written; paste into the Gemini app's video tool)\n\nWrite me a 30-second cinematic video-generation prompt: a lone footballer training under floodlights at dawn, ONE scene per true milestone in the JSON (matches played, doubts retired, stages runnable) — rendered as scoreboard glimpses and pitch markings, never text-heavy. Tone: quiet, earned, no triumphalism. End on the crest ⚪🔴 and the words "kal phir".\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
+    "voice_brief.md": voiceBrief(data),
   };
+}
+
+// THE VOICE BRIEF — the daily context capsule for the Voice Gaffer Gem
+// (setup/VOICE_SETUP.md): he pastes this once, then TALKS to the organism —
+// Gemini Live carries the conversation, this carries today's truth. Spoken
+// register, ≤20 short lines, numbers only from the wall data.
+function voiceBrief(d) {
+  const L = [];
+  L.push("# Voice Brief — paste me into the Voice Gaffer Gem, then just talk");
+  L.push("");
+  L.push(`Today: ${d.date}. Body verdict: ${d.verdict}.`);
+  if (d.kal_line) L.push(`His KAL-line (his own words, the day starts here): "${d.kal_line}"`);
+  L.push(`Season: ${d.season.matches_played} matches played · ${d.doubts_retired} doubts retired · ${d.tape_queue} rematches waiting.`);
+  if (d.season.weekly_consistency_pct !== null) L.push(`Weekly consistency: ${d.season.weekly_consistency_pct}%.`);
+  if (d.calibration) L.push(`Calibration gap ${d.calibration.gap} (${d.calibration.trend || "—"}).${d.calibration.danger && d.calibration.danger.length ? " Danger topic: " + d.calibration.danger[0] + "." : ""}`);
+  if (d.drills_tomorrow.length) L.push(`Tomorrow's set pieces: ${d.drills_tomorrow.map(x => x.kind).join(", ")}.`);
+  if (d.derby.length) L.push(`Hot derby: ${d.derby[0].from} vs ${d.derby[0].to} (×${d.derby[0].count}).`);
+  if (d.twin_voice) L.push(`The book's earned line: ${d.twin_voice}`);
+  if (d.bleeds.length) L.push(`Physio note: ${d.bleeds.join(", ")}.`);
+  L.push("");
+  L.push("Rules for this conversation: spoken register, one idea at a time, honest frame (compounding, never hype), no calendar pressure, cracks are data never verdicts, rivalry only vs kal-wala-Nikhil. If he Bolos a concept, listen fully, then probe ONE crack, warmly.");
+  return L.join("\n") + "\n";
 }
 
 // safety gate for Gemini output entering the club: inline SVG/HTML only —
@@ -331,12 +354,14 @@ async function selftest() {
 
   // GEMINI LANE
   const pack = promptPack(data);
-  assert("prompt pack: three prompts auto-written", Object.keys(pack).length === 3 && pack["wall_painter.md"].includes("frayed pass"));
+  assert("prompt pack: four prompts auto-written", Object.keys(pack).length === 4 && pack["wall_painter.md"].includes("frayed pass"));
+  assert("voice brief speaks his day (KAL + counters + spoken rules)", pack["voice_brief.md"].includes("pehla move: context Re-Jirah") && pack["voice_brief.md"].includes("24 doubts retired") && pack["voice_brief.md"].includes("spoken register"));
+  assert("voice brief carries no hype/streak/countdown", !/10x|exponential|streak|days left/i.test(pack["voice_brief.md"]));
   const packNoted = promptPack(data, "1. The derby table drowned the Maidan — shrink it.\n2. More whitespace at the top.");
   assert("CLAUDE↔GEMINI LOOP — render notes feed the next night's prompt", packNoted["wall_painter.md"].includes("RENDER NOTES") && packNoted["wall_painter.md"].includes("derby table drowned"));
   assert("no notes → clean prompt (no empty section)", !pack["wall_painter.md"].includes("RENDER NOTES"));
   assert("prompt pack embeds the real numbers", pack["match_poster.md"].includes('"doubts_retired": 24'));
-  assert("prompt pack carries the laws", Object.values(pack).every(p => p.includes("invent nothing") && p.includes("#0c0e13")));
+  assert("visual prompts carry the render laws", ["wall_painter.md", "match_poster.md", "season_film.md"].every(k => pack[k].includes("invent nothing") && pack[k].includes("#0c0e13")));
   assert("sanitizer accepts clean inline SVG", sanitizeGemini("<svg viewBox='0 0 10 10'><rect/></svg>") !== null);
   assert("sanitizer strips code fences", sanitizeGemini("```html\n<html><body>ok</body></html>\n```") !== null);
   assert("sanitizer rejects scripts", sanitizeGemini("<html><script>alert(1)</script></html>") === null);
