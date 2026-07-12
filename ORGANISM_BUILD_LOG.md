@@ -162,3 +162,38 @@ for him and Nidhi).
 **QUOTA CEILING:** audio-only 15-min stitched sessions; frame-mode for vision;
 key-pool across all his free projects; dugout_ledger informs the brain
 scheduler to shift text jobs off Gemini when voice needs the pool.
+
+## NEXT SESSION ADDENDUM 2 — THE CONTINUOUS-TIME ORGANISM (deep brainstorm, captain-approved)
+FRAME: organism lives in batch time; Live API = continuous time. Decide per
+loop: close-in-seconds vs must-stay-slow (clamps). Six layers:
+L1 EPISODIC MEMORY — Day-Thread transcripts complete the hierarchy: sensory
+   (bus) → episodic (transcripts) → semantic (capsules/lexicon) →
+   autobiographical (notebook/season); nightly digest distills tier→tier.
+L2 EARNED PROACTIVITY (crown mechanism) — SHADOW INTERRUPTIONS: proactive
+   engine logs would-have-spoken moments silently; Evening Scorer resolves
+   each (would it have helped?); an interruption-type earns VOICE only at
+   proven shadow hit-rate + captain's one-time spoken ratification (the
+   no-look-pass machinery pointed at the mouth). Captain's own spoken
+   reminders exempt (his voice echoed ≠ ping). RED = proactive mouth mute.
+   Candidate types to shadow-train: stoppage next-drill offer · wall-breaker
+   green-ball line · his own timed reminders · due-at-kickoff · scrimmage-door.
+L3 TWO-SPEED BRAIN — Live = reflex loop (never deep judgment; defers heavy
+   thoughts to overnight Claude via note). Slow brain programs fast brain
+   daily: overnight digest + enrichments + fingerprint + earned-interruption
+   list compile into the "DAY CARTRIDGE" (fresh Live system instruction each
+   dawn). Consolidation across the sleep boundary, like biology.
+L4 SENSES — true think-time latency from transcription stamps (repairs
+   latency_ms everywhere; highest data-ROI) · WHITEBOARD SCRIMMAGE via camera
+   (paper sketch + voice = system-design round in native medium — DOSSIER's
+   heaviest 60min finally trainable) · Re-Jirah live conductor (controller v0
+   actuated; concept-track paste → ~zero) · modality-routing law (voice-first:
+   recall/defend/3-ways/Bolo; screen-first: math-reconstruct/code) as a
+   dossier_weights field, setpiece tags drills.
+L5 THREE BUDGETS — Live-minutes = third pool beside Claude-window and
+   Gemini-text; dugout_ledger self-tunes per-key shape; degradation ladder
+   day-thread → on-demand → talk.mjs.
+L6 REFUSALS (permanent) — prosody never scores; organism-usage never a
+   market; ambient mic = household decision; proactivity only via shadow-gate.
+BUILD ORDER NEXT SESSION: P0 mic bug (see above) → shadow engine +
+day-cartridge compiler → voice full-time/genome tools → oral scrimmage →
+think-time stamps → Re-Jirah conductor → whiteboard mode → modality routing.
