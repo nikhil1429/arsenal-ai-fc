@@ -1,0 +1,6 @@
+{
+  "_comment": "THE ADVANCE SCOUT config (canon, committed). Threshold triggers on real state — never extrapolation. Constitutional law in scout.mjs: no projected date is ever shown; projection steers what the loop PREPARES, never what he owes. The LEARN/RATIFY edge split is always a proposal.",
+  "scrimmage": { "min_defend_grade_concepts": 3 },
+  "finops": { "skills": ["pydantic", "fastapi", "async"], "min_state": "held" },
+  "edges": { "high_weight_rounds": ["system_design", "production_eval", "build"] }
+}

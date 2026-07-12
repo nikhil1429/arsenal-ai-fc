@@ -1,0 +1,6 @@
+{
+  "_comment": "THE CAPSULE-MIRROR config (canon, committed). base = the captain's public gist raw URL (master store of FORGE capsules; Option-A manual writes only — the mirror NEVER writes back). ids = currently locked capsules; extend this list as new concepts lock. mirror.mjs is the sole reader.",
+  "base": "https://gist.githubusercontent.com/nikhil1429/ce50c28d585c2fcd915a9dbf61871a56/raw/",
+  "ids": ["tokenization", "embeddings", "inference", "context"],
+  "timeout_ms": 15000
+}

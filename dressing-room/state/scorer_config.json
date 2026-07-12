@@ -1,0 +1,8 @@
+{
+  "_comment": "THE EVENING SCORER config (canon, committed). One ledger, three books, one arithmetic (calibration.mjs's exported ece() + Brier). A bet whose instrument is dark is skipped, never guessed. Trust tiers: crossing the no-look threshold sets pending_ratification — the captain ratifies once; nothing auto-promotes. Gaffer tallies are descriptive context only, never automated lever-ranking.",
+  "session_min_minutes": 45,
+  "first_focus_deadline": "09:30",
+  "trust": { "no_look_min_hit_rate": 0.9, "no_look_min_n": 20 },
+  "gaffer_horizon_days": 3,
+  "targets": { "knew": 0.95, "shaky": 0.65, "guessed": 0.30 }
+}

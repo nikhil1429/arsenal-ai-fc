@@ -258,7 +258,9 @@ async function run() {
   const cfg = loadConfig();
   const now = new Date();
   const dayStart = localDayStart(now);
-  const dateStr = dayStart.toISOString().slice(0, 10);
+  // IST fix (organism U4, captain-approved): local components, never
+  // toISOString — UTC+5:30 made local midnight stamp YESTERDAY's date.
+  const dateStr = `${dayStart.getFullYear()}-${String(dayStart.getMonth() + 1).padStart(2, "0")}-${String(dayStart.getDate()).padStart(2, "0")}`;
 
   let afkEvents, windowEvents, webEvents, dataOk = true, note = "";
 

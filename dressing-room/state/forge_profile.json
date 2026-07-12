@@ -1,0 +1,9 @@
+{
+  "_comment": "THE GENOME (canon, committed) — the FORGE method as versioned data (THE_ORGANISM §VI). Seeded verbatim from FORGE_SPEC's current constants. SOLE writer: bootroom.mjs, and only through the mutation pipeline (propose → validate → captain's 'haan, chalao' → score → keep/auto-revert). Old values are frozen verbatim in legacy{} — layering, never replace. Medical rules, ladder_config, the Goalkeeper, and the honest frame are constitutionally OUTSIDE this genome and can never be mutation targets.",
+  "version": "1.0",
+  "rejirah_intervals_days": [3, 14, 42],
+  "axis_weights": { "a": 1, "b": 1, "c": 1, "d": 1, "e": 1, "f": 1, "g": 1, "h": 1, "i": 1 },
+  "interleave_confusables": true,
+  "criterion_gated_pass": { "correct": true, "confidence": "knew", "latency_under_median": true },
+  "legacy": {}
+}

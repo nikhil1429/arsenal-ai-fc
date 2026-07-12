@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "activitywatch": {
+      "command": "node",
+      "args": ["C:\\Users\\nikhi\\activitywatch-mcp-server\\dist\\index.js"],
+      "_comment": "The captain's own AW MCP build (free, local). Gives every Claude Code session in this repo direct time-audit sight — the /organism-doctor and /matchday skills use it when present. Deterministic organs (timeaudit/touchline) still read AW REST directly; this is the interactive-session lane only."
+    }
+  }
+}

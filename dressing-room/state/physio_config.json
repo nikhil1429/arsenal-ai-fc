@@ -1,0 +1,19 @@
+{
+  "_comment": "THE PHYSIO config (canon, committed). Cadence = how often each bus file is expected to refresh (hours); grace_frac widens it before a stale bleed fires. Gates = the volumes at which fitted organs earn their voice (THE_ORGANISM: 'every new organ ships behind a speak-gate'). The Governor is constitutionally absent from the signal table — physio.mjs hardcodes that exemption.",
+  "expected_cadence_hours": {
+    "readiness.json": 30, "cards.json": 30, "calibration.json": 30, "weaknesses.json": 30,
+    "learning_state.json": 30, "timeaudit.json": 30, "pulse.json": 30, "mirror_manifest.json": 30,
+    "drills.json": 30, "twin.json": 30, "pitch_read.json": 30
+  },
+  "grace_frac": 0.25,
+  "effort_uncaptured": { "min_learning_minutes": 120 },
+  "throwin_gap_days": 4,
+  "signal_table": { "min_n": 20 },
+  "gates": {
+    "twin_voice_min_resolutions": 30,
+    "doubt_clusters": { "min_capsules": 4, "min_doubts": 60 },
+    "bootroom_min_reps": 200,
+    "apni_ghadi": { "min_cards": 8, "min_reps_per_card": 4 },
+    "body_archive_min_days": 84
+  }
+}
