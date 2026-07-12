@@ -208,6 +208,14 @@ async function main() {
   const now = new Date();
   const dateStr = localDate(now);
 
+  // double-click guard: one full-time per day (a second click must never
+  // double a matchday). --force is the deliberate override.
+  if (!dry && !process.argv.includes("--force") && existsSync(join(PM_DIR, dateStr + ".md"))) {
+    const s = readJson(SEASON) || {};
+    console.log(`postmatch: today is already closed (Matchday ${s.matches_played ?? "?"}). Nothing written. (--force to redo, if you really mean it)`);
+    return;
+  }
+
   let hit = (argOf("--hit") || "").toUpperCase() || null;
   let signal = argOf("--signal");
   let kal = argOf("--kal");

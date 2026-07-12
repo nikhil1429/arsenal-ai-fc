@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dugout",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/dugout.mjs"],
+      "port": 4114
+    },
+    {
+      "name": "dugout-lan",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/dugout.mjs", "--lan"],
+      "port": 4114
+    }
+  ]
+}

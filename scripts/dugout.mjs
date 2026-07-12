@@ -980,6 +980,16 @@ async function main() {
       send(404, { error: "not found" });
     } catch (e) { send(500, { error: String(e.message).slice(0, 200) }); }
   });
+  // double-click friendly: if a bridge already owns the port, don't crash —
+  // just open the page and leave (the captain never sees EADDRINUSE).
+  server.on("error", (e) => {
+    if (e && e.code === "EADDRINUSE") {
+      console.log(`dugout: bridge already live on http://localhost:${PORT} — opening it.`);
+      if (!process.env.DUGOUT_NO_OPEN) { try { execFileSync("cmd", ["/c", "start", "", `http://localhost:${PORT}`], { windowsHide: true }); } catch { } }
+      process.exit(0);
+    }
+    throw e;
+  });
   // --lan (U4): the Dugout on his PHONE browser while pacing the house.
   // Home-wifi only; localhost stays the default. Phone mic on plain http
   // needs the documented one-time browser flag (setup/VOICE_SETUP.md §LAN).
