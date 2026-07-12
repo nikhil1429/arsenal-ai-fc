@@ -382,7 +382,10 @@ async function tick(cfg, deps) {
       ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
     };
     if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(row) + "\n");
-    queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
+    // a FAILED job does not consume its daily slot — it retries next tick
+    // (e.g. gemini before the captain's one-time login, or a transient claude
+    // error). Success is what spends the slot.
+    if (usage.ok) queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
     if (usage.limit_hit && cfg.budget.self_tune) {
       queueState.observed_window_ceiling = Math.max(1, windowUsage(ledger, now, cfg.budget.window_hours));
       ran.push({ job: job.id, note, ledgerRow: row });
@@ -427,7 +430,9 @@ async function selftest() {
   const eligNight = eligibleJobs(cfg, { jobs_run: {} }, now(23, 30));
   assert("overnight queue rich at 23:30 (≥4 jobs)", eligNight.filter(j => j.window === "overnight").length >= 4);
   assert("Sunday-only job honors days[] (2026-07-12 IS a Sunday)", eligNight.some(j => j.id === "season_review"));
-  assert("gemini job skipped while gemini.enabled=false", !eligNight.some(j => j.engine === "gemini"));
+  const cfgGemOff = { ...cfg, gemini: { ...cfg.gemini, enabled: false } };
+  assert("gemini jobs skipped when gemini.enabled=false (mechanism)", !eligibleJobs(cfgGemOff, { jobs_run: {} }, now(23, 30)).some(j => j.engine === "gemini"));
+  assert("gemini jobs eligible when enabled (committed default)", cfg.gemini.enabled === false || eligNight.some(j => j.engine === "gemini"));
   assert("priority ordering (formation > insights)", elig845.length === 0 || elig845[0].priority >= (elig845[1] ? elig845[1].priority : 0));
 
   // validators
