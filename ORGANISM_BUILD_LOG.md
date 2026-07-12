@@ -23,7 +23,16 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 
 ## Status
 - **Branch:** organism-final (created from main @ fcb007f)
-- **Phase:** COMPLETE + SUPERPOWER PASS (captain's second order, 12 Jul) —
+- **Phase: FINAL BUILD SESSION EXECUTED (sixth order) — DESIGN FROZEN until
+  the offer.** U1 Dugout hardening (empirical scar-table, spoken gates,
+  think-time, ACK, rehydrate+day-cartridge, mic P0 root-caused) · U1.5 Media
+  Engine (team talks→mp3, wall MEDIA panel, film kit) · U2 interview weapons
+  (oral scrimmage w/ personas+hedge ear, whiteboard/screen eyes, Re-Jirah
+  conductor, modality routing) · U3 earned proactivity (his-voice reminders,
+  shadow engine two-key gate, day-thread, semantic recall, third budget pool)
+  · U4 polish (LAN phone, event re-analysis, commitments wall, notes→postmatch,
+  timeaudit IST fix). 26/26 suites green. See ✅ section below.
+- **Prior phase:** COMPLETE + SUPERPOWER PASS (captain's second order, 12 Jul) —
   full body + brain + arsenal: 7 Claude Skills (.claude/skills/), repo .mcp.json
   (his AW server), Gemini prompt-pack pipeline + sanitizer fold-in (viz.mjs),
   market_scan/maidan_poster/widget_spec brain jobs + per-job extra_args
@@ -275,7 +284,33 @@ first real session pasted tomorrow. Standing: system.md review→LOCK · Oura
 secret regen · review+merge organism-final→main soon (installed tasks point at
 this working tree).
 
-## ⚡ THE FINAL BUILD SESSION (supersedes the gated U-order above — captain's call)
+## ✅ THE FINAL BUILD SESSION — EXECUTED (12 Jul 2026, sixth order; 13 commits 6267ed8→087a3a4)
+ALL of U1+U1.5+U2+U3+U4 built in ONE session, selftest+real-run+commit per
+unit. **26 suites green** (18 organism incl. new speak/talk/dugout/shadow +
+8 squad incl. timeaudit). **DESIGN FREEZE IS NOW ACTIVE until the offer.**
+**THE SCAR-TABLE, EMPIRICALLY RESOLVED (live WS probes vs gemini-3.1-flash-live-preview, 12 Jul):**
+· responseModalities+speechConfig must be NESTED in generationConfig — the
+  JARVIS root-level claim gets close 1007 on today's wire. The wire won.
+· outputAudioTranscription SURVIVES generation today — kept, with live
+  auto-strip (2 early aborts) + checkpoint-tool match-record as the fallback.
+· Charon verified end-to-end (audio back) · realtimeInput.text works ·
+  audioStreamEnd accepted · realtimeInput.video accepted+answered (frames) ·
+  mediaChunks DEPRECATED (explicit 1007) · TEXT modality REJECTED (audio-only
+  preview) · text-embedding-004 is 404 → gemini-embedding-001 (3072d).
+**MIC P0 ROOT CAUSE FOUND LIVE:** browser had localhost mic permission in
+state DENIED — Chrome never re-prompts a denied origin; old page swallowed
+the rejection. New page: permissions preflight names it BEFORE start + every
+error surfaced with its exact fix + ScriptProcessor fallback. Captain's
+half of the test: fix the permission (🔒 → Site settings → Microphone →
+Allow), reload, talk.
+**REAL-RUN PROOF (highlights):** first day cartridge compiled (6,085 tok) and
+folded into the dawn constitution · first real team-talk mp3 (483KB) ·
+5 ACK fillers synthesized · live reminder set by tool fired at +85s, spoken,
+verbatim · 3 recall chunks embedded live, query hit 0.7 · shadow ratify
+refused with honest numbers · trigger armed→eligible→disarmed · timeaudit
+stamps TODAY (IST fix live, real AW data).
+
+## ⚡ THE FINAL BUILD SESSION (the contract as given — supersedes the gated U-order above)
 ALL of U1 + U1.5 + U2 + U3 + U4 built END-TO-END in ONE session, no phase
 gates, no sequencing pauses. The only proof required per unit: selftest green
 + real-run line + small labelled commit (unchanged law). Order inside the

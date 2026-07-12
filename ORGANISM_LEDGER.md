@@ -151,6 +151,30 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
   (not the analysis head); FILM_SETUP.md — NotebookLM Video Overviews as the
   season-film engine (Veo = 8s trailer lane; Veo API = money-gated, not built).
 
+## THE FINAL BUILD SESSION PASS (12 Jul 2026, sixth order) — ALL BUILT, 26 suites green, DESIGN FROZEN
+| Mechanism | Where | Proof |
+|---|---|---|
+| Scar-table applied EMPIRICALLY (nested config, Charon, VAD+connect-on-voice+park, native-rate out, barge-in, outTx auto-strip + checkpoint record) | dugout.mjs | live WS probes 12 Jul; root-level=1007, Charon audio round-trip verified |
+| Mic P0 root-caused: DENIED permission state, Chrome never re-prompts | dugout.mjs page | preflight found it live in a real browser; every error now surfaced w/ fix |
+| SPOKEN GATES: run_postmatch · approve_genome · route_throwins ("his word IS the signature") | dugout.mjs + postmatch route mode | owner-shell asserts; no-word-no-write law in constitution |
+| Think-time stamps (captain_think / gaffer_respond) + rides rep notes | dugout.mjs → dugout_stamps.jsonl | live POST verified; outliers dropped |
+| ACK fillers (JARVIS pattern), law-checked Hinglish | speak.mjs synthToFile + dugout /ack | 5 real mp3s synthesized; never over live audio |
+| DAY CARTRIDGE (L3 slow→fast) + rehydrate via clientContent | brain job + dugout loader | first real cartridge compiled (6,085 tok), folds into dawn constitution |
+| MEDIA ENGINE: teamtalk_am/pm → validated mp3; "taiyaar" line INSIDE the two utterances; wall MEDIA panel; film kit (NotebookLM one-click) + poster fold | brain.mjs speak_to + viz.mjs | real 483KB team-talk mp3; two-utterance law asserted; G:-Drive copy live |
+| ORAL SCRIMMAGE: 3 personas, 5 probes, interruption, gut-word law; HEDGE EAR on its one legal surface (off-mic, model never told) | dugout.mjs ?mode=scrimmage | examiner served live; 3 hedges counted; cold-start law |
+| TOUCHLINE EYES: whiteboard camera + screen commentator, frame-mode | dugout.mjs | realtimeInput.video probed live (answered); mediaChunks deprecated on wire |
+| RE-JIRAH LIVE CONDUCTOR + MODALITY ROUTING (voice-first/screen-first) | dugout get_rejirah + setpiece + dossier_weights.modality_map | dormant-safe live answer; drills tagged (asserts) |
+| HIS-VOICE REMINDERS (gate-exempt: his voice echoed ≠ ping) | dugout set_reminder + fireReminders | REAL fire: +85s, spoken, verbatim, once |
+| SHADOW ENGINE: 4 types trained silently; evening scoring; TWO-KEY voice gate (≥10 shadows @ ≥0.7 + spoken ratification); revoked if proof decays; RED = not even shadows | shadow.mjs (new organ) + postmatch hook + dugout ratify_interruption | 21 asserts; live ratify refused with honest numbers |
+| DAY-THREAD modes (KICKOFF/GROUND/FULL-TIME) | dugout constitution | phase asserts |
+| SEMANTIC RECALL: his words → embeddings jsonl + cosine, dates + verbatim | dugout.mjs (gemini-embedding-001 — 004 is 404 now, probed) | +3 real chunks; live query hit 0.7 |
+| THIRD BUDGET POOL: voice minutes defer daytime gemini jobs | brain.mjs dugout_pool | asserts + status renders pool live |
+| Event-triggered deep re-analysis (milestone/crisis; consume-on-success) | brain trigger + deep_reanalysis job + postmatch 30-matchday arm | armed→eligible→disarmed verified live |
+| COMMITMENTS wall panel (kal-lines + next-day tick; miss = "went again") | viz.mjs | no-shame asserted |
+| dugout notes → postmatch routing gate (note:<ts>) | postmatch.mjs | route asserts |
+| LAN phone flag (--lan, localhost default, honest mic-flag note) | dugout.mjs + VOICE_SETUP §LAN | printed real address live |
+| timeaudit IST date fix (captain-approved one-liner) | timeaudit.mjs | real run stamps TODAY with live AW data |
+
 ## THE DUGOUT — metamorphosis chamber (12 Jul 2026, fifth order) — BUILT, bridge live-verified
 - dugout.mjs: local bridge (localhost:4114) + in-memory page (mic ⇄ Gemini
   Live free tier ⇄ speakers). Sub-second, interruptible, session-resumption
