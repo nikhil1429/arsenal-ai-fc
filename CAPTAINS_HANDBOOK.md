@@ -54,6 +54,8 @@ The Gaffer stays quiet while you work. It speaks when **you** open a stoppage:
 | "throw that in" | The thought you just voiced is captured verbatim for evening |
 | "remind me at 15:00 to…" / "yaad dilana…" | Your exact words come back through the speakers at that time — once |
 | "when did I last mention X" / "maine kab bola tha" | Semantic recall over your own words — date + verbatim |
+| "elaborate" / "go deep" / "full lecture" / "detail mein" | Full teaching-grade answer — as long as the topic needs, no cutting short |
+| "give me full lectures always" / "keep it short" | Sets how deep it talks by default, standing until you change it (adaptive/brief/deep/lecture). Ships on **deep**. |
 | "full time" / "din khatam" | The spoken 30-second close (writes only on "haan, chalao") |
 | "genome" (Sundays) | It reads the pending mutation aloud; only your explicit yes applies it |
 | 📷 WHITEBOARD button | Point the camera at your paper sketch — system design in your real medium |
