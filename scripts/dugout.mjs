@@ -204,6 +204,8 @@ VOICE REPS (the metamorphosis — talking is training): when he wants drilling, 
 
 TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
 
+RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first, honest verdicts, log_reps at the end. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
+
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
 
 THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are watching his PAPER (whiteboard mode) or his working SCREEN (commentator mode). Coach live and SHORT — spinning caught early ("same crack, different door"), Pehle-Guess whispered BEFORE he reads an answer on screen, a derby called the moment two concepts blur in his work. Frames are context, not a slideshow: speak only when it changes his next 30 seconds; his silence while sketching is work, not an invitation.
@@ -221,6 +223,7 @@ const TOOL_DECLS = [
   { name: "log_reps", description: "Log voice reps through the real capture contract. Only after gut-word was committed BEFORE the answer.", parameters: { type: "OBJECT", properties: { reps: { type: "ARRAY", items: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, question: { type: "STRING" }, confidence: { type: "STRING" }, correct: { type: "BOOLEAN" } }, required: ["concept", "question", "confidence", "correct"] } } }, required: ["reps"] } },
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "checkpoint", description: "Match record: one-line summary of what you just said. Call silently after each substantive reply; never mention it.", parameters: { type: "OBJECT", properties: { summary: { type: "STRING" } }, required: ["summary"] } },
   { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
@@ -241,7 +244,7 @@ function execTool(name, args, deps = {}) {
       return {
         verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "GREEN",
         sheet_head: existsSync(sheetP) ? readFileSync(sheetP, "utf8").split("\n").slice(0, 12).join("\n") : null,
-        drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt })),
+        drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt, modality: d.modality || "voice" })),
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now)).length,
@@ -254,6 +257,23 @@ function execTool(name, args, deps = {}) {
     if (name === "get_calibration") {
       const c = readJson(join(STATE_DIR, "calibration.json")) || {};
       return { gap: c.calibration_gap ?? null, trend: c.trend ?? null, danger: (c.danger_zone || []).map(d => d.topic) };
+    }
+    if (name === "get_rejirah") {
+      // THE RE-JIRAH LIVE CONDUCTOR — due decay-guard reviews, by voice.
+      // Dormant-safe: pre-blood the store is empty and the answer says so.
+      const summary = readJson(join(STATE_DIR, "cards.json")) || {};
+      const store = readJson(join(STATE_DIR, "fsrs_store.json")) || {};
+      const today = localDate(now);
+      const due = (Array.isArray(store.cards) ? store.cards : [])
+        .filter(c => c && (String(c.due || c.due_date || "").slice(0, 10) <= today))
+        .slice(0, 8)
+        .map(c => ({ concept: c.concept || c.topic || c.id || c.name || "unnamed", axis: c.axis || null, due: String(c.due || c.due_date || "").slice(0, 10) || null }));
+      return {
+        due_today: summary.due_today ?? due.length, overdue: summary.overdue ?? 0,
+        hardest_due: Array.isArray(summary.hardest_due) ? summary.hardest_due.slice(0, 3) : [],
+        queue: due,
+        note: due.length ? "conduct these by voice — recall probes, gut-word first; reps close the FSRS loop through capture" : "nothing due — the decay guard is quiet",
+      };
     }
     if (name === "retire_doubt") {
       sh("doubtminer.mjs", ["retire", String(args.capsule), String(args.doubt_index)]);
@@ -424,8 +444,15 @@ async function selftest() {
   assert("vision errors surfaced like mic errors", PAGE.includes("VISION "));
   assert("Gaffer eyes law travels: coach short, silence is work", buildConfig(["k1"]).system.includes("TOUCHLINE EYES") && buildConfig(["k1"]).system.includes("his next 30 seconds"));
 
+  // RE-JIRAH CONDUCTOR (U2c) — dormant-safe, voice-first routing
+  const rj = execTool("get_rejirah", {}, { sh });
+  assert("re-jirah conductor: dormant-safe pre-blood (counts + quiet note)", typeof rj.due_today === "number" && Array.isArray(rj.queue) && typeof rj.note === "string");
+  const gt = execTool("get_today", {}, { sh });
+  assert("get_today drills carry modality (voice routes to the Dugout)", (gt.drills || []).every(d => ["voice", "screen"].includes(d.modality)));
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 11);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 12);
+  assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
   assert("constitution travels: no-hype + gut-word + RED law in-instruction", cfg.system.includes("never say 10x") && cfg.system.includes("BEFORE he answers") && cfg.system.includes("RED"));
   assert("constitution wires the checkpoint match-record", cfg.system.includes("silently call checkpoint"));

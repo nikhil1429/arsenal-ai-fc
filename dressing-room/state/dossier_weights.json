@@ -23,5 +23,7 @@
   },
   "contrast_template": "Both cold, back to back: {a} vs {b} — one sentence each, then the ONE difference that decides {differentiator}. Bolo.",
   "rematch_template": "Week-{week} Nikhil argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
-  "round_mode_map": { "R_early": ["recall"], "R_mid": ["reconstruct", "defend"], "R_late": ["novel", "negative_space"] }
+  "round_mode_map": { "R_early": ["recall"], "R_mid": ["reconstruct", "defend"], "R_late": ["novel", "negative_space"] },
+  "modality_map": { "recall": "voice", "defend": "voice", "novel": "voice", "negative_space": "voice", "reconstruct": "screen", "floor_touch": "voice" },
+  "_modality_note": "MODALITY ROUTING (organism U2c): voice-first = recall/defend/3-ways/Bolo (his interviews are spoken; the Dugout conducts these); screen-first = math-reconstruct/code (derivations need the written medium). setpiece.mjs tags every drill; the Dugout routes voice drills into sessions."
 }

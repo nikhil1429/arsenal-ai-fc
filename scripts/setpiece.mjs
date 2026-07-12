@@ -248,7 +248,8 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
   return {
     date: tomorrowStr(now), for: tomorrowStr(now), status: drills.length ? "ok" : "awaiting_data",
     low_confidence: false, generated_at: now.toISOString(), ladder_verdict: verdict,
-    drills: drills.slice(0, maxN),
+    // MODALITY ROUTING (dossier law, U2c): voice-first vs screen-first per mode
+    drills: drills.slice(0, maxN).map(d => ({ ...d, modality: ((dossier && dossier.modality_map) || {})[d.mode] || "voice" })),
     withheld,
     bench_note: trimmed > 0 ? `${trimmed} more compiled and benched — doable by doing these first` : null,
   };
@@ -286,6 +287,8 @@ async function selftest() {
   assert("drills compiled for TOMORROW", green.for === "2026-07-13");
   assert("no deadline language in prompts", !green.drills.some(d => /deadline|days left|time is short|hurry/i.test(d.prompt)));
   assert("bench note names what was benched (never silent)", green.bench_note === null || /benched/.test(green.bench_note));
+  assert("MODALITY ROUTING — every drill tagged voice/screen per dossier map", green.drills.every(d => ["voice", "screen"].includes(d.modality)));
+  assert("recall/defend route VOICE, reconstruct routes SCREEN", green.drills.every(d => d.mode === "reconstruct" ? d.modality === "screen" : (d.mode === "recall" || d.mode === "defend") ? d.modality === "voice" : true));
 
   const amber = compile({ ...world, readiness: { verdict: "AMBER" } }, cfg, ladderCfg, dossier, now);
   assert("AMBER → recall-weight only", amber.drills.slice(1).every(d => d.mode === "recall" || d.kind === "opener"));
