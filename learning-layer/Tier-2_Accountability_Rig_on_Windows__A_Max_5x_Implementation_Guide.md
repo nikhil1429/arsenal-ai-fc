@@ -125,9 +125,9 @@ See **Appendix C**. Node‑based for Windows portability.
 1. Install the ntfy phone app; subscribe to topic `nikhil-jarvis`.
 2. In an **elevated Command Prompt** (`curl.exe` is built into Windows 10/11):
 ```
-schtasks /create /tn "jarvis-9am" /sc weekly /d MON,TUE,WED,THU,FRI /st 09:00 /tr "curl -H \"Title: Kickoff\" -H \"Priority: high\" -d \"9 AM: state your Building target and start\" ntfy.sh/nikhil-jarvis"
+schtasks /create /tn "jarvis-9am" /sc weekly /d MON,TUE,WED,THU,FRI /st 09:00 /tr "curl -H \"Title: Kickoff\" -H \"Priority: high\" -d \"9 AM: state your Building target and start\" ntfy.sh/<old-topic-redacted>"
 
-schtasks /create /tn "jarvis-8pm" /sc weekly /d MON,TUE,WED,THU,FRI /st 20:00 /tr "curl -H \"Title: Audit\" -H \"Priority: high\" -d \"8 PM: run /audit and log the day\" ntfy.sh/nikhil-jarvis"
+schtasks /create /tn "jarvis-8pm" /sc weekly /d MON,TUE,WED,THU,FRI /st 20:00 /tr "curl -H \"Title: Audit\" -H \"Priority: high\" -d \"8 PM: run /audit and log the day\" ntfy.sh/<old-topic-redacted>"
 ```
 (`/d MON,TUE,WED,THU,FRI` restricts to weekdays; add `SAT` for Mon–Sat.)
 3. Test: `schtasks /run /tn "jarvis-9am"` — phone should buzz.

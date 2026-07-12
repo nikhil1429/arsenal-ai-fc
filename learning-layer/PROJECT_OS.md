@@ -559,7 +559,7 @@ biology, will se compress nahi hoti).
   Stop (exit-2 forces keep-working). [Node .mjs, Windows-safe — guide Appendix C.]
 - SCHEDULE + PUSH: Desktop scheduled tasks (LOCAL routine, subscription pe, ActivityWatch localhost:5600 reach,
   restart-persist; "Keep computer awake" ON — app-open + PC-awake pe fire) + **cron/ntfy BELT** (deterministic,
-  AI-independent — "did I show up" ka source-of-truth; `curl -d ... ntfy.sh/nikhil-jarvis`, ASCII body).
+  AI-independent — "did I show up" ka source-of-truth; `curl -d ... ntfy.sh/<old-topic-redacted>`, ASCII body).
 - HUMAN GATE: sab action Nikhil pe LAND karta — kuch auto-approve NAHI (OS hard-rule). **Nidhi = body-double
   in-room = realest accountability (koi AI insaan ko replace nahi karta).**
 - BILLING (verify LIVE — post-cutoff, volatile): rig Max-5x SUBSCRIPTION pe chalta; June-2026 metered agent-
