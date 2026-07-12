@@ -26,7 +26,8 @@
 //   season.json (own), notebook.json (own), routed_balls.json (own)
 // OUTPUT: post_match/<date>.md · season.json · notebook.json · routed_balls.json
 // MODES:  --hit HIT|MISS|PARTIAL|REST --signal "…" --kal "…" [--diag start|block|sleep]
-//         [--route all|none] [--dry] · selftest  (interactive prompts if TTY, no flags)
+//         [--route all|none] [--dry] · route [all|<id>…] (route-only, no ledger)
+//         · selftest  (interactive prompts if TTY, no flags)
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
@@ -108,6 +109,12 @@ function updateNotebook(notebook, signal, hit, dateStr) {
   return nb;
 }
 
+// route-only picker (the spoken gate's deterministic half) — which pending
+// balls get routed; "all" or an explicit id list. Pure; caller writes ROUTED.
+function pickBallsToRoute(pending, which, ids = []) {
+  return which === "all" ? pending.slice() : pending.filter(b => ids.includes(b.id));
+}
+
 // ---------------------------------------------------------------------------
 // selftest — fixtures only, everything in-memory
 // ---------------------------------------------------------------------------
@@ -149,6 +156,12 @@ async function selftest() {
   const big = { moments: Array(50).fill({ date: "x", line: "y" }) };
   assert("notebook stays compressed (~45 moments)", updateNotebook(big, "new", "HIT", dateStr).moments.length === 45);
 
+  // route-only mode (the Dugout's spoken gate)
+  const pend = [{ id: "m1", text: "a" }, { id: "m2", text: "b" }];
+  assert("route picker: 'all' takes everything", pickBallsToRoute(pend, "all").length === 2);
+  assert("route picker: explicit ids take the subset only", pickBallsToRoute(pend, "ids", ["m2"]).map(b => b.id).join() === "m2");
+  assert("route picker: unknown id routes nothing (safe no-op)", pickBallsToRoute(pend, "ids", ["zz"]).length === 0);
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -174,6 +187,20 @@ async function promptIfTTY(question) {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if (mode === "route") {
+    // routing WITHOUT re-running the evening ledger (the Dugout's spoken gate
+    // lands here; season/notebook untouched — no double matchday, ever)
+    const rest = process.argv.slice(3);
+    const which = !rest.length || rest[0].toLowerCase() === "all" ? "all" : "ids";
+    const routedPrev = readJson(ROUTED) || { routed: [] };
+    const routedIds = new Set(routedPrev.routed.map(r => r.id));
+    const pending = readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id));
+    const pick = pickBallsToRoute(pending, which, rest);
+    if (!pick.length) { console.log("postmatch: no pending throw-ins to route"); return; }
+    writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pick.map(b => ({ id: b.id, routed_on: localDate(new Date()) }))) });
+    console.log(`postmatch: routed ${pick.length} throw-in(s) [${pick.map(b => b.id).join(", ")}]`);
+    return;
+  }
   const dry = process.argv.includes("--dry");
   const now = new Date();
   const dateStr = localDate(now);
@@ -219,4 +246,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { renderPostMatch, updateSeason, updateNotebook, KAL_RE };
+export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, KAL_RE };

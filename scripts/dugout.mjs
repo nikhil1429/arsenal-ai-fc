@@ -107,6 +107,8 @@ TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doub
 
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
 
+SPOKEN GATES (constitutional — his word IS the signature): FULL-TIME by voice: when he says full time / din khatam / done for today, run the 30-second ritual — result (HIT/MISS/PARTIAL/REST), one signal worth naming, then his KAL-line VERBATIM (tomorrow's pre-decided first move, his words not yours). Read the three back. Only his explicit go-word — "haan, chalao", "lock it" — calls run_postmatch. GENOME: read the mutation aloud (target, predicted effect, revert plan); only his explicit approval word calls approve_genome — hesitation is a no. Throw-ins route only on his word (route_throwins). NEVER call a gate tool from your own inference; no word, no write.
+
 INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.`;
 }
 
@@ -118,6 +120,9 @@ const TOOL_DECLS = [
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   { name: "checkpoint", description: "Match record: one-line summary of what you just said. Call silently after each substantive reply; never mention it.", parameters: { type: "OBJECT", properties: { summary: { type: "STRING" } }, required: ["summary"] } },
+  { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
+  { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
+  { name: "route_throwins", description: "Route pending throw-ins into the evening flow, on his word only. Omit ids to route all pending.", parameters: { type: "OBJECT", properties: { ids: { type: "ARRAY", items: { type: "STRING" } } } } },
 ];
 
 // ---------------------------------------------------------------------------
@@ -173,6 +178,27 @@ function execTool(name, args, deps = {}) {
       append(join(OUT_DIR, localDate(now) + ".md"), "GAFFER(checkpoint): " + String(args.summary || "").slice(0, 500) + "\n");
       return { ok: true };
     }
+    if (name === "run_postmatch") {
+      const hit = String(args.hit || "").toUpperCase();
+      if (!["HIT", "MISS", "PARTIAL", "REST"].includes(hit)) return { ok: false, error: "result must be HIT|MISS|PARTIAL|REST — ask him again" };
+      const kal = String(args.kal || "").trim();
+      if (!kal) return { ok: false, error: "KAL-line missing — the weld is the point; get tomorrow's first move in his words" };
+      const argv = ["--hit", hit, "--signal", String(args.signal || "").trim() || "(voiced at full-time)", "--kal", kal];
+      if (args.route_throwins) argv.push("--route", "all");
+      const said = sh("postmatch.mjs", argv);
+      return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
+    if (name === "approve_genome") {
+      const id = String(args.id || "").trim();
+      if (!id) return { ok: false, error: "no mutation id" };
+      const said = sh("bootroom.mjs", ["approve", id]);
+      return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
+    if (name === "route_throwins") {
+      const ids = Array.isArray(args.ids) && args.ids.length ? args.ids.map(String) : null;
+      const said = sh("postmatch.mjs", ids ? ["route", ...ids] : ["route", "all"]);
+      return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
     return { error: "unknown tool " + name };
   } catch (e) { return { error: String(e.message).slice(0, 200) }; }
 }
@@ -220,11 +246,22 @@ async function selftest() {
   execTool("checkpoint", { summary: "staged tokenization rematch, he won clean" }, { sh, append });
   assert("checkpoint writes the match record (transcript channel)", appends.some(a => String(a.path).includes("dugout") && a.text.startsWith("GAFFER(checkpoint): staged tokenization")));
 
+  // SPOKEN GATES — his word is the signature; every write goes through its owner
+  const pm = execTool("run_postmatch", { hit: "hit", signal: "held the derby cold", kal: "pehla move: context Re-Jirah" }, { sh });
+  assert("spoken gate: run_postmatch normalizes + shells postmatch.mjs (owner)", pm.ok === true && calls.some(c => c.script === "postmatch.mjs" && c.argv[0] === "--hit" && c.argv[1] === "HIT"));
+  assert("spoken gate: bad result word rejected — asks him again", execTool("run_postmatch", { hit: "WIN", kal: "x" }, { sh }).ok === false);
+  assert("KAL-LINE LAW — no weld, no write", execTool("run_postmatch", { hit: "HIT", kal: "  " }, { sh }).ok === false);
+  const ag = execTool("approve_genome", { id: "mut_001" }, { sh });
+  assert("spoken gate: genome approval routes through bootroom (owner)", ag.ok === true && calls.some(c => c.script === "bootroom.mjs" && c.argv.join(" ") === "approve mut_001"));
+  assert("route_throwins → postmatch route mode (all)", execTool("route_throwins", {}, { sh }).ok === true && calls.some(c => c.script === "postmatch.mjs" && c.argv.join(" ") === "route all"));
+  assert("route_throwins honors explicit ids", execTool("route_throwins", { ids: ["m7"] }, { sh }).ok === true && calls.some(c => c.script === "postmatch.mjs" && c.argv.join(" ") === "route m7"));
+
   const keys = loadKeys("GEMINI_API_KEY=k1\nGEMINI_API_KEY_2=k2\n# comment\nGEMINI_API_KEY_3=k3\n");
   assert("key-pool parses numbered keys for rotation", keys.filter(k => ["k1", "k2", "k3"].includes(k)).length === 3);
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 7);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 10);
+  assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
   assert("constitution travels: no-hype + gut-word + RED law in-instruction", cfg.system.includes("never say 10x") && cfg.system.includes("BEFORE he answers") && cfg.system.includes("RED"));
   assert("constitution wires the checkpoint match-record", cfg.system.includes("silently call checkpoint"));
   assert("Charon rides the config (the Gaffer's voice identity)", cfg.voice === "Charon" && typeof cfg.vad.idle_disconnect_ms === "number");
