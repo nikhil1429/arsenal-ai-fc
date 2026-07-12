@@ -274,3 +274,32 @@ cell · Drill Gem v4 add-on · real `npm run postmatch` · laptop open overnight
 first real session pasted tomorrow. Standing: system.md review→LOCK · Oura
 secret regen · review+merge organism-final→main soon (installed tasks point at
 this working tree).
+
+## ⚡ THE FINAL BUILD SESSION (supersedes the gated U-order above — captain's call)
+ALL of U1 + U1.5 + U2 + U3 + U4 built END-TO-END in ONE session, no phase
+gates, no sequencing pauses. The only proof required per unit: selftest green
++ real-run line + small labelled commit (unchanged law). Order inside the
+session (dependency-driven, not gated): P0 mic fix + scar-table + Charon →
+spoken gates + think-time + ACK + rehydrate/day-cartridge → MEDIA ENGINE
+(teamtalk job + speak --to-file + wall MEDIA panel + film kit) → oral
+scrimmage + personas + whiteboard/screen modes + Re-Jirah conductor +
+modality routing → his-voice reminders + shadow engine + shadow-scoring +
+day-thread modes + semantic recall + third budget pool → polish (LAN phone,
+event re-analysis, commitments view, dugout_notes→postmatch, timeaudit IST
+fix). Humane clamps/laws all unchanged. DESIGN FREEZE begins AFTER this
+session completes, until the offer. Then: the captain pumps reps.
+
+## 📋 THE KICKOFF PROMPT (paste this to start the next Claude Code session)
+---
+ultracode. Read ORGANISM_BUILD_LOG.md fully, then ORGANISM_ANATOMY.md and
+ORGANISM_LEDGER.md. Execute "THE FINAL BUILD SESSION" section end-to-end in
+this one session: build everything listed, no phase gates, selftest green +
+real-run + small commit per unit, push to organism-final only. Full approval
+given for everything except NEW money (money-gate = the only stop). Apply the
+JARVIS scar-table empirically to the Dugout first (mic bug = P0; I will test
+voice live with you). Keep every law and clamp exactly as written. At the end:
+run ALL selftests old+new, update the log/ledger, and hand me the one-line
+morning ritual. Then design freezes until the offer.
+---
+Short form (also valid): "ultracode — read ORGANISM_BUILD_LOG.md and execute
+THE FINAL BUILD SESSION end-to-end. Full approval, money-gate only. Mic first."
