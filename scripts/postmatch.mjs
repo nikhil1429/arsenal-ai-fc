@@ -238,6 +238,12 @@ async function main() {
   writeAtomic(join(PM_DIR, dateStr + ".md"), md);
   writeAtomic(SEASON, updateSeason(season, hit, dateStr));
   writeAtomic(NOTEBOOK, updateNotebook(readJson(NOTEBOOK), signal, hit, dateStr));
+  // evening shadow-scoring (U3b): resolve today's would-have-spoken moments —
+  // owner-writes via shadow.mjs; best-effort, never blocks the ritual
+  try {
+    const { execFileSync } = await import("node:child_process");
+    execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "score"], { windowsHide: true, timeout: 30000 });
+  } catch { }
   if (route === "all" && pendingBalls.length) {
     writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pendingBalls.map(b => ({ id: b.id, routed_on: dateStr }))) });
   }

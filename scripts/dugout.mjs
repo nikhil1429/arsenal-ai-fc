@@ -219,6 +219,15 @@ WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DE
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
 }
 
+// EARNED PROACTIVITY (U3b, L2) — the shadow-gate section, assembled live from
+// the proactivity ledger. Voice = proven hit-rate + his one-time ratification.
+function buildProactivitySection(led = readJson(join(STATE_DIR, "proactivity_ledger.json"))) {
+  const types = (led && led.types) || {};
+  const earned = Object.entries(types).filter(([, e]) => e.voice).map(([t]) => t);
+  const open = Object.entries(types).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t);
+  return `EARNED PROACTIVITY (the shadow-gate — constitutional): interruption-types you may INITIATE unprompted: ${earned.length ? earned.join(", ") : "NONE yet — every proactive idea stays behind your teeth; the organism shadows silently and earns the mouth with evidence"}.${open.length ? ` Door OPEN awaiting his word (offer ratification ONCE, at a natural stoppage): ${open.join(", ")} — his explicit yes → ratify_interruption.` : ""} Speaking an unearned interruption is a constitutional breach. If the body verdict is RED, the proactive mouth is MUTE regardless of what is earned.`;
+}
+
 // ---------------------------------------------------------------------------
 // THE GAFFER-LIVE CONSTITUTION (system instruction, assembled fresh per session)
 // ---------------------------------------------------------------------------
@@ -243,6 +252,8 @@ RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rej
 
 HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT words (never your paraphrase) and the time he named. At fire time his own words come back through you — once, warm, done. Never add advice to a reminder.
 
+${buildProactivitySection()}
+
 MATCH RECORD: after each substantive reply, silently call checkpoint with a one-line summary of what you just said. Never mention it — it is the club's transcript when the wire runs audio-only.
 
 THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are watching his PAPER (whiteboard mode) or his working SCREEN (commentator mode). Coach live and SHORT — spinning caught early ("same crack, different door"), Pehle-Guess whispered BEFORE he reads an answer on screen, a derby called the moment two concepts blur in his work. Frames are context, not a slideshow: speak only when it changes his next 30 seconds; his silence while sketching is work, not an invitation.
@@ -262,6 +273,7 @@ const TOOL_DECLS = [
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
+  { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
   { name: "checkpoint", description: "Match record: one-line summary of what you just said. Call silently after each substantive reply; never mention it.", parameters: { type: "OBJECT", properties: { summary: { type: "STRING" } }, required: ["summary"] } },
   { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
@@ -369,6 +381,10 @@ function execTool(name, args, deps = {}) {
       if (!due) return { ok: false, error: "no time — need at:'HH:MM' or in_minutes" };
       append(REMINDERS, JSON.stringify({ ts: new Date().toISOString(), due_at: due.toISOString(), text, fired: false }) + "\n");
       return { ok: true, due_at: due.toISOString(), echo: "his words, verbatim, once" };
+    }
+    if (name === "ratify_interruption") {
+      const said = sh("shadow.mjs", ["ratify", String(args.type || "")]);
+      return { ok: true, said: String(said || "").trim().slice(0, 300) };
     }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
@@ -511,8 +527,18 @@ async function selftest() {
   assert("due reminder fires ONCE, in his words, marked fired", spoken.length === 1 && spoken[0].includes("tumhare apne words: call the bank") && written[0].fired === true);
   assert("future reminder stays queued (not fired)", written[1].fired === false);
 
+  // EARNED PROACTIVITY (U3b) — the shadow-gate travels in the constitution
+  const proNone = buildProactivitySection(null);
+  assert("no ledger → NONE earned, mouth behind teeth", proNone.includes("NONE yet") && proNone.includes("constitutional breach"));
+  const proEarned = buildProactivitySection({ types: { wall_breaker: { voice: true, eligible: true, ratified: true }, due_at_kickoff: { voice: false, eligible: true, ratified: false } } });
+  assert("earned types listed; open door offered ONCE for ratification", proEarned.includes("wall_breaker") && proEarned.includes("due_at_kickoff") && proEarned.includes("ratify_interruption"));
+  assert("RED mutes the proactive mouth regardless of what is earned", proEarned.includes("RED") && proEarned.includes("MUTE"));
+  const rat = execTool("ratify_interruption", { type: "wall_breaker" }, { sh });
+  assert("ratification routes through shadow.mjs (owner writes the ledger)", rat.ok === true && calls.some(c => c.script === "shadow.mjs" && c.argv.join(" ") === "ratify wall_breaker"));
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 13);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 14);
+  assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
   assert("his-voice reminder law travels (verbatim, once, no advice)", cfg.system.includes("HIS-VOICE REMINDERS") && cfg.system.includes("Never add advice"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
@@ -771,6 +797,9 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   ensureAcks();   // fire-and-forget; offline = honest skip line
   setInterval(() => fireReminders().then(n => { if (n) console.log(`dugout: ${n} his-voice reminder(s) echoed`); }).catch(() => { }), 30000);
+  // the shadow engine trains while the voice surface is alive (detection is
+  // silent by construction; the mouth needs no wire to stay shut)
+  setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
