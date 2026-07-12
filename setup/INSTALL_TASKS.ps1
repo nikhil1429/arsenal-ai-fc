@@ -40,6 +40,18 @@ Mk "ArsenalFC-Scout"       "scout.mjs"      @("/SC","DAILY","/ST","22:05")
 # Sunday only: the genome files its proposal
 Mk "ArsenalFC-BootRoom"    "bootroom.mjs"   @("/SC","WEEKLY","/D","SUN","/ST","20:00")
 
+# POWER CONDITIONS (E2E finding, 12 Jul 2026): schtasks defaults set
+# DisallowStartIfOnBatteries + StopIfGoingOnBatteries — on battery the whole
+# organism silently queues/dies, and running jobs get KILLED mid-write on
+# unplug. The body runs wherever the machine is: clear both flags on EVERY
+# ArsenalFC-* task (covers the pre-existing squad tasks too).
+Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
+  $_.Settings.DisallowStartIfOnBatteries = $false
+  $_.Settings.StopIfGoingOnBatteries = $false
+  $_ | Set-ScheduledTask | Out-Null
+}
+Write-Host "  ~ battery kill-conditions cleared on all ArsenalFC-* tasks"
+
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"
 Write-Host "Post-match stays a human ritual: npm run postmatch (30 seconds, evening)."
