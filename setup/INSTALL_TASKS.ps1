@@ -9,12 +9,13 @@
 # recomputes are idempotent with the old cascade.
 # REVERT: setup\UNINSTALL_TASKS.ps1 removes ONLY the tasks created here.
 # ============================================================================
-$node = (Get-Command node).Source
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 function Mk($name, $args_, $sched) {
-  $tr = "`"$node`" $repo\scripts\$args_"
+  # cmd /c form avoids the nested-quote trap ("Program Files" in node's path):
+  # cd into the repo, then let PATH resolve node. No embedded quotes needed.
+  $tr = "cmd /c cd /d $repo && node scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
-  Write-Host "  + $name"
+  if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
 }
 Write-Host "Installing THE ORGANISM's schedule..."
 
