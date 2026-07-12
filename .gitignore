@@ -96,3 +96,7 @@ dressing-room/state/brain_out/
 # the dugout (live-voice notes + minutes ledger — personal)
 dressing-room/state/dugout_notes.jsonl
 dressing-room/state/dugout_ledger.jsonl
+
+# --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
+Jarvis/
+jarvis/

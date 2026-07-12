@@ -197,3 +197,41 @@ L6 REFUSALS (permanent) — prosody never scores; organism-usage never a
 BUILD ORDER NEXT SESSION: P0 mic bug (see above) → shadow engine +
 day-cartridge compiler → voice full-time/genome tools → oral scrimmage →
 think-time stamps → Re-Jirah conductor → whiteboard mode → modality routing.
+
+## THE JARVIS HARVEST (bible v4 read 12 Jul — mechanisms only, no personal content here)
+**IMMEDIATE (fixes our Dugout bugs — his 10-session hard-won Live API table):**
+speechConfig+responseModalities at setup ROOT (not inside generationConfig —
+we have this bug) · outputAudioTranscription crashes the WS (we set it — remove;
+get text via other lane or accept audio-only + client STT display) · NO
+realtimeInputConfig (1011s) · NO thinkingConfig · realtimeInput.text for runtime
+msgs (clientContent = history seeding only) · dual AudioContext 16kHz-in /
+NATIVE-rate-out (not fixed 24k) · local VAD + connect-on-speech (always-on WS
+hemorrhages tokens) · rehydrate context on 15-min reconnect · **Charon voice**
+(prebuiltVoiceConfig) = JARVIS's literal voice identity, continuity for the
+captain.
+**ADOPT (organ upgrades):** ACK pattern (cached filler lines during tool/slow
+waits — perceived latency near-zero) · wall TV-modes by time-of-day (Morning
+Brief / Focus Cockpit / Evening Reflection / Sleep-RED) · Show Mode (hide
+personal panels when demoing) · semantic recall tool ("when did I last mention
+X" — embeddings jsonl + cosine, free tier) · Opus-Principle codified (the
+janitor lane NEVER interprets for the scientist lane — Gemini cleans, Claude
+reads raw) · Phase-A→B Genius Play discipline (hot brain writes DURABLE
+retrievable artifacts now — fingerprint/lexicon/digests — so lean windows stay
+god-tier via retrieval; we already do this, now it's named and deliberate) ·
+examiner personas mined from his 18 modes (Recruiter Ghost, Scenario Bomb,
+Code Autopsy) into oral-scrimmage config · Hyperfocus Guard + mid-task Context
+Stash as shadow-interruption candidates · event-triggered deep re-analysis
+(milestone/crisis → 90-day re-read) as a brain job trigger post-blood.
+**REFUSE (organism laws hold):** API-first economics (JARVIS costs ₹5.7-11.3k/mo,
+Max does NOT cover API — the organism's subscription-only law is WHY it
+survives where JARVIS parked) · 39-table cloud truth (bus stays local/simple
+until post-job merger) · relationship-dimension scoring of people (12th-player
+wall) · mood/emotion engines feeding verdicts (medical clamp) · boot cinematics
+(§18 gate — post-job dopamine).
+**THE MERGER ROAD:** organism = JARVIS Phases 1-2 done free+clamped; post-offer
+Transfer Window adopts JARVIS Phase-B economics (income → budget), Supabase
+persistence tier, XR at its threshold. Same soul ("personal war equipment,
+not for sale"). Jarvis/ folder gitignored (public repo, personal content).
+**ASK CAPTAIN:** does the $300 Google Cloud credit from JARVIS Phase A still
+have balance? If yes → paid-tier Live/Pro juice is free-at-margin until it
+drains (changes quota ceiling massively).
