@@ -340,7 +340,7 @@ function renderWall(data, insights) {
 // THE GEMINI LANE — the organism writes his Gemini prompts every render, and
 // folds Gemini's answer back in ONLY through a sanitizer (superpower pass).
 // ---------------------------------------------------------------------------
-const PROMPT_LAWS = `LAWS (constitutional, travel with every render): every number must come from the JSON below — invent nothing; no hype words (10x/exponential/on steroids); no streak counts (weekly consistency only); no raw biometrics (verdict color only); no dates-as-deadlines; cold steel warm core palette — deep charcoal #0c0e13 base, warm amber #e8915a accents, off-white #e9e7e2 text, muted gold #c9a06a secondary; football register welcome (the Maidan is a pitch, confusions are derbies, healed weaknesses are trophies); ONE glance = ONE story; output ONLY the artifact, no commentary.`;
+const PROMPT_LAWS = `LAWS (constitutional, travel with every render): every number must come from the JSON below — invent nothing; no hype words (10x/exponential/on steroids); no streak counts (weekly consistency only); no raw biometrics (verdict color only); no dates-as-deadlines; SELF-CONTAINED single file — NO external references of ANY kind (no @import, no web fonts/googleapis, no external images or links; system fonts only: 'Segoe UI', system-ui, sans-serif) or the club's gate will reject the render; cold steel warm core palette — deep charcoal #0c0e13 base, warm amber #e8915a accents, off-white #e9e7e2 text, muted gold #c9a06a secondary; football register welcome (the Maidan is a pitch, confusions are derbies, healed weaknesses are trophies); ONE glance = ONE story; output ONLY the artifact, no commentary.`;
 
 function promptPack(data, renderNotes = null) {
   const json = JSON.stringify(data, null, 1);
@@ -464,6 +464,7 @@ async function selftest() {
   assert("no notes → clean prompt (no empty section)", !pack["wall_painter.md"].includes("RENDER NOTES"));
   assert("prompt pack embeds the real numbers", pack["match_poster.md"].includes('"doubts_retired": 24'));
   assert("visual prompts carry the render laws", ["wall_painter.md", "match_poster.md", "season_film.md"].every(k => pack[k].includes("invent nothing") && pack[k].includes("#0c0e13")));
+  assert("render laws forbid external refs (sanitizer-reject loop closed)", ["wall_painter.md", "match_poster.md"].every(k => pack[k].includes("SELF-CONTAINED") && pack[k].includes("no @import")));
   assert("sanitizer accepts clean inline SVG", sanitizeGemini("<svg viewBox='0 0 10 10'><rect/></svg>") !== null);
   assert("sanitizer allows the W3C svg namespace (not a network ref)", sanitizeGemini('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>') !== null);
   assert("sanitizer allows content= (no false handler match)", sanitizeGemini('<html><meta name="viewport" content="width=device-width"><body>x</body></html>') !== null);
