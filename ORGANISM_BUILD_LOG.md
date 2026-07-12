@@ -235,3 +235,42 @@ not for sale"). Jarvis/ folder gitignored (public repo, personal content).
 **ASK CAPTAIN:** does the $300 Google Cloud credit from JARVIS Phase A still
 have balance? If yes → paid-tier Live/Pro juice is free-at-margin until it
 drains (changes quota ceiling massively).
+
+## THE UNLEASH CONTRACT (FINAL — captain-approved 12 Jul night; coding resumes next session)
+CUT: wall TV-modes + Show Mode (no TV hardware, no demo audience). Gemini =
+free API confirmed (no credits remain). Identity: Dugout speaks as THE GAFFER
+(Charon sound) until the offer; merger ceremony renames it JARVIS at the
+Transfer Window. JARVIS merge = soul+scar-tissue now, body (React/Supabase/
+API-economics) post-offer as a data-pour.
+**NEW — THE MEDIA ENGINE (max visualization/motivation, replaces TV modes):**
+· TEAM TALK (fully automatic daily audio): brain job writes 90s Gaffer talk
+  from real sheet (morning) + post-match (evening) → speak.mjs gains --to-file
+  → club/media/teamtalk_<date>.mp3; wall gets a MEDIA panel (audio player +
+  today's poster + film kit link); "team talk ready" line rides INSIDE the
+  existing 08:45/21:30 pushes (two-utterance law intact). Scripts pass
+  no-hype/no-invented-numbers validators — evidence-based motivation only.
+· FILM KIT (one-click video): nightly auto-write of NotebookLM source doc →
+  G:\My Drive\arsenal\ + ready Veo prompt; his single tap = Generate.
+  (Veo API = money-gated; NotebookLM has no API — one-click is the honest
+  ceiling.) Daily poster already automatic (gemini_render job).
+**CODING ORDER (next sessions, gates unchanged):**
+U1 Dugout hardening: scar-table (root speechConfig; outputAudioTranscription
+   risk → fallback = checkpoint-tool-as-transcript-channel), Charon, VAD,
+   15-min rehydrate + day cartridge, ACK fillers, think-time stamps, spoken
+   gates (run_postmatch/approve_genome/route_throwins), dugout_notes→postmatch,
+   mic fix. GATE: one real voice conversation w/ voice rep end-to-end.
+U1.5 MEDIA ENGINE (teamtalk job + --to-file + wall MEDIA panel + film kit).
+U2 Interview weapons: oral scrimmage (personas: Recruiter Ghost/Scenario
+   Bomb/Code Autopsy; hedge log), whiteboard/camera mode, screen commentator,
+   Re-Jirah live conductor, modality routing. GATE: one graded oral scrimmage.
+U3 Earned proactivity: his-voice reminders FIRST (gate-exempt), then shadow
+   engine + evening shadow-scoring + day-thread modes + semantic recall +
+   dugout-minutes as third budget pool. GATE: 7 days shadows scored pre-ratify.
+U4 Polish ONLY (LAN phone, event-triggered re-analysis, commitments view,
+   timeaudit IST fix on approval). **DESIGN FREEZES AT U3 until the offer
+   (§18 law applied to the builder).**
+**U0 = THE CAPTAIN, TONIGHT (outranks all code):** ntfy subscribe · Colab v4
+cell · Drill Gem v4 add-on · real `npm run postmatch` · laptop open overnight ·
+first real session pasted tomorrow. Standing: system.md review→LOCK · Oura
+secret regen · review+merge organism-final→main soon (installed tasks point at
+this working tree).
