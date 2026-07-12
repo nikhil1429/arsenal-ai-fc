@@ -97,6 +97,7 @@ dressing-room/state/brain_out/
 dressing-room/state/dugout_notes.jsonl
 dressing-room/state/dugout_ledger.jsonl
 dressing-room/state/dugout_stamps.jsonl
+dressing-room/state/dugout_scrimmage.jsonl
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

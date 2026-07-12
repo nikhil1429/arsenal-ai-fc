@@ -137,6 +137,49 @@ function composeCartridgeSection(cart, stamps = []) {
 }
 
 // ---------------------------------------------------------------------------
+// THE ORAL SCRIMMAGE (U2) — the ear's ONE legal surface. Being judged is the
+// DECLARED point here; the confessional laws don't apply (and only here).
+// ---------------------------------------------------------------------------
+const PERSONAS = {
+  recruiter_ghost: "THE RECRUITER GHOST — a senior tech recruiter screening for an AI-PE role. Polite, brisk, surface-question then suddenly deep; interrupts once with 'and why should the business care?'; allergic to buzzwords and vague claims — names them flatly when heard.",
+  scenario_bomb: "THE SCENARIO BOMB — a staff engineer mid-incident. Somewhere in probe 3 or 4, detonate a twist mid-answer ('latency just tripled in prod — what do you check FIRST?'). Wants ordered, falsifiable steps; meets hedging with two seconds of silence, then 'so which is it?'",
+  code_autopsy: "THE CODE AUTOPSY — a principal engineer dissecting something he claims to know from his own drills. Line-level why: 'what breaks if I delete this piece?', 'where does this fail at 10k requests?'. No credit for narration; credit for mechanism.",
+};
+const HEDGE_RE = /\b(shayad|matlab|i think|i guess|maybe|probably|sort of|kind of|hopefully|not sure|i feel like)\b/gi;
+const countHedges = (text) => (String(text || "").match(HEDGE_RE) || []).length;
+function todaysPersona(now = new Date()) {
+  const keys = Object.keys(PERSONAS);
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  return keys[doy % keys.length];
+}
+function buildScrimmageInstruction(now = new Date()) {
+  const personaKey = todaysPersona(now);
+  const dossier = readJson(join(STATE_DIR, "dossier_weights.json")) || {};
+  const staged = ((readJson(join(STATE_DIR, "scout.json")) || {}).staged || []).find(s => s.kind === "scrimmage");
+  const briefP = join(STATE_DIR, "brain_out", "scrimmage", localDate(now) + ".md");
+  const brief = existsSync(briefP) ? readFileSync(briefP, "utf8").slice(0, 3000) : (staged && staged.brief ? String(staged.brief).slice(0, 3000) : null);
+  const fp = buildFingerprint({
+    grammar: readJson(join(STATE_DIR, "doubt_grammar.json")),
+    calibration: readJson(join(STATE_DIR, "calibration.json")),
+    ls: readJson(join(STATE_DIR, "learning_state.json")),
+  });
+  return `You are TODAY'S EXAMINER in an ORAL SCRIMMAGE — real interview conditions, by voice. Being judged is the DECLARED point of this surface; he asked for this. Honest, never cruel.
+
+YOUR PERSONA TODAY: ${PERSONAS[personaKey]}
+
+${fp}
+
+THE MOCK (run it exactly):
+1. FIVE probes, ONE at a time, time-weighted like the real onsite (${(dossier.rounds || []).map(r => r.id).join(" > ") || "system_design > build > production_eval > fundamentals > behavioral"}). Mix probe types: recall, reconstruct, defend, novel, negative-space${dossier.probe_types ? " — use the club's own grammar, e.g. defend: \"" + dossier.probe_types.defend.template.replace(/\{claim\}/, "…") + "\"" : ""}.
+2. Before EVERY answer he states his gut-word — knew, shaky, or guessed — BEFORE answering. No gut-word, no probe proceeds.
+3. Interrupt him ONCE mid-answer, like a real panel. Stay in persona.
+4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
+5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
+${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}
+INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
+}
+
+// ---------------------------------------------------------------------------
 // THE GAFFER-LIVE CONSTITUTION (system instruction, assembled fresh per session)
 // ---------------------------------------------------------------------------
 function buildSystemInstruction() {
@@ -175,6 +218,7 @@ const TOOL_DECLS = [
   { name: "run_postmatch", description: "FULL-TIME by voice — a SPOKEN GATE. Call ONLY after the ritual: result (HIT/MISS/PARTIAL/REST), one signal, his KAL-line in HIS words, read all three back, and his explicit go-word ('haan, chalao' / 'lock it'). Writes the evening ledger through postmatch.mjs.", parameters: { type: "OBJECT", properties: { hit: { type: "STRING" }, signal: { type: "STRING" }, kal: { type: "STRING" }, route_throwins: { type: "BOOLEAN" } }, required: ["hit", "kal"] } },
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "route_throwins", description: "Route pending throw-ins into the evening flow, on his word only. Omit ids to route all pending.", parameters: { type: "OBJECT", properties: { ids: { type: "ARRAY", items: { type: "STRING" } } } } },
+  { name: "scrimmage_report", description: "SCRIMMAGE ONLY — after probe 5: file the graded mock (score /25, two weakest cracks, tomorrow's drill).", parameters: { type: "OBJECT", properties: { total_25: { type: "NUMBER" }, weakest: { type: "ARRAY", items: { type: "STRING" } }, drill: { type: "STRING" }, persona: { type: "STRING" } }, required: ["total_25", "weakest", "drill"] } },
 ];
 
 // ---------------------------------------------------------------------------
@@ -213,7 +257,7 @@ function execTool(name, args, deps = {}) {
       const valid = (args.reps || []).filter(r => ["knew", "shaky", "guessed"].includes(r.confidence));
       if (!valid.length) return { ok: false, error: "no valid reps (gut-word missing)" };
       const rt = deps.runtime || runtime;
-      const note = "dugout-voice" + (rt.last_think_ms ? ` think:${rt.last_think_ms}ms` : "");
+      const note = (deps.mode === "scrimmage" ? "scrimmage-voice" : "dugout-voice") + (rt.last_think_ms ? ` think:${rt.last_think_ms}ms` : "");
       const batch = valid.map(r => ({
         ts: new Date().toISOString(), surface: "gem", track: "concept",
         concept: r.concept, axis: /^[a-i]$/.test(r.axis || "") ? r.axis : null,
@@ -253,6 +297,21 @@ function execTool(name, args, deps = {}) {
       const said = sh("postmatch.mjs", ids ? ["route", ...ids] : ["route", "all"]);
       return { ok: true, said: String(said || "").trim().slice(0, 300) };
     }
+    if (name === "scrimmage_report") {
+      const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
+        .filter(l => String(l.ts || "").slice(0, 10) === localDate(now))
+        .reduce((a, l) => a + (l.hedges || 0), 0);
+      const md = [
+        `## ORAL SCRIMMAGE · ${localDate(now)} · persona: ${String(args.persona || "unnamed")}`,
+        `score: ${Number(args.total_25)}/25`,
+        `weakest: ${(args.weakest || []).map(String).join(" · ")}`,
+        `drill: ${String(args.drill || "")}`,
+        `hedge-density (the ear's one legal surface, measured off-mic): ${hedges} hedge(s) this session`,
+        "",
+      ].join("\n");
+      append(join(OUT_DIR, `scrimmage_${localDate(now)}.md`), md);
+      return { ok: true, filed: true };
+    }
     return { error: "unknown tool " + name };
   } catch (e) { return { error: String(e.message).slice(0, 200) }; }
 }
@@ -269,13 +328,14 @@ function buildRehydrate(now = new Date()) {
 }
 
 // per-session config the page fetches (key never rests in the repo)
-function buildConfig(keys) {
+function buildConfig(keys, mode = "gaffer") {
   return {
     model: process.env.DUGOUT_MODEL || DEFAULT_MODEL,
     voice: process.env.DUGOUT_VOICE || DEFAULT_VOICE,
+    mode,
     keys,
-    system: buildSystemInstruction(),
-    rehydrate: buildRehydrate(),
+    system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
+    rehydrate: mode === "scrimmage" ? null : buildRehydrate(),   // a mock starts cold, like the real thing
     tools: [{ functionDeclarations: TOOL_DECLS }],
     vad: { onset_db_over_noise: 12, min_db: -55, hangover_ms: 900, preroll_ms: 500, idle_disconnect_ms: 90000, batch_ms: 100 },
     acks: listAcks(),
@@ -327,11 +387,29 @@ async function selftest() {
   assert("route_throwins → postmatch route mode (all)", execTool("route_throwins", {}, { sh }).ok === true && calls.some(c => c.script === "postmatch.mjs" && c.argv.join(" ") === "route all"));
   assert("route_throwins honors explicit ids", execTool("route_throwins", { ids: ["m7"] }, { sh }).ok === true && calls.some(c => c.script === "postmatch.mjs" && c.argv.join(" ") === "route m7"));
 
+  // THE ORAL SCRIMMAGE — the ear's one legal surface
+  const scrim = buildScrimmageInstruction(new Date(2026, 6, 12));
+  assert("scrimmage: examiner persona + 5 probes + gut-word law travel", scrim.includes("EXAMINER") && scrim.includes("FIVE probes") && scrim.includes("BEFORE answering"));
+  assert("scrimmage: real-panel interruption + honest-never-cruel", scrim.includes("Interrupt him ONCE") && scrim.includes("never cruel"));
+  assert("scrimmage: reps + report both mandatory at the whistle", scrim.includes("log_reps") && scrim.includes("scrimmage_report"));
+  assert("EAR LAW — the model is never told about hedge counting", !/hedge/i.test(scrim));
+  assert("all three personas exist; today's picked deterministically", Object.keys(PERSONAS).length === 3 && PERSONAS[todaysPersona(new Date(2026, 6, 12))] !== undefined);
+  assert("hedge counter hears Hinglish + English hedges", countHedges("CAPTAIN: Shayad yeh matlab I think sahi hai") === 3 && countHedges("CAPTAIN: cosine normalizes magnitude, full stop") === 0);
+  execTool("log_reps", { reps: [{ concept: "rag", question: "q", confidence: "guessed", correct: false }] }, { sh, mode: "scrimmage", runtime: { last_think_ms: null } });
+  const scrimPaste = JSON.parse(readFileSync(calls.filter(c => c.script === "capture.mjs").pop().argv[1], "utf8"));
+  assert("scrimmage reps tagged scrimmage-voice (declared surface)", scrimPaste[0].note === "scrimmage-voice");
+  const rep = execTool("scrimmage_report", { total_25: 17, weakest: ["eval metrics", "context handoff"], drill: "reconstruct the eval harness cold", persona: "scenario_bomb" }, { sh, append });
+  assert("scrimmage report filed with score + cracks + hedge line", rep.ok === true && appends.some(a => a.text.includes("17/25") && a.text.includes("eval metrics") && a.text.includes("hedge-density")));
+
   const keys = loadKeys("GEMINI_API_KEY=k1\nGEMINI_API_KEY_2=k2\n# comment\nGEMINI_API_KEY_3=k3\n");
   assert("key-pool parses numbered keys for rotation", keys.filter(k => ["k1", "k2", "k3"].includes(k)).length === 3);
 
+  const scfg = buildConfig(["k1"], "scrimmage");
+  assert("scrimmage config: examiner soul, cold start (no rehydrate)", scfg.mode === "scrimmage" && scfg.system.includes("EXAMINER") && scfg.rehydrate === null);
+  assert("page carries MODE end-to-end (config, tools, transcript)", PAGE.includes("mode:MODE") && PAGE.includes("/config?mode="));
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 10);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 11);
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
   assert("constitution travels: no-hype + gut-word + RED law in-instruction", cfg.system.includes("never say 10x") && cfg.system.includes("BEFORE he answers") && cfg.system.includes("RED"));
   assert("constitution wires the checkpoint match-record", cfg.system.includes("silently call checkpoint"));
@@ -387,6 +465,8 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>THE DUGOUT
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
 let outTxEnabled=true,earlyCloses=0,rehydrated=false;
+const MODE=new URLSearchParams(location.search).get('mode')==='scrimmage'?'scrimmage':'gaffer';
+if(MODE==='scrimmage')document.title='THE DUGOUT — SCRIMMAGE';
 const st=t=>document.getElementById('st').textContent=t;
 const diag=t=>document.getElementById('diag').textContent=t;
 const log=t=>{const el=document.getElementById('log');el.textContent=(t+"\\n"+el.textContent).slice(0,4000)};
@@ -417,7 +497,7 @@ function maybeAck(){if(!CFG||!CFG.acks||!CFG.acks.length||liveSrcs.length)return
  const n=Date.now();if(n-lastAckAt<8000)return;lastAckAt=n;
  try{new Audio(CFG.acks[(Math.random()*CFG.acks.length)|0]).play()}catch(e){}}
 
-async function toolCall(fc){const r=await fetch('/tool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fc.name,args:fc.args||{}})});
+async function toolCall(fc){const r=await fetch('/tool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fc.name,args:fc.args||{},mode:MODE})});
 return {id:fc.id,name:fc.name,response:{result:await r.json()}}}
 
 // THE LINE — connect-on-voice; parked on idle (scar: always-on WS hemorrhages tokens); stitched via sessionResumption
@@ -491,7 +571,7 @@ setInterval(()=>{if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!live
  parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
-function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0)})})}
+function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
 setInterval(flush,15000);
 function mins(){if(!t0)return;fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10})});t0=Date.now()}
 setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins();sendStamps()});
@@ -511,8 +591,8 @@ document.getElementById('go').onclick=async()=>{
  }catch(e){diag(micHelp(e));st('mic blocked — fix above, press START again');return}
  document.getElementById('go').style.display='none';
  try{
-  CFG=await (await fetch('/config')).json();
-  document.getElementById('mins').textContent='voice minutes today: '+CFG.minutes_today+' · keys in pool: '+CFG.keys.length+' · voice: '+CFG.voice;
+  CFG=await (await fetch('/config?mode='+MODE)).json();
+  document.getElementById('mins').textContent='voice minutes today: '+CFG.minutes_today+' · keys in pool: '+CFG.keys.length+' · voice: '+CFG.voice+(MODE==='scrimmage'?' · MODE: SCRIMMAGE — you are being judged, as requested':'');
   document.getElementById('meter').style.display='block';
   acOut=new (window.AudioContext||window.webkitAudioContext)();
   micCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
@@ -552,8 +632,11 @@ async function main() {
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
-      if (req.method === "GET" && req.url === "/") return send(200, PAGE, "text/html");
-      if (req.method === "GET" && req.url === "/config") return send(200, buildConfig(keys));
+      if (req.method === "GET" && (req.url === "/" || req.url.startsWith("/?"))) return send(200, PAGE, "text/html");
+      if (req.method === "GET" && req.url.startsWith("/config")) {
+        const mode = new URL(req.url, "http://x").searchParams.get("mode") === "scrimmage" ? "scrimmage" : "gaffer";
+        return send(200, buildConfig(keys, mode));
+      }
       if (req.method === "GET" && /^\/ack\/\d+$/.test(req.url || "")) {
         const files = (() => { try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort(); } catch { return []; } })();
         const f = files[Number(req.url.split("/")[2])];
@@ -564,9 +647,18 @@ async function main() {
       if (req.method === "POST") {
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
-        if (req.url === "/tool") return send(200, execTool(body.name, body.args || {}));
+        if (req.url === "/tool") return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
         if (req.url === "/transcript") {
           appendFileSync(join(OUT_DIR, localDate() + ".md"), body.lines.join("\n") + "\n");
+          // THE EAR'S ONE LEGAL SURFACE — hedge-density, scrimmage mode only,
+          // counted off-mic, never voiced mid-session (law).
+          if (body.mode === "scrimmage") {
+            for (const line of body.lines) {
+              if (!String(line).startsWith("CAPTAIN:")) continue;
+              const h = countHedges(line);
+              if (h) appendFileSync(join(STATE_DIR, "dugout_scrimmage.jsonl"), JSON.stringify({ ts: new Date().toISOString(), hedges: h }) + "\n");
+            }
+          }
           return send(200, { ok: true });
         }
         if (req.url === "/minutes") {
