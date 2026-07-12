@@ -10,6 +10,7 @@
     "capture:selftest": "node scripts/capture.mjs selftest",
     "heartbeat": "node scripts/heartbeat.mjs",
     "wall": "node scripts/viz.mjs",
+    "bundle": "node scripts/repo_bundle.mjs",
     "postmatch": "node scripts/postmatch.mjs",
     "brain": "node scripts/brain.mjs tick",
     "brain:status": "node scripts/brain.mjs status",

@@ -19,6 +19,9 @@ oura_tokens.json
 # --- node ---
 node_modules/
 
+# --- the whole-repo bundle (derived artifact; regenerate with `npm run bundle`) ---
+ARSENAL_FC_FULL_REPO_BUNDLE.md
+
 # --- OPTIONAL: personal health / medication data ---
 # This repo is PUBLIC. The two files below contain your Oura biometrics
 # (sleep, HRV, readiness) and your medication-intake timing. If you'd
