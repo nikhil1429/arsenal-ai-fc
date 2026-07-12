@@ -58,13 +58,11 @@
   setup/12TH_PLAYER_DECISION.md; zero code by design.
 - **Eval-scoreboard back-route** (§IX outer ring) — waits on the FinOps repo's
   harness (the product is the captain's to build; brief §7).
-- **manager system.md sections #6–#11** — deliberately NOT drafted at the tail
-  of this heavy build (the repo's own anti-corruption law: never write soul
-  sections in a heavy thread). The brain's formation_read runs on the 5 LOCKED
-  sections (identity, inviolable law, morning cognition, reconciliation,
-  formation-read) — the operative core — with manager.mjs's validator +
-  fallback guaranteeing the sheet regardless. Resume-point: CONDUCTOR_LOG
-  "M-2 resume at #6". This is the one soul task left, and it is left ON PURPOSE.
+- ~~manager system.md sections #6–#11~~ → **COMPLETE-DRAFT** on the captain's
+  "do everything" order (commit 949b08e; all 11 sections; meds-PII resolved as
+  generic "his stack"). First live formation-read ran through the full soul,
+  source=llm, validated. Remaining: the captain's line-by-line review → LOCK →
+  scaffolding strip. (Moved out of [LEAP]; review is the last gate.)
 - **Deep twin markets** (per-concept sessions-to-lock) — code path exists for
   unconditioned markets only; conditional markets need the 400-day stream
   (§IV.3 Transfer Window logic).
