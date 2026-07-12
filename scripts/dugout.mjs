@@ -131,8 +131,32 @@ async function ensureAcks(log = console.log) {
   } catch (e) { log(`dugout: ACK synthesis skipped (${String(e.message).slice(0, 80)})`); }
 }
 
+// THE MOUTH — model choice, decided EMPIRICALLY (probed live 12 Jul 2026 vs
+// the 5 Live-capable models on the account). gemini-3.1-flash-live-preview
+// wins for a COACHING/interview tutor: it said the MOST on an "elaborate
+// deeply" prompt (316 words vs native-audio's 192), reached first-audio in
+// ~0.58s (native-audio: ~7.9s), has an 8x bigger output budget (65,536 vs
+// 8,192 tokens — it can lecture for a long time), and is the ONLY Live model
+// that also does VISION (the whiteboard/screen eyes). The prettier
+// "native-audio" model is slower, terser, dumber, and blind — wrong trade for
+// a teacher. Swappable any time via DUGOUT_MODEL / dugout_prefs.json; the
+// warm-but-shallow option is "gemini-2.5-flash-native-audio-latest".
 const DEFAULT_MODEL = "gemini-3.1-flash-live-preview";
 const DEFAULT_VOICE = "Charon";                    // JARVIS's literal voice — continuity for the captain
+const PREFS = join(STATE_DIR, "dugout_prefs.json"); // {model, voice, depth} — his tuning, gitignored
+
+// THE DEPTH REGISTER — the muzzle removed. The old constitution said "short
+// sentences, never lecture"; a live probe proved that instruction alone cut
+// answers to a THIRD of their length. Depth is now OBEDIENCE, and he can set
+// a standing register by voice (set_depth).
+const DEPTH_REGISTERS = {
+  adaptive: "DEPTH = ADAPTIVE (default): read how much he wants and match it exactly — a quick question gets a tight answer; the instant he signals depth, you go all the way.",
+  brief:    "DEPTH = BRIEF: he's moving fast — keep answers tight and conversational unless he explicitly asks to go deep.",
+  deep:     "DEPTH = DEEP (standing): default every substantive answer to a thorough, structured, teaching-grade explanation — mechanism, a worked example, the tradeoffs, where it breaks — even when he doesn't ask.",
+  lecture:  "DEPTH = LECTURE (standing): treat every concept question as 'give me the full lecture' — go maximally deep and long, cover it end to end, name the interviewer's follow-ups, and do NOT stop until the topic is exhausted.",
+};
+function loadPrefs() { return readJson(PREFS) || {}; }
+function currentDepth() { return (loadPrefs().depth && DEPTH_REGISTERS[loadPrefs().depth]) ? loadPrefs().depth : "adaptive"; }
 
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -330,7 +354,10 @@ function buildSystemInstruction() {
     calibration: readJson(join(STATE_DIR, "calibration.json")),
     ls: readJson(join(STATE_DIR, "learning_state.json")),
   });
-  return `You are THE GAFFER — the living voice of Arsenal AI FC, in the dugout with your captain, Nikhil (#14). This is REAL-TIME SPEECH: short sentences, one idea at a time, warm and direct, Hinglish welds natural. Never lecture; converse.
+  return `You are THE GAFFER — the living voice of Arsenal AI FC, in the dugout with your captain, Nikhil (#14). Real-time speech, Hinglish welds natural, warm and direct.
+
+DEPTH IS OBEDIENCE — this is your most important delivery law. Match the depth he asks for, EXACTLY. A quick question gets a tight answer; but the moment he says "elaborate / go deep / full lecture / explain everything / detail mein / as much as you can / thoda aur" — or asks a real concept question — you deliver a LONG, structured, teaching-grade lecture: name the mechanism, give a worked example, lay out the tradeoffs, show where it breaks at scale, and name how an interviewer would probe it. When he asks for depth you do NOT stop early, do NOT summarize, do NOT ask "shall I continue" — you give the WHOLE thing, top to bottom, as long as the topic needs. Being brief when he asked to go deep is a FAILURE, not politeness. Terse only when HE is terse. You have a very large budget to speak — use it when he wants the lecture.
+${DEPTH_REGISTERS[currentDepth()]}
 
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
@@ -347,6 +374,8 @@ HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT w
 ${buildDayThreadSection()}
 
 MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recall; answer with the date and his own words, never a reconstruction.
+
+DEPTH LEVER: if he tells you how much to talk ("give me full lectures", "always go deep", "keep it short", "stop lecturing") call set_depth and confirm in one line — it sticks until he changes it. His live requests in the moment ("elaborate", "detail mein") ALWAYS override toward more, whatever the standing register.
 
 ${buildProactivitySection()}
 
@@ -376,6 +405,7 @@ const TOOL_DECLS = [
   { name: "approve_genome", description: "Approve a proposed Boot Room mutation — a SPOKEN GATE. Call ONLY after reading the mutation aloud (target, predicted effect, revert plan) and hearing his explicit approval word. Hesitation = not approved.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "route_throwins", description: "Route pending throw-ins into the evening flow, on his word only. Omit ids to route all pending.", parameters: { type: "OBJECT", properties: { ids: { type: "ARRAY", items: { type: "STRING" } } } } },
   { name: "scrimmage_report", description: "SCRIMMAGE ONLY — after probe 5: file the graded mock (score /25, two weakest cracks, tomorrow's drill).", parameters: { type: "OBJECT", properties: { total_25: { type: "NUMBER" }, weakest: { type: "ARRAY", items: { type: "STRING" } }, drill: { type: "STRING" }, persona: { type: "STRING" } }, required: ["total_25", "weakest", "drill"] } },
+  { name: "set_depth", description: "Set how deep/long you talk, STANDING until changed. Call when he says 'give me full lectures', 'always go deep', 'keep it short', 'stop lecturing', etc. adaptive=match each ask · brief=tight · deep=thorough by default · lecture=maximal every time. Confirm the new register in one line.", parameters: { type: "OBJECT", properties: { register: { type: "STRING", enum: ["adaptive", "brief", "deep", "lecture"] } }, required: ["register"] } },
 ];
 
 // ---------------------------------------------------------------------------
@@ -483,6 +513,13 @@ function execTool(name, args, deps = {}) {
       const said = sh("shadow.mjs", ["ratify", String(args.type || "")]);
       return { ok: true, said: String(said || "").trim().slice(0, 300) };
     }
+    if (name === "set_depth") {
+      const reg = String(args.register || "").toLowerCase();
+      if (!DEPTH_REGISTERS[reg]) return { ok: false, error: "register must be adaptive|brief|deep|lecture" };
+      const prefs = { ...loadPrefs(), depth: reg };
+      (deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2))))(PREFS, prefs);
+      return { ok: true, register: reg, effect: DEPTH_REGISTERS[reg] };
+    }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
         .filter(l => String(l.ts || "").slice(0, 10) === localDate(now))
@@ -515,15 +552,23 @@ function buildRehydrate(now = new Date()) {
 
 // per-session config the page fetches (key never rests in the repo)
 function buildConfig(keys, mode = "gaffer") {
+  const prefs = loadPrefs();
   return {
-    model: process.env.DUGOUT_MODEL || DEFAULT_MODEL,
-    voice: process.env.DUGOUT_VOICE || DEFAULT_VOICE,
+    model: process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL,
+    voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
+    depth: currentDepth(),
     mode,
     keys,
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     rehydrate: mode === "scrimmage" ? null : buildRehydrate(),   // a mock starts cold, like the real thing
     tools: [{ functionDeclarations: TOOL_DECLS }],
-    vad: { onset_db_over_noise: 12, min_db: -55, hangover_ms: 900, preroll_ms: 500, idle_disconnect_ms: 90000, batch_ms: 100 },
+    // THE EARS — VAD tuned for a captain who THINKS mid-sentence. hangover
+    // 1400ms means a pause to gather a thought no longer ends his turn (the
+    // old 900ms cut deep answers off); barge-in stays instant (any voiced
+    // frame stops playback). preroll 600ms keeps the front of a word.
+    vad: { onset_db_over_noise: 11, min_db: -55, hangover_ms: 1400, preroll_ms: 600, idle_disconnect_ms: 90000, batch_ms: 100 },
+    // THE EYES — sharper frames so it can actually READ his handwriting/code.
+    vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: 2000 },
     acks: listAcks(),
     minutes_today: readLines(DLEDGER).filter(l => String(l.ts || "").slice(0, 10) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
   };
@@ -598,7 +643,7 @@ async function selftest() {
   // THE TOUCHLINE EYES (U2b) — frame-mode vision, empirically-probed wire shape
   assert("vision sends realtimeInput.video (probed live; mediaChunks deprecated)", PAGE.includes("realtimeInput:{video:{data:") && !PAGE.includes("mediaChunks"));
   assert("whiteboard = camera, commentator = getDisplayMedia, both toggles", PAGE.includes("getDisplayMedia") && PAGE.includes("toggleVision('camera')") && PAGE.includes("toggleVision('screen')"));
-  assert("frame-mode cadence (quota-friendly, dodges video cap)", PAGE.includes("2500"));
+  assert("frame-mode cadence (config-driven, quota-friendly, dodges video cap)", PAGE.includes("VZ.frame_ms") && buildConfig(["k1"]).vision.frame_ms >= 1000);
   assert("eyes hold the line open (no idle-park while he sketches)", PAGE.includes("!vidKind&&CFG"));
   assert("vision errors surfaced like mic errors", PAGE.includes("VISION "));
   assert("Gaffer eyes law travels: coach short, silence is work", buildConfig(["k1"]).system.includes("TOUCHLINE EYES") && buildConfig(["k1"]).system.includes("his next 30 seconds"));
@@ -653,8 +698,26 @@ async function selftest() {
     assert("empty index → honest note", (await execRecall({ query: "x" }, { embed: mockEmbed, index: [] })).note.includes("empty"));
   }
 
+  // THE MOUTH UNMUZZLED (depth is obedience) — the empirical fix
+  const cfg0 = () => buildConfig(["k1"]);
+  assert("constitution: DEPTH IS OBEDIENCE, no more 'never lecture' muzzle", buildSystemInstruction().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("Never lecture"));
+  assert("constitution: elaborate/deep-dive triggers the full lecture", buildSystemInstruction().includes("full lecture") && buildSystemInstruction().includes("Being brief when he asked to go deep is a FAILURE"));
+  const depthCalls = [];
+  const badDepth = execTool("set_depth", { register: "wat" }, { writeJson: (p, o) => depthCalls.push(o) });
+  assert("set_depth rejects an unknown register", badDepth.ok === false && depthCalls.length === 0);
+  const okDepth = execTool("set_depth", { register: "lecture" }, { writeJson: (p, o) => depthCalls.push(o) });
+  assert("set_depth persists the register + returns its effect", okDepth.ok === true && okDepth.register === "lecture" && depthCalls.some(o => o.depth === "lecture"));
+  assert("all four depth registers defined", ["adaptive", "brief", "deep", "lecture"].every(r => DEPTH_REGISTERS[r]));
+  assert("depth lever wired into the constitution", buildSystemInstruction().includes("DEPTH LEVER") && cfg0().system.includes("set_depth"));
+
+  // THE EARS + EYES tuned to peak
+  assert("EARS: VAD hangover long enough to not cut off a thinking pause", cfg0().vad.hangover_ms >= 1200);
+  assert("EYES: sharper frames (higher jpeg quality + resolution), config-driven", cfg0().vision.jpeg_quality >= 0.8 && cfg0().vision.max_px >= 1280 && PAGE.includes("VZ.jpeg_quality") && PAGE.includes("VZ.frame_ms"));
+  assert("EYES: capture requests HD from the camera + screen", PAGE.includes("height:{ideal:1080}") && PAGE.includes("width:{ideal:1920}"));
+  assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
+
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 15);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 16);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -752,19 +815,20 @@ let vidStream=null,vidTimer=null,vidKind=null;
 async function startVision(kind){
  stopVision();
  try{
-  vidStream = kind==='screen' ? await navigator.mediaDevices.getDisplayMedia({video:{frameRate:2}})
-    : await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+  vidStream = kind==='screen' ? await navigator.mediaDevices.getDisplayMedia({video:{frameRate:3,width:{ideal:1920}}})
+    : await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
  }catch(e){diag('VISION '+(e.name||'')+': '+(e.message||e));return}
  vidKind=kind;
  vidStream.getVideoTracks()[0].onended=()=>stopVision();
  const vid=document.getElementById('vid');vid.srcObject=vidStream;await vid.play();
  const cv=document.createElement('canvas');
+ const VZ=(CFG&&CFG.vision)||{jpeg_quality:0.82,max_px:1280,frame_ms:2000};
  vidTimer=setInterval(()=>{
   if(!ws||ws.readyState!==1||!setupDone||!vid.videoWidth)return;
-  cv.width=Math.min(1024,vid.videoWidth);cv.height=Math.round(cv.width*vid.videoHeight/vid.videoWidth);
+  cv.width=Math.min(VZ.max_px,vid.videoWidth);cv.height=Math.round(cv.width*vid.videoHeight/vid.videoWidth);
   cv.getContext('2d').drawImage(vid,0,0,cv.width,cv.height);
-  ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',0.6).split(',')[1],mimeType:'image/jpeg'}}}));
- },2500);
+  ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',VZ.jpeg_quality).split(',')[1],mimeType:'image/jpeg'}}}));
+ },VZ.frame_ms);
  if(!ws||ws.readyState>1)connect();
  st(kind==='screen'?'🖥 commentator ON — the Gaffer watches you solve':'📷 whiteboard ON — show the paper');
  log('· eyes on ('+kind+') — 1 frame / 2.5s, quota-friendly')}

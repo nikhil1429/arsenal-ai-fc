@@ -107,6 +107,8 @@ dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
 # semantic recall index (his words, embedded)
 dressing-room/state/recall_index.jsonl
+# dugout voice prefs (his chosen model/voice/depth register)
+dressing-room/state/dugout_prefs.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/
