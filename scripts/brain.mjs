@@ -61,6 +61,7 @@ const DEFAULTS = {
   guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids", "god-tier", "time is short"] },
   ntfy: { enabled: false, topic: "", push_after: ["formation_read"] },
   gemini: { enabled: false, binary: "gemini" },
+  dugout_pool: { enabled: true, gemini_defer_threshold_min: 30 },
   jobs: [],
 };
 
@@ -78,6 +79,7 @@ function loadConfig(path = CFG_PATH) {
         guards: { ...DEFAULTS.guards, ...(j.guards || {}) },
         ntfy: { ...DEFAULTS.ntfy, ...(j.ntfy || {}) },
         gemini: { ...DEFAULTS.gemini, ...(j.gemini || {}) },
+        dugout_pool: { ...DEFAULTS.dugout_pool, ...(j.dugout_pool || {}) },
         jobs: Array.isArray(j.jobs) ? j.jobs : [],
       };
     }
@@ -126,18 +128,28 @@ function headroom(cfg, ledger, queueState, now) {
   return { allowed: Math.max(0, Math.min(cap - used, weeklyCap - weekly)), used, cap: Math.round(cap), phase: inRange(nowHM, cfg.overnight.start, cfg.overnight.end) ? "overnight" : inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end) ? "study" : "shoulder" };
 }
 
+// THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text
+function dugoutMinutesToday(now, file = join(STATE_DIR, "dugout_ledger.jsonl")) {
+  return readLines(file).filter(l => String(l.ts || "").slice(0, 10) === localDate(now)).reduce((a, l) => a + (l.minutes || 0), 0);
+}
+
 // which jobs are eligible now?
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function eligibleJobs(cfg, queueState, now) {
+function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
   const today = localDate(now);
   const nowHM = hhmm(now);
   const ran = (queueState && queueState.jobs_run && queueState.jobs_run[today]) || {};
   const windows = { morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] };
+  const daytime = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
   return cfg.jobs.filter(j => {
     if (j.enabled === false) return false;
     if ((ran[j.id] || 0) >= (j.max_per_day || 1)) return false;
     if (Array.isArray(j.days) && !j.days.includes(DOW[now.getDay()])) return false;
     if (j.engine === "gemini" && !cfg.gemini.enabled) return false;
+    // THE THIRD POOL: heavy voice day → daytime Gemini text/render jobs step
+    // aside (the voice needs the free-tier pool); they run overnight anyway.
+    if (j.engine === "gemini" && daytime && cfg.dugout_pool && cfg.dugout_pool.enabled &&
+        voiceMinToday !== null && voiceMinToday >= cfg.dugout_pool.gemini_defer_threshold_min) return false;
     if (j.at) return nowHM >= j.at && inRange(nowHM, ...(windows[j.window] || windows.any));
     return inRange(nowHM, ...(windows[j.window] || windows.any));
   }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -416,7 +428,7 @@ async function tick(cfg, deps) {
   queueState.jobs_run[today] = queueState.jobs_run[today] || {};
 
   const ran = [];
-  for (const job of eligibleJobs(cfg, queueState, now)) {
+  for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
     const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow)), queueState, now);
     if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
     const { usage, note } = await runJob(job, cfg, deps);
@@ -452,6 +464,18 @@ async function selftest() {
   const cfg = loadConfig();   // committed config is the fixture — it must parse
   assert("committed brain_config.json parses with jobs", cfg.jobs.length >= 10);
   assert("day cartridge job wired (L3: slow brain programs the fast brain)", cfg.jobs.some(j => j.id === "day_cartridge" && j.window === "overnight" && j.validate === "no_new_numbers" && String(j._note).includes("second person")));
+
+  // THE THIRD POOL (U3d) — voice minutes shift daytime gemini text jobs aside
+  {
+    const poolCfg = { ...cfg, gemini: { enabled: true }, dugout_pool: { enabled: true, gemini_defer_threshold_min: 30 }, jobs: [{ id: "g1", engine: "gemini", window: "any", priority: 5 }, { id: "c1", engine: "claude", window: "any", priority: 5 }] };
+    const day = new Date(2026, 6, 12, 14, 0), night = new Date(2026, 6, 12, 23, 0);
+    assert("heavy voice day → daytime gemini job steps aside", !eligibleJobs(poolCfg, {}, day, 45).some(j => j.id === "g1"));
+    assert("claude jobs untouched by the voice pool", eligibleJobs(poolCfg, {}, day, 45).some(j => j.id === "c1"));
+    assert("quiet voice day → gemini runs as normal", eligibleJobs(poolCfg, {}, day, 5).some(j => j.id === "g1"));
+    assert("overnight gemini runs regardless (voice is asleep)", eligibleJobs(poolCfg, {}, night, 500).some(j => j.id === "g1"));
+    assert("minutes ledger math: missing file → 0 (never crashes)", dugoutMinutesToday(day, "no-such-ledger-xyz.jsonl") === 0);
+    assert("pool committed to canon config", !!cfg.dugout_pool && cfg.dugout_pool.enabled === true);
+  }
 
   // MEDIA ENGINE — team talks: validated text → mp3 in club/media/
   const ttam = cfg.jobs.find(j => j.id === "teamtalk_am"), ttpm = cfg.jobs.find(j => j.id === "teamtalk_pm");
@@ -582,7 +606,8 @@ async function main() {
     const ledger = readLines(LEDGER);
     const q = readJson(QUEUE) || {};
     const h = headroom(cfg, ledger, q, now);
-    console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · eligible now: ${eligibleJobs(cfg, q, now).map(j => j.id).join(", ") || "none"}`);
+    const vm = dugoutMinutesToday(now);
+    console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · voice pool ${vm}min today${cfg.dugout_pool && cfg.dugout_pool.enabled && vm >= cfg.dugout_pool.gemini_defer_threshold_min ? " (daytime gemini deferred)" : ""} · eligible now: ${eligibleJobs(cfg, q, now, vm).map(j => j.id).join(", ") || "none"}`);
     return;
   }
   if (mode === "run") {
@@ -604,4 +629,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine };
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday };
