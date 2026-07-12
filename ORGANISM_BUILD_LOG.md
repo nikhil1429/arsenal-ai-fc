@@ -29,10 +29,21 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
   market_scan/maidan_poster/widget_spec brain jobs + per-job extra_args
   (brain.mjs). 22/22 suites re-verified green after upgrades. Folded/skipped
   superpowers logged with reasons in ORGANISM_LEDGER.md.
-- **CAPTAIN ACTIVATION (2 min, harness would not let the builder do it):**
-  `powershell -ExecutionPolicy Bypass -File setup\INSTALL_TASKS.ps1`
-  (+ optional wallpaper line in setup/WALLPAPER.ps1 header). Everything else
-  is live the moment those tasks exist.
+- **ACTIVATED (captain's "do everything, approval given", 12 Jul):**
+  · All 16 organism tasks + wallpaper task INSTALLED and verified (quoting bug
+    in INSTALL_TASKS.ps1 fixed — cmd /c form; 26 ArsenalFC-* entries live).
+  · Throw-in topic generated into gitignored throwin_topic.txt — poller WIRED
+    and polling. Captain's one remaining step: subscribe to the topic on the
+    phone ntfy app (view topic: `type dressing-room\state\throwin_topic.txt`).
+  · Gemini CLI installed globally + auth mode pre-set (oauth-personal).
+    Captain's one remaining step: run `gemini` once, click Google login, then
+    set gemini.enabled:true in brain_config.json.
+  · system.md M-2 COMPLETE-DRAFT — all 11 sections (949b08e). Captain's
+    line-by-line review owed before LOCK + scaffolding strip.
+  · **FIRST LIVE FORMATION-READ RAN**: brain → claude -p (full soul) →
+    runManager validated → team_sheet.md written, source=llm. Agentic-CLI
+    chatter guard added (sliceSheet + output contract; selftest 24/24).
+    Brain ledger live: ~15k tokens metabolized, study-phase cap honored.
 
 ## Phase plan
 - [x] P0a Branch + build log seeded

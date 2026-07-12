@@ -221,6 +221,17 @@ function geminiExec(prompt, binary, timeoutMs = 300000) {
   }
 }
 
+// the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
+// to "help". Deterministic slice: from the FIRST badge to the END of the LAST
+// badge. No badge ⇒ return as-is (the wrapper's validator will judge it).
+function sliceSheet(text) {
+  const s = String(text || "");
+  const first = s.indexOf("⚪🔴");
+  const last = s.lastIndexOf("⚪🔴");
+  if (first === -1 || last === first) return s;
+  return s.slice(first, last + "⚪🔴".length);
+}
+
 // ---------------------------------------------------------------------------
 // PROMPT BUILDERS
 // ---------------------------------------------------------------------------
@@ -256,10 +267,11 @@ async function runJob(job, cfg, deps) {
     const system = existsSync(SYSTEM_MD) ? readFileSync(SYSTEM_MD, "utf8") : "";
     let usage = null;
     const llm = async (prompt) => {
-      const r = exec(system + "\n\n=== TODAY'S WRAPPER FEATURES (the only numbers that exist) ===\n\n" + prompt, job.model);
+      const r = exec(system + "\n\n=== TODAY'S WRAPPER FEATURES (the only numbers that exist) ===\n\n" + prompt +
+        "\n\nOUTPUT CONTRACT (mechanical): reply with ONLY the finished team sheet text — first characters '⚪🔴', last line ending 'COYG. ⚪🔴'. No preamble, no commentary, no questions, no tool use, no file writes. Your entire reply IS the sheet.", job.model);
       usage = r;
       if (!r.ok) throw new Error(r.error || "llm failed");
-      return r.text;
+      return sliceSheet(r.text);
     };
     const res = dry ? { source: "dry" } : await runManager({ llm });
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
@@ -374,6 +386,10 @@ async function selftest() {
   const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
+  // sheet slicing — the agentic-CLI chatter guard
+  assert("sliceSheet strips preamble + epilogue chatter", sliceSheet("Sure! Here it is:\n⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴\nLet me know!") === "⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴");
+  assert("sliceSheet passes badge-less text through to the validator", sliceSheet("no badge here") === "no badge here");
+
   // M-3 socket smoke: runManager with a stub llm in a hermetic state dir
   const os = await import("node:os");
   const { mkdtempSync } = await import("node:fs");
@@ -422,4 +438,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig };
+export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet };
