@@ -46,20 +46,35 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 - 2026-07-12: branch `organism-final` created; build log seeded.
 
 ## In progress
-- **P2 BUILD — INLINE MODE.** The 13-agent organ-build workflow (run wf_ec5db480-112)
-  failed entirely: "session limit hit · resets 7am Asia/Calcutta" — the repo-read
-  fan-out consumed the Max-plan window. DO NOT spawn subagents until after 07:00 IST.
-  Builder is writing organs INLINE, one at a time, committing per organ.
-- Organ order: mirror → throwin → heartbeat → physio → twin → touchline → setpiece →
-  scorer → scout → bootroom → doubtminer → postmatch → viz → brain.mjs (+ system.md #6–#11).
-- Each organ: scripts/<name>.mjs + committed config + selftest green + real-run line.
-  Specs live in ORGANISM_ANATOMY.md §3–§7 AND (fuller) in the workflow script file:
-  workflows/scripts/organism-organ-build-wf_ec5db480-112.js (per-organ spec blocks —
-  a fresh session should read that file for the exact contracts).
-- DONE so far: ladder_config.json + dossier_weights.json + brain_config.json committed;
-  .gitignore block for ALL new state outputs committed (cb9fff2).
-- Resume-point if cut: check `git log --oneline` for last organ committed; continue
-  with the next one in the order above, spec from the workflow script file.
+- **P2 BUILD — INLINE MODE** (subagents dead until 07:00 IST session-limit reset;
+  builder writes organs inline, selftest-gated, one commit each).
+- **ORGANS GREEN (selftest + real run + committed):**
+  1. mirror.mjs (aad542b) — real run pulled all 4 REAL capsules from the gist.
+  2. throwin.mjs (7ad2839) — dormant-safe; verbatim + never-counts laws.
+  3. heartbeat.mjs (dc31a3d) — real run beat 6/6 live agents; timeaudit bridge works.
+  4. physio.mjs (31a4d97) — real run found a TRUE effort_uncaptured bleed;
+     doubt_clusters speak-gate already OPEN (real capsules).
+  5. twin.mjs (2f9bfbb) — sealed 3 real humble bets; voice silent (gag holds).
+  6. touchline.mjs (f9e0af1) — ear exiled by hardcode; no-ping law.
+  7. setpiece.mjs (e623bd9) — after doubtminer ran: compiled the FIRST REAL DRILL
+     (tape-room rematch on tokenization for 2026-07-13).
+  8. scorer.mjs (9cde874) — real run resolved 2 of the twin's real bets.
+  9. scout.mjs (e8ae073 + fix) — no-dates law; LEARN/RATIFY proposal.
+  10. bootroom.mjs + forge_profile.json (e723059) — genome seeded v1.0.
+  11. doubtminer.mjs (44ce8d5) — READ HIS 112 REAL DOUBTS (gate open, status ok);
+      112 tape-room rematches eligible; 25 verbatim anchors extracted.
+- **NEXT (exact order):** 12. postmatch.mjs (evening ledger; KAL-line writer matching
+  manager.mjs regex /KAL-?LINE\s*→\s*(.+)/i; season.json + notebook.json + routed_balls;
+  --dry for verification) → 13. viz.mjs (CLUB WALL html per ANATOMY §6) → 14. brain.mjs
+  (hot runtime per ANATOMY §5 + brain_config.json already committed; M-3 via
+  runManager({llm}) import — manager.mjs UNTOUCHED) → dressing-room/manager/system.md
+  sections #6–#11 DRAFTS (label them for captain review; meds fork at #8 = generic
+  "your stack") → npm scripts in package.json → setup/ pack (NTFY_SETUP, GEMINI_CLI_SETUP,
+  gems prompts, Colab flush cell from MANUAL_WIRING, install_tasks.ps1 with schedule
+  from ANATOMY §7, wallpaper.ps1, 12TH_PLAYER_DECISION, Oura/AW/Supabase/GitHub notes)
+  → P4 run ALL selftests old+new → ORGANISM_LEDGER.md + MORNING_RUNBOOK.md +
+  WHAT_CHANGED.md + money-gate list → final report.
+- Full per-organ specs: workflows/scripts/organism-organ-build-wf_ec5db480-112.js.
 
 ## Decisions & assumptions
 - Reader agents restricted to git-TRACKED files only (secrets/personal state are
