@@ -275,7 +275,7 @@ async function pushNtfy(cfg, title, body, fetchFn = fetch) {
   } catch (e) { return { sent: false, why: "network" }; }
 }
 const BELLS = {
-  fulltime: { title: "Full-time, captain", body: "30 seconds, then sleep: npm run postmatch\n(HIT/MISS · one signal · KAL-line — the weld that wins tomorrow's morning.) COYG" },
+  fulltime: { title: "⚪🔴 Full-time, captain", body: "30 seconds, then sleep: npm run postmatch\n(HIT/MISS · one signal · KAL-line — the weld that wins tomorrow's morning.) COYG" },
 };
 
 // the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
@@ -569,6 +569,7 @@ async function selftest() {
   const bellRes = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, BELLS.fulltime.body, okFetch);
   assert("full-time bell sends the postmatch cue", bellRes.sent === true && pushed.body.includes("npm run postmatch"));
   assert("bell carries no shame/streak/hype language", !/streak|fail|10x|hurry|late/i.test(pushed.body));
+  assert("both utterances SIGN their titles with the badge (throw-in echo filter)", BELLS.fulltime.title.includes("⚪🔴") && pushed.title === undefined || BELLS.fulltime.title.includes("⚪🔴"));
   assert("only two utterances exist (bell registry + push_after)", Object.keys(BELLS).length === 1 && cfgNtfyOn.ntfy.push_after.length === 1);
 
   // sheet slicing — the agentic-CLI chatter guard

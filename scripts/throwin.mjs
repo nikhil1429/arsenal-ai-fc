@@ -111,6 +111,10 @@ function ingest(pollText, existingIds) {
     let m; try { m = JSON.parse(line); } catch { continue; }
     if (m && typeof m.time === "number" && m.time > maxTime) maxTime = m.time; // since= watermark tracks ALL events
     if (!m || m.event !== "message" || typeof m.message !== "string" || !m.id) continue;
+    // ECHO FILTER (E2E finding, 12 Jul): the organism's two sanctioned pushes
+    // ride the SAME topic and sign their titles with the badge — its own
+    // mouth must never be re-ingested as the captain's thought.
+    if (m.title && String(m.title).includes("⚪🔴")) continue;
     if (existingIds.has(m.id)) continue;
     balls.push({
       ts: typeof m.time === "number" ? new Date(m.time * 1000).toISOString() : new Date().toISOString(),
@@ -137,11 +141,14 @@ async function selftest() {
     JSON.stringify({ id: "open1", time: 1783900200, event: "open" }),
     "{corrupt",
     JSON.stringify({ id: "m1", time: 1783900000, event: "message", message: raw }), // dup in same batch
+    JSON.stringify({ id: "push1", time: 1783900150, event: "message", title: "⚪🔴 Team sheet is up", message: "the sheet head…" }),
+    JSON.stringify({ id: "bell1", time: 1783900160, event: "message", title: "⚪🔴 Full-time, captain", message: "30 seconds, then sleep…" }),
   ].join("\n");
 
   const existing = new Set(["m0"]);
   const { balls, maxTime } = ingest(poll, existing);
   assert("two new balls ingested", balls.length === 2);
+  assert("ECHO FILTER — the organism's badge-titled pushes never become balls", !balls.some(b => b.id === "push1" || b.id === "bell1"));
   assert("VERBATIM law — whitespace + text byte-for-byte", balls[0].text === raw);
   assert("non-message events skipped", !balls.find(b => b.id === "open1"));
   assert("corrupt poll line skipped, no crash", true);
