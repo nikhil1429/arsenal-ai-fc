@@ -46,8 +46,20 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 - 2026-07-12: branch `organism-final` created; build log seeded.
 
 ## In progress
-- P0b: repo read fan-out (workflow). Resume-point: if interrupted, re-run read
-  workflow or read files directly; no build artifacts exist yet beyond this log.
+- **P2 BUILD — INLINE MODE.** The 13-agent organ-build workflow (run wf_ec5db480-112)
+  failed entirely: "session limit hit · resets 7am Asia/Calcutta" — the repo-read
+  fan-out consumed the Max-plan window. DO NOT spawn subagents until after 07:00 IST.
+  Builder is writing organs INLINE, one at a time, committing per organ.
+- Organ order: mirror → throwin → heartbeat → physio → twin → touchline → setpiece →
+  scorer → scout → bootroom → doubtminer → postmatch → viz → brain.mjs (+ system.md #6–#11).
+- Each organ: scripts/<name>.mjs + committed config + selftest green + real-run line.
+  Specs live in ORGANISM_ANATOMY.md §3–§7 AND (fuller) in the workflow script file:
+  workflows/scripts/organism-organ-build-wf_ec5db480-112.js (per-organ spec blocks —
+  a fresh session should read that file for the exact contracts).
+- DONE so far: ladder_config.json + dossier_weights.json + brain_config.json committed;
+  .gitignore block for ALL new state outputs committed (cb9fff2).
+- Resume-point if cut: check `git log --oneline` for last organ committed; continue
+  with the next one in the order above, spec from the workflow script file.
 
 ## Decisions & assumptions
 - Reader agents restricted to git-TRACKED files only (secrets/personal state are

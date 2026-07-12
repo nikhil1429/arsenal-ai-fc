@@ -1,0 +1,36 @@
+{
+  "_comment": "THE BRAIN's job table + budget policy (ORGANISM_ANATOMY §5). The brain runs HOT by the captain's standing order (12 Jul 2026, with Nidhi): exhaust the Claude Max 5x plan every rolling window and every week; weight the heavy work overnight; protect his study hours; never touch an API key. brain.mjs is the sole reader; edits here are canon edits.",
+  "version": 1,
+  "budget": {
+    "window_hours": 5,
+    "window_capacity_est_tokens": 800000,
+    "weekly_capacity_est_tokens": 12000000,
+    "day_reserve_frac": 0.25,
+    "overnight_target_frac": 0.95,
+    "self_tune": true,
+    "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it."
+  },
+  "study_hours": { "start": "09:00", "end": "21:00" },
+  "overnight": { "start": "22:00", "end": "07:30" },
+  "guards": {
+    "refuse_if_api_key_env": true,
+    "banned_phrases": ["10x", "exponential", "on steroids", "god-tier", "time is short"],
+    "_note": "Hype in output is a bug (CONDUCTOR §1). The API-key guard keeps the hard $100 ceiling: subscription only, ever."
+  },
+  "ntfy": { "enabled": false, "topic": "", "push_after": ["formation_read"], "_note": "Morning sheet push only. Nothing else ever pings. Enable via setup/NTFY_SETUP.md." },
+  "gemini": { "enabled": false, "binary": "gemini", "_note": "Second brain — visualization + long-context. Free CLI on his Google account (Pro sub raises limits). Enable via setup/GEMINI_CLI_SETUP.md. Degrades gracefully while absent." },
+  "jobs": [
+    { "id": "formation_read", "engine": "claude", "model": "opus", "window": "morning", "at": "08:45", "priority": 100, "enabled": true, "max_per_day": 1, "kind": "manager_m3", "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless." },
+    { "id": "midday_reread", "engine": "claude", "model": "sonnet", "window": "midday", "at": "13:30", "priority": 60, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["pulse.json", "pitch_read.json", "drills.json"], "out": "midday", "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work." },
+    { "id": "evening_voice", "engine": "claude", "model": "opus", "window": "evening", "at": "21:50", "priority": 90, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["twin.json", "slip.jsonl", "pitch_read.json", "pulse.json"], "out": "evening_voice" },
+    { "id": "deep_twin", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 50, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["predictions.jsonl", "slip.jsonl", "twin.json"], "out": "twin" },
+    { "id": "doubt_clusters", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 55, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["doubt_grammar.json", "tape_room.json"], "out": "doubts", "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules." },
+    { "id": "lexicon_mine", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 45, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["lexicon.json"], "out": "lexicon", "validate": "quotes_only", "_note": "Anchor-metaphor assist. Extraction, never invention: validator rejects any anchor text not verbatim-present in the input." },
+    { "id": "drill_forge", "engine": "claude", "model": "opus", "window": "overnight", "priority": 70, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["drills.json", "doubt_grammar.json", "weaknesses.json"], "out": "drill_forge", "validate": "no_new_numbers", "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only." },
+    { "id": "wall_insights", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 40, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["wall_data.json"], "out": "wall_insights", "validate": "no_new_numbers", "_note": "≤3 insight lines; viz.mjs re-validates before rendering." },
+    { "id": "season_review", "engine": "claude", "model": "opus", "window": "overnight", "days": ["Sun"], "priority": 80, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["slip.jsonl", "season.json", "mutations.jsonl", "loop_vitals.json"], "out": "season", "_note": "The week in evidence lines; words the Boot Room's deterministic proposal — never invents evidence." },
+    { "id": "capsule_premap", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 20, "enabled": true, "max_per_day": 3, "repeatable": true, "kind": "analysis", "inputs": ["doubt_grammar.json", "learning_state.json"], "out": "premap", "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack." },
+    { "id": "scrimmage_staging", "engine": "claude", "model": "opus", "window": "overnight", "priority": 30, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["scout.json", "learning_state.json"], "out": "scrimmage", "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive." },
+    { "id": "gemini_render", "engine": "gemini", "window": "overnight", "priority": 35, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["wall_data.json"], "out": "gemini_wall", "_note": "Runs only when gemini.enabled — rich visual HTML/infographic spec from the same wall data." }
+  ]
+}
