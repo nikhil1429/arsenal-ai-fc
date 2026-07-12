@@ -425,6 +425,7 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const cfg = loadConfig();   // committed config is the fixture — it must parse
   assert("committed brain_config.json parses with jobs", cfg.jobs.length >= 10);
+  assert("day cartridge job wired (L3: slow brain programs the fast brain)", cfg.jobs.some(j => j.id === "day_cartridge" && j.window === "overnight" && j.validate === "no_new_numbers" && String(j._note).includes("second person")));
 
   // budget math
   const now = (h, m) => new Date(2026, 6, 12, h, m, 0);

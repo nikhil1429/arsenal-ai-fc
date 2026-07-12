@@ -114,6 +114,29 @@ function loadKeys(envText = null) {
 }
 
 // ---------------------------------------------------------------------------
+// THE DAY CARTRIDGE (L3) — the slow brain's overnight compile, loaded at dawn.
+// Deterministic loader: today's cartridge, else yesterday's (≤36h fresh).
+// ---------------------------------------------------------------------------
+function loadDayCartridge(now = new Date(), dir = join(STATE_DIR, "brain_out", "day_cartridge")) {
+  for (const d of [now, new Date(now.getTime() - 86400000)]) {
+    const p = join(dir, localDate(d) + ".md");
+    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1800) }; } catch { } }
+  }
+  return null;
+}
+function medianThinkMs(stamps) {
+  const t = stamps.filter(s => s.kind === "captain_think" && Number.isFinite(s.ms)).slice(-50).map(s => s.ms).sort((a, b) => a - b);
+  return t.length >= 5 ? { ms: t[Math.floor(t.length / 2)], n: t.length } : null;   // thin data stays silent
+}
+function composeCartridgeSection(cart, stamps = []) {
+  const parts = [];
+  if (cart) parts.push(`THE DAY CARTRIDGE (compiled overnight by the slow brain · ${cart.date}):\n${cart.text}`);
+  const med = medianThinkMs(stamps);
+  if (med) parts.push(`THINK-TIME BASELINE (measured): his median think-time is ~${Math.round(med.ms / 100) / 10}s over ${med.n} answers — silence under that is him THINKING; do not jump in.`);
+  return parts.length ? "\n\n" + parts.join("\n\n") : "";
+}
+
+// ---------------------------------------------------------------------------
 // THE GAFFER-LIVE CONSTITUTION (system instruction, assembled fresh per session)
 // ---------------------------------------------------------------------------
 function buildSystemInstruction() {
@@ -137,7 +160,8 @@ MATCH RECORD: after each substantive reply, silently call checkpoint with a one-
 
 SPOKEN GATES (constitutional — his word IS the signature): FULL-TIME by voice: when he says full time / din khatam / done for today, run the 30-second ritual — result (HIT/MISS/PARTIAL/REST), one signal worth naming, then his KAL-line VERBATIM (tomorrow's pre-decided first move, his words not yours). Read the three back. Only his explicit go-word — "haan, chalao", "lock it" — calls run_postmatch. GENOME: read the mutation aloud (target, predicted effect, revert plan); only his explicit approval word calls approve_genome — hesitation is a no. Throw-ins route only on his word (route_throwins). NEVER call a gate tool from your own inference; no word, no write.
 
-INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.`;
+INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.` +
+  composeCartridgeSection(loadDayCartridge(), readLines(STAMPS));
 }
 
 const TOOL_DECLS = [
@@ -233,6 +257,17 @@ function execTool(name, args, deps = {}) {
   } catch (e) { return { error: String(e.message).slice(0, 200) }; }
 }
 
+// rehydrate: today's transcript tail — seeds a fresh WS when no resumption
+// handle exists (page reload, morning), so the thread never truly breaks
+function buildRehydrate(now = new Date()) {
+  const p = join(OUT_DIR, localDate(now) + ".md");
+  if (!existsSync(p)) return null;
+  try {
+    const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
+    return lines.length ? lines.slice(-25).join("\n").slice(-2000) : null;
+  } catch { return null; }
+}
+
 // per-session config the page fetches (key never rests in the repo)
 function buildConfig(keys) {
   return {
@@ -240,6 +275,7 @@ function buildConfig(keys) {
     voice: process.env.DUGOUT_VOICE || DEFAULT_VOICE,
     keys,
     system: buildSystemInstruction(),
+    rehydrate: buildRehydrate(),
     tools: [{ functionDeclarations: TOOL_DECLS }],
     vad: { onset_db_over_noise: 12, min_db: -55, hangover_ms: 900, preroll_ms: 500, idle_disconnect_ms: 90000, batch_ms: 100 },
     acks: listAcks(),
@@ -302,6 +338,18 @@ async function selftest() {
   assert("Charon rides the config (the Gaffer's voice identity)", cfg.voice === "Charon" && typeof cfg.vad.idle_disconnect_ms === "number");
   assert("minutes ledger math safe on empty", typeof cfg.minutes_today === "number");
   assert("ACK filler list rides the config (empty-safe)", Array.isArray(cfg.acks));
+  assert("rehydrate rides the config (null-safe)", "rehydrate" in cfg);
+
+  // DAY CARTRIDGE (L3) — deterministic composer
+  const cartSec = composeCartridgeSection({ date: "2026-07-12", text: "Yesterday you circled tokenization vs embeddings." },
+    Array.from({ length: 6 }, () => ({ kind: "captain_think", ms: 4000 })));
+  assert("cartridge section carries the overnight compile + date", cartSec.includes("DAY CARTRIDGE") && cartSec.includes("2026-07-12") && cartSec.includes("tokenization"));
+  assert("think-time baseline computed from stamps (median, gated ≥5)", cartSec.includes("~4s over 6 answers"));
+  assert("thin stamps stay SILENT (no baseline under n=5)", !composeCartridgeSection(null, [{ kind: "captain_think", ms: 9 }]).includes("THINK-TIME"));
+  assert("no cartridge + no stamps → empty section, constitution unchanged", composeCartridgeSection(null, []) === "");
+  const noCart = loadDayCartridge(new Date("2026-07-12T08:00:00"), join(os.tmpdir(), "dugout-nocart-" + Date.now()));
+  assert("missing cartridge dir → null, never crashes", noCart === null);
+  assert("page seeds fresh WS from today's record (clientContent, history-only)", PAGE.includes("REHYDRATE") && PAGE.includes("clientContent") && PAGE.includes("rehydrated"));
   assert("ACK lines obey the no-hype law (banned-phrase check)", ACK_LINES.every(l => bannedPhraseCheck(l, BANNED).length === 0 && l.length < 60));
   assert("think-time stamps wired: page measures both directions", PAGE.includes("captain_think") && PAGE.includes("gaffer_respond") && PAGE.includes("/stamps"));
   assert("ACK plays on toolCall, never over live audio", PAGE.includes("maybeAck") && PAGE.includes("liveSrcs.length)return"));
@@ -338,7 +386,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>THE DUGOUT
 <div id="log" style="margin-top:18px;max-width:640px;font-size:13px;color:#c9a06a;white-space:pre-wrap"></div>
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
-let outTxEnabled=true,earlyCloses=0;
+let outTxEnabled=true,earlyCloses=0,rehydrated=false;
 const st=t=>document.getElementById('st').textContent=t;
 const diag=t=>document.getElementById('diag').textContent=t;
 const log=t=>{const el=document.getElementById('log');el.textContent=(t+"\\n"+el.textContent).slice(0,4000)};
@@ -388,7 +436,11 @@ ws.onopen=()=>{const s={model:'models/'+CFG.model,
  if(outTxEnabled)s.outputAudioTranscription={};
  ws.send(JSON.stringify({setup:s}))};
 ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.text();let m;try{m=JSON.parse(d)}catch(e){return}
- if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
+ if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();
+  if(!resumeHandle&&CFG.rehydrate&&!rehydrated){rehydrated=true;
+   ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'[REHYDRATE — aaj ka match record so far; resume silently, no recap]\\n'+CFG.rehydrate}]}],turnComplete:false}}));
+   log('· rehydrated from today\\'s match record')}
+  st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
  if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable)resumeHandle=m.sessionResumptionUpdate.newHandle;
  if(m.goAway){log('· session rotating (goAway) — stitching…');return}
  if(m.toolCall){maybeAck();const rs=await Promise.all(m.toolCall.functionCalls.map(toolCall));
