@@ -246,6 +246,33 @@ function renderWall(data, insights) {
 }
 
 // ---------------------------------------------------------------------------
+// THE GEMINI LANE — the organism writes his Gemini prompts every render, and
+// folds Gemini's answer back in ONLY through a sanitizer (superpower pass).
+// ---------------------------------------------------------------------------
+const PROMPT_LAWS = `LAWS (constitutional, travel with every render): every number must come from the JSON below — invent nothing; no hype words (10x/exponential/on steroids); no streak counts (weekly consistency only); no raw biometrics (verdict color only); no dates-as-deadlines; cold steel warm core palette — deep charcoal #0c0e13 base, warm amber #e8915a accents, off-white #e9e7e2 text, muted gold #c9a06a secondary; football register welcome (the Maidan is a pitch, confusions are derbies, healed weaknesses are trophies); ONE glance = ONE story; output ONLY the artifact, no commentary.`;
+
+function promptPack(data) {
+  const json = JSON.stringify(data, null, 1);
+  return {
+    "wall_painter.md": `# Wall-Painter — tonight's render (auto-written by the organism)\n\nCreate ONE dense, beautiful, dark single-file HTML dashboard (inline SVG, no external anything) from this state. Sections: the Maidan as a real pitch diagram (stages = zones, fluency colors, the weak connection drawn as a frayed pass) · season strip (matches, doubts retired, weekly consistency) · calibration curve vs targets · derby table · tomorrow's set pieces · body verdict band · brain meter ("got sharper while you slept").\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
+    "match_poster.md": `# Match Poster — this week (auto-written by the organism)\n\nCreate ONE portrait SVG poster (print-worthy, 3:4) of this week as a football match: headline = the biggest true number in the data (doubts retired, matches played, or a derby settled); sub-line = the weekly consistency; one visual motif from the Maidan. Understated, premium, cold-steel-warm-core.\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
+    "season_film.md": `# Season Film — Veo prompt (auto-written; paste into the Gemini app's video tool)\n\nWrite me a 30-second cinematic video-generation prompt: a lone footballer training under floodlights at dawn, ONE scene per true milestone in the JSON (matches played, doubts retired, stages runnable) — rendered as scoreboard glimpses and pitch markings, never text-heavy. Tone: quiet, earned, no triumphalism. End on the crest ⚪🔴 and the words "kal phir".\n\n${PROMPT_LAWS}\n\n\`\`\`json\n${json}\n\`\`\`\n`,
+  };
+}
+
+// safety gate for Gemini output entering the club: inline SVG/HTML only —
+// no scripts of any kind, no external refs. Reject = null (deterministic wall
+// is always the surface of record).
+function sanitizeGemini(text) {
+  if (!text || typeof text !== "string") return null;
+  const t = text.trim().replace(/^```(html|svg|xml)?/i, "").replace(/```$/,"").trim();
+  const looksRight = /^<!doctype html/i.test(t) || /^<html/i.test(t) || /^<svg/i.test(t);
+  if (!looksRight) return null;
+  if (/<script|javascript:|on\w+\s*=|https?:\/\/|@import|<iframe|<object|<embed|<link/i.test(t)) return null;
+  return t;
+}
+
+// ---------------------------------------------------------------------------
 // selftest — fixtures only
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -300,6 +327,18 @@ async function selftest() {
   assert("hype in insights rejected", validateInsights("You are on a 10x trajectory.", data) === null);
   assert("insights capped at 3 lines", (validateInsights("a\nb\nc\nd", data) || []).length <= 3);
 
+  // GEMINI LANE
+  const pack = promptPack(data);
+  assert("prompt pack: three prompts auto-written", Object.keys(pack).length === 3 && pack["wall_painter.md"].includes("frayed pass"));
+  assert("prompt pack embeds the real numbers", pack["match_poster.md"].includes('"doubts_retired": 24'));
+  assert("prompt pack carries the laws", Object.values(pack).every(p => p.includes("invent nothing") && p.includes("#0c0e13")));
+  assert("sanitizer accepts clean inline SVG", sanitizeGemini("<svg viewBox='0 0 10 10'><rect/></svg>") !== null);
+  assert("sanitizer strips code fences", sanitizeGemini("```html\n<html><body>ok</body></html>\n```") !== null);
+  assert("sanitizer rejects scripts", sanitizeGemini("<html><script>alert(1)</script></html>") === null);
+  assert("sanitizer rejects external refs", sanitizeGemini("<svg><image href='https://x.test/a.png'/></svg>") === null);
+  assert("sanitizer rejects event handlers", sanitizeGemini("<svg onload=alert(1)></svg>") === null);
+  assert("sanitizer rejects non-artifacts", sanitizeGemini("Here is your dashboard, captain!") === null);
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -338,9 +377,19 @@ async function main() {
   const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
   writeAtomic(WALL_DATA, data);
   writeAtomic(WALL_HTML, renderWall(data, insights));
-  console.log(`viz: wall rendered (${data.verdict}${insights ? ", " + insights.length + " insights" : ""}) → ${WALL_HTML}`);
+  // the Gemini lane: write tonight's ready-made prompts + fold in any render
+  const pack = promptPack(data);
+  for (const [name, text] of Object.entries(pack)) writeAtomic(join(CLUB_DIR, "prompts", name), text);
+  let geminiNote = "";
+  const gPath = join(STATE_DIR, "brain_out", "gemini_wall", today + ".md");
+  if (existsSync(gPath)) {
+    const clean = sanitizeGemini(readFileSync(gPath, "utf8"));
+    if (clean) { writeAtomic(join(CLUB_DIR, "wall_gemini.html"), clean); geminiNote = " + gemini render folded in"; }
+    else geminiNote = " (gemini render REJECTED by sanitizer — deterministic wall stands)";
+  }
+  console.log(`viz: wall rendered (${data.verdict}${insights ? ", " + insights.length + " insights" : ""})${geminiNote} · 3 Gemini prompts refreshed → ${WALL_HTML}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { assembleWallData, renderWall, validateInsights, allowedNumbers };
+export { assembleWallData, renderWall, validateInsights, allowedNumbers, promptPack, sanitizeGemini };

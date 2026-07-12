@@ -189,10 +189,10 @@ function validateOutput(job, text, inputData, cfg) {
 // ---------------------------------------------------------------------------
 const LIMIT_RE = /limit|overloaded|rate.?limit|resets \d/i;
 
-function claudeExec(prompt, model, timeoutMs = 300000) {
+function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000) {
   const t0 = Date.now();
   try {
-    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet"],
+    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet", ...(Array.isArray(extraArgs) ? extraArgs : [])],
       { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let text = stdout, inTok = null, outTok = null, isErr = false;
     try {
@@ -268,7 +268,7 @@ async function runJob(job, cfg, deps) {
   // analysis-class job
   const inputs = gatherInputs(job);
   const prompt = buildAnalysisPrompt(job, inputs);
-  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model);
+  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args);
   if (r.ok && r.text) {
     const v = validateOutput(job, r.text, inputs, cfg);
     if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written` };

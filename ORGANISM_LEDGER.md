@@ -72,6 +72,38 @@
   capture rides the Gem v4 add-on (setup/GEMS_SETUP.md); the differ lands once
   defense notes actually flow.
 
+## SUPERPOWER-ARSENAL PASS (12 Jul 2026, second order) — wired · folded · skipped
+
+### WIRED (new, all on the branch, selftests re-run green)
+| Superpower | Mechanism | Why it compounds THIS loop |
+|---|---|---|
+| **7 Claude Skills** (.claude/skills/) — /matchday · /paste-session · /rematch · /scrimmage · /full-time · /genome · /organism-doctor · /paint | SKILL.md modules driving the .mjs organs; humane clamps baked into each | The captain-side membrane: his four verbs become one-command rituals; the Tape Room becomes PLAYABLE (rematch → doubtminer retire → capture paste); the scrimmage runs in DOSSIER grammar with hedge-logging (ear's legal surface) |
+| **ActivityWatch MCP, repo-wired** (.mcp.json) | Points at his own built server (C:\Users\nikhi\activitywatch-mcp-server) | Every Claude session in this repo gets time-audit sight; /organism-doctor cross-checks it against timeaudit.json |
+| **Gemini prompt-pack pipeline** (viz.mjs upgrade) | Every wall render auto-writes 3 ready-to-paste prompts (wall_painter · match_poster · season_film/Veo) with live numbers + laws embedded → club/prompts/ | "The organism writes his Gemini prompts" — zero authoring on his side; max visualization from the plan he already pays for |
+| **Gemini render fold-in with sanitizer** (viz.mjs) | brain_out/gemini_wall → sanitizeGemini() (no scripts, no external refs, artifact-only) → club/wall_gemini.html | The second brain's art enters the club ONLY through a deterministic gate; the deterministic wall stays the surface of record |
+| **market_scan brain job** (THE SCOUT resurrected, masterplan P6) | Sunday claude -p + --allowedTools WebSearch → brain_out/market/ proposal (never edits OPPONENT_SCOUT canon) | The DOSSIER §9 closed-loop finally has its weekly feed; degrades to no-op if the CLI build rejects the flag |
+| **maidan_poster + widget_spec brain jobs** (gemini) | Sat poster; Wed per-axis widget/viz spec for the newest capsule | Resurrects the FORGE's RESERVED viz layer (graveyard §2.5) as weekly proposals |
+| **extra_args per brain job** (brain.mjs) | Committed-config CLI capability grants per job | The brain can be given tools job-by-job, never globally |
+
+### FOLDED into existing organs (deliberate, with why)
+- **Google Drive MCP** → folded into the G: Drive-for-Desktop mount capture
+  already uses — an MCP here is a second door to the same room.
+- **GitHub MCP / commits-as-reps** → folded into "when the FinOps repo exists":
+  the mechanism is a trivial git-log parse; wiring it to THIS repo would count
+  the builder's commits, not the captain's reps. [LEAP-until-FinOps-repo].
+- **Cloud Routines** → stays SKIPPED (locked canon decision: metered risk,
+  laptop is open 9–9 + overnight).
+
+### SKIPPED at the anti-generic / clamp wall (deliberate, with why)
+- **Google Calendar MCP** — imports deadline-shape into a body whose
+  constitution bans calendar pressure; revisit only when real interviews are
+  being scheduled, as a separate captain decision.
+- **Generic MCP registry sweep** (Slack/Notion/etc.) — drawer-plugins; nothing
+  in his loop reads them, nothing in them feeds his reps.
+- **Schedule auto-activation by the builder** — permission-gated by the
+  harness; correct anyway: `setup\INSTALL_TASKS.ps1` is HIS one paste, and the
+  wallpaper task (`WALLPAPER.ps1` header) is HIS one line.
+
 ## Killed in review and STILL dead (endorsed)
 Phase-yield board · interleave control-arm · per-axis form-curve numerology ·
 frozen week-1 ghost · nearest-neighbor coaching retrieval · twin scoreline ·

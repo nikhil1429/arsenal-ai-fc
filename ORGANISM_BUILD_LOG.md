@@ -23,8 +23,16 @@ gag, exception-only voice, Governor never ranked, adaptation disclosed).
 
 ## Status
 - **Branch:** organism-final (created from main @ fcb007f)
-- **Phase:** COMPLETE — full body + brain built, 22/22 selftest suites green
-  (8 original + 14 new), setup pack + runbook + ledger + revert doc delivered.
+- **Phase:** COMPLETE + SUPERPOWER PASS (captain's second order, 12 Jul) —
+  full body + brain + arsenal: 7 Claude Skills (.claude/skills/), repo .mcp.json
+  (his AW server), Gemini prompt-pack pipeline + sanitizer fold-in (viz.mjs),
+  market_scan/maidan_poster/widget_spec brain jobs + per-job extra_args
+  (brain.mjs). 22/22 suites re-verified green after upgrades. Folded/skipped
+  superpowers logged with reasons in ORGANISM_LEDGER.md.
+- **CAPTAIN ACTIVATION (2 min, harness would not let the builder do it):**
+  `powershell -ExecutionPolicy Bypass -File setup\INSTALL_TASKS.ps1`
+  (+ optional wallpaper line in setup/WALLPAPER.ps1 header). Everything else
+  is live the moment those tasks exist.
 
 ## Phase plan
 - [x] P0a Branch + build log seeded
