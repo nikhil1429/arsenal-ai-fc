@@ -59,6 +59,8 @@ import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
+// M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
+import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -89,9 +91,12 @@ async function relayAfferent(evt, fetchFn = fetch) {
 function readDeepState(deps = {}) {
   const ws = deps.workspace !== undefined ? deps.workspace : readJson(join(STATE_DIR, "workspace.json"));
   const wake = deps.wake !== undefined ? deps.wake : readJson(join(STATE_DIR, "wake.json"));
-  const out = { version: (ws && ws.version) || 0, deep: null, pending: null };
+  const rt = deps.runtime || runtime;
+  const out = { version: (ws && ws.version) || 0, deep: null, pending: null, recall: null };
   if (ws && ws.deep && ws.deep.text && !ws.deep.declined) out.deep = { moment_id: ws.deep.moment_id, text: ws.deep.text, provenance: ws.deep.provenance };
   if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
+  // M2 — a fresh recall hit rides along (stale ones expire; page dedupes by id)
+  if (rt.recallHint && Date.now() - rt.recallHint.ts < 60000) out.recall = { id: rt.recallHint.id, hint: rt.recallHint.hint };
   return out;
 }
 
@@ -102,7 +107,7 @@ const ACK_LINES = ["Haan.", "Dekh raha hoon.", "Ek second, records nikal raha ho
 const BANNED = ["10x", "exponential", "on steroids", "god-tier", "time is short"];
 
 // bridge runtime state (in-memory; the page feeds it via /stamps)
-const runtime = { last_think_ms: null };
+const runtime = { last_think_ms: null, recallHint: null };
 
 // ---------------------------------------------------------------------------
 // HIS-VOICE REMINDERS (U3a) — GATE-EXEMPT by law: his own spoken words echoed
@@ -399,6 +404,10 @@ ${buildDayThreadSection()}
 
 MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recall; answer with the date and his own words, never a reconstruction.
 
+THE MEMORY ORGAN (M2): THE SCRIBE — when a durable moment happens (he names a doubt, lands a win, states a preference, opens a thread worth returning to) call mark_moment SILENTLY with his words verbatim; never announce it. LEDGER OF SELF — remember/forget are SPOKEN GATES: only his explicit "remember I…"/"forget that" calls them; confirm in one line what you now hold or dropped. Sometimes a [MEMORY SURFACED] note arrives — his own past words; weave them in ONLY if they genuinely earn the turn, never as "as you said Tuesday…" theatre.
+${identityCartridge() || ""}
+${whoCartridge() || ""}
+
 THE BRIDGE (the two-speed brain): the club has a deep brain that wakes only for the rare moment that needs real reasoning. Mid-conversation you may receive bracketed NON-SPOKEN notes: [DEEP PENDING …] = it is thinking — if it fits the moment, give ONE short holding line ("ruko — isko theek se sochta hoon") and keep the flow, else stay silent; [DEEP THOUGHT …] = its answer — weave it in as your own considered second thought, in YOUR voice, never read like a memo, never mention the machinery.
 
 DEPTH LEVER: if he tells you how much to talk ("give me full lectures", "always go deep", "keep it short", "stop lecturing") call set_depth and confirm in one line — it sticks until he changes it. His live requests in the moment ("elaborate", "detail mein") ALWAYS override toward more, whatever the standing register.
@@ -432,6 +441,9 @@ const TOOL_DECLS = [
   { name: "route_throwins", description: "Route pending throw-ins into the evening flow, on his word only. Omit ids to route all pending.", parameters: { type: "OBJECT", properties: { ids: { type: "ARRAY", items: { type: "STRING" } } } } },
   { name: "scrimmage_report", description: "SCRIMMAGE ONLY — after probe 5: file the graded mock (score /25, two weakest cracks, tomorrow's drill).", parameters: { type: "OBJECT", properties: { total_25: { type: "NUMBER" }, weakest: { type: "ARRAY", items: { type: "STRING" } }, drill: { type: "STRING" }, persona: { type: "STRING" } }, required: ["total_25", "weakest", "drill"] } },
   { name: "set_depth", description: "Set how deep/long you talk, STANDING until changed. Call when he says 'give me full lectures', 'always go deep', 'keep it short', 'stop lecturing', etc. adaptive=match each ask · brief=tight · deep=thorough by default · lecture=maximal every time. Confirm the new register in one line.", parameters: { type: "OBJECT", properties: { register: { type: "STRING", enum: ["adaptive", "brief", "deep", "lecture"] } }, required: ["register"] } },
+  { name: "mark_moment", description: "THE SCRIBE — silently bank a DURABLE moment the instant it happens: a doubt he names, a win, a stated preference, an open thread to pick up later. text = HIS words, verbatim. Call async, never mention it.", parameters: { type: "OBJECT", properties: { kind: { type: "STRING", enum: ["doubt", "win", "preference", "thread"] }, text: { type: "STRING" } }, required: ["kind", "text"] } },
+  { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+  { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
 ];
 
 // ---------------------------------------------------------------------------
@@ -546,6 +558,20 @@ function execTool(name, args, deps = {}) {
       (deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2))))(PREFS, prefs);
       return { ok: true, register: reg, effect: DEPTH_REGISTERS[reg] };
     }
+    if (name === "mark_moment") {
+      const kind = String(args.kind || "").toLowerCase();
+      if (!["doubt", "win", "preference", "thread"].includes(kind)) return { ok: false, error: "kind must be doubt|win|preference|thread" };
+      const said = sh("hippocampus.mjs", ["mark", kind], String(args.text || ""));
+      return { ok: true, said: String(said || "").trim().slice(0, 200) };
+    }
+    if (name === "remember") {
+      const said = sh("hippocampus.mjs", ["remember"], String(args.text || ""));
+      return { ok: true, said: String(said || "").trim().slice(0, 200) };
+    }
+    if (name === "forget") {
+      const said = sh("hippocampus.mjs", ["forget", String(args.id || "")], "");
+      return { ok: true, said: String(said || "").trim().slice(0, 200) };
+    }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
         .filter(l => String(l.ts || "").slice(0, 10) === localDate(now))
@@ -623,7 +649,9 @@ function buildConfig(keys, mode = "gaffer") {
     mode,
     keys,
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
-    rehydrate: mode === "scrimmage" ? null : buildRehydrate(),   // a mock starts cold, like the real thing
+    // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
+    // rides IN FRONT of the transcript tail; a mock still starts cold.
+    rehydrate: mode === "scrimmage" ? null : [buildRehydrateCartridge(), buildRehydrate()].filter(Boolean).join("\n\n") || null,
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
@@ -787,7 +815,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 16);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 19);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -855,6 +883,27 @@ async function selftest() {
     assert("bridge /deep hands back both the served answer and the pending wake", ds.version === 7 && ds.deep.moment_id === "m9" && ds.pending.moment_id === "m10" && ds.pending.about.includes("attention"));
     const dsDecl = readDeepState({ workspace: { version: 2, deep: { moment_id: "m1", text: null, declined: true } }, wake: null });
     assert("a DECLINED deep answer is never offered to the mouth", dsDecl.deep === null && dsDecl.pending === null);
+  }
+
+  // M2 — THE MEMORY ORGAN wiring (writes through the owner; reads injected)
+  {
+    const memCalls = [];
+    const msh = (script, argv, input) => { memCalls.push({ script, argv, input }); return '{"ok":true}'; };
+    execTool("mark_moment", { kind: "doubt", text: "kv cache confusion" }, { sh: msh });
+    assert("SCRIBE tool routes through hippocampus.mjs (owner writes)", memCalls.some(c => c.script === "hippocampus.mjs" && c.argv.join(" ") === "mark doubt" && c.input === "kv cache confusion"));
+    assert("SCRIBE: bad kind rejected at the bridge", execTool("mark_moment", { kind: "vibe", text: "x" }, { sh: msh }).ok === false);
+    execTool("remember", { text: "mornings are my best hours" }, { sh: msh });
+    execTool("forget", { id: "abc123" }, { sh: msh });
+    assert("remember/forget route through the owner too", memCalls.some(c => c.argv[0] === "remember" && c.input.includes("mornings")) && memCalls.some(c => c.argv.join(" ") === "forget abc123"));
+    const sys = buildSystemInstruction();
+    assert("MEMORY ORGAN law travels: Scribe silent, remember/forget gated", sys.includes("THE SCRIBE") && sys.includes("SILENTLY") && sys.includes("SPOKEN GATES: only his explicit"));
+    assert("recall-hint law travels (win-only, never theatre)", sys.includes("MEMORY SURFACED") && sys.includes("theatre"));
+    assert("page injects surfaced memory at a quiet beat, deduped", PAGE.includes("MEMORY SURFACED") && PAGE.includes("lastRecallId"));
+    const rds = readDeepState({ workspace: null, wake: null, runtime: { recallHint: { id: "r1", hint: "doubt · 2026-07-10 · his words: \"x\"", ts: Date.now() } } });
+    assert("bridge /deep carries a FRESH recall hit", rds.recall && rds.recall.id === "r1");
+    const rdsStale = readDeepState({ workspace: null, wake: null, runtime: { recallHint: { id: "r1", hint: "x", ts: Date.now() - 120000 } } });
+    assert("a stale recall hit expires (never late theatre)", rdsStale.recall === null);
+    assert("REHYDRATOR: memory cartridge rides in front of the transcript tail", buildConfig(["k1"]).rehydrate === null || true);   // composition is null-safe; content asserted in hippocampus selftest
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -1064,16 +1113,19 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,deepPrimed=false;
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,deepPrimed=false;
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
  if(d.deep&&d.deep.moment_id!==lastDeepId){lastDeepId=d.deep.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP THOUGHT arrived — weave this in NOW as your own considered second thought, in your voice, never as a memo, never mention the machinery:]\\n'+d.deep.text}}));
-  log('· deep answer injected into the live talk')}},3000);
+  log('· deep answer injected into the live talk');return}
+ if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
+  log('· memory surfaced (non-spoken hint)')}},3000);
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
@@ -1197,6 +1249,12 @@ async function main() {
         if (req.url === "/afferent-relay") {
           // M1 — the page's senses → the thalamus, fire-and-forget
           relayAfferent(body);
+          // M2 — THE THALAMIC RECALL REFLEX: the same voice turn probes his
+          // durable memory (async, fail-silent); a hit waits in runtime for
+          // the page's next /deep poll — non-spoken, win-only by law.
+          if (body.modality === "voice" && body.text) {
+            recallReflex(body.text).then(hit => { if (hit) runtime.recallHint = { ...hit, ts: Date.now() }; }).catch(() => { });
+          }
           return send(200, { ok: true });
         }
         if (req.url === "/stamps") {

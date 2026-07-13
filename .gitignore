@@ -112,6 +112,9 @@ dressing-room/state/dugout_prefs.json
 # dugout session resumption handle (a live session token — never committed)
 dressing-room/state/dugout_session.json
 
+# the hippocampus (M2) — his durable memory: episodes, identity facts, who-he-is. LOCAL ONLY.
+dressing-room/hippocampus/
+
 # the thalamus + cortex (M1) — his moments, words, frame-hashes: LOCAL ONLY.
 # the public repo holds the machinery, never the moments (CYBORG_BRAIN.md §11)
 dressing-room/state/afferent.jsonl
