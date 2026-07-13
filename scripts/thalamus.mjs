@@ -201,6 +201,19 @@ function createNucleus(cfg, deps = {}) {
 
   async function ingest(raw) {
     const now = D.now();
+    // THE AFFECT FIREWALL (§5.1) — an affect-modality event (the Cochlea's
+    // lane) may become AT MOST a timing/softening hint for the mouth, held
+    // ephemerally in the workspace, then discarded. It is NEVER logged,
+    // NEVER scored, and structurally cannot reach any file the Governor,
+    // Twin, or genome read (the thalamus writes only its own four files).
+    if (raw && raw.modality === "affect") {
+      const hint = /strain|flat|tired|heavy/i.test(String(raw.signal || ""))
+        ? "soften — shorter turns, offer the floor-touch gently"
+        : "ease the pace a touch";
+      N.workspace = { ...N.workspace, version: (N.workspace.version || 0) + 1, updated_at: new Date(now).toISOString(), mouth_hint: { hint, expires: new Date(now + 120000).toISOString() } };
+      D.writeWorkspace(N.workspace);
+      return { firewalled: true };
+    }
     const evt = sanitizeAfferent(raw);
     evt.ts = evt.ts || new Date(now).toISOString();
     // vision: the page sends only a 64-bit perceptual hash (raw pixels never
@@ -514,6 +527,13 @@ async function selftest() {
     const changed = await nv.ingest({ modality: "vision", kind: "screen", phash: "00000000ffffffff" });
     assert("phash: identical frame filtered; changed surface carries salience", same.filtered === true && !changed.filtered && changed.S > 0);
     assert("raw hash never persists in the afferent log (hash-in, distance-only)", !JSON.stringify(wrv.afferents).includes("ffffffffffffffff") && phashHamming("ffffffffffffffff", "0000000000000000") === 64);
+    // THE AFFECT FIREWALL (M3): affect in → at most a mouth hint out, then gone
+    const { n: na, wr: wra } = rig();
+    const fw = await na.ingest({ modality: "affect", signal: "voice sounds strained", source: "cochlea" });
+    const wsA = wra.workspaces[wra.workspaces.length - 1];
+    assert("AFFECT FIREWALL: affect → a timing hint in the workspace, nothing more", fw.firewalled === true && wsA.mouth_hint && wsA.mouth_hint.hint.includes("soften"));
+    assert("affect is NEVER logged, NEVER scored, NEVER bound", wra.afferents.length === 0 && wra.ledger.length === 0 && wra.wakes.length === 0);
+    assert("the hint self-expires (ephemeral by construction)", new Date(wsA.mouth_hint.expires) > new Date(0) && wsA.mouth_hint.expires !== undefined);
     assert("GOV magnitudes: any RED transition = 1.0, GREEN↔AMBER = 0.5",
       computeComponents({ modality: "bus", gov_from: "AMBER", gov_to: "RED" }, { cfg, markets: {}, seen: new Set(), hab: new Map(), now: 0 }).gov === 1 &&
       computeComponents({ modality: "bus", gov_from: "GREEN", gov_to: "AMBER" }, { cfg, markets: {}, seen: new Set(), hab: new Map(), now: 0 }).gov === 0.5);

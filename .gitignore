@@ -122,6 +122,8 @@ dressing-room/state/workspace.json
 dressing-room/state/salience_ledger.jsonl
 dressing-room/state/wake.json
 dressing-room/state/cortex_runtime.json
+# the fuelboard (M3) — per-account usage ledger (runtime)
+dressing-room/state/tanks.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

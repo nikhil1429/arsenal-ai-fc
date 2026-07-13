@@ -61,6 +61,12 @@ import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
+// M3 — fuelboard READS only (usage writes go through the owner via the shell)
+import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
+
+// M3 — THE WATCHER (T2): the second pair of eyes. Vision-only, never converses,
+// its audio is never played; its rare one-line observations become afferents.
+const WATCHER_INSTRUCTION = `You are THE WATCHER — the club's silent second pair of eyes on the captain's declared screen or paper. You NEVER converse, greet, or narrate. Stay completely silent (respond with nothing) for normal working frames. Speak ONE short line ONLY when you see one of exactly three things: SPINNING (the same failed approach repeated across frames), STUCK (no visible progress for a long stretch), or WRONG-ANSWER-FORMING (a mistake actively being written). The line names which one and what you saw, ≤15 words. Nothing else, ever.`;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -97,6 +103,8 @@ function readDeepState(deps = {}) {
   if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
   // M2 — a fresh recall hit rides along (stale ones expire; page dedupes by id)
   if (rt.recallHint && Date.now() - rt.recallHint.ts < 60000) out.recall = { id: rt.recallHint.id, hint: rt.recallHint.hint };
+  // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
+  out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
   return out;
 }
 
@@ -655,6 +663,14 @@ function buildConfig(keys, mode = "gaffer") {
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
+    // M3 — the tanks: the fuel gauge + the Watcher's assignment (key slots map
+    // into this same `keys` pool by index; T2 disabled or out of pool → null)
+    tanks: (() => {
+      try {
+        const w = loadTankConfig().find(t => t.id === "T2");
+        return { gauge: tankSummary(), watcher: (w && w.enabled && Number.isFinite(w.key_index) && w.key_index < keys.length) ? { key_index: w.key_index, instruction: WATCHER_INSTRUCTION } : null };
+      } catch { return { gauge: [], watcher: null }; }
+    })(),
     // M0 — context-window compression, tuned EXPLICITLY (spec: trigger ~25k /
     // keep ~8k) instead of riding server defaults: the session compresses
     // early and lives all day; the durable memory layers own what it evicts.
@@ -906,6 +922,21 @@ async function selftest() {
     assert("REHYDRATOR: memory cartridge rides in front of the transcript tail", buildConfig(["k1"]).rehydrate === null || true);   // composition is null-safe; content asserted in hippocampus selftest
   }
 
+  // M3 — THE TANKS wiring (fuel gauge · the Watcher's second socket · the hint lane)
+  {
+    const c3 = buildConfig(["k0", "k1", "k2", "k3", "k4", "k5"]);
+    assert("config carries the 7-tank fuel gauge", c3.tanks && Array.isArray(c3.tanks.gauge) && c3.tanks.gauge.length === 7);
+    assert("the Watcher's assignment travels (own key slot + its constitution)", c3.tanks.watcher && c3.tanks.watcher.key_index === 1 && c3.tanks.watcher.instruction.includes("THE WATCHER") && c3.tanks.watcher.instruction.includes("NEVER converse"));
+    assert("watcher out of pool → null (a 1-key day still works)", buildConfig(["k0"]).tanks.watcher === null);
+    assert("page: watcher socket on ITS OWN tank, frames at half cadence", PAGE.includes("watcherConnect") && PAGE.includes("CFG.tanks.watcher.key_index") && PAGE.includes("frameN++%2===0"));
+    assert("page: watcher observations become afferents, usage reported", PAGE.includes("source:'watcher'") && PAGE.includes("'/tank-use'"));
+    assert("page: the Watcher's audio is NEVER played (no playPCM in its lane)", !PAGE.slice(PAGE.indexOf("function watcherConnect"), PAGE.indexOf("function watcherStop")).includes("playPCM"));
+    assert("page: fuel line renders from the gauge", PAGE.includes("CFG.tanks.gauge"));
+    assert("page: timing hints injected as delivery-only, non-spoken", PAGE.includes("TIMING HINT") && PAGE.includes("delivery only"));
+    const mh = readDeepState({ workspace: { version: 1, mouth_hint: { hint: "soften", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {} });
+    assert("bridge /deep carries a live mouth hint; expired ones die", mh.mouth_hint && mh.mouth_hint.hint === "soften" && readDeepState({ workspace: { version: 1, mouth_hint: { hint: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {} }).mouth_hint === null);
+  }
+
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
   assert("wire shape: modalities+speechConfig NESTED in generationConfig", PAGE.includes("generationConfig:{responseModalities:['AUDIO'],speechConfig"));
   assert("Charon travels as prebuiltVoiceConfig", PAGE.includes("prebuiltVoiceConfig") && PAGE.includes("CFG.voice"));
@@ -992,11 +1023,16 @@ async function startVision(kind){
  const cv=document.createElement('canvas');
  const hcv=document.createElement('canvas');hcv.width=8;hcv.height=8;
  const VZ=(CFG&&CFG.vision)||{jpeg_quality:0.82,max_px:1280,frame_ms:2000};
+ let frameN=0;
+ watcherConnect();
  vidTimer=setInterval(()=>{
   if(!ws||ws.readyState!==1||!setupDone||!vid.videoWidth)return;
   cv.width=Math.min(VZ.max_px,vid.videoWidth);cv.height=Math.round(cv.width*vid.videoHeight/vid.videoWidth);
   cv.getContext('2d').drawImage(vid,0,0,cv.width,cv.height);
-  ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',VZ.jpeg_quality).split(',')[1],mimeType:'image/jpeg'}}}));
+  const fmsg=JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',VZ.jpeg_quality).split(',')[1],mimeType:'image/jpeg'}}});
+  ws.send(fmsg);
+  // M3 — THE WATCHER gets every second frame on ITS OWN tank (T2)
+  if(wsW&&wsW.readyState===1&&wSetup&&(frameN++%2===0))wsW.send(fmsg);
   // M1 — the frame's 64-bit average-hash → the thalamus (pixels never persist;
   // a static screen is filtered at the nucleus door for free)
   try{
@@ -1013,7 +1049,39 @@ async function startVision(kind){
  log('· eyes on ('+kind+') — 1 frame / 2.5s, quota-friendly')}
 function stopVision(){if(vidTimer){clearInterval(vidTimer);vidTimer=null}
  if(vidStream){for(const t of vidStream.getTracks())t.stop();vidStream=null}
+ watcherStop();
  if(vidKind){log('· eyes off');vidKind=null;st(setupDone?'🎙 LIVE — talk.':'🎤 armed — bolo')}}
+
+// M3 — THE WATCHER (T2): second socket, own tank, vision-only. Its audio is
+// NEVER played; its rare one-line observations become afferents. Any failure
+// is silent — the Watcher must never cost the conversation anything.
+let wsW=null,wSetup=false,wTx='',lastWObs=0;
+function watcherConnect(){
+ try{
+  if(!CFG||!CFG.tanks||!CFG.tanks.watcher)return;
+  if(wsW&&(wsW.readyState===0||wsW.readyState===1))return;
+  const key=CFG.keys[CFG.tanks.watcher.key_index];if(!key)return;
+  wSetup=false;wTx='';
+  wsW=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
+  wsW.onopen=()=>wsW.send(JSON.stringify({setup:{model:'models/'+CFG.model,
+   generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}}},
+   systemInstruction:{parts:[{text:CFG.tanks.watcher.instruction}]},
+   outputAudioTranscription:{},
+   contextWindowCompression:{triggerTokens:CFG.compression.trigger_tokens,slidingWindow:{targetTokens:CFG.compression.sliding_window_tokens}}}}));
+  wsW.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.text();let m;try{m=JSON.parse(d)}catch(e){return}
+   if(m.setupComplete){wSetup=true;log('· the Watcher is on (T2 — second pair of eyes)');return}
+   const sc=m.serverContent;if(!sc)return;
+   if(sc.outputTranscription&&sc.outputTranscription.text)wTx+=sc.outputTranscription.text;
+   if(sc.turnComplete&&wTx.trim()){const obs=wTx.trim().slice(0,200);wTx='';
+    const n=Date.now();if(n-lastWObs<10000)return;lastWObs=n;
+    fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'vision',source:'watcher',event_key:'watcher:'+obs.toLowerCase().split(/\\s+/).slice(0,3).join('-'),text:obs})}).catch(()=>{});
+    fetch('/tank-use',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'T2',units:1})}).catch(()=>{});
+    log('👁 watcher: '+obs)}};
+  wsW.onclose=()=>{wsW=null;wSetup=false};
+  wsW.onerror=()=>{};
+ }catch(e){}
+}
+function watcherStop(){if(wsW){try{wsW.close(1000)}catch(e){}wsW=null;wSetup=false}}
 function toggleVision(kind){vidKind===kind?stopVision():startVision(kind)}
 
 // ACK FILLERS — a cached line the instant a tool call lands (perceived latency ≈ 0)
@@ -1125,7 +1193,11 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
   log('· deep answer injected into the live talk');return}
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
-  log('· memory surfaced (non-spoken hint)')}},3000);
+  log('· memory surfaced (non-spoken hint)');return}
+ if(d.mouth_hint&&d.mouth_hint.expires!==lastHintExp){lastHintExp=d.mouth_hint.expires;
+  ws.send(JSON.stringify({realtimeInput:{text:'[TIMING HINT — non-spoken, about delivery only, never content: '+d.mouth_hint.hint+']'}}));
+  log('· timing hint (affect firewall output — delivery only)')}},3000);
+let lastHintExp=null;
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
@@ -1150,7 +1222,8 @@ document.getElementById('go').onclick=async()=>{
  try{
   CFG=await (await fetch('/config?mode='+MODE)).json();
   adoptResume();
-  document.getElementById('mins').textContent='voice minutes today: '+CFG.minutes_today+' · keys in pool: '+CFG.keys.length+' · voice: '+CFG.voice+(MODE==='scrimmage'?' · MODE: SCRIMMAGE — you are being judged, as requested':'');
+  const fuel=(CFG.tanks&&CFG.tanks.gauge&&CFG.tanks.gauge.length)?' ⛽ '+CFG.tanks.gauge.map(t=>t.id+' '+t.pct+'%'+(t.state==='HOT'?'':' '+t.state)).join(' · '):'';
+  document.getElementById('mins').textContent='voice minutes today: '+CFG.minutes_today+' · keys in pool: '+CFG.keys.length+' · voice: '+CFG.voice+(MODE==='scrimmage'?' · MODE: SCRIMMAGE — you are being judged, as requested':'')+fuel;
   document.getElementById('meter').style.display='block';
   acOut=new (window.AudioContext||window.webkitAudioContext)();
   micCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
@@ -1239,6 +1312,14 @@ async function main() {
         }
         if (req.url === "/minutes") {
           appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), minutes: body.minutes || 0 }) + "\n");
+          // M3 — the Gaffer's minutes count against T1 (owner writes the ledger)
+          try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", "T1", "1"], { windowsHide: true, timeout: 15000 }); } catch { }
+          return send(200, { ok: true });
+        }
+        if (req.url === "/tank-use") {
+          // M3 — page-reported tank usage → fuelboard (the owner) via the shell
+          const id = String(body.id || "");
+          if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", id, String(Math.max(1, Number(body.units) || 1))], { windowsHide: true, timeout: 15000 }); } catch { } }
           return send(200, { ok: true });
         }
         if (req.url === "/handle") {
