@@ -116,7 +116,13 @@ function inRange(nowHM, start, end) {
 
 // how many tokens may we spend RIGHT NOW?
 function headroom(cfg, ledger, queueState, now) {
-  const cap0 = (queueState && queueState.observed_window_ceiling) || cfg.budget.window_capacity_est_tokens;
+  // the observed ceiling is a LEARNED truth, but the real Max-5x window is
+  // always >= our deliberately-conservative estimate; never let a stale/low
+  // observed value collapse the budget to zero and starve the hot brain
+  // (E2E finding 13 Jul: a limit event recorded ceiling=1 and switched the
+  // overnight engine off). Floor at the estimate.
+  const est = cfg.budget.window_capacity_est_tokens;
+  const cap0 = Math.max(est, (queueState && queueState.observed_window_ceiling) || est);
   const used = windowUsage(ledger, now, cfg.budget.window_hours);
   const weekly = weekUsage(ledger, now);
   const weeklyCap = cfg.budget.weekly_capacity_est_tokens;
@@ -448,7 +454,10 @@ async function tick(cfg, deps) {
     if (usage.ok) queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
     if (usage.ok && job.trigger && queueState.triggers) delete queueState.triggers[job.trigger];   // consumed
     if (usage.limit_hit && cfg.budget.self_tune) {
-      queueState.observed_window_ceiling = Math.max(1, windowUsage(ledger, now, cfg.budget.window_hours));
+      // a limit event means we spent ~the plan's true capacity — record the
+      // ACTUAL window usage, but never below the conservative estimate (a
+      // limit at low observed-usage is a false read, not a 1-token ceiling).
+      queueState.observed_window_ceiling = Math.max(cfg.budget.window_capacity_est_tokens, windowUsage(ledger, now, cfg.budget.window_hours));
       ran.push({ job: job.id, note, ledgerRow: row });
       break;                                                    // back off the moment the plan says stop
     }
@@ -509,7 +518,8 @@ async function selftest() {
   assert("STUDY HOURS — cap = day_reserve_frac (protect the captain)", hStudy.phase === "study" && hStudy.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.day_reserve_frac));
   const hNight = headroom(cfg, ledger, qEmpty, now(23, 30));
   assert("OVERNIGHT — cap = overnight_target_frac (exhaust deliberately)", hNight.phase === "overnight" && hNight.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac));
-  assert("self-tuned ceiling overrides the estimate", headroom(cfg, ledger, { observed_window_ceiling: 400000 }, now(23, 30)).cap === Math.round(400000 * cfg.budget.overnight_target_frac));
+  assert("self-tuned ceiling ABOVE estimate overrides (learns the plan is bigger)", headroom(cfg, ledger, { observed_window_ceiling: 1200000 }, now(23, 30)).cap === Math.round(1200000 * cfg.budget.overnight_target_frac));
+  assert("STARVATION GUARD — a too-low/corrupt ceiling is floored at the estimate", headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac) && headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).allowed > 100000);
 
   // eligibility
   const q = { jobs_run: { "2026-07-12": { formation_read: 1 } } };
