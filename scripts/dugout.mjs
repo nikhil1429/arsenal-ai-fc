@@ -70,6 +70,30 @@ const REMINDERS = join(STATE_DIR, "dugout_reminders.jsonl");
 const RECALL    = join(STATE_DIR, "recall_index.jsonl");
 const ACK_DIR   = join(__dirname, "..", "dressing-room", "club", "media", "ack");
 const PORT = 4114;                                 // the captain's number
+const THALAMUS  = "http://127.0.0.1:4113";         // the relay nucleus (M1)
+
+// M1 — THE AFFERENT NERVE: every sense the Dugout carries lands in the ONE
+// nucleus. Fire-and-forget with a hard timeout: the thalamus being down must
+// NEVER cost the voice line a millisecond.
+async function relayAfferent(evt, fetchFn = fetch) {
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 1500);
+    await fetchFn(THALAMUS + "/afferent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evt), signal: ctrl.signal });
+    clearTimeout(t);
+    return true;
+  } catch { return false; }                        // nucleus asleep — the reflex plays on
+}
+// M1 — THE ASYNC ARC, read side: the page polls /deep; the bridge reads the
+// thalamus's workspace/wake (READ-only — single-writer law intact) and hands
+// back the pending wake (for the holding token) + any served deep answer.
+function readDeepState(deps = {}) {
+  const ws = deps.workspace !== undefined ? deps.workspace : readJson(join(STATE_DIR, "workspace.json"));
+  const wake = deps.wake !== undefined ? deps.wake : readJson(join(STATE_DIR, "wake.json"));
+  const out = { version: (ws && ws.version) || 0, deep: null, pending: null };
+  if (ws && ws.deep && ws.deep.text && !ws.deep.declined) out.deep = { moment_id: ws.deep.moment_id, text: ws.deep.text, provenance: ws.deep.provenance };
+  if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
+  return out;
+}
 
 // ACK fillers (JARVIS pattern): cached lines played the instant a tool call
 // lands — perceived latency near-zero. Short, honest, zero hype (law-checked
@@ -374,6 +398,8 @@ HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT w
 ${buildDayThreadSection()}
 
 MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recall; answer with the date and his own words, never a reconstruction.
+
+THE BRIDGE (the two-speed brain): the club has a deep brain that wakes only for the rare moment that needs real reasoning. Mid-conversation you may receive bracketed NON-SPOKEN notes: [DEEP PENDING …] = it is thinking — if it fits the moment, give ONE short holding line ("ruko — isko theek se sochta hoon") and keep the flow, else stay silent; [DEEP THOUGHT …] = its answer — weave it in as your own considered second thought, in YOUR voice, never read like a memo, never mention the machinery.
 
 DEPTH LEVER: if he tells you how much to talk ("give me full lectures", "always go deep", "keep it short", "stop lecturing") call set_depth and confirm in one line — it sticks until he changes it. His live requests in the moment ("elaborate", "detail mein") ALWAYS override toward more, whatever the standing register.
 
@@ -816,6 +842,21 @@ async function selftest() {
     assert("goAway → proactive stitch at a quiet beat (never mid-word)", PAGE.includes("goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length") && PAGE.includes("stitching=true"));
   }
 
+  // M1 — THE AFFERENT NERVE + THE ASYNC ARC (the thalamus wiring)
+  {
+    assert("voice nerve: finished captain turns POST to the nucleus relay", PAGE.includes("'/afferent-relay'") && PAGE.includes("modality:'voice'") && PAGE.includes("affVoice"));
+    assert("vision nerve: 64-bit frame phash travels, pixels never persist", PAGE.includes("phash:phash") && PAGE.includes("modality:'vision'") && PAGE.includes("hcv"));
+    assert("async arc: deep answers injected ONLY at a quiet beat", PAGE.includes("talking||liveSrcs.length)return") && PAGE.includes("DEEP THOUGHT"));
+    assert("holding token offered when the deep brain wakes mid-talk", PAGE.includes("DEEP PENDING") && PAGE.includes("holding line"));
+    assert("stale deep answers never replay on reload (primed first poll)", PAGE.includes("deepPrimed"));
+    assert("BRIDGE law travels in the constitution (never mention the machinery)", buildSystemInstruction().includes("THE BRIDGE") && buildSystemInstruction().includes("never mention the machinery"));
+    assert("thalamus down = fail-silent, the reflex plays on", (await relayAfferent({ modality: "voice", text: "x" }, async () => { throw new Error("down"); })) === false);
+    const ds = readDeepState({ workspace: { version: 7, deep: { moment_id: "m9", text: "the read", declined: false, provenance: "opus-extended" } }, wake: { status: "pending", moment_id: "m10", spotlight: { text: "why does attention scale" } } });
+    assert("bridge /deep hands back both the served answer and the pending wake", ds.version === 7 && ds.deep.moment_id === "m9" && ds.pending.moment_id === "m10" && ds.pending.about.includes("attention"));
+    const dsDecl = readDeepState({ workspace: { version: 2, deep: { moment_id: "m1", text: null, declined: true } }, wake: null });
+    assert("a DECLINED deep answer is never offered to the mouth", dsDecl.deep === null && dsDecl.pending === null);
+  }
+
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
   assert("wire shape: modalities+speechConfig NESTED in generationConfig", PAGE.includes("generationConfig:{responseModalities:['AUDIO'],speechConfig"));
   assert("Charon travels as prebuiltVoiceConfig", PAGE.includes("prebuiltVoiceConfig") && PAGE.includes("CFG.voice"));
@@ -900,12 +941,23 @@ async function startVision(kind){
  vidStream.getVideoTracks()[0].onended=()=>stopVision();
  const vid=document.getElementById('vid');vid.srcObject=vidStream;await vid.play();
  const cv=document.createElement('canvas');
+ const hcv=document.createElement('canvas');hcv.width=8;hcv.height=8;
  const VZ=(CFG&&CFG.vision)||{jpeg_quality:0.82,max_px:1280,frame_ms:2000};
  vidTimer=setInterval(()=>{
   if(!ws||ws.readyState!==1||!setupDone||!vid.videoWidth)return;
   cv.width=Math.min(VZ.max_px,vid.videoWidth);cv.height=Math.round(cv.width*vid.videoHeight/vid.videoWidth);
   cv.getContext('2d').drawImage(vid,0,0,cv.width,cv.height);
   ws.send(JSON.stringify({realtimeInput:{video:{data:cv.toDataURL('image/jpeg',VZ.jpeg_quality).split(',')[1],mimeType:'image/jpeg'}}}));
+  // M1 — the frame's 64-bit average-hash → the thalamus (pixels never persist;
+  // a static screen is filtered at the nucleus door for free)
+  try{
+   const hx=hcv.getContext('2d');hx.drawImage(vid,0,0,8,8);
+   const px=hx.getImageData(0,0,8,8).data;const g=[];let mean=0;
+   for(let i=0;i<64;i++){const v=(px[i*4]+px[i*4+1]+px[i*4+2])/3;g.push(v);mean+=v}
+   mean/=64;let phash='';
+   for(let i=0;i<64;i+=4){let nib=0;for(let b=0;b<4;b++)nib=(nib<<1)|(g[i+b]>mean?1:0);phash+=nib.toString(16)}
+   fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'vision',kind:vidKind,phash:phash})}).catch(()=>{});
+  }catch(e){}
  },VZ.frame_ms);
  if(!ws||ws.readyState>1)connect();
  st(kind==='screen'?'🖥 commentator ON — the Gaffer watches you solve':'📷 whiteboard ON — show the paper');
@@ -953,7 +1005,7 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
   if(ws&&ws.readyState===1)ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}));log('⚙ '+m.toolCall.functionCalls.map(f=>f.name).join(', '));return}
  const sc=m.serverContent;if(!sc)return;
  if(sc.interrupted)stopPlayback();
- if(sc.inputTranscription&&sc.inputTranscription.text)post('CAPTAIN',sc.inputTranscription.text);
+ if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text)}
  if(sc.outputTranscription&&sc.outputTranscription.text)post('GAFFER',sc.outputTranscription.text);
  if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[]))if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
 };
@@ -1002,6 +1054,26 @@ setInterval(()=>{
   goAwayAt=0;stitching=true;log('· stitching now (quiet beat) — same session, new socket');ws.close(1000);return}
  if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
  parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
+
+// M1 — THE AFFERENT NERVE (voice): each finished captain turn → the thalamus
+let affBuf='',affAt=0;
+function affVoice(t){affBuf+=t;affAt=Date.now()}
+setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
+ fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'voice',text:affBuf.slice(0,600)})}).catch(()=>{});
+ affBuf=''}},1000);
+// M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
+// bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
+// First poll PRIMES the ids so a stale deep answer never replays on reload.
+let lastPendingId=null,lastDeepId=null,deepPrimed=false;
+setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
+ let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;return}
+ if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
+  log('· deep brain woken — holding token offered');return}
+ if(d.deep&&d.deep.moment_id!==lastDeepId){lastDeepId=d.deep.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[DEEP THOUGHT arrived — weave this in NOW as your own considered second thought, in your voice, never as a memo, never mention the machinery:]\\n'+d.deep.text}}));
+  log('· deep answer injected into the live talk')}},3000);
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
@@ -1085,6 +1157,7 @@ async function main() {
         const mode = new URL(req.url, "http://x").searchParams.get("mode") === "scrimmage" ? "scrimmage" : "gaffer";
         return send(200, buildConfig(keys, mode));
       }
+      if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
       if (req.method === "GET" && /^\/ack\/\d+$/.test(req.url || "")) {
         const files = (() => { try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort(); } catch { return []; } })();
         const f = files[Number(req.url.split("/")[2])];
@@ -1120,6 +1193,11 @@ async function main() {
           // M0 — the page banks each fresh resumption handle here; a reload
           // (or a bridge restart) resumes the SAME server-side session.
           return send(200, saveSessionHandle(body));
+        }
+        if (req.url === "/afferent-relay") {
+          // M1 — the page's senses → the thalamus, fire-and-forget
+          relayAfferent(body);
+          return send(200, { ok: true });
         }
         if (req.url === "/stamps") {
           // true think-time from the wire (L4 sense — highest data-ROI):
