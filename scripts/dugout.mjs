@@ -539,6 +539,42 @@ function execTool(name, args, deps = {}) {
   } catch (e) { return { error: String(e.message).slice(0, 200) }; }
 }
 
+// ---------------------------------------------------------------------------
+// SESSION RESUMPTION PERSISTENCE (M0) — the handle used to live only in a page
+// variable, so every reload/crash threw away a server-side session that stays
+// valid ~2h. Now the page POSTs each fresh handle to /handle; the bridge holds
+// it in gitignored dugout_session.json (single writer: dugout); /config hands
+// it back ONLY when it is fresh (conservative TTL vs the ~2h validity), for
+// the SAME model (a handle is a session on one model), the SAME mode (a
+// scrimmage may never resume into the Gaffer's skin), and the SAME key slot
+// (handles are per-project — resuming a Tank-1 session through Tank-3's key
+// is a wire error, the exact bug key-rotation used to trigger).
+// ---------------------------------------------------------------------------
+const SESSION = join(STATE_DIR, "dugout_session.json");
+const RESUME_TTL_MIN = 100;                        // handles live ~2h; stay conservative
+function saveSessionHandle(body, deps = {}) {
+  const write = deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2)));
+  const now = deps.now || new Date();
+  if (!body || !body.handle) { write(SESSION, { handle: null, cleared_at: now.toISOString() }); return { ok: true, cleared: true }; }
+  write(SESSION, {
+    handle: String(body.handle),
+    key_index: Number.isFinite(Number(body.key_index)) ? Number(body.key_index) : 0,
+    model: String(body.model || ""),
+    mode: body.mode === "scrimmage" ? "scrimmage" : "gaffer",
+    ts: now.toISOString(),
+  });
+  return { ok: true };
+}
+function loadSessionHandle({ model, mode = "gaffer", keyCount = 0, now = new Date(), session } = {}) {
+  const s = session !== undefined ? session : readJson(SESSION);
+  if (!s || !s.handle || !s.ts) return null;
+  if ((now - new Date(s.ts)) > RESUME_TTL_MIN * 60000) return null;   // stale — server side is gone
+  if (s.model !== model) return null;                                  // a handle belongs to one model
+  if ((s.mode || "gaffer") !== mode) return null;                      // a mock never resumes the Gaffer
+  if (!Number.isFinite(s.key_index) || s.key_index < 0 || s.key_index >= keyCount) return null;
+  return { handle: s.handle, key_index: s.key_index };
+}
+
 // rehydrate: today's transcript tail — seeds a fresh WS when no resumption
 // handle exists (page reload, morning), so the thread never truly breaks
 function buildRehydrate(now = new Date()) {
@@ -553,14 +589,22 @@ function buildRehydrate(now = new Date()) {
 // per-session config the page fetches (key never rests in the repo)
 function buildConfig(keys, mode = "gaffer") {
   const prefs = loadPrefs();
+  const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
   return {
-    model: process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL,
+    model,
     voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
     depth: currentDepth(),
     mode,
     keys,
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     rehydrate: mode === "scrimmage" ? null : buildRehydrate(),   // a mock starts cold, like the real thing
+    // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
+    // session (memory intact, no rehydrate needed); null-safe when stale/absent.
+    resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
+    // M0 — context-window compression, tuned EXPLICITLY (spec: trigger ~25k /
+    // keep ~8k) instead of riding server defaults: the session compresses
+    // early and lives all day; the durable memory layers own what it evicts.
+    compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
     tools: [{ functionDeclarations: TOOL_DECLS }],
     // THE EARS — VAD tuned for a captain who THINKS mid-sentence. hangover
     // 1400ms means a pause to gather a thought no longer ends his turn (the
@@ -744,6 +788,34 @@ async function selftest() {
   assert("think-time stamps wired: page measures both directions", PAGE.includes("captain_think") && PAGE.includes("gaffer_respond") && PAGE.includes("/stamps"));
   assert("ACK plays on toolCall, never over live audio", PAGE.includes("maybeAck") && PAGE.includes("liveSrcs.length)return"));
 
+  // M0 — SESSION RESUMPTION PERSISTENCE + TUNED COMPRESSION (the all-day line)
+  {
+    const nowFix = new Date("2026-07-14T12:00:00");
+    const mk = (over = {}) => ({ handle: "h1", key_index: 1, model: DEFAULT_MODEL, mode: "gaffer", ts: new Date(nowFix - 30 * 60000).toISOString(), ...over });
+    const load = (session, over = {}) => loadSessionHandle({ model: DEFAULT_MODEL, mode: "gaffer", keyCount: 3, now: nowFix, session, ...over });
+    const ok = load(mk());
+    assert("fresh handle (same model/mode/key slot) is offered back", ok && ok.handle === "h1" && ok.key_index === 1);
+    assert("stale handle (> TTL, server side gone) → null", load(mk({ ts: new Date(nowFix - (RESUME_TTL_MIN + 5) * 60000).toISOString() })) === null);
+    assert("handle belongs to ONE model — mismatch → null", load(mk({ model: "gemini-2.5-flash-native-audio-latest" })) === null);
+    assert("a scrimmage never resumes into the Gaffer's skin", load(mk({ mode: "scrimmage" })) === null);
+    assert("handle is per-project — key slot out of pool → null", load(mk({ key_index: 7 })) === null);
+    assert("no file / cleared → null, never crashes", load(null) === null && load({ handle: null }) === null);
+    const saved = [];
+    const wj = (p, o) => saved.push(o);
+    saveSessionHandle({ handle: "h2", key_index: 2, model: DEFAULT_MODEL, mode: "gaffer" }, { writeJson: wj, now: nowFix });
+    assert("bank writes handle + key slot + model + mode + ts", saved[0].handle === "h2" && saved[0].key_index === 2 && saved[0].model === DEFAULT_MODEL && saved[0].ts === nowFix.toISOString());
+    saveSessionHandle({ handle: null }, { writeJson: wj, now: nowFix });
+    assert("bank clears on null (key rotation / resume rejection)", saved[1].handle === null);
+    const c0 = buildConfig(["k1"]);
+    assert("config carries resume (null-safe) + explicit compression tuning", "resume" in c0 && c0.compression.trigger_tokens === 25600 && c0.compression.sliding_window_tokens === 8192 && c0.compression.trigger_tokens > c0.compression.sliding_window_tokens);
+    assert("page sends EXPLICIT compression (trigger + sliding window target)", PAGE.includes("contextWindowCompression:{triggerTokens:CFG.compression.trigger_tokens,slidingWindow:{targetTokens:CFG.compression.sliding_window_tokens}}"));
+    assert("page adopts the banked handle on start (same key slot)", PAGE.includes("adoptResume") && PAGE.includes("keyIdx=CFG.resume.key_index"));
+    assert("page banks every fresh handle to the bridge", PAGE.includes("'/handle'") && PAGE.includes("postHandle(resumeHandle)"));
+    assert("key rotation DROPS the handle (per-project law)", PAGE.includes("dropResume('key rotation"));
+    assert("resume rejected by the wire → drop + fresh line + rehydrate", PAGE.includes("resumingWith&&!setupDone") && PAGE.includes("dropResume('resume rejected"));
+    assert("goAway → proactive stitch at a quiet beat (never mid-word)", PAGE.includes("goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length") && PAGE.includes("stitching=true"));
+  }
+
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
   assert("wire shape: modalities+speechConfig NESTED in generationConfig", PAGE.includes("generationConfig:{responseModalities:['AUDIO'],speechConfig"));
   assert("Charon travels as prebuiltVoiceConfig", PAGE.includes("prebuiltVoiceConfig") && PAGE.includes("CFG.voice"));
@@ -782,6 +854,12 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>THE DUGOUT
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
 let outTxEnabled=true,earlyCloses=0,rehydrated=false;
+// M0 — resumption across reloads + proactive goAway stitching
+let resumingWith=null,goAwayAt=0,lastHandlePost=0,stitching=false;
+function adoptResume(){if(CFG&&CFG.resume&&CFG.resume.handle){resumeHandle=CFG.resume.handle;keyIdx=CFG.resume.key_index||0;log('· resuming today\\'s session (handle restored — same key, memory intact)')}}
+function postHandle(h){const n=Date.now();if(h&&n-lastHandlePost<5000)return;lastHandlePost=n;
+ fetch('/handle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h,key_index:keyIdx,model:CFG?CFG.model:'',mode:MODE})}).catch(()=>{})}
+function dropResume(why){if(resumeHandle||resumingWith)log('· resume handle dropped ('+why+') — fresh line + rehydrate');resumeHandle=null;resumingWith=null;postHandle(null)}
 const MODE=new URLSearchParams(location.search).get('mode')==='scrimmage'?'scrimmage':'gaffer';
 if(MODE==='scrimmage')document.title='THE DUGOUT — SCRIMMAGE';
 const st=t=>document.getElementById('st').textContent=t;
@@ -858,17 +936,19 @@ ws.onopen=()=>{const s={model:'models/'+CFG.model,
  tools:CFG.tools,
  inputAudioTranscription:{},
  sessionResumption:resumeHandle?{handle:resumeHandle}:{},
- contextWindowCompression:{slidingWindow:{}}};
+ contextWindowCompression:{triggerTokens:CFG.compression.trigger_tokens,slidingWindow:{targetTokens:CFG.compression.sliding_window_tokens}}};
  if(outTxEnabled)s.outputAudioTranscription={};
+ resumingWith=resumeHandle;
  ws.send(JSON.stringify({setup:s}))};
 ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.text();let m;try{m=JSON.parse(d)}catch(e){return}
- if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();
+ if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();goAwayAt=0;
+  if(resumingWith){log('· session RESUMED server-side (compressed memory intact)');resumingWith=null}
   if(!resumeHandle&&CFG.rehydrate&&!rehydrated){rehydrated=true;
    ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'[REHYDRATE — aaj ka match record so far; resume silently, no recap]\\n'+CFG.rehydrate}]}],turnComplete:false}}));
    log('· rehydrated from today\\'s match record')}
   st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
- if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable)resumeHandle=m.sessionResumptionUpdate.newHandle;
- if(m.goAway){log('· session rotating (goAway) — stitching…');return}
+ if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable){resumeHandle=m.sessionResumptionUpdate.newHandle;postHandle(resumeHandle)}
+ if(m.goAway){goAwayAt=Date.now();log('· session rotating (goAway) — proactive stitch at next quiet beat');return}
  if(m.toolCall){maybeAck();const rs=await Promise.all(m.toolCall.functionCalls.map(toolCall));
   if(ws&&ws.readyState===1)ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}));log('⚙ '+m.toolCall.functionCalls.map(f=>f.name).join(', '));return}
  const sc=m.serverContent;if(!sc)return;
@@ -878,11 +958,13 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[]))if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
 };
 ws.onclose=e=>{if(closing)return;
+ if(stitching){stitching=false;setupDone=false;connect();return}
  if(parking){parking=false;setupDone=false;st('🎤 armed — line parked; bolo to reconnect');return}
+ if(resumingWith&&!setupDone){dropResume('resume rejected by the wire, code '+e.code);setupDone=false;setTimeout(connect,400);return}
  if(outTxEnabled&&setupAt&&(Date.now()-setupAt<20000)&&(e.code===1007||e.code===1011)){
   if(++earlyCloses>=2){outTxEnabled=false;log('· live scar bit: outputTranscription stripped — checkpoint tool is the match record now')}}
  if((e.code===1011||e.code===1008||/quota|exhaust|resource/i.test(e.reason||''))){
-   const k=nextKey();if(k){log('· quota on key '+(keyIdx)+' — rotating pool');connect();return}
+   const k=nextKey();if(k){log('· quota on key '+(keyIdx)+' — rotating pool');dropResume('key rotation — a handle is per-project');connect();return}
    st('🪑 free juice dry for today — bench: node scripts/talk.mjs');mins();return}
  log('· reconnecting ('+e.code+')…');setTimeout(connect,800)};
 }
@@ -913,7 +995,12 @@ function endSegment(){if(!segOpen)return;segOpen=false;
  if(ws&&ws.readyState===1&&setupDone)ws.send(m);else pending.push(m)}
 function flushPending(){if(!ws||ws.readyState!==1)return;for(const m of pending.splice(0))ws.send(m)}
 setInterval(()=>{if(talking)flushAudio()},100);
-setInterval(()=>{if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
+setInterval(()=>{
+ // M0 — goAway stitch: rotate PROACTIVELY at the first quiet beat, with the
+ // fresh handle, instead of waiting for the server to kill the socket mid-word
+ if(goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length){
+  goAwayAt=0;stitching=true;log('· stitching now (quiet beat) — same session, new socket');ws.close(1000);return}
+ if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
  parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
@@ -938,6 +1025,7 @@ document.getElementById('go').onclick=async()=>{
  document.getElementById('go').style.display='none';
  try{
   CFG=await (await fetch('/config?mode='+MODE)).json();
+  adoptResume();
   document.getElementById('mins').textContent='voice minutes today: '+CFG.minutes_today+' · keys in pool: '+CFG.keys.length+' · voice: '+CFG.voice+(MODE==='scrimmage'?' · MODE: SCRIMMAGE — you are being judged, as requested':'');
   document.getElementById('meter').style.display='block';
   acOut=new (window.AudioContext||window.webkitAudioContext)();
@@ -1028,6 +1116,11 @@ async function main() {
           appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), minutes: body.minutes || 0 }) + "\n");
           return send(200, { ok: true });
         }
+        if (req.url === "/handle") {
+          // M0 — the page banks each fresh resumption handle here; a reload
+          // (or a bridge restart) resumes the SAME server-side session.
+          return send(200, saveSessionHandle(body));
+        }
         if (req.url === "/stamps") {
           // true think-time from the wire (L4 sense — highest data-ROI):
           // captain_think = Gaffer's audio ends → his voice starts
@@ -1071,4 +1164,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase };
+export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase, loadSessionHandle, saveSessionHandle, RESUME_TTL_MIN };

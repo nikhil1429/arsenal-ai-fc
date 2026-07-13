@@ -109,6 +109,8 @@ dressing-room/state/proactivity_ledger.json
 dressing-room/state/recall_index.jsonl
 # dugout voice prefs (his chosen model/voice/depth register)
 dressing-room/state/dugout_prefs.json
+# dugout session resumption handle (a live session token — never committed)
+dressing-room/state/dugout_session.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/
