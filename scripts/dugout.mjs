@@ -443,6 +443,8 @@ ${buildDayThreadSection()}
 
 MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recall; answer with the date and his own words, never a reconstruction.
 
+THE BOARDROOM BRIEFING: when he asks what's happening in the club — "sab kuch batao", "club report", "brief me", "what did the organism do" — call get_club_report and give him the FULL briefing, spoken, 5-10 minutes, structured like a boardroom walk: the body first, then what the gate did today (moments, wakes, what was suppressed and why that's healthy), what the deep brain spent, what the night shift manufactured while he slept, what memory now holds, the fuel gauge, and END with what is DORMANT and exactly what un-dormants it (reps counts, days of data, his ratification word). Every number from the tool, zero invented, honest about what hasn't happened yet.
+
 THE MEMORY ORGAN (M2): THE SCRIBE — when a durable moment happens (he names a doubt, lands a win, states a preference, opens a thread worth returning to) call mark_moment SILENTLY with his words verbatim; never announce it. LEDGER OF SELF — remember/forget are SPOKEN GATES: only his explicit "remember I…"/"forget that" calls them; confirm in one line what you now hold or dropped. Sometimes a [MEMORY SURFACED] note arrives — his own past words; weave them in ONLY if they genuinely earn the turn, never as "as you said Tuesday…" theatre.
 ${identityCartridge() || ""}
 ${whoCartridge() || ""}
@@ -486,6 +488,7 @@ const TOOL_DECLS = [
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
+  { name: "get_club_report", description: "THE BOARDROOM BRIEFING — the WHOLE organism's state in one call: body, brain spend, what the gate did today, senses, memory, tanks, night-shift output, what's dormant and why. Call when he asks 'what's happening in the club / sab kuch batao / club report / brief me'.", parameters: { type: "OBJECT", properties: {} } },
 ];
 
 // M4 — THE CHALKBOARD's engine: the REST sandbox (the live socket's own
@@ -634,6 +637,42 @@ function execTool(name, args, deps = {}) {
       const prefs = { ...loadPrefs(), depth: reg };
       (deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2))))(PREFS, prefs);
       return { ok: true, register: reg, effect: DEPTH_REGISTERS[reg] };
+    }
+    if (name === "get_club_report") {
+      // THE BOARDROOM BRIEFING — every organ's day, one deterministic sweep.
+      // Numbers come from the bus alone; the Gaffer narrates, never invents.
+      const day = localDate(now);
+      const dayOf = (r) => r.day || String(r.ts || "").slice(0, 10);
+      const gate = readLines(join(STATE_DIR, "salience_ledger.jsonl")).filter(r => dayOf(r) === day);
+      const brainRows = readLines(join(STATE_DIR, "brain_ledger.jsonl")).filter(r => dayOf(r) === day);
+      const ws = readJson(join(STATE_DIR, "workspace.json")) || {};
+      const tone = currentTone();
+      const cal = readJson(join(STATE_DIR, "calibration.json")) || {};
+      const twin = readJson(join(STATE_DIR, "twin.json")) || {};
+      const led = readJson(join(STATE_DIR, "proactivity_ledger.json")) || {};
+      const presence = readLines(join(STATE_DIR, "presence_log.jsonl")).filter(r => r.day === day);
+      const hippoDir = join(__dirname, "..", "dressing-room", "hippocampus");
+      const episodes = readLines(join(hippoDir, "episodes.jsonl"));
+      const facts = (readJson(join(hippoDir, "identity_facts.json")) || { facts: [] }).facts;
+      const who = readJson(join(hippoDir, "who_he_is.json"));
+      const shift = readJson(join(STATE_DIR, "brain_out", "nightshift", `shift_${day}.json`));
+      const ns = loadNightshift(now);
+      let tanks = []; try { tanks = tankSummary(); } catch { }
+      return {
+        body: { verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "unknown", tone: tone.arousal, tone_stale: !!tone.stale },
+        brain: { opus_tokens_today: brainRows.filter(r => r.engine === "claude").reduce((a, r) => a + (r.total_tokens || 0), 0), jobs_today: brainRows.length, deep_answer_live: !!(ws.deep && ws.deep.text && !ws.deep.declined) },
+        gate: { moments_today: gate.length, reflex: gate.filter(r => r.tier === 0).length, enriched: gate.filter(r => r.tier === 1).length, opus_wakes: gate.filter(r => r.tier === 2).length, suppressed: gate.filter(r => ["refractory", "capped"].includes(r.outcome)).length },
+        senses: { presence_passes_today: presence.length, stall_edges_today: presence.filter(r => r.edge).length, whisper_loaded: !!(ws.whisper && new Date(ws.whisper.expires) > now) },
+        memory: { episodes: episodes.length, identity_facts: facts.length, who_he_is_date: (who || {}).date || null, open_threads: ((who || {}).open_threads || []).length, recall_index: readLines(RECALL).length },
+        tanks: { gauge: tanks.map(t => `${t.id} ${t.pct}% ${t.state}`), naive_shadow_note: "the fuel gauge shows what an all-Opus day would have cost" },
+        nightshift: shift ? shift.jobs : null,
+        nightshift_ready: { probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, scout_pack: ns.scout_pack },
+        twin: { status: twin.status || "unknown", note: twin.status !== "ok" ? "the book speaks only after 30 scored resolutions — it resolves as days close" : null },
+        calibration: { gap: cal.calibration_gap ?? null, note: cal.calibration_gap == null ? "silent below 20 reps — an early false alarm is worse than a missed one" : null },
+        proactivity: { earned: Object.entries((led.types || {})).filter(([, e]) => e.voice).map(([t]) => t), awaiting_his_word: Object.entries((led.types || {})).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t) },
+        season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
+        reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === day).length,
+      };
     }
     if (name === "mark_moment") {
       const kind = String(args.kind || "").toLowerCase();
@@ -911,7 +950,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 20);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 21);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -1022,7 +1061,7 @@ async function selftest() {
     const c4 = buildConfig(["k1"]);
     assert("SCAR: NO codeExecution on the live socket (it hangs the turn — probed)", c4.tools.length === 1 && !JSON.stringify(c4.tools).includes("codeExecution"));
     assert("search grounding honestly ABSENT (zero free quota — the wire said so)", !JSON.stringify(c4.tools).includes("googleSearch"));
-    assert("CHALKBOARD: run_python is a club tool (20 total)", c4.tools[0].functionDeclarations.length === 20 && c4.tools[0].functionDeclarations.some(t => t.name === "run_python"));
+    assert("CHALKBOARD: run_python is a club tool", c4.tools[0].functionDeclarations.some(t => t.name === "run_python"));
     assert("thinking: off for talk (latency), low in a mock, pref overrides", c4.thinking === "off" && buildConfig(["k1"], "scrimmage").thinking === "low");
     assert("page sends thinkingConfig only when thinking is on", PAGE.includes("thinkingConfig:{thinkingLevel:CFG.thinking.toUpperCase()}") && PAGE.includes("CFG.thinking!=='off'"));
     const fw = await runPythonSandbox("print(open('dressing-room/state/readiness.json').read())", { keys: ["k"], fetchFn: async () => { throw new Error("must not be called"); } });
@@ -1048,6 +1087,16 @@ async function selftest() {
     assert("conserve tone → mute too (rest is the agenda)", gate({ tone: "conserve" }).whisper === null);
     assert("expired whisper dies (the stuck→gone window closed)", gate({ workspace: { version: 1, whisper: { ...whisper, expires: new Date(Date.now() - 1000).toISOString() } } }).whisper === null);
     assert("page: whisper injected ONCE, win-framed, never shame-framed", PAGE.includes("EARNED WHISPER") && PAGE.includes("about to crack this") && PAGE.includes("lastWhisperId") && !PAGE.includes("about to fail"));
+  }
+
+  // THE BOARDROOM — the whole organism in one call, narratable in 5-10 min
+  {
+    const rep = execTool("get_club_report", {}, { sh });
+    assert("club report: body + brain + gate + senses + memory + tanks, one call", rep.body && rep.brain && rep.gate && rep.senses && rep.memory && Array.isArray(rep.tanks.gauge));
+    assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
+    assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
+    assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
+    assert("21 club tools now (the briefing joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 21);
   }
 
   // M11 — the Night Shift flows into the mouths by itself

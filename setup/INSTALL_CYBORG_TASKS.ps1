@@ -15,11 +15,17 @@ function Mk($name, $args_, $sched) {
 }
 Write-Host "Installing THE CYBORG BRAIN's schedule..."
 
-# the two daemons - daily 07:00 start (ONLOGON needs elevation; the Dugout
-# ALSO boots both on every matchday start, so this is just the backstop).
-# EADDRINUSE guards make double-starts harmless.
-Mk "ArsenalFC-Thalamus"       "thalamus.mjs"                 @("/SC","DAILY","/ST","07:00")
-Mk "ArsenalFC-Cortex"         "cortex.mjs"                   @("/SC","DAILY","/ST","07:02")
+# the two daemons - daily 07:00 start, INVISIBLE via hidden_run.vbs (scar
+# 0xC000013A: a visible console begs to be closed; closing it kills the
+# daemon). ONLOGON needs elevation; the Dugout ALSO boots both on every
+# matchday start. EADDRINUSE/singleton guards make double-starts harmless.
+function MkHidden($name, $args_, $sched) {
+  $tr = "wscript.exe `"$repo\setup\hidden_run.vbs`" node scripts\$args_"
+  schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
+  if ($LASTEXITCODE -eq 0) { Write-Host "  + $name (hidden)" } else { Write-Host "  ! FAILED $name" }
+}
+MkHidden "ArsenalFC-Thalamus" "thalamus.mjs"                 @("/SC","DAILY","/ST","07:00")
+MkHidden "ArsenalFC-Cortex"   "cortex.mjs"                   @("/SC","DAILY","/ST","07:02")
 # neuromodulation - hourly (cheap; follows the Governor wherever it goes)
 Mk "ArsenalFC-Tone"           "tone.mjs"                     @("/SC","HOURLY")
 # predictive presence - the stall sensor, every 10 minutes

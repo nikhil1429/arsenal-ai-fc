@@ -69,14 +69,22 @@ async function convene(question, deps = {}) {
   const use = deps.recordUse || recordUse;
   const capsules = deps.capsules !== undefined ? deps.capsules : capsuleExcerpts();
   const drafts = [];
-  await Promise.all(SEATS.map(async (seat) => {
-    const seed = seat.id === "captains_voice" && capsules ? `\nHIS CAPSULE ANCHORS (his real words — use his idiom):\n${capsules}\n` : "";
-    const r = await gen(`${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
-    use("T7", 1, 2500);
-    if (r.ok && r.text) drafts.push({ seat: seat.id, text: String(r.text).slice(0, 1200) });
-  }));
-  const dis = disagreement(drafts);
-  return { drafts, disagreement: dis, split: dis >= 0.85 && drafts.length >= 2, note: drafts.length ? undefined : "every chair empty (pool dry) — the Bridge proceeds cold" };
+  // THE BUS LEAVES ON TIME (live-arc scar, 14 Jul): a chair that misses the
+  // deadline is dropped — the deep answer must land in the stuck→gone window,
+  // and three perfect drafts 90s late are worth less than one on time.
+  const deadline = deps.deadline_ms || 25000;
+  await Promise.race([
+    Promise.all(SEATS.map(async (seat) => {
+      const seed = seat.id === "captains_voice" && capsules ? `\nHIS CAPSULE ANCHORS (his real words — use his idiom):\n${capsules}\n` : "";
+      const r = await gen(`${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
+      use("T7", 1, 2500);
+      if (r.ok && r.text) drafts.push({ seat: seat.id, text: String(r.text).slice(0, 1200) });
+    })),
+    new Promise((res) => setTimeout(res, deadline)),
+  ]);
+  const seated = drafts.slice();                     // late chairs talk to an empty room
+  const dis = disagreement(seated);
+  return { drafts: seated, disagreement: dis, split: dis >= 0.85 && seated.length >= 2, note: seated.length ? undefined : "every chair empty (pool dry/late) — the Bridge proceeds cold" };
 }
 
 // what cortex embeds in the Opus integration prompt
