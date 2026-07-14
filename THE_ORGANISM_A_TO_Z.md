@@ -264,7 +264,7 @@ The defensible thing here is **not the agents** — anyone can wire up agents. I
 - **It does not make anyone learn faster than biology permits.** Every mechanism is one of two things: *friction removed* or *signal conserved.* The multiplier is his consistency; the ceiling is reps × time × sleep. It refuses to claim otherwise.
 - **It gives no medical or investment advice**, by hard rule.
 - **Two lanes hit honest ceilings set by external APIs:** NotebookLM has no API (so the season film is "one click," not zero), and Veo costs real money (so the trailer prompt is auto-written but the render is money-gated). The daily poster, which *does* have a free API, is fully automatic.
-- **Design is frozen** until the offer lands — a deliberate anti-overbuilding law aimed at the founder's #2 failure mode.
+- **Design EVOLVES continuously** (unfrozen by the captain, 14 Jul 2026) — under the same laws: selftest green + real-run + small commit per unit, AI proposes · code validates · human approves. The anti-overbuilding law still stands as a bias: a mock shipped beats an organ added.
 
 ## 16. The roadmap — the Transfer Window
 

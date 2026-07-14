@@ -10,37 +10,412 @@
     "self_tune": true,
     "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it."
   },
-  "study_hours": { "start": "09:00", "end": "21:00" },
-  "overnight": { "start": "22:00", "end": "07:30" },
+  "study_hours": {
+    "start": "09:00",
+    "end": "21:00"
+  },
+  "overnight": {
+    "start": "22:00",
+    "end": "07:30"
+  },
   "guards": {
     "refuse_if_api_key_env": true,
-    "banned_phrases": ["10x", "exponential", "on steroids", "god-tier", "time is short"],
+    "banned_phrases": [
+      "10x",
+      "exponential",
+      "on steroids",
+      "god-tier",
+      "time is short"
+    ],
     "_note": "Hype in output is a bug (CONDUCTOR §1). The API-key guard keeps the hard $100 ceiling: subscription only, ever."
   },
-  "ntfy": { "enabled": true, "topic": "", "push_after": ["formation_read"], "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed." },
-  "gemini": { "enabled": true, "binary": "gemini", "_note": "Second brain — visualization + long-context. Free CLI on the captain's Google account (the AI Pro one, …2914). ENABLED: until his one-time login, gemini jobs fail gracefully and retry next tick (failed jobs don't spend their daily slot) — the first night after login, the renders just start." },
-  "dugout_pool": { "enabled": true, "gemini_defer_threshold_min": 30, "_note": "THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text. On a heavy voice day (≥threshold minutes in dugout_ledger), DAYTIME gemini jobs step aside so the voice keeps the free-tier pool; they run overnight regardless. Claude jobs unaffected." },
+  "ntfy": {
+    "enabled": true,
+    "topic": "",
+    "push_after": [
+      "formation_read"
+    ],
+    "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed."
+  },
+  "gemini": {
+    "enabled": true,
+    "binary": "gemini",
+    "_note": "Second brain — visualization + long-context. Free CLI on the captain's Google account (the AI Pro one, …2914). ENABLED: until his one-time login, gemini jobs fail gracefully and retry next tick (failed jobs don't spend their daily slot) — the first night after login, the renders just start."
+  },
+  "dugout_pool": {
+    "enabled": true,
+    "gemini_defer_threshold_min": 30,
+    "_note": "THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text. On a heavy voice day (≥threshold minutes in dugout_ledger), DAYTIME gemini jobs step aside so the voice keeps the free-tier pool; they run overnight regardless. Claude jobs unaffected."
+  },
   "jobs": [
-    { "id": "formation_read", "engine": "claude", "model": "opus", "window": "morning", "at": "08:45", "priority": 100, "enabled": true, "max_per_day": 1, "kind": "manager_m3", "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless." },
-    { "id": "midday_reread", "engine": "claude", "model": "sonnet", "window": "midday", "at": "13:30", "priority": 60, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["pulse.json", "pitch_read.json", "drills.json"], "out": "midday", "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work." },
-    { "id": "evening_voice", "engine": "claude", "model": "opus", "window": "evening", "at": "21:50", "priority": 90, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["twin.json", "slip.jsonl", "pitch_read.json", "pulse.json"], "out": "evening_voice" },
-    { "id": "deep_twin", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 50, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["predictions.jsonl", "slip.jsonl", "twin.json"], "out": "twin" },
-    { "id": "doubt_clusters", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 55, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["doubt_grammar.json", "tape_room.json"], "out": "doubts", "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules." },
-    { "id": "lexicon_mine", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 45, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["lexicon.json"], "out": "lexicon", "validate": "quotes_only", "_note": "Anchor-metaphor assist. Extraction, never invention: validator rejects any anchor text not verbatim-present in the input." },
-    { "id": "drill_forge", "engine": "claude", "model": "opus", "window": "overnight", "priority": 70, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["drills.json", "doubt_grammar.json", "weaknesses.json"], "out": "drill_forge", "validate": "no_new_numbers", "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only." },
-    { "id": "wall_insights", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 40, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["wall_data.json"], "out": "wall_insights", "validate": "no_new_numbers", "_note": "≤3 insight lines; viz.mjs re-validates before rendering. NUMBERS: quote them EXACTLY as they appear in the data — NEVER sum, average, or derive new ones (515 from 402+113 gets the whole output rejected); if a comparison needs arithmetic, describe it in words without the computed figure." },
-    { "id": "season_review", "engine": "claude", "model": "opus", "window": "overnight", "days": ["Sun"], "priority": 80, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["slip.jsonl", "season.json", "mutations.jsonl", "loop_vitals.json"], "out": "season", "_note": "The week in evidence lines; words the Boot Room's deterministic proposal — never invents evidence." },
-    { "id": "capsule_premap", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 20, "enabled": true, "max_per_day": 3, "repeatable": true, "kind": "analysis", "inputs": ["doubt_grammar.json", "learning_state.json"], "out": "premap", "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack." },
-    { "id": "scrimmage_staging", "engine": "claude", "model": "opus", "window": "overnight", "priority": 30, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["scout.json", "learning_state.json"], "out": "scrimmage", "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive." },
-    { "id": "gemini_render", "engine": "gemini", "window": "overnight", "priority": 35, "enabled": true, "max_per_day": 1, "kind": "render", "prompt_file": "wall_painter.md", "out": "gemini_wall", "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer." },
-    { "id": "maidan_poster", "engine": "gemini", "window": "overnight", "priority": 25, "enabled": true, "max_per_day": 1, "kind": "render", "prompt_file": "match_poster.md", "out": "poster", "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly)." },
-    { "id": "widget_spec", "engine": "gemini", "window": "overnight", "days": ["Wed"], "priority": 22, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["mirror_manifest.json", "learning_state.json"], "out": "widget_spec", "_note": "Resurrects the FORGE's RESERVED viz layer: drafts the per-axis widget/viz spec for the NEWEST locked capsule (mechanism + exact values honored; visual freedom per FORGE_DESIGN). Proposal only — flows into a Claude-Design/Gem session via the captain." },
-    { "id": "market_scan", "engine": "claude", "model": "sonnet", "window": "overnight", "days": ["Sun"], "priority": 28, "enabled": true, "max_per_day": 1, "kind": "analysis", "extra_args": ["--allowedTools", "WebSearch"], "inputs": ["scout.json", "learning_state.json"], "out": "market", "validate": null, "_note": "THE SCOUT resurrected (masterplan P6, DOSSIER §9 closed-loop): weekly live scan — 5 most-requested AI-PE skills in India this week, diff vs his current coverage, 3 real postings, every claim cited. Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon. Degrades to a no-op if this claude CLI build rejects the tool flag." },
-    { "id": "wall_review", "engine": "claude", "model": "sonnet", "window": "overnight", "priority": 24, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["wall_data.json", "../club/wall_gemini.html"], "out": "wall_review", "_note": "THE CLAUDE↔GEMINI LOOP, closing: critique last night's Gemini render against the captain's design laws (one glance = one story; ≤4 working-memory slots; no walls of text; cold-steel-warm-core palette; no hype/streaks/biometrics). Output = ≤10 concrete render-notes; viz.mjs feeds them into the NEXT night's Gemini prompt pack. The wall improves itself nightly, zero taps from the captain." },
-    { "id": "dugout_digest", "engine": "claude", "model": "opus", "window": "overnight", "priority": 65, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["brain_out/dugout/TODAY.md", "dugout_notes.jsonl", "tape_room.json", "lexicon.json"], "out": "dugout_digest", "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight." },
-    { "id": "day_cartridge", "engine": "claude", "model": "opus", "window": "overnight", "priority": 58, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["brain_out/dugout_digest/TODAY.md", "brain_out/evening_voice/TODAY.md", "drills.json", "pitch_read.json"], "out": "day_cartridge", "validate": "no_new_numbers", "_note": "THE DAY CARTRIDGE (L3 — the slow brain programs the fast brain across the sleep boundary): compile tomorrow's briefing for the Live voice, ≤15 lines, written TO the Gaffer in second person: yesterday's thread in 3 lines · what he's circling (from the digest) · today's drill focus · one voiced doubt to listen for · anything he asked to carry over. This text is INJECTED into the Dugout's dawn system instruction verbatim. No new numbers, no hype, no calendar pressure." },
-    { "id": "teamtalk_am", "engine": "claude", "model": "opus", "window": "overnight", "priority": 52, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["drills.json", "post_match/TODAY.md", "season.json", "notebook.json"], "out": "teamtalk_am", "validate": "no_new_numbers", "speak_to": "teamtalk_DATE_am.mp3", "serve": "next_morning", "_note": "THE MORNING TEAM TALK (media engine): the Gaffer's 90-second spoken team talk for TOMORROW MORNING — plain spoken prose, NO markdown/lists/emoji, ~220 words, coach register, Hinglish welds natural. Open from the KAL-line if present (his own words), name the set pieces waiting, one earned-and-specific note from the record, close on 'kal phir'. Evidence-based motivation ONLY — every number from the data; thin data = say less, never invent." },
-    { "id": "teamtalk_pm", "engine": "claude", "model": "opus", "window": "evening", "at": "20:40", "priority": 45, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["pulse.json", "pitch_read.json", "slip.jsonl", "season.json"], "out": "teamtalk_pm", "validate": "no_new_numbers", "speak_to": "teamtalk_DATE_pm.mp3", "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk." },
-    { "id": "deep_reanalysis", "engine": "claude", "model": "opus", "window": "any", "trigger": "reanalysis", "priority": 85, "enabled": true, "max_per_day": 1, "kind": "analysis", "inputs": ["season.json", "notebook.json", "slip.jsonl", "mutations.jsonl", "doubt_grammar.json", "learning_state.json"], "out": "reanalysis", "_note": "EVENT-TRIGGERED DEEP RE-READ (U4, JARVIS harvest): fires ONLY when a milestone/crisis arms the trigger (postmatch auto-arms every 30th matchday; the captain can arm it any time: node scripts/brain.mjs trigger reanalysis 'reason'). Re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts). Trigger is consumed on success." }
+    {
+      "id": "formation_read",
+      "engine": "claude",
+      "model": "opus",
+      "window": "morning",
+      "at": "08:45",
+      "priority": 100,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "manager_m3",
+      "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless."
+    },
+    {
+      "id": "midday_reread",
+      "engine": "gemini",
+      "window": "midday",
+      "at": "13:30",
+      "priority": 60,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "pulse.json",
+        "pitch_read.json",
+        "drills.json"
+      ],
+      "out": "midday",
+      "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "evening_voice",
+      "engine": "claude",
+      "model": "opus",
+      "window": "evening",
+      "at": "21:50",
+      "priority": 90,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "twin.json",
+        "slip.jsonl",
+        "pitch_read.json",
+        "pulse.json"
+      ],
+      "out": "evening_voice"
+    },
+    {
+      "id": "deep_twin",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 50,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "predictions.jsonl",
+        "slip.jsonl",
+        "twin.json"
+      ],
+      "out": "twin",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "doubt_clusters",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 55,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "doubt_grammar.json",
+        "tape_room.json"
+      ],
+      "out": "doubts",
+      "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "lexicon_mine",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 45,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "lexicon.json"
+      ],
+      "out": "lexicon",
+      "validate": "quotes_only",
+      "_note": "Anchor-metaphor assist. Extraction, never invention: validator rejects any anchor text not verbatim-present in the input.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "drill_forge",
+      "engine": "claude",
+      "model": "opus",
+      "window": "overnight",
+      "priority": 70,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "drills.json",
+        "doubt_grammar.json",
+        "weaknesses.json"
+      ],
+      "out": "drill_forge",
+      "validate": "no_new_numbers",
+      "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only."
+    },
+    {
+      "id": "wall_insights",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 40,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "wall_data.json"
+      ],
+      "out": "wall_insights",
+      "validate": "no_new_numbers",
+      "_note": "≤3 insight lines; viz.mjs re-validates before rendering. NUMBERS: quote them EXACTLY as they appear in the data — NEVER sum, average, or derive new ones (515 from 402+113 gets the whole output rejected); if a comparison needs arithmetic, describe it in words without the computed figure.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "season_review",
+      "engine": "claude",
+      "model": "opus",
+      "window": "overnight",
+      "days": [
+        "Sun"
+      ],
+      "priority": 80,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "slip.jsonl",
+        "season.json",
+        "mutations.jsonl",
+        "loop_vitals.json"
+      ],
+      "out": "season",
+      "_note": "The week in evidence lines; words the Boot Room's deterministic proposal — never invents evidence."
+    },
+    {
+      "id": "capsule_premap",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 20,
+      "enabled": true,
+      "max_per_day": 3,
+      "repeatable": true,
+      "kind": "analysis",
+      "inputs": [
+        "doubt_grammar.json",
+        "learning_state.json"
+      ],
+      "out": "premap",
+      "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "scrimmage_staging",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "overnight",
+      "priority": 30,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "scout.json",
+        "learning_state.json"
+      ],
+      "out": "scrimmage",
+      "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive.",
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+    },
+    {
+      "id": "gemini_render",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 35,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "render",
+      "prompt_file": "wall_painter.md",
+      "out": "gemini_wall",
+      "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer."
+    },
+    {
+      "id": "maidan_poster",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 25,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "render",
+      "prompt_file": "match_poster.md",
+      "out": "poster",
+      "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly)."
+    },
+    {
+      "id": "widget_spec",
+      "engine": "gemini",
+      "window": "overnight",
+      "days": [
+        "Wed"
+      ],
+      "priority": 22,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "mirror_manifest.json",
+        "learning_state.json"
+      ],
+      "out": "widget_spec",
+      "_note": "Resurrects the FORGE's RESERVED viz layer: drafts the per-axis widget/viz spec for the NEWEST locked capsule (mechanism + exact values honored; visual freedom per FORGE_DESIGN). Proposal only — flows into a Claude-Design/Gem session via the captain."
+    },
+    {
+      "id": "market_scan",
+      "engine": "gemini",
+      "window": "overnight",
+      "days": [
+        "Sun"
+      ],
+      "priority": 28,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "extra_args": [
+        "--allowedTools",
+        "WebSearch"
+      ],
+      "inputs": [
+        "scout.json",
+        "learning_state.json"
+      ],
+      "out": "market",
+      "validate": null,
+      "_note": "THE SCOUT resurrected (masterplan P6, DOSSIER §9 closed-loop): weekly live scan — 5 most-requested AI-PE skills in India this week, diff vs his current coverage, 3 real postings, every claim cited. Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon. Degrades to a no-op if this claude CLI build rejects the tool flag.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "wall_review",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 24,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "wall_data.json",
+        "../club/wall_gemini.html"
+      ],
+      "out": "wall_review",
+      "_note": "THE CLAUDE↔GEMINI LOOP, closing: critique last night's Gemini render against the captain's design laws (one glance = one story; ≤4 working-memory slots; no walls of text; cold-steel-warm-core palette; no hype/streaks/biometrics). Output = ≤10 concrete render-notes; viz.mjs feeds them into the NEXT night's Gemini prompt pack. The wall improves itself nightly, zero taps from the captain.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "dugout_digest",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 65,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "brain_out/dugout/TODAY.md",
+        "dugout_notes.jsonl",
+        "tape_room.json",
+        "lexicon.json"
+      ],
+      "out": "dugout_digest",
+      "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "day_cartridge",
+      "engine": "gemini",
+      "window": "overnight",
+      "priority": 58,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "brain_out/dugout_digest/TODAY.md",
+        "brain_out/evening_voice/TODAY.md",
+        "drills.json",
+        "pitch_read.json"
+      ],
+      "out": "day_cartridge",
+      "validate": "no_new_numbers",
+      "_note": "THE DAY CARTRIDGE (L3 — the slow brain programs the fast brain across the sleep boundary): compile tomorrow's briefing for the Live voice, ≤15 lines, written TO the Gaffer in second person: yesterday's thread in 3 lines · what he's circling (from the digest) · today's drill focus · one voiced doubt to listen for · anything he asked to carry over. This text is INJECTED into the Dugout's dawn system instruction verbatim. No new numbers, no hype, no calendar pressure.",
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+    },
+    {
+      "id": "teamtalk_am",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "overnight",
+      "priority": 52,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "drills.json",
+        "post_match/TODAY.md",
+        "season.json",
+        "notebook.json"
+      ],
+      "out": "teamtalk_am",
+      "validate": "no_new_numbers",
+      "speak_to": "teamtalk_DATE_am.mp3",
+      "serve": "next_morning",
+      "_note": "THE MORNING TEAM TALK (media engine): the Gaffer's 90-second spoken team talk for TOMORROW MORNING — plain spoken prose, NO markdown/lists/emoji, ~220 words, coach register, Hinglish welds natural. Open from the KAL-line if present (his own words), name the set pieces waiting, one earned-and-specific note from the record, close on 'kal phir'. Evidence-based motivation ONLY — every number from the data; thin data = say less, never invent.",
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+    },
+    {
+      "id": "teamtalk_pm",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "evening",
+      "at": "20:40",
+      "priority": 45,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "pulse.json",
+        "pitch_read.json",
+        "slip.jsonl",
+        "season.json"
+      ],
+      "out": "teamtalk_pm",
+      "validate": "no_new_numbers",
+      "speak_to": "teamtalk_DATE_pm.mp3",
+      "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk.",
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+    },
+    {
+      "id": "deep_reanalysis",
+      "engine": "claude",
+      "model": "opus",
+      "window": "any",
+      "trigger": "reanalysis",
+      "priority": 85,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": [
+        "season.json",
+        "notebook.json",
+        "slip.jsonl",
+        "mutations.jsonl",
+        "doubt_grammar.json",
+        "learning_state.json"
+      ],
+      "out": "reanalysis",
+      "_note": "EVENT-TRIGGERED DEEP RE-READ (U4, JARVIS harvest): fires ONLY when a milestone/crisis arms the trigger (postmatch auto-arms every 30th matchday; the captain can arm it any time: node scripts/brain.mjs trigger reanalysis 'reason'). Re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts). Trigger is consumed on success."
+    }
   ]
 }
