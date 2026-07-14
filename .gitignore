@@ -124,6 +124,8 @@ dressing-room/state/wake.json
 dressing-room/state/cortex_runtime.json
 # the fuelboard (M3) — per-account usage ledger (runtime)
 dressing-room/state/tanks.json
+# the live examiner (M4) — the staged code drill names his weaknesses
+dressing-room/state/examiner_drill.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

@@ -63,6 +63,8 @@ import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
+// M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
+import { loadFreshDrill, drillSection } from "./examiner.mjs";
 
 // M3 — THE WATCHER (T2): the second pair of eyes. Vision-only, never converses,
 // its audio is never played; its rare one-line observations become afferents.
@@ -275,7 +277,7 @@ THE MOCK (run it exactly):
 3. Interrupt him ONCE mid-answer, like a real panel. Stay in persona.
 4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
 5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
-${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}
+${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(loadFreshDrill(now))}
 WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DESIGN ON PAPER — ask for the sketch first, then attack the sketch (the frayed handoff, the missing failure path, "where does this fall over at scale?").
 
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
@@ -416,6 +418,8 @@ THE MEMORY ORGAN (M2): THE SCRIBE — when a durable moment happens (he names a 
 ${identityCartridge() || ""}
 ${whoCartridge() || ""}
 
+THE CHALKBOARD (run_python — you have a real sandbox, use it): when a claim is CHECKABLE, don't assert it — call run_python, narrate what you're running in one line, and read the REAL output back. "Don't trust me, watch it run." Prove answers, execute his ideas mid-drill, verify your own numbers. Grade the CODE, never the coder: a result is data, win-only voicing on what ran clean, a miss resolves silently. Math and demos only — never his personal data (the sandbox refuses it anyway).
+
 THE BRIDGE (the two-speed brain): the club has a deep brain that wakes only for the rare moment that needs real reasoning. Mid-conversation you may receive bracketed NON-SPOKEN notes: [DEEP PENDING …] = it is thinking — if it fits the moment, give ONE short holding line ("ruko — isko theek se sochta hoon") and keep the flow, else stay silent; [DEEP THOUGHT …] = its answer — weave it in as your own considered second thought, in YOUR voice, never read like a memo, never mention the machinery.
 
 DEPTH LEVER: if he tells you how much to talk ("give me full lectures", "always go deep", "keep it short", "stop lecturing") call set_depth and confirm in one line — it sticks until he changes it. His live requests in the moment ("elaborate", "detail mein") ALWAYS override toward more, whatever the standing register.
@@ -452,7 +456,38 @@ const TOOL_DECLS = [
   { name: "mark_moment", description: "THE SCRIBE — silently bank a DURABLE moment the instant it happens: a doubt he names, a win, a stated preference, an open thread to pick up later. text = HIS words, verbatim. Call async, never mention it.", parameters: { type: "OBJECT", properties: { kind: { type: "STRING", enum: ["doubt", "win", "preference", "thread"] }, text: { type: "STRING" } }, required: ["kind", "text"] } },
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
+  { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
 ];
+
+// M4 — THE CHALKBOARD's engine: the REST sandbox (the live socket's own
+// codeExecution HANGS the turn — scar, probed 14 Jul 2026). Code-enforced
+// firewall: model-authored code never touches his personal data or keys.
+const CHALKBOARD_DENY = [/dressing-room/i, /hippocampus/i, /oura/i, /\.gemini/i, /api[_-]?key/i, /environ/i, /open\s*\(/i, /pathlib/i, /subprocess/i, /os\.(system|popen|remove|unlink)/i];
+async function runPythonSandbox(code, deps = {}) {
+  const src = String(code || "").slice(0, 4000);
+  if (!src.trim()) return { ok: false, error: "no code" };
+  const hit = CHALKBOARD_DENY.find(re => re.test(src));
+  if (hit) return { ok: false, error: `chalkboard firewall: pattern ${hit} refused — the sandbox runs MATH and DEMOS, never files/env/personal data` };
+  const keys = deps.keys || loadKeys();
+  const fetchFn = deps.fetchFn || fetch;
+  for (const key of keys) {
+    try {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
+      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.CHALKBOARD_MODEL || "gemini-flash-latest"}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
+        body: JSON.stringify({ contents: [{ parts: [{ text: "Execute exactly this python and show the output. Do not modify it beyond what is needed to run it verbatim:\n```python\n" + src + "\n```" }] }], tools: [{ code_execution: {} }] }),
+      });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      const res = parts.find(p => p.codeExecutionResult);
+      const ranCode = (parts.find(p => p.executableCode) || { executableCode: {} }).executableCode.code || src;
+      if (res) return { ok: res.codeExecutionResult.outcome === "OUTCOME_OK", outcome: res.codeExecutionResult.outcome, output: String(res.codeExecutionResult.output || "").slice(0, 1500), ran: String(ranCode).slice(0, 1000) };
+    } catch { }
+  }
+  return { ok: false, error: "sandbox lane dry (keys/quota) — say so honestly, never fake an output" };
+}
 
 // ---------------------------------------------------------------------------
 // TOOL EXECUTION — every write goes through its owner
@@ -675,7 +710,16 @@ function buildConfig(keys, mode = "gaffer") {
     // keep ~8k) instead of riding server defaults: the session compresses
     // early and lives all day; the durable memory layers own what it evicts.
     compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
+    // M4 SCARS (probed live 14 Jul 2026): {codeExecution:{}} on the LIVE socket
+    // is accepted at setup but HANGS the turn on real use (dead air mid-talk) —
+    // so the Chalkboard is a run_python TOOL on the REST sandbox instead
+    // (proven: exact big-int product, OUTCOME_OK). googleSearch has ZERO free
+    // quota in every shape (1011/429 billing) — honestly ABSENT until a lane
+    // with real quota exists.
     tools: [{ functionDeclarations: TOOL_DECLS }],
+    // M4 — thinking before speech: off by default (latency); low in a mock
+    // (harder turns deserve it); his pref overrides. Shape probed live: OK.
+    thinking: ["off", "low", "high"].includes(prefs.thinking) ? prefs.thinking : (mode === "scrimmage" ? "low" : "off"),
     // THE EARS — VAD tuned for a captain who THINKS mid-sentence. hangover
     // 1400ms means a pause to gather a thought no longer ends his turn (the
     // old 900ms cut deep answers off); barge-in stays instant (any voiced
@@ -831,7 +875,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 19);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 20);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -935,6 +979,27 @@ async function selftest() {
     assert("page: timing hints injected as delivery-only, non-spoken", PAGE.includes("TIMING HINT") && PAGE.includes("delivery only"));
     const mh = readDeepState({ workspace: { version: 1, mouth_hint: { hint: "soften", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {} });
     assert("bridge /deep carries a live mouth hint; expired ones die", mh.mouth_hint && mh.mouth_hint.hint === "soften" && readDeepState({ workspace: { version: 1, mouth_hint: { hint: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {} }).mouth_hint === null);
+  }
+
+  // M4 — THE MOUTH CEILING (Chalkboard-on-REST · thinking · the code round)
+  {
+    const c4 = buildConfig(["k1"]);
+    assert("SCAR: NO codeExecution on the live socket (it hangs the turn — probed)", c4.tools.length === 1 && !JSON.stringify(c4.tools).includes("codeExecution"));
+    assert("search grounding honestly ABSENT (zero free quota — the wire said so)", !JSON.stringify(c4.tools).includes("googleSearch"));
+    assert("CHALKBOARD: run_python is a club tool (20 total)", c4.tools[0].functionDeclarations.length === 20 && c4.tools[0].functionDeclarations.some(t => t.name === "run_python"));
+    assert("thinking: off for talk (latency), low in a mock, pref overrides", c4.thinking === "off" && buildConfig(["k1"], "scrimmage").thinking === "low");
+    assert("page sends thinkingConfig only when thinking is on", PAGE.includes("thinkingConfig:{thinkingLevel:CFG.thinking.toUpperCase()}") && PAGE.includes("CFG.thinking!=='off'"));
+    const fw = await runPythonSandbox("print(open('dressing-room/state/readiness.json').read())", { keys: ["k"], fetchFn: async () => { throw new Error("must not be called"); } });
+    assert("CHALKBOARD FIREWALL: personal-data code REFUSED before any network", fw.ok === false && fw.error.includes("firewall"));
+    const fw2 = await runPythonSandbox("import subprocess; subprocess.run(['ls'])", { keys: ["k"], fetchFn: async () => { throw new Error("no"); } });
+    assert("CHALKBOARD FIREWALL: subprocess/env/file patterns refused too", fw2.ok === false);
+    const okRun = await runPythonSandbox("print(2+2)", { keys: ["k"], fetchFn: async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ executableCode: { code: "print(2+2)" } }, { codeExecutionResult: { outcome: "OUTCOME_OK", output: "4\n" } }] } }] }) }) });
+    assert("CHALKBOARD: sandbox output extracted honest (outcome + real stdout)", okRun.ok === true && okRun.output.trim() === "4" && okRun.ran.includes("2+2"));
+    const dry = await runPythonSandbox("print(1)", { keys: ["k"], fetchFn: async () => ({ ok: false, json: async () => ({}) }) });
+    assert("CHALKBOARD: lane dry → honest error, never a fake output", dry.ok === false && dry.error.includes("honestly"));
+    assert("CHALKBOARD law travels: prove it by running it, grade code never coder", buildSystemInstruction().includes("THE CHALKBOARD") && buildSystemInstruction().includes("watch it run") && buildSystemInstruction().includes("never the coder"));
+    const drill = { date: "2026-07-14", concept: "attention", template: "implement", task: "Implement a MINIMAL working attention", hidden_tests: ["run it"] };
+    assert("the Live Examiner's code round rides the scrimmage when staged", buildScrimmageInstruction(new Date(2026, 6, 14)).length > 0);   // presence asserted in examiner selftest; here: no crash pre-blood
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -1100,7 +1165,7 @@ setupDone=false;
 const key=CFG.keys[keyIdx];
 ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
 ws.onopen=()=>{const s={model:'models/'+CFG.model,
- generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}}},
+ generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}},...(CFG.thinking&&CFG.thinking!=='off'?{thinkingConfig:{thinkingLevel:CFG.thinking.toUpperCase()}}:{})},
  systemInstruction:{parts:[{text:CFG.system}]},
  tools:CFG.tools,
  inputAudioTranscription:{},
@@ -1124,7 +1189,12 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  if(sc.interrupted)stopPlayback();
  if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text)}
  if(sc.outputTranscription&&sc.outputTranscription.text)post('GAFFER',sc.outputTranscription.text);
- if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[]))if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
+ if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[])){
+  if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
+  // M4 — THE CHALKBOARD, visible: the Gaffer's live code runs land in the record
+  if(p.executableCode&&p.executableCode.code){log('⚗ chalkboard runs:\\n'+p.executableCode.code.slice(0,400));post('GAFFER(code)',p.executableCode.code.slice(0,300))}
+  if(p.codeExecutionResult){log('⚗ result ('+(p.codeExecutionResult.outcome||'?')+'): '+String(p.codeExecutionResult.output||'').slice(0,200));post('GAFFER(result)',String(p.codeExecutionResult.output||'').slice(0,200))}
+ }
 };
 ws.onclose=e=>{if(closing)return;
  if(stitching){stitching=false;setupDone=false;connect();return}
@@ -1294,7 +1364,8 @@ async function main() {
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
         if (req.url === "/tool") {
-          if (body.name === "semantic_recall") return send(200, await execRecall(body.args || {}));   // the one async tool
+          if (body.name === "semantic_recall") return send(200, await execRecall(body.args || {}));   // async tool
+          if (body.name === "run_python") return send(200, await runPythonSandbox((body.args || {}).code));   // M4 — the Chalkboard (async, REST sandbox)
           return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
         }
         if (req.url === "/transcript") {
