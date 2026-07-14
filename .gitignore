@@ -134,6 +134,9 @@ dressing-room/state/dmn_precache.json
 dressing-room/state/presence_log.jsonl
 # the living dossier (M8) — intra-day belief state over his learning
 dressing-room/state/dossier.json
+# the kennel lease (M9) — LOCAL until the Pi arrives; then remove this line so
+# the lease travels the git bus (see groundsman.mjs header: TRANSPORT)
+dressing-room/state/bus_lease.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

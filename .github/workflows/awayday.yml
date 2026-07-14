@@ -1,0 +1,22 @@
+# THE AWAY-DAY RUNNER (CYBORG_BRAIN.md §9) — a CI lane, NOT a home for the brain.
+# Runs ONLY the public_safe-flagged jobs in ci_manifest.json; the runner script
+# refuses the whole run if even one job lacks the flag. Personal data is
+# gitignored and therefore absent in this checkout by construction.
+name: away-day
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 21 * * *"   # 03:00 IST — while the house sleeps
+  workflow_dispatch: {}
+jobs:
+  public-safe-chores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node scripts/awayday.mjs run

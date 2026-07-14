@@ -1,0 +1,7 @@
+{
+  "_doc": "THE AWAY-DAY MANIFEST (CYBORG_BRAIN.md §9) — the ONLY jobs a cloud runner may execute. Every job MUST carry public_safe:true; scripts/awayday.mjs refuses the whole run if even one lacks it. Selftests are public-safe by design: every suite is dormant-safe and reads zero personal data (personal files are gitignored and absent in a cloud checkout anyway — this flag is the second lock).",
+  "jobs": [
+    { "name": "organism-selftests", "run": "npm run organism:selftest", "public_safe": true },
+    { "name": "squad-selftests", "run": "npm run squad:selftest", "public_safe": true }
+  ]
+}
