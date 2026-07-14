@@ -102,14 +102,14 @@ async function embedPool(texts, keys = loadKeys(), fetchFn = fetch) {
 }
 // models walk a fallback ladder (preview churn law: probed live 14 Jul 2026 —
 // bare "gemini-3.1-flash" is NOT on the wire; the -latest aliases survive churn)
-async function generatePool(prompt, { models, maxOutputTokens = 2048, json = false, keys = loadKeys(), fetchFn = fetch } = {}) {
+async function generatePool(prompt, { models, maxOutputTokens = 2048, json = false, keys = loadKeys(), fetchFn = fetch, temperature = 0.4 } = {}) {
   const ladder = models || [process.env.HIPPO_GEN_MODEL, "gemini-3.1-pro-preview", "gemini-flash-latest"].filter(Boolean);
   let lastStatus = null;                              // M16 — callers with a PINNED key learn WHY it failed (429 = lane dry)
   for (const model of ladder) {
     for (const key of keys) {
       try {
         const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 120000);
-        const gc = { maxOutputTokens, temperature: 0.4 };
+        const gc = { maxOutputTokens, temperature };  // M23 — hot sampling for difficulty grading
         if (json) gc.responseMimeType = "application/json";   // the wire enforces JSON, not the prompt
         const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
           method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,

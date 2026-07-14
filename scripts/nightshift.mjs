@@ -119,6 +119,55 @@ async function probeBank(deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// JOB 1b — M23 DIFFICULTY GRADING: the bank answers its own probes, k=3 at
+// t=0.9 on the free lane + 1 pro attempt (403 on free keys → flash, honest).
+// The VARIANCE across the answers is the difficulty: when four attempts
+// diverge, the probe sits on contested ground — exactly where a scrimmage
+// earns the most. Probes sort hardest-first; the scrimmage takes from the top.
+// Only the scrimmage's own ground (novel / negative-space) is graded, capped.
+// ---------------------------------------------------------------------------
+const GRADE = { probes_per_night: 6, k: 3, temp: 0.9 };
+function answerVariance(answers) {
+  if (!answers || answers.length < 2) return 0;
+  let sum = 0, n = 0;
+  for (let i = 0; i < answers.length; i++) for (let j = i + 1; j < answers.length; j++) {
+    const A = new Set(String(answers[i]).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 4));
+    const B = new Set(String(answers[j]).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 4));
+    const inter = [...A].filter(w => B.has(w)).length;
+    const uni = new Set([...A, ...B]).size || 1;
+    sum += 1 - inter / uni; n++;
+  }
+  return Math.round((sum / n) * 100) / 100;           // 0 = every attempt agrees · 1 = disjoint ground
+}
+async function gradeProbes(bank, deps = {}) {
+  const use = deps.recordUse || recordUse;
+  const genHot = deps.generateHot || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, temperature: GRADE.temp }));
+  const genPro = deps.generatePro || ((p) => generatePool(p, { models: ["gemini-3.1-pro-preview", "gemini-flash-latest"], maxOutputTokens: 2048 }));
+  const targets = [];
+  for (const [concept, v] of Object.entries(bank || {})) for (const pr of v.probes || []) {
+    if (["novel", "negative-space"].includes(pr.type)) targets.push({ concept, probe: pr });
+  }
+  const batch = targets.slice(0, GRADE.probes_per_night);
+  let spent = 0, graded = 0;
+  for (const t of batch) {
+    const q = `Answer this interview probe as a strong AI Product Engineer candidate, in ≤120 words, no preamble: "${t.probe.probe}"`;
+    const answers = [];
+    for (let i = 0; i < GRADE.k; i++) {
+      const r = await genHot(q).catch(() => ({ ok: false }));
+      use("T7", 1, 2000); spent++;
+      if (r.ok && r.text) answers.push(r.text);
+    }
+    const rp = await genPro(q).catch(() => ({ ok: false }));
+    use("T5", 1, 2000); spent++;
+    if (rp.ok && rp.text) answers.push(rp.text);
+    if (answers.length >= 2) { t.probe.difficulty = answerVariance(answers); t.probe.graded = answers.length; graded++; }
+  }
+  // hardest ground first — every consumer naturally takes from the top
+  for (const v of Object.values(bank || {})) if (v.probes) v.probes.sort((a, b) => (b.difficulty || 0) - (a.difficulty || 0));
+  return { graded, spent };
+}
+
+// ---------------------------------------------------------------------------
 // JOB 2 — PERSONALIZED DISTRACTORS (his own confusion shapes make the wrong answers)
 // ---------------------------------------------------------------------------
 async function distractorBank(deps = {}) {
@@ -485,8 +534,9 @@ async function runShift(deps = {}) {
   const write = deps.write || ((name, content) => writeAtomic(join(OUT_DIR, name), content));
 
   const pb = await probeBank(deps);
+  const gr = Object.keys(pb.bank).length ? await gradeProbes(pb.bank, deps) : { graded: 0, spent: 0 };   // M23 — grade BEFORE the bank is filed
   if (Object.keys(pb.bank).length) write(`probe_bank_${day}.json`, { date: day, bank: pb.bank });
-  out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent };
+  out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent, graded: gr.graded, grade_spent: gr.spent };
 
   const db = await distractorBank(deps);
   if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
@@ -537,7 +587,7 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const genProbes = async () => ({ ok: true, text: JSON.stringify(PROBE_TYPES.map(t => ({ type: t, probe: `a solid ${t} probe with enough length to pass validation` }))) });
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
-  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", now: new Date("2026-07-15T02:45:00") };
+  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), now: new Date("2026-07-15T02:45:00") };
 
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
@@ -559,6 +609,35 @@ async function selftest() {
   {
     const pb = await probeBank({ ...base, generate: genBad });
     assert("junk probes REJECTED per-item (code validates, junk never banked)", Object.keys(pb.bank).length === 0);
+  }
+
+  // JOB 1b — M23 DIFFICULTY GRADING: variance = difficulty, hardest first
+  {
+    const bank = { tokenization: { why: "capsule", probes: [
+      { type: "recall", probe: "a recall probe long enough to pass validation" },
+      { type: "novel", probe: "a novel probe long enough to pass validation" },
+      { type: "negative-space", probe: "a negative space probe long enough to pass" },
+    ] } };
+    let hotCalls = 0, proCalls = 0;
+    const spends = [];
+    const r = await gradeProbes(bank, {
+      generateHot: async () => { hotCalls++; return { ok: true, text: hotCalls % 2 ? "attention scales quadratically because pairwise handshakes multiply across positions" : "completely different framing about memory bandwidth saturation limits hardware" }; },
+      generatePro: async () => { proCalls++; return { ok: true, text: "a third entirely distinct answer regarding compiler kernels fusion throughput" }; },
+      recordUse: (id) => spends.push(id),
+    });
+    assert("GRADING: k=3 hot + 1 pro answers per scrimmage-ground probe", r.graded === 2 && hotCalls === 6 && proCalls === 2);
+    assert("GRADING: divergent answers = HIGH difficulty (contested ground)", bank.tokenization.probes.find(p => p.type === "novel").difficulty > 0.5);
+    assert("GRADING: probes sort hardest-first (the scrimmage takes from the top)", ["novel", "negative-space"].includes(bank.tokenization.probes[0].type) && bank.tokenization.probes[bank.tokenization.probes.length - 1].type === "recall");
+    assert("GRADING: hot spends on T7, the pro attempt on T5", spends.filter(s => s === "T7").length === 6 && spends.filter(s => s === "T5").length === 2);
+    // consensus ground = low difficulty
+    const bank2 = { x: { why: "w", probes: [{ type: "novel", probe: "another probe long enough to pass validation" }] } };
+    await gradeProbes(bank2, { generateHot: async () => ({ ok: true, text: "identical answer words every single time repeated verbatim consistently" }), generatePro: async () => ({ ok: true, text: "identical answer words every single time repeated verbatim consistently" }), recordUse: () => {} });
+    assert("GRADING: consensus answers = LOW difficulty (settled ground)", bank2.x.probes[0].difficulty < 0.1);
+    // dry lanes → ungraded, never crash; recall probes never graded (cap discipline)
+    const bank3 = { y: { why: "w", probes: [{ type: "novel", probe: "yet another probe long enough to pass" }, { type: "recall", probe: "recall probe long enough to pass validation" }] } };
+    const rDry = await gradeProbes(bank3, { generateHot: async () => ({ ok: false }), generatePro: async () => ({ ok: false }), recordUse: () => {} });
+    assert("GRADING: dry lanes → probe stays ungraded (never fabricate a grade)", rDry.graded === 0 && bank3.y.probes.every(p => p.difficulty === undefined));
+    assert("GRADING: variance math — clones 0, disjoint ~1", answerVariance(["same words here always", "same words here always"]) === 0 && answerVariance(["alpha bravo charlie delta echoes", "zulu yankee xylophone whiskey victor"]) === 1);
   }
   // the tuner speaks with data
   {
@@ -681,4 +760,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, drillConcepts, isOvernight, CAPS, TUNNEL, SEASON_CAPS };
+export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, CAPS, TUNNEL, SEASON_CAPS, GRADE };
