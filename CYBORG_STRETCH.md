@@ -1,5 +1,23 @@
 # ⚪🔴 CYBORG_STRETCH.md — the M14+ arc (handoff spec)
 
+> **BUILD STATUS (15 Jul 2026, "haan chalao" arc): PARTS A + B + C ARE BUILT, GREEN,
+> AND LIVE-RUN** — one labelled commit per unit in the ranked order (M17 `f918eea` ·
+> M16 `ffd80ae` · M14 `1402c81` · M21 `2c62b81` · M18 `393b32a` · M22 `98aa9cd` ·
+> M15 `5dd131f` · M20 `2d85a93` · M23 `23b7140` · Part C `8ab0aa9`), each selftested +
+> real-run per the law. All three §A wire-scars are dead (M14 killed the wake clobber,
+> M16 the serial dream, M22 the lost thought). Full chains green: 31 organism suites +
+> all squad suites. **Live proofs:** 24 pre-answers cached + a Hinglish doubt cosine-
+> matched at 0.97 with zero Opus; two Opus extended reads THINKING AT ONCE (29s overlap);
+> a suppressed thought's full ledger life `queued → drained → returned`; the sonnet
+> cross-examiner seated + ledgered; all five Part-C wire shapes setupComplete-verified;
+> the ephemeral MINT lane proven (the WS attach shape is not on the wire yet — scar
+> documented at `mintEphemeralToken`, re-probe via `dugout.mjs mint-probe`).
+> **What stays hypothesis until the pool refills:** the dry-night organs' happy paths
+> (M18's first real season read · M16's full 60-100-rollout stadium night · M23's live
+> grades) — their honest-degradation paths all ran live; the nightly schedule re-runs
+> them on fresh quota. Parts D + G need the captain's hand — see the list at the end
+> of the build session (git log `organism M17`…`organism PART C`).
+
 > **Written 14 Jul 2026, on the captain's order:** *"stretch the capabilities of the
 > brain and the organs to its absolute ceiling — make it a real cyborg brain, not a
 > human brain."* Distilled from 3 parallel deep audits (Live-API max · cyborg-stretch ·
