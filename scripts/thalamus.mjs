@@ -58,6 +58,7 @@ const WORKSPACE = join(STATE_DIR, "workspace.json");
 const SLEDGER   = join(STATE_DIR, "salience_ledger.jsonl");
 const WAKE      = join(STATE_DIR, "wake.json");
 const WQUEUE    = join(STATE_DIR, "wake_queue.jsonl");     // M14 — the overlap: wakes QUEUE, never clobber
+const BGQUEUE   = join(STATE_DIR, "bg_queue.jsonl");       // M22 — suppress the WAKE, never the THOUGHT
 const DOSSIER   = join(STATE_DIR, "dossier.json");
 const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
 const PORT = 4113;                                  // one below the Dugout's 4114
@@ -212,6 +213,29 @@ function pendingWakes(rows) {
   }
   return [...open.values()];
 }
+// M22 — the background queue's open set (queued minus drained/returned)
+function pendingBg(rows) {
+  const open = new Map();
+  for (const r of rows || []) {
+    if (!r || !r.moment_id) continue;
+    if (r.status === "queued") open.set(r.moment_id, r);
+    else open.delete(r.moment_id);
+  }
+  return [...open.values()];
+}
+// M22 — the recall-match: does the current spotlight touch a held background
+// thought? Exact concept-token hit or ≥2 shared >3-char words. Free, in-memory.
+function matchBg(evt, bgItems) {
+  const tokens = new Set((evt.concept_tokens || []).map(t => String(t).toLowerCase()));
+  const words = new Set(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3));
+  for (const b of bgItems || []) {
+    const bTokens = (b.tokens || []).map(t => String(t).toLowerCase());
+    if (bTokens.some(t => tokens.has(t))) return b;
+    const bWords = `${b.concept || ""} ${b.insight || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+    if (bWords.filter(w => words.has(w)).length >= 2) return b;
+  }
+  return null;
+}
 // M14 — the effective daily wake cap derives from the REAL window, floored so
 // the day's sharpest surprise always has a lane; wake_cap_per_day stays the
 // hard humane ceiling. Folklore is dead; the ledger decides.
@@ -255,6 +279,8 @@ function createNucleus(cfg, deps = {}) {
     // M14 — wakes QUEUE (append), they never clobber; wake.json stays as the
     // latest-wake mirror so every pre-queue reader keeps working (layering)
     appendWakeQueue: deps.appendWakeQueue || ((row) => appendFileSync(WQUEUE, JSON.stringify(row) + "\n")),
+    // M22 — the second spotlight: a suppressed wake's THOUGHT is queued here
+    appendBgQueue: deps.appendBgQueue || ((row) => appendFileSync(BGQUEUE, JSON.stringify(row) + "\n")),
     markets: deps.markets || (() => { const t = readJson(join(STATE_DIR, "twin.json")); const m = {}; for (const mk of (t && t.markets) || []) m[mk.id] = mk.p; return m; }),
     headroomFrac: deps.headroomFrac || defaultHeadroomFrac,
     allowedTokens: deps.allowedTokens || defaultAllowedTokens,   // M14 — the live cap rides the real ledger
@@ -376,6 +402,13 @@ function createNucleus(cfg, deps = {}) {
         const lastWake = N.wakeKeys.get(g.spotlight.key);
         if (lastWake && now - lastWake < cfg.refractory_min * 60000) { tier = 1; outcome = "refractory"; }
         else if (N.wakesToday >= capToday) { tier = 1; outcome = "capped"; }
+        // M22 — THE SECOND SPOTLIGHT: suppress the WAKE, never the THOUGHT.
+        // A refractory/capped moment earned deep attention and lost only the
+        // Opus lane — it queues for the idle-tank drain instead of dying.
+        if (outcome === "refractory" || outcome === "capped") {
+          D.appendBgQueue({ moment_id: momentId, ts: new Date(now).toISOString(), status: "queued", reason: outcome, spotlight: { ...g.spotlight.evt, S: g.spotlight.S }, bound_context: g.context.map(c => ({ modality: c.evt.modality, text: c.evt.text, event_key: c.evt.event_key })) });
+          D.log(`thalamus: ${outcome} moment queued for the second spotlight — the thought survives the gate`);
+        }
       }
       const moment = {
         moment_id: momentId, ts: new Date(now).toISOString(), tier,
@@ -421,8 +454,20 @@ function createNucleus(cfg, deps = {}) {
           }
         }
       }
+      // M22 — THE RECALL-MATCH: he just touched ground a suppressed thought
+      // lives on — the drained insight returns NOW, zero switching cost.
+      // Consumed on return (a background thought speaks its piece once).
+      let bgHint = N.workspace.bg_hint || null;
+      const bgHeld = Array.isArray(N.workspace.bg) ? N.workspace.bg : [];
+      const bgMatch = matchBg(g.spotlight.evt, bgHeld);
+      if (bgMatch) {
+        bgHint = { type: "second_spotlight", concept: bgMatch.concept, insight: bgMatch.insight, from_moment: bgMatch.moment_id, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+        N.workspace = { ...N.workspace, bg: bgHeld.filter(b => b.moment_id !== bgMatch.moment_id) };
+        D.appendBgQueue({ moment_id: bgMatch.moment_id, status: "returned", at: moment.ts, to_moment: momentId });
+        D.log(`thalamus: second spotlight returned — a suppressed thought on "${bgMatch.concept}" met its recall-match`);
+      }
       // THE BROADCAST IS THE WRITE — version-stamped; every region subscribes
-      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, pre_answer: preAnswer, mouth_hint: N.workspace.mouth_hint || null };
+      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, pre_answer: preAnswer, bg: Array.isArray(N.workspace.bg) ? N.workspace.bg : [], bg_hint: bgHint, mouth_hint: N.workspace.mouth_hint || null };
       D.writeWorkspace(N.workspace);
       if (tier === 2) {
         N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now);
@@ -472,7 +517,21 @@ function createNucleus(cfg, deps = {}) {
     return { ok: true, version: N.workspace.version };
   }
 
-  return { ingest, flush, foldDeepAnswer, state: N, cfg };
+  // M22 — a drained background thought folds in THROUGH the nucleus (single-
+  // writer preserved: the DMN posts, only this file writes workspace/bg_queue)
+  function foldBgDrained(body) {
+    const id = String(body.moment_id || "");
+    if (!id || !body.insight) return { ok: false, error: "a drained thought needs moment_id + insight" };
+    const held = (Array.isArray(N.workspace.bg) ? N.workspace.bg : []).filter(b => b.moment_id !== id);
+    held.push({ moment_id: id, concept: String(body.concept || "").slice(0, 80), insight: String(body.insight || "").slice(0, 400), tokens: Array.isArray(body.tokens) ? body.tokens.slice(0, 6) : [], ts: new Date(D.now()).toISOString() });
+    while (held.length > 10) held.shift();             // FIFO cap — the shelf stays small
+    N.workspace = { ...N.workspace, version: (N.workspace.version || 0) + 1, updated_at: new Date(D.now()).toISOString(), bg: held };
+    D.writeWorkspace(N.workspace);
+    D.appendBgQueue({ moment_id: id, status: "drained", at: new Date(D.now()).toISOString() });
+    return { ok: true, held: held.length };
+  }
+
+  return { ingest, flush, foldDeepAnswer, foldBgDrained, state: N, cfg };
 }
 function hash32(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h; }
 // Hamming distance between two 16-hex-char (64-bit) perceptual hashes
@@ -593,12 +652,13 @@ async function selftest() {
   // harness: virtual clock + captured writes + injected markets/headroom/adjudicator
   function rig(over = {}) {
     let t = 1000000;
-    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], queue: [], adjCalls: 0 };
+    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], queue: [], bgQueue: [], adjCalls: 0 };
     const n = createNucleus(over.cfg || cfg, {
       now: () => t,
       appendAfferent: (r) => wr.afferents.push(r), appendLedger: (r) => wr.ledger.push(r),
       writeWorkspace: (o) => wr.workspaces.push(JSON.parse(JSON.stringify(o))), writeWake: (o) => wr.wakes.push(JSON.parse(JSON.stringify(o))),
       appendWakeQueue: (r) => wr.queue.push(JSON.parse(JSON.stringify(r))),
+      appendBgQueue: (r) => wr.bgQueue.push(JSON.parse(JSON.stringify(r))),
       markets: () => over.markets || { session_happened: 0.9 },
       headroomFrac: () => (over.frac !== undefined ? over.frac : 1),
       allowedTokens: () => (over.allowedTokens !== undefined ? over.allowedTokens : 800000),
@@ -825,6 +885,45 @@ async function selftest() {
     assert("no cache match → NO pre-answer (never improvise an answer)", wr4.workspaces[wr4.workspaces.length - 1].pre_answer === null);
   }
 
+  // M22 — THE SECOND SPOTLIGHT: suppress the WAKE, never the THOUGHT
+  {
+    const capCfg = { ...cfg, refractory_min: 0 };
+    const { n, wr, tick } = rig({ cfg: capCfg, allowedTokens: 80000 });   // live cap = 2
+    for (const c of ["tokenization", "embeddings", "attention"]) {
+      await n.ingest({ modality: "voice", text: `i don't get ${c}`, concept_tokens: [c] });
+      await n.flush(); tick(60000);
+    }
+    const queued = wr.bgQueue.filter(b => b.status === "queued");
+    assert("a CAPPED moment queues its thought (never lost)", queued.length === 1 && queued[0].reason === "capped" && queued[0].spotlight.text.includes("attention"));
+    // refractory also queues (a live market keeps S high on the repeat)
+    const { n: n2, wr: wr2, tick: t2 } = rig({ markets: { m1: 0.9 } });
+    const hot = { modality: "voice", text: "i don't get attention scaling", market_id: "m1", observed: false, event_key: "doubt:attention" };
+    await n2.ingest({ ...hot }); await n2.flush();
+    t2(5 * 60000);
+    await n2.ingest({ ...hot }); await n2.flush();
+    assert("a REFRACTORY moment queues its thought too", wr2.bgQueue.some(b => b.status === "queued" && b.reason === "refractory"));
+    // the drain folds in THROUGH the nucleus; the shelf is capped
+    const fold = n.foldBgDrained({ moment_id: queued[0].moment_id, concept: "attention", insight: "the n-squared cost is the meetings, not the recompute", tokens: ["attention"] });
+    assert("a drained thought folds into workspace.bg (single-writer intact)", fold.ok && wr.workspaces[wr.workspaces.length - 1].bg.length === 1);
+    assert("the drain is LEDGERED (queued → drained rows)", wr.bgQueue.some(b => b.status === "drained" && b.moment_id === queued[0].moment_id));
+    // the recall-match: touching that ground returns the thought, consumed
+    tick(60000);
+    await n.ingest({ modality: "voice", text: "attention waali baat phir se", concept_tokens: ["attention"] });
+    await n.flush();
+    const wsp = wr.workspaces[wr.workspaces.length - 1];
+    assert("the RECALL-MATCH returns the thought at zero switching cost", wsp.bg_hint && wsp.bg_hint.type === "second_spotlight" && wsp.bg_hint.insight.includes("meetings"));
+    assert("a returned thought is CONSUMED (speaks its piece once)", wsp.bg.length === 0 && wr.bgQueue.some(b => b.status === "returned"));
+    // no match → nothing returns
+    const { n: n3, wr: wr3 } = rig();
+    n3.state.workspace.bg = [{ moment_id: "m_x", concept: "quantization", insight: "unrelated", tokens: ["quantization"] }];
+    await n3.ingest({ modality: "voice", text: "completely different cricket chat today", concept_tokens: [] });
+    await n3.flush();
+    assert("no recall-match → the thought stays on the shelf", wr3.workspaces[wr3.workspaces.length - 1].bg.length === 1 && !wr3.workspaces[wr3.workspaces.length - 1].bg_hint);
+    // pendingBg reducer
+    const open = pendingBg([{ moment_id: "a", status: "queued" }, { moment_id: "b", status: "queued" }, { moment_id: "a", status: "drained" }]);
+    assert("pendingBg: drained rows close their entry, others stay open", open.length === 1 && open[0].moment_id === "b");
+  }
+
   // habituation decays — after a long silence the same signal can fire again
   {
     const { n, tick } = rig();
@@ -874,6 +973,7 @@ async function main() {
         const body = raw ? JSON.parse(raw) : {};
         if (req.url === "/afferent") return send(200, await nucleus.ingest(body));
         if (req.url === "/deep-answer") return send(200, nucleus.foldDeepAnswer(body));
+        if (req.url === "/bg-drained") return send(200, nucleus.foldBgDrained(body));   // M22
       }
       send(404, { error: "not found" });
     } catch (e) { send(500, { error: String(e.message).slice(0, 200) }); }
@@ -887,4 +987,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, wakeCapToday };
+export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday };

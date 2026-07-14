@@ -41,6 +41,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
 import { loadBoard, headroomOf, recordUse, record429, stateOf } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
+import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the thalamus owns bg_queue.jsonl
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -48,6 +49,7 @@ const PRECACHE  = join(STATE_DIR, "dmn_precache.json");
 const AW = "http://localhost:5600";
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + ".tmp";
@@ -223,6 +225,48 @@ async function dream(deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// M22 — THE BG DRAIN: the gate suppressed a wake (refractory/capped) but the
+// THOUGHT queued in bg_queue.jsonl (thalamus-owned). Idle free lanes give each
+// its second spotlight; results fold back THROUGH :4113/bg-drained (single-
+// writer preserved) and wait on the nucleus's shelf for his next recall-match.
+// Thalamus down / lane dry → entries simply stay queued (honest retry).
+// Mid-day the mouth/eyes lanes (T1/T2) are NEVER borrowed — pickTank's law.
+// ---------------------------------------------------------------------------
+const BG_DRAIN_CAP = 6;
+async function drainBg(deps = {}) {
+  const tone = deps.tone || currentTone();
+  if (!tone.effects.dmn_allowed) return { ok: false, skipped: "tone is conserve — the drain rests too" };
+  const rows = deps.readBgQueue ? deps.readBgQueue() : readLines(join(STATE_DIR, "bg_queue.jsonl"));
+  const open = pendingBg(rows);
+  if (!open.length) return { ok: true, drained: 0, note: "no suppressed thoughts waiting" };
+  const board = deps.board || loadBoard();
+  const keys = deps.keys || loadHippoKeys();
+  const lanes = borrowableTanks(board, keys).filter(l => deps.away === true || !["T1", "T2"].includes(l.tank.id));
+  if (!lanes.length) return { ok: false, skipped: "no borrowable lane — the thoughts keep waiting (never spend the core)" };
+  const gen = deps.generate || ((p, lane) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 4096, json: true, keys: [lane.key] }));
+  const use = deps.recordUse || recordUse;
+  const post = deps.post || (async (body) => { const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); });
+  const batch = open.slice(0, BG_DRAIN_CAP);
+  let drained = 0;
+  for (let i = 0; i < batch.length; i++) {
+    const b = batch[i];
+    const lane = lanes[i % lanes.length];
+    const spot = b.spotlight || {};
+    const r = await gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly. THE MOMENT: ${JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600)}. Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane).catch(() => ({ ok: false }));
+    use(lane.tank.id, 1, 2500);
+    if (!r.ok) continue;
+    try {
+      const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+      const obj = JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw);
+      if (!obj.insight || String(obj.insight).length < 20) continue;   // a thin read never shelves
+      const res = await post({ moment_id: b.moment_id, concept: obj.concept, insight: obj.insight, tokens: spot.concept_tokens || [] }).catch(() => null);
+      if (res && res.ok) drained++;
+    } catch { }
+  }
+  return { ok: true, drained, waiting: open.length - drained };
+}
+
+// ---------------------------------------------------------------------------
 // dreamLegacy — the pre-M16 engine, FROZEN VERBATIM (layering, never replace):
 // one tank (T7), up to 8 serial rollouts, no verification. Kept runnable as
 // the fallback floor and the reference for what the stadium replaced.
@@ -327,6 +371,40 @@ async function selftest() {
     assert("STADIUM: the surviving lane still dreams (dry pool ≠ dead dream)", r.rollouts >= 1 && r.lanes.includes("T7"));
   }
 
+  // M22 — THE BG DRAIN: second spotlight on idle lanes, folded back via :4113
+  {
+    const bgRows = [
+      { moment_id: "bg1", status: "queued", reason: "capped", spotlight: { text: "i don't get attention scaling", concept_tokens: ["attention"] } },
+      { moment_id: "bg2", status: "queued", reason: "refractory", spotlight: { text: "kv cache doubt again", concept_tokens: ["kv"] } },
+      { moment_id: "bg0", status: "queued", reason: "capped", spotlight: { text: "already handled" } },
+      { moment_id: "bg0", status: "drained" },
+    ];
+    const twoLanes = { tanks: [
+      { id: "T5", name: "Scout", region: "research", key_index: 3, quota_est: 50, observed_ceiling: 0, used_today: 0, enabled: true },
+      { id: "T7", name: "DMN", region: "default-mode", key_index: 5, quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true },
+    ] };
+    const posts = []; const spends = {};
+    const genBG = async () => ({ ok: true, text: JSON.stringify({ concept: "attention", insight: "the suppressed read: caching kills recompute, the handshakes stay — hold that distinction" }) });
+    const r = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, post: async (b) => { posts.push(b); return { ok: true }; } });
+    assert("DRAIN: open thoughts drained on idle lanes, folded back via :4113", r.ok && r.drained === 2 && posts.length === 2 && posts[0].moment_id === "bg1" && posts[0].tokens.includes("attention"));
+    assert("DRAIN: already-drained entries never re-drain (event-sourced)", !posts.some(p => p.moment_id === "bg0"));
+    assert("DRAIN: every spend recorded on ITS lane", Object.keys(spends).length >= 1);
+    const rMute = await drainBg({ tone: { effects: { dmn_allowed: false } }, readBgQueue: () => bgRows });
+    assert("DRAIN: conserve tone mutes the drain too", rMute.ok === false && rMute.skipped.includes("conserve"));
+    const t12 = { tanks: [
+      { id: "T1", name: "Gaffer", region: "mouth", key_index: 0, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
+      { id: "T2", name: "Watcher", region: "vision", key_index: 1, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
+    ] };
+    const rT12 = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    assert("DRAIN: mouth/eyes lanes NEVER borrowed mid-day (pickTank's law)", rT12.ok === false && rT12.skipped.includes("never spend the core"));
+    const rAway = await drainBg({ away: true, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    assert("DRAIN: away-time legalizes the borrow (same law as the stadium)", rAway.ok && rAway.drained === 2);
+    const rDown = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => { throw new Error("nucleus down"); } });
+    assert("DRAIN: thalamus down → thoughts stay queued (honest retry, nothing lost)", rDown.ok && rDown.drained === 0 && rDown.waiting === 2);
+    const rNone = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
+    assert("DRAIN: empty queue → quiet no-op", rNone.ok && rNone.drained === 0 && rNone.note);
+  }
+
   // clustering determinism
   {
     const rolls = [
@@ -364,10 +442,18 @@ async function main() {
     console.log(p ? `dmn: precache ${p.date} — ${p.entries.length} predicted stall(s) loaded (${p.rollouts} rollouts${p.engine === "stadium" ? ` · stadium across ${(p.lanes || []).join("+")} · ${p.verified || 0} verified` : " · legacy"}) · INERT until M7 serves it through the earned-voice gate` : "dmn: no precache yet — it dreams when he's away");
     return;
   }
+  if (mode === "drain") {
+    const d = await drainBg({});
+    console.log(d.ok ? `dmn: second spotlight — ${d.drained} suppressed thought(s) drained${d.waiting ? `, ${d.waiting} waiting` : ""}${d.note ? ` (${d.note})` : ""}` : `dmn: no drain — ${d.skipped}`);
+    return;
+  }
+  // the drain rides every pass first (cheap, ≤6, mouth/eyes lanes excluded mid-day)
+  const bg = await drainBg({}).catch(() => ({ ok: false, skipped: "drain error" }));
+  if (bg.ok && bg.drained) console.log(`dmn: second spotlight — ${bg.drained} suppressed thought(s) drained`);
   const r = await dream({ force: process.argv.includes("--force") });
   console.log(r.ok ? `dmn: dreamed — ${r.entries} stall signature(s) from ${r.rollouts} rollouts across ${(r.lanes || []).join("+")} (${r.verified} verified; INERT ammunition for M7)` : `dmn: no dream — ${r.skipped}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { weakVector, isAway, dream, dreamLegacy, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK };
+export { weakVector, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP };

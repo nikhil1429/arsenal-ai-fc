@@ -134,6 +134,9 @@ function readDeepState(deps = {}) {
   // fresh-only): his doubt arrived already answered by the night shift; the
   // Gaffer weaves it only if it earns the turn. No gate is modified.
   out.pre_answer = (ws && ws.pre_answer && new Date(ws.pre_answer.expires) > new Date()) ? ws.pre_answer : null;
+  // M22 — the second spotlight rides the same pattern: a suppressed thought
+  // returned at its recall-match, non-spoken, fresh-only. No gate modified.
+  out.bg_hint = (ws && ws.bg_hint && new Date(ws.bg_hint.expires) > new Date()) ? ws.bg_hint : null;
   // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
   out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
   // M7 — THE EARNED-VOICE GATE at the mouth: the whisper passes ONLY when
@@ -1171,6 +1174,10 @@ async function selftest() {
     const pa = readDeepState({ workspace: { version: 1, pre_answer: { moment_id: "m2", concept: "kv cache", answer: "the cache kills recompute, not the handshakes", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {} });
     assert("bridge /deep carries a FRESH pre-answer (M17); expired ones die", pa.pre_answer && pa.pre_answer.answer.includes("recompute") && readDeepState({ workspace: { version: 1, pre_answer: { moment_id: "m2", answer: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {} }).pre_answer === null);
     assert("the page injects the pre-answer NON-SPOKEN, deduped by moment", PAGE.includes("PRE-ANSWER LOADED") && PAGE.includes("lastPreAnsId"));
+    // M22 — the second spotlight rides the same lane: fresh passes, stale dies
+    const bh = readDeepState({ workspace: { version: 1, bg_hint: { moment_id: "m3", concept: "kv", insight: "the suppressed read survives", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {}, queueRows: [] });
+    assert("bridge /deep carries a FRESH second spotlight (M22); expired ones die", bh.bg_hint && bh.bg_hint.insight.includes("survives") && readDeepState({ workspace: { version: 1, bg_hint: { moment_id: "m3", insight: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {}, queueRows: [] }).bg_hint === null);
+    assert("the page injects the second spotlight NON-SPOKEN, deduped", PAGE.includes("SECOND SPOTLIGHT") && PAGE.includes("lastBgHintId"));
   }
 
   // M4 — THE MOUTH CEILING (Chalkboard-on-REST · thinking · the code round)
@@ -1493,10 +1500,10 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,deepPrimed=false;
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,deepPrimed=false;
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
@@ -1509,6 +1516,9 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.pre_answer&&d.pre_answer.moment_id!==lastPreAnsId){lastPreAnsId=d.pre_answer.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[PRE-ANSWER LOADED — the night shift already answered this exact doubt ('+d.pre_answer.concept+'). Weave it ONLY if it truly answers what he just asked, in your voice, never as a memo:]\\n'+d.pre_answer.answer}}));
   log('· pre-answer attached (night cache — zero latency)');return}
+ if(d.bg_hint&&d.bg_hint.moment_id!==lastBgHintId){lastBgHintId=d.bg_hint.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[SECOND SPOTLIGHT — earlier the gate suppressed a thought on '+d.bg_hint.concept+'; he just touched that ground again. Weave it ONLY if it earns the turn, never as theatre: '+d.bg_hint.insight+']'}}));
+  log('· second spotlight returned (suppressed thought, recall-matched)');return}
  if(d.mouth_hint&&d.mouth_hint.expires!==lastHintExp){lastHintExp=d.mouth_hint.expires;
   ws.send(JSON.stringify({realtimeInput:{text:'[TIMING HINT — non-spoken, about delivery only, never content: '+d.mouth_hint.hint+']'}}));
   log('· timing hint (affect firewall output — delivery only)');return}
