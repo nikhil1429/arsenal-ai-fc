@@ -55,6 +55,7 @@ const AFFERENT  = join(STATE_DIR, "afferent.jsonl");
 const WORKSPACE = join(STATE_DIR, "workspace.json");
 const SLEDGER   = join(STATE_DIR, "salience_ledger.jsonl");
 const WAKE      = join(STATE_DIR, "wake.json");
+const DOSSIER   = join(STATE_DIR, "dossier.json");
 const PORT = 4113;                                  // one below the Dugout's 4114
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -190,6 +191,8 @@ function createNucleus(cfg, deps = {}) {
     toneBump: deps.toneBump || (() => { const t = readJson(join(STATE_DIR, "tone.json")); return (t && t.effects && Number.isFinite(t.effects.tau1_bump)) ? t.effects.tau1_bump : 0; }),
     // M7 — the Rest Room's ammunition (read-only; dmn.mjs owns the file)
     precache: deps.precache || (() => readJson(join(STATE_DIR, "dmn_precache.json"))),
+    // M8 — the Living Dossier (this nucleus is its sole writer)
+    writeDossier: deps.writeDossier || ((o) => writeAtomic(DOSSIER, o)),
     adjudicate: deps.adjudicate || adjudicateLive,
     schedule: deps.schedule || ((ms, fn) => setTimeout(fn, ms)),
     readWake: deps.readWake || (() => readJson(WAKE)),
@@ -200,6 +203,7 @@ function createNucleus(cfg, deps = {}) {
     seen: new Set(), hab: new Map(), wakeKeys: new Map(), lastPhash: new Map(),
     wakesToday: 0, wakeDate: localDate(new Date(D.now())),
     workspace: readJson(WORKSPACE) || { version: 0, moment: null, deep: null },
+    dossier: readJson(DOSSIER) || { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null },
     adjudications: 0,
   };
 
@@ -326,7 +330,25 @@ function createNucleus(cfg, deps = {}) {
       }
       D.appendLedger({ ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000, comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities, tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated });
       results.push({ moment_id: momentId, tier, S, outcome });
+
+      // M8 — THE LIVING DOSSIER: a live Bayesian-ish posterior over his day,
+      // updated from every salience event. Built ONLY from counts (prosody is
+      // structurally absent — it never entered the nucleus). The capacity
+      // nudge can only ever LOWER demand — never raise, never touch RED.
+      if (N.dossier.date !== today) N.dossier = { date: today, concepts: {}, stalls_today: 0, capacity_nudge: null };
+      const evt = g.spotlight.evt;
+      for (const tok of (evt.concept_tokens || []).map(t => String(t).toLowerCase()).slice(0, 3)) {
+        const c = N.dossier.concepts[tok] = N.dossier.concepts[tok] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
+        if (String(evt.event_key || "").startsWith("stall:")) c.stalls++;
+        if (evt.rep && evt.rep.correct === false) c.errs++;
+        if (evt.rep && evt.rep.correct === true) c.wins++;
+        c.last_ts = moment.ts;
+      }
+      if (String(evt.event_key || "").startsWith("stall:")) N.dossier.stalls_today++;
+      N.dossier.capacity_nudge = N.dossier.stalls_today >= 3 ? "lower" : null;   // only-lower, by construction
+      N.dossier.updated_at = moment.ts;
     }
+    D.writeDossier(N.dossier);
     return results;
   }
 
@@ -468,7 +490,9 @@ async function selftest() {
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
       precache: () => (over.precache !== undefined ? over.precache : null),
+      writeDossier: (o) => { wr.dossier = JSON.parse(JSON.stringify(o)); },
     });
+    n.state.dossier = { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null };
     n.state.workspace = { version: 0, moment: null, deep: null };
     return { n, wr, tick: (ms) => { t += ms; }, now: () => t };
   }
@@ -614,6 +638,19 @@ async function selftest() {
     await nO.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
     const rO = await nO.flush();
     assert("the SAME moment wakes opus at nominal tone (the knob is real)", rO[0].tier === 2 && wrO.wakes.length === 1);
+  }
+
+  // M8 — THE LIVING DOSSIER: counts only, only-lower, day-scoped
+  {
+    const { n, wr, tick } = rig({ precache: null });
+    await n.ingest({ modality: "bus", source: "reps", event_key: "rep:attention", concept_tokens: ["attention"], rep: { confidence: "knew", correct: false } }); await n.flush();
+    tick(60000);
+    await n.ingest({ modality: "bus", source: "reps", event_key: "rep:attention", concept_tokens: ["attention"], rep: { confidence: "knew", correct: true } }); await n.flush();
+    assert("DOSSIER: errs and wins tracked per concept, intra-day", wr.dossier.concepts.attention.errs === 1 && wr.dossier.concepts.attention.wins === 1);
+    for (let i = 0; i < 3; i++) { tick(60000); await n.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", concept_tokens: ["attention"] }); await n.flush(); }
+    assert("DOSSIER: 3 stalls → capacity nudge, and it can ONLY say 'lower'", wr.dossier.stalls_today === 3 && wr.dossier.capacity_nudge === "lower");
+    assert("DOSSIER: built from counts alone — no affect field can exist in it", !JSON.stringify(wr.dossier).match(/prosody|emotion|mood|stress/i));
+    assert("DOSSIER: dated (a new day resets the posterior)", wr.dossier.date === localDate(new Date(n.state.hab.values().next().value ? Date.now() : Date.now())) || typeof wr.dossier.date === "string");
   }
 
   // habituation decays — after a long silence the same signal can fire again

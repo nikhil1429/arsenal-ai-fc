@@ -30,6 +30,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck } from "./brain.mjs";
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
+// M8 — the Back Room: three cheap adversarial drafts before the one deep call
+import { convene, councilSection } from "./council.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -60,7 +62,7 @@ function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
   } catch { }
   return null;
 }
-function buildDeepPrompt(wake, bus = {}) {
+function buildDeepPrompt(wake, bus = {}, extraSection = "") {
   const spot = wake.spotlight || {};
   const capsule = bus.capsule !== undefined ? bus.capsule : findCapsule(spot.concept_tokens);
   const twin = bus.twin !== undefined ? bus.twin : readJson(join(STATE_DIR, "twin.json"));
@@ -73,7 +75,7 @@ ${JSON.stringify({ spotlight: { modality: spot.modality, text: spot.text, event_
 
 THE BUS SLICE (his real, live state — never invent beyond it):
 ${JSON.stringify({ twin_markets: ((twin || {}).markets || []).map(m => ({ id: m.id, p: m.p })), calibration_gap: (cal || {}).calibration_gap ?? null, danger_topics: ((cal || {}).danger_zone || []).map(d => d.topic).slice(0, 5), learning_state_status: (ls || {}).status || null }, null, 1).slice(0, 1500)}
-${capsule ? `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):\n${capsule.text}\n` : ""}
+${capsule ? `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):\n${capsule.text}\n` : ""}${extraSection}
 YOUR JOB: one deep, mechanism-level read. If it is a concept doubt: the real mechanism, a worked example, where it breaks, and the one reframe that dissolves HIS specific confusion. If it is a pattern/strategy moment: what is REALLY going on underneath, and the single next move that changes his next ten minutes. Think hard first; then answer.
 
 THE LAWS (inviolable): speakable Gaffer voice, Hinglish welds welcome, ≤250 words. Honest frame only — never "10x", "exponential", "on steroids"; no shame, no streaks, no countdowns; never a number that is not in the data above; medical territory = one sentence, "show your doctor". A crack is data, never a verdict.`;
@@ -142,7 +144,14 @@ async function serveWake(deps = {}) {
     return { served: false, declined: "no-headroom" };
   }
 
-  const prompt = buildDeepPrompt(wake, deps.bus || {});
+  // M8 — THE COUNCIL sits first (three free adversarial drafts), then ONE
+  // Opus integration adjudicates. Council dry/failed → the old cold path.
+  let council = null;
+  if (deps.council !== undefined) council = deps.council;
+  else if (cfg.council !== false) {
+    try { council = await convene(String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || ""), {}); } catch { council = null; }
+  }
+  const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
   const r = call(prompt);
   ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit });
   if (!r.ok) { log(`cortex: deep call failed (${r.error}) — wake stays pending (attempt ${tries + 1}/2)`); return { served: false, error: r.error }; }
@@ -173,6 +182,7 @@ async function selftest() {
       out,
       deps: {
         cfg: loadThalamusConfig(), brainCfg, env: {}, readWake: () => wake, bus,
+        council: null,                               // hermetic — the live council never convenes inside a selftest
         post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
         appendLedger: (r) => out.rows.push(r),
         runtime: over.runtime || { attempts: {} }, saveRuntime: (o) => out.saved.push(JSON.parse(JSON.stringify(o))),
@@ -231,6 +241,22 @@ async function selftest() {
     const { deps: d2 } = mkDeps({ deps: { readWake: () => null } });
     assert("no wake file → idle, never crashes", (await serveWake(d2)).idle === true);
   }
+  // M8 — the Council sits before the deep call
+  {
+    const councilFix = { drafts: [{ seat: "steelman", text: "the cache saves recompute" }, { seat: "prosecutor", text: "memory vs compute conflation" }], disagreement: 0.9, split: true };
+    let seenPrompt = null;
+    const { deps } = mkDeps({ deps: { council: councilFix }, call: undefined });
+    deps.call = (p) => { seenPrompt = p; return { ok: true, text: "integrated read", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; };
+    await serveWake(deps);
+    assert("COUNCIL: three drafts ride the ONE Opus integration prompt", seenPrompt.includes("[STEELMAN]") && seenPrompt.includes("[PROSECUTOR]") && seenPrompt.includes("integrate, don't average"));
+    assert("a hard split is surfaced to the deep brain as the crux", seenPrompt.includes("SPLIT HARD"));
+    const { deps: dCold } = mkDeps({ deps: { council: null } });
+    let coldPrompt = null;
+    dCold.call = (p) => { coldPrompt = p; return { ok: true, text: "cold read", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; };
+    await serveWake(dCold);
+    assert("council dry → the old cold path, byte-identical shape (layering)", coldPrompt && !coldPrompt.includes("[STEELMAN]") && coldPrompt.includes("YOUR JOB"));
+  }
+
   // the prompt itself
   {
     const p = buildDeepPrompt(wake, bus);
