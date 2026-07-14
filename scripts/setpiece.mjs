@@ -126,6 +126,18 @@ function candidates(world, dossier) {
     });
   }
 
+  // M15 — THE COUNCIL SPLIT: two model families read the same question
+  // disjointly. That divergence is curriculum — defend YOUR OWN read of it.
+  const cf = world.council_flag;
+  if (cf && cf.question) {
+    out.push({
+      kind: "council_split", probe_type_emoji: "🟣", concepts: [String(cf.question).slice(0, 60)],
+      prompt: fill(probes.defend && probes.defend.template, { claim: `your own read of: "${cf.question}"` }),
+      source: `council split across families (disagreement ${cf.disagreement})`,
+      winnable: false, mode: "defend",
+    });
+  }
+
   // NEMESIS — the KIND of thinking (axis pattern first, else headline)
   const wk = world.weaknesses;
   if (wk && (wk.axis_pattern || wk.headline)) {
@@ -195,6 +207,11 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
   if (world.season_read && world.season_read.date) {
     const lag = (now - new Date(world.season_read.date)) / 86400000;
     if (!(lag >= -1 && lag <= 7)) world = { ...world, season_read: null };
+  }
+  // M15 — a stale council flag (>2d) never steers them either
+  if (world.council_flag && world.council_flag.date) {
+    const lag = (now - new Date(world.council_flag.date)) / 86400000;
+    if (!(lag >= -1 && lag <= 2)) world = { ...world, council_flag: null };
   }
   const verdict = (world.readiness && typeof world.readiness.verdict === "string") ? world.readiness.verdict.toUpperCase() : "GREEN";
   const tier = (ladderCfg && ladderCfg[verdict]) || (ladderCfg && ladderCfg.GREEN) || { drill_modes_allowed: ["recall", "reconstruct", "defend", "novel", "negative_space"], max_drills: 3 };
@@ -343,6 +360,15 @@ async function selftest() {
     assert("season re-read: the ≤3 law survives the extra candidate", srDrills.drills.length <= 3);
   }
 
+  // M15 — the council's cross-family split becomes a defend drill; stale never rides
+  {
+    const cfWorld = { readiness: { verdict: "GREEN" }, council_flag: { date: "2026-07-12", question: "is retrieval quality worth more than model size?", disagreement: 0.91 } };
+    const cfDrills = compile(cfWorld, cfg, ladderCfg, dossier, now);
+    assert("council split: a FRESH flag compiles as a defend drill", cfDrills.drills.some(d => d.kind === "council_split" && d.mode === "defend" && d.prompt.includes("retrieval quality")));
+    const cfStale = compile({ readiness: { verdict: "GREEN" }, council_flag: { date: "2026-07-01", question: "x", disagreement: 0.9 } }, cfg, ladderCfg, dossier, now);
+    assert("council split: a STALE flag (>2d) never steers drills", !cfStale.drills.some(d => d.kind === "council_split"));
+  }
+
   // WAR-ROOM taper + DOSSIER weighting (compressed season)
   const registry = { concepts: { context: { bucket: "2-rag" }, chunking: { bucket: "2-rag" } }, skills: {} };
   const wrWorld = { ...world, registry, scout: { war_room: { active: true, mode: "taper" } } };
@@ -378,6 +404,7 @@ async function main() {
     scout: readJson(join(STATE_DIR, "scout.json")),
     registry: readJson(join(STATE_DIR, "concepts.json")),
     season_read: readJson(join(STATE_DIR, "season_read.json")),   // M18 — the night's re-read
+    council_flag: readJson(join(STATE_DIR, "council_flag.json")), // M15 — cross-family split
   };
   const out = compile(world, cfg, ladderCfg, dossier, new Date());
   writeAtomic(OUT, out);

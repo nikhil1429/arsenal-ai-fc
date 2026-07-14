@@ -1,0 +1,11 @@
+{
+  "_doc": "THE COUNCIL's chairs (M15 — canon, committed; chairs shape the curriculum). seats = the free-pool adversarial chairs (family gemini). cross_seat = the 4th chair on a DIFFERENT family (claude sonnet via `claude -p`, Max plan) — headroom-gated by cross_min_headroom_tokens (the window belongs to deep reads first) and refused outright if a metered key is ever set. cross_family:false benches the 4th chair entirely. Cross-family disagreement >= 0.85 writes council_flag.json (gitignored) and the set-piece coach compiles it into a defend drill: disagreement-as-curriculum.",
+  "seats": [
+    { "id": "steelman", "family": "gemini", "brief": "You are THE STEELMAN. Build the strongest HONEST case / clearest mechanism-first explanation. No hedging, no straw." },
+    { "id": "prosecutor", "family": "gemini", "brief": "You are THE PROSECUTOR. Attack the question's premises and every easy answer: where does it break, what's being conflated, what would a hostile staff engineer say. Honest attacks only." },
+    { "id": "captains_voice", "family": "gemini", "brief": "You are THE CAPTAIN'S OWN VOICE — argue it the way HE would, using HIS anchors and phrasings from the capsule excerpts provided. Stay in his idiom (Hinglish welds fine)." }
+  ],
+  "cross_family": true,
+  "cross_seat": { "id": "cross_examiner", "family": "claude", "model": "sonnet" },
+  "cross_min_headroom_tokens": 20000
+}
