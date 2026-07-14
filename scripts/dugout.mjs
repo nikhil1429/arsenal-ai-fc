@@ -1369,6 +1369,21 @@ async function main() {
   if (!keys.length) { console.log("dugout: no GEMINI_API_KEY found (~/.gemini/.env) — wire setup/GEMINI_CLI_SETUP.md first"); process.exit(1); }
   mkdirSync(OUT_DIR, { recursive: true });
   ensureAcks();   // fire-and-forget; offline = honest skip line
+  // M-final — THE DUGOUT BOOTS THE BRAIN: if the thalamus isn't up, spawn both
+  // daemons detached (their EADDRINUSE guards make double-starts harmless).
+  // A matchday works even before the logon tasks ever fired.
+  if (!process.env.DUGOUT_NO_BRAIN) {
+    fetch(THALAMUS + "/status", { signal: AbortSignal.timeout(1200) }).then(() => { }).catch(async () => {
+      try {
+        const { spawn } = await import("node:child_process");
+        for (const organ of ["thalamus.mjs", "cortex.mjs"]) {
+          const child = spawn(process.execPath, [join(__dirname, organ)], { detached: true, stdio: "ignore", windowsHide: true });
+          child.unref();
+        }
+        console.log("dugout: thalamus + cortex daemons spawned (the Dugout boots the brain)");
+      } catch { }
+    });
+  }
   setInterval(() => fireReminders().then(n => { if (n) console.log(`dugout: ${n} his-voice reminder(s) echoed`); }).catch(() => { }), 30000);
   // the shadow engine trains while the voice surface is alive (detection is
   // silent by construction; the mouth needs no wire to stay shut)
