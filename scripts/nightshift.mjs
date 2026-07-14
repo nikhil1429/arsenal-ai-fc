@@ -20,10 +20,14 @@
 //        5. GEM CARTRIDGE — a paste-ready system brief for his Gemini Gem
 //                          (his examiner-on-the-phone), refreshed from the
 //                          live bus so the Gem always knows today's state.
-//        6. GATE TUNE    — reads the salience ledger and DRAFTS threshold
-//                          suggestions (report-only: AI proposes · code
-//                          validates · HUMAN approves — the gate never
-//                          retunes itself).
+//        6. GATE TUNE    — M21 THE WIND TUNNEL: a deterministic counterfactual
+//                          REPLAY of the salience ledger over a grid of tier
+//                          configs (zero LLM, ms-fast) → a bootroom-grammar
+//                          proposal with evidence, predicted effect, metric
+//                          and revert. Report-only: AI/code proposes · HUMAN
+//                          applies to thalamus_config.json — the gate never
+//                          retunes itself. Under 200 decisions the frozen
+//                          heuristic (gateTuneReport) still reports (layering).
 //        7. PRE-ANSWER ENGINE (M17) — predicts his 15-25 likely NEXT doubts
 //                          (doubt-grammar shapes + 7-day afferents + FSRS-due
 //                          + danger zone), answers each in the DOSSIER's own
@@ -49,6 +53,8 @@ import { indexRecall } from "./dugout.mjs";
 import { indexEpisodes } from "./hippocampus.mjs";
 // job 7 rides the brain's own honest-frame validator (proven code, reused)
 import { loadConfig as loadBrainConfig, bannedPhraseCheck } from "./brain.mjs";
+// job 6 (the wind tunnel) replays the gate's own recorded decisions
+import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -177,8 +183,106 @@ function gemCartridge(deps = {}, now = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
-// JOB 6 — GATE TUNE (report-only: the gate NEVER retunes itself)
+// JOB 6 — M21 THE WIND TUNNEL (report-only: the gate NEVER retunes itself).
+// Every ledger row already carries S, headroom_frac, key, ts — so any tier
+// config can be replayed EXACTLY, offline, in milliseconds. The ε-band
+// resolves DOWN in replay (the tiny model's verdict is unknowable offline —
+// conservative, stated in the proposal). Output rides the boot room's own
+// mutation grammar so the captain reviews it like any gene.
 // ---------------------------------------------------------------------------
+const TUNNEL = { band: [1, 8], min_sample: 200, hysteresis_frac: 0.9, hysteresis_abs: 0.5 };
+
+function replayGate(rows, tiers, refractoryMin = 45, capPerDay = 15) {
+  const wakeKeys = new Map();
+  const days = new Set();
+  const m = { wakes: 0, capped: 0, refractory: 0, adjudications: 0, tier0: 0, tier1: 0, rows: 0 };
+  let wakesToday = 0, curDay = null;
+  for (const r of rows || []) {
+    if (!r || !Number.isFinite(r.S)) continue;
+    m.rows++;
+    const day = r.day || String(r.ts || "").slice(0, 10);
+    days.add(day);
+    if (day !== curDay) { curDay = day; wakesToday = 0; }
+    const hf = Math.max(0, Math.min(1, Number.isFinite(r.headroom_frac) ? r.headroom_frac : 1));
+    const t1 = tiers.tau1_base + (tiers.budget_k || 0) * (1 - hf);
+    let tier = r.S < tiers.tau0 ? 0 : 1;
+    if (Math.abs(r.S - t1) < tiers.epsilon) { m.adjudications++; tier = Math.max(tier, 1); }
+    else if (r.S >= t1) tier = 2;
+    if (tier === 2) {
+      const ts = new Date(r.ts || 0).getTime();
+      const last = wakeKeys.get(r.key);
+      if (last && ts - last < refractoryMin * 60000) { m.refractory++; tier = 1; }
+      else if (wakesToday >= capPerDay) { m.capped++; tier = 1; }
+      else { m.wakes++; wakesToday++; wakeKeys.set(r.key, ts); }
+    }
+    if (tier === 0) m.tier0++; else if (tier === 1) m.tier1++;
+  }
+  m.days = Math.max(1, days.size);
+  m.wakes_per_day = Math.round((m.wakes / m.days) * 100) / 100;
+  return m;
+}
+function tunnelScore(m, band) {
+  const pen = m.wakes_per_day < band[0] ? band[0] - m.wakes_per_day : m.wakes_per_day > band[1] ? m.wakes_per_day - band[1] : 0;
+  return Math.round((pen * 100 + m.capped * 2 + m.adjudications) * 100) / 100;
+}
+function windTunnel(rows, thalCfg, opts = {}) {
+  const t = { ...TUNNEL, ...opts };
+  const usable = (rows || []).filter(r => r && Number.isFinite(r.S));
+  if (usable.length < t.min_sample) return { proposal: null, why: `only ${usable.length} gate decisions — the tunnel needs ${t.min_sample} (an early retune is worse than a late one)` };
+  const cur = thalCfg.tiers;
+  const refr = thalCfg.refractory_min || 45, cap = thalCfg.wake_cap_per_day || 15;
+  const base = replayGate(usable, cur, refr, cap);
+  const baseScore = tunnelScore(base, t.band);
+  // the grid — tiers only; budget_k is the budget-coupling LAW's knob, his call
+  const cands = [];
+  for (const d0 of [-0.05, 0, 0.05]) for (const d1 of [-0.08, -0.04, 0, 0.04, 0.08]) for (const eps of [0.04, 0.08, 0.12]) {
+    const tau0 = Math.round((cur.tau0 + d0) * 100) / 100, tau1 = Math.round((cur.tau1_base + d1) * 100) / 100;
+    if (tau0 < 0.05 || tau0 > 0.5 || tau1 < tau0 + 0.15 || tau1 > 0.95) continue;
+    cands.push({ tau0, tau1_base: tau1, epsilon: eps, budget_k: cur.budget_k });
+  }
+  let best = null;
+  for (const c of cands) {
+    const m = replayGate(usable, c, refr, cap);
+    const s = tunnelScore(m, t.band);
+    if (!best || s < best.score) best = { tiers: c, metrics: m, score: s };
+  }
+  // hysteresis — a near-tie never files; the gate must be CLEARLY better
+  if (!best || best.score >= baseScore * t.hysteresis_frac - t.hysteresis_abs) {
+    return { proposal: null, healthy: true, why: `the gate is near-optimal on ${usable.length} replayed decisions (current score ${baseScore}, best grid ${best ? best.score : "—"})`, base };
+  }
+  const date = localDate(opts.now || new Date());
+  const changed = Object.keys(cur).filter(k => best.tiers[k] !== cur[k]);
+  const proposal = {
+    id: `wt-${date}-${changed.join("-") || "tiers"}`,
+    target: "thalamus_config.json → tiers",
+    diff: { old: { ...cur }, new: { ...best.tiers } },
+    evidence: [
+      `deterministic replay of ${usable.length} real gate decisions over ${base.days} day(s) — zero LLM`,
+      `current tiers: ${base.wakes_per_day} wakes/day · ${base.capped} capped · ${base.adjudications} ε-adjudications (score ${baseScore})`,
+      `proposed tiers: ${best.metrics.wakes_per_day} wakes/day · ${best.metrics.capped} capped · ${best.metrics.adjudications} ε-adjudications (score ${best.score})`,
+      `ε-band resolved DOWN in replay (the adjudicator's live verdicts are unknowable offline — conservative)`,
+    ],
+    predicted_effect: `wakes/day moves toward the [${t.band[0]}, ${t.band[1]}] band with fewer suppressed surprises and fewer paid adjudications`,
+    metric: { name: "wakes_per_day_band", min_events: t.min_sample, window_days: 14, band: t.band },
+    review_after_days: 14,
+    revert_diff: { new: { ...cur } },
+    status: "proposed", proposed_on: date, engine: "wind_tunnel",
+    human_note: "apply by editing thalamus_config.json tiers, then restart the thalamus — the gate NEVER retunes itself",
+  };
+  const md = [
+    `# WIND TUNNEL PROPOSAL · ${date} (report-only — thalamus_config.json is YOURS)`,
+    "",
+    ...proposal.evidence.map(e => `- ${e}`),
+    "",
+    `PROPOSED: ${JSON.stringify(proposal.diff.new)}`,
+    `REVERT:   ${JSON.stringify(proposal.revert_diff.new)}`,
+    `Apply → watch ${proposal.review_after_days} days → keep only if wakes/day sits in [${t.band[0]}, ${t.band[1]}].`,
+  ].join("\n");
+  return { proposal, md, base, best };
+}
+
+// gateTuneReport — the pre-M21 heuristic, FROZEN VERBATIM (layering): it still
+// speaks when the tunnel lacks its 200-decision sample (its own floor is 20).
 function gateTuneReport(rows, now = new Date()) {
   const recent = rows.slice(-200);
   if (recent.length < 20) return { md: null, why: `only ${recent.length} gate decisions — the tuner stays silent under 20 (an early false alarm is worse than a missed one)` };
@@ -313,9 +417,20 @@ async function runShift(deps = {}) {
   write("gem_cartridge.md", gc.md);
   out.jobs.gem_cartridge = { ok: true };
 
-  const gt = gateTuneReport(deps.ledgerRows || readLines(join(STATE_DIR, "salience_ledger.jsonl")), now);
-  if (gt.md) write(`gate_tune_${day}.md`, gt.md);
-  out.jobs.gate_tune = gt.md ? { proposed: true } : { silent: gt.why };
+  const rows = deps.ledgerRows || readLines(join(STATE_DIR, "salience_ledger.jsonl"));
+  const wt = windTunnel(rows, deps.thalamusCfg || loadThalamusConfig(), { now, ...(deps.tunnel || {}) });
+  if (wt.proposal) {
+    write(`wind_tunnel_${day}.json`, wt.proposal);
+    write(`gate_tune_${day}.md`, wt.md);
+    out.jobs.gate_tune = { proposed: true, engine: "wind_tunnel" };
+  } else if (wt.healthy) {
+    write(`gate_tune_${day}.md`, `# GATE HEALTHY · ${day}\n${wt.why}`);
+    out.jobs.gate_tune = { healthy: true, engine: "wind_tunnel" };
+  } else {
+    const gt = gateTuneReport(rows, now);            // the frozen heuristic floor (layering)
+    if (gt.md) write(`gate_tune_${day}.md`, gt.md);
+    out.jobs.gate_tune = gt.md ? { proposed: true, engine: "legacy" } : { silent: gt.why };
+  }
 
   const pa = await preAnswerEngine(deps);
   out.jobs.pre_answers = pa.ok ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent } : { skipped: pa.skipped };
@@ -329,7 +444,7 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const genProbes = async () => ({ ok: true, text: JSON.stringify(PROBE_TYPES.map(t => ({ type: t, probe: `a solid ${t} probe with enough length to pass validation` }))) });
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
-  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], now: new Date("2026-07-15T02:45:00") };
+  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, now: new Date("2026-07-15T02:45:00") };
 
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
@@ -365,6 +480,45 @@ async function selftest() {
     const c = drillConcepts({ calibration: { danger_zone: [{ topic: "eval metrics" }] }, ls: { concepts: [{ name: "rag", trend: "stalling" }] }, capsuleFiles: ["tokenization.json", "embeddings.json"] });
     assert("concepts: danger zone > stalling > locked capsules, deduped", c[0].concept === "eval metrics" && c[1].concept === "rag" && c.some(x => x.concept === "tokenization"));
     assert("Day-0 floor: locked capsules alone still make a bank (dormant-safe)", drillConcepts({ calibration: null, ls: null, capsuleFiles: ["context.json"] }).length === 1);
+  }
+
+  // JOB 6 — M21 THE WIND TUNNEL: replay → grid → bootroom-grammar proposal
+  {
+    const thal = { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 };
+    const mkRows = () => {
+      const rows = [];
+      for (let d = 1; d <= 5; d++) {
+        const day = `2026-07-0${d}`;
+        for (let i = 0; i < 50; i++) rows.push({ day, ts: `${day}T10:${String(i % 60).padStart(2, "0")}:00Z`, S: 0.30, headroom_frac: 1, key: `bus:filler${i}` });
+        rows.push({ day, ts: `${day}T11:00:00Z`, S: 0.53, headroom_frac: 1, key: `voice:doubt-a-${d}` });
+        rows.push({ day, ts: `${day}T15:00:00Z`, S: 0.53, headroom_frac: 1, key: `voice:doubt-b-${d}` });
+      }
+      return rows;
+    };
+    const wt = windTunnel(mkRows(), thal, { now: new Date("2026-07-15T02:45:00") });
+    assert("TUNNEL: a starving gate (0 wakes/day, ε-band churn) yields a PROPOSAL", wt.proposal && wt.base.wakes_per_day === 0 && wt.best.metrics.wakes_per_day >= 1);
+    assert("TUNNEL: the proposal rides the boot room's grammar (all 8 fields)", ["id", "target", "diff", "evidence", "predicted_effect", "metric", "review_after_days", "revert_diff"].every(k => k in wt.proposal) && wt.proposal.status === "proposed");
+    assert("TUNNEL: the revert is the CURRENT config, byte-equal", JSON.stringify(wt.proposal.revert_diff.new) === JSON.stringify(thal.tiers));
+    assert("TUNNEL: evidence carries real replay numbers + the ε-band caveat", wt.proposal.evidence.some(e => e.includes("260")) && wt.proposal.evidence.some(e => e.includes("replay")) && wt.proposal.evidence.some(e => e.includes("unknowable offline")));
+    assert("TUNNEL: report-only — the human applies it (the gate never retunes itself)", wt.proposal.human_note.includes("NEVER retunes") && wt.md.includes("YOURS"));
+    // a healthy gate files nothing
+    const healthyRows = [];
+    for (let d = 1; d <= 5; d++) {
+      const day = `2026-07-0${d}`;
+      for (let i = 0; i < 50; i++) healthyRows.push({ day, ts: `${day}T10:00:00Z`, S: 0.10, headroom_frac: 1, key: `bus:f${i}` });
+      for (let w = 0; w < 3; w++) healthyRows.push({ day, ts: `${day}T1${w}:30:00Z`, S: 0.75, headroom_frac: 1, key: `voice:hot-${d}-${w}` });
+    }
+    const wtH = windTunnel(healthyRows, thal, {});
+    assert("TUNNEL: a healthy gate (in-band, no churn) files NO proposal", wtH.proposal === null && wtH.healthy === true);
+    // the statistical floor
+    const wtS = windTunnel(mkRows().slice(0, 50), thal, {});
+    assert("TUNNEL: under 200 decisions → silent (an early retune is worse than late)", wtS.proposal === null && wtS.why.includes("200"));
+    // replay honors refractory (same key, minutes apart, one wake)
+    const rf = replayGate([
+      { day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.75, headroom_frac: 1, key: "voice:same" },
+      { day: "2026-07-01", ts: "2026-07-01T10:10:00Z", S: 0.75, headroom_frac: 1, key: "voice:same" },
+    ], thal.tiers, 45, 15);
+    assert("REPLAY: refractory suppression replays exactly (1 wake, 1 suppressed)", rf.wakes === 1 && rf.refractory === 1);
   }
 
   // JOB 7 — THE PRE-ANSWER ENGINE (M17)
@@ -414,4 +568,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, preAnswerEngine, preAnswerMaterial, drillConcepts, isOvernight, CAPS };
+export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, drillConcepts, isOvernight, CAPS, TUNNEL };
