@@ -122,6 +122,10 @@ function readDeepState(deps = {}) {
   if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
   // M2 — a fresh recall hit rides along (stale ones expire; page dedupes by id)
   if (rt.recallHint && Date.now() - rt.recallHint.ts < 60000) out.recall = { id: rt.recallHint.id, hint: rt.recallHint.hint };
+  // M17 — the pre-answer rides the RECALL pattern (responsive, non-spoken,
+  // fresh-only): his doubt arrived already answered by the night shift; the
+  // Gaffer weaves it only if it earns the turn. No gate is modified.
+  out.pre_answer = (ws && ws.pre_answer && new Date(ws.pre_answer.expires) > new Date()) ? ws.pre_answer : null;
   // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
   out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
   // M7 — THE EARNED-VOICE GATE at the mouth: the whisper passes ONLY when
@@ -1148,6 +1152,10 @@ async function selftest() {
     assert("page: timing hints injected as delivery-only, non-spoken", PAGE.includes("TIMING HINT") && PAGE.includes("delivery only"));
     const mh = readDeepState({ workspace: { version: 1, mouth_hint: { hint: "soften", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {} });
     assert("bridge /deep carries a live mouth hint; expired ones die", mh.mouth_hint && mh.mouth_hint.hint === "soften" && readDeepState({ workspace: { version: 1, mouth_hint: { hint: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {} }).mouth_hint === null);
+    // M17 — the pre-answer rides the recall pattern: fresh passes, stale dies
+    const pa = readDeepState({ workspace: { version: 1, pre_answer: { moment_id: "m2", concept: "kv cache", answer: "the cache kills recompute, not the handshakes", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {} });
+    assert("bridge /deep carries a FRESH pre-answer (M17); expired ones die", pa.pre_answer && pa.pre_answer.answer.includes("recompute") && readDeepState({ workspace: { version: 1, pre_answer: { moment_id: "m2", answer: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {} }).pre_answer === null);
+    assert("the page injects the pre-answer NON-SPOKEN, deduped by moment", PAGE.includes("PRE-ANSWER LOADED") && PAGE.includes("lastPreAnsId"));
   }
 
   // M4 — THE MOUTH CEILING (Chalkboard-on-REST · thinking · the code round)
@@ -1470,10 +1478,10 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,deepPrimed=false;
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,deepPrimed=false;
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
@@ -1483,6 +1491,9 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
   log('· memory surfaced (non-spoken hint)');return}
+ if(d.pre_answer&&d.pre_answer.moment_id!==lastPreAnsId){lastPreAnsId=d.pre_answer.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[PRE-ANSWER LOADED — the night shift already answered this exact doubt ('+d.pre_answer.concept+'). Weave it ONLY if it truly answers what he just asked, in your voice, never as a memo:]\\n'+d.pre_answer.answer}}));
+  log('· pre-answer attached (night cache — zero latency)');return}
  if(d.mouth_hint&&d.mouth_hint.expires!==lastHintExp){lastHintExp=d.mouth_hint.expires;
   ws.send(JSON.stringify({realtimeInput:{text:'[TIMING HINT — non-spoken, about delivery only, never content: '+d.mouth_hint.hint+']'}}));
   log('· timing hint (affect firewall output — delivery only)');return}

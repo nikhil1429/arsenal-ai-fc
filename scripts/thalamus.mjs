@@ -56,6 +56,7 @@ const WORKSPACE = join(STATE_DIR, "workspace.json");
 const SLEDGER   = join(STATE_DIR, "salience_ledger.jsonl");
 const WAKE      = join(STATE_DIR, "wake.json");
 const DOSSIER   = join(STATE_DIR, "dossier.json");
+const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
 const PORT = 4113;                                  // one below the Dugout's 4114
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -82,12 +83,15 @@ const DEFAULT_CONFIG = {
   pe: { norm_bits: 4, base_rates: { default: 0.5 } },
   adjudicator: { model: "gemini-flash-lite-latest", enabled: true },
   deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000 },
+  // M17 — the pre-answer serve side: cosine bar, the free overlap floor, and
+  // the one embed call's hard timeout (dry/slow → the floor, never a stall)
+  pre_answer: { enabled: true, threshold: 0.60, min_overlap: 2, embed_timeout_ms: 4000 },
   self_markers: ["i don't get", "don't understand", "samajh nahi", "samajh nahin", "confus", "kyun nahi aata", "stuck hoon", "atka hua", "doubt hai", "yeh kaise", "wait, why", "wait why", "makes no sense"],
 };
 function loadConfig() {
   const c = readJson(CONFIG);
   if (!c) return DEFAULT_CONFIG;
-  return { ...DEFAULT_CONFIG, ...c, weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) }, tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) }, hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) }, pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}) } };
+  return { ...DEFAULT_CONFIG, ...c, weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) }, tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) }, hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) }, pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}) }, pre_answer: { ...DEFAULT_CONFIG.pre_answer, ...(c.pre_answer || {}) } };
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +179,38 @@ function tau1Effective(cfg, headroomFrac) {
 }
 
 // ---------------------------------------------------------------------------
+// M17 — THE PRE-ANSWER match (deterministic): cosine first (needs both vecs),
+// the free word-overlap floor second. No match → null — NEVER improvise an
+// answer; the cache either drafted this exact doubt last night or it didn't.
+// ---------------------------------------------------------------------------
+function cosine(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return na && nb ? dot / Math.sqrt(na * nb) : 0;
+}
+function matchPreAnswer(evt, cache, qv, cfg) {
+  if (!Array.isArray(cache) || !cache.length) return null;
+  let best = null;
+  if (Array.isArray(qv)) {
+    for (const e of cache) {
+      if (!Array.isArray(e.vec)) continue;
+      const s = cosine(qv, e.vec);
+      if (s >= cfg.pre_answer.threshold && (!best || s > best.score)) best = { entry: e, score: s, via: "cosine" };
+    }
+  }
+  if (!best) {
+    const qw = new Set(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3));
+    for (const e of cache) {
+      const ew = String(e.concept + " " + e.doubt).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+      const overlap = ew.filter(w => qw.has(w)).length;
+      if (overlap >= cfg.pre_answer.min_overlap && (!best || overlap > best.score)) best = { entry: e, score: overlap, via: "overlap" };
+    }
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------
 // THE NUCLEUS — binding + gate. Pure-ish: every side effect goes through deps,
 // so the selftest drives it with an injected clock and captured writes.
 // ---------------------------------------------------------------------------
@@ -191,6 +227,17 @@ function createNucleus(cfg, deps = {}) {
     toneBump: deps.toneBump || (() => { const t = readJson(join(STATE_DIR, "tone.json")); return (t && t.effects && Number.isFinite(t.effects.tau1_bump)) ? t.effects.tau1_bump : 0; }),
     // M7 — the Rest Room's ammunition (read-only; dmn.mjs owns the file)
     precache: deps.precache || (() => readJson(join(STATE_DIR, "dmn_precache.json"))),
+    // M17 — the night's answer cache (read-only; nightshift.mjs owns the file)
+    answerCache: deps.answerCache || (() => readLines(ACACHE)),
+    // M17 — ONE embed per doubt-shaped moment (free T6 lane, hard timeout;
+    // dry/slow → null and the overlap floor serves — never a stall)
+    embedText: deps.embedText || (async (text) => {
+      try {
+        const { embedPool } = await import("./hippocampus.mjs");
+        const v = await Promise.race([embedPool([text]), new Promise(res => setTimeout(() => res(null), cfg.pre_answer.embed_timeout_ms))]);
+        return (v && v[0]) || null;
+      } catch { return null; }
+    }),
     // M8 — the Living Dossier (this nucleus is its sole writer)
     writeDossier: deps.writeDossier || ((o) => writeAtomic(DOSSIER, o)),
     adjudicate: deps.adjudicate || adjudicateLive,
@@ -320,8 +367,26 @@ function createNucleus(cfg, deps = {}) {
           D.log(`thalamus: stall matched the Rest Room's precache — whisper loaded (zero-latency), the mouth gate decides`);
         }
       }
+      // M17 — THE PRE-ANSWER ENGINE, serve side: a doubt-shaped moment (a
+      // voiced SELF or a confident-wrong rep) checks the night's answer_cache.
+      // The answer was drafted HOURS ago on the free pool — it attaches with
+      // zero latency and zero Opus. Attaching is NOT speech (recall-hint
+      // pattern): the Gaffer weaves it only if it earns the turn; no gate moved.
+      let preAnswer = N.workspace.pre_answer || null;
+      if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0)) {
+        const cache = D.answerCache() || [];
+        if (cache.length) {
+          const qtext = `${(g.spotlight.evt.concept_tokens || []).join(" ")} ${g.spotlight.evt.text || ""}`.trim();
+          const qv = cache.some(e => Array.isArray(e.vec)) ? await D.embedText(qtext).catch(() => null) : null;
+          const hit = matchPreAnswer(g.spotlight.evt, cache, qv, cfg);
+          if (hit) {
+            preAnswer = { type: "pre_answer", concept: hit.entry.concept, doubt: hit.entry.doubt, answer: hit.entry.answer, matched_via: hit.via, score: Math.round(hit.score * 100) / 100, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+            D.log(`thalamus: doubt matched the night's answer_cache (${hit.via}) — pre-answer attached, zero Opus; the mouth decides`);
+          }
+        }
+      }
       // THE BROADCAST IS THE WRITE — version-stamped; every region subscribes
-      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, mouth_hint: N.workspace.mouth_hint || null };
+      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, pre_answer: preAnswer, mouth_hint: N.workspace.mouth_hint || null };
       D.writeWorkspace(N.workspace);
       if (tier === 2) {
         N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now);
@@ -490,6 +555,8 @@ async function selftest() {
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
       precache: () => (over.precache !== undefined ? over.precache : null),
+      answerCache: () => (over.answerCache !== undefined ? over.answerCache : []),   // hermetic — the real cache never leaks in
+      embedText: async () => { wr.embedCalls = (wr.embedCalls || 0) + 1; return over.embedVec !== undefined ? over.embedVec : null; },
       writeDossier: (o) => { wr.dossier = JSON.parse(JSON.stringify(o)); },
     });
     n.state.dossier = { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null };
@@ -653,6 +720,33 @@ async function selftest() {
     assert("DOSSIER: dated (a new day resets the posterior)", wr.dossier.date === localDate(new Date(n.state.hab.values().next().value ? Date.now() : Date.now())) || typeof wr.dossier.date === "string");
   }
 
+  // M17 — THE PRE-ANSWER ENGINE serve side: doubt × cache = zero-latency attach
+  {
+    const cache = [
+      { id: "pa1", concept: "kv cache", doubt: "kv cache hai toh attention quadratic kyun", answer: "the cache kills recompute, not the handshakes", vec: [1, 0] },
+      { id: "pa2", concept: "unrelated", doubt: "something else entirely different", answer: "x", vec: [0, 1] },
+    ];
+    const { n, wr } = rig({ answerCache: cache, embedVec: [0.98, 0.05] });
+    await n.ingest({ modality: "voice", text: "i don't get kv cache attention quadratic", concept_tokens: ["attention"] });
+    await n.flush();
+    const wsp = wr.workspaces[wr.workspaces.length - 1];
+    assert("a voiced doubt pulls the night's pre-answer into the workspace (cosine)", wsp.pre_answer && wsp.pre_answer.matched_via === "cosine" && wsp.pre_answer.answer.includes("recompute"));
+    assert("the pre-answer expires (the confusion-hot window is 3 minutes)", new Date(wsp.pre_answer.expires) - new Date(wsp.updated_at) === 180000);
+    const { n: n2, wr: wr2 } = rig({ answerCache: cache, embedVec: null });
+    await n2.ingest({ modality: "voice", text: "i don't get why the kv cache leaves attention quadratic", concept_tokens: ["attention"] });
+    await n2.flush();
+    const wsp2 = wr2.workspaces[wr2.workspaces.length - 1];
+    assert("embed lane dry → the free word-overlap floor still attaches", wsp2.pre_answer && wsp2.pre_answer.matched_via === "overlap");
+    const { n: n3, wr: wr3 } = rig({ answerCache: cache, embedVec: [1, 0] });
+    await n3.ingest({ modality: "bus", event_key: "dead:due", due_count: 2 });
+    await n3.flush();
+    assert("a NON-doubt moment never queries the cache (pre-answers are for doubts)", (wr3.embedCalls || 0) === 0 && wr3.workspaces[wr3.workspaces.length - 1].pre_answer === null);
+    const { n: n4, wr: wr4 } = rig({ answerCache: [{ id: "z", concept: "zzz", doubt: "totally unrelated matter", answer: "x", vec: [0, 1] }], embedVec: [1, 0] });
+    await n4.ingest({ modality: "voice", text: "i don't get positional encodings at all", concept_tokens: ["positional"] });
+    await n4.flush();
+    assert("no cache match → NO pre-answer (never improvise an answer)", wr4.workspaces[wr4.workspaces.length - 1].pre_answer === null);
+  }
+
   // habituation decays — after a long silence the same signal can fire again
   {
     const { n, tick } = rig();
@@ -715,4 +809,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming };
+export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer };

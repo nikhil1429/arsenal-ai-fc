@@ -130,6 +130,8 @@ dressing-room/state/examiner_drill.json
 dressing-room/state/tone.json
 # the Rest Room (M6) — pre-drafted interventions name his weaknesses
 dressing-room/state/dmn_precache.json
+# the pre-answer engine (M17) — tonight's predicted doubts + answers (his words)
+dressing-room/state/answer_cache.jsonl
 # predictive presence (M7) — stall telemetry + would-have-whispered log
 dressing-room/state/presence_log.jsonl
 # presence self-calibration (M11) — thresholds fitted to HIS baselines
