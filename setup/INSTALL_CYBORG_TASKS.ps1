@@ -32,6 +32,11 @@ Mk "ArsenalFC-HippoStore"     "hippocampus.mjs consolidate-store" @("/SC","DAILY
 Mk "ArsenalFC-HippoIndex"     "hippocampus.mjs index"        @("/SC","HOURLY")
 # the Live Examiner - tomorrow's code round staged after the evening spine
 Mk "ArsenalFC-Examiner"       "examiner.mjs stage"           @("/SC","DAILY","/ST","21:55")
+# THE NIGHT SHIFT (M11) - the idle free-quota drain: probe banks, distractors,
+# embed backfill, the Scout pack, the Gem cartridge, the gate-tune report
+Mk "ArsenalFC-NightShift"     "nightshift.mjs"               @("/SC","DAILY","/ST","02:40")
+# the stall sensor fits itself to HIS baselines, weekly
+Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/D","SUN","/ST","03:30")
 
 # POWER CONDITIONS (the E2E scar): clear battery kill-flags on every task
 Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {

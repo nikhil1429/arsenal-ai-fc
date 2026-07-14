@@ -132,6 +132,8 @@ dressing-room/state/tone.json
 dressing-room/state/dmn_precache.json
 # predictive presence (M7) — stall telemetry + would-have-whispered log
 dressing-room/state/presence_log.jsonl
+# presence self-calibration (M11) — thresholds fitted to HIS baselines
+dressing-room/state/presence_thresholds.json
 # the living dossier (M8) — intra-day belief state over his learning
 dressing-room/state/dossier.json
 # the kennel lease (M9) — LOCAL until the Pi arrives; then remove this line so
