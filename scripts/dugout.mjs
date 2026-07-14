@@ -580,6 +580,7 @@ const TOOL_DECLS = [
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
+  { name: "read_url", description: "SOURCE-GROUNDED READ — fetch and read a PUBLIC http(s) page (docs, papers, articles) and answer FROM it. Use when he names a URL or when teaching deserves the actual source over your priors. NEVER for private/local/personal ground. question = what to extract.", parameters: { type: "OBJECT", properties: { url: { type: "STRING" }, question: { type: "STRING" } }, required: ["url"] } },
   { name: "get_club_report", description: "THE BOARDROOM BRIEFING — the WHOLE organism's state in one call: body, brain spend, what the gate did today, senses, memory, tanks, night-shift output, what's dormant and why. Call when he asks 'what's happening in the club / sab kuch batao / club report / brief me'.", parameters: { type: "OBJECT", properties: {} } },
 ];
 
@@ -611,6 +612,61 @@ async function runPythonSandbox(code, deps = {}) {
     } catch { }
   }
   return { ok: false, error: "sandbox lane dry (keys/quota) — say so honestly, never fake an output" };
+}
+
+// C6 — READ_URL: source-grounded teaching on the REST lane (urlContext).
+// Every call IS the live free-quota probe the spec demands: the lane answers
+// or honestly reports itself dry/absent. Firewall: PUBLIC http(s) URLs only —
+// personal/local ground and key-shaped strings never ride.
+const URLCTX_DENY = [/dressing-room/i, /hippocampus/i, /oura/i, /localhost|127\.0\.0\.1|192\.168\.|10\.\d+\./i, /api[_-]?key/i, /\.gemini/i];
+async function runReadUrl(args, deps = {}) {
+  const url = String((args || {}).url || "").trim();
+  const q = String((args || {}).question || "").slice(0, 300);
+  if (!/^https?:\/\//i.test(url)) return { ok: false, error: "read_url needs a public http(s) URL" };
+  if (URLCTX_DENY.some(re => re.test(url) || re.test(q))) return { ok: false, error: "url firewall: personal/local ground never rides a fetch" };
+  const keys = deps.keys || loadKeys();
+  const fetchFn = deps.fetchFn || fetch;
+  for (const key of keys) {
+    try {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
+      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.URLCTX_MODEL || "gemini-flash-latest"}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
+        body: JSON.stringify({ contents: [{ parts: [{ text: `${q || "Give the load-bearing points, dense, honest"} — read this source and answer FROM it, citing what it actually says: ${url}` }] }], tools: [{ url_context: {} }] }),
+      });
+      clearTimeout(t);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      const text = parts.map(p => p.text || "").join("");
+      if (text) return { ok: true, text: text.slice(0, 2000), url, note: "answered FROM the source — quote it, never your priors" };
+    } catch { }
+  }
+  return { ok: false, error: "url lane dry/absent on the free pool right now — say so honestly, never fake a read" };
+}
+
+// C5 — EPHEMERAL TOKENS: the bridge mints a 30-min single-use token so a LAN
+// page need never see a raw key. PROBED LIVE 15 Jul 2026: the MINT lane works
+// (v1alpha auth_tokens → 200 + token); the WS ATTACH shape does not —
+// access_token= closes 1008 (unregistered caller) and key=<token> closes 1007
+// on both v1alpha and v1beta. So the mint ships (endpoint + tests) and the
+// LAN page keeps riding keys until the wire's browser transport shape lands;
+// re-probe via: node scripts/dugout.mjs mint-probe.
+async function mintEphemeralToken(deps = {}) {
+  const keys = deps.keys || loadKeys();
+  const fetchFn = deps.fetchFn || fetch;
+  const minutes = deps.minutes || 30;
+  for (const key of keys) {
+    try {
+      const r = await fetchFn("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ uses: 1, expireTime: new Date(Date.now() + minutes * 60000).toISOString() }),
+      });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && j.name) return { ok: true, token: j.name, expires_in_min: minutes };
+    } catch { }
+  }
+  return { ok: false, error: "mint lane dry — raw-key mode stands" };
 }
 
 // ---------------------------------------------------------------------------
@@ -860,7 +916,8 @@ function buildConfig(keys, mode = "gaffer") {
       rehydrate: null, resume: null,
       compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
       tools: [],                                      // no hands — a guest is listening
-      thinking: "off",
+      thinking: "minimal",                            // C4 — explicit, honest (was "off" = silent default)
+      vad_server: { mode: "aligned", silence_ms: 1500 },
       vad: { onset_db_over_noise: 11, min_db: -55, hangover_ms: 1400, preroll_ms: 600, idle_disconnect_ms: 300000, batch_ms: 100 },
       vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: 2000 },
       tanks: { gauge: [], watcher: null },            // the Watcher stays home during a pitch
@@ -885,7 +942,12 @@ function buildConfig(keys, mode = "gaffer") {
     tanks: (() => {
       try {
         const w = loadTankConfig().find(t => t.id === "T2");
-        return { gauge: tankSummary(), watcher: (w && w.enabled && Number.isFinite(w.key_index) && w.key_index < keys.length) ? { key_index: w.key_index, instruction: WATCHER_INSTRUCTION } : null };
+        // C3 — the Watcher's frames ride MEDIA_RESOLUTION_LOW (probed live
+        // 15 Jul: setup accepts) — cheaper frames = eyes on the desk longer.
+        // The GAFFER'S eyes stay sharp (main socket untouched). Pref
+        // watcher_media:"high" restores full resolution; the page strip-scars
+        // it automatically if the wire ever bites.
+        return { gauge: tankSummary(), watcher: (w && w.enabled && Number.isFinite(w.key_index) && w.key_index < keys.length) ? { key_index: w.key_index, instruction: WATCHER_INSTRUCTION, media_resolution: prefs.watcher_media === "high" ? null : "MEDIA_RESOLUTION_LOW" } : null };
       } catch { return { gauge: [], watcher: null }; }
     })(),
     // M0 — context-window compression, tuned EXPLICITLY (spec: trigger ~25k /
@@ -899,14 +961,24 @@ function buildConfig(keys, mode = "gaffer") {
     // quota in every shape (1011/429 billing) — honestly ABSENT until a lane
     // with real quota exists.
     tools: [{ functionDeclarations: TOOL_DECLS }],
-    // M4 — thinking before speech: off by default (latency); low in a mock
-    // (harder turns deserve it); his pref overrides. Shape probed live: OK.
-    thinking: ["off", "low", "high"].includes(prefs.thinking) ? prefs.thinking : (mode === "scrimmage" ? "low" : "off"),
+    // C4 — THINKING HONESTY (probed live 15 Jul: MINIMAL + MEDIUM both accept
+    // setup): "off" silently rode the server's default minimal — now every
+    // session sends an EXPLICIT level. Talk = minimal (latency), scrimmage =
+    // medium (probes 4-5 are novel/negative-space — the hard ground earns
+    // real thought); his pref overrides; legacy "off" maps to minimal.
+    thinking: ["minimal", "low", "medium", "high"].includes(prefs.thinking) ? prefs.thinking : (prefs.thinking === "off" ? "minimal" : (mode === "scrimmage" ? "medium" : "minimal")),
     // THE EARS — VAD tuned for a captain who THINKS mid-sentence. hangover
     // 1400ms means a pause to gather a thought no longer ends his turn (the
     // old 900ms cut deep answers off); barge-in stays instant (any voiced
     // frame stops playback). preroll 600ms keeps the front of a word.
     vad: { onset_db_over_noise: 11, min_db: -55, hangover_ms: 1400, preroll_ms: 600, idle_disconnect_ms: 90000, batch_ms: 100 },
+    // C1 — SERVER-VAD ALIGNMENT (probed live 15 Jul: both shapes accept setup).
+    // The reps-corrupting gap: the server's ~800ms default silence-cut vs his
+    // measured >1.4s think-pauses — a clipped gut-word turn is a corrupted
+    // voice rep. "aligned" (default) tells the server to wait as long as the
+    // local VAD does; "manual" (pref vad_mode) disables server VAD entirely —
+    // the already-authoritative local VAD sends activityStart/activityEnd.
+    vad_server: { mode: prefs.vad_mode === "manual" ? "manual" : "aligned", silence_ms: 1500 },
     // THE EYES — sharper frames so it can actually READ his handwriting/code.
     // M5 — the tone multiplies the cadence: conserve = slower frames (gentler
     // pace, fewer tokens on a RED day); open = fuller frames.
@@ -1059,7 +1131,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 21);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 22);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -1180,14 +1252,41 @@ async function selftest() {
     assert("the page injects the second spotlight NON-SPOKEN, deduped", PAGE.includes("SECOND SPOTLIGHT") && PAGE.includes("lastBgHintId"));
   }
 
+  // PART C — the Live-API adopts (probed live 15 Jul 2026)
+  {
+    const cfg = buildConfig(["k1", "k2"]);
+    assert("C1: server-VAD ships ALIGNED to his think-pauses (1500ms, probed)", cfg.vad_server && cfg.vad_server.mode === "aligned" && cfg.vad_server.silence_ms === 1500);
+    assert("C1: the page sends realtimeInputConfig both ways (aligned + manual)", PAGE.includes("silenceDurationMs") && PAGE.includes("automaticActivityDetection:{disabled:true}"));
+    assert("C1: manual mode — the LOCAL VAD opens and closes the turn itself", PAGE.includes("activityStart:{}") && PAGE.includes("activityEnd:{}"));
+    assert("C2: the page reads usageMetadata (token-true gauge, free on the wire)", PAGE.includes("usageMetadata") && PAGE.includes("totalTokenCount") && PAGE.includes("tokens:dTok"));
+    assert("C3: the Watcher rides LOW-res frames; the Gaffer's eyes stay sharp", cfg.tanks.watcher === null || cfg.tanks.watcher.media_resolution === "MEDIA_RESOLUTION_LOW");
+    assert("C3: the strip-scar is armed (early 1007 → full-res retry, once)", PAGE.includes("wMediaStrip") && PAGE.includes("mediaResolution stripped"));
+    assert("C4: thinking is EXPLICIT now — talk minimal, scrimmage medium", cfg.thinking === "minimal" && buildConfig(["k1"], "scrimmage").thinking === "medium");
+    assert("C4: the page always sends thinkingConfig (the silent default is dead)", PAGE.includes("thinkExplicit?{thinkingConfig") && !PAGE.includes("CFG.thinking!=='off'"));
+    // C6 — read_url: the firewall runs BEFORE any network
+    const noNet = { fetchFn: async () => { throw new Error("must not fetch"); }, keys: ["k"] };
+    assert("C6: read_url refuses non-http ground", (await runReadUrl({ url: "file:///C:/x" }, noNet)).ok === false);
+    assert("C6: read_url firewall — local/personal ground never rides", (await runReadUrl({ url: "http://192.168.1.5/wall" }, noNet)).error.includes("firewall") && (await runReadUrl({ url: "https://x.com", question: "read my dressing-room state" }, noNet)).error.includes("firewall"));
+    const dry = await runReadUrl({ url: "https://example.com/doc" }, { keys: ["k"], fetchFn: async () => ({ ok: false }) });
+    assert("C6: a dry/absent lane reports honestly, never fakes a read", dry.ok === false && dry.error.includes("honest"));
+    const rOk = await runReadUrl({ url: "https://example.com/doc", question: "what is this" }, { keys: ["k"], fetchFn: async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: "the source says X" }] } }] }) }) });
+    assert("C6: a live read answers FROM the source", rOk.ok && rOk.text.includes("source says") && rOk.note.includes("never your priors"));
+    assert("C6: the tool is declared for the Gaffer (public ground only)", TOOL_DECLS.some(t => t.name === "read_url" && t.description.includes("NEVER for private")));
+    // C5 — the mint lane (wire-proven) + its honest failure
+    const mintOk = await mintEphemeralToken({ keys: ["k"], fetchFn: async () => ({ ok: true, json: async () => ({ name: "auth_tokens/abc123" }) }) });
+    assert("C5: the bridge mints a 30-min single-use token (lane proven live)", mintOk.ok && mintOk.token.startsWith("auth_tokens/") && mintOk.expires_in_min === 30);
+    const mintDry = await mintEphemeralToken({ keys: ["k"], fetchFn: async () => ({ ok: false }) });
+    assert("C5: mint dry → raw-key mode stands (honest, never half-locked)", mintDry.ok === false && mintDry.error.includes("raw-key"));
+  }
+
   // M4 — THE MOUTH CEILING (Chalkboard-on-REST · thinking · the code round)
   {
     const c4 = buildConfig(["k1"]);
     assert("SCAR: NO codeExecution on the live socket (it hangs the turn — probed)", c4.tools.length === 1 && !JSON.stringify(c4.tools).includes("codeExecution"));
     assert("search grounding honestly ABSENT (zero free quota — the wire said so)", !JSON.stringify(c4.tools).includes("googleSearch"));
     assert("CHALKBOARD: run_python is a club tool", c4.tools[0].functionDeclarations.some(t => t.name === "run_python"));
-    assert("thinking: off for talk (latency), low in a mock, pref overrides", c4.thinking === "off" && buildConfig(["k1"], "scrimmage").thinking === "low");
-    assert("page sends thinkingConfig only when thinking is on", PAGE.includes("thinkingConfig:{thinkingLevel:CFG.thinking.toUpperCase()}") && PAGE.includes("CFG.thinking!=='off'"));
+    assert("thinking: EXPLICIT minimal for talk, medium in a mock (C4 honesty fix)", c4.thinking === "minimal" && buildConfig(["k1"], "scrimmage").thinking === "medium");
+    assert("page ALWAYS sends an explicit thinkingLevel, scar-armed (C4)", PAGE.includes("thinkingLevel:(CFG.thinking||'minimal').toUpperCase()") && PAGE.includes("thinkExplicit"));
     const fw = await runPythonSandbox("print(open('dressing-room/state/readiness.json').read())", { keys: ["k"], fetchFn: async () => { throw new Error("must not be called"); } });
     assert("CHALKBOARD FIREWALL: personal-data code REFUSED before any network", fw.ok === false && fw.error.includes("firewall"));
     const fw2 = await runPythonSandbox("import subprocess; subprocess.run(['ls'])", { keys: ["k"], fetchFn: async () => { throw new Error("no"); } });
@@ -1220,7 +1319,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("21 club tools now (the briefing joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 21);
+    assert("22 club tools now (read_url joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 22);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -1247,7 +1346,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 21 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 22 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -1369,29 +1468,37 @@ function stopVision(){if(vidTimer){clearInterval(vidTimer);vidTimer=null}
 // M3 — THE WATCHER (T2): second socket, own tank, vision-only. Its audio is
 // NEVER played; its rare one-line observations become afferents. Any failure
 // is silent — the Watcher must never cost the conversation anything.
-let wsW=null,wSetup=false,wTx='',lastWObs=0;
+let wsW=null,wSetup=false,wTx='',lastWObs=0,wTok=0,wTokSent=0,wOpenAt=0,wMediaStrip=false;
 function watcherConnect(){
  try{
   if(!CFG||!CFG.tanks||!CFG.tanks.watcher)return;
   if(wsW&&(wsW.readyState===0||wsW.readyState===1))return;
   const key=CFG.keys[CFG.tanks.watcher.key_index];if(!key)return;
-  wSetup=false;wTx='';
+  wSetup=false;wTx='';wOpenAt=Date.now();
   wsW=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
   wsW.onopen=()=>wsW.send(JSON.stringify({setup:{model:'models/'+CFG.model,
-   generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}}},
+   // C3 — LOW-res frames on the Watcher only (probed live; strip-scar below):
+   // cheaper frames = eyes on the desk longer; the Gaffer's eyes stay sharp
+   generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}},...(CFG.tanks.watcher.media_resolution&&!wMediaStrip?{mediaResolution:CFG.tanks.watcher.media_resolution}:{})},
    systemInstruction:{parts:[{text:CFG.tanks.watcher.instruction}]},
    outputAudioTranscription:{},
    contextWindowCompression:{triggerTokens:CFG.compression.trigger_tokens,slidingWindow:{targetTokens:CFG.compression.sliding_window_tokens}}}}));
   wsW.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.text();let m;try{m=JSON.parse(d)}catch(e){return}
-   if(m.setupComplete){wSetup=true;log('· the Watcher is on (T2 — second pair of eyes)');return}
+   if(m.setupComplete){wSetup=true;log('· the Watcher is on (T2 — second pair of eyes'+(CFG.tanks.watcher.media_resolution&&!wMediaStrip?', low-res frames':'')+')');return}
+   if(m.usageMetadata&&isFinite(m.usageMetadata.totalTokenCount))wTok=Math.max(wTok,m.usageMetadata.totalTokenCount);   // C2 — the Watcher's true tokens
    const sc=m.serverContent;if(!sc)return;
    if(sc.outputTranscription&&sc.outputTranscription.text)wTx+=sc.outputTranscription.text;
    if(sc.turnComplete&&wTx.trim()){const obs=wTx.trim().slice(0,200);wTx='';
     const n=Date.now();if(n-lastWObs<10000)return;lastWObs=n;
+    const dTok=Math.max(0,wTok-wTokSent);wTokSent=wTok;
     fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'vision',source:'watcher',event_key:'watcher:'+obs.toLowerCase().split(/\\s+/).slice(0,3).join('-'),text:obs})}).catch(()=>{});
-    fetch('/tank-use',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'T2',units:1})}).catch(()=>{});
+    fetch('/tank-use',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'T2',units:1,tokens:dTok})}).catch(()=>{});
     log('👁 watcher: '+obs)}};
-  wsW.onclose=()=>{wsW=null;wSetup=false};
+  wsW.onclose=e=>{
+   // C3 strip-scar: an early 1007/1011 with LOW-res set → retry once full-res
+   if(!wSetup&&CFG.tanks.watcher.media_resolution&&!wMediaStrip&&wOpenAt&&(Date.now()-wOpenAt<15000)&&(e.code===1007||e.code===1011)){
+    wMediaStrip=true;wsW=null;log('· watcher scar bit: mediaResolution stripped — full-res frames ride');watcherConnect();return}
+   wsW=null;wSetup=false};
   wsW.onerror=()=>{};
  }catch(e){}
 }
@@ -1414,10 +1521,13 @@ setupDone=false;
 const key=CFG.keys[keyIdx];
 ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(key));
 ws.onopen=()=>{const s={model:'models/'+CFG.model,
- generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}},...(CFG.thinking&&CFG.thinking!=='off'?{thinkingConfig:{thinkingLevel:CFG.thinking.toUpperCase()}}:{})},
+ generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:CFG.voice}}},...(thinkExplicit?{thinkingConfig:{thinkingLevel:(CFG.thinking||'minimal').toUpperCase()}}:{})},
  systemInstruction:{parts:[{text:CFG.system}]},
  ...(CFG.tools&&CFG.tools.length?{tools:CFG.tools}:{}),
  inputAudioTranscription:{},
+ // C1 — server-VAD aligned to HIS think-pauses (or fully manual: the local
+ // VAD is the authority and sends activityStart/activityEnd itself)
+ realtimeInputConfig:(CFG.vad_server&&CFG.vad_server.mode==='manual'?{automaticActivityDetection:{disabled:true}}:{automaticActivityDetection:{silenceDurationMs:(CFG.vad_server&&CFG.vad_server.silence_ms)||1500}}),
  sessionResumption:resumeHandle?{handle:resumeHandle}:{},
  contextWindowCompression:{triggerTokens:CFG.compression.trigger_tokens,slidingWindow:{targetTokens:CFG.compression.sliding_window_tokens}}};
  if(outTxEnabled)s.outputAudioTranscription={};
@@ -1431,6 +1541,8 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
    log('· rehydrated from today\\'s match record')}
   st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
  if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable){resumeHandle=m.sessionResumptionUpdate.newHandle;postHandle(resumeHandle)}
+ // C2 — usageMetadata arrives FREE on server messages: the token-true gauge
+ if(m.usageMetadata&&isFinite(m.usageMetadata.totalTokenCount))tokTotal=Math.max(tokTotal,m.usageMetadata.totalTokenCount);
  if(m.goAway){goAwayAt=Date.now();log('· session rotating (goAway) — proactive stitch at next quiet beat');return}
  if(m.toolCall){maybeAck();const rs=await Promise.all(m.toolCall.functionCalls.map(toolCall));
   if(ws&&ws.readyState===1)ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}));log('⚙ '+m.toolCall.functionCalls.map(f=>f.name).join(', '));return}
@@ -1450,7 +1562,9 @@ ws.onclose=e=>{if(closing)return;
  if(parking){parking=false;setupDone=false;st('🎤 armed — line parked; bolo to reconnect');return}
  if(resumingWith&&!setupDone){dropResume('resume rejected by the wire, code '+e.code);setupDone=false;setTimeout(connect,400);return}
  if(outTxEnabled&&setupAt&&(Date.now()-setupAt<20000)&&(e.code===1007||e.code===1011)){
-  if(++earlyCloses>=2){outTxEnabled=false;log('· live scar bit: outputTranscription stripped — checkpoint tool is the match record now')}}
+  if(++earlyCloses>=2){outTxEnabled=false;log('· live scar bit: outputTranscription stripped — checkpoint tool is the match record now')}
+  // C4 scar ladder: still closing early after outTx stripped → explicit thinking goes next
+  if(earlyCloses>=4&&thinkExplicit){thinkExplicit=false;log('· live scar bit: explicit thinkingLevel stripped — server default rides')}}
  if((e.code===1011||e.code===1008||/quota|exhaust|resource/i.test(e.reason||''))){
    const k=nextKey();if(k){log('· quota on key '+(keyIdx)+' — rotating pool');dropResume('key rotation — a handle is per-project');connect();return}
    st('🪑 free juice dry for today — bench: node scripts/talk.mjs');mins();return}
@@ -1459,6 +1573,9 @@ ws.onclose=e=>{if(closing)return;
 
 // LOCAL VAD — the line opens on his voice, sleeps with him silent
 let vadNoise=-70,talking=false,lastVoice=0,segOpen=false,preroll=[],outQ=[],pending=[];
+let tokTotal=0,tokSent=0,thinkExplicit=true;   // C2 token gauge · C4 scar arm
+function sendRI(obj){const m=JSON.stringify({realtimeInput:obj});
+ if(ws&&ws.readyState===1&&setupDone)ws.send(m);else{pending.push(m);if(pending.length>140)pending.shift()}}
 function vadFrame(i16){let s=0;for(let i=0;i<i16.length;i++){const v=i16[i]/32768;s+=v*v}
  const db=10*Math.log10(s/i16.length+1e-10);
  if(db<vadNoise+3)vadNoise=vadNoise*0.995+db*0.005;
@@ -1468,6 +1585,7 @@ function onFrame(i16){const voiced=vadFrame(i16),now=Date.now();
  if(voiced){lastVoice=now;
   if(!talking){talking=true;segOpen=true;outQ=preroll.splice(0);
    if(awaitThink&&lastPlayEnd){stamp('captain_think',now-lastPlayEnd);awaitThink=false}
+   if(CFG.vad_server&&CFG.vad_server.mode==='manual')sendRI({activityStart:{}});
    if(!ws||ws.readyState>1){st('connecting…');connect()}}}
  if(talking){outQ.push(i16);
   if(now-lastVoice>CFG.vad.hangover_ms){talking=false;flushAudio();endSegment()}}
@@ -1479,8 +1597,9 @@ function sendAudio(i16){const msg=JSON.stringify({realtimeInput:{audio:{data:b64
 function flushAudio(){if(!outQ.length)return;sendAudio(concatFrames(outQ.splice(0)))}
 function endSegment(){if(!segOpen)return;segOpen=false;
  segEndAt=Date.now();awaitGaffer=true;
- const m=JSON.stringify({realtimeInput:{audioStreamEnd:true}});
- if(ws&&ws.readyState===1&&setupDone)ws.send(m);else pending.push(m)}
+ // C1 — manual mode: the LOCAL VAD (the authority on his think-pauses)
+ // closes the turn itself; aligned mode keeps the proven audioStreamEnd
+ sendRI(CFG.vad_server&&CFG.vad_server.mode==='manual'?{activityEnd:{}}:{audioStreamEnd:true})}
 function flushPending(){if(!ws||ws.readyState!==1)return;for(const m of pending.splice(0))ws.send(m)}
 setInterval(()=>{if(talking)flushAudio()},100);
 setInterval(()=>{
@@ -1530,7 +1649,8 @@ let lastHintExp=null,lastWhisperId=null;
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
 setInterval(flush,15000);
-function mins(){if(!t0)return;fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10})});t0=Date.now()}
+function mins(){if(!t0)return;const dTok=Math.max(0,tokTotal-tokSent);tokSent=tokTotal;
+ fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10,tokens:dTok})});t0=Date.now()}
 setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins();sendStamps()});
 
 // MIC P0 — every failure SURFACED with the fix, never swallowed
@@ -1592,6 +1712,12 @@ async function main() {
     console.log(`dugout: recall index +${n} new chunk(s) of his words`);
     return;
   }
+  if ((process.argv[2] || "").toLowerCase() === "mint-probe") {
+    // C5 — re-probe the ephemeral-token lane (mint proven; WS attach pending)
+    const m = await mintEphemeralToken();
+    console.log(m.ok ? `dugout: mint OK — ${String(m.token).slice(0, 28)}… (${m.expires_in_min} min, single-use). WS attach shape still pending on the wire — see mintEphemeralToken note.` : `dugout: mint failed — ${m.error}`);
+    return;
+  }
   const keys = loadKeys();
   if (!keys.length) { console.log("dugout: no GEMINI_API_KEY found (~/.gemini/.env) — wire setup/GEMINI_CLI_SETUP.md first"); process.exit(1); }
   mkdirSync(OUT_DIR, { recursive: true });
@@ -1647,7 +1773,13 @@ async function main() {
         if (req.url === "/tool") {
           if (body.name === "semantic_recall") return send(200, await execRecall(body.args || {}));   // async tool
           if (body.name === "run_python") return send(200, await runPythonSandbox((body.args || {}).code));   // M4 — the Chalkboard (async, REST sandbox)
+          if (body.name === "read_url") return send(200, await runReadUrl(body.args || {}));   // C6 — source-grounded read (async, REST urlContext)
           return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
+        }
+        if (req.url === "/token") {
+          // C5 — the mint lane (proven live); the page adopts it the day the
+          // wire's browser attach shape lands (see mintEphemeralToken note)
+          return send(200, await mintEphemeralToken());
         }
         if (req.url === "/transcript") {
           appendFileSync(join(OUT_DIR, localDate() + ".md"), body.lines.join("\n") + "\n");
@@ -1663,7 +1795,9 @@ async function main() {
           return send(200, { ok: true });
         }
         if (req.url === "/minutes") {
-          appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), minutes: body.minutes || 0 }) + "\n");
+          // C2 — the token-true gauge: usageMetadata's real count rides beside
+          // the wall-clock minutes (rationing can now trust tokens, not folklore)
+          appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), minutes: body.minutes || 0, tokens: Math.max(0, Number(body.tokens) || 0), tank: "T1" }) + "\n");
           // M3 — the Gaffer's minutes count against T1 (owner writes the ledger)
           try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", "T1", "1"], { windowsHide: true, timeout: 15000 }); } catch { }
           return send(200, { ok: true });
@@ -1672,6 +1806,8 @@ async function main() {
           // M3 — page-reported tank usage → fuelboard (the owner) via the shell
           const id = String(body.id || "");
           if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", id, String(Math.max(1, Number(body.units) || 1))], { windowsHide: true, timeout: 15000 }); } catch { } }
+          // C2 — a tank's true tokens land in the same voice ledger
+          if (Number(body.tokens) > 0) appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), tokens: Math.round(Number(body.tokens)), tank: id || "T?" }) + "\n");
           return send(200, { ok: true });
         }
         if (req.url === "/handle") {
@@ -1733,4 +1869,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase, loadSessionHandle, saveSessionHandle, RESUME_TTL_MIN };
+export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase, loadSessionHandle, saveSessionHandle, RESUME_TTL_MIN, runReadUrl, mintEphemeralToken };
