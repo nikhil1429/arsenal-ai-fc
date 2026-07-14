@@ -65,6 +65,7 @@ import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex 
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
 import { loadFreshDrill, drillSection } from "./examiner.mjs";
+import { pendingWakes } from "./thalamus.mjs";
 // M5 — neuromodulation (READS only; tone.mjs owns tone.json)
 import { currentTone } from "./tone.mjs";
 
@@ -119,7 +120,14 @@ function readDeepState(deps = {}) {
   const rt = deps.runtime || runtime;
   const out = { version: (ws && ws.version) || 0, deep: null, pending: null, recall: null };
   if (ws && ws.deep && ws.deep.text && !ws.deep.declined) out.deep = { moment_id: ws.deep.moment_id, text: ws.deep.text, provenance: ws.deep.provenance };
-  if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
+  // M14 — the wake QUEUE is the truth for "pending" (read-only; thalamus owns
+  // the file); wake.json stays the pre-queue fallback (layering)
+  const qRows = deps.queueRows !== undefined ? deps.queueRows : readLines(join(STATE_DIR, "wake_queue.jsonl"));
+  const open = pendingWakes(qRows);
+  if (open.length) {
+    const newest = open[open.length - 1];
+    out.pending = { moment_id: newest.moment_id, about: String((newest.spotlight || {}).text || (newest.spotlight || {}).event_key || "").slice(0, 120), queued: open.length };
+  } else if (wake && wake.status === "pending" && wake.moment_id) out.pending = { moment_id: wake.moment_id, about: String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || "").slice(0, 120) };
   // M2 — a fresh recall hit rides along (stale ones expire; page dedupes by id)
   if (rt.recallHint && Date.now() - rt.recallHint.ts < 60000) out.recall = { id: rt.recallHint.id, hint: rt.recallHint.hint };
   // M17 — the pre-answer rides the RECALL pattern (responsive, non-spoken,
@@ -1112,7 +1120,14 @@ async function selftest() {
     assert("stale deep answers never replay on reload (primed first poll)", PAGE.includes("deepPrimed"));
     assert("BRIDGE law travels in the constitution (never mention the machinery)", buildSystemInstruction().includes("THE BRIDGE") && buildSystemInstruction().includes("never mention the machinery"));
     assert("thalamus down = fail-silent, the reflex plays on", (await relayAfferent({ modality: "voice", text: "x" }, async () => { throw new Error("down"); })) === false);
-    const ds = readDeepState({ workspace: { version: 7, deep: { moment_id: "m9", text: "the read", declined: false, provenance: "opus-extended" } }, wake: { status: "pending", moment_id: "m10", spotlight: { text: "why does attention scale" } } });
+    const ds = readDeepState({ workspace: { version: 7, deep: { moment_id: "m9", text: "the read", declined: false, provenance: "opus-extended" } }, wake: { status: "pending", moment_id: "m10", spotlight: { text: "why does attention scale" } }, queueRows: [] });
+    // M14 — the queue is the truth for pending; wake.json is the fallback floor
+    const dsQ = readDeepState({ workspace: null, wake: null, queueRows: [
+      { moment_id: "q1", status: "pending", spotlight: { text: "first doubt" } },
+      { moment_id: "q2", status: "pending", spotlight: { text: "second doubt" } },
+      { moment_id: "q1", status: "served" },
+    ], runtime: {} });
+    assert("bridge /deep reads the wake QUEUE (open count, newest about)", dsQ.pending && dsQ.pending.moment_id === "q2" && dsQ.pending.queued === 1);
     assert("bridge /deep hands back both the served answer and the pending wake", ds.version === 7 && ds.deep.moment_id === "m9" && ds.pending.moment_id === "m10" && ds.pending.about.includes("attention"));
     const dsDecl = readDeepState({ workspace: { version: 2, deep: { moment_id: "m1", text: null, declined: true } }, wake: null });
     assert("a DECLINED deep answer is never offered to the mouth", dsDecl.deep === null && dsDecl.pending === null);

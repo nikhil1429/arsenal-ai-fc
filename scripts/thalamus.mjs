@@ -31,8 +31,10 @@
 //        EXCLUDED BY CONSTRUCTION: prosody, tone, emotion, agitation — any such
 //        field is STRIPPED at the door before an event even lands in the log.
 // LAWS:  single writer — this file alone writes afferent.jsonl · workspace.json
-//        · salience_ledger.jsonl · wake.json (cortex answers arrive THROUGH
-//        :4113/deep-answer, never as a file write). All four are gitignored
+//        · salience_ledger.jsonl · wake.json · wake_queue.jsonl (M14: wakes
+//        QUEUE, never clobber — wake.json is the latest-wake mirror; cortex
+//        answers arrive THROUGH :4113/deep-answer, never as a file write).
+//        All five are gitignored
 //        (they carry his words/moments; the public repo holds machinery only).
 //        The gate decides what gets THOUGHT ABOUT, never what gets SAID —
 //        outbound speech still passes the shadow ratify-gate + win-only law.
@@ -55,6 +57,7 @@ const AFFERENT  = join(STATE_DIR, "afferent.jsonl");
 const WORKSPACE = join(STATE_DIR, "workspace.json");
 const SLEDGER   = join(STATE_DIR, "salience_ledger.jsonl");
 const WAKE      = join(STATE_DIR, "wake.json");
+const WQUEUE    = join(STATE_DIR, "wake_queue.jsonl");     // M14 — the overlap: wakes QUEUE, never clobber
 const DOSSIER   = join(STATE_DIR, "dossier.json");
 const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
 const PORT = 4113;                                  // one below the Dugout's 4114
@@ -78,11 +81,16 @@ const DEFAULT_CONFIG = {
   tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 },
   binding_ms: 900,
   refractory_min: 45,
+  // M14 — wake_cap_per_day is the HARD ceiling (humane clamp); the EFFECTIVE
+  // cap derives live from the real window: floor(allowed_tokens / est_per_wake),
+  // floored at wake_cap_min so the day's sharpest surprise always has a lane
+  // (the cortex's headroom lock is the second gate). Folklore 15 is dead.
   wake_cap_per_day: 15,
+  wake_cap_min: 2,
   hab: { tau_ms: 600000, saturation: 4 },
   pe: { norm_bits: 4, base_rates: { default: 0.5 } },
   adjudicator: { model: "gemini-flash-lite-latest", enabled: true },
-  deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000 },
+  deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30 },
   // M17 — the pre-answer serve side: cosine bar, the free overlap floor, and
   // the one embed call's hard timeout (dry/slow → the floor, never a stall)
   pre_answer: { enabled: true, threshold: 0.60, min_overlap: 2, embed_timeout_ms: 4000 },
@@ -91,7 +99,7 @@ const DEFAULT_CONFIG = {
 function loadConfig() {
   const c = readJson(CONFIG);
   if (!c) return DEFAULT_CONFIG;
-  return { ...DEFAULT_CONFIG, ...c, weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) }, tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) }, hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) }, pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}) }, pre_answer: { ...DEFAULT_CONFIG.pre_answer, ...(c.pre_answer || {}) } };
+  return { ...DEFAULT_CONFIG, ...c, weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) }, tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) }, hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) }, pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}) }, pre_answer: { ...DEFAULT_CONFIG.pre_answer, ...(c.pre_answer || {}) }, deep: { ...DEFAULT_CONFIG.deep, ...(c.deep || {}) } };
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +197,29 @@ function cosine(a, b) {
   for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
   return na && nb ? dot / Math.sqrt(na * nb) : 0;
 }
+// ---------------------------------------------------------------------------
+// M14 — THE OVERLAP: the wake QUEUE (event-sourced, append-only, single-writer).
+// A "pending" row opens a wake; a later served/declined/expired row for the
+// same moment closes it. pendingWakes() reduces the log to the open set —
+// read-only consumers (cortex, dugout) import this, never write the file.
+// ---------------------------------------------------------------------------
+function pendingWakes(rows) {
+  const open = new Map();
+  for (const r of rows || []) {
+    if (!r || !r.moment_id) continue;
+    if (r.status === "pending") open.set(r.moment_id, r);
+    else open.delete(r.moment_id);
+  }
+  return [...open.values()];
+}
+// M14 — the effective daily wake cap derives from the REAL window, floored so
+// the day's sharpest surprise always has a lane; wake_cap_per_day stays the
+// hard humane ceiling. Folklore is dead; the ledger decides.
+function wakeCapToday(cfg, allowedTokens) {
+  const derived = Math.floor(Math.max(0, allowedTokens) / Math.max(1, cfg.deep.est_tokens_per_wake));
+  return Math.min(cfg.wake_cap_per_day, Math.max(cfg.wake_cap_min, derived));
+}
+
 function matchPreAnswer(evt, cache, qv, cfg) {
   if (!Array.isArray(cache) || !cache.length) return null;
   let best = null;
@@ -221,8 +252,12 @@ function createNucleus(cfg, deps = {}) {
     appendLedger: deps.appendLedger || ((row) => appendFileSync(SLEDGER, JSON.stringify(row) + "\n")),
     writeWorkspace: deps.writeWorkspace || ((o) => writeAtomic(WORKSPACE, o)),
     writeWake: deps.writeWake || ((o) => writeAtomic(WAKE, o)),
+    // M14 — wakes QUEUE (append), they never clobber; wake.json stays as the
+    // latest-wake mirror so every pre-queue reader keeps working (layering)
+    appendWakeQueue: deps.appendWakeQueue || ((row) => appendFileSync(WQUEUE, JSON.stringify(row) + "\n")),
     markets: deps.markets || (() => { const t = readJson(join(STATE_DIR, "twin.json")); const m = {}; for (const mk of (t && t.markets) || []) m[mk.id] = mk.p; return m; }),
     headroomFrac: deps.headroomFrac || defaultHeadroomFrac,
+    allowedTokens: deps.allowedTokens || defaultAllowedTokens,   // M14 — the live cap rides the real ledger
     // M5 — neuromodulation: the tone's τ1 bump (conserve raises the wake bar)
     toneBump: deps.toneBump || (() => { const t = readJson(join(STATE_DIR, "tone.json")); return (t && t.effects && Number.isFinite(t.effects.tau1_bump)) ? t.effects.tau1_bump : 0; }),
     // M7 — the Rest Room's ammunition (read-only; dmn.mjs owns the file)
@@ -324,6 +359,7 @@ function createNucleus(cfg, deps = {}) {
     if (today !== N.wakeDate) { N.wakeDate = today; N.wakesToday = 0; }
     const frac = D.headroomFrac();
     const t1 = tau1Effective(cfg, frac) + D.toneBump();   // budget coupling + neuromodulation
+    const capToday = wakeCapToday(cfg, D.allowedTokens()); // M14 — ledger-true, folklore dead
     const results = [];
     for (const g of bindGroups(buf)) {
       const S = g.spotlight.S;
@@ -339,7 +375,7 @@ function createNucleus(cfg, deps = {}) {
       if (tier === 2) {
         const lastWake = N.wakeKeys.get(g.spotlight.key);
         if (lastWake && now - lastWake < cfg.refractory_min * 60000) { tier = 1; outcome = "refractory"; }
-        else if (N.wakesToday >= cfg.wake_cap_per_day) { tier = 1; outcome = "capped"; }
+        else if (N.wakesToday >= capToday) { tier = 1; outcome = "capped"; }
       }
       const moment = {
         moment_id: momentId, ts: new Date(now).toISOString(), tier,
@@ -390,8 +426,10 @@ function createNucleus(cfg, deps = {}) {
       D.writeWorkspace(N.workspace);
       if (tier === 2) {
         N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now);
-        D.writeWake({ moment_id: momentId, ts: moment.ts, status: "pending", deadline_ms: (cfg.deep && cfg.deep.deadline_ms) || 45000, spotlight: moment.spotlight, bound_context: moment.context });
-        D.log(`thalamus: WAKE → opus (S=${S.toFixed(2)} ≥ τ1=${t1.toFixed(2)}, ${N.wakesToday}/${cfg.wake_cap_per_day} today)`);
+        const wakeRow = { moment_id: momentId, ts: moment.ts, status: "pending", deadline_ms: (cfg.deep && cfg.deep.deadline_ms) || 45000, spotlight: moment.spotlight, bound_context: moment.context };
+        D.appendWakeQueue(wakeRow);                  // M14 — the QUEUE is the contract: a second wake never clobbers a pending one
+        D.writeWake(wakeRow);                        // the latest-wake mirror (layering — pre-queue readers keep working)
+        D.log(`thalamus: WAKE → opus (S=${S.toFixed(2)} ≥ τ1=${t1.toFixed(2)}, ${N.wakesToday}/${capToday} today — cap is ledger-derived)`);
       }
       D.appendLedger({ ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000, comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities, tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated });
       results.push({ moment_id: momentId, tier, S, outcome });
@@ -425,6 +463,8 @@ function createNucleus(cfg, deps = {}) {
       deep: { moment_id: String(body.moment_id || ""), text: body.declined ? null : String(body.text || "").slice(0, 4000), declined: !!body.declined, reason: body.reason || null, provenance: body.provenance || "opus", ts: new Date(D.now()).toISOString() },
     };
     D.writeWorkspace(N.workspace);
+    // M14 — the resolution row CLOSES the wake in the queue (event-sourced)
+    D.appendWakeQueue({ moment_id: String(body.moment_id || ""), status: body.declined ? "declined" : "served", at: new Date(D.now()).toISOString(), reason: body.reason || null });
     const wake = D.readWake();
     if (wake && wake.moment_id === body.moment_id) {
       D.writeWake({ consumed: { moment_id: wake.moment_id, at: new Date(D.now()).toISOString(), status: body.declined ? "declined" : "served" } });  // consumed-on-success, like brain_queue.triggers
@@ -456,6 +496,16 @@ function defaultHeadroomFrac() {
     const hr = headroom(cfg, readLines(join(STATE_DIR, "brain_ledger.jsonl")), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date());
     return hr.cap > 0 ? clamp01((hr.cap - hr.used) / hr.cap) : 0;
   } catch { return 0.5; }   // unknown budget → lean conservative, not open
+}
+// M14 — the same guarded accounting, in TOKENS (feeds the live wake cap)
+function defaultAllowedTokens() {
+  try {
+    const { headroom, loadConfig: loadBrainCfg } = brainMod || {};
+    if (!headroom) return 0;
+    const cfg = loadBrainCfg();
+    const hr = headroom(cfg, readLines(join(STATE_DIR, "brain_ledger.jsonl")), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date());
+    return Math.max(0, hr.allowed || 0);
+  } catch { return 0; }     // unknown budget → the cap floors at wake_cap_min
 }
 let brainMod = null;
 
@@ -543,13 +593,15 @@ async function selftest() {
   // harness: virtual clock + captured writes + injected markets/headroom/adjudicator
   function rig(over = {}) {
     let t = 1000000;
-    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], adjCalls: 0 };
+    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], queue: [], adjCalls: 0 };
     const n = createNucleus(over.cfg || cfg, {
       now: () => t,
       appendAfferent: (r) => wr.afferents.push(r), appendLedger: (r) => wr.ledger.push(r),
       writeWorkspace: (o) => wr.workspaces.push(JSON.parse(JSON.stringify(o))), writeWake: (o) => wr.wakes.push(JSON.parse(JSON.stringify(o))),
+      appendWakeQueue: (r) => wr.queue.push(JSON.parse(JSON.stringify(r))),
       markets: () => over.markets || { session_happened: 0.9 },
       headroomFrac: () => (over.frac !== undefined ? over.frac : 1),
+      allowedTokens: () => (over.allowedTokens !== undefined ? over.allowedTokens : 800000),
       adjudicate: async () => { wr.adjCalls++; return over.adjVerdict || false; },
       schedule: () => null,                          // manual flush in tests
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
@@ -674,6 +726,32 @@ async function selftest() {
     assert("deep answer folds THROUGH the thalamus into workspace.deep", fold.ok && wsp.deep && wsp.deep.text === "the deep read" && wsp.deep.moment_id === mid);
     const lastWake = wr.wakes[wr.wakes.length - 1];
     assert("wake.json is CONSUMED-on-success (like brain_queue.triggers)", lastWake.consumed && lastWake.consumed.moment_id === mid && lastWake.consumed.status === "served");
+  }
+
+  // M14 — THE OVERLAP: wakes QUEUE (the clobber scar is dead) + ledger-true cap
+  {
+    const capCfg = { ...cfg, refractory_min: 0 };
+    const { n, wr, tick } = rig({ cfg: capCfg });
+    await n.ingest({ modality: "voice", text: "i don't get tokenization", concept_tokens: ["tokenization"] }); await n.flush();
+    tick(60000);
+    await n.ingest({ modality: "voice", text: "i don't get embeddings", concept_tokens: ["embeddings"] }); await n.flush();
+    const open = pendingWakes(wr.queue);
+    assert("TWO tier-2 moments → BOTH pending in the queue (the clobber is DEAD)", open.length === 2 && open[0].moment_id !== open[1].moment_id);
+    assert("wake.json stays as the latest-wake MIRROR (pre-queue readers live)", wr.wakes.length === 2 && wr.wakes[1].moment_id === open[1].moment_id);
+    const fold = n.foldDeepAnswer({ moment_id: open[0].moment_id, text: "deep read one", provenance: "opus" });
+    const openAfter = pendingWakes(wr.queue);
+    assert("a served resolution CLOSES only its own wake (event-sourced)", fold.ok && openAfter.length === 1 && openAfter[0].moment_id === open[1].moment_id);
+    assert("wake cap derives from the REAL window (800k → hard ceiling 15 binds)", wakeCapToday(cfg, 800000) === 15);
+    assert("a draining window SHRINKS the cap (120k → 3 wakes)", wakeCapToday(cfg, 120000) === 3);
+    assert("an empty window floors at wake_cap_min (the sharpest surprise keeps a lane)", wakeCapToday(cfg, 0) === cfg.wake_cap_min);
+    const { n: nCap, wr: wrCap, tick: tickCap } = rig({ cfg: capCfg, allowedTokens: 80000 });   // derived cap = 2
+    await nCap.ingest({ modality: "voice", text: "i don't get tokenization", concept_tokens: ["tokenization"] }); await nCap.flush();
+    tickCap(60000);
+    await nCap.ingest({ modality: "voice", text: "i don't get embeddings", concept_tokens: ["embeddings"] }); await nCap.flush();
+    tickCap(60000);
+    await nCap.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
+    const r3 = await nCap.flush();
+    assert("the LIVE cap gates the third wake on an 80k window (2 allowed, 3rd capped)", wrCap.queue.filter(q => q.status === "pending").length === 2 && r3[0].outcome === "capped");
   }
 
   // M7 — PREDICTIVE PRESENCE: stall × precache = a zero-latency whisper LOADED (never spoken here)
@@ -809,4 +887,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer };
+export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, wakeCapToday };
