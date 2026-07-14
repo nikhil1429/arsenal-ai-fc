@@ -128,6 +128,12 @@ dressing-room/state/tanks.json
 dressing-room/state/examiner_drill.json
 # neuromodulation (M5) — derived from the Governor verdict (which is private)
 dressing-room/state/tone.json
+# the Rest Room (M6) — pre-drafted interventions name his weaknesses
+dressing-room/state/dmn_precache.json
+# predictive presence (M7) — stall telemetry + would-have-whispered log
+dressing-room/state/presence_log.jsonl
+# the living dossier (M8) — intra-day belief state over his learning
+dressing-room/state/dossier.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/

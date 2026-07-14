@@ -109,6 +109,18 @@ function readDeepState(deps = {}) {
   if (rt.recallHint && Date.now() - rt.recallHint.ts < 60000) out.recall = { id: rt.recallHint.id, hint: rt.recallHint.hint };
   // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
   out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
+  // M7 — THE EARNED-VOICE GATE at the mouth: the whisper passes ONLY when
+  // (1) fresh (the stuck→gone window), (2) wall_breaker is PROVEN + RATIFIED
+  // in the shadow ledger, (3) the body verdict is not RED and the tone is not
+  // conserve. Sensing loaded it; only an EARNED mouth may say it.
+  out.whisper = null;
+  if (ws && ws.whisper && new Date(ws.whisper.expires) > new Date()) {
+    const led = deps.ledger !== undefined ? deps.ledger : readJson(join(STATE_DIR, "proactivity_ledger.json"));
+    const earned = !!(led && led.types && led.types.wall_breaker && led.types.wall_breaker.voice);
+    const verdict = deps.verdict !== undefined ? deps.verdict : ((readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "GREEN");
+    const tone = deps.tone !== undefined ? deps.tone : currentTone().arousal;
+    if (earned && verdict !== "RED" && tone !== "conserve") out.whisper = ws.whisper;
+  }
   return out;
 }
 
@@ -1006,6 +1018,18 @@ async function selftest() {
     assert("the Live Examiner's code round rides the scrimmage when staged", buildScrimmageInstruction(new Date(2026, 6, 14)).length > 0);   // presence asserted in examiner selftest; here: no crash pre-blood
   }
 
+  // M7 — PREDICTIVE PRESENCE at the mouth (the earned-voice gate, end to end)
+  {
+    const whisper = { type: "wall_breaker", concept: "attention", reframe: "the handhold", drill: "d", moment_id: "mw1", expires: new Date(Date.now() + 60000).toISOString() };
+    const gate = (over = {}) => readDeepState({ workspace: { version: 1, whisper }, wake: null, runtime: {}, ledger: { types: { wall_breaker: { voice: true } } }, verdict: "GREEN", tone: "open", ...over });
+    assert("EARNED + GREEN + fresh → the whisper reaches the mouth", gate().whisper !== null);
+    assert("UNEARNED (no ratified wall_breaker) → NEVER voiced, however good", gate({ ledger: { types: {} } }).whisper === null && gate({ ledger: null }).whisper === null);
+    assert("RED body → the whisper is MUTE regardless of what is earned", gate({ verdict: "RED" }).whisper === null);
+    assert("conserve tone → mute too (rest is the agenda)", gate({ tone: "conserve" }).whisper === null);
+    assert("expired whisper dies (the stuck→gone window closed)", gate({ workspace: { version: 1, whisper: { ...whisper, expires: new Date(Date.now() - 1000).toISOString() } } }).whisper === null);
+    assert("page: whisper injected ONCE, win-framed, never shame-framed", PAGE.includes("EARNED WHISPER") && PAGE.includes("about to crack this") && PAGE.includes("lastWhisperId") && !PAGE.includes("about to fail"));
+  }
+
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
   assert("wire shape: modalities+speechConfig NESTED in generationConfig", PAGE.includes("generationConfig:{responseModalities:['AUDIO'],speechConfig"));
   assert("Charon travels as prebuiltVoiceConfig", PAGE.includes("prebuiltVoiceConfig") && PAGE.includes("CFG.voice"));
@@ -1270,8 +1294,11 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
   log('· memory surfaced (non-spoken hint)');return}
  if(d.mouth_hint&&d.mouth_hint.expires!==lastHintExp){lastHintExp=d.mouth_hint.expires;
   ws.send(JSON.stringify({realtimeInput:{text:'[TIMING HINT — non-spoken, about delivery only, never content: '+d.mouth_hint.hint+']'}}));
-  log('· timing hint (affect firewall output — delivery only)')}},3000);
-let lastHintExp=null;
+  log('· timing hint (affect firewall output — delivery only)');return}
+ if(d.whisper&&d.whisper.moment_id!==lastWhisperId){lastWhisperId=d.whisper.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[EARNED WHISPER — he is stalling on '+d.whisper.concept+' RIGHT NOW; you have earned this interruption. ONE gentle line, win-framed ("you were about to crack this — here is the handhold"), then the reframe: '+d.whisper.reframe+'. Offer the drill only if he takes the hand: '+d.whisper.drill+']'}}));
+  log('🕯 earned whisper delivered (predictive presence)')}},3000);
+let lastHintExp=null,lastWhisperId=null;
 
 let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
 function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}

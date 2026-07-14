@@ -188,6 +188,8 @@ function createNucleus(cfg, deps = {}) {
     headroomFrac: deps.headroomFrac || defaultHeadroomFrac,
     // M5 — neuromodulation: the tone's τ1 bump (conserve raises the wake bar)
     toneBump: deps.toneBump || (() => { const t = readJson(join(STATE_DIR, "tone.json")); return (t && t.effects && Number.isFinite(t.effects.tau1_bump)) ? t.effects.tau1_bump : 0; }),
+    // M7 — the Rest Room's ammunition (read-only; dmn.mjs owns the file)
+    precache: deps.precache || (() => readJson(join(STATE_DIR, "dmn_precache.json"))),
     adjudicate: deps.adjudicate || adjudicateLive,
     schedule: deps.schedule || ((ms, fn) => setTimeout(fn, ms)),
     readWake: deps.readWake || (() => readJson(WAKE)),
@@ -294,8 +296,28 @@ function createNucleus(cfg, deps = {}) {
         spotlight: { ...g.spotlight.evt, S, comps: g.spotlight.comps },
         context: g.context.map(c => ({ ...c.evt, S: c.S })),
       };
+      // M7 — PREDICTIVE PRESENCE: a stall moment queries the Rest Room's
+      // precache — the intervention was drafted HOURS ago, so it lands with
+      // ZERO model latency, inside the stuck→gone window. Attaching it here
+      // is NOT speech: the mouth gate (earned voice + RED/conserve mute)
+      // still decides at the bridge whether it may ever be said.
+      let whisper = N.workspace.whisper || null;
+      if (String(g.spotlight.evt.event_key || "").startsWith("stall:")) {
+        const pc = D.precache();
+        const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []), ...String(g.spotlight.evt.text || "").toLowerCase().split(/[^a-z0-9]+/)].map(w => String(w).toLowerCase()).filter(w => w.length > 3));
+        let best = null;
+        for (const e of (pc && pc.entries) || []) {
+          const ew = String(e.concept + " " + e.stall_signature).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+          const overlap = ew.filter(w => hintWords.has(w)).length;
+          if (overlap >= 1 && (!best || overlap > best.overlap)) best = { ...e, overlap };
+        }
+        if (best) {
+          whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+          D.log(`thalamus: stall matched the Rest Room's precache — whisper loaded (zero-latency), the mouth gate decides`);
+        }
+      }
       // THE BROADCAST IS THE WRITE — version-stamped; every region subscribes
-      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null };
+      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, mouth_hint: N.workspace.mouth_hint || null };
       D.writeWorkspace(N.workspace);
       if (tier === 2) {
         N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now);
@@ -445,6 +467,7 @@ async function selftest() {
       schedule: () => null,                          // manual flush in tests
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
+      precache: () => (over.precache !== undefined ? over.precache : null),
     });
     n.state.workspace = { version: 0, moment: null, deep: null };
     return { n, wr, tick: (ms) => { t += ms; }, now: () => t };
@@ -560,6 +583,25 @@ async function selftest() {
     assert("deep answer folds THROUGH the thalamus into workspace.deep", fold.ok && wsp.deep && wsp.deep.text === "the deep read" && wsp.deep.moment_id === mid);
     const lastWake = wr.wakes[wr.wakes.length - 1];
     assert("wake.json is CONSUMED-on-success (like brain_queue.triggers)", lastWake.consumed && lastWake.consumed.moment_id === mid && lastWake.consumed.status === "served");
+  }
+
+  // M7 — PREDICTIVE PRESENCE: stall × precache = a zero-latency whisper LOADED (never spoken here)
+  {
+    const pc = { entries: [{ concept: "attention scaling", stall_signature: "quadratic attention kv cache confusion", reframe: "kv cache kills recompute, not the n² handshakes — separate the two costs", drill: "hand-count attention ops for n=4" }] };
+    const { n, wr } = rig({ precache: pc });
+    await n.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true, text: "tab-thrash forming: 38 switches", concept_tokens: ["attention", "scaling"] });
+    await n.flush();
+    const wsp = wr.workspaces[wr.workspaces.length - 1];
+    assert("a stall moment pulls the Rest Room's draft into the workspace, instantly", wsp.whisper && wsp.whisper.type === "wall_breaker" && wsp.whisper.reframe.includes("kv cache"));
+    assert("the whisper expires (the stuck→gone window is 3 minutes)", new Date(wsp.whisper.expires) - new Date(wsp.updated_at) === 180000);
+    const { n: n2, wr: wr2 } = rig({ precache: { entries: [{ concept: "unrelated topic", stall_signature: "nothing shared here", reframe: "x", drill: "y" }] } });
+    await n2.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true, text: "thrash", concept_tokens: ["attention"] });
+    await n2.flush();
+    assert("no precache match → NO whisper (never improvise an intervention)", wr2.workspaces[wr2.workspaces.length - 1].whisper === null);
+    const { n: n3, wr: wr3 } = rig({ precache: pc });
+    await n3.ingest({ modality: "voice", text: "normal chat about attention", concept_tokens: ["attention"] });
+    await n3.flush();
+    assert("a NON-stall moment never touches the precache (whispers are for the gap)", wr3.workspaces[wr3.workspaces.length - 1].whisper === null);
   }
 
   // M5 — neuromodulation: a conserve tone raises the wake bar whole-brain
