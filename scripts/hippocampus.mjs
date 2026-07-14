@@ -104,6 +104,7 @@ async function embedPool(texts, keys = loadKeys(), fetchFn = fetch) {
 // bare "gemini-3.1-flash" is NOT on the wire; the -latest aliases survive churn)
 async function generatePool(prompt, { models, maxOutputTokens = 2048, json = false, keys = loadKeys(), fetchFn = fetch } = {}) {
   const ladder = models || [process.env.HIPPO_GEN_MODEL, "gemini-3.1-pro-preview", "gemini-flash-latest"].filter(Boolean);
+  let lastStatus = null;                              // M16 — callers with a PINNED key learn WHY it failed (429 = lane dry)
   for (const model of ladder) {
     for (const key of keys) {
       try {
@@ -115,14 +116,14 @@ async function generatePool(prompt, { models, maxOutputTokens = 2048, json = fal
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
         });
         clearTimeout(t);
-        if (!r.ok) continue;
+        if (!r.ok) { lastStatus = r.status; continue; }
         const j = await r.json();
         const text = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || "").join("");
         if (text) return { ok: true, text, model, error: null };
       } catch { }
     }
   }
-  return { ok: false, text: null, error: "every key dry on every model" };
+  return { ok: false, text: null, error: "every key dry on every model", status: lastStatus };
 }
 
 // ---------------------------------------------------------------------------
