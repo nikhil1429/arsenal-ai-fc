@@ -186,6 +186,8 @@ function createNucleus(cfg, deps = {}) {
     writeWake: deps.writeWake || ((o) => writeAtomic(WAKE, o)),
     markets: deps.markets || (() => { const t = readJson(join(STATE_DIR, "twin.json")); const m = {}; for (const mk of (t && t.markets) || []) m[mk.id] = mk.p; return m; }),
     headroomFrac: deps.headroomFrac || defaultHeadroomFrac,
+    // M5 — neuromodulation: the tone's τ1 bump (conserve raises the wake bar)
+    toneBump: deps.toneBump || (() => { const t = readJson(join(STATE_DIR, "tone.json")); return (t && t.effects && Number.isFinite(t.effects.tau1_bump)) ? t.effects.tau1_bump : 0; }),
     adjudicate: deps.adjudicate || adjudicateLive,
     schedule: deps.schedule || ((ms, fn) => setTimeout(fn, ms)),
     readWake: deps.readWake || (() => readJson(WAKE)),
@@ -268,7 +270,7 @@ function createNucleus(cfg, deps = {}) {
     const today = localDate(new Date(now));
     if (today !== N.wakeDate) { N.wakeDate = today; N.wakesToday = 0; }
     const frac = D.headroomFrac();
-    const t1 = tau1Effective(cfg, frac);
+    const t1 = tau1Effective(cfg, frac) + D.toneBump();   // budget coupling + neuromodulation
     const results = [];
     for (const g of bindGroups(buf)) {
       const S = g.spotlight.S;
@@ -442,6 +444,7 @@ async function selftest() {
       adjudicate: async () => { wr.adjCalls++; return over.adjVerdict || false; },
       schedule: () => null,                          // manual flush in tests
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
+      toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
     });
     n.state.workspace = { version: 0, moment: null, deep: null };
     return { n, wr, tick: (ms) => { t += ms; }, now: () => t };
@@ -557,6 +560,18 @@ async function selftest() {
     assert("deep answer folds THROUGH the thalamus into workspace.deep", fold.ok && wsp.deep && wsp.deep.text === "the deep read" && wsp.deep.moment_id === mid);
     const lastWake = wr.wakes[wr.wakes.length - 1];
     assert("wake.json is CONSUMED-on-success (like brain_queue.triggers)", lastWake.consumed && lastWake.consumed.moment_id === mid && lastWake.consumed.status === "served");
+  }
+
+  // M5 — neuromodulation: a conserve tone raises the wake bar whole-brain
+  {
+    const { n, wr } = rig({ toneBump: 0.10 });       // conserve: τ1 0.55 → 0.65
+    await n.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
+    const rT = await n.flush();
+    assert("NEUROMODULATION: conserve tone (+0.10) demotes a borderline wake", rT[0].tier < 2 && wr.wakes.length === 0);
+    const { n: nO, wr: wrO } = rig({ toneBump: 0 });
+    await nO.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
+    const rO = await nO.flush();
+    assert("the SAME moment wakes opus at nominal tone (the knob is real)", rO[0].tier === 2 && wrO.wakes.length === 1);
   }
 
   // habituation decays — after a long silence the same signal can fire again

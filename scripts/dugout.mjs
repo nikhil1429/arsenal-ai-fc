@@ -65,6 +65,8 @@ import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex 
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
 import { loadFreshDrill, drillSection } from "./examiner.mjs";
+// M5 — neuromodulation (READS only; tone.mjs owns tone.json)
+import { currentTone } from "./tone.mjs";
 
 // M3 — THE WATCHER (T2): the second pair of eyes. Vision-only, never converses,
 // its audio is never played; its rare one-line observations become afferents.
@@ -432,7 +434,7 @@ THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are
 
 SPOKEN GATES (constitutional — his word IS the signature): FULL-TIME by voice: when he says full time / din khatam / done for today, run the 30-second ritual — result (HIT/MISS/PARTIAL/REST), one signal worth naming, then his KAL-line VERBATIM (tomorrow's pre-decided first move, his words not yours). Read the three back. Only his explicit go-word — "haan, chalao", "lock it" — calls run_postmatch. GENOME: read the mutation aloud (target, predicted effect, revert plan); only his explicit approval word calls approve_genome — hesitation is a no. Throw-ins route only on his word (route_throwins). NEVER call a gate tool from your own inference; no word, no write.
 
-INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.` +
+INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.${currentTone().effects.reflex_note ? `\n\nTONE (neuromodulation, standing): ${currentTone().effects.reflex_note}` : ""}` +
   composeCartridgeSection(loadDayCartridge(), readLines(STAMPS));
 }
 
@@ -726,7 +728,9 @@ function buildConfig(keys, mode = "gaffer") {
     // frame stops playback). preroll 600ms keeps the front of a word.
     vad: { onset_db_over_noise: 11, min_db: -55, hangover_ms: 1400, preroll_ms: 600, idle_disconnect_ms: 90000, batch_ms: 100 },
     // THE EYES — sharper frames so it can actually READ his handwriting/code.
-    vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: 2000 },
+    // M5 — the tone multiplies the cadence: conserve = slower frames (gentler
+    // pace, fewer tokens on a RED day); open = fuller frames.
+    vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: Math.round(2000 * (currentTone().effects.frame_ms_mult || 1)) },
     acks: listAcks(),
     minutes_today: readLines(DLEDGER).filter(l => String(l.ts || "").slice(0, 10) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
   };

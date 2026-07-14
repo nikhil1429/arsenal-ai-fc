@@ -126,6 +126,8 @@ dressing-room/state/cortex_runtime.json
 dressing-room/state/tanks.json
 # the live examiner (M4) — the staged code drill names his weaknesses
 dressing-room/state/examiner_drill.json
+# neuromodulation (M5) — derived from the Governor verdict (which is private)
+dressing-room/state/tone.json
 
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/
