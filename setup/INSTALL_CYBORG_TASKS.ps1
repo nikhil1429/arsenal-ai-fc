@@ -26,6 +26,7 @@ function MkHidden($name, $args_, $sched) {
 }
 MkHidden "ArsenalFC-Thalamus" "thalamus.mjs"                 @("/SC","DAILY","/ST","07:00")
 MkHidden "ArsenalFC-Cortex"   "cortex.mjs"                   @("/SC","DAILY","/ST","07:02")
+MkHidden "ArsenalFC-Turnstile" "turnstile.mjs"               @("/SC","DAILY","/ST","07:04")
 # neuromodulation - hourly (cheap; follows the Governor wherever it goes)
 Mk "ArsenalFC-Tone"           "tone.mjs"                     @("/SC","HOURLY")
 # predictive presence - the stall sensor, every 10 minutes

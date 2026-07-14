@@ -30,6 +30,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
+import os from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -103,8 +105,21 @@ async function defaultFetch(url, timeout_ms) {
 
 // pure core: parse ntfy /json?poll=1 body (one JSON object per line), keep
 // event==="message", dedup against existing ids, produce VERBATIM ball lines.
+// M12 (zero-tax): a message whose body IS the capture contract is not a
+// thought — it is BLOOD arriving by phone (PASTE via ntfy transport). Those
+// divert to `reps` and go straight through capture.mjs; they never become
+// loose balls, so the throw-in laws (verbatim thoughts, never auto-routed)
+// stay byte-identical for actual thoughts.
+function looksLikeContract(text) {
+  const s = String(text || "").trim();
+  if (!s.startsWith("[") || !s.endsWith("]")) return null;
+  let arr; try { arr = JSON.parse(s); } catch { return null; }
+  if (!Array.isArray(arr) || !arr.length || arr.length > 200) return null;
+  return arr.every(r => r && typeof r.concept === "string" && typeof r.question === "string" && ["knew", "shaky", "guessed"].includes(r.confidence)) ? arr : null;
+}
 function ingest(pollText, existingIds) {
   const balls = [];
+  const reps = [];
   let maxTime = 0;
   for (const line of String(pollText || "").split("\n")) {
     if (!line.trim()) continue;
@@ -116,6 +131,8 @@ function ingest(pollText, existingIds) {
     // mouth must never be re-ingested as the captain's thought.
     if (m.title && String(m.title).includes("⚪🔴")) continue;
     if (existingIds.has(m.id)) continue;
+    const contract = looksLikeContract(m.message);
+    if (contract) { reps.push({ id: m.id, reps: contract }); existingIds.add(m.id); continue; }
     balls.push({
       ts: typeof m.time === "number" ? new Date(m.time * 1000).toISOString() : new Date().toISOString(),
       id: m.id,
@@ -124,7 +141,7 @@ function ingest(pollText, existingIds) {
     });
     existingIds.add(m.id);
   }
-  return { balls, maxTime };
+  return { balls, reps, maxTime };
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +172,19 @@ async function selftest() {
   assert("in-batch dedup on ntfy id", balls.filter(b => b.id === "m1").length === 1);
   assert("cross-run dedup uses existing ids", ingest(poll, new Set(["m1", "m2"])).balls.length === 0);
   assert("routed:false on arrival (never auto-written)", balls.every(b => b.routed === false));
+
+  // M12 — blood by phone: the contract diverts, thoughts stay thoughts
+  {
+    const contract = JSON.stringify([{ surface: "gem", track: "concept", concept: "embeddings", axis: "c", question: "cosine vs dot?", confidence: "shaky", correct: true }]);
+    const mix = [
+      JSON.stringify({ id: "r1", time: 1752300000, event: "message", message: contract }),
+      JSON.stringify({ id: "t1", time: 1752300001, event: "message", message: "yeh khayal seedhiyon wala" }),
+    ].join("\n");
+    const got = ingest(mix, new Set());
+    assert("a contract-shaped message DIVERTS to reps (blood, not thought)", got.reps.length === 1 && got.reps[0].reps[0].concept === "embeddings");
+    assert("it never becomes a loose ball (thought laws untouched)", got.balls.length === 1 && got.balls[0].text === "yeh khayal seedhiyon wala");
+    assert("a JSON-ish thought that is NOT the contract stays a verbatim thought", ingest(JSON.stringify({ id: "t2", time: 1, event: "message", message: "[1,2,3]" }), new Set()).balls.length === 1);
+  }
   assert("max time tracked for since=", maxTime === 1783900200);
 
   // IRON GUARD #2: the output schemas carry NO usage metric — a ball is exactly
@@ -214,10 +244,20 @@ async function main() {
     return;
   }
   const existing = loadExistingIds();
-  const { balls, maxTime } = ingest(res.text, existing);
+  const { balls, reps, maxTime } = ingest(res.text, existing);
   if (balls.length) {
     mkdirSync(dirname(BALLS), { recursive: true });
     appendFileSync(BALLS, balls.map(b => JSON.stringify(b)).join("\n") + "\n");
+  }
+  // M12 — blood by phone: contract-shaped messages route through the owner
+  for (const r of reps) {
+    try {
+      const tmp = join(os.tmpdir(), `throwin-reps-${r.id}.json`);
+      const stamp = new Date().toISOString();       // arrival is the timestamp (capture demands ts)
+      writeFileSync(tmp, JSON.stringify(r.reps.map(x => ({ ts: x.ts || stamp, ...x }))));
+      execFileSync(process.execPath, [join(__dirname, "capture.mjs"), "paste", tmp], { encoding: "utf8", timeout: 60000, windowsHide: true });
+      console.log(`throwin: ${r.reps.length} rep(s) arrived by phone — captured (zero-tax)`);
+    } catch (e) { console.log(`throwin: phone reps rejected by capture (its contract, its call): ${String(e.message).slice(0, 100)}`); }
   }
   const prevSince = since === "all" ? 0 : Number(since);
   writeAtomic(TSTATE, { last_since: Math.max(prevSince, maxTime) || null, last_poll_at: now.toISOString(), wired: true });

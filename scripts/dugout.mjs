@@ -1543,7 +1543,7 @@ async function main() {
     fetch(THALAMUS + "/status", { signal: AbortSignal.timeout(1200) }).then(() => { }).catch(async () => {
       try {
         const { spawn } = await import("node:child_process");
-        for (const organ of ["thalamus.mjs", "cortex.mjs"]) {
+        for (const organ of ["thalamus.mjs", "cortex.mjs", "turnstile.mjs"]) {
           const child = spawn(process.execPath, [join(__dirname, organ)], { detached: true, stdio: "ignore", windowsHide: true });
           child.unref();
         }
