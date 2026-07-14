@@ -282,6 +282,15 @@ async function main() {
     console.log(`cortex: ${r.served ? "served " + r.moment_id : r.idle ? "no pending wake" : r.refused ? "refused (API key)" : JSON.stringify(r)}`);
     return;
   }
+  // SINGLETON LOCK — two cortexes racing one wake = double Opus spend. The
+  // lock is a localhost port (4112, one below the thalamus), same pattern as
+  // every daemon in the club: second instance stands down silently.
+  const { createServer } = await import("node:http");
+  const lock = createServer(() => {});
+  await new Promise((resolve) => {
+    lock.on("error", (e) => { if (e.code === "EADDRINUSE") { console.log("cortex: another cortex holds the lock (:4112) — standing down."); process.exit(0); } throw e; });
+    lock.listen(4112, "127.0.0.1", resolve);
+  });
   console.log("cortex: deep-brain daemon — watching wake.json (fs.watch + 5s poll)");
   let busy = false;
   const fire = async () => { if (busy) return; busy = true; try { await serveWake({ log: console.log }); } catch (e) { console.log("cortex: " + String(e.message).slice(0, 120)); } busy = false; };

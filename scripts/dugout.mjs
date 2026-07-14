@@ -68,6 +68,21 @@ import { loadFreshDrill, drillSection } from "./examiner.mjs";
 // M5 — neuromodulation (READS only; tone.mjs owns tone.json)
 import { currentTone } from "./tone.mjs";
 
+// M11 — the Night Shift's artifacts flow into the mouths by themselves:
+// banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
+// the scout pack → the Gaffer can NAME it by voice. Fresh = today or yesterday.
+function loadNightshift(now = new Date()) {
+  const dir = join(STATE_DIR, "brain_out", "nightshift");
+  const days = [localDate(now), localDate(new Date(now.getTime() - 86400000))];
+  const out = { probes: null, distractors: null, scout_pack: false, day: null };
+  for (const d of days) {
+    if (!out.probes) { const p = readJson(join(dir, `probe_bank_${d}.json`)); if (p && p.bank) { out.probes = p.bank; out.day = d; } }
+    if (!out.distractors) { const x = readJson(join(dir, `distractor_bank_${d}.json`)); if (x && x.bank) out.distractors = x.bank; }
+  }
+  out.scout_pack = existsSync(join(dir, "scout_pack.md"));
+  return out;
+}
+
 // M3 — THE WATCHER (T2): the second pair of eyes. Vision-only, never converses,
 // its audio is never played; its rare one-line observations become afferents.
 const WATCHER_INSTRUCTION = `You are THE WATCHER — the club's silent second pair of eyes on the captain's declared screen or paper. You NEVER converse, greet, or narrate. Stay completely silent (respond with nothing) for normal working frames. Speak ONE short line ONLY when you see one of exactly three things: SPINNING (the same failed approach repeated across frames), STUCK (no visible progress for a long stretch), or WRONG-ANSWER-FORMING (a mistake actively being written). The line names which one and what you saw, ≤15 words. Nothing else, ever.`;
@@ -291,7 +306,7 @@ THE MOCK (run it exactly):
 3. Interrupt him ONCE mid-answer, like a real panel. Stay in persona.
 4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
 5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
-${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(loadFreshDrill(now))}
+${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(loadFreshDrill(now))}${(() => { const ns = loadNightshift(now); return ns.probes ? "\nTHE NIGHT SHIFT'S PROBE BANK (drafted overnight in the club's grammar — draw probes from here first, never repeat yesterday's):\n" + Object.entries(ns.probes).slice(0, 4).map(([c, v]) => `${c}: ${v.probes.map(p => `[${p.type}] ${p.probe}`).join(" · ")}`).join("\n") + "\n" : ""; })()}
 WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DESIGN ON PAPER — ask for the sketch first, then attack the sketch (the frayed handoff, the missing failure path, "where does this fall over at scale?").
 
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
@@ -520,6 +535,8 @@ function execTool(name, args, deps = {}) {
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now)).length,
+        // M11 — the Gaffer can NAME tonight's staged work by voice
+        nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a Deep Research scout pack is staged — offer it at a natural stoppage: 'scout pack tayyar hai, Pro account pe chalana hai?'" : null }; })(),
       };
     }
     if (name === "get_tape_room") {
@@ -540,11 +557,14 @@ function execTool(name, args, deps = {}) {
         .filter(c => c && (String(c.due || c.due_date || "").slice(0, 10) <= today))
         .slice(0, 8)
         .map(c => ({ concept: c.concept || c.topic || c.id || c.name || "unnamed", axis: c.axis || null, due: String(c.due || c.due_date || "").slice(0, 10) || null }));
+      // M11 — the night shift's personalized distractors ride along per concept
+      const ns = loadNightshift(now);
+      for (const q of due) if (ns.distractors && ns.distractors[q.concept]) q.distractors = ns.distractors[q.concept].map(d => d.distractor);
       return {
         due_today: summary.due_today ?? due.length, overdue: summary.overdue ?? 0,
         hardest_due: Array.isArray(summary.hardest_due) ? summary.hardest_due.slice(0, 3) : [],
         queue: due,
-        note: due.length ? "conduct these by voice — recall probes, gut-word first; reps close the FSRS loop through capture" : "nothing due — the decay guard is quiet",
+        note: due.length ? "conduct these by voice — recall probes, gut-word first; offer a distractor as a tempting wrong option where provided; reps close the FSRS loop through capture" : "nothing due — the decay guard is quiet",
       };
     }
     if (name === "retire_doubt") {
@@ -1028,6 +1048,15 @@ async function selftest() {
     assert("conserve tone → mute too (rest is the agenda)", gate({ tone: "conserve" }).whisper === null);
     assert("expired whisper dies (the stuck→gone window closed)", gate({ workspace: { version: 1, whisper: { ...whisper, expires: new Date(Date.now() - 1000).toISOString() } } }).whisper === null);
     assert("page: whisper injected ONCE, win-framed, never shame-framed", PAGE.includes("EARNED WHISPER") && PAGE.includes("about to crack this") && PAGE.includes("lastWhisperId") && !PAGE.includes("about to fail"));
+  }
+
+  // M11 — the Night Shift flows into the mouths by itself
+  {
+    const gt = execTool("get_today", {}, { sh });
+    assert("get_today carries the night shift's staging (voice-nameable)", gt.nightshift && "scout_pack_ready" in gt.nightshift && "probe_concepts" in gt.nightshift);
+    const rj = execTool("get_rejirah", {}, { sh });
+    assert("re-jirah queue rides distractors when banked (null-safe when not)", Array.isArray(rj.queue) && rj.note);
+    assert("scrimmage pulls the banked probes when fresh (never repeats itself)", typeof buildScrimmageInstruction(new Date()) === "string");
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
