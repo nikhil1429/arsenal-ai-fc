@@ -50,6 +50,7 @@ function loadBus(P, today) {
     weaknesses: readJSON("weaknesses.json"),
     learning_state: readJSON("learning_state.json"),
     season: readJSON("season.json"),
+    season_read: readJSON("season_read.json"),         // M18 — the night's whole-season re-read
     captain_note: readText("captain_note.md"),
     last_post_match: readText(join("post_match", yday + ".md")),
   };
@@ -134,6 +135,18 @@ function computeFeatures(bus, today) {
     } : null,
     captain_note: bus.captain_note || null,
     kal_line: kal,
+    // M18 — the season re-read (bias-to-silence: fresh ≤7d AND non-empty, else null)
+    season_read: (() => {
+      const sr = bus.season_read;
+      if (!sr || !sr.date) return null;
+      const lag = daysBetween(sr.date, today);
+      if (lag == null || lag < 0 || lag > 7) return null;
+      const contradiction = (sr.contradictions || [])[0] || null;
+      const edge = (sr.confusion_edges || [])[0] || null;
+      const thread = (sr.open_threads || [])[0] || null;
+      if (!contradiction && !edge && !thread) return null;
+      return { date: sr.date, contradiction, edge, open_thread: thread };
+    })(),
   };
 }
 
@@ -181,6 +194,7 @@ function assemblePrompt(F, fin) {
     `INTENSITY: ${fin.intensity}`,
     `SHIPPING: ${fin.shipping_candidate || "n/a"}`,
     `KAL-LINE (yesterday): ${F.kal_line || "none"}`,
+    `SEASON RE-READ: ${F.season_read ? [F.season_read.contradiction ? `contradiction — "${F.season_read.contradiction.a}" vs "${F.season_read.contradiction.b}"` : null, F.season_read.edge ? `cross-week blur ${F.season_read.edge.from} ↔ ${F.season_read.edge.to}` : null, F.season_read.open_thread ? `never closed — ${F.season_read.open_thread.thread}` : null].filter(Boolean).join(" · ") : "none fresh"}`,
     `TASK: write team_sheet.md per template, Gaffer voice, phase-appropriate. Use ONLY the numbers above.`,
   ].join("\n");
 }
@@ -234,6 +248,12 @@ function fallbackSkeleton(F, fin) {
   if (F.calibration?.danger?.length) rep.push(`   • confident-wrong: ${F.calibration.danger.map((d) => d.topic).join(", ")} → tighter interval`);
   if (F.study && (F.study.due_today || F.study.overdue)) rep.push(`   • cards due: ${F.study.due_today} (+${F.study.overdue} overdue)`);
   if (F.time && F.time.on_track) rep.push(`   • ${F.time.on_track}`);
+  if (F.season_read) {                                 // M18 — one line, the sharpest find first
+    const sr = F.season_read;
+    if (sr.contradiction) rep.push(`   • season re-read: "${sr.contradiction.a}" vs "${sr.contradiction.b}" — un-reconciled`);
+    else if (sr.edge) rep.push(`   • season re-read: ${sr.edge.from} ↔ ${sr.edge.to} keep blurring across weeks`);
+    else if (sr.open_thread) rep.push(`   • season re-read: still open — ${sr.open_thread.thread}`);
+  }
   if (!rep.length) rep.push("   • the rest of the squad reports in as we go — today it's just you and me.");
   for (const r of rep) L.push(r);
   L.push("");
@@ -350,6 +370,17 @@ async function selftest() {
   // 4) VALID LLM sheet (numbers ∈ FEATURES) ⇒ accepted
   const good = await runManager({ today: TODAY, stateDir: stage("rich"), llm: async () => "⚪🔴 TEAM SHEET — 2026-07-10 · Matchday 13\nCaptain, chunking has missed 5 times — today we scout it.\nCOYG. ⚪🔴" });
   ok("guard: clean sheet (5 ∈ features) accepted ⇒ source=llm", good.source === "llm");
+
+  // 4b) M18 — SEASON RE-READ: fresh read lands one line; stale is silent
+  const srDir = stage("rich");
+  writeFileSync(join(srDir, "season_read.json"), JSON.stringify({ date: TODAY, contradictions: [{ a: "kv cache fixes quadratic", b: "attention stays n-squared", where: "capsule vs dugout" }], open_threads: [], confusion_edges: [{ from: "tokenization", to: "embeddings", evidence: "3 sessions" }], note: "x" }));
+  const sr = await runManager({ today: TODAY, stateDir: srDir });
+  ok("season-read: fresh contradiction rides the sheet (one line)", /season re-read: .*un-reconciled/.test(sr.sheet));
+  ok("season-read: the prompt carries the re-read for the LLM", /SEASON RE-READ: contradiction/.test(sr.prompt));
+  const srStaleDir = stage("rich");
+  writeFileSync(join(srStaleDir, "season_read.json"), JSON.stringify({ date: "2026-06-20", contradictions: [{ a: "x", b: "y" }], open_threads: [], confusion_edges: [] }));
+  const srStale = await runManager({ today: TODAY, stateDir: srStaleDir });
+  ok("season-read: a stale read (>7d) is SILENT (bias-to-silence)", srStale.features.season_read === null && !/season re-read/.test(srStale.sheet));
 
   // 5) MISSING readiness ⇒ grind honored, no crash, no RED-from-absence
   const nordDir = stage("rich");

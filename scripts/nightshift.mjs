@@ -28,6 +28,12 @@
 //                          applies to thalamus_config.json — the gate never
 //                          retunes itself. Under 200 decisions the frozen
 //                          heuristic (gateTuneReport) still reports (layering).
+//        8. SEASON RE-READ (M18) — the impossible coach: the ENTIRE corpus
+//                          (capsules · his transcripts · afferents · episodes)
+//                          rides ONE long-context call nightly → contradictions,
+//                          open-never-closed threads, cross-week confusion
+//                          edges → season_read.json (sole writer) → the
+//                          Manager's sheet + set-piece drills consume it.
 //        7. PRE-ANSWER ENGINE (M17) — predicts his 15-25 likely NEXT doubts
 //                          (doubt-grammar shapes + 7-day afferents + FSRS-due
 //                          + danger zone), answers each in the DOSSIER's own
@@ -379,6 +385,90 @@ Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; 
 }
 
 // ---------------------------------------------------------------------------
+// JOB 8 — M18 THE SEASON RE-READ: the coach no human could be — he re-reads
+// the WHOLE season every night. The entire corpus rides ONE long-context call
+// on the Scout lane: Pro first (403s on free keys until the Pro-tank linking
+// — Part D, the captain's call), honest degrade to flash-latest (still 1M).
+// AI proposes · the validator accepts or YESTERDAY'S READ STANDS.
+// Sole writer of season_read.json (gitignored — it quotes his words).
+// ---------------------------------------------------------------------------
+const SEASON_CAPS = { corpus_chars: 400000, per_source: 120000, arrays: 8, str: 300 };
+const AFFECT_RX = /prosody|emotion|mood|agitat|stress_level/i;
+
+function seasonCorpus(deps = {}) {
+  const parts = [];
+  const push = (name, text) => { if (text) parts.push(`\n===== ${name} =====\n${String(text).slice(0, SEASON_CAPS.per_source)}`); };
+  try {
+    const dir = join(STATE_DIR, "capsules");
+    for (const f of (deps.capsuleFiles || readdirSync(dir).filter(x => x.endsWith(".json"))))
+      push(`CAPSULE ${f}`, deps.capsuleText ? deps.capsuleText(f) : readFileSync(join(dir, f), "utf8"));
+  } catch { }
+  push("DOUBT GRAMMAR", JSON.stringify(deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"))));
+  const aff = deps.afferents || readLines(join(STATE_DIR, "afferent.jsonl"));
+  push("AFFERENTS (his voiced words + machine events)", aff.filter(a => a.text).map(a => `[${String(a.ts || "").slice(0, 10)} ${a.modality}] ${a.text}`).join("\n"));
+  try {
+    const dir = join(STATE_DIR, "brain_out", "dugout");
+    const files = (deps.transcriptFiles || readdirSync(dir).filter(x => x.endsWith(".md"))).slice(-21);
+    const lines = [];
+    for (const f of files) lines.push(...readFileSync(join(dir, f), "utf8").split("\n").filter(l => l.startsWith("CAPTAIN: ")).map(l => `[${f.replace(".md", "")}] ${l}`));
+    push("DUGOUT (his own lines, 3 weeks)", lines.join("\n"));
+  } catch { }
+  const eps = deps.episodes || readLines(join(__dirname, "..", "dressing-room", "hippocampus", "episodes.jsonl"));
+  push("EPISODES", eps.map(e => `[${e.day} ${e.kind}] ${e.text}`).join("\n"));
+  push("WHO HE IS", JSON.stringify(deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"))));
+  const balls = deps.throwins || readLines(join(STATE_DIR, "loose_balls.jsonl"));
+  push("THROW-INS (stray thoughts, verbatim)", balls.map(b => `[${String(b.ts || "").slice(0, 10)}] ${b.text || b.message || ""}`).join("\n"));
+  return parts.join("\n").slice(0, SEASON_CAPS.corpus_chars);
+}
+
+function validateSeasonRead(obj, banned) {
+  if (!obj || typeof obj !== "object") return "not an object";
+  for (const k of ["contradictions", "open_threads", "confusion_edges"]) if (!Array.isArray(obj[k])) return `missing array ${k}`;
+  const flat = JSON.stringify(obj);
+  if (bannedPhraseCheck(flat, banned).length) return "banned phrase";
+  if (AFFECT_RX.test(flat)) return "affect leaked";
+  if (!obj.contradictions.length && !obj.open_threads.length && !obj.confusion_edges.length) return "empty read";
+  return null;
+}
+
+async function seasonReRead(deps = {}) {
+  const now = deps.now || new Date();
+  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-3.1-pro-preview", "gemini-flash-latest"], maxOutputTokens: 16384, json: true }));
+  const use = deps.recordUse || recordUse;
+  const corpus = deps.corpus !== undefined ? deps.corpus : seasonCorpus(deps);
+  if (corpus.length < 2000) return { ok: false, skipped: "corpus too thin to re-read — the season is days old, not weeks" };
+  const r = await gen(`You are re-reading a learner's ENTIRE season tonight — every capsule he locked, every word he voiced, every doubt he logged (below). You are the coach no human could be: you re-read three weeks every night. Find ONLY what is genuinely in the text:
+1. CONTRADICTIONS — places where his understanding in one week contradicts another (quote both sides, name where).
+2. OPEN-NEVER-CLOSED THREADS — questions he raised and never resolved anywhere later.
+3. CROSS-WEEK CONFUSION EDGES — pairs of concepts he keeps blurring across sessions (from/to + one line of evidence).
+Honest frame only, no hype, no mood/emotion inference of ANY kind. Cap each list at ${SEASON_CAPS.arrays}. Output STRICT JSON, no fences:
+{"contradictions":[{"a":"<his week-X claim>","b":"<his week-Y claim>","where":"<capsule/transcript>"}],"open_threads":[{"thread":"<the unresolved question>","first_seen":"<when/where>"}],"confusion_edges":[{"from":"<concept>","to":"<concept>","evidence":"<one line>"}],"note":"<one honest sentence on the season's shape>"}
+
+THE CORPUS:
+${corpus}`);
+  use("T5", 1, Math.round(corpus.length / 4));
+  if (!r.ok) return { ok: false, skipped: "the long-context lane is dry — yesterday's read stands" };
+  let obj;
+  try {
+    const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+    obj = JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw);
+  } catch { return { ok: false, skipped: "unparseable read — yesterday's stands" }; }
+  const banned = deps.bannedPhrases !== undefined ? deps.bannedPhrases : (((loadBrainConfig() || {}).guards || {}).banned_phrases || []);
+  const bad = validateSeasonRead(obj, banned);
+  if (bad) return { ok: false, skipped: `validator rejected: ${bad} — yesterday's read stands` };
+  const trim = (arr, keys) => (arr || []).slice(0, SEASON_CAPS.arrays).map(x => Object.fromEntries(keys.map(k => [k, String(x[k] || "").slice(0, SEASON_CAPS.str)])));
+  const out = {
+    date: localDate(now), generated_at: now.toISOString(), model: r.model, corpus_chars: corpus.length,
+    contradictions: trim(obj.contradictions, ["a", "b", "where"]),
+    open_threads: trim(obj.open_threads, ["thread", "first_seen"]),
+    confusion_edges: trim(obj.confusion_edges, ["from", "to", "evidence"]),
+    note: String(obj.note || "").slice(0, 500),
+  };
+  (deps.writeRead || ((o) => writeAtomic(join(STATE_DIR, "season_read.json"), o)))(out);
+  return { ok: true, model: r.model, contradictions: out.contradictions.length, open_threads: out.open_threads.length, edges: out.confusion_edges.length, corpus_chars: corpus.length };
+}
+
+// ---------------------------------------------------------------------------
 // THE SHIFT
 // ---------------------------------------------------------------------------
 function isOvernight(now = new Date()) { const h = now.getHours(); return h >= 1 && h < 7; }
@@ -435,6 +525,9 @@ async function runShift(deps = {}) {
   const pa = await preAnswerEngine(deps);
   out.jobs.pre_answers = pa.ok ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent } : { skipped: pa.skipped };
 
+  const sr = await seasonReRead(deps);
+  out.jobs.season_read = sr.ok ? { model: sr.model, contradictions: sr.contradictions, open_threads: sr.open_threads, edges: sr.edges } : { skipped: sr.skipped };
+
   write(`shift_${day}.json`, out);
   return { ok: true, ...out };
 }
@@ -444,7 +537,7 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const genProbes = async () => ({ ok: true, text: JSON.stringify(PROBE_TYPES.map(t => ({ type: t, probe: `a solid ${t} probe with enough length to pass validation` }))) });
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
-  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, now: new Date("2026-07-15T02:45:00") };
+  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", now: new Date("2026-07-15T02:45:00") };
 
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
@@ -455,7 +548,7 @@ async function selftest() {
   {
     const writes = {};
     const r = await runShift({ ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } });
-    assert("the shift runs all seven jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs);
+    assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
     assert("probe bank: one per grammar type, validated, dated", writes["probe_bank_2026-07-15.json"].bank.tokenization.probes.length === 5);
     assert("distractors: personalized shape rides when grammar exists", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));
@@ -549,6 +642,26 @@ async function selftest() {
     assert("PRE-ANSWER material: 7-day afferent window, hot tokens counted", m.voiced.length === 1 && m.voiced[0] === "fresh doubt" && m.hotTokens.includes("kv"));
   }
 
+  // JOB 8 — M18 THE SEASON RE-READ
+  {
+    const goodRead = { contradictions: [{ a: "week 1: kv cache fixes quadratic attention", b: "week 3: attention stays n-squared with the cache", where: "capsule context vs dugout 07-12" }], open_threads: [{ thread: "does compaction lose the capsule anchors?", first_seen: "dugout 07-13" }], confusion_edges: [{ from: "tokenization", to: "embeddings", evidence: "blurred in 3 sessions" }], note: "the season circles context economics." };
+    const corpus = "x".repeat(5000);
+    let saved = null, spent = 0;
+    const r = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify(goodRead), model: "gemini-flash-latest" }), recordUse: (id, u, naive) => { spent = naive; }, writeRead: (o) => { saved = o; }, bannedPhrases: ["10x"], now: new Date("2026-07-15T03:00:00") });
+    assert("SEASON RE-READ: one long-context call → dated, model-stamped read", r.ok && saved.date === "2026-07-15" && saved.model === "gemini-flash-latest" && saved.contradictions.length === 1);
+    assert("SEASON RE-READ: the naive-shadow records the real corpus size", spent === Math.round(corpus.length / 4) && saved.corpus_chars === 5000);
+    let kept = true;
+    const rB = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify({ ...goodRead, note: "10x season!" }) }), recordUse: () => {}, writeRead: () => { kept = false; }, bannedPhrases: ["10x"] });
+    assert("SEASON RE-READ: banned phrase → REJECTED, yesterday's read stands", rB.ok === false && rB.skipped.includes("banned") && kept);
+    const rA = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify({ ...goodRead, note: "his mood seemed low all week" }) }), recordUse: () => {}, writeRead: () => { kept = false; }, bannedPhrases: [] });
+    assert("SEASON RE-READ: affect inference → REJECTED (never enters the bus)", rA.ok === false && rA.skipped.includes("affect") && kept);
+    const rE = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: '{"contradictions":[],"open_threads":[],"confusion_edges":[]}' }), recordUse: () => {}, writeRead: () => { kept = false; }, bannedPhrases: [] });
+    assert("SEASON RE-READ: an empty read never overwrites a real one", rE.ok === false && rE.skipped.includes("empty") && kept);
+    assert("SEASON RE-READ: a days-old season honestly refuses to pretend", (await seasonReRead({ corpus: "tiny", generate: async () => { throw new Error("no"); } })).skipped.includes("thin"));
+    const c = seasonCorpus({ capsuleFiles: [], grammar: { clusters: [] }, afferents: [{ ts: "2026-07-14T10:00:00Z", modality: "voice", text: "kv cache doubt" }], transcriptFiles: [], episodes: [{ day: "2026-07-13", kind: "doubt", text: "softmax why" }], who: { fingerprint: "attention arc" }, throwins: [{ ts: "2026-07-12T10:00:00Z", text: "check flash attention" }] });
+    assert("SEASON corpus: every organ's words ride, sectioned + capped", c.includes("AFFERENTS") && c.includes("kv cache doubt") && c.includes("softmax why") && c.includes("flash attention") && c.length <= 400000);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -568,4 +681,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, drillConcepts, isOvernight, CAPS, TUNNEL };
+export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, drillConcepts, isOvernight, CAPS, TUNNEL, SEASON_CAPS };

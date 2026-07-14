@@ -133,6 +133,8 @@ dressing-room/state/tone.json
 dressing-room/state/dmn_precache.json
 # the pre-answer engine (M17) — tonight's predicted doubts + answers (his words)
 dressing-room/state/answer_cache.jsonl
+# the season re-read (M18) — quotes his own words across the whole corpus
+dressing-room/state/season_read.json
 # predictive presence (M7) — stall telemetry + would-have-whispered log
 dressing-room/state/presence_log.jsonl
 # presence self-calibration (M11) — thresholds fitted to HIS baselines

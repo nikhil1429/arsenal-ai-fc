@@ -100,6 +100,20 @@ function candidates(world, dossier) {
     });
   }
 
+  // M18 — SEASON RE-READ cross-week edge: the night's whole-season re-read saw
+  // a blur the day's own sensors can't (they look back one day; it read three
+  // weeks). Compiled like a derby; freshness is gated in compile().
+  const srEdges = world.season_read && Array.isArray(world.season_read.confusion_edges) ? world.season_read.confusion_edges : [];
+  if (srEdges.length) {
+    const e = srEdges[0];
+    out.push({
+      kind: "season_edge", probe_type_emoji: "🟡", concepts: [e.from, e.to],
+      prompt: fill(dossier && dossier.contrast_template, { a: e.from, b: e.to, differentiator: "which one an interviewer means" }),
+      source: `season re-read: ${e.from} ↔ ${e.to} blur across weeks (${e.evidence || "seen in the corpus"})`,
+      winnable: false, mode: "reconstruct",
+    });
+  }
+
   // DANGER-ZONE — knew-but-wrong → reconstruct probe on that exact topic+axis
   const dz = world.calibration && Array.isArray(world.calibration.danger_zone) ? world.calibration.danger_zone : [];
   if (dz.length) {
@@ -177,6 +191,11 @@ function winnableOpener(world, dossier) {
 }
 
 function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
+  // M18 — a stale season re-read (>7d) never steers tomorrow's drills
+  if (world.season_read && world.season_read.date) {
+    const lag = (now - new Date(world.season_read.date)) / 86400000;
+    if (!(lag >= -1 && lag <= 7)) world = { ...world, season_read: null };
+  }
   const verdict = (world.readiness && typeof world.readiness.verdict === "string") ? world.readiness.verdict.toUpperCase() : "GREEN";
   const tier = (ladderCfg && ladderCfg[verdict]) || (ladderCfg && ladderCfg.GREEN) || { drill_modes_allowed: ["recall", "reconstruct", "defend", "novel", "negative_space"], max_drills: 3 };
   const withheld = [];
@@ -312,6 +331,18 @@ async function selftest() {
   const empty = compile({}, cfg, ladderCfg, dossier, now);
   assert("bloodless world → awaiting_data, zero drills, no crash", empty.status === "awaiting_data" && empty.drills.length === 0);
 
+  // M18 — the season re-read's cross-week edge becomes a drill; stale never rides
+  {
+    const srWorld = { ...world, season_read: { date: "2026-07-12", confusion_edges: [{ from: "context", to: "kv-cache", evidence: "blurred in 3 sessions" }] } };
+    const srDrills = compile(srWorld, cfg, ladderCfg, dossier, now);
+    assert("season re-read: a FRESH cross-week edge compiles as a drill candidate", JSON.stringify(srDrills).includes("season re-read") || srDrills.bench_note !== null);
+    const bareSr = compile({ readiness: { verdict: "GREEN" }, season_read: { date: "2026-07-12", confusion_edges: [{ from: "context", to: "kv-cache", evidence: "x" }] } }, cfg, ladderCfg, dossier, now);
+    assert("season re-read: the edge drill is real (contrast probe, both concepts)", bareSr.drills.some(d => d.kind === "season_edge" && d.concepts.includes("context") && d.concepts.includes("kv-cache")));
+    const staleSr = compile({ readiness: { verdict: "GREEN" }, season_read: { date: "2026-06-01", confusion_edges: [{ from: "a", to: "b" }] } }, cfg, ladderCfg, dossier, now);
+    assert("season re-read: a STALE read (>7d) never steers drills", !staleSr.drills.some(d => d.kind === "season_edge"));
+    assert("season re-read: the ≤3 law survives the extra candidate", srDrills.drills.length <= 3);
+  }
+
   // WAR-ROOM taper + DOSSIER weighting (compressed season)
   const registry = { concepts: { context: { bucket: "2-rag" }, chunking: { bucket: "2-rag" } }, skills: {} };
   const wrWorld = { ...world, registry, scout: { war_room: { active: true, mode: "taper" } } };
@@ -346,6 +377,7 @@ async function main() {
     cards: readJson(join(STATE_DIR, "cards.json")),
     scout: readJson(join(STATE_DIR, "scout.json")),
     registry: readJson(join(STATE_DIR, "concepts.json")),
+    season_read: readJson(join(STATE_DIR, "season_read.json")),   // M18 — the night's re-read
   };
   const out = compile(world, cfg, ladderCfg, dossier, new Date());
   writeAtomic(OUT, out);
