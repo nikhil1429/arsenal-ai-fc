@@ -52,6 +52,29 @@ Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Ob
 }
 Write-Host "  ~ battery kill-conditions cleared on all ArsenalFC-* tasks"
 
+# SLEEP CONDITIONS (live finding, 14 Jul 2026): a laptop asleep past a trigger
+# silently skips it — the morning spine's catch-ups came back 0x800710E0
+# "refused" and the whole 02:xx overnight lane read "has not yet run" (1999).
+# StartWhenAvailable = catch-up-on-wake, on EVERY task. schtasks /Create
+# cannot set it; patch post-create, same shape as the battery fix above.
+Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
+  $_.Settings.StartWhenAvailable = $true
+  $_ | Set-ScheduledTask | Out-Null
+}
+Write-Host "  ~ catch-up-on-wake (StartWhenAvailable) set on all ArsenalFC-* tasks"
+
+# GOALKEEPER CLOAK (live finding, 14 Jul 2026): the pre-existing Goalkeeper
+# task ran via a VISIBLE console (cmd /c node oura_coach.mjs) — the window
+# begs to be closed, and closing it kills the run mid-Oura-call (the same
+# 0xC000013A scar hidden_run.vbs exists for). Re-point it through the cloak.
+$gk = Get-ScheduledTask -TaskName "ArsenalFC-Goalkeeper" -ErrorAction SilentlyContinue
+if ($gk) {
+  $gkArgs = "$repo\setup\hidden_run.vbs cmd /c node $repo\scripts\oura_coach.mjs >> $repo\scripts\coach.log 2>&1"
+  $gkAct = New-ScheduledTaskAction -Execute "wscript.exe" -Argument $gkArgs
+  Set-ScheduledTask -TaskName "ArsenalFC-Goalkeeper" -Action $gkAct | Out-Null
+  Write-Host "  ~ Goalkeeper cloaked (hidden_run.vbs) — no more visible console to close"
+}
+
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"
 Write-Host "Post-match stays a human ritual: npm run postmatch (30 seconds, evening)."

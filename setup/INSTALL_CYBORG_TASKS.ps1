@@ -52,5 +52,22 @@ Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Ob
   $_ | Set-ScheduledTask | Out-Null
 }
 Write-Host "  ~ battery kill-conditions cleared on all ArsenalFC-* tasks"
+
+# SLEEP CONDITIONS (live finding, 14 Jul 2026): the 02:xx night lane had NEVER
+# fired — the laptop sleeps at 2am, schtasks /Create sets no wake/catch-up.
+# StartWhenAvailable = run-on-next-wake for every task; WakeToRun on the night
+# lane so it can wake the machine (NOTE: works only if the power plan allows
+# wake timers — powercfg RTCWAKE read 0x0 on 14 Jul; the captain's one-liner:
+#   powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_SLEEP RTCWAKE 1
+# Without it the lane still fires as a catch-up at first morning wake.)
+Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
+  $_.Settings.StartWhenAvailable = $true
+  $_ | Set-ScheduledTask | Out-Null
+}
+foreach ($n in "Consolidate","HippoStore","NightShift","PresenceFit","Examiner") {
+  $t = Get-ScheduledTask -TaskName "ArsenalFC-$n" -ErrorAction SilentlyContinue
+  if ($t) { $t.Settings.WakeToRun = $true; $t | Set-ScheduledTask | Out-Null }
+}
+Write-Host "  ~ catch-up-on-wake set on all tasks; night lane armed to wake the machine"
 Write-Host ""
 Write-Host "Done. The Kennel's heartbeat task is NOT installed yet - it ships when the Pi arrives (groundsman.mjs header: TRANSPORT)."
