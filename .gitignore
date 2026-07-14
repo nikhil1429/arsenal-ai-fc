@@ -143,3 +143,6 @@ dressing-room/state/bus_lease.json
 # --- JARVIS bibles (deeply personal — relationship/mood/psych material; repo is PUBLIC) ---
 Jarvis/
 jarvis/
+
+# pre-season vault (the build-era test data, archived never deleted)
+dressing-room/vault_preseason_*/
