@@ -75,7 +75,7 @@
 ### WIRED (new, all on the branch, selftests re-run green)
 | Superpower | Mechanism | Why it compounds THIS loop |
 |---|---|---|
-| **7 Claude Skills** (.claude/skills/) — /matchday · /paste-session · /rematch · /scrimmage · /full-time · /genome · /organism-doctor · /paint | SKILL.md modules driving the .mjs organs; humane clamps baked into each | The captain-side membrane: his four verbs become one-command rituals; the Tape Room becomes PLAYABLE (rematch → doubtminer retire → capture paste); the scrimmage runs in DOSSIER grammar with hedge-logging (ear's legal surface) |
+| **11 Claude Skills** (.claude/skills/) — /matchday · /paste-session · /rematch · /scrimmage · /full-time · /genome · /organism-doctor · /paint | SKILL.md modules driving the .mjs organs; humane clamps baked into each | The captain-side membrane: his four verbs become one-command rituals; the Tape Room becomes PLAYABLE (rematch → doubtminer retire → capture paste); the scrimmage runs in DOSSIER grammar with hedge-logging (ear's legal surface) |
 | **ActivityWatch MCP, repo-wired** (.mcp.json) | Points at his own built server (C:\Users\nikhi\activitywatch-mcp-server) | Every Claude session in this repo gets time-audit sight; /organism-doctor cross-checks it against timeaudit.json |
 | **Gemini prompt-pack pipeline** (viz.mjs upgrade) | Every wall render auto-writes 3 ready-to-paste prompts (wall_painter · match_poster · season_film/Veo) with live numbers + laws embedded → club/prompts/ | "The organism writes his Gemini prompts" — zero authoring on his side; max visualization from the plan he already pays for |
 | **Gemini render fold-in with sanitizer** (viz.mjs) | brain_out/gemini_wall → sanitizeGemini() (no scripts, no external refs, artifact-only) → club/wall_gemini.html | The second brain's art enters the club ONLY through a deterministic gate; the deterministic wall stays the surface of record |
@@ -151,7 +151,7 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
   (not the analysis head); FILM_SETUP.md — NotebookLM Video Overviews as the
   season-film engine (Veo = 8s trailer lane; Veo API = money-gated, not built).
 
-## THE FINAL BUILD SESSION PASS (12 Jul 2026, sixth order) — ALL BUILT, 26 suites green, DESIGN FROZEN
+## THE FINAL BUILD SESSION PASS (12 Jul 2026, sixth order) — ALL BUILT, 39 suites green (31 organism + 8 squad), DESIGN FROZEN
 | Mechanism | Where | Proof |
 |---|---|---|
 | Scar-table applied EMPIRICALLY (nested config, Charon, VAD+connect-on-voice+park, native-rate out, barge-in, outTx auto-strip + checkpoint record) | dugout.mjs | live WS probes 12 Jul; root-level=1007, Charon audio round-trip verified |
@@ -193,3 +193,21 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
 - Voice hierarchy final: DUGOUT primary · talk.mjs/speak.mjs bench ·
   Voice Gaffer Gem retired unbuilt. Preview-protocol caveat logged (Google
   may drift the WS schema; page surfaces raw errors for fast repair).
+
+
+## THE CYBORG-BRAIN LAYER (14 Jul 2026)
+| Mechanism | Where | Proof |
+|---|---|---|
+| Binds every sense into single moments, scores salience, wakes the cortex | thalamus.mjs | selftest green |
+| Two-speed reasoning (fast reflex + deep slow), budget rationing | cortex.mjs | selftest green |
+| Five-layer associative memory retrieval, instantly accessible | hippocampus.mjs | selftest green |
+| Default Mode Network, offline connection mapping | dmn.mjs | selftest green |
+| Parallel specialist lenses debating deep problems | council.mjs | selftest green |
+| Dreaming and background tasks while the captain is away | nightshift.mjs | selftest green |
+| Organism calorie and token spend tracking | fuelboard.mjs | selftest green |
+| Evaluates scrimmage and hedges, adversarial probing | examiner.mjs | selftest green |
+| Prosody and emotion gating/processing | tone.mjs | selftest green |
+| Tracks the active session and human engagement state | presence.mjs | selftest green |
+| Keeps the field clear, manages ephemeral data cleanup | groundsman.mjs | selftest green |
+| Offline syncing and disconnected operation state | awayday.mjs | selftest green |
+| Access control and ingestion gating | turnstile.mjs | selftest green |
