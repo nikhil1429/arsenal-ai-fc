@@ -1340,9 +1340,9 @@ async function selftest() {
     assert("C1: the page sends realtimeInputConfig both ways (aligned + manual)", PAGE.includes("silenceDurationMs") && PAGE.includes("automaticActivityDetection:{disabled:true}"));
     assert("C1: manual mode — the LOCAL VAD opens and closes the turn itself", PAGE.includes("activityStart:{}") && PAGE.includes("activityEnd:{}"));
     assert("C2: the page reads usageMetadata (token-true gauge, free on the wire)", PAGE.includes("usageMetadata") && PAGE.includes("totalTokenCount") && PAGE.includes("tokens:dTok"));
-    assert("C3: the Watcher rides LOW-res frames; the Gaffer's eyes stay sharp", cfg.tanks.watcher === null || cfg.tanks.watcher.media_resolution === "MEDIA_RESOLUTION_LOW");
+    assert("C3: watcher resolution follows the pref (LOW default, high restores full)", cfg.tanks.watcher === null || (loadPrefs().watcher_media === "high" ? cfg.tanks.watcher.media_resolution === null : cfg.tanks.watcher.media_resolution === "MEDIA_RESOLUTION_LOW"));
     assert("C3: the strip-scar is armed (early 1007 → full-res retry, once)", PAGE.includes("wMediaStrip") && PAGE.includes("mediaResolution stripped"));
-    assert("C4: thinking is EXPLICIT now — talk minimal, scrimmage medium", cfg.thinking === "minimal" && buildConfig(["k1"], "scrimmage").thinking === "medium");
+    assert("C4: thinking is ALWAYS an explicit level (pref wins; never silent off)", ["minimal","low","medium","high"].includes(cfg.thinking) && ["minimal","low","medium","high"].includes(buildConfig(["k1"], "scrimmage").thinking));
     assert("C4: the page always sends thinkingConfig (the silent default is dead)", PAGE.includes("thinkExplicit?{thinkingConfig") && !PAGE.includes("CFG.thinking!=='off'"));
     // C6 — read_url: the firewall runs BEFORE any network
     const noNet = { fetchFn: async () => { throw new Error("must not fetch"); }, keys: ["k"] };
@@ -1393,7 +1393,7 @@ async function selftest() {
     assert("SCAR: NO codeExecution on the live socket (it hangs the turn — probed)", c4.tools.length === 1 && !JSON.stringify(c4.tools).includes("codeExecution"));
     assert("search grounding honestly ABSENT (zero free quota — the wire said so)", !JSON.stringify(c4.tools).includes("googleSearch"));
     assert("CHALKBOARD: run_python is a club tool", c4.tools[0].functionDeclarations.some(t => t.name === "run_python"));
-    assert("thinking: EXPLICIT minimal for talk, medium in a mock (C4 honesty fix)", c4.thinking === "minimal" && buildConfig(["k1"], "scrimmage").thinking === "medium");
+    assert("thinking: explicit always — defaults minimal/medium, his pref overrides both", ["minimal","low","medium","high"].includes(c4.thinking) && (loadPrefs().thinking ? c4.thinking === loadPrefs().thinking : c4.thinking === "minimal"));
     assert("page ALWAYS sends an explicit thinkingLevel, scar-armed (C4)", PAGE.includes("thinkingLevel:(CFG.thinking||'minimal').toUpperCase()") && PAGE.includes("thinkExplicit"));
     const fw = await runPythonSandbox("print(open('dressing-room/state/readiness.json').read())", { keys: ["k"], fetchFn: async () => { throw new Error("must not be called"); } });
     assert("CHALKBOARD FIREWALL: personal-data code REFUSED before any network", fw.ok === false && fw.error.includes("firewall"));
