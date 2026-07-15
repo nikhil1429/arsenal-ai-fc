@@ -134,6 +134,12 @@ async function markMoment(kind, text, deps = {}) {
   if (!KINDS.includes(k)) return { ok: false, error: `kind must be ${KINDS.join("|")}` };
   const t = String(text || "").trim();
   if (!t) return { ok: false, error: "no words — a moment is his words, verbatim" };
+  // scan-fix 15 Jul: the model banked its own third-person paraphrase as
+  // "his verbatim words" and recall later QUOTED it back as him. Hard-reject
+  // narrator voice — a moment is first-person or it is not a moment.
+  if (/^\s*(he|she|the captain|captain|nikhil)('s|’s|\s+(is|was|has|had|says|said|wants|wanted|feels|felt|thinks|thought))\b/i.test(t)) {
+    return { ok: false, error: "that is a paraphrase ABOUT him — pass what HE said, first person, verbatim" };
+  }
   const embed = deps.embed || embedPool;
   const append = deps.append || ((row) => { mkdirSync(HIPPO_DIR, { recursive: true }); appendFileSync(EPISODES, JSON.stringify(row) + "\n"); });
   const now = deps.now || new Date();
@@ -221,7 +227,7 @@ async function consolidate(deps = {}) {
   if (!material.episodes.length && !material.captain_lines.length && !deps.force) {
     return { ok: false, skipped: true, reason: "no fresh material — the old who_he_is stands" };
   }
-  const prompt = `You maintain a ~1.5KB "who he is right now" file for a personal AI coach. Distill ONLY from the material below (his own words — invent NOTHING). Output STRICT JSON, no markdown fences, exactly these keys:
+  const prompt = `You maintain a ~1.5KB "who he is right now" file for a personal AI coach. Distill ONLY from the material below (his own words — invent NOTHING). HIS LEARNING IDENTITY COMES FIRST: concepts in motion, doubts, wins and cracks on his AI-interview arc. Talk about building/configuring the machine itself (tools, accounts, schedulers, APIs) is background noise — never let it become the fingerprint. Output STRICT JSON, no markdown fences, exactly these keys:
 {"fingerprint": "<2-3 sentences: where he stands right now — concepts in motion, current arc>", "open_threads": ["<unfinished thought/doubt he'll want picked back up>"], "recent_wins": ["<specific, earned>"], "recent_cracks": ["<named plainly as data, never shame>"], "voice_tuning": "<one sentence: how he's been wanting the coach to talk lately>", "do_not": ["<things he's signaled to stop doing>"]}
 Honest frame only (no hype words). No health/mood/emotion inference of ANY kind. Arrays ≤5 items, each ≤140 chars.
 
@@ -265,9 +271,11 @@ async function recallReflex(turnText, deps = {}) {
     if (s >= (deps.threshold || RECALL_THRESHOLD) && (!best || s > best.score)) best = { score: s, id: e.id, kind: e.kind, day: e.day, text: e.text };
   }
   // open threads match lexically (few, short — no embedding round-trip needed)
-  const words = new Set(t.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+  // scan-fix 15 Jul: \W+ split was Devanagari-blind — Unicode words, both scripts
+  const uniWords = (s) => String(s).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => (/[ऀ-ॿ]/.test(w) ? w.length >= 2 : w.length > 3));
+  const words = new Set(uniWords(t));
   for (const th of (who && who.open_threads) || []) {
-    const overlap = String(th).toLowerCase().split(/\W+/).filter(w => words.has(w)).length;
+    const overlap = uniWords(th).filter(w => words.has(w)).length;
     if (overlap >= 3 && !best) best = { score: 0.56, id: "thread:" + textHash(String(th)), kind: "thread", day: who.date, text: String(th) };
   }
   if (!best) return null;
@@ -344,6 +352,9 @@ async function selftest() {
     const rows = [];
     const bad = await markMoment("vibe", "x", { append: r => rows.push(r), embed: mockEmbed });
     assert("SCRIBE: unknown kind rejected (doubt|win|preference|thread only)", bad.ok === false && rows.length === 0);
+    // scan-fix 15 Jul: the VERBATIM LAW has teeth now — narrator voice rejected
+    const para = await markMoment("doubt", "He's actively questioning if I am updating memory", { append: r => rows.push(r), embed: mockEmbed });
+    assert("SCRIBE: a third-person paraphrase is REJECTED (his words or nothing)", para.ok === false && para.error.includes("first person") && rows.length === 0);
     const ok = await markMoment("doubt", "tokenization feels like magic not math", { append: r => rows.push(r), embed: mockEmbed, now: new Date("2026-07-14T10:00:00Z") });
     assert("SCRIBE: moment lands verbatim + embedded + day-stamped", ok.ok && ok.embedded && rows[0].text === "tokenization feels like magic not math" && rows[0].day && rows[0].kind === "doubt");
     const off = await markMoment("win", "held the derby", { append: r => rows.push(r), embed: async () => null });

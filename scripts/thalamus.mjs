@@ -93,9 +93,15 @@ const DEFAULT_CONFIG = {
   adjudicator: { model: "gemini-flash-lite-latest", enabled: true },
   deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30 },
   // M17 — the pre-answer serve side: cosine bar, the free overlap floor, and
-  // the one embed call's hard timeout (dry/slow → the floor, never a stall)
-  pre_answer: { enabled: true, threshold: 0.60, min_overlap: 2, embed_timeout_ms: 4000 },
-  self_markers: ["i don't get", "don't understand", "samajh nahi", "samajh nahin", "confus", "kyun nahi aata", "stuck hoon", "atka hua", "doubt hai", "yeh kaise", "wait, why", "wait why", "makes no sense"],
+  // the one embed call's hard timeout (dry/slow → the floor, never a stall).
+  // scan-fix 15 Jul: bar raised 0.60→0.66, overlap 2→3 — common Hinglish
+  // words were crossing the old floor and attaching irrelevant lectures.
+  pre_answer: { enabled: true, threshold: 0.66, min_overlap: 3, embed_timeout_ms: 4000 },
+  // scan-fix 15 Jul: the gate was DEAF to how he actually talks — Latin-only
+  // markers while the ASR ships Devanagari, so genuine confusion scored S=0
+  // and only the canned English phrase ever woke the deep brain. His real
+  // voice, both scripts:
+  self_markers: ["i don't get", "don't understand", "samajh nahi", "samajh nahin", "samajh mein nahi", "samajh na", "clear nahi", "confus", "kyun nahi aata", "kaise kaam", "kaise hota", "kya hota", "matlab kya", "stuck hoon", "atka hua", "doubt hai", "doubt aa", "yeh kaise", "wait, why", "wait why", "makes no sense", "समझ नहीं", "समझ में नहीं", "नहीं समझ", "समझा नहीं", "कैसे काम", "क्यों नहीं", "मतलब क्या", "डाउट"],
 };
 function loadConfig() {
   const c = readJson(CONFIG);
@@ -198,6 +204,13 @@ function cosine(a, b) {
   for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
   return na && nb ? dot / Math.sqrt(na * nb) : 0;
 }
+// scan-fix 15 Jul: every matcher tokenized with /[^a-z0-9]+/ — Devanagari
+// text produced ZERO words, so pre-answers, bg recall-matches and precache
+// whispers were all script-blind. Unicode words, both scripts, one helper:
+function tokWords(text) {
+  return String(text || "").toLowerCase().split(/[^\p{L}\p{N}]+/u)
+    .filter(w => (/[ऀ-ॿ]/.test(w) ? w.length >= 2 : w.length > 3));
+}
 // ---------------------------------------------------------------------------
 // M14 — THE OVERLAP: the wake QUEUE (event-sourced, append-only, single-writer).
 // A "pending" row opens a wake; a later served/declined/expired row for the
@@ -227,11 +240,11 @@ function pendingBg(rows) {
 // thought? Exact concept-token hit or ≥2 shared >3-char words. Free, in-memory.
 function matchBg(evt, bgItems) {
   const tokens = new Set((evt.concept_tokens || []).map(t => String(t).toLowerCase()));
-  const words = new Set(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3));
+  const words = new Set(tokWords(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`));
   for (const b of bgItems || []) {
     const bTokens = (b.tokens || []).map(t => String(t).toLowerCase());
     if (bTokens.some(t => tokens.has(t))) return b;
-    const bWords = `${b.concept || ""} ${b.insight || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+    const bWords = tokWords(`${b.concept || ""} ${b.insight || ""}`);
     if (bWords.filter(w => words.has(w)).length >= 2) return b;
   }
   return null;
@@ -255,9 +268,9 @@ function matchPreAnswer(evt, cache, qv, cfg) {
     }
   }
   if (!best) {
-    const qw = new Set(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3));
+    const qw = new Set(tokWords(`${(evt.concept_tokens || []).join(" ")} ${evt.text || ""}`));
     for (const e of cache) {
-      const ew = String(e.concept + " " + e.doubt).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+      const ew = tokWords(String(e.concept + " " + e.doubt));
       const overlap = ew.filter(w => qw.has(w)).length;
       if (overlap >= cfg.pre_answer.min_overlap && (!best || overlap > best.score)) best = { entry: e, score: overlap, via: "overlap" };
     }
@@ -424,10 +437,10 @@ function createNucleus(cfg, deps = {}) {
       let whisper = N.workspace.whisper || null;
       if (String(g.spotlight.evt.event_key || "").startsWith("stall:")) {
         const pc = D.precache();
-        const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []), ...String(g.spotlight.evt.text || "").toLowerCase().split(/[^a-z0-9]+/)].map(w => String(w).toLowerCase()).filter(w => w.length > 3));
+        const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []).map(t => String(t).toLowerCase()), ...tokWords(String(g.spotlight.evt.text || ""))]);
         let best = null;
         for (const e of (pc && pc.entries) || []) {
-          const ew = String(e.concept + " " + e.stall_signature).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+          const ew = tokWords(String(e.concept + " " + e.stall_signature));
           const overlap = ew.filter(w => hintWords.has(w)).length;
           if (overlap >= 1 && (!best || overlap > best.overlap)) best = { ...e, overlap };
         }
@@ -930,6 +943,24 @@ async function selftest() {
     // pendingBg reducer
     const open = pendingBg([{ moment_id: "a", status: "queued" }, { moment_id: "b", status: "queued" }, { moment_id: "a", status: "drained" }]);
     assert("pendingBg: drained rows close their entry, others stay open", open.length === 1 && open[0].moment_id === "b");
+  }
+
+  // SCAN-FIX 15 Jul — THE GATE HEARS HINGLISH (both scripts, no shibboleth)
+  {
+    const { n } = rig();
+    const deva = await n.ingest({ modality: "voice", text: "यार ये समझ नहीं आ रहा कि अटेंशन क्यों नहीं लीनियर होता", concept_tokens: ["attention-linear"] });
+    assert("a Devanagari doubt fires SELF (the gate is no longer script-blind)", deva.S >= 0.6);
+    const hinglish = await n.ingest({ modality: "voice", text: "kv cache ka matlab kya hota hai actually", concept_tokens: ["kv-fresh"] });
+    assert("a Latin-Hinglish doubt fires SELF too (matlab kya)", hinglish.S >= 0.6);
+    const plain = await n.ingest({ modality: "voice", text: "chalo aaj ka session shuru karte hain", concept_tokens: [] });
+    assert("plain chat still scores low (markers, not paranoia)", plain.S < 0.3);
+    // unicode matchers: a Devanagari turn reaches a cached pre-answer via overlap
+    const cache = [{ id: "pa", concept: "अटेंशन क्वाड्रेटिक", doubt: "अटेंशन क्वाड्रेटिक क्यों रहता है कैश के बाद भी", answer: "the meetings stay", vec: null }];
+    const hit = matchPreAnswer({ concept_tokens: [], text: "अटेंशन क्वाड्रेटिक क्यों है अभी भी कैश के साथ" }, cache, null, { pre_answer: { threshold: 0.66, min_overlap: 3 } });
+    assert("the overlap floor works in Devanagari (unicode tokens)", hit && hit.via === "overlap");
+    const bgHit = matchBg({ concept_tokens: [], text: "टोकनाइज़ेशन सबवर्ड वाला डाउट फिर से" }, [{ moment_id: "b1", concept: "टोकनाइज़ेशन सबवर्ड", insight: "सबवर्ड split का सवाल", tokens: [] }]);
+    assert("the bg recall-match works in Devanagari too", bgHit && bgHit.moment_id === "b1");
+    assert("the tightened floor rejects thin overlap (2 shared words < 3)", matchPreAnswer({ concept_tokens: [], text: "kv cache discussion generally" }, [{ id: "x", concept: "kv cache", doubt: "unrelated thing entirely", answer: "x", vec: null }], null, { pre_answer: { threshold: 0.66, min_overlap: 3 } }) === null);
   }
 
   // habituation decays — after a long silence the same signal can fire again

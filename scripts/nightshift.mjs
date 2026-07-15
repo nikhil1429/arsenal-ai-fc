@@ -393,7 +393,7 @@ async function preAnswerEngine(deps = {}) {
   }
   // 1 — PREDICT (one call): the doubts he is MOST LIKELY to voice next
   const pr = await gen(`You predict the NEXT doubts of one specific learner (an AI Product Engineer candidate) from his real signals. His confusion SHAPES (mined from his real captured doubts): ${JSON.stringify(material.clusters).slice(0, 2500)}. His last-7-days spoken fragments: ${JSON.stringify(material.voiced).slice(0, 3000)}. Concepts hot this week: ${material.hotTokens.join(", ") || "—"}. Due for review (decay risk): ${material.due.join(", ") || "—"}. Confident-but-wrong zone: ${material.danger.join(", ") || "—"}. Open threads: ${material.threads.join(" · ") || "—"}.
-Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — concrete, first-person, in his idiom (Hinglish fine), each anchored to one concept. Output STRICT JSON array, no fences: [{"concept":"<one concept>","doubt":"<the doubt as HE would voice it, 15-140 chars>"}]`, true);
+Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — concrete, first-person, in his idiom (Hinglish fine), each anchored to one concept. ONLY learning doubts on his interview arc (LLMs, RAG, evals, systems, his locked concepts decaying); IGNORE anything about building or configuring the organism/tooling itself (Claude, Gemini accounts, schedulers, APIs, tasks) — that is machinery talk, not a doubt worth pre-answering. Output STRICT JSON array, no fences: [{"concept":"<one concept>","doubt":"<the doubt as HE would voice it, 15-140 chars>"}]`, true);
   use("T7", 1, 4000);
   if (!pr.ok) return { ok: false, skipped: "prediction lane dry — no cache tonight" };
   let predicted = [];

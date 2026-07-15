@@ -1,13 +1,72 @@
 {
   "_doc": "THE THALAMUS CANON (CYBORG_BRAIN.md §4) — salience weights, tier thresholds, binding window, refractory, budget coupling. Approval-gated: changing these shapes what the organism ATTENDS to (curriculum-shaping), so edits ride the same human-approval law as the genome. Weights are calibrated so a voiced doubt on a fresh concept, or a confident-wrong rep on a fresh concept, crosses tau1 and wakes Opus — while a Governor flip or a due card alone never does (biometrics weight attention, never drive verdicts). Prosody/emotion/affect are EXCLUDED from scoring by construction (stripped at the door in code, not here).",
-  "weights": { "pe": 0.35, "nov": 0.20, "gov": 0.25, "err": 0.45, "self": 0.45, "dead": 0.15, "hab": 0.40 },
-  "tiers": { "tau0": 0.25, "tau1_base": 0.55, "epsilon": 0.08, "budget_k": 0.35 },
+  "weights": {
+    "pe": 0.35,
+    "nov": 0.2,
+    "gov": 0.25,
+    "err": 0.45,
+    "self": 0.45,
+    "dead": 0.15,
+    "hab": 0.4
+  },
+  "tiers": {
+    "tau0": 0.25,
+    "tau1_base": 0.52,
+    "epsilon": 0.08,
+    "budget_k": 0.35
+  },
   "binding_ms": 900,
   "refractory_min": 45,
   "wake_cap_per_day": 15,
-  "hab": { "tau_ms": 600000, "saturation": 4 },
-  "pe": { "norm_bits": 4, "base_rates": { "default": 0.5 } },
-  "adjudicator": { "model": "gemini-flash-lite-latest", "enabled": true },
-  "deep": { "deadline_ms": 45000, "min_headroom_tokens": 50000, "max_thinking_tokens": 16000, "timeout_ms": 300000 },
-  "self_markers": ["i don't get", "don't understand", "samajh nahi", "samajh nahin", "confus", "kyun nahi aata", "stuck hoon", "atka hua", "doubt hai", "yeh kaise", "wait, why", "wait why", "makes no sense"]
+  "hab": {
+    "tau_ms": 600000,
+    "saturation": 4
+  },
+  "pe": {
+    "norm_bits": 4,
+    "base_rates": {
+      "default": 0.5
+    }
+  },
+  "adjudicator": {
+    "model": "gemini-flash-lite-latest",
+    "enabled": true
+  },
+  "deep": {
+    "deadline_ms": 45000,
+    "min_headroom_tokens": 50000,
+    "max_thinking_tokens": 16000,
+    "timeout_ms": 300000
+  },
+  "self_markers": [
+    "i don't get",
+    "don't understand",
+    "samajh nahi",
+    "samajh nahin",
+    "samajh mein nahi",
+    "samajh na",
+    "clear nahi",
+    "confus",
+    "kyun nahi aata",
+    "kaise kaam",
+    "kaise hota",
+    "kya hota",
+    "matlab kya",
+    "stuck hoon",
+    "atka hua",
+    "doubt hai",
+    "doubt aa",
+    "yeh kaise",
+    "wait, why",
+    "wait why",
+    "makes no sense",
+    "समझ नहीं",
+    "समझ में नहीं",
+    "नहीं समझ",
+    "समझा नहीं",
+    "कैसे काम",
+    "क्यों नहीं",
+    "मतलब क्या",
+    "डाउट"
+  ]
 }
