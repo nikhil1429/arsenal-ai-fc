@@ -43,24 +43,24 @@ The football-club skin is **load-bearing, not decoration** — the builder is an
 ## 5. The superpowers (the pitch bullets)
 
 1. **Two separate AI billing pools, one voice.** Claude (Max subscription) is treated as scarce judgment capital; Gemini (free tier) does vision and bulk; deterministic code does all math for **zero tokens**. Marginal cost of running the whole machine: **≈ $0.** No API key is ever set — a hard, code-enforced $100 ceiling.
-2. **A real-time spoken coach (The Dugout).** Sub-second, interruptible voice — you *argue* with it. It reaches into your live data mid-sentence (15 tools), runs voice drills, stages rematches, files your evening ritual on your spoken word, and even watches your paper/screen through the camera. Built on the free Gemini Live tier with the wire-level bugs empirically solved (§10).
+2. **A real-time spoken coach (The Dugout).** Sub-second, interruptible voice — you *argue* with it. It reaches into your live data mid-sentence (24 tools), runs voice drills, stages rematches, files your evening ritual on your spoken word, and even watches your paper/screen through the camera. Built on the free Gemini Live tier with the wire-level bugs empirically solved (§10).
 3. **A hot brain that gets sharper while you sleep.** An overnight scheduler deliberately spends the plan's idle capacity — writing tomorrow's coaching cartridge, mining today's conversations into curriculum, rendering art — and self-tunes to the plan's true, unpublished limits.
 4. **Earned proactivity (the shadow engine).** The machine is not allowed to interrupt you until it has *silently proven* an interruption would have helped (measured hit-rate) **and** you've ratified it by voice. Restraint as a feature.
 5. **A calibration engine that finds your unknown-unknowns.** Every answer is pre-committed with a gut-word (*knew/shaky/guessed*); the machine measures where you were *confident and wrong* — the single most dangerous cell in learning.
 6. **Media that makes itself.** Daily posters (fully automatic), 90-second spoken team-talks, and one-click season films — the motivation layer for a brain that thinks in pictures.
 7. **A constitution enforced in code.** Win-only voicing, no shame, no streaks, no hype, no calendar pressure, a hard medical boundary — every one is a code path with a passing test, not a line in a prompt an LLM could ignore.
 
-## 6. The numbers (as of Day 0)
+## 6. The numbers (at launch — 15 Jul 2026)
 
 | Metric | Value |
 |---|---|
-| Scripts (deterministic Node organs) | **27** (~9,500 lines) |
-| Automated tasks (Windows Scheduler) | **26**, verified firing live |
-| Self-test suites, all green | **26** (18 organism + 8 squad) |
+| Scripts (deterministic Node organs) | **43** |
+| Automated tasks (Windows Scheduler) | **38**, verified firing live |
+| Self-test suites, all green | **39** (31 organism + 8 squad) |
 | Brain jobs (LLM work items) | **21**, budget-governed |
-| Live voice tools (the Dugout) | **15** |
-| Claude Skills (one-command rituals) | **9** |
-| Desktop launchers (zero-terminal) | **8** |
+| Live voice tools (the Dugout) | **24** |
+| Claude Skills (one-command rituals) | **11** |
+| Desktop launchers (zero-terminal) | **9** |
 | Git commits on `main` | **103** |
 | Marginal cost to run per month | **≈ $0** (subscription-only) |
 | API keys in the codebase | **0** (constitutionally forbidden) |
@@ -174,7 +174,7 @@ The deterministic scheduler; the LLM is only ever the passenger. **21 jobs** acr
 
 ## 10. THE DUGOUT — the crown (real-time voice)
 
-`dugout.mjs` (1,010 lines) is a local bridge that serves a browser page connecting mic ⇄ **Gemini Live (free tier)** ⇄ speakers, with the Gaffer's constitution and the captain's *measured cognitive fingerprint* as the system instruction. Sub-second, interruptible, all-day.
+`dugout.mjs` is a local bridge that serves a browser page connecting mic ⇄ **Gemini Live (free tier)** ⇄ speakers, with the Gaffer's constitution and the captain's *measured cognitive fingerprint* as the system instruction. Sub-second, interruptible, all-day.
 
 **The JARVIS scar-table, solved empirically.** The build applied a hard-won bug-table from a prior project — but *verified every claim against the live wire* (12 Jul) rather than trusting it:
 - speech config + response modalities must be **nested inside `generationConfig`** (the "root-level" claim gets a 1007 close — the wire overruled the table).
@@ -183,7 +183,7 @@ The deterministic scheduler; the LLM is only ever the passenger. **21 jobs** acr
 - Native-rate audio out, real barge-in (interrupt mid-sentence), 15-minute session-resumption stitching, key-pool rotation across free projects.
 - The **mic bug** was root-caused live: the browser held the permission in state *denied*, and Chrome never re-prompts a denied origin — the page now names this before you start and surfaces every error with its fix.
 
-**The 16 live tools** reach into the bus mid-sentence: `get_today`, `get_tape_room`, `retire_doubt`, `log_reps` (voice reps through the *real* capture contract — gut-word before answer, enforced), `take_note`, `get_calibration`, `checkpoint`, `run_postmatch`, `approve_genome`, `route_throwins`, `get_rejirah`, `set_reminder`, `ratify_interruption`, `scrimmage_report`, `semantic_recall`, `set_depth`.
+**The 24 live tools** reach into the bus mid-sentence: `get_today`, `get_organism` (the full-anatomy lecture), `get_club_report`, `get_capsule`, `get_tape_room`, `retire_doubt`, `log_reps` (voice reps through the *real* capture contract — gut-word before answer, enforced), `take_note`, `mark_moment`, `remember`, `forget`, `get_calibration`, `checkpoint`, `run_postmatch`, `approve_genome`, `route_throwins`, `get_rejirah`, `set_reminder`, `ratify_interruption`, `scrimmage_report`, `semantic_recall`, `set_depth`, `run_python` (the Chalkboard), `read_url`.
 
 **The mouth, ears, and eyes — tuned empirically to peak (U5).** All five Live-capable models were probed live: **`gemini-3.1-flash-live-preview`** wins for a teaching coach (it elaborated the most, reached first-audio in ~0.6s vs the native-audio model's ~8s, has an 8× larger output budget, and is the only Live model that also does vision). The default is swappable via a gitignored prefs file. **Depth is obedience:** the constitution's old "short sentences, never lecture" line was found (by live measurement) to cut answers to a third of their length — it's replaced by a law that matches the captain's requested depth exactly and defaults to thorough, with a spoken `set_depth` lever (adaptive/brief/deep/lecture). **Ears:** the voice-activity detector's hangover was lengthened so a mid-thought pause no longer ends his turn. **Eyes:** frames are captured in HD and sent sharper so the Gaffer can actually read his handwriting and code.
 
@@ -244,9 +244,9 @@ The captain never opens a terminal. The desktop holds **8 icons** (full guide in
 | **6 — TALK** | The bench voice when free quota runs dry |
 | **7 — SEASON FILM** | Opens NotebookLM + Drive for the one-click film |
 
-**A day:** morning push on the phone (~08:45) → open the Dugout, say "good morning" → study and *paste every session* → throw stray thoughts from the phone → evening bell (21:30) → 30-second full-time → sleep while the brain works. **Nine Claude Skills** (`/matchday`, `/scrimmage`, `/rematch`, `/genome`, `/paste-session`, `/full-time`, `/paint`, `/talk`, `/organism-doctor`) turn each ritual into one command inside the app.
+**A day:** morning push on the phone (~08:45) → open the Dugout, say "good morning" → study and *paste every session* → throw stray thoughts from the phone → evening bell (21:30) → 30-second full-time → sleep while the brain works. **Eleven Claude Skills** (`/matchday`, `/forge`, `/scrimmage`, `/rematch`, `/genome`, `/paste-session`, `/full-time`, `/paint`, `/talk`, `/gem-sync`, `/organism-doctor`) turn each ritual into one command inside the app.
 
-**The automation** — 26 Windows tasks run the spine unattended (mirror 06:55 → physio → twin → heartbeat → the sheet 08:45 → walls, throw-in poller every 15 min, brain tick every 30 min → evening scorer/setpiece/doubtminer → overnight brain drain). Verified firing live this session, including a fix so they run on **battery** (a default that had silently disabled the whole schedule when unplugged).
+**The automation** — 38 Windows tasks run the spine unattended (mirror 06:55 → physio → twin → heartbeat → the sheet 08:45 → walls, throw-in poller every 15 min, brain tick every 30 min → evening scorer/setpiece/doubtminer → overnight brain drain). Verified firing live this session, including a fix so they run on **battery** (a default that had silently disabled the whole schedule when unplugged).
 
 ## 14. The moat (for an investor)
 
@@ -278,13 +278,13 @@ Beyond that (the "JARVIS merger road"): the soul and scar-tissue stay; the *body
 
 ## 17. The tech stack (one glance)
 
-- **Runtime:** Node 22, ESM, Windows. 27 deterministic `.mjs` organs. Atomic writes (temp→rename), empty-safe, entry-guarded.
+- **Runtime:** Node 22, ESM, Windows. 43 deterministic `.mjs` organs. Atomic writes (temp→rename), empty-safe, entry-guarded.
 - **State:** a git repo as a single-writer JSON bus (`dressing-room/state/*.json`); commits are the audit log; personal/derived data is gitignored (the repo is public and clean-audited).
 - **AI:** Claude via `claude -p` on a Max subscription (judgment); Gemini via free CLI + free Live API (vision, bulk, voice). **No API keys, ever** — a code-enforced cost ceiling.
 - **Scheduling:** Windows Task Scheduler (26 `ArsenalFC-*` tasks) + `ntfy.sh` (two phone pushes only, ever) + an in-bridge interval loop.
 - **Voice:** Gemini Live (Charon) in the browser; neural TTS (`msedge-tts`, free) as the bench; local VAD.
 - **Deps:** just two npm packages (`ts-fsrs` for the vetted scheduler, `msedge-tts` for the voice). Everything else is standard library.
-- **Verification:** 26 self-test suites, all green; a live end-to-end pass this session that found and fixed four real automation bugs.
+- **Verification:** 39 self-test suites, all green; a full A-to-Z live verification (15 Jul 2026) — zero RED, every off-switch a named law or cold-start floor.
 
 ---
 
