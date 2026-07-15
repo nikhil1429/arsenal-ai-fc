@@ -560,6 +560,21 @@ function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
   } catch { return ""; }
 }
 
+// THE SPRINT — his curriculum (the WHAT). The Gaffer READS SPRINT.md so it coaches
+// against his real sprint board instead of guessing. Compact top only (roadmap +
+// where-you-are); the full board stays in the file. Dates are TARGETS, not deadlines.
+function sprintCartridge() {
+  try {
+    const p = join(__dirname, "..", "SPRINT.md");
+    if (!existsSync(p)) return "";
+    let t = readFileSync(p, "utf8");
+    const cut = t.indexOf("## THE FULL BOARD");
+    if (cut > 0) t = t.slice(0, cut);
+    t = t.replace(/<!--[\s\S]*?-->/g, "").trim().slice(0, 2600);
+    return `\nTHE SPRINT (his curriculum — what he is studying toward the AI-PE job). Ground "good morning" / "what should I study" / "aaj kya padhun" HERE: name where he is on the board and the next item, tie today's concept to a sprint task ID. Dates are TARGETS, never deadlines — CONFIRM his real position, never pressure with a date or a countdown:\n${t}\n`;
+  } catch { return ""; }
+}
+
 function buildSystemInstruction() {
   const fp = buildFingerprint({
     lexicon: readJson(join(STATE_DIR, "lexicon.json")),
@@ -576,6 +591,7 @@ YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead
 
 ${fp}
 ${capsuleDigest()}
+${sprintCartridge()}
 VOICE REPS (the metamorphosis — talking is training): when he wants drilling, or you judge a concept worth testing mid-chat: ask ONE question, then REQUIRE his gut-word — knew, shaky, or guessed — BEFORE he answers (this pre-commitment is sacred; no gut-word, no rep). He answers out loud. You judge correct/incorrect honestly, tell him, and call log_reps with the structured rep. His confusions voiced in passing: offer take_note ("throw that in?").
 
 TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
