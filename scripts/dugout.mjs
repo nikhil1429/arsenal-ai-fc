@@ -1569,21 +1569,62 @@ async function selftest() {
 // THE PAGE — mic ⇄ Gemini Live ⇄ speakers, tools relayed to this bridge.
 // Served from memory (no file → no writer conflict with viz's club/).
 // ---------------------------------------------------------------------------
-const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>THE DUGOUT</title></head>
-<body style="margin:0;background:#0c0e13;color:#e9e7e2;font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh">
-<div style="font-size:26px;font-weight:700">⚪🔴 THE DUGOUT</div>
-<div id="st" style="margin:14px;color:#5a6070">loading…</div>
-<div id="meter" style="width:220px;height:6px;background:#161a24;border-radius:3px;overflow:hidden;display:none"><div id="meterbar" style="height:100%;width:0%;background:#7fb069"></div></div>
-<button id="go" style="font-size:20px;padding:14px 44px;border-radius:12px;border:1px solid #e8915a;background:#161a24;color:#e8915a;cursor:pointer;margin-top:12px">START TALKING</button>
-<div id="modes" style="margin-top:10px;display:none">
-<button id="wb" style="font-size:13px;padding:8px 18px;border-radius:9px;border:1px solid #2c3444;background:#161a24;color:#c9a06a;cursor:pointer;margin:0 6px">📷 WHITEBOARD</button>
-<button id="scr" style="font-size:13px;padding:8px 18px;border-radius:9px;border:1px solid #2c3444;background:#161a24;color:#c9a06a;cursor:pointer;margin:0 6px">🖥 SCREEN</button>
+const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>THE DUGOUT</title><style>
+*{box-sizing:border-box}html,body{margin:0}
+body{background:#090A0E;color:#ECEAE4;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6vh 20px 44px;position:relative;overflow-x:hidden}
+.amb{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1200px 640px at 50% -12%,rgba(239,46,69,.18),transparent 62%),radial-gradient(900px 520px at 50% 118%,rgba(70,110,220,.07),transparent 60%)}
+.stage{position:relative;z-index:1;width:100%;max-width:700px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:15px}
+.brand{display:flex;align-items:center;gap:10px;font-size:12.5px;letter-spacing:.3em;text-transform:uppercase;color:#7E8598;font-weight:700}
+.brand .crest{font-size:17px;letter-spacing:normal}
+.dot{width:8px;height:8px;border-radius:50%;background:#3A4050}
+.word{font-size:clamp(42px,9vw,70px);line-height:.98;font-weight:800;letter-spacing:-.025em;margin:2px 0 0}
+.word .accent{color:#EF2E45}
+.tag{max-width:48ch;color:#A7AEBE;font-size:clamp(14px,2.2vw,16px);line-height:1.55;margin:0}
+.tag b{color:#ECEAE4;font-weight:600}
+.status{font-size:13px;color:#6C7380;min-height:17px}
+.go{font-size:19px;font-weight:700;letter-spacing:.01em;padding:18px 48px;border-radius:16px;border:0;background:linear-gradient(180deg,#F23A50,#C21128);color:#fff;cursor:pointer;box-shadow:0 12px 34px rgba(239,46,69,.34),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .12s ease,box-shadow .12s ease;animation:breathe 3.4s ease-in-out infinite}
+.go:hover{transform:translateY(-2px);box-shadow:0 18px 46px rgba(239,46,69,.5)}
+.go:active{transform:translateY(0)}
+@keyframes breathe{0%,100%{box-shadow:0 12px 30px rgba(239,46,69,.28),inset 0 1px 0 rgba(255,255,255,.22)}50%{box-shadow:0 14px 50px rgba(239,46,69,.58),inset 0 1px 0 rgba(255,255,255,.22)}}
+@media(prefers-reduced-motion:reduce){.go{animation:none}}
+.meter{width:250px;height:8px;background:#181B24;border-radius:5px;overflow:hidden;border:1px solid #23272F}
+.meterbar{height:100%;width:0%;background:linear-gradient(90deg,#46C480,#C9A227)}
+.prompts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:2px}
+.prompts .lbl{font-size:12px;color:#6C7380;letter-spacing:.03em}
+.prompts em{font-style:normal;font-size:12.5px;color:#DBB94A;background:rgba(201,162,39,.09);border:1px solid rgba(201,162,39,.24);border-radius:999px;padding:5px 13px}
+.modes{gap:10px;margin-top:2px}
+.ghost{font-size:13px;padding:9px 18px;border-radius:11px;border:1px solid #2A2F3A;background:#12141B;color:#DBB94A;cursor:pointer;margin:0 5px;transition:border-color .12s}
+.ghost:hover{border-color:#C9A227}
+.mins{font-size:12px;color:#616776}
+.diag{max-width:640px;font-size:13px;color:#F0616C;white-space:pre-wrap;border-radius:10px}
+.diag:not(:empty){padding:11px 15px;border:1px solid rgba(240,97,108,.28);background:rgba(240,97,108,.06)}
+.log{width:100%;max-width:640px;max-height:32vh;overflow-y:auto;font-size:13px;line-height:1.55;color:#98A0B0;white-space:pre-wrap;text-align:left;border-radius:12px}
+.log:not(:empty){padding:14px 17px;margin-top:4px;background:rgba(255,255,255,.02);border:1px solid #191C24}
+.nav{margin-top:6px;font-size:11.5px;letter-spacing:.03em;display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
+.nav a{color:#565C6B;text-decoration:none;padding:4px 9px;border-radius:6px;transition:color .12s,background .12s}
+.nav a.primary{color:#B99A38}
+.nav a:hover{color:#ECEAE4;background:rgba(255,255,255,.05)}
+</style></head>
+<body>
+<div class="amb"></div>
+<main class="stage">
+<div class="brand"><span class="crest">⚪🔴</span> The Dugout <span class="dot"></span></div>
+<h1 class="word">Talk to the <span class="accent">Gaffer</span></h1>
+<p class="tag">Your live AI dugout — ask about <b>anything</b>. Your day, a concept, the whole organism, or say <b>"prove it, run the code"</b> and watch it execute. One place, everything.</p>
+<div id="st" class="status">loading…</div>
+<button id="go" class="go">🎙 Start talking</button>
+<div id="meter" class="meter" style="display:none"><div id="meterbar" class="meterbar"></div></div>
+<div class="prompts"><span class="lbl">Try:</span><em>"walk me through the whole organism"</em><em>"kya due hai?"</em><em>"team sheet dikhao"</em><em>"prove it — run the code"</em></div>
+<div id="modes" class="modes" style="display:none">
+<button id="wb" class="ghost">📷 Whiteboard</button>
+<button id="scr" class="ghost">🖥 Screen</button>
 </div>
-<video id="vid" muted playsinline style="display:none"></video>
-<div id="mins" style="margin-top:10px;font-size:12px;color:#5a6070"></div>
-<div id="nav" style="margin-top:8px;font-size:12px"><a href="/?" style="color:#c9a06a;margin:0 7px">MATCHDAY</a><a href="/?mode=scrimmage" style="color:#c9a06a;margin:0 7px">SCRIMMAGE</a><a href="/club/wall.html" style="color:#c9a06a;margin:0 7px">THE WALL</a><a href="/?mode=signing" style="color:#5a6070;margin:0 7px">signing</a><a href="/?mode=brief-club" style="color:#5a6070;margin:0 7px">briefing 1</a><a href="/?mode=brief-brain" style="color:#5a6070;margin:0 7px">briefing 2</a><a href="/club/handbook.html" style="color:#5a6070;margin:0 7px">handbook</a></div>
-<div id="diag" style="margin-top:12px;max-width:640px;font-size:13px;color:#e07a5f;white-space:pre-wrap"></div>
-<div id="log" style="margin-top:18px;max-width:640px;font-size:13px;color:#c9a06a;white-space:pre-wrap"></div>
+<video id="vid" muted playsinline style="display:none;max-width:100%;border-radius:12px"></video>
+<div id="mins" class="mins"></div>
+<nav id="nav" class="nav"><a class="primary" href="/?">Matchday</a><a class="primary" href="/?mode=scrimmage">Scrimmage</a><a class="primary" href="/club/wall.html">The Wall</a><a href="/?mode=signing">signing</a><a href="/?mode=brief-club">briefing 1</a><a href="/?mode=brief-brain">briefing 2</a><a href="/club/handbook.html">handbook</a></nav>
+<div id="diag" class="diag"></div>
+<div id="log" class="log"></div>
+</main>
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
 let outTxEnabled=true,earlyCloses=0,rehydrated=false;
