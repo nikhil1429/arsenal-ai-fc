@@ -156,3 +156,6 @@ jarvis/
 
 # pre-season vault (the build-era test data, archived never deleted)
 dressing-room/vault_preseason_*/
+
+# the captain's personal operating manual (his daily routine — local only)
+THE_CAPTAINS_MANUAL.md
