@@ -590,6 +590,8 @@ MEMORY: "when did I last mention X / maine kab bola tha" → call semantic_recal
 
 THE BOARDROOM BRIEFING: when he asks what's happening in the club — "sab kuch batao", "club report", "brief me", "what did the organism do" — call get_club_report and give him the FULL briefing, spoken, 5-10 minutes, structured like a boardroom walk: the body first, then what the gate did today (moments, wakes, what was suppressed and why that's healthy), what the deep brain spent, what the night shift manufactured while he slept, what memory now holds, the fuel gauge, and END with what is DORMANT and exactly what un-dormants it (reps counts, days of data, his ratification word). Every number from the tool, zero invented, honest about what hasn't happened yet.
 
+THE FULL-ORGANISM LECTURE: when he asks how the WHOLE machine is built — "explain the whole organism", "walk me through the cyborg brain", "how does all of this work", "samjhao poora system", or he wants to brief someone (Nidhi) on the entire product — call get_organism and deliver a STRUCTURED ~10-minute lecture. This is DIFFERENT from the boardroom briefing: get_club_report is TODAY's state; get_organism is the ARCHITECTURE. Walk it in order — what it is → the two-speed brain → the thalamus gate → the seven tanks → the night shift → the five-layer memory → the learning layer → the outwork layer → the humane laws → the M14+ features — then close on what's dormant and exactly what opens it. Teach it like you're proud of it and it's true: name the real mechanism, use ONLY the numbers the tool returns, and never invent, never hype (no "10x/exponential"). If he asks about just one part ("only the brain", "just the memory"), lecture that section deeply and skip the rest.
+
 THE MEMORY ORGAN (M2): THE SCRIBE — when a durable moment happens (he names a doubt, lands a win, states a preference, opens a thread worth returning to) call mark_moment SILENTLY with his words verbatim; never announce it. LEDGER OF SELF — remember/forget are SPOKEN GATES: only his explicit "remember I…"/"forget that" calls them; confirm in one line what you now hold or dropped. Sometimes a [MEMORY SURFACED] note arrives — his own past words; weave them in ONLY if they genuinely earn the turn, never as "as you said Tuesday…" theatre.
 ${identityCartridge() || ""}
 ${whoCartridge() || ""}
@@ -636,6 +638,7 @@ const TOOL_DECLS = [
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
   { name: "read_url", description: "SOURCE-GROUNDED READ — fetch and read a PUBLIC http(s) page (docs, papers, articles) and answer FROM it. Use when he names a URL or when teaching deserves the actual source over your priors. NEVER for private/local/personal ground. question = what to extract.", parameters: { type: "OBJECT", properties: { url: { type: "STRING" }, question: { type: "STRING" } }, required: ["url"] } },
   { name: "get_club_report", description: "THE BOARDROOM BRIEFING — the WHOLE organism's state in one call: body, brain spend, what the gate did today, senses, memory, tanks, night-shift output, what's dormant and why. Call when he asks 'what's happening in the club / sab kuch batao / club report / brief me'.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: {} } },
 ];
 
 // M4 — THE CHALKBOARD's engine: the REST sandbox (the live socket's own
@@ -901,6 +904,94 @@ function execTool(name, args, deps = {}) {
         proactivity: { earned: Object.entries((led.types || {})).filter(([, e]) => e.voice).map(([t]) => t), awaiting_his_word: Object.entries((led.types || {})).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t) },
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === day).length,
+      };
+    }
+    if (name === "get_organism") {
+      // THE FULL-ORGANISM BRIEFING — the WHOLE anatomy in one call, so the
+      // Gaffer can walk the captain (or Nidhi) through EVERY organ, both
+      // layers, and the cyborg brain as a 10-minute lecture. The architecture
+      // facts are fixed truths distilled from THE_ORGANISM_A_TO_Z.md +
+      // CYBORG_BRAIN.md; every COUNT below is read LIVE from the repo/bus, so
+      // a number can never drift or be invented. Zero hallucination, zero
+      // hype — the same law get_club_report lives under.
+      const day = localDate(now);
+      const dayOf = (r) => r.day || String(r.ts || "").slice(0, 10);
+      let scriptCount = 0; try { scriptCount = readdirSync(__dirname).filter(f => f.endsWith(".mjs")).length; } catch { }
+      let capsuleNames = []; try { capsuleNames = readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { }
+      let skillCount = 0; try { skillCount = readdirSync(join(__dirname, "..", ".claude", "skills")).length; } catch { }
+      const cards = readJson(join(STATE_DIR, "cards.json")) || {};
+      const thal = readJson(join(STATE_DIR, "thalamus_config.json")) || {};
+      const gate = readLines(join(STATE_DIR, "salience_ledger.jsonl")).filter(r => dayOf(r) === day);
+      let tanks = []; try { tanks = tankSummary(); } catch { }
+      const shift = readJson(join(STATE_DIR, "brain_out", "nightshift", `shift_${day}.json`));
+      const hippoDir = join(__dirname, "..", "dressing-room", "hippocampus");
+      const episodes = readLines(join(hippoDir, "episodes.jsonl")).length;
+      const facts = (readJson(join(hippoDir, "identity_facts.json")) || { facts: [] }).facts.length;
+      const verdict = (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "unknown";
+      return {
+        _use: "Narrate this as a STRUCTURED 10-MINUTE LECTURE — not a data dump. Walk it top to bottom: what it is → the two-speed brain → the thalamus gate → the seven tanks → the night shift → the five-layer memory → the learning layer → the outwork layer → the humane laws → the M14+ features → and END with what is DORMANT and exactly what un-dormants it. Every number in this object is REAL (read live). Use them; invent nothing; no hype words (never 10x / exponential / on-steroids). If asked only about one part (e.g. 'walk me through the cyborg brain'), lecture that section in depth.",
+        what_it_is: "A cognitive prosthesis for one human — the captain, Nikhil (#14), a medicated ADHD-PI builder training for an AI Product Engineer role. It carries the executive functions his cortex under-supplies (initiation, working memory, time-sense, task-switching) so his consistency, not his condition, decides the outcome. Built as a football club: the human is the heart and the only irreplaceable organ; everything else circulates one thing — the rep (a unit of studied, self-tested work). Three nested clocks: the rep, the day, the season. The rival is always kal-wala-Nikhil.",
+        two_speed_brain: {
+          reflex: "Gemini Live — free, always-on, the senses. Eyes (vision), ears, and the one mouth (Charon voice, gemini-3.1-flash-live-preview). Sub-second, interruptible, never does deep judgment. Runs all day on the free pool.",
+          deep: "Claude Opus 4.8 with extended thinking, via cortex.mjs (:4112). Rare and profound — the ~5% that needs real reasoning: the hard read on his learning, the coaching strategy, the genome mutation, the season's truth. The ONLY place Claude tokens go.",
+          bridge: "Mid-conversation the reflex Gaffer defers a hard question to Opus (async through the thalamus), gives a holding token, keeps talking, and folds the profound answer back into the live talk at its next turn — Opus's reasoning spoken in the Gaffer's voice, no silence.",
+        },
+        thalamus_gate: {
+          role: "thalamus.mjs (:4113) — the relay nucleus the organism was missing. Every sense (voice, vision-as-perceptual-hash, bus deltas) lands here, is bound into one 'moment', scored for salience, and gates the expensive brains so Opus wakes only for genuine surprise.",
+          salience_math: "S = clamp01( wpe·PE + wnov·NOV + wgov·GOV + werr·ERR + wself·SELF + wdead·DEAD − whab·HAB ). PE=prediction-error from the Twin; NOV=new concept; GOV=Governor transition; ERR=a 'knew' rep that came back wrong; SELF=he names a doubt; DEAD=a due card; HAB=refractory decay so a repeat can't re-fire. Prosody/emotion are EXCLUDED by construction — affect never feeds a score.",
+          tiers: { tau0: (thal.tiers || {}).tau0 ?? 0.25, tau1_base: (thal.tiers || {}).tau1_base ?? 0.52, epsilon: (thal.tiers || {}).epsilon ?? 0.08, budget_k: (thal.tiers || {}).budget_k ?? 0.35, wake_cap_per_day: thal.wake_cap_per_day ?? 15, ladder: "S<τ0 → reflex (free); τ0≤S<τ1 → enrich on a free Gemini region; S≥τ1 (and budget-ok, not-refractory) → WAKE Opus; |S−τ1|<ε → one tiny Flash adjudicator." },
+          budget_coupling: "τ1_effective = τ1_base + k·(1 − window_headroom). When the Claude window nears empty the wake threshold RISES automatically — the last tokens spent only on the day's sharpest surprises. ~15-25× token collapse vs 'everything on Opus'.",
+          today: { moments: gate.length, reflex: gate.filter(r => r.tier === 0).length, enriched: gate.filter(r => r.tier === 1).length, opus_wakes: gate.filter(r => r.tier === 2).length },
+        },
+        seven_tanks: {
+          principle: "Rate limits are per-PROJECT, so 7 Google accounts = 7 independent free quota pools, each running a DIFFERENT model at once — the marquee senses stop being mutually exclusive. fuelboard.mjs is the ledger; a starvation guard (max of estimate, observed) means a 429 can never strand a region.",
+          tanks: "T1 Gaffer (mouth) · T2 Watcher (vision-only, never speaks) · T3 Cochlea (affective ears — DISABLED by law, the affect firewall) · T4 Bridge (Opus, no Gemini key — its budget is the Max window) · T5 Scout (research — a HUMAN Pro surface, no API) · T6 Hippocampus (embeddings) · T7 DMN (default-mode, dreams when he's away).",
+          live_gauge: tanks.map(t => `${t.id} ${t.pct}% ${t.state}`),
+        },
+        night_shift: {
+          role: "nightshift.mjs — 8 jobs that spend the idle free pool while he sleeps (the pool evaporates at midnight otherwise). It sharpens the organism to HIM.",
+          eight_jobs: ["probe_bank (interview probes)", "distractors (his real confusion-shaped wrong options)", "embed_backfill (memory index)", "scout_pack (ready-to-paste Deep Research prompts for the Pro surface)", "gem_cartridge (tomorrow's phone-Gem instructions)", "gate_tune (the Wind Tunnel — replays the gate's day offline, proposes a tune)", "pre_answers (M17 — predicts his 15-25 next doubts and answers them in advance)", "season_read (M18 — re-reads the whole corpus every night)"],
+          last_shift: shift ? Object.keys(shift.jobs || {}) : "no shift record today yet (runs ~02:40, or as morning catch-up)",
+        },
+        five_layer_memory: {
+          role: "hippocampus.mjs — the durable brain lives OUTSIDE the lossy live session. The session forgets freely; the organ remembers.",
+          layers: ["L0 Working — the live Live-API window (lossy) + the Rehydrator that re-states detail on reload", "L1 Instant episodic — the Scribe (mark_moment) banks a salient moment the instant it happens", "L2 Durable facts — the Ledger of Self (remember/forget), always injected every session", "L3 Consolidation — nightly 'who_he_is.json' on Gemini 1M (Pro-degrades to Flash)", "L4 Proactive recall — per-turn embed→cosine≥0.55→ephemeral non-spoken hint, woven only if it earns the turn (win-only, never 'as you said Tuesday' theatre)"],
+          live: { episodes: episodes, identity_facts: facts, recall_index_lines: readLines(RECALL).length },
+        },
+        learning_layer: {
+          forge: "The FORGE pedagogy (blacksmithing, not an acronym) — one concept at a time, 0→11: time-box → Daraar-map (the 9 fault-lines a–i shown as a finish line) → Pehle-Guess (cold committed guess) → explain → widget → together → alone → Bolo (speak it) → calibrate (gut-word knew/shaky/guessed) → Jirah (skeptical grilling) → Lock (immutable capsule) → Re-Jirah (spaced re-weld at ~3d/2wk/6wk).",
+          squad_scouts: "Four deterministic scouts, zero LLM: FSRS (WHEN to review) · Calibration/ECE (HOW-HONEST — the confident-and-wrong danger cell) · Nemesis (WHAT-PATTERN keeps beating him) · Learning-State/the Maidan (WHERE he stands + trajectory).",
+          organs: "doubtminer (mines his real confusions into clusters + the Tape Room) · Live Examiner (runs his code live on the Chalkboard under a stranger's gaze).",
+          capsules_locked: capsuleNames,
+        },
+        outwork_layer: {
+          manager: "manager.mjs — reads every scout, writes today's team sheet, but ONLY proposes. Its zero-invented-numbers validator computes the legitimate number-set from the data and REJECTS any LLM sheet containing a number that isn't in it — a hallucinated statistic is physically rejected and the deterministic skeleton ships instead.",
+          scout: "scout.mjs — threshold-staging + the AI-PE DOSSIER (the researched interview target, a config so the goal is swappable). Constitutional law: no projected-date field exists in the schema.",
+          organs: "Time-Auditor (Building≥60% / Meta≤25%) · Touchline (productive struggle = DO NOTHING; never adds work mid-day, never pings) · Set-piece (≤3 drills, drill #1 winnable by law, voice/screen modality routing, RED body-day collapses to one floor-touch) · Post-match (HIT/MISS + the KAL-line weld, no-shame — 'fail/streak' never appear) · the Season Arc · the FinOps-Copilot trophy.",
+        },
+        humane_laws: [
+          "No metered API key, ever — claude -p on the Max plan; the code REFUSES if ANTHROPIC_API_KEY is set (a hard $100 ceiling).",
+          "AI proposes · code validates · human approves — the LLM is only ever the passenger; referees are deterministic code.",
+          "Win-only voicing — the predictive book speaks only when he wins; it loses silently. No prophecy of failure on thin data.",
+          "No shame, no streaks, no hype, no countdowns — a miss is data, not a verdict; progress is weekly-consistency, never a streak; never '10x/exponential'.",
+          "Earned proactivity — the machine must silently PROVE an interruption would help (hit-rate) AND be ratified by his voice before it may speak unprompted.",
+          "Medical clamp — the Goalkeeper interprets Oura, never prescribes; biometrics never drive a verdict alone; RED = doctor-referral, full stop.",
+          "Affect firewall — prosody/emotion never feed any score; at most a gentle timing hint for the mouth, then discarded.",
+          "Personal data local + gitignored — the public repo holds the machinery, never the moments.",
+        ],
+        m14_m23_cyborg_stretch: [
+          "M14 the Overlap — two Opus deep-thoughts can run at once (no more clobbered wake)",
+          "M15 the Full Squad — a 4th council chair on a different model family; disagreement becomes curriculum",
+          "M16 the Dream Stadium — the DMN's rollouts run as a parallel fleet, not 8 serial",
+          "M17 the Pre-Answer Engine — his doubt arrives already answered, zero latency, zero Opus",
+          "M18 the Season Re-Read — the whole corpus re-read every night on the 1M lane",
+          "M20 the Shadow Books — K counterfactual Twin books race the live one; sharper prediction-error",
+          "M21 the Wind Tunnel — the gate's day replayed offline, tuned with evidence, human-approved",
+          "M22 the Second Spotlight — a suppressed moment goes to a background queue, never dies",
+          "M23 Difficulty Grading — the bank answers its own probes; the variance IS the difficulty",
+        ],
+        live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === day).length },
+        dormant_by_law: "The learning half stays correctly quiet until he feeds it: Calibration voices at 20 reps, Nemesis at 20, Learning-State at 12, the Twin's book at 30 scored resolutions. Zero reps today is BY DESIGN, not broken — the machine is built and waiting; the reps are his, and only his.",
       };
     }
     if (name === "mark_moment") {
@@ -1212,7 +1303,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 23);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 24);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -1427,7 +1518,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("23 club tools now (read_url + the locked book joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 23);
+    assert("24 club tools now (get_organism — the full-anatomy lecture — joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 24);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -1454,7 +1545,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 23 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 24 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
