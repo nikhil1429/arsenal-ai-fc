@@ -1585,62 +1585,526 @@ async function selftest() {
 // THE PAGE — mic ⇄ Gemini Live ⇄ speakers, tools relayed to this bridge.
 // Served from memory (no file → no writer conflict with viz's club/).
 // ---------------------------------------------------------------------------
-const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>THE DUGOUT</title><style>
-*{box-sizing:border-box}html,body{margin:0}
-body{background:#090A0E;color:#ECEAE4;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6vh 20px 44px;position:relative;overflow-x:hidden}
-.amb{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1200px 640px at 50% -12%,rgba(239,46,69,.18),transparent 62%),radial-gradient(900px 520px at 50% 118%,rgba(70,110,220,.07),transparent 60%)}
-.stage{position:relative;z-index:1;width:100%;max-width:700px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:15px}
-.brand{display:flex;align-items:center;gap:10px;font-size:12.5px;letter-spacing:.3em;text-transform:uppercase;color:#7E8598;font-weight:700}
-.brand .crest{font-size:17px;letter-spacing:normal}
-.dot{width:8px;height:8px;border-radius:50%;background:#3A4050}
-.word{font-size:clamp(42px,9vw,70px);line-height:.98;font-weight:800;letter-spacing:-.025em;margin:2px 0 0}
-.word .accent{color:#EF2E45}
-.tag{max-width:48ch;color:#A7AEBE;font-size:clamp(14px,2.2vw,16px);line-height:1.55;margin:0}
-.tag b{color:#ECEAE4;font-weight:600}
-.status{font-size:13px;color:#6C7380;min-height:17px}
-.go{font-size:19px;font-weight:700;letter-spacing:.01em;padding:18px 48px;border-radius:16px;border:0;background:linear-gradient(180deg,#F23A50,#C21128);color:#fff;cursor:pointer;box-shadow:0 12px 34px rgba(239,46,69,.34),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .12s ease,box-shadow .12s ease;animation:breathe 3.4s ease-in-out infinite}
-.go:hover{transform:translateY(-2px);box-shadow:0 18px 46px rgba(239,46,69,.5)}
-.go:active{transform:translateY(0)}
-@keyframes breathe{0%,100%{box-shadow:0 12px 30px rgba(239,46,69,.28),inset 0 1px 0 rgba(255,255,255,.22)}50%{box-shadow:0 14px 50px rgba(239,46,69,.58),inset 0 1px 0 rgba(255,255,255,.22)}}
-@media(prefers-reduced-motion:reduce){.go{animation:none}}
-.meter{width:250px;height:8px;background:#181B24;border-radius:5px;overflow:hidden;border:1px solid #23272F}
-.meterbar{height:100%;width:0%;background:linear-gradient(90deg,#46C480,#C9A227)}
-.prompts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:2px}
-.prompts .lbl{font-size:12px;color:#6C7380;letter-spacing:.03em}
-.prompts em{font-style:normal;font-size:12.5px;color:#DBB94A;background:rgba(201,162,39,.09);border:1px solid rgba(201,162,39,.24);border-radius:999px;padding:5px 13px}
-.modes{gap:10px;margin-top:2px}
-.ghost{font-size:13px;padding:9px 18px;border-radius:11px;border:1px solid #2A2F3A;background:#12141B;color:#DBB94A;cursor:pointer;margin:0 5px;transition:border-color .12s}
-.ghost:hover{border-color:#C9A227}
-.mins{font-size:12px;color:#616776}
-.diag{max-width:640px;font-size:13px;color:#F0616C;white-space:pre-wrap;border-radius:10px}
-.diag:not(:empty){padding:11px 15px;border:1px solid rgba(240,97,108,.28);background:rgba(240,97,108,.06)}
-.log{width:100%;max-width:640px;max-height:32vh;overflow-y:auto;font-size:13px;line-height:1.55;color:#98A0B0;white-space:pre-wrap;text-align:left;border-radius:12px}
-.log:not(:empty){padding:14px 17px;margin-top:4px;background:rgba(255,255,255,.02);border:1px solid #191C24}
-.nav{margin-top:6px;font-size:11.5px;letter-spacing:.03em;display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
-.nav a{color:#565C6B;text-decoration:none;padding:4px 9px;border-radius:6px;transition:color .12s,background .12s}
-.nav a.primary{color:#B99A38}
-.nav a:hover{color:#ECEAE4;background:rgba(255,255,255,.05)}
-</style></head>
-<body>
-<div class="amb"></div>
-<main class="stage">
-<div class="brand"><span class="crest">⚪🔴</span> The Dugout <span class="dot"></span></div>
-<h1 class="word">Talk to the <span class="accent">Gaffer</span></h1>
-<p class="tag">Your live AI dugout — ask about <b>anything</b>. Your day, a concept, the whole organism, or say <b>"prove it, run the code"</b> and watch it execute. One place, everything.</p>
-<div id="st" class="status">loading…</div>
-<button id="go" class="go">🎙 Start talking</button>
-<div id="meter" class="meter" style="display:none"><div id="meterbar" class="meterbar"></div></div>
-<div class="prompts"><span class="lbl">Try:</span><em>"walk me through the whole organism"</em><em>"kya due hai?"</em><em>"team sheet dikhao"</em><em>"prove it — run the code"</em></div>
-<div id="modes" class="modes" style="display:none">
-<button id="wb" class="ghost">📷 Whiteboard</button>
-<button id="scr" class="ghost">🖥 Screen</button>
-</div>
-<video id="vid" muted playsinline style="display:none;max-width:100%;border-radius:12px"></video>
-<div id="mins" class="mins"></div>
-<nav id="nav" class="nav"><a class="primary" href="/?">Matchday</a><a class="primary" href="/?mode=scrimmage">Scrimmage</a><a class="primary" href="/club/wall.html">The Wall</a><a href="/?mode=signing">signing</a><a href="/?mode=brief-club">briefing 1</a><a href="/?mode=brief-brain">briefing 2</a><a href="/club/handbook.html">handbook</a></nav>
-<div id="diag" class="diag"></div>
-<div id="log" class="log"></div>
-</main>
+const PAGE = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE DUGOUT</title>
+    <style>
+        /* CSS reset & base */
+        body, html { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            background: #020203; color: #ECEAE4; 
+            font-family: 'Inter', -apple-system, system-ui, sans-serif; 
+            overflow: hidden; 
+        }
+        
+        /* WebGL Background */
+        #glcanvas { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 1; pointer-events: none; 
+        }
+        
+        /* UI Layer */
+        #ui-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 10; display: flex; flex-direction: column; 
+            justify-content: space-between; padding: 3rem 4rem; 
+            box-sizing: border-box; pointer-events: none; 
+        }
+        #ui-layer > * { pointer-events: auto; }
+        
+        /* Top Bar */
+        .top-bar { 
+            display: flex; justify-content: space-between; align-items: flex-start; 
+            width: 100%; transition: opacity 1.5s ease; 
+        }
+        
+        /* Brand */
+        .brand { 
+            font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; 
+            color: rgba(255, 255, 255, 0.4); display: flex; align-items: center; gap: 12px; 
+            font-weight: 500;
+        }
+        .brand .crest { font-size: 14px; letter-spacing: normal; opacity: 0.8; }
+        
+        /* Status & Mins */
+        .status-container { 
+            display: flex; flex-direction: column; align-items: flex-end; gap: 6px; 
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; 
+            color: rgba(255, 255, 255, 0.3); text-transform: uppercase; letter-spacing: 0.2em; 
+        }
+        #st { color: rgba(255, 255, 255, 0.5); }
+        
+        /* Center Stage - Threshold */
+        #threshold-center { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            display: flex; flex-direction: column; align-items: center; gap: 3rem; 
+            transition: opacity 1.5s ease, transform 1.5s ease, filter 1.5s ease; 
+        }
+        body.presence-state #threshold-center { 
+            opacity: 0; pointer-events: none; transform: translate(-50%, -40%); 
+            filter: blur(10px);
+        }
+        
+        /* Hints */
+        .hints { 
+            display: flex; flex-direction: column; align-items: center; gap: 16px; 
+            opacity: 0.3; transition: opacity 0.5s ease;
+        }
+        .hints span { 
+            font-style: italic; font-size: 14px; color: #fff; font-weight: 300; 
+            letter-spacing: 0.05em; text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        /* Start Button */
+        #go { 
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); 
+            color: #fff; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+            letter-spacing: 0.3em; text-transform: uppercase; padding: 18px 40px; 
+            border-radius: 100px; cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            backdrop-filter: blur(10px); display: flex; align-items: center; gap: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        #go::before { 
+            content: ''; display: block; width: 6px; height: 6px; 
+            background: #EF2E45; border-radius: 50%; box-shadow: 0 0 12px #EF2E45; 
+            transition: all 0.4s ease;
+        }
+        #go:hover { 
+            border-color: rgba(239,46,69,0.4); background: rgba(239,46,69,0.05);
+            box-shadow: 0 8px 30px rgba(239,46,69,0.15); transform: translateY(-2px); 
+        }
+        #go:hover::before { box-shadow: 0 0 20px #EF2E45, 0 0 40px #EF2E45; }
+        
+        /* Bottom Area */
+        .bottom-bar { 
+            display: flex; justify-content: space-between; align-items: flex-end; 
+            width: 100%; transition: opacity 1.5s ease; 
+        }
+        
+        /* Nav */
+        #nav { 
+            display: flex; gap: 2rem; font-size: 11px; text-transform: uppercase; 
+            letter-spacing: 0.2em; transition: opacity 0.8s ease; 
+            font-weight: 500;
+        }
+        body.threshold-state #nav { opacity: 0.4; }
+        body.presence-state #nav { opacity: 0.1; }
+        #nav:hover { opacity: 1 !important; }
+        #nav a { 
+            color: rgba(255,255,255,0.6); text-decoration: none; transition: color 0.3s; 
+            padding-bottom: 4px; border-bottom: 1px solid transparent;
+        }
+        #nav a:hover { color: #fff; border-bottom: 1px solid rgba(255,255,255,0.3); }
+        
+        /* Modes */
+        #modes { display: flex; gap: 16px; opacity: 0; transition: opacity 0.8s ease; }
+        body.presence-state #modes { opacity: 0.1; }
+        #modes:hover { opacity: 1 !important; }
+        .ghost { 
+            background: transparent; border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 100px; color: rgba(255,255,255,0.6); font-size: 11px; 
+            text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; 
+            padding: 10px 20px; transition: all 0.3s; 
+        }
+        .ghost:hover { border-color: rgba(255,255,255,0.3); color: #fff; background: rgba(255,255,255,0.05); }
+        
+        /* Log / Subtitles */
+        #log-container { 
+            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); 
+            width: 70%; max-width: 900px; text-align: center; pointer-events: none; 
+        }
+        #log { 
+            font-size: clamp(24px, 4vw, 42px); line-height: 1.3; font-weight: 300; 
+            color: rgba(255, 255, 255, 0.95); text-shadow: 0 4px 30px rgba(0,0,0,0.9); 
+            transition: opacity 1.5s ease; max-height: 40vh; overflow: hidden; 
+            display: flex; flex-direction: column; justify-content: flex-end; 
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 40%, black 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 40%, black 100%);
+            padding: 20px 0;
+            letter-spacing: -0.01em;
+        }
+        body.threshold-state #log { opacity: 0; }
+        
+        /* Diag */
+        #diag { 
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%); 
+            max-width: 600px; font-size: 13px; font-family: monospace; color: #F0616C; 
+            text-align: center; padding: 16px 32px; border: 1px solid rgba(240,97,108,0.3); 
+            background: rgba(240,97,108,0.05); border-radius: 12px; backdrop-filter: blur(12px); 
+            transition: opacity 0.5s, transform 0.5s; z-index: 100; 
+            box-shadow: 0 10px 40px rgba(240,97,108,0.1);
+        }
+        #diag:empty { opacity: 0; pointer-events: none; transform: translate(-50%, -10px); }
+        
+        /* Required hidden elements from the contract */
+        #meter { opacity: 0; pointer-events: none; position: absolute; top: -9999px; }
+        #vid { display: none; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <!-- Three.js for WebGL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="threshold-state">
+
+    <canvas id="glcanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="brand"><span class="crest">⚪🔴</span> THE DUGOUT</div>
+            <div class="status-container">
+                <div id="st">IDLE</div>
+                <div id="mins"></div>
+            </div>
+        </div>
+        
+        <div id="threshold-center">
+            <div class="hints">
+                <span>"walk me through the whole organism"</span>
+                <span>"kya due hai?"</span>
+                <span>"prove it — run the code"</span>
+            </div>
+            <!-- Start button required by engine -->
+            <button id="go">Awaken the Gaffer</button>
+        </div>
+
+        <div id="log-container">
+            <!-- Transcript / floating subtitles surface -->
+            <div id="log"></div>
+        </div>
+        
+        <!-- Error surface -->
+        <div id="diag"></div>
+
+        <div class="bottom-bar">
+            <nav id="nav">
+                <a href="/?">Matchday</a>
+                <a href="/?mode=scrimmage">Scrimmage</a>
+                <a href="/club/wall.html">The Wall</a>
+            </nav>
+            <div id="modes">
+                <button id="wb" class="ghost">Whiteboard</button>
+                <button id="scr" class="ghost">Screen</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Audio signal elements -->
+    <div id="meter"><div id="meterbar"></div></div>
+    <!-- Hidden video feed -->
+    <video id="vid"></video>
+
+    
+<script>
+/* THE ENTITY — visual layer (Antigravity / Gemini 3.1 Pro). IIFE-isolated so a visual error can NEVER touch the voice engine below. */
+(function(){
+
+        /**
+         * THE DUGOUT - LIVING ENTITY VISUAL ENGINE
+         * This script contains ONLY the visual layer (Three.js WebGL and DOM transitions).
+         * It hooks into the real voice engine via the DOM elements specified in the contract.
+         */
+
+        // --- 1. WEBGL SINGULARITY SHADER ---
+        
+        const canvas = document.getElementById('glcanvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
+        
+        function resize() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (material) {
+                material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+            }
+        }
+        window.addEventListener('resize', resize);
+
+        const fragmentShader = \`
+            uniform float uTime;
+            uniform vec2 uResolution;
+            uniform float uAudioReact;
+            uniform float uState; // 0.0 = threshold, 1.0 = presence
+            uniform vec3 uColor; // The current personality color
+            
+            #define NUM_OCTAVES 3
+
+            // Simplex Noise Hash
+            vec3 hash(vec3 p) {
+                p = vec3(dot(p,vec3(127.1,311.7, 74.7)),
+                         dot(p,vec3(269.5,183.3,246.1)),
+                         dot(p,vec3(113.5,271.9,124.6)));
+                return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+            }
+
+            // 3D Simplex Noise
+            float noise(in vec3 p) {
+                vec3 i = floor(p + (p.x+p.y+p.z)*0.333333333333);
+                vec3 x0 = p - i + (i.x+i.y+i.z)*0.166666666667;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min(g.xyz, l.zxy);
+                vec3 i2 = max(g.xyz, l.zxy);
+                vec3 x1 = x0 - i1 + 0.166666666667;
+                vec3 x2 = x0 - i2 + 0.333333333333;
+                vec3 x3 = x0 - 1.0 + 0.5;
+                i = mod(i, 289.0);
+                vec4 p1 = vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3));
+                p1 = max(0.6 - p1, 0.0);
+                p1 *= p1;
+                p1 *= p1;
+                vec4 n = p1 * vec4(dot(hash(i), x0), dot(hash(i + i1), x1), dot(hash(i + i2), x2), dot(hash(i + 1.0), x3));
+                return dot(n, vec4(42.0));
+            }
+
+            float fbm(vec3 x) {
+                float v = 0.0;
+                float a = 0.5;
+                vec3 shift = vec3(100.0);
+                for (int i = 0; i < NUM_OCTAVES; ++i) {
+                    v += a * noise(x);
+                    x = x * 2.0 + shift;
+                    a *= 0.5;
+                }
+                return v;
+            }
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy / uResolution.xy;
+                uv = uv * 2.0 - 1.0;
+                uv.x *= uResolution.x / uResolution.y;
+
+                float dist = length(uv);
+                
+                // Base colors
+                vec3 bgDark = vec3(0.01, 0.01, 0.015);
+                vec3 identityRed = vec3(0.93, 0.18, 0.27); // Arsenal Red
+                
+                // Animation parameters based on state and audio
+                // In threshold, movement is slow. In presence, it's alive.
+                float speed = mix(0.1, 0.4, uState) + uAudioReact * 1.5;
+                float timeScale = uTime * speed;
+                
+                // The Singularity Domain Warping
+                vec2 warpedUV = uv;
+                float angle = atan(uv.y, uv.x);
+                float radius = length(uv);
+                
+                // Add twist
+                float twistAmount = mix(0.5, 2.0, uState) + uAudioReact * 3.0;
+                angle += noise(vec3(radius * 2.0, uTime * 0.1, 0.0)) * twistAmount;
+                warpedUV = vec2(cos(angle), sin(angle)) * radius;
+
+                // FBM for organic fluid shape
+                // We use fewer octaves or simpler math if we want to save battery, 
+                // but FBM 3 octaves is very cheap for 2D.
+                float n = fbm(vec3(warpedUV * mix(2.0, 3.5, uState), timeScale));
+                float n2 = fbm(vec3(warpedUV * 5.0 - n, timeScale * 1.2));
+                
+                // Shape creation
+                float baseRadius = mix(0.15, 0.25, uState);
+                float activeRadius = baseRadius + uAudioReact * 0.15 + n2 * (0.05 + uAudioReact * 0.1);
+                
+                // Core
+                float core = 1.0 - smoothstep(activeRadius - 0.1, activeRadius + 0.1, dist);
+                core = pow(core, 2.0); // Sharpen inner core
+                
+                // Aura (Outer glow)
+                float aura = 1.0 - smoothstep(activeRadius, activeRadius + mix(0.4, 0.8, uState) + uAudioReact, dist);
+                aura *= fbm(vec3(uv * 2.0, timeScale * 0.5)) * 0.5 + 0.5; // organic aura
+                
+                // Ring/Energy flares
+                float ring = smoothstep(0.0, 0.1, abs(dist - activeRadius - 0.05));
+                ring = 1.0 - ring;
+                ring *= pow(n, 2.0) * mix(0.2, 1.0, uState) * (1.0 + uAudioReact * 2.0);
+
+                // --- COLOR MIXING ---
+                vec3 finalColor = bgDark;
+                
+                if (uState < 0.01) {
+                    // Threshold state: very dormant, subtle Arsenal red breathing
+                    float breath = sin(uTime * 1.5) * 0.5 + 0.5;
+                    vec3 dormantColor = mix(vec3(0.05), identityRed, 0.2);
+                    finalColor = mix(finalColor, dormantColor, aura * 0.3 * breath);
+                    finalColor += vec3(1.0) * core * 0.1; // faint white core
+                } else {
+                    // Presence state: Use dynamic uColor driven by JS
+                    // Inner heat is hotter version of uColor
+                    vec3 heatColor = min(uColor + vec3(0.2, 0.2, 0.2), 1.0);
+                    if (uColor.r > uColor.b) { // If amber/gold, add white/yellow core
+                        heatColor = min(uColor + vec3(0.3, 0.3, 0.0), 1.0);
+                    }
+                    
+                    finalColor = mix(finalColor, uColor * 0.5, aura);
+                    finalColor += uColor * ring * 1.5;
+                    finalColor = mix(finalColor, heatColor, core * (0.5 + uAudioReact * 0.5));
+                    
+                    // Center pure energy
+                    float centerGlow = 1.0 - smoothstep(0.0, baseRadius * 0.5, dist);
+                    finalColor += vec3(1.0, 0.95, 0.9) * centerGlow * (0.5 + uAudioReact);
+                }
+
+                // Vignette
+                float vignette = 1.0 - smoothstep(0.5, 1.5, dist);
+                finalColor *= vignette;
+
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        \`;
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0.0 },
+                uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                uAudioReact: { value: 0.0 },
+                uState: { value: 0.0 },
+                uColor: { value: new THREE.Color(0x3388ff) }
+            },
+            vertexShader: \`void main() { gl_Position = vec4(position, 1.0); }\`,
+            fragmentShader: fragmentShader,
+            depthWrite: false,
+            depthTest: false
+        });
+
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+        scene.add(plane);
+
+        resize();
+
+        // --- 2. STATE & AUDIO HOOKS (THE CONTRACT) ---
+        
+        const clock = new THREE.Clock();
+        const meterbar = document.getElementById('meterbar');
+        const btnGo = document.getElementById('go');
+        
+        let targetAudio = 0;
+        let currentAudio = 0;
+        let isAwake = false;
+        let stateLerp = 0; // Animates 0 to 1 for threshold to presence transition
+
+        // Colors
+        const COLOR_AMBER = new THREE.Color(0xff8811); // Captain speaking (warm amber)
+        const COLOR_BLUE = new THREE.Color(0x1a75ff);  // Gaffer speaking (cool blue/steel)
+        const COLOR_VIOLET = new THREE.Color(0x9922ff); // Deep brain (violet/gold bloom)
+
+        const targetColor = new THREE.Color(COLOR_AMBER);
+        const currentColor = new THREE.Color(COLOR_AMBER);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1); // Cap dt
+            
+            // 1. Read Audio Signal from Contract (#meterbar width)
+            // The engine sets this width from 0% to 100%. We read it and normalize to 0.0 - 1.0
+            if (meterbar) {
+                const widthPercent = parseFloat(meterbar.style.width) || 0;
+                targetAudio = widthPercent / 100.0;
+            }
+            
+            // Smooth audio for visual fluidity
+            currentAudio += (targetAudio - currentAudio) * 10.0 * dt;
+            
+            // 2. Read Two-Voice Hook (window.__gafferSpeaking)
+            // If true: Gaffer is speaking -> Cool Blue.
+            // If false: Captain is speaking -> Warm Amber.
+            // Check for deepBrainWaking as an optional hook, else fallback to standard.
+            if (window.__deepBrainWaking) {
+                targetColor.copy(COLOR_VIOLET);
+            } else if (window.__gafferSpeaking) {
+                targetColor.copy(COLOR_BLUE);
+            } else {
+                targetColor.copy(COLOR_AMBER);
+            }
+            
+            // Smooth color transitions
+            currentColor.lerp(targetColor, 5.0 * dt);
+            
+            // State transition smoothing
+            const targetState = isAwake ? 1.0 : 0.0;
+            stateLerp += (targetState - stateLerp) * 2.0 * dt;
+            
+            // Throttle rendering: If dormant and no audio, we could potentially lower frame rate
+            // But Three.js RAF is efficient. We just keep the shader math cheap inside GLSL.
+
+            material.uniforms.uTime.value = clock.getElapsedTime();
+            material.uniforms.uAudioReact.value = currentAudio;
+            material.uniforms.uState.value = stateLerp;
+            material.uniforms.uColor.value.copy(currentColor);
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 3. DOM MUTATION OBSERVERS (The Engine Adapter) ---
+        // We do not touch the engine. We observe what it does to the DOM.
+
+        // Observe the #go button. The engine hides it when transitioning to Live.
+        const observerGo = new MutationObserver(() => {
+            const display = window.getComputedStyle(btnGo).display;
+            if (display === 'none' && !isAwake) {
+                triggerAwaken();
+            } else if (display !== 'none' && isAwake) {
+                triggerDormant();
+            }
+        });
+        observerGo.observe(btnGo, { attributes: true, attributeFilter: ['style', 'class'] });
+
+        // Add a click listener just in case we want immediate visual feedback before engine responds
+        btnGo.addEventListener('click', () => {
+            triggerAwaken();
+            // We don't hide the button here, we let the engine do it.
+        });
+
+        function triggerAwaken() {
+            if (isAwake) return;
+            isAwake = true;
+            document.body.classList.remove('threshold-state');
+            document.body.classList.add('presence-state');
+        }
+
+        function triggerDormant() {
+            if (!isAwake) return;
+            isAwake = false;
+            document.body.classList.remove('presence-state');
+            document.body.classList.add('threshold-state');
+        }
+
+        // Subtitles formatting: The engine writes raw text to #log.
+        // We want them to fade elegantly like thoughts.
+        // We will observe #log and wrap new text in styled spans.
+        const logEl = document.getElementById('log');
+        
+        const observerLog = new MutationObserver(() => {
+            // Optional: If engine appends elements (like <p> or <div>), we can animate them:
+            Array.from(logEl.children).forEach(child => {
+                if (child.nodeType === 1 && !child.dataset.animated) {
+                    child.dataset.animated = "true";
+                    child.style.animation = "floatUp 0.8s ease-out forwards";
+                    child.style.opacity = "0";
+                    child.style.transform = "translateY(10px)";
+                }
+            });
+            
+            // Auto-scroll to bottom smoothly
+            logEl.scrollTop = logEl.scrollHeight;
+        });
+        observerLog.observe(logEl, { childList: true, subtree: true, characterData: true });
+
+        // Add the CSS for floatUp dynamically just for log items
+        const style = document.createElement('style');
+        style.innerHTML = \`
+            @keyframes floatUp {
+                to { opacity: 1; transform: translateY(0); }
+            }
+        \`;
+        document.head.appendChild(style);
+
+    
+})();
+</script>
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
 let outTxEnabled=true,earlyCloses=0,rehydrated=false;
@@ -1970,6 +2434,9 @@ document.getElementById('go').onclick=async()=>{
  else if(p.state==='granted')st('mic already allowed — press START, then just talk');
  else st('press START, allow the mic, then just talk');
 }catch(e){st('press START, allow the mic, then just talk')}})();
+
+/* two-voice hook (grafted): expose whether the Gaffer's audio is playing, for the entity's amber<->blue */
+try{setInterval(function(){window.__gafferSpeaking=(typeof liveSrcs!=='undefined'&&liveSrcs&&liveSrcs.length>0);},80);}catch(e){}
 </script></body></html>`;
 
 // ---------------------------------------------------------------------------
