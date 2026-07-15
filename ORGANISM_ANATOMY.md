@@ -92,7 +92,7 @@ him a loss before he chooses to look.
 
 ---
 
-## 3. THE FINAL ROSTER — sixteen organs, one circulation
+## 3. THE FINAL ROSTER — twenty-nine organs, one circulation
 
 Status legend: **LIVE** = existed green before this build · **BUILT** = new, selftested,
 runs today on seed/empty data · **GATED** = built but constitutionally silent until its
@@ -364,3 +364,22 @@ loops to the job itself; capsules keep decay-guarding professional working memor
 the season ROLLS. A prosthesis is not returned after the race.
 
 *It proposes. You decide. COYG.* ⚪🔴
+
+
+## 8. THE CYBORG-BRAIN LAYER (14 Jul 2026)
+
+| # | Organ | Role | Status |
+|---|-------|------|--------|
+| 17 | **Thalamus** | Binds every sense into single moments, scores salience, wakes the cortex | BUILT |
+| 18 | **Cortex** | Two-speed reasoning (fast reflex + deep slow), budget rationing | BUILT |
+| 19 | **Hippocampus** | Five-layer associative memory retrieval, instantly accessible | BUILT |
+| 20 | **DMN** | Default Mode Network, offline connection mapping | BUILT |
+| 21 | **Council** | Parallel specialist lenses debating deep problems | BUILT |
+| 22 | **Nightshift** | Dreaming and background tasks while the captain is away | BUILT |
+| 23 | **Fuelboard** | Organism calorie and token spend tracking | BUILT |
+| 24 | **Examiner** | Evaluates scrimmage and hedges, adversarial probing | BUILT |
+| 25 | **Tone** | Prosody and emotion gating/processing | BUILT |
+| 26 | **Presence** | Tracks the active session and human engagement state | BUILT |
+| 27 | **Groundsman** | Keeps the field clear, manages ephemeral data cleanup | BUILT |
+| 28 | **Awayday** | Offline syncing and disconnected operation state | BUILT |
+| 29 | **Turnstile** | Access control and ingestion gating | BUILT |
