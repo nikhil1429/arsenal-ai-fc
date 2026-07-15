@@ -307,8 +307,17 @@ const clip = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stri
 // fluency map. Assembled deterministically; empty parts simply absent.
 function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
   const parts = [];
-  if (lexicon && Array.isArray(lexicon.anchors) && lexicon.anchors.length)
-    parts.push(`HIS ANCHOR METAPHORS (reach for these FIRST; verbatim from his own Bolo): ${lexicon.anchors.slice(0, 8).map(a => `"${a.phrase}"`).join(" · ")}`);
+  if (lexicon && Array.isArray(lexicon.anchors) && lexicon.anchors.length) {
+    // scan-fix 15 Jul: the miner's raw n-grams shipped shredded fragments
+    // ("one picture yeh diagram poore", "aristo eco ₹81 500") as "his
+    // metaphors" in EVERY prompt. Filter: no digits/currency, must not be a
+    // mid-phrase shard (drop entries wholly contained in a longer anchor).
+    const clean = lexicon.anchors
+      .map(a => String(a.phrase || "").trim())
+      .filter(p => p.length >= 12 && !/[\d₹$%]/.test(p));
+    const keep = clean.filter(p => !clean.some(q => q !== p && q.includes(p)));
+    if (keep.length) parts.push(`HIS ANCHOR METAPHORS (reach for these FIRST; verbatim from his own Bolo): ${keep.slice(0, 6).map(p => `"${p}"`).join(" · ")}`);
+  }
   if (grammar && grammar.shape_counts) {
     const top = Object.entries(grammar.shape_counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 2);
     if (top.length) parts.push(`HIS WRONG-PRIOR SHAPES (machine-side — design probes around these, NEVER name them to him): ${top.map(([s, n]) => `${s}(${n})`).join(", ")}`);

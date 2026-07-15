@@ -500,12 +500,20 @@ function createNucleus(cfg, deps = {}) {
     return results;
   }
 
-  // the deep answer flows back THROUGH the nucleus (single-writer preserved)
+  // the deep answer flows back THROUGH the nucleus (single-writer preserved).
+  // scan-fix 15 Jul: the single `deep` slot LOST answers live (two lanes, 5s
+  // apart — the first 6k-token read silently overwritten). `deep` stays as the
+  // latest (compat); `deep_recent` keeps the last 3 served answers so the page
+  // can inject each unseen one. Stale reads die at the bridge (10-min TTL).
   function foldDeepAnswer(body) {
     const cur = N.workspace;
+    const entry = { moment_id: String(body.moment_id || ""), text: body.declined ? null : String(body.text || "").slice(0, 4000), declined: !!body.declined, reason: body.reason || null, provenance: body.provenance || "opus", ts: new Date(D.now()).toISOString() };
+    const recent = (Array.isArray(cur.deep_recent) ? cur.deep_recent : []).filter(d => d.moment_id !== entry.moment_id);
+    if (!entry.declined && entry.text) recent.push({ moment_id: entry.moment_id, text: entry.text, provenance: entry.provenance, ts: entry.ts });
+    while (recent.length > 3) recent.shift();
     N.workspace = {
       ...cur, version: (cur.version || 0) + 1, updated_at: new Date(D.now()).toISOString(),
-      deep: { moment_id: String(body.moment_id || ""), text: body.declined ? null : String(body.text || "").slice(0, 4000), declined: !!body.declined, reason: body.reason || null, provenance: body.provenance || "opus", ts: new Date(D.now()).toISOString() },
+      deep: entry, deep_recent: recent,
     };
     D.writeWorkspace(N.workspace);
     // M14 — the resolution row CLOSES the wake in the queue (event-sourced)

@@ -80,7 +80,17 @@ function loadNightshift(now = new Date()) {
     if (!out.probes) { const p = readJson(join(dir, `probe_bank_${d}.json`)); if (p && p.bank) { out.probes = p.bank; out.day = d; } }
     if (!out.distractors) { const x = readJson(join(dir, `distractor_bank_${d}.json`)); if (x && x.bank) out.distractors = x.bank; }
   }
-  out.scout_pack = existsSync(join(dir, "scout_pack.md"));
+  // scan-fix 15 Jul: a stale scout pack nagged FOREVER (bare existsSync, no
+  // date) and its scripted line pushed a "Pro account" upsell into every
+  // get_today. Freshness-gate it like the banks: today/yesterday only.
+  out.scout_pack = (() => {
+    try {
+      const p = join(dir, "scout_pack.md");
+      if (!existsSync(p)) return false;
+      const head = readFileSync(p, "utf8").slice(0, 200);
+      return days.some(d => head.includes(d));
+    } catch { return false; }
+  })();
   return out;
 }
 
@@ -118,8 +128,12 @@ function readDeepState(deps = {}) {
   const ws = deps.workspace !== undefined ? deps.workspace : readJson(join(STATE_DIR, "workspace.json"));
   const wake = deps.wake !== undefined ? deps.wake : readJson(join(STATE_DIR, "wake.json"));
   const rt = deps.runtime || runtime;
-  const out = { version: (ws && ws.version) || 0, deep: null, pending: null, recall: null };
-  if (ws && ws.deep && ws.deep.text && !ws.deep.declined) out.deep = { moment_id: ws.deep.moment_id, text: ws.deep.text, provenance: ws.deep.provenance };
+  const out = { version: (ws && ws.version) || 0, deep: null, deep_recent: [], pending: null, recall: null };
+  // scan-fix 15 Jul: a deep answer is only worth speaking while the moment is
+  // warm — 10-min TTL (the slot used to serve YESTERDAY'S lecture on reload).
+  const deepFresh = (d) => d && d.text && !d.declined && d.ts && (Date.now() - new Date(d.ts).getTime() < 10 * 60000);
+  if (ws && deepFresh(ws.deep)) out.deep = { moment_id: ws.deep.moment_id, text: ws.deep.text, provenance: ws.deep.provenance };
+  if (ws && Array.isArray(ws.deep_recent)) out.deep_recent = ws.deep_recent.filter(deepFresh).map(d => ({ moment_id: d.moment_id, text: d.text, provenance: d.provenance }));
   // M14 — the wake QUEUE is the truth for "pending" (read-only; thalamus owns
   // the file); wake.json stays the pre-queue fallback (layering)
   const qRows = deps.queueRows !== undefined ? deps.queueRows : readLines(join(STATE_DIR, "wake_queue.jsonl"));
@@ -389,10 +403,25 @@ function gatherRecallSources() {
   return items;
 }
 
+// scan-fix 15 Jul: raw ASR junk polluted the index — whole-English turns
+// transliterated into Devanagari ("क्या फल आई वांट टू नो"), one-word shards,
+// mid-sentence fragments. A memory that quotes garble back as "his words" is
+// worse than no memory. Quality bar before anything is embedded:
+function recallWorthy(text) {
+  const t = String(text).trim();
+  if (t.length < 20) return false;
+  const words = t.split(/\s+/).filter(w => w.length > 1);
+  if (words.length < 4) return false;                       // shards carry no recall signal
+  const deva = (t.match(/[ऀ-ॿ]/g) || []).length;
+  if (deva / t.length > 0.3) return false;                  // transliterated-ASR garble (his real Hinglish rides Latin script)
+  if (/^[,.;:\-–—]/.test(t)) return false;                  // mid-sentence fragment
+  return true;
+}
+
 async function indexRecall(deps = {}) {
   const embed = deps.embed || embedTexts;
   const file = deps.file || RECALL;
-  const sources = (deps.sources || gatherRecallSources()).filter(i => String(i.text).trim().length >= 20);
+  const sources = (deps.sources || gatherRecallSources()).filter(i => recallWorthy(i.text));
   const seen = new Set(readLines(file).map(e => e.h));
   const fresh = [];
   for (const i of sources) { const h = textHash(String(i.text)); if (!seen.has(h)) { seen.add(h); fresh.push({ ...i, h }); } }
@@ -507,6 +536,30 @@ STORYTELLING LAW: no definitions, no lists read aloud. This whole briefing is ON
 // ---------------------------------------------------------------------------
 // THE GAFFER-LIVE CONSTITUTION (system instruction, assembled fresh per session)
 // ---------------------------------------------------------------------------
+// THE LOCKED BOOK (scan-fix 15 Jul): 211KB of his mastered capsules existed and
+// ZERO bytes reached the session — the coach literally could not know what he
+// had completed. This digest (~1KB, deterministic) rides EVERY session; the
+// get_capsule tool opens any locked book in full, live, mid-sentence.
+function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
+  try {
+    const files = readdirSync(dir).filter(f => f.endsWith(".json"));
+    if (!files.length) return "";
+    const rows = [];
+    for (const f of files) {
+      try {
+        const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
+        const id = f.replace(".json", "");
+        const bolo = String(j.bolo || (j.capsule && j.capsule.bolo) || "").replace(/\s+/g, " ").slice(0, 180);
+        const doubts = Array.isArray(j.doubts) ? j.doubts.length : (j.capsule && Array.isArray(j.capsule.doubts) ? j.capsule.doubts.length : 0);
+        const rj = Array.isArray(j.reJirahDone) ? j.reJirahDone.length : (j.reJirahDone ?? 0);
+        rows.push(`- ${(j.title || id).toUpperCase()} — LOCKED${j.lockedOn ? " " + String(j.lockedOn).slice(0, 10) : ""}${j.status ? " · " + j.status : ""} · re-jirah ×${rj} · ${doubts} doubt(s) fought through${bolo ? `\n  his bolo: "${bolo}…"` : ""}`);
+      } catch { }
+    }
+    if (!rows.length) return "";
+    return `\nTHE LOCKED BOOK — concepts he has ALREADY MASTERED (his own capsules; never teach these from zero, never act like he doesn't know them — probe for decay, build on them, reference HIS bolo):\n${rows.join("\n")}\nWhen the talk touches any of these, call get_capsule for the full book — his mechanism, fault-lines, and every doubt he already fought.\n`;
+  } catch { return ""; }
+}
+
 function buildSystemInstruction() {
   const fp = buildFingerprint({
     lexicon: readJson(join(STATE_DIR, "lexicon.json")),
@@ -522,7 +575,7 @@ ${DEPTH_REGISTERS[currentDepth()]}
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
 ${fp}
-
+${capsuleDigest()}
 VOICE REPS (the metamorphosis — talking is training): when he wants drilling, or you judge a concept worth testing mid-chat: ask ONE question, then REQUIRE his gut-word — knew, shaky, or guessed — BEFORE he answers (this pre-commitment is sacred; no gut-word, no rep). He answers out loud. You judge correct/incorrect honestly, tell him, and call log_reps with the structured rep. His confusions voiced in passing: offer take_note ("throw that in?").
 
 TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
@@ -566,6 +619,7 @@ const TOOL_DECLS = [
   { name: "log_reps", description: "Log voice reps through the real capture contract. Only after gut-word was committed BEFORE the answer.", parameters: { type: "OBJECT", properties: { reps: { type: "ARRAY", items: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, question: { type: "STRING" }, confidence: { type: "STRING" }, correct: { type: "BOOLEAN" } }, required: ["concept", "question", "confidence", "correct"] } } }, required: ["reps"] } },
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_capsule", description: "OPEN A LOCKED BOOK — the full capsule for a concept he has MASTERED (tokenization/embeddings/inference/context): his bolo, the mechanism, the 9 fault-lines, his real doubts with answers, interview lines. Call whenever the talk touches a locked concept — build on HIS words, never reteach from zero.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
@@ -687,12 +741,39 @@ function execTool(name, args, deps = {}) {
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now)).length,
         // M11 — the Gaffer can NAME tonight's staged work by voice
-        nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a Deep Research scout pack is staged — offer it at a natural stoppage: 'scout pack tayyar hai, Pro account pe chalana hai?'" : null }; })(),
+        nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a fresh Deep Research scout pack is staged — mention it ONCE at a natural stoppage, never as an upsell; if he's not interested, drop it for the day" : null }; })(),
       };
     }
     if (name === "get_tape_room") {
       const t = readJson(join(STATE_DIR, "tape_room.json")) || { queue: [], doubts_retired: 0 };
       return { doubts_retired: t.doubts_retired, eligible: (t.queue || []).filter(q => q.eligible).slice(0, 5) };
+    }
+    if (name === "get_capsule") {
+      // THE LOCKED BOOK, opened live (read-only; mirror.mjs owns the files)
+      const id = String((args || {}).id || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+      const p = join(STATE_DIR, "capsules", id + ".json");
+      if (!id || !existsSync(p)) {
+        const have = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { return []; } })();
+        return { ok: false, error: `no locked capsule "${id}"`, locked: have };
+      }
+      try {
+        const j = JSON.parse(readFileSync(p, "utf8"));
+        const src = j.capsule && typeof j.capsule === "object" ? j.capsule : j;
+        return {
+          ok: true, id, title: src.title || id, status: src.status || null, lockedOn: j.lockedOn || src.lockedOn || null,
+          rejirah_done: Array.isArray(src.reJirahDone) ? src.reJirahDone.length : (src.reJirahDone ?? 0),
+          bolo: String(src.bolo || "").slice(0, 1200),
+          hook: String(src.hook || "").slice(0, 500),
+          mechanism: String(src.mechanism || "").slice(0, 1500),
+          fault_lines: (Array.isArray(src.faultLines) ? src.faultLines : []).slice(0, 9).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
+          traps: (Array.isArray(src.traps) ? src.traps : []).slice(0, 6).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
+          skeptic_line: src.threeWays && src.threeWays.skeptic ? String(src.threeWays.skeptic).slice(0, 300) : null,
+          doubts: (Array.isArray(src.doubts) ? src.doubts : []).slice(0, 10).map(d => ({ q: String(d.q || d.question || "").slice(0, 200), a: String(d.a || d.answer || "").slice(0, 300) })),
+          doubt_count: Array.isArray(src.doubts) ? src.doubts.length : 0,
+          interview_lines: (Array.isArray(src.interviewLines) ? src.interviewLines : []).slice(0, 5).map(x => String(x).slice(0, 220)),
+          note: "HIS locked knowledge — build on his bolo and his fought-through doubts; probe for decay, never reteach from zero",
+        };
+      } catch { return { ok: false, error: "capsule unreadable" }; }
     }
     if (name === "get_calibration") {
       const c = readJson(join(STATE_DIR, "calibration.json")) || {};
@@ -1131,7 +1212,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 22);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 23);
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -1195,7 +1276,7 @@ async function selftest() {
     assert("stale deep answers never replay on reload (primed first poll)", PAGE.includes("deepPrimed"));
     assert("BRIDGE law travels in the constitution (never mention the machinery)", buildSystemInstruction().includes("THE BRIDGE") && buildSystemInstruction().includes("never mention the machinery"));
     assert("thalamus down = fail-silent, the reflex plays on", (await relayAfferent({ modality: "voice", text: "x" }, async () => { throw new Error("down"); })) === false);
-    const ds = readDeepState({ workspace: { version: 7, deep: { moment_id: "m9", text: "the read", declined: false, provenance: "opus-extended" } }, wake: { status: "pending", moment_id: "m10", spotlight: { text: "why does attention scale" } }, queueRows: [] });
+    const ds = readDeepState({ workspace: { version: 7, deep: { moment_id: "m9", text: "the read", declined: false, provenance: "opus-extended", ts: new Date().toISOString() } }, wake: { status: "pending", moment_id: "m10", spotlight: { text: "why does attention scale" } }, queueRows: [] });
     // M14 — the queue is the truth for pending; wake.json is the fallback floor
     const dsQ = readDeepState({ workspace: null, wake: null, queueRows: [
       { moment_id: "q1", status: "pending", spotlight: { text: "first doubt" } },
@@ -1279,6 +1360,33 @@ async function selftest() {
     assert("C5: mint dry → raw-key mode stands (honest, never half-locked)", mintDry.ok === false && mintDry.error.includes("raw-key"));
   }
 
+  // SCAN-FIX 15 Jul — THE GAFFER LEARNS THE CAPSULES (+ the seven UX breaks)
+  {
+    const digest = capsuleDigest();
+    assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never reteach") === false ? digest.includes("never teach") : true);
+    assert("the digest is in the LIVE system instruction", buildSystemInstruction().includes("THE LOCKED BOOK"));
+    const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
+    assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
+    const capMiss = execTool("get_capsule", { id: "nope" }, { sh });
+    assert("get_capsule on an unlocked concept lists what IS locked (honest)", capMiss.ok === false && Array.isArray(capMiss.locked) && capMiss.locked.includes("embeddings"));
+    assert("23 club tools (the locked book joined the squad)", TOOL_DECLS.some(t => t.name === "get_capsule"));
+    // deep TTL + multi-slot
+    const freshTs = new Date().toISOString(), staleTs = new Date(Date.now() - 11 * 60000).toISOString();
+    const dsT = readDeepState({ workspace: { version: 1, deep: { moment_id: "m1", text: "warm read", ts: freshTs }, deep_recent: [{ moment_id: "m1", text: "warm read", ts: freshTs }, { moment_id: "m0", text: "cold read", ts: staleTs }] }, wake: null, runtime: {}, queueRows: [] });
+    assert("a deep answer dies at 10 min (yesterday's lecture never replays)", dsT.deep && dsT.deep.moment_id === "m1" && dsT.deep_recent.length === 1 && dsT.deep_recent[0].moment_id === "m1");
+    const dsStale = readDeepState({ workspace: { version: 1, deep: { moment_id: "m0", text: "cold", ts: staleTs } }, wake: null, runtime: {}, queueRows: [] });
+    assert("a stale single-slot deep is filtered too", dsStale.deep === null);
+    assert("the page injects EVERY unseen deep answer (two lanes, zero loss)", PAGE.includes("seenDeep") && PAGE.includes("deep_recent"));
+    // page hygiene
+    assert("transcript fragments coalesce per speaker (no more word-salad record)", PAGE.includes("coFlush") && PAGE.includes("coWho"));
+    assert("minutes bill only while the wire is up (parked tab = free)", PAGE.includes("if(!ws||ws.readyState!==1||!setupDone)return;const dTok"));
+    assert("CFG refreshes every 10 min (the constitution no longer freezes at START)", PAGE.includes("600000"));
+    // recall quality bar
+    assert("recall bar: shards + transliterated garble never enter the index", recallWorthy("क्या फल आई वांट टू नो? अंडरस्टैंड एवरीथिंग") === false && recallWorthy("haan ok") === false && recallWorthy(", can you be able to") === false && recallWorthy("tokenization subwords wala doubt phir se aa raha hai") === true);
+    // the nag is dead
+    assert("get_today's scout-pack note is once-and-drop, never a Pro-account nag", !JSON.stringify(execTool("get_today", {}, { sh })).includes("Pro account"));
+  }
+
   // M4 — THE MOUTH CEILING (Chalkboard-on-REST · thinking · the code round)
   {
     const c4 = buildConfig(["k1"]);
@@ -1319,7 +1427,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("22 club tools now (read_url joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 22);
+    assert("23 club tools now (read_url + the locked book joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 23);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -1346,7 +1454,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 22 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 23 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -1619,15 +1727,16 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,deepPrimed=false;
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,deepPrimed=false;const seenDeep=new Set();
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
- if(d.deep&&d.deep.moment_id!==lastDeepId){lastDeepId=d.deep.moment_id;
-  ws.send(JSON.stringify({realtimeInput:{text:'[DEEP THOUGHT arrived — weave this in NOW as your own considered second thought, in your voice, never as a memo, never mention the machinery:]\\n'+d.deep.text}}));
+ const dr=(d.deep_recent&&d.deep_recent.length?d.deep_recent:(d.deep?[d.deep]:[])).find(x=>!seenDeep.has(x.moment_id));
+ if(dr){seenDeep.add(dr.moment_id);lastDeepId=dr.moment_id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[DEEP THOUGHT arrived — weave this in NOW as your own considered second thought, in your voice, never as a memo, never mention the machinery:]\\n'+dr.text}}));
   log('· deep answer injected into the live talk');return}
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
@@ -1646,12 +1755,25 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
   log('🕯 earned whisper delivered (predictive presence)')}},3000);
 let lastHintExp=null,lastWhisperId=null;
 
-let txBuf=[];function post(who,text){txBuf.push(who+': '+text);if(txBuf.length>=6)flush()}
-function flush(){if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
+// scan-fix 15 Jul: ASR fragments used to land one-word-per-line ("GAFFER: main"
+// / "GAFFER: hoon.") shredding the match record + the rehydrate seed. Coalesce
+// consecutive same-speaker fragments into ONE line per turn.
+let txBuf=[],coWho=null,coText='';
+function post(who,text){
+ if(who===coWho){coText+=(coText&&!/\\s$/.test(coText)?' ':'')+text;if(coText.length>1600)coFlush();return}
+ coFlush();coWho=who;coText=text}
+function coFlush(){if(coWho&&coText.trim()){txBuf.push(coWho+': '+coText.replace(/\\s+/g,' ').trim());if(txBuf.length>=6)flush()}coWho=null;coText=''}
+function flush(){coFlush();if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
 setInterval(flush,15000);
-function mins(){if(!t0)return;const dTok=Math.max(0,tokTotal-tokSent);tokSent=tokTotal;
+// scan-fix 15 Jul: a merely-open tab used to bill a voice-minute + a T1 unit
+// every 60s even with the line PARKED — count minutes only while the wire is up
+function mins(){if(!t0)return;if(!ws||ws.readyState!==1||!setupDone)return;const dTok=Math.max(0,tokTotal-tokSent);tokSent=tokTotal;
  fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10,tokens:dTok})});t0=Date.now()}
 setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins();sendStamps()});
+// scan-fix 15 Jul: CFG froze at START-click — a morning session carried the
+// 9AM constitution at 8PM. Re-fetch every 10 min; the NEXT (re)connect rides
+// the fresh instruction, tone, day-phase and memory cartridges.
+setInterval(async()=>{try{const c=await(await fetch('/config?mode='+MODE)).json();if(c&&c.system){CFG.system=c.system;CFG.thinking=c.thinking;CFG.vad_server=c.vad_server;CFG.tanks=c.tanks}}catch(e){}},600000);
 
 // MIC P0 — every failure SURFACED with the fix, never swallowed
 function micHelp(e){
