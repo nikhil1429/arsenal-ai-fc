@@ -56,6 +56,8 @@ dressing-room/state/manager_notes.json
 dressing-room/state/season.json
 dressing-room/state/captain_note.md
 dressing-room/state/post_match/
+# Deep Research reports pulled from the Gemini Pro surface (personal interview prep)
+dressing-room/state/scout_reports/
 
 # --- THE ORGANISM (organism-final) — per-run outputs + personal derived data ---
 # capsule mirror (his learning content, verbatim)
