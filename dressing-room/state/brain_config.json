@@ -5,7 +5,7 @@
     "window_hours": 5,
     "window_capacity_est_tokens": 800000,
     "weekly_capacity_est_tokens": 12000000,
-    "day_reserve_frac": 0.25,
+    "day_reserve_frac": 0.4,
     "overnight_target_frac": 0.95,
     "self_tune": true,
     "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it."
@@ -82,7 +82,7 @@
       "id": "evening_voice",
       "engine": "claude",
       "model": "opus",
-      "window": "evening",
+      "window": "any",
       "at": "21:50",
       "priority": 90,
       "enabled": true,

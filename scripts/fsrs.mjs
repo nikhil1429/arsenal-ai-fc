@@ -48,8 +48,9 @@
 //   entry guard · atomic writes (temp→rename) · match CLAUDE.md + timeaudit.mjs.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { fsrs, generatorParameters, createEmptyCard, Rating } from "ts-fsrs";
 
@@ -109,6 +110,33 @@ function writeAtomic(path, obj) {
   const tmp = path + ".tmp";
   writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
   renameSync(tmp, path);
+}
+
+// ---------------------------------------------------------------------------
+// scan-fix 15 Jul — THE CAPSULE FLOOR: his gist capsules carry REAL review
+// history (lockedOn = the passed Jirah; each reJirahDone = a passed re-weld,
+// all dated) — yet FSRS waited on reps_log and told the Re-Jirah conductor
+// "nothing due" about ground he MASTERED weeks ago. Locked history replays as
+// knew-correct events (surface:"capsule") so the decay guard covers the
+// locked book from day zero. NOT fabrication: no dated lock → no card, ever.
+// Live reps on the same concept later merge into the same card (normId).
+// ---------------------------------------------------------------------------
+function capsuleSeedReps(dir = join(STATE_DIR, "capsules")) {
+  const out = [];
+  try {
+    for (const f of readdirSync(dir).filter(x => x.endsWith(".json"))) {
+      try {
+        const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
+        const concept = String(j.id || f.replace(".json", "")).trim();
+        if (!concept) continue;
+        const dates = [];
+        if (j.lockedOn && !Number.isNaN(Date.parse(j.lockedOn))) dates.push(j.lockedOn);
+        for (const d of (Array.isArray(j.reJirahDone) ? j.reJirahDone : [])) if (d && !Number.isNaN(Date.parse(d))) dates.push(d);
+        for (const d of dates) out.push({ ts: new Date(d).toISOString(), surface: "capsule", track: "concept", concept, question: `capsule lock/re-weld (${concept})`, confidence: "knew", correct: true });
+      } catch { }
+    }
+  } catch { }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +261,25 @@ function selftest() {
   const empty = compute([], now, CFG, f);
   assert("empty-safe: status awaiting_data, zero counts, no cards", empty.cards.status === "awaiting_data" && empty.cards.due_today === 0 && empty.cards.overdue === 0 && empty.cards.hardest_due.length === 0 && empty.fsrsStore.cards.length === 0);
 
+  // --- scan-fix 15 Jul: THE CAPSULE FLOOR (real dates in, cards out; never fabricated) ---
+  {
+    const tmp = join(tmpdir(), `fsrs-caps-${Date.now()}`);
+    mkdirSync(tmp, { recursive: true });
+    writeFileSync(join(tmp, "tokenization.json"), JSON.stringify({ id: "tokenization", lockedOn: "2026-06-15", reJirahDone: ["2026-06-18", "2026-06-29"] }));
+    writeFileSync(join(tmp, "embeddings.json"), JSON.stringify({ id: "embeddings", lockedOn: "2026-06-21", reJirahDone: [] }));
+    writeFileSync(join(tmp, "broken.json"), JSON.stringify({ id: "broken" }));                     // no dated lock → no card
+    const seeds = capsuleSeedReps(tmp);
+    assert("CAPSULE FLOOR: lock + each re-weld replay as dated knew-correct events", seeds.length === 4 && seeds.every(r => r.surface === "capsule" && r.confidence === "knew" && r.correct === true && r.track === "concept"));
+    assert("CAPSULE FLOOR: an undated capsule seeds NOTHING (never fabricated)", !seeds.some(r => r.concept === "broken"));
+    const capStore = buildStore(seeds, f);
+    assert("CAPSULE FLOOR: one card per locked concept, real review counts", capStore.length === 2 && capStore.find(c => c.id === "tokenization").reps === 3 && capStore.find(c => c.id === "embeddings").reps === 1);
+    const capB = bucketize(capStore, new Date(2026, 6, 15, 12, 0, 0), CFG);   // 15 Jul: weeks past the single-review locks
+    assert("CAPSULE FLOOR: weeks-old single-review locks come due (the decay guard is ON)", capB.overdue + capB.due_today >= 1 && capB.hardest_due.length >= 1);
+    // live reps on the same concept MERGE into the capsule card (one identity)
+    const merged = buildStore([...seeds, { ts: "2026-07-10T09:00:00Z", surface: "gem", track: "concept", concept: "embeddings", question: "m1", confidence: "shaky", correct: true }], f);
+    assert("CAPSULE FLOOR: a live rep merges into the capsule card (normId identity)", merged.find(c => c.id === "embeddings").reps === 2);
+  }
+
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -245,7 +292,7 @@ function main() {
   const mode = (process.argv[2] || "recompute").toLowerCase();
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
 
-  const reps = loadReps(REPS_LOG);
+  const reps = [...capsuleSeedReps(), ...loadReps(REPS_LOG)];   // the capsule floor + his live reps, one card per concept
   const f = fsrs(generatorParameters({ request_retention: CFG.request_retention, enable_fuzz: false }));
   const { cards, fsrsStore } = compute(reps, new Date(), CFG, f);
   writeAtomic(CARDS, cards);
