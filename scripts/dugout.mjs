@@ -1714,7 +1714,8 @@ const PAGE = `<!DOCTYPE html>
         /* Log / Subtitles */
         #log-container { 
             position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); 
-            width: 70%; max-width: 900px; text-align: center; pointer-events: none; 
+            width: 70%; max-width: 900px; text-align: center; pointer-events: none;
+            display: none; /* subtitles removed — #log stays in the DOM (invisible) so the voice engine still writes to it silently */
         }
         #log { 
             font-size: clamp(24px, 4vw, 42px); line-height: 1.3; font-weight: 300; 
