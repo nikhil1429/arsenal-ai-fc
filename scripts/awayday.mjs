@@ -74,6 +74,7 @@ async function main() {
   console.log("awayday.mjs — run | list | selftest");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// a failing job must FAIL the run with a clean line, never an unhandled-rejection stack
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`awayday: FAILED — ${e && e.message ? e.message : e}`); process.exit(1); });
 
 export { vetJobs, run };

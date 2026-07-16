@@ -1469,13 +1469,25 @@ async function selftest() {
 
   // SCAN-FIX 15 Jul — THE GAFFER LEARNS THE CAPSULES (+ the seven UX breaks)
   {
+    // THE LOCKED BOOK IS PERSONAL: capsules/ is gitignored, so a public/cloud
+    // checkout (the away-day runner) is bloodless BY CONSTRUCTION. The suite
+    // proves the mechanism in whichever world it wakes in: the full book at
+    // home, honest-dormant on an away day — never a phantom capsule invented.
+    const haveCapsules = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).some(f => f.endsWith(".json")); } catch { return false; } })();
     const digest = capsuleDigest();
-    assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never reteach") === false ? digest.includes("never teach") : true);
-    assert("the digest is in the LIVE system instruction", buildSystemInstruction().includes("THE LOCKED BOOK"));
-    const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
-    assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
-    const capMiss = execTool("get_capsule", { id: "nope" }, { sh });
-    assert("get_capsule on an unlocked concept lists what IS locked (honest)", capMiss.ok === false && Array.isArray(capMiss.locked) && capMiss.locked.includes("embeddings"));
+    if (haveCapsules) {
+      assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never reteach") === false ? digest.includes("never teach") : true);
+      assert("the digest is in the LIVE system instruction", buildSystemInstruction().includes("THE LOCKED BOOK"));
+      const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
+      assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
+      const capMiss = execTool("get_capsule", { id: "nope" }, { sh });
+      assert("get_capsule on an unlocked concept lists what IS locked (honest)", capMiss.ok === false && Array.isArray(capMiss.locked) && capMiss.locked.includes("embeddings"));
+    } else {
+      assert("AWAY DAY: a bloodless checkout carries NO locked book (empty digest, nothing invented)", digest === "");
+      assert("AWAY DAY: the system instruction carries no phantom book", !buildSystemInstruction().includes("THE LOCKED BOOK"));
+      const capDormant = execTool("get_capsule", { id: "tokenization" }, { sh });
+      assert("AWAY DAY: get_capsule is honest-dormant (nothing locked yet, empty list)", capDormant.ok === false && Array.isArray(capDormant.locked) && capDormant.locked.length === 0);
+    }
     assert("23 club tools (the locked book joined the squad)", TOOL_DECLS.some(t => t.name === "get_capsule"));
     // deep TTL + multi-slot
     const freshTs = new Date().toISOString(), staleTs = new Date(Date.now() - 11 * 60000).toISOString();
