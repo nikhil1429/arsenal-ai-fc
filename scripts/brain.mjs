@@ -269,13 +269,22 @@ function resolveNtfyTopic(cfg, env = process.env) {
   } catch { }
   return null;
 }
+// HTTP headers are ByteString (every code point ≤ 0xFF) — Node's fetch throws on
+// the club badge BEFORE any network I/O, so an emoji title would silently kill the
+// push. ntfy supports RFC 2047 encoded-words in Title: the badge still shows on
+// the phone, the header stays pure ASCII.
+function ntfyHeaderSafe(s) {
+  const str = String(s || "");
+  return /^[\x00-\xFF]*$/.test(str) ? str : `=?UTF-8?B?${Buffer.from(str, "utf8").toString("base64")}?=`;
+}
 async function pushNtfy(cfg, title, body, fetchFn = fetch) {
   if (!cfg.ntfy || !cfg.ntfy.enabled) return { sent: false, why: "disabled" };
   const topic = resolveNtfyTopic(cfg);
   if (!topic) return { sent: false, why: "no topic" };
   try {
     const res = await fetchFn(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
-      method: "POST", body, headers: { Title: title, Tags: "soccer" },
+      method: "POST", body, headers: { Title: ntfyHeaderSafe(title), Tags: "soccer" },
+      signal: AbortSignal.timeout(15000),
     });
     return { sent: res && (res.ok || res.status === 200), why: null };
   } catch (e) { return { sent: false, why: "network" }; }
@@ -590,6 +599,13 @@ async function selftest() {
   assert("bell carries no shame/streak/hype language", !/streak|fail|10x|hurry|late/i.test(pushed.body));
   assert("both utterances SIGN their titles with the badge (throw-in echo filter)", BELLS.fulltime.title.includes("⚪🔴") && pushed.title === undefined || BELLS.fulltime.title.includes("⚪🔴"));
   assert("only two utterances exist (bell registry + push_after)", Object.keys(BELLS).length === 1 && cfgNtfyOn.ntfy.push_after.length === 1);
+  // the badge must SURVIVE HTTP: headers are ByteString (≤0xFF per char) — a raw
+  // emoji Title throws inside Node's fetch before any I/O and the push dies as
+  // "network". This mock enforces the real rule the earlier okFetch skipped.
+  const strictFetch = async (url, opts) => { for (const v of Object.values(opts.headers)) { for (const ch of String(v)) if (ch.codePointAt(0) > 255) throw new TypeError("header value is not a ByteString"); } return { ok: true, status: 200 }; };
+  assert("badge title survives real fetch header rules (RFC 2047, never raw emoji)", (await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, "b", strictFetch)).sent === true);
+  assert("encoded title decodes back to the badge on the phone", Buffer.from(ntfyHeaderSafe(BELLS.fulltime.title).replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8") === BELLS.fulltime.title);
+  assert("plain ASCII titles pass through untouched", ntfyHeaderSafe("Team sheet is up") === "Team sheet is up");
 
   // sheet slicing — the agentic-CLI chatter guard
   assert("sliceSheet strips preamble + epilogue chatter", sliceSheet("Sure! Here it is:\n⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴\nLet me know!") === "⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴");

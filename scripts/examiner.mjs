@@ -12,7 +12,7 @@
 //        floor. A template bank (implement / debug / extend) rotates by
 //        day-of-year. Writes examiner_drill.json (own file, gitignored — it
 //        names his weaknesses). The scrimmage instruction picks it up when
-//        fresh (same-day) and runs it as the heaviest probe.
+//        fresh (staged today or yesterday evening) and runs it as the heaviest probe.
 // LAWS:  the drill grades the CODE, never the coder — win-only on the result;
 //        a miss resolves silently into FSRS weight (the reps flow through
 //        log_reps like any market). No LLM here: staging is pure code.
@@ -69,10 +69,13 @@ function pickConcept(deps = {}) {
   const ls = deps.ls !== undefined ? deps.ls : readJson(join(STATE_DIR, "learning_state.json"));
   const concepts = (ls && (ls.concepts || ls.ladder || [])) || [];
   const arr = Array.isArray(concepts) ? concepts : Object.entries(concepts).map(([name, v]) => ({ name, ...(typeof v === "object" ? v : {}) }));
-  const byTrend = (t) => arr.filter(c => (c.trend || c.trajectory || "") === t).map(c => c.name || c.concept).filter(Boolean);
+  // learning_state.mjs writes { id, fluency: "🔴 learning", velocity: { slope } } —
+  // those keys read FIRST; the legacy trend/name/stage shapes stay as fallbacks.
+  const nameOf = (c) => c.id || c.name || c.concept;
+  const byTrend = (t) => arr.filter(c => ((c.velocity && c.velocity.slope) || c.trend || c.trajectory || "") === t).map(nameOf).filter(Boolean);
   const stalling = byTrend("stalling").concat(byTrend("regressing"));
   if (stalling.length) return { concept: stalling[0], why: "stalling/regressing in learning_state" };
-  const learning = arr.filter(c => /learning|red/i.test(String(c.stage || c.state || ""))).map(c => c.name || c.concept).filter(Boolean);
+  const learning = arr.filter(c => /learning|red/i.test(String(c.fluency || c.stage || c.state || ""))).map(nameOf).filter(Boolean);
   if (learning.length) return { concept: learning[0], why: "earliest ladder stage" };
   const cards = deps.cards !== undefined ? deps.cards : readJson(join(STATE_DIR, "cards.json"));
   const hard = (cards && cards.hardest_due) || [];
@@ -91,10 +94,14 @@ function stageDrill(deps = {}) {
   (deps.write || ((o) => writeAtomic(DRILL, o)))(drill);
   return drill;
 }
-// what the scrimmage reads: fresh same-day drill or nothing
+// what the scrimmage reads: a fresh drill or nothing. The scheduler stages at
+// 21:55 FOR TOMORROW'S mock, so "fresh" = staged today OR yesterday evening —
+// a same-day-only gate would leave every daytime scrimmage without its code round.
 function loadFreshDrill(now = new Date(), deps = {}) {
   const d = (deps.read || (() => readJson(DRILL)))();
-  return (d && d.date === localDate(now)) ? d : null;
+  if (!d) return null;
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  return (d.date === localDate(now) || d.date === localDate(new Date(nowMs - 86400000))) ? d : null;
 }
 // the section the scrimmage instruction embeds
 function drillSection(d) {
@@ -115,6 +122,11 @@ async function selftest() {
   assert("pick: FSRS hardest-due third", p3.concept === "context-windows");
   const p4 = pickConcept({ ls: null, cards: null });
   assert("pick: dormant-safe floor (never crashes bloodless)", p4.concept === "tokenization" && p4.why.includes("floor"));
+  // the REAL learning_state.mjs shape ({ id, fluency, velocity.slope }) must drive the pick
+  const p5 = pickConcept({ ls: { concepts: [{ id: "attention", fluency: "🔴 learning", velocity: { slope: "stalling" } }, { id: "rag", fluency: "🟢 fluent", velocity: { slope: "improving" } }] }, cards: null });
+  assert("pick: the PRODUCER'S real schema (velocity.slope + id) is read", p5.concept === "attention" && p5.why.includes("stalling"));
+  const p6 = pickConcept({ ls: { concepts: [{ id: "eval-metrics", fluency: "🔴 learning", velocity: { slope: "holding" } }] }, cards: null });
+  assert("pick: real fluency label routes the learning branch", p6.concept === "eval-metrics");
 
   let saved = null;
   const d = stageDrill({ ls: { concepts: [{ name: "attention", trend: "stalling" }] }, cards: null, now, write: (o) => { saved = o; } });
@@ -125,6 +137,7 @@ async function selftest() {
   assert("stage: the template ROTATES by day", dNext.template !== d.template);
 
   assert("fresh same-day drill loads", loadFreshDrill(now, { read: () => saved }) !== null);
+  assert("the 21:55 staging RIDES tomorrow's scrimmage (yesterday-staged = fresh)", loadFreshDrill(new Date(2026, 6, 15, 11, 0, 0), { read: () => saved }) !== null);
   assert("a stale drill never leaks into today's mock", loadFreshDrill(new Date(2026, 6, 16), { read: () => saved }) === null);
 
   const sec = drillSection(saved);
