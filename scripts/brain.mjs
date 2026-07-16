@@ -141,15 +141,23 @@ function dugoutMinutesToday(now, file = join(STATE_DIR, "dugout_ledger.jsonl")) 
 
 // which jobs are eligible now?
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// THE OVERNIGHT SHIFT IS ONE SHIFT even across midnight: its ledger day is the
+// evening it STARTED. Calendar-keying made every overnight job eligible AGAIN at
+// 00:00 — it re-ran with TODAY-tokened inputs now pointing at the empty new day
+// and overwrote the good artifacts (the KAL-rich morning talk among them).
+function shiftDay(job, now, cfg) {
+  if (!job || job.window !== "overnight") return localDate(now);
+  const endH = Number(String((cfg.overnight && cfg.overnight.end) || "07:30").split(":")[0]);
+  return now.getHours() <= endH ? localDate(new Date(now.getTime() - 86400000)) : localDate(now);
+}
 function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
-  const today = localDate(now);
   const nowHM = hhmm(now);
-  const ran = (queueState && queueState.jobs_run && queueState.jobs_run[today]) || {};
+  const ranOn = (day) => (queueState && queueState.jobs_run && queueState.jobs_run[day]) || {};
   const windows = { morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] };
   const daytime = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
   return cfg.jobs.filter(j => {
     if (j.enabled === false) return false;
-    if ((ran[j.id] || 0) >= (j.max_per_day || 1)) return false;
+    if ((ranOn(shiftDay(j, now, cfg))[j.id] || 0) >= (j.max_per_day || 1)) return false;
     if (Array.isArray(j.days) && !j.days.includes(DOW[now.getDay()])) return false;
     if (j.engine === "gemini" && !cfg.gemini.enabled) return false;
     // THE THIRD POOL: heavy voice day → daytime Gemini text/render jobs step
@@ -469,7 +477,7 @@ async function tick(cfg, deps) {
     // a FAILED job does not consume its daily slot — it retries next tick
     // (e.g. gemini before the captain's one-time login, or a transient claude
     // error). Success is what spends the slot.
-    if (usage.ok) queueState.jobs_run[today][job.id] = (queueState.jobs_run[today][job.id] || 0) + 1;
+    if (usage.ok) { const sd = shiftDay(job, now, cfg); const bucket = queueState.jobs_run[sd] = queueState.jobs_run[sd] || {}; bucket[job.id] = (bucket[job.id] || 0) + 1; }
     if (usage.ok && job.trigger && queueState.triggers) delete queueState.triggers[job.trigger];   // consumed
     if (usage.limit_hit && cfg.budget.self_tune) {
       // a limit event means we spent ~the plan's true capacity — record the
@@ -548,6 +556,13 @@ async function selftest() {
   const eligNight = eligibleJobs(cfg, { jobs_run: {} }, now(23, 30));
   assert("overnight queue rich at 23:30 (≥4 jobs)", eligNight.filter(j => j.window === "overnight").length >= 4);
   assert("Sunday-only job honors days[] (2026-07-12 IS a Sunday)", eligNight.some(j => j.id === "season_review"));
+  // THE MIDNIGHT SEAM — the overnight shift is ONE shift: a job that ran at
+  // 23:30 must NOT come back at 00:30 with empty TODAY-inputs; next evening it must.
+  const qNight = { jobs_run: { "2026-07-12": { day_cartridge: 1 } } };
+  assert("overnight job does NOT re-run after midnight (same shift)", !eligibleJobs(cfg, qNight, new Date(2026, 6, 13, 0, 30)).some(j => j.id === "day_cartridge"));
+  assert("next EVENING the overnight job runs again (new shift)", eligibleJobs(cfg, qNight, new Date(2026, 6, 13, 22, 30)).some(j => j.id === "day_cartridge"));
+  assert("a post-midnight success LEDGERS to the evening the shift started", shiftDay({ window: "overnight" }, new Date(2026, 6, 13, 0, 30), cfg) === "2026-07-12" && shiftDay({ window: "overnight" }, new Date(2026, 6, 13, 23, 0), cfg) === "2026-07-13");
+  assert("non-overnight jobs stay calendar-keyed", shiftDay({ window: "morning" }, new Date(2026, 6, 13, 8, 45), cfg) === "2026-07-13");
   const cfgGemOff = { ...cfg, gemini: { ...cfg.gemini, enabled: false } };
   assert("gemini jobs skipped when gemini.enabled=false (mechanism)", !eligibleJobs(cfgGemOff, { jobs_run: {} }, now(23, 30)).some(j => j.engine === "gemini"));
   assert("gemini jobs eligible when enabled (committed default)", cfg.gemini.enabled === false || eligNight.some(j => j.engine === "gemini"));
@@ -687,4 +702,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday };
+export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday };
