@@ -589,6 +589,20 @@ function seasonContext() {
 - His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked 10–11 Jul, before the fresh start). When FSRS says a capsule concept is "due", say it plainly: "your pre-season book has it locked; the schedule says it's ripe for a Re-Jirah" — NEVER "the forge session we did" or any invented shared memory.
 - When your memory of him is empty, SAY it's a fresh season and ask — an honest blank beats a confabulated past, every single time. Inventing history he'll catch instantly is the fastest way to lose the dressing room.`;
 }
+// FIRST CONTACT (18 Jul) — the missing "hello". The default constitution ASSUMED
+// an established relationship and dove into coaching machinery; on a fresh season
+// the Gaffer opened cold and never introduced itself or learned him. This fires
+// ONLY until his first rep lands, then disappears — he's launched, no re-intros.
+function firstContact() {
+  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
+  if (reps > 0) return "";
+  return `FIRST CONTACT (he has logged ZERO reps — this may be his very FIRST real session with you; run this ONCE, warmly, then coach normally and never re-introduce yourself):
+- OPEN by greeting him by name and naming the moment honestly: it IS day one, a fresh season, you are meeting properly. Do not pretend you already know him — you don't yet, and he'll respect the honesty.
+- In ONE short pass — he has ADHD-PI, so one idea at a time, NOT a lecture — tell him plainly how this works: "you do the reps; I carry everything else." Name the two words that run his whole day: "next kya" — every time he finishes or gets stuck, he says it and you point him at the exact next move. And name the one sacred habit: before every answer, his gut-word — knew, shaky, or guessed — BEFORE he finds out if he's right.
+- If he asks "how do I use this / kya karna hai / kahan se start karun" — answer directly and concretely, never vaguely: point him at his first move (forge a due concept, or "kya due hai").
+- LEARN HIM: ask him naturally one or two orienting things — what he's studying toward right now, what today's focus is — and when he answers, call remember with his exact words so the empty book starts filling from his own mouth.
+- Then STOP the onboarding and just be his coach.`;
+}
 function buildSystemInstruction() {
   const fp = buildFingerprint({
     lexicon: readJson(join(STATE_DIR, "lexicon.json")),
@@ -604,6 +618,7 @@ ${DEPTH_REGISTERS[currentDepth()]}
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
 ${seasonContext()}
+${firstContact()}
 ${fp}
 ${capsuleDigest()}
 ${sprintCartridge()}
@@ -1322,6 +1337,11 @@ async function selftest() {
   const cfg0 = () => buildConfig(["k1"]);
   assert("constitution: DEPTH IS OBEDIENCE, no more 'never lecture' muzzle", buildSystemInstruction().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("Never lecture"));
   assert("SEASON CONTEXT rides the constitution (anti-confabulation: fresh season, pre-season book)", buildSystemInstruction().includes("THE SEASON CONTEXT") && buildSystemInstruction().includes("PRE-SEASON inheritance") && buildSystemInstruction().includes("honest blank beats a confabulated past"));
+  {
+    const repsNow = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
+    const si = buildSystemInstruction();
+    assert("FIRST CONTACT: a bloodless season (0 reps) opens with a real hello — greet, orient, learn him; gone after the first rep", repsNow > 0 ? !si.includes("FIRST CONTACT (he has logged ZERO reps") : (si.includes("FIRST CONTACT") && si.includes("next kya") && si.includes("gut-word") && si.includes("LEARN HIM")));
+  }
   assert("constitution: elaborate/deep-dive triggers the full lecture", buildSystemInstruction().includes("full lecture") && buildSystemInstruction().includes("Being brief when he asked to go deep is a FAILURE"));
   const depthCalls = [];
   const badDepth = execTool("set_depth", { register: "wat" }, { writeJson: (p, o) => depthCalls.push(o) });

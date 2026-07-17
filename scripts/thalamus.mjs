@@ -114,9 +114,28 @@ function loadConfig() {
 // field may even ENTER the nucleus. Stripped before logging, scoring, binding.
 // ---------------------------------------------------------------------------
 const AFFECT_FIELDS = ["prosody", "emotion", "tone", "affect", "stress", "agitation", "mood", "sentiment"];
+// A spoken doubt arrives as {modality:'voice', text} with NO concept_tokens, so
+// novelty could never fire and nothing keyed the capsule / pre-answer match — a
+// fresh-concept doubt scored self-only (0.45) and stalled. Derive the concept
+// words from his speech (drop function words + the doubt-markers themselves) so a
+// NEW concept lights novelty (self+nov=0.65) and the deep prompt finds its capsule.
+const VOICE_STOP = new Set("what why how does is are the this that these those mean means meaning understand get got dont cant work works working about when where which would could should have has had will your you and but for not was were with from into then than some just like really actually thing kind sort okay haan theek hua kya kyu kyun kaise kaam karta karti karna karo karke bata batao samajh samjha samjhao nahi nahin naa aaya aata aati aaye gaya gayi hota hoti hona matlab mujhe muje tum tumhe aap yeh woh thoda toh bhi bilkul sab kuch wala wale wali mera meri raha rahi rahe liye".split(/\s+/));
+function deriveVoiceTokens(text) {
+  const seen = new Set(), out = [];
+  for (const w of String(text || "").toLowerCase().split(/[^a-z0-9]+/)) {
+    if (w.length < 4 || VOICE_STOP.has(w) || seen.has(w)) continue;
+    seen.add(w); out.push(w); if (out.length >= 4) break;
+  }
+  return out;
+}
 function sanitizeAfferent(evt) {
   const e = { ...evt };
   for (const k of Object.keys(e)) if (AFFECT_FIELDS.includes(k.toLowerCase())) delete e[k];
+  // enrich spoken turns with derived concept tokens (novelty + capsule matching)
+  if (e.modality === "voice" && e.text && !(Array.isArray(e.concept_tokens) && e.concept_tokens.length)) {
+    const toks = deriveVoiceTokens(e.text);
+    if (toks.length) e.concept_tokens = toks;
+  }
   return e;
 }
 
@@ -406,11 +425,18 @@ function createNucleus(cfg, deps = {}) {
       let tier = S < cfg.tiers.tau0 ? 0 : 1;
       let outcome = tier === 0 ? "reflex" : "enrich";
       let adjudicated = false;
-      if (Math.abs(S - t1) < cfg.tiers.epsilon) {
+      // ONE-SIDED epsilon (fix 18 Jul): a score already AT/ABOVE the bar wakes
+      // outright — it is NEVER handed to the fail-closed adjudicator. The grey
+      // band only catches near-MISSES just below the bar. (Before, a bare voiced
+      // doubt sat exactly on 0.45, landed inside the symmetric ±band around a
+      // 0.42 bar, and got silently demoted to a 15s haiku coin-flip that defaults
+      // to no-wake — so his real doubts almost never reached Opus.)
+      if (S >= t1) { tier = 2; outcome = "wake"; }
+      else if (t1 - S < cfg.tiers.epsilon) {
         adjudicated = true; N.adjudications++;
         const hard = await D.adjudicate(g.spotlight.evt, S).catch(() => false);
         if (hard) { tier = 2; outcome = "adjudicated_up"; } else { tier = Math.max(tier, 1); outcome = "adjudicated_down"; }
-      } else if (S >= t1) { tier = 2; outcome = "wake"; }
+      }
       if (tier === 2) {
         const lastWake = N.wakeKeys.get(g.spotlight.key);
         if (lastWake && now - lastWake < cfg.refractory_min * 60000) { tier = 1; outcome = "refractory"; }
@@ -710,6 +736,25 @@ async function selftest() {
     assert("REFRACTORY: the same surprise cannot re-fire the deep brain", r[0].tier === 1 && r[0].outcome === "refractory" && wr.wakes.length === 1);
   }
 
+  // (2b) THE WAKE-PATH FIX (18 Jul) — his spoken doubts must reach Opus again
+  {
+    // voice enrichment: a spoken doubt gains concept tokens; the markers drop
+    const enr = sanitizeAfferent({ modality: "voice", text: "Jumping ka matlab kya hai mujhe samajh nahi aaya" });
+    assert("VOICE TOKENS: a spoken doubt derives its concept, drops the doubt-markers", Array.isArray(enr.concept_tokens) && enr.concept_tokens.includes("jumping") && !enr.concept_tokens.includes("matlab") && !enr.concept_tokens.includes("samajh"));
+    // ONE-SIDED epsilon: a bare self-doubt (S≈0.45, no novelty) at the 0.40 bar
+    // must WAKE outright — never handed to the no-wake adjudicator.
+    const { n, wr } = rig({ adjVerdict: false });     // adjudicator would say NO-WAKE
+    n.state.seen.add("attention");                    // already-known concept → nov=0, no prior ingest → hab=0, so S≈self only
+    await n.ingest({ modality: "voice", text: "attention mujhe samajh nahi aaya", concept_tokens: ["attention"] });
+    const rb = await n.flush();
+    assert("ONE-SIDED epsilon: a bare voiced self-doubt at the bar WAKES, never demoted to the coin-flip", rb[0].tier === 2 && rb[0].outcome === "wake" && wr.adjCalls === 0);
+    // a FRESH concept doubt (self+nov≈0.65) wakes even on a drained budget
+    const { n: n2 } = rig({ adjVerdict: false, frac: 0.5 });   // drained → bar ~0.575
+    await n2.ingest({ modality: "voice", text: "embeddings kaise kaam karta hai mujhe samajh nahi aaya" });
+    const rc = await n2.flush();
+    assert("VOICE NOVELTY: a fresh-concept spoken doubt wakes Opus even on a half-drained budget", rc[0].tier === 2);
+  }
+
   // (3) τ1_effective rises as the window drains
   {
     const full = tau1Effective(cfg, 1), empty = tau1Effective(cfg, 0);
@@ -748,12 +793,14 @@ async function selftest() {
   // (6) the ambiguous band calls the tiny model AT MOST once
   {
     const t1 = tau1Effective(cfg, 1);
-    const w = { ...cfg.weights, self: t1 + 0.02 };    // engineer S inside the ε-band
+    // one-sided band (18 Jul): a NEAR-MISS just BELOW the bar is the only case
+    // that pays the adjudicator (a score above the bar wakes outright).
+    const w = { ...cfg.weights, self: t1 - 0.02 };    // engineer S just under the bar, inside ε
     const cfgBand = { ...cfg, weights: w };
     const { n, wr } = rig({ cfg: cfgBand, adjVerdict: true });
     await n.ingest({ modality: "voice", text: "i don't get x", concept_tokens: [] });
     const r = await n.flush();
-    assert("ε-band: ONE adjudication, verdict yes → TIER-2", wr.adjCalls === 1 && r[0].tier === 2 && r[0].outcome === "adjudicated_up");
+    assert("ε-band: a near-miss below the bar → ONE adjudication, verdict yes → TIER-2", wr.adjCalls === 1 && r[0].tier === 2 && r[0].outcome === "adjudicated_up");
     const { n: n3, wr: wr3 } = rig();
     await n3.ingest({ modality: "bus", event_key: "boring" }); await n3.flush();
     assert("clear cases never pay the adjudicator", wr3.adjCalls === 0);
@@ -851,7 +898,7 @@ async function selftest() {
   // (hermetic tau: the LIVE gate is captain-tunable — 17 Jul handbrake-off
   // dropped it to 0.40 — so this test pins its own bar instead of riding it)
   {
-    const cfgM5 = { ...cfg, tiers: { ...cfg.tiers, tau1_base: 0.52, epsilon: 0.08 } };
+    const cfgM5 = { ...cfg, tiers: { ...cfg.tiers, tau1_base: 0.58, epsilon: 0.08 } };
     const { n, wr } = rig({ toneBump: 0.10, cfg: cfgM5 });   // conserve: τ1 0.52 → 0.62
     await n.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
     const rT = await n.flush();
