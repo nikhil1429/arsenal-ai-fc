@@ -257,18 +257,25 @@ function renderNow(d) {
 // MEDIA — the club's channel (media engine): today's team talks as playable
 // audio, the daily poster, the film kit. Renders nothing when nothing exists.
 function renderMedia(d) {
+  if (d.verdict === "RED") return "";   // minimal-wall law: a rest day shows no channel at all
   const m = d.media || {};
-  if (!m.teamtalk_am && !m.teamtalk_pm && !m.poster && !m.filmkit) return "";
-  const audio = (label, src) => `<div style="margin:6px 0"><div style="font-size:11px;color:${C.dim}">${esc(label)}</div><audio controls preload="none" style="width:100%;height:32px" src="${esc(src)}"></audio></div>`;
-  let inner = "";
-  if (m.teamtalk_am) inner += audio("morning team talk", `media/teamtalk_${d.date}_am.mp3`);
-  if (m.teamtalk_pm) inner += audio("evening team talk", `media/teamtalk_${d.date}_pm.mp3`);
-  const links = [];
-  if (m.poster) links.push(`<a href="poster.svg" style="color:${C.amber}">today's poster</a>`);
-  if (m.filmkit) links.push(`<a href="filmkit_${d.date}.md" style="color:${C.amber}">film kit (NotebookLM source)</a>`);
-  links.push(`<a href="prompts/season_film.md" style="color:${C.gold}">Veo prompt</a>`);
-  inner += `<div style="font-size:12px;margin-top:6px">${links.join(" · ")}</div>`;
-  return panel("Media — the club's channel", inner);
+  // THE SHELF — always rendered (an empty shelf says WHO stocks it and WHEN;
+  // a vanished panel reads as broken). Poster shows as a real preview, the
+  // talks as clean players, the lanes as buttons. Numbers still live elsewhere.
+  const card = (inner, grow = 1) => `<div style="flex:${grow};min-width:180px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px">${inner}</div>`;
+  const label = (t) => `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${C.dim};margin-bottom:8px">${esc(t)}</div>`;
+  const btn = (href, text, col) => `<a href="${esc(href)}" style="display:inline-block;padding:6px 12px;margin:4px 8px 0 0;border:1px solid ${col};border-radius:999px;color:${col};font-size:12px;text-decoration:none">${text}</a>`;
+  const cards = [];
+  if (m.poster) cards.push(card(label("today's poster") + `<a href="poster.svg"><img src="poster.svg" alt="match poster" style="width:100%;border-radius:8px;display:block"></a>`, 2));
+  if (m.teamtalk_am) cards.push(card(label("🎙 morning team talk — 90s") + `<audio controls preload="none" style="width:100%;height:32px" src="media/teamtalk_${esc(d.date)}_am.mp3"></audio>`));
+  if (m.teamtalk_pm) cards.push(card(label("🌙 evening team talk — 90s") + `<audio controls preload="none" style="width:100%;height:32px" src="media/teamtalk_${esc(d.date)}_pm.mp3"></audio>`));
+  const shelf = cards.length
+    ? `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">${cards.join("")}</div>`
+    : `<div style="font-size:13px;color:${C.dim};padding:10px 2px">the shelf is empty right now — the night shift stocks it while you sleep: tonight's poster and two spoken team talks land here 🌙</div>`;
+  const lanes = btn(`filmkit_${d.date}.md`, "🎬 film kit → NotebookLM", C.amber)
+    + btn("prompts/season_film.md", "📽 Veo prompt", C.gold)
+    + btn("wall_gemini.html", "🎨 the Gemini render", C.dim);
+  return panel("Media — the club's channel", shelf + `<div style="margin-top:10px">${lanes}</div>`);
 }
 
 // THE FILM KIT — one-click season film: a NotebookLM-ready source doc in true
@@ -478,7 +485,9 @@ async function selftest() {
   const mediaData = assembleWallData({ ...bus, media: { teamtalk_am: true, teamtalk_pm: false, poster: true, filmkit: true } }, now);
   const mediaHtml = renderWall(mediaData, null);
   assert("MEDIA panel: team talk playable + poster + film kit links", mediaHtml.includes("<audio") && mediaHtml.includes("teamtalk_2026-07-12_am.mp3") && mediaHtml.includes("poster.svg") && mediaHtml.includes("filmkit_2026-07-12.md"));
-  assert("MEDIA panel absent when nothing exists (no empty shell)", !renderWall(assembleWallData(bus, now), null).includes("the club's channel"));
+  // LAW UPDATED (captain, 17 Jul): an empty shelf EXPLAINS itself (who stocks
+  // it, when) — a vanished panel reads as broken. RED-day hiding still wins.
+  assert("MEDIA shelf: empty state says the night shift stocks it (never a dead shell)", renderWall(assembleWallData(bus, now), null).includes("night shift stocks"));
   assert("MEDIA panel hidden on RED (minimal wall law wins)", !renderWall(assembleWallData({ ...bus, readiness: { verdict: "RED" }, media: { teamtalk_am: true } }, now), null).includes("<audio"));
   const kit = buildFilmKit(mediaData, { moments: [{ date: "2026-07-10", line: "the Tuesday you thought you'd break and didn't", result: "HIT" }] });
   assert("film kit: NotebookLM source doc in true numbers", kit.includes("Video Overview") && kit.includes("Doubts retired: 24") && kit.includes("Matches played: 12"));

@@ -285,20 +285,22 @@ function ntfyHeaderSafe(s) {
   const str = String(s || "");
   return /^[\x00-\xFF]*$/.test(str) ? str : `=?UTF-8?B?${Buffer.from(str, "utf8").toString("base64")}?=`;
 }
-async function pushNtfy(cfg, title, body, fetchFn = fetch) {
+async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
   if (!cfg.ntfy || !cfg.ntfy.enabled) return { sent: false, why: "disabled" };
   const topic = resolveNtfyTopic(cfg);
   if (!topic) return { sent: false, why: "no topic" };
   try {
     const res = await fetchFn(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
-      method: "POST", body, headers: { Title: ntfyHeaderSafe(title), Tags: "soccer" },
+      // Markdown renders in the ntfy app — plain text passes through unchanged,
+      // formatted utterances glow. Priority stays default: no urgency pressure, ever.
+      method: "POST", body, headers: { Title: ntfyHeaderSafe(title), Tags: opts.tags || "soccer", Priority: opts.priority || "default", Markdown: "yes" },
       signal: AbortSignal.timeout(15000),
     });
     return { sent: res && (res.ok || res.status === 200), why: null };
   } catch (e) { return { sent: false, why: "network" }; }
 }
 const BELLS = {
-  fulltime: { title: "⚪🔴 Full-time, captain", body: "30 seconds, then sleep: npm run postmatch\n(HIT/MISS · one signal · KAL-line — the weld that wins tomorrow's morning.) COYG" },
+  fulltime: { title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
 };
 
 // the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
@@ -399,7 +401,7 @@ async function runJob(job, cfg, deps) {
       const sheetPath = join(STATE_DIR, "team_sheet.md");
       const head = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n") : "sheet ready";
       const tt = teamtalkLine("am", now);
-      await pushNtfy(cfg, "⚪🔴 Team sheet is up", head + "\n…full sheet on the wall." + (tt ? "\n" + tt : ""));
+      await pushNtfy(cfg, "⚪🔴 Team sheet is up", `**The sheet is up, captain.**\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
     }
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
   }
