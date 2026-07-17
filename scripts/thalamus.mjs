@@ -848,12 +848,15 @@ async function selftest() {
   }
 
   // M5 — neuromodulation: a conserve tone raises the wake bar whole-brain
+  // (hermetic tau: the LIVE gate is captain-tunable — 17 Jul handbrake-off
+  // dropped it to 0.40 — so this test pins its own bar instead of riding it)
   {
-    const { n, wr } = rig({ toneBump: 0.10 });       // conserve: τ1 0.55 → 0.65
+    const cfgM5 = { ...cfg, tiers: { ...cfg.tiers, tau1_base: 0.52, epsilon: 0.08 } };
+    const { n, wr } = rig({ toneBump: 0.10, cfg: cfgM5 });   // conserve: τ1 0.52 → 0.62
     await n.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
     const rT = await n.flush();
     assert("NEUROMODULATION: conserve tone (+0.10) demotes a borderline wake", rT[0].tier < 2 && wr.wakes.length === 0);
-    const { n: nO, wr: wrO } = rig({ toneBump: 0 });
+    const { n: nO, wr: wrO } = rig({ toneBump: 0, cfg: cfgM5 });
     await nO.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
     const rO = await nO.flush();
     assert("the SAME moment wakes opus at nominal tone (the knob is real)", rO[0].tier === 2 && wrO.wakes.length === 1);

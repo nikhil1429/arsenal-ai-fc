@@ -49,6 +49,35 @@
   },
   "jobs": [
     {
+      "id": "midday_digest",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "midday",
+      "at": "14:00",
+      "priority": 62,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": ["brain_out/dugout/TODAY.md", "dugout_notes.jsonl", "presence_log.jsonl", "timeaudit.json"],
+      "out": "dugout_digest",
+      "_note": "HANDBRAKE-OFF (17 Jul): the SAME-DAY memory refresh — mine the morning's voice + behavior at 14:00 so the afternoon Gaffer already knows the morning. Overwrites today's digest with a richer read; the overnight run still does the full mine."
+    },
+    {
+      "id": "midday_cartridge",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "midday",
+      "at": "14:20",
+      "priority": 61,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "analysis",
+      "inputs": ["brain_out/dugout_digest/TODAY.md", "drills.json", "pitch_read.json"],
+      "out": "day_cartridge",
+      "validate": "no_new_numbers",
+      "_note": "HANDBRAKE-OFF (17 Jul): recompile the Gaffer's briefing from the midday digest — an afternoon Dugout session boots on a cartridge that includes TODAY so far, not just yesterday. Same laws: <=15 lines, second person, no new numbers, no hype."
+    },
+    {
       "id": "formation_read",
       "engine": "claude",
       "model": "opus",
