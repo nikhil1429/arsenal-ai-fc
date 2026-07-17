@@ -126,11 +126,14 @@ function compute(world, cfg, now = new Date()) {
   }
 
   // 3) EFFORT-UNCAPTURED — hours in the Learning bucket, zero reps in the log.
+  //    The audit is evidence for TODAY only if it is STAMPED today — the 07:30
+  //    run must never pair yesterday's minutes with a day that hasn't started
+  //    (a false accusation at dawn). No today-stamp ⇒ no accusation, ever.
   const ta = world.timeaudit;
-  const learnMin = ta && ta.buckets && ta.buckets.Learning && typeof ta.buckets.Learning.minutes === "number"
+  const today = localDate(now);
+  const learnMin = ta && ta.date === today && ta.buckets && ta.buckets.Learning && typeof ta.buckets.Learning.minutes === "number"
     ? ta.buckets.Learning.minutes : null;
   if (learnMin !== null && learnMin >= cfg.effort_uncaptured.min_learning_minutes) {
-    const today = localDate(now);
     const repsToday = world.reps.filter(r => String(r.ts || "").slice(0, 10) === today).length;
     if (repsToday === 0) {
       bleeds.push({ organ: "capture", kind: "effort_uncaptured",
@@ -266,11 +269,13 @@ async function selftest() {
   assert("existed-then-stale file bleeds", stale.bleeds.some(b => b.kind === "stale" && b.organ === "cards"));
   assert("line speaks when bleeding", typeof stale.line === "string");
 
-  // effort uncaptured
-  const effort = compute({ ...base, timeaudit: { buckets: { Learning: { minutes: 180 } } }, reps: [] }, cfg, now);
+  // effort uncaptured (the real producer always stamps date — mocks match it)
+  const effort = compute({ ...base, timeaudit: { date: "2026-07-12", buckets: { Learning: { minutes: 180 } } }, reps: [] }, cfg, now);
   assert("cameras-were-off bleed on effort without reps", effort.bleeds.some(b => b.kind === "effort_uncaptured" && b.line.includes("cameras were off")));
-  const effortOk = compute({ ...base, timeaudit: { buckets: { Learning: { minutes: 180 } } }, reps: [{ ts: "2026-07-12T10:00:00Z", track: "concept", correct: true, concept: "x" }] }, cfg, now);
+  const effortOk = compute({ ...base, timeaudit: { date: "2026-07-12", buckets: { Learning: { minutes: 180 } } }, reps: [{ ts: "2026-07-12T10:00:00Z", track: "concept", correct: true, concept: "x" }] }, cfg, now);
   assert("no effort bleed when reps flowed", !effortOk.bleeds.some(b => b.kind === "effort_uncaptured"));
+  const effortDawn = compute({ ...base, timeaudit: { date: "2026-07-11", buckets: { Learning: { minutes: 180 } } }, reps: [] }, cfg, now);
+  assert("DAWN GUARD — yesterday's minutes never accuse a day that hasn't started", !effortDawn.bleeds.some(b => b.kind === "effort_uncaptured"));
 
   // emitted-unconsumed
   const emit = compute({ ...base, weaknesses: { headline: { topic: "chunking" } }, weaknessesMtime: 100, teamSheetMtime: 50 }, cfg, now);

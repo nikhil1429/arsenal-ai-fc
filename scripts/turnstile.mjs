@@ -20,7 +20,7 @@
 //        node scripts/turnstile.mjs selftest
 // ============================================================================
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync, execFile } from "node:child_process";
@@ -29,6 +29,9 @@ import os from "node:os";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCK_PORT = 4111;                             // one below the cortex's lock
 const CADENCE_MS = 4000;
+// the dedupe ring SURVIVES restarts — hashes only (never content), so a daemon
+// respawn with the same session still on the clipboard can't double-ingest it
+const SEEN_FILE = join(__dirname, "..", "dressing-room", "state", "turnstile_seen.json");
 
 // ---------------------------------------------------------------------------
 // THE SHAPE TEST — is this copied text the capture contract? (pure)
@@ -60,25 +63,39 @@ function makeGate(deps = {}) {
     const h = hash32(String(clip).trim());
     if (seen.includes(h)) return { ingested: 0, why: "same blob already ingested (dedupe)" };
     // ARRIVAL IS THE TIMESTAMP — models never have to emit clocks (capture's
-    // contract requires ts; the copy-moment is the honest one, like voice reps)
+    // contract requires ts; the copy-moment is the honest one, like voice reps).
+    // The stamp rides AFTER the spread so a model's "ts": null can't erase it.
     const now = (deps.now || new Date()).toISOString();
-    const stamped = reps.map(r => ({ ts: r.ts || now, ...r }));
+    const stamped = reps.map(r => ({ ...r, ts: r.ts || now }));
     const tmp = join(deps.tmpdir || os.tmpdir(), `turnstile-${Date.now()}.json`);
     (deps.write || writeFileSync)(tmp, JSON.stringify(stamped));
+    let out = "";
     try {
-      (deps.sh || ((script, argv) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { encoding: "utf8", timeout: 60000, windowsHide: true })))("capture.mjs", ["paste", tmp]);
+      out = (deps.sh || ((script, argv) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { encoding: "utf8", timeout: 60000, windowsHide: true })))("capture.mjs", ["paste", tmp]);
     } catch (e) {
       return { ingested: 0, why: `capture rejected it (its contract, its call): ${String(e.message).slice(0, 120)}` };
+    } finally {
+      try { (deps.unlink || unlinkSync)(tmp); } catch { }   // rep content never lingers in %TEMP%
     }
     seen.push(h); if (seen.length > CAP) seen.shift();
-    return { ingested: reps.length, why: "captured" };
+    if (deps.persist) { try { deps.persist(seen); } catch { } }
+    // CAPTURE'S MOUTH IS THE TRUTH — its exit 0 only means the JSON parsed;
+    // the real appended/rejected counts ride its stdout. Speaking a rep the
+    // owner rejected would be a fabricated success, so we read the counts.
+    const m = String(out || "").match(/appended (\d+), rejected (\d+), duplicates (\d+)/);
+    const appended = m ? Number(m[1]) : reps.length;
+    const rejected = m ? Number(m[2]) : 0, dupes = m ? Number(m[3]) : 0;
+    if (appended === 0) return { ingested: 0, why: `capture accepted none (rejected ${rejected}, duplicates ${dupes}) — the reps are missing required fields` };
+    return { ingested: appended, why: (rejected || dupes) ? `captured ${appended} (capture rejected ${rejected}, duplicates ${dupes})` : "captured" };
   };
 }
 
 // windows clipboard read (daemon only)
 function readClipboard() {
   try {
-    return execFileSync("powershell", ["-NoProfile", "-Command", "Get-Clipboard -Raw"], { encoding: "utf8", timeout: 8000, windowsHide: true });
+    // PS 5.1 pipes stdout in the legacy OEM codepage — force UTF-8 so
+    // Hinglish/Devanagari question text survives the trip intact
+    return execFileSync("powershell", ["-NoProfile", "-Command", "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard -Raw"], { encoding: "utf8", timeout: 8000, windowsHide: true });
   } catch { return ""; }
 }
 
@@ -109,6 +126,21 @@ async function selftest() {
     const gateRej = makeGate({ sh: () => { throw new Error("bad rep line 3"); }, write: () => {}, tmpdir: "T" });
     const r4 = gateRej(blob);
     assert("capture's rejection is final (turnstile never overrides the owner)", r4.ingested === 0 && r4.why.includes("its contract"));
+    // FABRICATION GUARD — capture exits 0 even when it appends nothing; only
+    // its stdout counts are the truth, and the gate must repeat them honestly
+    const gateNone = makeGate({ sh: () => "paste: appended 0, rejected 2, duplicates 0 → x (total 5)", write: () => {}, tmpdir: "T" });
+    const r5 = gateNone(JSON.stringify([REP]));
+    assert("FABRICATION GUARD: capture accepting none ⇒ ingested 0, said honestly", r5.ingested === 0 && r5.why.includes("accepted none"));
+    const gatePart = makeGate({ sh: () => "paste: appended 1, rejected 1, duplicates 0 → x (total 6)", write: () => {}, tmpdir: "T" });
+    const r6 = gatePart(JSON.stringify([REP, { ...REP, concept: "attention" }]));
+    assert("PARTIAL TRUTH: only capture's appended count is ever spoken", r6.ingested === 1 && r6.why.includes("rejected 1"));
+    const ringOut = [];
+    const gateP = makeGate({ sh: () => "paste: appended 1, rejected 0, duplicates 0 → x (total 1)", write: () => {}, tmpdir: "T", persist: (ring) => ringOut.push(ring.length) });
+    gateP(JSON.stringify([REP]));
+    assert("RESTART ARMOR: the hash ring rides deps.persist after each ingest", ringOut.length === 1 && ringOut[0] === 1);
+    const gateTs = makeGate({ sh: () => "paste: appended 1, rejected 0, duplicates 0 → x (total 1)", write: (p, c) => writes.push({ p, c }), tmpdir: "T" });
+    gateTs(JSON.stringify([{ ...REP, ts: null }]));
+    assert("a model's ts:null never erases the arrival stamp", typeof JSON.parse(writes[writes.length - 1].c)[0].ts === "string" && JSON.parse(writes[writes.length - 1].c)[0].ts.includes("T"));
   }
 
   const passed = checks.every(c => c[1]);
@@ -126,7 +158,10 @@ async function main() {
     lock.listen(LOCK_PORT, "127.0.0.1", resolve);
   });
   console.log(`turnstile: watching the clipboard (${CADENCE_MS / 1000}s cadence) — copy a capture-contract JSON anywhere and it's in. Everything else is ignored by shape.`);
-  const gate = makeGate({});
+  // the ring survives restarts (hashes only) — a respawn with the session
+  // still on the clipboard must not re-ingest it as fresh-stamped duplicates
+  let seenRing = []; try { seenRing = JSON.parse(readFileSync(SEEN_FILE, "utf8")).slice(-20); } catch { }
+  const gate = makeGate({ seen: seenRing, persist: (ring) => writeFileSync(SEEN_FILE, JSON.stringify(ring)) });
   let lastHash = "";
   setInterval(() => {
     const clip = readClipboard();
@@ -136,9 +171,14 @@ async function main() {
     lastHash = h;
     const r = gate(clip);
     if (r.ingested) {
-      console.log(`turnstile: ${r.ingested} rep(s) captured from the clipboard`);
+      console.log(`turnstile: ${r.why === "captured" ? r.ingested + " rep(s) captured from the clipboard" : r.why}`);
       execFile(process.execPath, [join(__dirname, "heartbeat.mjs")], { windowsHide: true }, () => {});
       import("./speak.mjs").then(({ say }) => say(`${r.ingested} reps andar. Session captured.`)).catch(() => {});
+    } else if (r.why && r.why.includes("accepted none")) {
+      // a contract that capture fully rejected must be SAID, not swallowed —
+      // silence here reads as success to the captain
+      console.log(`turnstile: ${r.why}`);
+      import("./speak.mjs").then(({ say }) => say("Woh session capture nahi hua, captain — reps reject ho gaye. Format check karo.")).catch(() => {});
     }
   }, CADENCE_MS);
 }

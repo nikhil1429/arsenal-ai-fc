@@ -107,6 +107,8 @@ dressing-room/state/dugout_reminders.jsonl
 # the shadow engine (earned proactivity — personal behavioral data)
 dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
+# the turnstile's restart-proof dedupe ring (hashes only, runtime state)
+dressing-room/state/turnstile_seen.json
 # semantic recall index (his words, embedded)
 dressing-room/state/recall_index.jsonl
 # dugout voice prefs (his chosen model/voice/depth register)

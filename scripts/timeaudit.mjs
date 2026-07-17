@@ -217,7 +217,7 @@ function printReport(r) {
   }
   console.log(r.onTrack ? "\nSTATUS: ON TRACK ✔" : "\nSTATUS: OFF TRACK ✗");
   for (const f of r.flags) console.log("  - " + f);
-  console.log(`\n(written -> ${OUT_PATH})\n`);
+  console.log(MODE === "selftest" ? `\n(selftest: mock report NOT written — the live bus file is untouched)\n` : `\n(written -> ${OUT_PATH})\n`);
 }
 
 function maybeNtfy(cfg, r) {
@@ -292,9 +292,13 @@ async function run() {
   const cls = classify(cfg, active, windowEvents, webEvents);
   const r = buildReport(cfg, cls, MODE, { date: dateStr, dataOk, note });
 
-  writeFileSync(OUT_PATH, JSON.stringify(r, null, 2));
+  // selftest proves the classification math on MOCK data — it must never
+  // overwrite the LIVE bus file (physio/viz/scorer read it as truth) or push.
+  if (MODE !== "selftest") {
+    writeFileSync(OUT_PATH, JSON.stringify(r, null, 2));
+    maybeNtfy(cfg, r);
+  }
   printReport(r);
-  maybeNtfy(cfg, r);
 }
 
 // run only when invoked directly (Windows-safe entry check)
