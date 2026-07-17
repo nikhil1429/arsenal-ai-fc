@@ -5,7 +5,7 @@
 
 ## 0. Your desktop (the whole cockpit)
 
-Seven icons. That's the club.
+One desktop folder — `ARSENAL VAULT` — holds every icon: the numbered ARSENAL 0–7 and 9 launchers (there is no 8, nothing's missing), the two BRIEFING icons, and a couple of older duplicates. Daily you touch exactly two: **1 (Matchday — the Dugout)** and **2 (the Wall)**.
 
 | Icon | What it does | When |
 |---|---|---|
@@ -84,7 +84,7 @@ The Gaffer stays quiet while you work. It speaks when **you** open a stoppage:
 | 20:00 Sun | Boot Room files its genome proposal |
 | 22:15 → dawn | The hot brain deliberately spends the plan: digests, day cartridge, team talk, posters, deep work |
 
-Works on battery too (fixed and proven). Laptop closed = things simply wait; physio says so once, honestly.
+Works on battery too (fixed and proven). Laptop closed = daytime things simply wait and catch up; physio says so once, honestly. (Exception: the 02:40 night shift only runs 1–7 a.m. by law — a fully shut-down night skips it; sleep the laptop instead of shutting down.)
 
 ---
 

@@ -104,6 +104,16 @@ function compute(world, cfg, now = new Date()) {
   const bleeds = [];
   const nowMs = now.getTime();
 
+  // 0) DOCTOR-REFERRAL — the one health escalation that must NEVER die silently
+  //    in a JSON file (the Goalkeeper computes it; every surface keys off the
+  //    verdict alone, and the flag is independent of the verdict). Message
+  //    only, never a number, never an interpretation — the hard law.
+  if (world.referDoctor) {
+    bleeds.push({ organ: "goalkeeper", kind: "doctor_referral",
+      evidence: "readiness.safety.refer_doctor is set (sustained pattern)",
+      line: "the Goalkeeper filed a doctor-referral — a sustained pattern worth showing your doctor. Full stop." });
+  }
+
   // 1) STALE — only files that have EXISTED bleed (never-born ≠ bleeding).
   for (const [name, hrs] of Object.entries(cfg.expected_cadence_hours)) {
     const f = world.files[name];
@@ -241,6 +251,7 @@ function gatherWorld() {
     slip: readLines(join(STATE_DIR, "slip.jsonl")),
     fsrsStore: readJson(join(STATE_DIR, "fsrs_store.json")),
     readinessCount: readiness && typeof readiness.nights === "number" ? readiness.nights : 0,
+    referDoctor: !!(readiness && readiness.safety && readiness.safety.refer_doctor === true),
   };
 }
 
@@ -268,6 +279,11 @@ async function selftest() {
   const stale = compute({ ...base, files: { "cards.json": { exists: true, mtimeMs: now.getTime() - 60 * H } } }, cfg, now);
   assert("existed-then-stale file bleeds", stale.bleeds.some(b => b.kind === "stale" && b.organ === "cards"));
   assert("line speaks when bleeding", typeof stale.line === "string");
+
+  // DOCTOR-REFERRAL — the flag must ride the vitals, never die in a file
+  const refer = compute({ ...base, referDoctor: true }, cfg, now);
+  assert("DOCTOR-REFERRAL rides the vitals to every surface (full stop)", refer.bleeds.some(b => b.kind === "doctor_referral") && typeof refer.line === "string");
+  assert("the referral line carries a message, never a number", !/\d/.test(refer.bleeds.find(b => b.kind === "doctor_referral").line));
 
   // effort uncaptured (the real producer always stamps date — mocks match it)
   const effort = compute({ ...base, timeaudit: { date: "2026-07-12", buckets: { Learning: { minutes: 180 } } }, reps: [] }, cfg, now);

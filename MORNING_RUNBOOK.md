@@ -48,7 +48,7 @@ the receipts.
 ## When something feels off
 `node scripts/brain.mjs status` (budget + eligibility) ·
 `node scripts/physio.mjs` (what's bleeding) ·
-`npm run organism:selftest` (all 14 new organs) ·
+`npm run organism:selftest` (31 suites) ·
 `npm run squad:selftest` (all 8 original agents).
 
 ## Sunday

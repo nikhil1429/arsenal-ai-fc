@@ -22,10 +22,10 @@ node_modules/
 # --- the whole-repo bundle (derived artifact; regenerate with `npm run bundle`) ---
 ARSENAL_FC_FULL_REPO_BUNDLE.md
 
-# --- OPTIONAL: personal health / medication data ---
-# This repo is PUBLIC. The two files below contain your Oura biometrics
-# (sleep, HRV, readiness) and your medication-intake timing. If you'd
-# rather those NOT be public, uncomment them (or make the repo private):
+# --- personal health / medication data — IGNORED BY DEFAULT, keep it that way ---
+# This repo is PUBLIC. The two files below contain Oura biometrics (sleep, HRV,
+# readiness) and medication-intake timing. These rules are ACTIVE: the files are
+# NOT tracked and must never be. Do not remove or comment out these lines.
 dressing-room/state/readiness.json
 dressing-room/state/intake_log.json
 

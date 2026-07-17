@@ -27,7 +27,7 @@
 //   server (injectable fetchFn) · atomic writes · empty-safe · never fabricate.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -117,6 +117,13 @@ function looksLikeContract(text) {
   if (!Array.isArray(arr) || !arr.length || arr.length > 200) return null;
   return arr.every(r => r && typeof r.concept === "string" && typeof r.question === "string" && ["knew", "shaky", "guessed"].includes(r.confidence)) ? arr : null;
 }
+// the documented cartridge contract is [{concept,axis,question,confidence,correct}]
+// — no surface/track (the Gem doesn't know transport). The PHONE LANE owns those
+// defaults; explicit fields still win, and capture remains the validator of record.
+// ts rides AFTER the spread so a model's "ts": null never erases the stamp.
+function completeReps(arr, stamp) {
+  return arr.map(x => ({ surface: "gem", track: "concept", ...x, ts: x.ts || stamp }));
+}
 function ingest(pollText, existingIds) {
   const balls = [];
   const reps = [];
@@ -184,6 +191,16 @@ async function selftest() {
     assert("a contract-shaped message DIVERTS to reps (blood, not thought)", got.reps.length === 1 && got.reps[0].reps[0].concept === "embeddings");
     assert("it never becomes a loose ball (thought laws untouched)", got.balls.length === 1 && got.balls[0].text === "yeh khayal seedhiyon wala");
     assert("a JSON-ish thought that is NOT the contract stays a verbatim thought", ingest(JSON.stringify({ id: "t2", time: 1, event: "message", message: "[1,2,3]" }), new Set()).balls.length === 1);
+    // the DOCUMENTED cartridge contract has no surface/track — the phone lane
+    // fills the transport defaults; explicit fields win; ts:null gets stamped
+    const bare = [{ concept: "embeddings", axis: "c", question: "cosine vs dot?", confidence: "shaky", correct: true, ts: null }];
+    const filled = completeReps(bare, "2026-07-12T10:00:00Z");
+    assert("CARTRIDGE CONTRACT lands: surface/track defaults filled by the lane", filled[0].surface === "gem" && filled[0].track === "concept");
+    assert("a model's ts:null never erases the arrival stamp", filled[0].ts === "2026-07-12T10:00:00Z");
+    assert("explicit surface/track always win over the defaults", completeReps([{ surface: "colab", track: "skill", concept: "x", question: "q", confidence: "knew" }], "t")[0].surface === "colab");
+    // ntfy since= is inclusive — a diverted rep id must dedupe on the NEXT poll too
+    const again = ingest(mix, new Set(["r1"]));
+    assert("PERSISTED rep id blocks the re-served message (no 15-min duplicates)", again.reps.length === 0 && again.balls.length === 1);
   }
   assert("max time tracked for since=", maxTime === 1783900200);
 
@@ -224,10 +241,12 @@ async function main() {
     return;
   }
   let since = "all";
+  let priorRepIds = [];
   try {
     if (existsSync(TSTATE)) {
       const s = JSON.parse(readFileSync(TSTATE, "utf8"));
       if (s && typeof s.last_since === "number" && s.last_since > 0) since = String(s.last_since);
+      if (s && Array.isArray(s.rep_ids)) priorRepIds = s.rep_ids;
     }
   } catch { /* fresh start */ }
   const url = `${cfg.server}/${encodeURIComponent(topic)}/json?poll=1&since=${since}`;
@@ -244,26 +263,36 @@ async function main() {
     return;
   }
   const existing = loadExistingIds();
+  // ntfy's since= is INCLUSIVE, so the newest message re-serves every poll —
+  // diverted rep-message ids must persist across runs or the same session
+  // re-ingests every 15 minutes with a fresh arrival stamp (new dedup key).
+  for (const id of priorRepIds) existing.add(id);
   const { balls, reps, maxTime } = ingest(res.text, existing);
   if (balls.length) {
     mkdirSync(dirname(BALLS), { recursive: true });
     appendFileSync(BALLS, balls.map(b => JSON.stringify(b)).join("\n") + "\n");
   }
-  // M12 — blood by phone: contract-shaped messages route through the owner
+  // M12 — blood by phone: contract-shaped messages route through the owner.
+  // The lane fills the transport defaults (the cartridge contract carries no
+  // surface/track) and repeats CAPTURE'S OWN COUNTS — never a fabricated success.
   for (const r of reps) {
     try {
       const tmp = join(os.tmpdir(), `throwin-reps-${r.id}.json`);
       const stamp = new Date().toISOString();       // arrival is the timestamp (capture demands ts)
-      writeFileSync(tmp, JSON.stringify(r.reps.map(x => ({ ts: x.ts || stamp, ...x }))));
-      execFileSync(process.execPath, [join(__dirname, "capture.mjs"), "paste", tmp], { encoding: "utf8", timeout: 60000, windowsHide: true });
-      console.log(`throwin: ${r.reps.length} rep(s) arrived by phone — captured (zero-tax)`);
+      writeFileSync(tmp, JSON.stringify(completeReps(r.reps, stamp)));
+      let out = "";
+      try { out = execFileSync(process.execPath, [join(__dirname, "capture.mjs"), "paste", tmp], { encoding: "utf8", timeout: 60000, windowsHide: true }); }
+      finally { try { unlinkSync(tmp); } catch { } }
+      const mm = String(out || "").match(/appended (\d+), rejected (\d+)/);
+      if (mm && Number(mm[1]) === 0) console.log(`throwin: phone reps ALL rejected by capture (rejected ${mm[2]}) — the session did NOT land; check the cartridge shape`);
+      else console.log(`throwin: ${mm ? mm[1] : r.reps.length} rep(s) arrived by phone — captured (zero-tax)`);
     } catch (e) { console.log(`throwin: phone reps rejected by capture (its contract, its call): ${String(e.message).slice(0, 100)}`); }
   }
   const prevSince = since === "all" ? 0 : Number(since);
-  writeAtomic(TSTATE, { last_since: Math.max(prevSince, maxTime) || null, last_poll_at: now.toISOString(), wired: true });
+  writeAtomic(TSTATE, { last_since: Math.max(prevSince, maxTime) || null, last_poll_at: now.toISOString(), wired: true, rep_ids: priorRepIds.concat(reps.map(r => r.id)).slice(-100) });
   console.log(`throwin: ${balls.length} ball(s) landed → ${BALLS}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { ingest, resolveTopic, loadConfig, loadExistingIds };
+export { ingest, resolveTopic, loadConfig, loadExistingIds, completeReps };

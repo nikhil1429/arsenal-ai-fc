@@ -231,7 +231,7 @@ function gemCartridge(deps = {}, now = new Date()) {
     ((who && who.open_threads) || []).length ? `Open threads to attack: ${who.open_threads.join(" · ")}` : "",
     ((cal && cal.danger_zone) || []).length ? `My confident-but-wrong zone (drill these HARDEST): ${cal.danger_zone.map(d => d.topic || d.concept).join(", ")}` : "",
     "",
-    "RULES: one probe at a time · demand my gut-word (knew/shaky/guessed) BEFORE I answer · honest verdicts, no flattery · after each session output a JSON array of reps: [{\"concept\",\"axis\",\"question\",\"confidence\",\"correct\"}] so I can paste it into my capture system.",
+    "RULES: one probe at a time · demand my gut-word (knew/shaky/guessed) BEFORE I answer · honest verdicts, no flattery · after each session output a JSON array of reps, EVERY item exactly: {\"surface\":\"gem\",\"track\":\"concept\",\"concept\":\"...\",\"axis\":\"a-i\",\"question\":\"...\",\"confidence\":\"knew|shaky|guessed\",\"correct\":true|false} so I can paste it into my capture system.",
     bank && Object.keys(bank.bank || bank).length ? `\nFRESH PROBES (tonight's bank — use these first):\n${Object.entries(bank.bank || bank).slice(0, 4).map(([c, v]) => `- ${c}: ${(v.probes || []).slice(0, 2).map(p => p.probe).join(" · ")}`).join("\n")}` : "",
   ].filter(Boolean).join("\n");
   return { md };

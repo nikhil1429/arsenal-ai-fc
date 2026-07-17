@@ -126,8 +126,14 @@ function gafferPropose(drills, existing, dateStr) {
 
 function gafferMature(existing, repsByDate, dateStr, horizonDays) {
   const out = [];
+  // THE LEDGER IS APPEND-ONLY: a matured proposal's resolved copy is a NEW row
+  // and the original stays resolved:false forever. Retirement therefore means
+  // "a resolved row with the same (date|claim) already exists" — without this,
+  // every proposal re-matures and re-appends on EVERY run, forever.
+  const retired = new Set(existing.filter(s => s.book === "gaffer" && s.resolved).map(s => `${s.date}|${s.claim}`));
   for (const s of existing) {
     if (s.book !== "gaffer" || s.resolved) continue;
+    if (retired.has(`${s.date}|${s.claim}`)) continue;
     const age = Math.round((new Date(dateStr) - new Date(s.date)) / 86400000);
     if (age < (s.horizon_days || horizonDays)) continue;
     const concepts = String(s.claim || "").split("+").filter(Boolean);
@@ -144,9 +150,16 @@ function gafferMature(existing, repsByDate, dateStr, horizonDays) {
 
 // TRUST TIERS — rolling per-type hit-rate; nothing auto-promotes.
 function computeTiers(slip, cfg, prevTiers, now) {
-  const byType = {};
+  // the slip is append-only, so a corrected resolution (e.g. full-time flips a
+  // premature 21:35 MISS to HIT) is a LATER row with the same identity — the
+  // truth function reads LAST-WINS per (book,type,date,claim), never both.
+  const lastWins = new Map();
   for (const s of slip) {
     if (!s.resolved || typeof s.hit !== "boolean") continue;
+    lastWins.set(`${s.book}|${s.type}|${s.date}|${s.claim}`, s);
+  }
+  const byType = {};
+  for (const s of lastWins.values()) {
     (byType[s.type] = byType[s.type] || []).push(s.hit);
   }
   const prevMap = new Map(((prevTiers && prevTiers.tiers) || []).map(t => [t.type, t]));
@@ -225,7 +238,26 @@ async function selftest() {
   assert("young proposals left unresolved", gafferMature([{ date: today, book: "gaffer", type: "drill:derby", claim: "x", horizon_days: 3, resolved: false }], {}, today, 3).length === 0);
 
   // trust tiers
-  const slip = Array.from({ length: 25 }, (_, i) => ({ type: "drill:recall", book: "gaffer", resolved: true, hit: i !== 0 }));
+  // THE RETIREMENT LAW — a matured proposal never re-matures (append-only ledger)
+  {
+    const proposal = { date: "2026-07-09", book: "gaffer", type: "drill:recall", claim: "embeddings", horizon_days: 3, resolved: false, hit: null };
+    const rbd = { "2026-07-10": new Set(["embeddings"]) };
+    const m1 = gafferMature([proposal], rbd, today, 3);
+    assert("a ripe proposal matures once (hit on reps landed)", m1.length === 1 && m1[0].resolved === true && m1[0].hit === true);
+    const m2 = gafferMature([proposal, m1[0]], rbd, today, 3);
+    assert("RETIREMENT: the resolved copy retires the original — no re-maturing, ever", m2.length === 0);
+  }
+  // LAST-WINS — a correction row (full-time flips the premature 21:35 read) replaces, never double-counts
+  {
+    const rows = [
+      { date: today, book: "twin", type: "floor_touched", claim: "floor_touched", resolved: true, hit: false },
+      { date: today, book: "twin", type: "floor_touched", claim: "floor_touched", resolved: true, hit: true },
+    ];
+    const t = computeTiers(rows, cfg, null, now).tiers.find(x => x.type === "floor_touched");
+    assert("LAST-WINS: a corrected resolution counts once, as the correction", t.n === 1 && t.hit_rate === 1);
+  }
+
+  const slip = Array.from({ length: 25 }, (_, i) => ({ date: "2026-07-" + String(i + 1).padStart(2, "0"), claim: "c" + i, type: "drill:recall", book: "gaffer", resolved: true, hit: i !== 0 }));
   const tiers1 = computeTiers(slip, cfg, null, now);
   const t = tiers1.tiers.find(x => x.type === "drill:recall");
   assert("tier crossing threshold ⇒ pending_ratification, NOT no_look", t.pending_ratification === true && t.no_look === false);
@@ -253,27 +285,42 @@ async function main() {
   const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
   const repsByDate = {};
   for (const r of reps) {
-    const d = String(r.ts || "").slice(0, 10);
+    // reps stamp ts in UTC ISO; the day boundary is the CAPTAIN'S midnight —
+    // localDate() of the parsed instant keys a 00:45 IST rep to the right day
+    const parsed = r.ts ? new Date(r.ts) : null;
+    const d = parsed && !Number.isNaN(parsed.getTime()) ? localDate(parsed) : String(r.ts || "").slice(0, 10);
     (repsByDate[d] = repsByDate[d] || new Set()).add(String(r.concept || "").toLowerCase());
   }
   const ta = readJson(join(STATE_DIR, "timeaudit.json"));
   const pr = readJson(join(STATE_DIR, "pitch_read.json"));
   const pmPath = join(STATE_DIR, "post_match", today + ".md");
   const pmText = existsSync(pmPath) ? readFileSync(pmPath, "utf8") : null;
+  // NEVER-GUESS-A-RESOLUTION: a stale instrument is a DARK instrument.
+  // timeaudit dated yesterday must not resolve today's session_happened, and
+  // first-focus is unjudgeable before the 09:30 deadline or before kickoff.
+  const taFresh = ta && ta.date === today ? ta : null;
+  const deadlinePassed = now.getHours() * 60 + now.getMinutes() >= 9 * 60 + 30;
   const world = {
     repsOnDate: reps.length ? (repsByDate[today] ? repsByDate[today].size : 0) : (existsSync(join(STATE_DIR, "reps_log.jsonl")) ? 0 : null),
     postmatchHit: pmText ? /\b(HIT|PARTIAL)\b/.test(pmText) : null,
-    activeMinutes: ta && typeof ta.productiveMinutes === "number" ? ta.productiveMinutes
-      : (ta && ta.buckets ? ["Learning", "Building"].reduce((a, b) => a + ((ta.buckets[b] && ta.buckets[b].minutes) || 0), 0) : null),
-    firstFocusKnown: !!(pr && pr.date === today && pr.tunnel && pr.tunnel.state !== "no_data"),
+    activeMinutes: taFresh && typeof taFresh.productiveMinutes === "number" ? taFresh.productiveMinutes
+      : (taFresh && taFresh.buckets ? ["Learning", "Building"].reduce((a, b) => a + ((taFresh.buckets[b] && taFresh.buckets[b].minutes) || 0), 0) : null),
+    firstFocusKnown: !!(deadlinePassed && pr && pr.date === today && pr.tunnel && pr.tunnel.state !== "no_data" && pr.tunnel.state !== "pre_kickoff"),
     firstFocusBy0930: !!(pr && pr.tunnel && pr.tunnel.state !== "wall" && pr.tunnel.wall_minutes_today === 0),
     firstFocusEvidence: pr && pr.tunnel ? pr.tunnel.evidence : null,
   };
 
   const newRows = [];
-  newRows.push(...resolveTwin(preds, world, today, cfg).filter(r => !r.skipped));
+  // scorer runs twice a day BY DESIGN (21:35 task + full-time) — a market
+  // already resolved today re-appends ONLY as a correction (the hit flipped);
+  // an identical verdict never lands twice. computeTiers reads last-wins.
+  const twinPrior = new Map(slip.filter(s => s.book === "twin" && s.resolved).map(s => [`${s.date}|${s.type}`, s.hit]));
+  newRows.push(...resolveTwin(preds, world, today, cfg).filter(r => !r.skipped)
+    .filter(r => !twinPrior.has(`${r.date}|${r.type}`) || twinPrior.get(`${r.date}|${r.type}`) !== r.hit));
   const prevSnaps = slip.filter(s => s.book === "captain" && s.type === "calibration_gap");
-  const snap = captainSnapshot(readJson(join(STATE_DIR, "calibration.json")), prevSnaps, today);
+  // a calibration file from another day is a dead instrument — no snapshot
+  const cal = readJson(join(STATE_DIR, "calibration.json"));
+  const snap = captainSnapshot(cal && cal.date === today ? cal : null, prevSnaps, today);
   if (snap) newRows.push(snap);
   const maturedRaw = gafferMature(slip, repsByDate, today, cfg.gaffer_horizon_days);
   newRows.push(...maturedRaw);
