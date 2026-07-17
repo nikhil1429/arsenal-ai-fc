@@ -161,7 +161,8 @@ jarvis/
 # pre-season vault (the build-era test data, archived never deleted)
 dressing-room/vault_preseason_*/
 
-# the captain's personal operating manual (his daily routine — local only)
+# the captain's personal operating manuals (his daily routine — local only)
 THE_CAPTAINS_MANUAL.md
+THE_CYBORG_OWNERS_MANUAL.md
 # gem-sync ritual stamp (runtime state)
 dressing-room/state/gem_sync_stamp.json
