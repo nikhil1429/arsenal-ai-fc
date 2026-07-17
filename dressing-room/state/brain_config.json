@@ -62,7 +62,9 @@
     },
     {
       "id": "midday_reread",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (small inputs, cognitive)",
       "window": "midday",
       "at": "13:30",
       "priority": 60,
@@ -98,7 +100,9 @@
     },
     {
       "id": "deep_twin",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 50,
       "enabled": true,
@@ -114,7 +118,9 @@
     },
     {
       "id": "doubt_clusters",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 55,
       "enabled": true,
@@ -130,7 +136,9 @@
     },
     {
       "id": "lexicon_mine",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 45,
       "enabled": true,
@@ -164,7 +172,9 @@
     },
     {
       "id": "wall_insights",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 40,
       "enabled": true,
@@ -201,7 +211,9 @@
     },
     {
       "id": "capsule_premap",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 20,
       "enabled": true,
@@ -277,7 +289,9 @@
     },
     {
       "id": "market_scan",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "days": [
         "Sun"
@@ -301,7 +315,9 @@
     },
     {
       "id": "wall_review",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 24,
       "enabled": true,
