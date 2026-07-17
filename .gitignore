@@ -164,5 +164,8 @@ dressing-room/vault_preseason_*/
 # the captain's personal operating manuals (his daily routine — local only)
 THE_CAPTAINS_MANUAL.md
 THE_CYBORG_OWNERS_MANUAL.md
+# his STORY — names his condition, his family, his stakes. The repo is PUBLIC and
+# this is his to tell, not the internet's to scrape. Local until HE says otherwise.
+THE_ORGANISM_THE_WHOLE_STORY.md
 # gem-sync ritual stamp (runtime state)
 dressing-room/state/gem_sync_stamp.json
