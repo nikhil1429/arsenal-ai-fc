@@ -926,6 +926,9 @@ function execTool(name, args, deps = {}) {
         brain: { opus_tokens_today: brainRows.filter(r => r.engine === "claude").reduce((a, r) => a + (r.total_tokens || 0), 0), jobs_today: brainRows.length, deep_answer_live: !!(ws.deep && ws.deep.text && !ws.deep.declined) },
         gate: { moments_today: gate.length, reflex: gate.filter(r => r.tier === 0).length, enriched: gate.filter(r => r.tier === 1).length, opus_wakes: gate.filter(r => r.tier === 2).length, suppressed: gate.filter(r => ["refractory", "capped"].includes(r.outcome)).length },
         senses: { presence_passes_today: presence.length, stall_edges_today: presence.filter(r => r.edge).length, whisper_loaded: !!(ws.whisper && new Date(ws.whisper.expires) > now) },
+        // THE FOCUS LEDGER (17 Jul) — where his attention actually lived today,
+        // live from the sentinel's rows; breaks are DATA he asked to see, never a verdict
+        focus_today: (() => { const f = presence.filter(r => r.kind === "focus"); const br = f.filter(r => r.break_live); return { reads: f.length, breaks_seen: br.length, last_read: f.slice(-1)[0] ? { focus_min: f.slice(-1)[0].focus_min, off_min: f.slice(-1)[0].off_min, break_live: f.slice(-1)[0].break_live, pull: f.slice(-1)[0].pull } : null }; })(),
         memory: { episodes: episodes.length, identity_facts: facts.length, who_he_is_date: (who || {}).date || null, open_threads: ((who || {}).open_threads || []).length, recall_index: readLines(RECALL).length },
         tanks: { gauge: tanks.map(t => `${t.id} ${t.pct}% ${t.state}`), naive_shadow_note: "the fuel gauge shows what an all-Opus day would have cost" },
         nightshift: shift ? shift.jobs : null,
