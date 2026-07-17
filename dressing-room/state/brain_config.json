@@ -317,7 +317,9 @@
     },
     {
       "id": "dugout_digest",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the free pool 17 Jul — Google cut the free tier to ~20 req/day/model, the digest starved daily and the Gaffer went hollow; the Max window never runs dry",
       "window": "overnight",
       "priority": 65,
       "enabled": true,
@@ -335,7 +337,9 @@
     },
     {
       "id": "day_cartridge",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "moved off the free pool 17 Jul — the cartridge IS the Gaffer's daily brain; it rides the engine that never runs dry",
       "window": "overnight",
       "priority": 58,
       "enabled": true,

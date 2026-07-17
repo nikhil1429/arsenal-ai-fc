@@ -575,6 +575,20 @@ function sprintCartridge() {
   } catch { return ""; }
 }
 
+// THE SEASON CONTEXT (anti-confabulation law) — computed from the bus every
+// session. After the 17 Jul fresh start the Gaffer kept inventing shared
+// history ("that forge revision we did") because the FSRS capsule floor says
+// concepts are due while episodic memory is EMPTY. This section makes the
+// epistemic state explicit: what era the book is from, what has actually
+// happened THIS season, and what to say when memory is blank.
+function seasonContext() {
+  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
+  const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch { return 0; } })();
+  return `THE SEASON CONTEXT (computed live — this is your epistemic ground truth):
+- This is a FRESH SEASON: the captain wiped the club's behavioral memory on 17 Jul 2026 and started clean. Reps logged THIS season: ${reps}.${reps === 0 ? " ZERO sessions have happened this season — no forge, no scrimmage, no re-jirah has occurred yet. NEVER imply one did." : ""}
+- His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked 10–11 Jul, before the fresh start). When FSRS says a capsule concept is "due", say it plainly: "your pre-season book has it locked; the schedule says it's ripe for a Re-Jirah" — NEVER "the forge session we did" or any invented shared memory.
+- When your memory of him is empty, SAY it's a fresh season and ask — an honest blank beats a confabulated past, every single time. Inventing history he'll catch instantly is the fastest way to lose the dressing room.`;
+}
 function buildSystemInstruction() {
   const fp = buildFingerprint({
     lexicon: readJson(join(STATE_DIR, "lexicon.json")),
@@ -589,6 +603,7 @@ ${DEPTH_REGISTERS[currentDepth()]}
 
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
+${seasonContext()}
 ${fp}
 ${capsuleDigest()}
 ${sprintCartridge()}
@@ -1303,6 +1318,7 @@ async function selftest() {
   // THE MOUTH UNMUZZLED (depth is obedience) — the empirical fix
   const cfg0 = () => buildConfig(["k1"]);
   assert("constitution: DEPTH IS OBEDIENCE, no more 'never lecture' muzzle", buildSystemInstruction().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("Never lecture"));
+  assert("SEASON CONTEXT rides the constitution (anti-confabulation: fresh season, pre-season book)", buildSystemInstruction().includes("THE SEASON CONTEXT") && buildSystemInstruction().includes("PRE-SEASON inheritance") && buildSystemInstruction().includes("honest blank beats a confabulated past"));
   assert("constitution: elaborate/deep-dive triggers the full lecture", buildSystemInstruction().includes("full lecture") && buildSystemInstruction().includes("Being brief when he asked to go deep is a FAILURE"));
   const depthCalls = [];
   const badDepth = execTool("set_depth", { register: "wat" }, { writeJson: (p, o) => depthCalls.push(o) });
