@@ -567,7 +567,10 @@ async function selftest() {
   assert("non-overnight jobs stay calendar-keyed", shiftDay({ window: "morning" }, new Date(2026, 6, 13, 8, 45), cfg) === "2026-07-13");
   const cfgGemOff = { ...cfg, gemini: { ...cfg.gemini, enabled: false } };
   assert("gemini jobs skipped when gemini.enabled=false (mechanism)", !eligibleJobs(cfgGemOff, { jobs_run: {} }, now(23, 30)).some(j => j.engine === "gemini"));
-  assert("gemini jobs eligible when enabled (committed default)", cfg.gemini.enabled === false || eligNight.some(j => j.engine === "gemini"));
+  // ENGINE LAW (captain's order, 17 Jul): the free pool shrank to ~20 req/day
+  // and starved the night — ALL committed jobs now ride Claude; gemini.enabled
+  // stays true only for the physics lanes outside this job table.
+  assert("ENGINE LAW: every committed job rides Claude (no cognition on the free pool)", cfg.jobs.every(j => (j.engine || "claude") === "claude"));
   assert("priority ordering (formation > insights)", elig845.length === 0 || elig845[0].priority >= (elig845[1] ? elig845[1].priority : 0));
 
   // validators

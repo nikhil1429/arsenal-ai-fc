@@ -247,7 +247,9 @@
     },
     {
       "id": "gemini_render",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
       "window": "overnight",
       "priority": 35,
       "enabled": true,
@@ -259,7 +261,9 @@
     },
     {
       "id": "maidan_poster",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
       "window": "overnight",
       "priority": 25,
       "enabled": true,
@@ -271,7 +275,9 @@
     },
     {
       "id": "widget_spec",
-      "engine": "gemini",
+      "engine": "claude",
+      "model": "sonnet",
+      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
       "window": "overnight",
       "days": [
         "Wed"
@@ -345,7 +351,9 @@
         "brain_out/dugout/TODAY.md",
         "dugout_notes.jsonl",
         "tape_room.json",
-        "lexicon.json"
+        "lexicon.json",
+        "presence_log.jsonl",
+        "timeaudit.json"
       ],
       "out": "dugout_digest",
       "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight.",

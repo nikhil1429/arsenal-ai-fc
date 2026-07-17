@@ -36,6 +36,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
 import { generatePool } from "./hippocampus.mjs";
+import { claudeGenAsync } from "./claudegen.mjs";
 import { recordUse } from "./fuelboard.mjs";
 import { headroom, loadConfig as loadBrainConfig } from "./brain.mjs";
 
@@ -142,7 +143,13 @@ async function convene(question, deps = {}) {
   const q = String(question || "").trim();
   if (!q) return { drafts: [], disagreement: 0, note: "no question" };
   const { seats, cross, min_headroom } = deps.seatsCfg !== undefined ? { min_headroom: 20000, cross: null, ...deps.seatsCfg } : loadSeats();
-  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 }));
+  // 17 Jul: the chairs ride Claude (haiku — the bus leaves in 25s) EXCEPT the
+  // steelman seat, kept on Gemini deliberately: cross-FAMILY disagreement is
+  // M15's whole signal, and an all-Claude bench would argue with one accent.
+  const gen = deps.generate || null;
+  const seatGen = (seat, p) => gen ? gen(p)
+    : seat.id === "steelman" ? generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 })
+    : claudeGenAsync(p, "haiku", 20000);
   const use = deps.recordUse || recordUse;
   const capsules = deps.capsules !== undefined ? deps.capsules : capsuleExcerpts();
   const drafts = [];
@@ -152,9 +159,12 @@ async function convene(question, deps = {}) {
   const deadline = deps.deadline_ms || 25000;
   const jobs = seats.map(async (seat) => {
     const seed = seat.id === "captains_voice" && capsules ? `\nHIS CAPSULE ANCHORS (his real words — use his idiom):\n${capsules}\n` : "";
-    const r = await gen(`${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
+    const r = await seatGen(seat, `${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
     use("T7", 1, 2500);
-    if (r.ok && r.text) drafts.push({ seat: seat.id, family: seat.family || "gemini", text: String(r.text).slice(0, 1200) });
+    // the family label follows the ENGINE that actually spoke — the
+    // disagreement math groups by family and must never be lied to
+    const fam = gen ? (seat.family || "gemini") : (seat.id === "steelman" ? (seat.family || "gemini") : "claude");
+    if (r.ok && r.text) drafts.push({ seat: seat.id, family: fam, text: String(r.text).slice(0, 1200) });
   });
   // M15 — the cross-family chair: headroom-gated, $100-law-guarded, ledgered
   if (cross) {

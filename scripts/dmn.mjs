@@ -39,6 +39,9 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
+// 17 Jul: the dreams ride Claude (cognition law) — the lane/borrow machinery
+// stays as the ROLLOUT BUDGET; lane.key is now just a slot label.
+import { claudeGen } from "./claudegen.mjs";
 import { loadBoard, headroomOf, recordUse, record429, stateOf } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
 import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the thalamus owns bg_queue.jsonl
@@ -169,9 +172,7 @@ async function dream(deps = {}) {
       placed++;
     }
   }
-  // thinking models spend thoughts from the SAME output budget — 2048 starves
-  // a JSON rollout to an empty candidate (probed live, 15 Jul); 6144 breathes
-  const gen = deps.generate || ((p, lane) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 6144, json: true, keys: [lane.key] }));
+  const gen = deps.generate || ((p, lane) => claudeGen(p, "sonnet"));
   const use = deps.recordUse || recordUse;
   const fault = deps.record429 || record429;
   const rollouts = [];
@@ -243,7 +244,7 @@ async function drainBg(deps = {}) {
   const keys = deps.keys || loadHippoKeys();
   const lanes = borrowableTanks(board, keys).filter(l => deps.away === true || !["T1", "T2"].includes(l.tank.id));
   if (!lanes.length) return { ok: false, skipped: "no borrowable lane — the thoughts keep waiting (never spend the core)" };
-  const gen = deps.generate || ((p, lane) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 4096, json: true, keys: [lane.key] }));
+  const gen = deps.generate || ((p, lane) => claudeGen(p, "sonnet"));
   const use = deps.recordUse || recordUse;
   const post = deps.post || (async (body) => { const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); });
   const batch = open.slice(0, BG_DRAIN_CAP);

@@ -593,24 +593,17 @@ let brainMod = null;
 async function adjudicateLive(evt, S) {
   const cfg = loadConfig();
   if (!cfg.adjudicator.enabled) return false;
-  const { loadKeys } = await import("./dugout.mjs");
-  const keys = loadKeys();
   const q = `A personal learning system must decide if a moment needs its EXPENSIVE deep-reasoning brain or the free reflex is enough. Moment: ${JSON.stringify({ modality: evt.modality, text: String(evt.text || "").slice(0, 300), event_key: evt.event_key || null }).slice(0, 500)}. Is this a genuinely reasoning-hard moment (conceptual confusion, strategy question, contradiction) rather than routine chat/logging? Answer with exactly one word: yes or no.`;
-  for (const key of keys.slice(0, 3)) {
-    try {
-      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 5000);
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cfg.adjudicator.model}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({ contents: [{ parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 5, temperature: 0 } }),
-      });
-      clearTimeout(t);
-      if (!r.ok) continue;
-      const j = await r.json();
-      const text = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || "").join("").trim().toLowerCase();
-      if (text) return text.startsWith("y");
-    } catch { }
-  }
-  return false;                                     // every key dry → conservative: no wake
+  // 17 Jul: the adjudicator rides Claude (haiku, one word, async — the gate's
+  // event loop never blocks). 15s ceiling: the CLI cold-starts slower than a
+  // REST call. Any failure → the same conservative verdict as ever: no wake.
+  try {
+    const { claudeGenAsync } = await import("./claudegen.mjs");
+    const r = await claudeGenAsync(q, "haiku", 15000);
+    const text = String(r.text || "").trim().toLowerCase();
+    if (r.ok && text) return text.startsWith("y");
+  } catch { }
+  return false;                                     // engine dry/slow → conservative: no wake
 }
 
 // ---------------------------------------------------------------------------

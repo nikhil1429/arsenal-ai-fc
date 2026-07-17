@@ -53,6 +53,10 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, readdir
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePool, embedPool } from "./hippocampus.mjs";
+// 17 Jul: cognition rides Claude (the Gemini free tier shrank to ~20 req/day and
+// starved the night). generatePool stays imported for the PHYSICS lanes only:
+// the 400k-char season re-read (1M context) and embeddings.
+import { claudeGen } from "./claudegen.mjs";
 import { loadBoard, headroomOf, recordUse } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
 import { indexRecall } from "./dugout.mjs";
@@ -98,7 +102,7 @@ function drillConcepts(deps = {}) {
 // JOB 1 — THE PROBE BANK (validated JSON; junk rejected per-item)
 // ---------------------------------------------------------------------------
 async function probeBank(deps = {}) {
-  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 3000, json: true }));
+  const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
   const use = deps.recordUse || recordUse;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "dossier_weights.json"));
   const concepts = (deps.concepts || drillConcepts(deps)).slice(0, CAPS.probe_concepts);
@@ -141,8 +145,11 @@ function answerVariance(answers) {
 }
 async function gradeProbes(bank, deps = {}) {
   const use = deps.recordUse || recordUse;
-  const genHot = deps.generateHot || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, temperature: GRADE.temp }));
-  const genPro = deps.generatePro || ((p) => generatePool(p, { models: ["gemini-3.1-pro-preview", "gemini-flash-latest"], maxOutputTokens: 2048 }));
+  // haiku plays the hot seats (mechanical, ×24/night), sonnet plays the pro.
+  // NOTE: claude CLI has no temperature flag — the GRADE.temp knob is retired;
+  // natural sampling variance still separates contested from settled ground.
+  const genHot = deps.generateHot || ((p) => claudeGen(p, "haiku"));
+  const genPro = deps.generatePro || ((p) => claudeGen(p, "sonnet"));
   const targets = [];
   for (const [concept, v] of Object.entries(bank || {})) for (const pr of v.probes || []) {
     if (["novel", "negative-space"].includes(pr.type)) targets.push({ concept, probe: pr });
@@ -171,7 +178,7 @@ async function gradeProbes(bank, deps = {}) {
 // JOB 2 — PERSONALIZED DISTRACTORS (his own confusion shapes make the wrong answers)
 // ---------------------------------------------------------------------------
 async function distractorBank(deps = {}) {
-  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2500, json: true }));
+  const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
   const use = deps.recordUse || recordUse;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"));
   const shapes = ((grammar && grammar.clusters) || []).map(c => c.shape || c.name).filter(Boolean).slice(0, 5);
@@ -385,7 +392,7 @@ async function preAnswerEngine(deps = {}) {
   const now = deps.now || new Date();
   // thinking models spend thoughts from the SAME output budget — the 25-item
   // predict needs real room or the wire returns an empty candidate (probed live)
-  const gen = deps.generate || ((p, big) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: big ? 16384 : 8192, json: true }));
+  const gen = deps.generate || ((p, big) => claudeGen(p, "sonnet"));
   const use = deps.recordUse || recordUse;
   const material = deps.material || preAnswerMaterial(deps, now);
   if (!(material.clusters.length || material.voiced.length || material.due.length || material.danger.length || material.threads.length)) {
