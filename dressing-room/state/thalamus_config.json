@@ -11,12 +11,12 @@
   },
   "tiers": {
     "tau0": 0.25,
-    "tau1_base": 0.52,
-    "epsilon": 0.08,
+    "tau1_base": 0.45,
+    "epsilon": 0.1,
     "budget_k": 0.35
   },
   "binding_ms": 900,
-  "refractory_min": 45,
+  "refractory_min": 20,
   "wake_cap_per_day": 15,
   "hab": {
     "tau_ms": 600000,

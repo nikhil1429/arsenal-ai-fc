@@ -74,7 +74,9 @@
       "inputs": [
         "pulse.json",
         "pitch_read.json",
-        "drills.json"
+        "drills.json",
+        "presence_log.jsonl",
+        "timeaudit.json"
       ],
       "out": "midday",
       "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work.",
