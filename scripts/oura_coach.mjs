@@ -11,7 +11,7 @@
 //     (via Oura's own baseline-normalized `sleep_balance` contributor).
 //   • LOW-confidence / med-confounded signals (RHR, HRV, temperature) are
 //     surfaced as INFORMATION only — they can NEVER, on their own, produce
-//     AMBER or RED. (methylphenidate + caffeine + aripiprazole + venlafaxine
+//     AMBER or RED. (the stimulant + caffeine + antipsychotic + SNRI classes
 //     elevate RHR / suppress HRV as a normal baseline effect.)
 //   • RED is RARE: only a SUSTAINED multi-day convergence — deep+REM collapse
 //     (the anchor) AND a second high/clean axis. A single night, a single low
@@ -80,7 +80,7 @@ const V2 = {
 const MED = {
   hrLowConfidence: true,
   note: "HR signals (RHR/HRV) + single-night temperature are medication-influenced "
-      + "(methylphenidate + caffeine + aripiprazole + venlafaxine) -> treated as "
+      + "(stimulant + caffeine + antipsychotic + SNRI classes) -> treated as "
       + "LOW-confidence and can never drive a verdict alone. Judged only vs Nikhil's "
       + "own medicated baseline, never textbook. Sleep-architecture trends, resilience, "
       + "and sleep-vs-own-baseline carry the weight. This tool never comments on "

@@ -27,6 +27,7 @@
   },
   "ntfy": {
     "enabled": false,
-    "topic": "nikhil-jarvis"
+    "topic": "",
+    "_note": "topic stays EMPTY in this tracked file — the secret resolves at runtime from gitignored throwin_topic.txt / env, never committed (the old topic was burned 12 Jul; scrubbed from HEAD 17 Jul)"
   }
 }

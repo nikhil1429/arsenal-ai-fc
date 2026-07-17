@@ -65,7 +65,7 @@ async function main() {
         const t1 = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
         const v = await fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${t1}&end_date=${t2}`, { headers: { Authorization: `Bearer ${tok.access_token}` } });
         if (v.ok) { const j = await v.json(); verified = true; verifyMsg = `✅ VERIFIED — pulled ${(j.data || []).length} days of readiness from YOUR Oura account. Token is good.`; }
-        else verifyMsg = `❌ Token saved but your Oura DATA is NOT accessible: HTTP ${v.status}.\n   This means consent was granted WITHOUT being logged into your ring's Oura account.\n   FIX: open cloud.ouraring.com, LOG IN as the account that owns your ring (nikhil.panwar2914@gmail.com),\n        then delete oura_tokens.json + oura_secrets.json and run this again, pasting the URL into THAT browser.`;
+        else verifyMsg = `❌ Token saved but your Oura DATA is NOT accessible: HTTP ${v.status}.\n   This means consent was granted WITHOUT being logged into your ring's Oura account.\n   FIX: open cloud.ouraring.com, LOG IN as the Google account that owns your ring,\n        then delete oura_tokens.json + oura_secrets.json and run this again, pasting the URL into THAT browser.`;
       } catch (ve) { verifyMsg = "⚠️  Could not verify token: " + ve.message; }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end("<h2>" + (verified ? "\u2705 Oura connected \u2014 data verified. Close this tab." : "\u26A0\uFE0F Connected, but data not accessible \u2014 check the terminal.") + "</h2>");
@@ -79,7 +79,7 @@ async function main() {
   server.listen(8080, () => {
     console.log("\n" + "=".repeat(70));
     console.log(">>> STEP 1: In your browser, LOG IN to  cloud.ouraring.com");
-    console.log(">>>         as the account that owns your ring (nikhil.panwar2914@gmail.com).");
+    console.log(">>>         as the Google account that owns your ring.");
     console.log(">>> STEP 2: Paste this URL into THAT SAME browser and press Enter:");
     console.log("=".repeat(70) + "\n");
     console.log(authUrl + "\n");

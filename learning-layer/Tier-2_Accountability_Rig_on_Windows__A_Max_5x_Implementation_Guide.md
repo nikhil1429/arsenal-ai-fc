@@ -51,7 +51,7 @@ Because AI scheduling depends on the app being open and the machine awake, the *
 - Install: `/plugin marketplace add RemoteCTO/claude-plugins-marketplace` then `/plugin install timelog`. It logs sessions/prompts/projects/tickets as JSONL to `~/.claude/timelog/`, works cross‑platform (Node ships with Claude Code), needs no config for basic use. `/timelog:backfill` imports past transcripts. A per‑project regex (`projectPattern` in `~/.claude/timelog/config.json`) fixes the "everything lumped under one project" problem if you launch Claude from a parent directory.
 
 ### ntfy belt
-- `ntfy.sh` publishes a phone push via a simple HTTP POST: `curl -d "message" ntfy.sh/<topic>`. The topic name is effectively a password (no signup), so keep `nikhil-jarvis` private. Title via `-H "Title: ..."`, priority via `-H "Priority: high"`.
+- `ntfy.sh` publishes a phone push via a simple HTTP POST: `curl -d "message" ntfy.sh/<topic>`. The topic name is effectively a password (no signup), so keep `<your-secret-topic>` private (never commit it — this repo resolves it from a gitignored file at runtime). Title via `-H "Title: ..."`, priority via `-H "Priority: high"`.
 - `curl.exe` ships with Windows 10/11 by default. Windows Task Scheduler (`schtasks /create`) fires it at fixed wall‑clock times independent of any AI.
 
 ---
@@ -122,7 +122,7 @@ See **Appendix C**. Node‑based for Windows portability.
 **Checkpoint:** both tasks appear under "Scheduled"; "Run now" produces a correct session; prompts are stored under `%USERPROFILE%\.claude\scheduled-tasks\`.
 
 ### Phase 7 — Deterministic ntfy belt (Windows Task Scheduler)
-1. Install the ntfy phone app; subscribe to topic `nikhil-jarvis`.
+1. Install the ntfy phone app; subscribe to topic `<your-secret-topic>`.
 2. In an **elevated Command Prompt** (`curl.exe` is built into Windows 10/11):
 ```
 schtasks /create /tn "jarvis-9am" /sc weekly /d MON,TUE,WED,THU,FRI /st 09:00 /tr "curl -H \"Title: Kickoff\" -H \"Priority: high\" -d \"9 AM: state your Building target and start\" ntfy.sh/<old-topic-redacted>"
@@ -168,7 +168,7 @@ hardcode separators. Do the following, showing me each file before writing and a
    then the distribution subagent.
 
 5. Print—but DO NOT run—the two `schtasks /create` commands for the 9am/8pm ntfy pushes to
-   topic nikhil-jarvis (I will run them myself in an elevated prompt).
+   topic <your-secret-topic> (I will run them myself in an elevated prompt).
 
 Confirm at the end which steps still require me to act manually (installing ActivityWatch,
 editing Claude Desktop JSON, approving MCP, creating Desktop scheduled tasks, running schtasks).
