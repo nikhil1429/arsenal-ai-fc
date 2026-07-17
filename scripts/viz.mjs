@@ -272,9 +272,16 @@ function renderMedia(d) {
   const shelf = cards.length
     ? `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">${cards.join("")}</div>`
     : `<div style="font-size:13px;color:${C.dim};padding:10px 2px">the shelf is empty right now — the night shift stocks it while you sleep: tonight's poster and two spoken team talks land here 🌙</div>`;
-  const lanes = btn(`filmkit_${d.date}.md`, "🎬 film kit → NotebookLM", C.amber)
-    + btn("prompts/season_film.md", "📽 Veo prompt", C.gold)
-    + btn("wall_gemini.html", "🎨 the Gemini render", C.dim);
+  // ONE-CLICK LANES — a click copies the ready-made source AND opens the right
+  // account: land, paste, Generate. No raw markdown in the captain's face.
+  const jsSafe = (s) => JSON.stringify(String(s || "")).replace(/</g, "\\u003c");
+  const act = (fn, label, col) => `<button onclick="${fn}" style="cursor:pointer;background:none;display:inline-block;padding:6px 12px;margin:4px 8px 0 0;border:1px solid ${col};border-radius:999px;color:${col};font-size:12px">${label}</button>`;
+  let lanes = `<script>function ship(t,u){try{navigator.clipboard.writeText(t)}catch(e){};window.open(u,'_blank')}
+const KIT=${jsSafe(m.filmkit_text)};const VEO=${jsSafe(m.veo_text)};</script>`
+    + act("ship(KIT,'https://notebooklm.google.com')", "🎬 season film — opens NotebookLM, source already copied: paste → Video Overview", C.amber)
+    + act("ship(VEO,'https://gemini.google.com')", "📽 poster/film prompt — opens Gemini, prompt copied: paste → send", C.gold);
+  if (m.gemini_render) lanes += btn("wall_gemini.html", "🎨 the Gemini render", C.dim);
+  lanes += `<a href="filmkit_${esc(d.date)}.md" style="margin-left:6px;font-size:11px;color:${C.dim}">raw kit</a>`;
   return panel("Media — the club's channel", shelf + `<div style="margin-top:10px">${lanes}</div>`);
 }
 
@@ -580,10 +587,9 @@ async function main() {
   } catch { }
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
   const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
-  writeAtomic(WALL_DATA, data);
-  writeAtomic(WALL_HTML, renderWall(data, insights));
-  // the Gemini lane: write tonight's ready-made prompts (with last night's
-  // design-coach critique folded in — the Claude↔Gemini loop) + fold in renders
+  // the Gemini lane: tonight's ready-made prompts (with last night's design-
+  // coach critique folded in) — built BEFORE the render so the shelf's
+  // one-click lanes can carry the kit + prompt straight to the clipboard.
   let renderNotes = null;
   for (let i = 0; i <= 2; i++) {
     const d = localDate(new Date(now.getTime() - i * 86400000));
@@ -592,6 +598,11 @@ async function main() {
   }
   const pack = promptPack(data, renderNotes);
   for (const [name, text] of Object.entries(pack)) writeAtomic(join(CLUB_DIR, "prompts", name), text);
+  data.media.filmkit_text = kit;
+  data.media.veo_text = pack["season_film.md"] || Object.values(pack)[0] || "";
+  data.media.gemini_render = existsSync(join(CLUB_DIR, "wall_gemini.html"));
+  writeAtomic(WALL_DATA, data);
+  writeAtomic(WALL_HTML, renderWall(data, insights));
   let geminiNote = "";
   const gPath = join(STATE_DIR, "brain_out", "gemini_wall", today + ".md");
   if (existsSync(gPath)) {

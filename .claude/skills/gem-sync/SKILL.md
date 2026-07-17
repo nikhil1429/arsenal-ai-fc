@@ -19,3 +19,9 @@ description: Refresh THE EXAMINER Gem on the captain's Gemini Pro account with t
 4. NEVER touch login/passwords — if the account isn't signed in, stop and tell him.
    His own data → his own Google account; nothing else is pasted anywhere.
 5. Close with one line: what changed in the cartridge (new probes/threads count).
+
+## THE STAMP (the machine holds the calendar)
+After a successful sync, write the stamp so physio stops reminding until it is due again:
+```
+node -e "require('fs').writeFileSync('dressing-room/state/gem_sync_stamp.json', JSON.stringify({ at: new Date().toISOString() }))"
+```

@@ -14,10 +14,13 @@
 - **Self-contained single file**: no CDN, no external fonts/images (inline SVG fine), works offline from `file://` and from `localhost:4114/club/`.
 - Audio/poster paths are relative: `media/teamtalk_<date>_am.mp3`, `media/teamtalk_<date>_pm.mp3`, `poster.svg`, `filmkit_<date>.md`.
 
-## Design direction (where Antigravity shines)
-- Dark, cinematic, Arsenal white-red on near-black; one display serif for the club name, clean sans for data; generous whitespace; subtle motion (CSS only) on the odometers and the Maidan pitch.
-- **MEDIA — THE CLUB'S CHANNEL is the hero fix**: poster as a framed art piece, team talks as beautiful players with waveform-feel styling, film kit / Veo / prompt-pack as pill buttons. Empty state = "the night shift stocks this shelf 🌙", styled, never blank.
-- The Maidan as an actual pitch (SVG), calibration as a book spread, the season as a fixture strip. Refresh meta tag stays (the page reloads itself every 5 min).
+## Creative direction: FULL FREEDOM (the captain's words)
+**"I want to feel like a cyborg living in 2035 inside an organism."** That is the entire brief. Within the laws above, Antigravity has total creative freedom — layout, typography, motion, metaphor, all of it. Directions the captain will love (suggestions, not constraints):
+- The wall as living TISSUE: panels as organs/membranes that breathe (slow CSS pulse), data flowing as bioluminescent threads between them, the Maidan as a real pitch under floodlights, odometers as heartbeats.
+- Neural-interface HUD aesthetics: thin luminous rules, depth, glassmorphism on near-black, Arsenal red as the blood of the organism, white as bone.
+- Motion everywhere but calm — nothing blinks, nothing counts down, everything breathes. A 2035 cockpit, not a casino.
+- **MEDIA — THE CLUB'S CHANNEL is the hero panel**: poster as framed art, team talks as living waveforms, the one-click lanes (they copy content + open the account — keep their onclick behavior) as glowing organelles. The empty state must still say the night shift stocks it.
+- Keep the 5-minute self-refresh meta tag. Keep every number's meaning; reinvent every pixel.
 
 ## Context files Antigravity should read first
 - `dressing-room/state/wall_data.json` — the ONLY numbers that exist.

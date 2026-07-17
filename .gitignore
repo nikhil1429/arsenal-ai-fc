@@ -163,3 +163,5 @@ dressing-room/vault_preseason_*/
 
 # the captain's personal operating manual (his daily routine — local only)
 THE_CAPTAINS_MANUAL.md
+# gem-sync ritual stamp (runtime state)
+dressing-room/state/gem_sync_stamp.json

@@ -114,6 +114,17 @@ function compute(world, cfg, now = new Date()) {
       line: "the Goalkeeper filed a doctor-referral — a sustained pattern worth showing your doctor. Full stop." });
   }
 
+  // 0b) THE WEEKLY RITUALS — the Gaffer's mouth says WHEN; the captain never
+  //     has to remember /gem-sync or /genome himself (anti-ADHD law).
+  if (world.gemSyncDue) {
+    bleeds.push({ organ: "gem", kind: "gem_sync_due", evidence: world.gemSyncDue,
+      line: "gem-sync is due — say /gem-sync jab 5 minute mile; your pocket examiner deserves tonight's cartridge." });
+  }
+  if (world.genomePending) {
+    bleeds.push({ organ: "bootroom", kind: "genome_pending", evidence: "a proposed mutation sits unreviewed in mutations.jsonl",
+      line: "the boot room filed a proposal — /genome for your word when ready." });
+  }
+
   // 1) STALE — only files that have EXISTED bleed (never-born ≠ bleeding).
   for (const [name, hrs] of Object.entries(cfg.expected_cadence_hours)) {
     const f = world.files[name];
@@ -252,6 +263,18 @@ function gatherWorld() {
     fsrsStore: readJson(join(STATE_DIR, "fsrs_store.json")),
     readinessCount: readiness && typeof readiness.nights === "number" ? readiness.nights : 0,
     referDoctor: !!(readiness && readiness.safety && readiness.safety.refer_doctor === true),
+    // THE WEEKLY RITUALS — the machine holds the calendar so he never has to
+    gemSyncDue: (() => {
+      const s = readJson(join(STATE_DIR, "gem_sync_stamp.json"));
+      if (!s || !s.at) return "no sync on record — the pocket examiner runs on an old cartridge";
+      const days = (Date.now() - Date.parse(s.at)) / 86400000;
+      return Number.isFinite(days) && days >= 7 ? `last synced ${Math.floor(days)} day(s) ago` : null;
+    })(),
+    genomePending: (() => {
+      const last = {};
+      for (const m of readLines(join(STATE_DIR, "mutations.jsonl"))) if (m && m.id) last[m.id] = m;
+      return Object.values(last).some(m => m.status === "proposed");
+    })(),
   };
 }
 
@@ -279,6 +302,11 @@ async function selftest() {
   const stale = compute({ ...base, files: { "cards.json": { exists: true, mtimeMs: now.getTime() - 60 * H } } }, cfg, now);
   assert("existed-then-stale file bleeds", stale.bleeds.some(b => b.kind === "stale" && b.organ === "cards"));
   assert("line speaks when bleeding", typeof stale.line === "string");
+
+  // THE WEEKLY RITUALS — the machine remembers, the mouth reminds
+  const rit = compute({ ...base, gemSyncDue: "last synced 8 day(s) ago", genomePending: true }, cfg, now);
+  assert("gem-sync due rides the vitals (he never has to remember)", rit.bleeds.some(b => b.kind === "gem_sync_due"));
+  assert("a pending genome proposal is SAID, not buried", rit.bleeds.some(b => b.kind === "genome_pending"));
 
   // DOCTOR-REFERRAL — the flag must ride the vitals, never die in a file
   const refer = compute({ ...base, referDoctor: true }, cfg, now);

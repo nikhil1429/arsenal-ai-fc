@@ -2502,11 +2502,18 @@ async function main() {
         return send(200, buildConfig(keys, mode));
       }
       if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
-      if (req.method === "GET" && (req.url || "").startsWith("/club/") && /^[a-z0-9_.-]+$/i.test((req.url || "").slice(6))) {
-        // ONE FRONT DOOR — the wall/handbook served from the same page (read-only)
-        const f = join(__dirname, "..", "dressing-room", "club", req.url.slice(6));
+      if (req.method === "GET" && (req.url || "").startsWith("/club/")) {
+        // ONE FRONT DOOR — wall/handbook/media/prompts served read-only.
+        // Path law: 1–2 clean segments (media/ and prompts/ live one level
+        // deep — the old single-segment regex 404'd the team talks), every
+        // segment whitelisted, dot-dot impossible. UTF-8 declared on text
+        // (Devanagari/Hinglish rendered as mojibake without it).
+        const segs = (req.url || "").slice(6).split("?")[0].split("/");
+        const clean = segs.length >= 1 && segs.length <= 2 && segs.every(s => /^[a-z0-9_.-]+$/i.test(s) && s !== ".." && s !== ".");
+        if (!clean) return send(404, { error: "no such page" });
+        const f = join(__dirname, "..", "dressing-room", "club", ...segs);
         if (!existsSync(f)) return send(404, { error: "no such page" });
-        const type = f.endsWith(".html") ? "text/html" : f.endsWith(".svg") ? "image/svg+xml" : f.endsWith(".png") ? "image/png" : f.endsWith(".jpg") ? "image/jpeg" : f.endsWith(".mp3") ? "audio/mpeg" : "text/plain";
+        const type = f.endsWith(".html") ? "text/html; charset=utf-8" : f.endsWith(".svg") ? "image/svg+xml" : f.endsWith(".png") ? "image/png" : f.endsWith(".jpg") ? "image/jpeg" : f.endsWith(".mp3") ? "audio/mpeg" : "text/plain; charset=utf-8";
         res.writeHead(200, { "Content-Type": type });
         return res.end(readFileSync(f));
       }
