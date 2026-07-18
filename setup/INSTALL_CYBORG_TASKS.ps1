@@ -52,6 +52,10 @@ Mk "ArsenalFC-Examiner"       "examiner.mjs stage"           @("/SC","DAILY","/S
 Mk "ArsenalFC-NightShift"     "nightshift.mjs"               @("/SC","DAILY","/ST","02:40")
 # working-memory (P5): overnight deepening - the concept graph, the ONE Opus path (cortex)
 Mk "ArsenalFC-ConceptGraph"   "cortex.mjs consolidate"       @("/SC","DAILY","/ST","03:00")
+# the Gaffer's SELF-KNOWLEDGE - Claude rebuilds the organism self-portrait from the live
+# code so the voice can explain any layer, current + in full (never a stale script). Weekly
+# safety-regen; regenerate on demand before a demo with:  npm run selfknowledge
+Mk "ArsenalFC-SelfKnowledge"  "selfknowledge.mjs"            @("/SC","WEEKLY","/D","SUN","/ST","04:00")
 # the stall sensor fits itself to HIS baselines, weekly
 Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/D","SUN","/ST","03:30")
 

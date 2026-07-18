@@ -1,7 +1,14 @@
 {
-  "_comment": "THE CLAUDE CODE CAPTURE NERVE (working-memory Phase 1). UserPromptSubmit fires hooks/afferent-post.mjs — a fail-silent (~250ms), stdout-free, secret-scrubbing bridge that POSTs the captain's own words to the thalamus (:4113) as a 'code' afferent, so his forge study + FinOps turns flow into the ONE working memory with zero capture tax. Relative command (CWD = project root); never blocks the session; the thalamus being down is a silent no-op.",
+  "_comment": "THE CLAUDE CODE CAPTURE NERVE. UserPromptSubmit + Stop both fire hooks/afferent-post.mjs — a fail-silent (~250ms), stdout-free, secret-scrubbing bridge that POSTs to the thalamus (:4113) as a 'code' afferent. UserPromptSubmit captures HIS words (source 'claude-code'); Stop captures WHAT HE WAS TAUGHT (last_assistant_message, source 'claude-code-teaching') — so the WHOLE learning turn (question + answer) flows into the ONE working memory with zero capture tax. Relative command (CWD = project root); never blocks the session; thalamus down = silent no-op.",
   "hooks": {
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node hooks/afferent-post.mjs" }
+        ]
+      }
+    ],
+    "Stop": [
       {
         "hooks": [
           { "type": "command", "command": "node hooks/afferent-post.mjs" }

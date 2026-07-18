@@ -59,6 +59,7 @@ import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
+import { loadSelfKnowledge } from "./selfknowledge.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
@@ -1124,16 +1125,29 @@ function buildRehydrate(now = new Date()) {
 }
 
 // per-session config the page fetches (key never rests in the repo)
+// THE LIVE SELF-KNOWLEDGE — the organism's self-portrait, rebuilt from the ACTUAL code
+// (selfknowledge.mjs), injected into the guest keynotes so the Gaffer explains any layer
+// CURRENT + in full, grounded in real modules — not a stale hand-written script. The
+// keynote prose is the STYLE; this is the TRUTH. Absent file → "" (legacy keynote alone).
+function selfKnowledgeBlock() {
+  const fresh = loadSelfKnowledge();
+  if (!fresh || fresh.length < 200) return "";
+  return `\n\n═══ THE LIVE MACHINE — reconstructed from the ACTUAL source code (this is the CURRENT TRUTH) ═══\nThe tour above is your WARMTH and delivery style. The knowledge below was just rebuilt from the organism's real code, so it is CURRENT and complete. If the tour missed anything or is out of date, THIS supersedes it — and you may answer ANY question about the organism, any layer, in full detail, grounded ONLY in what is here. Invent nothing; if it isn't below, say you'll check. The guest-privacy law still holds absolutely: machine only, never his personal data.\n\n${fresh}`;
+}
+
 function buildConfig(keys, mode = "gaffer") {
   const prefs = loadPrefs();
   const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
   // THE BRIEFINGS — guest keynotes: NO tools (structural privacy: the model
   // cannot read the bus), no rehydrate, no resume, long idle (she listens).
   if (mode === "brief-club" || mode === "brief-brain" || mode === "signing") {
+    // brief-club/brief-brain get the LIVE self-knowledge appended (any layer, current, in
+    // full); signing is his personal onboarding — no architecture dump.
+    const liveKnowledge = mode === "signing" ? "" : selfKnowledgeBlock();
     return {
       model, voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
       depth: "deep", mode, keys,
-      system: buildBriefingInstruction(mode),
+      system: buildBriefingInstruction(mode) + liveKnowledge,
       rehydrate: null, resume: null,
       compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
       tools: [],                                      // no hands — a guest is listening

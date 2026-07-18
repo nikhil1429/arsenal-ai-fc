@@ -26,19 +26,23 @@ async function main() {
   let hook = {};
   try { hook = JSON.parse(raw || "{}"); } catch { return die(); }
 
-  // Capture the captain's OWN words — the highest-signal trace of what he's
-  // working on / confused about. Other hook events are a no-op for now.
-  if ((hook.hook_event_name || "") !== "UserPromptSubmit") return die();
-  const text = String(hook.prompt || "").trim();
+  // Capture BOTH sides of a Claude Code learning turn: his OWN words
+  // (UserPromptSubmit) AND what he was TAUGHT (Stop → last_assistant_message), so the
+  // brain sees the whole learning turn — not just the question, the answer too.
+  const ev = hook.hook_event_name || "";
+  let text, source, cap;
+  if (ev === "UserPromptSubmit") { text = String(hook.prompt || "").trim(); source = "claude-code"; cap = 1200; }
+  else if (ev === "Stop") { text = String(hook.last_assistant_message || "").trim(); source = "claude-code-teaching"; cap = 2000; }
+  else return die();
   if (text.length < 3) return die();
   if (SECRET_RE.test(text)) return die();
-  // skip slash-commands / skill invocations — they are control, not cognition
-  if (/^\//.test(text)) return die();
+  // skip slash-commands on HIS side (control, not cognition); teaching is always cognition
+  if (source === "claude-code" && /^\//.test(text)) return die();
 
   const evt = {
     modality: "code",
-    source: "claude-code",
-    text: text.slice(0, 1200),
+    source,
+    text: text.slice(0, cap),
     cwd: String(hook.cwd || "").split(/[\\/]/).slice(-1)[0] || null,
     ts: new Date().toISOString(),
   };

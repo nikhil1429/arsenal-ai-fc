@@ -140,6 +140,8 @@ dressing-room/state/bg_queue.jsonl
 dressing-room/state/cortex_runtime.json
 # the concept graph (P5) — his concepts + fluency + next-unlocks, synthesised nightly
 dressing-room/state/concept_graph.json
+# the organism self-portrait — Claude-generated from the live code (regenerated, not versioned)
+dressing-room/state/organism_self.md
 # the fuelboard (M3) — per-account usage ledger (runtime)
 dressing-room/state/tanks.json
 # the live examiner (M4) — the staged code drill names his weaknesses
