@@ -172,7 +172,12 @@ async function serveOne(wake, deps = {}) {
   // window) and the gate floor scales WITH it, so the deepest read never overshoots.
   const hr = deps.headroom || headroom(brainCfg, readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
   const mtf = maxThinkingFor(hr.phase, hr.allowed);
-  const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens, min_headroom_tokens: mtf.min_headroom_tokens } };
+  // the decline floor must cover the FULL call (input context + thinking + output), NOT just
+  // 1.6x thinking — so NEVER drop below the config's conservative flat floor; only ever RAISE
+  // it for the deep overnight reads (where think*1.6 overtakes it). Guards against a low-band
+  // read firing with too little headroom and overshooting into his protected study/live reserve.
+  const minHeadroom = Math.max((cfg.deep && cfg.deep.min_headroom_tokens) || 50000, mtf.min_headroom_tokens);
+  const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens, min_headroom_tokens: minHeadroom } };
   const call = deps.call || ((prompt) => claudeDeepAsync(prompt, deepCfg));
   if (hr.allowed < deepCfg.deep.min_headroom_tokens) {
     log(`cortex: window too low (${hr.allowed} < ${deepCfg.deep.min_headroom_tokens}) — declining, not draining`);

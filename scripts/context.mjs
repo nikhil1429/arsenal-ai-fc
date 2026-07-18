@@ -75,9 +75,13 @@ async function sense(deps = {}) {
     event_key: `context:${win.app}`, ts: now.toISOString(),
   };
   const posted = await (deps.post || ((e) => defaultPost(e, deps)))(evt);
+  // ONLY advance state when the afferent actually LANDED. If the thalamus was momentarily
+  // down (posted === false), leave prev untouched so the NEXT poll re-detects this same
+  // change and retries — self-healing (e.g. a daemon that booted before the thalamus).
+  // Advancing on a failed post would drop that window's context afferent forever.
   const state = { app: win.app, title: win.title, emit_ts: now.toISOString() };
-  (deps.save || ((o) => writeAtomic(CONTEXT_STATE, o)))(state);
-  return { emitted: true, posted, evt, state };
+  if (posted) (deps.save || ((o) => writeAtomic(CONTEXT_STATE, o)))(state);
+  return { emitted: posted, posted, evt, state, reason: posted ? undefined : "post-failed-will-retry" };
 }
 
 async function selftest() {
@@ -96,7 +100,9 @@ async function selftest() {
   assert("AW down / no window → no emit, no crash", r4.emitted === false && r4.reason === "no-window");
   const r5 = await sense({ now, window: { app: "chrome.exe", title: "attention paper" }, prev: { app: "chrome.exe", title: "youtube", emit_ts: "2026-07-18T09:50:00Z" }, post: async () => true, save: () => {} });
   assert("title-only change still emits (the title carries the concept)", r5.emitted === true);
-  assert("thalamus down → emitted true but posted false, state still recorded", (await sense({ now, window: { app: "x.exe", title: "t" }, prev: null, post: async () => false, save: () => {} })).posted === false);
+  let s6 = "unset";
+  const r6 = await sense({ now, window: { app: "x.exe", title: "t" }, prev: null, post: async () => false, save: (o) => { s6 = o; } });
+  assert("thalamus down → NOT emitted + state NOT advanced (retries next poll, no afferent dropped)", r6.posted === false && r6.emitted === false && s6 === "unset" && r6.reason === "post-failed-will-retry");
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
