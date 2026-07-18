@@ -1,6 +1,6 @@
 ---
 name: forge
-description: Run a full FORGE study session INSIDE Claude Code with ZERO capture tax — Claude is the teacher-examiner, the gut-word law is enforced, and at session end the reps are captured automatically (no copy, no paste). Use when the captain says "forge <concept>", "padhai karte hain", "study session", or names a concept to learn.
+description: Run a full FORGE study session INSIDE Claude Code with ZERO capture tax — Claude is the teacher-examiner, the gut-word law is enforced, and at session end the reps are captured automatically (no copy, no paste). Use when the captain NAMES a concept to forge — "forge <concept>", or names a specific concept to lock. A generic study-start with NO concept named ("padhai karte hain", "aaj ka session", "continue", "where was I") goes to /learn, which reads state and delegates back here when the current task is a concept.
 ---
 
 # /forge — the zero-tax study session

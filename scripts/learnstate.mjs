@@ -32,10 +32,19 @@ function gather(dir = STATE) {
   const cur = (sprint.progress && sprint.progress.current) || null;
   const watch = Array.isArray(weak.patterns) ? weak.patterns.slice(0, 3).map(p => p.label || p.pattern || p.name).filter(Boolean)
     : Array.isArray(weak.weaknesses) ? weak.weaknesses.slice(0, 3).map(w => w.axis || w.concept || w).filter(Boolean) : [];
+  // track -> the session ritual (single source of truth, kept in sync with .claude/skills/learn/SKILL.md §1).
+  // Was a binary skill/else ternary that mislabeled every non-skill track "FORGE 9-axis" — course/build/
+  // domain/career now route explicitly; an unknown track falls to a safe SESSION line (never a stray FORGE).
+  const MODE_BY_TRACK = {
+    concept: "FORGE — the 9-axis concept capsule (Pehle-Guess, crack-map, gut-word law).",
+    skill:   "PYTHON SKILL loop — JS->Python bridge, struggle-first; emit the CLOSE-PACKET (BLOCK-A->Colab, BLOCK-B->Coach Gem).",
+    course:  "COURSE — guided active-recall Colab pass (predict -> work the cells -> retrieval quiz). NOT a Forge capsule.",
+    build:   "BUILD — struggle-first build session on the artifact; you write it, hint-not-solve, Bolo the interview-defensible parts.",
+    domain:  "DOMAIN — teach finance/tax from zero (no assumed recall) + Bolo; concept-style close, not Python.",
+    career:  "CAREER — not a study session; orient + assist (draft/review), no reps.",
+  };
   const modeLine = cur
-    ? (cur.track === "skill"
-        ? "PYTHON SKILL loop — JS->Python bridge, 5-phase (Samjhao->Dikhao->Saath->Akele->Bolo), struggle-first; emit the CLOSE-PACKET (BLOCK-A->Colab, BLOCK-B->Coach Gem)."
-        : "FORGE — the 9-axis concept capsule (Pehle-Guess, crack-map, gut-word law).")
+    ? (MODE_BY_TRACK[cur.track] || "SESSION — read the task and decide what it needs; force no ritual.")
     : "no current task in sprint.json";
   return { sprint, ws, cur, watch, modeLine };
 }
@@ -79,6 +88,12 @@ function selftest() {
   assert("brief tells the session NOT to re-ask where he is", b.includes("do NOT ask him to re-explain"));
   writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-07", task: "Python basics", track: "skill", subtopics: "types, f-strings" } } }));
   assert("skill task (Python) routes to the JS->Python CLOSE-PACKET loop", brief(dir).includes("CLOSE-PACKET"));
+  writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-05", task: "Anthropic API", track: "course", subtopics: "messages, models" } } }));
+  const courseBrief = brief(dir);
+  assert("course task routes to COURSE (Colab) — NOT mislabeled FORGE", courseBrief.includes("COURSE") && !courseBrief.includes("FORGE"));
+  writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-08", task: "FinOps repo", track: "build", subtopics: "scaffold" } } }));
+  const buildBrief = brief(dir);
+  assert("build task routes to BUILD — never a stray FORGE label", buildBrief.includes("BUILD") && !buildBrief.includes("FORGE"));
   const dir2 = mkdtempSync(join(tmpdir(), "learnstate-empty-"));
   assert("empty state -> a valid brief, never a crash", typeof brief(dir2) === "string" && brief(dir2).includes("KICKOFF"));
   const passed = checks.every(Boolean);
