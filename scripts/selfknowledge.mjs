@@ -33,7 +33,11 @@ const SELF      = join(STATE, "organism_self.md");
 const BLEDGER   = join(STATE, "brain_ledger.jsonl");
 // the HUMAN-framing sources: what the organism does + how his day flows, in story form
 // (NOT code). Claude uses these for the feel/routine, and the live modules for currency.
-const FUNCTIONAL_DOCS = ["THE_ORGANISM_THE_WHOLE_STORY.md", "THE_CYBORG_OWNERS_MANUAL.md", "learning-layer/GEMINI_LOOP.md"];
+// THE_ORGANISM__EVERYTHING.md is the current source-of-truth self-portrait (hand-synthesized 2026-07-19
+// from a full live-code deep-read; supersedes the older story/manual docs, which stay in the repo by the
+// layering law but are no longer the regen source — they had gone stale). The Gaffer's spoken self-knowledge
+// is regenerated FROM this book, so "tell me everything" / "explain just the brain|memory|learning" are grounded in it.
+const FUNCTIONAL_DOCS = ["THE_ORGANISM__EVERYTHING.md"];
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 function writeAtomic(p, txt) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, txt); renameSync(tmp, p); }
@@ -63,16 +67,18 @@ function gatherMachinery(deps = {}) {
   // the human-framing story + routine docs (feel, day-flow, WHY) — for a plain explanation
   let docs = [];
   if (deps.docs) docs = deps.docs;
-  else for (const d of FUNCTIONAL_DOCS) { try { const p = join(ROOT, d); if (existsSync(p)) docs.push({ name: d, text: readFileSync(p, "utf8").slice(0, 16000) }); } catch {} }
+  else for (const d of FUNCTIONAL_DOCS) { try { const p = join(ROOT, d); if (existsSync(p)) docs.push({ name: d, text: readFileSync(p, "utf8").slice(0, 200000) }); } catch {} }
   return { modules, npmScripts: Object.keys(pkg.scripts || {}), skills, docs };
 }
 
 function buildPrompt(m) {
   const modules = m.modules.map(x => x.desc).join("\n---\n").slice(0, 32000);
-  const docs = (m.docs || []).map(d => `## ${d.name}\n${d.text}`).join("\n\n").slice(0, 60000);
+  const docs = (m.docs || []).map(d => `## ${d.name}\n${d.text}`).join("\n\n").slice(0, 200000);
   return `You are writing THE ORGANISM'S PLAIN-LANGUAGE EXPLANATION OF ITSELF — the knowledge THE GAFFER (its living voice) uses whenever someone says "explain the organism", "what is this", "how does my day work", or when Nikhil shows a FRIEND who does NOT code and does NOT care about code. The friend wants to understand, in plain human words: WHAT this thing does, HOW it works, WHERE it happens, and WHY it exists.
 
 WHO NIKHIL IS: a person with ADHD-PI training to become an AI Product Engineer. The organism ("Arsenal AI FC") is a football-club-themed system that carries his executive function (starting things, holding context, sense of time) so he can just learn and work. He is the captain, #14.
+
+OUTPUT CONTRACT (do not break): Respond with ONLY the document text — your entire reply IS the document. Do NOT use any tools, do NOT create or write any files, do NOT ask for approval or confirmation, do NOT preface or describe what you wrote. Begin directly with a markdown heading.
 
 ABSOLUTE RULES FOR YOUR OUTPUT (this is the whole point — do not break them):
 - PLAIN HUMAN LANGUAGE ONLY. NO code, NO file names, NO script names, NO ports, NO technical jargon. If a concept is technical, explain it with an everyday analogy. A friend who has never programmed must follow EVERY sentence.
@@ -111,6 +117,11 @@ function generate(deps = {}) {
   const r = call(buildPrompt(m));
   (deps.meter || ((row) => { try { appendFileSync(BLEDGER, JSON.stringify(row) + "\n"); } catch {} }))({ ts: new Date().toISOString(), job: "selfknowledge", engine: "claude", model: deps.model || "opus", total_tokens: r.tokens || 0, duration_ms: r.ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit });
   if (!r.ok || !r.text.trim()) return { ok: false, error: r.error || "empty generation", tokens: r.tokens };
+  // GUARD: the agentic CLI can misfire and return a META-MESSAGE ("I've written…, waiting on your approval…")
+  // instead of the document text. Reject that so a good portrait is never clobbered by chatter.
+  if (/\b(waiting on your approval|I've written|I have written|would you like me to|let me know if|go ahead and allow|approve the write|point me at a different|save (?:it|this) to)\b/i.test(r.text)) {
+    return { ok: false, error: "agentic-meta response, not a portrait — old self-knowledge stands", tokens: r.tokens };
+  }
   const stamp = deps.now ? deps.now.toISOString() : new Date().toISOString();
   const out = `<!-- ORGANISM SELF-PORTRAIT · generated from the LIVE code by selfknowledge.mjs · ${stamp} · do NOT hand-edit — regenerate. -->\n\n${r.text.trim()}\n`;
   (deps.write || ((t) => writeAtomic(SELF, t)))(out);
@@ -142,6 +153,8 @@ async function selftest() {
   assert("generate: metered as a 'selfknowledge' claude job", metered && metered.job === "selfknowledge" && metered.total_tokens === 12000);
   const bad = generate({ gather: mockGather, call: () => ({ ok: false, error: "session limit", limit_hit: true }), write: () => { throw new Error("must not write on failed gen"); }, meter: () => {} });
   assert("generate: a failed/limit-hit call writes NOTHING (never a broken portrait)", bad.ok === false && /limit/.test(bad.error));
+  const meta = generate({ gather: mockGather, call: () => ({ ok: true, text: "I've written the full tour. It's waiting on your approval to save to X.md — go ahead and allow it." }), write: () => { throw new Error("must not write an agentic-meta response"); }, meter: () => {} });
+  assert("generate: an agentic-meta response is rejected, never written as the portrait", meta.ok === false && /meta/.test(meta.error));
   assert("generate: empty machinery → honest fail, no crash", generate({ gather: () => ({ modules: [], npmScripts: [], skills: [], stateFiles: [] }) }).ok === false);
   assert("loadSelfKnowledge: absent file → null (caller falls back to legacy keynote)", loadSelfKnowledge({ path: join(STATE, "no_such_self.md") }) === null);
   const passed = checks.every(Boolean);
