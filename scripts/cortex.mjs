@@ -32,7 +32,7 @@ import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, ren
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync, execFile } from "node:child_process";
-import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck } from "./brain.mjs";
+import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinkingFor } from "./brain.mjs";
 import { loadConfig as loadThalamusConfig, pendingWakes } from "./thalamus.mjs";
 // M8 — the Back Room: three cheap adversarial drafts before the one deep call
 import { convene, councilSection } from "./council.mjs";
@@ -148,7 +148,6 @@ async function serveOne(wake, deps = {}) {
   const ledger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
   const runtime = deps.runtime !== undefined ? deps.runtime : (readJson(RUNTIME) || { attempts: {} });
   const saveRuntime = deps.saveRuntime || ((o) => writeAtomic(RUNTIME, o));
-  const call = deps.call || ((prompt) => claudeDeepAsync(prompt, cfg));
   const log = deps.log || (() => {});
 
   // the $100 law — same refusal as brain.mjs
@@ -168,10 +167,15 @@ async function serveOne(wake, deps = {}) {
   runtime.attempts[wake.moment_id] = tries + 1;
   saveRuntime(runtime);
 
-  // second budget lock — the thalamus raised the bar; the cortex checks the vault
+  // second budget lock — the thalamus raised the bar; the cortex checks the vault.
+  // P3 — thinking depth rides the moment (16k live / 48k overnight, capped to the
+  // window) and the gate floor scales WITH it, so the deepest read never overshoots.
   const hr = deps.headroom || headroom(brainCfg, readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
-  if (hr.allowed < cfg.deep.min_headroom_tokens) {
-    log(`cortex: window too low (${hr.allowed} < ${cfg.deep.min_headroom_tokens}) — declining, not draining`);
+  const mtf = maxThinkingFor(hr.phase, hr.allowed);
+  const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens, min_headroom_tokens: mtf.min_headroom_tokens } };
+  const call = deps.call || ((prompt) => claudeDeepAsync(prompt, deepCfg));
+  if (hr.allowed < deepCfg.deep.min_headroom_tokens) {
+    log(`cortex: window too low (${hr.allowed} < ${deepCfg.deep.min_headroom_tokens}) — declining, not draining`);
     await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "no-headroom", provenance: "cortex" });
     return { served: false, declined: "no-headroom" };
   }

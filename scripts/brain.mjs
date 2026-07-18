@@ -171,6 +171,19 @@ function maxThinkingFor(phase, allowed) {
   return { max_thinking_tokens: think, min_headroom_tokens: Math.round(think * 1.6) };
 }
 
+// PACING (P3) — the resident daemon's burn-rate signal: spread the remaining window
+// headroom across the time left before the window edge, in tokens/min. Heuristic (the
+// 5h window is rolling, not clean-edged) — it LOGS the pace and lets the loop reason
+// about being ahead/behind; the HARD per-job gating always stays in headroom(). The
+// daemon never writes wake_queue — the thalamus is the sole wake authority.
+function targetBurn(cfg, hr, now = new Date()) {
+  const windowMin = (((cfg && cfg.budget && cfg.budget.window_hours) || 5)) * 60;
+  const dayMin = now.getHours() * 60 + now.getMinutes();
+  const minsToEdge = Math.max(5, windowMin - (dayMin % windowMin));
+  const remaining = Math.max(0, (hr && hr.allowed) || 0);
+  return { pace_tok_per_min: Math.round(remaining / minsToEdge), remaining, mins_to_edge: minsToEdge, phase: hr && hr.phase };
+}
+
 // best-effort "is he live right now" — the freshest of his interactive traces.
 // Defensive: any failure → {} (no signal → assume live → protect him).
 function liveSignal(now, dir = STATE_DIR) {
@@ -639,6 +652,8 @@ async function selftest() {
     assert("THINKING DEPTH — lean live, deep overnight", maxThinkingFor("study", 1000000).max_thinking_tokens === 16000 && maxThinkingFor("overnight", 1000000).max_thinking_tokens === 48000);
     assert("THINKING DEPTH — never budgets more than the window can pay", maxThinkingFor("overnight", 40000).max_thinking_tokens <= 20000);
     assert("THINKING DEPTH — derives the deep-read headroom floor", maxThinkingFor("overnight", 1000000).min_headroom_tokens === Math.round(48000 * 1.6));
+    assert("PACING — burn rate rises with headroom, mins-to-edge floored >=5", (() => { const c = { budget: { window_hours: 5 } }; const rich = targetBurn(c, { allowed: 300000, phase: "overnight" }, now(2, 0)); const poor = targetBurn(c, { allowed: 20000, phase: "overnight" }, now(2, 0)); return rich.pace_tok_per_min > poor.pace_tok_per_min && rich.mins_to_edge >= 5; })());
+    assert("PACING — zero/negative headroom → pace floored at 0, never negative", targetBurn({ budget: {} }, { allowed: -5, phase: "shoulder" }, now(14, 0)).pace_tok_per_min === 0);
     assert("OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve", headroom(cfg, [], qEmpty, now(6, 0)).cap === dayCap);
     assert("OVERNIGHT — 23:30 still floods to the overnight target", headroom(cfg, [], qEmpty, now(23, 30)).cap === nightCap);
     assert("LIVE SIGNAL — no traces ⇒ empty (assume live, never over-spend)", Object.keys(liveSignal(now(14, 0), "no-such-dir-xyz")).length === 0);
@@ -803,6 +818,36 @@ async function main() {
     console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
     return;
   }
+  if (mode === "daemon" || mode === "--daemon") {
+    // THE RESIDENT PACEMAKER (P3) — the old 15-30min cron, folded into brain.mjs as a
+    // ~60-90s poll. Each beat: compute the burn pace, run a tick (which self-gates every
+    // job on headroom), report. It NEVER writes wake_queue — the thalamus stays the SOLE
+    // wake authority (Layer 4 law). SIGINT/SIGTERM = a clean stop between beats.
+    const pollMs = (cfg.daemon && cfg.daemon.poll_ms) || 75000;
+    let stop = false, beats = 0;
+    const onSig = () => { stop = true; };
+    process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
+    console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
+    while (!stop) {
+      const bnow = new Date();
+      const bdeps = { exec: claudeExec, gexec: geminiExec, now: bnow, dry: process.argv.includes("--dry"), signals: liveSignal(bnow) };
+      try {
+        const hr = headroom(cfg, readLines(LEDGER), readJson(QUEUE) || {}, bnow, bdeps.signals);
+        const pace = targetBurn(cfg, hr, bnow);
+        const { ran, refused } = await tick(cfg, bdeps);
+        if (refused) { console.log("brain: --daemon halting — ANTHROPIC_API_KEY refusal. Unset it and restart."); break; }
+        beats++;
+        const done = ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
+        console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${ran.length} ran]`);
+      } catch (e) {
+        console.log(`brain: --daemon beat error (continuing): ${String((e && e.message) || e).slice(0, 160)}`);
+      }
+      await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= pollMs) { clearInterval(iv); res(); } }, step); });
+    }
+    console.log(`brain: --daemon stopped after ${beats} beat(s).`);
+    return;
+  }
+
   // tick
   const { ran, refused } = await tick(cfg, deps);
   if (refused) process.exit(1);
@@ -812,4 +857,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, liveSignal };
+export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, liveSignal };

@@ -113,6 +113,10 @@ dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
 # the turnstile's restart-proof dedupe ring (hashes only, runtime state)
 dressing-room/state/turnstile_seen.json
+# the ambient context bridge (P3) — last app/title window + emit stamp (his activity)
+dressing-room/state/context_state.json
+# the organism-memory MCP scribe log (P2) — his notes (also under hippocampus/, belt+braces)
+dressing-room/state/scribe_log.jsonl
 # ALL vaults are personal state — never tracked, regardless of the vault's name
 dressing-room/vault_*/
 # semantic recall index (his words, embedded)
