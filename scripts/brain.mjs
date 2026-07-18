@@ -184,6 +184,84 @@ function targetBurn(cfg, hr, now = new Date()) {
   return { pace_tok_per_min: Math.round(remaining / minsToEdge), remaining, mins_to_edge: minsToEdge, phase: hr && hr.phase };
 }
 
+// ===========================================================================
+// THE HAIKU PULSE (P4) — the always-on continuous layer, on HAIKU (~1% of Opus).
+// The architecture's MOST FRAGILE piece: "cheap enough to be continuous" is
+// asserted, never derived — so the meter IS the design. Three hard rails:
+//   1. ENGAGED-ONLY   — idle → the pulse sleeps, zero spend (never pulse the void).
+//   2. HARD DAILY CAP — counted from the ledger; over cap → skip (can't cannibalise
+//                       the overnight Opus budget).
+//   3. METERED EVERY PULSE — even a HOLD costs tokens and is logged, so the real
+//                       per-call cost is MEASURABLE from day one (measure, then tune).
+// It watches the afferent tail ABOVE the thalamus's deterministic salience and, if a
+// genuine reasoning-hard moment hides there, ESCALATES by POSTing an afferent — it
+// NEVER writes wake_queue (the thalamus stays the sole wake authority — Layer 4 law).
+// ===========================================================================
+function pulseConfig(cfg) {
+  const p = (cfg && cfg.pulse) || {};
+  return {
+    enabled: p.enabled !== false,
+    model: p.model || "haiku",
+    daily_cap: p.daily_cap || 200,                 // conservative hard ceiling — MEASURE, then raise
+    engaged_idle_max_min: p.engaged_idle_max_min || 10,
+    min_headroom_tokens: p.min_headroom_tokens || 20000,
+    tail_n: p.tail_n || 12,
+    timeout_ms: p.timeout_ms || 60000,
+  };
+}
+function pulsesToday(ledger, now) {
+  const today = localDate(now);
+  return (ledger || []).filter(r => r && r.job === "haiku_pulse" && String(r.ts || "").slice(0, 10) === today).length;
+}
+async function defaultAfferentPost(evt) {
+  const url = (process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113") + "/afferent";
+  try {
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 400);
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evt), signal: ctrl.signal });
+    clearTimeout(to); return !!(r && r.ok);
+  } catch { return false; }
+}
+async function runPulse(cfg, deps = {}) {
+  const now = deps.now || new Date();
+  const pc = pulseConfig(cfg);
+  if (!pc.enabled) return { pulsed: false, skipped: "disabled" };
+  // GATE 1 — engaged only (no interactive trace ⇒ treat as idle; never pulse the void)
+  const sig = deps.signals || liveSignal(now);
+  const idle = typeof sig.idle_min === "number" ? sig.idle_min : 999;
+  if (idle > pc.engaged_idle_max_min) return { pulsed: false, skipped: `idle (${idle}min)` };
+  const ledger = deps.ledger || readLines(LEDGER);
+  // GATE 2 — hard daily cap (the meter is the ceiling)
+  const count = pulsesToday(ledger, now);
+  if (count >= pc.daily_cap) return { pulsed: false, skipped: `daily cap (${count}/${pc.daily_cap})` };
+  // GATE 3 — headroom (never pulse the window dry; live-reserve already protects him)
+  const hr = deps.headroom || headroom(cfg, ledger, readJson(QUEUE) || {}, now, sig);
+  if (hr.allowed < pc.min_headroom_tokens) return { pulsed: false, skipped: `headroom (${hr.allowed})` };
+  // the afferent tail ABOVE the deterministic salience
+  const tail = (deps.tail || readLines(join(STATE_DIR, "afferent.jsonl")).slice(-pc.tail_n))
+    .filter(a => a && a.text).map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+  if (!tail.length) return { pulsed: false, skipped: "empty tail" };
+  const prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
+  const exec = deps.exec || claudeExec;
+  const t0 = Date.now();
+  const r = deps.mockCall ? deps.mockCall(prompt) : exec(prompt, pc.model, [], pc.timeout_ms);
+  const dur = Date.now() - t0;
+  // parse defensively — a malformed pulse is a HOLD, never a crash
+  let verdict = { escalate: false, which: "", why: "" };
+  try {
+    const j = JSON.parse(String(r.text || "").replace(/^```json\s*|\s*```$/g, "").trim());
+    if (j && typeof j === "object") verdict = { escalate: !!j.escalate, which: String(j.which || "").slice(0, 200), why: String(j.why || "").slice(0, 120) };
+  } catch { /* hold */ }
+  // METER EVERY PULSE — even a hold. This row IS the safety instrument.
+  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok) };
+  (deps.appendLedger || ((o) => { if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(o) + "\n"); }))(row);
+  // ESCALATE by POSTing an afferent — the thalamus decides + enqueues. NEVER wake_queue.
+  let posted = false;
+  if (verdict.escalate && r.ok) {
+    posted = await (deps.post || defaultAfferentPost)({ modality: "pulse", source: "haiku-pulse", text: `pulse flagged: ${verdict.which}${verdict.why ? " — " + verdict.why : ""}`, event_key: "pulse:escalate", ts: now.toISOString() });
+  }
+  return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap };
+}
+
 // best-effort "is he live right now" — the freshest of his interactive traces.
 // Defensive: any failure → {} (no signal → assume live → protect him).
 function liveSignal(now, dir = STATE_DIR) {
@@ -654,6 +732,26 @@ async function selftest() {
     assert("THINKING DEPTH — derives the deep-read headroom floor", maxThinkingFor("overnight", 1000000).min_headroom_tokens === Math.round(48000 * 1.6));
     assert("PACING — burn rate rises with headroom, mins-to-edge floored >=5", (() => { const c = { budget: { window_hours: 5 } }; const rich = targetBurn(c, { allowed: 300000, phase: "overnight" }, now(2, 0)); const poor = targetBurn(c, { allowed: 20000, phase: "overnight" }, now(2, 0)); return rich.pace_tok_per_min > poor.pace_tok_per_min && rich.mins_to_edge >= 5; })());
     assert("PACING — zero/negative headroom → pace floored at 0, never negative", targetBurn({ budget: {} }, { allowed: -5, phase: "shoulder" }, now(14, 0)).pace_tok_per_min === 0);
+    // PULSE (P4) — the three hard rails + escalate/hold, all deps-injected (no live spend)
+    {
+      const pTail = [{ modality: "voice", text: "attention scaling mujhe samajh nahi aaya" }];
+      const hrOK = { allowed: 300000, phase: "study" };
+      const mkCall = (esc) => () => ({ ok: true, text: JSON.stringify({ escalate: esc, which: "attention scaling", why: "conceptual confusion" }), input_tokens: 400, output_tokens: 30, total_tokens: 430, error: null, limit_hit: false });
+      let metered = [], posted = null;
+      const base = { now: now(14, 0), signals: { idle_min: 2 }, headroom: hrOK, tail: pTail, ledger: [], appendLedger: (o) => metered.push(o), post: async (e) => { posted = e; return true; }, dry: true };
+      const esc = await runPulse(cfg, { ...base, mockCall: mkCall(true) });
+      assert("PULSE — escalate: metered + POSTs a 'pulse' afferent (never wake_queue)", esc.pulsed && esc.escalated && metered.length === 1 && metered[0].job === "haiku_pulse" && posted && posted.modality === "pulse" && posted.event_key === "pulse:escalate");
+      metered = []; posted = null;
+      const hold = await runPulse(cfg, { ...base, mockCall: mkCall(false) });
+      assert("PULSE — a HOLD is STILL metered (the meter is the whole safety story)", hold.pulsed && !hold.escalated && metered.length === 1 && posted === null);
+      const idleSkip = await runPulse(cfg, { ...base, signals: { idle_min: 30 }, appendLedger: () => { throw new Error("meter when idle"); }, mockCall: () => { throw new Error("call when idle"); } });
+      assert("PULSE — engaged gate: idle → skip, zero call, zero meter", idleSkip.pulsed === false && /idle/.test(idleSkip.skipped));
+      const capped = await runPulse(cfg, { ...base, ledger: Array.from({ length: 500 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString() })), appendLedger: () => { throw new Error("pulse over cap"); }, mockCall: () => { throw new Error("call over cap"); } });
+      assert("PULSE — hard daily cap: over cap → skip, no call, no meter", capped.pulsed === false && /cap/.test(capped.skipped));
+      let m2 = [];
+      const malformed = await runPulse(cfg, { ...base, appendLedger: (o) => m2.push(o), mockCall: () => ({ ok: true, text: "not json at all", total_tokens: 200 }) });
+      assert("PULSE — malformed reply → HOLD, still metered, never a crash", malformed.pulsed && malformed.escalated === false && m2.length === 1);
+    }
     assert("OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve", headroom(cfg, [], qEmpty, now(6, 0)).cap === dayCap);
     assert("OVERNIGHT — 23:30 still floods to the overnight target", headroom(cfg, [], qEmpty, now(23, 30)).cap === nightCap);
     assert("LIVE SIGNAL — no traces ⇒ empty (assume live, never over-spend)", Object.keys(liveSignal(now(14, 0), "no-such-dir-xyz")).length === 0);
@@ -756,6 +854,22 @@ async function selftest() {
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
+// SINGLE-INSTANCE tick guard (P3-review fix) — the resident daemon and any schtasks
+// 'brain tick' must NEVER run tick() CONCURRENTLY, or an eligible job double-runs (double
+// Opus spend + duplicate ledger rows) because jobs_run is only persisted at beat-end. An
+// exclusive localhost port bind (cortex's :4112 pattern) serializes ticks across processes
+// and self-releases if a holder crashes. Held only for the tick's duration; a loser skips.
+async function withTickLock(fn, deps = {}) {
+  // brain's OWN singleton port. The organism's block: 4111 turnstile · 4112 cortex ·
+  // 4113 thalamus · 4114 dugout — so brain takes 4115 (verified free; 4111 collides).
+  const port = deps.lockPort || 4115;
+  const { createServer } = await import("node:http");
+  const lock = createServer(() => {});
+  const got = await new Promise((res) => { lock.once("error", () => res(false)); lock.listen(port, "127.0.0.1", () => res(true)); });
+  if (!got) return { ran: [], refused: false, skipped: "tick locked (another tick is running)" };
+  try { return await fn(); } finally { try { lock.close(); } catch {} }
+}
+
 async function main() {
   const mode = (process.argv[2] || "tick").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
@@ -818,6 +932,15 @@ async function main() {
     console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
     return;
   }
+  if (mode === "pulse") {
+    // ONE haiku pulse (for a 60-90s schtasks, or manual measurement). Self-gated +
+    // metered; safe to call as often as you like (engaged/cap/headroom rails hold).
+    const r = await runPulse(cfg, deps);
+    console.log(r.pulsed
+      ? `brain: pulse — ${r.escalated ? "ESCALATED (" + r.why + ")" : "hold"} · ${(r.tokens || 0).toLocaleString()} tok · ${r.count}/${r.cap} today`
+      : `brain: pulse skipped — ${r.skipped}`);
+    return;
+  }
   if (mode === "daemon" || mode === "--daemon") {
     // THE RESIDENT PACEMAKER (P3) — the old 15-30min cron, folded into brain.mjs as a
     // ~60-90s poll. Each beat: compute the burn pace, run a tick (which self-gates every
@@ -834,11 +957,21 @@ async function main() {
       try {
         const hr = headroom(cfg, readLines(LEDGER), readJson(QUEUE) || {}, bnow, bdeps.signals);
         const pace = targetBurn(cfg, hr, bnow);
-        const { ran, refused } = await tick(cfg, bdeps);
-        if (refused) { console.log("brain: --daemon halting — ANTHROPIC_API_KEY refusal. Unset it and restart."); break; }
-        beats++;
-        const done = ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
-        console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${ran.length} ran]`);
+        const t = await withTickLock(() => tick(cfg, bdeps));
+        if (t.refused) { console.log("brain: --daemon halting — ANTHROPIC_API_KEY refusal. Unset it and restart."); break; }
+        if (t.skipped) {
+          console.log(`brain: beat skipped — ${t.skipped}`);   // another tick owns the window this beat
+        } else {
+          beats++;
+          const done = t.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
+          console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]`);
+          // the always-on HAIKU PULSE rides the beat — self-gated (engaged + cap + headroom)
+          // and metered every fire; skipped when another tick owns the beat (no double-pulse).
+          if (pulseConfig(cfg).enabled) {
+            const pr = await runPulse(cfg, bdeps);
+            if (pr.pulsed) console.log(`brain: pulse ${pr.escalated ? "ESCALATED" : "hold"} (${(pr.tokens || 0).toLocaleString()} tok · ${pr.count}/${pr.cap})`);
+          }
+        }
       } catch (e) {
         console.log(`brain: --daemon beat error (continuing): ${String((e && e.message) || e).slice(0, 160)}`);
       }
@@ -848,13 +981,14 @@ async function main() {
     return;
   }
 
-  // tick
-  const { ran, refused } = await tick(cfg, deps);
+  // tick (single-instance guarded — won't run concurrently with the resident daemon)
+  const { ran, refused, skipped } = await withTickLock(() => tick(cfg, deps));
   if (refused) process.exit(1);
+  if (skipped) { console.log(`brain: ${skipped} — skipped this tick`); return; }
   const done = ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
   console.log(`brain: tick — ${done} job(s) ran, ${ran.length - done} skipped/failed [${ran.map(r => r.job + (r.skipped ? ":skip" : "")).join(", ") || "idle"}] → ${LEDGER}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, liveSignal };
+export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, runPulse, pulseConfig, pulsesToday, liveSignal };
