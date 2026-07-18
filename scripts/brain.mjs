@@ -51,6 +51,7 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CFG_PATH  = join(STATE_DIR, "brain_config.json");
 const LEDGER    = join(STATE_DIR, "brain_ledger.jsonl");
 const QUEUE     = join(STATE_DIR, "brain_queue.json");
+const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
 const SYSTEM_MD = join(__dirname, "..", "dressing-room", "manager", "system.md");
 
@@ -114,8 +115,8 @@ function inRange(nowHM, start, end) {
   return start <= end ? (nowHM >= start && nowHM < end) : (nowHM >= start || nowHM < end);
 }
 
-// how many tokens may we spend RIGHT NOW?
-function headroom(cfg, ledger, queueState, now) {
+// how many tokens may we spend RIGHT NOW?  (signals: optional live-activity hint)
+function headroom(cfg, ledger, queueState, now, signals = null) {
   // the observed ceiling is a LEARNED truth, but the real Max-5x window is
   // always >= our deliberately-conservative estimate; never let a stale/low
   // observed value collapse the budget to zero and starve the hot brain
@@ -127,11 +128,80 @@ function headroom(cfg, ledger, queueState, now) {
   const weekly = weekUsage(ledger, now);
   const weeklyCap = cfg.budget.weekly_capacity_est_tokens;
   const nowHM = hhmm(now);
+  const study = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
+  const overnight = inRange(nowHM, cfg.overnight.start, cfg.overnight.end);
   let cap;
-  if (inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end)) cap = cap0 * cfg.budget.day_reserve_frac;          // protect his study
-  else if (inRange(nowHM, cfg.overnight.start, cfg.overnight.end)) cap = cap0 * cfg.budget.overnight_target_frac;    // exhaust deliberately
-  else cap = cap0 * 0.6;                                                                                              // shoulder hours
-  return { allowed: Math.max(0, Math.min(cap - used, weeklyCap - weekly)), used, cap: Math.round(cap), phase: inRange(nowHM, cfg.overnight.start, cfg.overnight.end) ? "overnight" : inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end) ? "study" : "shoulder" };
+  if (study) cap = cap0 * (signals ? reserveNow(cfg, signals) : cfg.budget.day_reserve_frac);   // protect his study — dynamically when we know he's live
+  else if (overnight) {                                                                          // exhaust deliberately, but taper the morning tail
+    const tail = nowHM >= "05:30" && nowHM < cfg.overnight.end;   // 05:30–07:30: back off so any CLI lockout clears before study
+    cap = cap0 * (tail ? cfg.budget.day_reserve_frac : cfg.budget.overnight_target_frac);
+  } else cap = cap0 * 0.6;                                                                        // shoulder hours
+  return { allowed: Math.max(0, Math.min(cap - used, weeklyCap - weekly)), used, cap: Math.round(cap), phase: overnight ? "overnight" : study ? "study" : "shoulder" };
+}
+
+// LIVE RESERVE (Phase 0) — while he is actually at the keyboard, keep daytime
+// spend protective so his heaviest interactive burst always has headroom; the
+// instant he goes idle the spend rises toward the overnight target and the pacer
+// floods. signals.idle_min = minutes since his last interactive trace; absent →
+// assume live (safe). Returns the effective daytime SPEND fraction.
+function reserveNow(cfg, signals = {}) {
+  const idleMin = typeof signals.idle_min === "number" ? signals.idle_min : 0;
+  const dayFrac = cfg.budget.day_reserve_frac, nightFrac = cfg.budget.overnight_target_frac;
+  if (idleMin >= 20) return nightFrac;
+  if (idleMin >= 8) return Math.min(nightFrac, dayFrac + (nightFrac - dayFrac) * 0.5);
+  return dayFrac;
+}
+
+// SELF-TUNE the window ceiling as an EWMA, not a one-way ratchet: a limit event
+// reveals the window's true size, but one anomalous night must not inflate it
+// forever. Blend observed usage toward the running ceiling, floored at the
+// estimate — the ledger self-corrects downward too, tracking the plan's real shape.
+function blendCeiling(prev, observed, estimate, alpha = 0.4) {
+  const base = (prev && prev > 0) ? prev : estimate;
+  return Math.max(estimate, Math.round(alpha * observed + (1 - alpha) * base));
+}
+
+// THINKING DEPTH scales with the moment: lean (16k) while he is live so turns
+// stay fast; deep (48k) overnight when the whole plan is the budget — never more
+// than the window can pay for. Also yields the headroom floor a deep read needs,
+// so the deepest thinking can't overshoot the one meter. (cortex wires this in P3.)
+function maxThinkingFor(phase, allowed) {
+  let think = phase === "study" ? 16000 : 48000;
+  think = Math.min(think, Math.max(8000, Math.floor((allowed || 0) * 0.5)));
+  return { max_thinking_tokens: think, min_headroom_tokens: Math.round(think * 1.6) };
+}
+
+// best-effort "is he live right now" — the freshest of his interactive traces.
+// Defensive: any failure → {} (no signal → assume live → protect him).
+function liveSignal(now, dir = STATE_DIR) {
+  let freshest = 0;
+  try {
+    const scan = (arr, k = "ts") => { for (const r of arr) { const t = new Date(r[k]).getTime(); if (t > freshest && t <= now.getTime()) freshest = t; } };
+    scan(readLines(join(dir, "afferent.jsonl")).slice(-40).filter(a => ["voice", "code", "desktop-study", "note", "context"].includes(a.modality)));
+    scan(readLines(join(dir, "presence_log.jsonl")).slice(-6).filter(r => r.kind === "focus" && (r.focus_min || 0) > 0));
+    scan(readLines(join(dir, "dugout_stamps.jsonl")).slice(-10));
+  } catch {}
+  return freshest ? { idle_min: Math.max(0, Math.round((now.getTime() - freshest) / 60000)) } : {};
+}
+
+// TOKEN VITALS — the plan's fuel gauge, always current: both windows the Max-5x
+// plan enforces (the rolling 5h window and the 7-day week). brain (single writer)
+// mirrors this to token_vitals.json so the pacer, every organ, and the captain can
+// read exactly how much of his plan is left, any time.
+function tokenVitals(cfg, ledger, queueState, now, signals = null) {
+  const h = headroom(cfg, ledger, queueState, now, signals);
+  const est = cfg.budget.window_capacity_est_tokens;
+  const ceiling = Math.max(est, (queueState && queueState.observed_window_ceiling) || est);
+  const win = windowUsage(ledger, now, cfg.budget.window_hours);
+  const wk = weekUsage(ledger, now), wkCap = cfg.budget.weekly_capacity_est_tokens;
+  const pct = (a, b) => b > 0 ? Math.round((a / b) * 1000) / 10 : 0;
+  return {
+    ts: now.toISOString(), phase: h.phase,
+    window_5h: { used: win, ceiling, pct: pct(win, ceiling), cap_now: h.cap, allowed_now: h.allowed },
+    week_7d: { used: wk, cap: wkCap, pct: pct(wk, wkCap), remaining: Math.max(0, wkCap - wk) },
+    ceiling_source: (queueState && queueState.observed_window_ceiling) ? "observed" : "estimate",
+    summary: `${h.phase} · 5h ${win.toLocaleString()}/${ceiling.toLocaleString()} (${pct(win, ceiling)}%) · week ${wk.toLocaleString()}/${wkCap.toLocaleString()} (${pct(wk, wkCap)}%) · headroom now ${h.allowed.toLocaleString()}`,
+  };
 }
 
 // THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text
@@ -466,7 +536,7 @@ async function tick(cfg, deps) {
 
   const ran = [];
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
-    const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow)), queueState, now);
+    const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow)), queueState, now, deps.signals);
     if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
     const { usage, note } = await runJob(job, cfg, deps);
     const row = {
@@ -485,14 +555,17 @@ async function tick(cfg, deps) {
       // a limit event means we spent ~the plan's true capacity — record the
       // ACTUAL window usage, but never below the conservative estimate (a
       // limit at low observed-usage is a false read, not a 1-token ceiling).
-      queueState.observed_window_ceiling = Math.max(cfg.budget.window_capacity_est_tokens, windowUsage(ledger, now, cfg.budget.window_hours));
+      queueState.observed_window_ceiling = blendCeiling(queueState.observed_window_ceiling, windowUsage(ledger, now, cfg.budget.window_hours), cfg.budget.window_capacity_est_tokens);
       ran.push({ job: job.id, note, ledgerRow: row });
       break;                                                    // back off the moment the plan says stop
     }
     ran.push({ job: job.id, note, ledgerRow: row });
   }
   queueState.last_tick = now.toISOString();
-  if (!deps.dry) writeAtomic(QUEUE, queueState);
+  if (!deps.dry) {
+    writeAtomic(QUEUE, queueState);
+    try { writeAtomic(TOKEN_VITALS, tokenVitals(cfg, readLines(LEDGER), queueState, now, deps.signals)); } catch {}
+  }
   return { ran, refused: false };
 }
 
@@ -548,6 +621,28 @@ async function selftest() {
   assert("OVERNIGHT — cap = overnight_target_frac (exhaust deliberately)", hNight.phase === "overnight" && hNight.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac));
   assert("self-tuned ceiling ABOVE estimate overrides (learns the plan is bigger)", headroom(cfg, ledger, { observed_window_ceiling: 1200000 }, now(23, 30)).cap === Math.round(1200000 * cfg.budget.overnight_target_frac));
   assert("STARVATION GUARD — a too-low/corrupt ceiling is floored at the estimate", headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac) && headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).allowed > 100000);
+
+  // ---- PHASE-0 GOVERNOR: token vitals · live reserve · ceiling EWMA · thinking depth ----
+  {
+    const dayCap = Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.day_reserve_frac);
+    const nightCap = Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac);
+    const estC = cfg.budget.window_capacity_est_tokens;
+    const vt = tokenVitals(cfg, [L(1, 100000), L(30, 4000000)], qEmpty, now(23, 0));
+    assert("TOKEN VITALS expose BOTH windows (5h + 7d)", vt.window_5h.used === 100000 && vt.week_7d.used === 4100000 && vt.week_7d.cap === cfg.budget.weekly_capacity_est_tokens);
+    assert("TOKEN VITALS carry a human summary + live headroom", /5h .*week /.test(vt.summary) && typeof vt.window_5h.allowed_now === "number");
+    assert("LIVE RESERVE — at the keyboard, daytime spend stays protective", headroom(cfg, [], qEmpty, now(14, 0), { idle_min: 1 }).cap === dayCap);
+    assert("LIVE RESERVE — idle at the desk, spend rises toward the flood", headroom(cfg, [], qEmpty, now(14, 0), { idle_min: 30 }).cap === nightCap);
+    assert("LIVE RESERVE — no signal ⇒ unchanged static behavior (selftests safe)", headroom(cfg, [], qEmpty, now(14, 0)).cap === dayCap);
+    assert("CEILING EWMA — blends observed toward the running ceiling", blendCeiling(1000000, 1400000, estC, 0.5) === 1200000);
+    assert("CEILING EWMA — floored at the estimate (a low read can't starve)", blendCeiling(null, 1, estC) === estC);
+    assert("CEILING EWMA — self-corrects DOWN (not a one-way ratchet)", blendCeiling(2000000, 900000, estC, 0.5) < 2000000);
+    assert("THINKING DEPTH — lean live, deep overnight", maxThinkingFor("study", 1000000).max_thinking_tokens === 16000 && maxThinkingFor("overnight", 1000000).max_thinking_tokens === 48000);
+    assert("THINKING DEPTH — never budgets more than the window can pay", maxThinkingFor("overnight", 40000).max_thinking_tokens <= 20000);
+    assert("THINKING DEPTH — derives the deep-read headroom floor", maxThinkingFor("overnight", 1000000).min_headroom_tokens === Math.round(48000 * 1.6));
+    assert("OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve", headroom(cfg, [], qEmpty, now(6, 0)).cap === dayCap);
+    assert("OVERNIGHT — 23:30 still floods to the overnight target", headroom(cfg, [], qEmpty, now(23, 30)).cap === nightCap);
+    assert("LIVE SIGNAL — no traces ⇒ empty (assume live, never over-spend)", Object.keys(liveSignal(now(14, 0), "no-such-dir-xyz")).length === 0);
+  }
 
   // eligibility
   const q = { jobs_run: { "2026-07-12": { formation_read: 1 } } };
@@ -651,7 +746,7 @@ async function main() {
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const cfg = loadConfig();
   const now = new Date();
-  const deps = { exec: claudeExec, gexec: geminiExec, now, dry: process.argv.includes("--dry") };
+  const deps = { exec: claudeExec, gexec: geminiExec, now, dry: process.argv.includes("--dry"), signals: liveSignal(now) };
 
   if (mode === "bell") {
     const kind = (process.argv[3] || "fulltime").toLowerCase();
@@ -678,6 +773,16 @@ async function main() {
     q.triggers[name] = { ts: now.toISOString(), reason: process.argv.slice(4).join(" ") || null };
     writeAtomic(QUEUE, q);
     console.log(`brain: trigger '${name}' armed — the next tick fires the matching job once`);
+    return;
+  }
+  if (mode === "tokens") {
+    const ledger = readLines(LEDGER);
+    const q = readJson(QUEUE) || {};
+    const v = tokenVitals(cfg, ledger, q, now, liveSignal(now));
+    writeAtomic(TOKEN_VITALS, v);
+    console.log("brain tokens · " + v.summary);
+    console.log(`  5h window : ${v.window_5h.used.toLocaleString()} / ${v.window_5h.ceiling.toLocaleString()} (${v.window_5h.pct}% of ceiling · ${v.ceiling_source}) — spend now <= ${v.window_5h.allowed_now.toLocaleString()}`);
+    console.log(`  7d week   : ${v.week_7d.used.toLocaleString()} / ${v.week_7d.cap.toLocaleString()} (${v.week_7d.pct}%) — ${v.week_7d.remaining.toLocaleString()} left`);
     return;
   }
   if (mode === "status") {
@@ -707,4 +812,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday };
+export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, liveSignal };
