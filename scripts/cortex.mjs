@@ -394,13 +394,14 @@ async function selftest() {
   {
     const concepts = ["embeddings", "vector-search", "attention", "hallucinations"];
     const lstate = { concepts: [{ id: "embeddings", fluency: "🟢 fluent" }, { id: "attention", fluency: "🔴 learning" }] };
-    const goodGraph = JSON.stringify({ nodes: [{ id: "embeddings", fluency: "fluent" }, { id: "attention", fluency: "learning" }, { id: "not-a-real-concept", fluency: "fluent" }], edges: [{ from: "embeddings", to: "vector-search", kind: "prereq" }, { from: "attention", to: "ghost", kind: "related" }], next_unlocks: ["vector-search", "ghost"] });
+    const goodGraph = JSON.stringify({ nodes: [{ id: "embeddings", fluency: "fluent" }, { id: "attention", fluency: "expert" }, { id: "attention", fluency: "learning" }, { id: "not-a-real-concept", fluency: "fluent" }], edges: [{ from: "embeddings", to: "vector-search", kind: "prereq" }, { from: "attention", to: "ghost", kind: "related" }], clusters: [{ name: "rag", concepts: ["embeddings", "ghost-concept"] }, { name: "all-ghost", concepts: ["nope"] }], next_unlocks: ["vector-search", "ghost"] });
     const okHr = { allowed: 400000, phase: "overnight" };
     const base = { concepts, lstate, headroom: okHr, now: new Date("2026-07-18T03:00:00Z"), env: {}, brainCfg: { guards: {} }, cfg: { deep: { min_headroom_tokens: 50000 } } };
     let wrote = null, metered = [];
     const r = await runConsolidation({ ...base, appendLedger: (o) => metered.push(o), write: (o) => { wrote = o; }, call: async () => ({ ok: true, text: goodGraph, total_tokens: 12000, input_tokens: 8000, output_tokens: 4000, duration_ms: 30000 }) });
     assert("CONSOLIDATE — writes a concept graph, metered as cortex_consolidate", r.ok && wrote && metered.length === 1 && metered[0].job === "cortex_consolidate");
     assert("CONSOLIDATE — grounds it: nodes/edges/unlocks NOT in the concept set are dropped (no ghosts)", wrote && wrote.nodes.length === 2 && wrote.edges.length === 1 && wrote.next_unlocks.length === 1 && wrote.next_unlocks[0] === "vector-search");
+    assert("CONSOLIDATE — clusters grounded (ghost concepts dropped, all-ghost cluster removed) + nodes deduped + fluency clamped to enum", wrote.clusters.length === 1 && wrote.clusters[0].concepts.length === 1 && wrote.clusters[0].concepts[0] === "embeddings" && wrote.node_count === 2 && wrote.nodes.find(n => n.id === "attention").fluency === "unknown");
     const skip = await runConsolidation({ ...base, headroom: { allowed: 10000, phase: "study" }, call: async () => { throw new Error("must not call with no headroom"); }, write: () => { throw new Error("no write"); }, appendLedger: () => {} });
     assert("CONSOLIDATE — no headroom → skip, no Opus call, no write (never overshoots the meter)", skip.ok === false && /headroom/.test(skip.skipped));
     let m2 = [];
@@ -478,12 +479,20 @@ async function runConsolidation(deps = {}) {
   if (!r.ok) return { ok: false, error: r.error, tokens: r.total_tokens || 0 };
   let graph;
   try { graph = JSON.parse(String(r.text || "").replace(/^```json\s*|\s*```$/g, "").trim()); } catch { return { ok: false, error: "unparseable graph", tokens: r.total_tokens }; }
-  // GROUND it — only concepts from the real set survive (no hallucinated nodes/edges)
+  // GROUND it — ONLY concepts from the real set survive (no hallucinated ids in ANY lane),
+  // nodes deduped, fluency clamped to the enum. Every concept-bearing field is filtered.
   const set = new Set(concepts);
-  const nodes = Array.isArray(graph.nodes) ? graph.nodes.filter(n => n && set.has(n.id)) : [];
-  const edges = Array.isArray(graph.edges) ? graph.edges.filter(e => e && set.has(e.from) && set.has(e.to) && e.from !== e.to) : [];
+  const FLU = new Set(["learning", "holding", "fluent", "unknown"]);
+  const seen = new Set();
+  const nodes = (Array.isArray(graph.nodes) ? graph.nodes : [])
+    .filter(n => n && set.has(n.id) && !seen.has(n.id) && seen.add(n.id))
+    .map(n => ({ id: n.id, fluency: FLU.has(String(n.fluency)) ? n.fluency : "unknown" }));
+  const edges = (Array.isArray(graph.edges) ? graph.edges : []).filter(e => e && set.has(e.from) && set.has(e.to) && e.from !== e.to);
   if (!nodes.length) return { ok: false, error: "no valid nodes", tokens: r.total_tokens };
-  const out = { generated_at: now.toISOString(), source: "cortex-consolidate (opus)", node_count: nodes.length, edge_count: edges.length, nodes, edges, clusters: Array.isArray(graph.clusters) ? graph.clusters : [], next_unlocks: Array.isArray(graph.next_unlocks) ? graph.next_unlocks.filter(x => set.has(x)) : [] };
+  const clusters = (Array.isArray(graph.clusters) ? graph.clusters : [])
+    .map(c => ({ name: c && c.name, concepts: Array.isArray(c && c.concepts) ? c.concepts.filter(x => set.has(x)) : [] }))
+    .filter(c => c.concepts.length);
+  const out = { generated_at: now.toISOString(), source: "cortex-consolidate (opus)", node_count: nodes.length, edge_count: edges.length, nodes, edges, clusters, next_unlocks: Array.isArray(graph.next_unlocks) ? graph.next_unlocks.filter(x => set.has(x)) : [] };
   (deps.write || ((o) => writeAtomic(CONCEPT_GRAPH, o)))(out);
   return { ok: true, nodes: nodes.length, edges: edges.length, tokens: r.total_tokens, next_unlocks: out.next_unlocks };
 }

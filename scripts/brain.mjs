@@ -211,7 +211,11 @@ function pulseConfig(cfg) {
 }
 function pulsesToday(ledger, now) {
   const today = localDate(now);
-  return (ledger || []).filter(r => r && r.job === "haiku_pulse" && String(r.ts || "").slice(0, 10) === today).length;
+  // count on matching LOCAL dates. r.ts is a UTC ISO stamp — slicing its STRING would
+  // mis-bucket every pulse fired before the local UTC offset each night (IST 00:00-05:30
+  // maps to the previous UTC day), silently disengaging the hard cap during exactly the
+  // overnight window it protects. Parse to a Date, then compare LOCAL dates.
+  return (ledger || []).filter(r => r && r.job === "haiku_pulse" && r.ts && localDate(new Date(r.ts)) === today).length;
 }
 async function defaultAfferentPost(evt) {
   const url = (process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113") + "/afferent";
@@ -257,7 +261,13 @@ async function runPulse(cfg, deps = {}) {
   // ESCALATE by POSTing an afferent — the thalamus decides + enqueues. NEVER wake_queue.
   let posted = false;
   if (verdict.escalate && r.ok) {
-    posted = await (deps.post || defaultAfferentPost)({ modality: "pulse", source: "haiku-pulse", text: `pulse flagged: ${verdict.which}${verdict.why ? " — " + verdict.why : ""}`, event_key: "pulse:escalate", ts: now.toISOString() });
+    // carry the flagged concept as concept_tokens (so the thalamus can score novelty on it)
+    // + a PER-CONCEPT event_key (distinct escalations don't collapse into one habituation
+    // bucket). The pulse only NAMES the moment; the thalamus stays the sole authority on
+    // whether it crosses the wake threshold — that threshold is a salience-config/tuning
+    // matter (part of the multi-day pulse calibration), not something the pulse forces.
+    const tokens = String(verdict.which || "").toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3).slice(0, 4);
+    posted = await (deps.post || defaultAfferentPost)({ modality: "pulse", source: "haiku-pulse", text: `pulse flagged (reasoning-hard): ${verdict.which}${verdict.why ? " — " + verdict.why : ""}`, concept_tokens: tokens, event_key: `pulse:${tokens[0] || "moment"}`, ts: now.toISOString() });
   }
   return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap };
 }
@@ -740,7 +750,8 @@ async function selftest() {
       let metered = [], posted = null;
       const base = { now: now(14, 0), signals: { idle_min: 2 }, headroom: hrOK, tail: pTail, ledger: [], appendLedger: (o) => metered.push(o), post: async (e) => { posted = e; return true; }, dry: true };
       const esc = await runPulse(cfg, { ...base, mockCall: mkCall(true) });
-      assert("PULSE — escalate: metered + POSTs a 'pulse' afferent (never wake_queue)", esc.pulsed && esc.escalated && metered.length === 1 && metered[0].job === "haiku_pulse" && posted && posted.modality === "pulse" && posted.event_key === "pulse:escalate");
+      assert("PULSE — escalate: metered + POSTs a 'pulse' afferent w/ concept_tokens + per-concept key (never wake_queue)", esc.pulsed && esc.escalated && metered.length === 1 && metered[0].job === "haiku_pulse" && posted && posted.modality === "pulse" && posted.event_key === "pulse:attention" && Array.isArray(posted.concept_tokens) && posted.concept_tokens.includes("attention"));
+      assert("PULSE — cap counts by PARSED local date (today's pulse counts, a 2-day-old one does not)", pulsesToday([{ job: "haiku_pulse", ts: base.now.toISOString() }, { job: "haiku_pulse", ts: new Date(base.now.getTime() - 2 * 86400000).toISOString() }], base.now) === 1);
       metered = []; posted = null;
       const hold = await runPulse(cfg, { ...base, mockCall: mkCall(false) });
       assert("PULSE — a HOLD is STILL metered (the meter is the whole safety story)", hold.pulsed && !hold.escalated && metered.length === 1 && posted === null);
