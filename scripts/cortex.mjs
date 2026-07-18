@@ -390,9 +390,102 @@ async function selftest() {
     assert("prompt itself breaks no banned-phrase law", bannedPhraseCheck(p.replace(/never "10x", "exponential", "on steroids"/, ""), ["on steroids"]).length === 0);
   }
 
+  // OVERNIGHT DEEPENING (P5) — the concept graph, deps-injected (no live Opus)
+  {
+    const concepts = ["embeddings", "vector-search", "attention", "hallucinations"];
+    const lstate = { concepts: [{ id: "embeddings", fluency: "🟢 fluent" }, { id: "attention", fluency: "🔴 learning" }] };
+    const goodGraph = JSON.stringify({ nodes: [{ id: "embeddings", fluency: "fluent" }, { id: "attention", fluency: "learning" }, { id: "not-a-real-concept", fluency: "fluent" }], edges: [{ from: "embeddings", to: "vector-search", kind: "prereq" }, { from: "attention", to: "ghost", kind: "related" }], next_unlocks: ["vector-search", "ghost"] });
+    const okHr = { allowed: 400000, phase: "overnight" };
+    const base = { concepts, lstate, headroom: okHr, now: new Date("2026-07-18T03:00:00Z"), env: {}, brainCfg: { guards: {} }, cfg: { deep: { min_headroom_tokens: 50000 } } };
+    let wrote = null, metered = [];
+    const r = await runConsolidation({ ...base, appendLedger: (o) => metered.push(o), write: (o) => { wrote = o; }, call: async () => ({ ok: true, text: goodGraph, total_tokens: 12000, input_tokens: 8000, output_tokens: 4000, duration_ms: 30000 }) });
+    assert("CONSOLIDATE — writes a concept graph, metered as cortex_consolidate", r.ok && wrote && metered.length === 1 && metered[0].job === "cortex_consolidate");
+    assert("CONSOLIDATE — grounds it: nodes/edges/unlocks NOT in the concept set are dropped (no ghosts)", wrote && wrote.nodes.length === 2 && wrote.edges.length === 1 && wrote.next_unlocks.length === 1 && wrote.next_unlocks[0] === "vector-search");
+    const skip = await runConsolidation({ ...base, headroom: { allowed: 10000, phase: "study" }, call: async () => { throw new Error("must not call with no headroom"); }, write: () => { throw new Error("no write"); }, appendLedger: () => {} });
+    assert("CONSOLIDATE — no headroom → skip, no Opus call, no write (never overshoots the meter)", skip.ok === false && /headroom/.test(skip.skipped));
+    let m2 = [];
+    const bad = await runConsolidation({ ...base, appendLedger: (o) => m2.push(o), write: () => { throw new Error("no write on malformed"); }, call: async () => ({ ok: true, text: "not json at all", total_tokens: 500 }) });
+    assert("CONSOLIDATE — malformed graph → metered but NOT written (a bad graph never lands)", bad.ok === false && m2.length === 1);
+    const realShape = gatherCorpus({ concepts: { version: 1, _comment: "x", axes: { a: "..." }, concepts: { tokenization: {}, embeddings: {} }, skills: { pydantic: {} } }, lstate: null });
+    assert("CONSOLIDATE — reads the REAL concepts.json shape (concepts+skills objects), NOT its metadata keys", realShape.concepts.includes("tokenization") && realShape.concepts.includes("pydantic") && !realShape.concepts.includes("_comment") && !realShape.concepts.includes("axes"));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
+}
+
+// ---------------------------------------------------------------------------
+// OVERNIGHT DEEPENING (P5) — THE CONCEPT GRAPH. A nightly consolidation routed
+// through the ONE Opus path (cortex), NEVER grafted onto dmn.mjs (dmn stays the
+// FREE Gemini dreamer — a second unmetered Opus path would breach Law 2). Reads
+// his concept list + fluency, asks Opus to synthesise a prereq/relation graph,
+// writes concept_graph.json. Gated on headroom + metered like every deep read.
+// DESIGN NOTE: the architecture suggested a thalamus-enqueued 'consolidation'
+// WAKE; this direct `cortex consolidate` mode is the SAME single Opus path with
+// less surgery (no new afferent-recognition path, thalamus stays sole wake
+// writer untouched), and a scheduled nightly batch fits a mode better than a
+// reactive wake. Same law kept: one metered Opus path, dmn free.
+// ---------------------------------------------------------------------------
+const CONCEPTS      = join(STATE_DIR, "concepts.json");
+const LSTATE        = join(STATE_DIR, "learning_state.json");
+const CONCEPT_GRAPH = join(STATE_DIR, "concept_graph.json");
+
+function buildConsolidationPrompt(concepts, fluency) {
+  const cList = concepts.slice(0, 120).join(", ");
+  const fLines = fluency.slice(0, 60).map(f => `${f.id}: ${f.fluency}`).join(" · ");
+  return `You build a CONCEPT GRAPH for a personal AI-learning system — a map of how the learner's concepts connect, so his overnight brain can see the terrain. Use ONLY the concepts listed; invent no fluency he hasn't shown. Reply with STRICT JSON, no prose, no code fence:
+{"nodes":[{"id":"<concept from the list>","fluency":"learning|holding|fluent|unknown"}],"edges":[{"from":"<concept>","to":"<concept>","kind":"prereq|related|confused-with"}],"clusters":[{"name":"<short theme>","concepts":["<concept>"]}],"next_unlocks":["<concept he is ready to learn next: its prereqs are fluent/holding>"]}
+Every node id and every edge endpoint MUST be one of the listed concepts. Ground edges in real dependency (e.g. embeddings -> vector-search is a prereq).
+CONCEPTS: ${cList}
+CURRENT FLUENCY: ${fLines || "(none logged yet)"}`;
+}
+
+function gatherCorpus(deps = {}) {
+  const cj = deps.concepts !== undefined ? deps.concepts : readJson(CONCEPTS);
+  const idOf = (c) => typeof c === "string" ? c : (c && (c.id || c.concept || c.name));
+  const idsOf = (coll) => Array.isArray(coll) ? coll.map(idOf).filter(Boolean) : (coll && typeof coll === "object" ? Object.keys(coll) : []);
+  let concepts = [];
+  if (Array.isArray(cj)) concepts = cj.map(idOf).filter(Boolean);
+  // canonical concepts.json = { concepts: {id:{...}}, skills: {id:{...}}, version, _comment, axes }
+  else if (cj && typeof cj === "object" && (cj.concepts || cj.skills)) concepts = [...idsOf(cj.concepts), ...idsOf(cj.skills)];
+  else if (cj && typeof cj === "object") concepts = Object.keys(cj).filter(k => !k.startsWith("_"));   // last-resort flat map
+  const lj = deps.lstate !== undefined ? deps.lstate : readJson(LSTATE);
+  const arr = lj && (lj.concepts || lj.ladder);
+  const fluency = Array.isArray(arr)
+    ? arr.map(c => ({ id: idOf(c), fluency: String(c.fluency || c.stage || "unknown").replace(/[^a-z]/gi, "") || "unknown" })).filter(c => c.id)
+    : [];
+  return { concepts: [...new Set(concepts)], fluency };
+}
+
+async function runConsolidation(deps = {}) {
+  const now = deps.now || new Date();
+  const brainCfg = deps.brainCfg || loadBrainConfig();
+  const cfg = deps.cfg || loadThalamusConfig();
+  const env = deps.env || process.env;
+  if (brainCfg.guards && brainCfg.guards.refuse_if_api_key_env && env.ANTHROPIC_API_KEY) return { ok: false, refused: true };
+  const { concepts, fluency } = gatherCorpus(deps);
+  if (concepts.length < 3) return { ok: false, skipped: `too few concepts (${concepts.length})` };
+  // budget gate — the SAME conservative floor as a deep read (never overshoot the meter)
+  const hr = deps.headroom || headroom(brainCfg, readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
+  const mtf = maxThinkingFor(hr.phase, hr.allowed);
+  const minHeadroom = Math.max((cfg.deep && cfg.deep.min_headroom_tokens) || 50000, mtf.min_headroom_tokens);
+  if (hr.allowed < minHeadroom) return { ok: false, skipped: `no-headroom (${hr.allowed} < ${minHeadroom})` };
+  const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens } };
+  const call = deps.call || ((p) => claudeDeep(p, deepCfg));
+  const r = await call(buildConsolidationPrompt(concepts, fluency));
+  (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({ ts: now.toISOString(), job: "cortex_consolidate", engine: "claude", model: "opus", input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit });
+  if (!r.ok) return { ok: false, error: r.error, tokens: r.total_tokens || 0 };
+  let graph;
+  try { graph = JSON.parse(String(r.text || "").replace(/^```json\s*|\s*```$/g, "").trim()); } catch { return { ok: false, error: "unparseable graph", tokens: r.total_tokens }; }
+  // GROUND it — only concepts from the real set survive (no hallucinated nodes/edges)
+  const set = new Set(concepts);
+  const nodes = Array.isArray(graph.nodes) ? graph.nodes.filter(n => n && set.has(n.id)) : [];
+  const edges = Array.isArray(graph.edges) ? graph.edges.filter(e => e && set.has(e.from) && set.has(e.to) && e.from !== e.to) : [];
+  if (!nodes.length) return { ok: false, error: "no valid nodes", tokens: r.total_tokens };
+  const out = { generated_at: now.toISOString(), source: "cortex-consolidate (opus)", node_count: nodes.length, edge_count: edges.length, nodes, edges, clusters: Array.isArray(graph.clusters) ? graph.clusters : [], next_unlocks: Array.isArray(graph.next_unlocks) ? graph.next_unlocks.filter(x => set.has(x)) : [] };
+  (deps.write || ((o) => writeAtomic(CONCEPT_GRAPH, o)))(out);
+  return { ok: true, nodes: nodes.length, edges: edges.length, tokens: r.total_tokens, next_unlocks: out.next_unlocks };
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +497,14 @@ async function main() {
   if (mode === "tick") {
     const r = await serveWakes({ log: console.log });
     console.log(`cortex: ${r.served ? `served ${r.served} wake(s)${r.queued ? `, ${r.queued} still queued` : ""}` : r.idle ? "no pending wake" : (r.results || []).some(x => x.refused) ? "refused (API key)" : JSON.stringify(r)}`);
+    return;
+  }
+  if (mode === "consolidate") {
+    // OVERNIGHT DEEPENING (P5) — one nightly Opus pass → concept_graph.json
+    const r = await runConsolidation({ log: console.log });
+    console.log(r.ok
+      ? `cortex: concept graph → ${r.nodes} nodes, ${r.edges} edges${r.next_unlocks && r.next_unlocks.length ? " · next: " + r.next_unlocks.slice(0, 3).join(", ") : ""} (${(r.tokens || 0).toLocaleString()} tok)`
+      : `cortex: consolidate skipped — ${r.skipped || r.error || (r.refused ? "API-key refusal" : "unknown")}`);
     return;
   }
   // SINGLETON LOCK — two cortexes racing one wake = double Opus spend. The
@@ -456,4 +557,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDeepAsync, findCapsule };
+export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDeepAsync, findCapsule, runConsolidation, buildConsolidationPrompt, gatherCorpus };
