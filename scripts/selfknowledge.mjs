@@ -31,6 +31,9 @@ const SCRIPTS   = join(ROOT, "scripts");
 const STATE     = join(ROOT, "dressing-room", "state");
 const SELF      = join(STATE, "organism_self.md");
 const BLEDGER   = join(STATE, "brain_ledger.jsonl");
+// the HUMAN-framing sources: what the organism does + how his day flows, in story form
+// (NOT code). Claude uses these for the feel/routine, and the live modules for currency.
+const FUNCTIONAL_DOCS = ["THE_ORGANISM_THE_WHOLE_STORY.md", "THE_CYBORG_OWNERS_MANUAL.md", "learning-layer/GEMINI_LOOP.md"];
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 function writeAtomic(p, txt) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, txt); renameSync(tmp, p); }
@@ -57,36 +60,35 @@ function gatherMachinery(deps = {}) {
   }
   const pkg = deps.pkg || readJson(join(ROOT, "package.json")) || {};
   let skills = []; try { skills = deps.skills || readdirSync(join(ROOT, ".claude", "skills")); } catch {}
-  let stateFiles = []; try { stateFiles = (deps.stateFiles || readdirSync(STATE)).filter(f => /\.json$|\.jsonl$/.test(f)); } catch {}
-  return { modules, npmScripts: Object.keys(pkg.scripts || {}), skills, stateFiles };
+  // the human-framing story + routine docs (feel, day-flow, WHY) — for a plain explanation
+  let docs = [];
+  if (deps.docs) docs = deps.docs;
+  else for (const d of FUNCTIONAL_DOCS) { try { const p = join(ROOT, d); if (existsSync(p)) docs.push({ name: d, text: readFileSync(p, "utf8").slice(0, 16000) }); } catch {} }
+  return { modules, npmScripts: Object.keys(pkg.scripts || {}), skills, docs };
 }
 
 function buildPrompt(m) {
-  const mod = m.modules.map(x => `### scripts/${x.file}\n${x.desc}`).join("\n\n");
-  return `You are writing the DEFINITIVE, CURRENT self-portrait of a real personal AI organism, grounded ENTIRELY in its actual SOURCE CODE below — never in any external design doc (those are stale). Below is EVERY module's own header comment (what each part ACTUALLY does right now), plus its skills, run-scripts, and live state files.
+  const modules = m.modules.map(x => x.desc).join("\n---\n").slice(0, 32000);
+  const docs = (m.docs || []).map(d => `## ${d.name}\n${d.text}`).join("\n\n").slice(0, 60000);
+  return `You are writing THE ORGANISM'S PLAIN-LANGUAGE EXPLANATION OF ITSELF — the knowledge THE GAFFER (its living voice) uses whenever someone says "explain the organism", "what is this", "how does my day work", or when Nikhil shows a FRIEND who does NOT code and does NOT care about code. The friend wants to understand, in plain human words: WHAT this thing does, HOW it works, WHERE it happens, and WHY it exists.
 
-CONTEXT: This is "Arsenal AI FC" — a football-club-themed cognitive prosthesis for ONE person (Nikhil, the captain, #14) who has ADHD-PI. It carries his executive function (initiation, working memory, time-sense) so he can just learn and work. He is training to become an AI Product Engineer.
+WHO NIKHIL IS: a person with ADHD-PI training to become an AI Product Engineer. The organism ("Arsenal AI FC") is a football-club-themed system that carries his executive function (starting things, holding context, sense of time) so he can just learn and work. He is the captain, #14.
 
-YOUR JOB: Write a comprehensive, vivid, ACCURATE, engaging explanation of the WHOLE organism that a smart friend hearing it for the first time could follow for 30-40 minutes. It will be the knowledge THE GAFFER (the club's living voice) uses to explain itself to a guest, so it must be GOD-TIER and true to the code.
+ABSOLUTE RULES FOR YOUR OUTPUT (this is the whole point — do not break them):
+- PLAIN HUMAN LANGUAGE ONLY. NO code, NO file names, NO script names, NO ports, NO technical jargon. If a concept is technical, explain it with an everyday analogy. A friend who has never programmed must follow EVERY sentence.
+- Explain WHAT it does for him, HOW it works (as a feeling/story, not a mechanism), WHERE each thing happens (which room / app / moment), and how his WHOLE DAY FLOWS start to finish.
+- Cover his real daily routine in order: the morning kickoff; LEARNING (he learns AI concepts and Python by talking to a coach on his computer); PRACTICE (he writes code in an online notebook); his TWO assistant-coaches (one reviews his code like a senior developer, one quizzes him daily); the 30-second evening close; and what the machine does OVERNIGHT while he sleeps so tomorrow is ready.
+- Cover, in plain terms: the whole club and its "rooms"; the BRAIN — how it quietly decides which moments deserve deep thought, how it remembers the important things, and how it forgets the rest on purpose (like a human); the coaches and the honesty rules; and the features they deliberately REFUSED to build (and why that restraint is the point).
+- Be vivid and warm — like showing a friend around a stadium you built by hand. Ground everything in what actually exists below. Invent NOTHING. No hype words — the honesty IS the pitch.
+- Output MARKDOWN, structured as a spoken tour with clear section headings. Make it LONG and detailed — a genuine 30-40 minute telling.
 
-COVER (grounded in the real modules below — name the actual files/mechanisms):
-1. What it IS (the one-line soul) and WHY it exists — the before-world of thoughts dying on staircases, the ADHD tax, a cognitive prosthesis.
-2. THE LAYERS, clearly separated:
-   - the EXECUTION / outwork layer (time-audit, presence, the daily match, the Manager team-sheet);
-   - the LEARNING layer (the Forge 9-axis method, the rep engine, capture, FSRS, the Gems/Colab loop, the examiner/scrimmage);
-   - the CYBORG BRAIN — the thalamus (the reception desk + salience bouncer), the cortex/deep Opus brain, memory/hippocampus (scribe, ledger-of-self, consolidator, biological forgetting), the seven parallel minds, the default-mode network / rest room, predictive presence, AND the newest working-memory layer (the externalized working-set/distiller, the continuous Haiku pulse, the resident daemon pacemaker, the ambient context river, the overnight concept-graph, the organism-memory MCP door).
-3. How a single MOMENT flows through it, end to end.
-4. The LAWS it obeys — AI proposes / code validates / human approves; the medical clamp (data-analyst never prescriber, RED = doctor-referral); earned-voice (a salient moment does not earn a voice); machine-is-public / moments-are-private; the budget governor pinning the plan.
-5. What makes it genuinely HARD TO COPY (trust enforced in code, the longitudinal record, the category).
+═══ THE STORY, THE ROUTINE, THE WHY (the human framing — draw the feel, the day-flow, and the soul from here) ═══
+${docs}
 
-RULES: Ground EVERY claim in a module that actually exists below. Invent NOTHING. No hype words — the honesty IS the pitch. Structure it as a spoken tour with clear section headers. Output MARKDOWN only. Be maximally detailed and precise.
+═══ WHAT ACTUALLY EXISTS RIGHT NOW (each line is one real capability — TRANSLATE each into a plain-human "what it does for him"; this list keeps you CURRENT and complete; NEVER name any of these files/scripts in your output) ═══
+${modules}
 
-═══ THE ACTUAL MACHINERY (every module's own words — the source of truth) ═══
-${mod}
-
-═══ SKILLS ═══ ${m.skills.join(", ")}
-═══ RUN-SCRIPTS ═══ ${m.npmScripts.join(", ")}
-═══ LIVE STATE FILES (the organs' memory) ═══ ${m.stateFiles.slice(0, 60).join(", ")}`;
+SKILLS HE CAN INVOKE: ${m.skills.join(", ")}`;
 }
 
 function claudeCall(prompt, model = "opus", timeoutMs = 400000) {
@@ -126,13 +128,14 @@ async function selftest() {
   const checks = [];
   const assert = (n, c) => { checks.push(!!c); console.log(`  ${c ? "✓" : "✗"} ${n}`); };
   const mockGather = () => ({
-    modules: [{ file: "thalamus.mjs", desc: "THE THALAMUS — the salience door on :4113 where every sense lands." }, { file: "cortex.mjs", desc: "THE CORTEX — the deep Opus brain, serves wakes." }],
-    npmScripts: ["brain", "dugout"], skills: ["forge", "learn"], stateFiles: ["afferent.jsonl"],
+    modules: [{ file: "thalamus.mjs", desc: "THE THALAMUS — the salience door where every sense lands." }, { file: "cortex.mjs", desc: "THE CORTEX — the deep brain, serves wakes." }],
+    npmScripts: ["brain", "dugout"], skills: ["forge", "learn"], docs: [{ name: "STORY.md", text: "He is the captain. Thoughts died on staircases before the club." }],
   });
   const p = buildPrompt(mockGather());
-  assert("prompt grounds in REAL module headers (names the actual files)", p.includes("scripts/thalamus.mjs") && p.includes("scripts/cortex.mjs"));
-  assert("prompt forbids stale docs + demands god-tier accuracy from source", /never in any external design doc|source of truth/i.test(p) && /Invent NOTHING/.test(p));
-  assert("prompt covers all three layers + the newest working-memory brain layer", /EXECUTION/.test(p) && /LEARNING layer/.test(p) && /CYBORG BRAIN/.test(p) && /concept-graph|Haiku pulse|working-set/.test(p));
+  assert("prompt demands PLAIN HUMAN language — explicitly NO code / files / jargon", /PLAIN HUMAN LANGUAGE ONLY/.test(p) && /NO code, NO file names/.test(p) && /never programmed/.test(p));
+  assert("prompt draws feel + day-flow from the human STORY + ROUTINE docs", /THE STORY, THE ROUTINE/.test(p) && /staircases/.test(p));
+  assert("prompt covers his real WHOLE-DAY flow + overnight, for a non-coder friend", /WHOLE DAY FLOWS/.test(p) && /OVERNIGHT/.test(p) && /daily routine/i.test(p));
+  assert("prompt stays CURRENT via live modules but forbids naming any file/script", /WHAT ACTUALLY EXISTS RIGHT NOW/.test(p) && /NEVER name any of these files/.test(p));
   let wrote = null, metered = null;
   const r = generate({ gather: mockGather, now: new Date("2026-07-18T21:00:00Z"), call: () => ({ ok: true, text: "# The Organism\nA cognitive prosthesis...", tokens: 12000, ms: 25000 }), write: (t) => { wrote = t; }, meter: (row) => { metered = row; } });
   assert("generate: writes the self-portrait + stamps it live-generated", r.ok && wrote && /generated from the LIVE code/.test(wrote) && /The Organism/.test(wrote));

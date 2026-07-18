@@ -1125,14 +1125,15 @@ function buildRehydrate(now = new Date()) {
 }
 
 // per-session config the page fetches (key never rests in the repo)
-// THE LIVE SELF-KNOWLEDGE — the organism's self-portrait, rebuilt from the ACTUAL code
-// (selfknowledge.mjs), injected into the guest keynotes so the Gaffer explains any layer
-// CURRENT + in full, grounded in real modules — not a stale hand-written script. The
-// keynote prose is the STYLE; this is the TRUTH. Absent file → "" (legacy keynote alone).
+// THE LIVE SELF-KNOWLEDGE — the organism's PLAIN-LANGUAGE self-portrait (selfknowledge.mjs
+// rebuilds it from the real system, so it can never be stale). Injected into the NORMAL
+// Gaffer AND the guest keynotes so he can just TALK to the Gaffer — no modes, no commands —
+// and it explains what the organism does / how his day works / anything, in full, in plain
+// human terms. Absent file → "" (graceful; the base instruction stands).
 function selfKnowledgeBlock() {
   const fresh = loadSelfKnowledge();
   if (!fresh || fresh.length < 200) return "";
-  return `\n\n═══ THE LIVE MACHINE — reconstructed from the ACTUAL source code (this is the CURRENT TRUTH) ═══\nThe tour above is your WARMTH and delivery style. The knowledge below was just rebuilt from the organism's real code, so it is CURRENT and complete. If the tour missed anything or is out of date, THIS supersedes it — and you may answer ANY question about the organism, any layer, in full detail, grounded ONLY in what is here. Invent nothing; if it isn't below, say you'll check. The guest-privacy law still holds absolutely: machine only, never his personal data.\n\n${fresh}`;
+  return `\n\n═══ WHAT THE ORGANISM IS — the full plain-language picture (freshly rebuilt, CURRENT) ═══\nYou KNOW this whole system, top to bottom. Whenever he (or a friend he is showing) asks "explain the organism", "what is this", "how does my day work", "what does it do", "how does the brain work" — ANYTHING about the machine itself — explain it warmly in plain human language, in as much detail as they want (up to a full 30-40 minute tour). No code, no jargon, no file names — just what it does, how, and where. Ground it ONLY in what is below; if something is not here, say you will check rather than invent. This is CURRENT and supersedes any older framing.\n\n${fresh}`;
 }
 
 function buildConfig(keys, mode = "gaffer") {
@@ -1165,7 +1166,7 @@ function buildConfig(keys, mode = "gaffer") {
     depth: currentDepth(),
     mode,
     keys,
-    system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
+    system: mode === "scrimmage" ? buildScrimmageInstruction() : (buildSystemInstruction() + selfKnowledgeBlock()),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
     rehydrate: mode === "scrimmage" ? null : [buildRehydrateCartridge(), buildRehydrate()].filter(Boolean).join("\n\n") || null,
