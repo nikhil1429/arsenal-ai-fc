@@ -98,6 +98,7 @@ dressing-room/club/
 dressing-room/state/brain_ledger.jsonl
 dressing-room/state/brain_queue.json
 dressing-room/state/token_vitals.json
+dressing-room/state/working_set.json
 dressing-room/state/brain_out/
 # the dugout (live-voice notes + minutes ledger + think-time stamps — personal)
 dressing-room/state/dugout_notes.jsonl
