@@ -27,10 +27,18 @@ function MkHidden($name, $args_, $sched) {
 MkHidden "ArsenalFC-Thalamus" "thalamus.mjs"                 @("/SC","DAILY","/ST","07:00")
 MkHidden "ArsenalFC-Cortex"   "cortex.mjs"                   @("/SC","DAILY","/ST","07:02")
 MkHidden "ArsenalFC-Turnstile" "turnstile.mjs"               @("/SC","DAILY","/ST","07:04")
+# working-memory (P3): the resident PACEMAKER daemon (~75s poll). Singleton via the
+# tick lock (:4115), so a stray BrainTick can never double-run it.
+MkHidden "ArsenalFC-BrainDaemon" "brain.mjs daemon"          @("/SC","DAILY","/ST","07:06")
 # neuromodulation - hourly (cheap; follows the Governor wherever it goes)
 Mk "ArsenalFC-Tone"           "tone.mjs"                     @("/SC","HOURLY")
 # predictive presence - the stall sensor, every 10 minutes
 Mk "ArsenalFC-Presence"       "presence.mjs sense"           @("/SC","MINUTE","/MO","10")
+# working-memory (P1): the FREE distiller (working_set) every 15 min
+Mk "ArsenalFC-Distiller"      "distiller.mjs"                @("/SC","MINUTE","/MO","15")
+# working-memory (P3): the ambient CONTEXT bridge - AW window deltas -> the thalamus
+# river, every minute (the ~60s floor is this cadence; each run only emits on a change)
+Mk "ArsenalFC-Context"        "context.mjs once"             @("/SC","MINUTE","/MO","1")
 # the Rest Room - hourly; its own gates (away/tone/headroom) do the deciding
 Mk "ArsenalFC-DMN"            "dmn.mjs"                      @("/SC","HOURLY")
 # the hippocampus - nightly consolidation + store maintenance + hourly sweep
@@ -42,6 +50,8 @@ Mk "ArsenalFC-Examiner"       "examiner.mjs stage"           @("/SC","DAILY","/S
 # THE NIGHT SHIFT (M11) - the idle free-quota drain: probe banks, distractors,
 # embed backfill, the Scout pack, the Gem cartridge, the gate-tune report
 Mk "ArsenalFC-NightShift"     "nightshift.mjs"               @("/SC","DAILY","/ST","02:40")
+# working-memory (P5): overnight deepening - the concept graph, the ONE Opus path (cortex)
+Mk "ArsenalFC-ConceptGraph"   "cortex.mjs consolidate"       @("/SC","DAILY","/ST","03:00")
 # the stall sensor fits itself to HIS baselines, weekly
 Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/D","SUN","/ST","03:30")
 
@@ -64,10 +74,18 @@ Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Ob
   $_.Settings.StartWhenAvailable = $true
   $_ | Set-ScheduledTask | Out-Null
 }
-foreach ($n in "Consolidate","HippoStore","NightShift","PresenceFit","Examiner") {
+foreach ($n in "Consolidate","HippoStore","NightShift","PresenceFit","Examiner","ConceptGraph") {
   $t = Get-ScheduledTask -TaskName "ArsenalFC-$n" -ErrorAction SilentlyContinue
   if ($t) { $t.Settings.WakeToRun = $true; $t | Set-ScheduledTask | Out-Null }
 }
 Write-Host "  ~ catch-up-on-wake set on all tasks; night lane armed to wake the machine"
+
+# working-memory (P3-review): the resident --daemon (ArsenalFC-BrainDaemon) is the PRIMARY
+# pacer; the base schedule's ArsenalFC-BrainTick (30-min) STAYS as a fallback for when the
+# daemon is down. They can never double-run OR double-spend — the tick lock (:4115)
+# serializes tick() cross-process (jobs_run is persisted at tick-end, so a serialized
+# follower sees the claim and skips the job). So INSTALL_TASKS.ps1 stays untouched.
+Write-Host "  ~ BrainDaemon is primary; BrainTick stays as a lock-coordinated fallback"
+
 Write-Host ""
 Write-Host "Done. The Kennel's heartbeat task is NOT installed yet - it ships when the Pi arrives (groundsman.mjs header: TRANSPORT)."

@@ -4,6 +4,11 @@
       "command": "node",
       "args": ["C:\\Users\\nikhi\\activitywatch-mcp-server\\dist\\index.js"],
       "_comment": "The captain's own AW MCP build (free, local). Gives every Claude Code session in this repo direct time-audit sight — the /organism-doctor and /matchday skills use it when present. Deterministic organs (timeaudit/touchline) still read AW REST directly; this is the interactive-session lane only."
+    },
+    "organism-memory": {
+      "command": "node",
+      "args": ["C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\mcp-memory.mjs"],
+      "_comment": "working-memory P2. The door into the ONE working memory — recall(query) over his durable episodes+words, note(kind,text) routed through the thalamus (:4113), get_context() rehydrate, remember_fact(text) STAGED to pending (Law 4, never canon). Dependency-free stdio JSON-RPC. Register the SAME server in Claude Desktop's config to give the Desktop study room the same recall+capture."
     }
   }
 }

@@ -97,6 +97,10 @@ dressing-room/club/
 # the brain runtime (usage ledger + generated artifacts)
 dressing-room/state/brain_ledger.jsonl
 dressing-room/state/brain_queue.json
+dressing-room/state/token_vitals.json
+dressing-room/state/working_set.json
+dressing-room/state/sprint.json
+dressing-room/state/sprint_config.json
 dressing-room/state/brain_out/
 # the dugout (live-voice notes + minutes ledger + think-time stamps — personal)
 dressing-room/state/dugout_notes.jsonl
@@ -109,6 +113,10 @@ dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
 # the turnstile's restart-proof dedupe ring (hashes only, runtime state)
 dressing-room/state/turnstile_seen.json
+# the ambient context bridge (P3) — last app/title window + emit stamp (his activity)
+dressing-room/state/context_state.json
+# the organism-memory MCP scribe log (P2) — his notes (also under hippocampus/, belt+braces)
+dressing-room/state/scribe_log.jsonl
 # ALL vaults are personal state — never tracked, regardless of the vault's name
 dressing-room/vault_*/
 # semantic recall index (his words, embedded)
@@ -130,6 +138,8 @@ dressing-room/state/wake.json
 dressing-room/state/wake_queue.jsonl
 dressing-room/state/bg_queue.jsonl
 dressing-room/state/cortex_runtime.json
+# the concept graph (P5) — his concepts + fluency + next-unlocks, synthesised nightly
+dressing-room/state/concept_graph.json
 # the fuelboard (M3) — per-account usage ledger (runtime)
 dressing-room/state/tanks.json
 # the live examiner (M4) — the staged code drill names his weaknesses

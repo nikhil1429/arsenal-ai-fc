@@ -52,6 +52,7 @@ const DEFAULT_TANKS = [
   { id: "T5", name: "Scout",       region: "research",     key_index: 3,    model: "gemini-3.1-pro-preview",              quota_est: 50,   enabled: true },
   { id: "T6", name: "Hippocampus", region: "memory",       key_index: 4,    model: "gemini-embedding-001",                quota_est: 1000, enabled: true },
   { id: "T7", name: "DMN",         region: "default-mode", key_index: 5,    model: "gemini-flash-latest",                 quota_est: 250,  enabled: true },
+  { id: "T8", name: "Distiller",   region: "working-set",  key_index: 6,    model: "gemini-flash-latest",                 quota_est: 250,  enabled: true },
 ];
 function loadTankConfig() {
   const c = readJson(CONFIG);
