@@ -100,7 +100,7 @@ SKILLS HE CAN INVOKE: ${m.skills.join(", ")}`;
 function claudeCall(prompt, model = "opus", timeoutMs = 400000) {
   const t0 = Date.now();
   try {
-    const raw = execFileSync("claude", ["-p", "--output-format", "json", "--model", model], { input: prompt, timeout: timeoutMs, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const raw = execFileSync("claude", ["-p", "--output-format", "json", "--model", model], { input: prompt, timeout: timeoutMs, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
     const j = JSON.parse(raw);
     const inTok = (j.usage && j.usage.input_tokens) || 0, outTok = (j.usage && j.usage.output_tokens) || 0;
     return { ok: j.is_error !== true && !!j.result, text: String(j.result || ""), tokens: inTok + outTok, ms: Date.now() - t0, error: j.is_error ? String(j.result).slice(0, 200) : null, limit_hit: false };

@@ -120,17 +120,47 @@ const AFFECT_FIELDS = ["prosody", "emotion", "tone", "affect", "stress", "agitat
 // words from his speech (drop function words + the doubt-markers themselves) so a
 // NEW concept lights novelty (self+nov=0.65) and the deep prompt finds its capsule.
 const VOICE_STOP = new Set("what why how does is are the this that these those mean means meaning understand get got dont cant work works working about when where which would could should have has had will your you and but for not was were with from into then than some just like really actually thing kind sort okay haan theek hua kya kyu kyun kaise kaam karta karti karna karo karke bata batao samajh samjha samjhao nahi nahin naa aaya aata aati aaye gaya gayi hota hoti hona matlab mujhe muje tum tumhe aap yeh woh thoda toh bhi bilkul sab kuch wala wale wali mera meri raha rahi rahe liye".split(/\s+/));
+// E2E audit 25 Jul 2026: this derivation was STILL Latin-only (`/[^a-z0-9]+/`)
+// long after the 15 Jul scan-fix taught the MATCHERS both scripts — so a fully
+// Devanagari doubt ("यार ये अटेंशन समझ नहीं आ रहा", which is exactly how the ASR
+// ships his speech, see the self_markers note above) produced ZERO tokens: NOV
+// could never light, the moment scored self-only 0.45, and the moment the budget
+// lifted τ1_eff past 0.45 his realest doubts stopped reaching Opus entirely.
+// Two scripts, one derivation: split on letters/digits AND combining marks
+// (\p{M} — matras ARE marks; leaving them out of the word class shreds a
+// Devanagari word into consonant crumbs), Devanagari words counting from 2 chars
+// like tokWords does, with a Devanagari stop-list mirroring VOICE_STOP and the
+// doubt-markers' own words so the marker never becomes the "concept".
+const DEVA_STOP = new Set("यह ये वो वह वे इस उस जो कि की का के को में से पर और या भी तो न ना नहीं नही मत अरे यार अच्छा ठीक क्या क्यों क्यूँ क्यूं कैसे कैसा कैसी कब कहाँ कहां कौन कितना कितनी है हैं हूँ हूं था थी थे हो होता होती होते होना हुआ हुई गया गयी गई गए रहा रही रहे रहना समझ समझा समझी समझना समझाओ समझाना मतलब बात बातें कर करता करती करते करना करो करके बता बताओ बताना डाउट कुछ सब बहुत थोड़ा ज़्यादा ज्यादा मुझे मुझको मेरा मेरी मेरे तुम तुझे आप अपना अभी अब फिर वाला वाली वाले लिए लिये चल चलो एक दो साथ बिल्कुल शायद असल असली सवाल जवाब".split(/\s+/));
+const isDevanagari = (w) => /[ऀ-ॿ]/.test(w);
 function deriveVoiceTokens(text) {
   const seen = new Set(), out = [];
-  for (const w of String(text || "").toLowerCase().split(/[^a-z0-9]+/)) {
-    if (w.length < 4 || VOICE_STOP.has(w) || seen.has(w)) continue;
+  for (const w of String(text || "").toLowerCase().split(/[^\p{L}\p{N}\p{M}]+/u)) {
+    if (!w || seen.has(w)) continue;
+    if (isDevanagari(w) ? (w.length < 2 || DEVA_STOP.has(w)) : (w.length < 4 || VOICE_STOP.has(w))) continue;
     seen.add(w); out.push(w); if (out.length >= 4) break;
   }
   return out;
 }
+// E2E audit 25 Jul 2026: the door swept only TOP-LEVEL keys, so any nested
+// carrier — {meta:{emotion:"agitated"}}, or the richer ASR payload a Cochlea
+// upgrade would ship, {analysis:{prosody:{...},stress:0.9}} — walked through
+// intact, was appended verbatim to afferent.jsonl and broadcast inside
+// workspace.moment.spotlight where every region reads it. The affect firewall is
+// a BOUNDARY, not a surface wipe: sweep the whole object (depth-limited, arrays
+// included) before anything is logged, scored or bound.
+function stripAffect(v, depth = 0) {
+  if (Array.isArray(v)) return depth >= 8 ? [] : v.map(x => stripAffect(x, depth + 1));
+  if (v && typeof v === "object") {
+    if (depth >= 8) return {};
+    const o = {};
+    for (const [k, val] of Object.entries(v)) { if (AFFECT_FIELDS.includes(k.toLowerCase())) continue; o[k] = stripAffect(val, depth + 1); }
+    return o;
+  }
+  return v;
+}
 function sanitizeAfferent(evt) {
-  const e = { ...evt };
-  for (const k of Object.keys(e)) if (AFFECT_FIELDS.includes(k.toLowerCase())) delete e[k];
+  const e = stripAffect({ ...evt });     // was a top-level-only delete loop — see stripAffect
   // enrich spoken turns with derived concept tokens (novelty + capsule matching)
   if (e.modality === "voice" && e.text && !(Array.isArray(e.concept_tokens) && e.concept_tokens.length)) {
     const toks = deriveVoiceTokens(e.text);
@@ -385,7 +415,12 @@ function createNucleus(cfg, deps = {}) {
     for (const t of evt.concept_tokens || []) N.seen.add(String(t).toLowerCase());
     if (evt.confused_with) N.seen.add(`pair:${String(evt.confused_with).toLowerCase()}`);
     N.buffer.push({ evt, comps, S: salience(comps, cfg.weights), key, at: now });
-    if (!N.flushTimer) N.flushTimer = D.schedule(cfg.binding_ms, () => flush().catch(() => {}));
+    // E2E audit 25 Jul 2026: this catch was BLIND (`() => {}`) — and flush()
+    // splices the buffer before it scores anything, so a single throw (a Windows
+    // renameSync EPERM while Drive-sync/AV/an editor holds workspace.json open is
+    // the everyday cause) made his moment vanish with no tier, no wake, no ledger
+    // row and not one line of log to find it by. It says so now.
+    if (!N.flushTimer) N.flushTimer = D.schedule(cfg.binding_ms, () => flush().catch(e => D.log(`thalamus: flush failed — ${(e && e.message) || e}`)));
     return { ok: true, S: N.buffer[N.buffer.length - 1].S };
   }
 
@@ -408,7 +443,21 @@ function createNucleus(cfg, deps = {}) {
     return groups;
   }
 
-  async function flush() {
+  // E2E audit 25 Jul 2026: flush() was RE-ENTRANT across its own awaits (the ≤15s
+  // adjudicator, the ≤4s embed). While one flush sat parked, the next binding
+  // window fired a second flush that ran to completion and broadcast the LIVE
+  // spotlight — then the parked one resumed and overwrote it with an OLDER moment
+  // at a HIGHER version, pinning the Dugout page to a moment he had already moved
+  // past. The same interleaving let both flushes read the pre-increment wake
+  // counter and blow the day's humane Opus cap. Flushes now CHAIN: one moment at
+  // a time, in arrival order. flushOnce is the original engine, behaviour intact.
+  let flushChain = Promise.resolve();
+  function flush() {
+    const p = flushChain.then(flushOnce, flushOnce);
+    flushChain = p.then(() => { }, () => { });      // a failed flush must never wedge the chain
+    return p;
+  }
+  async function flushOnce() {
     N.flushTimer = null;
     const buf = N.buffer.splice(0);
     if (!buf.length) return [];
@@ -419,124 +468,161 @@ function createNucleus(cfg, deps = {}) {
     const t1 = tau1Effective(cfg, frac) + D.toneBump();   // budget coupling + neuromodulation
     const capToday = wakeCapToday(cfg, D.allowedTokens()); // M14 — ledger-true, folklore dead
     const results = [];
+    // E2E audit 25 Jul 2026: the buffer is SPLICED before any of this runs, so one
+    // throw used to take every remaining bound moment of the window with it —
+    // silently. The everyday cause on this machine is a renameSync EPERM while
+    // Drive-sync / AV / an open editor holds workspace.json for a beat. Each group
+    // now stands alone: a failed write costs ONE moment, and it says so in the log.
     for (const g of bindGroups(buf)) {
-      const S = g.spotlight.S;
-      const momentId = `m_${now}_${Math.abs(hash32(g.spotlight.key + S))}`;
-      let tier = S < cfg.tiers.tau0 ? 0 : 1;
-      let outcome = tier === 0 ? "reflex" : "enrich";
-      let adjudicated = false;
-      // ONE-SIDED epsilon (fix 18 Jul): a score already AT/ABOVE the bar wakes
-      // outright — it is NEVER handed to the fail-closed adjudicator. The grey
-      // band only catches near-MISSES just below the bar. (Before, a bare voiced
-      // doubt sat exactly on 0.45, landed inside the symmetric ±band around a
-      // 0.42 bar, and got silently demoted to a 15s haiku coin-flip that defaults
-      // to no-wake — so his real doubts almost never reached Opus.)
-      if (S >= t1) { tier = 2; outcome = "wake"; }
-      else if (t1 - S < cfg.tiers.epsilon) {
-        adjudicated = true; N.adjudications++;
-        const hard = await D.adjudicate(g.spotlight.evt, S).catch(() => false);
-        if (hard) { tier = 2; outcome = "adjudicated_up"; } else { tier = Math.max(tier, 1); outcome = "adjudicated_down"; }
+      try {
+        const r = await runGroup(g, { now, today, frac, t1, capToday });
+        if (r) results.push(r);
+      } catch (e) {
+        D.log(`thalamus: a bound moment was LOST mid-flush (${(e && e.message) || e}) — the rest of this window still lands`);
       }
-      if (tier === 2) {
-        const lastWake = N.wakeKeys.get(g.spotlight.key);
-        if (lastWake && now - lastWake < cfg.refractory_min * 60000) { tier = 1; outcome = "refractory"; }
-        else if (N.wakesToday >= capToday) { tier = 1; outcome = "capped"; }
-        // M22 — THE SECOND SPOTLIGHT: suppress the WAKE, never the THOUGHT.
-        // A refractory/capped moment earned deep attention and lost only the
-        // Opus lane — it queues for the idle-tank drain instead of dying.
-        if (outcome === "refractory" || outcome === "capped") {
-          D.appendBgQueue({ moment_id: momentId, ts: new Date(now).toISOString(), status: "queued", reason: outcome, spotlight: { ...g.spotlight.evt, S: g.spotlight.S }, bound_context: g.context.map(c => ({ modality: c.evt.modality, text: c.evt.text, event_key: c.evt.event_key })) });
-          D.log(`thalamus: ${outcome} moment queued for the second spotlight — the thought survives the gate`);
-        }
-      }
-      const moment = {
-        moment_id: momentId, ts: new Date(now).toISOString(), tier,
-        modalities: [...new Set([g.spotlight.evt.modality, ...g.context.map(c => c.evt.modality)])],
-        spotlight: { ...g.spotlight.evt, S, comps: g.spotlight.comps },
-        context: g.context.map(c => ({ ...c.evt, S: c.S })),
-      };
-      // M7 — PREDICTIVE PRESENCE: a stall moment queries the Rest Room's
-      // precache — the intervention was drafted HOURS ago, so it lands with
-      // ZERO model latency, inside the stuck→gone window. Attaching it here
-      // is NOT speech: the mouth gate (earned voice + RED/conserve mute)
-      // still decides at the bridge whether it may ever be said.
-      let whisper = N.workspace.whisper || null;
-      if (String(g.spotlight.evt.event_key || "").startsWith("stall:")) {
-        const pc = D.precache();
-        const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []).map(t => String(t).toLowerCase()), ...tokWords(String(g.spotlight.evt.text || ""))]);
-        let best = null;
-        for (const e of (pc && pc.entries) || []) {
-          const ew = tokWords(String(e.concept + " " + e.stall_signature));
-          const overlap = ew.filter(w => hintWords.has(w)).length;
-          if (overlap >= 1 && (!best || overlap > best.overlap)) best = { ...e, overlap };
-        }
-        if (best) {
-          whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
-          D.log(`thalamus: stall matched the Rest Room's precache — whisper loaded (zero-latency), the mouth gate decides`);
-        }
-      }
-      // M17 — THE PRE-ANSWER ENGINE, serve side: a doubt-shaped moment (a
-      // voiced SELF or a confident-wrong rep) checks the night's answer_cache.
-      // The answer was drafted HOURS ago on the free pool — it attaches with
-      // zero latency and zero Opus. Attaching is NOT speech (recall-hint
-      // pattern): the Gaffer weaves it only if it earns the turn; no gate moved.
-      let preAnswer = N.workspace.pre_answer || null;
-      if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0)) {
-        const cache = D.answerCache() || [];
-        if (cache.length) {
-          const qtext = `${(g.spotlight.evt.concept_tokens || []).join(" ")} ${g.spotlight.evt.text || ""}`.trim();
-          const qv = cache.some(e => Array.isArray(e.vec)) ? await D.embedText(qtext).catch(() => null) : null;
-          const hit = matchPreAnswer(g.spotlight.evt, cache, qv, cfg);
-          if (hit) {
-            preAnswer = { type: "pre_answer", concept: hit.entry.concept, doubt: hit.entry.doubt, answer: hit.entry.answer, matched_via: hit.via, score: Math.round(hit.score * 100) / 100, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
-            D.log(`thalamus: doubt matched the night's answer_cache (${hit.via}) — pre-answer attached, zero Opus; the mouth decides`);
-          }
-        }
-      }
-      // M22 — THE RECALL-MATCH: he just touched ground a suppressed thought
-      // lives on — the drained insight returns NOW, zero switching cost.
-      // Consumed on return (a background thought speaks its piece once).
-      let bgHint = N.workspace.bg_hint || null;
-      const bgHeld = Array.isArray(N.workspace.bg) ? N.workspace.bg : [];
-      const bgMatch = matchBg(g.spotlight.evt, bgHeld);
-      if (bgMatch) {
-        bgHint = { type: "second_spotlight", concept: bgMatch.concept, insight: bgMatch.insight, from_moment: bgMatch.moment_id, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
-        N.workspace = { ...N.workspace, bg: bgHeld.filter(b => b.moment_id !== bgMatch.moment_id) };
-        D.appendBgQueue({ moment_id: bgMatch.moment_id, status: "returned", at: moment.ts, to_moment: momentId });
-        D.log(`thalamus: second spotlight returned — a suppressed thought on "${bgMatch.concept}" met its recall-match`);
-      }
-      // THE BROADCAST IS THE WRITE — version-stamped; every region subscribes
-      N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, whisper, pre_answer: preAnswer, bg: Array.isArray(N.workspace.bg) ? N.workspace.bg : [], bg_hint: bgHint, mouth_hint: N.workspace.mouth_hint || null };
-      D.writeWorkspace(N.workspace);
-      if (tier === 2) {
-        N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now);
-        const wakeRow = { moment_id: momentId, ts: moment.ts, status: "pending", deadline_ms: (cfg.deep && cfg.deep.deadline_ms) || 45000, spotlight: moment.spotlight, bound_context: moment.context };
-        D.appendWakeQueue(wakeRow);                  // M14 — the QUEUE is the contract: a second wake never clobbers a pending one
-        D.writeWake(wakeRow);                        // the latest-wake mirror (layering — pre-queue readers keep working)
-        D.log(`thalamus: WAKE → opus (S=${S.toFixed(2)} ≥ τ1=${t1.toFixed(2)}, ${N.wakesToday}/${capToday} today — cap is ledger-derived)`);
-      }
-      D.appendLedger({ ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000, comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities, tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated });
-      results.push({ moment_id: momentId, tier, S, outcome });
-
-      // M8 — THE LIVING DOSSIER: a live Bayesian-ish posterior over his day,
-      // updated from every salience event. Built ONLY from counts (prosody is
-      // structurally absent — it never entered the nucleus). The capacity
-      // nudge can only ever LOWER demand — never raise, never touch RED.
-      if (N.dossier.date !== today) N.dossier = { date: today, concepts: {}, stalls_today: 0, capacity_nudge: null };
-      const evt = g.spotlight.evt;
-      for (const tok of (evt.concept_tokens || []).map(t => String(t).toLowerCase()).slice(0, 3)) {
-        const c = N.dossier.concepts[tok] = N.dossier.concepts[tok] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
-        if (String(evt.event_key || "").startsWith("stall:")) c.stalls++;
-        if (evt.rep && evt.rep.correct === false) c.errs++;
-        if (evt.rep && evt.rep.correct === true) c.wins++;
-        c.last_ts = moment.ts;
-      }
-      if (String(evt.event_key || "").startsWith("stall:")) N.dossier.stalls_today++;
-      N.dossier.capacity_nudge = N.dossier.stalls_today >= 3 ? "lower" : null;   // only-lower, by construction
-      N.dossier.updated_at = moment.ts;
     }
     D.writeDossier(N.dossier);
     return results;
+  }
+
+  // one bound moment, start to finish: the ladder, the gates, the attachments,
+  // the broadcast, the ledger, the dossier. Split out of flush() by the E2E audit
+  // (25 Jul 2026) so a throw here cannot take its sibling moments down with it.
+  async function runGroup(g, { now, today, frac, t1, capToday }) {
+    const S = g.spotlight.S;
+    const momentId = `m_${now}_${Math.abs(hash32(g.spotlight.key + S))}`;
+    let tier = S < cfg.tiers.tau0 ? 0 : 1;
+    let outcome = tier === 0 ? "reflex" : "enrich";
+    let adjudicated = false;
+    // E2E audit 25 Jul 2026: the two FREE gates are read BEFORE the ladder now.
+    // They used to run only AFTER the ε-band's paid ~15s adjudication, so a
+    // moment already inside its refractory window, or already past the day's
+    // cap, still bought a verdict that was going to be demoted regardless — and
+    // the ledger then carried adjudicated:true on an outcome of "refractory".
+    // A gated near-miss now simply takes the adjudicator's own fail-closed
+    // default (no wake) without paying a CLI cold-start for it.
+    const lastWake = N.wakeKeys.get(g.spotlight.key);
+    const inRefractory = lastWake !== undefined && now - lastWake < cfg.refractory_min * 60000;
+    const atCap = N.wakesToday >= capToday;
+    // ONE-SIDED epsilon (fix 18 Jul): a score already AT/ABOVE the bar wakes
+    // outright — it is NEVER handed to the fail-closed adjudicator. The grey
+    // band only catches near-MISSES just below the bar. (Before, a bare voiced
+    // doubt sat exactly on 0.45, landed inside the symmetric ±band around a
+    // 0.42 bar, and got silently demoted to a 15s haiku coin-flip that defaults
+    // to no-wake — so his real doubts almost never reached Opus.)
+    if (S >= t1) { tier = 2; outcome = "wake"; }
+    else if (t1 - S < cfg.tiers.epsilon && !inRefractory && !atCap) {
+      adjudicated = true; N.adjudications++;
+      const hard = await D.adjudicate(g.spotlight.evt, S).catch(() => false);
+      if (hard) { tier = 2; outcome = "adjudicated_up"; } else { tier = Math.max(tier, 1); outcome = "adjudicated_down"; }
+    }
+    if (tier === 2) {
+      if (inRefractory) { tier = 1; outcome = "refractory"; }
+      else if (atCap) { tier = 1; outcome = "capped"; }
+      // E2E audit 25 Jul 2026: the wake slot is RESERVED here, at the gate. It
+      // used to be claimed ~70 lines below, on the FAR side of the ≤4s embed
+      // await — two flushes interleaving on that await both read the same
+      // pre-increment counter and both woke Opus, past the humane cap. (flush()
+      // is serialized now too; this is the second lock, not the first.)
+      else { N.wakesToday++; N.wakeKeys.set(g.spotlight.key, now); }
+      // M22 — THE SECOND SPOTLIGHT: suppress the WAKE, never the THOUGHT.
+      // A refractory/capped moment earned deep attention and lost only the
+      // Opus lane — it queues for the idle-tank drain instead of dying.
+      if (outcome === "refractory" || outcome === "capped") {
+        D.appendBgQueue({ moment_id: momentId, ts: new Date(now).toISOString(), status: "queued", reason: outcome, spotlight: { ...g.spotlight.evt, S: g.spotlight.S }, bound_context: g.context.map(c => ({ modality: c.evt.modality, text: c.evt.text, event_key: c.evt.event_key })) });
+        D.log(`thalamus: ${outcome} moment queued for the second spotlight — the thought survives the gate`);
+      }
+    }
+    const moment = {
+      moment_id: momentId, ts: new Date(now).toISOString(), tier,
+      modalities: [...new Set([g.spotlight.evt.modality, ...g.context.map(c => c.evt.modality)])],
+      spotlight: { ...g.spotlight.evt, S, comps: g.spotlight.comps },
+      context: g.context.map(c => ({ ...c.evt, S: c.S })),
+    };
+    // M7 — PREDICTIVE PRESENCE: a stall moment queries the Rest Room's
+    // precache — the intervention was drafted HOURS ago, so it lands with
+    // ZERO model latency, inside the stuck→gone window. Attaching it here
+    // is NOT speech: the mouth gate (earned voice + RED/conserve mute)
+    // still decides at the bridge whether it may ever be said.
+    let whisper = N.workspace.whisper || null;
+    if (String(g.spotlight.evt.event_key || "").startsWith("stall:")) {
+      const pc = D.precache();
+      const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []).map(t => String(t).toLowerCase()), ...tokWords(String(g.spotlight.evt.text || ""))]);
+      let best = null;
+      for (const e of (pc && pc.entries) || []) {
+        const ew = tokWords(String(e.concept + " " + e.stall_signature));
+        const overlap = ew.filter(w => hintWords.has(w)).length;
+        if (overlap >= 1 && (!best || overlap > best.overlap)) best = { ...e, overlap };
+      }
+      if (best) {
+        whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+        D.log(`thalamus: stall matched the Rest Room's precache — whisper loaded (zero-latency), the mouth gate decides`);
+      }
+    }
+    // M17 — THE PRE-ANSWER ENGINE, serve side: a doubt-shaped moment (a
+    // voiced SELF or a confident-wrong rep) checks the night's answer_cache.
+    // The answer was drafted HOURS ago on the free pool — it attaches with
+    // zero latency and zero Opus. Attaching is NOT speech (recall-hint
+    // pattern): the Gaffer weaves it only if it earns the turn; no gate moved.
+    let preAnswer = N.workspace.pre_answer || null;
+    if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0)) {
+      const cache = D.answerCache() || [];
+      if (cache.length) {
+        const qtext = `${(g.spotlight.evt.concept_tokens || []).join(" ")} ${g.spotlight.evt.text || ""}`.trim();
+        const qv = cache.some(e => Array.isArray(e.vec)) ? await D.embedText(qtext).catch(() => null) : null;
+        const hit = matchPreAnswer(g.spotlight.evt, cache, qv, cfg);
+        if (hit) {
+          preAnswer = { type: "pre_answer", concept: hit.entry.concept, doubt: hit.entry.doubt, answer: hit.entry.answer, matched_via: hit.via, score: Math.round(hit.score * 100) / 100, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+          D.log(`thalamus: doubt matched the night's answer_cache (${hit.via}) — pre-answer attached, zero Opus; the mouth decides`);
+        }
+      }
+    }
+    // M22 — THE RECALL-MATCH: he just touched ground a suppressed thought
+    // lives on — the drained insight returns NOW, zero switching cost.
+    // Consumed on return (a background thought speaks its piece once).
+    let bgHint = N.workspace.bg_hint || null;
+    const bgHeld = Array.isArray(N.workspace.bg) ? N.workspace.bg : [];
+    const bgMatch = matchBg(g.spotlight.evt, bgHeld);
+    if (bgMatch) {
+      bgHint = { type: "second_spotlight", concept: bgMatch.concept, insight: bgMatch.insight, from_moment: bgMatch.moment_id, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+      N.workspace = { ...N.workspace, bg: bgHeld.filter(b => b.moment_id !== bgMatch.moment_id) };
+      D.appendBgQueue({ moment_id: bgMatch.moment_id, status: "returned", at: moment.ts, to_moment: momentId });
+      D.log(`thalamus: second spotlight returned — a suppressed thought on "${bgMatch.concept}" met its recall-match`);
+    }
+    // THE BROADCAST IS THE WRITE — version-stamped; every region subscribes
+    // E2E audit 25 Jul 2026: this rebuild lists its fields explicitly and USED TO
+    // OMIT `deep_recent` — so every ordinary moment broadcast wiped the last-3
+    // served Opus answers that serveDeep() (below, ~L550) maintains, and the
+    // Dugout page reads to inject answers he hasn't seen yet. That is exactly the
+    // "lost deep answer" scar this list was built to close, reopened from the side.
+    N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, deep_recent: Array.isArray(N.workspace.deep_recent) ? N.workspace.deep_recent : [], whisper, pre_answer: preAnswer, bg: Array.isArray(N.workspace.bg) ? N.workspace.bg : [], bg_hint: bgHint, mouth_hint: N.workspace.mouth_hint || null };
+    D.writeWorkspace(N.workspace);
+    if (tier === 2) {
+      // (the slot itself was reserved at the gate above — E2E audit 25 Jul 2026)
+      const wakeRow = { moment_id: momentId, ts: moment.ts, status: "pending", deadline_ms: (cfg.deep && cfg.deep.deadline_ms) || 45000, spotlight: moment.spotlight, bound_context: moment.context };
+      D.appendWakeQueue(wakeRow);                  // M14 — the QUEUE is the contract: a second wake never clobbers a pending one
+      D.writeWake(wakeRow);                        // the latest-wake mirror (layering — pre-queue readers keep working)
+      D.log(`thalamus: WAKE → opus (S=${S.toFixed(2)} ≥ τ1=${t1.toFixed(2)}, ${N.wakesToday}/${capToday} today — cap is ledger-derived)`);
+    }
+    D.appendLedger({ ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000, comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities, tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated });
+
+    // M8 — THE LIVING DOSSIER: a live Bayesian-ish posterior over his day,
+    // updated from every salience event. Built ONLY from counts (prosody is
+    // structurally absent — it never entered the nucleus). The capacity
+    // nudge can only ever LOWER demand — never raise, never touch RED.
+    if (N.dossier.date !== today) N.dossier = { date: today, concepts: {}, stalls_today: 0, capacity_nudge: null };
+    const evt = g.spotlight.evt;
+    for (const tok of (evt.concept_tokens || []).map(t => String(t).toLowerCase()).slice(0, 3)) {
+      const c = N.dossier.concepts[tok] = N.dossier.concepts[tok] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
+      if (String(evt.event_key || "").startsWith("stall:")) c.stalls++;
+      if (evt.rep && evt.rep.correct === false) c.errs++;
+      if (evt.rep && evt.rep.correct === true) c.wins++;
+      c.last_ts = moment.ts;
+    }
+    if (String(evt.event_key || "").startsWith("stall:")) N.dossier.stalls_today++;
+    N.dossier.capacity_nudge = N.dossier.stalls_today >= 3 ? "lower" : null;   // only-lower, by construction
+    N.dossier.updated_at = moment.ts;
+    return { moment_id: momentId, tier, S, outcome };
   }
 
   // the deep answer flows back THROUGH the nucleus (single-writer preserved).
@@ -636,6 +722,14 @@ async function adjudicateLive(evt, S) {
 // THE BUS NERVE — fs.watch on the state dir turns machine events into afferents
 // (event-driven, near-zero cost; 60s poll as the Windows fs.watch safety net)
 // ---------------------------------------------------------------------------
+// E2E audit 25 Jul 2026: firstToday used to slice the UTC calendar date straight
+// out of an ISO-Z rep timestamp (`x.ts.slice(0,10)`) and compare it to the LOCAL
+// date. This machine is IST (+5:30): between 00:00 and 05:30 every rep written
+// "today" still carries YESTERDAY's UTC date, so no prior rep ever matched, and
+// every late-night rep re-flagged firstToday — firing the "session_happened"
+// market a second time and feeding the Twin a phantom surprise on a book it had
+// already resolved. One zone: convert, then compare.
+const repLocalDay = (ts) => { const d = new Date(ts || NaN); return Number.isNaN(d.getTime()) ? String(ts || "").slice(0, 10) : localDate(d); };
 function createBusWatcher(nucleus, deps = {}) {
   const snap = {
     verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || null,
@@ -653,7 +747,7 @@ function createBusWatcher(nucleus, deps = {}) {
     const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
     if (reps.length > snap.reps) {
       const fresh = reps.slice(snap.reps);
-      const firstToday = !reps.slice(0, snap.reps).some(x => String(x.ts || "").slice(0, 10) === today());
+      const firstToday = !reps.slice(0, snap.reps).some(x => repLocalDay(x.ts) === today());   // local-vs-local (see repLocalDay)
       fresh.forEach((rep, i) => out.push({
         modality: "bus", source: "reps", event_key: `rep:${rep.concept || "?"}`,
         concept_tokens: rep.concept ? [rep.concept] : [], rep: { confidence: rep.confidence, correct: rep.correct },
@@ -687,28 +781,47 @@ function createBusWatcher(nucleus, deps = {}) {
 async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
-  const cfg = loadConfig();
+  // E2E audit 25 Jul 2026: the bar was read LIVE from dressing-room/state/
+  // thalamus_config.json — a file whose own header INVITES the captain to retune
+  // it through the genome flow. So the wake-path checks below were testing the
+  // KNOB, not the code: nudge tau1_base to 0.50 and check 2b goes red while the
+  // one-sided-ε logic it guards is perfectly intact. The bar these checks were
+  // written against now lives HERE, built from DEFAULT_CONFIG and pinned (the M5
+  // block has always pinned its own — this is the same discipline, file-wide).
+  const liveCfg = loadConfig();
+  const cfg = { ...DEFAULT_CONFIG, tiers: { ...DEFAULT_CONFIG.tiers, tau1_base: 0.40, epsilon: 0.10 } };
+  assert("SELFTEST HERMETIC: the checks' bar is pinned in this file, not read from the tunable config",
+    cfg.tiers.tau1_base === 0.40 && cfg.tiers.epsilon === 0.10 && cfg.weights.self === DEFAULT_CONFIG.weights.self && cfg !== liveCfg);
+  assert("the LIVE config still parses and merges (it just doesn't set the test's bar)",
+    !!liveCfg && Number.isFinite(liveCfg.tiers.tau1_base) && Number.isFinite(liveCfg.tiers.epsilon) && Array.isArray(liveCfg.self_markers));
 
   // harness: virtual clock + captured writes + injected markets/headroom/adjudicator
   function rig(over = {}) {
     let t = 1000000;
-    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], queue: [], bgQueue: [], adjCalls: 0 };
+    const wr = { afferents: [], ledger: [], workspaces: [], wakes: [], queue: [], bgQueue: [], logs: [], adjCalls: 0 };
     const n = createNucleus(over.cfg || cfg, {
       now: () => t,
       appendAfferent: (r) => wr.afferents.push(r), appendLedger: (r) => wr.ledger.push(r),
-      writeWorkspace: (o) => wr.workspaces.push(JSON.parse(JSON.stringify(o))), writeWake: (o) => wr.wakes.push(JSON.parse(JSON.stringify(o))),
+      // failWorkspaceFor makes ONE moment's write throw — the Windows EPERM the
+      // E2E audit (25 Jul 2026) found could silently eat a whole binding window
+      writeWorkspace: (o) => { if (over.failWorkspaceFor && o.moment && o.moment.spotlight && o.moment.spotlight.event_key === over.failWorkspaceFor) throw new Error("EPERM: workspace.json held open"); wr.workspaces.push(JSON.parse(JSON.stringify(o))); },
+      writeWake: (o) => wr.wakes.push(JSON.parse(JSON.stringify(o))),
+      log: (m) => wr.logs.push(String(m)),
       appendWakeQueue: (r) => wr.queue.push(JSON.parse(JSON.stringify(r))),
       appendBgQueue: (r) => wr.bgQueue.push(JSON.parse(JSON.stringify(r))),
       markets: () => over.markets || { session_happened: 0.9 },
       headroomFrac: () => (over.frac !== undefined ? over.frac : 1),
       allowedTokens: () => (over.allowedTokens !== undefined ? over.allowedTokens : 800000),
-      adjudicate: async () => { wr.adjCalls++; return over.adjVerdict || false; },
+      // adjDelayMs lets a test PARK a flush mid-await (the re-entrancy rig)
+      adjudicate: async () => { wr.adjCalls++; if (over.adjDelayMs) await new Promise(r => setTimeout(r, over.adjDelayMs)); return over.adjVerdict || false; },
       schedule: () => null,                          // manual flush in tests
       readWake: () => (wr.wakes.length ? wr.wakes[wr.wakes.length - 1] : null),
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
       precache: () => (over.precache !== undefined ? over.precache : null),
       answerCache: () => (over.answerCache !== undefined ? over.answerCache : []),   // hermetic — the real cache never leaks in
-      embedText: async () => { wr.embedCalls = (wr.embedCalls || 0) + 1; return over.embedVec !== undefined ? over.embedVec : null; },
+      // wakesAtEmbed snapshots the wake counter AT the embed await — that await is
+      // the window two interleaved flushes used to race through (E2E audit 25 Jul 2026)
+      embedText: async () => { wr.embedCalls = (wr.embedCalls || 0) + 1; wr.wakesAtEmbed = n.state.wakesToday; return over.embedVec !== undefined ? over.embedVec : null; },
       writeDossier: (o) => { wr.dossier = JSON.parse(JSON.stringify(o)); },
     });
     n.state.dossier = { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null };
@@ -741,6 +854,16 @@ async function selftest() {
     // voice enrichment: a spoken doubt gains concept tokens; the markers drop
     const enr = sanitizeAfferent({ modality: "voice", text: "Jumping ka matlab kya hai mujhe samajh nahi aaya" });
     assert("VOICE TOKENS: a spoken doubt derives its concept, drops the doubt-markers", Array.isArray(enr.concept_tokens) && enr.concept_tokens.includes("jumping") && !enr.concept_tokens.includes("matlab") && !enr.concept_tokens.includes("samajh"));
+    // REGRESSION (E2E audit 25 Jul 2026): the derivation was Latin-only, so a
+    // fully-Devanagari doubt — how the ASR actually ships his speech — yielded NO
+    // tokens: nov stayed 0, S sat at self-only 0.45, and any budget-raised bar
+    // silently swallowed his realest doubts.
+    const deva = sanitizeAfferent({ modality: "voice", text: "यार ये अटेंशन समझ नहीं आ रहा" });
+    assert("VOICE TOKENS (Devanagari): a spoken doubt in his own script derives its concept too", Array.isArray(deva.concept_tokens) && deva.concept_tokens.includes("अटेंशन") && !deva.concept_tokens.includes("समझ") && !deva.concept_tokens.includes("नहीं"));
+    const { n: nD, wr: wrD } = rig({ adjVerdict: false });   // adjudicator would say NO-WAKE
+    const rD = await nD.ingest({ modality: "voice", text: "यार ये अटेंशन समझ नहीं आ रहा" });
+    await nD.flush();
+    assert("a FRESH-concept Devanagari doubt lights NOV and wakes Opus (self+nov=0.65)", rD.S >= 0.64 && wrD.wakes.length === 1);
     // ONE-SIDED epsilon: a bare self-doubt (S≈0.45, no novelty) at the 0.40 bar
     // must WAKE outright — never handed to the no-wake adjudicator.
     const { n, wr } = rig({ adjVerdict: false });     // adjudicator would say NO-WAKE
@@ -788,6 +911,13 @@ async function selftest() {
     const affect = await n2.ingest({ modality: "voice", text: "cosine question", concept_tokens: ["cosine"], prosody: { stress: 0.99 }, emotion: "agitated", tone: "flat" });
     assert("AFFECT FIREWALL: prosody/emotion change NOTHING in the score", Math.abs(clean.S - affect.S) < 1e-12);
     assert("affect fields never even land in the afferent log", !JSON.stringify(wr2.afferents).match(/prosody|emotion|agitated|"tone"/i) && wr.afferents.length === 1);
+    // REGRESSION (E2E audit 25 Jul 2026): the door swept TOP-LEVEL keys only, so a
+    // nested carrier (a richer ASR payload, a meta blob) sailed through into
+    // afferent.jsonl and into workspace.moment.spotlight. The firewall is a
+    // boundary — depth must not buy passage — and non-affect data must survive it.
+    const nested = sanitizeAfferent({ modality: "voice", text: "cosine question", concept_tokens: ["cosine"], meta: { emotion: "frustrated", turn: 7 }, asr: { analysis: { prosody: { stress: 0.9 }, words: 3 }, alts: [{ text: "cosine", tone: "flat" }] } });
+    assert("AFFECT FIREWALL: NESTED prosody/emotion/tone is stripped too (the door sweeps deep)",
+      !JSON.stringify(nested).match(/prosody|emotion|frustrated|stress|"tone"|flat/i) && nested.meta.turn === 7 && nested.asr.analysis.words === 3 && nested.asr.alts[0].text === "cosine");
   }
 
   // (6) the ambiguous band calls the tiny model AT MOST once
@@ -823,7 +953,11 @@ async function selftest() {
     const wsA = wra.workspaces[wra.workspaces.length - 1];
     assert("AFFECT FIREWALL: affect → a timing hint in the workspace, nothing more", fw.firewalled === true && wsA.mouth_hint && wsA.mouth_hint.hint.includes("soften"));
     assert("affect is NEVER logged, NEVER scored, NEVER bound", wra.afferents.length === 0 && wra.ledger.length === 0 && wra.wakes.length === 0);
-    assert("the hint self-expires (ephemeral by construction)", new Date(wsA.mouth_hint.expires) > new Date(0) && wsA.mouth_hint.expires !== undefined);
+    // E2E audit 25 Jul 2026: this check could not fail — `expires > epoch` is true
+    // of every timestamp ever written, so a TTL regression (120s → 12h, leaking a
+    // stale softening hint across his whole day) would have shipped green. Assert
+    // the actual window, the way the whisper/pre-answer checks do.
+    assert("the hint self-expires in exactly 120s (ephemeral by construction)", new Date(wsA.mouth_hint.expires) - new Date(wsA.updated_at) === 120000);
     assert("GOV magnitudes: any RED transition = 1.0, GREEN↔AMBER = 0.5",
       computeComponents({ modality: "bus", gov_from: "AMBER", gov_to: "RED" }, { cfg, markets: {}, seen: new Set(), hab: new Map(), now: 0 }).gov === 1 &&
       computeComponents({ modality: "bus", gov_from: "GREEN", gov_to: "AMBER" }, { cfg, markets: {}, seen: new Set(), hab: new Map(), now: 0 }).gov === 0.5);
@@ -847,6 +981,15 @@ async function selftest() {
     assert("deep answer folds THROUGH the thalamus into workspace.deep", fold.ok && wsp.deep && wsp.deep.text === "the deep read" && wsp.deep.moment_id === mid);
     const lastWake = wr.wakes[wr.wakes.length - 1];
     assert("wake.json is CONSUMED-on-success (like brain_queue.triggers)", lastWake.consumed && lastWake.consumed.moment_id === mid && lastWake.consumed.status === "served");
+    // REGRESSION (E2E audit 25 Jul 2026): the served answer must SURVIVE the next
+    // ordinary broadcast. The workspace rebuild omitted deep_recent, so a single
+    // following moment erased the answers he paid Opus for, before the page showed them.
+    assert("a served deep answer enters deep_recent", Array.isArray(wsp.deep_recent) && wsp.deep_recent.some(d => d.moment_id === mid));
+    tick(60000);
+    await n.ingest({ modality: "voice", text: "ok now something completely unrelated", concept_tokens: ["other"] });
+    await n.flush();
+    const after = wr.workspaces[wr.workspaces.length - 1];
+    assert("DEEP ANSWERS SURVIVE the next broadcast (the lost-answer scar stays shut)", Array.isArray(after.deep_recent) && after.deep_recent.some(d => d.moment_id === mid));
   }
 
   // M14 — THE OVERLAP: wakes QUEUE (the clobber scar is dead) + ledger-true cap
@@ -919,7 +1062,17 @@ async function selftest() {
     for (let i = 0; i < 3; i++) { tick(60000); await n.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", concept_tokens: ["attention"] }); await n.flush(); }
     assert("DOSSIER: 3 stalls → capacity nudge, and it can ONLY say 'lower'", wr.dossier.stalls_today === 3 && wr.dossier.capacity_nudge === "lower");
     assert("DOSSIER: built from counts alone — no affect field can exist in it", !JSON.stringify(wr.dossier).match(/prosody|emotion|mood|stress/i));
-    assert("DOSSIER: dated (a new day resets the posterior)", wr.dossier.date === localDate(new Date(n.state.hab.values().next().value ? Date.now() : Date.now())) || typeof wr.dossier.date === "string");
+    // E2E audit 25 Jul 2026: this check could not fail — its second disjunct
+    // (`typeof date === "string"`) is true of every run, and the first was in fact
+    // FALSE under the rig's epoch clock, which is why the escape hatch was there.
+    // So the claimed behaviour (a new day RESETS the posterior) was never tested.
+    // Tick the virtual clock across midnight and assert the rollover for real.
+    const day1 = wr.dossier.date;
+    tick(24 * 3600000);
+    await n.ingest({ modality: "bus", source: "reps", event_key: "rep:attention", concept_tokens: ["attention"], rep: { confidence: "knew", correct: true } });
+    await n.flush();
+    assert("DOSSIER: a new day RESETS the posterior (date rolls, stalls_today back to 0, concepts fresh)",
+      typeof day1 === "string" && wr.dossier.date !== day1 && wr.dossier.stalls_today === 0 && wr.dossier.capacity_nudge === null && wr.dossier.concepts.attention.stalls === 0 && wr.dossier.concepts.attention.wins === 1);
   }
 
   // M17 — THE PRE-ANSWER ENGINE serve side: doubt × cache = zero-latency attach
@@ -1004,6 +1157,52 @@ async function selftest() {
     const bgHit = matchBg({ concept_tokens: [], text: "टोकनाइज़ेशन सबवर्ड वाला डाउट फिर से" }, [{ moment_id: "b1", concept: "टोकनाइज़ेशन सबवर्ड", insight: "सबवर्ड split का सवाल", tokens: [] }]);
     assert("the bg recall-match works in Devanagari too", bgHit && bgHit.moment_id === "b1");
     assert("the tightened floor rejects thin overlap (2 shared words < 3)", matchPreAnswer({ concept_tokens: [], text: "kv cache discussion generally" }, [{ id: "x", concept: "kv cache", doubt: "unrelated thing entirely", answer: "x", vec: null }], null, { pre_answer: { threshold: 0.66, min_overlap: 3 } }) === null);
+  }
+
+  // E2E AUDIT 25 Jul 2026 — the flush lane: serialized, gated free-first, and the
+  // wake slot claimed before the await it used to be raced across
+  {
+    const t1v = tau1Effective(cfg, 1);                                   // the pinned bar, headroom full
+    // (a) RE-ENTRANCY: flush A parks on the ~15s adjudicator; a newer moment
+    // flushes meanwhile. The parked one used to resume and stamp its OLDER moment
+    // over the live spotlight at a HIGHER version — the page froze on stale ground.
+    const bandCfg = { ...cfg, weights: { ...cfg.weights, self: t1v - 0.02 } };   // lands inside ε, so A must adjudicate
+    const { n, wr } = rig({ cfg: bandCfg, adjVerdict: false, adjDelayMs: 30 });
+    await n.ingest({ modality: "voice", text: "i don't get x", concept_tokens: [] });
+    const pA = n.flush();
+    await new Promise(r => setImmediate(r));                             // let A splice the buffer and park on the adjudicator
+    await n.ingest({ modality: "bus", event_key: "later", concept_tokens: ["later"] });
+    const pB = n.flush();
+    await Promise.all([pA, pB]);
+    const last = wr.workspaces[wr.workspaces.length - 1].moment;
+    assert("FLUSH SERIALIZED: a parked older moment can no longer overwrite the newer broadcast", last.spotlight.event_key === "later" && wr.workspaces.length === 2);
+    // (b) ε-BAND ECONOMY: the free gates run BEFORE the paid call. Cap = 0 here,
+    // so the verdict was always going to be thrown away — it must never be bought.
+    const cappedCfg = { ...cfg, wake_cap_per_day: 0, weights: { ...cfg.weights, self: t1v - 0.02 } };
+    const { n: nE, wr: wrE } = rig({ cfg: cappedCfg, adjVerdict: true });
+    await nE.ingest({ modality: "voice", text: "i don't get x", concept_tokens: [] });
+    const rE = await nE.flush();
+    assert("ε-BAND ECONOMY: an already-capped near-miss never pays the adjudicator", wrE.adjCalls === 0 && rE[0].tier === 1 && rE[0].outcome === "enrich");
+    // (c) the wake slot is reserved AT THE GATE — the embed await below it was the
+    // window two interleaved flushes both walked through on the same counter.
+    const { n: nR, wr: wrR } = rig({ answerCache: [{ id: "z", concept: "attention", doubt: "attention kya hai", answer: "x", vec: [1, 0] }], embedVec: [1, 0] });
+    await nR.ingest({ modality: "voice", text: "i don't get attention", concept_tokens: ["attention"] });
+    await nR.flush();
+    assert("WAKE SLOT RESERVED at the gate, not on the far side of the ≤4s embed await", wrR.embedCalls === 1 && wrR.wakesAtEmbed === 1 && wrR.wakes.length === 1);
+    // (c2) GROUP ISOLATION: the buffer is spliced before anything is scored, so a
+    // single throwing write (Drive-sync/AV/editor holding workspace.json → EPERM)
+    // used to take every remaining bound moment of the window with it, silently.
+    const { n: nT, wr: wrT } = rig({ failWorkspaceFor: "boom" });
+    await nT.ingest({ modality: "bus", event_key: "boom", gov_from: "AMBER", gov_to: "RED" });        // higher S → spotlight of group 1
+    await nT.ingest({ modality: "bus", event_key: "survivor", gov_from: "GREEN", gov_to: "AMBER" });  // its own group
+    const rT = await nT.flush();
+    assert("GROUP ISOLATION: one failed write costs ONE moment — its siblings still land, and the loss is LOGGED",
+      rT.length === 1 && wrT.ledger.length === 1 && wrT.ledger[0].key === "bus:survivor" && wrT.logs.some(l => /LOST mid-flush/.test(l)));
+    // (d) rep timestamps are compared in ONE zone — the 00:00-05:30 IST blind spot
+    const midnightLocal = new Date(2026, 6, 12, 0, 30, 0);               // 00:30 LOCAL on 12 Jul
+    const lateLocal = new Date(2026, 6, 12, 23, 30, 0);                  // 23:30 LOCAL on 12 Jul
+    assert("REP DAY: a UTC-Z rep timestamp is dated in LOCAL time (session_happened stops re-firing at night)",
+      repLocalDay(midnightLocal.toISOString()) === "2026-07-12" && repLocalDay(lateLocal.toISOString()) === "2026-07-12" && repLocalDay("junk") === "junk" && repLocalDay(undefined) === "");
   }
 
   // habituation decays — after a long silence the same signal can fire again

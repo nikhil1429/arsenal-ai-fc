@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # INSTALL_TASKS.ps1 — THE ORGANISM's schedule (ORGANISM_ANATOMY §7)
 # Run ONCE in an elevated-or-normal PowerShell:
 #   powershell -ExecutionPolicy Bypass -File setup\INSTALL_TASKS.ps1

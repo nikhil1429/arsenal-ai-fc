@@ -42,8 +42,12 @@
 //                          ALREADY ANSWERED (the thalamus cosine-attaches it
 //                          as a non-spoken hint; the mouth gate decides).
 // LAWS:  fires overnight (or --force) · conserve tone = no shift (rest) ·
-//        spends ONLY fuelboard headroom, hard-capped per job · every output
-//        validated by code, junk rejected · all outputs land in gitignored
+//        the cognition jobs ride the CLAUDE subscription lane under ONE
+//        shift-wide call budget (enforced ACROSS jobs, not merely declared per
+//        job) and bill no Gemini tank; the shift's one genuine Gemini spend
+//        (the season re-read, T5) is gated on T5's own headroom — E2E audit
+//        25 Jul 2026 · every output validated by code, junk rejected · all
+//        outputs land in gitignored
 //        brain_out/nightshift/ (job 7: gitignored answer_cache.jsonl — its
 //        sole writer; it names his doubts) · zero writes to any organ's file.
 // MODES: node scripts/nightshift.mjs [--force] · status · selftest
@@ -80,8 +84,47 @@ function writeAtomic(path, obj) {
 }
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-const CAPS = { probe_concepts: 6, probes_per_concept: 5, distractor_concepts: 6, min_headroom: 30, pre_answer_max: 25 };
+// min_headroom (30) is the RETIRED whole-shift T7 gate — kept in the shape so no
+// consumer of CAPS breaks, but nothing reads it since the E2E audit (25 Jul 2026)
+// re-pointed the gate at the lane each job actually spends. shift_call_budget is
+// the sum of the per-job caps: 6 probes + 6×4 grades + 6 distractors + 1+25 pre-answers.
+const CAPS = { probe_concepts: 6, probes_per_concept: 5, distractor_concepts: 6, min_headroom: 30, pre_answer_max: 25, min_gemini_headroom: 1, shift_call_budget: 62 };
 const PROBE_TYPES = ["recall", "reconstruct", "defend", "novel", "negative-space"];
+
+// ---------------------------------------------------------------------------
+// E2E audit 25 Jul 2026 — THE FUELBOARD MISBILLING. Since the 17 Jul migration
+// (see the note at the imports) jobs 1 / 1b / 2 / 7 ride claudeGen — the Claude
+// MAX SUBSCRIPTION — yet every one of them still charged a GEMINI tank: up to
+// ~56 units on T7 (the DMN's gemini-flash key) plus 6 on T5 (the Scout's pro
+// key) per night for calls that never touch a Gemini key. Two real harms: the
+// fuelboard read fiction (the gauge showed T7 burnt by work it never did), and
+// the admission gate metered a resource this shift no longer spends, so a day
+// of honest DMN traffic silently cancelled the whole night. The Claude lane is
+// a subscription, not a tank — it is metered by the brain's own window ledger,
+// never here — so its spends ride a NON-TANK lane id that the fuelboard never
+// sees. Genuine Gemini spends (the season re-read on T5) still bill normally.
+// NOTE (open, needs fuelboard.mjs): the naive-shadow multiplier only counts
+// tank-billed calls, so the Claude lane's shadow tokens go unrecorded until the
+// board grows a Claude lane of its own. Under-reporting a saving beats
+// inventing a Gemini spend.
+// ---------------------------------------------------------------------------
+const CLAUDE_LANE = "CLAUDE_MAX";
+const meterUse = (lane, units = 1, naiveTokens = 0) => (lane === CLAUDE_LANE
+  ? { ok: true, lane, billed: false }              // subscription — nothing to meter on the board
+  : recordUse(lane, units, naiveTokens));
+
+// E2E audit 25 Jul 2026 — THE BUDGET THAT WASN'T. The shift checked headroom
+// ONCE, before job 1, then made up to ~62 LLM calls with no re-check: the
+// header's "hard-capped per job" was true only per job, never across the shift,
+// so the measured budget could be spent nearly twice over. One budget object now
+// travels with the deps: every LLM call must TAKE from it, and a job that finds
+// it empty stops where it stands (partial work still files — half a probe bank
+// beats none). Standalone job calls (and the selftest) get the unlimited one.
+function makeBudget(n) {
+  return { left: Number.isFinite(n) ? Math.max(0, Math.floor(n)) : Infinity, spent: 0,
+           take() { if (this.left <= 0) return false; this.left--; this.spent++; return true; } };
+}
+const NO_BUDGET = { left: Infinity, spent: 0, take: () => true };
 
 // concepts worth drilling: weak first, locked capsules as the floor (Re-Jirah fodder)
 function drillConcepts(deps = {}) {
@@ -103,14 +146,16 @@ function drillConcepts(deps = {}) {
 // ---------------------------------------------------------------------------
 async function probeBank(deps = {}) {
   const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
-  const use = deps.recordUse || recordUse;
+  const use = deps.recordUse || meterUse;
+  const budget = deps.budget || NO_BUDGET;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "dossier_weights.json"));
   const concepts = (deps.concepts || drillConcepts(deps)).slice(0, CAPS.probe_concepts);
   const bank = {};
   let spent = 0;
   for (const c of concepts) {
+    if (!budget.take()) break;                       // E2E audit 25 Jul 2026: the shift-wide budget binds here too
     const r = await gen(`Generate exactly ${CAPS.probes_per_concept} INTERVIEW PROBES for the concept "${c.concept}" for an AI Product Engineer candidate. One per type: ${PROBE_TYPES.join(", ")}. negative-space = "when would you NOT use it". Output STRICT JSON array, no fences: [{"type":"...","probe":"<the question, <=200 chars, interviewer voice>"}]${grammar && grammar.probe_types ? `\nMatch this club's probe grammar where possible: ${JSON.stringify(Object.keys(grammar.probe_types))}` : ""}`);
-    use("T7", 1, 3000); spent++;
+    use(CLAUDE_LANE, 1, 3000); spent++;              // claudeGen — subscription lane, never a Gemini tank
     if (!r.ok) continue;
     try {
       const raw = String(r.text); const s = raw.indexOf("["), e = raw.lastIndexOf("]");
@@ -143,8 +188,14 @@ function answerVariance(answers) {
   }
   return Math.round((sum / n) * 100) / 100;           // 0 = every attempt agrees · 1 = disjoint ground
 }
+// E2E audit 25 Jul 2026: claudeGen is SYNCHRONOUS (execFileSync) and returns a
+// plain object — calling .catch() on it is a TypeError that kills the whole pass
+// the instant the LLM lane actually works. A thunk + try/catch tolerates BOTH a
+// sync return and a promise, so injected async deps keep working too.
+const genSafe = async (fn) => { try { return await fn(); } catch { return { ok: false }; } };
 async function gradeProbes(bank, deps = {}) {
-  const use = deps.recordUse || recordUse;
+  const use = deps.recordUse || meterUse;
+  const budget = deps.budget || NO_BUDGET;
   // haiku plays the hot seats (mechanical, ×24/night), sonnet plays the pro.
   // NOTE: claude CLI has no temperature flag — the GRADE.temp knob is retired;
   // natural sampling variance still separates contested from settled ground.
@@ -160,13 +211,16 @@ async function gradeProbes(bank, deps = {}) {
     const q = `Answer this interview probe as a strong AI Product Engineer candidate, in ≤120 words, no preamble: "${t.probe.probe}"`;
     const answers = [];
     for (let i = 0; i < GRADE.k; i++) {
-      const r = await genHot(q).catch(() => ({ ok: false }));
-      use("T7", 1, 2000); spent++;
+      if (!budget.take()) break;                     // E2E audit 25 Jul 2026: the shift-wide budget binds here too
+      const r = await genSafe(() => genHot(q));
+      use(CLAUDE_LANE, 1, 2000); spent++;            // haiku on the subscription — T7 was pure fiction post-17-Jul
       if (r.ok && r.text) answers.push(r.text);
     }
-    const rp = await genPro(q).catch(() => ({ ok: false }));
-    use("T5", 1, 2000); spent++;
-    if (rp.ok && rp.text) answers.push(rp.text);
+    if (budget.take()) {
+      const rp = await genSafe(() => genPro(q));
+      use(CLAUDE_LANE, 1, 2000); spent++;            // the "pro" seat is claudeGen sonnet now, NOT the Scout's T5 key
+      if (rp.ok && rp.text) answers.push(rp.text);
+    }
     if (answers.length >= 2) { t.probe.difficulty = answerVariance(answers); t.probe.graded = answers.length; graded++; }
   }
   // hardest ground first — every consumer naturally takes from the top
@@ -179,15 +233,17 @@ async function gradeProbes(bank, deps = {}) {
 // ---------------------------------------------------------------------------
 async function distractorBank(deps = {}) {
   const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
-  const use = deps.recordUse || recordUse;
+  const use = deps.recordUse || meterUse;
+  const budget = deps.budget || NO_BUDGET;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"));
   const shapes = ((grammar && grammar.clusters) || []).map(c => c.shape || c.name).filter(Boolean).slice(0, 5);
   const concepts = (deps.concepts || drillConcepts(deps)).slice(0, CAPS.distractor_concepts);
   const bank = {};
   let spent = 0;
   for (const c of concepts) {
+    if (!budget.take()) break;                       // E2E audit 25 Jul 2026: the shift-wide budget binds here too
     const r = await gen(`For the concept "${c.concept}", write exactly 3 DISTRACTORS — answers that are PLAUSIBLE-BUT-WRONG in ways a learner actually gets wrong${shapes.length ? ` (this learner's real confusion shapes: ${shapes.join("; ")})` : ""}. Output STRICT JSON array, no fences: [{"distractor":"<the wrong-but-tempting claim, <=160 chars>","why_wrong":"<the precise crack, <=120 chars>"}]`);
-    use("T7", 1, 2500); spent++;
+    use(CLAUDE_LANE, 1, 2500); spent++;              // claudeGen — subscription lane, never a Gemini tank
     if (!r.ok) continue;
     try {
       const raw = String(r.text); const s = raw.indexOf("["), e = raw.lastIndexOf("]");
@@ -247,14 +303,64 @@ function gemCartridge(deps = {}, now = new Date()) {
 // ---------------------------------------------------------------------------
 // JOB 6 — M21 THE WIND TUNNEL (report-only: the gate NEVER retunes itself).
 // Every ledger row already carries S, headroom_frac, key, ts — so any tier
-// config can be replayed EXACTLY, offline, in milliseconds. The ε-band
-// resolves DOWN in replay (the tiny model's verdict is unknowable offline —
-// conservative, stated in the proposal). Output rides the boot room's own
-// mutation grammar so the captain reviews it like any gene.
+// config can be replayed EXACTLY, offline, in milliseconds. The ε-band is
+// ONE-SIDED (it mirrors the live gate) and its near-misses resolve DOWN in
+// replay (the tiny model's verdict is unknowable offline — conservative,
+// stated in the proposal). Output rides the boot room's own mutation grammar
+// so the captain reviews it like any gene.
 // ---------------------------------------------------------------------------
 const TUNNEL = { band: [1, 8], min_sample: 200, hysteresis_frac: 0.9, hysteresis_abs: 0.5 };
 
+// E2E audit 25 Jul 2026: THE TUNNEL REPLAYED A GATE THAT NO LONGER EXISTS.
+// This replay used a SYMMETRIC ε-band, checked BEFORE the wake test, so every
+// score in [τ1, τ1+ε) was resolved DOWN to tier 1 — the exact behaviour the
+// live thalamus abandoned on 18 Jul (thalamus.mjs: "ONE-SIDED epsilon"), and
+// abandoned precisely because his real voiced doubts sit just above the bar and
+// were being demoted to a fail-closed coin flip. A tunnel that replays the OLD
+// gate mis-states reality twice over: it reports wakes that really happened as
+// ε-adjudications, and then files a tuning proposal whose evidence is fiction.
+// It now mirrors the live ladder exactly: the two FREE gates (refractory, cap)
+// are read first, at/above the bar WAKES outright, and only a near-MISS below
+// the bar — and only when not already gated — counts as a paid adjudication.
+// replayGateLegacy below is the pre-fix engine, frozen verbatim (layering).
 function replayGate(rows, tiers, refractoryMin = 45, capPerDay = 15) {
+  const wakeKeys = new Map();
+  const days = new Set();
+  const m = { wakes: 0, capped: 0, refractory: 0, adjudications: 0, tier0: 0, tier1: 0, rows: 0 };
+  let wakesToday = 0, curDay = null;
+  for (const r of rows || []) {
+    if (!r || !Number.isFinite(r.S)) continue;
+    m.rows++;
+    const day = r.day || String(r.ts || "").slice(0, 10);
+    days.add(day);
+    if (day !== curDay) { curDay = day; wakesToday = 0; }
+    const hf = Math.max(0, Math.min(1, Number.isFinite(r.headroom_frac) ? r.headroom_frac : 1));
+    const t1 = tiers.tau1_base + (tiers.budget_k || 0) * (1 - hf);
+    const ts = new Date(r.ts || 0).getTime();
+    const last = wakeKeys.get(r.key);
+    const inRefractory = last !== undefined && ts - last < refractoryMin * 60000;
+    const atCap = wakesToday >= capPerDay;
+    let tier = r.S < tiers.tau0 ? 0 : 1;
+    if (r.S >= t1) tier = 2;                                         // at/above the bar wakes outright (live, 18 Jul)
+    else if (t1 - r.S < tiers.epsilon && !inRefractory && !atCap) {   // only a near-MISS is worth a paid verdict
+      m.adjudications++; tier = Math.max(tier, 1);                   // resolved DOWN offline — conservative
+    }
+    if (tier === 2) {
+      if (inRefractory) { m.refractory++; tier = 1; }
+      else if (atCap) { m.capped++; tier = 1; }
+      else { m.wakes++; wakesToday++; wakeKeys.set(r.key, ts); }
+    }
+    if (tier === 0) m.tier0++; else if (tier === 1) m.tier1++;
+  }
+  m.days = Math.max(1, days.size);
+  m.wakes_per_day = Math.round((m.wakes / m.days) * 100) / 100;
+  return m;
+}
+
+// replayGateLegacy — the pre-audit symmetric-band replay, FROZEN VERBATIM
+// (layering): kept so any older wind-tunnel proposal can be re-derived exactly
+// as it was filed. Nothing calls it in the live path.
+function replayGateLegacy(rows, tiers, refractoryMin = 45, capPerDay = 15) {
   const wakeKeys = new Map();
   const days = new Set();
   const m = { wakes: 0, capped: 0, refractory: 0, adjudications: 0, tier0: 0, tier1: 0, rows: 0 };
@@ -322,7 +428,7 @@ function windTunnel(rows, thalCfg, opts = {}) {
       `deterministic replay of ${usable.length} real gate decisions over ${base.days} day(s) — zero LLM`,
       `current tiers: ${base.wakes_per_day} wakes/day · ${base.capped} capped · ${base.adjudications} ε-adjudications (score ${baseScore})`,
       `proposed tiers: ${best.metrics.wakes_per_day} wakes/day · ${best.metrics.capped} capped · ${best.metrics.adjudications} ε-adjudications (score ${best.score})`,
-      `ε-band resolved DOWN in replay (the adjudicator's live verdicts are unknowable offline — conservative)`,
+      `one-sided ε-band replayed exactly as the live gate runs it (at/above τ1 wakes); only near-MISSES adjudicate and they resolve DOWN in replay (the adjudicator's live verdicts are unknowable offline — conservative)`,
     ],
     predicted_effect: `wakes/day moves toward the [${t.band[0]}, ${t.band[1]}] band with fewer suppressed surprises and fewer paid adjudications`,
     metric: { name: "wakes_per_day_band", min_events: t.min_sample, window_days: 14, band: t.band },
@@ -393,15 +499,19 @@ async function preAnswerEngine(deps = {}) {
   // thinking models spend thoughts from the SAME output budget — the 25-item
   // predict needs real room or the wire returns an empty candidate (probed live)
   const gen = deps.generate || ((p, big) => claudeGen(p, "sonnet"));
-  const use = deps.recordUse || recordUse;
+  const use = deps.recordUse || meterUse;
+  const budget = deps.budget || NO_BUDGET;
   const material = deps.material || preAnswerMaterial(deps, now);
   if (!(material.clusters.length || material.voiced.length || material.due.length || material.danger.length || material.threads.length)) {
     return { ok: false, skipped: "no real signal on the bus — never predict doubts from nothing" };
   }
+  // E2E audit 25 Jul 2026: the shift-wide budget is checked BEFORE the predict
+  // call — a prediction with no budget left to answer it is a wasted call.
+  if (!budget.take()) return { ok: false, skipped: "shift call budget spent — the cache waits for tomorrow's headroom" };
   // 1 — PREDICT (one call): the doubts he is MOST LIKELY to voice next
   const pr = await gen(`You predict the NEXT doubts of one specific learner (an AI Product Engineer candidate) from his real signals. His confusion SHAPES (mined from his real captured doubts): ${JSON.stringify(material.clusters).slice(0, 2500)}. His last-7-days spoken fragments: ${JSON.stringify(material.voiced).slice(0, 3000)}. Concepts hot this week: ${material.hotTokens.join(", ") || "—"}. Due for review (decay risk): ${material.due.join(", ") || "—"}. Confident-but-wrong zone: ${material.danger.join(", ") || "—"}. Open threads: ${material.threads.join(" · ") || "—"}.
 Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — concrete, first-person, in his idiom (Hinglish fine), each anchored to one concept. ONLY learning doubts on his interview arc (LLMs, RAG, evals, systems, his locked concepts decaying); IGNORE anything about building or configuring the organism/tooling itself (Claude, Gemini accounts, schedulers, APIs, tasks) — that is machinery talk, not a doubt worth pre-answering. Output STRICT JSON array, no fences: [{"concept":"<one concept>","doubt":"<the doubt as HE would voice it, 15-140 chars>"}]`, true);
-  use("T7", 1, 4000);
+  use(CLAUDE_LANE, 1, 4000);                         // claudeGen — subscription lane, never a Gemini tank
   if (!pr.ok) return { ok: false, skipped: "prediction lane dry — no cache tonight" };
   let predicted = [];
   try {
@@ -416,9 +526,10 @@ Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — co
   const entries = [];
   let spent = 1;
   for (const d of predicted) {
+    if (!budget.take()) break;                       // E2E audit 25 Jul 2026: the shift-wide budget binds here too
     const r = await gen(`Answer this learner's doubt COMPLETELY, in the club's DOSSIER grammar. The doubt (his voice): "${d.doubt}" — concept: ${d.concept}.
 Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; (2) one worked micro-example with real small numbers; (3) where it breaks / the limit; (4) the trade-off a staff engineer would name; (5) ONE reframe that dissolves this exact confusion, speakable, Hinglish welds welcome. Honest frame only — never hype, never a shame word. Output STRICT JSON, no fences: {"answer":"<the full answer>"}`);
-    use("T7", 1, 3500); spent++;
+    use(CLAUDE_LANE, 1, 3500); spent++;              // claudeGen — subscription lane, never a Gemini tank
     if (!r.ok) continue;
     try {
       const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
@@ -490,7 +601,7 @@ function validateSeasonRead(obj, banned) {
 async function seasonReRead(deps = {}) {
   const now = deps.now || new Date();
   const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-3.1-pro-preview", "gemini-flash-latest"], maxOutputTokens: 16384, json: true }));
-  const use = deps.recordUse || recordUse;
+  const use = deps.recordUse || meterUse;            // the ONE genuine Gemini spend of the shift — T5 is billed for real
   const corpus = deps.corpus !== undefined ? deps.corpus : seasonCorpus(deps);
   if (corpus.length < 2000) return { ok: false, skipped: "corpus too thin to re-read — the season is days old, not weeks" };
   const r = await gen(`You are re-reading a learner's ENTIRE season tonight — every capsule he locked, every word he voiced, every doubt he logged (below). You are the coach no human could be: you re-read three weeks every night. Find ONLY what is genuinely in the text:
@@ -534,25 +645,42 @@ async function runShift(deps = {}) {
   if (!deps.force && !isOvernight(now)) return { ok: false, skipped: "not overnight — the shift works while he sleeps (--force to override)" };
   if (tone.arousal === "conserve") return { ok: false, skipped: "conserve tone — a depleted captain's machine also rests" };
   const board = deps.board || loadBoard();
-  const t7 = board.tanks.find(t => t.id === "T7");
-  if (headroomOf(t7) < CAPS.min_headroom) return { ok: false, skipped: `T7 headroom ${headroomOf(t7)} < ${CAPS.min_headroom} — nothing idle to convert` };
+  // E2E audit 25 Jul 2026: this was ONE gate on T7 (a gemini-flash key the
+  // post-17-Jul shift never spends) that killed the ENTIRE night — probe bank,
+  // distractors, pre-answers, the season read — whenever the daytime DMN had
+  // drained it. The cognition jobs ride the Claude subscription: they are bounded
+  // by the shift-wide call budget below, not by a Gemini tank. T5 (the season
+  // re-read's real spend) is metered where it is actually spent, at that job.
+  const t5 = board.tanks.find(t => t.id === "T5");
+  const geminiDry = t5 ? headroomOf(t5) < CAPS.min_gemini_headroom : false;
+  const budget = deps.budget || makeBudget(CAPS.shift_call_budget);
+  const jobDeps = { ...deps, budget };
   const day = localDate(now);
   const out = { date: day, jobs: {} };
   const write = deps.write || ((name, content) => writeAtomic(join(OUT_DIR, name), content));
 
-  const pb = await probeBank(deps);
-  const gr = Object.keys(pb.bank).length ? await gradeProbes(pb.bank, deps) : { graded: 0, spent: 0 };   // M23 — grade BEFORE the bank is filed
+  const pb = await probeBank(jobDeps);
+  const gr = Object.keys(pb.bank).length ? await gradeProbes(pb.bank, jobDeps) : { graded: 0, spent: 0 };   // M23 — grade BEFORE the bank is filed
   if (Object.keys(pb.bank).length) write(`probe_bank_${day}.json`, { date: day, bank: pb.bank });
   out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent, graded: gr.graded, grade_spent: gr.spent };
 
-  const db = await distractorBank(deps);
+  const db = await distractorBank(jobDeps);
   if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
   out.jobs.distractors = { concepts: Object.keys(db.bank).length, spent: db.spent };
 
   let backfilled = 0;
   if (!deps.skipBackfill) {
-    for (let i = 0; i < 20; i++) { const n = await indexRecall().catch(() => 0); backfilled += n; if (!n) break; }
-    backfilled += await indexEpisodes().catch(() => 0);
+    const idxRecall = deps.indexRecall || indexRecall;
+    for (let i = 0; i < 20; i++) { const n = await idxRecall().catch(() => 0); backfilled += n; if (!n) break; }
+    // E2E audit 25 Jul 2026: indexEpisodes() reads ALL of episodes.jsonl, awaits a
+    // multi-second embed round-trip, then REWRITES THE WHOLE FILE by rename — and
+    // it ran here at 03:00, the same minute the hourly ArsenalFC-HippoIndex task
+    // runs the identical pass, while any live daemon can still markMoment-append.
+    // Whatever landed inside that window was silently erased by the rename: a lost
+    // moment leaves no error, only a hole in his memory. The hourly indexer already
+    // owns that lane, so the shift no longer competes for the file. The path stays
+    // (layering) behind an explicit opt-in, for the day the schtask dies.
+    if (deps.backfillEpisodes) backfilled += await (deps.indexEpisodes || indexEpisodes)().catch(() => 0);
   }
   out.jobs.embed_backfill = { chunks: backfilled };
 
@@ -579,10 +707,15 @@ async function runShift(deps = {}) {
     out.jobs.gate_tune = gt.md ? { proposed: true, engine: "legacy" } : { silent: gt.why };
   }
 
-  const pa = await preAnswerEngine(deps);
+  const pa = await preAnswerEngine(jobDeps);
   out.jobs.pre_answers = pa.ok ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent } : { skipped: pa.skipped };
 
-  const sr = await seasonReRead(deps);
+  // the season re-read is the shift's ONE genuine Gemini call — it, and only it,
+  // answers to T5's headroom (E2E audit 25 Jul 2026: the gate now meters the
+  // resource the job actually spends)
+  const sr = geminiDry
+    ? { ok: false, skipped: `T5 headroom ${headroomOf(t5)} < ${CAPS.min_gemini_headroom} — the long-context lane is spent; yesterday's read stands` }
+    : await seasonReRead(jobDeps);
   out.jobs.season_read = sr.ok ? { model: sr.model, contradictions: sr.contradictions, open_threads: sr.open_threads, edges: sr.edges } : { skipped: sr.skipped };
 
   write(`shift_${day}.json`, out);
@@ -599,7 +732,17 @@ async function selftest() {
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
   assert("conserve tone → no shift (the machine rests too)", (await runShift({ ...base, tone: { arousal: "conserve", effects: {} } })).skipped.includes("conserve"));
-  assert("no T7 headroom → nothing to convert", (await runShift({ ...base, board: { tanks: [{ id: "T7", quota_est: 30, observed_ceiling: 0, used_today: 29, enabled: true, key_index: 5 }] } })).skipped.includes("headroom"));
+  // E2E audit 25 Jul 2026: a drained T7 used to cancel the WHOLE night, though
+  // the cognition lane is the Claude subscription and spends no Gemini at all.
+  {
+    const dryT7 = await runShift({ ...base, generate: genProbes, board: { tanks: [{ id: "T7", quota_est: 30, observed_ceiling: 0, used_today: 29, enabled: true, key_index: 5 }] } });
+    assert("a drained GEMINI DMN tank never cancels the CLAUDE-lane shift", dryT7.ok === true && dryT7.jobs.probe_bank.concepts === 1);
+    const dryT5 = await runShift({ ...base, generate: genProbes, corpus: "x".repeat(5000), board: { tanks: [
+      { id: "T5", quota_est: 50, observed_ceiling: 0, used_today: 50, enabled: true, key_index: 3 },
+      { id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 },
+    ] } });
+    assert("the season re-read (the shift's ONE real Gemini spend) answers to T5's own headroom", dryT5.ok === true && dryT5.jobs.season_read.skipped.includes("T5 headroom"));
+  }
 
   // the jobs
   {
@@ -607,7 +750,7 @@ async function selftest() {
     const r = await runShift({ ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } });
     assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
     assert("probe bank: one per grammar type, validated, dated", writes["probe_bank_2026-07-15.json"].bank.tokenization.probes.length === 5);
-    assert("distractors: personalized shape rides when grammar exists", r.jobs.distractors.spent >= 1);
+    assert("distractors: one call is attempted per drill concept", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));
     assert("gem cartridge: gut-word law + reps-JSON contract travel to the phone", writes["gem_cartridge.md"].includes("knew/shaky/guessed") && writes["gem_cartridge.md"].includes("paste"));
     assert("gate tuner: silent under 20 decisions (no early false alarms)", r.jobs.gate_tune.silent && r.jobs.gate_tune.silent.includes("20"));
@@ -616,6 +759,35 @@ async function selftest() {
   {
     const pb = await probeBank({ ...base, generate: genBad });
     assert("junk probes REJECTED per-item (code validates, junk never banked)", Object.keys(pb.bank).length === 0);
+  }
+  // JOB 2 — the personalization the old check never looked at (E2E audit 25 Jul
+  // 2026: it asserted only `spent >= 1`, with grammar null and a probe-shaped
+  // generator, so it passed while banking nothing and personalizing nothing —
+  // deleting the confusion-shape interpolation would not have moved it).
+  {
+    let seenPrompt = null;
+    const genD = async (p) => { seenPrompt = p; return { ok: true, text: JSON.stringify([{ distractor: "the KV cache makes attention linear because the keys are already computed", why_wrong: "the new token still meets every cached key — n handshakes remain" }]) }; };
+    const db = await distractorBank({ ...base, generate: genD, grammar: { clusters: [{ shape: "scale_intuition_failure" }, { shape: "cache_means_free" }] }, concepts: [{ concept: "kv cache", why: "capsule" }] });
+    assert("distractors: HIS OWN confusion shapes ride the prompt (the feature, not just the call)", seenPrompt.includes("scale_intuition_failure") && seenPrompt.includes("cache_means_free"));
+    assert("distractors: valid items are banked with their why_wrong crack", db.bank["kv cache"] && db.bank["kv cache"].length === 1 && db.bank["kv cache"][0].why_wrong.includes("handshakes"));
+  }
+  // THE SHIFT-WIDE CALL BUDGET (E2E audit 25 Jul 2026: one headroom check before
+  // job 1, then ~62 spends with no re-check — the cap was declared, not enforced)
+  {
+    const b1 = makeBudget(2);
+    const pb = await probeBank({ ...base, generate: genProbes, budget: b1, concepts: [{ concept: "a", why: "w" }, { concept: "b", why: "w" }, { concept: "c", why: "w" }, { concept: "d", why: "w" }] });
+    assert("BUDGET: a job STOPS where the budget ends (partial work still files)", pb.spent === 2 && Object.keys(pb.bank).length === 2 && b1.left === 0);
+    const rB = await runShift({ ...base, generate: genProbes, budget: makeBudget(1) });
+    assert("BUDGET: it travels ACROSS jobs — grading and distractors stop too", rB.jobs.probe_bank.spent === 1 && rB.jobs.probe_bank.grade_spent === 0 && rB.jobs.distractors.spent === 0);
+  }
+  // THE EMBED BACKFILL RACE (E2E audit 25 Jul 2026: indexEpisodes rewrites the
+  // whole of episodes.jsonl and ran head-on into the hourly HippoIndex task)
+  {
+    let ep = 0;
+    const r = await runShift({ ...base, generate: genProbes, skipBackfill: false, indexRecall: async () => 0, indexEpisodes: async () => { ep++; return 3; } });
+    assert("BACKFILL: the shift never rewrites episodes.jsonl (the hourly indexer owns it)", ep === 0 && r.jobs.embed_backfill.chunks === 0);
+    const rOpt = await runShift({ ...base, generate: genProbes, skipBackfill: false, backfillEpisodes: true, indexRecall: async () => 0, indexEpisodes: async () => { ep++; return 3; } });
+    assert("BACKFILL: the episodes lane survives behind an explicit opt-in (layering)", ep === 1 && rOpt.jobs.embed_backfill.chunks === 3);
   }
 
   // JOB 1b — M23 DIFFICULTY GRADING: variance = difficulty, hardest first
@@ -635,7 +807,23 @@ async function selftest() {
     assert("GRADING: k=3 hot + 1 pro answers per scrimmage-ground probe", r.graded === 2 && hotCalls === 6 && proCalls === 2);
     assert("GRADING: divergent answers = HIGH difficulty (contested ground)", bank.tokenization.probes.find(p => p.type === "novel").difficulty > 0.5);
     assert("GRADING: probes sort hardest-first (the scrimmage takes from the top)", ["novel", "negative-space"].includes(bank.tokenization.probes[0].type) && bank.tokenization.probes[bank.tokenization.probes.length - 1].type === "recall");
-    assert("GRADING: hot spends on T7, the pro attempt on T5", spends.filter(s => s === "T7").length === 6 && spends.filter(s => s === "T5").length === 2);
+    // E2E audit 25 Jul 2026: this used to assert the MISBILLING (6×T7 + 2×T5) —
+    // Gemini tanks charged for calls that ride the Claude subscription. The
+    // assertion encoded the bug, so it now states the law instead.
+    assert("GRADING: every spend rides the CLAUDE lane — no Gemini tank is billed for it", spends.filter(s => s === CLAUDE_LANE).length === 8 && spends.every(s => s !== "T7" && s !== "T5"));
+    // the real claudeGen is SYNCHRONOUS and returns a PLAIN OBJECT: the old
+    // `await genHot(q).catch(...)` threw "catch is not a function" and killed the
+    // whole shift the instant the LLM lane actually worked (E2E audit 25 Jul 2026)
+    const bankSync = { z: { why: "w", probes: [{ type: "novel", probe: "a sync-lane probe long enough to pass validation" }] } };
+    let syncCalls = 0;
+    const rSync = await gradeProbes(bankSync, {
+      generateHot: () => ({ ok: true, text: ++syncCalls % 2 ? "attention scales quadratically because pairwise handshakes multiply across positions" : "a completely different framing regarding memory bandwidth saturation limits here" }),
+      generatePro: () => ({ ok: true, text: "a third entirely distinct answer about compiler kernel fusion throughput ceilings" }),
+      recordUse: () => {},
+    });
+    assert("GRADING: a SYNCHRONOUS generator (the real claudeGen shape) grades, never throws", rSync.graded === 1 && bankSync.z.probes[0].difficulty > 0.5);
+    const rThrow = await gradeProbes({ t: { why: "w", probes: [{ type: "novel", probe: "a throwing-lane probe long enough to pass" }] } }, { generateHot: () => { throw new Error("EINVAL spawn claude"); }, generatePro: () => { throw new Error("EINVAL"); }, recordUse: () => {} });
+    assert("GRADING: a THROWING generator degrades to ungraded, never kills the shift", rThrow.graded === 0);
     // consensus ground = low difficulty
     const bank2 = { x: { why: "w", probes: [{ type: "novel", probe: "another probe long enough to pass validation" }] } };
     await gradeProbes(bank2, { generateHot: async () => ({ ok: true, text: "identical answer words every single time repeated verbatim consistently" }), generatePro: async () => ({ ok: true, text: "identical answer words every single time repeated verbatim consistently" }), recordUse: () => {} });
@@ -698,6 +886,21 @@ async function selftest() {
       { day: "2026-07-01", ts: "2026-07-01T10:10:00Z", S: 0.75, headroom_frac: 1, key: "voice:same" },
     ], thal.tiers, 45, 15);
     assert("REPLAY: refractory suppression replays exactly (1 wake, 1 suppressed)", rf.wakes === 1 && rf.refractory === 1);
+    // E2E audit 25 Jul 2026: the replay used a SYMMETRIC ε-band checked BEFORE
+    // the wake test, so a score already AT/ABOVE the bar was resolved DOWN to
+    // tier 1 — the gate the live thalamus abandoned on 18 Jul. His real voiced
+    // doubts sit exactly there; the tunnel was calling his wakes "adjudications"
+    // and filing proposals on evidence that never happened.
+    const above = replayGate([{ day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.58, headroom_frac: 1, key: "voice:in-band" }], thal.tiers, 45, 15);
+    assert("REPLAY: ONE-SIDED ε — at/above the bar WAKES (mirrors the live 18 Jul gate)", above.wakes === 1 && above.adjudications === 0);
+    const below = replayGate([{ day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.50, headroom_frac: 1, key: "voice:near-miss" }], thal.tiers, 45, 15);
+    assert("REPLAY: only a near-MISS below the bar adjudicates, and resolves DOWN", below.wakes === 0 && below.adjudications === 1 && below.tier1 === 1);
+    const gated = replayGate([
+      { day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.75, headroom_frac: 1, key: "voice:same" },
+      { day: "2026-07-01", ts: "2026-07-01T10:10:00Z", S: 0.50, headroom_frac: 1, key: "voice:same" },
+    ], thal.tiers, 45, 15);
+    assert("REPLAY: a refractory-gated near-miss buys no verdict (the free gates read first)", gated.wakes === 1 && gated.adjudications === 0);
+    assert("REPLAY: the pre-audit symmetric band stays frozen beside it (layering)", replayGateLegacy([{ day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.58, headroom_frac: 1, key: "voice:in-band" }], thal.tiers, 45, 15).wakes === 0);
   }
 
   // JOB 7 — THE PRE-ANSWER ENGINE (M17)
@@ -767,4 +970,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, CAPS, TUNNEL, SEASON_CAPS, GRADE };
+export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, replayGateLegacy, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, makeBudget, CAPS, CLAUDE_LANE, TUNNEL, SEASON_CAPS, GRADE };

@@ -58,6 +58,51 @@ const DEFAULTS = {
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const round = (x, d = 4) => (x === null ? null : Math.round(x * 10 ** d) / 10 ** d);
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// A REP BELONGS TO THE DAY THE CAPTAIN LIVED, NOT THE DAY UTC WAS HAVING.
+// E2E audit (25 Jul 2026, finding 87f8f8da): §3 compared `String(r.ts).slice(0,10)`
+// — the UTC calendar day — against localDate(now), which is IST (UTC+5:30).
+// Rep stamps are plain `new Date().toISOString()` (throwin.mjs, and the cartridge
+// capture contract), so EVERY rep captured between 00:00 and 05:30 IST carries
+// yesterday's UTC day. A night-shift session therefore read as "0 reps today"
+// and the physio accused him of playing with the cameras off on the very day he
+// captured the most — the one accusation that must never be false, since it asks
+// for work. Date-only stamps are taken literally: they carry no clock to convert.
+const repLocalDay = (ts) => {
+  const s = String(ts || "");
+  if (!/[T ]/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? localDate(d) : s.slice(0, 10);
+};
+
+// LAST-WINS OVER AN APPEND-ONLY LEDGER — scorer.mjs's own canon ("the truth
+// function reads LAST-WINS per (book,type,date,claim), never both"), which the
+// physio was not honouring. E2E audit (25 Jul 2026, finding 029c3bae): when late
+// reps flip a twin resolution, the scorer APPENDS a correction row rather than
+// editing the old one, so one market-day can sit in slip.jsonl twice with
+// opposite `hit`. Counting raw rows let a single corrected day pay the
+// 30-resolution twin_voice gate twice AND put both the miss and the hit into the
+// Brier — a gate opening on volume that never happened, scored against events
+// that never happened twice. Later row wins, exactly as the scorer intends.
+const lastWinsSlip = (rows) => {
+  const m = new Map();
+  for (const s of rows) m.set(`${s.book}|${s.type}|${s.date}|${s.claim}`, s);
+  return [...m.values()];
+};
+
+// FSRS-6 forgetting curve, ts-fsrs's default decay (w[20] = 0.1542):
+//   R(t) = (1 + FACTOR·t/S)^DECAY,  FACTOR chosen so R(S) = 0.9 exactly.
+const FSRS_DECAY  = -0.1542;
+const FSRS_FACTOR = Math.pow(0.9, 1 / FSRS_DECAY) - 1;
+const retrievability = (elapsedDays, stability) =>
+  Math.pow(1 + FSRS_FACTOR * Math.max(0, elapsedDays) / Math.max(Number(stability) || 0.1, 0.1), FSRS_DECAY);
+
+// fsrs.mjs's normId, CLONED rather than imported on purpose: importing fsrs.mjs
+// would drag ts-fsrs into this process, and the organ whose whole job is to
+// report anemia must not itself die because a node_module went missing.
+const normId = (s) => String(s).trim().toLowerCase().replace(/\s+/g, " ");
+
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
@@ -95,12 +140,85 @@ const readLines = (p) => {
 };
 
 // ---------------------------------------------------------------------------
+// FSRS SIGNAL ROW — v0 frozen verbatim (layering law), new engine beside it
+// ---------------------------------------------------------------------------
+// v0, kept exactly as it shipped: this is what every loop_vitals.json written
+// before 25 Jul 2026 reported, so the number stays readable in hindsight.
+// Superseded by fsrsSignal below; not called by compute any more.
+function fsrsSignalLegacy(world, cfg) {
+  let brier = null, n = 0;
+  if (world.fsrsStore && Array.isArray(world.fsrsStore.cards) && world.reps.length) {
+    // score: for each rep on a card AFTER its first review, FSRS "predicted"
+    // retrievability proxy — honest v0: use overdue-vs-outcome (due passed &
+    // rep correct?) as binary forecast 0.9/0.5; gated hard below min_n.
+    const dueByConcept = new Map(world.fsrsStore.cards.map(c => [c.id, c.due]));
+    const scored = [];
+    for (const r of world.reps) {
+      if (r.track !== "concept" || typeof r.correct !== "boolean") continue;
+      const due = dueByConcept.get(String(r.concept || "").toLowerCase());
+      if (!due) continue;
+      const p = new Date(r.ts) <= new Date(due) ? 0.9 : 0.5;   // before due: high retention predicted
+      scored.push((p - (r.correct ? 1 : 0)) ** 2);
+    }
+    n = scored.length;
+    if (n >= cfg.signal_table.min_n) brier = round(scored.reduce((a, b) => a + b, 0) / n, 4);
+  }
+  return { organ: "fsrs", brier, n, note: brier === null ? "gated (needs n≥" + cfg.signal_table.min_n + ")" : "brier vs due-day outcomes" };
+}
+
+// E2E audit (25 Jul 2026, finding 9faeef60) — why v0 had to be superseded: it
+// scored every HISTORICAL rep against the card's CURRENT `due`, i.e. the next
+// review scheduled after the latest fsrs recompute, which is almost always in
+// the future. So `rep.ts <= due` was true for essentially every rep, p collapsed
+// to the constant 0.9, the 0.5 branch was all but unreachable, and the row
+// published as "brier vs due-day outcomes" was really mean((0.9 − correct)²) —
+// an accuracy proxy wearing a forecast's name, read as forecast quality by the
+// captain and volume-gated on by the Boot Room. (It also keyed reps with a bare
+// toLowerCase, so a stray space in `concept` silently dropped the rep.)
+// fsrs_store.json keeps no per-review history, so the honest reconstruction
+// available INSIDE this organ is FSRS's own forgetting curve replayed in ts
+// order: for each rep after a card's first, predict R over the gap since that
+// card's previous rep. Stability is the card's CURRENT stability — the only one
+// on disk — and the note says so, so the number is never read as more than it is.
+function fsrsSignal(world, cfg) {
+  let brier = null, n = 0;
+  const cards = world.fsrsStore && Array.isArray(world.fsrsStore.cards) ? world.fsrsStore.cards : [];
+  if (cards.length && world.reps.length) {
+    const stabilityById = new Map(cards.map(c => [normId(c.id != null ? c.id : c.concept || ""), Number(c.stability)]));
+    const byCard = new Map();
+    for (const r of world.reps) {
+      if (r.track !== "concept" || typeof r.correct !== "boolean") continue;
+      const id = normId(r.concept || "");
+      const S = stabilityById.get(id);
+      if (!Number.isFinite(S) || S <= 0) continue;         // new/unknown card: no curve to forecast with
+      const t = new Date(r.ts).getTime();
+      if (!Number.isFinite(t)) continue;
+      if (!byCard.has(id)) byCard.set(id, []);
+      byCard.get(id).push({ t, correct: r.correct, S });
+    }
+    const scored = [];
+    for (const reps of byCard.values()) {
+      reps.sort((a, b) => a.t - b.t);
+      for (let i = 1; i < reps.length; i++) {              // a card's first rep has no interval to forecast over
+        const p = retrievability((reps[i].t - reps[i - 1].t) / 86400000, reps[i].S);
+        scored.push((p - (reps[i].correct ? 1 : 0)) ** 2);
+      }
+    }
+    n = scored.length;
+    if (n >= cfg.signal_table.min_n) brier = round(scored.reduce((a, b) => a + b, 0) / n, 4);
+  }
+  return { organ: "fsrs", brier, n,
+    note: brier === null ? "gated (needs n≥" + cfg.signal_table.min_n + ")"
+      : "brier vs FSRS retrievability over the gap since that card's previous rep (current stability used as proxy — the store keeps no per-review history)" };
+}
+
+// ---------------------------------------------------------------------------
 // pure core — every input injected so the selftest owns the world
 // ---------------------------------------------------------------------------
 function compute(world, cfg, now = new Date()) {
   // world: { files:{name:{exists,mtimeMs}}, reps:[], timeaudit, weaknesses, teamSheetMtime,
   //          weaknessesMtime, looseBalls:[], throwinState, capsules:[{doubts:[]}...],
-  //          slip:[], fsrsStore, readinessCount }
+  //          slip:[], fsrsStore, readinessCount, readinessDay, bodyDaysSeen:[] }
   const bleeds = [];
   const nowMs = now.getTime();
 
@@ -155,7 +273,10 @@ function compute(world, cfg, now = new Date()) {
   const learnMin = ta && ta.date === today && ta.buckets && ta.buckets.Learning && typeof ta.buckets.Learning.minutes === "number"
     ? ta.buckets.Learning.minutes : null;
   if (learnMin !== null && learnMin >= cfg.effort_uncaptured.min_learning_minutes) {
-    const repsToday = world.reps.filter(r => String(r.ts || "").slice(0, 10) === today).length;
+    // repLocalDay, not a UTC slice — see its comment (E2E audit 25 Jul 2026,
+    // finding 87f8f8da): the timeaudit's `date` is a LOCAL day, so the reps it
+    // is weighed against must be counted on the same clock.
+    const repsToday = world.reps.filter(r => repLocalDay(r.ts) === today).length;
     if (repsToday === 0) {
       bleeds.push({ organ: "capture", kind: "effort_uncaptured",
         evidence: `${learnMin} Learning minutes today, 0 reps in the log`,
@@ -178,49 +299,73 @@ function compute(world, cfg, now = new Date()) {
   // 5) MIRROR-STALE handled by (1) via mirror_manifest.json cadence.
 
   // SPEAK-GATES — computed from real volumes; fitted organs defer to these.
+  // A gate counts MARKET-DAYS, not ledger rows: lastWinsSlip collapses the
+  // scorer's appended corrections (E2E audit 25 Jul 2026, finding 029c3bae) so a
+  // day whose verdict flipped cannot buy the captain's trust twice.
   const twinResolutions = {};
-  for (const s of world.slip) if (s.book === "twin" && s.resolved) twinResolutions[s.type] = (twinResolutions[s.type] || 0) + 1;
+  for (const s of lastWinsSlip(world.slip.filter(s => s.book === "twin" && s.resolved))) twinResolutions[s.type] = (twinResolutions[s.type] || 0) + 1;
   const totalDoubts = world.capsules.reduce((n, c) => n + (Array.isArray(c.doubts) ? c.doubts.length : 0), 0);
   const maturedCards = world.fsrsStore && Array.isArray(world.fsrsStore.cards)
     ? world.fsrsStore.cards.filter(c => (c.reps || 0) >= cfg.gates.apni_ghadi.min_reps_per_card).length : 0;
+
+  // BODY-ARCHIVE — the gate that could never open. E2E audit (25 Jul 2026,
+  // finding aff39f83): it asks for 84 days of body history but read
+  // readiness.json's `nights`, which oura_coach derives from a HARDCODED 45-day
+  // fetch window (fetchNights(45)) — structurally capped at 45, so an 84-day
+  // gate was unreachable by construction and the body-archive organ would have
+  // stayed constitutionally mute no matter how many seasons the ring was worn.
+  // Nothing on the bus accumulates body-days, and the physio may not write
+  // another organ's file — but it IS the sole writer of loop_vitals.json, so it
+  // keeps its own ledger there: the distinct readiness days it has witnessed,
+  // fed back in on the next run as world.bodyDaysSeen. The gate takes whichever
+  // source knows more, the ledger or the rolling window, so the number is
+  // monotone, never below what Oura can already prove, and can actually reach 84.
+  const bodyDays = new Set((Array.isArray(world.bodyDaysSeen) ? world.bodyDaysSeen : []).filter(d => ISO_DAY.test(String(d))));
+  if (ISO_DAY.test(String(world.readinessDay || ""))) bodyDays.add(String(world.readinessDay));
+  const body_days_seen = [...bodyDays].sort().slice(-730);      // two seasons of memory is plenty
+  const bodyArchiveDays = Math.max(body_days_seen.length, world.readinessCount || 0);
+
   const speak_gates = {
     twin_voice: Object.values(twinResolutions).some(n => n >= cfg.gates.twin_voice_min_resolutions),
     doubt_clusters: world.capsules.length >= cfg.gates.doubt_clusters.min_capsules && totalDoubts >= cfg.gates.doubt_clusters.min_doubts,
     bootroom_mutation: world.reps.length >= cfg.gates.bootroom_min_reps,
     apni_ghadi: maturedCards >= cfg.gates.apni_ghadi.min_cards,
-    body_archive: (world.readinessCount || 0) >= cfg.gates.body_archive_min_days,
+    body_archive: bodyArchiveDays >= cfg.gates.body_archive_min_days,
   };
 
   // SIGNAL TABLE — per-organ predictive scoring; FSRS Brier is the one fit
   // legitimate from day one (built for n=1), still volume-gated.
   // GOVERNOR CONSTITUTIONALLY EXEMPT — never in this table (see header).
   const signal_table = [];
-  {
-    let brier = null, n = 0;
-    if (world.fsrsStore && Array.isArray(world.fsrsStore.cards) && world.reps.length) {
-      // score: for each rep on a card AFTER its first review, FSRS "predicted"
-      // retrievability proxy — honest v0: use overdue-vs-outcome (due passed &
-      // rep correct?) as binary forecast 0.9/0.5; gated hard below min_n.
-      const dueByConcept = new Map(world.fsrsStore.cards.map(c => [c.id, c.due]));
-      const scored = [];
-      for (const r of world.reps) {
-        if (r.track !== "concept" || typeof r.correct !== "boolean") continue;
-        const due = dueByConcept.get(String(r.concept || "").toLowerCase());
-        if (!due) continue;
-        const p = new Date(r.ts) <= new Date(due) ? 0.9 : 0.5;   // before due: high retention predicted
-        scored.push((p - (r.correct ? 1 : 0)) ** 2);
-      }
-      n = scored.length;
-      if (n >= cfg.signal_table.min_n) brier = round(scored.reduce((a, b) => a + b, 0) / n, 4);
-    }
-    signal_table.push({ organ: "fsrs", brier, n, note: brier === null ? "gated (needs n≥" + cfg.signal_table.min_n + ")" : "brier vs due-day outcomes" });
-  }
+  signal_table.push(fsrsSignal(world, cfg));
   for (const organ of ["twin", "gaffer"]) {
-    const entries = world.slip.filter(s => s.book === organ && s.resolved && typeof s.p === "number");
-    const n = entries.length;
-    const brier = n >= cfg.signal_table.min_n
-      ? round(entries.reduce((a, s) => a + (s.p - (s.hit ? 1 : 0)) ** 2, 0) / n, 4) : null;
-    signal_table.push({ organ, brier, n, note: brier === null ? "gated" : "brier over slip" });
+    // LAST-WINS first (finding 029c3bae): a corrected market-day is ONE event,
+    // and the Brier must score the verdict that stood, not both verdicts.
+    const resolved = lastWinsSlip(world.slip.filter(s => s.book === organ && s.resolved));
+    const priced = resolved.filter(s => typeof s.p === "number");
+    const nPriced = priced.length;
+    const brier = nPriced >= cfg.signal_table.min_n
+      ? round(priced.reduce((a, s) => a + (s.p - (s.hit ? 1 : 0)) ** 2, 0) / nPriced, 4) : null;
+    // THE GAFFER'S ROW WAS DEAD WIRING. E2E audit (25 Jul 2026, finding
+    // 4ee75ad6): this row demanded a numeric `p`, but scorer.mjs — the sole
+    // writer of slip.jsonl — creates every gaffer proposal with p:null
+    // (gafferPropose) and the matured copy spreads `...s`, so no gaffer row has
+    // ever carried a price or ever will. n sat at 0 forever while the note read
+    // "gated", i.e. "not enough data yet" — a lie that would have survived a
+    // thousand resolved drills, and the one row the Boot Room volume-gates on.
+    // A gaffer bet is an UNPRICED binary claim ("reps will land on this
+    // concept"), so it is scored the way unpriced binary claims are scored:
+    // hit-rate. The Brier path stays above, untouched, for any book that does
+    // carry p (the twin does) — and takes precedence the day the gaffer gets one.
+    const unpriced = resolved.filter(s => typeof s.p !== "number" && typeof s.hit === "boolean");
+    const nUnpriced = unpriced.length;
+    const hit_rate = brier === null && nUnpriced >= cfg.signal_table.min_n
+      ? round(unpriced.filter(s => s.hit).length / nUnpriced, 4) : null;
+    const n = brier !== null ? nPriced : hit_rate !== null ? nUnpriced : Math.max(nPriced, nUnpriced);
+    signal_table.push({ organ, brier, hit_rate, n,
+      note: brier !== null ? "brier over slip"
+        : hit_rate !== null ? "hit-rate over resolved unpriced claims (this book writes no p)"
+        : "gated (needs n≥" + cfg.signal_table.min_n + ")" });
   }
 
   return {
@@ -231,6 +376,9 @@ function compute(world, cfg, now = new Date()) {
     bleeds,
     speak_gates,
     signal_table,
+    // the physio's own body-day ledger, read back on the next run (finding
+    // aff39f83) — the only accumulating record of days the ring reported
+    body_days_seen,
     line: bleeds.length ? bleeds[0].line : null,     // EXCEPTION-ONLY VOICE
   };
 }
@@ -262,6 +410,13 @@ function gatherWorld() {
     slip: readLines(join(STATE_DIR, "slip.jsonl")),
     fsrsStore: readJson(join(STATE_DIR, "fsrs_store.json")),
     readinessCount: readiness && typeof readiness.nights === "number" ? readiness.nights : 0,
+    // BODY-DAY LEDGER (finding aff39f83): `nights` is capped at oura_coach's
+    // 45-day fetch window, so the 84-day body_archive gate needs a source that
+    // accumulates. The physio owns loop_vitals.json, so it reads its own last
+    // ledger back and adds today's readiness day. A torn-token run (ok:false)
+    // contributes nothing — an unanswered ring is not a day of body history.
+    bodyDaysSeen: (readJson(VITALS) || {}).body_days_seen || [],
+    readinessDay: readiness && readiness.ok !== false && typeof readiness.day === "string" ? readiness.day : null,
     referDoctor: !!(readiness && readiness.safety && readiness.safety.refer_doctor === true),
     // THE WEEKLY RITUALS — the machine holds the calendar so he never has to
     gemSyncDue: (() => {
@@ -331,9 +486,27 @@ async function selftest() {
   const noGap = compute({ ...base, throwinState: { wired: false }, looseBalls: [] }, cfg, now);
   assert("unwired poller never bleeds (usage never coached)", !noGap.bleeds.some(b => b.kind === "throwin_gap"));
 
+  // LOCAL-DAY REPS — E2E audit (25 Jul 2026, finding 87f8f8da). A rep captured
+  // at 02:00 IST carries YESTERDAY's UTC day, but it belongs to the local day
+  // the captain actually played — the day timeaudit.date names. Both fixtures
+  // are built off the LOCAL clock so they mean the same thing on any machine.
+  const taToday = { date: "2026-07-12", buckets: { Learning: { minutes: 180 } } };
+  const atLocal = (d, h, m) => new Date(2026, 6, d, h, m, 0).toISOString();
+  const oneRep = (ts) => [{ ts, track: "concept", correct: true, concept: "x" }];
+  const dawnRep = compute({ ...base, timeaudit: taToday, reps: oneRep(atLocal(12, 2, 0)) }, cfg, now);
+  assert("a 02:00-local rep counts for TODAY (a UTC slice files it yesterday)", !dawnRep.bleeds.some(b => b.kind === "effort_uncaptured"));
+  // ...and the counting stays TIGHT: last night's rep must not silence today.
+  const staleRep = compute({ ...base, timeaudit: taToday, reps: oneRep(atLocal(11, 23, 0)) }, cfg, now);
+  assert("yesterday's 23:00 rep does NOT count for today (the fix widens nothing)", staleRep.bleeds.some(b => b.kind === "effort_uncaptured"));
+
   // speak gates
+  // Slip fixtures carry `date` + `claim` like the real ledger does — without
+  // them all 31 rows collapse to one identity under the LAST-WINS dedupe the
+  // scorer's canon requires (finding 029c3bae), which is a fixture artefact,
+  // never a property of slip.jsonl.
+  const slipDay = (i) => localDate(new Date(2026, 5, 1 + i));
   const gates = compute({ ...base,
-    slip: Array.from({ length: 31 }, (_, i) => ({ book: "twin", type: "floor_touched", resolved: true, hit: i % 2 === 0, p: 0.6 })),
+    slip: Array.from({ length: 31 }, (_, i) => ({ date: slipDay(i), book: "twin", type: "floor_touched", claim: "floor touched", resolved: true, hit: i % 2 === 0, p: 0.6 })),
     capsules: [{ doubts: Array(20).fill({ q: "q", a: "a" }) }, { doubts: Array(20).fill({ q: "q", a: "a" }) }, { doubts: Array(15).fill({ q: "q", a: "a" }) }, { doubts: Array(10).fill({ q: "q", a: "a" }) }],
     reps: Array(250).fill({ ts: "2026-07-01T00:00:00Z", track: "concept", correct: true, concept: "x" }),
   }, cfg, now);
@@ -343,6 +516,42 @@ async function selftest() {
   assert("body_archive gate closed below 84 days", gates.speak_gates.body_archive === false);
   const gatesClosed = compute(base, cfg, now);
   assert("all gates closed on bloodless organism", Object.values(gatesClosed.speak_gates).every(v => v === false));
+
+  // BODY-ARCHIVE — finding aff39f83: readiness.nights is structurally capped at
+  // 45 by oura_coach's fetch window, so an 84-day gate could never open off it.
+  const archDays = Array.from({ length: 90 }, (_, i) => localDate(new Date(2026, 3, 1 + i)));
+  const arch = compute({ ...base, readinessCount: 45, bodyDaysSeen: archDays, readinessDay: "2026-07-12" }, cfg, now);
+  assert("body_archive opens on the physio's OWN day-ledger, not the capped 45-night window", arch.speak_gates.body_archive === true);
+  assert("the ledger grows by the day witnessed (tomorrow's run remembers today)", arch.body_days_seen.includes("2026-07-12") && arch.body_days_seen.length === 91);
+
+  // LAST-WINS — finding 029c3bae: the scorer APPENDS a correction row when late
+  // reps flip a twin resolution, so one market-day can appear twice with
+  // opposite verdicts. It must buy neither double volume nor double scoring.
+  const twin20 = Array.from({ length: 20 }, (_, i) => ({ date: slipDay(i), book: "twin", type: "floor_touched", claim: "floor touched", resolved: true, hit: false, p: 0.6 }));
+  const corrected = compute({ ...base, slip: [...twin20, ...twin20.slice(0, 5).map(s => ({ ...s, hit: true }))] }, cfg, now);
+  const twinRow = corrected.signal_table.find(s => s.organ === "twin");
+  assert("25 slip rows over 20 market-days score as 20", twinRow.n === 20);
+  assert("...and the CORRECTED verdict is the one scored", twinRow.brier === round((15 * 0.36 + 5 * 0.16) / 20, 4));
+  const inflated = compute({ ...base, slip: (() => { const r = Array.from({ length: 29 }, (_, i) => ({ date: slipDay(i), book: "twin", type: "floor_touched", claim: "floor touched", resolved: true, hit: true, p: 0.6 })); return [...r, { ...r[0], hit: false }]; })() }, cfg, now);
+  assert("a correction never pays the twin_voice gate twice (29 days ≠ 30)", inflated.speak_gates.twin_voice === false);
+
+  // THE GAFFER'S ROW — finding 4ee75ad6: scorer.mjs writes EVERY gaffer row with
+  // p:null, so a p-only Brier left the row permanently n=0 and lying "gated".
+  const gafSlip = Array.from({ length: 24 }, (_, i) => ({ date: slipDay(i), book: "gaffer", type: "drill:recall", claim: "embeddings", resolved: true, hit: i % 4 !== 0, p: null }));
+  const gafRow = compute({ ...base, slip: gafSlip }, cfg, now).signal_table.find(s => s.organ === "gaffer");
+  assert("the gaffer's book scores on hit-rate (p:null is all the scorer ever writes)", gafRow.n === 24 && gafRow.hit_rate === 0.75);
+  assert("...so a full gaffer book never reports itself 'gated'", !/gated/.test(gafRow.note));
+
+  // FSRS — finding 9faeef60: v0 measured every rep against the card's CURRENT
+  // due, so p was the constant 0.9 and the "brier" was accuracy in a costume.
+  // A 1-day-stability card answered a year late must be forecast LOW, not 0.9.
+  const fsrsWorld = {
+    fsrsStore: { cards: [{ id: "embeddings", concept: "embeddings", stability: 1, due: "2027-01-01T00:00:00.000Z", reps: 21 }] },
+    reps: Array.from({ length: 21 }, (_, i) => ({ ts: new Date(Date.UTC(2024, 0, 1 + i * 365)).toISOString(), track: "concept", correct: false, concept: "  Embeddings " })),
+  };
+  const fsrsRow = compute({ ...base, ...fsrsWorld }, cfg, now).signal_table.find(s => s.organ === "fsrs");
+  assert("fsrs scores INTERVALS not the current due-date, and normId's the concept (21 reps → 20 forecasts)", fsrsRow.n === 20);
+  assert("a year-late rep on a 1-day-stability card is forecast LOW (v0's constant 0.9 scored 0.81)", fsrsRow.brier !== null && fsrsRow.brier < 0.3);
 
   // signal table: GOVERNOR EXEMPT + gating
   assert("GOVERNOR EXEMPT — never in the signal table", !gates.signal_table.some(s => /governor|goalkeeper|oura|readiness/i.test(s.organ)));
@@ -368,4 +577,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, loadConfig };
+// fsrsSignalLegacy is exported, not orphaned: the layering law keeps the frozen
+// v0 in the codebase (E2E audit 25 Jul 2026, finding 9faeef60), and an engine
+// nothing can call is an engine nobody can compare the new one against.
+export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy };

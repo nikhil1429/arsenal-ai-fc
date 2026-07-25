@@ -48,7 +48,9 @@
 //   entry guard · atomic writes (temp→rename) · match CLAUDE.md + timeaudit.mjs.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync } from "node:fs";
+// rmSync: selftest-only — the CAPSULE FLOOR block cleans up its own temp dir
+// (E2E audit 25 Jul 2026 found it leaking one dir per run). Never used on state.
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -132,7 +134,18 @@ function capsuleSeedReps(dir = join(STATE_DIR, "capsules")) {
         const dates = [];
         if (j.lockedOn && !Number.isNaN(Date.parse(j.lockedOn))) dates.push(j.lockedOn);
         for (const d of (Array.isArray(j.reJirahDone) ? j.reJirahDone : [])) if (d && !Number.isNaN(Date.parse(d))) dates.push(d);
-        for (const d of dates) out.push({ ts: new Date(d).toISOString(), surface: "capsule", track: "concept", concept, question: `capsule lock/re-weld (${concept})`, confidence: "knew", correct: true });
+        // E2E audit 25 Jul 2026 found: dates were emitted raw, so a capsule whose
+        // re-weld happened ON the lock day (lockedOn also listed in reJirahDone), or
+        // a duplicated entry in the gist array, replayed TWO Easy reviews at the exact
+        // same instant. FSRS treats them as two real recalls: card.reps inflates and
+        // the zero-elapsed second review still raises stability → the card's `due`
+        // is pushed further out than his actual history earns, and the decay guard
+        // goes quiet on ground he has NOT re-welded. Same instant = one event, so
+        // dedupe on the normalized ISO timestamp (not the raw string: "2026-06-15"
+        // and "2026-06-15T00:00:00Z" are the same moment and must collapse too).
+        // Set preserves insertion order → lock stays first, chronology unchanged.
+        const uniqTs = [...new Set(dates.map(d => new Date(d).toISOString()))];
+        for (const ts of uniqTs) out.push({ ts, surface: "capsule", track: "concept", concept, question: `capsule lock/re-weld (${concept})`, confidence: "knew", correct: true });
       } catch { }
     }
   } catch { }
@@ -264,6 +277,11 @@ function selftest() {
   // --- scan-fix 15 Jul: THE CAPSULE FLOOR (real dates in, cards out; never fabricated) ---
   {
     const tmp = join(tmpdir(), `fsrs-caps-${Date.now()}`);
+    // E2E audit 25 Jul 2026 found: this block created the temp dir and never removed
+    // it, so every organism-doctor health check left another fsrs-caps-* dir in %TEMP%
+    // forever. try/finally + rmSync mirrors capture.mjs's selftest cleanup. Scoped to
+    // this dir only — selftest touches no real state, and main() never calls rmSync.
+    try {
     mkdirSync(tmp, { recursive: true });
     writeFileSync(join(tmp, "tokenization.json"), JSON.stringify({ id: "tokenization", lockedOn: "2026-06-15", reJirahDone: ["2026-06-18", "2026-06-29"] }));
     writeFileSync(join(tmp, "embeddings.json"), JSON.stringify({ id: "embeddings", lockedOn: "2026-06-21", reJirahDone: [] }));
@@ -278,6 +296,22 @@ function selftest() {
     // live reps on the same concept MERGE into the capsule card (one identity)
     const merged = buildStore([...seeds, { ts: "2026-07-10T09:00:00Z", surface: "gem", track: "concept", concept: "embeddings", question: "m1", confidence: "shaky", correct: true }], f);
     assert("CAPSULE FLOOR: a live rep merges into the capsule card (normId identity)", merged.find(c => c.id === "embeddings").reps === 2);
+
+    // E2E audit 25 Jul 2026 regression: same-instant duplicate dates must collapse.
+    // Own sub-dir (not *.json → capsuleSeedReps skips it above, so the counts asserted
+    // there stay exactly as they were). `dupe` locked 15 Jun with a same-day re-weld
+    // AND a repeated gist entry: 4 raw dates, 2 distinct instants. Pre-fix this emitted
+    // 4 seeds → card.reps 4 with three zero-elapsed Easy reviews inflating stability.
+    const dupDir = join(tmp, "dupe-case");
+    mkdirSync(dupDir, { recursive: true });
+    writeFileSync(join(dupDir, "dupe.json"), JSON.stringify({ id: "dupe", lockedOn: "2026-06-15", reJirahDone: ["2026-06-15T00:00:00.000Z", "2026-06-29", "2026-06-29"] }));
+    const dupSeeds = capsuleSeedReps(dupDir);
+    assert("CAPSULE FLOOR: same-instant dates dedupe (4 raw dates ⇒ 2 review events)", dupSeeds.length === 2 && dupSeeds[0].ts === "2026-06-15T00:00:00.000Z" && dupSeeds[1].ts === "2026-06-29T00:00:00.000Z");
+    const dupStore = buildStore(dupSeeds, f);
+    assert("CAPSULE FLOOR: dedupe ⇒ card.reps is the REAL review count (2, not 4)", dupStore.length === 1 && dupStore[0].reps === 2);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });   // no fsrs-caps-* left behind
+    }
   }
 
   const passed = checks.every(([, ok]) => ok);

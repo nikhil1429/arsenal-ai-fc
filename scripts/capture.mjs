@@ -48,7 +48,7 @@
 //   entry guard · atomic write (temp→rename) · empty-safe · never fabricate.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -116,6 +116,17 @@ const AXES       = new Set("abcdefghi".split(""));               // 9 axes a–i
 function validateRep(o, reg = EMPTY_REG) {
   if (o === null || typeof o !== "object" || Array.isArray(o)) return { ok: false, error: "not an object" };
   if (typeof o.ts !== "string" || o.ts.trim() === "") return { ok: false, error: "ts missing/not-string" };
+  // ts must actually PARSE as a date. E2E audit (25 Jul 2026): the gate only asked for a
+  // non-empty string, so an LLM-authored ts ("yesterday 9pm", "19/07/2026 21:30") sailed
+  // through capture and was then SILENTLY discarded by every consumer downstream — fsrs
+  // validRep, calibration, nemesis and learning_state all require
+  // !Number.isNaN(Date.parse(ts)). The rep sat in the log looking captured while it
+  // scheduled no card and showed in no view. Reject it HERE, loud, with a reason the
+  // paste output prints — and store the normalized ISO form so the dedupe key
+  // (ts + question) cannot split on two spellings of the same instant.
+  const tsMs = Date.parse(o.ts);
+  if (Number.isNaN(tsMs)) return { ok: false, error: `ts not a parseable date (${o.ts})` };
+  const tsISO = new Date(tsMs).toISOString();
   if (!SURFACES.has(o.surface)) return { ok: false, error: `surface not gem|colab (${o.surface})` };
   if (!TRACKS.has(o.track)) return { ok: false, error: `track not concept|skill (${o.track})` };
   if (typeof o.concept !== "string" || o.concept.trim() === "") return { ok: false, error: "concept missing/empty" };
@@ -158,7 +169,7 @@ function validateRep(o, reg = EMPTY_REG) {
   // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged)
   const { canonical, unregistered } = canonicalize(o.concept, o.track, reg);
   const rep = {
-    ts: o.ts, surface: o.surface, track: o.track, concept: canonical,
+    ts: tsISO, surface: o.surface, track: o.track, concept: canonical,
     axis: o.axis, question: o.question, confidence: o.confidence, correct: o.correct,
     latency_ms, aided, unregistered, confused_with, edge,
   };
@@ -181,15 +192,76 @@ function loadReps(path, reg = EMPTY_REG) {
 }
 
 // atomic write: temp file → rename (a parse-fail reads as missing, never half-written)
+// E2E audit (25 Jul 2026): the temp name was the FIXED `path + ".tmp"`. Two live
+// processes run this file — dugout.mjs shells `capture.mjs paste <tmp>` on every
+// log_reps tool call, heartbeat runs `capture.mjs pull` on the schedule — so both
+// wrote the SAME temp path and either could rename the other's half-written file
+// over reps_log. Temp is now unique per process AND per call, and a failed write
+// deletes its own temp instead of leaving an orphan next to gitignored personal
+// state (the repo-root `*.tmp` rule covers it, but we don't leave litter for it).
+let tmpSeq = 0;
 function writeAtomic(path, reps) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
-  writeFileSync(tmp, reps.map((r) => JSON.stringify(r)).join("\n") + (reps.length ? "\n" : ""));
-  renameSync(tmp, path);
+  const tmp = `${path}.${process.pid}.${++tmpSeq}.${Date.now().toString(36)}.tmp`;
+  try {
+    writeFileSync(tmp, reps.map((r) => JSON.stringify(r)).join("\n") + (reps.length ? "\n" : ""));
+    renameSync(tmp, path);
+  } catch (e) {
+    try { rmSync(tmp, { force: true }); } catch { /* best-effort cleanup; the throw below is the truth */ }
+    throw e;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// writer lock — reps_log has one logical writer (this file) but SEVERAL live
+// processes running it (dugout `paste` on voice reps · heartbeat `pull` on the
+// schedule). E2E audit (25 Jul 2026): ingest() is a read-modify-REWRITE of the
+// whole log with no lock, so a paste and a pull overlapping inside that window
+// silently LOSE one batch — the second writer rewrites the file from its own
+// stale snapshot and the first writer's reps vanish. This is an OS-level
+// exclusive-create (wx) lock. Two hard rules encoded here:
+//   • it never wedges capture: a lock left behind by a killed writer is broken
+//     once it goes stale, and a lock we can't take at all is stepped over;
+//   • it never refuses a rep: on timeout we break the lock and write anyway —
+//     racing a rep is bad, dropping the captain's rep on the floor is worse.
+// The lock deliberately carries a *.tmp suffix so the repo-root `*.tmp` ignore
+// already covers it: a crash can't leave an untracked sibling in a PUBLIC repo.
+// ---------------------------------------------------------------------------
+const LOCK_STALE_MS   = 30_000;   // older than this ⇒ its owner is dead, break it
+const LOCK_TIMEOUT_MS = 5_000;    // waited this long ⇒ break it and proceed anyway
+const LOCK_POLL_MS    = 25;
+const LOCK_MAX_TRIES  = 600;      // absolute backstop: never spin forever
+const lockPathOf = (path) => `${path}.lock.tmp`;
+const sleepSync = (ms) => { try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch { /* no SAB → skip the nap, the try-loop still bounds itself */ } };
+
+function withRepsLock(path, fn, opts = {}) {
+  const lock     = lockPathOf(path);
+  const staleMs  = Number.isFinite(opts.staleMs)   ? opts.staleMs   : LOCK_STALE_MS;
+  const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : LOCK_TIMEOUT_MS;
+  try { mkdirSync(dirname(path), { recursive: true }); } catch { /* dir may already exist */ }
+  const started = Date.now();
+  let held = false, tries = 0;
+  while (!held && ++tries <= LOCK_MAX_TRIES) {
+    try {
+      writeFileSync(lock, JSON.stringify({ pid: process.pid, at: Date.now() }), { flag: "wx" });
+      held = true;
+    } catch (e) {
+      if (!e || e.code !== "EEXIST") return fn();   // can't lock at all (read-only dir, odd FS) → run unlocked rather than block capture
+      let ageMs;
+      try { ageMs = Date.now() - statSync(lock).mtimeMs; } catch { continue; }  // lock vanished mid-check → retry the grab
+      if (ageMs > staleMs || Date.now() - started > timeoutMs) { try { rmSync(lock, { force: true }); } catch { /* someone else broke it first */ } continue; }
+      sleepSync(LOCK_POLL_MS);
+    }
+  }
+  if (!held) return fn();                            // backstop exhausted → write anyway, never lose the rep
+  try { return fn(); } finally { try { rmSync(lock, { force: true }); } catch { /* best-effort release */ } }
 }
 
 // ingest candidates → validate + dedup (vs existing AND within batch) → atomic append.
-function ingest(path, candidates, reg = EMPTY_REG) {
+// LAYERING (E2E audit 25 Jul 2026): this is the original engine, byte-for-byte —
+// it assumes it is alone with the file. `ingest` below is the plan of record and
+// runs exactly this under the writer lock. Nothing else should call it unlocked.
+function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
   const existing = loadReps(path, reg);
   const seen = new Set(existing.map(keyOf));
   const toAppend = [];
@@ -204,6 +276,14 @@ function ingest(path, candidates, reg = EMPTY_REG) {
   }
   if (toAppend.length) writeAtomic(path, existing.concat(toAppend));
   return { appended: toAppend.length, rejected, duplicates, total: existing.length + toAppend.length, errors };
+}
+
+// the plan of record: the same ingest, with the read-modify-rewrite window held
+// under the writer lock so a concurrent paste/pull can't overwrite the other's reps.
+// (opts is lock tuning only — selftest uses it to age a lock out instantly; callers
+//  in production pass nothing and get the LOCK_* defaults.)
+function ingest(path, candidates, reg = EMPTY_REG, opts = {}) {
+  return withRepsLock(path, () => ingestUnlocked(path, candidates, reg), opts);
 }
 
 // parse a pasted blob into an array of candidate objects
@@ -221,20 +301,44 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
   }
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
-  let pulled = 0, rejected = 0, duplicates = 0;
+  let pulled = 0, rejected = 0, duplicates = 0, failed = 0;
+  const failures = [];
   for (const f of files) {
     const full = join(inboxPath, f);
-    const cands = [];
-    for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
-      const s = line.trim(); if (!s) continue;
-      try { cands.push(JSON.parse(s)); } catch { rejected++; }
+    // PER-FILE ISOLATION (E2E audit 25 Jul 2026): the read + ingest + move used to run
+    // bare, so ONE bad file killed the whole pull. The inbox is a Google Drive for
+    // Desktop folder — an online-only placeholder or a file the sync engine still holds
+    // open throws EBUSY/EPERM/ENOENT on read, the exception escaped pullFromInbox, the
+    // scheduled ArsenalFC-CapturePull process died, and every file alphabetically BEHIND
+    // it stayed unpulled that night (and every night, until the captain noticed). One
+    // unreadable file must cost one file, never the batch.
+    try {
+      const cands = [];
+      for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
+        const s = line.trim(); if (!s) continue;
+        try { cands.push(JSON.parse(s)); } catch { rejected++; }
+      }
+      const r = ingest(repsPath, cands, reg);
+      pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
+      mkdirSync(doneDir, { recursive: true });
+      // collision-safe archive: renameSync OVERWRITES an existing destination on both
+      // Windows and POSIX, so a same-named file from an earlier session (Colab reuses
+      // export names) was silently destroyed in done/. Park the newcomer beside it.
+      let dest = join(doneDir, f);
+      if (existsSync(dest)) {
+        const dot = f.lastIndexOf(".");
+        dest = join(doneDir, `${f.slice(0, dot)}.${Date.now().toString(36)}${f.slice(dot)}`);
+      }
+      renameSync(full, dest);
+    } catch (e) {
+      // reps may already be ingested when only the MOVE failed — that's safe: the file
+      // stays in the inbox and next run's ts+question dedupe swallows the re-read.
+      failed++; failures.push(`${f}: ${e?.code || e?.message || String(e)}`);
+      continue;
     }
-    const r = ingest(repsPath, cands, reg);
-    pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
-    mkdirSync(doneDir, { recursive: true });
-    renameSync(full, join(doneDir, f));
   }
-  return { pulled, files: files.length, rejected, duplicates, wired: true, note: `pulled ${pulled} from ${files.length} file(s)` };
+  const note = `pulled ${pulled} from ${files.length - failed} file(s)` + (failed ? `; ${failed} file(s) FAILED and stay in the inbox: ${failures.slice(0, 5).join("; ")}` : "");
+  return { pulled, files: files.length, rejected, duplicates, failed, failures, wired: true, note };
 }
 
 // ---------------------------------------------------------------------------
@@ -323,6 +427,54 @@ function selftest() {
   ingest(p3, [], reg);
   assert("empty-ingest: no file fabricated", !existsSync(p3));
   assert("pull dormant: missing inbox → 0 pulled, wired=false", pullFromInbox(join(dir, "no_such_inbox"), p, reg).wired === false);
+
+  // --- E2E audit (25 Jul 2026) regressions ---------------------------------
+  // ts gate: unparseable timestamps used to be APPENDED here and then silently
+  // dropped by fsrs/calibration/nemesis/learning_state (all Date.parse-gated).
+  assert("ts-reject: unparseable ts ('yesterday 9pm') rejected at the gate",
+    ingest(p, [rep({ ts: "yesterday 9pm", question: "tsbad" })], reg).rejected === 1 && !findQ("tsbad"));
+  assert("ts-reject: locale ts ('19/07/2026 21:30') rejected at the gate",
+    ingest(p, [rep({ ts: "19/07/2026 21:30", question: "tsbad2" })], reg).rejected === 1);
+  ingest(p, [rep({ ts: "2026-07-11T09:20:00Z", question: "tsnorm" })], reg);
+  assert("ts-normalize: stored as canonical ISO (dedupe key can't split on format)",
+    findQ("tsnorm")?.ts === "2026-07-11T09:20:00.000Z");
+
+  // writer lock: held for the critical section, released after, and a lock left
+  // behind by a killed writer is broken instead of wedging capture forever.
+  let lockedInside = false;
+  withRepsLock(p, () => { lockedInside = existsSync(lockPathOf(p)); });
+  assert("writer-lock: held during the critical section, released after",
+    lockedInside === true && !existsSync(lockPathOf(p)));
+  writeFileSync(lockPathOf(p), JSON.stringify({ pid: 0, at: 0 }));      // abandoned lock from a killed writer
+  const heldRun = ingest(p, [rep({ ts: "2026-07-11T09:21:00Z", question: "lockheld" })], reg, { staleMs: 0 });
+  assert("writer-lock: stale lock broken + released — the rep is never lost",
+    heldRun.appended === 1 && !!findQ("lockheld") && !existsSync(lockPathOf(p)));
+
+  // writeAtomic: a failed rename must not leave its temp behind (and the temp is
+  // no longer the fixed path+".tmp" that two live writers used to share).
+  const blocked = join(dir, "blocked.jsonl"); mkdirSync(blocked, { recursive: true });   // rename onto a dir ⇒ EPERM/EISDIR
+  let threw = false;
+  try { writeAtomic(blocked, [rep()]); } catch { threw = true; }
+  const orphans = readdirSync(dir).filter((f) => f.endsWith(".tmp"));
+  assert("writeAtomic: failed write cleans up its own temp (no orphan .tmp sibling)", threw && orphans.length === 0);
+  rmSync(blocked, { recursive: true, force: true });
+
+  // pull isolation: one unreadable file used to throw straight out of pullFromInbox
+  // and kill the scheduled pull, stranding every file behind it.
+  const inbox = join(dir, "inbox"); mkdirSync(inbox, { recursive: true });
+  mkdirSync(join(inbox, "aaa_broken.jsonl"), { recursive: true });       // a directory ⇒ readFileSync throws EISDIR
+  writeFileSync(join(inbox, "bbb_good.jsonl"), JSON.stringify(rep({ ts: "2026-07-11T12:00:00Z", question: "pulled_ok" })) + "\n");
+  const pr = pullFromInbox(inbox, p, reg);
+  assert("pull isolation: broken file counted as failed, the good file still ingested",
+    pr.pulled === 1 && pr.failed === 1 && !!findQ("pulled_ok") && existsSync(join(inbox, "aaa_broken.jsonl")));
+
+  // pull archive: a name collision in done/ must not silently overwrite the older file.
+  const inbox2 = join(dir, "inbox2"); mkdirSync(join(inbox2, "done"), { recursive: true });
+  writeFileSync(join(inbox2, "done", "ccc.jsonl"), "");                  // an older session already archived
+  writeFileSync(join(inbox2, "ccc.jsonl"), JSON.stringify(rep({ ts: "2026-07-11T12:01:00Z", question: "pulled_collide" })) + "\n");
+  const pr2 = pullFromInbox(inbox2, p, reg);
+  assert("pull archive: collision keeps BOTH files in done/ (no silent overwrite)",
+    pr2.pulled === 1 && pr2.failed === 0 && readdirSync(join(inbox2, "done")).filter((f) => f.startsWith("ccc")).length === 2);
 
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);

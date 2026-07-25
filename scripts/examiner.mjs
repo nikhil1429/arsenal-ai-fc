@@ -144,7 +144,15 @@ async function selftest() {
   assert("section: task travels verbatim, tests marked reveal-as-you-RUN", sec.includes(saved.task) && sec.includes("ONLY as you RUN"));
   assert("section: grade-the-code-never-the-coder law travels", sec.includes("never the coder"));
   assert("no drill → empty section (scrimmage unchanged)", drillSection(null) === "");
-  assert("all three templates concept-parametric", Object.values(TEMPLATES).every(f => f("x").task.includes("x") || f("x").task.length > 0));
+  // E2E audit 25 Jul 2026: this check was vacuous TWICE OVER and could never go red.
+  // (1) the `|| f("x").task.length > 0` arm passed for any non-empty prose, so a
+  // template that dropped `${c}` entirely still read green; (2) even the first arm
+  // was unfalsifiable — the word "e-x-aminer" sits in every template's prose, so
+  // .includes("x") was true regardless of interpolation. A drill that stops naming
+  // his weakest concept is the whole failure this file exists to prevent, so the
+  // probe now uses a sentinel that cannot occur in English prose and no escape hatch.
+  const SENTINEL = "zzconceptzz";
+  assert("all three templates concept-parametric", Object.values(TEMPLATES).every(f => f(SENTINEL).task.includes(SENTINEL)));
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

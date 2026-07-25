@@ -107,15 +107,47 @@ check(v2_4.tiers.low_confidence_med_informational.length >= 1, "low-confidence s
 // GENUINE RED — sustained deep+REM COLLAPSE + resilience FALLING (convergence)
 // ---------------------------------------------------------------------------
 P("V2-5 — sustained deep+REM collapse + resilience falling -> genuine RED");
+// [E2E audit 25 Jul 2026 — finding 316f8318] this fixture ALSO stamped
+// `c_sleepBalance: 40` on the collapsed nights. sleepBal7 then came back 40 < 55,
+// so sleepShortTrend was true and the RED gate — archCollapse && (resFalling ||
+// sleepShortTrend || cleanCorrob) — fired through the SLEEP axis no matter what
+// resilience did. The one check named for resilience convergence therefore never
+// touched resTrendFalling: break that function (a RES_RANK rename, a shape change
+// making every lookup undefined) and the suite still printed ALL V2 CHECKS PASSED
+// while the third high-confidence axis sat dead. Sleep balance now stays at his
+// healthy baseline (~80), so the ONLY second axis available is resilience falling,
+// and the assertions below pin that isolation explicitly instead of trusting it.
 let n5 = baseline(45).map((x) => ({ ...x }));
 for (let i = 34; i < 45; i++) {                     // last 11 nights: architecture collapses
-  n5[i] = { ...n5[i], deep: 2400, rem: 2600, c_sleepBalance: 40,
+  n5[i] = { ...n5[i], deep: 2400, rem: 2600,
             resilience: i > 41 ? "limited" : (i > 37 ? "adequate" : "solid") };
 }
 let v2_5 = analyze(n5);
 console.log(brief(v2_5));
 check(v2_5.verdict === "RED", "RED fires ONLY on sustained multi-day convergence");
 check(v2_5.tiers.high_confidence.sleep_architecture_trend.collapse === true, "deep+REM collapse detected as the anchor axis");
+// the three guards that make the RED above ATTRIBUTABLE to resilience: the second
+// axis must be resilience and nothing else, or this check is testing a name only.
+check(v2_5.tiers.high_confidence.resilience.falling === true, "resilience trend detected as FALLING (the convergent axis under test)");
+check(v2_5.tiers.high_confidence.sleep_vs_personal_baseline.short === false, "sleep-vs-personal-baseline is NOT short — it is not smuggling in the RED");
+check(v2_5.tiers.clean_corroboration.fired === false, "RR corroboration did NOT fire — resilience is the sole second axis");
+
+// ---------------------------------------------------------------------------
+// [E2E audit 25 Jul 2026 — finding 316f8318, other half] the convergence gate
+// itself was never tested from the negative side: nothing asserted that the
+// ANCHOR ALONE is insufficient. Same collapse, resilience left at his healthy
+// cycling baseline (resTrendFalling false), sleep balance healthy, RR flat —
+// one sustained high-confidence axis and no second one. §12 says that is AMBER.
+// If the gate ever degrades to `archCollapse -> RED`, this is what catches it.
+// ---------------------------------------------------------------------------
+P("V2-5b — deep+REM collapse ALONE (no second axis) -> AMBER, not RED");
+let n5b = baseline(45).map((x) => ({ ...x }));
+for (let i = 34; i < 45; i++) n5b[i] = { ...n5b[i], deep: 2400, rem: 2600 };
+let v2_5b = analyze(n5b);
+console.log("V2 says:", v2_5b.verdict);
+check(v2_5b.tiers.high_confidence.sleep_architecture_trend.collapse === true, "anchor axis present (same collapse as V2-5)");
+check(v2_5b.tiers.high_confidence.resilience.falling === false, "resilience NOT falling — the second axis is genuinely absent");
+check(v2_5b.verdict === "AMBER", "anchor alone is AMBER — convergence is REQUIRED for RED");
 
 // ---------------------------------------------------------------------------
 // SINGLE-NIGHT collapse must NOT be RED (only sustained trends count)

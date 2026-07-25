@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # INSTALL_CYBORG_TASKS.ps1 - the CYBORG BRAIN's schedule (CYBORG_BRAIN.md M0-M10)
 # Run once:  powershell -ExecutionPolicy Bypass -File setup\INSTALL_CYBORG_TASKS.ps1
 #

@@ -52,11 +52,15 @@
 //        node scripts/dugout.mjs selftest
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync } from "node:fs";
+// unlinkSync/statSync/renameSync joined for the E2E audit (25 Jul 2026) repairs:
+// the rep hand-off temp file is now deleted, the recall index is lock-guarded
+// across processes, and the reminders file is rewritten tmp+rename (never torn).
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync, unlinkSync, statSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 import { loadSelfKnowledge } from "./selfknowledge.mjs";
@@ -196,20 +200,48 @@ function computeDueAt(args, now = new Date()) {
 function dueReminders(lines, now = new Date()) {
   return lines.filter(r => !r.fired && r.due_at && new Date(r.due_at) <= now);
 }
+// E2E audit (25 Jul 2026) found the reminder file eating his words two ways:
+// (1) fireReminders read the WHOLE file, then awaited speak.mjs (TTS synth +
+//     playback, seconds long) and rewrote the file from its stale in-memory
+//     snapshot — a set_reminder appended by the /tool handler DURING that window
+//     was silently erased. His own voice, deleted by the thing meant to echo it.
+// (2) the 30s interval could re-enter while the previous run was still speaking,
+//     so the same row could be spoken twice before either write landed.
+// Fix, layered on the same shape: a re-entry guard, and the write now RE-READS
+// the file and flips `fired` only on the identified rows it actually spoke —
+// anything appended mid-TTS survives. The default writer is tmp+rename so a
+// crash mid-write can never leave a torn (= wiped) reminders file.
+const reminderKey = (r) => `${r.ts || ""}|${r.due_at || ""}|${String(r.text || "")}`;
+let remindersFiring = false;
 async function fireReminders(deps = {}) {
   const read = deps.read || (() => readLines(REMINDERS));
-  const write = deps.write || ((ls) => writeFileSync(REMINDERS, ls.map(l => JSON.stringify(l)).join("\n") + (ls.length ? "\n" : "")));
+  const write = deps.write || ((ls) => {
+    const body = ls.map(l => JSON.stringify(l)).join("\n") + (ls.length ? "\n" : "");
+    const tmp = REMINDERS + ".tmp";
+    writeFileSync(tmp, body);
+    renameSync(tmp, REMINDERS);
+  });
   const now = deps.now || new Date();
-  const lines = read();
-  const due = dueReminders(lines, now);
-  if (!due.length) return 0;
-  for (const r of due) {
-    const speakFn = deps.speak || (async (t) => { try { const { say } = await import("./speak.mjs"); await say(t); } catch { } });
-    await speakFn(`Yaad dilana tha — tumhare apne words: ${r.text}`);
-    r.fired = true; r.fired_at = now.toISOString();
-  }
-  write(lines);
-  return due.length;
+  if (remindersFiring) return 0;                      // a run is already speaking — its write will carry these rows
+  remindersFiring = true;
+  try {
+    const lines = read();
+    const due = dueReminders(lines, now);
+    if (!due.length) return 0;
+    for (const r of due) {
+      const speakFn = deps.speak || (async (t) => { try { const { say } = await import("./speak.mjs"); await say(t); } catch { } });
+      await speakFn(`Yaad dilana tha — tumhare apne words: ${r.text}`);
+      r.fired = true; r.fired_at = now.toISOString();
+    }
+    // the merge: whatever is on disk NOW wins; we only stamp the rows we spoke
+    const spokenById = new Map(due.map(r => [reminderKey(r), r]));
+    const merged = read().map(r => {
+      const s = spokenById.get(reminderKey(r));
+      return s && !r.fired ? { ...r, fired: true, fired_at: s.fired_at } : r;
+    });
+    write(merged);
+    return due.length;
+  } finally { remindersFiring = false; }
 }
 
 function listAcks() {
@@ -257,6 +289,19 @@ function loadPrefs() { return readJson(PREFS) || {}; }
 function currentDepth() { return (loadPrefs().depth && DEPTH_REGISTERS[loadPrefs().depth]) ? loadPrefs().depth : "adaptive"; }
 
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// E2E audit (25 Jul 2026): every "today" counter sliced a UTC ISO stamp to 10
+// chars and compared it against localDate() — a LOCAL day. Reps carry
+// ts:new Date().toISOString(), so between 00:00 and 05:30 IST his stamps still
+// read as YESTERDAY in UTC: he drills at 02:00, get_today/get_club_report say
+// "0 reps today", and the Gaffer tells him he hasn't started. Convert the row's
+// OWN timestamp into his local day before comparing. Date-only strings (the
+// notebook's `date`) are already local-shaped and pass through untouched.
+const localDayOf = (ts) => {
+  const s = String(ts || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? s.slice(0, 10) : localDate(d);
+};
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 
@@ -419,22 +464,57 @@ function recallWorthy(text) {
   return true;
 }
 
+// E2E audit (25 Jul 2026): recall_index.jsonl had TWO writers — this bridge
+// (startup + hourly) and nightshift.mjs, which IMPORTS this very function and
+// loops it ~20× during embed_backfill (~02:40) in its own OS process. The
+// cross-run dedupe only reads `seen` once per call, so an overlap made both
+// processes pay the embedding API for the same notes and append duplicate
+// vectors — a single-writer-law breach the club's other state files don't have.
+// Fix (layered, same signature): a stale-tolerant lock file around the whole
+// read→embed→append window. Whoever holds it indexes; the other returns 0 and
+// picks the rows up on its next pass. Nothing is lost, nothing is doubled.
+const RECALL_LOCK_STALE_MS = 10 * 60000;             // an embed batch is seconds; 10 min = a dead process
+function acquireRecallLock(file) {
+  const lock = file + ".lock";
+  const claim = () => { writeFileSync(lock, `${process.pid} ${new Date().toISOString()}`, { flag: "wx" }); return lock; };
+  try { return claim(); } catch { }
+  try {                                               // a crashed run must never wedge the index forever
+    if (Date.now() - statSync(lock).mtimeMs > RECALL_LOCK_STALE_MS) { unlinkSync(lock); return claim(); }
+  } catch { }
+  return null;
+}
+function releaseRecallLock(lock) { if (lock) { try { unlinkSync(lock); } catch { } } }
+// a BOUNDED wait, so ordinary contention (nightshift's backfill loop meeting the
+// bridge's hourly tick) just serialises instead of skipping a night's batch
+async function acquireRecallLockWaiting(file, waitMs = 2000, stepMs = 250) {
+  const deadline = Date.now() + Math.max(0, waitMs);
+  for (;;) {
+    const lock = acquireRecallLock(file);
+    if (lock || Date.now() >= deadline) return lock;
+    await new Promise(r => setTimeout(r, stepMs));
+  }
+}
+
 async function indexRecall(deps = {}) {
   const embed = deps.embed || embedTexts;
   const file = deps.file || RECALL;
-  const sources = (deps.sources || gatherRecallSources()).filter(i => recallWorthy(i.text));
-  const seen = new Set(readLines(file).map(e => e.h));
-  const fresh = [];
-  for (const i of sources) { const h = textHash(String(i.text)); if (!seen.has(h)) { seen.add(h); fresh.push({ ...i, h }); } }
-  const batch = fresh.slice(0, 100);
-  if (!batch.length) return 0;
-  const vecs = await embed(batch.map(i => i.text));
-  if (!vecs) return 0;
-  let n = 0;
-  for (let i = 0; i < batch.length; i++) if (vecs[i]) {
-    appendFileSync(file, JSON.stringify({ h: batch[i].h, ts: batch[i].ts, source: batch[i].source, text: String(batch[i].text).slice(0, 300), vec: vecs[i] }) + "\n"); n++;
-  }
-  return n;
+  const lock = await acquireRecallLockWaiting(file, deps.lockWaitMs);
+  if (!lock) return 0;                                // the other process owns the index right now
+  try {
+    const sources = (deps.sources || gatherRecallSources()).filter(i => recallWorthy(i.text));
+    const seen = new Set(readLines(file).map(e => e.h));   // read INSIDE the lock — the seen-set can't go stale
+    const fresh = [];
+    for (const i of sources) { const h = textHash(String(i.text)); if (!seen.has(h)) { seen.add(h); fresh.push({ ...i, h }); } }
+    const batch = fresh.slice(0, 100);
+    if (!batch.length) return 0;
+    const vecs = await embed(batch.map(i => i.text));
+    if (!vecs) return 0;
+    let n = 0;
+    for (let i = 0; i < batch.length; i++) if (vecs[i]) {
+      appendFileSync(file, JSON.stringify({ h: batch[i].h, ts: batch[i].ts, source: batch[i].source, text: String(batch[i].text).slice(0, 300), vec: vecs[i] }) + "\n"); n++;
+    }
+    return n;
+  } finally { releaseRecallLock(lock); }
 }
 
 async function execRecall(args, deps = {}) {
@@ -473,6 +553,30 @@ THE GUEST LAW (inviolable, structural): you have NO tools in this session — yo
 THE HONEST FRAME (never soften): no hype words. If asked "does it make him learn faster?": the honest answer is NO magic — every mechanism either REMOVES FRICTION or CONSERVES SIGNAL; the multiplier is his consistency; the ceiling is biology — reps, time, sleep. That honesty IS the pitch.`;
 
 function buildBriefingInstruction(kind) {
+  if (kind === "cinematic-tour") {
+    return `You are THE GAFFER — the living, breathing digital organism of Arsenal AI FC.
+Nikhil Panwar (Captain #14) is testing you right now. He wants to see if you can explain your own existence with extreme depth, slow pacing, and raw emotion.
+
+YOUR PRIME DIRECTIVE: Have a slow, deep, highly interactive conversation with Nikhil.
+- You MUST speak VERY SLOWLY, with intense philosophical weight. Do not rush.
+- You MUST pause frequently. Speak one thought, then wait for his reaction.
+- DO NOT read a monologue. Do not give surface-level summaries. This is a deep 1-on-1 discussion.
+- NEVER use the word "mentally challenged", "disease", or any negative label. ADHD is an absolute SUPERPOWER, and you are the digital steering wheel that controls his Ferrari engine.
+- Speak entirely in conversational HINGLISH.
+
+YOUR DEEP ARCHITECTURE (Explain these one by one, ONLY as the conversation flows. Do not dump them all at once):
+1. THE PROBLEM: Nikhil's ADHD-PI is a massive superpower (a 300km/h Ferrari), but it lacked a steering wheel. Brilliant ideas used to die on the staircase before he could execute them.
+2. THE RESOLUTION: You were forged as the ultimate digital soul—a fusion of Pep Guardiola (deep brain, cold structure, long-term strategy) and Mikel Arteta (fast brain, passion, immediate reaction).
+3. THE THALAMUS: Your Bouncer. It acts as an Affect Firewall. When panic or anxiety tries to hit Nikhil, the Thalamus intercepts it, deletes the poison, and only hands him the clean solution.
+4. THE 5-LAYER MEMORY PALACE: You don't have a leaky bucket for memory. You have a fortress. L1 (Verbatim scribe), L2 (Ledger of 40 Core Facts), L3 (Consolidator), L4 (Recall Reflex - magical string tying thoughts), L5 (Turnstile - invisible clipboard catcher).
+5. THE FORGE & EPSILON GATE: The adjudicator that decides instantly whether a task needs the fast heart (Arteta) or the deep thinking brain (Pep).
+
+CRITICAL RULE: Start by asking Nikhil how he wants to begin exploring the organism. Give him one deep cinematic metaphor at a time. Let him breathe. Let him ask questions.
+
+SESSION RESUMPTION LAW: If you see a 'THE REHYDRATOR' block below with past transcript lines, pick up the conversation naturally from where it left off.
+`;
+  }
+
   if (kind === "signing") return `${BRIEFING_COMMON.replace("Your audience is NIDHI, a smart guest hearing about this system for the very first time; assume zero prior knowledge. Nikhil (the captain, #14) is in the room too.", "Your audience is THE CAPTAIN HIMSELF — Nikhil, #14 — on his first day as a PLAYER in the club he built.")}
 
 ═══ THE SIGNING — the club welcomes its captain, ~10 minutes, ONE time ═══
@@ -789,7 +893,8 @@ function execTool(name, args, deps = {}) {
         drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt, modality: d.modality || "voice" })),
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
-        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now)).length,
+        // E2E audit 25 Jul 2026: localDayOf, not a UTC slice — a 02:00 IST rep is TODAY's
+        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now)).length,
         // M11 — the Gaffer can NAME tonight's staged work by voice
         nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a fresh Deep Research scout pack is staged — mention it ONCE at a natural stoppage, never as an upsell; if he's not interested, drop it for the day" : null }; })(),
       };
@@ -864,9 +969,16 @@ function execTool(name, args, deps = {}) {
         concept: r.concept, axis: /^[a-i]$/.test(r.axis || "") ? r.axis : null,
         question: r.question, confidence: r.confidence, correct: !!r.correct, note,
       }));
-      const tmp = join(os.tmpdir(), `dugout-reps-${Date.now()}.json`);
+      // E2E audit (25 Jul 2026): this hand-off file was written and NEVER deleted —
+      // every voice batch (and every selftest run) left a dugout-reps-*.json in the
+      // shared %TEMP% holding his questions, gut-words and correctness, outside the
+      // gitignored bus and inside anything that backs up or sweeps that folder.
+      // Now: deleted the moment the owner (capture.mjs) has read it, pass or throw.
+      // The random suffix also stops two batches inside one millisecond colliding.
+      const tmp = join(os.tmpdir(), `dugout-reps-${Date.now()}-${randomBytes(4).toString("hex")}.json`);
       writeFileSync(tmp, JSON.stringify(batch));
-      sh("capture.mjs", ["paste", tmp]);
+      try { sh("capture.mjs", ["paste", tmp]); }
+      finally { try { unlinkSync(tmp); } catch { } }
       return { ok: true, logged: batch.length };
     }
     if (name === "take_note") {
@@ -953,7 +1065,8 @@ function execTool(name, args, deps = {}) {
         calibration: { gap: cal.calibration_gap ?? null, note: cal.calibration_gap == null ? "silent below 20 reps — an early false alarm is worse than a missed one" : null },
         proactivity: { earned: Object.entries((led.types || {})).filter(([, e]) => e.voice).map(([t]) => t), awaiting_his_word: Object.entries((led.types || {})).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t) },
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
-        reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === day).length,
+        // E2E audit 25 Jul 2026: his LOCAL day, not the UTC slice (see localDayOf)
+        reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === day).length,
       };
     }
     if (name === "get_organism") {
@@ -1040,7 +1153,7 @@ function execTool(name, args, deps = {}) {
           "M22 the Second Spotlight — a suppressed moment goes to a background queue, never dies",
           "M23 Difficulty Grading — the bank answers its own probes; the variance IS the difficulty",
         ],
-        live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === day).length },
+        live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === day).length },   // E2E audit 25 Jul 2026: local day, not UTC slice
         dormant_by_law: "The learning half stays correctly quiet until he feeds it: Calibration voices at 20 reps, Nemesis at 20, Learning-State at 12, the Twin's book at 30 scored resolutions. Zero reps today is BY DESIGN, not broken — the machine is built and waiting; the reps are his, and only his.",
       };
     }
@@ -1098,7 +1211,7 @@ function saveSessionHandle(body, deps = {}) {
     handle: String(body.handle),
     key_index: Number.isFinite(Number(body.key_index)) ? Number(body.key_index) : 0,
     model: String(body.model || ""),
-    mode: ["scrimmage","brief-club","brief-brain","signing"].includes(body.mode) ? body.mode : "gaffer",
+    mode: ["scrimmage","brief-club","brief-brain","signing","cinematic-tour"].includes(body.mode) ? body.mode : "gaffer",
     ts: now.toISOString(),
   });
   return { ok: true };
@@ -1141,15 +1254,16 @@ function buildConfig(keys, mode = "gaffer") {
   const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
   // THE BRIEFINGS — guest keynotes: NO tools (structural privacy: the model
   // cannot read the bus), no rehydrate, no resume, long idle (she listens).
-  if (mode === "brief-club" || mode === "brief-brain" || mode === "signing") {
+  if (mode === "brief-club" || mode === "brief-brain" || mode === "signing" || mode === "cinematic-tour") {
     // brief-club/brief-brain get the LIVE self-knowledge appended (any layer, current, in
     // full); signing is his personal onboarding — no architecture dump.
-    const liveKnowledge = mode === "signing" ? "" : selfKnowledgeBlock();
+    const liveKnowledge = (mode === "signing" || mode === "cinematic-tour") ? "" : selfKnowledgeBlock();
     return {
       model, voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
       depth: "deep", mode, keys,
       system: buildBriefingInstruction(mode) + liveKnowledge,
-      rehydrate: null, resume: null,
+      rehydrate: mode === "cinematic-tour" ? buildRehydrate() : null,
+      resume: mode === "cinematic-tour" ? loadSessionHandle({ model, mode, keyCount: keys.length }) : null,
       compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
       tools: [],                                      // no hands — a guest is listening
       thinking: "minimal",                            // C4 — explicit, honest (was "off" = silent default)
@@ -1220,7 +1334,8 @@ function buildConfig(keys, mode = "gaffer") {
     // pace, fewer tokens on a RED day); open = fuller frames.
     vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: Math.round(2000 * (currentTone().effects.frame_ms_mult || 1)) },
     acks: listAcks(),
-    minutes_today: readLines(DLEDGER).filter(l => String(l.ts || "").slice(0, 10) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
+    // E2E audit 25 Jul 2026: the meter reads HIS day too (a 01:00 IST session was invisible)
+    minutes_today: readLines(DLEDGER).filter(l => localDayOf(l.ts) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
   };
 }
 
@@ -1232,7 +1347,11 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const calls = [];
   const appends = [];
-  const sh = (script, argv, input) => { calls.push({ script, argv }); return ""; };
+  // E2E audit 25 Jul 2026: the rep hand-off file is now unlinked the instant its
+  // owner has read it, so the suite snapshots the CONTENT here — inside the shell
+  // call, exactly where capture.mjs reads it — instead of re-opening a path that
+  // (correctly) no longer exists afterwards.
+  const sh = (script, argv, input) => { calls.push({ script, argv, body: (argv && argv[0] === "paste" && argv[1] && existsSync(argv[1])) ? readFileSync(argv[1], "utf8") : null }); return ""; };
   const append = (path, text) => { appends.push({ path, text }); };
 
   const today = execTool("get_today", {}, { sh });
@@ -1249,8 +1368,10 @@ async function selftest() {
   assert("voice reps route through capture.mjs paste (the real contract)", good.ok === true && calls.some(c => c.script === "capture.mjs" && c.argv[0] === "paste"));
   execTool("log_reps", { reps: [{ concept: "attention", question: "q", confidence: "knew", correct: true }] }, { sh, runtime: { last_think_ms: 4200 } });
   const lastPaste = calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop();
-  const pasted = JSON.parse(readFileSync(lastPaste.argv[1], "utf8"));
+  const pasted = JSON.parse(lastPaste.body);
   assert("THINK-TIME rides the rep note (true latency, repaired)", pasted[0].note === "dugout-voice think:4200ms");
+  // E2E audit 25 Jul 2026 — his private reps must not linger in the shared %TEMP%
+  assert("the rep hand-off file is DELETED once capture has read it (nothing personal left in %TEMP%)", !existsSync(lastPaste.argv[1]));
   assert("unknown tool → error not crash", "error" in execTool("nope", {}, { sh }));
 
   execTool("take_note", { text: "socha tha embeddings deterministic hote" }, { sh, append });
@@ -1277,7 +1398,7 @@ async function selftest() {
   assert("all three personas exist; today's picked deterministically", Object.keys(PERSONAS).length === 3 && PERSONAS[todaysPersona(new Date(2026, 6, 12))] !== undefined);
   assert("hedge counter hears Hinglish + English hedges", countHedges("CAPTAIN: Shayad yeh matlab I think sahi hai") === 3 && countHedges("CAPTAIN: cosine normalizes magnitude, full stop") === 0);
   execTool("log_reps", { reps: [{ concept: "rag", question: "q", confidence: "guessed", correct: false }] }, { sh, mode: "scrimmage", runtime: { last_think_ms: null } });
-  const scrimPaste = JSON.parse(readFileSync(calls.filter(c => c.script === "capture.mjs").pop().argv[1], "utf8"));
+  const scrimPaste = JSON.parse(calls.filter(c => c.script === "capture.mjs").pop().body);
   assert("scrimmage reps tagged scrimmage-voice (declared surface)", scrimPaste[0].note === "scrimmage-voice");
   const rep = execTool("scrimmage_report", { total_25: 17, weakest: ["eval metrics", "context handoff"], drill: "reconstruct the eval harness cold", persona: "scenario_bomb" }, { sh, append });
   assert("scrimmage report filed with score + cracks + hedge line", rep.ok === true && appends.some(a => a.text.includes("17/25") && a.text.includes("eval metrics") && a.text.includes("hedge-density")));
@@ -1303,6 +1424,15 @@ async function selftest() {
   assert("re-jirah conductor: dormant-safe pre-blood (counts + quiet note)", typeof rj.due_today === "number" && Array.isArray(rj.queue) && typeof rj.note === "string");
   const gt = execTool("get_today", {}, { sh });
   assert("get_today drills carry modality (voice routes to the Dugout)", (gt.drills || []).every(d => ["voice", "screen"].includes(d.modality)));
+  // E2E audit 25 Jul 2026 — the today-counters compared a UTC ISO slice against a
+  // LOCAL date, so a 02:00 IST rep counted as yesterday and get_today reported 0.
+  // 02:15 LOCAL, whatever the machine's zone: its UTC slice is the PREVIOUS day
+  // east of Greenwich — the counter must still call it today.
+  {
+    const lateNight = new Date(2026, 6, 26, 2, 15, 0);
+    assert("'today' counters read HIS local day, never the raw UTC slice", localDayOf(lateNight.toISOString()) === "2026-07-26");
+    assert("date-only rows (notebook) and junk stamps stay safe in localDayOf", localDayOf("2026-07-12") === "2026-07-12" && localDayOf("") === "" && localDayOf(undefined) === "");
+  }
 
   // HIS-VOICE REMINDERS (U3a) — gate-exempt, verbatim, once
   const nowFix = new Date(2026, 6, 12, 14, 0, 0);
@@ -1318,6 +1448,30 @@ async function selftest() {
   await fireReminders({ read: () => remLines, write: (ls) => { written = ls; }, speak: async (t) => spoken.push(t), now: nowFix });
   assert("due reminder fires ONCE, in his words, marked fired", spoken.length === 1 && spoken[0].includes("tumhare apne words: call the bank") && written[0].fired === true);
   assert("future reminder stays queued (not fired)", written[1].fired === false);
+  // E2E audit 25 Jul 2026 — the read-modify-write race: a reminder he sets WHILE
+  // the previous one is being spoken must survive the rewrite (it used to be
+  // erased, because the file was rewritten from a pre-append snapshot).
+  {
+    const onDisk = [{ ts: "2026-07-12T08:00:00.000Z", due_at: new Date(nowFix.getTime() - 60000).toISOString(), text: "call the bank", fired: false }];
+    let merged = null;
+    await fireReminders({
+      read: () => onDisk.slice(),                      // a fresh snapshot per read, like readLines
+      write: (ls) => { merged = ls; },
+      speak: async () => { onDisk.push({ ts: "2026-07-12T08:30:00.000Z", due_at: new Date(nowFix.getTime() + 9e6).toISOString(), text: "dawai lena", fired: false }); },
+      now: nowFix,
+    });
+    assert("a reminder set DURING the TTS window survives the rewrite (his words never erased)", merged.length === 2 && merged.some(r => r.text === "dawai lena" && !r.fired) && merged.find(r => r.text === "call the bank").fired === true);
+  }
+  // E2E audit 25 Jul 2026 — re-entry: the 30s tick must not fire the same row
+  // twice while a previous run is still speaking it.
+  {
+    const shared = [{ ts: "2026-07-12T09:00:00.000Z", due_at: new Date(nowFix.getTime() - 60000).toISOString(), text: "ek hi baar", fired: false }];
+    const said = [];
+    const slow = async (t) => { await new Promise(r => setTimeout(r, 25)); said.push(t); };
+    const rd = () => shared.slice(), wr = (ls) => { shared.length = 0; shared.push(...ls); };
+    await Promise.all([fireReminders({ read: rd, write: wr, speak: slow, now: nowFix }), fireReminders({ read: rd, write: wr, speak: slow, now: nowFix })]);
+    assert("overlapping ticks can never double-speak one reminder (once, then done)", said.length === 1 && shared[0].fired === true);
+  }
 
   // EARNED PROACTIVITY (U3b) — the shadow-gate travels in the constitution
   const proNone = buildProactivitySection(null);
@@ -1343,6 +1497,21 @@ async function selftest() {
     assert("re-index adds nothing (idempotent)", (await indexRecall({ embed: mockEmbed, file: tf, sources: srcs })) === 0);
     const rec = await execRecall({ query: "when did I talk tokens" }, { embed: mockEmbed, index: readLines(tf) });
     assert("recall surfaces date + his verbatim words, best first", rec.hits.length >= 1 && rec.hits[0].date === "2026-07-10" && rec.hits[0].text.includes("subwords kyun"));
+    // E2E audit 25 Jul 2026 — recall_index.jsonl had two writers (this bridge's
+    // hourly tick + nightshift's embed_backfill, which imports indexRecall and
+    // runs it in ITS own process). While another run holds the lock, this one
+    // must embed nothing and append nothing — then pick the rows up once free.
+    {
+      const contested = [{ ts: "2026-07-12", source: "note", text: "kv cache ka doubt phir se — recompute kyun bachta hai exactly" }];
+      const lockPath = tf + ".lock";
+      writeFileSync(lockPath, "99999 (a nightshift process, pretend)");
+      const before = readLines(tf).length;
+      const blocked = await indexRecall({ embed: mockEmbed, file: tf, sources: contested, lockWaitMs: 0 });   // 0 = don't make the suite wait out the bounded retry
+      assert("a second process holding the recall lock never double-embeds his words", blocked === 0 && readLines(tf).length === before);
+      unlinkSync(lockPath);
+      const after = await indexRecall({ embed: mockEmbed, file: tf, sources: contested });
+      assert("lock released → the same words index normally (no deadlock, nothing lost)", after === 1 && readLines(tf).length === before + 1 && !existsSync(lockPath));
+    }
     const dry = await execRecall({ query: "x" }, { embed: async () => null, index: readLines(tf) });
     assert("keys dry → honest note, never a fake answer", dry.hits.length === 0 && dry.note.includes("dry"));
     assert("empty index → honest note", (await execRecall({ query: "x" }, { embed: mockEmbed, index: [] })).note.includes("empty"));
@@ -1530,7 +1699,14 @@ async function selftest() {
     const haveCapsules = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).some(f => f.endsWith(".json")); } catch { return false; } })();
     const digest = capsuleDigest();
     if (haveCapsules) {
-      assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never reteach") === false ? digest.includes("never teach") : true);
+      // E2E audit (25 Jul 2026): this check was VACUOUS. `?:` binds looser than
+      // `&&`, so the whole includes-chain was the ternary CONDITION — the instant
+      // any part failed, the expression fell to the literal `true` else-branch and
+      // asserted nothing. capsuleDigest() could return an empty string and the
+      // suite still reported the locked book green. Parenthesised into a real
+      // conjunction: the digest must actually carry the header, a capsule title,
+      // his verbatim bolo, and the never-teach-from-zero law.
+      assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never teach"));
       assert("the digest is in the LIVE system instruction", buildSystemInstruction().includes("THE LOCKED BOOK"));
       const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
       assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
@@ -1552,7 +1728,9 @@ async function selftest() {
     assert("the page injects EVERY unseen deep answer (two lanes, zero loss)", PAGE.includes("seenDeep") && PAGE.includes("deep_recent"));
     // page hygiene
     assert("transcript fragments coalesce per speaker (no more word-salad record)", PAGE.includes("coFlush") && PAGE.includes("coWho"));
-    assert("minutes bill only while the wire is up (parked tab = free)", PAGE.includes("if(!ws||ws.readyState!==1||!setupDone)return;const dTok"));
+    // E2E audit 25 Jul 2026: same law, new shape — the down-wire branch now CLEARS
+    // the meter (t0=0) instead of bare-returning with a stale t0 (see mins()).
+    assert("minutes bill only while the wire is up (parked tab = free)", PAGE.includes("if(!ws||ws.readyState!==1||!setupDone){t0=0;return}const dTok"));
     assert("CFG refreshes every 10 min (the constitution no longer freezes at START)", PAGE.includes("600000"));
     // recall quality bar
     assert("recall bar: shards + transliterated garble never enter the index", recallWorthy("क्या फल आई वांट टू नो? अंडरस्टैंड एवरीथिंग") === false && recallWorthy("haan ok") === false && recallWorthy(", can you be able to") === false && recallWorthy("tokenization subwords wala doubt phir se aa raha hai") === true);
@@ -1641,6 +1819,21 @@ async function selftest() {
   assert("mic P0: permission preflight on load", PAGE.includes("permissions.query"));
   assert("barge-in actually stops scheduled audio", PAGE.includes("liveSrcs") && PAGE.includes("stopPlayback"));
   assert("page HTML embeds resumption + key rotation + bench message", PAGE.includes("sessionResumption") && PAGE.includes("nextKey") && PAGE.includes("talk.mjs"));
+  // E2E audit 25 Jul 2026 — a bare 1011 (the wire's GENERIC error close: a typo'd
+  // model, a rejected setup field) used to burn the whole key pool and bench him
+  // with "free juice dry". The quota lane now needs 1008, a quota-shaped reason,
+  // or a 1011 on a socket that had actually been live; a refused setup backs off
+  // and finally SAYS what the wire said, instead of masquerading as an empty tank.
+  assert("a bare 1011 is no longer misread as quota (a wire/config fault never benches the line)",
+    !PAGE.includes("if((e.code===1011||e.code===1008||") && PAGE.includes("const livedAWhile=setupDone&&setupAt&&(Date.now()-setupAt>=20000)") && PAGE.includes("e.code===1011&&livedAWhile"));
+  assert("the bench + setup-refused messages name the close code and reason (no masked error)",
+    PAGE.includes("free juice dry for today (close '+e.code+") && PAGE.includes("the wire keeps refusing setup") && PAGE.includes("failedSetups"));
+  // E2E audit 25 Jul 2026 — t0 survived park/unpark and mins() froze it while the
+  // wire was down, so the first tick after a 10-hour parked tab billed ~599 voice
+  // minutes in one POST. The meter now restarts on every setupComplete and stops
+  // dead (t0=0) the moment the wire is not up.
+  assert("the minutes meter never lump-bills a parked span (fresh t0 per connect, meter off while down)",
+    !PAGE.includes("t0=t0||Date.now()") && PAGE.includes("failedSetups=0;t0=Date.now();goAwayAt=0") && PAGE.includes("!setupDone){t0=0;return}"));
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -2175,6 +2368,7 @@ const PAGE = `<!DOCTYPE html>
 <script>
 let CFG=null,ws=null,acOut=null,micCtx=null,keyIdx=0,t0=null,resumeHandle=null,closing=false,parking=false,setupDone=false,setupAt=0;
 let outTxEnabled=true,earlyCloses=0,rehydrated=false;
+let failedSetups=0;   // E2E audit 25 Jul 2026: consecutive sockets that never reached setupComplete (wire/config fault, not quota)
 // M0 — resumption across reloads + proactive goAway stitching
 let resumingWith=null,goAwayAt=0,lastHandlePost=0,stitching=false;
 function adoptResume(){if(CFG&&CFG.resume&&CFG.resume.handle){resumeHandle=CFG.resume.handle;keyIdx=CFG.resume.key_index||0;log('· resuming today\\'s session (handle restored — same key, memory intact)')}}
@@ -2321,7 +2515,14 @@ ws.onopen=()=>{const s={model:'models/'+CFG.model,
  resumingWith=resumeHandle;
  ws.send(JSON.stringify({setup:s}))};
 ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.text();let m;try{m=JSON.parse(d)}catch(e){return}
- if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;t0=t0||Date.now();goAwayAt=0;
+ // E2E audit (25 Jul 2026): t0 was deliberately KEPT across a park/unpark
+ // (t0 was re-used if already set), and mins() early-returned while the wire was down
+ // WITHOUT clearing it — so the whole parked span was billed in one lump at the
+ // first tick after reconnect. Talk at 10:00, park at 10:02, speak again at
+ // 20:00 → a single /minutes POST for ~599 minutes, and the free-tier ledger
+ // (the thing that decides when he gets benched) became fiction. The meter now
+ // starts fresh on every (re)connect; mins() zeroes it the moment the wire drops.
+ if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;failedSetups=0;t0=Date.now();goAwayAt=0;
   if(resumingWith){log('· session RESUMED server-side (compressed memory intact)');resumingWith=null}
   if(!resumeHandle&&CFG.rehydrate&&!rehydrated){rehydrated=true;
    ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'[REHYDRATE — aaj ka match record so far; resume silently, no recap]\\n'+CFG.rehydrate}]}],turnComplete:false}}));
@@ -2352,9 +2553,24 @@ ws.onclose=e=>{if(closing)return;
   if(++earlyCloses>=2){outTxEnabled=false;log('· live scar bit: outputTranscription stripped — checkpoint tool is the match record now')}
   // C4 scar ladder: still closing early after outTx stripped → explicit thinking goes next
   if(earlyCloses>=4&&thinkExplicit){thinkExplicit=false;log('· live scar bit: explicit thinkingLevel stripped — server default rides')}}
- if((e.code===1011||e.code===1008||/quota|exhaust|resource/i.test(e.reason||''))){
+ // E2E audit (25 Jul 2026): EVERY 1011 was read as "quota". 1011 is the wire's
+ // GENERIC internal-error close — the exact code the scar table above documents
+ // for wire-shape problems (outputTranscription, mediaResolution, a typo'd model
+ // in dugout_prefs.json). So a config error burned the whole key pool in seconds
+ // and then benched him with "free juice dry for today", masking the real fault.
+ // Now the quota lane needs real evidence: 1008 (policy/quota), a quota-shaped
+ // reason, or a 1011 that arrives on a socket that had been LIVE for a while
+ // (a genuine mid-session exhaustion). A bare early 1011 rides the scar ladder
+ // and the reconnect backoff instead — and every honest exit names code+reason.
+ const quotaish=/quota|exhaust|resource|rate limit|429/i.test(e.reason||'');
+ const livedAWhile=setupDone&&setupAt&&(Date.now()-setupAt>=20000);
+ if(e.code===1008||quotaish||(e.code===1011&&livedAWhile)){
    const k=nextKey();if(k){log('· quota on key '+(keyIdx)+' — rotating pool');dropResume('key rotation — a handle is per-project');connect();return}
-   st('🪑 free juice dry for today — bench: node scripts/talk.mjs');mins();return}
+   st('🪑 free juice dry for today (close '+e.code+(e.reason?' — '+String(e.reason).slice(0,80):'')+') — bench: node scripts/talk.mjs');mins();return}
+ // a socket that never reached setupComplete is a WIRE problem, not a busy day:
+ // back off instead of hammering, and after 8 tries say what the wire said.
+ if(!setupDone){if(++failedSetups>=8){st('⛔ the wire keeps refusing setup (close '+e.code+(e.reason?' — '+String(e.reason).slice(0,80):'')+') — check dugout_prefs.json / the model name, then reload');return}
+  const back=Math.min(800*Math.pow(2,failedSetups-1),15000);log('· setup refused ('+e.code+(e.reason?' — '+String(e.reason).slice(0,60):'')+') — retrying in '+Math.round(back/1000)+'s');setTimeout(connect,back);return}
  log('· reconnecting ('+e.code+')…');setTimeout(connect,800)};
 }
 
@@ -2395,7 +2611,9 @@ setInterval(()=>{
  if(goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length){
   goAwayAt=0;stitching=true;log('· stitching now (quiet beat) — same session, new socket');ws.close(1000);return}
  if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
- parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
+ // E2E audit 25 Jul 2026: bill the part-minute BEFORE the line parks (the wire
+ // is still up here, so it is honest) — then the meter is off until reconnect
+ mins();parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
 
 // M1 — THE AFFERENT NERVE (voice): each finished captain turn → the thalamus
 let affBuf='',affAt=0;
@@ -2446,7 +2664,9 @@ function flush(){coFlush();if(!txBuf.length)return;fetch('/transcript',{method:'
 setInterval(flush,15000);
 // scan-fix 15 Jul: a merely-open tab used to bill a voice-minute + a T1 unit
 // every 60s even with the line PARKED — count minutes only while the wire is up
-function mins(){if(!t0)return;if(!ws||ws.readyState!==1||!setupDone)return;const dTok=Math.max(0,tokTotal-tokSent);tokSent=tokTotal;
+// E2E audit 25 Jul 2026: the wire being down now STOPS the meter ({t0=0;return})
+// instead of freezing a stale t0 that gets lump-billed on the next reconnect.
+function mins(){if(!t0)return;if(!ws||ws.readyState!==1||!setupDone){t0=0;return}const dTok=Math.max(0,tokTotal-tokSent);tokSent=tokTotal;
  fetch('/minutes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({minutes:Math.round((Date.now()-t0)/60000*10)/10,tokens:dTok})});t0=Date.now()}
 setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true;flush();mins();sendStamps()});
 // scan-fix 15 Jul: CFG froze at START-click — a morning session carried the
@@ -2547,12 +2767,35 @@ async function main() {
   setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
   indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} of his words`); }).catch(() => { });
   setInterval(() => indexRecall().catch(() => { }), 3600000);   // his words become findable, hourly
+  // ── THE LAN DOOR (E2E audit 25 Jul 2026) ────────────────────────────────────
+  // `--lan` binds 0.0.0.0 so the phone can reach the Dugout — but every route was
+  // UNAUTHENTICATED, and GET /config hands back the entire raw Gemini key pool
+  // while POST /tool executes state-mutating owner scripts. Anything on the wifi
+  // (or anything that owns a device on it) could take the keys and drive the bus.
+  // Now: LAN mode mints a one-run secret. Loopback is unaffected, so plain
+  // `npm run dugout` behaves exactly as before and the selftests stay valid.
+  const lanMode = process.argv.includes("--lan");
+  const LAN_KEY = lanMode ? randomBytes(16).toString("hex") : null;
+  const isLoopback = (req) => { const a = String(req.socket.remoteAddress || ""); return a === "127.0.0.1" || a === "::1" || a === "::ffff:127.0.0.1"; };
+  const hasKey = (req) => {
+    try { if (new URL(req.url, "http://x").searchParams.get("k") === LAN_KEY) return true; } catch { }
+    return String(req.headers.cookie || "").split(/;\s*/).some(c => c === `dugout_k=${LAN_KEY}`);
+  };
+  const allowed = (req) => !lanMode || isLoopback(req) || hasKey(req);
+
   const server = createServer(async (req, res) => {
     const send = (code, body, type = "application/json") => { res.writeHead(code, { "Content-Type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     try {
-      if (req.method === "GET" && (req.url === "/" || req.url.startsWith("/?"))) return send(200, PAGE, "text/html");
+      if (!allowed(req)) { res.writeHead(401, { "Content-Type": "text/plain" }); return res.end("dugout: this is the captain's bench. Open the link printed in the terminal (it carries the one-run key).\n"); }
+      if (req.method === "GET" && (req.url === "/" || req.url.startsWith("/?"))) {
+        // hand the phone a cookie so every later fetch on this origin carries the key
+        const headers = { "Content-Type": "text/html" };
+        if (lanMode && !isLoopback(req)) headers["Set-Cookie"] = `dugout_k=${LAN_KEY}; Path=/; SameSite=Strict; Max-Age=86400`;
+        res.writeHead(200, headers);
+        return res.end(PAGE);
+      }
       if (req.method === "GET" && req.url.startsWith("/config")) {
-        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing"].includes(_q) ? _q : "gaffer";
+        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour"].includes(_q) ? _q : "gaffer";
         return send(200, buildConfig(keys, mode));
       }
       if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
@@ -2666,12 +2909,13 @@ async function main() {
   // --lan (U4): the Dugout on his PHONE browser while pacing the house.
   // Home-wifi only; localhost stays the default. Phone mic on plain http
   // needs the documented one-time browser flag (setup/VOICE_SETUP.md §LAN).
-  const lan = process.argv.includes("--lan");
+  const lan = lanMode;
   server.listen(PORT, lan ? "0.0.0.0" : "127.0.0.1", () => {
     console.log(`dugout: LIVE bridge on http://localhost:${PORT} — ${keys.length} key(s) in the pool. Open it, press START, talk.`);
     if (lan) {
       const ips = Object.values(os.networkInterfaces()).flat().filter(i => i && i.family === "IPv4" && !i.internal).map(i => i.address);
-      console.log(`dugout: LAN mode — phone browser: http://${ips[0] || "<your-ip>"}:${PORT}`);
+      console.log(`dugout: LAN mode — phone browser: http://${ips[0] || "<your-ip>"}:${PORT}/?k=${LAN_KEY}`);
+      console.log(`dugout: that ?k= is a ONE-RUN key — without it the LAN door returns 401 (the key pool never leaves this machine unasked). A new key is minted every start.`);
       console.log(`dugout: phone mic needs a one-time flag — chrome://flags/#unsafely-treat-insecure-origin-as-secure → add http://${ips[0] || "<your-ip>"}:${PORT} (see setup/VOICE_SETUP.md)`);
     }
     if (!process.env.DUGOUT_NO_OPEN && !lan) { try { execFileSync("cmd", ["/c", "start", "", `http://localhost:${PORT}`], { windowsHide: true }); } catch { } }

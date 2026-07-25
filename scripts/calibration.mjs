@@ -16,7 +16,8 @@
 //        targets from calibration_config.json {knew,shaky,guessed}; empty bucket skipped.
 //   overconfidence_rate = P(correct==false | confidence=="knew")  (danger keys off THIS).
 //
-// DANGER ZONE — per-topic (canonical concept id), knew-WRONG only. A topic enters iff:
+// DANGER ZONE — per TRACK+topic (canonical id; concepts{} and skills{} are separate namespaces,
+//   so each entry carries its own `track`), knew-WRONG only. A topic enters iff:
 //   (a) ≥ danger.min_knew_reps knew-reps, AND (b) knew-accuracy < danger.accuracy_mid.
 //   confidence:"high" always; accuracy:"low" if <accuracy_low else "mid". shaky/guessed
 //   wrongs NEVER enter. AXIS-SHARPEN (concept-track): if ≥2 knew-wrong reps share one axis
@@ -68,21 +69,42 @@ const round = (x, d = 4) => (x === null ? null : Math.round(x * 10 ** d) / 10 **
 const numOr = (x, dflt) => (typeof x === "number" && !Number.isNaN(x) ? x : dflt);
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-function loadConfig(path = CFG_PATH) {
+// E2E audit 25 Jul 2026 (4b9d982e): the three SCALAR knobs were numOr-guarded but the two
+// NESTED ones were raw object spreads — `{ ...d.targets, ...(j.targets || {}) }` — so any value
+// type from the hand-edited calibration_config.json walked straight into the math. A typo'd
+// target ("0..67", "0.95%") makes ece() return NaN, calibration_gap serialises as null and the
+// trend prints "holding steady (~NaN)" while status still reads "ok" — a silently dead scalar.
+// A typo'd danger.accuracy_mid is worse: `acc >= NaN` is always false, so gate (b) never fires
+// and EVERY 3-knew topic floods the danger zone labelled "the dangerous illusion", which the
+// Manager, nightshift and setpiece all drill HARDEST. Guard every leaf like nemesis.mjs does.
+function normalizeConfig(j) {
   const d = DEFAULTS;
+  const o = (j && typeof j === "object") ? j : {};
+  const t = (o.targets && typeof o.targets === "object") ? o.targets : {};
+  const g = (o.danger  && typeof o.danger  === "object") ? o.danger  : {};
+  return {
+    targets: {
+      knew:    numOr(t.knew,    d.targets.knew),
+      shaky:   numOr(t.shaky,   d.targets.shaky),
+      guessed: numOr(t.guessed, d.targets.guessed),
+    },
+    window_size: numOr(o.window_size, d.window_size),
+    min_reps:    numOr(o.min_reps,    d.min_reps),
+    trend_delta: numOr(o.trend_delta, d.trend_delta),
+    danger: {
+      min_knew_reps: numOr(g.min_knew_reps, d.danger.min_knew_reps),
+      accuracy_low:  numOr(g.accuracy_low,  d.danger.accuracy_low),
+      accuracy_mid:  numOr(g.accuracy_mid,  d.danger.accuracy_mid),
+    },
+  };
+}
+
+function loadConfig(path = CFG_PATH) {
   try {
-    if (existsSync(path)) {
-      const j = JSON.parse(readFileSync(path, "utf8"));
-      return {
-        targets: { ...d.targets, ...(j.targets || {}) },
-        window_size: numOr(j.window_size, d.window_size),
-        min_reps: numOr(j.min_reps, d.min_reps),
-        trend_delta: numOr(j.trend_delta, d.trend_delta),
-        danger: { ...d.danger, ...(j.danger || {}) },
-      };
-    }
+    if (existsSync(path)) return normalizeConfig(JSON.parse(readFileSync(path, "utf8")));
   } catch { /* malformed config → defaults */ }
-  return { ...d };
+  // missing/malformed ⇒ defaults, via the same normaliser (fresh nested objects, never DEFAULTS' refs)
+  return normalizeConfig(null);
 }
 
 function loadRegistry(path = CONCEPTS_PATH) {
@@ -165,20 +187,30 @@ function bucketsObj(reps) {
 
 // per-topic knew-wrong danger zone (only meaningful at status "ok")
 function computeDanger(reps, cfg, reg) {
+  // group by TRACK + topic.
+  // E2E audit 25 Jul 2026 (1bcef5ff): this keyed on the canonical topic NAME alone — the same
+  // namespace collapse nemesis had (540b2b43). concepts.json keeps concepts{} and skills{} as
+  // SEPARATE maps, and an unregistered rep falls back to its raw normalized string, so skill
+  // "async" (Colab) and a concept-track "async" (Gem) pooled into ONE knew-accuracy against the
+  // danger gates. Fluent skill reps could then be dragged under accuracy_mid by concept misses
+  // (indicting Python the captain is solid on) or, worse, mask a real concept blind spot by
+  // averaging it away. The entry also carried no track, so the Manager could not tell which
+  // domain was in danger. Separate namespaces ⇒ separate verdicts, each stamped with its track.
   const byTopic = new Map();
   for (const r of reps) {
-    const t = topicOf(r, reg);
-    if (!byTopic.has(t)) byTopic.set(t, []);
-    byTopic.get(t).push(r);
+    const topic = topicOf(r, reg);
+    const key = `${r.track}\u0000${topic}`;   // NUL join: no normalized topic can contain it
+    if (!byTopic.has(key)) byTopic.set(key, { reps: [], track: r.track, topic });
+    byTopic.get(key).reps.push(r);
   }
   const scored = [];
-  for (const [topic, trs] of byTopic) {
+  for (const { reps: trs, track, topic } of byTopic.values()) {
     const knew = trs.filter((r) => r.confidence === "knew");
     if (knew.length < cfg.danger.min_knew_reps) continue;                 // gate (a)
     const acc = knew.filter((r) => r.correct).length / knew.length;
     if (acc >= cfg.danger.accuracy_mid) continue;                         // gate (b): only confident-wrong
     const entry = {
-      topic, confidence: "high",
+      topic, track, confidence: "high",
       accuracy: acc < cfg.danger.accuracy_low ? "low" : "mid",
     };
     // axis-sharpen (concept-track only): plurality axis among knew-wrong reps, ≥2
@@ -311,6 +343,39 @@ function selftest() {
   const raw = [...rep(2, "Brand New Topic", "knew", false), ...rep(1, "Brand New Topic", "knew", false), ...rep(20, "filler", "shaky", true)];
   assert("concepts.json missing ⇒ topic = raw normalized id", !!find(compute(raw, cfg, EMPTY_REG, now).danger_zone, "brand new topic"));
 
+  // --- E2E audit 25 Jul 2026 regressions -------------------------------------
+  // 15) the NESTED config leaves are numeric-guarded too (4b9d982e). Under the old raw spread a
+  //     hand-typo walked in whole: targets.knew "0.95%" ⇒ ece() NaN ⇒ calibration_gap serialises
+  //     as null and the trend prints "holding steady (~NaN)" while status still reads "ok"; and
+  //     danger.accuracy_mid "0..67" ⇒ `acc >= NaN` is always false ⇒ gate (b) is dead and a
+  //     3-knew PERFECT topic gets stamped "confident-wrong = the dangerous illusion".
+  const badCfg = normalizeConfig({ targets: { knew: "0.95%", guessed: null }, danger: { accuracy_mid: "0..67", min_knew_reps: [] } });
+  assert("bad config leaves ⇒ DEFAULTS (string/null/array all rejected)",
+    badCfg.targets.knew === 0.95 && badCfg.targets.guessed === 0.30
+    && badCfg.danger.accuracy_mid === 0.67 && badCfg.danger.min_knew_reps === 3);
+  const badRun = compute([...rep(40, "filler", "shaky", true), ...rep(3, "solid", "knew", true)], badCfg, EMPTY_REG, now);
+  assert("bad config: gap + trend stay finite AND a 3/3-correct topic is NOT indicted",
+    Number.isFinite(badRun.calibration_gap) && !badRun.trend.includes("NaN") && badRun.danger_zone.length === 0);
+
+  // 16) tracks are SEPARATE namespaces (1bcef5ff). Skill "async" is fluent (3/3 knew-correct);
+  //     concept-track "async" has 2 knew-wrong, below gate (a). Merged on the topic name alone
+  //     they became one 5-knew pool at 0.60 < accuracy_mid, so the danger zone indicted "async"
+  //     — the Python skill the captain is actually solid on.
+  const m16 = [...rep(3, "async", "knew", true, { track: "skill" }), ...rep(2, "async", "knew", false), ...rep(20, "filler", "shaky", true)];
+  assert("track-split: a fluent skill is not dragged into danger by a same-named concept",
+    !find(compute(m16, cfg, EMPTY_REG, now).danger_zone, "async"));
+
+  // 16b) and when BOTH tracks are genuinely in danger they are TWO entries, each stamped with its
+  //      track — the old merged entry carried none, so the Manager could not tell which domain.
+  const m16b = [
+    ...rep(3, "parsers", "knew", false, { track: "skill" }),
+    ...rep(1, "parsers", "knew", true), ...rep(3, "parsers", "knew", false),
+    ...rep(20, "filler", "shaky", true),
+  ];
+  const p16b = compute(m16b, cfg, EMPTY_REG, now).danger_zone.filter((e) => e.topic === "parsers");
+  assert("track-split: both tracks in danger ⇒ TWO entries, each carrying its own track",
+    p16b.length === 2 && new Set(p16b.map((e) => e.track)).size === 2 && p16b.every((e) => TRACKS.has(e.track)));
+
   const passed = checks.every(([, ok2]) => ok2);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -334,4 +399,4 @@ function main() {
 // Windows-safe entry guard (like timeaudit.mjs / fsrs.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, ece, computeDanger, computeTrend, bucketsObj, loadReps, loadConfig, loadRegistry, topicOf };
+export { compute, ece, computeDanger, computeTrend, bucketsObj, loadReps, loadConfig, normalizeConfig, loadRegistry, topicOf };

@@ -13,15 +13,26 @@
 // ============================================================================
 
 import { execFileSync, execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 const LIMIT_RE = /limit|rate.?limit|quota|overloaded|429/i;
+// E2E audit 25 Jul 2026: this used to return the %APPDATA%\npm\claude.cmd shim
+// UNCONDITIONALLY. That path does not exist under the native installer (the CLI
+// lives at ~/.local/bin/claude.exe, on PATH), so EVERY organ on this engine died
+// with a silent spawn EINVAL — nightshift, dmn, council, thalamus's adjudicator.
+// Now mirrors brain.mjs:421-428, the pattern that was always correct: probe for
+// the shim, else the bare name; .cmd needs shell:true on Node 22 (CVE-2024-27980).
 const BIN = () => {
-  // Windows: npm shims live in %APPDATA%\npm as .cmd — bare name can ENOENT
-  // under some spawn contexts; the shim path always works.
-  if (process.platform === "win32" && process.env.APPDATA) return join(process.env.APPDATA, "npm", "claude.cmd");
+  if (process.platform === "win32" && process.env.APPDATA) {
+    const shim = join(process.env.APPDATA, "npm", "claude.cmd");
+    if (existsSync(shim)) return shim;
+  }
   return "claude";
 };
+// zero argv strings carry spaces (fixed flags only) and the prompt rides stdin,
+// so shell:true here cannot become an injection surface.
+const needsShell = (bin) => bin.endsWith(".cmd");
 const ARGS = (model) => ["-p", "--output-format", "json", "--model", model || "sonnet"];
 
 function parseOut(stdout, prompt, t0) {
@@ -44,8 +55,9 @@ const refuse = () => ({ ok: false, text: null, total_tokens: 0, duration_ms: 0, 
 function claudeGen(prompt, model = "sonnet", timeoutMs = 300000) {
   if (process.env.ANTHROPIC_API_KEY) return refuse();
   const t0 = Date.now();
+  const bin = BIN();
   try {
-    const stdout = execFileSync(BIN(), ARGS(model), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const stdout = execFileSync(bin, ARGS(model), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
     return parseOut(stdout, prompt, t0);
   } catch (e) { return parseErr(e, prompt, t0); }
 }
@@ -53,8 +65,9 @@ function claudeGen(prompt, model = "sonnet", timeoutMs = 300000) {
 function claudeGenAsync(prompt, model = "sonnet", timeoutMs = 300000) {
   if (process.env.ANTHROPIC_API_KEY) return Promise.resolve(refuse());
   const t0 = Date.now();
+  const bin = BIN();
   return new Promise((resolve) => {
-    const child = execFile(BIN(), ARGS(model), { timeout: timeoutMs, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024 },
+    const child = execFile(bin, ARGS(model), { timeout: timeoutMs, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } },
       (err, stdout) => resolve(err && !stdout ? parseErr(err, prompt, t0) : parseOut(stdout || "", prompt, t0)));
     child.stdin.on("error", () => { });   // child died early — the callback reports it
     child.stdin.end(String(prompt));
@@ -74,6 +87,16 @@ async function selftest() {
   const lim = parseOut(JSON.stringify({ result: "rate limit reached", is_error: true }), "p", Date.now());
   assert("limit event detected honestly", lim.ok === false && lim.limit_hit === true);
   assert("raw non-json passes through", parseOut("plain", "p", Date.now()).text === "plain");
+  // THE ENGINE MUST BE SPAWNABLE (E2E audit 25 Jul): the old BIN() pointed at a
+  // shim that does not exist here, so every organ failed with EINVAL and nobody
+  // noticed for days. This check fails loudly the moment the binary is unreachable.
+  {
+    const bin = BIN();
+    const resolvable = existsSync(bin) || (() => {
+      try { execFileSync(process.platform === "win32" ? "where" : "which", [bin], { stdio: "pipe" }); return true; } catch { return false; }
+    })();
+    assert(`claude binary is resolvable (${bin})`, resolvable);
+  }
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;

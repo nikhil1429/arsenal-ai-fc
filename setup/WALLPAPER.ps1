@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # WALLPAPER.ps1 — the ambient Maidan (THE_ORGANISM §VII.2, First Touch arm b)
 # Draws KAL-line + season numbers + verdict band onto a PNG and sets it as the
 # desktop wallpaper. The loop's state becomes the thing you see before you can

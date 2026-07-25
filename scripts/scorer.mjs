@@ -24,7 +24,9 @@
 // INPUT (read-only): predictions.jsonl · calibration.json · reps_log.jsonl ·
 //   timeaudit.json · pitch_read.json · drills.json · post_match/<date>.md
 // OUTPUT: slip.jsonl (append; sole writer) + trust_tiers.json (sole writer)
-// MODES:  run (default: resolve matured + snapshot + propose) · selftest
+// MODES:  run (default: resolve matured + snapshot + propose; accepts
+//         --date=YYYY-MM-DD to name the ledger day) · ratify <type> (the
+//         captain's one word, the only path to no_look) · selftest
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
@@ -114,14 +116,47 @@ function captainSnapshot(calibration, prevSnapshots, dateStr) {
 
 // GAFFER book: (a) append today's drills as unresolved proposals;
 // (b) mature proposals ≥ horizon old: hit = reps landed on those concepts.
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+// A PACKET'S IDENTITY IS ITS OWN PLAY DAY, NOT THE RUN CLOCK.
+// E2E audit (25 Jul 2026, HIGH): proposals were stamped `date: dateStr` — the
+// scorer RUN date — while drills.json carries `for`, the day the packet is FOR.
+// setpiece compiles day D's packet at 21:40 on D-1, but INSTALL_TASKS fires the
+// scorer at 21:35 and the full-time skill runs it AGAIN (before setpiece, then
+// setpiece rewrites the file). So one packet got stamped D-1 by the late D-1 run
+// and D by the next evening's 21:35 run; the dedupe key `date|claim` saw two
+// different keys ⇒ ONE coaching move, TWO bets on the gaffer's book, and the two
+// copies mature on different days with different verdicts. Stamping the packet's
+// own `for` day makes re-runs over the same packet collapse onto one row by
+// construction, and puts the play day inside the maturation window (below).
+function packetDay(drills, dateStr) {
+  const d = drills && (drills.for || drills.date);
+  return ISO_DAY.test(String(d || "")) ? String(d) : dateStr;
+}
 function gafferPropose(drills, existing, dateStr) {
   if (!drills || !Array.isArray(drills.drills) || !drills.drills.length) return [];
-  const already = new Set(existing.filter(s => s.book === "gaffer" && !s.resolved).map(s => `${s.date}|${s.claim}`));
+  const day = packetDay(drills, dateStr);
+  // resolved rows count as "already proposed" too — the ledger is append-only, so
+  // a matured bet's original stays resolved:false forever; keying off unresolved
+  // rows alone would let a retired proposal be re-opened by a stale packet.
+  const already = new Set(existing.filter(s => s.book === "gaffer").map(s => `${s.date}|${s.claim}`));
+  // ...and the batch dedupes against ITSELF. `already` was built from `existing`
+  // only, so two drills in ONE packet naming the same concept (setpiece happily
+  // emits a recall and a second recall on "inference") emitted two identical
+  // rows in a single run — the same coaching move counted twice in the trust
+  // tier. Found while verifying the E2E audit's double-proposal finding
+  // (25 Jul 2026): the live slip carries doubled unresolved rows on 07-21,
+  // 07-22 and 07-23, all same-date pairs the existing-only key could not see.
+  const seen = new Set(already);
   return drills.drills.filter(d => d.kind !== "floor_touch").map(d => ({
-    date: dateStr, book: "gaffer", type: "drill:" + d.kind,
+    date: day, book: "gaffer", type: "drill:" + d.kind,
     claim: (d.concepts || []).join("+") || d.kind, p: null,
     horizon_days: 3, resolved: false, hit: null, evidence: d.source || null,
-  })).filter(e => !already.has(`${e.date}|${e.claim}`));
+  })).filter(e => {
+    const k = `${e.date}|${e.claim}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 function gafferMature(existing, repsByDate, dateStr, horizonDays) {
@@ -138,7 +173,14 @@ function gafferMature(existing, repsByDate, dateStr, horizonDays) {
     if (age < (s.horizon_days || horizonDays)) continue;
     const concepts = String(s.claim || "").split("+").filter(Boolean);
     let played = false;
-    for (let i = 1; i <= (s.horizon_days || horizonDays); i++) {
+    // THE WINDOW OPENS ON THE PLAY DAY ITSELF (i=0), not the morning after.
+    // E2E audit (25 Jul 2026, HIGH — same defect as the run-date stamp above):
+    // the scan started at i=1, so reps landed on the very day the packet was FOR
+    // scored as "no reps on it". A drill done on the day it was set is the whole
+    // point of setting it; missing it made the gaffer's book read as coaching
+    // that never lands. Widening the window can only turn a fabricated MISS into
+    // an honest HIT — it can never flip a real HIT to a MISS.
+    for (let i = 0; i <= (s.horizon_days || horizonDays); i++) {
       const d = localDate(new Date(new Date(s.date).getTime() + i * 86400000));
       const set = repsByDate[d];
       if (set && concepts.some(c => set.has(c.toLowerCase()))) { played = true; break; }
@@ -146,6 +188,81 @@ function gafferMature(existing, repsByDate, dateStr, horizonDays) {
     out.push({ ...s, resolved: true, hit: played, evidence: (s.evidence || "") + ` | matured d+${age}: ${played ? "reps landed" : "no reps on it"}` });
   }
   return out;
+}
+
+// THE FIRST-FOCUS INSTRUMENT — a morning question needs a morning measurement.
+// E2E audit (25 Jul 2026, HIGH): main() resolved this market with
+//   firstFocusBy0930 = pr.tunnel.state !== "wall" && pr.tunnel.wall_minutes_today === 0
+// but touchline's `tunnel.state` is a read of the LAST 45 MINUTES at whatever
+// time it last ran (~21:0x by the 21:35 scorer) and `wall_minutes_today` accrues
+// across the WHOLE day. Neither field records WHEN the first Learning-bucket
+// focus landed. So a captain who opened Colab at 09:00 and hit one 15-minute
+// window-hopping wall at 15:00 was stamped a MISS on a market he won — an
+// evening proxy wearing a morning measurement's clothes. The live ledger shows
+// the damage: first_focus_by_0930 sits at n=5, hit_rate 0.0, five fabricated
+// MISSes the twin was then scored and re-calibrated against. That is a GUESS,
+// and NEVER-GUESS-A-RESOLUTION outranks having a verdict.
+// NOW: only a stamp captured AT the morning resolves it — pitch_read (or its
+// tunnel block) must carry `first_focus_at` ("HH:MM" or an ISO instant) or an
+// explicit boolean `first_focus_by`. No such instrument exists yet, so the
+// market is DARK and resolveTwin skips it with "instrument dark" until whoever
+// owns touchline.mjs stamps one. The deadline is now cfg.first_focus_deadline
+// (it was loaded and never read; main() hardcoded 09:30 beside it).
+function parseHHMM(s, fallbackMin = 9 * 60 + 30) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || "").trim());
+  if (!m) return fallbackMin;
+  const h = Number(m[1]), mi = Number(m[2]);
+  if (!(h >= 0 && h <= 23 && mi >= 0 && mi <= 59)) return fallbackMin;
+  return h * 60 + mi;
+}
+function stampMinutes(v) {
+  const s = String(v || "").trim();
+  if (!s) return null;
+  const hm = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (hm) return parseHHMM(s, null);
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d.getHours() * 60 + d.getMinutes();
+}
+function firstFocusRead(pr, dateStr, now, cfg) {
+  const DARK = { known: false, hit: null, evidence: null };
+  const deadlineMin = parseHHMM(cfg && cfg.first_focus_deadline);
+  // unjudgeable before the deadline — unless the ledger day is already over
+  // (post-midnight full-time), in which case the morning is long settled.
+  const dayOver = localDate(now) !== dateStr;
+  if (!dayOver && now.getHours() * 60 + now.getMinutes() < deadlineMin) return DARK;
+  if (!pr || pr.date !== dateStr) return DARK;
+  const t = pr.tunnel || {};
+  const flag = typeof pr.first_focus_by === "boolean" ? pr.first_focus_by
+    : (typeof t.first_focus_by === "boolean" ? t.first_focus_by : null);
+  if (flag !== null) return { known: true, hit: flag, evidence: pr.first_focus_evidence || t.first_focus_evidence || "pitch_read first_focus_by stamp" };
+  const at = pr.first_focus_at || t.first_focus_at || null;
+  const min = stampMinutes(at);
+  if (min === null) return DARK;
+  const hhmm = (n) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+  return { known: true, hit: min <= deadlineMin, evidence: `first Learning focus stamped ${hhmm(min)} (deadline ${hhmm(deadlineMin)})` };
+}
+// FROZEN VERBATIM — the pre-audit expression, kept as the record of what the
+// market used to be resolved by. Reference only; nothing in the run path calls
+// it, and it must never resolve a bet again.
+function firstFocusFromTunnelLegacy(pr) {
+  return !!(pr && pr.tunnel && pr.tunnel.state !== "wall" && pr.tunnel.wall_minutes_today === 0);
+}
+
+// THE LEDGER DAY vs THE CALENDAR DAY.
+// E2E audit (25 Jul 2026, MEDIUM): the design (see main) leans on full-time
+// re-appending a correction row over the premature 21:35 verdict. But main()
+// derived `today = localDate(now)` off the wall clock, so a full-time run after
+// midnight computed the NEXT calendar date: yesterday's twin bets were no longer
+// in `todays`, the 23:50 reps keyed to yesterday were invisible, post_match/
+// <yesterday>.md was never opened — the premature "0 rep(s)" MISS could never be
+// corrected, and the correction mechanism the whole append-only design rests on
+// silently stopped existing for exactly the nights he worked late. The captain's
+// day ends when he closes it, not at 00:00: anything before the cutoff still
+// belongs to yesterday's book.
+const LEDGER_DAY_CUTOFF_HOUR = 4;
+function ledgerDate(now, cutoffHour = LEDGER_DAY_CUTOFF_HOUR) {
+  if (now.getHours() >= cutoffHour) return localDate(now);
+  return localDate(new Date(now.getTime() - 86400000));
 }
 
 // TRUST TIERS — rolling per-type hit-rate; nothing auto-promotes.
@@ -181,6 +298,29 @@ function computeTiers(slip, cfg, prevTiers, now) {
   };
 }
 
+// THE DOOR THE CAPTAIN WALKS THROUGH — `node scorer.mjs ratify <type>`.
+// E2E audit (25 Jul 2026, MEDIUM): computeTiers renders `no_look: qualifies &&
+// ratified` where ratified is read back out of trust_tiers.json — of which the
+// scorer is the SOLE writer, and which it only ever writes from computeTiers.
+// So no_look could only ever be true if it was ALREADY true: a cold-start
+// deadlock. A tier could cross the threshold, sit at pending_ratification:true
+// forever, and the captain's word had nothing to land on — "the captain ratifies
+// once, out loud" was a constitutional promise with no receiver. This mode is
+// the receiver, mirroring shadow.mjs's `ratify <type>`. It still cannot promote
+// anything on its own: the door must already be open (pending_ratification), and
+// because computeTiers recomputes `qualifies` every run, a ratification whose
+// hit-rate later decays goes dark again — ratification never outlives its proof.
+function ratifyTier(prevTiers, type) {
+  if (!prevTiers || !Array.isArray(prevTiers.tiers) || !prevTiers.tiers.length)
+    return { ok: false, why: "no scored tiers yet — the scorer has not written trust_tiers.json" };
+  const t = prevTiers.tiers.find(x => x.type === type);
+  if (!t) return { ok: false, why: `unknown tier '${type}' — known: ${prevTiers.tiers.map(x => x.type).join(", ")}` };
+  if (t.no_look === true) return { ok: false, why: `'${type}' is already ratified` };
+  if (t.pending_ratification !== true) return { ok: false, why: `not proven yet — n=${t.n}, hit-rate ${t.hit_rate}; the door is shut and nothing auto-promotes` };
+  t.no_look = true; t.pending_ratification = false;
+  return { ok: true, why: `ratified by the captain's word — '${type}' renders bare (no-look) from now on`, doc: prevTiers };
+}
+
 // ---------------------------------------------------------------------------
 // selftest — fixtures only
 // ---------------------------------------------------------------------------
@@ -210,7 +350,28 @@ async function selftest() {
   const res1 = resolveTwin(preds, world1, today, cfg);
   assert("floor_touched resolves on reps", res1.find(r => r.type === "floor_touched").hit === true);
   assert("session_happened resolves on active minutes", res1.find(r => r.type === "session_happened").hit === true);
-  assert("first_focus resolves from tunnel evidence", res1.find(r => r.type === "first_focus_by_0930").hit === false);
+  assert("first_focus resolves only from a KNOWN instrument", res1.find(r => r.type === "first_focus_by_0930").hit === false);
+
+  // E2E audit 25 Jul 2026 (HIGH) — the first-focus market must never be answered
+  // by an evening tunnel read. It is a morning question; only a morning stamp.
+  {
+    const evening = { date: today, tunnel: { state: "clear", wall_minutes_today: 0, evidence: "3 window-switches, 22 Learning-min in last 45min" } };
+    const ffDark = firstFocusRead(evening, today, now, cfg);
+    assert("NEVER GUESS — the 21:35 tunnel read is NOT a morning instrument ⇒ dark", ffDark.known === false && ffDark.hit === null);
+    assert("...and the frozen legacy proxy would have answered it anyway (the bug, preserved)", firstFocusFromTunnelLegacy(evening) === true);
+    const walled = { date: today, first_focus_at: "09:05", tunnel: { state: "wall", wall_minutes_today: 15 } };
+    assert("a 09:05 stamp is a HIT even after a 15:00 wall (wall_minutes ≠ start time)", firstFocusRead(walled, today, now, cfg).hit === true);
+    assert("a 10:40 stamp is an honest MISS", firstFocusRead({ date: today, first_focus_at: "10:40" }, today, now, cfg).hit === false);
+    assert("before the deadline the market is unjudgeable, stamp or no stamp", firstFocusRead(walled, today, new Date(2026, 6, 12, 8, 0, 0), cfg).known === false);
+    assert("the deadline comes from config, not a hardcoded 09:30", firstFocusRead({ date: today, first_focus_at: "10:00" }, today, now, { ...cfg, first_focus_deadline: "10:30" }).hit === true);
+    assert("a stale pitch_read (yesterday's) is dark", firstFocusRead({ date: "2026-07-11", first_focus_at: "09:00" }, today, now, cfg).known === false);
+  }
+
+  // E2E audit 25 Jul 2026 (MEDIUM) — the ledger day is the captain's day, and it
+  // does not end at 00:00; the post-midnight full-time must still close it.
+  assert("evening run scores the day it is in", ledgerDate(new Date(2026, 6, 12, 21, 35, 0)) === "2026-07-12");
+  assert("LEDGER DAY: a 00:15 full-time still closes YESTERDAY's book (else no correction is possible)", ledgerDate(new Date(2026, 6, 13, 0, 15, 0)) === "2026-07-12");
+  assert("past the 04:00 cutoff the new day owns the ledger", ledgerDate(new Date(2026, 6, 13, 4, 0, 0)) === "2026-07-13");
 
   // NEVER GUESS — dark instruments skip
   const dark = resolveTwin(preds, { repsOnDate: null, postmatchHit: null, activeMinutes: null, firstFocusKnown: false }, today, cfg);
@@ -236,6 +397,25 @@ async function selftest() {
   const maturedMiss = gafferMature([{ date: "2026-07-09", book: "gaffer", type: "drill:derby", claim: "chunking", horizon_days: 3, resolved: false }], repsByDate, "2026-07-12", 3);
   assert("no reps in horizon ⇒ honest miss", maturedMiss[0].hit === false);
   assert("young proposals left unresolved", gafferMature([{ date: today, book: "gaffer", type: "drill:derby", claim: "x", horizon_days: 3, resolved: false }], {}, today, 3).length === 0);
+
+  // E2E audit 25 Jul 2026 (HIGH) — ONE packet is ONE bet, stamped with the day
+  // it is FOR. setpiece writes day D's packet at 21:40 on D-1; the scorer sees
+  // that same file at full-time on D-1 AND at 21:35 on D.
+  {
+    const packet = { date: "2026-07-13", for: "2026-07-13", drills: [{ kind: "derby", concepts: ["tokenization"], source: "confused ×4" }] };
+    const lateOnDMinus1 = gafferPropose(packet, [], "2026-07-12");
+    assert("proposal carries the packet's PLAY day, not the scorer run date", lateOnDMinus1[0].date === "2026-07-13");
+    assert("the same packet seen on two runs ⇒ ONE bet, not two", gafferPropose(packet, lateOnDMinus1, "2026-07-13").length === 0);
+    const resolvedCopy = { ...lateOnDMinus1[0], resolved: true, hit: true };
+    assert("a matured packet is never re-proposed by a stale drills.json", gafferPropose(packet, [lateOnDMinus1[0], resolvedCopy], "2026-07-16").length === 0);
+    assert("a packet with no `for`/`date` falls back to the run date (nothing regresses)", gafferPropose({ drills: packet.drills }, [], "2026-07-12")[0].date === "2026-07-12");
+    const doubled = { for: "2026-07-13", drills: [{ kind: "recall", concepts: ["inference"] }, { kind: "recall", concepts: ["inference"] }] };
+    assert("two drills on the SAME concept in ONE packet ⇒ ONE bet (live slip doubled 07-21/22/23)", gafferPropose(doubled, [], "2026-07-13").length === 1);
+    // and the window must open ON the play day — a drill done the day it was set
+    const onDay = gafferMature([{ date: "2026-07-13", book: "gaffer", type: "drill:derby", claim: "tokenization", horizon_days: 3, resolved: false }],
+      { "2026-07-13": new Set(["tokenization"]) }, "2026-07-16", 3);
+    assert("reps ON the play day count — the maturation window no longer starts a day late", onDay.length === 1 && onDay[0].hit === true);
+  }
 
   // trust tiers
   // THE RETIREMENT LAW — a matured proposal never re-matures (append-only ledger)
@@ -266,6 +446,21 @@ async function selftest() {
   assert("DESCRIPTIVE LAW — no rank/lever fields anywhere", !JSON.stringify(tiers1).match(/"rank"|"lever"/));
   assert("empty slip ⇒ awaiting_data", computeTiers([], cfg, null, now).status === "awaiting_data");
 
+  // E2E audit 25 Jul 2026 (MEDIUM) — the ratification deadlock: no_look could
+  // only ever be true if it was already true. Here is the door, and its lock.
+  {
+    const pend = computeTiers(slip, cfg, null, now);
+    assert("ratify refuses an unknown tier", ratifyTier(pend, "drill:nope").ok === false);
+    assert("ratify REFUSED before the proof (door shut ⇒ nothing auto-promotes)", ratifyTier(computeTiers(slip.slice(0, 3), cfg, null, now), "drill:recall").ok === false);
+    const said = ratifyTier(pend, "drill:recall");
+    assert("THE CAPTAIN'S WORD LANDS: pending_ratification → no_look (was unreachable)", said.ok === true && pend.tiers.find(x => x.type === "drill:recall").no_look === true && pend.tiers.find(x => x.type === "drill:recall").pending_ratification === false);
+    assert("the ratification survives the next scoring run", computeTiers(slip, cfg, pend, now).tiers.find(x => x.type === "drill:recall").no_look === true);
+    assert("ratify refuses a second time (the word is said once)", ratifyTier(pend, "drill:recall").ok === false);
+    // ratification cannot outlive its proof — decay re-shuts the door
+    const decayed = slip.map((s, i) => ({ ...s, hit: i % 2 === 0 }));
+    assert("a decayed hit-rate revokes no_look (proof outranks the word)", computeTiers(decayed, cfg, pend, now).tiers.find(x => x.type === "drill:recall").no_look === false);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -275,11 +470,28 @@ async function selftest() {
 // main
 // ---------------------------------------------------------------------------
 async function main() {
-  const mode = (process.argv[2] || "run").toLowerCase();
+  // argv: flags (--date=YYYY-MM-DD) are parsed out so `mode` stays the first
+  // bare word — `run` (default) · `selftest` · `ratify <type>`.
+  const argv = process.argv.slice(2);
+  const bare = argv.filter(a => !a.startsWith("--"));
+  const mode = (bare[0] || "run").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const cfg = loadConfig();
   const now = new Date();
-  const today = localDate(now);
+  if (mode === "ratify") {
+    // E2E audit 25 Jul 2026 — the receiver for the captain's one word (see
+    // ratifyTier). Reads and rewrites trust_tiers.json only; touches no ledger.
+    const r = ratifyTier(readJson(TIERS), String(bare[1] || ""));
+    console.log(`scorer ratify: ${r.ok ? "✓" : "✗"} ${r.why}`);
+    if (r.ok) writeAtomic(TIERS, r.doc);
+    process.exit(r.ok ? 0 : 1);
+  }
+  // THE LEDGER DAY, not the calendar day (see ledgerDate): a full-time run at
+  // 00:15 is still closing YESTERDAY's book, and that is precisely the run whose
+  // job is to correct the premature 21:35 verdicts. `--date=YYYY-MM-DD` lets the
+  // full-time skill name the day explicitly when it knows better.
+  const dateArg = argv.map(a => (/^--date=(\d{4}-\d{2}-\d{2})$/.exec(a) || [])[1]).find(Boolean) || null;
+  const today = dateArg || ledgerDate(now);
   const slip = readLines(SLIP);
   const preds = readLines(join(STATE_DIR, "predictions.jsonl"));
   const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
@@ -297,17 +509,21 @@ async function main() {
   const pmText = existsSync(pmPath) ? readFileSync(pmPath, "utf8") : null;
   // NEVER-GUESS-A-RESOLUTION: a stale instrument is a DARK instrument.
   // timeaudit dated yesterday must not resolve today's session_happened, and
-  // first-focus is unjudgeable before the 09:30 deadline or before kickoff.
+  // first-focus is unjudgeable before the deadline or before kickoff.
   const taFresh = ta && ta.date === today ? ta : null;
-  const deadlinePassed = now.getHours() * 60 + now.getMinutes() >= 9 * 60 + 30;
+  // E2E audit 25 Jul 2026: the old `deadlinePassed` const hardcoded 09:30 while
+  // cfg.first_focus_deadline sat unread two lines away; the deadline (and the
+  // whole first-focus question) now lives inside firstFocusRead, which refuses to
+  // answer at all without a genuine morning stamp.
+  const ff = firstFocusRead(pr, today, now, cfg);
   const world = {
     repsOnDate: reps.length ? (repsByDate[today] ? repsByDate[today].size : 0) : (existsSync(join(STATE_DIR, "reps_log.jsonl")) ? 0 : null),
     postmatchHit: pmText ? /\b(HIT|PARTIAL)\b/.test(pmText) : null,
     activeMinutes: taFresh && typeof taFresh.productiveMinutes === "number" ? taFresh.productiveMinutes
       : (taFresh && taFresh.buckets ? ["Learning", "Building"].reduce((a, b) => a + ((taFresh.buckets[b] && taFresh.buckets[b].minutes) || 0), 0) : null),
-    firstFocusKnown: !!(deadlinePassed && pr && pr.date === today && pr.tunnel && pr.tunnel.state !== "no_data" && pr.tunnel.state !== "pre_kickoff"),
-    firstFocusBy0930: !!(pr && pr.tunnel && pr.tunnel.state !== "wall" && pr.tunnel.wall_minutes_today === 0),
-    firstFocusEvidence: pr && pr.tunnel ? pr.tunnel.evidence : null,
+    firstFocusKnown: ff.known,
+    firstFocusBy0930: ff.hit,
+    firstFocusEvidence: ff.evidence,
   };
 
   const newRows = [];
@@ -338,4 +554,5 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { resolveTwin, captainSnapshot, gafferPropose, gafferMature, computeTiers, loadConfig };
+export { resolveTwin, captainSnapshot, gafferPropose, gafferMature, computeTiers, loadConfig,
+  firstFocusRead, firstFocusFromTunnelLegacy, ledgerDate, ratifyTier, packetDay };

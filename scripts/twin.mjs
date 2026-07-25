@@ -15,11 +15,16 @@
 //     Book-beats-captain resolves SILENTLY into scheduling weight. A fitted
 //     twin is unwinnable by construction; voiced both ways it is a whip.
 //   · COLD-START GAG — no market speaks until ≥30 scored resolutions AND it
-//     beats base rate. A morning prophecy of failure delivered to a
+//     beats the coin flip. A morning prophecy of failure delivered to a
 //     shame-spiral brain before it sits is the initiation wall with a
 //     probability stapled to it.
-//   · DEAD-MARKET PRUNING — a market that can't beat base rate after 30 bets
-//     is flagged dead and stops sealing. The twin prunes its own delusions.
+//   · DEAD-MARKET PRUNING — a market that can't beat the coin flip after 30
+//     bets is flagged dead and stops sealing. The twin prunes its own delusions.
+//     (Both clamps read "beat base rate" until the E2E audit of 25 Jul 2026
+//     proved that baseline was the HINDSIGHT-fitted constant — unbeatable by
+//     construction, so every healthy market died the day it matured. The
+//     honest, no-hindsight baseline is the uninformative 0.5 book. See
+//     deadVerdictLegacy / deadVerdict — the old arithmetic is frozen, not lost.)
 //   · NO DREAD-CLASS MARKETS — no session-abandon / failure-probability
 //     market exists in config or code. Ever.
 // M20 — THE SHADOW BOOKS (the cyborg stretch): K counterfactual books run in
@@ -71,7 +76,12 @@ function loadConfig(path = CFG_PATH) {
         voice_min_resolutions: typeof j.voice_min_resolutions === "number" ? j.voice_min_resolutions : DEFAULTS.voice_min_resolutions,
         dead_market_min: typeof j.dead_market_min === "number" ? j.dead_market_min : DEFAULTS.dead_market_min,
         // M20 — per-market book choice (captain-applied; unknown book → live default)
-        books: Object.fromEntries(Object.entries(j.books || {}).filter(([, v]) => v in BOOKS)),
+        // E2E audit 25 Jul 2026: was `v in BOOKS` — the `in` operator walks the
+        // PROTOTYPE CHAIN, so a typo'd/pasted "__proto__", "constructor" or
+        // "toString" passed validation and then crashed every twin run before a
+        // single bet was sealed (BOOKS["__proto__"] is Object.prototype: truthy,
+        // not callable). Own-property check only.
+        books: Object.fromEntries(Object.entries(j.books || {}).filter(([, v]) => typeof v === "string" && Object.hasOwn(BOOKS, v))),
       };
     }
   } catch { /* malformed → defaults */ }
@@ -94,19 +104,82 @@ const readLines = (p) => {
 // ---------------------------------------------------------------------------
 // pure core
 // ---------------------------------------------------------------------------
+// E2E audit 25 Jul 2026 (HIGH — the slip is APPEND-ONLY): scorer.mjs is the
+// slip's sole writer and runs TWICE a day BY DESIGN (21:35 task + full-time).
+// When a verdict FLIPS it re-appends a row with the same (book,type,date) —
+// its twinPrior gate only suppresses an IDENTICAL verdict — and its own
+// computeTiers reads LAST-WINS on book|type|date|claim. twin.mjs read the raw
+// filter and counted the premature row AND its correction as two independent
+// resolutions: one phantom hit + one phantom miss on a single day, dragging
+// `base` toward 0.5, adding p²+(1-p)² ≥ 0.5 to the Brier sum, tripping the
+// 30-resolution gag/pruning thresholds on fewer REAL days, and feeding a ghost
+// bet into every shadow-book replay. We now dedupe on the scorer's own key.
+// Map.set keeps the FIRST insertion slot and the LAST value, so a correction
+// settles back into its own chronological position — exactly what the
+// no-lookahead replay in shadowTable needs.
+const lastWins = (rows) => {
+  const m = new Map();
+  for (const s of rows) m.set(`${s.book}|${s.type}|${s.date}|${s.claim}`, s);
+  return [...m.values()];
+};
+
+// E2E audit 25 Jul 2026 (CRITICAL): the honest, no-hindsight baseline — the
+// Brier of the uninformative constant-0.5 book. See deadVerdict below.
+const COIN_BRIER = 0.25;
+
 // market stats from the scorer's slip (book==="twin", type===market id)
-function marketStats(slip, marketId) {
-  const rows = slip.filter(s => s.book === "twin" && s.type === marketId && s.resolved === true && typeof s.hit === "boolean");
+function marketStats(slip, marketId, deadWindow = 0) {
+  const rows = lastWins(slip.filter(s => s.book === "twin" && s.type === marketId && s.resolved === true && typeof s.hit === "boolean"));
   const n = rows.length;
   const hits = rows.filter(r => r.hit).length;
   const base = n ? hits / n : 0.5;
-  let brier = null, baseBrier = null;
+  const sq = (rs, price) => rs.reduce((a, r) => a + (price(r) - (r.hit ? 1 : 0)) ** 2, 0) / rs.length;
+  let brier = null, baseBrier = null, recentBrier = null;
   if (n) {
-    brier = rows.reduce((a, r) => a + ((typeof r.p === "number" ? r.p : 0.5) - (r.hit ? 1 : 0)) ** 2, 0) / n;
-    baseBrier = rows.reduce((a, r) => a + (base - (r.hit ? 1 : 0)) ** 2, 0) / n;
+    brier = sq(rows, r => (typeof r.p === "number" ? r.p : 0.5));
+    baseBrier = sq(rows, () => base);   // FROZEN: the hindsight constant, report-only (see deadVerdictLegacy)
+    // E2E audit 25 Jul 2026 (CRITICAL, revival path): the verdict brier rides a
+    // TRAILING window, so a market is judged on the book it runs TODAY rather
+    // than on its cold-start era. Pruning is recomputed every run, so a market
+    // whose recent scoring recovers comes back to life instead of being held
+    // hostage forever by ancient humble 0.5 seals.
+    const w = deadWindow > 0 ? rows.slice(-deadWindow) : rows;
+    recentBrier = sq(w, r => (typeof r.p === "number" ? r.p : 0.5));
   }
-  return { n, hits, base, brier: round(brier), baseBrier: round(baseBrier) };
+  return { n, hits, base, brier: round(brier), baseBrier: round(baseBrier), recentBrier: round(recentBrier) };
 }
+
+// FROZEN — the pre-audit dead-market verdict, kept verbatim for the record.
+// The E2E audit (25 Jul 2026) proved it structurally UNPASSABLE: baseBrier is
+// the IN-SAMPLE-OPTIMAL constant (base = hits/n, fitted in hindsight to the
+// very outcomes it is scored against; algebraically base·(1-base)). For any
+// unconditional book the sealed price is independent of the outcome, so the
+// cross-term vanishes in expectation and Σ(pᵢ-base)² > 0 ⇒ brier > baseBrier,
+// always. Monte Carlo over θ∈{0.5…0.95} × n∈{30…365} put P(brier ≥ baseBrier)
+// at 1.0000 in EVERY cell (θ=0.8, n=30: 0.177 vs 0.155). So every HEALTHY
+// market flipped dead at resolution 30 — and dead is terminal: sealToday
+// filters m.alive ⇒ no new bets ⇒ the slip freezes ⇒ the identical dead
+// verdict recomputes forever, and beats_base (required by computeVoice) could
+// never be earned. The twin self-lobotomized exactly when it matured.
+const deadVerdictLegacy = (s, cfg) => ({
+  alive: !(s.n >= cfg.dead_market_min && s.brier !== null && s.brier >= s.baseBrier),
+  beats_base: s.n >= cfg.dead_market_min && s.brier !== null && s.brier < s.baseBrier,
+});
+
+// PLAN OF RECORD — the same clamp, against an honest baseline no hindsight was
+// fitted to: the uninformative constant-0.5 book (Brier 0.25). "Still can't
+// beat a coin flip after 30 bets" IS the delusion the pruning was written to
+// catch. The other candidate — the no-lookahead sequential base-rate replay —
+// was REJECTED on purpose: the live laplace_all book IS that replay, so it
+// would tie itself and die on the >= tie-break, i.e. the same permanent death
+// in a new costume.
+const deadVerdict = (s, cfg) => {
+  const b = s.recentBrier !== null ? s.recentBrier : s.brier;
+  return {
+    alive: !(s.n >= cfg.dead_market_min && b !== null && b >= COIN_BRIER),
+    beats_base: s.n >= cfg.dead_market_min && b !== null && b < COIN_BRIER,
+  };
+};
 
 // Laplace-smoothed probability for today's seal
 const laplace = (hits, n) => (hits + 1) / (n + 2);
@@ -125,15 +198,26 @@ const BOOKS = {
     return laplace(base.filter(r => r.hit).length, base.length);
   },
 };
-const marketRows = (slip, marketId) => slip.filter(s => s.book === "twin" && s.type === marketId && s.resolved === true && typeof s.hit === "boolean");
+// E2E audit 25 Jul 2026 (HIGH): deduped last-wins, same as marketStats — the
+// books price from REAL days, never from a correction counted twice.
+const marketRows = (slip, marketId) => lastWins(slip.filter(s => s.book === "twin" && s.type === marketId && s.resolved === true && typeof s.hit === "boolean"));
 
 function computeMarkets(slip, cfg, todayStr = localDate(new Date())) {
   return cfg.markets.map(m => {
-    const s = marketStats(slip, m.id);
-    const alive = !(s.n >= cfg.dead_market_min && s.brier !== null && s.brier >= s.baseBrier);
-    const beats_base = s.n >= cfg.dead_market_min && s.brier !== null && s.brier < s.baseBrier;
-    const bookId = (cfg.books && cfg.books[m.id]) || "laplace_all";
-    const price = (BOOKS[bookId] || BOOKS.laplace_all)(marketRows(slip, m.id), { date: todayStr });
+    const s = marketStats(slip, m.id, cfg.dead_market_min);
+    const { alive, beats_base } = deadVerdict(s, cfg);   // E2E audit 25 Jul 2026 (CRITICAL) — honest baseline; deadVerdictLegacy kept frozen above
+    const wanted = (cfg.books && cfg.books[m.id]) || "laplace_all";
+    // E2E audit 25 Jul 2026: `typeof === "function"` guard, not truthiness. The
+    // config filter used `v in BOOKS`, which walks the prototype chain, so
+    // "__proto__" / "constructor" / "toString" survived validation and
+    // BOOKS["__proto__"] is Object.prototype — truthy, uncallable, TypeError
+    // before a single bet was sealed. The filter is fixed (Object.hasOwn) AND
+    // the call site refuses anything that is not a real book.
+    // ...and twin.json reports the book that ACTUALLY priced the bet, not the
+    // one the config asked for — a silent fallback that lies on the bus is how
+    // a bad config survives a review.
+    const bookId = typeof BOOKS[wanted] === "function" && Object.hasOwn(BOOKS, wanted) ? wanted : "laplace_all";
+    const price = BOOKS[bookId](marketRows(slip, m.id), { date: todayStr });
     return { id: m.id, desc: m.desc, p: round(price), n_resolved: s.n, alive, beats_base, book: bookId };
   });
 }
@@ -187,15 +271,38 @@ function proposeBookSwaps(table, cfg, todayStr) {
   return props;
 }
 
+// E2E audit 25 Jul 2026: the local day BEFORE todayStr, computed on a fixed
+// UTC midnight so no timezone can slide it a day. todayStr is already the
+// captain's local date, so the arithmetic stays in his calendar.
+const prevDay = (todayStr) => {
+  const t = Date.parse(`${todayStr}T00:00:00Z`);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t - 86400000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+};
+
 // WIN-ONLY VOICE: non-null ONLY when a mature, base-beating market resolved
 // YESTERDAY in the captain's favor AGAINST the book (book said p<0.5, outcome true).
 function computeVoice(slip, markets, cfg, todayStr) {
+  const yesterday = prevDay(todayStr);
   for (const m of markets) {
     if (m.n_resolved < cfg.voice_min_resolutions || !m.beats_base || !m.alive) continue;
-    const rows = slip.filter(s => s.book === "twin" && s.type === m.id && s.resolved && typeof s.p === "number");
-    const last = rows[rows.length - 1];
-    if (!last || last.date === undefined) continue;
-    if (last.date >= todayStr) continue;                    // only settled days speak
+    // E2E audit 25 Jul 2026 (HIGH): dedupe last-wins here too — a corrected
+    // resolution must not be able to speak as its own superseded twin.
+    const rows = lastWins(slip.filter(s => s.book === "twin" && s.type === m.id && s.resolved && typeof s.p === "number"));
+    // ...and pick the newest row BY DATE, not by file order. File order only
+    // held because the scorer happens to append chronologically; a single
+    // out-of-order or backfilled row let a stale win jump the queue.
+    const dated = rows.filter(r => r.date !== undefined).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const last = dated[dated.length - 1];
+    if (!last) continue;
+    // E2E audit 25 Jul 2026: the comment above always SAID "resolved YESTERDAY"
+    // but the code only asked for `last.date < todayStr`. With no new
+    // resolutions (missed scorer runs, captain travelling, instrument dark) the
+    // same week-old row kept qualifying and twin.json re-emitted the identical
+    // "you're outrunning your own curve" brag every single morning — a brag
+    // that repeats is not a brag, it is wallpaper. Yesterday, or silence.
+    if (yesterday === null || last.date !== yesterday) continue;
     if (last.hit === true && last.p < 0.5) {
       const pct = Math.round(last.p * 100);
       return `the book had you at ${pct}% for "${m.desc}" — you landed it anyway. You're outrunning your own curve.`;
@@ -235,6 +342,8 @@ async function selftest() {
   const cfg = loadConfig("__no_such__");
   const now = new Date(2026, 6, 12, 8, 35, 0);
   const today = "2026-07-12";
+  // distinct, real calendar days — one bet per day, as the append-only slip means it
+  const dayN = (i, from = Date.UTC(2026, 4, 1)) => { const d = new Date(from + i * 86400000); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; };
 
   // cold start: no slip at all
   const cold = computeMarkets([], cfg);
@@ -262,6 +371,60 @@ async function selftest() {
   const bookWin = mature.slice(0, 35).concat([{ book: "twin", type: "floor_touched", date: "2026-07-11", resolved: true, hit: false, p: 0.2 }]);
   assert("WIN-ONLY LAW — book-beats-captain is silent", computeVoice(bookWin, computeMarkets(bookWin, cfg), cfg, today) === null);
 
+  // E2E audit 25 Jul 2026 — the brag is YESTERDAY's or it is silence. The old
+  // gate only asked `last.date < todayStr`, so with no fresh resolutions the
+  // identical line re-rendered every morning through postmatch and viz.
+  assert("STALE VOICE: the win resolved yesterday speaks", typeof computeVoice(mature, matureM, cfg, "2026-07-12") === "string");
+  assert("STALE VOICE: the SAME win is silent the next morning (a brag that repeats is wallpaper)", computeVoice(mature, matureM, cfg, "2026-07-13") === null);
+  assert("STALE VOICE: still silent a week on, however dark the instrument went", computeVoice(mature, matureM, cfg, "2026-07-19") === null);
+  // ...and `last` is newest BY DATE, not last in file order (the scorer only
+  // happens to append chronologically — a backfill breaks that assumption).
+  const backfilled = mature.slice(0, 35).concat([
+    { book: "twin", type: "floor_touched", claim: "floor_touched", date: "2026-07-11", resolved: true, hit: false, p: 0.2 },  // yesterday: the book won → silence
+    { book: "twin", type: "floor_touched", claim: "floor_touched", date: "2026-07-04", resolved: true, hit: true, p: 0.2 },   // appended late: a week-old captain win
+  ]);
+  assert("NEWEST BY DATE: a late-appended OLD win cannot speak over yesterday's loss", computeVoice(backfilled, computeMarkets(backfilled, cfg), cfg, today) === null);
+
+  // E2E audit 25 Jul 2026 (HIGH) — the scorer's CORRECTION rows.
+  // scorer.mjs runs 21:35 AND at full-time; a flipped verdict is a second row
+  // on the same (book,type,date). Twin used to score both as real bets.
+  {
+    const corrected = [
+      { book: "twin", type: "floor_touched", claim: "floor_touched", date: "2026-07-10", resolved: true, hit: true, p: 0.6 },
+      { book: "twin", type: "floor_touched", claim: "floor_touched", date: "2026-07-11", resolved: true, hit: false, p: 0.6 }, // 21:35 — floor not touched YET
+      { book: "twin", type: "floor_touched", claim: "floor_touched", date: "2026-07-11", resolved: true, hit: true, p: 0.6 },  // 22:30 he touched it → full-time corrects
+    ];
+    const st = marketStats(corrected, "floor_touched");
+    assert("LAST-WINS: a 21:35 miss corrected at full-time counts ONCE, as the HIT", st.n === 2 && st.hits === 2 && st.base === 1);
+    assert("LAST-WINS: the books price from real days, not phantom bets", marketRows(corrected, "floor_touched").length === 2);
+  }
+
+  // E2E audit 25 Jul 2026 (CRITICAL) — a HEALTHY unconditional market must
+  // survive maturity. This fixture is exactly what the live laplace_all book
+  // produces: sequential prices from PRIOR history only, on a real ~80% market.
+  {
+    const honest = []; let h = 0;
+    for (let i = 0; i < 35; i++) {
+      const hit = i % 5 !== 4;                                   // 28 hits / 35 = 0.8
+      honest.push({ book: "twin", type: "session_happened", claim: "session_happened", date: dayN(i), resolved: true, hit, p: round(laplace(h, i)) });
+      if (hit) h++;
+    }
+    const hs = marketStats(honest, "session_happened", cfg.dead_market_min);
+    const hm = computeMarkets(honest, cfg).find(m => m.id === "session_happened");
+    assert("HONEST BASELINE: a well-calibrated 80% market at n=35 STAYS ALIVE", hm.n_resolved === 35 && hm.alive === true);
+    assert("HONEST BASELINE: ...and can earn beats_base, so the voice is reachable at all", hm.beats_base === true);
+    // the proof the old clamp was unpassable, not merely strict:
+    assert("the FROZEN legacy verdict is what killed it (hindsight base beat the live book)", hs.brier > hs.baseBrier && deadVerdictLegacy(hs, cfg).alive === false);
+  }
+
+  // E2E audit 25 Jul 2026 — a book name off the prototype chain is not a book.
+  {
+    const poisoned = loadConfigFromObject({ markets: [{ id: "floor_touched", desc: "floor" }], books: { floor_touched: "__proto__", session_happened: "constructor", first_focus_by_0930: "window14" } });
+    assert("BOOK VALIDATION: __proto__/constructor are stripped, real books survive", Object.keys(poisoned.books).length === 1 && poisoned.books.first_focus_by_0930 === "window14");
+    const forced = computeMarkets([], { markets: [{ id: "floor_touched", desc: "floor" }], voice_min_resolutions: 30, dead_market_min: 30, books: { floor_touched: "__proto__" } });
+    assert("BOOK VALIDATION: a poisoned book seals anyway — falls back AND reports the truth", forced[0].p === 0.5 && forced[0].book === "laplace_all");
+  }
+
   // dead market pruning: predictions systematically anti-calibrated
   const dead = Array.from({ length: 35 }, (_, i) => ({ book: "twin", type: "session_happened", date: `2026-06-${String(i + 1).padStart(2, "0")}`, resolved: true, hit: i % 2 === 0, p: i % 2 === 0 ? 0.1 : 0.9 }));
   const deadM = computeMarkets(dead, cfg).find(m => m.id === "session_happened");
@@ -282,8 +445,15 @@ async function selftest() {
   // M20 — THE SHADOW BOOKS: replay tournament, no lookahead, genome proposal
   {
     // a regime shift: 25 misses then 15 hits — recency books must outprice history
+    // E2E audit 25 Jul 2026: this fixture used to wrap its dates with (i % 28),
+    // so 12 of the 40 "bets" landed on a day already bet — which on the real
+    // append-only slip means a CORRECTION, not a second bet. Once twin.mjs
+    // started reading last-wins (as scorer.mjs always has) the fixture
+    // collapsed to 28 rows and the regime shift dissolved. Forty bets now means
+    // forty distinct, real calendar days; the hit pattern and the assertions'
+    // intent are unchanged.
     const shift = [];
-    for (let i = 0; i < 40; i++) shift.push({ book: "twin", type: "floor_touched", date: `2026-06-${String((i % 28) + 1).padStart(2, "0")}`, resolved: true, hit: i >= 25, p: 0.5 });
+    for (let i = 0; i < 40; i++) shift.push({ book: "twin", type: "floor_touched", date: dayN(i), resolved: true, hit: i >= 25, p: 0.5 });
     const oneCfg = { markets: [{ id: "floor_touched", desc: "floor" }], voice_min_resolutions: 30, dead_market_min: 30, books: {} };
     const table = shadowTable(shift, oneCfg);
     assert("SHADOW TABLE: every book replays every market (4 books × 1 market)", table.length === 4 && new Set(table.map(t => t.book)).size === 4 && table.every(t => t.n === 40));
@@ -303,10 +473,17 @@ async function selftest() {
     const stock = computeMarkets(shift, oneCfg, "2026-07-15");
     assert("an applied swap re-prices the market (recency sees the shift)", swapped[0].book === "window14" && swapped[0].p > stock[0].p);
     assert("the swap NEVER touches alive/beats_base (clamp arithmetic frozen)", swapped[0].alive === stock[0].alive && swapped[0].beats_base === stock[0].beats_base);
-    // voice clamps ride the recorded slip, not the book choice
-    const vSwapped = computeVoice(shift, swapped, { ...oneCfg, books: { floor_touched: "window14" } }, "2026-07-15");
-    const vStock = computeVoice(shift, stock, oneCfg, "2026-07-15");
-    assert("VOICE CLAMPS UNTOUCHED: the same slip speaks identically under any book", vSwapped === vStock);
+    // voice clamps ride the recorded slip, not the book choice.
+    // E2E audit 25 Jul 2026: this used to run on the `shift` fixture, whose flat
+    // p=0.5 can never earn a voice — so it compared null === null and only ever
+    // proved identical SILENCE. A clamp check that cannot fail is worse than no
+    // check. It now runs on the `mature` market, which ACTUALLY SPEAKS: if a
+    // future edit ever made computeVoice quote the configured book's price
+    // instead of the recorded slip p, this breaks.
+    const swapCfg = { ...cfg, books: { floor_touched: "window14" } };
+    const vSwapped = computeVoice(mature, computeMarkets(mature, swapCfg, today), swapCfg, today);
+    const vStock = computeVoice(mature, computeMarkets(mature, cfg, today), cfg, today);
+    assert("VOICE CLAMPS UNTOUCHED: an EARNED voice is byte-identical under any book", typeof vStock === "string" && vStock.includes("outrunning your own curve") && vSwapped === vStock);
     // twin.json carries the tournament
     const t = buildTwin(stock, null, now, table, props);
     assert("twin.json carries the shadow table + proposals (report-only, on the bus)", t.shadow_books.length === 4 && t.proposals.length === 1);
@@ -324,7 +501,8 @@ function loadConfigFromObject(j) {
     markets: markets.filter(m => m && m.id && !/abandon|fail|dread|quit|stall/i.test(m.id)),
     voice_min_resolutions: typeof j.voice_min_resolutions === "number" ? j.voice_min_resolutions : DEFAULTS.voice_min_resolutions,
     dead_market_min: typeof j.dead_market_min === "number" ? j.dead_market_min : DEFAULTS.dead_market_min,
-    books: Object.fromEntries(Object.entries(j.books || {}).filter(([, v]) => v in BOOKS)),
+    // E2E audit 25 Jul 2026: mirrors loadConfig's own-property filter (was `in BOOKS`)
+    books: Object.fromEntries(Object.entries(j.books || {}).filter(([, v]) => typeof v === "string" && Object.hasOwn(BOOKS, v))),
   };
 }
 
@@ -354,4 +532,6 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeMarkets, computeVoice, sealToday, buildTwin, marketStats, laplace, loadConfig, loadConfigFromObject, shadowTable, proposeBookSwaps, BOOKS };
+// E2E audit 25 Jul 2026: deadVerdict + the frozen deadVerdictLegacy are exported
+// so the pruning arithmetic — old and new — is inspectable from outside.
+export { computeMarkets, computeVoice, sealToday, buildTwin, marketStats, laplace, loadConfig, loadConfigFromObject, shadowTable, proposeBookSwaps, BOOKS, lastWins, deadVerdict, deadVerdictLegacy };
