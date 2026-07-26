@@ -94,8 +94,8 @@ function mayTick(hostId, role, deps = {}) {
 // That claim was FALSE, and it was the most dangerous line in the repo:
 // .gitignore is a hand-enumerated DENYLIST (~90 literal paths) and `origin` is
 // a PUBLIC GitHub repo. Anything personal the captain drops in the tree that
-// nobody thought to enumerate — a doctor's letter, a new bible, an .md naming
-// his psychiatrist — is untracked AND unignored, and `git add -A` on a loop
+// nobody thought to enumerate — medical correspondence, a new bible, an .md
+// naming real people — is untracked AND unignored, and `git add -A` on a loop
 // that fires every 30 minutes with nobody watching would stage it, commit it
 // and push it to the internet. A denylist can never make a push safe; only an
 // allowlist can. So the night-shift now carries two independent locks:
