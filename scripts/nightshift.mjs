@@ -671,7 +671,20 @@ async function runShift(deps = {}) {
   let backfilled = 0;
   if (!deps.skipBackfill) {
     const idxRecall = deps.indexRecall || indexRecall;
-    for (let i = 0; i < 20; i++) { const n = await idxRecall().catch(() => 0); backfilled += n; if (!n) break; }
+    // E2E audit 26 Jul 2026: indexRecall returns 0 for BOTH "nothing left to embed"
+    // and "the Dugout's hourly tick holds the lock right now", so this loop used to
+    // abandon the whole night's backfill on a simple timing collision. It now asks
+    // (via the status out-channel) and waits the lock out a bounded number of times.
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    let lockRetries = 0;
+    for (let i = 0; i < 20; i++) {
+      const status = {};
+      const n = await idxRecall({ status }).catch(() => 0);
+      backfilled += n;
+      if (n) continue;
+      if (status.locked && lockRetries < 3) { lockRetries++; await sleep(deps.lockRetryMs ?? 3000); i--; continue; }
+      break;                                            // genuinely nothing left to embed
+    }
     // E2E audit 25 Jul 2026: indexEpisodes() reads ALL of episodes.jsonl, awaits a
     // multi-second embed round-trip, then REWRITES THE WHOLE FILE by rename — and
     // it ran here at 03:00, the same minute the hourly ArsenalFC-HippoIndex task

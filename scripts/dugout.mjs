@@ -495,11 +495,19 @@ async function acquireRecallLockWaiting(file, waitMs = 2000, stepMs = 250) {
   }
 }
 
+// Returns the number of rows indexed. NOTE the ambiguity this used to carry: 0
+// meant BOTH "nothing new to embed" and "another process holds the lock", so a
+// caller looping `if (!n) break` (nightshift's embed_backfill) quit the moment the
+// Dugout's hourly tick happened to own the file — skipping that night's backfill
+// entirely. Callers that care can pass `deps.status`, an out-channel object filled
+// with { locked } so they can retry instead of giving up. (E2E audit, 26 Jul 2026.)
 async function indexRecall(deps = {}) {
   const embed = deps.embed || embedTexts;
   const file = deps.file || RECALL;
+  const status = deps.status || {};
   const lock = await acquireRecallLockWaiting(file, deps.lockWaitMs);
-  if (!lock) return 0;                                // the other process owns the index right now
+  if (!lock) { status.locked = true; return 0; }       // the other process owns the index right now
+  status.locked = false;
   try {
     const sources = (deps.sources || gatherRecallSources()).filter(i => recallWorthy(i.text));
     const seen = new Set(readLines(file).map(e => e.h));   // read INSIDE the lock — the seen-set can't go stale

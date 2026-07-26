@@ -28,6 +28,10 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync, mkdtempSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+// the timeaudit schema bridge lives in heartbeat.mjs (it named the mismatch first)
+// and is imported, never re-implemented — see timeFeature() below. No cycle:
+// heartbeat imports nothing local, and brain.mjs is the only importer of this file.
+import { timeauditBridge } from "./heartbeat.mjs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";   // selftest ONLY — spawns THIS file to prove the CLI guard
 
@@ -95,6 +99,13 @@ function daysBetween(a, b) { const ms = Date.parse(b) - Date.parse(a); return Nu
 // LAYERING: the legacy flat read stays FIRST and untouched (legacy/dummy files still work);
 // the real shape is bridged only when the flat fields are absent, mirroring heartbeat's
 // timeauditBridge including the buckets.json targets (defaults 60 / 25).
+// DE-DUPLICATED 26 Jul 2026: the bridge maths used to be COPIED here, because the
+// fix agent that wrote it owned only this file and could not export from heartbeat.
+// Two copies of one schema translation is a drift bug waiting to happen — the day
+// buckets.json grows a third target, one of them silently disagrees with the other.
+// heartbeat.mjs is the bridge's home (it named the mismatch first) and already
+// exports it; this file now consumes that single source of truth and keeps ONLY
+// the part that is genuinely its own: the legacy flat-shape passthrough.
 function timeFeature(T, buckets) {
   if (!T) return null;
   const flat = {
@@ -103,15 +114,7 @@ function timeFeature(T, buckets) {
   };
   if (flat.building_pct != null || flat.meta_pct != null) return flat;   // legacy shape — verbatim
   if (!T.buckets) return flat;
-  const pct = (b) => (T.buckets[b] && typeof T.buckets[b].pct === "number") ? T.buckets[b].pct : null;
-  const tg = (buckets && buckets.targets) || {};
-  const building_target = typeof tg.buildingPctMin === "number" ? tg.buildingPctMin : 60;
-  const metaMax = typeof tg.metaPctMax === "number" ? tg.metaPctMax : 25;
-  const building_pct = pct("Building"), meta_pct = pct("Meta");
-  let on_track = null;
-  if (typeof T.onTrack === "boolean") on_track = T.onTrack ? "yes" : "no";
-  else if (building_pct !== null && meta_pct !== null) on_track = (building_pct >= building_target && meta_pct <= metaMax) ? "yes" : "no";
-  return { building_pct, building_target, meta_pct, on_track };
+  return timeauditBridge(T, buckets) || flat;                            // the ONE bridge, owned by heartbeat.mjs
 }
 
 // ---- FEATURES: the ONLY numbers allowed downstream. Everything null-safe. ----
