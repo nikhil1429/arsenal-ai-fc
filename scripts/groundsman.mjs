@@ -87,6 +87,40 @@ function mayTick(hostId, role, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// THE PUBLISH ALLOWLIST — what the UNATTENDED night-shift may put on the
+// internet (E2E audit 25 Jul 2026, CRITICAL). The old comment on the push step
+// claimed it was "public-safe by construction: every personal file is
+// gitignored, so `git add -A` can only ever stage machinery + public outputs."
+// That claim was FALSE, and it was the most dangerous line in the repo:
+// .gitignore is a hand-enumerated DENYLIST (~90 literal paths) and `origin` is
+// a PUBLIC GitHub repo. Anything personal the captain drops in the tree that
+// nobody thought to enumerate — medical correspondence, a new bible, an .md
+// naming real people — is untracked AND unignored, and `git add -A` on a loop
+// that fires every 30 minutes with nobody watching would stage it, commit it
+// and push it to the internet. A denylist can never make a push safe; only an
+// allowlist can. So the night-shift now carries two independent locks:
+//   1. `git add -u -- <allowlist>` — `-u` stages ONLY files git already TRACKS,
+//      so a brand-new file on disk cannot be staged by the Kennel at all.
+//      Publishing something NEW stays a deliberate human act at the laptop.
+//      (This is also why dressing-room/state/ can sit on the list: only the
+//      already-published config/canon files there are tracked; every personal
+//      state file is untracked and therefore unreachable by `-u`.)
+//   2. the index is read BACK with --name-only and every staged path matched
+//      against this list; anything off it and the pass REFUSES to commit or
+//      push. Lock 2 catches what lock 1 can't: paths left staged in the index
+//      before this pass ever ran. Fail closed — it reports and idles.
+// ---------------------------------------------------------------------------
+const PUBLISH_ALLOWLIST = [
+  "scripts/", "setup/", "hooks/", "dressing-room/state/",
+  "package.json", "package-lock.json", "ci_manifest.json", "README.md",
+];
+function isPublishablePath(p) {
+  const path = String(p == null ? "" : p).trim().replace(/^"(.*)"$/, "$1").replace(/\\/g, "/");
+  if (!path || path.includes("..")) return false;    // empty or an escape out of the repo → never
+  return PUBLISH_ALLOWLIST.some(a => (a.endsWith("/") ? path.startsWith(a) : path === a));
+}
+
+// ---------------------------------------------------------------------------
 // THE NIGHT LOOP (Kennel side) — pull → lease → tick → push public-safe only
 // ---------------------------------------------------------------------------
 function sh(cmd, args, deps = {}) {
@@ -101,11 +135,21 @@ async function nightPass(hostId, deps = {}) {
   if (!take.taken) return { ok: false, step: "lease", why: take.why };
   const tick = run("node", [join(__dirname, "brain.mjs"), "tick"]);
   if (!tick.ok) return { ok: false, step: "tick", why: tick.out };
-  // push is PUBLIC-SAFE BY CONSTRUCTION: every personal file is gitignored,
-  // so `git add -A` can only ever stage machinery + public outputs.
-  run("git", ["add", "-A"]);
+  // push is public-safe BY ENFORCEMENT now, not by assumption (E2E audit
+  // 25 Jul 2026 — see THE PUBLISH ALLOWLIST above; this step used to be a bare
+  // `git add -A` into a PUBLIC remote). Lock 1: tracked files, on the list only.
+  // If a listed path has vanished git calls the whole pathspec fatal → nothing
+  // stages → we stop before the index gate. Fail closed, and say so out loud.
+  const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
+  if (!add.ok) return { ok: true, ticked: true, pushed: false, why: `staging refused: ${add.out}` };
   const diff = run("git", ["diff", "--cached", "--quiet"]);
   if (!diff.ok) {                                    // exit 1 = staged changes exist
+    // Lock 2: read the index back and refuse on ANY path off the allowlist —
+    // the index can carry paths staged by something other than this pass.
+    const staged = run("git", ["diff", "--cached", "--name-only"]);
+    if (!staged.ok) return { ok: true, ticked: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" };
+    const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
+    if (offending.length) return { ok: true, ticked: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never the night-shift` };
     run("git", ["commit", "-m", `kennel: night-shift outputs (${hostId})`]);
     const push = run("git", ["push"]);
     if (!push.ok) return { ok: true, ticked: true, pushed: false, why: push.out };
@@ -146,7 +190,15 @@ async function selftest() {
   // the night pass
   {
     const calls = [];
-    const mkSh = (fail = {}) => (c, a) => { calls.push(c + " " + a.join(" ")); if (fail[c]) return { ok: false, out: "boom" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; };
+    // the mock must now answer BOTH diff calls: --name-only returns the staged
+    // set (the allowlist gate reads it), --quiet returns exit 1 = changes exist
+    const mkSh = (fail = {}, stagedNames = "scripts/brain.mjs\n") => (c, a) => {
+      calls.push(c + " " + a.join(" "));
+      if (fail[c]) return { ok: false, out: "boom" };
+      if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: stagedNames };
+      if (c === "git" && a[0] === "diff") return { ok: false, out: "" };
+      return { ok: true, out: "" };
+    };
     const r = await nightPass("pi1", { sh: mkSh(), read: () => mkLease("laptop", "lap1", 25), write: () => {}, now });
     assert("night pass: pull → take lease → tick → commit → push", r.ok && r.ticked && r.pushed && calls.some(c => c.includes("pull")) && calls.some(c => c.includes("brain.mjs")) && calls.some(c => c.includes("push")));
     const calls2 = [];
@@ -154,6 +206,28 @@ async function selftest() {
     assert("laptop awake → the pass stops AT the lease (no tick, no push)", r2.ok === false && r2.step === "lease" && !calls2.some(c => c.includes("brain.mjs")));
     const r3 = await nightPass("pi1", { sh: mkSh({ git: true }), read: () => null, write: () => {}, now });
     assert("pull failure aborts the pass before anything writes", r3.ok === false && r3.step === "pull");
+
+    // THE PUBLISH ALLOWLIST — the E2E audit's critical find (25 Jul 2026):
+    // `git add -A` + push to a PUBLIC remote, on an unattended 30-min loop.
+    assert("allowlist: machinery + the tracked bus files are publishable",
+      isPublishablePath("scripts/brain.mjs") && isPublishablePath("dressing-room/state/brain_config.json") && isPublishablePath("README.md"));
+    assert("allowlist: a personal file nobody enumerated is NOT publishable",
+      !isPublishablePath("THE_DOCTORS_LETTER.md") && !isPublishablePath("dressing-room/hippocampus/episodes.jsonl") && !isPublishablePath("Jarvis/mood.md") && !isPublishablePath("../outside.md"));
+    assert("the night-shift stages TRACKED files on the list only — never `git add -A`",
+      calls.some(c => c.startsWith("git add -u --")) && !calls.some(c => c.includes("add -A")));
+    const calls4 = [];
+    const r4 = await nightPass("pi1", {
+      sh: (c, a) => { calls4.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "scripts/brain.mjs\nTHE_DOCTORS_LETTER.md\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+      read: () => mkLease("laptop", "lap1", 25), write: () => {}, now,
+    });
+    assert("ONE OFF-LIST PATH IN THE INDEX ABORTS THE PUSH (nothing personal reaches the internet)",
+      r4.pushed === false && r4.refused === true && !calls4.some(c => c.includes("commit")) && !calls4.some(c => c.includes("push")));
+    const calls5 = [];
+    const r5 = await nightPass("pi1", {
+      sh: (c, a) => { calls5.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: false, out: "boom" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+      read: () => mkLease("laptop", "lap1", 25), write: () => {}, now,
+    });
+    assert("can't READ the index back → fail closed, no push", r5.pushed === false && r5.refused === true && !calls5.some(c => c.includes("push")));
   }
 
   const passed = checks.every(c => c[1]);
@@ -185,4 +259,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, TTL_MIN };
+export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, TTL_MIN, isPublishablePath, PUBLISH_ALLOWLIST };

@@ -7,11 +7,15 @@
 //   the ONE working memory. Four tools:
 //     · recall(query)      — semantic recall over his durable memory: ONE cosine
 //                            surface merging episodes.jsonl + recall_index.jsonl
-//                            at read time (lexical fallback when the pool is dry).
+//                            + the MCP's own scribe_log at read time, deduped
+//                            (lexical fallback when the pool is dry).
 //     · note(kind,text)    — write a salient moment (doubt/win/preference/thread/
-//                            note): kept in the MCP's own scribe_log AND routed
+//                            note): kept in the MCP's own scribe_log, routed
 //                            through the thalamus door (:4113 = SOLE writer of the
-//                            shared bus), so a Desktop confusion reaches the Gaffer.
+//                            shared bus) so a Desktop confusion reaches the Gaffer,
+//                            AND — for the kinds the hippocampus knows — handed to
+//                            markMoment (its owner-writer) so the moment becomes a
+//                            real, recallable episode even when the bus is down.
 //     · get_context()      — buildRehydrateCartridge() + the distiller working_set:
 //                            "where he is right now", for session re-entry.
 //     · remember_fact(text)— STAGES to identity_facts.pending.jsonl. NEVER canon;
@@ -22,13 +26,14 @@
 //   moments live under the gitignored dressing-room/hippocampus/ — the machinery
 //   ships, the moments never do.
 // MODES: node scripts/mcp-memory.mjs           → the stdio MCP server (host-spawned)
+//        node scripts/mcp-memory.mjs resync    → re-post notes whose thalamus POST failed
 //        node scripts/mcp-memory.mjs selftest  → baked-mock checks (no net, no live state)
 // ============================================================================
 import { readFileSync, existsSync, appendFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
-import { buildRehydrateCartridge, embedPool } from "./hippocampus.mjs";
+import { buildRehydrateCartridge, embedPool, markMoment } from "./hippocampus.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT   = join(__dirname, "..");
@@ -43,6 +48,13 @@ const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 
 const NAME = "organism-memory", VERSION = "0.1.0", PROTOCOL = "2024-11-05";
 const NOTE_KINDS = ["doubt", "win", "preference", "thread", "note"];
+// mirrors hippocampus.mjs KINDS (not exported there) — the kinds markMoment will
+// accept as a real episode. "note" is ours alone: it stays scribe-only.
+const HIPPO_KINDS = ["doubt", "win", "preference", "thread"];
+// E2E audit (25 Jul 2026): the thalamus POST aborted at 400ms — very tight for a
+// local HTTP round-trip on a machine that is also running the daemon stack, so a
+// perfectly healthy door was being reported dead. 2.5s, env-overridable.
+const POST_TIMEOUT_MS = Number(process.env.ARSENAL_MCP_POST_TIMEOUT_MS || 2500);
 
 // ---- helpers (defensive: a missing/corrupt file reads as empty, never a throw) ----
 const readJson  = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -53,36 +65,65 @@ const words = (s) => String(s).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w =
 const nowIso = (deps) => (deps.now || new Date()).toISOString();
 function appendLine(p, obj) { mkdirSync(dirname(p), { recursive: true }); appendFileSync(p, JSON.stringify(obj) + "\n"); }
 
-// ---- recall(query) — the shared cosine surface (episodes ⊕ recall_index), lexical fallback ----
+// ---- recall(query) — the shared cosine surface (episodes ⊕ recall_index ⊕ scribe_log), lexical fallback ----
+// E2E audit (25 Jul 2026): the same sentence genuinely lives on more than one
+// surface — the Gaffer marks a doubt as an episode AND the nightly backfill
+// embeds the identical transcript line into recall_index — and the merge took
+// top-k with no dedupe, so ONE moment could eat 2 of the 3 hit slots and crowd
+// out the other two things he actually said. Dedupe on normalised text BEFORE
+// slicing to k: keep the highest-scoring copy, ties break toward the episode
+// (it carries kind + day; a recall_index row usually carries neither).
+const SURFACE_RANK = { episode: 0, note: 1, recall: 2 };
+const normText = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function dedupeTopK(scored, k) {
+  const seen = new Set(), out = [];
+  for (const h of scored.slice().sort((a, b) => (b.score - a.score) || ((SURFACE_RANK[a.source] ?? 9) - (SURFACE_RANK[b.source] ?? 9)))) {
+    const key = normText(h.text);
+    if (!key || seen.has(key)) continue;
+    seen.add(key); out.push(h);
+    if (out.length >= k) break;
+  }
+  return out;
+}
 async function recall(query, deps = {}) {
   const q = clip(query, 400);
   if (q.length < 2) return { hits: [], mode: "empty", note: "query too short" };
   const episodes = (deps.episodes || readLines(EPISODES)).filter(e => e && e.text);
   const index    = (deps.index    || readLines(RECALL_INDEX)).filter(r => r && r.text);
+  // E2E audit (25 Jul 2026): recall read episodes ⊕ recall_index ONLY, so every
+  // note() row that never became an episode — plain kind:"note", or a markMoment
+  // the paraphrase-guard refused — was unreachable FOREVER: repo-wide, scribe_log
+  // had literally zero readers. It is now a third surface. It carries no vec
+  // (nothing embeds it), so it rides the lexical pass; the kinds that DO become
+  // episodes (see note()) get their vectors from the hourly `hippocampus index`
+  // sweep and rank semantically like any other moment. `_ack` delivery rows carry
+  // no text, so the .text filter keeps them out of the pool.
+  const scribe   = (deps.scribe   || readLines(SCRIBE_LOG)).filter(s => s && s.text);
   const embed = deps.embed || embedPool;
   let qv = null;
   try { const e = await embed([q]); qv = e && e[0]; } catch { qv = null; }   // pool dry → honest lexical
   const pool = [
     ...episodes.map(e => ({ source: "episode", kind: e.kind || "episode", day: e.day || null, text: e.text, vec: e.vec })),
     ...index.map(r => ({ source: "recall", kind: r.kind || "word", day: r.day || null, text: r.text, vec: r.vec })),
+    ...scribe.map(s => ({ source: "note", kind: s.kind || "note", day: s.day || String(s.ts || "").slice(0, 10) || null, text: s.text, vec: s.vec })),
   ];
   const k = deps.k || 3;
   if (qv) {
     const scored = pool.filter(h => Array.isArray(h.vec)).map(h => ({ source: h.source, kind: h.kind, day: h.day, text: h.text, score: cosine(qv, h.vec) }));
-    const hits = scored.filter(h => h.score >= (deps.threshold || 0.55)).sort((a, b) => b.score - a.score).slice(0, k).map(h => ({ ...h, score: Math.round(h.score * 100) / 100 }));
+    const hits = dedupeTopK(scored.filter(h => h.score >= (deps.threshold || 0.55)), k).map(h => ({ ...h, score: Math.round(h.score * 100) / 100 }));
     if (hits.length) return { hits, mode: "semantic" };
   }
   // lexical fallback: term overlap (pool dry, no vectors, or nothing over threshold)
   const qw = new Set(words(q));
-  const hits = pool.map(h => ({ source: h.source, kind: h.kind, day: h.day, text: h.text, score: words(h.text).filter(w => qw.has(w)).length }))
-    .filter(h => h.score > 0).sort((a, b) => b.score - a.score).slice(0, k);
+  const hits = dedupeTopK(pool.map(h => ({ source: h.source, kind: h.kind, day: h.day, text: h.text, score: words(h.text).filter(w => qw.has(w)).length }))
+    .filter(h => h.score > 0), k);
   return { hits, mode: "lexical" };
 }
 
 // ---- note(kind,text) — own scribe_log (never lost) + best-effort thalamus POST (shared bus) ----
 async function defaultPost(evt) {
   try {
-    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 400);
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), POST_TIMEOUT_MS);
     const r = await fetch(THALAMUS + "/afferent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evt), signal: ctrl.signal });
     clearTimeout(to); return !!(r && r.ok);
   } catch { return false; }
@@ -92,11 +133,68 @@ async function note(kind, text, deps = {}) {
   const t = clip(text, 1200);
   if (!t) return { ok: false, error: "empty text" };
   const row = { ts: nowIso(deps), kind: k, text: t, source: "mcp" };
-  (deps.append || ((o) => appendLine(SCRIBE_LOG, o)))(row);   // own file first — a note is never lost
+  const append = deps.append || ((o) => appendLine(SCRIBE_LOG, o));
+  append(row);   // own file first — a note is never lost
+  // E2E audit (25 Jul 2026): THE DEAD END. The row landed in scribe_log (which
+  // NOTHING in the repo read) and one fire-and-forget POST; on failure it still
+  // answered ok:true, so a doubt voiced in Desktop while the daemon stack was
+  // down reached nothing at all — no afferent, no episode, no recall, ever.
+  // Two doors now, and neither replaces the scribe row above:
+  //   (1) the DURABLE door — kinds the hippocampus knows (doubt|win|preference|
+  //       thread) are handed to markMoment, the OWNER-writer of episodes, so the
+  //       moment becomes a real recallable episode whatever the bus is doing.
+  //       markMoment is durable-first (appends before it embeds) and keeps its own
+  //       verbatim/paraphrase guard — a refusal just leaves us with the scribe row,
+  //       which recall() now reads too.
+  //   (2) the BUS door — the thalamus POST, unchanged in spirit (the MCP still
+  //       never writes the shared bus itself), but its outcome is RECORDED as an
+  //       append-only `_ack` row on failure, so resyncScribeLog can retry it.
+  // When a test injects `append`, the default mark degrades to a no-op: an
+  // injected writer must NEVER reach the captain's real episodes.jsonl.
+  const mark = deps.mark || (deps.append ? (async () => ({ ok: false, error: "test-mode: episode write suppressed" })) : markMoment);
   const post = deps.post || defaultPost;
-  let posted = false;
+  let posted = false, episode = null;
   try { posted = await post({ modality: "desktop-study", source: "organism-memory", text: `[${k}] ${t}`, ts: row.ts }); } catch { posted = false; }
-  return { ok: true, kind: k, staged_to: "scribe_log", posted };
+  // …and it hands markMoment an embed no-op on purpose: the vector is NOT this
+  // process's job. It keeps the tool call instant (no 15s-per-key pool round trip
+  // inside a Desktop tool call) and — more importantly — stops the MCP from ever
+  // running patchEpisodeVec, which rewrites episodes.jsonl whole. The hourly
+  // `hippocampus index` sweep back-fills the vector, exactly as markMoment's own
+  // header promises. Append-only from here; the rewriter stays the hippocampus.
+  const markDeps = deps.markDeps || { embed: async () => null };
+  if (HIPPO_KINDS.includes(k)) {
+    try { const m = await mark(k, t, markDeps); if (m && m.ok) episode = m.id || null; } catch { episode = null; }
+  }
+  if (!posted) append({ ts: nowIso(deps), kind: "_ack", ref: row.ts, posted: false, episode });   // append-only delivery record → resync retries it
+  const out = { ok: true, kind: k, staged_to: "scribe_log", posted, episode };
+  if (!posted) out.warning = episode
+    ? "the thalamus door was shut — the moment IS durable (it became an episode) but the live bus never saw it; `node scripts/mcp-memory.mjs resync` re-posts it."
+    : "the thalamus door was shut and this kind does not become an episode — it is held in scribe_log (recallable, lexically) until a resync. Tell him it did not reach the live bus.";
+  return out;
+}
+
+// ---- resync — the retry path a failed POST never had (append-only, no rewrites) ----
+// E2E audit (25 Jul 2026): a refused POST had NO retry anywhere, so a note taken
+// while the thalamus was down never reached the shared bus. A `_ack posted:false`
+// row is the open ticket; a later `_ack posted:true` for the same ref closes it.
+// Nothing is rewritten — scribe_log stays a pure append-only log.
+async function resyncScribeLog(deps = {}) {
+  const rows = deps.rows || readLines(SCRIBE_LOG);
+  const open = new Set();
+  for (const a of rows) {
+    if (!a || a.kind !== "_ack" || !a.ref) continue;
+    if (a.posted === true) open.delete(a.ref); else open.add(a.ref);
+  }
+  const pending = rows.filter(r => r && r.text && open.has(r.ts));
+  const append = deps.append || ((o) => appendLine(SCRIBE_LOG, o));
+  const post = deps.post || defaultPost;
+  let reposted = 0;
+  for (const r of pending) {
+    let ok = false;
+    try { ok = await post({ modality: "desktop-study", source: "organism-memory", text: `[${r.kind}] ${r.text}`, ts: r.ts }); } catch { ok = false; }
+    if (ok) { append({ ts: nowIso(deps), kind: "_ack", ref: r.ts, posted: true }); reposted++; }
+  }
+  return { pending: pending.length, reposted };
 }
 
 // ---- get_context() — rehydrate cartridge ⊕ the distiller working_set (READ-only) ----
@@ -114,6 +212,19 @@ function getContext(deps = {}) {
     ].join(" · ");
     parts.push("WORKING SET (the distiller's live whiteboard):\n" + line);
   }
+  // E2E audit (25 Jul 2026): remember_fact staged to identity_facts.pending.jsonl
+  // and told him it "needs your explicit confirm" — but repo-wide NOTHING ever read
+  // that file, so there was no surface on which the confirm could happen and staged
+  // facts rotted invisibly forever. get_context is the one door every session opens,
+  // so the queue is surfaced HERE, in his face, at every re-entry. Law 4 intact: this
+  // ASKS for his word, it never takes it — promotion to canon belongs to the
+  // hippocampus (the single writer of identity_facts.json), not to this server.
+  const pend = (deps.pending !== undefined ? deps.pending : readLines(PENDING_FACTS))
+    .filter(p => p && p.text && (p.status || "pending") === "pending");
+  if (pend.length) {
+    const shown = pend.slice(-5).map(p => `  · "${clip(p.text, 160)}"   (staged ${String(p.ts || "").slice(0, 10) || "?"})`);
+    parts.push(`PENDING IDENTITY FACTS — ${pend.length} staged, awaiting HIS word (Law 4: nothing is canon until he says so):\n${shown.join("\n")}\n  → ask him to confirm or drop each; only he promotes it.`);
+  }
   return parts.length ? parts.join("\n\n") : "no context yet — the memory is empty.";
 }
 
@@ -129,7 +240,7 @@ function rememberFactStaged(text, deps = {}) {
 // ---- the stdio JSON-RPC 2.0 server (MCP) ----
 const TOOLS = [
   { name: "recall", description: "Semantic recall over the captain's durable memory (his past episodes + his embedded words). Returns his most relevant real moments — doubts, wins, threads — for a query. Read-only.", inputSchema: { type: "object", properties: { query: { type: "string", description: "what to recall about (a concept, a feeling, a thread)" } }, required: ["query"] } },
-  { name: "note", description: "Write a salient moment into the shared working memory — a doubt he voiced, a win, a stated preference, an open thread, or a plain note. It is kept locally AND routed to the thalamus so it reaches every surface (Code, the Gaffer).", inputSchema: { type: "object", properties: { kind: { type: "string", enum: NOTE_KINDS, description: "doubt | win | preference | thread | note" }, text: { type: "string", description: "his words, verbatim where possible" } }, required: ["text"] } },
+  { name: "note", description: "Write a salient moment into the shared working memory — a doubt he voiced, a win, a stated preference, an open thread, or a plain note. It is kept locally, routed to the thalamus so it reaches every surface (Code, the Gaffer), and (for doubt/win/preference/thread) written as a durable episode he can be reminded of later. If the reply carries a `warning`, tell him — the live bus did not see it.", inputSchema: { type: "object", properties: { kind: { type: "string", enum: NOTE_KINDS, description: "doubt | win | preference | thread | note" }, text: { type: "string", description: "his words, verbatim where possible" } }, required: ["text"] } },
   { name: "get_context", description: "Rehydrate where the captain is right now: his identity cartridge + who-he-is + last durable episodes + the distiller's live working set. Call at the start of a session so you never ask him to re-explain.", inputSchema: { type: "object", properties: {} } },
   { name: "remember_fact", description: "STAGE a durable identity fact about the captain. It is NOT saved to canon — it waits in a pending file for his explicit confirmation (Law 4). Use for stable truths about who he is, not passing state.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
 ];
@@ -157,9 +268,21 @@ async function handle(msg, deps = {}) {
     if (method === "ping") return reply({ result: {} });
     if (method === "tools/list") return reply({ result: { tools: TOOLS } });
     if (method === "tools/call") {
-      const out = await dispatch(params && params.name, params && params.arguments, deps);
-      const text = typeof out === "string" ? out : JSON.stringify(out, null, 2);
-      return reply({ result: { content: [{ type: "text", text }] } });
+      // E2E audit (25 Jul 2026): tool dispatch shared the outer catch, so ANY tool
+      // failure — including a host simply mis-naming a tool ("remember") — came back
+      // as JSON-RPC -32603, a PROTOCOL error. The host then showed a generic
+      // server-error toast and the model never saw the reason, so it could not
+      // self-correct. MCP (2024-11-05, the version this server pins) draws the line
+      // the other way round: an execution failure is a normal result carrying
+      // isError:true and readable text. Protocol error frames stay reserved for
+      // malformed requests — the outer catch still owns those.
+      try {
+        const out = await dispatch(params && params.name, params && params.arguments, deps);
+        const text = typeof out === "string" ? out : JSON.stringify(out, null, 2);
+        return reply({ result: { content: [{ type: "text", text }] } });
+      } catch (e) {
+        return reply({ result: { content: [{ type: "text", text: String((e && e.message) || e) }], isError: true } });
+      }
     }
     reply({ error: { code: -32601, message: "method not found: " + method } });
   } catch (e) {
@@ -184,12 +307,15 @@ async function selftest() {
   ];
   const index = [{ kind: "word", day: "2026-07-12", text: "why attention is quadratic", vec: [0.94, 0.1, 0] }];
 
-  const r = await recall("attention", { embed: mockEmbed, episodes, index, threshold: 0.5 });
+  // every recall call pins `scribe: []` (or its own rows): the selftest must stay
+  // hermetic now that scribe_log is a real read surface — his live notes must never
+  // be able to change a check's answer. (E2E audit 25 Jul 2026.)
+  const r = await recall("attention", { embed: mockEmbed, episodes, index, scribe: [], threshold: 0.5 });
   assert("recall: ONE semantic surface merges episodes + recall_index, cosine-ranked", r.mode === "semantic" && r.hits.length >= 1 && /attention/.test(r.hits[0].text));
   assert("recall: the attention episode wins (score ~1)", r.hits[0].source === "episode" && r.hits[0].score >= 0.9);
-  const rl = await recall("cosine similarity", { embed: async () => { throw new Error("dry"); }, episodes, index });
+  const rl = await recall("cosine similarity", { embed: async () => { throw new Error("dry"); }, episodes, index, scribe: [] });
   assert("recall: pool dry → lexical fallback still finds the cosine win", rl.mode === "lexical" && rl.hits.some(h => /cosine/.test(h.text)));
-  assert("recall: a nothing query returns no hits, never a crash", (await recall("zzzq", { embed: async () => null, episodes, index })).hits.length === 0);
+  assert("recall: a nothing query returns no hits, never a crash", (await recall("zzzq", { embed: async () => null, episodes, index, scribe: [] })).hits.length === 0);
 
   let logged = null, postedEvt = null;
   const n = await note("doubt", "kv-cache feels like magic", { append: (o) => { logged = o; }, post: async (e) => { postedEvt = e; return true; }, now: new Date("2026-07-14T10:00:00Z") });
@@ -198,9 +324,49 @@ async function selftest() {
   assert("note: unknown kind degrades to 'note', never rejected", (await note("vibe", "x", { append: () => {}, post: async () => false })).kind === "note");
   assert("note: thalamus down → still ok (own file already holds it)", (await note("win", "held the derby", { append: () => {}, post: async () => false })).ok === true);
 
-  const ctx = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: { concept_in_motion: "hallucinations", open_loop: "why grounding fails", where_left_off: "detection strategies", next_step: "read the eval doc" } });
+  // — E2E audit (25 Jul 2026) regressions: the note dead end —
+  const scribe = [
+    { ts: "2026-07-13T09:00:00.000Z", kind: "note", text: "grounding in RAG still feels hand-wavy" },
+    { ts: "2026-07-13T09:00:01.000Z", kind: "_ack", ref: "2026-07-13T09:00:00.000Z", posted: false, episode: null },
+  ];
+  const rs = await recall("grounding", { embed: async () => { throw new Error("dry"); }, episodes, index, scribe });
+  assert("recall: scribe_log is a THIRD surface — a plain note is no longer unreachable", rs.hits.some(h => h.source === "note" && /grounding/.test(h.text)) && !rs.hits.some(h => h.kind === "_ack"));
+  const dupIndex = [{ kind: "word", day: "2026-07-11", text: "nailed cosine similarity", vec: [0, 1, 0] }, ...index];
+  const rd = await recall("cosine", { embed: mockEmbed, episodes, index: dupIndex, scribe: [], threshold: 0.5 });
+  assert("recall: one sentence living on two surfaces takes ONE slot, and the episode copy wins", rd.hits.length === 1 && rd.hits[0].source === "episode" && /cosine/.test(rd.hits[0].text));
+
+  let marked = null, ack = null;
+  const nEp = await note("doubt", "why does grounding fail", {
+    append: (o) => { if (o.kind === "_ack") ack = o; },
+    post: async () => false,
+    mark: async (mk, mt) => { marked = { kind: mk, text: mt }; return { ok: true, id: "ep1" }; },
+    now: new Date("2026-07-14T10:00:00Z"),
+  });
+  assert("note: a doubt reaches the hippocampus OWNER-writer → a real, recallable episode", marked && marked.kind === "doubt" && marked.text === "why does grounding fail" && nEp.episode === "ep1");
+  assert("note: a refused POST is ticketed (_ack posted:false) + surfaced as a warning, not masked ok:true", ack && ack.posted === false && ack.ref === "2026-07-14T10:00:00.000Z" && /resync/.test(nEp.warning || ""));
+  assert("note: a plain 'note' kind never becomes an episode (hippocampus does not know that kind)", (await note("note", "stray thought", { append: () => {}, post: async () => true, mark: async () => { throw new Error("must not be called"); } })).episode === null);
+
+  const acks = [];
+  const rr = await resyncScribeLog({
+    rows: [
+      { ts: "2026-07-14T10:00:00.000Z", kind: "doubt", text: "why does grounding fail", source: "mcp" },
+      { ts: "2026-07-14T10:00:01.000Z", kind: "_ack", ref: "2026-07-14T10:00:00.000Z", posted: false },
+      { ts: "2026-07-14T11:00:00.000Z", kind: "win", text: "held the derby", source: "mcp" },
+      { ts: "2026-07-14T11:00:01.000Z", kind: "_ack", ref: "2026-07-14T11:00:00.000Z", posted: false },
+      { ts: "2026-07-14T11:30:00.000Z", kind: "_ack", ref: "2026-07-14T11:00:00.000Z", posted: true },
+    ],
+    post: async (e) => { acks.push(e); return true; }, append: () => {}, now: new Date("2026-07-15T00:00:00Z"),
+  });
+  assert("resync: an open ticket is re-posted once; a ticket already closed is left alone", rr.pending === 1 && rr.reposted === 1 && acks.length === 1 && /\[doubt\]/.test(acks[0].text));
+
+  const ctx = getContext({ pending: [], cartridge: () => "IDENTITY: he is the captain.", ws: { concept_in_motion: "hallucinations", open_loop: "why grounding fails", where_left_off: "detection strategies", next_step: "read the eval doc" } });
   assert("get_context: fuses rehydrate cartridge + the distiller working set", /IDENTITY/.test(ctx) && /hallucinations/.test(ctx) && /WORKING SET/.test(ctx));
-  assert("get_context: empty memory → a valid line, never a crash", typeof getContext({ cartridge: () => null, ws: null }) === "string");
+  assert("get_context: empty memory → a valid line, never a crash", typeof getContext({ cartridge: () => null, ws: null, pending: [] }) === "string");
+  const ctxP = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [
+    { ts: "2026-07-12T08:00:00Z", text: "prefers full lectures, not fragments", status: "pending" },
+    { ts: "2026-07-12T09:00:00Z", text: "a fact he already ruled on", status: "confirmed" },
+  ] });
+  assert("get_context: staged identity facts are surfaced for his word — they can no longer rot unseen", /PENDING IDENTITY FACTS — 1 staged/.test(ctxP) && /full lectures/.test(ctxP) && !/already ruled on/.test(ctxP));
 
   let staged = null;
   const rf = rememberFactStaged("prefers Hinglish, direct — not a hype-man", { append: (o) => { staged = o; }, now: new Date("2026-07-14T10:00:00Z") });
@@ -212,16 +378,19 @@ async function selftest() {
   try {
     await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     await handle({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-    await handle({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "recall", arguments: { query: "attention" } }, }, { embed: mockEmbed, episodes, index, threshold: 0.5 });
+    await handle({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "recall", arguments: { query: "attention" } }, }, { embed: mockEmbed, episodes, index, scribe: [], threshold: 0.5 });
     await handle({ jsonrpc: "2.0", method: "notifications/initialized" });      // notification → silent
     await handle({ jsonrpc: "2.0", method: "ping" });                            // id-less request-method → also silent
     await handle({ jsonrpc: "2.0", id: 5, method: "bogus/method" });             // unknown → error
+    await handle({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "remember", arguments: {} } });  // bad tool NAME → tool error, not protocol error
   } finally { process.stdout.write = orig; }
   assert("rpc: initialize returns protocolVersion + serverInfo(name)", sent[0] && sent[0].result && sent[0].result.serverInfo && sent[0].result.serverInfo.name === NAME);
   assert("rpc: tools/list advertises all 4 tools", sent[1] && sent[1].result && sent[1].result.tools.length === 4 && sent[1].result.tools.map(t => t.name).sort().join(",") === "get_context,note,recall,remember_fact");
   assert("rpc: tools/call returns MCP content blocks", sent[2] && sent[2].result && Array.isArray(sent[2].result.content) && sent[2].result.content[0].type === "text");
   assert("rpc: notifications + id-less request-methods draw NO reply (every frame carries an id)", sent.every(m => m.id !== undefined && m.id !== null));
   assert("rpc: unknown method → JSON-RPC error -32601", sent.find(m => m.id === 5) && sent.find(m => m.id === 5).error && sent.find(m => m.id === 5).error.code === -32601);
+  const badTool = sent.find(m => m.id === 6);
+  assert("rpc: a bad TOOL name is a tool result with isError (readable by the model), not a -32603 protocol error", badTool && !badTool.error && badTool.result && badTool.result.isError === true && /unknown tool/.test(badTool.result.content[0].text));
 
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -231,8 +400,11 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
+  // E2E audit (25 Jul 2026): the manual/scheduled drain for notes whose thalamus
+  // POST was refused. Safe to run any time — it only re-posts open `_ack` tickets.
+  if (mode === "resync") { console.log(JSON.stringify(await resyncScribeLog())); return; }
   serve();
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { recall, note, getContext, rememberFactStaged, dispatch, handle, TOOLS };
+export { recall, note, resyncScribeLog, getContext, rememberFactStaged, dispatch, handle, TOOLS };

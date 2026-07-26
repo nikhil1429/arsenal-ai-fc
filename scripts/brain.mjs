@@ -59,7 +59,12 @@ const DEFAULTS = {
   budget: { window_hours: 5, window_capacity_est_tokens: 800000, weekly_capacity_est_tokens: 12000000, day_reserve_frac: 0.25, overnight_target_frac: 0.95, self_tune: true },
   study_hours: { start: "09:00", end: "21:00" },
   overnight: { start: "22:00", end: "07:30" },
-  guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids", "god-tier", "time is short"] },
+  // max_attempts_per_shift (E2E audit 25 Jul 2026): a FAILED job keeps its daily
+  // slot so it can retry — but with a ~75s daemon beat and nothing counting the
+  // attempts, a job that fails DETERMINISTICALLY (validator always rejects, CLI
+  // logged out) re-ran ~1150×/day at full model cost. Retry is right; retrying
+  // forever is not. N attempts per shift, then the job sits out until next shift.
+  guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids", "god-tier", "time is short"], max_attempts_per_shift: 3 },
   ntfy: { enabled: false, topic: "", push_after: ["formation_read"] },
   gemini: { enabled: false, binary: "gemini" },
   dugout_pool: { enabled: true, gemini_defer_threshold_min: 30 },
@@ -84,7 +89,19 @@ function loadConfig(path = CFG_PATH) {
         jobs: Array.isArray(j.jobs) ? j.jobs : [],
       };
     }
-  } catch { /* malformed → defaults */ }
+  } catch (e) {
+    // E2E audit 25 Jul 2026: a malformed canon config used to degrade SILENTLY to
+    // DEFAULTS — whose jobs list is EMPTY. "config broken" and "nothing eligible"
+    // then look identical: the daemon beats forever logging `0/0 ran`, status says
+    // "eligible now: none", and every overnight organ stops without a word. One
+    // trailing comma could brain-death the organism for days. It now SAYS SO, and
+    // marks the returned config so callers can tell the two states apart.
+    console.error(`brain: ⚠ CONFIG UNREADABLE — ${path}: ${String(e && e.message).slice(0, 140)}`);
+    console.error("brain: ⚠ falling back to DEFAULTS, which have ZERO jobs — the brain will tick and do NOTHING until this file parses. Fix the JSON.");
+    const d = JSON.parse(JSON.stringify(DEFAULTS));
+    d._config_error = String(e && e.message).slice(0, 200);
+    return d;
+  }
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
 
@@ -105,8 +122,12 @@ const readLines = (p) => {
 // BUDGET GOVERNOR (pure)
 // ---------------------------------------------------------------------------
 function windowUsage(ledger, now, hours) {
-  const cutoff = now.getTime() - hours * 3600000;
-  return ledger.filter(l => l.engine === "claude" && new Date(l.ts).getTime() >= cutoff)
+  const end = now.getTime();
+  const cutoff = end - hours * 3600000;
+  // E2E audit 25 Jul 2026: the window had NO upper bound, so any row stamped in
+  // the future counted as spent-right-now — a clock skew or a replayed ledger
+  // could pin the governor at 100% forever. A window has two edges.
+  return ledger.filter(l => { const t = new Date(l.ts).getTime(); return l.engine === "claude" && t >= cutoff && t <= end; })
     .reduce((a, l) => a + (l.total_tokens || 0), 0);
 }
 const weekUsage = (ledger, now) => windowUsage(ledger, now, 24 * 7);
@@ -285,6 +306,29 @@ function liveSignal(now, dir = STATE_DIR) {
   return freshest ? { idle_min: Math.max(0, Math.round((now.getTime() - freshest) / 60000)) } : {};
 }
 
+// THE DEAD-BRAIN ALARM (E2E audit 25 Jul 2026 — OBSERVED LIVE, not inferred).
+// The daemon ticked normally for four days while EVERY call failed with
+// {"is_error":true,"result":"Not logged in · Please run /login"} — 732 consecutive
+// failed ledger rows. No organ produced anything and NOTHING said a word: the
+// brain had no notion of its own ok-rate. A brain that cannot call its own model
+// must SAY SO, every tick, in the one place a human already looks (the ledger's
+// consumers: tick log, status, token_vitals.json → the doctor).
+// Deliberately reads the TAIL only: an old outage must not alarm forever.
+function failureStreak(ledger, n = 25) {
+  const rows = (ledger || []).filter(r => r && r.engine !== "gemini" && typeof r.ok === "boolean").slice(-n);
+  let streak = 0;
+  for (let i = rows.length - 1; i >= 0; i--) { if (rows[i].ok) break; streak++; }
+  const authRe = /not logged in|please run \/login|invalid api key|authenticat|unauthorized/i;
+  const dead = streak >= 5;
+  const auth = dead && rows.slice(-streak).some(r => authRe.test(String(r.error || "")));
+  return {
+    streak, sampled: rows.length, dead, not_logged_in: auth,
+    hint: !dead ? null : auth
+      ? "the claude CLI is NOT LOGGED IN for the account this daemon runs under — open a terminal AS THAT USER, run `claude`, then /login."
+      : "every recent brain call failed — check the last error in brain_ledger.jsonl.",
+  };
+}
+
 // TOKEN VITALS — the plan's fuel gauge, always current: both windows the Max-5x
 // plan enforces (the rolling 5h window and the 7-day week). brain (single writer)
 // mirrors this to token_vitals.json so the pacer, every organ, and the captain can
@@ -301,6 +345,9 @@ function tokenVitals(cfg, ledger, queueState, now, signals = null) {
     window_5h: { used: win, ceiling, pct: pct(win, ceiling), cap_now: h.cap, allowed_now: h.allowed },
     week_7d: { used: wk, cap: wkCap, pct: pct(wk, wkCap), remaining: Math.max(0, wkCap - wk) },
     ceiling_source: (queueState && queueState.observed_window_ceiling) ? "observed" : "estimate",
+    // E2E audit 25 Jul 2026: the fuel gauge showed a brain burning fuel while it
+    // was in fact dead (every call failing). Ship the ok-rate WITH the fuel.
+    health: failureStreak(ledger),
     summary: `${h.phase} · 5h ${win.toLocaleString()}/${ceiling.toLocaleString()} (${pct(win, ceiling)}%) · week ${wk.toLocaleString()}/${wkCap.toLocaleString()} (${pct(wk, wkCap)}%) · headroom now ${h.allowed.toLocaleString()}`,
   };
 }
@@ -321,14 +368,43 @@ function shiftDay(job, now, cfg) {
   const endH = Number(String((cfg.overnight && cfg.overnight.end) || "07:30").split(":")[0]);
   return now.getHours() <= endH ? localDate(new Date(now.getTime() - 86400000)) : localDate(now);
 }
+// THE ATTEMPT LEDGER (E2E audit 25 Jul 2026). jobs_run is only credited on
+// SUCCESS ("a failed job does not consume its daily slot"), which is right — but
+// nothing counted the FAILURES, so a deterministically-failing job re-ran on every
+// ~75s beat forever at full model cost: wall_insights derives a number → validator
+// rejects → slot never consumed → highest-priority eligible job again 75s later.
+// Same loop for a logged-out CLI. Attempts are now counted per shift beside the
+// runs, and a job that has burned its attempts sits out until the next shift.
+function attemptsOn(queueState, day, id) {
+  return ((queueState && queueState.jobs_failed && queueState.jobs_failed[day]) || {})[id] || 0;
+}
+function recordJobFail(queueState, job, now, cfg) {
+  const sd = shiftDay(job, now, cfg);
+  queueState.jobs_failed = queueState.jobs_failed || {};
+  const b = queueState.jobs_failed[sd] = queueState.jobs_failed[sd] || {};
+  b[job.id] = (b[job.id] || 0) + 1;
+  return queueState;
+}
+// the one place a run is credited — shared by tick() and manual `run` mode, so a
+// manual run consumes the same slot the scheduler checks (E2E audit 25 Jul 2026).
+function recordJobRun(queueState, job, now, cfg) {
+  const sd = shiftDay(job, now, cfg);
+  queueState.jobs_run = queueState.jobs_run || {};
+  const b = queueState.jobs_run[sd] = queueState.jobs_run[sd] || {};
+  b[job.id] = (b[job.id] || 0) + 1;
+  return queueState;
+}
 function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
   const nowHM = hhmm(now);
+  const maxAttempts = (cfg.guards && cfg.guards.max_attempts_per_shift) || DEFAULTS.guards.max_attempts_per_shift;
   const ranOn = (day) => (queueState && queueState.jobs_run && queueState.jobs_run[day]) || {};
   const windows = { morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] };
   const daytime = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
   return cfg.jobs.filter(j => {
     if (j.enabled === false) return false;
     if ((ranOn(shiftDay(j, now, cfg))[j.id] || 0) >= (j.max_per_day || 1)) return false;
+    // RETRY CAP: burned its attempts this shift → sit out (see attemptsOn above)
+    if (attemptsOn(queueState, shiftDay(j, now, cfg), j.id) >= (j.max_attempts || maxAttempts)) return false;
     if (Array.isArray(j.days) && !j.days.includes(DOW[now.getDay()])) return false;
     if (j.engine === "gemini" && !cfg.gemini.enabled) return false;
     // THE THIRD POOL: heavy voice day → daytime Gemini text/render jobs step
@@ -389,43 +465,89 @@ function validateOutput(job, text, inputData, cfg) {
 // ---------------------------------------------------------------------------
 const LIMIT_RE = /limit|overloaded|rate.?limit|resets \d/i;
 
+// TRUE TOKEN COST (E2E audit 25 Jul 2026). The ledger read ONLY input_tokens +
+// output_tokens. But `claude -p` runs the full CLI: the system prompt and tool
+// definitions arrive as CACHE tokens, so a real call looks like
+// {input_tokens: ~4, output_tokens: ~600, cache_creation_input_tokens: ~14000,
+//  cache_read_input_tokens: ~9000} — i.e. the two fields we counted were a few
+// PERCENT of the spend. The governor believed it had ample headroom, kept
+// flooding, and slammed the plan limit while the meter read ~10%. The plan meters
+// cache tokens; so do we. Counted at full weight deliberately: over-counting
+// costs sharpness, under-counting costs the captain his own plan mid-study.
+function usageTotal(usage) {
+  if (!usage || typeof usage !== "object") return 0;
+  return (usage.input_tokens || 0) + (usage.output_tokens || 0)
+       + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
+}
+
 function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000) {
   const t0 = Date.now();
   try {
     const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet", ...(Array.isArray(extraArgs) ? extraArgs : [])],
-      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
-    let text = stdout, inTok = null, outTok = null, isErr = false;
+      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
     try {
       const j = JSON.parse(stdout);
       text = j.result !== undefined ? String(j.result) : stdout;
       isErr = j.is_error === true;
-      if (j.usage) { inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null; }
+      if (j.usage) {
+        inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null;
+        // the cache pair is where the CLI's real spend lives — see usageTotal above
+        cacheCreate = j.usage.cache_creation_input_tokens ?? null;
+        cacheRead = j.usage.cache_read_input_tokens ?? null;
+      }
     } catch { /* non-json → raw text */ }
-    const total = (inTok || 0) + (outTok || 0) || Math.ceil((prompt.length + text.length) / 4);
+    // PHANTOM-TOKEN GUARD (E2E audit 25 Jul 2026): a FAILED call carries no usage
+    // object, so the char-count estimate used to be ledgered as if those tokens
+    // were really spent. Four days of "Not logged in" errors booked ~4.8M tokens
+    // that never reached the API and throttled the governor against fiction.
+    // An unmade call costs nothing; estimate only when the call actually landed.
+    const measured = usageTotal({ input_tokens: inTok, output_tokens: outTok, cache_creation_input_tokens: cacheCreate, cache_read_input_tokens: cacheRead });
+    const total = isErr ? measured : (measured || Math.ceil((prompt.length + text.length) / 4));
     const limit_hit = isErr && LIMIT_RE.test(text);
-    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null };
+    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null };
   } catch (e) {
     const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
-    return { ok: false, text: null, input_tokens: null, output_tokens: null, total_tokens: Math.ceil(prompt.length / 4),
+    return { ok: false, text: null, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, total_tokens: 0,   // never spawned/never answered ⇒ zero spend
       duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) };
   }
+}
+
+// RESOLVE THE GEMINI COMMAND (pure — the spawn itself stays in geminiExec).
+// Windows: npm installs gemini as a .cmd shim (bare "gemini" ENOENTs from
+// execFile), and Node 22 requires shell:true to spawn a .cmd (CVE-2024-27980).
+// E2E audit 25 Jul 2026: the old comment claimed the path was "fixed and
+// space-free", but it is built from %APPDATA% — any Windows account whose
+// username has a space ("C:\Users\Nikhil Panwar\AppData\Roaming\npm\gemini.cmd")
+// hands cmd.exe an UNQUOTED string, which splits at the space and tries to run
+// C:\Users\Nikhil. With shell:true the config-supplied `binary` string also
+// reaches cmd.exe verbatim, so it is validated as a bare name first: under a
+// shell, an unvalidated string is an injection, not an argument.
+function geminiCommand(binary, opts = {}) {
+  const platform = opts.platform || process.platform;
+  const appdata = opts.appdata !== undefined ? opts.appdata : process.env.APPDATA;
+  const exists = opts.exists || existsSync;
+  const name = String(binary || "");
+  if (!/^[\w.-]+$/.test(name)) return { ok: false, cmd: null, shell: false, error: `unsafe gemini binary name: ${name.slice(0, 40)}` };
+  const shim = platform === "win32" && appdata ? join(appdata, "npm", name + ".cmd") : name;
+  const resolved = exists(shim) ? shim : name;
+  const shell = resolved.endsWith(".cmd");
+  // quoted ONLY when a shell will parse it; execFileSync without a shell passes
+  // the path through untouched and quotes would become part of the filename.
+  return { ok: true, cmd: shell ? `"${resolved}"` : resolved, shell, path: resolved, error: null };
 }
 
 function geminiExec(prompt, binary, timeoutMs = 300000) {
   const t0 = Date.now();
   try {
-    // Windows: npm installs gemini as a .cmd shim (bare "gemini" ENOENTs from
-    // execFile). Prompt goes via STDIN (argv would hit length limits + quoting).
-    // The junk legacy GOOGLE_API_KEY is stripped from the child env — the
-    // organism's Gemini lane authenticates via ~/.gemini/.env only.
-    const shim = process.platform === "win32" && process.env.APPDATA
-      ? join(process.env.APPDATA, "npm", binary + ".cmd") : binary;
-    const cmd = existsSync(shim) ? shim : binary;
+    // Prompt goes via STDIN (argv would hit length limits + quoting). The junk
+    // legacy GOOGLE_API_KEY is stripped from the child env — the organism's
+    // Gemini lane authenticates via ~/.gemini/.env only.
+    const gc = geminiCommand(binary);
+    if (!gc.ok) return { ok: false, text: null, total_tokens: 0, duration_ms: Date.now() - t0, limit_hit: false, error: gc.error };
     const env = { ...process.env, GEMINI_CLI_TRUST_WORKSPACE: "true" };
     delete env.GOOGLE_API_KEY;
-    // Node 22 requires shell:true to spawn .cmd shims (CVE-2024-27980 guard);
-    // safe here: zero argv, prompt rides stdin, path is fixed and space-free.
-    const stdout = execFileSync(cmd, [], { input: prompt.slice(0, 200000), timeout: timeoutMs, encoding: "utf8", windowsHide: true, env, shell: cmd.endsWith(".cmd") });
+    const stdout = execFileSync(gc.cmd, [], { input: prompt.slice(0, 200000), timeout: timeoutMs, encoding: "utf8", windowsHide: true, env, shell: gc.shell });
     return { ok: true, text: stdout, total_tokens: Math.ceil((prompt.length + stdout.length) / 4), duration_ms: Date.now() - t0, limit_hit: false, error: null };
   } catch (e) {
     return { ok: false, text: null, total_tokens: 0, duration_ms: Date.now() - t0, limit_hit: false, error: String(e.message).slice(0, 200) };
@@ -439,7 +561,14 @@ function geminiExec(prompt, binary, timeoutMs = 300000) {
 // holds "" and resolution falls back to env → gitignored throwin_topic.txt.
 // ---------------------------------------------------------------------------
 function resolveNtfyTopic(cfg, env = process.env) {
-  if (cfg.ntfy && cfg.ntfy.topic) return cfg.ntfy.topic;
+  // TRIPWIRE (E2E audit 25 Jul 2026): brain_config.json is TRACKED in a PUBLIC
+  // repo and the topic name IS the password (NTFY_SETUP.md Part 1). The old
+  // Part 3 told the captain to paste it here. Precedence is unchanged so a local
+  // experiment still works — but it now says so out loud, every single run.
+  if (cfg.ntfy && cfg.ntfy.topic) {
+    console.warn("brain: ⚠ ntfy topic is set INSIDE brain_config.json — that file is COMMITTED to a public repo. Move it to env ARSENAL_NTFY_TOPIC or dressing-room/state/throwin_topic.txt (gitignored) and blank it here.");
+    return cfg.ntfy.topic;
+  }
   const fromEnv = env.ARSENAL_NTFY_TOPIC;
   if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim();
   try {
@@ -470,6 +599,12 @@ async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
     return { sent: res && (res.ok || res.status === 200), why: null };
   } catch (e) { return { sent: false, why: "network" }; }
 }
+// the OTHER sanctioned utterance's title, hoisted out of runJob (E2E audit
+// 25 Jul 2026): it lived as an inline literal, so the selftest that claims to
+// check "both utterances sign their titles with the badge" could not see it and
+// silently only ever checked the bell. The badge IS the throw-in echo filter —
+// both titles must carry it, and now both are checkable from one place.
+const SHEET_PUSH_TITLE = "⚪🔴 Team sheet is up";
 const BELLS = {
   fulltime: { title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
 };
@@ -535,10 +670,17 @@ ${fingerprint}`;
   return head + body;
 }
 
-function gatherInputs(job, now = new Date()) {
+// dateStr (E2E audit 25 Jul 2026): the TODAY token used to expand to the CALENDAR
+// date always. shiftDay fixed the RE-run after midnight, but a FIRST run after
+// midnight still gathered the fresh, empty new day: dugout_digest at 23:40 writes
+// the 12th, the tick breaks on budget, and day_cartridge at 00:30 reads
+// brain_out/.../<the 13th>.md → null, and thinks the captain did nothing all day.
+// One shift, one date — the caller passes the shift day for overnight jobs.
+function gatherInputs(job, now = new Date(), dateStr = null) {
   const inputs = {};
+  const day = dateStr || localDate(now);
   for (const raw of (job.inputs || [])) {
-    const name = raw.replace(/TODAY/g, localDate(now));   // date-tokened paths (e.g. dugout transcripts)
+    const name = raw.replace(/TODAY/g, day);   // date-tokened paths (e.g. dugout transcripts)
     const p = join(STATE_DIR, name);
     if (name.endsWith(".jsonl")) inputs[name] = readLines(p).slice(-200);
     else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = existsSync(p) ? readFileSync(p, "utf8").slice(-20000) : null;
@@ -552,7 +694,11 @@ function gatherInputs(job, now = new Date()) {
 // ---------------------------------------------------------------------------
 async function runJob(job, cfg, deps) {
   const { exec, gexec, now, dry } = deps;
-  const today = localDate(now);
+  // ONE SHIFT, ONE DATE (E2E audit 25 Jul 2026): both the TODAY-token inputs and
+  // the output filename now key off the shift the job belongs to, not the wall
+  // calendar — so an overnight job that first runs at 00:30 still reads and
+  // writes the evening it started. Identical to localDate() for every other window.
+  const today = shiftDay(job, now, cfg);
 
   if (job.kind === "manager_m3") {
     // M-3: the plug meets the socket. manager.mjs validates + writes the sheet
@@ -572,7 +718,7 @@ async function runJob(job, cfg, deps) {
       const sheetPath = join(STATE_DIR, "team_sheet.md");
       const head = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n") : "sheet ready";
       const tt = teamtalkLine("am", now);
-      await pushNtfy(cfg, "⚪🔴 Team sheet is up", `**The sheet is up, captain.**\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+      await pushNtfy(cfg, SHEET_PUSH_TITLE, `**The sheet is up, captain.**\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
     }
     return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
   }
@@ -580,7 +726,7 @@ async function runJob(job, cfg, deps) {
   // analysis-class job — render-class jobs use viz's auto-written prompt file
   // (it carries the render laws + the design-coach critique), never the
   // analysis head (which would ask for markdown, not an artifact).
-  const inputs = gatherInputs(job);
+  const inputs = gatherInputs(job, now, today);
   let prompt;
   if (job.kind === "render" && job.prompt_file) {
     const pf = join(STATE_DIR, "..", "club", "prompts", job.prompt_file);
@@ -630,19 +776,35 @@ async function tick(cfg, deps) {
     console.log("brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing risk). Unset it; the brain runs on the Max subscription only.");
     return { ran: [], refused: true };
   }
-  const ledger = readLines(LEDGER);
-  const queueState = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+  // HERMETIC-TEST SEAM (E2E audit 25 Jul 2026): tick() used to always read the
+  // LIVE ledger/queue, so the selftest's mocked clock saw real rows and the two
+  // tick checks went red the moment the machine had history. Production passes
+  // neither dep and behaves exactly as before.
+  const ledger = deps.ledger || readLines(LEDGER);
+  const queueState = deps.queueState || readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
   const today = localDate(now);
+  queueState.jobs_run = queueState.jobs_run || {};
   queueState.jobs_run[today] = queueState.jobs_run[today] || {};
 
+  // THE DEAD-BRAIN ALARM, spoken every tick (E2E audit 25 Jul 2026 — live):
+  // four days of "Not logged in" and the runtime never once said it was blind.
+  const health = failureStreak(ledger);
+  if (health.dead) {
+    console.error(`brain: ⚠⚠ DEAD BRAIN — the last ${health.streak} of ${health.sampled} calls ALL FAILED. ${health.hint}`);
+  }
+
   const ran = [];
+  const consumedTriggers = [];
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
-    const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow)), queueState, now, deps.signals);
+    const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)), queueState, now, deps.signals);
     if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
     const { usage, note } = await runJob(job, cfg, deps);
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
+      // the cache pair rides the row too (E2E audit 25 Jul 2026) — total_tokens now
+      // includes it, so the components must be visible or the ledger can't be audited.
+      cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null,
       total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0,
       ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
     };
@@ -650,13 +812,24 @@ async function tick(cfg, deps) {
     // a FAILED job does not consume its daily slot — it retries next tick
     // (e.g. gemini before the captain's one-time login, or a transient claude
     // error). Success is what spends the slot.
-    if (usage.ok) { const sd = shiftDay(job, now, cfg); const bucket = queueState.jobs_run[sd] = queueState.jobs_run[sd] || {}; bucket[job.id] = (bucket[job.id] || 0) + 1; }
-    if (usage.ok && job.trigger && queueState.triggers) delete queueState.triggers[job.trigger];   // consumed
+    if (usage.ok) recordJobRun(queueState, job, now, cfg);
+    // …but the ATTEMPT is counted either way (E2E audit 25 Jul 2026), so a job that
+    // fails deterministically — validator always rejects, CLI logged out — cannot
+    // re-run on every 75s beat forever at full model cost. A plan-limit backoff is
+    // NOT the job's fault, so it doesn't burn an attempt.
+    else if (!usage.limit_hit) recordJobFail(queueState, job, now, cfg);
+    if (usage.ok && job.trigger && queueState.triggers) { delete queueState.triggers[job.trigger]; consumedTriggers.push(job.trigger); }   // consumed
     if (usage.limit_hit && cfg.budget.self_tune) {
       // a limit event means we spent ~the plan's true capacity — record the
       // ACTUAL window usage, but never below the conservative estimate (a
       // limit at low observed-usage is a false read, not a 1-token ceiling).
-      queueState.observed_window_ceiling = blendCeiling(queueState.observed_window_ceiling, windowUsage(ledger, now, cfg.budget.window_hours), cfg.budget.window_capacity_est_tokens);
+      // E2E audit 25 Jul 2026: the observation read the START-OF-TICK ledger only,
+      // so the drain that CAUSED the limit was invisible — a limit hit after
+      // 900k of in-tick spend was recorded as "the ceiling is ~0 observed", which
+      // then dragged the learned ceiling DOWN toward the estimate. Observe the
+      // same augmented view the per-job headroom check already uses, plus this row.
+      const observed = windowUsage(ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)).concat([row]), now, cfg.budget.window_hours);
+      queueState.observed_window_ceiling = blendCeiling(queueState.observed_window_ceiling, observed, cfg.budget.window_capacity_est_tokens);
       ran.push({ job: job.id, note, ledgerRow: row });
       break;                                                    // back off the moment the plan says stop
     }
@@ -664,10 +837,27 @@ async function tick(cfg, deps) {
   }
   queueState.last_tick = now.toISOString();
   if (!deps.dry) {
-    writeAtomic(QUEUE, queueState);
+    // LOST-UPDATE FIX (E2E audit 25 Jul 2026): the queue object is read once at
+    // beat start and written whole at beat end, minutes of LLM calls later. A
+    // `brain trigger <name>` fired in between (postmatch auto-arms 'reanalysis')
+    // wrote its armed trigger to disk — and this write silently erased it, so the
+    // event-triggered re-analysis never happened and nothing reported it. Re-read
+    // at write time and keep the disk's triggers, minus the ones we just consumed.
+    writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), queueState, consumedTriggers));
     try { writeAtomic(TOKEN_VITALS, tokenVitals(cfg, readLines(LEDGER), queueState, now, deps.signals)); } catch {}
   }
   return { ran, refused: false };
+}
+
+// the merge itself, pure and testable: brain owns every key EXCEPT `triggers`,
+// which a separate `brain trigger` process arms at any moment. Disk wins on
+// triggers (it is the freshest arming), we win on everything else, and anything
+// this tick consumed stays consumed.
+function mergeTriggers(disk, mine, consumed = []) {
+  if (!disk || typeof disk !== "object") return mine;
+  const triggers = { ...(disk.triggers || {}) };
+  for (const k of consumed) delete triggers[k];
+  return { ...mine, triggers };
 }
 
 // ---------------------------------------------------------------------------
@@ -714,6 +904,13 @@ async function selftest() {
   const ledger = [L(1, 100000), L(2, 200000), L(6, 500000), L(3, 50000, "gemini")];
   assert("window usage sums 5h of CLAUDE tokens only", windowUsage(ledger, now(23, 0), 5) === 300000);
   assert("gemini tokens never count against the Claude window", windowUsage(ledger, now(23, 0), 5) < 350000);
+  // REGRESSION (E2E audit 25 Jul 2026): the window had no upper edge, so a
+  // future-stamped row (clock skew / replayed ledger) counted as spent now and
+  // could pin the governor at zero headroom permanently.
+  {
+    const future = ledger.concat([{ ts: new Date(now(23, 0).getTime() + 6 * 3600000).toISOString(), engine: "claude", total_tokens: 999999 }]);
+    assert("WINDOW HAS TWO EDGES — a future-dated row never counts as spent", windowUsage(future, now(23, 0), 5) === 300000);
+  }
 
   const qEmpty = { observed_window_ceiling: null, jobs_run: {} };
   const hStudy = headroom(cfg, ledger, qEmpty, now(14, 0));
@@ -808,10 +1005,11 @@ async function selftest() {
   // tick with mock executor: runs jobs, respects budget, self-tunes on limit
   const calls = [];
   const mockExec = (prompt, model) => { calls.push({ model, len: prompt.length }); return { ok: true, text: "Sharp read. 2 drills stand.", total_tokens: 50000, duration_ms: 10, limit_hit: false, error: null }; };
-  const t1 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: mockExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+  const hermetic = () => ({ ledger: [], queueState: { observed_window_ceiling: null, jobs_run: {} } });
+  const t1 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: mockExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
   assert("overnight tick drains multiple jobs", t1.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length >= 3);
   const limitExec = () => ({ ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "You've hit your session limit · resets 7am" });
-  const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+  const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
   // cognitive fingerprint — 2050-grade personalization, measured not assumed
@@ -836,7 +1034,11 @@ async function selftest() {
   const bellRes = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, BELLS.fulltime.body, okFetch);
   assert("full-time bell sends the postmatch cue", bellRes.sent === true && pushed.body.includes("npm run postmatch"));
   assert("bell carries no shame/streak/hype language", !/streak|fail|10x|hurry|late/i.test(pushed.body));
-  assert("both utterances SIGN their titles with the badge (throw-in echo filter)", BELLS.fulltime.title.includes("⚪🔴") && pushed.title === undefined || BELLS.fulltime.title.includes("⚪🔴"));
+  // E2E audit 25 Jul 2026: this check was a TAUTOLOGY — `A && B || A` (&& binds
+  // tighter) reduces to A, the dead clause compared an RFC-2047 title to undefined,
+  // and the SECOND utterance was never inspected at all. Both titles, explicitly.
+  assert("both utterances SIGN their titles with the badge (throw-in echo filter)", BELLS.fulltime.title.includes("⚪🔴") && SHEET_PUSH_TITLE.includes("⚪🔴"));
+  assert("the sheet push actually SENDS the badged title (not just declares it)", (() => { const t = ntfyHeaderSafe(SHEET_PUSH_TITLE); return Buffer.from(t.replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8").includes("⚪🔴"); })());
   assert("only two utterances exist (bell registry + push_after)", Object.keys(BELLS).length === 1 && cfgNtfyOn.ntfy.push_after.length === 1);
   // the badge must SURVIVE HTTP: headers are ByteString (≤0xFF per char) — a raw
   // emoji Title throws inside Node's fetch before any I/O and the push dies as
@@ -857,6 +1059,125 @@ async function selftest() {
   const res = await runManager({ llm: async () => null, stateDir: tmp });
   assert("M-3 SOCKET — runManager import works; fallback law intact", res && res.source === "fallback" && existsSync(join(tmp, "team_sheet.md")));
 
+  // =========================================================================
+  // E2E AUDIT 25 Jul 2026 — the regression wall. Every check below FAILS against
+  // the code as it stood the night the audit ran; none of them can pass vacuously.
+  // =========================================================================
+  {
+    // 1. TRUE TOKEN COST — the cache pair is most of a `claude -p` call's spend
+    assert("LEDGER COUNTS CACHE TOKENS — the CLI's real spend is cache, not input/output",
+      usageTotal({ input_tokens: 4, output_tokens: 600, cache_creation_input_tokens: 14000, cache_read_input_tokens: 9000 }) === 23604);
+    assert("token accounting is defensive — no usage object ⇒ zero, never NaN",
+      usageTotal(null) === 0 && usageTotal({}) === 0 && usageTotal({ input_tokens: 10 }) === 10);
+
+    // 2. DRY IS DRY — --dry must never reach the real executor
+    const dryDeps = buildDeps(now(23, 0), ["node", "brain.mjs", "daemon", "--dry"]);
+    const wetDeps = buildDeps(now(23, 0), ["node", "brain.mjs", "daemon"]);
+    assert("--dry NEVER reaches the real `claude -p` executor (preview costs nothing)",
+      dryDeps.dry === true && dryDeps.exec !== claudeExec && dryDeps.gexec !== geminiExec);
+    assert("a dry call is a ZERO-token no-op that still looks like a success to the pipeline",
+      dryDeps.exec("prompt", "opus").total_tokens === 0 && dryDeps.exec("p", "opus").ok === true);
+    assert("without --dry the real executors are wired exactly as before",
+      wetDeps.dry === false && wetDeps.exec === claudeExec && wetDeps.gexec === geminiExec);
+
+    // 3. RETRY CAP — a deterministically-failing job must stop re-running every beat
+    const qBurned = { jobs_run: {}, jobs_failed: { "2026-07-12": { day_cartridge: 3 } } };
+    const qOne = { jobs_run: {}, jobs_failed: { "2026-07-12": { day_cartridge: 1 } } };
+    assert("RETRY CAP — a job that burned its attempts this shift sits out (no 75s retry storm)",
+      !eligibleJobs(cfg, qBurned, now(23, 30)).some(j => j.id === "day_cartridge"));
+    assert("RETRY CAP — under the cap the job still retries (failure keeps its slot)",
+      eligibleJobs(cfg, qOne, now(23, 30)).some(j => j.id === "day_cartridge"));
+    assert("RETRY CAP — attempts are keyed to the SHIFT, so the next evening is a clean slate",
+      eligibleJobs(cfg, qBurned, new Date(2026, 6, 13, 22, 30)).some(j => j.id === "day_cartridge"));
+    const qF = {}; recordJobFail(qF, { id: "wall_insights", window: "overnight" }, now(23, 30), cfg);
+    assert("a validator rejection COUNTS as an attempt (the tokens were really spent)",
+      attemptsOn(qF, "2026-07-12", "wall_insights") === 1);
+
+    // 4. MANUAL RUN spends the slot (else the 08:45 tick pushes the sheet twice)
+    const qManual = {}; recordJobRun(qManual, cfg.jobs.find(j => j.id === "formation_read"), now(8, 40), cfg);
+    assert("MANUAL RUN consumes the daily slot — the scheduled tick won't double-push the sheet",
+      !eligibleJobs(cfg, qManual, now(8, 45)).some(j => j.id === "formation_read"));
+
+    // 5. ONE SHIFT, ONE DATE — a first run after midnight reads the shift it belongs to
+    const past2am = new Date(2026, 6, 13, 0, 30);
+    const giShift = gatherInputs({ window: "overnight", inputs: ["no_such_dir_xyz/TODAY.md"] }, past2am, shiftDay({ window: "overnight" }, past2am, cfg));
+    assert("MIDNIGHT SEAM — overnight TODAY-inputs resolve to the SHIFT day, not the empty new calendar day",
+      Object.keys(giShift)[0] === "no_such_dir_xyz/2026-07-12.md");
+    const giDay = gatherInputs({ window: "morning", inputs: ["no_such_dir_xyz/TODAY.md"] }, new Date(2026, 6, 13, 8, 45));
+    assert("daytime jobs still read the plain calendar day (unchanged)",
+      Object.keys(giDay)[0] === "no_such_dir_xyz/2026-07-13.md");
+
+    // 6. CEILING OBSERVATION must include the drain that CAUSED the limit
+    {
+      const qCeil = { observed_window_ceiling: 1000000, jobs_run: {} };
+      let n = 0;
+      const drainThenLimit = () => (++n <= 3)
+        ? { ok: true, text: "steady read, nothing invented", total_tokens: 300000, duration_ms: 5, limit_hit: false, error: null }
+        : { ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "session limit · resets 7am" };
+      await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") },
+        { exec: drainThenLimit, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ledger: [], queueState: qCeil });
+      // 3×300k spent inside this tick, then the limit. blend(prev 1.0M, observed 900k)
+      // = 960k. Reading only the START-OF-TICK ledger observes 0 → blend collapses to
+      // 800k (the estimate floor) and the learned ceiling is dragged DOWN by a drain
+      // that actually proved the window is big.
+      assert("CEILING OBSERVATION includes THIS tick's own spend (a limit after a 900k drain is not 'observed 0')",
+        qCeil.observed_window_ceiling === 960000);
+    }
+
+    // 7. QUEUE MERGE — a trigger armed mid-tick must survive the end-of-beat write
+    const diskQ = { triggers: { reanalysis: { ts: "armed-mid-tick" }, doubt: { ts: "old" } }, jobs_run: { "2026-07-11": { x: 1 } } };
+    const mineQ = { triggers: { doubt: { ts: "old" } }, jobs_run: { "2026-07-12": { drill_forge: 1 } }, last_tick: "now" };
+    const merged = mergeTriggers(diskQ, mineQ, ["doubt"]);
+    assert("QUEUE MERGE — a trigger armed WHILE the tick ran is not erased by the tick's write",
+      !!merged.triggers.reanalysis);
+    assert("QUEUE MERGE — a trigger this tick CONSUMED stays consumed", !merged.triggers.doubt);
+    assert("QUEUE MERGE — brain still owns every non-trigger key",
+      merged.jobs_run["2026-07-12"].drill_forge === 1 && merged.last_tick === "now" && merged.jobs_run["2026-07-11"] === undefined);
+    assert("QUEUE MERGE — no readable queue on disk ⇒ write ours (first run never blocks)",
+      mergeTriggers(null, mineQ, []) === mineQ);
+
+    // 8. THE DEAD-BRAIN ALARM (live finding: 732 straight failures, four silent days)
+    const deadRows = Array.from({ length: 10 }, () => ({ engine: "claude", ok: false, ts: now(22, 0).toISOString(), total_tokens: 0, error: 'Not logged in · Please run /login' }));
+    const hDead = failureStreak(deadRows);
+    assert("DEAD BRAIN — an all-failed tail is detected and NAMED (login, not mystery)",
+      hDead.dead === true && hDead.streak === 10 && hDead.not_logged_in === true && /login/.test(hDead.hint));
+    assert("DEAD BRAIN — one success at the tail clears the alarm (an old outage never nags)",
+      failureStreak(deadRows.concat([{ engine: "claude", ok: true, ts: now(22, 5).toISOString() }])).dead === false);
+    assert("DEAD BRAIN — the fuel gauge carries the ok-rate, so the doctor can see a dead brain",
+      tokenVitals(cfg, deadRows, qEmpty, now(23, 0)).health.dead === true);
+
+    // 9. CONFIG UNREADABLE must be loud, not a silent zero-job brain
+    {
+      const { mkdtempSync } = await import("node:fs");
+      const osx = await import("node:os");
+      const bad = join(mkdtempSync(join(osx.tmpdir(), "brain-cfg-")), "brain_config.json");
+      writeFileSync(bad, '{ "jobs": [], }');
+      const orig = console.error; let spoke = 0; console.error = () => { spoke++; };
+      const broken = loadConfig(bad);
+      console.error = orig;
+      assert("CONFIG BROKEN — a malformed canon config SAYS SO and is flagged, never a silent idle brain",
+        spoke > 0 && typeof broken._config_error === "string" && broken.jobs.length === 0);
+      assert("CONFIG MISSING — an absent file is still the quiet, legal first-run default",
+        loadConfig(join(dirname(bad), "no-such-config.json"))._config_error === undefined);
+    }
+
+    // 10. GEMINI SHIM — %APPDATA% with a space is a real machine, not a hypothetical
+    const spaced = geminiCommand("gemini", { platform: "win32", appdata: "C:\\Users\\Nikhil Panwar\\AppData\\Roaming", exists: () => true });
+    assert("GEMINI SHIM — a spaced %APPDATA% path is QUOTED before cmd.exe parses it",
+      spaced.shell === true && spaced.cmd === '"C:\\Users\\Nikhil Panwar\\AppData\\Roaming\\npm\\gemini.cmd"');
+    assert("GEMINI SHIM — no shell ⇒ no quotes (quotes would become part of the filename)",
+      geminiCommand("gemini", { platform: "linux", appdata: null, exists: () => false }).cmd === "gemini");
+    assert("GEMINI SHIM — a config-supplied binary string can never inject into cmd.exe",
+      geminiCommand("gemini & del x", { platform: "win32", appdata: "C:\\a", exists: () => true }).ok === false);
+
+    // 11. TICK LOCK — only EADDRINUSE means "another tick is running"
+    assert("TICK LOCK — a genuinely in-use port reads as locked",
+      lockVerdict({ code: "EADDRINUSE" }) === "locked");
+    assert("TICK LOCK — an UNBINDABLE port is a FAULT, not a phantom concurrent tick",
+      lockVerdict({ code: "EACCES" }) === "unbindable" && lockVerdict({ code: "EADDRNOTAVAIL" }) === "unbindable");
+    assert("TICK LOCK — a clean bind is acquired", lockVerdict(null) === "acquired");
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -870,15 +1191,49 @@ async function selftest() {
 // Opus spend + duplicate ledger rows) because jobs_run is only persisted at beat-end. An
 // exclusive localhost port bind (cortex's :4112 pattern) serializes ticks across processes
 // and self-releases if a holder crashes. Held only for the tick's duration; a loser skips.
+// E2E audit 25 Jul 2026: the bind result used to be a BOOLEAN — every listen
+// error meant "another tick is running". It doesn't. EACCES, EADDRNOTAVAIL, or a
+// Windows WinNAT/Hyper-V dynamic reserved range swallowing :4115 (those ranges
+// move after a reboot) all bind-fail too — and then every daemon beat and every
+// scheduled tick forever prints "tick locked (another tick is running)", an
+// assertion about a concurrent tick that does not exist, while the brain quietly
+// does nothing at all. Only EADDRINUSE is a lock; anything else is a FAULT.
+function lockVerdict(err) {
+  if (!err) return "acquired";
+  return err.code === "EADDRINUSE" ? "locked" : "unbindable";
+}
 async function withTickLock(fn, deps = {}) {
   // brain's OWN singleton port. The organism's block: 4111 turnstile · 4112 cortex ·
   // 4113 thalamus · 4114 dugout — so brain takes 4115 (verified free; 4111 collides).
   const port = deps.lockPort || 4115;
   const { createServer } = await import("node:http");
   const lock = createServer(() => {});
-  const got = await new Promise((res) => { lock.once("error", () => res(false)); lock.listen(port, "127.0.0.1", () => res(true)); });
-  if (!got) return { ran: [], refused: false, skipped: "tick locked (another tick is running)" };
+  const err = await new Promise((res) => { lock.once("error", (e) => res(e || { code: "UNKNOWN" })); lock.listen(port, "127.0.0.1", () => res(null)); });
+  const verdict = lockVerdict(err);
+  if (verdict === "locked") return { ran: [], refused: false, skipped: "tick locked (another tick is running)" };
+  if (verdict === "unbindable") {
+    // loud, then RUN: a dead brain is worse than a small concurrency risk (the
+    // daemon singleton on :4116 already stops the common double-runner).
+    console.error(`brain: ⚠ tick-lock port :${port} is UNBINDABLE (${err.code}) — this is NOT a concurrent tick. Running this tick UNLOCKED; if it persists, free the port or move it (deps.lockPort).`);
+    return await fn();
+  }
   try { return await fn(); } finally { try { lock.close(); } catch {} }
+}
+
+// DRY MEANS DRY (E2E audit 25 Jul 2026). --dry only ever suppressed WRITES: the
+// executor still fired REAL `claude -p` calls, and because the ledger append is a
+// write, the spend was invisible too. `brain daemon --dry` at 23:00 to "preview"
+// the overnight drain therefore re-ran the whole overnight suite plus a haiku
+// pulse every 75s with real, unmetered Opus/Sonnet calls. The dry executors are
+// injected in ONE place (buildDeps) so every mode — tick, run, pulse, daemon —
+// inherits them; selftest injects its own deps and is untouched by this.
+// the stub text is deliberately DIGIT-FREE so the no_new_numbers validator can't
+// reject it and turn a dry preview into a fake "rejected" report.
+const dryExec = (prompt, model) => ({ ok: true, text: `[dry-run — no LLM call was made; the real run would have used model: ${String(model || "sonnet").replace(/\d/g, "")}]`, input_tokens: 0, output_tokens: 0, cache_creation_tokens: 0, cache_read_tokens: 0, total_tokens: 0, duration_ms: 0, limit_hit: false, error: null });
+const dryGexec = () => ({ ok: true, text: "[dry-run — no gemini call was made.]", total_tokens: 0, duration_ms: 0, limit_hit: false, error: null });
+function buildDeps(now, argv = process.argv) {
+  const dry = argv.includes("--dry");
+  return { exec: dry ? dryExec : claudeExec, gexec: dry ? dryGexec : geminiExec, now, dry, signals: liveSignal(now) };
 }
 
 async function main() {
@@ -886,7 +1241,7 @@ async function main() {
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const cfg = loadConfig();
   const now = new Date();
-  const deps = { exec: claudeExec, gexec: geminiExec, now, dry: process.argv.includes("--dry"), signals: liveSignal(now) };
+  const deps = buildDeps(now);   // --dry ⇒ stub executors: dry is DRY, not "writes off"
 
   if (mode === "bell") {
     const kind = (process.argv[3] || "fulltime").toLowerCase();
@@ -931,6 +1286,13 @@ async function main() {
     const h = headroom(cfg, ledger, q, now);
     const vm = dugoutMinutesToday(now);
     console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · voice pool ${vm}min today${cfg.dugout_pool && cfg.dugout_pool.enabled && vm >= cfg.dugout_pool.gemini_defer_threshold_min ? " (daytime gemini deferred)" : ""} · eligible now: ${eligibleJobs(cfg, q, now, vm).map(j => j.id).join(", ") || "none"}`);
+    // the ok-rate, said out loud (E2E audit 25 Jul 2026): status used to look
+    // perfectly healthy through four days of every-call-failed.
+    const hh = failureStreak(ledger);
+    console.log(hh.dead
+      ? `brain: ⚠⚠ DEAD BRAIN — the last ${hh.streak} of ${hh.sampled} calls ALL FAILED. ${hh.hint}`
+      : `brain: health OK — ${hh.streak} failure(s) at the tail of the last ${hh.sampled} call(s).`);
+    if (cfg._config_error) console.log(`brain: ⚠⚠ CONFIG BROKEN (${cfg._config_error}) — running on DEFAULTS with zero jobs.`);
     return;
   }
   if (mode === "run") {
@@ -938,9 +1300,26 @@ async function main() {
     const job = cfg.jobs.find(j => j.id === id);
     if (!job) { console.log(`brain: no job ${id}`); process.exit(1); }
     if (cfg.guards.refuse_if_api_key_env && process.env.ANTHROPIC_API_KEY) { console.log("brain: REFUSING — ANTHROPIC_API_KEY set."); process.exit(1); }
-    const { usage, note } = await runJob(job, cfg, deps);
-    if (!deps.dry) appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit }) + "\n");
-    console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
+    // E2E audit 25 Jul 2026: `run` used to bypass the tick lock AND never credit
+    // jobs_run — so `brain run formation_read` at 08:40 fired the one sanctioned
+    // sheet push, and the 08:45 scheduled tick, seeing an empty slot, ran it and
+    // pushed AGAIN (double Opus spend, two sheets on his phone). A manual run is
+    // still a run: it takes the lock and it spends the slot.
+    const out = await withTickLock(async () => {
+      const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+      const sd = shiftDay(job, now, cfg);
+      const already = ((q.jobs_run && q.jobs_run[sd]) || {})[job.id] || 0;
+      if (already >= (job.max_per_day || 1)) console.warn(`brain: ⚠ ${job.id} already ran ${already}× this shift (${sd}) — running again because you asked; it will spend again.`);
+      const { usage, note } = await runJob(job, cfg, deps);
+      if (!deps.dry) {
+        appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true }) + "\n");
+        if (usage.ok) { recordJobRun(q, job, now, cfg); writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [])); }
+        else if (!usage.limit_hit) { recordJobFail(q, job, now, cfg); writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [])); }
+      }
+      console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
+      return { ran: [], refused: false };
+    });
+    if (out && out.skipped) console.log(`brain: ${out.skipped} — 'run' skipped so it can't double-run the job`);
     return;
   }
   if (mode === "pulse") {
@@ -957,6 +1336,18 @@ async function main() {
     // ~60-90s poll. Each beat: compute the burn pace, run a tick (which self-gates every
     // job on headroom), report. It NEVER writes wake_queue — the thalamus stays the SOLE
     // wake authority (Layer 4 law). SIGINT/SIGTERM = a clean stop between beats.
+    // DAEMON SINGLETON (E2E audit 25 Jul 2026). Observed live: FOUR resident
+    // daemons alive at once (spawned 21, 22, 23 and 25 Jul) — every schedule fire
+    // or manual start added one and none ever retired. withTickLock stopped them
+    // double-SPENDING, but nothing stopped the processes accumulating, and each
+    // one polls forever. An exclusive port bind held for the PROCESS lifetime
+    // makes starting the daemon idempotent: the second instance exits at once.
+    // Port registry: 4111 turnstile · 4112 cortex · 4113 thalamus · 4114 dugout
+    // · 4115 brain tick-lock · 4116 brain daemon-singleton.
+    const { createServer: createSingleton } = await import("node:http");
+    const resident = createSingleton(() => {});
+    const isFirst = await new Promise((res) => { resident.once("error", () => res(false)); resident.listen(4116, "127.0.0.1", () => res(true)); });
+    if (!isFirst) { console.log("brain: --daemon ALREADY RESIDENT (:4116 held) — this instance exits instead of piling up."); return; }
     const pollMs = (cfg.daemon && cfg.daemon.poll_ms) || 75000;
     let stop = false, beats = 0;
     const onSig = () => { stop = true; };
@@ -964,7 +1355,7 @@ async function main() {
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
     while (!stop) {
       const bnow = new Date();
-      const bdeps = { exec: claudeExec, gexec: geminiExec, now: bnow, dry: process.argv.includes("--dry"), signals: liveSignal(bnow) };
+      const bdeps = buildDeps(bnow);   // --dry ⇒ the beat calls NOTHING real (E2E audit 25 Jul 2026)
       try {
         const hr = headroom(cfg, readLines(LEDGER), readJson(QUEUE) || {}, bnow, bdeps.signals);
         const pace = targetBurn(cfg, hr, bnow);
@@ -988,6 +1379,7 @@ async function main() {
       }
       await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= pollMs) { clearInterval(iv); res(); } }, step); });
     }
+    try { resident.close(); } catch {}                 // release the singleton for the next start
     console.log(`brain: --daemon stopped after ${beats} beat(s).`);
     return;
   }
@@ -1002,4 +1394,6 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, runPulse, pulseConfig, pulsesToday, liveSignal };
+export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, runPulse, pulseConfig, pulsesToday, liveSignal,
+  // E2E audit 25 Jul 2026 — new seams, exported so the doctor/selftest can see them
+  usageTotal, failureStreak, gatherInputs, recordJobRun, recordJobFail, attemptsOn, mergeTriggers, geminiCommand, lockVerdict, buildDeps, SHEET_PUSH_TITLE };

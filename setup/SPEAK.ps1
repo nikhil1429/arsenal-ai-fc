@@ -1,4 +1,4 @@
-# SPEAK.ps1 — the organism's spoken utterance (optional lane; see VOICE_SETUP.md)
+﻿# SPEAK.ps1 — the organism's spoken utterance (optional lane; see VOICE_SETUP.md)
 # Reads the team sheet's opening lines aloud via Windows TTS. Two sanctioned
 # utterances only (bias-to-silence law): morning sheet · full-time bell line.
 Add-Type -AssemblyName System.Speech

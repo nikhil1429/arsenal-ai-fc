@@ -37,7 +37,9 @@
 //   canonical (THE_MANAGER §4/§5/§10): weaknesses:[{id,topic,recurrence,last_seen,status,evidence[]}]
 //   additive: date, generated_at, total_reps, status(envelope), low_confidence, headline,
 //   axis_pattern{axis,concepts[],strength,note}, per-entry {axis, score}.
-//   id = STABLE topic-derived slug (never positional). recurrence = RAW int; score = weighted float.
+//   id = STABLE topic-derived slug (never positional; grouping is per TRACK+topic, so the id
+//   carries a track suffix ONLY when the same topic exists on both tracks). recurrence = RAW int;
+//   score = weighted float. last_seen / evidence dates are the captain's LOCAL day, like `date`.
 //
 // MODES: recompute (default) · selftest
 // RULES (CONDUCTOR §4): deterministic · zero-LLM · no API key · Node 22 ESM · Windows-safe
@@ -70,8 +72,16 @@ const slugify  = (s) => normText(s).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$
 const round = (x, d = 4) => (x === null ? null : Math.round(x * 10 ** d) / 10 ** d);
 const numOr = (x, dflt) => (typeof x === "number" && !Number.isNaN(x) ? x : dflt);
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// LEGACY (frozen verbatim, layering rule): raw UTC-slice date labels. E2E audit 25 Jul 2026
+// (5de388f9) found these mislabel the captain's real reps — capture.mjs stores ts as UTC "Z"
+// (both real rows in reps_log.jsonl are "…T19:00:29Z" = 00:30 IST the NEXT day), so a rep done
+// between 00:00–05:29 IST was stamped with YESTERDAY while the envelope `date` is local: the
+// morning sheet showed a weakness "last seen" a day before the session that produced it.
 const mmdd = (ts) => String(ts).slice(5, 10);
 const isoDate = (ts) => String(ts).slice(0, 10);
+// LIVE path: label misses by the captain's LOCAL calendar day (same clock as `date`).
+const localIsoDate = (ts) => localDate(new Date(Date.parse(ts)));
+const localMmdd = (ts) => localIsoDate(ts).slice(5);
 
 function loadConfig(path = CFG_PATH) {
   const d = DEFAULTS;
@@ -182,7 +192,13 @@ function isHealed(sorted, cfg) {
 function scoreOf(misses, nowMs, halflifeDays) {
   let s = 0;
   for (const m of misses) {
-    const ageDays = (nowMs - Date.parse(m.ts)) / 86400000;
+    // E2E audit 25 Jul 2026 (60e9b317): ageDays was UNCLAMPED, so a rep whose ts is in the
+    // FUTURE gave a NEGATIVE age and 0.5^negative = 2^(|age|/halflife) — one rep a year ahead
+    // scored ~2^36 ≈ 7e10 and owned "today's #1 to scout" forever, drowning every real miss.
+    // That input is reachable: reps arrive as PASTED session JSON and capture.mjs validateRep
+    // only checks ts is a non-empty string, so a Gem-emitted wrong YEAR flows straight through.
+    // Clamp at 0 ⇒ a future / clock-skewed rep is scored as "just now" (weight 1), never more.
+    const ageDays = Math.max(0, (nowMs - Date.parse(m.ts)) / 86400000);
     s += Math.pow(0.5, ageDays / halflifeDays);
   }
   return s;
@@ -205,33 +221,59 @@ function compute(reps, cfg, reg, now) {
     return { date, status: "awaiting_data", low_confidence: true, headline: null, axis_pattern: null, weaknesses: [], total_reps: 0, generated_at };
   }
 
-  // group by topic
+  // group by TRACK + topic.
+  // E2E audit 25 Jul 2026 (540b2b43): this keyed on the topic NAME alone, but concepts.json
+  // keeps concepts{} and skills{} as SEPARATE namespaces (and unregistered concept reps fall
+  // back to the raw string), so the same word on both tracks — skill "parsers" in Colab vs a
+  // concept-track Gem question on parsers — collapsed into ONE bucket. That fused timeline
+  // INVENTED relapses across tracks (correct on the skill → wrong on the concept read as a
+  // relapse) and stamped the entry with whichever track's rep happened to arrive first, which
+  // then decided axis-eligibility. Separate namespaces ⇒ separate weaknesses.
   const byTopic = new Map();
   for (const r of reps) {
-    const t = topicOf(r, reg);
-    if (!byTopic.has(t)) byTopic.set(t, { reps: [], track: r.track });
-    byTopic.get(t).reps.push(r);
+    const topic = topicOf(r, reg);
+    const key = `${r.track}\u0000${topic}`;   // NUL join: no normalized topic can contain it
+    if (!byTopic.has(key)) byTopic.set(key, { reps: [], track: r.track, topic });
+    byTopic.get(key).reps.push(r);
   }
 
   let entries = [];
-  for (const [topic, g] of byTopic) {
+  for (const g of byTopic.values()) {
+    const topic = g.topic;
     const { sorted, misses } = analyzeTopic(g.reps, reg.loaded);
     if (!misses.length) continue;                    // no qualifying miss ⇒ not a weakness (never fabricate)
     const healed = isHealed(sorted, cfg);
+    const lastTs = misses[misses.length - 1].ts;
     entries.push({
       id: slugify(topic), topic,
       recurrence: misses.length,                     // RAW int
-      last_seen: isoDate(misses[misses.length - 1].ts),
+      last_seen: localIsoDate(lastTs),               // LOCAL day (audit 5de388f9), not the UTC slice
       status: healed ? "closed" : "open",
-      evidence: misses.map((m) => `${mmdd(m.ts)} ${m.type}`),
+      evidence: misses.map((m) => `${localMmdd(m.ts)} ${m.type}`),
       axis: modeAxis(misses),                         // null for skill / no-axis / registry-absent
       score: round(scoreOf(misses, nowMs, cfg.recency_halflife_days)),
       _track: g.track,
+      _last_ts: lastTs,                               // raw ts kept for time math (see prune below)
     });
   }
 
-  // prune long-stale CLOSED entries (open never pruned)
-  entries = entries.filter((e) => e.status !== "closed" || (nowMs - Date.parse(e.last_seen)) / 86400000 <= cfg.closed_prune_days);
+  // prune long-stale CLOSED entries (open never pruned).
+  // Audit 25 Jul 2026 (5de388f9): this re-parsed last_seen as a bare date = UTC midnight, which
+  // is a different instant from the rep itself and now that last_seen is LOCAL would drift by an
+  // offset. Age the entry off its raw miss ts — the only unambiguous instant we hold.
+  entries = entries.filter((e) => e.status !== "closed" || (nowMs - Date.parse(e._last_ts)) / 86400000 <= cfg.closed_prune_days);
+
+  // id de-collision (audit 25 Jul 2026 · 540b2b43, consequence of splitting the tracks): ids stay
+  // the bare topic slug — STABLE — unless the SAME topic now exists on both tracks. Then the
+  // concept-track entry keeps the bare id ("concept" < "skill") and the other takes a track suffix,
+  // so weaknesses[] can never ship two rows the Manager would resolve to one id.
+  const takenIds = new Set();
+  for (const e of entries.slice().sort((a, b) => a.id.localeCompare(b.id) || a._track.localeCompare(b._track) || a.topic.localeCompare(b.topic))) {
+    if (!takenIds.has(e.id)) { takenIds.add(e.id); continue; }
+    let cand = `${e.id}-${e._track}`, n = 2;
+    while (takenIds.has(cand)) cand = `${e.id}-${e._track}-${n++}`;   // paranoia: two topics slugging alike on one track
+    e.id = cand; takenIds.add(cand);
+  }
 
   // envelope health
   const status = N < cfg.warming_up_min_reps ? "warming_up" : "ok";
@@ -356,6 +398,51 @@ function selftest() {
   // 16) concepts.json absent ⇒ raw topic + axis null
   const r16 = compute([...relOn("tokenization", "e"), ...relOn("chunking", "e"), ...relOn("retrieval", "e"), ...filler], cfg, EMPTY_REG, now);
   assert("concepts.json absent ⇒ axis null + no axis_pattern", find(r16, "tokenization")?.axis === null && r16.axis_pattern === null);
+
+  // --- E2E audit 25 Jul 2026 regressions -----------------------------------
+  // 17) tracks are SEPARATE namespaces (540b2b43). Old grouping keyed on the topic name only,
+  //     so these two reps fused into one bucket: one entry, recurrence 2, track of whoever
+  //     landed first. Now: two entries, one miss each, the concept one axis-eligible.
+  const m17 = [
+    mk({ concept: "parsers", track: "skill",   confidence: "knew", correct: false, day: 0 }),
+    mk({ concept: "parsers", track: "concept", confidence: "knew", correct: false, day: 3 }),
+  ];
+  const p17 = compute(m17, cfg, REG, now).weaknesses.filter((e) => e.topic === "parsers");
+  assert("track-split: same topic on both tracks ⇒ TWO entries, distinct ids, neither inflated",
+    p17.length === 2 && new Set(p17.map((e) => e.id)).size === 2 && p17.every((e) => e.recurrence === 1)
+    && !!p17.find((e) => e.axis === "a") && !!p17.find((e) => e.axis === null));
+
+  // 17b) and the fused timeline INVENTED relapses: a correct Colab skill rep used to make the
+  //      later concept miss read as "relapse". It is a plain knew-wrong — different namespace.
+  const c17 = compute([
+    mk({ concept: "parsers", track: "skill",   confidence: "knew", correct: true,  day: 0 }),
+    mk({ concept: "parsers", track: "concept", confidence: "knew", correct: false, day: 3 }),
+  ], cfg, REG, now).weaknesses.filter((e) => e.topic === "parsers");
+  assert("track-split: a skill-track correct never fabricates a concept-track relapse",
+    c17.length === 1 && c17[0].evidence[0].endsWith("knew-wrong"));
+
+  // 18) future-dated ts cannot hijack the headline (60e9b317). Unclamped, this single miss
+  //     scored 0.5^(-351/10) ≈ 2^35 and buried a real five-miss grind forever.
+  const r18 = compute([
+    mk({ concept: "futurerep", confidence: "knew", correct: false, ts: "2027-07-18T09:00:00Z" }),
+    ...[0, 1, 2, 3, 4].map((d) => mk({ concept: "realgrind", confidence: "knew", correct: false, ts: new Date(Date.parse("2026-07-25T09:00:00Z") + d * 86400000).toISOString() })),
+  ], cfg, REG, now);
+  assert("future-dated ts is clamped: one bad-year rep cannot out-score a real recurrence",
+    r18.headline?.topic === "realgrind" && find(r18, "futurerep").score <= 1 + 1e-9);
+
+  // 19) date labels are LOCAL, not the UTC slice (5de388f9). Two boundary reps: 23:30Z lands on
+  //     the NEXT local day east of UTC (the captain's IST 00:00–05:29 window — where his real
+  //     reps live), 00:30Z on the PREVIOUS local day west of it. Discriminates in any non-UTC
+  //     zone; on a box literally set to UTC the two labellings are identical by definition.
+  const lateNight = "2026-07-17T23:30:00Z", earlyAm = "2026-07-17T00:30:00Z";
+  const r19 = compute([
+    mk({ concept: "latenight", confidence: "knew", correct: false, ts: lateNight }),
+    mk({ concept: "earlyam",   confidence: "knew", correct: false, ts: earlyAm }),
+  ], cfg, REG, now);
+  const expLate = localDate(new Date(Date.parse(lateNight))), expEarly = localDate(new Date(Date.parse(earlyAm)));
+  assert("local-date: last_seen + evidence use the rep's LOCAL day, not the UTC slice of ts",
+    find(r19, "latenight").last_seen === expLate && find(r19, "earlyam").last_seen === expEarly
+    && find(r19, "latenight").evidence[0] === `${expLate.slice(5)} knew-wrong`);
 
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

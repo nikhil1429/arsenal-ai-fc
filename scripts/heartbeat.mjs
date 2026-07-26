@@ -52,12 +52,27 @@ const DEFAULTS = {
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+// E2E audit (25 Jul 2026): an order entry only has to be JSON-valid to reach
+// runAgent — and JSON-valid is not shape-valid. `{"order":["capture"]}` or an
+// entry that lost its `script` key parses fine, so the "malformed → defaults"
+// catch below never fires; the damage lands later, in runAgent's join().
+// One shape gate, used by BOTH the loader and the runner.
+const validEntry = (e) =>
+  !!e && typeof e === "object" &&
+  typeof e.name === "string" && e.name.length > 0 &&
+  typeof e.script === "string" && e.script.length > 0;
+
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
       const j = JSON.parse(readFileSync(path, "utf8"));
+      // E2E audit (25 Jul 2026): was `Array.isArray(j.order) && j.order.length`,
+      // which waved through string/shapeless entries. Now junk entries are
+      // dropped and the survivors still beat; only a fully-junk order falls back
+      // to DEFAULTS, because zero organs beating is worse than a stale order.
+      const kept = Array.isArray(j.order) ? j.order.filter(validEntry) : [];
       return {
-        order: Array.isArray(j.order) && j.order.length ? j.order : DEFAULTS.order,
+        order: kept.length ? kept : DEFAULTS.order.slice(),
         timeout_ms: typeof j.timeout_ms === "number" ? j.timeout_ms : DEFAULTS.timeout_ms,
       };
     }
@@ -79,6 +94,15 @@ const readJson = (path) => {
 
 // one agent, isolated: failure/absence never aborts the pass.
 function runAgent(entry, timeout_ms, scriptsDir = SCRIPTS, execFn = execFileSync) {
+  // E2E audit (25 Jul 2026): join() sits OUTSIDE the try, so a config entry with
+  // a non-string `script` threw ERR_INVALID_ARG_TYPE right here and aborted the
+  // whole beat — organs already run, pulse.json never written, isolation law
+  // ("one agent failing NEVER aborts the pass") broken by a single bad line of
+  // canon. A malformed entry is now just another isolated failure.
+  if (!validEntry(entry)) {
+    const name = (entry && typeof entry.name === "string" && entry.name) ? entry.name : "(malformed)";
+    return { name, ran: false, exit: null, ms: 0, note: "malformed config entry" };
+  }
   const path = join(scriptsDir, entry.script);
   const t0 = Date.now();
   if (!existsSync(path)) return { name: entry.name, ran: false, exit: null, ms: 0, note: "script missing" };
@@ -87,7 +111,18 @@ function runAgent(entry, timeout_ms, scriptsDir = SCRIPTS, execFn = execFileSync
     return { name: entry.name, ran: true, exit: 0, ms: Date.now() - t0, note: null };
   } catch (e) {
     const exit = typeof e.status === "number" ? e.status : null;
-    const note = e.killed ? "timeout" : (exit !== null ? `exit ${exit}` : "spawn error");
+    // E2E audit (25 Jul 2026): the old test was `e.killed`, which execFileSync
+    // NEVER sets — Node's checkExecSyncError ObjectAssigns only the spawnSync
+    // result {pid,output,stdout,stderr,status,signal,error} onto the thrown
+    // error; `killed` belongs to async ChildProcess. So the timeout branch was
+    // dead code and a wedged organ (hung Drive pull) was labelled "spawn error",
+    // pointing debugging at permissions instead of the hang. Verified on this
+    // machine: a timed-out child throws {code:'ETIMEDOUT', signal:'SIGTERM',
+    // status:null, killed:undefined}. e.killed is kept as a fallback so an
+    // injected execFn stub can still declare a kill.
+    const timedOut = e.code === "ETIMEDOUT" || e.killed === true ||
+                     (e.signal === "SIGTERM" && e.status === null);
+    const note = timedOut ? "timeout" : (exit !== null ? `exit ${exit}` : "spawn error");
     return { name: entry.name, ran: false, exit, ms: Date.now() - t0, note };
   }
 }
@@ -188,6 +223,34 @@ async function selftest() {
   assert("missing script isolated with note", results[2].ran === false && results[2].note === "script missing");
   assert("fixed order preserved", results.map(r => r.name).join(",") === "ok,bad,ghost");
 
+  // regression (E2E audit 25 Jul 2026): malformed canon must be an isolated
+  // organ failure, not a thrown TypeError that ends the beat. Both of these
+  // threw ERR_INVALID_ARG_TYPE out of runAgent before the fix.
+  let malThrew = false, mal = null;
+  try { mal = runAgent({ name: "noscript" }, 5000, tmp); } catch { malThrew = true; }
+  assert("entry missing `script` isolated, never throws", !malThrew && mal && mal.ran === false && mal.note === "malformed config entry");
+  let strThrew = false;
+  try { runAgent("capture", 5000, tmp); } catch { strThrew = true; }
+  assert("bare-string order entry isolated, never throws", !strThrew);
+
+  // regression (E2E audit 25 Jul 2026): loadConfig used to pass any non-empty
+  // array straight through — junk entries reached runAgent. Junk is dropped,
+  // good entries survive, and an entirely junk order still beats the DEFAULTS.
+  const cfgMixed = join(tmp, "hb_cfg_mixed.json");
+  writeFileSync(cfgMixed, JSON.stringify({ order: ["capture", { name: "noscript" }, { name: "good", script: "ok.mjs", args: [] }], timeout_ms: 4000 }));
+  const loadedMixed = loadConfig(cfgMixed);
+  assert("loadConfig drops shapeless order entries, keeps good ones", loadedMixed.order.length === 1 && loadedMixed.order[0].name === "good" && loadedMixed.timeout_ms === 4000);
+  const cfgJunk = join(tmp, "hb_cfg_junk.json");
+  writeFileSync(cfgJunk, JSON.stringify({ order: ["capture", "fsrs"] }));
+  assert("all-junk order falls back to DEFAULTS (never zero organs)", loadConfig(cfgJunk).order.length === DEFAULTS.order.length);
+
+  // regression (E2E audit 25 Jul 2026): a hung organ was reported as
+  // "spawn error" because execFileSync never sets e.killed. Real spawn, real
+  // kill — the only honest way to pin the label (~0.4s).
+  writeFileSync(join(tmp, "hang.mjs"), "Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000);");
+  const hung = runAgent({ name: "hang", script: "hang.mjs", args: [] }, 400, tmp);
+  assert("timed-out organ labelled timeout, not spawn error", hung.ran === false && hung.note === "timeout");
+
   const now = new Date(2026, 6, 12, 8, 39, 0);
   const bus = {
     readiness: { day: "2026-07-11", verdict: "AMBER" },              // 1-day Oura lag = fresh
@@ -210,9 +273,22 @@ async function selftest() {
   const brDerived = timeauditBridge({ date: "x", buckets: { Building: { pct: 40 }, Meta: { pct: 30 } } }, buckets);
   assert("bridge derives on_track when onTrack absent", brDerived.on_track === "no");
 
-  const ladderCfg = JSON.parse(readFileSync(join(STATE_DIR, "ladder_config.json"), "utf8"));
+  // E2E audit (25 Jul 2026): this read the LIVE ladder_config.json, breaking
+  // this selftest's own header promise ("no real state touched") — an ENOENT
+  // (file renamed mid genome-review) killed the run before a single check
+  // printed, and a legitimate canon edit would fail heartbeat for a defect that
+  // isn't heartbeat's. The mapping logic is what's under test, so the tiers are
+  // now an inline fixture mirroring ladder_config.json's shape. The live file
+  // is still exercised for real in `run` mode via readJson (null-safe there).
+  const ladderCfg = {
+    GREEN: { drill_modes_allowed: ["recall", "reconstruct", "defend", "novel", "negative_space"], max_drills: 3, sheet_scope: "full", nemesis_headline: "show", due_cards_may_slide: false, first_ball: "winnable_green" },
+    AMBER: { drill_modes_allowed: ["recall"], max_drills: 2, sheet_scope: "floor_plus_one", nemesis_headline: "show", due_cards_may_slide: true, first_ball: "winnable_green" },
+    RED:   { drill_modes_allowed: ["floor_touch"], max_drills: 1, sheet_scope: "floor_only", nemesis_headline: "withhold_disclose_at_postmatch", due_cards_may_slide: true, first_ball: "five_minute_floor_touch" },
+  };
   const ladRed = ladderRead({ verdict: "RED" }, ladderCfg);
   assert("RED ladder → nemesis withholding disclosed", ladRed.withheld.some(w => w.includes("nemesis")));
+  const ladAmber = ladderRead({ verdict: "AMBER" }, ladderCfg);
+  assert("AMBER caps sheet + drills, keeps nemesis headline", ladAmber.withheld.some(w => w.includes("floor_plus_one")) && ladAmber.withheld.some(w => w.includes("drills limited")) && !ladAmber.withheld.some(w => w.includes("nemesis")));
   const ladNone = ladderRead(null, ladderCfg);
   assert("missing readiness → GREEN (M-1 precedent), zero withholdings", ladNone.verdict === "GREEN" && ladNone.withheld.length === 0);
 

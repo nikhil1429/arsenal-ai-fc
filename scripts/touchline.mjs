@@ -53,6 +53,20 @@ const DEFAULTS = {
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+// THE CAPTAIN'S MIDNIGHT (E2E audit 25 Jul 2026). Both rep windows used to key
+// a rep by String(r.ts).slice(0,10) — the UTC calendar date — and then compare
+// it against localDate(now), which is IST. capture.mjs stamps ts in UTC ISO, so
+// a 00:15 IST rep on the 22nd carries "2026-07-21T18:45:00Z" and landed on the
+// 21st: a post-midnight session was INVISIBLE to struggleRead (no_data while
+// the session was live) and its concepts never cleared the weak-foot streak.
+// Same rule scorer.mjs already runs on the same ledger — the day boundary is
+// the captain's midnight, not Greenwich's. Unparseable ts ⇒ the old raw slice,
+// so a malformed line degrades exactly as before instead of throwing.
+function repDayKey(ts) {
+  const parsed = ts ? new Date(ts) : null;
+  return parsed && !Number.isNaN(parsed.getTime()) ? localDate(parsed) : String(ts || "").slice(0, 10);
+}
+
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
@@ -84,6 +98,45 @@ const readLines = (p) => {
   try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
   return out;
 };
+// raw (unparsed) lines — the upsert rewrites the history file and must carry
+// lines it cannot parse through UNTOUCHED rather than silently dropping them.
+const readRawLines = (p) => {
+  try { if (existsSync(p)) return readFileSync(p, "utf8").split("\n").filter(l => l.trim()); } catch {}
+  return [];
+};
+function writeAtomicText(path, text) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, text);
+  renameSync(tmp, path);
+}
+
+// THE FROZEN DAY (E2E audit 25 Jul 2026, HIGH). The daily history line was
+// appended under `if (!history.some(h => h.date === today))` — i.e. only the
+// FIRST run of a date ever wrote it. INSTALL_TASKS.ps1 schedules this organ
+// every 30 minutes around the clock, so the first run of each date lands at
+// ~00:00–00:30, when tunnelRead is pre_kickoff (wall_minutes_today 0) and the
+// rep window is empty (struggle no_data). That zero was then frozen for the
+// whole day: viz.mjs sums history.slice(-7) into wall_week_minutes, so the
+// constitutional weekly wall trend was permanently 0 no matter how many hours
+// the captain actually spent circling. Idempotency-per-date is preserved — the
+// day still owns exactly one line — but the line is now UPSERTED on every run
+// so it always holds the latest read of the day. Pure so the selftest can see
+// it; unparseable lines and other dates ride through verbatim.
+function mergeHistoryLine(rawLines, entry) {
+  const encoded = JSON.stringify(entry);
+  const out = [];
+  let replaced = false;
+  for (const l of (rawLines || [])) {
+    if (!l.trim()) continue;
+    let d = null;
+    try { d = JSON.parse(l).date; } catch { d = null; }        // unreadable line → keep it, never judge it
+    if (d && d === entry.date) { if (!replaced) { out.push(encoded); replaced = true; } continue; }
+    out.push(l);
+  }
+  if (!replaced) out.push(encoded);
+  return out;
+}
 
 // classify an app/title into a bucket via committed buckets.json rules (same
 // substring semantics as timeaudit.mjs — duplicated by house law, not imported).
@@ -134,7 +187,13 @@ function struggleRead(repsToday, cfg) {
   const confRank = { guessed: 0, shaky: 1, knew: 2 };
   const lat = last.map(r => typeof r.latency_ms === "number" ? r.latency_ms : null);
   const latKnown = lat.filter(x => x !== null);
-  const latRising = latKnown.length >= 3 && latKnown[latKnown.length - 1] > latKnown[0];
+  // E2E audit 25 Jul 2026: latRising used to be `last > first` — a ONE-MILLISECOND
+  // wobble between the first and last rep of the window read as "latency climbing"
+  // and was then printed as evidence in the basis. Human reaction time jitters by
+  // hundreds of ms at rest; a rise only means something when it is a slope. 1.25×
+  // is deliberately blunt (no regression fitting on six points).
+  const LAT_RISE_FACTOR = 1.25;
+  const latRising = latKnown.length >= 3 && latKnown[latKnown.length - 1] > latKnown[0] * LAT_RISE_FACTOR;
   const confFalling = confRank[last[last.length - 1].confidence] < confRank[last[0].confidence];
   const correctFrac = last.filter(r => r.correct).length / last.length;
   const wrongSameAxis = (() => {
@@ -146,10 +205,18 @@ function struggleRead(repsToday, cfg) {
   const guessedWrong = last.filter(r => !r.correct && r.confidence === "guessed").length;
   if (wrongSameAxis >= cfg.struggle.spin_axis_repeat || (guessedWrong >= 3 && correctFrac < 0.34))
     return { verdict: "spinning", basis: `wrong repeating on one axis ×${wrongSameAxis}, correct ${Math.round(correctFrac * 100)}%` };
-  if (correctFrac >= 0.5 && (latRising || confFalling))
-    return { verdict: "productive", basis: `correct holding ${Math.round(correctFrac * 100)}%, latency ${latRising ? "climbing" : "steady"}, confidence ${confFalling ? "falling" : "steady"}` };
+  // ORDER MATTERS (E2E audit 25 Jul 2026): cruising used to be tested AFTER the
+  // productive branch, so a genuine cruising window (6/6 correct, all "knew", all
+  // under fast_ms) was swallowed by `correctFrac >= 0.5 && latRising` the moment
+  // the last rep was a few ms slower than the first — cruising was very nearly
+  // unreachable and the material-too-easy signal never reached the organs reading
+  // pitch_read.json. cruising is the STRICTER predicate (every rep correct + knew
+  // + fast), so it is the one that must be asked first; productive stays the
+  // fallback it was written to be. Nothing about the productive verdict changed.
   const allFastKnew = last.every(r => r.correct && r.confidence === "knew" && (r.latency_ms === null || r.latency_ms === undefined || r.latency_ms <= cfg.struggle.fast_ms));
   if (allFastKnew) return { verdict: "cruising", basis: "fast + correct + knew across the window" };
+  if (correctFrac >= 0.5 && (latRising || confFalling))
+    return { verdict: "productive", basis: `correct holding ${Math.round(correctFrac * 100)}%, latency ${latRising ? "climbing" : "steady"}, confidence ${confFalling ? "falling" : "steady"}` };
   return { verdict: "productive", basis: `mixed window, correct ${Math.round(correctFrac * 100)}% — the forge working` };
 }
 
@@ -166,9 +233,16 @@ function tankRead(cards, cfg) {
 }
 
 // WEAK-FOOT: served-but-not-returned across consecutive history days — a fact.
-function weakFootRead(history, repsByDate, cfg) {
+// excludeDate (E2E audit 25 Jul 2026, added beside the old behaviour — omit it
+// and this function is byte-for-byte what it always was): TODAY'S history line
+// exists from the first run after midnight, and its due_served is the full
+// queue while the day has not been played yet. Counting it charged the captain
+// a deferral for a card he still had fourteen hours to play — a live session
+// read as a weak foot. A day is only evidence once it is over; main() passes
+// today so the in-progress day is watched, never judged.
+function weakFootRead(history, repsByDate, cfg, excludeDate = null) {
   const streaks = {};
-  const days = history.slice(-7);
+  const days = (excludeDate ? history.filter(h => h && h.date !== excludeDate) : history).slice(-7);
   for (const day of days) {
     const served = new Set(day.due_served || []);
     const played = repsByDate[day.date] || new Set();
@@ -232,6 +306,15 @@ async function selftest() {
   const cruising = Array(6).fill(rep(true, "knew", 3000));
   assert("struggle: fast+correct+knew = cruising", struggleRead(cruising, cfg).verdict === "cruising");
   assert("struggle: thin data = no_data (never guesses)", struggleRead([rep(true, "knew", 1)], cfg).verdict === "no_data");
+  // REGRESSION (E2E audit 25 Jul 2026): 6/6 correct, all "knew", all fast, last
+  // rep 200ms slower than the first. Old order returned "productive" (DO NOTHING)
+  // and the too-easy signal never left this organ.
+  const cruisingJitter = [rep(true, "knew", 3000), rep(true, "knew", 2900), rep(true, "knew", 3100), rep(true, "knew", 3050), rep(true, "knew", 2950), rep(true, "knew", 3200)];
+  assert("struggle: cruising is reachable — a 200ms wobble is not 'struggle'", struggleRead(cruisingJitter, cfg).verdict === "cruising");
+  // REGRESSION: same wobble in a MIXED window must not be reported as evidence
+  // of climbing latency (old latRising was `last > first`, epsilon-free).
+  const wobble = [rep(true, "knew", 3000), rep(true, "knew", 2900), rep(false, "knew", 3100), rep(true, "knew", 3050), rep(true, "knew", 2950), rep(true, "knew", 3200)];
+  assert("struggle: a 200ms wobble is not cited as 'latency climbing'", !struggleRead(wobble, cfg).basis.includes("climbing"));
 
   // TANK
   const tank = tankRead({ hardest_due: ["a", "b", "c", "d", "e", "f", "g", "h"] }, cfg);
@@ -248,6 +331,29 @@ async function selftest() {
   const wf = weakFootRead(hist, repsBy, cfg);
   assert("weak-foot: 3-day served-not-returned streak fires (a fact, not a fit)", wf.streaks.some(s => s.concept === "chunking" && s.n === 3));
   assert("weak-foot: returned concept resets", !wf.streaks.some(s => s.concept === "embeddings"));
+  // REGRESSION (E2E audit 25 Jul 2026): today's line is already in history from
+  // the 00:00 run. Counted, it charged a 4th deferral for a card the captain
+  // still had all day to play; excluded, the streak is the 3 days that are over.
+  const wfLive = weakFootRead([...hist, { date: "2026-07-12", due_served: ["chunking"] }], repsBy, cfg, "2026-07-12");
+  assert("weak-foot: the IN-PROGRESS day is watched, never judged", wfLive.streaks.some(s => s.concept === "chunking" && s.n === 3));
+
+  // DAY-KEY — the captain's midnight (E2E audit 25 Jul 2026). Built from a LOCAL
+  // 00:15 instant, so the ISO string it produces is the previous UTC day on any
+  // clock east of Greenwich (IST = the captain's).
+  const postMidnight = new Date(2026, 6, 22, 0, 15, 0);
+  assert("reps key to the captain's local day, not the UTC ISO slice", repDayKey(postMidnight.toISOString()) === "2026-07-22");
+  assert("day-key: unparseable ts degrades to the old raw slice (never throws)", repDayKey("2026-07-22-nonsense") === "2026-07-22" && repDayKey(null) === "");
+
+  // HISTORY UPSERT — one line per date, refreshed all day (E2E audit 25 Jul 2026)
+  const rawHist = [JSON.stringify({ date: "2026-07-11", wall_minutes: 40, struggle: "productive" }), "{ not json", JSON.stringify({ date: "2026-07-12", wall_minutes: 0, struggle: "no_data" })];
+  const merged = mergeHistoryLine(rawHist, { date: "2026-07-12", wall_minutes: 36, struggle: "productive" });
+  assert("history: today's line is UPSERTED, not frozen at the 00:00 run",
+    merged.length === 3 && JSON.parse(merged[2]).wall_minutes === 36 && JSON.parse(merged[2]).struggle === "productive");
+  assert("history: older days + unreadable lines ride through verbatim",
+    JSON.parse(merged[0]).wall_minutes === 40 && merged[1] === "{ not json");
+  const appended = mergeHistoryLine(rawHist, { date: "2026-07-13", wall_minutes: 5 });
+  assert("history: a new date appends, still exactly one line per date",
+    appended.length === 4 && appended.filter(l => l.includes("2026-07-13")).length === 1);
 
   // EAR + no-push law
   const read = buildRead({ tunnel: t1, struggle: sp, tank, weak_foot: wf, now });
@@ -288,7 +394,7 @@ async function main() {
   const buckets = readJson(join(STATE_DIR, "buckets.json"));
   const cards = readJson(join(STATE_DIR, "cards.json"));
   const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
-  const repsToday = reps.filter(r => String(r.ts || "").slice(0, 10) === today);
+  const repsToday = reps.filter(r => repDayKey(r.ts) === today);   // captain's midnight, not UTC's (E2E audit 25 Jul 2026)
   const history = readLines(HIST);
   const prevSameDay = readJson(OUT);
   const prev = prevSameDay && prevSameDay.date === today ? prevSameDay : null;
@@ -306,7 +412,7 @@ async function main() {
 
   const repsByDate = {};
   for (const r of reps) {
-    const d = String(r.ts || "").slice(0, 10);
+    const d = repDayKey(r.ts);                                    // same day boundary as repsToday (E2E audit 25 Jul 2026)
     (repsByDate[d] = repsByDate[d] || new Set()).add(String(r.concept || "").toLowerCase());
   }
 
@@ -314,22 +420,25 @@ async function main() {
     tunnel: tunnelRead(windowEvents, buckets, cfg, now, prev),
     struggle: struggleRead(repsToday, cfg),
     tank: tankRead(cards, cfg),
-    weak_foot: weakFootRead(history, repsByDate, cfg),
+    weak_foot: weakFootRead(history, repsByDate, cfg, today),     // today is watched, not judged (E2E audit 25 Jul 2026)
     now,
   });
   writeAtomic(OUT, read);
-  // one daily summary line in history (idempotent per date: only append once/day)
-  if (!history.some(h => h.date === today)) {
-    appendFileSync(HIST, JSON.stringify({
-      date: today,
-      due_served: (cards && cards.hardest_due) || [],
-      wall_minutes: read.tunnel.wall_minutes_today,
-      struggle: read.struggle.verdict,
-    }) + "\n");
-  }
+  // one daily summary line in history — still exactly one per date, but now
+  // refreshed on every run instead of frozen at the 00:00 run (E2E audit 25 Jul
+  // 2026). Append while the date is new (cheap, append-only); rewrite the file
+  // atomically once the line exists, so a crash can never truncate history.
+  const line = {
+    date: today,
+    due_served: (cards && cards.hardest_due) || [],
+    wall_minutes: read.tunnel.wall_minutes_today,
+    struggle: read.struggle.verdict,
+  };
+  if (!history.some(h => h.date === today)) appendFileSync(HIST, JSON.stringify(line) + "\n");
+  else writeAtomicText(HIST, mergeHistoryLine(readRawLines(HIST), line).join("\n") + "\n");
   console.log(`touchline: tunnel=${read.tunnel.state} struggle=${read.struggle.verdict} bench=${read.tank.benched.length} weak-foot=${read.weak_foot.streaks.length} → ${OUT}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject };
+export { tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject, repDayKey, mergeHistoryLine };

@@ -38,6 +38,14 @@ const WALL_DATA = join(STATE_DIR, "wall_data.json");
 const WALL_HTML = join(CLUB_DIR, "wall.html");
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// E2E audit 25 Jul 2026: every ledger/reps row is stamped `now.toISOString()`
+// — UTC, with the Z (brain.mjs, capture.mjs). Slicing that string and comparing
+// it to a LOCAL date silently dates an IST 00:00–05:29 call to YESTERDAY, so
+// the brain panel dropped exactly the overnight calls it exists to celebrate,
+// and reps logged before 05:30 vanished from "reps today". Bucket by PARSED
+// local day (brain.mjs's pulsesToday idiom); fall back to the raw slice only
+// when the ts refuses to parse, so a malformed row behaves as it always did.
+const tsLocalDay = (ts) => { const d = new Date(ts); return Number.isNaN(d.getTime()) ? String(ts || "").slice(0, 10) : localDate(d); };
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readLines = (p) => {
   const out = [];
@@ -70,7 +78,7 @@ function assembleWallData(bus, now = new Date()) {
 
   // brain meter from ledger
   const today = localDate(now);
-  const todayCalls = (brainLedger || []).filter(l => String(l.ts || "").slice(0, 10) === today);
+  const todayCalls = (brainLedger || []).filter(l => tsLocalDay(l.ts) === today);   // local day, not the UTC slice (E2E audit 25 Jul 2026)
   const overnight = todayCalls.filter(l => { const h = new Date(l.ts).getHours(); return h >= 22 || h < 8; });
 
   return {
@@ -313,6 +321,21 @@ function buildFilmKit(d, notebook) {
   return L.join("\n") + "\n";
 }
 
+// POSTER FRESHNESS — E2E audit 25 Jul 2026: the old gate was
+// `posterOk || existsSync(club/poster.svg)`, but poster.svg is a FIXED, undated
+// filename that nothing ever cleans up. On any day the poster job didn't run,
+// posterOk was false yet the old file was still on disk, so the shelf kept
+// serving last week's image under the fixed caption "today's poster" — the one
+// thing the wall may never do, present stale media as current. Each accepted
+// poster now also drops a date-stamped twin (poster_<date>.svg) and the flag
+// rides ONLY on today's stamp, the same way the team-talk mp3 filenames already
+// carry their date. poster.svg stays as the served path (the render, the
+// Antigravity brief and the club's relative links all point at it) — it is now
+// only ever *shown* on a day it was actually written.
+function posterFlag(posterOkToday, exists, dir, today) {
+  return !!(posterOkToday || exists(join(dir, `poster_${today}.svg`)));
+}
+
 // COMMITMENTS — his own kal-lines and what happened next. Won days get the
 // tick; a miss reads "went again" (no-shame law); the newest waits unjudged.
 function renderCommitments(d) {
@@ -432,7 +455,13 @@ async function selftest() {
     tape_room: { doubts_retired: 24, queue: Array(88).fill({}) },
     history: [{ wall_minutes: 24, struggle: "productive" }, { wall_minutes: 10, struggle: "productive" }],
     readiness: { verdict: "GREEN", hrv: 22.7, rhr: 76.4 },
-    brainLedger: [{ ts: "2026-07-12T02:10:00", total_tokens: 52000 }, { ts: "2026-07-12T13:30:00", total_tokens: 8000 }],
+    // ts EXACTLY as brain.mjs writes it — `now.toISOString()`, UTC, with the Z.
+    // E2E audit 25 Jul 2026: the old fixture was timezone-naive
+    // ("2026-07-12T02:10:00"), which JS parses as LOCAL time, so it agreed with
+    // the buggy UTC string-slice and hid the very bug this panel suffers from.
+    // 02:10 local is the overnight call; in IST it serialises to the PREVIOUS
+    // UTC day, which is precisely what used to make it disappear.
+    brainLedger: [{ ts: new Date(2026, 6, 12, 2, 10, 0).toISOString(), total_tokens: 52000 }, { ts: new Date(2026, 6, 12, 13, 30, 0).toISOString(), total_tokens: 8000 }],
     vitals: { bleeds: [{ kind: "effort_uncaptured" }] },
     drills: { drills: [{ kind: "tape_room", probe_type_emoji: "🟣" }] },
     twin: { voice: null },
@@ -444,7 +473,18 @@ async function selftest() {
   assert("doubts_retired + matches_played render big", html.includes(">24<") && html.includes(">12<"));
   assert("NO RAW BIOMETRICS — hrv/rhr numbers never render", !html.includes("22.7") && !html.includes("76.4"));
   assert("body strip carries verdict only", html.includes("GREEN") && html.includes("verdict only"));
-  assert("brain meter shows overnight sharpening", html.includes("overnight") && html.includes("60,000"));
+  // E2E audit 25 Jul 2026: `html.includes("overnight")` could never fail —
+  // renderBrain always prints the literal label — so the overnight half of this
+  // check was vacuous. Assert the RENDERED COUNTS instead.
+  assert("brain meter shows overnight sharpening (exact counts, not just the label)", html.includes("2 call(s) today · 1 overnight") && html.includes("60,000"));
+  // REGRESSION (E2E audit 25 Jul 2026): a 03:00-local brain tick is written by
+  // brain.mjs as a UTC ts whose DATE is yesterday. It must still count as
+  // today's overnight sharpening. Under the old `String(l.ts).slice(0,10)`
+  // filter this row was dropped and every counter read 0.
+  const utcBleed = assembleWallData({ history: [], brainLedger: [{ ts: new Date(2026, 6, 12, 3, 0, 0).toISOString(), total_tokens: 1234 }] }, now);
+  assert("brain ledger buckets by LOCAL day, never the raw UTC ts slice",
+    utcBleed.brain.calls_today === 1 && utcBleed.brain.overnight_calls === 1 && utcBleed.brain.tokens_today === 1234);
+  assert("an unparseable ts still can't fake a call into today", assembleWallData({ history: [], brainLedger: [{ ts: "garbage" }, {}] }, now).brain.calls_today === 0);
   assert("KAL-line front and center", html.includes("pehla move: context Re-Jirah"));
   assert("wall trend weekly-only wording", html.includes("wall-minutes this week") && html.includes("never a daily meter"));
 
@@ -496,6 +536,15 @@ async function selftest() {
   // it, when) — a vanished panel reads as broken. RED-day hiding still wins.
   assert("MEDIA shelf: empty state says the night shift stocks it (never a dead shell)", renderWall(assembleWallData(bus, now), null).includes("night shift stocks"));
   assert("MEDIA panel hidden on RED (minimal wall law wins)", !renderWall(assembleWallData({ ...bus, readiness: { verdict: "RED" }, media: { teamtalk_am: true } }, now), null).includes("<audio"));
+  // REGRESSION (E2E audit 25 Jul 2026): the poster flag used to read
+  // `posterOk || exists(club/poster.svg)` — an undated file nothing cleans up —
+  // so last week's poster kept rendering under the caption "today's poster".
+  // The flag now rides only on a date-stamped twin. Fake fs, no disk touched.
+  const staleUndatedOnly = (p) => /poster\.svg$/.test(p);                    // yesterday's file still lying around
+  const datedTwinToo     = (p) => staleUndatedOnly(p) || p.endsWith(`poster_2026-07-12.svg`);
+  assert("a stale undated poster.svg no longer counts as today's poster", posterFlag(false, staleUndatedOnly, CLUB_DIR, "2026-07-12") === false);
+  assert("a poster stamped with today's date does count", posterFlag(false, datedTwinToo, CLUB_DIR, "2026-07-12") === true);
+  assert("today's freshly-sanitized poster counts even before the stamp lands", posterFlag(true, () => false, CLUB_DIR, "2026-07-12") === true);
   const kit = buildFilmKit(mediaData, { moments: [{ date: "2026-07-10", line: "the Tuesday you thought you'd break and didn't", result: "HIT" }] });
   assert("film kit: NotebookLM source doc in true numbers", kit.includes("Video Overview") && kit.includes("Doubts retired: 24") && kit.includes("Matches played: 12"));
   assert("film kit folds real notebook moments", kit.includes("the Tuesday you thought"));
@@ -547,7 +596,7 @@ async function main() {
     kal_line: kal,
     pitch_read: readJson(join(STATE_DIR, "pitch_read.json")),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
-    repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === today).length,
+    repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => tsLocalDay(r.ts) === today).length,   // same UTC-slice bug as the ledger (E2E audit 25 Jul 2026)
   };
   // COMMITMENTS (U4): last week of kal-lines + what the next day said
   const commitments = [];
@@ -569,12 +618,18 @@ async function main() {
   const posterPath = join(STATE_DIR, "brain_out", "poster", today + ".md");
   if (existsSync(posterPath)) {
     const cleanPoster = sanitizeGemini(readFileSync(posterPath, "utf8"));
-    if (cleanPoster && /^<svg/i.test(cleanPoster)) { writeAtomic(join(CLUB_DIR, "poster.svg"), cleanPoster); posterOk = true; }
+    // served path + a date-stamped twin: the twin is the PROOF that today's
+    // poster exists (E2E audit 25 Jul 2026 — see posterFlag).
+    if (cleanPoster && /^<svg/i.test(cleanPoster)) {
+      writeAtomic(join(CLUB_DIR, "poster.svg"), cleanPoster);
+      writeAtomic(join(CLUB_DIR, `poster_${today}.svg`), cleanPoster);
+      posterOk = true;
+    }
   }
   bus.media = {
     teamtalk_am: existsSync(join(CLUB_DIR, "media", `teamtalk_${today}_am.mp3`)),
     teamtalk_pm: existsSync(join(CLUB_DIR, "media", `teamtalk_${today}_pm.mp3`)),
-    poster: posterOk || existsSync(join(CLUB_DIR, "poster.svg")),
+    poster: posterFlag(posterOk, existsSync, CLUB_DIR, today),
     filmkit: true,   // written below, every render
   };
   const data = assembleWallData(bus, now);
@@ -583,7 +638,11 @@ async function main() {
   writeAtomic(join(CLUB_DIR, `filmkit_${today}.md`), kit);
   try {
     const gdir = "G:\\My Drive\\arsenal";
-    if (existsSync(gdir)) writeFileSync(join(gdir, `filmkit_${today}.md`), kit);
+    // writeAtomic, not a bare writeFileSync (E2E audit 25 Jul 2026): every other
+    // output in this file is tmp+rename, and this one is read by an EXTERNAL
+    // process — Drive's sync uploader / a NotebookLM ingest — which can open the
+    // file mid-write and ship a truncated source. Same tmp+rename discipline.
+    if (existsSync(gdir)) writeAtomic(join(gdir, `filmkit_${today}.md`), kit);
   } catch { }
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
   const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;

@@ -41,10 +41,27 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
 // 17 Jul: the dreams ride Claude (cognition law) — the lane/borrow machinery
 // stays as the ROLLOUT BUDGET; lane.key is now just a slot label.
-import { claudeGen } from "./claudegen.mjs";
+// E2E audit 25 Jul 2026: this pulled the SYNC claudeGen (execFileSync). Every
+// `await gen(...)` inside Promise.all therefore blocked the whole event loop, so
+// the M16 "PARALLEL lanes" were strictly serial — a full stadium night was ~108
+// blocking `claude -p` calls back to back (30 min to hours for one hourly pass,
+// passes overlapping each other). claudeGenAsync returns the SAME shape off a
+// real promise, so Promise.all across lanes finally buys real concurrency while
+// each lane stays serial for RPM sanity. (It also removes the sync-return trap
+// that made the old `gen(...).catch(...)` a TypeError.)
+import { claudeGenAsync } from "./claudegen.mjs";
 import { loadBoard, headroomOf, recordUse, record429, stateOf } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
 import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the thalamus owns bg_queue.jsonl
+
+// E2E audit 25 Jul 2026: claudeGen is SYNCHRONOUS (execFileSync) and returns a
+// plain object — calling .catch() on it is a TypeError that kills the whole pass
+// the instant the LLM lane actually works. A thunk + try/catch tolerates BOTH a
+// sync return and a promise, so injected async deps keep working too.
+const genSafe = async (fn) => { try { return await fn(); } catch { return { ok: false }; } };
+// THE DEFAULT LANE GENERATOR — async by law (see the import note above). Named so
+// the selftest can prove it never hands back a synchronous value again.
+const defaultGen = (p, _lane) => claudeGenAsync(p, "sonnet");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -75,8 +92,16 @@ function weakVector(deps = {}) {
   for (const d of (cal && cal.danger_zone) || []) out.push({ concept: d.topic || d.concept, why: "confident-but-wrong (danger zone)" });
   const ls = deps.ls !== undefined ? deps.ls : readJson(join(STATE_DIR, "learning_state.json"));
   const concepts = (ls && (ls.concepts || [])) || [];
+  // E2E audit 25 Jul 2026: this leg read c.trend / c.trajectory / c.name — keys the
+  // PRODUCER never writes. learning_state.mjs emits concepts as
+  // { id, track, axis, fluency, velocity: { slope: "stalling"|"regressing"|... }, edge }
+  // (learning_state.mjs:185,224), so "stalling concepts" — one of the three advertised
+  // signals — was structurally dead: a concept could stall for weeks and never once
+  // reach a dream. Mirrors examiner.mjs:75; the old keys stay in the chain (layering,
+  // never replace) so injected/older shapes keep reading.
   for (const c of (Array.isArray(concepts) ? concepts : [])) {
-    if (["stalling", "regressing"].includes(String(c.trend || c.trajectory || ""))) out.push({ concept: c.name || c.concept, why: `trajectory ${c.trend || c.trajectory}` });
+    const slope = String((c.velocity && c.velocity.slope) || c.trend || c.trajectory || "");
+    if (["stalling", "regressing"].includes(slope)) out.push({ concept: c.id || c.name || c.concept, why: `trajectory ${slope}` });
   }
   const twin = deps.twin !== undefined ? deps.twin : readJson(join(STATE_DIR, "twin.json"));
   for (const m of (twin && twin.markets) || []) {
@@ -89,6 +114,7 @@ function weakVector(deps = {}) {
 // ---------------------------------------------------------------------------
 // THE GATES — away · tone · headroom (all three, or no dream)
 // ---------------------------------------------------------------------------
+const AFK_STALE_MS = 30 * 60 * 1000;                 // how stale the LAST AFK heartbeat may be before we stop trusting it
 async function isAway(deps = {}) {
   const fetchFn = deps.fetchFn || fetch;
   try {
@@ -102,7 +128,17 @@ async function isAway(deps = {}) {
     const ev = await (await fetchFn(`${AW}/api/0/buckets/${encodeURIComponent(afk)}/events?limit=1`)).json();
     const last = ev && ev[0];
     if (!last) return { away: false, why: "no AFK events" };
-    const away = last.data && last.data.status === "afk" && (Date.now() - new Date(last.timestamp).getTime()) < 3600000 * 6;
+    // E2E audit 25 Jul 2026: the freshness test was `now - event.timestamp < 6h`,
+    // i.e. it measured from the event's START. aw-watcher-afk merges a continuous
+    // AFK stretch into ONE event: `timestamp` stays pinned at the moment he walked
+    // away while `duration` grows on every heartbeat. So after 6 hours away the
+    // check flipped to "present per ActivityWatch" and the Rest Room refused to
+    // dream for the rest of the night — it went blind during exactly the longest,
+    // most borrowable absences (sleep 23:00-07:00: every tick from ~05:00 skipped).
+    // Freshness now rides the event's END, which is the thing that actually proves
+    // the watcher is still alive; the window is short for that reason.
+    const endMs = new Date(last.timestamp).getTime() + (Number(last.duration) || 0) * 1000;
+    const away = !!(last.data && last.data.status === "afk") && (Date.now() - endMs) < AFK_STALE_MS;
     return { away, why: away ? "AFK per ActivityWatch" : "present per ActivityWatch" };
   } catch { return { away: false, why: "AFK check failed — assume present (never dream over his shoulder)" }; }
 }
@@ -113,9 +149,16 @@ async function isAway(deps = {}) {
 // legal scratch cortex. Each lane may spend ONLY its own headroom
 // (ceiling·(1−reserve) − used): use-it-or-lose-it quota, blast radius $0.
 function borrowableTanks(board, keys = []) {
+  // E2E audit 25 Jul 2026: this ALSO required `keys[t.key_index]` — a live GEMINI
+  // key — to legalize a lane. Since the 17 Jul swap every rollout rides `claude -p`,
+  // so a missing Gemini key says nothing about whether the lane can run. The moment
+  // the captain cleaned up the now-useless GEMINI_API_KEY entries, borrowableTanks
+  // would return [] forever and the whole Rest Room would die quietly behind the
+  // misleading message "idle-tank headroom 0 < 8". The key stays as the slot LABEL
+  // (advisory); enabled · non-COLD · measured headroom are the only real gates.
   return board.tanks
-    .filter(t => t.enabled && t.key_index !== null && ["HOT", "WARM"].includes(stateOf(t)) && keys[t.key_index])
-    .map(t => ({ tank: t, key: keys[t.key_index], budget: headroomOf(t) }))
+    .filter(t => t.enabled && t.key_index !== null && ["HOT", "WARM"].includes(stateOf(t)))
+    .map(t => ({ tank: t, key: keys[t.key_index] || null, budget: headroomOf(t) }))
     .filter(l => l.budget > 0);
 }
 
@@ -160,9 +203,19 @@ async function dream(deps = {}) {
   const lanes = borrowableTanks(board, keys);
   const totalBudget = lanes.reduce((a, l) => a + l.budget, 0);
   if (totalBudget < 8) return { ok: false, skipped: `idle-tank headroom ${totalBudget} < 8 — the stadium only spends use-it-or-lose-it quota` };
-  const nRoll = Math.min(MAX_ROLLOUTS_NIGHT, totalBudget, weak.length * ROLLOUTS_PER_WEAK);
+  // E2E audit 25 Jul 2026 — THE VERIFICATION RESERVE. The planner used to hand
+  // EVERY unit of measured headroom to rollouts; the verification phase then spent
+  // up to 8 MORE units, round-robin, with no budget check at all. A lane that had
+  // exactly exhausted its headroom kept absorbing counter-rollouts, so the spend
+  // ran past the ceiling·(1−reserve) line that headroomOf protects ("never the
+  // core") and that this file's LAWS header calls inviolable. Counter-rollouts are
+  // now BUDGETED FIRST — they are the cheaper half of the dream, and unverified
+  // ammunition is worth less than none — and each lane's remaining budget is
+  // tracked through BOTH phases (see lane.spent below).
+  const verifyReserve = Math.min(8, Math.max(1, Math.floor(totalBudget * 0.25)));
+  const nRoll = Math.min(MAX_ROLLOUTS_NIGHT, Math.max(0, totalBudget - verifyReserve), weak.length * ROLLOUTS_PER_WEAK);
   // round-robin the rollouts onto lanes, capped by each lane's OWN budget
-  const plan = lanes.map(l => ({ ...l, jobs: [] }));
+  const plan = lanes.map(l => ({ ...l, jobs: [], spent: 0 }));
   let placed = 0;
   while (placed < nRoll && plan.some(l => l.jobs.length < l.budget)) {
     for (const lane of plan) {
@@ -172,9 +225,17 @@ async function dream(deps = {}) {
       placed++;
     }
   }
-  const gen = deps.generate || ((p, lane) => claudeGen(p, "sonnet"));
+  const gen = deps.generate || defaultGen;
   const use = deps.recordUse || recordUse;
   const fault = deps.record429 || record429;
+  // E2E audit 25 Jul 2026: recordUse/record429 are non-transactional
+  // load→mutate→save passes over tanks.json, and nightshift/council write the same
+  // file at night. On Windows a renameSync onto a file another process holds throws
+  // EPERM — and that throw came straight out of the lane, rejected the Promise.all
+  // and killed the whole dream mid-pass, losing every rollout already paid for.
+  // A gauge write is TELEMETRY: it must never be able to kill the thing it measures.
+  const safeUse = (id, units, naive) => { try { use(id, units, naive); } catch { } };
+  const safeFault = (id) => { try { fault(id); } catch { } };
   const rollouts = [];
   // THE STADIUM — lanes drain in PARALLEL; inside a lane the calls stay serial
   // (per-project RPM is the real ceiling, not concurrency). A wire 429 STANDS
@@ -182,10 +243,14 @@ async function dream(deps = {}) {
   // floors the learned ceiling) — a dry lane never burns its whole budget.
   await Promise.all(plan.map(async (lane) => {
     for (const job of lane.jobs) {
-      const r = await gen(rolloutPrompt(job.w, job.persona), lane).catch(() => ({ ok: false }));
-      use(lane.tank.id, 1, 3000);                    // measured spend on ITS OWN gauge + naive-shadow
+      const r = await genSafe(() => gen(rolloutPrompt(job.w, job.persona), lane));
+      safeUse(lane.tank.id, 1, 3000);                // measured spend on ITS OWN gauge + naive-shadow
+      lane.spent++;                                  // …and on the lane's own remaining-budget counter (audit 25 Jul)
       if (!r.ok) {
-        if (r.status === 429) { fault(lane.tank.id); lane.dry = true; break; }
+        // audit 25 Jul: claudeGen signals a plan/rate limit as `limit_hit`; it has
+        // no `status` field, so the old `r.status === 429` never fired and a dry
+        // lane silently burned its whole budget. `status` kept for injected deps.
+        if (r.limit_hit || r.status === 429) { safeFault(lane.tank.id); lane.dry = true; break; }
         continue;
       }
       try {
@@ -201,19 +266,42 @@ async function dream(deps = {}) {
   // "broken" → DROPPED (better no ammunition than wrong ammunition); a lane
   // hiccup keeps the draft but marks it unverified (drafts are inert by law).
   const entries = [];
-  const liveLanes = plan.filter(l => !l.dry);
-  await Promise.all(clusters.map(async (c, i) => {
-    const lane = liveLanes.length ? liveLanes[i % liveLanes.length] : plan[i % plan.length];
-    const r = await gen(counterPrompt(c), lane).catch(() => ({ ok: false }));
-    use(lane.tank.id, 1, 2000);
-    if (!r.ok && r.status === 429) fault(lane.tank.id);
+  // E2E audit 25 Jul 2026 — TWO defects lived in the old one-liner
+  //   `const lane = liveLanes.length ? liveLanes[i % liveLanes.length] : plan[i % plan.length];`
+  // (1) no remaining-budget check: a lane already at its measured headroom still
+  //     absorbed counter-spend, breaking "each lane may spend ONLY its own headroom";
+  // (2) the fallback: when EVERY lane had stood down dry (rate-limited), it happily
+  //     fired 8 more counter-rollouts through those same dead lanes at the very
+  //     engine that just refused us — spending past recorded ceilings to get
+  //     nothing. Now the assignment is computed UP FRONT against live lanes that
+  //     still have budget, each unit CLAIMED synchronously (no two counter-rollouts
+  //     can share the last slot across the parallel awaits), and a cluster with no
+  //     legal lane simply keeps its draft UNVERIFIED — inert by law, honest.
+  const verifyLanes = plan.filter(l => !l.dry && l.spent < l.budget);
+  const assign = [];
+  let vi = 0;
+  for (const c of clusters) {
+    let lane = null;
+    for (let k = 0; k < verifyLanes.length; k++) {
+      const cand = verifyLanes[(vi + k) % verifyLanes.length];
+      if (cand.spent < cand.budget) { lane = cand; vi = (vi + k + 1) % verifyLanes.length; break; }
+    }
+    if (lane) lane.spent++;                          // claim the unit before any await
+    assign.push({ c, lane });
+  }
+  await Promise.all(assign.map(async ({ c, lane }) => {
     let verified = null;
-    if (r.ok) {
-      try {
-        const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
-        const v = JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw);
-        verified = v.verdict === "sound" ? true : v.verdict === "broken" ? false : null;
-      } catch { }
+    if (lane) {
+      const r = await genSafe(() => gen(counterPrompt(c), lane));
+      safeUse(lane.tank.id, 1, 2000);
+      if (!r.ok && (r.limit_hit || r.status === 429)) safeFault(lane.tank.id);
+      if (r.ok) {
+        try {
+          const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+          const v = JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw);
+          verified = v.verdict === "sound" ? true : v.verdict === "broken" ? false : null;
+        } catch { }
+      }
     }
     if (verified === false) return;
     entries.push({ concept: c.concept, stall_signature: c.stall_point, reframe: c.reframe_15s, drill: c.drill, votes: c.votes, verified: verified === true });
@@ -242,19 +330,32 @@ async function drainBg(deps = {}) {
   if (!open.length) return { ok: true, drained: 0, note: "no suppressed thoughts waiting" };
   const board = deps.board || loadBoard();
   const keys = deps.keys || loadHippoKeys();
-  const lanes = borrowableTanks(board, keys).filter(l => deps.away === true || !["T1", "T2"].includes(l.tank.id));
+  const lanes = borrowableTanks(board, keys)
+    .filter(l => deps.away === true || !["T1", "T2"].includes(l.tank.id))
+    .map(l => ({ ...l, spent: 0 }));                 // audit 25 Jul: the drain must respect budgets too (see the lane pick below)
   if (!lanes.length) return { ok: false, skipped: "no borrowable lane — the thoughts keep waiting (never spend the core)" };
-  const gen = deps.generate || ((p, lane) => claudeGen(p, "sonnet"));
+  const gen = deps.generate || defaultGen;
   const use = deps.recordUse || recordUse;
+  // same law as the stadium: a gauge write is telemetry and may never kill the drain
+  const safeUse = (id, units, naive) => { try { use(id, units, naive); } catch { } };
   const post = deps.post || (async (body) => { const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); });
   const batch = open.slice(0, BG_DRAIN_CAP);
   let drained = 0;
   for (let i = 0; i < batch.length; i++) {
     const b = batch[i];
-    const lane = lanes[i % lanes.length];
+    // E2E audit 25 Jul 2026: this was `lanes[i % lanes.length]` — round-robin with
+    // NO remaining-budget check, so a lane whose whole headroom was 1 could be
+    // charged three drain jobs, past the reserve line. Keep the round-robin shape
+    // (start at i, scan forward) but take only a lane that still has budget; when
+    // none does, the remaining thoughts simply stay queued — honest retry, the
+    // drain's own stated law, never a raid on the core.
+    let lane = null;
+    for (let k = 0; k < lanes.length; k++) { const cand = lanes[(i + k) % lanes.length]; if (cand.spent < cand.budget) { lane = cand; break; } }
+    if (!lane) break;
+    lane.spent++;
     const spot = b.spotlight || {};
-    const r = await gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly. THE MOMENT: ${JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600)}. Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane).catch(() => ({ ok: false }));
-    use(lane.tank.id, 1, 2500);
+    const r = await genSafe(() => gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly. THE MOMENT: ${JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600)}. Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane));
+    safeUse(lane.tank.id, 1, 2500);
     if (!r.ok) continue;
     try {
       const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
@@ -324,6 +425,51 @@ async function selftest() {
   assert("no REAL weak points → honest skip (never dreams fabricated cracks)", (await dream({ ...base, weak: [] })).skipped.includes("nothing honest"));
   assert("no lane headroom → no dream (use-it-or-lose-it only, $0 blast radius)", (await dream({ ...base, board: boardFix(2) })).skipped.includes("headroom"));
 
+  // E2E audit 25 Jul 2026 — THE WEAK-POINT VECTOR must read the PRODUCER'S schema.
+  // learning_state.mjs writes { id, fluency, velocity: { slope } }; the old code
+  // looked for c.trend/c.trajectory/c.name, so the "stalling concepts" leg was dead
+  // wire — a stalling concept could never reach a dream.
+  {
+    const wReal = weakVector({ calibration: null, twin: null, ls: { concepts: [
+      { id: "attention", track: "concept", fluency: "🔴 learning", velocity: { slope: "stalling" } },
+      { id: "rag", track: "concept", fluency: "🟢 fluent", velocity: { slope: "improving" } },
+    ] } });
+    assert("WEAK VECTOR: the producer's real schema (id + velocity.slope) feeds the dream", wReal.length === 1 && wReal[0].concept === "attention" && wReal[0].why.includes("stalling"));
+    const wLegacy = weakVector({ calibration: null, twin: null, ls: { concepts: [{ name: "kv cache", trend: "regressing" }] } });
+    assert("WEAK VECTOR: the legacy trend/name shape still reads (layering, never replace)", wLegacy.length === 1 && wLegacy[0].concept === "kv cache");
+  }
+
+  // E2E audit 25 Jul 2026 — THE AFK CLOCK. aw-watcher-afk merges a continuous
+  // absence into ONE event whose `timestamp` stays at the moment he left while
+  // `duration` grows; measuring staleness from the START declared him "present"
+  // after 6h, so the Rest Room went blind during the longest absences.
+  {
+    const mkFetch = (evt) => async (url) => String(url).includes("/events")
+      ? { ok: true, json: async () => [evt] }
+      : { ok: true, json: async () => ({ "aw-watcher-afk_desktop": { id: "aw-watcher-afk_desktop" } }) };
+    const hoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();
+    const asleep8h = { timestamp: hoursAgo(8), duration: 8 * 3600 - 60, data: { status: "afk" } };
+    assert("AFK CLOCK: an 8h continuous absence still reads AWAY (freshness rides the event's END)", (await isAway({ fetchFn: mkFetch(asleep8h) })).away === true);
+    const stale = { timestamp: hoursAgo(4), duration: 3600, data: { status: "afk" } };   // AFK ended 3h ago — the watcher stopped reporting
+    assert("AFK CLOCK: a stale AFK event is NOT away (never dream over his shoulder)", (await isAway({ fetchFn: mkFetch(stale) })).away === false);
+    const atDesk = { timestamp: hoursAgo(0.01), duration: 30, data: { status: "not-afk" } };
+    assert("AFK CLOCK: not-afk is present", (await isAway({ fetchFn: mkFetch(atDesk) })).away === false);
+  }
+
+  // E2E audit 25 Jul 2026 — the default lane generator must be ASYNC: the sync
+  // claudeGen (execFileSync) blocked the event loop, making the stadium's
+  // Promise.all "parallel lanes" strictly serial (and its return value un-.catch-able).
+  // With ANTHROPIC_API_KEY set, claudegen refuses instantly — NO process is spawned.
+  {
+    const oldKey = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "sk-selftest-no-spawn";
+    const d = defaultGen("probe", null);
+    const isThenable = !!d && typeof d.then === "function";
+    await Promise.resolve(d);
+    if (oldKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = oldKey;
+    assert("STADIUM: the default lane generator is ASYNC (a sync engine serializes every 'parallel' lane)", isThenable);
+  }
+
   // M16 — THE DREAM STADIUM: parallel lanes, per-lane budgets, verification
   {
     const stadiumBoard = { tanks: [
@@ -335,7 +481,14 @@ async function selftest() {
     const r = await dream({ ...base, board: stadiumBoard, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, write: (o) => { saved = o; } });
     assert("STADIUM: the away-gate legalizes the borrow — rollouts fan across ALL idle lanes", r.ok && r.lanes.length === 3 && Object.keys(spends).length === 3);
     assert("STADIUM: 2 weak points × depth 25 = 50 rollouts (was 8 serial)", r.rollouts === 50 && r.rollouts <= MAX_ROLLOUTS_NIGHT);
-    assert("STADIUM: a lane never spends past its OWN measured headroom", spends.T5 <= Math.floor(50 * 0.85) - 30 + 3);   // budget 12 + its ≤3 counter-rollouts
+    // E2E audit 25 Jul 2026: this check was named "never spends past its OWN measured
+    // headroom" and then granted "+3" of slack — it asserted the very overspend it
+    // claimed to forbid. T5's headroom is exactly floor(50·0.85)−30 = 12, rollouts AND
+    // counter-rollouts included. No fudge factor: that is what the law says.
+    assert("STADIUM: a lane never spends past its OWN measured headroom (verification included)",
+      spends.T5 <= Math.floor(50 * 0.85) - 30 && spends.T2 <= Math.floor(90 * 0.85) && spends.T7 <= Math.floor(250 * 0.85));
+    assert("BORROW: a lane is legal with NO Gemini key (rollouts ride claude -p — dead keys must not kill the Rest Room)",
+      borrowableTanks(stadiumBoard, []).length === 3);
     assert("STADIUM: verification ran — entries land VERIFIED, engine stamped", saved.engine === "stadium" && saved.verified >= 1 && saved.entries.every(e => e.verified === true) && saved.inert === true);
     assert("clustering: same stall signature merges with votes", saved.entries.some(e => e.votes >= 2));
   }
@@ -370,6 +523,29 @@ async function selftest() {
     const r = await dream({ ...base, board: twoLanes, generate: genDryT2, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, record429: (id) => faults.push(id), write: () => {} });
     assert("STADIUM: a wire-429 lane STANDS DOWN after one call (never burns its budget)", r.ok && spends.T2 <= 2 && faults.includes("T2"));
     assert("STADIUM: the surviving lane still dreams (dry pool ≠ dead dream)", r.rollouts >= 1 && r.lanes.includes("T7"));
+
+    // E2E audit 25 Jul 2026 — the SUBSCRIPTION limit signal + the dead-engine raid.
+    // claudeGen reports a plan/rate limit as `limit_hit` (it has no `status` field),
+    // and when EVERY lane had stood down the old verification phase fell back to
+    // `plan[i % plan.length]` and fired counter-rollouts through those dead lanes at
+    // the engine that had just refused us. Here the only lane dies mid-pass on
+    // limit_hit: the drafts must survive UNVERIFIED and not one counter may be fired.
+    let counters = 0, calls = 0, savedDry = null;
+    const genDiesLate = async (p) => {
+      if (p.includes("hostile staff-engineer")) { counters++; return genOK(p); }
+      return ++calls <= 3 ? genOK(p) : { ok: false, limit_hit: true };
+    };
+    const rDry = await dream({ ...base, generate: genDiesLate, recordUse: () => {}, record429: () => {}, write: (o) => { savedDry = o; } });
+    assert("STADIUM: `limit_hit` stands the lane down (the claudeGen signal, not a wire 429)", rDry.ok && rDry.rollouts === 3);
+    assert("STADIUM: every lane dry → ZERO counter-rollouts fired at a refusing engine (drafts kept unverified)",
+      counters === 0 && savedDry && savedDry.entries.length >= 1 && savedDry.entries.every(e => e.verified === false));
+
+    // a fuelboard write fault (tanks.json held by nightshift/council → EPERM) is
+    // telemetry failing, not the dream failing — it must never kill the pass.
+    let rThrow = null;
+    try { rThrow = await dream({ ...base, recordUse: () => { throw new Error("EPERM: tanks.json busy"); }, record429: () => { throw new Error("EPERM"); }, write: () => {} }); }
+    catch { rThrow = { ok: false, threw: true }; }
+    assert("STADIUM: a fuelboard write fault never kills the dream (telemetry ≠ the dream)", rThrow.ok === true && rThrow.rollouts >= 1);
   }
 
   // M22 — THE BG DRAIN: second spotlight on idle lanes, folded back via :4113

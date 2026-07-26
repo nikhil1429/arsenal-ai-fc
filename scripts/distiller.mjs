@@ -56,8 +56,19 @@ function deterministicSet(stream, presence, drills) {
   const last = stream[stream.length - 1];
   const lastDoubt = [...stream].reverse().find(s => DOUBT_RE.test(s.text));
   const pull = (presence || []).slice().reverse().find(r => Array.isArray(r.pull_words) && r.pull_words.length);
-  const nextDrill = drills && Array.isArray(drills.drills) && drills.drills[0]
-    ? (drills.drills[0].concept || drills.drills[0].title || "") : "";
+  // E2E audit (25 Jul 2026): this read `drills[0].concept || drills[0].title` and
+  // NEITHER KEY EXISTS. setpiece.mjs is the sole writer of drills.json and stamps
+  // every row as { kind, probe_type_emoji, concepts: [...], prompt, source, ... } —
+  // `concepts` is an ARRAY, and there is no `concept`/`title` anywhere. So next_step
+  // was silently "" on every real 15-min run (confirmed live: drills[0].concepts =
+  // ["embeddings"], floor next_step = ""), which handed the slot to whatever the
+  // LLM felt like inventing — the exact thing the header LAW forbids. Read the real
+  // schema: first string concept, else the drill's own prompt (floor_touch rows are
+  // written with concepts: [] and carry the whole instruction in `prompt`).
+  // Still never invented: verbatim from drills.json, or empty.
+  const d0 = drills && Array.isArray(drills.drills) ? drills.drills[0] : null;
+  const c0 = d0 && Array.isArray(d0.concepts) ? d0.concepts.find(c => typeof c === "string" && c.trim()) : "";
+  const nextDrill = c0 || (d0 && typeof d0.prompt === "string" ? d0.prompt : "");
   return {
     concept_in_motion: last ? clampStr(last.text, 80) : (pull ? clampStr(pull.pull_words.join(" "), 60) : ""),
     open_loop: lastDoubt ? clampStr(lastDoubt.text, 160) : "",
@@ -95,10 +106,27 @@ function parseSet(text) {
   return (set.concept_in_motion || set.open_loop || set.where_left_off || set.next_step) ? set : null;
 }
 
-// LLM value wins where present; the deterministic floor fills every gap.
-function merge(llm, floor) {
+// FROZEN — the original merge, kept verbatim (layering law). It let the LLM win on
+// EVERY slot, next_step included, which is why the invented-next_step leak below was
+// possible. Reference only; `merge` is the plan of record.
+function mergeLegacy(llm, floor) {
   const out = {};
   for (const k of ["concept_in_motion", "open_loop", "where_left_off", "next_step"]) out[k] = (llm && llm[k]) || floor[k] || "";
+  return out;
+}
+
+// LLM value wins where present; the deterministic floor fills every gap.
+// EXCEPT next_step. E2E audit (25 Jul 2026): this file's own header LAW is "Never
+// invents a next_step — it comes from drills.json or stays empty", but mergeLegacy
+// took the LLM's next_step whenever the floor was blank — and thanks to the schema
+// bug above the floor was ALWAYS blank, so the captain's re-entry card was being
+// handed a next move Gemini made up, with a drills.json sitting right there. Now
+// next_step is floor-only: drills.json or "", full stop. The other three slots keep
+// the old behaviour (LLM phrasing is the point there — it is grounded in the stream).
+function merge(llm, floor) {
+  const out = {};
+  for (const k of ["concept_in_motion", "open_loop", "where_left_off"]) out[k] = (llm && llm[k]) || (floor && floor[k]) || "";
+  out.next_step = (floor && floor.next_step) || "";
   return out;
 }
 
@@ -151,7 +179,10 @@ async function selftest() {
     { ts: "2026-07-18T10:00:00Z", modality: "code", text: "explain embeddings vs tokenization" },
     { ts: "2026-07-18T10:05:00Z", modality: "voice", text: "cosine similarity samajh nahi aaya, kyun use karte hain?" },
   ];
-  const drills = { drills: [{ concept: "attention mechanism" }] };
+  // E2E audit (25 Jul 2026): this fixture used to be `{ concept: "attention mechanism" }`
+  // — a key setpiece.mjs has NEVER written. The fake fixture is exactly why the dead
+  // next_step slot survived every green selftest. This is now a real setpiece row.
+  const drills = { drills: [{ kind: "recall", probe_type_emoji: "🔵", concepts: ["attention mechanism"], prompt: "one cold guess on attention mechanism", source: "due" }] };
 
   // deterministic floor — honest, never empty when data exists
   const floor = deterministicSet(stream, [], drills);
@@ -159,6 +190,17 @@ async function selftest() {
   assert("FLOOR — open_loop catches the hanging doubt", DOUBT_RE.test(floor.open_loop) && floor.open_loop.includes("cosine"));
   assert("FLOOR — next_step comes from drills, never invented", floor.next_step === "attention mechanism");
   assert("FLOOR — empty stream yields empty slots, never a crash", deterministicSet([], [], null).where_left_off === "");
+  // REGRESSION (E2E audit 25 Jul 2026): reads setpiece's real concepts[] array, not
+  // the phantom .concept/.title keys. Fails on the old code — it returned "".
+  assert("FLOOR — next_step reads setpiece's real concepts[] schema (not .concept/.title)",
+    deterministicSet(stream, [], { drills: [{ kind: "derby", concepts: ["chunking", "retrieval"], prompt: "contrast them" }] }).next_step === "chunking");
+  // REGRESSION: floor_touch rows carry concepts: [] — fall back to the drill's own
+  // prompt rather than leaving the slot dead. Old code returned "" here too.
+  assert("FLOOR — a concepts:[] row (floor_touch) falls back to the drill prompt",
+    deterministicSet(stream, [], { drills: [{ kind: "floor_touch", concepts: [], prompt: "One 10-minute touch: open the field, one green concept" }] }).next_step.startsWith("One 10-minute touch"));
+  // REGRESSION: a non-string concept (defensive) must not leak "[object Object]".
+  assert("FLOOR — non-string concepts are skipped, never stringified into the slot",
+    deterministicSet(stream, [], { drills: [{ concepts: [{ id: "x" }], prompt: "the real instruction" }] }).next_step === "the real instruction");
 
   // parse + merge
   const good = parseSet('{"concept_in_motion":"embeddings","open_loop":"why cosine","where_left_off":"asked about cosine","next_step":""}');
@@ -166,6 +208,15 @@ async function selftest() {
   assert("PARSE — junk text returns null (floor takes over)", parseSet("sorry I can't do that") === null);
   const merged = merge(good, floor);
   assert("MERGE — LLM wins where present, floor fills the gap (next_step)", merged.concept_in_motion === "embeddings" && merged.next_step === "attention mechanism");
+  // REGRESSION (E2E audit 25 Jul 2026): the header LAW — next_step is drills-only.
+  // Old merge handed the LLM's invented step straight to the captain; fails on it.
+  assert("MERGE — an LLM-invented next_step never beats drills.json (header law)",
+    merge({ concept_in_motion: "embeddings", next_step: "go read chapter 7" }, floor).next_step === "attention mechanism");
+  assert("MERGE — with no drills staged, an invented next_step is DROPPED, not shown",
+    merge({ next_step: "go read chapter 7" }, { concept_in_motion: "", open_loop: "", where_left_off: "", next_step: "" }).next_step === "");
+  // the frozen legacy path, kept so the delta is visible: it is what leaked.
+  assert("MERGE — mergeLegacy still shows the old leak (why it was superseded)",
+    mergeLegacy({ next_step: "go read chapter 7" }, floor).next_step === "go read chapter 7");
 
   // distill — mocked LLM, no network
   const set = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null, gen: async () => '{"concept_in_motion":"embeddings","open_loop":"why cosine similarity","where_left_off":"","next_step":""}' });
@@ -189,4 +240,4 @@ async function main() {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { distill, deterministicSet, parseSet, merge, recentStream, buildPrompt, summaryLine, run };
+export { distill, deterministicSet, parseSet, merge, mergeLegacy, recentStream, buildPrompt, summaryLine, run };

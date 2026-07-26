@@ -69,7 +69,7 @@ Reply with ONLY your spoken words — no markdown, no lists, ≤3 sentences.`;
 function callClaude(prompt, model, timeoutMs = 120000) {
   const t0 = Date.now();
   try {
-    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model], { input: prompt, timeout: timeoutMs, encoding: "utf8", windowsHide: true });
+    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model], { input: prompt, timeout: timeoutMs, encoding: "utf8", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
     let text = stdout, inTok = null, outTok = null;
     try { const j = JSON.parse(stdout); text = j.result !== undefined ? String(j.result) : stdout; if (j.usage) { inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null; } } catch { }
     return { ok: true, text: text.trim(), total_tokens: (inTok || 0) + (outTok || 0) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0 };

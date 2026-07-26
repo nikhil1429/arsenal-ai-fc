@@ -1,4 +1,4 @@
-# open_dugout.ps1 — the ONE correct way to open any Dugout surface.
+﻿# open_dugout.ps1 — the ONE correct way to open any Dugout surface.
 # Kills the stale bridge on :4114 FIRST (so a code change always loads), then
 # starts a fresh hidden bridge and opens the requested mode. The brain daemons
 # (:4113 thalamus, :4112 cortex, :4111 turnstile) are NEVER touched.

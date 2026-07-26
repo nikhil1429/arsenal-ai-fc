@@ -138,6 +138,10 @@ dressing-room/state/wake.json
 dressing-room/state/wake_queue.jsonl
 dressing-room/state/bg_queue.jsonl
 dressing-room/state/cortex_runtime.json
+# the cortex paid-answer lifeboat (his deep answers, awaiting delivery)
+dressing-room/state/cortex_unsent.jsonl
+# the live-demo sandbox (isolated fork state — never the real bus)
+dressing-room/state/demo_sandbox/
 # the concept graph (P5) — his concepts + fluency + next-unlocks, synthesised nightly
 dressing-room/state/concept_graph.json
 # the organism self-portrait — Claude-generated from the live code (regenerated, not versioned)
@@ -181,5 +185,17 @@ THE_CYBORG_OWNERS_MANUAL.md
 THE_ORGANISM_THE_WHOLE_STORY.md
 # the brain's own telling (for Nidhi) — same call: his machine, his story to publish
 THE_BRAIN_HOW_IT_THINKS.md
+# the cinematic tour — same class as the three above: names his condition and
+# four real people. Found STAGED for commit during the E2E audit (25 Jul 2026).
+THE_GAFFER_CINEMATIC_TOUR.md
 # gem-sync ritual stamp (runtime state)
 dressing-room/state/gem_sync_stamp.json
+
+# --- BACKUPS OF PERSONAL STATE ---
+# Every rule above is a hand-written denylist entry, so a backup of an ignored
+# file is NOT itself ignored (the E2E audit caught exactly this: a .bak of the
+# gitignored brain ledger showed up untracked and publishable). Blanket-ignore
+# the backup/temp suffixes anywhere in the tree.
+*.bak
+*.tmp
+*.orig

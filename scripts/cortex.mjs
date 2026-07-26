@@ -42,10 +42,26 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const WAKE      = join(STATE_DIR, "wake.json");
 const WQUEUE    = join(STATE_DIR, "wake_queue.jsonl");   // M14 — read-only here; the thalamus is its sole writer
 const RUNTIME   = join(STATE_DIR, "cortex_runtime.json");
+// the paid-answer lifeboat: answers that could not be reported back (thalamus
+// down / restarting) wait here instead of evaporating. Drained on the next serve.
+const UNSENT    = join(STATE_DIR, "cortex_unsent.jsonl");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 const THALAMUS  = "http://127.0.0.1:4113";
 const LIMIT_RE  = /limit|overloaded|rate.?limit|resets \d/i;
-const defaultPost = async (path, body) => { const r = await fetch(THALAMUS + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); };
+// E2E audit 25 Jul 2026: this used to be an unguarded fetch. If the thalamus was
+// down or slow, the POST threw, the exception escaped serveOne, and the Opus
+// answer the captain had ALREADY PAID FOR was discarded — the wake stayed pending
+// and the same expensive question was bought again on the next attempt, until it
+// finally died as "gave-up". An answer that cost money must never be lost to a
+// transport hiccup: report failures now come back as a value, and the caller
+// SPOOLS the text to disk (see UNSENT) so it can be delivered later.
+const defaultPost = async (path, body) => {
+  try {
+    const r = await fetch(THALAMUS + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) return { ok: false, error: `thalamus ${r.status}` };
+    try { return { ok: true, ...(await r.json()) }; } catch { return { ok: true }; }
+  } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 160) }; }
+};
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
@@ -97,12 +113,19 @@ function claudeDeep(prompt, cfg, deps = {}) {
   try {
     const raw = exec(["-p", "--output-format", "json", "--model", "opus"], {
       input: prompt, timeout: cfg.deep.timeout_ms, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true,
-      env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens) },   // extended thinking
+      env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens), ARSENAL_ORGAN: "1" },   // extended thinking
     });
     const j = JSON.parse(raw);
     const text = String(j.result || "");
     const inTok = (j.usage && j.usage.input_tokens) || 0, outTok = (j.usage && j.usage.output_tokens) || 0;
-    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: false, error: j.is_error ? String(j.result).slice(0, 200) : null };
+    // E2E audit 25 Jul 2026: limit_hit was hardcoded `false` on every response the
+    // CLI managed to serialise — but a Max plan-limit is NOT a thrown exception: the
+    // CLI exits 0 with {is_error:true, result:"You've hit your session limit · resets
+    // 7am"}. So the single most common failure of the whole $100 law was ledgered as
+    // an ordinary error, the window never learned it was locked, and the wake burned
+    // both its attempts inside the lockout. brain.mjs:507 has always read the
+    // envelope (`isErr && LIMIT_RE.test(text)`); the cortex now reads it the same way.
+    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null };
   } catch (e) {
     const msg = String((e && e.message) || e).slice(0, 200);
     return { ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: /limit|overloaded|rate.?limit|resets \d/i.test(msg), error: msg };
@@ -119,14 +142,17 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
       const execFn = deps.execAsync || execFile;
       const child = execFn("claude", ["-p", "--output-format", "json", "--model", "opus"], {
         timeout: cfg.deep.timeout_ms, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024,
-        env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens) },   // extended thinking
+        env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens), ARSENAL_ORGAN: "1" },   // extended thinking
       }, (err, stdout) => {
         if (err && !stdout) return fail(String((err && err.message) || err));
         try {
           const j = JSON.parse(stdout);
           const text = String(j.result || "");
           const inTok = (j.usage && j.usage.input_tokens) || 0, outTok = (j.usage && j.usage.output_tokens) || 0;
-          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: false, error: j.is_error ? String(j.result).slice(0, 200) : null });
+          // E2E audit 25 Jul 2026: same envelope blindness as claudeDeep above — the
+          // async lane is the one the daemon actually uses, so THIS is where a plan
+          // limit was being ledgered as limit_hit:false and killing queued wakes.
+          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null });
         } catch (e) { fail(String((e && e.message) || e)); }
       });
       if (child && child.stdin) { child.stdin.on("error", () => {}); child.stdin.write(prompt); child.stdin.end(); }
@@ -139,6 +165,46 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
 // serveOne handles ONE wake; serveWake keeps the legacy single-slot contract
 // verbatim; serveWakes (M14) drains the queue up to deep.concurrency at once.
 // ---------------------------------------------------------------------------
+// E2E audit 25 Jul 2026 — THE CONCURRENT-LANE OVERSHOOT. Every lane computed its
+// headroom gate from the LEDGER, and the ledger only learns about a deep read
+// AFTER it returns. With deep.concurrency lanes opening back-to-back (serveWakes'
+// Promise.all, and the daemon's fire() loop), lane 2 read the same "allowed" that
+// lane 1 had already committed to spend: two 48k-thinking reads could both clear a
+// floor sized for ONE and land together inside his protected study reserve. This
+// counter is the missing in-flight book: a lane reserves its estimated spend the
+// instant it clears the gate and releases it when the call returns, so the next
+// lane gates against what is REALLY left. Module-level on purpose — the daemon and
+// serveWakes dispatch from different places into the same window.
+let inflightReserve = 0;
+
+// E2E audit 25 Jul 2026: the daemon's fire() re-entered itself from `.finally`, i.e.
+// after EVERY lane outcome. When a serve did not actually close the wake (deep call
+// failed, answer spooled because the thalamus was down, API-key refusal) the wake was
+// still pending, so the immediate re-entry re-dispatched the same moment with zero
+// delay — a tight loop that burned the 2-attempt cap, and real Opus tokens, in
+// milliseconds. Re-enter ONLY when the thalamus has ACKNOWLEDGED a close (served /
+// gave-up / declined, and the report-back itself got through): that is the only state
+// in which the wake is guaranteed gone from the next queue read. Everything else waits
+// for the 5s poll, which is the natural backoff.
+const laneResolved = (r) => !!(r && (r.served || r.gave_up || r.declined) && r.reported !== false);
+
+// E2E audit 25 Jul 2026: cortex_runtime.json's attempts map was append-only — no code
+// path ever deleted a key, not on success, not on give-up, not on decline. Every
+// moment_id ever woken lived there forever, and every single serve paid a full-file
+// parse + rewrite of an ever-growing JSON. A moment that is no longer pending can
+// never be served again, so its bookkeeping is dead weight: prune to the live queue.
+// The unsent flags are pruned FIRST so a still-undelivered paid answer keeps its
+// attempt row (it is the one thing that must survive a closed-looking queue).
+function pruneRuntime(runtime, liveIds = []) {
+  const live = new Set(liveIds);
+  let removed = 0;
+  if (runtime.unsent) for (const k of Object.keys(runtime.unsent)) if (!live.has(k)) { delete runtime.unsent[k]; removed++; }
+  if (runtime.attempts) for (const k of Object.keys(runtime.attempts)) {
+    if (!live.has(k) && !(runtime.unsent && runtime.unsent[k])) { delete runtime.attempts[k]; removed++; }
+  }
+  return removed;
+}
+
 async function serveOne(wake, deps = {}) {
   const cfg = deps.cfg || loadThalamusConfig();
   const brainCfg = deps.brainCfg || loadBrainConfig();
@@ -157,12 +223,43 @@ async function serveOne(wake, deps = {}) {
   }
   if (!wake || !wake.moment_id || wake.consumed || wake.status !== "pending") return { served: false, idle: true };
 
+  // E2E audit 25 Jul 2026 — THE RE-BUY. The lifeboat below spools an answer whose
+  // report-back failed, but ONLY the thalamus can close a queue row: with the
+  // thalamus still down the wake is STILL pending, and the very next pass walked
+  // straight back into a fresh Opus read of the same question — paying twice for one
+  // thought, which is exactly what the lifeboat exists to prevent. A moment whose
+  // answer is already bought and waiting on the wire is RE-DELIVERED (free), never
+  // re-thought. This sits ahead of the attempts cap on purpose: a paid answer must
+  // reach him even if the wake has otherwise run out of attempts.
+  runtime.unsent = runtime.unsent || {};
+  if (runtime.unsent[wake.moment_id]) {
+    const d = await drainUnsent({ ...deps, log });
+    const stillHeld = (d.held_ids || []).includes(wake.moment_id);
+    if (!stillHeld) { delete runtime.unsent[wake.moment_id]; saveRuntime(runtime); }
+    log(`cortex: ${wake.moment_id} is ALREADY PAID FOR — ${stillHeld ? "thalamus still unreachable, holding the spooled answer" : "spooled answer delivered"} (no second Opus read)`);
+    return { served: !stillHeld, redelivered: !stillHeld, reported: !stillHeld, moment_id: wake.moment_id };
+  }
+
+  // E2E audit 25 Jul 2026 — THE LOCKOUT HOLD. A plan-limit is the WINDOW's state, not
+  // this wake's fault, and it lasts until the window resets. Without a hold the daemon
+  // re-fired `claude -p` every 5s inside the lockout and each wake spent both its
+  // attempts within seconds, so a 03:00 session limit permanently killed every queued
+  // doubt as "gave-up-after-2-attempts" for reads that were never actually attempted.
+  if (runtime.limit_hold_until && now < new Date(runtime.limit_hold_until)) {
+    log(`cortex: plan-limit hold until ${runtime.limit_hold_until} — ${wake.moment_id} waits (no call, no attempt burned)`);
+    return { served: false, limit_held: true };
+  }
+
   // attempts cap — a poisoned wake never loops the window dry
   runtime.attempts = runtime.attempts || {};
   const tries = runtime.attempts[wake.moment_id] || 0;
   if (tries >= 2) {
-    await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "gave-up-after-2-attempts", provenance: "cortex" });
-    return { served: false, gave_up: true };
+    // E2E audit 25 Jul 2026: the report-back result is now carried out as `reported`
+    // so the daemon only re-enters its dispatch loop on a close the thalamus actually
+    // ACKNOWLEDGED — an unacknowledged decline leaves the wake pending, and re-firing
+    // on it is the busy-loop (see laneResolved).
+    const s = await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "gave-up-after-2-attempts", provenance: "cortex" });
+    return { served: false, gave_up: true, reported: !(s && s.ok === false) };
   }
   runtime.attempts[wake.moment_id] = tries + 1;
   saveRuntime(runtime);
@@ -179,33 +276,99 @@ async function serveOne(wake, deps = {}) {
   const minHeadroom = Math.max((cfg.deep && cfg.deep.min_headroom_tokens) || 50000, mtf.min_headroom_tokens);
   const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens, min_headroom_tokens: minHeadroom } };
   const call = deps.call || ((prompt) => claudeDeepAsync(prompt, deepCfg));
-  if (hr.allowed < deepCfg.deep.min_headroom_tokens) {
-    log(`cortex: window too low (${hr.allowed} < ${deepCfg.deep.min_headroom_tokens}) — declining, not draining`);
-    await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "no-headroom", provenance: "cortex" });
-    return { served: false, declined: "no-headroom" };
+  // E2E audit 25 Jul 2026: gate against what is left AFTER the lanes already in flight
+  // (see inflightReserve above) — the ledger cannot see a read that has not returned yet.
+  const est = Math.max(0, (cfg.deep && cfg.deep.est_tokens_per_wake) || 40000);
+  const freeNow = hr.allowed - inflightReserve;
+  if (freeNow < deepCfg.deep.min_headroom_tokens) {
+    log(`cortex: window too low (${freeNow}${inflightReserve ? ` = ${hr.allowed} - ${inflightReserve} in flight` : ""} < ${deepCfg.deep.min_headroom_tokens}) — declining, not draining`);
+    const s = await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "no-headroom", provenance: "cortex" });
+    return { served: false, declined: "no-headroom", reported: !(s && s.ok === false) };
   }
 
   // M8 — THE COUNCIL sits first (three free adversarial drafts), then ONE
   // Opus integration adjudicates. Council dry/failed → the old cold path.
-  let council = null;
-  if (deps.council !== undefined) council = deps.council;
-  else if (cfg.council !== false) {
-    try { council = await convene(String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || ""), {}); } catch { council = null; }
-  }
-  const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
-  const r = await call(prompt);
+  let council = null, r;
+  inflightReserve += est;                       // the lane is committed from here
+  try {
+    if (deps.council !== undefined) council = deps.council;
+    else if (cfg.council !== false) {
+      try { council = await convene(String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || ""), {}); } catch { council = null; }
+    }
+    const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
+    r = await call(prompt);
+  } finally { inflightReserve = Math.max(0, inflightReserve - est); }
   ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit });
-  if (!r.ok) { log(`cortex: deep call failed (${r.error}) — wake stays pending (attempt ${tries + 1}/2)`); return { served: false, error: r.error }; }
+  if (!r.ok) {
+    if (r.limit_hit) {
+      // E2E audit 25 Jul 2026: give the attempt BACK and hold the lane. A read that the
+      // plan refused to even start must not count against the poison-guard's 2-attempt
+      // cap — otherwise one locked window silently kills the whole night's queue. With
+      // the attempt refunded the TTL (expired-in-queue), not the lockout, decides.
+      runtime.attempts[wake.moment_id] = tries;
+      const holdMin = (cfg.deep && cfg.deep.limit_backoff_min) || 15;
+      runtime.limit_hold_until = new Date(now.getTime() + holdMin * 60000).toISOString();
+      saveRuntime(runtime);
+      log(`cortex: PLAN LIMIT (${r.error}) — attempt refunded, lane held ${holdMin}min (until ${runtime.limit_hold_until})`);
+      return { served: false, error: r.error, limit_hit: true };
+    }
+    log(`cortex: deep call failed (${r.error}) — wake stays pending (attempt ${tries + 1}/2)`);
+    return { served: false, error: r.error };
+  }
 
   // honest-frame validator — a law-breaking answer is DECLINED, never softened
   const banned = bannedPhraseCheck(r.text, (brainCfg.guards && brainCfg.guards.banned_phrases) || []);
   if (banned.length) {
-    await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: `banned-phrase:${banned.join(",")}`, provenance: "cortex" });
-    return { served: false, declined: "banned-phrase" };
+    const s = await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: `banned-phrase:${banned.join(",")}`, provenance: "cortex" });
+    return { served: false, declined: "banned-phrase", reported: !(s && s.ok === false) };
   }
-  await post("/deep-answer", { moment_id: wake.moment_id, text: r.text, provenance: "opus-extended", tokens: r.total_tokens });
+  const payload = { moment_id: wake.moment_id, text: r.text, provenance: "opus-extended", tokens: r.total_tokens };
+  const sent = await post("/deep-answer", payload);
+  if (sent && sent.ok === false) {
+    // the answer is BOUGHT AND GOOD — the wire failed, not the thought. Spool it.
+    try { (deps.spool || spoolUnsent)(payload); } catch { }
+    // E2E audit 25 Jul 2026: remember, in the runtime, that this moment is ALREADY PAID
+    // FOR. The wake stays pending (only the thalamus closes rows), so without this flag
+    // the next pass re-read the same question on Opus — the spool saved the text but not
+    // the money. The re-buy guard at the top of serveOne reads exactly this.
+    runtime.unsent[wake.moment_id] = (now instanceof Date ? now : new Date()).toISOString();
+    saveRuntime(runtime);
+    log(`cortex: deep answer for ${wake.moment_id} could NOT be reported (${sent.error}) — SPOOLED to cortex_unsent.jsonl, will deliver on the next pass (never re-bought)`);
+    return { served: false, spooled: true, moment_id: wake.moment_id, error: sent.error };
+  }
   log(`cortex: deep answer served for ${wake.moment_id} (${r.total_tokens} tok, ${Math.round(r.duration_ms / 1000)}s)`);
-  return { served: true, moment_id: wake.moment_id, tokens: r.total_tokens };
+  return { served: true, moment_id: wake.moment_id, tokens: r.total_tokens, reported: true };
+}
+
+// ── THE PAID-ANSWER LIFEBOAT (E2E audit 25 Jul 2026) ────────────────────────
+// A deep answer costs real Opus tokens. If the report-back POST fails, the text
+// is spooled here and re-delivered on the next serve pass, so a thalamus restart
+// costs a few seconds of latency instead of the answer plus a second purchase.
+function spoolUnsent(payload) {
+  mkdirSync(dirname(UNSENT), { recursive: true });
+  appendFileSync(UNSENT, JSON.stringify({ ...payload, spooled_at: new Date().toISOString() }) + "\n");
+}
+async function drainUnsent(deps = {}) {
+  const post = deps.post || defaultPost;
+  const rows = deps.readUnsent ? deps.readUnsent() : readLines(UNSENT);
+  // E2E audit 25 Jul 2026: held_ids added so serveOne's re-buy guard can tell whether
+  // THIS moment's paid answer got through, rather than guessing from a global count.
+  if (!rows.length) return { delivered: 0, still_held: 0, held_ids: [] };
+  const held = [];
+  let delivered = 0;
+  for (const row of rows) {
+    const { spooled_at, ...payload } = row;
+    const r = await post("/deep-answer", payload);
+    if (r && r.ok === false) held.push(row); else delivered++;
+  }
+  const write = deps.writeUnsent || ((lines) => { if (lines.length) writeFileSync(UNSENT, lines.map(l => JSON.stringify(l)).join("\n") + "\n"); else if (existsSync(UNSENT)) writeFileSync(UNSENT, ""); });
+  write(held);
+  // E2E audit 25 Jul 2026: this said `(deps.log || log)` — there is no module-level
+  // `log`, so the ONE line that fires on a successful recovery threw a ReferenceError.
+  // serveWakes swallows it in its try/catch, but the daemon's re-buy guard now calls
+  // drainUnsent on every held moment, so the throw would have masked the recovery.
+  if (delivered) (deps.log || (() => {}))(`cortex: delivered ${delivered} spooled deep answer(s) that would otherwise have been lost`);
+  return { delivered, still_held: held.length, held_ids: held.map(h => h && h.moment_id).filter(Boolean) };
 }
 
 // the legacy single-slot contract, byte-compatible (layering — never replace)
@@ -221,6 +384,8 @@ async function serveWakes(deps = {}) {
   const cfg = deps.cfg || loadThalamusConfig();
   const now = deps.now || new Date();
   const post = deps.post || defaultPost;
+  // deliver anything a previous pass paid for but could not hand over
+  if (deps.drain !== false) { try { await drainUnsent(deps); } catch { } }
   const rows = deps.readQueue ? deps.readQueue() : readLines(WQUEUE);
   let pending = pendingWakes(rows);
   if (!pending.length) {
@@ -243,6 +408,11 @@ async function serveWakes(deps = {}) {
   // ONE shared runtime object across the batch — concurrent saves merge instead
   // of last-write-wins clobbering the poison-guard's attempt counts
   const runtime = deps.runtime !== undefined ? deps.runtime : (readJson(RUNTIME) || { attempts: {} });
+  // E2E audit 25 Jul 2026: prune the dead bookkeeping BEFORE the batch writes it back,
+  // so cortex_runtime.json stays the size of the live queue instead of the size of his
+  // whole history (see pruneRuntime). Pending — not `live` — is the survival set: a
+  // wake awaiting its expiry decline still owns its attempt row.
+  if (pruneRuntime(runtime, pending.map(w => w.moment_id))) (deps.saveRuntime || ((o) => writeAtomic(RUNTIME, o)))(runtime);
   const results = await Promise.all(batch.map(w => serveOne(w, { ...deps, cfg, now, post, runtime })));
   return { served: results.filter(r => r.served).length, results, expired, queued: live.length - batch.length };
 }
@@ -256,12 +426,23 @@ async function selftest() {
   const wake = { moment_id: "m_1", status: "pending", spotlight: { modality: "voice", text: "i don't get attention scaling", concept_tokens: ["attention"], S: 0.7, comps: { self: 1 } }, bound_context: [{ modality: "vision", event_key: "frame" }] };
   const bus = { capsule: null, twin: { markets: [{ id: "session_happened", p: 0.5 }] }, calibration: { calibration_gap: 0.12, danger_zone: [{ topic: "eval metrics" }] }, learning_state: { status: "ok" } };
   const brainCfg = { guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids"] }, budget: {} };
+  // E2E audit 25 Jul 2026: the suite used to build its cfg with loadThalamusConfig(),
+  // i.e. it read the LIVE, approval-gated dressing-room/state/thalamus_config.json —
+  // and several checks silently depended on its values (the overlap check needs
+  // deep.concurrency === 2, the expiry check needs queue_ttl_min < 120). Halving
+  // concurrency to calm the window — a documented, supported knob — turned the suite
+  // red for a regression that did not exist. Every other dep here is injected; the
+  // config is a frozen fixture now too, mirroring thalamus.mjs's DEFAULT_CONFIG.deep.
+  const CFG_FIX = Object.freeze({
+    council: false,   // the live council never convenes inside a selftest
+    deep: Object.freeze({ deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30, limit_backoff_min: 15 }),
+  });
   const mkDeps = (over = {}) => {
     const out = { posts: [], rows: [], runtime: { attempts: {} }, saved: [] };
     return {
       out,
       deps: {
-        cfg: loadThalamusConfig(), brainCfg, env: {}, readWake: () => wake, bus,
+        cfg: CFG_FIX, brainCfg, env: {}, readWake: () => wake, bus,
         council: null,                               // hermetic — the live council never convenes inside a selftest
         post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
         appendLedger: (r) => out.rows.push(r),
@@ -313,6 +494,33 @@ async function selftest() {
     const { deps, out } = mkDeps({ call: () => ({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: 500, duration_ms: 100, limit_hit: true, error: "rate limit" }) });
     const r = await serveWake(deps);
     assert("failed call → NO post (wake stays pending for retry), ledger records limit", !r.served && out.posts.length === 0 && out.rows[0].limit_hit === true);
+    // E2E audit 25 Jul 2026 — THE LOCKOUT. A plan limit used to be charged to the WAKE:
+    // the attempt stayed spent, so two failures inside one locked window killed the
+    // doubt as "gave-up-after-2-attempts" for reads Opus never even started.
+    const refund = out.saved[1] || {};
+    assert("PLAN LIMIT: the burnt attempt is given BACK (a locked window must not kill the wake)", out.saved.length === 2 && out.saved[0].attempts.m_1 === 1 && (refund.attempts || {}).m_1 === 0);
+    assert("PLAN LIMIT: the lane is HELD until the window can pay again (no 5s hammering)", typeof refund.limit_hold_until === "string" && new Date(refund.limit_hold_until) > new Date());
+  }
+  // ...and while that hold stands, a wake waits instead of spending
+  {
+    let called = 0;
+    const { deps, out } = mkDeps({
+      runtime: { attempts: {}, limit_hold_until: new Date(Date.now() + 60000).toISOString() },
+      call: () => { called++; return { ok: true, text: "should never be bought during a lockout", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; },
+    });
+    const r = await serveWake(deps);
+    assert("PLAN LIMIT: while the hold stands the wake waits — zero Opus calls, zero ledger rows, zero posts", r.limit_held === true && called === 0 && out.rows.length === 0 && out.posts.length === 0);
+  }
+  // the CLI's plan-limit envelope: exit 0, is_error:true, limit text in `result`
+  {
+    const tinyCfg = { deep: { timeout_ms: 1000, max_thinking_tokens: 1000 } };
+    const limitJson = JSON.stringify({ is_error: true, result: "You've hit your session limit · resets 7am" });
+    const rl = claudeDeep("p", tinyCfg, { exec: () => limitJson });
+    assert("ENVELOPE: a plan limit reported as exit-0 JSON is read as limit_hit (sync lane)", rl.ok === false && rl.limit_hit === true);
+    const rh = claudeDeep("p", tinyCfg, { exec: () => JSON.stringify({ result: "a real deep read", usage: { input_tokens: 5, output_tokens: 5 } }) });
+    assert("ENVELOPE: a healthy answer is never mislabelled a limit", rh.ok === true && rh.limit_hit === false);
+    const ra = await claudeDeepAsync("p", tinyCfg, { execAsync: (_f, _a, _o, cb) => { cb(null, JSON.stringify({ is_error: true, result: "5-hour limit reached · resets 3am" })); return null; } });
+    assert("ENVELOPE: the ASYNC lane (the one the daemon uses) reads it too", ra.ok === false && ra.limit_hit === true);
   }
   // consumed / absent wakes are idle
   {
@@ -337,6 +545,41 @@ async function selftest() {
     assert("council dry → the old cold path, byte-identical shape (layering)", coldPrompt && !coldPrompt.includes("[STEELMAN]") && coldPrompt.includes("YOUR JOB"));
   }
 
+  // THE PAID-ANSWER LIFEBOAT (E2E audit 25 Jul 2026) — a report-back failure must
+  // never destroy an answer the captain already paid Opus for. Before the fix the
+  // unguarded fetch THREW here: the text was dropped, the wake stayed pending, and
+  // the same question was bought a second time.
+  {
+    const spooled = [];
+    const { deps } = mkDeps({});
+    deps.call = () => ({ ok: true, text: "the expensive read", input_tokens: 10, output_tokens: 90, total_tokens: 100, duration_ms: 5, limit_hit: false, error: null });
+    deps.post = async () => ({ ok: false, error: "connect ECONNREFUSED 127.0.0.1:4113" });
+    deps.spool = (p) => spooled.push(p);
+    const out = await serveWake(deps);
+    assert("THALAMUS DOWN: serving does not throw and reports honestly", out && out.served === false && out.spooled === true);
+    assert("THALAMUS DOWN: the paid answer is SPOOLED verbatim, never lost", spooled.length === 1 && spooled[0].text === "the expensive read" && spooled[0].tokens === 100);
+    // and it is delivered on the next pass, without re-buying it
+    const held = spooled.map(p => ({ ...p, spooled_at: "2026-07-25T00:00:00.000Z" }));
+    const sent = []; let written = null;
+    const drained = await drainUnsent({
+      post: async (path, body) => { sent.push(body); return { ok: true }; },
+      readUnsent: () => held, writeUnsent: (l) => { written = l; }, log: () => {},
+    });
+    assert("RECOVERY: the spooled answer is delivered on the next pass", drained.delivered === 1 && sent.length === 1 && sent[0].text === "the expensive read");
+    assert("RECOVERY: the spool is emptied once delivered (never replayed forever)", Array.isArray(written) && written.length === 0);
+    // E2E audit 25 Jul 2026 — THE RE-BUY. The spool saved the TEXT but not the MONEY:
+    // only the thalamus can close a queue row, so the wake was still pending and the
+    // very next pass walked back into a fresh Opus read of the same doubt.
+    let bought = 0;
+    deps.call = () => { bought++; return { ok: true, text: "a SECOND paid read of the same doubt", input_tokens: 10, output_tokens: 90, total_tokens: 100, duration_ms: 5, limit_hit: false, error: null }; };
+    const redeliver = [];
+    deps.post = async (p, b) => { redeliver.push(b); return { ok: true }; };
+    deps.readUnsent = () => spooled.map(p => ({ ...p, spooled_at: "2026-07-25T00:00:00.000Z" }));
+    deps.writeUnsent = () => {};
+    const second = await serveWake(deps);
+    assert("NO RE-BUY: the still-pending wake is re-DELIVERED from the spool, Opus is never called twice", second.redelivered === true && bought === 0 && redeliver.length === 1 && redeliver[0].text === "the expensive read");
+  }
+
   // M14 — THE OVERLAP: the queue serves TWO at once; expiry declines; legacy floor
   {
     const mkWake = (id, ts) => ({ moment_id: id, ts, status: "pending", spotlight: { modality: "voice", text: `doubt ${id}`, concept_tokens: [id], S: 0.7, comps: { self: 1 } }, bound_context: [] });
@@ -354,20 +597,40 @@ async function selftest() {
       return { ok: true, text: "parallel deep read", input_tokens: 10, output_tokens: 10, total_tokens: 20, duration_ms: 25, limit_hit: false, error: null };
     };
     const mk = (rows) => ({
-      cfg: loadThalamusConfig(), brainCfg, env: {}, now: nowT, council: null, bus,
+      cfg: CFG_FIX, brainCfg, env: {}, now: nowT, council: null, bus,
       readQueue: () => rows, readWake: () => null,
       post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
       appendLedger: (r) => out.rows.push(r), runtime: { attempts: {} }, saveRuntime: () => {},
       headroom: { allowed: 300000, used: 0, cap: 800000, phase: "overnight" },
       call: slowCall,
     });
+    const K = CFG_FIX.deep.concurrency;   // derived, not hardcoded — the fixture IS the contract
     const r = await serveWakes(mk(qRows));
-    assert("TWO queued wakes are served CONCURRENTLY (the overlap is real)", r.served === 2 && peak === 2 && out.posts.length === 2);
-    assert("each spend rides the shared brain ledger (two rows, both opus)", out.rows.length === 2 && out.rows.every(x => x.engine === "claude"));
+    assert("TWO queued wakes are served CONCURRENTLY (the overlap is real)", r.served === K && peak === K && out.posts.length === K);
+    assert("each spend rides the shared brain ledger (two rows, both opus)", out.rows.length === K && out.rows.every(x => x.engine === "claude"));
     // three queued, concurrency 2 → one waits its turn (never dropped)
     out.posts.length = 0; out.rows.length = 0; peak = 0;
     const r3 = await serveWakes(mk([mkWake("m_1", "2026-07-15T02:58:00Z"), mkWake("m_2", "2026-07-15T02:58:30Z"), mkWake("m_3", "2026-07-15T02:59:00Z")]));
-    assert("THREE queued, two lanes → 2 served now, 1 stays queued (never clobbered)", r3.served === 2 && r3.queued === 1 && peak === 2);
+    assert("THREE queued, two lanes → 2 served now, 1 stays queued (never clobbered)", r3.served === K && r3.queued === 3 - K && peak === K);
+    // E2E audit 25 Jul 2026 — THE CONCURRENT-LANE OVERSHOOT. allowed=100k, overnight →
+    // the floor for ONE 48k-thinking read is 76.8k. Both lanes used to read the SAME
+    // 100k (the ledger cannot see a call that has not returned), both cleared the floor,
+    // and their JOINT spend landed inside the reserve the floor exists to protect.
+    // Lane 2 must now gate against 100k MINUS lane 1's in-flight estimate.
+    out.posts.length = 0; out.rows.length = 0; peak = 0;
+    const rTight = await serveWakes({ ...mk([mkWake("m_t1", "2026-07-15T02:58:00Z"), mkWake("m_t2", "2026-07-15T02:58:30Z")]), headroom: { allowed: 100000, used: 700000, cap: 800000, phase: "overnight" } });
+    assert("TIGHT WINDOW: lane 2 gates against lane 1's IN-FLIGHT spend — one read fires, one is declined", rTight.served === 1 && out.rows.length === 1 && out.posts.filter(p => p.b.reason === "no-headroom").length === 1);
+    assert("TIGHT WINDOW: the reserve is released again (a lane never leaks headroom)", inflightReserve === 0);
+    // E2E audit 25 Jul 2026 — the attempts map was append-only and grew forever.
+    out.posts.length = 0; out.rows.length = 0;
+    const savedR = [];
+    const rP = await serveWakes({
+      ...mk([mkWake("m_live", "2026-07-15T02:59:00Z")]),
+      runtime: { attempts: { m_live: 0, m_dead_1: 1, m_dead_2: 2 }, unsent: { m_gone: "2026-07-01T00:00:00.000Z" } },
+      saveRuntime: (o) => savedR.push(JSON.parse(JSON.stringify(o))),
+    });
+    const lastSave = savedR[savedR.length - 1];
+    assert("PRUNE: bookkeeping for wakes that are no longer pending is dropped (the runtime can't grow forever)", rP.served === 1 && lastSave && !("m_dead_1" in lastSave.attempts) && !("m_dead_2" in lastSave.attempts) && lastSave.attempts.m_live === 1 && !(lastSave.unsent && lastSave.unsent.m_gone));
     // a stale wake is declined, never dangles
     out.posts.length = 0;
     const rOld = await serveWakes(mk([mkWake("m_old", "2026-07-15T01:00:00Z")]));
@@ -379,6 +642,17 @@ async function selftest() {
     out.posts.length = 0;
     const rLeg = await serveWakes({ ...mk([]), readWake: () => mkWake("m_legacy", "2026-07-15T02:59:30Z") });
     assert("LAYERING: queue empty → the pre-M14 single-slot contract still serves", rLeg.served === 1 && out.posts[0].b.moment_id === "m_legacy");
+    // E2E audit 25 Jul 2026 — THE BUSY-LOOP. The daemon's fire() re-entered itself from
+    // `.finally`, i.e. after every outcome. Only the thalamus closes a queue row, so an
+    // outcome that did NOT get an acknowledged close left the moment pending and the
+    // instant re-entry re-dispatched the SAME wake with zero delay. laneResolved is the
+    // predicate that gate now uses (fire() itself lives in main() and cannot be tested
+    // without opening the :4112 lock, so the contract is asserted here).
+    assert("DAEMON LANE: only an ACKNOWLEDGED close re-opens the dispatcher (no busy-loop)",
+      laneResolved({ served: true, reported: true }) === true && laneResolved({ gave_up: true, reported: true }) === true && laneResolved({ declined: "no-headroom", reported: true }) === true
+      && laneResolved({ served: false, spooled: true }) === false && laneResolved({ served: false, error: "boom" }) === false
+      && laneResolved({ limit_held: true }) === false && laneResolved({ refused: true }) === false
+      && laneResolved({ declined: "no-headroom", reported: false }) === false && laneResolved(null) === false);
   }
 
   // the prompt itself
@@ -504,8 +778,24 @@ async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   if (mode === "tick") {
-    const r = await serveWakes({ log: console.log });
-    console.log(`cortex: ${r.served ? `served ${r.served} wake(s)${r.queued ? `, ${r.queued} still queued` : ""}` : r.idle ? "no pending wake" : (r.results || []).some(x => x.refused) ? "refused (API key)" : JSON.stringify(r)}`);
+    // E2E audit 25 Jul 2026: tick used to return BEFORE the :4112 singleton lock below,
+    // whose whole reason for existing is "two cortexes racing one wake = double Opus
+    // spend". A queue row only closes when an answer posts back, so a manual poke while
+    // the daemon was 40s into an extended read served the SAME moment a second time —
+    // the attempt counter lives in a file and gives no cross-process protection. tick now
+    // takes the same lock, and stands down if the daemon already holds it (the daemon is
+    // already serving that queue, within 5s). The lock is released before we exit.
+    const { createServer: mkSrv } = await import("node:http");
+    const held = await new Promise((resolve) => {
+      const s = mkSrv(() => {});
+      s.on("error", () => resolve(null));
+      s.listen(4112, "127.0.0.1", () => resolve(s));
+    });
+    if (!held) { console.log("cortex: the daemon holds the lock (:4112) and is already serving the queue — tick stands down."); return; }
+    try {
+      const r = await serveWakes({ log: console.log });
+      console.log(`cortex: ${r.served ? `served ${r.served} wake(s)${r.queued ? `, ${r.queued} still queued` : ""}` : r.idle ? "no pending wake" : (r.results || []).some(x => x.refused) ? "refused (API key)" : JSON.stringify(r)}`);
+    } finally { try { held.close(); } catch { } }
     return;
   }
   if (mode === "consolidate") {
@@ -542,6 +832,9 @@ async function main() {
         if (w && w.status === "pending" && w.moment_id && !w.consumed) pending = [w];
       }
       const now = new Date();
+      // E2E audit 25 Jul 2026: the daemon rewrote cortex_runtime.json on every attempt
+      // but never dropped a closed moment, so the file grew for the life of the system.
+      pruneRuntime(runtime, pending.map(w => w.moment_id).concat([...inflight]));
       for (const w of pending) {
         if (inflight.has(w.moment_id)) continue;
         if (inflight.size >= K) break;
@@ -552,9 +845,17 @@ async function main() {
           continue;
         }
         console.log(`cortex: lane open for ${w.moment_id} (${inflight.size}/${K})`);
+        // E2E audit 25 Jul 2026: the re-entry used to be unconditional (`.finally(… fire())`).
+        // A lane that did NOT close its wake — failed call, spooled answer, plan-limit hold,
+        // API-key refusal — left the moment pending, so re-entering immediately re-dispatched
+        // the SAME wake with no delay: a hot loop that ate the attempt cap (and, before the
+        // lifeboat, real Opus spend) in milliseconds. Only an acknowledged close re-opens the
+        // dispatcher; anything else waits for the 5s poll. See laneResolved.
+        let resolved = false;
         serveOne(w, { log: console.log, runtime })
+          .then(r => { resolved = laneResolved(r); })
           .catch(e => console.log("cortex: " + String(e.message).slice(0, 120)))
-          .finally(() => { inflight.delete(w.moment_id); fire(); });
+          .finally(() => { inflight.delete(w.moment_id); if (resolved) fire(); });
       }
     } catch (e) { console.log("cortex: " + String(e.message).slice(0, 120)); }
   };

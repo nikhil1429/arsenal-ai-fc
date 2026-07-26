@@ -33,6 +33,20 @@ The organism NEVER counts or coaches your throw-in usage. It is a reflex, not
 a duty. The Physio only watches for *delivery* failure (poller wired but dead).
 
 ## Part 3 — the morning sheet push (1 min, optional)
-Edit `dressing-room/state/brain_config.json` → `"ntfy": { "enabled": true,
-"topic": "<same-or-a-second-topic>" }`. Only the 08:45 sheet pushes. Nothing
-else ever pings — that is constitutional.
+In `dressing-room/state/brain_config.json` set `"ntfy": { "enabled": true }` and
+**leave `"topic"` exactly as it is — the empty string.**
+
+> ⚠️ **NEVER paste the topic into `brain_config.json`.** That file is TRACKED in a
+> PUBLIC repo, and this doc's own Part 1 calls the topic name the password. An
+> earlier version of this step told you to paste it here; on free ntfy.sh there is
+> no access control, so committing it hands anyone who reads the repo your phone's
+> notification channel. (Caught by the E2E audit, 25 Jul 2026.)
+
+The secret resolves at RUNTIME, never from the committed file — `resolveNtfyTopic`
+in `scripts/brain.mjs` reads, in order:
+1. `cfg.ntfy.topic` — leave blank; it exists only for local experiments
+2. `ARSENAL_NTFY_TOPIC` — the environment variable (recommended)
+3. `dressing-room/state/throwin_topic.txt` — gitignored, the same topic Part 1 stored
+
+So: set the env var (or rely on the Part 1 file) and leave the JSON alone. Only the
+08:45 sheet pushes. Nothing else ever pings — that is constitutional.

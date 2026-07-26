@@ -26,14 +26,16 @@
 //        node scripts/fuelboard.mjs selftest
 // ============================================================================
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, rmSync, statSync, utimesSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CONFIG    = join(STATE_DIR, "fuelboard_config.json");
 const TANKS     = join(STATE_DIR, "tanks.json");
+const TANK_LOCK = TANKS + ".lock";
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 function writeAtomic(path, obj) {
@@ -103,30 +105,91 @@ function headroomOf(t, reserveFrac = 0.15) {
 }
 
 // ---------------------------------------------------------------------------
-// THE LEDGER VERBS (single writer: every mutation loads → mutates → saves)
+// THE TANK LOCK — cross-PROCESS mutual exclusion around load→mutate→save.
+// E2E audit (25 Jul 2026, finding 3e32616e): "single writer" held only INSIDE
+// one process. The verbs are fully synchronous, so no two of them interleave in
+// a single node — but many PROCESSES import them: the hourly dmn pass fires
+// 50-100 recordUse writes across a stadium night, council.mjs records seat
+// spends whenever cortex/nightshift convenes it, and `fuelboard.mjs status`
+// re-saves the whole board. Two of those overlapping = classic lost update:
+// both load "T7 used 40", both write 41, one unit of spend evaporates and the
+// gauge under-reports — which is exactly the number the STARVATION GUARD later
+// freezes into observed_ceiling on a 429. So the whole read-modify-write now
+// runs under an exclusive lockfile (O_EXCL create, atomic on Windows + POSIX).
+// Two deliberate degradations, because a fuel ledger must never block a spend:
+//   · a STALE lock (holder crashed mid-write) is broken after LOCK_STALE_MS —
+//     a dead organ can never wedge the board for the season;
+//   · if the wait budget expires we proceed UNLOCKED and say so (`locked:false`)
+//     — that is exactly today's behaviour, so we are never worse than before.
+// ---------------------------------------------------------------------------
+const LOCK_STALE_MS = 10_000;   // no honest holder keeps a sync file write this long
+const LOCK_WAIT_MS  = 2_000;    // patience before we give up and write anyway
+const LOCK_STEALS   = 3;        // bounded stale-breaking: never spin forever
+const sleepSync = (ms) => {
+  // synchronous sleep — the verbs are sync by contract and callers depend on
+  // the return value being the settled board, so we must not go async here
+  try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
+  catch { const end = Date.now() + ms; while (Date.now() < end) { /* spin */ } }
+};
+function acquireTankLock(lockPath = TANK_LOCK, { waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS } = {}) {
+  const deadline = Date.now() + waitMs;
+  let steals = 0;
+  for (;;) {
+    try {
+      mkdirSync(dirname(lockPath), { recursive: true });
+      writeFileSync(lockPath, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), { flag: "wx" });
+      return () => { try { rmSync(lockPath, { force: true }); } catch {} };
+    } catch (e) {
+      if (!e || e.code !== "EEXIST") return () => {};   // fs unusable → never block the spend
+      let age = Infinity;
+      try { age = Date.now() - statSync(lockPath).mtimeMs; } catch {}
+      if (age > staleMs && steals < LOCK_STEALS) { steals += 1; try { rmSync(lockPath, { force: true }); } catch {} continue; }
+      if (Date.now() >= deadline) return null;          // waited long enough → caller proceeds unlocked
+      sleepSync(25);
+    }
+  }
+}
+// deps.readState/writeState = an in-memory board (selftest, or a caller that
+// owns its own state) → it never touches the shared file, so it needs no lock.
+// deps.acquireLock is honoured either way so the lock discipline is testable.
+function withTankLock(deps, fn) {
+  const inMemory = !!(deps.readState || deps.writeState);
+  const acquire  = deps.acquireLock || (inMemory ? null : acquireTankLock);
+  const release  = acquire ? acquire(deps.lockPath || TANK_LOCK) : null;
+  try { return fn(release !== null); }
+  finally { if (typeof release === "function") release(); }
+}
+
+// ---------------------------------------------------------------------------
+// THE LEDGER VERBS (single writer: every mutation loads → mutates → saves,
+// now serialised across processes by the tank lock above)
 // ---------------------------------------------------------------------------
 function recordUse(tankId, units = 1, naiveTokens = 0, deps = {}) {
-  const board = loadBoard(deps);
-  const t = board.tanks.find(x => x.id === tankId);
-  if (!t) return { ok: false, error: "no such tank" };
-  t.used_today += Math.max(0, Number(units) || 0);
-  board.actual_units += Math.max(0, Number(units) || 0);
-  board.naive_shadow_tokens += Math.max(0, Number(naiveTokens) || 0);
-  saveBoard(board, deps);
-  return { ok: true, used_today: t.used_today, state: stateOf(t) };
+  return withTankLock(deps, (locked) => {
+    const board = loadBoard(deps);
+    const t = board.tanks.find(x => x.id === tankId);
+    if (!t) return { ok: false, error: "no such tank" };
+    t.used_today += Math.max(0, Number(units) || 0);
+    board.actual_units += Math.max(0, Number(units) || 0);
+    board.naive_shadow_tokens += Math.max(0, Number(naiveTokens) || 0);
+    saveBoard(board, deps);
+    return { ok: true, used_today: t.used_today, state: stateOf(t), locked };
+  });
 }
 function record429(tankId, deps = {}) {
-  const board = loadBoard(deps);
-  const t = board.tanks.find(x => x.id === tankId);
-  if (!t) return { ok: false, error: "no such tank" };
-  // THE STARVATION GUARD (the brain's P0 fix, ported): the observed ceiling is
-  // NEVER recorded below the conservative estimate — a 429 at low usage must
-  // not strand the region at ceiling≈0 and silently kill it for the season.
-  t.observed_ceiling = Math.max(t.quota_est, t.used_today);
-  t.last_429 = new Date().toISOString();
-  t.faults_today += 1;
-  saveBoard(board, deps);
-  return { ok: true, observed_ceiling: t.observed_ceiling, state: stateOf(t) };
+  return withTankLock(deps, (locked) => {
+    const board = loadBoard(deps);
+    const t = board.tanks.find(x => x.id === tankId);
+    if (!t) return { ok: false, error: "no such tank" };
+    // THE STARVATION GUARD (the brain's P0 fix, ported): the observed ceiling is
+    // NEVER recorded below the conservative estimate — a 429 at low usage must
+    // not strand the region at ceiling≈0 and silently kill it for the season.
+    t.observed_ceiling = Math.max(t.quota_est, t.used_today);
+    t.last_429 = new Date().toISOString();
+    t.faults_today += 1;
+    saveBoard(board, deps);
+    return { ok: true, observed_ceiling: t.observed_ceiling, state: stateOf(t), locked };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +293,41 @@ async function selftest() {
     const s = summary(loadBoard(m));
     assert("the page summary carries id/state/pct for the fuel line", s.length === 7 && s.every(x => "pct" in x && "state" in x));
   }
+  // THE TANK LOCK (E2E audit 25 Jul 2026, 3e32616e — lost updates across
+  // processes). Runs against a throwaway lock path in the OS temp dir so the
+  // selftest never touches the captain's live tanks.json or its lock.
+  {
+    const lp = join(tmpdir(), `fuelboard_selftest_${process.pid}.lock`);
+    try { rmSync(lp, { force: true }); } catch {}
+    const rel = acquireTankLock(lp, { waitMs: 0 });
+    assert("tank lock: the first writer takes the board", typeof rel === "function");
+    assert("tank lock: a SECOND process cannot enter the read-modify-write", acquireTankLock(lp, { waitMs: 0 }) === null);
+    rel();
+    const rel2 = acquireTankLock(lp, { waitMs: 0 });
+    assert("tank lock: released → the next spend walks straight in", typeof rel2 === "function");
+    rel2();
+    // a holder that crashed mid-write: backdate the lock past LOCK_STALE_MS so
+    // this exercises the REAL staleness rule, not a doctored threshold
+    writeFileSync(lp, JSON.stringify({ pid: 999999, at: "crashed" }));
+    const old = new Date(Date.now() - 10 * 60_000);
+    utimesSync(lp, old, old);
+    const relStale = acquireTankLock(lp, { waitMs: 0 });
+    assert("tank lock: a STALE holder is broken — a dead organ never wedges the board", typeof relStale === "function");
+    if (typeof relStale === "function") relStale();
+    try { rmSync(lp, { force: true }); } catch {}
+  }
+  {
+    const m = mem();
+    let held = 0, freed = 0;
+    const spy = { ...m, acquireLock: () => { held += 1; return () => { freed += 1; }; } };
+    recordUse("T7", 1, 0, spy);
+    record429("T7", spy);
+    assert("EVERY ledger spend runs inside the tank lock, and releases it", held === 2 && freed === 2);
+    let held2 = 0, freed2 = 0;
+    const spy2 = { ...mem(), acquireLock: () => { held2 += 1; return () => { freed2 += 1; }; } };
+    recordUse("T99-nope", 1, 0, spy2);
+    assert("a REJECTED spend still releases the lock (no wedged fuelboard)", held2 === 1 && freed2 === 1);
+  }
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -245,13 +343,20 @@ async function main() {
   if (mode === "use") { console.log(JSON.stringify(recordUse(process.argv[3], Number(process.argv[4] || 1), Number(process.argv[5] || 0)))); return; }
   if (mode === "fault") { console.log(JSON.stringify(record429(process.argv[3]))); return; }
   // status (default)
-  const board = loadBoard();
+  // E2E audit (25 Jul 2026, 3e32616e): status is a read-modify-write too — it
+  // re-saves the WHOLE board, so a status run overlapping a dmn/council spend
+  // used to write its own stale snapshot over that spend. Load and save now sit
+  // inside one lock hold; the printing happens after, outside the critical path.
+  const board = withTankLock({}, () => {
+    const b = loadBoard();
+    saveBoard(b);                                    // persist any day-reset
+    return b;
+  });
   console.log(`⛽ THE FUELBOARD · ${board.day}`);
   for (const l of gaugeLines(board)) console.log("  " + l);
   if (board.naive_shadow_tokens) console.log(`  naive-Opus shadow: ~${Math.round(board.naive_shadow_tokens / 1000)}k tokens avoided (${board.actual_units} free units spent instead)`);
-  saveBoard(board);                                  // persist any day-reset
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { loadBoard, saveBoard, stateOf, headroomOf, recordUse, record429, pickTank, gaugeLines, summary, loadTankConfig };
+export { loadBoard, saveBoard, stateOf, headroomOf, recordUse, record429, pickTank, gaugeLines, summary, loadTankConfig, acquireTankLock, withTankLock };

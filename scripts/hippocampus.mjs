@@ -25,6 +25,11 @@
 //                           freely; the organ remembers.
 // M10:   consolidate-store — month-sharding + FSRS-style biological forgetting
 //        (prune to cold shards, never delete); recall stays O(recent).
+// E2E:   audit 25 Jul 2026 — L1 is now genuinely DURABLE-FIRST (append, THEN
+//        embed: a stalled pool can no longer eat a moment), and L4 finally
+//        COUNTS its recalls — via an append-only recall_bumps.jsonl that the
+//        hourly `index` sweep folds in (the FSRS stretch inside memoryStrength
+//        was dead wiring until now: nothing ever wrote anything but 0).
 // LAWS:  single writer of dressing-room/hippocampus/* (ALL gitignored — his
 //        moments never touch the public repo). Facts verbatim, byte-exact.
 //        remember/forget fire on HIS words only (the Dugout constitution
@@ -83,20 +88,31 @@ function loadKeys(envText = null) {
   }
   return keys;
 }
+// E2E audit (25 Jul 2026): this fetch had NO AbortController at all — unlike
+// generatePool's 120s. A stalled endpoint (TCP accepted, never answers) hung it
+// forever, PER KEY, and every caller inherited that hang: the Dugout's scribe
+// tool runs this organ via execFileSync with a 60s kill, so the child died mid-
+// flight and the captain's moment vanished. A recall embed is a sub-second call;
+// 15s is already generous. Timer cleared in `finally` (a thrown fetch used to
+// leave the timer armed — same class of leak as generatePool below).
+const EMBED_TIMEOUT_MS = Number(process.env.HIPPO_EMBED_TIMEOUT_MS || 15000);
+const EMBED_BATCH_CAP = 100;                        // Gemini batchEmbedContents hard cap: 100 requests/call
 async function embedPool(texts, keys = loadKeys(), fetchFn = fetch) {
   if (!texts.length) return [];
   const model = process.env.HIPPO_EMBED_MODEL || "gemini-embedding-001";
   for (const key of keys) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), EMBED_TIMEOUT_MS);
     try {
       const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
         body: JSON.stringify({ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: String(t).slice(0, 1500) }] } })) }),
       });
       if (!r.ok) continue;
       const j = await r.json();
       const vecs = (j.embeddings || []).map(e => e.values);
       if (vecs.length) return vecs;
-    } catch { }
+    } catch { } finally { clearTimeout(timer); }
   }
   return null;
 }
@@ -107,20 +123,26 @@ async function generatePool(prompt, { models, maxOutputTokens = 2048, json = fal
   let lastStatus = null;                              // M16 — callers with a PINNED key learn WHY it failed (429 = lane dry)
   for (const model of ladder) {
     for (const key of keys) {
+      // E2E audit (25 Jul 2026): the timer was declared INSIDE the try and only
+      // cleared on the success path, so a fetch that throws instantly (Wi-Fi
+      // down → ECONNREFUSED/DNS) left one armed 120s timer per key × per model.
+      // Six orphaned handles kept the event loop alive: the 02:10 consolidate
+      // printed "every key dry" in <1s then sat there for two minutes. Hoisted
+      // out of the try and cleared in `finally`.
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 120000);
       try {
-        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 120000);
         const gc = { maxOutputTokens, temperature };  // M23 — hot sampling for difficulty grading
         if (json) gc.responseMimeType = "application/json";   // the wire enforces JSON, not the prompt
         const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
           method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
         });
-        clearTimeout(t);
         if (!r.ok) { lastStatus = r.status; continue; }
         const j = await r.json();
         const text = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || "").join("");
         if (text) return { ok: true, text, model, error: null };
-      } catch { }
+      } catch { } finally { clearTimeout(t); }
     }
   }
   return { ok: false, text: null, error: "every key dry on every model", status: lastStatus };
@@ -142,37 +164,88 @@ async function markMoment(kind, text, deps = {}) {
   }
   const embed = deps.embed || embedPool;
   const append = deps.append || ((row) => { mkdirSync(HIPPO_DIR, { recursive: true }); appendFileSync(EPISODES, JSON.stringify(row) + "\n"); });
+  // E2E audit (25 Jul 2026): the embed used to be AWAITED **before** the append,
+  // so a hung pool ate the moment outright — the Dugout calls this via
+  // execFileSync with a 60s kill, the child died inside the fetch and nothing
+  // was ever written. The header always promised "written the MOMENT they
+  // happen + embedded async"; now the code actually does that. Order is now
+  // DURABLE-FIRST: append with vec:null, then best-effort embed and patch the
+  // row in place. If the patch never happens (dry pool / crash) the hourly
+  // `index` sweep back-fills the vector — the moment itself is already safe.
+  // When a test injects `append`, the default patch is a no-op: an injected
+  // writer must NEVER cause a write to the captain's real episodes.jsonl.
+  const patch = deps.patch || (deps.append ? (() => true) : ((row) => patchEpisodeVec(row.id, row.vec)));
   const now = deps.now || new Date();
-  const vecs = await embed([t]).catch(() => null);
-  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: localDate(now), kind: k, text: t.slice(0, 500), vec: (vecs && vecs[0]) || null, recalls: 0 };
-  append(row);
-  return { ok: true, id: row.id, embedded: !!row.vec };
+  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: localDate(now), kind: k, text: t.slice(0, 500), vec: null, recalls: 0 };
+  append(row);                                      // ← the moment is durable from HERE, whatever the network does
+  let embedded = false;
+  try {
+    const vecs = await embed([t]);
+    if (vecs && vecs[0]) { row.vec = vecs[0]; embedded = patch(row) !== false; }
+  } catch { }
+  return { ok: true, id: row.id, embedded, durable: true };
+}
+// single writer of episodes.jsonl (this organ) → an in-place rewrite is safe;
+// the hot set is O(recent) by consolidateStore, so this stays cheap.
+function patchEpisodeVec(id, vec, file = EPISODES) {
+  try {
+    const rows = readLines(file);
+    const hit = rows.find(r => r.id === id);
+    if (!hit) return false;
+    hit.vec = vec;
+    writeAtomic(file, rows.map(x => JSON.stringify(x)).join("\n") + "\n");
+    return true;
+  } catch { return false; }
 }
 // embed-pending sweep — offline moments get their vectors when the pool wakes
-async function indexEpisodes(deps = {}) {
+// E2E audit (25 Jul 2026): this sent the ENTIRE pending list as one
+// batchEmbedContents call. Past 100 rows the wire rejects it (400), embedPool
+// walks every key, returns null, and the sweep reported a bare "0" — byte-
+// identical to a healthy empty backlog. So a week of offline marking became a
+// backlog that could never drain and never said so. Two fixes: chunk to the
+// 100-request cap, and report failures distinguishably. indexEpisodes keeps its
+// number return (nightshift.mjs:560 sums it) — the detail lives beside it.
+async function indexEpisodesDetailed(deps = {}) {
   const embed = deps.embed || embedPool;
   const file = deps.file || EPISODES;
   const rows = readLines(file);
+  // this sweep IS the single writer of episodes.jsonl — so it is also where the
+  // per-turn recall journal gets folded in (see bumpRecall below).
+  const recalls = applyRecallBumps(rows, deps);
   const pending = rows.filter(r => !r.vec);
-  if (!pending.length) return 0;
-  const vecs = await embed(pending.map(r => r.text));
-  if (!vecs) return 0;
-  let n = 0;
-  pending.forEach((r, i) => { if (vecs[i]) { r.vec = vecs[i]; n++; } });
-  (deps.write || ((rs) => writeAtomic(file, rs.map(x => JSON.stringify(x)).join("\n") + "\n")))(rows);
-  return n;
+  let n = 0, failed = 0;
+  for (let i = 0; i < pending.length; i += EMBED_BATCH_CAP) {
+    const chunk = pending.slice(i, i + EMBED_BATCH_CAP);
+    const vecs = await embed(chunk.map(r => r.text));
+    if (!vecs) { failed += chunk.length; continue; }  // this chunk stays pending; the next sweep retries it
+    chunk.forEach((r, j) => { if (vecs[j]) { r.vec = vecs[j]; n++; } else failed++; });
+  }
+  if (n || recalls) {
+    (deps.write || ((rs) => writeAtomic(file, rs.map(x => JSON.stringify(x)).join("\n") + "\n")))(rows);
+    // clear the journal only when it was the real one AND we really persisted
+    if (recalls && !deps.bumps && !deps.write) { try { writeFileSync(RECALL_BUMPS, ""); } catch { } }
+  }
+  return { ok: failed === 0, embedded: n, pending: pending.length, failed, recalls };
 }
+async function indexEpisodes(deps = {}) { return (await indexEpisodesDetailed(deps)).embedded; }
 
 // ---------------------------------------------------------------------------
 // L2 — THE LEDGER OF SELF (captain-gated at the mouth; shape enforced here)
 // ---------------------------------------------------------------------------
+const FACT_MAX_CHARS = 240;
 function rememberFact(text, deps = {}) {
-  const t = String(text || "").trim();
+  // E2E audit (25 Jul 2026): dedupe compared the FULL input against the stored
+  // row, which was already truncated to 240 — so any fact longer than that
+  // never matched itself and re-appended on every re-utterance, while
+  // id = textHash(FULL text) gave all the copies the SAME id (forget one, the
+  // twins stay). Truncate ONCE, up front, so compare + id + stored text are the
+  // same string. Existing rows keep their old ids: dedupe matches on text.
+  const t = String(text || "").trim().slice(0, FACT_MAX_CHARS);
   if (!t) return { ok: false, error: "no words to remember" };
   const facts = (deps.read || (() => readJson(FACTS)))() || { facts: [] };
   if (facts.facts.some(f => f.text === t)) return { ok: true, id: facts.facts.find(f => f.text === t).id, note: "already held" };
   if (facts.facts.length >= FACTS_CAP) return { ok: false, error: `the ledger holds ${FACTS_CAP} facts max — forget one first (it must stay small enough to ALWAYS be present)` };
-  const f = { id: textHash(t), ts: (deps.now || new Date()).toISOString(), text: t.slice(0, 240) };
+  const f = { id: textHash(t), ts: (deps.now || new Date()).toISOString(), text: t };
   facts.facts.push(f);
   (deps.write || ((o) => writeAtomic(FACTS, o)))(facts);
   return { ok: true, id: f.id };
@@ -279,7 +352,56 @@ async function recallReflex(turnText, deps = {}) {
     if (overlap >= 3 && !best) best = { score: 0.56, id: "thread:" + textHash(String(th)), kind: "thread", day: who.date, text: String(th) };
   }
   if (!best) return null;
+  // E2E audit (25 Jul 2026): `recalls` was DEAD WIRING — memoryStrength stretches
+  // stability by it, but nothing on the whole repo ever wrote anything but the
+  // literal 0. So a doubt he circled back to six times decayed exactly like one
+  // he never touched again, and consolidate-store retired it to cold. A surfaced
+  // episode IS a review — count it here, where the reflex actually fires.
+  // Once per DAY, not per turn: the same episode surfacing five times in one
+  // session is one review, not five (unbounded stretch = never forgotten).
+  // A lexical "thread:" hit is not an episode row — nothing to bump.
+  if (!String(best.id).startsWith("thread:")) {
+    const bump = deps.bump || (deps.episodes ? (() => false) : bumpRecall);
+    try { bump(best.id, localDate(deps.now || new Date())); } catch { }
+  }
   return { id: best.id, kind: best.kind, text: best.text, hint: `${best.kind} · ${best.day} · his words: "${best.text}"`, score: Math.round(best.score * 100) / 100 };
+}
+// The bump is an APPEND-ONLY JOURNAL, not an edit of episodes.jsonl. Why: the
+// reflex fires in-process inside the Dugout on every turn, while `hippocampus.mjs
+// mark` runs as a separate child — two read-modify-writes of the same file would
+// clobber each other and could drop a freshly marked moment. An O_APPEND line
+// cannot. The hourly `index` sweep (the single writer) folds the journal in.
+const RECALL_BUMPS = join(HIPPO_DIR, "recall_bumps.jsonl");
+function bumpRecall(id, today = localDate(), file = RECALL_BUMPS) {
+  try {
+    if (!id || String(id).startsWith("thread:")) return false;   // a thread is not an episode row
+    mkdirSync(dirname(file), { recursive: true });
+    appendFileSync(file, JSON.stringify({ id, day: today }) + "\n");
+    return true;
+  } catch { return false; }
+}
+// fold the journal into the rows (mutates in place; caller persists + clears).
+// One stretch per episode per DAY — five surfacings in one session is ONE review.
+function applyRecallBumps(rows, deps = {}) {
+  const journal = (deps.bumps || readLines(RECALL_BUMPS)).filter(b => b && b.id && b.day).sort((a, b) => String(a.day).localeCompare(String(b.day)));
+  if (!journal.length) return 0;
+  const byId = new Map(rows.map(r => [r.id, r]));
+  const seen = new Set();
+  let applied = 0;
+  for (const b of journal) {
+    const key = b.id + "|" + b.day;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const r = byId.get(b.id);
+    // monotonic, so a replay can never double-count: the journal is cleared only
+    // after a successful persist, and a crash in between would otherwise re-fold.
+    // (id absent = pruned to a cold shard — nothing to stretch, drop it.)
+    if (!r || String(b.day) <= String(r.last_recall_day || "")) continue;
+    r.recalls = (r.recalls || 0) + 1;
+    r.last_recall_day = b.day;
+    applied++;
+  }
+  return applied;
 }
 
 // ---------------------------------------------------------------------------
@@ -359,6 +481,20 @@ async function selftest() {
     assert("SCRIBE: moment lands verbatim + embedded + day-stamped", ok.ok && ok.embedded && rows[0].text === "tokenization feels like magic not math" && rows[0].day && rows[0].kind === "doubt");
     const off = await markMoment("win", "held the derby", { append: r => rows.push(r), embed: async () => null });
     assert("SCRIBE: pool dry → moment still lands (vec null, sweep later)", off.ok && rows[1].vec === null);
+    // E2E audit 25 Jul 2026 — ORDER is the fix: durable append BEFORE the embed.
+    // A hung pool (the dugout kills the child at 60s) must never eat a moment.
+    let order = null, embedStarted = false;
+    const hung = await markMoment("doubt", "does my moment survive a hung embedding pool", {
+      append: r => { order = embedStarted ? "after-embed" : "before-embed"; rows.push(r); },
+      embed: async () => { embedStarted = true; await new Promise(r => setTimeout(r, 10)); return null; },
+    });
+    assert("SCRIBE: the durable append happens BEFORE the embed round-trip (a stalled pool can never eat a moment)", hung.ok && hung.durable === true && order === "before-embed" && rows[2].vec === null);
+    // …and the other half of the same audit finding: the embed fetch itself was
+    // un-abortable. Injected fetchFn — no wire is touched here.
+    const timersBefore = process.getActiveResourcesInfo().filter(r => r === "Timeout").length;
+    let sawSignal;
+    const nulled = await embedPool(["x"], ["k1", "k2"], async (_u, o) => { sawSignal = o.signal; return { ok: false }; });
+    assert("embedPool carries an AbortSignal per key and clears its timer (it could hang forever before)", nulled === null && sawSignal instanceof AbortSignal && sawSignal.aborted === false && process.getActiveResourcesInfo().filter(r => r === "Timeout").length <= timersBefore);
   }
   // the embed-pending sweep
   {
@@ -368,6 +504,24 @@ async function selftest() {
     writeFileSync(tmp, rows.map(r => JSON.stringify(r)).join("\n") + "\n");
     const n = await indexEpisodes({ embed: mockEmbed, file: tmp, write: (rs) => { written = rs; } });
     assert("sweep embeds ONLY the pending rows (idempotent by shape)", n === 1 && written[0].vec && written[1].vec[0] === 1);
+    // E2E audit 25 Jul 2026 — a 100+ backlog used to go out as ONE oversized
+    // batch, get 400 on every key, and report a bare "0" forever. Chunk to the
+    // wire cap, and make a failed sweep readable as failure, not as "nothing to do".
+    const many = Array.from({ length: 250 }, (_, i) => ({ id: "p" + i, text: "pending moment " + i, vec: null }));
+    const tmpBig = join(os.tmpdir(), `hippo-batch-${Date.now()}.jsonl`);
+    writeFileSync(tmpBig, many.map(r => JSON.stringify(r)).join("\n") + "\n");
+    const sizes = [];
+    const wireCapped = async (ts) => { sizes.push(ts.length); return ts.length > 100 ? null : ts.map(() => [0, 1]); };
+    const big = await indexEpisodesDetailed({ embed: wireCapped, file: tmpBig, write: () => { } });
+    assert("sweep chunks to the 100-request wire cap (a 100+ backlog used to fail forever)", big.embedded === 250 && sizes.length === 3 && sizes.every(s => s <= EMBED_BATCH_CAP));
+    const dryRun = await indexEpisodesDetailed({ embed: async () => null, file: tmpBig, write: () => { } });
+    assert("sweep tells 'nothing pending' apart from 'every batch failed'", dryRun.pending === 250 && dryRun.failed === 250 && dryRun.ok === false && (await indexEpisodesDetailed({ embed: mockEmbed, file: tmp, write: () => { } })).ok === true);
+    // the sweep is the single writer, so it is also where the recall journal lands
+    const tmpFull = join(os.tmpdir(), `hippo-full-${Date.now()}.jsonl`);
+    writeFileSync(tmpFull, JSON.stringify({ id: "b", text: "done", vec: [1, 0] }) + "\n");
+    let folded = null;
+    const withBumps = await indexEpisodesDetailed({ embed: async () => { throw new Error("nothing pending — the pool must not be touched"); }, file: tmpFull, bumps: [{ id: "b", day: "2026-07-20" }], write: (rs) => { folded = rs; } });
+    assert("sweep folds the recall journal even with NOTHING pending, and spends no pool call", withBumps.recalls === 1 && withBumps.embedded === 0 && folded.find(r => r.id === "b").recalls === 1);
   }
 
   // L2 — the Ledger of Self
@@ -387,6 +541,16 @@ async function selftest() {
     const cart = identityCartridge({ facts: [{ id: "x1", text: "mornings are my best hours" }] });
     assert("cartridge carries EVERY fact, marked always-present", cart.includes("ALWAYS present") && cart.includes("mornings"));
     assert("no facts → empty cartridge, constitution unchanged", identityCartridge({ facts: [] }) === "");
+  }
+  // E2E audit 25 Jul 2026 — dedupe used to compare the FULL input against the
+  // already-truncated stored row, so long facts duplicated under ONE shared id.
+  {
+    let store = { facts: [] };
+    const deps = { read: () => store, write: (o) => { store = o; }, now: new Date("2026-07-14T10:00:00Z") };
+    const long = "the interview arc runs through retrieval and evals, and " + "detail ".repeat(40);
+    const a = rememberFact(long, deps);
+    const b = rememberFact(long, deps);
+    assert("LEDGER: a >240-char fact dedupes against its OWN stored (truncated) form — no twins sharing one id", long.length > 240 && a.ok && b.note === "already held" && b.id === a.id && store.facts.length === 1 && store.facts[0].id === textHash(store.facts[0].text));
   }
 
   // L3 — the Consolidator (AI proposes · code validates)
@@ -422,6 +586,37 @@ async function selftest() {
     const th = await recallReflex("why does the kv cache not fix quadratic attention scaling", { episodes: [], who: { date: "2026-07-14", open_threads: ["why kv-cache doesn't fix quadratic attention scaling"] }, embed: mockEmbed });
     assert("REFLEX: an open thread resurfaces when he circles back", th && th.kind === "thread" && th.text.includes("kv-cache"));
     assert("REFLEX: tiny turns never trigger a lookup", (await recallReflex("haan ok", { episodes: eps, embed: async () => { throw new Error("no"); } })) === null);
+    // E2E audit 25 Jul 2026 — `recalls` was dead wiring: memoryStrength stretches
+    // stability by it but NOTHING ever wrote anything but 0, so a doubt he kept
+    // circling back to decayed like one he'd abandoned. The reflex counts it now.
+    const bumps = [];
+    const counted = await recallReflex("wait tokens and subwords again, how does tokenization split", { episodes: eps, who: null, embed: mockEmbed, bump: (id, day) => bumps.push([id, day]), now: new Date("2026-07-14T10:00:00Z") });
+    assert("REFLEX: a surfaced episode gets its recall COUNTED (the FSRS stretch was never wired)", counted && counted.id === "e1" && bumps.length === 1 && bumps[0][0] === "e1" && bumps[0][1] === "2026-07-14");
+    const tbumps = [];
+    await recallReflex("why does the kv cache not fix quadratic attention scaling", { episodes: [], who: { date: "2026-07-14", open_threads: ["why kv-cache doesn't fix quadratic attention scaling"] }, embed: mockEmbed, bump: (id) => tbumps.push(id) });
+    assert("REFLEX: a lexical THREAD hit has no episode row — nothing bumped", tbumps.length === 0);
+    // the bump is APPEND-ONLY (the reflex runs inside the Dugout while `mark`
+    // runs as a child — two rewrites of episodes.jsonl would clobber a moment).
+    const tmpB = join(os.tmpdir(), `hippo-bump-${Date.now()}.jsonl`);
+    const wrote = [bumpRecall("e1", "2026-07-14", tmpB), bumpRecall("e1", "2026-07-14", tmpB), bumpRecall("e1", "2026-07-15", tmpB), bumpRecall("thread:abc", "2026-07-15", tmpB)];
+    const journal = readLines(tmpB);
+    assert("REFLEX: the bump only ever APPENDS (no read-modify-write race with a concurrent mark)", wrote.join() === "true,true,true,false" && journal.length === 3 && journal[0].id === "e1");
+    // one stretch per DAY: the same episode surfacing five times in a session is
+    // one review, not five (per-turn counting = a memory that never decays).
+    const target = [{ id: "e1", ts: "2026-07-10T10:00:00Z", kind: "doubt", day: "2026-07-10", text: "tokenization subwords doubt", vec: [1, 0], recalls: 0 }];
+    const applied = applyRecallBumps(target, { bumps: journal.concat([{ id: "pruned-to-cold", day: "2026-07-15" }]) });
+    assert("REFLEX: the sweep folds the journal — ONE stretch per day, replay-safe, unknown ids dropped", applied === 2 && target[0].recalls === 2 && target[0].last_recall_day === "2026-07-15" && applyRecallBumps(target, { bumps: journal }) === 0);
+    const strengthened = memoryStrength(target[0], new Date("2026-08-20T00:00:00Z")) > memoryStrength({ ...target[0], recalls: 0 }, new Date("2026-08-20T00:00:00Z"));
+    assert("REFLEX: counted recalls actually STRETCH the forgetting curve (the whole point of the wiring)", strengthened);
+  }
+  // E2E audit 25 Jul 2026 — generatePool's 120s abort timer was cleared ONLY on
+  // the success path, so a fetch that throws (Wi-Fi down) left one armed timer
+  // per key × per model holding the event loop open ~2 min after the work ended.
+  {
+    const liveTimers = () => process.getActiveResourcesInfo().filter(r => r === "Timeout").length;
+    const before = liveTimers();
+    const dry = await generatePool("x", { models: ["m1", "m2"], keys: ["k1", "k2", "k3"], fetchFn: async () => { throw new Error("ECONNREFUSED"); } });
+    assert("GEN: a thrown fetch leaks NO 120s abort timer (the nightly used to hang 2 min after finishing)", dry.ok === false && liveTimers() <= before);
   }
 
   // L0 — the rehydrator cartridge
@@ -463,7 +658,13 @@ async function main() {
   if (mode === "mark") { console.log(JSON.stringify(await markMoment(process.argv[3], stdin()))); return; }
   if (mode === "remember") { console.log(JSON.stringify(rememberFact(stdin()))); return; }
   if (mode === "forget") { console.log(JSON.stringify(forgetFact(process.argv[3]))); return; }
-  if (mode === "index") { console.log(`hippocampus: ${await indexEpisodes()} pending episode(s) embedded`); return; }
+  // E2E audit (25 Jul 2026): "0 pending episode(s) embedded" used to mean BOTH
+  // "healthy, nothing to do" and "the batch was rejected on every key". Say which.
+  if (mode === "index") {
+    const r = await indexEpisodesDetailed();
+    console.log(`hippocampus: ${r.embedded}/${r.pending} pending episode(s) embedded${r.recalls ? ` · ${r.recalls} recall(s) counted` : ""}${r.failed ? ` · ${r.failed} FAILED (pool dry or batch rejected) — backlog stands, next sweep retries` : ""}`);
+    return;
+  }
   if (mode === "recall") { console.log(JSON.stringify(await recallReflex(process.argv.slice(3).join(" ")))); return; }
   if (mode === "cartridge") { console.log(buildRehydrateCartridge() || "(the organ is empty — it fills as he talks)"); return; }
   if (mode === "consolidate") {
@@ -481,4 +682,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { markMoment, indexEpisodes, rememberFact, forgetFact, identityCartridge, whoCartridge, consolidate, validateWho, recallReflex, buildRehydrateCartridge, consolidateStore, memoryStrength, generatePool, embedPool, loadKeys as loadHippoKeys };
+export { markMoment, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact, identityCartridge, whoCartridge, consolidate, validateWho, recallReflex, bumpRecall, applyRecallBumps, buildRehydrateCartridge, consolidateStore, memoryStrength, generatePool, embedPool, loadKeys as loadHippoKeys };

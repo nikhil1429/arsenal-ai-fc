@@ -151,10 +151,30 @@ function extractAnchors(capsules, cfg) {
       }
     }
   }
+  // EXTRACTION LAW — the honest test (REPAIRED; the E2E audit of 25 Jul 2026
+  // found the old one was tautological dead code). The old filter ran AFTER the
+  // dedup loop and rebuilt its haystack with the SAME pipeline that produced the
+  // n-grams:
+  //     sources.map(s => s.text.toLowerCase()
+  //       .replace(/[^\p{L}\p{N}₹\s-]/gu, " ").replace(/\s+/g, " "))
+  // Every kept phrase is by construction a contiguous token run of exactly that
+  // normalized text, so `t.includes(phrase)` could never be false — the law
+  // verified nothing. Worse, because punctuation had already been flattened to
+  // space, phrases that STRADDLE a punctuation break ("recon; jaise" → "recon
+  // jaise", "resolution 0 — warehouse" → "resolution 0 warehouse") were served
+  // to him as "his anchor metaphors" — invention wearing extraction's shirt,
+  // the exact thing this law exists to stop.
+  // The repaired test keeps punctuation and collapses whitespace only: a phrase
+  // is verbatim only if his raw words ran together with nothing but space
+  // between them. It is applied to the CANDIDATES (not after dedup) so a bogus
+  // cross-punctuation phrase can no longer swallow the real sub-phrase it
+  // contains and then vanish, taking the real anchor down with it.
+  const verbatim = sources.map(s => String(s.text).toLowerCase().replace(/\s+/g, " "));
+  const isVerbatim = (phrase) => verbatim.some(t => t.includes(phrase));
   // recurring across ≥min_count occurrences AND ≥2 capsules (a personal anchor,
   // not a one-capsule phrase); longest-first dedup (drop sub-phrases of kept ones)
   const cands = [...counts.entries()]
-    .filter(([, e]) => e.count >= cfg.lexicon.min_count && e.capsules.size >= 2)
+    .filter(([phrase, e]) => e.count >= cfg.lexicon.min_count && e.capsules.size >= 2 && isVerbatim(phrase))
     .sort((a, b) => b[0].length - a[0].length || b[1].count - a[1].count);
   const kept = [];
   for (const [phrase, e] of cands) {
@@ -162,9 +182,7 @@ function extractAnchors(capsules, cfg) {
     kept.push({ phrase, count: e.count, sources: [...e.capsules], breaking_point: null });
     if (kept.length >= 25) break;
   }
-  // EXTRACTION LAW: every anchor must be a verbatim substring of some source text
-  const all = sources.map(s => String(s.text).toLowerCase().replace(/[^\p{L}\p{N}₹\s-]/gu, " ").replace(/\s+/g, " "));
-  return kept.filter(k => all.some(t => t.includes(k.phrase)));
+  return kept;
 }
 
 function buildLexicon(capsules, cfg, now = new Date()) {
@@ -201,10 +219,74 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
     low_confidence: false,
     generated_at: now.toISOString(),
     queue,
-    doubts_retired: retired.length,
-    retired,
+    // E2E audit (25 Jul 2026) found: this was `retired.length` while the queue
+    // exclusion above used the de-duplicating retiredKeys Set. Two entries for
+    // the same capsule#index (a hand-repair, or an unlocked dugout-retire racing
+    // the 21:45 run) removed ONE doubt from the queue but added TWO to the
+    // counter — the one progress bar this brain believes, inflated forever and
+    // never repairable by more running. The counter now counts what the queue
+    // counts: distinct retired doubts.
+    doubts_retired: retiredKeys.size,
+    retired,  // raw list kept verbatim — it carries retired_on dates; it is his data, not a derived count
   };
 }
+
+// ---------------------------------------------------------------------------
+// THE TAPE ROOM — guards on the way in (all three added by the E2E audit, 25 Jul 2026)
+// ---------------------------------------------------------------------------
+
+// GUARD 1 — never confuse "no history yet" with "history I could not read".
+// E2E audit (25 Jul 2026) found: main() read prior retires via readJson(TAPE),
+// which returns null on a MISSING file and on an unreadable/corrupt one alike.
+// retired then fell back to [] and the run unconditionally writeAtomic()'d over
+// tape_room.json. One malformed byte (hand-edit typo) or a transient EBUSY at
+// the scheduled 21:45 run — the moment another organ happened to have the file
+// open — and every doubt he ever retired was erased, silently, with a cheerful
+// "doubts_retired=0" on stdout. There is no recovering that from the capsules.
+// So: absent → legitimately start empty; present-but-unreadable → ABORT the run,
+// write NOTHING, and say so loudly. A skipped night costs nothing; a wiped
+// counter costs the only progress bar this brain believes.
+// io is injected so the selftest can exercise every branch without touching disk.
+function loadRetiredSafe(path, io = { exists: existsSync, read: readFileSync }) {
+  if (!io.exists(path)) return { ok: true, retired: [], reason: "absent — fresh start" };
+  let raw;
+  try { raw = io.read(path, "utf8"); } catch (e) { return { ok: false, retired: null, reason: `unreadable (${e.message})` }; }
+  let j;
+  try { j = JSON.parse(raw); } catch (e) { return { ok: false, retired: null, reason: `not valid JSON (${e.message})` }; }
+  if (!j || typeof j !== "object" || !Array.isArray(j.retired)) {
+    return { ok: false, retired: null, reason: "parses, but carries no retired[] array — this is not a tape_room.json" };
+  }
+  return { ok: true, retired: j.retired, reason: "loaded" };
+}
+
+// GUARD 2 — a retire must name a doubt that EXISTS.
+// E2E audit (25 Jul 2026) found: retire mode checked only that <capsule> was
+// truthy and <doubt_index> parsed as an int — never that the pair existed in the
+// capsules. A near-miss id from the dugout's rematch call ('tokenisation' for
+// 'tokenization') appended a phantom retire: doubts_retired climbed by one
+// forever while the REAL doubt stayed in the queue, unbeaten. That directly
+// breaks the header's constitutional line "doubts_retired only ever climbs by
+// real retires". Validate against what is actually on disk, and on failure print
+// the valid ids/range so the caller can self-correct.
+function validateRetireTarget(capsules, capsule, idx) {
+  const c = capsules.find(x => x.id === capsule);
+  if (!c) return { ok: false, reason: `unknown capsule "${capsule}"`, valid: capsules.map(x => x.id) };
+  const n = Array.isArray(c.doubts) ? c.doubts.length : 0;
+  if (!Number.isInteger(idx) || idx < 0 || idx >= n) {
+    return { ok: false, reason: n ? `doubt_index ${idx} out of range for "${capsule}" (valid 0..${n - 1})` : `capsule "${capsule}" has no doubts`, valid: [] };
+  }
+  return { ok: true, reason: "valid target", valid: [] };
+}
+
+// GUARD 3 — an unrecognised mode is an error, not a run.
+// E2E audit (25 Jul 2026) found: mode came straight from argv[2] and anything
+// unrecognised fell through to the default `run` path — so a fat-fingered
+// `selftst` or `retrie` fired the REAL writer against real state while the
+// captain believed he was testing. Modes are an allowlist now; unknown → usage
+// and exit 1, before a single file is touched.
+const MODES = new Set(["run", "retire", "selftest"]);
+const USAGE = "usage: node scripts/doubtminer.mjs [run | retire <capsule> <doubt_index> | selftest]";
+const resolveMode = (argv2) => { const m = String(argv2 ?? "run").toLowerCase(); return MODES.has(m) ? m : null; };
 
 // ---------------------------------------------------------------------------
 // selftest — fixtures only
@@ -237,7 +319,19 @@ async function selftest() {
   // LEXICON
   const lex = buildLexicon(caps(20), cfg, now);
   assert("recurring cross-capsule anchor extracted", lex.anchors.some(a => a.phrase.includes("warehouse wala naksha")));
-  assert("EXTRACTION LAW — every anchor verbatim in a source", lex.anchors.every(a => a.phrase.length > 0));
+  // E2E audit (25 Jul 2026): this check used to assert `a.phrase.length > 0` — it
+  // asserted NOTHING, guarding a filter that itself could never fire. Real test
+  // now: rebuild the raw sources with punctuation INTACT (whitespace collapsed
+  // only) and demand every anchor appear inside one of them. Against the old
+  // code this fails loudly — the fixture's ~20 "resolution <n> warehouse wala
+  // naksha" anchors leap the em-dash in "crisp resolution 0 — warehouse …",
+  // words he never once said back to back.
+  const rawSources = [];
+  for (const c of caps(20)) { rawSources.push(c.bolo, c.deep); for (const d of c.doubts) rawSources.push(d.a); }
+  const rawSpaced = rawSources.map(t => t.toLowerCase().replace(/\s+/g, " "));
+  assert("EXTRACTION LAW — every anchor verbatim in a source (punctuation respected)",
+    lex.anchors.length > 0 && lex.anchors.every(a => rawSpaced.some(t => t.includes(a.phrase))));
+  assert("EXTRACTION LAW — no anchor leaps a punctuation break", !lex.anchors.some(a => /resolution \d+ warehouse/.test(a.phrase)));
   assert("breaking_point null until the captain declares", lex.anchors.every(a => a.breaking_point === null));
   assert("anchors carry source capsules", lex.anchors[0].sources.length >= 2);
   const lexEmpty = buildLexicon([], cfg, now);
@@ -251,6 +345,27 @@ async function selftest() {
   const tape2 = buildTapeRoom(caps(3), [{ capsule: "tok", doubt_index: 0, retired_on: "2026-07-12" }], cfg, now);
   assert("retired doubt leaves the queue; counter climbs", tape2.doubts_retired === 1 && !tape2.queue.some(q => q.capsule === "tok" && q.doubt_index === 0));
   assert("retire idempotence guard (same key not double-counted)", buildTapeRoom(caps(3), [{ capsule: "tok", doubt_index: 0 }, { capsule: "tok", doubt_index: 0 }], cfg, now).queue.filter(q => q.capsule === "tok" && q.doubt_index === 0).length === 0);
+  // E2E audit (25 Jul 2026): the line above only ever checked the QUEUE side of
+  // idempotence — doubts_retired was retired.length and quietly read 2 for one
+  // retired doubt. This is the half that was missing.
+  const dup = buildTapeRoom(caps(3), [{ capsule: "tok", doubt_index: 0, retired_on: "2026-07-12" }, { capsule: "tok", doubt_index: 0, retired_on: "2026-07-13" }], cfg, now);
+  assert("duplicate retires counted ONCE (doubts_retired de-duplicated like the queue)", dup.doubts_retired === 1 && dup.retired.length === 2);
+
+  // GUARDS on the way in (E2E audit 25 Jul 2026) — no disk touched; io injected
+  const io = (content) => ({ exists: () => true, read: () => { if (content instanceof Error) throw content; return content; } });
+  const absentIo = { exists: () => false, read: () => { throw new Error("must not be read"); } };
+  assert("absent tape_room.json = legitimate fresh start", (() => { const r = loadRetiredSafe("x", absentIo); return r.ok === true && r.retired.length === 0; })());
+  assert("good tape_room.json returns its retires", loadRetiredSafe("x", io(JSON.stringify({ retired: [{ capsule: "tok", doubt_index: 0 }] }))).retired.length === 1);
+  assert("CORRUPT tape_room.json ABORTS — never silently reset to zero retires", loadRetiredSafe("x", io("{ not json")).ok === false && loadRetiredSafe("x", io("{ not json")).retired === null);
+  assert("unreadable tape_room.json (EBUSY) ABORTS, does not read as empty", loadRetiredSafe("x", io(Object.assign(new Error("EBUSY"), {}))).ok === false);
+  assert("tape_room.json with no retired[] ABORTS", loadRetiredSafe("x", io("{}")).ok === false);
+
+  const rcaps = caps(3);
+  assert("retire target — real capsule#index accepted", validateRetireTarget(rcaps, "tok", 0).ok === true);
+  assert("retire target — typo'd capsule id REJECTED (no phantom retire)", validateRetireTarget(rcaps, "tokenisation", 0).ok === false);
+  assert("retire target — out-of-range doubt_index REJECTED", validateRetireTarget(rcaps, "tok", 3).ok === false && validateRetireTarget(rcaps, "tok", -1).ok === false);
+
+  assert("unknown argv mode rejected, never falls through to a real run", resolveMode("selftst") === null && resolveMode("retrie") === null && resolveMode(undefined) === "run" && resolveMode("RETIRE") === "retire");
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -261,23 +376,38 @@ async function selftest() {
 // main
 // ---------------------------------------------------------------------------
 async function main() {
-  const mode = (process.argv[2] || "run").toLowerCase();
+  const mode = resolveMode(process.argv[2]);   // GUARD 3 — unknown modes no longer fall through to a real run
+  if (mode === null) { console.error(`doubtminer: unknown mode "${process.argv[2]}" — nothing written.\n${USAGE}`); process.exit(1); }
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const cfg = loadConfig();
   const now = new Date();
-  const prevTape = readJson(TAPE);
-  let retired = (prevTape && Array.isArray(prevTape.retired)) ? prevTape.retired : [];
+  // GUARD 1 — corrupt tape_room.json must never be mistaken for an empty one
+  const prevTape = loadRetiredSafe(TAPE);
+  if (!prevTape.ok) {
+    console.error(`doubtminer: REFUSING TO RUN — ${TAPE} exists but ${prevTape.reason}.`);
+    console.error("  Writing now would reset doubts_retired to 0 and erase every retire. Nothing was written.");
+    console.error("  Repair (or move aside) that file, then re-run. The queue rebuilds itself from the capsules; the retires do not.");
+    process.exit(1);
+  }
+  let retired = prevTape.retired;
+
+  const capsules = loadCapsules();   // loaded BEFORE retire now — GUARD 2 validates the target against it
 
   if (mode === "retire") {
     const capsule = process.argv[3];
     const idx = parseInt(process.argv[4], 10);
     if (!capsule || Number.isNaN(idx)) { console.log("usage: node scripts/doubtminer.mjs retire <capsule> <doubt_index>"); process.exit(1); }
+    const target = validateRetireTarget(capsules, capsule, idx);   // GUARD 2 — no phantom retires
+    if (!target.ok) {
+      console.error(`doubtminer: refusing to retire — ${target.reason}. Nothing written.`);
+      if (target.valid.length) console.error(`  known capsules: ${target.valid.join(", ")}`);
+      process.exit(1);
+    }
     if (!retired.some(r => r.capsule === capsule && r.doubt_index === idx)) {
       retired = retired.concat([{ capsule, doubt_index: idx, retired_on: localDate(now) }]);
     }
   }
 
-  const capsules = loadCapsules();
   writeAtomic(GRAMMAR, mineGrammar(capsules, cfg, now));
   writeAtomic(LEXICON, buildLexicon(capsules, cfg, now));
   const tape = buildTapeRoom(capsules, retired, cfg, now);
@@ -287,4 +417,5 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { mineGrammar, buildLexicon, buildTapeRoom, extractAnchors, classifyShape, loadConfig, loadCapsules };
+export { mineGrammar, buildLexicon, buildTapeRoom, extractAnchors, classifyShape, loadConfig, loadCapsules,
+         loadRetiredSafe, validateRetireTarget, resolveMode };   // guards exported for the audit's regression tests (25 Jul 2026)

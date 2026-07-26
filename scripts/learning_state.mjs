@@ -72,12 +72,49 @@ const TRACKS = new Set(["concept", "skill"]);
 const normText = (s) => String(s).trim().toLowerCase().replace(/\s+/g, " ");
 const numOr = (x, d) => (typeof x === "number" && !Number.isNaN(x) ? x : d);
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// isoDate = UTC calendar-date slice. FROZEN (layering law) — it no longer feeds
+// `last_seen`. E2E audit (25 Jul 2026) caught it disagreeing with the envelope
+// `date`, which is localDate(now) i.e. IST: capture.mjs stamps ts as ISO-UTC, so
+// every rep logged between 00:00 and 05:30 IST sliced back to the PREVIOUS UTC day.
+// A 01:00 IST drill on 22 Jul emitted date:"2026-07-22" but last_seen:"2026-07-21",
+// so any consumer asking "drilled today?" by comparing the two saw a concept that
+// was in fact drilled hours ago as untouched. Kept for callers that want the UTC day.
 const isoDate = (ts) => String(ts).slice(0, 10);
+// localDayOf = the LOCAL calendar day of a rep timestamp — same wall clock the
+// envelope `date` runs on, so last_seen and date are directly comparable.
+// (E2E audit 25 Jul 2026 fix; unparseable ts falls back to the old slice.)
+const localDayOf = (ts) => { const d = new Date(ts); return Number.isNaN(d.getTime()) ? isoDate(ts) : localDate(d); };
 const round = (x, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
 
 const RANK  = { learning: 0, held: 1, fluent: 2 };
 const LABEL = { learning: "🔴 learning", held: "🟡 held", fluent: "🟢 fluent" };
 const EMOJI = { learning: "🔴", held: "🟡", fluent: "🟢" };
+
+// sanitizeMaidan — E2E audit (25 Jul 2026): loadConfig used to swallow j.maidan
+// WHOLESALE the moment `stages` was an Array, checking nothing inside it. One
+// malformed stage (e.g. the `concepts:` line dropped while hand-editing thresholds
+// during R1 calibration) still passed that gate and then threw TypeError inside
+// compute — `s.concepts.slice()` in stageSkeleton and `members.filter(...)` in the
+// stage rollup — so the 08:45 recompute exited non-zero and learning_state.json
+// quietly went stale: the Manager kept reading yesterday's positional map with no
+// error anywhere. Now every stage/handoff is shape-checked, a stage with no usable
+// concepts degrades to an empty (awaiting_data) stage instead of exploding, and if
+// NOTHING survives we fall back to the built-in Maidan rather than an empty field.
+function sanitizeMaidan(m, fallback) {
+  const src = (m && typeof m === "object") ? m : {};
+  const stages = (Array.isArray(src.stages) ? src.stages : [])
+    .filter((s) => s && typeof s === "object" && typeof s.id === "string" && s.id.trim() !== "")
+    .map((s) => ({
+      ...s,
+      label: typeof s.label === "string" ? s.label : s.id,
+      concepts: (Array.isArray(s.concepts) ? s.concepts : []).filter((c) => typeof c === "string" && c.trim() !== ""),
+    }));
+  if (!stages.length) return JSON.parse(JSON.stringify(fallback));
+  const handoffs = (Array.isArray(src.handoffs) ? src.handoffs : [])
+    .filter((h) => h && typeof h === "object" && typeof h.from === "string" && typeof h.to === "string")
+    .map((h) => ({ ...h, label: typeof h.label === "string" ? h.label : `${h.from} → ${h.to}` }));
+  return { ...src, stages, handoffs };
+}
 
 function loadConfig(path = CFG_PATH) {
   const d = DEFAULTS;
@@ -94,7 +131,9 @@ function loadConfig(path = CFG_PATH) {
           warming_up_min_reps: numOr(t.warming_up_min_reps, d.thresholds.warming_up_min_reps),
           stall_reps: numOr(t.stall_reps, d.thresholds.stall_reps),
         },
-        maidan: (j.maidan && Array.isArray(j.maidan.stages)) ? j.maidan : d.maidan,
+        // was: (j.maidan && Array.isArray(j.maidan.stages)) ? j.maidan : d.maidan
+        // — array-ness of `stages` said nothing about the stages themselves (E2E audit 25 Jul 2026).
+        maidan: sanitizeMaidan(j.maidan, d.maidan),
       };
     }
   } catch { /* malformed ⇒ defaults */ }
@@ -182,7 +221,9 @@ function idFluency(reps, cfg) {
   const domAxis = Object.entries(axc).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || null;
   // latest edge
   let edge = null; for (const r of sorted) if (r.edge != null) edge = r.edge;
-  return { state: final, reps: n, last_seen: n ? isoDate(sorted[n - 1].ts) : null, velocity: { slope, reps_to_state, stalled }, domAxis, edge };
+  // last_seen is LOCAL-day (was isoDate = UTC slice) so it lines up with the envelope
+  // `date` — see localDayOf. (E2E audit 25 Jul 2026.)
+  return { state: final, reps: n, last_seen: n ? localDayOf(sorted[n - 1].ts) : null, velocity: { slope, reps_to_state, stalled }, domAxis, edge };
 }
 
 // ---------------------------------------------------------------------------
@@ -195,23 +236,44 @@ function compute(reps, fsrsCards, reg, cfg, now) {
   const nowMs = (now instanceof Date ? now.getTime() : now);
   const th = cfg.thresholds;
 
+  // compute() is EXPORTED, so a caller (selftest, the Manager, a future agent) can hand
+  // it a cfg that never passed through loadConfig's sanitizer. E2E audit (25 Jul 2026):
+  // a stage without `concepts` used to throw TypeError here and kill the whole recompute.
+  // Same shape contract as sanitizeMaidan, applied defensively at the point of use.
+  const cfgStages   = (cfg.maidan?.stages   || []).filter((s) => s && typeof s === "object");
+  const cfgHandoffs = (cfg.maidan?.handoffs || []).filter((h) => h && typeof h === "object");
+  const stageMembers = (s) => (Array.isArray(s.concepts) ? s.concepts : []);
+
   // Maidan skeleton from config (canon structure — present even when empty)
-  const stageSkeleton = () => (cfg.maidan.stages || []).map((s) => ({ id: s.id, label: s.label, concepts: s.concepts.slice(), runnable_frac: 0, status: "awaiting_data" }));
+  const stageSkeleton = () => cfgStages.map((s) => ({ id: s.id, label: s.label, concepts: stageMembers(s).slice(), runnable_frac: 0, status: "awaiting_data" }));
 
   if (N === 0) {
     return {
       date, generated_at, total_reps: 0, status: "awaiting_data", low_confidence: true,
       maidan_stage_focus: null, weak_connection: null, python_fluency: {}, rejirah_due: [], core_vs_light: {},
       concepts: [], axes: [],
-      maidan: { stages: stageSkeleton(), handoffs: (cfg.maidan.handoffs || []).map((h) => ({ from: h.from, to: h.to, combined_fluency: EMOJI.learning })) },
+      maidan: { stages: stageSkeleton(), handoffs: cfgHandoffs.map((h) => ({ from: h.from, to: h.to, combined_fluency: EMOJI.learning })) },
     };
   }
 
-  // group reps by canonical id
+  // group reps by TRACK + canonical id.
+  // E2E audit (25 Jul 2026): this used to key on the id ALONE, but concept and skill are
+  // separate namespaces (capture.mjs canonicalises per track), so the same id can legally
+  // live in both — e.g. concept "embeddings" and a Colab skill "embeddings". When that
+  // happened every rep of BOTH tracks fell into one group whose `track` was whichever rep
+  // the log happened to hold first, and the entity then surfaced in ONLY that track:
+  // python_fluency silently lost the skill (or concepts[] lost the concept), rep counts
+  // doubled, and the fluency ladder mixed aided-gated skill reps with concept reps.
+  // Keyed by track now (fsrs.mjs already track-filters before grouping); the raw id rides
+  // along in the value so every downstream surface still emits the bare id.
+  const groupKey = (track, id) => `${track}␟${id}`;
   const byId = new Map();
-  for (const r of reps) { const id = canonId(r, reg); if (!byId.has(id)) byId.set(id, { track: r.track, reps: [] }); byId.get(id).reps.push(r); }
+  for (const r of reps) { const id = canonId(r, reg); const key = groupKey(r.track, id); if (!byId.has(key)) byId.set(key, { id, track: r.track, reps: [] }); byId.get(key).reps.push(r); }
   const fl = new Map();
-  for (const [id, g] of byId) fl.set(id, { track: g.track, core: coreOf(id, g.track, reg), ...idFluency(g.reps, cfg) });
+  for (const g of byId.values()) fl.set(groupKey(g.track, g.id), { id: g.id, track: g.track, core: coreOf(g.id, g.track, reg), ...idFluency(g.reps, cfg) });
+  // concept-track lookup by bare id — the Maidan, the axis rollup and the FSRS join all
+  // speak concept ids (fsrs.mjs makes cards from concept-track reps only).
+  const flConcept = (id) => fl.get(groupKey("concept", id));
 
   // confusion-pairs (global) + attach per concept
   const pairCount = new Map();
@@ -220,7 +282,8 @@ function compute(reps, fsrsCards, reg, cfg, now) {
 
   // concepts[] (track concept)
   const concepts = [];
-  for (const [id, f] of fl) if (f.track === "concept") {
+  for (const f of fl.values()) if (f.track === "concept") {
+    const id = f.id;                                    // bare id (map key is track␟id now)
     concepts.push({
       id, track: "concept", axis: f.domAxis, fluency: LABEL[f.state], core: f.core, reps: f.reps, last_seen: f.last_seen,
       velocity: f.velocity, edge: f.edge,
@@ -231,7 +294,7 @@ function compute(reps, fsrsCards, reg, cfg, now) {
 
   // python_fluency (track skill)
   const python_fluency = {};
-  for (const [id, f] of fl) if (f.track === "skill") python_fluency[id] = LABEL[f.state];
+  for (const f of fl.values()) if (f.track === "skill") python_fluency[f.id] = LABEL[f.state];
 
   // per-axis rollup (concept-track)
   const axisConcepts = {};   // axis -> Set of concept ids
@@ -242,40 +305,40 @@ function compute(reps, fsrsCards, reg, cfg, now) {
     if (!c || c.due == null) continue;
     const dueMs = Date.parse(c.due); if (Number.isNaN(dueMs) || dueMs >= nowMs) continue;
     const id = c.id || normText(c.concept || "");
-    const f = fl.get(id);
+    const f = flConcept(id);                            // concept-track join (E2E audit 25 Jul 2026)
     rejirah_due.push({ concept: c.concept ?? id, axis: axisLabel(reg, f?.domAxis || null), overdue_days: Math.floor((nowMs - dueMs) / 86400000) });
   }
   rejirah_due.sort((a, b) => b.overdue_days - a.overdue_days);
-  const dueCountByAxis = {}; for (const c of fsrsCards) { if (!c || c.due == null) continue; const dueMs = Date.parse(c.due); if (Number.isNaN(dueMs) || dueMs >= nowMs) continue; const f = fl.get(c.id || normText(c.concept || "")); if (f?.domAxis) dueCountByAxis[f.domAxis] = (dueCountByAxis[f.domAxis] || 0) + 1; }
+  const dueCountByAxis = {}; for (const c of fsrsCards) { if (!c || c.due == null) continue; const dueMs = Date.parse(c.due); if (Number.isNaN(dueMs) || dueMs >= nowMs) continue; const f = flConcept(c.id || normText(c.concept || "")); if (f?.domAxis) dueCountByAxis[f.domAxis] = (dueCountByAxis[f.domAxis] || 0) + 1; }
 
   const axes = [];
   for (const ax of Object.keys(axisConcepts).sort()) {
     const ids = [...axisConcepts[ax]];
     const counts = { learning: 0, held: 0, fluent: 0 };
-    for (const id of ids) counts[fl.get(id)?.state || "learning"]++;
+    for (const id of ids) counts[flConcept(id)?.state || "learning"]++;
     const total = ids.length;
     axes.push({ axis: ax, label: reg.axes[ax] || null, fluent_frac: total ? round(counts.fluent / total) : 0, counts, due_count: dueCountByAxis[ax] || 0 });
   }
 
   // edge-map
   const edge_map = {};
-  for (const [id, f] of fl) if (f.track === "concept" && f.edge != null) edge_map[id] = f.edge;
+  for (const f of fl.values()) if (f.track === "concept" && f.edge != null) edge_map[f.id] = f.edge;
 
-  // Maidan stages + handoffs
-  const stateEmojiOf = (id) => EMOJI[fl.get(id)?.state || "learning"];
-  const rankOf = (id) => RANK[fl.get(id)?.state || "learning"];
-  const stages = (cfg.maidan.stages || []).map((s) => {
-    const members = s.concepts;
-    const withReps = members.filter((id) => fl.has(id));
-    const fluent = members.filter((id) => fl.get(id)?.state === "fluent").length;
+  // Maidan stages + handoffs (stage members + handoff endpoints are concept ids)
+  const stateEmojiOf = (id) => EMOJI[flConcept(id)?.state || "learning"];
+  const rankOf = (id) => RANK[flConcept(id)?.state || "learning"];
+  const stages = cfgStages.map((s) => {
+    const members = stageMembers(s);                    // was s.concepts — crashed if absent (E2E audit 25 Jul 2026)
+    const withReps = members.filter((id) => flConcept(id) != null);
+    const fluent = members.filter((id) => flConcept(id)?.state === "fluent").length;
     const runnable_frac = members.length ? round(fluent / members.length) : 0;
     const status = runnable_frac >= th.stage_runnable_frac ? "runnable" : (withReps.length ? "building" : "awaiting_data");
     return { id: s.id, label: s.label, concepts: members.slice(), runnable_frac, status };
   });
-  const handoffs = (cfg.maidan.handoffs || []).map((h) => ({ from: h.from, to: h.to, label: h.label, combined_fluency: EMOJI[Object.keys(RANK).find((k) => RANK[k] === Math.min(rankOf(h.from), rankOf(h.to)))] }));
+  const handoffs = cfgHandoffs.map((h) => ({ from: h.from, to: h.to, label: h.label, combined_fluency: EMOJI[Object.keys(RANK).find((k) => RANK[k] === Math.min(rankOf(h.from), rankOf(h.to)))] }));
   // weak_connection = lowest combined; prefer both-core spine
   let weakHandoff = null;
-  for (const h of (cfg.maidan.handoffs || [])) {
+  for (const h of cfgHandoffs) {
     const combined = Math.min(rankOf(h.from), rankOf(h.to));
     const bothCore = coreOf(h.from, "concept", reg) && coreOf(h.to, "concept", reg);
     const cand = { h, combined, bothCore };
@@ -285,10 +348,10 @@ function compute(reps, fsrsCards, reg, cfg, now) {
   let maidan_stage_focus = weakHandoff ? `${weakHandoff.h.from} → ${weakHandoff.h.to} handoff` : null;
 
   // core_vs_light (concepts with reps)
-  const conceptFl = [...fl.entries()].filter(([, f]) => f.track === "concept");
-  const coreIds = conceptFl.filter(([, f]) => f.core);
-  const lightIds = conceptFl.filter(([, f]) => !f.core);
-  const fluentFrac = (arr) => `${arr.filter(([, f]) => f.state === "fluent").length}/${arr.length} fluent`;
+  const conceptFl = [...fl.values()].filter((f) => f.track === "concept");
+  const coreIds = conceptFl.filter((f) => f.core);
+  const lightIds = conceptFl.filter((f) => !f.core);
+  const fluentFrac = (arr) => `${arr.filter((f) => f.state === "fluent").length}/${arr.length} fluent`;
   const core_vs_light = {
     core: coreIds.length ? `spine: ${fluentFrac(coreIds)}` : "spine: no reps yet",
     light: lightIds.length ? fluentFrac(lightIds) : "no light concepts drilled",
@@ -377,6 +440,37 @@ function selftest() {
   // 15) concepts.json / config missing ⇒ graceful (raw ids, no crash, no axis label)
   const g = compute([cf("brandnew"), cf("brandnew"), cf("brandnew")], [{ id: "brandnew", concept: "brandnew", due: "2026-07-30T00:00:00Z" }], EMPTY_REG, cfg, now);
   assert("registry missing ⇒ graceful (raw id, bare axis letter, no crash)", findC(g, "brandnew")?.fluency === "🟢 fluent" && g.rejirah_due[0]?.axis === "f");
+
+  // 16) last_seen rides the LOCAL day — regression for the E2E audit (25 Jul 2026) find that
+  //     it was a UTC slice: a 00:30 IST rep stamped the PREVIOUS day while the envelope
+  //     `date` said today, so "drilled today?" consumers saw a fresh concept as untouched.
+  //     Both ends of the day are checked so the assertion bites east AND west of UTC.
+  const localRep = (y, mo, d, h, mi) => ({ ts: new Date(y, mo, d, h, mi, 0).toISOString(), surface: "gem", track: "concept", concept: "chunking", axis: "f", question: "tz", confidence: "knew", correct: true, latency_ms: 100, aided: null, confused_with: null, edge: null });
+  const tzNoon  = new Date(2026, 6, 22, 12, 0, 0);
+  const tzEarly = compute([localRep(2026, 6, 22, 0, 30)], [], REG, cfg, tzNoon);
+  const tzLate  = compute([localRep(2026, 6, 22, 23, 30)], [], REG, cfg, tzNoon);
+  assert("last_seen = LOCAL day of the rep (agrees with envelope date at both ends of the day)",
+    tzEarly.date === "2026-07-22" && findC(tzEarly, "chunking")?.last_seen === "2026-07-22" && findC(tzLate, "chunking")?.last_seen === "2026-07-22");
+
+  // 17) malformed Maidan config must DEGRADE, never throw (E2E audit 25 Jul 2026): a stage
+  //     that lost its `concepts:` line used to pass loadConfig's array-only gate and then
+  //     TypeError inside compute, so the 08:45 recompute died and the state file went stale.
+  const badMaidan = { stages: [{ id: "agents", label: "Agents" }, { id: "rag", concepts: ["chunking", 7] }, null, { label: "no id" }], handoffs: [{ from: "chunking", to: "embeddings" }, "junk"] };
+  const sm = sanitizeMaidan(JSON.parse(JSON.stringify(badMaidan)), DEFAULTS.maidan);
+  assert("config sanitizer: concepts-less stage kept as empty, id-less/null stages + junk handoffs dropped",
+    sm.stages.length === 2 && sm.stages[0].concepts.length === 0 && sm.stages[1].concepts.length === 1 && sm.handoffs.length === 1 && typeof sm.handoffs[0].label === "string");
+  let badThrew = false, badEmpty = null, badOut = null;
+  try { const badCfg = { thresholds: cfg.thresholds, maidan: badMaidan }; badEmpty = compute([], [], REG, badCfg, now); badOut = compute([cf("chunking")], [], REG, badCfg, now); } catch { badThrew = true; }
+  assert("malformed stage ⇒ empty stage + awaiting_data, recompute never throws (empty AND populated paths)",
+    !badThrew && badEmpty?.maidan.stages[0].concepts.length === 0 && badOut?.maidan.stages.find((s) => s.id === "agents")?.status === "awaiting_data" && badOut?.maidan.stages.find((s) => s.id === "rag")?.status === "building");
+
+  // 18) concept + skill sharing one id are SEPARATE entities (E2E audit 25 Jul 2026): grouping
+  //     keyed on the bare id merged both namespaces into whichever track appeared first, so
+  //     python_fluency silently lost the skill and the concept's rep count doubled.
+  const col = compute([cf("embeddings"), cf("embeddings"), cf("embeddings"),
+    cf("embeddings", { track: "skill", aided: false }), cf("embeddings", { track: "skill", aided: false }), cf("embeddings", { track: "skill", aided: false })], [], REG, cfg, now);
+  assert("track namespaces: concept + skill sharing an id do not merge",
+    col.python_fluency.embeddings === "🟢 fluent" && findC(col, "embeddings")?.reps === 3 && findC(col, "embeddings")?.track === "concept");
 
   const passed = checks.every(([, c]) => c);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

@@ -125,6 +125,7 @@ function claudeChairAsync(prompt, model = "sonnet", timeoutMs = 20000, deps = {}
       const execFn = deps.execAsync || execFile;
       const child = execFn("claude", ["-p", "--output-format", "json", "--model", model], {
         timeout: timeoutMs, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024,
+        env: { ...process.env, ARSENAL_ORGAN: "1" },
       }, (err, stdout) => {
         if (err && !stdout) return fail((err && err.message) || err);
         try {
