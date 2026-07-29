@@ -684,6 +684,24 @@ function sprintCartridge() {
     const cut = t.indexOf("## THE FULL BOARD");
     if (cut > 0) t = t.slice(0, cut);
     t = t.replace(/<!--[\s\S]*?-->/g, "").trim().slice(0, 2600);
+    // LIVE POSITION OVERRIDE (29 Jul 2026). SPRINT.md is a hand-maintained
+    // ROADMAP and goes stale the moment he moves — it was 14 days behind
+    // sprint.json when this was found, so the Gaffer was coaching him toward
+    // items his own board already marks done. sprint.json's `progress` block is
+    // refreshed every 07:00 by ArsenalFC-SprintSync straight from his Google
+    // Sheet, so it — not the .md — is where he actually IS. Roadmap from the
+    // file, position from the bus; if the bus is silent the old behaviour stands.
+    try {
+      const sj = readJson(join(STATE_DIR, "sprint.json"));
+      const cur = sj && sj.progress && sj.progress.current;
+      if (cur && cur.id) {
+        const nx = ((sj.progress && sj.progress.next_up) || []).slice(0, 3);
+        t += `\n\nWHERE HE ACTUALLY IS RIGHT NOW (live from his sheet, synced 07:00 daily — this OVERRIDES any position stated in the roadmap above):`
+          + `\n- current: ${cur.id} ${cur.task}${cur.track ? ` [${cur.track}]` : ""}${cur.subtopics ? ` — ${cur.subtopics}` : ""}${cur.status ? ` (${cur.status})` : ""}`
+          + (nx.length ? `\n- next up: ${nx.join(" · ")}` : "")
+          + `\n- Anything the roadmap lists BEFORE ${cur.id} is behind him. Never coach him back onto it.`;
+      }
+    } catch { }
     return `\nTHE SPRINT (his curriculum — what he is studying toward the AI-PE job). Ground "good morning" / "what should I study" / "aaj kya padhun" HERE: name where he is on the board and the next item, tie today's concept to a sprint task ID. Dates are TARGETS, never deadlines — CONFIRM his real position, never pressure with a date or a countdown:\n${t}\n`;
   } catch { return ""; }
 }
@@ -694,12 +712,26 @@ function sprintCartridge() {
 // concepts are due while episodic memory is EMPTY. This section makes the
 // epistemic state explicit: what era the book is from, what has actually
 // happened THIS season, and what to say when memory is blank.
+// the capsules' real lock window, read from the files instead of hardcoded.
+// (29 Jul 2026: this string said "locked 10–11 Jul" — the real lockedOn values are
+// 15/21/24/28 Jun, so the Gaffer confidently stated a wrong date about his own book.)
+function capsWindow() {
+  try {
+    const dir = join(STATE_DIR, "capsules");
+    const days = readdirSync(dir).filter(f => f.endsWith(".json"))
+      .map(f => { try { return readJson(join(dir, f)); } catch { return null; } })
+      .map(c => c && (c.lockedOn || c.locked_on)).filter(Boolean).sort();
+    if (!days.length) return "pre-season";
+    const fmt = (d) => { const x = new Date(d + "T00:00:00Z"); return Number.isFinite(x.getTime()) ? x.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : d; };
+    return days[0] === days[days.length - 1] ? fmt(days[0]) : fmt(days[0]) + "–" + fmt(days[days.length - 1]);
+  } catch { return "pre-season"; }
+}
 function seasonContext() {
   const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
   const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch { return 0; } })();
   return `THE SEASON CONTEXT (computed live — this is your epistemic ground truth):
 - This is a FRESH SEASON: the captain wiped the club's behavioral memory on 17 Jul 2026 and started clean. Reps logged THIS season: ${reps}.${reps === 0 ? " ZERO sessions have happened this season — no forge, no scrimmage, no re-jirah has occurred yet. NEVER imply one did." : ""}
-- His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked 10–11 Jul, before the fresh start). When FSRS says a capsule concept is "due", say it plainly: "your pre-season book has it locked; the schedule says it's ripe for a Re-Jirah" — NEVER "the forge session we did" or any invented shared memory.
+- His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked ${capsWindow()}, before the fresh start). When FSRS says a capsule concept is "due", say it plainly: "your pre-season book has it locked; the schedule says it's ripe for a Re-Jirah" — NEVER "the forge session we did" or any invented shared memory.
 - When your memory of him is empty, SAY it's a fresh season and ask — an honest blank beats a confabulated past, every single time. Inventing history he'll catch instantly is the fastest way to lose the dressing room.`;
 }
 // FIRST CONTACT (18 Jul) — the missing "hello". The default constitution ASSUMED
