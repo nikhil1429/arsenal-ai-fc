@@ -11,7 +11,14 @@ on:
   workflow_dispatch: {}
 jobs:
   public-safe-chores:
-    runs-on: ubuntu-latest
+    # WINDOWS, not ubuntu (29 Jul 2026). This ran on ubuntu-latest and had failed
+    # on EVERY push since 15 Jul — ~24 red emails — while the identical suite
+    # passes on a clean Windows checkout (verified with both CRLF and LF line
+    # endings). That is not a flake: the organism IS a Windows system — schtasks
+    # in 10 files, 8 PowerShell installers, %APPDATA% shims, cmd.exe spawns, the
+    # Windows-clipboard turnstile. Testing it on Linux tested a platform it will
+    # never run on, so the red said nothing true and trained everyone to ignore CI.
+    runs-on: windows-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4

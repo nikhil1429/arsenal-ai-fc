@@ -36,7 +36,18 @@ async function run(deps = {}) {
   if (refused.length) return { ok: false, why: `REFUSED: ${refused.map(j => j.name).join(", ")} lack public_safe:true — the away-day runner does not negotiate` };
   const exec = deps.exec || ((cmd) => execSync(cmd, { encoding: "utf8", stdio: "inherit", cwd: join(__dirname, ".."), timeout: 1200000 }));
   const ran = [];
-  for (const j of runnable) { exec(j.run); ran.push(j.name); }
+  // NAME THE FAILING JOB (29 Jul 2026). A throw from execSync used to escape raw,
+  // so a red run said only "Process completed with exit code 1" — with two jobs in
+  // the manifest and 40+ selftests inside them, that pointed at nothing. This ran
+  // red on every push for two weeks partly because the signal was unreadable.
+  for (const j of runnable) {
+    try { exec(j.run); } catch (e) {
+      const why = String((e && e.message) || e).split("\n")[0].slice(0, 200);
+      console.error(`\naway-day: JOB FAILED — "${j.name}"\n  command : ${j.run}\n  platform: ${process.platform} node ${process.version}\n  error   : ${why}`);
+      return { ok: false, failed: j.name, why, ran };
+    }
+    ran.push(j.name);
+  }
   return { ok: true, ran };
 }
 
