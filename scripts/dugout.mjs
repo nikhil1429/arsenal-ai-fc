@@ -1320,7 +1320,17 @@ function buildConfig(keys, mode = "gaffer") {
     depth: currentDepth(),
     mode,
     keys,
-    system: mode === "scrimmage" ? buildScrimmageInstruction() : (buildSystemInstruction() + selfKnowledgeBlock()),
+    // NO STATIC SELF-PORTRAIT IN THE GAFFER (captain's call, 29 Jul 2026).
+    // organism_self.md used to be pasted into EVERY Gaffer session — 22,000
+    // tokens, 61% of the prompt — describing a machine the Gaffer can already
+    // interrogate live. It has `get_organism` (the full anatomy, every COUNT
+    // read from the bus at call time) and `get_club_report` (the whole state in
+    // one call). A static file can only ever be a stale second copy of what the
+    // tools return fresh: when it drifted, it drifted while claiming to be
+    // "freshly rebuilt, CURRENT". So: the Gaffer ASKS instead of being told.
+    // The tool-less briefing modes above still carry it — a guest keynote has no
+    // hands to call a tool with, so for them the file is the only source.
+    system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
     rehydrate: mode === "scrimmage" ? null : [buildRehydrateCartridge(), buildRehydrate()].filter(Boolean).join("\n\n") || null,
