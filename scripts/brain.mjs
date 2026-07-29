@@ -618,7 +618,7 @@ async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
 // both titles must carry it, and now both are checkable from one place.
 const SHEET_PUSH_TITLE = "⚪🔴 Team sheet is up";
 const BELLS = {
-  fulltime: { title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
+  fulltime: { at: "21:30", grace_min: 75, title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
 };
 
 // the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
@@ -1052,6 +1052,23 @@ async function selftest() {
   assert("both utterances SIGN their titles with the badge (throw-in echo filter)", BELLS.fulltime.title.includes("⚪🔴") && SHEET_PUSH_TITLE.includes("⚪🔴"));
   assert("the sheet push actually SENDS the badged title (not just declares it)", (() => { const t = ntfyHeaderSafe(SHEET_PUSH_TITLE); return Buffer.from(t.replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8").includes("⚪🔴"); })());
   assert("only two utterances exist (bell registry + push_after)", Object.keys(BELLS).length === 1 && cfgNtfyOn.ntfy.push_after.length === 1);
+  // THE BELL MEANS ITS HOUR (29 Jul 2026) — observed live: the 21:30 bell fired
+  // at 15:23 as schtasks catch-up after the laptop woke, pushing "30 seconds,
+  // then sleep" mid-afternoon. Pure function of the clock, so it is testable.
+  {
+    const onTime = (hh, mm) => {
+      const b = BELLS.fulltime;
+      const [bh, bm] = String(b.at).split(":").map(Number);
+      const lateBy = (hh * 60 + mm) - (bh * 60 + bm);
+      return !(lateBy < -5 || lateBy > (b.grace_min || 75));
+    };
+    assert("BELL HOUR — the fulltime bell declares its hour + grace", BELLS.fulltime.at === "21:30" && BELLS.fulltime.grace_min > 0);
+    assert("BELL HOUR — rings at 21:30", onTime(21, 30));
+    assert("BELL HOUR — rings a little late (21:55, inside grace)", onTime(21, 55));
+    assert("BELL HOUR — SILENT at 15:23, the real catch-up time that caused this", onTime(15, 23) === false);
+    assert("BELL HOUR — SILENT hours early (08:00)", onTime(8, 0) === false);
+    assert("BELL HOUR — SILENT past the grace (23:30)", onTime(23, 30) === false);
+  }
   // the badge must SURVIVE HTTP: headers are ByteString (≤0xFF per char) — a raw
   // emoji Title throws inside Node's fetch before any I/O and the push dies as
   // "network". This mock enforces the real rule the earlier okFetch skipped.
@@ -1259,6 +1276,22 @@ async function main() {
     const kind = (process.argv[3] || "fulltime").toLowerCase();
     const bell = BELLS[kind];
     if (!bell) { console.log(`brain: no bell '${kind}'`); process.exit(1); }
+    // THE BELL MEANS ITS HOUR (29 Jul 2026). The schtask carries
+    // StartWhenAvailable=True, so a missed 21:30 fires the INSTANT the laptop
+    // wakes — observed live: last run 15:23, pushing "Full-time, captain —
+    // 30 seconds, then sleep" to his phone at twenty past three in the
+    // afternoon. Catch-up is right for consolidation, which only needs to
+    // happen; it is wrong for an utterance whose entire meaning is its hour.
+    // The organism gets exactly two utterances a day — one arriving absurdly
+    // late costs more trust than a skipped one. Late ⇒ stay silent, out loud.
+    if (bell.at && !process.argv.includes("--force")) {
+      const [bh, bm] = String(bell.at).split(":").map(Number);
+      const lateBy = (now.getHours() * 60 + now.getMinutes()) - (bh * 60 + bm);
+      if (lateBy < -5 || lateBy > (bell.grace_min || 75)) {
+        console.log(`brain: bell '${kind}' SILENT — it is ${hhmm(now)}, the bell belongs to ${bell.at} (±${bell.grace_min || 75}m). A catch-up bell at the wrong hour is noise, not a cue. Use --force to ring anyway.`);
+        return;
+      }
+    }
     const tt = teamtalkLine("pm", now);   // rides INSIDE the bell — never a third utterance
     const r = await pushNtfy(cfg, bell.title, bell.body + (tt ? "\n" + tt : ""));
     console.log(`brain: bell '${kind}' ${r.sent ? "rang on the phone" : "silent (" + r.why + ")"}`);
