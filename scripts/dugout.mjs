@@ -63,7 +63,6 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
-import { loadSelfKnowledge } from "./selfknowledge.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
@@ -1278,17 +1277,12 @@ function buildRehydrate(now = new Date()) {
 }
 
 // per-session config the page fetches (key never rests in the repo)
-// THE LIVE SELF-KNOWLEDGE — the organism's PLAIN-LANGUAGE self-portrait (selfknowledge.mjs
-// rebuilds it from the real system, so it can never be stale). Injected into the NORMAL
-// Gaffer AND the guest keynotes so he can just TALK to the Gaffer — no modes, no commands —
-// and it explains what the organism does / how his day works / anything, in full, in plain
-// human terms. Absent file → "" (graceful; the base instruction stands).
-function selfKnowledgeBlock() {
-  const fresh = loadSelfKnowledge();
-  if (!fresh || fresh.length < 200) return "";
-  return `\n\n═══ WHAT THE ORGANISM IS — the full plain-language picture (freshly rebuilt, CURRENT) ═══\nYou KNOW this whole system, top to bottom. Whenever he (or a friend he is showing) asks "explain the organism", "what is this", "how does my day work", "what does it do", "how does the brain work" — ANYTHING about the machine itself — explain it warmly in plain human language, in as much detail as they want (up to a full 30-40 minute tour). No code, no jargon, no file names — just what it does, how, and where. Ground it ONLY in what is below; if something is not here, say you will check rather than invent. This is CURRENT and supersedes any older framing.\n\n${fresh}`;
-}
-
+// selfKnowledgeBlock() lived here until 29 Jul 2026. It pasted organism_self.md
+// into every session — 22,000 tokens — under a banner claiming to be "freshly
+// rebuilt, CURRENT" while the file itself sat 10 days stale and hand-written.
+// The Gaffer already holds get_organism (full anatomy, every count read live)
+// and get_club_report (whole state, one call), so a static copy could only ever
+// be a second, worse answer. Removed on the captain's call: it asks now.
 function buildConfig(keys, mode = "gaffer") {
   const prefs = loadPrefs();
   const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
@@ -1297,7 +1291,12 @@ function buildConfig(keys, mode = "gaffer") {
   if (mode === "brief-club" || mode === "brief-brain" || mode === "signing" || mode === "cinematic-tour") {
     // brief-club/brief-brain get the LIVE self-knowledge appended (any layer, current, in
     // full); signing is his personal onboarding — no architecture dump.
-    const liveKnowledge = (mode === "signing" || mode === "cinematic-tour") ? "" : selfKnowledgeBlock();
+    // NO SELF-PORTRAIT ANYWHERE (captain's call, 29 Jul 2026): "remove kardo, no
+    // need to explain it to anyone." The guest-keynote lecture is retired. Every
+    // mode now stands on its own instruction — the Gaffer asks get_organism when
+    // it needs the anatomy, and the briefings simply no longer give the tour.
+    // Kept as a const so buildConfig's shape is untouched downstream.
+    const liveKnowledge = "";
     return {
       model, voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
       depth: "deep", mode, keys,
