@@ -22,7 +22,10 @@ description: Full health check of the organism — vitals, brain budget, selftes
    - `node scripts/brain.mjs status` (budget phase, ceiling, eligibility)
    - `npm run organism:selftest` then `npm run squad:selftest`
      (report PASS/FAIL count only, name any red suite)
-   - `schtasks /Query /FO CSV | findstr ArsenalFC` (schedule alive?)
+   - schedule alive? Use PowerShell, NOT the Bash tool — under Git Bash the
+     forward-slash flags get MSYS-mangled into a path and schtasks errors out:
+     `schtasks /query /fo csv /v | ConvertFrom-Csv | Where-Object { $_.TaskName -match 'ArsenalFC' }`
+     Report count + any task whose Last Result is non-zero.
 2. If the ActivityWatch MCP is connected in this session, pull today's
    3-bucket split as a cross-check against timeaudit.json — flag divergence.
 3. Reply as a physio's chart (≤12 lines): 🟢/🟡/🔴 per system — brain-alive

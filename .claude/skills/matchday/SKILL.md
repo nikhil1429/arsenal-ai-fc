@@ -16,6 +16,8 @@ visuals over walls of text, no hype, no calendar pressure, never streaks.
    - THE ONE THING from the sheet (one line, why in half a line).
    - Today's ≤3 drills as a numbered list (kind + concept only).
    - Physio line ONLY if something bleeds. Brain phase one-liner.
-   - End: `open dressing-room/club/wall.html` reminder + "COYG. ⚪🔴".
+   - End: a reminder to open the wall + "COYG. ⚪🔴". NOTE: `open` is macOS —
+     on his Windows box say `start dressing-roomclubwall.html` (cmd) or just
+     "double-click club/wall.html". Never print the macOS form.
 4. If readiness verdict is RED: show KAL-line + the single floor-touch only.
    Nothing else. No summaries of what was withheld (post-match discloses).
