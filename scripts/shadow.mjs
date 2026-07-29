@@ -34,6 +34,19 @@ const TYPES = ["stoppage_next_drill", "wall_breaker", "due_at_kickoff", "scrimma
 const VOICE_GATE = { min_shadows: 10, min_hit_rate: 0.7 };   // proven, not vibes
 
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// THE CAPTAIN'S MIDNIGHT (IST sweep, 26 Jul 2026). reps_log and shadow_log both
+// stamp `ts` as UTC ISO, but every comparison below is against localDate() = IST.
+// Slicing the raw stamp buckets anything logged 00:00-05:30 IST into YESTERDAY:
+// gatherWorld saw "0 reps today" during a night session, and the once-per-day
+// dedupe set came back EMPTY so the same shadow re-fired every 10-minute tick all
+// night. Same rule physio/touchline/scorer run — parse, then format in his day.
+const localDayOf = (ts) => {
+  const str = String(ts || "");
+  if (!/[T ]/.test(str)) return str.slice(0, 10);
+  const d = new Date(str);
+  return Number.isFinite(d.getTime()) ? localDate(d) : str.slice(0, 10);
+};
+
 const hhmmOf = (now) => `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch { } return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } } catch { } return o; };
@@ -170,7 +183,7 @@ async function selftest() {
 // main
 // ---------------------------------------------------------------------------
 function gatherWorld(now) {
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now));
+  const reps = readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now));
   const lastRep = reps.length ? new Date(reps[reps.length - 1].ts) : null;
   const drills = readJson(join(STATE_DIR, "drills.json")) || {};
   const pr = readJson(join(STATE_DIR, "pitch_read.json")) || {};
@@ -192,7 +205,7 @@ async function main() {
 
   if (mode === "detect") {
     const today = localDate(now);
-    const already = new Set(readLines(SHADOW_LOG).filter(l => String(l.ts || "").slice(0, 10) === today).map(l => l.type));
+    const already = new Set(readLines(SHADOW_LOG).filter(l => localDayOf(l.ts) === today).map(l => l.type));
     const moments = detectShadows(gatherWorld(now), already, now);
     for (const m of moments) appendFileSync(SHADOW_LOG, JSON.stringify(m) + "\n");
     console.log(`shadow: ${moments.length} shadow(s) logged silently${moments.length ? " [" + moments.map(m => m.type).join(", ") + "]" : ""} — the mouth stays shut`);
@@ -203,7 +216,7 @@ async function main() {
     const unresolved = lines.filter(l => !l.resolved);
     if (!unresolved.length) { console.log("shadow: nothing to score"); return; }
     const today = localDate(now);
-    const reps = readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === today);
+    const reps = readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === today);
     const hist = readLines(join(STATE_DIR, "pitch_read_history.jsonl")).slice(-4);
     const facts = {
       rep_times_iso: reps.map(r => r.ts),

@@ -1181,7 +1181,7 @@ function execTool(name, args, deps = {}) {
     }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
-        .filter(l => String(l.ts || "").slice(0, 10) === localDate(now))
+        .filter(l => localDayOf(l.ts) === localDate(now))
         .reduce((a, l) => a + (l.hedges || 0), 0);
       const md = [
         `## ORAL SCRIMMAGE · ${localDate(now)} · persona: ${String(args.persona || "unnamed")}`,

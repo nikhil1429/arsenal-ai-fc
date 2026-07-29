@@ -152,8 +152,14 @@ export function makeCallbackHandler({ state, secrets: s, closeServer, fetchImpl 
       // wrong-account token returns 200 on personal_info but 401 on data).
       let verifyMsg = "", verified = false;
       try {
-        const t2 = new Date().toISOString().slice(0, 10);
-        const t1 = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+        // IST SWEEP 26 Jul 2026: this window was built from the UTC calendar day
+        // on a UTC+5:30 machine, against an API that labels nights by the user's
+        // LOCAL day — the same defect already fixed in oura_coach's fetchNights.
+        // Between 00:00 and 05:29 IST it asked for a window ending YESTERDAY, so a
+        // freshly-linked ring could verify as "no data" purely because of the hour.
+        const localDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const t2 = localDay(new Date());
+        const t1 = localDay(new Date(Date.now() - 7 * 864e5));
         const v = await fetchImpl(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${t1}&end_date=${t2}`, { headers: { Authorization: `Bearer ${tok.access_token}` } });
         // verdict lives in verifyVerdict() — a 200 with zero days is NOT "good".
         const j = v.ok ? await v.json() : null;

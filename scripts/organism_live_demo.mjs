@@ -169,6 +169,19 @@ function loadPrefs() { return readJson(PREFS) || {}; }
 function currentDepth() { return (loadPrefs().depth && DEPTH_REGISTERS[loadPrefs().depth]) ? loadPrefs().depth : "adaptive"; }
 
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+// THE CAPTAIN'S MIDNIGHT (IST sweep, 26 Jul 2026). Stored `ts` is UTC ISO; every
+// comparison here is against localDate() = IST (UTC+5:30). Slicing the raw stamp
+// buckets anything logged between 00:00 and 05:30 IST into YESTERDAY — the demo
+// then reports zero reps and zero minutes for a night session.
+// Same rule physio/touchline/scorer/shadow run: parse, then format in HIS day.
+// A date-only stamp carries no clock, so it is taken literally.
+const localDayOf = (ts) => {
+  const str = String(ts || "");
+  if (!/[T ]/.test(str)) return str.slice(0, 10);
+  const d = new Date(str);
+  return Number.isFinite(d.getTime()) ? localDate(d) : str.slice(0, 10);
+};
+
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 
@@ -434,7 +447,7 @@ function execTool(name, args, deps = {}) {
         drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt, modality: d.modality || "voice" })),
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
-        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => String(r.ts || "").slice(0, 10) === localDate(now)).length,
+        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now)).length,
       };
     }
     if (name === "get_tape_room") {
@@ -532,7 +545,7 @@ function execTool(name, args, deps = {}) {
     }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
-        .filter(l => String(l.ts || "").slice(0, 10) === localDate(now))
+        .filter(l => localDayOf(l.ts) === localDate(now))
         .reduce((a, l) => a + (l.hedges || 0), 0);
       const md = [
         `## ORAL SCRIMMAGE · ${localDate(now)} · persona: ${String(args.persona || "unnamed")}`,
@@ -580,7 +593,7 @@ function buildConfig(keys, mode = "gaffer") {
     // THE EYES — sharper frames so it can actually READ his handwriting/code.
     vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: 2000 },
     acks: listAcks(),
-    minutes_today: readLines(DLEDGER).filter(l => String(l.ts || "").slice(0, 10) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
+    minutes_today: readLines(DLEDGER).filter(l => localDayOf(l.ts) === localDate()).reduce((a, l) => a + (l.minutes || 0), 0),
   };
 }
 

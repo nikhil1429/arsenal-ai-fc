@@ -352,9 +352,21 @@ function tokenVitals(cfg, ledger, queueState, now, signals = null) {
   };
 }
 
+// THE CAPTAIN'S MIDNIGHT (IST sweep, 26 Jul 2026). A stored `ts` is UTC ISO, so
+// slicing its first 10 chars gives the GREENWICH day; comparing that to
+// localDate() (IST, UTC+5:30) mis-buckets everything logged between 00:00 and
+// 05:30 IST. Same rule physio/touchline/scorer already run: parse, then format
+// in HIS calendar. A date-only stamp carries no clock, so it is taken literally.
+const localDayOf = (ts, fallbackNow) => {
+  const s = String(ts || "");
+  if (!/[T ]/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? localDate(d) : s.slice(0, 10);
+};
+
 // THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text
 function dugoutMinutesToday(now, file = join(STATE_DIR, "dugout_ledger.jsonl")) {
-  return readLines(file).filter(l => String(l.ts || "").slice(0, 10) === localDate(now)).reduce((a, l) => a + (l.minutes || 0), 0);
+  return readLines(file).filter(l => localDayOf(l.ts) === localDate(now)).reduce((a, l) => a + (l.minutes || 0), 0);
 }
 
 // which jobs are eligible now?
