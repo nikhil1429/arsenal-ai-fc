@@ -1,6 +1,8 @@
 {
   "version": 1,
-  "_comment": "Canonical vocabulary — the single source of concept/skill IDs + the 9 axes. Hand-curated CANON (committed, NOT gitignored; contains no personal study data). capture.mjs READS this to normalize a rep's concept (case-fold + alias lookup) and to flag unregistered:true; capture NEVER writes it (single-writer preserved). track:\"concept\" IDs = AI concepts (9-axis, decay-prone); track:\"skill\" IDs = Python (fluency, NO axis). Grows over time; adding an entry retro-registers matching reps on next load.",
+  "_comment": "Canonical vocabulary — the single source of concept/skill IDs + the 9 axes. Hand-curated CANON (committed, NOT gitignored; contains no personal study data). capture.mjs READS this to normalize a rep's concept (case-fold + alias lookup) and to flag unregistered:true; capture NEVER writes it (single-writer preserved). track:\"concept\" IDs = AI concepts (9-axis, decay-prone); track:\"skill\" IDs = Python + hands-on/course work (fluency, NO axis). Grows over time; adding an entry retro-registers matching reps on next load.",
+  "_track_rule": "capture.mjs accepts EXACTLY two tracks: concept and skill. sprint.json also carries course/build/domain/career — those are CURRICULUM labels, not rep tracks. Mapping of record, verbatim from .claude/skills/learn/SKILL.md §track routing: course -> track:\"skill\" (surface \"colab\", axis null), subject registered under \"skills\" below · build -> track:\"skill\" too (\"there is no build rep track\") — its reps land on the Python/API skills the build exercises (fastapi, pydantic, parsers, api_error_handling), not on task nouns like \"scaffold\" or \"vercel deploy\" · domain (TDS/TCS/DTAA) -> track:\"concept\", registered below, because it produces genuine recall reps · career -> no reps. Registered 30 Jul 2026 from sprint.json after an audit found only 8 of ~115 sprint strings resolved — every unregistered concept silently coined a phantom topic that grew its own FSRS cards and nemesis entries. (Corrected same day: the first version wrongly claimed build/domain produce no reps.)",
+  "_unregistered_note": "1-09 'Recall + Bolo locks' is deliberately NOT a concept: it is the method (blank-recall, spoken explain, capsule lock), not a body of knowledge with 9 axes.",
   "axes": {
     "a": "kya+analogy",
     "b": "kyun/first-principles",
@@ -14,17 +16,44 @@
   },
   "concepts": {
     "tokenization": { "bucket": "1-fundamentals", "core": true, "aliases": ["tokenizer", "bpe"] },
+    "inference": { "bucket": "1-fundamentals", "core": true, "aliases": ["sampling", "decoding", "temperature", "top-p", "top-k sampling", "greedy decoding"] },
+    "context": { "bucket": "1-fundamentals", "core": true, "aliases": ["context window", "context_window", "ctx"] },
+    "hallucinations": { "bucket": "1-fundamentals", "core": true, "aliases": ["hallucination", "hal", "grounding"] },
     "embeddings": { "bucket": "2-rag", "core": true, "aliases": [] },
     "chunking": { "bucket": "2-rag", "core": true, "aliases": ["chunking tradeoffs"] },
     "retrieval": { "bucket": "2-rag", "core": true, "aliases": ["top-k", "hybrid search", "reranking"] },
     "rag_eval": { "bucket": "2-rag", "core": true, "aliases": ["ragas"] },
-    "tool_use": { "bucket": "3-agents", "core": true, "aliases": ["function calling"] }
+    "vector_search": { "bucket": "2-rag", "core": true, "aliases": ["pgvector", "faiss"] },
+    "tool_use": { "bucket": "3-agents", "core": true, "aliases": ["function calling", "tooluse"] },
+    "react_agent": { "bucket": "3-agents", "core": true, "aliases": ["react agent", "observe-reason-act", "reasoning and acting"] },
+    "structured_output": { "bucket": "4-llm-api", "core": true, "aliases": ["json output", "structured output", "json mode", "schema forcing"] },
+    "multimodal": { "bucket": "4-llm-api", "core": true, "aliases": ["vision", "vision input", "image input"] },
+    "confidence_scoring": { "bucket": "4-llm-api", "core": true, "aliases": ["trust score", "confidence score", "action threshold"] },
+    "multi_model_verification": { "bucket": "4-llm-api", "core": true, "aliases": ["multi-model", "cross-model check", "model agreement"] },
+    "golden_dataset": { "bucket": "5-llmops", "core": true, "aliases": ["golden set", "eval dataset"] },
+    "llm_judge": { "bucket": "5-llmops", "core": true, "aliases": ["llm-as-judge", "llm as judge", "auto-grade"] },
+    "observability": { "bucket": "5-llmops", "core": true, "aliases": ["tracing", "token accounting"] },
+    "human_in_loop": { "bucket": "5-llmops", "core": true, "aliases": ["hitl", "human in the loop", "teach-the-ai"] },
+    "where_not_ai": { "bucket": "6-cross-cut", "core": true, "aliases": ["where not to use ai", "deterministic vs ai"] },
+    "tds": { "bucket": "7-domain", "core": true, "aliases": ["tax deducted at source", "194c", "194j", "194h"] },
+    "tcs": { "bucket": "7-domain", "core": true, "aliases": ["tax collected at source", "206c"] },
+    "dtaa": { "bucket": "7-domain", "core": true, "aliases": ["double taxation", "double taxation avoidance"] },
+    "neuralnet": { "bucket": "1-fundamentals", "core": false, "aliases": ["neural network"] },
+    "rlhf": { "bucket": "1-fundamentals", "core": false, "aliases": ["preference tuning", "post-training"] },
+    "jagged": { "bucket": "6-cross-cut", "core": false, "aliases": ["jagged frontier"] }
   },
   "skills": {
+    "python_basics": { "core": true, "aliases": ["python", "f-strings", "control flow", "types"] },
     "pydantic": { "core": true, "aliases": [] },
     "fastapi": { "core": true, "aliases": [] },
     "async": { "core": true, "aliases": ["asyncio"] },
     "api_error_handling": { "core": true, "aliases": [] },
-    "parsers": { "core": true, "aliases": [] }
+    "parsers": { "core": true, "aliases": [] },
+    "prompt_engineering": { "core": true, "aliases": ["prompting", "few-shot", "chain-of-thought", "system prompts"] },
+    "anthropic_api": { "core": true, "aliases": ["messages api", "api fundamentals", "claude api"] },
+    "tool_use_api": { "core": true, "aliases": ["tool use hands-on", "function calling hands-on", "anthropic tool use", "tool use course"] },
+    "evaluations": { "core": true, "aliases": ["eval design", "evals"] },
+    "streaming": { "core": true, "aliases": ["sse", "server-sent events", "structured streaming"] },
+    "react_ui": { "core": false, "aliases": ["react", "frontend"] }
   }
 }

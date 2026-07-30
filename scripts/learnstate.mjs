@@ -181,6 +181,15 @@ function selftest() {
 function main() {
   const mode = (process.argv[2] || "brief").toLowerCase();
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
+  // SELF-INJECTION GUARD (audit 30 Jul 2026 — same scar as hooks/afferent-post.mjs
+  // and forge_session.mjs). This runs as the SessionStart hook, so its stdout is
+  // injected into the session. Every headless `claude -p` the organism spawns
+  // (brain, nightshift, dmn, cortex, council, selfknowledge, talk) runs inside this
+  // project, inherits .claude/settings.json and fires SessionStart — so the
+  // captain's second-person study brief ("do NOT ask him to re-explain where he
+  // is") was being prepended to organ prompts that are asked for STRICT JSON.
+  // `json` and `selftest` stay reachable: they are read paths, not injection paths.
+  if (process.env.ARSENAL_ORGAN === "1" && mode !== "json") return;
   if (mode === "json") { console.log(JSON.stringify(gather(), null, 2)); return; }
   console.log(brief());
 }

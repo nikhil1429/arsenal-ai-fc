@@ -43,6 +43,11 @@ const DEFAULTS = {
     "drills.json": 30, "twin.json": 30, "pitch_read.json": 30,
   },
   grace_frac: 0.25,
+  // A legitimate lag is not a bleed. The Oura pull is a day or two behind by nature
+  // (same ≤2d tolerance manager.mjs honours), so readiness content may trail without
+  // the organ being broken. Everything else is expected to say something new when it
+  // writes. (audit 30 Jul 2026 — content-vs-mtime staleness)
+  content_lag_tolerance_hours: { "readiness.json": 48 },
   effort_uncaptured: { min_learning_minutes: 120 },
   throwin_gap_days: 4,
   signal_table: { min_n: 20 },
@@ -109,6 +114,7 @@ function loadConfig(path = CFG_PATH) {
       const j = JSON.parse(readFileSync(path, "utf8"));
       return {
         expected_cadence_hours: { ...DEFAULTS.expected_cadence_hours, ...(j.expected_cadence_hours || {}) },
+        content_lag_tolerance_hours: { ...DEFAULTS.content_lag_tolerance_hours, ...(j.content_lag_tolerance_hours || {}) },
         grace_frac: typeof j.grace_frac === "number" ? j.grace_frac : DEFAULTS.grace_frac,
         effort_uncaptured: { ...DEFAULTS.effort_uncaptured, ...(j.effort_uncaptured || {}) },
         throwin_gap_days: typeof j.throwin_gap_days === "number" ? j.throwin_gap_days : DEFAULTS.throwin_gap_days,
@@ -244,15 +250,53 @@ function compute(world, cfg, now = new Date()) {
   }
 
   // 1) STALE — only files that have EXISTED bleed (never-born ≠ bleeding).
+  // AUDIT (30 Jul 2026): this read MTIME ONLY. A file rewritten on schedule with
+  // unchanged, days-old CONTENT therefore looked perfectly fresh — physio reported
+  // "no bleed" on readiness.json while tone.mjs, which reads the verdict's own stamp,
+  // called the same file "Governor stale (61h)". Two organs, one file, opposite answers.
+  // The honest age is the OLDER of the two: a touched file with stale content is stale.
+  // Per-file `content_lag_tolerance_hours` keeps a LEGITIMATE lag legitimate — the Oura
+  // pull is a day or two behind by nature (the same ≤2d tolerance manager.mjs applies),
+  // and that lag is normal, not a bleed.
   for (const [name, hrs] of Object.entries(cfg.expected_cadence_hours)) {
     const f = world.files[name];
     if (!f || !f.exists) continue;                       // never born → status quo
-    const ageH = (nowMs - f.mtimeMs) / 3600000;
-    if (ageH > hrs * (1 + cfg.grace_frac)) {
+    const mtimeAgeH = (nowMs - f.mtimeMs) / 3600000;
+    const cadenceLimit = hrs * (1 + cfg.grace_frac);
+    // The tolerance REPLACES the cadence limit for this file; it does not stack on top of it.
+    // (regression audit 30 Jul 2026: subtracting the 48h tolerance from content age BEFORE
+    // comparing to cadence+grace made the real silence window 30×1.25+48 = 85.5h — the organ
+    // whose job is to notice a dead instrument would have said nothing for most of a week,
+    // while the comment claimed it matched manager.mjs's ≤2d rule. Now readiness bleeds at
+    // exactly >48h of content age, which IS that rule.)
+    const tol = (cfg.content_lag_tolerance_hours || {})[name] || 0;
+    const contentLimit = Math.max(cadenceLimit, tol);
+    const contentAgeH = Number.isFinite(f.contentMs) ? (nowMs - f.contentMs) / 3600000 : null;
+    const mtimeStale = mtimeAgeH > cadenceLimit;
+    const contentStale = contentAgeH !== null && contentAgeH > contentLimit;
+    if (mtimeStale || contentStale) {
+      const byContent = contentStale && !mtimeStale;
       bleeds.push({ organ: name.replace(".json", ""), kind: "stale",
-        evidence: `${name} is ${round(ageH, 1)}h old (cadence ${hrs}h)`,
-        line: `${name.replace(".json", "")} went quiet — its file is ${Math.round(ageH)}h old.` });
+        evidence: byContent
+          ? `${name} was written ${round(mtimeAgeH, 1)}h ago but its CONTENT is ${round(contentAgeH, 1)}h old (limit ${round(contentLimit, 1)}h)`
+          : `${name} is ${round(mtimeAgeH, 1)}h old (cadence ${hrs}h)`,
+        line: byContent
+          ? `${name.replace(".json", "")} is writing on time but saying nothing new — its content is ${Math.round(contentAgeH)}h old.`
+          : `${name.replace(".json", "")} went quiet — its file is ${Math.round(mtimeAgeH)}h old.` });
     }
+  }
+
+  // 1b) PHANTOM TOPICS — a rep whose concept is not in the registry.
+  // capture.mjs has always SET unregistered:true and now NAMES it on stdout, but the lane
+  // that actually produces his reps (dugout voice → execFileSync, output discarded) throws
+  // that stdout away, and CapturePull runs unattended 14×/day. A defect only visible on a
+  // console nobody reads is still invisible. The bus is the surface that always gets read.
+  // (regression audit 30 Jul 2026)
+  const phantoms = [...new Set((world.reps || []).filter(r => r && r.unregistered).map(r => r.concept))];
+  if (phantoms.length) {
+    bleeds.push({ organ: "capture", kind: "unregistered_concept",
+      evidence: `reps_log holds ${phantoms.length} concept(s) absent from concepts.json: ${phantoms.slice(0, 5).join(", ")}`,
+      line: `${phantoms.slice(0, 3).join(", ")} — yeh concepts.json mein nahi hain, toh inke reps apna alag phantom topic bana rahe hain. Registry mein add karo.` });
   }
 
   // 2) EMITTED-BUT-NEVER-CONSUMED — a weakness headline no sheet ever surfaced.
@@ -388,7 +432,23 @@ function gatherWorld() {
   const files = {};
   for (const name of fileNames) {
     const p = join(STATE_DIR, name);
-    files[name] = existsSync(p) ? { exists: true, mtimeMs: statSync(p).mtimeMs } : { exists: false };
+    if (!existsSync(p)) { files[name] = { exists: false }; continue; }
+    // contentMs = what the file SAYS about itself, independent of when it was touched.
+    // `generated_at` is the precise stamp; `day`/`date` is day-granularity, so anchor it
+    // at START of that day — the conservative (older) reading, never a flattering one.
+    const j = readJson(p);
+    const stamp = j && (j.generated_at || j.day || j.date);
+    // A day-granularity stamp is anchored at the END of its day: a file stamped TODAY is
+    // 0h old whatever the clock says. Anchoring at midnight (the first cut) accused an
+    // organ written 0h ago of holding "20h-old content" every evening — and loop_vitals'
+    // line is spoken aloud by the Gaffer. (regression audit 30 Jul 2026)
+    const isDay = /^\d{4}-\d{2}-\d{2}$/.test(String(stamp));
+    const t = stamp ? Date.parse(isDay ? `${stamp}T23:59:59` : String(stamp)) : NaN;
+    // sanity bound: a garbage stamp V8 happens to coerce ("2026" → year 2026, "5" → 2001)
+    // must NOT become "content is 222788h old". Out of range ⇒ fall back to mtime alone.
+    const ageH = (Date.now() - t) / 3600000;
+    const usable = Number.isFinite(t) && ageH > -36 && ageH < 24 * 400;
+    files[name] = { exists: true, mtimeMs: statSync(p).mtimeMs, contentMs: usable ? t : undefined };
   }
   const capsDir = join(STATE_DIR, "capsules");
   const capsules = existsSync(capsDir)
@@ -457,6 +517,34 @@ async function selftest() {
   const stale = compute({ ...base, files: { "cards.json": { exists: true, mtimeMs: now.getTime() - 60 * H } } }, cfg, now);
   assert("existed-then-stale file bleeds", stale.bleeds.some(b => b.kind === "stale" && b.organ === "cards"));
   assert("line speaks when bleeding", typeof stale.line === "string");
+
+  // CONTENT-STALE (audit 30 Jul 2026) — written on time, saying nothing new.
+  // This is the disagreement tone.mjs could see and physio could not.
+  const freshFile = { exists: true, mtimeMs: now.getTime() - 1 * H };
+  const contentStale = compute({ ...base, files: { "cards.json": { ...freshFile, contentMs: now.getTime() - 90 * H } } }, cfg, now);
+  const csb = contentStale.bleeds.find(b => b.kind === "stale" && b.organ === "cards");
+  assert("a file touched on schedule with 90h-old CONTENT still bleeds", !!csb);
+  assert("the evidence names the real cause, not the mtime", /CONTENT is/.test(csb.evidence) && /writing on time but saying nothing new/.test(csb.line));
+  const contentFresh = compute({ ...base, files: { "cards.json": { ...freshFile, contentMs: now.getTime() - 2 * H } } }, cfg, now);
+  assert("fresh content + fresh mtime = no bleed", !contentFresh.bleeds.some(b => b.kind === "stale"));
+  // the Oura lag is legitimate and must NOT read as a wound
+  const ouraLag = compute({ ...base, files: { "readiness.json": { ...freshFile, contentMs: now.getTime() - 44 * H } } }, cfg, now);
+  assert("readiness' documented ≤2d Oura lag is tolerated, not called a bleed",
+    !ouraLag.bleeds.some(b => b.kind === "stale" && b.organ === "readiness"));
+  // THE TOLERANCE REPLACES THE CADENCE LIMIT, IT DOES NOT STACK ON IT (the C2 regression:
+  // 30×1.25 + 48 = 85.5h of silence on a dead Oura, while claiming to be manager's ≤2d rule)
+  const oura50 = compute({ ...base, files: { "readiness.json": { ...freshFile, contentMs: now.getTime() - 50 * H } } }, cfg, now);
+  assert("readiness bleeds at >48h of content age — the documented rule, not 85.5h",
+    oura50.bleeds.some(b => b.kind === "stale" && b.organ === "readiness"));
+  const oura46 = compute({ ...base, files: { "readiness.json": { ...freshFile, contentMs: now.getTime() - 46 * H } } }, cfg, now);
+  assert("and stays quiet just under it (46h)", !oura46.bleeds.some(b => b.kind === "stale" && b.organ === "readiness"));
+
+  // PHANTOM TOPICS bleed on the bus, not just on a console nobody reads
+  const ph = compute({ ...base, reps: [{ concept: "pandas dataframes", unregistered: true }, { concept: "embeddings" }] }, cfg, now);
+  assert("an unregistered concept in reps_log bleeds by NAME",
+    ph.bleeds.some(b => b.kind === "unregistered_concept" && /pandas dataframes/.test(b.evidence)));
+  assert("registered concepts never bleed as phantoms",
+    !compute({ ...base, reps: [{ concept: "embeddings" }] }, cfg, now).bleeds.some(b => b.kind === "unregistered_concept"));
 
   // THE WEEKLY RITUALS — the machine remembers, the mouth reminds
   const rit = compute({ ...base, gemSyncDue: "last synced 8 day(s) ago", genomePending: true }, cfg, now);

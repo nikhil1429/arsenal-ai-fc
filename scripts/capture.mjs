@@ -48,7 +48,7 @@
 //   entry guard · atomic write (temp→rename) · empty-safe · never fabricate.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -75,7 +75,21 @@ function resolveInbox() {
 // ---------------------------------------------------------------------------
 // registry — canonical concept/skill vocab (read-only). Empty-safe if missing.
 // ---------------------------------------------------------------------------
-const normText = (s) => String(s).trim().toLowerCase().replace(/\s+/g, " ");
+// REGISTRY KEY NORMALISATION (used ONLY for concept/skill id + alias lookup).
+// AUDIT (30 Jul 2026): ids are snake_case (`tool_use`, `rag_eval`, `vector_search`) but a
+// rep is written in prose ("tool use"), and folding only whitespace meant the two never met —
+// `canonicalize("tool use")` returned unregistered:true against a registry that HAD tool_use.
+// Every multi-word concept in the syllabus was invisible to its own registry entry. Folding
+// `_` and `-` to a space fixes it once, for every id present and future, instead of asking
+// each entry to hand-list its own spelling.
+// ORDER MATTERS AND IT BIT ONCE (same-day regression audit, 30 Jul 2026): the first
+// version trimmed BEFORE folding, so "-embeddings" folded to " embeddings" — a leading
+// space nothing removed afterwards. That made normText NON-IDEMPOTENT, and because
+// loadReps re-canonicalises every existing line, the on-disk rep and a fresh candidate
+// produced different keyOf values: the SAME rep appended on every single ingest, and the
+// stored concept silently flipped from an unregistered " embeddings" to the real
+// `embeddings` — fabricated reps landing on a real FSRS card. Fold first, THEN trim.
+const normText = (s) => String(s).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 const EMPTY_REG = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false };
 
 function loadRegistry(path = CONCEPTS_PATH) {
@@ -177,16 +191,32 @@ function validateRep(o, reg = EMPTY_REG) {
   return { ok: true, rep };
 }
 
-const keyOf = (r) => JSON.stringify([r.ts, r.question]);
+// DEDUP KEY (audit 30 Jul 2026): was [ts, question] only. A FORGE session logs many
+// reps in one burst, and its most common question text is literally "Bolo." — so two
+// reps on DIFFERENT concepts sharing a rounded/reused ts collapsed into one and the
+// second was silently counted as a duplicate. concept+axis are what make a rep a
+// distinct measurement, so they belong in its identity.
+const keyOf = (r) => JSON.stringify([r.ts, r.concept, r.axis ?? null, r.question]);
 
 // load existing reps (defensive: skip unparseable lines; missing file = empty)
-function loadReps(path, reg = EMPTY_REG) {
+// `stats` is an optional out-param: a dropped line used to be invisible at every
+// call site, so a half-written or hand-mangled reps_log silently shrank the corpus
+// every consumer reasoned from. Callers that don't care pass nothing. (audit 30 Jul 2026)
+function loadReps(path, reg = EMPTY_REG, stats = {}) {
+  stats.skipped = 0;
+  stats.skipped_reasons = [];
+  stats.skipped_lines = [];        // the RAW text, so it can be rescued before a rewrite
   if (!existsSync(path)) return [];
   const out = [];
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const s = line.trim();
     if (!s) continue;
-    try { const o = JSON.parse(s); const v = validateRep(o, reg); if (v.ok) out.push(v.rep); } catch { /* skip corrupt line */ }
+    let o;
+    try { o = JSON.parse(s); }
+    catch { stats.skipped++; stats.skipped_reasons.push("unparseable JSON line"); stats.skipped_lines.push(s); continue; }
+    const v = validateRep(o, reg);
+    if (v.ok) out.push(v.rep);
+    else { stats.skipped++; stats.skipped_reasons.push(v.error); stats.skipped_lines.push(s); }
   }
   return out;
 }
@@ -262,20 +292,48 @@ function withRepsLock(path, fn, opts = {}) {
 // it assumes it is alone with the file. `ingest` below is the plan of record and
 // runs exactly this under the writer lock. Nothing else should call it unlocked.
 function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
-  const existing = loadReps(path, reg);
+  const loadStats = {};
+  const existing = loadReps(path, reg, loadStats);
   const seen = new Set(existing.map(keyOf));
   const toAppend = [];
   let rejected = 0, duplicates = 0;
   const errors = [];
+  // UNREGISTERED SURFACE (audit 30 Jul 2026): capture has always SET unregistered:true
+  // on an unknown concept, but nothing anywhere read it — so a phantom topic (a typo, or
+  // a syllabus concept never added to concepts.json) grew its own FSRS cards and nemesis
+  // entries in total silence. It is counted and named at the call site now.
+  const unregistered = [];
   for (const c of candidates) {
     const v = validateRep(c, reg);
     if (!v.ok) { rejected++; errors.push(v.error); continue; }
     const k = keyOf(v.rep);
     if (seen.has(k)) { duplicates++; continue; }
+    if (v.rep.unregistered) unregistered.push(v.rep.concept);
     seen.add(k); toAppend.push(v.rep);
   }
+  // QUARANTINE BEFORE REWRITE (regression audit, 30 Jul 2026). writeAtomic rewrites the
+  // file from `existing`, which holds ONLY the lines that validated — so every unreadable
+  // line was silently DELETED by the next successful ingest. (That data loss predates the
+  // audit; what the first fix added was a warning that said the opposite, telling him to
+  // "inspect it" at the exact moment the text stopped existing.) Nothing is destroyed now:
+  // the raw text is appended to a sibling quarantine file first, and only then do we rewrite.
+  let quarantined = 0;
+  if (toAppend.length && loadStats.skipped) {
+    try {
+      appendFileSync(path + ".quarantine.jsonl",
+        loadStats.skipped_lines.map((l) => l + "\n").join(""), "utf8");
+      quarantined = loadStats.skipped_lines.length;
+    } catch { /* quarantine is a courtesy, never a reason to lose the good reps */ }
+  }
   if (toAppend.length) writeAtomic(path, existing.concat(toAppend));
-  return { appended: toAppend.length, rejected, duplicates, total: existing.length + toAppend.length, errors };
+  return {
+    appended: toAppend.length, rejected, duplicates,
+    total: existing.length + toAppend.length, errors,
+    unregistered: [...new Set(unregistered)],
+    skipped_existing: loadStats.skipped || 0,
+    skipped_reasons: [...new Set(loadStats.skipped_reasons || [])],
+    quarantined, quarantine_path: quarantined ? path + ".quarantine.jsonl" : null,
+  };
 }
 
 // the plan of record: the same ingest, with the read-modify-rewrite window held
@@ -301,8 +359,9 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
   }
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
-  let pulled = 0, rejected = 0, duplicates = 0, failed = 0;
+  let pulled = 0, rejected = 0, duplicates = 0, failed = 0, quarantined = 0, quarantinePath = null;
   const failures = [];
+  const unregistered = [];
   for (const f of files) {
     const full = join(inboxPath, f);
     // PER-FILE ISOLATION (E2E audit 25 Jul 2026): the read + ingest + move used to run
@@ -320,6 +379,12 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
       }
       const r = ingest(repsPath, cands, reg);
       pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
+      // The unattended lane must carry the same two warnings the interactive one does —
+      // CapturePull runs 14×/day with nobody watching, and it was the ONLY lane that
+      // stayed mute about a phantom concept or a quarantined line. (regression audit 30 Jul)
+      for (const u of r.unregistered || []) unregistered.push(u);
+      quarantined += r.quarantined || 0;
+      if (r.quarantine_path) quarantinePath = r.quarantine_path;
       mkdirSync(doneDir, { recursive: true });
       // collision-safe archive: renameSync OVERWRITES an existing destination on both
       // Windows and POSIX, so a same-named file from an earlier session (Colab reuses
@@ -337,8 +402,12 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
       continue;
     }
   }
-  const note = `pulled ${pulled} from ${files.length - failed} file(s)` + (failed ? `; ${failed} file(s) FAILED and stay in the inbox: ${failures.slice(0, 5).join("; ")}` : "");
-  return { pulled, files: files.length, rejected, duplicates, failed, failures, wired: true, note };
+  const uniqUnreg = [...new Set(unregistered)];
+  const note = `pulled ${pulled} from ${files.length - failed} file(s)`
+    + (failed ? `; ${failed} file(s) FAILED and stay in the inbox: ${failures.slice(0, 5).join("; ")}` : "")
+    + (uniqUnreg.length ? `; ⚠ UNREGISTERED concept(s) coined: ${uniqUnreg.join(", ")} — add them to concepts.json` : "")
+    + (quarantined ? `; ⚠ ${quarantined} unreadable reps_log line(s) moved to ${quarantinePath}` : "");
+  return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, quarantined, quarantine_path: quarantinePath, wired: true, note };
 }
 
 // ---------------------------------------------------------------------------
@@ -419,6 +488,62 @@ function selftest() {
   const p2 = join(dir, "reps_noreg.jsonl"); if (existsSync(p2)) rmSync(p2);
   const nr = ingest(p2, [rep({ ts: "2026-07-11T11:12:00Z", question: "noreg" })], loadRegistry(join(dir, "no_such_concepts.json")));
   assert("concepts.json missing ⇒ still logs (unregistered:true)", nr.appended === 1);
+  assert("UNREGISTERED IS NAMED, not just flagged (the count had no consumer before)",
+    Array.isArray(ur.unregistered) && ur.unregistered.includes("brand new concept") && nr.unregistered.length === 1);
+
+  // ---- audit 30 Jul 2026 ----
+  // SNAKE_CASE ↔ PROSE: ids are snake_case, reps are prose. They must meet.
+  const snakePath = join(dir, "concepts_snake.json");
+  writeFileSync(snakePath, JSON.stringify({
+    version: 1, axes: {},
+    concepts: { tool_use: { aliases: [] }, vector_search: { aliases: ["top-k sampling"] } },
+    skills: { python_basics: { aliases: [] } },
+  }));
+  const snakeReg = loadRegistry(snakePath);
+  assert("snake_case id resolves from its prose spelling ('tool use' → tool_use)",
+    canonicalize("tool use", "concept", snakeReg).canonical === "tool_use"
+    && canonicalize("Tool  Use", "concept", snakeReg).unregistered === false);
+  assert("hyphens fold too, and the skill map is folded the same way",
+    canonicalize("VECTOR-SEARCH", "concept", snakeReg).canonical === "vector_search"
+    && canonicalize("python basics", "skill", snakeReg).canonical === "python_basics");
+  assert("a genuinely unknown concept is still unregistered (folding ≠ matching anything)",
+    canonicalize("quantum tunnelling", "concept", snakeReg).unregistered === true);
+  // IDEMPOTENCE is the load-bearing property, not prettiness: loadReps re-canonicalises
+  // every existing line, so canonicalize(canonicalize(x)) !== canonicalize(x) means the
+  // same rep re-appends on every ingest, forever. A markdown bullet leaking into a concept
+  // string ("- embeddings") is the realistic way that happens.
+  const idem = (raw, track = "concept") => {
+    const once = canonicalize(raw, track, snakeReg).canonical;
+    return once === canonicalize(once, track, snakeReg).canonical;
+  };
+  assert("IDEMPOTENT — edge separators cannot survive one pass",
+    ["- embeddings", "embeddings-", "_tool_use_", "  tool--use  ", "-", "tool_use"].every((s) => idem(s)));
+  assert("a leading-separator concept does not re-append on every ingest (the C1 regression)",
+    (() => {
+      const pe = join(dir, "reps_edge.jsonl"); if (existsSync(pe)) rmSync(pe);
+      const edge = { ts: "2026-07-11T14:00:00Z", surface: "gem", track: "concept", concept: "- forge locks", axis: "a", question: "edge", confidence: "knew", correct: true };
+      const a = ingest(pe, [edge], reg), b = ingest(pe, [edge], reg), c = ingest(pe, [edge], reg);
+      return a.appended === 1 && b.appended === 0 && c.appended === 0 && b.duplicates === 1;
+    })());
+
+  // DEDUP IDENTITY: a rep is (ts, concept, axis, question) — a FORGE burst logs many
+  // reps whose question is literally "Bolo." on different concepts and axes.
+  const pk = join(dir, "reps_key.jsonl"); if (existsSync(pk)) rmSync(pk);
+  const boloTs = "2026-07-11T12:00:00Z";
+  const bolo = (concept, axis) => ({ ts: boloTs, surface: "gem", track: "concept", concept, axis, question: "Bolo.", confidence: "knew", correct: true });
+  const k1 = ingest(pk, [bolo("tokenization", "a"), bolo("tokenization", "b"), bolo("pydantic-ish", "a")], reg);
+  assert("same ts + same question on DIFFERENT axis/concept are distinct reps (were 2 silent dupes)",
+    k1.appended === 3 && k1.duplicates === 0);
+  const k2 = ingest(pk, [bolo("tokenization", "a")], reg);
+  assert("a truly identical rep is STILL a duplicate (dedup did not just get weaker)",
+    k2.appended === 0 && k2.duplicates === 1);
+
+  // A CORRUPT EXISTING LINE IS COUNTED, NOT SWALLOWED
+  const pc = join(dir, "reps_corrupt.jsonl"); if (existsSync(pc)) rmSync(pc);
+  writeFileSync(pc, JSON.stringify(rep({ ts: "2026-07-11T13:00:00Z", question: "good" })) + "\n{ truncated json\n");
+  const cr = ingest(pc, [rep({ ts: "2026-07-11T13:01:00Z", question: "next" })], reg);
+  assert("an unreadable existing line is REPORTED (every consumer silently shrank the corpus before)",
+    cr.skipped_existing === 1 && cr.skipped_reasons.length === 1);
 
   // dedup + empty-ingest + pull-dormant
   const cnt = loadReps(p, reg).length;
@@ -506,6 +631,18 @@ function main() {
     catch (e) { console.error(`paste: not valid JSON — nothing ingested (${e.message})`); process.exit(1); }
     const r = ingest(REPS_LOG, cands, reg);
     console.log(`paste: appended ${r.appended}, rejected ${r.rejected}, duplicates ${r.duplicates} → ${REPS_LOG} (total ${r.total})`);
+    // The two silences the 30 Jul audit found: an unknown concept, and a dropped line.
+    // Both are now LOUD at the one place a human is looking.
+    if (r.unregistered && r.unregistered.length) {
+      console.log(`paste: ⚠ UNREGISTERED concept(s): ${r.unregistered.join(", ")} — these coined phantom topics.`);
+      console.log(`paste:   add them to dressing-room/state/concepts.json (hand-curated canon — the captain's call), then reps retro-register on next load.`);
+    }
+    if (r.skipped_existing) {
+      console.log(`paste: ⚠ ${r.skipped_existing} EXISTING line(s) in reps_log could not be read: ${r.skipped_reasons.join(" · ")}`);
+      console.log(r.quarantined
+        ? `paste:   their raw text was saved to ${r.quarantine_path} before the rewrite — they are NOT in reps_log any more. Inspect that file.`
+        : `paste:   nothing was rewritten this run, so they are still in reps_log. Inspect it before the next successful ingest.`);
+    }
     if (r.errors.length) console.log(`  rejected reasons: ${r.errors.slice(0, 10).join("; ")}`);
     process.exit(0);
   }

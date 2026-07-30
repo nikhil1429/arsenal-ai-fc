@@ -60,6 +60,13 @@ function loadBus(P, today) {
     // E2E audit (25 Jul 2026): needed by the timeaudit schema bridge below (buildingPctMin /
     // metaPctMax), exactly as heartbeat.mjs reads it. Config, not a signal ⇒ never staleness-gated.
     buckets: readJSON("buckets.json"),
+    // THE TWO WITNESSES (30 Jul 2026). capsule_map = what the LOCKED capsules already
+    // know (36 axes, 36 survived strike questions, a date-driven Re-Jirah schedule) —
+    // richness the bus had never once read. shipped = artifacts produced, the second
+    // witness beside the time camera, so a dark-camera day with work in it stops reading
+    // as "you did nothing". Both are read-only here; the Manager only ever proposes.
+    capsule_map: readJSON("capsule_map.json"),
+    shipped: readJSON("shipped.json"),
     captain_note: readText("captain_note.md"),
     last_post_match: readText(join("post_match", yday + ".md")),
   };
@@ -108,6 +115,13 @@ function daysBetween(a, b) { const ms = Date.parse(b) - Date.parse(a); return Nu
 // the part that is genuinely its own: the legacy flat-shape passthrough.
 function timeFeature(T, buckets) {
   if (!T) return null;
+  // INSTRUMENTS DARK ≠ HE DID NOTHING (audit 30 Jul 2026 — the last existence-gate in this
+  // function, the same class okWeak and okLS were fixed for). timeaudit.mjs writes
+  // dataOk:false with every bucket at 0 when ActivityWatch is unreachable. Nothing consumed
+  // that envelope, so an outage rendered as a hard "Building 0%/60% target — off track" and
+  // handed Opus `on track: no` — the machine accusing him of a day it simply could not see.
+  // A blind sensor reports blindness; it never reports a zero.
+  if (T.dataOk === false) return { dark: true, why: T.note || "the time camera was unreachable — no reading, not a zero" };
   const flat = {
     building_pct: T.building_pct ?? null, building_target: T.building_target ?? null,
     meta_pct: T.meta_pct ?? null, on_track: T.on_track || null,
@@ -143,7 +157,14 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
   // consumers), so a 5-rep hunch rendered as a hard read in SQUAD REPORTS. system.md's silence
   // law is explicit: "warming_up means no headline".
   const okWeak = fresh("weaknesses") && bus.weaknesses && bus.weaknesses.status === "ok" && bus.weaknesses.low_confidence !== true;
-  const okLS = fresh("learning_state") && bus.learning_state;
+  // AUDIT (30 Jul 2026) — the last existence-gate. `okLS` was `fresh && present`, and the
+  // learning_state file ALWAYS exists, so at 2 reps its `warming_up` / low_confidence:true
+  // formation (weak_connection, rejirah_due) rendered as a hard read — the same defect the
+  // nemesis headline was fixed for five days earlier, in the same function. learning_state.mjs
+  // suppresses its own axis rollups under warming_up for exactly this reason; the Manager now
+  // honours that instead of reaching past it. Same shape as okWeak: status-ok AND not low-confidence.
+  const okLS = fresh("learning_state") && bus.learning_state
+    && bus.learning_state.status === "ok" && bus.learning_state.low_confidence !== true;
   // E2E audit (25 Jul 2026): R.safety was NEVER read and R.flags was only ever read as an
   // Array — but the real Goalkeeper writes flags as an OBJECT {clean, hr_low_confidence}
   // (oura_coach.mjs:422), so real flags always collapsed to [], and safety.refer_doctor with
@@ -190,6 +211,22 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
     } : null,                                          // missing/stale ⇒ grind honored downstream
     safety,                                            // doctor referral — outranks every other read
     time: timeFeature(T, bus.buckets),
+    // status-gated like every other signal (never existence-gated — that was the whole
+    // 30 Jul lesson). capsule_map is NOT staleness-gated: a capsule locked in June is not
+    // stale, it is history, and its Re-Jirah debt only grows.
+    capsules: bus.capsule_map && bus.capsule_map.status === "ok" ? {
+      locked: bus.capsule_map.totals.capsules,
+      strike_questions: bus.capsule_map.totals.strike_questions,
+      rejirah_overdue: (bus.capsule_map.rejirah_overdue || []).slice(0, 3),
+      cracked_axes: bus.capsule_map.totals.axes_cracked,
+    } : null,
+    // shipped carries timeaudit's own dataOk envelope: dark is reported as dark, never 0.
+    shipped: bus.shipped && bus.shipped.status === "ok" ? {
+      commits: bus.shipped.totals?.commits ?? null,
+      new_files: bus.shipped.totals?.new_files ?? null,
+      shipped: bus.shipped.shipped,
+      events: (bus.shipped.artifact_events || []).map(e => e.kind),
+    } : (bus.shipped && bus.shipped.status === "unreadable" ? { dark: true } : null),
     study: okCards ? {
       due_today: bus.cards.due_today ?? 0, overdue: bus.cards.overdue ?? 0,
       hardest_due: bus.cards.hardest_due || [],
@@ -291,7 +328,8 @@ function assemblePrompt(F, fin, stale = {}) {
     F.season.paused_until ? `SEASON PAUSED until ${F.season.paused_until} — a paused season stays paused; propose no work.` : null,
     `READINESS: ${F.readiness ? `${F.readiness.verdict} · ${F.readiness.ceiling} · ${(F.readiness.work_type || []).join("; ")}${drv}` : "no verdict (grind honored)"}`,
     `SHAPE (his real windows — never a generic clock): ${shapeFromTiming(F.readiness?.timing)}`,
-    `TIME: ${F.time && F.time.building_pct != null ? `Building ${F.time.building_pct}%${F.time.building_target != null ? `/${F.time.building_target}%` : ""}${F.time.meta_pct != null ? ` · Meta ${F.time.meta_pct}%` : ""}${F.time.on_track ? ` · on track: ${F.time.on_track}` : ""}` : "no audit yet"}`,
+    `TIME: ${F.time && F.time.dark ? "instruments dark — the time camera was unreachable; do NOT read this as a zero"
+      : F.time && F.time.building_pct != null ? `Building ${F.time.building_pct}%${F.time.building_target != null ? `/${F.time.building_target}%` : ""}${F.time.meta_pct != null ? ` · Meta ${F.time.meta_pct}%` : ""}${F.time.on_track ? ` · on track: ${F.time.on_track}` : ""}` : "no audit yet"}`,
     `CARDS: ${F.study ? `${F.study.due_today} due, ${F.study.overdue} overdue [${F.study.hardest_due.join(", ")}]` : "awaiting data"}`,
     `WEAKNESS: ${F.headline ? F.headline.one_line : "none surfaced (bias-to-silence)"}`,
     `AXIS PATTERN: ${F.axis_pattern?.note || "none"}`,
@@ -345,6 +383,7 @@ function shapeFromTiming(timing) {
 // which under the real schema would have rendered a bare "• no").
 function timeReportLine(t) {
   if (!t) return null;
+  if (t.dark) return `   • time: instruments dark — ${t.why} (no reading today, not a zero)`;
   if (t.building_pct == null) {
     return (typeof t.on_track === "string" && t.on_track !== "yes" && t.on_track !== "no") ? `   • ${t.on_track}` : null;
   }
@@ -423,6 +462,21 @@ function fallbackSkeleton(F, fin, stale = {}) {
   if (F.study && (F.study.due_today || F.study.overdue)) rep.push(`   • cards due: ${F.study.due_today} (+${F.study.overdue} overdue)`);
   const tline = timeReportLine(F.time);
   if (tline) rep.push(tline);
+  // THE SECOND WITNESS — artifacts beside hours. A dark camera plus real output is a WON
+  // day, and until 30 Jul the sheet had no way to say so. Dark is named as dark, never 0.
+  if (F.shipped?.dark) rep.push(`   • shipped: output sensor dark — no repo readable (blindness, not a zero)`);
+  else if (F.shipped) {
+    const ev = F.shipped.events?.length ? ` · ${F.shipped.events.join(" + ")}` : "";
+    rep.push(F.shipped.shipped
+      ? `   • shipped: ${F.shipped.commits} commit(s)${F.shipped.new_files ? `, ${F.shipped.new_files} new file(s)` : ""}${ev}`
+      : `   • shipped: nothing committed yet today${ev}`);
+  }
+  // THE CAPSULES SPEAK — Re-Jirah is date-driven off lockedOn (FORGE_SPEC §4) and had never
+  // reached a single surface. One line, worst debt first, with the ready-made probe count.
+  if (F.capsules?.rejirah_overdue?.length) {
+    const o = F.capsules.rejirah_overdue[0];
+    rep.push(`   • Re-Jirah overdue: ${o.concept} ${o.overdue_days}d (${F.capsules.rejirah_overdue.length} concept(s)) — ${F.capsules.strike_questions} strike sawaal ready`);
+  }
   if (F.season_read) {                                 // M18 — one line, the sharpest find first
     const sr = F.season_read;
     if (sr.contradiction) rep.push(`   • season re-read: "${sr.contradiction.a}" vs "${sr.contradiction.b}" — un-reconciled`);
@@ -685,6 +739,65 @@ async function selftest() {
   const wu = await runManager({ today: TODAY, stateDir: wuDir });
   ok("warming_up: nemesis headline is SILENT (system.md: warming_up means no headline)",
     wu.features.headline === null && !/5× miss on chunking/.test(wu.sheet) && /^WEAKNESS: none surfaced/m.test(wu.prompt));
+
+  // 6e-bis) WARMING_UP LEARNING-STATE — the last existence-gate (audit 30 Jul 2026).
+  // learning_state.json always EXISTS, so its formation used to ride the sheet at 2 reps.
+  const wlsDir = stage("rich");
+  writeFileSync(join(wlsDir, "learning_state.json"),
+    JSON.stringify({ ...FX.rich.learning_state, status: "warming_up", low_confidence: true }));
+  const wls = await runManager({ today: TODAY, stateDir: wlsDir });
+  ok("warming_up: learning_state formation is SILENT (weak handoff + rejirah_due withheld)",
+    wls.features.formation === null
+    && !/chunking → embeddings/.test(wls.sheet)
+    && /^FORMATION: awaiting data/m.test(wls.prompt)
+    && /^DUE \(highest-leverage\): none/m.test(wls.prompt));
+
+  // 6e-ter) INSTRUMENTS DARK — an ActivityWatch outage must never render as a hard 0%
+  // (audit 30 Jul 2026). This is exactly what timeaudit.mjs writes when AW is unreachable.
+  const darkDir = stage("rich");
+  writeFileSync(join(darkDir, "timeaudit.json"), JSON.stringify({
+    date: TODAY, dataOk: false, note: "ActivityWatch unreachable",
+    buckets: { Building: { pct: 0 }, Meta: { pct: 0 } }, onTrack: false,
+  }));
+  const dark = await runManager({ today: TODAY, stateDir: darkDir });
+  ok("dark camera: reported as blindness, never as 'Building 0% — off track'",
+    dark.features.time?.dark === true
+    && /instruments dark/.test(dark.sheet)
+    && !/Building 0%/.test(dark.sheet)
+    && !/on track: no/.test(dark.prompt));
+
+  // 6e-quater) THE TWO WITNESSES REACH THE SHEET (30 Jul 2026). An organ nothing reads is
+  // the very defect these two were built to close — so prove they render, both ways.
+  const wDir = stage("rich");
+  writeFileSync(join(wDir, "capsule_map.json"), JSON.stringify({
+    date: TODAY, status: "ok",
+    totals: { capsules: 4, axes_present: 36, axes_cracked: 2, strike_questions: 36 },
+    rejirah_overdue: [{ concept: "embeddings", overdue_days: 36, next_due: "2026-06-24", rounds_done: 0 }],
+  }));
+  writeFileSync(join(wDir, "shipped.json"), JSON.stringify({
+    date: TODAY, status: "ok", dataOk: true, shipped: true,
+    totals: { commits: 3, files_touched: 9, insertions: 200, deletions: 4, new_files: 2 },
+    artifact_events: [{ kind: "capsule_locked", what: "hallucinations" }],
+  }));
+  const wit = await runManager({ today: TODAY, stateDir: wDir });
+  ok("capsules speak: Re-Jirah debt + the ready-made probe count reach the sheet",
+    /Re-Jirah overdue: embeddings 36d/.test(wit.sheet) && /36 strike sawaal ready/.test(wit.sheet));
+  ok("shipped speaks: artifacts render beside hours, with the day's events",
+    /shipped: 3 commit\(s\), 2 new file\(s\) · capsule_locked/.test(wit.sheet));
+
+  // and the distinction that justifies the whole organ: dark ≠ zero
+  const sdDir = stage("rich");
+  writeFileSync(join(sdDir, "shipped.json"), JSON.stringify({ date: TODAY, status: "unreadable", dataOk: false, shipped: null, totals: null, artifact_events: [] }));
+  const sd = await runManager({ today: TODAY, stateDir: sdDir });
+  ok("a dark output sensor is named as blindness, never rendered as 0 commits",
+    /output sensor dark/.test(sd.sheet) && !/shipped: 0 commit/.test(sd.sheet));
+
+  // bias-to-silence still holds: an awaiting_data capsule map says nothing at all
+  const qDir = stage("rich");
+  writeFileSync(join(qDir, "capsule_map.json"), JSON.stringify({ date: TODAY, status: "awaiting_data", totals: { capsules: 0, strike_questions: 0, axes_cracked: 0 }, rejirah_overdue: [] }));
+  const q = await runManager({ today: TODAY, stateDir: qDir });
+  ok("no capsules ⇒ the sheet stays silent about Re-Jirah (bias-to-silence preserved)",
+    q.features.capsules === null && !/Re-Jirah overdue/.test(q.sheet));
 
   // 6f) A PAUSED SEASON STAYS PAUSED (precedence rung 5 — previously unenforceable)
   const pauseDir = stage("rich");

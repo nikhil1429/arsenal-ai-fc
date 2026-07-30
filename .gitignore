@@ -86,6 +86,17 @@ dressing-room/state/scout.json
 dressing-room/state/doubt_grammar.json
 dressing-room/state/lexicon.json
 dressing-room/state/tape_room.json
+# the two witnesses (30 Jul 2026) — capsule_map carries his verbatim capsule content
+# (capsules/ is already ignored, so its extract must be too); shipped carries commit
+# subjects + activity; shipped_config holds machine-local repo paths.
+dressing-room/state/capsule_map.json
+dressing-room/state/shipped.json
+dressing-room/state/shipped_config.json
+# rescued reps_log lines (raw personal study text pulled out before an atomic rewrite)
+dressing-room/state/reps_log.jsonl.quarantine.jsonl
+# forge step-state (live session pacer — which step/axis he is on; personal study state)
+dressing-room/state/forge_session.json
+dressing-room/state/forge_session.json.tmp
 # genome runtime (proposals + personal changelog; forge_profile.json IS committed canon)
 dressing-room/state/mutations.jsonl
 SEASON_CHANGELOG.md

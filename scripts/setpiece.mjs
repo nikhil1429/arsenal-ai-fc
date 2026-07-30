@@ -137,10 +137,21 @@ function conceptsFromText(text, registry) {
   const hits = [];
   for (const id of Object.keys(reg)) {
     const names = [id, ...(Array.isArray(reg[id] && reg[id].aliases) ? reg[id].aliases : [])];
+    // WORD BOUNDARIES, NOT SUBSTRINGS (audit 30 Jul 2026). A bare `includes` makes every
+    // SHORT id a landmine in Hinglish: the alias `hal` fired inside *chalta / chal raha /
+    // chalo* and tagged his own line ("kaun KAB chalta hai") as `hallucinations`, and
+    // `vision` fires inside *division/television*. scorer.gafferPropose() then turns that
+    // tag into a ledger CLAIM. The registry keeps growing and its ids keep getting shorter,
+    // so this is fixed at the matcher, not by pruning aliases one at a time.
     const found = names.some(n => {
       const raw = String(n || "").toLowerCase().trim();
       if (!raw) return false;
-      return t.includes(raw) || t.includes(raw.replace(/[_-]+/g, " "));
+      const variants = [...new Set([raw, raw.replace(/[_-]+/g, " ")])];
+      return variants.some(v => {
+        const esc = v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        // \b is wrong at a non-word edge (e.g. "top-k"), so anchor on non-word-or-string-edge
+        return new RegExp(`(^|[^a-z0-9])${esc}($|[^a-z0-9])`, "i").test(t);
+      });
     });
     if (found) hits.push(id);
   }

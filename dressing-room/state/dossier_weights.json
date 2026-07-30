@@ -12,6 +12,10 @@
     "1-fundamentals": ["fundamentals", "system_design"],
     "2-rag": ["system_design", "production_eval", "build"],
     "3-agents": ["system_design", "build"],
+    "4-llm-api": ["system_design", "build"],
+    "5-llmops": ["production_eval", "system_design"],
+    "6-cross-cut": ["system_design", "production_eval"],
+    "7-domain": ["fundamentals", "system_design"],
     "skills": ["build", "production_eval"]
   },
   "probe_types": {

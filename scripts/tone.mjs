@@ -23,8 +23,9 @@
 //        node scripts/tone.mjs status · selftest
 // ============================================================================
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, appendFileSync, renameSync, rmSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -32,11 +33,38 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const TONE      = join(STATE_DIR, "tone.json");
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-function writeAtomic(path, obj) {
+// AUDIT (30 Jul 2026): the temp name was the FIXED `path + ".tmp"` and the rename had
+// no retry, so on Windows a transient lock on tone.json (indexer, AV scan, a reader
+// mid-read) threw EPERM and killed the whole run — ArsenalFC-Tone exited 1, tone.json
+// was never written for that hour, and nothing logged why. Reproduced at 39/40 failures
+// under contention in a sandbox. Now: per-process temp (two writers can't collide) and
+// a short backoff, because these locks clear in milliseconds. The final failure still
+// throws — a write that genuinely cannot land must not be swallowed.
+function writeAtomic(path, obj, attempts = 5) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
-  renameSync(tmp, path);
+  for (let i = 0; ; i++) {
+    try { renameSync(tmp, path); return; }
+    catch (e) {
+      const transient = e && (e.code === "EPERM" || e.code === "EBUSY" || e.code === "EACCES");
+      if (!transient || i >= attempts - 1) {
+        try { if (existsSync(tmp)) rmSync(tmp, { force: true }); } catch {}
+        // THE OTHER HALF OF THE ROOT CAUSE (audit 30 Jul 2026): the retry stopped the crash
+        // but "nothing logged why" was still true — ArsenalFC-Tone's schtasks command has no
+        // redirect, so stderr goes nowhere and a genuine failure is invisible forever. Every
+        // other organ here keeps a sibling .log; tone now does too. Best-effort, then rethrow.
+        try {
+          appendFileSync(join(__dirname, "tone.log"),
+            `${new Date().toISOString()} writeAtomic FAILED after ${attempts} attempt(s) on ${path}: ${e?.code || ""} ${e?.message || String(e)}\n`, "utf8");
+        } catch { /* a log that cannot be written must not become the failure */ }
+        throw e;
+      }
+      // busy-wait a few ms — Atomics.wait is the only sync sleep available here
+      const sab = new Int32Array(new SharedArrayBuffer(4));
+      Atomics.wait(sab, 0, 0, 20 * (i + 1));
+    }
+  }
 }
 
 // the effects every organ reads — ONE table, so the whole brain moves together
@@ -126,6 +154,34 @@ async function selftest() {
   const st = currentTone({ read: () => written, now: new Date(now.getTime() + 27 * 3600000) });
   assert("consumers: stale tone (>26h) self-degrades to nominal", st.stale === true && st.arousal === "nominal" && st.effects === EFFECTS.nominal);
   assert("consumers: missing tone → nominal, never crashes", currentTone({ read: () => null }).arousal === "nominal");
+
+  // WRITE-PATH COVERAGE (audit 30 Jul 2026). The selftest injects `write`, so writeAtomic —
+  // the ONLY thing the EPERM hardening changed — never executed here: 16/16 green while the
+  // fix was an untested hypothesis. CLAUDE.md: "unrun system = hypothesis". Now it runs.
+  const box = join(tmpdir(), `tone_selftest_${process.pid}`);
+  mkdirSync(box, { recursive: true });
+  const okPath = join(box, "ok.json");
+  writeAtomic(okPath, { hello: "world" });
+  assert("writeAtomic lands a parseable file and leaves NO temp behind",
+    JSON.parse(readFileSync(okPath, "utf8")).hello === "world"
+    && readdirSync(box).filter(f => f.includes(".tmp")).length === 0);
+  assert("the temp is per-process (two writers cannot share one temp name)",
+    !existsSync(okPath + ".tmp"));
+  // rename ONTO a directory is a permanent, non-transient failure: it must give up fast,
+  // rethrow, clean its temp, and leave a line in tone.log — not die silently on a schedule.
+  const dirTarget = join(box, "iamadir");
+  mkdirSync(dirTarget, { recursive: true });
+  let threw = null;
+  const t0 = Date.now();
+  try { writeAtomic(dirTarget, { x: 1 }); } catch (e) { threw = e; }
+  const elapsed = Date.now() - t0;
+  assert("a doomed rename rethrows rather than being swallowed", !!threw);
+  assert("it cleans its own temp on the failure path",
+    readdirSync(box).filter(f => f.includes(".tmp")).length === 0);
+  assert("the retry budget is bounded (no spin): under 2s", elapsed < 2000);
+  assert("the failure leaves a line in scripts/tone.log — 'nothing logged why' is closed",
+    existsSync(join(__dirname, "tone.log")) && /writeAtomic FAILED/.test(readFileSync(join(__dirname, "tone.log"), "utf8")));
+  rmSync(box, { recursive: true, force: true });
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

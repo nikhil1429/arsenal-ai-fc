@@ -3,9 +3,11 @@
   "expected_cadence_hours": {
     "readiness.json": 30, "cards.json": 30, "calibration.json": 30, "weaknesses.json": 30,
     "learning_state.json": 30, "timeaudit.json": 30, "pulse.json": 30, "mirror_manifest.json": 30,
-    "drills.json": 30, "twin.json": 30, "pitch_read.json": 30
+    "drills.json": 30, "twin.json": 30, "pitch_read.json": 30,
+    "capsule_map.json": 30, "shipped.json": 30
   },
   "grace_frac": 0.25,
+  "content_lag_tolerance_hours": { "readiness.json": 48 },
   "effort_uncaptured": { "min_learning_minutes": 120 },
   "throwin_gap_days": 4,
   "signal_table": { "min_n": 20 },
