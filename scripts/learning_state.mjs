@@ -20,10 +20,12 @@
 //   fsrs_store.json         — per-card `due` → rejirah_due (decay stays FSRS-owned; we only join axis)
 //   concepts.json           — axis authority + bucket + `core` flag + canonicalize
 //   learning_state_config.json — thresholds + Maidan structure (missing ⇒ built-in defaults)
+//   forge_session.json      — the FORGE pacer's live position (read-only; forge_session.mjs owns it)
+//   forge_sessions.jsonl    — append-only history of ENDED forge sessions (read-only, same owner)
 //
 // OUTPUT: dressing-room/state/learning_state.json (single writer; gitignored — derived PII).
 //   Manager §10 surface fields (maidan_stage_focus, weak_connection, python_fluency,
-//   rejirah_due, core_vs_light) + rich additive (concepts[], axes[], maidan{}).
+//   rejirah_due, core_vs_light) + rich additive (concepts[], axes[], maidan{}, position{}).
 //
 // FLUENCY LADDER: 🔴 learning → 🟡 held (≥held_streak consecutive correct) →
 //   🟢 fluent (≥fluent_streak consecutive COLD-FAST). cold-fast = correct ∧ knew ∧
@@ -46,6 +48,9 @@ const FSRS_STORE = join(STATE_DIR, "fsrs_store.json");
 const CONCEPTS   = join(STATE_DIR, "concepts.json");
 const CFG_PATH   = join(STATE_DIR, "learning_state_config.json");
 const OUT        = join(STATE_DIR, "learning_state.json");
+// read-only, owned by forge_session.mjs — see the FORGE POSITION section below
+const FORGE_SESSION = join(STATE_DIR, "forge_session.json");
+const FORGE_HISTORY = join(STATE_DIR, "forge_sessions.jsonl");
 
 const DEFAULTS = {
   thresholds: { held_streak: 2, fluent_streak: 3, latency_fast_ms: 8000, stage_runnable_frac: 0.75, warming_up_min_reps: 12, stall_reps: 6 },
@@ -186,6 +191,140 @@ function writeAtomic(path, obj) {
 }
 
 // ---------------------------------------------------------------------------
+// FORGE POSITION — the pacer's live position, projected onto the bus (READ-ONLY)
+// ---------------------------------------------------------------------------
+// WHY IT EXISTS (1 Aug 2026): forge_session.json had exactly ONE reader — the
+// script that writes it. dugout.mjs (THE GAFFER, the organ that talks to him in
+// real time) opens ~30 state files and that was never one of them, so the voice
+// answering "where was I?" could not name the concept on the table or the step it
+// was on — while the answer sat on disk two directories away. Learning-state
+// already answers WHERE HE STANDS across concepts; where he stands RIGHT NOW is
+// the same question at a shorter timescale, so the projection rides this file
+// instead of a new organ. The SINGLE-WRITER law is untouched: forge_session.mjs
+// still owns both files and we only ever read them — a one-way afferent nerve,
+// the same pattern mirror.mjs uses.
+//
+// WHY A COPY AND NOT AN IMPORT: forge_session.mjs dispatches its CLI at MODULE
+// SCOPE — it has no `import.meta.url === argv[1]` entry guard (this file does,
+// at the bottom). Importing it would run its `switch (mode)` against OUR argv, so
+// a plain `node scripts/learning_state.mjs selftest` would fire forge_session's
+// OWN selftest and process.exit() before a single rep was read. So we read the
+// JSON and duplicate the three small constants below. Copies drift — but a drifted
+// copy shows up as the Gaffer naming a step the pacer's own contract line does
+// not, which is loud and cheap. A coupling that can hijack the process is neither.
+//
+// TOPIC-AGNOSTIC BY CONSTRUCTION: nothing here knows a concept name. The concept
+// is whatever string the pacer wrote; every axis list is derived from a..i.
+const FORGE_STEPS = [                                     // THE METHOD, verbatim order
+  "TIME-BOX", "DARAAR-MAP", "PEHLE-GUESS", "SAMJHAO", "DIKHAO", "SAATH-KARO",
+  "AKELE-KARO", "BOLO", "CALIBRATE", "JIRAH", "LOCK", "RE-JIRAH",
+];
+const FORGE_AXES = "abcdefghi".split("");
+const FORGE_STALE_HOURS = 18;               // forge_session: "a study session does not span a night"
+
+// The shape is CONSTANT — present in every output, on every path, whether or not
+// a session exists. A consumer that has to branch on `position` being absent will
+// eventually forget to, and the Gaffer would then read `undefined.concept`.
+const emptyPosition = () => ({
+  session_open: false, concept: null, step: null, step_name: null,
+  axes_done: [], axes_deferred: [], axes_left: [], axes_ungraded: [],
+  started_at: null, stale: false, stale_as_of: null, last_closed: null,
+});
+
+// last_closed rides the LAST history row and is populated INDEPENDENTLY of whether
+// a session is open — "what did he finish last" and "what is he on now" are two
+// different questions and the Gaffer asks both.
+function projectLastClosed(row) {
+  if (!row || typeof row !== "object" || Array.isArray(row) || typeof row.concept !== "string") return null;
+  const arr = (x) => (Array.isArray(x) ? x.slice() : []);
+  return {
+    concept: row.concept,
+    ended_at: typeof row.ended_at === "string" ? row.ended_at : null,
+    steps_ran: arr(row.steps_ran), steps_missed: arr(row.steps_missed),
+    axes_done: arr(row.axes_done), axes_deferred: arr(row.axes_deferred), axes_untouched: arr(row.axes_untouched),
+  };
+}
+
+// PURE — hand it the parsed session object (or null) and the last history row (or
+// null). No disk, so the selftest drives every branch. `now` takes a Date or ms.
+function projectPosition(raw, lastRow, now) {
+  const nowMs = (now instanceof Date) ? now.getTime() : Number(now);
+  const pos = emptyPosition();
+  pos.last_closed = projectLastClosed(lastRow);
+  // missing · unreadable · not an object · no concept ⇒ there is no position to report
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || typeof raw.concept !== "string" || raw.concept.trim() === "") return pos;
+  if (raw.closed_at) return pos;              // a closed session is history, not a position
+
+  const arr = (x) => (Array.isArray(x) ? x : []);
+  const axes_done = arr(raw.axes_done).filter((a) => FORGE_AXES.includes(a));
+  const axes_deferred = arr(raw.axes_deferred).filter((a) => FORGE_AXES.includes(a));
+  // MIRROR THE PACER'S OWN REPAIR rather than inventing a second answer:
+  // forge_session's load() clamps a mangled step to 0 before it builds the contract
+  // line, so a file holding step:99 makes the pacer say TIME-BOX. Projecting null
+  // here would have the Gaffer and the contract contradicting each other about the
+  // same file on the same turn, and he would have to adjudicate. One organ, one answer.
+  const step = Number.isInteger(raw.step) && raw.step >= 0 && raw.step < FORGE_STEPS.length ? raw.step : 0;
+  // STALE mirrors forge_session's STALE_HOURS notion: a session older than that is
+  // not being paced any more (its contract goes silent). Unparseable/absent
+  // started_at ⇒ stale, the same "repair toward silence" direction the pacer takes.
+  const t0 = Date.parse(typeof raw.started_at === "string" ? raw.started_at : "");
+  const stale = !Number.isFinite(t0) || !Number.isFinite(nowMs) || ((nowMs - t0) / 3600000) > FORGE_STALE_HOURS;
+  // UNGRADED, verbatim from forge_session's coverage(): an axis needs a jirah
+  // BEFORE its own mark, and it may not SHARE that jirah with another axis — nine
+  // axes marked after one `moment jirah` are nine ungraded claims, not nine grades.
+  // Malformed provenance drops to 0, which downgrades the axis to ungraded: the safe
+  // direction, because a default that laundered a self-rating into a grade is exactly
+  // what the pacer refuses to do.
+  const marks = (raw.axes_marked_at && typeof raw.axes_marked_at === "object" && !Array.isArray(raw.axes_marked_at)) ? raw.axes_marked_at : {};
+  const jb = (a) => { const m = marks[a]; return (m && typeof m === "object" && !Array.isArray(m) && Number.isInteger(m.jirah_before) && m.jirah_before >= 0) ? m.jirah_before : 0; };
+  const axes_ungraded = axes_done.filter((a) => !(jb(a) >= 1 && !axes_done.some((b) => b !== a && jb(b) === jb(a))));
+
+  return {
+    ...pos,
+    session_open: true,
+    concept: raw.concept.trim(),
+    step, step_name: FORGE_STEPS[step],
+    axes_done, axes_deferred,
+    // DERIVED, never stored: the pacer writes only done + deferred, so "left" is
+    // whatever the nine axes still owe. Anything else would go stale on the next mark.
+    axes_left: FORGE_AXES.filter((a) => !axes_done.includes(a) && !axes_deferred.includes(a)),
+    axes_ungraded,
+    started_at: typeof raw.started_at === "string" ? raw.started_at : null,
+    stale,
+    // A FROZEN BOOLEAN OUTLIVES ITS TRUTH (added 1 Aug 2026, from the review of this
+    // very block). `stale` is judged at RECOMPUTE time, but this file is rewritten by
+    // the 08:45 heartbeat — not per turn. A session that started at 12:25 and was
+    // projected fresh at 21:14 crosses STALE_HOURS at 06:25 with nothing rewriting the
+    // file, so for hours the bus asserts a LIVE session the OWNING organ has already
+    // declared dead: forge_session's contract has gone silent while this still says
+    // session_open && !stale. That is not staleness, it is an inversion. Stamping WHEN
+    // the judgement was made makes the snapshot self-describing: a consumer that cares
+    // about the live answer recomputes from started_at (which is right here) instead of
+    // trusting a boolean older than the fact it describes.
+    stale_as_of: Number.isFinite(nowMs) ? new Date(nowMs).toISOString() : null,
+  };
+}
+
+// DISK — both readers are total: a missing, truncated or hand-mangled file is an
+// absent position, never an exception. learning_state.mjs runs unattended at 08:45
+// and its output feeds hook-reachable organs; a broken pacer file must never be
+// able to stop the positional map from being written.
+function loadForgeSession(path = FORGE_SESSION) {
+  try { if (existsSync(path)) { const j = JSON.parse(readFileSync(path, "utf8")); if (j && typeof j === "object" && !Array.isArray(j)) return j; } } catch { /* unreadable ⇒ no position */ }
+  return null;
+}
+// LAST VALID ROW WINS and a mangled line is skipped — the same rule forge_session's
+// own lastHistory() uses. The file is append-only, so the tail is the newest close.
+function loadForgeLastClosed(path = FORGE_HISTORY) {
+  try {
+    if (!existsSync(path)) return null;
+    let last = null;
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) { const s = line.trim(); if (!s) continue; try { const o = JSON.parse(s); if (o && o.concept) last = o; } catch { /* a mangled line is skipped, never fatal */ } }
+    return last;
+  } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------
 // per-id fluency + velocity (reps of ONE id, any order)
 // ---------------------------------------------------------------------------
 function isColdFast(r, cfg) {
@@ -229,12 +368,18 @@ function idFluency(reps, cfg) {
 // ---------------------------------------------------------------------------
 // full compute
 // ---------------------------------------------------------------------------
-function compute(reps, fsrsCards, reg, cfg, now) {
+// forgeSession / forgeLastRow are TRAILING + OPTIONAL: compute() is exported and a
+// pre-existing 5-arg caller must keep working unchanged (layering, never replace).
+// It gets the constant empty block, so the field is never missing — only empty.
+// The RAW inputs come in and the projection happens HERE, so a caller cannot hand
+// the bus a hand-shaped `position` that never passed the rules above.
+function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastRow = null) {
   const N = reps.length;
   const date = localDate(now);
   const generated_at = new Date(now).toISOString();
   const nowMs = (now instanceof Date ? now.getTime() : now);
   const th = cfg.thresholds;
+  const position = projectPosition(forgeSession, forgeLastRow, nowMs);
 
   // compute() is EXPORTED, so a caller (selftest, the Manager, a future agent) can hand
   // it a cfg that never passed through loadConfig's sanitizer. E2E audit (25 Jul 2026):
@@ -253,6 +398,10 @@ function compute(reps, fsrsCards, reg, cfg, now) {
       maidan_stage_focus: null, weak_connection: null, python_fluency: {}, rejirah_due: [], core_vs_light: {},
       concepts: [], axes: [],
       maidan: { stages: stageSkeleton(), handoffs: cfgHandoffs.map((h) => ({ from: h.from, to: h.to, combined_fluency: EMOJI.learning })) },
+      // rides the zero-reps path too: a first-ever forge session is EXACTLY when
+      // there are no reps yet, and that is the moment the Gaffer most needs to know
+      // where he is standing.
+      position,
     };
   }
 
@@ -368,6 +517,7 @@ function compute(reps, fsrsCards, reg, cfg, now) {
     edge_map, confusion_pairs,
     concepts, axes,
     maidan: { stages, handoffs },
+    position,
   };
 }
 
@@ -472,6 +622,92 @@ function selftest() {
   assert("track namespaces: concept + skill sharing an id do not merge",
     col.python_fluency.embeddings === "🟢 fluent" && findC(col, "embeddings")?.reps === 3 && findC(col, "embeddings")?.track === "concept");
 
+  // 19) FORGE POSITION (1 Aug 2026) — forge_session.json's only reader was the script
+  //     that writes it, so the Gaffer could not name the concept or the step the
+  //     captain was standing on. Everything below is driven with plain objects: the
+  //     projection is pure, so no disk and no live bus file is touched.
+  //     The concepts here are DELIBERATELY nonsense — a projection that ever needed a
+  //     real concept name to work would be a hardcode, and these asserts would catch it.
+  const T0 = Date.parse("2026-08-01T09:00:00Z");
+  const openSess = {
+    concept: "zzq_widget_theory", started_at: "2026-08-01T08:00:00Z", updated_at: "2026-08-01T08:30:00Z",
+    step: 3, steps_done: [0, 1, 2, 3], axes_done: ["a", "b"], axes_deferred: ["g"],
+    // a and b each sit behind their OWN jirah (1 then 2) — that is what makes them graded
+    axes_marked_at: { a: { at: "2026-08-01T08:20:00Z", step: 3, jirah_before: 1 }, b: { at: "2026-08-01T08:25:00Z", step: 3, jirah_before: 2 } },
+    question_moments: { pehle_guess: 2, widget_gate: 0, check_q: 1, jirah: 2 },
+  };
+  const histRow = { concept: "qqx_prior_concept", ended_at: "2026-07-31T12:25:21.402Z", ended_by: "close",
+    steps_ran: [0, 1, 2, 3, 4, 5], steps_missed: [6, 7, 8, 9, 10, 11],
+    axes_done: ["a", "b", "c"], axes_deferred: [], axes_untouched: ["d", "e", "f", "g", "h", "i"] };
+
+  const pOpen = projectPosition(openSess, null, T0);
+  assert("position: an OPEN session projects concept + step + step_name + axes + started_at",
+    pOpen.session_open === true && pOpen.concept === "zzq_widget_theory" && pOpen.step === 3
+    && pOpen.step_name === "SAMJHAO" && pOpen.axes_done.join("") === "ab" && pOpen.axes_deferred.join("") === "g"
+    && pOpen.started_at === "2026-08-01T08:00:00Z" && pOpen.stale === false && pOpen.last_closed === null);
+
+  // A frozen `stale` can outlive its truth, so the judgement carries its own clock:
+  // stale_as_of is stamped on EVERY path (empty block included) so a consumer can see
+  // how old the verdict is and recompute from started_at instead of trusting it.
+  assert("position: `stale` is stamped with WHEN it was judged, on both paths",
+    pOpen.stale_as_of === new Date(T0).toISOString()
+    && Object.prototype.hasOwnProperty.call(projectPosition(null, null, T0), "stale_as_of")
+    && projectPosition(null, null, T0).stale_as_of === null);
+
+  // axes_left must be DERIVED — same session, two different done/deferred splits, and
+  // a third with nothing marked. A hardcoded list cannot satisfy all three.
+  const leftOf = (done, deferred) => projectPosition({ ...openSess, axes_done: done, axes_deferred: deferred, axes_marked_at: {} }, null, T0).axes_left.join("");
+  assert("position: axes_left is DERIVED from a..i minus done minus deferred, never stored",
+    pOpen.axes_left.join("") === "cdefhi" && leftOf(["i"], []) === "abcdefgh"
+    && leftOf([], ["a", "b", "c", "d", "e", "f", "g", "h", "i"]) === "" && leftOf([], []) === "abcdefghi");
+
+  assert("position: MISSING/unreadable/junk forge_session ⇒ session_open false, empty lists, no throw",
+    [null, undefined, "not an object", [1, 2], {}, { concept: "   " }].every((bad) => {
+      const p = projectPosition(bad, null, T0);
+      return p.session_open === false && p.concept === null && p.step === null && p.step_name === null
+        && p.axes_done.length === 0 && p.axes_left.length === 0 && p.stale === false && p.last_closed === null;
+    }));
+
+  const pClosed = projectPosition({ ...openSess, closed_at: "2026-08-01T08:45:00Z" }, histRow, T0);
+  assert("position: a CLOSED session is not a position, but last_closed still rides the bus",
+    pClosed.session_open === false && pClosed.concept === null
+    && pClosed.last_closed?.concept === "qqx_prior_concept" && pClosed.last_closed.ended_at === histRow.ended_at
+    && pClosed.last_closed.steps_ran.length === 6 && pClosed.last_closed.axes_untouched.join("") === "defghi");
+
+  // ungraded mirrors forge_session's coverage(): a jirah is per-axis and cannot be
+  // shared — two axes marked behind the SAME jirah are two claims, not two grades.
+  const ungradedWith = (marks) => projectPosition({ ...openSess, axes_marked_at: marks }, null, T0).axes_ungraded.join("");
+  assert("position: axes_ungraded mirrors the pacer — own jirah grades, a SHARED jirah does not, junk/absent provenance ⇒ ungraded",
+    pOpen.axes_ungraded.length === 0
+    && ungradedWith({ a: { at: "x", step: 3, jirah_before: 1 }, b: { at: "x", step: 3, jirah_before: 1 } }) === "ab"
+    && ungradedWith({ a: { at: "x", step: 3, jirah_before: 0 }, b: { at: "x", step: 3, jirah_before: 2 } }) === "a"
+    && ungradedWith({}) === "ab"
+    && ungradedWith({ a: { jirah_before: "many" }, b: null }) === "ab");
+
+  assert("position: STALE mirrors the pacer's 18h notion (18h fresh · 19h stale · no started_at ⇒ stale)",
+    projectPosition({ ...openSess, started_at: new Date(T0 - 17 * 3600000).toISOString() }, null, T0).stale === false
+    && projectPosition({ ...openSess, started_at: new Date(T0 - 19 * 3600000).toISOString() }, null, T0).stale === true
+    && projectPosition({ ...openSess, started_at: undefined }, null, T0).stale === true
+    && projectPosition({ ...openSess, started_at: undefined }, null, T0).session_open === true);
+
+  assert("position: a mangled step is repaired to the pacer's own answer (0 TIME-BOX), never left undefined",
+    projectPosition({ ...openSess, step: 99 }, null, T0).step_name === "TIME-BOX"
+    && projectPosition({ ...openSess, step: "3" }, null, T0).step === 0
+    && projectPosition({ ...openSess, axes_done: ["a", "zz", 7], axes_deferred: null }, null, T0).axes_done.join("") === "a");
+
+  // and it must actually reach the OUTPUT — on both compute() paths, including zero reps.
+  const posEmpty = compute([], [], REG, cfg, now, openSess, histRow);
+  const posFull  = compute([cf("chunking")], [], REG, cfg, now, openSess, histRow);
+  assert("position rides learning_state.json on BOTH compute paths (0 reps and populated)",
+    posEmpty.position.session_open === true && posEmpty.position.step_name === "SAMJHAO"
+    && posFull.position.concept === "zzq_widget_theory" && posFull.position.last_closed?.concept === "qqx_prior_concept");
+  assert("BACKWARD-COMPAT — a 5-arg compute() caller still works and gets the constant EMPTY block, never a missing field",
+    "position" in compute([cf("chunking")], [], REG, cfg, now)
+    && compute([cf("chunking")], [], REG, cfg, now).position.session_open === false
+    && compute([], [], REG, cfg, now).position.last_closed === null);
+  assert("EMPTY-SAFE ON DISK — both forge readers return null for a missing path and never throw",
+    loadForgeSession("__no_such_forge_session__") === null && loadForgeLastClosed("__no_such_forge_history__") === null);
+
   const passed = checks.every(([, c]) => c);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -487,12 +723,18 @@ function main() {
   const reg = loadRegistry();
   const reps = loadReps(REPS_LOG);
   const cards = loadFsrsCards();
-  const out = compute(reps, cards, reg, cfg, new Date());
+  const out = compute(reps, cards, reg, cfg, new Date(), loadForgeSession(), loadForgeLastClosed());
   writeAtomic(OUT, out);
-  console.log(`learning-state: ${out.status} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}  →  ${OUT}`);
+  // the position clause is APPENDED, never replacing the existing line — the 08:45
+  // log is how an operator sees whether the pacer was actually picked up this run.
+  const p = out.position;
+  const posBit = p.session_open
+    ? ` · position ${p.concept} step ${p.step} ${p.step_name}${p.stale ? " (stale)" : ""}`
+    : (p.last_closed ? ` · position none (last ${p.last_closed.concept})` : " · position none");
+  console.log(`learning-state: ${out.status} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}${posBit}  →  ${OUT}`);
   process.exit(0);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, idFluency, isColdFast, loadReps, loadConfig, loadRegistry, loadFsrsCards };
+export { compute, idFluency, isColdFast, loadReps, loadConfig, loadRegistry, loadFsrsCards, projectPosition, loadForgeSession, loadForgeLastClosed };

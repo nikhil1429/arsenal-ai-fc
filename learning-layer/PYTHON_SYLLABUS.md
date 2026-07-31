@@ -2,6 +2,12 @@
 > **Build this → ship M1 → interview-grade Python.** Yeh `FINOPS_AI_CONCEPTS.md` ke dangling
 > `PYTHON_SYLLABUS.md` ref ko resolve karta hai. Project files ka canonical Python plan — har naya thread isse padhe.
 >
+> **01 Aug 2026 sync:** do asli gaps band kiye. (1) **Classes/OOP tier ADDED — T0.5, T1 se PEHLE.** File mein
+> classes ka ek bullet tak nahi tha, jabki T1 Pydantic *poora* class-based hai = dependency-break, gap nahi.
+> **T1–T4 numbers jaanboojh ke NAHI badle** (GEMINI_LOOP §9/§11 unhe naam se reference karte) — isliye decimal
+> T0.5, renumber nahi. Phase-A ~52h → ~57h. (2) **sprint.json ↔ §6 ka ordering conflict** record + resolve kiya
+> (§6 ka ⚠️ box — durable fix live SHEET mein hai). Baaki file UNCHANGED.
+>
 > **05 Jul 2026 sync:** §0 depth-rule reconciled (light-RITUAL/heavy-REPS/god-tier-CORE) + CLOSE-PACKET pipeline
 > wired (GEMINI_LOOP §11-13). Baaki file UNCHANGED. Yeh file = *kya* seekhna (tiers/resources); *kaise* chalega
 > (per-subtopic packet + rep-engine + rhythm) = GEMINI_LOOP §11-13.
@@ -52,14 +58,14 @@
 
 ## 1. THE SHAPE (one line)
 
-> **Phase A** (ship M1, ~52h, Sprint 1–2) → **Phase B** (fluency + interview-grade, ~55h directed, Sprint 3–6 + Phase-2)
+> **Phase A** (ship M1, ~57h, Sprint 1–2) → **Phase B** (fluency + interview-grade, ~55h directed, Sprint 3–6 + Phase-2)
 
-Directed-study ≈ 107h. Sprint file ka **~125h** figure = iske upar hands-on build-practice. **~46h** (board ka
+Directed-study ≈ 112h. Sprint file ka **~125h** figure = iske upar hands-on build-practice. **~46h** (board ka
 Phase-A slice) = "build-enough w/ Claude Code 70/30" — yeh syllabus usi slice ko tier-wise kholta hai.
 
 ---
 
-## 2. PHASE A — SHIP M1 (~52h · Sprint 1–2 · all P0)
+## 2. PHASE A — SHIP M1 (~57h · Sprint 1–2 · all P0)
 
 ### T0 — Python Core, JS-bridged (~12h)
 **Covers:** variables/types · lists vs JS-arrays · **dicts vs JS-objects** (sabse zyada use) · functions
@@ -85,6 +91,45 @@ comprehension (light) · `import` / `json.loads`-`dumps`.
 **Build artifact:** invoice-line **calculator** — `"Aristo Eco — ₹81,500"` → subtotal → 18% GST → total.
 **Interview/Bolo:** "Python idioms vs JS — dict access, no `i++`, truthiness, list comprehension."
 **FinOps spot:** har file ki neenv; extraction script.
+
+---
+
+### T0.5 — Classes / OOP (~5h) · T1 ka HARD prerequisite
+**Covers:** `class` definition · **`__init__`** · **`self`** (explicit first param) · instance attributes ·
+**class attributes vs instance attributes** · methods (instance · `@classmethod` · `@staticmethod` light) ·
+**inheritance** (`class Dog(Animal)`) · `super().__init__()` · `__repr__` (debug-print) · **kab class, kab
+function** (decision rule).
+
+**Depth = CORE, peripheral NAHI (§0 selective-fluency):** T1 Pydantic *poora* class-based hai — `class
+Invoice(BaseModel)` ek class DEFINITION hai jo `BaseModel` se inherit karti; fields uske body mein, validators
+uske andar methods. Yaani T0 se seedha T1 pe jaana literally impossible tha: T1 ki **pehli hi line** woh syntax
+hai jo kabhi padhaayi nahi gayi. Isliye classes dṛḍhabhūmi (cold-likhne wali) list mein baithti hain —
+skip-list §5 ki "look it up" cheez NAHI.
+
+**JS→Python bridge:** tu classes *already* likh chuka hai — `class X {}`, `extends`, React ke class-components.
+Mapping seedhi hai: `constructor()` → **`__init__()`** · `this.total` → **`self.total`** · `class Dog extends
+Animal` → **`class Dog(Animal)`** · `super()` → `super().__init__()` · `new Dog("Rex")` → `Dog("Rex")` (`new`
+keyword hai hi nahi). **Teen asli diff — yahi trip karayenge:** (1) **`self` EXPLICIT hai** — har method ka
+pehla parameter tu khud likhta hai, JS ka implicit `this` nahi (side-effect: `this`-binding ka poora JS-dard
+Python mein exist hi nahi karta); (2) **class-body mein likha `x = 5` = class attribute** — sab instances mein
+SHARED; per-instance chahiye to `__init__` ke andar `self.x = x`. JS mein iska rozmarra equivalent nahi, aur
+yeh #1 beginner trap hai (class-level pe mutable default `[]` = saare objects ek hi list share karenge);
+(3) inheritance **parentheses** se aati hai, keyword se nahi — `(Animal)`, `extends Animal` nahi.
+
+**Resource:** ✅ Dave Ebbelaar — *Python for AI & Agents · Full Beginner Course* — **wahi T0 wali playlist,
+ch 61-66:** 61 Introduction to Classes (OOP) · 62 Creating Your First Class (`__init__`, `self`) · 63 Class
+Attributes vs Instances · 64 Class Methods · 65 Class Inheritance · 66 When to Use Classes vs Functions.
+`youtube.com/playlist?list=PL-Y17yukoyy0SupAJSPQYg_Lvre9Kt9EG`
+*(playlist ✅ pehle se confirmed; 🟡 chapter-numbers captain ke brief se aaye — click-verify pending, padded nahi)*
+**Build artifact:** **plain-Python `InvoiceLine`** (Pydantic se PEHLE — taaki T1 mein diff KHUD dikhe):
+`__init__(vendor, amount)` + `gst()` (18%) + `total()` + `__repr__`; phir `RecurringInvoiceLine(InvoiceLine)`
+inherit kar ke `months` add kar aur `total()` override kar. **Yehi class T1 mein `class Invoice(BaseModel)` ban
+jayegi** — tab tu exactly dekh payega Pydantic ne MUFT mein kya diya (types, validation, `ValidationError`).
+**Interview/Bolo:** "Pydantic model koi magic nahi — ek class hai jo `BaseModel` se inherit karti hai; `self`
+explicit isliye ki Python 'explicit > implicit' chunta hai; class TAB jab **state + behaviour saath** rehna ho,
+warna plain function — sirf-data ke liye class nahi, dataclass/Pydantic model."
+**FinOps spot:** har typed extraction ka skeleton — `Invoice` · `LineItem` · `Vendor`. T0.5 unka DHAANCHA
+banata hai, T1 us dhaanche pe validation chadhata hai.
 
 ---
 
@@ -175,6 +220,7 @@ DataFrames basics · CSV/Excel read (SheetJS-equiv) · numpy arrays (embeddings 
 | Tier | Resource | Channel/Author | URL | Status |
 |---|---|---|---|---|
 | T0 | Python for AI & Agents (playlist) | Dave Ebbelaar | `youtube.com/playlist?list=PL-Y17yukoyy0SupAJSPQYg_Lvre9Kt9EG` | ✅ channel + playlist confirmed |
+| T0.5 | *same playlist* — **ch 61-66** (classes/OOP) | Dave Ebbelaar | `youtube.com/playlist?list=PL-Y17yukoyy0SupAJSPQYg_Lvre9Kt9EG` | ✅ playlist confirmed · 🟡 ch-numbers click-verify pending |
 | T1 | Pydantic Crash Course (90m) | Dave Ebbelaar | `youtube.com/watch?v=PkQIREapb9o` | ✅✅ exact match verified |
 | T2 | FastAPI Tutorial (docs) | Tiangolo | `fastapi.tiangolo.com/tutorial/` | ✅ official anchor |
 | T3 | async Python · Web Crawler | mCoding | `youtube.com/watch?v=ftmdDlwMwwQ` | ✅ click-confirmed |
@@ -199,16 +245,33 @@ PyTorch / TensorFlow · from-scratch ML · Django · metaclasses / descriptors �
 
 ## 6. MAPPING (yeh syllabus kahan baithta hai)
 
-**→ Sprint board rows:** T0–T1 ≈ 1-07 (basics-start) · T1 ≈ 2-12 (Pydantic) · T2 ≈ 2-11 (FastAPI) ·
-T3/T4 thread through 2-10/2-11. Board = coarse epics; yeh = tier detail.
+**→ Sprint board rows:** T0–T1 ≈ 1-07 (basics-start; **T0.5 classes yahin baithta hai, T1 se pehle**) ·
+T1 ≈ 2-12 (Pydantic) · T2 ≈ 2-11 (FastAPI) · T3/T4 thread through 2-10/2-11. Board = coarse epics; yeh = tier detail.
 
 **→ FINOPS_AI_CONCEPTS.md (Bucket 5):** "Python / FastAPI / Pydantic / asyncio — [B] FULL backend from Day 1."
 Yeh us line ka execution-plan hai.
 
-**→ FinOps M1 build:** T0 core → T1 typed extraction → T2 upload+stream endpoint → T3 concurrent calls →
-T4 Claude-call engine. Phase-A done = M1 backend live.
+**→ FinOps M1 build:** T0 core → **T0.5 classes** → T1 typed extraction → T2 upload+stream endpoint →
+T3 concurrent calls → T4 Claude-call engine. Phase-A done = M1 backend live.
 
 **→ Anthropic courses unlock:** API-Fundamentals + Tool-Use Colab pe Python pe chalte — T0-T2 inhe support karta.
+
+> ⚠️ **CANON CONFLICT — ordering (recorded 01 Aug 2026 · RESOLVED).**
+> `dressing-room/state/sprint.json` yeh order rakhta hai: **1-05 Anthropic API-Fundamentals → 1-06 Prompt
+> Engineering → 1-07 Python basics (start)** — yaani courses PEHLE. Upar wali line uska ulta kehti hai: courses
+> Colab pe, **Python mein** chalte, to Python pehle. Dono canon hain, dono ek doosre ko kaat rahe the.
+> **RESOLUTION: T0 (+T0.5) Python basics PEHLE, phir Colab courses.** Wajah mechanical hai, preference nahi —
+> course ka har cell Python hai; bina `dict` / f-string / function / `json.loads` ke tu code *padh* bhi nahi
+> payega, sirf run-button dabayega = zero rep, course "done" dikhega aur seekha kuch nahi hoga. Sequence tod ke
+> chalna hi ho to sirf reading/theory-slice chalao — koi bhi *interactive* Colab cell Python maangta hai.
+> **Durable fix is file mein NAHI, live SHEET mein hai.** `sprint.json` ka `progress` block har sync pe
+> `scripts/sprintsync.mjs` dwaara captain ke LIVE Google Sheet (Sprint Board ka CSV export) se **overwrite** hota
+> hai — JSON ya markdown mein kuch bhi likho, agle sync pe mit jayega. Aur `next_up` **sheet ki ROW ORDER** se
+> banta hai, ID-sort se nahi (`data.slice(curIdx + 1)`).
+> **Captain ka one-liner — sheet mein yeh karna hai:** *Sprint Board tab mein poori row `1-07 Python basics
+> (start)` uthaa ke `1-05 Anthropic: API Fundamentals` ke UPAR drop kar do — ID text mat badalna* (order
+> row-position se aata hai, ID se nahi; IDs ko doosri files reference karti hain).
+> *(Yeh file ya koi bhi doc `sprint.json` ko nahi likhta — uske `progress` ka single writer `sprintsync.mjs` hai.)*
 
 ---
 
@@ -220,6 +283,21 @@ T4 Claude-call engine. Phase-A done = M1 backend live.
   Python-for-AI focus + same instructor as T1/T4 = zero context-switch.
 - **Layering within-Python:** raw `anthropic`/`openai` SDK + manual RAG → phir Instructor/LlamaIndex abstraction.
   (Pehle JS→Python migration story thi; Node-skip ke baad woh dead.)
+- **Classes/OOP tier ADDED = T0.5 (01 Aug):** file mein classes ka ek `Covers:` bullet tak nahi tha — na tier,
+  na zikr. Yeh gap nahi, **dependency-break** tha: T1 Pydantic *poora* class-based hai (`class Invoice(BaseModel)`
+  = class definition + inheritance), yaani T0 → T1 jump literally impossible tha; T1 ki pehli hi line woh syntax
+  hoti jo kabhi padhaayi nahi gayi. Isliye T1 se PEHLE daala. **Renumber jaanboojh ke NAHI kiya** — T1→T2 shift
+  karne se GEMINI_LOOP §9 (research-prompt) aur §11 (tier-close) dono ke tier-references toot jaate → decimal
+  tier `T0.5`. Layering, replace nahi. Anchor pehle se maujood tha: wahi T0 playlist, ch 61-66 (naya resource
+  hunt zero). Depth = CORE/dṛḍhabhūmi (§0), skip-list nahi — kyunki yeh interview mein COLD likhna padega
+  (har Pydantic model ek class hai). Cost: Phase-A ~52h → ~57h, directed ≈107h → ≈112h.
+  *Accepted — yeh 5h T1 ke 12h ko bachate hain, warna T1 aadha syntax-debugging ban jaata.*
+- **Ordering conflict settled — Python T0 pehle, phir Anthropic Colab courses (01 Aug):** `sprint.json`
+  (1-05/1-06 courses → 1-07 Python) aur is file ka §6 ("courses Colab pe Python pe chalte") aapas mein takra rahe
+  the; dono canon, isliye chup rehna = har thread mein dobara bahes. Resolution + wajah + captain ka exact
+  sheet-fix = §6 ka ⚠️ box. Yahaan sirf record: **durable fix SHEET mein hai** — `sprint.json` ka `progress`
+  block `scripts/sprintsync.mjs` har sync pe live-sheet se overwrite karta hai, to JSON/markdown mein likha
+  koi bhi order temporary patch hai, fix nahi. (sprint.json is task mein CHHUA NAHI gaya — single-writer law.)
 - **Depth-rule reconciled (05 Jul):** "Python = tool, light touch" line → "light RITUAL / heavy REPS / god-tier
   CORE" (§0). Root cause: "light touch" ko "shallow" padha jaa raha tha (recurring). Light = no Forge-capsule
   ritual; depth = ladder × reps × build, selective on core. CLOSE-PACKET pipeline (GEMINI_LOOP §11-13) = kaise chalega.

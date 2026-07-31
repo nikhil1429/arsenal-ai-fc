@@ -372,7 +372,9 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 
 ---
 
-## ⚠ UNRESOLVED — this document contradicts canon, and the captain must decide
+## RESOLVED — 2026-08-01 · the captain ruled: the VISUALIZATION CONTRACT STANDS
+
+### The conflict, as it stood (preserved verbatim — do not re-litigate it)
 
 Finding **#2** says: *visualisation does not produce understanding for him; plain text plus a
 hand-run trace does, and a failed visual makes him ask for a better visual rather than for
@@ -386,17 +388,75 @@ pacer prints every turn at step 4.
 On 31 Jul 2026 the widget was built to contract and he did not drive it; the concept advanced
 only through plain text in chat.
 
-**This is a genuine conflict between two pieces of evidence, not an error in either.** It is
-NOT resolved here, and nothing in the code has been changed because of it. Three readings are
-open, and only the captain can choose:
+Three readings were put to him. **(a)** the contract stands and the widgets built so far were
+simply bad ones · **(b)** the contract is wrong for this brain and gets demoted: text +
+hand-trace becomes the lesson, the widget becomes optional reinforcement AFTER understanding ·
+**(c)** both hold, split by purpose: text teaches the mechanism, the widget is only for
+Re-Jirah day-3 cold-start.
 
-- **(a)** The Visualization Contract stands; the widgets built so far were simply bad ones
-  (too many objects, counting hidden behind interaction — which is what the contract's own
-  load-budget clause already forbids).
-- **(b)** The contract is wrong for this brain and should be demoted: text + hand-trace becomes
-  the lesson, the widget becomes optional reinforcement AFTER understanding.
-- **(c)** Both hold, split by purpose: text teaches the mechanism, the widget is only for
-  Re-Jirah cold-start (which is what canon already assigns it at day 3).
+### THE RULING — 1 Aug 2026, in his own words
 
-Until he decides, canon wins — that is the standing rule. But the conflict is written down
-here so nobody has to rediscover it.
+> *"11 point yes visuals are important for my adhd pi brain."*
+
+**That is reading (a). CHOSEN. The Visualization Contract is not demoted.** He is the only
+authority on his own brain, and he has now said, unprompted, that visuals are load-bearing for
+it. *(Honest note on the quote: "11 point" is his answer-number on the question-set he was
+answering, not a pointer to rule 11 of the cold-start card — rule 11 is about two-option stops.
+[SHAYAD], from the shape of the reply.)*
+
+### What (a) does to finding #2 — it changes its JOB, not its truth
+
+**Nothing in #2 is deleted or softened, and nothing in it was wrong.** The three dated
+failures and the BPE hand-trace success are still the strongest evidence in this document.
+Under the ruling they are re-read: **#2 is the specification for what makes a widget BAD — it
+is not proof that visuals do not work.** Read the failures as a defect list and every single
+one was already outlawed by the contract's own clauses (`PROJECT_OS.md:328-342`):
+
+| #2's evidence | the contract clause it was already breaking |
+|---|---|
+| ~6 Jun — "too much on screen at once" | *"Load budget: max ~6 objects ek waqt visible... one viewport, no scroll"* |
+| ~6 Jun — "the counting hidden inside interactions" | *"Mechanism ka working VISIBLE rahe — interactivity ke peeche hidden nahi"* |
+| ~30 Jun — *"x3 kyu hain?? smjha nahi"* / *"ye viz se kuch clear hi nahi hua hain"* | *"Spotlight: har step pe sirf EK change highlight"* + *"History trail: har transformation ka breadcrumb visible rahe"* |
+| ~12 Jun — *"this was so basic bro :("* | *"Story hook: pehla frame = business cliffhanger, definition nahi"* + Guess-gates + Trap cards |
+
+Every failure is a workmanship failure against a clause that already existed. That is exactly
+what reading (a) claims, and it is why (a) survives its own evidence.
+
+**The one data point (a) does NOT fully absorb, stated honestly:** 31 Jul 2026 — that widget
+was built to contract and still went undriven. One occurrence, **[SHAYAD]**. The contract's own
+*"Chala mode: Nikhil drive kare, widget validate"* means an undriven widget is a FAILED widget,
+not a passed one — so it is at minimum a build defect too. The ruling stands over it. But this
+is the named falsifier: if widgets that genuinely meet every clause keep going undriven, that
+is new evidence and it goes back to the captain as new evidence — it does not re-open the
+question by itself.
+
+### REJECTED, and why — so this is never re-argued from scratch
+
+- **(b) demote the contract.** Rejected by the ruling. All the evidence for (b) came from
+  widgets that violated the contract; demoting the tool because of the workmanship would have
+  thrown away something he has now said he needs.
+- **(c) split by purpose.** Rejected **as the governing split** — it removes the widget from
+  the lesson itself, which is (b) wearing a smaller coat. Note the half of (c) that was never
+  in dispute survives untouched: canon already assigns the widget the day-3 Re-Jirah cold start
+  (*"Re-Jirah day-3 isi se cold start"*). That was never the contested part.
+
+### What did NOT change — read this before "simplifying" anything
+
+- **Cold-start card rule 3** (*"mechanism in text + a numbered trace; visuals only after
+  understanding"*) stays EXACTLY as written, and was not edited. The ruling is that a widget is
+  **required**, not that the text-first mechanism is abandoned. Rule 4 — he runs every example
+  by hand — is untouched for the same reason: the BPE trace (~6 Jun) is still how mechanism
+  lands.
+- **Finding #2's own RULE line and its TRAP** are left verbatim. This document does not rewrite
+  its own findings after the fact; that is the whole point of a forensic record. Where #2's rule
+  line collides with the contract, **canon wins** — the standing rule before the ruling, and the
+  ruling confirms it. The TRAP (*a request for a better visual mid-concept is novelty, not
+  understanding*) is unaffected: it governs mid-concept re-builds, which is finding #3's
+  territory, not whether a concept gets a widget at all.
+- **No code was changed by this ruling.** THE METHOD step 4, the forge pacer and the contract
+  were already the law; the ruling keeps them the law.
+
+**Residual seam, recorded and deliberately NOT re-opened:** the exact ordering of *text-first*
+(rule 3) versus *"widget HI lesson hai"* (the contract) is a sequencing question the ruling did
+not touch, because the ruling was about whether visuals count at all. It is written here so the
+next reader knows it was seen and left alone, not missed.

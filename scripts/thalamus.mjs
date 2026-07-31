@@ -45,10 +45,16 @@
 //        node scripts/thalamus.mjs status     → workspace + today's gate ledger
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "node:http";
+// M8-FIX 1 Aug 2026 — the canon matcher itself, not a copy of it (see THE
+// DOSSIER TAKES ONLY CANON below). capture.mjs owns concepts.json; this is a
+// read-only borrow of its two pure resolvers, so the normalisation scars baked
+// into normText (fold `_`/`-` first, THEN trim — non-idempotence there once
+// fabricated reps onto a real FSRS card) can never drift between the organs.
+import { loadRegistry, canonicalize } from "./capture.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -60,6 +66,7 @@ const WAKE      = join(STATE_DIR, "wake.json");
 const WQUEUE    = join(STATE_DIR, "wake_queue.jsonl");     // M14 — the overlap: wakes QUEUE, never clobber
 const BGQUEUE   = join(STATE_DIR, "bg_queue.jsonl");       // M22 — suppress the WAKE, never the THOUGHT
 const DOSSIER   = join(STATE_DIR, "dossier.json");
+const CONCEPTS  = join(STATE_DIR, "concepts.json");        // canon vocab — capture.mjs owns it; this nucleus READS
 const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
 const PORT = 4113;                                  // one below the Dugout's 4114
 
@@ -328,6 +335,53 @@ function matchPreAnswer(evt, cache, qv, cfg) {
 }
 
 // ---------------------------------------------------------------------------
+// M8-FIX (1 Aug 2026) — THE DOSSIER TAKES ONLY CANON.
+// presence.mjs posts its stall afferent with concept_tokens = the most frequent
+// words of the WINDOW TITLES he was thrashing between; its own header calls
+// them "a hint of what he was in", and it is RIGHT to send them — the precache
+// match (M7) and the bg recall-match key off that hint. But the dossier write
+// below took every one of those tokens as a concept, so on 31 Jul 2026 20:14
+// his day's posterior grew rows named "google", "chrome", "labelbox".
+// dossier.json is the OPPONENT_SCOUT test-set that shapes scrimmage grammar:
+// left alone, the captain eventually gets quizzed on "chrome".
+// The fix follows capture.mjs's precedent exactly — resolve the token against
+// the hand-curated canon registry (case-fold + alias lookup, capture's OWN
+// canonicalize) and let only a resolving token open a dossier row.
+// SCOPE IS DELIBERATELY ONE WRITE: the hint keeps flowing everywhere it flows
+// today — the afferent log, the salience ledger, the workspace broadcast, NOV,
+// HAB, binding, the precache/bg matchers. ONLY dossier.concepts is filtered.
+// And a stall is still a stall: stalls_today and the capacity nudge count the
+// episode whether or not its words were canon (they measure thrash, not topic).
+// ---------------------------------------------------------------------------
+const EMPTY_REGISTRY = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false };
+let regCache = { key: "", reg: EMPTY_REGISTRY };
+function conceptRegistry() {
+  // The daemon runs for days and the canon is edited BY HAND, so a restart must
+  // not be the price of registering a concept — but re-parsing the file per
+  // token would be absurd. mtime+size keyed: one stat per dossier write, a
+  // re-parse only when he actually changed it. Any failure (missing, held,
+  // malformed) → the empty registry, which downstream means the OLD behaviour.
+  try {
+    const st = statSync(CONCEPTS);
+    const key = `${st.mtimeMs}:${st.size}`;
+    if (key !== regCache.key) regCache = { key, reg: loadRegistry(CONCEPTS) };
+    return regCache.reg;
+  } catch { return EMPTY_REGISTRY; }
+}
+// raw token → the canonical dossier key, or null when it is not canon at all.
+// Both vocabularies count: a dossier row is study GROUND, not a track-scoped
+// rep, and a hands-on skill id (fastapi) is as testable as a concept id.
+// No registry → the pre-fix behaviour, verbatim (capture's law: a missing
+// registry is never allowed to block a write).
+function dossierKey(tok, reg) {
+  if (!reg || !reg.loaded) return String(tok).toLowerCase();
+  const c = canonicalize(tok, "concept", reg);
+  if (!c.unregistered) return c.canonical;
+  const s = canonicalize(tok, "skill", reg);
+  return s.unregistered ? null : s.canonical;
+}
+
+// ---------------------------------------------------------------------------
 // THE NUCLEUS — binding + gate. Pure-ish: every side effect goes through deps,
 // so the selftest drives it with an injected clock and captured writes.
 // ---------------------------------------------------------------------------
@@ -363,6 +417,11 @@ function createNucleus(cfg, deps = {}) {
     }),
     // M8 — the Living Dossier (this nucleus is its sole writer)
     writeDossier: deps.writeDossier || ((o) => writeAtomic(DOSSIER, o)),
+    // M8-FIX — the canon vocabulary the dossier is filtered against (read-only).
+    // Injected like tone/precache/answerCache so the selftest pins its OWN
+    // vocabulary: concepts.json is hand-curated canon the captain edits, and a
+    // check that rode it would go red on code that never changed.
+    conceptRegistry: deps.conceptRegistry || conceptRegistry,
     adjudicate: deps.adjudicate || adjudicateLive,
     schedule: deps.schedule || ((ms, fn) => setTimeout(fn, ms)),
     readWake: deps.readWake || (() => readJson(WAKE)),
@@ -612,8 +671,13 @@ function createNucleus(cfg, deps = {}) {
     // nudge can only ever LOWER demand — never raise, never touch RED.
     if (N.dossier.date !== today) N.dossier = { date: today, concepts: {}, stalls_today: 0, capacity_nudge: null };
     const evt = g.spotlight.evt;
+    const reg = D.conceptRegistry();
+    // the first-3 selection is untouched; only NON-CANON tokens are dropped out
+    // of it, and only here — see THE DOSSIER TAKES ONLY CANON above.
     for (const tok of (evt.concept_tokens || []).map(t => String(t).toLowerCase()).slice(0, 3)) {
-      const c = N.dossier.concepts[tok] = N.dossier.concepts[tok] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
+      const id = dossierKey(tok, reg);
+      if (id === null) continue;                     // an ambient window-title word: a hint elsewhere, a concept nowhere
+      const c = N.dossier.concepts[id] = N.dossier.concepts[id] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
       if (String(evt.event_key || "").startsWith("stall:")) c.stalls++;
       if (evt.rep && evt.rep.correct === false) c.errs++;
       if (evt.rep && evt.rep.correct === true) c.wins++;
@@ -795,6 +859,21 @@ async function selftest() {
   assert("the LIVE config still parses and merges (it just doesn't set the test's bar)",
     !!liveCfg && Number.isFinite(liveCfg.tiers.tau1_base) && Number.isFinite(liveCfg.tiers.epsilon) && Array.isArray(liveCfg.self_markers));
 
+  // M8-FIX — the canon vocabulary the dossier checks ride, PINNED here for the
+  // same reason the bar above is: dressing-room/state/concepts.json is
+  // hand-curated and grows weekly, so a check that read it would go red the day
+  // he registers or renames something. The KEYS are built through capture's own
+  // normaliser (against an empty registry, canonicalize returns exactly
+  // normText(raw)) so the fixture can never drift from the matcher it tests.
+  const normKey = (s) => canonicalize(s, "concept", { conceptAlias: new Map(), skillAlias: new Map() }).canonical;
+  const bakeReg = (concepts, skills = {}) => {
+    const reg = { conceptAlias: new Map(), skillAlias: new Map(), loaded: true };
+    for (const [id, al] of Object.entries(concepts)) { reg.conceptAlias.set(normKey(id), id); for (const a of al) reg.conceptAlias.set(normKey(a), id); }
+    for (const [id, al] of Object.entries(skills)) { reg.skillAlias.set(normKey(id), id); for (const a of al) reg.skillAlias.set(normKey(a), id); }
+    return reg;
+  };
+  const testReg = bakeReg({ attention: [], tokenization: ["bpe"], embeddings: [] }, { fastapi: [] });
+
   // harness: virtual clock + captured writes + injected markets/headroom/adjudicator
   function rig(over = {}) {
     let t = 1000000;
@@ -823,6 +902,7 @@ async function selftest() {
       // the window two interleaved flushes used to race through (E2E audit 25 Jul 2026)
       embedText: async () => { wr.embedCalls = (wr.embedCalls || 0) + 1; wr.wakesAtEmbed = n.state.wakesToday; return over.embedVec !== undefined ? over.embedVec : null; },
       writeDossier: (o) => { wr.dossier = JSON.parse(JSON.stringify(o)); },
+      conceptRegistry: () => (over.registry !== undefined ? over.registry : testReg),   // hermetic — the live canon never leaks in
     });
     n.state.dossier = { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null };
     n.state.workspace = { version: 0, moment: null, deep: null };
@@ -1075,6 +1155,44 @@ async function selftest() {
       typeof day1 === "string" && wr.dossier.date !== day1 && wr.dossier.stalls_today === 0 && wr.dossier.capacity_nudge === null && wr.dossier.concepts.attention.stalls === 0 && wr.dossier.concepts.attention.wins === 1);
   }
 
+  // M8-FIX (1 Aug 2026) — THE DOSSIER TAKES ONLY CANON. presence's stall hint is
+  // window-TITLE words ("a hint of what he was in"), and on 31 Jul it grew him a
+  // posterior with rows named google / chrome / labelbox — the scrimmage test-set
+  // learning the browser he stalled in. The hint must keep flowing everywhere;
+  // only this one write is filtered.
+  {
+    const { n, wr, tick } = rig();
+    await n.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true, text: "tab-thrash forming: 38 switches in 12min", concept_tokens: ["google", "chrome", "labelbox"] });
+    await n.flush();
+    assert("DOSSIER CANON: browser-title words never become concepts", Object.keys(wr.dossier.concepts).length === 0);
+    assert("DOSSIER CANON: a stall is still a stall — stalls_today counts an episode with unregistered hints", wr.dossier.stalls_today === 1);
+    assert("THE HINT STILL FLOWS: the afferent log and the workspace broadcast carry the raw tokens verbatim",
+      wr.afferents[0].concept_tokens.join(",") === "google,chrome,labelbox"
+      && wr.workspaces[wr.workspaces.length - 1].moment.spotlight.concept_tokens.includes("chrome"));
+    assert("THE HINT STILL SCORES: an unregistered token still lights NOV (only the dossier is filtered)", wr.ledger[0].comps.nov === 1);
+    tick(60000);
+    await n.ingest({ modality: "bus", source: "reps", event_key: "rep:attention", concept_tokens: ["attention"], rep: { confidence: "knew", correct: false } });
+    await n.flush();
+    assert("DOSSIER CANON: a REGISTERED concept still lands, counts intact", wr.dossier.concepts.attention && wr.dossier.concepts.attention.errs === 1);
+    tick(60000);
+    await n.ingest({ modality: "bus", source: "reps", event_key: "rep:bpe", concept_tokens: ["BPE"], rep: { confidence: "knew", correct: true } });
+    await n.flush();
+    assert("DOSSIER CANON: an ALIAS folds to its canonical id (capture's own matcher, no second dialect)",
+      wr.dossier.concepts.tokenization && wr.dossier.concepts.tokenization.wins === 1 && !wr.dossier.concepts.bpe);
+    tick(60000);
+    await n.ingest({ modality: "voice", text: "fastapi ka dependency injection samajh nahi aaya", concept_tokens: ["fastapi"] });
+    await n.flush();
+    assert("DOSSIER CANON: a registered SKILL id is real ground too (both vocabularies count)", !!wr.dossier.concepts.fastapi);
+    // registry missing / held / malformed → the PRE-FIX behaviour, verbatim
+    const { n: nR, wr: wrR } = rig({ registry: EMPTY_REGISTRY });
+    await nR.ingest({ modality: "bus", source: "presence", event_key: "stall:leading-edge", concept_tokens: ["google", "chrome"] });
+    await nR.flush();
+    assert("NO REGISTRY → the OLD behaviour verbatim (write everything; a dry registry never blocks a write)",
+      !!wrR.dossier.concepts.chrome && !!wrR.dossier.concepts.google && wrR.dossier.stalls_today === 1);
+    assert("dossierKey: alias→id · ambient word→null · no registry→pass-through",
+      dossierKey("BPE", testReg) === "tokenization" && dossierKey("chrome", testReg) === null && dossierKey("Chrome", EMPTY_REGISTRY) === "chrome");
+  }
+
   // M17 — THE PRE-ANSWER ENGINE serve side: doubt × cache = zero-latency attach
   {
     const cache = [
@@ -1268,4 +1386,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday };
+export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry };

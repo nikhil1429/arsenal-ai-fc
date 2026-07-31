@@ -40,8 +40,10 @@
 //
 // WRITER OF: dressing-room/state/forge_session.json (live pacer state) AND
 //            dressing-room/state/forge_sessions.jsonl (append-only session history)
-// READS:     its own forge_sessions.jsonl, `boot` mode only — still no cross-organ
-//            deps; it never reads reps_log (capture.mjs owns it)
+// READS:     its own forge_sessions.jsonl (`boot` only) AND, at `close` only,
+//            teaching_contract.json STRICTLY READ-ONLY — an afferent nerve, never a
+//            write (teaching_contract.mjs is that file's sole writer). It still
+//            never reads reps_log (capture.mjs owns it).
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> [done|defer]
 //        · moment <kind> · status · contract · boot · close · selftest
 // ============================================================================
@@ -54,6 +56,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const SESSION   = join(STATE_DIR, "forge_session.json");
 const HISTORY   = join(STATE_DIR, "forge_sessions.jsonl");
+const TEACHING  = join(STATE_DIR, "teaching_contract.json");   // READ-ONLY here; owned by teaching_contract.mjs
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
 const STEPS = [
@@ -306,6 +309,46 @@ function coverage(s, now = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
+// THE TEACHER'S OWN DRIFTS (W3, 1 Aug 2026). Every close already reported how the
+// SESSION went and nothing reported how the TEACHER went. teaching_contract.mjs has
+// counted real observed teaching-drifts since 31 Jul, but that count only surfaced
+// when a human thought to run `list` — i.e. never, at the one moment it matters.
+// Now the close report says it unasked, every session.
+//
+// WHAT CANNOT BE KNOWN AND IS THEREFORE NOT CLAIMED: `hits` is CUMULATIVE across
+// every session ever, and `last_hit` is ONE timestamp. So "his-word drifted twice
+// tonight" is unknowable from that file — a rule with hits:5 whose last_hit lands
+// inside this session may have drifted once tonight or five times. The only
+// attributable fact is WHICH rules were hit at or after started_at, and that is all
+// the line says. Printing "×2" here would be the same class of lie as marking an
+// axis done without its own jirah, in the one report built to expose that lie.
+//
+// NO ANCHOR, NO CLAIM: an unparseable started_at returns null (say nothing) rather
+// than defaulting to epoch and reporting every drift the machine has ever seen as
+// "this session" — the failure mode that would be loudest and most wrong.
+// ---------------------------------------------------------------------------
+function teachingDrifts(tc, started_at) {
+  const t0 = Date.parse(started_at || "");
+  if (!tc || !Array.isArray(tc.rules) || !Number.isFinite(t0)) return null;
+  const ids = tc.rules
+    .filter((r) => r && typeof r.id === "string" && r.id)
+    .filter((r) => { const h = Date.parse(r.last_hit || ""); return Number.isFinite(h) && h >= t0; })
+    .map((r) => r.id)
+    .sort();                       // sorted so the report never moves when the ranking does
+  return { since: started_at, rule_ids: ids, rules_drifted: ids.length };
+}
+
+// ONE line, in the close report's voice. null = there was nothing honest to say, and
+// the caller prints nothing at all (a missing teaching contract is not a clean sheet).
+function teachingDriftLine(d) {
+  if (!d) return null;
+  if (!d.rule_ids.length) return "TEACHING DRIFTS THIS SESSION: none";
+  return `TEACHING DRIFTS THIS SESSION: ${d.rules_drifted} rule${d.rules_drifted === 1 ? "" : "s"} since session start`
+    + ` · ${d.rule_ids.join(" · ")}`
+    + ` (rule ids only — teaching_contract hits are CUMULATIVE, so how many times each drifted tonight is not knowable)`;
+}
+
+// ---------------------------------------------------------------------------
 // DISK — thin, atomic, and never throws at a hook
 // ---------------------------------------------------------------------------
 function load(path = SESSION) {
@@ -411,6 +454,18 @@ function lastHistory(path = HISTORY) {
     const last = rows[rows.length - 1];
     return { last, same_concept: rows.filter((r) => r.concept === last.concept).length };
   } catch { return { last: null, same_concept: 0 }; }
+}
+
+// The one cross-organ read this file has ever made, and it is one-way. Anything at
+// all wrong with the file — absent, truncated, an array, rules missing — is null, and
+// null means the close report stays exactly as it was before today. A neighbour organ
+// going bad must never cost the captain his coverage report.
+function loadTeaching(path = TEACHING) {
+  try {
+    if (!existsSync(path)) return null;
+    const j = JSON.parse(readFileSync(path, "utf8"));
+    return (j && typeof j === "object" && !Array.isArray(j) && Array.isArray(j.rules)) ? j : null;
+  } catch { return null; }
 }
 
 // Two pure predicates so the guards are unit-testable without disk.
@@ -757,6 +812,59 @@ function selftest() {
     Math.max(bStale.length, bFresh.length, bHist.length) <= 2 && !existsSync(join(tmpdir(), "forge_boot_wrote_something")));
   rmSync(hp, { force: true });
 
+  // =========================================================================
+  // 1 Aug 2026 — THE TEACHER'S OWN DRIFTS AT CLOSE (W3)
+  // Fixture only; the live teaching_contract.json is never read by the selftest.
+  // =========================================================================
+  const TC = { version: 1, rules: [
+    { id: "his-word",    hits: 5, last_hit: nowISO(T(10)),  born: nowISO(T0) },   // hit DURING the session
+    { id: "terminology", hits: 1, last_hit: nowISO(T(-90)), born: nowISO(T0) },   // hit BEFORE it started
+    { id: "hinglish",    hits: 0, last_hit: null,           born: nowISO(T0) },   // never hit
+    { id: "link-back",   hits: 2, last_hit: nowISO(T0),     born: nowISO(T0) },   // hit exactly AT started_at
+    { id: 7,             hits: 9, last_hit: nowISO(T(10)) },                      // malformed id, dropped
+  ] };
+  const dr = teachingDrifts(TC, nowISO(T0));
+  assert("DRIFT ATTRIBUTION — only last_hit >= started_at counts; earlier hits, null and junk ids never do",
+    dr.rule_ids.join() === "his-word,link-back" && dr.rules_drifted === 2 && dr.since === nowISO(T0));
+  assert("NO FABRICATED PRECISION — the line names rule IDS and never a per-rule count (hits are cumulative)",
+    /^TEACHING DRIFTS THIS SESSION: 2 rules since session start · his-word · link-back/.test(teachingDriftLine(dr))
+    && !/[x×]\s*\d/.test(teachingDriftLine(dr)) && /CUMULATIVE/.test(teachingDriftLine(dr))
+    && teachingDriftLine(dr).split("\n").length === 1);
+  assert("ZERO IS SAID OUT LOUD — a clean session prints 'none', not silence",
+    teachingDriftLine(teachingDrifts({ rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0)))
+      === "TEACHING DRIFTS THIS SESSION: none");
+  assert("NO ANCHOR, NO CLAIM — an unparseable/absent started_at attributes nothing and prints NOTHING",
+    teachingDrifts(TC, "nonsense") === null && teachingDrifts(TC, undefined) === null
+    && teachingDriftLine(null) === null && teachingDriftLine(teachingDrifts(null, nowISO(T0))) === null);
+
+  const tcProbe = join(tmpdir(), `forge_teaching_selftest_${process.pid}.json`);
+  rmSync(tcProbe, { force: true });
+  const tcMissing = loadTeaching(tcProbe) === null;
+  writeFileSync(tcProbe, "{ this is not json");
+  const tcBroken = loadTeaching(tcProbe) === null;
+  writeFileSync(tcProbe, JSON.stringify([1, 2, 3]));
+  const tcArray = loadTeaching(tcProbe) === null;
+  writeFileSync(tcProbe, JSON.stringify({ version: 1 }));
+  const tcNoRules = loadTeaching(tcProbe) === null;
+  writeFileSync(tcProbe, JSON.stringify(TC));
+  const tcBytes = readFileSync(tcProbe, "utf8");
+  const tcGood = loadTeaching(tcProbe);
+  assert("HOOK-SAFE — missing / truncated / array / rule-less teaching_contract.json all load as null, never throw",
+    tcMissing && tcBroken && tcArray && tcNoRules && tcGood.rules.length === 5);
+  assert("READ-ONLY — teaching_contract.mjs is that file's sole writer; a read leaves it byte-identical",
+    readFileSync(tcProbe, "utf8") === tcBytes);
+  rmSync(tcProbe, { force: true });
+
+  const hp2 = join(tmpdir(), `forge_hist_drift_selftest_${process.pid}.jsonl`);
+  rmSync(hp2, { force: true });
+  appendCoverage(clean, "close", { teaching_drifts: dr }, hp2, T(30));
+  const row2 = JSON.parse(readFileSync(hp2, "utf8").trim());
+  assert("HISTORY KEEPS IT — the JSONL row carries teaching_drifts with the same ids, count and anchor",
+    row2.teaching_drifts && row2.teaching_drifts.rule_ids.join() === "his-word,link-back"
+    && row2.teaching_drifts.rules_drifted === 2 && row2.teaching_drifts.since === nowISO(T0)
+    && row2.method_clean === true);
+  rmSync(hp2, { force: true });
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -788,8 +896,13 @@ switch (mode) {
     }
     // RECORD BEFORE DISCARD: a --force overwrite still leaves a row behind.
     if (prev && !prev.closed_at && force) {
-      appendCoverage(prev, "force",
-        prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {});
+      // The discarded session's teaching drifts ride along too: a --force row is a
+      // session ending WITHOUT a close report, so this row is the only trace it leaves.
+      const d = teachingDrifts(loadTeaching(), prev.started_at);
+      appendCoverage(prev, "force", {
+        ...(prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {}),
+        ...(d ? { teaching_drifts: d } : {}),
+      });
     }
     const s = blank(concept);
     save(s);
@@ -827,9 +940,12 @@ switch (mode) {
     // report is unreachable for exactly the sessions that most need one.
     const s = need(load());
     const cov = coverage(s);
+    // Computed BEFORE the append so the history row carries the same thing stdout
+    // says — a number read once in a terminal and never written down is not a record.
+    const drifts = teachingDrifts(loadTeaching(), s.started_at);
     console.log(JSON.stringify(cov, null, 2));
     if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
-      appendCoverage(s, "close");
+      appendCoverage(s, "close", drifts ? { teaching_drifts: drifts } : {});
       save({ ...s, closed_at: nowISO() });
     }
     // ALWAYS printed — never gated on failure. The draft printed this block only
@@ -845,6 +961,11 @@ switch (mode) {
     if (cov.core_missing.length) R.push(`  CORE axis ${cov.core_missing.join("")} never closed (CORE-NEVER-DEFERRED — canon forbids deferring it)`);
     if (cov.widget_gates < WIDGET_GATES_MIN) R.push(`  widget guess-gates driven ${cov.widget_gates}/${WIDGET_GATES_MIN} — built is not driven`);
     if (cov.check_q_refused) R.push(`  check-questions REFUSED: ${cov.check_q_refused} (quiz-dump attempts)`);
+    // The session graded itself above; this grades the TEACHER. Unconditional, same
+    // reason the two clocks are: a report that only speaks when it has bad news makes
+    // "have no bad news" the cheapest move. Silent only when the file cannot be read.
+    const dl = teachingDriftLine(drifts);
+    if (dl) R.push(`  ${dl}`);
     R.push("  → say all of this out loud to him, verbatim, before the delta.");
     R.push(`forge_session: recorded to ${HISTORY}`);
     console.log(R.join("\n"));
