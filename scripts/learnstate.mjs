@@ -61,7 +61,7 @@ const MEMO_EPISODES = 6;
 // ---------------------------------------------------------------------------
 // THE TEACHING CARD (31 Jul 2026). learning-layer/HOW_HE_LEARNS.md is a forensic
 // read of the whole Claude Project history — 21 findings, his own verbatim words,
-// ending in a sixteen-rule cold-start card. Written to a file, it was read by
+// ending in a seventeen-rule cold-start card. Written to a file, it was read by
 // NOBODY: same defect as the hippocampus, one day later. A rule that depends on a
 // session choosing to open a file is not a rule, it is a hope.
 //
@@ -286,7 +286,7 @@ function selftest() {
   writeFileSync(cf, `${CARD_BEGIN} n -->\n${"x".repeat(CARD_MAX + 500)}\n${CARD_END} -->\n`);
   assert("CARD PARSER — a runaway card is capped and says so (the brief stays orientation)",
     loadTeachingCard(cf).length <= CARD_MAX + 80 && loadTeachingCard(cf).includes("truncated"));
-  assert("THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all sixteen rules",
+  assert("THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all seventeen rules",
     (() => { const c = loadTeachingCard(); return !!c && /^1\. Give ONE new idea/m.test(c) && /^16\. /m.test(c); })());
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

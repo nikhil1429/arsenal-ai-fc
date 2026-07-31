@@ -339,7 +339,7 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 
 ---
 
-# THE COLD-START CARD — the sixteen rules
+# THE COLD-START CARD — the seventeen rules
 
 *If a fresh session reads nothing else, it reads this.*
 
@@ -366,6 +366,7 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 14. **Park every hardware/buying topic** in one line — no price, no link.
 15. **Show new syntax first**, ask for the guess after.
 16. **Call the new thread yourself**, before it gets heavy, with the full carry-forward.
+17. Take that one idea and go **all the way down** — in his words, "jitna dheere ho sake, har ek cheez poori tarah samjhao." **Dheema is not lamba:** dheema = ONE thing, small steps, stopping at each. Lamba = many things in one message. Never make it longer; always make it deeper.
 
 <!-- COLD-START-CARD:END -->
 
