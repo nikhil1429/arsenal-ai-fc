@@ -48,7 +48,7 @@
 //   entry guard · atomic write (temp→rename) · empty-safe · never fabricate.
 // ============================================================================
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, openSync, closeSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -230,12 +230,29 @@ function loadReps(path, reg = EMPTY_REG, stats = {}) {
 // deletes its own temp instead of leaving an orphan next to gitignored personal
 // state (the repo-root `*.tmp` rule covers it, but we don't leave litter for it).
 let tmpSeq = 0;
+// RENAME RETRY (research 31 Jul 2026). Nineteen other scripts read reps_log.jsonl
+// with a plain readFileSync and no lock. On Windows a rename over a path another
+// process holds open fails with EPERM/EACCES/EBUSY — and this is the LAST step of
+// an ingest, so the throw lands after the merge and destroys the WHOLE batch. A
+// study session's reps are the one thing in this repo that cannot be regenerated.
+// A bounded retry costs at most 75ms and turns a race into a non-event.
+const RENAME_TRIES = 3, RENAME_RETRY_MS = 25;
+const RENAME_RETRY_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
 function writeAtomic(path, reps) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.${++tmpSeq}.${Date.now().toString(36)}.tmp`;
   try {
     writeFileSync(tmp, reps.map((r) => JSON.stringify(r)).join("\n") + (reps.length ? "\n" : ""));
-    renameSync(tmp, path);
+    let lastErr = null;
+    for (let attempt = 1; attempt <= RENAME_TRIES; attempt++) {
+      try { renameSync(tmp, path); lastErr = null; break; }
+      catch (e) {
+        lastErr = e;
+        if (!RENAME_RETRY_CODES.has(e && e.code) || attempt === RENAME_TRIES) break;
+        sleepSync(RENAME_RETRY_MS);   // declared below; ESM hoists the fn, and this runs later
+      }
+    }
+    if (lastErr) throw lastErr;
   } catch (e) {
     try { rmSync(tmp, { force: true }); } catch { /* best-effort cleanup; the throw below is the truth */ }
     throw e;
@@ -601,6 +618,38 @@ function selftest() {
   assert("pull archive: collision keeps BOTH files in done/ (no silent overwrite)",
     pr2.pulled === 1 && pr2.failed === 0 && readdirSync(join(inbox2, "done")).filter((f) => f.startsWith("ccc")).length === 2);
 
+  // CONCURRENT READER (31 Jul 2026). Nineteen scripts read reps_log with no lock,
+  // and on Windows a rename over a path another process holds open fails EPERM —
+  // a throw that lands AFTER the merge, at the last step of an ingest.
+  //
+  // WHAT THE RETRY ACTUALLY BUYS, stated honestly: real readers do readFileSync,
+  // which holds the handle for microseconds, so the overlap is TRANSIENT and three
+  // bounded attempts across ~75ms clear it. A handle held for the WHOLE operation
+  // (measured here, and it genuinely still fails) cannot be renamed over by anyone,
+  // and no amount of retrying changes that. So the guarantee this pins is not "the
+  // write always succeeds" — it is "a failure NEVER costs data": the throw is
+  // catchable, the ORIGINAL file is byte-intact, no orphan temp is left, and the
+  // caller (paste) turns it into a clean 're-run the same command' refusal instead
+  // of an uncaught stack trace that reads like the reps are gone.
+  const conc = join(dir, "concurrent.jsonl");
+  const concBefore = JSON.stringify(rep({ ts: "2026-07-12T09:00:00Z", question: "held_open_first" })) + "\n";
+  writeFileSync(conc, concBefore);
+  let fd = null, concThrew = false, concErr = null;
+  try {
+    fd = openSync(conc, "r");                                    // a reader holding it open for the whole call
+    try { ingest(conc, [rep({ ts: "2026-07-12T09:01:00Z", question: "held_open_second" })], reg); }
+    catch (e) { concThrew = true; concErr = e; }
+  } finally { if (fd !== null) { try { closeSync(fd); } catch { /* nothing to salvage */ } } }
+  const concOrphans = readdirSync(dir).filter((f) => f.startsWith("concurrent.jsonl.") && f.endsWith(".tmp"));
+  assert("CONCURRENT READER: a rename blocked by a held handle throws CATCHABLY and costs NO data (original intact, no orphan temp)",
+    concThrew && RENAME_RETRY_CODES.has(concErr && concErr.code)
+    && readFileSync(conc, "utf8") === concBefore && concOrphans.length === 0);
+  // and once the reader lets go, the very same ingest lands — which is exactly what
+  // the paste refusal tells him to do ("re-run the same command").
+  const concRetry = ingest(conc, [rep({ ts: "2026-07-12T09:01:00Z", question: "held_open_second" })], reg);
+  assert("CONCURRENT READER: re-running after the handle is released ingests normally — the reps were never lost",
+    concRetry.appended === 1 && readFileSync(conc, "utf8").trim().split("\n").filter(Boolean).length === 2);
+
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -629,7 +678,16 @@ function main() {
     let cands;
     try { cands = parseBlob(text); }
     catch (e) { console.error(`paste: not valid JSON — nothing ingested (${e.message})`); process.exit(1); }
-    const r = ingest(REPS_LOG, cands, reg);
+    // A CLEAN REFUSAL, NEVER A STACK TRACE (31 Jul 2026). If the ingest throws —
+    // a held file, a full disk — the captain must be told his reps are recoverable
+    // by re-running, not shown a Node traceback that reads like the data is gone.
+    let r;
+    try { r = ingest(REPS_LOG, cands, reg); }
+    catch (e) {
+      console.error(`paste: FAILED — nothing was ingested (${(e && e.code) || "error"}: ${(e && e.message) || e}).`);
+      console.error("paste:   Your reps are NOT lost: re-run the same command. If it repeats, another process is holding reps_log open.");
+      process.exit(1);
+    }
     console.log(`paste: appended ${r.appended}, rejected ${r.rejected}, duplicates ${r.duplicates} → ${REPS_LOG} (total ${r.total})`);
     // The two silences the 30 Jul audit found: an unknown concept, and a dropped line.
     // Both are now LOUD at the one place a human is looking.
