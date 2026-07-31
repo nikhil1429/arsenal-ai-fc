@@ -99,6 +99,10 @@ dressing-room/state/reps_log.jsonl.quarantine.jsonl
 dressing-room/state/forge_session.json
 dressing-room/state/forge_session.json.tmp
 dressing-room/state/forge_sessions.jsonl
+# teaching-contract runtime (his personal drift ledger + a turn counter that changes on
+# EVERY prompt — same class as forge_session.json. The rules are seeded by
+# scripts/teaching_contract.mjs, so a fresh clone rebuilds this file on first run.)
+dressing-room/state/teaching_contract.json
 # genome runtime (proposals + personal changelog; forge_profile.json IS committed canon)
 dressing-room/state/mutations.jsonl
 SEASON_CHANGELOG.md
