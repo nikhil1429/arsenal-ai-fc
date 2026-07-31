@@ -1,5 +1,5 @@
 {
-  "_comment": "THE CLAUDE CODE CAPTURE NERVE. UserPromptSubmit + Stop both fire hooks/afferent-post.mjs — a fail-silent (~250ms), stdout-free, secret-scrubbing bridge that POSTs to the thalamus (:4113) as a 'code' afferent. UserPromptSubmit captures HIS words (source 'claude-code'); Stop captures WHAT HE WAS TAUGHT (last_assistant_message, source 'claude-code-teaching') — so the WHOLE learning turn (question + answer) flows into the ONE working memory with zero capture tax. Relative command (CWD = project root); never blocks the session; thalamus down = silent no-op. THE FORGE PACER (30 Jul 2026): UserPromptSubmit ALSO fires `forge_session.mjs contract`, whose stdout IS injected by design — THE METHOD's 12-step order + the two anti-quiz-dump laws, re-read EVERY turn instead of once at skill-load (prose read once drowns after 40 turns; that is exactly how 8 of 12 steps went missing on the first live session). Silent unless a fresh, unclosed forge session exists; silent for headless organs (ARSENAL_ORGAN=1).",
+  "_comment": "THE CLAUDE CODE CAPTURE NERVE. UserPromptSubmit + Stop both fire hooks/afferent-post.mjs — a fail-silent (~250ms), stdout-free, secret-scrubbing bridge that POSTs to the thalamus (:4113) as a 'code' afferent. UserPromptSubmit captures HIS words (source 'claude-code'); Stop captures WHAT HE WAS TAUGHT (last_assistant_message, source 'claude-code-teaching') — so the WHOLE learning turn (question + answer) flows into the ONE working memory with zero capture tax. Relative command (CWD = project root); never blocks the session; thalamus down = silent no-op. THE FORGE PACER (30 Jul 2026): UserPromptSubmit ALSO fires `forge_session.mjs contract`, whose stdout IS injected by design — THE METHOD's 12-step order + the two anti-quiz-dump laws, re-read EVERY turn instead of once at skill-load (prose read once drowns after 40 turns; that is exactly how 8 of 12 steps went missing on the first live session). Silent unless a fresh, unclosed forge session exists; silent for headless organs (ARSENAL_ORGAN=1). THE BOOT LINE (31 Jul 2026): SessionStart ALSO fires `forge_session.mjs boot` — read-only, never writes, at most two lines, silent for headless organs (ARSENAL_ORGAN=1) and silent when there is no session and no history. It deliberately speaks on a STALE session: staleness silences the PACER, never the MEMORY. Companion: learnstate.mjs brief now splices the hippocampus rehydrate cartridge, so a fresh session arrives holding his durable memory instead of making him re-explain himself.",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -19,7 +19,8 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "node scripts/learnstate.mjs brief" }
+          { "type": "command", "command": "node scripts/learnstate.mjs brief" },
+          { "type": "command", "command": "node scripts/forge_session.mjs boot" }
         ]
       }
     ]

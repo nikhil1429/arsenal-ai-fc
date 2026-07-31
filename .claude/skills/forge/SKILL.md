@@ -25,12 +25,22 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 `UserPromptSubmit` hook re-injects the contract **every turn**. You MUST drive it:
 
 ```
+node scripts/forge_session.mjs boot                   # read-only; SessionStart runs it for you
 node scripts/forge_session.mjs start <concept>        # at session open, before anything
 node scripts/forge_session.mjs step <0-11>            # BEFORE each step's first message
 node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred)
 node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```
+
+**If SessionStart reported an OPEN session, `close` it FIRST and read the coverage aloud** —
+do NOT re-teach the axes it lists and do NOT restart from step 0. `start` will **REFUSE**
+while any unclosed session exists, stale or not.
+
+**Mark an axis `done` AFTER its own `moment jirah`, not before.** An axis marked with no
+jirah behind it — or sharing one jirah with other axes — is recorded as **UNGRADED**: canon
+says the status comes from JIRAH, **per axis**, never from a self-rating (§9, §10 below).
+Re-marking after the Jirah upgrades it, so a mis-ordered mark is always recoverable.
 
 **Every teaching message opens with one line: `STEP n/11 · NAME · axis <x>`.** He must be
 able to see, at a glance and without reading any rule, which step he is in and which one
@@ -122,7 +132,12 @@ When he says "session khatam / done / bas":
    Report capture's output **verbatim** if it rejects. If a rep comes back
    `unregistered:true`, the concept is missing from `state/concepts.json` — say so; that
    registry is hand-curated canon and needs his approval, never a silent edit.
-3. `node scripts/forge_session.mjs close` → show the **COVERAGE** honestly: steps ran /
+3. `node scripts/forge_session.mjs close` → the coverage is now **appended to
+   `state/forge_sessions.jsonl`** (it survives the session; before this it died with the
+   terminal), and close **ALWAYS** prints the method block — including `elapsed` and
+   `axis marks spread over`. Read the reasons **verbatim**, clean or not, before the delta.
+   A twelve-step session in 1.4 minutes is theatre; say the two numbers out loud.
+   Show the **COVERAGE** honestly: steps ran /
    steps missed / axes done / axes **deferred** / axes untouched.
 4. Then the DELTA only (≤6 lines): reps in · fluency moves · cards due tomorrow.
 5. One honest close, self-scout register. No praise unless earned and specific.

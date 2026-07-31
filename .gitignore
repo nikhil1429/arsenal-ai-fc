@@ -94,9 +94,11 @@ dressing-room/state/shipped.json
 dressing-room/state/shipped_config.json
 # rescued reps_log lines (raw personal study text pulled out before an atomic rewrite)
 dressing-room/state/reps_log.jsonl.quarantine.jsonl
-# forge step-state (live session pacer — which step/axis he is on; personal study state)
+# forge step-state (live session pacer — which step/axis he is on; personal study state;
+# the .jsonl is the append-only history of closed sessions)
 dressing-room/state/forge_session.json
 dressing-room/state/forge_session.json.tmp
+dressing-room/state/forge_sessions.jsonl
 # genome runtime (proposals + personal changelog; forge_profile.json IS committed canon)
 dressing-room/state/mutations.jsonl
 SEASON_CHANGELOG.md

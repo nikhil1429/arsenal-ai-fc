@@ -13,6 +13,11 @@ Run `node scripts/learnstate.mjs json` and read:
 - `cur.track` · `cur.task` · `cur.subtopics` — the task of record (mirrors his live sheet)
 - `ws.where_left_off` · `ws.open_loop` — where the last session stopped + the loop still hanging
 - `watch` — his repeat JS-hangovers (the ledger; empty right now = first packets observe)
+- `node scripts/forge_session.mjs boot` — whether a forge session is still **OPEN** on disk
+  (concept, step, axes already closed, which of them are ungraded), or when the last one
+  closed. `learnstate.mjs json` is structurally blind to this: `gather()` reads
+  sprint/working_set/weaknesses only. **If a session is open, do NOT re-teach its closed
+  axes** — `close` it first, read the coverage aloud, then continue.
 
 Open with ONE line: what he's on + the open loop. Then route. If `cur` is empty,
 tell him the sprint has no current task (run `node scripts/sprintsync.mjs`) and stop.
