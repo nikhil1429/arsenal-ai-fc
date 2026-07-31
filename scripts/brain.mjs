@@ -662,6 +662,27 @@ function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
   if (calibration && typeof calibration.overconfidence_rate === "number")
     parts.push(`CALIBRATION: overconfidence P(wrong|knew)=${calibration.overconfidence_rate}; trend ${calibration.trend || "—"}.`);
   if (ls && ls.weak_connection) parts.push(`THE FRAYING PASS: ${ls.weak_connection}.`);
+  // WHERE HE IS STANDING RIGHT NOW (added 1 Aug 2026). The forge pacer was an island:
+  // it alone knew the concept and the step, so every OTHER surface — the Gaffer most of
+  // all, holding thirty state files — had to ask him what he was in the middle of. The
+  // position now rides learning_state.json; this is the consumer that turns it into a
+  // sentence. Deliberately POSITION ONLY, never content: the pacer knows which axes were
+  // graded, and that is a FACT. What was taught is his Bolo's to say, at LOCK, in his
+  // words (FORGE_SPEC §2.5) — a fingerprint that summarised his understanding would be
+  // this machine inventing his mind back at him.
+  if (ls && ls.position && ls.position.session_open && ls.position.concept) {
+    const p = ls.position;
+    // `stale` is a frozen judgement (learning_state stamps stale_as_of for exactly this
+    // reason) — recompute from started_at so a session that died overnight is not
+    // announced as live.
+    const t0 = Date.parse(p.started_at || "");
+    const dead = p.stale || (Number.isFinite(t0) && (Date.now() - t0) / 3600000 > 18);
+    if (!dead) parts.push(
+      `MID-CONCEPT RIGHT NOW: ${p.concept}, step ${p.step}/11 ${p.step_name || ""}`.trim()
+      + ` — axes closed ${(p.axes_done || []).join("") || "none"}, left ${(p.axes_left || []).join("") || "none"}`
+      + ((p.axes_ungraded || []).length ? `, UNGRADED ${p.axes_ungraded.join("")}` : "")
+      + ". Do not re-teach a closed axis; do not claim an ungraded one is held.");
+  }
   parts.push("FIXED TRAITS: ADHD-PI, ~4 working-memory slots, visual-first, Hinglish welds, walls of text = shutdown, finance-ops instincts (Zomato/Blinkit) — teach through business impact.");
   return parts.length ? "THE CAPTAIN'S COGNITIVE FINGERPRINT (measured, not assumed):\n" + parts.map(p => "  · " + p).join("\n") : "";
 }
