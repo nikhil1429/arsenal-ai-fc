@@ -57,6 +57,34 @@ const ageDays = (ts, now) => { const t = Date.parse(String(ts || "")); return Nu
 //    `claude -p` organ prompts never get the captain's personal memory prepended.
 const MEMO_MAX = 2200;          // orientation, not an archive — a wall of text read every session is a wall ignored
 const MEMO_EPISODES = 6;
+
+// ---------------------------------------------------------------------------
+// THE TEACHING CARD (31 Jul 2026). learning-layer/HOW_HE_LEARNS.md is a forensic
+// read of the whole Claude Project history — 21 findings, his own verbatim words,
+// ending in a sixteen-rule cold-start card. Written to a file, it was read by
+// NOBODY: same defect as the hippocampus, one day later. A rule that depends on a
+// session choosing to open a file is not a rule, it is a hope.
+//
+// SINGLE SOURCE: the card is parsed out of the document between two explicit
+// markers, so editing the doc updates every future session on its next boot and
+// the two can never drift. Missing file, missing marker, empty block → null →
+// the brief prints exactly as it did before. It never guesses at the boundaries.
+const CARD_FILE  = join(__dirname, "..", "learning-layer", "HOW_HE_LEARNS.md");
+const CARD_BEGIN = "<!-- COLD-START-CARD:BEGIN";
+const CARD_END   = "<!-- COLD-START-CARD:END";
+const CARD_MAX   = 1800;
+function loadTeachingCard(path = CARD_FILE) {
+  try {
+    if (!existsSync(path)) return null;
+    const raw = readFileSync(path, "utf8");
+    const a = raw.indexOf(CARD_BEGIN); if (a < 0) return null;
+    const open = raw.indexOf("-->", a); if (open < 0) return null;
+    const b = raw.indexOf(CARD_END, open); if (b < 0) return null;
+    const body = raw.slice(open + 3, b).replace(/\*\*/g, "").trim();
+    if (!body) return null;
+    return body.length > CARD_MAX ? body.slice(0, CARD_MAX) + "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)" : body;
+  } catch { return null; }
+}
 async function loadMemory() {
   try {
     const h = await import("./hippocampus.mjs");
@@ -113,7 +141,7 @@ function gather(dir = STATE, now = Date.now()) {
   return { sprint, ws, cur, watch, modeLine, wsAge };
 }
 
-function brief(dir = STATE, now = Date.now(), memory = null) {
+function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   const { sprint, ws, cur, watch, modeLine, wsAge } = gather(dir, now);
   // age tag for the working-set slots (see WS_STALE_DAYS above). Same-day = no tag
   // (the common, healthy case stays quiet); a missing `ts` is called out rather
@@ -145,6 +173,11 @@ function brief(dir = STATE, now = Date.now(), memory = null) {
     L.push("--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---");
     L.push(memory);
     L.push("--- (true WHEN WRITTEN — verify anything time-sensitive against state. Deeper recall: organism-memory MCP `get_context` / `recall`.) ---");
+  }
+  if (card) {
+    L.push("--- HOW TO TEACH HIM (evidence from his own words — learning-layer/HOW_HE_LEARNS.md) ---");
+    L.push(card);
+    L.push("--- (these are OBSERVED, not preferences he stated. #1 and #12 are the two that break him most.) ---");
   }
   L.push("LAWS: struggle-first (never hand him code/answers he hasn't attempted) · JS->Python bridge (he knows JS/React) · Bolo every concept · automate the friction, protect the baking.");
   L.push("=== (you are oriented — do NOT ask him to re-explain where he is) ===");
@@ -227,6 +260,34 @@ function selftest() {
     !brief(dir, NOW, "").includes("HIS MEMORY") && !brief(dir, NOW, 0).includes("HIS MEMORY"));
   assert("MEMORY — the loader exists and is async (hook path may never block on a throw)",
     typeof loadMemory === "function" && loadMemory.constructor.name === "AsyncFunction");
+
+  // ---- TEACHING CARD (31 Jul 2026) — the rules must ARRIVE, not wait to be opened.
+  const cardBrief = brief(dir, NOW, null, "1. ONE idea per message.\n2. Hinglish.");
+  assert("CARD — a supplied card is spliced verbatim", cardBrief.includes("ONE idea per message"));
+  assert("CARD — the block names the evidence file and says these are OBSERVED, not stated preferences",
+    cardBrief.includes("HOW_HE_LEARNS.md") && cardBrief.includes("OBSERVED"));
+  assert("CARD — it sits above the LAWS line", cardBrief.indexOf("HOW TO TEACH HIM") < cardBrief.indexOf("LAWS:"));
+  assert("BACKWARD-COMPATIBLE — no card arg reproduces the old brief byte-for-byte",
+    brief(dir, NOW) === brief(dir, NOW, null, null) && !brief(dir, NOW).includes("HOW TO TEACH HIM"));
+  assert("REPAIR TOWARD SILENCE — an empty/non-string card is dropped, never rendered",
+    !brief(dir, NOW, null, "").includes("HOW TO TEACH HIM") && !brief(dir, NOW, null, 0).includes("HOW TO TEACH HIM"));
+  // the parser: single-source, and SILENT on any boundary it cannot prove
+  const cf = join(dir, "card.md");
+  writeFileSync(cf, `# doc\nprose above\n${CARD_BEGIN} note -->\n1. rule one\n2. **rule two**\n${CARD_END} -->\nprose below\n`);
+  assert("CARD PARSER — reads only between the markers, strips bold, drops the surrounding prose",
+    loadTeachingCard(cf) === "1. rule one\n2. rule two");
+  writeFileSync(cf, "# doc\nno markers here at all\n");
+  assert("CARD PARSER — no markers -> null (never guesses at the boundaries)", loadTeachingCard(cf) === null);
+  writeFileSync(cf, `# doc\n${CARD_BEGIN} note -->\n1. orphan begin, no end\n`);
+  assert("CARD PARSER — a begin with no end -> null", loadTeachingCard(cf) === null);
+  writeFileSync(cf, `${CARD_BEGIN} note -->\n   \n${CARD_END} -->\n`);
+  assert("CARD PARSER — an empty block -> null", loadTeachingCard(cf) === null);
+  assert("CARD PARSER — a missing file -> null, never a throw", loadTeachingCard(join(dir, "__nope__.md")) === null);
+  writeFileSync(cf, `${CARD_BEGIN} n -->\n${"x".repeat(CARD_MAX + 500)}\n${CARD_END} -->\n`);
+  assert("CARD PARSER — a runaway card is capped and says so (the brief stays orientation)",
+    loadTeachingCard(cf).length <= CARD_MAX + 80 && loadTeachingCard(cf).includes("truncated"));
+  assert("THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all sixteen rules",
+    (() => { const c = loadTeachingCard(); return !!c && /^1\. Give ONE new idea/m.test(c) && /^16\. /m.test(c); })());
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -246,7 +307,7 @@ async function main() {
   if (process.env.ARSENAL_ORGAN === "1" && mode !== "json") return;
   if (mode === "json") { console.log(JSON.stringify(gather(), null, 2)); return; }
   // AFTER the organ guard, never before — an organ prompt must never carry his memory.
-  console.log(brief(STATE, Date.now(), await loadMemory()));
+  console.log(brief(STATE, Date.now(), await loadMemory(), loadTeachingCard()));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 export { brief, gather };

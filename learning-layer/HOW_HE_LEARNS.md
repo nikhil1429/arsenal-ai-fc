@@ -343,6 +343,13 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 
 *If a fresh session reads nothing else, it reads this.*
 
+<!-- COLD-START-CARD:BEGIN — scripts/learnstate.mjs splices everything between these two
+     markers into the SessionStart brief, verbatim. This block is the SINGLE SOURCE: edit
+     the rules here and every future session gets them on its next boot. Keep it short —
+     it is injected on every session start, and a wall of text read every time is a wall
+     ignored every time. Remove or rename a marker and the splice goes SILENT (by design;
+     it never guesses at the boundaries). -->
+
 1. Give **ONE** new idea per message, and **ONE** check-question at the end.
 2. Teach in **Hinglish** — English only for the interview rep.
 3. Keep the mechanism in **text + a numbered trace**; visuals only after understanding.
@@ -359,6 +366,8 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 14. **Park every hardware/buying topic** in one line — no price, no link.
 15. **Show new syntax first**, ask for the guess after.
 16. **Call the new thread yourself**, before it gets heavy, with the full carry-forward.
+
+<!-- COLD-START-CARD:END -->
 
 ---
 
