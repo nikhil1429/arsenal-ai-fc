@@ -43,6 +43,39 @@
 // MODES: node scripts/thalamus.mjs            → daemon on http://127.0.0.1:4113
 //        node scripts/thalamus.mjs selftest   → deterministic bar (§4.7)
 //        node scripts/thalamus.mjs status     → workspace + today's gate ledger
+// ----------------------------------------------------------------------------
+// ORGANISM REPAIR 4 Aug 2026 — THE NUCLEUS HEARS HIM (issues #1 #2 #6 #9 #10 #106).
+// Five cuts, all in this file, all layered (the old engine is frozen beside the
+// new one everywhere it was replaced):
+//   #1  SELF fired on `modality === "voice"` only, and voice has been silent
+//       since 30 Jul. Measured: 3,099 `code:` moments in salience_ledger, max S
+//       = 0.000, no exceptions. The gate is now PROVENANCE-based
+//       (cfg.self_sources) — his mic, his Claude Code prompts, his MCP notes —
+//       and NEVER `claude-code-teaching` (cfg.self_deny_sources: that stream is
+//       the machine's own answers, not him). deriveVoiceTokens was voice-gated
+//       for the same reason, so even a self=1 code moment would have stalled at
+//       0.45 with nov=0; it now runs on the same provenance set.
+//   #2  The haiku pulse could not reach even tier 0: its arithmetic ceiling was
+//       0.24375 against tau0 = 0.25, because every `pulse:*` event_key fell to
+//       base_rates.default = 0.5 — i.e. a RARE event scored as maximally
+//       UNSURPRISING. base_rates now supports `prefix:*` keys and carries a
+//       MEASURED pulse rate (see thalamus_config.json). New ceiling 0.32029.
+//   #6  The DMN precache join ran raw window-title words ("google", "chrome")
+//       against concept names — 0 of 95 historical stalls matched. The legacy
+//       matcher is frozen; a CANON join (dossierKey/conceptRegistry, already
+//       owned by this file) runs behind it, falling back to sprint.json's
+//       current concept when the stall's own words name nothing canonical.
+//   #9  Expired whisper / pre_answer / bg_hint / mouth_hint were carried
+//       forward unconditionally and rebroadcast on every bound moment, so
+//       workspace.json advertised a pre-answer whose 3-minute window had closed
+//       two days earlier. They are dropped at the source now, and the drop is
+//       logged.
+//   #10 Every D.log went to a closed handle (setup/hidden_run.vbs, no redirect),
+//       so the moment-loss alarm and the whisper/pre-answer attach flags existed
+//       nowhere. There is now a real rotating log file AND — because a log is
+//       not a measurement — every ledger row carries an `engines` tri-state so
+//       "has the pre-answer engine ever fired?" is answerable by grep.
+//   #106 `status` reports have/need counters, never a bare word.
 // ============================================================================
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch } from "node:fs";
@@ -68,6 +101,8 @@ const BGQUEUE   = join(STATE_DIR, "bg_queue.jsonl");       // M22 — suppress t
 const DOSSIER   = join(STATE_DIR, "dossier.json");
 const CONCEPTS  = join(STATE_DIR, "concepts.json");        // canon vocab — capture.mjs owns it; this nucleus READS
 const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
+const SPRINT    = join(STATE_DIR, "sprint.json");          // #6 — the curriculum spine; READ-ONLY (sprintsync owns it)
+const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagnostics that had nowhere to land (*.log is gitignored)
 const PORT = 4113;                                  // one below the Dugout's 4114
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -85,7 +120,21 @@ const DEFAULT_CONFIG = {
   // calibrated so: a voiced doubt on a fresh concept (self+nov) or a
   // confident-wrong rep on a fresh concept (err+nov) crosses τ1 → wake;
   // a Governor flip or due-card alone NEVER wakes opus (attention, not verdict)
-  weights: { pe: 0.35, nov: 0.20, gov: 0.25, err: 0.45, self: 0.45, dead: 0.15, hab: 0.40 },
+  // #2(c) — `pulse` is a REAL named component (computed + ledgered on every
+  // moment) whose weight is 0.00: the CURRENT value, preserved exactly, because
+  // the arithmetic proves no positive value is safe today and the captain's
+  // standing order forbids inventing one. Shown work, from the live config:
+  //   to admit a pulse on the pulse term ALONE (nov is noise until #3 lands):
+  //     w_pe·pe_pulse + w_pulse ≥ tau0  →  0.12029 + w_pulse ≥ 0.25  →  w_pulse ≥ 0.12971
+  //   to keep the trap shut (a sentinel must NEVER wake Opus by itself):
+  //     w_pe·pe_pulse + w_nov·1 + w_pulse < tau1_base  →  0.32029 + w_pulse < 0.40  →  w_pulse < 0.07971
+  //   0.12971 > 0.07971 — the two requirements are INCOMPATIBLE at the live
+  //   weights, so a weighted pulse term cannot do the job the base-rate fix
+  //   (#2a) already does. It stays at 0 and stays MEASURED: comps.pulse lands
+  //   in every ledger row, and `status` prints the have/need. What would set it:
+  //   a verdict source — 0 of 131 escalations has ever reached a human or an
+  //   adjudicator verdict, so its precision is unknown, not low.
+  weights: { pe: 0.35, nov: 0.20, gov: 0.25, err: 0.45, self: 0.45, dead: 0.15, hab: 0.40, pulse: 0.00 },
   tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 },
   binding_ms: 900,
   refractory_min: 45,
@@ -96,6 +145,12 @@ const DEFAULT_CONFIG = {
   wake_cap_per_day: 15,
   wake_cap_min: 2,
   hab: { tau_ms: 600000, saturation: 4 },
+  // #2(a) — base_rates now understands `prefix:*` keys (longest prefix wins, so
+  // the lookup is order-independent). `default: 0.5` is the WORST possible prior
+  // for a rare machine event: surprisal(0.5, 4 bits) = 0.25, halved for weak
+  // evidence = 0.125 — a rare escalation scored as maximally unsurprising. The
+  // live table (dressing-room/state/thalamus_config.json) carries the measured
+  // pulse rate; this default block stays as the hermetic fallback.
   pe: { norm_bits: 4, base_rates: { default: 0.5 } },
   adjudicator: { model: "gemini-flash-lite-latest", enabled: true },
   deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30 },
@@ -104,6 +159,26 @@ const DEFAULT_CONFIG = {
   // scan-fix 15 Jul: bar raised 0.60→0.66, overlap 2→3 — common Hinglish
   // words were crossing the old floor and attaching irrelevant lectures.
   pre_answer: { enabled: true, threshold: 0.66, min_overlap: 3, embed_timeout_ms: 4000 },
+  // #6 — the DMN precache join. `legacy_raw` is the original word-overlap
+  // matcher, kept first and unchanged (layering law); `canon_join` and
+  // `sprint_fallback` are the repair, and either can be switched off without
+  // touching code if the whisper lane ever turns noisy.
+  whisper: { legacy_raw: true, canon_join: true, sprint_fallback: true },
+  // #1 — SELF is gated on PROVENANCE, not modality. `voice` is the synthetic
+  // provenance of a mic afferent (live voice rows carry no `source` field at
+  // all — measured across all 271). The deny list wins over the allow list:
+  // `claude-code-teaching` is the Stop-hook stream, i.e. the organism's OWN
+  // answers (hooks/afferent-post.mjs:56) — scoring the machine's confidence
+  // language as HIS doubt is exactly the self-talk scar the capture guard
+  // exists to close.
+  self_sources: ["voice", "claude-code", "organism-memory"],
+  self_deny_sources: ["claude-code-teaching"],
+  // #10 — the diagnostics that had nowhere to land. Rotation size is DERIVED,
+  // not guessed: salience_ledger.jsonl holds 5,481 bound moments over 16 days =
+  // 342.6 moments/day, and the worst case is one ~160-byte log line per moment
+  // → 54.8 KB/day. 30 days of that worst case = 1,644,480 B ≈ 1,650,000.
+  // `keep: 1` — one rotated generation, so the disk cost is bounded at ~3.3 MB.
+  log: { enabled: true, max_bytes: 1650000, keep: 1 },
   // scan-fix 15 Jul: the gate was DEAF to how he actually talks — Latin-only
   // markers while the ASR ships Devanagari, so genuine confusion scored S=0
   // and only the canned English phrase ever woke the deep brain. His real
@@ -113,7 +188,45 @@ const DEFAULT_CONFIG = {
 function loadConfig() {
   const c = readJson(CONFIG);
   if (!c) return DEFAULT_CONFIG;
-  return { ...DEFAULT_CONFIG, ...c, weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) }, tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) }, hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) }, pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}) }, pre_answer: { ...DEFAULT_CONFIG.pre_answer, ...(c.pre_answer || {}) }, deep: { ...DEFAULT_CONFIG.deep, ...(c.deep || {}) } };
+  return {
+    ...DEFAULT_CONFIG, ...c,
+    weights: { ...DEFAULT_CONFIG.weights, ...(c.weights || {}) },
+    tiers: { ...DEFAULT_CONFIG.tiers, ...(c.tiers || {}) },
+    hab: { ...DEFAULT_CONFIG.hab, ...(c.hab || {}) },
+    // deep-merge pe so a live table that omits base_rates still gets `default`
+    pe: { ...DEFAULT_CONFIG.pe, ...(c.pe || {}), base_rates: { ...DEFAULT_CONFIG.pe.base_rates, ...((c.pe || {}).base_rates || {}) } },
+    pre_answer: { ...DEFAULT_CONFIG.pre_answer, ...(c.pre_answer || {}) },
+    deep: { ...DEFAULT_CONFIG.deep, ...(c.deep || {}) },
+    whisper: { ...DEFAULT_CONFIG.whisper, ...(c.whisper || {}) },      // #6
+    log: { ...DEFAULT_CONFIG.log, ...(c.log || {}) },                  // #10
+  };
+}
+
+// ---------------------------------------------------------------------------
+// #10 — THE LOG THAT SURVIVES THE CLOAK.
+// ArsenalFC-Thalamus runs as `wscript setup/hidden_run.vbs node scripts/thalamus.mjs`
+// and hidden_run.vbs ends in `sh.Run cmd, 0, False` — window style 0, no
+// redirect. So every D.log() call in this file wrote to a closed handle: the
+// moment-loss alarm (added by a prior audit BECAUSE a loss had no log), the
+// whisper/pre-answer attach flags, the WAKE line. `find . -name "*.log"` listed
+// eight organs and neither the thalamus nor the cortex.
+// Append-only, size-rotated, best-effort: a log that cannot be written must
+// never become the failure it was installed to record (tone.mjs:58's law).
+// ---------------------------------------------------------------------------
+function rotateLogIfNeeded(cfg) {
+  try {
+    const max = (cfg.log && cfg.log.max_bytes) || DEFAULT_CONFIG.log.max_bytes;
+    if (!existsSync(LOGFILE)) return;
+    if (statSync(LOGFILE).size < max) return;
+    renameSync(LOGFILE, LOGFILE + ".1");             // keep: 1 — one generation back
+  } catch { /* rotation is best-effort; a busy handle must not stop the write */ }
+}
+function fileLog(cfg, msg) {
+  try {
+    if (cfg.log && cfg.log.enabled === false) return;
+    rotateLogIfNeeded(cfg);
+    appendFileSync(LOGFILE, `${new Date().toISOString()} ${String(msg)}\n`, "utf8");
+  } catch { /* never let the log become the failure */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -166,10 +279,40 @@ function stripAffect(v, depth = 0) {
   }
   return v;
 }
-function sanitizeAfferent(evt) {
+// ---------------------------------------------------------------------------
+// #1 — PROVENANCE, NOT MODALITY. The one wire, cut in two places in this file.
+// `modality` describes the PIPE ("voice", "code", "desktop-study"); `source`
+// describes WHO SPOKE. The nucleus only ever wanted the second question, and
+// asking the first is what made his entire Claude Code stream — 3,099 bound
+// moments, max S 0.000 — unscoreable by construction.
+// Live voice afferents carry no `source` field at all (measured: all 271), so a
+// voice modality IS its own provenance. Everything else must name itself.
+// The deny list wins: `claude-code-teaching` is the Stop hook, the organism's
+// own answers coming back through the door.
+// ---------------------------------------------------------------------------
+function provenanceOf(evt) {
+  const s = String((evt && evt.source) || "").toLowerCase();
+  if (s) return s;
+  return evt && evt.modality === "voice" ? "voice" : "";
+}
+function isHisVoice(evt, cfg) {
+  const p = provenanceOf(evt);
+  if (!p) return false;
+  const deny = cfg.self_deny_sources || DEFAULT_CONFIG.self_deny_sources;
+  if (deny.includes(p)) return false;
+  const allow = cfg.self_sources || DEFAULT_CONFIG.self_sources;
+  return allow.includes(p);
+}
+// sanitizeAfferent is called from ingest() (which has cfg) and from the
+// selftest/exports (which historically did not) — cfg defaults so every legacy
+// caller keeps working verbatim.
+function sanitizeAfferent(evt, cfg = DEFAULT_CONFIG) {
   const e = stripAffect({ ...evt });     // was a top-level-only delete loop — see stripAffect
-  // enrich spoken turns with derived concept tokens (novelty + capsule matching)
-  if (e.modality === "voice" && e.text && !(Array.isArray(e.concept_tokens) && e.concept_tokens.length)) {
+  // enrich HIS turns with derived concept tokens (novelty + capsule matching).
+  // Was `e.modality === "voice"` — the second cut of the #1 wire: a code
+  // afferent got no tokens, so nov was 0 and even a self=1 typed doubt stalled
+  // at 0.45 instead of the 0.65 a fresh-concept doubt is worth.
+  if (isHisVoice(e, cfg) && e.text && !(Array.isArray(e.concept_tokens) && e.concept_tokens.length)) {
     const toks = deriveVoiceTokens(e.text);
     if (toks.length) e.concept_tokens = toks;
   }
@@ -181,10 +324,28 @@ function sanitizeAfferent(evt) {
 // ---------------------------------------------------------------------------
 function surprisalPE(pObs, normBits) { return clamp01(-Math.log2(Math.max(1e-6, Math.min(1, pObs))) / normBits); }
 
+// #2(a) — base-rate lookup with `prefix:*` support. The haiku pulse does not
+// emit one event_key: brain.mjs:354 builds `pulse:${firstToken}`, so the live
+// bus carries 30 distinct keys (`pulse:need`, `pulse:isko`, `pulse:escalate`…)
+// and an exact-match table could never cover them. Exact key first, then the
+// LONGEST matching wildcard (longest-prefix-wins makes the answer independent
+// of key order in the JSON), then `default`.
+function baseRateFor(eventKey, table) {
+  const t = table || {};
+  if (t[eventKey] !== undefined) return t[eventKey];
+  let bestLen = -1, bestVal;
+  for (const k of Object.keys(t)) {
+    if (!k.endsWith("*")) continue;
+    const pre = k.slice(0, -1);
+    if (String(eventKey).startsWith(pre) && pre.length > bestLen) { bestLen = pre.length; bestVal = t[k]; }
+  }
+  return bestLen >= 0 ? bestVal : t.default;
+}
+
 function computeComponents(evt, ctx) {
   // ctx: { cfg, markets(id→p), seen:Set, hab:Map, now }
   const { cfg } = ctx;
-  const comps = { pe: 0, nov: 0, gov: 0, err: 0, self: 0, dead: 0, hab: 0 };
+  const comps = { pe: 0, nov: 0, gov: 0, err: 0, self: 0, dead: 0, hab: 0, pulse: 0 };
 
   // PE — the Twin's book first; Laplace base-rate table second
   if (evt.market_id && ctx.markets && ctx.markets[evt.market_id] !== undefined) {
@@ -194,7 +355,7 @@ function computeComponents(evt, ctx) {
   } else if (evt.p_obs !== undefined) {           // pre-resolved probability (slip rows)
     comps.pe = surprisalPE(evt.p_obs, cfg.pe.norm_bits);
   } else if (evt.event_key) {
-    const base = cfg.pe.base_rates[evt.event_key] ?? cfg.pe.base_rates.default;
+    const base = baseRateFor(evt.event_key, cfg.pe.base_rates) ?? cfg.pe.base_rates.default;   // #2(a) — `prefix:*` aware
     comps.pe = surprisalPE(evt.observed === false ? 1 - base : base, cfg.pe.norm_bits) * 0.5; // base-rate PE is weak evidence
   }
 
@@ -213,9 +374,20 @@ function computeComponents(evt, ctx) {
     comps.err = evt.rep.confidence === "knew" ? 1 : evt.rep.confidence === "shaky" ? 0.4 : 0.15;
   }
 
-  // SELF — he names the doubt
+  // SELF — he names the doubt.
+  // FROZEN, for the record (the layering law): the gate used to read
+  //   `if (evt.modality === "voice" && text && cfg.self_markers.some(...))`
+  // and the mic went silent on 30 Jul. selfLegacy() below preserves it verbatim
+  // so the two can always be compared on the same event; the provenance gate is
+  // the plan of record. See #1 in the header.
   const text = String(evt.text || "").toLowerCase();
-  if (evt.modality === "voice" && text && cfg.self_markers.some(m => text.includes(m))) comps.self = 1;
+  if (isHisVoice(evt, cfg) && text && cfg.self_markers.some(m => text.includes(m))) comps.self = 1;
+
+  // #2(c) — the sentinel term. The haiku pulse already PAID an LLM call to read
+  // his stream and say "reasoning-hard"; the nucleus records that verdict on
+  // every moment so it is countable. Its weight is 0.00 (see DEFAULT_CONFIG) —
+  // this is instrumentation with an address, not a live term.
+  if (evt.modality === "pulse" || String(evt.event_key || "").startsWith("pulse:")) comps.pulse = 1;
 
   // DEAD — due work as time-pressure (voicing still obeys the humane clamp)
   if (Number.isFinite(evt.due_count) && evt.due_count > 0) comps.dead = clamp01(evt.due_count / 5);
@@ -234,8 +406,18 @@ function computeComponents(evt, ctx) {
   }
   return comps;
 }
+// THE FROZEN SELF GATE (#1). Kept verbatim so the change is auditable and
+// reversible, and so nightshift's replay can ask "what did the OLD gate say
+// about this row?" without archaeology. Nothing in the live path calls it.
+function selfLegacy(evt, cfg) {
+  const text = String((evt && evt.text) || "").toLowerCase();
+  return (evt && evt.modality === "voice" && text && (cfg.self_markers || DEFAULT_CONFIG.self_markers).some(m => text.includes(m))) ? 1 : 0;
+}
 function salience(comps, w) {
-  return clamp01(w.pe * comps.pe + w.nov * comps.nov + w.gov * comps.gov + w.err * comps.err + w.self * comps.self + w.dead * comps.dead - w.hab * comps.hab);
+  // `|| 0` on the new pulse term: salience() is exported and the selftest builds
+  // weight objects by hand — a missing key must read as "off", never NaN.
+  return clamp01(w.pe * comps.pe + w.nov * comps.nov + w.gov * comps.gov + w.err * comps.err + w.self * comps.self + w.dead * comps.dead
+    + (w.pulse || 0) * (comps.pulse || 0) - w.hab * comps.hab);
 }
 function signalKey(evt) {
   if (evt.event_key) return `${evt.modality}:${evt.event_key}`;
@@ -422,6 +604,15 @@ function createNucleus(cfg, deps = {}) {
     // vocabulary: concepts.json is hand-curated canon the captain edits, and a
     // check that rode it would go red on code that never changed.
     conceptRegistry: deps.conceptRegistry || conceptRegistry,
+    // #6 — the fallback join key. sprint.json is the curriculum spine and is
+    // Sheet-driven + single-writer (sprintsync owns it); this is a READ.
+    // working_set.concept_in_motion was measured to overlap the precache on
+    // nothing; sprint.progress.current.task is "Hallucinations" today and the
+    // live dmn_precache.json holds 3 of 5 entries on `hallucinations`.
+    sprintConcept: deps.sprintConcept || (() => {
+      const s = readJson(SPRINT);
+      return (s && s.progress && s.progress.current && s.progress.current.task) ? String(s.progress.current.task) : null;
+    }),
     adjudicate: deps.adjudicate || adjudicateLive,
     schedule: deps.schedule || ((ms, fn) => setTimeout(fn, ms)),
     readWake: deps.readWake || (() => readJson(WAKE)),
@@ -451,7 +642,7 @@ function createNucleus(cfg, deps = {}) {
       D.writeWorkspace(N.workspace);
       return { firewalled: true };
     }
-    const evt = sanitizeAfferent(raw);
+    const evt = sanitizeAfferent(raw, cfg);        // #1 — the derivation gate reads cfg.self_sources now
     evt.ts = evt.ts || new Date(now).toISOString();
     // vision: the page sends only a 64-bit perceptual hash (raw pixels never
     // persist); salience of a frame = Hamming distance from the last one
@@ -603,19 +794,72 @@ function createNucleus(cfg, deps = {}) {
     // ZERO model latency, inside the stuck→gone window. Attaching it here
     // is NOT speech: the mouth gate (earned voice + RED/conserve mute)
     // still decides at the bridge whether it may ever be said.
-    let whisper = N.workspace.whisper || null;
+    // #9 — EXPIRY IS AT THE SOURCE. These four slots used to be carried forward
+    // UNCONDITIONALLY and rebroadcast on every bound moment, so live
+    // workspace.json advertised a pre_answer whose 3-minute window closed on
+    // 30 Jul — re-serialized into thousands of broadcasts since. Every consumer
+    // guards on `expires`, so nothing stale was ever spoken; the damage was that
+    // the state file MISREPORTED the organism's condition, which is the exact
+    // class of lie this audit exists to end. A missing `expires` reads as alive
+    // (defensive: only a real, past deadline may drop a payload).
+    const alive = (o) => !!o && (!o.expires || new Date(o.expires).getTime() > now);
+    const carry = (o, name) => { if (o && !alive(o)) { D.log(`thalamus: dropped an EXPIRED ${name} from the workspace (expired ${o.expires}) — the broadcast now reports the truth`); return null; } return o || null; };
+    let whisper = carry(N.workspace.whisper, "whisper");
+    let engWhisper = "skip", engPre = "skip";      // #10 — tri-states, never an unmeasured silence
     if (String(g.spotlight.evt.event_key || "").startsWith("stall:")) {
       const pc = D.precache();
+      const entries = (pc && pc.entries) || [];
       const hintWords = new Set([...(g.spotlight.evt.concept_tokens || []).map(t => String(t).toLowerCase()), ...tokWords(String(g.spotlight.evt.text || ""))]);
-      let best = null;
-      for (const e of (pc && pc.entries) || []) {
-        const ew = tokWords(String(e.concept + " " + e.stall_signature));
-        const overlap = ew.filter(w => hintWords.has(w)).length;
-        if (overlap >= 1 && (!best || overlap > best.overlap)) best = { ...e, overlap };
+      let best = null, via = null;
+      // defensive: a hand-built cfg (selftest fixtures, a future caller) must
+      // never throw INSIDE a bound moment — a throw here costs the moment.
+      const wcfg = cfg.whisper || DEFAULT_CONFIG.whisper;
+      // ---- LANE 1 (FROZEN): the original raw word-overlap matcher, verbatim.
+      // It has matched 0 of 95 historical stalls — presence.mjs fills
+      // concept_tokens with WINDOW-TITLE words ("google","chrome","antigravity")
+      // and this joins them against concept NAMES — but it is left first and
+      // untouched, because it is the one that fires when presence's producer
+      // side is repaired to send real concepts.
+      if (wcfg.legacy_raw !== false) {
+        for (const e of entries) {
+          const ew = tokWords(String(e.concept + " " + e.stall_signature));
+          const overlap = ew.filter(w => hintWords.has(w)).length;
+          if (overlap >= 1 && (!best || overlap > best.overlap)) { best = { ...e, overlap }; via = "raw"; }
+        }
+      }
+      // ---- LANE 2 (#6, the repair): CANONICAL join. Push both sides through
+      // the dossierKey()/conceptRegistry() filter this file already owns (see
+      // THE DOSSIER TAKES ONLY CANON) so "chrome" resolves to nothing and
+      // "hallucination" resolves to the registered id `hallucinations`. If the
+      // stall's own words name no canon at all — the measured everyday case —
+      // fall back to the sprint's CURRENT concept: he stalled while he was
+      // supposed to be on today's ground, and that is a defensible prior, said
+      // out loud in the log rather than smuggled.
+      if (!best && wcfg.canon_join !== false) {
+        const reg = D.conceptRegistry();
+        const canonOf = (words) => { const s = new Set(); for (const w of words) { const id = dossierKey(w, reg); if (id) s.add(id); } return s; };
+        let hintCanon = canonOf([...hintWords]);
+        let fellBack = false;
+        if (!hintCanon.size && wcfg.sprint_fallback !== false) {
+          const sc = D.sprintConcept();
+          const id = sc ? dossierKey(String(sc).toLowerCase(), reg) : null;
+          if (id) { hintCanon = new Set([id]); fellBack = true; }
+        }
+        if (hintCanon.size) {
+          for (const e of entries) {
+            const eCanon = canonOf([String(e.concept || "").toLowerCase(), ...tokWords(String(e.concept || ""))]);
+            const overlap = [...eCanon].filter(id => hintCanon.has(id)).length;
+            if (overlap >= 1 && (!best || overlap > best.overlap)) { best = { ...e, overlap }; via = fellBack ? "sprint" : "canon"; }
+          }
+        }
       }
       if (best) {
-        whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
-        D.log(`thalamus: stall matched the Rest Room's precache — whisper loaded (zero-latency), the mouth gate decides`);
+        whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, matched_via: via, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+        engWhisper = "hit";
+        D.log(`thalamus: stall matched the Rest Room's precache via ${via} on "${best.concept}" — whisper loaded (zero-latency), the mouth gate decides`);
+      } else {
+        engWhisper = entries.length ? "miss" : "dry";
+        D.log(`thalamus: stall found NO precache match (${entries.length} entr${entries.length === 1 ? "y" : "ies"} on offer) — no whisper, never improvise one`);
       }
     }
     // M17 — THE PRE-ANSWER ENGINE, serve side: a doubt-shaped moment (a
@@ -623,7 +867,7 @@ function createNucleus(cfg, deps = {}) {
     // The answer was drafted HOURS ago on the free pool — it attaches with
     // zero latency and zero Opus. Attaching is NOT speech (recall-hint
     // pattern): the Gaffer weaves it only if it earns the turn; no gate moved.
-    let preAnswer = N.workspace.pre_answer || null;
+    let preAnswer = carry(N.workspace.pre_answer, "pre-answer");     // #9
     if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0)) {
       const cache = D.answerCache() || [];
       if (cache.length) {
@@ -632,14 +876,24 @@ function createNucleus(cfg, deps = {}) {
         const hit = matchPreAnswer(g.spotlight.evt, cache, qv, cfg);
         if (hit) {
           preAnswer = { type: "pre_answer", concept: hit.entry.concept, doubt: hit.entry.doubt, answer: hit.entry.answer, matched_via: hit.via, score: Math.round(hit.score * 100) / 100, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
+          engPre = "hit";
           D.log(`thalamus: doubt matched the night's answer_cache (${hit.via}) — pre-answer attached, zero Opus; the mouth decides`);
+        } else {
+          engPre = "miss";
+          D.log(`thalamus: doubt queried the night's answer_cache (${cache.length} drafted) — NO match, no pre-answer (never improvise an answer)`);
         }
+      } else {
+        // #10 / HONESTY: an empty cache is an UNMEASURED SILENCE, not a miss.
+        // Rendering it as "no match" is exactly how "has the pre-answer engine
+        // ever fired?" became unanswerable.
+        engPre = "dry";
+        D.log(`thalamus: doubt reached the pre-answer engine but the night's answer_cache is EMPTY — this is a dry corpus, not a miss`);
       }
     }
     // M22 — THE RECALL-MATCH: he just touched ground a suppressed thought
     // lives on — the drained insight returns NOW, zero switching cost.
     // Consumed on return (a background thought speaks its piece once).
-    let bgHint = N.workspace.bg_hint || null;
+    let bgHint = carry(N.workspace.bg_hint, "second-spotlight hint");   // #9
     const bgHeld = Array.isArray(N.workspace.bg) ? N.workspace.bg : [];
     const bgMatch = matchBg(g.spotlight.evt, bgHeld);
     if (bgMatch) {
@@ -654,7 +908,7 @@ function createNucleus(cfg, deps = {}) {
     // served Opus answers that serveDeep() (below, ~L550) maintains, and the
     // Dugout page reads to inject answers he hasn't seen yet. That is exactly the
     // "lost deep answer" scar this list was built to close, reopened from the side.
-    N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, deep_recent: Array.isArray(N.workspace.deep_recent) ? N.workspace.deep_recent : [], whisper, pre_answer: preAnswer, bg: Array.isArray(N.workspace.bg) ? N.workspace.bg : [], bg_hint: bgHint, mouth_hint: N.workspace.mouth_hint || null };
+    N.workspace = { version: (N.workspace.version || 0) + 1, updated_at: moment.ts, moment, deep: N.workspace.deep || null, deep_recent: Array.isArray(N.workspace.deep_recent) ? N.workspace.deep_recent : [], whisper, pre_answer: preAnswer, bg: Array.isArray(N.workspace.bg) ? N.workspace.bg : [], bg_hint: bgHint, mouth_hint: carry(N.workspace.mouth_hint, "mouth hint") };
     D.writeWorkspace(N.workspace);
     if (tier === 2) {
       // (the slot itself was reserved at the gate above — E2E audit 25 Jul 2026)
@@ -663,7 +917,22 @@ function createNucleus(cfg, deps = {}) {
       D.writeWake(wakeRow);                        // the latest-wake mirror (layering — pre-queue readers keep working)
       D.log(`thalamus: WAKE → opus (S=${S.toFixed(2)} ≥ τ1=${t1.toFixed(2)}, ${N.wakesToday}/${capToday} today — cap is ledger-derived)`);
     }
-    D.appendLedger({ ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000, comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities, tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated });
+    // #10 — THE ATTACH FLAGS GET AN ADDRESS. A log answers "what happened at
+    // 14:02"; it cannot answer "has the pre-answer engine EVER fired?" — and
+    // that question was unanswerable across the organism's whole life. The
+    // ledger is append-only, single-writer (this file), and already read by
+    // nightshift's wind tunnel and the Dugout's gate panel, so the tri-states
+    // ride it. "skip" = never queried · "dry" = queried, the corpus was EMPTY
+    // (an unmeasured silence, NOT a zero) · "miss" = queried and genuinely no
+    // match · "hit" = attached. `provenance` lands too, because #1's whole
+    // premise was that nobody could see which stream a moment came from.
+    D.appendLedger({
+      ts: moment.ts, day: today, moment_id: momentId, tier, S: Math.round(S * 1000) / 1000,
+      comps: roundComps(g.spotlight.comps), key: g.spotlight.key, modalities: moment.modalities,
+      tau1_eff: Math.round(t1 * 1000) / 1000, headroom_frac: Math.round(frac * 1000) / 1000, outcome, adjudicated,
+      provenance: provenanceOf(g.spotlight.evt) || null,
+      engines: { whisper: engWhisper, pre_answer: engPre, bg: bgMatch ? "hit" : (bgHeld.length ? "miss" : "skip") },
+    });
 
     // M8 — THE LIVING DOSSIER: a live Bayesian-ish posterior over his day,
     // updated from every salience event. Built ONLY from counts (prosody is
@@ -677,10 +946,16 @@ function createNucleus(cfg, deps = {}) {
     for (const tok of (evt.concept_tokens || []).map(t => String(t).toLowerCase()).slice(0, 3)) {
       const id = dossierKey(tok, reg);
       if (id === null) continue;                     // an ambient window-title word: a hint elsewhere, a concept nowhere
-      const c = N.dossier.concepts[id] = N.dossier.concepts[id] || { stalls: 0, errs: 0, wins: 0, last_ts: null };
+      const c = N.dossier.concepts[id] = N.dossier.concepts[id] || { stalls: 0, errs: 0, wins: 0, doubts: 0, last_ts: null };
+      if (c.doubts === undefined) c.doubts = 0;      // a dossier written before #1 has no doubts key
       if (String(evt.event_key || "").startsWith("stall:")) c.stalls++;
       if (evt.rep && evt.rep.correct === false) c.errs++;
       if (evt.rep && evt.rep.correct === true) c.wins++;
+      // #1 — the prize. Until today a doubt he TYPED scored zero and left no
+      // trace anywhere; the dossier is the organism's posterior over his day and
+      // it is where "what confuses him, on the surface he actually works on"
+      // belongs. Counts only — the affect firewall never let anything else in.
+      if (g.spotlight.comps.self > 0) c.doubts++;
       c.last_ts = moment.ts;
     }
     if (String(evt.event_key || "").startsWith("stall:")) N.dossier.stalls_today++;
@@ -898,6 +1173,7 @@ async function selftest() {
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
       precache: () => (over.precache !== undefined ? over.precache : null),
       answerCache: () => (over.answerCache !== undefined ? over.answerCache : []),   // hermetic — the real cache never leaks in
+      sprintConcept: () => (over.sprintConcept !== undefined ? over.sprintConcept : null),  // #6 — hermetic; the live sprint.json never leaks in
       // wakesAtEmbed snapshots the wake counter AT the embed await — that await is
       // the window two interleaved flushes used to race through (E2E audit 25 Jul 2026)
       embedText: async () => { wr.embedCalls = (wr.embedCalls || 0) + 1; wr.wakesAtEmbed = n.state.wakesToday; return over.embedVec !== undefined ? over.embedVec : null; },
@@ -1218,6 +1494,32 @@ async function selftest() {
     await n4.ingest({ modality: "voice", text: "i don't get positional encodings at all", concept_tokens: ["positional"] });
     await n4.flush();
     assert("no cache match → NO pre-answer (never improvise an answer)", wr4.workspaces[wr4.workspaces.length - 1].pre_answer === null);
+    // #9 (ORGANISM REPAIR 4 Aug 2026) — THE CARRY-FORWARD PATH, previously
+    // UNTESTED. Live workspace.json (v5,274) still advertised a pre_answer whose
+    // 3-minute window closed on 30 Jul, re-serialized into every broadcast
+    // since. Seed exactly that shape and prove the next moment drops it.
+    const { n: n5, wr: wr5 } = rig({ answerCache: [] });
+    n5.state.workspace = {
+      version: 5274, moment: null, deep: null,
+      pre_answer: { type: "pre_answer", concept: "temperature", answer: "two days dead", ts: "1970-01-01T00:00:00.000Z", expires: "1970-01-01T00:03:00.000Z" },
+      whisper: { type: "wall_breaker", concept: "stale", expires: "1970-01-01T00:03:00.000Z" },
+      bg_hint: { type: "second_spotlight", concept: "stale", expires: "1970-01-01T00:03:00.000Z" },
+      mouth_hint: { hint: "soften", expires: "1970-01-01T00:02:00.000Z" },
+    };
+    await n5.ingest({ modality: "bus", event_key: "anything", concept_tokens: ["zzz"] });
+    await n5.flush();
+    const stale = wr5.workspaces[wr5.workspaces.length - 1];
+    assert("#9 EXPIRY AT THE SOURCE: a dead pre-answer/whisper/bg-hint/mouth-hint is DROPPED, not rebroadcast forever",
+      stale.pre_answer === null && stale.whisper === null && stale.bg_hint === null && stale.mouth_hint === null);
+    assert("#9: the drop is LOGGED (a silent clean-up would be the same lie in the other direction)",
+      wr5.logs.filter(l => /dropped an EXPIRED/.test(l)).length === 4);
+    // and a LIVE payload must still survive — expiry clears, it does not wipe
+    const { n: n6, wr: wr6 } = rig({ answerCache: [] });
+    // the rig's virtual clock starts at t = 1,000,000 — this window is still open
+    n6.state.workspace = { version: 1, moment: null, deep: null, pre_answer: { type: "pre_answer", concept: "live", expires: new Date(1000000 + 180000).toISOString() } };
+    await n6.ingest({ modality: "bus", event_key: "anything2", concept_tokens: ["yyy"] });
+    await n6.flush();
+    assert("#9: a payload still INSIDE its window is carried forward untouched", wr6.workspaces[wr6.workspaces.length - 1].pre_answer.concept === "live");
   }
 
   // M22 — THE SECOND SPOTLIGHT: suppress the WAKE, never the THOUGHT
@@ -1333,9 +1635,237 @@ async function selftest() {
     assert("HAB: a flapping signal decays; a long-quiet signal recovers", e2.S < e1.S && e3.S > e2.S);
   }
 
+  // =========================================================================
+  // ORGANISM REPAIR 4 Aug 2026 — #1 THE NUCLEUS HEARS HIM (provenance, not modality)
+  // The central claim, asserted directly: an afferent shaped EXACTLY like a real
+  // row off his Claude Code stream must clear tau0. Live shape, measured — every
+  // one of the 502 `claude-code` afferents has exactly these five keys:
+  //   {modality, source, text, cwd, ts}
+  // and the whole stream scored 0.000 across 3,099 bound moments.
+  // =========================================================================
+  {
+    const typed = { modality: "code", source: "claude-code", text: "i am confused, after every agents work will be completed then where are we standing?? clear the picture for me", cwd: "arsenal-ai-fc", ts: "2026-07-31T11:40:00.000Z" };
+    const { n, wr } = rig({ adjVerdict: false });         // the adjudicator would say NO — this must not need it
+    const r = await n.ingest({ ...typed });
+    const rr = await n.flush();
+    assert("#1 THE CLAIM: a real-shaped typed doubt from Claude Code now scores ABOVE tau0 (it scored 0.000 for 3,099 moments)",
+      r.S > cfg.tiers.tau0 && wr.ledger[0].comps.self === 1);
+    assert("#1: and it clears the wake bar outright — self 0.45 + a fresh concept 0.20 = 0.65 ≥ τ1 0.40, no coin-flip",
+      Math.abs(r.S - 0.65) < 1e-9 && rr[0].tier === 2 && wr.adjCalls === 0);
+    assert("#1 (second cut): the code afferent DERIVES concept tokens now — without them nov=0 and even self=1 stalls at 0.45",
+      Array.isArray(wr.afferents[0].concept_tokens) && wr.afferents[0].concept_tokens.length > 0 && wr.ledger[0].comps.nov === 1);
+    // THE DENY LIST — the Stop hook is the organism answering itself.
+    const { n: nT, wr: wrT } = rig();
+    const teach = await nT.ingest({ modality: "code", source: "claude-code-teaching", text: "here is why your confusion about attention is normal — i don't get why people find it hard", cwd: "arsenal-ai-fc" });
+    await nT.flush();
+    assert("#1 DENY: `claude-code-teaching` (the machine's OWN answers) never fires SELF and never derives tokens",
+      teach.S === 0 && wrT.ledger[0].comps.self === 0 && !wrT.afferents[0].concept_tokens);
+    // his MCP notes route as modality desktop-study / source organism-memory —
+    // measured: all 6 such moments scored S = 0.000
+    const { n: nM } = rig();
+    const note = await nM.ingest({ modality: "desktop-study", source: "organism-memory", text: "[doubt] grounding kaise kaam karta hai mujhe samajh nahi aaya" });
+    assert("#1: an organism-memory note (modality desktop-study) is HIS voice too — it scores", note.S > cfg.tiers.tau0);
+    // NOT WIDENED, on purpose (THE TRAPS): "bhai i am not understanding …" — one
+    // of the four doubts the audit quotes — is caught only because the same
+    // message happens to contain "confusion" later on. `not understanding` is
+    // genuinely absent from self_markers. The captain's standing instruction is
+    // that the channel was dead, not the filter; the filter is re-measurable now
+    // that the channel is open, and widening it before that measurement exists
+    // would be exactly the guess the standing order forbids.
+    assert("#1: the marker list is UNCHANGED — a real gap (`not understanding`) is recorded, not silently patched",
+      cfg.self_markers.length === liveCfg.self_markers.length && !cfg.self_markers.includes("not understanding")
+      && computeComponents({ modality: "code", source: "claude-code", text: "bhai i am not understanding what are you following" }, { cfg, markets: {}, seen: new Set(), hab: new Map(), now: 0 }).self === 0);
+    // an unnamed stream stays out: provenance must be positively claimed
+    const { n: nU } = rig();
+    const unk = await nU.ingest({ modality: "code", source: "some-future-integration", text: "i don't get this at all" });
+    assert("#1: an UNLISTED provenance still scores 0 — the gate is an allow-list, not a guess", unk.S === 0);
+    assert("#1: provenanceOf — source wins, a bare voice row is its own provenance, everything else must name itself",
+      provenanceOf({ modality: "code", source: "claude-code" }) === "claude-code" && provenanceOf({ modality: "voice", text: "x" }) === "voice" && provenanceOf({ modality: "context" }) === "");
+    // THE LAYERING LAW: the old gate is frozen, not deleted, and still says what it always said
+    assert("#1 LAYERING: selfLegacy (the frozen voice-only gate) is preserved verbatim and disagrees exactly where it always did",
+      selfLegacy({ modality: "voice", text: "i don't get attention" }, cfg) === 1 && selfLegacy(typed, cfg) === 0 && isHisVoice(typed, cfg) === true);
+  }
+
+  // ORGANISM REPAIR — #2 THE PULSE CAN REACH THE LADDER (measured base rate)
+  {
+    assert("#2 base-rate lookup: exact key wins · `prefix:*` matches · longest prefix wins · default is the last resort",
+      baseRateFor("pulse:need", { default: 0.5, "pulse:*": 0.148695 }) === 0.148695
+      && baseRateFor("pulse:need", { default: 0.5, "pulse:need": 0.9, "pulse:*": 0.148695 }) === 0.9
+      && baseRateFor("pulse:escalate", { default: 0.5, "p*": 0.3, "pulse:*": 0.148695 }) === 0.148695
+      && baseRateFor("gov:GREEN->AMBER", { default: 0.5, "pulse:*": 0.148695 }) === 0.5);
+    // the pinned bar carries the same MEASURED rate the live config does:
+    // brain_ledger.jsonl → 881 haiku_pulse rows, 131 escalated → p = 0.148695
+    const pulseCfg = { ...cfg, pe: { ...cfg.pe, base_rates: { ...cfg.pe.base_rates, "pulse:*": 0.148695 } } };
+    // the live shape, measured across all 131 pulse afferents
+    const pulseEvt = { modality: "pulse", source: "haiku-pulse", text: "pulse flagged (reasoning-hard): Core architectural question about teaching depth", concept_tokens: ["moments", "combined", "trust", "break"], event_key: "pulse:moments" };
+    const { n: nOld } = rig({ cfg });                      // no pulse entry → the 0.5 coin-flip default
+    const rOld = await nOld.ingest({ ...pulseEvt });
+    assert("#2 THE WALL, reproduced: on the 0.5 default the pulse ceiling is 0.24375 — BELOW tau0 0.25, by 0.006",
+      Math.abs(rOld.S - 0.24375) < 1e-9 && rOld.S < cfg.tiers.tau0);
+    const { n: nNew, wr: wrNew } = rig({ cfg: pulseCfg });
+    const rNew = await nNew.ingest({ ...pulseEvt });
+    const rp = await nNew.flush();
+    assert("#2(a) THE WALL IS DOWN: the measured base rate lifts the same pulse to 0.32029 — above tau0, into the enrichment lane",
+      Math.abs(rNew.S - 0.32029) < 1e-4 && rNew.S > cfg.tiers.tau0 && rp[0].tier >= 1);
+    assert("#2 THE TRAP STAYS SHUT: the pulse does NOT wake Opus by itself — it lands in the ε-band and the fail-closed adjudicator decides",
+      rNew.S < cfg.tiers.tau1_base && wrNew.adjCalls === 1 && rp[0].outcome === "adjudicated_down" && wrNew.wakes.length === 0);
+    assert("#2 and it stays well below what HIS OWN doubt is worth (0.320 vs 0.650) — the sentinel never outranks him",
+      rNew.S < 0.45);
+    assert("#2(c): weights.pulse is a real, named, LEDGERED component pinned at 0.00 — instrumentation, not a live term",
+      cfg.weights.pulse === 0 && wrNew.ledger[0].comps.pulse === 1 && salience({ pe: 0, nov: 0, gov: 0, err: 0, self: 0, dead: 0, hab: 0, pulse: 1 }, cfg.weights) === 0);
+    assert("#2(c): salience() survives a hand-built weight object with no pulse key (never NaN)",
+      salience({ pe: 0, nov: 1, gov: 0, err: 0, self: 0, dead: 0, hab: 0, pulse: 1 }, { pe: 0.35, nov: 0.2, gov: 0.25, err: 0.45, self: 0.45, dead: 0.15, hab: 0.4 }) === 0.2);
+    // the LIVE table must carry a measured rate — the ceiling arithmetic above
+    // is worthless if dressing-room/state/thalamus_config.json still leaves the
+    // pulse standing on the coin-flip default. This checks the CONFIG, on purpose.
+    assert("#2(a) LIVE CONFIG: the shipped base_rates table no longer leaves `pulse:*` on the 0.5 coin-flip",
+      baseRateFor("pulse:moments", liveCfg.pe.base_rates) < 0.5 && baseRateFor("gov:x", liveCfg.pe.base_rates) === 0.5);
+  }
+
+  // ORGANISM REPAIR — #6 THE DMN PRECACHE GETS A JOIN KEY THAT CAN BIND
+  {
+    // the live shapes, both measured. presence.mjs sends window-title words:
+    //   {"event_key":"stall:leading-edge","text":"tab-thrash forming: 55 switches in 9min",
+    //    "concept_tokens":["notepad","claude","pulse","important"]}
+    // dmn_precache.json holds {concept:"hallucinations", stall_signature:"..."}
+    const pc = { entries: [{ concept: "hallucinations", stall_signature: "Walk me through the exact trace of a hallucination in prod", reframe: "grounding is a retrieval problem before it is a model problem", drill: "trace one output back to its source span" }] };
+    const stall = { modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true, text: "tab-thrash forming: 55 switches in 9min", concept_tokens: ["notepad", "claude", "pulse", "important"] };
+    const reg6 = bakeReg({ hallucinations: ["hallucination", "grounding"], attention: [] });
+    // (a) the OLD behaviour, reproduced: raw window-title words vs concept names
+    const { n: nA, wr: wrA } = rig({ precache: pc, registry: reg6, sprintConcept: null, cfg: { ...cfg, whisper: { legacy_raw: true, canon_join: false, sprint_fallback: false } } });
+    await nA.ingest({ ...stall }); await nA.flush();
+    assert("#6 THE MISS, reproduced: the legacy raw join matches 0 — browser chrome words against concept names",
+      wrA.workspaces[wrA.workspaces.length - 1].whisper === null && wrA.ledger[0].engines.whisper === "miss");
+    // (b) the repair: nothing in the stall is canon → fall back to the sprint's concept
+    const { n: nB, wr: wrB } = rig({ precache: pc, registry: reg6, sprintConcept: "Hallucinations" });
+    await nB.ingest({ ...stall }); await nB.flush();
+    const wsB = wrB.workspaces[wrB.workspaces.length - 1];
+    assert("#6 SPRINT FALLBACK: window-title words name nothing canonical → the sprint's CURRENT concept becomes the join key, and the whisper loads",
+      wsB.whisper && wsB.whisper.concept === "hallucinations" && wsB.whisper.matched_via === "sprint" && wrB.ledger[0].engines.whisper === "hit");
+    assert("#6: the assumption is SAID OUT LOUD — matched_via rides the payload and the log names the route",
+      wrB.logs.some(l => /via sprint on "hallucinations"/.test(l)));
+    // (c) when the stall DOES name canon ground, that wins — no fallback needed
+    const { n: nC, wr: wrC } = rig({ precache: pc, registry: reg6, sprintConcept: "attention" });
+    await nC.ingest({ ...stall, concept_tokens: ["chrome", "grounding", "notepad"] }); await nC.flush();
+    const wsC = wrC.workspaces[wrC.workspaces.length - 1];
+    assert("#6 CANON JOIN: an alias inside the stall's own hint (grounding→hallucinations) beats the fallback",
+      wsC.whisper && wsC.whisper.matched_via === "canon" && wsC.whisper.concept === "hallucinations");
+    // (d) the fallback is a JOIN KEY, not a licence to improvise
+    const { n: nD, wr: wrD } = rig({ precache: { entries: [{ concept: "a real study session happens today", stall_signature: "what does the Twin verify", reframe: "x", drill: "y" }] }, registry: reg6, sprintConcept: "Hallucinations" });
+    await nD.ingest({ ...stall }); await nD.flush();
+    assert("#6: a precache entry that names no registered concept still matches NOTHING — the fallback opens a door, it does not force one",
+      wrD.workspaces[wrD.workspaces.length - 1].whisper === null);
+    // (e) the frozen lane still wins when presence's producer side is repaired
+    const { n: nE, wr: wrE } = rig({ precache: { entries: [{ concept: "attention scaling", stall_signature: "quadratic attention kv cache", reframe: "r", drill: "d" }] }, registry: reg6, sprintConcept: "Hallucinations" });
+    await nE.ingest({ ...stall, concept_tokens: ["attention", "scaling"] }); await nE.flush();
+    assert("#6 LAYERING: the original raw matcher is still FIRST and still fires the day presence sends real concepts",
+      wrE.workspaces[wrE.workspaces.length - 1].whisper.matched_via === "raw");
+  }
+
+  // ORGANISM REPAIR — #10 THE DIAGNOSTICS SURVIVE, AND THE FLAGS BECOME COUNTABLE
+  {
+    // A log answers "what happened at 14:02". It cannot answer "has the
+    // pre-answer engine EVER fired?" — which was, in fact, unanswerable. The
+    // tri-state on the ledger row is the answer, and it never renders an
+    // unmeasured silence (an EMPTY corpus) as a measured zero (a miss).
+    const { n: nS, wr: wrS } = rig({ answerCache: [] });
+    await nS.ingest({ modality: "bus", event_key: "dead:due", due_count: 2 }); await nS.flush();
+    assert("#10: a moment that never asked reports `skip` — not a zero", wrS.ledger[0].engines.pre_answer === "skip" && wrS.ledger[0].engines.whisper === "skip");
+    const { n: nDry, wr: wrDry } = rig({ answerCache: [] });
+    await nDry.ingest({ modality: "code", source: "claude-code", text: "i am confused about hallucination grounding" }); await nDry.flush();
+    assert("#10 HONESTY: a doubt that reached an EMPTY answer_cache reports `dry`, never `miss` — an unmeasured silence is not a measured zero",
+      wrDry.ledger[0].engines.pre_answer === "dry" && wrDry.logs.some(l => /dry corpus, not a miss/.test(l)));
+    const { n: nMiss, wr: wrMiss } = rig({ answerCache: [{ id: "z", concept: "zzz", doubt: "totally unrelated matter", answer: "x", vec: null }] });
+    await nMiss.ingest({ modality: "code", source: "claude-code", text: "i am confused about hallucination grounding" }); await nMiss.flush();
+    assert("#10: a doubt against a STOCKED cache that genuinely does not match reports `miss` — a different fact, recorded as one",
+      wrMiss.ledger[0].engines.pre_answer === "miss");
+    assert("#10: the provenance rides the ledger row too — `who spoke` was invisible in 5,481 rows",
+      wrMiss.ledger[0].provenance === "claude-code" && wrS.ledger[0].provenance === null);
+    // the moment-loss alarm — the one diagnostic that exists nowhere else —
+    // still fires (covered above) AND now has somewhere to land:
+    assert("#10: the log file target is inside the repo and gitignored (*.log), so his words never reach the public remote",
+      /thalamus\.log$/.test(LOGFILE) && LOGFILE.includes("scripts"));
+    assert("#10: rotation is size-derived and disabling the log is a no-op, never a throw",
+      DEFAULT_CONFIG.log.max_bytes === 1650000 && fileLog({ log: { enabled: false } }, "must not write") === undefined);
+    // THE ONE NON-HERMETIC CHECK IN THIS FILE, and it is deliberate: #10's whole
+    // claim is "the diagnostics now have somewhere to land", and a test that
+    // never writes the file proves nothing about that. One append-only line into
+    // a gitignored, size-rotated log the organ owns.
+    const stamp = `selftest heartbeat ${Date.now()}`;
+    const before = existsSync(LOGFILE) ? statSync(LOGFILE).size : 0;
+    fileLog(loadConfig(), stamp);
+    assert("#10 PROOF: a diagnostic written through fileLog actually LANDS on disk (this is the whole of #10)",
+      existsSync(LOGFILE) && statSync(LOGFILE).size > before && readFileSync(LOGFILE, "utf8").includes(stamp));
+  }
+
+  // ORGANISM REPAIR — #106 STATUS IS A HAVE/NEED COUNTER
+  {
+    const rows = [
+      { day: "2026-08-04", tier: 0, S: 0, key: "code:x", comps: { self: 0, pulse: 0 }, engines: { whisper: "skip", pre_answer: "skip", bg: "skip" }, provenance: "claude-code" },
+      { day: "2026-08-04", tier: 2, S: 0.65, key: "code:confused", comps: { self: 1, pulse: 0 }, engines: { whisper: "skip", pre_answer: "dry", bg: "skip" }, provenance: "claude-code" },
+      { day: "2026-08-04", tier: 1, S: 0.32, key: "pulse:moments", comps: { self: 0, pulse: 1 }, engines: { whisper: "skip", pre_answer: "skip", bg: "skip" }, provenance: "haiku-pulse" },
+    ];
+    const out = buildStatus(rows, rows, { version: 12, deep: null, deep_recent: [] }, cfg);
+    assert("#106: every line is have/need — tiers against the cap, self against the stream, engines against instrumented rows",
+      /tier2 1\/15 \(wakes\/hard cap\)/.test(out) && /self channel\s+: 1\/3 moments/.test(out) && /1\/2 code moments now score above zero \(before the #1 repair: 0\/2\)/.test(out) && /pulse sentinel : 1\/1 escalations/.test(out));
+    assert("#106 HONESTY: an empty deep lane says WHY it is empty instead of printing a dash",
+      /never asked/.test(out) && !/deep=—/.test(out));
+    assert("#106: rows written before the #10 repair are reported as UNMEASURED, never as zero",
+      /UNMEASURED, not zero/.test(buildStatus([], [{ day: "d", tier: 0, S: 0, key: "code:x", comps: { self: 0 } }], {}, cfg)));
+    assert("#106: statusReport() runs against the LIVE files without throwing", typeof statusReport() === "string" && statusReport().startsWith("thalamus:"));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
+}
+
+// ---------------------------------------------------------------------------
+// #106 / #10 — STATUS IS A HAVE/NEED COUNTER, NEVER A WORD.
+// The old line printed tier counts and `deep=—`, and a dash cannot distinguish
+// "the deep lane has never been asked" from "it answered and the answer was
+// consumed". Every line below now shows the numerator AND what would move it.
+// Pure: takes rows, returns a string, so the selftest can drive it.
+// ---------------------------------------------------------------------------
+function buildStatus(rows, allRows, w, cfg) {
+  const L = [];
+  const byTier = rows.reduce((a, r) => { a[r.tier] = (a[r.tier] || 0) + 1; return a; }, {});
+  const t2 = byTier[2] || 0;
+  const capHard = cfg.wake_cap_per_day;
+  L.push(`thalamus: workspace v${w.version || 0} · today ${rows.length} moment(s) — tier0 ${byTier[0] || 0}/${rows.length} · tier1 ${byTier[1] || 0}/${rows.length} · tier2 ${t2}/${capHard} (wakes/hard cap)`);
+  // the deep lane — "—" used to mean three different things
+  const deep = w.deep ? (w.deep.declined ? `declined (${w.deep.reason || "no reason recorded"})` : "served") : "never asked (0 answers have come back through :4113/deep-answer)";
+  L.push(`  deep lane      : ${deep} · deep_recent ${(Array.isArray(w.deep_recent) ? w.deep_recent : []).length}/3 held`);
+  // #1 — the typed lane. This is the number the whole repair exists to move.
+  const scored = allRows.filter(r => r.comps && r.comps.self > 0);
+  const codeRows = allRows.filter(r => String(r.key || "").startsWith("code:"));
+  const codeScored = codeRows.filter(r => (r.S || 0) > 0);
+  L.push(`  self channel   : ${scored.length}/${allRows.length} moments lifetime have fired SELF · from the typed lane ${codeScored.length}/${codeRows.length} code moments now score above zero (before the #1 repair: 0/${codeRows.length})`);
+  // #10 — the two engines whose firing history was unanswerable
+  const eng = (name) => {
+    const seen = allRows.filter(r => r.engines && r.engines[name] !== undefined);
+    const c = (v) => seen.filter(r => r.engines[name] === v).length;
+    if (!seen.length) return `no instrumented rows yet (every row predates the #10 repair — this is UNMEASURED, not zero)`;
+    return `hit ${c("hit")} · miss ${c("miss")} · corpus dry ${c("dry")} · not queried ${c("skip")} — over ${seen.length}/${allRows.length} instrumented rows`;
+  };
+  L.push(`  whisper engine : ${eng("whisper")}`);
+  L.push(`  pre-answer eng : ${eng("pre_answer")}`);
+  // #2 — the sentinel term, with the counter that would let it be set
+  const pulseRows = allRows.filter(r => (r.comps && r.comps.pulse > 0) || String(r.key || "").startsWith("pulse:"));
+  const pulseLive = pulseRows.filter(r => r.tier >= 1).length;
+  L.push(`  pulse sentinel : ${pulseLive}/${pulseRows.length} escalations reached tier≥1 · weight ${(cfg.weights.pulse ?? 0).toFixed(2)} (need a verdict source before it can be raised — 0 of ${pulseRows.length} has ever been humanly or adjudicator-verdicted; safe ceiling ${(cfg.tiers.tau1_base - 0.32029).toFixed(3)})`);
+  // #10 — is the log actually landing?
+  let logState = "MISSING — no diagnostic has been written yet";
+  try { if (existsSync(LOGFILE)) logState = `${statSync(LOGFILE).size}/${cfg.log.max_bytes} bytes before rotation`; } catch { }
+  L.push(`  diagnostics    : ${LOGFILE} — ${logState}`);
+  return L.join("\n");
+}
+function statusReport() {
+  const cfg = loadConfig();
+  const w = readJson(WORKSPACE) || {};
+  const all = readLines(SLEDGER);
+  const rows = all.filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate());
+  return buildStatus(rows, all, w, cfg);
 }
 
 // ---------------------------------------------------------------------------
@@ -1344,16 +1874,13 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
-  if (mode === "status") {
-    const w = readJson(WORKSPACE) || {};
-    const rows = readLines(SLEDGER).filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate());
-    const byTier = rows.reduce((a, r) => { a[r.tier] = (a[r.tier] || 0) + 1; return a; }, {});
-    console.log(`thalamus: workspace v${w.version || 0} · today ${rows.length} moment(s) — tier0 ${byTier[0] || 0} · tier1 ${byTier[1] || 0} · tier2 ${byTier[2] || 0} · deep=${w.deep ? (w.deep.declined ? "declined" : "served") : "—"}`);
-    return;
-  }
+  if (mode === "status") { console.log(statusReport()); return; }
   brainMod = await import("./brain.mjs");
   const cfg = loadConfig();
-  const nucleus = createNucleus(cfg, { log: console.log });
+  // #10 — console.log alone went to a closed handle under hidden_run.vbs. Both,
+  // always: the console for a foreground run, the file for the cloak.
+  const log = (m) => { console.log(m); fileLog(cfg, m); };
+  const nucleus = createNucleus(cfg, { log });
   // boot re-seed: yesterday's tail keeps NOV/HAB honest across restarts
   for (const row of readLines(AFFERENT).slice(-500)) {
     for (const t of row.concept_tokens || []) nucleus.state.seen.add(String(t).toLowerCase());
@@ -1381,9 +1908,9 @@ async function main() {
     if (e && e.code === "EADDRINUSE") { console.log(`thalamus: nucleus already live on :${PORT} — standing down.`); process.exit(0); }
     throw e;
   });
-  server.listen(PORT, "127.0.0.1", () => console.log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day`));
+  server.listen(PORT, "127.0.0.1", () => log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day · SELF on provenance [${(cfg.self_sources || []).join(", ")}], never [${(cfg.self_deny_sources || []).join(", ")}]`));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry };
+export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport };

@@ -58,7 +58,13 @@
 //   never be able to block the captain's prompt. `at`/`done`/`ingest` are interactive
 //   and DO exit non-zero — a refusal he cannot see is a refusal that did not happen.
 //
-// CLI: ingest <file> | at <n> | done <n> | status | json | selftest
+// CLI: ingest <file> | at <n> | done <n> | status | brief | json | selftest
+//
+// THE ADDRESS (audit #35, 4 Aug 2026): this organ had ZERO callers. It now exposes
+// `courseBrief()` (one call, never throws, always the same shape) and a `brief` CLI
+// mode for skills. The wiring on the reader side — learnstate.mjs's SessionStart
+// brief and/or dugout.mjs — is the captain's to land; see courseBrief() below for
+// why it must be a READER and never sprintsync.mjs.
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
@@ -363,6 +369,50 @@ function statusLine(state) {
 }
 
 // ---------------------------------------------------------------------------
+// THE ADDRESS (audit #35, 4 Aug 2026) — the one-call reader for other organs.
+// ---------------------------------------------------------------------------
+// This organ was 670 lines with ZERO callers: no scheduled task, no npm script, no
+// import, no skill reference, and course.json had never been created. Meanwhile
+// sprint.json's next_up is 1-05 and 1-06 — BOTH course-track, 1-06 alone 9 chapters
+// — so on 1-05 the machine would ASK him where he is, in direct violation of the
+// /learn skill's own promise ("the captain should NEVER re-explain where he is").
+//
+// A reader must be able to wire this in ONE line and must never risk his prompt, so
+// courseBrief() takes no arguments, opens at most one file, catches everything, and
+// always returns the same shape. `present:false` is a first-class answer.
+//
+// THE CONSUMER MUST BE A READER — learnstate.mjs's brief or dugout.mjs — NEVER
+// sprintsync.mjs: sprint.json is Google-Sheet-driven and single-writer, and splicing
+// another organ's state into it makes it mixed-provenance and one Sheet-sync away
+// from clobbering his chapter position (sprintsync.mjs:101 writeAtomic(SPRINT, …)).
+export function courseBrief(path = STATE) {
+  try {
+    const { ok, state } = loadState(path);
+    const line = statusLine(state);
+    if (!ok || !state || !state.course || !Array.isArray(state.chapters) || !state.chapters.length) {
+      return { present: false, line, title: null, current: null, current_title: null, total: 0, done: 0 };
+    }
+    const total = state.chapters.length;
+    const done = state.chapters.filter((c) => c.covered).length;
+    const cur = state.current !== null ? state.chapters.find((c) => c.n === state.current) || null : null;
+    return {
+      present: true,
+      line,                                   // #106 — always a have/need counter, never a bare word
+      title: state.course.title || null,
+      current: cur ? cur.n : null,
+      current_title: cur ? cur.title : null,
+      start_seconds: cur ? cur.start_seconds : null,
+      total, done,
+      next: state.chapters.find((c) => !c.covered && (cur === null || c.n > cur.n)) || null,
+    };
+  } catch {
+    // A course tracker must NEVER be able to block his prompt (the HOOK-SAFE law
+    // in the header). An unreadable file reads as "no course", loudly-but-safely.
+    return { present: false, line: "course: unreadable — `node scripts/course.mjs status` for the reason", title: null, current: null, current_title: null, total: 0, done: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DISK — the only untested layer, kept thin and always guarded.
 // ---------------------------------------------------------------------------
 
@@ -563,6 +613,34 @@ function selftest() {
     norm.chapters.length === 2 && norm.chapters[0].n === 1 && norm.current === null && norm.chapters[0].covered === true);
   assert("normalize invents a title for a row that lost one, and never a chapter", norm.chapters[0].title === "Chapter 1");
 
+  // ---- AUDIT #35 — THE ADDRESS. A reader must be able to wire this in one line. ----
+  {
+    const missing = join(STATE_DIR, "__course_selftest_no_such__.json");
+    const absent = courseBrief(missing);
+    assert("#35 — courseBrief on a MISSING course answers honestly instead of throwing (his prompt is never at risk)",
+      absent.present === false && absent.total === 0 && typeof absent.line === "string" && absent.line.length > 0);
+    assert("#35 — the absent answer still carries every field a reader destructures (no undefined at the call site)",
+      ["present", "line", "title", "current", "current_title", "total", "done"].every((k) => k in absent));
+    // and on a real state — built through the pure core, written to a scratch path
+    // the live file never sees.
+    const built = mergeCourse(emptyState(), parseCourse(PASTE), T0).state;
+    const staged = markCurrent(markDone(built, 1, T1).state, 2, T1).state;
+    const tmpPath = join(STATE_DIR, `__course_selftest_${process.pid}.json`);
+    let brief;
+    try {
+      writeAtomic(tmpPath, staged);
+      brief = courseBrief(tmpPath);
+    } finally { try { rmSync(tmpPath, { force: true }); } catch { /* best effort */ } }
+    assert("#35 — courseBrief TELLS a reader the chapter he is on, so nothing has to ask him",
+      brief.present === true && brief.current === 2 && brief.current_title === "Installing Python"
+      && brief.total === 4 && brief.done === 1);
+    assert("#35 — it names the next uncovered chapter after his position (what /learn opens on)",
+      brief.next && brief.next.n === 3);
+    assert("#35 (#106) — the brief's line is a have/need counter, never a bare gated word",
+      /chapter 2\/4/.test(brief.line) && /\(1 done\)/.test(brief.line));
+    assert("#35 — the scratch state left no trace beside the live file", !existsSync(tmpPath));
+  }
+
   // ---- THE DISK-FREE CLAIM, MEASURED ----
   assert("PURE CORE IS DISK-FREE — the live course.json was not created, touched or resized by any of the above",
     diskSig() === SIG_BEFORE);
@@ -588,6 +666,13 @@ function main() {
   }
   if (cmd === "json") {
     try { console.log(JSON.stringify(loadState().state, null, 2)); } catch { console.log(JSON.stringify(emptyState(), null, 2)); }
+    process.exit(0);
+  }
+  // #35 — the compact address for a SKILL (markdown, no import): one small JSON
+  // object with his position in it. Hook-safe like the two above: never throws,
+  // always exit 0.
+  if (cmd === "brief") {
+    try { console.log(JSON.stringify(courseBrief())); } catch { console.log(JSON.stringify({ present: false, line: "course: unavailable" })); }
     process.exit(0);
   }
   if (cmd === "selftest") return selftest();
@@ -658,6 +743,7 @@ function main() {
     "  node scripts/course.mjs at <n>          mark the chapter he is on now",
     "  node scripts/course.mjs done <n>        mark chapter n covered",
     "  node scripts/course.mjs status          one compact line",
+    "  node scripts/course.mjs brief           compact JSON position for a reader/skill (never throws)",
     "  node scripts/course.mjs json            full state for other organs",
     "  node scripts/course.mjs selftest        fixtures only; never writes state",
   ].join("\n"));

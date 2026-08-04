@@ -38,14 +38,25 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CFG_PATH  = join(STATE_DIR, "heartbeat_config.json");
 const PULSE     = join(STATE_DIR, "pulse.json");
 
+// ORGANISM AUDIT #49 (4 Aug 2026) — DEFAULTS.order had SIX entries while the
+// committed canon (heartbeat_config.json) has EIGHT. capsule_bridge and shipped
+// were missing, and those two are precisely the only organs in the beat with NO
+// independent automatic path (the other six each own a scheduled task; verified
+// in the audit appendix). So any degraded config — file deleted, unparseable, or
+// every entry shape-invalid — silently amputated the two witnesses that nothing
+// else can wake, and then main() printed "6/6 organs beat … all ran".
+// DEFAULTS is now a verbatim mirror of the canon file, and the selftest asserts
+// that parity against the real file so this drift cannot recur silently.
 const DEFAULTS = {
   order: [
     { name: "capture",        script: "capture.mjs",        args: ["pull"] },
     { name: "fsrs",           script: "fsrs.mjs",           args: [] },
+    { name: "capsule_bridge", script: "capsule_bridge.mjs", args: [] },
     { name: "calibration",    script: "calibration.mjs",    args: [] },
     { name: "nemesis",        script: "nemesis.mjs",        args: [] },
     { name: "learning_state", script: "learning_state.mjs", args: [] },
     { name: "timeaudit",      script: "timeaudit.mjs",      args: ["pulse"] },
+    { name: "shipped",        script: "shipped.mjs",        args: [] },
   ],
   timeout_ms: 120000,
 };
@@ -62,6 +73,12 @@ const validEntry = (e) =>
   typeof e.name === "string" && e.name.length > 0 &&
   typeof e.script === "string" && e.script.length > 0;
 
+// ORGANISM AUDIT #49 — the loader now REPORTS what it did instead of quietly
+// substituting. `configured_total` is how many organs the canon asked for, so the
+// stdout count can be "6/8", not the self-congratulating "6/6" you get when you
+// divide by the survivors. `source` and `dropped` name the degradation out loud
+// (the precedent is brain.mjs:106-108, which already announces its own config
+// fallback). Nothing here changes WHICH organs beat — only what is admitted.
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
@@ -70,14 +87,33 @@ function loadConfig(path = CFG_PATH) {
       // which waved through string/shapeless entries. Now junk entries are
       // dropped and the survivors still beat; only a fully-junk order falls back
       // to DEFAULTS, because zero organs beating is worse than a stale order.
-      const kept = Array.isArray(j.order) ? j.order.filter(validEntry) : [];
+      const raw  = Array.isArray(j.order) ? j.order : [];
+      const kept = raw.filter(validEntry);
+      const dropped = raw.filter(e => !validEntry(e))
+        .map(e => (e && typeof e === "object" && typeof e.name === "string") ? e.name : "(malformed)");
+      const timeout_ms = typeof j.timeout_ms === "number" ? j.timeout_ms : DEFAULTS.timeout_ms;
+      if (kept.length) {
+        return {
+          order: kept, timeout_ms,
+          // the canon asked for `raw.length`; `kept.length` is what survived.
+          configured_total: raw.length,
+          source: dropped.length ? "canon(partial)" : "canon",
+          dropped,
+        };
+      }
       return {
-        order: kept.length ? kept : DEFAULTS.order.slice(),
-        timeout_ms: typeof j.timeout_ms === "number" ? j.timeout_ms : DEFAULTS.timeout_ms,
+        order: DEFAULTS.order.slice(), timeout_ms,
+        configured_total: DEFAULTS.order.length,
+        source: raw.length ? "defaults(every canon entry malformed)" : "defaults(canon order empty)",
+        dropped,
       };
     }
-  } catch { /* malformed → defaults */ }
-  return { order: DEFAULTS.order.slice(), timeout_ms: DEFAULTS.timeout_ms };
+  } catch {
+    return { order: DEFAULTS.order.slice(), timeout_ms: DEFAULTS.timeout_ms,
+      configured_total: DEFAULTS.order.length, source: "defaults(canon unparseable)", dropped: [] };
+  }
+  return { order: DEFAULTS.order.slice(), timeout_ms: DEFAULTS.timeout_ms,
+    configured_total: DEFAULTS.order.length, source: "defaults(canon missing)", dropped: [] };
 }
 
 function writeAtomic(path, obj) {
@@ -183,13 +219,61 @@ function ladderRead(readiness, ladderCfg) {
   return { verdict, source, withheld };
 }
 
-function buildPulse({ agents, bus, buckets, ladderCfg, now }) {
+// ORGANISM AUDIT #68 (4 Aug 2026) — pulse.status and pulse.low_confidence were
+// STRING LITERALS ("ok" / false), computed from nothing, with the `agents` array
+// (every organ's real exit code) sitting on the very next line and never read.
+// Fed buildPulse eight organs all `ran:false` and it still returned "ok"; the
+// selftest's own fixture builds a pulse reading "ok" from 1-of-3 organs and
+// prints ALL CHECKS PASSED. No deterministic reader branches on it (verified:
+// postmatch.mjs:230 takes only .withheld_disclosures), but pulse.json is pasted
+// RAW into three enabled LLM jobs — so the lie is read by the part of the system
+// that cannot check it. Now derived, with a have/need counter beside the word so
+// the reader never has to trust the word alone (audit #106).
+//
+// Vocabulary note: "degraded" is the audit's own recommended value, and it is
+// safe here in a way it is NOT for loop_vitals — manager.mjs:159/:167 pattern-
+// matches `bus.X.status === "ok"` on cards/calibration/weaknesses/learning_state
+// only, and nothing anywhere pattern-matches pulse.status.
+function pulseHealth(agents, configured_total) {
+  const list = Array.isArray(agents) ? agents : [];
+  const beat    = list.filter(a => a && a.ran === true && a.exit === 0);
+  const skipped = list.filter(a => a && a.ran !== true && a.note === "skipped");
+  // anything that was asked to run, was not skipped, and did not come back clean
+  const failed  = list.filter(a => a && a.ran !== true && a.note !== "skipped");
+  // organs the canon asked for that never even produced a row (a shrunk order)
+  const total   = Number.isInteger(configured_total) && configured_total > list.length ? configured_total : list.length;
+  const unaccounted = total - list.length;
+  const detail = [
+    ...failed.map(a => `${a.name}:${a.note || "failed"}`),
+    ...skipped.map(a => `${a.name}:skipped`),
+    ...(unaccounted > 0 ? [`${unaccounted} organ(s) never reached the beat`] : []),
+  ];
+  return {
+    status: (failed.length || unaccounted > 0) ? "degraded" : "ok",
+    // low_confidence is the DATA-SUFFICIENCY half of the house pair: a skipped
+    // organ is not a failure, but its file did not refresh, so anything read
+    // downstream is thinner than a full beat. That is exactly low confidence.
+    low_confidence: failed.length > 0 || skipped.length > 0 || unaccounted > 0,
+    organs: {
+      configured: total,
+      beat: beat.length,
+      failed: failed.map(a => a.name),
+      skipped: skipped.map(a => a.name),
+      // the have/need line, so no surface has to re-derive it from the array
+      line: `${beat.length}/${total} organs beat${detail.length ? " — " + detail.join(", ") : " — all ran"}`,
+    },
+  };
+}
+
+function buildPulse({ agents, bus, buckets, ladderCfg, now, configured_total }) {
   const today = localDate(now);
   const lad = ladderRead(bus.readiness, ladderCfg);
+  const health = pulseHealth(agents, configured_total);
   return {
     date: today,
-    status: "ok",
-    low_confidence: false,
+    status: health.status,
+    low_confidence: health.low_confidence,
+    organs: health.organs,
     generated_at: now.toISOString(),
     agents,
     staleness: staleness(bus, today),
@@ -206,6 +290,9 @@ async function selftest() {
   const os = await import("node:os");
   const { mkdtempSync } = await import("node:fs");
   const checks = [];
+  // HONESTY OVER GREEN: a check that could not be run is recorded as UNMEASURED
+  // and named in the summary — never rendered as a silent pass.
+  const unmeasured = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const tmp = mkdtempSync(join(os.tmpdir(), "heartbeat-st-"));
 
@@ -243,6 +330,38 @@ async function selftest() {
   const cfgJunk = join(tmp, "hb_cfg_junk.json");
   writeFileSync(cfgJunk, JSON.stringify({ order: ["capture", "fsrs"] }));
   assert("all-junk order falls back to DEFAULTS (never zero organs)", loadConfig(cfgJunk).order.length === DEFAULTS.order.length);
+
+  // ORGANISM AUDIT #49 — the loader must ADMIT a degradation, not perform it in
+  // silence. Before this, `loadConfig` returned only {order,timeout_ms}: a
+  // missing canon and a healthy canon were indistinguishable to every caller.
+  assert("junk fallback names itself as a fallback, not as canon",
+    /^defaults\(/.test(loadConfig(cfgJunk).source) && loadConfig(cfgJunk).dropped.length === 2);
+  assert("a missing canon file says so", /^defaults\(canon missing/.test(loadConfig(join(tmp, "nope.json")).source));
+  const cfgBad = join(tmp, "hb_cfg_bad.json");
+  writeFileSync(cfgBad, "{not json");
+  assert("an unparseable canon says so (and still beats)",
+    loadConfig(cfgBad).source === "defaults(canon unparseable)" && loadConfig(cfgBad).order.length === DEFAULTS.order.length);
+  assert("a partially-junk canon reports the CONFIGURED total, not the survivors",
+    loadedMixed.configured_total === 3 && loadedMixed.order.length === 1 && loadedMixed.source === "canon(partial)");
+
+  // ORGANISM AUDIT #49 — THE PARITY CHECK THAT WAS MISSING. The old suite
+  // asserted `loadConfig(junk).order.length === DEFAULTS.order.length`, i.e. it
+  // pinned the fallback to ITSELF, so DEFAULTS could drift away from the canon
+  // (6 vs 8 organs) and the suite stayed green. This asserts DEFAULTS against
+  // the REAL heartbeat_config.json. It is deliberately NOT fatal when the canon
+  // is unreadable — the ladder_config lesson (see :276 below) is that a selftest
+  // must not die for a file that isn't its subject — but an unmeasured check is
+  // reported as unmeasured, never silently counted as a pass.
+  let canonOrder = null;
+  try { const c = JSON.parse(readFileSync(CFG_PATH, "utf8")); if (Array.isArray(c.order)) canonOrder = c.order; } catch { /* unreadable */ }
+  const sig = (o) => JSON.stringify(o.map(e => [e.name, e.script, (e.args || []).join(" ")]));
+  if (canonOrder) {
+    assert(`DEFAULTS.order matches the canon heartbeat_config.json verbatim (${canonOrder.length} organs)`,
+      sig(canonOrder) === sig(DEFAULTS.order));
+  } else {
+    unmeasured.push("DEFAULTS.order vs canon heartbeat_config.json (file unreadable)");
+    console.log("  ⚠ DEFAULTS.order vs canon parity — NOT MEASURED (heartbeat_config.json unreadable)");
+  }
 
   // regression (E2E audit 25 Jul 2026): a hung organ was reported as
   // "spawn error" because execFileSync never sets e.killed. Real spawn, real
@@ -292,14 +411,40 @@ async function selftest() {
   const ladNone = ladderRead(null, ladderCfg);
   assert("missing readiness → GREEN (M-1 precedent), zero withholdings", ladNone.verdict === "GREEN" && ladNone.withheld.length === 0);
 
-  const pulse = buildPulse({ agents: results, bus, buckets, ladderCfg, now });
+  const pulse = buildPulse({ agents: results, bus, buckets, ladderCfg, now, configured_total: results.length });
   assert("pulse envelope + disclosures present", pulse.date === "2026-07-12" && Array.isArray(pulse.withheld_disclosures));
+
+  // ORGANISM AUDIT #68 — THIS is the fixture that used to lie. `results` is
+  // 1-of-3 organs (ok.mjs ran, bad.mjs exited 3, ghost.mjs is missing) and the
+  // pulse built from it reported "status":"ok","low_confidence":false while the
+  // whole suite printed ALL CHECKS PASSED. The literal is now a computation.
+  assert("a 1-of-3 beat is NOT 'ok' (the fixture that used to lie)",
+    pulse.status === "degraded" && pulse.low_confidence === true);
+  assert("the pulse carries a have/need counter, not just a word",
+    pulse.organs.configured === 3 && pulse.organs.beat === 1 &&
+    pulse.organs.failed.join(",") === "bad,ghost" && /^1\/3 organs beat — /.test(pulse.organs.line));
+  const allGood = [{ name: "a", ran: true, exit: 0, ms: 1, note: null }, { name: "b", ran: true, exit: 0, ms: 1, note: null }];
+  const okPulse = buildPulse({ agents: allGood, bus, buckets, ladderCfg, now, configured_total: 2 });
+  assert("a clean beat still reads ok / high-confidence",
+    okPulse.status === "ok" && okPulse.low_confidence === false && okPulse.organs.line === "2/2 organs beat — all ran");
+  // a --skip is deliberate, so it is not a FAILURE — but that organ's file did
+  // not refresh, which is precisely what low_confidence means in this codebase.
+  const skipped = buildPulse({ agents: [allGood[0], { name: "b", ran: false, exit: null, ms: 0, note: "skipped" }], bus, buckets, ladderCfg, now, configured_total: 2 });
+  assert("a skipped organ is low-confidence but not 'degraded'",
+    skipped.status === "ok" && skipped.low_confidence === true && skipped.organs.skipped.join(",") === "b");
+  // ORGANISM AUDIT #49 — the amputation case: the canon asked for 8, only 6 rows
+  // came back. "6/6 organs beat … all ran" was the exact printed lie.
+  const shrunk = buildPulse({ agents: allGood, bus, buckets, ladderCfg, now, configured_total: 8 });
+  assert("organs the canon asked for but never beat are counted against the total",
+    shrunk.status === "degraded" && /^2\/8 organs beat — 6 organ\(s\) never reached the beat/.test(shrunk.organs.line));
+
   const p = join(tmp, "pulse.json");
   writeAtomic(p, pulse);
   assert("atomic pulse write lands", existsSync(p) && JSON.parse(readFileSync(p, "utf8")).date === "2026-07-12");
 
   const passed = checks.every(c => c[1]);
-  console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
+  const tail = unmeasured.length ? ` (${unmeasured.length} NOT MEASURED: ${unmeasured.join("; ")})` : "";
+  console.log(passed ? `\nALL CHECKS PASSED${tail}` : `\nSELFTEST FAILED${tail}`);
   return passed;
 }
 
@@ -328,12 +473,17 @@ async function main() {
   };
   const buckets = readJson(join(STATE_DIR, "buckets.json"));
   const ladderCfg = readJson(join(STATE_DIR, "ladder_config.json"));
-  const pulse = buildPulse({ agents, bus, buckets, ladderCfg, now });
+  const pulse = buildPulse({ agents, bus, buckets, ladderCfg, now, configured_total: cfg.configured_total });
   writeAtomic(PULSE, pulse);
-  const ok = agents.filter(a => a.ran).length;
-  console.log(`heartbeat: ${ok}/${agents.length} organs beat (${agents.filter(a => !a.ran).map(a => `${a.name}:${a.note}`).join(", ") || "all ran"}) · ladder ${pulse.ladder.verdict} → ${PULSE}`);
+  // ORGANISM AUDIT #49 — the denominator is now the CONFIGURED squad, not the
+  // survivors, so a shrunk order can no longer print itself a perfect score; and
+  // a degraded config announces itself instead of being inferred from a count.
+  if (cfg.source && cfg.source !== "canon") {
+    console.log(`heartbeat: CONFIG DEGRADED — ${cfg.source}${cfg.dropped && cfg.dropped.length ? ` · dropped: ${cfg.dropped.join(", ")}` : ""} · running ${cfg.order.length} organ(s) from ${cfg.source.startsWith("canon") ? "canon" : "DEFAULTS"}`);
+  }
+  console.log(`heartbeat: ${pulse.organs.line} · pulse ${pulse.status} · ladder ${pulse.ladder.verdict} → ${PULSE}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runAgent, staleness, timeauditBridge, ladderRead, buildPulse, loadConfig };
+export { runAgent, staleness, timeauditBridge, ladderRead, buildPulse, pulseHealth, loadConfig, DEFAULTS };

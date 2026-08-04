@@ -35,7 +35,7 @@
 //        node scripts/dmn.mjs status · selftest
 // ============================================================================
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
@@ -58,14 +58,64 @@ import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the t
 // plain object — calling .catch() on it is a TypeError that kills the whole pass
 // the instant the LLM lane actually works. A thunk + try/catch tolerates BOTH a
 // sync return and a promise, so injected async deps keep working too.
-const genSafe = async (fn) => { try { return await fn(); } catch { return { ok: false }; } };
+// Audit 4 Aug 2026 (#8): the old form was `catch { return { ok: false }; }` — it
+// DISCARDED the exception. A 22-hour outage then left zero forensics: record429
+// stores only a timestamp, so the only record of WHY the Rest Room died was a
+// message that named the wrong engine. The text is now carried out as `error`.
+const genSafe = async (fn) => {
+  try { return await fn(); }
+  catch (e) { return { ok: false, threw: true, error: String((e && e.message) || e).slice(0, 600) }; }
+};
 // THE DEFAULT LANE GENERATOR — async by law (see the import note above). Named so
 // the selftest can prove it never hands back a synchronous value again.
-const defaultGen = (p, _lane) => claudeGenAsync(p, "sonnet");
+const DMN_MODEL = "sonnet";
+const defaultGen = (p, _lane) => claudeGenAsync(p, DMN_MODEL);
+
+// ── #8 · WHOSE ENGINE FAILED? ───────────────────────────────────────────────
+// Since the 17 Jul migration EVERY rollout rides `claude -p` (see the header):
+// the tanks are a ROLLOUT BUDGET, not a Gemini quota this organ spends. But the
+// old code wrote any `limit_hit` through fuelboard.record429 — the fuelboard's
+// GEMINI-quota instrument — and fuelboard.mjs:96 turns one `last_429` stamp into
+// DEAD-TILL-LOCAL-MIDNIGHT. On 1 Aug 2026 one Claude-side error killed five
+// tanks in 2.6s and the DMN skipped for ~22h reporting "idle-tank headroom 0",
+// i.e. the exact lie this file's own comment at :155 already warns about.
+// A Gemini fault is now the ONLY thing that may touch a tank:
+//   · `status === 429` — the wire shape a real Gemini/HTTP client returns
+//     (claudeGen has NO `status` field; it signals a plan wall as `limit_hit`)
+//   · an explicit `engine: "gemini"` on an injected generator
+// Everything else stands the LANE down (budget discipline, unchanged) and is
+// recorded in the brain ledger instead of on the fuel gauge.
+const geminiFault = (r) => !!(r && (r.status === 429 || r.engine === "gemini"));
+const engineFault = (r) => !!(r && (r.limit_hit || r.threw) && !geminiFault(r));
+
+// ── #7 · THE DMN'S SPEND BECOMES VISIBLE TO THE BRAIN BUDGET ────────────────
+// Measured 4 Aug 2026: 0 of 2,882 brain_ledger.jsonl rows are DMN, while a full
+// stadium night fires up to ~57 `claude -p` calls (49 rollouts + up to 8
+// counter-rollouts) — every one of them on the same Max subscription window
+// brain.mjs rations. The window could therefore be spent twice over and the
+// governor would never see it. Rows are the SAME shape brain.mjs and cortex.mjs
+// write (cortex.mjs:301 is the precedent), so windowUsage() picks them up with
+// no change on the brain side. HONESTY: a component the engine did not report
+// is null, never 0, and an estimated total says so (`tokens_estimated`).
+// A ledger write is TELEMETRY — same law as safeUse: it may never kill the pass.
+// (BLEDGER itself is declared with the other paths below, after __dirname.)
+const DMN_JOBS = ["dmn_rollout", "dmn_counter", "dmn_bg_drain"];
+function ledgerRow(job, r, lane, now = new Date()) {
+  return {
+    ts: now.toISOString(), job, engine: "claude", model: DMN_MODEL,
+    input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+    cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+    total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+    duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+    // #8 forensics: which lane, and what the engine actually said
+    lane: lane || null, limit_signal: r.limit_signal || null, http_status: r.http_status ?? null,
+  };
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const PRECACHE  = join(STATE_DIR, "dmn_precache.json");
+const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");   // #7 — the shared window ledger (append-only; brain.mjs owns the schema)
 const AW = "http://localhost:5600";
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
@@ -79,6 +129,12 @@ function writeAtomic(path, obj) {
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
 const MAX_ROLLOUTS = 8;                              // legacy engine's cap (frozen)
+// MIN_STADIUM_BUDGET preserves the pre-audit literal `8` in `totalBudget < 8`
+// VERBATIM — no new number is guessed here. It is the legacy engine's own
+// rollout cap (MAX_ROLLOUTS above): below one legacy dream's worth of budget
+// there is nothing to cluster, so the stadium stands down. Named + surfaced as
+// a have/need counter (#106) instead of a bare inequality.
+const MIN_STADIUM_BUDGET = MAX_ROLLOUTS;
 const MAX_ROLLOUTS_NIGHT = 100;                      // the stadium's hard cap (clusters saturate ~100)
 const ROLLOUTS_PER_WEAK = 25;                        // depth per weak point before diminishing returns
 const PERSONAS = ["a brisk recruiter screening for buzzwords", "a staff engineer mid-incident demanding ordered steps", "a principal engineer dissecting line-level mechanism", "a skeptical PM asking why an LLM at all"];
@@ -202,7 +258,20 @@ async function dream(deps = {}) {
   const keys = deps.keys || loadHippoKeys();
   const lanes = borrowableTanks(board, keys);
   const totalBudget = lanes.reduce((a, l) => a + l.budget, 0);
-  if (totalBudget < 8) return { ok: false, skipped: `idle-tank headroom ${totalBudget} < 8 — the stadium only spends use-it-or-lose-it quota` };
+  if (totalBudget < MIN_STADIUM_BUDGET) {
+    // #8 + #106 — THE SKIP LINE THAT LIED. The old text was
+    //   "idle-tank headroom 0 < 8 — the stadium only spends use-it-or-lose-it quota"
+    // which reads as "the free Gemini pool is spent". On 1 Aug the pool was 99%
+    // FULL: five tanks were frozen COLD by a CLAUDE-side error mis-written as a
+    // Gemini 429. The line now shows have/need AND names the real reason a lane
+    // is unavailable, so the captain can tell an empty pool from a faulted board.
+    const all = (board.tanks || []);
+    const cold = all.filter(t => t.enabled && t.key_index !== null && !["HOT", "WARM"].includes(stateOf(t)));
+    const why = cold.length
+      ? ` · ${cold.length}/${all.length} tank(s) frozen: ${cold.map(t => `${t.id}=${stateOf(t)}${t.last_429 ? `(faulted ${String(t.last_429).slice(0, 19)})` : ""}`).join(", ")} — a frozen tank is a FAULT stamp, not spent quota`
+      : ` · ${lanes.length}/${all.length} lane(s) borrowable — genuinely spent`;
+    return { ok: false, skipped: `idle-tank headroom ${totalBudget}/${MIN_STADIUM_BUDGET} needed${why}` };
+  }
   // E2E audit 25 Jul 2026 — THE VERIFICATION RESERVE. The planner used to hand
   // EVERY unit of measured headroom to rollouts; the verification phase then spent
   // up to 8 MORE units, round-robin, with no budget check at all. A lane that had
@@ -236,6 +305,17 @@ async function dream(deps = {}) {
   // A gauge write is TELEMETRY: it must never be able to kill the thing it measures.
   const safeUse = (id, units, naive) => { try { use(id, units, naive); } catch { } };
   const safeFault = (id) => { try { fault(id); } catch { } };
+  // #7 — the meter. Injected in the selftest; a throw here is telemetry failing,
+  // never the dream failing (same law as safeUse above).
+  const ledger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
+  const meter = (job, r, laneId) => { try { ledger(ledgerRow(job, r, laneId, new Date())); } catch { } };
+  // #8 — THE SHARED-ENGINE FAILURE GUARD (not a budget: a guard that stops ONE
+  // identical failure repeating across every lane). All lanes ride ONE upstream
+  // Claude engine, so the fuelboard's founding premise — "7 accounts = 7
+  // independent pools" — does not hold here. When that one engine refuses, the
+  // remaining lanes will each pay a call to be told the same thing. The first
+  // engine-side refusal stands the WHOLE stadium down and records why.
+  const engine = { down: null, error: null };
   const rollouts = [];
   // THE STADIUM — lanes drain in PARALLEL; inside a lane the calls stay serial
   // (per-project RPM is the real ceiling, not concurrency). A wire 429 STANDS
@@ -243,14 +323,25 @@ async function dream(deps = {}) {
   // floors the learned ceiling) — a dry lane never burns its whole budget.
   await Promise.all(plan.map(async (lane) => {
     for (const job of lane.jobs) {
+      if (engine.down) { lane.dry = true; break; }   // #8 — the shared engine already refused; do not re-ask it per lane
       const r = await genSafe(() => gen(rolloutPrompt(job.w, job.persona), lane));
       safeUse(lane.tank.id, 1, 3000);                // measured spend on ITS OWN gauge + naive-shadow
       lane.spent++;                                  // …and on the lane's own remaining-budget counter (audit 25 Jul)
+      meter("dmn_rollout", r, lane.tank.id);         // #7 — the brain window SEES this call now
       if (!r.ok) {
         // audit 25 Jul: claudeGen signals a plan/rate limit as `limit_hit`; it has
         // no `status` field, so the old `r.status === 429` never fired and a dry
         // lane silently burned its whole budget. `status` kept for injected deps.
-        if (r.limit_hit || r.status === 429) { safeFault(lane.tank.id); lane.dry = true; break; }
+        // audit 4 Aug (#8): the two causes are now TOLD APART. A wire/Gemini 429
+        // faults the tank (that gauge measures Gemini quota). A Claude-side wall
+        // stands the lane — and the shared engine — down WITHOUT touching the
+        // fuel board, because no Gemini quota was spent to justify freezing it.
+        if (geminiFault(r)) { safeFault(lane.tank.id); lane.dry = true; break; }
+        if (engineFault(r)) {
+          lane.dry = true;
+          if (!engine.down) { engine.down = "claude"; engine.error = r.error || (r.limit_hit ? "plan/rate wall" : "engine threw"); }
+          break;
+        }
         continue;
       }
       try {
@@ -260,7 +351,9 @@ async function dream(deps = {}) {
       } catch { }
     }
   }));
-  if (!rollouts.length) return { ok: false, skipped: "every rollout failed/dry — no dream tonight" };
+  // #8 — name the engine, not the tanks. "dry" used to mean "the Gemini pool is
+  // spent"; on the shared Claude lane it usually means the subscription refused.
+  if (!rollouts.length) return { ok: false, skipped: `every rollout failed/dry — no dream tonight${engine.down ? ` (the ${engine.down} engine stood the stadium down: ${String(engine.error).slice(0, 160)} — NO Gemini tank was faulted for it)` : ""}`, engine_down: engine.down, engine_error: engine.error };
   const clusters = clusterRollouts(rollouts).slice(0, 8);
   // THE VERIFICATION PHASE — every cluster faces ONE hostile counter-rollout.
   // "broken" → DROPPED (better no ammunition than wrong ammunition); a lane
@@ -291,10 +384,12 @@ async function dream(deps = {}) {
   }
   await Promise.all(assign.map(async ({ c, lane }) => {
     let verified = null;
-    if (lane) {
+    if (lane && !engine.down) {                      // #8 — never fire a counter at an engine that just refused
       const r = await genSafe(() => gen(counterPrompt(c), lane));
       safeUse(lane.tank.id, 1, 2000);
-      if (!r.ok && (r.limit_hit || r.status === 429)) safeFault(lane.tank.id);
+      meter("dmn_counter", r, lane.tank.id);         // #7
+      if (!r.ok && geminiFault(r)) safeFault(lane.tank.id);
+      if (!r.ok && engineFault(r) && !engine.down) { engine.down = "claude"; engine.error = r.error || "plan/rate wall"; }
       if (r.ok) {
         try {
           const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
@@ -308,9 +403,11 @@ async function dream(deps = {}) {
   }));
   if (!entries.length) return { ok: false, skipped: "verification killed every cluster — better no ammunition than wrong ammunition" };
   entries.sort((a, b) => (Number(b.verified) - Number(a.verified)) || (b.votes - a.votes));
-  const out = { date: localDate(now), dreamed_at: now.toISOString(), engine: "stadium", lanes: plan.filter(l => l.jobs.length).map(l => l.tank.id), rollouts: rollouts.length, verified: entries.filter(e => e.verified).length, entries: entries.slice(0, 6), inert: true };
+  const out = { date: localDate(now), dreamed_at: now.toISOString(), engine: "stadium", lanes: plan.filter(l => l.jobs.length).map(l => l.tank.id), rollouts: rollouts.length, verified: entries.filter(e => e.verified).length, entries: entries.slice(0, 6), inert: true,
+    // honesty (#8/#106): a PARTIAL night must not read like a full one
+    planned_rollouts: nRoll, engine_down: engine.down || null, engine_error: engine.error || null };
   (deps.write || ((o) => writeAtomic(PRECACHE, o)))(out);
-  return { ok: true, entries: out.entries.length, rollouts: rollouts.length, verified: out.verified, lanes: out.lanes };
+  return { ok: true, entries: out.entries.length, rollouts: rollouts.length, planned_rollouts: nRoll, verified: out.verified, lanes: out.lanes, engine_down: engine.down, engine_error: engine.error };
 }
 
 // ---------------------------------------------------------------------------
@@ -338,6 +435,12 @@ async function drainBg(deps = {}) {
   const use = deps.recordUse || recordUse;
   // same law as the stadium: a gauge write is telemetry and may never kill the drain
   const safeUse = (id, units, naive) => { try { use(id, units, naive); } catch { } };
+  // #7 — the drain spends the same subscription window; it meters too.
+  const ledger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
+  const meter = (job, r, laneId) => { try { ledger(ledgerRow(job, r, laneId, new Date())); } catch { } };
+  // #8 — the drain had NO limit handling at all: a refusing engine burned all
+  // BG_DRAIN_CAP jobs one after another to be told the same thing six times.
+  const engine = { down: null, error: null };
   const post = deps.post || (async (body) => { const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); });
   const batch = open.slice(0, BG_DRAIN_CAP);
   let drained = 0;
@@ -356,7 +459,15 @@ async function drainBg(deps = {}) {
     const spot = b.spotlight || {};
     const r = await genSafe(() => gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly. THE MOMENT: ${JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600)}. Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane));
     safeUse(lane.tank.id, 1, 2500);
-    if (!r.ok) continue;
+    meter("dmn_bg_drain", r, lane.tank.id);          // #7
+    if (!r.ok) {
+      // #8 — a Gemini wire 429 faults ITS tank; a Claude-side wall stops the
+      // drain outright (the thoughts stay queued — this file's own honest-retry
+      // law) and NEVER writes a Gemini fault it did not earn.
+      if (geminiFault(r)) { try { (deps.record429 || record429)(lane.tank.id); } catch { } continue; }
+      if (engineFault(r)) { engine.down = "claude"; engine.error = r.error || "plan/rate wall"; break; }
+      continue;
+    }
     try {
       const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
       const obj = JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw);
@@ -365,7 +476,7 @@ async function drainBg(deps = {}) {
       if (res && res.ok) drained++;
     } catch { }
   }
-  return { ok: true, drained, waiting: open.length - drained };
+  return { ok: true, drained, waiting: open.length - drained, engine_down: engine.down || null, engine_error: engine.error || null };
 }
 
 // ---------------------------------------------------------------------------
@@ -417,7 +528,9 @@ async function selftest() {
   const boardFix = (head) => ({ tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 250 * 0.85 - head, enabled: true, key_index: 5 }] });
   const keysFix = ["k0", "k1", "k2", "k3", "k4", "k5"];
   const genOK = async (p) => ({ ok: true, text: p.includes("hostile staff-engineer") ? JSON.stringify({ verdict: "sound", why: "holds" }) : JSON.stringify({ stall_point: /eval/.test(p) ? "precision recall tradeoff at threshold" : "lost context after compaction", reframe_15s: "start from the confusion matrix, one cell at a time", drill: "hand-compute P/R on 10 rows" }) });
-  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, now: new Date("2026-07-14T15:00:00") };
+  // appendLedger is injected on every fixture: a selftest must never append a
+  // real row to the shared brain_ledger (it would bill his live window for a test)
+  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, appendLedger: () => {}, now: new Date("2026-07-14T15:00:00") };
 
   // the gates (shared by both engines; exercised on the plan of record)
   assert("CONSERVE tone MUTES the dream (a depleted captain rests)", (await dream({ ...base, tone: { effects: { dmn_allowed: false } } })).skipped.includes("conserve"));
@@ -546,6 +659,60 @@ async function selftest() {
     try { rThrow = await dream({ ...base, recordUse: () => { throw new Error("EPERM: tanks.json busy"); }, record429: () => { throw new Error("EPERM"); }, write: () => {} }); }
     catch { rThrow = { ok: false, threw: true }; }
     assert("STADIUM: a fuelboard write fault never kills the dream (telemetry ≠ the dream)", rThrow.ok === true && rThrow.rollouts >= 1);
+
+    // ── #8 · CROSS-ENGINE FAULT ATTRIBUTION (organism audit, 4 Aug 2026) ────
+    // 1 Aug 01:48 IST: ONE `claude -p` error was written through record429 onto
+    // FIVE Gemini tanks (five faults in 2.6s) whose Gemini quota was never spent.
+    // fuelboard.mjs:96 froze them till local midnight and the Rest Room was down
+    // ~22h reporting "idle-tank headroom 0" — a false reason for a false fault.
+    {
+      const fiveLanes = { tanks: ["T1", "T2", "T5", "T6", "T7"].map((id, i) => (
+        { id, name: id, region: "r" + i, key_index: i, quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true })) };
+      const faults5 = [], metered = [];
+      let claudeCalls = 0;
+      // the real shape claudegen returns on a plan wall: limit_hit, NO `status`
+      const genClaudeWall = async () => { claudeCalls++; return { ok: false, limit_hit: true, limit_signal: "api_error_status", http_status: 429, error: "You've hit your weekly limit · resets 11:30pm", total_tokens: 12, duration_ms: 5 }; };
+      const rWall = await dream({ ...base, board: fiveLanes, generate: genClaudeWall, recordUse: () => {}, record429: (id) => faults5.push(id), appendLedger: (row) => metered.push(row), write: () => { throw new Error("must not write"); } });
+      assert("#8: a CLAUDE-side wall faults ZERO Gemini tanks (the 1 Aug five-tank kill cannot recur)", faults5.length === 0);
+      // the lanes fan out CONCURRENTLY (Promise.all), so the first round of one
+      // call per lane is already in flight before any answer comes back — the
+      // guard stops everything AFTER that round. 5 lanes × 10 jobs each = 50
+      // possible calls; the whole stadium stands down at 5, one per lane.
+      assert("#8: the shared engine stands the WHOLE stadium down after one round (5 calls, not 50)",
+        claudeCalls === fiveLanes.tanks.length && rWall.engine_down === "claude");
+      assert("#8: the skip NAMES the engine and keeps the error text (forensics survive)",
+        rWall.ok === false && rWall.skipped.includes("claude engine") && rWall.skipped.includes("NO Gemini tank") && String(rWall.engine_error).includes("weekly limit"));
+      assert("#8: a GENUINE wire 429 still faults its own tank (the instrument is not disarmed)",
+        geminiFault({ status: 429 }) === true && geminiFault({ ok: false, limit_hit: true }) === false && engineFault({ ok: false, limit_hit: true }) === true);
+      // a thrown generator is an engine fault too, and its message is preserved
+      const thrown = await genSafe(() => { throw new Error("spawn claude EINVAL"); });
+      assert("#8: a THROWN engine error keeps its text (genSafe no longer swallows it)",
+        thrown.ok === false && thrown.threw === true && thrown.error.includes("EINVAL") && engineFault(thrown) === true);
+
+      // ── #7 · THE SPEND IS ON THE BRAIN WINDOW ────────────────────────────
+      const rows = [];
+      const rMet = await dream({ ...base, board: fiveLanes, appendLedger: (row) => rows.push(row), recordUse: () => {}, write: () => {} });
+      assert("#7: every rollout AND every counter-rollout lands a brain_ledger row",
+        rows.length === rMet.rollouts + rMet.entries && rows.filter(x => x.job === "dmn_rollout").length === rMet.rollouts);
+      assert("#7: the rows are brain-shaped (engine/model/ok/limit_hit) so windowUsage sees them",
+        rows.every(x => x.engine === "claude" && x.model === DMN_MODEL && "ok" in x && "limit_hit" in x && "total_tokens" in x && DMN_JOBS.includes(x.job)));
+      assert("#7: an unreported token split is NULL and the total says it is an ESTIMATE (never a fake zero)",
+        rows.every(x => x.input_tokens === null && x.output_tokens === null && x.tokens_estimated === true));
+      assert("#7: the failing calls are metered too — a refusal is spend the window must see",
+        metered.length === fiveLanes.tanks.length && metered.every(x => x.ok === false && x.limit_hit === true && x.job === "dmn_rollout")
+        && new Set(metered.map(x => x.lane)).size === fiveLanes.tanks.length);
+      // telemetry must never kill the dream (same law as the fuelboard write)
+      const rLedgerThrow = await dream({ ...base, appendLedger: () => { throw new Error("EPERM: brain_ledger.jsonl busy"); }, recordUse: () => {}, write: () => {} });
+      assert("#7: a ledger write fault never kills the dream (telemetry ≠ the dream)", rLedgerThrow.ok === true && rLedgerThrow.rollouts >= 1);
+    }
+
+    // #106 — the headroom skip is a have/need counter that names the real cause
+    {
+      const frozen = { tanks: [{ id: "T7", name: "DMN", region: "d", key_index: 5, quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, last_429: "2026-07-14T01:48:00.000Z", day: localDate(new Date("2026-07-14T15:00:00")) }] };
+      const rCold = await dream({ ...base, board: frozen });
+      assert("#106: 'no headroom' shows have/need AND says the tank is FAULTED, not spent",
+        rCold.ok === false && /headroom \d+\/\d+ needed/.test(rCold.skipped) && rCold.skipped.includes("FAULT stamp"));
+    }
   }
 
   // M22 — THE BG DRAIN: second spotlight on idle lanes, folded back via :4113
@@ -562,23 +729,23 @@ async function selftest() {
     ] };
     const posts = []; const spends = {};
     const genBG = async () => ({ ok: true, text: JSON.stringify({ concept: "attention", insight: "the suppressed read: caching kills recompute, the handshakes stay — hold that distinction" }) });
-    const r = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, post: async (b) => { posts.push(b); return { ok: true }; } });
+    const r = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, post: async (b) => { posts.push(b); return { ok: true }; } });
     assert("DRAIN: open thoughts drained on idle lanes, folded back via :4113", r.ok && r.drained === 2 && posts.length === 2 && posts[0].moment_id === "bg1" && posts[0].tokens.includes("attention"));
     assert("DRAIN: already-drained entries never re-drain (event-sourced)", !posts.some(p => p.moment_id === "bg0"));
     assert("DRAIN: every spend recorded on ITS lane", Object.keys(spends).length >= 1);
-    const rMute = await drainBg({ tone: { effects: { dmn_allowed: false } }, readBgQueue: () => bgRows });
+    const rMute = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: false } }, readBgQueue: () => bgRows });
     assert("DRAIN: conserve tone mutes the drain too", rMute.ok === false && rMute.skipped.includes("conserve"));
     const t12 = { tanks: [
       { id: "T1", name: "Gaffer", region: "mouth", key_index: 0, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
       { id: "T2", name: "Watcher", region: "vision", key_index: 1, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
     ] };
-    const rT12 = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    const rT12 = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
     assert("DRAIN: mouth/eyes lanes NEVER borrowed mid-day (pickTank's law)", rT12.ok === false && rT12.skipped.includes("never spend the core"));
-    const rAway = await drainBg({ away: true, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    const rAway = await drainBg({ appendLedger: () => {}, away: true, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
     assert("DRAIN: away-time legalizes the borrow (same law as the stadium)", rAway.ok && rAway.drained === 2);
-    const rDown = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => { throw new Error("nucleus down"); } });
+    const rDown = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => { throw new Error("nucleus down"); } });
     assert("DRAIN: thalamus down → thoughts stay queued (honest retry, nothing lost)", rDown.ok && rDown.drained === 0 && rDown.waiting === 2);
-    const rNone = await drainBg({ tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
+    const rNone = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
     assert("DRAIN: empty queue → quiet no-op", rNone.ok && rNone.drained === 0 && rNone.note);
   }
 
@@ -616,7 +783,24 @@ async function main() {
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
   if (mode === "status") {
     const p = readJson(PRECACHE);
-    console.log(p ? `dmn: precache ${p.date} — ${p.entries.length} predicted stall(s) loaded (${p.rollouts} rollouts${p.engine === "stadium" ? ` · stadium across ${(p.lanes || []).join("+")} · ${p.verified || 0} verified` : " · legacy"}) · INERT until M7 serves it through the earned-voice gate` : "dmn: no precache yet — it dreams when he's away");
+    console.log(p ? `dmn: precache ${p.date} — ${p.entries.length} predicted stall(s) loaded (${p.rollouts}${p.planned_rollouts ? `/${p.planned_rollouts} planned` : ""} rollouts${p.engine === "stadium" ? ` · stadium across ${(p.lanes || []).join("+")} · ${p.verified || 0} verified` : " · legacy"})${p.engine_down ? ` · PARTIAL: the ${p.engine_down} engine stood the stadium down (${String(p.engine_error).slice(0, 120)})` : ""} · INERT until M7 serves it through the earned-voice gate` : "dmn: no precache yet — it dreams when he's away");
+    // #7/#8 — THE ADDRESS. The DMN's spend and its outages now live in the shared
+    // brain ledger; this is where a human reads them back. Before this, a Claude
+    // refusal left only a `last_429` timestamp on the wrong instrument.
+    const rows = readLines(BLEDGER).filter(r => DMN_JOBS.includes(r.job));
+    if (!rows.length) console.log("dmn: brain-ledger rows for this organ: 0/0 — nothing metered yet (the spend is invisible to the budget until it dreams)");
+    else {
+      const today = localDate();
+      const mine = rows.filter(r => String(r.ts || "").slice(0, 10) === today);
+      const tok = mine.reduce((a, r) => a + (r.total_tokens || 0), 0);
+      const est = mine.filter(r => r.tokens_estimated).length;
+      const fails = rows.filter(r => r.ok === false);
+      const last = fails[fails.length - 1];
+      console.log(`dmn: metered on the brain window — ${mine.length}/${rows.length} call(s) today, ${tok.toLocaleString()} tok${est ? ` (${est}/${mine.length} totals are length-ESTIMATES, not engine-reported)` : ""}`);
+      console.log(last
+        ? `dmn: last failed call ${last.ts} on ${last.lane || "?"} — limit_hit=${!!last.limit_hit}${last.limit_signal ? ` via ${last.limit_signal}` : ""}${last.http_status ? ` (HTTP ${last.http_status})` : ""} :: ${String(last.error || "").slice(0, 200)}`
+        : `dmn: no failed calls on record (${rows.length} metered)`);
+    }
     return;
   }
   if (mode === "drain") {
@@ -628,9 +812,14 @@ async function main() {
   const bg = await drainBg({}).catch(() => ({ ok: false, skipped: "drain error" }));
   if (bg.ok && bg.drained) console.log(`dmn: second spotlight — ${bg.drained} suppressed thought(s) drained`);
   const r = await dream({ force: process.argv.includes("--force") });
-  console.log(r.ok ? `dmn: dreamed — ${r.entries} stall signature(s) from ${r.rollouts} rollouts across ${(r.lanes || []).join("+")} (${r.verified} verified; INERT ammunition for M7)` : `dmn: no dream — ${r.skipped}`);
+  console.log(r.ok
+    ? `dmn: dreamed — ${r.entries} stall signature(s) from ${r.rollouts}/${r.planned_rollouts} planned rollouts across ${(r.lanes || []).join("+")} (${r.verified} verified; INERT ammunition for M7)${r.engine_down ? ` · PARTIAL: the ${r.engine_down} engine refused mid-pass — ${String(r.engine_error).slice(0, 140)}` : ""}`
+    : `dmn: no dream — ${r.skipped}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { weakVector, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP };
+export { weakVector, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP,
+  // audit 4 Aug 2026 — the new seams, exported so the doctor/other suites can
+  // hold the fault-attribution (#8) and the meter (#7) to the same rules
+  geminiFault, engineFault, ledgerRow, genSafe, DMN_JOBS, DMN_MODEL, MIN_STADIUM_BUDGET };

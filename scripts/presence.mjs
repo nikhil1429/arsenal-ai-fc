@@ -16,17 +16,26 @@
 //        conserve mute at the mouth. On a conserve day it senses but stays
 //        OFF the wire (rest is the agenda). AW unreachable → silent no-op.
 //        Sole writer of presence_log.jsonl (gitignored). Zero LLM.
-// MODES: node scripts/presence.mjs sense [--demo] · calibrate · status · selftest
+// MODES: node scripts/presence.mjs sense [--demo] · calibrate · status · roll · selftest
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync,
+         statSync, openSync, closeSync, readSync, readdirSync, mkdtempSync, rmSync } from "node:fs";
+import { join, dirname, basename } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { currentTone } from "./tone.mjs";
+// #6 (producer side): the ONE canonical concept vocabulary. capture.mjs owns it and
+// thalamus.mjs:90 already imports the same two functions — presence joins that lane
+// rather than growing a third private copy of the canon (the drift the audit killed
+// in validators.mjs). Pure functions over dressing-room/state/concepts.json; no writes.
+import { loadRegistry, canonicalize } from "./capture.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const PLOG      = join(STATE_DIR, "presence_log.jsonl");
+const CONCEPTS  = join(STATE_DIR, "concepts.json");
+const SPRINT    = join(STATE_DIR, "sprint.json");
 const AW = "http://localhost:5600";
 const THALAMUS = "http://127.0.0.1:4113";
 
@@ -42,8 +51,95 @@ function loadSignature(deps = {}) {
   return fitted && fitted.min_switch_rate_per_min ? { ...SIGNATURE, ...fitted } : SIGNATURE;
 }
 const pctl = (arr, p) => { const a = [...arr].sort((x, y) => x - y); return a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : 0; };
-// fit to his own normal: p95 of calm-work rates becomes the bar (floored at factory)
-function calibrate(deps = {}) {
+
+// ---------------------------------------------------------------------------
+// #50 — THE MONOTONE RATCHET (audit 2 Aug 2026, finding 23). URGENT: it refits
+// 03:30 every Sunday and it has ALREADY fired twice.
+// ---------------------------------------------------------------------------
+// The old fit built its "calm work" reference population from rows whose `edge`
+// label was FROZEN INTO THE ROW at write time (:281) by the PREVIOUS fit. Raise
+// the bar → more rows get written `edge:false` → those newly-"calm" rows carry
+// HIGHER rates → the next p95 is higher → the bar rises again. A positive
+// feedback loop with the sensor's own output on both sides.
+//
+// The audit's leave-one-out proof: 28 post-fit rows entered the calm pool ONLY
+// because the bar had risen (factory would label them edge). Refit WITHOUT those
+// 28 = 6.1 — unchanged. WITH them = 7.4. So 100% of the climb was feedback and
+// 0% was his behaviour. Live confirmation on this machine: presence_thresholds
+// .json now reads {"min_switch_rate_per_min":7.4,"min_total_switches":59,
+// "fitted_at":"2026-08-02"} — the predicted ratchet landed.
+//
+// Measured on the live 1,613-row ledger while writing this fix:
+//   legacy (frozen labels, whole log) → 7.3 / 59   ← the climb, still climbing
+//   factory relabel, whole log        → 6.0 / 55
+//   factory relabel, last  5 days     → 6.0 / 58
+//   factory relabel, last 10 days     → 6.0 / 56
+//   factory relabel, last 14 days     → 6.0 / 56
+// A stable reference population holds the bar flat across every window width.
+//
+// TRAP (named in ORGANISM_ISSUES.md): "cap the fitted bar at 1.5x factory" is
+// WRONG — 1.5 x 30 = 45 switches, BELOW the already-fitted 53/59, so that guard
+// would silently LOWER the switch bar instead of arresting the drift. Not used.
+//
+// TWO REPAIRS, both required (the second is the co-defect the scanner missed):
+//   1. RELABEL from the factory SIGNATURE, never from the frozen `edge` field.
+//      The reference population then depends only on his telemetry, so a fit can
+//      go DOWN as well as up — a ratchet is a ratchet because it cannot fall.
+//   2. A RECENCY WINDOW. The old read took the ENTIRE log (`readLines(PLOG)`),
+//      so the calm pool only ever grew (621 rows at 16 days, ~2,457 by week 8)
+//      and "his normal" was increasingly set by months-old behaviour.
+//
+// NO GUESSED WINDOW WIDTH (captain's standing order). The window is DERIVED from
+// the two minimums this function already enforced before the audit and which are
+// preserved verbatim below: take the FEWEST most-recent days that still satisfy
+// them. Nothing new was chosen; the smallest sufficient window is the one that
+// dilutes least. `days_available` vs `window_days` is reported as a have/need
+// counter (#106) so the width is visible instead of assumed.
+const CALIBRATE = {
+  min_days: 5,             // verbatim from the pre-audit `if (days.size < 5)`
+  min_calm_samples: 20,    // verbatim from the pre-audit `if (calm.length < 20)`
+};
+// the STABLE label: what the FACTORY signature says about a row, computed from the
+// row's own telemetry. Never `r.edge` — that field is the previous fit's opinion.
+const factoryEdge = (r) => isLeadingEdge({
+  span_min: Number(r.span_min) || 0, switches: Number(r.switches) || 0, rate_per_min: Number(r.rate) || 0,
+}, SIGNATURE);
+const hasTelemetry = (r) => r && Number.isFinite(Number(r.rate)) && Number.isFinite(Number(r.switches));
+
+// the fewest most-recent days that clear BOTH minimums; the whole span if they never do.
+function calmWindow(passRows, cfg = CALIBRATE) {
+  const days = [...new Set(passRows.map(r => r.day).filter(Boolean))].sort();
+  const calmIn = (set) => passRows.filter(r => set.has(r.day) && Number(r.rate) > 0 && !factoryEdge(r));
+  for (let k = Math.min(cfg.min_days, days.length); k <= days.length; k++) {
+    const win = days.slice(-k);
+    const calm = calmIn(new Set(win));
+    if (calm.length >= cfg.min_calm_samples) return { window: win, calm, enough: true, days_available: days.length };
+  }
+  return { window: days, calm: calmIn(new Set(days)), enough: false, days_available: days.length };
+}
+
+// Grow the tail read until it holds enough history to satisfy the minimums, or
+// until it has reached the start of recorded history. FIRST-READ SIZE, NOT A CAP:
+// the loop doubles, and `complete:false` (fewer rows returned than asked for) is
+// the only stop condition other than sufficiency.
+const CALIBRATE_FIRST_ROWS = 1024;
+function calibrationRows(deps = {}) {
+  let want = CALIBRATE_FIRST_ROWS;
+  for (;;) {
+    const rep = presenceTailReport(want, deps);
+    const pass = sensePassRows(rep.rows).filter(hasTelemetry);
+    const days = new Set(pass.map(r => r.day));
+    const enough = days.size >= CALIBRATE.min_days && calmWindow(pass).enough;
+    if (enough || !rep.complete) return rep;      // sufficient, or history exhausted
+    want *= 2;
+  }
+}
+
+// calibrateLegacy — the pre-audit fit, FROZEN VERBATIM (layering law, CLAUDE.md).
+// It is the record of the ratchet: frozen `edge` labels + the whole-log read. Kept
+// so the delta is provable, and the selftest asserts the two engines diverge on
+// contaminated data. NOT the plan of record; nothing calls it but the selftest.
+function calibrateLegacy(deps = {}) {
   const rows = deps.rows || readLines(PLOG);
   const days = new Set(rows.map(r => r.day));
   if (days.size < 5) return { ok: false, skipped: `${days.size} day(s) of telemetry — the sensor fits to HIM only after 5 (factory defaults hold)` };
@@ -58,6 +154,53 @@ function calibrate(deps = {}) {
   return { ok: true, ...fitted };
 }
 
+// THE PLAN OF RECORD — fit to his own normal against a STABLE, RECENT population.
+function calibrate(deps = {}) {
+  // injected rows ARE the whole history by definition, hence complete:false — the
+  // flag means "the tail read asked for more than existed", i.e. history exhausted.
+  const src = deps.rows
+    ? { rows: deps.rows, complete: false, have: deps.rows.length, need: deps.rows.length, scanned: ["(injected)"], archives: 0 }
+    : calibrationRows(deps);
+  const pass = sensePassRows(src.rows).filter(hasTelemetry);
+  const days = new Set(pass.map(r => r.day).filter(Boolean));
+  const scanned = { rows_scanned: src.rows.length, pass_rows: pass.length, files: src.scanned.length, history_complete: !src.complete };
+  if (days.size < CALIBRATE.min_days) {
+    return { ok: false, have_days: days.size, need_days: CALIBRATE.min_days, ...scanned,
+      skipped: `${days.size}/${CALIBRATE.min_days} day(s) of telemetry — the sensor fits to HIM only after ${CALIBRATE.min_days} (factory defaults hold)` };
+  }
+  const w = calmWindow(pass);
+  if (!w.enough) {
+    return { ok: false, have_samples: w.calm.length, need_samples: CALIBRATE.min_calm_samples, window_days: w.window.length, days_available: w.days_available, ...scanned,
+      skipped: `${w.calm.length}/${CALIBRATE.min_calm_samples} calm-work samples across all ${w.days_available} recorded day(s) — factory defaults hold` };
+  }
+  const inWindow = new Set(w.window);
+  // the counter that makes the ratchet visible: how many rows the FROZEN label
+  // would have called calm that the FACTORY signature calls a stall. Every one of
+  // those is a row the old fit used to raise its own bar with.
+  const windowPass = pass.filter(r => inWindow.has(r.day));
+  const frozenCalm = windowPass.filter(r => !r.edge && Number(r.rate) > 0).length;
+  const prev = deps.previous !== undefined ? deps.previous : readJson(THRESHOLDS);
+  const fitted = {
+    fitted_at: new Date().toISOString(),
+    // `days`/`samples` keep their pre-audit key names — presence_thresholds.json is
+    // read by loadSignature (spread over SIGNATURE) and by the status line.
+    days: w.window.length, samples: w.calm.length,
+    labelled_by: "factory-signature",          // NOT the frozen per-row `edge` (that is what ratcheted)
+    window_days: w.window.length, days_available: w.days_available,
+    window_from: w.window[0], window_to: w.window[w.window.length - 1],
+    frozen_label_calm: frozenCalm, factory_label_calm: w.calm.length,
+    ratchet_rows_excluded: Math.max(0, frozenCalm - w.calm.length),
+    min_switch_rate_per_min: Math.max(SIGNATURE.min_switch_rate_per_min, Math.round(pctl(w.calm.map(r => Number(r.rate)), 0.95) * 1.25 * 10) / 10),
+    min_total_switches: Math.max(SIGNATURE.min_total_switches, Math.round(pctl(w.calm.map(r => Number(r.switches)), 0.95) * 1.25)),
+  };
+  fitted.previous = prev ? { min_switch_rate_per_min: prev.min_switch_rate_per_min, min_total_switches: prev.min_total_switches, fitted_at: prev.fitted_at || null } : null;
+  fitted.direction = !prev ? "first fit"
+    : fitted.min_switch_rate_per_min > prev.min_switch_rate_per_min ? "UP"
+    : fitted.min_switch_rate_per_min < prev.min_switch_rate_per_min ? "down (a ratchet cannot do this)" : "flat";
+  (deps.write || ((o) => { mkdirSync(dirname(THRESHOLDS), { recursive: true }); const tmp = THRESHOLDS + ".tmp"; writeFileSync(tmp, JSON.stringify(o, null, 2) + "\n"); renameSync(tmp, THRESHOLDS); }))(fitted);
+  return { ok: true, ...fitted, ...scanned };
+}
+
 // E2E audit 25 Jul 2026 (b831d29c): every sense pass appends TWO rows — the
 // thrash row and the kind:"focus" ledger row — so `status` printed rows.length
 // and reported exactly 2× the real pass count ("48 sense passes today" for 24
@@ -67,8 +210,199 @@ function calibrate(deps = {}) {
 // NOT this file's to fix — reported to the audit instead.)
 const sensePassRows = (rows) => (rows || []).filter(r => r && !r.kind);
 
+// One day's rows, read from the tail and PROVEN complete (#4/#51). It widens until
+// a row OLDER than `day` is inside the window — that is what proves midnight was
+// crossed — or until history runs out. 256 is a first-read row count, not a cap.
+function presenceDayReport(day, deps = {}) {
+  let n = 256;
+  for (;;) {
+    const rep = presenceTailReport(n, deps);
+    const sawOlder = rep.rows.some(r => r && r.day && r.day < day);
+    if (sawOlder || !rep.complete) {
+      return { rows: rep.rows.filter(r => r && r.day === day), covers_boundary: sawOlder || !rep.complete,
+        scanned_rows: rep.rows.length, files: rep.scanned.length, archives: rep.archives };
+    }
+    n *= 2;
+  }
+}
+
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+// ---------------------------------------------------------------------------
+// #51 — THE UNBOUNDED LEDGER: A MONTHLY ROLL, AND A TAIL READER THE OTHERS SHARE
+// ---------------------------------------------------------------------------
+// presence_log.jsonl is append-only with NO rotation: 285,369 bytes / 1,613 rows
+// after 19 calendar days (measured 4 Aug 2026) => ~6.7 MB/yr, and it has FIVE
+// whole-file readers repo-wide (presence calibrate, brain liveSignal, brain
+// gatherInputs, distiller, dugout's boardroom briefing) that between them keep
+// ~1% of what they parse.
+//
+// presence.mjs is the SOLE WRITER of this ledger, so the roll belongs here.
+// Rolled rows go to `presence_log.<YYYY-MM>.jsonl` beside the live file — the
+// exact sibling shape brain.mjs's archiveSiblings() and dugout.mjs's
+// readPresenceDay() already glob for, so the three organs agree on the layout.
+//
+// EVERY reader below tolerates BOTH layouts. Before the first roll there are no
+// siblings and the live file answers everything; after a roll the live file is
+// short and the tail read walks back into the archives. Nothing is ever deleted:
+// a roll MOVES rows, it never drops them, and re-running a roll that already
+// happened appends nothing (the archive is de-duplicated on write).
+//
+// NO GUESSED BYTE BUDGET. TAIL_CHUNK is a FIRST-READ SIZE, not a cap: the read
+// doubles from the end of the file until it holds n+1 newlines or reaches byte 0.
+// 64 KiB is one filesystem read-ahead unit and already spans ~370 rows at this
+// ledger's own measured mean row size (285,369 B / 1,613 rows = 177 B/row), so
+// every caller in this repo (n = 4, 6, 12, 200) is answered by the first syscall.
+const TAIL_CHUNK = 65536;
+const HEAD_CHUNK = 8192;                     // enough for the ledger's first row; same doubling law would apply
+
+function tailText(p, n, chunk = TAIL_CHUNK) {
+  let fd = null;
+  try {
+    const size = statSync(p).size;
+    if (!size) return "";
+    fd = openSync(p, "r");
+    let want = Math.min(size, chunk);
+    for (;;) {
+      const buf = Buffer.alloc(want);
+      readSync(fd, buf, 0, want, size - want);
+      const text = buf.toString("utf8");
+      if (want >= size) return text;                                   // whole file: nothing was cut
+      if ((text.match(/\n/g) || []).length > n) return text.slice(text.indexOf("\n") + 1);   // drop the sliced fragment
+      want = Math.min(size, want * 2);
+    }
+  } catch { return ""; } finally { if (fd !== null) { try { closeSync(fd); } catch {} } }
+}
+function headText(p, bytes = HEAD_CHUNK) {
+  let fd = null;
+  try {
+    const size = statSync(p).size;
+    if (!size) return "";
+    const want = Math.min(size, bytes);
+    const buf = Buffer.alloc(want);
+    fd = openSync(p, "r");
+    readSync(fd, buf, 0, want, 0);
+    const text = buf.toString("utf8");
+    return want >= size ? text : text.slice(0, text.lastIndexOf("\n") + 1);
+  } catch { return ""; } finally { if (fd !== null) { try { closeSync(fd); } catch {} } }
+}
+const parseLines = (text) => { const o = []; for (const l of String(text || "").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } return o; };
+
+const archivePath = (file, month) => String(file).replace(/\.jsonl$/, `.${month}.jsonl`);
+// newest archive first — `presence_log.2026-08.jsonl` sorts after `presence_log.2026-07.jsonl`
+function archiveSiblings(file) {
+  try {
+    const dir = dirname(file), base = basename(file, ".jsonl");
+    const re = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[0-9][0-9A-Za-z_-]*\\.jsonl$`);
+    return readdirSync(dir).filter(f => re.test(f)).sort().reverse().map(f => join(dir, f));
+  } catch { return []; }
+}
+
+// THE SHARED TAIL READER — the helper brain.mjs / distiller.mjs / dugout.mjs can
+// import instead of re-parsing the whole ledger. Returns rows OLDEST-LAST, exactly
+// like readLines(...).slice(-n) did, so it is a drop-in for every existing call.
+//   presenceTailReport(n, { file }) -> { rows, have, need, complete, scanned, archives }
+// `complete` is the honesty flag (#4): false means history ran out before n rows
+// were found — a short answer, never a measured zero. Callers that only want rows
+// use presenceTail(n, { file }).
+function presenceTailReport(n, deps = {}) {
+  const file = deps.file || PLOG;
+  const readT = deps.tailText || tailText;
+  const want = Math.max(0, Number(n) || 0);
+  let rows = existsSync(file) ? parseLines(readT(file, want)) : [];
+  const scanned = [file];
+  const archives = deps.archives !== undefined ? deps.archives : archiveSiblings(file);
+  for (const a of archives) {
+    if (rows.length >= want) break;
+    const short = want - rows.length;
+    const older = parseLines(readT(a, short));
+    rows = older.slice(-short).concat(rows);
+    scanned.push(a);
+  }
+  rows = rows.slice(-want);
+  return { rows, have: rows.length, need: want, complete: rows.length >= want, scanned, archives: archives.length };
+}
+const presenceTail = (n, deps = {}) => presenceTailReport(n, deps).rows;
+
+const monthOf = (r) => String((r && (r.day || r.ts)) || "").slice(0, 7);
+// Cheap check: is the ledger's FIRST row older than the current month? One bounded
+// head read (8 KiB), not a whole-file parse — this runs on every 10-minute pass.
+function rollDue(now = new Date(), deps = {}) {
+  const file = deps.file || PLOG;
+  const head = deps.head !== undefined ? deps.head : (existsSync(file) ? parseLines(headText(file)) : []);
+  const first = head[0];
+  const current_month = localDate(now).slice(0, 7);
+  if (!first) return { due: false, current_month, reason: "ledger empty — nothing to roll" };
+  const m = monthOf(first);
+  if (!m) return { due: false, current_month, reason: "first row carries no date — never guess one" };
+  return { due: m < current_month, first_month: m, current_month, reason: m < current_month ? `oldest row is ${m}, we are in ${current_month}` : `oldest row is already ${m}` };
+}
+
+// THE ROLL. Moves every row from a PAST month into its own archive and rewrites the
+// live ledger with the current month only. Idempotent: an archive is read before it
+// is written and identical rows are not appended twice, so a crash between the two
+// writes costs a re-run, never a duplicate or a loss.
+function rollPresenceLog(now = new Date(), deps = {}) {
+  const file = deps.file || PLOG;
+  const current_month = localDate(now).slice(0, 7);
+  const rows = deps.rows || (existsSync(file) ? readLines(file) : []);
+  if (!rows.length) return { rolled: false, moved: 0, kept: 0, months: [], reason: "ledger empty — nothing to roll" };
+  const older = new Map(); const keep = [];
+  for (const r of rows) { const m = monthOf(r); if (m && m < current_month) { if (!older.has(m)) older.set(m, []); older.get(m).push(r); } else keep.push(r); }
+  const months = [...older.keys()].sort();
+  if (!months.length) return { rolled: false, moved: 0, kept: keep.length, months: [], reason: `all ${rows.length} row(s) are in ${current_month}` };
+  const write = deps.write || ((p, text) => { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, text); renameSync(tmp, p); });
+  const readArchive = deps.readArchive || ((p) => (existsSync(p) ? readLines(p) : []));
+  const archives = []; let moved = 0, appended = 0;
+  for (const m of months) {
+    const ap = archivePath(file, m);
+    const have = readArchive(ap);
+    const seen = new Set(have.map(r => JSON.stringify(r)));
+    const add = older.get(m).filter(r => !seen.has(JSON.stringify(r)));
+    write(ap, [...have, ...add].map(r => JSON.stringify(r)).join("\n") + "\n");
+    archives.push({ file: ap, month: m, rows: have.length + add.length, appended: add.length, already_there: older.get(m).length - add.length });
+    moved += older.get(m).length; appended += add.length;
+  }
+  // RE-READ BEFORE THE REWRITE. presence has a documented overlapping-instance scar
+  // (:241-252) and the ledger is append-only: a pass that appended a row while the
+  // archive was being written would be erased by a rewrite built from the stale read.
+  // Recomputing `keep` from the file as it stands NOW costs one read a month and
+  // closes the only path by which this roll could lose a row.
+  const fresh = deps.rows ? rows : (deps.reread ? deps.reread(file) : (existsSync(file) ? readLines(file) : rows));
+  const archivedKeys = new Set();
+  for (const m of months) for (const r of older.get(m)) archivedKeys.add(JSON.stringify(r));
+  const keepNow = fresh.filter(r => !archivedKeys.has(JSON.stringify(r)));
+  write(file, keepNow.length ? keepNow.map(r => JSON.stringify(r)).join("\n") + "\n" : "");
+  return { rolled: true, moved, appended, kept: keepNow.length, late_rows_preserved: Math.max(0, keepNow.length - keep.length), months, archives, current_month };
+}
+// SECRETS GUARD (CLAUDE.md: "the repo is PUBLIC · glance before every push").
+// .gitignore:181 names `dressing-room/state/presence_log.jsonl` LITERALLY — it does
+// not cover the `presence_log.<YYYY-MM>.jsonl` siblings this roll creates, and those
+// carry window titles and tone. presence.mjs cannot fix .gitignore (not its file, and
+// not its business), so it does the next honest thing: it SAYS SO, every time an
+// archive exists and the pattern is missing. An unmeasured silence is not a clean bill.
+const IGNORE_LINE = "dressing-room/state/presence_log.*.jsonl";
+function archiveIgnoreGap(deps = {}) {
+  const archives = deps.archives || archiveSiblings(deps.file || PLOG);
+  if (!archives.length) return { gap: false, archives: 0, needed_line: IGNORE_LINE };
+  let gi = deps.gitignore;
+  if (gi === undefined) { try { gi = readFileSync(join(__dirname, "..", ".gitignore"), "utf8"); } catch { gi = ""; } }
+  // any line that globs the month suffix counts; a literal `presence_log.jsonl` does not
+  const covered = String(gi || "").split("\n").some(l => {
+    const s = l.trim();
+    if (!s || s.startsWith("#")) return false;
+    return /presence_log/.test(s) && /\*/.test(s);
+  });
+  return { gap: !covered, archives: archives.length, needed_line: IGNORE_LINE };
+}
+
+// the pass-time guard: only pay for the whole-file read on the day a roll is actually due
+function maybeRoll(now = new Date(), deps = {}) {
+  const due = rollDue(now, deps);
+  if (!due.due) return { rolled: false, ...due };
+  return { ...rollPresenceLog(now, deps), ...due };
+}
 
 // ---------------------------------------------------------------------------
 // THE READ — window events (last 10 min) → thrash telemetry
@@ -259,6 +593,74 @@ const fetchWindowEvents = (deps = {}) => fetchAwEvents("aw-watcher-window", deps
 const fetchAfkEvents = (deps = {}) => fetchAwEvents("aw-watcher-afk", deps);
 
 // ---------------------------------------------------------------------------
+// #6 (PRODUCER SIDE) — `concept_tokens` MUST CARRY CONCEPTS
+// ---------------------------------------------------------------------------
+// The field name is a contract. thalamus.mjs joins it against the DMN's precached
+// concept names, adds every token to the novelty vocabulary (`N.seen`), and fuses
+// co-temporal moments that share one. This organ was filling it with WINDOW-TITLE
+// WORDS: over all 95 stall afferents ever posted the histogram was google 83,
+// chrome 78, claude 37, youtube 19, gmail 12, windows 10, amazon 9 — browser
+// chrome, not one concept. Measured result: 0 of 95 stalls matched the precache,
+// so ~49 DMN rollouts a night produced zero whispers in 16 days, and dossier.json
+// still reads "concepts":{} after 90 stall moments.
+//
+// So: canonicalize through capture.mjs's registry (the same canon thalamus.mjs
+// imports) and emit ONLY what resolves to a registered concept or skill id. When
+// nothing in the title is canon — the everyday case — fall back to sprint.json's
+// CURRENT task, because "he stalled while he was supposed to be on today's ground"
+// is a defensible prior. It is said OUT LOUD in `concept_source` rather than
+// smuggled: window-title-canon | sprint-current | none. The raw title words are
+// NOT thrown away — they move to `title_words`, which is what they always were.
+//
+// DIVERGENCE FROM thalamus.dossierKey(), on purpose: with no registry loaded that
+// helper passes the raw token through (capture's law — a missing registry may
+// never block a WRITE). Here a missing registry means emit NOTHING, because
+// passing raw window words through is precisely the defect being repaired.
+const EMPTY_REG = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false };
+let _regCache = { key: "", reg: EMPTY_REG };
+function conceptRegistry(path = CONCEPTS) {
+  // mtime+size keyed: the canon is hand-edited, and a 10-minute job must not need
+  // a restart to see a newly registered concept — nor re-parse the file per token.
+  try {
+    const st = statSync(path);
+    const key = `${st.mtimeMs}:${st.size}`;
+    if (key !== _regCache.key) _regCache = { key, reg: loadRegistry(path) };
+    return _regCache.reg;
+  } catch { return EMPTY_REG; }
+}
+function canonToken(word, reg) {
+  if (!reg || !reg.loaded) return null;
+  const w = String(word || "").trim();
+  if (!w) return null;
+  const c = canonicalize(w, "concept", reg);
+  if (!c.unregistered) return c.canonical;
+  const s = canonicalize(w, "skill", reg);          // a hands-on skill id is as real a concept as a theory one
+  return s.unregistered ? null : s.canonical;
+}
+const conceptTokens = (words, reg) => {
+  const out = [];
+  for (const w of words || []) { const id = canonToken(w, reg); if (id && !out.includes(id)) out.push(id); }
+  return out;
+};
+function sprintConcept(deps = {}) {
+  const j = deps.sprint !== undefined ? deps.sprint : readJson(SPRINT);
+  const cur = j && j.progress && j.progress.current;
+  const task = cur && cur.task ? String(cur.task) : "";
+  return task.trim() || null;
+}
+// title words -> { concept_tokens, concept_source }. Honest by construction: an
+// empty array is an empty array, never a browser name dressed up as a concept.
+function stallConcepts(titleWords, deps = {}) {
+  const reg = deps.registry !== undefined ? deps.registry : conceptRegistry();
+  const fromTitle = conceptTokens(titleWords, reg);
+  if (fromTitle.length) return { concept_tokens: fromTitle, concept_source: "window-title-canon" };
+  const sc = sprintConcept(deps);
+  const id = sc ? canonToken(sc, reg) : null;
+  if (id) return { concept_tokens: [id], concept_source: "sprint-current" };
+  return { concept_tokens: [], concept_source: "none" };
+}
+
+// ---------------------------------------------------------------------------
 // THE SENSE PASS — telemetry → (maybe) one afferent · always the log
 // ---------------------------------------------------------------------------
 async function sense(deps = {}) {
@@ -277,7 +679,29 @@ async function sense(deps = {}) {
     } catch { return false; }
   });
   const append = deps.append || ((r) => { mkdirSync(dirname(PLOG), { recursive: true }); appendFileSync(PLOG, JSON.stringify(r) + "\n"); });
-  let _log = null; const log = () => (_log || (_log = readLines(PLOG)));   // read the ledger at most once per pass
+  // #51: the monthly roll rides the sense pass, because this organ is the ledger's
+  // sole writer. It costs ONE bounded head read on 30 days out of 31; on the day a
+  // roll is due it pays for one full read and one rewrite. Pass `roll: null` to keep
+  // an injected-events caller (the selftest) entirely off the filesystem.
+  const rolled = deps.roll !== undefined ? deps.roll : maybeRoll(now);
+  // #51: the ledger is read from its TAIL, not whole. Every pass appends exactly TWO
+  // rows (the thrash row and the kind:"focus" row — documented at :61-68 and a perfect
+  // 2:1 on every single day of the ledger), so two full passes is strictly more than
+  // the one-of-each these lookups need. It is NOT a cap: findPrev widens the window
+  // and walks into the archives until the row is found or history genuinely runs out.
+  // "I did not look far enough" must never be rendered as "there is no previous row".
+  const ROWS_PER_PASS = 2, PREV_TAIL_ROWS = ROWS_PER_PASS * 2;
+  const readTail = deps.readTail || ((n) => presenceTailReport(n, { file: deps.plog || PLOG }));
+  let _rep = null;
+  const findPrev = (pred) => {
+    let n = PREV_TAIL_ROWS;
+    for (;;) {
+      const rep = (_rep && _rep.need >= n) ? _rep : (_rep = readTail(n));
+      const hit = rep.rows.filter(pred).slice(-1)[0] || null;
+      if (hit || !rep.complete) return hit;                 // found it, or that is all the history there is
+      n = rep.need * 2;
+    }
+  };
   const row = { ts: now.toISOString(), day: localDate(now), switches: t.switches, rate: Math.round(t.rate_per_min * 10) / 10, span_min: Math.round(t.span_min * 10) / 10, edge, tone: tone.arousal, posted: false };
   // E2E audit 25 Jul 2026 (b6e6a127): the focus lane deduped on onset but this
   // one fired on EVERY matching pass. One continuous 25-min thrash spell spans 3
@@ -286,10 +710,18 @@ async function sense(deps = {}) {
   // an inflated count. Same law as the focus lane now: only the false→true edge
   // (episode onset) speaks; every pass still LOGS edge rows so the calibrate
   // dataset and the telemetry season are untouched.
-  const prevEdge = deps.prevEdge !== undefined ? deps.prevEdge
-    : log().filter(r => !r.kind).slice(-1)[0] || null;
+  const prevEdge = deps.prevEdge !== undefined ? deps.prevEdge : findPrev(r => r && !r.kind);
+  // #6: real concept tokens, or an honest empty array — never browser chrome.
+  const cw = stallConcepts(t.top_words, deps);
+  if (edge) { row.concept_source = cw.concept_source; row.concepts = cw.concept_tokens; }
   if (edge && !(prevEdge && prevEdge.edge) && tone.arousal !== "conserve") {
-    row.posted = await post({ modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true, text: `tab-thrash forming: ${t.switches} switches in ${Math.round(t.span_min)}min`, concept_tokens: t.top_words });
+    row.posted = await post({
+      modality: "bus", source: "presence", event_key: "stall:leading-edge", stall: true,
+      text: `tab-thrash forming: ${t.switches} switches in ${Math.round(t.span_min)}min`,
+      concept_tokens: cw.concept_tokens,        // canon ids only (may be []) — the field name is a contract
+      concept_source: cw.concept_source,        // window-title-canon | sprint-current | none
+      title_words: t.top_words,                 // the raw window words, kept, under their real name
+    });
   }
   append(row);
   // THE FOCUS LEDGER rides the same pass — zero extra fetches, zero tokens.
@@ -299,14 +731,22 @@ async function sense(deps = {}) {
   // the window events were fetched too, so injected-events callers stay offline.
   const afk = deps.afk !== undefined ? deps.afk : (deps.events !== undefined ? null : await fetchAfkEvents(deps));
   const f = focusRead(events, now, deps.matcher || null, FOCUS, afk);
-  const prevFocus = deps.prevFocus !== undefined ? deps.prevFocus
-    : log().filter(r => r.kind === "focus").slice(-1)[0] || null;
+  const prevFocus = deps.prevFocus !== undefined ? deps.prevFocus : findPrev(r => r && r.kind === "focus");
   const frow = { ts: now.toISOString(), day: localDate(now), kind: "focus", ...f, tone: tone.arousal, posted: false };
   if (f.break_live && !(prevFocus && prevFocus.break_live) && tone.arousal !== "conserve") {
-    frow.posted = await post({ modality: "bus", source: "presence", event_key: "focus:break", stall: false, text: `the thread snapped: ${f.break_run_min}min off after ${f.focus_min}min of work${f.pull ? " — pulled by " + f.pull : ""}`, concept_tokens: f.pull_words });
+    // #6, same law on this lane — but NO sprint fallback here. The pull words name
+    // what dragged him AWAY ("youtube", "cricket"); calling today's study ground the
+    // concept of a distraction would be a fabrication, not a prior.
+    const pullCanon = conceptTokens(f.pull_words, deps.registry !== undefined ? deps.registry : conceptRegistry());
+    frow.posted = await post({
+      modality: "bus", source: "presence", event_key: "focus:break", stall: false,
+      text: `the thread snapped: ${f.break_run_min}min off after ${f.focus_min}min of work${f.pull ? " — pulled by " + f.pull : ""}`,
+      concept_tokens: pullCanon, concept_source: pullCanon.length ? "pull-title-canon" : "none",
+      pull_words: f.pull_words,                 // the raw distraction words, kept, under their real name
+    });
   }
   append(frow);
-  return { ok: true, edge, posted: row.posted, telemetry: t, focus: frow, muted: edge && tone.arousal === "conserve" };
+  return { ok: true, edge, posted: row.posted, telemetry: t, focus: frow, concepts: cw, rolled, muted: edge && tone.arousal === "conserve" };
 }
 
 // A FIXTURE of the Time-Auditor's config shape — the selftest asserts the
@@ -319,6 +759,14 @@ const FIXTURE_BUCKETS = {
     Learning: { apps: ["obsidian.exe"], domains: ["colab.research.google.com"] },
     Building: { apps: ["code.exe"], domains: ["github.com"] },
   },
+};
+// A FIXTURE of capture.mjs's registry shape (same reason as FIXTURE_BUCKETS: the
+// selftest must test the LOGIC, never the captain's live concepts.json — adding a
+// concept to his canon may not turn this file red).
+const FIXTURE_REG = {
+  loaded: true,
+  conceptAlias: new Map([["attention", "attention"], ["attention mechanism", "attention"], ["hallucinations", "hallucinations"], ["hallucination", "hallucinations"]]),
+  skillAlias: new Map([["python basics", "python_basics"], ["python", "python_basics"]]),
 };
 
 async function selftest() {
@@ -351,12 +799,36 @@ async function selftest() {
   // an hour ago. A selftest that reads live state tests the day, not the code.
   {
     const fx = bucketsMatcher(FIXTURE_BUCKETS);
-    const base = { now, tone: { arousal: "open", effects: {} }, signature: SIGNATURE, matcher: fx, prevEdge: { edge: false }, prevFocus: null, afk: null };
+    // `roll: null` and an injected registry/sprint keep the pass entirely off the
+    // filesystem — a selftest that reads live state tests the day, not the code.
+    const base = { now, tone: { arousal: "open", effects: {} }, signature: SIGNATURE, matcher: fx, prevEdge: { edge: false }, prevFocus: null, afk: null, roll: null, registry: FIXTURE_REG, sprint: null };
     const logs = []; let posted = null;
     const r = await sense({ ...base, events: mkEvents(40, 8), post: async (e) => { posted = e; return true; }, append: (x) => logs.push(x) });
     assert("leading edge + open tone → ONE afferent at the thalamus", r.edge && r.posted && posted.event_key === "stall:leading-edge");
-    assert("the afferent carries the concept hint for the precache match", Array.isArray(posted.concept_tokens) && posted.concept_tokens.includes("attention"));
+    // #6 REGRESSION (audit 2 Aug 2026, finding 13). The OLD assertion here read
+    // `posted.concept_tokens.includes("attention")` against a fixture title that
+    // happened to contain a concept — it encoded the very assumption that failed in
+    // production (real titles read "google", "chrome", "claude"; 0 of 95 stalls ever
+    // matched the DMN precache). It could not fail, so it protected nothing. The
+    // three assertions below test the actual contract: canon in, chrome out.
+    assert("#6 the afferent's concept_tokens are CANON ids (title word → registered concept)",
+      Array.isArray(posted.concept_tokens) && posted.concept_tokens.includes("attention") && posted.concept_source === "window-title-canon");
+    assert("#6 browser chrome NEVER reaches concept_tokens — it stays in title_words under its real name",
+      !posted.concept_tokens.some(w => ["google", "chrome", "docs", "editor"].includes(w)) && Array.isArray(posted.title_words) && posted.title_words.includes("google"));
     assert("every pass logs telemetry (the season's stall dataset)", logs.length === 2 && logs[0].edge === true && logs[1].kind === "focus");
+    // no canon in the title → the sprint's CURRENT task, said out loud in concept_source
+    let postedS = null;
+    await sense({ ...base, events: mkEvents(40, 8, "youtube - cricket highlights"), sprint: { progress: { current: { task: "Hallucinations" } } }, post: async (e) => { postedS = e; return true; }, append: () => {} });
+    assert("#6 no canon in the title → fall back to sprint's current concept, and SAY so",
+      postedS.concept_tokens.length === 1 && postedS.concept_tokens[0] === "hallucinations" && postedS.concept_source === "sprint-current");
+    let postedN = null;
+    await sense({ ...base, events: mkEvents(40, 8, "youtube - cricket highlights"), sprint: null, post: async (e) => { postedN = e; return true; }, append: () => {} });
+    assert("#6 nothing canon anywhere → an HONEST empty array, never a window word dressed as a concept",
+      Array.isArray(postedN.concept_tokens) && postedN.concept_tokens.length === 0 && postedN.concept_source === "none");
+    let postedE = null;
+    await sense({ ...base, events: mkEvents(40, 8), registry: EMPTY_REG, sprint: { progress: { current: { task: "Hallucinations" } } }, post: async (e) => { postedE = e; return true; }, append: () => {} });
+    assert("#6 NO registry on disk → emit nothing (a missing canon may not become a licence to ship titles)",
+      postedE.concept_tokens.length === 0 && postedE.concept_source === "none");
     let posted2 = null;
     const r2 = await sense({ ...base, events: mkEvents(40, 8), tone: { arousal: "conserve", effects: {} }, post: async () => { posted2 = true; return true; }, append: () => {} });
     assert("CONSERVE day: it senses but stays OFF the wire (rest is the agenda)", r2.edge && r2.muted && posted2 === null);
@@ -384,9 +856,14 @@ async function selftest() {
     const f1 = focusRead(evts, now, matcher);
     assert("SENTINEL: focus minutes counted, the live break seen with its pull", f1.focus_min >= 18 && f1.break_live === true && f1.pull === "chrome.exe" && f1.pull_words.includes("youtube"));
     let fposted = null;
-    const fbase = { now, events: evts, tone: { arousal: "open", effects: {} }, signature: SIGNATURE, matcher, prevFocus: null, prevEdge: null, afk: null };
+    const fbase = { now, events: evts, tone: { arousal: "open", effects: {} }, signature: SIGNATURE, matcher, prevFocus: null, prevEdge: null, afk: null, roll: null, registry: FIXTURE_REG, sprint: null };
     const rF = await sense({ ...fbase, post: async (e) => { fposted = e; return true; }, append: () => {} });
-    assert("SENTINEL: break ONSET fires ONE focus:break afferent with the pull words", rF.focus.posted === true && fposted && fposted.event_key === "focus:break" && fposted.concept_tokens.includes("youtube"));
+    // #6 on the break lane: the words that pulled him are carried as pull_words. They
+    // are NOT concepts ("youtube", "cricket"), so concept_tokens is honestly empty —
+    // and there is deliberately NO sprint fallback here (see the emit site).
+    assert("SENTINEL: break ONSET fires ONE focus:break afferent with the pull words", rF.focus.posted === true && fposted && fposted.event_key === "focus:break" && fposted.pull_words.includes("youtube"));
+    assert("#6 a distraction is never relabelled as today's concept — concept_tokens stays empty on a break",
+      Array.isArray(fposted.concept_tokens) && fposted.concept_tokens.length === 0 && fposted.concept_source === "none");
     let fposted2 = null;
     const rF2 = await sense({ ...fbase, prevFocus: { break_live: true }, post: async (e) => { fposted2 = e; return true; }, append: () => {} });
     assert("SENTINEL: an ONGOING break never re-fires (a nag is not a whisper)", rF2.focus.break_live === true && rF2.focus.posted === false && fposted2 === null);
@@ -426,14 +903,57 @@ async function selftest() {
   {
     const mkRows = (days, rate) => Array.from({ length: days * 6 }, (_, i) => ({ day: `2026-07-${String(1 + (i % days)).padStart(2, "0")}`, rate: rate + (i % 3), switches: 20 + (i % 10), edge: false }));
     assert("under 5 days of telemetry → factory defaults hold (honest skip)", calibrate({ rows: mkRows(3, 2), write: () => { throw new Error("no"); } }).ok === false);
+    assert("...and the honest skip is a have/need COUNTER, not a word (#106)",
+      calibrate({ rows: mkRows(3, 2), write: () => {} }).have_days === 3 && calibrate({ rows: mkRows(3, 2), write: () => {} }).need_days === CALIBRATE.min_days);
     let fitted = null;
-    const c = calibrate({ rows: mkRows(6, 6), write: (o) => { fitted = o; } });
-    assert("5+ days → thresholds fit to HIS p95 calm-work baseline (never below factory)", c.ok && fitted.min_switch_rate_per_min >= SIGNATURE.min_switch_rate_per_min && fitted.days === 6);
+    const c = calibrate({ rows: mkRows(6, 6), write: (o) => { fitted = o; }, previous: null });
+    assert("5+ days → thresholds fit to HIS p95 calm-work baseline (never below factory)", c.ok && fitted.min_switch_rate_per_min >= SIGNATURE.min_switch_rate_per_min);
+    assert("the fit states its own population: the recency window and the days available (#106)",
+      fitted.window_days === CALIBRATE.min_days && fitted.days_available === 6 && fitted.samples >= CALIBRATE.min_calm_samples && fitted.labelled_by === "factory-signature");
     const sigF = loadSignature({ fitted });
     assert("the fitted signature raises the bar for a high-baseline captain", sigF.min_switch_rate_per_min > SIGNATURE.min_switch_rate_per_min);
     const calmForHim = { span_min: 8, switches: 40, rate_per_min: 5.5 };
     assert("what was an 'edge' on factory becomes CALM once his normal is known", isLeadingEdge(calmForHim, SIGNATURE) === true && isLeadingEdge(calmForHim, sigF) === false);
     assert("no fitted file → factory signature, never crashes", loadSignature({ fitted: null }).min_switch_rate_per_min === 5);
+
+    // ------------------------------------------------------------------
+    // #50 REGRESSION (audit 2 Aug 2026, finding 23) — THE MONOTONE RATCHET.
+    // The contaminated population, built exactly as the live ledger built it:
+    // 40 genuinely calm rows, plus 20 rows that ARE stalls by the factory
+    // signature (rate 7, 50 switches, 8-min span) but were written `edge:false`
+    // because a previously-raised bar was in force. Those 20 are the feedback.
+    // ------------------------------------------------------------------
+    const calmRows = Array.from({ length: 40 }, (_, i) => ({ day: `2026-07-${String(10 + (i % 5)).padStart(2, "0")}`, rate: 2, switches: 10, span_min: 8, edge: false }));
+    const feedbackRows = Array.from({ length: 20 }, (_, i) => ({ day: `2026-07-${String(10 + (i % 5)).padStart(2, "0")}`, rate: 7, switches: 50, span_min: 8, edge: false }));
+    const contaminated = [...calmRows, ...feedbackRows];
+    let fRatchet = null, fFixed = null;
+    calibrateLegacy({ rows: contaminated, write: (o) => { fRatchet = o; } });
+    const cFixed = calibrate({ rows: contaminated, write: (o) => { fFixed = o; }, previous: null });
+    assert("#50 the FROZEN-label fit swallows its own output and climbs (the legacy engine, kept as the record)",
+      fRatchet.min_switch_rate_per_min > SIGNATURE.min_switch_rate_per_min);
+    assert("#50 relabelling from the FACTORY signature excludes every feedback row and holds the bar flat",
+      fFixed.min_switch_rate_per_min === SIGNATURE.min_switch_rate_per_min && fFixed.min_total_switches === SIGNATURE.min_total_switches &&
+      fFixed.min_switch_rate_per_min < fRatchet.min_switch_rate_per_min);
+    assert("#50 the excluded feedback rows are COUNTED and reported, not silently dropped (#4)",
+      cFixed.frozen_label_calm === 60 && cFixed.factory_label_calm === 40 && cFixed.ratchet_rows_excluded === 20);
+    // A ratchet is a ratchet because it cannot fall. Prove this one can.
+    const quiet = Array.from({ length: 40 }, (_, i) => ({ day: `2026-07-${String(10 + (i % 5)).padStart(2, "0")}`, rate: 1, switches: 5, span_min: 8, edge: true }));
+    assert("#50 a calmer week can LOWER the bar again — the fit is no longer one-way",
+      calibrate({ rows: quiet, write: () => {}, previous: { min_switch_rate_per_min: 7.4, min_total_switches: 59 } }).direction.startsWith("down"));
+    // THE RECENCY WINDOW (the co-defect): old, wilder days must not set today's normal.
+    const oldWild = Array.from({ length: 60 }, (_, i) => ({ day: `2026-06-${String(1 + (i % 10)).padStart(2, "0")}`, rate: 4.9, switches: 29, span_min: 8, edge: false }));
+    const recentCalm = Array.from({ length: 40 }, (_, i) => ({ day: `2026-07-${String(20 + (i % 5)).padStart(2, "0")}`, rate: 1, switches: 5, span_min: 8, edge: false }));
+    const win = calibrate({ rows: [...oldWild, ...recentCalm], write: () => {}, previous: null });
+    assert("#50 the recency window fits the FEWEST recent days that clear the minimums — ancient behaviour no longer dilutes his normal",
+      win.window_days === CALIBRATE.min_days && win.days_available === 15 && win.window_from === "2026-07-20" && win.samples === 40);
+    assert("#50 the window is DERIVED from the function's own pre-existing minimums, never a chosen number",
+      CALIBRATE.min_days === 5 && CALIBRATE.min_calm_samples === 20);
+    // the trap, asserted so nobody re-proposes it: 1.5 x factory is BELOW the live fit
+    assert("#50 TRAP: a '1.5x factory' cap would LOWER the switch bar (1.5x30=45 < the fitted 53/59) — not used",
+      Math.round(SIGNATURE.min_total_switches * 1.5) === 45);
+    // focus rows carry no rate/switches and must never enter the calm pool
+    assert("#50 focus-ledger rows are not sense passes and never reach the fit",
+      calibrate({ rows: [...contaminated, ...Array.from({ length: 50 }, () => ({ day: "2026-07-11", kind: "focus", focus_min: 9 }))], write: () => {}, previous: null }).factory_label_calm === 40);
   }
 
   // the wire and the vitals — E2E audit 25 Jul 2026 regressions
@@ -458,6 +978,81 @@ async function selftest() {
     assert("status counts sense PASSES, not rows — the focus ledger row is not a second pass", sensePassRows(day).length === 2 && day.length === 4);
   }
 
+  // ------------------------------------------------------------------------
+  // #51 — THE MONTHLY ROLL + THE SHARED TAIL READER, on REAL files in a temp dir.
+  // An unrun rotation is a hypothesis; this one actually moves bytes on disk.
+  // ------------------------------------------------------------------------
+  {
+    const dir = mkdtempSync(join(tmpdir(), "arsenal-presence-"));
+    const file = join(dir, "presence_log.jsonl");
+    const mk = (day, i, kind) => (kind
+      ? { ts: `${day}T0${i % 10}:00:00.000Z`, day, kind, focus_min: i, posted: false }
+      : { ts: `${day}T0${i % 10}:00:00.000Z`, day, switches: 10 + i, rate: 1, span_min: 8, edge: false, posted: false });
+    const july = [], aug = [];
+    for (let i = 0; i < 30; i++) { july.push(mk("2026-07-20", i)); july.push(mk("2026-07-20", i, "focus")); }
+    for (let i = 0; i < 6; i++) { aug.push(mk("2026-08-02", i)); aug.push(mk("2026-08-02", i, "focus")); }
+    const writeAll = (rows) => writeFileSync(file, rows.map(r => JSON.stringify(r)).join("\n") + "\n");
+    try {
+      writeAll([...july, ...aug]);
+      const aug4 = new Date("2026-08-04T09:00:00");
+      // the un-rolled layout must work exactly as before — nothing may break mid-flight
+      assert("#51 UN-ROLLED layout: the tail reader answers from the live file alone",
+        presenceTailReport(6, { file }).rows.length === 6 && presenceTailReport(6, { file }).archives === 0 &&
+        presenceTailReport(6, { file }).rows.every(r => r.day === "2026-08-02"));
+      assert("#51 asking for more rows than exist is an honest SHORT answer, never a padded one",
+        presenceTailReport(500, { file }).complete === false && presenceTailReport(500, { file }).rows.length === 72);
+      const due = rollDue(aug4, { file });
+      assert("#51 the roll is DUE when the ledger's oldest row predates the current month (one bounded head read)",
+        due.due === true && due.first_month === "2026-07" && due.current_month === "2026-08");
+      const r1 = rollPresenceLog(aug4, { file });
+      const arch = archivePath(file, "2026-07");
+      assert("#51 the roll MOVES the past month into presence_log.<YYYY-MM>.jsonl and keeps the current month live",
+        r1.rolled === true && r1.moved === 60 && r1.kept === 12 && existsSync(arch) &&
+        readLines(arch).length === 60 && readLines(file).length === 12);
+      assert("#51 the archive filename is the sibling shape brain.mjs/dugout.mjs already glob for",
+        archiveSiblings(file).length === 1 && basename(archiveSiblings(file)[0]) === "presence_log.2026-07.jsonl");
+      assert("#51 nothing is ever LOST by a roll — every archived row is byte-identical to what left the ledger",
+        JSON.stringify(readLines(arch)) === JSON.stringify(july));
+      assert("#51 a second roll is a no-op with an honest reason (idempotent)",
+        rollPresenceLog(aug4, { file }).rolled === false && maybeRoll(aug4, { file }).rolled === false);
+      // a concurrent sense pass appending mid-roll must survive the rewrite
+      writeAll([...july, ...aug]);
+      const late = mk("2026-08-04", 9);
+      const rLate = rollPresenceLog(aug4, { file, reread: () => [...july, ...aug, late] });
+      assert("#51 a row appended DURING the roll survives the rewrite (the append-only law holds through rotation)",
+        rLate.kept === 13 && rLate.late_rows_preserved === 1 && readLines(file).length === 13 &&
+        readLines(file).slice(-1)[0].ts === late.ts);
+      // crash simulation: the archive landed, the live rewrite did not. Re-running
+      // must not duplicate a single row.
+      writeAll([...july, ...aug]);
+      const r2 = rollPresenceLog(aug4, { file });
+      assert("#51 a crash BETWEEN the archive write and the live rewrite costs a re-run, never a duplicate",
+        r2.rolled === true && readLines(arch).length === 60 && r2.archives[0].appended === 0 && r2.archives[0].already_there === 60);
+      // after the roll the tail reader must walk back into the archive
+      const across = presenceTailReport(20, { file });
+      assert("#51 ROLLED layout: the tail read walks back into the archive and returns rows OLDEST-LAST",
+        across.rows.length === 20 && across.complete === true && across.archives === 1 &&
+        across.rows.slice(0, 8).every(r => r.day === "2026-07-20") && across.rows.slice(-12).every(r => r.day === "2026-08-02"));
+      const dayRep = presenceDayReport("2026-08-02", { file });
+      assert("#51 a day count PROVES it reached past midnight before reporting a total (#4)",
+        dayRep.rows.length === 12 && dayRep.covers_boundary === true && sensePassRows(dayRep.rows).length === 6);
+      // the pass-time lookups: found from the tail, and widened when the tail is short
+      const rPrev = await sense({ now, events: mkEvents(5, 8), tone: { arousal: "open", effects: {} }, signature: SIGNATURE,
+        matcher: bucketsMatcher(FIXTURE_BUCKETS), afk: null, roll: null, registry: EMPTY_REG, sprint: null, plog: file,
+        post: async () => true, append: () => {} });
+      assert("#51 the sense pass finds its previous rows from the ledger TAIL (no whole-file parse)", rPrev.ok === true);
+      writeAll([mk("2026-08-02", 0), ...Array.from({ length: 10 }, (_, i) => mk("2026-08-02", i, "focus"))]);
+      assert("#51 when the tail holds no matching row the window WIDENS — 'I did not look far enough' is never 'there is none'",
+        presenceTailReport(4, { file }).rows.filter(r => !r.kind).length === 0 &&
+        presenceTailReport(16, { file }).rows.filter(r => !r.kind).length >= 1);
+      // the repo is PUBLIC: a roll must never create an un-ignored file in silence
+      assert("#51 SECRETS: a literal `presence_log.jsonl` ignore line does NOT cover the archives — and the organ says so",
+        archiveIgnoreGap({ file, gitignore: "dressing-room/state/presence_log.jsonl\n" }).gap === true &&
+        archiveIgnoreGap({ file, gitignore: "dressing-room/state/presence_log.*.jsonl\n" }).gap === false &&
+        archiveIgnoreGap({ file: join(dir, "no_such_log.jsonl"), gitignore: "" }).gap === false);
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -467,12 +1062,45 @@ async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
   if (mode === "status") {
-    const rows = readLines(PLOG).filter(r => r.day === localDate());
-    const edges = rows.filter(r => r.edge);
-    console.log(`presence: ${sensePassRows(rows).length} sense pass(es) today · ${edges.length} leading edge(s) · ${edges.filter(r => r.posted).length} posted to the thalamus`);
+    // #106: have/need counters, never a status word — and the fit is stated with the
+    // population it was fitted on, so a ratcheted bar can be SEEN rather than trusted.
+    const day = localDate();
+    const d = presenceDayReport(day);
+    const rows = d.rows, passes = sensePassRows(rows), edges = passes.filter(r => r.edge);
+    const sig = loadSignature(), fitted = readJson(THRESHOLDS);
+    console.log(`presence: ${passes.length} sense pass(es) today · ${edges.length} leading edge(s) · ${edges.filter(r => r.posted).length} posted to the thalamus`);
+    console.log(`  bar in force: ${sig.min_switch_rate_per_min}/min + ${sig.min_total_switches} switches over ${sig.min_span_min}min` +
+      (fitted ? ` — fitted ${String(fitted.fitted_at).slice(0, 10)} on ${fitted.samples || "?"} calm sample(s) across ${fitted.window_days || fitted.days || "?"} day(s), labelled by ${fitted.labelled_by || "the FROZEN edge field (pre-#50 fit — refit to clear the ratchet)"}`
+              : ` — FACTORY (no fit on disk yet)`));
+    const recent = presenceTailReport(CALIBRATE_FIRST_ROWS, {});
+    const recentPass = sensePassRows(recent.rows).filter(hasTelemetry);
+    const w = calmWindow(recentPass);
+    console.log(`  calibration readiness: ${new Set(recentPass.map(r => r.day).filter(Boolean)).size}/${CALIBRATE.min_days} day(s) · ${w.calm.length}/${CALIBRATE.min_calm_samples} calm sample(s) in the last ${recent.rows.length} ledger row(s)` +
+      (w.enough ? ` — the Sunday fit will run on the last ${w.window.length} day(s)` : " — the Sunday fit will SKIP and the factory signature holds"));
+    console.log(`  ledger: read ${d.scanned_rows} row(s) from ${d.files} file(s) (${d.archives} archive(s))` +
+      (d.covers_boundary ? " — the window reached past midnight, today's count is complete" : " — WINDOW DID NOT REACH MIDNIGHT: today's count is a floor, not a total"));
+    const g = archiveIgnoreGap();
+    if (g.gap) console.log(`  ⚠ SECRETS: ${g.archives} rolled archive(s) are NOT covered by .gitignore (it names presence_log.jsonl literally). The repo is PUBLIC. Add:  ${g.needed_line}`);
     return;
   }
-  if (mode === "calibrate") { const c = calibrate(); console.log(c.ok ? `presence: fitted to HIS baselines — rate bar ${c.min_switch_rate_per_min}/min, switches ${c.min_total_switches} (${c.days} days, ${c.samples} samples)` : `presence: ${c.skipped}`); return; }
+  if (mode === "roll") {
+    const r = maybeRoll(new Date());
+    console.log(r.rolled
+      ? `presence: rolled ${r.moved} row(s) into ${r.months.join(", ")} (${r.appended} newly archived, ${r.kept} kept live) — ${r.archives.map(a => basename(a.file) + ":" + a.rows).join(" · ")}`
+      : `presence: no roll — ${r.reason}`);
+    const g = archiveIgnoreGap();
+    if (g.gap) console.log(`  ⚠ SECRETS: ${g.archives} rolled archive(s) are NOT covered by .gitignore (it names presence_log.jsonl literally). The repo is PUBLIC. Add:  ${g.needed_line}`);
+    return;
+  }
+  if (mode === "calibrate") {
+    const c = calibrate();
+    if (!c.ok) { console.log(`presence: ${c.skipped}`); return; }
+    console.log(`presence: fitted to HIS baselines — rate bar ${c.min_switch_rate_per_min}/min, switches ${c.min_total_switches}`);
+    console.log(`  population: ${c.samples} calm sample(s) over ${c.window_days}/${c.days_available} day(s) (${c.window_from} → ${c.window_to}), labelled by ${c.labelled_by}`);
+    console.log(`  ratchet check: the frozen edge field would have called ${c.frozen_label_calm} row(s) calm; the factory signature calls ${c.factory_label_calm}. ${c.ratchet_rows_excluded} feedback row(s) excluded.`);
+    console.log(`  direction vs previous: ${c.direction}${c.previous ? ` (was ${c.previous.min_switch_rate_per_min}/min, ${c.previous.min_total_switches} switches)` : ""}`);
+    return;
+  }
   if (mode === "sense") {
     const demo = process.argv.includes("--demo");
     const t0 = Date.now();                          // hoisted once — a mid-build clock tick shaved the rate under the bar (scar)
@@ -480,9 +1108,15 @@ async function main() {
     console.log(r.ok ? `presence: ${r.edge ? (r.posted ? "LEADING EDGE — afferent posted" : r.muted ? "leading edge, MUTED (conserve)" : "leading edge, thalamus asleep") : "calm"} (${r.telemetry.switches} switches / ${Math.round(r.telemetry.span_min)}min)` : `presence: ${r.skipped}`);
     return;
   }
-  console.log("presence.mjs — sense [--demo] | status | selftest");
+  console.log("presence.mjs — sense [--demo] | status | calibrate | roll | selftest");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { thrashTelemetry, isLeadingEdge, sense, calibrate, loadSignature, SIGNATURE, focusRead, focusReadLegacy, awayIntervals, bucketsMatcher, sensePassRows, fetchAwEvents, fetchWindowEvents, fetchAfkEvents, FOCUS };
+export { thrashTelemetry, isLeadingEdge, sense, calibrate, calibrateLegacy, calmWindow, factoryEdge, CALIBRATE,
+         loadSignature, SIGNATURE, focusRead, focusReadLegacy, awayIntervals, bucketsMatcher, sensePassRows,
+         fetchAwEvents, fetchWindowEvents, fetchAfkEvents, FOCUS,
+         // #51 — the shared, archive-tolerant readers the other four call sites can import
+         presenceTail, presenceTailReport, presenceDayReport, rollPresenceLog, rollDue, maybeRoll, archiveSiblings, archivePath,
+         // #6 — the producer-side concept canon
+         stallConcepts, conceptTokens, canonToken, conceptRegistry, sprintConcept };

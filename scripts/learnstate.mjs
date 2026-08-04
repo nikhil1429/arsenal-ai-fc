@@ -18,6 +18,7 @@ import { readFileSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { courseBrief } from "./course.mjs";   // audit #35 — the course tracker's one reader
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE = join(__dirname, "..", "dressing-room", "state");
@@ -69,6 +70,13 @@ const MEMO_EPISODES = 6;
 // markers, so editing the doc updates every future session on its next boot and
 // the two can never drift. Missing file, missing marker, empty block → null →
 // the brief prints exactly as it did before. It never guesses at the boundaries.
+//
+// AUDIT 4 Aug 2026 (#14): this loader is now EXPORTED and reused by
+// mcp-memory.mjs's get_context. It was reachable only from the SessionStart
+// brief, while CLAUDE.md mandates `get_context` as *the* session-start call —
+// so the door the captain is told to open was the one door with no teaching
+// card behind it. One parser, two doors: forking a second copy into the MCP is
+// exactly how the two would drift.
 const CARD_FILE  = join(__dirname, "..", "learning-layer", "HOW_HE_LEARNS.md");
 const CARD_BEGIN = "<!-- COLD-START-CARD:BEGIN";
 const CARD_END   = "<!-- COLD-START-CARD:END";
@@ -160,6 +168,18 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     const sp = (sprint.sprints || []).find(s => String(cur.id).startsWith(String(s.n) + "-"));
     L.push(`LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}`);
     L.push(`  MODE: ${modeLine}`);
+    // audit #35 — THE COURSE TRACKER GETS ITS ADDRESS.
+    // course.mjs was 670 lines with zero callers and course.json had never existed, while
+    // sprint.json's next_up is 1-05 and 1-06 — BOTH course-track, 9 chapters. So on 1-05 he
+    // would have been ASKED where he is instead of being TOLD. courseBrief() takes no args,
+    // never throws, and reports `present:false` honestly when nothing has been ingested yet.
+    // NOTE: the reader is HERE, never sprintsync — sprint.json is Sheet-driven, single-writer.
+    if (cur.track === "course") {
+      try {
+        const cb = courseBrief();
+        if (cb && cb.line) L.push(`  📼 ${cb.line}`);
+      } catch { /* a brief must never be the thing that breaks SessionStart */ }
+    }
   } else {
     L.push("LEARNING NOW: (sprint.json has no current task — run the sprint sync)");
   }
@@ -310,4 +330,7 @@ async function main() {
   console.log(brief(STATE, Date.now(), await loadMemory(), loadTeachingCard()));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
-export { brief, gather };
+// #14 — loadTeachingCard is exported so `get_context` can serve the SAME card
+// from the SAME parser (see the note above it). CARD_MAX rides along so a
+// consumer can state the cap it is honouring instead of inventing its own.
+export { brief, gather, loadTeachingCard, loadMemory, CARD_MAX };

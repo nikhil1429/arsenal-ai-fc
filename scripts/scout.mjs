@@ -19,6 +19,15 @@
 //   · The LEARN/RATIFY split is a PROPOSAL — the captain approves; the loop
 //     never decides what he won't know.
 //
+// FIELD CONTRACT (audit #37, 4 Aug 2026): every staged row carries
+//   `trigger_met: true` alongside the human-readable `trigger` string. It is
+//   redundant by construction — a row only EXISTS once its threshold passed —
+//   but `shadow.mjs:196` has always read `s.trigger_met`, a field this file had
+//   never emitted, so `staged_scrimmage` was false on every scrimmage the scout
+//   genuinely staged and the scrimmage_door shadow could never fire. The flag is
+//   also what ORGANISM_ANATOMY.md:180 documents the schema as carrying. Emitting
+//   it makes the reader and the doc true at once; shadow.mjs accepts both shapes.
+//
 // INPUT (read-only): learning_state.json · concepts.json · dossier_weights.json ·
 //   season.json · scout_config.json (canon)
 // OUTPUT: dressing-room/state/scout.json (sole writer)
@@ -80,7 +89,8 @@ function stageTriggers(ls, cfg, dossier, season) {
     const modes = (dossier && dossier.round_mode_map && dossier.round_mode_map.R_late) || ["novel", "negative_space"];
     staged.push({
       kind: "scrimmage",
-      trigger: `${ready.length} core concepts at DEFEND grade (threshold ${cfg.scrimmage.min_defend_grade_concepts})`,
+      trigger_met: true,                     // #37 — the field shadow.mjs reads
+      trigger: `${ready.length}/${cfg.scrimmage.min_defend_grade_concepts} core concepts at DEFEND grade`,
       brief: `R-late scrimmage staged over ${ready.map(c => c.id).join(" · ")} — probe modes: ${modes.join(", ")}. A door, open whenever you want it.`,
     });
   }
@@ -95,12 +105,34 @@ function stageTriggers(ls, cfg, dossier, season) {
     const item = season && season.pipeline_item ? ` (${season.pipeline_item})` : "";
     staged.push({
       kind: "finops_milestone",
-      trigger: `python core [${cfg.finops.skills.join(", ")}] all ≥ ${cfg.finops.min_state}`,
+      trigger_met: true,                     // #37 — same contract, every kind
+      trigger: `python core ${cfg.finops.skills.length}/${cfg.finops.skills.length} [${cfg.finops.skills.join(", ")}] all ≥ ${cfg.finops.min_state}`,
       brief: `The next FinOps milestone${item} is buildable on what you now hold. Spec sits ready when you want the ball.`,
     });
   }
   return staged;
 }
+
+// #106 — HAVE/NEED, not a bare word. `status:"awaiting_data"` tells him the
+// scout found nothing; it does not tell him how close nothing is to something.
+// This is a pure read of the SAME predicates stageTriggers uses (kept separate
+// so stageTriggers' return contract is untouched), so the counter can never
+// disagree with what actually staged. Every `need` is the configured threshold —
+// no number is invented here.
+function stageReadiness(ls, cfg) {
+  const concepts = ls && Array.isArray(ls.concepts) ? ls.concepts : [];
+  const ready = concepts.filter(c => c.track !== "skill" && c.core && isFluent(c));
+  const skillMap = new Map(concepts.filter(c => c.track === "skill").map(c => [c.id, c]));
+  const skillsHeld = cfg.finops.skills.filter(s => {
+    const c = skillMap.get(s);
+    return !!(c && (cfg.finops.min_state === "held" ? isHeldPlus(c) : isFluent(c)));
+  });
+  return {
+    scrimmage: { have: ready.length, need: cfg.scrimmage.min_defend_grade_concepts, of: "core concepts at DEFEND grade" },
+    finops: { have: skillsHeld.length, need: cfg.finops.skills.length, of: `python core skills ≥ ${cfg.finops.min_state}` },
+  };
+}
+const readinessLine = (r) => `scrimmage ${r.scrimmage.have}/${r.scrimmage.need} ${r.scrimmage.of} · finops ${r.finops.have}/${r.finops.need} ${r.finops.of}`;
 
 // LEARN/RATIFY — edges × DOSSIER round-weights, via concepts.json buckets.
 function edgeSplit(ls, registry, dossier, cfg) {
@@ -145,14 +177,18 @@ function warRoomRead(season, cfg, now) {
 // that opens, never a deadline.
 const applyWindow = (staged) => ({ open: staged.some(s => s.kind === "finops_milestone") });
 
-function buildScout(staged, edges, now, war_room = { active: false, mode: null }) {
+function buildScout(staged, edges, now, war_room = { active: false, mode: null }, readiness = null) {
   const any = staged.length || edges.learn.length || edges.ratify.length || war_room.active;
   return {
     date: localDate(now),
+    // status stays in the house data-sufficiency vocabulary (manager.mjs:159/:167
+    // pattern-matches === "ok"); the have/need counter rides BESIDE it, #106.
     status: any ? "ok" : "awaiting_data",
     low_confidence: false,
     generated_at: now.toISOString(),
     staged,
+    readiness,
+    readiness_line: readiness ? readinessLine(readiness) : null,
     edges,
     war_room,
     apply_window: applyWindow(staged),
@@ -191,16 +227,37 @@ async function selftest() {
   assert("finops milestone stages when python core held", staged.some(s => s.kind === "finops_milestone"));
   assert("brief is a door, not a debt", staged.every(s => !/you (should|must|owe)|by (mon|tue|wed|thu|fri|sat|sun)/i.test(s.brief)));
 
+  // #37 — THE FIELD CONTRACT shadow.mjs:196 reads. Without this the scrimmage
+  // door shadow can never fire, however genuinely the scout stages one.
+  assert("#37 EVERY staged row emits trigger_met:true (the field shadow.mjs reads)",
+    staged.length > 0 && staged.every(s => s.trigger_met === true));
+  assert("#37 the human-readable trigger string survives beside the flag",
+    staged.find(s => s.kind === "scrimmage").trigger.includes("DEFEND grade"));
+
   const below = stageTriggers({ concepts: ls.concepts.slice(2) }, cfg, dossier, null);
   assert("below threshold → no scrimmage staged", !below.some(s => s.kind === "scrimmage"));
+  assert("#37 no staged row means no trigger_met to read (absence, not a false flag)",
+    !below.some(s => s.kind === "scrimmage" && s.trigger_met));
+
+  // #106 — have/need beside the status word
+  const rdy = stageReadiness(ls, cfg);
+  assert("#106 readiness counts the SAME predicate that staged (3/3 core at DEFEND)",
+    rdy.scrimmage.have === 3 && rdy.scrimmage.need === cfg.scrimmage.min_defend_grade_concepts);
+  assert("#106 finops counter is have/need over the named skills", rdy.finops.have === 3 && rdy.finops.need === 3);
+  const rdyThin = stageReadiness({ concepts: ls.concepts.slice(2) }, cfg);
+  assert("#106 a scout that staged nothing still says how far off it is, not just 'awaiting_data'",
+    rdyThin.scrimmage.have < rdyThin.scrimmage.need && /\d+\/\d+/.test(readinessLine(rdyThin)));
+  assert("#106 readiness survives a bloodless world without inventing a number",
+    stageReadiness(null, cfg).scrimmage.have === 0 && stageReadiness(null, cfg).finops.have === 0);
 
   const edges = edgeSplit(ls, registry, dossier, cfg);
   assert("edge on high-weight ground → LEARN", edges.learn.some(e => e.concept === "chunking"));
   assert("edge on low-weight ground → RATIFY with negative-space line", edges.ratify.some(e => e.concept === "jagged" && e.negative_space_line.includes("yeh main nahi karta")));
   assert("edge text carried VERBATIM", edges.learn[0].edge_verbatim === "can size chunks, shaky on overlap tradeoffs");
 
-  const scout = buildScout(staged, edges, now);
+  const scout = buildScout(staged, edges, now, undefined, rdy);
   assert("split marked as a proposal (captain decides)", /proposal/.test(scout.note));
+  assert("#106 the counter ships on scout.json, not just the console", /3\/3/.test(scout.readiness_line));
 
   // WAR-ROOM — compressed-season protocol
   const wrCfg = { ...cfg, war_room: { taper_days: 10 } };
@@ -208,7 +265,7 @@ async function selftest() {
   assert("war-room activates inside the taper window", wrOn.active === true && wrOn.mode === "taper");
   assert("war-room silent outside the window", warRoomRead({ interview_dates: ["2026-09-20"] }, wrCfg, new Date(2026, 6, 12)).active === false);
   assert("war-room safe on garbage dates / no season", warRoomRead({ interview_dates: ["soon"] }, wrCfg, now).active === false && warRoomRead(null, wrCfg, now).active === false);
-  const wrScout = buildScout(staged, edges, now, wrOn);
+  const wrScout = buildScout(staged, edges, now, wrOn, rdy);
   assert("NO-COUNTDOWN LAW — war_room carries no date/days field", !JSON.stringify(wrScout.war_room).match(/\d{4}-\d{2}-\d{2}|days|until|left/i));
   assert("apply window opens with the finops door", wrScout.apply_window.open === true);
 
@@ -219,7 +276,10 @@ async function selftest() {
   const stripped = JSON.stringify({ ...scout, date: "", generated_at: "" });
   assert("NO-DATES LAW — no date strings outside envelope", !/\d{4}-\d{2}-\d{2}/.test(stripped));
 
-  assert("bloodless world → awaiting_data, no crash", buildScout(stageTriggers(null, cfg, dossier, null), edgeSplit(null, null, dossier, cfg), now).status === "awaiting_data");
+  const bloodless = buildScout(stageTriggers(null, cfg, dossier, null), edgeSplit(null, null, dossier, cfg), now, undefined, stageReadiness(null, cfg));
+  assert("bloodless world → awaiting_data, no crash", bloodless.status === "awaiting_data");
+  assert("#106 even awaiting_data reports 0/3 — the distance, not just the word", /0\/3/.test(bloodless.readiness_line));
+  assert("NO-DATES LAW holds with the new readiness fields", !/\d{4}-\d{2}-\d{2}/.test(JSON.stringify({ ...bloodless, date: "", generated_at: "" })));
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -239,11 +299,13 @@ async function main() {
   const dossier = readJson(join(STATE_DIR, "dossier_weights.json"));
   const season = readJson(join(STATE_DIR, "season.json"));
   const staged = stageTriggers(ls, cfg, dossier, season);
-  const out = buildScout(staged, edgeSplit(ls, registry, dossier, cfg), now, warRoomRead(season, cfg, now));
+  const out = buildScout(staged, edgeSplit(ls, registry, dossier, cfg), now, warRoomRead(season, cfg, now), stageReadiness(ls, cfg));
   writeAtomic(OUT, out);
-  console.log(`scout: ${out.staged.length} staged · learn=${out.edges.learn.length} ratify=${out.edges.ratify.length}${out.war_room.active ? " · WAR-ROOM taper" : ""} → ${OUT}`);
+  // #106 — the console line carries the counter too, so "0 staged" is readable
+  // as distance-to-the-door rather than as a dead organ.
+  console.log(`scout: ${out.staged.length} staged (${out.readiness_line}) · learn=${out.edges.learn.length} ratify=${out.edges.ratify.length}${out.war_room.active ? " · WAR-ROOM taper" : ""} → ${OUT}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { stageTriggers, edgeSplit, buildScout, warRoomRead, loadConfig };
+export { stageTriggers, stageReadiness, readinessLine, edgeSplit, buildScout, warRoomRead, loadConfig };

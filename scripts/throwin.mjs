@@ -253,7 +253,18 @@ async function selftest() {
   assert("ECHO FILTER — the organism's badge-titled pushes never become balls", !balls.some(b => b.id === "push1" || b.id === "bell1"));
   assert("VERBATIM law — whitespace + text byte-for-byte", balls[0].text === raw);
   assert("non-message events skipped", !balls.find(b => b.id === "open1"));
-  assert("corrupt poll line skipped, no crash", true);
+  // AUDIT #76 (4 Aug 2026) — this was `assert("corrupt poll line skipped, no crash", true)`:
+  // a LITERAL that could not fail, guarding the one branch that decides whether a
+  // single malformed byte from ntfy costs him a whole 15-minute poll. It is now
+  // three real claims: the junk never becomes a thought, a poll made ENTIRELY of
+  // junk returns empty instead of throwing, and — the load-bearing one — the
+  // since= watermark still advances past the corrupt line (1783900200 is the
+  // `open1` event above, the newest `time` in the batch). If the parse threw, the
+  // watermark would stall and every later poll would re-serve the same window.
+  assert("corrupt poll line skipped — it never becomes a ball, and the watermark still advances past it",
+    !balls.some(b => String(b.text).includes("{corrupt"))
+    && maxTime === 1783900200
+    && ingest("{corrupt\n{\"id\":\"x\",\"event\":\n\nnot json at all", new Set()).balls.length === 0);
   assert("in-batch dedup on ntfy id", balls.filter(b => b.id === "m1").length === 1);
   assert("cross-run dedup uses existing ids", ingest(poll, new Set(["m1", "m2"])).balls.length === 0);
   assert("routed:false on arrival (never auto-written)", balls.every(b => b.routed === false));

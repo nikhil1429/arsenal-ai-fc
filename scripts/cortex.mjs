@@ -683,6 +683,60 @@ async function selftest() {
     assert("CONSOLIDATE — malformed graph → metered but NOT written (a bad graph never lands)", bad.ok === false && m2.length === 1);
     const realShape = gatherCorpus({ concepts: { version: 1, _comment: "x", axes: { a: "..." }, concepts: { tokenization: {}, embeddings: {} }, skills: { pydantic: {} } }, lstate: null });
     assert("CONSOLIDATE — reads the REAL concepts.json shape (concepts+skills objects), NOT its metadata keys", realShape.concepts.includes("tokenization") && realShape.concepts.includes("pydantic") && !realShape.concepts.includes("_comment") && !realShape.concepts.includes("axes"));
+
+    // ── #71 · THE SILENT NO-OP ─────────────────────────────────────────────
+    // Measured over the live ledger on 4 Aug 2026: 11 cortex_consolidate rows on
+    // 8 distinct days for a DAILY job registered 18 Jul — 10 of 18 days left NO
+    // trace at all, because every early return happened before the first append.
+    // Task Scheduler read that as success, indefinitely. Each gate now bills a
+    // row that says it did not run, and why.
+    {
+      const rowsOf = async (over) => { const m = []; const res = await runConsolidation({ ...base, appendLedger: (o) => m.push(o), write: () => { throw new Error("no write"); }, call: async () => { throw new Error("no call"); }, ...over }); return { m, res }; };
+      const noHead = await rowsOf({ headroom: { allowed: 10000, phase: "study" } });
+      assert("#71: a no-headroom skip LEAVES A ROW (it used to leave nothing at all)",
+        noHead.m.length === 1 && noHead.m[0].job === "cortex_consolidate" && noHead.m[0].ran === false && noHead.m[0].ok === false && noHead.m[0].total_tokens === 0);
+      assert("#71: the row NAMES the gate, as a have/need counter (#106)",
+        /no-headroom \(10000\/\d+ needed/.test(noHead.m[0].skipped) && noHead.m[0].headroom_needed > 0);
+      const thin = await rowsOf({ concepts: ["only", "two"] });
+      assert("#71: a too-few-concepts skip leaves a row too (every gate, not just this one)",
+        thin.m.length === 1 && thin.m[0].ran === false && thin.m[0].skipped.includes("2/3 needed"));
+      const refused = await rowsOf({ brainCfg: { guards: { refuse_if_api_key_env: true } }, env: { ANTHROPIC_API_KEY: "sk-no" } });
+      assert("#71: the API-key refusal is recorded too (the $100 law leaves a receipt)",
+        refused.res.refused === true && refused.m.length === 1 && refused.m[0].ran === false);
+      // a successful pass is marked ran:true so the two are never confused
+      let mOK = [];
+      const okRun = await runConsolidation({ ...base, appendLedger: (o) => mOK.push(o), write: () => {}, call: async () => ({ ok: true, text: goodGraph, total_tokens: 12000, input_tokens: 8000, output_tokens: 4000, duration_ms: 3 }) });
+      assert("#71: a real pass is marked ran:true — a skip can never be read as a run", okRun.ok && mOK.length === 1 && mOK[0].ran === true && mOK[0].total_tokens === 12000);
+      // and a ledger fault must not kill the pass (telemetry ≠ the work)
+      const survive = await runConsolidation({ ...base, appendLedger: () => { throw new Error("EPERM: brain_ledger.jsonl busy"); }, write: () => {}, call: async () => ({ ok: true, text: goodGraph, total_tokens: 10, duration_ms: 1 }) });
+      assert("#71: a ledger write fault never kills the consolidation (telemetry ≠ the work)", survive.ok === true);
+      // THE EXIT-CODE STANDARD: the job is daily, so 'today' is its own contract
+      const today = new Date("2026-07-18T03:00:00Z");
+      assert("#71: freshness is measured against the job's OWN daily cadence, no invented threshold",
+        graphFreshness(today, { graph: { generated_at: "2026-07-18T02:00:00Z" } }).fresh === true
+        && graphFreshness(today, { graph: { generated_at: "2026-07-16T02:00:00Z" } }).age_days === 2
+        && graphFreshness(today, { graph: { generated_at: "2026-07-16T02:00:00Z" } }).fresh === false
+        && graphFreshness(today, { graph: null }).exists === false);
+    }
+
+    // ── #72 · THE READER'S CONTRACT ────────────────────────────────────────
+    // setpiece.mjs is being wired as the first reader this file has ever had.
+    // These assertions ARE the contract; break one and the reader breaks.
+    {
+      let g = null;
+      await runConsolidation({ ...base, appendLedger: () => {}, write: (o) => { g = o; }, call: async () => ({ ok: true, text: goodGraph, total_tokens: 1, duration_ms: 1 }) });
+      assert("#72: the written shape carries every field the reader is promised",
+        g.schema_version === 1 && typeof g.generated_at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(g.date)
+        && g.node_count === g.nodes.length && g.edge_count === g.edges.length
+        && Array.isArray(g.clusters) && Array.isArray(g.next_unlocks));
+      assert("#72: next_unlocks are BARE STRINGS (a reader must not have to guess)",
+        g.next_unlocks.every(x => typeof x === "string"));
+      assert("#72: nodes/edges/clusters/next_unlocks are ALL grounded in the concept set",
+        g.nodes.every(n => concepts.includes(n.id)) && g.edges.every(e => concepts.includes(e.from) && concepts.includes(e.to))
+        && g.clusters.every(c => c.concepts.every(x => concepts.includes(x))) && g.next_unlocks.every(x => concepts.includes(x)));
+      assert("#72/#106: the graph ships its own have/need counter — fluency measured for N of M",
+        g.concepts_considered === 4 && g.fluency_known === 2);
+    }
   }
 
   const passed = checks.every(c => c[1]);
@@ -705,6 +759,40 @@ async function selftest() {
 const CONCEPTS      = join(STATE_DIR, "concepts.json");
 const LSTATE        = join(STATE_DIR, "learning_state.json");
 const CONCEPT_GRAPH = join(STATE_DIR, "concept_graph.json");
+
+// ── #72 · THE concept_graph.json CONTRACT (organism audit, 4 Aug 2026) ───────
+// This file had a writer and, for its whole life, ZERO readers. setpiece.mjs is
+// now being wired as the reader, so the shape below is a CONTRACT, not an
+// implementation detail. Nothing here may be renamed or reordered without
+// updating the reader in the same change.
+//
+//   {
+//     schema_version : 1                       // bump only on a breaking change
+//     generated_at   : ISO-8601 string         // when THIS graph was synthesised
+//     date           : "YYYY-MM-DD" (local)    // the day it belongs to
+//     source         : "cortex-consolidate (opus)"
+//     node_count     : int  (=== nodes.length)
+//     edge_count     : int  (=== edges.length)
+//     nodes          : [{ id: <concept id from concepts.json>,
+//                         fluency: "learning"|"holding"|"fluent"|"unknown" }]
+//     edges          : [{ from: <id>, to: <id>, kind: "prereq"|"related"|"confused-with" }]
+//     clusters       : [{ name: <short theme>, concepts: [<id>, …] }]
+//     next_unlocks   : [<id>, …]               // BARE STRINGS, not objects
+//     concepts_considered : int                // the size of the grounding set
+//     fluency_known  : int                     // how many of those have a MEASURED fluency
+//   }
+//
+// GROUNDING GUARANTEE the reader may rely on: every id in nodes/edges/clusters/
+// next_unlocks is a member of concepts.json's concept ∪ skill id set. Anything
+// the model invented is dropped before the write. Arrays are always present
+// (possibly empty) — a reader never has to null-check them.
+//
+// HONESTY the reader MUST carry through (#106): `fluency_known / concepts_considered`
+// is a have/need counter. Live on 4 Aug 2026 it reads 2/38 — 36 nodes say
+// "unknown" because learning_state.json has only ever seen two concepts. A
+// surface that presents `next_unlocks` as a ready plan without showing that
+// ratio is reporting a 2-datapoint inference as a 38-datapoint one.
+const CONCEPT_GRAPH_SCHEMA = 1;
 
 function buildConsolidationPrompt(concepts, fluency) {
   const cList = concepts.slice(0, 120).join(", ");
@@ -733,23 +821,55 @@ function gatherCorpus(deps = {}) {
   return { concepts: [...new Set(concepts)], fluency };
 }
 
+// ── #71 · THE SILENT NO-OP ──────────────────────────────────────────────────
+// MEASURED 4 Aug 2026 over the live brain_ledger.jsonl: `cortex_consolidate` has
+// 11 rows on 8 DISTINCT DAYS (18, 19, 20, 22, 23, 25, 29 Jul · 2 Aug) — for a
+// task that fires DAILY at 03:00 and has been registered since 18 Jul. 18
+// calendar days, 8 with a trace: on the other 10 the pass returned before the
+// FIRST ledger append, printed a line into a wscript window with no redirect,
+// and exited 0. Task Scheduler recorded "Last Result 0" — clean success — for a
+// nightly Opus consolidation that never ran. dressing-room/club/
+// ORGANISM_RESEARCH_2026-07-31.md:203 named this on 31 Jul; it was still true
+// today (concept_graph.json's generated_at was 2 days stale).
+// The fix is not to force the pass through the gate — the gate is correct. It is
+// that EVERY outcome now leaves a row. A skip is a fact about the organism's
+// budget; an unrecorded skip is an unmeasured silence rendered as success.
+function consolidationLedgerRow(now, extra = {}) {
+  return {
+    ts: now.toISOString(), job: "cortex_consolidate", engine: "claude", model: "opus",
+    input_tokens: null, output_tokens: null, total_tokens: 0, duration_ms: 0,
+    ok: false, error: null, limit_hit: false, ran: false, ...extra,
+  };
+}
 async function runConsolidation(deps = {}) {
   const now = deps.now || new Date();
   const brainCfg = deps.brainCfg || loadBrainConfig();
   const cfg = deps.cfg || loadThalamusConfig();
   const env = deps.env || process.env;
-  if (brainCfg.guards && brainCfg.guards.refuse_if_api_key_env && env.ANTHROPIC_API_KEY) return { ok: false, refused: true };
+  const log = deps.log || (() => {});
+  const ledger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
+  // a ledger write is telemetry: it must never be able to kill the pass it measures
+  const meter = (row) => { try { ledger(row); } catch { } };
+  // every early return goes through here — that is the whole point of #71
+  const bail = (skipped, extra = {}) => {
+    meter(consolidationLedgerRow(now, { skipped, error: `did not run: ${skipped}`, ...extra }));
+    log(`cortex: consolidate did NOT run — ${skipped}`);
+    return { ok: false, skipped, ...extra };
+  };
+  if (brainCfg.guards && brainCfg.guards.refuse_if_api_key_env && env.ANTHROPIC_API_KEY) {
+    return { ...bail("API-key refusal (Max plan only, never metered)"), refused: true };
+  }
   const { concepts, fluency } = gatherCorpus(deps);
-  if (concepts.length < 3) return { ok: false, skipped: `too few concepts (${concepts.length})` };
+  if (concepts.length < 3) return bail(`too few concepts (${concepts.length}/3 needed)`);
   // budget gate — the SAME conservative floor as a deep read (never overshoot the meter)
   const hr = deps.headroom || headroom(brainCfg, readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
   const mtf = maxThinkingFor(hr.phase, hr.allowed);
   const minHeadroom = Math.max((cfg.deep && cfg.deep.min_headroom_tokens) || 50000, mtf.min_headroom_tokens);
-  if (hr.allowed < minHeadroom) return { ok: false, skipped: `no-headroom (${hr.allowed} < ${minHeadroom})` };
+  if (hr.allowed < minHeadroom) return bail(`no-headroom (${hr.allowed}/${minHeadroom} needed, phase ${hr.phase})`, { headroom_allowed: hr.allowed, headroom_needed: minHeadroom });
   const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens } };
   const call = deps.call || ((p) => claudeDeep(p, deepCfg));
   const r = await call(buildConsolidationPrompt(concepts, fluency));
-  (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({ ts: now.toISOString(), job: "cortex_consolidate", engine: "claude", model: "opus", input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit });
+  meter({ ts: now.toISOString(), job: "cortex_consolidate", engine: "claude", model: "opus", input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, ran: true });
   if (!r.ok) return { ok: false, error: r.error, tokens: r.total_tokens || 0 };
   let graph;
   try { graph = JSON.parse(String(r.text || "").replace(/^```json\s*|\s*```$/g, "").trim()); } catch { return { ok: false, error: "unparseable graph", tokens: r.total_tokens }; }
@@ -766,9 +886,38 @@ async function runConsolidation(deps = {}) {
   const clusters = (Array.isArray(graph.clusters) ? graph.clusters : [])
     .map(c => ({ name: c && c.name, concepts: Array.isArray(c && c.concepts) ? c.concepts.filter(x => set.has(x)) : [] }))
     .filter(c => c.concepts.length);
-  const out = { generated_at: now.toISOString(), source: "cortex-consolidate (opus)", node_count: nodes.length, edge_count: edges.length, nodes, edges, clusters, next_unlocks: Array.isArray(graph.next_unlocks) ? graph.next_unlocks.filter(x => set.has(x)) : [] };
+  // #72 — THE FILE THE READER RELIES ON. Field names and types are the contract
+  // documented at CONCEPT_GRAPH_SCHEMA above; every array is always present.
+  // fluency_known/concepts_considered is the have/need counter (#106) that stops
+  // a downstream surface from presenting a 2-datapoint inference as a 38-datapoint
+  // one — `fluency` here is only as good as learning_state.json's coverage.
+  const measuredFluency = (fluency || []).filter(f => f && f.fluency && f.fluency !== "unknown" && set.has(f.id));
+  const out = {
+    schema_version: CONCEPT_GRAPH_SCHEMA,
+    generated_at: now.toISOString(),
+    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    source: "cortex-consolidate (opus)",
+    node_count: nodes.length, edge_count: edges.length,
+    nodes, edges, clusters,
+    next_unlocks: Array.isArray(graph.next_unlocks) ? graph.next_unlocks.filter(x => set.has(x)) : [],
+    concepts_considered: concepts.length,
+    fluency_known: measuredFluency.length,
+  };
   (deps.write || ((o) => writeAtomic(CONCEPT_GRAPH, o)))(out);
-  return { ok: true, nodes: nodes.length, edges: edges.length, tokens: r.total_tokens, next_unlocks: out.next_unlocks };
+  return { ok: true, nodes: nodes.length, edges: edges.length, tokens: r.total_tokens, next_unlocks: out.next_unlocks, concepts_considered: out.concepts_considered, fluency_known: out.fluency_known };
+}
+
+// #71 — how stale is the artifact on disk? A DAILY job's own contract is that
+// the graph is today's; anything else means one or more nightly passes did not
+// land. No threshold is invented here — the cadence IS the standard.
+function graphFreshness(now = new Date(), deps = {}) {
+  const g = deps.graph !== undefined ? deps.graph : readJson(CONCEPT_GRAPH);
+  if (!g) return { exists: false, fresh: false, age_days: null, generated_at: null };
+  const gen = g.generated_at ? new Date(g.generated_at) : null;
+  if (!gen || isNaN(gen)) return { exists: true, fresh: false, age_days: null, generated_at: g.generated_at || null };
+  const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const age = Math.floor((new Date(dayOf(now)) - new Date(dayOf(gen))) / 86400000);
+  return { exists: true, fresh: age <= 0, age_days: age, generated_at: g.generated_at };
 }
 
 // ---------------------------------------------------------------------------
@@ -802,8 +951,18 @@ async function main() {
     // OVERNIGHT DEEPENING (P5) — one nightly Opus pass → concept_graph.json
     const r = await runConsolidation({ log: console.log });
     console.log(r.ok
-      ? `cortex: concept graph → ${r.nodes} nodes, ${r.edges} edges${r.next_unlocks && r.next_unlocks.length ? " · next: " + r.next_unlocks.slice(0, 3).join(", ") : ""} (${(r.tokens || 0).toLocaleString()} tok)`
-      : `cortex: consolidate skipped — ${r.skipped || r.error || (r.refused ? "API-key refusal" : "unknown")}`);
+      ? `cortex: concept graph → ${r.nodes} nodes, ${r.edges} edges${r.next_unlocks && r.next_unlocks.length ? " · next: " + r.next_unlocks.slice(0, 3).join(", ") : ""} (${(r.tokens || 0).toLocaleString()} tok) · fluency measured for ${r.fluency_known}/${r.concepts_considered} concepts`
+      : `cortex: consolidate DID NOT RUN — ${r.skipped || r.error || (r.refused ? "API-key refusal" : "unknown")}`);
+    // #71 — THE EXIT CODE IS THE ONLY THING THE CAPTAIN EVER SEES. This job runs
+    // under wscript with no redirect (see finding #16), so the line above dies in
+    // a closing window; Task Scheduler's "Last Result" is the whole surface. It
+    // read 0 — clean success — on the 10 of 18 days this pass never ran at all.
+    // The standard is the job's OWN daily cadence, not an invented threshold:
+    // green iff the graph on disk is today's.
+    const f = graphFreshness(new Date());
+    if (!f.exists) console.log("cortex: concept_graph.json does NOT exist — no consolidation has ever landed");
+    else if (!f.fresh) console.log(`cortex: concept_graph.json on disk is ${f.age_days === null ? "undated" : `${f.age_days} day(s) old`} (generated_at ${f.generated_at}) — a DAILY pass that leaves a stale artifact is not a success`);
+    process.exitCode = f.fresh ? 0 : 1;
     return;
   }
   // SINGLETON LOCK — two cortexes racing one wake = double Opus spend. The
@@ -867,4 +1026,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDeepAsync, findCapsule, runConsolidation, buildConsolidationPrompt, gatherCorpus };
+export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDeepAsync, findCapsule, runConsolidation, buildConsolidationPrompt, gatherCorpus,
+  // audit 4 Aug 2026 — #71/#72 seams: the staleness standard and the reader's
+  // schema version, exported so a consumer can assert the contract it relies on
+  graphFreshness, CONCEPT_GRAPH_SCHEMA, CONCEPT_GRAPH };

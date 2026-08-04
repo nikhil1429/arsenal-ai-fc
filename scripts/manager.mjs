@@ -32,6 +32,13 @@ import { tmpdir } from "node:os";
 // and is imported, never re-implemented — see timeFeature() below. No cycle:
 // heartbeat imports nothing local, and brain.mjs is the only importer of this file.
 import { timeauditBridge } from "./heartbeat.mjs";
+// THE ONE ZERO-HALLUCINATION VALIDATOR (2 Aug 2026 audit, findings #59/#60/#61).
+// This engine WAS born here — the 25 Jul fix landed in this file and nowhere else,
+// while brain.mjs and viz.mjs kept whitelisting every integer 0–31 and stripping every
+// date. It has been lifted verbatim into scripts/validators.mjs so three call sites
+// cannot drift again, and this file now consumes it instead of owning a fourth copy.
+// The pre-lift original is frozen below as `allowedNumbersLegacy` (layering law).
+import { allowedNumbers as allowedNumbersShared, noNewNumbers as noNewNumbersShared } from "./validators.mjs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";   // selftest ONLY — spawns THIS file to prove the CLI guard
 
@@ -60,6 +67,11 @@ function loadBus(P, today) {
     // E2E audit (25 Jul 2026): needed by the timeaudit schema bridge below (buildingPctMin /
     // metaPctMax), exactly as heartbeat.mjs reads it. Config, not a signal ⇒ never staleness-gated.
     buckets: readJSON("buckets.json"),
+    // AUDIT #27/#106 (2 Aug 2026): the "need" half of the have/need counter that replaces
+    // the bare word "warming_up" on the axes rollup. Config, not a signal ⇒ never
+    // staleness-gated, exactly like buckets.json above. Absent ⇒ the counter degrades to
+    // "n=9 reps" with no target, which is honest; it never invents a threshold.
+    ls_config: readJSON("learning_state_config.json"),
     // THE TWO WITNESSES (30 Jul 2026). capsule_map = what the LOCKED capsules already
     // know (36 axes, 36 survived strike questions, a date-driven Re-Jirah schedule) —
     // richness the bus had never once read. shipped = artifacts produced, the second
@@ -143,6 +155,7 @@ function timeFeature(T, buckets) {
 // Oura-lag tolerance (readinessFresh) — that lag is normal, not staleness.
 function computeFeatures(bus, today, stale = staleness(bus, today)) {
   const fresh = (k) => stale[k] === "fresh";
+  const minReps = (bus.ls_config && bus.ls_config.thresholds && bus.ls_config.thresholds.warming_up_min_reps) ?? null;
   const S = bus.season || {};
   const mp = Number.isInteger(S.matches_played) ? S.matches_played : 0;
   const phase = phaseFor(mp);
@@ -160,11 +173,25 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
   // AUDIT (30 Jul 2026) — the last existence-gate. `okLS` was `fresh && present`, and the
   // learning_state file ALWAYS exists, so at 2 reps its `warming_up` / low_confidence:true
   // formation (weak_connection, rejirah_due) rendered as a hard read — the same defect the
-  // nemesis headline was fixed for five days earlier, in the same function. learning_state.mjs
-  // suppresses its own axis rollups under warming_up for exactly this reason; the Manager now
-  // honours that instead of reaching past it. Same shape as okWeak: status-ok AND not low-confidence.
-  const okLS = fresh("learning_state") && bus.learning_state
-    && bus.learning_state.status === "ok" && bus.learning_state.low_confidence !== true;
+  // nemesis headline was fixed for five days earlier, in the same function. Same shape as
+  // okWeak: status-ok AND not low-confidence.
+  //
+  // CORRECTION (2 Aug 2026 audit, finding #28). This comment used to justify the gate with
+  // "learning_state.mjs suppresses its own axis rollups under warming_up for exactly this
+  // reason." That is FALSE, and the file it describes proves it: learning_state.mjs:519
+  // suppresses exactly TWO fields under low_confidence — `weak_connection` and
+  // `maidan_stage_focus` — and emits `axes`, `core_vs_light`, `rejirah_due` and
+  // `python_fluency` unconditionally at :516. Today's live warming_up file ships a full
+  // four-axis rollup. So the producer was NOT withholding the rollup; the Manager was
+  // reaching past a suppression that never happened and then dropping everything.
+  //
+  // The gate is therefore SPLIT (finding #27). okLS still governs the two fields the
+  // producer itself treats as low-confidence headlines. The 9-axis rollup and core_vs_light
+  // — the spine of THE METHOD, recomputed daily and read by literally nobody for two weeks —
+  // ride on FRESHNESS alone, and always carry their n so a warming read can never be
+  // mistaken for a hard one (Law: a status word becomes a have/need counter, never "ok").
+  const freshLS = fresh("learning_state") && !!bus.learning_state;
+  const okLS = freshLS && bus.learning_state.status === "ok" && bus.learning_state.low_confidence !== true;
   // E2E audit (25 Jul 2026): R.safety was NEVER read and R.flags was only ever read as an
   // Array — but the real Goalkeeper writes flags as an OBJECT {clean, hr_low_confidence}
   // (oura_coach.mjs:422), so real flags always collapsed to [], and safety.refer_doctor with
@@ -239,12 +266,25 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
     // Gated on okWeak (fresh + status ok + not low_confidence) — see the note above.
     headline: okWeak ? bus.weaknesses.headline : null,                // {id,topic,axis,one_line}|null
     axis_pattern: okWeak ? bus.weaknesses.axis_pattern : null,
-    formation: okLS ? {
-      maidan_stage_focus: bus.learning_state.maidan_stage_focus || null,
-      weak_connection: bus.learning_state.weak_connection || null,
+    // FORMATION is now present whenever learning_state is FRESH, with per-field gating
+    // inside (findings #27/#28). Everything okLS used to gate still degrades exactly as
+    // before — a warming_up bus yields weak_connection null and rejirah_due [] — so no
+    // low-confidence headline reaches the sheet. What changed is that the two fields the
+    // producer emits unconditionally now actually reach a surface.
+    formation: freshLS ? {
+      maidan_stage_focus: okLS ? (bus.learning_state.maidan_stage_focus || null) : null,
+      weak_connection: okLS ? (bus.learning_state.weak_connection || null) : null,
+      // python_fluency stays LIFTED BUT DORMANT on purpose: it is `{}` today because all 9
+      // reps are concept-track and zero are skill-track. Rendering it would print an empty
+      // object as if it were a measurement. It gets a surface the day it gets a rep.
       python_fluency: bus.learning_state.python_fluency || {},
-      rejirah_due: bus.learning_state.rejirah_due || [],
+      rejirah_due: okLS ? (bus.learning_state.rejirah_due || []) : [],
       core_vs_light: bus.learning_state.core_vs_light || {},          // {core,light} fixed keys
+      axes: Array.isArray(bus.learning_state.axes) ? bus.learning_state.axes : [],
+      // the have/need pair that keeps the rollup honest while it is still warming
+      reps: Number.isInteger(bus.learning_state.total_reps) ? bus.learning_state.total_reps : null,
+      reps_needed: Number.isInteger(minReps) ? minReps : null,
+      warming: !okLS,
     } : null,
     captain_note: bus.captain_note || null,
     kal_line: kal,
@@ -280,7 +320,18 @@ function formationInputs(F) {
 }
 
 // ---- zero-hallucination: allowed-number set from EVERY numeric token in F ----
-function allowedNumbers(F) {
+// `shown` is the text the LLM was actually handed (the assembled prompt). A digit
+// the wrapper itself put in front of the model is, by definition, not invented.
+// LIVE — the shared engine. Same signature, same semantics; it additionally normalises
+// float repr and treats comma-grouped thousands as one number (finding #60), neither of
+// which can loosen the guard.
+const allowedNumbers = (F, shown = "") => allowedNumbersShared(F, shown);
+
+// ---- FROZEN (layering law, CLAUDE.md) --------------------------------------
+// The 25 Jul engine, kept verbatim and called by NOTHING. It is the reference the
+// selftest holds the shared version against, so "did the lift change a verdict?" is a
+// question the suite answers rather than a claim this comment makes.
+function allowedNumbersLegacy(F, shown = "") {
   const set = new Set();
   const eat = (v) => {
     if (v == null) return;
@@ -294,6 +345,17 @@ function allowedNumbers(F) {
     if (typeof v === "object") return Object.values(v).forEach(eat);
   };
   eat(F);
+  // THE PROMPT MAY NOT CONTRADICT ITS OWN VALIDATOR (1 Aug 2026 audit — observed live).
+  // shapeFromTiming() is shared by assemblePrompt (line 330) and fallbackSkeleton (line 455),
+  // so with the Goalkeeper stale the wrapper INJECTED "one clean 90-min block" into the prompt
+  // and then bounced the finished sheet for containing 90 — `invented number(s): 90` — while
+  // the skeleton it published instead carried that same 90. 48,464 Opus tokens discarded, the
+  // sheet silently downgraded, and (brain.mjs runJob) the morning push suppressed, on every day
+  // the body read was dark. The rule was always "use ONLY the numbers you were shown"; eating
+  // `shown` makes the validator enforce exactly that rule instead of a stricter one nobody wrote.
+  // Note this does NOT loosen the guard: `shown` is the wrapper's own assembled prompt, whose
+  // every digit already traces to a computed feature or to a literal the wrapper authored.
+  eat(shown);
   // E2E audit (25 Jul 2026): this used to whitelist EVERY integer 0-31 — which is precisely
   // the range a hallucinating LLM fabricates (card counts, day counts, rep counts, streaks,
   // small percentages). "cards due: 12 (+9 overdue)" invented from nothing passed the
@@ -304,6 +366,41 @@ function allowedNumbers(F) {
   // enter the set via eat(F) above, so no honest sheet loses anything.
   for (let i = 1; i <= 3; i++) set.add(String(i));     // list ordinals only
   return set;
+}
+
+// ---- THE 9-AXIS ROLLUP, finally rendered (2 Aug 2026 audit, findings #27/#28) ----
+// learning_state.json ships a full per-axis rollup every single day —
+//   axes[] = [{axis:"a", label:"kya+analogy", fluent_frac:0, counts:{learning,held,fluent}, due_count}, …]
+// — plus core_vs_light ("spine: 0/2 fluent"). A repo-wide grep for a reader returned
+// ZERO. It was lifted into F.formation at :245/:247 and then printed by neither
+// assemblePrompt nor fallbackSkeleton: computed correctly, every day, for nobody. The
+// 9-axis model is the spine of THE METHOD, so this is the one thing in the Manager
+// whose absence the captain could feel and never see.
+//
+// ONE builder, shared by the prompt and the skeleton, so the two can never disagree
+// about what the axes say — the same de-duplication reasoning as timeauditBridge.
+// Returns null when there is nothing measured, so bias-to-silence still holds.
+const AXIS_ORDER = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+function axesLine(f) {
+  if (!f || !Array.isArray(f.axes) || !f.axes.length) return null;
+  const rows = [...f.axes].sort((x, y) => AXIS_ORDER.indexOf(x.axis) - AXIS_ORDER.indexOf(y.axis));
+  // per axis: the counts as a have/need, never a verdict word. "a kya+analogy 0/2 fluent (2 due)"
+  return rows.map((a) => {
+    const c = a.counts || {};
+    const seen = (c.learning || 0) + (c.held || 0) + (c.fluent || 0);
+    const due = a.due_count ? ` · ${a.due_count} due` : "";
+    return `${a.axis}${a.label ? " " + a.label : ""} ${c.fluent || 0}/${seen} fluent${due}`;
+  }).join(" | ");
+}
+// THE STATUS WORD BECOMES A COUNTER (#106). "warming_up" told him nothing; "9/12 reps"
+// tells him exactly how far the read is from being a hard one.
+function repsCounter(f) {
+  if (!f) return "";
+  if (!f.warming) return "";
+  if (f.reps == null) return " · WARMING (rep count unknown — treat as indicative, not a verdict)";
+  return f.reps_needed == null
+    ? ` · WARMING at n=${f.reps} reps (threshold unreadable — treat as indicative, not a verdict)`
+    : ` · WARMING ${f.reps}/${f.reps_needed} reps — indicative, not a verdict`;
 }
 
 // ---- assemble the compressed prompt (FEATURES + formation, NOT raw JSON) -----
@@ -335,6 +432,11 @@ function assemblePrompt(F, fin, stale = {}) {
     `AXIS PATTERN: ${F.axis_pattern?.note || "none"}`,
     `DANGER: ${F.calibration?.danger?.length ? F.calibration.danger.map((d) => d.topic).join(", ") : "none"}`,
     `FORMATION: ${F.formation?.weak_connection ? `weak handoff ${F.formation.weak_connection}` : "awaiting data"}`,
+    // #27: the per-axis rollup and the core/light split, handed to the LLM for the first
+    // time. Both ride while the state is still warming — with the counter attached, so the
+    // model is told plainly that this is indicative and must not be spoken as a hard read.
+    axesLine(F.formation) ? `AXES (9-axis fluency rollup${repsCounter(F.formation)}): ${axesLine(F.formation)}` : null,
+    F.formation?.core_vs_light?.core ? `CORE vs LIGHT: ${F.formation.core_vs_light.core}${F.formation.core_vs_light.light ? ` · light ${F.formation.core_vs_light.light}` : ""}${repsCounter(F.formation)}` : null,
     `DUE (highest-leverage): ${dueHL ? `${dueHL.concept || dueHL}${dueHL.axis ? ` · axis ${dueHL.axis}` : ""}` : "none"}`,
     `INTENSITY: ${fin.intensity}`,
     `SHIPPING: ${fin.shipping_candidate || "n/a"}`,
@@ -349,12 +451,11 @@ function assemblePrompt(F, fin, stale = {}) {
 
 // ---- validate an LLM sheet: template + line-cap + no-invented-number ---------
 const LINE_CAP = 40;
-function validate(text, F) {
+function validate(text, F, shown = "") {
   if (!text || typeof text !== "string") return { ok: false, reason: "empty" };
   const lines = text.split("\n");
   if (lines.length > LINE_CAP) return { ok: false, reason: `line-cap (${lines.length}>${LINE_CAP})` };
   if (!/TEAM SHEET/.test(text) || !/COYG/.test(text)) return { ok: false, reason: "template markers missing" };
-  const allowed = allowedNumbers(F);
   // E2E audit (25 Jul 2026): this used to blank out EVERY date and EVERY clock time before
   // the invented-number check, so the LLM could invent any deadline ("we ship by 2026-08-01")
   // or any window ("lights out by 22:45") and pass the gate — a fabricated deadline being
@@ -362,9 +463,10 @@ function validate(text, F) {
   // and times are already in the allowed set because eat(F) tokenises F.date ("2026-07-10" →
   // 2026/07/10) and the Goalkeeper's timing windows ("11:30–14:30" → 11/30/14/30). An invented
   // one contributes a token no feature produced, and bounces.
-  const nums = text.match(/\d+(?:\.\d+)?/g) || [];
-  const invented = nums.filter((n) => !allowed.has(n));
-  if (invented.length) return { ok: false, reason: `invented number(s): ${[...new Set(invented)].join(", ")}` };
+  // 2 Aug 2026: the extraction is now the shared one too, so a comma-grouped thousand
+  // ("10,000") is ONE number here exactly as it is in brain and viz (finding #60).
+  const v = noNewNumbersShared(text, F, shown);
+  if (!v.ok) return { ok: false, reason: `invented number(s): ${v.all.join(", ")}` };
   return { ok: true };
 }
 
@@ -462,6 +564,15 @@ function fallbackSkeleton(F, fin, stale = {}) {
   if (F.study && (F.study.due_today || F.study.overdue)) rep.push(`   • cards due: ${F.study.due_today} (+${F.study.overdue} overdue)`);
   const tline = timeReportLine(F.time);
   if (tline) rep.push(tline);
+  // #27 — THE 9-AXIS ROLLUP ON THE SHEET. It was recomputed daily and rendered on no
+  // surface for two weeks; this is the surface. Deliberately in SQUAD REPORTS beside the
+  // other measured reads, and deliberately carrying its own n: a warming rollup that
+  // reads like a hard verdict is the exact defect okWeak/okLS were written to stop.
+  const ax = axesLine(F.formation);
+  if (ax) rep.push(`   • axes: ${ax}${repsCounter(F.formation)}`);
+  if (F.formation?.core_vs_light?.core) {
+    rep.push(`   • core vs light: ${F.formation.core_vs_light.core}${F.formation.core_vs_light.light ? ` · light ${F.formation.core_vs_light.light}` : ""}${repsCounter(F.formation)}`);
+  }
   // THE SECOND WITNESS — artifacts beside hours. A dark camera plus real output is a WON
   // day, and until 30 Jul the sheet had no way to say so. Dark is named as dark, never 0.
   if (F.shipped?.dark) rep.push(`   • shipped: output sensor dark — no repo readable (blindness, not a zero)`);
@@ -528,7 +639,7 @@ export async function runManager({ today = todayISO(), llm = async () => null, s
   let sheet = null, source = "fallback", reason = "no-llm (M-1)";
   try {
     const out = await llm(prompt);
-    const v = validate(out, F);
+    const v = validate(out, F, prompt);
     if (v.ok) { sheet = out; source = "llm"; reason = "validated"; }
     else if (out != null) reason = `llm rejected: ${v.reason}`;
   } catch (e) { reason = `llm error: ${e.message}`; }
@@ -742,15 +853,79 @@ async function selftest() {
 
   // 6e-bis) WARMING_UP LEARNING-STATE — the last existence-gate (audit 30 Jul 2026).
   // learning_state.json always EXISTS, so its formation used to ride the sheet at 2 reps.
+  //
+  // ASSERTION CORRECTED 2 Aug 2026 (finding #28). It used to read
+  // `wls.features.formation === null`, which pinned the WRONG behaviour: it asserted that a
+  // warming learning_state produces NO formation at all, and that is how the 9-axis rollup
+  // and core_vs_light — which learning_state.mjs:516 emits UNCONDITIONALLY, suppressing only
+  // weak_connection and maidan_stage_focus at :519 — reached no surface for two weeks. The
+  // silence law is about low-confidence HEADLINES, not about every field in the file. The
+  // check now asserts both halves: the headline fields are still withheld, AND the fields
+  // the producer never withheld actually arrive, carrying their n.
   const wlsDir = stage("rich");
   writeFileSync(join(wlsDir, "learning_state.json"),
-    JSON.stringify({ ...FX.rich.learning_state, status: "warming_up", low_confidence: true }));
+    JSON.stringify({
+      ...FX.rich.learning_state, status: "warming_up", low_confidence: true, total_reps: 9,
+      // verbatim shape of the live warming_up file (2026-08-04)
+      axes: [
+        { axis: "a", label: "kya+analogy", fluent_frac: 0, counts: { learning: 2, held: 0, fluent: 0 }, due_count: 2 },
+        { axis: "c", label: "mechanism", fluent_frac: 0, counts: { learning: 1, held: 0, fluent: 0 }, due_count: 0 },
+      ],
+      core_vs_light: { core: "spine: 0/2 fluent", light: "no light concepts drilled" },
+      python_fluency: {},   // live shape today: all 9 reps are concept-track, zero skill-track
+    }));
+  writeFileSync(join(wlsDir, "learning_state_config.json"), JSON.stringify({ thresholds: { warming_up_min_reps: 12 } }));
   const wls = await runManager({ today: TODAY, stateDir: wlsDir });
-  ok("warming_up: learning_state formation is SILENT (weak handoff + rejirah_due withheld)",
-    wls.features.formation === null
+  ok("warming_up: the low-confidence HEADLINES are still silent (weak handoff + rejirah_due withheld)",
+    wls.features.formation.weak_connection === null
+    && wls.features.formation.rejirah_due.length === 0
     && !/chunking → embeddings/.test(wls.sheet)
     && /^FORMATION: awaiting data/m.test(wls.prompt)
     && /^DUE \(highest-leverage\): none/m.test(wls.prompt));
+  ok("#27/#28 warming_up: the 9-axis rollup RIDES (the producer never suppressed it) — sheet AND prompt",
+    /• axes: a kya\+analogy 0\/2 fluent · 2 due \| c mechanism 0\/1 fluent/.test(wls.sheet)
+    && /^AXES \(9-axis fluency rollup/m.test(wls.prompt));
+  ok("#106 warming_up: the status WORD is replaced by a have/need counter, on both surfaces",
+    /WARMING 9\/12 reps — indicative, not a verdict/.test(wls.sheet)
+    && /WARMING 9\/12 reps/.test(wls.prompt)
+    && !/warming_up/.test(wls.sheet));
+  ok("#27 warming_up: core_vs_light reaches a human for the first time",
+    /• core vs light: spine: 0\/2 fluent · light no light concepts drilled/.test(wls.sheet)
+    && /^CORE vs LIGHT: spine: 0\/2 fluent/m.test(wls.prompt));
+  ok("#27: python_fluency stays DORMANT — an empty object is never rendered as a measurement",
+    JSON.stringify(wls.features.formation.python_fluency) === "{}" && !/python_fluency|python fluency/i.test(wls.sheet));
+  // and with NO axes there is still nothing to say — bias-to-silence survives the change
+  const noAxDir = stage("rich");
+  writeFileSync(join(noAxDir, "learning_state.json"), JSON.stringify({ ...FX.rich.learning_state, axes: [], core_vs_light: {} }));
+  const noAx = await runManager({ today: TODAY, stateDir: noAxDir });
+  ok("#27: an EMPTY rollup prints nothing at all (no '0/0 fluent' fabricated from absence)",
+    !/• axes:/.test(noAx.sheet) && !/AXES \(9-axis/.test(noAx.prompt) && !/core vs light/.test(noAx.sheet));
+  // a STALE learning_state must still null the whole formation — the 25 Jul silence law
+  const stLsDir = stage("rich");
+  writeFileSync(join(stLsDir, "learning_state.json"), JSON.stringify({ ...FX.rich.learning_state, date: "2026-06-01" }));
+  const stLs = await runManager({ today: TODAY, stateDir: stLsDir });
+  ok("#28: a STALE learning_state still nulls the ENTIRE formation, rollup included (freshness still gates)",
+    stLs.features.formation === null && !/• axes:/.test(stLs.sheet));
+
+  // 6e-quinquies) THE SHARED VALIDATOR (2 Aug 2026 audit, #59/#60) — this engine was born
+  // here and has been lifted to scripts/validators.mjs so brain and viz stop drifting from
+  // it. These hold the lift to "same verdicts, plus the comma fix", in both directions.
+  ok("#59: the lifted engine agrees with the frozen 25 Jul original on the fixture's whole feature set",
+    [...allowedNumbersLegacy(rich.features)].every((n) => allowedNumbers(rich.features).has(n)));
+  ok("#59: the 0-31 hole stays closed after the lift (12 and 31 are not free)",
+    allowedNumbers({ matchday: 7 }).has("12") === false && allowedNumbers({ matchday: 7 }).has("31") === false);
+  const commaGood = await runManager({ today: TODAY, stateDir: stage("rich"), llm: async () => "⚪🔴 TEAM SHEET — 2026-07-10 · Matchday 13\nThe ledger holds 37 reps.\nCOYG. ⚪🔴" });
+  ok("#59: an honest number still passes after the lift (37 total_reps ∈ features)", commaGood.source === "llm");
+  {
+    // #60 — comma grouping. Built as a real sheet so it goes through validate(), not a unit poke.
+    const cDir = stage("rich");
+    writeFileSync(join(cDir, "season.json"), JSON.stringify({ ...FX.rich.season, pipeline_item: "M1 extraction — 10,000 invoices" }));
+    const cSheet = await runManager({ today: TODAY, stateDir: cDir, llm: async () => "⚪🔴 TEAM SHEET — 2026-07-10 · Matchday 13\nThe pipeline item is 10,000 invoices.\nCOYG. ⚪🔴" });
+    ok("#60: a comma-grouped thousand quoted from a FEATURE no longer bounces as 'invented 000'", cSheet.source === "llm");
+    const cBad = await runManager({ today: TODAY, stateDir: cDir, llm: async () => "⚪🔴 TEAM SHEET — 2026-07-10 · Matchday 13\nThe pipeline item is 99,999 invoices.\nCOYG. ⚪🔴" });
+    ok("#60: a comma-grouped thousand that is NOT in the features still bounces (the guard did not loosen)",
+      cBad.source === "fallback" && /invented number/.test(cBad.reason));
+  }
 
   // 6e-ter) INSTRUMENTS DARK — an ActivityWatch outage must never render as a hard 0%
   // (audit 30 Jul 2026). This is exactly what timeaudit.mjs writes when AW is unreachable.

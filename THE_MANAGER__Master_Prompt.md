@@ -347,7 +347,7 @@ is everything. Today we just start. I feel back home doing this.
    └ why this, not that: it's the first brick of the trophy; Supabase polish can wait.
 
 🔋 ENERGY: GREEN — full ceiling; deep encoding primed. Go hard in the peaks.
-🕐 SHAPE: hardest work ~11:00–14:00; one clean 90-min block, then reps.
+🕐 SHAPE: hardest work in your first peak window; one clean deep block, then reps.
 🪑 BENCHED TODAY: no system-tinkering, no rig-tweaking. Build the feature.
 
 📋 SQUAD REPORTS (reconciled):

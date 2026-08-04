@@ -208,6 +208,6 @@ dread-class markets (structurally stripped in twin.mjs) · any 'exponential' cla
 | Evaluates scrimmage and hedges, adversarial probing | examiner.mjs | selftest green |
 | Prosody and emotion gating/processing | tone.mjs | selftest green |
 | Tracks the active session and human engagement state | presence.mjs | selftest green |
-| Keeps the field clear, manages ephemeral data cleanup | groundsman.mjs | selftest green |
+| Two-node bus-lease arbiter (single-writer law across laptop + Kennel) + publish-allowlist git-push gate. Cleans up nothing. | groundsman.mjs | selftest green, but **DORMANT — M9-pending**: zero importers, zero scheduled tasks, zero skills, and `bus_lease.json` has never been created (all four re-verified 2026-08-04). The green is a unit-test green, not a wired-organ green — the file documents its own three-step activation checklist in its header (TRANSPORT), gated on the Pi arriving. Corrected under issue #94; the old row claimed BUILT *and* described the wrong function. |
 | Offline syncing and disconnected operation state | awayday.mjs | selftest green |
 | Access control and ingestion gating | turnstile.mjs | selftest green |

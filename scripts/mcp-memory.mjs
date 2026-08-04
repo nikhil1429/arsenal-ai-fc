@@ -16,8 +16,9 @@
 //                            AND — for the kinds the hippocampus knows — handed to
 //                            markMoment (its owner-writer) so the moment becomes a
 //                            real, recallable episode even when the bus is down.
-//     · get_context()      — buildRehydrateCartridge() + the distiller working_set:
-//                            "where he is right now", for session re-entry.
+//     · get_context()      — buildRehydrateCartridge() + the distiller working_set
+//                            + the teaching card: "where he is right now" AND how
+//                            to teach him, for session re-entry.
 //     · remember_fact(text)— STAGES to identity_facts.pending.jsonl. NEVER canon;
 //                            needs a separate human confirm (Law 4).
 // LAWS: single-writer (the MCP owns scribe_log.jsonl + identity_facts.pending.jsonl
@@ -34,6 +35,13 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
 import { buildRehydrateCartridge, embedPool, markMoment } from "./hippocampus.mjs";
+// AUDIT 4 Aug 2026 (#14): the seventeen-rule cold-start card reached the
+// SessionStart brief and nothing else, while CLAUDE.md names `get_context` as
+// THE session-start call — so the mandated door was the one with no teaching
+// rules behind it. Same parser, same document, same markers: REUSED, not
+// forked. learnstate.mjs writes nothing and its main() is entry-point-gated, so
+// importing it here is a pure read.
+import { loadTeachingCard } from "./learnstate.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT   = join(__dirname, "..");
@@ -225,7 +233,27 @@ function getContext(deps = {}) {
     const shown = pend.slice(-5).map(p => `  · "${clip(p.text, 160)}"   (staged ${String(p.ts || "").slice(0, 10) || "?"})`);
     parts.push(`PENDING IDENTITY FACTS — ${pend.length} staged, awaiting HIS word (Law 4: nothing is canon until he says so):\n${shown.join("\n")}\n  → ask him to confirm or drop each; only he promotes it.`);
   }
-  return parts.length ? parts.join("\n\n") : "no context yet — the memory is empty.";
+  // #14 — THE TEACHING CARD. Framed exactly as learnstate.mjs:177-181 frames it
+  // in the SessionStart brief, so a session that arrives through either door
+  // gets the same rules in the same words. REPAIR TOWARD SILENCE: a missing
+  // file, a missing marker or an empty block yields null and this block simply
+  // does not appear — get_context degrades to precisely what it printed before.
+  let card = null;
+  try { card = deps.card !== undefined ? deps.card : loadTeachingCard(); } catch { card = null; }
+  if (card && typeof card === "string" && card.trim()) {
+    parts.push(`HOW TO TEACH HIM (evidence from his own words — learning-layer/HOW_HE_LEARNS.md; these are OBSERVED, not preferences he stated):\n${card}`);
+  }
+  // #106 — get_context is the mandated session-start door, so it must be able to
+  // say what it actually carried. A missing leg is named, never silently absent:
+  // "0 durable episodes" and "who_he_is unreadable" are different facts.
+  const carried = [
+    `cartridge ${cart ? "yes" : "MISSING"}`,
+    `working set ${ws && typeof ws === "object" ? "yes" : "MISSING"}`,
+    `teaching card ${card ? "yes" : "MISSING"}`,
+    `${pend.length} pending fact(s)`,
+  ].join(" · ");
+  if (!parts.length) return `no context yet — the memory is empty. [carried: ${carried}]`;
+  return parts.join("\n\n") + `\n\n[get_context carried: ${carried}]`;
 }
 
 // ---- remember_fact(text) — STAGE only (Law 4: proposes, never acts on canon) ----
@@ -241,7 +269,7 @@ function rememberFactStaged(text, deps = {}) {
 const TOOLS = [
   { name: "recall", description: "Semantic recall over the captain's durable memory (his past episodes + his embedded words). Returns his most relevant real moments — doubts, wins, threads — for a query. Read-only.", inputSchema: { type: "object", properties: { query: { type: "string", description: "what to recall about (a concept, a feeling, a thread)" } }, required: ["query"] } },
   { name: "note", description: "Write a salient moment into the shared working memory — a doubt he voiced, a win, a stated preference, an open thread, or a plain note. It is kept locally, routed to the thalamus so it reaches every surface (Code, the Gaffer), and (for doubt/win/preference/thread) written as a durable episode he can be reminded of later. If the reply carries a `warning`, tell him — the live bus did not see it.", inputSchema: { type: "object", properties: { kind: { type: "string", enum: NOTE_KINDS, description: "doubt | win | preference | thread | note" }, text: { type: "string", description: "his words, verbatim where possible" } }, required: ["text"] } },
-  { name: "get_context", description: "Rehydrate where the captain is right now: his identity cartridge + who-he-is + last durable episodes + the distiller's live working set. Call at the start of a session so you never ask him to re-explain.", inputSchema: { type: "object", properties: {} } },
+  { name: "get_context", description: "Rehydrate where the captain is right now: his identity cartridge (every fact DATED — a fact is true as of its date, not automatically today) + who-he-is (labelled RIGHT NOW only when it was consolidated today, otherwise AS OF its date with its age) + last durable episodes + the distiller's live working set + the teaching card of how he learns. Call at the start of a session so you never ask him to re-explain.", inputSchema: { type: "object", properties: {} } },
   { name: "remember_fact", description: "STAGE a durable identity fact about the captain. It is NOT saved to canon — it waits in a pending file for his explicit confirmation (Law 4). Use for stable truths about who he is, not passing state.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
 ];
 
@@ -359,14 +387,37 @@ async function selftest() {
   });
   assert("resync: an open ticket is re-posted once; a ticket already closed is left alone", rr.pending === 1 && rr.reposted === 1 && acks.length === 1 && /\[doubt\]/.test(acks[0].text));
 
-  const ctx = getContext({ pending: [], cartridge: () => "IDENTITY: he is the captain.", ws: { concept_in_motion: "hallucinations", open_loop: "why grounding fails", where_left_off: "detection strategies", next_step: "read the eval doc" } });
+  const ctx = getContext({ pending: [], card: null, cartridge: () => "IDENTITY: he is the captain.", ws: { concept_in_motion: "hallucinations", open_loop: "why grounding fails", where_left_off: "detection strategies", next_step: "read the eval doc" } });
   assert("get_context: fuses rehydrate cartridge + the distiller working set", /IDENTITY/.test(ctx) && /hallucinations/.test(ctx) && /WORKING SET/.test(ctx));
-  assert("get_context: empty memory → a valid line, never a crash", typeof getContext({ cartridge: () => null, ws: null, pending: [] }) === "string");
-  const ctxP = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [
+  assert("get_context: empty memory → a valid line, never a crash", typeof getContext({ cartridge: () => null, ws: null, pending: [], card: null }) === "string");
+  const ctxP = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, card: null, pending: [
     { ts: "2026-07-12T08:00:00Z", text: "prefers full lectures, not fragments", status: "pending" },
     { ts: "2026-07-12T09:00:00Z", text: "a fact he already ruled on", status: "confirmed" },
   ] });
   assert("get_context: staged identity facts are surfaced for his word — they can no longer rot unseen", /PENDING IDENTITY FACTS — 1 staged/.test(ctxP) && /full lectures/.test(ctxP) && !/already ruled on/.test(ctxP));
+
+  // — AUDIT 4 Aug 2026 (#14): the mandated session-start door carries the card —
+  const ctxC = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [], card: "1. Give ONE new idea per message.\n2. Hinglish, not shuddh Hindi." });
+  assert("get_context #14: the teaching card ARRIVES through the door CLAUDE.md actually mandates",
+    /HOW TO TEACH HIM/.test(ctxC) && /ONE new idea per message/.test(ctxC) && /Hinglish/.test(ctxC));
+  assert("get_context #14: the card is framed as OBSERVED evidence and names its source file — same words as the SessionStart brief",
+    /OBSERVED, not preferences he stated/.test(ctxC) && /HOW_HE_LEARNS\.md/.test(ctxC));
+  assert("get_context #14: REPAIR TOWARD SILENCE — no card → the payload is byte-identical to what it printed before",
+    getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [], card: null }) === getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [], card: "" })
+    && !/HOW TO TEACH HIM/.test(getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, pending: [], card: null })));
+  // ONE parser, not a fork: the card get_context serves is the very function
+  // learnstate.mjs uses for the brief, against the real shipped document.
+  const { loadTeachingCard } = await import("./learnstate.mjs");
+  const realCard = loadTeachingCard();
+  assert("get_context #14: it REUSES learnstate's parser (one source of truth) and the shipped HOW_HE_LEARNS.md really parses",
+    typeof loadTeachingCard === "function" && !!realCard && /^1\. Give ONE new idea/m.test(realCard)
+    && getContext({ cartridge: () => "X", ws: null, pending: [] }).includes(realCard));
+  // #106 — every leg it carried, or did not, is named
+  const ctxCount = getContext({ cartridge: () => "IDENTITY: x", ws: null, pending: [], card: null });
+  assert("get_context #106: it reports what it CARRIED — a missing leg is named, not silently absent",
+    /\[get_context carried: cartridge yes · working set MISSING · teaching card MISSING · 0 pending fact\(s\)\]/.test(ctxCount));
+  assert("get_context #106: the empty-memory line carries the same counter (an empty door still says what it looked for)",
+    /carried: cartridge MISSING/.test(getContext({ cartridge: () => null, ws: null, pending: [], card: null })));
 
   let staged = null;
   const rf = rememberFactStaged("prefers Hinglish, direct — not a hype-man", { append: (o) => { staged = o; }, now: new Date("2026-07-14T10:00:00Z") });

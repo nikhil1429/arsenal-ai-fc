@@ -45,6 +45,14 @@ so NO 9-axis capsule. Run the 6-beat loop; the reps + volume happen on his free 
 4. **Ingest the handoff** → capture the reps + draft the log (§3). Never re-narrate from memory.
 
 ### track = `course`  (Anthropic courses on Colab, e.g. 1-05/1-06)
+**FIRST, read where he already is — never ask him:** `node scripts/course.mjs brief`
+(also spliced into the SessionStart kickoff automatically). It names the chapter he is on out
+of how many. If it reports nothing ingested yet, the chapter list is a one-time paste:
+`node scripts/course.mjs ingest <chapters.txt>` — then `done <n>` as each chapter closes.
+(Issue #35, 2026-08-04: this tracker was 670 lines with ZERO callers and `course.json` had
+never been created, while `next_up` was 1-05 and 1-06 — both course-track, 9 chapters. So the
+one thing built to stop him being asked "where are you?" was the one thing nobody called.)
+
 A guided active-recall pass, Colab-surfaced (not a Forge capsule, not the full Python packet).
 Per chapter: he predicts what it covers → works the Colab cells himself → you quiz for
 retrieval, not re-teach. Bank genuine reps as `track:"skill", surface:"colab"` (§3). If a

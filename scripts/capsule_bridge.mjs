@@ -34,8 +34,13 @@
 //   · Deterministic. No LLM, no network, no API key.
 //
 // WRITER OF: dressing-room/state/capsule_map.json
+//   two-schedulers block: scheduler_agreement[] (audit #33 — the arm that never existed),
+//   scheduler_disagreement{}, and the honesty counters fsrs_due_names_known /
+//   fsrs_due_total / fsrs_due_names_complete / fsrs_due_note. CONSUMER: setpiece.mjs
+//   (evening packet) reads the agreement to rank and prints the note verbatim.
 // READS:     dressing-room/state/capsules/*.json (read-only) · forge_profile.json
-//            (rejirah_intervals_days — the genome owns the schedule, not this file)
+//            (rejirah_intervals_days — the genome owns the schedule, not this file) ·
+//            cards.json (FSRS's due NAMES live in hardest_due, not in the integer counters)
 // MODES: (default) write · show · selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
@@ -153,12 +158,18 @@ function build(capsules, intervals, today, fsrsDue = []) {
   // FSRS, air-gapped, with learning_state borrowing the "Re-Jirah" NAME for FSRS
   // output). This organ does not merge them and does not pick a winner. It states
   // where they disagree so the ambiguity stops being invisible.
-  const fsrsSet = new Set((fsrsDue || []).map(x => String(x).toLowerCase()));
+  const fsrs = normalizeFsrsDue(fsrsDue);
+  const fsrsSet = new Set(fsrs.names);
   const capsuleDue = new Set(overdue.map(e => e.concept));
   const disagreement = {
     capsule_says_due_fsrs_quiet: [...capsuleDue].filter(c => !fsrsSet.has(c)),
     fsrs_says_due_capsule_quiet: [...fsrsSet].filter(c => !capsuleDue.has(c)),
   };
+  // audit #33: naming where they AGREE is the half this organ never had. Two independent
+  // schedulers landing on the same concept is stronger evidence than either alone, and it
+  // is the signal setpiece now ranks on. Without it "no disagreement" and "no data" looked
+  // identical from the outside — which is how a permanently-empty arm went unnoticed.
+  const agreement = [...capsuleDue].filter(c => fsrsSet.has(c));
 
   return {
     date: today,
@@ -180,6 +191,13 @@ function build(capsules, intervals, today, fsrsDue = []) {
     rejirah_overdue: overdue.map(e => ({ concept: e.concept, overdue_days: e.rejirah.overdue_days, next_due: e.rejirah.next_due, rounds_done: e.rejirah.rounds_done })),
     strike_bank: bank,
     scheduler_disagreement: disagreement,
+    scheduler_agreement: agreement,
+    // the honesty counters behind the two arms above (audit #33). complete:null means the
+    // FSRS side could not be read at all — a silence, never a measured zero.
+    fsrs_due_names_known: fsrs.names_known,
+    fsrs_due_total: fsrs.due_total,
+    fsrs_due_names_complete: fsrs.complete,
+    fsrs_due_note: fsrs.why || null,
     line: entries.length
       ? (overdue.length
         ? `${overdue[0].concept} ka Re-Jirah ${overdue[0].rejirah.overdue_days} din overdue hai — aur uske ${bank.filter(b => b.concept === overdue[0].concept).length} strike sawaal already likhe rakhe hain.`
@@ -201,10 +219,62 @@ function loadIntervals(path = PROFILE) {
   return Array.isArray(v) && v.length && v.every(n => Number.isInteger(n) && n > 0) ? v : DEFAULT_INTERVALS;
 }
 
-function fsrsDueConcepts() {
+// ORGANISM audit #33 (2026-08-04) — THE ARM THAT COULD NEVER BE NON-EMPTY.
+// LEGACY (frozen verbatim, layering rule): this picked arrays out of cards.due_today and
+// cards.overdue. fsrs.mjs:190-210 writes both of those as INTEGERS (live: 0 and 4) and puts
+// the concept NAMES in cards.hardest_due, which this never opened. So it returned [] on
+// EVERY run since the day it shipped: `fsrs_says_due_capsule_quiet` was structurally
+// incapable of being non-empty, `capsule_says_due_fsrs_quiet` was just the full overdue
+// list, and the organ whose stated purpose is "so the two worlds stop being air-gapped and
+// silent" reported total disagreement every single day. Live output named embeddings,
+// inference and context as "FSRS quiet" while FSRS listed all three in hardest_due — three
+// positively wrong statements — and lost hallucinations, the one concept FSRS wanted.
+// Reference only; nothing on the run path calls it.
+function fsrsDueConceptsLegacy() {
   const cards = readJson(join(STATE_DIR, "cards.json"));
   const pick = (arr) => (Array.isArray(arr) ? arr : []).map(c => String(c && (c.concept ?? c.id ?? c) || "").toLowerCase()).filter(Boolean);
   return cards ? [...new Set([...pick(cards.due_today), ...pick(cards.overdue)])] : [];
+}
+
+// LIVE path, pure half — takes an already-parsed cards.json so the selftest can feed the
+// exact shape fsrs really writes instead of a hand-made array (which is precisely why the
+// bug above stayed green for weeks).
+// It reads hardest_due (the only field FSRS has ever put names in) and KEEPS the
+// array-tolerant pick on due_today/overdue so a future fsrs that writes arrays still works.
+// It also carries a HAVE/NEED counter, because hardest_due is a TRUNCATED list:
+// fsrs.mjs:198 slices it to cfg.hardestDueMax (canon default 8). With more due cards than
+// that, "capsule_says_due_fsrs_quiet" over-reports — so the truncation is measured and
+// disclosed rather than assumed away. Unreadable cards.json ⇒ due_total null and
+// complete null: FSRS's list is UNKNOWN, never a measured empty.
+function fsrsDueFromCards(cards) {
+  if (!cards || typeof cards !== "object") {
+    return { names: [], due_total: null, names_known: 0, complete: null,
+      why: "cards.json missing or malformed — FSRS's due list is UNKNOWN, not empty" };
+  }
+  const pick = (arr) => (Array.isArray(arr) ? arr : []).map(c => String(c && (c.concept ?? c.id ?? c) || "").toLowerCase()).filter(Boolean);
+  const names = [...new Set([...pick(cards.hardest_due), ...pick(cards.due_today), ...pick(cards.overdue)])];
+  const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const dt = num(cards.due_today), od = num(cards.overdue);
+  const due_total = dt === null && od === null ? null : (dt || 0) + (od || 0);
+  const complete = due_total === null ? null : names.length >= due_total;
+  return {
+    names, due_total, names_known: names.length, complete,
+    why: complete === false
+      ? `FSRS reports ${due_total} due card(s) but names only ${names.length} (cards.hardest_due is capped by fsrs_config.hardestDueMax) — "capsule_says_due_fsrs_quiet" may over-report`
+      : null,
+  };
+}
+// LIVE path, shell half — the only untested layer.
+function fsrsDueConcepts(path = join(STATE_DIR, "cards.json")) {
+  return fsrsDueFromCards(readJson(path));
+}
+
+// build() accepts either the rich reading above OR a bare array of names. A caller handing
+// a bare array is asserting it IS the complete list, so the counters mirror it exactly.
+function normalizeFsrsDue(fsrsDue) {
+  if (fsrsDue && !Array.isArray(fsrsDue) && typeof fsrsDue === "object" && Array.isArray(fsrsDue.names)) return fsrsDue;
+  const names = [...new Set((Array.isArray(fsrsDue) ? fsrsDue : []).map(x => String(x || "").toLowerCase()).filter(Boolean))];
+  return { names, due_total: names.length, names_known: names.length, complete: true, why: null };
 }
 
 function writeAtomic(path, obj) {
@@ -261,6 +331,43 @@ function selftest() {
   assert("names what the capsule calls due and FSRS does not", dis.capsule_says_due_fsrs_quiet.join() === "inference");
   assert("and what FSRS calls due and the capsule does not", dis.fsrs_says_due_capsule_quiet.join() === "embeddings");
 
+  // ORGANISM audit #33 (2026-08-04) — THE FIXTURE THAT HID THE BUG.
+  // The check above passes a hand-made ARRAY, so the disk reader was never exercised and
+  // the fact that fsrs writes INTEGERS in due_today/overdue could not be caught. These
+  // feed the shape fsrs.mjs really emits.
+  {
+    const LIVE_SHAPE = { date: TODAY, total_cards: 5, due_today: 0, overdue: 4,
+      hardest_due: ["inference", "context", "embeddings", "hallucinations"], status: "ok" };
+    const read = fsrsDueFromCards(LIVE_SHAPE);
+    assert("#33 FSRS's due NAMES are read from hardest_due, not from the integer counters",
+      read.names.join() === "inference,context,embeddings,hallucinations" && read.names_known === 4);
+    assert("#33 the frozen legacy pick returns [] against this exact shape (the bug, preserved)",
+      [LIVE_SHAPE.due_today, LIVE_SHAPE.overdue].every(v => typeof v === "number")
+      && (Array.isArray(LIVE_SHAPE.due_today) ? 1 : 0) + (Array.isArray(LIVE_SHAPE.overdue) ? 1 : 0) === 0);
+    const b33 = build([cap()], DEFAULT_INTERVALS, TODAY, read);   // capsule `inference` is overdue
+    assert("#33 the agreement arm can now be non-empty — it was structurally impossible before",
+      b33.scheduler_agreement.join() === "inference");
+    assert("#33 ...and the disagreement arms stop lying: FSRS-only names are named",
+      b33.scheduler_disagreement.capsule_says_due_fsrs_quiet.length === 0
+      && b33.scheduler_disagreement.fsrs_says_due_capsule_quiet.join() === "context,embeddings,hallucinations");
+    assert("#33 a complete FSRS list is reported complete, with its have/need counter",
+      b33.fsrs_due_names_complete === true && b33.fsrs_due_names_known === 4 && b33.fsrs_due_total === 4 && b33.fsrs_due_note === null);
+    // hardest_due is capped (fsrs_config.hardestDueMax, canon 8): more due than named ⇒ say so
+    const trunc = fsrsDueFromCards({ due_today: 3, overdue: 8, hardest_due: ["a", "b", "c", "d", "e", "f", "g", "h"] });
+    assert("#33 a TRUNCATED name list is disclosed as a have/need counter, never assumed whole",
+      trunc.complete === false && trunc.names_known === 8 && trunc.due_total === 11 && /over-report/.test(trunc.why));
+    assert("#33 an unreadable cards.json is UNKNOWN, never a measured zero",
+      fsrsDueFromCards(null).complete === null && fsrsDueFromCards(null).due_total === null
+      && build([cap()], DEFAULT_INTERVALS, TODAY, fsrsDueFromCards(null)).fsrs_due_note !== null);
+    assert("#33 an array caller still works byte-for-byte (back-compat with the old signature)",
+      JSON.stringify(build([cap()], DEFAULT_INTERVALS, TODAY, ["embeddings"]).scheduler_disagreement) === JSON.stringify(dis));
+    // and the LIVE file, exercised for real through the disk reader — shape only; the
+    // values are fsrs's to compute and are deliberately not asserted.
+    const liveRead = fsrsDueConcepts();
+    assert("#33 the LIVE cards.json flows through the disk reader and yields NAMES (was always [])",
+      Array.isArray(liveRead.names) && (liveRead.due_total === null || liveRead.names_known > 0 || liveRead.due_total === 0));
+  }
+
   assert("MALFORMED-SAFE — a capsule with no lockedOn reports schedule_known:false, never a fake date",
     build([cap({ lockedOn: null })], DEFAULT_INTERVALS, TODAY).concepts[0].rejirah.schedule_known === false);
   assert("MALFORMED-SAFE — junk faultLines are skipped, not crashed on",
@@ -287,7 +394,14 @@ function main() {
   writeAtomic(OUT, out);
   console.log(`capsule_bridge: ${out.totals.capsules} capsule(s) · ${out.totals.axes_present} axes · ${out.totals.strike_questions} strike questions · ${out.rejirah_overdue.length} overdue → ${OUT}`);
   if (out.line) console.log(`  ${out.line}`);
+  // audit #33: the two-schedulers read is the headline feature; print it so a run that
+  // produces a wrong one is visible the night it happens, not two audits later.
+  console.log(`  schedulers — agree: ${out.scheduler_agreement.join(", ") || "none"} · Re-Jirah only: ${out.scheduler_disagreement.capsule_says_due_fsrs_quiet.join(", ") || "none"} · FSRS only: ${out.scheduler_disagreement.fsrs_says_due_capsule_quiet.join(", ") || "none"} (FSRS named ${out.fsrs_due_names_known}/${out.fsrs_due_total === null ? "?" : out.fsrs_due_total})`);
+  if (out.fsrs_due_note) console.log(`  WARN ${out.fsrs_due_note}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { build, mapCapsule, rejirahRounds, strikeBank, loadIntervals };
+export { build, mapCapsule, rejirahRounds, strikeBank, loadIntervals,
+  // audit #33 (2026-08-04): the fixed FSRS due reader (pure + shell) with the frozen
+  // legacy pick beside it, and the array/object normaliser build() accepts.
+  fsrsDueFromCards, fsrsDueConcepts, fsrsDueConceptsLegacy, normalizeFsrsDue };

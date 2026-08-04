@@ -45,7 +45,17 @@ const DEFAULTS = {
   ],
   gates: { min_capsules: 4, min_doubts: 60 },
   tape_room: { min_age_days: 14 },
-  lexicon: { min_ngram: 2, max_ngram: 5, min_count: 2 },
+  // min_content_words (#4) — see isConnectivePhrase() for the measurement that
+  // earned the 1. It is a config key precisely so it can be retuned from data
+  // rather than re-argued in code.
+  lexicon: { min_ngram: 2, max_ngram: 5, min_count: 2, min_content_words: 1 },
+  // GATE 2 (#34) — FORGE_SPEC's cold-reader slip-catcher. fragment_max_tokens is
+  // MEASURED, not guessed: across the 112 live doubts (4 Aug 2026) the token-count
+  // distribution is p10=4, p25=6, median=8 — only ONE doubt in the whole bank sits
+  // at ≤2 tokens ("Polysemy kya?"). A 2-token bar therefore sits below the 10th
+  // percentile and cannot sweep up a normal atomic doubt; it catches exactly the
+  // stub shape the spec names ("Zyada temp = ?").
+  gate2: { enabled: true, fragment_max_tokens: 2, near_duplicate_prefix_tokens: 6 },
 };
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -59,6 +69,7 @@ function loadConfig(path = CFG_PATH) {
         gates: { ...DEFAULTS.gates, ...(j.gates || {}) },
         tape_room: { ...DEFAULTS.tape_room, ...(j.tape_room || {}) },
         lexicon: { ...DEFAULTS.lexicon, ...(j.lexicon || {}) },
+        gate2: { ...DEFAULTS.gate2, ...(j.gate2 || {}) },
       };
     }
   } catch { /* malformed → defaults */ }
@@ -116,6 +127,11 @@ function mineGrammar(capsules, cfg, now = new Date()) {
     machine_side: true,          // shapes probe design only; NEVER shown pre-Pehle-Guess
     total_doubts: total,
     capsules: capsules.length,
+    // AUDIT #106 — a bare gated word ("warming_up") tells him nothing: not how far
+    // off he is, not which half is short. `status` keeps its enum (manager.mjs:159
+    // and calibration.mjs pattern-match that vocabulary — changing it would break
+    // them), and this line carries the have/need pair beside it.
+    gate_line: `${capsules.length}/${cfg.gates.min_capsules} capsules · ${total}/${cfg.gates.min_doubts} doubts`,
     shape_counts,
     clusters: gated ? null : Object.entries(shape_counts)
       .filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1])
@@ -127,9 +143,62 @@ function mineGrammar(capsules, cfg, now = new Date()) {
 // ---------------------------------------------------------------------------
 // GHAR KI BOLI — anchor extraction (verbatim substrings only)
 // ---------------------------------------------------------------------------
-const STOP = new Set(("the a an is are was were hai hain ka ki ke ko se me mein par aur ya to of in on at for with and or but it this that yeh woh jo bhi nahi nhi ho kar karta karti karte hota hoti hote agar toh phir jaise matlab like when what why how i you he she we they").split(" "));
+// FROZEN VERBATIM (layering law) — the pre-#4 stopword list. Kept because
+// extractAnchorsLegacy below is frozen against it and must keep behaving exactly
+// as it did on 4 Aug 2026.
+const STOP_V0 = new Set(("the a an is are was were hai hain ka ki ke ko se me mein par aur ya to of in on at for with and or but it this that yeh woh jo bhi nahi nhi ho kar karta karti karte hota hoti hote agar toh phir jaise matlab like when what why how i you he she we they").split(" "));
 
-function extractAnchors(capsules, cfg) {
+// AUDIT #4 (4 Aug 2026) — THE MINED LEXICON WAS FILLER, NOT HIS VOICE.
+// The 25 anchors live on 4 Aug included "karne se pehle", "yahan asli baat",
+// "do alag level", "saare purane", "pehle saare", "yaad nahi -" and "tokenization
+// ne" — pure connective tissue served to him as GHAR KI BOLI, his own metaphors.
+// The cause is that STOP_V0 above is an ENGLISH list with a token handful of
+// Hindi words bolted on, while he writes Hinglish: `karne`, `pehle`, `saare`,
+// `yahan`, `ne`, `wala`, `kaise`, `kya`, `abhi`, `chahiye` were all invisible to
+// it, so an n-gram made entirely of them passed the boundary test.
+// This list ADDS the missing Hinglish function words (postpositions, pronouns,
+// auxiliaries, question words, quantifiers) plus the English closed class.
+// It is a superset — nothing that was a stopword stopped being one.
+const STOP_HINGLISH = ("be been being if then than these those its as by from into about over under not no do does did have has had will would can could should shall may might must me my your his her our their there here which who whom whose so such very just also only more most some any each every other same too much many both either neither one two three ek do teen char tha thi hona hone honge hogi hoga na ne haan wo vo yahan wahan kahan kaise kaisa kaisi kya kyu kyun kyunki jaisa jaisi fir ab abhi tab kab sab saare saara saari sabhi kuch koi apna apne apni uska uski uske iska iski iske isko usko inko unko mera meri mere tera teri tere hum tum aap unka unki unke wala wale wali karo karna karne kiya kiye kare karenge raha rahi rahe rakhna dena lena leta deta hi bas pehle baad liye chahiye padega padta padti sakta sakti sakte gaya gayi gaye diya diye laga lagi lage lagta dekhna dekho socho samajh chalta chalte chalti banta bante banti nikalta nikalti lekin magar sirf tak wagera").split(" ");
+const STOP = new Set([...STOP_V0, ...STOP_HINGLISH]);
+
+// A token that carries meaning: not a function word, and long enough to be a word
+// rather than an initial. The length floor (3) is NOT new — it is the same floor
+// the extraction engine has always used at the `gram.every(...)` guard below.
+const isContentWord = (w) => !STOP.has(w) && String(w).length >= 3;
+// The normalizer keeps `-` and `₹`, so a phrase can end on a bare "-" ("yaad nahi -"
+// was a live anchor). A boundary token must contain an actual letter or digit.
+const hasAlnum = (w) => /[\p{L}\p{N}]/u.test(String(w));
+
+// THE QUALITY FILTER (#4). A candidate is CONNECTIVE TISSUE — not an anchor — when
+// its edges are function words / punctuation, or when it carries fewer than
+// `min_content_words` real words.
+//   MEASURED, not guessed (live capsules, 4 Aug 2026): the engine mined 25 anchors.
+//   Boundary + Hinglish stops alone drop 9 of them; adding min_content_words = 1
+//   drops the 10th ("yaad nahi -"), leaving 15 — every survivor a phrase he
+//   actually coined ("business cliffhanger", "frozen vocab", "vector search",
+//   "diagram poore concept ki reed", "reply ke andar kv-memory", "code validates").
+//   min_content_words = 2 was also measured: it removes only "ai proposes", a real
+//   phrase of his, for no filler gain — so 1 is the earned value, and it lives in
+//   config (`lexicon.min_content_words`) rather than in this line.
+function isConnectivePhrase(phrase, minContentWords) {
+  const w = String(phrase).split(" ").filter(Boolean);
+  if (!w.length) return true;
+  const first = w[0], last = w[w.length - 1];
+  if (STOP.has(first) || STOP.has(last)) return true;
+  if (!hasAlnum(first) || !hasAlnum(last)) return true;
+  return w.filter(isContentWord).length < minContentWords;
+}
+
+// ---------------------------------------------------------------------------
+// FROZEN VERBATIM (CLAUDE.md layering law) — the pre-#4 extractor, byte-for-byte
+// as it stood on 4 Aug 2026, still reachable and still exported. It is the engine
+// that produced the 25 live anchors; the selftest below runs it side-by-side with
+// the repaired one so the improvement is a MEASURED difference, not a claim.
+// It reads STOP_V0 deliberately: freezing an engine and letting its data drift is
+// not freezing it.
+// ---------------------------------------------------------------------------
+function extractAnchorsLegacy(capsules, cfg) {
   const sources = [];  // [{capsule, field, text}]
   for (const c of capsules) {
     if (typeof c.bolo === "string" && c.bolo.trim()) sources.push({ capsule: c.id, field: "bolo", text: c.bolo });
@@ -142,8 +211,60 @@ function extractAnchors(capsules, cfg) {
     for (let n = cfg.lexicon.min_ngram; n <= cfg.lexicon.max_ngram; n++) {
       for (let i = 0; i + n <= words.length; i++) {
         const gram = words.slice(i, i + n);
-        if (STOP.has(gram[0]) || STOP.has(gram[gram.length - 1])) continue;
-        if (gram.every(w => STOP.has(w) || w.length < 3)) continue;
+        if (STOP_V0.has(gram[0]) || STOP_V0.has(gram[gram.length - 1])) continue;
+        if (gram.every(w => STOP_V0.has(w) || w.length < 3)) continue;
+        const phrase = gram.join(" ");
+        const e = counts.get(phrase) || { count: 0, sources: new Set(), capsules: new Set() };
+        e.count++; e.sources.add(src.capsule + ":" + src.field); e.capsules.add(src.capsule);
+        counts.set(phrase, e);
+      }
+    }
+  }
+  const verbatim = sources.map(s => String(s.text).toLowerCase().replace(/\s+/g, " "));
+  const isVerbatim = (phrase) => verbatim.some(t => t.includes(phrase));
+  const cands = [...counts.entries()]
+    .filter(([phrase, e]) => e.count >= cfg.lexicon.min_count && e.capsules.size >= 2 && isVerbatim(phrase))
+    .sort((a, b) => b[0].length - a[0].length || b[1].count - a[1].count);
+  const kept = [];
+  for (const [phrase, e] of cands) {
+    if (kept.some(k => k.phrase.includes(phrase))) continue;
+    kept.push({ phrase, count: e.count, sources: [...e.capsules], breaking_point: null });
+    if (kept.length >= 25) break;
+  }
+  return kept;
+}
+
+// THE PLAN OF RECORD (#4). Same extraction engine — the EXTRACTION LAW below is
+// untouched — with the connective-tissue filter applied at candidate time, so a
+// filler n-gram can no longer swallow (via longest-first dedup) the real anchor
+// nested inside it and then be discarded itself, taking the anchor with it.
+// `stats` is an optional out-param the caller may pass to learn how much glue was
+// rejected. It exists because the obvious counter — legacy_count − new_count — is a
+// LIE: the keep-list is capped at 25, so every filtered phrase is immediately
+// backfilled by the next candidate and the difference reads 0 while ten connectives
+// were in fact removed (measured live, 4 Aug 2026). Count the rejections, not the
+// survivors.
+function extractAnchors(capsules, cfg, stats = null) {
+  const sources = [];  // [{capsule, field, text}]
+  for (const c of capsules) {
+    if (typeof c.bolo === "string" && c.bolo.trim()) sources.push({ capsule: c.id, field: "bolo", text: c.bolo });
+    if (typeof c.deep === "string" && c.deep.trim()) sources.push({ capsule: c.id, field: "deep", text: c.deep });
+    for (const d of (c.doubts || [])) if (typeof d.a === "string") sources.push({ capsule: c.id, field: "doubts.a", text: d.a });
+  }
+  const counts = new Map(); // phrase -> {count, sources:Set}
+  for (const src of sources) {
+    const words = String(src.text).toLowerCase().replace(/[^\p{L}\p{N}₹\s-]/gu, " ").split(/\s+/).filter(Boolean);
+    for (let n = cfg.lexicon.min_ngram; n <= cfg.lexicon.max_ngram; n++) {
+      for (let i = 0; i + n <= words.length; i++) {
+        const gram = words.slice(i, i + n);
+        // #4 — this admission guard stays on STOP_V0 ON PURPOSE. Every NEW rejection
+        // is made in one place (isConnectivePhrase, below) so it can be COUNTED.
+        // Tightening the guard here instead would produce the same anchor list while
+        // reporting "0 filtered", because the glue would be dropped before it was ever
+        // a candidate — a counter that reads 0 for a filter that fired is the same
+        // class of lie as the literal assertions this audit exists to repair.
+        if (STOP_V0.has(gram[0]) || STOP_V0.has(gram[gram.length - 1])) continue;
+        if (gram.every(w => STOP_V0.has(w) || w.length < 3)) continue;
         const phrase = gram.join(" ");
         const e = counts.get(phrase) || { count: 0, sources: new Set(), capsules: new Set() };
         e.count++; e.sources.add(src.capsule + ":" + src.field); e.capsules.add(src.capsule);
@@ -173,9 +294,16 @@ function extractAnchors(capsules, cfg) {
   const isVerbatim = (phrase) => verbatim.some(t => t.includes(phrase));
   // recurring across ≥min_count occurrences AND ≥2 capsules (a personal anchor,
   // not a one-capsule phrase); longest-first dedup (drop sub-phrases of kept ones)
+  const minContent = Number.isFinite(cfg.lexicon && cfg.lexicon.min_content_words) ? cfg.lexicon.min_content_words : DEFAULTS.lexicon.min_content_words;
+  let filtered = 0;
   const cands = [...counts.entries()]
-    .filter(([phrase, e]) => e.count >= cfg.lexicon.min_count && e.capsules.size >= 2 && isVerbatim(phrase))
+    .filter(([phrase, e]) => {
+      if (!(e.count >= cfg.lexicon.min_count && e.capsules.size >= 2 && isVerbatim(phrase))) return false;
+      if (isConnectivePhrase(phrase, minContent)) { filtered++; return false; }   // #4 — GHAR KI BOLI, not grammar glue
+      return true;
+    })
     .sort((a, b) => b[0].length - a[0].length || b[1].count - a[1].count);
+  if (stats) stats.connectives_filtered = filtered;
   const kept = [];
   for (const [phrase, e] of cands) {
     if (kept.some(k => k.phrase.includes(phrase))) continue;
@@ -186,14 +314,118 @@ function extractAnchors(capsules, cfg) {
 }
 
 function buildLexicon(capsules, cfg, now = new Date()) {
-  const anchors = extractAnchors(capsules, cfg);
+  // #4 — the filter's own receipt: how many candidate n-grams were rejected as
+  // connective tissue. Printed, not gated on; it is how a future drift shows up.
+  const stats = { connectives_filtered: 0 };
+  const anchors = extractAnchors(capsules, cfg, stats);
   return {
     date: localDate(now),
     status: anchors.length ? "ok" : "awaiting_data",
     low_confidence: capsules.length < 4,
     generated_at: now.toISOString(),
+    // #106 — a counter, not a bare word
+    anchor_line: `${anchors.length} anchors kept · ${stats.connectives_filtered} connective n-gram(s) rejected (#4)`,
+    filtered_connectives: stats.connectives_filtered,
     anchors,
     law: "reach for his anchors first; a foreign analogy only when no anchor fits — and never past its breaking point",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// GATE 2 — THE COLD-READER SLIP-CATCHER (audit #34, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// FORGE_SPEC.md §3/§5 mandates a GATE 2 content-verify at every LOCK/SAVE: every
+// doubts[].q checked against the COLD-READER STANDARD — cryptic / fragment / meta
+// / near-duplicate → FLAG → captain approves the fix → only then "done". It has
+// existed as prose since 2026-07-02 and NEVER ONCE FIRED: no runtime surface
+// carries it (.claude/skills/forge/SKILL.md step 10 transcribes GATE 1 and stops,
+// and that skill is the only artifact loaded at a lock). A deterministic scan on
+// 4 Aug 2026 found 16-17 of the 112 live doubts violating the spec's OWN named
+// failure patterns — and all of them sit in tape_room.json's queue as VERBATIM
+// rematch prompts, so a cold future-Nikhil is served "ye to inference vali cheez
+// hi hai na?" with no way to know what "ye" was.
+//
+// THIS IS FLAG-ONLY, BY DESIGN AND BY NECESSITY:
+//   · by design — GATE 2 is a flag→approval→fix procedure in the spec itself;
+//   · by necessity — capsules are read-only MIRRORS of the canonical gist, so no
+//     local write could repair one. The repair must reach the gist through the
+//     captain. This organ's whole job is to make sure he KNOWS.
+// It lives here because doubtminer already walks every doubt nightly at 21:45 and
+// already owns the queue — so a bad doubt is caught in the same pass that would
+// otherwise arm it as a rematch prompt.
+//
+// Every pattern below is one the spec names in its own words (FORGE_SPEC.md §3,
+// "3 failure-patterns (yahi pakadne — Gate 2 inhe flag karta)"). Nothing is
+// invented, and no threshold is guessed — see DEFAULTS.gate2 for the arithmetic.
+const GATE2_PATTERNS = {
+  // 1. CRYPTIC — the subject is not named. The spec forbids a dangling
+  //    ye / woh / Map / second-enemy / (pehle-guess) by name (FORGE_SPEC.md §3).
+  cryptic: [
+    /^\s*[("[]?\s*(ye|yeh|woh|wo|is|us|iska|uska|inka|unka)\b/i,
+    /\(\s*pehle[-\s]?guess\s*\)/i,
+    /\bsecond enemy\b/i,
+    /\bmap kaunsa\b/i,
+    /\bhar layer pe same kv\b/i,      // the spec's verbatim ❌ CRYPTIC example
+  ],
+  // 2. FRAGMENT — hangs off the doubt next to it; alone it says nothing.
+  //    "Zyada temp = ?" is the spec's verbatim ❌ example.
+  fragment: [
+    /=\s*\??\s*$/,                     // trails off into an equals sign
+    /^\s*\?+\s*$/,
+  ],
+  // 3. META / TO-DO — not a knowledge doubt at all: curriculum planning, a status
+  //    note, a deferral. The spec says PRUNE ("koi cold-reader jawab banta hi nahi").
+  meta: [
+    /\[\s*resolved/i,
+    /\bnahi seekhna\b/i, /\bnahi seekhn/i, /\bseekhunga\b/i, /\bseekhna hai\b/i,
+    /\bkitni depth\b/i, /\bkacha samajh\b/i,
+    /\bsamajhna (hai|zaroori|chahiye)\b/i,
+    /\byaad rakhna pad/i,
+    /\bderive karna chahiye\b/i,
+    /\babhi nahi\b/i,
+  ],
+};
+
+const gate2Norm = (q) => String(q || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+// Returns { checked, flagged, by_pattern, flags[] } — never throws, never writes,
+// never rewrites a single character of his content.
+function gate2Flags(capsules, cfg = DEFAULTS, now = new Date()) {
+  const g = { ...DEFAULTS.gate2, ...((cfg && cfg.gate2) || {}) };
+  const flags = [];
+  const by_pattern = { cryptic: 0, fragment: 0, meta: 0, near_duplicate: 0 };
+  let checked = 0;
+  const prefixes = new Map();   // first-N-tokens → the doubt that claimed it
+  for (const c of capsules || []) {
+    for (const [i, d] of (c.doubts || []).entries()) {
+      checked++;
+      const q = String((d && d.q) || "");
+      const tokens = gate2Norm(q);
+      const hit = [];
+      if (GATE2_PATTERNS.cryptic.some(r => r.test(q))) hit.push("cryptic");
+      // a one- or two-word question carries no confusion-journey — the spec's
+      // "ATOMIC ≠ terse" clause. Threshold is config, derivation in DEFAULTS.
+      if (GATE2_PATTERNS.fragment.some(r => r.test(q)) || tokens.length <= g.fragment_max_tokens) hit.push("fragment");
+      if (GATE2_PATTERNS.meta.some(r => r.test(q))) hit.push("meta");
+      const key = `${c.id}|${tokens.slice(0, g.near_duplicate_prefix_tokens).join(" ")}`;
+      if (tokens.length && prefixes.has(key)) hit.push("near_duplicate");
+      else if (tokens.length) prefixes.set(key, `${c.id}#${i}`);
+      if (!hit.length) continue;
+      for (const h of hit) by_pattern[h]++;
+      flags.push({
+        capsule: c.id, doubt_index: i, patterns: hit,
+        // VERBATIM, truncated only for the report — the queue still carries the full q
+        q_first_100: q.slice(0, 100),
+        duplicate_of: hit.includes("near_duplicate") ? prefixes.get(key) : undefined,
+      });
+    }
+  }
+  return {
+    checked, flagged: flags.length, by_pattern, flags,
+    // #106 — a have/need counter, never a bare gated word
+    line: `${flags.length}/${checked} live doubts violate FORGE_SPEC GATE 2 (cold-reader standard)`,
+    law: "FLAG ONLY. Capsules mirror the gist — the repair reaches the gist through the captain, never through this organ.",
+    checked_at: now.toISOString(),
   };
 }
 
@@ -202,13 +434,19 @@ function buildLexicon(capsules, cfg, now = new Date()) {
 // ---------------------------------------------------------------------------
 function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
   const retiredKeys = new Set(retired.map(r => `${r.capsule}#${r.doubt_index}`));
+  // #34 — GATE 2 runs BEFORE the queue is built, so every rematch prompt carries
+  // the verdict on its own cold-readability. `/rematch` can then refuse to serve a
+  // flagged doubt (or serve it with the warning) instead of confronting a cold
+  // future-Nikhil with "ye to inference vali cheez hi hai na?" and no antecedent.
+  const g2 = gate2Flags(capsules, cfg, now);
+  const g2By = new Map(g2.flags.map(f => [`${f.capsule}#${f.doubt_index}`, f.patterns]));
   const queue = [];
   for (const c of capsules) {
     const ageDays = c.lockedOn ? (now - new Date(c.lockedOn)) / 86400000 : 0;
     for (const [i, d] of (c.doubts || []).entries()) {
       const key = `${c.id}#${i}`;
       if (retiredKeys.has(key)) continue;
-      queue.push({ capsule: c.id, doubt_index: i, q_verbatim: d.q, locked_on: c.lockedOn || null, eligible: ageDays >= cfg.tape_room.min_age_days });
+      queue.push({ capsule: c.id, doubt_index: i, q_verbatim: d.q, locked_on: c.lockedOn || null, eligible: ageDays >= cfg.tape_room.min_age_days, gate2_flag: g2By.get(key) || null });
     }
   }
   // eldest first — the oldest opponent is the most satisfying rematch
@@ -227,6 +465,11 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
     // never repairable by more running. The counter now counts what the queue
     // counts: distinct retired doubts.
     doubts_retired: retiredKeys.size,
+    // #106 — the progress bar as a have/need pair, so "0" is never read as "fine"
+    retire_line: `${retiredKeys.size}/${retiredKeys.size + queue.length} doubts retired`,
+    // #34 — the GATE 2 verdict rides on the queue's own file, minus the per-doubt
+    // duplication (each entry already carries its gate2_flag).
+    gate2: { checked: g2.checked, flagged: g2.flagged, by_pattern: g2.by_pattern, line: g2.line, law: g2.law, flags: g2.flags },
     retired,  // raw list kept verbatim — it carries retired_on dates; it is his data, not a derived count
   };
 }
@@ -367,6 +610,108 @@ async function selftest() {
 
   assert("unknown argv mode rejected, never falls through to a real run", resolveMode("selftst") === null && resolveMode("retrie") === null && resolveMode(undefined) === "run" && resolveMode("RETIRE") === "retire");
 
+  // ---- AUDIT #4 — THE MINED LEXICON WAS FILLER --------------------------------
+  // Proven as a DIFFERENCE against the frozen pre-#4 engine, on a fixture built
+  // from the shapes that were actually live on 4 Aug ("karne se pehle",
+  // "yahan asli baat", "saare purane"). Both engines run; only one may serve glue.
+  {
+    const fillerCaps = ["a", "b"].map((id) => ({
+      id, lockedOn: "2026-06-15",
+      bolo: "warehouse wala naksha socho. yeh karne se pehle woh dekhna hota hai. yahan asli baat alag hai",
+      deep: "warehouse wala naksha phir se. yeh karne se pehle woh dekhna hota hai. yahan asli baat alag hai",
+      doubts: [{ q: "q", a: "warehouse wala naksha yahan chalta hai" }],
+    }));
+    const before = extractAnchorsLegacy(fillerCaps, cfg).map(a => a.phrase);
+    const after = extractAnchors(fillerCaps, cfg).map(a => a.phrase);
+    const isGlue = (p) => /karne se pehle|yahan asli baat/.test(p);
+    assert("#4 — the FROZEN engine really does mine connective tissue (the bug, reproduced)", before.some(isGlue));
+    assert("#4 — the repaired engine serves NONE of it", !after.some(isGlue));
+    assert("#4 — and his real anchor survives the filter (a filter that eats his voice is worse than the filler)",
+      after.some(p => p.includes("warehouse wala naksha")));
+    assert("#4 — Hinglish function words are stopwords now (they were invisible to the English-only list)",
+      ["karne", "pehle", "saare", "yahan", "ne", "wala", "kaise", "kya", "abhi", "chahiye", "isko", "uska", "matlab", "raha", "bhi"].every(w => STOP.has(w))
+      && !STOP_V0.has("karne") && !STOP_V0.has("pehle"));
+    assert("#4 — a phrase that is ALL glue, or ends on bare punctuation, is connective; a real one is not",
+      isConnectivePhrase("karne se pehle", 1) && isConnectivePhrase("yaad nahi -", 1)
+      && isConnectivePhrase("do alag level", 1) && !isConnectivePhrase("warehouse wala naksha", 1)
+      && !isConnectivePhrase("business cliffhanger", 1));
+    assert("#4 — the filter is a CONFIG key, not a constant (min_content_words raises the bar)",
+      isConnectivePhrase("ai ka ml", 1) === true && isConnectivePhrase("ai proposes", 1) === false && isConnectivePhrase("ai proposes", 2) === true);
+    const lexF = buildLexicon(fillerCaps, cfg, now);
+    // the counter must count REJECTIONS, not the survivor delta: the keep-list is
+    // capped at 25, so on the live bank the delta reads 0 while 10 connectives were
+    // actually removed. A counter that reports 0 for a filter that fired is the
+    // same class of lie as the literal assertions this audit is repairing.
+    const probe = { connectives_filtered: -1 };
+    extractAnchors(fillerCaps, cfg, probe);
+    assert("#4 — the lexicon reports REJECTIONS, not the survivor delta (the cap would hide the delta)",
+      probe.connectives_filtered > 0 && lexF.filtered_connectives === probe.connectives_filtered
+      && /connective n-gram\(s\) rejected/.test(lexF.anchor_line));
+  }
+
+  // ---- AUDIT #34 — FORGE_SPEC GATE 2, THE COLD-READER SLIP-CATCHER ------------
+  // Every fixture below is a doubt that is LIVE in his capsules right now, or a
+  // verbatim ❌ example from FORGE_SPEC.md §3. Nothing invented.
+  {
+    const g2caps = [{
+      id: "context", lockedOn: "2026-06-15", doubts: [
+        { q: "model ko pura input yaad rahe — kaunsa enemy pehle marta? (pehle-guess)" },  // spec:113 — named token
+        { q: "ye to inference vali cheez hi hai na?" },                                     // dangling `ye`
+        { q: "second enemy = menu size jo logits se banta?" },                              // spec:113 + trailing =
+        { q: "har layer pe SAME KV cache?" },                                               // spec:120 verbatim ❌ CRYPTIC
+        { q: "chop/summarize/RAG kaise chalta - nahi seekhna?" },                           // spec:122 verbatim ❌ META
+        { q: "Zyada temp = ?" },                                                            // spec:121 verbatim ❌ FRAGMENT
+        { q: "[RESOLVED 21 Jun] ANN cold-recall - 4 din pehle nervous, ab?" },              // spec:122 verbatim ❌ META
+        // the control: a doubt that PASSES. If the scanner ever flags this, it is
+        // flagging his good work and the check must go red.
+        { q: "maine socha embeddings ka cosine aur dot product same cheez hain kyunki dono direction dekhte, phir laga normalize karne ke baad hi same hote — toh bina normalize kiye kaunsa sahi hai?" },
+      ],
+    }, {
+      id: "dupes", lockedOn: "2026-06-15", doubts: [
+        { q: "tokenizer frozen vocab ke bahar ka shabd kaise todta hai jab woh dictionary mein hai hi nahi" },
+        { q: "tokenizer frozen vocab ke bahar ka shabd kaise todta hai — dobara wahi sawaal" },
+      ],
+    }];
+    const g2 = gate2Flags(g2caps, cfg, now);
+    const flagged = new Set(g2.flags.map(f => `${f.capsule}#${f.doubt_index}`));
+    assert("#34 — GATE 2 flags the spec's own named CRYPTIC patterns (dangling ye, second-enemy, (pehle-guess), the KV example)",
+      ["context#0", "context#1", "context#2", "context#3"].every(k => flagged.has(k)));
+    assert("#34 — it flags the spec's verbatim META and FRAGMENT examples too",
+      flagged.has("context#4") && flagged.has("context#5") && flagged.has("context#6"));
+    assert("#34 — a GOOD doubt is NOT flagged (a scanner that flags everything flags nothing)",
+      !flagged.has("context#7"));
+    assert("#34 — a near-duplicate is caught and NAMED, not just counted",
+      flagged.has("dupes#1") && g2.flags.find(f => f.capsule === "dupes").duplicate_of === "dupes#0");
+    assert("#34 — patterns are reported per-kind, and the count is a have/need line (#106)",
+      g2.by_pattern.cryptic > 0 && g2.by_pattern.meta > 0 && g2.by_pattern.fragment > 0 && g2.by_pattern.near_duplicate === 1
+      && g2.checked === 10 && /\d+\/10 live doubts/.test(g2.line));
+    assert("#34 — FLAG ONLY: not one character of his content is rewritten",
+      g2caps[0].doubts[1].q === "ye to inference vali cheez hi hai na?" && /FLAG ONLY/.test(g2.law));
+    // the address: the flag rides on the rematch prompt itself, in the queue
+    const tapeG2 = buildTapeRoom(g2caps, [], cfg, now);
+    assert("#34 — every queued rematch prompt carries its own GATE 2 verdict (that is the surface)",
+      tapeG2.queue.every(q => "gate2_flag" in q)
+      && tapeG2.queue.find(q => q.capsule === "context" && q.doubt_index === 1).gate2_flag.includes("cryptic")
+      && tapeG2.queue.find(q => q.capsule === "context" && q.doubt_index === 7).gate2_flag === null);
+    assert("#34 — the tape room reports the flagged count beside the queue it armed",
+      tapeG2.gate2.flagged === g2.flagged && tapeG2.gate2.checked === 10);
+    assert("#34 — a clean bank flags nothing and still reports honestly (0/n, never silence)",
+      (() => { const clean = gate2Flags([{ id: "x", doubts: [{ q: g2caps[0].doubts[7].q }] }], cfg, now); return clean.flagged === 0 && clean.checked === 1 && /0\/1 live doubts/.test(clean.line); })());
+  }
+
+  // ---- AUDIT #106 — every gated status carries its have/need counter -----------
+  {
+    const gated = mineGrammar(caps(5), cfg, now);
+    assert("#106 — a 'warming_up' grammar says HOW SHORT it is, not just the word",
+      gated.status === "warming_up" && gated.gate_line === `4/${cfg.gates.min_capsules} capsules · 20/${cfg.gates.min_doubts} doubts`);
+    const open = mineGrammar(caps(20), cfg, now);
+    assert("#106 — the counter is live in the OPEN state too (it never becomes decoration)",
+      open.status === "ok" && open.gate_line === `4/${cfg.gates.min_capsules} capsules · 80/${cfg.gates.min_doubts} doubts`);
+    const t = buildTapeRoom(caps(3), [{ capsule: "tok", doubt_index: 0 }], cfg, now);
+    assert("#106 — doubts_retired is reported as retired/total, so 0 is never read as 'fine'",
+      t.retire_line === `1/${t.queue.length + 1} doubts retired`);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -412,10 +757,22 @@ async function main() {
   writeAtomic(LEXICON, buildLexicon(capsules, cfg, now));
   const tape = buildTapeRoom(capsules, retired, cfg, now);
   writeAtomic(TAPE, tape);
-  console.log(`doubtminer: ${capsules.length} capsule(s), ${tape.queue.length} in the tape-room queue, doubts_retired=${tape.doubts_retired} → ${TAPE}`);
+  console.log(`doubtminer: ${capsules.length} capsule(s), ${tape.queue.length} in the tape-room queue, ${tape.retire_line} → ${TAPE}`);
+  // #34 — GATE 2's whole point is that the captain SEES the count. A flag nobody
+  // reads is the prose gate all over again.
+  if (tape.gate2.flagged) {
+    console.log(`doubtminer: ⚠ GATE 2 — ${tape.gate2.line}`);
+    console.log(`  by pattern: ${Object.entries(tape.gate2.by_pattern).filter(([, n]) => n).map(([k, n]) => `${k}=${n}`).join(" · ")}`);
+    for (const f of tape.gate2.flags) console.log(`    ${f.patterns.join("+").padEnd(18)} ${(f.capsule + "#" + f.doubt_index).padEnd(16)} ${JSON.stringify(f.q_first_100)}`);
+    console.log("  These are queued as VERBATIM rematch prompts. Capsules mirror the gist — repair them there, not here.");
+  } else {
+    console.log(`doubtminer: GATE 2 — ${tape.gate2.line}`);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { mineGrammar, buildLexicon, buildTapeRoom, extractAnchors, classifyShape, loadConfig, loadCapsules,
-         loadRetiredSafe, validateRetireTarget, resolveMode };   // guards exported for the audit's regression tests (25 Jul 2026)
+         loadRetiredSafe, validateRetireTarget, resolveMode,     // guards exported for the audit's regression tests (25 Jul 2026)
+         extractAnchorsLegacy, isConnectivePhrase, STOP, STOP_V0,   // #4 — frozen engine + the filter, both reachable
+         gate2Flags, GATE2_PATTERNS };                              // #34 — GATE 2, so a reader can flag without re-implementing

@@ -13,7 +13,22 @@ $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 function Mk($name, $args_, $sched) {
   # cmd /c form avoids the nested-quote trap ("Program Files" in node's path):
   # cd into the repo, then let PATH resolve node. No embedded quotes needed.
-  $tr = "cmd /c cd /d $repo && node scripts\$args_"
+  #
+  # 2 Aug 2026 audit, finding #98 (cohort half) — EVERY ORGAN GETS A VOICE.
+  # This used to be a bare `cmd /c cd /d $repo && node scripts\$args_` with no
+  # redirect, so ~35 scheduled organs printed into a cmd window that closed the
+  # instant they finished. The Boot Room's weekly verdict, the conductor's chain
+  # report, every stack trace: gone. Only six organs (Goalkeeper, FSRS,
+  # Calibration, Nemesis, LearningState, TimeAuditor) had a hand-appended
+  # redirect, which is why those six are the only ones with a .log today.
+  # run_logged.cmd does the redirect, rolls the log at 2 MB, and — critically —
+  # exits with the ORGAN's code, because Task Scheduler's `Last Result` is what
+  # /organism-doctor reads to decide whether an organ is alive.
+  #
+  # NOTE: this changes tasks created BY THIS SCRIPT. Tasks already registered keep
+  # their existing command until they are re-registered (re-running this file with
+  # /F overwrites them, which is the intended upgrade path).
+  $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
 }

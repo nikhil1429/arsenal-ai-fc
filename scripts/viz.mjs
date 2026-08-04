@@ -20,16 +20,32 @@
 //     render the minimal wall (KAL-line + floor) — his own wall never shows
 //     him a loss before he's chosen to look.
 //   · Brain insights render only if EVERY number in them exists in wall_data
-//     (the Manager's zero-invented-numbers law, reused).
+//     (the ONE validator, scripts/validators.mjs — never a local copy), and a
+//     REJECTED read is SHOWN, never silently omitted: a hallucinating night and
+//     a night the brain never ran must not produce the same blank shelf.
+//   · NO STALE MEDIA. Every media flag rides on a DATE-STAMPED artifact
+//     (posterFlag, geminiFlag). The wall may never present an old render as
+//     current, and it may never render an undated link to an undated file.
+//   · ABSENT ≠ ZERO. A file that has never been written is not a counter that
+//     measured nothing. Every panel says which one it is looking at.
+//   · EVERY GATE IS A COUNTER. No panel is withheld behind a producer's status
+//     word; it speaks from rep 1 with its have/need shown.
 //
-// INPUT (read-only): the whole bus. OUTPUT: wall_data.json +
-//   dressing-room/club/wall.html (sole writer of both).
+// INPUT (read-only): the whole bus, plus brain_config.json's `overnight` block
+//   and calibration_config.json's `min_reps` — two numbers this file needs and
+//   must never invent, read from the organs that own them.
+// OUTPUT: wall_data.json + dressing-room/club/wall.html (sole writer of both).
 // MODES:  run (default) · selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, statSync, openSync, readSync, closeSync, readdirSync } from "node:fs";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// #59/#60 (4 Aug 2026 audit): viz kept its OWN copy of the zero-hallucination
+// validator and it was the un-fixed copy — see allowedNumbersLegacy below. There
+// is now exactly one, in validators.mjs, and this file imports it. Do not add a
+// third.
+import { allowedNumbers, noNewNumbers } from "./validators.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -47,11 +63,102 @@ const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).pa
 // when the ts refuses to parse, so a malformed row behaves as it always did.
 const tsLocalDay = (ts) => { const d = new Date(ts); return Number.isNaN(d.getTime()) ? String(ts || "").slice(0, 10) : localDate(d); };
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => {
+const parseLines = (text) => {
   const out = [];
-  try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
+  for (const l of String(text || "").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} }
   return out;
 };
+// FROZEN (CLAUDE.md layering law): the whole-file reader every caller used before
+// the 4 Aug 2026 audit. Still the right tool for the small, bounded files
+// (pitch_read_history.jsonl = 1,797 bytes / 16 rows on 4 Aug). The unbounded ones
+// now go through readLinesSince().
+const readLines = (p) => { try { if (existsSync(p)) return parseLines(readFileSync(p, "utf8")); } catch {} return []; };
+
+// ---------------------------------------------------------------------------
+// #51 (reader side) — BOUNDED, ROLL-TOLERANT JSONL READING
+// ---------------------------------------------------------------------------
+// Every .jsonl on the bus is unbounded. brain_ledger.jsonl measured 1,244,313
+// bytes / 2,882 rows on 4 Aug 2026, and viz re-read ALL of it three times a day
+// to answer a question about roughly ten hours of it. readLinesSince() reads the
+// TAIL first and widens only if the tail did not reach far enough back.
+//
+// THIS IS NOT A GUESSED BUDGET (captain's standing order). TAIL_PROBE_BYTES is a
+// first probe, never a cap: the coverage check below re-reads the whole file, and
+// then any rolled/archived siblings, whenever the probe fell short — so a probe
+// that is too small costs one extra read and can NEVER silently drop a row.
+// Arithmetic for the probe size, from the live ledger:
+//   1,244,313 bytes / 2,882 rows = 431.7 bytes/row   (measured, not assumed)
+//   busiest single day in the file = 987 rows        (26 Jul, audit appendix #53)
+//   987 x 432 = 426,384 bytes  ->  probe 512 KiB = 1.23 busiest-days of headroom.
+const TAIL_PROBE_BYTES = 512 * 1024;
+
+function readTailText(p, bytes) {
+  const size = statSync(p).size;
+  if (size <= bytes) return { text: readFileSync(p, "utf8"), whole: true, size, read: size };
+  const fd = openSync(p, "r");
+  try {
+    const buf = Buffer.allocUnsafe(bytes);
+    readSync(fd, buf, 0, bytes, size - bytes);
+    const text = buf.toString("utf8");
+    const nl = text.indexOf("\n");
+    // the first line of a byte-offset read is almost certainly cut in half.
+    // Drop it — never guess at half a row.
+    return { text: nl < 0 ? "" : text.slice(nl + 1), whole: false, size, read: bytes };
+  } finally { closeSync(fd); }
+}
+
+// A monthly roll (#51's producer-side fix, presence.mjs / brain.mjs) will leave
+// the older rows in a sibling file. viz must survive that on the morning of the
+// 1st, when "last night" lives in last month's file. Both conventions in the
+// plan are accepted: <base>.<stamp>.jsonl beside the live file, and an archive/
+// sub-directory one level down.
+function rolledSiblings(p) {
+  const dir = dirname(p), base = basename(p, ".jsonl"), live = basename(p);
+  const out = [];
+  const scan = (d) => { try { for (const f of readdirSync(d)) if (f !== live && f.startsWith(base) && f.endsWith(".jsonl")) out.push(join(d, f)); } catch {} };
+  scan(dir); scan(join(dir, "archive"));
+  return out.sort().reverse();                       // newest stamp first
+}
+
+/**
+ * Rows at/after `sinceMs`, read tail-first, widening until the window is provably
+ * covered. Returns the rows AND an honest coverage report — an uncovered read is
+ * never rendered as a measured zero (audit law: honesty over green).
+ */
+function readLinesSince(p, sinceMs, tsOf = (r) => Date.parse(r && r.ts)) {
+  const rep = { rows: [], covered: false, bytes_read: 0, bytes_total: 0, files: [], reason: "file absent" };
+  if (!existsSync(p)) return rep;
+  const oldestReaches = (rows) => rows.some(r => { const t = tsOf(r); return Number.isFinite(t) && t < sinceMs; });
+  const keep = (rows) => rows.filter(r => { const t = tsOf(r); return Number.isFinite(t) && t >= sinceMs; });
+  try {
+    rep.bytes_total = statSync(p).size;
+    let probe = readTailText(p, TAIL_PROBE_BYTES);
+    let rows = parseLines(probe.text);
+    rep.bytes_read = probe.read; rep.files.push(basename(p));
+    // Covered when we can SEE a row older than the window start (proof we did not
+    // stop short), or when we have the whole file in hand.
+    if (!probe.whole && !oldestReaches(rows)) {
+      probe = { text: readFileSync(p, "utf8"), whole: true, size: rep.bytes_total, read: rep.bytes_total };
+      rows = parseLines(probe.text);
+      rep.bytes_read = probe.read;
+    }
+    rep.rows = keep(rows);
+    rep.covered = oldestReaches(rows);
+    rep.reason = rep.covered ? "window covered by the live file" : "live file starts inside the window";
+    if (!rep.covered) {
+      for (const sib of rolledSiblings(p)) {
+        const s = readTailText(sib, TAIL_PROBE_BYTES);
+        const srows = parseLines(s.text);
+        rep.bytes_read += s.read; rep.files.push(basename(sib));
+        rep.rows = keep(srows).concat(rep.rows);
+        if (oldestReaches(srows)) { rep.covered = true; rep.reason = "window covered with a rolled sibling"; break; }
+      }
+      if (!rep.covered) rep.reason = `no row older than the window exists (${rep.files.length} file(s) read) — the ledger may simply be younger than the window`;
+    }
+  } catch (e) { rep.reason = `read failed: ${e && e.code ? e.code : "unknown"}`; }
+  rep.rows.sort((a, b) => (tsOf(a) || 0) - (tsOf(b) || 0));
+  return rep;
+}
 function writeAtomic(path, text) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + ".tmp";
@@ -64,46 +171,152 @@ const safe = (v, fallback = "—") => (v === null || v === undefined || (typeof 
 // ---------------------------------------------------------------------------
 // data assembly (pure)
 // ---------------------------------------------------------------------------
+// THE OVERNIGHT WINDOW (#88, 4 Aug 2026 audit) ------------------------------
+// The old bucket filtered the ledger to TODAY's local day and only then asked
+// "was the hour >= 22 or < 8?" — so the h>=22 clause was structurally unreachable
+// for last night. Hour 22 is the single busiest hour in the whole ledger (674
+// rows) and 22:00-23:59 holds 987 of 2,833 rows; on 26 Jul the 08:50 wall showed
+// 221 of 478 real overnight calls under the banner "got sharper while you slept".
+// The window must CROSS MIDNIGHT: [yesterday start, today end).
+//
+// The two clock times are NOT invented here — they are read from
+// brain_config.json's own `overnight` block ({"start":"22:00","end":"07:30"}),
+// the same block brain.mjs schedules the night shift with. The literals below are
+// only the fallback for an unreadable config, and they are copied from that file,
+// not chosen. `overnight_window_source` says which one was used, on the surface.
+const OVERNIGHT_FALLBACK = { start: "22:00", end: "07:30" };   // mirrors brain_config.json
+const parseHM = (s, dh, dm) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || "").trim());
+  return m ? [Number(m[1]), Number(m[2])] : [dh, dm];
+};
+function overnightWindow(now, cfg) {
+  const c = cfg && typeof cfg === "object" ? cfg : OVERNIGHT_FALLBACK;
+  const [sh, sm] = parseHM(c.start, 22, 0);
+  const [eh, em] = parseHM(c.end, 7, 30);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em, 0, 0);
+  const start = new Date(end.getTime());
+  start.setDate(start.getDate() - 1);
+  start.setHours(sh, sm, 0, 0);
+  return { start, end, label: `${String(sh).padStart(2, "0")}:${String(sm).padStart(2, "0")}→${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}` };
+}
+
+// WEEKLY CONSISTENCY (#85, 4 Aug 2026 audit) ---------------------------------
+// The old line was `history.slice(-7)` filtered on `struggle !== "no_data"`, and
+// it was wrong on BOTH halves:
+//   · DENOMINATOR — the last 7 ROWS are not the last 7 DAYS. On 2 Aug those 7 rows
+//     spanned NINE calendar days; 07-24, 07-27 and 07-28 had no row at all and
+//     silently left the denominator, inflating the percentage.
+//   · NUMERATOR — `struggle` is only ever a verdict at >= 6 reps/day
+//     (touchline.mjs:186); below that pitch_read writes "no_data". So the 60-min
+//     and 75-min days scored ZERO and the single day that counted, 07-31, was the
+//     day the organism labelled him SPINNING. 14% for a week holding 225
+//     wall-minutes across 5 worked days; a flat 0% on every film kit 17-31 Jul.
+// The club's own law (ORGANISM_ANATOMY.md:199-200) defines a won day as
+// "floor-attempt or conscious-rest" — SHOWED UP, not WON — and `wall_minutes > 0`
+// is exactly that test (6/7 on 2 Aug). Spinning days still COUNT: misses are data
+// (ORGANISM_ANATOMY.md:87, no streak-shaming). A day with no row is a day he did
+// not show up: it stays in the denominator, it does not vanish from it.
+// The 7 is not a tuned limit — it is the word "weekly" on the panel.
+function weeklyConsistency(history, now) {
+  const DAYS = 7;
+  const wanted = [];
+  for (let i = DAYS - 1; i >= 0; i--) wanted.push(localDate(new Date(now.getTime() - i * 86400000)));
+  const rows = (history || []).filter(r => r && r.date);
+  // HONESTY OVER GREEN: if not one row carries a date we have measured NOTHING.
+  // Render "—", never a 0% he did not earn.
+  if (!rows.length) return { pct: null, worked: 0, days: DAYS, minutes: 0, measured: false };
+  const byDate = new Map();
+  for (const r of rows) byDate.set(String(r.date), r);
+  const inWindow = wanted.map(d => byDate.get(d) || null);
+  const worked = inWindow.filter(r => r && (r.wall_minutes || 0) > 0).length;
+  const minutes = inWindow.reduce((a, r) => a + (r && r.wall_minutes ? r.wall_minutes : 0), 0);
+  return { pct: Math.round(100 * worked / DAYS), worked, days: DAYS, minutes, measured: true };
+}
+
 function assembleWallData(bus, now = new Date()) {
   const { learning_state, season, calibration, tape_room, history, readiness, brainLedger, vitals, drills, twin } = bus;
   const verdict = readiness && readiness.verdict ? String(readiness.verdict).toUpperCase() : "GREEN";
 
-  // weekly consistency: won-days / days-elapsed over last 7 recorded days
-  const days = (history || []).slice(-7);
-  const weekly_consistency_pct = days.length
-    ? Math.round(100 * days.filter(d => d.struggle && d.struggle !== "no_data").length / days.length) : null;
-
-  // wall trend: weekly aggregate ONLY
-  const wall_week_minutes = (history || []).slice(-7).reduce((a, d) => a + (d.wall_minutes || 0), 0);
+  // weekly consistency + the wall trend now share ONE real 7-calendar-day window
+  // (#85). The old wall trend summed the last 7 ROWS and carried the same
+  // rows-are-not-days defect one line below the consistency bug.
+  const wc = weeklyConsistency(history, now);
+  const wall_week_minutes = wc.measured ? wc.minutes : (history || []).slice(-7).reduce((a, d) => a + (d.wall_minutes || 0), 0);
 
   // brain meter from ledger
   const today = localDate(now);
   const todayCalls = (brainLedger || []).filter(l => tsLocalDay(l.ts) === today);   // local day, not the UTC slice (E2E audit 25 Jul 2026)
-  const overnight = todayCalls.filter(l => { const h = new Date(l.ts).getHours(); return h >= 22 || h < 8; });
+  // #88: computed from the FULL ledger slice against a midnight-crossing window,
+  // never from todayCalls — that nesting is what made last night unreachable.
+  const ow = overnightWindow(now, bus.brain_overnight);
+  const inWindow = (l) => { const t = Date.parse(l && l.ts); return Number.isFinite(t) && t >= ow.start.getTime() && t < ow.end.getTime(); };
+  const overnight = (brainLedger || []).filter(inWindow);
+
+  // CALIBRATION FROM REP 1 (#106/#99): the old gate was `status === "ok"`, which
+  // calibration.mjs:254 only issues at >= min_reps — so on 4 Aug, with 9 real reps
+  // and a real 0.2111 gap on disk, the wall printed "awaiting blood" and threw the
+  // measurement away. The panel now speaks whenever there is an n, and carries a
+  // have/need counter instead of the word "warming_up". Danger topics stay
+  // suppressed below the threshold because the PRODUCER suppresses them.
+  const calBuckets = calibration && calibration.buckets ? calibration.buckets : null;
+  const calN = calibration && typeof calibration.total_reps === "number" ? calibration.total_reps
+    : calBuckets ? Object.values(calBuckets).reduce((a, b) => a + (b && b.n ? b.n : 0), 0) : 0;
+  const calNeed = typeof bus.calibration_min_reps === "number" ? bus.calibration_min_reps : null;   // read from calibration_config.json, never guessed
 
   return {
     date: today, generated_at: now.toISOString(), verdict,
     maidan: learning_state && learning_state.maidan ? learning_state.maidan : null,
     weak_connection: learning_state ? learning_state.weak_connection : null,
     season: {
+      // #84: "the file has never existed" and "the counter measured zero" used to
+      // collapse to the SAME value here, and renderSeason was the only data panel
+      // with no awaiting() branch — so the wall and the desktop asserted
+      // "matches 0 · cabinet locked" as a counted fact. The numeric keys keep their
+      // old shape (setup/WALLPAPER.ps1 reads them positionally); `ledger_open` is
+      // the fact that was missing, and the render branches on it.
+      ledger_open: !!season,
       matches_played: season ? safe(season.matches_played, 0) : 0,
       trophy_state: season ? safe(season.trophy_state, "unlit") : "unlit",
-      weekly_consistency_pct,
+      weekly_consistency_pct: wc.pct,
+      weekly_consistency_days: wc.worked,      // have  ─┐ #106: a counter, not a word
+      weekly_consistency_window: wc.days,      // need  ─┘
+      weekly_consistency_basis: wc.measured ? "days with wall_minutes > 0, over a real 7-calendar-day window" : "no dated history row — unmeasured",
     },
-    calibration: calibration && calibration.status === "ok" ? {
+    calibration: calBuckets && calN > 0 ? {
       gap: calibration.calibration_gap, trend: calibration.trend,
-      buckets: calibration.buckets, danger: (calibration.danger_zone || []).map(d => d.topic),
+      buckets: calBuckets, danger: (calibration.danger_zone || []).map(d => d.topic),
+      reps_have: calN, reps_need: calNeed,
+      low_confidence: calibration.low_confidence !== false,
+      status: calibration.status || null,
     } : null,
     derby: learning_state && Array.isArray(learning_state.confusion_pairs) ? learning_state.confusion_pairs.slice(0, 5) : [],
+    // same absent-vs-zero distinction as the season ledger (#84)
+    tape_open: !!tape_room,
     doubts_retired: tape_room ? safe(tape_room.doubts_retired, 0) : 0,
     tape_queue: tape_room && Array.isArray(tape_room.queue) ? tape_room.queue.length : 0,
     wall_week_minutes,
     body: { verdict },                                    // verdict ONLY — never raw biometrics
     bleeds: vitals && Array.isArray(vitals.bleeds) ? vitals.bleeds.map(b => b.kind) : [],
-    brain: { calls_today: todayCalls.length, overnight_calls: overnight.length,
-             tokens_today: todayCalls.reduce((a, l) => a + (l.total_tokens || 0), 0) },
+    brain: {
+      calls_today: todayCalls.length,
+      tokens_today: todayCalls.reduce((a, l) => a + (l.total_tokens || 0), 0),
+      overnight_calls: overnight.length,
+      overnight_tokens: overnight.reduce((a, l) => a + (l.total_tokens || 0), 0),
+      overnight_window: ow.label,                                        // #88 — say WHICH night
+      overnight_window_source: bus.brain_overnight ? "brain_config.json" : "fallback (brain_config unreadable)",
+      // HONESTY OVER GREEN: if the bounded read could not prove it reached back
+      // past the window start, the panel says so instead of printing a zero.
+      coverage: bus.ledger_coverage || null,
+    },
     kal_line: bus.kal_line || null,
-    drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({ kind: d.kind, emoji: d.probe_type_emoji })) : [],
+    // #87: the packet used to be flattened to {kind, emoji}, so wall.html rendered
+    // the literal string "🔵 recall" — a drill with no content. concepts[] is what
+    // makes it a drill; carry it to every surface that reads this file.
+    drills_tomorrow: drills && Array.isArray(drills.drills) ? drills.drills.map(d => ({
+      kind: d.kind, emoji: d.probe_type_emoji,
+      concepts: Array.isArray(d.concepts) ? d.concepts.filter(Boolean).map(String) : [],
+      mode: d.mode || null,
+    })) : [],
     twin_voice: twin ? twin.voice : null,
     media: bus.media || null,   // {teamtalk_am,teamtalk_pm,poster,filmkit} — presence flags only
     commitments: Array.isArray(bus.commitments) ? bus.commitments.slice(-7) : [],   // kal-lines, kept (U4)
@@ -111,7 +324,9 @@ function assembleWallData(bus, now = new Date()) {
     // count UP + the struggle verdict in forge-framing. No quota bars, no
     // wall-minutes daily meter (that law stands), hidden entirely on RED.
     now: {
-      struggle: bus.pitch_read && bus.pitch_read.date === today ? bus.pitch_read.struggle.verdict : "no_data",
+      // guarded read: a pitch_read.json written mid-run without a struggle block
+      // used to throw a TypeError here and kill the whole render.
+      struggle: bus.pitch_read && bus.pitch_read.date === today && bus.pitch_read.struggle && bus.pitch_read.struggle.verdict ? bus.pitch_read.struggle.verdict : "no_data",
       learning_min: bus.timeaudit && bus.timeaudit.buckets && bus.timeaudit.buckets.Learning ? Math.round(bus.timeaudit.buckets.Learning.minutes || 0) : 0,
       building_min: bus.timeaudit && bus.timeaudit.buckets && bus.timeaudit.buckets.Building ? Math.round(bus.timeaudit.buckets.Building.minutes || 0) : 0,
       reps_today: bus.repsToday || 0,
@@ -119,8 +334,24 @@ function assembleWallData(bus, now = new Date()) {
   };
 }
 
-// numbers whitelist (Manager's law, reused) for insight validation
-function allowedNumbers(data) {
+// ---------------------------------------------------------------------------
+// INSIGHT VALIDATION (#59, #60)
+// ---------------------------------------------------------------------------
+// FROZEN VERBATIM (CLAUDE.md layering law) — viz's own copy of the whitelist, as
+// it stood until 4 Aug 2026. It is kept, and it is NEUTERED: nothing calls it any
+// more. It is here as the witness to what it did, because it is the reason the
+// wall could carry an invented number:
+//   · `for (let i = 0; i <= 31; i++)` whitelisted EVERY integer 0-31 — exactly the
+//     range a hallucinating model fabricates (rep counts, card counts, small
+//     percentages), so "9 doubts retired" passed on a wall showing 0.
+//   · the caller then blanket-stripped every date and every clock time before the
+//     check, so an INVENTED deadline ("we ship by 2026-08-01") or an invented
+//     window ("lights out by 22:45") could never be caught at all.
+//   · it also split comma-grouped thousands: "10,000" extracted as ["10","000"]
+//     and bounced on "000", a number the model was handed, not one it invented (#60).
+// The plan of record is scripts/validators.mjs, imported at the top of this file.
+// Re-enabling this one means re-opening all three holes.
+function allowedNumbersLegacy(data) {
   const s = new Set();
   (function walk(v) {
     if (typeof v === "number" && Number.isFinite(v)) { s.add(String(v)); s.add(String(Math.round(v))); }
@@ -131,15 +362,42 @@ function allowedNumbers(data) {
   for (let i = 0; i <= 31; i++) s.add(String(i));
   return s;
 }
-function validateInsights(text, data) {
-  if (!text || !text.trim()) return null;
-  const allowed = allowedNumbers(data);
+
+// brain_config.json's banned_phrases, the three that apply to a motivational
+// surface. Kept as a named constant so the reason for a rejection can be shown.
+const HYPE_RE = /10x|exponential|on steroids/i;
+
+/**
+ * THE READ — the plan of record. Returns a RESULT, not a silence.
+ *
+ * #59's second half: the old validateInsights was reject-and-omit — it returned
+ * `null` and renderWall simply emitted no panel. On the wall, a night the brain
+ * never ran and a night the brain hallucinated looked IDENTICAL: a blank shelf.
+ * That is the audit's own failure mode (an unmeasured silence rendered as a
+ * measured nothing). A rejection is now a first-class, visible outcome.
+ *
+ * @param {string} text   the model's ≤3 lines
+ * @param {*} data        wall_data — the only numbers that exist
+ * @param {string} shown  the assembled prompt, if the caller has it (validators.mjs
+ *                        eats it: a digit the wrapper itself handed the model is by
+ *                        definition not invented)
+ * @returns {{lines: string[]|null, rejected: boolean, reason?: string}}
+ */
+function readInsights(text, data, shown = "") {
+  if (!text || !text.trim()) return { lines: null, rejected: false };
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 3);
-  const stripped = lines.join(" ").replace(/\d{4}-\d{2}-\d{2}/g, "").replace(/\d{1,2}:\d{2}/g, "");
-  for (const n of stripped.match(/\d+(\.\d+)?/g) || []) if (!allowed.has(n)) return null;   // reject-and-omit
-  if (/10x|exponential|on steroids/i.test(stripped)) return null;
-  return lines;
+  if (!lines.length) return { lines: null, rejected: false };
+  const joined = lines.join(" ");
+  const num = noNewNumbers(joined, data, shown);
+  if (!num.ok) return { lines: null, rejected: true, reason: `invented number ${num.bad}` };
+  const hype = HYPE_RE.exec(joined);
+  if (hype) return { lines: null, rejected: true, reason: `banned hype phrase "${hype[0]}"` };
+  return { lines, rejected: false };
 }
+
+// Contract-preserving wrapper: array-or-null, the shape every existing caller and
+// fixture expects. New callers should use readInsights and render the rejection.
+function validateInsights(text, data, shown = "") { return readInsights(text, data, shown).lines; }
 
 // ---------------------------------------------------------------------------
 // render (pure) — cold steel, warm core
@@ -151,6 +409,8 @@ function panel(title, inner) {
   <h2 style="font-size:11px;letter-spacing:2px;color:${C.gold};margin:0 0 10px;text-transform:uppercase">${esc(title)}</h2>${inner}</section>`;
 }
 const awaiting = (what) => `<div style="color:${C.dim};font-size:13px;padding:8px 0">awaiting blood — ${esc(what)} flows in with your first reps</div>`;
+// same voice, different trigger: some ledgers open on a ritual, not on reps (#84)
+const awaitingOn = (what, when) => `<div style="color:${C.dim};font-size:13px;padding:8px 0">awaiting blood — ${esc(what)} opens with ${esc(when)}</div>`;
 const fluColor = (f) => String(f).includes("🟢") ? C.green : String(f).includes("🟡") ? C.yellow : C.red;
 
 function renderMaidan(d) {
@@ -177,20 +437,39 @@ function renderMaidan(d) {
   return panel("The Maidan — your field", svg + weak);
 }
 
+// #84 — renderSeason was the ONLY data panel with no awaiting() branch, so on a
+// bus where season.json has never been written it printed "0 matches played" and
+// "🔒 the cabinet unlit" in the same weight and colour as a counted number. The
+// numbers are all accurate TODAY (matches_played 0 really is 0 until the first
+// full-time closes), so this is not a live lie — it is the missing signal that
+// would tell him the ledger DIED rather than read zero. Note the shape: an absent
+// season ledger does not blank the whole panel, because doubts_retired and the
+// consistency window beside it are genuinely measured and must keep their address
+// (audit rule: never take away a surface, give the missing thing one).
 function renderSeason(d) {
   const s = d.season;
   const cons = s.weekly_consistency_pct === null ? "—" : s.weekly_consistency_pct + "%";
-  return panel("Season", `
-    <div style="display:flex;gap:24px;align-items:baseline">
-      <div><span style="font-size:34px;color:${C.amber};font-weight:700">${safe(s.matches_played, 0)}</span>
-        <div style="font-size:11px;color:${C.dim}">matches played</div></div>
-      <div><span style="font-size:34px;color:${C.amber};font-weight:700">${d.doubts_retired}</span>
-        <div style="font-size:11px;color:${C.dim}">doubts retired · ${d.tape_queue} rematches waiting</div></div>
-      <div><span style="font-size:22px;color:${C.body}">${esc(cons)}</span>
-        <div style="font-size:11px;color:${C.dim}">weekly consistency</div></div>
-      <div><span style="font-size:22px">${s.trophy_state === "lit" ? "🏆" : "🔒"}</span>
-        <div style="font-size:11px;color:${C.dim}">the cabinet ${esc(s.trophy_state)}</div></div>
-    </div>`);
+  // every source dark → the sibling-panel treatment, verbatim
+  if (!s.ledger_open && !d.tape_open && s.weekly_consistency_pct === null) {
+    return panel("Season", awaitingOn("the season ledger", "your first full-time"));
+  }
+  const cell = (big, small, col = C.amber, size = 34) =>
+    `<div><span style="font-size:${size}px;color:${col};font-weight:700">${big}</span>
+        <div style="font-size:11px;color:${C.dim}">${small}</div></div>`;
+  const dark = (small) =>
+    `<div><span style="font-size:22px;color:${C.dim}">—</span>
+        <div style="font-size:11px;color:${C.dim}">${small}</div></div>`;
+  const parts = [];
+  parts.push(s.ledger_open ? cell(safe(s.matches_played, 0), "matches played") : dark("matches played · ledger opens at your first full-time"));
+  parts.push(d.tape_open ? cell(d.doubts_retired, `doubts retired · ${d.tape_queue} rematches waiting`) : dark("doubts retired · the tape room has not opened"));
+  // have/need beside the percentage (#106) — the number can no longer be read as
+  // a verdict without its denominator.
+  parts.push(cell(esc(cons), `weekly consistency · ${s.weekly_consistency_days}/${s.weekly_consistency_window} days you showed up`, C.body, 22));
+  parts.push(s.ledger_open
+    ? `<div><span style="font-size:22px">${s.trophy_state === "lit" ? "🏆" : "🔒"}</span>
+        <div style="font-size:11px;color:${C.dim}">the cabinet ${esc(s.trophy_state)}</div></div>`
+    : dark("the cabinet · unknown until the ledger opens"));
+  return panel("Season", `<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap">${parts.join("")}</div>`);
 }
 
 function renderCalibration(d) {
@@ -200,9 +479,19 @@ function renderCalibration(d) {
     const acc = b && b.accuracy !== null && b.n ? Math.round(b.accuracy * 100) : null;
     return `<div style="margin:4px 0;font-size:12px;color:${C.body}">${name}: ${acc === null ? "—" : acc + "%"} <span style="color:${C.dim}">(target ${Math.round(target * 100)}%, n=${b ? b.n : 0})</span></div>`;
   };
+  // #106 — the have/need counter replaces the word "warming_up". The panel used
+  // to disappear entirely below the producer's min_reps gate, throwing away a real
+  // measurement (9 reps, gap 0.2111 on 4 Aug) and telling him "awaiting blood"
+  // when blood had in fact been drawn. It speaks from rep 1, with its n shown, and
+  // says plainly what it is not yet allowed to conclude.
+  const need = typeof c.reps_need === "number" ? c.reps_need : null;
+  const warming = c.low_confidence !== false;
+  const counter = warming
+    ? `<div style="font-size:11px;color:${C.yellow};margin-bottom:8px">reading from ${c.reps_have} rep(s)${need === null ? " — the confidence threshold is unreadable right now" : ` of the ${need} this book wants`} · a direction, not a verdict${c.danger && c.danger.length ? "" : " · danger topics stay suppressed until then"}</div>`
+    : `<div style="font-size:11px;color:${C.dim};margin-bottom:8px">reading from ${c.reps_have} rep(s)${need === null ? "" : ` · past the ${need}-rep confidence threshold`}</div>`;
   return panel("Calibration — the book on your knowing",
     `<div style="font-size:26px;color:${C.amber};font-weight:700">${safe(c.gap)}</div>
-     <div style="font-size:11px;color:${C.dim};margin-bottom:8px">${esc(safe(c.trend, ""))}</div>` +
+     <div style="font-size:11px;color:${C.dim};margin-bottom:2px">${esc(safe(c.trend, ""))}</div>` + counter +
     bucket("knew", c.buckets && c.buckets.knew, 0.95) + bucket("shaky", c.buckets && c.buckets.shaky, 0.65) + bucket("guessed", c.buckets && c.buckets.guessed, 0.30) +
     (c.danger && c.danger.length ? `<div style="color:${C.red};font-size:12px;margin-top:8px">danger: ${esc(c.danger.join(", "))}</div>` : ""));
 }
@@ -223,9 +512,17 @@ function renderBody(d) {
 }
 
 function renderBrain(d) {
+  const b = d.brain;
+  // #88: say WHICH night. The old line read "N overnight" from a window that
+  // structurally could not contain last night's 22:00-23:59 — and on the 22:00
+  // wall it labelled the evening's OWN calls as work done "while you slept",
+  // before he had slept. Naming the window is what makes the number checkable.
+  const win = b.overnight_window ? ` (${esc(b.overnight_window)}, last night)` : "";
+  const cov = b.coverage && b.coverage.covered === false
+    ? `<div style="font-size:11px;color:${C.yellow};margin-top:4px">the ledger read could not reach back past the window start — ${esc(b.coverage.reason || "reason unrecorded")}. Read this as at-least, not as a total.</div>` : "";
   return panel("The brain — got sharper while you slept",
-    `<div style="font-size:13px;color:${C.body}">${d.brain.calls_today} call(s) today · ${d.brain.overnight_calls} overnight</div>
-     <div style="font-size:11px;color:${C.dim};margin-top:4px">${d.brain.tokens_today.toLocaleString()} tokens metabolized</div>`);
+    `<div style="font-size:13px;color:${C.body}">${b.calls_today} call(s) today · ${b.overnight_calls} overnight${win}</div>
+     <div style="font-size:11px;color:${C.dim};margin-top:4px">${b.tokens_today.toLocaleString()} tokens metabolized today · ${(b.overnight_tokens || 0).toLocaleString()} across last night's shift</div>${cov}`);
 }
 
 function renderWallTrend(d) {
@@ -235,10 +532,19 @@ function renderWallTrend(d) {
      <div style="font-size:11px;color:${C.dim};margin-top:4px">a stat you watch shrink — never a daily meter</div>`);
 }
 
+// #87 — the packet reached this surface stripped of content: wall.html literally
+// rendered "🔵 recall", a drill with no subject. concepts[] is the drill; without
+// it the panel is decoration. An empty concepts[] is now SAID, not hidden, because
+// a drill with no concept is a real defect upstream and he should see it.
 function renderDrills(d) {
   if (!d.drills_tomorrow.length) return panel("Tomorrow's set pieces", awaiting("compiled drills"));
-  return panel("Tomorrow's set pieces", d.drills_tomorrow.map(x =>
-    `<span style="font-size:14px;margin-right:12px">${esc(x.emoji || "")} ${esc(x.kind)}</span>`).join(""));
+  return panel("Tomorrow's set pieces", d.drills_tomorrow.map(x => {
+    const what = x.concepts && x.concepts.length
+      ? `<span style="color:${C.amber}">${esc(x.concepts.join(" · "))}</span>`
+      : `<span style="color:${C.dim}">no concept named — the packet came through empty</span>`;
+    const mode = x.mode ? `<span style="color:${C.dim};font-size:11px"> · ${esc(x.mode)}</span>` : "";
+    return `<div style="font-size:14px;color:${C.body};margin:5px 0">${esc(x.emoji || "")} ${esc(x.kind)} — ${what}${mode}</div>`;
+  }).join(""));
 }
 
 const FORGE_FRAME = {
@@ -284,12 +590,47 @@ function renderMedia(d) {
   // account: land, paste, Generate. No raw markdown in the captain's face.
   const jsSafe = (s) => JSON.stringify(String(s || "")).replace(/</g, "\\u003c");
   const act = (fn, label, col) => `<button onclick="${fn}" style="cursor:pointer;background:none;display:inline-block;padding:6px 12px;margin:4px 8px 0 0;border:1px solid ${col};border-radius:999px;color:${col};font-size:12px">${label}</button>`;
-  let lanes = `<script>function ship(t,u){try{navigator.clipboard.writeText(t)}catch(e){};window.open(u,'_blank')}
-const KIT=${jsSafe(m.filmkit_text)};const VEO=${jsSafe(m.veo_text)};</script>`
-    + act("ship(KIT,'https://notebooklm.google.com')", "🎬 season film — opens NotebookLM, source already copied: paste → Video Overview", C.amber)
-    + act("ship(VEO,'https://gemini.google.com')", "📽 poster/film prompt — opens Gemini, prompt copied: paste → send", C.gold);
-  if (m.gemini_render) lanes += btn("wall_gemini.html", "🎨 the Gemini render", C.dim);
+  // #89 — ship() used to be:
+  //     try{navigator.clipboard.writeText(t)}catch(e){};window.open(u,'_blank')
+  //   writeText returns a PROMISE. A synchronous try/catch cannot catch a promise
+  //   rejection, so a denied write (NotAllowedError: "Document is not focused" —
+  //   reproduced live from file://) was swallowed in total silence while the tab
+  //   opened anyway and the button's own label told him in writing "source already
+  //   copied". He then pastes whatever was on his clipboard before.
+  //   THE FIX IS NOT `.then(() => window.open(...))` — moving the open out of the
+  //   user-gesture window hands it to the popup blocker and trades a rare silent
+  //   copy failure for a reliable "nothing opened at all". So: window.open stays
+  //   SYNCHRONOUS inside the click, .catch() is attached to the write, and the
+  //   outcome — success, failure, or no clipboard API at all — is written into the
+  //   page next to the raw-kit link that is already the fallback.
+  const shipJs = `<script>
+function shipnote(msg,col){var n=document.getElementById('shipnote');if(n){n.textContent=msg;n.style.color=col}}
+function ship(t,u){
+  var w=window.open(u,'_blank');                       /* synchronous: keeps the user gesture */
+  if(!w){shipnote('\\u26a0 the browser blocked the new tab \\u2014 allow popups for this page, or use the raw kit link below','${C.yellow}')}
+  var p=null;
+  try{p=(navigator.clipboard&&navigator.clipboard.writeText)?navigator.clipboard.writeText(t):null}
+  catch(e){p=null}
+  if(p&&p.then){
+    p.then(function(){shipnote('\\u2713 copied \\u2014 paste it there (Ctrl+V)','${C.green}')})
+     .catch(function(e){shipnote('\\u26a0 copy FAILED ('+(e&&e.name?e.name:'unknown')+') \\u2014 your clipboard still holds whatever it held. Use the raw kit link below.','${C.red}')});
+  } else {
+    shipnote('\\u26a0 no clipboard API on this origin \\u2014 nothing was copied. Use the raw kit link below.','${C.red}');
+  }
+}
+const KIT=${jsSafe(m.filmkit_text)};const VEO=${jsSafe(m.veo_text)};</script>`;
+  // the labels no longer PROMISE a copy that has not happened yet
+  let lanes = shipJs
+    + act("ship(KIT,'https://notebooklm.google.com')", "🎬 season film — opens NotebookLM + copies the source: paste → Video Overview", C.amber)
+    + act("ship(VEO,'https://gemini.google.com')", "📽 poster/film prompt — opens Gemini + copies the prompt: paste → send", C.gold);
+  // #86 — the button used to ride a bare existsSync on a fixed, undated filename
+  // nothing ever unlinks, so it stayed lit forever from the first successful fold
+  // and on 2 Aug pointed at a 21 Jul artifact. The flag now rides on a
+  // date-stamped twin (see geminiFlag / posterFlag) and the date is PRINTED, so an
+  // undated link to an undated file can never be rendered again.
+  if (m.gemini_render) lanes += btn("wall_gemini.html", `🎨 the Gemini render · ${esc(m.gemini_render_date || d.date)}`, C.dim);
   lanes += `<a href="filmkit_${esc(d.date)}.md" style="margin-left:6px;font-size:11px;color:${C.dim}">raw kit</a>`;
+  lanes += `<div id="shipnote" style="margin-top:8px;font-size:11px;color:${C.dim}">nothing copied yet — the buttons above report success or failure here</div>`;
   return panel("Media — the club's channel", shelf + `<div style="margin-top:10px">${lanes}</div>`);
 }
 
@@ -303,9 +644,18 @@ function buildFilmKit(d, notebook) {
   L.push("Source document for a NotebookLM **Video Overview**. Upload this file (or point NotebookLM at the Drive copy), choose Video Overview, generate. That's the whole ritual.");
   L.push("");
   L.push(`## The season, in true numbers (as of ${d.date})`);
-  L.push(`- Matches played: ${safe(d.season.matches_played, 0)}`);
-  L.push(`- Doubts retired: ${d.doubts_retired} · rematches still waiting: ${d.tape_queue}`);
-  if (d.season.weekly_consistency_pct !== null) L.push(`- Weekly consistency: ${d.season.weekly_consistency_pct}%`);
+  // #84 — the kit is a source document for a film about his life; an unopened
+  // ledger must not be narrated as a counted zero any more than the wall may.
+  L.push(d.season.ledger_open
+    ? `- Matches played: ${safe(d.season.matches_played, 0)}`
+    : `- Matches played: not yet counted — the season ledger opens at his first full-time. Do not narrate this as zero.`);
+  L.push(d.tape_open
+    ? `- Doubts retired: ${d.doubts_retired} · rematches still waiting: ${d.tape_queue}`
+    : `- Doubts retired: not yet counted — the tape room has not opened. Do not narrate this as zero.`);
+  // #85 — and it must say what the percentage is OF (this printed a flat "0%" on
+  // every kit from 17 to 31 Jul, over weeks he showed up four and five times).
+  if (d.season.weekly_consistency_pct !== null) L.push(`- Weekly consistency: ${d.season.weekly_consistency_pct}% — he showed up on ${d.season.weekly_consistency_days} of the last ${d.season.weekly_consistency_window} days`);
+  else L.push(`- Weekly consistency: unmeasured (${d.season.weekly_consistency_basis})`);
   if (d.calibration) L.push(`- Calibration gap: ${safe(d.calibration.gap)} (${d.calibration.trend || "—"})`);
   if (d.maidan && Array.isArray(d.maidan.stages)) L.push(`- Maidan stages runnable: ${d.maidan.stages.filter(s => s.status === "runnable").length} of ${d.maidan.stages.length}`);
   if (d.kal_line) L.push(`- Tomorrow's first move, in his own words: "${d.kal_line}"`);
@@ -336,6 +686,22 @@ function posterFlag(posterOkToday, exists, dir, today) {
   return !!(posterOkToday || exists(join(dir, `poster_${today}.svg`)));
 }
 
+// GEMINI-RENDER FRESHNESS (#86, 4 Aug 2026 audit) — the identical bug, left
+// uncured one line away from its own cure. `data.media.gemini_render =
+// existsSync(club/wall_gemini.html)` was a bare existence check on a FIXED,
+// undated filename; repo-wide grep finds no unlink anywhere, so the flag was
+// permanently true from the first successful fold onward and the wall offered a
+// 21 Jul snapshot of his life as "the Gemini render" on 2 Aug. Worse, the
+// assignment ran BEFORE the fold that writes the file, so even on a night a fresh
+// render DID land the flag described the PREVIOUS render's state — a one-render
+// lag with no relationship to today at all. Same shape as posterFlag: the served
+// path stays wall_gemini.html (the club's relative links point at it), the flag
+// rides only on a date-stamped twin, and main() now sets it AFTER the fold.
+// NOT a lookback (see THE TRAPS, #65): today's stamp or nothing.
+function geminiFlag(foldedToday, exists, dir, today) {
+  return !!(foldedToday || exists(join(dir, `wall_gemini_${today}.html`)));
+}
+
 // COMMITMENTS — his own kal-lines and what happened next. Won days get the
 // tick; a miss reads "went again" (no-shame law); the newest waits unjudged.
 function renderCommitments(d) {
@@ -350,6 +716,28 @@ function renderCommitments(d) {
   return panel("Commitments — your own words", rows);
 }
 
+// THE READ, AND THE REJECTED READ (#59) --------------------------------------
+// The old wall emitted no panel at all when validateInsights returned null, so a
+// night the brain never ran and a night the brain hallucinated a number produced
+// the IDENTICAL surface: nothing. That is the audit's central failure mode —
+// silence rendered as a measured nothing — sitting on the one panel whose whole
+// job is to be trustworthy. A rejection is now shown, named, and framed: the gate
+// working is good news about the wall, not a blank shelf.
+// Accepts either the legacy array|null or readInsights' result object.
+function insightShelf(insights) {
+  const r = Array.isArray(insights) ? { lines: insights, rejected: false }
+    : (insights && typeof insights === "object") ? insights : { lines: null, rejected: false };
+  if (r.lines && r.lines.length) {
+    return panel("The read", r.lines.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join(""));
+  }
+  if (r.rejected) {
+    return panel("The read — held at the gate", `
+      <div style="font-size:13px;color:${C.yellow};margin:4px 0">last night's read was written, then REJECTED before it reached this wall: ${esc(r.reason || "reason unrecorded")}.</div>
+      <div style="font-size:11px;color:${C.dim};margin-top:6px">Nothing that cannot be traced to a real number gets a place here. The panels above are deterministic and stand on their own.</div>`);
+  }
+  return "";
+}
+
 function renderWall(data, insights) {
   const red = data.verdict === "RED";
   const head = `<meta http-equiv="refresh" content="300"><header style="padding:18px 22px 4px;display:flex;justify-content:space-between;align-items:baseline">
@@ -361,8 +749,7 @@ function renderWall(data, insights) {
     // minimal wall: KAL-line + floor only — never a loss before he chooses to look
     body = kal + panel("Today", `<div style="font-size:15px;color:${C.body}">Rotation day. One five-minute floor-touch is the whole match. The rest of the wall waits for you.</div>`);
   } else {
-    const insightHtml = insights && insights.length
-      ? panel("The read", insights.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join("")) : "";
+    const insightHtml = insightShelf(insights);
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
       renderNow(data) + renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
@@ -401,10 +788,16 @@ function voiceBrief(d) {
   L.push("");
   L.push(`Today: ${d.date}. Body verdict: ${d.verdict}.`);
   if (d.kal_line) L.push(`His KAL-line (his own words, the day starts here): "${d.kal_line}"`);
-  L.push(`Season: ${d.season.matches_played} matches played · ${d.doubts_retired} doubts retired · ${d.tape_queue} rematches waiting.`);
-  if (d.season.weekly_consistency_pct !== null) L.push(`Weekly consistency: ${d.season.weekly_consistency_pct}%.`);
-  if (d.calibration) L.push(`Calibration gap ${d.calibration.gap} (${d.calibration.trend || "—"}).${d.calibration.danger && d.calibration.danger.length ? " Danger topic: " + d.calibration.danger[0] + "." : ""}`);
-  if (d.drills_tomorrow.length) L.push(`Tomorrow's set pieces: ${d.drills_tomorrow.map(x => x.kind).join(", ")}.`);
+  // #84 — the spoken brief is the surface with the least room to be corrected, so
+  // an unopened ledger is named as unopened, not spoken as a zero.
+  L.push(d.season.ledger_open
+    ? `Season: ${d.season.matches_played} matches played · ${d.doubts_retired} doubts retired · ${d.tape_queue} rematches waiting.`
+    : `Season: the ledger has not opened yet — no match has been closed with a full-time, so there is no matches-played number to say. ${d.tape_open ? `${d.doubts_retired} doubts retired · ${d.tape_queue} rematches waiting.` : "The tape room has not opened either."}`);
+  if (d.season.weekly_consistency_pct !== null) L.push(`Weekly consistency: ${d.season.weekly_consistency_pct}% — ${d.season.weekly_consistency_days} of the last ${d.season.weekly_consistency_window} days he touched the wall.`);
+  // #106 — say the n, and say what it does not yet license
+  if (d.calibration) L.push(`Calibration gap ${d.calibration.gap} (${d.calibration.trend || "—"}), from ${d.calibration.reps_have} rep(s)${d.calibration.low_confidence !== false ? (typeof d.calibration.reps_need === "number" ? ` of the ${d.calibration.reps_need} it wants — a direction, not a verdict` : " — still low-confidence, a direction not a verdict") : ""}.${d.calibration.danger && d.calibration.danger.length ? " Danger topic: " + d.calibration.danger[0] + "." : ""}`);
+  // #87 — a set piece without its concept is not a set piece
+  if (d.drills_tomorrow.length) L.push(`Tomorrow's set pieces: ${d.drills_tomorrow.map(x => x.concepts && x.concepts.length ? `${x.kind} on ${x.concepts.join(" and ")}` : `${x.kind} (no concept named)`).join(", ")}.`);
   if (d.derby.length) L.push(`Hot derby: ${d.derby[0].from} vs ${d.derby[0].to} (×${d.derby[0].count}).`);
   if (d.twin_voice) L.push(`The book's earned line: ${d.twin_voice}`);
   if (d.bleeds.length) L.push(`Physio note: ${d.bleeds.join(", ")}.`);
@@ -451,9 +844,21 @@ async function selftest() {
       confusion_pairs: [{ from: "tokenization", to: "embeddings", count: 4 }],
     },
     season: { matches_played: 12, trophy_state: "unlit" },
-    calibration: { status: "ok", calibration_gap: 0.14, trend: "narrowing (0.19 → 0.14)", buckets: { knew: { n: 30, accuracy: 0.9 }, shaky: { n: 12, accuracy: 0.6 }, guessed: { n: 5, accuracy: 0.4 } }, danger_zone: [{ topic: "context" }] },
+    calibration: { status: "ok", total_reps: 47, low_confidence: false, calibration_gap: 0.14, trend: "narrowing (0.19 → 0.14)", buckets: { knew: { n: 30, accuracy: 0.9 }, shaky: { n: 12, accuracy: 0.6 }, guessed: { n: 5, accuracy: 0.4 } }, danger_zone: [{ topic: "context" }] },
+    calibration_min_reps: 20,
     tape_room: { doubts_retired: 24, queue: Array(88).fill({}) },
-    history: [{ wall_minutes: 24, struggle: "productive" }, { wall_minutes: 10, struggle: "productive" }],
+    // FIXTURE CORRECTED (#85, 4 Aug 2026): the old rows carried no `date` at all,
+    // which the producer (touchline.mjs:435) always writes — so every assertion
+    // about the weekly window was exercising a schema that does not exist on disk.
+    // `now` is 2026-07-12 22:00, so the 7-day window is 07-06..07-12: two worked
+    // days (07-11: 24 min, 07-12: 10 min), one zero-minute day inside the window,
+    // and one 999-minute row OUTSIDE it that must not leak into the total.
+    history: [
+      { date: "2026-07-04", wall_minutes: 999, struggle: "productive" },   // outside the 7-day window
+      { date: "2026-07-09", wall_minutes: 0,   struggle: "spinning"   },   // showed up? no. counted? no.
+      { date: "2026-07-11", wall_minutes: 24,  struggle: "no_data"    },   // 24 min, <6 reps — the day the OLD code threw away
+      { date: "2026-07-12", wall_minutes: 10,  struggle: "productive" },
+    ],
     readiness: { verdict: "GREEN", hrv: 22.7, rhr: 76.4 },
     // ts EXACTLY as brain.mjs writes it — `now.toISOString()`, UTC, with the Z.
     // E2E audit 25 Jul 2026: the old fixture was timezone-naive
@@ -463,7 +868,10 @@ async function selftest() {
     // UTC day, which is precisely what used to make it disappear.
     brainLedger: [{ ts: new Date(2026, 6, 12, 2, 10, 0).toISOString(), total_tokens: 52000 }, { ts: new Date(2026, 6, 12, 13, 30, 0).toISOString(), total_tokens: 8000 }],
     vitals: { bleeds: [{ kind: "effort_uncaptured" }] },
-    drills: { drills: [{ kind: "tape_room", probe_type_emoji: "🟣" }] },
+    // FIXTURE CORRECTED (#87): drills.json carries `concepts: []` on every drill
+    // (dressing-room/state/drills.json, 4 Aug) and the fixture omitted it — which
+    // is exactly why the "🟣 tape_room"-with-no-subject bug survived the suite.
+    drills: { drills: [{ kind: "tape_room", probe_type_emoji: "🟣", concepts: ["tokenization"], mode: "defend" }] },
     twin: { voice: null },
     kal_line: "pehla move: context Re-Jirah",
   };
@@ -488,6 +896,54 @@ async function selftest() {
   assert("KAL-line front and center", html.includes("pehla move: context Re-Jirah"));
   assert("wall trend weekly-only wording", html.includes("wall-minutes this week") && html.includes("never a daily meter"));
 
+  // === #88 — THE OVERNIGHT WINDOW MUST CROSS MIDNIGHT ======================
+  // The old bucket filtered to today's local day FIRST, so the `h >= 22` clause
+  // was unreachable for last night — and 22:00-23:59 is the busiest band in the
+  // real ledger (987 of 2,833 rows). Every pre-existing overnight fixture was
+  // post-midnight only (02:10, 03:00), which is why the suite never saw it.
+  const nightBus = { history: [], brain_overnight: { start: "22:00", end: "07:30" }, brainLedger: [
+    { ts: new Date(2026, 6, 11, 23, 0, 0).toISOString(), total_tokens: 5000 },   // LAST NIGHT 23:00 — the row the old code could never see
+    { ts: new Date(2026, 6, 12, 3, 0, 0).toISOString(),  total_tokens: 3000 },   // last night, after midnight
+    { ts: new Date(2026, 6, 12, 13, 0, 0).toISOString(), total_tokens: 100 },    // daytime
+    { ts: new Date(2026, 6, 12, 22, 30, 0).toISOString(), total_tokens: 700 },   // TONIGHT — not slept through yet
+  ] };
+  const night = assembleWallData(nightBus, now).brain;
+  assert("#88 last night's 22:00-23:59 now reaches the morning wall (2 overnight, not 1)", night.overnight_calls === 2);
+  assert("#88 overnight tokens span the midnight boundary (5000+3000)", night.overnight_tokens === 8000);
+  // the PM wall (22:00) used to label the evening's OWN calls as work done while
+  // he slept — before he had slept. Tonight's 22:30 row must count as ZERO here.
+  assert("#88 TONIGHT's 22:30 call is NOT reported as 'while you slept'",
+    assembleWallData({ history: [], brain_overnight: { start: "22:00", end: "07:30" },
+      brainLedger: [{ ts: new Date(2026, 6, 12, 22, 30, 0).toISOString(), total_tokens: 700 }] }, now).brain.overnight_calls === 0);
+  assert("#88 calendar-day counters stay calendar-day (3 today, last night's 23:00 excluded)", night.calls_today === 3);
+  assert("#88 the window is named on the surface, so the number is checkable",
+    night.overnight_window === "22:00→07:30" && renderWall(assembleWallData(nightBus, now), null).includes("22:00→07:30"));
+  assert("#88 the window comes from brain_config, and says so when it does not",
+    assembleWallData({ history: [] }, now).brain.overnight_window_source.startsWith("fallback"));
+
+  // === #85 — WEEKLY CONSISTENCY: 7 CALENDAR DAYS, wall_minutes > 0 =========
+  // Window 2026-07-06..07-12. Worked days in the fixture: 07-11 (24 min) and
+  // 07-12 (10 min) = 2/7 = 29%. The OLD code returned 100% here (3 of the 4 rows
+  // carry a non-no_data struggle over a 4-row denominator) — a number invented by
+  // a denominator that silently dropped the days he never showed up.
+  assert("#85 consistency is worked-days over a REAL 7-day window (2/7 = 29%)",
+    data.season.weekly_consistency_pct === 29 && data.season.weekly_consistency_days === 2 && data.season.weekly_consistency_window === 7);
+  assert("#85 a day with NO row stays in the denominator (7, not the 4 rows present)",
+    weeklyConsistency(bus.history, now).days === 7);
+  assert("#85 a SPINNING day still counts if he showed up (no streak-shaming law)",
+    weeklyConsistency([{ date: "2026-07-12", wall_minutes: 40, struggle: "spinning" }], now).worked === 1);
+  assert("#85 a <6-rep 'no_data' day with real minutes COUNTS (the 60-min days the old code threw away)",
+    weeklyConsistency([{ date: "2026-07-12", wall_minutes: 60, struggle: "no_data" }], now).worked === 1);
+  assert("#85 a zero-minute day does NOT count, whatever its struggle verdict",
+    weeklyConsistency([{ date: "2026-07-12", wall_minutes: 0, struggle: "productive" }], now).worked === 0);
+  assert("#85 an UNDATED history measures nothing and renders '—', never 0%",
+    weeklyConsistency([{ wall_minutes: 30 }], now).pct === null
+    && renderWall(assembleWallData({ ...bus, history: [{ wall_minutes: 30 }] }, now), null).includes(">—</span>"));
+  assert("#85 the wall trend shares the same 7-day window (34 min, not the 1033 of all rows)",
+    data.wall_week_minutes === 34);
+  assert("#85 the percentage carries its denominator on the wall (have/need, #106)",
+    html.includes("2/7 days you showed up"));
+
   // NOW strip (captain's call) + living refresh
   const nowData = assembleWallData({ ...bus, pitch_read: { date: "2026-07-12", struggle: { verdict: "productive" } }, timeaudit: { buckets: { Learning: { minutes: 95 }, Building: { minutes: 40 } } }, repsToday: 7 }, now);
   const nowHtml = renderWall(nowData, null);
@@ -505,8 +961,39 @@ async function selftest() {
   // insights validation
   assert("insight with real numbers passes", validateInsights("24 doubts retired and the gap sits at 0.14 — the book is honest.", data) !== null);
   assert("insight with INVENTED number rejected (omitted)", validateInsights("Your recall jumped 97% this week.", data) === null);
-  assert("hype in insights rejected", validateInsights("You are on a 10x trajectory.", data) === null);
+  // STRENGTHENED (4 Aug 2026): the old fixture was "on a 10x trajectory", whose
+  // "10" the number gate now catches on its own — so the assertion passed without
+  // ever exercising the hype guard. A digit-free hype phrase tests what it claims.
+  assert("hype in insights rejected", validateInsights("You are on an exponential trajectory.", data) === null);
+  assert("...and the rejection NAMES the hype phrase, not a generic failure",
+    readInsights("You are on an exponential trajectory.", data).reason.includes("exponential"));
   assert("insights capped at 3 lines", (validateInsights("a\nb\nc\nd", data) || []).length <= 3);
+
+  // === #59/#60 — ONE VALIDATOR, AND A VISIBLE REJECTION ====================
+  // The frozen legacy whitelist is kept as the witness; these two assertions are
+  // what it USED to do, so a re-introduction can never pass silently.
+  assert("#59 the frozen legacy whitelist really did allow every integer 0-31",
+    allowedNumbersLegacy({ x: 1 }).has("12") && allowedNumbersLegacy({ x: 1 }).has("31"));
+  assert("#59 the live validator does NOT — an invented 'cards due: 12' bounces",
+    validateInsights("cards due: 12 (+9 overdue)", { matchday: 7 }) === null);
+  assert("#59 an INVENTED deadline bounces (dates are no longer blanket-stripped)",
+    validateInsights("we ship by 2026-08-01", { matchday: 7 }) === null);
+  assert("#59 an INVENTED clock time bounces (times are no longer blanket-stripped)",
+    validateInsights("lights out by 22:45", { matchday: 7 }) === null);
+  assert("#60 a comma-grouped thousand is ONE number and no longer bounces on '000'",
+    validateInsights("the brain metabolized 60,000 tokens", data) !== null);
+  // the rejection is a SURFACE, not a silence: a hallucinating night and a night
+  // the brain never ran used to render the identical blank shelf.
+  const rejected = readInsights("Your recall jumped 97% this week.", data);
+  assert("#59 a rejection is reported, named, and carries the invented token",
+    rejected.rejected === true && rejected.lines === null && rejected.reason === "invented number 97");
+  const rejHtml = renderWall(data, rejected);
+  assert("#59 the wall SHOWS the rejection instead of losing the panel",
+    rejHtml.includes("held at the gate") && rejHtml.includes("invented number 97"));
+  assert("#59 a genuinely absent read still renders no shelf at all (silence ≠ rejection)",
+    !renderWall(data, readInsights("", data)).includes("held at the gate") && !renderWall(data, readInsights("", data)).includes("The read"));
+  assert("#59 the legacy array contract still renders the accepted read",
+    renderWall(data, ["24 doubts retired"]).includes("24 doubts retired"));
 
   // GEMINI LANE
   const pack = promptPack(data);
@@ -550,6 +1037,123 @@ async function selftest() {
   assert("film kit folds real notebook moments", kit.includes("the Tuesday you thought"));
   assert("film kit carries the tone laws, zero hype", kit.includes("kal phir") && !/10x|exponential|on steroids|countdown to/i.test(kit));
 
+  // === #86 — THE GEMINI RENDER NEEDS THE SAME FRESHNESS GATE AS THE POSTER ==
+  const staleGeminiOnly = (p) => /wall_gemini\.html$/.test(p);                 // the 21 Jul file nothing unlinks
+  const geminiTwinToo   = (p) => staleGeminiOnly(p) || p.endsWith(`wall_gemini_2026-07-12.html`);
+  assert("#86 a stale undated wall_gemini.html no longer lights the button",
+    geminiFlag(false, staleGeminiOnly, CLUB_DIR, "2026-07-12") === false);
+  assert("#86 a render stamped with today's date does light it",
+    geminiFlag(false, geminiTwinToo, CLUB_DIR, "2026-07-12") === true);
+  assert("#86 tonight's fresh fold counts even before the stamp is re-read",
+    geminiFlag(true, () => false, CLUB_DIR, "2026-07-12") === true);
+  assert("#86 the button prints the date, so an undated link can never render again",
+    renderWall(assembleWallData({ ...bus, media: { gemini_render: true, gemini_render_date: "2026-07-12" } }, now), null).includes("the Gemini render · 2026-07-12"));
+
+  // === #84 — THE SEASON PANEL FINALLY HAS AN AWAITING-BLOOD BRANCH ==========
+  // season.json has never been written; the panel used to print "0 matches
+  // played · 🔒 the cabinet unlit" in counted-number weight, and viz.mjs:89-90
+  // gave a reader no way to tell an absent ledger from a measured zero.
+  const noSeason = assembleWallData({ ...bus, season: null }, now);
+  assert("#84 absent ≠ zero is now IN THE DATA (ledger_open false)", noSeason.season.ledger_open === false && data.season.ledger_open === true);
+  const noSeasonHtml = renderWall(noSeason, null);
+  // scoped to the Season SECTION — the NOW strip legitimately renders a 0 for a
+  // measured, un-started day, and that zero is honest.
+  const seasonPanel = (h) => h.split(">Season<")[1].split("</section>")[0];
+  assert("#84 the wall says the ledger has not opened instead of asserting 0 matches",
+    noSeasonHtml.includes("ledger opens at your first full-time") && !seasonPanel(noSeasonHtml).includes(">0</span>"));
+  assert("#84 the cabinet is 'unknown', never a locked padlock it did not measure",
+    noSeasonHtml.includes("unknown until the ledger opens") && !noSeasonHtml.includes("🔒"));
+  assert("#84 measured siblings KEEP their address (doubts retired still renders)",
+    noSeasonHtml.includes(">24<") && noSeasonHtml.includes("doubts retired"));
+  const blindBus = { ...bus, season: null, tape_room: null, history: [] };
+  assert("#84 with every season source dark, the panel takes the sibling awaiting() treatment",
+    renderWall(assembleWallData(blindBus, now), null).includes("the season ledger opens with your first full-time"));
+  assert("#84 an absent tape room is not a measured zero either",
+    assembleWallData(blindBus, now).tape_open === false
+    && renderWall(assembleWallData({ ...bus, tape_room: null }, now), null).includes("the tape room has not opened"));
+  const blindKit = buildFilmKit(assembleWallData(blindBus, now), null);
+  assert("#84 the film kit refuses to narrate an unopened ledger as zero",
+    blindKit.includes("Do not narrate this as zero") && !blindKit.includes("Matches played: 0"));
+  assert("#84 the spoken brief refuses too",
+    promptPack(assembleWallData(blindBus, now))["voice_brief.md"].includes("the ledger has not opened yet"));
+
+  // === #87 — THE DRILL PACKET REACHES THE WALL WITH ITS CONCEPTS ============
+  assert("#87 concepts survive assembly (they used to be dropped at viz.mjs:106)",
+    data.drills_tomorrow[0].concepts.length === 1 && data.drills_tomorrow[0].concepts[0] === "tokenization");
+  assert("#87 the wall renders the SUBJECT, not the bare '🟣 tape_room'",
+    html.includes("tape_room — <span") && html.includes("tokenization"));
+  assert("#87 a packet that really does arrive empty SAYS so (never a silent blank)",
+    renderWall(assembleWallData({ ...bus, drills: { drills: [{ kind: "recall", probe_type_emoji: "🔵" }] } }, now), null).includes("no concept named"));
+  assert("#87 the spoken brief names the concept too",
+    pack["voice_brief.md"].includes("tape_room on tokenization"));
+
+  // === #89 — THE ONE-CLICK LANES REPORT WHAT THEY ACTUALLY DID ==============
+  const shipHtml = renderMedia(mediaData);
+  assert("#89 window.open stays SYNCHRONOUS inside the click (popup blockers)",
+    /function ship\(t,u\)\{\s*var w=window\.open\(u,'_blank'\);/.test(shipHtml));
+  assert("#89 the async clipboard write now has a .catch (a Promise rejection can't be caught by try/catch)",
+    shipHtml.includes(".catch(function(e){") && shipHtml.includes("copy FAILED"));
+  assert("#89 a blocked popup and a missing clipboard API are BOTH reported",
+    shipHtml.includes("blocked the new tab") && shipHtml.includes("no clipboard API"));
+  assert("#89 there is a place on the page for the report to land",
+    shipHtml.includes('id="shipnote"'));
+  assert("#89 the labels no longer PROMISE a copy that has not resolved yet",
+    !shipHtml.includes("already copied") && shipHtml.includes("+ copies the source"));
+
+  // === #106 — HAVE/NEED COUNTERS INSTEAD OF STATUS WORDS ====================
+  // calibration.mjs writes status "warming_up" below min_reps; the wall used to
+  // gate on status === "ok" and throw a real 9-rep measurement away.
+  const warmBus = { ...bus, calibration: { status: "warming_up", low_confidence: true, total_reps: 9, calibration_gap: 0.2111, trend: "establishing baseline (9 reps)", buckets: { knew: { n: 2, accuracy: 1 }, shaky: { n: 2, accuracy: 0.5 }, guessed: { n: 5, accuracy: 0 } }, danger_zone: [] }, calibration_min_reps: 20 };
+  const warm = assembleWallData(warmBus, now);
+  assert("#106 calibration speaks from rep 1 — a warming_up book is no longer thrown away",
+    warm.calibration !== null && warm.calibration.reps_have === 9 && warm.calibration.reps_need === 20);
+  const warmHtml = renderWall(warm, null);
+  assert("#106 the panel prints have/need, not the word 'warming_up'",
+    warmHtml.includes("reading from 9 rep(s) of the 20 this book wants") && !warmHtml.includes("warming_up"));
+  assert("#106 ...and says plainly what 9 reps does not yet license",
+    warmHtml.includes("a direction, not a verdict") && warmHtml.includes("0.2111"));
+  assert("#106 the 'need' is READ from calibration_config, never invented when absent",
+    assembleWallData({ ...warmBus, calibration_min_reps: null }, now).calibration.reps_need === null
+    && renderWall(assembleWallData({ ...warmBus, calibration_min_reps: null }, now), null).includes("threshold is unreadable"));
+  assert("#106 a book with zero reps still degrades to awaiting-blood, not to a fake gap",
+    assembleWallData({ ...bus, calibration: { status: "awaiting_data", buckets: { knew: { n: 0, accuracy: null } }, total_reps: 0 } }, now).calibration === null);
+
+  // === #51 (reader side) — BOUNDED, ROLL-TOLERANT, HONEST ABOUT COVERAGE ====
+  // No disk is touched: readLinesSince is exercised against the repo's own state
+  // dir, which is read-only from here.
+  const ledgerPath = join(STATE_DIR, "brain_ledger.jsonl");
+  if (existsSync(ledgerPath)) {
+    const win = overnightWindow(new Date(), null);
+    const r = readLinesSince(ledgerPath, win.start.getTime());
+    assert("#51 the ledger read is BOUNDED (bytes_read ≤ bytes_total, and it says both)",
+      r.bytes_read <= r.bytes_total && r.bytes_total > 0);
+    assert("#51 every row returned really is inside the window (no pre-window leakage)",
+      r.rows.every(x => Date.parse(x.ts) >= win.start.getTime()));
+    assert("#51 coverage is REPORTED, never assumed — the reason is always a sentence",
+      typeof r.covered === "boolean" && typeof r.reason === "string" && r.reason.length > 0);
+  } else {
+    assert("#51 an absent ledger reports absence, it does not throw or fake a zero",
+      readLinesSince(ledgerPath, 0).reason === "file absent");
+  }
+  assert("#51 an absent file is absence, not an empty measurement",
+    readLinesSince(join(STATE_DIR, "__no_such_ledger__.jsonl"), 0).covered === false);
+  assert("#51 uncovered coverage reaches the surface as a warning, never as a silent total",
+    renderWall(assembleWallData({ ...bus, ledger_coverage: { covered: false, reason: "live file starts inside the window" } }, now), null).includes("could not reach back past the window start"));
+
+  // === #90 — wall_data.json MUST NOT EMBED A COPY OF ITSELF =================
+  // main() writes WALL_DATA before attaching the blobs; this asserts the property
+  // that ordering exists to guarantee, on the same object main() serialises.
+  const persisted = assembleWallData(bus, now);
+  const persistedJson = JSON.stringify(persisted);
+  assert("#90 the persisted snapshot carries no veo_text/filmkit_text self-copy",
+    !persistedJson.includes("veo_text") && !persistedJson.includes("filmkit_text"));
+  assert("#90 ...and therefore no nested second copy of its own numbers",
+    (persistedJson.match(/"doubts_retired"/g) || []).length === 1);
+  const withBlobs = assembleWallData({ ...bus, media: { poster: true } }, now);
+  withBlobs.media.filmkit_text = kit; withBlobs.media.veo_text = pack["season_film.md"];
+  assert("#90 the WALL still receives the blobs it needs (same object, after the write)",
+    renderMedia(withBlobs).includes("const KIT=") && renderMedia(withBlobs).includes("const VEO="));
+
   // COMMITMENTS VIEW (U4) — kal-lines, kept; no shame ever
   const cData = assembleWallData({ ...bus, commitments: [
     { date: "2026-07-09", kal: "pehla move: parser test", next_result: "HIT" },
@@ -582,21 +1186,39 @@ async function main() {
     const p = join(STATE_DIR, "post_match", d + ".md");
     if (existsSync(p)) { const m = readFileSync(p, "utf8").match(/KAL-?LINE\s*→\s*(.+)/i); if (m) { kal = m[1].trim(); break; } }
   }
+  // CONFIG READS (read-only, single-writer law intact). Two numbers this file
+  // needs but must never invent: the night-shift window and the calibration
+  // confidence threshold. Both are read from the organs that own them.
+  const brainCfg = readJson(join(STATE_DIR, "brain_config.json"));
+  const calCfg   = readJson(join(STATE_DIR, "calibration_config.json"));
+  // #88/#51: the ledger window starts at the overnight window's own start, so ONE
+  // bounded read serves both the calendar-day counters and the midnight-crossing
+  // overnight bucket.
+  const ow = overnightWindow(now, brainCfg && brainCfg.overnight);
+  const ledger = readLinesSince(join(STATE_DIR, "brain_ledger.jsonl"), ow.start.getTime());
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+  const reps = readLinesSince(join(STATE_DIR, "reps_log.jsonl"), startOfToday);
   const bus = {
     learning_state: readJson(join(STATE_DIR, "learning_state.json")),
     season: readJson(join(STATE_DIR, "season.json")),
     calibration: readJson(join(STATE_DIR, "calibration.json")),
+    calibration_min_reps: calCfg && typeof calCfg.min_reps === "number" ? calCfg.min_reps : null,   // #106 — the "need", read not guessed
     tape_room: readJson(join(STATE_DIR, "tape_room.json")),
+    // pitch_read_history.jsonl is one row per day and 1,797 bytes on 4 Aug — the
+    // whole-file read is the right tool and the 7-day window is applied in
+    // weeklyConsistency(). It gets the bounded reader the day it needs one.
     history: readLines(join(STATE_DIR, "pitch_read_history.jsonl")),
     readiness: readJson(join(STATE_DIR, "readiness.json")),
-    brainLedger: readLines(join(STATE_DIR, "brain_ledger.jsonl")),
+    brain_overnight: brainCfg && brainCfg.overnight ? brainCfg.overnight : null,
+    brainLedger: ledger.rows,                                   // #51 — tail-bounded, roll-tolerant
+    ledger_coverage: { covered: ledger.covered, reason: ledger.reason, rows: ledger.rows.length, bytes_read: ledger.bytes_read, bytes_total: ledger.bytes_total, files: ledger.files },
     vitals: readJson(join(STATE_DIR, "loop_vitals.json")),
     drills: readJson(join(STATE_DIR, "drills.json")),
     twin: readJson(join(STATE_DIR, "twin.json")),
     kal_line: kal,
     pitch_read: readJson(join(STATE_DIR, "pitch_read.json")),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
-    repsToday: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => tsLocalDay(r.ts) === today).length,   // same UTC-slice bug as the ledger (E2E audit 25 Jul 2026)
+    repsToday: reps.rows.filter(r => tsLocalDay(r.ts) === today).length,   // local day, not the UTC slice (E2E audit 25 Jul 2026)
   };
   // COMMITMENTS (U4): last week of kal-lines + what the next day said
   const commitments = [];
@@ -645,7 +1267,13 @@ async function main() {
     if (existsSync(gdir)) writeAtomic(join(gdir, `filmkit_${today}.md`), kit);
   } catch { }
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
-  const insights = existsSync(insightPath) ? validateInsights(readFileSync(insightPath, "utf8"), data) : null;
+  // #59 — readInsights, not validateInsights: a rejection is a result the wall
+  // shows, not a silence it swallows. `shown` is empty here because viz does not
+  // hold the prompt brain.mjs assembled; validators.mjs still eats every number
+  // reachable from `data`, which IS what the job was fed (brain_config.json:
+  // wall_insights inputs = ["wall_data.json"]).
+  const insightRead = existsSync(insightPath) ? readInsights(readFileSync(insightPath, "utf8"), data) : { lines: null, rejected: false };
+  const insights = insightRead.lines;
   // the Gemini lane: tonight's ready-made prompts (with last night's design-
   // coach critique folded in) — built BEFORE the render so the shelf's
   // one-click lanes can carry the kit + prompt straight to the clipboard.
@@ -657,21 +1285,61 @@ async function main() {
   }
   const pack = promptPack(data, renderNotes);
   for (const [name, text] of Object.entries(pack)) writeAtomic(join(CLUB_DIR, "prompts", name), text);
-  data.media.filmkit_text = kit;
-  data.media.veo_text = pack["season_film.md"] || Object.values(pack)[0] || "";
-  data.media.gemini_render = existsSync(join(CLUB_DIR, "wall_gemini.html"));
-  writeAtomic(WALL_DATA, data);
-  writeAtomic(WALL_HTML, renderWall(data, insights));
-  let geminiNote = "";
+
+  // GEMINI FOLD — moved ABOVE the flag and the state write (#86). It used to run
+  // last, so `gemini_render` described the state of the previous render. Now the
+  // fold happens, then the flag is computed from what the fold actually wrote.
+  let geminiNote = "", geminiFoldedToday = false;
   const gPath = join(STATE_DIR, "brain_out", "gemini_wall", today + ".md");
   if (existsSync(gPath)) {
     const clean = sanitizeGemini(readFileSync(gPath, "utf8"));
-    if (clean) { writeAtomic(join(CLUB_DIR, "wall_gemini.html"), clean); geminiNote = " + gemini render folded in"; }
-    else geminiNote = " (gemini render REJECTED by sanitizer — deterministic wall stands)";
+    if (clean) {
+      writeAtomic(join(CLUB_DIR, "wall_gemini.html"), clean);                     // the served path (club links point here)
+      writeAtomic(join(CLUB_DIR, `wall_gemini_${today}.html`), clean);            // the date-stamped PROOF the flag rides on
+      geminiFoldedToday = true;
+      geminiNote = " + gemini render folded in";
+    } else geminiNote = " (gemini render REJECTED by sanitizer — deterministic wall stands)";
   }
-  console.log(`viz: wall rendered (${data.verdict}${insights ? ", " + insights.length + " insights" : ""})${geminiNote} · 3 Gemini prompts refreshed → ${WALL_HTML}`);
+  data.media.gemini_render = geminiFlag(geminiFoldedToday, existsSync, CLUB_DIR, today);
+  data.media.gemini_render_date = data.media.gemini_render ? today : null;
+
+  // #90 — THE STATE SNAPSHOT IS TAKEN HERE, BEFORE THE SELF-COPY. veo_text and
+  // filmkit_text are ~4.7KB of text the wall's inline <script> needs and NO state
+  // reader ever reads back (repo-wide grep: two hits, both in this file, both in
+  // this process). Written after `data` was serialised, wall_data.json carried a
+  // full nested JSON dump of itself — 6,714 bytes for ~2KB of state — and that
+  // whole duplicate was then inlined into TWO nightly LLM prompts (wall_insights,
+  // wall_review), halving their headroom under brain.mjs's 14,000-char clip with
+  // pure anchoring noise. Same object, same process: the HTML still gets the blobs.
+  writeAtomic(WALL_DATA, data);
+  data.media.filmkit_text = kit;                                   // in-memory only, for the wall's <script>
+  data.media.veo_text = pack["season_film.md"] || Object.values(pack)[0] || "";
+  writeAtomic(WALL_HTML, renderWall(data, insightRead));
+
+  // #106 — have/need counters, not status words, on the line he actually reads.
+  const cal = data.calibration;
+  const parts = [
+    `wall rendered (${data.verdict})`,
+    insights ? `${insights.length} insight line(s)` : insightRead.rejected ? `insights REJECTED at the gate: ${insightRead.reason}` : "no insights on disk",
+    `season ledger ${data.season.ledger_open ? "open" : "NOT YET OPEN (matches/cabinet shown as unmeasured)"}`,
+    `consistency ${data.season.weekly_consistency_days}/${data.season.weekly_consistency_window} days`,
+    cal ? `calibration ${cal.reps_have}/${cal.reps_need === null ? "?" : cal.reps_need} reps` : "calibration awaiting its first rep",
+    `brain ${data.brain.calls_today} today · ${data.brain.overnight_calls} overnight ${data.brain.overnight_window}${data.brain.coverage && data.brain.coverage.covered === false ? " (COVERAGE UNPROVEN: " + data.brain.coverage.reason + ")" : ""}`,
+    `ledger read ${ledger.bytes_read.toLocaleString()}/${ledger.bytes_total.toLocaleString()} bytes`,
+    `gemini render ${data.media.gemini_render ? "fresh (" + today + ")" : "none for today"}`,
+  ];
+  console.log(`viz: ${parts.join(" · ")}${geminiNote} · 3 Gemini prompts refreshed → ${WALL_HTML}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { assembleWallData, renderWall, validateInsights, allowedNumbers, promptPack, sanitizeGemini, renderMedia, buildFilmKit };
+export {
+  assembleWallData, renderWall, promptPack, sanitizeGemini, renderMedia, buildFilmKit,
+  // #59: `allowedNumbers` is re-exported from validators.mjs — every importer that
+  // already asked viz for it now transparently gets the ONE fixed implementation.
+  // allowedNumbersLegacy is the frozen witness, exported so a reader can diff them.
+  allowedNumbers, allowedNumbersLegacy,
+  validateInsights,     // legacy contract: string[] | null
+  readInsights,         // plan of record: {lines, rejected, reason}
+  insightShelf, posterFlag, geminiFlag, weeklyConsistency, overnightWindow, readLinesSince,
+};

@@ -65,6 +65,13 @@ const STORE     = join(STATE_DIR, "fsrs_store.json");
 const CFG = {
   request_retention: clamp01(Number(process.env.FSRS_RETENTION)) ?? 0.90,   // target retention
   hardestDueMax: 8,                                                          // cap on hardest_due list
+  // ORGANISM AUDIT #24 (4 Aug 2026) — THE LIVE-PATH REVIEW UNIT.
+  // "local_day" = plan of record · "none" = the frozen pre-audit replay
+  // (buildStoreLegacy). Named, not buried: flipping it back is one edit.
+  review_unit: "local_day",
+  // Which rep speaks for a collapsed day. "worst" = the lowest FSRS grade in the
+  // day. See THE REVIEW UNIT below for why this direction and not the other.
+  collapse_rating: "worst",
 };
 
 let TSFSRS_VERSION = "unknown";
@@ -153,9 +160,67 @@ function capsuleSeedReps(dir = join(STATE_DIR, "capsules")) {
 }
 
 // ---------------------------------------------------------------------------
+// THE REVIEW UNIT (organism audit #24, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// THE BUG, in the captain's own ledger: reps_log.jsonl rows 3-6 read
+// 20:28:02.795Z · 20:28:03.795Z · 20:28:04.795Z · 21:58:02.795Z — four reps across
+// ninety minutes sharing one millisecond, three of them exactly 1000 ms apart.
+// Those timestamps were AUTHORED by the model (the forge skill tells it to write
+// `ts`), never measured. buildStore then replayed them as three separate FSRS
+// reviews with elapsed_days = 0 between them — precisely the failure capsuleSeedReps
+// was patched to avoid for capsule dates (:147) and left unguarded on the live path.
+// Measured effect on the live card: stability 0.0265 against 0.3760 at honest spacing.
+//
+// WHY THE UNIT IS THE CALENDAR DAY, AND WHY THAT IS NOT A GUESSED THRESHOLD.
+// The audit's own suggestion was "closer together than a few minutes = one event",
+// but a few minutes is a number nobody measured. FSRS does not need one: its unit of
+// account IS the day. ts-fsrs computes elapsed_days by flooring the millisecond gap
+// to whole days, so two reviews inside one day carry elapsed_days = 0 — they are
+// arithmetically incapable of contributing interval information. Collapsing them
+// therefore DESTROYS NOTHING FSRS can use, while NOT collapsing them manufactures
+// review events that never happened. The unit is read off the algorithm's own
+// resolution, not chosen. (Live consequence, stated so it is not a surprise: the
+// seven `hallucinations` reps all fall on IST 31 Jul, so the card goes from a
+// fabricated 7 reviews to its real 1.)
+//
+// WHICH REP SPEAKS FOR THE DAY — the WORST grade in it. He probed `hallucinations`
+// on nine axes in one sitting and broke on several; taking the best (or the last,
+// which in a FORGE session is usually post-teaching) would let one lucky axis
+// certify a concept he did not hold. Worst is the conservative direction, the same
+// direction calibration's danger zone and learning-state's ladder already take. The
+// day's LAST instant is used as the review time so chronology is unchanged.
+//
+// THE CAPTAIN'S MIDNIGHT, not Greenwich's — the same boundary touchline.mjs:65 and
+// scorer.mjs already run on. localDate() is local by construction.
+const localDayOf = (ts) => { const d = new Date(ts); return Number.isNaN(d.getTime()) ? String(ts).slice(0, 10) : localDate(d); };
+
+// Groups one concept's chronologically-sorted reps into review EVENTS.
+// cfg.review_unit === "none" ⇒ one event per rep, i.e. the frozen legacy behaviour.
+function collapseReviews(sorted, cfg) {
+  if (!cfg || cfg.review_unit !== "local_day") return sorted.map((r) => ({ rep: r, merged: 1, day: localDayOf(r.ts) }));
+  const groups = [];
+  for (const r of sorted) {
+    const day = localDayOf(r.ts);
+    const cur = groups[groups.length - 1];
+    if (cur && cur.day === day) { cur.reps.push(r); continue; }
+    groups.push({ day, reps: [r] });
+  }
+  return groups.map((g) => {
+    const last = g.reps[g.reps.length - 1];
+    let speaks = last;
+    if (cfg.collapse_rating === "worst") for (const r of g.reps) if (ratingOf(r) < ratingOf(speaks)) speaks = r;
+    // the day's LAST instant, carrying the day's WORST grade
+    return { rep: { ...last, confidence: speaks.confidence, correct: speaks.correct }, merged: g.reps.length, day: g.day };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // core — replay reps into per-concept FSRS cards
 // ---------------------------------------------------------------------------
-function buildStore(reps, f) {
+// FROZEN (layering law) — the pre-#24 replay, byte-for-byte. It is what produced
+// every fsrs_store.json on disk today, so it stays readable and callable: a future
+// reader comparing the two schedules must be able to run both.
+function buildStoreLegacy(reps, f) {
   const groups = new Map();               // id -> { display, reps:[] }
   for (const r of reps) {
     if (!validRep(r)) continue;
@@ -183,6 +248,49 @@ function buildStore(reps, f) {
   return store;
 }
 
+// PLAN OF RECORD (#24): the same replay, against the review UNIT rather than
+// against whatever millisecond the model happened to author. Every card now carries
+// its own arithmetic — raw_reps, review_events, collapsed — so the number FSRS acted
+// on is inspectable beside the number he actually logged. cfg is trailing +
+// optional so every pre-existing 2-arg caller keeps working (layering, never replace).
+function buildStore(reps, f, cfg = CFG) {
+  const groups = new Map();               // id -> { display, reps:[] }
+  for (const r of reps) {
+    if (!validRep(r)) continue;
+    const id = normId(r.concept);
+    if (!id) continue;
+    if (!groups.has(id)) groups.set(id, { display: r.concept, reps: [] });
+    const g = groups.get(id);
+    g.display = r.concept;                 // last-seen original text = display
+    g.reps.push(r);
+  }
+  const store = [];
+  for (const [id, g] of groups) {
+    const sorted = g.reps.slice().sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+    // THE ONE CHANGED LINE, and everything below it is unchanged: FSRS is handed
+    // review EVENTS, not raw reps. With review_unit "none" this is the identity
+    // transform and buildStore is buildStoreLegacy.
+    const events = collapseReviews(sorted, cfg);
+    let card = createEmptyCard(new Date(events[0].rep.ts));
+    for (const e of events) card = f.next(card, new Date(e.rep.ts), ratingOf(e.rep)).card;
+    store.push({
+      concept: g.display, id,
+      stability: round(card.stability),
+      difficulty: round(card.difficulty),
+      last_review: card.last_review ? new Date(card.last_review).toISOString() : null,
+      due: new Date(card.due).toISOString(),
+      reps: card.reps, lapses: card.lapses, state: card.state,
+      // #24 — the arithmetic, on the bus. `reps` is what FSRS scheduled from;
+      // raw_reps is what he actually logged. Reporting only one of them is how the
+      // authored-timestamp fiction stayed invisible for a fortnight.
+      raw_reps: sorted.length, review_events: events.length,
+      collapsed: sorted.length - events.length,
+      review_unit: (cfg && cfg.review_unit) || "none",
+    });
+  }
+  return store;
+}
+
 // classify due vs overdue vs future against `now`; rank hardest by soonest-due, then lowest-stability
 function bucketize(store, now, cfg) {
   const start = new Date(now); start.setHours(0, 0, 0, 0);
@@ -200,15 +308,35 @@ function bucketize(store, now, cfg) {
 }
 
 function compute(reps, now, cfg, f) {
-  const store = buildStore(reps, f);
+  const store = buildStore(reps, f, cfg);
   const b = bucketize(store, now, cfg);
   const date = localDate(now);
   const generated_at = new Date(now).toISOString();
+  // #24 — the collapse, summed across every card, so the difference between what he
+  // logged and what FSRS scheduled from is a printed number and not an inference.
+  const raw = store.reduce((a, c) => a + (c.raw_reps || 0), 0);
+  const events = store.reduce((a, c) => a + (c.review_events || 0), 0);
   const cards = {
     date, engine: ENGINE, request_retention: cfg.request_retention,
     total_cards: store.length,
     due_today: b.due_today, overdue: b.overdue, hardest_due: b.hardest_due,
     status: store.length ? "ok" : "awaiting_data",
+    // ORGANISM AUDIT #106 — THE UNGATE. A refusal must be a measurement with its
+    // denominator shown, never the bare word. fsrs's only gate is "does one card
+    // exist", so it says so with its n rather than saying "awaiting_data" and
+    // leaving the captain to guess how far off he is.
+    gate: {
+      have: store.length, need: 1, unit: "cards",
+      line: `${store.length}/1 cards`,
+      open: store.length >= 1,
+      withheld: store.length ? [] : ["due_today", "overdue", "hardest_due"],
+    },
+    collapse: {
+      unit: (cfg.review_unit || "none"), rating: cfg.collapse_rating || null,
+      raw_reps: raw, review_events: events, collapsed: raw - events,
+      line: `${events}/${raw} review events (${raw - events} same-day reps merged)`,
+      note: "FSRS schedules in whole days; reps inside one day carry elapsed_days=0 and cannot inform an interval (organism audit #24)",
+    },
     generated_at,
   };
   const fsrsStore = { date, engine: ENGINE, request_retention: cfg.request_retention, generated_at, cards: store };
@@ -314,6 +442,88 @@ function selftest() {
     }
   }
 
+  // --- ORGANISM AUDIT #24 (4 Aug 2026): THE REVIEW UNIT ----------------------
+  // The live ledger's own shape: a FORGE burst whose timestamps the MODEL wrote —
+  // three reps one second apart, then a fourth ninety minutes later, all on one
+  // calendar day. Pre-fix this replayed as FOUR reviews with elapsed_days = 0.
+  {
+    const burstDay = (h, m, s, ms, conf, correct) => ({
+      ts: new Date(2026, 6, 31, h, m, s, ms).toISOString(), surface: "gem", track: "concept",
+      concept: "hallucinations", question: "Bolo.", confidence: conf, correct,
+    });
+    const burst = [
+      burstDay(20, 28, 2, 795, "guessed", false),
+      burstDay(20, 28, 3, 795, "guessed", false),
+      burstDay(20, 28, 4, 795, "knew", true),
+      burstDay(21, 58, 2, 795, "shaky", true),
+    ];
+    const legacy = buildStoreLegacy(burst, f)[0];
+    const fixed = buildStore(burst, f, CFG)[0];
+    assert("#24 the FROZEN legacy replay still counts the authored burst as 4 reviews (it is kept, not deleted)",
+      legacy.reps === 4);
+    assert("#24 the live path now replays one calendar day as ONE review event, and shows its arithmetic",
+      fixed.reps === 1 && fixed.review_events === 1 && fixed.raw_reps === 4 && fixed.collapsed === 3);
+    // ASSERT THE REAL INVARIANT, not a downstream side-effect. (The first draft of
+    // this check asserted `lapses === 1` on both engines; ts-fsrs does not count a
+    // FIRST review as a lapse — a New card graded Again is learning, not a relapse —
+    // so both read 0 and the assertion proved nothing about which grade won. What is
+    // actually being claimed is that the day's WORST grade, at the day's LAST
+    // instant, is what FSRS is handed.)
+    const sortedBurst = burst.slice().sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+    const ev = collapseReviews(sortedBurst, CFG);
+    assert("#24 the WORST grade in the day speaks for it, at the day's LAST instant (a lucky axis cannot certify a broken concept)",
+      ev.length === 1 && ev[0].merged === 4
+      && ratingOf(ev[0].rep) === Math.min(...sortedBurst.map(ratingOf))
+      && ev[0].rep.correct === false && ev[0].rep.confidence === "guessed"
+      && ev[0].rep.ts === sortedBurst[sortedBurst.length - 1].ts);
+    assert("#24 ...and 'worst' is a NAMED knob: turning it off lets the day's last rep speak instead",
+      collapseReviews(sortedBurst, { ...CFG, collapse_rating: "last" })[0].rep.confidence === "shaky");
+    assert("#24 zero-elapsed replays really did move the schedule — the two stabilities differ",
+      legacy.stability !== fixed.stability);
+
+    // ...and a genuine multi-day history is UNTOUCHED: this must fix the fiction
+    // without flattening real spacing, which is the whole point.
+    const spread = [
+      { ts: "2026-07-01T09:00:00Z", surface: "gem", track: "concept", concept: "spread", question: "s1", confidence: "knew", correct: true },
+      { ts: "2026-07-05T09:00:00Z", surface: "gem", track: "concept", concept: "spread", question: "s2", confidence: "knew", correct: true },
+      { ts: "2026-07-15T09:00:00Z", surface: "gem", track: "concept", concept: "spread", question: "s3", confidence: "knew", correct: true },
+    ];
+    const sp = buildStore(spread, f, CFG)[0];
+    assert("#24 three reps on three different days stay THREE reviews (real spacing is never flattened)",
+      sp.reps === 3 && sp.review_events === 3 && sp.collapsed === 0
+      && JSON.stringify(buildStoreLegacy(spread, f)[0].due) === JSON.stringify(sp.due));
+
+    // the unit is a NAMED knob, and turning it off restores the frozen engine exactly
+    const off = buildStore(burst, f, { ...CFG, review_unit: "none" })[0];
+    assert("#24 review_unit:'none' reproduces the frozen legacy schedule byte-for-byte (the switch is real)",
+      off.reps === legacy.reps && off.stability === legacy.stability && off.due === legacy.due);
+
+    // the capsule floor rides the same unit and is NOT disturbed: its dates are
+    // already one-per-instant, and distinct days stay distinct.
+    const capsuleLike = [
+      { ts: "2026-06-15T00:00:00.000Z", surface: "capsule", track: "concept", concept: "cap", question: "lock", confidence: "knew", correct: true },
+      { ts: "2026-06-29T00:00:00.000Z", surface: "capsule", track: "concept", concept: "cap", question: "reweld", confidence: "knew", correct: true },
+    ];
+    assert("#24 capsule seeds on distinct days are untouched by the collapse (capsuleSeedReps is not touched at all)",
+      buildStore(capsuleLike, f, CFG)[0].reps === 2 && buildStore(capsuleLike, f, CFG)[0].collapsed === 0);
+
+    // and the counter reaches cards.json, where a human reads it
+    const cc = compute(burst, new Date(2026, 7, 1, 12, 0, 0), CFG, f).cards;
+    assert("#24 cards.json carries the collapse arithmetic (raw vs scheduled), never just the scheduled number",
+      cc.collapse.raw_reps === 4 && cc.collapse.review_events === 1 && cc.collapse.collapsed === 3 && cc.collapse.line.includes("1/4"));
+  }
+
+  // --- ORGANISM AUDIT #106: the status line is a have/need counter ------------
+  {
+    const now106 = new Date(2026, 7, 1, 12, 0, 0);
+    const g0 = compute([], now106, CFG, f).cards;
+    const g1 = compute(growth, now106, CFG, f).cards;
+    assert("#106 an empty schedule says 0/1 cards with its denominator, not just 'awaiting_data'",
+      g0.status === "awaiting_data" && g0.gate.line === "0/1 cards" && g0.gate.open === false && g0.gate.withheld.includes("hardest_due"));
+    assert("#106 ...and the counter tracks the real n once cards exist",
+      g1.gate.have === 1 && g1.gate.open === true && g1.gate.line === "1/1 cards" && g1.gate.withheld.length === 0);
+  }
+
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -331,11 +541,11 @@ function main() {
   const { cards, fsrsStore } = compute(reps, new Date(), CFG, f);
   writeAtomic(CARDS, cards);
   writeAtomic(STORE, fsrsStore);
-  console.log(`fsrs: ${cards.status} — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}]  →  ${CARDS}`);
+  console.log(`fsrs: ${cards.status} (${cards.gate.line}) — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}] · ${cards.collapse.line}  →  ${CARDS}`);
   process.exit(0);
 }
 
 // Windows-safe entry guard (like timeaudit.mjs / capture.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { buildStore, bucketize, compute, ratingOf, normId, loadReps };
+export { buildStore, buildStoreLegacy, collapseReviews, localDayOf, bucketize, compute, ratingOf, normId, loadReps, CFG };

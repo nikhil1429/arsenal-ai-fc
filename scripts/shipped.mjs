@@ -53,8 +53,21 @@ const localDate = (now = new Date()) =>
 // on fixtures, then let the shell be the only untested part.)
 // ---------------------------------------------------------------------------
 
-// `git log --pretty=format:C%x09%H%x09%aI%x09%s --numstat` emits, per commit:
-//   C<TAB>sha<TAB>iso-date<TAB>subject
+// SELECTION AND DISPLAY MUST NAME THE SAME CLOCK — ORGANISM audit #97 (2026-08-04).
+// readRepo picks commits with `git log --since/--until`, which filter on the COMMITTER
+// date, while this format string printed %aI — the AUTHOR date. They are equal until the
+// first rebase, amend or cherry-pick and then they diverge silently. Reproduced in this
+// repo: commit 257e1aa has author date 2026-07-08T19:25:59+05:30 and committer date
+// 2026-07-10T14:30:21+05:30, so `--since="2026-07-10 00:00:00"` selects it into the 10th
+// and it labels itself the 8th. 5 of 219 commits here have divergent dates; that one
+// crosses a day boundary. Today the bug is INERT — summarise() drops the per-commit date
+// on the floor and no consumer reads it — but "unreachable" is not "correct", and the
+// exported parseGitLog is public surface. %cI makes the label the same clock as the filter.
+// (Note for whoever revisits this: `--date=author` is not a real git option. The choice is
+// %cI here, or drop the field; matching the filter is the cheaper of the two.)
+export const GIT_LOG_FORMAT = "C%x09%H%x09%cI%x09%s";
+// `git log --pretty=format:C%x09%H%x09%cI%x09%s --numstat` emits, per commit:
+//   C<TAB>sha<TAB>iso-COMMITTER-date<TAB>subject
 //   adds<TAB>dels<TAB>path      (repeated; "-" for binary)
 export function parseGitLog(raw) {
   const commits = [];
@@ -63,7 +76,8 @@ export function parseGitLog(raw) {
     if (!line.trim()) continue;
     if (line.startsWith("C\t")) {
       const [, sha, date, ...rest] = line.split("\t");
-      cur = { sha: (sha || "").slice(0, 8), date: date || null, subject: rest.join("\t") || "", files: [], insertions: 0, deletions: 0 };
+      // `date` is the COMMITTER date (%cI) — the same clock --since/--until filter on.
+      cur = { sha: (sha || "").slice(0, 8), date: date || null, date_kind: "committer", subject: rest.join("\t") || "", files: [], insertions: 0, deletions: 0 };
       commits.push(cur);
       continue;
     }
@@ -121,7 +135,8 @@ function git(repo, args) {
 function readRepo(repo, day) {
   const since = `${day} 00:00:00`, until = `${day} 23:59:59`;
   try {
-    const raw = git(repo, ["log", `--since=${since}`, `--until=${until}`, "--pretty=format:C%x09%H%x09%aI%x09%s", "--numstat"]);
+    // audit #97: --since/--until filter on the COMMITTER date, so the format must print it.
+    const raw = git(repo, ["log", `--since=${since}`, `--until=${until}`, `--pretty=format:${GIT_LOG_FORMAT}`, "--numstat"]);
     const commits = parseGitLog(raw);
     let newFiles = [];
     try {
@@ -227,6 +242,17 @@ function selftest() {
     parseGitLog("5\t5\tstray.txt").length === 0);
   assert("EMPTY-SAFE — no output ⇒ no commits", parseGitLog("").length === 0 && parseGitLog(null).length === 0);
   assert("a path containing a TAB survives", parseGitLog("C\ts\td\tsub\n1\t1\tdir\twith\ttab.md")[0].files[0] === "dir\twith\ttab.md");
+
+  // ORGANISM audit #97 (2026-08-04) — the selection clock and the display clock must match.
+  // --since/--until filter on the COMMITTER date; the format used to print %aI (AUTHOR).
+  // Live proof in this repo: 257e1aa is authored 2026-07-08 and committed 2026-07-10, so
+  // it was selected into the 10th and labelled itself the 8th.
+  assert("#97 the log format prints the COMMITTER date (%cI), the same clock --since filters on",
+    /%cI/.test(GIT_LOG_FORMAT) && !/%aI/.test(GIT_LOG_FORMAT) && GIT_LOG_FORMAT.startsWith("C%x09"));
+  assert("#97 readRepo asks git for exactly that format (no second, drifting copy of it)",
+    readRepo.toString().includes("GIT_LOG_FORMAT") && !readRepo.toString().includes("%aI"));
+  assert("#97 the parsed date says which clock it is, so no consumer has to guess",
+    commits[0].date_kind === "committer" && commits[0].date === "2026-07-30T10:00:00+05:30");
 
   const sum = summarise(commits, ["scripts/capsule_bridge.mjs"]);
   assert("files are de-duplicated across commits", sum.files_touched === 4 && sum.commits === 2);

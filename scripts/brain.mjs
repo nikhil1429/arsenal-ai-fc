@@ -27,9 +27,16 @@
 // GUARDS (each selftested):
 //   · ANTHROPIC_API_KEY set ⇒ REFUSE to run LLM calls (hard $100 ceiling:
 //     subscription only, ever).
-//   · banned-phrase validator (no 10x/exponential/on-steroids — hype in
-//     output is a bug); no_new_numbers validator for insight-class jobs
-//     (the Manager's zero-invented-numbers law, reused).
+//   · banned-phrase validator (no 10x/on-steroids/god-tier — hype in output is a
+//     bug), OPT-OUT per job via `hype_guard:false` for machine-side analysis where
+//     the words are real vocabulary; no_new_numbers / quotes_only validators for
+//     insight-class jobs. All three now delegate to scripts/validators.mjs — the ONE
+//     zero-hallucination engine — and the assembled prompt is threaded through as
+//     `shown`, so a digit the wrapper itself handed the model is never "invented".
+//   · EVERY job declares a `surface` (where its output appears). Reported with a
+//     have/need counter on `status`; never a silent block.
+//   · declared inputs are audited per run: a `required:true` input that is absent
+//     skips the job BEFORE the spend, and the absent count rides the ledger row.
 //   · deterministic organs never blocked: the brain enriches; it is never
 //     load-bearing for the sheet (fallback skeleton law lives in manager.mjs).
 //
@@ -40,11 +47,20 @@
 // MODES:  tick (default) · run <job_id> · status · selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync } from "node:fs";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { runManager } from "./manager.mjs";
+// THE ONE ZERO-HALLUCINATION VALIDATOR (2 Aug 2026 audit, findings #59/#60/#61).
+// `allowedNumbers`/`noNewNumbers` used to exist THREE times — here, in manager.mjs and
+// in viz.mjs — and only the manager's carried the 25 Jul fix. The two copies here still
+// whitelisted every integer 0–31 and blanket-stripped dates and clock times, so a
+// fabricated "cards due: 12 (+9 overdue)" or "we ship by 2026-12-25" sailed through on
+// all six no_new_numbers jobs — including both team-talk mp3s and the Dugout's
+// day_cartridge system instruction. The frozen originals stay below (layering law) as
+// `allowedNumbersLegacy` / `noNewNumbersLegacy`; every LIVE call now routes here.
+import { allowedNumbers as allowedNumbersShared, noNewNumbers as noNewNumbersShared, quotesOnly } from "./validators.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -64,7 +80,15 @@ const DEFAULTS = {
   // attempts, a job that fails DETERMINISTICALLY (validator always rejects, CLI
   // logged out) re-ran ~1150×/day at full model cost. Retry is right; retrying
   // forever is not. N attempts per shift, then the job sits out until next shift.
-  guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids", "god-tier", "time is short"], max_attempts_per_shift: 3 },
+  // "exponential" was DROPPED from the banned list on 2 Aug 2026 (audit finding #62).
+  // bannedPhraseCheck is a naive lowercase substring test, so it also catches
+  // "exponentially" and "exponent" — and this organism's entire syllabus is transformers,
+  // where softmax IS an exponential and quadratic-vs-exponential is a real claim about
+  // complexity. Measured: 12 rejections / 185,983 tokens destroyed after the spend, on
+  // machine-side mining jobs. The guard exists to keep HYPE out of the captain's ear;
+  // it is kept for "10x", "on steroids", "god-tier", "time is short", which have no
+  // legitimate technical reading. Per-job opt-out: `"hype_guard": false` (see hypeGuardOn).
+  guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "on steroids", "god-tier", "time is short"], max_attempts_per_shift: 3 },
   ntfy: { enabled: false, topic: "", push_after: ["formation_read"] },
   gemini: { enabled: false, binary: "gemini" },
   dugout_pool: { enabled: true, gemini_defer_threshold_min: 30 },
@@ -86,6 +110,20 @@ function loadConfig(path = CFG_PATH) {
         ntfy: { ...DEFAULTS.ntfy, ...(j.ntfy || {}) },
         gemini: { ...DEFAULTS.gemini, ...(j.gemini || {}) },
         dugout_pool: { ...DEFAULTS.dugout_pool, ...(j.dugout_pool || {}) },
+        // CANON THAT COULD NOT BE EDITED (1 Aug 2026 audit). This return is a hardcoded
+        // key literal, so a `pulse` or `daemon` block written into brain_config.json was
+        // read, parsed, and silently dropped on the floor — pulseConfig() always saw
+        // undefined and always returned its own defaults, and `"enabled": false` for the
+        // pulse was literally unreachable. The file's own header claims "brain.mjs is the
+        // sole reader; edits here are canon edits"; for two whole sections that was false.
+        pulse: { ...(j.pulse || {}) },
+        daemon: { ...(j.daemon || {}) },
+        // THE MASTER PAUSE (2 Aug 2026). One switch for all 23 LLM jobs, because
+        // flipping 23 `enabled` flags by hand is 23 chances to leave one on and no
+        // way to tell later which were paused deliberately and which were forgotten.
+        // Strictly `=== true` so a typo, a string, or a missing key can never pause
+        // the organism by accident — the safe direction is RUNNING.
+        paused: j.paused === true,
         jobs: Array.isArray(j.jobs) ? j.jobs : [],
       };
     }
@@ -117,6 +155,77 @@ const readLines = (p) => {
   try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
   return out;
 };
+
+// ---------------------------------------------------------------------------
+// TAIL READS FOR UNBOUNDED LOGS (2 Aug 2026 audit, finding #51)
+// ---------------------------------------------------------------------------
+// presence_log.jsonl is append-only with no rotation — 266 KB / 1,507 rows after 16
+// days, ~6.7 MB/yr measured. brain has TWO whole-file readers that then throw ~99% of
+// it away: liveSignal() wants the last 6 rows, and gatherInputs wants the last 200 for
+// three LLM jobs. The presence organ is adding a MONTHLY ROLL, so the live file can
+// also become short or vanish mid-month; a reader that only ever opens
+// `<name>.jsonl` would then silently report an empty history as a measured zero.
+//
+// So this does two things at once: it reads only the bytes it needs, and it falls
+// back to the newest ARCHIVE siblings (`<name>.<YYYY-MM>.jsonl`) when the live file
+// cannot supply n rows. Archive-tolerant by construction — it works whether or not
+// the roll has landed yet.
+//
+// NO GUESSED BYTE BUDGET: the read GROWS from the end of the file, doubling until it
+// has n+1 newlines or reaches byte 0. The starting chunk is derived, not chosen —
+// 64 KiB is one filesystem read-ahead unit and already holds ~370 presence rows at
+// the file's own measured mean row size (266,799 B / 1,507 rows = 177 B/row), i.e.
+// the first read satisfies every caller in this file (n = 6 and n = 200) without a
+// second syscall. If a row ever gets longer, the loop simply reads again.
+const TAIL_CHUNK = 65536;
+function tailText(p, n) {
+  let fd = null;
+  try {
+    const size = statSync(p).size;
+    if (size === 0) return "";
+    fd = openSync(p, "r");
+    let want = Math.min(size, TAIL_CHUNK);
+    for (;;) {
+      const buf = Buffer.alloc(want);
+      readSync(fd, buf, 0, want, size - want);
+      const text = buf.toString("utf8");
+      // enough newlines to be sure the first (possibly truncated) row can be dropped,
+      // or we already hold the whole file — either way we are done.
+      if (want >= size) return text;
+      if ((text.match(/\n/g) || []).length > n) return text.slice(text.indexOf("\n") + 1);
+      want = Math.min(size, want * 2);
+    }
+  } catch { return null; } finally { if (fd !== null) { try { closeSync(fd); } catch {} } }
+}
+function parseLines(text) {
+  const out = [];
+  for (const l of String(text || "").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} }
+  return out;
+}
+// archives of `<dir>/<base>.jsonl`, newest first: `<base>.2026-07.jsonl`, `<base>.2026-06.jsonl`…
+// Sorted DESCENDING by name, which for zero-padded YYYY-MM is chronological.
+function archiveSiblings(p) {
+  try {
+    const dir = dirname(p), base = basename(p, ".jsonl");
+    const re = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[0-9][0-9A-Za-z_-]*\\.jsonl$`);
+    return readdirSync(dir).filter(f => re.test(f)).sort().reverse().map(f => join(dir, f));
+  } catch { return []; }
+}
+// The public seam: the last n parsed rows of a (possibly rolled) jsonl log, oldest→newest.
+// Returns [] when nothing is readable — and the CALLER is responsible for not rendering
+// that as a measured zero (see the absent-input accounting in gatherInputsAudited).
+function readLinesTail(p, n) {
+  let rows = existsSync(p) ? parseLines(tailText(p, n)) : [];
+  if (rows.length >= n) return rows.slice(-n);
+  // short (or missing) live file ⇒ a roll just happened, or is about to. Walk back
+  // through the archives newest-first until we have n rows or run out of history.
+  for (const a of archiveSiblings(p)) {
+    if (rows.length >= n) break;
+    const older = parseLines(tailText(a, n - rows.length));
+    rows = older.slice(-(n - rows.length)).concat(rows);
+  }
+  return rows.slice(-n);
+}
 
 // ---------------------------------------------------------------------------
 // BUDGET GOVERNOR (pure)
@@ -220,14 +329,89 @@ function targetBurn(cfg, hr, now = new Date()) {
 // ===========================================================================
 function pulseConfig(cfg) {
   const p = (cfg && cfg.pulse) || {};
+  // THE CAP WAS DENOMINATED IN THE WRONG UNIT (1 Aug 2026 audit — measured).
+  // "Cheap enough to be continuous" was asserted from the MODEL (haiku ~1% of opus) and
+  // never re-derived from the CALL. Every `claude -p` re-pays a full CLI boot: measured
+  // 32,480 tok/pulse of which ~31,970 is system-prompt + tool-definition cache — the
+  // pulse's own payload is ~510. So the "cheap" layer costs 1.61x an Opus job (opus avg
+  // 20,192, n=24), and 200 calls/day authorised ~6.5M tok/DAY against a 12M/WEEK plan.
+  // On 1 Aug it took 86.6% of the day's entire spend. Rail 3 (headroom) fired correctly
+  // and rail 2 could not, because it was counting the wrong thing. Now it counts tokens.
+  const weekly = (cfg && cfg.budget && cfg.budget.weekly_capacity_est_tokens) || DEFAULTS.budget.weekly_capacity_est_tokens;
+  // ---- THE MEASUREMENT WINDOW, not a guessed cap (2 Aug 2026 audit, #66/#67) ------
+  // The captain's standing order forbids setting a numerical limit by guessing: open
+  // it, MEASURE, then set it from data. rail 2b was 0.05 of the weekly plan — a number
+  // nobody derived. What IS measured: 32,480 tok/pulse (853 ledger rows, of which
+  // ~31,970 is the `claude -p` boot tax and ~510 is the pulse's own payload).
+  //
+  // So the window is now sized to buy MEASUREMENT, and the arithmetic is written down:
+  //     weekly plan            12,000,000 tok
+  //     × PULSE_MEASURE_FRAC        0.10           (doubled from 0.05 — #67)
+  //     = daily window          1,200,000 tok
+  //     ÷ measured cost/pulse      32,480 tok
+  //     ≈ 36 pulses/day of real observation
+  // Paired with HALVED frequency (pulse_every_n_beats — #67), a ~75s daemon beat pulses
+  // every ~150s, so ~36 pulses covers ~90 engaged minutes/day at full cadence and the
+  // TOKEN window is what actually binds on a long day. That is the point: it is a
+  // window sized to produce a cost distribution, not a budget asserted from a vibe.
+  // It re-fits itself whenever the plan's real shape is re-learned (see self-tune), and
+  // `brain status` now prints the measured tok/pulse beside it so the next value comes
+  // off the ledger and not off a hunch.
+  const PULSE_MEASURE_FRAC = 0.10;
   return {
     enabled: p.enabled !== false,
     model: p.model || "haiku",
-    daily_cap: p.daily_cap || 200,                 // conservative hard ceiling — MEASURE, then raise
+    // rail 2a — CALLS. Not a budget: a runaway-loop backstop (an explicitly permitted
+    // exception to the no-guessed-limits order — it stops one identical failure
+    // repeating forever). At the window above it can never bind: 1,200,000 / 32,480
+    // ≈ 36 pulses, far under 200. It only fires if a bug makes pulses free.
+    daily_cap: p.daily_cap || 200,
+    daily_token_frac: p.daily_token_frac || PULSE_MEASURE_FRAC,
+    daily_token_budget: p.daily_token_budget || Math.round(weekly * (p.daily_token_frac || PULSE_MEASURE_FRAC)),
+    // rail 2d — FREQUENCY. Halved (#67): the pulse rides every Nth daemon beat, not
+    // every beat. Same reasoning as the window — fewer, better-spaced observations of
+    // the same stream cost half as much and lose almost nothing, because the afferent
+    // tail moves far slower than a 75-second beat.
+    every_n_beats: Math.max(1, Number(p.every_n_beats) || 2),
+    // rail 2c — a deterministically failing pulse burned all 200 slots on 21 Jul (164
+    // failures, CLI logged out) and killed the organ for the rest of that day. The job
+    // runner has had attemptsOn() since the 25 Jul audit; runPulse is called separately
+    // at the daemon level and was never covered by it.
+    max_consecutive_failures: p.max_consecutive_failures || 3,
     engaged_idle_max_min: p.engaged_idle_max_min || 10,
     min_headroom_tokens: p.min_headroom_tokens || 20000,
     tail_n: p.tail_n || 12,
     timeout_ms: p.timeout_ms || 60000,
+  };
+}
+// today's pulse rows, parsed-local-date keyed exactly like pulsesToday (see the note there)
+function pulseRowsToday(ledger, now) {
+  const today = localDate(now);
+  return (ledger || []).filter(r => r && r.job === "haiku_pulse" && r.ts && localDate(new Date(r.ts)) === today);
+}
+function pulseTokensToday(ledger, now) {
+  return pulseRowsToday(ledger, now).reduce((a, r) => a + (r.total_tokens || 0), 0);
+}
+// consecutive failures at the TAIL of today's pulses (a success anywhere resets it)
+function pulseFailStreak(ledger, now) {
+  const rows = pulseRowsToday(ledger, now);
+  let n = 0;
+  for (let i = rows.length - 1; i >= 0; i--) { if (rows[i].ok) break; n++; }
+  return n;
+}
+// THE MEASUREMENT ITSELF (#66/#67). The whole point of the window above is to LEARN
+// what a pulse really costs, so the number has to be readable. Returns a have/need
+// shape, never a bare verdict: {n, tokens, mean, budget, pct}. n === 0 is reported as
+// "not measured yet", never as a mean of 0.
+function pulseCostToday(ledger, now, budget = null) {
+  const rows = pulseRowsToday(ledger, now);
+  const tokens = rows.reduce((a, r) => a + (r.total_tokens || 0), 0);
+  return {
+    n: rows.length,
+    tokens,
+    mean: rows.length ? Math.round(tokens / rows.length) : null,   // null = unmeasured, NOT 0
+    budget,
+    pct: budget ? Math.round((tokens / budget) * 1000) / 10 : null,
   };
 }
 function pulsesToday(ledger, now) {
@@ -238,6 +422,71 @@ function pulsesToday(ledger, now) {
   // overnight window it protects. Parse to a Date, then compare LOCAL dates.
   return (ledger || []).filter(r => r && r.job === "haiku_pulse" && r.ts && localDate(new Date(r.ts)) === today).length;
 }
+// ---------------------------------------------------------------------------
+// THE PULSE'S CONCEPT TOKENS (2 Aug 2026 audit, finding #3)
+// ---------------------------------------------------------------------------
+// `concept_tokens` used to be "the first 4 words longer than 3 characters", with no
+// stopword filter of any kind. Measured on the live ledger that produced:
+//     event_key `pulse:need`, `pulse:isko`, concept_tokens ["what","left","part"]
+// nov is the ONLY component that ever carries a pulse's salience score (pe falls to a
+// base rate, self/err/gov/dead are structurally 0), and nov reads exactly this field.
+// So the one signal doing the work was noise, and habituation then keyed on `pulse:isko`.
+//
+// Two changes: drop stopwords (English + HIS Hinglish — the list below is built from
+// the actual failures and from the particles he types), and PREFER registered concept
+// names, which is what the nucleus can actually match on.
+const PULSE_STOPWORDS = new Set([
+  // English fillers that survived the >3-char test and were observed in live tokens
+  "what", "that", "this", "then", "than", "with", "from", "have", "has", "been", "being",
+  "will", "would", "could", "should", "shall", "must", "about", "there", "their", "here",
+  "when", "where", "which", "while", "your", "yours", "just", "like", "into", "onto",
+  "over", "some", "more", "most", "much", "many", "need", "needs", "want", "wants",
+  "left", "part", "parts", "thing", "things", "does", "done", "make", "made", "take",
+  "taken", "give", "given", "said", "says", "tell", "told", "know", "knows", "known",
+  "going", "doing", "really", "still", "even", "also", "only", "very", "back", "down",
+  "because", "something", "anything", "everything", "nothing", "someone", "actually",
+  "maybe", "might", "thats", "dont", "cant", "wont", "isnt", "arent", "were", "they",
+  "them", "these", "those", "such", "same", "other", "another", "already", "again",
+  "each", "both", "than", "then", "sure", "okay", "well", "good", "nice", "great",
+  // his Hinglish particles — the exact class that produced `pulse:isko`
+  "isko", "iska", "uska", "usko", "unka", "inka", "mera", "tera", "hume", "mujhe",
+  "tumhe", "aapko", "apna", "apne", "apni", "wala", "wale", "wali", "koi", "kuch",
+  "kaise", "kaisa", "kaisi", "kyun", "kyu", "kyon", "kaun", "kahan", "kabhi",
+  "matlab", "yaar", "bhai", "phir", "abhi", "sirf", "lekin", "magar", "toh", "bhi",
+  "aur", "mein", "hain", "hai", "nahi", "nhi", "raha", "rahi", "rahe", "karo", "kare",
+  "karna", "karta", "karti", "hota", "hoti", "hote", "hoga", "hogi", "hona", "chahiye",
+  "batao", "bolo", "dekho", "socho", "thoda", "bahut", "zyada", "jaise", "waise",
+  "yahan", "wahan", "acha", "accha", "theek", "thik", "haan", "nahin", "bilkul",
+]);
+// the registered vocabulary — concepts.json keys + aliases, word-split. This is the
+// SAME registry the rest of the organism canonicalises against, so a pulse token that
+// survives here is one the nucleus can genuinely join on.
+function conceptVocabulary(dir = STATE_DIR) {
+  const set = new Set();
+  const reg = readJson(join(dir, "concepts.json"));
+  const eat = (s) => { for (const w of String(s || "").toLowerCase().split(/[^a-z0-9]+/)) if (w.length > 3) set.add(w); };
+  const cs = (reg && reg.concepts) || {};
+  for (const [name, meta] of Object.entries(cs)) { eat(name); for (const a of (meta && meta.aliases) || []) eat(a); }
+  for (const [name] of Object.entries((reg && reg.skills) || {})) eat(name);
+  return set;
+}
+// PURE, so the selftest can drive it without touching disk.
+function pulseTokens(text, vocab = new Set(), max = 4) {
+  const words = String(text || "").toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
+  const kept = words.filter(w => !PULSE_STOPWORDS.has(w));
+  // registered concept names first — they are what the nucleus's novelty join can match
+  const known = kept.filter(w => vocab.has(w));
+  const rest = kept.filter(w => !vocab.has(w));
+  const out = [];
+  for (const w of [...known, ...rest]) if (!out.includes(w) && out.length < max) out.push(w);
+  // HONEST DEGRADATION: if the moment was ALL stopwords there is no concept in it. Fall
+  // back to the old unfiltered behaviour rather than collapsing every such escalation
+  // into one `pulse:moment` habituation bucket — but the tokens are then genuinely
+  // filler, which is exactly what the ledger will now show.
+  if (!out.length) for (const w of words) if (!out.includes(w) && out.length < max) out.push(w);
+  return out;
+}
+
 async function defaultAfferentPost(evt) {
   const url = (process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113") + "/afferent";
   try {
@@ -255,15 +504,43 @@ async function runPulse(cfg, deps = {}) {
   const idle = typeof sig.idle_min === "number" ? sig.idle_min : 999;
   if (idle > pc.engaged_idle_max_min) return { pulsed: false, skipped: `idle (${idle}min)` };
   const ledger = deps.ledger || readLines(LEDGER);
-  // GATE 2 — hard daily cap (the meter is the ceiling)
+  // GATE 2a — call cap (kept as a runaway-loop backstop, not the real constraint)
   const count = pulsesToday(ledger, now);
   if (count >= pc.daily_cap) return { pulsed: false, skipped: `daily cap (${count}/${pc.daily_cap})` };
-  // GATE 3 — headroom (never pulse the window dry; live-reserve already protects him)
+  // GATE 2b — TOKEN cap: the constraint that actually binds (see pulseConfig's note).
+  const spent = pulseTokensToday(ledger, now);
+  if (spent >= pc.daily_token_budget) return { pulsed: false, skipped: `token budget (${spent}/${pc.daily_token_budget})` };
+  // GATE 2c — failure backoff: stop paying the CLI boot tax to fail identically all day.
+  const fails = pulseFailStreak(ledger, now);
+  if (fails >= pc.max_consecutive_failures) return { pulsed: false, skipped: `backoff (${fails} consecutive failures)` };
+  // GATE 3 — headroom (never pulse the window dry; live-reserve already protects him).
+  // FLOOR DERIVED, NOT GUESSED (2 Aug 2026 audit, #66). `min_headroom_tokens` was 20,000 —
+  // a number nobody derived, and BELOW the measured 32,480 a pulse actually costs. So the
+  // gate was letting a pulse fire into a window that could not pay for it, which is the
+  // opposite of what a headroom floor is for. The config value is preserved as the named
+  // key and is now a FLOOR under the floor: the real bar is whichever is larger, the
+  // configured value or today's own measured mean cost off the ledger. On a day with no
+  // pulses yet there is no measurement, so the configured value stands alone — and the
+  // skip line says which of the two bound, so the next config value comes off evidence.
   const hr = deps.headroom || headroom(cfg, ledger, readJson(QUEUE) || {}, now, sig);
-  if (hr.allowed < pc.min_headroom_tokens) return { pulsed: false, skipped: `headroom (${hr.allowed})` };
-  // the afferent tail ABOVE the deterministic salience
-  const tail = (deps.tail || readLines(join(STATE_DIR, "afferent.jsonl")).slice(-pc.tail_n))
-    .filter(a => a && a.text).map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+  const measured = pulseCostToday(ledger, now).mean;             // null until measured today
+  const floor = Math.max(pc.min_headroom_tokens, measured || 0);
+  if (hr.allowed < floor) {
+    return { pulsed: false, skipped: `headroom (${hr.allowed} < ${floor}${measured ? `, today's measured cost/pulse ${measured}` : ", configured floor; cost/pulse NOT MEASURED YET today"})` };
+  }
+  // the afferent tail ABOVE the deterministic salience.
+  // THE PULSE MUST NOT EAT ITS OWN TAIL (1 Aug 2026 audit — measured). Escalating POSTs an
+  // afferent of modality "pulse" back into the SAME stream this reads, and the filter here
+  // only ever checked `a.text`. Six of the last twelve afferents were its own output; five
+  // read literally "pulse flagged (reasoning-hard): pulse flagged (reasoning-hard): …", and
+  // the escalation rate stood at 82% over 24h. The thalamus held (wake_queue never took one),
+  // so this cost tokens and signal quality rather than false wakes — but it is a feedback
+  // loop, and a watch that keeps re-reading its own alarm is not watching him.
+  // Filter BEFORE the slice, or excluding rows would silently shrink the window below tail_n.
+  const tail = (deps.tail || readLines(join(STATE_DIR, "afferent.jsonl")))
+    .filter(a => a && a.text && a.modality !== "pulse")
+    .slice(-pc.tail_n)
+    .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
   if (!tail.length) return { pulsed: false, skipped: "empty tail" };
   const prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
   const exec = deps.exec || claudeExec;
@@ -277,7 +554,14 @@ async function runPulse(cfg, deps = {}) {
     if (j && typeof j === "object") verdict = { escalate: !!j.escalate, which: String(j.which || "").slice(0, 200), why: String(j.why || "").slice(0, 120) };
   } catch { /* hold */ }
   // METER EVERY PULSE — even a hold. This row IS the safety instrument.
-  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok) };
+  // The cache pair rides this row too (1 Aug 2026 audit). The job-runner row has carried
+  // it since 25 Jul with the rule spelled out one screen below — "the components must be
+  // visible or the ledger can't be audited" — and this literal simply omitted it. 0 of 853
+  // pulse rows had it, leaving a mean 14,026 tok/call unattributed (~2.36M all-time). The
+  // split is the whole decision: cache_creation is reducible, cache_read is the fixed boot
+  // tax, and without seeing them apart there is no way to tell whether the pulse can ever
+  // be made cheap or is simply the wrong shape.
+  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok) };
   (deps.appendLedger || ((o) => { if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(o) + "\n"); }))(row);
   // ESCALATE by POSTing an afferent — the thalamus decides + enqueues. NEVER wake_queue.
   let posted = false;
@@ -287,10 +571,12 @@ async function runPulse(cfg, deps = {}) {
     // bucket). The pulse only NAMES the moment; the thalamus stays the sole authority on
     // whether it crosses the wake threshold — that threshold is a salience-config/tuning
     // matter (part of the multi-day pulse calibration), not something the pulse forces.
-    const tokens = String(verdict.which || "").toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3).slice(0, 4);
+    // stopword-filtered, concept-preferring (audit #3) — the old form was
+    // `.split().filter(w => w.length > 3).slice(0,4)` and produced `pulse:isko`.
+    const tokens = pulseTokens(verdict.which, deps.vocab || conceptVocabulary());
     posted = await (deps.post || defaultAfferentPost)({ modality: "pulse", source: "haiku-pulse", text: `pulse flagged (reasoning-hard): ${verdict.which}${verdict.why ? " — " + verdict.why : ""}`, concept_tokens: tokens, event_key: `pulse:${tokens[0] || "moment"}`, ts: now.toISOString() });
   }
-  return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap };
+  return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap, tokens_today: spent + row.total_tokens, token_budget: pc.daily_token_budget };
 }
 
 // best-effort "is he live right now" — the freshest of his interactive traces.
@@ -299,9 +585,13 @@ function liveSignal(now, dir = STATE_DIR) {
   let freshest = 0;
   try {
     const scan = (arr, k = "ts") => { for (const r of arr) { const t = new Date(r[k]).getTime(); if (t > freshest && t <= now.getTime()) freshest = t; } };
-    scan(readLines(join(dir, "afferent.jsonl")).slice(-40).filter(a => ["voice", "code", "desktop-study", "note", "context"].includes(a.modality)));
-    scan(readLines(join(dir, "presence_log.jsonl")).slice(-6).filter(r => r.kind === "focus" && (r.focus_min || 0) > 0));
-    scan(readLines(join(dir, "dugout_stamps.jsonl")).slice(-10));
+    // TAIL READS (audit #51). These three are append-only logs; this function wants the
+    // freshest row and nothing else. readLinesTail reads only the bytes it needs and
+    // tolerates a rolled/archived presence_log, so the monthly roll cannot turn "he was
+    // at the keyboard 4 minutes ago" into "no signal at all".
+    scan(readLinesTail(join(dir, "afferent.jsonl"), 40).filter(a => ["voice", "code", "desktop-study", "note", "context"].includes(a.modality)));
+    scan(readLinesTail(join(dir, "presence_log.jsonl"), 6).filter(r => r.kind === "focus" && (r.focus_min || 0) > 0));
+    scan(readLinesTail(join(dir, "dugout_stamps.jsonl"), 10));
   } catch {}
   return freshest ? { idle_min: Math.max(0, Math.round((now.getTime() - freshest) / 60000)) } : {};
 }
@@ -406,11 +696,22 @@ function recordJobRun(queueState, job, now, cfg) {
   b[job.id] = (b[job.id] || 0) + 1;
   return queueState;
 }
+// hoisted out of eligibleJobs (1 Aug 2026) so the absence alarm in tick() reads the
+// SAME window boundary the eligibility check uses — a duplicated "12:00" literal would
+// drift the moment either side moved, and the alarm exists precisely to be trustworthy.
+const jobWindows = (cfg) => ({ morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] });
 function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
+  // MASTER PAUSE — the thinking stops, the CAPTURING does not. Every deterministic
+  // organ (capture, fsrs, calibration, nemesis, learning_state, presence, thalamus,
+  // the wall) keeps running and keeps recording, so a paused week still arrives with
+  // real data for the organism to think about when it wakes. Paused is stated out
+  // loud on every tick and in `status` — a silent pause would be indistinguishable
+  // from a dead brain, which is this organism's oldest failure mode.
+  if (cfg && cfg.paused === true) return [];   // === true: only a literal pause pauses
   const nowHM = hhmm(now);
   const maxAttempts = (cfg.guards && cfg.guards.max_attempts_per_shift) || DEFAULTS.guards.max_attempts_per_shift;
   const ranOn = (day) => (queueState && queueState.jobs_run && queueState.jobs_run[day]) || {};
-  const windows = { morning: ["07:30", "12:00"], midday: ["12:00", "17:00"], evening: ["17:00", "22:00"], overnight: [cfg.overnight.start, cfg.overnight.end], any: ["00:00", "24:00"] };
+  const windows = jobWindows(cfg);
   const daytime = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
   return cfg.jobs.filter(j => {
     if (j.enabled === false) return false;
@@ -438,7 +739,16 @@ function bannedPhraseCheck(text, banned) {
   const hay = String(text || "").toLowerCase();
   return banned.filter(b => hay.includes(String(b).toLowerCase()));
 }
-function allowedNumbers(data) {
+
+// ---- FROZEN (layering law, CLAUDE.md) --------------------------------------
+// These two ARE the defect finding #59/#60 names. They are kept verbatim, renamed,
+// and called by NOTHING on the live path — the selftest holds them as a regression
+// witness so the drift can never quietly come back without a red suite. Do not call
+// them; `validators.mjs` is the plan of record.
+//   · whitelisted every integer 0–31, the exact range a hallucinating LLM fabricates
+//   · blanket-stripped every date and clock time, so an invented deadline passed
+//   · split "10,000" into ["10","000"] and bounced honest thousands (#60)
+function allowedNumbersLegacy(data) {
   const s = new Set();
   (function walk(v) {
     if (typeof v === "number" && Number.isFinite(v)) { s.add(String(v)); s.add(String(Math.round(v * 10000) / 10000)); }
@@ -449,25 +759,56 @@ function allowedNumbers(data) {
   for (let i = 0; i <= 31; i++) s.add(String(i));
   return s;
 }
-function noNewNumbers(text, inputData) {
-  const allowed = allowedNumbers(inputData);
+function noNewNumbersLegacy(text, inputData) {
+  const allowed = allowedNumbersLegacy(inputData);
   const stripped = String(text || "").replace(/\d{4}-\d{2}-\d{2}/g, "").replace(/\d{1,2}:\d{2}/g, "");
   for (const n of stripped.match(/\d+(\.\d+)?/g) || []) if (!allowed.has(n)) return { ok: false, bad: n };
   return { ok: true };
 }
-function validateOutput(job, text, inputData, cfg) {
-  const banned = bannedPhraseCheck(text, cfg.guards.banned_phrases);
-  if (banned.length) return { ok: false, reason: `banned phrase: ${banned.join(", ")}` };
+
+// ---- LIVE (delegates to scripts/validators.mjs) -----------------------------
+// Same names, same call shape as before, so every existing caller and the export
+// surface are untouched — but the engine underneath is now the ONE canonical one.
+// `shown` is the assembled prompt: a digit the wrapper itself put in front of the
+// model is by definition not invented, and WITHOUT it importing the tightened
+// whitelist would have recreated the already-audited "invented number 90" bug inside
+// brain (buildAnalysisPrompt injects the literal 25 in its own LAWS line, plus every
+// fingerprint digit, none of which are in `inputs`).
+const allowedNumbers = (data, shown = "") => allowedNumbersShared(data, shown);
+function noNewNumbers(text, inputData, shown = "") {
+  const v = noNewNumbersShared(text, inputData, shown);
+  return v.ok ? { ok: true } : { ok: false, bad: v.bad, all: v.all };
+}
+
+// THE HYPE GUARD IS OPT-OUT PER JOB (2 Aug 2026 audit, finding #62).
+// It exists for the captain-facing VOICE — CLAUDE.md's "no hype-man" working-style
+// rule — and was being enforced on machine-side mining jobs he never reads, where the
+// banned words are subject vocabulary. The obvious gate (`job.speak_to ||
+// job.validate === "no_new_numbers"`) is a TRAP: evening_voice has neither, so that
+// form would strip the guard from the one Opus job that writes in his ear's register.
+// An explicit per-job opt-out cannot make that mistake — the default is GUARDED, and
+// a job only loses it by saying so in config.
+const hypeGuardOn = (job) => !job || job.hype_guard !== false;
+
+function validateOutput(job, text, inputData, cfg, shown = "") {
+  if (hypeGuardOn(job)) {
+    const banned = bannedPhraseCheck(text, cfg.guards.banned_phrases);
+    if (banned.length) return { ok: false, reason: `banned phrase: ${banned.join(", ")}` };
+  }
   if (job.validate === "no_new_numbers") {
-    const v = noNewNumbers(text, inputData);
+    const v = noNewNumbers(text, inputData, shown);
     if (!v.ok) return { ok: false, reason: `invented number: ${v.bad}` };
   }
   if (job.validate === "quotes_only") {
-    // v0: every quoted segment ≥12 chars must appear verbatim in the input
-    const hay = JSON.stringify(inputData);
-    for (const m of String(text).match(/"([^"]{12,})"/g) || []) {
-      if (!hay.includes(m.slice(1, -1))) return { ok: false, reason: `non-verbatim quote: ${m.slice(0, 40)}…` };
-    }
+    // finding #61: the ≥12-char floor used to live INSIDE the pair matcher
+    // (/"([^"]{12,})"/g), so any anchor shorter than 12 chars desynced the pairing and
+    // the regex matched from one phrase's CLOSING quote to the next phrase's OPENING
+    // quote, capturing the annotation between them as if it were a quote. lexicon_mine
+    // went 0-for-115 (548,556 tokens in 7 days) and was UNWINNABLE, because his own
+    // lexicon holds "one picture" (11), "tera finops" (11), "naya sawaal" (11).
+    // validators.quotesOnly pairs quotes sequentially, then applies the floor.
+    const v = quotesOnly(text, inputData);
+    if (!v.ok) return { ok: false, reason: `non-verbatim quote: ${v.bad}…` };
   }
   return { ok: true };
 }
@@ -617,6 +958,23 @@ async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
 // silently only ever checked the bell. The badge IS the throw-in echo filter —
 // both titles must carry it, and now both are checkable from one place.
 const SHEET_PUSH_TITLE = "⚪🔴 Team sheet is up";
+// THE SAME MOUTH, SAYING THE OPPOSITE THING (1 Aug 2026 audit). Not a third daily
+// utterance: this and SHEET_PUSH_TITLE share the ONE morning slot (`mouth_said[day]`),
+// so at most one of them is ever spoken. It exists because the morning sheet failed
+// SILENTLY on 9 of 15 days — the laptop asleep through the whole 07:30–12:00 window,
+// no ledger row, no bleed, and `brain status` still printing "health OK". The bell
+// already stays silent OUT LOUD (see mode === "bell"); the sheet did not. Absence is
+// the failure this organism could not see, so absence now has to speak.
+const SHEET_ABSENCE_TITLE = "⚪🔴 No sheet this morning";
+// THE MORNING SLOT — one utterance per shift-day, whoever claims it. The sheet push
+// (runJob) and the absence line (tick) are the same mouth saying opposite things, so
+// exactly one may speak. Pure, and exported, so the law is a fact the selftest can
+// hold rather than a comment two call sites are each trusted to honour.
+function mouthMaySpeak(cfg, queueState, day, jobId) {
+  if (!cfg || !cfg.ntfy || !cfg.ntfy.enabled) return false;
+  if (!(cfg.ntfy.push_after || []).includes(jobId)) return false;
+  return !(((queueState && queueState.mouth_said) || {})[day]);
+}
 const BELLS = {
   fulltime: { at: "21:30", grace_min: 75, title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
 };
@@ -642,7 +1000,7 @@ const clip = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stri
 // anchors (Ghar-ki-Boli), his wrong-prior shapes (the Decoy Map, machine-side
 // — used to design, never shown pre-guess), his live calibration bias, his
 // fluency map. Assembled deterministically; empty parts simply absent.
-function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
+function buildFingerprint({ lexicon, grammar, calibration, ls, mined } = {}) {
   const parts = [];
   if (lexicon && Array.isArray(lexicon.anchors) && lexicon.anchors.length) {
     // scan-fix 15 Jul: the miner's raw n-grams shipped shredded fragments
@@ -654,6 +1012,19 @@ function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
       .filter(p => p.length >= 12 && !/[\d₹$%]/.test(p));
     const keep = clean.filter(p => !clean.some(q => q !== p && q.includes(p)));
     if (keep.length) parts.push(`HIS ANCHOR METAPHORS (reach for these FIRST; verbatim from his own Bolo): ${keep.slice(0, 6).map(p => `"${p}"`).join(" · ")}`);
+  }
+  // THE MINER FINALLY HAS AN ADDRESS (2 Aug 2026 audit, finding #5). `lexicon_mine`
+  // writes brain_out/lexicon/<date>.md every night and NOTHING opened it — 560,786
+  // tokens all-time into a file with no reader, on top of being 0-for-115 on the
+  // validator (#61, fixed above). This is the seam it was always missing: the mined
+  // anchors ride the fingerprint that conditions every other brain call.
+  // SAFE BY CONSTRUCTION: the job is `validate: "quotes_only"`, so anything inside
+  // quotes in that file is verbatim-present in lexicon.json — the miner cannot invent
+  // a phrase into his own voice. The file's DATE is printed rather than thresholded:
+  // an old mine is still one of his real phrases, and the reader can see its age
+  // (the hippocampus/tone stale-safe pattern — degrade, never assert freshness).
+  if (mined && Array.isArray(mined.anchors) && mined.anchors.length) {
+    parts.push(`MINED ANCHORS (lexicon_mine, ${mined.date}; verbatim-validated against his lexicon): ${mined.anchors.slice(0, 4).map(p => `"${p}"`).join(" · ")}`);
   }
   if (grammar && grammar.shape_counts) {
     const top = Object.entries(grammar.shape_counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 2);
@@ -683,8 +1054,50 @@ function buildFingerprint({ lexicon, grammar, calibration, ls } = {}) {
       + ((p.axes_ungraded || []).length ? `, UNGRADED ${p.axes_ungraded.join("")}` : "")
       + ". Do not re-teach a closed axis; do not claim an ungraded one is held.");
   }
+  // WHAT HE FINISHED LAST (2 Aug 2026 audit, finding #29). learning_state computes
+  // `position.last_closed` DELIBERATELY independently of whether a session is open
+  // (learning_state.mjs:235-247) — "what did he finish last" and "what is he on now"
+  // are two different questions — and it had ZERO consumers anywhere in the repo,
+  // because the branch above drops the entire position block the moment a session is
+  // absent or stale. Which is exactly when this is the only thing left to say.
+  // Position only, never content — same law as the branch above: the pacer knows which
+  // axes were graded, and that is a FACT; what was taught is his Bolo's to say.
+  const lc = ls && ls.position && ls.position.last_closed;
+  if (lc && lc.concept) {
+    const done = (lc.axes_done || []).join("") || "none";
+    const untouched = (lc.axes_untouched || []).join("") || "none";
+    const missed = (lc.steps_missed || []).length;
+    parts.push(
+      `LAST CLOSED SESSION: ${lc.concept}${lc.ended_at ? ` (ended ${String(lc.ended_at).slice(0, 10)})` : ""}`
+      + ` — axes closed ${done}, untouched ${untouched}`
+      + ((lc.axes_deferred || []).length ? `, deferred ${lc.axes_deferred.join("")}` : "")
+      + `; ${(lc.steps_ran || []).length}/${(lc.steps_ran || []).length + missed} steps ran.`
+      + " That is where the last lap actually stopped — pick up from it, do not assume the concept is finished.");
+  }
   parts.push("FIXED TRAITS: ADHD-PI, ~4 working-memory slots, visual-first, Hinglish welds, walls of text = shutdown, finance-ops instincts (Zomato/Blinkit) — teach through business impact.");
   return parts.length ? "THE CAPTAIN'S COGNITIVE FINGERPRINT (measured, not assumed):\n" + parts.map(p => "  · " + p).join("\n") : "";
+}
+// finding #5's reader: the newest brain_out/lexicon/<date>.md, with its quoted spans
+// extracted. Quotes are paired SEQUENTIALLY (never /"([^"]{12,})"/ — that is the exact
+// desync #61 was about) and the ≥12-char floor is applied after pairing, matching
+// validators.quotesOnly so what the fingerprint shows is what the validator accepted.
+function minedAnchors(dir = join(OUT_DIR, "lexicon")) {
+  try {
+    const files = readdirSync(dir).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).sort();
+    if (!files.length) return null;
+    const newest = files[files.length - 1];
+    const parts = readFileSync(join(dir, newest), "utf8").split('"');
+    const raw = [];
+    for (let i = 1; i < parts.length; i += 2) {
+      const seg = parts[i].trim();
+      // same two filters the deterministic anchor path above already applies (scan-fix
+      // 15 Jul): no digits/currency, and drop any span wholly contained in a longer one,
+      // so a mid-phrase shard can never ride into the prompt as "his metaphor".
+      if (seg.length >= 12 && !/[\d₹$%]/.test(seg) && !raw.includes(seg)) raw.push(seg);
+    }
+    const anchors = raw.filter(p => !raw.some(q => q !== p && q.includes(p)));
+    return anchors.length ? { date: newest.replace(/\.md$/, ""), anchors } : null;
+  } catch { return null; }
 }
 function gatherFingerprint() {
   return buildFingerprint({
@@ -692,12 +1105,22 @@ function gatherFingerprint() {
     grammar: readJson(join(STATE_DIR, "doubt_grammar.json")),
     calibration: readJson(join(STATE_DIR, "calibration.json")),
     ls: readJson(join(STATE_DIR, "learning_state.json")),
+    mined: minedAnchors(),
   });
 }
 
-function buildAnalysisPrompt(job, inputs, fingerprint = gatherFingerprint()) {
+function buildAnalysisPrompt(job, inputs, fingerprint = gatherFingerprint(), banned = DEFAULTS.guards.banned_phrases) {
+  // THE PROMPT MUST NAME THE SAME LAW THE VALIDATOR ENFORCES (finding #62). This line
+  // used to order every job never to write "10x/exponential" — including the machine-side
+  // mining jobs whose whole subject is transformers, where softmax IS an exponential.
+  // "exponential" is no longer banned anywhere; the hype list is now named from the live
+  // config so the instruction can never drift from the guard again, and a job that has
+  // opted out of the guard is not told a rule it is not held to.
+  const hype = hypeGuardOn(job)
+    ? ` honest frame only (compounding, never ${(banned || []).map(b => `"${b}"`).join("/")});`
+    : " honest frame only (this is machine-side analysis — subject vocabulary is not hype, but do not sell);";
   const head = `You are an organ of ARSENAL AI FC — the captain's exocortex. Job: ${job.id}. ${job._note || ""}
-LAWS: honest frame only (compounding, never "10x/exponential"); no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.
+LAWS:${hype} no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.
 ${fingerprint}`;
   const body = Object.entries(inputs).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
   return head + body;
@@ -710,16 +1133,95 @@ ${fingerprint}`;
 // brain_out/.../<the 13th>.md → null, and thinks the captain did nothing all day.
 // One shift, one date — the caller passes the shift day for overnight jobs.
 function gatherInputs(job, now = new Date(), dateStr = null) {
+  return gatherInputsAudited(job, now, dateStr).inputs;
+}
+
+// ---------------------------------------------------------------------------
+// THE SILENT-NULL PROBLEM (2 Aug 2026 audit, finding #64)
+// ---------------------------------------------------------------------------
+// gatherInputs mapped a missing path to null with NO warning, and
+// buildAnalysisPrompt then rendered the literal string `null` under a heading that
+// says `## INPUT season.json`. Measured: EIGHT enabled jobs declare inputs that do
+// not exist, seven of them run — teamtalk_am has produced the morning team talk 85
+// times at 3-of-4 inputs absent, billing ~45k tokens and reporting ok:true every run.
+//
+// THE TRAP (recorded in ORGANISM_ISSUES.md): do NOT use a majority-ratio guard. It
+// misses deep_reanalysis at exactly 50% — the job the finding was written about — and
+// it KILLS teamtalk_am at 75%, a daily ritual that currently degrades gracefully
+// (its 1 Aug output literally says "season aur match record se koi naya signal nahi
+// aaya, toh us par kuch bolne ka nahi"). A ratio cannot tell a load-bearing absence
+// from a tolerable one; only the config can.
+//
+// So: a PER-INPUT `required` flag, plus the absent count recorded on the ledger row so
+// the spend on nulls is finally visible. An input may be a plain string (optional, the
+// old shape, unchanged) or {"path": "...", "required": true}.
+function normalizeInputs(job) {
+  return (job.inputs || []).map(raw =>
+    (raw && typeof raw === "object")
+      ? { path: String(raw.path || ""), required: raw.required === true }
+      : { path: String(raw), required: false });
+}
+function gatherInputsAudited(job, now = new Date(), dateStr = null) {
   const inputs = {};
   const day = dateStr || localDate(now);
-  for (const raw of (job.inputs || [])) {
-    const name = raw.replace(/TODAY/g, day);   // date-tokened paths (e.g. dugout transcripts)
+  const absent = [], required_absent = [];
+  for (const decl of normalizeInputs(job)) {
+    const name = decl.path.replace(/TODAY/g, day);   // date-tokened paths (e.g. dugout transcripts)
     const p = join(STATE_DIR, name);
-    if (name.endsWith(".jsonl")) inputs[name] = readLines(p).slice(-200);
-    else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = existsSync(p) ? readFileSync(p, "utf8").slice(-20000) : null;
+    const there = existsSync(p);
+    // TAIL READ (audit #51): three jobs list presence_log.jsonl, which is unbounded and
+    // rolls monthly. Only the last 200 rows were ever used; now only those are read, and
+    // a rolled file resolves through its archives instead of reading as empty.
+    if (name.endsWith(".jsonl")) inputs[name] = readLinesTail(p, 200);
+    else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = there ? readFileSync(p, "utf8").slice(-20000) : null;
     else inputs[name] = readJson(p);
+    // "absent" is about the FILE, not about emptiness — an empty log is a measured zero
+    // and must never be reported as a missing input (that is the honesty law running
+    // the other way).
+    if (!there) { absent.push(name); if (decl.required) required_absent.push(name); }
   }
-  return inputs;
+  const declared = Object.keys(inputs).length;
+  return { inputs, declared, absent, required_absent, present: declared - absent.length };
+}
+
+// ---------------------------------------------------------------------------
+// SURFACES — every job declares where its output APPEARS (audit finding #63)
+// ---------------------------------------------------------------------------
+// Eight-to-ten brain jobs wrote into brain_out dirs no line of code opens: 2,865,782
+// tokens all-time, ~3.27M of one 8.25M week. midday_reread alone ate 560,465 of an
+// 800,000-token window for a file with no reader, while formation_read — the sheet,
+// priority 100 — got 103,010 all week.
+//
+// The organism's own constraint (ORGANISM_ISSUES.md, constraint 3) is: "Never delete
+// an organ because nobody reads its output. Give it an ADDRESS." Four of these jobs
+// are DESIGNED to be human-read and say so verbatim in their config notes
+// (doubt_clusters, widget_spec, market_scan, drill_forge) — wiring a code consumer is
+// the wrong seam for those. Their real defect is that NO SURFACE EVER POINTED AT THE
+// FILE: runJob's `→ brain_out/<out>/<date>.md` note is the only pointer that has ever
+// existed, and stdout goes to a hidden window. So the address is made real here — the
+// note names the surface, the LEDGER ROW carries the note, and `brain status` prints
+// the human-read files by path so a batch-glance is one command away.
+//
+// DELIBERATELY NOT A HARD GATE. A job with no surface is reported, loudly, with a
+// have/need counter — it is not blocked. The safe direction in this runtime is
+// RUNNING (the same reasoning as `paused === true`): a missing config key must never
+// be able to silence an organ. What gets disabled is disabled EXPLICITLY, in config,
+// with a comment naming what would bring it back.
+const SURFACE_KINDS = new Set(["code", "job_input", "human_file", "media", "sheet", "none"]);
+function jobSurface(job) {
+  const s = job && job.surface;
+  if (!s || typeof s !== "object" || !SURFACE_KINDS.has(s.kind)) {
+    return { declared: false, kind: "none", where: null };
+  }
+  return { declared: true, kind: s.kind, where: s.where || null };
+}
+// the have/need counter (#106): never the bare word "ok".
+function surfaceAudit(cfg) {
+  const jobs = (cfg.jobs || []).filter(j => j.enabled !== false);
+  const addressed = jobs.filter(j => { const s = jobSurface(j); return s.declared && s.kind !== "none"; });
+  const orphans = jobs.filter(j => { const s = jobSurface(j); return !s.declared || s.kind === "none"; }).map(j => j.id);
+  const human = jobs.filter(j => jobSurface(j).kind === "human_file");
+  return { have: addressed.length, need: jobs.length, orphans, human };
 }
 
 // ---------------------------------------------------------------------------
@@ -746,31 +1248,93 @@ async function runJob(job, cfg, deps) {
       return sliceSheet(r.text);
     };
     const res = dry ? { source: "dry" } : await runManager({ llm });
-    // the one sanctioned morning push: the sheet lands on his phone unasked
-    if (!dry && res.source === "llm" && (cfg.ntfy.push_after || []).includes(job.id)) {
+    // THE MOUTH IS GATED ON THE SHEET EXISTING, NOT ON WHO WROTE IT (1 Aug 2026 audit).
+    // This read `res.source === "llm"`, so EVERY degraded path — validator reject, spawn
+    // ETIMEDOUT, a 429 weekly limit, the M-1 stub — wrote a perfectly good sheet to disk
+    // (manager.mjs publishes it UNCONDITIONALLY, line 535) and then silently swallowed the
+    // one push the captain actually depends on. Observed live 1 Aug: source=fallback on
+    // `invented number(s): 90`, phone silent after a SUCCESSFUL 48,464-token Opus run.
+    // brain_config's own note promises "fallback skeleton guarantees the sheet regardless" —
+    // the gate broke that promise without ever saying so. Now the sheet always ships and the
+    // BODY carries the provenance: a skeleton morning is honest, never absent.
+    //
+    // ONCE A DAY, WHOEVER SPEAKS. A failed llm does not consume the job's daily slot (it is
+    // meant to retry), so gating on existence alone would have pushed up to max_attempts
+    // times per morning. `mouth_said[day]` is the morning slot itself — the sheet claims it
+    // here, the absence line in tick() claims it if the window closes empty. Exactly one of
+    // the two speaks, which keeps the two-utterances-a-day law intact.
+    let pushed = null;
+    const qs = deps.queueState;
+    const spoke = !mouthMaySpeak(cfg, qs, today, job.id) && !!(qs && qs.mouth_said && qs.mouth_said[today]);
+    if (!dry && mouthMaySpeak(cfg, qs, today, job.id)) {
       const sheetPath = join(STATE_DIR, "team_sheet.md");
-      const head = existsSync(sheetPath) ? readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n") : "sheet ready";
-      const tt = teamtalkLine("am", now);
-      await pushNtfy(cfg, SHEET_PUSH_TITLE, `**The sheet is up, captain.**\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+      if (existsSync(sheetPath)) {
+        const head = readFileSync(sheetPath, "utf8").split("\n").slice(0, 10).join("\n");
+        const tt = teamtalkLine("am", now);
+        const lead = res.source === "llm"
+          ? "**The sheet is up, captain.**"
+          : `**The sheet is up, captain** — skeleton, not the Gaffer's read.\n\n_${res.reason || "no llm"}_`;
+        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+        // marked only on a REAL send, so a network blip retries next beat instead of
+        // burning the day's one utterance on a push that never left the machine.
+        if (qs && pushed.sent) { qs.mouth_said = qs.mouth_said || {}; qs.mouth_said[today] = "sheet"; }
+      }
     }
-    return { usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" }, note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}` };
+    return {
+      usage: usage || { ok: false, total_tokens: 0, limit_hit: false, error: "not called" },
+      note: `sheet source=${res.source}${res.reason ? " (" + res.reason + ")" : ""}${pushed ? ` · push ${pushed.sent ? "sent" : "FAILED: " + pushed.why}` : spoke ? " · push already sent today" : ""}`,
+    };
   }
 
   // analysis-class job — render-class jobs use viz's auto-written prompt file
   // (it carries the render laws + the design-coach critique), never the
   // analysis head (which would ask for markdown, not an artifact).
-  const inputs = gatherInputs(job, now, today);
+  const gi = gatherInputsAudited(job, now, today);
+  const inputs = gi.inputs;
+  // REQUIRED INPUTS (finding #64). Only a config-declared `required: true` can stop a
+  // job, and it stops it BEFORE the spend, saying exactly which file is missing —
+  // never a ratio, never a silent null rendered as `null` under its own heading.
+  if (gi.required_absent.length) {
+    return {
+      usage: { ok: false, total_tokens: 0, duration_ms: 0, limit_hit: false, error: `required input absent: ${gi.required_absent.join(", ")}` },
+      note: `skipped before spend — ${gi.required_absent.length}/${gi.declared} REQUIRED input(s) absent: ${gi.required_absent.join(", ")}`,
+      inputs_absent: gi.absent.length, inputs_declared: gi.declared, inputs_absent_names: gi.absent,
+    };
+  }
   let prompt;
   if (job.kind === "render" && job.prompt_file) {
     const pf = join(STATE_DIR, "..", "club", "prompts", job.prompt_file);
-    prompt = existsSync(pf) ? readFileSync(pf, "utf8") + "\nOutput ONLY the artifact — first character '<'." : buildAnalysisPrompt(job, inputs);
-  } else prompt = buildAnalysisPrompt(job, inputs);
+    prompt = existsSync(pf) ? readFileSync(pf, "utf8") + "\nOutput ONLY the artifact — first character '<'." : buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
+  } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args);
+  // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
+  // was actually built from — including the failures.
+  const acct = { inputs_absent: gi.absent.length, inputs_declared: gi.declared, inputs_absent_names: gi.absent };
   if (r.ok && r.text) {
-    const v = validateOutput(job, r.text, inputs, cfg);
-    if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written` };
-    if (!dry) writeAtomic(join(OUT_DIR, job.out || job.id, today + ".md"), r.text);
-    let note = `→ brain_out/${job.out || job.id}/${today}.md`;
+    // `prompt` is threaded in as `shown` (finding #59): buildAnalysisPrompt injects the
+    // literal 25 in its own LAWS line plus every fingerprint digit, none of which are in
+    // `inputs` — without this the tightened whitelist would bounce the model for numbers
+    // the wrapper itself handed it. Same fix the manager already carries.
+    const v = validateOutput(job, r.text, inputs, cfg, prompt);
+    if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written`, ...acct };
+    // WHICH DATE THE ARTIFACT IS FOR (2 Aug 2026 audit, finding #65). The write used to
+    // hardcode `today` = shiftDay(), which is YESTERDAY for any overnight job run before
+    // 07:30 — and the night shift fires 02:40–03:00. viz reads the CALENDAR date, so
+    // ~675k tokens/week of poster + gemini_wall + wall_insights landed in filenames viz
+    // can never open (club/poster.svg frozen at 21 Jul). Fixed at the PRODUCER, not with
+    // a viz-side lookback — a lookback fights posterFlag's freshness law and would serve
+    // a two-day-old poster as today's. serveDate() already proves this on the mp3 lane.
+    // shiftDay REMAINS the ledger/eligibility key; only the filename moves, and only for
+    // jobs that explicitly declare `serve`.
+    const outDay = outDate(job, now, today);
+    if (!dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".md"), r.text);
+    // THE ADDRESS, said out loud (finding #63). This note is what the ledger row carries
+    // and what `brain status` echoes, so a file written for a human to glance at finally
+    // names itself somewhere he can see.
+    const srf = jobSurface(job);
+    let note = `→ brain_out/${job.out || job.id}/${outDay}.md`
+      + (srf.where ? ` · reads at: ${srf.where}` : " · ⚠ NO SURFACE DECLARED — nothing points at this file")
+      + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "");
     // MEDIA ENGINE: speak_to jobs render their validated text to an mp3 in
     // club/media/ (speak.mjs synthToFile — earClean inside). Offline = honest
     // skip; the text output stands either way.
@@ -782,15 +1346,31 @@ async function runJob(job, cfg, deps) {
         note += sp.wrote ? ` · 🎙 ${job.speak_to.replace(/DATE/g, serveDate(job, now))}` : ` · mp3 skipped (${sp.error})`;
       } catch (e) { note += ` · mp3 skipped (${String(e.message).slice(0, 60)})`; }
     }
-    return { usage: r, note };
+    return { usage: r, note, ...acct };
   }
-  return { usage: r, note: r.limit_hit ? "PLAN LIMIT observed — ceiling recorded, backing off" : `failed: ${r.error}` };
+  return { usage: r, note: r.limit_hit ? "PLAN LIMIT observed — ceiling recorded, backing off" : `failed: ${r.error}`, ...acct };
 }
 
 // which date an audio artifact SERVES: overnight-compiled morning talks are
 // for tomorrow (when run in the evening half of the night), else today.
 function serveDate(job, now) {
   return job.serve === "next_morning" && now.getHours() >= 15 ? localDate(new Date(now.getTime() + 86400000)) : localDate(now);
+}
+
+// WHICH DATE THE .md ARTIFACT IS FILED UNDER (2 Aug 2026 audit, finding #65).
+// Pure, so the seam is testable. Two different questions, deliberately kept apart:
+//   · shiftDay  — WHICH SHIFT this run belongs to. Stays the ledger and eligibility key,
+//                 so the overnight shift is still ONE shift across midnight and an
+//                 00:30 re-run cannot claim a second daily slot.
+//   · serveDate — WHICH MORNING the artifact is FOR. Only jobs that declare `serve`
+//                 use it, so nothing else moves: dugout_digest at 00:30 still files
+//                 under the evening it started, and day_cartridge still finds it.
+// Without this split, `writeAtomic(..., today + ".md")` filed the poster, the Gemini
+// render and the wall's "The read" under YESTERDAY (shiftDay returns yesterday for any
+// overnight job run before 07:30, and the night shift fires 02:40–03:00) while viz
+// opened the calendar date — ~675k tokens/week into filenames viz can never open.
+function outDate(job, now, shiftToday) {
+  return job && job.serve ? serveDate(job, now) : shiftToday;
 }
 
 // "team talk taiyaar" rides INSIDE the two sanctioned utterances (never a
@@ -821,6 +1401,16 @@ async function tick(cfg, deps) {
 
   // THE DEAD-BRAIN ALARM, spoken every tick (E2E audit 25 Jul 2026 — live):
   // four days of "Not logged in" and the runtime never once said it was blind.
+  // PAUSED, OUT LOUD. A quiet brain and a paused brain look identical from the
+  // outside, and this organism has already lost four days to that exact ambiguity.
+  // #106: a have/need counter, never a bare word. "all 23 jobs" was already drifting from
+  // the truth the moment #63 turned four of them off — the pause holds the ENABLED ones,
+  // and the difference between the two numbers is itself information.
+  if (cfg.paused) {
+    const all = (cfg.jobs || []).length, on = (cfg.jobs || []).filter(j => j.enabled !== false).length;
+    console.log(`brain: PAUSED — ${on}/${all} enabled LLM jobs held by brain_config.paused (${all - on} are separately disabled, each with a stated reason). Capture, sensors and the deterministic squad still run. Un-pause: set "paused": false.`);
+  }
+
   const health = failureStreak(ledger);
   if (health.dead) {
     console.error(`brain: ⚠⚠ DEAD BRAIN — the last ${health.streak} of ${health.sampled} calls ALL FAILED. ${health.hint}`);
@@ -831,7 +1421,10 @@ async function tick(cfg, deps) {
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
     const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)), queueState, now, deps.signals);
     if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
-    const { usage, note } = await runJob(job, cfg, deps);
+    // queueState rides along so runJob can claim the day's ONE morning utterance
+    // (`mouth_said`) — a failed llm keeps its slot and retries, and without this the
+    // existence-gated push would fire once per attempt.
+    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState });
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
@@ -840,6 +1433,21 @@ async function tick(cfg, deps) {
       cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null,
       total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0,
       ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
+      // THE ONE FACT NEEDED TO DEBUG A SILENT MOUTH, finally written down (1 Aug 2026
+      // audit): runJob has always built `sheet source=… (reason)`, and the row literal
+      // has always dropped it. 0 of 2,811 rows carried it, stdout goes nowhere (the
+      // daemon runs through hidden_run.vbs with the window hidden), and manager_notes.json
+      // holds only the LAST run — so every earlier morning's verdict was unrecoverable.
+      note: note || null,
+      // WHAT THIS RUN WAS ACTUALLY BUILT FROM (2 Aug 2026 audit, finding #64). Eight
+      // enabled jobs declare inputs that do not exist and 85 teamtalk_am runs billed full
+      // price on 3-of-4 absent — with nothing anywhere recording it. A have/need pair,
+      // never a bare "ok": `null` here means the job declared no inputs at all (the
+      // manager_m3 class), which is different from "all inputs present".
+      inputs_present: typeof inputs_declared === "number" ? inputs_declared - inputs_absent : null,
+      inputs_declared: typeof inputs_declared === "number" ? inputs_declared : null,
+      inputs_absent: typeof inputs_absent === "number" ? inputs_absent : null,
+      inputs_absent_names: (inputs_absent_names && inputs_absent_names.length) ? inputs_absent_names : null,
     };
     if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(row) + "\n");
     // a FAILED job does not consume its daily slot — it retries next tick
@@ -868,6 +1476,34 @@ async function tick(cfg, deps) {
     }
     ran.push({ job: job.id, note, ledgerRow: row });
   }
+  // ---- THE MORNING THAT NEVER CAME — absence speaks, once, out loud ----------
+  // RC-4 of the 1 Aug 2026 audit: this organism detects FAILURE and never ABSENCE.
+  // failureStreak() samples logged calls, and a job that never ran logs nothing — so
+  // formation_read missing on 19/22/23/24/25/27/28/29/31 Jul (9 of 15 days, laptop
+  // asleep clean through 07:30–12:00) produced no row, no bleed, no alarm, while
+  // `brain status` kept printing "health OK". team_sheet.md just sat there stale,
+  // yesterday's sheet reading as today's. Nine days before the captain noticed.
+  // The bell already refuses to ring late and SAYS SO; the sheet now does the same.
+  // Shares `mouth_said[day]` with the sheet push, so the morning slot still speaks
+  // at most once — this is that one utterance when there was nothing to announce.
+  try {
+    const sheetJob = (cfg.jobs || []).find(j => j.enabled !== false && (cfg.ntfy.push_after || []).includes(j.id));
+    const closeHM = (jobWindows(cfg)[sheetJob?.window] || jobWindows(cfg).any)[1];
+    if (!deps.dry && sheetJob && hhmm(now) >= closeHM
+        && !(queueState.jobs_run[today] || {})[sheetJob.id]
+        && mouthMaySpeak(cfg, queueState, today, sheetJob.id)) {
+      const tried = attemptsOn(queueState, today, sheetJob.id);
+      const why = tried > 0
+        ? `it ran ${tried}× and failed every time`
+        : `the ${sheetJob.window} window closed and it never ran — the machine was not awake for it`;
+      const r = await pushNtfy(cfg, SHEET_ABSENCE_TITLE,
+        `**No sheet this morning, captain.**\n\n${why}.\n\nNothing is lost — the wall and the state are untouched, and yesterday's sheet is still on disk (do not read it as today's). Open the laptop and ask for it whenever you want.`,
+        undefined, { tags: "soccer,mute" });
+      if (r.sent) { queueState.mouth_said = queueState.mouth_said || {}; queueState.mouth_said[today] = "absence"; }
+      console.log(`brain: ${sheetJob.window} window closed with no ${sheetJob.id} — ${r.sent ? "said so on the phone" : "phone unreachable (" + r.why + "), will say it next beat"}`);
+    }
+  } catch (e) { console.error(`brain: absence check failed — ${e.message}`); }
+
   queueState.last_tick = now.toISOString();
   if (!deps.dry) {
     // LOST-UPDATE FIX (E2E audit 25 Jul 2026): the queue object is read once at
@@ -899,8 +1535,16 @@ function mergeTriggers(disk, mine, consumed = []) {
 async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
-  const cfg = loadConfig();   // committed config is the fixture — it must parse
+  // The committed config is the fixture — it must parse. But the RUNTIME SWITCHES in it
+  // are the captain's, not the suite's: on 2 Aug he paused the brain and disabled the
+  // pulse, and 21 assertions went red without a line of logic changing. A suite whose
+  // verdict depends on his current settings tests his settings, not the code. Every
+  // switch is therefore forced to its RUNNING value here, and each switch has its own
+  // dedicated assertions (PAUSE — …, PULSE — disabled …) that pass it explicitly.
+  const liveCfg = loadConfig();
+  const cfg = { ...liveCfg, paused: false, pulse: { ...(liveCfg.pulse || {}), enabled: true } };
   assert("committed brain_config.json parses with jobs", cfg.jobs.length >= 10);
+  assert("the suite reads the captain's real switches without obeying them", typeof liveCfg.paused === "boolean");
   assert("day cartridge job wired (L3: slow brain programs the fast brain)", cfg.jobs.some(j => j.id === "day_cartridge" && j.window === "overnight" && j.validate === "no_new_numbers" && String(j._note).includes("second person")));
 
   // THE THIRD POOL (U3d) — voice minutes shift daytime gemini text jobs aside
@@ -974,24 +1618,121 @@ async function selftest() {
     assert("PACING — zero/negative headroom → pace floored at 0, never negative", targetBurn({ budget: {} }, { allowed: -5, phase: "shoulder" }, now(14, 0)).pace_tok_per_min === 0);
     // PULSE (P4) — the three hard rails + escalate/hold, all deps-injected (no live spend)
     {
+      // HERMETIC CONFIG (2 Aug 2026). This block used the LIVE cfg, so the moment the
+      // captain paused the pulse in brain_config.json all NINE pulse assertions went red —
+      // not because the code broke, but because a setting changed. A suite whose answer
+      // depends on his current settings is not a suite. The pulse's own enabled-flag
+      // behaviour is asserted separately (see the CONFIG assertions below).
+      const pCfg = { ...cfg, pulse: { ...(cfg.pulse || {}), enabled: true } };
       const pTail = [{ modality: "voice", text: "attention scaling mujhe samajh nahi aaya" }];
       const hrOK = { allowed: 300000, phase: "study" };
       const mkCall = (esc) => () => ({ ok: true, text: JSON.stringify({ escalate: esc, which: "attention scaling", why: "conceptual confusion" }), input_tokens: 400, output_tokens: 30, total_tokens: 430, error: null, limit_hit: false });
       let metered = [], posted = null;
       const base = { now: now(14, 0), signals: { idle_min: 2 }, headroom: hrOK, tail: pTail, ledger: [], appendLedger: (o) => metered.push(o), post: async (e) => { posted = e; return true; }, dry: true };
-      const esc = await runPulse(cfg, { ...base, mockCall: mkCall(true) });
+      const esc = await runPulse(pCfg, { ...base, mockCall: mkCall(true) });
       assert("PULSE — escalate: metered + POSTs a 'pulse' afferent w/ concept_tokens + per-concept key (never wake_queue)", esc.pulsed && esc.escalated && metered.length === 1 && metered[0].job === "haiku_pulse" && posted && posted.modality === "pulse" && posted.event_key === "pulse:attention" && Array.isArray(posted.concept_tokens) && posted.concept_tokens.includes("attention"));
       assert("PULSE — cap counts by PARSED local date (today's pulse counts, a 2-day-old one does not)", pulsesToday([{ job: "haiku_pulse", ts: base.now.toISOString() }, { job: "haiku_pulse", ts: new Date(base.now.getTime() - 2 * 86400000).toISOString() }], base.now) === 1);
       metered = []; posted = null;
-      const hold = await runPulse(cfg, { ...base, mockCall: mkCall(false) });
+      const hold = await runPulse(pCfg, { ...base, mockCall: mkCall(false) });
       assert("PULSE — a HOLD is STILL metered (the meter is the whole safety story)", hold.pulsed && !hold.escalated && metered.length === 1 && posted === null);
-      const idleSkip = await runPulse(cfg, { ...base, signals: { idle_min: 30 }, appendLedger: () => { throw new Error("meter when idle"); }, mockCall: () => { throw new Error("call when idle"); } });
+      const idleSkip = await runPulse(pCfg, { ...base, signals: { idle_min: 30 }, appendLedger: () => { throw new Error("meter when idle"); }, mockCall: () => { throw new Error("call when idle"); } });
       assert("PULSE — engaged gate: idle → skip, zero call, zero meter", idleSkip.pulsed === false && /idle/.test(idleSkip.skipped));
-      const capped = await runPulse(cfg, { ...base, ledger: Array.from({ length: 500 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString() })), appendLedger: () => { throw new Error("pulse over cap"); }, mockCall: () => { throw new Error("call over cap"); } });
+      const capped = await runPulse(pCfg, { ...base, ledger: Array.from({ length: 500 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString() })), appendLedger: () => { throw new Error("pulse over cap"); }, mockCall: () => { throw new Error("call over cap"); } });
       assert("PULSE — hard daily cap: over cap → skip, no call, no meter", capped.pulsed === false && /cap/.test(capped.skipped));
       let m2 = [];
-      const malformed = await runPulse(cfg, { ...base, appendLedger: (o) => m2.push(o), mockCall: () => ({ ok: true, text: "not json at all", total_tokens: 200 }) });
+      const malformed = await runPulse(pCfg, { ...base, appendLedger: (o) => m2.push(o), mockCall: () => ({ ok: true, text: "not json at all", total_tokens: 200 }) });
       assert("PULSE — malformed reply → HOLD, still metered, never a crash", malformed.pulsed && malformed.escalated === false && m2.length === 1);
+
+      // ---- THE BLEED RAILS (1 Aug 2026 audit — the pulse took 86.6% of a day) ----
+      // rail 2b: TOKENS. The call cap could not bind because it counted the wrong unit.
+      // FIXTURE RE-DERIVED 2 Aug 2026 (#67): the measurement window doubled to 0.10 of a
+      // 12M weekly plan = 1,200,000 tok/day, so at the MEASURED 32,480 tok/pulse the cap
+      // now bites at ceil(1,200,000 / 32,480) = 37 pulses → 37 × 32,480 = 1,201,760.
+      // 37 calls is still nowhere near the 200-call backstop, which is the whole point:
+      // the unit that binds is tokens, and the call cap is a runaway guard, not a budget.
+      const bigRows = Array.from({ length: 37 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString(), total_tokens: 32480, ok: true }));
+      assert("PULSE tokens — today's spend is summed from the ledger, not inferred", pulseTokensToday(bigRows, now(14, 0)) === 1201760);
+      assert("PULSE tokens — a yesterday row never counts against today", pulseTokensToday([...bigRows, { job: "haiku_pulse", ts: new Date(now(14, 0).getTime() - 86400000).toISOString(), total_tokens: 999999, ok: true }], now(14, 0)) === 1201760);
+      const tokCapped = await runPulse(pCfg, { ...base, ledger: bigRows, appendLedger: () => { throw new Error("pulsed over the TOKEN budget"); }, mockCall: () => { throw new Error("called over the TOKEN budget"); } });
+      assert("PULSE — token budget bites where the CALL cap never could (37 calls, 1.2M tokens, cap 200)", tokCapped.pulsed === false && /token budget/.test(tokCapped.skipped) && bigRows.length < pulseConfig(pCfg).daily_cap);
+      assert("PULSE — the measurement window is a FRACTION of the weekly plan, so it re-fits itself", pulseConfig({ budget: { weekly_capacity_est_tokens: 12000000 } }).daily_token_budget === 1200000);
+      assert("PULSE — an explicit daily_token_budget in config wins over the fraction", pulseConfig({ pulse: { daily_token_budget: 123456 } }).daily_token_budget === 123456);
+
+      // ---- #66/#67 — THE WINDOW IS MEASURED, NOT GUESSED -----------------------
+      // The captain's standing order: never set a numerical limit by guessing. These hold
+      // the two halves of the replacement — a window derived from a measured cost, and a
+      // frequency that was halved rather than a cap that was invented.
+      assert("MEASUREMENT — the window DOUBLED (0.05 → 0.10 of the weekly plan)", pulseConfig({}).daily_token_frac === 0.10);
+      assert("MEASUREMENT — frequency HALVED: the pulse rides every 2nd daemon beat by default", pulseConfig({}).every_n_beats === 2 && pulseConfig({ pulse: { every_n_beats: 5 } }).every_n_beats === 5);
+      assert("MEASUREMENT — every_n_beats is always >= 1 (0, negative, garbage and absent all stay safe: `beats % n` must never divide by zero)",
+        [0, -3, "abc", null, undefined, NaN].every(v => pulseConfig({ pulse: { every_n_beats: v } }).every_n_beats >= 1));
+      assert("MEASUREMENT — the arithmetic closes: window ÷ measured cost/pulse ≈ 36 observations/day", Math.floor(pulseConfig({}).daily_token_budget / 32480) === 36);
+      {
+        // the measurement itself must never render an unmeasured silence as a measured zero
+        const c0 = pulseCostToday([], now(14, 0), 1200000);
+        const c1 = pulseCostToday(bigRows, now(14, 0), 1200000);
+        assert("MEASUREMENT — 0 pulses today reports mean = null (NOT MEASURED), never a mean of 0", c0.n === 0 && c0.mean === null && c0.tokens === 0);
+        assert("MEASUREMENT — with pulses it reports the real per-call cost off the ledger", c1.n === 37 && c1.mean === 32480 && c1.pct === 100.1);
+      }
+      {
+        // #66 — the headroom floor now DERIVES from the measured cost, and the old
+        // configured 20,000 was below what a pulse actually costs (32,480), i.e. the gate
+        // was letting a pulse fire into a window that could not pay for it.
+        const priced = [{ job: "haiku_pulse", ts: now(14, 0).toISOString(), total_tokens: 32480, ok: true }];
+        const thin = await runPulse(pCfg, {
+          ...base, ledger: priced, headroom: { allowed: 25000, phase: "study" },
+          appendLedger: () => { throw new Error("metered on headroom it cannot pay for"); },
+          mockCall: () => { throw new Error("called on headroom below one measured pulse"); },
+        });
+        assert("#66 — headroom BELOW today's measured cost/pulse now skips (the configured 20,000 alone would have let it fire)",
+          thin.pulsed === false && /headroom/.test(thin.skipped) && /measured cost\/pulse 32480/.test(thin.skipped)
+          && 25000 > pulseConfig(pCfg).min_headroom_tokens);
+        const unmeasured = await runPulse(pCfg, { ...base, ledger: [], headroom: { allowed: 19000, phase: "study" }, appendLedger: () => { throw new Error("x"); }, mockCall: () => { throw new Error("x"); } });
+        assert("#66 — with NO measurement yet the configured floor still stands, and SAYS it is unmeasured",
+          unmeasured.pulsed === false && /NOT MEASURED YET/.test(unmeasured.skipped));
+      }
+
+      // rail 2c: BACKOFF. 21 Jul burned all 200 slots with 164 failures on a logged-out CLI.
+      const failRows = Array.from({ length: 3 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString(), total_tokens: 0, ok: false }));
+      assert("PULSE backoff — counts consecutive failures at the TAIL of today", pulseFailStreak(failRows, now(14, 0)) === 3);
+      assert("PULSE backoff — one success ANYWHERE later resets the streak", pulseFailStreak([...failRows, { job: "haiku_pulse", ts: now(14, 0).toISOString(), total_tokens: 400, ok: true }], now(14, 0)) === 0);
+      const backedOff = await runPulse(pCfg, { ...base, ledger: failRows, appendLedger: () => { throw new Error("pulsed while backed off"); }, mockCall: () => { throw new Error("called while backed off"); } });
+      assert("PULSE — 3 consecutive failures → sit out, no call, no meter", backedOff.pulsed === false && /backoff/.test(backedOff.skipped));
+
+      // the feedback loop: escalating POSTs modality "pulse" into the very stream this reads
+      let m3 = [];
+      const selfFed = await runPulse(pCfg, {
+        ...base, appendLedger: (o) => m3.push(o),
+        tail: [{ modality: "pulse", text: "pulse flagged (reasoning-hard): pulse flagged (reasoning-hard): x" }],
+        mockCall: () => { throw new Error("called on a tail of NOTHING but its own output"); },
+      });
+      assert("PULSE — its OWN output is not a moment: a self-only tail reads as empty", selfFed.pulsed === false && /empty tail/.test(selfFed.skipped) && m3.length === 0);
+      let m4 = [], seenPrompt = "";
+      await runPulse(pCfg, {
+        ...base, appendLedger: (o) => m4.push(o),
+        tail: [{ modality: "pulse", text: "pulse flagged (reasoning-hard): echo" }, { modality: "voice", text: "attention scaling samajh nahi aaya" }],
+        mockCall: (p) => { seenPrompt = p; return { ok: true, text: JSON.stringify({ escalate: false }), total_tokens: 430 }; },
+      });
+      assert("PULSE — a mixed tail keeps his voice and drops the echo", m4.length === 1 && /attention scaling/.test(seenPrompt) && !/pulse flagged/.test(seenPrompt));
+      assert("PULSE — the row now carries the cache pair (the boot tax is finally visible)", "cache_read_tokens" in m4[0] && "cache_creation_tokens" in m4[0]);
+
+      // RC-6: config sections that were parsed and then silently dropped
+      assert("CONFIG — a `pulse` block written into brain_config actually reaches pulseConfig", pulseConfig({ pulse: { daily_cap: 7 } }).daily_cap === 7);
+      assert("CONFIG — `enabled: false` for the pulse is reachable at last", pulseConfig({ pulse: { enabled: false } }).enabled === false);
+      // and the disabled path must SPEND NOTHING — no CLI call, no ledger row, no network.
+      // This is the assertion the captain's pause actually rests on.
+      {
+        const offCfg = { ...cfg, pulse: { enabled: false } };
+        const off = await runPulse(offCfg, { ...base, mockCall: () => { throw new Error("called while disabled"); }, appendLedger: () => { throw new Error("metered while disabled"); } });
+        assert("PULSE — disabled ⇒ zero call, zero meter, and it SAYS why", off.pulsed === false && off.skipped === "disabled");
+      }
+
+      // ---- THE MASTER PAUSE (2 Aug 2026) ----
+      assert("PAUSE — paused ⇒ not one job is eligible, at any hour", eligibleJobs({ ...cfg, paused: true }, { jobs_run: {} }, now(8, 45)).length === 0 && eligibleJobs({ ...cfg, paused: true }, { jobs_run: {} }, now(2, 0)).length === 0);
+      assert("PAUSE — un-paused ⇒ the job table works exactly as before", eligibleJobs({ ...cfg, paused: false }, { jobs_run: {} }, now(8, 45)).some(j => j.id === "formation_read"));
+      // the safe direction is RUNNING: only a literal true may silence the organism.
+      assert("PAUSE — a truthy typo can never pause it (string)", loadConfig.length >= 0 && eligibleJobs({ ...cfg, paused: "true" }, { jobs_run: {} }, now(8, 45)).length > 0);
+      assert("PAUSE — a missing key can never pause it", eligibleJobs({ ...cfg, paused: undefined }, { jobs_run: {} }, now(8, 45)).length > 0);
     }
     assert("OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve", headroom(cfg, [], qEmpty, now(6, 0)).cap === dayCap);
     assert("OVERNIGHT — 23:30 still floods to the overnight target", headroom(cfg, [], qEmpty, now(23, 30)).cap === nightCap);
@@ -1006,7 +1747,10 @@ async function selftest() {
   assert("overnight jobs ineligible mid-day", !eligibleJobs(cfg, { jobs_run: {} }, now(14, 0)).some(j => j.window === "overnight"));
   const eligNight = eligibleJobs(cfg, { jobs_run: {} }, now(23, 30));
   assert("overnight queue rich at 23:30 (≥4 jobs)", eligNight.filter(j => j.window === "overnight").length >= 4);
-  assert("Sunday-only job honors days[] (2026-07-12 IS a Sunday)", eligNight.some(j => j.id === "season_review"));
+  // (was season_review until 2 Aug 2026, when #63 disabled it for having no address —
+  // market_scan is the other Sun-only job and exercises exactly the same mechanism.)
+  assert("Sunday-only job honors days[] (2026-07-12 IS a Sunday)", eligNight.some(j => j.id === "market_scan"));
+  assert("days[] still EXCLUDES a Sunday-only job on a Monday", !eligibleJobs(cfg, { jobs_run: {} }, new Date(2026, 6, 13, 23, 30)).some(j => j.id === "market_scan"));
   // THE MIDNIGHT SEAM — the overnight shift is ONE shift: a job that ran at
   // 23:30 must NOT come back at 00:30 with empty TODAY-inputs; next evening it must.
   const qNight = { jobs_run: { "2026-07-12": { day_cartridge: 1 } } };
@@ -1097,6 +1841,28 @@ async function selftest() {
   assert("badge title survives real fetch header rules (RFC 2047, never raw emoji)", (await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, "b", strictFetch)).sent === true);
   assert("encoded title decodes back to the badge on the phone", Buffer.from(ntfyHeaderSafe(BELLS.fulltime.title).replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8") === BELLS.fulltime.title);
   assert("plain ASCII titles pass through untouched", ntfyHeaderSafe("Team sheet is up") === "Team sheet is up");
+
+  // ---- THE MORNING SLOT: one utterance, whoever claims it (1 Aug 2026 audit) ----
+  // The old push was gated on `res.source === "llm"`, so a validator reject, a spawn
+  // timeout or a 429 wrote the sheet and silenced the phone; and when the job never ran
+  // at all (9 of 15 days, laptop asleep through the window) nothing anywhere said so.
+  // Both halves are now the same mouth — these hold it to exactly one utterance.
+  const mCfg = { ntfy: { enabled: true, topic: "t1", push_after: ["formation_read"] } };
+  assert("ABSENCE title signs with the badge (throw-in echo filter, same as the other two)", SHEET_ABSENCE_TITLE.includes("⚪🔴"));
+  assert("ABSENCE title survives real fetch header rules and decodes back to the badge",
+    Buffer.from(ntfyHeaderSafe(SHEET_ABSENCE_TITLE).replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8") === SHEET_ABSENCE_TITLE);
+  assert("the two morning utterances are DISTINCT — he can tell a sheet from its absence", SHEET_ABSENCE_TITLE !== SHEET_PUSH_TITLE);
+  assert("MOUTH open when the day has said nothing yet", mouthMaySpeak(mCfg, { mouth_said: {} }, "2026-08-02", "formation_read") === true);
+  assert("MOUTH shut once the SHEET spoke (a retrying job cannot push twice)", mouthMaySpeak(mCfg, { mouth_said: { "2026-08-02": "sheet" } }, "2026-08-02", "formation_read") === false);
+  assert("MOUTH shut once ABSENCE spoke (the alarm never repeats on later beats)", mouthMaySpeak(mCfg, { mouth_said: { "2026-08-02": "absence" } }, "2026-08-02", "formation_read") === false);
+  assert("MOUTH still open on the NEXT day (the slot is per shift-day, not forever)", mouthMaySpeak(mCfg, { mouth_said: { "2026-08-02": "sheet" } }, "2026-08-03", "formation_read") === true);
+  assert("MOUTH shut when ntfy is disabled", mouthMaySpeak({ ntfy: { enabled: false, push_after: ["formation_read"] } }, {}, "2026-08-02", "formation_read") === false);
+  assert("MOUTH shut for any job the captain did not sanction in push_after", mouthMaySpeak(mCfg, {}, "2026-08-02", "deep_twin") === false);
+  assert("MOUTH survives a queueState with no mouth_said at all (first ever run)", mouthMaySpeak(mCfg, {}, "2026-08-02", "formation_read") === true);
+  // the absence alarm must close at the SAME boundary eligibility opens/shuts on —
+  // a duplicated literal here is how an alarm starts lying about a window that moved.
+  assert("ABSENCE reads the morning window from the same map eligibleJobs uses", jobWindows(cfg).morning[1] === "12:00" && jobWindows(cfg).morning[0] === "07:30");
+  assert("ABSENCE window map honours config for overnight (not a frozen literal)", jobWindows({ overnight: { start: "23:00", end: "06:00" } }).overnight[0] === "23:00");
 
   // sheet slicing — the agentic-CLI chatter guard
   assert("sliceSheet strips preamble + epilogue chatter", sliceSheet("Sure! Here it is:\n⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴\nLet me know!") === "⚪🔴 TEAM SHEET — x\nbody\nCOYG. ⚪🔴");
@@ -1226,6 +1992,256 @@ async function selftest() {
     assert("TICK LOCK — an UNBINDABLE port is a FAULT, not a phantom concurrent tick",
       lockVerdict({ code: "EACCES" }) === "unbindable" && lockVerdict({ code: "EADDRNOTAVAIL" }) === "unbindable");
     assert("TICK LOCK — a clean bind is acquired", lockVerdict(null) === "acquired");
+  }
+
+  // =========================================================================
+  // AUDIT 2 Aug 2026 — the second regression wall. Every check below FAILS against
+  // the code as it stood before this pass. The FROZEN pre-audit engines
+  // (allowedNumbersLegacy / noNewNumbersLegacy) are kept live in the file precisely so
+  // the drift can be asserted in BOTH directions instead of described in a comment.
+  // =========================================================================
+  {
+    const os2 = await import("node:os");
+    const { mkdtempSync: mkd } = await import("node:fs");
+
+    // ---- #59 · the 0–31 whitelist hole, both directions ------------------
+    const F59 = { reps: 9, capsules: 4, date: "2026-08-02" };
+    assert("#59 LEGACY (frozen witness) — the old validator WAVED THROUGH 'cards due: 12 (+9 overdue)'",
+      noNewNumbersLegacy("cards due: 12 (+9 overdue)", F59).ok === true);
+    assert("#59 LIVE — the shared validator BOUNCES it, naming the invented token",
+      validateOutput({ validate: "no_new_numbers" }, "cards due: 12 (+9 overdue)", F59, cfg).ok === false
+      && /invented number: 12/.test(validateOutput({ validate: "no_new_numbers" }, "cards due: 12 (+9 overdue)", F59, cfg).reason));
+    assert("#59 LEGACY — the old validator STRIPPED dates and clock times, so an invented deadline passed",
+      noNewNumbersLegacy("we ship by 2026-12-25, lights out 22:45", F59).ok === true);
+    assert("#59 LIVE — an invented deadline and an invented clock window both bounce now",
+      validateOutput({ validate: "no_new_numbers" }, "we ship by 2026-12-25", F59, cfg).ok === false
+      && validateOutput({ validate: "no_new_numbers" }, "lights out by 22:45", F59, cfg).ok === false);
+    assert("#59 — an HONEST number that traces to the inputs still passes (no honest output lost)",
+      validateOutput({ validate: "no_new_numbers" }, "9 reps, 4 capsules, on 2026-08-02", F59, cfg).ok === true);
+    assert("#59 — brain's allowedNumbers IS the shared one now (0–31 laundering is gone)",
+      allowedNumbers({}).has("12") === false && allowedNumbers({}).has("31") === false
+      && allowedNumbersLegacy({}).has("12") === true && allowedNumbersLegacy({}).has("31") === true);
+
+    // ---- #60 · comma-grouped thousands -----------------------------------
+    assert("#60 LEGACY — '10,000' split into ['10','000'] and bounced a number the model was HANDED",
+      noNewNumbersLegacy("the wall shows 10,000 tokens", { tokens: 10000 }).ok === false
+      && noNewNumbersLegacy("the wall shows 10,000 tokens", { tokens: 10000 }).bad === "000");
+    assert("#60 LIVE — comma-grouped thousands and Indian lakh grouping both survive",
+      validateOutput({ validate: "no_new_numbers" }, "the wall shows 10,000 tokens", { tokens: 10000 }, cfg).ok === true
+      && validateOutput({ validate: "no_new_numbers" }, "that is 1,00,000 rupees", { amt: 100000 }, cfg).ok === true);
+    assert("#60 — a comma-grouped number that is NOT in the data still bounces (the guard did not loosen)",
+      validateOutput({ validate: "no_new_numbers" }, "the wall shows 99,999 tokens", { tokens: 10000 }, cfg).ok === false);
+
+    // ---- #59 · `shown` threading — the "invented 90" bug, prevented here --
+    // buildAnalysisPrompt injects the literal 25 in its own LAWS line. Under a tightened
+    // whitelist and WITHOUT `shown`, brain would have bounced the model for a number the
+    // wrapper itself put in front of it — recreating the already-audited manager bug.
+    const j59 = { id: "shown_probe", validate: "no_new_numbers", inputs: [], out: "shown_probe" };
+    const p59 = buildAnalysisPrompt(j59, {}, "", cfg.guards.banned_phrases);
+    assert("#59 — the assembled prompt really does carry a digit that is in NO input (the 25-line law)",
+      /≤ 25 lines/.test(p59) && !("25" in {}));
+    assert("#59 — WITHOUT `shown` that digit is 'invented' (the bug this would have been)",
+      validateOutput(j59, "hold it to 25 lines today", {}, cfg).ok === false);
+    assert("#59 — WITH `shown` threaded it passes, and runJob threads it for real",
+      validateOutput(j59, "hold it to 25 lines today", {}, cfg, p59).ok === true);
+    {
+      const r59 = await runJob(j59, cfg, { exec: () => ({ ok: true, text: "hold it to 25 lines today", total_tokens: 10, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("#59 END-TO-END — runJob hands validateOutput the prompt it actually sent (not a fresh reject)",
+        r59.usage.ok === true && /→ brain_out\/shown_probe\//.test(r59.note));
+    }
+
+    // ---- #61 · quotes_only pairing (lexicon_mine, 0-for-115) -------------
+    const lex61 = { anchors: [{ phrase: "one picture" }, { phrase: "tera finops" }, { phrase: "the whole machine is one long sentence" }] };
+    const annotated = '"one picture" (4× · context+emb) and "tera finops" (×2)';
+    assert("#61 LEGACY (the exact live failure) — a sub-12-char anchor DESYNCED the pairing and captured the annotation",
+      (String(annotated).match(/"([^"]{12,})"/g) || []).some(m => m.includes("(4×")));
+    assert("#61 LIVE — sequential pairing accepts his real, verbatim, sub-12-char anchors",
+      validateOutput({ validate: "quotes_only" }, annotated, lex61, cfg).ok === true);
+    assert("#61 — a genuinely non-verbatim long quote is STILL caught (the guard did not loosen)",
+      validateOutput({ validate: "quotes_only" }, 'he said "this phrase was never anywhere in the input"', lex61, cfg).ok === false);
+
+    // ---- #62 · the hype guard, opt-out per job ---------------------------
+    assert("#62 — 'exponential' is gone from the defaults AND from the committed config (softmax IS an exponential)",
+      !DEFAULTS.guards.banned_phrases.includes("exponential") && !(liveCfg.guards.banned_phrases || []).includes("exponential"));
+    assert("#62 — the real technical sentence that cost 185,983 tokens now passes",
+      validateOutput({ validate: null }, "Probe angle: softmax normalises by the exponential of each score, so attention cost grows quadratically.", {}, cfg).ok === true);
+    assert("#62 — genuine hype is still bounced on a guarded job", validateOutput({ validate: null }, "this is a 10x week", {}, cfg).ok === false);
+    assert("#62 — hype_guard:false opts a machine-side job out; the default is GUARDED",
+      hypeGuardOn({}) === true && hypeGuardOn({ hype_guard: false }) === false
+      && validateOutput({ hype_guard: false }, "this is a 10x week", {}, cfg).ok === true);
+    // THE TRAP, held as an assertion: `job.speak_to || validate==="no_new_numbers"` would
+    // have stripped the guard from evening_voice, which has NEITHER.
+    {
+      const ev = liveCfg.jobs.find(j => j.id === "evening_voice");
+      assert("#62 TRAP — evening_voice has neither speak_to nor validate, and KEEPS the hype guard",
+        !!ev && !ev.speak_to && !ev.validate && hypeGuardOn(ev) === true);
+      assert("#62 — every job the captain HEARS or READS keeps the guard",
+        ["evening_voice", "teamtalk_am", "teamtalk_pm", "day_cartridge", "midday_cartridge", "wall_insights", "drill_forge"]
+          .every(id => hypeGuardOn(liveCfg.jobs.find(j => j.id === id) || {}) === true));
+      assert("#62 — the prompt's own LAWS line no longer orders a job not to say a word that is not banned",
+        !/exponential/.test(buildAnalysisPrompt({ id: "x" }, {}, "", cfg.guards.banned_phrases))
+        && /machine-side analysis/.test(buildAnalysisPrompt({ id: "x", hype_guard: false }, {}, "", cfg.guards.banned_phrases)));
+    }
+
+    // ---- #63 · every job declares where its output appears ---------------
+    {
+      const sa = surfaceAudit(liveCfg);
+      assert("#63 — EVERY enabled job in the committed config declares a surface (have/need, not a word)",
+        sa.have === sa.need && sa.orphans.length === 0 && sa.need > 0);
+      assert("#63 — the four DESIGNED-to-be-human-read jobs are still ON and addressed by file path",
+        ["doubt_clusters", "widget_spec", "market_scan", "drill_forge"].every(id => {
+          const j = liveCfg.jobs.find(x => x.id === id);
+          return j && j.enabled !== false && jobSurface(j).kind === "human_file" && /brain_out\//.test(jobSurface(j).where || "");
+        }));
+      assert("#63 — every DISABLED job says WHY and names what would bring it back",
+        liveCfg.jobs.filter(j => j.enabled === false).length > 0
+        && liveCfg.jobs.filter(j => j.enabled === false).every(j => /RE-ENABLE WHEN/.test(JSON.stringify(j))));
+      assert("#63 — midday_reread (560,465 tok of an 800,000 window, no reader) is off",
+        (liveCfg.jobs.find(j => j.id === "midday_reread") || {}).enabled === false);
+      assert("#63 — an undeclared surface is reported, never silently trusted",
+        jobSurface({}).declared === false && jobSurface({ surface: { kind: "banana" } }).declared === false
+        && jobSurface({ surface: { kind: "code", where: "viz.mjs:647" } }).where === "viz.mjs:647");
+      // the address itself: runJob's note names the surface, and the ledger row carries the note
+      const jh = { id: "human_probe", out: "human_probe", inputs: [], surface: { kind: "human_file", where: "brain_out/human_probe/<date>.md — glance it" } };
+      const rh = await runJob(jh, cfg, { exec: () => ({ ok: true, text: "a proposal", total_tokens: 5, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("#63 — the run note names the FILE and the SURFACE, so a human-read file finally points at itself",
+        /brain_out\/human_probe\//.test(rh.note) && /reads at: /.test(rh.note));
+      const rn = await runJob({ id: "orphan_probe", out: "orphan_probe", inputs: [] }, cfg, { exec: () => ({ ok: true, text: "x", total_tokens: 5, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("#63 — a job with NO declared surface says so out loud on every run", /NO SURFACE DECLARED/.test(rn.note));
+    }
+
+    // ---- #64 · required inputs, and the ratio TRAP -----------------------
+    {
+      assert("#64 — an input may be a plain string (optional, unchanged) or {path, required}",
+        JSON.stringify(normalizeInputs({ inputs: ["a.json", { path: "b.json", required: true }] }))
+        === JSON.stringify([{ path: "a.json", required: false }, { path: "b.json", required: true }]));
+      const jAbs = { id: "abs", inputs: ["no_such_a.json", "no_such_b.jsonl", { path: "no_such_c.json", required: true }], out: "abs" };
+      const a = gatherInputsAudited(jAbs, now(23, 30));
+      assert("#64 — absence is COUNTED and NAMED, not silently rendered as the literal `null`",
+        a.declared === 3 && a.absent.length === 3 && a.present === 0 && a.required_absent.length === 1 && a.required_absent[0] === "no_such_c.json");
+      const rReq = await runJob(jAbs, cfg, { exec: () => { throw new Error("spent tokens on a job missing a REQUIRED input"); }, gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("#64 — a REQUIRED absent input skips the job BEFORE the spend, and says which file",
+        rReq.usage.ok === false && rReq.usage.total_tokens === 0 && /REQUIRED input\(s\) absent: no_such_c\.json/.test(rReq.note));
+      // THE TRAP: a majority-ratio guard misses deep_reanalysis at exactly 50% and kills
+      // teamtalk_am at 75%. Both shapes are held here, from the committed config.
+      const tta = liveCfg.jobs.find(j => j.id === "teamtalk_am");
+      const dre = liveCfg.jobs.find(j => j.id === "deep_reanalysis");
+      const ttaA = gatherInputsAudited(tta, now(23, 30), shiftDay(tta, now(23, 30), cfg));
+      assert("#64 TRAP — teamtalk_am really is running at 3-of-4 absent, and is NOT killed (it degrades in words)",
+        ttaA.absent.length === 3 && ttaA.declared === 4 && ttaA.required_absent.length === 0);
+      assert("#64 TRAP — deep_reanalysis sits at exactly 50% absent, which no majority rule would ever catch",
+        gatherInputsAudited(dre, now(23, 30)).absent.length * 2 === gatherInputsAudited(dre, now(23, 30)).declared);
+      assert("#64 — every `required: true` in the committed config resolves on disk TODAY (a regression net, not a new gate)",
+        liveCfg.jobs.filter(j => j.enabled !== false).every(j => gatherInputsAudited(j, new Date(), shiftDay(j, new Date(), liveCfg)).required_absent.length === 0));
+      const rOpt = await runJob({ id: "opt", inputs: ["no_such_x.json", "drills.json"], out: "opt" }, cfg,
+        { exec: () => ({ ok: true, text: "thin data, saying less", total_tokens: 7, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("#64 — an OPTIONAL absent input still runs, and the run reports what it was built from",
+        rOpt.usage.ok === true && rOpt.inputs_absent === 1 && rOpt.inputs_declared === 2 && /inputs 1\/2 present/.test(rOpt.note));
+    }
+
+    // ---- #65 · the night shift's artifacts land where viz looks ----------
+    {
+      const nightRun = new Date(2026, 6, 13, 2, 50);      // the real 02:40–03:00 night shift
+      const evenRun = new Date(2026, 6, 12, 23, 0);
+      const serveJob = { window: "overnight", serve: "next_morning" };
+      const plainJob = { window: "overnight" };
+      assert("#65 — shiftDay STILL returns yesterday for an overnight job at 02:50 (ledger key unchanged)",
+        shiftDay(serveJob, nightRun, cfg) === "2026-07-12");
+      assert("#65 — but the ARTIFACT for a `serve` job is filed under the morning it is FOR",
+        outDate(serveJob, nightRun, shiftDay(serveJob, nightRun, cfg)) === "2026-07-13");
+      assert("#65 — an evening compile of the same job serves the NEXT morning",
+        outDate(serveJob, evenRun, shiftDay(serveJob, evenRun, cfg)) === "2026-07-13");
+      assert("#65 — a job WITHOUT `serve` is untouched: it still files under its shift (day_cartridge's chain holds)",
+        outDate(plainJob, nightRun, shiftDay(plainJob, nightRun, cfg)) === "2026-07-12");
+      assert("#65 — the three artifacts viz opens by calendar date now declare `serve`",
+        ["maidan_poster", "gemini_render", "wall_insights"].every(id => (liveCfg.jobs.find(j => j.id === id) || {}).serve === "next_morning"));
+      assert("#65 — wall_review deliberately does NOT (its consumer already loops i<=2 over recent dates)",
+        (liveCfg.jobs.find(j => j.id === "wall_review") || {}).serve === undefined);
+    }
+
+    // ---- #3 · the pulse's concept tokens are no longer filler ------------
+    {
+      const vocab = new Set(["attention", "embeddings", "softmax"]);
+      const oldWay = (t) => String(t).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3).slice(0, 4);
+      assert("#3 (live evidence) — the OLD rule produced `pulse:isko` from his own Hinglish",
+        oldWay("isko samajh nahi aaya attention wala")[0] === "isko");
+      assert("#3 — stopwords are dropped and a REGISTERED CONCEPT leads, so the key is `pulse:attention`",
+        pulseTokens("isko samajh nahi aaya attention wala", vocab)[0] === "attention");
+      assert("#3 (live evidence) — the OLD rule produced ['what','left','that','part'] — pure filler",
+        JSON.stringify(oldWay("what is left of that part")) === JSON.stringify(["what", "left", "that", "part"]));
+      assert("#3 — every one of those four is now a stopword, so filler can never lead the key",
+        ["what", "left", "that", "part"].every(w => PULSE_STOPWORDS.has(w))
+        && pulseTokens("what is left of that part is the retrieval step", vocab)[0] === "retrieval"
+        && !pulseTokens("what is left of that part is the retrieval step", vocab).some(w => ["what", "left", "that", "part"].includes(w)));
+      assert("#3 — a concept beats a non-stopword noun for the habituation key",
+        pulseTokens("the warehouse diagram for embeddings", vocab)[0] === "embeddings");
+      assert("#3 — an ALL-stopword moment degrades honestly to the old behaviour instead of collapsing to one bucket",
+        pulseTokens("isko wala kaise matlab", vocab).length > 0);
+      assert("#3 — the vocabulary really is the organism's own concept registry", conceptVocabulary().size > 10 && conceptVocabulary().has("embeddings"));
+      assert("#3 — the stopword list carries BOTH languages he actually types",
+        PULSE_STOPWORDS.has("isko") && PULSE_STOPWORDS.has("matlab") && PULSE_STOPWORDS.has("what") && PULSE_STOPWORDS.has("part"));
+    }
+
+    // ---- #5 · lexicon_mine finally has a reader --------------------------
+    {
+      const td5 = mkd(join(os2.tmpdir(), "brain-mined-"));
+      writeFileSync(join(td5, "2026-07-19.md"), 'anchors:\n- "one picture" (4× · context+emb)\n- "the whole machine is one long sentence" (2×)\n');
+      writeFileSync(join(td5, "2026-08-01.md"), '- "warehouse wala naksha" — strongest\n- "short" ignored\n');
+      const m = minedAnchors(td5);
+      assert("#5 — the NEWEST mined file is read, and its quoted spans extracted by sequential pairing",
+        m && m.date === "2026-08-01" && m.anchors.includes("warehouse wala naksha") && !m.anchors.includes("short"));
+      const fpM = buildFingerprint({ mined: m });
+      assert("#5 — mined anchors reach the fingerprint at the head of every analysis prompt, WITH their date",
+        /MINED ANCHORS/.test(fpM) && fpM.includes("2026-08-01") && fpM.includes('"warehouse wala naksha"'));
+      assert("#5 — no mined file ⇒ no line at all (an empty dir never fabricates an anchor)",
+        minedAnchors(join(td5, "no-such-dir")) === null && !/MINED ANCHORS/.test(buildFingerprint({})));
+    }
+
+    // ---- #29 · last_closed is no longer computed for nobody --------------
+    {
+      const lastClosed = { concept: "hallucinations", ended_at: "2026-08-02T09:00:19.555Z", steps_ran: [0, 2, 3], steps_missed: [1, 4, 5], axes_done: ["a"], axes_deferred: [], axes_untouched: ["b", "c"] };
+      const fpDead = buildFingerprint({ ls: { position: { session_open: false, concept: null, last_closed: lastClosed } } });
+      assert("#29 — with NO open session (the case that dropped the whole block) the last lap still reaches the prompt",
+        /LAST CLOSED SESSION: hallucinations/.test(fpDead) && /ended 2026-08-02/.test(fpDead) && /axes closed a, untouched bc/.test(fpDead));
+      const fpStale = buildFingerprint({ ls: { position: { session_open: true, concept: "x", step: 3, stale: true, started_at: "2026-07-01T00:00:00Z", last_closed: lastClosed } } });
+      assert("#29 — a STALE session is not announced as live, and last_closed speaks in its place",
+        !/MID-CONCEPT RIGHT NOW/.test(fpStale) && /LAST CLOSED SESSION/.test(fpStale));
+      assert("#29 — POSITION ONLY, never content: it reports axes and steps, never what was taught",
+        /3\/6 steps ran/.test(fpDead) && !/taught|understood|explained/i.test(fpDead));
+      assert("#29 — no last_closed ⇒ no line (never a fabricated 'last session')",
+        !/LAST CLOSED SESSION/.test(buildFingerprint({ ls: { position: { session_open: false, last_closed: null } } })));
+    }
+
+    // ---- #51 · the unbounded presence log is read by the tail ------------
+    {
+      const td51 = mkd(join(os2.tmpdir(), "brain-tail-"));
+      const live = join(td51, "presence_log.jsonl");
+      writeFileSync(join(td51, "presence_log.2026-07.jsonl"), Array.from({ length: 500 }, (_, i) => JSON.stringify({ i, era: "archive" })).join("\n") + "\n");
+      writeFileSync(live, Array.from({ length: 3000 }, (_, i) => JSON.stringify({ i, era: "live", pad: "x".repeat(120) })).join("\n") + "\n");
+      const t6 = readLinesTail(live, 6);
+      assert("#51 — a 3,000-row log yields exactly the 6 rows the caller wanted, newest last",
+        t6.length === 6 && t6[5].i === 2999 && t6[0].i === 2994);
+      assert("#51 — and the 200-row LLM-input slice is the same tail, not a whole-file parse",
+        readLinesTail(live, 200).length === 200 && readLinesTail(live, 200)[199].i === 2999);
+      // the roll: a fresh month leaves the live file nearly empty
+      writeFileSync(live, JSON.stringify({ i: 0, era: "live-after-roll" }) + "\n");
+      const rolled = readLinesTail(live, 6);
+      assert("#51 — after a monthly ROLL the reader falls back to the archive instead of reporting an empty history",
+        rolled.length === 6 && rolled[5].era === "live-after-roll" && rolled[0].era === "archive");
+      assert("#51 — the archive glob finds the rolled sibling and nothing else",
+        archiveSiblings(live).length === 1 && /presence_log\.2026-07\.jsonl$/.test(archiveSiblings(live)[0]));
+      assert("#51 — a missing file is [] and never a crash (and never a measured zero downstream)",
+        readLinesTail(join(td51, "no_such.jsonl"), 6).length === 0);
+      assert("#51 — brain's own readers ask for a TAIL now (liveSignal never crashes on a rolled log)",
+        typeof liveSignal(now(14, 0), td51) === "object");
+    }
+
+    // ---- #106 · status lines are have/need counters ----------------------
+    {
+      const sa = surfaceAudit({ jobs: [{ id: "a", surface: { kind: "code", where: "x" } }, { id: "b" }, { id: "c", enabled: false }] });
+      assert("#106 — the surface report is a have/need pair and NAMES the gap, never the bare word 'ok'",
+        sa.have === 1 && sa.need === 2 && sa.orphans.length === 1 && sa.orphans[0] === "b");
+    }
   }
 
   const passed = checks.every(c => c[1]);
@@ -1359,6 +2375,39 @@ async function main() {
       ? `brain: ⚠⚠ DEAD BRAIN — the last ${hh.streak} of ${hh.sampled} calls ALL FAILED. ${hh.hint}`
       : `brain: health OK — ${hh.streak} failure(s) at the tail of the last ${hh.sampled} call(s).`);
     if (cfg._config_error) console.log(`brain: ⚠⚠ CONFIG BROKEN (${cfg._config_error}) — running on DEFAULTS with zero jobs.`);
+
+    // ---- SURFACES: where every enabled job's output actually appears (finding #63) ----
+    // This IS the address for the four jobs that are designed to be human-read. Their
+    // output used to exist only as a file nothing pointed at; it is now one command away,
+    // named by path, beside the date of the newest thing each of them wrote.
+    const sa = surfaceAudit(cfg);
+    console.log(`brain: surfaces ${sa.have}/${sa.need} enabled jobs declare where their output appears${sa.orphans.length ? ` — NO ADDRESS: ${sa.orphans.join(", ")}` : ""}`);
+    if (sa.human.length) {
+      console.log("brain: for your eyes (nothing reads these — glance and bin):");
+      for (const j of sa.human) {
+        const d = join(OUT_DIR, j.out || j.id);
+        let newest = null;
+        try { const fs2 = readdirSync(d).filter(f => f.endsWith(".md")).sort(); newest = fs2.length ? fs2[fs2.length - 1] : null; } catch {}
+        console.log(`  · ${j.id.padEnd(16)} ${newest ? join("dressing-room", "state", "brain_out", j.out || j.id, newest) : `(brain_out/${j.out || j.id}/ — nothing written yet)`}`);
+      }
+    }
+
+    // ---- INPUTS: declared vs on disk, per enabled job (finding #64) ----
+    const gaps = [];
+    for (const j of (cfg.jobs || []).filter(x => x.enabled !== false && (x.inputs || []).length)) {
+      const a = gatherInputsAudited(j, now, shiftDay(j, now, cfg));
+      if (a.absent.length) gaps.push(`${j.id} ${a.present}/${a.declared}${a.required_absent.length ? ` (REQUIRED absent: ${a.required_absent.join(", ")})` : ""} — absent: ${a.absent.join(", ")}`);
+    }
+    console.log(gaps.length
+      ? `brain: inputs — ${gaps.length} enabled job(s) are running on absent evidence:\n  · ${gaps.join("\n  · ")}`
+      : "brain: inputs — every enabled job's declared inputs resolve on disk.");
+
+    // ---- PULSE: the measurement, never a verdict (findings #66/#67) ----
+    const pc = pulseConfig(cfg);
+    const pcost = pulseCostToday(ledger, now, pc.daily_token_budget);
+    console.log(pc.enabled
+      ? `brain: pulse window ${pcost.tokens.toLocaleString()}/${pc.daily_token_budget.toLocaleString()} tok today (${pcost.pct ?? 0}%) · ${pcost.n} pulse(s) · measured cost ${pcost.mean === null ? "NOT MEASURED YET (0 pulses today)" : pcost.mean.toLocaleString() + " tok/pulse"} · every ${pc.every_n_beats} beat(s)`
+      : "brain: pulse DISABLED in brain_config — zero calls, zero meter, and no measurement is accruing.");
     return;
   }
   if (mode === "run") {
@@ -1376,9 +2425,15 @@ async function main() {
       const sd = shiftDay(job, now, cfg);
       const already = ((q.jobs_run && q.jobs_run[sd]) || {})[job.id] || 0;
       if (already >= (job.max_per_day || 1)) console.warn(`brain: ⚠ ${job.id} already ran ${already}× this shift (${sd}) — running again because you asked; it will spend again.`);
-      const { usage, note } = await runJob(job, cfg, deps);
+      const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, deps);
       if (!deps.dry) {
-        appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true }) + "\n");
+        appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
+          // same input accounting as the scheduled path (finding #64) — a manual run must
+          // not be the one place the evidence base goes unrecorded.
+          inputs_present: typeof inputs_declared === "number" ? inputs_declared - inputs_absent : null,
+          inputs_declared: typeof inputs_declared === "number" ? inputs_declared : null,
+          inputs_absent: typeof inputs_absent === "number" ? inputs_absent : null,
+          inputs_absent_names: (inputs_absent_names && inputs_absent_names.length) ? inputs_absent_names : null }) + "\n");
         if (usage.ok) { recordJobRun(q, job, now, cfg); writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [])); }
         else if (!usage.limit_hit) { recordJobFail(q, job, now, cfg); writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [])); }
       }
@@ -1393,7 +2448,7 @@ async function main() {
     // metered; safe to call as often as you like (engaged/cap/headroom rails hold).
     const r = await runPulse(cfg, deps);
     console.log(r.pulsed
-      ? `brain: pulse — ${r.escalated ? "ESCALATED (" + r.why + ")" : "hold"} · ${(r.tokens || 0).toLocaleString()} tok · ${r.count}/${r.cap} today`
+      ? `brain: pulse — ${r.escalated ? "ESCALATED (" + r.why + ")" : "hold"} · ${(r.tokens || 0).toLocaleString()} tok · ${r.count}/${r.cap} calls · ${(r.tokens_today || 0).toLocaleString()}/${(r.token_budget || 0).toLocaleString()} tok measurement window`
       : `brain: pulse skipped — ${r.skipped}`);
     return;
   }
@@ -1433,11 +2488,18 @@ async function main() {
           beats++;
           const done = t.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
           console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]`);
-          // the always-on HAIKU PULSE rides the beat — self-gated (engaged + cap + headroom)
+          // the HAIKU PULSE rides every Nth beat — self-gated (engaged + cap + headroom)
           // and metered every fire; skipped when another tick owns the beat (no double-pulse).
-          if (pulseConfig(cfg).enabled) {
+          // FREQUENCY HALVED (2 Aug 2026 audit, #67): it used to fire on EVERY beat, so a
+          // ~75s poll meant a pulse a minute and a quarter all day, and haiku_pulse became
+          // 2,762,471 tok = 32.4% of the rolling week — the single largest consumer of the
+          // plan. `every_n_beats` (default 2) doubles the spacing. The afferent tail moves
+          // far slower than 75 seconds, so this loses observations, not signal — and the
+          // measured tok/pulse now prints beside it so the next value comes off the ledger.
+          const pcfg = pulseConfig(cfg);
+          if (pcfg.enabled && beats % pcfg.every_n_beats === 0) {
             const pr = await runPulse(cfg, bdeps);
-            if (pr.pulsed) console.log(`brain: pulse ${pr.escalated ? "ESCALATED" : "hold"} (${(pr.tokens || 0).toLocaleString()} tok · ${pr.count}/${pr.cap})`);
+            if (pr.pulsed) console.log(`brain: pulse ${pr.escalated ? "ESCALATED" : "hold"} (${(pr.tokens || 0).toLocaleString()} tok · ${pr.count}/${pr.cap} calls · ${(pr.tokens_today || 0).toLocaleString()}/${(pr.token_budget || 0).toLocaleString()} tok window)`);
           }
         }
       } catch (e) {
@@ -1462,4 +2524,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
 export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, runPulse, pulseConfig, pulsesToday, liveSignal,
   // E2E audit 25 Jul 2026 — new seams, exported so the doctor/selftest can see them
-  usageTotal, failureStreak, gatherInputs, recordJobRun, recordJobFail, attemptsOn, mergeTriggers, geminiCommand, lockVerdict, buildDeps, SHEET_PUSH_TITLE };
+  usageTotal, failureStreak, gatherInputs, recordJobRun, recordJobFail, attemptsOn, mergeTriggers, geminiCommand, lockVerdict, buildDeps, SHEET_PUSH_TITLE,
+  // 1 Aug 2026 — the absence utterance + the shared window map, exported so the
+  // selftest can hold them to the same badge/boundary rules as the other two.
+  SHEET_ABSENCE_TITLE, jobWindows, mouthMaySpeak, pulseTokensToday, pulseFailStreak,
+  // 2 Aug 2026 audit — the new seams. allowedNumbers/noNewNumbers now delegate to
+  // scripts/validators.mjs; the FROZEN pre-audit engines are exported too so the
+  // selftest can hold them as a live regression witness (nothing else may call them).
+  allowedNumbers, allowedNumbersLegacy, noNewNumbersLegacy, hypeGuardOn,
+  gatherInputsAudited, normalizeInputs, jobSurface, surfaceAudit,
+  readLinesTail, archiveSiblings, pulseTokens, conceptVocabulary, PULSE_STOPWORDS,
+  pulseCostToday, minedAnchors, outDate };

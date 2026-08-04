@@ -90,6 +90,19 @@ is not.
   stuck-points ONLY — never curriculum/status/deferral notes) in **his** words, never
   invented → he **BATCH**-glances ("go" / "yeh do fix", not line-by-line) → then it is
   written. A raw stuck-point never goes straight into `doubts[]`.
+  **GATE 2 — VERIFY-GATE (the slip-catcher).** FORGE_SPEC §5 defines TWO gates and this
+  skill used to transcribe only the first — and this skill is the ONLY artifact loaded at
+  a lock, so GATE 2 has never once run (audit #34, 2026-08-04: **16 of 112 live doubts
+  violate the spec's own named failure patterns**, and all 16 are queued in
+  `tape_room.json` as verbatim rematch prompts, so a cold future-Nikhil gets served
+  *"ye to inference vali cheez hi hai na?"* with no idea what "ye" was).
+  So: at **every LOCK and every SAVE** — including 4a back-writes and Re-Jirah — re-read
+  ALL `doubts[]` and `bridges[].q` against the COLD-READER STANDARD above. Flag anything
+  **cryptic** (dangling `ye`/`woh`/`Map`/`second enemy` with no named subject), any
+  **fragment**, any **meta/curriculum/deferral** note (*"kaise chalta - nahi seekhna?"*),
+  any **near-duplicate**, and anything carrying a bare `(pehle-guess)` marker. Show him the
+  flagged lines as a BATCH → fix on his approval → only then is the lock "done".
+  A doubt that cannot be understood by someone who was not in the room is not a doubt yet.
 - **11 · RE-JIRAH.** ~3 din / ~2 hafte / ~6 hafte (`forge_profile.json`:
   `rejirah_intervals_days`). Day-3's opening move = widget Chala mode, cold.
 

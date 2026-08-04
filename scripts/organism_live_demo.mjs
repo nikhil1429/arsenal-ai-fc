@@ -1,6 +1,25 @@
 #!/usr/bin/env node
 // ============================================================================
-// dugout.mjs · ARSENAL AI FC — THE ORGANISM: THE DUGOUT (metamorphosis chamber)
+// organism_live_demo.mjs · SANDBOXED FORK of scripts/dugout.mjs — NOT LIVE.
+// ----------------------------------------------------------------------------
+// #58 (ORGANISM audit, Aug 2026): this line used to read "dugout.mjs · ARSENAL
+// AI FC — THE ORGANISM: THE DUGOUT", so every grep for a Dugout behaviour
+// returned two answers and the STALE one looked authoritative. It is a copy
+// that was never renamed internally. The live Dugout is scripts/dugout.mjs;
+// nothing in the repo, the launchers, package.json, the schedule or any skill
+// invokes THIS file. Its sandbox terms are in full at :64-72 below (own port
+// 4134, own state dir demo_sandbox/ — it cannot touch the captain's real bus).
+//
+// KEPT, NOT DELETED — deliberately, on two grounds: CLAUDE.md's non-negotiable
+// "Layering, never replace", and a prior audit's explicit keep+sandbox decision
+// recorded at :64-72. The one thing in here that was ever AHEAD of production —
+// the Origin/CSRF guard at :1247-1260 — has now been ported into the live file
+// (dugout.mjs, see its "THE CSRF GUARD" block), so this fork no longer holds
+// the only copy of a security fix.
+//
+// Everything below this banner is the FORK's original header, left verbatim —
+// with the single exception of the MODES block, which named dugout.mjs and port
+// 4114 and is corrected in place (that IS the #58 defect, not a bystander).
 // ----------------------------------------------------------------------------
 // WHAT:  Real-time voice — the captain and the organism, sub-second,
 //        interruptible, all day. A local bridge (this file) serves a browser
@@ -48,8 +67,12 @@
 //        dugout_notes.jsonl · dugout_ledger.jsonl · brain_out/dugout/.
 //        Localhost only. The key is served at runtime from ~/.gemini/.env —
 //        never written into the repo.
-// MODES: node scripts/dugout.mjs        → serves http://localhost:4114 (#14)
-//        node scripts/dugout.mjs selftest
+// MODES: node scripts/organism_live_demo.mjs        → serves http://localhost:4134
+//        node scripts/organism_live_demo.mjs selftest
+//        (#58: these two lines also said "dugout.mjs" and ":4114" — the same
+//         lie as the old line 3. A grep for the live Dugout's invocation used
+//         to land here. Corrected to what this file actually does; see :82,
+//         `const PORT = 4134; // NOT 4114 — the real Dugout owns that`.)
 // ============================================================================
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync } from "node:fs";

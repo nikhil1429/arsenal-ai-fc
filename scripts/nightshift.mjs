@@ -297,7 +297,16 @@ function gemCartridge(deps = {}, now = new Date()) {
     "RULES: one probe at a time · demand my gut-word (knew/shaky/guessed) BEFORE I answer · honest verdicts, no flattery · after each session output a JSON array of reps, EVERY item exactly: {\"surface\":\"gem\",\"track\":\"concept\",\"concept\":\"...\",\"axis\":\"a-i\",\"question\":\"...\",\"confidence\":\"knew|shaky|guessed\",\"correct\":true|false} so I can paste it into my capture system.",
     bank && Object.keys(bank.bank || bank).length ? `\nFRESH PROBES (tonight's bank — use these first):\n${Object.entries(bank.bank || bank).slice(0, 4).map(([c, v]) => `- ${c}: ${(v.probes || []).slice(0, 2).map(p => p.probe).join(" · ")}`).join("\n")}` : "",
   ].filter(Boolean).join("\n");
-  return { md };
+  // #106 — the shift record used to log this job as the literal `{ ok: true }`,
+  // written unconditionally right after the file write, so it could never be
+  // anything but true: a status that cannot fail measures nothing. What the
+  // captain actually needs to know is what went INTO the cartridge his examiner
+  // will run on — an empty one still writes fine and still says "ok".
+  const probeConcepts = bank ? Object.keys(bank.bank || bank).length : 0;
+  return {
+    md,
+    filled: { capsules: caps.length, probe_concepts: probeConcepts, has_fingerprint: !!(who && who.fingerprint), open_threads: ((who && who.open_threads) || []).length, danger_topics: ((cal && cal.danger_zone) || []).length },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -416,7 +425,37 @@ function windTunnel(rows, thalCfg, opts = {}) {
   }
   // hysteresis — a near-tie never files; the gate must be CLEARLY better
   if (!best || best.score >= baseScore * t.hysteresis_frac - t.hysteresis_abs) {
-    return { proposal: null, healthy: true, why: `the gate is near-optimal on ${usable.length} replayed decisions (current score ${baseScore}, best grid ${best ? best.score : "—"})`, base };
+    // ── #73 · "GATE HEALTHY" WAS A LIE ────────────────────────────────────
+    // Reproduced against the live salience ledger on the audit: 5,280 rows,
+    // base replay {wakes: 6, days: 14, wakes_per_day: 0.43}, base score 59,
+    // best grid 57 — and the file on disk said "GATE HEALTHY". It said so
+    // because hysteresis had nothing to do with the BAND: it only asks "did the
+    // grid clearly beat the current config?" When the answer is no, the old
+    // code declared health — for a gate running at 0.43 wakes/day against its
+    // OWN declared [1, 8]. Not-improvable is not the same as healthy.
+    // Health is now measured against the band the tunnel itself declares, and
+    // "out of band with no config that fixes it" is reported as exactly that.
+    const inBand = base.wakes_per_day >= t.band[0] && base.wakes_per_day <= t.band[1];
+    const date = localDate(opts.now || new Date());
+    const bestLine = best ? `${best.metrics.wakes_per_day} wakes/day (score ${best.score})` : "— (no candidate config cleared the shape rules)";
+    const why = inBand
+      ? `the gate is IN BAND and near-optimal on ${usable.length} replayed decisions — ${base.wakes_per_day} wakes/day inside [${t.band[0]}, ${t.band[1]}] (current score ${baseScore}, best grid ${best ? best.score : "—"})`
+      : `OUT OF BAND: ${base.wakes_per_day} wakes/day against this tunnel's own [${t.band[0]}, ${t.band[1]}], over ${usable.length} replayed decisions. Nothing is proposed because no config in the ${cands.length}-point grid clears hysteresis — the best it found is ${bestLine}. A gate below its own floor that the grid cannot lift is NOT healthy; it points at what reaches the gate (the SCORE), not at the thresholds.`;
+    const md = [
+      `# GATE ${inBand ? "HEALTHY" : "OUT OF BAND"} · ${date} (report-only — thalamus_config.json is YOURS)`,
+      "",
+      `- measured: ${base.wakes_per_day} wakes/day · ${base.capped} capped · ${base.refractory} refractory-suppressed · ${base.adjudications} ε-adjudications over ${base.days} day(s), ${usable.length} decisions (score ${baseScore})`,
+      `- this tunnel's own healthy band: [${t.band[0]}, ${t.band[1]}] wakes/day → measured ${base.wakes_per_day} sits ${inBand ? "INSIDE" : "OUTSIDE"} it`,
+      `- best config found in the ${cands.length}-point grid: ${bestLine}`,
+      `- current tiers: ${JSON.stringify(cur)}`,
+      "",
+      inBand
+        ? "No change proposed: the gate is inside its band and the grid cannot clearly beat it."
+        : "No change proposed, and that is NOT a clean bill of health — see above. The grid only moves tau0/tau1_base/epsilon; if none of them lifts the wake rate, the shortfall is upstream of the thresholds (what scores at all), which no tier edit can fix.",
+      "",
+      "PRESENTATION ONLY. This file's target (thalamus_config.json → tiers) sits outside the Boot Room's mutation grammar and `validateMutation` would reject it, so there is deliberately NO auto-apply path anywhere. The gate NEVER retunes itself.",
+    ].join("\n");
+    return { proposal: null, healthy: inBand, out_of_band: !inBand, why, md, base, best, band: t.band, grid_size: cands.length };
   }
   const date = localDate(opts.now || new Date());
   const changed = Object.keys(cur).filter(k => best.tiers[k] !== cur[k]);
@@ -476,12 +515,62 @@ function gateTuneReport(rows, now = new Date()) {
 // non-spoken, mouth gate untouched) — zero latency, zero Opus, rep captured
 // while the confusion is hot. Sole writer of answer_cache.jsonl.
 // ---------------------------------------------------------------------------
+// ── #1 · THE THIRD CUT — PROVENANCE, NOT MODALITY ───────────────────────────
+// One wire, three cuts: thalamus.mjs:218 (the self gate), thalamus.mjs:172
+// (deriveVoiceTokens) and THIS line. The pre-answer corpus filtered
+// `a.modality === "voice"`, and the voice bridge has been silent since 30 Jul —
+// so the engine that predicts tomorrow's doubts was reading a dead channel while
+// 502 rows of his own typed doubts sat in the same file.
+// The gate is now PROVENANCE: whose words are these?
+//   HIS      · voice (the bridge) · claude-code (what he types) ·
+//              organism-memory (an MCP note he wrote himself)
+//   NOT HIS  · claude-code-teaching — the COACH'S OWN OUTPUT. Measured 4 Aug
+//              2026: 342 rows of it, 215 in the last 7 days. Feeding the
+//              assistant's own prose back in as "his doubts" would make the
+//              engine predict itself. This one is a hard deny, never a default.
+// Legacy shape (layering): the 271 voice afferents carry NO `source` field at
+// all, so modality "voice" maps to provenance "voice" and keeps reading.
+const HIS_SOURCES = new Set(["voice", "claude-code", "organism-memory"]);
+const NOT_HIS_SOURCES = new Set(["claude-code-teaching"]);
+function provenanceOf(a) {
+  if (!a) return "";
+  const s = String(a.source || "").toLowerCase();
+  if (s) return s;
+  return String(a.modality || "").toLowerCase() === "voice" ? "voice" : "";
+}
+function isHisWords(a) {
+  if (!a || !a.text) return false;
+  const p = provenanceOf(a);
+  if (NOT_HIS_SOURCES.has(p)) return false;
+  return HIS_SOURCES.has(p);
+}
+
 function preAnswerMaterial(deps = {}, now = new Date()) {
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"));
   const clusters = ((grammar && grammar.clusters) || []).map(c => ({ shape: c.shape, examples: (c.examples || []).slice(0, 3).map(e => e.q_first_80 || "").filter(Boolean) }));
   const weekAgo = now.getTime() - 7 * 86400000;
   const aff = (deps.afferents || readLines(join(STATE_DIR, "afferent.jsonl"))).filter(a => new Date(a.ts || 0).getTime() >= weekAgo);
-  const voiced = aff.filter(a => a.modality === "voice" && a.text).map(a => String(a.text).slice(0, 120)).slice(-30);
+  const his = aff.filter(isHisWords);
+  const voiced = his.map(a => String(a.text).slice(0, 120)).slice(-30);
+  // ── #56 · REPORT THE CORPUS, DO NOT ASSUME IT ─────────────────────────────
+  // The voice corpus empties for good once the 30 Jul batch falls out of the
+  // 7-day window, and :724 recorded NOTHING about what fed the prediction — so
+  // this input could degrade to zero with no signal anywhere. The composition
+  // now travels out with the material and lands on the shift record (the shift
+  // record is read by `nightshift status` and by dugout.mjs:1215/:1238), so a
+  // dry corpus is VISIBLE the day it happens instead of the week after.
+  const bySource = {};
+  for (const a of aff) { const p = provenanceOf(a) || `(no source · ${a.modality || "?"})`; bySource[p] = (bySource[p] || 0) + 1; }
+  const composition = {
+    window_days: 7,
+    afferents_in_window: aff.length,
+    his_turns_in_window: his.length,
+    voiced_turns_in_window: aff.filter(a => String(a.modality || "").toLowerCase() === "voice" && a.text).length,
+    typed_turns_in_window: his.filter(a => provenanceOf(a) === "claude-code").length,
+    used_in_prompt: voiced.length,
+    excluded_not_his: aff.filter(a => a.text && NOT_HIS_SOURCES.has(provenanceOf(a))).length,
+    by_source: bySource,
+  };
   const tokens = {};
   for (const a of aff) for (const t of a.concept_tokens || []) tokens[t] = (tokens[t] || 0) + 1;
   const hotTokens = Object.entries(tokens).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t]) => t);
@@ -491,7 +580,9 @@ function preAnswerMaterial(deps = {}, now = new Date()) {
   const danger = ((cal && cal.danger_zone) || []).map(d => d.topic || d.concept).filter(Boolean);
   const who = deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"));
   const threads = ((who && who.open_threads) || []).slice(0, 5);
-  return { clusters, voiced, hotTokens, due, danger, threads };
+  // `voiced` keeps its name so every existing consumer/fixture reads unchanged
+  // (layering); `his_words` is the honest alias now that typed doubts ride too.
+  return { clusters, voiced, his_words: voiced, composition, hotTokens, due, danger, threads };
 }
 
 async function preAnswerEngine(deps = {}) {
@@ -502,17 +593,20 @@ async function preAnswerEngine(deps = {}) {
   const use = deps.recordUse || meterUse;
   const budget = deps.budget || NO_BUDGET;
   const material = deps.material || preAnswerMaterial(deps, now);
+  // #56 — the corpus report rides EVERY return, including the skips. A skip
+  // caused by a dry corpus is exactly the case that must not be silent.
+  const corpus = material.composition || { window_days: 7, his_turns_in_window: (material.voiced || []).length, used_in_prompt: (material.voiced || []).length, note: "composition not measured (material injected)" };
   if (!(material.clusters.length || material.voiced.length || material.due.length || material.danger.length || material.threads.length)) {
-    return { ok: false, skipped: "no real signal on the bus — never predict doubts from nothing" };
+    return { ok: false, skipped: "no real signal on the bus — never predict doubts from nothing", corpus };
   }
   // E2E audit 25 Jul 2026: the shift-wide budget is checked BEFORE the predict
   // call — a prediction with no budget left to answer it is a wasted call.
-  if (!budget.take()) return { ok: false, skipped: "shift call budget spent — the cache waits for tomorrow's headroom" };
+  if (!budget.take()) return { ok: false, skipped: "shift call budget spent — the cache waits for tomorrow's headroom", corpus };
   // 1 — PREDICT (one call): the doubts he is MOST LIKELY to voice next
-  const pr = await gen(`You predict the NEXT doubts of one specific learner (an AI Product Engineer candidate) from his real signals. His confusion SHAPES (mined from his real captured doubts): ${JSON.stringify(material.clusters).slice(0, 2500)}. His last-7-days spoken fragments: ${JSON.stringify(material.voiced).slice(0, 3000)}. Concepts hot this week: ${material.hotTokens.join(", ") || "—"}. Due for review (decay risk): ${material.due.join(", ") || "—"}. Confident-but-wrong zone: ${material.danger.join(", ") || "—"}. Open threads: ${material.threads.join(" · ") || "—"}.
+  const pr = await gen(`You predict the NEXT doubts of one specific learner (an AI Product Engineer candidate) from his real signals. His confusion SHAPES (mined from his real captured doubts): ${JSON.stringify(material.clusters).slice(0, 2500)}. His last-7-days OWN WORDS — spoken and typed, ${(material.voiced || []).length} turn(s) (never the coach's replies): ${JSON.stringify(material.voiced).slice(0, 3000)}. Concepts hot this week: ${material.hotTokens.join(", ") || "—"}. Due for review (decay risk): ${material.due.join(", ") || "—"}. Confident-but-wrong zone: ${material.danger.join(", ") || "—"}. Open threads: ${material.threads.join(" · ") || "—"}.
 Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — concrete, first-person, in his idiom (Hinglish fine), each anchored to one concept. ONLY learning doubts on his interview arc (LLMs, RAG, evals, systems, his locked concepts decaying); IGNORE anything about building or configuring the organism/tooling itself (Claude, Gemini accounts, schedulers, APIs, tasks) — that is machinery talk, not a doubt worth pre-answering. Output STRICT JSON array, no fences: [{"concept":"<one concept>","doubt":"<the doubt as HE would voice it, 15-140 chars>"}]`, true);
   use(CLAUDE_LANE, 1, 4000);                         // claudeGen — subscription lane, never a Gemini tank
-  if (!pr.ok) return { ok: false, skipped: "prediction lane dry — no cache tonight" };
+  if (!pr.ok) return { ok: false, skipped: "prediction lane dry — no cache tonight", corpus };
   let predicted = [];
   try {
     const raw = String(pr.text); const s = raw.indexOf("["), e = raw.lastIndexOf("]");
@@ -520,7 +614,7 @@ Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — co
       .filter(d => d && typeof d.doubt === "string" && d.doubt.length >= 12 && typeof d.concept === "string" && d.concept)
       .slice(0, CAPS.pre_answer_max);
   } catch { }
-  if (!predicted.length) return { ok: false, skipped: "prediction unparseable — junk never enters the cache" };
+  if (!predicted.length) return { ok: false, skipped: "prediction unparseable — junk never enters the cache", corpus };
   // 2 — ANSWER each in the DOSSIER grammar (validated per-item; junk rejected)
   const banned = deps.bannedPhrases !== undefined ? deps.bannedPhrases : (((loadBrainConfig() || {}).guards || {}).banned_phrases || []);
   const entries = [];
@@ -540,7 +634,7 @@ Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; 
       entries.push({ id: `pa_${localDate(now)}_${entries.length}`, date: localDate(now), concept: String(d.concept).slice(0, 80), doubt: String(d.doubt).slice(0, 200), answer: answer.slice(0, 1400), vec: null });
     } catch { }
   }
-  if (!entries.length) return { ok: false, skipped: "every answer failed validation — cache untouched" };
+  if (!entries.length) return { ok: false, skipped: "every answer failed validation — cache untouched", corpus };
   // 3 — EMBED the doubts (T6 lane) so the thalamus can cosine-attach; dry →
   // vec null, the serve side's word-overlap floor still works (layering)
   const embed = deps.embed || embedPool;
@@ -548,7 +642,7 @@ Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; 
   let embedded = 0;
   if (vecs) entries.forEach((e, i) => { if (vecs[i]) { e.vec = vecs[i]; embedded++; } });
   (deps.writeCache || ((rows) => writeAtomic(join(STATE_DIR, "answer_cache.jsonl"), rows.map(x => JSON.stringify(x)).join("\n") + "\n")))(entries);
-  return { ok: true, predicted: predicted.length, answered: entries.length, embedded, spent };
+  return { ok: true, predicted: predicted.length, answered: entries.length, embedded, spent, corpus };
 }
 
 // ---------------------------------------------------------------------------
@@ -703,25 +797,40 @@ async function runShift(deps = {}) {
 
   const gc = gemCartridge({ ...deps, probeBank: Object.keys(pb.bank).length ? { bank: pb.bank } : undefined }, now);
   write("gem_cartridge.md", gc.md);
-  out.jobs.gem_cartridge = { ok: true };
+  // #106 — what the cartridge actually carries, not a literal that cannot fail
+  out.jobs.gem_cartridge = { ...gc.filled, empty: !(gc.filled.capsules || gc.filled.probe_concepts || gc.filled.has_fingerprint || gc.filled.danger_topics) };
 
   const rows = deps.ledgerRows || readLines(join(STATE_DIR, "salience_ledger.jsonl"));
   const wt = windTunnel(rows, deps.thalamusCfg || loadThalamusConfig(), { now, ...(deps.tunnel || {}) });
+  // ── #73 · GIVE THE WIND TUNNEL AN ADDRESS ─────────────────────────────────
+  // gate_tune_<date>.md has been written nightly since 20 Jul with no reader
+  // anywhere in the repo. Deleting it is not an option (rule: never delete an
+  // organ because nobody reads it — give it an address), and a mutation lane is
+  // not an option either (the TRAP: its target would be rejected by the Boot
+  // Room's validateMutation, so any wiring must be presentation-only). The
+  // address is the SHIFT RECORD: shift_<date>.json is read back by
+  // `nightshift status` and by dugout.mjs:1215/:1238, so the verdict and its
+  // numbers now reach a surface without inventing an auto-apply path.
   if (wt.proposal) {
     write(`wind_tunnel_${day}.json`, wt.proposal);
     write(`gate_tune_${day}.md`, wt.md);
-    out.jobs.gate_tune = { proposed: true, engine: "wind_tunnel" };
-  } else if (wt.healthy) {
-    write(`gate_tune_${day}.md`, `# GATE HEALTHY · ${day}\n${wt.why}`);
-    out.jobs.gate_tune = { healthy: true, engine: "wind_tunnel" };
+    out.jobs.gate_tune = { proposed: true, engine: "wind_tunnel", wakes_per_day: wt.base.wakes_per_day, band: (deps.tunnel && deps.tunnel.band) || TUNNEL.band, in_band: false, decisions: wt.base.rows, file: `gate_tune_${day}.md` };
+  } else if (wt.md) {
+    // the tunnel had its sample and filed a verdict — healthy OR out-of-band
+    write(`gate_tune_${day}.md`, wt.md);
+    out.jobs.gate_tune = { engine: "wind_tunnel", healthy: !!wt.healthy, out_of_band: !!wt.out_of_band, wakes_per_day: wt.base.wakes_per_day, band: wt.band, in_band: !!wt.healthy, decisions: wt.base.rows, days: wt.base.days, file: `gate_tune_${day}.md`, why: wt.why };
   } else {
     const gt = gateTuneReport(rows, now);            // the frozen heuristic floor (layering)
     if (gt.md) write(`gate_tune_${day}.md`, gt.md);
-    out.jobs.gate_tune = gt.md ? { proposed: true, engine: "legacy" } : { silent: gt.why };
+    out.jobs.gate_tune = gt.md ? { proposed: true, engine: "legacy", file: `gate_tune_${day}.md` } : { silent: gt.why };
   }
 
   const pa = await preAnswerEngine(jobDeps);
-  out.jobs.pre_answers = pa.ok ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent } : { skipped: pa.skipped };
+  // #56 — the corpus report rides the record on BOTH paths. "0 of his own turns
+  // in the window" is now a number on a surface, not an unstated assumption.
+  out.jobs.pre_answers = pa.ok
+    ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent, corpus: pa.corpus }
+    : { skipped: pa.skipped, corpus: pa.corpus };
 
   // the season re-read is the shift's ONE genuine Gemini call — it, and only it,
   // answers to T5's headroom (E2E audit 25 Jul 2026: the gate now meters the
@@ -766,6 +875,13 @@ async function selftest() {
     assert("distractors: one call is attempted per drill concept", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));
     assert("gem cartridge: gut-word law + reps-JSON contract travel to the phone", writes["gem_cartridge.md"].includes("knew/shaky/guessed") && writes["gem_cartridge.md"].includes("paste"));
+    // #106 — the shift record said `{ok:true}` unconditionally: a status that
+    // cannot fail. It now counts what actually went into the cartridge.
+    assert("#106: the gem-cartridge record is a have/need count, not a literal that cannot fail",
+      r.jobs.gem_cartridge.ok === undefined && r.jobs.gem_cartridge.capsules === 1 && r.jobs.gem_cartridge.probe_concepts === 1 && r.jobs.gem_cartridge.empty === false);
+    const bare = gemCartridge({ who: null, calibration: null, capsuleFiles: [], probeBank: undefined }, new Date("2026-07-15T02:45:00"));
+    assert("#106: an EMPTY cartridge says it is empty (it still writes, and still would have said ok)",
+      bare.filled.capsules === 0 && bare.filled.probe_concepts === 0 && bare.filled.has_fingerprint === false);
     assert("gate tuner: silent under 20 decisions (no early false alarms)", r.jobs.gate_tune.silent && r.jobs.gate_tune.silent.includes("20"));
   }
   // validation honesty
@@ -914,6 +1030,34 @@ async function selftest() {
     ], thal.tiers, 45, 15);
     assert("REPLAY: a refractory-gated near-miss buys no verdict (the free gates read first)", gated.wakes === 1 && gated.adjudications === 0);
     assert("REPLAY: the pre-audit symmetric band stays frozen beside it (layering)", replayGateLegacy([{ day: "2026-07-01", ts: "2026-07-01T10:00:00Z", S: 0.58, headroom_frac: 1, key: "voice:in-band" }], thal.tiers, 45, 15).wakes === 0);
+
+    // ── #73 · "GATE HEALTHY" FOR A STARVED GATE ─────────────────────────────
+    // Live on the audit: 5,280 rows, 0.43 wakes/day against the tunnel's own
+    // [1, 8], base score 59, best grid 57 — hysteresis blocked the proposal and
+    // the file said GATE HEALTHY. Hysteresis is disabled here (frac 0, abs 0) to
+    // reproduce that exact state deterministically: nothing can ever be filed,
+    // so the ONLY question left is whether the verdict tells the truth.
+    {
+      const blocked = { hysteresis_frac: 0, hysteresis_abs: 0, now: new Date("2026-07-15T02:45:00") };
+      const starved = windTunnel(mkRows(), thal, blocked);         // 0 wakes/day — below the floor
+      assert("#73: a gate BELOW its own floor is never called healthy, even when nothing can be proposed",
+        starved.proposal === null && starved.healthy === false && starved.out_of_band === true && starved.base.wakes_per_day < starved.band[0]);
+      assert("#73: the report says OUT OF BAND, shows the band, and says WHY nothing was filed",
+        starved.md.includes("# GATE OUT OF BAND") && starved.md.includes("[1, 8]") && starved.md.includes("OUTSIDE")
+        && starved.md.includes("NOT a clean bill of health") && starved.why.includes("OUT OF BAND"));
+      assert("#73: the TRAP is respected — the surfacing is presentation-only, with no apply path",
+        starved.md.includes("PRESENTATION ONLY") && starved.md.includes("validateMutation") && starved.md.includes("NEVER retunes itself"));
+      const inband = windTunnel(healthyRows, thal, blocked);       // 3 wakes/day — inside the band
+      assert("#73: an in-band gate that the grid cannot beat IS healthy (the honest half still works)",
+        inband.proposal === null && inband.healthy === true && inband.out_of_band === false && inband.md.includes("# GATE HEALTHY"));
+      // …and the verdict reaches a surface (rule 5: an organ needs an address)
+      const writes = {};
+      const rG = await runShift({ ...base, generate: genProbes, ledgerRows: mkRows(), tunnel: blocked, write: (n, c) => { writes[n] = c; } });
+      assert("#73: the gate verdict lands on the SHIFT RECORD — the surface status/dugout already read",
+        rG.jobs.gate_tune.out_of_band === true && rG.jobs.gate_tune.wakes_per_day === 0 && rG.jobs.gate_tune.in_band === false
+        && Array.isArray(rG.jobs.gate_tune.band) && rG.jobs.gate_tune.decisions === 260
+        && writes["gate_tune_2026-07-15.md"].includes("OUT OF BAND"));
+    }
   }
 
   // JOB 7 — THE PRE-ANSWER ENGINE (M17)
@@ -942,6 +1086,52 @@ async function selftest() {
       { modality: "voice", text: "fresh doubt", ts: "2026-07-14T10:00:00Z", concept_tokens: ["kv"] },
     ], grammar: null, cards: null, calibration: null, who: null }, new Date("2026-07-15T02:00:00"));
     assert("PRE-ANSWER material: 7-day afferent window, hot tokens counted", m.voiced.length === 1 && m.voiced[0] === "fresh doubt" && m.hotTokens.includes("kv"));
+  }
+  // ── #1 (third cut) · PROVENANCE, NOT MODALITY ─────────────────────────────
+  // The corpus filtered `modality === "voice"` and voice died on 30 Jul, so the
+  // pre-answer engine was reading a dead channel while 502 rows of his typed
+  // doubts sat in the same file. Measured 4 Aug: {code|claude-code 502,
+  // code|claude-code-teaching 342, voice 271, desktop-study|organism-memory 6}.
+  {
+    const now7 = new Date("2026-08-04T02:00:00Z");
+    const t = (d) => new Date(now7.getTime() - d * 86400000).toISOString();
+    const aff = [
+      { modality: "voice", text: "spoken doubt (no source field — the legacy shape)", ts: t(1) },
+      { modality: "code", source: "claude-code", text: "bhai i am not understanding what are you following to teach me", ts: t(1) },
+      { modality: "desktop-study", source: "organism-memory", text: "a doubt he noted himself through the MCP", ts: t(2) },
+      { modality: "code", source: "claude-code-teaching", text: "All four of my files green. The fleet is still running", ts: t(1) },
+      { modality: "context", source: "activitywatch", text: "claude.exe · Claude", ts: t(1) },
+      { modality: "pulse", source: "haiku-pulse", text: "pulse flagged (reasoning-hard): x", ts: t(1) },
+      { modality: "code", source: "claude-code", text: "too old to ride", ts: t(30) },
+    ];
+    const m = preAnswerMaterial({ afferents: aff, grammar: null, cards: null, calibration: null, who: null }, now7);
+    assert("#1: his TYPED doubts now ride the pre-answer corpus (the third cut is closed)",
+      m.voiced.some(x => x.includes("not understanding")));
+    assert("#1: the legacy voice shape (no `source` field at all) still rides — layering, nothing lost",
+      m.voiced.some(x => x.includes("spoken doubt")));
+    assert("#1: an organism-memory note is his words too", m.voiced.some(x => x.includes("noted himself")));
+    assert("#1: claude-code-TEACHING is a hard deny — the coach's own prose never becomes 'his doubt'",
+      !m.voiced.some(x => x.includes("files green")) && m.composition.excluded_not_his === 1);
+    assert("#1: window titles and machine pulses are still not his words",
+      !m.voiced.some(x => x.includes("claude.exe")) && !m.voiced.some(x => x.includes("pulse flagged")) && m.voiced.length === 3);
+    // ── #56 · THE CORPUS IS REPORTED, NOT ASSUMED ───────────────────────────
+    assert("#56: the composition is measured — his turns, voiced vs typed, and what was excluded",
+      m.composition.window_days === 7 && m.composition.his_turns_in_window === 3
+      && m.composition.voiced_turns_in_window === 1 && m.composition.typed_turns_in_window === 1
+      && m.composition.used_in_prompt === 3 && m.composition.afferents_in_window === 6
+      && m.composition.by_source["activitywatch"] === 1);
+    // the 6-7 Aug case the audit predicted: voice falls out of the window
+    const dry = preAnswerMaterial({ afferents: [{ modality: "context", source: "activitywatch", text: "chrome.exe", ts: t(1) }], grammar: null, cards: null, calibration: null, who: null }, now7);
+    assert("#56: a DRY corpus reports zero explicitly (an unmeasured silence is never a measured zero)",
+      dry.voiced.length === 0 && dry.composition.his_turns_in_window === 0 && dry.composition.voiced_turns_in_window === 0 && dry.composition.afferents_in_window === 1);
+    // and it survives all the way onto the shift record, on the SKIP path too
+    const rDry = await preAnswerEngine({ material: { ...dry, clusters: [], due: [], danger: [], threads: [] }, generate: async () => { throw new Error("must not be called"); }, bannedPhrases: [] });
+    assert("#56: the skip carries the corpus report with it (the dry case is the one that must be visible)",
+      rDry.ok === false && rDry.corpus && rDry.corpus.his_turns_in_window === 0);
+    const writes2 = {};
+    const rShift = await runShift({ ...base, generate: genProbes, afferents: [], write: (n, c) => { writes2[n] = c; } });
+    assert("#56: the shift record carries it too — dugout.mjs:1215 and `status` read that file",
+      rShift.jobs.pre_answers.corpus && rShift.jobs.pre_answers.corpus.his_turns_in_window === 0);
   }
 
   // JOB 8 — M18 THE SEASON RE-READ
@@ -975,6 +1165,15 @@ async function main() {
   if (mode === "status") {
     const s = readJson(join(OUT_DIR, `shift_${localDate()}.json`));
     console.log(s ? `nightshift: last shift ${s.date} — ${JSON.stringify(s.jobs)}` : "nightshift: no shift filed today");
+    if (s && s.jobs) {
+      // #56 — the pre-answer corpus, in words, every time it is asked
+      const c = (s.jobs.pre_answers || {}).corpus;
+      if (c) console.log(`nightshift: pre-answer corpus — ${c.his_turns_in_window} of HIS turn(s) in the last ${c.window_days}d (${c.voiced_turns_in_window} voiced · ${c.typed_turns_in_window} typed), ${c.used_in_prompt} rode the prompt, ${c.excluded_not_his} coach-authored row(s) excluded, out of ${c.afferents_in_window} afferent(s)${c.his_turns_in_window === 0 ? "  ← DRY: the engine predicted from shapes/FSRS alone, not from his words" : ""}`);
+      // #73 — the wind tunnel's verdict, with its own band beside it
+      const g = s.jobs.gate_tune;
+      if (g && g.wakes_per_day !== undefined) console.log(`nightshift: gate — ${g.wakes_per_day} wakes/day vs its own band [${(g.band || [])[0]}, ${(g.band || [])[1]}] over ${g.decisions} decision(s) → ${g.proposed ? "PROPOSAL FILED (report-only)" : g.in_band ? "in band" : "OUT OF BAND, and no grid config fixes it"} · see brain_out/nightshift/${g.file}`);
+      else if (g && g.silent) console.log(`nightshift: gate — silent (${g.silent})`);
+    }
     return;
   }
   const r = await runShift({ force: process.argv.includes("--force") });
@@ -983,4 +1182,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, replayGateLegacy, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, makeBudget, CAPS, CLAUDE_LANE, TUNNEL, SEASON_CAPS, GRADE };
+export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, replayGateLegacy, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, makeBudget, CAPS, CLAUDE_LANE, TUNNEL, SEASON_CAPS, GRADE,
+  // audit 4 Aug 2026 — #1/#56 seams: the provenance gate is now testable from
+  // outside, so the thalamus side of the same wire can assert the SAME rule
+  isHisWords, provenanceOf, HIS_SOURCES, NOT_HIS_SOURCES };

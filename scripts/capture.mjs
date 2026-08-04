@@ -21,6 +21,14 @@
 //     • pull   — Colab→Drive (Option B): reads *.jsonl from the Drive inbox →
 //                append → move to <inbox>/done. (See MANUAL_WIRING.md.)
 //
+// v4 AMENDMENT — THE OBSERVED ARRIVAL CLOCK (organism audit #24, 4 Aug 2026):
+//   `ts` was AUTHORED BY THE MODEL and never checked against a clock capture owns.
+//   Live proof in reps_log.jsonl: four reps spanning 90 minutes all carry the
+//   millisecond `.795`, three of them exactly 1000 ms apart. Capture now stamps its
+//   OWN arrival instant (`observed_at`) and keeps the author's claim verbatim
+//   (`ts_claimed`) — nothing is destroyed. See THE THREE CLOCKS below for which one
+//   `ts` resolves to and why it is not blindly the observed one.
+//
 // INPUT CONTRACT (one rep, one JSON object):
 //   { ts:ISO, surface:"gem"|"colab",
 //     track:"concept"|"skill",              // drives downstream ontology
@@ -33,8 +41,10 @@
 //     edge:string|null,                     // v3 optional — verbatim knowledge-boundary text (feeds edge-map)
 //     note?:string }
 //   Enriched-on-write: concept→canonical, unregistered:boolean (unknown concept is
-//   still appended with unregistered:true — SOFT, never hard-rejected).
-//   Dedup key = ts + question. Structurally-malformed reps are REJECTED.
+//   still appended with unregistered:true — SOFT, never hard-rejected), plus the
+//   three clocks (ts_claimed · observed_at · ts_source).
+//   Dedup key = ts_claimed + concept + axis + question. Structurally-malformed
+//   reps are REJECTED.
 //
 // OUTPUT: dressing-room/state/reps_log.jsonl (append-only JSONL, single writer).
 //   Missing/empty = valid (awaiting data). NEVER fabricates a rep.
@@ -52,6 +62,7 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";     // #25 — the heartbeat chain (see chainHeartbeat)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -127,7 +138,64 @@ const TRACKS     = new Set(["concept", "skill"]);
 const CONFIDENCE = new Set(["knew", "shaky", "guessed"]);        // gut-word, committed BEFORE the answer
 const AXES       = new Set("abcdefghi".split(""));               // 9 axes a–i (canon; FORGE faultLines a–i)
 
-function validateRep(o, reg = EMPTY_REG) {
+// ---------------------------------------------------------------------------
+// THE THREE CLOCKS (organism audit #24, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// EVIDENCE: reps_log.jsonl rows 3-6 read 20:28:02.795Z · 20:28:03.795Z ·
+// 20:28:04.795Z · 21:58:02.795Z — four reps across ninety minutes sharing one
+// millisecond, three of them exactly 1000 ms apart. .claude/skills/forge/SKILL.md
+// step 1 tells the model to BUILD the array including `ts`; this file only ever
+// asked that the string PARSE. So the ledger's spine was a plausible fiction.
+//
+//   ts_claimed  — what the author wrote, normalized to ISO. Never destroyed.
+//   observed_at — the instant CAPTURE saw the rep. A fact this process owns.
+//                 null on rows written before this amendment: we do not know when
+//                 they arrived, and inventing a stamp would be the exact lie the
+//                 amendment exists to end.
+//   ts          — the best available instant. Every consumer keeps reading this.
+//
+// WHY `ts` IS NOT BLINDLY observed_at. The arrival clock is an UPPER BOUND on when
+// the rep happened, not the event time: a FORGE session runs 20:00–22:00 and the
+// whole array lands in one paste at 22:30, and a Colab export pulled the next
+// morning arrives ~12 hours after the reps it carries. Overwriting `ts` with the
+// arrival instant would move those reps to the WRONG CALENDAR DAY and silently
+// break every organ that keys on the captain's midnight — scorer's repsOnDate,
+// touchline's repsToday (touchline.mjs:397), learning_state's last_seen. So the
+// claim is preferred while it is CONSISTENT with the observation, and the
+// observation wins where the claim is impossible: a rep cannot have happened after
+// it arrived. That is a fact-check, not a guess, and it needs no threshold.
+//
+// The distortion #24 actually costs — FSRS replaying a burst as N zero-elapsed
+// reviews — is fixed where it lives, in fsrs.mjs's live replay path, against
+// FSRS's own scheduling resolution. capture's job is to stop LOSING the evidence.
+function resolveClocks(o, opts) {
+  const tsMs = Date.parse(o.ts);
+  if (Number.isNaN(tsMs)) return null;
+  const iso = (ms) => new Date(ms).toISOString();
+  const parseIso = (v) => {
+    if (typeof v !== "string" || v.trim() === "") return null;
+    const ms = Date.parse(v);
+    return Number.isNaN(ms) ? null : iso(ms);
+  };
+  // IDEMPOTENCE IS LOAD-BEARING (the same law normText obeys, and for the same
+  // reason): loadReps re-validates every line already on disk, so a second pass
+  // over a stored rep must return the identical object or the dedupe key splits
+  // and the rep re-appends forever. A stored observed_at / ts_claimed therefore
+  // always WINS over anything the caller offers.
+  const observed_at = parseIso(o.observed_at) || parseIso(opts && opts.observedAt) || null;
+  const ts_claimed = parseIso(o.ts_claimed) || iso(tsMs);
+  let ts = ts_claimed, ts_source = "claimed";
+  if (observed_at && Date.parse(ts_claimed) > Date.parse(observed_at)) {
+    ts = observed_at;                       // impossible claim → the fact wins
+    ts_source = "observed(claim_after_arrival)";
+  }
+  return { ts, ts_claimed, observed_at, ts_source };
+}
+
+// opts.observedAt — the arrival instant, supplied ONLY by ingest (which is the one
+// place a rep genuinely arrives). loadReps deliberately passes nothing, so
+// re-reading the log can never restamp history as "arrived now".
+function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (o === null || typeof o !== "object" || Array.isArray(o)) return { ok: false, error: "not an object" };
   if (typeof o.ts !== "string" || o.ts.trim() === "") return { ok: false, error: "ts missing/not-string" };
   // ts must actually PARSE as a date. E2E audit (25 Jul 2026): the gate only asked for a
@@ -138,9 +206,8 @@ function validateRep(o, reg = EMPTY_REG) {
   // scheduled no card and showed in no view. Reject it HERE, loud, with a reason the
   // paste output prints — and store the normalized ISO form so the dedupe key
   // (ts + question) cannot split on two spellings of the same instant.
-  const tsMs = Date.parse(o.ts);
-  if (Number.isNaN(tsMs)) return { ok: false, error: `ts not a parseable date (${o.ts})` };
-  const tsISO = new Date(tsMs).toISOString();
+  const clocks = resolveClocks(o, opts);
+  if (!clocks) return { ok: false, error: `ts not a parseable date (${o.ts})` };
   if (!SURFACES.has(o.surface)) return { ok: false, error: `surface not gem|colab (${o.surface})` };
   if (!TRACKS.has(o.track)) return { ok: false, error: `track not concept|skill (${o.track})` };
   if (typeof o.concept !== "string" || o.concept.trim() === "") return { ok: false, error: "concept missing/empty" };
@@ -183,9 +250,12 @@ function validateRep(o, reg = EMPTY_REG) {
   // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged)
   const { canonical, unregistered } = canonicalize(o.concept, o.track, reg);
   const rep = {
-    ts: tsISO, surface: o.surface, track: o.track, concept: canonical,
+    ts: clocks.ts, surface: o.surface, track: o.track, concept: canonical,
     axis: o.axis, question: o.question, confidence: o.confidence, correct: o.correct,
     latency_ms, aided, unregistered, confused_with, edge,
+    // THE THREE CLOCKS (#24) — additive; `ts` above keeps its meaning for every
+    // existing consumer, and the provenance now rides beside it instead of being lost.
+    ts_claimed: clocks.ts_claimed, observed_at: clocks.observed_at, ts_source: clocks.ts_source,
   };
   if (o.note !== undefined) rep.note = o.note;
   return { ok: true, rep };
@@ -196,7 +266,19 @@ function validateRep(o, reg = EMPTY_REG) {
 // reps on DIFFERENT concepts sharing a rounded/reused ts collapsed into one and the
 // second was silently counted as a duplicate. concept+axis are what make a rep a
 // distinct measurement, so they belong in its identity.
-const keyOf = (r) => JSON.stringify([r.ts, r.concept, r.axis ?? null, r.question]);
+// FROZEN (layering law) — the pre-#24 identity, verbatim. Kept because it is the
+// identity every row currently on disk was written under, and because a future
+// reader comparing the two must be able to see exactly what changed.
+const keyOfLegacy = (r) => JSON.stringify([r.ts, r.concept, r.axis ?? null, r.question]);
+
+// PLAN OF RECORD (#24, 4 Aug 2026): the identity rides ts_CLAIMED, not ts.
+// `ts` may now be corrected toward the observed arrival clock, and observed_at is
+// stamped fresh on every arrival — so keying on `ts` would make the SAME rep
+// pasted twice look like two different reps the moment a correction fired. The
+// author's claim is the only clock that is stable across re-ingests. For every row
+// written before this amendment ts_claimed is derived from ts, so the two keys are
+// byte-identical on the existing log and no rep is orphaned.
+const keyOf = (r) => JSON.stringify([r.ts_claimed ?? r.ts, r.concept, r.axis ?? null, r.question]);
 
 // load existing reps (defensive: skip unparseable lines; missing file = empty)
 // `stats` is an optional out-param: a dropped line used to be invisible at every
@@ -308,7 +390,13 @@ function withRepsLock(path, fn, opts = {}) {
 // LAYERING (E2E audit 25 Jul 2026): this is the original engine, byte-for-byte —
 // it assumes it is alone with the file. `ingest` below is the plan of record and
 // runs exactly this under the writer lock. Nothing else should call it unlocked.
-function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
+// opts.observedAt (#24): the arrival instant stamped on THIS batch. Defaulted here
+// rather than per-rep so every rep in one paste/pull shares one honest arrival
+// stamp — they did arrive together. Injectable so the selftest can drive it.
+function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
+  const observedAt = (typeof opts.observedAt === "string" && !Number.isNaN(Date.parse(opts.observedAt)))
+    ? new Date(Date.parse(opts.observedAt)).toISOString()
+    : new Date().toISOString();
   const loadStats = {};
   const existing = loadReps(path, reg, loadStats);
   const seen = new Set(existing.map(keyOf));
@@ -321,7 +409,7 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
   // entries in total silence. It is counted and named at the call site now.
   const unregistered = [];
   for (const c of candidates) {
-    const v = validateRep(c, reg);
+    const v = validateRep(c, reg, { observedAt });
     if (!v.ok) { rejected++; errors.push(v.error); continue; }
     const k = keyOf(v.rep);
     if (seen.has(k)) { duplicates++; continue; }
@@ -343,9 +431,13 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
     } catch { /* quarantine is a courtesy, never a reason to lose the good reps */ }
   }
   if (toAppend.length) writeAtomic(path, existing.concat(toAppend));
+  // #24 HONESTY COUNTER: an authored timestamp is not a measurement, and the human
+  // reading `appended 7` deserves to know which clock those seven rode in on.
+  const ts_corrected = toAppend.filter((r) => r.ts_source !== "claimed").length;
   return {
     appended: toAppend.length, rejected, duplicates,
     total: existing.length + toAppend.length, errors,
+    observed_at: observedAt, ts_corrected,
     unregistered: [...new Set(unregistered)],
     skipped_existing: loadStats.skipped || 0,
     skipped_reasons: [...new Set(loadStats.skipped_reasons || [])],
@@ -355,10 +447,11 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG) {
 
 // the plan of record: the same ingest, with the read-modify-rewrite window held
 // under the writer lock so a concurrent paste/pull can't overwrite the other's reps.
-// (opts is lock tuning only — selftest uses it to age a lock out instantly; callers
-//  in production pass nothing and get the LOCK_* defaults.)
+// (opts carries lock tuning — selftest uses it to age a lock out instantly, callers
+//  in production pass nothing and get the LOCK_* defaults — and, since #24,
+//  observedAt, which the selftest injects to drive the arrival clock deterministically.)
 function ingest(path, candidates, reg = EMPTY_REG, opts = {}) {
-  return withRepsLock(path, () => ingestUnlocked(path, candidates, reg), opts);
+  return withRepsLock(path, () => ingestUnlocked(path, candidates, reg, opts), opts);
 }
 
 // parse a pasted blob into an array of candidate objects
@@ -376,7 +469,7 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
   }
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
-  let pulled = 0, rejected = 0, duplicates = 0, failed = 0, quarantined = 0, quarantinePath = null;
+  let pulled = 0, rejected = 0, duplicates = 0, failed = 0, quarantined = 0, quarantinePath = null, ts_corrected = 0;
   const failures = [];
   const unregistered = [];
   for (const f of files) {
@@ -400,6 +493,7 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
       // CapturePull runs 14×/day with nobody watching, and it was the ONLY lane that
       // stayed mute about a phantom concept or a quarantined line. (regression audit 30 Jul)
       for (const u of r.unregistered || []) unregistered.push(u);
+      ts_corrected += r.ts_corrected || 0;                       // #24 — carried into the unattended lane too
       quarantined += r.quarantined || 0;
       if (r.quarantine_path) quarantinePath = r.quarantine_path;
       mkdirSync(doneDir, { recursive: true });
@@ -423,8 +517,70 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
   const note = `pulled ${pulled} from ${files.length - failed} file(s)`
     + (failed ? `; ${failed} file(s) FAILED and stay in the inbox: ${failures.slice(0, 5).join("; ")}` : "")
     + (uniqUnreg.length ? `; ⚠ UNREGISTERED concept(s) coined: ${uniqUnreg.join(", ")} — add them to concepts.json` : "")
+    + (ts_corrected ? `; ⚠ ${ts_corrected} rep(s) claimed a ts AFTER arrival — corrected to the observed clock` : "")
     + (quarantined ? `; ⚠ ${quarantined} unreadable reps_log line(s) moved to ${quarantinePath}` : "");
-  return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, quarantined, quarantine_path: quarantinePath, wired: true, note };
+  return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, ts_corrected, quarantined, quarantine_path: quarantinePath, wired: true, note };
+}
+
+// ---------------------------------------------------------------------------
+// THE HEARTBEAT CHAIN (organism audit #25, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// ArsenalFC-CapturePull runs `capture.mjs pull` at 09:00 repeating hourly (14 fires
+// a day). ArsenalFC-FSRS / Calibration / Nemesis / LearningState run ONCE, at
+// 08:40–08:44. So a rep that landed from Colab at 14:00 was really ingested — the
+// live readers (scorer, touchline, dugout) saw it that evening — but every DERIVED
+// organ (cards.json, calibration.json, nemesis, learning_state.json) kept yesterday's
+// answer until 08:39 the next morning. The paste lane never had this hole: the
+// forge skill chains `capture.mjs paste` → `heartbeat.mjs` by hand, and
+// turnstile.mjs:175 execFiles heartbeat the moment the clipboard gate ingests.
+// The pull lane simply never got the same wire.
+//
+// TWO THINGS THIS MUST NOT DO, and how each is prevented:
+//   1. RECURSE. heartbeat_config.json's order runs `capture.mjs pull` FIRST, so a
+//      naive chain is capture → heartbeat → capture → heartbeat. Broken two ways at
+//      once: we pass heartbeat's own `--skip=capture` (heartbeat.mjs:456-463), and we
+//      export ARSENAL_CAPTURE_CHAINED=1 so any capture inside the chained beat
+//      refuses to chain again. Either alone terminates it; both, and it cannot start.
+//   2. FIRE ON A QUIET PULL. The chain is gated on `pulled > 0`. Thirteen of the
+//      fourteen daily pulls find an empty inbox and cost exactly nothing — the 08:39
+//      beat's own capture step is unchanged unless reps genuinely arrived.
+const CHAIN_ENV = "ARSENAL_CAPTURE_CHAINED";
+const HEARTBEAT_CFG = join(STATE_DIR, "heartbeat_config.json");
+
+// NOT GUESSED. heartbeat caps EACH organ at heartbeat_config.timeout_ms and runs
+// them strictly in sequence (heartbeat.mjs:462-464), so the beat's own worst case is
+// exactly timeout_ms × (number of organs). We borrow heartbeat's contract instead of
+// inventing a ceiling. If the config is unreadable we pass NO timeout at all rather
+// than pick a number: heartbeat already bounds every child it spawns, so the honest
+// answer is "let the organ that owns the bound enforce it".
+function chainTimeoutMs(cfgPath = HEARTBEAT_CFG) {
+  try {
+    const j = JSON.parse(readFileSync(cfgPath, "utf8"));
+    const n = Array.isArray(j.order) ? j.order.filter((e) => e && typeof e === "object" && typeof e.script === "string").length : 0;
+    const t = Number.isFinite(j.timeout_ms) ? j.timeout_ms : 0;
+    if (n > 0 && t > 0) return n * t;              // e.g. 8 organs × 120000 ms = 960000 ms
+  } catch { /* unreadable canon → no ceiling of our own (see above) */ }
+  return null;
+}
+
+// Returns a REPORT, never throws: a failed recompute must not turn a successful
+// ingest into a non-zero exit. The reps are already on disk by the time we get here.
+function chainHeartbeat({ reason, scriptsDir = __dirname, exec = execFileSync, env = process.env } = {}) {
+  if (env[CHAIN_ENV] === "1") return { ran: false, why: "already inside a chained heartbeat (no recursion)" };
+  const hb = join(scriptsDir, "heartbeat.mjs");
+  if (!existsSync(hb)) return { ran: false, why: `heartbeat.mjs not found at ${hb}` };
+  const timeout = chainTimeoutMs();
+  const t0 = Date.now();
+  try {
+    exec(process.execPath, [hb, "run", "--skip=capture"], {
+      stdio: "pipe", windowsHide: true,
+      env: { ...env, [CHAIN_ENV]: "1" },
+      ...(timeout ? { timeout } : {}),
+    });
+    return { ran: true, ms: Date.now() - t0, why: reason, timeout_ms: timeout };
+  } catch (e) {
+    return { ran: false, ms: Date.now() - t0, why: `heartbeat FAILED (${(e && e.code) || (e && e.status) || "error"}) — the reps ARE captured; derived state is stale until the next beat` };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -650,6 +806,90 @@ function selftest() {
   assert("CONCURRENT READER: re-running after the handle is released ingests normally — the reps were never lost",
     concRetry.appended === 1 && readFileSync(conc, "utf8").trim().split("\n").filter(Boolean).length === 2);
 
+  // --- ORGANISM AUDIT #24 (4 Aug 2026): THE OBSERVED ARRIVAL CLOCK -----------
+  // The live log's rows 3-6 span 90 minutes and share the millisecond `.795`.
+  // capture could not tell an authored timestamp from a measured one, because it
+  // never took a measurement of its own.
+  {
+    const pc24 = join(dir, "reps_clocks.jsonl"); if (existsSync(pc24)) rmSync(pc24);
+    const ARRIVED = "2026-07-31T23:00:00.000Z";
+    const findIn = (path, q) => loadReps(path, reg).find((r) => r.question === q);
+
+    ingest(pc24, [rep({ ts: "2026-07-31T20:28:02.795Z", question: "c1" })], reg, { observedAt: ARRIVED });
+    const c1 = findIn(pc24, "c1");
+    assert("#24 THE THREE CLOCKS — the author's claim is kept verbatim AND an arrival stamp capture owns is added",
+      c1.ts_claimed === "2026-07-31T20:28:02.795Z" && c1.observed_at === ARRIVED && c1.ts === c1.ts_claimed && c1.ts_source === "claimed");
+
+    // an IMPOSSIBLE claim (a rep cannot happen after it arrived) loses to the fact.
+    // No threshold is involved — this is a fact-check, not a tolerance.
+    ingest(pc24, [rep({ ts: "2026-08-05T09:00:00.000Z", question: "c2" })], reg, { observedAt: ARRIVED });
+    const c2 = findIn(pc24, "c2");
+    assert("#24 an impossible claim (ts AFTER arrival) is CORRECTED to the observed clock, claim still stored",
+      c2.ts === ARRIVED && c2.ts_source === "observed(claim_after_arrival)" && c2.ts_claimed === "2026-08-05T09:00:00.000Z");
+
+    // ...and the correction is COUNTED where a human is looking.
+    const cr24 = ingest(pc24, [rep({ ts: "2026-08-06T09:00:00.000Z", question: "c3" })], reg, { observedAt: ARRIVED });
+    assert("#24 the correction is counted in the ingest report (never a silent rewrite)", cr24.ts_corrected === 1 && cr24.observed_at === ARRIVED);
+
+    // IDEMPOTENCE — re-reading the log must not restamp history as "arrived now",
+    // and must not split the dedupe key. This is the property that makes the
+    // amendment safe: loadReps re-validates EVERY line on every ingest.
+    const before24 = loadReps(pc24, reg);
+    const again24 = ingest(pc24, [rep({ ts: "2026-07-31T20:28:02.795Z", question: "c1" })], reg, { observedAt: "2026-08-04T12:00:00.000Z" });
+    const after24 = loadReps(pc24, reg);
+    assert("#24 IDEMPOTENT — a stored rep keeps its own arrival stamp on reload, and re-ingesting it is still a duplicate",
+      again24.appended === 0 && again24.duplicates === 1
+      && after24.length === before24.length
+      && findIn(pc24, "c1").observed_at === ARRIVED
+      && JSON.stringify(after24) === JSON.stringify(before24));
+
+    // a row written BEFORE this amendment has no arrival stamp — and we say so
+    // rather than inventing one. An unmeasured silence is never a measured zero.
+    const pLegacy = join(dir, "reps_legacy.jsonl"); if (existsSync(pLegacy)) rmSync(pLegacy);
+    writeFileSync(pLegacy, JSON.stringify({ ts: "2026-07-30T20:28:02.795Z", surface: "gem", track: "concept", concept: "tokenization", axis: "a", question: "old", confidence: "knew", correct: true }) + "\n");
+    const old = loadReps(pLegacy, reg)[0];
+    assert("#24 a pre-amendment row reads observed_at:null (we do NOT know when it arrived) and ts_claimed backfills from ts",
+      old.observed_at === null && old.ts_claimed === "2026-07-30T20:28:02.795Z" && old.ts === old.ts_claimed);
+
+    // and its identity is UNCHANGED, so no existing rep is orphaned by the new key
+    assert("#24 the new identity is byte-identical to the frozen legacy one on a pre-amendment row",
+      keyOf(old) === keyOfLegacy(old));
+
+    // one paste = one arrival instant. The reps really did arrive together; three
+    // different stamps a millisecond apart would be the same fiction in a new place.
+    const burst = ingest(pc24, [
+      rep({ ts: "2026-07-31T20:28:02.795Z", question: "b1", axis: "a" }),
+      rep({ ts: "2026-07-31T20:28:03.795Z", question: "b2", axis: "c" }),
+      rep({ ts: "2026-07-31T20:28:04.795Z", question: "b3", axis: "e" }),
+    ], reg, { observedAt: ARRIVED });
+    const stamps = ["b1", "b2", "b3"].map((q) => findIn(pc24, q).observed_at);
+    assert("#24 one batch = ONE arrival instant (the burst arrived together; it did not arrive 1000ms apart)",
+      burst.appended === 3 && new Set(stamps).size === 1 && stamps[0] === ARRIVED);
+  }
+
+  // --- ORGANISM AUDIT #25 (4 Aug 2026): THE HEARTBEAT CHAIN -----------------
+  {
+    const calls = [];
+    const fakeExec = (bin, argv, opts) => { calls.push({ bin, argv, env: opts && opts.env }); return ""; };
+    const c = chainHeartbeat({ reason: "test", scriptsDir: __dirname, exec: fakeExec, env: {} });
+    assert("#25 the chain shells heartbeat.mjs with heartbeat's OWN --skip=capture (recursion cannot start)",
+      c.ran === true && calls.length === 1 && calls[0].argv[0].endsWith("heartbeat.mjs") && calls[0].argv.includes("--skip=capture"));
+    assert("#25 the chained child is marked, so a capture inside the beat refuses to chain again",
+      calls[0].env[CHAIN_ENV] === "1"
+      && chainHeartbeat({ reason: "t", exec: fakeExec, env: { [CHAIN_ENV]: "1" } }).ran === false
+      && calls.length === 1);
+    // a failed recompute must never turn a successful ingest into a failure —
+    // the reps are already on disk by the time the chain runs.
+    const boom = chainHeartbeat({ reason: "t", scriptsDir: __dirname, env: {}, exec: () => { const e = new Error("x"); e.code = "ETIMEDOUT"; throw e; } });
+    assert("#25 a failed heartbeat is REPORTED, never thrown — and it says the reps are safe",
+      boom.ran === false && /ETIMEDOUT/.test(boom.why) && /reps ARE captured/.test(boom.why));
+    // the timeout is DERIVED from heartbeat's own contract, never picked
+    const tcfg = join(dir, "hb_cfg.json");
+    writeFileSync(tcfg, JSON.stringify({ order: [{ name: "a", script: "a.mjs" }, { name: "b", script: "b.mjs" }, { name: "c", script: "c.mjs" }], timeout_ms: 1000 }));
+    assert("#25 the chain ceiling is heartbeat's own timeout_ms × its own organ count (3 × 1000), not a number we chose",
+      chainTimeoutMs(tcfg) === 3000 && chainTimeoutMs(join(dir, "__no_hb_cfg__")) === null);
+  }
+
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -663,9 +903,12 @@ function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
   const reg = loadRegistry();
+  const flags = process.argv.slice(3).filter((a) => a.startsWith("--"));
+  const wantsChain = flags.includes("--chain");
+  const noChain = flags.includes("--no-chain");
 
   if (mode === "paste") {
-    const fileArg = process.argv[3];
+    const fileArg = process.argv.slice(3).find((a) => !a.startsWith("--"));
     let text;
     if (fileArg) {
       if (!existsSync(fileArg)) { console.error(`paste: file not found: ${fileArg}`); process.exit(1); }
@@ -701,7 +944,25 @@ function main() {
         ? `paste:   their raw text was saved to ${r.quarantine_path} before the rewrite — they are NOT in reps_log any more. Inspect that file.`
         : `paste:   nothing was rewritten this run, so they are still in reps_log. Inspect it before the next successful ingest.`);
     }
+    if (r.ts_corrected) console.log(`paste: ⚠ ${r.ts_corrected} rep(s) claimed a timestamp AFTER they arrived — ts corrected to the observed clock (ts_claimed keeps the original).`);
     if (r.errors.length) console.log(`  rejected reasons: ${r.errors.slice(0, 10).join("; ")}`);
+    // #26 — the paste lane's recompute. OPT-IN, and that is deliberate: the forge
+    // skill (SKILL.md step 2) and turnstile.mjs:175 already chain heartbeat right
+    // after their paste, and dugout.mjs:1143 shells this synchronously on every
+    // voice log_reps call — an unconditional blocking beat there would stall the
+    // live voice surface, and two heartbeats racing would have two fsrs processes
+    // renaming the same fixed `cards.json.tmp`. So: pass --chain and you get it now;
+    // don't, and the exit line SAYS what is stale instead of implying it is fresh.
+    if (r.appended > 0) {
+      if (wantsChain) {
+        const c = chainHeartbeat({ reason: `paste appended ${r.appended}` });
+        console.log(c.ran
+          ? `paste: heartbeat chained (${c.ms}ms) — cards/calibration/nemesis/learning_state now reflect these reps.`
+          : `paste: heartbeat NOT chained — ${c.why}`);
+      } else {
+        console.log("paste: derived state (cards · calibration · nemesis · learning_state) does NOT yet include these reps — run `node scripts/heartbeat.mjs`, or re-run this with --chain.");
+      }
+    }
     process.exit(0);
   }
 
@@ -714,14 +975,23 @@ function main() {
     const r = pullFromInbox(inbox, REPS_LOG, reg);
     console.log(`pull: ${r.note}` + (r.wired ? ` (rejected ${r.rejected || 0}, duplicates ${r.duplicates || 0})` : ""));
     if (!r.wired) console.log(`  to enable: create ${inbox} (or fix ARSENAL_REPS_INBOX / capture_config.json), then enable task ArsenalFC-CapturePull.`);
+    // #25 — THE FIX. A rep pulled at 14:00 used to leave every derived organ on
+    // yesterday's answer until 08:39 tomorrow. Now the pull that actually brought
+    // reps in triggers the same ordered recompute the morning beat runs.
+    if (r.pulled > 0 && !noChain) {
+      const c = chainHeartbeat({ reason: `pull ingested ${r.pulled}` });
+      console.log(c.ran
+        ? `pull: heartbeat chained (${c.ms}ms) — cards/calibration/nemesis/learning_state reflect these reps now, not at 08:39 tomorrow.`
+        : `pull: heartbeat NOT chained — ${c.why}`);
+    }
     process.exit(0);
   }
 
-  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file]   append pasted Gem/Colab session JSON\n  node capture.mjs pull           ingest new reps from the Drive inbox\n  node capture.mjs selftest       run baked-mock checks");
+  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs selftest                 run baked-mock checks");
   process.exit(0);
 }
 
 // Windows-safe entry guard (normalise argv[1] to a file:// URL, like timeaudit.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { validateRep, ingest, loadReps, pullFromInbox, keyOf, loadRegistry, canonicalize };
+export { validateRep, ingest, loadReps, pullFromInbox, keyOf, keyOfLegacy, loadRegistry, canonicalize, resolveClocks, chainHeartbeat, chainTimeoutMs };

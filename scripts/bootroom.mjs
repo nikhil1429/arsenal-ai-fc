@@ -44,6 +44,26 @@ const STATE_DIR = join(REPO_ROOT, "dressing-room", "state");
 const PROFILE   = join(STATE_DIR, "forge_profile.json");
 const MUTS      = join(STATE_DIR, "mutations.jsonl");
 const CHANGELOG = join(REPO_ROOT, "SEASON_CHANGELOG.md");
+// ORGANISM AUDIT #98 — the Boot Room's entire weekly output was a console.log
+// into a `cmd /c` window that closes. \ArsenalFC-BootRoom has no `>> …log 2>&1`
+// redirect (unlike Calibration/FSRS/Nemesis/LearningState/Goalkeeper), so "did
+// the genome run this week?" was unanswerable, and /organism-doctor read
+// `Last Result: 0` and called it green. Every run now leaves one line here.
+// This does NOT duplicate loop_vitals: the gate STATE is already there, but
+// these two branches exist nowhere else once the window closes —
+//   · proposeFromEvidence's gate-OPEN-but-no-evidence reason (the only record
+//     that the genome looked and found nothing), and
+//   · `extended` (mutations.jsonl keeps the bumped review_after_days, but the
+//     ANNOUNCEMENT that a window was extended, and why, had no home).
+// Address: physio.mjs reads the last line into loop_vitals.genome, which the
+// matchday skill and the brain's job inputs already open.
+const RUNLOG    = join(STATE_DIR, "bootroom_log.jsonl");
+
+// THE EVIDENCE BAR — pre-existing value, UNCHANGED (it was the bare literal `5`
+// at the old line 151). Named so it can be surfaced as a have/need counter
+// instead of hiding inside a sentence, per the captain's standing order that a
+// threshold must be visible next to the number it is judging.
+const MIN_LATE_LAPSES = 5;
 
 // the genome's whitelist is the profile itself; these are FOREVER OUTSIDE it.
 const FORBIDDEN = /medical|ladder|goalkeeper|governor|oura|readiness|honest|doctor|verdict/i;
@@ -132,8 +152,20 @@ function scoreMutation(m, profile, metricValue, eventCount, now = new Date()) {
 // ---------------------------------------------------------------------------
 // PROPOSE — deterministic evidence assembly (Sunday's filing)
 // ---------------------------------------------------------------------------
-function proposeFromEvidence(reps, profile, gateOpen, now = new Date()) {
-  if (!gateOpen) return { proposal: null, reason: "speak-gate closed (volume) — no proposal, honestly" };
+// ORGANISM AUDIT #102/#106 — THE UNGATE. The two silent branches below used to
+// publish a verdict with the count filed off: "speak-gate closed (volume)" and
+// "no axis shows ≥5 late-checkpoint lapses". Both now carry have/need, so the
+// captain reads the climb instead of a wall. `gate` is optional and defaults to
+// null — main() supplies {have, need} from the SAME physio_config.json key that
+// physio.mjs:375 used to decide `gateOpen`, so there is exactly one number and
+// nobody guesses a second one. NO GATE IS LOWERED by any of this.
+function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = null) {
+  if (!gateOpen) {
+    const counter = (gate && Number.isFinite(gate.have) && Number.isFinite(gate.need))
+      ? `${gate.have}/${gate.need} reps` : `${reps.length} rep(s) — threshold unreadable`;
+    return { proposal: null, reason: `${counter} — the genome is listening, not proposing yet (speak-gate on volume)`,
+      counter: { have: gate && Number.isFinite(gate.have) ? gate.have : reps.length, need: gate ? gate.need : null, kind: "volume_gate" } };
+  }
   // Evidence: per-axis lapse counts at the late checkpoint (post 14d). This is
   // the APNI GHADI seed: his own clock replacing [3d/2wk/6wk].
   const lapsesByAxis = {};
@@ -148,7 +180,16 @@ function proposeFromEvidence(reps, profile, gateOpen, now = new Date()) {
     if (r.correct && !seen[k]) seen[k] = r.ts;
   }
   const worst = Object.entries(lapsesByAxis).sort((a, b) => b[1] - a[1])[0];
-  if (!worst || worst[1] < 5) return { proposal: null, reason: "no axis shows ≥5 late-checkpoint lapses — nothing to propose" };
+  if (!worst || worst[1] < MIN_LATE_LAPSES) {
+    // THE GATE-OPEN-BUT-NO-EVIDENCE BRANCH (#98). This is one of exactly two
+    // states whose information existed nowhere but the vanished console — the
+    // genome looked, and found nothing worth mutating. It is persisted now.
+    const have = worst ? worst[1] : 0;
+    const where = worst ? `worst axis (${worst[0]})` : "no axis has any";
+    return { proposal: null,
+      reason: `${where} shows ${have}/${MIN_LATE_LAPSES} late-checkpoint lapses — the genome looked and found nothing to propose`,
+      counter: { have, need: MIN_LATE_LAPSES, kind: "evidence_bar", axis: worst ? worst[0] : null } };
+  }
   const [axis, n] = worst;
   const cur = profile.rejirah_intervals_days || [3, 14, 42];
   return {
@@ -165,6 +206,18 @@ function proposeFromEvidence(reps, profile, gateOpen, now = new Date()) {
     },
     reason: null,
   };
+}
+
+// ORGANISM AUDIT #98 — one line per run, so "did the genome run?" has an answer
+// that survives the closing cmd window. Pure builder (selftestable); the append
+// is done by logRun so the fixture path never touches disk.
+function runLogRow(now, mode, outcome, detail = {}) {
+  return { at: now.toISOString(), day: localDate(now), mode, outcome, ...detail };
+}
+function logRun(row, appendFn = appendFileSync, path = RUNLOG) {
+  // a health ledger must never be the reason the organ dies
+  try { appendFn(path, JSON.stringify(row) + "\n"); } catch { /* unwritable state dir — the run still stands */ }
+  return row;
 }
 
 function changelogLine(m, beat) {
@@ -221,6 +274,16 @@ async function selftest() {
   // PROPOSE: gated + evidence-driven
   const gateClosed = proposeFromEvidence([], profile(), false, now);
   assert("speak-gate closed ⇒ honest no-proposal line", gateClosed.proposal === null && /gate/.test(gateClosed.reason));
+
+  // THE UNGATE — ORGANISM AUDIT #102/#106. "speak-gate closed (volume)" told the
+  // captain he would never see a proposal and hid the fact that he was 9 reps
+  // into a 200-rep climb. The counter is now in the line itself.
+  const nine = Array.from({ length: 9 }, () => ({ track: "concept", axis: "e", concept: "c", ts: "2026-07-01T00:00:00Z" }));
+  const gc = proposeFromEvidence(nine, profile(), false, now, { have: 9, need: 200 });
+  assert("#102 the gate-closed line SHOWS its n (9/200 reps), not just the verdict",
+    gc.proposal === null && gc.reason.startsWith("9/200 reps") && gc.counter.have === 9 && gc.counter.need === 200);
+  assert("...and an unreadable threshold says so rather than inventing a denominator",
+    /threshold unreadable/.test(proposeFromEvidence(nine, profile(), false, now, null).reason));
   const reps = [];
   for (let i = 0; i < 8; i++) {
     reps.push({ ts: "2026-05-01T10:00:00Z", track: "concept", concept: "c" + i, axis: "e", correct: true, confidence: "knew" });
@@ -232,10 +295,38 @@ async function selftest() {
   assert("proposal validates against its own profile", validateMutation(prop.proposal, profile()).ok);
   const thin = proposeFromEvidence(reps.slice(0, 6), profile(), true, now);
   assert("thin evidence ⇒ no proposal", thin.proposal === null);
+  // #98/#106 — the GATE-OPEN-BUT-NO-EVIDENCE branch. This is one of the two
+  // states whose only record was a console line in a window that closes.
+  assert("#106 the no-evidence line is a have/need counter, never a bare 'nothing to propose'",
+    /\b3\/5 late-checkpoint lapses\b/.test(thin.reason) && thin.counter.have === 3 && thin.counter.need === MIN_LATE_LAPSES);
+  const nothing = proposeFromEvidence([], profile(), true, now);
+  assert("...and zero evidence reads 0/5, not silence", /0\/5 late-checkpoint lapses/.test(nothing.reason) && nothing.counter.have === 0);
+  assert("the evidence bar is UNCHANGED at 5 — surfaced, not lowered", MIN_LATE_LAPSES === 5 && thin.proposal === null);
 
   // changelog line
   const line = changelogLine(kept.m, 1);
   assert("changelog line human-readable with outcome", /Beat 1:/.test(line) && /KEPT/.test(line));
+
+  // THE RUN LOG — ORGANISM AUDIT #98. \ArsenalFC-BootRoom is `cmd /c … node
+  // scripts\bootroom.mjs` with NO log redirect, so every console line above died
+  // with the window and "did the genome run?" had no answer. Verified in the
+  // audit: mutations.jsonl, SEASON_CHANGELOG.md and scripts\bootroom.log all
+  // did not exist, and a full before/after diff of dressing-room\state showed
+  // ZERO writes from a real run. One line per run now survives.
+  const rows = [];
+  const memAppend = (_p, s) => rows.push(JSON.parse(s));
+  logRun(runLogRow(now, "run", "gate_closed", { reason: gc.reason, gate_open: false, counter: gc.counter }), memAppend, "(memory)");
+  assert("every run leaves one auditable row (day, mode, outcome)",
+    rows.length === 1 && rows[0].day === "2026-07-12" && rows[0].mode === "run" && rows[0].outcome === "gate_closed");
+  assert("...carrying the have/need that caused it, so a silent week is auditable",
+    rows[0].counter.have === 9 && rows[0].counter.need === 200);
+  logRun(runLogRow(now, "run", "extended", { id: "mut-1", counter: { have: 5, need: 20, kind: "metric_events" }, review_after_days: 28, extended: 1, changelog_written: false }), memAppend, "(memory)");
+  assert("EXTENDED is persisted — mutations.jsonl keeps the new window, but the WHY had no home",
+    rows[1].outcome === "extended" && rows[1].counter.have === 5 && rows[1].counter.need === 20 && rows[1].changelog_written === false);
+  // the ledger must never be the reason the organ dies
+  let threw = false;
+  try { logRun(runLogRow(now, "run", "quiet_day"), () => { throw new Error("disk full"); }, "(memory)"); } catch { threw = true; }
+  assert("an unwritable run log never aborts the genome", threw === false);
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -250,33 +341,69 @@ async function main() {
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const now = new Date();
   const profile = readJson(PROFILE);
-  if (!profile) { console.log(`bootroom: forge_profile.json missing — genome absent, nothing to do → ${PROFILE}`); return; }
+  if (!profile) {
+    console.log(`bootroom: forge_profile.json missing — genome absent, nothing to do → ${PROFILE}`);
+    logRun(runLogRow(now, mode, "no_genome", { note: "forge_profile.json missing" }));
+    return;
+  }
   const muts = readLines(MUTS);
   const vitals = readJson(join(STATE_DIR, "loop_vitals.json"));
   const gateOpen = !!(vitals && vitals.speak_gates && vitals.speak_gates.bootroom_mutation);
   const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+  // ONE number, read from the file that already owns it. physio.mjs:375 decides
+  // `bootroom_mutation` with physio_config.json gates.bootroom_min_reps; the
+  // counter must be judged against that exact value, never a copy. If the config
+  // is unreadable the counter says so rather than inventing a denominator —
+  // physio's own published counter is preferred when present.
+  const physioCfg = readJson(join(STATE_DIR, "physio_config.json"));
+  const publishedCounter = vitals && vitals.speak_gate_counters && vitals.speak_gate_counters.bootroom_mutation;
+  const gateNeed = publishedCounter && Number.isFinite(publishedCounter.need) ? publishedCounter.need
+    : (physioCfg && physioCfg.gates && Number.isFinite(physioCfg.gates.bootroom_min_reps) ? physioCfg.gates.bootroom_min_reps : null);
+  const gate = gateNeed === null ? null : { have: reps.length, need: gateNeed };
 
   if (mode === "propose" || (mode === "run" && now.getDay() === 0)) {
-    const { proposal, reason } = proposeFromEvidence(reps, profile, gateOpen, now);
+    const { proposal, reason, counter } = proposeFromEvidence(reps, profile, gateOpen, now, gate);
     if (proposal) {
       if (!muts.some(m => m.id === proposal.id)) {
         appendFileSync(MUTS, JSON.stringify(proposal) + "\n");
         console.log(`bootroom: proposal ${proposal.id} filed — awaiting the captain's "haan, chalao" → ${MUTS}`);
-      } else console.log(`bootroom: proposal ${proposal.id} already filed`);
-    } else console.log(`bootroom: ${reason}`);
+        logRun(runLogRow(now, mode, "proposal_filed", { id: proposal.id, target: proposal.target, evidence: proposal.evidence }));
+      } else {
+        console.log(`bootroom: proposal ${proposal.id} already filed`);
+        logRun(runLogRow(now, mode, "proposal_already_filed", { id: proposal.id }));
+      }
+    } else {
+      console.log(`bootroom: ${reason}`);
+      // #98 — THIS is the line that used to die with the window. Persisted with
+      // its have/need so a week of silence is auditable, not assumed.
+      logRun(runLogRow(now, mode, counter && counter.kind === "volume_gate" ? "gate_closed" : "no_evidence",
+        { reason, gate_open: gateOpen, counter: counter || null }));
+    }
     if (mode === "propose") return;
   }
 
   if (mode === "approve") {
     const id = process.argv[3];
     const m = muts.find(x => x.id === id && x.status === "proposed");
-    if (!m) { console.log(`bootroom: no proposed mutation with id ${id}`); process.exit(1); }
+    if (!m) {
+      console.log(`bootroom: no proposed mutation with id ${id}`);
+      logRun(runLogRow(now, mode, "approve_no_such_mutation", { id }));
+      process.exit(1);
+    }
     const res = approveMutation(m, profile, muts, now);
-    if (!res.ok) { console.log(`bootroom: REJECTED — ${res.err}`); process.exit(1); }
+    if (!res.ok) {
+      console.log(`bootroom: REJECTED — ${res.err}`);
+      // #98 — a REJECTED approval writes nothing to SEASON_CHANGELOG (only
+      // kept/reverted go there), so without this row the refusal and its reason
+      // existed only in the console.
+      logRun(runLogRow(now, mode, "approve_rejected", { id, err: res.err }));
+      process.exit(1);
+    }
     writeAtomic(PROFILE, res.profile);
     writeAtomic(MUTS, muts.map(x => JSON.stringify(x.id === id ? res.mutation : x)).join("\n") + "\n");
     appendFileSync(CHANGELOG, changelogLine(res.mutation, muts.filter(x => x.status !== "proposed").length + 1) + "\n");
     console.log(`bootroom: ${id} LIVE — old value frozen in legacy{}, review in ${m.review_after_days}d → ${PROFILE}`);
+    logRun(runLogRow(now, mode, "approved", { id, target: m.target, review_after_days: m.review_after_days }));
     return;
   }
 
@@ -311,12 +438,33 @@ async function main() {
       if (res.action === "reverted") writeAtomic(PROFILE, profile);
       writeAtomic(MUTS, muts.map(x => JSON.stringify(x.id === live.id ? res.m : x)).join("\n") + "\n");
       if (res.action !== "extended") appendFileSync(CHANGELOG, changelogLine(res.m, muts.filter(x => ["kept", "reverted"].includes(x.status)).length + 1) + "\n");
-      console.log(`bootroom: ${live.id} ${res.action.toUpperCase()}`);
-    } else console.log(`bootroom: ${live.id} live, review pending`);
-  } else if (mode === "score") console.log("bootroom: no live mutation to score");
-  if (mode === "run" && now.getDay() !== 0 && !live) console.log("bootroom: quiet day — no live mutation, proposals file on Sundays");
+      console.log(`bootroom: ${live.id} ${res.action.toUpperCase()}${res.action === "extended" ? ` — ${events}/${live.metric.min_events} events, window now ${res.m.review_after_days}d (extension #${res.m.extended})` : ""}`);
+      // #98 — `extended` deliberately skips the changelog (line above: the
+      // changelog is the KEPT/REVERTED medicine, and an extension is neither).
+      // mutations.jsonl does keep the bumped review_after_days, so the DATA
+      // survived — but the announcement, and the event count that caused it, did
+      // not. Both are persisted here, with the metric's own min_events as need.
+      logRun(runLogRow(now, mode, res.action, {
+        id: live.id, metric: live.metric && live.metric.name,
+        counter: { have: events, need: live.metric ? live.metric.min_events : null, kind: "metric_events" },
+        outcome: res.m.outcome !== undefined ? res.m.outcome : count,
+        review_after_days: res.m.review_after_days, extended: res.m.extended || 0,
+        changelog_written: res.action !== "extended",
+      }));
+    } else {
+      console.log(`bootroom: ${live.id} live, review pending`);
+      logRun(runLogRow(now, mode, "waiting", { id: live.id, review_after_days: live.review_after_days }));
+    }
+  } else if (mode === "score") {
+    console.log("bootroom: no live mutation to score");
+    logRun(runLogRow(now, mode, "nothing_to_score"));
+  }
+  if (mode === "run" && now.getDay() !== 0 && !live) {
+    console.log("bootroom: quiet day — no live mutation, proposals file on Sundays");
+    logRun(runLogRow(now, mode, "quiet_day", { gate_open: gateOpen, counter: gate ? { ...gate, kind: "volume_gate" } : null }));
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { validateMutation, approveMutation, scoreMutation, proposeFromEvidence, changelogLine, resolvePath };
+export { validateMutation, approveMutation, scoreMutation, proposeFromEvidence, changelogLine, resolvePath, runLogRow, logRun, RUNLOG, MIN_LATE_LAPSES };

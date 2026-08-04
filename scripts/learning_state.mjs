@@ -234,6 +234,21 @@ const emptyPosition = () => ({
 // last_closed rides the LAST history row and is populated INDEPENDENTLY of whether
 // a session is open — "what did he finish last" and "what is he on now" are two
 // different questions and the Gaffer asks both.
+//
+// ORGANISM AUDIT #29 (4 Aug 2026) — CONFIRMED, AND NOW LOAD-BEARING. The audit found
+// this block correct and unread: `grep -rn last_closed` over scripts/, .claude/ and
+// hooks/ returned only this file. brain.mjs reads ls.position but gates the whole
+// block on session_open and never reaches here, so the one artifact of yesterday's
+// teaching — what he actually finished, which steps ran, which axes are still
+// untouched — reached no surface. brain.mjs's buildFingerprint is being wired to it.
+// THE PRODUCER-SIDE CONTRACT, stated so a future edit cannot quietly break it:
+//   · last_closed is set BEFORE every early return in projectPosition, so it rides
+//     the missing-session, junk-session, closed-session AND open-session paths;
+//   · it rides both compute() paths, including the zero-reps one — a first-ever
+//     session is exactly when the previous close is the only thing there is to say;
+//   · null means "no valid history row", never "there is a session open". Those two
+//     are different facts and a consumer must be able to tell them apart.
+// Each clause is asserted in the selftest under "#29".
 function projectLastClosed(row) {
   if (!row || typeof row !== "object" || Array.isArray(row) || typeof row.concept !== "string") return null;
   const arr = (x) => (Array.isArray(x) ? x.slice() : []);
@@ -362,7 +377,56 @@ function idFluency(reps, cfg) {
   let edge = null; for (const r of sorted) if (r.edge != null) edge = r.edge;
   // last_seen is LOCAL-day (was isoDate = UTC slice) so it lines up with the envelope
   // `date` — see localDayOf. (E2E audit 25 Jul 2026.)
-  return { state: final, reps: n, last_seen: n ? localDayOf(sorted[n - 1].ts) : null, velocity: { slope, reps_to_state, stalled }, domAxis, edge };
+  //
+  // ORGANISM AUDIT #101/#106 (4 Aug 2026): the two TRAILING streaks are returned as
+  // well. They were computed here all along and thrown away at the return, which is
+  // why "why is nothing fluent yet?" had no answer anywhere on the bus — the ladder
+  // could only ever say 🔴, never "1 of the 3 cold-fast reps it needs". Additive.
+  return {
+    state: final, reps: n, last_seen: n ? localDayOf(sorted[n - 1].ts) : null,
+    velocity: { slope, reps_to_state, stalled }, domAxis, edge,
+    correct_streak: correctStreak, cold_fast_streak: coldFastStreak,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// THE UNGATE (organism audit #101 + #106, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// His verbatim ask: "i can not wait for so many days for gates to be opened."
+// NOTHING BELOW LOWERS A GATE. warming_up_min_reps stays 12, held_streak stays 2,
+// fluent_streak stays 3 — inventing a maidan focus from nine reps would be the
+// lying failure mode this audit exists to hunt. What changes is that the refusal
+// stops being a word and becomes an arithmetic he can watch move: `9/12 reps`, with
+// the withheld fields NAMED, and with the per-concept streak gates carrying their
+// OWN n (the audit's sharpest number — "2 cold-fast reps in six weeks" — was
+// nowhere on the bus, so the slowest gate in the organism was also the most invisible).
+//
+// `status` / `low_confidence` are UNCHANGED: manager.mjs:194 gates on
+// `status === "ok" && low_confidence !== true`, and re-spelling that enum would
+// break the gate rather than open it. The counter is additive, beside them.
+function buildGate(N, th, fluencies) {
+  const open = N >= th.warming_up_min_reps;
+  const best = (pick) => fluencies.reduce((m, f) => Math.max(m, pick(f) || 0), 0);
+  const bestCorrect = best((f) => f.correct_streak);
+  const bestColdFast = best((f) => f.cold_fast_streak);
+  return {
+    have: N, need: th.warming_up_min_reps, unit: "reps",
+    line: `${N}/${th.warming_up_min_reps} reps`,
+    open,
+    // NAMED, not implied. learning_state.mjs suppresses exactly these two under
+    // low_confidence and emits axes / core_vs_light / rejirah_due / python_fluency
+    // unconditionally — a fact manager.mjs:164's old comment had backwards.
+    withheld: open ? [] : ["weak_connection", "maidan_stage_focus"],
+    emitted_regardless: ["axes", "core_vs_light", "rejirah_due", "python_fluency", "concepts", "position"],
+    sub: [
+      { name: "weak_connection", have: N, need: th.warming_up_min_reps, unit: "reps", line: `${N}/${th.warming_up_min_reps} reps`, open },
+      { name: "maidan_stage_focus", have: N, need: th.warming_up_min_reps, unit: "reps", line: `${N}/${th.warming_up_min_reps} reps`, open },
+      // per-concept ladder gates: the BEST live streak across every entity, so the
+      // number answers "how close is anything at all to advancing?"
+      { name: "any concept → 🟡 held", have: bestCorrect, need: th.held_streak, unit: "correct in a row", line: `${bestCorrect}/${th.held_streak} correct in a row`, open: bestCorrect >= th.held_streak },
+      { name: "any concept → 🟢 fluent", have: bestColdFast, need: th.fluent_streak, unit: "cold-fast in a row", line: `${bestColdFast}/${th.fluent_streak} cold-fast in a row`, open: bestColdFast >= th.fluent_streak },
+    ],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +462,8 @@ function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastR
       maidan_stage_focus: null, weak_connection: null, python_fluency: {}, rejirah_due: [], core_vs_light: {},
       concepts: [], axes: [],
       maidan: { stages: stageSkeleton(), handoffs: cfgHandoffs.map((h) => ({ from: h.from, to: h.to, combined_fluency: EMOJI.learning })) },
+      gate: buildGate(0, th, []),        // #101/#106 — "0/12 reps", never a bare word
+
       // rides the zero-reps path too: a first-ever forge session is EXACTLY when
       // there are no reps yet, and that is the moment the Gaffer most needs to know
       // where he is standing.
@@ -513,10 +579,12 @@ function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastR
 
   return {
     date, generated_at, total_reps: N, status, low_confidence,
+    gate: buildGate(N, th, [...fl.values()]),      // #101/#106 — the have/need counter
     maidan_stage_focus, weak_connection, python_fluency, rejirah_due, core_vs_light,
     edge_map, confusion_pairs,
     concepts, axes,
     maidan: { stages, handoffs },
+    // #29 — UNCONDITIONAL on every path, open session or not. See projectLastClosed.
     position,
   };
 }
@@ -708,6 +776,76 @@ function selftest() {
   assert("EMPTY-SAFE ON DISK — both forge readers return null for a missing path and never throw",
     loadForgeSession("__no_such_forge_session__") === null && loadForgeLastClosed("__no_such_forge_history__") === null);
 
+  // --- ORGANISM AUDIT #101 / #106 (4 Aug 2026): THE UNGATE -------------------
+  {
+    const nine = [];   // the captain's live n today: 9 concept reps, nothing fluent
+    for (const c of ["hallucinations", "embeddings", "chunking"]) for (let i = 0; i < 3; i++) nine.push(rp({ concept: c, confidence: "guessed", correct: false }));
+    const u9 = compute(nine, [], REG, cfg, now);
+    assert("#101 nine reps say '9/12 reps' with the denominator, beside (not instead of) the machine status",
+      u9.gate.line === "9/12 reps" && u9.gate.have === 9 && u9.gate.need === 12 && u9.gate.open === false
+      && u9.status === "warming_up" && u9.low_confidence === true);
+    assert("#101 the silence NAMES the two fields it withholds — and names what it emits anyway",
+      u9.gate.withheld.join(",") === "weak_connection,maidan_stage_focus"
+      && u9.weak_connection === null && u9.maidan_stage_focus === null
+      && u9.gate.emitted_regardless.includes("axes"));
+    // the manager's old comment claimed the axis rollups were suppressed under
+    // warming_up. They never were, and the counter must not repeat the lie.
+    assert("#101 axes / core_vs_light / rejirah_due really ARE emitted under warming_up (the suppression is only the two headlines)",
+      Array.isArray(u9.axes) && u9.axes.length > 0 && typeof u9.core_vs_light.core === "string" && Array.isArray(u9.rejirah_due));
+    assert("#101 an empty ledger reads 0/12 (never a silently-confident zero)",
+      compute([], [], REG, cfg, now).gate.line === "0/12 reps" && compute([], [], REG, cfg, now).gate.open === false);
+    assert("#101 NO GATE WAS LOWERED — 11 reps still withholds the headline, it just says 11/12",
+      (() => { const e = compute(nine.concat([rp({ concept: "chunking" }), rp({ concept: "chunking" })]), [], REG, cfg, now); return e.gate.line === "11/12 reps" && e.gate.open === false && e.weak_connection === null; })());
+    assert("#101 the gate opens from live data and the headline appears (12 reps, unchanged threshold)",
+      mv.gate.open === true && mv.gate.line === "12/12 reps" && typeof mv.weak_connection === "string" && mv.gate.withheld.length === 0);
+
+    // THE SLOWEST GATE IN THE ORGANISM, finally visible: the audit's own number was
+    // "2 cold-fast reps in six weeks" and no surface carried it.
+    const twoColdFast = compute([cf("chunking"), cf("chunking")], [], REG, cfg, now);
+    const cfGate = twoColdFast.gate.sub.find((s) => s.name === "any concept → 🟢 fluent");
+    const heldGate = twoColdFast.gate.sub.find((s) => s.name === "any concept → 🟡 held");
+    assert("#101 the per-concept ladder gates carry their OWN n — '2/3 cold-fast in a row', not silence",
+      cfGate.have === 2 && cfGate.need === 3 && cfGate.open === false && cfGate.line === "2/3 cold-fast in a row"
+      && heldGate.have === 2 && heldGate.open === true);
+    assert("#101 a miss resets the streak counter, so the number is live and not a high-water mark",
+      compute([cf("chunking"), cf("chunking"), rp({ concept: "chunking", correct: false, confidence: "guessed" })], [], REG, cfg, now)
+        .gate.sub.find((s) => s.name === "any concept → 🟢 fluent").have === 0);
+
+    // the counter reads the CONFIG, never a literal — a captain who edits the
+    // threshold must see his own number or the counter is decoration
+    const cfg20 = { thresholds: { ...cfg.thresholds, warming_up_min_reps: 20 }, maidan: cfg.maidan };
+    assert("#101 the counter reads the live config (warming_up_min_reps 20 ⇒ 9/20)",
+      compute(nine, [], REG, cfg20, now).gate.line === "9/20 reps");
+  }
+
+  // --- ORGANISM AUDIT #29 (4 Aug 2026): last_closed rides EVERY path ---------
+  // Confirmed correct by the audit and about to acquire its first consumer
+  // (brain.mjs buildFingerprint). These assertions are the producer-side contract:
+  // a future edit that drops it on any branch fails here, loudly.
+  {
+    const T29 = Date.parse("2026-08-01T09:00:00Z");
+    const row = { concept: "qqx_prior_concept", ended_at: "2026-07-31T12:25:21.402Z", steps_ran: [0, 1, 2], steps_missed: [3], axes_done: ["a"], axes_deferred: [], axes_untouched: ["b"] };
+    const open29 = { concept: "zzq_live", started_at: "2026-08-01T08:00:00Z", step: 2, axes_done: [], axes_deferred: [] };
+    const paths = {
+      open: projectPosition(open29, row, T29),
+      closed: projectPosition({ ...open29, closed_at: "2026-08-01T08:45:00Z" }, row, T29),
+      missing: projectPosition(null, row, T29),
+      junk: projectPosition("not an object", row, T29),
+      stale: projectPosition({ ...open29, started_at: "2026-07-01T00:00:00Z" }, row, T29),
+    };
+    assert("#29 last_closed rides EVERY projection branch — open, closed, missing, junk and stale",
+      Object.values(paths).every((p) => p.last_closed && p.last_closed.concept === "qqx_prior_concept" && p.last_closed.ended_at === row.ended_at));
+    assert("#29 ...including the branch that matters most: a session OPEN and a prior close, both true at once",
+      paths.open.session_open === true && paths.open.concept === "zzq_live" && paths.open.last_closed.steps_ran.length === 3);
+    assert("#29 null last_closed means 'no valid history row', NEVER 'a session is open' (two different facts)",
+      projectPosition(open29, null, T29).last_closed === null
+      && projectPosition(null, { nonsense: true }, T29).last_closed === null
+      && projectPosition(null, null, T29).last_closed === null);
+    assert("#29 it reaches learning_state.json on BOTH compute paths, zero reps included",
+      compute([], [], REG, cfg, now, open29, row).position.last_closed?.concept === "qqx_prior_concept"
+      && compute([cf("chunking")], [], REG, cfg, now, open29, row).position.last_closed?.concept === "qqx_prior_concept");
+  }
+
   const passed = checks.every(([, c]) => c);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -731,10 +869,13 @@ function main() {
   const posBit = p.session_open
     ? ` · position ${p.concept} step ${p.step} ${p.step_name}${p.stale ? " (stale)" : ""}`
     : (p.last_closed ? ` · position none (last ${p.last_closed.concept})` : " · position none");
-  console.log(`learning-state: ${out.status} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}${posBit}  →  ${OUT}`);
+  // #106 — lead with the counter. `${have}/${need} reps` beats `warming_up` because
+  // it tells him how many more, and the withheld list tells him what he is buying.
+  const gateBit = out.gate.open ? out.gate.line : `${out.gate.line} (withholding ${out.gate.withheld.join(", ")})`;
+  console.log(`learning-state: ${gateBit} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}${posBit}  →  ${OUT}`);
   process.exit(0);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, idFluency, isColdFast, loadReps, loadConfig, loadRegistry, loadFsrsCards, projectPosition, loadForgeSession, loadForgeLastClosed };
+export { compute, idFluency, isColdFast, buildGate, loadReps, loadConfig, loadRegistry, loadFsrsCards, projectPosition, projectLastClosed, loadForgeSession, loadForgeLastClosed };

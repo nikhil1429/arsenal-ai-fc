@@ -179,11 +179,54 @@ function tunnelRead(windowEvents, buckets, cfg, now, prevSameDay) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// THE UNGATE (organism audit #106, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// His verbatim ask: "i can not wait for so many days for gates to be opened."
+//
+// EVIDENCE: pitch_read_history.jsonl carries fourteen day-lines and THIRTEEN of
+// them read `"struggle":"no_data"`; live pitch_read.json reads
+// {"verdict":"no_data","basis":"0 reps today (< 6)"} — and reps_log.jsonl holds
+// NINE rows in its entire life, so six-reps-in-one-day has happened exactly once
+// (IST 31 Jul). The organ is STARVED, not broken: it is right to refuse.
+//
+// NOTHING HERE LOWERS THE GATE. `last_n` stays 6. Four reps cannot separate a
+// productive window from a spinning one, and a verdict invented from four would
+// feed shadow.mjs:94's wall_breaker and, through it, tomorrow's set-piece packet
+// with a guess. What changes is that the refusal now carries its DENOMINATOR:
+// "0/6 reps today" is a fact he can watch move, while "no_data" is a word he can
+// only take on faith — and it reads identically to a dead organ.
+//
+// `verdict` IS THE MACHINE CONTRACT AND IS UNCHANGED. shadow.mjs:434 lifts
+// `pr.struggle.verdict` and shadow.mjs:94 tests it `=== "spinning"`; viz.mjs:329
+// lifts the same field and viz.mjs:557 keys FORGE_FRAME on the literal, where
+// "no_data" is both a key and the fallback — so re-spelling the enum would
+// silently swap the wall to its fallback frame and blind the wall_breaker shadow
+// with no error anywhere. The counter rides BESIDE it, additive, exactly as
+// calibration.mjs:300 · learning_state.mjs:582 · twin.mjs:374 · fsrs.mjs:328 do.
+const STRUGGLE_UNIT = "reps today";
+function struggleGate(haveToday, need) {
+  const open = haveToday >= need;
+  return {
+    have: haveToday, need, unit: STRUGGLE_UNIT,
+    line: `${haveToday}/${need} ${STRUGGLE_UNIT}`,
+    open,
+    // NAME the withheld thing. A quiet organ and a broken one look the same from
+    // outside; saying which field is being held back is the difference.
+    withheld: open ? [] : ["verdict"],
+  };
+}
+
 // STRUGGLE over the last N reps today: the verdict the captain cannot feel
 // from inside. productive ⇒ DO NOTHING.
 function struggleRead(repsToday, cfg) {
-  const last = repsToday.slice(-cfg.struggle.last_n);
-  if (last.length < cfg.struggle.last_n) return { verdict: "no_data", basis: `${last.length} reps today (< ${cfg.struggle.last_n})` };
+  const need = cfg.struggle.last_n;
+  const last = repsToday.slice(-need);
+  // have = the REAL count of reps today, never the capped window length: the point
+  // of the counter is to show distance-to-open, and a capped have can never be
+  // wrong in the honest direction.
+  const gate = struggleGate(repsToday.length, need);
+  if (!gate.open) return { verdict: "no_data", basis: gate.line, gate };
   const confRank = { guessed: 0, shaky: 1, knew: 2 };
   const lat = last.map(r => typeof r.latency_ms === "number" ? r.latency_ms : null);
   const latKnown = lat.filter(x => x !== null);
@@ -204,7 +247,7 @@ function struggleRead(repsToday, cfg) {
   })();
   const guessedWrong = last.filter(r => !r.correct && r.confidence === "guessed").length;
   if (wrongSameAxis >= cfg.struggle.spin_axis_repeat || (guessedWrong >= 3 && correctFrac < 0.34))
-    return { verdict: "spinning", basis: `wrong repeating on one axis ×${wrongSameAxis}, correct ${Math.round(correctFrac * 100)}%` };
+    return { verdict: "spinning", basis: `wrong repeating on one axis ×${wrongSameAxis}, correct ${Math.round(correctFrac * 100)}%`, gate };
   // ORDER MATTERS (E2E audit 25 Jul 2026): cruising used to be tested AFTER the
   // productive branch, so a genuine cruising window (6/6 correct, all "knew", all
   // under fast_ms) was swallowed by `correctFrac >= 0.5 && latRising` the moment
@@ -214,10 +257,10 @@ function struggleRead(repsToday, cfg) {
   // + fast), so it is the one that must be asked first; productive stays the
   // fallback it was written to be. Nothing about the productive verdict changed.
   const allFastKnew = last.every(r => r.correct && r.confidence === "knew" && (r.latency_ms === null || r.latency_ms === undefined || r.latency_ms <= cfg.struggle.fast_ms));
-  if (allFastKnew) return { verdict: "cruising", basis: "fast + correct + knew across the window" };
+  if (allFastKnew) return { verdict: "cruising", basis: "fast + correct + knew across the window", gate };
   if (correctFrac >= 0.5 && (latRising || confFalling))
-    return { verdict: "productive", basis: `correct holding ${Math.round(correctFrac * 100)}%, latency ${latRising ? "climbing" : "steady"}, confidence ${confFalling ? "falling" : "steady"}` };
-  return { verdict: "productive", basis: `mixed window, correct ${Math.round(correctFrac * 100)}% — the forge working` };
+    return { verdict: "productive", basis: `correct holding ${Math.round(correctFrac * 100)}%, latency ${latRising ? "climbing" : "steady"}, confidence ${confFalling ? "falling" : "steady"}`, gate };
+  return { verdict: "productive", basis: `mixed window, correct ${Math.round(correctFrac * 100)}% — the forge working`, gate };
 }
 
 // TANK: visible bench over the due list — never a silent deletion.
@@ -255,10 +298,21 @@ function weakFootRead(history, repsByDate, cfg, excludeDate = null) {
 }
 
 function buildRead({ tunnel, struggle, tank, weak_foot, now }) {
+  // #106 — `low_confidence: false` was a LITERAL on every read this organ has ever
+  // written, including the thirteen of fourteen days its rep-fed quarter was dark.
+  // A boolean that cannot be anything else is not a measurement. It is derived now,
+  // from the one gate in this organ that can genuinely refuse.
+  // `status` stays "ok" and stays a literal ON PURPOSE: here it means "the organ
+  // ran and wrote a read", which is true on every one of those days, and it is the
+  // field any future consumer would pattern-match. The counter is a SEPARATE field.
+  const gate = (struggle && struggle.gate) ? struggle.gate : null;
   return {
     date: localDate(now),
     status: "ok",
-    low_confidence: false,
+    low_confidence: gate ? !gate.open : false,
+    // the have/need counter at the TOP of pitch_read.json, so a surface reading the
+    // header never has to descend into a sense to learn why the read is thin.
+    gate,
     generated_at: now.toISOString(),
     tunnel, struggle, tank, weak_foot,
     ear: { enabled: false, surface: "scrimmage_only" },
@@ -300,7 +354,13 @@ async function selftest() {
   const productive = [rep(true, "knew", 4000), rep(true, "knew", 6000), rep(false, "shaky", 8000), rep(true, "shaky", 10000), rep(true, "shaky", 12000), rep(true, "guessed", 15000)];
   const sp = struggleRead(productive, cfg);
   assert("struggle: latency↑ conf↓ correct-holding = productive", sp.verdict === "productive");
-  assert("PRODUCTIVE = DO-NOTHING — verdict+basis only, no actuator fields", Object.keys(sp).sort().join(",") === "basis,verdict");
+  // The constitutional key-set check, kept EXACT (an inclusive check would stop
+  // being able to fail). #106 adds `gate` and nothing else; the second assert pins
+  // the gate's own shape so "add a counter" can never become "add an actuator".
+  assert("PRODUCTIVE = DO-NOTHING — verdict + basis + the #106 counter, and nothing else",
+    Object.keys(sp).sort().join(",") === "basis,gate,verdict");
+  assert("...and the counter is a MEASUREMENT, not an actuator (have/need/unit/line/open/withheld only)",
+    Object.keys(sp.gate).sort().join(",") === "have,line,need,open,unit,withheld");
   const spinning = [rep(false, "guessed", 5000, "e"), rep(false, "guessed", 5000, "e"), rep(false, "shaky", 5000, "e"), rep(true, "guessed", 5000, "a"), rep(false, "guessed", 5000, "e"), rep(false, "guessed", 5000, "e")];
   assert("struggle: wrong repeating on one axis = spinning", struggleRead(spinning, cfg).verdict === "spinning");
   const cruising = Array(6).fill(rep(true, "knew", 3000));
@@ -367,6 +427,45 @@ async function selftest() {
   assert("NO-PING LAW — no push-channel client, fetch is GET-only", !src.includes(needle) && !/method\s*:\s*["']POST/i.test(src));
   const asJson = JSON.stringify(read);
   assert("no imperative to the captain in output (data only)", !/do this now|you must|you should/i.test(asJson));
+
+  // --- ORGANISM AUDIT #106 (4 Aug 2026): THE UNGATE -------------------------
+  // Live baseline this is written against: pitch_read_history.jsonl = 14 day-lines,
+  // 13 of them "no_data"; reps_log.jsonl = 9 rows all-time. The refusal is CORRECT.
+  // What follows proves the refusal now shows its denominator, and that not one
+  // number moved to make that happen.
+  {
+    const r6 = (n) => Array.from({ length: n }, () => rep(true, "knew", 3000));
+    const thin = struggleRead(r6(1), cfg);
+    assert("#106 one rep says '1/6 reps today' with its denominator, not the bare word",
+      thin.gate.line === "1/6 reps today" && thin.gate.open === false && thin.gate.have === 1 && thin.gate.need === 6);
+    assert("#106 a rep-less day reads 0/6 — never a silently-confident zero",
+      struggleRead([], cfg).gate.line === "0/6 reps today");
+    assert("#106 the refusal NAMES what it withholds (a quiet organ is indistinguishable from a broken one)",
+      thin.gate.withheld.join(",") === "verdict" && thin.basis === "1/6 reps today");
+    // THE LOAD-BEARING ONE. If this ever flips, the ungate has become a lie.
+    assert("#106 NO GATE WAS LOWERED — five reps still refuses a verdict, it just says 5/6",
+      struggleRead(r6(5), cfg).verdict === "no_data" && struggleRead(r6(5), cfg).gate.line === "5/6 reps today");
+    assert("#106 the gate opens from the data itself, at the UNCHANGED threshold of 6",
+      struggleRead(r6(6), cfg).gate.open === true && struggleRead(r6(6), cfg).verdict === "cruising");
+    assert("#106 have is the REAL n today, not the capped window (9 reps reads 9/6, never 6/6)",
+      struggleRead(r6(9), cfg).gate.have === 9);
+    assert("#106 the counter reads the LIVE config, never a hardcoded 6",
+      struggleRead(r6(5), loadConfigFromObject({ struggle: { ...DEFAULTS.struggle, last_n: 10 } })).gate.line === "5/10 reps today");
+    // CROSS-FILE CONTRACT: shadow.mjs:94/:434 and viz.mjs:329/:557 key on this
+    // literal, and viz's FORGE_FRAME uses "no_data" as both a key and its fallback —
+    // a re-spelled enum would degrade the wall silently, with no error anywhere.
+    const VERDICTS = new Set(["no_data", "spinning", "cruising", "productive"]);
+    assert("#106 the machine contract is INTACT — every verdict is still one of shadow/viz's four literals",
+      [struggleRead([], cfg), thin, struggleRead(r6(6), cfg), sp, struggleRead(spinning, cfg)]
+        .every(v => VERDICTS.has(v.verdict)));
+    // the header boolean that could never be true
+    const darkRead = buildRead({ tunnel: t1, struggle: struggleRead([], cfg), tank, weak_foot: wf, now });
+    const litRead  = buildRead({ tunnel: t1, struggle: struggleRead(r6(6), cfg), tank, weak_foot: wf, now });
+    assert("#106 low_confidence is MEASURED now — it was the literal `false` on all 13 dark days",
+      darkRead.low_confidence === true && litRead.low_confidence === false);
+    assert("#106 the counter also rides the HEADER of pitch_read, and `status` keeps its machine meaning",
+      darkRead.gate.line === "0/6 reps today" && darkRead.status === "ok" && litRead.status === "ok");
+  }
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -436,9 +535,13 @@ async function main() {
   };
   if (!history.some(h => h.date === today)) appendFileSync(HIST, JSON.stringify(line) + "\n");
   else writeAtomicText(HIST, mergeHistoryLine(readRawLines(HIST), line).join("\n") + "\n");
-  console.log(`touchline: tunnel=${read.tunnel.state} struggle=${read.struggle.verdict} bench=${read.tank.benched.length} weak-foot=${read.weak_foot.streaks.length} → ${OUT}`);
+  // #106 — lead with the counter when the gate is shut. "struggle=no_data" is the
+  // line that has printed on thirteen of fourteen days and told him nothing; the
+  // counter says how far off six he actually is, which is the thing he can act on.
+  const struggleLine = read.struggle.gate && !read.struggle.gate.open ? read.struggle.gate.line : read.struggle.verdict;
+  console.log(`touchline: tunnel=${read.tunnel.state} struggle=${struggleLine} bench=${read.tank.benched.length} weak-foot=${read.weak_foot.streaks.length} → ${OUT}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject, repDayKey, mergeHistoryLine };
+export { tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject, repDayKey, mergeHistoryLine, struggleGate };

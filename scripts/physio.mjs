@@ -108,6 +108,57 @@ const retrievability = (elapsedDays, stability) =>
 // report anemia must not itself die because a node_module went missing.
 const normId = (s) => String(s).trim().toLowerCase().replace(/\s+/g, " ");
 
+// ---------------------------------------------------------------------------
+// FUEL (ORGANISM AUDIT #93, physio side) — no health surface read tank state
+// ---------------------------------------------------------------------------
+// `grep -n "tank|fuel" scripts/physio.mjs` returned ZERO before this, and
+// /organism-doctor never touched it either, while T1 (the mouth) and T2 (the
+// Watcher) sat COLD from a 429 storm. The Dugout voice had no fuel and no organ
+// in the body said so. The physio is the proprioception organ; an empty tank is
+// exactly the kind of thing proprioception is for.
+//
+// TWO RULES, both taken from fuelboard.mjs rather than invented here:
+//  · USABLE is fuelboard.mjs:203's own definition — state ∈ {HOT, WARM}. No new
+//    threshold is introduced; there is no number to guess.
+//  · A tanks.json whose `day` is not today is NOT today's reading. fuelboard's
+//    loadBoard() day-resets used_today/last_429 at local midnight, so a stored
+//    "COLD" from two days ago would read HOT the moment the board is next
+//    loaded. Reporting it as current would be exactly the "unmeasured silence
+//    rendered as a measured zero" this audit exists to kill. So a stale board is
+//    reported as stale and NEVER bleeds.
+// tanks.json is read RAW and read-only. fuelboard.mjs is deliberately NOT
+// imported and `fuelboard.mjs status` is deliberately NOT shelled: status does a
+// read-modify-WRITE of tanks.json under the tank lock, and a health probe must
+// never mutate the thing it is measuring.
+const USABLE_TANK_STATES = ["HOT", "WARM"];      // fuelboard.mjs:203, verbatim
+
+function fuelRead(tanksJson, tankRegistry, now) {
+  if (!tanksJson || !tanksJson.tanks || typeof tanksJson.tanks !== "object") return null;  // never born ≠ bleeding
+  const today = localDate(now);
+  const states = {};
+  for (const [id, t] of Object.entries(tanksJson.tanks)) states[id] = (t && typeof t.state === "string") ? t.state : "unknown";
+  const reading_is_today = tanksJson.day === today;
+  const usable = Object.entries(states).filter(([, s]) => USABLE_TANK_STATES.includes(s)).map(([id]) => id);
+  const cold = Object.entries(states).filter(([, s]) => s === "COLD").map(([id]) => id);
+  // which tank is the mouth is DATA, not a constant: fuelboard_config.json's own
+  // registry names it by region. Fall back to fuelboard.mjs's documented
+  // DEFAULT_TANKS mapping (T1 Gaffer = region "mouth") only if the registry is
+  // unreadable — and say which source was used.
+  const reg = (tankRegistry && Array.isArray(tankRegistry.tanks)) ? tankRegistry.tanks : null;
+  const mouthTank = reg ? (reg.find(t => t && t.region === "mouth") || {}).id || null : "T1";
+  return {
+    day: tanksJson.day || null,
+    reading_is_today,
+    mouth_tank: mouthTank,
+    mouth_state: mouthTank ? (states[mouthTank] || "unknown") : null,
+    states, usable, cold,
+    source: reg ? "fuelboard_config.json registry" : "fuelboard.mjs DEFAULT_TANKS (registry unreadable)",
+    note: reading_is_today
+      ? `${usable.length}/${Object.keys(states).length} tanks usable (HOT/WARM) as of today`
+      : `NOT TODAY'S READING — the fuel board was last written ${tanksJson.day || "(no day stamp)"}; these states are what stood then, and fuelboard day-resets at local midnight`,
+  };
+}
+
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
@@ -213,8 +264,11 @@ function fsrsSignal(world, cfg) {
     n = scored.length;
     if (n >= cfg.signal_table.min_n) brier = round(scored.reduce((a, b) => a + b, 0) / n, 4);
   }
+  // ORGANISM AUDIT #104/#106 — the note used to read "gated (needs n≥20)", which
+  // says the bar and hides the climb. `7/20` says both. The gate itself is
+  // UNCHANGED (still cfg.signal_table.min_n, still no brier below it).
   return { organ: "fsrs", brier, n,
-    note: brier === null ? "gated (needs n≥" + cfg.signal_table.min_n + ")"
+    note: brier === null ? `${n}/${cfg.signal_table.min_n} forecasts — brier lands at ${cfg.signal_table.min_n}`
       : "brier vs FSRS retrievability over the gap since that card's previous rep (current stability used as proxy — the store keeps no per-review history)" };
 }
 
@@ -300,12 +354,47 @@ function compute(world, cfg, now = new Date()) {
   }
 
   // 2) EMITTED-BUT-NEVER-CONSUMED — a weakness headline no sheet ever surfaced.
-  if (world.weaknesses && world.weaknesses.headline && world.weaknessesMtime) {
-    if (!world.teamSheetMtime || world.teamSheetMtime < world.weaknessesMtime) {
-      bleeds.push({ organ: "nemesis→manager", kind: "emitted_unconsumed",
-        evidence: "weaknesses.headline set but team_sheet.md missing or older",
-        line: "the scout filed a headline no sheet has carried yet." });
-    }
+  //
+  // ORGANISM AUDIT #70 (4 Aug 2026) — THE FALSE ALARM. The old test was
+  // `headline present && (sheet missing || sheet.mtime < weaknesses.mtime)`, and
+  // it was wrong twice:
+  //
+  //  (a) IT ACCUSED THE MANAGER OF OBEYING THE LAW. nemesis.mjs deliberately
+  //      emits a headline while status="warming_up" / low_confidence=true (it is
+  //      a floor signal for its own consumers), and manager.mjs:167 refuses to
+  //      carry it in exactly that case — `okWeak = fresh && status==="ok" &&
+  //      low_confidence !== true` — because system.md's silence law says
+  //      "warming_up means no headline", and manager.mjs:769 selftests it. Live
+  //      right now: weaknesses.json is status "warming_up", low_confidence true,
+  //      total_reps 9 — and loop_vitals.json carried the emitted_unconsumed
+  //      bleed anyway. The physio was reporting the silence law as a wound.
+  //
+  //  (b) IT COMPARED CLOCKS, NOT CONTENT. weaknesses.json is rewritten by the
+  //      08:39 heartbeat EVERY day, unchanged headline included, which bumps its
+  //      mtime past a sheet that already carried that exact line. So a headline
+  //      the sheet is literally printing (manager.mjs:489 pushes
+  //      `F.headline.one_line` verbatim) re-registered as an orphan the next
+  //      morning, forever.
+  //
+  // The honest orphan test: the headline must be CONSUMABLE by the manager's own
+  // rule, and the sheet must not already carry it. Text beats mtime when the text
+  // is available; the mtime comparison survives as the fallback for when the
+  // sheet cannot be read. No new threshold, no lowered bar — a genuine orphan
+  // (a status-ok headline on a sheet that never printed it) still bleeds.
+  const wk = world.weaknesses;
+  const headline = (wk && wk.headline) ? wk.headline : null;
+  // mirrors manager.mjs:167 `okWeak` exactly — the consumer's own trust gate
+  const headlineConsumable = !!(headline && wk.status === "ok" && wk.low_confidence !== true);
+  const oneLine = (headline && typeof headline.one_line === "string") ? headline.one_line : null;
+  const sheetText = typeof world.teamSheetText === "string" ? world.teamSheetText : null;
+  const sheetCarries = !!(sheetText && oneLine && sheetText.includes(oneLine));
+  const sheetOlder = !world.teamSheetMtime || world.teamSheetMtime < world.weaknessesMtime;
+  if (headlineConsumable && world.weaknessesMtime && !sheetCarries && sheetOlder) {
+    bleeds.push({ organ: "nemesis→manager", kind: "emitted_unconsumed",
+      evidence: sheetText === null
+        ? "weaknesses.headline is status-ok but team_sheet.md is missing"
+        : "weaknesses.headline is status-ok, and team_sheet.md neither carries its one_line nor postdates it",
+      line: "the scout filed a headline no sheet has carried yet." });
   }
 
   // 3) EFFORT-UNCAPTURED — hours in the Learning bucket, zero reps in the log.
@@ -342,6 +431,24 @@ function compute(world, cfg, now = new Date()) {
 
   // 5) MIRROR-STALE handled by (1) via mirror_manifest.json cadence.
 
+  // 6) FUEL — ORGANISM AUDIT #93. The mouth running dry is a body fact, and the
+  //    body organ is the one that should say it. Bleeds ONLY on a reading that
+  //    is actually today's (see fuelRead's comment: a stale board is not a cold
+  //    board, it is an unread board — and an unread board is reported, not
+  //    accused). No number is invented: "usable" is fuelboard's own HOT/WARM.
+  const fuel = fuelRead(world.tanks, world.tankRegistry, now);
+  if (fuel && fuel.reading_is_today) {
+    if (fuel.usable.length === 0) {
+      bleeds.push({ organ: "fuelboard", kind: "fuel_dry",
+        evidence: `0/${Object.keys(fuel.states).length} tanks usable (HOT/WARM) — ${fuel.cold.length ? "COLD: " + fuel.cold.join(", ") : "none HOT/WARM"}`,
+        line: "every fuel tank is cold — the voice has nothing to speak with until the quota resets at midnight." });
+    } else if (fuel.mouth_tank && !USABLE_TANK_STATES.includes(fuel.mouth_state)) {
+      bleeds.push({ organ: "fuelboard", kind: "mouth_cold",
+        evidence: `${fuel.mouth_tank} (the mouth) reads ${fuel.mouth_state}; still usable: ${fuel.usable.join(", ")}`,
+        line: "the Gaffer's own tank is cold — the voice will be failing over or falling silent." });
+    }
+  }
+
   // SPEAK-GATES — computed from real volumes; fitted organs defer to these.
   // A gate counts MARKET-DAYS, not ledger rows: lastWinsSlip collapses the
   // scorer's appended corrections (E2E audit 25 Jul 2026, finding 029c3bae) so a
@@ -377,6 +484,35 @@ function compute(world, cfg, now = new Date()) {
     body_archive: bodyArchiveDays >= cfg.gates.body_archive_min_days,
   };
 
+  // ORGANISM AUDIT #102/#103/#104/#106 — THE UNGATE, have/need from rep 1.
+  // A closed gate used to publish one bit: `false`. "9 reps of the 200 this organ
+  // is waiting for" and "you will never see this" are the same bit, and the
+  // captain was shown the second when the truth was the first. Every gate now
+  // carries its OWN counter beside the boolean.
+  //
+  // NO GATE IS LOWERED and no number is introduced: every `need` below is read
+  // straight out of cfg (physio_config.json), the same value that decides the
+  // boolean on the line above. The vocabulary (have / need / open) is the one
+  // scripts/limits.mjs already uses for exactly this purpose.
+  //
+  // speak_gates stays a flat map of BOOLEANS — bootroom.mjs:256 reads
+  // `vitals.speak_gates.bootroom_mutation` as a boolean and must not be broken.
+  // The counters ride alongside, in their own key.
+  const counter = (have, need, unit) => ({ have, need, open: have >= need, unit, line: `${have}/${need} ${unit}` });
+  const bestTwinType = Object.values(twinResolutions).length ? Math.max(...Object.values(twinResolutions)) : 0;
+  const speak_gate_counters = {
+    twin_voice: counter(bestTwinType, cfg.gates.twin_voice_min_resolutions, "resolutions on one claim-type"),
+    doubt_clusters: {
+      capsules: counter(world.capsules.length, cfg.gates.doubt_clusters.min_capsules, "capsules"),
+      doubts: counter(totalDoubts, cfg.gates.doubt_clusters.min_doubts, "doubts"),
+      open: speak_gates.doubt_clusters,
+      line: `${world.capsules.length}/${cfg.gates.doubt_clusters.min_capsules} capsules · ${totalDoubts}/${cfg.gates.doubt_clusters.min_doubts} doubts`,
+    },
+    bootroom_mutation: counter(world.reps.length, cfg.gates.bootroom_min_reps, "reps"),
+    apni_ghadi: counter(maturedCards, cfg.gates.apni_ghadi.min_cards, `cards with ≥${cfg.gates.apni_ghadi.min_reps_per_card} reps`),
+    body_archive: counter(bodyArchiveDays, cfg.gates.body_archive_min_days, "body-days witnessed"),
+  };
+
   // SIGNAL TABLE — per-organ predictive scoring; FSRS Brier is the one fit
   // legitimate from day one (built for n=1), still volume-gated.
   // GOVERNOR CONSTITUTIONALLY EXEMPT — never in this table (see header).
@@ -406,20 +542,61 @@ function compute(world, cfg, now = new Date()) {
     const hit_rate = brier === null && nUnpriced >= cfg.signal_table.min_n
       ? round(unpriced.filter(s => s.hit).length / nUnpriced, 4) : null;
     const n = brier !== null ? nPriced : hit_rate !== null ? nUnpriced : Math.max(nPriced, nUnpriced);
+    // ORGANISM AUDIT #104/#106 — have/need, not the bare word "gated".
     signal_table.push({ organ, brier, hit_rate, n,
       note: brier !== null ? "brier over slip"
         : hit_rate !== null ? "hit-rate over resolved unpriced claims (this book writes no p)"
-        : "gated (needs n≥" + cfg.signal_table.min_n + ")" });
+        : `${n}/${cfg.signal_table.min_n} resolved — brier (priced) or hit-rate (unpriced) lands at ${cfg.signal_table.min_n}` });
   }
+
+  // ORGANISM AUDIT #69 — `status: "ok"` and `low_confidence: false` USED TO BE
+  // HERE, as literals, computed from nothing, sitting directly above a populated
+  // `bleeds` array. talk.mjs:44 clips this file's first 400 characters into the
+  // voice prompt, and those 400 characters were literally `"status":"ok"`
+  // followed by the bleed — the model was handed a contradiction and asked to
+  // speak from it.
+  //
+  // BOTH FIELDS ARE DELETED, not repaired, and that is deliberate:
+  //  · They had ZERO readers. Verified repo-wide: dugout.mjs:1057 takes `.line`,
+  //    viz.mjs:1215 takes the object and reads `.bleeds`, bootroom.mjs:255-256
+  //    takes `.speak_gates.bootroom_mutation`, talk.mjs:44 clips the raw text.
+  //    ORGANISM_ANATOMY.md:149-153 documents the loop_vitals contract and never
+  //    mentions either field. They were vestigial.
+  //  · Computing them was the TRAP. In this codebase status/low_confidence is a
+  //    DATA-SUFFICIENCY pair, not a health verdict (calibration.mjs:29-30,
+  //    learning_state.mjs:511), and manager.mjs:159/:167 pattern-matches that
+  //    exact vocabulary. Inventing a `"bleeding"` value would have silently
+  //    changed what the Manager trusts. The audit's instruction was explicit:
+  //    delete the field, do not extend the enum.
+  //
+  // What replaces them at the top of the file is a COUNT, not a verdict —
+  // derived, unambiguous, and inside talk.mjs's 400-char window without talk.mjs
+  // having to change (that file belongs to another organ's owner).
+  const summary = bleeds.length
+    ? `${bleeds.length} bleed(s): ${bleeds.map(b => b.kind).join(", ")}`
+    : "no bleeds";
 
   return {
     date: localDate(now),
-    status: "ok",
-    low_confidence: false,
+    summary,
     generated_at: now.toISOString(),
     bleeds,
     speak_gates,
+    speak_gate_counters,
     signal_table,
+    // ORGANISM AUDIT #93 — tank state now HAS a health address. null when
+    // tanks.json has never existed (never-born ≠ bleeding).
+    fuel,
+    // ORGANISM AUDIT #98 — the Boot Room's weekly line used to die in a closing
+    // cmd window, so "did the genome run?" was unanswerable and /organism-doctor
+    // read `Last Result: 0` and called it green. bootroom.mjs now appends one
+    // row per run to bootroom_log.jsonl; this is that row's ADDRESS — loop_vitals
+    // is already opened by the matchday skill and by brain_config's job inputs.
+    // null (never run / no ledger) is reported as null, never as a green zero.
+    genome: (world.genomeLastRun && typeof world.genomeLastRun === "object")
+      ? { last_run: world.genomeLastRun.at || null, outcome: world.genomeLastRun.outcome || null,
+          counter: world.genomeLastRun.counter || null, reason: world.genomeLastRun.reason || null }
+      : null,
     // the physio's own body-day ledger, read back on the next run (finding
     // aff39f83) — the only accumulating record of days the ring reported
     body_days_seen,
@@ -464,6 +641,18 @@ function gatherWorld() {
     weaknesses: readJson(wkPath),
     weaknessesMtime: existsSync(wkPath) ? statSync(wkPath).mtimeMs : null,
     teamSheetMtime: existsSync(tsPath) ? statSync(tsPath).mtimeMs : null,
+    // ORGANISM AUDIT #70 — the orphan test reads the sheet's TEXT, because a
+    // sheet that literally prints the headline has consumed it whatever the
+    // mtimes say. null (unreadable) falls back to the mtime comparison.
+    teamSheetText: (() => { try { return existsSync(tsPath) ? readFileSync(tsPath, "utf8") : null; } catch { return null; } })(),
+    // ORGANISM AUDIT #93 — RAW read of tanks.json. Never `fuelboard.mjs status`
+    // (it read-modify-writes the file under the tank lock), never an import of
+    // fuelboard.mjs (the anemia organ must not inherit another organ's deps).
+    tanks: readJson(join(STATE_DIR, "tanks.json")),
+    tankRegistry: readJson(join(STATE_DIR, "fuelboard_config.json")),
+    // ORGANISM AUDIT #98 — the last row of the Boot Room's own run ledger.
+    // Read-only; physio never writes it (bootroom.mjs is its single writer).
+    genomeLastRun: (() => { const rows = readLines(join(STATE_DIR, "bootroom_log.jsonl")); return rows.length ? rows[rows.length - 1] : null; })(),
     looseBalls: readLines(join(STATE_DIR, "loose_balls.jsonl")),
     throwinState: readJson(join(STATE_DIR, "throwin_state.json")),
     capsules,
@@ -564,9 +753,73 @@ async function selftest() {
   const effortDawn = compute({ ...base, timeaudit: { date: "2026-07-11", buckets: { Learning: { minutes: 180 } } }, reps: [] }, cfg, now);
   assert("DAWN GUARD — yesterday's minutes never accuse a day that hasn't started", !effortDawn.bleeds.some(b => b.kind === "effort_uncaptured"));
 
-  // emitted-unconsumed
-  const emit = compute({ ...base, weaknesses: { headline: { topic: "chunking" } }, weaknessesMtime: 100, teamSheetMtime: 50 }, cfg, now);
-  assert("headline older sheet → emitted_unconsumed bleed", emit.bleeds.some(b => b.kind === "emitted_unconsumed"));
+  // emitted-unconsumed — ORGANISM AUDIT #70. The old fixture omitted `status`
+  // entirely, so it asserted the alarm on a headline the Manager is forbidden to
+  // consume: it proved the false positive rather than the behaviour.
+  const okHeadline = { status: "ok", low_confidence: false, headline: { topic: "chunking", one_line: "5× miss on chunking — axis f keeps breaking." } };
+  const emit = compute({ ...base, weaknesses: okHeadline, weaknessesMtime: 100, teamSheetMtime: 50 }, cfg, now);
+  assert("a status-ok headline on an older sheet → emitted_unconsumed bleed", emit.bleeds.some(b => b.kind === "emitted_unconsumed"));
+  const emitNoSheet = compute({ ...base, weaknesses: okHeadline, weaknessesMtime: 100, teamSheetMtime: null }, cfg, now);
+  assert("...and a missing sheet is still an orphan", emitNoSheet.bleeds.some(b => b.kind === "emitted_unconsumed" && /missing/.test(b.evidence)));
+  // (a) the manager's silence law is NOT a wound: nemesis emits a headline while
+  // warming_up on purpose, manager.mjs:167 refuses it on purpose. This is the
+  // bleed that was live in loop_vitals.json on 4 Aug 2026 against 9 reps.
+  const warmingHeadline = compute({ ...base, weaknesses: { status: "warming_up", low_confidence: true, headline: { topic: "hallucinations", one_line: "2× miss on hallucinations" } }, weaknessesMtime: 100, teamSheetMtime: 50 }, cfg, now);
+  assert("a warming_up headline is NOT an orphan — the Manager is obeying the silence law",
+    !warmingHeadline.bleeds.some(b => b.kind === "emitted_unconsumed"));
+  const lowConf = compute({ ...base, weaknesses: { status: "ok", low_confidence: true, headline: { topic: "x", one_line: "y" } }, weaknessesMtime: 100, teamSheetMtime: 50 }, cfg, now);
+  assert("...and neither is a low_confidence headline (manager.mjs:167's own pair)",
+    !lowConf.bleeds.some(b => b.kind === "emitted_unconsumed"));
+  // (b) content beats clocks: the daily heartbeat rewrite bumps weaknesses.json's
+  // mtime past a sheet that is literally printing the line.
+  const carried = compute({ ...base, weaknesses: okHeadline, weaknessesMtime: 100, teamSheetMtime: 50,
+    teamSheetText: "TEAM SHEET\n   • 5× miss on chunking — axis f keeps breaking.\nCOYG." }, cfg, now);
+  assert("a sheet that PRINTS the one_line has consumed it, whatever the mtimes say",
+    !carried.bleeds.some(b => b.kind === "emitted_unconsumed"));
+  const notCarried = compute({ ...base, weaknesses: okHeadline, weaknessesMtime: 100, teamSheetMtime: 50,
+    teamSheetText: "TEAM SHEET\n   • instruments dark — nothing about chunking here.\nCOYG." }, cfg, now);
+  assert("a real orphan still bleeds when the sheet is readable and silent",
+    notCarried.bleeds.some(b => b.kind === "emitted_unconsumed" && /neither carries/.test(b.evidence)));
+
+  // FUEL — ORGANISM AUDIT #93. No health surface read tank state; physio had
+  // zero "tank" hits while T1/T2 sat COLD.
+  const tanksToday = (states) => ({ day: localDate(now), tanks: Object.fromEntries(Object.entries(states).map(([k, v]) => [k, { state: v }])) });
+  const registry = { tanks: [{ id: "T1", region: "mouth" }, { id: "T2", region: "vision" }, { id: "T7", region: "default-mode" }] };
+  const dry = compute({ ...base, tanks: tanksToday({ T1: "COLD", T2: "COLD", T7: "COLD" }), tankRegistry: registry }, cfg, now);
+  assert("all tanks cold TODAY → fuel_dry bleeds (the voice has nothing to speak with)",
+    dry.bleeds.some(b => b.kind === "fuel_dry") && dry.fuel.usable.length === 0);
+  const mouthCold = compute({ ...base, tanks: tanksToday({ T1: "COLD", T2: "HOT", T7: "HOT" }), tankRegistry: registry }, cfg, now);
+  assert("the MOUTH tank cold bleeds on its own, named from the registry not a constant",
+    mouthCold.bleeds.some(b => b.kind === "mouth_cold") && mouthCold.fuel.mouth_tank === "T1");
+  const fuelOk = compute({ ...base, tanks: tanksToday({ T1: "HOT", T2: "WARM", T7: "HOT" }), tankRegistry: registry }, cfg, now);
+  assert("HOT/WARM tanks never bleed (fuelboard.mjs:203's own definition of usable)",
+    !fuelOk.bleeds.some(b => /fuel|mouth/.test(b.kind)) && fuelOk.fuel.usable.length === 3);
+  // HONESTY: a board written two days ago is an UNREAD board, not a cold one —
+  // fuelboard day-resets last_429 at local midnight, so yesterday's COLD is not
+  // today's state and must never be reported as if it were.
+  const staleBoard = compute({ ...base, tanks: { day: "2026-07-10", tanks: { T1: { state: "COLD" } } }, tankRegistry: registry }, cfg, now);
+  assert("a stale fuel board is reported as NOT TODAY'S READING and never bleeds",
+    !staleBoard.bleeds.some(b => /fuel|mouth/.test(b.kind)) &&
+    staleBoard.fuel.reading_is_today === false && /NOT TODAY'S READING/.test(staleBoard.fuel.note));
+  assert("a tanks.json that never existed is null, not a wound (never-born ≠ bleeding)",
+    compute(base, cfg, now).fuel === null);
+
+  // GENOME — ORGANISM AUDIT #98. The Boot Room's weekly line vanished into a
+  // closing cmd window; bootroom.mjs now leaves a row, and this is its address.
+  const gen = compute({ ...base, genomeLastRun: { at: "2026-07-12T14:30:00.000Z", day: "2026-07-12", mode: "run", outcome: "gate_closed", reason: "9/200 reps — the genome is listening, not proposing yet (speak-gate on volume)", counter: { have: 9, need: 200, kind: "volume_gate" } } }, cfg, now);
+  assert("the Boot Room's last run reaches a surface a human already opens",
+    gen.genome.outcome === "gate_closed" && gen.genome.counter.have === 9 && gen.genome.counter.need === 200);
+  assert("a genome that has never run reports null, never a green zero",
+    compute(base, cfg, now).genome === null);
+
+  // ORGANISM AUDIT #69 — the literal pair is GONE, and what sits at the top of
+  // the file inside talk.mjs's 400-char clip is a count, not a verdict.
+  assert("loop_vitals no longer carries the zero-information status/low_confidence pair",
+    !("status" in emit) && !("low_confidence" in emit));
+  assert("the first 400 chars talk.mjs clips now open with an honest bleed count",
+    JSON.stringify(emit).slice(0, 400).includes('"summary":"1 bleed(s): emitted_unconsumed"'));
+  assert("...and 'no bleeds' when nothing bleeds (never a false alarm either way)",
+    compute(base, cfg, now).summary === "no bleeds");
 
   // throw-in gap: wired + flowed + silent
   const gap = compute({ ...base, throwinState: { wired: true }, looseBalls: [{ ts: new Date(now.getTime() - 6 * 86400000).toISOString() }] }, cfg, now);
@@ -604,6 +857,36 @@ async function selftest() {
   assert("body_archive gate closed below 84 days", gates.speak_gates.body_archive === false);
   const gatesClosed = compute(base, cfg, now);
   assert("all gates closed on bloodless organism", Object.values(gatesClosed.speak_gates).every(v => v === false));
+
+  // THE UNGATE — ORGANISM AUDIT #102/#103/#104/#106. A shut gate must publish
+  // its CLIMB, not just its verdict. Every `need` below is read from cfg, so a
+  // lowered gate would break these — they cannot be satisfied by relaxing a bar.
+  const ungate = compute({ ...base,
+    reps: Array.from({ length: 9 }, () => ({ ts: "2026-07-01T00:00:00Z", track: "concept", correct: true, concept: "x" })),
+    fsrsStore: { cards: [{ id: "a", stability: 1, reps: 4 }, { id: "b", stability: 1, reps: 2 }] },
+    capsules: [{ doubts: Array(30).fill({ q: "q" }) }],
+    slip: Array.from({ length: 12 }, (_, i) => ({ date: slipDay(i), book: "twin", type: "floor_touched", claim: "c", resolved: true, hit: true, p: 0.6 })),
+  }, cfg, now);
+  const C = ungate.speak_gate_counters;
+  assert("#102 boot room shows its n from rep 1 (9/200 reps), never a bare false",
+    C.bootroom_mutation.line === `9/${cfg.gates.bootroom_min_reps} reps` && C.bootroom_mutation.open === false);
+  assert("#103 apni ghadi shows have/need in matured CARDS, and names the maturity bar",
+    C.apni_ghadi.have === 1 && C.apni_ghadi.need === cfg.gates.apni_ghadi.min_cards &&
+    C.apni_ghadi.unit === `cards with ≥${cfg.gates.apni_ghadi.min_reps_per_card} reps`);
+  assert("twin + doubt-cluster + body-archive gates all carry counters too",
+    C.twin_voice.line === `12/${cfg.gates.twin_voice_min_resolutions} resolutions on one claim-type` &&
+    C.doubt_clusters.line === `1/${cfg.gates.doubt_clusters.min_capsules} capsules · 30/${cfg.gates.doubt_clusters.min_doubts} doubts` &&
+    C.body_archive.need === cfg.gates.body_archive_min_days);
+  assert("every counter's `open` agrees with the boolean gate it stands beside (no drift)",
+    Object.entries(ungate.speak_gates).every(([k, v]) => C[k].open === v));
+  assert("speak_gates stays a flat boolean map — bootroom.mjs:256 reads it as one",
+    Object.values(ungate.speak_gates).every(v => typeof v === "boolean"));
+  // #104/#106 — the signal table says "7/20", not the bare word "gated".
+  assert("#104 signal-table rows show n/min_n instead of the word 'gated'",
+    ungate.signal_table.every(r => (r.brier !== null || r.hit_rate !== null) || new RegExp(`^${r.n}/${cfg.signal_table.min_n} `).test(r.note)) &&
+    !ungate.signal_table.some(r => /^gated/.test(r.note)));
+  assert("...and the gate itself is NOT lowered — no brier below min_n",
+    ungate.signal_table.every(r => r.brier === null || r.n >= cfg.signal_table.min_n));
 
   // BODY-ARCHIVE — finding aff39f83: readiness.nights is structurally capped at
   // 45 by oura_coach's fetch window, so an 84-day gate could never open off it.
@@ -660,7 +943,15 @@ async function main() {
   const cfg = loadConfig();
   const out = compute(gatherWorld(), cfg, new Date());
   writeAtomic(VITALS, out);
-  console.log(`physio: ${out.bleeds.length} bleed(s)${out.bleeds.length ? " — " + out.bleeds.map(b => b.kind).join(", ") : ""} · gates open: ${Object.entries(out.speak_gates).filter(([, v]) => v).map(([k]) => k).join(", ") || "none (awaiting blood)"} → ${VITALS}`);
+  // ORGANISM AUDIT #106 — stdout stops saying "none (awaiting blood)" and starts
+  // saying how far away each closed gate is. Same numbers as the file; no organ
+  // has to be opened to read the climb.
+  const shut = Object.entries(out.speak_gate_counters)
+    .filter(([k]) => out.speak_gates[k] === false)
+    .map(([k, c]) => `${k} ${c.line}`);
+  const open = Object.entries(out.speak_gates).filter(([, v]) => v).map(([k]) => k);
+  console.log(`physio: ${out.summary}${out.fuel ? ` · fuel ${out.fuel.reading_is_today ? `${out.fuel.usable.length}/${Object.keys(out.fuel.states).length} tanks usable` : `board last read ${out.fuel.day} (not today)`}` : ""} → ${VITALS}`);
+  console.log(`physio: gates open: ${open.join(", ") || "none yet"}${shut.length ? ` · climbing: ${shut.join(" · ")}` : ""}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
@@ -668,4 +959,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 // fsrsSignalLegacy is exported, not orphaned: the layering law keeps the frozen
 // v0 in the codebase (E2E audit 25 Jul 2026, finding 9faeef60), and an engine
 // nothing can call is an engine nobody can compare the new one against.
-export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy };
+// gatherWorld is exported so a health surface can take a READ-ONLY preview of
+// the vitals without shelling `physio.mjs run` (which writes loop_vitals.json).
+// It performs no writes of any kind — readJson / readLines / statSync only.
+export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy, gatherWorld, fuelRead };

@@ -28,8 +28,18 @@ $bBody = New-Object System.Drawing.SolidBrush($body)
 $bDim = New-Object System.Drawing.SolidBrush($dim)
 
 $g.DrawString("ARSENAL AI FC", $fSm, $bDim, 80, 120)
+# 2 Aug 2026 audit, finding #82 — the amber headline is the slot reserved for HIS
+# OWN WORDS, decided last night. The old fallback printed "one green ball, first
+# thing." here, which (a) put a canned motivational line in his voice, and (b)
+# collided almost verbatim with postmatch.mjs's declined-prompt default, so a real
+# DECLINED run and a NEVER-RUN night were indistinguishable on the desktop.
+# postmatch no longer fabricates a line; this no longer fabricates one either.
+# The empty state now reads as an INVITATION and names the one command that fills it.
 if ($data.kal_line) { $g.DrawString("KAL  >  " + $data.kal_line, $fBig, $bAmber, 76, 150) }
-else { $g.DrawString("KAL  >  one green ball, first thing.", $fBig, $bAmber, 76, 150) }
+else {
+  $g.DrawString("KAL  >  ___", $fBig, $bAmber, 76, 150)
+  $g.DrawString("no line yet — /full-time tonight writes tomorrow's first move", $fSm, $bDim, 80, 200)
+}
 
 $verdColor = switch ($data.verdict) { "GREEN" { "#7fb069" } "AMBER" { "#d9b45a" } default { "#c05a5a" } }
 $bVerd = New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml($verdColor))

@@ -231,7 +231,11 @@ function computeDanger(reps, cfg, reg) {
 function computeTrend(reps, cfg) {
   const N = reps.length;
   const W = cfg.window_size;
-  if (N < 2 * W) return `establishing baseline (${N} reps)`;
+  // ORGANISM AUDIT #99/#106 — the denominator was missing. "establishing baseline
+  // (9 reps)" told him where he stood and never how far that was from speaking; the
+  // trend needs TWO full windows, and nothing on any surface said so. Same sentence,
+  // with its n over its need.
+  if (N < 2 * W) return `establishing baseline (${N}/${2 * W} reps)`;
   const ordered = reps.slice().sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
   const current = ordered.slice(N - W);
   const prior   = ordered.slice(N - 2 * W, N - W);
@@ -241,6 +245,37 @@ function computeTrend(reps, cfg) {
   if (delta > cfg.trend_delta)  return `narrowing (${f(pe)} → ${f(ce)})`;
   if (delta < -cfg.trend_delta) return `widening (${f(pe)} → ${f(ce)})`;
   return `holding steady (~${f(ce)})`;
+}
+
+// ---------------------------------------------------------------------------
+// THE UNGATE (organism audit #99 + #106, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// His verbatim ask: "i can not wait for so many days for gates to be opened."
+// The answer is NOT to lower a gate — nine reps cannot produce a trustworthy ECE
+// and manufacturing one from thin data is the exact lying failure this whole audit
+// exists to hunt. The answer is that a REFUSAL becomes a MEASUREMENT with its
+// denominator shown: `warming_up` is a word he can only take on faith, `9/20 reps`
+// is a fact he can act on and watch move. Every suppressed field is NAMED, so the
+// silence says what it is withholding instead of just being quiet.
+//
+// `status` / `low_confidence` are UNCHANGED and stay the machine contract —
+// manager.mjs:165 gates on `status === "ok"`, and re-spelling that enum would break
+// the gate rather than open it. The counter rides beside them, additive.
+function buildGate(N, cfg, knewCount) {
+  const open = N >= cfg.min_reps;
+  const trendNeed = 2 * cfg.window_size;
+  return {
+    have: N, need: cfg.min_reps, unit: "reps",
+    line: `${N}/${cfg.min_reps} reps`,
+    open,
+    withheld: open ? [] : ["danger_zone"],
+    // every other number in this organ that can refuse, with its own n over its need
+    sub: [
+      { name: "danger_zone", have: N, need: cfg.min_reps, unit: "reps", line: `${N}/${cfg.min_reps} reps`, open },
+      { name: "trend", have: N, need: trendNeed, unit: "reps", line: `${N}/${trendNeed} reps`, open: N >= trendNeed },
+      { name: "danger.min_knew_reps", have: knewCount, need: cfg.danger.min_knew_reps, unit: "knew-reps", line: `${knewCount}/${cfg.danger.min_knew_reps} knew-reps`, open: knewCount >= cfg.danger.min_knew_reps },
+    ],
+  };
 }
 
 function compute(reps, cfg, reg, now) {
@@ -262,6 +297,7 @@ function compute(reps, cfg, reg, now) {
     danger_zone,
     total_reps: N,
     status, low_confidence,
+    gate: buildGate(N, cfg, knew.length),           // #99/#106 — the have/need counter
     generated_at: new Date(now).toISOString(),
   };
 }
@@ -376,6 +412,46 @@ function selftest() {
   assert("track-split: both tracks in danger ⇒ TWO entries, each carrying its own track",
     p16b.length === 2 && new Set(p16b.map((e) => e.track)).size === 2 && p16b.every((e) => TRACKS.has(e.track)));
 
+  // --- ORGANISM AUDIT #99 / #106 (4 Aug 2026): THE UNGATE --------------------
+  // A refusal must be a MEASUREMENT with its denominator shown. Not a lower gate —
+  // the gate is unchanged; what changes is that the shut door has a number on it.
+  {
+    const nine = [...rep(2, "c", "knew", true), ...rep(2, "c", "shaky", true), ...rep(5, "c", "guessed", false)];  // the captain's live n today
+    const u9 = compute(nine, cfg, reg, now);
+    assert("#99 nine reps say '9/20 reps' with the denominator, beside (not instead of) the machine status",
+      u9.gate.line === "9/20 reps" && u9.gate.have === 9 && u9.gate.need === 20 && u9.gate.open === false
+      && u9.status === "warming_up" && u9.low_confidence === true);
+    assert("#99 the silence NAMES what it is withholding (a quiet organ is indistinguishable from a broken one)",
+      u9.gate.withheld.includes("danger_zone") && u9.danger_zone.length === 0);
+    assert("#99 the trend shows its own need too — it wants TWO windows, and now says so",
+      u9.trend === "establishing baseline (9/40 reps)" && u9.gate.sub.find((s) => s.name === "trend").need === 40);
+    assert("#99 the knew-rep gate carries its OWN n, not the total (they refuse for different reasons)",
+      u9.gate.sub.find((s) => s.name === "danger.min_knew_reps").have === 2
+      && u9.gate.sub.find((s) => s.name === "danger.min_knew_reps").need === 3);
+
+    // ZERO IS NOT A MEASUREMENT OF ZERO — it is "no data", and it still shows its need.
+    const u0 = compute([], cfg, reg, now);
+    assert("#99 an empty ledger reads 0/20 (never a silently-confident zero)",
+      u0.gate.line === "0/20 reps" && u0.gate.open === false && u0.status === "awaiting_data");
+
+    // ...and the counter OPENS on its own, from live data, never asserted
+    const u20 = compute(rep(20, "filler", "shaky", true), cfg, reg, now);
+    assert("#99 the gate opens from the data itself and stops withholding",
+      u20.gate.line === "20/20 reps" && u20.gate.open === true && u20.gate.withheld.length === 0 && u20.status === "ok");
+
+    // THE GATE IS NOT LOWERED — the whole point. 19 reps still refuses.
+    const u19 = compute([...rep(16, "filler", "shaky", true), ...rep(3, "chunking", "knew", false)], cfg, reg, now);
+    assert("#99 NO GATE WAS LOWERED — a qualifying danger topic at 19 reps is still suppressed, it just says 19/20",
+      u19.gate.line === "19/20 reps" && u19.gate.open === false && u19.danger_zone.length === 0);
+
+    // the counter tracks the CONFIG, not a literal — a captain who edits min_reps
+    // must see his own number, or the counter is decoration.
+    const c30 = normalizeConfig({ min_reps: 30, window_size: 5 });
+    const u30 = compute(nine, c30, reg, now);
+    assert("#99 the counter reads the live config (min_reps 30 ⇒ 9/30), never a hardcoded 20",
+      u30.gate.line === "9/30 reps" && u30.gate.sub.find((s) => s.name === "trend").need === 10);
+  }
+
   const passed = checks.every(([, ok2]) => ok2);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -392,11 +468,13 @@ function main() {
   const reps = loadReps(REPS_LOG);
   const out = compute(reps, cfg, reg, new Date());
   writeAtomic(CAL, out);
-  console.log(`calibration: ${out.status} — gap ${out.calibration_gap} · overconf ${out.overconfidence_rate} · danger ${out.danger_zone.length} · ${out.trend}  →  ${CAL}`);
+  // #106 — the console line leads with the counter, not the word. A refusal a human
+  // reads must carry the number that would end it.
+  console.log(`calibration: ${out.gate.line}${out.gate.open ? "" : ` (${out.status}; withholding ${out.gate.withheld.join(", ")})`} — gap ${out.calibration_gap} · overconf ${out.overconfidence_rate} · danger ${out.danger_zone.length} · ${out.trend}  →  ${CAL}`);
   process.exit(0);
 }
 
 // Windows-safe entry guard (like timeaudit.mjs / fsrs.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, ece, computeDanger, computeTrend, bucketsObj, loadReps, loadConfig, normalizeConfig, loadRegistry, topicOf };
+export { compute, ece, computeDanger, computeTrend, bucketsObj, buildGate, loadReps, loadConfig, normalizeConfig, loadRegistry, topicOf };

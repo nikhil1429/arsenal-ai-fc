@@ -35,16 +35,86 @@ const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).pa
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const clip = (s, n) => { const t = typeof s === "string" ? s : JSON.stringify(s); return t && t.length > n ? t.slice(0, n) + "…" : (t || ""); };
 
+// ---------------------------------------------------------------------------
+// #69 — PROJECT, DON'T CLIP. The old line was
+//   "VITALS: " + clip(readJson(loop_vitals.json), 400)
+// and 400 characters of that file is EXACTLY `"status":"ok"` plus the first
+// bleed. The model read "ok" sitting on top of "readiness is writing on time but
+// saying nothing new" and could honestly repeat "vitals ok" back to him.
+// physio's `status`/`low_confidence` are hardcoded literals with zero code
+// readers — they carry no information at all — and the vitals owner is deleting
+// them. So this projects the fields it actually wants and NEVER forwards the
+// pair: correct whether those fields survive, get deleted, or come back wrong.
+// It also does not invent a "bleeding" verdict — it hands over the bleed LINES
+// and lets the model read them, which is what a physio's line is for.
+function projectVitals(v) {
+  if (!v) return "VITALS: no loop_vitals.json on disk — the physio has not run. Unknown, not fine.";
+  const bleeds = Array.isArray(v.bleeds) ? v.bleeds : [];
+  const gates = v.speak_gates && typeof v.speak_gates === "object"
+    ? Object.entries(v.speak_gates).filter(([, open]) => open).map(([k]) => k) : [];
+  const out = [`VITALS (${bleeds.length} bleed${bleeds.length === 1 ? "" : "s"} today):`];
+  if (!bleeds.length) out.push("  nothing bleeding.");
+  for (const b of bleeds.slice(0, 5)) out.push(`  · ${b.organ || "?"} [${b.kind || "?"}] — ${clip(b.line || b.evidence || "", 160)}`);
+  if (bleeds.length > 5) out.push(`  · …and ${bleeds.length - 5} more`);
+  if (v.line) out.push(`  physio's line: ${clip(v.line, 200)}`);
+  if (gates.length) out.push(`  speak-gates open: ${gates.join(", ")}`);
+  return out.join("\n");
+}
+
+// #37/#106 — SCOUT is projected for the same reason: a 300-char clip of
+// scout.json spent its whole budget on the envelope and cut off `staged`
+// entirely, which is the only part worth speaking about.
+function projectScout(s) {
+  if (!s) return "SCOUT: no scout.json on disk — the advance scout has not run.";
+  const staged = Array.isArray(s.staged) ? s.staged : [];
+  const rows = staged.map(x => `  · ${x.kind} — ${clip(x.trigger || "", 120)}`);
+  const learn = ((s.edges || {}).learn || []).length, ratify = ((s.edges || {}).ratify || []).length;
+  return [
+    `SCOUT: ${staged.length} staged${s.readiness_line ? ` (${s.readiness_line})` : ""} · learn=${learn} ratify=${ratify}${s.war_room && s.war_room.active ? " · WAR-ROOM taper" : ""}`,
+    ...rows,
+  ].join("\n");
+}
+
+// DRILLS — the #69 assertion below caught this one too: drills.json carries the
+// SAME data-sufficiency pair, and 800 raw characters spent ~120 of them on an
+// envelope (date/for/status/low_confidence/generated_at) that told the model
+// "status":"ok" and nothing else. Dropping the envelope closes the leak AND
+// hands the freed budget back to the drill content, which is the part he needs.
+// Staleness is stated in words rather than left for the model to infer.
+function projectDrills(d, today) {
+  if (!d) return "DRILLS: no drills.json on disk — the set-piece coach has not run.";
+  const stale = d.for && d.for !== today ? ` — STALE: this packet was cut for ${d.for}, not today` : "";
+  return `DRILLS${stale}: ` + clip({ ladder_verdict: d.ladder_verdict, drills: d.drills || [], withheld: d.withheld, bench_note: d.bench_note }, 800);
+}
+
+// TWIN — third file caught by the same assertion. Unlike physio's, the twin's
+// pair is HONEST (status "warming_up" / low_confidence true genuinely means
+// "my numbers are thin"), so this does not drop it — it says it in words the
+// model cannot mistake for a health verdict, and spends the freed budget on the
+// markets, each of which now arrives with its own n (have/need at the source).
+function projectTwin(t) {
+  if (!t) return "TWIN: no twin.json on disk — the forecaster has not run.";
+  const markets = (t.markets || []).filter(m => m.alive !== false)
+    .map(m => `  · ${m.desc || m.id}: p=${m.p} (n=${m.n_resolved ?? "?"} resolved)`);
+  const thin = t.low_confidence === true || (t.status && t.status !== "ok");
+  return [
+    `TWIN (${markets.length} live market${markets.length === 1 ? "" : "s"})${thin ? " — the twin itself says its numbers are still thin; quote the n, not the p" : ""}:`,
+    ...markets.slice(0, 6),
+    t.voice ? `  twin's line: ${clip(t.voice, 160)}` : null,
+  ].filter(Boolean).join("\n");
+}
+
 // live bus snapshot, compact — refreshed EVERY turn (the coupling is the point)
-function busSnapshot() {
+function busSnapshot(now = new Date()) {
   const sheetP = join(STATE_DIR, "team_sheet.md");
+  const tape = readJson(join(STATE_DIR, "tape_room.json")) || {};
   return [
     existsSync(sheetP) ? "TODAY'S SHEET:\n" + readFileSync(sheetP, "utf8").split("\n").slice(0, 14).join("\n") : "no sheet yet",
-    "DRILLS: " + clip(readJson(join(STATE_DIR, "drills.json")), 800),
-    "VITALS: " + clip(readJson(join(STATE_DIR, "loop_vitals.json")), 400),
-    "TWIN: " + clip(readJson(join(STATE_DIR, "twin.json")), 300),
-    "SCOUT: " + clip(readJson(join(STATE_DIR, "scout.json")), 300),
-    "TAPE ROOM: queue " + ((readJson(join(STATE_DIR, "tape_room.json")) || {}).queue || []).length + ", retired " + ((readJson(join(STATE_DIR, "tape_room.json")) || {}).doubts_retired || 0),
+    projectDrills(readJson(join(STATE_DIR, "drills.json")), localDate(now)),
+    projectVitals(readJson(join(STATE_DIR, "loop_vitals.json"))),
+    projectTwin(readJson(join(STATE_DIR, "twin.json"))),
+    projectScout(readJson(join(STATE_DIR, "scout.json"))),
+    "TAPE ROOM: queue " + (tape.queue || []).length + ", retired " + (tape.doubts_retired || 0),
   ].join("\n\n");
 }
 
@@ -98,6 +168,62 @@ async function selftest() {
   assert("clamp: 3 sentences max, hard", clampSpoken("One. Two! Three? Four. Five.") === "One. Two! Three?");
   assert("clamp survives unpunctuated rambles", clampSpoken("just words no periods at all").length > 0);
   assert("bus snapshot never crashes on bloodless state", typeof busSnapshot() === "string");
+
+  // #69 — the vitals projection. The live file's status/low_confidence are
+  // hardcoded literals; the fixture below is the shape physio ships today.
+  const vFix = {
+    date: "2026-08-04", status: "ok", low_confidence: false,
+    bleeds: [
+      { organ: "readiness", kind: "stale", evidence: "content is 64.5h old", line: "readiness is writing on time but saying nothing new — its content is 64h old." },
+      { organ: "throwin", kind: "throwin_gap", evidence: "last delivery 5d ago", line: "the throw-in line may be dropping balls." },
+    ],
+    speak_gates: { twin_voice: false, doubt_clusters: true },
+    line: "readiness is writing on time but saying nothing new — its content is 64h old.",
+  };
+  const pv = projectVitals(vFix);
+  assert("#69 the projection NEVER forwards physio's literal status/low_confidence pair",
+    !/"?status"?\s*:/.test(pv) && !/low_confidence/.test(pv) && !/\bok\b/.test(pv));
+  assert("#69 the bleeds the old 400-char clip buried now arrive whole", pv.includes("readiness") && pv.includes("throwin") && /2 bleeds/.test(pv));
+  assert("#69 physio's spoken line rides along", pv.includes("physio's line:"));
+  assert("#69 only OPEN speak-gates are named", /doubt_clusters/.test(pv) && !/twin_voice/.test(pv));
+  assert("#69 a clean body says so plainly, without borrowing the word 'ok'",
+    /0 bleeds/.test(projectVitals({ bleeds: [] })) && /nothing bleeding/.test(projectVitals({ bleeds: [] })));
+  assert("#69 a MISSING vitals file reads as unknown, never as healthy (no unmeasured zero)",
+    /has not run/.test(projectVitals(null)) && /Unknown, not fine/.test(projectVitals(null)));
+  assert("#69 the projection survives a vitals file whose status field was deleted",
+    projectVitals({ bleeds: [{ organ: "x", kind: "y", line: "z" }] }).includes("· x [y] — z"));
+  assert("#69 the whole snapshot carries no bare status:ok for the model to repeat",
+    !/"status"\s*:\s*"ok"/.test(busSnapshot()) && !/"low_confidence"/.test(busSnapshot()));
+  const dFix = { date: "2026-08-05", for: "2026-08-05", status: "ok", low_confidence: false, generated_at: "x", ladder_verdict: "GREEN", drills: [{ kind: "tape_room", concepts: ["tokenization"] }], withheld: [], bench_note: null };
+  assert("#69 drills keep their content but lose the status envelope",
+    projectDrills(dFix, "2026-08-05").includes("tokenization") && projectDrills(dFix, "2026-08-05").includes("GREEN")
+    && !/"status"/.test(projectDrills(dFix, "2026-08-05")));
+  assert("#69 a drill packet cut for another day is announced as stale, not passed off as today's",
+    /STALE/.test(projectDrills(dFix, "2026-08-04")) && !/STALE/.test(projectDrills(dFix, "2026-08-05")));
+  assert("#69 a missing drills.json says so rather than reading as an empty day",
+    /has not run/.test(projectDrills(null, "2026-08-05")));
+  const tFix = { status: "warming_up", low_confidence: true, markets: [{ id: "floor_touched", desc: "the never-zero floor is touched today", p: 0.25, n_resolved: 10, alive: true }, { id: "dead", desc: "d", p: 1, n_resolved: 0, alive: false }], voice: null };
+  assert("#69 twin's honest thin-data warning survives as words, not as a raw enum",
+    /numbers are still thin/.test(projectTwin(tFix)) && !/"low_confidence"/.test(projectTwin(tFix)));
+  assert("#69 every twin market arrives with its own n, not just a p",
+    /p=0\.25 \(n=10 resolved\)/.test(projectTwin(tFix)));
+  assert("#69 dead markets are not quoted as live", !/\bd\b:/.test(projectTwin(tFix)) && /1 live market/.test(projectTwin(tFix)));
+  assert("#69 a missing twin.json says so rather than going silent", /has not run/.test(projectTwin(null)));
+
+  // #37/#106 — scout is projected too, so `staged` survives the budget
+  const sFix = { staged: [{ kind: "scrimmage", trigger_met: true, trigger: "3/3 core concepts at DEFEND grade", brief: "x".repeat(400) }], readiness_line: "scrimmage 3/3 · finops 1/3", edges: { learn: [1], ratify: [] }, war_room: { active: false } };
+  const ps = projectScout(sFix);
+  assert("#37 a staged scrimmage reaches the model instead of being clipped off", ps.includes("scrimmage") && ps.includes("DEFEND grade"));
+  assert("#106 the scout's have/need counter rides into the prompt", ps.includes("scrimmage 3/3"));
+  assert("#37 a missing scout.json says so rather than going silent", /has not run/.test(projectScout(null)));
+
+  // TRAP (ORGANISM_ISSUES.md): dugout.mjs benches to `node scripts/talk.mjs`
+  // when the primary voice dies. This file must never be deleted, and a
+  // string-only check would stay green over a dead pointer — so assert the
+  // entry point is genuinely live.
+  assert("talk.mjs is a runnable bench for the dugout's dead-voice fallback",
+    typeof main === "function" && typeof busSnapshot === "function" && typeof buildTurnPrompt === "function");
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -148,4 +274,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { buildTurnPrompt, clampSpoken, busSnapshot };
+export { buildTurnPrompt, clampSpoken, busSnapshot, projectVitals, projectScout, projectDrills, projectTwin };

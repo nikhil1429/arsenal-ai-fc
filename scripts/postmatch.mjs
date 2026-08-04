@@ -84,7 +84,24 @@ function renderPostMatch({ hit, signal, kal, diag, disclosures, twinVoice, pendi
     for (const b of pendingBalls.slice(0, 5)) lines.push(`  · [${b.id}] "${b.text}"`);
   }
   lines.push("");
-  lines.push(`KAL-LINE → ${kal}`);
+  // 2 Aug 2026 audit, finding #82 — THE SLOT RESERVED FOR HIS OWN WORDS.
+  // The KAL-line is the one place on the wall, the wallpaper and the voice brief
+  // that is supposed to carry HIS sentence, decided last night. It used to default
+  // to "one green ball, first thing. That's the whole plan." when he declined the
+  // prompt — which collided almost verbatim with WALLPAPER.ps1's never-run
+  // fallback, so a real DECLINED run and a NEVER-RUN night rendered identically on
+  // his desktop. Two different states, one string, no way to tell them apart.
+  //
+  // Now: a declined prompt writes NO KAL-LINE at all. The marker below is worded so
+  // it deliberately does NOT match KAL_RE (manager.mjs's parser contract, line 44),
+  // so every downstream consumer — manager.mjs:71/:186, viz's kal_line,
+  // WALLPAPER.ps1 — correctly reads null and renders its own honest empty state
+  // instead of a commitment he never made.
+  if (kal) {
+    lines.push(`KAL-LINE → ${kal}`);
+  } else {
+    lines.push(`(no KAL-line tonight — the prompt was declined, so tomorrow opens without one)`);
+  }
   lines.push("");
   lines.push(`COYG. ${BADGE}`);
   return lines.join("\n") + "\n";
@@ -129,6 +146,21 @@ async function selftest() {
     twinVoice: null, pendingBalls: [{ id: "m1", text: "dot vs cosine same cheez?" }], matchday: 5, dateStr,
   });
   assert("KAL-LINE matches manager.mjs parser regex", KAL_RE.test(md) && md.match(KAL_RE)[1].includes("context-window Re-Jirah"));
+
+  // audit #82 — A DECLINED KAL-LINE MUST BE INDISTINGUISHABLE FROM NOTHING, NOT FROM A COMMITMENT.
+  // The old code defaulted a declined prompt to "one green ball, first thing. That's the whole
+  // plan." and WALLPAPER.ps1's never-run fallback printed "one green ball, first thing." — so
+  // the desktop showed the same amber headline whether he had declined or never played at all.
+  const mdNoKal = renderPostMatch({
+    hit: "HIT", signal: "s", kal: null, diag: null, disclosures: [],
+    twinVoice: null, pendingBalls: [], matchday: 5, dateStr,
+  });
+  assert("DECLINED KAL: the parser finds NOTHING (so kal_line reads null downstream, not a fake line)",
+    KAL_RE.test(mdNoKal) === false);
+  assert("DECLINED KAL: the file still says out loud that the prompt was declined",
+    /declined/i.test(mdNoKal));
+  assert("DECLINED KAL: the old fabricated sentence appears nowhere in the tree's output",
+    !/one green ball, first thing/i.test(mdNoKal));
   assert("badge + matchday + COYG present", md.includes(BADGE) && md.includes("Matchday 5") && md.includes("COYG."));
   assert("DISCLOSURE LAW — withheld adaptations always render", md.includes("QUIET ADAPTATIONS") && md.includes("nemesis headline withheld"));
   assert("pending throw-ins shown verbatim, never auto-routed", md.includes("dot vs cosine same cheez?") && md.includes("one word routes them"));
@@ -225,7 +257,10 @@ async function main() {
   if (!hit) hit = ((await promptIfTTY("Result? HIT / MISS / PARTIAL / REST → ")) || "HIT").toUpperCase();
   if (!["HIT", "MISS", "PARTIAL", "REST"].includes(hit)) { console.log("postmatch: --hit must be HIT|MISS|PARTIAL|REST"); process.exit(1); }
   if (!signal) signal = await promptIfTTY("One signal worth naming (data, not verdict) → ");
-  if (!kal) kal = (await promptIfTTY("KAL-LINE — tomorrow's pre-decided first move → ")) || "one green ball, first thing. That's the whole plan.";
+  // audit #82: NO fabricated fallback here. If he declines, `kal` stays null and
+  // renderPostMatch writes an honest "declined" marker instead of putting a canned
+  // motivational sentence into the one slot that is supposed to be his own voice.
+  if (!kal) kal = (await promptIfTTY("KAL-LINE — tomorrow's pre-decided first move → ")) || null;
 
   const pulse = readJson(join(STATE_DIR, "pulse.json"));
   const drills = readJson(join(STATE_DIR, "drills.json"));
@@ -271,7 +306,8 @@ async function main() {
   if (route === "all" && pendingBalls.length) {
     writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pendingBalls.map(b => ({ id: b.id, routed_on: dateStr }))) });
   }
-  console.log(`postmatch: ${hit} · Matchday ${matchday} · KAL-line locked${route === "all" ? ` · ${pendingBalls.length} throw-in(s) routed` : ""} → ${join(PM_DIR, dateStr + ".md")}`);
+  // audit #82: this used to say "KAL-line locked" even when he declined the prompt.
+  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${route === "all" ? ` · ${pendingBalls.length} throw-in(s) routed` : ""} → ${join(PM_DIR, dateStr + ".md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

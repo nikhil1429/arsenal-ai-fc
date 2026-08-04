@@ -33,9 +33,15 @@
 //      starts demanding that 1-05 be tied back to it. Zero maintenance.
 //
 // CONTEXT WARNING (his second requirement — "explicitly tell me beforehand everytime
-// when you are about to loose the context"): a turn counter is kept per forge session
-// and a loud line fires at `context_warn_at`, so the warning is a MEASURED signal the
-// machine raises, not a promise the model has to remember to keep.
+// when you are about to loose the context"): a turn counter is kept per CLAUDE CODE
+// SESSION and a loud line fires at `context_warn_at`, so the warning is a MEASURED
+// signal the machine raises, not a promise the model has to remember to keep.
+//   CORRECTED 2 Aug 2026 (audit #38). This line used to read "per forge session", and
+//   the code did exactly that — which is why the organ could pass its own selftest
+//   18/18 while asserting something untrue to him. Context is a property of the CLAUDE
+//   CODE session, not the study session, so the spec contradicted the purpose four
+//   lines above it. Both were wrong together; both are fixed together. See THE ANCHOR
+//   below for the precedence and for UNKNOWN NEVER RESETS.
 //
 // OWNER DISCIPLINE: this file is the sole writer of state/teaching_contract.json.
 // `print` is HOOK-SAFE — it fails silent and always exits 0. A broken teaching contract
@@ -121,14 +127,21 @@ function dropRule(state, id) {
   return { ok: true, state: { ...state, rules: state.rules.filter((x) => x.id !== id) } };
 }
 
+// ── FROZEN ENGINES (layering law, CLAUDE.md) ─────────────────────────────────
+// Both of these are the 31 Jul originals, kept BYTE-FOR-BYTE. They are no longer
+// the plan of record — the engines below them are — but they stay so the audit's
+// two findings remain reproducible from inside this file, and so the selftest can
+// assert what the OLD engine actually did rather than describing it in a comment.
+// Neither is called by any live path; both are called by the selftest.
+
 // A new forge session resets the turn clock; the same one keeps counting.
-function bumpTurn(state, sessionStartedAt) {
+function bumpTurnLegacy(state, sessionStartedAt) {
   const t = state.turns || { session_started_at: null, count: 0 };
   const fresh = t.session_started_at !== (sessionStartedAt || null);
   return { ...state, turns: { session_started_at: sessionStartedAt || null, count: fresh ? 1 : t.count + 1 } };
 }
 
-function blockLines(state, done, now = new Date()) {
+function blockLinesLegacy(state, done, now = new Date()) {
   if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
   const turn = (state.turns && state.turns.count) || 0;
   const warnAt = state.context_warn_at || DEFAULT_WARN_AT;
@@ -142,6 +155,150 @@ function blockLines(state, done, now = new Date()) {
     L.push(`  ⛔ CONTEXT WARNING — turn ${turn}. TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`);
   }
   return L.slice(0, MAX_BLOCK_LINES);
+}
+
+// ── THE ANCHOR — what counts as "a session" for the turn clock (audit #38) ────
+// THE DEFECT, measured on the live bus 2 Aug 2026:
+//   · bumpTurnLegacy treats "the anchor string changed" as the ONLY reset, and the
+//     anchor was the FORGE session's started_at. Live state today: forge_session.json
+//     started_at 2026-08-02T09:04:09.246Z, teaching_contract.json turns.count 28 —
+//     i.e. the counter rides a study session, not a Claude Code session.
+//   · With NO forge session, forgeStartedAt() returns null, and after ONE bump the
+//     stored anchor is already null, so `null !== null` is FALSE FOREVER. The count
+//     rises monotonically across every future session with no reset path. Past
+//     context_warn_at it then fires the CONTEXT WARNING on turn 1 of every fresh,
+//     empty session — and a warning that always fires is one he learns to ignore.
+//
+// THE LAW THAT FIXES IT — **UNKNOWN NEVER RESETS.** Only a KNOWN anchor that DIFFERS
+// from the stored one resets the count. A null/absent anchor means "I do not know
+// which session this is", and not-knowing must never be read as a new session. This
+// is the audit's named trap: making a null anchor reset would pin the counter at 1
+// on exactly the non-forge days the warning matters most.
+//
+// ANCHOR CLASSES, in precedence order:
+//   1. cc:<session_id>   — the Claude Code session id, read from the hook payload on
+//      stdin. This is the boundary that actually governs CONTEXT, which is the thing
+//      the warning is about. Same read hooks/afferent-post.mjs:44 has performed live
+//      in this same UserPromptSubmit array since 25 Jul.
+//   2. cc:local-<iso>    — minted by `reset-turns`. Wire `reset-turns` into
+//      .claude/settings.json's SessionStart array and the clock has a real per-session
+//      boundary with NO stdin dependency at all. (That wiring is the sanctioned fix;
+//      class 1 is belt-and-braces so the counter is right even before it lands.)
+//   3. forge:<started_at> — the ORIGINAL anchor, kept as the secondary reset trigger
+//      the header at :36 has always described: a new `forge start` still resets.
+//   4. null              — unknown. Held, never reset, and SAID OUT LOUD in the block
+//      header, because "turn 28/40" is only true of a session we can actually name.
+const CC_PREFIX = "cc:";
+const FORGE_PREFIX = "forge:";
+
+// MIGRATION (one-shot, layered). Pre-fix state carried ONLY turns.session_started_at
+// = the forge session's started_at ISO. Read that as a forge-class anchor so the
+// upgrade itself does not silently reset his live counter on its first turn.
+function storedAnchorOf(t) {
+  if (!t || typeof t !== "object") return null;
+  if (typeof t.anchor === "string" && t.anchor) return t.anchor;
+  if (typeof t.session_started_at === "string" && t.session_started_at) return FORGE_PREFIX + t.session_started_at;
+  return null;
+}
+
+function anchorKindOf(t) {
+  if (t && typeof t.anchor_kind === "string" && t.anchor_kind) return t.anchor_kind;
+  return storedAnchorOf(t) ? "forge" : "none";   // pre-fix state: a non-null anchor WAS a live forge anchor
+}
+
+// obs = { cc: <claude code session id|null>, forge: <forge started_at|null> }
+function resolveAnchor(stored, obs = {}) {
+  const held = typeof stored === "string" && stored ? stored : null;
+  const cc = obs.cc ? CC_PREFIX + String(obs.cc) : null;
+  const forge = obs.forge ? FORGE_PREFIX + String(obs.forge) : null;
+  if (cc) return { id: cc, kind: "cc" };
+  // No session id THIS turn. If the stored anchor is session-class we cannot tell
+  // whether we are still inside it — UNKNOWN NEVER RESETS, so hold it rather than
+  // demote to the forge anchor (a demotion would look like "the anchor changed" and
+  // would reset the clock on a turn where nothing actually changed).
+  if (held && held.startsWith(CC_PREFIX)) return { id: held, kind: "cc_held" };
+  if (forge) return { id: forge, kind: "forge" };
+  return { id: held, kind: "none" };
+}
+
+// PLAN OF RECORD. `anchor` may be the {id, kind} object from resolveAnchor, or a bare
+// string (legacy call shape — read as a forge anchor, so the three original selftest
+// invariants still hold verbatim against this engine).
+function bumpTurn(state, anchor, now = new Date()) {
+  const t = (state && state.turns) || {};
+  const a = (anchor && typeof anchor === "object")
+    ? anchor
+    : { id: anchor ? FORGE_PREFIX + String(anchor) : null, kind: anchor ? "forge" : "none" };
+  const prev = storedAnchorOf(t);
+  const known = a.kind !== "none" && !!a.id;
+  // Adopting an anchor where NONE was stored is "we learned which session this is",
+  // not "a new session started" — so it does not reset either. Only known != known.
+  const fresh = known && prev !== null && a.id !== prev;
+  const count = fresh ? 1 : (Number.isInteger(t.count) ? t.count : 0) + 1;
+  return {
+    ...state,
+    turns: {
+      anchor: a.id,
+      anchor_kind: a.kind,
+      count,
+      // FROZEN KEY: this is what pre-fix state and any human reading the file already
+      // know to look for. It carries the forge ISO when the anchor is forge-class and
+      // null otherwise — never a `cc:` string, so nothing that ever parsed it as a
+      // timestamp can be handed a non-timestamp.
+      session_started_at: a.id && a.id.startsWith(FORGE_PREFIX) ? a.id.slice(FORGE_PREFIX.length) : null,
+      // WHEN this count started. Makes "28 prompts since <date>" a measured fact
+      // rather than an unlabelled number when the clock is unanchored.
+      since: (fresh || typeof t.since !== "string" || !t.since) ? now.toISOString() : t.since,
+    },
+  };
+}
+
+// ── THE BLOCK — non-droppable lines first (audit #39) ────────────────────────
+// THE DEFECT: blockLinesLegacy ended `L.slice(0, MAX_BLOCK_LINES)`, which truncates
+// from the TAIL — and the tail is exactly the CONTEXT WARNING, then the link-back.
+// Reproduced by the audit against live state: show_n=3 loses the warning, show_n=4
+// loses the link-back too. Both are the things the header calls the point of the
+// organ; the rules are by design re-injected on later turns and the warning fires
+// once. The truncation order sacrificed the one thing he asked for by name.
+//
+// THE FIX: the budget is spent on the non-droppables FIRST (header · link-back ·
+// warning = at most 3), and the ROTATING RULES take whatever is left. Slot 1 (the
+// worst offender) is index 0 of pick(), so truncation always eats a rotating rule
+// and never the top-ranked one. The block is bounded BY CONSTRUCTION now, not by a
+// slice — which is what finally makes the ANTI-WALL assertion falsifiable.
+// ARITHMETIC (no guessed number anywhere): reserved is at most 1+1+1 = 3, so
+// MAX_BLOCK_LINES - reserved is at least 5-3 = 2 rule slots in every reachable state.
+function blockLines(state, done, now = new Date()) {
+  if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
+  const t = (state.turns && typeof state.turns === "object") ? state.turns : {};
+  const turn = Number.isInteger(t.count) ? t.count : 0;
+  const warnAt = state.context_warn_at || DEFAULT_WARN_AT;
+  const anchored = anchorKindOf(t) !== "none";
+  const total = state.rules.length;
+
+  const link = (done && done.length)
+    ? `  link back BY NAME to what is already closed: ${done.join(" · ")}`
+    : null;
+  // HONESTY (audit #38 + #106): an unanchored clock has counted prompts across
+  // sessions, so it is NOT this session's turn count. It still fires — suppressing
+  // it is the named trap — but it says which kind of number it is.
+  const warn = turn >= warnAt
+    ? `  ⛔ CONTEXT WARNING — turn ${turn}${anchored ? "" : " counted ACROSS sessions (clock unanchored)"}.`
+      + ` TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`
+    : null;
+
+  const reserved = 1 + (link ? 1 : 0) + (warn ? 1 : 0);        // header + the two non-droppables
+  const room = Math.max(0, MAX_BLOCK_LINES - reserved);
+  const shown = pick(state.rules, turn, state.show_n).slice(0, room);
+
+  const L = [];
+  L.push(`TEACHING CONTRACT (drift-ranked · mutates with the journey) · turn ${turn}/${warnAt}`
+    + (anchored ? "" : " · CLOCK UNANCHORED (no session boundary recorded — see reset-turns)")
+    + ` · rules ${shown.length}/${total}`);                     // have/need, never the bare word
+  for (const r of shown) L.push(`  ⚠ ${r.line}${r.hits ? `  [drifted ${r.hits}×]` : ""}`);
+  if (link) L.push(link);
+  if (warn) L.push(warn);
+  return L;
 }
 
 // ── DISK ──────────────────────────────────────────────────────────────────────
@@ -178,6 +335,44 @@ function forgeStartedAt() {
   } catch { return null; }
 }
 
+// THE CLAUDE CODE SESSION ID, straight from the hook payload (audit #38, class 1).
+// Claude Code pipes the same JSON payload to every command in a hooks array, and
+// hooks/afferent-post.mjs:44 has read fd 0 exactly this way in THIS SAME
+// UserPromptSubmit array since 25 Jul — the read is proven in this hook position,
+// not assumed. The repo's own rig guide documents the payload shape
+// (learning-layer/Tier-2_Accountability_Rig_on_Windows…md:373 reads transcript_path
+// off it), and session_id rides alongside it.
+//
+// NEVER BLOCKS: a TTY stdin is not read at all (a human at a terminal would hang on
+// a pipe that never ends), and every failure path — no stdin, drained stdin because
+// an earlier hook consumed it, junk JSON, no session_id — returns null. Under
+// UNKNOWN NEVER RESETS, null is the safe direction: the clock holds, it does not
+// jump. So the worst case of this read failing is exactly the behaviour we would
+// have had without it.
+function hookSessionId() {
+  try {
+    if (process.stdin.isTTY) return null;
+    const raw = readFileSync(0, "utf8");
+    if (!raw || !raw.trim()) return null;
+    const j = JSON.parse(raw);
+    const id = j && typeof j.session_id === "string" ? j.session_id.trim() : "";
+    return id || null;
+  } catch { return null; }
+}
+
+// The three numbers `list` and the close report both need: how many rules exist,
+// how many have EVER been hit, and when the newest hit landed. Pure; no disk.
+// (audit #40 — a zero here is only meaningful next to the date the recorder last ran.)
+function hitStats(rules) {
+  const arr = Array.isArray(rules) ? rules : [];
+  let everHit = 0, newest = null;
+  for (const r of arr) {
+    const h = Date.parse((r && r.last_hit) || "");
+    if (Number.isFinite(h)) { everHit++; if (!newest || h > Date.parse(newest)) newest = r.last_hit; }
+  }
+  return { total: arr.length, ever_hit: everHit, newest_hit: newest };
+}
+
 // ── SELFTEST ──────────────────────────────────────────────────────────────────
 
 function selftest() {
@@ -205,32 +400,102 @@ function selftest() {
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
   assert("drop removes", dropRule(base, "hinglish").state.rules.length === 4);
 
-  const t1 = bumpTurn(base, "S1");
+  // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
+  const t1L = bumpTurnLegacy(base, "S1");
+  assert("FROZEN ENGINE — legacy turn clock starts at 1, keeps counting, resets on a new forge session",
+    t1L.turns.count === 1 && bumpTurnLegacy(t1L, "S1").turns.count === 2
+    && bumpTurnLegacy(bumpTurnLegacy(t1L, "S1"), "S2").turns.count === 1);
+
+  const t1 = bumpTurn(base, "S1", T0);
   assert("turn clock starts at 1 for a new session", t1.turns.count === 1);
-  assert("same session keeps counting", bumpTurn(t1, "S1").turns.count === 2);
-  assert("a NEW forge session resets the clock", bumpTurn(bumpTurn(t1, "S1"), "S2").turns.count === 1);
+  assert("same session keeps counting", bumpTurn(t1, "S1", T0).turns.count === 2);
+  assert("a NEW forge session resets the clock", bumpTurn(bumpTurn(t1, "S1", T0), "S2", T0).turns.count === 1);
+
+  // ---- audit #38 — the anchor. Each of these can fail; none is a tautology.
+  const nullAnchored = bumpTurn(bumpTurn(base, null, T0), null, T0);
+  assert("THE TRAP — a NULL anchor never resets the clock (that would pin it at 1 on exactly the non-forge days the warning matters)",
+    bumpTurn(base, null, T0).turns.count === 1 && nullAnchored.turns.count === 2
+    && bumpTurn(nullAnchored, null, T0).turns.count === 3);
+  assert("UNKNOWN NEVER RESETS — adopting an anchor where none was stored keeps counting, it does not restart",
+    bumpTurn(nullAnchored, { id: "cc:A", kind: "cc" }, T0).turns.count === 3);
+  const ccA = bumpTurn(base, { id: "cc:A", kind: "cc" }, T0);
+  assert("A KNOWN, DIFFERENT session id DOES reset — this is the reset path the forge anchor never gave a non-forge day",
+    bumpTurn(ccA, { id: "cc:A", kind: "cc" }, T0).turns.count === 2
+    && bumpTurn(ccA, { id: "cc:B", kind: "cc" }, T0).turns.count === 1);
+  assert("PRECEDENCE — the Claude Code session id beats the forge session; the forge session is only the fallback",
+    resolveAnchor(null, { cc: "A", forge: "2026-08-02T09:04:09.246Z" }).id === "cc:A"
+    && resolveAnchor(null, { cc: null, forge: "2026-08-02T09:04:09.246Z" }).id === "forge:2026-08-02T09:04:09.246Z"
+    && resolveAnchor(null, {}).kind === "none");
+  assert("A SESSION ANCHOR IS HELD when no session id is readable that turn — never demoted to the forge anchor (a demotion would read as a reset)",
+    resolveAnchor("cc:A", { cc: null, forge: "2026-08-02T09:04:09.246Z" }).id === "cc:A"
+    && resolveAnchor("cc:A", { cc: null, forge: "2026-08-02T09:04:09.246Z" }).kind === "cc_held"
+    && bumpTurn({ ...base, turns: { anchor: "cc:A", anchor_kind: "cc", count: 9 } },
+                resolveAnchor("cc:A", { cc: null, forge: "X" }), T0).turns.count === 10);
+  assert("MIGRATION — pre-fix state (turns.session_started_at only) reads as a FORGE anchor, so the upgrade does not reset his live count",
+    storedAnchorOf({ session_started_at: "2026-08-02T09:04:09.246Z", count: 28 }) === "forge:2026-08-02T09:04:09.246Z"
+    && anchorKindOf({ session_started_at: "2026-08-02T09:04:09.246Z", count: 28 }) === "forge"
+    && bumpTurn({ ...base, turns: { session_started_at: "2026-08-02T09:04:09.246Z", count: 28 } },
+                { id: "forge:2026-08-02T09:04:09.246Z", kind: "forge" }, T0).turns.count === 29);
+  assert("the frozen key survives: session_started_at still carries the forge ISO for a forge anchor, and null for a session anchor",
+    bumpTurn(base, "S1", T0).turns.session_started_at === "S1"
+    && bumpTurn(base, { id: "cc:A", kind: "cc" }, T0).turns.session_started_at === null);
 
   const done = ["1-01 Embeddings", "1-02 Inference & sampling"];
   const lines = blockLines(t1, done, T0);
   assert("block names the closed concepts, derived from sprint.json — never typed here",
     lines.some((l) => l.includes("1-02 Inference & sampling")));
+
+  // ---- audit #39 — the block's budget. The old assertion here checked the length of
+  // a value it had just sliced to that length and COULD NOT FAIL. blockLines no longer
+  // slices — it is bounded by construction — so this same sentence is now falsifiable,
+  // and the three below it are the ones that actually protect the two derived lines.
+  const atShowN = (n, turn) => blockLines({ ...base, show_n: n, turns: { anchor: "cc:S", anchor_kind: "cc", count: turn } }, done, T0);
   assert("ANTI-WALL LAW — the block is never more than 5 lines, in any reachable state",
     (() => {
       let worst = 0;
-      for (let t = 0; t < 60; t++) {
-        let s = { ...base, turns: { session_started_at: "S", count: t }, show_n: 4 };
-        worst = Math.max(worst, blockLines(s, done, T0).length);
-      }
+      for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++) worst = Math.max(worst, atShowN(n, t).length);
       return worst <= MAX_BLOCK_LINES;
     })());
+  assert("THE CONTEXT WARNING IS NON-DROPPABLE — it survives at EVERY show_n 1..6 (the legacy slice ate it from show_n 3)",
+    [1, 2, 3, 4, 5, 6].every((n) => atShowN(n, 40).some((l) => /CONTEXT WARNING/.test(l))));
+  assert("THE LINK-BACK IS NON-DROPPABLE — it survives at every show_n 1..6 whenever sprint progress.done is non-empty",
+    [1, 2, 3, 4, 5, 6].every((n) => atShowN(n, 40).some((l) => /link back BY NAME/.test(l))));
+  assert("TRUNCATION EATS A ROTATING RULE, NEVER SLOT 1 — the worst offender is shown at every show_n",
+    [1, 2, 3, 4, 5, 6].every((n) => atShowN(n, 40).some((l) => l.includes(rank(base.rules)[0].line))));
+  // ARITHMETIC, so the numbers below are read not guessed. show_n=4, done non-empty:
+  //   before the warning — reserved = header 1 + link 1 = 2 → room 3 → "rules 3/5"
+  //   after  the warning — reserved = header 1 + link 1 + warn 1 = 3 → room 2 → "rules 2/5"
+  // i.e. the warning costs a ROTATING RULE, which is exactly the trade the audit asked
+  // for and the reverse of what the slice used to do.
+  assert("HAVE/NEED — the header says how many rules are actually shown out of how many exist, so a truncation is visible",
+    /rules 2\/5/.test(atShowN(4, 40)[0]) && /rules 3\/5/.test(atShowN(4, 1)[0]));
+  assert("NO REGRESSION AT THE LIVE VALUE — at show_n 2 he still gets both rules, the link-back AND the warning, in 5 lines",
+    atShowN(2, 40).length === 5 && /rules 2\/5/.test(atShowN(2, 40)[0])
+    && atShowN(2, 40).filter((l) => /^ {2}⚠/.test(l)).length === 2
+    && atShowN(2, 40).some((l) => /link back BY NAME/.test(l))
+    && atShowN(2, 40).some((l) => /CONTEXT WARNING/.test(l)));
+  assert("REGRESSION PIN — the FROZEN engine really did drop the warning at show_n 3 and the link-back at show_n 4 (why this file now has two)",
+    !blockLinesLegacy({ ...base, show_n: 3, turns: { session_started_at: "S", count: 40 } }, done, T0).some((l) => /CONTEXT WARNING/.test(l))
+    && !blockLinesLegacy({ ...base, show_n: 4, turns: { session_started_at: "S", count: 40 } }, done, T0).some((l) => /link back BY NAME/.test(l)));
 
   const warned = { ...base, turns: { session_started_at: "S", count: 40 } };
   assert("CONTEXT WARNING fires at the threshold, loudly",
     blockLines(warned, done, T0).some((l) => /CONTEXT WARNING/.test(l)));
   assert("…and stays quiet before it",
     !blockLines({ ...base, turns: { session_started_at: "S", count: 39 } }, done, T0).some((l) => /CONTEXT WARNING/.test(l)));
+  assert("HONESTY — an UNANCHORED clock still warns (never suppressed) but says the count is across sessions, and an anchored one does not",
+    blockLines({ ...base, turns: { anchor: null, anchor_kind: "none", count: 40 } }, done, T0).some((l) => /CONTEXT WARNING/.test(l) && /across sessions/i.test(l))
+    && blockLines({ ...base, turns: { anchor: null, anchor_kind: "none", count: 40 } }, done, T0)[0].includes("CLOCK UNANCHORED")
+    && !blockLines(warned, done, T0)[0].includes("CLOCK UNANCHORED"));
   assert("HOOK-SAFE — no rules injects nothing", blockLines({ rules: [] }, done, T0).length === 0);
   assert("HOOK-SAFE — garbage state injects nothing", blockLines(null, done, T0).length === 0);
+  assert("HOOK-SAFE — a state with no turns block at all still renders turn 0 and never throws",
+    blockLines({ ...base, turns: undefined }, done, T0)[0].includes("turn 0/40"));
+
+  // ---- audit #40's numbers, computed here so the close report never has to guess
+  assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
+    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 5
+    && hitStats(hit.rules).ever_hit === 1 && hitStats(hit.rules).newest_hit === T0.toISOString());
 
   console.log(`\nteaching_contract selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
@@ -248,7 +513,11 @@ switch (cmd) {
     // the turn clock of) the captain's teaching contract.
     if (process.env.ARSENAL_ORGAN === "1") process.exit(0);
     try {
-      const s = bumpTurn(load(), forgeStartedAt());
+      const st = load();
+      // PRECEDENCE, resolved once per turn: Claude Code session id > a held session
+      // anchor > the forge session > unknown (held, never reset).
+      const anchor = resolveAnchor(storedAnchorOf(st.turns), { cc: hookSessionId(), forge: forgeStartedAt() });
+      const s = bumpTurn(st, anchor);
       save(s);
       const lines = blockLines(s, doneConcepts());
       if (lines.length) console.log(lines.join("\n"));
@@ -257,7 +526,15 @@ switch (cmd) {
   }
   case "list": {
     const s = load();
-    console.log(`teaching_contract · ${s.rules.length} rules · turn ${(s.turns || {}).count || 0}/${s.context_warn_at || DEFAULT_WARN_AT}`);
+    const t = s.turns || {};
+    const hs = hitStats(s.rules);
+    // HAVE/NEED, never a bare status word (audit #106) — and the drift recorder's
+    // last run is printed next to the hit counts, because a hit count with no date
+    // beside it reads as a live measurement when it is a two-day-old seeding burst.
+    console.log(`teaching_contract · rules ${s.rules.length} · turn ${t.count || 0}/${s.context_warn_at || DEFAULT_WARN_AT}`
+      + ` · clock anchor ${anchorKindOf(t)} ${storedAnchorOf(t) || "(none)"}`
+      + ` · drift hits recorded ${hs.ever_hit}/${hs.total} rules, last ${hs.newest_hit ? hs.newest_hit.slice(0, 10) : "never"}`
+      + ` (only \`teaching_contract.mjs hit <id>\` writes those — nothing in the machine calls it)`);
     for (const r of rank(s.rules)) console.log(`  ${r.id.padEnd(12)} hits=${String(r.hits).padStart(2)}  ${r.line}`);
     break;
   }
@@ -285,8 +562,24 @@ switch (cmd) {
     break;
   }
   case "reset-turns": {
-    save({ ...load(), turns: { session_started_at: forgeStartedAt(), count: 0 } });
-    console.log("teaching_contract: turn clock reset");
+    // THE SESSION BOUNDARY (audit #38). Wire this into .claude/settings.json's
+    // SessionStart hooks array and the clock is anchored to the Claude Code session
+    // — the boundary that actually governs context. It mints a SESSION-CLASS anchor
+    // (never a forge one), so the next `print` sees an unchanged anchor and lands on
+    // turn 1, not turn 2. When SessionStart's payload is readable the anchor IS the
+    // real session id; otherwise `local-<iso>` is unique per invocation, which is all
+    // the reset needs. SessionStart also fires on resume/compact — resetting right
+    // after a compaction is correct, the context was just freed.
+    const cc = hookSessionId();
+    const id = CC_PREFIX + (cc || `local-${new Date().toISOString()}`);
+    save({ ...load(), turns: { anchor: id, anchor_kind: "cc", count: 0, session_started_at: null, since: new Date().toISOString() } });
+    // SILENT IN HOOK MODE. A SessionStart hook's stdout is injected as context, and
+    // "turn clock reset" is bookkeeping, not orientation — the same law
+    // hooks/afferent-post.mjs:12-13 states for its own hook. A human running this by
+    // hand (TTY) still gets the confirmation, and the anchor is on disk either way.
+    if (process.stdin.isTTY) {
+      console.log(`teaching_contract: turn clock reset · anchor ${id}${cc ? "" : " (no hook session id on stdin — minted a local one)"}`);
+    }
     break;
   }
   case "selftest": selftest(); break;

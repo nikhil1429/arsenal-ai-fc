@@ -15,6 +15,12 @@ oura_tokens.json
 
 # --- logs ---
 *.log
+# 4 Aug 2026 — ROLLED logs are not covered by `*.log`: "thalamus.log.1" does not END
+# in ".log". The audit's #10/#98 fixes (hidden_run.vbs + run_logged.cmd) both roll at
+# 2 MB, so this pattern is now reachable. Same class as the .bak leak the E2E audit
+# caught: a rule that stops one character short of the file it was written for.
+*.log.[0-9]
+*.log.[0-9][0-9]
 
 # --- node ---
 node_modules/
@@ -22,12 +28,29 @@ node_modules/
 # --- the whole-repo bundle (derived artifact; regenerate with `npm run bundle`) ---
 ARSENAL_FC_FULL_REPO_BUNDLE.md
 
+# --- audit scratch (leftover working dir from the 2 Aug adversarial audit) ---
+.audit_tmp/
+
 # --- personal health / medication data — IGNORED BY DEFAULT, keep it that way ---
 # This repo is PUBLIC. The two files below contain Oura biometrics (sleep, HRV,
 # readiness) and medication-intake timing. These rules are ACTIVE: the files are
 # NOT tracked and must never be. Do not remove or comment out these lines.
 dressing-room/state/readiness.json
 dressing-room/state/intake_log.json
+# 2 Aug 2026 audit, finding #79 — the two rules above are PATH-ANCHORED, so a copy
+# of either file anywhere else in the tree (a vault, a backup dir, a worktree, a
+# hand-made debug copy) was NOT covered and would have been publishable. The repo is
+# PUBLIC and these hold Oura biometrics + medication-intake TIMING. Belt and braces:
+**/readiness.json
+**/intake_log.json
+# ISSUE #79 (2026-08-04) — the two rules above are PATH-ANCHORED, so a copy that
+# lands anywhere else in the tree (a vault, a scratch dir, an export, a rescued
+# backup that is not a .bak) is NOT covered and IS publishable. The same
+# belt-and-braces glob already guards oura_secrets/oura_tokens fourteen lines up;
+# these two deserve it more — they hold biometrics AND medication-intake timing.
+# Verify: `git check-ignore -v <any/path/readiness.json>` must name a line here.
+**/readiness.json
+**/intake_log.json
 
 # --- per-run OUTPUT state (data, not code — regenerated every run) ---
 dressing-room/state/timeaudit.json
@@ -179,6 +202,13 @@ dressing-room/state/season_read.json
 dressing-room/state/council_flag.json
 # predictive presence (M7) — stall telemetry + would-have-whispered log
 dressing-room/state/presence_log.jsonl
+# 4 Aug 2026 — audit #51 added a MONTHLY ROLL to presence.mjs, and the rolled file
+# (presence_log.2026-07.jsonl) did not match the anchored rule above. It carries the
+# same activity telemetry as the live file, and this repo is PUBLIC. Cover the roll:
+dressing-room/state/presence_log.*.jsonl
+# the produce-and-consume reconciliation (4 Aug 2026) — derived output, regenerated
+# on every run; it names every artifact and its readers.
+dressing-room/state/reconcile.json
 # presence self-calibration (M11) — thresholds fitted to HIS baselines
 dressing-room/state/presence_thresholds.json
 # the living dossier (M8) — intra-day belief state over his learning

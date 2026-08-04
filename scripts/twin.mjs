@@ -218,8 +218,41 @@ function computeMarkets(slip, cfg, todayStr = localDate(new Date())) {
     // a bad config survives a review.
     const bookId = typeof BOOKS[wanted] === "function" && Object.hasOwn(BOOKS, wanted) ? wanted : "laplace_all";
     const price = BOOKS[bookId](marketRows(slip, m.id), { date: todayStr });
-    return { id: m.id, desc: m.desc, p: round(price), n_resolved: s.n, alive, beats_base, book: bookId };
+    return { id: m.id, desc: m.desc, p: round(price), n_resolved: s.n, alive, beats_base, book: bookId, gate: marketGate(s.n, cfg) };
   });
+}
+
+// ---------------------------------------------------------------------------
+// THE UNGATE (organism audit #105 + #106, 4 Aug 2026)
+// ---------------------------------------------------------------------------
+// The COLD-START GAG is constitutional and stays exactly where it is: no market
+// speaks below voice_min_resolutions, because a morning prophecy delivered to a
+// shame-spiral brain on thin data is the initiation wall with a probability stapled
+// to it. But "warming_up" told him nothing — not how many resolutions the twin has,
+// not how many it needs, not which market is the laggard. Live today: three markets
+// at 5, 10 and 10 of 30. That is a measurement, and it should read as one.
+// NOTHING HERE LOWERS A GAG OR MANUFACTURES A VOICE.
+const marketGate = (n, cfg) => ({
+  have: n, need: cfg.voice_min_resolutions, unit: "scored resolutions",
+  line: `${n}/${cfg.voice_min_resolutions} scored resolutions`,
+  open: n >= cfg.voice_min_resolutions,
+});
+
+// The twin as a whole is only as mature as its THINNEST market — one market at 30
+// while another sits at 5 is not a mature twin, and reporting the max would be the
+// flattering read. Worst market, named.
+function buildGate(markets, cfg) {
+  const need = cfg.voice_min_resolutions;
+  const worst = markets.reduce((w, m) => (w === null || m.n_resolved < w.n_resolved ? m : w), null);
+  const have = worst ? worst.n_resolved : 0;
+  return {
+    have, need, unit: "scored resolutions",
+    line: `${have}/${need} scored resolutions`,
+    open: markets.length > 0 && markets.every((m) => m.n_resolved >= need),
+    slowest_market: worst ? worst.id : null,
+    withheld: markets.length && markets.every((m) => m.n_resolved >= need) ? [] : ["voice"],
+    per_market: markets.map((m) => ({ id: m.id, ...marketGate(m.n_resolved, cfg) })),
+  };
 }
 
 // M20 — the Brier table: every book replays every market with NO LOOKAHEAD
@@ -318,12 +351,29 @@ function sealToday(existingPreds, markets, todayStr, nowIso) {
     .map(m => ({ date: todayStr, market: m.id, p: m.p, n_resolved: m.n_resolved, sealed_at: nowIso }));
 }
 
-function buildTwin(markets, voice, now, shadow = null, proposals = []) {
+// cfg is TRAILING + OPTIONAL so every pre-existing 5-arg caller keeps working
+// (layering, never replace) and, absent one, falls back to DEFAULTS — which is the
+// literal 30 this function used to hardcode, so behaviour is unchanged by default.
+//
+// ORGANISM AUDIT #105 (4 Aug 2026), found while wiring the counter: the maturity
+// test here was the LITERAL `30`, twice, while the real gag arithmetic reads
+// cfg.voice_min_resolutions (computeVoice:289) and cfg.dead_market_min. The captain
+// editing twin_config.json would have moved the gag and NOT the status wearing its
+// name — twin.json would have said "ok" while every market was still gagged, or
+// "warming_up" over a twin that was speaking. One threshold, one source.
+function buildTwin(markets, voice, now, shadow = null, proposals = [], cfg = null) {
+  const c = {
+    voice_min_resolutions: (cfg && typeof cfg.voice_min_resolutions === "number") ? cfg.voice_min_resolutions : DEFAULTS.voice_min_resolutions,
+  };
   const anyData = markets.some(m => m.n_resolved > 0);
+  const gate = buildGate(markets, c);
   return {
     date: localDate(now),
-    status: anyData ? (markets.every(m => m.n_resolved >= 30) ? "ok" : "warming_up") : "awaiting_data",
-    low_confidence: !markets.every(m => m.n_resolved >= 30),
+    status: anyData ? (gate.open ? "ok" : "warming_up") : "awaiting_data",
+    low_confidence: !gate.open,
+    // #105/#106 — the have/need counter, beside the machine status (never replacing
+    // it: dugout.mjs:1256 and its selftest at :2033 read `twin.status === "ok"`).
+    gate,
     generated_at: now.toISOString(),
     markets,
     voice,
@@ -489,6 +539,48 @@ async function selftest() {
     assert("twin.json carries the shadow table + proposals (report-only, on the bus)", t.shadow_books.length === 4 && t.proposals.length === 1);
   }
 
+  // --- ORGANISM AUDIT #105 / #106 (4 Aug 2026): THE UNGATE -------------------
+  {
+    // the captain's live shape today: three markets at 5, 10 and 10 of 30
+    const liveish = [];
+    const add = (type, n) => { for (let i = 0; i < n; i++) liveish.push({ book: "twin", type, claim: type, date: dayN(i), resolved: true, hit: i % 2 === 0, p: 0.5 }); };
+    add("first_focus_by_0930", 5); add("floor_touched", 10); add("session_happened", 10);
+    const lm = computeMarkets(liveish, cfg, today);
+    const lt = buildTwin(lm, null, now, null, [], cfg);
+    assert("#105 the twin says '5/30 scored resolutions' with its denominator, not the bare word",
+      lt.gate.line === "5/30 scored resolutions" && lt.gate.have === 5 && lt.gate.need === 30 && lt.gate.open === false
+      && lt.status === "warming_up" && lt.low_confidence === true);
+    assert("#105 the counter reports the THINNEST market and names it (reporting the max would be the flattering read)",
+      lt.gate.slowest_market === "first_focus_by_0930"
+      && lt.gate.per_market.find(g => g.id === "floor_touched").line === "10/30 scored resolutions");
+    assert("#105 every market carries its own counter, so 'silent' is never mistaken for 'broken'",
+      lm.every(m => m.gate && m.gate.need === 30 && m.gate.open === false) && lt.gate.withheld.includes("voice"));
+    assert("#105 a cold twin reads 0/30, not an empty silence",
+      buildTwin(computeMarkets([], cfg, today), null, now, null, [], cfg).gate.line === "0/30 scored resolutions");
+
+    // THE GAG IS NOT LOWERED — the whole point. 29 resolutions still cannot speak.
+    const near = [];
+    for (const t of ["first_focus_by_0930", "floor_touched", "session_happened"]) for (let i = 0; i < 29; i++) near.push({ book: "twin", type: t, claim: t, date: dayN(i), resolved: true, hit: true, p: 0.2 });
+    const nearT = buildTwin(computeMarkets(near, cfg, today), computeVoice(near, computeMarkets(near, cfg, today), cfg, today), now, null, [], cfg);
+    assert("#105 NO GAG WAS LOWERED — at 29/30 the twin is still silent, it just says 29/30",
+      nearT.gate.line === "29/30 scored resolutions" && nearT.gate.open === false && nearT.voice === null && nearT.status === "warming_up");
+
+    // AND THE BUG FOUND WHILE WIRING IT: the maturity test was the literal 30 while
+    // the gag reads cfg.voice_min_resolutions. Move the config and they disagreed.
+    const cfg10 = { ...cfg, voice_min_resolutions: 10 };
+    const t10 = buildTwin(computeMarkets(liveish, cfg10, today), null, now, null, [], cfg10);
+    assert("#105 status + counter ride the CONFIG's threshold, not a literal (twin_config.json is now the single source)",
+      t10.gate.need === 10 && t10.gate.line === "5/30 scored resolutions".replace("30", "10") && t10.gate.open === false);
+    const allTen = [];
+    for (const t of ["first_focus_by_0930", "floor_touched", "session_happened"]) for (let i = 0; i < 10; i++) allTen.push({ book: "twin", type: t, claim: t, date: dayN(i), resolved: true, hit: i % 2 === 0, p: 0.5 });
+    const tOpen = buildTwin(computeMarkets(allTen, cfg10, today), null, now, null, [], cfg10);
+    assert("#105 ...so lowering voice_min_resolutions to 10 makes BOTH the status and the counter open together (they used to disagree)",
+      tOpen.gate.open === true && tOpen.status === "ok" && tOpen.low_confidence === false);
+    assert("#105 BACKWARD-COMPAT — a 5-arg buildTwin caller still works and still gets DEFAULTS' 30",
+      buildTwin(computeMarkets(allTen, cfg, today), null, now).gate.need === 30
+      && buildTwin(computeMarkets(allTen, cfg, today), null, now).status === "warming_up");
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -526,12 +618,16 @@ async function main() {
   const voice = computeVoice(slip, markets, cfg, today);
   const shadow = shadowTable(slip, cfg);
   const proposals = proposeBookSwaps(shadow, cfg, today);
-  writeAtomic(TWIN, buildTwin(markets, voice, now, shadow, proposals));
-  console.log(`twin: ${seals.length} bet(s) sealed (${markets.filter(m => m.alive).length}/${markets.length} markets alive) · voice ${voice ? "EARNED" : "silent"} · shadow books ${proposals.length ? proposals.length + " swap proposal(s) filed" : "quiet"} → ${TWIN}`);
+  const out = buildTwin(markets, voice, now, shadow, proposals, cfg);
+  writeAtomic(TWIN, out);
+  // #106 — the counter leads. "silent" alone reads like a broken organ; "silent
+  // (5/30 scored resolutions, slowest: first_focus_by_0930)" reads like a clock.
+  const voiceBit = voice ? "EARNED" : `silent (${out.gate.line}${out.gate.slowest_market ? `, slowest: ${out.gate.slowest_market}` : ""})`;
+  console.log(`twin: ${seals.length} bet(s) sealed (${markets.filter(m => m.alive).length}/${markets.length} markets alive) · voice ${voiceBit} · shadow books ${proposals.length ? proposals.length + " swap proposal(s) filed" : "quiet"} → ${TWIN}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 // E2E audit 25 Jul 2026: deadVerdict + the frozen deadVerdictLegacy are exported
 // so the pruning arithmetic — old and new — is inspectable from outside.
-export { computeMarkets, computeVoice, sealToday, buildTwin, marketStats, laplace, loadConfig, loadConfigFromObject, shadowTable, proposeBookSwaps, BOOKS, lastWins, deadVerdict, deadVerdictLegacy };
+export { computeMarkets, computeVoice, sealToday, buildTwin, buildGate, marketGate, marketStats, laplace, loadConfig, loadConfigFromObject, shadowTable, proposeBookSwaps, BOOKS, lastWins, deadVerdict, deadVerdictLegacy };

@@ -123,7 +123,11 @@ volume gate opens · **[LEAP]** = named honestly as vision, not built.
 fixture-type inside Set-Piece; the Edge Ledger is Scout's LEARN/RATIFY view over
 learning_state's `edge_map`; the Tape Room is a drill-type fed by Doubt Engine's queue;
 First Touch is a template law in the sheet + post-match; the No-Look Pass is Scorer's
-`trust_tiers.json` consumed by the sheet; the Autonomic Ladder is a config every organ
+`trust_tiers.json` — **written and read by `scorer.mjs` alone, NOT by the sheet**
+(corrected under issue #95, 2026-08-04: `assemblePrompt` has never read it — verified,
+`manager.mjs` contains zero references to `trust_tiers`, and
+`dressing-room/manager/system.md:528-543` already recorded this correction. The old line
+here claimed a consumer that does not exist); the Autonomic Ladder is a config every organ
 reads. **Not built, by constitution:** the Twelfth Player (Nidhi's buttons — a decision
 for two humans; a consent note ships in `setup/12TH_PLAYER_DECISION.md`, no code), the
 Mixed-Zone Ear on FORGE-Bolo (exiled forever; a passive scrimmage-only hook exists in
@@ -380,6 +384,6 @@ the season ROLLS. A prosthesis is not returned after the race.
 | 24 | **Examiner** | Evaluates scrimmage and hedges, adversarial probing | BUILT |
 | 25 | **Tone** | Prosody and emotion gating/processing | BUILT |
 | 26 | **Presence** | Tracks the active session and human engagement state | BUILT |
-| 27 | **Groundsman** | Keeps the field clear, manages ephemeral data cleanup | BUILT |
+| 27 | **Groundsman** | Two-node **bus-lease arbiter** (`bus_lease.json`: laptop always priority, the Kennel may take the lease only past TTL, nobody ticks the brain without holding it) + a **publish-allowlist git-push gate** — the Kennel's night-shift. It cleans up nothing. | **DORMANT — M9-pending** |
 | 28 | **Awayday** | Offline syncing and disconnected operation state | BUILT |
 | 29 | **Turnstile** | Access control and ingestion gating | BUILT |

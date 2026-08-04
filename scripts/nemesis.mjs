@@ -36,7 +36,11 @@
 // OUTPUT: dressing-room/state/weaknesses.json (single writer; gitignored — derived PII):
 //   canonical (THE_MANAGER §4/§5/§10): weaknesses:[{id,topic,recurrence,last_seen,status,evidence[]}]
 //   additive: date, generated_at, total_reps, status(envelope), low_confidence, headline,
-//   axis_pattern{axis,concepts[],strength,note}, per-entry {axis, score}.
+//   axis_pattern{axis,concepts[],strength,note}, per-entry {axis, axis_counts, score},
+//   gate{reps_have,reps_need,met,short_by} + status_line (audit #100/#106: every gate word
+//   ships its own have/need counter; the gate itself is unchanged).
+//   evidence[] entries are "MM-DD HH:MM axis X type" — one distinguishable receipt per
+//   miss (audit #31). `axis` is a STRICT mode: a tie names no axis and says so.
 //   id = STABLE topic-derived slug (never positional; grouping is per TRACK+topic, so the id
 //   carries a track suffix ONLY when the same topic exists on both tracks). recurrence = RAW int;
 //   score = weighted float. last_seen / evidence dates are the captain's LOCAL day, like `date`.
@@ -82,6 +86,11 @@ const isoDate = (ts) => String(ts).slice(0, 10);
 // LIVE path: label misses by the captain's LOCAL calendar day (same clock as `date`).
 const localIsoDate = (ts) => localDate(new Date(Date.parse(ts)));
 const localMmdd = (ts) => localIsoDate(ts).slice(5);
+// ORGANISM AUDIT #31 (2026-08-04): the clock-time half of a distinguishable receipt.
+const localHhmm = (ts) => {
+  const d = new Date(Date.parse(ts));
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 function loadConfig(path = CFG_PATH) {
   const d = DEFAULTS;
@@ -173,11 +182,36 @@ function analyzeTopic(reps, axisEnabled) {
   return { sorted, misses };
 }
 
-function modeAxis(misses) {
+// LEGACY (frozen verbatim, layering rule): alphabetical-tiebreak "mode". ORGANISM audit
+// #31 (2026-08-04) found this reports a WINNER where the data holds a TIE — the live
+// hallucinations entry split its two misses a/c one apiece and the headline read
+// "axis a keeps breaking", an accusation the receipts cannot support. Reference only;
+// nothing on the run path calls it.
+function modeAxisLegacy(misses) {
   const c = {};
   for (const m of misses) if (m.axis) c[m.axis] = (c[m.axis] || 0) + 1;
   const s = Object.entries(c).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   return s.length ? s[0][0] : null;
+}
+
+// per-axis tally for one topic's misses — the auditable half of the axis claim.
+function axisCounts(misses) {
+  const c = {};
+  for (const m of misses) if (m.axis) c[m.axis] = (c[m.axis] || 0) + 1;
+  return c;
+}
+
+// LIVE path: an axis is only "the axis that keeps breaking" if it STRICTLY out-counts
+// every other axis. A 1-1 split names no opponent, so it reports null and the headline
+// drops the axis clause rather than inventing a pattern. This never lowers a gate: it
+// only refuses a claim the misses do not carry. axis_counts ships alongside so the
+// split is visible instead of merely absent.
+function modeAxis(misses) {
+  const c = axisCounts(misses);
+  const s = Object.entries(c).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  if (!s.length) return null;
+  if (s.length > 1 && s[1][1] === s[0][1]) return null;   // TIE ⇒ no single axis keeps breaking
+  return s[0][0];
 }
 
 function isHealed(sorted, cfg) {
@@ -204,6 +238,22 @@ function scoreOf(misses, nowMs, halflifeDays) {
   return s;
 }
 
+// THE RECEIPT. ORGANISM audit #31 (2026-08-04).
+// LEGACY (frozen verbatim, layering rule): day + type only. Live weaknesses.json shipped
+// `["07-31 relapse","07-31 relapse"]` for TWO different reps ten minutes apart on TWO
+// different axes (a at 14:36, c at 14:46) — a receipt that cannot tell its own entries
+// apart cannot make "2× miss" auditable, and the per-miss axis survived NOWHERE else in
+// the output (modeAxis collapses it). Reference only; nothing on the run path calls it.
+function evidenceLineLegacy(m) { return `${localMmdd(m.ts)} ${m.type}`; }
+// LIVE path: day + local clock time + the miss's own axis + type. Every field is already
+// in the miss object (analyzeTopic pushes {ts,type,axis}); nothing new is measured, so
+// this can never fabricate. A skill-track / registry-absent miss has no axis and simply
+// omits the clause — it never prints "axis null".
+function evidenceLine(m) {
+  const when = `${localMmdd(m.ts)} ${localHhmm(m.ts)}`;
+  return m.axis ? `${when} axis ${m.axis} ${m.type}` : `${when} ${m.type}`;
+}
+
 function headlineLine(e) {
   const ax = e.axis ? ` — axis ${e.axis} keeps breaking` : "";
   return `${e.recurrence}× miss on ${e.topic}${ax}. today's #1 to scout — drill it before it drills you.`;
@@ -212,13 +262,34 @@ function axisPatternNote(axis, concepts) {
   return `${concepts.length} concepts (${concepts.join(", ")}) all break on axis ${axis} — the pattern is the opponent, not the topic. scout the KIND of thinking.`;
 }
 
+// THE HAVE/NEED COUNTER — ORGANISM audit #100 + #106 (2026-08-04).
+// The bare word "warming_up" told the captain nothing: not how far off the gate is, not
+// whether it is moving, not what the gate even is. It reads as "come back later" when the
+// truth is "9 of the 20 reps the AXIS-PATTERN ceiling needs — and the headline below is
+// already live". The gate is NOT lowered here (axis_pattern still needs
+// warming_up_min_reps); only its distance is now stated.
+// `status` keeps its exact enum vocabulary — manager.mjs:159 matches `status === "ok"`
+// verbatim, and the trap list is explicit that pattern-matched vocabularies must not be
+// re-spelled. The counter rides ALONGSIDE it as gate{} + status_line.
+function gateOf(N, cfg) {
+  const need = cfg.warming_up_min_reps;
+  const met = N >= need;
+  const head = N === 0 ? "awaiting_data" : met ? "ok" : "warming_up";
+  return {
+    gate: { reps_have: N, reps_need: need, met, short_by: met ? 0 : need - N },
+    status_line: met
+      ? `${head} — ${N}/${need} reps (axis-pattern gate met)`
+      : `${head} — ${N}/${need} reps toward the axis-pattern gate${N > 0 ? "; the headline below is live from rep 1" : ""}`,
+  };
+}
+
 function compute(reps, cfg, reg, now) {
   const N = reps.length;
   const date = localDate(now);
   const generated_at = new Date(now).toISOString();
   const nowMs = now instanceof Date ? now.getTime() : now;
   if (N === 0) {
-    return { date, status: "awaiting_data", low_confidence: true, headline: null, axis_pattern: null, weaknesses: [], total_reps: 0, generated_at };
+    return { date, status: "awaiting_data", ...gateOf(0, cfg), low_confidence: true, headline: null, axis_pattern: null, weaknesses: [], total_reps: 0, generated_at };
   }
 
   // group by TRACK + topic.
@@ -249,8 +320,9 @@ function compute(reps, cfg, reg, now) {
       recurrence: misses.length,                     // RAW int
       last_seen: localIsoDate(lastTs),               // LOCAL day (audit 5de388f9), not the UTC slice
       status: healed ? "closed" : "open",
-      evidence: misses.map((m) => `${localMmdd(m.ts)} ${m.type}`),
-      axis: modeAxis(misses),                         // null for skill / no-axis / registry-absent
+      evidence: misses.map(evidenceLine),             // audit #31: day + time + axis + type
+      axis: modeAxis(misses),                         // null for skill / no-axis / registry-absent / TIE
+      axis_counts: axisCounts(misses),                // audit #31: the split behind `axis` (may be {})
       score: round(scoreOf(misses, nowMs, cfg.recency_halflife_days)),
       _track: g.track,
       _last_ts: lastTs,                               // raw ts kept for time math (see prune below)
@@ -304,9 +376,9 @@ function compute(reps, cfg, reg, now) {
   // final weaknesses[]: open-first, then score desc — strip internal _track
   const weaknesses = entries
     .sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1) || b.score - a.score || a.id.localeCompare(b.id))
-    .map((e) => ({ id: e.id, topic: e.topic, recurrence: e.recurrence, last_seen: e.last_seen, status: e.status, evidence: e.evidence, axis: e.axis, score: e.score }));
+    .map((e) => ({ id: e.id, topic: e.topic, recurrence: e.recurrence, last_seen: e.last_seen, status: e.status, evidence: e.evidence, axis: e.axis, axis_counts: e.axis_counts, score: e.score }));
 
-  return { date, status, low_confidence, headline, axis_pattern, weaknesses, total_reps: N, generated_at };
+  return { date, status, ...gateOf(N, cfg), low_confidence, headline, axis_pattern, weaknesses, total_reps: N, generated_at };
 }
 
 // ---------------------------------------------------------------------------
@@ -388,8 +460,55 @@ function selftest() {
   // 13) single-focus: one headline object (or null)
   assert("single-focus: exactly one headline object", r9.headline && typeof r9.headline === "object" && "id" in r9.headline);
 
-  // 14) receipts non-empty
+  // 14) receipts non-empty — AND DISTINGUISHABLE (ORGANISM audit #31, 2026-08-04).
+  //     The old assertion only checked length > 0, which is why the live file could ship
+  //     ["07-31 relapse","07-31 relapse"] for two different reps on two different axes and
+  //     stay green. A receipt whose entries cannot be told apart is not a receipt.
   assert("receipts: every real entry has non-empty evidence[]", r9.weaknesses.length > 0 && r9.weaknesses.every((e) => Array.isArray(e.evidence) && e.evidence.length > 0));
+  assert("receipts: one receipt per miss (recurrence and evidence[] never disagree)",
+    r9.weaknesses.every((e) => e.evidence.length === e.recurrence));
+  {
+    // the exact live shape: same topic, same LOCAL day, two misses ten minutes apart on
+    // two different axes. Under the old template both rendered "07-31 relapse".
+    const sameDay = compute([
+      mk({ concept: "hallucinations", axis: "a", confidence: "knew", correct: true,  ts: "2026-07-30T21:58:00Z" }),
+      mk({ concept: "hallucinations", axis: "a", confidence: "knew", correct: false, ts: "2026-07-31T14:36:00Z" }),
+      mk({ concept: "hallucinations", axis: "c", confidence: "knew", correct: false, ts: "2026-07-31T14:46:00Z" }),
+    ], cfg, REG, now);
+    const ev = find(sameDay, "hallucinations").evidence;
+    assert("receipts: two same-day misses on DIFFERENT axes render as DIFFERENT strings",
+      ev.length === 2 && new Set(ev).size === 2 && ev.every((s) => /axis [a-i]/.test(s)) && ev.some((s) => /axis a /.test(s)) && ev.some((s) => /axis c /.test(s)));
+    assert("receipts carry the miss's own clock time, not just the day",
+      ev.every((s) => /^\d{2}-\d{2} \d{2}:\d{2} /.test(s)) && new Set(ev.map((s) => s.slice(0, 11))).size === 2);
+    // ...and the axis claim above them stops being a coin-flip: 1-1 is a TIE, not a mode.
+    assert("a 1-1 axis split reports NO single axis (was: alphabetical winner 'a keeps breaking')",
+      find(sameDay, "hallucinations").axis === null && !/axis .* keeps breaking/.test(sameDay.headline.one_line));
+    assert("...and the split itself is shown, not merely withheld",
+      JSON.stringify(find(sameDay, "hallucinations").axis_counts) === JSON.stringify({ a: 1, c: 1 }));
+    assert("the frozen legacy mode still picks the alphabetical winner (the bug, preserved)",
+      modeAxisLegacy([{ axis: "a" }, { axis: "c" }]) === "a");
+    // a genuine majority still names its opponent
+    const major = compute([
+      mk({ concept: "majority", axis: "a", confidence: "knew", correct: false, ts: "2026-07-31T10:00:00Z" }),
+      mk({ concept: "majority", axis: "a", confidence: "knew", correct: false, ts: "2026-07-31T11:00:00Z" }),
+      mk({ concept: "majority", axis: "c", confidence: "knew", correct: false, ts: "2026-07-31T12:00:00Z" }),
+    ], cfg, REG, now);
+    assert("a STRICT majority axis is still named (the fix refuses ties, not evidence)",
+      find(major, "majority").axis === "a");
+  }
+
+  // 14b) THE HAVE/NEED COUNTER (ORGANISM audit #100/#106) — the gate's distance is stated,
+  //      the gate itself is unchanged, and the headline is live below it from rep 1.
+  {
+    const one = compute([mk({ concept: "firstrep", confidence: "knew", correct: false })], cfg, REG, now);
+    assert("audit #100: nemesis speaks from rep 1 — a headline exists at n=1", one.headline !== null && one.total_reps === 1);
+    assert("audit #106: the status line is a have/need counter, never a bare gate word",
+      /\b1\/20 reps\b/.test(one.status_line) && one.gate.reps_have === 1 && one.gate.reps_need === cfg.warming_up_min_reps && one.gate.short_by === 19);
+    assert("the gate is NOT lowered — axis_pattern still withheld below min_reps", one.axis_pattern === null && one.status === "warming_up");
+    assert("gate.met flips only at the real threshold (r9 has N=20)", r9.gate.met === true && r9.gate.short_by === 0 && /20\/20 reps/.test(r9.status_line));
+    assert("the empty envelope also counts, never a bare 'awaiting_data'",
+      e0.gate.reps_have === 0 && /0\/20 reps/.test(e0.status_line));
+  }
 
   // 15) schema: canonical keys present + typed
   const s = find(r9, "tokenization");
@@ -440,9 +559,12 @@ function selftest() {
     mk({ concept: "earlyam",   confidence: "knew", correct: false, ts: earlyAm }),
   ], cfg, REG, now);
   const expLate = localDate(new Date(Date.parse(lateNight))), expEarly = localDate(new Date(Date.parse(earlyAm)));
+  // (evidence[] now carries day + LOCAL clock time + axis + type — audit #31 — so the
+  //  expected string is rebuilt from the same local clock rather than pinned to a literal.)
+  const expLateHm = localHhmm(lateNight);
   assert("local-date: last_seen + evidence use the rep's LOCAL day, not the UTC slice of ts",
     find(r19, "latenight").last_seen === expLate && find(r19, "earlyam").last_seen === expEarly
-    && find(r19, "latenight").evidence[0] === `${expLate.slice(5)} knew-wrong`);
+    && find(r19, "latenight").evidence[0] === `${expLate.slice(5)} ${expLateHm} axis a knew-wrong`);
 
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -461,12 +583,17 @@ function main() {
   const out = compute(reps, cfg, reg, new Date());
   writeAtomic(WEAK, out);
   const hl = out.headline ? out.headline.topic : "-";
-  const ap = out.axis_pattern ? `axis ${out.axis_pattern.axis}×${out.axis_pattern.strength}` : "-";
-  console.log(`nemesis: ${out.status} — weaknesses ${out.weaknesses.length} · headline ${hl} · axis_pattern ${ap}  →  ${WEAK}`);
+  const ap = out.axis_pattern
+    ? `axis ${out.axis_pattern.axis}×${out.axis_pattern.strength}`
+    : `- (needs ${out.gate.reps_have}/${out.gate.reps_need} reps)`;   // audit #106: have/need, never a bare gate word
+  console.log(`nemesis: ${out.status_line} — weaknesses ${out.weaknesses.length} · headline ${hl} · axis_pattern ${ap}  →  ${WEAK}`);
   process.exit(0);
 }
 
 // Windows-safe entry guard (like fsrs.mjs / calibration.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, analyzeTopic, isHealed, scoreOf, loadReps, loadConfig, loadRegistry, topicOf, slugify };
+export { compute, analyzeTopic, isHealed, scoreOf, loadReps, loadConfig, loadRegistry, topicOf, slugify,
+  // audit #31/#100/#106 (2026-08-04): receipt builder + axis mode + the have/need counter,
+  // with both retired engines kept beside their replacements (layering law).
+  evidenceLine, evidenceLineLegacy, modeAxis, modeAxisLegacy, axisCounts, gateOf };

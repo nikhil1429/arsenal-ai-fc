@@ -50,12 +50,22 @@
 //        never written into the repo.
 // MODES: node scripts/dugout.mjs        → serves http://localhost:4114 (#14)
 //        node scripts/dugout.mjs selftest
+//        node scripts/dugout.mjs index          → recall index, one pass
+//        node scripts/dugout.mjs mint-probe     → ephemeral-token probe
+//        node scripts/dugout.mjs reminders      → HEADLESS his-voice reminders
+//        node scripts/dugout.mjs shadow-detect  → HEADLESS shadow sample
+//        (the last two exist so the two lanes that used to live ONLY inside
+//         main()'s setInterval — and therefore only ran on days he happened to
+//         open the bridge window — can be driven by a scheduled task. See the
+//         HEADLESS LANES note above main().)
 // ============================================================================
 
 // unlinkSync/statSync/renameSync joined for the E2E audit (25 Jul 2026) repairs:
 // the rep hand-off temp file is now deleted, the recall index is lock-guarded
 // across processes, and the reminders file is rewritten tmp+rename (never torn).
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync, unlinkSync, statSync, renameSync } from "node:fs";
+// openSync/readSync/closeSync joined for the ORGANISM audit (#51): the presence
+// log is unbounded and is read from its TAIL now, not whole.
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync, unlinkSync, statSync, renameSync, openSync, readSync, closeSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -303,6 +313,105 @@ const localDayOf = (ts) => {
 };
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+
+// ---------------------------------------------------------------------------
+// #51 — THE UNBOUNDED LOG, READ FROM ITS TAIL.
+// presence_log.jsonl grows forever (five whole-file readers repo-wide; the
+// boardroom briefing below is one of them). Measured 2026-08-04: 284,643 bytes
+// after 19 calendar days, i.e. ~6.7 MB/yr, and the briefing only ever wanted
+// TODAY's rows out of it.
+//
+// THE TAIL BUDGET IS DERIVED, NOT GUESSED (captain's standing order). Measured
+// over the live presence_log.jsonl, bytes per calendar day:
+//     worst  = 68,234 B / 396 rows (2026-07-18 — and that day still carries the
+//              double-instance overlap presence.mjs:241-252 later fixed, so it
+//              is a genuine upper bound, not a typical day)
+//     median ≈ 13,500 B   ·   today (2026-08-04, partial) = 1,472 B
+//   262,144 B (256 KiB) = 3.84x the worst day ever recorded. Two full days of
+//   the worst day still fit. Override with DUGOUT_PRESENCE_TAIL_BYTES.
+// It is a SAFETY NET, not a budget: `readPresenceDay` PROVES whether the window
+// actually reached back past midnight and says so out loud when it did not —
+// an unmeasured silence must never render as a measured zero.
+const PRESENCE_TAIL_BYTES = Math.max(65536, Number(process.env.DUGOUT_PRESENCE_TAIL_BYTES) || 262144);
+
+// Read the last `maxBytes` of a JSONL file. `whole` = the window reached byte 0
+// (nothing was cut). When it did not, the first physical line is dropped: a byte
+// offset lands mid-row, and half a JSON object is not data.
+function readLinesTail(p, maxBytes = PRESENCE_TAIL_BYTES) {
+  const out = { rows: [], whole: true, file_bytes: 0, read_bytes: 0, exists: false };
+  let fd = null;
+  try {
+    if (!existsSync(p)) return out;
+    out.exists = true;
+    const size = statSync(p).size;
+    out.file_bytes = size;
+    const start = Math.max(0, size - maxBytes);
+    out.whole = start === 0;
+    out.read_bytes = size - start;
+    const buf = Buffer.alloc(out.read_bytes);
+    fd = openSync(p, "r");
+    readSync(fd, buf, 0, out.read_bytes, start);
+    const lines = buf.toString("utf8").split("\n");
+    if (!out.whole) lines.shift();                       // the sliced fragment
+    for (const l of lines) { if (!l.trim()) continue; try { out.rows.push(JSON.parse(l)); } catch { } }
+  } catch { /* a torn read degrades to "no rows", never to a wrong count */ }
+  finally { if (fd !== null) { try { closeSync(fd); } catch { } } }
+  return out;
+}
+
+// Today's presence rows, tail-scoped and tolerant of a rolled file.
+// ROLL TOLERANCE: #51's remedy is a monthly roll owned by presence.mjs. On the
+// day of a roll the live file restarts near-empty and the morning's rows sit in
+// the archive, so when the live tail cannot PROVE it saw midnight we also sweep
+// the newest `presence_log*.jsonl` sibling. Absent a roll this costs one
+// readdir and nothing else.
+// HONESTY (#106): `have_need` is a counter, never a status word — it reports
+// what was scanned against what exists, and `covers_midnight` says plainly
+// whether the count for today can be trusted as complete.
+function readPresenceDay(day, deps = {}) {
+  const file = deps.file || join(STATE_DIR, "presence_log.jsonl");
+  const dir = dirname(file);
+  const base = file.split(/[\\/]/).pop().replace(/\.jsonl$/, "");
+  const readTail = deps.readTail || readLinesTail;
+  const live = readTail(file);
+  const rows = live.rows.filter(r => r && r.day === day);
+  let siblings = [];
+  try { siblings = readdirSync(dir).filter(f => f !== base + ".jsonl" && f.startsWith(base) && f.endsWith(".jsonl")).sort(); } catch { }
+  // PROOF that today's first row is inside what we scanned, in order of strength.
+  // Note (a) is what makes this honest on a ROLL DAY: "I read the whole live
+  // file" does NOT prove I saw midnight if the file was rolled this morning —
+  // the morning's rows would be in the archive, and a naive `whole` check would
+  // report a truncated count as a total. That is the exact class of lie this
+  // audit exists to kill, so `whole` alone only counts when no archive exists.
+  //   (a) a row OLDER than `day` sits inside the window → the boundary was read
+  //   (b) we read the whole live file and there is no rolled sibling at all
+  //       → the live file is all the data that exists
+  let covers = live.rows.some(r => r && r.day && r.day < day) || (live.whole && siblings.length === 0);
+  const scanned = [file];
+  if (!covers && siblings.length) {
+    const prev = join(dir, siblings[siblings.length - 1]);
+    const arch = readTail(prev);
+    const seen = new Set(rows.map(r => JSON.stringify(r)));
+    for (const r of arch.rows) if (r && r.day === day && !seen.has(JSON.stringify(r))) rows.push(r);
+    scanned.push(prev);
+    covers = arch.rows.some(r => r && r.day && r.day < day) || (arch.whole && live.whole);
+  }
+  rows.sort((a, b) => String(a.ts || "").localeCompare(String(b.ts || "")));
+  return {
+    rows,
+    have_need: {
+      rows_for_today: rows.length,
+      scanned_bytes: live.read_bytes,
+      file_bytes: live.file_bytes,
+      tail_budget_bytes: PRESENCE_TAIL_BYTES,
+      files_scanned: scanned.length,
+      covers_midnight: covers,
+      note: live.exists
+        ? (covers ? null : `the ${PRESENCE_TAIL_BYTES}-byte tail did not reach today's first row — this count is a FLOOR, not a total. Raise DUGOUT_PRESENCE_TAIL_BYTES.`)
+        : "presence_log.jsonl does not exist — the sensor has never written. Nothing was measured; this is not a measured zero.",
+    },
+  };
+}
 
 // keys: GEMINI_API_KEY env → ~/.gemini/.env (supports GEMINI_API_KEY and
 // GEMINI_API_KEY_2/_3… — the captain's other free projects, rotated on quota)
@@ -652,6 +761,19 @@ STORYTELLING LAW: no definitions, no lists read aloud. This whole briefing is ON
 // ZERO bytes reached the session — the coach literally could not know what he
 // had completed. This digest (~1KB, deterministic) rides EVERY session; the
 // get_capsule tool opens any locked book in full, live, mid-sentence.
+//
+// #92 — THE LOCKED-BOOK IDS ARE READ, NEVER TYPED. They used to be frozen into
+// the get_capsule tool description as prose ("tokenization/embeddings/inference/
+// context"), which is one of three places the count 4 was hardcoded (the others
+// are mirror_config.json's `ids` and mirror.mjs:40 DEFAULTS, both another
+// owner's). The consequence: lock a fifth capsule and the Gaffer's own tool
+// description still advertises four, while the mirror reports "ok" — a number
+// that goes stale silently is exactly the class of lie this audit exists for.
+// Returns [] (not a guess) when capsules/ is absent: it is gitignored, so an
+// away-day clone legitimately has none.
+function lockedCapsuleIds(dir = join(STATE_DIR, "capsules")) {
+  try { return readdirSync(dir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort(); } catch { return []; }
+}
 function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
   try {
     const files = readdirSync(dir).filter(f => f.endsWith(".json"));
@@ -811,7 +933,9 @@ const TOOL_DECLS = [
   { name: "log_reps", description: "Log voice reps through the real capture contract. Only after gut-word was committed BEFORE the answer.", parameters: { type: "OBJECT", properties: { reps: { type: "ARRAY", items: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, question: { type: "STRING" }, confidence: { type: "STRING" }, correct: { type: "BOOLEAN" } }, required: ["concept", "question", "confidence", "correct"] } } }, required: ["reps"] } },
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
-  { name: "get_capsule", description: "OPEN A LOCKED BOOK — the full capsule for a concept he has MASTERED (tokenization/embeddings/inference/context): his bolo, the mechanism, the 9 fault-lines, his real doubts with answers, interview lines. Call whenever the talk touches a locked concept — build on HIS words, never reteach from zero.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
+  // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
+  // typed. Prose that names a number must name the real one or name none.
+  { name: "get_capsule", description: `OPEN A LOCKED BOOK — the full capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}): his bolo, the mechanism, the 9 fault-lines, his real doubts with answers, interview lines. Call whenever the talk touches a locked concept — build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
@@ -1080,7 +1204,10 @@ function execTool(name, args, deps = {}) {
       const cal = readJson(join(STATE_DIR, "calibration.json")) || {};
       const twin = readJson(join(STATE_DIR, "twin.json")) || {};
       const led = readJson(join(STATE_DIR, "proactivity_ledger.json")) || {};
-      const presence = readLines(join(STATE_DIR, "presence_log.jsonl")).filter(r => r.day === day);
+      // #51 — was `readLines(presence_log.jsonl).filter(...)`: the WHOLE 284 KB
+      // (and growing) file parsed to answer a question about one day.
+      const presenceScan = (deps.readPresenceDay || readPresenceDay)(day);
+      const presence = presenceScan.rows;
       const hippoDir = join(__dirname, "..", "dressing-room", "hippocampus");
       const episodes = readLines(join(hippoDir, "episodes.jsonl"));
       const facts = (readJson(join(hippoDir, "identity_facts.json")) || { facts: [] }).facts;
@@ -1092,7 +1219,17 @@ function execTool(name, args, deps = {}) {
         body: { verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "unknown", tone: tone.arousal, tone_stale: !!tone.stale },
         brain: { opus_tokens_today: brainRows.filter(r => r.engine === "claude").reduce((a, r) => a + (r.total_tokens || 0), 0), jobs_today: brainRows.length, deep_answer_live: !!(ws.deep && ws.deep.text && !ws.deep.declined) },
         gate: { moments_today: gate.length, reflex: gate.filter(r => r.tier === 0).length, enriched: gate.filter(r => r.tier === 1).length, opus_wakes: gate.filter(r => r.tier === 2).length, suppressed: gate.filter(r => ["refractory", "capped"].includes(r.outcome)).length },
-        senses: { presence_passes_today: presence.length, stall_edges_today: presence.filter(r => r.edge).length, whisper_loaded: !!(ws.whisper && new Date(ws.whisper.expires) > now) },
+        // #54 — `presence.length` was a PERFECT 2x overcount, every populated
+        // day, in the one organ whose whole job is honest self-report. Every
+        // sense pass appends TWO rows: the thrash row (presence.mjs:294, no
+        // `kind`) and the focus-ledger row (presence.mjs:308, kind:"focus").
+        // Measured over the live log — 07-26 48=24+24 · 07-30 140=70+70 ·
+        // 08-01 120=60+60 · 08-02 12=6+6 — so the Gaffer briefed "12 sense
+        // passes" for 6 real ones. A pass IS a thrash row: the same predicate
+        // presence.mjs already fixed in its own `status` (sensePassRows, :69)
+        // and explicitly left here for this audit. `stall_edges_today` is
+        // untouched by law — focus rows carry no `edge`, so it was never wrong.
+        senses: { presence_passes_today: presence.filter(r => !r.kind).length, stall_edges_today: presence.filter(r => r.edge).length, whisper_loaded: !!(ws.whisper && new Date(ws.whisper.expires) > now), scan: presenceScan.have_need },
         // THE FOCUS LEDGER (17 Jul) — where his attention actually lived today,
         // live from the sentinel's rows; breaks are DATA he asked to see, never a verdict
         focus_today: (() => { const f = presence.filter(r => r.kind === "focus"); const br = f.filter(r => r.break_live); return { reads: f.length, breaks_seen: br.length, last_read: f.slice(-1)[0] ? { focus_min: f.slice(-1)[0].focus_min, off_min: f.slice(-1)[0].off_min, break_live: f.slice(-1)[0].break_live, pull: f.slice(-1)[0].pull } : null }; })(),
@@ -1100,8 +1237,38 @@ function execTool(name, args, deps = {}) {
         tanks: { gauge: tanks.map(t => `${t.id} ${t.pct}% ${t.state}`), naive_shadow_note: "the fuel gauge shows what an all-Opus day would have cost" },
         nightshift: shift ? shift.jobs : null,
         nightshift_ready: { probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, scout_pack: ns.scout_pack },
-        twin: { status: twin.status || "unknown", note: twin.status !== "ok" ? "the book speaks only after 30 scored resolutions — it resolves as days close" : null },
-        calibration: { gap: cal.calibration_gap ?? null, note: cal.calibration_gap == null ? "silent below 20 reps — an early false alarm is worse than a missed one" : null },
+        // #106 — a status WORD ("warming_up") tells him nothing about how far
+        // away the thing is. Both lines now carry a have/need counter, and both
+        // NEEDs are read from the owner's own config file rather than retyped
+        // here: twin_config.json → voice_min_resolutions (twin.mjs:62 default
+        // 30, preserved) and calibration_config.json → min_reps (calibration.mjs
+        // :58 default 20, preserved). `have` is the gate's own arithmetic:
+        // twin.mjs:325 opens on markets.EVERY n_resolved ≥ N, so the binding
+        // number is the WEAKEST market, not the total.
+        twin: (() => {
+          const need = Number((readJson(join(STATE_DIR, "twin_config.json")) || {}).voice_min_resolutions) || 30;
+          const ms = Array.isArray(twin.markets) ? twin.markets : [];
+          const have = ms.length ? Math.min(...ms.map(m => Number(m.n_resolved) || 0)) : null;
+          return {
+            status: twin.status || "unknown",
+            resolutions_have: have, resolutions_need: need,
+            markets: ms.length,
+            note: twin.status === "ok" ? null
+              : have === null ? "no markets on file — the book has never been built, so there is nothing to count toward the gate"
+                : `the book speaks once EVERY market has ${need} scored resolutions; the weakest is at ${have} — ${Math.max(0, need - have)} to go. They resolve as days close.`,
+          };
+        })(),
+        calibration: (() => {
+          const need = Number((readJson(join(STATE_DIR, "calibration_config.json")) || {}).min_reps) || 20;
+          const have = Number.isFinite(Number(cal.total_reps)) ? Number(cal.total_reps) : null;
+          return {
+            gap: cal.calibration_gap ?? null,
+            reps_have: have, reps_need: need,
+            note: have === null ? "calibration.json has no rep count — nothing was measured, so read no zero into this"
+              : have >= need ? null
+                : `${have}/${need} reps — the danger zone stays suppressed below ${need}; an early false alarm is worse than a missed one. ${need - have} to go.`,
+          };
+        })(),
         proactivity: { earned: Object.entries((led.types || {})).filter(([, e]) => e.voice).map(([t]) => t), awaiting_his_word: Object.entries((led.types || {})).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t) },
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         // E2E audit 25 Jul 2026: his LOCAL day, not the UTC slice (see localDayOf)
@@ -1265,6 +1432,16 @@ function loadSessionHandle({ model, mode = "gaffer", keyCount = 0, now = new Dat
   return { handle: s.handle, key_index: s.key_index };
 }
 
+// M2 — THE REHYDRATOR's composition, named so it can be ASSERTED. It was an
+// inline `[a, b].filter(Boolean).join()` inside buildConfig, and the selftest
+// line that claimed to check it (#76) was `x || true` — unfalsifiable. The
+// claim is simple and load-bearing: durable memory (identity + who-he-is + last
+// episodes) rides IN FRONT of today's transcript tail, so a resumed session
+// knows WHO he is before it reads what was said. Null-safe on either part.
+function composeRehydrate(cartridge, tail) {
+  return [cartridge, tail].filter(Boolean).join("\n\n") || null;
+}
+
 // rehydrate: today's transcript tail — seeds a fresh WS when no resumption
 // handle exists (page reload, morning), so the thread never truly breaks
 function buildRehydrate(now = new Date()) {
@@ -1332,7 +1509,7 @@ function buildConfig(keys, mode = "gaffer") {
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
-    rehydrate: mode === "scrimmage" ? null : [buildRehydrateCartridge(), buildRehydrate()].filter(Boolean).join("\n\n") || null,
+    rehydrate: mode === "scrimmage" ? null : composeRehydrate(buildRehydrateCartridge(), buildRehydrate()),
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
@@ -1686,7 +1863,35 @@ async function selftest() {
     assert("bridge /deep carries a FRESH recall hit", rds.recall && rds.recall.id === "r1");
     const rdsStale = readDeepState({ workspace: null, wake: null, runtime: { recallHint: { id: "r1", hint: "x", ts: Date.now() - 120000 } } });
     assert("a stale recall hit expires (never late theatre)", rdsStale.recall === null);
-    assert("REHYDRATOR: memory cartridge rides in front of the transcript tail", buildConfig(["k1"]).rehydrate === null || true);   // composition is null-safe; content asserted in hippocampus selftest
+    // #76 — THIS ASSERTION COULD NOT FAIL. It read
+    //   assert("REHYDRATOR: …", buildConfig(["k1"]).rehydrate === null || true)
+    // and `x || true` is unconditionally true — the suite has been counting a
+    // no-op as a pass. The claim in the name is a real, checkable one:
+    // buildConfig composes `rehydrate` as [cartridge, transcript-tail].join,
+    // so the memory cartridge must come FIRST. Checked against whichever parts
+    // actually exist on this machine (capsules/hippocampus are gitignored, so an
+    // away-day runner legitimately has neither) — and it fails on any of the
+    // three real ways this can break: wrong order, a dropped part, or a
+    // non-null rehydrate composed from nothing.
+    {
+      // the ORDER, tested on the composer itself so it holds on ANY machine —
+      // capsules/ and the hippocampus are gitignored, so an away-day runner has
+      // neither part and a live-state-only check would silently test nothing.
+      assert("REHYDRATOR: memory cartridge rides IN FRONT of the transcript tail",
+        composeRehydrate("WHO-HE-IS", "TRANSCRIPT") === "WHO-HE-IS\n\nTRANSCRIPT");
+      assert("REHYDRATOR: null-safe on either part, and empty composes to null (never an empty seed)",
+        composeRehydrate("WHO-HE-IS", null) === "WHO-HE-IS"
+        && composeRehydrate(null, "TRANSCRIPT") === "TRANSCRIPT"
+        && composeRehydrate(null, null) === null
+        && composeRehydrate("", "") === null);
+      // and the live config really is built by that composer, on this machine
+      const cart = buildRehydrateCartridge();
+      const tail = buildRehydrate();
+      assert(`REHYDRATOR: the live config carries exactly that composition (cartridge ${cart ? "present" : "absent"} · tail ${tail ? "present" : "absent"})`,
+        buildConfig(["k1"]).rehydrate === composeRehydrate(cart, tail));
+      // the other half of the same law: a mock must never see his memory
+      assert("REHYDRATOR: a scrimmage still starts COLD (no cartridge, no tail)", buildConfig(["k1"], "scrimmage").rehydrate === null);
+    }
   }
 
   // M3 — THE TANKS wiring (fuel gauge · the Watcher's second socket · the hint lane)
@@ -1755,7 +1960,8 @@ async function selftest() {
       // suite still reported the locked book green. Parenthesised into a real
       // conjunction: the digest must actually carry the header, a capsule title,
       // his verbatim bolo, and the never-teach-from-zero law.
-      assert("THE LOCKED BOOK rides the constitution (4 capsules, his bolo, decay law)", digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never teach"));
+      // #92 — the label said "4 capsules" as a literal; it now counts them.
+      assert(`THE LOCKED BOOK rides the constitution (${lockedCapsuleIds().length} capsule(s) counted off disk, his bolo, decay law)`, digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never teach"));
       assert("the digest is in the LIVE system instruction", buildSystemInstruction().includes("THE LOCKED BOOK"));
       const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
       assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
@@ -1883,6 +2089,192 @@ async function selftest() {
   // dead (t0=0) the moment the wire is not up.
   assert("the minutes meter never lump-bills a parked span (fresh t0 per connect, meter off while down)",
     !PAGE.includes("t0=t0||Date.now()") && PAGE.includes("failedSetups=0;t0=Date.now();goAwayAt=0") && PAGE.includes("!setupDone){t0=0;return}"));
+
+  // ==========================================================================
+  // ORGANISM AUDIT (Aug 2026) — the dugout/bridge repairs
+  //
+  // Some checks below are source-level regression nets: they prove a fix is
+  // WIRED, not merely defined, in code paths (main()'s dispatch, the server's
+  // POST router) that cannot be entered from a selftest without binding :4114
+  // and spawning the thalamus/cortex daemons. Every one of their needles is
+  // deliberately SPLIT across a `+` so the assertion line cannot match itself —
+  // an unsplit needle is a green light that can never turn red, which is the
+  // exact defect (#76) this same block repairs elsewhere. All of these were
+  // mutation-tested: each one was made to fail before it was left passing.
+  // ==========================================================================
+  const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+
+  // #57 — THE CSRF GUARD. The POST router shells out to five owner scripts; it
+  // had no Origin, Referer or content-type check at all, and the LAN gate is
+  // unconditionally true in default mode. These assertions are the regression
+  // net for a security fix, so they test REFUSAL as hard as they test passage.
+  {
+    const P = (headers) => postGuard({ headers });
+    const json = "application/json";
+    assert("#57 the served page still gets through (same-origin, JSON)",
+      P({ host: "localhost:4114", origin: "http://localhost:4114", "content-type": json }).ok === true);
+    assert("#57 a charset parameter does not break the real page",
+      P({ host: "localhost:4114", origin: "http://localhost:4114", "content-type": "application/json; charset=UTF-8" }).ok === true);
+    assert("#57 curl / a local script (no Origin at all) still works",
+      P({ host: "localhost:4114", "content-type": json }).ok === true);
+    assert("#57 the LAN door survives — his phone is same-origin on the LAN ip",
+      P({ host: "192.168.1.7:4114", origin: "http://192.168.1.7:4114", "content-type": json }).ok === true);
+    assert("#57 A HOSTILE PAGE IS REFUSED (this is the whole point)",
+      P({ host: "localhost:4114", origin: "https://evil.example", "content-type": json }).ok === false);
+    assert("#57 a hostile Referer is refused too (Origin can be omitted)",
+      P({ host: "localhost:4114", referer: "https://evil.example/x.html", "content-type": json }).ok === false);
+    assert("#57 the preflight-free form POST is refused on content-type",
+      P({ host: "localhost:4114", "content-type": "text/plain" }).ok === false
+      && P({ host: "localhost:4114", "content-type": "application/x-www-form-urlencoded" }).ok === false
+      && P({ host: "localhost:4114" }).ok === false);
+    assert("#57 a refusal carries an HTTP code and a reason (never a silent drop)",
+      P({ host: "localhost:4114", origin: "https://evil.example", "content-type": json }).code === 403
+      && P({ host: "localhost:4114", "content-type": "text/plain" }).code === 415);
+    // NEEDLES ARE SPLIT ON PURPOSE — DO NOT "TIDY" THEM BACK TOGETHER.
+    // A source-grep assertion whose needle appears verbatim in its own line
+    // matches ITSELF and can never fail — the same defect as #76's `x || true`.
+    // Mutation-tested: deleting the call from the router reddens this.
+    assert("#57 the guard is WIRED into the live POST router, not just defined",
+      SRC.includes("const g = post" + "Guard(req);"));
+    assert("#57 every POST the page makes sets Content-Type: application/json (the guard costs the real page nothing)",
+      (PAGE.match(/method:'POST'/g) || []).length === (PAGE.match(/method:'POST',headers:\{'Content-Type':'application\/json'\}/g) || []).length);
+  }
+
+  // #53 — HEADLESS REMINDERS. `fireReminders` had exactly one caller (a 30s
+  // setInterval inside the bridge), so a reminder set at 10:00 for 18:00 was
+  // silently never delivered if he closed the window — against an UNCONDITIONAL
+  // promise in the constitution. Assert the entry point exists AND that the
+  // promise and the delivery path now agree.
+  {
+    const src = SRC;
+    // split needles — see the note in the #57 block above
+    assert("#53 a headless reminder verb exists in main() (not only the setInterval)",
+      src.includes(`["reminders", "fire-remind` + `ers"].includes((process.argv[2] || "").toLowerCase())`));
+    assert("#53 the headless verb actually fires them (calls fireReminders, not just logs)",
+      /reminders", "fire-reminders"\][\s\S]{0,900}await fireReminders\(\)/.test(src));
+    assert("#53 the header documents the headless lane (a scheduled task needs to find it)",
+      src.includes("node scripts/dugout.mjs remind" + "ers"));
+    // the promise at :775 is unconditional — so the delivery path must be too
+    assert("#53 the constitution still promises delivery, and now something outside the window can keep it",
+      buildSystemInstruction().includes("At fire time his own words come back through you"));
+    // and the out-of-process runner really does lose nothing: say() is direct
+    assert("#53 fireReminders speaks through speak.mjs directly (no live session needed)",
+      src.includes(`const { say } = await imp` + `ort("./speak.mjs")`));
+  }
+
+  // #52 (caller side) — the shadow sampler off the setInterval island.
+  {
+    const src = SRC;
+    const runs = [];
+    const okRun = detectShadows({ run: (a) => { runs.push(a.join(" ")); return "cast: due_at_kickoff"; } });
+    assert("#52 detectShadows is a named function that drives shadow.mjs detect",
+      okRun.ok === true && runs.length === 1 && runs[0] === "detect" && okRun.said.includes("due_at_kickoff"));
+    const bad = detectShadows({ run: () => { throw new Error("shadow.mjs exploded"); } });
+    assert("#52 a failed sample is REPORTED, not swallowed (the interval swallowed it forever)",
+      bad.ok === false && bad.error.includes("exploded"));
+    // split needles — see the note in the #57 block above
+    assert("#52 a headless verb exists so shadows aren't sampled only on bridge days",
+      src.includes(`(process.argv[2] || "").toLowerCase() === "shadow-det` + `ect"`));
+    assert("#52 the in-process interval now goes through the SAME function (one lane, two callers)",
+      src.includes("setInterval(() => { detectShad" + "ows(); }, 600000)"));
+  }
+
+  // #54 — the 2x presence overcount, and #51's tail scoping, in one sweep.
+  {
+    // a fixture shaped exactly like the live log: presence.mjs writes a thrash
+    // row and a kind:"focus" row per pass, so 3 passes = 6 rows.
+    const day = localDate();
+    const pass = (i, edge) => ([
+      { ts: `${day}T0${i}:00:00.000Z`, day, switches: 40, rate: 4, span_min: 10, edge: !!edge },
+      { ts: `${day}T0${i}:00:00.000Z`, day, kind: "focus", focus_min: 5, off_min: 2, break_live: false, pull: "chrome.exe" },
+    ]);
+    const rows = [...pass(1, false), ...pass(2, true), ...pass(3, false)];
+    const fake = { rows, have_need: { rows_for_today: rows.length, covers_midnight: true } };
+    const rep = execTool("get_club_report", {}, { sh, readPresenceDay: () => fake });
+    assert("#54 THREE passes report as THREE, not six (the 2:1 thrash/focus split no longer doubles him)",
+      rep.senses.presence_passes_today === 3 && rows.length === 6);
+    assert("#54 stall_edges_today is untouched (focus rows carry no `edge`; it was never wrong)",
+      rep.senses.stall_edges_today === 1);
+    assert("#54 the focus ledger still reads the focus rows (the fix must not eat them)",
+      rep.focus_today.reads === 3 && rep.focus_today.last_read && rep.focus_today.last_read.pull === "chrome.exe");
+    // #51 — the tail reader itself, against the REAL file
+    const scan = readPresenceDay(day);
+    assert("#51 the presence read is tail-scoped, and it says how much it scanned",
+      Number.isFinite(scan.have_need.scanned_bytes) && Number.isFinite(scan.have_need.file_bytes)
+      && scan.have_need.scanned_bytes <= scan.have_need.file_bytes
+      && scan.have_need.tail_budget_bytes === PRESENCE_TAIL_BYTES);
+    assert("#51 the scan reports coverage HONESTLY — a truncated window is never rendered as a total",
+      typeof scan.have_need.covers_midnight === "boolean"
+      && (scan.have_need.covers_midnight ? scan.have_need.note === null || !scan.have_need.note.includes("FLOOR") : scan.have_need.note.includes("FLOOR")));
+    assert("#51 every row it returns really is today's (day-scoped, not just tail-sliced)",
+      scan.rows.every(r => r.day === day));
+    // a byte-sliced first line is a fragment, not a row — it must be dropped
+    {
+      const tmp = join(STATE_DIR, `.selftest_tail_${process.pid}.jsonl`);
+      try {
+        writeFileSync(tmp, [
+          JSON.stringify({ ts: "2026-01-01T00:00:00.000Z", day: "2026-01-01", switches: 1 }),
+          JSON.stringify({ ts: "2026-01-02T00:00:00.000Z", day: "2026-01-02", switches: 2 }),
+          JSON.stringify({ ts: "2026-01-03T00:00:00.000Z", day: "2026-01-03", switches: 3 }),
+        ].join("\n") + "\n");
+        const whole = readLinesTail(tmp, 1 << 20);
+        const cut = readLinesTail(tmp, 90);   // lands mid-file → first line is a fragment
+        assert("#51 a whole file reads whole; a cut window drops the sliced fragment and SAYS it was cut",
+          whole.whole === true && whole.rows.length === 3
+          && cut.whole === false && cut.rows.length < 3 && cut.rows.every(r => r && r.day));
+        assert("#51 a missing log is an honest absence, never a measured zero",
+          readLinesTail(join(STATE_DIR, "__no_such_presence_log__.jsonl")).exists === false
+          && readPresenceDay(day, { file: join(STATE_DIR, "__no_such_presence_log__.jsonl") }).have_need.note.includes("never written"));
+      } finally { try { unlinkSync(tmp); } catch { } }
+    }
+    // roll tolerance: today's morning rows sit in the rolled sibling.
+    // #51's remedy (a monthly roll) is presence.mjs's to write — this proves the
+    // READER survives the day it happens instead of silently losing the morning.
+    {
+      const base = `.selftest_roll_${process.pid}`;
+      const live = join(STATE_DIR, `${base}.jsonl`);
+      const arch = join(STATE_DIR, `${base}.2026-07.jsonl`);
+      try {
+        writeFileSync(arch, JSON.stringify({ ts: `${day}T01:00:00.000Z`, day, switches: 1 }) + "\n");
+        writeFileSync(live, JSON.stringify({ ts: `${day}T09:00:00.000Z`, day, switches: 2 }) + "\n");
+        const rolled = readPresenceDay(day, { file: live });
+        assert("#51 a rolled log is tolerated — today's rows from BOTH files, in time order",
+          rolled.rows.length === 2 && rolled.rows[0].switches === 1 && rolled.have_need.files_scanned === 2);
+        // and reading the live file whole must NOT be mistaken for seeing midnight
+        assert("#51 'I read the whole live file' is not accepted as proof when an archive exists",
+          readPresenceDay(day, { file: live }).have_need.covers_midnight === true
+          && readLinesTail(live).whole === true);
+      } finally { for (const f of [live, arch]) { try { unlinkSync(f); } catch { } } }
+    }
+  }
+
+  // #106 — status WORDS became have/need counters (both needs read from the
+  // owner's own config, never retyped here).
+  {
+    const rep = execTool("get_club_report", {}, { sh });
+    assert("#106 the twin reports how far from its gate it is, not just 'warming_up'",
+      "resolutions_have" in rep.twin && "resolutions_need" in rep.twin && rep.twin.resolutions_need > 0);
+    assert("#106 calibration reports reps have/need, and the need comes from calibration_config.json",
+      "reps_have" in rep.calibration && rep.calibration.reps_need === ((readJson(join(STATE_DIR, "calibration_config.json")) || {}).min_reps ?? 20));
+    assert("#106 a null count is narrated as 'nothing measured', never as a zero",
+      rep.twin.resolutions_have === null ? String(rep.twin.note).includes("never been built") : rep.twin.resolutions_have >= 0);
+  }
+
+  // #92 — the locked-book ids in prose are READ, not typed.
+  {
+    const ids = lockedCapsuleIds();
+    const decl = TOOL_DECLS.find(t => t.name === "get_capsule");
+    assert("#92 get_capsule's description names the REAL locked set (no frozen list of four)",
+      ids.length ? (decl.description.includes(String(ids.length)) && ids.every(i => decl.description.includes(i)))
+        : decl.description.includes("none locked on this machine"));
+    // the real check: the set NAMED in the prose must equal the set on disk.
+    // A re-frozen literal, a phantom id, or a dropped one all break this.
+    const named = (decl.description.match(/right now: ([^)]*)\)/) || [])[1];
+    assert("#92 the prose names EXACTLY the capsules on disk — no phantom, no dropped, no frozen literal",
+      ids.length
+        ? (typeof named === "string" && named.split("/").slice().sort().join("|") === ids.slice().sort().join("|"))
+        : named === undefined);
+  }
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -2776,6 +3168,80 @@ try{setInterval(function(){window.__gafferSpeaking=(typeof liveSrcs!=='undefined
 </script></body></html>`;
 
 // ---------------------------------------------------------------------------
+// THE CSRF GUARD (#57 — ORGANISM audit, Aug 2026). SECURITY, not cosmetics.
+//
+// What was wrong: the POST router below dispatched /tool with NO Origin,
+// Referer or content-type check, and /tool's handlers shell out to capture.mjs,
+// postmatch.mjs, bootroom.mjs, doubtminer.mjs and hippocampus.mjs. A simple
+// JSON-body POST is preflight-free, so ANY page open in another tab of the
+// captain's browser could drive the owner scripts on his behalf. The response
+// would be CORS-blocked; the SIDE EFFECT still lands. The LAN gate (`allowed`)
+// is NOT a substitute — in default (non---lan) mode it is `!lanMode || …`,
+// i.e. unconditionally true.
+//
+// Where this code comes from: it already existed, correctly written, in the
+// SANDBOXED FORK at scripts/organism_live_demo.mjs:1247-1260 — `git log -S`
+// shows the string "cross-origin POST refused" entered the repo in exactly one
+// commit and exactly one file, and it was never the live one. This is that
+// guard, ported to where it belongs, with two deliberate changes:
+//
+//   1. SAME-ORIGIN, not loopback-only. The fork only ever served loopback, so
+//      it could hardcode localhost/127.0.0.1. The live bridge has a LAN door
+//      (`--lan`, served on http://<lan-ip>:4114 for his phone) — a loopback-only
+//      test would 403 the phone on every tool call. Same-origin (the Origin's
+//      host equals the Host we were reached on) covers loopback AND the LAN
+//      door, and still refuses every third-party page.
+//   2. CONTENT-TYPE. Every POST the served page makes sets
+//      'Content-Type: application/json' (10 call sites, verified). A
+//      cross-origin <form> can only ever send urlencoded / plain / multipart;
+//      anything that CAN set application/json has first had to pass a CORS
+//      preflight this server never answers. So this is a second, independent
+//      lock that costs the real page nothing.
+//
+// Absent Origin/Referer is ALLOWED on purpose: that is curl, a local script, or
+// a same-origin fetch that chose not to send one — all legitimate here, and all
+// already inside the trust boundary a browser attacker is trying to cross.
+// ---------------------------------------------------------------------------
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+function postGuard(req) {
+  const h = (req && req.headers) || {};
+  const src = h.origin || h.referer || "";
+  if (src) {
+    let ok = false;
+    try {
+      const u = new URL(src);
+      ok = (u.host && u.host === String(h.host || "")) || LOOPBACK_HOSTS.has(u.hostname);
+    } catch { ok = false; }
+    if (!ok) return { ok: false, code: 403, why: "cross-origin POST refused" };
+  }
+  const ct = String(h["content-type"] || "").split(";")[0].trim().toLowerCase();
+  if (ct !== "application/json") return { ok: false, code: 415, why: "the dugout's POST routes take application/json only" };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// HEADLESS LANES (#52 caller-side, #53) — two lanes used to be reachable ONLY
+// from main()'s setInterval, which means they only ever ran on days the captain
+// happened to open the bridge window (last session: 2026-07-30). Both are now
+// named, exported, and drivable from the CLI so a scheduled task can own them:
+//
+//   node scripts/dugout.mjs reminders      → fires anything due, then exits
+//   node scripts/dugout.mjs shadow-detect  → one shadow sample, then exits
+//
+// Neither loses anything out of process: fireReminders speaks through
+// speak.mjs's say() directly (:231), not through the live Gemini session, and
+// shadow detection is silent by construction (the mouth needs no wire to stay
+// shut). The shadow ENGINE (scripts/shadow.mjs, including its date-scoping bug)
+// is another owner's file — this is only the caller.
+// ---------------------------------------------------------------------------
+function detectShadows(deps = {}) {
+  const run = deps.run || ((args) => execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), ...args], { windowsHide: true, timeout: 30000, encoding: "utf8" }));
+  try { return { ok: true, said: String(run(["detect"]) || "").trim().slice(0, 300) }; }
+  // the in-process interval swallowed this forever; a headless run SAYS it
+  catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+}
+
+// ---------------------------------------------------------------------------
 // main — the bridge server (localhost only)
 // ---------------------------------------------------------------------------
 async function main() {
@@ -2789,6 +3255,37 @@ async function main() {
     // C5 — re-probe the ephemeral-token lane (mint proven; WS attach pending)
     const m = await mintEphemeralToken();
     console.log(m.ok ? `dugout: mint OK — ${String(m.token).slice(0, 28)}… (${m.expires_in_min} min, single-use). WS attach shape still pending on the wire — see mintEphemeralToken note.` : `dugout: mint failed — ${m.error}`);
+    return;
+  }
+  // #53 — THE HEADLESS REMINDER RUNNER. Until this existed, main() handled only
+  // selftest|index|mint-probe, so `fireReminders` had exactly ONE caller: the
+  // 30-second setInterval inside the server body below. Set a reminder at 10:00
+  // for 18:00, close the window, and his own words silently never came back —
+  // while the constitution at :775 promised him, unconditionally, that they
+  // would. This is the out-of-process delivery path that keeps the promise.
+  if (["reminders", "fire-reminders"].includes((process.argv[2] || "").toLowerCase())) {
+    const before = readLines(REMINDERS);
+    const due = dueReminders(before);
+    const spoke = await fireReminders();
+    const after = readLines(REMINDERS);
+    const queued = after.filter(r => !r.fired).length;
+    // #106 — a have/need counter, never a bare status word. Every number here is
+    // COUNTED off the file; "0 due" and "no file at all" read differently.
+    console.log(existsSync(REMINDERS)
+      ? `dugout reminders: ${spoke}/${due.length} due echoed · ${queued} still queued · ${after.length} row(s) on file`
+      : `dugout reminders: no reminders file yet (${REMINDERS}) — set_reminder has never been used, so there is nothing to echo. This is a measured absence, not a failure.`);
+    return;
+  }
+  // #52 (caller side) — THE HEADLESS SHADOW SAMPLE. Same disease as the
+  // reminders: `detect`'s only caller was a setInterval inside the bridge, so
+  // shadows were sampled only on days he opened the window. The scorer's
+  // date-scoping bug lives in shadow.mjs and is NOT fixed here (different
+  // owner) — schedule this lane only after that lands, or the catch-up run
+  // fabricates verdicts from days the shadows did not happen on.
+  if ((process.argv[2] || "").toLowerCase() === "shadow-detect") {
+    const r = detectShadows();
+    console.log(r.ok ? `dugout shadow-detect: ${r.said || "(shadow.mjs said nothing — no shadow cast this pass)"}` : `dugout shadow-detect: FAILED — ${r.error}`);
+    if (!r.ok) process.exitCode = 1;   // a scheduled task must see the failure, not a silent 0
     return;
   }
   const keys = loadKeys();
@@ -2812,8 +3309,11 @@ async function main() {
   }
   setInterval(() => fireReminders().then(n => { if (n) console.log(`dugout: ${n} his-voice reminder(s) echoed`); }).catch(() => { }), 30000);
   // the shadow engine trains while the voice surface is alive (detection is
-  // silent by construction; the mouth needs no wire to stay shut)
-  setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
+  // silent by construction; the mouth needs no wire to stay shut).
+  // #52 — this is now the SECOND caller, not the only one: the same lane runs
+  // headless via `node scripts/dugout.mjs shadow-detect`, so shadows stop being
+  // sampled only on days he happens to open the bridge.
+  setInterval(() => { detectShadows(); }, 600000);
   indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} of his words`); }).catch(() => { });
   setInterval(() => indexRecall().catch(() => { }), 3600000);   // his words become findable, hourly
   // ── THE LAN DOOR (E2E audit 25 Jul 2026) ────────────────────────────────────
@@ -2871,6 +3371,10 @@ async function main() {
         return res.end(readFileSync(join(ACK_DIR, f)));
       }
       if (req.method === "POST") {
+        // #57 — the guard the live file never had (see postGuard above). It runs
+        // BEFORE the body is drained, so a refused request costs nothing.
+        const g = postGuard(req);
+        if (!g.ok) { res.writeHead(g.code, { "Content-Type": "text/plain" }); return res.end(g.why + "\n"); }
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
         if (req.url === "/tool") {
@@ -2973,4 +3477,11 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase, loadSessionHandle, saveSessionHandle, RESUME_TTL_MIN, runReadUrl, mintEphemeralToken };
+// ORGANISM audit (Aug 2026) — the repaired lanes get ADDRESSES, not just CLI
+// verbs: postGuard (#57) so any future POST surface reuses the one guard rather
+// than growing a second, drifting copy; detectShadows (#52) and fireReminders
+// (#53) so a scheduler or another organ can drive them out of process;
+// readPresenceDay (#51) so the other whole-file presence readers have a
+// tail-scoped, roll-tolerant one to adopt; lockedCapsuleIds (#92) so the mirror
+// can enumerate the real set instead of a hardcoded four.
+export { execTool, buildConfig, buildSystemInstruction, loadKeys, TOOL_DECLS, PAGE, execRecall, indexRecall, cosine, dayPhase, loadSessionHandle, saveSessionHandle, RESUME_TTL_MIN, runReadUrl, mintEphemeralToken, postGuard, detectShadows, fireReminders, readPresenceDay, readLinesTail, lockedCapsuleIds, composeRehydrate, PRESENCE_TAIL_BYTES };

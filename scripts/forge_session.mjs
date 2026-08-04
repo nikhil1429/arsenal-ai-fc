@@ -335,17 +335,90 @@ function teachingDrifts(tc, started_at) {
     .filter((r) => { const h = Date.parse(r.last_hit || ""); return Number.isFinite(h) && h >= t0; })
     .map((r) => r.id)
     .sort();                       // sorted so the report never moves when the ranking does
-  return { since: started_at, rule_ids: ids, rules_drifted: ids.length };
+  // THE INSTRUMENT, MEASURED (audit #40 — see the block above teachingDriftLine).
+  // These ride into forge_sessions.jsonl too, so a `"rules_drifted":0` row on disk is
+  // never readable as a measured zero either.
+  let everHit = 0, newest = null;
+  for (const r of tc.rules) {
+    const h = Date.parse((r && r.last_hit) || "");
+    if (Number.isFinite(h)) { everHit++; if (newest === null || h > newest) newest = h; }
+  }
+  // FORWARD PATH, named so this guard can retire itself: if a real drift recorder is
+  // ever wired (a `hit` obligation in /forge and /learn, or a nightly transcript pass),
+  // it should stamp `checked_at` (ISO) into teaching_contract.json on EVERY run — a
+  // heartbeat that says "I looked", which is the one fact that turns a zero into a
+  // measurement. When that stamp lands at or after started_at, the line below may
+  // honestly say "none" again. Until then it must not.
+  const checked = Date.parse((tc.checked_at) || "");
+  return {
+    since: started_at,
+    rule_ids: ids,
+    rules_drifted: ids.length,
+    rules_total: tc.rules.length,
+    rules_hit_ever: everHit,
+    newest_hit: newest === null ? null : new Date(newest).toISOString(),
+    checked_at: Number.isFinite(checked) ? tc.checked_at : null,
+    recorder_ran_in_window: Number.isFinite(checked) && checked >= t0,
+  };
 }
 
-// ONE line, in the close report's voice. null = there was nothing honest to say, and
-// the caller prints nothing at all (a missing teaching contract is not a clean sheet).
-function teachingDriftLine(d) {
+// FROZEN VERBATIM (1 Aug semantics — layering law, CLAUDE.md). This is what shipped
+// and what the audit caught: with rule_ids empty it says "none", full stop. Kept so
+// the finding stays reproducible from inside this file, and pinned by the selftest.
+// NOT on any live path.
+function teachingDriftLineLegacy(d) {
   if (!d) return null;
   if (!d.rule_ids.length) return "TEACHING DRIFTS THIS SESSION: none";
   return `TEACHING DRIFTS THIS SESSION: ${d.rules_drifted} rule${d.rules_drifted === 1 ? "" : "s"} since session start`
     + ` · ${d.rule_ids.join(" · ")}`
     + ` (rule ids only — teaching_contract hits are CUMULATIVE, so how many times each drifted tonight is not knowable)`;
+}
+
+// ---------------------------------------------------------------------------
+// THE HONESTY GUARD ON ZERO (audit #40, 2 Aug 2026).
+//
+// WHAT WAS WRONG: nothing in this machine writes a teaching-drift `hit`. A repo-wide
+// grep for `teaching_contract.mjs (hit|add)` returns ZERO callers — no hook, no brain
+// job, no skill, no scheduled task. All five `last_hit` stamps in the live file are a
+// 402-millisecond scripted seeding burst on 31 Jul (born 18:21:03.887Z, hits at
+// .993 / :04.109 / :04.191 / :04.289 / :04.395). So `last_hit` can never advance, and
+// from the currently-open session onward the legacy line above prints
+// "TEACHING DRIFTS THIS SESSION: none" at every close, forever, however badly the
+// teaching drifts. The live proof is already on disk: the last row of
+// forge_sessions.jsonl (closed 2026-08-02T09:00:19.555Z) carries
+// "teaching_drifts":{"rule_ids":[],"rules_drifted":0} — a false clean sheet, already
+// written down.
+//
+// WHY THAT IS THE WORST PLACE FOR IT: an UNMEASURED SILENCE rendered as a MEASURED
+// ZERO, inside the one report built specifically to refuse that class of lie — its own
+// comment above calls printing an unknowable number "the same class of lie as marking
+// an axis done without its own jirah".
+//
+// WHAT IS AND IS NOT BROKEN: the ranking in teaching_contract.mjs IS computed live
+// from state — the code is not a static list, and every rule still rotates into the
+// block. It is the DATA that is frozen, and this line says exactly that rather than
+// implying the organ is dead.
+//
+// WHO MAY RECORD A DRIFT IS THE CAPTAIN'S CALL, not this file's — it is reported to
+// him, not invented here. Until he makes it, zero says "not measured".
+// ---------------------------------------------------------------------------
+function teachingDriftLine(d) {
+  if (!d) return null;
+  if (d.rule_ids.length) {
+    return `TEACHING DRIFTS THIS SESSION: ${d.rules_drifted} rule${d.rules_drifted === 1 ? "" : "s"} since session start`
+      + ` · ${d.rule_ids.join(" · ")}`
+      + ` (rule ids only — teaching_contract hits are CUMULATIVE, so how many times each drifted tonight is not knowable)`;
+  }
+  if (d.recorder_ran_in_window) {
+    // A recorder looked and found nothing. THAT is a measured zero, and it may say so.
+    return `TEACHING DRIFTS THIS SESSION: none — MEASURED (the drift recorder stamped checked_at ${d.checked_at}, inside this session)`;
+  }
+  const last = d.newest_hit ? d.newest_hit.slice(0, 10) : "never";
+  return `TEACHING DRIFTS THIS SESSION: NOT MEASURED — 0 recorded, and 0 here is not a measurement.`
+    + ` A drift is only ever written by a human running \`node scripts/teaching_contract.mjs hit <id>\`, and NOTHING in the machine calls it;`
+    + ` newest stamp ${last} (${d.rules_hit_ever}/${d.rules_total} rules ever hit, none since this session started).`
+    + ` The drift-RANKING is computed live from those hits, so it is the DATA that is frozen, not the code.`
+    + ` Read this as an unmeasured silence, not a clean sheet — and decide who is allowed to record a drift.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -517,7 +590,13 @@ const oneLine = (s) => `forge_session: ${s.concept} · STEP ${s.step}/${STEPS.le
 // a stale session to resume pacing — it tells it to `close` first, so the loop
 // ends in ONE command.
 // ---------------------------------------------------------------------------
-function bootLines(s, hist, now = new Date()) {
+// FROZEN VERBATIM (31 Jul semantics — layering law, CLAUDE.md). This is the engine
+// the audit caught at #30: the open-session branch RETURNS, so the `if (h.last)`
+// history branch below it is unreachable while any session is open — and because a
+// stale session stays open indefinitely, that suppression is permanent, not
+// transient. Kept so the finding stays reproducible from inside this file, and pinned
+// by the selftest. NOT on any live path.
+function bootLinesLegacy(s, hist, now = new Date()) {
   const h = hist || { last: null, same_concept: 0 };
   if (s && s.concept && !s.closed_at) {
     const age = hoursSince(s.started_at, now);
@@ -542,6 +621,68 @@ function bootLines(s, hist, now = new Date()) {
     return [`LAST FORGE SESSION · ${L.concept} · ${day} · steps ${(L.steps_ran || []).length}/${STEPS.length}`
       + ` · axes done ${(L.axes_done || []).join("") || "—"} · ungraded ${(L.axes_ungraded || []).join("") || "—"}`
       + ` · elapsed ${L.elapsed_min === null || L.elapsed_min === undefined ? "?" : L.elapsed_min}m · ${L.ended_by || "?"}`
+      + (h.same_concept > 1 ? ` · ${h.same_concept} recorded runs for this concept` : "")];
+  }
+  return [];
+}
+
+// THE SWALLOWED FACT, GIVEN AN ADDRESS (audit #30, 2 Aug 2026).
+// The last recorded session's verdict is the most decision-relevant thing at kickoff
+// and it reached NO boot line: the open-session branch returned before the history
+// branch, and the history branch never read the verdict fields anyway (it printed
+// steps/axes/elapsed/ended_by only, never method_clean or core_missing — both of which
+// are sitting in every forge_sessions.jsonl row).
+//
+// THE CAP IS NOT THE ENEMY AND IS NOT TOUCHED. `:811` asserts BOOT IS BOUNDED — never
+// more than 2 lines in any branch — and the HARD CAP comment above says the same. So
+// this is a SUFFIX on line 1, not a third line: the fact is surfaced, the anti-wall
+// law is intact, and the selftest that guards it still guards it.
+// It names its own concept, so "2 recorded runs of that concept" can never be misread
+// as being about the session currently open when the two differ.
+function historyDigest(h) {
+  const L = h && h.last;
+  if (!L || !L.concept) return "";
+  const day = String(L.ended_at || "").slice(0, 10) || "date unknown";
+  const bits = [`steps ${(L.steps_ran || []).length}/${STEPS.length}`,
+                `axes ${(L.axes_done || []).length}/${AXES.length}`];          // have/need, never a bare word
+  if (typeof L.method_clean === "boolean") bits.push(`method_clean ${L.method_clean}`);
+  if (Array.isArray(L.core_missing) && L.core_missing.length) bits.push(`CORE ${L.core_missing.join("")} never closed`);
+  if (h.same_concept > 1) bits.push(`${h.same_concept} recorded runs of that concept`);
+  return ` ‖ LAST RECORDED ${day} · ${L.concept} · ${bits.join(" · ")}`;
+}
+
+function bootLines(s, hist, now = new Date()) {
+  const h = hist || { last: null, same_concept: 0 };
+  if (s && s.concept && !s.closed_at) {
+    const age = hoursSince(s.started_at, now);
+    const stale = age > STALE_HOURS;
+    const marks = s.axes_marked_at || {};
+    const jb = (a) => { const m = marks[a]; return m && Number.isInteger(m.jirah_before) ? m.jirah_before : 0; };
+    const ungraded = s.axes_done.filter((a) => !(jb(a) >= 1 && !s.axes_done.some((b) => b !== a && jb(b) === jb(a))));
+    const left = AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a));
+    const when = Number.isFinite(age) ? `started ${age.toFixed(1)}h ago${stale ? " (STALE — the pacer is silent)" : ""}` : "age unknown";
+    return [
+      `FORGE SESSION OPEN ON DISK · ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step] || "?"}`
+        + ` · axes done ${s.axes_done.join("") || "—"} ${s.axes_done.length}/${AXES.length} · ungraded ${ungraded.join("") || "—"}`
+        + ` · deferred ${s.axes_deferred.join("") || "—"} · left ${left.join("") || "—"} · ${when}`
+        + historyDigest(h),                      // #30 — no longer swallowed, and still ONE line
+      stale
+        ? "Do NOT re-teach those axes and do NOT start this concept from step 0. Run `node scripts/forge_session.mjs close` FIRST (that is the only thing that saves the coverage report), then `start <concept>`."
+        : `Resume it — do NOT re-teach those axes and do NOT run \`start\` again (it will refuse). Continue at STEP ${s.step}.`,
+    ];
+  }
+  if (h.last) {
+    const L = h.last;
+    const day = String(L.ended_at || "").slice(0, 10) || "date unknown";
+    return [`LAST FORGE SESSION · ${L.concept} · ${day} · steps ${(L.steps_ran || []).length}/${STEPS.length}`
+      + ` · axes done ${(L.axes_done || []).join("") || "—"} ${(L.axes_done || []).length}/${AXES.length}`
+      + ` · ungraded ${(L.axes_ungraded || []).join("") || "—"}`
+      + ` · elapsed ${L.elapsed_min === null || L.elapsed_min === undefined ? "?" : L.elapsed_min}m · ${L.ended_by || "?"}`
+      // THE VERDICT, which this branch never carried either (audit #30, verifier's
+      // correction 1): method_clean and core_missing sit in every row on disk and were
+      // read by nothing. They are the reason a "last session" line is worth printing.
+      + (typeof L.method_clean === "boolean" ? ` · method_clean ${L.method_clean}` : "")
+      + (Array.isArray(L.core_missing) && L.core_missing.length ? ` · CORE ${L.core_missing.join("")} never closed` : "")
       + (h.same_concept > 1 ? ` · ${h.same_concept} recorded runs for this concept` : "")];
   }
   return [];
@@ -808,8 +949,36 @@ function selftest() {
   assert("BOOT names the run count only above one recorded row",
     /2 recorded runs/.test(bHist[0])
     && !/recorded runs/.test(bootLines({ ...clean, closed_at: nowISO(T0) }, { last: JSON.parse(readFileSync(hp, "utf8").trim().split("\n")[0]), same_concept: 1 }, T0)[0]));
+  // ---- audit #30 — the open-session branch used to swallow the history entirely.
+  // Every pre-existing fixture above pairs an OPEN session with {last:null} and
+  // non-null history only with a CLOSED session, so the open-beats-history
+  // precedence was never asserted anywhere — it was incidental, not designed.
+  // These are the assertions that were missing.
+  const HH = lastHistory(hp);
+  const bStaleHist = bootLines(staleSession, HH, new Date(T0.getTime() + 19 * 3600000));
+  assert("BOOT NO LONGER SWALLOWS THE LAST SESSION — an OPEN session now surfaces the last recorded verdict TOO",
+    bStaleHist.length === 2 && /FORGE SESSION OPEN ON DISK/.test(bStaleHist[0])
+    && /LAST RECORDED/.test(bStaleHist[0]) && /method_clean false/.test(bStaleHist[0])
+    && /CORE d never closed/.test(bStaleHist[0]) && /2 recorded runs of that concept/.test(bStaleHist[0]));
+  assert("…INSIDE THE SAME TWO LINES — the surfaced fact is a suffix on line 1, so the selftested cap is untouched",
+    bStaleHist.length === bStale.length && bStale.length === 2
+    && bootLines(staleSession, HH, T(30)).length === 2);
+  assert("REGRESSION PIN — the FROZEN engine really did drop it: same inputs, no LAST RECORDED anywhere",
+    !bootLinesLegacy(staleSession, HH, new Date(T0.getTime() + 19 * 3600000)).join(" ").includes("LAST RECORDED")
+    && !bootLinesLegacy(staleSession, HH, new Date(T0.getTime() + 19 * 3600000)).join(" ").includes("method_clean"));
+  assert("the digest is SILENT with no history, so a first-ever session is not given a phantom last one",
+    historyDigest({ last: null, same_concept: 0 }) === "" && historyDigest(null) === ""
+    && !bStale[0].includes("LAST RECORDED"));
+  assert("the digest NAMES ITS OWN CONCEPT, so a run count can never be misread as being about the open session",
+    /LAST RECORDED [\d-]+ · hallucinations/.test(historyDigest(HH)));
+  assert("HAVE/NEED — the boot lines count axes as done/total, never a bare letter list",
+    /axes done abcef 5\/9/.test(bStale[0]) && /axes done abcef 5\/9/.test(bHist[0]));
+  assert("THE VERDICT REACHES THE HISTORY BRANCH TOO — method_clean and core_missing were in every row and read by nothing",
+    /method_clean false/.test(bHist[0]) && /CORE d never closed/.test(bHist[0]));
+
   assert("BOOT IS BOUNDED — never more than 2 lines in any branch, and never writes",
-    Math.max(bStale.length, bFresh.length, bHist.length) <= 2 && !existsSync(join(tmpdir(), "forge_boot_wrote_something")));
+    Math.max(bStale.length, bFresh.length, bHist.length, bStaleHist.length) <= 2
+    && !existsSync(join(tmpdir(), "forge_boot_wrote_something")));
   rmSync(hp, { force: true });
 
   // =========================================================================
@@ -830,12 +999,38 @@ function selftest() {
     /^TEACHING DRIFTS THIS SESSION: 2 rules since session start · his-word · link-back/.test(teachingDriftLine(dr))
     && !/[x×]\s*\d/.test(teachingDriftLine(dr)) && /CUMULATIVE/.test(teachingDriftLine(dr))
     && teachingDriftLine(dr).split("\n").length === 1);
-  assert("ZERO IS SAID OUT LOUD — a clean session prints 'none', not silence",
-    teachingDriftLine(teachingDrifts({ rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0)))
-      === "TEACHING DRIFTS THIS SESSION: none");
+  assert("ZERO IS SAID OUT LOUD — a drift-free session still prints a line, never silence",
+    typeof teachingDriftLine(teachingDrifts({ rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0))) === "string");
   assert("NO ANCHOR, NO CLAIM — an unparseable/absent started_at attributes nothing and prints NOTHING",
     teachingDrifts(TC, "nonsense") === null && teachingDrifts(TC, undefined) === null
     && teachingDriftLine(null) === null && teachingDriftLine(teachingDrifts(null, nowISO(T0))) === null);
+
+  // ---- audit #40 — the honesty guard on zero.
+  const quiet = teachingDrifts({ rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }, { id: "b", hits: 0, last_hit: null }] }, nowISO(T0));
+  const quietLine = teachingDriftLine(quiet);
+  assert("REGRESSION PIN — the FROZEN engine really did render an unmeasured silence as the measured word 'none'",
+    teachingDriftLineLegacy(quiet) === "TEACHING DRIFTS THIS SESSION: none");
+  assert("AN UNMEASURED ZERO SAYS SO — 'NOT MEASURED', never 'none', and it names WHY",
+    /NOT MEASURED/.test(quietLine) && !/^TEACHING DRIFTS THIS SESSION: none/.test(quietLine)
+    && /teaching_contract\.mjs hit <id>/.test(quietLine) && /NOTHING in the machine calls it/.test(quietLine));
+  assert("…and it carries the MEASURED instrument facts: newest stamp date + a have/need over the rules",
+    quietLine.includes(nowISO(T(-90)).slice(0, 10)) && /1\/2 rules ever hit/.test(quietLine)
+    && quiet.rules_total === 2 && quiet.rules_hit_ever === 1 && quiet.newest_hit === nowISO(T(-90)));
+  assert("…and it is ACCURATE about what is frozen: the DATA, not the code (the ranking is computed live)",
+    /DATA that is frozen, not the code/.test(quietLine));
+  assert("NEVER HIT AT ALL reads as 'never', not as a date and not as a zero-that-looks-measured",
+    /newest stamp never/.test(teachingDriftLine(teachingDrifts({ rules: [{ id: "a", hits: 0, last_hit: null }] }, nowISO(T0))))
+    && teachingDrifts({ rules: [{ id: "a", hits: 0, last_hit: null }] }, nowISO(T0)).newest_hit === null);
+  assert("THE GUARD CAN RETIRE ITSELF — a recorder that stamps checked_at INSIDE the window earns the word 'none' back",
+    /^TEACHING DRIFTS THIS SESSION: none — MEASURED/.test(
+      teachingDriftLine(teachingDrifts({ checked_at: nowISO(T(10)), rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0))))
+    && /NOT MEASURED/.test(
+      teachingDriftLine(teachingDrifts({ checked_at: nowISO(T(-10)), rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0)))));
+  assert("A REAL DRIFT IS UNAFFECTED — the measured branch is byte-identical to the frozen engine's",
+    teachingDriftLine(dr) === teachingDriftLineLegacy(dr));
+  assert("THE LINE IS STILL ONE LINE in every branch (the close report is not a wall)",
+    [teachingDriftLine(dr), quietLine, teachingDriftLine(teachingDrifts({ checked_at: nowISO(T(10)), rules: [] }, nowISO(T0)))]
+      .every((l) => typeof l === "string" && l.split("\n").length === 1));
 
   const tcProbe = join(tmpdir(), `forge_teaching_selftest_${process.pid}.json`);
   rmSync(tcProbe, { force: true });

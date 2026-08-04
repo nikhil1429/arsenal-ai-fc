@@ -83,6 +83,26 @@ const readLines = (p) => {
 // ---------------------------------------------------------------------------
 // pure core
 // ---------------------------------------------------------------------------
+// "N rep(s)" WHERE N WAS NEVER THE REP COUNT — ORGANISM audit #96 (2026-08-04).
+// main() accumulates repsByDate[d] as a Set of CONCEPT NAMES and passed its `.size` as
+// world.repsOnDate, which this rendered as "N rep(s)". Live proof: reps_log.jsonl holds
+// SEVEN reps on 2026-07-31 (all on `hallucinations`) and the slip row reads
+// {"date":"2026-07-31","type":"floor_touched","hit":true,"evidence":"1 rep(s)"} — wrong on
+// both populated days, and evening_voice/2026-07-31.md quotes the wrong number verbatim
+// back at him. Five brain jobs ingest slip.jsonl, so the wrong figure is what the LLM sees.
+// The Set MUST stay exactly as it is — gafferMature's membership test (`set.has(...)`) is
+// the whole reason it is a Set of concepts. So the row count rides in PARALLEL, as
+// world.repRowsOnDate, with identical null semantics, and is used only for the sentence.
+// A caller that does not supply it (any pre-audit fixture) gets the old string byte for
+// byte — this can never silently print "undefined rep(s)".
+function repsEvidence(world) {
+  const rows = typeof world.repRowsOnDate === "number" ? world.repRowsOnDate : null;
+  const tail = world.postmatchHit ? " + post-match HIT" : "";
+  return rows === null
+    ? `${world.repsOnDate} rep(s)${tail}`                                  // legacy caller: no row counter
+    : `${rows} rep(s) on ${world.repsOnDate} concept(s)${tail}`;
+}
+
 // TWIN resolutions for a given date — never guessed; dark instrument = skip.
 function resolveTwin(preds, world, dateStr, cfg) {
   const out = [];
@@ -90,7 +110,12 @@ function resolveTwin(preds, world, dateStr, cfg) {
   for (const p of todays) {
     let hit = null, evidence = null;
     if (p.market === "floor_touched") {
-      if (world.repsOnDate !== null) { hit = world.repsOnDate > 0 || world.postmatchHit === true; evidence = `${world.repsOnDate} rep(s)${world.postmatchHit ? " + post-match HIT" : ""}`; }
+      if (world.repsOnDate !== null) {
+        // THE VERDICT is unchanged: world.repsOnDate is a Set SIZE, and a Set is non-empty
+        // exactly when the row count is, so the hit gate below is identical either way.
+        hit = world.repsOnDate > 0 || world.postmatchHit === true;
+        evidence = repsEvidence(world);
+      }
       else if (world.postmatchHit !== null) { hit = world.postmatchHit; evidence = "post-match verdict"; }
     } else if (p.market === "session_happened") {
       if (world.activeMinutes !== null) { hit = world.activeMinutes >= cfg.session_min_minutes; evidence = `${world.activeMinutes} active min (need ${cfg.session_min_minutes})`; }
@@ -265,6 +290,40 @@ function ledgerDate(now, cutoffHour = LEDGER_DAY_CUTOFF_HOUR) {
   return localDate(new Date(now.getTime() - 86400000));
 }
 
+// THE RETIRED-RESOLVER QUARANTINE — ORGANISM audit #95 (2026-08-04).
+// trust_tiers.json ships {"type":"first_focus_by_0930","n":5,"hit_rate":0}. All five rows
+// (07-18, 07-21, 07-22, 07-23, 07-25, every one hit:false) were resolved by
+// firstFocusFromTunnelLegacy — the evening tunnel proxy the 25 Jul audit RETIRED and froze
+// two functions up, precisely because it answered a morning question with a 21:35 reading.
+// Since the retirement the market has been correctly DARK: firstFocusRead refuses to answer
+// without a genuine morning stamp, no organ writes first_focus_at, and so ZERO honest rows
+// exist. A 0.0 hit-rate over a market that has never once been honestly measured is not a
+// weak result — it is a fabricated one, and rule 4 of this repair says an unmeasured
+// silence must never render as a measured zero.
+//
+// We do NOT rewrite slip.jsonl. It is append-only and those rows are the historical record
+// of a bug; deleting them would destroy the evidence that the bug happened. Instead the
+// tier REFUSES to count a row whose resolver no longer exists, and says so in the tier
+// itself. Identification is by the resolver's own EVIDENCE SIGNATURE, not by a date:
+// the retired proxy wrote "N window-switches, M Learning-min in last 45min"; the live
+// resolver writes "first Learning focus stamped HH:MM (deadline HH:MM)" or the pitch_read
+// stamp note. So the day touchline finally stamps a morning, new rows count automatically
+// and the old ones stay quarantined — no cutoff to maintain, nothing to guess.
+const RETIRED_RESOLVERS = [{
+  book: "twin",
+  type: "first_focus_by_0930",
+  // evidence written by the CURRENT resolver (firstFocusRead) — anything else on this
+  // market predates the retirement and cannot be evidence about anything.
+  live_evidence: /first Learning focus stamped|first_focus_by stamp/i,
+  why: "resolved by the retired evening tunnel proxy (firstFocusFromTunnelLegacy, frozen 25 Jul); no morning instrument has ever stamped first_focus_at, so this market has never been honestly measured",
+}];
+function retiredResolverFor(row) {
+  for (const r of RETIRED_RESOLVERS) {
+    if (row.book === r.book && row.type === r.type && !r.live_evidence.test(String(row.evidence || ""))) return r;
+  }
+  return null;
+}
+
 // TRUST TIERS — rolling per-type hit-rate; nothing auto-promotes.
 function computeTiers(slip, cfg, prevTiers, now) {
   // the slip is append-only, so a corrected resolution (e.g. full-time flips a
@@ -276,25 +335,36 @@ function computeTiers(slip, cfg, prevTiers, now) {
     lastWins.set(`${s.book}|${s.type}|${s.date}|${s.claim}`, s);
   }
   const byType = {};
+  let quarantinedTotal = 0;
   for (const s of lastWins.values()) {
-    (byType[s.type] = byType[s.type] || []).push(s.hit);
+    const b = (byType[s.type] = byType[s.type] || { hits: [], quarantined: 0, why: null });
+    const retired = retiredResolverFor(s);                  // audit #95
+    if (retired) { b.quarantined++; quarantinedTotal++; b.why = retired.why; continue; }
+    b.hits.push(s.hit);
   }
   const prevMap = new Map(((prevTiers && prevTiers.tiers) || []).map(t => [t.type, t]));
-  const tiers = Object.entries(byType).map(([type, hits]) => {
-    const n = hits.length;
-    const hit_rate = round(hits.filter(Boolean).length / n, 4);
-    const qualifies = n >= cfg.trust.no_look_min_n && hit_rate >= cfg.trust.no_look_min_hit_rate;
+  const tiers = Object.entries(byType).map(([type, b]) => {
+    const n = b.hits.length;
+    // n === 0 with rows on the books means EVERY row was quarantined. hit_rate is null —
+    // an unmeasured market, stated as unmeasured. It must never render as 0.
+    const hit_rate = n ? round(b.hits.filter(Boolean).length / n, 4) : null;
+    const qualifies = n >= cfg.trust.no_look_min_n && hit_rate !== null && hit_rate >= cfg.trust.no_look_min_hit_rate;
     const prev = prevMap.get(type);
     const ratified = prev ? prev.no_look === true && prev.pending_ratification === false : false;
     return {
       type, n, hit_rate,
       no_look: qualifies && ratified,                       // only a ratified tier renders bare
       pending_ratification: qualifies && !ratified,          // the captain says the word once
+      // audit #95: the tier carries its own exclusions. A reader that ignores these fields
+      // sees n/hit_rate that are already honest; a reader that reads them learns why.
+      quarantined: b.quarantined,
+      quarantine_reason: b.quarantined ? b.why : null,
     };
   });
   return {
     date: localDate(now), status: tiers.length ? "ok" : "awaiting_data", low_confidence: false,
     generated_at: now.toISOString(), tiers,
+    quarantined_rows: quarantinedTotal,
   };
 }
 
@@ -346,7 +416,7 @@ async function selftest() {
     { date: today, market: "session_happened", p: 0.5 },
     { date: today, market: "first_focus_by_0930", p: 0.5 },
   ];
-  const world1 = { repsOnDate: 2, postmatchHit: null, activeMinutes: 120, firstFocusKnown: true, firstFocusBy0930: false, firstFocusEvidence: "wall until 10:05" };
+  const world1 = { repsOnDate: 2, repRowsOnDate: 7, postmatchHit: null, activeMinutes: 120, firstFocusKnown: true, firstFocusBy0930: false, firstFocusEvidence: "wall until 10:05" };
   const res1 = resolveTwin(preds, world1, today, cfg);
   assert("floor_touched resolves on reps", res1.find(r => r.type === "floor_touched").hit === true);
   assert("session_happened resolves on active minutes", res1.find(r => r.type === "session_happened").hit === true);
@@ -373,8 +443,24 @@ async function selftest() {
   assert("LEDGER DAY: a 00:15 full-time still closes YESTERDAY's book (else no correction is possible)", ledgerDate(new Date(2026, 6, 13, 0, 15, 0)) === "2026-07-12");
   assert("past the 04:00 cutoff the new day owns the ledger", ledgerDate(new Date(2026, 6, 13, 4, 0, 0)) === "2026-07-13");
 
+  // ORGANISM audit #96 (2026-08-04) — "N rep(s)" where N was the CONCEPT count.
+  // Live: 7 reps on 2026-07-31, all on `hallucinations`, filed as "1 rep(s)".
+  {
+    const ev = res1.find(r => r.type === "floor_touched").evidence;
+    assert("#96 the slip says how many REPS landed and on how many concepts (was '1 rep(s)' for 7)",
+      ev === "7 rep(s) on 2 concept(s)");
+    assert("#96 the hit VERDICT is untouched — a Set size >0 exactly when the row count is",
+      resolveTwin(preds, { ...world1, repsOnDate: 1, repRowsOnDate: 7 }, today, cfg).find(r => r.type === "floor_touched").hit === true
+      && resolveTwin(preds, { ...world1, repsOnDate: 0, repRowsOnDate: 0, postmatchHit: null }, today, cfg).find(r => r.type === "floor_touched").hit === false);
+    assert("#96 a caller with no row counter still gets the exact legacy string (never 'undefined rep(s)')",
+      resolveTwin(preds, { repsOnDate: 2, postmatchHit: null, activeMinutes: null, firstFocusKnown: false }, today, cfg)
+        .find(r => r.type === "floor_touched").evidence === "2 rep(s)");
+    assert("#96 the post-match witness still rides on the end of the sentence",
+      resolveTwin(preds, { ...world1, postmatchHit: true }, today, cfg).find(r => r.type === "floor_touched").evidence === "7 rep(s) on 2 concept(s) + post-match HIT");
+  }
+
   // NEVER GUESS — dark instruments skip
-  const dark = resolveTwin(preds, { repsOnDate: null, postmatchHit: null, activeMinutes: null, firstFocusKnown: false }, today, cfg);
+  const dark = resolveTwin(preds, { repsOnDate: null, repRowsOnDate: null, postmatchHit: null, activeMinutes: null, firstFocusKnown: false }, today, cfg);
   assert("NEVER GUESS — dark instrument ⇒ skipped with reason", dark.every(r => r.skipped && r.reason === "instrument dark"));
 
   // captain snapshot: narrowing = hit; idempotent
@@ -461,6 +547,37 @@ async function selftest() {
     assert("a decayed hit-rate revokes no_look (proof outranks the word)", computeTiers(decayed, cfg, pend, now).tiers.find(x => x.type === "drill:recall").no_look === false);
   }
 
+  // ORGANISM audit #95 (2026-08-04) — five fabricated MISSes welded into a trust tier.
+  {
+    // the live rows, verbatim in shape: the retired tunnel proxy's evidence signature.
+    const ghosts = ["2026-07-18", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-25"].map((d, i) => ({
+      date: d, book: "twin", type: "first_focus_by_0930", claim: "first_focus_by_0930",
+      resolved: true, hit: false, evidence: `${i * 30} window-switches, 0 Learning-min in last 45min`,
+    }));
+    const g = computeTiers(ghosts, cfg, null, now);
+    const ff = g.tiers.find(x => x.type === "first_focus_by_0930");
+    assert("#95 a market resolved only by a RETIRED instrument reports hit_rate null, never 0",
+      ff.hit_rate === null && ff.n === 0 && ff.quarantined === 5 && g.quarantined_rows === 5);
+    assert("#95 ...and the tier says WHY, on its own face", /retired evening tunnel proxy/.test(ff.quarantine_reason));
+    assert("#95 a null hit-rate can never qualify for no_look (the door stays shut)",
+      ff.no_look === false && ff.pending_ratification === false);
+    // THE LEDGER IS NOT REWRITTEN — the rows stay; only the tier refuses to count them.
+    assert("#95 the append-only ledger is untouched — quarantine is a READ-side refusal",
+      ghosts.length === 5 && ghosts.every(r => r.resolved === true));
+    // the day a real morning instrument lands, its rows count automatically — no date cutoff
+    const honest = ghosts.concat([{ date: "2026-08-04", book: "twin", type: "first_focus_by_0930", claim: "first_focus_by_0930",
+      resolved: true, hit: true, evidence: "first Learning focus stamped 09:05 (deadline 09:30)" }]);
+    const h = computeTiers(honest, cfg, null, now).tiers.find(x => x.type === "first_focus_by_0930");
+    assert("#95 an honestly-measured row counts the moment it exists (no cutoff to maintain)",
+      h.n === 1 && h.hit_rate === 1 && h.quarantined === 5);
+    assert("#95 markets with a live producer are NOT quarantined (no collateral damage)",
+      computeTiers(slip, cfg, null, now).tiers.find(x => x.type === "drill:recall").quarantined === 0
+      && computeTiers(slip, cfg, null, now).quarantined_rows === 0);
+    assert("#95 the pitch_read stamp evidence is also recognised as live",
+      computeTiers([{ date: today, book: "twin", type: "first_focus_by_0930", claim: "first_focus_by_0930", resolved: true, hit: true,
+        evidence: "pitch_read first_focus_by stamp" }], cfg, null, now).tiers[0].n === 1);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -496,12 +613,16 @@ async function main() {
   const preds = readLines(join(STATE_DIR, "predictions.jsonl"));
   const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
   const repsByDate = {};
+  // audit #96: the ROW counter, built in the same loop off the same key, so it can never
+  // drift from the Set. The Set is untouched — gafferMature needs concept membership.
+  const repRowsByDate = {};
   for (const r of reps) {
     // reps stamp ts in UTC ISO; the day boundary is the CAPTAIN'S midnight —
     // localDate() of the parsed instant keys a 00:45 IST rep to the right day
     const parsed = r.ts ? new Date(r.ts) : null;
     const d = parsed && !Number.isNaN(parsed.getTime()) ? localDate(parsed) : String(r.ts || "").slice(0, 10);
     (repsByDate[d] = repsByDate[d] || new Set()).add(String(r.concept || "").toLowerCase());
+    repRowsByDate[d] = (repRowsByDate[d] || 0) + 1;
   }
   const ta = readJson(join(STATE_DIR, "timeaudit.json"));
   const pr = readJson(join(STATE_DIR, "pitch_read.json"));
@@ -516,8 +637,13 @@ async function main() {
   // whole first-focus question) now lives inside firstFocusRead, which refuses to
   // answer at all without a genuine morning stamp.
   const ff = firstFocusRead(pr, today, now, cfg);
+  // audit #96 — IDENTICAL null semantics on both counters, derived from one expression so
+  // they cannot diverge: null means "reps_log.jsonl does not exist" (a dark instrument),
+  // 0 means "the file exists and holds nothing for today" (a measured zero).
+  const noReps = existsSync(join(STATE_DIR, "reps_log.jsonl")) ? 0 : null;
   const world = {
-    repsOnDate: reps.length ? (repsByDate[today] ? repsByDate[today].size : 0) : (existsSync(join(STATE_DIR, "reps_log.jsonl")) ? 0 : null),
+    repsOnDate: reps.length ? (repsByDate[today] ? repsByDate[today].size : 0) : noReps,
+    repRowsOnDate: reps.length ? (repRowsByDate[today] || 0) : noReps,
     postmatchHit: pmText ? /\b(HIT|PARTIAL)\b/.test(pmText) : null,
     activeMinutes: taFresh && typeof taFresh.productiveMinutes === "number" ? taFresh.productiveMinutes
       : (taFresh && taFresh.buckets ? ["Learning", "Building"].reduce((a, b) => a + ((taFresh.buckets[b] && taFresh.buckets[b].minutes) || 0), 0) : null),
@@ -547,12 +673,20 @@ async function main() {
     appendFileSync(SLIP, newRows.map(r => JSON.stringify(r)).join("\n") + "\n");
   }
   const fullSlip = slip.concat(newRows);
-  writeAtomic(TIERS, computeTiers(fullSlip, cfg, readJson(TIERS), now));
+  const tiers = computeTiers(fullSlip, cfg, readJson(TIERS), now);
+  writeAtomic(TIERS, tiers);
   const resolved = newRows.filter(r => r.resolved).length;
   console.log(`scorer: ${resolved} resolution(s), ${newRows.length - resolved} proposal(s) appended · slip=${fullSlip.length} rows → ${TIERS}`);
+  // audit #95: an excluded row is never silently excluded.
+  if (tiers.quarantined_rows) {
+    console.log(`  quarantined ${tiers.quarantined_rows} row(s) resolved by a retired instrument (kept in slip.jsonl, refused by the tiers):`);
+    for (const t of tiers.tiers) if (t.quarantined) console.log(`    ${t.type}: ${t.quarantined} row(s), n=${t.n}, hit_rate=${t.hit_rate === null ? "null (never honestly measured)" : t.hit_rate} — ${t.quarantine_reason}`);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { resolveTwin, captainSnapshot, gafferPropose, gafferMature, computeTiers, loadConfig,
-  firstFocusRead, firstFocusFromTunnelLegacy, ledgerDate, ratifyTier, packetDay };
+  firstFocusRead, firstFocusFromTunnelLegacy, ledgerDate, ratifyTier, packetDay,
+  // audit #95/#96 (2026-08-04): the honest rep sentence and the retired-resolver refusal.
+  repsEvidence, retiredResolverFor, RETIRED_RESOLVERS };
