@@ -190,6 +190,21 @@ function build(capsules, intervals, today, fsrsDue = []) {
     },
     rejirah_overdue: overdue.map(e => ({ concept: e.concept, overdue_days: e.rejirah.overdue_days, next_due: e.rejirah.next_due, rounds_done: e.rejirah.rounds_done })),
     strike_bank: bank,
+    // AUDIT #10 (4 Aug 2026) — THE TWO SCHEDULERS ANSWER DIFFERENT QUESTIONS.
+    // A disagreement here is EXPECTED and is not an error, and neither side is
+    // "the" scheduler:
+    //   · FSRS (fsrs.mjs)        → which REP to drill next. Rep-driven, per-card,
+    //                              only `track=="concept"` reps ever become cards.
+    //   · Capsule Re-Jirah       → which locked CAPSULE needs a fresh 9-axis
+    //     (this file's dates)      defence. lockedOn-driven, per-capsule.
+    // Live example the day this was written: capsule said `tokenization` was due
+    // (8d past its R3 date) while FSRS said `hallucinations` was due (an active
+    // concept with no capsule yet). Both were right — they were answering
+    // different questions. Reporting that is the whole job of this field.
+    // This organ stays a READER: it resolves nothing, schedules nothing, and must
+    // never be turned into a second controller (the 31 Jul audit recommended
+    // AGAINST building a per-axis controller parallel to FSRS).
+    scheduler_disagreement_doc: "EXPECTED, not an error: FSRS schedules REPS (rep-driven, per-card); capsule Re-Jirah schedules CAPSULE RE-TEMPERING (lockedOn-driven, per-capsule). Neither overrides the other.",
     scheduler_disagreement: disagreement,
     scheduler_agreement: agreement,
     // the honesty counters behind the two arms above (audit #33). complete:null means the

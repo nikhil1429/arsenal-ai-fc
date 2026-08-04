@@ -1,6 +1,16 @@
 # SYSTEM_METACOGNITION — Arsenal AI FC · the LEARNING layer + the OUTWORK layer
 **[DRAFT — captain review]**
 
+> **STALENESS STAMP — 4 Aug 2026.** Yeh file Pass-1 diagnosis hai aur uske do load-bearing
+> facts ab GALAT hain. Verify kiye gaye, live data ke against:
+> · Finding 1 kehti hai `reps_log.jsonl` "does not exist" aur layer ne "never processed one
+>   real rep" — asal mein **9 reps** hain.
+> · `concepts.json` ke bare mein "6 concepts + 5 skills" likha hai (do jagah) — asal mein
+>   **26 concepts + 12 skills** registered hain.
+> Baaki diagnosis ka dhaancha zinda hai; sirf ye numbers mat padho — **live padho**.
+> Aur is file ke **9 OPEN FORKS (F-1...F-9) pe faisla aaj tak nahi hua** — woh abhi bhi khule hain.
+> (Yeh stamp file ko replace nahi karta — layering law: purana verbatim zinda, naya uske upar.)
+
 > **What this is.** A full-system, two-pass metacognition of the *system around* both layers — read from disk (repo = truth), agents run to capture real schemas, then every load-bearing claim adversarially stress-tested and re-verified against disk. **Nothing here is committed canon.** It proposes; you decide. Genuine design choices are surfaced as **OPEN FORK** — never silently picked.
 >
 > **Guardrails honored.** (1) **Pedagogy is untouched.** How you *study* — the FORGE method, Jirah, the 9-axis drill, cold-reader doubt-capture — is Nidhi's domain and is **not** analyzed or redesigned here. This is about the wiring, signal, scheduling, and accountability *around* learning. System and method are separable. (2) **No hype.** The honest frame is *compounding, self-correcting, directed-efficiency* — the multiplier is your consistency, the ceiling is biology. "Ceiling" below means **maximum depth-of-effect per load-bearing word**, scope-matched. (3) The Manager **M-2 soul** (`system.md`) is in progress in another thread and is **not** evaluated as final.

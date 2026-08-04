@@ -61,7 +61,16 @@ const TEACHING  = join(STATE_DIR, "teaching_contract.json");   // READ-ONLY here
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
 const STEPS = [
   "TIME-BOX",       // 0  core concept ≈ max 1 din; budget khatam → bache axes DEFER
-  "DARAAR-MAP",     // 1  9 axes dikhao = visible finish line
+  // AUDIT #4 (4 Aug 2026) — THE NAME IS USED AT TWO DIFFERENT MOMENTS.
+  // At step 1 NOTHING is cracked yet: these are the 9 ANGLES TO COVER, shown
+  // upfront as a visible finish line (an ADHD-PI accommodation, not decoration).
+  // The real cracks -- capsule `faultLines` -- only exist AFTER step 9 JIRAH,
+  // where an axis is graded held or cracked. Same word, two moments; reading
+  // step 1 as "the crack map" makes a session hunt for damage that has not
+  // happened yet. The canonical name stays (PROJECT_OS.md + forge_sessions.jsonl
+  // history both carry this exact string) -- what changes is that the ambiguity
+  // is now written down instead of being rediscovered every few weeks.
+  "DARAAR-MAP",     // 1  COVERAGE map: 9 axes dikhao = visible finish line (cracks come at 9 JIRAH)
   "PEHLE-GUESS",    // 2  teaching se PEHLE 2-3 axis Q ka cold guess
   "SAMJHAO",        // 3  analogy, zero assumed knowledge
   "DIKHAO",         // 4  concrete example + concept ka WIDGET (Visualization Contract)
@@ -203,6 +212,22 @@ function addMoment(s, kind, now = new Date()) {
 
 // THE CONTRACT — what the hook injects on every turn. Short by design: a wall of
 // text read every turn is a wall of text ignored every turn.
+// ONE line, emitted only when the sprint says a CONCEPT is in motion and no forge
+// session is carrying it. Reads sprint.json read-only; any failure = silence (this
+// runs on a hook, and a hook that throws costs him a turn).
+export function nudgeLine(deps = {}) {
+  try {
+    const sprint = deps.sprint !== undefined ? deps.sprint
+      : JSON.parse(readFileSync(join(STATE_DIR, "sprint.json"), "utf8"));
+    const cur = sprint && sprint.progress && sprint.progress.current;
+    if (!cur || String(cur.track || "").toLowerCase() !== "concept") return "";
+    const task = cur.task || cur.id || "the current concept";
+    return `FORGE: koi session KHULI nahi hai, aur sprint pe "${task}" (concept) chal raha hai.`
+      + ` Agar is turn mein padhana hai to PEHLE \`node scripts/forge_session.mjs start <concept>\` —`
+      + ` warna THE METHOD ka 12-step order, chaar-legal-question-moments law aur META-FREEZE is turn tak pahunchte hi nahi.`;
+  } catch { return ""; }
+}
+
 function contractLines(s, now = new Date()) {
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
@@ -716,6 +741,27 @@ function selftest() {
   assert("SKIP DETECTION — steps jumped over are named in the contract",
     contractLines(s4, T0).some((l) => /SKIPPED so far.*1 DARAAR-MAP/.test(l)));
   assert("step 4 contract demands the widget", contractLines(s4, T0).some((l) => /owes a WIDGET/.test(l)));
+
+  // ── THE SILENCE GAP (4 Aug 2026) — the nudge that closes it ────────────────
+  // Measured before this fix: `contract` printed ZERO bytes for a whole session
+  // while sprint.json's current task was a concept mid-flight. The 12-step block
+  // staying silent is correct; the METHOD reaching the turn NOT AT ALL is not.
+  assert("SILENCE GAP — a concept in the sprint with NO open session gets ONE nudge line",
+    /forge_session\.mjs start/.test(nudgeLine({ sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
+  assert("SILENCE GAP — the nudge names the CONCEPT, so it is never a generic nag",
+    /Hallucinations/.test(nudgeLine({ sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
+  assert("SILENCE GAP — it names WHAT IS LOST, not just what to run",
+    /META-FREEZE/.test(nudgeLine({ sprint: { progress: { current: { task: "X", track: "concept" } } } })));
+  assert("SILENCE GAP — a NON-concept track stays SILENT (never the always-fires warning, audit #38)",
+    nudgeLine({ sprint: { progress: { current: { task: "Python basics", track: "skill" } } } }) === ""
+    && nudgeLine({ sprint: { progress: { current: { task: "API", track: "course" } } } }) === ""
+    && nudgeLine({ sprint: { progress: { current: { task: "resume", track: "career" } } } }) === "");
+  assert("SILENCE GAP — it is ONE line, so it can never become a wall",
+    nudgeLine({ sprint: { progress: { current: { task: "X", track: "concept" } } } }).split("\n").length === 1);
+  assert("SILENCE GAP — a missing/junk sprint degrades to silence, never to a thrown hook",
+    nudgeLine({ sprint: null }) === "" && nudgeLine({ sprint: {} }) === "");
+  assert("SILENCE GAP — an OPEN session suppresses the nudge (the block speaks instead)",
+    contractLines(s4, T0).length > 0);
   assert("step 7 contract demands voice-first Bolo",
     contractLines(setStep(s4, 7, T0).session, T0).some((l) => /voice-first/.test(l)));
 
@@ -1115,7 +1161,23 @@ switch (mode) {
     // be handed the captain's forge contract.
     if (process.env.ARSENAL_ORGAN === "1") break;
     const lines = contractLines(load());
-    if (lines.length) console.log(lines.join("\n"));
+    if (lines.length) { console.log(lines.join("\n")); break; }
+    // ── THE SILENCE GAP (4 Aug 2026) ────────────────────────────────────────
+    // contractLines() is silent on three conditions — no session · closed · stale.
+    // That is correct FOR THE 12-STEP BLOCK: a full pacer block on a non-study
+    // turn is noise. But the consequence was never stated anywhere: with no open
+    // session, THE METHOD's step order, the four-legal-question-moments law and
+    // META-FREEZE **reach the turn not at all**, and nothing notices. Measured
+    // today: `contract` printed ZERO bytes for this entire session while the
+    // sprint's current task was a concept mid-flight.
+    // His own law (HOW_HE_LEARNS / CLAUDE.md): *anything he has to remember is a
+    // design defect, not a discipline problem.* Opening the session was a thing he
+    // had to remember, and the whole METHOD hung off it.
+    // So: ONE line — never the block — and only when the sprint itself says a
+    // CONCEPT is in motion. On a Python/course/build/career day this stays silent,
+    // which is why it cannot become the always-fires warning that trains him to
+    // ignore it (the audit's #38 failure mode).
+    console.log(nudgeLine());
     break;
   }
   case "boot": {                          // HOOK PATH — read-only, at most two lines

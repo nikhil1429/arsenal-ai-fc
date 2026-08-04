@@ -226,6 +226,11 @@ PATCH — Delivery line replace (VISUALIZATION CONTRACT):
   ✅ 1 Tokenization (locked 6/15) → ✅ 2 Embeddings (locked 6/21) → ✅ 3 Inference + sampling (locked 6/24)
   → ✅ 4 Context window (locked 6/28) → 5 Neural net internals (light) → 6 Training/RLHF (light)
   → 7 Hallucinations → 8 Tool use → 9 Jagged intelligence (light).
+  ORDER-CORRECTION-2 (4 Aug 2026): Hallucinations ab LIVE hai as sprint 1-04, yaani stream ke
+  #5 Neural net internals (light) aur #6 Training/RLHF (light) SKIP ho gaye, dropped nahi —
+  woh dono abhi bhi FLOOR ka hissa hain (17 concepts x 9 axes = floor; time-box DEFER karta,
+  delete kabhi nahi). Neeche ka #7 wala number stream ka DEPENDENCY position hai, sprint ka
+  task-id nahi -- do alag numbering systems hain, mila mat do.
   ORDER-CORRECTION (29 Jun): Context window actual mein #4 pe locked hua (original plan #6 tha) —
   NN/Training se AAGE pull hua. Gist canonical num isi ko confirm karta (context = "04"). Baaki
   order dependency-respecting.
@@ -369,6 +374,12 @@ i) SAMJHAO 3 WAYS — CEO (business) / junior (mechanics) / skeptical senior (tr
 - Master = gist — EK FILE PER CAPSULE (tokenization.json, embeddings.json, inference.json,
   context.json, ...; naam = capsule ke 'id' se). Purana single forge-capsules.json flat-array
   DEAD. THE-FORGE.html = engine, baked snapshot ke saath — kabhi empty nahi.
+- CLAUDE CODE (4 Aug 2026): ab CURL ki zaroorat NAHI. `mirror.mjs` roz 06:55 pe gist se saare
+  capsules `dressing-room/state/capsules/<id>.json` mein kheench laata hai (4 files, 41-61 KB,
+  verified). Session seedha wahi LOCAL file `Read` kare -- network chahiye hi nahi. Padhne ka
+  surface: `node scripts/deep.mjs <concept> <axis>`. Gist canonical rehta hai (mirror wahin se
+  kheenchta, aur locked capsules IMMUTABLE hain) -- neeche wala curl-path browser/fallback ke
+  liye hai, roz ka rasta nahi.
 - Thread start pe har capsule file CURL (web_fetch gist.githubusercontent.com pe BLOCKED — bash `curl -s`):
   Raw base: https://gist.githubusercontent.com/nikhil1429/ce50c28d585c2fcd915a9dbf61871a56/raw/<id>.json
   Files: .../raw/tokenization.json, .../raw/embeddings.json, .../raw/inference.json, .../raw/context.json

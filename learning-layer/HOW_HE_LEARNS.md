@@ -460,3 +460,19 @@ question by itself.
 (rule 3) versus *"widget HI lesson hai"* (the contract) is a sequencing question the ruling did
 not touch, because the ruling was about whether visuals count at all. It is written here so the
 next reader knows it was seen and left alone, not missed.
+
+**SEQUENCING ANSWERED — 4 Aug 2026 (the ruling is untouched; only the ordering is stated).**
+The seam dissolves once you notice the two live in **different steps of THE METHOD**, not in
+competition for one moment:
+- **Step 3 · SAMJHAO is TEXT.** Mechanism in text + a numbered trace he runs by hand. Rule 3 owns
+  this step, and step 3 now carries its own depth floor (analogy + worked example + why-chain +
+  stuck-story) — see `.claude/skills/forge/SKILL.md`.
+- **Step 4 · DIKHAO is the WIDGET.** The Visualization Contract owns this step, in full, undemoted.
+So the order is **text first, then the widget** — which is exactly rule 3's *"visuals samajh ke
+BAAD"* and exactly the contract's own position in the step list. Neither is weakened: a widget
+delivered before the mechanism is understood breaks rule 3, and a step 4 with no widget breaks
+the contract. **This does NOT re-open the ruling** — the contract's status, its clauses, and the
+"undriven widget = FAILED widget" law are all unchanged.
+*(Recorded because a session on 4 Aug 2026 nearly demoted the contract on the false premise that
+a terminal cannot deliver a widget. It can: the contract's own clause says "delivery inline, and
+if the render fails, a self-contained `.html` immediately — laptop-first.")*

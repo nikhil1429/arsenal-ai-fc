@@ -20,6 +20,22 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { courseBrief } from "./course.mjs";   // audit #35 — the course tracker's one reader
 
+// audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
+// what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
+function rejirahDueLine(dir) {
+  const p = join(dir, "capsule_map.json");
+  if (!existsSync(p)) return null;
+  const m = JSON.parse(readFileSync(p, "utf8"));
+  const od = (m.rejirah_overdue || []).filter((r) => (r.overdue_days || 0) > 0)
+    .sort((a, b) => (b.overdue_days || 0) - (a.overdue_days || 0));
+  if (!od.length) return null;
+  const never = od.filter((r) => (r.rounds_done || 0) === 0).length;
+  const head = od.slice(0, 3).map((r) => `${r.concept} ${r.overdue_days}d`).join(" · ");
+  return `RE-JIRAH OVERDUE (${od.length}): ${head}${od.length > 3 ? " …" : ""}`
+    + (never ? ` — ${never} ka ek bhi round nahi hua.` : "")
+    + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`;
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE = join(__dirname, "..", "dressing-room", "state");
 
@@ -189,6 +205,16 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   const nx = (sprint.progress && sprint.progress.next_up) || [];
   if (nx.length) L.push(`NEXT UP: ${nx.slice(0, 3).join(" · ")}`);
   if (sprint.progress && sprint.progress.examiner_daily) L.push(`DAILY EXAMINER: at day's end, test today's concept (${cur ? cur.task : "current"}) — retrieval practice, not a full mock.`);
+  // audit #11 — RE-JIRAH WAS INVISIBLE AT SESSION START.
+  // Measured 4 Aug 2026: embeddings 41d, inference 38d, context 34d overdue, and
+  // THREE of the four capsules had `rounds_done: 0` — never re-tempered once —
+  // while 36 ready-written strike questions sat unused. Nothing surfaced that at
+  // kickoff, so every session opened on "what's next" and never on "what's rotting".
+  // Overdue is RIPE, not late: this line names it without scolding.
+  try {
+    const dueLine = rejirahDueLine(dir);
+    if (dueLine) L.push(dueLine);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
   if (memory) {
     L.push("--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---");
     L.push(memory);

@@ -18,6 +18,14 @@
 // INPUTS (reads-only; each missing ⇒ graceful skip, never crash):
 //   reps_log.jsonl          — fluency, velocity, edge, confusions (BOTH tracks)
 //   fsrs_store.json         — per-card `due` → rejirah_due (decay stays FSRS-owned; we only join axis)
+//        ⚠ NAME COLLISION (audit #10, 4 Aug 2026): the field below is called
+//        `rejirah_due` but it is **FSRS's rep schedule**, NOT the FORGE capsule's
+//        Re-Jirah. They answer different questions and neither overrides the other:
+//        FSRS = which REP to drill next (rep-driven, per-card); capsule Re-Jirah =
+//        which locked CAPSULE needs a fresh 9-axis defence (lockedOn-driven,
+//        per-capsule, owned by capsule_bridge.mjs). The name was borrowed and has
+//        confused every reader since. It is NOT renamed here — several organs read
+//        this key — but nothing downstream may treat it as the capsule schedule.
 //   concepts.json           — axis authority + bucket + `core` flag + canonicalize
 //   learning_state_config.json — thresholds + Maidan structure (missing ⇒ built-in defaults)
 //   forge_session.json      — the FORGE pacer's live position (read-only; forge_session.mjs owns it)
