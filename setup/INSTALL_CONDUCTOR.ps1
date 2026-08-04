@@ -100,23 +100,59 @@ else {
   # morning silently queues or dies mid-write. Clear both, and let a missed run
   # start late rather than never.
   $x = [xml](schtasks /Query /TN $conductorTask /XML)
-  $x.Task.Settings.DisallowStartIfOnBatteries = "false"
-  $x.Task.Settings.StopIfGoingOnBatteries     = "false"
-  $x.Task.Settings.StartWhenAvailable         = "true"
+  $st = $x.Task.Settings
+  $st.DisallowStartIfOnBatteries = "false"
+  $st.StopIfGoingOnBatteries     = "false"
+  # 4 Aug 2026 — THIS LINE USED TO LIE.
+  # schtasks-generated XML does NOT contain a <StartWhenAvailable> element, so a bare
+  # `$st.StartWhenAvailable = "true"` throws SetValueInvocationException. The throw was
+  # non-terminating, execution continued, and the script printed
+  # "+ power conditions cleared, StartWhenAvailable on" anyway — a measured failure
+  # rendered as a success, which is the exact defect class this whole repair exists to
+  # remove. Verified on the live task: the property was ABSENT after the "success".
+  # Create the element when it is missing, then VERIFY it off disk before claiming it.
+  if (-not $st.StartWhenAvailable) {
+    $el = $x.CreateElement("StartWhenAvailable", $x.DocumentElement.NamespaceURI)
+    $el.InnerText = "true"
+    $st.AppendChild($el) | Out-Null
+  } else { $st.StartWhenAvailable = "true" }
   $tmp = Join-Path $env:TEMP "conductor_task.xml"
   $x.Save($tmp)
   schtasks /Create /F /TN $conductorTask /XML $tmp | Out-Null
-  if ($LASTEXITCODE -eq 0) { Say "  + power conditions cleared, StartWhenAvailable on" }
-  else { Say "  ! could not apply power settings - do it by hand in Task Scheduler" }
-  Remove-Item $tmp -ErrorAction SilentlyContinue
+  if ($LASTEXITCODE -ne 0) {
+    Say "  ! could not apply power settings - do it by hand in Task Scheduler"
+  } else {
+    # READ IT BACK. Never report a setting from the fact that a command exited 0.
+    $v = [xml](schtasks /Query /TN $conductorTask /XML)
+    $vs = $v.Task.Settings
+    $batOk  = ($vs.DisallowStartIfOnBatteries -eq "false") -and ($vs.StopIfGoingOnBatteries -eq "false")
+    $swaOk  = ($vs.StartWhenAvailable -eq "true")
+    if ($batOk) { Say "  + power conditions cleared (verified on disk)" }
+    else        { Say "  ! power conditions NOT cleared - the organism will die on battery" }
+    if ($swaOk) { Say "  + StartWhenAvailable = true (verified on disk) - a missed morning runs LATE, not never" }
+    else        { Say "  ! StartWhenAvailable NOT set - a missed morning will simply never run" }
+  }
 }
 
 # --- 2. disable the 14 it replaces ------------------------------------------
 Say "Disabling the 14 tasks the conductor now runs in order ..."
+# 4 Aug 2026 — the first live run disabled only 10 of 14 and never said so: the script
+# hit a non-terminating error partway and the four survivors (Calibration, Nemesis,
+# LearningState, Wall-AM) stayed Ready while the run looked finished. A partial result
+# reported as a whole one is the same defect as a false success. So: keep going past any
+# single failure, then VERIFY every one off disk and print a have/need count.
+$disabled = @(); $stuck = @()
 foreach ($t in $replaced) {
   if ($WhatIf) { Say "  would DISABLE $t"; continue }
-  schtasks /Change /TN $t /DISABLE 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) { Say "  - disabled $t" } else { Say "  ! $t not found (skipped)" }
+  try { schtasks /Change /TN $t /DISABLE 2>$null | Out-Null } catch { }
+  $row = schtasks /query /tn $t /fo csv /v 2>$null | ConvertFrom-Csv | Select-Object -First 1
+  if (-not $row)                      { Say "  · $t not present (skipped)" }
+  elseif ($row.Status -eq "Disabled") { $disabled += $t; Say "  - disabled $t" }
+  else                                { $stuck += $t;    Say "  ! $t is STILL $($row.Status) - disable it by hand" }
+}
+if (-not $WhatIf) {
+  Say ("  => {0}/{1} disabled (verified on disk)" -f $disabled.Count, $replaced.Count)
+  if ($stuck.Count) { Say ("  => STILL ENABLED: {0} - these will double-run against the conductor" -f ($stuck -join ", ")) }
 }
 
 Say ""

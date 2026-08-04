@@ -30,7 +30,8 @@
 //     failed, how long, in what order — because "it returned 0" was exactly the signal
 //     that hid this for two weeks (Windows reports 0 for a script that failed inside).
 // ============================================================================
-import { spawnSync } from "node:child_process";
+import { spawnSync, spawn } from "node:child_process";
+import net from "node:net";
 import { writeFileSync, renameSync, readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
@@ -47,9 +48,20 @@ const REPORT = join(STATE_DIR, "conductor.json");
 export const MORNING = [
   { id: "mirror",        at: "06:55", args: ["scripts/mirror.mjs"] },
   { id: "sprintsync",    at: "07:00", args: ["scripts/sprintsync.mjs"] },
-  { id: "thalamus",      at: "07:00", args: ["scripts/thalamus.mjs"] },
-  { id: "cortex",        at: "07:02", args: ["scripts/cortex.mjs"] },
-  { id: "turnstile",     at: "07:04", args: ["scripts/turnstile.mjs"] },
+  // THE THREE DAEMONS (4 Aug 2026 — caught during the schtasks install, before it ran).
+  // These do NOT exit. `node scripts/thalamus.mjs` is an HTTP relay on :4113 that runs for
+  // days; cortex and turnstile are the same shape (turnstile holds a singleton lock on
+  // :4111 precisely because "two turnstiles double-ingest"). Run synchronously like every
+  // other step, they would each block the chain for the full STEP_TIMEOUT_MS, be KILLED at
+  // the timeout, and be recorded as failures — and killing the thalamus mid-morning takes
+  // the whole nucleus down. The old schtasks entries always knew this: they launched these
+  // three through `wscript hidden_run.vbs` (fire-and-forget, no window), never inline.
+  // So: `daemon.port` marks them. The runner probes the port first — if it answers, the
+  // daemon is already up and is LEFT ALONE (relaunching risks a second instance) — and
+  // otherwise launches it DETACHED through the same VBS cloak, which now also logs.
+  { id: "thalamus",      at: "07:00", args: ["scripts/thalamus.mjs"],  daemon: { port: 4113 } },
+  { id: "cortex",        at: "07:02", args: ["scripts/cortex.mjs"],    daemon: { port: 4112 } },
+  { id: "turnstile",     at: "07:04", args: ["scripts/turnstile.mjs"], daemon: { port: 4111 } },
   { id: "physio",        at: "07:30", args: ["scripts/physio.mjs"] },
   // ---- the body read. EVERYTHING below depends on this file existing and being today's.
   { id: "goalkeeper",    at: "08:30", args: ["scripts/oura_coach.mjs"], writes: "readiness.json", network: true },
@@ -84,6 +96,39 @@ export function armTrigger(name, reason, dir = STATE_DIR) {
   q.triggers[name] = { ts: new Date().toISOString(), reason };
   writeAtomic(p, JSON.stringify(q, null, 2));
   return true;
+}
+
+// Is something already listening on this localhost port? A daemon that answers is a
+// daemon that is alive — cheaper and more honest than parsing a process list, and it
+// is the same question the organ itself asks (turnstile binds :4111 as its singleton).
+export function portOpen(port, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; try { sock.destroy(); } catch {} resolve(v); } };
+    sock.setTimeout(timeoutMs);
+    sock.once("connect", () => finish(true));
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+    try { sock.connect(port, "127.0.0.1"); } catch { finish(false); }
+  });
+}
+
+// Launch a long-running organ the way the schtasks entries always did: through the
+// VBS cloak, with NO window and NO wait. A visible console begs to be closed, and
+// closing it kills the daemon (the 0xC000013A scar, 14 Jul 2026). hidden_run.vbs now
+// also redirects stdout+stderr to scripts/<name>.log and rolls it (audit #10), so a
+// detached launch is no longer a silent one.
+export function launchDetached(args) {
+  const vbs = join(REPO, "setup", "hidden_run.vbs");
+  if (existsSync(vbs)) {
+    const c = spawn("wscript.exe", [vbs, "node", ...args], { cwd: REPO, detached: true, stdio: "ignore", windowsHide: true });
+    c.unref();
+    return;
+  }
+  // No cloak (a non-Windows checkout, or CI): still never block the chain.
+  const c = spawn(process.execPath, args, { cwd: REPO, detached: true, stdio: "ignore" });
+  c.unref();
 }
 
 export async function conduct(chain = MORNING, opts = {}) {
@@ -121,6 +166,44 @@ export async function conduct(chain = MORNING, opts = {}) {
     // unconditionally (manager.mjs guarantees it) — but the degradation is recorded,
     // never inferred, so tomorrow's debugging does not start from a blank page.
     const missing = (step.needs || []).filter(n => !(steps.find(s => s.id === n) || {}).ok);
+
+    // ---- DAEMON STEPS: probe, then launch DETACHED. Never block the chain. ----
+    if (step.daemon) {
+      // A DRY run with no injected launcher must never start a real daemon. Without
+      // this, the selftest's isolation block — which passes no stub — would spawn
+      // thalamus/cortex/turnstile for real on any machine where those ports are closed,
+      // and on the away-day CI runner (no wscript, every port closed) it would leave
+      // orphaned node processes behind on every push. Same law as timeaudit's
+      // "the selftest must never touch the live bus". An injected launcher still runs,
+      // so the daemon logic itself stays fully exercised by the tests below.
+      if (opts.dry && !opts.launch) {
+        steps.push({ id: step.id, ok: true, ms: Date.now() - t0, daemon: "dry — not launched", port: step.daemon.port });
+        continue;
+      }
+      const probe = opts.probe || portOpen;
+      const launch = opts.launch || launchDetached;
+      let up = false;
+      try { up = await probe(step.daemon.port); } catch { up = false; }
+      if (up) {
+        // Already serving. Relaunching would race a singleton lock at best and
+        // double-ingest at worst — turnstile's own header says so.
+        steps.push({ id: step.id, ok: true, ms: Date.now() - t0, daemon: "already running", port: step.daemon.port });
+        continue;
+      }
+      let err = null;
+      try { launch(step.args); } catch (e) { err = String(e && e.message || e); }
+      // A detached launch has no exit code to wait for — claiming one would be the
+      // fabricated-success defect this whole audit exists to hunt. Report what is
+      // true: it was STARTED. The daemon's own log (scripts/<name>.log, now written
+      // by hidden_run.vbs) is where its health actually lives.
+      steps.push({
+        id: step.id, ok: !err, ms: Date.now() - t0,
+        daemon: err ? "launch failed" : "launched (detached — exit code not awaited)",
+        port: step.daemon.port, error: err,
+      });
+      continue;
+    }
+
     const r = run(step.args);
     const ms = Date.now() - t0;
     const timedOut = !!(r && (r.error && /ETIMEDOUT|timed out/i.test(String(r.error.message || r.error))));
@@ -159,22 +242,85 @@ async function selftest() {
   {
     const seen = [];
     const armed = [];
-    await conduct(MORNING, { ...base, run: (a) => { seen.push(a[0]); return { status: 0, stderr: "" }; }, arm: (n) => { armed.push([n, seen.length]); return true; } });
+    const rep = await conduct(MORNING, { ...base, run: (a) => { seen.push(a[0]); return { status: 0, stderr: "" }; }, arm: (n) => { armed.push([n, seen.length]); return true; }, probe: async () => false, launch: () => {} });
     const gk = seen.indexOf("scripts/oura_coach.mjs");
     const ls = seen.indexOf("scripts/learning_state.mjs");
     const sheet = seen.indexOf("scripts/brain.mjs");
     ok("ORDER — the body read precedes the sheet (the 1 Aug inversion, impossible now)", gk > -1 && sheet > -1 && gk < sheet);
+
+    // ---- DAEMONS (4 Aug 2026) — caught during the install, BEFORE it ran ----
+    // thalamus/cortex/turnstile never exit. Run inline they would each block for the
+    // full STEP_TIMEOUT_MS, be killed, and be logged as failures — and killing the
+    // thalamus takes the nucleus down mid-morning.
+    {
+      const dmns = MORNING.filter(s => s.daemon);
+      ok("DAEMON — the three long-running organs are declared, not treated as one-shots",
+        dmns.length === 3 && ["thalamus", "cortex", "turnstile"].every(id => dmns.some(d => d.id === id)));
+
+      // already up → left alone, and NOT relaunched (turnstile: "two turnstiles double-ingest")
+      let launches = 0;
+      const repUp = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
+        { ...base, probe: async () => true, launch: () => { launches++; } });
+      ok("DAEMON — an ALREADY-RUNNING daemon is left alone, never relaunched",
+        repUp.steps[0].ok === true && repUp.steps[0].daemon === "already running" && launches === 0);
+
+      // down → launched detached, and the chain does NOT wait for an exit code
+      const spawned = [];
+      const repDown = await conduct(
+        [{ id: "turnstile", args: ["scripts/turnstile.mjs"], daemon: { port: 4111 } },
+         { id: "after", args: ["scripts/x.mjs"] }],
+        { ...base, probe: async () => false, launch: (a) => { spawned.push(a[0]); },
+          run: () => ({ status: 0, stdout: "", stderr: "" }) });
+      ok("DAEMON — a DOWN daemon is launched detached, and the chain continues past it",
+        spawned.length === 1 && repDown.steps[0].ok === true && repDown.steps.length === 2 && repDown.steps[1].ok === true);
+      ok("DAEMON — the report says the exit code was NOT awaited (no fabricated success)",
+        /exit code not awaited/.test(repDown.steps[0].daemon));
+      ok("DAEMON — a daemon step NEVER reaches the synchronous runner (that is the hang)",
+        repDown.steps[0].exit === undefined);
+
+      // a launch that throws is a real failure, and it is named
+      const repErr = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
+        { ...base, probe: async () => false, launch: () => { throw new Error("wscript missing"); } });
+      ok("DAEMON — a launch that throws is reported as a FAILURE, with its reason",
+        repErr.steps[0].ok === false && /wscript missing/.test(repErr.steps[0].error));
+
+      // the probe itself must answer honestly on a port nobody is serving
+      ok("DAEMON — portOpen says false for a port nobody is listening on",
+        (await portOpen(59999, 200)) === false);
+
+      // THE SELFTEST MUST NEVER START A REAL DAEMON. A dry run with no injected
+      // launcher short-circuits before probe AND before launch — otherwise this very
+      // suite would spawn thalamus/cortex/turnstile on any box where those ports are
+      // closed, and the away-day CI runner would leak three node processes per push.
+      const repDry = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }], { ...base });
+      ok("DAEMON — a DRY run never launches anything, and says so instead of pretending",
+        repDry.steps[0].daemon === "dry — not launched" && repDry.steps[0].ok === true);
+    }
     ok("ORDER — every signal organ precedes the sheet", ls > -1 && ls < sheet);
     ok("ORDER — the wall renders after the sheet it renders", seen.indexOf("scripts/viz.mjs") > sheet);
     ok("ORDER — the trigger is armed AFTER the signals and BEFORE the sheet", armed.length === 1 && armed[0][1] === ls + 1 && armed[0][1] === sheet);
-    ok("ORDER — sequential, one run per step, nothing dropped", seen.length === MORNING.filter(s => s.args).length);
+    // 4 Aug 2026: this used to compare `seen` against EVERY step carrying `args`. The three
+    // daemons carry args too but deliberately never reach the synchronous runner, so the
+    // count alone would now be wrong in a way that hides the interesting fact. Assert both
+    // halves: every one-shot really ran, AND nothing vanished from the report.
+    ok("ORDER — sequential, one run per step, nothing dropped (daemons launched, not run inline)",
+      seen.length === MORNING.filter(s => s.args && !s.daemon).length &&
+      rep.steps.length === MORNING.length);
+    ok("ORDER — the three daemons are still in the report, each with its port",
+      MORNING.filter(s => s.daemon).every(d => {
+        const row = rep.steps.find(s => s.id === d.id);
+        return row && row.port === d.daemon.port && typeof row.daemon === "string";
+      }));
   }
 
   // failure isolation — one dead organ must not cost him the other fourteen
   {
     const seen = [];
     const rep = await conduct(MORNING, { ...base, run: (a) => { seen.push(a[0]); return a[0].includes("twin") ? { status: 1, stderr: "boom" } : { status: 0, stderr: "" }; }, arm: () => true });
-    ok("ISOLATION — a mid-chain failure does not stop the chain", seen.length === MORNING.filter(s => s.args).length);
+    ok("ISOLATION — a mid-chain failure does not stop the chain", seen.length === MORNING.filter(s => s.args && !s.daemon).length);
     ok("ISOLATION — the failure is recorded with its exit code and stderr", rep.steps.find(s => s.id === "twin").ok === false && /boom/.test(rep.steps.find(s => s.id === "twin").stderr));
     ok("ISOLATION — a healthy step keeps no stderr noise", rep.steps.find(s => s.id === "mirror").stderr === null);
     ok("ISOLATION — the report counts honestly", rep.ran === MORNING.length && rep.failed === 1);
