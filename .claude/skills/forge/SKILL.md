@@ -60,6 +60,31 @@ is not.
   These are reps (confidence = `guessed` unless he states otherwise).
 - **3 · SAMJHAO.** Analogy first, **zero assumed knowledge**, ground-up. Business impact +
   interview-readiness framing.
+  **THE DEPTH FLOOR (added 4 Aug 2026 — this step had no floor at all).** Until today step 3's
+  whole spec was the two lines above, while step 4's ran thirteen. Step 3 is where the teaching
+  actually happens, and it was the least-specified step in THE METHOD.
+  Why it matters mechanically: `FORGE_SPEC.md` defines the stored `deep` layer as
+  **analogy + worked example + why-chain + stuck-story**, and says it is *recovered at LOCK from
+  the teaching threads* — Claude never invents it. So the thread is the raw material. **If the
+  teaching never produced a why-chain or a stuck-story, there is nothing to recover at LOCK**, the
+  capsule's `deep` comes out thin, and he only finds out two months later on a cold re-read — which
+  `FORGE_DEEP_RENDER_BRIEF.md` names an *interview-failure risk*.
+  So, per axis, the thread must end up carrying all four:
+  1. **ANALOGY** — everyday and physical only (khana, ghar, dukaan, sheher). **Never geometric,
+     never a graph, never a coordinate space** — every abstract analogy has failed him on record.
+  2. **WORKED EXAMPLE** — real numbers, his own data (the invoice line), **run by hand**. Watching
+     does not stick.
+  3. **WHY-CHAIN** — *why this and not the obvious alternative*, followed until it bottoms out.
+     This is the one that silently goes missing; a mechanism he can state but not justify collapses
+     under the first "why?" in a Jirah.
+  4. **STUCK-STORY** — the *maine-socha-X-phir-Y* moment, in **his** words, captured **as it
+     happens**. It cannot be reconstructed later, and it is what makes a cold re-read recognisable
+     to future-Nikhil.
+  Delivery obeys HOW_HE_LEARNS: **one idea per message**, mechanism as **text + a numbered trace**,
+  end with **one** check-question then STOP, and say **"tu yahan hai, itna bacha hai"** every turn.
+  **Deeper, never longer** — if he asks for detail, add STEPS, never more content in one message.
+  *(This floor does NOT touch step 4. The Visualization Contract stands — he ruled on it himself,
+  1 Aug 2026. Text-first here, widget there; they are different steps, not competing surfaces.)*
 - **4 · DIKHAO.** Concrete example **+ the concept's WIDGET** (Visualization Contract):
   story hook = a business cliffhanger, not a definition · stepper only / **no autoplay**,
   counter visible ("3/9") · one highlight per step, rest dimmed, caption one line ·
@@ -105,6 +130,16 @@ is not.
   A doubt that cannot be understood by someone who was not in the room is not a doubt yet.
 - **11 · RE-JIRAH.** ~3 din / ~2 hafte / ~6 hafte (`forge_profile.json`:
   `rejirah_intervals_days`). Day-3's opening move = widget Chala mode, cold.
+  **Run it from here (added 4 Aug 2026):**
+  `node scripts/deep.mjs due` — the queue, **strike questions only, notes shut**. That is
+  controller-v0 knob 1, ALWAYS-COLD: *struggle is the feature, not the bug.* Make him answer
+  before anything opens.
+  `node scripts/deep.mjs <concept> <axis>` — then, and only then, the weld and the full `deep`
+  layer for that axis, in his own words.
+  A little overdue is **RIPE**, not late — high-value recall. Only severe overdue is worth naming,
+  because compounding-avoidance is the ADHD-PI failure mode this step exists to beat.
+  *(Until today those 80,511 characters of `deep` — all 36 axes — were readable only by opening a
+  JSON file by hand. `FORGE_SPEC.md` has marked this "MUST RENDER … fix PENDING" since 30 Jun.)*
 
 ## THE 9 AXES (this is the daraar-map of step 1)
 

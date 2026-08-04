@@ -19,8 +19,23 @@ Run `node scripts/learnstate.mjs json` and read:
   sprint/working_set/weaknesses only. **If a session is open, do NOT re-teach its closed
   axes** — `close` it first, read the coverage aloud, then continue.
 
+- `node scripts/deep.mjs` — what is already LOCKED, and what Re-Jirah is due. Cheap, read-only.
+  **Check this before starting anything new.** Measured 4 Aug 2026: embeddings 41d, inference 38d,
+  context 34d overdue, and **three of the four capsules had never been re-tempered once**
+  (`rounds_done: 0`) while 36 ready-written strike questions sat unused. He has been depositing
+  and never withdrawing. A due Re-Jirah usually beats a new concept — say so, and let him choose.
+
 Open with ONE line: what he's on + the open loop. Then route. If `cur` is empty,
 tell him the sprint has no current task (run `node scripts/sprintsync.mjs`) and stop.
+
+### RE-READ / RE-JIRAH (he wants to revisit, not start new)
+Triggers: *"revise"*, *"purana dohrana hai"*, *"re-jirah"*, *"yaad nahi raha"*, or a due queue.
+1. `node scripts/deep.mjs due` — the queue, **strike questions only, notes shut** (controller-v0
+   knob 1, ALWAYS-COLD: *struggle is the feature*). He answers cold, out loud, BEFORE anything opens.
+2. `node scripts/deep.mjs <concept> <axis>` — only then the weld and the full `deep` layer, in his
+   own words. Never paraphrase it back at him; it is the text he will defend in an interview.
+3. Held clean → note it. Cracked → re-weld NOW, and the crack is **data, never a verdict**.
+4. Reps from a Re-Jirah round capture exactly like any other rep (§3), gut-word first.
 
 ## 1. ROUTE by `cur.track`
 

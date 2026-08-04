@@ -79,6 +79,43 @@ working set. Use `recall` for a targeted lookup ("what confused him about X").
   (or add a `.worktreeinclude` listing the token files) so a Git-worktree
   session can see them.
 
+## The LEARNING LAYER — this is where he actually studies
+> Added 4 Aug 2026. Until then this file said **nothing** about the learning layer — no `/forge`,
+> no `PROJECT_OS.md`, no `HOW_HE_LEARNS.md` — while being the one file every session reads. The
+> hooks injected the pacer and the teaching rules, so the *rules* arrived but the *map* never did.
+
+**Read `learning-layer/LEARNING_LAYER_MAP.md` first.** It is a MAP + INDEX, **not canon** — it
+says which rule lives in which file, who wins a conflict, and how a session actually runs. If it
+and a canon file disagree, **canon wins and the map is wrong** — fix the map.
+
+**Canon, in precedence order:**
+- `learning-layer/PROJECT_OS.md` — THE METHOD (12 steps, 0–11) · the 9 axes · HARD RULES · syllabus
+  · the VISUALIZATION CONTRACT. One source of truth for *how we work*.
+- `learning-layer/FORGE_SPEC.md` — capsule JSON schema · the COLD-READER STANDARD · Gate 1 + Gate 2.
+  **Final on the capsule schema and the doubt quality-bar.**
+- `learning-layer/FORGE_DESIGN.md` — **final on visual design.**
+- `learning-layer/HOW_HE_LEARNS.md` — **evidence**, not canon: 21 forensic findings + the 17-rule
+  COLD-START CARD that `learnstate.mjs` splices verbatim into every SessionStart brief.
+
+**Laws that are easy to break and expensive to break:**
+- **The Visualization Contract is NOT demoted.** He ruled on it himself, 1 Aug 2026, in his own
+  words — *"11 point yes visuals are important for my adhd pi brain"* (`HOW_HE_LEARNS.md`, THE
+  VISUALIZATION RULING). Every concept gets ONE widget and **the widget IS the lesson**. Delivery
+  is inline, and if a render fails, a self-contained `.html` — laptop-first. Do not re-open this.
+- **Capsules are IMMUTABLE and their prose is SACRED** (`bolo`, `weld`, `deep`, `mechanism`, `hook`,
+  `why`, `traps`, `threeWays`, `interviewLines`). Never invent them, never reword them, never
+  re-emit a locked capsule. That is the content he will defend out loud in an interview.
+- **Only four question-moments exist by design** — Pehle-Guess · widget guess-gates · ONE sharp
+  check-question across steps 3–6 · Jirah. Anything else is a quiz-dump, which canon forbids.
+- **Gut-word before the answer** (`knew`/`shaky`/`guessed`), never re-graded after. No gut-word,
+  no rep.
+- **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs`. Never hand-edit
+  a state file.
+
+**The surfaces:** `/forge` (he named a concept) · `/learn` (he didn't — read state and route) ·
+`/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`
+(`due` = the queue, questions only and **cold**; `<concept> <axis>` = one axis fully opened).
+
 ## Files of record
 - `OPS_STATE.md` (Google Drive) — live operational anchor; read first each thread.
 - `GOALKEEPER_v2_migration.md` — what changed in the Goalkeeper recalibration.
