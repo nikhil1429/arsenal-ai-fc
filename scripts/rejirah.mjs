@@ -8,14 +8,42 @@
 // `reJirahDone: []` — never re-tempered once, 34-42 days overdue. A cold round could
 // be run but its RESULT had nowhere to land, so the loop had no back edge.
 //
-// WHY NOT WRITE INTO THE CAPSULE. FORGE_SPEC reserves per-axis `axisType` / `nextDue`
-// / `lastResult` / `calibrationGap` / `fluencyState` and capsule-level `edgeMap` /
-// `confusionPairs`, and planned to POPULATE them on the first R1 run. That plan means
-// editing 36 immutable capsules whose prose is sacred — the exact corruption risk the
-// immutability law exists to prevent, taken 36 times. So (captain's ruling D3, 5 Aug
-// 2026) THE CAPSULE IS NEVER TOUCHED: results go to an append-only log beside it, and
-// every reserved field becomes DERIVED. Recompute is lossless, the sacred prose is
-// unreachable from here, and a wrong constant costs a re-run rather than a rewrite.
+// WHY THE CONTROLLER FIELDS ARE DERIVED. FORGE_SPEC reserves per-axis `axisType` /
+// `nextDue` / `lastResult` / `calibrationGap` / `fluencyState` and capsule-level
+// `edgeMap` / `confusionPairs`, and §6 says their FINAL shape + constants get spec'd at
+// the first R1 run — "un-run = hypothesis; run se hi real values + tuned constants aate".
+// Before a single round has been sat there is nothing honest to freeze, so they are
+// computed here from the append-only log instead. Recompute is lossless and a wrong
+// constant costs a re-run rather than a rewrite. This is a DEFERRAL until R1 closes,
+// which is exactly what the spec asks for — not a refusal.
+//
+// CORRECTION (5 Aug 2026, second pass — the first pass had this WRONG and it is worth
+// saying plainly). This header used to claim the capsule may never be written at all,
+// citing the immutability law. It read that law backwards. FORGE_SPEC §5's actual text
+// is "Claude purane locked capsules KABHI RE-EMIT nahi karta" and, in the same sentence,
+// "existing file SIRF APNE Re-Jirah/doubt pe edit hoti" — never REGENERATE, and the one
+// occasion it does name for an edit is this very organ's. §6 even names the mechanism:
+// "re-emit nahi, TARGETED UPDATE". So a Re-Jirah round IS supposed to land in the
+// capsule, in one field: `reJirahDone`.
+//
+// WHY THIS FILE STILL DOES NOT WRITE IT. Not the immutability law — OWNERSHIP. The gist
+// is the master store (§1) and `dressing-room/state/capsules/` is a READ-ONLY MIRROR
+// whose single writer is mirror.mjs, which re-fetches verbatim gist bytes every morning.
+// A local edit here would be a single-writer violation that the 06:55 mirror silently
+// erased by breakfast. The captain's Option-A write path (§2 step 2b) is his paste into
+// the gist, and "nothing auto-saves — Nikhil decides" is the rule right beside it.
+// So `close` does the three things a machine legitimately can:
+//   1. record the round in this organ's OWN append-only log (real timestamps),
+//   2. emit the exact `reJirahDone` patch for his one-file gist replace, and
+//   3. keep the round PENDING until the mirror brings the gist back down carrying it —
+//      which is a real proof his paste landed, not an assumption that it did.
+// That is the back edge closed through the master store, with no ownership broken.
+//
+// WHAT DEPENDS ON `reJirahDone` (why the pending-nag is not pedantry): fsrs.mjs:143
+// builds a concept's entire review history from lockedOn + these dates, deep.mjs:82
+// counts them for the round number, capsule_bridge.mjs:75 derives done/overdue/due from
+// them, dugout.mjs reports them and shipped.mjs:165 emits `rejirah_served` from them.
+// Until the date reaches the gist, all five believe the round never happened.
 //
 // THE ARBITER (captain's ruling D4). Two schedulers used to emit dates and
 // capsule_bridge could only report the disagreement. They were answering different
@@ -24,11 +52,12 @@
 //     THIS FILE          = WHICH AXES, and HOW HARD.         <- never emits a concept date
 // So there is no conflict left to resolve, only a division of labour to honour.
 //
-// LAWS: single writer of rejirah_log.jsonl · reads capsules READ-ONLY · no LLM ·
-//   every threshold below is a v0 HYPOTHESIS and is either taken from an organ that
-//   already owns it or derived from canon in the comment beside it — none is invented.
-// CLI: grade <concept> <axis> held|cracked [--gut w] [--cold false] | state [concept]
-//    | due | selftest
+// LAWS: single writer of rejirah_log.jsonl · reads capsules READ-ONLY (mirror.mjs owns
+//   them) · no LLM · no network · every threshold below is a v0 HYPOTHESIS and is either
+//   taken from an organ that already owns it or derived from canon in the comment beside
+//   it — none is invented.
+// CLI: grade <concept> <axis> held|cracked [--gut w] [--cold false]
+//    | close <concept> [--anyway] | pending | state [concept] | due | selftest
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -72,17 +101,25 @@ const HELD_AT = 2, FLUENT_AT = 3;
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const nowIso = (d = new Date()) => d.toISOString();
 
+// The log carries TWO row kinds in one append-only file, because they are one history:
+// an axis GRADE (has `axis`) and a round CLOSE (has `kind:"round-close"`). Every derive
+// below filters on the field it needs — `axisState` on `r.axis`, `confusionPairs` on
+// `r.result` — so a close row is structurally invisible to the axis maths and can never
+// be mistaken for a graded round.
 export function readLog(path = LOG) {
   const out = [];
   try {
     if (!existsSync(path)) return out;
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
       const s = line.trim(); if (!s) continue;
-      try { const j = JSON.parse(s); if (j && j.concept && j.axis) out.push(j); } catch {}
+      try { const j = JSON.parse(s); if (j && j.concept && (j.axis || j.kind)) out.push(j); } catch {}
     }
   } catch {}
   return out;
 }
+
+export const isGrade = (r) => !!(r && r.axis && !r.kind);
+export const isClose = (r) => !!(r && r.kind === "round-close");
 
 export function loadCapsules(dir = CAPSULES) {
   if (!existsSync(dir)) return [];
@@ -123,6 +160,118 @@ export function append(row, path = LOG) {
   return true;
 }
 
+// ── THE ROUND CLOSE (captain's ruling A, 5 Aug 2026) ─────────────────────────
+// A round's due-dates are NOT stored anywhere — FORGE_SPEC §4 says "engine new Date() se
+// compute, no stored countdown". This helper is a deliberate line-for-line mirror of
+// capsule_bridge.mjs's rejirahRounds(): same ISO_DAY guard, same `done` SET keyed on the
+// due-date, same ordering. Two organs computing one schedule two ways is the exact drift
+// class this repo keeps finding, so the rule here is copy the owner, never re-derive.
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const addDays = (isoDay, n) => new Date(Date.parse(`${isoDay}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+
+export function roundSchedule(capsule, intervals) {
+  const locked = ISO_DAY.test(String(capsule && capsule.lockedOn || "")) ? capsule.lockedOn : null;
+  if (!locked) return { ok: false, why: `"${capsule && capsule.id}" has no valid lockedOn — its Re-Jirah schedule cannot be computed, and inventing one would be a fabricated date.`, rounds: [] };
+  const done = new Set((Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone : []).filter((d) => ISO_DAY.test(String(d))));
+  const rounds = intervals.map((n, i) => {
+    const due = addDays(locked, n);
+    return { round: i + 1, interval_days: n, due, done: done.has(due) };
+  });
+  return { ok: true, rounds, locked };
+}
+
+// The round he is closing is the FIRST one not yet in `reJirahDone` — never the most
+// overdue. Three rounds overdue means R1 is the one being sat, and jumping to R3 would
+// silently mark two rounds served that never were.
+export function openRound(capsule, intervals) {
+  const s = roundSchedule(capsule, intervals);
+  if (!s.ok) return { ok: false, why: s.why };
+  const open = s.rounds.find((r) => !r.done);
+  if (!open) return { ok: false, why: `every scheduled round is already in reJirahDone (${s.rounds.length}/${s.rounds.length} served) — FORGE_SPEC schedules ${intervals.join("d / ")}d and no more.`, complete: true };
+  return { ok: true, ...open, total: s.rounds.length };
+}
+
+// VALIDATED BEFORE IT IS WRITTEN, like buildRow. A close row records the round, the
+// canonical DUE-date it closes, and which axes were actually graded into it — so a year
+// from now the log alone answers "what did that round consist of".
+export function buildCloseRow(input = {}, deps = {}) {
+  const concept = String(input.concept || "").toLowerCase().trim();
+  if (!concept) return { ok: false, why: "concept is required" };
+  if (!ISO_DAY.test(String(input.due || ""))) return { ok: false, why: `due must be an ISO day (got "${input.due}")` };
+  if (!Number.isInteger(input.round) || input.round < 1) return { ok: false, why: `round must be a positive integer (got "${input.round}")` };
+  return {
+    ok: true,
+    row: {
+      ts: nowIso(deps.now ? new Date(deps.now) : new Date()),
+      concept, kind: "round-close",
+      round: input.round,
+      // CANON SEMANTICS: the DUE-date, not the day he sat it (FORGE_SPEC §4 write path:
+      // "Claude reJirahDone mein woh DUE-DATE add karta"). This is not cosmetic —
+      // capsule_bridge tests `done.has(due)`, so recording today's date on an overdue
+      // round would leave that round reading "overdue" forever. The real sitting time is
+      // never lost: it is this row's own `ts` and every grade row's `ts`.
+      due: input.due,
+      axes_graded: Array.isArray(input.axes) ? [...new Set(input.axes)].sort() : [],
+      forced: !!input.forced,
+    },
+  };
+}
+
+// ── THE PENDING LEDGER (the proof, not the assumption) ───────────────────────
+// A close he ran is only HALF the write. The other half is his paste into the gist, and
+// the machine can VERIFY it rather than trust it: mirror.mjs re-fetches the gist every
+// morning, so once the date appears in the local mirror's `reJirahDone`, the paste
+// provably landed. Until then the round is PENDING and says so — the whole failure mode
+// this repo keeps hitting is work that happened but never reached the state everything
+// else reads.
+export function pendingCloses(caps, rows) {
+  const byId = new Map(caps.map((c) => [c.id, c]));
+  const out = [];
+  for (const r of rows.filter(isClose)) {
+    const cap = byId.get(r.concept);
+    const landed = !!(cap && Array.isArray(cap.reJirahDone) && cap.reJirahDone.includes(r.due));
+    if (!landed) out.push({ concept: r.concept, round: r.round, due: r.due, closed_at: r.ts, known_capsule: !!cap });
+  }
+  return out.sort((a, b) => String(a.closed_at).localeCompare(String(b.closed_at)));
+}
+
+// ── SUCCESSIVE-RELEARNING (canon's own criterion for "this round is done") ───
+// PROJECT_OS.md §LEARNING EXECUTION LAYER, Ceiling-additions: "SUCCESSIVE-RELEARNING
+// criterion (har round har due-axis 'cold ek baar sahi' zaroori = us session done)".
+// Not a threshold I chose — canon's, quoted. An axis counts as satisfied when it was HELD
+// at least once in this round; a crack does NOT satisfy it (the whole point of the
+// criterion is one clean cold retrieval, not one attempt). Axes that were not due are not
+// owed anything, so they are never listed — a criterion that nags about ground that was
+// never scheduled is just noise.
+export function successiveRelearning(capsule, rows, intervals, since = "", now = new Date()) {
+  const mine = rows.filter((r) => isGrade(r) && r.concept === capsule.id);
+  // DUE-NESS IS MEASURED BEFORE THIS ROUND, NOT AFTER — found by its own selftest, 5 Aug.
+  // Deriving it from ALL rows lets this round's own grades answer the question: a crack
+  // resets the interval to +3d, so the axis reads "not due", drops out of `owed`, and the
+  // criterion silently forgives exactly the axis that just failed. Same trap with a hold.
+  // The question is "was this axis owed COMING IN", so only prior grades may answer it.
+  const prior = mine.filter((r) => String(r.ts) <= since);
+  const thisRound = mine.filter((r) => String(r.ts) > since);
+  const owed = [], missing = [];
+  for (const axis of AXES) {
+    const st = axisState(capsule, axis, prior, intervals, now);
+    if (!(st.overdueDays !== null && st.overdueDays > 0)) continue;   // not due → not owed
+    owed.push(axis);
+    if (!thisRound.some((r) => r.axis === axis && r.result === "held")) missing.push(axis);
+  }
+  return { met: owed.length > 0 && missing.length === 0, owed, missing };
+}
+
+// The patch is the WHOLE `reJirahDone` array, because that is what he replaces in the
+// one file (FORGE_SPEC §2 step 2b). Sorted + de-duplicated: fsrs.mjs:144-154 carries a
+// scar from exactly this — a duplicated gist entry replayed as two reviews at the same
+// instant and pushed the card's due date past what his history earned.
+export function gistPatch(capsule, dueDates) {
+  const merged = [...new Set([...(Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone : []), ...dueDates])]
+    .filter((d) => ISO_DAY.test(String(d))).sort();
+  return { field: "reJirahDone", value: merged, json: `  "reJirahDone": ${JSON.stringify(merged)},` };
+}
+
 // ── THE DERIVED STATE (the reserved fields, computed not stored) ─────────────
 // PER-AXIS ADAPTIVE INTERVAL (knob 3, SM-2-lite): a clean hold EXPANDS to the next
 // interval in the profile's ladder; a crack RESETS to the first. Global +3d/+2wk/+6wk
@@ -130,7 +279,10 @@ export function append(row, path = LOG) {
 // the axis inherits the capsule's own lockedOn schedule, so a never-graded axis is
 // never silently treated as fresh.
 export function axisState(capsule, axis, rows, intervals, now = new Date()) {
-  const hist = rows.filter((r) => r.concept === capsule.id && r.axis === axis)
+  // isGrade() is belt-and-braces beside `r.axis === axis`: a close row has no axis and is
+  // already excluded, but stating the row KIND means a future row shape can never drift
+  // into the ladder maths by accident.
+  const hist = rows.filter((r) => isGrade(r) && r.concept === capsule.id && r.axis === axis)
     .sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
   const last = hist.length ? hist[hist.length - 1] : null;
 
@@ -192,7 +344,7 @@ export function conceptState(capsule, rows, intervals, now = new Date()) {
   };
   // CONFUSION-PAIRS stay null until there is real cross-concept error data. Bias to
   // silence: one false alarm is worse than one missed alarm (the repo's own rule).
-  const cracked = rows.filter((r) => r.result === "cracked");
+  const cracked = rows.filter((r) => isGrade(r) && r.result === "cracked");
   const distinct = new Set(cracked.map((r) => r.concept));
   const confusionPairs = (cracked.length >= 6 && distinct.size >= 2)
     ? [...distinct].slice(0, 4).map((c) => ({ with: c, seen: cracked.filter((r) => r.concept === c).length }))
@@ -327,6 +479,112 @@ function selftest() {
       return rows.length === 2 && rows[0].result === "cracked" && rows[1].result === "held";
     })());
 
+  // ── THE ROUND CLOSE (ruling A) ─────────────────────────────────────────────
+  // REAL DATA, not a fixture: tokenization is locked 2026-06-15 and its gist carries
+  // reJirahDone ["2026-06-18","2026-06-29"]. lockedOn+3 and lockedOn+14 are exactly those
+  // two dates, which is the live proof that canon stores the DUE-date and that this
+  // schedule agrees with capsule_bridge.mjs's on his actual capsule.
+  const TOK = { id: "tokenization", lockedOn: "2026-06-15", reJirahDone: ["2026-06-18", "2026-06-29"] };
+  const sch = roundSchedule(TOK, IV);
+  assert("SCHEDULE — computed off lockedOn, and it reproduces his REAL tokenization dates",
+    sch.ok && sch.rounds.map((r) => r.due).join(",") === "2026-06-18,2026-06-29,2026-07-27"
+    && sch.rounds[0].done && sch.rounds[1].done && !sch.rounds[2].done);
+  assert("SCHEDULE — no valid lockedOn means NO schedule, never a fabricated date",
+    !roundSchedule({ id: "x" }, IV).ok && !roundSchedule({ id: "x", lockedOn: "soon" }, IV).ok);
+  assert("OPEN ROUND — the FIRST unserved round, never the most overdue (R1 before R3)",
+    (() => { const o = openRound(cap, IV); return o.ok && o.round === 1 && o.due === "2026-06-24"; })());
+  assert("OPEN ROUND — with two served, the next one is R3, not R1 again",
+    (() => { const o = openRound(TOK, IV); return o.ok && o.round === 3 && o.due === "2026-07-27" && o.total === 3; })());
+  assert("OPEN ROUND — all three served reports COMPLETE, and refuses to invent a fourth",
+    (() => { const o = openRound({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, IV);
+      return !o.ok && o.complete === true; })());
+
+  assert("CLOSE ROW — validated: concept, an ISO due-day, and a positive round are all required",
+    !buildCloseRow({ due: "2026-06-24", round: 1 }).ok
+    && !buildCloseRow({ concept: "e", due: "soon", round: 1 }).ok
+    && !buildCloseRow({ concept: "e", due: "2026-06-24", round: 0 }).ok
+    && buildCloseRow({ concept: "e", due: "2026-06-24", round: 1 }).ok);
+  assert("CLOSE ROW — records the canonical DUE-date while its own ts keeps the real sitting time",
+    (() => { const b = buildCloseRow({ concept: "embeddings", due: "2026-06-24", round: 1, axes: ["c", "a", "a"] }, { now: "2026-08-05T10:00:00Z" });
+      return b.row.due === "2026-06-24" && b.row.ts.startsWith("2026-08-05")
+        && b.row.kind === "round-close" && b.row.axes_graded.join("") === "ac"; })());   // deduped + sorted
+
+  const closeRow = buildCloseRow({ concept: "embeddings", due: "2026-06-24", round: 1, axes: ["a"] }, { now: "2026-08-05T10:00:00Z" }).row;
+  assert("ROW KINDS — a grade is a grade, a close is a close, and neither answers for the other",
+    isGrade(clean2[0]) && !isClose(clean2[0]) && isClose(closeRow) && !isGrade(closeRow));
+  assert("CLOSE ROWS ARE INVISIBLE TO THE LADDER — a close never counts as a graded round",
+    (() => { const withClose = axisState(cap, "a", [...clean2, closeRow], IV, NOW);
+      const without = axisState(cap, "a", clean2, IV, NOW);
+      return JSON.stringify(withClose) === JSON.stringify(without); })());
+  assert("CLOSE ROWS ARE INVISIBLE TO CONFUSION-PAIRS (no `result` to be mistaken for a crack)",
+    JSON.stringify(conceptState(cap, [...clean2, closeRow], IV, NOW).edgeMap)
+    === JSON.stringify(conceptState(cap, clean2, IV, NOW).edgeMap));
+  assert("LOG READER — both kinds survive a round-trip through the file, in order",
+    (() => {
+      const p = join(mkdtempSync(join(tmpdir(), "rejirah3-")), "log.jsonl");
+      append(buildRow({ concept: "embeddings", axis: "a", result: "held", gut: "shaky" }, { capsuleIds: ["embeddings"] }).row, p);
+      append(closeRow, p);
+      const back = readLog(p);
+      return back.length === 2 && isGrade(back[0]) && isClose(back[1]) && back[1].due === "2026-06-24";
+    })());
+
+  // THE PROOF, not the assumption.
+  assert("PENDING — a closed round whose date is NOT in the capsule reads PENDING",
+    (() => { const p = pendingCloses([cap], [closeRow]);
+      return p.length === 1 && p[0].round === 1 && p[0].due === "2026-06-24" && p[0].known_capsule === true; })());
+  assert("PENDING — once the mirror brings the date back down, the round stops being pending",
+    pendingCloses([{ ...cap, reJirahDone: ["2026-06-24"] }], [closeRow]).length === 0);
+  assert("PENDING — a close for a concept the mirror does not carry is surfaced, not swallowed",
+    (() => { const p = pendingCloses([], [closeRow]); return p.length === 1 && p[0].known_capsule === false; })());
+
+  // The double-close trap, found by running the CLI for real (5 Aug): the mirror does not
+  // know about a close until the paste lands, so openRound legitimately still says R1 —
+  // and a naive second `close` would append a duplicate row for the same due-date.
+  assert("DOUBLE-CLOSE — a pending round is still 'open' in the mirror, and the pair detects it",
+    (() => { const o = openRound(cap, IV);                       // mirror still shows reJirahDone: []
+      const p = pendingCloses([cap], [closeRow]);
+      return o.ok && o.round === 1 && o.due === "2026-06-24"
+        && !!p.find((x) => x.concept === "embeddings" && x.due === o.due); })());
+  assert("DOUBLE-CLOSE — once the paste lands, the same pair opens R2 cleanly and flags nothing",
+    (() => { const landed = { ...cap, reJirahDone: ["2026-06-24"] };
+      const o = openRound(landed, IV);
+      return o.ok && o.round === 2 && o.due === "2026-07-05"
+        && pendingCloses([landed], [closeRow]).length === 0; })());
+
+  // SUCCESSIVE-RELEARNING — canon's criterion, not a threshold of mine.
+  const SINCE = "2026-08-05T00:00:00Z";
+  const rnd = (axis, result) => row(axis, result, "shaky", "2026-08-05T09:00:00Z");
+  assert("SUCCESSIVE-RELEARNING — every one of the 9 axes is overdue here, so all 9 are OWED",
+    successiveRelearning(cap, [], IV, SINCE, NOW).owed.length === 9);
+  assert("SUCCESSIVE-RELEARNING — an axis HELD cold this round satisfies its debt",
+    !successiveRelearning(cap, [rnd("a", "held")], IV, SINCE, NOW).missing.includes("a"));
+  assert("SUCCESSIVE-RELEARNING — a CRACK does not satisfy it (the criterion is one CLEAN retrieval)",
+    successiveRelearning(cap, [rnd("b", "cracked")], IV, SINCE, NOW).missing.includes("b"));
+  assert("SUCCESSIVE-RELEARNING — a hold from BEFORE this round does not pay this round's debt",
+    successiveRelearning(cap, clean2, IV, SINCE, NOW).missing.includes("a"));   // clean2 is July
+  assert("SUCCESSIVE-RELEARNING — MET only when every owed axis held clean, never partially",
+    (() => { const all = AXES.map((x) => rnd(x, "held"));
+      const one = AXES.slice(0, 8).map((x) => rnd(x, "held"));
+      return successiveRelearning(cap, all, IV, SINCE, NOW).met === true
+        && successiveRelearning(cap, one, IV, SINCE, NOW).met === false
+        && successiveRelearning(cap, one, IV, SINCE, NOW).missing.join("") === "i"; })());
+  assert("SUCCESSIVE-RELEARNING — an axis that was never DUE is never listed as owed (no noise)",
+    (() => { const fresh = { id: "embeddings", lockedOn: "2026-08-04" };   // locked yesterday, nothing due
+      const s = successiveRelearning(fresh, [], IV, SINCE, NOW);
+      return s.owed.length === 0 && s.met === false; })());
+
+  assert("GIST PATCH — merges into the EXISTING array, sorted, and never drops a served round",
+    (() => { const g = gistPatch(TOK, ["2026-07-27"]);
+      return g.value.join(",") === "2026-06-18,2026-06-29,2026-07-27" && g.field === "reJirahDone"; })());
+  assert("GIST PATCH — de-duplicates (fsrs.mjs:144's scar: a repeated date replays as two reviews)",
+    gistPatch(TOK, ["2026-06-29", "2026-06-29"]).value.length === 2);
+  assert("GIST PATCH — junk dates are dropped rather than pasted into his master store",
+    gistPatch({ reJirahDone: ["2026-06-18", "kal", ""] }, ["2026-07-27"]).value.join(",") === "2026-06-18,2026-07-27");
+  assert("GIST PATCH — emits a paste-ready JSON line for the one-file replace (§2 2b)",
+    /^ {2}"reJirahDone": \["2026-06-18","2026-06-29","2026-07-27"\],$/.test(gistPatch(TOK, ["2026-07-27"]).json));
+  assert("THE CAPSULE IS STILL NEVER MUTATED — patching derives a NEW array, it does not touch his",
+    (() => { const before = JSON.stringify(TOK); gistPatch(TOK, ["2026-07-27"]); return JSON.stringify(TOK) === before; })());
+
   console.log(`\nrejirah selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
@@ -359,6 +617,88 @@ function main() {
     return;
   }
 
+  if (mode === "close") {
+    const want = String(rest[0] || "").toLowerCase().trim();
+    const anyway = rest.includes("--anyway");
+    if (!want) { console.error("rejirah: close <concept> [--anyway]"); process.exit(1); }
+    const cap = caps.find((c) => c.id === want);
+    if (!cap) {
+      console.error(`rejirah: "${want}" is not a locked capsule in the mirror. Locked: ${caps.map((c) => c.id).join(" · ") || "(none — run \`node scripts/mirror.mjs\`)"}`);
+      process.exit(1);
+    }
+    const open = openRound(cap, intervals);
+    if (!open.ok) { console.error(`rejirah: ${open.why}`); process.exit(1); }
+
+    // ALREADY CLOSED, STILL PENDING. openRound reads the MIRROR, and the mirror only
+    // learns about a close after the gist paste + the next mirror run — so a round he
+    // closed an hour ago is legitimately still "open" here. Without this guard the second
+    // `close` would append a DUPLICATE close row for the same due-date and the message
+    // would blame him for not grading. The blocker is the un-pasted patch, so say that
+    // and hand him the patch again.
+    const already = pendingCloses(caps, rows).find((p) => p.concept === want && p.due === open.due);
+    if (already) {
+      console.error(`rejirah: R${already.round} (${already.due}) is ALREADY closed — you closed it ${String(already.closed_at).slice(0, 16).replace("T", " ")}. It is waiting on the gist, not on you.`);
+      console.error(`  ${want}.json:${gistPatch(cap, [already.due]).json.trim()}`);
+      console.error(`  Paste that, then \`node scripts/mirror.mjs\` — R${already.round + 1} opens by itself once it lands.`);
+      process.exit(1);
+    }
+
+    // A round with nothing graded into it did not happen. This is not a threshold — it is
+    // the difference between an event and a no-op, and canon's own "un-run = hypothesis".
+    // `--anyway` exists because a round sat away from the keyboard is still a real round;
+    // it is RECORDED as forced so the log never pretends otherwise.
+    const lastClose = rows.filter((r) => isClose(r) && r.concept === want).sort((a, b) => String(a.ts).localeCompare(String(b.ts))).pop();
+    const since = lastClose ? lastClose.ts : "";
+    const graded = rows.filter((r) => isGrade(r) && r.concept === want && String(r.ts) > since);
+    const axesGraded = [...new Set(graded.map((r) => r.axis))].sort();
+    if (!graded.length && !anyway) {
+      console.error(`rejirah: nothing has been graded on "${want}" since ${lastClose ? `round ${lastClose.round} closed (${lastClose.ts.slice(0, 10)})` : "it was locked"} — closing R${open.round} now would record a round that never ran.`);
+      console.error(`  Grade the axes first:  node scripts/deep.mjs due   then   node scripts/rejirah.mjs grade ${want} <axis> held|cracked --gut <word>`);
+      console.error(`  Sat it away from the keyboard? \`--anyway\` records it, flagged as forced.`);
+      process.exit(1);
+    }
+
+    const built = buildCloseRow({ concept: want, due: open.due, round: open.round, axes: axesGraded, forced: !graded.length }, {});
+    if (!built.ok) { console.error(`rejirah: ${built.why}`); process.exit(1); }
+    append(built.row);
+
+    const pend = pendingCloses(caps, [...rows, built.row]).filter((p) => p.concept === want);
+    const patch = gistPatch(cap, pend.map((p) => p.due));
+    console.log(`\n🏁 RE-JIRAH R${open.round}/${open.total} CLOSED — ${want}   (due-date ${open.due})`);
+    console.log(`   axes graded into this round: ${axesGraded.length ? axesGraded.join(" ") : "(none — FORCED, recorded as such)"}`);
+    // Canon's criterion, reported honestly at the one moment it means something. It does not
+    // block: an interrupted round is a real round, and a machine that refuses to let him
+    // close one teaches him to stop closing them.
+    const sr = successiveRelearning(cap, [...rows, ...graded], intervals, since, now);
+    if (sr.owed.length) {
+      console.log(sr.met
+        ? `   ✅ successive-relearning MET — every due axis (${sr.owed.join(" ")}) held cold at least once.`
+        : `   ⚠ successive-relearning NOT met — due but never held clean this round: ${sr.missing.join(" ")}`
+          + `\n     (PROJECT_OS §LEARNING EXECUTION LAYER: "har round har due-axis cold ek baar sahi". They stay overdue and come back — that is the criterion working, not a failure.)`);
+    }
+    console.log(`\n── THE OTHER HALF IS YOURS (FORGE_SPEC §2 step 2b — nothing auto-saves) ──`);
+    console.log(`   Gist file: ${want}.json   ·   replace ONE line, nothing else:\n`);
+    console.log(patch.json);
+    console.log(`\n   Then \`node scripts/mirror.mjs\` pulls it back and this round stops reading PENDING.`);
+    console.log(`   Until it lands, fsrs / deep / capsule_bridge / dugout / shipped all still believe R${open.round} never happened.\n`);
+    return;
+  }
+
+  if (mode === "pending") {
+    const pend = pendingCloses(caps, rows);
+    if (!pend.length) { console.log("\nrejirah: koi gist-write pending nahi — har closed round mirror mein land kar chuka.\n"); return; }
+    console.log(`\n⚠ ${pend.length} RE-JIRAH ROUND(S) CLOSED BUT NOT IN THE GIST YET\n`);
+    for (const p of pend) {
+      const cap = caps.find((c) => c.id === p.concept);
+      const patch = cap ? gistPatch(cap, pend.filter((x) => x.concept === p.concept).map((x) => x.due)) : null;
+      console.log(`  ${p.concept}  R${p.round}  due ${p.due}   (closed ${String(p.closed_at).slice(0, 16).replace("T", " ")})`);
+      if (patch) console.log(`     → ${p.concept}.json:${patch.json.trim()}`);
+      if (!p.known_capsule) console.log(`     ⚠ no capsule named "${p.concept}" in the mirror — check the id.`);
+    }
+    console.log(`\n  Paste into the gist, then \`node scripts/mirror.mjs\` to confirm it landed.\n`);
+    return;
+  }
+
   if (mode === "state") {
     const want = String(rest[0] || "").toLowerCase();
     for (const c of caps) {
@@ -372,11 +712,20 @@ function main() {
       }
       console.log(`  edge-map → defend ${st.edgeMap.can_defend.join("") || "—"} · cracked ${st.edgeMap.cracked.join("") || "—"} · unmeasured ${st.edgeMap.unmeasured.join("") || "—"}`);
       if (!st.confusionPairs) console.log(`  confusion-pairs: ${st.confusion_gate}`);
+      const sch = roundSchedule(c, intervals);
+      if (sch.ok) console.log(`  rounds → ${sch.rounds.map((r) => `R${r.round} ${r.due}${r.done ? " ✓" : ""}`).join(" · ")}`);
+      const pend = pendingCloses([c], rows);
+      for (const p of pend) console.log(`  ⚠ R${p.round} (${p.due}) closed ${String(p.closed_at).slice(0, 10)} but NOT in the gist yet — \`node scripts/rejirah.mjs pending\``);
     }
     return;
   }
 
   if (mode === "due" || !mode) {
+    // The pending line goes FIRST and unconditionally: a round he already sat but never
+    // pasted is more urgent than the next round to sit, and it is the one thing that
+    // silently makes every other number on this screen wrong.
+    const pend = pendingCloses(caps, rows);
+    if (pend.length) console.log(`\n⚠ ${pend.length} closed round(s) NOT in the gist yet — \`node scripts/rejirah.mjs pending\` for the patch. Until then five organs still read them as never-served.`);
     const rep = dueReport(caps, rows, intervals, readJson(CARDS), now);
     if (!rep.length) { console.log("\nrejirah: kuch due nahi.\n"); return; }
     console.log(`\n== RE-JIRAH — AXES DUE ==   (FSRS says WHEN · this says WHICH AXES + HOW HARD)\n`);
@@ -387,10 +736,14 @@ function main() {
       }
       console.log("");
     }
-    console.log(`  Cold sawaal: \`node scripts/deep.mjs due\`   ·   Result likho: \`node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>\`\n`);
+    console.log(`  Cold sawaal: \`node scripts/deep.mjs due\`   ·   Result likho: \`node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>\``);
+    console.log(`  Round khatam: \`node scripts/rejirah.mjs close <concept>\` → gist patch milega (paste tera, §2 2b).\n`);
     return;
   }
-  console.log("rejirah: grade <concept> <axis> held|cracked [--gut knew|shaky|guessed] [--cold false] | state [concept] | due | selftest");
+  console.log(`rejirah: grade <concept> <axis> held|cracked [--gut knew|shaky|guessed] [--cold false]
+         | close <concept> [--anyway]   (round khatam → gist patch)
+         | pending   (closed par gist mein abhi tak nahi)
+         | state [concept] | due | selftest`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

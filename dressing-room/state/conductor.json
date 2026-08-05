@@ -1,0 +1,163 @@
+{
+  "started": "2026-08-05T13:58:05.555Z",
+  "finished": "2026-08-05T13:58:28.992Z",
+  "total_ms": 23432,
+  "ran": 16,
+  "ok": 16,
+  "failed": 0,
+  "order": [
+    "mirror",
+    "sprintsync",
+    "thalamus",
+    "cortex",
+    "turnstile",
+    "physio",
+    "goalkeeper",
+    "twin",
+    "heartbeat",
+    "fsrs",
+    "calibration",
+    "nemesis",
+    "learningstate",
+    "signals",
+    "sheet",
+    "wall"
+  ],
+  "steps": [
+    {
+      "id": "mirror",
+      "ok": true,
+      "ms": 12506,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "sprintsync",
+      "ok": true,
+      "ms": 2003,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "thalamus",
+      "ok": true,
+      "ms": 23,
+      "daemon": "already running",
+      "port": 4113
+    },
+    {
+      "id": "cortex",
+      "ok": true,
+      "ms": 3,
+      "daemon": "already running",
+      "port": 4112
+    },
+    {
+      "id": "turnstile",
+      "ok": true,
+      "ms": 2,
+      "daemon": "already running",
+      "port": 4111
+    },
+    {
+      "id": "physio",
+      "ok": true,
+      "ms": 319,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "goalkeeper",
+      "ok": true,
+      "ms": 1661,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "twin",
+      "ok": true,
+      "ms": 306,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "heartbeat",
+      "ok": true,
+      "ms": 4384,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "fsrs",
+      "ok": true,
+      "ms": 220,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "calibration",
+      "ok": true,
+      "ms": 205,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "nemesis",
+      "ok": true,
+      "ms": 217,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "learningstate",
+      "ok": true,
+      "ms": 274,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "signals",
+      "ok": true,
+      "ms": 12,
+      "armed": "morning_signals"
+    },
+    {
+      "id": "sheet",
+      "ok": true,
+      "ms": 858,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "wall",
+      "ok": true,
+      "ms": 439,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    }
+  ]
+}

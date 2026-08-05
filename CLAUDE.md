@@ -105,12 +105,18 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 - **Capsules are IMMUTABLE and their prose is SACRED** (`bolo`, `weld`, `deep`, `mechanism`, `hook`,
   `why`, `traps`, `threeWays`, `interviewLines`). Never invent them, never reword them, never
   re-emit a locked capsule. That is the content he will defend out loud in an interview.
+  **IMMUTABLE means never RE-EMIT, not never write** (`FORGE_SPEC.md` §5 says both things in one
+  sentence: *"Claude purane locked capsules KABHI re-emit nahi karta"* AND *"existing file sirf
+  apne Re-Jirah/doubt pe edit hoti"*; §6 names the mechanism — *"re-emit nahi, targeted update"*).
+  Two writes are legitimate and both are HIS, by paste: `reJirahDone` on a Re-Jirah round, and a
+  `doubts[]` back-write. No script writes `dressing-room/state/capsules/` — that is a read-only
+  mirror owned by `mirror.mjs`, which re-fetches the gist every morning.
 - **Only four question-moments exist by design** — Pehle-Guess · widget guess-gates · ONE sharp
   check-question across steps 3–6 · Jirah. Anything else is a quiz-dump, which canon forbids.
 - **Gut-word before the answer** (`knew`/`shaky`/`guessed`), never re-graded after. No gut-word,
   no rep.
-- **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs`. Never hand-edit
-  a state file.
+- **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs` · `rejirah.mjs` ·
+  `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules). Never hand-edit a state file.
 
 **The surfaces:** `/forge` (he named a concept) · `/learn` (he didn't — read state and route) ·
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`
@@ -119,10 +125,25 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 **Added 5 Aug 2026 (audit #107 repair — all selftested and run live):**
 - `scripts/rejirah.mjs` — **the Re-Jirah controller and the loop's missing back edge.**
   `grade <concept> <axis> held|cracked --gut <word>` records a cold round; `state` and `due`
-  derive it. **Capsules are NEVER written to** — results live in `rejirah_log.jsonl` and every
-  reserved controller-v0 field (`axisType` · `nextDue` · `lastResult` · `calibrationGap` ·
-  `fluencyState` · `edgeMap`) is DERIVED. **FSRS owns WHEN a concept returns; this owns WHICH
-  AXES and HOW HARD** — the two schedulers no longer disagree.
+  derive it. Every reserved controller-v0 field (`axisType` · `nextDue` · `lastResult` ·
+  `calibrationGap` · `fluencyState` · `edgeMap`) is DERIVED from `rejirah_log.jsonl` — a
+  **deferral until R1**, which is what canon asks for, not a refusal. **FSRS owns WHEN a concept
+  returns; this owns WHICH AXES and HOW HARD** — the two schedulers no longer disagree.
+  **`close <concept>` ends a round** (5 Aug, pass 2) and prints the one-line `reJirahDone` patch
+  for the gist — **his paste**, per `FORGE_SPEC.md` §2 2b, because nothing auto-saves and
+  `capsules/` belongs to `mirror.mjs`. Until the mirror brings it back, the round reads
+  **PENDING** (`rejirah.mjs pending`, and the SessionStart brief says so) — which is *proof* the
+  paste landed, not an assumption. **Five organs read `reJirahDone`** — `fsrs.mjs:143` builds the
+  entire review history from it, plus `deep.mjs`, `capsule_bridge.mjs`, `dugout.mjs`,
+  `shipped.mjs` — so until it lands, all five believe the round never happened. `close` also
+  reports canon's SUCCESSIVE-RELEARNING criterion (every due axis held cold once); it reports,
+  it never blocks.
+- `scripts/python_state.mjs` — the **Python track's state**, which the biggest rock on the sprint
+  (1-07, 16h) did not have at all. `subtopic` · `close --why` · `tier-close` · `watch` · `packet` ·
+  `brief`. Fluency is **declared with a reason, never computed** — there is no threshold in the
+  file, per his standing rule that no number gets guessed before 30-45 days of real data. Two canon
+  pace-guards warn but never block; Forge grammar on the Python track is hard-refused
+  (`GEMINI_LOOP.md` §11.3 — the 9-axis capsule is **never** run on Python).
 - `scripts/widget.mjs` — the **Visualization Contract's registry** (it had no code owner;
   `viz.mjs` is the club wall). `list` · `register <c> <file> --gates <n>` · `open <c>`.
   It never generates a widget — an undriven widget is a failed widget, and the value is the

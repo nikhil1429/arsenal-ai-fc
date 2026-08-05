@@ -167,14 +167,33 @@ is not.
   `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut knew|shaky|guessed`
   Until this existed, a cold round could be run and its result had nowhere to land, which is
   why three of four capsules sat at `reJirahDone: []` — never re-tempered once, 34-42 days
-  overdue, 80,511 characters of his own prose never withdrawn. **The capsule is never
-  touched** (its prose is sacred and immutable): the row goes to `rejirah_log.jsonl`, and
-  per-axis `axisType` / `nextDue` / `lastResult` / `calibrationGap` / `fluencyState` plus
-  capsule-level `edgeMap` are **DERIVED** from it — `node scripts/rejirah.mjs state <concept>`.
-  A clean hold expands that axis's interval; a crack resets it; **confident-and-cracked**
-  escalates (tighter interval + a harder round mode), because that is the dangerous illusion.
+  overdue, 80,511 characters of his own prose never withdrawn. The row goes to
+  `rejirah_log.jsonl`, and per-axis `axisType` / `nextDue` / `lastResult` / `calibrationGap` /
+  `fluencyState` plus capsule-level `edgeMap` are **DERIVED** from it —
+  `node scripts/rejirah.mjs state <concept>`. A clean hold expands that axis's interval; a
+  crack resets it; **confident-and-cracked** escalates (tighter interval + a harder round
+  mode), because that is the dangerous illusion.
   `node scripts/rejirah.mjs due` — FSRS says WHEN a concept returns, this says WHICH AXES and
   HOW HARD. They no longer disagree; they answer different questions.
+  **THEN CLOSE THE ROUND — this half is what makes the other half count (5 Aug 2026, pass 2):**
+  `node scripts/rejirah.mjs close <concept>` → it prints the exact one-line `reJirahDone`
+  patch for the gist, which **he** pastes (FORGE_SPEC §2 step 2b — *nothing auto-saves*).
+  *An earlier note here said "the capsule is never touched" and cited immutability. That read the
+  law backwards and is corrected: FORGE_SPEC §5 forbids **RE-EMITTING** a locked capsule and, in
+  the same sentence, says an existing file **is** edited "sirf apne Re-Jirah/doubt pe"; §6 names
+  the mechanism — "re-emit nahi, **targeted update**". `reJirahDone` is meant to be written.*
+  The reason **this organ** does not write it is OWNERSHIP, not sanctity: the gist is master and
+  `state/capsules/` is a read-only mirror whose single writer is `mirror.mjs`, which re-fetches
+  every morning — a local edit would be erased by breakfast. So the round stays **PENDING** until
+  the mirror brings his paste back down, which is a *proof* it landed rather than an assumption.
+  `node scripts/rejirah.mjs pending` lists anything still un-pasted, and the SessionStart brief
+  says so too. **It matters because five organs read `reJirahDone`** — `fsrs.mjs` builds the whole
+  review history from it, plus `deep.mjs`, `capsule_bridge.mjs`, `dugout.mjs`, `shipped.mjs`.
+  Until the date lands, all five believe the round never happened.
+  `close` also reports canon's **SUCCESSIVE-RELEARNING criterion** (PROJECT_OS §LEARNING EXECUTION
+  LAYER: *"har round har due-axis cold ek baar sahi"*) — every due axis held clean at least once.
+  It reports, never blocks: an interrupted round is still a real round, and axes that stayed
+  cracked simply remain overdue and come back. That is the criterion working, not a failure.
   A little overdue is **RIPE**, not late — high-value recall. Only severe overdue is worth naming,
   because compounding-avoidance is the ADHD-PI failure mode this step exists to beat.
   *(Until today those 80,511 characters of `deep` — all 36 axes — were readable only by opening a

@@ -19,9 +19,29 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { courseBrief } from "./course.mjs";   // audit #35 — the course tracker's one reader
+import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
+import { loadCapsules, readLog, pendingCloses } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
+// AUDIT #107 second pass (5 Aug 2026) — A ROUND HE SAT BUT NEVER PASTED IS INVISIBLE.
+// `close` records the round in rejirah_log.jsonl, but the capsule's `reJirahDone` only
+// changes when he pastes into the gist and mirror.mjs pulls it back. In that gap five
+// organs (fsrs · deep · capsule_bridge · dugout · shipped) still read the round as never
+// served, and the ONLY thing that would ever tell him is a command he has to remember to
+// run. So it rides the kickoff, above the overdue line: an un-pasted round makes every
+// other Re-Jirah number on this screen wrong, which makes it the more urgent of the two.
+function rejirahPendingLine(dir) {
+  const caps = loadCapsules(join(dir, "capsules"));
+  const rows = readLog(join(dir, "rejirah_log.jsonl"));
+  const pend = pendingCloses(caps, rows);
+  if (!pend.length) return null;
+  const head = pend.slice(0, 3).map((p) => `${p.concept} R${p.round} (${p.due})`).join(" · ");
+  return `⚠ RE-JIRAH PENDING GIST-WRITE (${pend.length}): ${head}${pend.length > 3 ? " …" : ""}`
+    + `  — round baith chuka, gist mein abhi nahi. Tab tak fsrs/deep/capsule_bridge use "hua hi nahi" padhte hain.`
+    + `  Patch: \`node scripts/rejirah.mjs pending\``;
+}
+
 function rejirahDueLine(dir) {
   const p = join(dir, "capsule_map.json");
   if (!existsSync(p)) return null;
@@ -214,6 +234,21 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
         if (cb && cb.line) L.push(`  📼 ${cb.line}`);
       } catch { /* a brief must never be the thing that breaks SessionStart */ }
     }
+    // audit #107 item #26 — THE PYTHON TRACK GETS ITS ADDRESS. Same defect as #35 above,
+    // on the bigger rock: 1-07 is 16h and sprint.json calls it "Biggest rock", yet the
+    // track had no state file at all, so a fresh thread inherited nothing and would have
+    // ASKED him where he is. GEMINI_LOOP §13.4 makes the watch-list Claude's standing job
+    // and §11.4 says it must travel thread-to-thread — that is why the hangovers ride the
+    // brief and not just the packet: they are what the very next reply has to catch.
+    if (cur.track === "skill") {
+      try {
+        const pb = pythonBrief();
+        if (pb && pb.line) L.push(`  🐍 ${pb.line}`);
+        if (pb && pb.watch_list && pb.watch_list.length) {
+          L.push(`  ⚠️ JS-HANGOVERS (his repeats — inject these in every CLOSE-PACKET): ${pb.watch_list.join(" · ")}`);
+        }
+      } catch { /* a brief must never be the thing that breaks SessionStart */ }
+    }
   } else {
     L.push("LEARNING NOW: (sprint.json has no current task — run the sprint sync)");
   }
@@ -229,6 +264,10 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   // while 36 ready-written strike questions sat unused. Nothing surfaced that at
   // kickoff, so every session opened on "what's next" and never on "what's rotting".
   // Overdue is RIPE, not late: this line names it without scolding.
+  try {
+    const pendLine = rejirahPendingLine(dir);
+    if (pendLine) L.push(pendLine);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const dueLine = rejirahDueLine(dir);
     if (dueLine) L.push(dueLine);

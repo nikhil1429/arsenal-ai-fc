@@ -37,10 +37,17 @@ Triggers: *"revise"*, *"purana dohrana hai"*, *"re-jirah"*, *"yaad nahi raha"*, 
 3. Held clean → note it. Cracked → re-weld NOW, and the crack is **data, never a verdict**.
    **Then RECORD it — `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>`.**
    Before 5 Aug 2026 this had no write path, which is why three of four capsules showed
-   `reJirahDone: []` — never re-tempered once. The capsule is never edited (sacred prose): the
-   row lands in `rejirah_log.jsonl` and the per-axis schedule, fluency and calibration-gap are
-   DERIVED from it. `node scripts/rejirah.mjs due` = which axes and how hard (FSRS still owns WHEN).
-4. Reps from a Re-Jirah round capture exactly like any other rep (§3), gut-word first.
+   `reJirahDone: []` — never re-tempered once. The row lands in `rejirah_log.jsonl` and the
+   per-axis schedule, fluency and calibration-gap are DERIVED from it.
+   `node scripts/rejirah.mjs due` = which axes and how hard (FSRS still owns WHEN).
+4. **CLOSE THE ROUND — `node scripts/rejirah.mjs close <concept>`.** It prints the one-line
+   `reJirahDone` patch for the gist; **he** pastes it (FORGE_SPEC §2 2b — nothing auto-saves),
+   then `node scripts/mirror.mjs` proves it landed. This organ does not write the capsule for an
+   OWNERSHIP reason, not a sanctity one — `state/capsules/` is a read-only mirror owned by
+   `mirror.mjs`. Until the paste lands the round reads **PENDING**, and five organs (`fsrs`,
+   `deep`, `capsule_bridge`, `dugout`, `shipped`) still believe it never happened.
+   `node scripts/rejirah.mjs pending` = anything still un-pasted; the SessionStart brief says so too.
+5. Reps from a Re-Jirah round capture exactly like any other rep (§3), gut-word first.
 
 ## 1. ROUTE by `cur.track`
 
@@ -59,6 +66,29 @@ OWN reps at close, so on the concept track **skip §3 (ingest+capture) entirely*
 Python is **light ritual · heavy reps · god-tier core** — a skill, not a decay-prone concept,
 so NO 9-axis capsule. Run the 6-beat loop; the reps + volume happen on his free Gemini rig
 (Colab dojo + Coach Gem), so your job is SAMAJH + the packet + capture — never the reps.
+
+**FIRST, read where he is — never ask:** `node scripts/python_state.mjs brief`
+(also spliced into the SessionStart kickoff). It names the subtopic, its tier, its fluency rung
+and the JS-hangover watch-list with ×N counts. *(Built 5 Aug 2026, audit #107 item #26: the
+track sprint.json calls the "Biggest rock" — 1-07, 16h — had no state file at all, so every
+fresh thread inherited nothing. GEMINI_LOOP §13.4 makes the watch-list Claude's standing job
+and §11.4 says it must travel thread-to-thread; until now it only lived in chat.)*
+
+The organ is the single writer — never hand-edit `python_state.json`:
+```
+node scripts/python_state.mjs subtopic "<name>" --tier T0     # starting a subtopic
+node scripts/python_state.mjs packet "<name>"                 # after emitting the CLOSE-PACKET
+node scripts/python_state.mjs watch "<js-hangover>"           # each repeat from the handoff (×N counts)
+node scripts/python_state.mjs close "<name>" --why "<1 line>" [--fluency 🟢] [--bolo done] [--floor]
+node scripts/python_state.mjs tier-close T0 --artifact "<what he wrote COLD>"
+```
+`--why` is REQUIRED — §11.4's state read is *"🔴/🟡 + 1-line kyun"*, and a rung with no reason is
+a rung with no evidence. Fluency is **declared, never computed**: no rep-count threshold exists in
+that file, by his standing rule (*"koi bhi number GUESS karke mat lagao"*, 1 Aug). Two canon
+pace-guards WARN but never block — 🟢 on a peripheral tier (§12.4 selective fluency) and a missing
+Bolo on a CORE tier (§11.0). One thing it hard-refuses: Forge grammar (capsule/jirah/axis) on the
+Python track — §11.3's *"Python pe KABHI nahi"*. Bad day → `--floor` records it as a floor-day
+(§13.2: WARM + 1 drill + 1 Bolo, never zero, guilt-free).
 
 1. **SAMAJH** — teach the subtopic in Code: what-it-is + the JS↔Python diff + a Pehle-Guess
    ("cold — yeh JS ke kis cheez jaisa hai?"). One concept, short passes, struggle-first. He

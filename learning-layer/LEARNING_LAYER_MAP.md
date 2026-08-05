@@ -112,15 +112,18 @@ Raw base: `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/learn
 
 ## 3. THE METHOD — 12 steps (0-11), har concept, isi order mein
 
-The step list comes from `PROJECT_OS.md` §THE METHOD, but the per-message opening line is NOT in PROJECT_OS — cite it to `.claude/skills/forge/SKILL.md:45`. e.g. "`PROJECT_OS.md` §THE METHOD (+ `.claude/skills/forge/SKILL.md:45` for the per-message line). Har teaching message ek line se khulti hai: `STEP n/11 · NAME · axis <x>`" — skip karna allowed hai (time-box/RED day), **chupke se** skip karna nahi.
+Source: `PROJECT_OS.md` §THE METHOD (steps 0-11). Har teaching message ek line se khulti hai —
+`STEP n/11 · NAME · axis <x>` — **par yeh line PROJECT_OS mein NAHI hai**, woh
+`.claude/skills/forge/SKILL.md` ki hai; cite wahin. Step skip karna allowed hai (time-box / RED day);
+**chupke se** skip karna nahi.
 
 | # | naam | kya hota hai |
 |---|---|---|
 | 0 | **TIME-BOX** | core concept ≈ max 1 din. Budget khatam → bache axes **DEFER** (`axis <x> defer` + cracked-log). *Deferred ≠ dropped.* Pace kabhi nahi kat-ti, correctness kabhi nahi. |
 | 1 | **DARAAR-MAP** | saare 9 axes upfront dikhao = **visible finish line** (ADHD-PI accommodation, decoration nahi) |
 | 2 | **PEHLE-GUESS** | teaching se PEHLE 2-3 axis Qs cold. Galat chalega (generation effect + pre-learning calibration point). Yeh **reps** hain — confidence `guessed` (jab tak woh khud kuch aur na bole). |
-| 3 | **SAMJHAO** | analogy pehle, zero assumed knowledge, ground-up, business + interview framing |
-…**+ concept ka WIDGET** (§4 Visualization Contract)
+| 3 | **SAMJHAO** | analogy pehle, zero assumed knowledge, ground-up, business + interview framing. **DEPTH FLOOR** (`forge/SKILL.md`, 4 Aug 2026): har axis pe thread mein chaaron hone chahiye — ANALOGY (rozmarra/physical, kabhi geometric nahi) · WORKED EXAMPLE (asli numbers, uske apne data pe, **haath se chalwaya**) · WHY-CHAIN (yeh kyun, obvious alternative kyun nahi — yahi chupke se gayab hota hai) · STUCK-STORY (*maine-socha-X-phir-Y*, **uske shabd, jab ho tab**). Kyunki `deep` layer LOCK pe **isi thread se recover** hoti hai — thread mein nahi bana to capsule ka `deep` patla nikal-ta hai. |
+| **4** | **DIKHAO** | concrete example **+ concept ka WIDGET** (§4 Visualization Contract — poore clauses wahan). Widget time-box 45-60 min: cross ho to **widget** ka scope kato, concept ka kabhi nahi. **Pehle registry dekho — `node scripts/widget.mjs list`** (5 Aug 2026: 4 mein se **0** locked capsules ke paas widget hai). |
 | 5 | **SAATH KARO** | saath mein work through — widget pe ya kaagaz pe |
 | 6 | **AKELE KARO** | woh akela kare, galtiyan kare. Widget ka Chala-mode yahan. |
 | 7 | **BOLO** | **pehle BOL ke** (voice note/zor se), PHIR transcript. Rep = awaaz, delivery = text. **NON-NEGOTIABLE** — yahi interview defense hai. |
@@ -135,11 +138,13 @@ The step list comes from `PROJECT_OS.md` §THE METHOD, but the per-message openi
 
 (`dressing-room/state/concepts.json` → `axes` mein in 9 axes ke SHORT-LABELS canon hain — alag, chhote strings: a `kya+analogy` · b `kyun/first-principles` · c `mechanism` · d `math+range` · e `limits/failure-modes` · f `tradeoffs` · g `FinOps-spot` · h `scale/cost` · i `3-ways`. `learning_state.mjs` inhi labels ko padhta hai.)
 
-Heading says "DO" (two) but three items are numbered under it. Canon has exactly TWO numbered laws; the third item is a separate un-numbered rule, not law #3. Renumber so items 1-2 are the laws and item 3 becomes an un-numbered follow-on line (e.g. "**Plus (alag rule, law nahi):** Har teaching pass ke baad …").
+Canon ke paas theek **DO** numbered law hain. (Pehle yahan teen numbered the — teesra law nahi hai,
+alag rule hai; ab woh un-numbered hai.)
 
 1. **Sirf CHAAR question-moments exist karte hain by design:** Pehle-Guess (2) · widget guess-gates (4) · **EK** sharp check-question (steps 3-6) · Jirah (9). Iske alawa kuch bhi = quiz-dump, canon mana karta hai.
 2. **Steps 3-6 ke dauraan ek waqt pe max EK sharp check-question** — aur woh **abhi-jo-padhaya** usko check kare, kabhi kuch un-taught nahi. Pacer doosre pe hard-stop karta hai.
-3. Har teaching pass ke baad: sirf **"samajh aaya — haan ya nahi?"** aur **RUKO**. "Nahi" → wahi idea doosre tareeke se, aage mat badho, probe mat karo.
+
+**Plus (alag rule, law nahi):** har teaching pass ke baad sirf **"samajh aaya — haan ya nahi?"** aur **RUKO**. "Nahi" → wahi idea doosre tareeke se, aage mat badho, probe mat karo.
 
 ---
 
@@ -164,7 +169,13 @@ to WIDGET ka scope kato, concept ka kabhi nahi.
 
 ## 5. THE CAPSULE — notes ka format (canonical = `FORGE_SPEC.md`)
 
-Add the local mirror: gist canonical hai, par organism ek READ-ONLY local mirror pe chalta — `dressing-room/state/capsules/<id>.json`, single writer `scripts/mirror.mjs`. Har organ (doubtminer/Gate 2, tape_room, lexicon, doubt_grammar) yahi padhta, gist nahi.
+**Gist = MASTER. Local = READ-ONLY MIRROR.** Organism `dressing-room/state/capsules/<id>.json` pe
+chalta hai, jiska **akela likhne wala `scripts/mirror.mjs`** hai — woh roz 06:55 pe gist se verbatim
+bytes kheench ke file **overwrite** karta hai. Har organ (doubtminer/Gate 2, tape_room, lexicon,
+doubt_grammar, deep, fsrs, capsule_bridge, rejirah) yahi padhta hai, gist nahi.
+**Iska seedha natija:** koi bhi organ local capsule ko likh nahi sakta — likha hua agli subah mit
+jaayega. Isliye har capsule-write (Re-Jirah date, doubt back-write) uske **gist paste** se hi hota hai,
+aur mirror use wapas laa kar *saabit* karta hai ki paste landa (dekho §9 PENDING).
 Raw: `https://gist.githubusercontent.com/nikhil1429/ce50c28d585c2fcd915a9dbf61871a56/raw/<id>.json`
 Files abhi: `tokenization.json` · `embeddings.json` · `inference.json` · `context.json`.
 **404 = woh concept abhi locked nahi.** Purana single `forge-capsules.json` flat-array **DEAD**.
@@ -280,7 +291,11 @@ R12 wording) + Zettelkasten (autonomous notes) + Tulving (encoding specificity) 
 | **domain** (TDS / TCS / DTAA) | concept-style close, **finance zero se** — koi assumed recall nahi | `track:"concept"` |
 | **career** (resume/applications) | **study session nahi.** Help karo, ritual mat chalao, **rep capture mat karo.** Saaf bol do. | — |
 
-Same seam text, PLUS the v2.0 seam-refine that canon attaches to it: **5 CORE curated drills CLAUDE ke** (quality + ladder-aligned); **BULK volume Gemini ka**. "REPS = Gemini" ko drill-refusal mat samajhna — teacher problems deta hai, student solutions generate karta hai; generation-effect intact.
+**HARD SEAM:** REPS + REVIEW + RESEARCH = Gemini · SAMAJH + DEFENSE + BUILD = Claude. Foundations
+Jirah aur FinOps-decision defense **kabhi Gemini pe nahi**.
+**Seam-refine (v2.0, canon isse seam ke saath hi jodti hai):** **5 CORE curated drills CLAUDE ke**
+(quality + ladder-aligned); **BULK volume Gemini ka**. "REPS = Gemini" ko drill-refusal mat samajhna —
+teacher problems deta hai, student solutions generate karta hai; generation-effect intact.
 
 **PYTHON DEPTH (recurring confusion — SETTLED):** Python = **light ritual · heavy reps · god-tier core**.
 Skill hai, decay-prone concept nahi → koi 9-axis capsule nahi. Par shallow bhi nahi — **SELECTIVE**:
@@ -310,12 +325,22 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 
 | kab | kya chalta | kyun |
 |---|---|---|
-| **SessionStart** | `node scripts/learnstate.mjs brief` | "main kahan hoon" brief — sprint position + kahan chhoda + open loop + watch-list + next-up + aaj ka Examiner target. **HOW_HE_LEARNS ka COLD-START CARD isi mein splice hota hai** (markers `COLD-START-CARD:BEGIN/END` ke beech ka text verbatim). |
+| **SessionStart** | `node scripts/teaching_contract.mjs reset-turns` *(5 Aug)* | turn-clock ka session boundary. Organ ka apna header 2 Aug se yeh bol raha tha par kabhi wire nahi hua tha — clock ke paas reset ka rasta hi nahi tha. **Sabse pehle chalta hai.** |
+| **SessionStart** | `node scripts/learnstate.mjs brief` | "main kahan hoon" brief — sprint position + kahan chhoda + open loop + watch-list + next-up + aaj ka Examiner target + Re-Jirah overdue + **PENDING gist-write** + course/python brief. **HOW_HE_LEARNS ka COLD-START CARD isi mein splice hota hai** (markers `COLD-START-CARD:BEGIN/END` ke beech ka text verbatim). *(5 Aug: ab yeh `scripts/context_manifest.mjs` se render hota hai — explicit 12,000-char budget, worst-priority-first kharch, aur footer har hisse ke bytes + jo bhi MISSING/TRIMMED hua woh naam se bolta. Kyun: brief har SessionStart pe hippocampus cartridge ke 4,157 mein se **1,957 chupchap gira raha tha.** Size problem kabhi nahi thi — silent loss thi.)* |
 | **SessionStart** | `node scripts/forge_session.mjs boot` | read-only — koi forge session disk pe abhi **OPEN** to nahi? Stale session pe bhi bolta hai (staleness pacer ko chup karti, memory ko nahi). |
 | **UserPromptSubmit** | `node hooks/afferent-post.mjs` | uske shabd thalamus (:4113) ko — zero capture-tax |
 | **UserPromptSubmit** | `node scripts/forge_session.mjs contract` | **THE METHOD ka 12-step order + dono anti-quiz-dump laws, HAR TURN.** ≤9 lines (anti-wall law). Fresh unclosed session na ho to chup. |
 | **UserPromptSubmit** | `node scripts/teaching_contract.mjs print` | **HOW-TO-TEACH rules, har turn**, ≤5 lines, drift-ranked + rotating + turn-counter (context warning) |
 | **Stop** | `node hooks/afferent-post.mjs` | **jo padhaya gaya** woh bhi memory mein (`claude-code-teaching`) |
+| **PreCompact** *(5 Aug)* | `node scripts/learnstate.mjs brief` | compaction ke paar orientation zinda rahe — SessionStart ke compact-source firing pe bharosa karne ke bajaye brief dobara print hoti hai. |
+
+> **CONTEXT WARNING (5 Aug, badla hua):** ab woh **transcript ke SIZE** pe hai, turn-counter pe nahi.
+> Naapa gaya: ek hi conversation mein session id `bd2d46c2…` → `fa94c375…` fork hui aur counter
+> **1 → 1 → 2** ho gaya — yaani woh theek us pal zero hua jab context sabse bada tha. #38 ka
+> "hamesha firing" ulat ke uske bure roop "kabhi nahi firing" mein badal gaya tha. Naya transcript
+> file history INHERIT karti hai (710,280 → 958,257 bytes), toh **size fork ke paar bachta hai,
+> identity nahi.** Budget 1,500,000 bytes — uske apne 3,780 transcripts pe p95 = 99,557 aur sirf
+> **49 (1.3%)** kabhi 1 MB paar karte hain, isliye yeh line woh kabhi ignore karna nahi seekhega.
 
 **Kyun do alag contract:** 31 Jul ko naapa gaya — pacer har turn aata tha, teaching-rules sirf
 SessionStart pe. 5-ghante ki session ka nateeja: **zero method-drift, chaar teaching-drift**
@@ -422,18 +447,42 @@ nahi hua" value). **Clean outcome se `knew` gadho mat.**
 | `sprint.json` (`progress` block) | `sprintsync.mjs` | uski live Google Sheet se |
 | `concepts.json` | **koi nahi — HAND-CURATED CANON** | concept/skill IDs + 9 axes + aliases |
 | `forge_profile.json` | `bootroom.mjs` (sirf mutation pipeline se) | THE GENOME |
+| `capsules/<id>.json` | `mirror.mjs` | gist ka READ-ONLY mirror — roz 06:55 pe verbatim overwrite. **Koi doosra organ ise likhta nahi** (§5). |
+| `rejirah_log.jsonl` | `rejirah.mjs` *(5 Aug 2026)* | Re-Jirah ke axis-GRADE rows + round-CLOSE rows, append-only. Controller-v0 ke saare reserved field isse **DERIVE** hote hain. |
+| `python_state.json` | `python_state.mjs` *(5 Aug 2026)* | Python track: subtopic · tier · 🔴🟡🟢 · close_sign_at · JS-hangover watch-list (×N) · last_packet |
+| `widgets.json` | `widget.mjs` *(5 Aug 2026)* | Visualization Contract ka registry — kaunse concept ka widget maujood hai aur kitne guess-gate **actually driven** hue. **Generate kabhi nahi karta.** |
 
 **LAW: writes sirf owners se.** `reps_log.jsonl`, `concepts.json`, ya koi bhi state file **haath se
 kabhi edit mat karo**. Doubts → `node scripts/hippocampus.mjs mark doubt` (uske shabd stdin pe).
 
-Committed vs gitignored: repo PUBLIC hai. Zyadatar `*_config.json` + `concepts.json` + `forge_profile.json` committed hain — par yeh rule exact nahi: `capture_config.json` aur `sprint_config.json` config hote hue bhi GITIGNORED hain, aur `buckets.json` + `dossier_weights.json` tracked hain (na config, na concepts/genome). **Aur `course.json` .gitignore mein hai hi nahi** — jis din `course.mjs` use likhega, uski chapter-position public repo mein chali jayegi. Har push se pehle glance. Live/derived state — `reps_log.jsonl`,
-`learning_state.json`, `examiner_drill.json`, scout reports — **gitignored**. Har push se pehle glance.
+**Committed vs gitignored (UPDATED 5 Aug 2026 — decision D10 ne yeh palat diya).** Repo PUBLIC hai.
+Pehle yahan likha tha ki `reps_log.jsonl` · `learning_state.json` · `examiner_drill.json` gitignored
+hain — **ab woh galat hai.** Captain ne D10 mein (do baar, files naam le kar) ruling di: **uska
+personal study data repo ke SAATH travel karta hai.** `.gitignore` ab in teeno ko TRACK karta hai,
+aur purane rules comment mein frozen hain taaki reversal auditable rahe. **Jo ab bhi ignored hai:**
+credentials (`oura_*`), biometrics (`readiness.json`, `intake_log.json`), aur kuch bhi jo **doosre
+logon ka naam** leta hai — D10 ne unhe cover NAHI kiya.
+`capsules/` bhi gitignored hai — matlab **git in 210 KB capsules ka backup nahi hai; gist hi master
+aur ekmatra backup hai.**
+Naye tracked state (5 Aug): `python_state.json` · `rejirah_log.jsonl` · `widgets.json` — teeno study
+data hain, D10 ke andar. `course.json` bhi tracked hai (pehle se flagged tha; D10 ke baad yeh ab
+consistent hai, defect nahi). **Har push se pehle ek glance — yeh list badalti rehti hai.**
 
-Same diagram, but note the two extra inputs the picture hides: **FSRS ka doosra input = THE CAPSULE FLOOR** — `capsuleSeedReps()` `dressing-room/state/capsules/*.json` padhta hai aur har `lockedOn` / re-weld date ko `surface:"capsule"`, knew-correct review event bana ke replay karta hai (undated capsule = ZERO seed, kabhi fabricate nahi). Aur **Learning-State chhe input padhta hai**, sirf reps_log nahi.
    "KAB"        "kitna IMAANDAAR"  "kaunsa PATTERN"  "KAHAN khade ho"
 ```
 
-Add the #24 review-unit amendment that landed 4 Aug 2026: **REVIEW UNIT = ek LOCAL DIN** (`review_unit:"local_day"`), aur us din ka **SABSE KHARAB** grade poore din ke liye bolta hai (`collapse_rating:"worst"`). Ek burst ke N reps ab N zero-elapsed reviews nahi bante — ek review event bante hain. Purana per-rep replay `buildStoreLegacy()` mein frozen hai (`review_unit:"none"` se wapas aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+shaky→Good · correct+knew→Easy.
+**Do input jo yeh diagram chhupa deta hai:**
+- **FSRS ka doosra input = THE CAPSULE FLOOR.** `capsuleSeedReps()` `dressing-room/state/capsules/*.json`
+  padhta hai aur har `lockedOn` / re-weld date ko `surface:"capsule"` knew-correct review event bana ke
+  replay karta hai (undated capsule = ZERO seed, fabricate kabhi nahi). **Isi wajah se `reJirahDone` ka
+  gist tak pahunchna load-bearing hai** — woh date hi FSRS ka review-history hai (§9).
+- **Learning-State chhe input padhta hai**, sirf `reps_log` nahi.
+
+**REVIEW UNIT amendment (#24, 4 Aug 2026):** review ka unit = **ek LOCAL DIN**
+(`review_unit:"local_day"`), aur us din ka **SABSE KHARAB** grade poore din ke liye bolta hai
+(`collapse_rating:"worst"`). Ek burst ke N reps ab N zero-elapsed reviews nahi bante — ek review event
+bante hain. Purana per-rep replay `buildStoreLegacy()` mein frozen hai (`review_unit:"none"` se wapas
+aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+shaky→Good · correct+knew→Easy.
   **Sirf `track=="concept"` reps card bante** — Python (`skill`) ignore hota (canon: Python fluency hai,
   spaced-recall card nahi).
 - **Calibration (`calibration.mjs`)** — ECE = Σ (n_b/N)·|accuracy_b − target_b| over knew/shaky/guessed.
@@ -466,6 +515,24 @@ Add the #24 review-unit amendment that landed 4 Aug 2026: **REVIEW UNIT = ek LOC
 - `turnstile.mjs` — zero-tax capture daemon: **copy hi poora move hai.** Clipboard pe jo cheez capture-contract
   ki shakal ki hai woh `capture.mjs` se ho ke andar jaati; **baaki sab kuch ignore** (parse bhi nahi hota,
   log bhi nahi). Singleton :4111.
+- `rejirah.mjs` *(5 Aug 2026)* — **Re-Jirah controller + loop ka missing back edge.** `deep.mjs due`
+  queue khol deta tha aur use band karne ka koi rasta nahi tha. Ab: `grade` ek cold round likhta hai,
+  `close` round khatam karke **gist patch** deta hai, `pending` batata hai kya abhi tak paste nahi hua.
+  Capsule ko **kabhi nahi likhta** — sanctity ki wajah se nahi, **ownership** ki wajah se (`mirror.mjs`
+  uska writer hai). Saare controller-v0 reserved field DERIVED. Poora §9.
+- `widget.mjs` *(5 Aug 2026)* — **Visualization Contract ka registry** — Contract ke paas koi code owner
+  tha hi nahi (`viz.mjs` club WALL hai, concept-widget engine nahi). `list` · `register <c> <file>
+  --gates <n>` · `open <c>`. **Generate KABHI nahi karta** (captain ka D5): widget ki poori keemat
+  bespoke hero example hai ("Aristo Eco — ₹81,500"), aur generator theek woh generic widget banata hai
+  jo canon mana karti hai. `--gates` < 2 pe woh **"built, NOT driven"** bolta — Contract ke apne
+  Chala-mode clause ke hisaab se **undriven widget = FAILED widget**. Live: **0/4** locked capsules.
+- `python_state.mjs` *(5 Aug 2026)* — Python track ka single writer (subtopic · tier · 🔴🟡🟢 ·
+  JS-hangover watch-list · last_packet). Fluency **declare** hoti hai `--why` ke saath, compute nahi —
+  us file mein ek bhi threshold nahi hai (uska standing usool: *"koi bhi number GUESS karke mat lagao"*).
+  Do canon pace-guard WARN karte hain par **rokte nahi**; ek cheez hard-refuse hai — Python pe Forge
+  grammar (§11.3 ka "KABHI nahi").
+- `context_manifest.mjs` *(5 Aug 2026)* — SessionStart ka assembler: 12,000-char budget,
+  worst-priority-first, aur footer har hisse ke bytes + MISSING/TRIMMED naam se bolta hai.
 - `course.mjs` — chapter position tracker. **EK LAW: chapter kabhi invent mat karo.** Sirf explicit
   `Chapter N: Title` header chapter banata; gaps verbatim rehte (1,2,5 → 1,2,5, beech mein 3-4 gadhe nahi
   jaate); zero-chapter paste = **loud refusal**, khaali course likh ke asli ko overwrite nahi.
@@ -509,13 +576,54 @@ capsule-level `edgeMap` · `confusionPairs`.
 unhe **chalata** hai. Locked capsules tab tak in fields ke bina hain (immutable; R1 pe targeted update,
 sacred Bolo preserve karke).
 
-⚠️ **Do duniya, abhi bhi alag:** FORGE ka date-driven Re-Jirah **aur** repo ka FSRS — dono schedule kehte
-hain. `capsule_bridge.mjs` unke disagreement ko **report** karta hai, resolve nahi. Uske apne audit ne kaha:
-"FSRS ke samaanantar Re-Jirah per-axis controller banana" **recommend NAHI** hai. Toh yeh khula hai, by design.
+### `scripts/rejirah.mjs` — controller ka CODE (5 Aug 2026)
+
+```
+node scripts/rejirah.mjs due                     # kaunse AXES + kis MODE pe (FSRS order deta hai)
+node scripts/rejirah.mjs grade <c> <axis> held|cracked --gut knew|shaky|guessed
+node scripts/rejirah.mjs close <c> [--anyway]    # round khatam → gist patch print
+node scripts/rejirah.mjs pending                 # closed par gist mein abhi tak nahi
+node scripts/rejirah.mjs state [c]               # saare DERIVED fields + round schedule
+```
+
+Saare controller-v0 reserved field **DERIVED** hain (`axisType` · `nextDue` · `lastResult` ·
+`calibrationGap` · `fluencyState` · `edgeMap` · `confusionPairs`), `rejirah_log.jsonl` se — kyunki
+R1 se pehle freeze karne ko kuch imaandaar hai hi nahi. **Yeh deferral hai, inkaar nahi:** canon dono
+jagah (FORGE_SPEC §6 aur PROJECT_OS §LEARNING EXECUTION LAYER) kehti hai in fields ko **first R1 pe
+spec + POPULATE** karo.
+
+⚠️ **`reJirahDone` ko yeh organ NAHI likhta — aur wajah sanctity nahi, OWNERSHIP hai.** (Pehle yahan
+"capsule kabhi chhua nahi jaata" wali line thi jo immutability law ko **ulta** padh rahi thi:
+FORGE_SPEC §5 **RE-EMIT** mana karti hai, aur usi vaakya mein kehti hai existing file *"sirf apne
+Re-Jirah/doubt pe edit hoti"*; §6 mechanism ka naam bhi deti hai — *"re-emit nahi, **targeted
+update**"*.) Asli wajah §5 hai: local `capsules/` ek read-only mirror hai jiska single writer
+`mirror.mjs` hai, jo roz subah gist se overwrite kar deta hai. Isliye:
+
+**round close → gist patch → uska paste → `mirror.mjs` → PENDING khatam.** Jab tak paste nahi landa,
+round **PENDING** padha jaata hai — yeh *saboot* hai ki paste hua, anumaan nahi. **Paanch organ
+`reJirahDone` pe khade hain:** `fsrs.mjs:143` (poori review-history isi se banti) · `deep.mjs:82`
+(round counter) · `capsule_bridge.mjs:75` (done/overdue/due) · `dugout.mjs` · `shipped.mjs:165`
+(`rejirah_served`). Paste na ho to paanchon maante hain round hua hi nahi — isliye SessionStart brief
+bhi PENDING line uthati hai.
+
+`close` canon ka **SUCCESSIVE-RELEARNING criterion** bhi report karta hai ("har round har due-axis cold
+ek baar sahi") — report karta hai, **rokta nahi**: adhoora round bhi asli round hai, aur jo axes cracked
+rahe woh overdue rehte hain aur wapas aate hain.
+
+✅ **Do duniya ab ALAG NAHI (D4, 5 Aug 2026).** Pehle yahan likha tha ki FORGE ka date-driven Re-Jirah
+aur repo ka FSRS air-gapped hain aur `capsule_bridge.mjs` sirf disagreement **report** karta hai.
+Captain ne yeh resolve kar diya, merge karke nahi — **kaam baant ke**:
+**FSRS = KAB ek concept wapas aata (scheduler of record) · rejirah.mjs = KAUNSE AXES aur KITNA HARD.**
+`rejirah.mjs` kabhi concept-level date emit nahi karta, isliye takraane ko kuch bacha hi nahi.
+`capsule_bridge.mjs` ab bhi READER hai (controller nahi) aur ab bhi report karta hai.
 
 ---
 
-Design layer sab CONFIRM. Missing: MAIDAN ab sirf design nahi hai — live implementation `learning_state.mjs` mein hai with **3 stages** (`fundamentals` [tokenization] · `rag_pipeline` [chunking, embeddings, retrieval, rag_eval] · `agents` [tool_use]) aur **4 handoffs** (text→vectors · chunks→vectors · vectors→top-k · results→eval), config `dressing-room/state/learning_state_config.json` se, aur `sanitizeMaidan()` ek malformed stage pe crash nahi hota (25 Jul E2E audit fix). Field abhi `awaiting_data` hai kyunki reps 9 < 12.
+**MAIDAN ab sirf design nahi hai — live implementation `learning_state.mjs` mein hai:** **3 stages**
+(`fundamentals` [tokenization] · `rag_pipeline` [chunking, embeddings, retrieval, rag_eval] ·
+`agents` [tool_use]) aur **4 handoffs** (text→vectors · chunks→vectors · vectors→top-k · results→eval),
+config `dressing-room/state/learning_state_config.json` se; `sanitizeMaidan()` ek malformed stage pe
+crash nahi hota (25 Jul E2E audit fix). Field abhi `awaiting_data` hai kyunki reps **9 < 12**.
 
 Forge ka unit = **CONCEPT** (capsule); goal ka unit = **FIELD** (poora juda hua runnable naksha).
 17 capsules tempered ho jaayein tab bhi field apne aap nahi chalega — **tempered players ≠ drilled team.**
@@ -618,7 +726,11 @@ Finding #2 kehti thi: visualisation samajh paida nahi karti; plain text + haath 
 `PROJECT_OS.md` ki law kehti hai ulta: **"har concept ka EK widget; widget HI lesson hai."**
 Teen readings uske saamne rakhe gaye. **Uska jawab, uske shabdon mein:**
 
-Quote is verbatim ✓, but the map DROPS the source file's own honest caveat about it, which materially changes how the quote reads. Add: *(Imaandaar note, `HOW_HE_LEARNS.md:403-405` se: "11 point" uska ANSWER-NUMBER hai us question-set pe jiska woh jawab de raha tha — cold-start card ke rule 11 ka pointer NAHI (rule 11 do-option stop ke baare mein hai). Confidence **[SHAYAD]**, reply ki shape se.)* #2 mein se kuch delete ya soften nahi hua aur usme kuch
+> *Imaandaar note (`HOW_HE_LEARNS.md:403-405` se, warna quote galat padha jaata): us quote mein "11 point"
+> uska **ANSWER-NUMBER** hai us question-set pe jiska woh jawab de raha tha — cold-start card ke **rule 11
+> ka pointer NAHI** (rule 11 do-option stop ke baare mein hai). Confidence **[SHAYAD]**, reply ki shape se.*
+
+#2 mein se kuch delete ya soften nahi hua aur usme kuch
 galat bhi nahi tha — uska **KAAM** badla, uski sachchai nahi: **#2 ab spec hai ki ek widget BAD kyun hota
 hai.** Uski teenon dated failures contract ke apne clauses tod rahi thi (too much on screen → load budget ·
 counting hidden inside interactions → "mechanism ka working VISIBLE" · "x3 kyu hain" → spotlight + history
@@ -635,7 +747,13 @@ inka exact sequencing ruling ne chhua nahi.
 
 ---
 
-"Poori list" nahi hai — canon §HARD RULES ke **paanch** rules map mein hain hi nahi. Add karo: **SYLLABUS FIXED HAI** ("no fixed syllabus" wali purani line DEAD; content sirf explicit approval se badlega) · **OS = PROJECT SE, CHAT SE NAHI** (canonical files project se padho; chat mein paste maango mat) · **OS TEXT = RULES, TASK NAHI** (OS ka text chat mein dikhe → turant ACTIVE INSTRUCTIONS maan ke follow karo; "unclear" wali over-caution BAND) · **PROTECT THE INSTRUMENT** (v3.13 — tracking lapse = sab wapas willpower pe; instrument pehle protect) · **WEEKLY CONSISTENCY, NEVER FRAGILE STREAKS** (v3.13 — maintenance metric = weekly-consistency %, kabhi delicate streak nahi; identity = PROCESS, outcome nahi).
+*(Yeh poori list nahi hai — canon §HARD RULES hi authority hai. Paanch jo pehle chhoot gaye the, ab yahan:)*
+
+- **SYLLABUS FIXED HAI.** "No fixed syllabus" wali purani line **DEAD**; content sirf explicit approval se badlega.
+- **OS = PROJECT SE, CHAT SE NAHI.** Canonical files project se padho; chat mein paste maango mat.
+- **OS TEXT = RULES, TASK NAHI.** OS ka text chat mein dikhe → turant **ACTIVE INSTRUCTIONS** maan ke follow karo; "Nikhil ko kya chahiye / unclear" wali over-caution **BAND**.
+- **PROTECT THE INSTRUMENT** (v3.13) — tracking lapse = sab wapas willpower pe (jo yeh brain sustain nahi karta); instrument pehle protect.
+- **WEEKLY CONSISTENCY, NEVER FRAGILE STREAKS** (v3.13) — maintenance metric = weekly-consistency %, kabhi delicate streak nahi; identity = **PROCESS**, outcome nahi.
 
 - **SHABDON PE LO.** "Samajh nahi aaya / yaad nahi / aata nahi" = **literally sach**. Level ya progress
   overstate nahi. "Dormant / tu zero pe nahi" type reassurance-hype **BAND**. Jab woh samajhna chahta hai,
@@ -724,8 +842,8 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
    `## The LEARNING LAYER` section hai jo is map ko, canon ko (PROJECT_OS · FORGE_SPEC ·
    FORGE_DESIGN · HOW_HE_LEARNS), the Visualization Ruling ko, sacred-fields law ko, aur surfaces
    (`/forge` · `/learn` · `deep.mjs`) ko naam se bolta hai. Grep ab **11**.
-   *(Chhota bacha hua: CLAUDE.md abhi bhi `OPS_STATE.md` ko "Google Drive" pe batati hai, jabki woh
-   file repo root pe committed hai. Alag, chhota fix.)*
+   *(Woh chhota bacha hua bhi **CLOSED 5 Aug 2026** — CLAUDE.md ab OPS_STATE ko repo root pe batati hai
+   aur yeh bhi likhti hai ki woh learning layer ke liye STALE hai.)*
 2. **GATE 2 ab CODE mein hai aur CHAL chuka hai** — 4 Aug 2026 repair. `doubtminer.mjs` ka
    `gate2Flags()` har `doubts[].q` ko cryptic / fragment / meta / near-duplicate ke against scan
    karta hai aur har queue-entry pe `gate2_flag` chipkata hai. Live: **112 checked · 17 flagged**
@@ -743,15 +861,23 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
    `<concept> <axis>` = ek axis poora khula, uske shabd verbatim.
    **Abhi bhi khula:** shipped `THE-FORGE.html` abhi bhi `deep`/`viz` render nahi karta (item 8).
    Woh browser-side kaam hai; `FORGE_DEEP_RENDER_BRIEF.md` uska vehicle rehta hai.
-4. **Do Re-Jirah duniya** — FORGE ka date-driven schedule aur repo ka FSRS air-gapped hain;
-   `capsule_bridge.mjs` unka disagreement report karta hai, resolve nahi. Jaan-boojh ke khula.
+4. ~~**Do Re-Jirah duniya**~~ — **CLOSED 5 Aug 2026 (D4).** Merge karke nahi, kaam baant ke:
+   **FSRS = KAB · `rejirah.mjs` = KAUNSE AXES + KITNA HARD.** `rejirah.mjs` koi concept-level date
+   emit hi nahi karta, toh takraav structurally khatam. Detail §9.
 5. **`OPS_STATE.md` learning layer ke liye STALE hai** — 15 Jul ka hai, "Skills (11)" bolta hai (ab 12 hain,
    `/learn` add hua), aur `reps_log = 0` bolta hai. `capture.mjs` ka v4 amendment (4 Aug) live reps quote
    karta hai. **Yeh number live padho, doc pe bharosa mat karo.**
 6. **Controller v0 schema abhi populate nahi hua** — per-axis `axisType`/`nextDue`/`lastResult`/
    `calibrationGap`/`fluencyState` + capsule `edgeMap`/`confusionPairs` **reserved** hain, first R1 run pe
    spec + populate honge. Constants (interval multipliers, reset window, R-mid→R-late switch, weave fraction)
-   = **v0 hypotheses**.
+   = **v0 hypotheses**. *(5 Aug: ab yeh sab `rejirah.mjs` mein `rejirah_log.jsonl` se DERIVE hote hain —
+   ek honest interim jab tak R1 poora na ho. Yeh **deferral** hai, inkaar nahi: canon dono jagah
+   POPULATE-at-R1 bolti hai, aur woh baaki hai.)*
+6b. **KHULA — R1 ka gist paste abhi kisi ne kiya hi nahi.** `close` patch bana deta hai, par capsule
+   `reJirahDone` tab tak nahi badalta jab tak **woh** gist mein paste na kare aur `mirror.mjs` use wapas
+   na laaye. Aaj live: **teen capsules (embeddings · inference · context) pe abhi bhi `reJirahDone: []`,
+   34-42 din overdue, aur ek bhi round nahi baitha.** Machine ab poora rasta jaanti hai — round abhi baitha
+   nahi gaya. `node scripts/rejirah.mjs due` se shuru.
 7. **Registry-vs-syllabus seam** — `PROJECT_OS.md` ka syllabus **17 concepts / 3 streams** kehta hai;
    `concepts.json` **26 concepts + 12 skills** register karta hai (buckets 1-7). Yeh takrav nahi hai —
    OS ka syllabus Foundations ki ladder hai, `concepts.json` poori sprint ki rep-vocabulary hai (30 Jul ko
@@ -773,13 +899,35 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
 node scripts/learnstate.mjs brief|json
 node scripts/forge_session.mjs boot|status
 node scripts/course.mjs brief
+node scripts/python_state.mjs brief|status          # Python track (5 Aug)
 node scripts/sprintsync.mjs
 
-# forge session
-Add the two missing modes the script actually ships (and that today's pacer work made load-bearing): `node scripts/forge_session.mjs contract` (THE METHOD's 12-step order re-injected every turn — fired by the UserPromptSubmit hook, but runnable by hand) and `node scripts/forge_session.mjs selftest`. Also `start` takes an optional `--force`.
+# forge session (pacer)
+node scripts/forge_session.mjs start <concept> [--force]   # --force = purani unclosed session DISCARD (ek `force` row phir bhi history mein)
+node scripts/forge_session.mjs step <0-11> | axis <a-i> [done|defer] | moment <name> | close
+node scripts/forge_session.mjs contract             # THE METHOD ka 12-step order — UserPromptSubmit hook chalata, haath se bhi chal jaata
+node scripts/forge_session.mjs selftest
+
+# re-jirah (5 Aug) — FSRS = KAB · yeh = KAUNSE AXES + KITNA HARD
+node scripts/deep.mjs due                           # cold queue, sirf strike-sawaal
+node scripts/rejirah.mjs due | state [c]
+node scripts/rejirah.mjs grade <c> <axis> held|cracked --gut knew|shaky|guessed
+node scripts/rejirah.mjs close <c>                  # round khatam → gist patch
+node scripts/rejirah.mjs pending                    # closed par gist mein abhi nahi
+
+# python track (5 Aug) — single writer, haath se kabhi mat likho
+node scripts/python_state.mjs subtopic "<name>" --tier T0
+node scripts/python_state.mjs close "<name>" --why "<1 line>" [--fluency 🟢] [--bolo done] [--floor]
+node scripts/python_state.mjs tier-close T0 --artifact "<COLD likha artifact>"
+node scripts/python_state.mjs watch "<js-hangover>" | unwatch | packet
+
+# widget registry (5 Aug) — KNOWS, generate kabhi nahi karta
+node scripts/widget.mjs list | register <c> <file> --gates <n> | open <c>
 
 # capture (akela darwaza)
-Add `--chain` and the Drive-inbox path: `node scripts/capture.mjs paste [file] [--chain]` (--chain recomputes derived state immediately, so heartbeat ko alag se chalane ki zaroorat nahi) and `node scripts/capture.mjs pull [--no-chain]` (Drive inbox se reps ingest — zero-paste path).
+node scripts/capture.mjs rep --concept <c> --axis <a> --q "<tested kya>" --gut <word> --correct true|false
+node scripts/capture.mjs paste [file] [--chain]     # --chain derived state turant recompute karta (heartbeat alag se nahi chahiye)
+node scripts/capture.mjs pull [--no-chain]          # Drive inbox se ingest — zero-paste path
 echo "uske shabd" | node scripts/hippocampus.mjs mark doubt
 
 # signals — ⚠ NANGA (bare) INVOCATION IN SAB KA MATLAB HAI **RECOMPUTE = WRITE**, read-only nahi
