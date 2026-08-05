@@ -35,6 +35,11 @@ Triggers: *"revise"*, *"purana dohrana hai"*, *"re-jirah"*, *"yaad nahi raha"*, 
 2. `node scripts/deep.mjs <concept> <axis>` — only then the weld and the full `deep` layer, in his
    own words. Never paraphrase it back at him; it is the text he will defend in an interview.
 3. Held clean → note it. Cracked → re-weld NOW, and the crack is **data, never a verdict**.
+   **Then RECORD it — `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>`.**
+   Before 5 Aug 2026 this had no write path, which is why three of four capsules showed
+   `reJirahDone: []` — never re-tempered once. The capsule is never edited (sacred prose): the
+   row lands in `rejirah_log.jsonl` and the per-axis schedule, fluency and calibration-gap are
+   DERIVED from it. `node scripts/rejirah.mjs due` = which axes and how hard (FSRS still owns WHEN).
 4. Reps from a Re-Jirah round capture exactly like any other rep (§3), gut-word first.
 
 ## 1. ROUTE by `cur.track`
@@ -42,7 +47,10 @@ Triggers: *"revise"*, *"purana dohrana hai"*, *"re-jirah"*, *"yaad nahi raha"*, 
 ### track = `concept`  (Foundations / LLM-API / LLMOps AI concepts → the heavy ritual)
 This is a FORGE concept (§11.3: Foundations-concept close = heavy Forge 9-axis, **never**
 the Python light-close). **Hand the session to FORGE** — invoke the `forge` skill on
-`cur.task` (or run its 9-axis flow inline: Pehle-Guess → crack-map teach → probe under the
+`cur.task`. **Forge opens the pacer session itself as its first action** (5 Aug 2026,
+audit #107) — until then nobody owned that, so THE METHOD's step order, the
+four-question-moments law and META-FREEZE simply never reached the turn. Do not route a
+concept day past this branch without forge actually running `start` (or run its 9-axis flow inline: Pehle-Guess → crack-map teach → probe under the
 gut-word law → Bolo → auto-capture). Do NOT duplicate the forge engine here. Forge captures its
 OWN reps at close, so on the concept track **skip §3 (ingest+capture) entirely** — the only
 /learn beat that runs after forge is the day-end close (**§4**).

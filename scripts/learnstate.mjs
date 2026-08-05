@@ -109,13 +109,21 @@ function loadTeachingCard(path = CARD_FILE) {
     return body.length > CARD_MAX ? body.slice(0, CARD_MAX) + "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)" : body;
   } catch { return null; }
 }
-async function loadMemory() {
+// AUDIT #107 (5 Aug 2026) — THE CAP IS NOW THE CALLER'S, NOT A CONSTANT.
+// MEMO_MAX = 2200 was a reasonable guess in July and a measured bug in August: the live
+// cartridge is 4,157 characters, so 1,957 of his durable memory were dropped at every
+// SessionStart, silently, forever. The fix is not a bigger constant — it is that the
+// party which knows the whole budget (context_manifest.mjs) decides the share, and
+// says out loud whenever it had to cut. The default is UNCHANGED, so every existing
+// caller and the frozen brief() path behave exactly as they did.
+async function loadMemory(cap = MEMO_MAX) {
   try {
     const h = await import("./hippocampus.mjs");
     if (typeof h.buildRehydrateCartridge !== "function") return null;
     const raw = h.buildRehydrateCartridge({ n: MEMO_EPISODES });
     if (!raw || typeof raw !== "string") return null;
-    return raw.length > MEMO_MAX ? raw.slice(0, MEMO_MAX) + "\n… (truncated — full recall via the organism-memory MCP `get_context`)" : raw;
+    const n = Number.isFinite(cap) && cap > 0 ? cap : MEMO_MAX;
+    return raw.length > n ? raw.slice(0, n) + "\n… (truncated — full recall via the organism-memory MCP `get_context`)" : raw;
   } catch { return null; }
 }
 
@@ -174,6 +182,16 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     : wsAge >= WS_STALE_DAYS ? ` (STALE · ${Math.floor(wsAge)}d old — treat as history, confirm before acting on it)`
     : wsAge >= 1 ? ` (${Math.floor(wsAge)}d ago)`
     : "";
+  // AUDIT #107 — THE SPINE GETS AN AGE TOO. sprint.json feeds this brief, the forge
+  // nudge, the teaching contract's link-back and the drills; until 5 Aug it carried no
+  // timestamp at all, so a Sheet that stopped syncing looked exactly like one that
+  // just synced. Same rule as the working_set tag above: absent age is CALLED OUT, not
+  // assumed fresh, because an untimestamped spine is the one you can least afford to
+  // trust silently.
+  const spAge = ageDays(sprint.progress && sprint.progress.synced_at, now);
+  const spTag = spAge === null ? " (no sync stamp — run `node scripts/sprintsync.mjs`)"
+    : spAge >= WS_STALE_DAYS ? ` (SPRINT STALE · ${Math.floor(spAge)}d since sync)`
+    : "";
   const L = [];
   L.push("=== ARSENAL — SESSION KICKOFF (auto · session-agnostic · read from state, not chat) ===");
   if (cur) {
@@ -182,7 +200,7 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     // "10-01".startsWith("1") is true. Task ids are always "<sprint>-<nn>", so the
     // separator is part of the match, not decoration.
     const sp = (sprint.sprints || []).find(s => String(cur.id).startsWith(String(s.n) + "-"));
-    L.push(`LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}`);
+    L.push(`LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
     L.push(`  MODE: ${modeLine}`);
     // audit #35 — THE COURSE TRACKER GETS ITS ADDRESS.
     // course.mjs was 670 lines with zero callers and course.json had never existed, while
@@ -353,6 +371,15 @@ async function main() {
   if (process.env.ARSENAL_ORGAN === "1" && mode !== "json") return;
   if (mode === "json") { console.log(JSON.stringify(gather(), null, 2)); return; }
   // AFTER the organ guard, never before — an organ prompt must never carry his memory.
+  // AUDIT #107: the assembler decides each part's share of an explicit budget and
+  // prints a manifest footer naming anything missing or trimmed. If it is unavailable
+  // or throws, we fall back to the exact pre-#107 call — a hook must never be the
+  // thing that breaks SessionStart.
+  try {
+    const { assemble } = await import("./context_manifest.mjs");
+    const out = await assemble({ dir: STATE, now: Date.now() });
+    if (out && typeof out.text === "string" && out.text) { console.log(out.text); return; }
+  } catch { /* fall through to the frozen path */ }
   console.log(brief(STATE, Date.now(), await loadMemory(), loadTeachingCard()));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

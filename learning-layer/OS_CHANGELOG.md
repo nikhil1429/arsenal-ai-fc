@@ -2,6 +2,45 @@
 # Reference-only version history. Turn-1 pe zaroori NAHI. Live rules = PROJECT_OS.md.
 # Yeh history hai (tera apna rule: "history lives in git commits") — CI/OS se yahan move kiya (10 Jul).
 
+# v3.14 (05 Aug 2026): AUDIT #107 — THE LEARNING-LAYER WIRING REPAIR. META-FREEZE was overridden by the
+#   captain, explicitly and repeatedly ("we need to fix the issues first" / "we need to fix every single
+#   issue"), which is the exception canon allows; logged here as canon requires. Nothing in THE METHOD, the
+#   9 axes, the capsule schema or the Visualization Contract changed — this repair is entirely about DELIVERY,
+#   WRITE-PATHS and OWNERSHIP. Every engine replaced was frozen verbatim beside its successor (layering law).
+#   (1) THE CONTEXT WARNING RODE THE WRONG NOUN. Measured across three turns of one conversation: the Claude
+#       Code session id changed mid-conversation (bd2d46c2 -> fa94c375) and the turn counter went 1 -> 1 -> 2,
+#       i.e. it zeroed exactly when context was LARGEST. Audit #38's "always fires" inverted into the worse,
+#       silent "never fires". transcript_path is no fix either (a fork mints a new file) — but the new file
+#       INHERITS the history (710,280 -> 958,257 bytes), so SIZE survives what IDENTITY does not. The warning
+#       now rides transcript bytes, with the turn counter as a labelled fallback. Threshold DERIVED from his
+#       own 3,780 transcripts (p50 28,197 · p95 99,557 · p99 2,263,929; only 49 ever pass 1 MB), so it fires
+#       on ~1% of sessions and can never become the line he learns to ignore. `reset-turns` finally wired into
+#       SessionStart — its own header had named that the sanctioned fix since 2 Aug. PreCompact added.
+#   (2) THE BRIEF DROPPED 47% OF HIS MEMORY, SILENTLY. Cartridge 4,157 chars, MEMO_MAX 2,200. New
+#       context_manifest.mjs assembles SessionStart against an explicit 12,000-char budget (D2) and prints a
+#       footer naming every part's bytes and anything MISSING or TRIMMED. PENDING IDENTITY FACTS now reach the
+#       brief; before this only get_context showed them, and get_context is a call a model must REMEMBER.
+#   (3) RE-JIRAH HAD NO BACK EDGE. deep.mjs opened the queue; nothing could close it — three of four capsules
+#       at reJirahDone:[] , 34-42 days overdue, 80,511 chars of his prose never withdrawn. New rejirah.mjs
+#       (D3): append-only rejirah_log.jsonl, and every FORGE_SPEC-reserved controller-v0 field DERIVED rather
+#       than stored. THE CAPSULES ARE NEVER TOUCHED — the spec's original plan (populate 36 immutable capsules)
+#       was rejected as the exact sacred-prose corruption risk immutability exists to prevent.
+#   (4) TWO SCHEDULERS, NOW ARBITRATED (D4): FSRS owns WHEN a concept returns; rejirah.mjs owns WHICH AXES and
+#       HOW HARD, and never emits a concept-level date. They answered different questions all along.
+#   (5) THE VISUALIZATION CONTRACT HAD NO CODE OWNER. viz.mjs is the club wall. New widget.mjs is a REGISTRY,
+#       not a generator (D5=A) — a generator produces the generic widget canon forbids. Live truth it now
+#       states out loud: 0 of 4 locked capsules have a widget, and the one that exists is an orphan.
+#   (6) GATE 2's 17 FLAGGED DOUBTS ARE NO LONGER SERVED. All 112 tape-room entries were eligible:true,
+#       including the 17 the spec's own detector calls cryptic/fragment/meta. Content untouched (his to fix,
+#       on the gist); serving stopped. 17 remains a MACHINE FLOOR, not the truth.
+#   (7) capture.mjs gains `rep` — one rep, as it happens, through the SAME validator. Reps no longer hinge on
+#       a clean close, which the record says does not happen: 4 recorded sessions, method_clean false ×4,
+#       reps_log at 9 lines, so calibration/nemesis/learning_state are all still gated shut.
+#   (8) sprint.json gains synced_at and the brief age-tags it — the spine of four readers had no timestamp.
+#   (9) .gitignore: readiness/intake_log/reps_log/learning_state/examiner_drill now tracked on his explicit,
+#       twice-given ruling (D10). Credentials and anything naming OTHER people stay ignored — not covered by
+#       that ruling and not his alone to publish.
+
 # v3.13 (08 Jul 2026): OUTWORK EXECUTION LAYER MERGED — do naye canonical files (EXECUTION_FINAL_Tier2_
 #   Metamorphosis.md = grind/day operating-system · Tier-2_Accountability_Rig_on_Windows...md = version-accurate
 #   Max-5x build guide) OS mein wired, LEARNING layer ke PEER ke roop mein. Do organ, ek khoon (kickoff+audit

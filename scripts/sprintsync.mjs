@@ -97,6 +97,15 @@ async function sync({ fetchFn = fetch, now = new Date() } = {}) {
   const prev = (sprint.progress && sprint.progress.current) || {};
   if (prev.id === progress.current.id) progress.current = { ...prev, ...progress.current };
   if (sprint.progress && sprint.progress.examiner_daily) progress.examiner_daily = sprint.progress.examiner_daily;
+  // FRESHNESS STAMP (audit #107, 5 Aug 2026). sprint.json is the spine of FOUR
+  // readers — the SessionStart brief, the forge nudge, the teaching contract's
+  // link-back line, and setpiece's drills. It carried NO timestamp, so a dead Sheet
+  // and a synced one were indistinguishable and every reader trusted it equally.
+  // (The tell was already on disk: `progress.done` omits `tokenization`, which has
+  // been a locked, tempered capsule since 15 Jun.) The brief age-tags this exactly
+  // the way it already age-tags working_set.json, so a stale spine is VISIBLE rather
+  // than silently believed.
+  progress.synced_at = now.toISOString();
   sprint.progress = progress;
   writeAtomic(SPRINT, sprint);
   console.log(`sprintsync: synced — current ${progress.current.id} ${progress.current.task} (${progress.current.status}) · ${progress.done.length} done · next ${progress.next_up.length}`);

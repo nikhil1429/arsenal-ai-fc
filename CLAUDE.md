@@ -116,7 +116,29 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`
 (`due` = the queue, questions only and **cold**; `<concept> <axis>` = one axis fully opened).
 
+**Added 5 Aug 2026 (audit #107 repair — all selftested and run live):**
+- `scripts/rejirah.mjs` — **the Re-Jirah controller and the loop's missing back edge.**
+  `grade <concept> <axis> held|cracked --gut <word>` records a cold round; `state` and `due`
+  derive it. **Capsules are NEVER written to** — results live in `rejirah_log.jsonl` and every
+  reserved controller-v0 field (`axisType` · `nextDue` · `lastResult` · `calibrationGap` ·
+  `fluencyState` · `edgeMap`) is DERIVED. **FSRS owns WHEN a concept returns; this owns WHICH
+  AXES and HOW HARD** — the two schedulers no longer disagree.
+- `scripts/widget.mjs` — the **Visualization Contract's registry** (it had no code owner;
+  `viz.mjs` is the club wall). `list` · `register <c> <file> --gates <n>` · `open <c>`.
+  It never generates a widget — an undriven widget is a failed widget, and the value is the
+  bespoke hero example. Live truth today: **0 of 4 locked capsules have one.**
+- `scripts/context_manifest.mjs` — the SessionStart assembler. Explicit 12k budget, and a
+  footer naming every part's bytes plus anything MISSING or TRIMMED. It exists because the
+  brief silently dropped 1,957 of the hippocampus cartridge's 4,157 characters every session.
+- `capture.mjs rep …` — **one rep, as it happens.** Same validator as `paste`. Do not bank a
+  day's reps on a clean close.
+- The CONTEXT WARNING now rides the **transcript's size**, not the turn counter (a fork resets
+  the counter at exactly the moment context is fullest). `PreCompact` re-prints the brief.
+
 ## Files of record
-- `OPS_STATE.md` (Google Drive) — live operational anchor; read first each thread.
+- `OPS_STATE.md` (**repo root**, committed — not Google Drive; that line was wrong until
+  5 Aug 2026) — live operational anchor; read first each thread. **It is STALE for the
+  learning layer**: it is dated 15 Jul, says "Skills (11)" (there are 12) and `reps_log = 0`.
+  Read those numbers live from state, never from this doc.
 - `GOALKEEPER_v2_migration.md` — what changed in the Goalkeeper recalibration.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.

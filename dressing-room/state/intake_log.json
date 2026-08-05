@@ -1,0 +1,17 @@
+{
+  "_comment": "Log med/supplement/caffeine TIMING per day (24h HH:MM). The coach reads this to explain HR/REM/latency shifts as medication-timing effects, NOT under-recovery. It NEVER comments on the medication itself. Copy a day, fill it, or just tell Claude and paste.",
+  "_template": {
+    "methylphenidate": ["09:00", "14:00"],
+    "caffeine": ["09:30", "13:00"],
+    "aripiprazole": ["21:00"],
+    "venlafaxine": ["09:00"],
+    "other": []
+  },
+  "2026-07-08": {
+    "methylphenidate": [],
+    "caffeine": [],
+    "aripiprazole": [],
+    "venlafaxine": [],
+    "other": []
+  }
+}

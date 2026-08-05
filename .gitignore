@@ -31,33 +31,26 @@ ARSENAL_FC_FULL_REPO_BUNDLE.md
 # --- audit scratch (leftover working dir from the 2 Aug adversarial audit) ---
 .audit_tmp/
 
-# --- personal health / medication data — IGNORED BY DEFAULT, keep it that way ---
-# This repo is PUBLIC. The two files below contain Oura biometrics (sleep, HRV,
-# readiness) and medication-intake timing. These rules are ACTIVE: the files are
-# NOT tracked and must never be. Do not remove or comment out these lines.
-dressing-room/state/readiness.json
-dressing-room/state/intake_log.json
-# 2 Aug 2026 audit, finding #79 — the two rules above are PATH-ANCHORED, so a copy
-# of either file anywhere else in the tree (a vault, a backup dir, a worktree, a
-# hand-made debug copy) was NOT covered and would have been publishable. The repo is
-# PUBLIC and these hold Oura biometrics + medication-intake TIMING. Belt and braces:
-**/readiness.json
-**/intake_log.json
-# ISSUE #79 (2026-08-04) — the two rules above are PATH-ANCHORED, so a copy that
-# lands anywhere else in the tree (a vault, a scratch dir, an export, a rescued
-# backup that is not a .bak) is NOT covered and IS publishable. The same
-# belt-and-braces glob already guards oura_secrets/oura_tokens fourteen lines up;
-# these two deserve it more — they hold biometrics AND medication-intake timing.
-# Verify: `git check-ignore -v <any/path/readiness.json>` must name a line here.
-**/readiness.json
-**/intake_log.json
+# --- personal health / medication data ---
+# RULED BY THE CAPTAIN, 5 Aug 2026 (decision D10). These held Oura biometrics and
+# medication-intake TIMING, and were denied by the #79 belt-and-braces globs. He was
+# shown both files by name, was told plainly that a public push is irreversible, and
+# ruled twice that they go in the repo. His data, his call — recorded here rather
+# than silently reversed, so the reversal is auditable and so the next reader knows
+# this is a DECISION and not an oversight.
+#   PREVIOUSLY (frozen for the record, do not re-enable without his word):
+#     dressing-room/state/readiness.json · dressing-room/state/intake_log.json
+#     **/readiness.json · **/intake_log.json
+# NOT covered by that ruling and still ACTIVE below: live credentials
+# (oura_secrets/oura_tokens) and anything naming OTHER people.
 
 # --- per-run OUTPUT state (data, not code — regenerated every run) ---
 dressing-room/state/timeaudit.json
 
-# --- capture data: study/drill reps (personal learning data, not code) ---
-dressing-room/state/reps_log.jsonl
-# machine-local capture config (this PC's Google Drive inbox path — not canonical)
+# --- capture data: study/drill reps ---
+# D10, 5 Aug 2026: reps_log.jsonl now travels with the repo (his ruling). capture_config
+# stays ignored for a DIFFERENT reason than privacy — it holds THIS machine's Drive path,
+# so committing it would break the next machine, not expose him.
 dressing-room/state/capture_config.json
 
 # --- FSRS agent outputs (derived personal study data: concepts + schedule) ---
@@ -70,8 +63,7 @@ dressing-room/state/calibration.json
 # --- Nemesis agent output (derived personal study data: weak topics + receipts) ---
 dressing-room/state/weaknesses.json
 
-# --- Learning-state agent output (derived personal study data: fluency map + edges) ---
-dressing-room/state/learning_state.json
+# --- Learning-state agent output --- D10, 5 Aug 2026: now tracked (his ruling).
 
 # --- Manager (Agent #1) outputs + personal inputs (team sheet / notes / season / captain note / post-match) ---
 dressing-room/state/team_sheet.md
@@ -188,8 +180,7 @@ dressing-room/state/concept_graph.json
 dressing-room/state/organism_self.md
 # the fuelboard (M3) — per-account usage ledger (runtime)
 dressing-room/state/tanks.json
-# the live examiner (M4) — the staged code drill names his weaknesses
-dressing-room/state/examiner_drill.json
+# the live examiner (M4) — D10, 5 Aug 2026: now tracked (his ruling).
 # neuromodulation (M5) — derived from the Governor verdict (which is private)
 dressing-room/state/tone.json
 # the Rest Room (M6) — pre-drafted interventions name his weaknesses

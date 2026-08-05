@@ -907,20 +907,64 @@ function main() {
   const wantsChain = flags.includes("--chain");
   const noChain = flags.includes("--no-chain");
 
-  if (mode === "paste") {
-    const fileArg = process.argv.slice(3).find((a) => !a.startsWith("--"));
-    let text;
-    if (fileArg) {
-      if (!existsSync(fileArg)) { console.error(`paste: file not found: ${fileArg}`); process.exit(1); }
-      text = readFileSync(fileArg, "utf8");
-    } else if (!process.stdin.isTTY) {
-      text = readFileSync(0, "utf8");                 // piped stdin
-    } else {
-      console.error("paste: provide a JSON file arg or pipe JSON via stdin.\n  node capture.mjs paste session.json"); process.exit(1);
-    }
+  if (mode === "paste" || mode === "rep") {
     let cands;
-    try { cands = parseBlob(text); }
-    catch (e) { console.error(`paste: not valid JSON — nothing ingested (${e.message})`); process.exit(1); }
+    if (mode === "rep") {
+      // ── ONE REP, AS IT HAPPENS (audit #107, 5 Aug 2026) ─────────────────────
+      // Every rep used to hinge on a perfect end-of-session close: build the whole
+      // array, write a temp file, paste it. Measured cost of that coupling — FOUR
+      // recorded forge sessions on `hallucinations`, all four `method_clean false`,
+      // and reps_log standing at NINE lines total, which is why calibration (gate 20),
+      // nemesis (20) and learning_state (12) are all still dormant. A session that
+      // ends messily loses the whole day's reps, and his sessions end messily.
+      // So: a second door, same lock. This builds ONE rep and hands it to the SAME
+      // ingest() — identical validation, identical dedupe, identical reporting. No
+      // second validator can drift from the first, because there isn't one.
+      const flag = (n) => { const i = process.argv.indexOf("--" + n); return i >= 0 ? process.argv[i + 1] : undefined; };
+      const track = (flag("track") || "concept").toLowerCase();
+      const axisRaw = flag("axis");
+      const lat = flag("latency");
+      const one = {
+        // `ts` is stamped HERE, at the moment of capture, which is the honest value —
+        // this door exists precisely so the rep is not reconstructed hours later. (v4's
+        // observed_at/ts_claimed machinery still applies on ingest.)
+        ts: new Date().toISOString(),
+        surface: flag("surface") || (track === "skill" ? "colab" : "gem"),
+        track,
+        concept: flag("concept"),
+        // A skill rep MUST carry axis null (the contract's own rule); a concept rep
+        // must carry a single letter. We pass the value through UNCHANGED so
+        // capture's own validator gives the same verdict it would give a pasted rep.
+        axis: track === "skill" ? null : axisRaw,
+        question: flag("q") || flag("question"),
+        confidence: flag("gut") || flag("confidence"),
+        correct: String(flag("correct")).toLowerCase() === "true",
+      };
+      // latency_ms is written ONLY when actually supplied — never invented. The
+      // genome's criterion_gated_pass reads it, and a fabricated number corrupts the
+      // fluency ladder (the law is in SKILL.md and in this file's own header).
+      if (lat !== undefined && Number.isFinite(Number(lat))) one.latency_ms = Number(lat);
+      if (!one.concept || !one.question || !one.confidence) {
+        console.error("rep: --concept, --q and --gut are all required.");
+        console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');
+        console.error("  GUT-WORD LAW: --gut is what he committed BEFORE answering. No gut-word, no rep. Never re-graded after.");
+        process.exit(1);
+      }
+      cands = [one];
+    } else {
+      const fileArg = process.argv.slice(3).find((a) => !a.startsWith("--"));
+      let text;
+      if (fileArg) {
+        if (!existsSync(fileArg)) { console.error(`paste: file not found: ${fileArg}`); process.exit(1); }
+        text = readFileSync(fileArg, "utf8");
+      } else if (!process.stdin.isTTY) {
+        text = readFileSync(0, "utf8");                 // piped stdin
+      } else {
+        console.error("paste: provide a JSON file arg or pipe JSON via stdin.\n  node capture.mjs paste session.json"); process.exit(1);
+      }
+      try { cands = parseBlob(text); }
+      catch (e) { console.error(`paste: not valid JSON — nothing ingested (${e.message})`); process.exit(1); }
+    }
     // A CLEAN REFUSAL, NEVER A STACK TRACE (31 Jul 2026). If the ingest throws —
     // a held file, a full disk — the captain must be told his reps are recoverable
     // by re-running, not shown a Node traceback that reads like the data is gone.

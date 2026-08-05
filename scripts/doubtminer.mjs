@@ -446,7 +446,24 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
     for (const [i, d] of (c.doubts || []).entries()) {
       const key = `${c.id}#${i}`;
       if (retiredKeys.has(key)) continue;
-      queue.push({ capsule: c.id, doubt_index: i, q_verbatim: d.q, locked_on: c.lockedOn || null, eligible: ageDays >= cfg.tape_room.min_age_days, gate2_flag: g2By.get(key) || null });
+      // HARM CONTAINMENT (audit #107, 5 Aug 2026 — captain approved).
+      // Gate 2 has flagged 17 of 112 live doubts as cryptic/fragment/meta, and every
+      // one of them was still `eligible: true` — so a cold future-Nikhil would be
+      // served *"ye to inference vali cheez hi hai na?"* with no antecedent, which is
+      // the precise harm the COLD-READER STANDARD exists to prevent. Fixing the TEXT
+      // is his (the prose is sacred, and only he can edit the gist). Fixing the
+      // SERVING is ours, and needs no approval on content: a flagged doubt is held OUT
+      // of the queue until its flag clears. The row stays, verbatim, carrying its flag
+      // and its reason — nothing is deleted, nothing is rewritten, and the moment he
+      // repairs the wording the next run re-admits it automatically.
+      const g2flag = g2By.get(key) || null;
+      const oldEnough = ageDays >= cfg.tape_room.min_age_days;
+      queue.push({
+        capsule: c.id, doubt_index: i, q_verbatim: d.q, locked_on: c.lockedOn || null,
+        eligible: oldEnough && !g2flag,
+        ineligible_reason: !oldEnough ? "too young" : g2flag ? "gate2: not cold-readable yet" : null,
+        gate2_flag: g2flag,
+      });
     }
   }
   // eldest first — the oldest opponent is the most satisfying rematch
@@ -469,7 +486,10 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
     retire_line: `${retiredKeys.size}/${retiredKeys.size + queue.length} doubts retired`,
     // #34 — the GATE 2 verdict rides on the queue's own file, minus the per-doubt
     // duplication (each entry already carries its gate2_flag).
-    gate2: { checked: g2.checked, flagged: g2.flagged, by_pattern: g2.by_pattern, line: g2.line, law: g2.law, flags: g2.flags },
+    gate2: { checked: g2.checked, flagged: g2.flagged, by_pattern: g2.by_pattern, line: g2.line, law: g2.law, flags: g2.flags,
+      // #107 — say what the flag now COSTS, so "flagged" is never read as "noted and served anyway"
+      withheld_from_queue: queue.filter(q => q.gate2_flag && !q.eligible).length,
+      withheld_note: "flagged doubts are held OUT of the rematch queue until the wording is repaired — content untouched, re-admitted automatically" },
     retired,  // raw list kept verbatim — it carries retired_on dates; it is his data, not a derived count
   };
 }

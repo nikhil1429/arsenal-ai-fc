@@ -49,7 +49,7 @@
 //
 // CLI: print | list | add <id> <line...> | hit <id> | drop <id> | reset-turns | selftest
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,9 +58,35 @@ const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state", "teaching_contract.json");
 const SPRINT = join(ROOT, "dressing-room", "state", "sprint.json");
 const FORGE = join(ROOT, "dressing-room", "state", "forge_session.json");
+const CAPSULE_DIR = join(ROOT, "dressing-room", "state", "capsules");
 
 const MAX_BLOCK_LINES = 5;      // the anti-wall law, this organ's own copy
 const DEFAULT_WARN_AT = 40;
+
+// ── THE FILL GAUGE (audit #107, 5 Aug 2026) ──────────────────────────────────
+// MEASURED, not assumed. Audit #38 moved the clock off the forge session and onto
+// the Claude Code session id, and that was right about the NOUN and wrong about the
+// IDENTIFIER. Measured live on 5 Aug across three consecutive turns of ONE
+// conversation: the session id changed mid-conversation (bd2d46c2… -> fa94c375…)
+// and the counter went 1 -> 1 -> 2. So the clock zeroed at exactly the moment the
+// context was LARGEST — a resume/fork. #38's failure mode was "always fires"; this
+// is its mirror, "never fires", and it is the worse of the two because it is silent.
+//
+// transcript_path is not the fix either: the fork minted a NEW transcript file. But
+// the new file INHERITED the history (710,280 -> 958,257 bytes), so while the
+// transcript's IDENTITY breaks across a fork, its SIZE carries forward. Size is
+// therefore the only resume-surviving proxy for context fill that we can read.
+//
+// THE CONSTANT IS DERIVED FROM HIS OWN HISTORY, never chosen: across 3,780
+// transcripts in this project's Claude Code store — p50 28,197 · p90 63,367 ·
+// p95 99,557 · p99 2,263,929 · max 12,171,532 bytes; only 49 (1.3%) ever pass 1 MB.
+// A warn at 1.5 MB therefore fires on ~1% of sessions — the long study ones, which
+// is precisely the population the warning exists for — and stays silent on the 99%,
+// so it can never become the always-fires line he learns to ignore.
+// It is still a v0 HYPOTHESIS (transcript bytes are not context tokens) and it lives
+// in state, so it can be retuned from observation without editing this file.
+const DEFAULT_TRANSCRIPT_WARN_BYTES = 1_500_000;
+const SOFT_FRACTION = 0.6;      // a heads-up BEFORE the hard line — he asked to be warned beforehand
 
 // ── SEED ──────────────────────────────────────────────────────────────────────
 // These four are not invented: each is a drift that actually happened on 31 Jul and
@@ -72,6 +98,10 @@ function seed(now = new Date()) {
     version: 1,
     show_n: 2,
     context_warn_at: DEFAULT_WARN_AT,
+    // Lives in STATE so the fill gauge can be retuned from observation without
+    // editing this file — same discipline as `context_warn_at`. Absent in pre-#107
+    // state files, and absent falls back to the derived default (never to silence).
+    transcript_warn_bytes: DEFAULT_TRANSCRIPT_WARN_BYTES,
     turns: { session_started_at: null, count: 0 },
     rules: [
       r("his-word", "Uska saaf bola hua instruction > meri samajh. Scope kaatna/badalna ho to PEHLE poochho, khud mat kaato."),
@@ -190,6 +220,7 @@ function blockLinesLegacy(state, done, now = new Date()) {
 //      header, because "turn 28/40" is only true of a session we can actually name.
 const CC_PREFIX = "cc:";
 const FORGE_PREFIX = "forge:";
+const TX_PREFIX = "tx:";        // audit #107 — the transcript, which survives a resume
 
 // MIGRATION (one-shot, layered). Pre-fix state carried ONLY turns.session_started_at
 // = the forge session's started_at ISO. Read that as a forge-class anchor so the
@@ -207,7 +238,11 @@ function anchorKindOf(t) {
 }
 
 // obs = { cc: <claude code session id|null>, forge: <forge started_at|null> }
-function resolveAnchor(stored, obs = {}) {
+// FROZEN 5 Aug 2026 (audit #107), byte-for-byte. No longer the plan of record — the
+// engine below adds a transcript-class anchor above `cc` — but it stays so the #38
+// invariants remain reproducible from inside this file and the selftest can assert
+// what the OLD precedence actually did rather than describing it in a comment.
+function resolveAnchorLegacy(stored, obs = {}) {
   const held = typeof stored === "string" && stored ? stored : null;
   const cc = obs.cc ? CC_PREFIX + String(obs.cc) : null;
   const forge = obs.forge ? FORGE_PREFIX + String(obs.forge) : null;
@@ -219,6 +254,46 @@ function resolveAnchor(stored, obs = {}) {
   if (held && held.startsWith(CC_PREFIX)) return { id: held, kind: "cc_held" };
   if (forge) return { id: forge, kind: "forge" };
   return { id: held, kind: "none" };
+}
+
+// PLAN OF RECORD (audit #107). Same law — UNKNOWN NEVER RESETS — with one class
+// added ABOVE `cc`: the transcript. A transcript survives what a session id does not
+// (a plain resume keeps writing the same file), so anchoring on it removes the most
+// common spurious reset. A FORK still mints a new transcript, which is why the
+// context WARNING no longer rides this anchor at all — it rides the fill gauge, which
+// carries forward across both. The anchor's remaining job is rule ROTATION, where a
+// reset costs nothing.
+// obs = { tx, cc, forge }
+function resolveAnchor(stored, obs = {}) {
+  const held = typeof stored === "string" && stored ? stored : null;
+  const tx = obs.tx ? TX_PREFIX + String(obs.tx) : null;
+  const cc = obs.cc ? CC_PREFIX + String(obs.cc) : null;
+  const forge = obs.forge ? FORGE_PREFIX + String(obs.forge) : null;
+  if (tx) return { id: tx, kind: "tx" };
+  if (cc) return { id: cc, kind: "cc" };
+  // No live identifier THIS turn. A held session-class anchor (tx or cc) cannot be
+  // proven stale, so it is HELD rather than demoted — a demotion would read as "the
+  // anchor changed" and would reset a clock on a turn where nothing changed.
+  // The held KIND keeps the class it was held from — `cc_held` is the label #38's
+  // invariant was written against, so it must survive verbatim; `tx_held` is its
+  // transcript-class twin. A held anchor is never relabelled, only carried.
+  if (held && held.startsWith(TX_PREFIX)) return { id: held, kind: "tx_held" };
+  if (held && held.startsWith(CC_PREFIX)) return { id: held, kind: "cc_held" };
+  if (forge) return { id: forge, kind: "forge" };
+  return { id: held, kind: "none" };
+}
+
+// ── THE FILL GAUGE ───────────────────────────────────────────────────────────
+// Pure read. Every failure path returns null, and a null fill means the block falls
+// back to the turn counter — never to silence, and never to a fabricated number.
+function transcriptFill(path, warnBytes = DEFAULT_TRANSCRIPT_WARN_BYTES) {
+  try {
+    if (!path || typeof path !== "string" || !existsSync(path)) return null;
+    const bytes = statSync(path).size;
+    if (!Number.isFinite(bytes) || bytes <= 0) return null;
+    const limit = Number.isFinite(warnBytes) && warnBytes > 0 ? warnBytes : DEFAULT_TRANSCRIPT_WARN_BYTES;
+    return { bytes, limit, pct: bytes / limit };
+  } catch { return null; }
 }
 
 // PLAN OF RECORD. `anchor` may be the {id, kind} object from resolveAnchor, or a bare
@@ -268,7 +343,10 @@ function bumpTurn(state, anchor, now = new Date()) {
 // slice — which is what finally makes the ANTI-WALL assertion falsifiable.
 // ARITHMETIC (no guessed number anywhere): reserved is at most 1+1+1 = 3, so
 // MAX_BLOCK_LINES - reserved is at least 5-3 = 2 rule slots in every reachable state.
-function blockLines(state, done, now = new Date()) {
+// FROZEN 5 Aug 2026 (audit #107), byte-for-byte. Superseded by the engine below,
+// which adds the fill gauge; kept so the #39 non-droppable-ordering invariant stays
+// assertable against the engine that first satisfied it.
+function blockLinesV2(state, done, now = new Date()) {
   if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
   const t = (state.turns && typeof state.turns === "object") ? state.turns : {};
   const turn = Number.isInteger(t.count) ? t.count : 0;
@@ -301,6 +379,60 @@ function blockLines(state, done, now = new Date()) {
   return L;
 }
 
+const mb = (b) => (b / 1048576).toFixed(2) + " MB";
+
+// PLAN OF RECORD (audit #107). Identical to V2 except for WHICH SIGNAL RAISES THE
+// WARNING. The turn counter measures prompts; what he asked to be warned about is
+// CONTEXT. Those two came apart the moment a fork reset the counter to 1 while the
+// context kept everything — so the counter is now the FALLBACK and the transcript's
+// size is the signal. Fill wins whenever it is readable: a 60-turn session with a
+// small transcript is genuinely nowhere near compaction, and firing there is how a
+// warning becomes noise.
+// The line budget arithmetic is UNCHANGED (header + link + warn ≤ 3 reserved, so at
+// least 2 rule slots survive in every reachable state), which keeps the #39
+// non-droppable-ordering assertion true of this engine too.
+function blockLines(state, done, now = new Date(), fill = null) {
+  if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
+  const t = (state.turns && typeof state.turns === "object") ? state.turns : {};
+  const turn = Number.isInteger(t.count) ? t.count : 0;
+  const warnAt = state.context_warn_at || DEFAULT_WARN_AT;
+  const anchored = anchorKindOf(t) !== "none";
+  const total = state.rules.length;
+
+  const link = (done && done.length)
+    ? `  link back BY NAME to what is already closed: ${done.join(" · ")}`
+    : null;
+
+  let warn = null;
+  if (fill && fill.pct >= 1) {
+    warn = `  ⛔ CONTEXT WARNING — transcript ${mb(fill.bytes)} (${Math.round(fill.pct * 100)}% of the ${mb(fill.limit)} warn budget).`
+      + ` TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`;
+  } else if (fill && fill.pct >= SOFT_FRACTION) {
+    warn = `  ⚠ context filling — transcript ${mb(fill.bytes)} (${Math.round(fill.pct * 100)}% of the ${mb(fill.limit)} warn budget). Say it out loud at the next natural break, not mid-idea.`;
+  } else if (!fill && turn >= warnAt) {
+    // FALLBACK ONLY — the transcript was unreadable. Say which number this is: an
+    // unanchored counter has counted prompts across sessions and is not this
+    // session's turn count. Suppressing it is the named #38 trap; mislabelling it
+    // is the #106 one.
+    warn = `  ⛔ CONTEXT WARNING — turn ${turn}${anchored ? "" : " counted ACROSS sessions (clock unanchored)"}, transcript unreadable so this is a PROMPT count, not a context measure.`
+      + ` TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`;
+  }
+
+  const reserved = 1 + (link ? 1 : 0) + (warn ? 1 : 0);
+  const room = Math.max(0, MAX_BLOCK_LINES - reserved);
+  const shown = pick(state.rules, turn, state.show_n).slice(0, room);
+
+  const L = [];
+  L.push(`TEACHING CONTRACT (drift-ranked · mutates with the journey) · turn ${turn}/${warnAt}`
+    + (anchored ? "" : " · CLOCK UNANCHORED (no session boundary recorded — see reset-turns)")
+    + (fill ? ` · context ${Math.round(fill.pct * 100)}%` : "")
+    + ` · rules ${shown.length}/${total}`);
+  for (const r of shown) L.push(`  ⚠ ${r.line}${r.hits ? `  [drifted ${r.hits}×]` : ""}`);
+  if (link) L.push(link);
+  if (warn) L.push(warn);
+  return L;
+}
+
 // ── DISK ──────────────────────────────────────────────────────────────────────
 
 function load() {
@@ -320,12 +452,43 @@ function save(s) {
   } catch { return false; }
 }
 
+// AUDIT #107 — CLOSED MEANS LOCKED, NOT JUST TICKED ON THE SHEET.
+// This read only sprint.progress.done, and the live Sheet lists 1-01 Embeddings ·
+// 1-02 Inference · 1-03 Context — while `tokenization` has been a LOCKED, TEMPERED
+// capsule since 15 Jun 2026 and appears nowhere in it. So the one rule whose whole job
+// is "link the new concept back BY NAME to what is already closed" was structurally
+// unable to name a quarter of what he has actually closed. A locked capsule is the
+// harder evidence of the two — the Sheet is hand-maintained, a capsule is not — so
+// both sources feed the line, de-duplicated, Sheet wording first.
 function doneConcepts() {
+  const out = [], seen = new Set();
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+  // The two sources word the same concept differently — the Sheet says "Context window",
+  // the capsule id is "context". An exact-key dedupe would print BOTH, which is worse
+  // than the bug it was fixing: the rule would tell him to link back to one concept
+  // twice. So a capsule matches if any Sheet entry CONTAINS its id.
+  const push = (label, key) => {
+    const k = norm(key || label);
+    if (!k) return;
+    for (const s of seen) if (s === k || s.includes(k) || k.includes(s)) return;
+    seen.add(k); out.push(label);
+  };
   try {
     const sp = JSON.parse(readFileSync(SPRINT, "utf8"));
     const d = sp && sp.progress && Array.isArray(sp.progress.done) ? sp.progress.done : [];
-    return d.map((x) => String(x).replace(/\s*\(finish\)\s*$/i, "").trim()).filter(Boolean);
-  } catch { return []; }
+    for (const x of d) {
+      const label = String(x).replace(/\s*\(finish\)\s*$/i, "").trim();
+      if (label) push(label, label.replace(/^\d+-\d+\s*/, ""));   // "1-01 Embeddings" keys on "embeddings"
+    }
+  } catch {}
+  try {
+    for (const f of readdirSync(CAPSULE_DIR)) {
+      if (!f.endsWith(".json")) continue;
+      const c = JSON.parse(readFileSync(join(CAPSULE_DIR, f), "utf8"));
+      if (c && c.id) push(`${c.title || c.id} (capsule locked)`, c.id);
+    }
+  } catch { /* no capsule mirror on this machine — the Sheet alone still works */ }
+  return out;
 }
 
 function forgeStartedAt() {
@@ -349,15 +512,38 @@ function forgeStartedAt() {
 // UNKNOWN NEVER RESETS, null is the safe direction: the clock holds, it does not
 // jump. So the worst case of this read failing is exactly the behaviour we would
 // have had without it.
-function hookSessionId() {
+// CACHED — fd 0 is a ONE-SHOT stream. Before audit #107 there was a single reader,
+// so a plain `readFileSync(0)` per call was safe. Now two facts are needed off the
+// same payload (session_id AND transcript_path) and a second read would return "" and
+// silently blank the anchor. One read, memoised, is the only correct shape here.
+let _payload;
+function hookPayload() {
+  if (_payload !== undefined) return _payload;
+  _payload = null;
   try {
-    if (process.stdin.isTTY) return null;
+    if (process.stdin.isTTY) return _payload;
     const raw = readFileSync(0, "utf8");
-    if (!raw || !raw.trim()) return null;
+    if (!raw || !raw.trim()) return _payload;
     const j = JSON.parse(raw);
-    const id = j && typeof j.session_id === "string" ? j.session_id.trim() : "";
-    return id || null;
-  } catch { return null; }
+    if (j && typeof j === "object") _payload = j;
+  } catch { _payload = null; }
+  return _payload;
+}
+
+function hookSessionId() {
+  const j = hookPayload();
+  const id = j && typeof j.session_id === "string" ? j.session_id.trim() : "";
+  return id || null;
+}
+
+// The transcript is the container context actually lives in, and the repo's own rig
+// guide documents this field on the payload
+// (learning-layer/Tier-2_Accountability_Rig_on_Windows…md:373 reads transcript_path
+// off it) — so this is a documented read, not a guess.
+function hookTranscriptPath() {
+  const j = hookPayload();
+  const p = j && typeof j.transcript_path === "string" ? j.transcript_path.trim() : "";
+  return p || null;
 }
 
 // The three numbers `list` and the close report both need: how many rules exist,
@@ -492,6 +678,65 @@ function selftest() {
   assert("HOOK-SAFE — a state with no turns block at all still renders turn 0 and never throws",
     blockLines({ ...base, turns: undefined }, done, T0)[0].includes("turn 0/40"));
 
+  // ---- audit #107 — THE FILL GAUGE. Every assertion below can fail; none is a
+  // tautology. The real file on disk is used as the transcript fixture so the gauge is
+  // exercised against a genuine stat() rather than a mock that can drift from it.
+  const SELF = join(HERE, "teaching_contract.mjs");
+  const selfBytes = statSync(SELF).size;
+  const fHard = transcriptFill(SELF, Math.floor(selfBytes / 2));       // pct ≈ 2.0
+  const fSoft = transcriptFill(SELF, Math.floor(selfBytes / 0.8));     // pct = 0.8
+  const fQuiet = transcriptFill(SELF, selfBytes * 100);                // pct = 0.01
+  const quietState = { ...base, turns: { anchor: "tx:/t.jsonl", anchor_kind: "tx", count: 1 } };
+  const busyState = { ...base, turns: { anchor: "tx:/t.jsonl", anchor_kind: "tx", count: 60 } };
+
+  assert("FILL GAUGE — reads a real file and reports bytes/limit/pct",
+    fHard && fHard.bytes === selfBytes && fHard.pct > 1.9 && fHard.pct < 2.1);
+  assert("FILL GAUGE — a missing path, a non-string and a directory all yield null, never a throw",
+    transcriptFill(join(HERE, "__nope__.mjs")) === null && transcriptFill(null) === null
+    && transcriptFill(123) === null && transcriptFill(HERE) === null);
+  assert("HARD TIER — at/over the budget the warning names the TRANSCRIPT and still says TELL HIM NOW",
+    blockLines(quietState, done, T0, fHard).some((l) => /CONTEXT WARNING/.test(l) && /transcript/.test(l) && /TELL HIM NOW/.test(l)));
+  assert("SOFT TIER — past 60% he is warned BEFOREHAND, and it is NOT the loud line",
+    (() => { const L = blockLines(quietState, done, T0, fSoft);
+      return L.some((l) => /context filling/.test(l)) && !L.some((l) => /CONTEXT WARNING/.test(l)); })());
+  assert("QUIET — well under the budget nothing fires at all (the 99% of sessions stay silent)",
+    !blockLines(quietState, done, T0, fQuiet).some((l) => /CONTEXT WARNING|context filling/.test(l)));
+  assert("THE POINT OF #107 — a 60-turn session with a SMALL transcript does NOT warn; fill beats the prompt counter",
+    !blockLines(busyState, done, T0, fQuiet).some((l) => /CONTEXT WARNING|context filling/.test(l))
+    && blockLines(busyState, done, T0, null).some((l) => /CONTEXT WARNING/.test(l)));
+  assert("FALLBACK IS LABELLED — with no readable transcript the turn-count warning says it is a PROMPT count",
+    blockLines(busyState, done, T0, null).some((l) => /PROMPT count, not a context measure/.test(l)));
+  assert("HEADER — the fill percentage is visible whenever it is known, and absent when it is not",
+    /context 80%/.test(blockLines(quietState, done, T0, fSoft)[0])
+    && !/context \d+%/.test(blockLines(quietState, done, T0, null)[0]));
+  assert("ANTI-WALL HOLDS WITH THE GAUGE ON — still never more than 5 lines, at every show_n and both tiers",
+    (() => { let worst = 0;
+      for (const f of [fHard, fSoft, fQuiet, null]) for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
+        worst = Math.max(worst, blockLines({ ...base, show_n: n, turns: { anchor: "tx:/t", anchor_kind: "tx", count: t } }, done, T0, f).length);
+      return worst <= MAX_BLOCK_LINES; })());
+
+  // ---- audit #107 — THE ANCHOR. This is the measured defect, pinned.
+  const TX = { tx: "/p/t.jsonl" };
+  assert("ANCHOR — the transcript outranks the session id",
+    resolveAnchor(null, { ...TX, cc: "S1" }).kind === "tx" && resolveAnchor(null, { ...TX, cc: "S1" }).id === "tx:/p/t.jsonl");
+  assert("THE MEASURED DEFECT — a NEW session id on the SAME transcript no longer resets the clock",
+    (() => { const a = bumpTurn(base, resolveAnchor(null, { ...TX, cc: "S1" }), T0);
+      const b = bumpTurn(a, resolveAnchor(storedAnchorOf(a.turns), { ...TX, cc: "S2-forked" }), T0);
+      return a.turns.count === 1 && b.turns.count === 2; })());
+  assert("…and the FROZEN engine really did reset there (why this file now has two)",
+    (() => { const a = bumpTurn(base, resolveAnchorLegacy(null, { cc: "S1" }), T0);
+      const b = bumpTurn(a, resolveAnchorLegacy(storedAnchorOf(a.turns), { cc: "S2-forked" }), T0);
+      return a.turns.count === 1 && b.turns.count === 1; })());
+  assert("UNKNOWN NEVER RESETS — with nothing observable, a held transcript anchor is HELD, not demoted to forge",
+    resolveAnchor("tx:/p/t.jsonl", { forge: "2026-08-02T09:04:09Z" }).id === "tx:/p/t.jsonl"
+    && resolveAnchor("tx:/p/t.jsonl", { forge: "2026-08-02T09:04:09Z" }).kind === "tx_held");
+  assert("FROZEN ENGINE — resolveAnchorLegacy has no concept of a transcript and still puts cc first",
+    resolveAnchorLegacy(null, { tx: "/p/t.jsonl", cc: "S1" }).kind === "cc");
+  assert("SEED — the fill budget lives in STATE so it is retunable without editing this file",
+    seed(T0).transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES);
+  assert("BACKWARD-COMPATIBLE — pre-#107 state has no transcript_warn_bytes and falls back to the derived default",
+    transcriptFill(SELF, undefined).limit === DEFAULT_TRANSCRIPT_WARN_BYTES);
+
   // ---- audit #40's numbers, computed here so the close report never has to guess
   assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
     hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 5
@@ -514,12 +759,16 @@ switch (cmd) {
     if (process.env.ARSENAL_ORGAN === "1") process.exit(0);
     try {
       const st = load();
-      // PRECEDENCE, resolved once per turn: Claude Code session id > a held session
-      // anchor > the forge session > unknown (held, never reset).
-      const anchor = resolveAnchor(storedAnchorOf(st.turns), { cc: hookSessionId(), forge: forgeStartedAt() });
+      // PRECEDENCE, resolved once per turn: transcript > Claude Code session id >
+      // a held session anchor > the forge session > unknown (held, never reset).
+      const tx = hookTranscriptPath();
+      const anchor = resolveAnchor(storedAnchorOf(st.turns), { tx, cc: hookSessionId(), forge: forgeStartedAt() });
       const s = bumpTurn(st, anchor);
       save(s);
-      const lines = blockLines(s, doneConcepts());
+      // The warning rides the FILL GAUGE, not the anchor — a fork resets the anchor
+      // at exactly the moment the context is fullest (audit #107).
+      const fill = transcriptFill(tx, st.transcript_warn_bytes);
+      const lines = blockLines(s, doneConcepts(), new Date(), fill);
       if (lines.length) console.log(lines.join("\n"));
     } catch { /* silence is the contract */ }
     process.exit(0);
@@ -570,15 +819,20 @@ switch (cmd) {
     // real session id; otherwise `local-<iso>` is unique per invocation, which is all
     // the reset needs. SessionStart also fires on resume/compact — resetting right
     // after a compaction is correct, the context was just freed.
+    // Mint the STRONGEST anchor available, so the very next `print` sees an unchanged
+    // anchor and lands on turn 1 rather than 2. Transcript first (it survives a plain
+    // resume), then the session id, then a local mint — which is unique per invocation,
+    // and uniqueness is all a reset needs.
+    const tx = hookTranscriptPath();
     const cc = hookSessionId();
-    const id = CC_PREFIX + (cc || `local-${new Date().toISOString()}`);
-    save({ ...load(), turns: { anchor: id, anchor_kind: "cc", count: 0, session_started_at: null, since: new Date().toISOString() } });
+    const id = tx ? TX_PREFIX + tx : CC_PREFIX + (cc || `local-${new Date().toISOString()}`);
+    save({ ...load(), turns: { anchor: id, anchor_kind: tx ? "tx" : "cc", count: 0, session_started_at: null, since: new Date().toISOString() } });
     // SILENT IN HOOK MODE. A SessionStart hook's stdout is injected as context, and
     // "turn clock reset" is bookkeeping, not orientation — the same law
     // hooks/afferent-post.mjs:12-13 states for its own hook. A human running this by
     // hand (TTY) still gets the confirmation, and the anchor is on disk either way.
     if (process.stdin.isTTY) {
-      console.log(`teaching_contract: turn clock reset · anchor ${id}${cc ? "" : " (no hook session id on stdin — minted a local one)"}`);
+      console.log(`teaching_contract: turn clock reset · anchor ${id}${(tx || cc) ? "" : " (no transcript_path or session_id on stdin — minted a local one)"}`);
     }
     break;
   }

@@ -33,6 +33,18 @@ node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```
 
+**START IT YOURSELF, AS THE FIRST ACTION OF THIS SKILL — never wait to be reminded.**
+*(5 Aug 2026, audit #107.)* `forge_session.mjs contract` is silent on three conditions —
+no session · closed · stale — which is correct for the 12-step block but had a consequence
+nobody had written down: with no open session, **THE METHOD's step order, the
+four-legal-question-moments law and META-FREEZE reach the turn not at all.** Measured that
+day: `contract` printed zero bytes for an entire session while the sprint's current task
+was a concept mid-flight, and the four recorded runs on `hallucinations` scored 6/12, 4/12,
+3/12, 3/12 steps with `method_clean false` every time. The captain ruled (D9) that the
+contract must NOT print a METHOD block without a session — a line that always fires is a
+line he learns to ignore — so the obligation lands **here**: opening the session is the
+skill's job, not something he has to remember.
+
 **If SessionStart reported an OPEN session, `close` it FIRST and read the coverage aloud** —
 do NOT re-teach the axes it lists and do NOT restart from step 0. `start` will **REFUSE**
 while any unclosed session exists, stale or not.
@@ -96,6 +108,16 @@ is not.
   **His own data always** — FinOps/Blinkit strings, never "hello world". Deliver inline; if
   the render fails, hand him a self-contained `.html` immediately.
   Widget time-box 45-60 min: overrun cuts the WIDGET's scope, never the concept's.
+  **CHECK THE REGISTRY FIRST — `node scripts/widget.mjs list`.** Measured 5 Aug 2026:
+  **0 of 4 locked capsules had a widget**, and the single widget in the repo belonged to a
+  concept that was not locked. The Contract had no code owner at all (viz.mjs is the club
+  WALL, not a concept-widget engine), so nothing could see that. The registry only KNOWS —
+  it never generates, because a widget's whole value is the bespoke hero example
+  ("Aristo Eco — ₹81,500") and a generator produces exactly the generic widget canon forbids.
+  After the gates are actually driven:
+  `node scripts/widget.mjs register <concept> <file> --gates <n>` · `open <concept>`.
+  It reports **"built, NOT driven"** until `--gates` ≥ 2, because the Contract's own
+  Chala-mode clause means an **undriven widget is a FAILED widget** — built was never the bar.
 - **5 · SAATH KARO.** Work it through together — on the widget or on paper.
 - **6 · AKELE KARO.** He does it alone and makes mistakes. Widget Chala mode fits here.
 - **7 · BOLO.** **Voice first** — he speaks it aloud (or voice note), THEN types the
@@ -117,10 +139,15 @@ is not.
   written. A raw stuck-point never goes straight into `doubts[]`.
   **GATE 2 — VERIFY-GATE (the slip-catcher).** FORGE_SPEC §5 defines TWO gates and this
   skill used to transcribe only the first — and this skill is the ONLY artifact loaded at
-  a lock, so GATE 2 has never once run (audit #34, 2026-08-04: **16 of 112 live doubts
-  violate the spec's own named failure patterns**, and all 16 are queued in
-  `tape_room.json` as verbatim rematch prompts, so a cold future-Nikhil gets served
-  *"ye to inference vali cheez hi hai na?"* with no idea what "ye" was).
+  a lock, so GATE 2 had never once run (audit #34, 2026-08-04). It is now in CODE:
+  `doubtminer.mjs gate2Flags()` measures **17 of 112 live doubts** breaking the spec's own
+  named failure patterns (cryptic 7 · meta 8 · fragment 2 · near-dup 0) — earlier notes said
+  16; **17 is the measured number**. And as of 5 Aug 2026 those 17 are held OUT of the
+  rematch queue (`eligible:false`, `ineligible_reason: "gate2: not cold-readable yet"`), so a
+  cold future-Nikhil is no longer served *"ye to inference vali cheez hi hai na?"* with no
+  antecedent. The rows stay verbatim and untouched; repairing the wording on the gist
+  re-admits them automatically. **17 is a MACHINE FLOOR, not the truth** — the detector is a
+  fixed pattern list, so the real count is ≥17, and only he can fix the text.
   So: at **every LOCK and every SAVE** — including 4a back-writes and Re-Jirah — re-read
   ALL `doubts[]` and `bridges[].q` against the COLD-READER STANDARD above. Flag anything
   **cryptic** (dangling `ye`/`woh`/`Map`/`second enemy` with no named subject), any
@@ -136,6 +163,18 @@ is not.
   before anything opens.
   `node scripts/deep.mjs <concept> <axis>` — then, and only then, the weld and the full `deep`
   layer for that axis, in his own words.
+  **THEN RECORD THE RESULT — the loop has a back edge now (5 Aug 2026):**
+  `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut knew|shaky|guessed`
+  Until this existed, a cold round could be run and its result had nowhere to land, which is
+  why three of four capsules sat at `reJirahDone: []` — never re-tempered once, 34-42 days
+  overdue, 80,511 characters of his own prose never withdrawn. **The capsule is never
+  touched** (its prose is sacred and immutable): the row goes to `rejirah_log.jsonl`, and
+  per-axis `axisType` / `nextDue` / `lastResult` / `calibrationGap` / `fluencyState` plus
+  capsule-level `edgeMap` are **DERIVED** from it — `node scripts/rejirah.mjs state <concept>`.
+  A clean hold expands that axis's interval; a crack resets it; **confident-and-cracked**
+  escalates (tighter interval + a harder round mode), because that is the dangerous illusion.
+  `node scripts/rejirah.mjs due` — FSRS says WHEN a concept returns, this says WHICH AXES and
+  HOW HARD. They no longer disagree; they answer different questions.
   A little overdue is **RIPE**, not late — high-value recall. Only severe overdue is worth naming,
   because compounding-avoidance is the ADHD-PI failure mode this step exists to beat.
   *(Until today those 80,511 characters of `deep` — all 36 axes — were readable only by opening a
@@ -176,6 +215,14 @@ When he says "session khatam / done / bas":
    - skill/coding sessions: `"surface":"colab"`, `"track":"skill"`, `axis` MUST be `null`.
    - Include `latency_ms` only when actually observable — never invent it (the genome's
      `criterion_gated_pass` reads it, and a faked number corrupts the fluency ladder).
+   **CAPTURE AS YOU GO, do not bank the whole day on a clean close (added 5 Aug 2026):**
+   `node scripts/capture.mjs rep --concept <c> --axis <a> --q "<what was tested>" --gut <word> --correct true|false`
+   Same door, same validator, same dedupe as `paste` — just one rep, stamped when it
+   actually happened. It exists because every rep used to hinge on a perfect close, and
+   the record says closes are not clean: four recorded sessions, `method_clean false` in
+   all four, `reps_log` still at **nine lines total** — which is why calibration (gate 20),
+   nemesis (20) and learning_state (12) are ALL still dormant. Run the paste at close too;
+   duplicates are detected, so capturing twice costs nothing and losing a session costs the day.
 2. Save to a temp file → `node scripts/capture.mjs paste <tmpfile>` → `node scripts/heartbeat.mjs`.
    Report capture's output **verbatim** if it rejects. If a rep comes back
    `unregistered:true`, the concept is missing from `state/concepts.json` — say so; that
