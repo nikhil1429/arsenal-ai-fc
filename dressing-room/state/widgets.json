@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "widgets": {
+    "embeddings": {
+      "file": "dressing-room/club/widgets/embeddings.html",
+      "gates_driven": 3,
+      "registered_at": "2026-08-05T22:51:19.956Z"
+    }
+  }
+}
