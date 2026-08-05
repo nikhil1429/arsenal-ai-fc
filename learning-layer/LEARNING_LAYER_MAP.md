@@ -422,6 +422,10 @@ tmpfile mein save → node scripts/capture.mjs paste <tmpfile> → node scripts/
   likha hua clock bharosemand nahi tha.**
 
 **GUT-WORD LAW (inviolable):** `knew` / `shaky` / `guessed` **jawab se PEHLE**. **Gut-word nahi → rep nahi.**
+> CANON HOME: `PROJECT_OS.md` STEP 8 CALIBRATE + HARD RULES (likha 6 Aug 2026). Us din tak yeh law
+> SIRF is map mein aur CLAUDE.md mein tha — aur yeh file canon nahi hai — matlab ek "inviolable" law
+> ka koi canon ghar hi nahi tha, aur `rejirah.mjs grade` use tod raha tha (bina gut ke round le leta
+> tha) jabki `capture.mjs rep` refuse karta tha. Dono ab ek hi jawab dete hain.
 Baad mein **re-grade kabhi nahi**. `confidence` = usne jawab dene se PEHLE jo commit kiya · `correct` =
 nateeja. Confidence ko correctness se derive karna = `confidence == correct` force ho jaata hai aur
 **overconfidence signal mar jaata hai** (`P(wrong|knew)` — confident-but-wrong hi to poora point hai).

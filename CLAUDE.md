@@ -117,6 +117,16 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   no rep.
 - **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs` · `rejirah.mjs` ·
   `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules). Never hand-edit a state file.
+- **DRIFT IS SELF-REPORTED, HIS WORD PROMOTES IT** (6 Aug 2026 — this is the missing caller).
+  The moment you catch yourself breaking a teaching-contract rule — you cut his scope, you
+  answered in English, you dumped a quiz, you put his level above his own — run
+  `node scripts/teaching_contract.mjs flag <rule-id> --why "<what you did>"` **in that turn**.
+  It STAGES only: `hits` is untouched, so the thing being ranked can never rank itself. He
+  promotes with `confirm <id>` or kills it with `dismiss <id>`, and the staged queue rides the
+  contract block every turn so it cannot rot. Until 6 Aug NOTHING called `hit`, so the whole
+  drift RANKING was frozen on 31 Jul data while the forge close report printed "NOT MEASURED"
+  — the code was fine, the data was starved. Do not wait to be asked; do not grade yourself
+  into canon either.
 
 **The surfaces:** `/forge` (he named a concept) · `/learn` (he didn't — read state and route) ·
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`

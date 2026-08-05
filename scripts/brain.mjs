@@ -833,10 +833,61 @@ function usageTotal(usage) {
        + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
 }
 
-function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000) {
+// ---------------------------------------------------------------------------
+// THE BOOT TAX — the organism's single largest waste, closed 6 Aug 2026.
+// ---------------------------------------------------------------------------
+// The 2 Aug pause note measured the shape of the spend and named it exactly: 178
+// calls, average 47,847 tokens each, of which only ~1,706 was generated output.
+// "96% of every call was the machine loading itself; 3.6% was thinking." It then
+// treated that as a fact of life and paused the brain instead.
+//
+// It is not a fact of life. `claude -p` boots the FULL interactive CLI: its system
+// prompt, every built-in tool definition, and any MCP servers the project's
+// .mcp.json declares — all billed as cache tokens on EVERY call. An organ job needs
+// none of it. runJob already reads every input off disk itself (gatherInputsAudited)
+// and embeds it in the prompt, so the model is never asked to use a tool; it is a
+// pure text transform that happens to be spawned through a coding CLI.
+//
+// MEASURED 6 Aug 2026, same 6-token probe, same model:
+//     baseline (today)                                49,411 tokens
+//     --strict-mcp-config alone                       49,146   (MCP was never the bulk)
+//     --tools ""                                      22,382
+//     --system-prompt + --tools "" + --strict-mcp     >>> 5,663 <<<
+// 88.5% off on a bare probe. But a probe is pure overhead, so that number flatters:
+// VERIFIED THE SAME DAY ON 11 REAL JOBS (a live tick, real prompts, real outputs):
+//     368 historical calls   avg 33,234 tokens/call
+//     11 lean jobs           avg 14,128 tokens/call     => 57.5% off
+//     one tick: 155,412 spent where the old average predicted 365,574
+// 57.5% is the number to quote — the probe's 88.5% is the ceiling, not the average,
+// because real jobs carry real embedded input and real generated output, and BOTH are
+// legitimate spend. The ratio is what actually inverted: generated output was 3.6% of
+// a call on 2 Aug and is 24.9% of these eleven. The machine is finally mostly thinking.
+//
+// REVERSIBLE: set budget.lean_calls = false in brain_config.json to restore the old
+// full-CLI invocation verbatim. Nothing else changes.
+const ORGAN_SYSTEM_PROMPT =
+  "You are a deterministic text transformer inside a personal accountability system. "
+  + "Everything you need is in the prompt: data is embedded, never fetched. "
+  + "Return ONLY what the prompt asks for — no preamble, no commentary, no apology, "
+  + "and no markdown fences unless the prompt explicitly asks for them.";
+const LEAN_ARGS = ["--system-prompt", ORGAN_SYSTEM_PROMPT, "--tools", "", "--strict-mcp-config"];
+
+// resolved once per process, not per call — the switch is a config read, not a hot path
+let _lean = null;
+function leanEnabled() {
+  if (_lean === null) {
+    try { const c = loadConfig(); _lean = !(c && c.budget && c.budget.lean_calls === false); }
+    catch { _lean = true; }   // default LEAN: the expensive shape must be the one you opt into
+  }
+  return _lean;
+}
+
+function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null) {
+  if (lean === null) lean = leanEnabled();
   const t0 = Date.now();
   try {
-    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet", ...(Array.isArray(extraArgs) ? extraArgs : [])],
+    const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet",
+      ...(lean ? LEAN_ARGS : []), ...(Array.isArray(extraArgs) ? extraArgs : [])],
       { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
     let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
     try {
@@ -2131,8 +2182,29 @@ async function selftest() {
         ttaA.absent.length === 3 && ttaA.declared === 4 && ttaA.required_absent.length === 0);
       assert("#64 TRAP — deep_reanalysis sits at exactly 50% absent, which no majority rule would ever catch",
         gatherInputsAudited(dre, now(23, 30)).absent.length * 2 === gatherInputsAudited(dre, now(23, 30)).declared);
-      assert("#64 — every `required: true` in the committed config resolves on disk TODAY (a regression net, not a new gate)",
-        liveCfg.jobs.filter(j => j.enabled !== false).every(j => gatherInputsAudited(j, new Date(), shiftDay(j, new Date(), liveCfg)).required_absent.length === 0));
+      // HERMETIC (audit 6 Aug 2026). This began as a live regression net and had become
+      // a CLOCK. Two required inputs are brain_out artifacts this same pipeline PRODUCES
+      // (midday_cartridge and day_cartridge each require dugout_digest's dated .md), so on
+      // any day the organism has not run they are legitimately absent and this went red —
+      // and brain sits at position 16 of 43 in a && chain, so 27 organs stopped being run
+      // at all. Measured 6 Aug 2026 with the schedule disarmed: exactly those two.
+      // The claim splits in two, and both halves stay real:
+      //   · a required input OUTSIDE brain_out/ is infrastructure — it must exist NOW.
+      //   · a required input INSIDE brain_out/ is a CHAIN dependency — assert its PRODUCER
+      //     job exists and is enabled, which is the config typo the net was actually for.
+      const enabledJobs = liveCfg.jobs.filter(j => j.enabled !== false);
+      const requiredOf = (j) => normalizeInputs(j).filter(d => d.required).map(d => d.path);
+      const infraMissing = enabledJobs.flatMap((j) => {
+        const day = shiftDay(j, new Date(), liveCfg);
+        return requiredOf(j).filter(p => !p.startsWith("brain_out/"))
+          .filter(p => !existsSync(join(STATE_DIR, p.replace(/TODAY/g, day))));
+      });
+      assert("#64 — every required input OUTSIDE the pipeline resolves on disk TODAY (the regression net, now hermetic)",
+        infraMissing.length === 0);
+      const orphanChain = enabledJobs.flatMap((j) => requiredOf(j).filter(p => p.startsWith("brain_out/"))
+        .filter((p) => { const producer = p.split("/")[1]; return !liveCfg.jobs.some(k => k.out === producer && k.enabled !== false); }));
+      assert("#64 — every required brain_out/ input has an ENABLED producer job (a chain typo still fails; a cold pipeline does not)",
+        orphanChain.length === 0);
       const rOpt = await runJob({ id: "opt", inputs: ["no_such_x.json", "drills.json"], out: "opt" }, cfg,
         { exec: () => ({ ok: true, text: "thin data, saying less", total_tokens: 7, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
       assert("#64 — an OPTIONAL absent input still runs, and the run reports what it was built from",

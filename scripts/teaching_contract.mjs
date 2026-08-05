@@ -152,6 +152,57 @@ function hitRule(state, id, now = new Date()) {
   };
 }
 
+// ── THE MISSING CALLER (audit 6 Aug 2026) ────────────────────────────────────
+// `hit` is the only thing that writes a drift, and NOTHING in the machine called it.
+// Measured: 5 of 10 rules had ever been hit, newest stamp 2026-07-31, and the whole
+// injection ORDER is ranked off those hits — so the ranking was frozen while the
+// forge close report cheerfully printed "TEACHING DRIFTS: NOT MEASURED". The report
+// asked the right question out loud: *decide who is allowed to record a drift.*
+//
+// THE RULING, and why it is the only one consistent with this codebase: the captain
+// is the one who NOTICES a drift, but he is mid-concept when it happens and his own
+// law says anything he must remember to do is a design defect. Claude is the one who
+// can notice it instantly — and is exactly the party you cannot let grade itself.
+// So: the same shape `remember_fact` already uses for identity facts (mcp-memory.mjs
+// Law 4) — the model STAGES, the human PROMOTES, and the staged queue is SURFACED so
+// it cannot rot invisibly. AI proposes · code validates · human approves, unchanged.
+//   flag <id> --why "..."   Claude self-reports the moment it catches itself. Stages
+//                           ONLY: hits is untouched, so the ranking cannot be gamed
+//                           by the thing being ranked.
+//   confirm <id>            HIS word. Promotes the newest staged flag into a real hit.
+//   dismiss <id>            HIS word. Drops it — a wrong self-report costs nothing.
+function flagRule(state, id, why, now = new Date()) {
+  if (!state.rules.some((x) => x.id === id)) return { ok: false, why: `no rule "${id}"`, state };
+  const staged = [...(state.staged || []), { id, why: String(why || "").slice(0, 240), at: now.toISOString() }];
+  return { ok: true, state: { ...state, staged } };
+}
+function confirmFlag(state, id, now = new Date()) {
+  const staged = state.staged || [];
+  if (!staged.some((s) => s.id === id)) return { ok: false, why: `nothing staged for "${id}"`, state };
+  let dropped = false;   // drop exactly ONE — a rule drifted twice is two hits
+  const rest = [...staged].reverse().filter((s) => (s.id === id && !dropped) ? (dropped = true, false) : true).reverse();
+  const hit = hitRule({ ...state, staged: rest }, id, now);
+  return hit.ok ? hit : { ok: false, why: hit.why, state };
+}
+function dismissFlag(state, id) {
+  const staged = state.staged || [];
+  if (!staged.some((s) => s.id === id)) return { ok: false, why: `nothing staged for "${id}"`, state };
+  let dropped = false;
+  const rest = [...staged].reverse().filter((s) => (s.id === id && !dropped) ? (dropped = true, false) : true).reverse();
+  return { ok: true, state: { ...state, staged: rest } };
+}
+// The staged queue must be VISIBLE or it becomes the very thing it replaced: a silent
+// measurement that never lands. One line, only when non-empty.
+function stagedLine(state) {
+  const staged = (state && state.staged) || [];
+  if (!staged.length) return null;
+  const byId = {};
+  for (const s of staged) byId[s.id] = (byId[s.id] || 0) + 1;
+  return `  ⚑ ${staged.length} DRIFT(S) SELF-REPORTED, awaiting your word: `
+    + Object.entries(byId).map(([k, n]) => `${k}${n > 1 ? `×${n}` : ""}`).join(" · ")
+    + `  → \`node scripts/teaching_contract.mjs confirm <id>\` (ya \`dismiss <id>\`)`;
+}
+
 function dropRule(state, id) {
   if (!state.rules.some((x) => x.id === id)) return { ok: false, why: `no rule "${id}"`, state };
   return { ok: true, state: { ...state, rules: state.rules.filter((x) => x.id !== id) } };
@@ -769,6 +820,8 @@ switch (cmd) {
       // at exactly the moment the context is fullest (audit #107).
       const fill = transcriptFill(tx, st.transcript_warn_bytes);
       const lines = blockLines(s, doneConcepts(), new Date(), fill);
+      const sl = stagedLine(s);            // staged drifts ride the same block, or they rot
+      if (sl) lines.push(sl);
       if (lines.length) console.log(lines.join("\n"));
     } catch { /* silence is the contract */ }
     process.exit(0);
@@ -801,6 +854,33 @@ switch (cmd) {
     save(res.state);
     const r = res.state.rules.find((x) => x.id === arg);
     console.log(`teaching_contract: "${arg}" now ${r.hits}× — it moves up the injection order`);
+    break;
+  }
+  case "flag": {                                // CLAUDE'S PATH — stages only, never ranks
+    const wi = process.argv.indexOf("--why");
+    const res = flagRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
+    if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
+    save(res.state);
+    console.log(`teaching_contract: "${arg}" STAGED (${(res.state.staged || []).length} awaiting his word) — hits unchanged; only he promotes it.`);
+    break;
+  }
+  case "confirm": {                             // HIS WORD — the only path to a real hit
+    const res = confirmFlag(load(), arg);
+    if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
+    save(res.state);
+    const r = res.state.rules.find((x) => x.id === arg);
+    console.log(`teaching_contract: "${arg}" confirmed → ${r.hits}× — it moves up the injection order`);
+    break;
+  }
+  case "dismiss": {
+    const res = dismissFlag(load(), arg);
+    if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
+    save(res.state);
+    console.log(`teaching_contract: "${arg}" dismissed — a wrong self-report costs nothing`);
+    break;
+  }
+  case "staged": {
+    console.log(stagedLine(load()) || "teaching_contract: koi drift staged nahi.");
     break;
   }
   case "drop": {

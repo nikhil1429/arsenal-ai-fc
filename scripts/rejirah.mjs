@@ -602,6 +602,23 @@ function main() {
 
   if (mode === "grade") {
     const flag = (n) => { const i = rest.indexOf("--" + n); return i >= 0 ? rest[i + 1] : undefined; };
+    // THE GUT-WORD LAW, HELD AT THE DOOR (audit 6 Aug 2026). buildRow deliberately
+    // ACCEPTS gut:null and must keep doing so — never inferring a gut-word from the
+    // result is what keeps the overconfidence signal honest, and the log's existing
+    // rows are read back through it. But the CLI was letting a NEW round in without
+    // one, while capture.mjs refused the identical omission on a rep. One law, two
+    // writers, two answers — and the lenient side was the worse one: the round still
+    // counted toward rounds/nextDue and into FSRS's review history while producing
+    // ZERO calibration signal (calibrationGap below is skipped when gut is null), so
+    // the axis looked rehearsed and its overconfidence stayed invisible.
+    // Refused HERE, not in buildRow, so history stays readable and the non-inference
+    // property is untouched. Canon: CLAUDE.md + LEARNING_LAYER_MAP.md §424 —
+    // "Gut-word nahi → rep nahi."
+    if (flag("gut") === undefined) {
+      console.error("rejirah: --gut is required. GUT-WORD LAW: knew|shaky|guessed, committed BEFORE the answer, never re-graded after. No gut-word, no rep.");
+      console.error(`  node scripts/rejirah.mjs grade ${rest[0] || "<concept>"} ${rest[1] || "<axis>"} ${rest[2] || "held|cracked"} --gut shaky`);
+      process.exit(1);
+    }
     const built = buildRow({
       concept: rest[0], axis: rest[1], result: rest[2],
       gut: flag("gut"), cold: flag("cold") === "false" ? false : true,

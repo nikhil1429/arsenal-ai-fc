@@ -1,6 +1,18 @@
 ⚪🔴 ARSENAL AI FC — OPS_STATE
 THE thread-agnostic anchor. A fresh thread reads THIS ONE file first and knows everything: what the organism is, what's built, what's live, what's launched. Keep BOUNDED (~2 pages). This is STATE, not a log — history lives in git commits (`git log --oneline -30`). Design/anatomy detail: CYBORG_BRAIN.md · CYBORG_STRETCH.md · THE_ORGANISM_A_TO_Z.md · learning-layer/. No zip, ever.
 
+⚠ NUMBERS REFRESHED 2026-08-06 (cross-organ test pass). What this file said, and what was actually true:
+  · "reps_log = 0 by design" → 9 rows. The learning half started; this doc did not notice for three weeks.
+  · "Skills (11)" → 12 (/learn was missing from the list).
+  · "39 selftest suites green" → 62 members now RUN independently via `npm test`; 61 organs carry a selftest.
+    Four of them (rejirah · python_state · widget · context_manifest — the whole audit-#107 learning loop)
+    were in NO suite and had never been run by any command. They are wired in now.
+  · The BRAIN is PAUSED (`brain_config.paused: true`, set 2 Aug) — 19/23 LLM jobs held. The schedule below
+    is armed and running; what is off is the THINKING, not the recording. Un-pause is a token-budget
+    decision, not a repair: the rolling 7d window read 80.2% of 12M on 6 Aug.
+  Everything below this line is as-written on 2026-07-15 and may be older than the state files. Read
+  live numbers from state, never from this doc.
+
 Last updated: 2026-07-15 (v4.0 — LAUNCHED. The full organism — learning layer + outwork/execution layer + cyborg brain — is BUILT, GREEN, CLEAN-SLATED, RUNNING, and VERIFIED A-to-Z. The final aggressive full-feature test passed: ZERO RED, every off-switch a named law or a named cold-start floor. The only thing left is the captain's reps.) · Branch: main · Captain & #14: Nikhil (GitHub: nikhil1429).
 
 ⚡ WHERE WE ARE (one glance)
@@ -18,10 +30,10 @@ LAUNCHED. The deepest pre-launch verification is done — 39 selftest suites gre
 - THE FINAL VERIFICATION passed: 31 organism + 8 squad selftest suites green; 16 organs live-verified GREEN + 4 DORMANT-BY-LAW (of 29 built, all selftest-green), ZERO RED; all 24 Dugout tools exercised (23 live/contract-verified, read_url honest-dormant on a dry free-pool quota); the Hinglish (0.65) + Devanagari (0.65) gate → TIER-2 → Opus → fold-back proven live in both scripts; FSRS floor (4 cards, 3 overdue: embeddings/inference/context) confirmed; the 08:45 sheet proven real-Opus (formation_read OK, validated, not skeleton); the evening spine + all 8 night-shift jobs run live (season_read on gemini-flash-latest → 6 contradictions); media engine renders (wall.html, a real TTS MP3, poster.svg); privacy sweep GREEN (9 sensitive files gitignored, reps_log.jsonl 0 bytes preserved).
 - THE GAFFER NOW KNOWS THE WHOLE ORGANISM: a new get_organism tool (the 24th) + a full-anatomy lecture section in his constitution. Say "explain the whole organism / walk me through the cyborg brain" → a structured ~10-min lecture, every number read LIVE (zero hallucination, zero hype). Proven end-to-end through the wire.
 - FOUR SCAN-FIXES (prior era) intact: Gaffer's capsules + get_capsule; the two-script gate; the FSRS capsule floor; memory honesty.
-- CLEAN SLATE preserved: 46 test-era files vaulted (moved, never deleted). reps_log.jsonl = 0 by design.
+- CLEAN SLATE preserved: 46 test-era files vaulted (moved, never deleted). reps_log.jsonl = 9 rows (6 Aug 2026 — the learning half is NO LONGER dormant; it started. This line read "= 0 by design" for three weeks after that stopped being true).
 
 ⏳ PENDING (all the captain's — his logins, his reps)
-1. THE REPS — reps_log = 0. The learning half stays correctly dormant until his first /forge or paste (Calibration & Nemesis @20 reps, Learning-State @12, the Twin's book @30 resolutions). That's his, and only his.
+1. THE REPS — reps_log = 9 (6 Aug 2026). The learning half has STARTED but is still under every floor: Calibration & Nemesis @20 reps, Learning-State @12, the Twin's book @30 resolutions. Those organs are dormant-by-law, not broken. That's his, and only his.
 2. CAPTAIN'S BROWSER STEPS — ALL CLOSED 15 Jul (Chrome-driven with the captain watching): Jules × both Pro accounts → both PRs verified + merged (renu = a real README replacing the stub; nikhil = ANATOMY/LEDGER cyborg-layer refresh + count fixes) · Gemini Pro Deep Research × both accounts → both reports captured to dressing-room/state/scout_reports/ (private/gitignored): AI-PE interview landscape + FinOps-Copilot portfolio guide. STILL his hand: the phone Voice-Gaffer Gem (gem_cartridge.md staged, /gem-sync drives it). Also delivered: THE_CAPTAINS_MANUAL.md — the full A-to-Z operating manual (NotebookLM-ready).
 
 🔒 LAWS (inviolable — never soften, never flip)
@@ -31,7 +43,7 @@ No metered API key, ever (claude -p on Max; code REFUSES if ANTHROPIC_API_KEY se
 There is NO "AI-Studio ↔ AI-Pro" API unlock — a consumer Gemini AI Pro subscription (the Jio accounts) does NOT grant an elevated AI Studio API tier; a Pro-account key is still free-tier (Pro models 403). The prior "linking unlocks the 1M Pro engine" belief was wrong and is retired. The CODE already knew this: T5 Scout is a HUMAN surface (no API), and every Pro call degrades Pro→flash-latest on the 403 — proven this session (M18 season_read ran on gemini-flash-latest fine; the ~120k-token corpus fits Flash). The Pro accounts' real value = Jules (async coding labor, public repo, PR-gated — both ENROLLED) + the consumer surfaces by hand (Deep Research, NotebookLM, Veo). The 9 keys are AQ.* free-tier in ~/.gemini/.env; Live voice works. Free pool resets ~12:30 IST — organs degrade honestly when dry.
 
 📁 FILES OF RECORD
-OPS_STATE.md (this) — read first. THE_ORGANISM_A_TO_Z.md — the full anatomy + pitch (read to Nidhi). CYBORG_BRAIN.md / CYBORG_STRETCH.md — the two-speed-brain build spec + the M14+ arc. learning-layer/ — the FORGE pedagogy + the DOSSIER + syllabus. ARSENAL_AI_FC_MASTERPLAN / THE_MANAGER / THE_GAFFER — the Manager's brain + soul. Skills (11): /matchday /forge /full-time /scrimmage /rematch /genome /paste-session /talk /organism-doctor /gem-sync /paint. (ORGANISM_ANATOMY.md + ORGANISM_LEDGER.md refreshed by Jules 15 Jul — cyborg layer + real counts now in.) THE_CAPTAINS_MANUAL.md — the captain's how-to-use-it operating manual.
+OPS_STATE.md (this) — read first. THE_ORGANISM_A_TO_Z.md — the full anatomy + pitch (read to Nidhi). CYBORG_BRAIN.md / CYBORG_STRETCH.md — the two-speed-brain build spec + the M14+ arc. learning-layer/ — the FORGE pedagogy + the DOSSIER + syllabus. ARSENAL_AI_FC_MASTERPLAN / THE_MANAGER / THE_GAFFER — the Manager's brain + soul. Skills (12): /matchday /forge /learn /full-time /scrimmage /rematch /genome /paste-session /talk /organism-doctor /gem-sync /paint. (ORGANISM_ANATOMY.md + ORGANISM_LEDGER.md refreshed by Jules 15 Jul — cyborg layer + real counts now in.) THE_CAPTAINS_MANUAL.md — the captain's how-to-use-it operating manual.
 
 🧠 ENV / LESSONS (carry-forward)
 Windows, Node 22, ESM. Entry guard uses pathToFileURL(process.argv[1]). Atomic writes (temp→rename). Daemons are singletons via localhost port locks (:4113/:4112/:4114) — second instance stands down; launchers kill-then-start so they never serve stale code. ntfy phone subscribed; two pushes only ever (08:45 sheet, 21:30 bell). Log files show UTF-8 as gibberish (cosmetic). Bench voice = talk.mjs (Claude brain + msedge-tts) when the Gemini pool is dry. naive_shadow multiplier live (~526k would-be-Opus tokens vs ~209 free units on a sample day).

@@ -62,26 +62,33 @@ const clipTo = (s, n) => (typeof s === "string" && s.length > n)
 // queue because a staged fact with no surface to be confirmed on is a fact that rots.
 // get_context was the only door that showed it, and get_context is a call a model has
 // to remember to make — which is the exact failure mode this whole audit is about.
+// THE THREE STATES ARE THREE FACTS (audit 6 Aug 2026). This module's own header says
+// "a missing leg and an empty leg are different facts" — and then rendered a file that
+// does not exist, a healthy queue with nothing in it, and an unreadable file as the SAME
+// footer string, `pending_facts MISSING (0 staged)`. Its selftest pinned that. The word
+// MISSING on a queue that is simply empty reads as breakage; the word EMPTY on a file
+// that is genuinely gone reads as fine. Each now says which one it is.
 export function pendingFactsBlock(path = PENDING_FACTS) {
   try {
-    if (!existsSync(path)) return { present: false, text: "", count: 0 };
+    if (!existsSync(path)) return { present: false, state: "MISSING", text: "", count: 0 };
     const rows = [];
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
       const s = line.trim();
       if (!s) continue;
       try { const j = JSON.parse(s); if (j && j.text && (j.status || "pending") === "pending") rows.push(j); } catch {}
     }
-    if (!rows.length) return { present: false, text: "", count: 0 };
+    if (!rows.length) return { present: false, state: "EMPTY", text: "", count: 0 };
     const shown = rows.slice(-5).map((p) =>
       `  · "${String(p.text).replace(/\s+/g, " ").trim().slice(0, 160)}"   (staged ${String(p.ts || "").slice(0, 10) || "?"})`);
     return {
       present: true,
+      state: "ok",
       count: rows.length,
       text: `--- PENDING IDENTITY FACTS — ${rows.length} staged, awaiting HIS word (Law 4: nothing is canon until he says so) ---\n`
         + shown.join("\n")
         + `\n  → ask him to confirm or drop each; only he promotes it (hippocampus.mjs is the single writer).`,
     };
-  } catch { return { present: false, text: "", count: 0, error: true }; }
+  } catch { return { present: false, state: "ERROR", text: "", count: 0, error: true }; }
 }
 
 // ── THE ASSEMBLER ────────────────────────────────────────────────────────────
@@ -92,7 +99,11 @@ export async function assemble(deps = {}) {
   const now = deps.now || Date.now();
   const ceiling = Number.isFinite(deps.ceiling) ? deps.ceiling : CEILING;
   const spent = [];
-  const record = (id, present, bytes, note) => spent.push({ id, present, bytes, note: note || null });
+  // `state` is the WORD the footer prints: ok · EMPTY · MISSING · ERROR. It defaults from
+  // `present` so every existing caller keeps its old meaning, and only the parts that can
+  // genuinely be empty-but-healthy pass an explicit one.
+  const record = (id, present, bytes, note, state) =>
+    spent.push({ id, present, bytes, note: note || null, state: state || (present ? "ok" : "MISSING") });
 
   const ls = deps.learnstate || await import("./learnstate.mjs");
   const brief = ls.brief;
@@ -102,7 +113,7 @@ export async function assemble(deps = {}) {
   //    part whose size we can treat as a fixed floor.
   let base = "";
   try { base = brief(dir, now, null, null); record("orientation", true, base.length); }
-  catch (e) { record("orientation", false, 0, "ERROR " + (e && e.message)); }
+  catch (e) { record("orientation", false, 0, "ERROR " + (e && e.message), "ERROR"); }
 
   // 2. TEACHING CARD — single-sourced from HOW_HE_LEARNS.md via learnstate's parser.
   let card = null;
@@ -113,22 +124,33 @@ export async function assemble(deps = {}) {
   // 3. PENDING FACTS — computed before memory so its cost is known to the budget.
   const pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock();
   record("pending_facts", !!pend.present, pend.present ? pend.text.length : 0,
-    pend.present ? `${pend.count} staged` : "0 staged");
+    pend.present ? `${pend.count} staged` : "0 staged", pend.state);
 
   // 4. MEMORY — gets whatever is left, which today is all of it. THE WHOLE POINT:
   //    the cap is computed from the budget rather than being a constant that silently
   //    ate 47% of the cartridge, and if it ever DOES bite, the footer says so.
-  const overhead = 3 * 90;                       // the three wrapper/label lines brief adds around memory+card
+  // OVERHEAD IS MEASURED, NOT GUESSED (audit 6 Aug 2026). This was `3 * 90` — a hunch,
+  // against his standing rule of 1 Aug: no number goes in by guess. brief() renders its
+  // wrapper/label lines only when memory and card are TRUTHY, so a one-character probe
+  // of each yields the exact wrapper cost: (probe render − base) − the 2 probe chars.
+  let overhead = 3 * 90;                          // fallback only if the probe cannot render
+  try { const probe = brief(dir, now, "X", "Y"); if (probe && probe.length > base.length) overhead = probe.length - base.length - 2; } catch {}
   const room = ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length : 0)
     - FOOTER_RESERVE - overhead;
   const memCap = Math.max(0, Math.min(MEMORY_CAP, room));
-  let memory = null, memFull = 0;
+  let memory = null, memFull = 0, clipped = false;
   try {
     memory = deps.memory !== undefined ? deps.memory : await ls.loadMemory(memCap);
     memFull = deps.memoryFullLength !== undefined ? deps.memoryFullLength : (memory ? memory.length : 0);
-    if (memory && memory.length > memCap) memory = clipTo(memory, memCap);
+    // TRIMMED IS TRACKED, NOT INFERRED (audit 6 Aug 2026). It used to be computed as
+    // `memFull > memory.length` AFTER clipping — but clipTo appends a ~70-char "…
+    // (truncated)" tail, so whenever the overflow was smaller than that tail the clipped
+    // string came out LONGER than the original and the comparison read false. Real loss,
+    // reported as no loss: the exact silent-drop this module exists to abolish, reproduced
+    // inside its own accounting. The flag is now set where the cut happens.
+    if (memory && memory.length > memCap) { memory = clipTo(memory, memCap); clipped = true; }
   } catch { memory = null; }
-  const trimmed = !!(memory && memFull > memory.length);
+  const trimmed = clipped || !!(memory && memFull > memory.length);
   record("memory", !!memory, memory ? memory.length : 0,
     !memory ? "MISSING (hippocampus unreadable)" : trimmed ? `TRIMMED from ${memFull} — budget` : null);
 
@@ -141,7 +163,7 @@ export async function assemble(deps = {}) {
 
   const total = text.length + FOOTER_RESERVE;
   const footer = `[context manifest: ${spent.map((s) =>
-    `${s.id} ${s.present ? s.bytes : "MISSING"}${s.note ? ` (${s.note})` : ""}`).join(" · ")}`
+    `${s.id} ${s.state === "ok" ? s.bytes : s.state}${s.note ? ` (${s.note})` : ""}`).join(" · ")}`
     + ` · assembled ${text.length}/${ceiling}]`;
   return { text: text + "\n" + footer, manifest: spent, bytes: text.length, ceiling, total, footer };
 }
@@ -190,7 +212,26 @@ function selftest() {
     assert("PENDING FACTS REACH THE SESSION — the queue that only get_context used to show",
       withPend.text.includes("PENDING IDENTITY FACTS") && /pending_facts \d+ \(2 staged\)/.test(withPend.footer));
     assert("…and zero staged facts render NOTHING (a queue that is empty must stay quiet)",
-      !(await run()).text.includes("PENDING IDENTITY FACTS") && /pending_facts MISSING \(0 staged\)/.test(r.footer));
+      !(await run()).text.includes("PENDING IDENTITY FACTS"));
+    // THE THREE STATES ARE THREE FACTS — the law this module states in its own header,
+    // now held at the door instead of collapsed into one word.
+    const empt = await assemble({ learnstate: stub, memoryFullLength: 4157, pending: { present: false, state: "EMPTY", text: "", count: 0 } });
+    assert("EMPTY ≠ MISSING — a healthy queue with nothing in it reads EMPTY, not MISSING",
+      /pending_facts EMPTY \(0 staged\)/.test(empt.footer));
+    const gone = await assemble({ learnstate: stub, memoryFullLength: 4157, pending: { present: false, state: "MISSING", text: "", count: 0 } });
+    assert("MISSING ≠ EMPTY — a file that is genuinely absent still reads MISSING",
+      /pending_facts MISSING/.test(gone.footer));
+    const err = await assemble({ learnstate: stub, memoryFullLength: 4157, pending: { present: false, state: "ERROR", text: "", count: 0, error: true } });
+    assert("ERROR is its own word — an unreadable queue never hides behind 'empty'",
+      /pending_facts ERROR/.test(err.footer));
+    assert("the LIVE pending reader reports one of the three states, never a bare boolean",
+      ["ok", "EMPTY", "MISSING", "ERROR"].includes(pendingFactsBlock().state));
+    // THE CLIP-TAIL TRAP: overflow smaller than clipTo's ~70-char tail used to make the
+    // clipped string LONGER than the original, so `trimmed` read false on a real cut.
+    const tail = await assemble({ learnstate: { ...stub, loadMemory: async () => "M".repeat(4157) },
+      pending: { present: false, text: "", count: 0 }, memoryFullLength: 4157, ceiling: 900 });
+    assert("A CUT IS ALWAYS NAMED — even when the truncation notice is longer than the overflow",
+      /TRIMMED from 4157/.test(tail.manifest.find((m) => m.id === "memory").note || ""));
 
     const broken = await assemble({ learnstate: { ...stub, loadMemory: async () => { throw new Error("boom"); } },
       pending: { present: false, text: "", count: 0 } });
