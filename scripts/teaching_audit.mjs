@@ -131,6 +131,36 @@ export function countQuestions(text) {
   return m ? m.length : 0;
 }
 
+// DHEEMA vs LAMBA, MADE COUNTABLE (his ruling, 6 Aug 2026: "ye dheema vs lamba
+// merko thodi pata chal paega yar" — he cannot be the one to notice it, which is
+// the whole point of this file).
+//
+// It was previously written off as unmechanizable. That was wrong, and the error
+// was reading it as a LENGTH rule. In his own words it is not:
+//   "dheema = EK cheez, poori tarah kholi hui, chhote-chhote kadam, har kadam pe
+//    ruk ke. Lamba = ek message mein bahut saari cheezein."
+// So the axis is HOW MANY THINGS, not how many characters. A long message that
+// opens ONE thing all the way down is dheema and is exactly what he asked for;
+// a short message carrying four things is lamba. Length cannot tell them apart —
+// structure can.
+//
+// A message covering one idea does not need section breaks. Headers and horizontal
+// rules exist precisely TO separate different things, so their count is a direct
+// count of the things. This is the same threshold-free shape as the check-question
+// rule: not "how long", but "more than ONE".
+//
+// DELIBERATELY NOT COUNTED: plain numbered lists. Canon asks for the mechanism in
+// text plus a NUMBERED TRACE (HOW_HE_LEARNS #3) — a trace is one idea walked step
+// by step, which is the definition of dheema. Counting it would punish the exact
+// format he asked for.
+export function countSectionBreaks(text) {
+  const stripped = String(text || "").replace(/```[\s\S]*?```/g, "");
+  const headers = (stripped.match(/^#{1,6}\s+\S/gm) || []).length;
+  const rules = (stripped.match(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/gm) || []).length;
+  const tables = (stripped.match(/^\s*\|[\s:|-]+\|\s*$/gm) || []).length;   // a comparison grid is many things at once
+  return headers + rules + tables;
+}
+
 export function hindiMarkerCount(text) {
   const words = norm(text).replace(/```[\s\S]*?```/g, " ").split(/[^a-zऀ-ॿ]+/).filter(Boolean);
   if (/[ऀ-ॿ]/.test(String(text || ""))) return 999;   // Devanagari is unambiguously Hindi
@@ -175,6 +205,18 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
       rule: "one-idea",
       evidence: `${qs} question marks ended a sentence in one teaching message (canon allows ONE check-question)`,
       excerpt: quote(String(assistantText).split(/(?<=\?)\s+/).filter((s) => s.includes("?")).join(" … "), 200),
+    });
+  }
+
+  // ---- 1b) DHEEMA, NOT LAMBA (HOW_HE_LEARNS #17) -------------------------
+  // He said outright that he cannot catch this one himself. Counting the section
+  // breaks catches it for him: one idea needs no dividers.
+  const breaks = countSectionBreaks(assistantText);
+  if (breaks > 1) {
+    drifts.push({
+      rule: "dheema-not-lamba",
+      evidence: `${breaks} section break(s) in one teaching message — headers/rules/tables separate DIFFERENT things, and canon is ONE thing opened all the way down. Never make it longer; make it deeper.`,
+      excerpt: quote(String(assistantText).match(/^#{1,6}\s+.*$/gm)?.join(" | ") || "", 200),
     });
   }
 
@@ -326,6 +368,23 @@ function selftest() {
       .drifts.some((d) => d.rule === "one-idea"));
   assert("a `?` inside a fenced code block is NOT a question put to him",
     countQuestions("dekho ye code:\n```\nx = a ? b : c;\ny = d ? e : f;\n```\nsamajh aaya?") === 1);
+
+  // --- 1b) dheema vs lamba -------------------------------------------------
+  // The one he said he could not catch himself. The axis is HOW MANY THINGS,
+  // never how many characters — so these two assertions are the heart of it.
+  assert("LAMBA — three headers in one teaching message is caught (many things at once)",
+    auditTurn({ assistantText: "## Token\nkuch text hai\n## Vocabulary\naur text hai\n## Sampling\nphir text hai", session: OPEN })
+      .drifts.some((d) => d.rule === "dheema-not-lamba"));
+  assert("DHEEMA — a LONG message opening ONE thing is clean (length is not the rule)",
+    !auditTurn({ assistantText: "Token wo sabse chhoti unit hai jo model padhta hai. ".repeat(60) + "Ab bolo — tumhare hisaab se kya hoga?", session: OPEN })
+      .drifts.some((d) => d.rule === "dheema-not-lamba"));
+  assert("a NUMBERED TRACE is dheema, never lamba — canon asks for it (HOW_HE_LEARNS #3)",
+    !auditTurn({ assistantText: "Chalo trace karte hain:\n1. pehle tokenizer chalta hai\n2. phir vocabulary lookup\n3. phir next-token prediction\n4. phir sampling\nSamajh aaya?", session: OPEN })
+      .drifts.some((d) => d.rule === "dheema-not-lamba"));
+  assert("a comparison TABLE counts as many-things-at-once",
+    countSectionBreaks("| a | b |\n|---|---|\n| 1 | 2 |") >= 1);
+  assert("a `---` inside a fenced code block is not a section break",
+    countSectionBreaks("dekho:\n```\n---\n---\n```\nbas") === 0);
 
   // --- 2) Hinglish ---------------------------------------------------------
   assert("a fully English teaching turn is caught",

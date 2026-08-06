@@ -192,7 +192,19 @@ function hermetic() {
   // actually up — brain.mjs (token_vitals), thalamus/dugout/distiller (workspace),
   // distiller/mcp-memory (working_set). Excluding a file WITHOUT that scan would be how a
   // real defect gets papered over, so the scan is the price of every future addition here.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json/;
+  // ADDED 6 Aug 2026, and the scan above was RUN before adding them — not assumed.
+  // This assertion was FLAPPING: it named throwin_state.json on one run and
+  // teaching_contract.json on another, i.e. it was catching a poller and a hook that
+  // happened to fire during the window, never a test write. That matters more than it
+  // used to, because /organism-doctor now declares `npm test` the authority — so the
+  // authority was crying wolf by default, which is how a real red gets ignored.
+  //   · throwin_state.json     — the throw-in poller stamps last_poll_at on its own cadence
+  //   · teaching_contract.json — the UserPromptSubmit hook increments the turn clock, and
+  //                              teaching_audit stages drifts, both mid-run
+  // PROOF (the price the header above sets for every addition): all 65 selftests were run
+  // ONE AT A TIME with both files stat-ed before and after each. Neither file was touched
+  // by a single selftest. Excluding them therefore hides no defect.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);
