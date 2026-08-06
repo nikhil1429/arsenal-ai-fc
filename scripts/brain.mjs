@@ -145,7 +145,7 @@ function loadConfig(path = CFG_PATH) {
 
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
   writeFileSync(tmp, typeof obj === "string" ? obj : JSON.stringify(obj, null, 2) + "\n");
   renameSync(tmp, path);
 }

@@ -122,7 +122,7 @@ const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSyn
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
   writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
   renameSync(tmp, path);
 }
@@ -791,7 +791,11 @@ async function main() {
     if (!rows.length) console.log("dmn: brain-ledger rows for this organ: 0/0 — nothing metered yet (the spend is invisible to the budget until it dreams)");
     else {
       const today = localDate();
-      const mine = rows.filter(r => String(r.ts || "").slice(0, 10) === today);
+      // A row belongs to the day the captain lived, not the day UTC was having —
+      // ts is ISO-UTC, `today` is local, so convert before comparing (the same IST
+      // scar physio.mjs and fsrs.mjs both carry the fix for). (7 Aug 2026)
+      const localDayOf = (ts) => { const d = new Date(String(ts || "")); return Number.isNaN(d.getTime()) ? String(ts || "").slice(0, 10) : localDate(d); };
+      const mine = rows.filter(r => localDayOf(r.ts) === today);
       const tok = mine.reduce((a, r) => a + (r.total_tokens || 0), 0);
       const est = mine.filter(r => r.tokens_estimated).length;
       const fails = rows.filter(r => r.ok === false);

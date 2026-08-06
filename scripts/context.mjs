@@ -50,7 +50,7 @@ const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 const FLOOR_MS = 60000;                                             // resident poll cadence (~60s floor)
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-function writeAtomic(p, obj) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, JSON.stringify(obj, null, 2)); renameSync(tmp, p); }
+function writeAtomic(p, obj) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + "." + process.pid + ".tmp"; writeFileSync(tmp, JSON.stringify(obj, null, 2)); renameSync(tmp, p); }
 const clip = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
 
 // pull the CURRENT window (app + title) from ActivityWatch — metadata, never pixels

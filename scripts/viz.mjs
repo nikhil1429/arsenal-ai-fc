@@ -161,7 +161,7 @@ function readLinesSince(p, sinceMs, tsOf = (r) => Date.parse(r && r.ts)) {
 }
 function writeAtomic(path, text) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
   writeFileSync(tmp, typeof text === "string" ? text : JSON.stringify(text, null, 2) + "\n");
   renameSync(tmp, path);
 }

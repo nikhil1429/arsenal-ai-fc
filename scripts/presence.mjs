@@ -352,7 +352,7 @@ function rollPresenceLog(now = new Date(), deps = {}) {
   for (const r of rows) { const m = monthOf(r); if (m && m < current_month) { if (!older.has(m)) older.set(m, []); older.get(m).push(r); } else keep.push(r); }
   const months = [...older.keys()].sort();
   if (!months.length) return { rolled: false, moved: 0, kept: keep.length, months: [], reason: `all ${rows.length} row(s) are in ${current_month}` };
-  const write = deps.write || ((p, text) => { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, text); renameSync(tmp, p); });
+  const write = deps.write || ((p, text) => { mkdirSync(dirname(p), { recursive: true }); const tmp = p + "." + process.pid + ".tmp"; writeFileSync(tmp, text); renameSync(tmp, p); });
   const readArchive = deps.readArchive || ((p) => (existsSync(p) ? readLines(p) : []));
   const archives = []; let moved = 0, appended = 0;
   for (const m of months) {

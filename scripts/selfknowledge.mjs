@@ -66,7 +66,7 @@ const BLEDGER   = join(STATE, "brain_ledger.jsonl");
 const FUNCTIONAL_DOCS = ["THE_ORGANISM__EVERYTHING.md"];
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-function writeAtomic(p, txt) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + ".tmp"; writeFileSync(tmp, txt); renameSync(tmp, p); }
+function writeAtomic(p, txt) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + "." + process.pid + ".tmp"; writeFileSync(tmp, txt); renameSync(tmp, p); }
 
 // ---------------------------------------------------------------------------
 // THE FREEZE (audit #46) — does anything actually READ organism_self.md?

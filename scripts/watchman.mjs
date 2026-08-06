@@ -313,22 +313,52 @@ function probeSuite() {
 // "running right now" are not errors and are excluded by name, not by guess:
 // 0x41303 = never yet run · 0x41301 = currently running.
 const TASK_STATUS_NOT_ERRORS = new Set([0, 0x41303, 0x41301]);
-function probeTasks() {
+const TASK_NEVER_RAN = 0x41303;
+
+// A DAILY task whose last run is older than yesterday MISSED at least one whole
+// schedule — no threshold invented, the cadence is the task's own trigger
+// (DaysInterval=1). This is the check that would have caught 6 Aug: the
+// Morning-Conductor skipped a day (StartWhenAvailable and all), the whole
+// sensory lane served day-old state on the one day he actually studied, and the
+// physio's 30h cadence window is structurally blind to a single missed morning
+// (stale-by-25h at the 21:50 sweep is inside every 30h grace). Weekly tasks are
+// exempt by construction — their DaysInterval is not 1. Pure, so the selftest
+// drives it with fixtures.
+export function missedDailyTasks(rows, today, yesterday) {
+  return (Array.isArray(rows) ? rows : []).filter((t) =>
+    t && t.daily === true
+    && typeof t.result === "number" && t.result !== TASK_NEVER_RAN
+    && typeof t.last === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.last)
+    && t.last < yesterday);
+}
+
+function probeTasks(today, yesterday) {
   try {
     const ps = spawnSync("powershell", ["-NoProfile", "-Command",
-      "Get-ScheduledTask | Where-Object {$_.TaskName -like 'ArsenalFC-*' -and $_.State -ne 'Disabled'} | ForEach-Object { $i = $_ | Get-ScheduledTaskInfo; [PSCustomObject]@{name=$_.TaskName; result=$i.LastTaskResult; last=('' + $i.LastRunTime)} } | ConvertTo-Json -Compress"],
+      "Get-ScheduledTask | Where-Object {$_.TaskName -like 'ArsenalFC-*' -and $_.State -ne 'Disabled'} | ForEach-Object { $i = $_ | Get-ScheduledTaskInfo; $di = ($_.Triggers | Where-Object {$_.PSObject.Properties['DaysInterval'] -and $_.DaysInterval} | Select-Object -First 1).DaysInterval; [PSCustomObject]@{name=$_.TaskName; result=$i.LastTaskResult; last=$i.LastRunTime.ToString('yyyy-MM-dd'); daily=($di -eq 1)} } | ConvertTo-Json -Compress"],
       { timeout: 60000, encoding: "utf8" });
-    if (ps.error || ps.status !== 0) return null;   // no scheduler read = no claim, never a fabricated finding
+    if (ps.error || ps.status !== 0) return [];   // no scheduler read = no claim, never a fabricated finding
     let rows = [];
-    try { const j = JSON.parse(String(ps.stdout || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch { return null; }
+    try { const j = JSON.parse(String(ps.stdout || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch { return []; }
+    const out = [];
     const bad = rows.filter((t) => t && typeof t.result === "number" && !TASK_STATUS_NOT_ERRORS.has(t.result));
-    if (!bad.length) return null;
-    return {
-      id: "task-errors", level: "RED",
-      finding: `${bad.length} enabled scheduled organ(s) errored on their last run`,
-      evidence: bad.map((t) => `${t.name}: result ${t.result} (last ${t.last})`).join(" · "),
-    };
-  } catch { return null; }
+    if (bad.length) {
+      out.push({
+        id: "task-errors", level: "RED",
+        finding: `${bad.length} enabled scheduled organ(s) errored on their last run`,
+        evidence: bad.map((t) => `${t.name}: result ${t.result} (last ${t.last})`).join(" · "),
+      });
+    }
+    const missed = missedDailyTasks(rows, today, yesterday);
+    if (missed.length) {
+      out.push({
+        id: "task-missed", level: "RED",
+        finding: `${missed.length} DAILY organ(s) have not run since before yesterday — a whole schedule was skipped and every reader of their output is on stale state`,
+        evidence: missed.map((t) => `${t.name}: last ran ${t.last}`).join(" · ") + " — the 6 Aug class: the morning lane silently skipped the one day he studied",
+      });
+    }
+    return out;
+  } catch { return []; }
 }
 
 // ---------------------------------------------------------------------------
@@ -422,7 +452,8 @@ function run(argv) {
   const w = gather(now);
   const findings = checks(w);
   if (!skipSuite) { const f = probeSuite(); if (f) findings.push(f); }
-  { const f = probeTasks(); if (f) findings.push(f); }
+  const yday = localDate(new Date(now.getTime() - 24 * 3.6e6));
+  findings.push(...probeTasks(w.today, yday));
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);
@@ -541,6 +572,19 @@ function selftest() {
     && briefLines(null, TODAY, YDAY).some((l) => /never run yet/.test(l)));
   assert("BRIEF — yesterday's run still counts as fresh (nightly cadence, date compare, no invented number)",
     briefLines({ at: `${YDAY}T23:55:00+05:30`, findings: [] }, TODAY, YDAY).length === 0);
+
+  // The missed-daily net (the 6 Aug class) — pure, fixture-driven, each side can fail
+  const taskRows = [
+    { name: "A-Daily-Missed", result: 0, last: "2026-08-04", daily: true },
+    { name: "B-Daily-Fresh", result: 0, last: YDAY, daily: true },
+    { name: "C-Weekly-Old", result: 0, last: "2026-07-28", daily: false },
+    { name: "D-Daily-NeverRan", result: 0x41303, last: "1999-11-30", daily: true },
+  ];
+  assert("MISSED-DAILY — a daily task last run before yesterday is caught; fresh, weekly and never-ran are all exempt",
+    (() => { const m = missedDailyTasks(taskRows, TODAY, YDAY);
+      return m.length === 1 && m[0].name === "A-Daily-Missed"; })());
+  assert("MISSED-DAILY — yesterday's run still counts as on-schedule (nightly cadence, date compare, no invented number)",
+    missedDailyTasks([{ name: "X", result: 0, last: YDAY, daily: true }], TODAY, YDAY).length === 0);
 
   // Tier-2 prompt carries the §7.1 constraints verbatim
   const P = tier2Prompt(hard);

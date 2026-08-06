@@ -226,7 +226,7 @@ async function fireReminders(deps = {}) {
   const read = deps.read || (() => readLines(REMINDERS));
   const write = deps.write || ((ls) => {
     const body = ls.map(l => JSON.stringify(l)).join("\n") + (ls.length ? "\n" : "");
-    const tmp = REMINDERS + ".tmp";
+    const tmp = REMINDERS + "." + process.pid + ".tmp";
     writeFileSync(tmp, body);
     renameSync(tmp, REMINDERS);
   });

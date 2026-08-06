@@ -142,7 +142,7 @@ async function enumerateGist(cfg, fetchFn) {
 
 function writeAtomicText(path, text) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
   writeFileSync(tmp, text);
   renameSync(tmp, path);
 }
@@ -334,8 +334,10 @@ async function main() {
   const { manifest, writes } = await pull(cfg, defaultFetch, hasLocal, new Date());
   for (const w of writes) writeAtomicText(w.path, w.text);
   writeAtomic(join(STATE_DIR, "mirror_manifest.json"), manifest);
-  const ok = Object.values(manifest.per_id).filter(x => x.ok).length;
-  console.log(`mirror: ${ok}/${cfg.ids.length} capsules mirrored (${Object.entries(manifest.per_id).filter(([,v]) => !v.ok).map(([k,v]) => `${k}:${v.error}`).join(", ") || "all ok"}) → ${join(STATE_DIR, "mirror_manifest.json")}`);
+  // The console denominator is the MANIFEST's need (enumeration-aware), never the
+  // configured floor — cfg.ids.length is 4 forever, so a fifth locked capsule would
+  // have printed "5/4 capsules mirrored" while the manifest itself was right. (7 Aug 2026)
+  console.log(`mirror: ${manifest.counter} · ${manifest.status} (${manifest.shortfall.join(", ") || "all ok"}) → ${join(STATE_DIR, "mirror_manifest.json")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -48,7 +48,7 @@ function loadConfig() {
 // temp->rename; this one now does too.
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = path + ".tmp";
+  const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
   writeFileSync(tmp, JSON.stringify(obj, null, 2));
   renameSync(tmp, path);
 }

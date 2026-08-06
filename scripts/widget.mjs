@@ -143,8 +143,8 @@ function selftest() {
       const a = registerWidget({ widgets: {} }, "tokenization", real, 2);
       const b = registerWidget(a.reg, "tokenization", real, undefined);
       return a.ok && a.reg.widgets.tokenization.gates_driven === 2 && b.reg.widgets.tokenization.gates_driven === 2; })());
-  assert("THE LIVE TRUTH — against the real repo this reports the measured 0-of-4 with one orphan",
-    (() => { const live = report(); return /\/4 locked capsules/.test(live.counter); })());
+  assert("THE LIVE TRUTH — the live counter's denominator IS the live locked-capsule count (was a hardcoded /4 that would go red the day a fifth capsule locked — the exact rot class CLAUDE.md documents)",
+    (() => { const live = report(); return live.counter.endsWith(`/${lockedConcepts().length} locked capsules have a widget`); })());
   assert("A BROKEN/ABSENT REGISTRY FILE degrades to empty, never a throw",
     loadRegistry(join(HERE, "__nope__.json")).widgets && Object.keys(loadRegistry(join(HERE, "__nope__.json")).widgets).length === 0);
 
