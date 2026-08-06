@@ -7,9 +7,34 @@
 
 ---
 
-## RESUME HERE — the state of the machine right now
+## RESUME HERE — ~~the state of the machine right now~~ THE STATE AS OF 2 AUG 2026
 
-### PAUSED deliberately by the captain, 2 Aug
+> ⚠ **"RIGHT NOW" EXPIRED — audit #108, 6 Aug 2026.** This heading claimed the present tense and
+> then went four days without a reader, so the table below was consulted as live truth while 2 of
+> its 3 rows had already been reversed by the captain's own hand. It is FROZEN as the 2 Aug record.
+> **Never read machine state out of this document. Read it out of the machine:**
+>
+> - brain pause + pulse — `dressing-room/state/brain_config.json` (`paused`, `pulse.enabled`), or
+>   `node scripts/brain.mjs status` for budget + eligibility.
+> - scheduled tasks — `Get-ScheduledTask -TaskName ArsenalFC-* | Select TaskName,State`.
+>
+> **What those two commands actually said on 2026-08-06:**
+>
+> - **Row 1 is now FALSE.** `brain_config.paused` is **`false`** — the captain un-paused it on 6 Aug
+>   once the `claude -p` boot tax was closed in `brain.mjs claudeExec` (`--system-prompt` + `--tools ""`
+>   + `--strict-mcp-config`), measured on the same probe at 49,411 → 5,663 tokens/call. The 23 jobs are
+>   thinking again; 4 of them (`midday_reread` · `deep_twin` · `season_review` · `capsule_premap`) stay
+>   individually `enabled:false` for a different reason entirely — audit #63, no reader for their output —
+>   each carrying its own `_disabled_reason`. Row 1's pause is over; those four are not the pause.
+> - **Row 2 still holds.** `pulse.enabled` is still `false`, and its re-enable condition is unchanged
+>   and still unmet: the nucleus wiring (plan group G3) before any budget comes back.
+> - **Row 3 names the wrong tasks.** Of the five listed below, **only `ArsenalFC-Cortex` is Disabled.**
+>   `ArsenalFC-DMN`, `ArsenalFC-ConceptGraph`, `ArsenalFC-NightShift` and `ArsenalFC-SelfKnowledge` are
+>   all **Ready**. The live disabled set is 14 of 45 tasks and does not match this list — which is the
+>   whole point: a hand-maintained list of scheduler state goes stale the first time anyone touches
+>   `schtasks`, and nothing here notices. Query the scheduler.
+
+### PAUSED deliberately by the captain, 2 Aug — *as recorded that day; see the freeze note above*
 
 | What | How it was paused | How to reverse |
 |---|---|---|

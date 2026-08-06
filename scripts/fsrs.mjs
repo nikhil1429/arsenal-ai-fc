@@ -130,7 +130,112 @@ function writeAtomic(path, obj) {
 // locked book from day zero. NOT fabrication: no dated lock → no card, ever.
 // Live reps on the same concept later merge into the same card (normId).
 // ---------------------------------------------------------------------------
-function capsuleSeedReps(dir = join(STATE_DIR, "capsules")) {
+// ---------------------------------------------------------------------------
+// THE RE-JIRAH BRIDGE (organism audit #108, 6 Aug 2026)
+// ---------------------------------------------------------------------------
+// THE BUG: rejirah.mjs is the single writer of rejirah_log.jsonl and FSRS never
+// opened that file — `grep -c rejirah_log scripts/fsrs.mjs` returned 0. So the
+// two schedulers CLAIMED a division of labour ("FSRS owns WHEN a concept returns;
+// Re-Jirah owns WHICH AXES and HOW HARD") while sharing no data at all. The only
+// thing that crossed was the reJirahDone DATE, and the seeder below stamped every
+// one of them `confidence:"knew", correct:true` — an unconditional Rating.Easy.
+// Net effect: a round in which he cracked every axis, graded honestly, pushed the
+// card's interval FURTHER OUT. The loop's own back edge punished honesty.
+//
+// Two things had to change, and neither is a new number:
+//   1. GRADE, NOT ASSUMPTION. A reJirahDone date now inherits the ROUND'S REAL
+//      RESULT: any axis cracked ⇒ correct:false. This mirrors the rule already
+//      settled at #24 for same-day reps — the WORST grade speaks — because a round
+//      is one review event and a partially-cracked round is not a clean recall.
+//      The gut-word is the round's worst committed gut, never inferred (rejirah.mjs
+//      refuses to derive gut from result for exactly this reason; so do we).
+//   2. THE REAL CLOCK. rejirah.mjs deliberately records the DUE-date on a close row
+//      (FORGE_SPEC §4; capsule_bridge tests `done.has(due)`), and that is correct
+//      FOR THE CAPSULE. But FSRS is a spaced-repetition engine: feeding it a due-date
+//      as a review TIMESTAMP replays the review inside the interval chain — closing
+//      an overdue round today would stamp a review 42 days in the past. That also
+//      defeated #24's same-day collapse, which can only let the worst grade speak
+//      when the rows SHARE a local day. So we take the close row's own `ts` — the
+//      moment he actually sat it, which rejirah.mjs has always preserved.
+//
+// A reJirahDone date with NO matching close row keeps the old behaviour verbatim
+// (a knew/correct replay at the recorded date) — those are his hand-written gist
+// entries from before the controller existed, and we have no grades for them. They
+// are TAGGED `seed_basis:"legacy-gist"` so an unmeasured pass can never again be
+// mistaken for a measured one.
+function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl")) {
+  const grades = [];               // {ts, concept, axis, result, gut, round}
+  const closes = [];               // {ts, concept, round, due, axes_graded}
+  try {
+    if (!existsSync(path)) return new Map();
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      const s = line.trim(); if (!s) continue;
+      try {
+        const j = JSON.parse(s);
+        if (!j || !j.concept) continue;
+        if (j.kind === "round-close") closes.push(j);
+        else if (j.axis) grades.push(j);
+      } catch { }
+    }
+  } catch { return new Map(); }
+
+  // Key on concept + the DUE date's calendar day, because that is the only field
+  // the capsule's reJirahDone array carries back. Day-granularity, not instant:
+  // the gist stores "2026-06-24", the close row stores a full ISO string.
+  const dayOf = (d) => { const t = Date.parse(d); return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10); };
+  const out = new Map();
+  // A ROUND IS A TIME WINDOW, NOT AN AXIS NAME (verify pass, 6 Aug 2026).
+  // First cut matched grades by `round` number with an axis-NAME fallback. But the
+  // grade CLI (rejirah.mjs, the `grade` case) never passes a round number, so every
+  // real row carries round:null and the fallback ALWAYS won — matching on concept +
+  // axis letter with no time bound at all. Reproduced on a two-round fixture: round 2
+  // held both axes on `knew` and still came back {cracked:true, worstGut:"guessed"},
+  // having swallowed round 1's crack; and round 1 read round 2's rows too, so a later
+  // crack retroactively dirtied an earlier clean round. Once he cracked an axis once,
+  // that concept could never seed a clean round again and FSRS would lapse the card on
+  // every close — the loop punishing honesty in a second, subtler way.
+  // The window is the one rejirah.mjs's own `close` already uses: rows after the
+  // PREVIOUS close for this concept, up to and including this one. Deriving it here
+  // (rather than making the CLI stamp a round number) also repairs rows already on disk.
+  const closesByConcept = new Map();
+  for (const c of closes) {
+    if (Number.isNaN(Date.parse(c.ts))) continue;
+    const k = String(c.concept).toLowerCase().trim();
+    if (!closesByConcept.has(k)) closesByConcept.set(k, []);
+    closesByConcept.get(k).push(c);
+  }
+  for (const list of closesByConcept.values()) list.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+  for (const c of closes) {
+    const day = dayOf(c.due);
+    if (!day || Number.isNaN(Date.parse(c.ts))) continue;
+    const concept = String(c.concept).toLowerCase().trim();
+    const siblings = closesByConcept.get(concept) || [];
+    const idx = siblings.indexOf(c);
+    const since = idx > 0 ? Date.parse(siblings[idx - 1].ts) : -Infinity;   // the previous round's close
+    const until = Date.parse(c.ts);
+    // Round number is still honoured WHEN BOTH SIDES CARRY ONE — a future CLI that
+    // stamps it stays exact — but the time window is what actually decides today.
+    const named = new Set(Array.isArray(c.axes_graded) ? c.axes_graded : []);
+    const mine = grades.filter((g) => {
+      if (String(g.concept).toLowerCase().trim() !== concept) return false;
+      const t = Date.parse(g.ts);
+      if (Number.isNaN(t) || t <= since || t > until) return false;          // this round's window only
+      if (c.round != null && g.round != null) return g.round === c.round;
+      return named.size ? named.has(g.axis) : true;
+    });
+    const cracked = mine.some((g) => g.result === "cracked");
+    // WORST gut wins, same principle as the worst grade. Never inferred: a round
+    // with no committed gut-word stays null and the caller keeps "knew" rather than
+    // inventing a confidence he did not state.
+    const rank = { guessed: 3, shaky: 2, knew: 1 };
+    const worstGut = mine.map((g) => g.gut).filter(Boolean)
+      .sort((a, b) => (rank[b] || 0) - (rank[a] || 0))[0] || null;
+    out.set(`${concept}|${day}`, { ts: c.ts, cracked, worstGut, graded: mine.length });
+  }
+  return out;
+}
+
+function capsuleSeedReps(dir = join(STATE_DIR, "capsules"), rounds = readRejirahRounds()) {
   const out = [];
   try {
     for (const f of readdirSync(dir).filter(x => x.endsWith(".json"))) {
@@ -151,8 +256,30 @@ function capsuleSeedReps(dir = join(STATE_DIR, "capsules")) {
         // dedupe on the normalized ISO timestamp (not the raw string: "2026-06-15"
         // and "2026-06-15T00:00:00Z" are the same moment and must collapse too).
         // Set preserves insertion order → lock stays first, chronology unchanged.
-        const uniqTs = [...new Set(dates.map(d => new Date(d).toISOString()))];
-        for (const ts of uniqTs) out.push({ ts, surface: "capsule", track: "concept", concept, question: `capsule lock/re-weld (${concept})`, confidence: "knew", correct: true });
+        // #24's dedupe rule is UNCHANGED — same instant = one event — but it now runs
+        // on the FINAL timestamp, after a matched round has swapped its due-date for
+        // the moment he actually sat it. Deduping before the swap would collapse the
+        // wrong pairs. The lock is always index 0 when present and is never looked up
+        // in the round map: a lock IS the passed Jirah by definition, not a re-weld.
+        const lockIso = (j.lockedOn && !Number.isNaN(Date.parse(j.lockedOn))) ? new Date(j.lockedOn).toISOString() : null;
+        const key = concept.toLowerCase().trim();
+        const seen = new Set();
+        for (const d of dates) {
+          const rawIso = new Date(d).toISOString();
+          const round = rawIso === lockIso ? null : rounds.get(`${key}|${rawIso.slice(0, 10)}`);
+          const ts = round ? new Date(round.ts).toISOString() : rawIso;
+          if (Number.isNaN(Date.parse(ts)) || seen.has(ts)) continue;
+          seen.add(ts);
+          out.push({
+            ts, surface: "capsule", track: "concept", concept,
+            question: `capsule lock/re-weld (${concept})`,
+            // A graded round speaks for itself; an ungraded date keeps the frozen
+            // legacy assumption AND says so, so the two can never be confused again.
+            confidence: round ? (round.worstGut || "knew") : "knew",
+            correct: round ? !round.cracked : true,
+            seed_basis: round ? "rejirah-graded" : "legacy-gist",
+          });
+        }
       } catch { }
     }
   } catch { }
@@ -437,6 +564,74 @@ function selftest() {
     assert("CAPSULE FLOOR: same-instant dates dedupe (4 raw dates ⇒ 2 review events)", dupSeeds.length === 2 && dupSeeds[0].ts === "2026-06-15T00:00:00.000Z" && dupSeeds[1].ts === "2026-06-29T00:00:00.000Z");
     const dupStore = buildStore(dupSeeds, f);
     assert("CAPSULE FLOOR: dedupe ⇒ card.reps is the REAL review count (2, not 4)", dupStore.length === 1 && dupStore[0].reps === 2);
+    // --- ORGANISM AUDIT #108 (6 Aug 2026): THE RE-JIRAH BRIDGE ---------------
+    // Pre-fix, FSRS never opened rejirah_log.jsonl and stamped EVERY reJirahDone
+    // date knew/correct. A round where he honestly cracked every axis therefore
+    // replayed as Rating.Easy and pushed the card FURTHER out — the back edge
+    // punished honesty. These assertions are the lock on both halves of the fix.
+    const rjDir = join(tmp, "rejirah-case");
+    mkdirSync(rjDir, { recursive: true });
+    writeFileSync(join(rjDir, "cracked.json"), JSON.stringify({ id: "cracked", lockedOn: "2026-06-01", reJirahDone: ["2026-06-24"] }));
+    writeFileSync(join(rjDir, "held.json"), JSON.stringify({ id: "held", lockedOn: "2026-06-01", reJirahDone: ["2026-06-24"] }));
+    writeFileSync(join(rjDir, "legacy.json"), JSON.stringify({ id: "legacy", lockedOn: "2026-06-01", reJirahDone: ["2026-06-24"] }));
+    const rjLog = join(tmp, "rejirah_log.jsonl");
+    writeFileSync(rjLog, [
+      // a round he SAT on 5 Aug for a due-date of 24 Jun — one axis cracked
+      { ts: "2026-06-20T10:00:00.000Z", concept: "cracked", axis: "a", result: "held", gut: "shaky", round: 1 },
+      { ts: "2026-06-20T10:05:00.000Z", concept: "cracked", axis: "b", result: "cracked", gut: "guessed", round: 1 },
+      { ts: "2026-08-05T18:00:00.000Z", concept: "cracked", kind: "round-close", round: 1, due: "2026-06-24", axes_graded: ["a", "b"] },
+      // a round where every axis held
+      { ts: "2026-06-20T11:00:00.000Z", concept: "held", axis: "a", result: "held", gut: "knew", round: 1 },
+      { ts: "2026-08-05T19:00:00.000Z", concept: "held", kind: "round-close", round: 1, due: "2026-06-24", axes_graded: ["a"] },
+    ].map(r => JSON.stringify(r)).join("\n") + "\n");
+    const rounds = readRejirahRounds(rjLog);
+    const rjSeeds = capsuleSeedReps(rjDir, rounds);
+    const seedFor = (c) => rjSeeds.filter(s => s.concept === c);
+    const reweld = (c) => seedFor(c).find(s => s.seed_basis !== undefined && s.ts !== "2026-06-01T00:00:00.000Z");
+    assert("#108 a CRACKED round seeds correct:false — honesty no longer reads as Easy",
+      reweld("cracked").correct === false && reweld("cracked").seed_basis === "rejirah-graded");
+    assert("#108 the round's WORST gut speaks (guessed beats shaky), never inferred from the result",
+      reweld("cracked").confidence === "guessed");
+    assert("#108 an all-HELD round still seeds correct:true",
+      reweld("held").correct === true && reweld("held").confidence === "knew");
+    assert("#108 the review is stamped when he SAT it, not the backdated due-date",
+      reweld("cracked").ts === "2026-08-05T18:00:00.000Z" && reweld("held").ts === "2026-08-05T19:00:00.000Z");
+    assert("#108 a reJirahDone with NO close row keeps the frozen legacy replay, and SAYS so",
+      reweld("legacy").correct === true && reweld("legacy").ts === "2026-06-24T00:00:00.000Z" && reweld("legacy").seed_basis === "legacy-gist");
+    assert("#108 the LOCK is never looked up in the round map — a lock IS the passed Jirah",
+      seedFor("cracked").find(s => s.ts === "2026-06-01T00:00:00.000Z").correct === true);
+    assert("#108 a missing rejirah_log is empty-safe (no throw, every date reads legacy)",
+      readRejirahRounds(join(tmp, "nope.jsonl")).size === 0 && capsuleSeedReps(rjDir, new Map()).every(s => s.seed_basis === "legacy-gist" || s.correct === true));
+    // THE TWO-ROUND FIXTURE THE FIRST CUT DID NOT HAVE (verify pass, 6 Aug 2026).
+    // Every assertion above hand-writes round:1 on its grade rows — a shape the live
+    // CLI never produces, because `rejirah.mjs grade` passes no round number at all.
+    // So the axis-name fallback ran unbounded in production while the suite stayed
+    // green. These rows carry round:null ON PURPOSE: this is the real shape.
+    const twoRoundLog = join(tmp, "two_rounds.jsonl");
+    writeFileSync(twoRoundLog, [
+      // R1 — he cracked b
+      { ts: "2026-07-01T10:00:00.000Z", concept: "twin", axis: "a", result: "held", gut: "knew", round: null },
+      { ts: "2026-07-01T10:05:00.000Z", concept: "twin", axis: "b", result: "cracked", gut: "guessed", round: null },
+      { ts: "2026-07-01T18:00:00.000Z", concept: "twin", kind: "round-close", round: null, due: "2026-07-02", axes_graded: ["a", "b"] },
+      // R2 — a month later, BOTH held cleanly. The same two axis letters.
+      { ts: "2026-08-01T10:00:00.000Z", concept: "twin", axis: "a", result: "held", gut: "knew", round: null },
+      { ts: "2026-08-01T10:05:00.000Z", concept: "twin", axis: "b", result: "held", gut: "knew", round: null },
+      { ts: "2026-08-01T18:00:00.000Z", concept: "twin", kind: "round-close", round: null, due: "2026-08-02", axes_graded: ["a", "b"] },
+    ].map(r => JSON.stringify(r)).join("\n") + "\n");
+    const tr = readRejirahRounds(twoRoundLog);
+    const r1 = tr.get("twin|2026-07-02"), r2 = tr.get("twin|2026-08-02");
+    assert("#108 R2 — a clean round stays clean; it does NOT inherit R1's crack (round:null, the real CLI shape)",
+      r2 && r2.cracked === false && r2.worstGut === "knew" && r2.graded === 2);
+    assert("#108 R1 — an earlier round is not retroactively rewritten by a later one",
+      r1 && r1.cracked === true && r1.worstGut === "guessed" && r1.graded === 2);
+    assert("#108 each round sees ONLY its own window (2 grades each, never all 4)",
+      r1.graded === 2 && r2.graded === 2);
+
+    // The whole point: the cracked card must now be due SOONER than the held one.
+    const crackedCard = buildStore(seedFor("cracked"), f)[0];
+    const heldCard = buildStore(seedFor("held"), f)[0];
+    assert("#108 a cracked round pulls the card IN, an all-held round pushes it OUT",
+      new Date(crackedCard.due).getTime() < new Date(heldCard.due).getTime() && crackedCard.stability < heldCard.stability);
     } finally {
       rmSync(tmp, { recursive: true, force: true });   // no fsrs-caps-* left behind
     }

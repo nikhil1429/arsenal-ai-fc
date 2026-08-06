@@ -41,6 +41,23 @@ const DEFAULTS = {
     "readiness.json": 30, "cards.json": 30, "calibration.json": 30, "weaknesses.json": 30,
     "learning_state.json": 30, "timeaudit.json": 30, "pulse.json": 30, "mirror_manifest.json": 30,
     "drills.json": 30, "twin.json": 30, "pitch_read.json": 30,
+    // THE TWO ORGANS THE BLEED DETECTOR COULD NOT SEE (audit #108, 6 Aug 2026).
+    // Both had been dead for days with nothing anywhere able to raise it:
+    //  · team_sheet.md — the MANAGER'S ONLY OUTPUT, the capstone of the whole build
+    //    order, frozen at 2026-08-01 ("Matchday 1 · Introduction ... I don't know you
+    //    yet") while the Dugout served it to him every morning as today's sheet. It
+    //    was absent from this table entirely, so its death was structurally unraisable.
+    //  · brain_out/nightshift/gem_cartridge.md — the night lane last ran 2 Aug and
+    //    missed four consecutive nights with LastTaskResult 0 each time. `grep -n
+    //    nightshift scripts/physio.mjs` returned ZERO hits: the vitals organ had no
+    //    check for it at all, so it could have stayed dead indefinitely. This is the
+    //    feedstock for the Gem, the scout pack and the distractor banks.
+    // 30 is NOT a new number — it is the value every other daily organ in this table
+    // already carries (a missed morning plus its catch-up window). Both files are .md,
+    // which readJson returns null for, so they fall back to mtime staleness — correct
+    // here, because for these two "when was it last written" IS the health question.
+    "team_sheet.md": 30,
+    "brain_out/nightshift/gem_cartridge.md": 30,
   },
   grace_frac: 0.25,
   // A legitimate lag is not a bleed. The Oura pull is a day or two behind by nature
@@ -429,6 +446,30 @@ function compute(world, cfg, now = new Date()) {
     }
   }
 
+  // 4b) THE WAKE-GATE VERDICT, SURFACED (audit #108, 6 Aug 2026).
+  //     The night shift's wind-tunnel replays every recorded decision and files a
+  //     verdict to brain_out/nightshift/gate_tune_<date>.md — and NOTHING read that
+  //     file. On 6 Aug it said OUT OF BAND: 0.33 wakes/day against its own [1, 8]
+  //     over 5,940 replayed decisions, and — correctly — proposed NO change, because
+  //     no config in its 24-point grid clears hysteresis. Its own conclusion is that
+  //     the fault is in what REACHES the gate (the salience score), not the
+  //     thresholds. That is a real finding the captain should see, and it was buried
+  //     in a markdown file with no reader.
+  //     THIS ORGAN REPORTS IT AND NEVER TUNES IT. No threshold is read from here and
+  //     none is proposed: his standing rule is that no number is chosen before 30-45
+  //     days of real data, and the data behind THIS verdict was produced while the
+  //     thalamus was running two-day-old code with every salience repair inert. The
+  //     honest move is to look again after real use, not to tune against a broken
+  //     measurement. The band is the tuner's own, quoted — not invented here.
+  if (world.gateTune && world.gateTune.out_of_band) {
+    const g = world.gateTune;
+    bleeds.push({
+      organ: "wake-gate", kind: "gate_out_of_band",
+      evidence: `wind tunnel: ${g.wakes_per_day} wakes/day vs its own band [${(g.band || []).join(", ")}] over ${g.decisions} replayed decision(s)${g.days ? ` across ${g.days}d` : ""}`,
+      line: "the wake-gate is below its own floor and the tuner could not fix it with thresholds — it points at the SCORE reaching the gate. Look again after 30-45 days of real use; do not tune it now.",
+    });
+  }
+
   // 5) MIRROR-STALE handled by (1) via mirror_manifest.json cadence.
 
   // 6) FUEL — ORGANISM AUDIT #93. The mouth running dry is a body fact, and the
@@ -655,6 +696,17 @@ function gatherWorld() {
     genomeLastRun: (() => { const rows = readLines(join(STATE_DIR, "bootroom_log.jsonl")); return rows.length ? rows[rows.length - 1] : null; })(),
     looseBalls: readLines(join(STATE_DIR, "loose_balls.jsonl")),
     throwinState: readJson(join(STATE_DIR, "throwin_state.json")),
+    // the LATEST filed shift's gate verdict — read-only; nightshift.mjs is its single
+    // writer. Reads the newest shift_*.json rather than today's, because a lane that
+    // missed four nights (as it had, 2-6 Aug) must still be able to report its last
+    // real verdict instead of going quiet exactly when something is wrong.
+    gateTune: (() => {
+      try {
+        const dir = join(STATE_DIR, "brain_out", "nightshift");
+        const f = readdirSync(dir).filter(x => /^shift_\d{4}-\d{2}-\d{2}\.json$/.test(x)).sort().pop();
+        return f ? ((readJson(join(dir, f)) || {}).jobs || {}).gate_tune || null : null;
+      } catch { return null; }
+    })(),
     capsules,
     slip: readLines(join(STATE_DIR, "slip.jsonl")),
     fsrsStore: readJson(join(STATE_DIR, "fsrs_store.json")),
@@ -694,13 +746,31 @@ async function selftest() {
   const base = {
     files: {}, reps: [], timeaudit: null, weaknesses: null, weaknessesMtime: null,
     teamSheetMtime: null, looseBalls: [], throwinState: null, capsules: [], slip: [],
-    fsrsStore: null, readinessCount: 0,
+    fsrsStore: null, readinessCount: 0, gateTune: null,
   };
 
   // healthy bloodless organism: nothing born, nothing bleeds, line null
   const quiet = compute({ ...base, files: { "cards.json": { exists: false } } }, cfg, now);
   assert("never-born files do NOT bleed (bloodless ≠ wounded)", quiet.bleeds.length === 0);
   assert("EXCEPTION-ONLY VOICE — line null when nothing bleeds", quiet.line === null);
+
+  // audit #108 — THE WAKE-GATE VERDICT IS REPORTED, NEVER TUNED.
+  // The tuner's own out-of-band finding lived in a markdown file nothing read.
+  // This organ surfaces it and proposes nothing: no threshold is read from the
+  // verdict, and an in-band gate must stay silent so the line keeps its meaning.
+  {
+    const oob = compute({ ...base, gateTune: { out_of_band: true, wakes_per_day: 0.33, band: [1, 8], decisions: 5940, days: 18 } }, cfg, now);
+    const b = oob.bleeds.find(x => x.kind === "gate_out_of_band");
+    assert("#108 an OUT-OF-BAND wake-gate is surfaced as a bleed (it had no reader at all)", !!b);
+    assert("#108 the evidence quotes the tuner's OWN band and sample size, inventing nothing",
+      b && /0\.33 wakes\/day/.test(b.evidence) && /\[1, 8\]/.test(b.evidence) && /5940 replayed/.test(b.evidence));
+    assert("#108 it REPORTS, never proposes a threshold — and says to re-measure, not to tune",
+      b && /do not tune it now/i.test(b.line));
+    assert("#108 an IN-BAND gate stays silent (the line only ever speaks on exception)",
+      compute({ ...base, gateTune: { out_of_band: false, wakes_per_day: 4, band: [1, 8], decisions: 900 } }, cfg, now).bleeds.every(x => x.kind !== "gate_out_of_band"));
+    assert("#108 a night lane that never filed a shift cannot fabricate a gate verdict",
+      compute({ ...base, gateTune: null }, cfg, now).bleeds.every(x => x.kind !== "gate_out_of_band"));
+  }
 
   // stale bleed: existed, went quiet
   const stale = compute({ ...base, files: { "cards.json": { exists: true, mtimeMs: now.getTime() - 60 * H } } }, cfg, now);

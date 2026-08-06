@@ -9,7 +9,28 @@
 # ============================================================================
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 function Mk($name, $args_, $sched) {
-  $tr = "cmd /c cd /d $repo && node scripts\$args_"
+  # 6 Aug 2026 audit, finding #108 - EVERY CYBORG ORGAN GETS A VOICE TOO.
+  # This line used to be a bare `cmd /c cd /d $repo && node scripts\$args_` with no
+  # redirect. INSTALL_TASKS.ps1's Mk() was fixed on 2 Aug (finding #98) to route
+  # through run_logged.cmd; this file - written for the evolution's organs - was
+  # never brought along, so the two installers disagreed on the same line. The
+  # measured consequence: 15 of the 31 enabled ArsenalFC-* tasks still run the bare
+  # unlogged form - re-measured on review 6 Aug 2026, and the count of 15 is exactly
+  # right, but the FIRST draft of this comment said those 15 "have no log file at ALL"
+  # and that predicate is false: Tone and Bell-FullTime are in the 15 and tone.log /
+  # brain.log both exist (older hand-runs and other lanes write them). Stated correctly
+  # it is worse, not better - 21 of the 31 enabled tasks have no log file today, and
+  # the two organs actually misbehaving (NightShift, SelfKnowledge) are both
+  # registered here - i.e. undiagnosable BY DESIGN, because their stdout went to a
+  # cmd window that closed the instant they finished. run_logged.cmd redirects to
+  # scripts\<organ>.log, rolls it at 2 MB, and exits with the ORGAN's code so Task
+  # Scheduler's Last Result (what /organism-doctor reads) still means what it says.
+  # NOTE: this changes tasks created BY THIS SCRIPT. Already-registered tasks keep
+  # their old bare command until this file is RE-RUN (/F overwrites = the upgrade
+  # path). MkHidden below is deliberately NOT changed here - it routes through
+  # hidden_run.vbs for the console-cloak scar (0xC000013A) and wrapping it is a
+  # different design question, not this repair.
+  $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
 }

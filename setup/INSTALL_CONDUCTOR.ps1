@@ -4,7 +4,26 @@
 # 2 Aug 2026 audit, findings #41 / #42 / #43.
 #
 # NOT RUN AUTOMATICALLY. This file changes the machine's schedule, so it is
-# written, reviewed, and run BY THE CAPTAIN. Nothing here has been executed.
+# written, reviewed, and run BY THE CAPTAIN.
+#
+# RUN LOG - it HAS been run live. (audit #108, 6 Aug 2026.)
+#   This header used to end "Nothing here has been executed," which stopped being
+#   true and then stayed on the page - so anyone reading the file assumed the
+#   conductor was still a proposal and that the 14 alarms were still armed. Both
+#   wrong, and that is exactly the class of stale-doc defect the 4 Aug pass above
+#   removed from the *code* while leaving it in the *comment*.
+#   Verified on this box, 6 Aug 2026, off the live Task Scheduler - not inferred:
+#     - ArsenalFC-Morning-Conductor EXISTS, State = Ready, trigger 08:45.
+#     - Its action is the run_logged.cmd form this script writes:
+#         cmd /c C:\...\setup\run_logged.cmd scripts\conductor.mjs morning
+#     - StartWhenAvailable = True; DisallowStartIfOnBatteries = False;
+#       StopIfGoingOnBatteries = False - i.e. the post-create XML patch below
+#       landed, including the element-creation fix.
+#     - Exactly 14 ArsenalFC-* tasks read Disabled, and they are the 14 named in
+#       $replaced, one for one - so the disable-loop completed, not partially.
+#   What is still UNVERIFIED here: whether the 08:45 chain has produced a good
+#   morning. That is conductor.mjs's record to answer, not this installer's.
+#   Re-running it is still safe and is the intended upgrade path (/F overwrites).
 #
 # WHY THIS EXISTS - measured on 4 Aug 2026, not theorised:
 #   29 ArsenalFC-* tasks all fired at the same instant (16:28:23) as a

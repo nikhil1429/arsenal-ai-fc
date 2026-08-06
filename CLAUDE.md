@@ -12,11 +12,16 @@ Node 22). Agents read/write a JSON **state bus** at `dressing-room/state/*.json`
 `ntfy.sh`. LLM calls via `claude -p` (Max subscription — **never** an API key).
 
 ## Build order (STRICT — one agent at a time, sequential)
-1. **Goalkeeper** (Oura readiness coach) — v2 recalibrated, DONE, pending live run.
+1. **Goalkeeper** (Oura readiness coach) — v2 recalibrated, DONE, **live-run proven**
+   (audit #108, 6 Aug 2026: this said "pending live run" long after it had run, so every
+   session read the capstone's predecessor as unfinished. Evidence:
+   `dressing-room/state/readiness.json` → `engine: "v2-recalibrated"`, real AMBER verdict
+   for day `2026-08-04`; full run output in `scripts/coach.log`).
 2. **Time-Auditor** (ActivityWatch tracker) — DONE.
-3. **Signal-source agents** (§4 inputs: Nemesis · Calibration · FSRS · learning-state) — **built first**, each proven green before the next.
+3. **Signal-source agents** (§4 inputs: Nemesis · Calibration · FSRS · learning-state) — **built first**, each proven green before the next. **COMPLETE** — `CONDUCTOR_LOG.md`: "SIGNAL-SOURCE AGENTS COMPLETE … #0 Capture · #1 FSRS · #2 Calibration · #3 Nemesis · #4 learning-state".
 4. **The Manager** (roster Dugout #1) — **built LAST, the capstone.** M-1 =
-   `manager.mjs` deterministic wrapper, **no LLM**, is **already built + tested green in a web sandbox = reference-only**; place + re-test it against **real agent JSONs (not dummy)** when the Manager's turn comes → M-2→M-5.
+   `manager.mjs` deterministic wrapper, **no LLM**, is **PLACED and re-tested green against the REAL agent JSONs** — commit `1d4e158`, live run on 2026-07-11 state; read the pass count from `node scripts/manager.mjs selftest`, never from here (audit #108, 6 Aug 2026: this line still read "already built + tested green in a web sandbox = reference-only; place + re-test it … when the Manager's turn comes", a full capstone step behind the repo, so sessions kept re-planning work already committed. Review pass, same day: the repair first copied `35 passed / 0 failed` in here out of `CONDUCTOR_LOG.md` — that is M-1's PLACEMENT figure from 11 Jul and it has not been true for weeks; a re-run on 6 Aug passed with **zero failures** on a suite that has grown well past 35 checks. Exactly the rot this same audit deleted from the widget and OPS_STATE lines, re-introduced two bullets above them.)
+   **M-2→M-5 are NOT done.** `CONDUCTOR_LOG.md`: "RESUME: continue M-2 from #6 PRECEDENCE" → M-2 `system.md` soul → M-3 `claude -p` + billing guards → M-4 §11 sandbox → M-5 scheduled task. The Manager is **not** finished.
 Do not start a new agent until the current one is proven (see "unrun" below).
 
 ## Non-negotiable principles
@@ -31,7 +36,15 @@ Do not start a new agent until the current one is proven (see "unrun" below).
 - **No auto-approve.** Never save to memory or edit canonical files without
   explicit approval. Canonical files (live truth) = `OPS_STATE.md`,
   `ARSENAL_AI_FC_MASTERPLAN.md`, `THE_MANAGER__Master_Prompt.md`, `THE_GAFFER.md`
-  (on Google Drive). If you change one without authorization, flag it loudly.
+  (**all four committed in the repo root** — `THE_GAFFER.md` was tagged "on Google Drive"
+  until audit #108, 6 Aug 2026; same wrong-Drive error that `OPS_STATE.md` carried until
+  5 Aug. Review pass, same day: the repair justified this with "`git ls-files THE_GAFFER.md`
+  has **always** tracked it here", which the add-commit itself contradicts — it entered git
+  at `ac2d77b` "sync: canon files to repo (Drive → git as single source)", 10 Jul 2026 16:50,
+  2h22m AFTER `097121b` first wrote this file at 14:28 the same day. So the Drive tag was
+  TRUE the hour it was written and went wrong that afternoon, which is the more useful
+  lesson: a location written into prose rots the moment a sync moves the file). If you
+  change one without authorization, flag it loudly.
 - **"Unrun system = hypothesis."** Nothing is "done" until it has actually run.
   Write the test, RUN it, show output. Mock tests use no live credentials.
 - **Brain rotation:** Sonnet for routine work, Opus for complex/soul work — not
@@ -157,7 +170,10 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 - `scripts/widget.mjs` — the **Visualization Contract's registry** (it had no code owner;
   `viz.mjs` is the club wall). `list` · `register <c> <file> --gates <n>` · `open <c>`.
   It never generates a widget — an undriven widget is a failed widget, and the value is the
-  bespoke hero example. Live truth today: **0 of 4 locked capsules have one.**
+  bespoke hero example. Live coverage comes from the owner, never from this line —
+  **`node scripts/widget.mjs list`** (audit #108, 6 Aug 2026: the hardcoded "0 of 4 locked
+  capsules have one" was already false when read — `embeddings` was registered 5 Aug with
+  3 gates driven — and any count written here rots on the very next `register`).
 - `scripts/context_manifest.mjs` — the SessionStart assembler. Explicit 12k budget, and a
   footer naming every part's bytes plus anything MISSING or TRIMMED. It exists because the
   brief silently dropped 1,957 of the hippocampus cartridge's 4,157 characters every session.
@@ -169,7 +185,11 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 ## Files of record
 - `OPS_STATE.md` (**repo root**, committed — not Google Drive; that line was wrong until
   5 Aug 2026) — live operational anchor; read first each thread. **It is STALE for the
-  learning layer**: it is dated 15 Jul, says "Skills (11)" (there are 12) and `reps_log = 0`.
-  Read those numbers live from state, never from this doc.
+  learning layer**: it is dated 15 Jul, and its skill/rep counts moved on long ago. Read
+  those numbers live — count `.claude/skills/` and the lines in
+  `dressing-room/state/reps_log.jsonl` — never from that doc, and never from here either
+  (audit #108, 6 Aug 2026: this line's own "corrections" had themselves rotted — it claimed
+  `reps_log = 0` when the log already held reps, which is exactly how a hardcoded count in
+  the one file every session reads goes on misinforming after the thing it corrected).
 - `GOALKEEPER_v2_migration.md` — what changed in the Goalkeeper recalibration.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.

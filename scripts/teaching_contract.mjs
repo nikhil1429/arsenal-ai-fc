@@ -47,7 +47,9 @@
 // `print` is HOOK-SAFE — it fails silent and always exits 0. A broken teaching contract
 // must never be able to block his prompt.
 //
-// CLI: print | list | add <id> <line...> | hit <id> | drop <id> | reset-turns | selftest
+// CLI: see USAGE at the bottom of this file — one string, printed by `default` and
+// asserted by the selftest, so a command can never again exist in the switch and be
+// invisible in the help (audit #108, 6 Aug 2026).
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -442,7 +444,29 @@ const mb = (b) => (b / 1048576).toFixed(2) + " MB";
 // The line budget arithmetic is UNCHANGED (header + link + warn ≤ 3 reserved, so at
 // least 2 rule slots survive in every reachable state), which keeps the #39
 // non-droppable-ordering assertion true of this engine too.
-function blockLines(state, done, now = new Date(), fill = null) {
+//
+// EXTENDED IN PLACE, 6 Aug 2026 (audit #108) — two additions, neither of which changes
+// a single byte of output for a state that has no staged drifts and a readable
+// transcript, which is why this is an extension and not a fourth frozen engine:
+//
+//  1. THE STAGED-DRIFT LINE IS RESERVED, NOT APPENDED. It was pushed onto the array in
+//     the `print` CLI case AFTER this function had already spent its budget, so the
+//     very first time the 6 Aug drift-caller law was actually used the block would be
+//     SIX lines — MAX_BLOCK_LINES exists to stop exactly that, and the append walked
+//     around it. A wall read every turn is a wall ignored every turn, and the newest
+//     organ would have been the one to break it. Now it is a non-droppable reserved
+//     line like the link-back and the warning, so a ROTATING RULE yields its slot —
+//     the same trade audit #39 already ruled correct.
+//  2. AN UNMEASURABLE FILL IS SAID OUT LOUD (`fillUnknown`). Before this, `fill === null`
+//     below `warnAt` printed NOTHING about context — indistinguishable from "context is
+//     fine". That is audit #107's failure mode inverted: #107 was a counter that reset
+//     when context was fullest, this is a gauge that goes quiet when it cannot read,
+//     and silence is the worse of the two because he cannot tell it apart from a
+//     healthy session. It shares the warning's slot (it can only fire when no warning
+//     fired), so the arithmetic still bounds at header 1 + link 1 + warn|unknown 1 +
+//     staged 1 = 4 reserved → at least ONE rule slot, and slot 1 is pick()'s index 0,
+//     so the worst offender is still never the line that gets eaten.
+function blockLines(state, done, now = new Date(), fill = null, fillUnknown = false) {
   if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
   const t = (state.turns && typeof state.turns === "object") ? state.turns : {};
   const turn = Number.isInteger(t.count) ? t.count : 0;
@@ -469,7 +493,14 @@ function blockLines(state, done, now = new Date(), fill = null) {
       + ` TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`;
   }
 
-  const reserved = 1 + (link ? 1 : 0) + (warn ? 1 : 0);
+  // Only when the caller TRIED and failed (see the `print` path) — a bare `print` with
+  // no hook payload at all is a genuine no-op and stays silent, per the hook contract.
+  const unknown = (!fill && fillUnknown && !warn)
+    ? `  ⚠ context fill UNKNOWN this turn — transcript unreadable, so nothing measured it. turn ${turn} is a PROMPT count, not a context measure; if this session has been long, say so out loud rather than assume it is fine.`
+    : null;
+
+  const staged = stagedLine(state);
+  const reserved = 1 + (link ? 1 : 0) + ((warn || unknown) ? 1 : 0) + (staged ? 1 : 0);
   const room = Math.max(0, MAX_BLOCK_LINES - reserved);
   const shown = pick(state.rules, turn, state.show_n).slice(0, room);
 
@@ -481,17 +512,40 @@ function blockLines(state, done, now = new Date(), fill = null) {
   for (const r of shown) L.push(`  ⚠ ${r.line}${r.hits ? `  [drifted ${r.hits}×]` : ""}`);
   if (link) L.push(link);
   if (warn) L.push(warn);
+  else if (unknown) L.push(unknown);
+  if (staged) L.push(staged);
   return L;
 }
 
 // ── DISK ──────────────────────────────────────────────────────────────────────
+
+// A TUNABLE THAT CANNOT BE TUNED IS NOT A TUNABLE (audit #108, 6 Aug 2026).
+// The comment at :102 promises `transcript_warn_bytes` "lives in STATE so the fill
+// gauge can be retuned from observation without editing this file". load() returned
+// the stored object VERBATIM, so that promise held only for a state file BORN after
+// the key existed: for any file that already existed, the key could never arrive, and
+// every save() wrote the same key-less object straight back. Retuning would then have
+// meant hand-editing state, which the single-writer law forbids.
+// HONEST ABOUT THE EVIDENCE: checked on the live bus 6 Aug — his
+// dressing-room/state/teaching_contract.json DOES carry the key today, because that
+// file was re-seeded after #107 shipped. So this is luck, not design; the structural
+// hole is real and the same trap waits for every future seed key (the four
+// drift-caller commands of 6 Aug added no key, the next tunable will).
+//
+// THE FIX: spread the seed UNDER the stored state. Stored values always win, so no
+// existing number, rule, hit count or anchor is touched; only genuinely MISSING keys
+// are filled, and the next save() persists them. Pure and separately testable so the
+// selftest can assert it without going near his live file.
+function withSeedDefaults(stored, now = new Date()) {
+  return { ...seed(now), ...stored };
+}
 
 function load() {
   try {
     if (!existsSync(STATE)) return seed();
     const s = JSON.parse(readFileSync(STATE, "utf8"));
     if (!s || !Array.isArray(s.rules)) return seed();
-    return s;
+    return withSeedDefaults(s);
   } catch { return seed(); }
 }
 
@@ -788,6 +842,65 @@ function selftest() {
   assert("BACKWARD-COMPATIBLE — pre-#107 state has no transcript_warn_bytes and falls back to the derived default",
     transcriptFill(SELF, undefined).limit === DEFAULT_TRANSCRIPT_WARN_BYTES);
 
+  // ---- audit #108, 6 Aug 2026 — four repairs, each pinned to the defect it fixed.
+  // None of these is a tautology: every one of them fails against the pre-#108 file.
+
+  // T1 — the help hid the one command CLAUDE.md makes mandatory.
+  assert("THE HELP ADMITS TO EVERY LIVE COMMAND — `flag`/`confirm`/`dismiss`/`staged` shipped 6 Aug and the usage line still listed only the 31 Jul set",
+    ["print", "list", "add", "hit", "flag", "confirm", "dismiss", "staged", "drop", "reset-turns", "selftest"]
+      .every((c) => USAGE.includes(c)));
+
+  // T2 — a seed key added later could never reach an EXISTING state file.
+  const preFix = {
+    version: 1, show_n: 1, context_warn_at: DEFAULT_WARN_AT,
+    turns: { anchor: "cc:A", anchor_kind: "cc", count: 28 },
+    rules: base.rules.slice(0, 2),
+  };
+  assert("RETUNABLE FOR REAL — a state file written before a seed key existed GAINS it on load, instead of being rewritten key-less every turn",
+    !("transcript_warn_bytes" in preFix)
+    && withSeedDefaults(preFix, T0).transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES);
+  assert("…and the backfill overwrites NOTHING — his rules, his tuned values and his live turn count all survive it",
+    withSeedDefaults(preFix, T0).rules.length === 2
+    && withSeedDefaults(preFix, T0).show_n === 1 && seed(T0).show_n !== 1
+    && withSeedDefaults(preFix, T0).turns.count === 28
+    && withSeedDefaults(preFix, T0).turns.anchor === "cc:A");
+
+  // T3 — the staged-drift line was appended AFTER the budget, so the drift-caller law
+  // being used at all would have pushed the block to 6 lines.
+  const stagedState = (n, turn) => ({
+    ...base, show_n: n,
+    staged: [{ id: "hinglish", why: "answered him in English", at: T0.toISOString() }],
+    turns: { anchor: "tx:/t", anchor_kind: "tx", count: turn },
+  });
+  assert("THE STAGED LINE IS PAID FOR OUT OF THE BUDGET — staged drift + link-back + warning is still <= 5 lines, at every show_n and every tier",
+    (() => { let worst = 0;
+      for (const f of [fHard, fSoft, fQuiet, null]) for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
+        worst = Math.max(worst, blockLines(stagedState(n, t), done, T0, f).length);
+      return worst <= MAX_BLOCK_LINES; })());
+  assert("…and it is NON-DROPPABLE — a ROTATING rule yields the slot, slot 1 never does",
+    [1, 2, 3, 4, 5, 6].every((n) => {
+      const L = blockLines(stagedState(n, 40), done, T0, null);
+      return L.some((l) => /SELF-REPORTED/.test(l)) && L.some((l) => l.includes(rank(base.rules)[0].line));
+    }));
+  assert("NOTHING STAGED = NOTHING SAID — the line only exists when there is something awaiting his word",
+    !blockLines(busyState, done, T0, null).some((l) => /SELF-REPORTED/.test(l)));
+
+  // T4 — a fill the gauge could not compute printed NOTHING, which reads exactly like
+  // a healthy session on the one turn (the first after a fork) it is least likely to be.
+  assert("THE MISS IS VISIBLE — a transcript we TRIED and failed to read says so; a genuine no-op still says nothing",
+    blockLines(quietState, done, T0, null, true).some((l) => /context fill UNKNOWN/.test(l))
+    && !blockLines(quietState, done, T0, null, false).some((l) => /context fill UNKNOWN/.test(l)));
+  assert("…it SHARES the warning's slot and never doubles it — past warn_at the loud #107 fallback wins and the unknown line stands down",
+    (() => { const L = blockLines(busyState, done, T0, null, true);
+      return L.some((l) => /CONTEXT WARNING/.test(l)) && !L.some((l) => /context fill UNKNOWN/.test(l)); })());
+  assert("…and it never fires when the gauge actually read something",
+    !blockLines(quietState, done, T0, fQuiet, true).some((l) => /context fill UNKNOWN/.test(l)));
+  assert("ANTI-WALL HOLDS WITH BOTH #108 LINES ON — staged drift + unknown fill + link-back, still <= 5 lines at every show_n",
+    (() => { let worst = 0;
+      for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
+        worst = Math.max(worst, blockLines(stagedState(n, t), done, T0, null, true).length);
+      return worst <= MAX_BLOCK_LINES; })());
+
   // ---- audit #40's numbers, computed here so the close report never has to guess
   assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
     hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 5
@@ -798,6 +911,17 @@ function selftest() {
 }
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
+
+// THE HELP HID THE LAW (audit #108, 6 Aug 2026). `flag`, `confirm`, `dismiss` and
+// `staged` have been implemented in the switch below since 6 Aug, and CLAUDE.md makes
+// `flag <rule-id> --why "…"` the MANDATORY drift-caller path — run in the turn the
+// drift happens. The usage line still listed only the 31 Jul commands, so the one
+// command the operating system requires was the one command the file would not admit
+// to having. Hoisted into a const so the selftest can assert every live command
+// appears here — a command can be forgotten in prose, not in an assertion.
+const USAGE = "teaching_contract: print | list | add <id> <line...> | hit <id>"
+  + " | flag <id> --why \"...\" | confirm <id> | dismiss <id> | staged"
+  + " | drop <id> | reset-turns | selftest";
 
 const cmd = process.argv[2];
 const arg = process.argv[3];
@@ -813,15 +937,56 @@ switch (cmd) {
       // PRECEDENCE, resolved once per turn: transcript > Claude Code session id >
       // a held session anchor > the forge session > unknown (held, never reset).
       const tx = hookTranscriptPath();
-      const anchor = resolveAnchor(storedAnchorOf(st.turns), { tx, cc: hookSessionId(), forge: forgeStartedAt() });
+      const held = storedAnchorOf(st.turns);
+      const anchor = resolveAnchor(held, { tx, cc: hookSessionId(), forge: forgeStartedAt() });
       const s = bumpTurn(st, anchor);
       save(s);
       // The warning rides the FILL GAUGE, not the anchor — a fork resets the anchor
       // at exactly the moment the context is fullest (audit #107).
-      const fill = transcriptFill(tx, st.transcript_warn_bytes);
-      const lines = blockLines(s, doneConcepts(), new Date(), fill);
-      const sl = stagedLine(s);            // staged drifts ride the same block, or they rot
-      if (sl) lines.push(sl);
+      //
+      // THE GAUGE'S OWN BLIND SPOT (audit #108, 6 Aug 2026). This was a single read of
+      // `tx` and nothing else, so it returned null — silently — on the FIRST prompt of a
+      // session, when the new transcript file is not on disk yet, and on any turn whose
+      // payload was already drained by an earlier hook in the same array. That is the
+      // worst possible turn to go quiet: after a fork the context is FULLEST on prompt 1
+      // (#107's own evidence, 710,280 -> 958,257 bytes), and #107's fix rides entirely
+      // on this read.
+      // So: fall back to the LAST transcript we anchored on. Its identity breaks across
+      // a fork but its size carries forward — that is the measured fact #107 is built on
+      // — so the previous file is a real lower bound on fill, not a guess. If even that
+      // is unreadable, the miss is stated in the block instead of being invisible.
+      //
+      // REVIEW CORRECTION (audit #108 review pass, 6 Aug 2026). MEASURED against a copy of
+      // this file with real hook payloads, because the paragraph above argues the fork case
+      // and the wiring says otherwise: .claude/settings.json runs `reset-turns` as the FIRST
+      // SessionStart hook, and it mints tx:<transcript_path> off that same payload — so on
+      // prompt 1 the held anchor IS this turn's tx, `heldTx !== tx` is false, and this
+      // fallback CANNOT fire there. Reproduced: prompt 1 with an on-disk-yet-missing
+      // transcript printed the `context fill UNKNOWN` line (branch 2), never the fallback.
+      // What the fallback actually buys is the DRAINED-PAYLOAD turn — tx null, held anchor
+      // = this session's own transcript, size read correctly. That case is real, it is the
+      // common one, and it is why the branch stays.
+      // THE EDGE IT OPENS, on the record rather than found later: if the held anchor is a
+      // DIFFERENT session's transcript (SessionStart's reset-turns did not run, or its save
+      // failed) AND this turn's tx is unreadable, the fallback reports THAT file's size —
+      // reproduced at "context 811%" off a stale 11.6 MB transcript on turn 1 of an empty
+      // session. Across a FORK the previous file is a genuine lower bound; across an
+      // UNRELATED session it is not, and a loud warning on a fresh session is #38's
+      // "always fires" failure mode coming back. Narrowing the fallback to fire only when
+      // `!tx` closes it and loses nothing that works today — NOT done here, because it is a
+      // behaviour change outside the four assigned repairs. Captain's ruling.
+      const heldTx = (held && held.startsWith(TX_PREFIX)) ? held.slice(TX_PREFIX.length) : null;
+      let fill = transcriptFill(tx, st.transcript_warn_bytes);
+      if (!fill && heldTx && heldTx !== tx) fill = transcriptFill(heldTx, st.transcript_warn_bytes);
+      const fillUnknown = !fill && !!(tx || heldTx);   // we had something to measure and still failed
+      // The staged-drift line is built INSIDE blockLines now and paid for out of the
+      // 5-line budget. Pushing it on here (as this did until 6 Aug) spent a sixth line
+      // the anti-wall law does not have — see audit #108 at blockLines.
+      const lines = blockLines(s, doneConcepts(), new Date(), fill, fillUnknown);
+      // …with one exception, preserved verbatim from the old append: with ZERO rules the
+      // block is empty by the hook-safe law, and a staged drift would then have nowhere
+      // to be seen. One line, still inside the budget.
+      if (!lines.length) { const sl = stagedLine(s); if (sl) lines.push(sl); }
       if (lines.length) console.log(lines.join("\n"));
     } catch { /* silence is the contract */ }
     process.exit(0);
@@ -833,10 +998,17 @@ switch (cmd) {
     // HAVE/NEED, never a bare status word (audit #106) — and the drift recorder's
     // last run is printed next to the hit counts, because a hit count with no date
     // beside it reads as a live measurement when it is a two-day-old seeding burst.
+    // CORRECTED 6 Aug 2026 (audit #108). This tail used to end "nothing in the machine
+    // calls it", which was the true and damning finding of the 6 Aug audit — for about
+    // an hour. `flag`/`confirm`/`dismiss` landed that same day and CLAUDE.md now makes
+    // `flag` mandatory in the turn a drift happens, so the line was telling him the
+    // ranking is dead at the exact moment it started being fed. It must name the two
+    // paths that produce a real hit and the one that only stages, or he cannot read a
+    // zero here correctly.
     console.log(`teaching_contract · rules ${s.rules.length} · turn ${t.count || 0}/${s.context_warn_at || DEFAULT_WARN_AT}`
       + ` · clock anchor ${anchorKindOf(t)} ${storedAnchorOf(t) || "(none)"}`
       + ` · drift hits recorded ${hs.ever_hit}/${hs.total} rules, last ${hs.newest_hit ? hs.newest_hit.slice(0, 10) : "never"}`
-      + ` (only \`teaching_contract.mjs hit <id>\` writes those — nothing in the machine calls it)`);
+      + ` (a real hit comes only from \`hit <id>\` or your \`confirm <id>\`; Claude's \`flag <id>\` STAGES and never ranks)`);
     for (const r of rank(s.rules)) console.log(`  ${r.id.padEnd(12)} hits=${String(r.hits).padStart(2)}  ${r.line}`);
     break;
   }
@@ -918,5 +1090,5 @@ switch (cmd) {
   }
   case "selftest": selftest(); break;
   default:
-    console.log("teaching_contract: print | list | add <id> <line...> | hit <id> | drop <id> | reset-turns | selftest");
+    console.log(USAGE);
 }

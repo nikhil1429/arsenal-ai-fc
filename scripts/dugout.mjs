@@ -74,7 +74,7 @@ import { randomBytes } from "node:crypto";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
-import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
+import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex, learningArcVerdict, conceptVocabulary } from "./hippocampus.mjs";
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
@@ -553,6 +553,37 @@ function gatherRecallSources() {
     for (const f of readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)))
       for (const line of readFileSync(join(OUT_DIR, f), "utf8").split("\n"))
         if (line.startsWith("CAPTAIN: ")) items.push({ ts: f.slice(0, 10), source: "dugout", text: line.slice(9) });
+  } catch { }
+  // ── HIS STUDY SURFACE, WHICH RECALL COULD NOT SEE (audit #108, 6 Aug 2026) ──
+  // Census on the live index: 137 rows — {dugout: 133, throwin: 2, note: 2} — dated
+  // 17/18/19 Jul, one row on 30 Jul, two on 5 Aug. Every source above is a VOICE or
+  // scratch surface. Since 29 Jul he has done essentially all of his studying by
+  // TYPING in Claude Code, which lands in afferent.jsonl as source "claude-code":
+  // 538 rows, none of them embedded anywhere. So `recall("hallucinations grounding —
+  // what confused him")` answered with three mid-July ASR fragments at 0.6x — "What?
+  // What are you saying? I don't get you, gaffer." CLAUDE.md makes recall the
+  // non-negotiable first call precisely so he never re-explains himself, and it was
+  // searching a corpus that had never seen a single day of his actual study.
+  //
+  // Deliberately NOT a second writer: the 25 Jul E2E audit already settled that
+  // recall_index.jsonl gets ONE append path — indexRecall(), serialised by its lock —
+  // and nightshift imports it rather than writing directly. So the fix is a new
+  // SOURCE, not a new writer, and nightshift's embed_backfill picks it up for free.
+  // The rows are filtered by the same learning-arc verdict the consolidator uses, so
+  // only turns that name canon vocabulary get in — not every keystroke — and
+  // recallWorthy() still applies to every one of them at the door.
+  try {
+    // built once per call — conceptVocabulary() reads concepts.json + sprint.json
+    const vocab = conceptVocabulary();
+    if (vocab.length) {
+      for (const r of readLines(join(STATE_DIR, "afferent.jsonl"))) {
+        // HIS words only. `claude-code-teaching` is the coach's own output; embedding it
+        // would let recall quote me back to him as his own memory (see distiller #108).
+        if (!r || r.source !== "claude-code" || r.modality !== "code" || !r.text) continue;
+        if (!learningArcVerdict(String(r.text), vocab).ok) continue;
+        items.push({ ts: r.ts, source: "claude-code", text: String(r.text) });
+      }
+    }
   } catch { }
   return items;
 }

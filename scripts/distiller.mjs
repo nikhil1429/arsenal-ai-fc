@@ -82,7 +82,14 @@ function recentStream(dir = STATE_DIR, n = 25, modalities = INTERACTIVE, rows = 
   return (rows || readLines(join(dir, "afferent.jsonl")))
     .filter(a => modalities.includes(a.modality) && String(a.text || "").trim().length > 2)
     .slice(-n)
-    .map(a => ({ ts: a.ts, modality: a.modality, text: clampStr(a.text, 400) }));
+    // `source` is CARRIED, not dropped (audit #108 verify pass, 6 Aug 2026). The
+    // his-words deny-list added below screens on source, and this projection was
+    // silently deleting the field on every production row — so isHisSource() read
+    // undefined, "" was not in the deny Set, and NOTHING was ever denied. The fix
+    // tested green only because its assertions injected `deps.stream` by hand, a
+    // shape no real caller produces. A filter is worth exactly as much as the field
+    // it filters on surviving the hop before it.
+    .map(a => ({ ts: a.ts, modality: a.modality, source: a.source, text: clampStr(a.text, 400) }));
 }
 // THE ADDRESS FOR THE AMBIENT STREAM (rule 3: never delete an organ because nobody
 // reads its output — give it a surface). context.mjs's ~145 emits/day are no longer
@@ -108,7 +115,25 @@ function currentWindow(dir = STATE_DIR, rows = null) {
 //     means "the last concrete thing HE did" — "claude.exe · Claude" is not that.
 // If every candidate row is a caption the slot stays EMPTY. An empty slot is a
 // truthful "nothing recorded"; a caption is a lie that reads like an answer.
-const hisWords = (stream) => (stream || []).filter(s => s && !AMBIENT.includes(s.modality) && !looksLikeWindowCaption(s.text));
+// CUT 3 — THE SELF-CAPTURE LEAK, REOPENED ON A NEW KEY (audit #108, 6 Aug 2026).
+// The 25 Jul leak was closed on `modality`; this one walked back in on `source`.
+// The Stop hook captures the ASSISTANT'S last message as `source:"claude-code-teaching"`
+// with `modality:"code"` — deliberately, so what he was TAUGHT reaches the one working
+// memory. But that modality is identical to his own typed prompts (`source:"claude-code"`),
+// so a modality-only screen cannot tell the two apart, and 377 rows of my own prose were
+// counting as HIS words. Measured cost: working_set.json reported `his_words: 25 /
+// sources_scanned: 25` — a perfect 100%-his score — while roughly 11 of those 25 rows fed
+// to the LLM were mine, which is how the brief came to print MY audit task as his
+// LAST SESSION and OPEN LOOP. An organism that reads its own output back as his words
+// starts predicting itself.
+// Three sibling organs already had this exact deny-list and distiller was the only one
+// without it: nightshift.mjs NOT_HIS_SOURCES, thalamus.mjs self_deny_sources (also in
+// thalamus_config.json), hippocampus.mjs. We copy them EXACTLY rather than inventing a
+// broader rule: `claude-code` is HIS 538 typed prompts and must keep passing — a prefix
+// match on /^claude-code/ would have silently deleted his single largest written source.
+const NOT_HIS_SOURCES = new Set(["claude-code-teaching"]);
+const isHisSource = (s) => !NOT_HIS_SOURCES.has(String((s && s.source) || "").toLowerCase());
+const hisWords = (stream) => (stream || []).filter(s => s && !AMBIENT.includes(s.modality) && !looksLikeWindowCaption(s.text) && isHisSource(s));
 
 function deterministicSet(stream, presence, drills) {
   const own = hisWords(stream);
@@ -378,6 +403,44 @@ async function selftest() {
   assert("#21 the re-entry card counts what it stood on (#106): his-words vs rows scanned, slots filled",
     wsSet.have_need.his_words === 1 && wsSet.have_need.sources_scanned === 1 && wsSet.have_need.slots_total === 4 &&
     wsSet.current_window === "claude.exe · Claude" && !/\.exe/.test(wsSet.where_left_off));
+
+  // --- CUT 3 / audit #108: THE SELF-CAPTURE LEAK ON `source` -----------------
+  // The Stop hook writes MY last message as source:"claude-code-teaching" with the
+  // SAME modality:"code" his own prompts carry, so a modality-only screen counted my
+  // prose as his. The pair below is the whole point: identical modality, opposite
+  // provenance. `claude-code` must survive — it is his 538 typed prompts.
+  const selfStream = [
+    { ts: "2026-08-06T01:00:00Z", modality: "code", source: "claude-code", text: "embeddings mein cosine kyun?" },
+    { ts: "2026-08-06T01:01:00Z", modality: "code", source: "claude-code-teaching", text: "Both pushed. Working tree clean. ## Done — everything is on main" },
+  ];
+  assert("#108 my own teaching output is NOT his words — same modality, denied on source",
+    hisWords(selfStream).length === 1 && hisWords(selfStream)[0].source === "claude-code");
+  assert("#108 his typed prompts still pass — the deny-list is exact, not a claude-code* prefix",
+    hisWords([selfStream[0]]).length === 1);
+  assert("#108 a legacy row with NO source field still passes (voice afferents carry none)",
+    hisWords([{ ts: "2026-08-06T01:02:00Z", modality: "voice", text: "gaffer suno" }]).length === 1);
+  const leaked = await distill({ dir: "no-dir", stream: selfStream, presence: [], drills: null, workspace: null, gen: null });
+  assert("#108 the have/need counter stops reporting 100%-his when half the rows are mine",
+    leaked.have_need.his_words === 1 && leaked.have_need.sources_scanned === 2);
+  assert("#108 where_left_off can never be my own sign-off line",
+    !/Working tree clean|everything is on main/.test(String(leaked.where_left_off || "")));
+  // THE ASSERTION THAT WOULD HAVE CAUGHT THE DEAD FIX (verify pass, 6 Aug 2026).
+  // Every assertion above injects `deps.stream` by hand — a shape no production
+  // caller ever builds. main() goes through recentStream(), which projected rows to
+  // {ts, modality, text} and DROPPED source, so the deny-list above was inert in
+  // production while the suite stayed green. This one runs the REAL path: raw
+  // afferent rows in, recentStream's own projection, deny-list out.
+  {
+    const rawAfferent = [
+      { ts: "2026-08-06T02:00:00Z", modality: "code", source: "claude-code", text: "tokenization ke baad embeddings kyun aate hain, wahi samajh nahi aaya" },
+      { ts: "2026-08-06T02:01:00Z", modality: "code", source: "claude-code-teaching", text: "Both pushed. Working tree clean. ## Done — everything is on main" },
+    ];
+    const viaReal = recentStream("no-dir", 25, INTERACTIVE, rawAfferent);
+    assert("#108 recentStream CARRIES source through its projection (the field the filter needs)",
+      viaReal.length === 2 && viaReal.every(r => typeof r.source === "string"));
+    assert("#108 …so the deny-list actually bites on the PRODUCTION path, not just injected fixtures",
+      hisWords(viaReal).length === 1 && hisWords(viaReal)[0].source === "claude-code");
+  }
 
   // distill — mocked LLM, no network
   const set = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null, gen: async () => '{"concept_in_motion":"embeddings","open_loop":"why cosine similarity","where_left_off":"","next_step":""}' });

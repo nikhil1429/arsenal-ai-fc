@@ -32,7 +32,8 @@
 // ============================================================================
 import { spawnSync, spawn } from "node:child_process";
 import net from "node:net";
-import { writeFileSync, renameSync, readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import http from "node:http";
+import { writeFileSync, renameSync, readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -101,7 +102,10 @@ export function armTrigger(name, reason, dir = STATE_DIR) {
 // Is something already listening on this localhost port? A daemon that answers is a
 // daemon that is alive — cheaper and more honest than parsing a process list, and it
 // is the same question the organ itself asks (turnstile binds :4111 as its singleton).
-export function portOpen(port, timeoutMs = 400) {
+// The one probe timeout this file has always had. buildStamp() reuses it rather
+// than introducing a second, so there is exactly one number to ever re-tune.
+const PROBE_TIMEOUT_MS = 400;
+export function portOpen(port, timeoutMs = PROBE_TIMEOUT_MS) {
   return new Promise((resolve) => {
     const sock = new net.Socket();
     let done = false;
@@ -112,6 +116,87 @@ export function portOpen(port, timeoutMs = 400) {
     sock.once("error", () => finish(false));
     try { sock.connect(port, "127.0.0.1"); } catch { finish(false); }
   });
+}
+
+// THE BUILD CHECK (audit #108). Asks a daemon what code it is actually running.
+// Deliberately tiny and fail-soft: any error, timeout or missing endpoint returns
+// null, which the caller reports as "unverified" — never as a failure, because a
+// daemon without a /status route (cortex, turnstile) is not broken, just silent.
+// MEASURED, NOT CHOSEN (6 Aug 2026 — the captain's standing rule: no number is
+// guessed). First cut invented 500ms and an 8192-byte cap out of nothing. Live
+// measurement against the running thalamus on this box:
+//   · /status round-trip, 8 consecutive reads: 21 21 22 22 24 24 28 30 ms (max 30).
+//     So we reuse this file's OWN established probe timeout (portOpen's 400ms)
+//     rather than adding a second number — 13× the observed worst case.
+//   · /status payload: 147 bytes. The cap below is a runaway guard against a
+//     pathological response, NOT a tuning threshold — it can never change
+//     behaviour on a healthy endpoint — and it is written as an explicit multiple
+//     of the measured size so the basis stays auditable instead of magic.
+const STATUS_PAYLOAD_MEASURED_BYTES = 147;          // measured live, 2026-08-06
+const STATUS_MAX_BYTES = STATUS_PAYLOAD_MEASURED_BYTES * 32;
+export function buildStamp(port, timeoutMs = PROBE_TIMEOUT_MS) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const to = setTimeout(() => finish(null), timeoutMs);
+    try {
+      const req = http.get({ host: "127.0.0.1", port, path: "/status", timeout: timeoutMs }, (res) => {
+        if (res.statusCode !== 200) { res.resume(); clearTimeout(to); return finish(null); }
+        let raw = "";
+        res.on("data", (c) => { raw += c; if (raw.length > STATUS_MAX_BYTES) req.destroy(); });
+        res.on("end", () => { clearTimeout(to); try { finish(JSON.parse(raw)); } catch { finish(null); } });
+      });
+      req.on("error", () => { clearTimeout(to); finish(null); });
+      req.on("timeout", () => { try { req.destroy(); } catch {} clearTimeout(to); finish(null); });
+    } catch { clearTimeout(to); finish(null); }
+  });
+}
+
+// mtime of a repo-relative script path, or null if it cannot be read. Anchored on
+// __dirname's parent so the answer never depends on the caller's CWD.
+export function mtimeOf(relPath) {
+  try { return statSync(join(__dirname, "..", relPath)).mtimeMs; } catch { return null; }
+}
+
+// THE IMPORT GRAPH, NOT JUST THE ENTRY FILE (audit #108 verify pass, 6 Aug 2026).
+// The first cut compared only the daemon's own file. But thalamus.mjs imports
+// capture.mjs — repaired the same day — so editing a DEPENDENCY after boot left a
+// genuinely stale daemon reporting "build current". A module graph is the unit that
+// gets frozen at load, so the graph is what must be compared. Walks local relative
+// imports transitively; node: and package imports are not ours and are skipped.
+export function newestGraphMtime(relPath, seen = new Set()) {
+  const abs = join(__dirname, "..", relPath);
+  if (seen.has(abs)) return { ms: null, file: null };
+  seen.add(abs);
+  let newest = { ms: null, file: null };
+  let src = "";
+  try {
+    newest = { ms: statSync(abs).mtimeMs, file: relPath };
+    src = readFileSync(abs, "utf8");
+  } catch { return newest; }
+  for (const m of src.matchAll(/from\s+["'](\.\/[^"']+\.mjs)["']/g)) {
+    const child = join(dirname(relPath), m[1]).replace(/\\/g, "/");
+    const r = newestGraphMtime(child, seen);
+    if (r.ms != null && (newest.ms == null || r.ms > newest.ms)) newest = r;
+  }
+  return newest;
+}
+
+// THE UNIVERSAL FALLBACK: ask the OS when the daemon has nothing to say.
+// Only thalamus serves /status; cortex and turnstile hold bare port locks and would
+// have read "build unverified" forever — one organ covered out of three. The process
+// table knows when EVERY process started, without any daemon changing at all. Windows
+// only (this box), fail-soft everywhere: any error returns null and the caller reports
+// UNVERIFIED, which is an honest unknown and never a failure.
+export function processStartMs(relPath, deps = {}) {
+  const run = deps.run || spawnSync;
+  try {
+    const leaf = relPath.split("/").pop();
+    const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match '${leaf.replace(".", "\\.")}' } | Select-Object -First 1 -ExpandProperty CreationDate | ForEach-Object { $_.ToUniversalTime().ToString('o') }`;
+    const r = run("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { encoding: "utf8", timeout: 5000 });
+    const t = Date.parse(String((r && r.stdout) || "").trim());
+    return Number.isFinite(t) ? t : null;
+  } catch { return null; }
 }
 
 // Launch a long-running organ the way the schtasks entries always did: through the
@@ -187,7 +272,59 @@ export async function conduct(chain = MORNING, opts = {}) {
       if (up) {
         // Already serving. Relaunching would race a singleton lock at best and
         // double-ingest at worst — turnstile's own header says so.
-        steps.push({ id: step.id, ok: true, ms: Date.now() - t0, daemon: "already running", port: step.daemon.port });
+        //
+        // BUT "up" IS NOT "CURRENT" (audit #108, 6 Aug 2026). This branch used to
+        // report `ok: true, "already running"` and stop, which is how a thalamus that
+        // booted 45 minutes BEFORE its own file was rewritten sailed through two days of
+        // green 16/16 chains — and through a full audit. Node caches a module at load;
+        // nothing here ever restarts a daemon; so a port answering proves only that
+        // SOMETHING is listening, never that the repaired code is what answers.
+        // A daemon that states its build gets checked. One that does not is reported as
+        // UNVERIFIED rather than healthy — an honest unknown, never a fabricated green.
+        const stamp = await (opts.buildStamp || buildStamp)(step.daemon.port);
+        const onDisk = opts.mtimeOf ? opts.mtimeOf(step.args[0]) : mtimeOf(step.args[0]);
+        // TIER 2 — the daemon said nothing, so ask the OS. Covers cortex and turnstile,
+        // which have no /status at all, and checks the whole import GRAPH rather than
+        // just the entry file. Reported separately because it is a coarser instrument:
+        // process-start vs file-mtime, not the exact stamp the module itself captured.
+        if (!stamp || stamp.module_mtime_ms == null) {
+          const started = (opts.processStartMs || processStartMs)(step.args[0]);
+          const graph = (opts.newestGraphMtime || newestGraphMtime)(step.args[0]);
+          if (started != null && graph.ms != null && graph.ms > started) {
+            steps.push({
+              id: step.id, ok: false, ms: Date.now() - t0, port: step.daemon.port,
+              daemon: "STALE BUILD — running code older than its module graph (via process table)",
+              error: `booted ${new Date(started).toISOString()}; ${graph.file} last written ${new Date(graph.ms).toISOString()} — restart it to load the repairs`,
+            });
+            continue;
+          }
+          steps.push({
+            id: step.id, ok: true, ms: Date.now() - t0, port: step.daemon.port,
+            daemon: started != null && graph.ms != null
+              ? "already running (build current — via process table)"
+              : "already running (build unverified — no /status stamp and no process match)",
+          });
+          continue;
+        }
+        // EXACT EQUALITY, because there is no skew to tolerate (measured 6 Aug 2026).
+        // The first cut allowed 1000ms of drift — a number chosen, not measured. But
+        // both sides read mtimeMs from statSync on the SAME file: the daemon at boot,
+        // this probe now. Five consecutive live reads returned a delta of exactly 0,
+        // 0, 0, 0, 0. Any non-zero difference means the file genuinely changed after
+        // the daemon loaded it, which is precisely what this check exists to catch —
+        // so a tolerance could only ever hide a real stale build.
+        if (stamp && stamp.module_mtime_ms != null && onDisk != null && stamp.module_mtime_ms !== onDisk) {
+          steps.push({
+            id: step.id, ok: false, ms: Date.now() - t0, port: step.daemon.port,
+            daemon: "STALE BUILD — running code older than the file on disk",
+            error: `booted ${stamp.booted_at || "?"} against a module last written ${new Date(onDisk).toISOString()}; restart it to load the repairs`,
+          });
+          continue;
+        }
+        steps.push({
+          id: step.id, ok: true, ms: Date.now() - t0, port: step.daemon.port,
+          daemon: stamp && stamp.module_mtime_ms != null ? "already running (build current)" : "already running (build unverified — no /status build stamp)",
+        });
         continue;
       }
       let err = null;
@@ -261,9 +398,74 @@ async function selftest() {
       let launches = 0;
       const repUp = await conduct(
         [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
-        { ...base, probe: async () => true, launch: () => { launches++; } });
+        { ...base, probe: async () => true, launch: () => { launches++; },
+          buildStamp: async () => ({ module_mtime_ms: 1000 }), mtimeOf: () => 1000 });
       ok("DAEMON — an ALREADY-RUNNING daemon is left alone, never relaunched",
-        repUp.steps[0].ok === true && repUp.steps[0].daemon === "already running" && launches === 0);
+        repUp.steps[0].ok === true && /already running/.test(repUp.steps[0].daemon) && launches === 0);
+
+      // ---- audit #108: "UP" IS NOT "CURRENT" -------------------------------
+      // The measured failure: thalamus booted 04-08 16:43:34, its file was rewritten
+      // 17:28:30, and this chain reported 16/16 green for two days while every 4-Aug
+      // repair sat inert. A port cannot tell you which build answers it.
+      let staleLaunches = 0;
+      const repStale = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
+        { ...base, probe: async () => true, launch: () => { staleLaunches++; },
+          buildStamp: async () => ({ module_mtime_ms: 1000, booted_at: "2026-08-04T16:43:34Z" }), mtimeOf: () => 999999 });
+      ok("#108 DAEMON — a daemon running code OLDER than its file is reported FAILED, not healthy",
+        repStale.steps[0].ok === false && /STALE BUILD/.test(repStale.steps[0].daemon));
+      ok("#108 DAEMON — a stale daemon is still never auto-relaunched (the double-ingest law holds)",
+        staleLaunches === 0);
+      ok("#108 DAEMON — the stale report names both clocks so the fix is obvious",
+        /booted 2026-08-04T16:43:34Z/.test(repStale.steps[0].error) && /restart it/.test(repStale.steps[0].error));
+
+      // A daemon with no /status build stamp (cortex, turnstile) is UNVERIFIED —
+      // an honest unknown. It must NOT be failed: silence is not a defect.
+      const repUnver = await conduct(
+        [{ id: "cortex", args: ["scripts/cortex.mjs"], daemon: { port: 4112 } }],
+        { ...base, probe: async () => true, launch: () => {}, buildStamp: async () => null, mtimeOf: () => 1000,
+          processStartMs: () => null, newestGraphMtime: () => ({ ms: null, file: null }) });
+      ok("#108 DAEMON — no build stamp AND no process match ⇒ UNVERIFIED, still ok (honest unknown, never a fake green)",
+        repUnver.steps[0].ok === true && /build unverified/.test(repUnver.steps[0].daemon));
+
+      // ---- verify pass: TIER 2, the process-table fallback ------------------
+      // Only thalamus serves /status. Before this, cortex and turnstile read
+      // "unverified" forever — the defect class was closed for ONE organ of three.
+      const repOsStale = await conduct(
+        [{ id: "cortex", args: ["scripts/cortex.mjs"], daemon: { port: 4112 } }],
+        { ...base, probe: async () => true, launch: () => {}, buildStamp: async () => null,
+          processStartMs: () => 1000, newestGraphMtime: () => ({ ms: 2000, file: "scripts/cortex.mjs" }) });
+      ok("#108 DAEMON — a daemon with NO /status is still caught stale, via the process table",
+        repOsStale.steps[0].ok === false && /process table/.test(repOsStale.steps[0].daemon));
+      const repOsOk = await conduct(
+        [{ id: "turnstile", args: ["scripts/turnstile.mjs"], daemon: { port: 4111 } }],
+        { ...base, probe: async () => true, launch: () => {}, buildStamp: async () => null,
+          processStartMs: () => 3000, newestGraphMtime: () => ({ ms: 2000, file: "scripts/turnstile.mjs" }) });
+      ok("#108 DAEMON — booted AFTER its newest file ⇒ current (turnstile's real case, never a false alarm)",
+        repOsOk.steps[0].ok === true && /build current/.test(repOsOk.steps[0].daemon));
+      // the graph, not just the entry file: thalamus imports capture.mjs
+      {
+        const g = newestGraphMtime("scripts/thalamus.mjs");
+        ok("#108 DAEMON — the staleness check walks the IMPORT GRAPH, not just the entry file",
+          g.ms != null && typeof g.file === "string" && g.file.endsWith(".mjs"));
+      }
+
+      // EXACT match ⇒ current. Measured live: both sides statSync the same file and
+      // the delta was 0 on 5/5 reads, so there is no skew to tolerate and any
+      // difference at all is a real stale build (the 1000ms tolerance the first cut
+      // invented could only have hidden one).
+      const repSame = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
+        { ...base, probe: async () => true, launch: () => {},
+          buildStamp: async () => ({ module_mtime_ms: 1786014546971.656 }), mtimeOf: () => 1786014546971.656 });
+      ok("#108 DAEMON — an exact mtime match reads BUILD CURRENT (measured skew is 0, so equality is the test)",
+        repSame.steps[0].ok === true && /build current/.test(repSame.steps[0].daemon));
+      const repOneMs = await conduct(
+        [{ id: "thalamus", args: ["scripts/thalamus.mjs"], daemon: { port: 4113 } }],
+        { ...base, probe: async () => true, launch: () => {},
+          buildStamp: async () => ({ module_mtime_ms: 1000 }), mtimeOf: () => 1001 });
+      ok("#108 DAEMON — even a 1ms difference is a stale build (no invented tolerance to hide behind)",
+        repOneMs.steps[0].ok === false && /STALE BUILD/.test(repOneMs.steps[0].daemon));
 
       // down → launched detached, and the chain does NOT wait for an exit code
       const spawned = [];
@@ -428,6 +630,18 @@ async function main() {
     console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}`);
   }
   console.log(`conductor: morning chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${dry ? " (dry — no report written)" : ` → ${REPORT}`}`);
+  // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).
+  // This function printed its FAIL lines and then fell off the end, so the process
+  // exited 0 no matter what broke. That is the single most expensive silence in the
+  // organism: one scheduled task now carries FOURTEEN organs, and Task Scheduler's
+  // Last Result was the only channel left that could report on any of them. Every
+  // one of the 14 individual tasks it replaced could fail visibly; the chain that
+  // replaced them could not. Same defect class this file's own `--dry` comment above
+  // calls out — "a task returning 0 after failing inside".
+  if (rep.failed) {
+    console.error(`conductor: ${rep.failed} step(s) FAILED — exiting non-zero so Task Scheduler's Last Result says so.`);
+    process.exitCode = 1;
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

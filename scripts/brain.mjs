@@ -2546,10 +2546,32 @@ async function main() {
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
+    // THE PACEMAKER RE-READS ITS OWN SWITCH (audit #108, 6 Aug 2026).
+    // `cfg` was loaded ONCE in main() and this loop reused it forever, so a resident
+    // daemon kept obeying whatever brain_config.json said at boot. Measured live: PID
+    // 21080 (started 05-08 07:06) was still printing "PAUSED — 19/23 enabled LLM jobs
+    // held" at beat 394 while the file on disk had read `paused: false` since 04:08
+    // that morning. The 30-min BrainTick spawns fresh and did honour the change, so
+    // the harm looked one-directional and cosmetic — but the DANGEROUS direction is the
+    // reverse: setting `paused: true` to stop a token bleed would not stop this loop,
+    // and it is the process holding the plan's credit card. A pause switch that a
+    // running process cannot see is not a pause switch.
+    // Re-read per beat, never trusting a partial file: loadConfig() returning null or
+    // throwing (an atomic rename caught mid-flight) keeps the LAST GOOD config rather
+    // than crashing the pacer or silently falling back to defaults.
+    let liveCfg = cfg;
     while (!stop) {
       const bnow = new Date();
       const bdeps = buildDeps(bnow);   // --dry ⇒ the beat calls NOTHING real (E2E audit 25 Jul 2026)
       try {
+        // `if (fresh)` was DEAD CODE (verify pass, 6 Aug 2026): loadConfig() never
+        // returns null and never throws — on a parse error it returns a DEFAULTS
+        // deep-copy tagged `_config_error`. So an unreadable brain_config.json
+        // (an atomic rename caught mid-flight) would have swapped the live pacer to
+        // DEFAULTS: jobs = 0 and `paused` undefined — silently DROPPING a deliberate
+        // pause, the exact direction the comment above swears this prevents.
+        try { const fresh = loadConfig(); if (fresh && !fresh._config_error) liveCfg = fresh; } catch { /* keep last good */ }
+        const cfg = liveCfg;           // shadows the boot config for the rest of this beat
         const hr = headroom(cfg, readLines(LEDGER), readJson(QUEUE) || {}, bnow, bdeps.signals);
         const pace = targetBurn(cfg, hr, bnow);
         const t = await withTickLock(() => tick(cfg, bdeps));

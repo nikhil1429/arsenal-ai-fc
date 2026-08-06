@@ -19,10 +19,23 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 > plus BOTH anti-quiz-dump laws were absent, so perfect compliance with this file still
 > produced a non-method session. That is the defect this render closes.)*
 
-## THE PACER — non-negotiable, it is how the steps stop being prose
+## THE PACER — non-negotiable, it is how skipping a step stops being invisible
 
 `scripts/forge_session.mjs` is the sole writer of `state/forge_session.json`, and a
 `UserPromptSubmit` hook re-injects the contract **every turn**. You MUST drive it:
+
+> **What the pacer can and cannot do — say it the way the code says it** *(6 Aug 2026, audit
+> #108).* This heading used to read "it is how the steps stop being prose", which claims an
+> enforcement the organ does not have and cannot have. Its own LAWS header
+> (`forge_session.mjs:30-39`) is blunt about it: *"The step number is a CLAIM Claude makes, not
+> a proof. This organ makes the claim VISIBLE and the skipping COUNTABLE — it cannot make it
+> impossible,"* and *"METHOD_CLEAN IS A FLOOR, NOT A CERTIFICATE"* — a session that never ran
+> `start` is invisible to it, `check_q` is self-reported, and elapsed/axis-span are reported
+> and never thresholded. So the pacer is a witness, not a fence: **the only thing that actually
+> runs the 12 steps is you running them.** A green coverage report is evidence, never proof.
+> (One real fence does exist and is not softened by this note: the **second** check-question
+> inside steps 3-6 is genuinely REFUSED by `moment check_q`, and each refusal is counted into
+> `check_q_refused`, which makes the session dirty. See the anti-quiz-dump laws below.)
 
 ```
 node scripts/forge_session.mjs boot                   # read-only; SessionStart runs it for you
@@ -108,10 +121,15 @@ is not.
   **His own data always** — FinOps/Blinkit strings, never "hello world". Deliver inline; if
   the render fails, hand him a self-contained `.html` immediately.
   Widget time-box 45-60 min: overrun cuts the WIDGET's scope, never the concept's.
-  **CHECK THE REGISTRY FIRST — `node scripts/widget.mjs list`.** Measured 5 Aug 2026:
-  **0 of 4 locked capsules had a widget**, and the single widget in the repo belonged to a
-  concept that was not locked. The Contract had no code owner at all (viz.mjs is the club
-  WALL, not a concept-widget engine), so nothing could see that. The registry only KNOWS —
+  **CHECK THE REGISTRY FIRST — `node scripts/widget.mjs list`. READ THE COUNT OFF THAT
+  COMMAND, never off this page** *(6 Aug 2026, audit #108: this line used to hardcode
+  "0 of 4 locked capsules had a widget". That was true when measured on 5 Aug and false one
+  day later — the registry is live state and a number copied into a skill file rots the moment
+  he registers a widget, then lies to the next session about the very gap the check exists to
+  close.)* The reason the check exists is unchanged: **when the registry was first run on
+  5 Aug 2026, no locked capsule had a widget at all**, and the single widget in the repo
+  belonged to a concept that was not locked. The Contract had no code owner at all (viz.mjs is
+  the club WALL, not a concept-widget engine), so nothing could see that. The registry only KNOWS —
   it never generates, because a widget's whole value is the bespoke hero example
   ("Aristo Eco — ₹81,500") and a generator produces exactly the generic widget canon forbids.
   After the gates are actually driven:

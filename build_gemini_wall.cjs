@@ -1,3 +1,22 @@
+// ============================================================================
+// build_gemini_wall.cjs — LEGACY / ORPHAN. NOT the plan of record.
+// ----------------------------------------------------------------------------
+// 6 Aug 2026 audit, finding #108.
+// Nothing calls this file: no npm script, no scheduled task, no organ. It is a
+// root-level orphan kept for reference (layering law — it is not deleted).
+//
+// THE PLAN OF RECORD for the Gemini wall is brain.mjs's `gemini_render` job,
+// whose output viz.mjs:1293 reads from
+//     dressing-room/state/brain_out/gemini_wall/<today>.md
+// and then sanitizes + folds into club/wall_gemini.html.
+//
+// WHY THE OUTPUT NAME CHANGED: this script used to write that EXACT path. So the
+// one person most likely to run it — someone debugging a broken wall — would have
+// silently overwritten the live render with this stale build, and viz.mjs would
+// have folded the overwrite in without ever knowing. A debugging tool that
+// destroys the artifact under test is worse than no tool. It now writes a
+// clearly-legacy sibling, <today>.legacy.md, which viz.mjs does NOT read.
+// ============================================================================
 const fs = require('fs');
 const path = require('path');
 
@@ -465,5 +484,8 @@ const html = `<!doctype html>
 </html>`;
 
 fs.mkdirSync(path.join('dressing-room', 'state', 'brain_out', 'gemini_wall'), { recursive: true });
-fs.writeFileSync(path.join('dressing-room', 'state', 'brain_out', 'gemini_wall', today + '.md'), html);
-console.log('Done!');
+// 6 Aug 2026 (audit #108): was `today + '.md'` — the live render's own path, read
+// by viz.mjs:1293. Writing there from an uncalled orphan silently replaced the
+// real wall. `.legacy.md` is ignored by viz.mjs, so this stays a safe scratch build.
+fs.writeFileSync(path.join('dressing-room', 'state', 'brain_out', 'gemini_wall', today + '.legacy.md'), html);
+console.log('Done! (legacy build — wrote ' + today + '.legacy.md; the live wall is brain.mjs gemini_render -> ' + today + '.md)');

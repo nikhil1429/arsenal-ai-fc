@@ -48,8 +48,19 @@ the receipts.
 ## When something feels off
 `node scripts/brain.mjs status` (budget + eligibility) ·
 `node scripts/physio.mjs` (what's bleeding) ·
-`npm run organism:selftest` (31 suites) ·
-`npm run squad:selftest` (all 8 original agents).
+`npm test` — **the authority**: runs every suite member INDEPENDENTLY and reports all of them
+(`npm run test:suites` prints the membership + the total). Live on 2026-08-06: **62 members, all green.**
+
+<!-- audit #108, 6 Aug 2026. The two lines below are FROZEN as-written and are no longer the
+     instruction. They read `npm run organism:selftest` (31 suites) · `npm run squad:selftest`
+     (all 8 original agents) — both counts wrong (live: 43 and 19, total 62), and both commands
+     are `&&` chains, i.e. FAST-FAIL membership records, not nets: one red organ leaves every
+     member after it unrun and unreported (package.json `_runner_law`). A hardcoded count in a
+     runbook rots the first time an organ is added — audit #107 added four and neither number
+     moved. Hence the command, not the number. -->
+~~`npm run organism:selftest` (31 suites) · `npm run squad:selftest` (all 8 original agents).~~
+Those two chains still exist and are still useful for a fast pre-commit glance — just don't read
+a count off them.
 
 ## Sunday
 Off. The organism idles with you. The Boot Room files its one proposal for

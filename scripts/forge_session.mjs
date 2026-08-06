@@ -22,6 +22,10 @@
 // LAWS:
 //   · SOLE WRITER of dressing-room/state/forge_session.json. Nothing else writes it.
 //   · NEVER teaches, never grades, never touches reps_log — capture.mjs owns reps.
+//     AMENDED (audit #108, 6 Aug 2026): "never touches" is now exactly NEVER WRITES.
+//     `close` READS reps_log.jsonl, one direction only, to say whether this session
+//     banked a single rep — because for two whole sessions it banked none and the
+//     report said nothing at all. capture.mjs remains its sole writer. See repsBanked().
 //   · `contract` and `status` are HOOK-SAFE: fail-silent, exit 0, print NOTHING
 //     when there is no fresh session (a pacer must never bite the editor).
 //   · STALE = SILENT. A session older than STALE_HOURS is not a live session.
@@ -43,7 +47,9 @@
 // READS:     its own forge_sessions.jsonl (`boot` only) AND, at `close` only,
 //            teaching_contract.json STRICTLY READ-ONLY — an afferent nerve, never a
 //            write (teaching_contract.mjs is that file's sole writer). It still
-//            never reads reps_log (capture.mjs owns it).
+//            never reads reps_log (capture.mjs owns it).  ← TRUE UNTIL audit #108,
+//            6 Aug 2026: `close` now reads reps_log.jsonl on the SAME terms — one
+//            direction, capture.mjs still the sole writer, a bad file costs nothing.
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> [done|defer]
 //        · moment <kind> · status · contract · boot · close · selftest
 // ============================================================================
@@ -57,6 +63,7 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const SESSION   = join(STATE_DIR, "forge_session.json");
 const HISTORY   = join(STATE_DIR, "forge_sessions.jsonl");
 const TEACHING  = join(STATE_DIR, "teaching_contract.json");   // READ-ONLY here; owned by teaching_contract.mjs
+const REPS      = join(STATE_DIR, "reps_log.jsonl");           // READ-ONLY here; owned by capture.mjs (audit #108)
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
 const STEPS = [
@@ -564,6 +571,119 @@ function loadTeaching(path = TEACHING) {
     const j = JSON.parse(readFileSync(path, "utf8"));
     return (j && typeof j === "object" && !Array.isArray(j) && Array.isArray(j.rules)) ? j : null;
   } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------
+// DID A SINGLE REP ACTUALLY LAND? (audit #108, 6 Aug 2026)
+//
+// WHAT WAS WRONG: the close report graded the SESSION (steps · axes · gates · the two
+// clocks) and the TEACHER (drifts), and never once asked whether the one durable thing
+// a study session is supposed to leave behind — a rep — reached disk. So a session could
+// close reading clean and bank NOTHING, and the report was silent about the only loss
+// that is total.
+//
+// THE EVIDENCE, ON DISK TODAY: reps_log.jsonl holds NINE rows, newest
+// 2026-07-31T17:48:00.000Z. forge_sessions.jsonl holds FOUR sessions on `hallucinations`,
+// two of which BOTH opened and closed after that stamp (2026-07-31T22:55 → 2026-08-02T09:00
+// and 2026-08-02T09:04 → 2026-08-04T16:24). Every rep of those two sessions is simply gone,
+// and both close reports printed their coverage without a word about it. That is the same
+// class of lie this file already refuses elsewhere — an unmeasured silence read as a clean
+// sheet — sitting in the one report built to expose it.
+//
+// WHAT IT CLAIMS AND WHAT IT CANNOT: it counts ROWS whose `ts` is at or after started_at.
+// It cannot know whether a row belongs to this concept, this session or this human —
+// capture.mjs owns that file and this is a one-way read. A count is evidence that
+// something was banked; it is NEVER a grade, and the line says so out loud.
+// NO ANCHOR, NO CLAIM: an unparseable started_at returns null and the report says nothing,
+// rather than defaulting to epoch and reporting every rep ever written as "this session" —
+// the same rule teachingDrifts() follows, for the same reason.
+// DEFENSIVE BY DESIGN: an absent file is a MEASURED zero (nothing has ever been banked),
+// a half-written JSONL line is skipped and counted, and any read failure is null — a
+// neighbour organ going bad must never cost the captain his coverage report.
+// ---------------------------------------------------------------------------
+function repsBanked(started_at, path = REPS) {
+  const t0 = Date.parse(started_at || "");
+  if (!Number.isFinite(t0)) return null;
+  try {
+    if (!existsSync(path)) return { since: started_at, present: false, reps: 0, total: 0, malformed: 0, undated: 0, newest: null };
+    let reps = 0, total = 0, malformed = 0, undated = 0, newest = null;
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let o = null;
+      try { o = JSON.parse(line); } catch { malformed++; continue; }
+      if (!o || typeof o !== "object" || Array.isArray(o)) { malformed++; continue; }
+      total++;
+      const t = Date.parse(o.ts || "");
+      if (!Number.isFinite(t)) { undated++; continue; }   // a rep with no clock cannot be attributed to a window
+      if (newest === null || t > newest) newest = t;
+      if (t >= t0) reps++;
+    }
+    return { since: started_at, present: true, reps, total, malformed, undated,
+             newest: newest === null ? null : new Date(newest).toISOString() };
+  } catch { return null; }
+}
+
+// ONE line, LOUD on zero. The bad-news voice here is the one already established by
+// teachingDriftLine's NOT-MEASURED branch: name the number, name the evidence behind it,
+// name the command that fixes it. Zero is the whole reason this line exists, so zero is
+// the branch that shouts; a healthy count still prints, unconditionally, for the same
+// reason the two clocks do — a report that only speaks when it has bad news makes
+// "have no bad news" the cheapest move for a tired session.
+function repsBankedLine(r) {
+  if (!r) return null;
+  const junk = (r.malformed || r.undated)
+    ? ` (${r.malformed} unparseable line${r.malformed === 1 ? "" : "s"} + ${r.undated} undated row${r.undated === 1 ? "" : "s"} skipped)` : "";
+  if (r.reps > 0) {
+    return `REPS BANKED SINCE SESSION START: ${r.reps} of ${r.total} rows in reps_log.jsonl${junk}`
+      + ` — a COUNT, not a grade: capture.mjs owns that file and this read cannot tell whose rep it is.`;
+  }
+  return `⛔ REPS BANKED SINCE SESSION START: ZERO — `
+    + (r.present
+        ? `reps_log.jsonl holds ${r.total} row${r.total === 1 ? "" : "s"}, newest ${r.newest ? r.newest.slice(0, 10) : "undated"}, and NOT ONE lands at or after ${r.since}.`
+        : `reps_log.jsonl does not exist — nothing has ever been banked.`)
+    + `${junk} This session is closing with no durable trace: every gut-word he said out loud tonight dies with this terminal.`
+    + ` Bank them NOW, one per rep — \`node scripts/capture.mjs rep …\` (same validator as \`paste\`) — before anything else.`;
+}
+
+// ---------------------------------------------------------------------------
+// JIRAH HAS NEVER RUN — NOT ONCE, IN THIS MACHINE'S WHOLE HISTORY (audit #108, 6 Aug 2026).
+//
+// EVIDENCE: all four rows in forge_sessions.jsonl carry "question_moments":{"jirah":0},
+// and the first of them also carries "axes_done":["a","b","c","e","f"] — five axes declared
+// done on a concept that has never been cross-examined once. coverage() ALREADY HELD that
+// fact (that same row names axes_ungraded abcef), and the close report printed the
+// CONSEQUENCE while never naming the CAUSE: step 9 was skipped in every session on record.
+// A reader sees "axes marked done without their OWN jirah" and hears a grading-hygiene nit;
+// the true reading is that the grading step itself has never happened at all.
+//
+// HIS FRAMING, 31 Jul, verbatim in spirit: a "done" axis without a Jirah is a CLAIM, not a
+// grade. It is printed in his words because that sentence is what makes the line land.
+// SILENT the moment one jirah runs, so it can never become the always-fires warning that
+// trains him to ignore it (the audit's #38 failure mode).
+// A MISSING counter is not a measured zero: if question_moments has no `jirah` at all we
+// say nothing, rather than reporting an absence as a finding.
+//
+// REVIEW CORRECTION, same day (audit #108 review, 6 Aug 2026) — SCOPE.
+// The line as first written said `NEVER RAN — … so NO axis on <concept> has been GRADED`.
+// That sentence is a claim about the concept's WHOLE HISTORY, but the only number behind
+// it is `cov.question_moments.jirah`, which coverage() computes from THIS session's
+// counters alone — `close` never opens forge_sessions.jsonl (only `boot` does). Today the
+// two readings coincide, because all four rows on disk carry jirah:0; the first session
+// that does run a Jirah makes the wider claim false while the counter still reads 0 on the
+// next one, and this file's whole argument is that an unmeasured silence must never be
+// printed as a measured fact. So the wording now says exactly what was measured — this
+// session — and nothing more. Making it history-wide is a real option, but it means
+// reading the history file at close, which is a different organ's worth of behaviour.
+// The volume, the ⛔, and his CLAIM-not-a-grade sentence are untouched.
+// ---------------------------------------------------------------------------
+function jirahNeverRanLine(cov) {
+  if (!cov || !cov.question_moments) return null;
+  const j = cov.question_moments.jirah;
+  if (!Number.isFinite(j) || j > 0) return null;
+  const done = Array.isArray(cov.axes_done) ? cov.axes_done : [];
+  return `⛔ JIRAH (step 9) NEVER RAN IN THIS SESSION — 0 jirah moments, so NO axis on ${cov.concept} was GRADED tonight`
+    + (done.length ? `, including the ${done.length} marked done (${done.join("")})` : "")
+    + `. A "done" axis without a Jirah is a CLAIM, not a grade.`;
 }
 
 // Two pure predicates so the guards are unit-testable without disk.
@@ -1106,6 +1226,68 @@ function selftest() {
     && row2.method_clean === true);
   rmSync(hp2, { force: true });
 
+  // =========================================================================
+  // 6 Aug 2026 — audit #108: DID ANY REP LAND · DID JIRAH EVER RUN
+  // Every fixture below lives under tmpdir(); the live reps_log.jsonl is never read.
+  // =========================================================================
+  const rp = join(tmpdir(), `forge_reps_selftest_${process.pid}.jsonl`);
+  rmSync(rp, { force: true });
+  const rMissing = repsBanked(nowISO(T0), rp);
+  assert("REPS — an ABSENT reps_log is a measured zero (present:false, reps:0), never a throw",
+    rMissing && rMissing.present === false && rMissing.reps === 0 && rMissing.total === 0);
+  assert("…and it says the file does not exist rather than implying rows were checked",
+    /does not exist/.test(repsBankedLine(rMissing)) && /ZERO/.test(repsBankedLine(rMissing)));
+  writeFileSync(rp, [
+    JSON.stringify({ ts: nowISO(T(-90)), concept: "embeddings" }),      // banked BEFORE this session
+    JSON.stringify({ ts: nowISO(T0), concept: "hallucinations" }),      // exactly AT started_at — counts
+    JSON.stringify({ ts: nowISO(T(20)), concept: "hallucinations" }),   // during
+    "{ this is not json",                                              // half-written line
+    JSON.stringify({ concept: "no ts at all" }),                        // undated row
+  ].join("\n") + "\n");
+  const rBytes = readFileSync(rp, "utf8");
+  const rb = repsBanked(nowISO(T0), rp);
+  assert("REPS — counts only rows at or after started_at; an earlier rep is never borrowed",
+    rb.reps === 2 && rb.total === 4 && rb.newest === nowISO(T(20)));
+  assert("REPS — a half-written line and an undated row are SKIPPED and COUNTED, never fatal",
+    rb.malformed === 1 && rb.undated === 1);
+  assert("READ-ONLY — capture.mjs stays reps_log's sole writer; the read leaves it byte-identical",
+    readFileSync(rp, "utf8") === rBytes);
+  assert("NO ANCHOR, NO CLAIM — an unparseable/absent started_at counts nothing and prints nothing",
+    repsBanked("nonsense", rp) === null && repsBanked(undefined, rp) === null && repsBankedLine(null) === null);
+  const rZero = repsBanked(nowISO(T(600)), rp);
+  const zeroLine = repsBankedLine(rZero);
+  assert("THE 31 JUL → 4 AUG HOLE — a session whose whole window is after the newest rep reports ZERO",
+    rZero.reps === 0 && rZero.total === 4 && /ZERO/.test(zeroLine));
+  assert("ZERO IS LOUD — it names the newest stamp, the window, and the command that fixes it",
+    zeroLine.includes(nowISO(T(20)).slice(0, 10)) && zeroLine.includes(nowISO(T(600)))
+    && /capture\.mjs rep/.test(zeroLine) && /⛔/.test(zeroLine));
+  assert("A BANKED SESSION still prints, and refuses to call the count a grade",
+    /^REPS BANKED SINCE SESSION START: 2 of 4 rows/.test(repsBankedLine(rb))
+    && /COUNT, not a grade/.test(repsBankedLine(rb)));
+  assert("THE REPS LINE IS ONE LINE in every branch (the close report is not a wall)",
+    [zeroLine, repsBankedLine(rb), repsBankedLine(rMissing)].every((l) => typeof l === "string" && l.split("\n").length === 1));
+  rmSync(rp, { force: true });
+
+  // ---- JIRAH: 0 in all four rows on disk, and the report never said so.
+  const jLive = jirahNeverRanLine(coverage(legacy, T0));       // the live row-1 shape: abcef done, jirah 0
+  assert("JIRAH NEVER RAN — the live-row shape prints the line, names the concept and the marks",
+    /JIRAH \(step 9\) NEVER RAN/.test(jLive) && /hallucinations/.test(jLive) && /\(abcef\)/.test(jLive));
+  assert("…in HIS framing — a 'done' axis without a Jirah is a CLAIM, not a grade",
+    /A "done" axis without a Jirah is a CLAIM, not a grade\./.test(jLive) && jLive.split("\n").length === 1);
+  assert("JIRAH — it speaks with NO axes marked too (three of the four live rows are exactly that)",
+    /NEVER RAN/.test(jirahNeverRanLine(coverage(blank("hallucinations", T0), T0))));
+  assert("JIRAH — SILENT the moment one actually runs (never the always-fires warning, audit #38)",
+    jirahNeverRanLine(coverage(mAj, T0)) === null && jirahNeverRanLine(coverage(clean, T0)) === null);
+  assert("JIRAH — a missing counter is NOT a measured zero, and junk input never throws",
+    jirahNeverRanLine(null) === null && jirahNeverRanLine({}) === null
+    && jirahNeverRanLine({ concept: "x", question_moments: {} }) === null);
+  // Review correction (6 Aug 2026): the counter behind this line is THIS session's, and
+  // `close` never opens the history file — so the sentence may not claim the concept's
+  // whole past. Pinned here so the wider wording cannot come back unnoticed.
+  assert("JIRAH — the claim is SCOPED to this session, never to the concept's whole history",
+    /NEVER RAN IN THIS SESSION/.test(jLive) && /was GRADED tonight/.test(jLive)
+    && !/has been GRADED/.test(jLive));
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -1200,6 +1382,10 @@ switch (mode) {
     // Computed BEFORE the append so the history row carries the same thing stdout
     // says — a number read once in a terminal and never written down is not a record.
     const drifts = teachingDrifts(loadTeaching(), s.started_at);
+    // audit #108 — read BEFORE the append too, and for the same reason as the drifts:
+    // whatever stdout is about to say about this session must be computed off one
+    // snapshot of disk, not re-read after the close has already moved things.
+    const reps = repsBanked(s.started_at);
     console.log(JSON.stringify(cov, null, 2));
     if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
       appendCoverage(s, "close", drifts ? { teaching_drifts: drifts } : {});
@@ -1215,6 +1401,9 @@ switch (mode) {
     if (cov.steps_missed.length) R.push(`  steps never run: ${cov.steps_missed.map((i) => `${i} ${STEPS[i]}`).join(" · ")}`);
     if (cov.axes_untouched.length) R.push(`  axes never touched: ${cov.axes_untouched.join("")}`);
     if (cov.axes_ungraded.length) R.push(`  axes marked done without their OWN jirah (self-rated or batch-graded, not per-axis graded): ${cov.axes_ungraded.join("")}`);
+    // #108 — the CAUSE under that line, which nothing had ever named (see jirahNeverRanLine).
+    const jl = jirahNeverRanLine(cov);
+    if (jl) R.push(`  ${jl}`);
     if (cov.core_missing.length) R.push(`  CORE axis ${cov.core_missing.join("")} never closed (CORE-NEVER-DEFERRED — canon forbids deferring it)`);
     if (cov.widget_gates < WIDGET_GATES_MIN) R.push(`  widget guess-gates driven ${cov.widget_gates}/${WIDGET_GATES_MIN} — built is not driven`);
     if (cov.check_q_refused) R.push(`  check-questions REFUSED: ${cov.check_q_refused} (quiz-dump attempts)`);
@@ -1223,6 +1412,10 @@ switch (mode) {
     // "have no bad news" the cheapest move. Silent only when the file cannot be read.
     const dl = teachingDriftLine(drifts);
     if (dl) R.push(`  ${dl}`);
+    // #108 — and this grades neither the session nor the teacher: it asks whether the
+    // night left anything behind at all. Unconditional, loudest at zero.
+    const rl = repsBankedLine(reps);
+    if (rl) R.push(`  ${rl}`);
     R.push("  → say all of this out loud to him, verbatim, before the delta.");
     R.push(`forge_session: recorded to ${HISTORY}`);
     console.log(R.join("\n"));

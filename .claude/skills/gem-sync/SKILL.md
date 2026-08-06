@@ -25,3 +25,16 @@ After a successful sync, write the stamp so physio stops reminding until it is d
 ```
 node -e "require('fs').writeFileSync('dressing-room/state/gem_sync_stamp.json', JSON.stringify({ at: new Date().toISOString() }))"
 ```
+
+> 🚩 **KNOWN LAW-BREAK — this write has no owner (audit #108, 6 Aug 2026, UNRESOLVED).**
+> The one-liner above is a **raw hand-write into `dressing-room/state/`**, which CLAUDE.md's
+> single-writer law forbids outright: *"Never hand-edit a state file"*, writes go through
+> owners only. Every other state file has a named owning script; `gem_sync_stamp.json` has
+> **none** — no `.mjs` in `scripts/` writes it, so the skill writes it itself and the law is
+> broken every single sync. It is flagged here rather than quietly fixed because the fix is a
+> real decision, not an edit: either an owner organ takes the file (physio is the reader, so
+> it is the obvious candidate) or the stamp moves into a file that already has one. Inventing
+> an owner inside this skill would just be a second unowned writer. **Until the captain rules,
+> run the line knowingly — and know it is a state write with no owning script behind it.**
+> *(Verified 6 Aug 2026: the only other reference to this file anywhere in the repo is
+> `physio.mjs:672`, which READS it. Nothing writes it but this skill.)*

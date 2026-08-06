@@ -42,7 +42,21 @@ function rejirahPendingLine(dir) {
     + `  Patch: \`node scripts/rejirah.mjs pending\``;
 }
 
-function rejirahDueLine(dir) {
+// AUDIT #108 (6 Aug 2026) — THE ONLY SLOT ON THIS SCREEN WITH NO AGE ON IT.
+// Every other line in this brief that is fed by a file someone else refreshes says how
+// old it is: the working_set carries WS_STALE_DAYS + the "(Nd ago)" tag, and the sprint
+// spine got SPRINT-STALE on 5 Aug for exactly this reason. This line did not — it printed
+// `embeddings 42d` as if the 42 had been computed this morning. capsule_map.json is
+// written ONLY by capsule_bridge.mjs on the morning conductor's run (its `generated_at`
+// on disk today reads 2026-08-05T13:58Z while this brief is being read on 6 Aug), so the
+// day-counts drift one further day behind reality for every conductor run that does not
+// happen — and an overdue count that is quietly wrong is worse than one that is loudly
+// old, because the whole point of this line is to rank what is rotting fastest.
+// SAME PATTERN, NOT A NEW ONE: the existing ageDays() helper, the same "more than a day"
+// boundary the working_set tag already uses (`wsAge >= 1`), and a MISSING generated_at is
+// CALLED OUT rather than assumed fresh — an untimestamped map is the one you can least
+// afford to trust silently. No new threshold is invented here.
+function rejirahDueLine(dir, now = Date.now()) {
   const p = join(dir, "capsule_map.json");
   if (!existsSync(p)) return null;
   const m = JSON.parse(readFileSync(p, "utf8"));
@@ -51,9 +65,16 @@ function rejirahDueLine(dir) {
   if (!od.length) return null;
   const never = od.filter((r) => (r.rounds_done || 0) === 0).length;
   const head = od.slice(0, 3).map((r) => `${r.concept} ${r.overdue_days}d`).join(" · ");
+  const mapAge = ageDays(m.generated_at, now);
+  const mapTag = mapAge === null
+    ? `  (is map pe koi generated_at nahi — ye din-ginti kitni purani hai, pata nahi: \`node scripts/capsule_bridge.mjs\`)`
+    : mapAge >= 1
+      ? `  (MAP ${Math.floor(mapAge)}d purana — ye din-ginti us din ki hai, aaj ki nahi: \`node scripts/capsule_bridge.mjs\`)`
+      : "";
   return `RE-JIRAH OVERDUE (${od.length}): ${head}${od.length > 3 ? " …" : ""}`
     + (never ? ` — ${never} ka ek bhi round nahi hua.` : "")
-    + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`;
+    + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`
+    + mapTag;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -269,7 +290,7 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     if (pendLine) L.push(pendLine);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
-    const dueLine = rejirahDueLine(dir);
+    const dueLine = rejirahDueLine(dir, now);   // #108 — the brief's clock, so the age tag is deterministic in test
     if (dueLine) L.push(dueLine);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   if (memory) {
@@ -391,6 +412,33 @@ function selftest() {
     loadTeachingCard(cf).length <= CARD_MAX + 80 && loadTeachingCard(cf).includes("truncated"));
   assert("THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all seventeen rules",
     (() => { const c = loadTeachingCard(); return !!c && /^1\. Give ONE new idea/m.test(c) && /^16\. /m.test(c); })());
+  // ---- AUDIT #108 (6 Aug 2026) — the RE-JIRAH OVERDUE day-counts must carry their age.
+  // Same defect the working_set and the sprint spine were both repaired for, on the one
+  // slot that never got it: capsule_map.json is regenerated only by the morning conductor,
+  // so its `42d` is as old as the map. Fixtures only — the live bus is never touched.
+  const mapDir = (genAt) => {
+    const d = mkdtempSync(join(tmpdir(), "learnstate-map-"));
+    writeFileSync(join(d, "capsule_map.json"), JSON.stringify({
+      ...(genAt === null ? {} : { generated_at: genAt }),
+      rejirah_overdue: [{ concept: "embeddings", overdue_days: 42, rounds_done: 0 }],
+    }));
+    return d;
+  };
+  const freshMap = brief(mapDir(iso(0.2)), NOW);
+  const oldMap   = brief(mapDir(iso(3)), NOW);
+  const noStamp  = brief(mapDir(null), NOW);
+  assert("RE-JIRAH OVERDUE still prints its counts unchanged in every age branch",
+    [freshMap, oldMap, noStamp].every((b) => b.includes("RE-JIRAH OVERDUE (1): embeddings 42d")
+      && b.includes("Overdue = RIPE, late nahi")));
+  assert("a same-day capsule_map carries NO age tag (the healthy case stays quiet)",
+    !freshMap.includes("MAP ") && !freshMap.includes("generated_at nahi"));
+  assert("a 3-day-old capsule_map says so — the day-counts are that day's, not today's",
+    oldMap.includes("MAP 3d purana") && oldMap.includes("capsule_bridge.mjs"));
+  assert("a capsule_map with NO generated_at is CALLED OUT, never assumed fresh",
+    noStamp.includes("koi generated_at nahi") && noStamp.includes("capsule_bridge.mjs"));
+  assert("the RE-JIRAH OVERDUE slot is still ONE line (the kickoff is not a wall)",
+    (oldMap.split("\n").find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "").length > 0
+    && oldMap.split("\n").filter((l) => l.startsWith("RE-JIRAH OVERDUE")).length === 1);
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;

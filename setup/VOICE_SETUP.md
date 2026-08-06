@@ -47,6 +47,20 @@ voice. Your rituals are now speakable.
 `setup/SPEAK.ps1` reads the morning sheet's opening lines out loud through
 Windows TTS at 08:46 (its only other utterance: the 21:30 bell line). Enable
 only if a talking laptop suits your room:
+
+> ⚠️ **SUPERSEDED — DO NOT RUN THE COMMAND BELOW AS-IS (audit #108, 6 Aug 2026).**
+> The block is kept, not deleted (layering law), but it is a footgun and
+> `scripts/speak.mjs:18-28` already documents why: `SPEAK.ps1` is an **orphaned
+> pre-neural duplicate** (audit #55). It calls Windows `System.Speech` directly,
+> so it never touches `speak.mjs` and **bypasses the neural voice**
+> (en-US-ChristopherNeural) entirely — the robotic fallback becomes the only
+> voice. And it reads `team_sheet.md`, which today still opens *"I don't know you
+> yet"*: installing it as-is robot-voices that sentence at you every morning at
+> 08:46. There is deliberately **no `ArsenalFC-Speak` task installed**, and this
+> lane stays uninstalled until `SPEAK.ps1` is rewritten to shell
+> `node scripts/speak.mjs "<line>"`. Until then, Lane 1 and Lane 3-via-`speak.mjs`
+> are the real voices.
+
 ```powershell
 schtasks /Create /F /TN "ArsenalFC-Speak" /TR "powershell -ExecutionPolicy Bypass -File C:\Users\nikhi\GitHub\arsenal-ai-fc\setup\SPEAK.ps1" /SC DAILY /ST 08:46
 ```

@@ -306,13 +306,50 @@ export function axisState(capsule, axis, rows, intervals, now = new Date()) {
   // held twice, cracked, then held once is on rung 1 — the crack really did cost the
   // ground it had gained, which is the point of a reset.
   const idx = Math.min(Math.max(0, streak - 1), intervals.length - 1);
-  const anchor = last ? new Date(last.ts) : new Date(String(capsule.lockedOn || "") + "T00:00:00Z");
   let nextDue = null, overdueDays = null;
-  if (!Number.isNaN(anchor.getTime())) {
-    const step = (last && last.result === "cracked") ? intervals[0] : intervals[idx];
-    const d = new Date(anchor.getTime() + step * 86400000);
-    nextDue = d.toISOString().slice(0, 10);
-    overdueDays = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 86400000));
+  if (last) {
+    // GRADED AXIS — the per-axis ladder owns it, anchored on its own last round. Unchanged.
+    const anchor = new Date(last.ts);
+    if (!Number.isNaN(anchor.getTime())) {
+      const step = last.result === "cracked" ? intervals[0] : intervals[idx];
+      const d = new Date(anchor.getTime() + step * 86400000);
+      nextDue = d.toISOString().slice(0, 10);
+      overdueDays = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 86400000));
+    }
+  } else {
+    // UNGRADED AXIS — THE CAPSULE'S OWN ROUND SCHEDULE OWNS IT (audit #108, 6 Aug 2026).
+    //
+    // WHAT WAS WRONG. This branch used to be `new Date(String(capsule.lockedOn || "") +
+    // "T00:00:00Z")` + intervals[0] — lockedOn + the FIRST interval, forever, with
+    // `reJirahDone` never read at all. MEASURED on his live mirror today: tokenization is
+    // locked 2026-06-15 carrying reJirahDone ["2026-06-18","2026-06-29"], and all nine of
+    // its axes printed "due 2026-06-18 (49d overdue)" — R1's date — three lines above the
+    // SAME screen's own "rounds → R1 2026-06-18 ✓ · R2 2026-06-29 ✓". One screen, two
+    // answers, and the louder one nagged him to re-sit two rounds he had already served.
+    // capsule_map.json (next_due 2026-07-27, overdue 9) and `deep.mjs due` (R3) both said
+    // R3 at the same instant, so this file was the odd one out, not the other two.
+    //
+    // WHY THE FIX IS A DELEGATION, NOT A NEW SUM. An axis with no history of its own has
+    // no per-axis ladder to stand on — its schedule IS the capsule's, and roundSchedule()
+    // above is this file's deliberate line-for-line mirror of capsule_bridge.mjs, which
+    // owns that schedule. Copy the owner, never re-derive (the rule stated at the top of
+    // the ROUND CLOSE block). Its ISO_DAY filter is also the guard on junk: an unparseable
+    // entry in reJirahDone is dropped, never parsed into a moved anchor.
+    //
+    // THE EMPTY-ARRAY CASE IS BYTE-IDENTICAL to the old line: with reJirahDone [] the first
+    // unserved round IS R1 = lockedOn + intervals[0]. Only capsules that have actually
+    // served a round move, which is the whole bug.
+    //
+    // ALL ROUNDS SERVED + NEVER GRADED = NO DATE, deliberately. Canon schedules three
+    // rounds and openRound() "refuses to invent a fourth"; a fabricated 4th due-date would
+    // be exactly the invented number this repo forbids. The axis comes back the moment a
+    // real grade lands and the ladder above takes over.
+    const sch = roundSchedule(capsule, intervals);
+    const open = sch.ok ? sch.rounds.find((r) => !r.done) : null;
+    if (open) {
+      nextDue = open.due;
+      overdueDays = Math.max(0, Math.floor((now.getTime() - Date.parse(`${open.due}T00:00:00Z`)) / 86400000));
+    }
   }
   const roundsDone = hist.length;
   return {
@@ -373,6 +410,29 @@ export function dueReport(caps, rows, intervals, cards, now = new Date()) {
     const ar = a.fsrs_rank < 0 ? 99 : a.fsrs_rank, br = b.fsrs_rank < 0 ? 99 : b.fsrs_rank;
     return ar - br || (b.axes[0].overdueDays - a.axes[0].overdueDays);
   });
+}
+
+// THE AXES PAST THE CAP ARE COUNTED AND NAMED (audit #108, 6 Aug 2026).
+// WHAT WAS WRONG: the `due` renderer printed `r.axes.slice(0, 4)` and then nothing — no
+// remainder, no count. MEASURED today on all four locked capsules: 9 axes due on each, 4
+// rendered, so the one screen that calls itself the authority on WHICH AXES under-reported
+// by 56% and read as "four things to do". The cut is not even random TODAY — every axis is
+// ungraded and ties on overdue, so dueReport's sort is stable and a-d render first, which
+// hides exactly e f g h i, and f/g/i are the ENTIRE `defend` tier in AXIS_TYPE above: the
+// cap was hiding precisely the hardest axes. (Review pass, audit #108: that "a-d first" is a
+// property of today's all-ungraded state, NOT an invariant — the sort is
+// `escalate desc, overdueDays desc`, so one confident-crack on g reorders it to g a b c and
+// the hidden five become d e f h i. Which is why the line below reads the real sorted array
+// rather than assuming letters; do not re-derive the remainder from the alphabet.)
+// THE CAP ITSELF STAYS (deep.mjs's rule 17 — "DEEPER, NEVER LONGER"; this screen is a
+// triage list, not a 36-axis dump, and picking a bigger cap would be inventing a number).
+// What changes is that the remainder is stated out loud, with the command that opens it.
+// Returns null when nothing is hidden, so a short list prints exactly as it always did.
+export function moreAxesLine(axes, concept, shown) {
+  const hidden = (Array.isArray(axes) ? axes : []).slice(shown);
+  if (!hidden.length) return null;
+  return `   … +${hidden.length} more due: ${hidden.map((a) => `${a.axis}·${a.axisType}`).join(" ")}`
+    + `   → poori list: \`node scripts/rejirah.mjs state ${concept}\``;
 }
 
 function intervalsOf() {
@@ -455,6 +515,15 @@ function selftest() {
       return r[0].axes[0].axis === "c" && b && b.overdueDays > r[0].axes[0].overdueDays; })());
   assert("EMPTY LOG — no rows means every axis falls back to the capsule schedule, never a crash",
     dueReport(caps, [], IV, null, NOW).length === 2);
+  // audit #108 — the `due` screen renders only 4 axes; the other 5 must be COUNTED and NAMED.
+  assert("DUE SCREEN — the axes past the 4-line cap are counted and named, never silently dropped",
+    (() => { const r = dueReport([cap], [], IV, {}, NOW)[0];
+      const line = moreAxesLine(r.axes, r.concept, 4);
+      return r.axes.length === 9 && /\+5 more due/.test(line)
+        && ["e", "f", "g", "h", "i"].every((x) => line.includes(`${x}·`))
+        && line.includes("rejirah.mjs state embeddings"); })());
+  assert("DUE SCREEN — nothing hidden means NO extra line (a short list prints exactly as before)",
+    moreAxesLine([{ axis: "a", axisType: "recall" }], "embeddings", 4) === null && moreAxesLine(null, "x", 4) === null);
   assert("READER IS SAFE — a missing log file reads as zero rows",
     readLog(join(HERE, "__no_such_log__.jsonl")).length === 0);
   // UNRUN = HYPOTHESIS. The write path is exercised for real, against a temp file, so
@@ -491,6 +560,21 @@ function selftest() {
     && sch.rounds[0].done && sch.rounds[1].done && !sch.rounds[2].done);
   assert("SCHEDULE — no valid lockedOn means NO schedule, never a fabricated date",
     !roundSchedule({ id: "x" }, IV).ok && !roundSchedule({ id: "x", lockedOn: "soon" }, IV).ok);
+  // ANCHOR (audit #108) — the ungraded-axis schedule must agree with the capsule's own
+  // round line on the SAME screen. Pinned on the real tokenization capsule, because that is
+  // the one that contradicted itself in production.
+  assert("ANCHOR — an ungraded axis on a capsule with SERVED rounds schedules the open round (R3), not R1 all over again",
+    (() => { const s = axisState(TOK, "a", [], IV, NOW);
+      return s.rounds === 0 && s.nextDue === "2026-07-27" && s.overdueDays === 9; })());   // capsule_map.json says 9 too
+  assert("ANCHOR — reJirahDone [] is UNCHANGED: still R1 = lockedOn + the first interval",
+    axisState({ id: "x", lockedOn: "2026-06-21", reJirahDone: [] }, "a", [], IV, NOW).nextDue === "2026-06-24");
+  assert("ANCHOR — junk dates cannot move it (ISO_DAY guard), and a real grade still outranks the capsule schedule",
+    axisState({ ...TOK, reJirahDone: ["kal", "", "2026-13-45"] }, "a", [], IV, NOW).nextDue === "2026-06-18"
+    && axisState(TOK, "a", [{ concept: "tokenization", axis: "a", result: "held", gut: "shaky", cold: true, ts: "2026-07-20T00:00:00Z" }], IV, NOW).nextDue === "2026-07-23");
+  assert("ANCHOR — all three rounds served and never graded = NO date, never a fabricated 4th round",
+    (() => { const s = axisState({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, "a", [], IV, NOW);
+      return s.nextDue === null && s.overdueDays === null; })());
+
   assert("OPEN ROUND — the FIRST unserved round, never the most overdue (R1 before R3)",
     (() => { const o = openRound(cap, IV); return o.ok && o.round === 1 && o.due === "2026-06-24"; })());
   assert("OPEN ROUND — with two served, the next one is R3, not R1 again",
@@ -703,6 +787,27 @@ function main() {
 
   if (mode === "pending") {
     const pend = pendingCloses(caps, rows);
+    // AN UNMEASURED ZERO SAYS SO (audit #108, 6 Aug 2026) — the same guard forge_session.mjs
+    // put on teaching-drift in audit #40: "Read this as an unmeasured silence, not a clean
+    // sheet." MEASURED TODAY: dressing-room/state/rejirah_log.jsonl DOES NOT EXIST. Not one
+    // axis has ever been graded and not one round has ever been closed, while four locked
+    // capsules sit 10-43 days overdue. The legacy line below claims "har closed round mirror
+    // mein land kar chuka" — every closed round landed — which is vacuously true of an EMPTY
+    // SET and reads as an all-clear on a loop that has never once run. That is the worst
+    // possible place for it: `pending` is the organ whose ONLY job is to prove his gist paste
+    // landed, so a false all-clear here is indistinguishable from a working back edge.
+    // WHAT IS NOT BROKEN: pendingCloses() is computed live off the log and the mirror — it is
+    // the DATA that is absent, not the code, and this line says that rather than implying the
+    // organ is dead. A real close still earns the original line back, verbatim.
+    if (!pend.length && !rows.some(isClose)) {
+      console.log(`\nrejirah: PENDING NOT MEASURED — 0 pending, and 0 here is not a measurement.`);
+      console.log(`  ${existsSync(LOG) ? `rejirah_log.jsonl has ${rows.length} row(s) but not one round-close` : "rejirah_log.jsonl does not exist"}`
+        + ` — ${rows.filter(isGrade).length} axis grade(s), 0 rounds EVER closed, on ${caps.length} locked capsule(s).`);
+      console.log(`  Nothing has ever been closed, so nothing CAN be pending. Yeh clean sheet nahi hai — yeh un-run hai.`);
+      console.log(`  A round becomes pending only after \`node scripts/rejirah.mjs close <concept>\`; until one runs, this screen stays quiet however overdue the queue gets.`);
+      console.log(`  Kya due hai: \`node scripts/rejirah.mjs due\`\n`);
+      return;
+    }
     if (!pend.length) { console.log("\nrejirah: koi gist-write pending nahi — har closed round mirror mein land kar chuka.\n"); return; }
     console.log(`\n⚠ ${pend.length} RE-JIRAH ROUND(S) CLOSED BUT NOT IN THE GIST YET\n`);
     for (const p of pend) {
@@ -751,6 +856,9 @@ function main() {
       for (const a of r.axes.slice(0, 4)) {
         console.log(`   ${a.axis} · ${a.axisType} · ${a.mode} · ${a.overdueDays}d overdue${a.escalate ? "  ⛔ confident-crack" : ""}`);
       }
+      // The 5 axes the cap hides are named, not swallowed — see moreAxesLine (audit #108).
+      const more = moreAxesLine(r.axes, r.concept, 4);
+      if (more) console.log(more);
       console.log("");
     }
     console.log(`  Cold sawaal: \`node scripts/deep.mjs due\`   ·   Result likho: \`node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>\``);

@@ -20,12 +20,31 @@ description: Full health check of the organism — vitals, brain budget, selftes
 1. Run in order (don't stop on failure — report all):
    - `node scripts/physio.mjs` (bleeds + speak-gates)
    - `node scripts/brain.mjs status` (budget phase, ceiling, eligibility)
-   - `npm run organism:selftest` then `npm run squad:selftest`
-     (report PASS/FAIL count only, name any red suite)
+   - `npm test` — **this is the authority, and the only correct net.**
+     Report per-organ PASS/FAIL and name EVERY red one.
+     (Audit #108, 6 Aug 2026: this line used to read `npm run organism:selftest`
+     then `npm run squad:selftest`. Both are `&&` chains, so they FAST-FAIL —
+     brain.mjs sits at position 16 of 43, meaning one red organ left the 27 after
+     it unrun and unreported, and the suite said "failed" where the truth was
+     "27 unverified". A health surface that under-reports coverage by two-thirds
+     at exactly the moment something is already red is the live-looking-corpse
+     mode step 0 exists to refuse. `npm test` runs organism_test.mjs all, which
+     runs every organ and reports each one.)
+   - chain report: read `dressing-room/state/conductor.json` raw. Report 🔴 if
+     `finished` is not today's local date, or if `failed` > 0 — naming each failed
+     step id. The morning chain now carries FOURTEEN organs in ONE scheduled task,
+     so this file is the only per-organ record of the morning that exists.
    - schedule alive? Use PowerShell, NOT the Bash tool — under Git Bash the
      forward-slash flags get MSYS-mangled into a path and schtasks errors out:
-     `schtasks /query /fo csv /v | ConvertFrom-Csv | Where-Object { $_.TaskName -match 'ArsenalFC' }`
-     Report count + any task whose Last Result is non-zero.
+     `Get-ScheduledTask -TaskName ArsenalFC-* | ForEach-Object { $_ | Get-ScheduledTaskInfo }`
+     Report count + any **enabled** task whose Last Result is non-zero.
+     Two standing exclusions, so the only reds you report are real ones:
+     · skip tasks whose State is `Disabled` — the 14 morning organs are disabled
+       BY DESIGN (setup/INSTALL_CONDUCTOR.ps1 replaced them with the 08:45 chain);
+       a disabled task's stale Last Result is not a fault.
+     · `ArsenalFC-SelfKnowledge` returns 0x800710E0 ("operator or administrator
+       refused") and the organ reports itself FROZEN (`node scripts/selfknowledge.mjs
+       consumers` → 0 live consumers). Note it, don't red the organism for it.
    - **THE FUEL TANKS** (issue #93, 2026-08-04). No health surface read tank
      state until this line existed — `physio.mjs` and `viz.mjs` have zero "tank"
      hits, and this skill never touched it, so the seven free-tier accounts

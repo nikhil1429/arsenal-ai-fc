@@ -192,6 +192,18 @@ function resolveClocks(o, opts) {
   return { ts, ts_claimed, observed_at, ts_source };
 }
 
+// THE --correct PARSER (audit #108, 6 Aug 2026). Lives here, next to validateRep,
+// because it is the CLI half of the same law: a rep's correctness is either stated
+// or the rep does not exist. It returns `undefined` — never a default — for anything
+// that is not literally "true"/"false", so the rep then fails validateRep's own
+// `typeof o.correct !== "boolean"` gate. The bug this replaces defaulted to `false`,
+// which is a valid boolean and therefore invisible to every downstream check.
+function parseCorrectFlag(raw) {
+  if (raw === undefined || raw === null) return undefined;
+  const s = String(raw).trim().toLowerCase();
+  return s === "true" ? true : s === "false" ? false : undefined;
+}
+
 // opts.observedAt — the arrival instant, supplied ONLY by ingest (which is the one
 // place a rep genuinely arrives). loadReps deliberately passes nothing, so
 // re-reading the log can never restamp history as "arrived now".
@@ -625,6 +637,17 @@ function selftest() {
   r = ingest(p, [rep({ ts: "2026-07-11T09:10:00Z", question: "good1" }), ...bad], reg);
   assert("malformed-reject: 7 rejected, only 1 valid appended", r.rejected === 7 && r.appended === 1 && loadReps(p, reg).length === before + 1);
 
+  // 3d) THE --correct FLAG IS PARSED, NEVER DEFAULTED (audit #108, 6 Aug 2026).
+  // The `rep` door coerced with `=== "true"`, so a MISSING or misspelt flag became
+  // `false` — a valid boolean that validateRep could never reject, writing a miss he
+  // never made into the field calibration/nemesis/fsrs all key on. These assertions
+  // are the lock: only the two literals may produce a boolean.
+  assert("correct-parse: literal true/false only", parseCorrectFlag("true") === true && parseCorrectFlag("false") === false);
+  assert("correct-parse: case/space tolerant", parseCorrectFlag("  TRUE ") === true && parseCorrectFlag("False") === false);
+  assert("correct-parse: MISSING flag ⇒ undefined, never false", parseCorrectFlag(undefined) === undefined);
+  assert("correct-parse: 1/yes/garbage ⇒ undefined, never false", ["1", "yes", "y", "0", "no", "--gut", ""].every((v) => parseCorrectFlag(v) === undefined));
+  assert("correct-parse: undefined then fails validateRep (same lock as paste)", validateRep(rep({ correct: parseCorrectFlag(undefined) }), reg).ok === false);
+
   // 3b/3c) confidence enum
   assert("enum-reject: confidence outside {knew,shaky,guessed} rejected", ingest(p, [rep({ ts: "2026-07-11T09:12:00Z", question: "ec", confidence: "sorta" })], reg).rejected === 1);
   assert("enum-accept: knew/shaky/guessed all valid", ["knew", "shaky", "guessed"].every((c, i) => ingest(p, [rep({ ts: `2026-07-11T10:0${i}:00Z`, question: `enumok${i}`, confidence: c })], reg).appended === 1));
@@ -924,6 +947,19 @@ function main() {
       const track = (flag("track") || "concept").toLowerCase();
       const axisRaw = flag("axis");
       const lat = flag("latency");
+      // ── --correct IS PARSED, NEVER COERCED (audit #108, 6 Aug 2026) ───────────
+      // This line used to read `String(flag("correct")).toLowerCase() === "true"`.
+      // An unconditional coercion means a FORGOTTEN flag, a misspelt one, or
+      // `--correct 1` / `--correct yes` all silently produce `false` — a fully
+      // VALID boolean, so validateRep's `typeof o.correct !== "boolean"` waved it
+      // straight through and wrote a rep he never got wrong. `correct` is the field
+      // calibration, nemesis and fsrs ALL key on, so one forgotten flag poisons the
+      // calibration curve with a fake miss and nothing anywhere objects. `paste` never
+      // had this hole, which made the newer door strictly weaker than the old one —
+      // the exact opposite of this block's own "same door, same lock" promise.
+      // Now: anything that is not literally true/false becomes `undefined`, so the
+      // SAME validator that guards a pasted rep rejects it. No second validator.
+      const correct = parseCorrectFlag(flag("correct"));
       const one = {
         // `ts` is stamped HERE, at the moment of capture, which is the honest value —
         // this door exists precisely so the rep is not reconstructed hours later. (v4's
@@ -938,16 +974,20 @@ function main() {
         axis: track === "skill" ? null : axisRaw,
         question: flag("q") || flag("question"),
         confidence: flag("gut") || flag("confidence"),
-        correct: String(flag("correct")).toLowerCase() === "true",
+        correct,
       };
       // latency_ms is written ONLY when actually supplied — never invented. The
       // genome's criterion_gated_pass reads it, and a fabricated number corrupts the
       // fluency ladder (the law is in SKILL.md and in this file's own header).
       if (lat !== undefined && Number.isFinite(Number(lat))) one.latency_ms = Number(lat);
-      if (!one.concept || !one.question || !one.confidence) {
-        console.error("rep: --concept, --q and --gut are all required.");
+      if (!one.concept || !one.question || !one.confidence || one.correct === undefined) {
+        console.error("rep: --concept, --q, --gut and --correct are all required.");
         console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');
         console.error("  GUT-WORD LAW: --gut is what he committed BEFORE answering. No gut-word, no rep. Never re-graded after.");
+        if (one.correct === undefined) {
+          console.error(`  --correct must be literally true or false (got: ${flag("correct") === undefined ? "MISSING" : JSON.stringify(flag("correct"))}).`);
+          console.error("  It is NEVER defaulted: a missing flag used to become `false` and write a miss he never made.");
+        }
         process.exit(1);
       }
       cands = [one];
@@ -1031,7 +1071,7 @@ function main() {
     process.exit(0);
   }
 
-  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs selftest                 run baked-mock checks");
+  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs selftest                 run baked-mock checks");
   process.exit(0);
 }
 

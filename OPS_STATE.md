@@ -7,9 +7,20 @@ THE thread-agnostic anchor. A fresh thread reads THIS ONE file first and knows e
   · "39 selftest suites green" → 62 members now RUN independently via `npm test`; 61 organs carry a selftest.
     Four of them (rejirah · python_state · widget · context_manifest — the whole audit-#107 learning loop)
     were in NO suite and had never been run by any command. They are wired in now.
-  · The BRAIN is PAUSED (`brain_config.paused: true`, set 2 Aug) — 19/23 LLM jobs held. The schedule below
+  · [FROZEN — this bullet was WRONG THE HOUR IT WAS WRITTEN; corrected below, audit #108, 6 Aug 2026]
+    "The BRAIN is PAUSED (`brain_config.paused: true`, set 2 Aug) — 19/23 LLM jobs held. The schedule below
     is armed and running; what is off is the THINKING, not the recording. Un-pause is a token-budget
-    decision, not a repair: the rolling 7d window read 80.2% of 12M on 6 Aug.
+    decision, not a repair: the rolling 7d window read 80.2% of 12M on 6 Aug."
+    CORRECTION: `brain_config.paused` is **false**. The captain un-paused it in the SAME commit that wrote
+    this refresh block (6c6e682, "The boot tax falls 57%..."), so the doc asserted a pause that the commit
+    beside it had already lifted — the un-pause was the point of that commit, not a separate event.
+    LIVE TRUTH 2026-08-06: the BRAIN is RUNNING. 23 jobs configured; 19 enabled, and the 4 that are off
+    (midday_reread · deep_twin · season_review · capsule_premap) are off for audit #63 — no reader for their
+    output — each with its own `_disabled_reason`, NOT because of any pause. What IS still switched off is
+    the HAIKU PULSE: `brain_config.pulse.enabled: false`, paused 2 Aug and still paused, because its verdict
+    reaches nobody (thalamus.mjs has no `pulse` modality) — its re-enable condition, the nucleus wiring, is
+    named in the config and has not landed. Read `paused` and `pulse.enabled` from
+    `dressing-room/state/brain_config.json` (or `node scripts/brain.mjs status`), never from this doc.
   Everything below this line is as-written on 2026-07-15 and may be older than the state files. Read
   live numbers from state, never from this doc.
 

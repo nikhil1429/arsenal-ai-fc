@@ -737,7 +737,15 @@ async function runShift(deps = {}) {
   const now = deps.now || new Date();
   const tone = deps.tone || currentTone();
   if (!deps.force && !isOvernight(now)) return { ok: false, skipped: "not overnight — the shift works while he sleeps (--force to override)" };
-  if (tone.arousal === "conserve") return { ok: false, skipped: "conserve tone — a depleted captain's machine also rests" };
+  // --force MEANS FORCE, ON BOTH GATES (audit #108, 6 Aug 2026). The overnight gate
+  // above honoured --force and this one did not, so the two skips were indistinguishable
+  // from the outside: the night lane had been silently dead for four days (2→6 Aug, last
+  // shift 02-08, LastTaskResult 0 every time) and a --force recovery run would ALSO have
+  // returned `skipped` on any conserve day, reading as the same nothing. The rest law is
+  // real and stays the default — a depleted captain's machine also rests — but a manual
+  // recovery run must be able to say "I know, run it anyway", and must SAY that it did.
+  if (tone.arousal === "conserve" && !deps.force) return { ok: false, skipped: "conserve tone — a depleted captain's machine also rests (--force to override)" };
+  const forcedThroughRest = tone.arousal === "conserve" && !!deps.force;
   const board = deps.board || loadBoard();
   // E2E audit 25 Jul 2026: this was ONE gate on T7 (a gemini-flash key the
   // post-17-Jul shift never spends) that killed the ENTIRE night — probe bank,
@@ -750,7 +758,9 @@ async function runShift(deps = {}) {
   const budget = deps.budget || makeBudget(CAPS.shift_call_budget);
   const jobDeps = { ...deps, budget };
   const day = localDate(now);
-  const out = { date: day, jobs: {} };
+  // Recorded on the shift itself, so a forced run through the rest law is legible in
+  // the filed report months later and can never be mistaken for a normal night.
+  const out = { date: day, jobs: {}, ...(forcedThroughRest ? { forced_through_conserve: true } : {}) };
   const write = deps.write || ((name, content) => writeAtomic(join(OUT_DIR, name), content));
 
   const pb = await probeBank(jobDeps);
@@ -853,7 +863,18 @@ async function selftest() {
 
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
-  assert("conserve tone → no shift (the machine rests too)", (await runShift({ ...base, tone: { arousal: "conserve", effects: {} } })).skipped.includes("conserve"));
+  assert("conserve tone → no shift (the machine rests too)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T02:45:00"), tone: { arousal: "conserve", effects: {} } })).skipped.includes("conserve"));
+  // audit #108: --force must clear BOTH gates. Before this, the overnight gate honoured
+  // --force and the conserve gate did not, so a recovery run on a conserve day returned
+  // the same silent `skipped` as the four-day-dead lane it was meant to rescue.
+  {
+    const forced = await runShift({ ...base, generate: genProbes, tone: { arousal: "conserve", effects: {} } });
+    assert("#108 --force overrides the conserve gate too (a recovery run is possible on a rest day)", !forced.skipped);
+    assert("#108 a run forced through the rest law SAYS so on the filed shift", forced.forced_through_conserve === true);
+    assert("#108 a normal shift carries no such flag (the marker is never noise)",
+      (await runShift({ ...base, generate: genProbes })).forced_through_conserve === undefined);
+    assert("#108 the conserve skip message now names the override", (await runShift({ ...base, force: false, now: new Date("2026-07-15T02:45:00"), tone: { arousal: "conserve", effects: {} } })).skipped.includes("--force"));
+  }
   // E2E audit 25 Jul 2026: a drained T7 used to cancel the WHOLE night, though
   // the cognition lane is the Claude subscription and spends no Gemini at all.
   {

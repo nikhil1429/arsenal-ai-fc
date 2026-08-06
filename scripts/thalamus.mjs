@@ -78,7 +78,8 @@
 //   #106 `status` reports have/need counters, never a bare word.
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "node:http";
@@ -90,6 +91,10 @@ import { createServer } from "node:http";
 import { loadRegistry, canonicalize } from "./capture.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+// Captured ONCE, at module load — this is the mtime of the code actually running in
+// this process, which is what /status must report. See the /status handler for why.
+const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch { return null; } })();
+const BOOTED_AT = new Date().toISOString();
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CONFIG    = join(STATE_DIR, "thalamus_config.json");
 const AFFERENT  = join(STATE_DIR, "afferent.jsonl");
@@ -221,12 +226,29 @@ function rotateLogIfNeeded(cfg) {
     renameSync(LOGFILE, LOGFILE + ".1");             // keep: 1 — one generation back
   } catch { /* rotation is best-effort; a busy handle must not stop the write */ }
 }
-function fileLog(cfg, msg) {
+// THE CLOAK AND THE LOGGER FIGHT OVER THE SAME FILE (audit #108 verify pass, 6 Aug 2026).
+// hidden_run.vbs launches each daemon as `cmd /c <cmd> >> "scripts/<organ>.log" 2>&1`,
+// which holds an EXCLUSIVE Windows handle on that file for the daemon's whole life. So
+// every appendFileSync to it throws — and this function swallowed the throw, which is
+// correct as a policy (a log must never be the failure) but meant the ONE diagnostic
+// that exists nowhere else, the moment-loss reason #10 was built to capture, was lost
+// exactly while the organ was healthy and running. The defect was invisible for two
+// days because the daemons were DEAD; restarting them is what made it observable.
+// Fix: fall back to stdout. Under the cloak, stdout IS this same file (the `>>`
+// redirect), so the line still lands; run bare, it lands on the console. Either way it
+// is no longer silently dropped. `logTarget` is exported so the selftest can prove the
+// append path on a file nothing else holds, instead of racing the live daemon.
+function fileLog(cfg, msg, target = LOGFILE) {
+  if (cfg.log && cfg.log.enabled === false) return;
+  const line = `${new Date().toISOString()} ${String(msg)}\n`;
   try {
-    if (cfg.log && cfg.log.enabled === false) return;
     rotateLogIfNeeded(cfg);
-    appendFileSync(LOGFILE, `${new Date().toISOString()} ${String(msg)}\n`, "utf8");
-  } catch { /* never let the log become the failure */ }
+    appendFileSync(target, line, "utf8");
+    return "file";
+  } catch {
+    // the file is held (we are running under the cloak, or another process owns it)
+    try { process.stdout.write(line); return "stdout"; } catch { return null; }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1791,11 +1813,31 @@ async function selftest() {
     // claim is "the diagnostics now have somewhere to land", and a test that
     // never writes the file proves nothing about that. One append-only line into
     // a gitignored, size-rotated log the organ owns.
+    // Proven on a PRIVATE target, not the live thalamus.log. Writing to the real one
+    // raced the running daemon, whose cloak (`cmd /c ... >> scripts/thalamus.log`)
+    // holds an exclusive handle — so this assertion went red whenever the organism
+    // was actually HEALTHY, which is the worst possible polarity for a health check.
     const stamp = `selftest heartbeat ${Date.now()}`;
-    const before = existsSync(LOGFILE) ? statSync(LOGFILE).size : 0;
-    fileLog(loadConfig(), stamp);
+    const tgt = join(tmpdir(), `thalamus_selftest_${process.pid}.log`);
+    try { if (existsSync(tgt)) rmSync(tgt); } catch { }
+    const where = fileLog(loadConfig(), stamp, tgt);
     assert("#10 PROOF: a diagnostic written through fileLog actually LANDS on disk (this is the whole of #10)",
-      existsSync(LOGFILE) && statSync(LOGFILE).size > before && readFileSync(LOGFILE, "utf8").includes(stamp));
+      where === "file" && existsSync(tgt) && readFileSync(tgt, "utf8").includes(stamp));
+    // …and the new half: when the target IS held (the live-daemon case), the line must
+    // still reach stdout — which under the cloak is that same file — never vanish.
+    {
+      const held = join(tmpdir(), "thalamus_selftest_dir_as_file");
+      try { mkdirSync(held, { recursive: true }); } catch { }   // a directory: append always throws
+      const chunks = [];
+      const realWrite = process.stdout.write.bind(process.stdout);
+      process.stdout.write = (c) => { chunks.push(String(c)); return true; };
+      let fellBackTo;
+      try { fellBackTo = fileLog(loadConfig(), stamp, held); } finally { process.stdout.write = realWrite; }
+      assert("#10 a HELD log target falls back to stdout — the diagnostic is never silently dropped",
+        fellBackTo === "stdout" && chunks.join("").includes(stamp));
+      try { rmSync(held, { recursive: true, force: true }); } catch { }
+    }
+    try { rmSync(tgt, { force: true }); } catch { }
   }
 
   // ORGANISM REPAIR — #106 STATUS IS A HAVE/NEED COUNTER
@@ -1891,7 +1933,17 @@ async function main() {
     const send = (code, body) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(body)); };
     try {
       if (req.method === "GET" && req.url === "/status") {
-        return send(200, { ok: true, version: nucleus.state.workspace.version, wakes_today: nucleus.state.wakesToday, wake_cap: cfg.wake_cap_per_day, tau1_eff: Math.round(tau1Effective(cfg, defaultHeadroomFrac()) * 1000) / 1000 });
+        // THE BUILD STAMP (audit #108, 6 Aug 2026). Node caches a module at load, so a
+        // resident daemon keeps executing the code it booted with FOREVER — nothing in
+        // the organism restarts it. Measured: this process booted 04-08 16:43:34 while
+        // this file was rewritten 45 minutes later at 17:28:30, so every 4-Aug salience
+        // repair (token derivation, the SELF gate, provenance logging) sat inert on disk
+        // for two days. The morning conductor certified it healthy the whole time,
+        // because it probes the PORT and a port cannot tell you what build answers it.
+        // So the daemon now states its own build, and the conductor compares it against
+        // the file. `module_mtime_ms` is read once at boot on purpose: reading it live
+        // would report the file's current state, which is exactly the thing being tested.
+        return send(200, { ok: true, version: nucleus.state.workspace.version, wakes_today: nucleus.state.wakesToday, wake_cap: cfg.wake_cap_per_day, tau1_eff: Math.round(tau1Effective(cfg, defaultHeadroomFrac()) * 1000) / 1000, module_mtime_ms: MODULE_MTIME_MS, booted_at: BOOTED_AT });
       }
       if (req.method === "GET" && req.url === "/workspace") return send(200, nucleus.state.workspace);
       if (req.method === "POST") {
