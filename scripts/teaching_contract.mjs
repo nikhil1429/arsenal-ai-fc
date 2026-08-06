@@ -51,7 +51,7 @@
 // asserted by the selftest, so a command can never again exist in the switch and be
 // invisible in the help (audit #108, 6 Aug 2026).
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,12 +87,37 @@ const DEFAULT_WARN_AT = 40;
 // so it can never become the always-fires line he learns to ignore.
 // It is still a v0 HYPOTHESIS (transcript bytes are not context tokens) and it lives
 // in state, so it can be retuned from observation without editing this file.
-const DEFAULT_TRANSCRIPT_WARN_BYTES = 1_500_000;
+// FROZEN 6 Aug 2026 (self-sustaining brief §5.8) — no longer the plan of record.
+// The derivation above was real but answered the WRONG QUESTION: it measured "how
+// long do his sessions historically get" and was then used to answer "how much can
+// the model actually hold". First live test, 6 Aug: transcript 0.92 MB while the
+// real context read 234.7k/1.0M tokens = 23% full — the soft warning fired at 23%
+// real fill and advised abandoning a healthy session. A gauge that cries wolf
+// trains him to ignore it, which is the exact failure its own comment names.
+const DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY = 1_500_000;
+// PLAN OF RECORD (6 Aug 2026, §5.8 repair). Derived from the RIGHT question, with
+// the arithmetic on record so it can be checked and retuned:
+//   measured 6 Aug: 964,000 transcript bytes ↔ 234,700 context tokens ≈ 4.1 bytes/token
+//   the live window is 1.0M tokens → full window ≈ 4.1 * 1,000,000 ≈ 4.1 MB of transcript
+// So the warn budget now IS the measured window: the soft line (SOFT_FRACTION 0.6,
+// unchanged) fires at ~60% of REAL fill — the "beforehand" he asked for — and the
+// hard line means the window is genuinely at capacity. Still a hypothesis (v1, one
+// measurement), still retunable in state without touching this file; the watchman's
+// nightly data is what will retune it, not a guess.
+const MEASURED_BYTES_PER_TOKEN = 4.1;          // 964,000 / 234,700 — measured, 6 Aug 2026
+const CONTEXT_WINDOW_TOKENS = 1_000_000;       // the live session's own readout, same day
+const DEFAULT_TRANSCRIPT_WARN_BYTES = Math.round(MEASURED_BYTES_PER_TOKEN * CONTEXT_WINDOW_TOKENS);
 const SOFT_FRACTION = 0.6;      // a heads-up BEFORE the hard line — he asked to be warned beforehand
 
 // ── SEED ──────────────────────────────────────────────────────────────────────
-// These four are not invented: each is a drift that actually happened on 31 Jul and
-// that he named himself. Everything after this comes in through `add`.
+// None of these is invented: the first five are the drifts that actually happened on
+// 31 Jul, the next five are the drifts of 6 Aug — every line is one he named himself.
+// GROWN TO TEN, 6 Aug 2026 (self-sustaining repair): the audit organ stages against
+// six rule ids of which five lived ONLY in the state file — so a single re-seed event
+// (missing/corrupt file) would have silently killed five of its six checks forever
+// (`flag`/`autohit` refuse unknown ids and the caller discards the failure). The seed
+// must carry every rule an automatic path depends on. Everything after this still
+// comes in through `add`.
 function seed(now = new Date()) {
   const ts = now.toISOString();
   const r = (id, line) => ({ id, line, hits: 0, last_hit: null, born: ts });
@@ -111,17 +136,47 @@ function seed(now = new Date()) {
       r("terminology", "Asli terminology bolo (token · vocabulary · next-token · sampling · groundedness). Hindi anuvaad se naam mat badlo — analogy alag cheez hai, naam alag."),
       r("link-back", "Naya concept hamesha pehle band ho chuke concepts se NAAM le kar jodo."),
       r("decided", "Jo faisla wo pehle le chuka hai wo zinda hai — har naye message se intent dobara mat nikaalo."),
+      r("one-idea", "EK naya idea per message, aur ANT mein EK check-question. Ye uska rule #1 hai aur usko sabse zyada todta hai."),
+      r("his-level", "Uska level uske apne shabd se upar mat rakho — koi 'dormant', koi 'ye to tumhe pata hai'."),
+      r("no-system-mid-concept", "Concept ke beech koi system/notes/tool kaam nahi — naam lo, park karo, micro-question wapas haath mein do."),
+      r("confusion-is-literal", "'samajh nahi aaya' ko literally lo — wahin ruko, zero se shuru karo, aage mat badho."),
+      r("dheema-not-lamba", "DHEEMA = EK cheez poori tarah kholi hui, chhote kadam. LAMBA = ek message mein bahut cheezein. Kabhi lamba mat karo — hamesha GEHRA karo."),
     ],
   };
 }
 
 // ── PURE CORE (no disk — the selftest never needs a file) ─────────────────────
 
-function rank(rules) {
+// FROZEN 6 Aug 2026 (layering law) — the single-lane ranking, byte-for-byte. It read
+// only his-confirmed `hits`, which was correct while his word was the only recorder;
+// the drift-count ruling (his own, 6 Aug: "keep me out of the picture") added the
+// code-measured lane below, so this stays for the record and the selftest.
+function rankLegacy(rules) {
   // Worst offender first. Ties break on recency, then on birth order (stable).
   return [...rules].sort((a, b) =>
     (b.hits - a.hits)
     || String(b.last_hit || "").localeCompare(String(a.last_hit || ""))
+    || String(a.born || "").localeCompare(String(b.born || "")));
+}
+
+// PLAN OF RECORD (6 Aug 2026 — THE TWO-LANE RULING, his word on the exact question:
+// "keep me out of the picture"). A drift has two provenances and they are never mixed:
+//   `hits`      — HIS lane: his `confirm` of a staged report, or a hand-run `hit`.
+//   `auto_hits` — the CODE lane: teaching_audit.mjs measured the turn and recorded it.
+//                 No model judgement is in this lane — a regex has no reputation to
+//                 protect — so counting it is measurement, not self-grading, and per
+//                 his ruling it asks nobody. Reversible via `unhit-auto` (§7.1 law).
+// The RANKING reads both lanes summed: the rule he is being failed on most rises,
+// whoever recorded the failure. Ties: most recent stamp in either lane, then birth.
+const ruleWeight = (r) => (Number(r.hits) || 0) + (Number(r.auto_hits) || 0);
+const newestStamp = (r) => {
+  const a = Date.parse(r.last_hit || ""), b = Date.parse(r.last_auto_hit || "");
+  return Math.max(Number.isFinite(a) ? a : 0, Number.isFinite(b) ? b : 0);
+};
+function rank(rules) {
+  return [...rules].sort((a, b) =>
+    (ruleWeight(b) - ruleWeight(a))
+    || (newestStamp(b) - newestStamp(a))
     || String(a.born || "").localeCompare(String(b.born || "")));
 }
 
@@ -154,6 +209,47 @@ function hitRule(state, id, now = new Date()) {
   };
 }
 
+// ── THE CODE LANE (6 Aug 2026 — the two-lane ruling, see rank()) ─────────────
+// `autohit` is called ONLY by teaching_audit.mjs's hook path, one spawn per measured
+// drift. It touches auto_hits/last_auto_hit and never `hits` — his lane stays his.
+function autoHitRule(state, id, why, now = new Date()) {
+  if (!state.rules.some((x) => x.id === id)) return { ok: false, why: `no rule "${id}"`, state };
+  return {
+    ok: true,
+    state: {
+      ...state,
+      rules: state.rules.map((x) => x.id === id
+        ? { ...x, auto_hits: (Number(x.auto_hits) || 0) + 1, last_auto_hit: now.toISOString() }
+        : x),
+    },
+  };
+}
+// The §7.1 reversibility law: every self-applied count has a one-command revert.
+// Evidence for WHICH auto-hit to revert lives in teaching_audit.jsonl rows (the
+// audit is that file's single writer); this only walks the counter back.
+function unhitAutoRule(state, id, n = 1) {
+  if (!state.rules.some((x) => x.id === id)) return { ok: false, why: `no rule "${id}"`, state };
+  const k = Math.max(1, Number(n) || 1);
+  return {
+    ok: true,
+    state: {
+      ...state,
+      rules: state.rules.map((x) => x.id === id
+        ? { ...x, auto_hits: Math.max(0, (Number(x.auto_hits) || 0) - k) }
+        : x),
+    },
+  };
+}
+// THE HEARTBEAT (6 Aug 2026). forge_session.mjs:378-393 has read `checked_at` off
+// this file since audit #40 as the one fact that turns a zero into a measurement —
+// and nothing ever stamped it, so the close report said NOT MEASURED forever. The
+// audit organ stamps it on every audited turn via the `checked` CLI (single-writer
+// law: teaching_audit never writes this file itself). "I looked" is the stamp's
+// entire meaning — it carries no verdict.
+function checkedStamp(state, now = new Date()) {
+  return { ...state, checked_at: now.toISOString() };
+}
+
 // ── THE MISSING CALLER (audit 6 Aug 2026) ────────────────────────────────────
 // `hit` is the only thing that writes a drift, and NOTHING in the machine called it.
 // Measured: 5 of 10 rules had ever been hit, newest stamp 2026-07-31, and the whole
@@ -175,7 +271,11 @@ function hitRule(state, id, now = new Date()) {
 //   dismiss <id>            HIS word. Drops it — a wrong self-report costs nothing.
 function flagRule(state, id, why, now = new Date()) {
   if (!state.rules.some((x) => x.id === id)) return { ok: false, why: `no rule "${id}"`, state };
-  const staged = [...(state.staged || []), { id, why: String(why || "").slice(0, 240), at: now.toISOString() }];
+  // NO CAP on why (6 Aug 2026). This sliced at 240 and the live file proved the cost:
+  // 3 of his 5 staged reports ended mid-word ("axis g ka ka", "Teen baar usne k") —
+  // the root-cause TAIL is what a cap eats, the same scar the afferent caps left
+  // before his "there should be no limit" ruling. Same ruling, same fix.
+  const staged = [...(state.staged || []), { id, why: String(why || ""), at: now.toISOString() }];
   return { ok: true, state: { ...state, staged } };
 }
 function confirmFlag(state, id, now = new Date()) {
@@ -509,7 +609,14 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
     + (anchored ? "" : " · CLOCK UNANCHORED (no session boundary recorded — see reset-turns)")
     + (fill ? ` · context ${Math.round(fill.pct * 100)}%` : "")
     + ` · rules ${shown.length}/${total}`);
-  for (const r of shown) L.push(`  ⚠ ${r.line}${r.hits ? `  [drifted ${r.hits}×]` : ""}`);
+  // Both lanes shown, provenance visible (6 Aug two-lane ruling): "3× · 2 auto"
+  // means 1 confirmed by him + 2 measured by code. A bare number would hide who
+  // recorded it, and hidden provenance is how a lane gets gamed.
+  for (const r of shown) {
+    const n = ruleWeight(r);
+    const auto = Number(r.auto_hits) || 0;
+    L.push(`  ⚠ ${r.line}${n ? `  [drifted ${n}×${auto ? ` · ${auto} auto` : ""}]` : ""}`);
+  }
   if (link) L.push(link);
   if (warn) L.push(warn);
   else if (unknown) L.push(unknown);
@@ -537,22 +644,50 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
 // are filled, and the next save() persists them. Pure and separately testable so the
 // selftest can assert it without going near his live file.
 function withSeedDefaults(stored, now = new Date()) {
-  return { ...seed(now), ...stored };
+  const s = { ...seed(now), ...stored };
+  // ONE-SHOT MIGRATION (§5.8, 6 Aug 2026). The live file was seeded post-#107 and
+  // carries the frozen 1.5 MB budget — the value derived for the wrong question.
+  // Only the EXACT legacy default migrates; any other stored number is a value
+  // someone chose on purpose and stored-wins keeps protecting it.
+  if (s.transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY) {
+    s.transcript_warn_bytes = DEFAULT_TRANSCRIPT_WARN_BYTES;
+  }
+  return s;
 }
 
+// NEVER RESEED OVER LIVE DATA (6 Aug 2026, self-sustaining repair). The old load()
+// returned a bare seed() whenever the file was corrupt/torn — and every caller
+// save()s what it loaded, so one torn read would have silently WIPED his 10 rules,
+// every hit in both lanes, and the whole staged queue. Now a file that EXISTS but
+// cannot be read comes back marked `_unreadable`, save() refuses to persist that
+// marker, and the on-disk data survives until a good read. The watchman's shape
+// check is what raises the corruption to him; this just refuses to make it worse.
 function load() {
   try {
     if (!existsSync(STATE)) return seed();
     const s = JSON.parse(readFileSync(STATE, "utf8"));
-    if (!s || !Array.isArray(s.rules)) return seed();
+    if (!s || !Array.isArray(s.rules)) return { ...seed(), _unreadable: true };
     return withSeedDefaults(s);
-  } catch { return seed(); }
+  } catch { return { ...seed(), _unreadable: true }; }
 }
 
 function save(s) {
   try {
+    if (s && s._unreadable) return false;   // never clobber a live file we could not read
     mkdirSync(dirname(STATE), { recursive: true });
-    writeFileSync(STATE, JSON.stringify(s, null, 2) + "\n");
+    // ATOMIC (6 Aug 2026): this was a bare writeFileSync — truncate-then-write — while
+    // the writer population grew to `print` (every prompt), `autohit`/`checked` (every
+    // audited Stop) and `reset-turns` (every SessionStart). A reader catching the
+    // truncated window parses "" → seed → the wipe described at load(). Per-pid tmp +
+    // rename is the same shape forge_session.mjs:502-514 has used since 30 Jul.
+    const tmp = `${STATE}.${process.pid}.tmp`;
+    try {
+      writeFileSync(tmp, JSON.stringify(s, null, 2) + "\n");
+      renameSync(tmp, STATE);
+    } catch (e) {
+      try { if (existsSync(tmp)) rmSync(tmp, { force: true }); } catch {}
+      throw e;
+    }
     return true;
   } catch { return false; }
 }
@@ -658,8 +793,16 @@ function hitStats(rules) {
   const arr = Array.isArray(rules) ? rules : [];
   let everHit = 0, newest = null;
   for (const r of arr) {
-    const h = Date.parse((r && r.last_hit) || "");
-    if (Number.isFinite(h)) { everHit++; if (!newest || h > Date.parse(newest)) newest = r.last_hit; }
+    // BOTH lanes count as "this rule has drifted" (6 Aug two-lane ruling) — the
+    // stats answer "has the recorder ever recorded", not "who recorded".
+    const a = Date.parse((r && r.last_hit) || "");
+    const b = Date.parse((r && r.last_auto_hit) || "");
+    const h = Math.max(Number.isFinite(a) ? a : -Infinity, Number.isFinite(b) ? b : -Infinity);
+    if (Number.isFinite(h) && h > 0) {
+      everHit++;
+      const iso = new Date(h).toISOString();
+      if (!newest || h > Date.parse(newest)) newest = (h === a) ? r.last_hit : (h === b ? r.last_auto_hit : iso);
+    }
   }
   return { total: arr.length, ever_hit: everHit, newest_hit: newest };
 }
@@ -672,7 +815,10 @@ function selftest() {
   const T0 = new Date("2026-07-31T18:00:00Z");
   const base = seed(T0);
 
-  assert("seed carries the five drifts he actually named", base.rules.length === 5);
+  assert("seed carries all ten rules he named himself (grown 6 Aug: a re-seed must never orphan the audit's rule ids)", base.rules.length === 10);
+  assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed)",
+    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word"]
+      .every((id) => base.rules.some((r) => r.id === id)));
 
   const hit = hitRule(hitRule(base, "hinglish", T0).state, "hinglish", T0).state;
   assert("hit increments and stamps", hit.rules.find((r) => r.id === "hinglish").hits === 2);
@@ -686,10 +832,10 @@ function selftest() {
     secondSlots.size === hit.rules.length - 1);
 
   const grown = addRule(base, "no-praise", "Praise sirf jab kamayi ho, aur specific ho.", T0);
-  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 6);
+  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 11);
   assert("add refuses a duplicate id", addRule(grown.state, "no-praise", "x", T0).ok === false);
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
-  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 4);
+  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 9);
 
   // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
   const t1L = bumpTurnLegacy(base, "S1");
@@ -759,9 +905,9 @@ function selftest() {
   // i.e. the warning costs a ROTATING RULE, which is exactly the trade the audit asked
   // for and the reverse of what the slice used to do.
   assert("HAVE/NEED — the header says how many rules are actually shown out of how many exist, so a truncation is visible",
-    /rules 2\/5/.test(atShowN(4, 40)[0]) && /rules 3\/5/.test(atShowN(4, 1)[0]));
+    /rules 2\/10/.test(atShowN(4, 40)[0]) && /rules 3\/10/.test(atShowN(4, 1)[0]));
   assert("NO REGRESSION AT THE LIVE VALUE — at show_n 2 he still gets both rules, the link-back AND the warning, in 5 lines",
-    atShowN(2, 40).length === 5 && /rules 2\/5/.test(atShowN(2, 40)[0])
+    atShowN(2, 40).length === 5 && /rules 2\/10/.test(atShowN(2, 40)[0])
     && atShowN(2, 40).filter((l) => /^ {2}⚠/.test(l)).length === 2
     && atShowN(2, 40).some((l) => /link back BY NAME/.test(l))
     && atShowN(2, 40).some((l) => /CONTEXT WARNING/.test(l)));
@@ -847,7 +993,7 @@ function selftest() {
 
   // T1 — the help hid the one command CLAUDE.md makes mandatory.
   assert("THE HELP ADMITS TO EVERY LIVE COMMAND — `flag`/`confirm`/`dismiss`/`staged` shipped 6 Aug and the usage line still listed only the 31 Jul set",
-    ["print", "list", "add", "hit", "flag", "confirm", "dismiss", "staged", "drop", "reset-turns", "selftest"]
+    ["print", "list", "add", "hit", "flag", "confirm", "dismiss", "staged", "autohit", "unhit-auto", "checked", "drop", "reset-turns", "selftest"]
       .every((c) => USAGE.includes(c)));
 
   // T2 — a seed key added later could never reach an EXISTING state file.
@@ -903,8 +1049,43 @@ function selftest() {
 
   // ---- audit #40's numbers, computed here so the close report never has to guess
   assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
-    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 5
+    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 10
     && hitStats(hit.rules).ever_hit === 1 && hitStats(hit.rules).newest_hit === T0.toISOString());
+
+  // ---- 6 Aug 2026 — THE TWO-LANE RULING, pinned. His exact words on the exact
+  // question ("keep me out of the picture") are what authorise the auto lane; these
+  // assertions are what keep it honest. None is a tautology.
+  const auto2 = autoHitRule(autoHitRule(base, "one-idea", "x", T0).state, "one-idea", "y", T0).state;
+  assert("AUTO LANE — autohit increments auto_hits and stamps last_auto_hit, never touching his `hits`",
+    auto2.rules.find((r) => r.id === "one-idea").auto_hits === 2
+    && auto2.rules.find((r) => r.id === "one-idea").hits === 0
+    && auto2.rules.find((r) => r.id === "one-idea").last_auto_hit === T0.toISOString());
+  assert("AUTO LANE — unknown id refused, exactly like hit/flag (the silent-drop path the audit must record)",
+    autoHitRule(base, "nope", "x", T0).ok === false);
+  const mixed = autoHitRule(autoHitRule(hitRule(base, "hinglish", T0).state, "one-idea", "x", T0).state, "one-idea", "y", T0).state;
+  assert("RANKING MERGES THE LANES — 2 auto-hits outrank 1 confirmed hit; the worst offender rises whoever recorded it",
+    rank(mixed.rules)[0].id === "one-idea");
+  assert("FROZEN ENGINE — rankLegacy still reads only his lane: 1 confirmed hit outranks 2 auto-hits there (why this file now has two rank engines)",
+    rankLegacy(mixed.rules)[0].id === "hinglish");
+  assert("REVERSIBLE (§7.1 law) — unhit-auto walks the count back and floors at zero, never negative",
+    unhitAutoRule(auto2, "one-idea", 1).state.rules.find((r) => r.id === "one-idea").auto_hits === 1
+    && unhitAutoRule(auto2, "one-idea", 99).state.rules.find((r) => r.id === "one-idea").auto_hits === 0);
+  assert("PROVENANCE VISIBLE — the block prints the auto share next to the total, never a bare number",
+    blockLines({ ...auto2, turns: { anchor: "cc:S", anchor_kind: "cc", count: 1 } }, [], T0)
+      .some((l) => /\[drifted 2× · 2 auto\]/.test(l)));
+  assert("HIT STATS COUNT BOTH LANES — an auto-only drift still reads as 'this rule has drifted'",
+    hitStats(auto2.rules).ever_hit === 1 && hitStats(auto2.rules).newest_hit === T0.toISOString());
+  assert("HEARTBEAT — checkedStamp writes an ISO checked_at (the fact forge_session.mjs:384 has read since audit #40)",
+    checkedStamp(base, T0).checked_at === T0.toISOString());
+  assert("§5.8 MIGRATION — the frozen 1.5 MB budget upgrades to the measured-window default, and ONLY the exact legacy value migrates",
+    withSeedDefaults({ rules: [], transcript_warn_bytes: DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY }, T0).transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES
+    && withSeedDefaults({ rules: [], transcript_warn_bytes: 999999 }, T0).transcript_warn_bytes === 999999);
+  assert("§5.8 — the new budget is DERIVED (bytes/token × window), not typed: 4.1 × 1,000,000",
+    DEFAULT_TRANSCRIPT_WARN_BYTES === Math.round(4.1 * 1_000_000) && DEFAULT_TRANSCRIPT_WARN_BYTES !== DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY);
+  assert("NEVER RESEED OVER LIVE DATA — save() refuses a state marked _unreadable, so a torn read can no longer wipe his rules",
+    save({ _unreadable: true, rules: [] }) === false);
+  assert("NO CAP ON WHY — a 300-char self-report survives whole (his 'no limit' ruling; 3 of his 5 live reports were cut mid-word at 240)",
+    flagRule(base, "his-word", "x".repeat(300), T0).state.staged[0].why.length === 300);
 
   console.log(`\nteaching_contract selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
@@ -921,6 +1102,7 @@ function selftest() {
 // appears here — a command can be forgotten in prose, not in an assertion.
 const USAGE = "teaching_contract: print | list | add <id> <line...> | hit <id>"
   + " | flag <id> --why \"...\" | confirm <id> | dismiss <id> | staged"
+  + " | autohit <id> --why \"...\" | unhit-auto <id> [--n <k>] | checked"
   + " | drop <id> | reset-turns | selftest";
 
 const cmd = process.argv[2];
@@ -1052,7 +1234,43 @@ switch (cmd) {
     break;
   }
   case "staged": {
-    console.log(stagedLine(load()) || "teaching_contract: koi drift staged nahi.");
+    // FULL CONTENT, not just counts (6 Aug 2026). stagedLine shows `his-word×5` and
+    // NOTHING anywhere printed the whys — he was being asked to confirm/dismiss
+    // reports whose content no command would show him. His word needs the evidence.
+    const s = load();
+    const q = s.staged || [];
+    if (!q.length) { console.log("teaching_contract: koi drift staged nahi."); break; }
+    console.log(`teaching_contract: ${q.length} staged drift(s) awaiting his word — confirm <id> | dismiss <id>\n`);
+    q.forEach((e, i) => {
+      const auto = /^\[auto\]/.test(String(e.why || ""));
+      console.log(`  ${i + 1}. [${e.id}] ${String(e.at).slice(0, 16)} · filed by ${auto ? "CODE (audit)" : "the model (self-report)"}`);
+      console.log(`     ${e.why || "(no why recorded)"}\n`);
+    });
+    break;
+  }
+  case "autohit": {                             // THE CODE LANE — teaching_audit.mjs only
+    const wi = process.argv.indexOf("--why");
+    const res = autoHitRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
+    if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
+    save(res.state);
+    const r = res.state.rules.find((x) => x.id === arg);
+    console.log(`teaching_contract: "${arg}" auto-counted → ${r.auto_hits}× auto (${ruleWeight(r)}× total) — code measured it, nobody was asked (his 6 Aug ruling). Revert: unhit-auto ${arg}`);
+    break;
+  }
+  case "unhit-auto": {                          // §7.1 reversibility — one command walks it back
+    const ni = process.argv.indexOf("--n");
+    const res = unhitAutoRule(load(), arg, ni >= 0 ? Number(process.argv[ni + 1]) : 1);
+    if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
+    save(res.state);
+    const r = res.state.rules.find((x) => x.id === arg);
+    console.log(`teaching_contract: "${arg}" auto-count walked back → ${r.auto_hits || 0}× auto (${ruleWeight(r)}× total)`);
+    break;
+  }
+  case "checked": {                             // THE HEARTBEAT — "I looked", stamped by the audit every audited turn
+    const st = load();
+    const res = checkedStamp(st);
+    save(res);
+    if (process.stdin.isTTY) console.log(`teaching_contract: checked_at stamped ${res.checked_at}`);
     break;
   }
   case "drop": {

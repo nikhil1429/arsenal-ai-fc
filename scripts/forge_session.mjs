@@ -63,6 +63,7 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const SESSION   = join(STATE_DIR, "forge_session.json");
 const HISTORY   = join(STATE_DIR, "forge_sessions.jsonl");
 const TEACHING  = join(STATE_DIR, "teaching_contract.json");   // READ-ONLY here; owned by teaching_contract.mjs
+const AUDIT_LAST = join(STATE_DIR, "teaching_audit_last.json"); // READ-ONLY here; owned by teaching_audit.mjs (checked_rules stamp)
 const REPS      = join(STATE_DIR, "reps_log.jsonl");           // READ-ONLY here; owned by capture.mjs (audit #108)
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
@@ -394,6 +395,50 @@ function teachingDrifts(tc, started_at) {
   };
 }
 
+// THE OTHER TWO LANES + COVERAGE (7 Aug 2026, self-sustaining repair). The drift
+// line below reads only HIS lane (confirmed `hits`). Under the 6 Aug two-lane
+// ruling two more facts now exist at close time, and a close that cannot see them
+// can mint a clean sheet by lane-blindness — the exact lie teachingDriftLine's own
+// header condemns, upgraded to affirmative once checked_at started landing:
+//   · the AUTO lane — rules whose last_auto_hit landed inside this session's window
+//     (code-measured, auto-counted, reversible; evidence in teaching_audit.jsonl);
+//   · the STAGED queue — self-reports filed in-window still awaiting his word;
+//   · COVERAGE — which contract rules the audit has NO check for, read from the
+//     checked_rules stamp teaching_audit.mjs writes into teaching_audit_last.json
+//     every turn. DERIVED both sides, typed nowhere, so it cannot rot on the next
+//     `add` (the exact hardcode-rot CLAUDE.md documents three times).
+// Pure; every failure path returns [] and the close report prints exactly what it
+// printed before this function existed — a neighbour organ going bad must never
+// cost him his coverage report.
+function auditLaneLines(tc, started_at, auditLast) {
+  const L = [];
+  try {
+    const t0 = Date.parse(started_at || "");
+    if (tc && Array.isArray(tc.rules) && Number.isFinite(t0)) {
+      const auto = tc.rules
+        .filter((r) => { const h = Date.parse((r && r.last_auto_hit) || ""); return Number.isFinite(h) && h >= t0; })
+        .map((r) => r.id).sort();
+      if (auto.length) {
+        L.push(`AUTO-COUNTED THIS SESSION (code-measured, nobody asked — his 6 Aug ruling): ${auto.length} rule${auto.length === 1 ? "" : "s"} · ${auto.join(" · ")}`
+          + ` — evidence rows in teaching_audit.jsonl; revert: \`teaching_contract.mjs unhit-auto <id>\``);
+      }
+      const staged = (Array.isArray(tc.staged) ? tc.staged : [])
+        .filter((x) => { const h = Date.parse((x && x.at) || ""); return Number.isFinite(h) && h >= t0; });
+      if (staged.length) {
+        L.push(`SELF-REPORTED, STILL STAGED: ${staged.length} filed this session, awaiting his word — \`teaching_contract.mjs staged\` shows the evidence; a close does not clear them`);
+      }
+      const checked = auditLast && Array.isArray(auditLast.checked_rules) ? auditLast.checked_rules : null;
+      if (checked) {
+        const unchecked = tc.rules.map((r) => r.id).filter((id) => !checked.includes(id));
+        if (unchecked.length) {
+          L.push(`COVERAGE: the audit has NO check for ${unchecked.length} of ${tc.rules.length} rules (${unchecked.join(" · ")}) — "no drift caught" is NOT "taught correctly"`);
+        }
+      }
+    }
+  } catch { /* lane lines are a courtesy, never a blocker */ }
+  return L;
+}
+
 // FROZEN VERBATIM (1 Aug semantics — layering law, CLAUDE.md). This is what shipped
 // and what the audit caught: with rule_ids empty it says "none", full stop. Kept so
 // the finding stays reproducible from inside this file, and pinned by the selftest.
@@ -570,6 +615,16 @@ function loadTeaching(path = TEACHING) {
     if (!existsSync(path)) return null;
     const j = JSON.parse(readFileSync(path, "utf8"));
     return (j && typeof j === "object" && !Array.isArray(j) && Array.isArray(j.rules)) ? j : null;
+  } catch { return null; }
+}
+
+// Same one-way, anything-wrong-is-null read as loadTeaching, for the audit's
+// last-run stamp (checked_rules feeds the close report's coverage line).
+function loadAuditLast(path = AUDIT_LAST) {
+  try {
+    if (!existsSync(path)) return null;
+    const j = JSON.parse(readFileSync(path, "utf8"));
+    return (j && typeof j === "object" && !Array.isArray(j)) ? j : null;
   } catch { return null; }
 }
 
@@ -1194,6 +1249,31 @@ function selftest() {
       teachingDriftLine(teachingDrifts({ checked_at: nowISO(T(-10)), rules: [{ id: "a", hits: 3, last_hit: nowISO(T(-90)) }] }, nowISO(T0)))));
   assert("A REAL DRIFT IS UNAFFECTED — the measured branch is byte-identical to the frozen engine's",
     teachingDriftLine(dr) === teachingDriftLineLegacy(dr));
+  // ---- 7 Aug 2026 — the other two lanes + coverage (auditLaneLines). Each can fail.
+  {
+    const tcLanes = {
+      rules: [
+        { id: "hinglish", hits: 0, last_hit: null, auto_hits: 2, last_auto_hit: nowISO(T(10)) },
+        { id: "his-word", hits: 1, last_hit: nowISO(T(-90)), auto_hits: 0 },
+        { id: "unchecked-rule", hits: 0, last_hit: null },
+      ],
+      staged: [{ id: "his-word", why: "x", at: nowISO(T(20)) }, { id: "his-word", why: "old", at: nowISO(T(-90)) }],
+    };
+    const lastStamp = { checked_rules: ["hinglish", "his-word"] };
+    const L = auditLaneLines(tcLanes, nowISO(T0), lastStamp);
+    assert("AUTO LANE AT CLOSE — an in-window last_auto_hit is named, with the revert command (a clean sheet can no longer be minted by lane-blindness)",
+      L.some((l) => /AUTO-COUNTED THIS SESSION.*hinglish/.test(l) && /unhit-auto/.test(l)));
+    assert("STAGED AT CLOSE — only IN-WINDOW self-reports are counted (1, not 2), and the close does not clear them",
+      L.some((l) => /SELF-REPORTED, STILL STAGED: 1 /.test(l)));
+    assert("COVERAGE AT CLOSE — the unchecked rule is named, derived from the checked_rules stamp, typed nowhere",
+      L.some((l) => /NO check for 1 of 3 rules \(unchecked-rule\)/.test(l)));
+    assert("LANES ARE SILENT WHEN EMPTY — no auto, no staged, full coverage ⇒ zero lines (the close report is unchanged from before this function existed)",
+      auditLaneLines({ rules: [{ id: "hinglish", hits: 0 }], staged: [] }, nowISO(T0), { checked_rules: ["hinglish"] }).length === 0);
+    assert("LANES FAIL SAFE — null contract, garbage anchor, missing stamp all yield [] and never throw",
+      auditLaneLines(null, nowISO(T0), null).length === 0
+      && auditLaneLines(tcLanes, "nonsense", lastStamp).length === 0
+      && auditLaneLines(tcLanes, nowISO(T0), null).length > 0);
+  }
   assert("THE LINE IS STILL ONE LINE in every branch (the close report is not a wall)",
     [teachingDriftLine(dr), quietLine, teachingDriftLine(teachingDrifts({ checked_at: nowISO(T(10)), rules: [] }, nowISO(T0)))]
       .every((l) => typeof l === "string" && l.split("\n").length === 1));
@@ -1412,6 +1492,8 @@ switch (mode) {
     // "have no bad news" the cheapest move. Silent only when the file cannot be read.
     const dl = teachingDriftLine(drifts);
     if (dl) R.push(`  ${dl}`);
+    // 7 Aug 2026 — the other two lanes + coverage, same disk snapshot as `drifts`.
+    for (const al of auditLaneLines(loadTeaching(), s.started_at, loadAuditLast())) R.push(`  ${al}`);
     // #108 — and this grades neither the session nor the teacher: it asks whether the
     // night left anything behind at all. Unconditional, loudest at zero.
     const rl = repsBankedLine(reps);

@@ -244,3 +244,12 @@ dressing-room/state/gem_sync_stamp.json
 # the log quotes his prompts and my teaching text back verbatim as evidence.
 dressing-room/state/teaching_audit_last.json
 dressing-room/state/teaching_audit.jsonl
+
+# watchman per-run state (7 Aug 2026). Same class: machine-local nightly sweep
+# results, the Tier-2 repair log/journal (they quote session evidence verbatim),
+# and the prompt file handed to the repair child. Public remote gets none of it.
+dressing-room/state/watchman_last.json
+dressing-room/state/watchman.jsonl
+dressing-room/state/watchman_repairs.jsonl
+dressing-room/state/watchman_repair.log
+dressing-room/state/watchman_tier2_prompt.txt
