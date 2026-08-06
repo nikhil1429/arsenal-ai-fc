@@ -237,3 +237,10 @@ dressing-room/state/gem_sync_stamp.json
 *.bak
 *.tmp
 *.orig
+
+# teaching_audit per-run state (6 Aug 2026). Same class as forge_session.json:
+# machine-local turn bookkeeping the checker writes on every Stop hook, plus the
+# append-only verdict log. Neither is code and neither belongs on a public remote —
+# the log quotes his prompts and my teaching text back verbatim as evidence.
+dressing-room/state/teaching_audit_last.json
+dressing-room/state/teaching_audit.jsonl
