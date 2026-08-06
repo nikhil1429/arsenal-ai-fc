@@ -13,7 +13,8 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "node hooks/afferent-post.mjs" }
+          { "type": "command", "command": "node hooks/afferent-post.mjs" },
+          { "type": "command", "command": "node scripts/teaching_audit.mjs hook" }
         ]
       }
     ],

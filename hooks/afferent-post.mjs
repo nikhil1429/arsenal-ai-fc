@@ -48,10 +48,18 @@ async function main() {
   // Capture BOTH sides of a Claude Code learning turn: his OWN words
   // (UserPromptSubmit) AND what he was TAUGHT (Stop → last_assistant_message), so the
   // brain sees the whole learning turn — not just the question, the answer too.
+  // NO CAP. HIS RULING, 6 Aug 2026, in his own words: "there should be no limit."
+  // The caps were 1200 on his side and 2000 on mine, and they were silently EATING
+  // the record: 175 of 382 captured teaching messages sat exactly at 2000 chars, i.e.
+  // 46% were truncated — and what a cap removes is always the END of the message,
+  // which is precisely where the check-question, the hand-back and the close live.
+  // Any organ that reads this stream to check how he was taught was reading a
+  // message with its ending cut off. A truncated record is not a smaller record; it
+  // is a record that is wrong in a specific, load-bearing place.
   const ev = hook.hook_event_name || "";
-  let text, source, cap;
-  if (ev === "UserPromptSubmit") { text = String(hook.prompt || "").trim(); source = "claude-code"; cap = 1200; }
-  else if (ev === "Stop") { text = String(hook.last_assistant_message || "").trim(); source = "claude-code-teaching"; cap = 2000; }
+  let text, source;
+  if (ev === "UserPromptSubmit") { text = String(hook.prompt || "").trim(); source = "claude-code"; }
+  else if (ev === "Stop") { text = String(hook.last_assistant_message || "").trim(); source = "claude-code-teaching"; }
   else return die();
   if (text.length < 3) return die();
   if (isSelfTalk(text)) return die();      // the organism never mistakes itself for him
@@ -62,7 +70,7 @@ async function main() {
   const evt = {
     modality: "code",
     source,
-    text: text.slice(0, cap),
+    text,
     cwd: String(hook.cwd || "").split(/[\\/]/).slice(-1)[0] || null,
     ts: new Date().toISOString(),
   };
