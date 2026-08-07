@@ -18,6 +18,9 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
    cold-reader standard (HIS words, maine-socha-X-phir-Y, atomic, subject
    named) and emit the ONE gist file edit for him to paste — Option A,
    never auto-written.
-5. Reply ≤6 lines: result echoed · twin line ONLY if postmatch shows one ·
-   tomorrow's compiled drill kinds · "wall repainted." Then stop. Sleep is
-   training; do not open new topics.
+5. Run `node scripts/captains_call.mjs deal` (THE CAPTAIN'S CALL, 7 Aug 2026).
+   If a card prints, add its ONE line to the reply and take his one-word answer
+   (haan/na/baad → `answer <id> <word>`). One card max — the queue never shows.
+6. Reply ≤6 lines: result echoed · twin line ONLY if postmatch shows one ·
+   tomorrow's compiled drill kinds · the call card if one dealt · "wall
+   repainted." Then stop. Sleep is training; do not open new topics.

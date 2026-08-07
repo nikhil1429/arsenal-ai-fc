@@ -11,16 +11,16 @@ visuals over walls of text, no hype, no calendar pressure, never streaks.
 1. Run: `node scripts/heartbeat.mjs` then `node scripts/brain.mjs status`.
 2. Read (do not dump raw): `dressing-room/state/team_sheet.md`,
    `dressing-room/state/drills.json`, `dressing-room/state/loop_vitals.json`.
-   Also glance the newest file in `dressing-room/state/brain_out/market/` — the
-   Scout's weekly MARKET PROPOSAL (added 7 Aug 2026; until then it had no reader
-   at all and reconcile bled it as an orphan). If one exists that is newer than
-   the captain's last matchday, add ONE line to the reply: its "Honest read"
-   sentence + the file path. THE FLOW (his ruling, 7 Aug): he reads it against
-   `learning-layer/OPPONENT_SCOUT.md`; only HE edits that canon; if he does,
-   `dressing-room/state/dossier_weights.json` must be regenerated to match — the
-   watchman's nightly `projection-stale` check catches a canon edit whose
-   projection lagged. Never summarize the whole proposal into the sheet; one
-   line + path, his to open.
+   Also run `node scripts/captains_call.mjs deal` — THE CAPTAIN'S CALL (7 Aug
+   2026, his ADHD-PI ruling: reports are machine-face, decisions are one card).
+   If it prints a card, put that ONE line in the reply and take his one-word
+   answer (haan/na/baad → `node scripts/captains_call.mjs answer <id> <word>`).
+   Max ONE card; never list the queue. The Scout's weekly market proposal
+   arrives this way too — on haan, YOU read the file it names and walk him
+   through it in ≤3 lines (he never reads it himself). THE FLOW (his ruling):
+   only HE edits `learning-layer/OPPONENT_SCOUT.md`; if he does,
+   `dressing-room/state/dossier_weights.json` must be regenerated to match —
+   the watchman's nightly `projection-stale` check catches a lagging projection.
 3. Reply in ≤10 lines, in this order:
    - His KAL-line verbatim, first — the sheet resumes him, never addresses him.
    - THE ONE THING from the sheet (one line, why in half a line).

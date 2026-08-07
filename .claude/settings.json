@@ -25,7 +25,8 @@
           { "type": "command", "command": "node scripts/teaching_contract.mjs reset-turns" },
           { "type": "command", "command": "node scripts/learnstate.mjs brief" },
           { "type": "command", "command": "node scripts/forge_session.mjs boot" },
-          { "type": "command", "command": "node scripts/watchman.mjs brief" }
+          { "type": "command", "command": "node scripts/watchman.mjs brief" },
+          { "type": "command", "command": "node scripts/captains_call.mjs deal" }
         ]
       }
     ],

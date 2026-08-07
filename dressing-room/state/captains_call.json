@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "next_id": 8,
+  "cards": [
+    {
+      "id": "c1",
+      "key": "drift:2026-08-06T12:58:45.685Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: axis a ko bina arg ke mark kar diya, jo default 'done' hai — Jirah se pehle. Axis ab UNGRADED record hua hai. — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T12:58:45.685Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c2",
+      "key": "drift:2026-08-06T13:52:47.514Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: DOOSRI baar: 'axis b' bina arg chala diya. Root cause — 'axis <x>' ka matlab 'ab is axis pe hoon' nahi, 'yeh … — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T13:52:47.514Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c3",
+      "key": "drift:2026-08-06T14:08:28.069Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: axis d ka scope khud kaat diya — 'tujhe wahi number de raha hoon jo tere kaam ka hai' bol ke universal measur… — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T14:08:28.069Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c4",
+      "key": "drift:2026-08-06T14:12:14.251Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: TABLES. Usne bola tables usse confuse karte hain aur 'it was the same in previous time' — matlab pehle bhi hu… — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T14:12:14.251Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c5",
+      "key": "drift:2026-08-06T16:57:17.200Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: COVERAGE FAILURE — canon: 'COVERAGE + RETENTION = CLAUDE KA KAAM, Nikhil ke questions pe kabhi depend nahi.' … — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T16:57:17.200Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c6",
+      "key": "drift:2026-08-06T19:52:11.836Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: Aage kood gaya. Woh factuality wale doubt pe atka tha (FinOps ke private data pe factuality kaise naapoge) jo… — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-06T19:52:11.836Z"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c7",
+      "key": "market:2026-08-01.md",
+      "source": "brain_out/market",
+      "line": "Scout ka market proposal (2026-08-01): \"no contradiction with existing scout — this reinforces it, doesn't overturn it. Framework…\" — 3 line mein sunna hai?",
+      "dispatch": {
+        "kind": "open",
+        "path": "dressing-room/state/brain_out/market/2026-08-01.md"
+      },
+      "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    }
+  ]
+}

@@ -129,7 +129,15 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 - **Gut-word before the answer** (`knew`/`shaky`/`guessed`), never re-graded after. No gut-word,
   no rep.
 - **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs` · `rejirah.mjs` ·
-  `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules). Never hand-edit a state file.
+  `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules) · `captains_call.mjs`
+  (captains_call.json — added 7 Aug 2026 with his "yes do it all"). Never hand-edit a state file.
+- **THE CAPTAIN'S CALL** (7 Aug 2026, his ADHD-PI ruling): reports are MACHINE-face — Claude
+  reads them whole; anything needing HIS word becomes ONE one-line card dealt at an anchor he
+  already hits (SessionStart hook · /matchday · /full-time). He answers haan/na/baad, the organ
+  dispatches the owner's CLI. THE ANCHOR LAW: **if a thing needs the captain, it rides an anchor;
+  if it cannot ride an anchor, it does not need the captain.** Never hand him a report to read,
+  never a list of asks, never a command to remember — file a card instead
+  (`node scripts/captains_call.mjs file --line "…"`), max ONE dealt per anchor.
 - **DRIFT IS SELF-REPORTED, HIS WORD PROMOTES IT** (6 Aug 2026 — this is the missing caller).
   The moment you catch yourself breaking a teaching-contract rule — you cut his scope, you
   answered in English, you dumped a quiz, you put his level above his own — run
