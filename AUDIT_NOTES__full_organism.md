@@ -79,3 +79,17 @@
 - VERDICT: detection→gate→spawn→diagnosis→(now-unblocked) repair→journal→revert-path = every link proven live; the one link that failed (permissions) is fixed and its failure mode is now self-announcing.
 
 ## STATUS: ALL 18 PARTS CLOSED. Session complete.
+
+---
+
+# NEXT BUILD — THE OUTWARD LOOP (his rulings, 7-8 Aug 2026 night — READ FIRST NEXT SESSION)
+
+**HIS RULINGS (verbatim intent, recorded the night given):**
+1. **Gemini Pro doctrine:** "leave the internet things to gemini ai pro because it is best in it... we need to utilize it to the maximum." The 17 Jul Engine Law was about the API free pool only — his Pro subscription is the INTERNET ARM: machine writes missions, he fires them, output returns via a paste door.
+2. **Cadence:** outward checks run **AFTER EVERY TOPIC COMPLETION** (wired to LOCK, step 10) — benchmark re-run · mission fire · DOSSIER diff/probe refresh · gate-check · widget register · gist prompt. PLUS a **≥2×/week floor** (benchmark + missions even with no lock). NOT weekly.
+3. **No calendar waiting:** the data-gates are COUNT/EVENT gates (his own 1 Aug rule) — decoy ≥4 capsules+≥60 doubts (opens at hallucinations LOCK), R1 constants (opens at his FIRST Re-Jirah round), confusion-pairs (≥6 cracked). Never frame as dates again.
+4. SEASON.md **UN-PARKED** by his word tonight. Deep-render + tool-less stay EXCLUDED.
+
+**BUILD ORDER:** (1) `benchmark.mjs` — AI_PE_ROADMAP 5 buckets × dossier_weights (§1 rubric: fundamentals 17.8 + system_design 26.7 = 44.5%) × live evidence (capsules/axes-held-cold via `rejirah held` · python_state tier · course.json done · shipped artifacts) → have/need per bucket, no invented numbers; rides wall + matchday; (2) mission generator (in nightshift or scout) + `capture.mjs research-paste`-style door + diff→captains_call card (canon edits = his word); (3) LOCK-chain hook in forge_session step 10; (4) M-2→M-5 Manager (prereqs complete — signal agents done); (5) SEASON.md writer in postmatch (Claude fills 100%, he writes ZERO).
+**HIS EVENTS (machine waits):** first Re-Jirah round · first /full-time · hallucinations LOCK · course/python start · driving 3 widgets.
+**Sources already mapped:** OPPONENT_SCOUT §1/§4/§5/§9 · AI_PE_ROADMAP buckets+80/20 · GEMINI_RIG_SETUP (prompt home) · brain market_scan→card wiring · watchman c4b projection guard.
