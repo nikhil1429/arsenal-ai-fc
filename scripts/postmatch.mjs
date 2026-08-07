@@ -23,11 +23,22 @@
 //   · --dry renders everything and writes NOTHING.
 //
 // INPUT (read-only): pulse.json · drills.json · twin.json · loose_balls.jsonl ·
+//   capsule_map.json · python_state.json · benchmark.json (SEASON.md standings) ·
 //   season.json (own), notebook.json (own), routed_balls.json (own)
-// OUTPUT: post_match/<date>.md · season.json · notebook.json · routed_balls.json
+// OUTPUT: post_match/<date>.md · season.json · notebook.json · routed_balls.json ·
+//   dressing-room/SEASON.md (the logbook — un-parked by his word 7 Aug 2026;
+//   Claude fills 100%, he writes ZERO)
 // MODES:  --hit HIT|MISS|PARTIAL|REST --signal "…" --kal "…" [--diag start|block|sleep]
 //         [--route all|none] [--dry] · route [all|<id>…] (route-only, no ledger)
+//         · season (regen SEASON.md only — no ledger, no matchday)
 //         · selftest  (interactive prompts if TTY, no flags)
+// SEASON.md (DAILY_CADENCE.md compact design, honest subset): TABLE standings +
+//   MATCH ROWS newest-top + streak/form-line (rest-dot neutral) + KAL→kickoff
+//   weld + shame-spiral guard + no date-countdown. Design fields with NO machine
+//   source yet (M1 %, floor/surplus/save-flag per row, won-day=5 scoring) are
+//   DEFERRED, not faked — they join when their owners exist.
+// WHO ELSE COULD ACT ON THIS OUTPUT (Ruling 5): learnstate kickoff (streak line)
+//   · viz wall · twin (bets read season.json) · outwork_audit o5 (sync watch).
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
@@ -40,6 +51,7 @@ const PM_DIR    = join(STATE_DIR, "post_match");
 const SEASON    = join(STATE_DIR, "season.json");
 const NOTEBOOK  = join(STATE_DIR, "notebook.json");
 const ROUTED    = join(STATE_DIR, "routed_balls.json");
+const SEASON_MD = join(__dirname, "..", "dressing-room", "SEASON.md");   // the logbook (8 Aug 2026)
 
 const KAL_RE = /KAL-?LINE\s*→\s*(.+)/i;      // manager.mjs's exact parser contract
 const BADGE = "⚪🔴";
@@ -107,15 +119,89 @@ function renderPostMatch({ hit, signal, kal, diag, disclosures, twinVoice, pendi
   return lines.join("\n") + "\n";
 }
 
-function updateSeason(season, hit, dateStr) {
+function updateSeason(season, hit, dateStr, extras = {}) {
   const s = season || { season_day: 0, matches_played: 0, trophy_state: "unlit", pipeline_item: null, started_on: dateStr };
   const won = WON_DAY.has(hit);
+  const matches_played = (s.matches_played || 0) + (won ? 1 : 0);
+  // MATCH ROWS ledger (SEASON.md's raw layer, 8 Aug 2026) — one row per close,
+  // MISS days included (a row is data, not a verdict). Uncapped: this IS the
+  // season's memory; SEASON.md renders the tail, season.json holds it all.
+  const rows = Array.isArray(s.rows) ? s.rows.slice() : [];
+  rows.push({ date: dateStr, matchday: won ? matches_played : null, result: hit,
+    kal: extras.kal || null, signal: extras.signal || null });
   return {
     ...s,
     season_day: (s.season_day || 0) + 1,
-    matches_played: (s.matches_played || 0) + (won ? 1 : 0),
+    matches_played,
     last_result: hit,
     last_played: dateStr,
+    rows,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SEASON.md — the logbook (his word 7 Aug 2026 un-parked it; DAILY_CADENCE design)
+// Claude fills 100%, he writes ZERO. Pure render — the selftest drives it disk-free.
+// ---------------------------------------------------------------------------
+const FORM_GLYPH = { HIT: "●", PARTIAL: "●", REST: "◦", MISS: "·" };   // rest-dot NEUTRAL by design; MISS is a small dot, never an ✗
+
+function seasonStreak(rows) {
+  let k = 0;
+  for (let i = rows.length - 1; i >= 0; i--) { if (WON_DAY.has(rows[i].result)) k++; else break; }
+  return k;
+}
+
+function renderSeasonMd({ season, lockedCount, python, benchmark, now }) {
+  const dateStr = localDate(now);
+  const rows = (season && Array.isArray(season.rows) ? season.rows : []);
+  const L = [];
+  L.push(`# ${BADGE} SEASON — the match record`);
+  L.push("");
+  L.push(`> Execution-memory, Forge ka sibling — machine-written 100% by postmatch.mjs at every`);
+  L.push(`> full-time (un-parked by his word, 7 Aug 2026; he writes ZERO here). Regen anytime:`);
+  L.push("> `node scripts/postmatch.mjs season`. Tarikh yahan sirf RECORD hai — kabhi demand nahi.");
+  L.push("");
+  L.push(`## STANDINGS · ${dateStr}`);
+  if (!season) {
+    L.push(`- no matchday closed yet — the first /full-time writes row 1. The season starts when he plays, not when a date says so.`);
+  } else {
+    L.push(`- season day ${season.season_day || 0} · matchdays played ${season.matches_played || 0} · current run: ${seasonStreak(rows)} won-day(s)`);
+    const tail = rows.slice(-7);
+    if (tail.length) L.push(`- form (last ${tail.length} close${tail.length > 1 ? "s" : ""}, oldest→newest): ${tail.map((r) => FORM_GLYPH[r.result] || "·").join(" ")}   (● won · ◦ rest — a won day too · «·» not-won: data, not a verdict)`);
+  }
+  L.push(`- capsules locked: ${typeof lockedCount === "number" ? lockedCount : "—"}`);
+  L.push(`- python: ${python ? `tier ${python.tier || "—"} · ${python.fluency || "—"}` : "no track state yet"}`);
+  if (benchmark) {
+    L.push(benchmark.status === "gated_pre_audit"
+      ? `- benchmark: GATED (pre-audit) — ${(benchmark.gate && benchmark.gate.missions_line) || ""}`
+      : `- benchmark: ${(benchmark.buckets || []).map((b) => `${b.id} locked ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}`);
+  } else L.push(`- benchmark: never run`);
+  const lastKal = [...rows].reverse().find((r) => r.kal);
+  L.push(`- KAL→KICKOFF weld: ${lastKal ? `"${lastKal.kal}" (${lastKal.date})` : "no KAL-line on record yet"}`);
+  L.push("");
+  L.push(`## MATCH ROWS (newest first${rows.length > 30 ? ", last 30 — full ledger: season.json" : ""})`);
+  if (!rows.length) {
+    L.push(`_khaali — pehla full-time isse likhega._`);
+  } else {
+    L.push(`| date | MD | result | KAL |`);
+    L.push(`|---|---|---|---|`);
+    for (const r of rows.slice(-30).reverse()) {
+      L.push(`| ${r.date} | ${r.matchday ?? "—"} | ${r.result === "REST" ? "REST (load-managed)" : r.result} | ${r.kal ? r.kal.replace(/\|/g, "/") : "—"} |`);
+    }
+  }
+  L.push("");
+  L.push(`COYG. ${BADGE}`);
+  return L.join("\n") + "\n";
+}
+
+function gatherSeasonExtras(now) {
+  const capsuleMap = readJson(join(STATE_DIR, "capsule_map.json"));
+  return {
+    season: readJson(SEASON),
+    lockedCount: capsuleMap && Array.isArray(capsuleMap.concepts) ? capsuleMap.concepts.filter((c) => c.locked_on).length : null,
+    python: readJson(join(STATE_DIR, "python_state.json")),
+    benchmark: readJson(join(STATE_DIR, "benchmark.json")),
+    now,
   };
 }
 
@@ -194,6 +280,36 @@ async function selftest() {
   assert("route picker: explicit ids take the subset only", pickBallsToRoute(pend, "ids", ["m2"]).map(b => b.id).join() === "m2");
   assert("route picker: unknown id routes nothing (safe no-op)", pickBallsToRoute(pend, "ids", ["zz"]).length === 0);
 
+  // SEASON.md — the logbook (8 Aug 2026)
+  {
+    const s1r = updateSeason(null, "HIT", "2026-08-10", { kal: "pehla move: rejirah embeddings", signal: "held cold" });
+    const s2r = updateSeason(s1r, "MISS", "2026-08-11", {});
+    const s3r = updateSeason(s2r, "REST", "2026-08-12", { kal: "kal fresh: M1 parser" });
+    assert("SEASON rows: one row per close, MISS days included (data, not a verdict)",
+      s3r.rows.length === 3 && s3r.rows[1].result === "MISS" && s3r.rows[1].matchday === null);
+    assert("SEASON rows: won days carry their matchday number; KAL + signal ride the row",
+      s3r.rows[0].matchday === 1 && s3r.rows[2].matchday === 2 && s3r.rows[0].kal.includes("rejirah"));
+    const mdSeason = renderSeasonMd({ season: s3r, lockedCount: 4, python: { tier: null, fluency: "🔴" },
+      benchmark: { status: "gated_pre_audit", gate: { missions_line: "full-syllabus audit 0/4 returned" } }, now: new Date(2026, 7, 12) });
+    assert("SEASON.md: standings carry day/matchdays/run + form glyphs (rest-dot neutral)",
+      /season day 3 · matchdays played 2 · current run: 1 won-day/.test(mdSeason) && /● · ◦/.test(mdSeason));
+    assert("SEASON.md: KAL→KICKOFF weld shows the LAST recorded KAL verbatim",
+      /KAL→KICKOFF weld: "kal fresh: M1 parser" \(2026-08-12\)/.test(mdSeason));
+    assert("SEASON.md: match rows newest-first with REST labelled load-managed",
+      mdSeason.indexOf("| 2026-08-12 |") < mdSeason.indexOf("| 2026-08-10 |") && /REST \(load-managed\)/.test(mdSeason));
+    assert("SEASON.md: benchmark gate line passes through honestly",
+      /benchmark: GATED \(pre-audit\) — full-syllabus audit 0\/4 returned/.test(mdSeason));
+    assert("NO SHAME LAW on the logbook — no failure/broken-streak words, MISS renders a neutral dot",
+      !/fail|failure|broke|shame/i.test(mdSeason));
+    assert("NO-COUNTDOWN LAW on the logbook — no deadline/days-left language",
+      !/deadline|days left|due by|countdown/i.test(mdSeason));
+    const mdEmpty = renderSeasonMd({ season: null, lockedCount: null, python: null, benchmark: null, now: new Date(2026, 7, 8) });
+    assert("SEASON.md: empty season renders the honest scaffold (starts when he plays, not a date)",
+      /no matchday closed yet/.test(mdEmpty) && /starts when he plays/.test(mdEmpty) && /khaali — pehla full-time/.test(mdEmpty));
+    assert("SEASON.md: he writes ZERO — the file says who writes it",
+      /machine-written 100% by postmatch\.mjs/.test(mdSeason));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -219,6 +335,14 @@ async function promptIfTTY(question) {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if (mode === "season") {
+    // Regen the logbook WITHOUT closing a day — no ledger, no matchday, no
+    // prompts. Honest on an empty season (the scaffold says so out loud).
+    const md = renderSeasonMd(gatherSeasonExtras(new Date()));
+    writeAtomic(SEASON_MD, md);
+    console.log(`postmatch: SEASON.md regenerated → ${SEASON_MD}`);
+    return;
+  }
   if (mode === "route") {
     // routing WITHOUT re-running the evening ledger (the Dugout's spoken gate
     // lands here; season/notebook untouched — no double matchday, ever)
@@ -287,9 +411,12 @@ async function main() {
     return;
   }
   writeAtomic(join(PM_DIR, dateStr + ".md"), md);
-  const newSeason = updateSeason(season, hit, dateStr);
+  const newSeason = updateSeason(season, hit, dateStr, { kal, signal });
   writeAtomic(SEASON, newSeason);
   writeAtomic(NOTEBOOK, updateNotebook(readJson(NOTEBOOK), signal, hit, dateStr));
+  // THE LOGBOOK (8 Aug 2026): SEASON.md rides every full-time — Claude fills
+  // 100%, he writes ZERO. Best-effort: a logbook render must never block the ritual.
+  try { writeAtomic(SEASON_MD, renderSeasonMd({ ...gatherSeasonExtras(now), season: newSeason })); } catch { }
   // milestone → arm the brain's deep re-analysis (U4; every 30th matchday)
   if (newSeason.matches_played > 0 && newSeason.matches_played % 30 === 0 && WON_DAY.has(hit)) {
     try {
@@ -312,4 +439,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, KAL_RE };
+export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, KAL_RE, renderSeasonMd, seasonStreak };
