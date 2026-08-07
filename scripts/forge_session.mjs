@@ -132,6 +132,7 @@ const blank = (concept, now = new Date()) => ({
   axes_done: [],
   axes_deferred: [],
   axes_marked_at: {},
+  current_axis: null,
   question_moments: MOMENTS.reduce((o, m) => ((o[m] = 0), o), {}),
   check_q_this_pass: 0,
 });
@@ -184,7 +185,23 @@ function markAxis(s, axis, how = "done", now = new Date()) {
   // from argv, so wall-time cannot be typed in.
   const marked = { ...(s.axes_marked_at || {}) };
   marked[a] = { at: nowISO(now), step: s.step, jirah_before: (s.question_moments && s.question_moments.jirah) || 0 };
-  return { ok: true, session: { ...s, axes_done: done.sort(), axes_deferred: def.sort(), axes_marked_at: marked, updated_at: nowISO(now) } };
+  // Marking an axis (either way) ends its turn as the CURRENT axis — see setCurrentAxis.
+  const cur = s.current_axis === a ? null : (s.current_axis ?? null);
+  return { ok: true, session: { ...s, axes_done: done.sort(), axes_deferred: def.sort(), axes_marked_at: marked, current_axis: cur, updated_at: nowISO(now) } };
+}
+
+// THE MISSING DECLARATION (7 Aug 2026, full-organism audit P4.1). What a teacher
+// needs every turn is "I am NOW on axis x" — a statement that completes nothing.
+// Until today that command did not exist, and the nearest-looking one (`axis <x>`,
+// argument optional, DEFAULT DONE) meant "axis x is COMPLETE": on 7 Aug that trap
+// bit twice in twenty minutes, recording axes b and then another as done-but-
+// UNGRADED before any Jirah had happened. `now` is pure declaration: it moves no
+// axis between lists, touches no marks, and is cleared by the axis's own
+// done/defer. The trap itself is closed at the CLI (the bare form now refuses).
+function setCurrentAxis(s, axis, now = new Date()) {
+  const a = String(axis || "").trim().toLowerCase();
+  if (!AXES.includes(a)) return { ok: false, error: `axis not a..i (${axis})`, session: s };
+  return { ok: true, session: { ...s, current_axis: a, updated_at: nowISO(now) } };
 }
 
 function addMoment(s, kind, now = new Date()) {
@@ -307,7 +324,7 @@ function contractLines(s, now = new Date()) {
     + (n >= 1 && n < 10 ? ` · META-FREEZE ON (concept open — no process/system/repo work until step 10 LOCK)` : ""));
   L.push(`  THE METHOD order: ${STEPS.map((t, i) => (i === n ? `[${i} ${t}]` : `${i} ${t}`)).join(" · ")}`);
   if (skipped.length) L.push(`  ⚠ SKIPPED so far: ${skipped.map((i) => `${i} ${STEPS[i]}`).join(" · ")} — say so out loud, or go back.`);
-  L.push(`  axes: done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
+  L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
     + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
   L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these four are legal — no quiz-dump)`);
   if (SOFT_PHASE(n)) {
@@ -818,7 +835,7 @@ const apply = (r) => {
   save(r.session);
   return r.session;
 };
-const oneLine = (s) => `forge_session: ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step]} · axes done ${s.axes_done.join("") || "—"} · check-Q this pass ${s.check_q_this_pass || 0}`
+const oneLine = (s) => `forge_session: ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step]}${s.current_axis ? ` · ON axis ${s.current_axis}` : ""} · axes done ${s.axes_done.join("") || "—"} · check-Q this pass ${s.check_q_this_pass || 0}`
   + (s.check_q_refused ? ` · refused ${s.check_q_refused}` : "")
   + (s.closed_at ? ` · CLOSED ${s.closed_at}` : (hoursSince(s.started_at) > STALE_HOURS ? " · STALE (pacer silent)" : ""));
 
@@ -989,6 +1006,19 @@ function selftest() {
   assert("re-marking an axis MOVES it, never duplicates", ax2.axes_done.length === 0 && ax2.axes_deferred.join() === "a");
   assert("axis rejects a letter past i", !markAxis(ax, "z", "done").ok);
   assert("axis rejects an unknown disposition", !markAxis(ax, "b", "maybe").ok);
+
+  // P4.1 (7 Aug 2026) — the current-axis declaration, and the trap's pure-side contract
+  assert("axis NOW declares without completing anything",
+    (() => { const r = setCurrentAxis(s4, "B", T0); return r.ok && r.session.current_axis === "b" && r.session.axes_done.length === s4.axes_done.length && r.session.axes_deferred.length === s4.axes_deferred.length; })());
+  assert("axis NOW rejects a letter past i", !setCurrentAxis(s4, "z").ok);
+  assert("marking the CURRENT axis done|defer clears the declaration",
+    (() => { const c = setCurrentAxis(s4, "b", T0).session; return markAxis(c, "b", "done", T0).session.current_axis === null && markAxis(c, "b", "defer", T0).session.current_axis === null; })());
+  assert("marking a DIFFERENT axis leaves the declaration standing",
+    (() => { const c = setCurrentAxis(s4, "b", T0).session; return markAxis(c, "c", "done", T0).session.current_axis === "b"; })());
+  assert("the contract block names the ON axis while it is undecided, and drops it once marked",
+    (() => { const c = setCurrentAxis(s4, "b", T0).session;
+      return contractLines(c, T0).some((l) => /ON b ·/.test(l))
+        && !contractLines(markAxis(c, "b", "done", T0).session, T0).some((l) => /ON b ·/.test(l)); })());
 
   const cov = coverage(ax2);
   assert("coverage counts what RAN, not what was claimed", cov.steps_ran.join() === "0,3,4" && cov.steps_pct === 25);
@@ -1482,7 +1512,29 @@ switch (mode) {
     break;
   }
   case "step":   console.log(oneLine(apply(setStep(live(need(load())), rest[0])))); break;
-  case "axis":   console.log(oneLine(apply(markAxis(live(need(load())), rest[0], rest[1] || "done")))); break;
+  case "axis": {
+    // FROZEN 7 Aug 2026 (full-organism audit P4.1) — the original dispatch, verbatim:
+    //   case "axis":   console.log(oneLine(apply(markAxis(live(need(load())), rest[0], rest[1] || "done")))); break;
+    // `rest[1] || "done"` made the argument optional and the default "COMPLETE" — so
+    // "axis b", typed on 7 Aug to mean "I am now on axis b", recorded "axis b is
+    // DONE" twice in twenty minutes, both before any Jirah. A no-argument form that
+    // silently marks work complete is a trap. It now refuses and names the three
+    // explicit forms; `now` is the declaration that was missing entirely.
+    const how = String(rest[1] || "").trim().toLowerCase();
+    if (!how) {
+      console.error(`forge_session: axis ${rest[0] || "<x>"} — KYA karna hai? Bina bole kuch nahi hota (purana default 'done' 7 Aug ko do baar kaat gaya):`);
+      console.error(`  axis ${rest[0] || "<x>"} now    → ab is axis par kaam chal raha hai (sirf declare — kuch COMPLETE nahi hota)`);
+      console.error(`  axis ${rest[0] || "<x>"} done   → axis COMPLETE (sirf uske apne Jirah ke BAAD)`);
+      console.error(`  axis ${rest[0] || "<x>"} defer  → aaj nahi — deferred list mein (core axis d kabhi nahi)`);
+      process.exit(1);
+    }
+    if (how === "now" || how === "on" || how === "current") {
+      console.log(oneLine(apply(setCurrentAxis(live(need(load())), rest[0]))));
+    } else {
+      console.log(oneLine(apply(markAxis(live(need(load())), rest[0], how))));
+    }
+    break;
+  }
   case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
   case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
   case "contract": {                      // HOOK PATH — silence is the default
@@ -1584,5 +1636,5 @@ switch (mode) {
   }
   case "selftest": selftest(); break;
   default:
-    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> [done|defer] | moment <" + MOMENTS.join("|") + "> | status | contract | boot | close | selftest");
+    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | status | contract | boot | close | selftest");
 }

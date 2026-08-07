@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 8,
+  "next_id": 10,
   "cards": [
     {
       "id": "c1",
@@ -12,7 +12,10 @@
         "at": "2026-08-06T12:58:45.685Z"
       },
       "filed_at": "2026-08-07T05:38:03.010Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-07T06:49:04.623Z",
+        "2026-08-07T06:49:08.104Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
@@ -114,6 +117,39 @@
         "path": "dressing-room/state/brain_out/market/2026-08-01.md"
       },
       "filed_at": "2026-08-07T05:38:03.010Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c8",
+      "key": "drift:2026-08-07T13:03:35.292Z",
+      "source": "teaching_contract.staged",
+      "line": "Drift report [his-word]: Apni hi baat se takraaya. Pehle padhaya ki uske private invoices pe closed-book factuality bekaar hai (fridge… — sahi hai?",
+      "dispatch": {
+        "kind": "staged",
+        "at": "2026-08-07T13:03:35.292Z"
+      },
+      "filed_at": "2026-08-07T14:05:50.002Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c9",
+      "key": "gate2:embeddings:0",
+      "source": "tape_room.gate2",
+      "line": "Doubt cold-readable nahi (embeddings): \"Map kaunsa hai? Ye map kya cheez hai?\" — abhi 1 line mein saath theek karein? (1/17+, regex floor)",
+      "dispatch": {
+        "kind": "none"
+      },
+      "filed_at": "2026-08-07T14:05:50.002Z",
       "dealt": [],
       "answer": null,
       "answered_at": null,

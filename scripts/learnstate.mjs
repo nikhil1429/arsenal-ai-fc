@@ -14,13 +14,13 @@
 //   JS->Python 5-phase loop (Claude learn -> Colab -> Coach Gem + CLOSE-PACKET).
 // MODES: brief (default — for the SessionStart hook) · json · selftest
 // ============================================================================
-import { readFileSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { courseBrief } from "./course.mjs";   // audit #35 — the course tracker's one reader
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
-import { loadCapsules, readLog, pendingCloses } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds
+import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
@@ -214,6 +214,79 @@ function gather(dir = STATE, now = Date.now()) {
   return { sprint, ws, cur, watch, modeLine, wsAge };
 }
 
+// ---------------------------------------------------------------------------
+// THE ARBITER (P7.B, full-organism audit 7 Aug 2026). Six organs hold opinions
+// about what he should do next — the open forge session, Re-Jirah (pending paste
+// + overdue rounds), the sprint, the Examiner, Nemesis, the floor. Nobody
+// arbitrated, so every kickoff listed them ALL and the choosing tax landed on the
+// one brain this system exists to protect. This makes the call IN CODE, with a
+// stated precedence, and names what lost and why — auditable, never silent:
+//   1. an OPEN forge session — an open loop starves everything else; stale-open
+//      means "close it first" (the coverage report is the only record it happened)
+//   2. a Re-Jirah round SAT but never pasted — a 2-minute act; until it lands,
+//      five organs read the round as never-served
+//   3. the most-overdue Re-Jirah round — proof decays; overdue = ripe, not late
+//   4. the sprint's current task — the plan of record
+//   5. a staged Examiner drill — retrieval practice on the day's concept
+// The WATCHMAN deliberately never ranks: organ repair is the machine's job (his
+// 6 Aug ruling — "keep me out of this picture") and must never become his next
+// thing. Nemesis feeds WHICH drill, not WHETHER — it rides inside 4/5, not beside
+// them. Every read is fail-silent: this rides the SessionStart hook via brief().
+export function nextup(dir = STATE, now = Date.now()) {
+  const winnerOf = (name, line, why, rest) => ({ winner: { name, line, why }, contenders: rest });
+  const losers = [];
+  let forge = null;
+  try { forge = readJson(join(dir, "forge_session.json")); } catch {}
+  const forgeOpen = !!(forge && forge.concept && !forge.closed_at);
+  let pend = [], overdue = [];
+  try {
+    const caps = loadCapsules(join(dir, "capsules"));
+    const rows = readLog(join(dir, "rejirah_log.jsonl"));
+    pend = pendingCloses(caps, rows);
+    const iv = intervalsOf();
+    for (const c of caps) {
+      const r = openRound(c, iv);
+      if (r && r.ok && r.due) {
+        const od = Math.floor((now - Date.parse(r.due)) / 86400000);
+        if (od > 0) overdue.push({ concept: c.id, round: r.round, due: r.due, overdue_days: od });
+      }
+    }
+    overdue.sort((a, b) => b.overdue_days - a.overdue_days);
+  } catch {}
+  const sprint = readJson(join(dir, "sprint.json")) || {};
+  const cur = (sprint.progress && sprint.progress.current) || null;
+  const exam = readJson(join(dir, "examiner_drill.json"));
+
+  if (pend.length) losers.push({ name: "rejirah-pending", line: `${pend.length} closed round(s) un-pasted — \`node scripts/rejirah.mjs pending\`` });
+  if (overdue.length) losers.push({ name: "rejirah-due", line: `R${overdue[0].round} ${overdue[0].concept} ${overdue[0].overdue_days}d ripe (+${overdue.length - 1} more) — \`node scripts/deep.mjs due\`` });
+  if (cur) losers.push({ name: "sprint", line: `${cur.id} ${cur.task} [${cur.track}]` });
+  if (exam && exam.concept) losers.push({ name: "examiner", line: `staged drill on ${exam.concept} (${exam.date || "?"})` });
+
+  if (forgeOpen) {
+    const stale = (now - Date.parse(forge.started_at || "")) / 3600000 > 18;
+    const line = stale
+      ? `PEHLE \`node scripts/forge_session.mjs close\` — '${forge.concept}' kal se khula pada hai; coverage report zor se padho, PHIR wahi concept continue`
+      : `resume '${forge.concept}' @ STEP ${forge.step} — usi jagah se, kuch dobara nahi`;
+    return winnerOf("forge-open", line, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
+  }
+  if (pend.length) {
+    return winnerOf("rejirah-pending", `gist paste: ${pend.slice(0, 2).map((p) => `${p.concept} R${p.round}`).join(" · ")} — \`node scripts/rejirah.mjs pending\` se patch lo`,
+      "2 minute ka kaam; jab tak nahi hota, paanch organ round ko 'hua hi nahi' padhte hain", losers.filter((l) => l.name !== "rejirah-pending"));
+  }
+  if (overdue.length) {
+    const o = overdue[0];
+    return winnerOf("rejirah-due", `Re-Jirah R${o.round} '${o.concept}' (${o.overdue_days}d ripe) — shuru: \`node scripts/deep.mjs due\`, grade: \`node scripts/rejirah.mjs grade\``,
+      "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai", losers.filter((l) => l.name !== "rejirah-due"));
+  }
+  if (cur) {
+    return winnerOf("sprint", `${cur.id} ${cur.task} [${cur.track}] — plan of record`, "koi khula loop nahi, koi overdue proof nahi — ab aage ka kaam", losers.filter((l) => l.name !== "sprint"));
+  }
+  if (exam && exam.concept) {
+    return winnerOf("examiner", `staged drill on ${exam.concept}`, "sprint khali hai — staged drill hi agla kaam hai", losers.filter((l) => l.name !== "examiner"));
+  }
+  return winnerOf("none", "kuch nahi mila — `node scripts/sprintsync.mjs` chala ke sprint wapas lao", "har source khali/unreadable tha", losers);
+}
+
 function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   const { sprint, ws, cur, watch, modeLine, wsAge } = gather(dir, now);
   // age tag for the working-set slots (see WS_STALE_DAYS above). Same-day = no tag
@@ -243,6 +316,12 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     const sp = (sprint.sprints || []).find(s => String(cur.id).startsWith(String(s.n) + "-"));
     L.push(`LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
     L.push(`  MODE: ${modeLine}`);
+    // P7.B (7 Aug 2026) — ONE decision, made in code, so the kickoff never again
+    // hands him a menu of six competing opinions. Fail-silent like every splice here.
+    try {
+      const nu = nextup(dir, now);
+      if (nu && nu.winner && nu.winner.name !== "none") L.push(`  ▶ PEHLA KAAM: ${nu.winner.line}  (kyun: ${nu.winner.why}${nu.contenders.length ? ` · haara: ${nu.contenders.map((c) => c.name).join(", ")} — poora: \`node scripts/learnstate.mjs nextup\`` : ""})`);
+    } catch { /* a brief must never be the thing that breaks SessionStart */ }
     // audit #35 — THE COURSE TRACKER GETS ITS ADDRESS.
     // course.mjs was 670 lines with zero callers and course.json had never existed, while
     // sprint.json's next_up is 1-05 and 1-06 — BOTH course-track, 9 chapters. So on 1-05 he
@@ -368,6 +447,31 @@ function selftest() {
   const dir2 = mkdtempSync(join(tmpdir(), "learnstate-empty-"));
   assert("empty state -> a valid brief, never a crash", typeof brief(dir2, NOW) === "string" && brief(dir2, NOW).includes("KICKOFF"));
 
+  // ---- P7.B — THE ARBITER (7 Aug 2026): one winner, stated precedence, losers named
+  const dirA = mkdtempSync(join(tmpdir(), "learnstate-arbiter-"));
+  writeFileSync(join(dirA, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-04", task: "Hallucinations", track: "concept" } } }));
+  assert("ARBITER — with only a sprint, the sprint wins (plan of record)",
+    nextup(dirA, NOW).winner.name === "sprint");
+  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 2 * 3600000).toISOString(), step: 4 }));
+  assert("ARBITER — an OPEN fresh forge session beats the sprint, and says RESUME",
+    (() => { const n = nextup(dirA, NOW); return n.winner.name === "forge-open" && /resume/.test(n.winner.line) && n.contenders.some((c) => c.name === "sprint"); })());
+  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 30 * 3600000).toISOString(), step: 4 }));
+  assert("ARBITER — a STALE-open session wins but the action is CLOSE-first (coverage report is the record)",
+    /PEHLE.*close/.test(nextup(dirA, NOW).winner.line));
+  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 30 * 3600000).toISOString(), step: 4, closed_at: new Date(NOW - 20 * 3600000).toISOString() }));
+  const capDirA = join(dirA, "capsules"); mkdirSync(capDirA, { recursive: true });
+  writeFileSync(join(capDirA, "tokenization.json"), JSON.stringify({ id: "tokenization", lockedOn: "2026-06-15", reJirahDone: [] }));
+  assert("ARBITER — session closed + an overdue Re-Jirah round → Re-Jirah wins (proof decays first)",
+    (() => { const n = nextup(dirA, NOW); return n.winner.name === "rejirah-due" && /tokenization/.test(n.winner.line); })());
+  writeFileSync(join(dirA, "rejirah_log.jsonl"), JSON.stringify({ kind: "round-close", concept: "tokenization", round: 1, due: "2026-06-18", closed_at: iso(1), axes_graded: ["a"] }) + "\n");
+  assert("ARBITER — a round SAT-but-unpasted beats a merely-due round (five organs read it as never-served)",
+    nextup(dirA, NOW).winner.name === "rejirah-pending");
+  assert("ARBITER — the watchman NEVER appears, winner or loser",
+    (() => { const n = nextup(dirA, NOW); return n.winner.name !== "watchman" && !n.contenders.some((c) => c.name === "watchman"); })());
+  assert("ARBITER — brief() carries exactly one PEHLA KAAM line",
+    (brief(dirA, NOW) === undefined ? [] : brief(dirA, NOW).split("\n")).filter((l) => l.includes("PEHLA KAAM")).length <= 1
+    && brief(dir, NOW).split("\n").filter((l) => l.includes("PEHLA KAAM")).length === 1);
+
   // ---- MEMORY SPLICE (31 Jul 2026) — the brief must carry the hippocampus, and
   // must be IDENTICAL to the old brief whenever memory is absent or broken.
   const memBrief = brief(dir, NOW, "THE LEDGER OF SELF:\n- he has ADHD-PI");
@@ -457,6 +561,19 @@ async function main() {
   // `json` and `selftest` stay reachable: they are read paths, not injection paths.
   if (process.env.ARSENAL_ORGAN === "1" && mode !== "json") return;
   if (mode === "json") { console.log(JSON.stringify(gather(), null, 2)); return; }
+  if (mode === "nextup") {
+    // P7.B — the full arbitration, on demand: winner, why, and every loser named.
+    const nu = nextup(STATE, Date.now());
+    console.log(`\n== NEXT UP — THE ARBITER (deterministic · precedence stated in code) ==\n`);
+    console.log(`  ▶ ${nu.winner.line}`);
+    console.log(`    kyun: ${nu.winner.why}`);
+    if (nu.contenders.length) {
+      console.log(`\n  haare hue daave (order = precedence):`);
+      for (const c of nu.contenders) console.log(`   · ${c.name}: ${c.line}`);
+    }
+    console.log(`\n  (watchman kabhi is list mein nahi aata — organ repair machine ka kaam hai, tera nahi.)\n`);
+    return;
+  }
   // AFTER the organ guard, never before — an organ prompt must never carry his memory.
   // AUDIT #107: the assembler decides each part's share of an explicit budget and
   // prints a manifest footer naming anything missing or trimmed. If it is unavailable

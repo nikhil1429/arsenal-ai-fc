@@ -375,7 +375,7 @@ opponent ban ke wapas; saaf jeeto to doubt retire) · `/paste-session` (Gem/Cola
 node scripts/forge_session.mjs boot                    # read-only; SessionStart khud chalata
 node scripts/forge_session.mjs start <concept> [--force]   # session khulte hi, sabse pehle (--force = purani unclosed session DISCARD, par ek `force` row phir bhi history mein likhi jaati)
 node scripts/forge_session.mjs step <0-11>
-node scripts/forge_session.mjs axis <a-i> [done|defer]     # arg optional — chhoda to `done` maana jaata
+node scripts/forge_session.mjs axis <a-i> now|done|defer   # arg REQUIRED (7 Aug 2026, P4.1: bare form REFUSES — purana default `done` do baar Jirah se pehle axis "complete" kar gaya). `now` = "ab is axis par hoon", sirf declare
 node scripts/forge_session.mjs status                     # hook-safe, ek line
 node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                   # "session khatam" pe → coverage report
@@ -455,6 +455,8 @@ nahi hua" value). **Clean outcome se `knew` gadho mat.**
 | `rejirah_log.jsonl` | `rejirah.mjs` *(5 Aug 2026)* | Re-Jirah ke axis-GRADE rows + round-CLOSE rows, append-only. Controller-v0 ke saare reserved field isse **DERIVE** hote hain. |
 | `python_state.json` | `python_state.mjs` *(5 Aug 2026)* | Python track: subtopic · tier · 🔴🟡🟢 · close_sign_at · JS-hangover watch-list (×N) · last_packet |
 | `widgets.json` | `widget.mjs` *(5 Aug 2026)* | Visualization Contract ka registry — kaunse concept ka widget maujood hai aur kitne guess-gate **actually driven** hue. **Generate kabhi nahi karta.** |
+| `gemini_quality.jsonl` | `capture.mjs` *(7 Aug 2026, P6.1)* | Gemini surface ka OUTCOME ledger — har paste-batch ke measured stats (gut mix · correct rate · span), **judge koi nahi 30-45d tak**. Transcript-level compliance wahan ho hi nahi sakti (transcript machine tak aata hi nahi) — replacement = yeh lane + day-end cold Examiner. |
+| `outwork_audit_last.json` | `outwork_audit.mjs` *(7 Aug 2026, P8.2)* | OUTWORK layer ka behavioural audit — "din ne apna kaam kiya?": full-time close · KAL→kickoff weld · RESULT paper-trail · 3-bucket split · season/post_match sync · presence≠output. Watchman ki nightly run ise `run --json` se ride karti hai. WON-DAY ke unmachine-checkable hisse `report` mein NAAM se stated. |
 
 **LAW: writes sirf owners se.** `reps_log.jsonl`, `concepts.json`, ya koi bhi state file **haath se
 kabhi edit mat karo**. Doubts → `node scripts/hippocampus.mjs mark doubt` (uske shabd stdin pe).
@@ -908,7 +910,7 @@ node scripts/sprintsync.mjs
 
 # forge session (pacer)
 node scripts/forge_session.mjs start <concept> [--force]   # --force = purani unclosed session DISCARD (ek `force` row phir bhi history mein)
-node scripts/forge_session.mjs step <0-11> | axis <a-i> [done|defer] | moment <name> | close
+node scripts/forge_session.mjs step <0-11> | axis <a-i> now|done|defer | moment <name> | close
 node scripts/forge_session.mjs contract             # THE METHOD ka 12-step order — UserPromptSubmit hook chalata, haath se bhi chal jaata
 node scripts/forge_session.mjs selftest
 

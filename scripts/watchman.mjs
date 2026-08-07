@@ -387,6 +387,26 @@ function probeTasks(today, yesterday) {
   } catch { return []; }
 }
 
+// The outwork behavioural sweep (P8.2, 7 Aug 2026). outwork_audit.mjs asks the
+// question this file deliberately does not — not "did the organ run" but "did
+// the DAY do its job": full-time close, the KAL→kickoff weld, the honest-review
+// paper trail, the 3-bucket split, season/post_match agreement. Spawned like
+// probeSuite so the two layers ride ONE schedule; its findings merge into the
+// same night's report and gate. A spawn failure is a finding, never a silence.
+function probeOutwork() {
+  try {
+    const r = spawnSync(process.execPath, [join(__dirname, "outwork_audit.mjs"), "run", "--json"],
+      { timeout: 60000, encoding: "utf8" });
+    if (r.error || r.status !== 0) {
+      return [{ id: "outwork-audit-unrunnable", level: "RED", finding: "the outwork behavioural audit could not run", evidence: String(r.error || `exit ${r.status}: ${String(r.stderr || "").slice(0, 200)}`) }];
+    }
+    const j = JSON.parse(String(r.stdout || "[]").trim() || "[]");
+    return Array.isArray(j) ? j : [];
+  } catch (e) {
+    return [{ id: "outwork-audit-unrunnable", level: "RED", finding: "the outwork behavioural audit could not run", evidence: String(e) }];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TIER 2 — escalation, per his §7.1/§7.2 rulings. Fires ONLY on non-INFO
 // findings, at most once per local day, detached so the nightly task never
@@ -480,6 +500,7 @@ function run(argv) {
   if (!skipSuite) { const f = probeSuite(); if (f) findings.push(f); }
   const yday = localDate(new Date(now.getTime() - 24 * 3.6e6));
   findings.push(...probeTasks(w.today, yday));
+  findings.push(...probeOutwork());
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);

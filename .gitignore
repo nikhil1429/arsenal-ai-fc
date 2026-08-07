@@ -253,3 +253,6 @@ dressing-room/state/watchman.jsonl
 dressing-room/state/watchman_repairs.jsonl
 dressing-room/state/watchman_repair.log
 dressing-room/state/watchman_tier2_prompt.txt
+# outwork_audit per-run state (7 Aug 2026, P8.2). Same class as watchman_last:
+# machine-local sweep output, rebuilt nightly, meaningless on another machine.
+dressing-room/state/outwork_audit_last.json

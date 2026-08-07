@@ -67,6 +67,10 @@ import { execFileSync } from "node:child_process";     // #25 — the heartbeat 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const REPS_LOG  = join(STATE_DIR, "reps_log.jsonl");
+// P6.1 (full-organism audit, 7 Aug 2026) — the Gemini surface's OUTCOME ledger.
+// One JSON line per pasted batch: measured stats, judged by NOBODY until there is
+// 30-45d of real data (his standing rule). capture.mjs is its single writer.
+const GEMINI_QUALITY = join(STATE_DIR, "gemini_quality.jsonl");
 const CONFIG_PATH   = join(STATE_DIR, "capture_config.json");   // machine-local (gitignored)
 const CONCEPTS_PATH = join(STATE_DIR, "concepts.json");         // canon (committed)
 
@@ -454,6 +458,44 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
     skipped_existing: loadStats.skipped || 0,
     skipped_reasons: [...new Set(loadStats.skipped_reasons || [])],
     quarantined, quarantine_path: quarantined ? path + ".quarantine.jsonl" : null,
+    appended_rows: toAppend,      // P6.1 — the paste lane's quality stats read these
+  };
+}
+
+// ---------------------------------------------------------------------------
+// P6.1 — THE GEMINI SURFACE'S HONEST ANSWER (full-organism audit, 7 Aug 2026).
+// Stated plainly and permanently: a TRANSCRIPT-level compliance check for the
+// Gemini/Colab surface CANNOT exist on this machine — the teaching happens on a
+// surface whose transcript never arrives; only the rep JSON does. No
+// deterministic checker can audit turns it cannot see, and inventing an LLM
+// re-grader over rep text would judge a summary, not the teaching.
+// WHAT REPLACES IT (outcome over process):
+//   1. shape validation at the door (validateRep — ts/gut/axis law, already live),
+//   2. THIS: per-batch MEASURED stats, recorded to gemini_quality.jsonl and
+//      judged by nobody until 30-45d of real data exists (his standing rule),
+//   3. the day's cold Examiner retrieval test — if the teaching was bad, the
+//      cold outcome cracks HERE, where the machine can see it.
+// The watchman's report prints this same boundary every night (§6.2).
+// Pure — the selftest drives it with fixtures.
+export function geminiBatchStats(rows, observedAt = null) {
+  const n = (Array.isArray(rows) ? rows : []).length;
+  if (!n) return null;
+  const by = (f) => rows.reduce((o, r) => { const k = String(r[f]); o[k] = (o[k] || 0) + 1; return o; }, {});
+  const tss = rows.map((r) => Date.parse(r.ts)).filter(Number.isFinite);
+  return {
+    at: observedAt || new Date().toISOString(),
+    n,
+    surfaces: by("surface"),
+    tracks: by("track"),
+    concepts: [...new Set(rows.map((r) => r.concept))],
+    axes: [...new Set(rows.map((r) => r.axis).filter(Boolean))].sort(),
+    confidence_mix: by("confidence"),
+    correct_rate: +(rows.filter((r) => r.correct === true).length / n).toFixed(2),
+    // measured, never judged: a batch that is 100% knew-correct is RECORDED here —
+    // whether that is mastery or a surface that never commits a real gut-word is a
+    // 30-45d question, not this line's.
+    all_knew_correct: rows.every((r) => r.confidence === "knew" && r.correct === true),
+    ts_span_min: tss.length >= 2 ? Math.round((Math.max(...tss) - Math.min(...tss)) / 60000) : 0,
   };
 }
 
@@ -622,6 +664,22 @@ function selftest() {
   // 2) valid-append
   let r = ingest(p, [rep(), rep({ ts: "2026-07-11T09:05:00Z", question: "q2" })], reg);
   assert("valid-append: 2 valid reps appended", r.appended === 2 && loadReps(p, reg).length === 2);
+  // P6.1 — the Gemini outcome lane: appended rows ride the return, and the pure
+  // stats function measures without judging (each side can fail).
+  assert("P6.1 — ingest returns the appended rows for the quality lane",
+    Array.isArray(r.appended_rows) && r.appended_rows.length === 2);
+  assert("P6.1 — geminiBatchStats measures mix/rate/span and flags-without-judging all-knew-correct",
+    (() => {
+      const rows = [
+        { ts: "2026-08-07T10:00:00Z", surface: "gem", track: "concept", concept: "hallucinations", axis: "a", confidence: "knew", correct: true },
+        { ts: "2026-08-07T10:30:00Z", surface: "gem", track: "concept", concept: "hallucinations", axis: "b", confidence: "shaky", correct: false },
+      ];
+      const s = geminiBatchStats(rows, "2026-08-07T11:00:00Z");
+      const all = geminiBatchStats(rows.map((x) => ({ ...x, confidence: "knew", correct: true })));
+      return s.n === 2 && s.correct_rate === 0.5 && s.confidence_mix.knew === 1 && s.confidence_mix.shaky === 1
+        && s.ts_span_min === 30 && s.all_knew_correct === false && all.all_knew_correct === true
+        && geminiBatchStats([]) === null;
+    })());
 
   // 3) malformed-reject (7): missing ts, out-of-set conf, numeric conf, bad surface, missing concept, non-bool correct, note wrong type
   const bad = [
@@ -1030,6 +1088,17 @@ function main() {
     }
     if (r.ts_corrected) console.log(`paste: ⚠ ${r.ts_corrected} rep(s) claimed a timestamp AFTER they arrived — ts corrected to the observed clock (ts_claimed keeps the original).`);
     if (r.errors.length) console.log(`  rejected reasons: ${r.errors.slice(0, 10).join("; ")}`);
+    // P6.1 — the Gemini surface's outcome ledger (paste lane only: the paste door IS
+    // the off-machine handoff; the `rep` door is the in-session surface the teaching
+    // audit already covers). Recorded, never judged.
+    if (mode === "paste" && r.appended > 0) {
+      const stats = geminiBatchStats(r.appended_rows, r.observed_at);
+      if (stats) {
+        try { appendFileSync(GEMINI_QUALITY, JSON.stringify(stats) + "\n", "utf8"); } catch { /* a ledger miss never blocks reps */ }
+        console.log(`paste: gemini-quality row recorded (n ${stats.n} · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
+        console.log("paste: (Gemini ka TRANSCRIPT is machine tak kabhi nahi aata — process-compliance wahan unmeasurable hai. Yeh lane sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
+      }
+    }
     // #26 — the paste lane's recompute. OPT-IN, and that is deliberate: the forge
     // skill (SKILL.md step 2) and turnstile.mjs:175 already chain heartbeat right
     // after their paste, and dugout.mjs:1143 shells this synchronously on every

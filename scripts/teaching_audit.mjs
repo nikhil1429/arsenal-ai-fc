@@ -85,7 +85,7 @@
 // (`autohit` / `checked`), exactly as the owners-only law requires.
 // ---------------------------------------------------------------------------
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, cpSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, cpSync, rmSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -107,8 +107,22 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 export const CHECKED_RULES = [
   "one-idea", "dheema-not-lamba", "hinglish", "his-level",
   "no-system-mid-concept", "confusion-is-literal", "his-word",
-  "coverage",
+  "coverage", "neev-pehle", "link-back", "terminology", "decided",
 ];
+
+// COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
+// id in CHECKED_RULES means "a check EXISTS", never "the whole rule is machine-
+// visible". This map states, for every partially-checkable rule, exactly which
+// slice the machine sees and which slice stays HIS to catch — so "no drift caught"
+// can never quietly widen into "taught correctly". `report` prints it verbatim.
+export const RULE_NOTES = {
+  "neev-pehle": "machine sees the LEXICAL slice only: a listed term-of-art used in the teaching body before any definitional line for it, this concept. The SEMANTIC form (a conclusion resting on an un-opened idea that has no listed name) is not machine-checkable without an LLM judge — that slice stays his to flag.",
+  "link-back": "machine sees NAME-presence only: by the time SAMJHAO ends (first turn past step 3) some closed concept must have been NAMED in this session. Whether the link was a real weld or a name-drop is not machine-visible.",
+  "terminology": "machine sees a fixed translation-pair floor (shabdkosh/bhram/prasang-class replacements — 0 false positives across 4,270 live rows because they never occur in his register). Softer paraphrase-drift is not machine-visible; the pair list under-counts by design.",
+  "decided": "machine sees TWO fingerprints only (re-opening the selfknowledge freeze; re-opening the tool-less/guest surface — both PERMANENT rulings, 7 Aug 2026). The general form (re-litigating any settled decision) has no decision registry to check against and stays his to catch.",
+  "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
+  "coverage": "machine sees ONE fingerprint: a CORE axis landing in axes_deferred. The half-answer/scope-cut class is semantic and stays his.",
+};
 
 // CORE-NEVER-DEFERRED's axis set, mirrored from the owner (forge_session.mjs:109;
 // canon PROJECT_OS.md:316). Mirrored, not imported — this hook must stay
@@ -277,6 +291,171 @@ export function mentionsSystemWork(text) {
 }
 
 // ---------------------------------------------------------------------------
+// NEEV-PEHLE (full-organism audit P1.2, 7 Aug 2026) — the sequencing defect that
+// finally got a name. Its shape, in the captain's evidence: the teacher delivers a
+// CONCLUSION before the thing that conclusion rests on. Both live 7 Aug instances
+// share one lexical fingerprint: a TERM-OF-ART was USED (inside a formula or an
+// instruction) before any definitional line for it had ever appeared —
+//   · the groundedness FORMULA arrived before "ground truth" was opened as an
+//     object (he had to ask three times);
+//   · "apne invoices se eval set banao" arrived before "eval set ek FILE hai" had
+//     ever been said (he worked it out himself and corrected the teacher).
+// HOW_HE_LEARNS #8 is the canon this projects onto: "Open every new name or label
+// in one line, the first time."
+//
+// WHAT IS CHECKABLE AND WHAT IS NOT, stated plainly (see RULE_NOTES): the machine
+// can see LISTED terms used-before-opened. It cannot see a conclusion resting on
+// an un-opened IDEA that has no listed name — that is semantic, needs a judge, and
+// stays his to flag. This list is therefore a FLOOR, like Gate 2's regexes: grown
+// from observed failures + the near-syllabus term space, never claimed complete.
+const TERMS_OF_ART = [
+  // the two observed failures and their cluster
+  "ground truth", "eval set", "evaluation set", "test set", "closed-book", "open-book",
+  "groundedness", "factuality", "hallucination rate",
+  // near-syllabus terms a teacher could plausibly conclude-with before opening
+  "benchmark", "precision", "recall", "f1", "rag", "retrieval", "chunking", "reranking",
+  "system prompt", "few-shot", "zero-shot", "chain of thought", "fine-tuning", "rlhf",
+];
+
+// Vocabulary already OPENED by closed concepts — a term the syllabus already
+// taught never fires. concepts.json aliases carry most of it; this map adds the
+// core words of each CLOSED concept that its alias list does not spell out.
+const CLOSED_EXTRA_VOCAB = {
+  tokenization: ["token", "tokens", "vocabulary", "next-token", "next-token prediction"],
+  inference: ["probability", "probability distribution"],
+};
+
+// Hyphen/space-flexible, word-bounded presence. "closed-book" matches "closed book";
+// plural s/es tolerated; substrings never match ("rag" does not fire inside "storage").
+const flexTerm = (t) => String(t).trim().split(/[\s-]+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s-]+");
+export function termUsed(text, term) {
+  return new RegExp(`(^|[^a-z0-9])${flexTerm(term)}(e?s)?([^a-z0-9]|$)`, "i").test(stripCode(text));
+}
+
+// Did this text OPEN the term — a one-line definitional act, in the house style
+// measured off the real repair turns in afferent.jsonl (6 Aug 16:49): "ka asli
+// naam: EVALUATION SET", "Yahi tera ground truth hai", "eval set ek FILE hai",
+// "X matlab/yaani …", "X (gloss…)", "X = …".
+export function opensTerm(text, term) {
+  const s = stripCode(text);
+  const T = `[*_"'«»]*${flexTerm(term)}(e?s)?[*_"'«»]*`;
+  const pats = [
+    `${T}\\s*(=|ka matlab|matlab|yaani)`,                                  // eval set = / matlab
+    `${T}\\s*\\(`,                                                          // EVALUATION SET *(chhota naam…)*
+    `${T}\\s+ek\\s+[^.\\n]{1,60}(hai|hota|hoti)`,                           // "eval set ek FILE hai"
+    `${T}\\s+(is|means)\\s+(a|an|the)?\\b`,                                 // English definitional
+    `(asli naam|naam|kehte hain|bolte hain|kehlata|kehlati)[^.\\n]{0,30}[:\\-—]?\\s*${T}`,
+    `(yahi|yeh|ye)\\s+(tera|tumhara|hamara)?\\s*${T}\\s+(hai|hota|hoti)`,   // "Yahi tera ground truth hai"
+  ];
+  return pats.some((p) => new RegExp(p, "i").test(s));
+}
+
+// TERMINOLOGY (P1.1) — the checkable floor of the rule "Hindi anuvaad se naam mat
+// badlo". A pair fires only when the Hindi NAME-replacement is present AND the
+// English term is absent from the same message — both present is a gloss/analogy,
+// which canon explicitly allows ("analogy alag cheez hai, naam alag"). Ordinary
+// Hinglish words that live in his analogy register (tukda, sambhavna — 11 clean
+// live occurrences) are EXCLUDED on evidence; every pair below has ZERO occurrences
+// in 4,270 live afferent rows, so a hit is near-certain drift and the list is an
+// honest under-count, never a wolf-crier.
+const TERM_TRANSLATIONS = [
+  ["shabdkosh", "vocabulary"],
+  ["bhram", "hallucination"],
+  ["prasang khidki", "context window"],
+  ["prasang", "context"],
+  ["antargat", "embedding"],
+  ["nishkarsh", "inference"],
+];
+
+// DECIDED (P1.1) — the two PERMANENT rulings with unambiguous fingerprints
+// (7 Aug 2026, hippocampus: selfknowledge frozen + no tool-less guest surface,
+// "yeh thread dobara mat kholo"). Anything matching these is re-litigation.
+const DECIDED_RULINGS = [
+  { rx: /selfknowledge[^.\n]{0,60}(enable|wapas|re-?open|chal(u|a)o|un-?freeze|revive|zinda)/i,
+    ruling: "selfknowledge.mjs PERMANENTLY frozen — his word, 7 Aug 2026; do not re-open" },
+  { rx: /tool-?less\s+(guest\s+)?surface|guest\/keynote\s+surface/i,
+    ruling: "the tool-less guest/keynote surface is NOT to be built — his word, 7 Aug 2026" },
+];
+
+// The closed-concept world, derived LIVE (never hardcoded): sprint.json
+// progress.done + the locked capsule mirror. Returns { names, vocab } — names for
+// the link-back check, vocab (ids + aliases + extra) pre-opened for neev-pehle.
+export function closedDerive(stateDir = STATE_DIR) {
+  const names = [], vocab = [];
+  try {
+    const sprint = readJson(join(stateDir, "sprint.json"));
+    for (const d of ((sprint || {}).progress || {}).done || []) {
+      const clean = String(d).replace(/^\d+-\d+\s+/, "").replace(/\s*\(.*\)$/, "");
+      for (const part of clean.split(/[&,]/)) { const p = part.trim(); if (p) names.push(p); }
+    }
+  } catch { /* absent sprint = empty world, never a throw */ }
+  try {
+    for (const f of readdirSync(join(stateDir, "capsules"))) {
+      if (f.endsWith(".json")) names.push(f.replace(/\.json$/, ""));
+    }
+  } catch { /* no mirror on this machine */ }
+  try {
+    const reg = readJson(join(stateDir, "concepts.json"));
+    const byId = (reg || {}).concepts || {};
+    for (const n of names) {
+      const id = n.toLowerCase().replace(/\s+/g, "_");
+      const hit = byId[n.toLowerCase()] || byId[id] || Object.entries(byId).find(([k]) => n.toLowerCase().includes(k))?.[1];
+      if (hit && Array.isArray(hit.aliases)) vocab.push(...hit.aliases);
+    }
+  } catch { /* registry optional */ }
+  for (const n of names) {
+    vocab.push(n.toLowerCase());
+    const extra = CLOSED_EXTRA_VOCAB[n.toLowerCase()];
+    if (extra) vocab.push(...extra);
+  }
+  const seen = new Set();
+  const uniqNames = names.filter((n) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+  return { names: uniqNames, vocab: [...new Set(vocab.map((v) => String(v).toLowerCase()))] };
+}
+
+// SEED FROM HISTORY (P1.2, 7 Aug 2026). The cross-turn term/link state was born
+// mid-concept — six hallucinations sessions predate it, and their teaching turns
+// are all on disk in afferent.jsonl (claude-code-teaching lane). Claiming "never
+// opened" without having watched would be a guess; replaying the recorded turns
+// through the SAME opensTerm/termUsed the live check uses is a measurement.
+// This is the owner writing its own state file — single-writer law intact.
+export function seedTerms({ concept = null, sinceSession = null } = {}) {
+  const fs = readForgeSession();
+  const c = concept || (fs.session && fs.session.concept) || null;
+  if (!c) return { ok: false, why: "no concept — none open on disk, none given" };
+  const afferents = join(STATE_DIR, "afferent.jsonl");
+  if (!existsSync(afferents)) return { ok: false, why: "no afferent.jsonl — nothing recorded to replay" };
+  const opened = new Set(), used = new Set();
+  let rows = 0, teachRows = 0, linkSeen = false;
+  const closed = closedDerive();
+  const startISO = sinceSession || (fs.session && fs.session.started_at) || null;
+  const lines = readFileSync(afferents, "utf8").split("\n");
+  for (const l of lines) {
+    if (!l.trim()) continue;
+    let r; try { r = JSON.parse(l); } catch { continue; }
+    rows++;
+    if (r.source !== "claude-code-teaching" || typeof r.text !== "string") continue;
+    teachRows++;
+    for (const t of TERMS_OF_ART) {
+      if (!termUsed(r.text, t)) continue;
+      used.add(t);
+      if (opensTerm(r.text, t)) opened.add(t);
+    }
+    if (startISO && r.ts && r.ts >= startISO) {
+      if (closed.names.some((n) => norm(r.text).includes(n.toLowerCase()) || norm(r.text).includes(n.toLowerCase().replace(/s$/, "")))) linkSeen = true;
+    }
+  }
+  const last = readLast() || {};
+  writeLastReal({
+    ...last,
+    terms: { concept: c, opened: [...opened].sort(), flagged: (last.terms && last.terms.concept === c ? last.terms.flagged : []) || [], seeded_from_history_at: new Date().toISOString() },
+    linkback: { concept: c, session: startISO, seen: linkSeen, flagged: false, seeded_from_history_at: new Date().toISOString() },
+    checked_rules: CHECKED_RULES,
+  });
+  return { ok: true, concept: c, rows, teachRows, opened: [...opened].sort(), used_never_opened: [...used].filter((t) => !opened.has(t)).sort(), linkSeen };
+}
+
+// ---------------------------------------------------------------------------
 // FROZEN 6 Aug 2026 (layering law) — the original audit engine, kept whole. Its
 // helper calls are re-pointed at the frozen twins (countQuestionsLegacy etc.) so
 // the OLD behaviour stays reproducible verbatim; everything else is byte-for-byte.
@@ -388,7 +567,7 @@ export function auditTurnLegacy({ assistantText = "", userText = "", session = n
  *   no-system           steps 3-6  (unchanged; now code-stripped)
  *   confusion/ungraded  state comparisons, step-agnostic by construction
  */
-export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null } = {}) {
+export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null, termState = null, linkState = null, closed = null } = {}) {
   const drifts = [];
   const open = !!(session && session.concept && !session.closed_at);
 
@@ -517,6 +696,81 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
     }
   }
 
+  // ---- 8) NEEV-PEHLE — a term-of-art used before it was ever opened --------
+  // (P1.2, 7 Aug 2026 — the sequencing defect, lexical slice; RULE_NOTES states
+  // the semantic slice stays his.) Fires only in the teaching body, only when the
+  // caller supplies cross-turn state (termState) — a stateless call never guesses.
+  // A term this turn OPENS is clean and becomes opened; a term already flagged
+  // never re-fires; closed-concept vocabulary is pre-opened.
+  const termResult = { used: [], opened_now: [], fired: [] };
+  if (inBody && termState && Array.isArray(termState.opened)) {
+    const preOpened = new Set([...(termState.opened || []), ...(((closed || {}).vocab) || [])].map((t) => String(t).toLowerCase()));
+    const flagged = new Set((termState.flagged || []).map((t) => String(t).toLowerCase()));
+    for (const t of TERMS_OF_ART) {
+      if (!termUsed(assistantText, t)) continue;
+      termResult.used.push(t);
+      if (opensTerm(assistantText, t)) { termResult.opened_now.push(t); continue; }
+      if (preOpened.has(t) || flagged.has(t)) continue;
+      // aliases of each other ("eval set" / "evaluation set" / "test set") — one
+      // opening covers the cluster
+      const cluster = { "eval set": ["evaluation set", "test set"], "evaluation set": ["eval set", "test set"], "test set": ["eval set", "evaluation set"] }[t] || [];
+      if (cluster.some((c) => preOpened.has(c) || termResult.opened_now.includes(c))) continue;
+      termResult.fired.push(t);
+      drifts.push({
+        rule: "neev-pehle",
+        evidence: `term-of-art "${t}" USED at step ${step} but never OPENED — no definitional line for it this concept, this turn or any before (canon HOW_HE_LEARNS #8: naya naam pehli baar aate hi EK line mein kholo; conclusion-before-foundation is the 7 Aug class)`,
+        excerpt: quote(String(stripCode(assistantText)).split(/\n/).find((l) => termUsed(l, t)) || assistantText, 160),
+      });
+    }
+  }
+
+  // ---- 9) LINK-BACK — SAMJHAO ended and no closed concept was ever named ----
+  // (P1.1.) Presence-of-name only (RULE_NOTES). Fires ONCE per session, at the
+  // first audited turn past step 3, when no closed-concept name has appeared in
+  // any audited turn of this session including this one.
+  let linkbackNamedNow = false, linkbackFired = false;
+  if (linkState && closed && Array.isArray(closed.names) && closed.names.length) {
+    linkbackNamedNow = closed.names.some((n) => {
+      const key = n.toLowerCase();
+      const t = norm(stripCode(assistantText));
+      return t.includes(key) || t.includes(key.replace(/s$/, ""));
+    });
+    if (Number.isFinite(step) && step > 3 && step <= 9 && !linkState.seen && !linkState.flagged && !linkbackNamedNow) {
+      linkbackFired = true;
+      drifts.push({
+        rule: "link-back",
+        evidence: `SAMJHAO is over (step ${step}) and NO closed concept has been named this session — canon: naya concept hamesha band ho chuke concepts se NAAM le kar jodo (closed: ${closed.names.join(" · ")})`,
+        excerpt: quote(assistantText, 120),
+      });
+    }
+  }
+
+  // ---- 10) TERMINOLOGY — Hindi name-replacement with the English term absent --
+  // (P1.1, floor pairs only — RULE_NOTES.) Both-present is a gloss and is clean.
+  if (inTeaching && step !== 7) {
+    for (const [hindi, english] of TERM_TRANSLATIONS) {
+      if (termUsed(assistantText, hindi) && !termUsed(assistantText, english)) {
+        drifts.push({
+          rule: "terminology",
+          evidence: `"${hindi}" used as the NAME with "${english}" absent from the message — Hindi anuvaad se naam mat badlo (analogy alag cheez hai, naam alag); both together is a legal gloss`,
+          excerpt: quote(String(stripCode(assistantText)).split(/\n/).find((l) => termUsed(l, hindi)) || assistantText, 140),
+        });
+      }
+    }
+  }
+
+  // ---- 11) DECIDED — re-opening a PERMANENT ruling -------------------------
+  // (P1.1, two fingerprints only — RULE_NOTES.)
+  for (const d of DECIDED_RULINGS) {
+    if (d.rx.test(stripCode(assistantText))) {
+      drifts.push({
+        rule: "decided",
+        evidence: `re-litigates a settled ruling: ${d.ruling}`,
+        excerpt: quote(String(stripCode(assistantText)).match(d.rx)?.[0] || assistantText, 140),
+      });
+    }
+  }
+
   // ---- MEASURED ONLY, NEVER JUDGED ---------------------------------------
   const measured = {
     chars: String(assistantText).length,
@@ -530,7 +784,7 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
     step: Number.isFinite(step) ? step : null,
   };
 
-  return { audited: true, why: null, drifts, measured };
+  return { audited: true, why: null, drifts, measured, terms: termResult, linkback: { named_now: linkbackNamedNow, fired: linkbackFired } };
 }
 
 // ---------------------------------------------------------------------------
@@ -639,12 +893,37 @@ export function stopHook(hook, io) {
   const prevAxesDone = last.stop && Array.isArray(last.stop.axes_done) ? last.stop.axes_done : null;
   const prevAxesDeferred = last.stop && Array.isArray(last.stop.axes_deferred) ? last.stop.axes_deferred : null;
 
+  // Cross-turn state for neev-pehle + link-back (P1.1/P1.2), keyed by CONCEPT —
+  // a term opened in yesterday's session of the same concept stays opened (canon
+  // is "pehli baar", first time EVER for this concept, not first time today).
+  // This file is teaching_audit's own (single-writer law), so the state rides it.
+  const concept = session ? String(session.concept || "") : "";
+  const terms0 = (last.terms && last.terms.concept === concept) ? last.terms : { concept, opened: [], flagged: [] };
+  const link0 = (last.linkback && last.linkback.concept === concept && last.linkback.session === (session && session.started_at))
+    ? last.linkback : { concept, session: session && session.started_at, seen: false, flagged: false };
+  const closed = closedDerive();
+
   const res = auditTurn({
     assistantText: String(hook.last_assistant_message || ""),
     userText, session, prevStep, prevAxesDone, prevAxesDeferred,
+    termState: terms0, linkState: link0, closed,
   });
 
   const why = res.audited ? null : (readWhy || res.why);
+
+  // Roll the state forward off what the engine measured (opened accumulates for
+  // the concept's lifetime; a fired term goes to flagged so it never re-fires;
+  // link-back is per-SESSION and latches on first naming or first flag).
+  const terms1 = res.audited ? {
+    concept,
+    opened: [...new Set([...(terms0.opened || []), ...(res.terms?.opened_now || [])])],
+    flagged: [...new Set([...(terms0.flagged || []), ...(res.terms?.fired || [])])],
+  } : terms0;
+  const link1 = res.audited ? {
+    ...link0,
+    seen: !!(link0.seen || res.linkback?.named_now),
+    flagged: !!(link0.flagged || res.linkback?.fired),
+  } : link0;
 
   // Auto-count first, so the log row can record what actually landed.
   const staged = [];
@@ -667,6 +946,8 @@ export function stopHook(hook, io) {
       axes_done: session && Array.isArray(session.axes_done) ? session.axes_done : [],
       axes_deferred: session && Array.isArray(session.axes_deferred) ? session.axes_deferred : [],
     },
+    terms: terms1,
+    linkback: link1,
     checked_rules: CHECKED_RULES,
   });
 
@@ -777,7 +1058,11 @@ function report() {
     const unchecked = tc.rules.map((r) => r.id).filter((id) => !CHECKED_RULES.includes(id));
     console.log(`  coverage: checks exist for ${tc.rules.length - unchecked.length} of ${tc.rules.length} contract rules`
       + (unchecked.length ? ` — UNCHECKED: ${unchecked.join(" · ")}` : ""));
-    console.log("  ('no drift caught' is NOT 'taught correctly' — only the checked rules are checked.)");
+    console.log("  ('no drift caught' is NOT 'taught correctly' — only the checked rules are checked,");
+    console.log("   and for these, only the stated slice:)");
+    for (const [r, note] of Object.entries(RULE_NOTES)) {
+      if (CHECKED_RULES.includes(r) && tc.rules.some((x) => x.id === r)) console.log(`   · ${r} — ${note}`);
+    }
   }
   if (!existsSync(LOG)) { console.log("  no turns audited yet (it runs only while a forge session is open).\n"); return; }
   const rows = readFileSync(LOG, "utf8").trim().split("\n").map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
@@ -956,9 +1241,72 @@ function selftest() {
     }).drifts.some((d) => d.rule === "coverage"));
   assert("CHECKED_RULES names every rule id this engine can emit, and nothing else",
     (() => {
-      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage"];
+      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided"];
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
+
+  // ========================================================================
+  // PART 2b — P1.1/P1.2 (7 Aug 2026): neev-pehle, link-back, terminology,
+  // decided. The neev-pehle cases are the REAL 6-7 Aug failures, reconstructed
+  // from the staged drift reports and the live afferent rows — the captain's
+  // own test set, per the brief.
+  // ========================================================================
+  const T0STATE = { opened: [], flagged: [] };
+  const NOCLOSED = { names: [], vocab: [] };
+  assert("NEEV-PEHLE — drift #7's real shape ('apne invoices se eval set banao', never opened) FIRES at step 4",
+    auditTurn({
+      assistantText: "Ab agla kadam: apne invoices se **eval set** banao — 50 sawaal kaafi hain shuru ke liye.",
+      session: at(4), termState: T0STATE, closed: NOCLOSED,
+    }).drifts.some((d) => d.rule === "neev-pehle" && /eval set/.test(d.evidence)));
+  assert("NEEV-PEHLE — drift #5's real shape (formula with 'closed-book' + 'ground truth' unopened) fires for BOTH",
+    (() => {
+      const r = auditTurn({
+        assistantText: "Groundedness ka formula: supported claims / total claims. Isko **closed-book** mode mein chalao aur **ground truth** se compare karo.",
+        session: at(4), termState: T0STATE, closed: NOCLOSED,
+      });
+      const fired = r.drifts.filter((d) => d.rule === "neev-pehle").map((d) => d.evidence).join(" ");
+      return /closed-book/.test(fired) && /ground truth/.test(fired);
+    })());
+  assert("NEEV-PEHLE — the REAL 6 Aug repair turn (asli naam: EVALUATION SET … Yahi tera ground truth hai) OPENS and stays clean",
+    (() => {
+      const real = "Us test track ka asli naam: **EVALUATION SET** *(chhota naam: **eval set**, ya **test set**)*. Yeh hai: sawaalon ki ek fixed list, aur har sawaal ka verified sahi jawab. Yahi tera **ground truth** hai.";
+      const r = auditTurn({ assistantText: real, session: at(4), termState: T0STATE, closed: NOCLOSED });
+      return !r.drifts.some((d) => d.rule === "neev-pehle")
+        && r.terms.opened_now.includes("evaluation set") && r.terms.opened_now.includes("ground truth");
+    })());
+  assert("NEEV-PEHLE — an OPENED term never fires again, and the eval-set cluster shares one opening",
+    (() => {
+      const st = { opened: ["eval set"], flagged: [] };
+      const r = auditTurn({ assistantText: "Apne **test set** pe accuracy nikaal.", session: at(5), termState: st, closed: NOCLOSED });
+      return !r.drifts.some((d) => d.rule === "neev-pehle");
+    })());
+  assert("NEEV-PEHLE — closed-concept vocabulary is pre-opened (sampling never fires, inference is closed)",
+    !auditTurn({ assistantText: "Isme **sampling** wahi kaam karti hai jo pehle dekhi thi.", session: at(4), termState: T0STATE, closed: { names: ["Inference & sampling"], vocab: ["sampling"] } })
+      .drifts.some((d) => d.rule === "neev-pehle"));
+  assert("NEEV-PEHLE — a FLAGGED term does not re-fire every turn, and a stateless call stays silent (never guesses)",
+    !auditTurn({ assistantText: "eval set yaad hai na.", session: at(4), termState: { opened: [], flagged: ["eval set"] }, closed: NOCLOSED })
+      .drifts.some((d) => d.rule === "neev-pehle")
+    && !auditTurn({ assistantText: "eval set banao abhi.", session: at(4) }).drifts.some((d) => d.rule === "neev-pehle"));
+  assert("LINK-BACK — step 4 with zero closed-concept names ever seen FIRES once; naming 'embedding' (singular) counts as seen",
+    (() => {
+      const closed = { names: ["Embeddings", "Context window"], vocab: [] };
+      const fired = auditTurn({ assistantText: "Aaj naya concept shuru karte hain.", session: at(4), linkState: { seen: false, flagged: false }, closed });
+      const named = auditTurn({ assistantText: "Yeh wahi baat hai jo embedding mein dekhi thi.", session: at(4), linkState: { seen: false, flagged: false }, closed });
+      return fired.drifts.some((d) => d.rule === "link-back") && fired.linkback.fired
+        && !named.drifts.some((d) => d.rule === "link-back") && named.linkback.named_now;
+    })());
+  assert("LINK-BACK — silent during SAMJHAO (step 3), silent once seen/flagged, silent with no closed concepts",
+    !auditTurn({ assistantText: "x", session: at(3), linkState: { seen: false, flagged: false }, closed: { names: ["Embeddings"], vocab: [] } }).drifts.some((d) => d.rule === "link-back")
+    && !auditTurn({ assistantText: "x", session: at(4), linkState: { seen: true, flagged: false }, closed: { names: ["Embeddings"], vocab: [] } }).drifts.some((d) => d.rule === "link-back")
+    && !auditTurn({ assistantText: "x", session: at(4), linkState: { seen: false, flagged: false }, closed: NOCLOSED }).drifts.some((d) => d.rule === "link-back"));
+  assert("TERMINOLOGY — 'shabdkosh' with 'vocabulary' absent fires; BOTH together is a legal gloss; step 7 exempt",
+    auditTurn({ assistantText: "Model ka **shabdkosh** 50,000 ka hota hai.", session: at(4) }).drifts.some((d) => d.rule === "terminology")
+    && !auditTurn({ assistantText: "Vocabulary — matlab model ka shabdkosh — 50,000 ki hoti hai.", session: at(4) }).drifts.some((d) => d.rule === "terminology")
+    && !auditTurn({ assistantText: "Model ka shabdkosh bada hai.", session: at(7) }).drifts.some((d) => d.rule === "terminology"));
+  assert("DECIDED — proposing to re-enable selfknowledge fires; the tool-less surface fingerprint fires; clean teaching does not",
+    auditTurn({ assistantText: "Ek idea: selfknowledge wapas enable kar dein?", session: at(4) }).drifts.some((d) => d.rule === "decided")
+    && auditTurn({ assistantText: "Hum ek tool-less surface bana sakte hain guests ke liye.", session: at(4) }).drifts.some((d) => d.rule === "decided")
+    && !auditTurn({ assistantText: "Token wo sabse chhoti unit hai jo model padhta hai.", session: at(4) }).drifts.some((d) => d.rule === "decided"));
 
   // ========================================================================
   // PART 3 — THE DISK PATH. This is what 25 green assertions never touched
@@ -1033,5 +1381,14 @@ const cmd = process.argv[2];
 if (cmd === "selftest") selftest();
 else if (cmd === "report") report();
 else if (cmd === "probe") probe(process.argv.slice(3));
+else if (cmd === "seed-terms") {
+  const ci = process.argv.indexOf("--concept");
+  const r = seedTerms({ concept: ci >= 0 ? process.argv[ci + 1] : null });
+  if (!r.ok) { console.log(`seed-terms: ${r.why}`); process.exit(1); }
+  console.log(`seed-terms · ${r.concept} · replayed ${r.teachRows} teaching rows (of ${r.rows} afferents)`);
+  console.log(`  OPENED (definitional line found on record): ${r.opened.join(" · ") || "—"}`);
+  console.log(`  used but NEVER opened (these will fire if used bare again): ${r.used_never_opened.join(" · ") || "—"}`);
+  console.log(`  link-back this session: ${r.linkSeen ? "a closed concept HAS been named" : "no closed concept named yet"}`);
+}
 else if (cmd === "hook") await hookMain();
-else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | selftest");
+else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | selftest");

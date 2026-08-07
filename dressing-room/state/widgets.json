@@ -5,6 +5,21 @@
       "file": "dressing-room/club/widgets/embeddings.html",
       "gates_driven": 3,
       "registered_at": "2026-08-05T22:51:19.956Z"
+    },
+    "tokenization": {
+      "file": "dressing-room/club/widgets/tokenization.html",
+      "gates_driven": 0,
+      "registered_at": "2026-08-07T14:03:10.667Z"
+    },
+    "inference": {
+      "file": "dressing-room/club/widgets/inference.html",
+      "gates_driven": 0,
+      "registered_at": "2026-08-07T14:03:10.763Z"
+    },
+    "context": {
+      "file": "dressing-room/club/widgets/context.html",
+      "gates_driven": 0,
+      "registered_at": "2026-08-07T14:03:10.877Z"
     }
   }
 }

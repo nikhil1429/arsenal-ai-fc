@@ -41,7 +41,8 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 node scripts/forge_session.mjs boot                   # read-only; SessionStart runs it for you
 node scripts/forge_session.mjs start <concept>        # at session open, before anything
 node scripts/forge_session.mjs step <0-11>            # BEFORE each step's first message
-node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred)
+node scripts/forge_session.mjs axis <a-i> now         # the moment you START teaching an axis (declares, completes NOTHING)
+node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred) — `done` only AFTER its own Jirah; bare `axis <x>` refuses (P4.1)
 node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```

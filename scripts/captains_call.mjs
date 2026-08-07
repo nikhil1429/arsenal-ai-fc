@@ -92,7 +92,7 @@ function loadState() {
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
-export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "" } = {}, now = new Date()) {
+export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -118,6 +118,32 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     }
   }
 
+  // 1b. ONE Gate-2 flagged doubt (full-organism audit P5.2, 7 Aug 2026). 17 of 112
+  // tape-room doubts violate the cold-reader standard (cryptic/meta/fragment) and are
+  // therefore EXCLUDED from rematches — correct, but it left them with no repair path:
+  // a list he will never open. This is the anchor-lawful flow instead: ONE doubt, one
+  // line, at an anchor he already hits; haan = the session walks the rewrite with him
+  // right now (≤3 lines) and hands him the gist patch. Serialized: a new card derives
+  // only when no gate2 card is LIVE, so the 17 arrive one at a time, never as a list.
+  // The 17 is a REGEX FLOOR, not the truth — the card says so ("regex floor").
+  // HONEST LEAK, on the record: a haan answered but never pasted to the gist retires
+  // the card while the doubt stays flagged; it gets a second lap only after every
+  // other flagged doubt has had its first — the queue moves, nothing loops forever.
+  if (gate2 && gate2.doubt) {
+    const g = gate2.doubt;
+    const key = `gate2:${g.capsule}:${g.doubt_index}`;
+    const liveGate2 = s.cards.some((c) => c.source === "tape_room.gate2" && !c.answer && !c.retired_at);
+    if (!byKey.has(key) && !liveGate2) {
+      s.cards.push({
+        id: `c${s.next_id++}`, key, source: "tape_room.gate2",
+        line: `Doubt cold-readable nahi (${g.capsule}): "${clip(g.q_verbatim, 70)}" — abhi 1 line mein saath theek karein? (${gate2.fixed_or_carded + 1}/${gate2.total}+, regex floor)`,
+        dispatch: { kind: "none" },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
+    }
+  }
+
   // 2. the newest market proposal — one card per FILE, ever.
   if (marketFile) {
     const key = `market:${marketFile}`;
@@ -135,11 +161,14 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
 }
 
 // Pick THE one card to deal. Order (an ORDER, not a number): hand-filed →
-// staged drifts oldest-first → market. Sleeping and answered cards never deal.
+// staged drifts oldest-first → gate2 doubt-repairs → market. Sleeping and
+// answered cards never deal.
 export function pickCard(state, { today }) {
   const live = state.cards.filter((c) => !c.answer && !c.retired_at
     && !(c.sleep_until && c.sleep_until >= today));
-  const rank = (c) => (c.source === "hand-filed" ? 0 : c.source === "teaching_contract.staged" ? 1 : 2);
+  const rank = (c) => (c.source === "hand-filed" ? 0
+    : c.source === "teaching_contract.staged" ? 1
+    : c.source === "tape_room.gate2" ? 2 : 3);
   live.sort((a, b) => rank(a) - rank(b) || String(a.filed_at).localeCompare(String(b.filed_at)));
   return live[0] || null;
 }
@@ -199,7 +228,21 @@ function gatherSources() {
       if (m) marketHonest = m[1];
     }
   } catch { /* no market dir yet — no card */ }
-  return { staged, marketFile, marketHonest };
+  // P5.2 — the first Gate-2 flagged doubt not yet carded (read-only on tape_room.json;
+  // doubtminer.mjs owns that file, this only reads the flags it wrote).
+  let gate2 = null;
+  try {
+    const tape = readJson(join(STATE_DIR, "tape_room.json"));
+    const q = (tape && Array.isArray(tape.queue)) ? tape.queue : [];
+    const flagged = q.filter((x) => Array.isArray(x.gate2_flag) && x.gate2_flag.length);
+    if (flagged.length) {
+      const call = loadState();
+      const carded = new Set(call.cards.filter((c) => c.source === "tape_room.gate2").map((c) => c.key));
+      const nextDoubt = flagged.find((x) => !carded.has(`gate2:${x.capsule}:${x.doubt_index}`));
+      if (nextDoubt) gate2 = { doubt: nextDoubt, total: flagged.length, fixed_or_carded: carded.size };
+    }
+  } catch { /* no tape room yet — no card */ }
+  return { staged, marketFile, marketHonest, gate2 };
 }
 
 function sync(now = new Date()) {
@@ -337,6 +380,22 @@ function selftest() {
   assert("derive — a staged entry settled at the source auto-retires its card (a card must not outlive its ask)",
     gone.cards.find((c) => c.key === `drift:${STAGED[0].at}`).retired_at !== null
     && gone.cards.find((c) => c.key === `drift:${STAGED[1].at}`).retired_at === null);
+
+  // P5.2 — the gate2 doubt lane (7 Aug 2026)
+  const G2 = { doubt: { capsule: "embeddings", doubt_index: 0, q_verbatim: "Map kaunsa hai? Ye map kya cheez hai?" }, total: 17, fixed_or_carded: 0 };
+  const sg = deriveCards(blank(), { gate2: G2 }, T0);
+  assert("GATE2 — one flagged doubt becomes ONE card, quote + regex-floor honesty in the line",
+    sg.cards.length === 1 && sg.cards[0].source === "tape_room.gate2"
+    && /Map kaunsa hai/.test(sg.cards[0].line) && /regex floor/.test(sg.cards[0].line) && /1\/17/.test(sg.cards[0].line));
+  assert("GATE2 — serialized: while one gate2 card is LIVE, a second flagged doubt derives NOTHING",
+    deriveCards(sg, { gate2: { ...G2, doubt: { capsule: "inference", doubt_index: 3, q_verbatim: "doosra" } } }, T0).cards.length === 1);
+  assert("GATE2 — idempotent on the same doubt (key is identity)",
+    deriveCards(sg, { gate2: G2 }, T0).cards.length === 1);
+  assert("GATE2 — ranks AFTER staged drifts, BEFORE market (his confirmations first)",
+    (() => { const mix = deriveCards(sg, { staged: [STAGED[0]], marketFile: "2026-08-01.md" }, T0);
+      const first = pickCard(mix, { today: "2026-08-07" });
+      const afterDrift = pickCard({ ...mix, cards: mix.cards.map((c) => c.key.startsWith("drift:") ? { ...c, answer: "haan" } : c) }, { today: "2026-08-07" });
+      return first.key.startsWith("drift:") && afterDrift.source === "tape_room.gate2"; })());
 
   // pick
   assert("pick — ONE card, oldest staged before market (order, not a number)",

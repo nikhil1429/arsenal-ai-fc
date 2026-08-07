@@ -68,6 +68,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE = join(HERE, "..", "dressing-room", "state");
 const CAPSULES = join(STATE, "capsules");
 const LOG = join(STATE, "rejirah_log.jsonl");
+const SESSIONS_LOG = join(STATE, "forge_sessions.jsonl");   // read-only here — forge_session.mjs owns it
 const PROFILE = join(STATE, "forge_profile.json");
 const CARDS = join(STATE, "cards.json");
 
@@ -865,9 +866,53 @@ function main() {
     console.log(`  Round khatam: \`node scripts/rejirah.mjs close <concept>\` → gist patch milega (paste tera, §2 2b).\n`);
     return;
   }
+  if (mode === "held") {
+    // P7.A (full-organism audit, 7 Aug 2026): "Which concepts do I actually hold
+    // right now, and how do you know?" — answered from EVIDENCE, in code. Proof =
+    // a cold Jirah survived: the lock-day Jirah (capsule status "tempered"), or a
+    // cold Re-Jirah grade since. Sessions sat, hours spent and axes "taught" are
+    // NOT proof and are never counted here — that distinction is the whole reason
+    // this command exists (six hallucinations sessions, zero graded axes).
+    console.log(`\n== KYA ACTUALLY HELD HAI — aur kaise pata ==   (proof = cold Jirah · taught ≠ held)\n`);
+    for (const c of caps) {
+      const st = conceptState(c, rows, intervals, now);
+      const coldRows = rows.filter((r) => isGrade(r) && r.concept === c.id);
+      const lockDays = c.lockedOn ? Math.floor((now.getTime() - Date.parse(c.lockedOn)) / 86400000) : null;
+      const proof = c.lockedOn
+        ? `Jirah-tempered at LOCK (${c.lockedOn}${lockDays !== null ? `, ${lockDays}d ago` : ""})`
+        : "lock date missing — no dated proof at all";
+      const since = coldRows.length
+        ? `cold since lock: ${st.edgeMap.can_defend.join("") || "—"} held · ${st.edgeMap.cracked.join("") || "—"} cracked · ${st.edgeMap.unmeasured.join("") || "—"} unmeasured`
+        : `cold re-proof since lock: NEVER — 0 of 9 axes ever re-graded`;
+      console.log(`  ${c.id.padEnd(14)} ${proof}\n  ${" ".repeat(14)} ${since}`);
+    }
+    // In-flight concepts (no capsule yet) — the evidence is the session history,
+    // and the honest reading of it, out loud.
+    try {
+      const hist = existsSync(SESSIONS_LOG)
+        ? readFileSync(SESSIONS_LOG, "utf8").trim().split(/\r?\n/).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)
+        : [];
+      const liveS = readJson(join(STATE, "forge_session.json"));
+      const inflight = new Map();
+      for (const r of hist) { if (!caps.some((cp) => cp.id === r.concept)) inflight.set(r.concept, [...(inflight.get(r.concept) || []), r]); }
+      if (liveS && liveS.concept && !caps.some((cp) => cp.id === liveS.concept) && !inflight.has(liveS.concept)) inflight.set(liveS.concept, []);
+      for (const [concept, runs] of inflight) {
+        const graded = new Set(runs.flatMap((r) => r.axes_graded || []));
+        const jirahs = runs.reduce((n, r) => n + (((r.question_moments || {}).jirah) || 0), 0)
+          + (liveS && liveS.concept === concept ? ((liveS.question_moments || {}).jirah || 0) : 0);
+        const nRuns = runs.length + (liveS && liveS.concept === concept && !liveS.closed_at ? 1 : 0);
+        console.log(`  ${concept.padEnd(14)} NOT LOCKED — ${nRuns} session(s) on record, axes cold-graded ${graded.size}/9, Jirah moments ${jirahs}`);
+        console.log(`  ${" ".repeat(14)} → koi machine-proof NAHI ki isme se kuch bhi bacha hai. Session ≠ evidence; Jirah = evidence.`);
+      }
+    } catch { /* history optional */ }
+    console.log(`\n  Unmeasured ≠ lost — par proof purana hota jaata hai. Agla cold check: \`node scripts/rejirah.mjs due\`\n`);
+    return;
+  }
+
   console.log(`rejirah: grade <concept> <axis> held|cracked [--gut knew|shaky|guessed] [--cold false]
          | close <concept> [--anyway]   (round khatam → gist patch)
          | pending   (closed par gist mein abhi tak nahi)
+         | held      (kya PROVEN hai — P7.A ka jawab, evidence se)
          | state [concept] | due | selftest`);
 }
 
