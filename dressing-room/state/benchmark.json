@@ -1,0 +1,10 @@
+{
+  "date": "2026-08-08",
+  "status": "gated_pre_audit",
+  "gate": {
+    "reason": "Ruling 6 — benchmark ships AFTER the full-syllabus audit refresh (measuring against a stale map is half a lie; DOSSIER researched 29 Jun 2026)",
+    "missions_line": "full-syllabus audit 0/4 returned — next fire: M01"
+  },
+  "runs": [],
+  "generated_at": "2026-08-07T21:01:18.820Z"
+}
