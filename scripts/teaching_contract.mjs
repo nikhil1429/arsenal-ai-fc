@@ -141,6 +141,13 @@ function seed(now = new Date()) {
       r("no-system-mid-concept", "Concept ke beech koi system/notes/tool kaam nahi — naam lo, park karo, micro-question wapas haath mein do."),
       r("confusion-is-literal", "'samajh nahi aaya' ko literally lo — wahin ruko, zero se shuru karo, aage mat badho."),
       r("dheema-not-lamba", "DHEEMA = EK cheez poori tarah kholi hui, chhote kadam. LAMBA = ek message mein bahut cheezein. Kabhi lamba mat karo — hamesha GEHRA karo."),
+      // 7 Aug 2026 (audit deliverable 1) — the half-answer/stopped-early class,
+      // his worst miss, finally a first-class rule. Until today it had NO id, so
+      // his three 6 Aug self-reports of exactly this class all landed under
+      // his-word and distorted the ranking. teaching_audit.mjs checks its one
+      // machine-readable fingerprint (core axis deferred); the semantic rest
+      // stays his to flag — now under its own name.
+      r("coverage", "Har axis ka POORA scope kholna Claude ka kaam hai — COVERAGE uske sawaalon pe kabhi depend nahi. Aadha jawab, kata scope, dabaya doubt, core-axis defer = drift."),
     ],
   };
 }
@@ -815,9 +822,9 @@ function selftest() {
   const T0 = new Date("2026-07-31T18:00:00Z");
   const base = seed(T0);
 
-  assert("seed carries all ten rules he named himself (grown 6 Aug: a re-seed must never orphan the audit's rule ids)", base.rules.length === 10);
+  assert("seed carries all eleven rules he named himself (grown 6 Aug, again 7 Aug: a re-seed must never orphan the audit's rule ids)", base.rules.length === 11);
   assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed)",
-    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word"]
+    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage"]
       .every((id) => base.rules.some((r) => r.id === id)));
 
   const hit = hitRule(hitRule(base, "hinglish", T0).state, "hinglish", T0).state;
@@ -832,10 +839,10 @@ function selftest() {
     secondSlots.size === hit.rules.length - 1);
 
   const grown = addRule(base, "no-praise", "Praise sirf jab kamayi ho, aur specific ho.", T0);
-  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 11);
+  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 12);
   assert("add refuses a duplicate id", addRule(grown.state, "no-praise", "x", T0).ok === false);
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
-  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 9);
+  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 10);
 
   // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
   const t1L = bumpTurnLegacy(base, "S1");
@@ -905,9 +912,9 @@ function selftest() {
   // i.e. the warning costs a ROTATING RULE, which is exactly the trade the audit asked
   // for and the reverse of what the slice used to do.
   assert("HAVE/NEED — the header says how many rules are actually shown out of how many exist, so a truncation is visible",
-    /rules 2\/10/.test(atShowN(4, 40)[0]) && /rules 3\/10/.test(atShowN(4, 1)[0]));
+    /rules 2\/11/.test(atShowN(4, 40)[0]) && /rules 3\/11/.test(atShowN(4, 1)[0]));
   assert("NO REGRESSION AT THE LIVE VALUE — at show_n 2 he still gets both rules, the link-back AND the warning, in 5 lines",
-    atShowN(2, 40).length === 5 && /rules 2\/10/.test(atShowN(2, 40)[0])
+    atShowN(2, 40).length === 5 && /rules 2\/11/.test(atShowN(2, 40)[0])
     && atShowN(2, 40).filter((l) => /^ {2}⚠/.test(l)).length === 2
     && atShowN(2, 40).some((l) => /link back BY NAME/.test(l))
     && atShowN(2, 40).some((l) => /CONTEXT WARNING/.test(l)));
@@ -1049,7 +1056,7 @@ function selftest() {
 
   // ---- audit #40's numbers, computed here so the close report never has to guess
   assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
-    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 10
+    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 11
     && hitStats(hit.rules).ever_hit === 1 && hitStats(hit.rules).newest_hit === T0.toISOString());
 
   // ---- 6 Aug 2026 — THE TWO-LANE RULING, pinned. His exact words on the exact

@@ -76,7 +76,7 @@ const ANN = {
   "scripts/postmatch.mjs": "The evening ledger — the 30-second full-time ritual: HIT/MISS, one signal, the KAL-line (tomorrow's first move). No-shame enforced; conscious rest = a won day.",
   "scripts/brain.mjs": "THE BRAIN — the hot two-engine runtime: 21 LLM jobs, a self-tuning budget governor that protects study hours + exhausts the plan overnight, and the M-3 socket into the Manager.",
   "scripts/viz.mjs": "THE CLUB WALL — renders your whole body as one offline HTML dashboard (Maidan pitch, calibration, commitments, media) + writes the nightly Gemini art prompts + the film kit.",
-  "scripts/dugout.mjs": "THE DUGOUT (the crown, 1010 lines) — the real-time voice bridge: mic<->Gemini Live<->speakers, 15 live tools, oral scrimmage, camera eyes, shadow-gated proactivity, semantic recall.",
+  "scripts/dugout.mjs": "THE DUGOUT (the crown) — the real-time voice bridge: mic<->Gemini Live<->speakers, live tools, oral scrimmage, camera eyes, shadow-gated proactivity, semantic recall.",
   "scripts/shadow.mjs": "The shadow engine — earned proactivity: logs would-have-spoken moments silently and the machine may only interrupt you once it has PROVEN a hit-rate AND you ratify by voice.",
   "scripts/speak.mjs": "The mouth — neural TTS (free msedge-tts, robot fallback). Speaks only what it's handed; also renders team-talks and ACK fillers to mp3 files.",
   "scripts/talk.mjs": "TALK MODE — the bench voice: a typed/dictated conversation loop with spoken replies, for when the free Live quota runs dry.",
@@ -198,7 +198,10 @@ const fence = f => f.endsWith(".mjs") ? "javascript" : f.endsWith(".json") ? "js
 const lines = f => readFileSync(join(ROOT, f), "utf8").split("\n").length;
 
 // ---- assemble ----
-const now = "12 July 2026";
+// FULL-ORGANISM AUDIT (7 Aug 2026): this was the literal string "12 July 2026" — the
+// day the bundler was written — so every regenerated bundle stamped itself with a
+// five-week-old date. A derived artifact must carry the date it was actually derived.
+const now = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 let out = "";
 out += `# ⚪🔴 ARSENAL AI FC — THE COMPLETE REPO, IN ONE FILE\n`;
 out += `### Every tracked file, top to bottom, so you can read the whole thing you built.\n`;

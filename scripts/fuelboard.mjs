@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-// fuelboard.mjs · ARSENAL AI FC — THE FUELBOARD (seven tanks, one gauge)
+// fuelboard.mjs · ARSENAL AI FC — THE FUELBOARD (eight tanks, one gauge)
 // ----------------------------------------------------------------------------
 // WHAT:  The account-allocation ledger that makes "7 parallel regions" real
 //        (CYBORG_BRAIN.md §5, §8). Rate limits are per-PROJECT, so 7 accounts
@@ -8,7 +8,8 @@
 //        T1 Gaffer (mouth) · T2 Watcher (vision) · T3 Cochlea (ears, OFF by
 //        default) · T4 Bridge (Opus via cortex — not a Gemini tank) · T5 Scout
 //        (research) · T6 Hippocampus (embeddings) · T7 DMN (default-mode +
-//        failover shock absorber).
+//        failover shock absorber) · T8 Distiller (working-set — added with the
+//        working-memory build; §5's seven regions + one).
 // LAWS:  sole writer of tanks.json (gitignored runtime). THE STARVATION GUARD
 //        (ported verbatim from the brain's P0 fix): a 429 records
 //        observed_ceiling = Math.max(quota_est, used_today) — a limit event at
@@ -244,7 +245,7 @@ async function selftest() {
     const t1 = b.tanks.find(t => t.id === "T1");
     assert("local-midnight reset: usage + faults + 429 clear, day rolls", t1.used_today === 0 && t1.last_429 === null);
     assert("the LEARNED ceiling survives the day-reset (property of the account)", t1.observed_ceiling === 120);
-    assert("seven tanks, seven regions, each a different job", b.tanks.length === 7 && new Set(b.tanks.map(t => t.region)).size === 7);
+    assert("eight tanks, eight regions, each a different job", b.tanks.length === 8 && new Set(b.tanks.map(t => t.region)).size === 8);
   }
   // THE STARVATION GUARD (the P0 fix, ported)
   {
@@ -289,9 +290,9 @@ async function selftest() {
     recordUse("T7", 2, 80000, m);
     assert("naive_shadow accumulates what all-Opus would have cost", m.get().naive_shadow_tokens === 120000 && m.get().actual_units === 7);
     const lines = gaugeLines(loadBoard(m));
-    assert("the gauge draws 7 bars with states", lines.length === 7 && lines.every(l => /[▓░]{8}/.test(l)) && lines.some(l => l.includes("HOT")));
+    assert("the gauge draws 8 bars with states", lines.length === 8 && lines.every(l => /[▓░]{8}/.test(l)) && lines.some(l => l.includes("HOT")));
     const s = summary(loadBoard(m));
-    assert("the page summary carries id/state/pct for the fuel line", s.length === 7 && s.every(x => "pct" in x && "state" in x));
+    assert("the page summary carries id/state/pct for the fuel line", s.length === 8 && s.every(x => "pct" in x && "state" in x));
   }
   // THE TANK LOCK (E2E audit 25 Jul 2026, 3e32616e — lost updates across
   // processes). Runs against a throwaway lock path in the OS temp dir so the

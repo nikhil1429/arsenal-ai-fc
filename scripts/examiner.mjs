@@ -15,8 +15,10 @@
 //        day-of-year WITHIN that bank (audit #36: it used to rotate over the
 //        mechanism bank unconditionally and staged "Implement a MINIMAL working
 //        hallucinations from scratch", which is not a thing that can be done).
-//        Writes examiner_drill.json (own file, gitignored — it
-//        names his weaknesses). The scrimmage instruction picks it up when
+//        Writes examiner_drill.json (own file — TRACKED since D10, the captain's
+//        5 Aug 2026 ruling recorded in .gitignore; this header said "gitignored"
+//        until the 7 Aug full-organism audit caught the drift). The scrimmage
+//        instruction picks it up when
 //        fresh (staged today or yesterday evening) and runs it as the heaviest probe.
 // LAWS:  the drill grades the CODE, never the coder — win-only on the result;
 //        a miss resolves silently into FSRS weight (the reps flow through

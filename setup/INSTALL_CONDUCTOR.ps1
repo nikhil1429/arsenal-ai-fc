@@ -14,6 +14,10 @@
 #   removed from the *code* while leaving it in the *comment*.
 #   Verified on this box, 6 Aug 2026, off the live Task Scheduler - not inferred:
 #     - ArsenalFC-Morning-Conductor EXISTS, State = Ready, trigger 08:45.
+#       (7 Aug 2026: the LIVE trigger now reads 09:15 - moved on the box after this
+#       verification, not by this script, which still registers 08:45. If re-run,
+#       this installer will move it BACK to 08:45 - re-apply the 09:15 by hand or
+#       edit the /ST below first.)
 #     - Its action is the run_logged.cmd form this script writes:
 #         cmd /c C:\...\setup\run_logged.cmd scripts\conductor.mjs morning
 #     - StartWhenAvailable = True; DisallowStartIfOnBatteries = False;

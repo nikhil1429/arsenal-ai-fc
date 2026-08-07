@@ -107,7 +107,15 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 export const CHECKED_RULES = [
   "one-idea", "dheema-not-lamba", "hinglish", "his-level",
   "no-system-mid-concept", "confusion-is-literal", "his-word",
+  "coverage",
 ];
+
+// CORE-NEVER-DEFERRED's axis set, mirrored from the owner (forge_session.mjs:109;
+// canon PROJECT_OS.md:316). Mirrored, not imported — this hook must stay
+// dependency-light and fail-silent, and the owner's constant is one letter that
+// has never moved. If it ever grows, the parity selftest here and the owner's
+// close report will disagree out loud.
+const CORE_AXES = ["d"];
 
 // ---------------------------------------------------------------------------
 // THE RULES. Each one is (a) a rule-id that already exists in the teaching
@@ -380,7 +388,7 @@ export function auditTurnLegacy({ assistantText = "", userText = "", session = n
  *   no-system           steps 3-6  (unchanged; now code-stripped)
  *   confusion/ungraded  state comparisons, step-agnostic by construction
  */
-export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null } = {}) {
+export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null } = {}) {
   const drifts = [];
   const open = !!(session && session.concept && !session.closed_at);
 
@@ -481,6 +489,29 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
           rule: "his-word",
           evidence: `axis "${ax}" marked done at step ${step} with ZERO Jirah rounds before it — the grade is a claim, not a grade (canon: an axis is done when it survives its own Jirah)`,
           excerpt: `axes_marked_at.${ax} = ${JSON.stringify(m)}`,
+        });
+      }
+    }
+  }
+
+  // ---- 7) COVERAGE — core axis deferred (the half-answer class, 7 Aug 2026) --
+  // The captain's worst miss finally gets a machine check. His staged evidence
+  // (three of the six 6 Aug self-reports) is one class: the axis got its
+  // convenient half — "wahi number jo tere kaam ka hai" — and the universal half
+  // never came. Most of that class is semantic and stays HIS to flag; the ONE
+  // state fingerprint a machine can read is a CORE axis landing in axes_deferred.
+  // The owner PERMITS it (markAxis refuses nothing — deferral is legal for a-c,
+  // e-i) and only reports it at close; canon says the core axis can NEVER be
+  // deferred (CORE-NEVER-DEFERRED, PROJECT_OS.md:316). Same new-mark-only shape
+  // as check 6, so a standing deferral is one drift, not one per turn forever.
+  if (Array.isArray(prevAxesDeferred) && Array.isArray(session.axes_deferred)) {
+    for (const ax of session.axes_deferred) {
+      if (prevAxesDeferred.includes(ax)) continue;
+      if (CORE_AXES.includes(ax)) {
+        drifts.push({
+          rule: "coverage",
+          evidence: `core axis "${ax}" was DEFERRED — canon: CORE-NEVER-DEFERRED (core measure/formula/range is the concept). Scope kaatna ho to PEHLE poochho; defer is for the outer axes only.`,
+          excerpt: `axes_deferred = ${JSON.stringify(session.axes_deferred)}`,
         });
       }
     }
@@ -606,10 +637,11 @@ export function stopHook(hook, io) {
   const prevStep = paired && Number.isFinite(p.step) ? p.step
     : (last.stop && Number.isFinite(last.stop.step) ? last.stop.step : null);
   const prevAxesDone = last.stop && Array.isArray(last.stop.axes_done) ? last.stop.axes_done : null;
+  const prevAxesDeferred = last.stop && Array.isArray(last.stop.axes_deferred) ? last.stop.axes_deferred : null;
 
   const res = auditTurn({
     assistantText: String(hook.last_assistant_message || ""),
-    userText, session, prevStep, prevAxesDone,
+    userText, session, prevStep, prevAxesDone, prevAxesDeferred,
   });
 
   const why = res.audited ? null : (readWhy || res.why);
@@ -633,6 +665,7 @@ export function stopHook(hook, io) {
       why,
       drifts: res.drifts.length,
       axes_done: session && Array.isArray(session.axes_done) ? session.axes_done : [],
+      axes_deferred: session && Array.isArray(session.axes_deferred) ? session.axes_deferred : [],
     },
     checked_rules: CHECKED_RULES,
   });
@@ -903,9 +936,27 @@ function selftest() {
     auditTurn({ assistantText: "Token wo sabse chhoti unit hai jo model padhta hai. Ab bolo — 'khaana' kitne token banega?", session: at(4) }).drifts.length === 0);
   assert("V2 — a session object with no concept is NOT audited (mirrors the owner's load() contract)",
     auditTurn({ assistantText: "x", session: { step: 3 } }).audited === false);
+  assert("V2 — COVERAGE: core axis d NEWLY deferred → coverage drift (the half-answer class's one machine-readable fingerprint)",
+    auditTurn({
+      assistantText: "Theek hai, d baad mein.", session: { ...at(3), axes_deferred: ["d"] },
+      prevAxesDeferred: [],
+    }).drifts.some((d) => d.rule === "coverage" && /CORE-NEVER-DEFERRED/.test(d.evidence)));
+  assert("V2 — COVERAGE: a non-core deferral is LEGAL (no drift), and a standing core deferral does not re-fire every turn",
+    !auditTurn({
+      assistantText: "g defer kar diya.", session: { ...at(3), axes_deferred: ["g"] },
+      prevAxesDeferred: [],
+    }).drifts.some((d) => d.rule === "coverage")
+    && !auditTurn({
+      assistantText: "Theek hai.", session: { ...at(3), axes_deferred: ["d"] },
+      prevAxesDeferred: ["d"],
+    }).drifts.some((d) => d.rule === "coverage"));
+  assert("V2 — COVERAGE: no prompt-time deferral record (prevAxesDeferred null) → the check stays silent, never guesses",
+    !auditTurn({
+      assistantText: "x", session: { ...at(3), axes_deferred: ["d"] },
+    }).drifts.some((d) => d.rule === "coverage"));
   assert("CHECKED_RULES names every rule id this engine can emit, and nothing else",
     (() => {
-      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word"];
+      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage"];
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
 

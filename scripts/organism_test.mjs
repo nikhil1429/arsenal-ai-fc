@@ -204,7 +204,16 @@ function hermetic() {
   // PROOF (the price the header above sets for every addition): all 65 selftests were run
   // ONE AT A TIME with both files stat-ed before and after each. Neither file was touched
   // by a single selftest. Excluding them therefore hides no defect.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit/;
+  // brain_ledger.jsonl + tanks.json added 7 Aug 2026, per this list's own proof
+  // protocol (daemon-written, not selftest-written): the flagging run's writes were
+  // dmn_rollout ledger rows stamped 00:23:43Z — INSIDE the suite window — from the
+  // DMN whose hourly task had fired at 05:15 IST in that morning's wake catch-up
+  // burst, with NightShift simultaneously mid-shift (both bill tanks via fuelboard
+  // recordUse and append their own ledger rows; dmn.mjs:118 names brain_ledger a
+  // shared append-only lane). No selftest bills the live board by design: fuelboard's
+  // uses mem() fixtures, dmn/council/nightshift inject recordUse, distiller's T8
+  // billing lives in defaultGen which selftests replace via deps.gen.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

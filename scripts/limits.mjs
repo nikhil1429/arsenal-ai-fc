@@ -124,8 +124,8 @@ export const GATES = [
 
 // ---- BUDGETS: numbers that cap SPEND ---------------------------------------
 export const BUDGETS = [
-  { name: "pulse daily call cap",      where: "brain.mjs pulseConfig.daily_cap",              value: 200,      origin: "guessed",  note: "never converted to tokens; 200 x ~32,480 = ~6.5M/day against a 12M/WEEK plan" },
-  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.05,     origin: "guessed",  note: "added by Claude 1 Aug — a guess by the captain's own rule, up for removal" },
+  { name: "pulse daily call cap",      where: "brain.mjs pulseConfig.daily_cap",              value: 200,      origin: "guessed",  note: "reclassified #66/#67: a runaway-loop backstop, NOT a budget — at the 0.10 window (~36 pulses/day) it can never bind; pulse itself PAUSED since 2 Aug (brain_config.pulse.enabled:false)" },
+  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.10,     origin: "guessed",  note: "was 0.05 (1 Aug guess); DOUBLED 2 Aug as a MEASUREMENT WINDOW — arithmetic recorded in brain_config.pulse._measurement_window_note; this row said 0.05 until 7 Aug 2026, exactly the rot this file warns about" },
   { name: "window capacity estimate",  where: "brain_config.budget.window_capacity_est_tokens", value: 800000, origin: "measured", note: "SELF-TUNES from observed limit events (observed_window_ceiling)" },
   { name: "weekly capacity estimate",  where: "brain_config.budget.weekly_capacity_est_tokens", value: 12000000, origin: "external", note: "the Claude Max plan's real wall — not ours to choose" },
   { name: "day reserve fraction",      where: "brain_config.budget.day_reserve_frac",         value: 0.4,      origin: "guessed",  note: "how much of the window is held back during his study hours" },

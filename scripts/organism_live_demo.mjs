@@ -101,7 +101,11 @@ const DLEDGER   = join(STATE_DIR, "dugout_ledger.jsonl");
 const STAMPS    = join(STATE_DIR, "dugout_stamps.jsonl");
 const REMINDERS = join(STATE_DIR, "dugout_reminders.jsonl");
 const RECALL    = join(STATE_DIR, "recall_index.jsonl");
-const ACK_DIR   = join(__dirname, "..", "dressing-room", "club", "media", "ack");
+// FULL-ORGANISM AUDIT (7 Aug 2026): third residual sandbox breach, same class as
+// execTool's sh and the shadow interval — this pointed at the REAL club/media/ack,
+// and ensureAcks() in main() synthesizes mp3s into it. The demo now keeps its ack
+// cache inside its own sandbox like every other file it touches.
+const ACK_DIR   = join(STATE_DIR, "club", "media", "ack");
 const PORT = 4134;                                 // NOT 4114 — the real Dugout owns that
 
 // ACK fillers (JARVIS pattern): cached lines played the instant a tool call
@@ -458,7 +462,15 @@ const TOOL_DECLS = [
 // TOOL EXECUTION — every write goes through its owner
 // ---------------------------------------------------------------------------
 function execTool(name, args, deps = {}) {
-  const sh = deps.sh || ((script, argv, input) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { input, encoding: "utf8", timeout: 60000, windowsHide: true }));
+  // FULL-ORGANISM AUDIT (7 Aug 2026): the sandbox banner promises "nothing it does
+  // can touch the captain's real bus", but this default `sh` shelled the REAL owner
+  // scripts — capture.mjs paste (real reps_log), doubtminer retire, postmatch,
+  // bootroom approve — because their state paths are anchored to the real
+  // dressing-room/state, not this fork's demo_sandbox/. The 25 Jul sandbox fixed
+  // the file paths and missed the shell-outs. A demo tool call must never mutate
+  // the live bus, so the default is now a refusal; a test that needs the spawn
+  // behaviour injects deps.sh exactly as the selftest always has.
+  const sh = deps.sh || ((script, argv) => JSON.stringify({ ok: false, sandbox: true, refused: `${script} ${argv.join(" ")}`, note: "demo sandbox — owner scripts write the REAL bus and are not spawned from here" }));
   const append = deps.append || appendFileSync;
   const now = deps.now || new Date();
   try {
@@ -1249,7 +1261,11 @@ async function main() {
   setInterval(() => fireReminders().then(n => { if (n) console.log(`dugout: ${n} his-voice reminder(s) echoed`); }).catch(() => { }), 30000);
   // the shadow engine trains while the voice surface is alive (detection is
   // silent by construction; the mouth needs no wire to stay shut)
-  setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
+  // FULL-ORGANISM AUDIT (7 Aug 2026): this interval ran the REAL shadow.mjs detect
+  // every 10 minutes — shadow.mjs writes the real shadow_log.jsonl, a second
+  // sandbox breach of the same kind as execTool's sh (see the note there). Disabled:
+  // a demo must never train the live shadow ledger.
+  // setInterval(() => { try { execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "detect"], { windowsHide: true, timeout: 30000 }); } catch { } }, 600000);
   indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} of his words`); }).catch(() => { });
   setInterval(() => indexRecall().catch(() => { }), 3600000);   // his words become findable, hourly
   const server = createServer(async (req, res) => {

@@ -248,15 +248,20 @@ async function main() {
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`context: --daemon up (poll ~${FLOOR_MS / 1000}s) — ambient AW → :4113 on window change. Ctrl-C to stop.`);
     while (!stop) {
-      try { const r = await sense(); if (r.emitted) { emits++; console.log(`context: → ${r.evt.text}${r.evt.concept_tokens.length ? ` [${r.evt.concept_tokens.join(", ")}]` : ""}${r.posted ? "" : " (thalamus down)"}`); } } catch { /* never taxes */ }
+      try { const r = await sense(); if (r.emitted) { emits++; console.log(`context: → ${r.evt.text}${r.evt.concept_tokens.length ? ` [${r.evt.concept_tokens.join(", ")}]` : ""}`); } } catch { /* never taxes */ }
       await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= FLOOR_MS) { clearInterval(iv); res(); } }, step); });
     }
     console.log(`context: --daemon stopped (${emits} emit(s)).`);
     return;
   }
   const r = await sense();
+  // sense() returns emitted === posted, so an emitted-but-not-posted arm can never
+  // print — the two "(thalamus down…)" clauses that used to sit here were dead code,
+  // and the `once` one claimed "state updated" when a failed post deliberately does
+  // NOT advance state (retry law above). A failed post speaks through the honest
+  // branch: "no emit (post-failed-will-retry)". (Audit, 7 Aug 2026.)
   console.log(r.emitted
-    ? `context: emitted → ${r.evt.text}${r.evt.concept_tokens.length ? ` [concept: ${r.evt.concept_tokens.join(", ")}]` : ""}${r.posted ? "" : " (thalamus down; state updated)"}`
+    ? `context: emitted → ${r.evt.text}${r.evt.concept_tokens.length ? ` [concept: ${r.evt.concept_tokens.join(", ")}]` : ""}`
     : `context: no emit (${r.reason})`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

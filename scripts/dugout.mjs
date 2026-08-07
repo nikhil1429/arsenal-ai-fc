@@ -1535,8 +1535,13 @@ function buildConfig(keys, mode = "gaffer") {
     // one call). A static file can only ever be a stale second copy of what the
     // tools return fresh: when it drifted, it drifted while claiming to be
     // "freshly rebuilt, CURRENT". So: the Gaffer ASKS instead of being told.
-    // The tool-less briefing modes above still carry it — a guest keynote has no
-    // hands to call a tool with, so for them the file is the only source.
+    // (Full-organism audit, 7 Aug 2026: this tombstone used to end "the tool-less
+    // briefing modes above still carry it — for them the file is the only source."
+    // That was already false when written into its final form: the briefing branch
+    // above sets `liveKnowledge = ""` under the captain's 29 Jul ruling — "remove
+    // kardo, no need to explain it to anyone" — and `selfknowledge.mjs consumers`
+    // reports 0 live consumers. NOTHING reads organism_self.md any more; the
+    // briefings stand on their own instructions.)
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
@@ -1928,7 +1933,7 @@ async function selftest() {
   // M3 — THE TANKS wiring (fuel gauge · the Watcher's second socket · the hint lane)
   {
     const c3 = buildConfig(["k0", "k1", "k2", "k3", "k4", "k5"]);
-    assert("config carries the 7-tank fuel gauge", c3.tanks && Array.isArray(c3.tanks.gauge) && c3.tanks.gauge.length === 7);
+    assert("config carries the 8-tank fuel gauge", c3.tanks && Array.isArray(c3.tanks.gauge) && c3.tanks.gauge.length === 8);
     assert("the Watcher's assignment travels (own key slot + its constitution)", c3.tanks.watcher && c3.tanks.watcher.key_index === 1 && c3.tanks.watcher.instruction.includes("THE WATCHER") && c3.tanks.watcher.instruction.includes("NEVER converse"));
     assert("watcher out of pool → null (a 1-key day still works)", buildConfig(["k0"]).tanks.watcher === null);
     assert("page: watcher socket on ITS OWN tank, frames at half cadence", PAGE.includes("watcherConnect") && PAGE.includes("CFG.tanks.watcher.key_index") && PAGE.includes("frameN++%2===0"));

@@ -106,6 +106,12 @@ The nucleus holds a **binding window B ≈ 900ms**. Afferent events inside B tha
 
 ## 5. THE SEVEN TANKS — seven parallel minds, each a DIFFERENT model
 
+> **7 Aug 2026, on the live board:** the registry now carries an EIGHTH row — **T8 Distiller**
+> (working-set, `gemini-flash-latest`, key 6), added by the working-memory build and finally
+> wired to bill on 7 Aug (until then distiller's daily flash spend was invisible to the gauge).
+> The SEVEN below remain this design's seven cyborg *sense* regions, unchanged; T8 is a
+> metering lane beside them, so the fuel gauge (§ "fuelboard" below) draws **8 bars**, not 7.
+
 **The technical jewel:** the marquee senses are **mutually exclusive on one model.** The seeing/teaching Gaffer (`3.1-flash-live`) *cannot* do affective/proactive audio or `NON_BLOCKING` async calls — those are `gemini-2.5-flash-native-audio` + `v1alpha` only. On one socket you get one or the other. **Rate limits are per-PROJECT** (not per-key), so 7 accounts = 7 independent quota pools, each running a *different model simultaneously.* Mutual exclusion dissolves into division of labor.
 
 | Tank | Account | Region | Model | Job |

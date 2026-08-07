@@ -1170,8 +1170,20 @@ function buildAnalysisPrompt(job, inputs, fingerprint = gatherFingerprint(), ban
   const hype = hypeGuardOn(job)
     ? ` honest frame only (compounding, never ${(banned || []).map(b => `"${b}"`).join("/")});`
     : " honest frame only (this is machine-side analysis — subject vocabulary is not hype, but do not sell);";
+  // THE PROMPT MUST NAME THE SAME LAW THE VALIDATOR ENFORCES (finding #62's rule,
+  // applied to the OTHER validator — 7 Aug 2026 audit). After the #61 pairing fix,
+  // lexicon_mine STILL failed every run (457h stale, reconcile's bleed) for a reason
+  // the prompt never told the model about: quotesOnly's haystack is the ## INPUT
+  // sections alone, but the model also sees this head — where the fingerprint prints
+  // his anchors IN QUOTES as style and the laws carry quotable doctrine. Observed
+  // rejects: "hallucinations" (the fingerprint's position line), "proposes code
+  // validates human approves" (doctrine), and a real anchor with a comma tucked
+  // inside the closing quote. The law was enforced but never named.
+  const quoteLaw = job.validate === "quotes_only"
+    ? `\nQUOTE LAW (enforced mechanically, reject on breach): every "quoted span" of 12+ characters in your reply must be copied BYTE-FOR-BYTE from the ## INPUT sections below. Never quote this instruction block or anything above the inputs; punctuation you add stays OUTSIDE the quotes; one verbatim phrase per pair of quotes, never a stitched sentence.`
+    : "";
   const head = `You are an organ of ARSENAL AI FC — the captain's exocortex. Job: ${job.id}. ${job._note || ""}
-LAWS:${hype} no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.
+LAWS:${hype} no calendar pressure; no shame; self-scout register; every number must come from the data below; if the data is thin say so plainly. Output: concise markdown, ≤ 25 lines.${quoteLaw}
 ${fingerprint}`;
   const body = Object.entries(inputs).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
   return head + body;

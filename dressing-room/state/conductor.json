@@ -1,7 +1,7 @@
 {
-  "started": "2026-08-05T13:58:05.555Z",
-  "finished": "2026-08-05T13:58:28.992Z",
-  "total_ms": 23432,
+  "started": "2026-08-07T03:45:02.304Z",
+  "finished": "2026-08-07T03:45:12.281Z",
+  "total_ms": 9976,
   "ran": 16,
   "ok": 16,
   "failed": 0,
@@ -27,7 +27,7 @@
     {
       "id": "mirror",
       "ok": true,
-      "ms": 12506,
+      "ms": 2903,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -36,7 +36,7 @@
     {
       "id": "sprintsync",
       "ok": true,
-      "ms": 2003,
+      "ms": 1174,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -45,28 +45,28 @@
     {
       "id": "thalamus",
       "ok": true,
-      "ms": 23,
-      "daemon": "already running",
-      "port": 4113
+      "ms": 38,
+      "port": 4113,
+      "daemon": "already running (build current)"
     },
     {
       "id": "cortex",
       "ok": true,
-      "ms": 3,
-      "daemon": "already running",
-      "port": 4112
+      "ms": 1493,
+      "port": 4112,
+      "daemon": "already running (build current — via process table)"
     },
     {
       "id": "turnstile",
       "ok": true,
-      "ms": 2,
-      "daemon": "already running",
-      "port": 4111
+      "ms": 987,
+      "port": 4111,
+      "daemon": "already running (build current — via process table)"
     },
     {
       "id": "physio",
       "ok": true,
-      "ms": 319,
+      "ms": 135,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -75,7 +75,7 @@
     {
       "id": "goalkeeper",
       "ok": true,
-      "ms": 1661,
+      "ms": 933,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -84,7 +84,7 @@
     {
       "id": "twin",
       "ok": true,
-      "ms": 306,
+      "ms": 92,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -93,7 +93,7 @@
     {
       "id": "heartbeat",
       "ok": true,
-      "ms": 4384,
+      "ms": 1422,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -102,7 +102,7 @@
     {
       "id": "fsrs",
       "ok": true,
-      "ms": 220,
+      "ms": 100,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -111,7 +111,7 @@
     {
       "id": "calibration",
       "ok": true,
-      "ms": 205,
+      "ms": 84,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -120,7 +120,7 @@
     {
       "id": "nemesis",
       "ok": true,
-      "ms": 217,
+      "ms": 98,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -129,7 +129,7 @@
     {
       "id": "learningstate",
       "ok": true,
-      "ms": 274,
+      "ms": 107,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -138,13 +138,13 @@
     {
       "id": "signals",
       "ok": true,
-      "ms": 12,
+      "ms": 4,
       "armed": "morning_signals"
     },
     {
       "id": "sheet",
       "ok": true,
-      "ms": 858,
+      "ms": 219,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -153,7 +153,7 @@
     {
       "id": "wall",
       "ok": true,
-      "ms": 439,
+      "ms": 187,
       "exit": 0,
       "error": null,
       "stderr": null,

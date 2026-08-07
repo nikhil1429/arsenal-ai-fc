@@ -291,7 +291,20 @@ async function defaultGen(prompt) {
   const { generatePool } = await import("./hippocampus.mjs");
   // NOT json-mode: it returned empty on the flash model live; the prompt asks for
   // JSON and parseSet extracts the {…} block from whatever comes back (robust).
-  return generatePool(prompt, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, temperature: 0.2 });
+  const r = await generatePool(prompt, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, temperature: 0.2 });
+  // T8 billing — the header's "registered as fuelboard tank T8" was a claim with
+  // no caller until 7 Aug 2026: nothing anywhere recordUse()'d T8, so this organ's
+  // daily flash spend was invisible to the gauge (the exact "fuelboard read
+  // fiction" scar nightshift documents). One unit per pool call; naive-shadow 0
+  // because under-reporting a saving beats inventing a token count. Billing lives
+  // HERE (the live default), not in distill() — selftests inject deps.gen and
+  // must never touch the real board.
+  try {
+    const { recordUse, record429 } = await import("./fuelboard.mjs");
+    if (r && r.ok) recordUse("T8", 1, 0);
+    else if (r && r.status === 429) record429("T8");
+  } catch { /* the gauge must never block the working set */ }
+  return r;
 }
 
 function summaryLine(set) {

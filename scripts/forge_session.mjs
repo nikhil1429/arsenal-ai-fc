@@ -236,6 +236,49 @@ export function nudgeLine(deps = {}) {
   } catch { return ""; }
 }
 
+// ---------------------------------------------------------------------------
+// DOSSIER → TEACHING CALIBRATION (7 Aug 2026 audit, deliverable 2 — class H).
+// Measured before today: EVERY dossier_weights.json reader was a testing organ
+// (setpiece probe grammar + weighting · scout edge split · nightshift probe bank
+// + scoutPack · dugout scrimmage instruction) and NO teaching organ read it at
+// all — the interview's own time-weights shaped every drill he was TESTED with
+// and never once the session he was TAUGHT in. This is the projection of that
+// same file onto the teaching surface: which rounds buy this concept's bucket
+// (weights are OPPONENT_SCOUT §1's, read-only, never invented here) and which
+// probe TYPES will hit the axes still left open — so the teacher teaching axis d
+// can see, every turn, the exact interview shapes that will test it.
+// PURE: all data injected, [] on any missing/corrupt piece — the contract hook
+// must stay fail-silent. Bucket fallback mirrors setpiece.mjs:419 (concepts.json
+// bucket, else registry.skills → "skills") so the two sides read ONE law.
+export function dossierLines(concept, s, { dossier, registry } = {}) {
+  try {
+    if (!concept || !s || !dossier || !Array.isArray(dossier.rounds)) return [];
+    const reg = registry || {};
+    const c = (reg.concepts || {})[concept];
+    const bucket = c && c.bucket ? c.bucket : ((reg.skills && reg.skills[concept]) ? "skills" : null);
+    if (!bucket) return [];
+    const roundIds = (dossier.bucket_round_map || {})[bucket] || [];
+    if (!roundIds.length) return [];
+    const rounds = roundIds.map((id) => dossier.rounds.find((r) => r.id === id)).filter(Boolean);
+    if (!rounds.length) return [];
+    const pct = (w) => `${Math.round(w * 1000) / 10}%`;
+    const total = rounds.reduce((a, r) => a + (Number(r.weight) || 0), 0);
+    const L = [];
+    L.push(`  DOSSIER: ${bucket} → ${rounds.map((r) => `${r.id} ${pct(Number(r.weight) || 0)}`).join(" · ")} (interview ka ${pct(total)} is bucket pe — OPPONENT_SCOUT §1, read-only)`);
+    const left = AXES.filter((a) => !(s.axes_done || []).includes(a) && !(s.axes_deferred || []).includes(a));
+    if (left.length && dossier.probe_types) {
+      const map = left
+        .map((a) => {
+          const types = Object.entries(dossier.probe_types).filter(([, v]) => Array.isArray(v.axis_types) && v.axis_types.includes(a)).map(([k]) => k);
+          return types.length ? `${a}←${types.join(",")}` : null;
+        })
+        .filter(Boolean);
+      if (map.length) L.push(`  bache axes ke interview-probes: ${map.join(" · ")}`);
+    }
+    return L;
+  } catch { return []; }
+}
+
 function contractLines(s, now = new Date()) {
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
@@ -1110,6 +1153,32 @@ function selftest() {
     && contractLines(setStep(blank("x", T0), 9, T0).session, T0)[0].includes("META-FREEZE ON")
     && !contractLines(blank("x", T0), T0)[0].includes("META-FREEZE ON")
     && !contractLines(setStep(blank("x", T0), 10, T0).session, T0)[0].includes("META-FREEZE ON"));
+
+  // ---- DELIVERABLE 2 (7 Aug 2026) — the dossier reaches the TEACHING side ----
+  {
+    const dz = {
+      rounds: [
+        { id: "fundamentals", label: "F", minutes: 40, weight: 0.178 },
+        { id: "system_design", label: "S", minutes: 60, weight: 0.267 },
+      ],
+      bucket_round_map: { "1-fundamentals": ["fundamentals", "system_design"], skills: ["system_design"] },
+      probe_types: { recall: { axis_types: ["a", "c", "d"] }, defend: { axis_types: ["e"] } },
+    };
+    const rz = { concepts: { hallu: { bucket: "1-fundamentals" } }, skills: { gitx: true } };
+    const sz = { ...blank("hallu", T0), axes_done: ["a"], axes_deferred: ["e"] };
+    const out = dossierLines("hallu", sz, { dossier: dz, registry: rz });
+    assert("DOSSIER LINE — bucket + per-round weights + the bucket total, all straight from the injected file",
+      out.length === 2 && /1-fundamentals → fundamentals 17\.8% · system_design 26\.7%/.test(out[0]) && /44\.5%/.test(out[0]));
+    assert("DOSSIER LINE — probe map covers ONLY axes still left (done 'a' and deferred 'e' excluded; 'c' and 'd' present)",
+      /c←recall/.test(out[1]) && /d←recall/.test(out[1]) && !/a←/.test(out[1]) && !/e←/.test(out[1]));
+    assert("DOSSIER LINE — a skills entry falls back to the 'skills' bucket (setpiece.mjs:419's own law, mirrored)",
+      /skills → system_design/.test((dossierLines("gitx", sz, { dossier: dz, registry: rz })[0]) || ""));
+    assert("DOSSIER LINE — fail-silent: no dossier, no registry, unknown concept, or corrupt rounds each yield [] and never throw",
+      dossierLines("hallu", sz, { registry: rz }).length === 0
+      && dossierLines("hallu", sz, { dossier: dz }).length === 0
+      && dossierLines("nope", sz, { dossier: dz, registry: rz }).length === 0
+      && dossierLines("hallu", sz, { dossier: { rounds: "x" }, registry: rz }).length === 0);
+  }
   let worst = 0;
   for (let i = 0; i < STEPS.length; i++) {
     let c = setStep(blank("x", T0), i, T0).session;
@@ -1422,8 +1491,18 @@ switch (mode) {
     // .claude/settings.json and fires UserPromptSubmit. An organ prompt must never
     // be handed the captain's forge contract.
     if (process.env.ARSENAL_ORGAN === "1") break;
-    const lines = contractLines(load());
-    if (lines.length) { console.log(lines.join("\n")); break; }
+    const sNow = load();
+    const lines = contractLines(sNow);
+    if (lines.length) {
+      // Deliverable 2 (7 Aug 2026): the dossier calibration rides the SAME block,
+      // loaded here (not inside the pure renderer) so fixtures stay disk-free and
+      // a missing/corrupt dossier or registry costs nothing but the line itself.
+      const rj = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
+      const dossier = rj(join(STATE_DIR, "dossier_weights.json"));
+      const registry = rj(join(STATE_DIR, "concepts.json"));
+      console.log(lines.concat(dossierLines(sNow.concept, sNow, { dossier, registry })).join("\n"));
+      break;
+    }
     // ── THE SILENCE GAP (4 Aug 2026) ────────────────────────────────────────
     // contractLines() is silent on three conditions — no session · closed · stale.
     // That is correct FOR THE 12-STEP BLOCK: a full pacer block on a non-study

@@ -1,19 +1,16 @@
 {
-  "date": "2026-08-05",
-  "generated_at": "2026-08-05T13:58:27.598Z",
-  "total_reps": 9,
-  "status": "warming_up",
-  "low_confidence": true,
+  "date": "2026-08-07",
+  "generated_at": "2026-08-07T03:45:11.838Z",
+  "total_reps": 13,
+  "status": "ok",
+  "low_confidence": false,
   "gate": {
-    "have": 9,
+    "have": 13,
     "need": 12,
     "unit": "reps",
-    "line": "9/12 reps",
-    "open": false,
-    "withheld": [
-      "weak_connection",
-      "maidan_stage_focus"
-    ],
+    "line": "13/12 reps",
+    "open": true,
+    "withheld": [],
     "emitted_regardless": [
       "axes",
       "core_vs_light",
@@ -25,19 +22,19 @@
     "sub": [
       {
         "name": "weak_connection",
-        "have": 9,
+        "have": 13,
         "need": 12,
         "unit": "reps",
-        "line": "9/12 reps",
-        "open": false
+        "line": "13/12 reps",
+        "open": true
       },
       {
         "name": "maidan_stage_focus",
-        "have": 9,
+        "have": 13,
         "need": 12,
         "unit": "reps",
-        "line": "9/12 reps",
-        "open": false
+        "line": "13/12 reps",
+        "open": true
       },
       {
         "name": "any concept → 🟡 held",
@@ -57,29 +54,29 @@
       }
     ]
   },
-  "maidan_stage_focus": null,
-  "weak_connection": null,
+  "maidan_stage_focus": "tokenization → embeddings handoff",
+  "weak_connection": "tokenization → embeddings (text → vectors)",
   "python_fluency": {},
   "rejirah_due": [
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 34
+      "overdue_days": 36
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 30
+      "overdue_days": 32
     },
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 18
+      "overdue_days": 20
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 4
+      "overdue_days": 0
     }
   ],
   "core_vs_light": {
@@ -111,8 +108,8 @@
       "axis": "a",
       "fluency": "🔴 learning",
       "core": true,
-      "reps": 7,
-      "last_seen": "2026-07-31",
+      "reps": 11,
+      "last_seen": "2026-08-06",
       "velocity": {
         "slope": "stalling",
         "reps_to_state": 1,
@@ -150,7 +147,7 @@
       "label": "math+range",
       "fluent_frac": 0,
       "counts": {
-        "learning": 1,
+        "learning": 2,
         "held": 0,
         "fluent": 0
       },
@@ -229,17 +226,31 @@
     ]
   },
   "position": {
-    "session_open": false,
-    "concept": null,
-    "step": null,
-    "step_name": null,
-    "axes_done": [],
+    "session_open": true,
+    "concept": "hallucinations",
+    "step": 3,
+    "step_name": "SAMJHAO",
+    "axes_done": [
+      "a",
+      "b"
+    ],
     "axes_deferred": [],
-    "axes_left": [],
-    "axes_ungraded": [],
-    "started_at": null,
+    "axes_left": [
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+      "i"
+    ],
+    "axes_ungraded": [
+      "a",
+      "b"
+    ],
+    "started_at": "2026-08-06T12:39:39.506Z",
     "stale": false,
-    "stale_as_of": null,
+    "stale_as_of": "2026-08-07T03:45:11.838Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-08-04T16:24:19.916Z",
