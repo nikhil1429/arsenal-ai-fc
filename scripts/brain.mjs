@@ -1846,10 +1846,17 @@ async function selftest() {
   const calls = [];
   const mockExec = (prompt, model) => { calls.push({ model, len: prompt.length }); return { ok: true, text: "Sharp read. 2 drills stand.", total_tokens: 50000, duration_ms: 10, limit_hit: false, error: null }; };
   const hermetic = () => ({ ledger: [], queueState: { observed_window_ceiling: null, jobs_run: {} } });
-  const t1 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: mockExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
+  // DORMANT-SAFE (7 Aug 2026, the away-day red). These tick fixtures test the BUDGET
+  // LOOP (drain count, limit stop, ceiling blend) — but each job's real `inputs` were
+  // still gathered from the LIVE state dir, so on a fresh checkout (which the CI runner
+  // is forever, by design) required-absent inputs skipped jobs before the mock exec and
+  // all three asserts went red while passing at home. The inputs are not this fixture's
+  // subject; they are stripped so the loop is measured identically in both worlds.
+  const inputFree = (jobs) => jobs.filter(j => j.kind !== "manager_m3").map(j => ({ ...j, inputs: [] }));
+  const t1 = await tick({ ...cfg, jobs: inputFree(cfg.jobs) }, { exec: mockExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
   assert("overnight tick drains multiple jobs", t1.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length >= 3);
   const limitExec = () => ({ ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "You've hit your session limit · resets 7am" });
-  const t2 = await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
+  const t2 = await tick({ ...cfg, jobs: inputFree(cfg.jobs) }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
   // cognitive fingerprint — 2050-grade personalization, measured not assumed
@@ -1993,7 +2000,7 @@ async function selftest() {
       const drainThenLimit = () => (++n <= 3)
         ? { ok: true, text: "steady read, nothing invented", total_tokens: 300000, duration_ms: 5, limit_hit: false, error: null }
         : { ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "session limit · resets 7am" };
-      await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3") },
+      await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3").map(j => ({ ...j, inputs: [] })) },
         { exec: drainThenLimit, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ledger: [], queueState: qCeil });
       // 3×300k spent inside this tick, then the limit. blend(prev 1.0M, observed 900k)
       // = 960k. Reading only the START-OF-TICK ledger observes 0 → blend collapses to
@@ -2189,11 +2196,24 @@ async function selftest() {
       // teamtalk_am at 75%. Both shapes are held here, from the committed config.
       const tta = liveCfg.jobs.find(j => j.id === "teamtalk_am");
       const dre = liveCfg.jobs.find(j => j.id === "deep_reanalysis");
-      const ttaA = gatherInputsAudited(tta, now(23, 30), shiftDay(tta, now(23, 30), cfg));
-      assert("#64 TRAP — teamtalk_am really is running at 3-of-4 absent, and is NOT killed (it degrades in words)",
-        ttaA.absent.length === 3 && ttaA.declared === 4 && ttaA.required_absent.length === 0);
-      assert("#64 TRAP — deep_reanalysis sits at exactly 50% absent, which no majority rule would ever catch",
-        gatherInputsAudited(dre, now(23, 30)).absent.length * 2 === gatherInputsAudited(dre, now(23, 30)).declared);
+      // DORMANT-SAFE (7 Aug 2026, the away-day red). These two began as live regression
+      // nets and had become CLOCKS of this exact machine's state: "3-of-4 absent" was
+      // true at home and false (4-of-4) on every fresh checkout, so CI went red on a
+      // statement about a different computer. The TRAP's real claims are environment-
+      // stable and are what is asserted now: teamtalk_am declares 4 inputs, NONE
+      // required — so however many are absent it degrades in words and is never killed
+      // (a majority-ratio guard would have killed it); and the exactly-50% shape a
+      // majority rule can never catch is held by a FIXTURE whose present half is a
+      // TRACKED file, identical in every checkout.
+      // The kill-proof property is CONFIG SHAPE, not today's disk: teamtalk declares 4
+      // inputs of which 3 are OPTIONAL — so a majority of its inputs can be absent and
+      // it still runs (degrading in words). That is true in every checkout, forever.
+      const ttaDecl = normalizeInputs(tta);
+      assert("#64 TRAP — teamtalk_am (4 declared, 3 optional) survives a majority of its inputs being absent BY SHAPE (a majority-ratio guard would kill it)",
+        ttaDecl.length === 4 && ttaDecl.filter(d => !d.required).length === 3 && Array.isArray(dre.inputs) && dre.inputs.length >= 2);
+      const jHalf = { id: "half", inputs: ["concepts.json", "no_such_half.json"], out: "half" };
+      assert("#64 TRAP — an exactly-50%-absent job is a shape no majority rule would ever catch (fixture: one tracked file + one missing)",
+        gatherInputsAudited(jHalf, now(23, 30)).absent.length * 2 === gatherInputsAudited(jHalf, now(23, 30)).declared);
       // HERMETIC (audit 6 Aug 2026). This began as a live regression net and had become
       // a CLOCK. Two required inputs are brain_out artifacts this same pipeline PRODUCES
       // (midday_cartridge and day_cartridge each require dugout_digest's dated .md), so on
@@ -2211,13 +2231,28 @@ async function selftest() {
         return requiredOf(j).filter(p => !p.startsWith("brain_out/"))
           .filter(p => !existsSync(join(STATE_DIR, p.replace(/TODAY/g, day))));
       });
-      assert("#64 — every required input OUTSIDE the pipeline resolves on disk TODAY (the regression net, now hermetic)",
-        infraMissing.length === 0);
+      // WARM-MACHINE NET (7 Aug 2026, the away-day red). "Required infrastructure must
+      // exist NOW" is a statement about HIS machine, not about a fresh checkout — the
+      // required files (drills.json, slip.jsonl) are gitignored personal state, absent
+      // in every CI clone by construction, so this net went red on a truth about a
+      // different computer. It runs only where the organism actually lives (marker:
+      // the afferent bus, gitignored and always present on a live machine) and SAYS
+      // it skipped elsewhere — a skip with its reason, never a silent green.
+      const WARM = existsSync(join(STATE_DIR, "afferent.jsonl"));
+      if (WARM) {
+        assert("#64 — every required input OUTSIDE the pipeline resolves on disk TODAY (the regression net — live machine only)",
+          infraMissing.length === 0);
+      } else {
+        console.log("  ~ SKIP #64 infra net — dormant checkout (no afferent bus): required personal state is absent here by construction");
+      }
       const orphanChain = enabledJobs.flatMap((j) => requiredOf(j).filter(p => p.startsWith("brain_out/"))
         .filter((p) => { const producer = p.split("/")[1]; return !liveCfg.jobs.some(k => k.out === producer && k.enabled !== false); }));
       assert("#64 — every required brain_out/ input has an ENABLED producer job (a chain typo still fails; a cold pipeline does not)",
         orphanChain.length === 0);
-      const rOpt = await runJob({ id: "opt", inputs: ["no_such_x.json", "drills.json"], out: "opt" }, cfg,
+      // concepts.json, not drills.json: the present half must be a TRACKED file so the
+      // 1/2-present claim is identical at home and in a fresh checkout (drills.json is
+      // gitignored personal state — the exact reason this assert was a clock).
+      const rOpt = await runJob({ id: "opt", inputs: ["no_such_x.json", "concepts.json"], out: "opt" }, cfg,
         { exec: () => ({ ok: true, text: "thin data, saying less", total_tokens: 7, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
       assert("#64 — an OPTIONAL absent input still runs, and the run reports what it was built from",
         rOpt.usage.ok === true && rOpt.inputs_absent === 1 && rOpt.inputs_declared === 2 && /inputs 1\/2 present/.test(rOpt.note));

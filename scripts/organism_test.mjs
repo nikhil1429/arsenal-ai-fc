@@ -27,7 +27,7 @@
 //   the law it is holding · a RED here is a real defect, not a flaky net.
 // CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path]
 // ============================================================================
-import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -332,6 +332,23 @@ function sandbox() {
     if (existsSync(join(ROOT, p))) cpSync(join(ROOT, p), join(d, p), { recursive: true });
   }
   if (existsSync(join(ROOT, "node_modules"))) cpSync(join(ROOT, "node_modules"), join(d, "node_modules"), { recursive: true });
+  // DORMANT-SAFE MIRROR (7 Aug 2026, the away-day red). dressing-room/state/capsules/
+  // is a gitignored mirror (gist = master), so a fresh checkout — which is what the CI
+  // runner IS, forever, by design — has none, and the five RE-JIRAH/DEEP cross-checks
+  // above went red on every push while passing at home. Their subject is the LOOP
+  // (grade → close → patch → pending → cold questions), not his content, so when the
+  // sandbox copy carries no capsule the sandbox is seeded with a MINIMAL fixture one —
+  // in the SANDBOX only, never the live mirror (mirror.mjs stays its only writer).
+  const capDir = join(d, "dressing-room", "state", "capsules");
+  const hasCapsule = existsSync(capDir) && readdirSync(capDir).some((f) => f.endsWith(".json"));
+  if (!hasCapsule) {
+    mkdirSync(capDir, { recursive: true });
+    writeFileSync(join(capDir, "embeddings.json"), JSON.stringify({
+      id: "embeddings", num: "02", title: "Embeddings (CI fixture)", lockedOn: "2026-06-21",
+      reJirahDone: [], status: "tempered",
+      faultLines: "abcdefghi".split("").map((a) => ({ axis: a, title: `axis ${a}`, strike: `fixture strike ${a}?`, weld: "fixture weld", status: "held" })),
+    }, null, 2));
+  }
   return d;
 }
 
