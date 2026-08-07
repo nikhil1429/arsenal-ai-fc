@@ -57,6 +57,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmSync,
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open spawns (outward loop, 8 Aug 2026)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -1467,8 +1468,95 @@ function selftest() {
     /NEVER RAN IN THIS SESSION/.test(jLive) && /was GRADED tonight/.test(jLive)
     && !/has been GRADED/.test(jLive));
 
+  // THE LOCK-CHAIN (outward loop, 8 Aug 2026) — pure pieces only; a selftest
+  // never spawns another organ, so the spawn argv itself is what gets asserted.
+  {
+    const cmds = chainCommands("hallucinations");
+    assert("lock-chain: exact spawn argv (mission stage-lock + benchmark run)",
+      cmds.length === 2
+      && /scout\.mjs$/.test(cmds[0].args[0]) && cmds[0].args.slice(1).join(" ") === "mission stage-lock hallucinations"
+      && /benchmark\.mjs$/.test(cmds[1].args[0]) && cmds[1].args[1] === "run");
+    const cm3 = { concepts: [
+      { concept: "a1", locked_on: "2026-06-01", counts: { doubts: 20 } },
+      { concept: "a2", locked_on: "2026-06-02", counts: { doubts: 25 } },
+      { concept: "a3", locked_on: "2026-06-03", counts: { doubts: 10 } },
+      { concept: "open1", locked_on: null, counts: { doubts: 99 } },
+    ] };
+    const gl = gateLines(cm3, []);
+    assert("data-gates: decoy counts LOCKED capsules + their doubts; unlocked never counted",
+      /decoy-drills — capsules 3\/4 · doubts 55\/60/.test(gl[0]) && /gate closed/.test(gl[0]));
+    const cm4 = { concepts: [...cm3.concepts.filter((c) => c.locked_on), { concept: "a4", locked_on: "2026-06-04", counts: { doubts: 5 } }] };
+    const rows = [
+      { concept: "e", axis: "a", result: "cracked", cold: true },
+      { concept: "e", axis: "b", result: "cracked", cold: true },
+      { concept: "e", kind: "round-close" },
+    ];
+    const gl2 = gateLines(cm4, rows);
+    assert("data-gates: decoy OPENS at 4 capsules + 60 doubts (his ruled counts, verbatim)",
+      /gate OPEN · decoy-drills — capsules 4\/4 · doubts 60\/60/.test(gl2[0]));
+    assert("data-gates: R1 opens on the FIRST round-close row (an event, never a date)",
+      /gate OPEN · R1-constants — Re-Jirah rounds closed 1\/1/.test(gl2[1]));
+    assert("data-gates: confusion-pairs counts cracked grades only (close rows invisible to it)",
+      /confusion-pairs — cracked cold grades 2\/6/.test(gl2[2]) && /gate closed/.test(gl2[2]));
+    assert("data-gates: bloodless world reports 0s, never crashes",
+      gateLines(null, [])[0].includes("capsules 0/4"));
+  }
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
+}
+
+// ---------------------------------------------------------------------------
+// THE LOCK-CHAIN (outward loop, his Rulings 2+3+6 · 8 Aug 2026)
+// ---------------------------------------------------------------------------
+// At step 10 the outward checks ride the lock: stage the L-mission (harvest),
+// re-run the benchmark, report the data-gates, name the widget + gist moves.
+// Every lane is fail-silent and runs AFTER the step change is saved — no
+// outward failure can touch the LOCK itself or block his study moment.
+// The dossier/probe refresh is deliberately NOT automated here: it rides the
+// L-mission's return → diff card → HIS word (canon never auto-edits).
+function chainCommands(concept) {
+  return [
+    { name: "mission",   args: [join(__dirname, "scout.mjs"), "mission", "stage-lock", concept], timeout: 15000 },
+    { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 },
+  ];
+}
+
+// THE DATA-GATES (Ruling 3 — COUNT/EVENT gates per his 1 Aug rule; the counts
+// 4/60/6 are HIS ruled numbers, verbatim from the sealed rulings, not guesses).
+// Report-only: a gate line never blocks anything.
+function gateLines(capsuleMap, rejirahRows) {
+  const caps = ((capsuleMap && capsuleMap.concepts) || []).filter((c) => c.locked_on);
+  const doubts = caps.reduce((a, c) => a + ((c.counts && c.counts.doubts) || 0), 0);
+  const rounds = (rejirahRows || []).filter((r) => r && r.kind === "round-close").length;
+  const cracked = (rejirahRows || []).filter((r) => r && r.axis && !r.kind && r.result === "cracked").length;
+  const g = (name, open, have) => `gate ${open ? "OPEN" : "closed"} · ${name} — ${have}`;
+  return [
+    g("decoy-drills", caps.length >= 4 && doubts >= 60, `capsules ${caps.length}/4 · doubts ${doubts}/60`),
+    g("R1-constants", rounds >= 1, `Re-Jirah rounds closed ${rounds}/1`),
+    g("confusion-pairs", cracked >= 6, `cracked cold grades ${cracked}/6`),
+  ];
+}
+
+function lockChain(s, { dry = false } = {}) {
+  const safeJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+  const safeJsonl = (p) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
+  console.log(`\n== LOCK-CHAIN (outward, Ruling 2)${dry ? " — PREVIEW: spawns named, not fired" : ""} ==`);
+  for (const cmd of chainCommands(s.concept)) {
+    if (dry) { console.log(`  would run: node scripts/${cmd.args[0].replace(/^.*[\\/]/, "")} ${cmd.args.slice(1).join(" ")}`); continue; }
+    try {
+      const out = execFileSync(process.execPath, cmd.args, { encoding: "utf8", timeout: cmd.timeout });
+      console.log(`  ${cmd.name}: ${out.trim().split("\n")[0] || "ran"}`);
+    } catch (e) { console.log(`  ${cmd.name}: skipped (${String(e.message || e).slice(0, 70)}) — non-blocking`); }
+  }
+  for (const l of gateLines(safeJson(join(STATE_DIR, "capsule_map.json")), safeJsonl(join(STATE_DIR, "rejirah_log.jsonl")))) console.log(`  ${l}`);
+  const w = safeJson(join(STATE_DIR, "widgets.json"));
+  const reg = w && w.widgets && w.widgets[s.concept];
+  console.log(reg
+    ? `  widget: registered (${reg.gates_driven} gate(s) driven)${reg.gates_driven >= WIDGET_GATES_MIN ? "" : " — drive the gates (built ≠ driven)"}`
+    : `  widget: NOT registered for ${s.concept} — node scripts/widget.mjs register ${s.concept} <file> --gates <n>`);
+  console.log("  gist: capsule paste is HIS move (FORGE_SPEC §2 2b) — mirror.mjs fetches it back 06:55; till then the lock reads PENDING");
+  console.log("  dossier: probe refresh rides the L-mission return → diff card → his word (canon never auto-edits)");
 }
 
 // ---------------------------------------------------------------------------
@@ -1509,9 +1597,27 @@ switch (mode) {
     const s = blank(concept);
     save(s);
     console.log(oneLine(s));
+    // TOPIC-OPEN SCOUTING (Ruling 6 layer 2, 8 Aug 2026): stage the T-mission
+    // the moment a concept opens — prevent at open, validate at lock. Fail-silent:
+    // scouting must never block the study from starting. EMPHASIS only; the
+    // syllabus stays canon (the guard is baked into the mission prompt itself).
+    try {
+      const out = execFileSync(process.execPath, [join(__dirname, "scout.mjs"), "mission", "stage-topic", s.concept], { encoding: "utf8", timeout: 15000 });
+      console.log((out.trim().split("\n")[0] || "").replace(/^MISSIONS DESK · /, "scout: "));
+    } catch { console.log("scout: topic mission not staged (scout unavailable) — non-blocking"); }
     break;
   }
-  case "step":   console.log(oneLine(apply(setStep(live(need(load())), rest[0])))); break;
+  case "step": {
+    const before = load();
+    const wasAtLock = !!(before && before.step === 10);
+    const s = apply(setStep(live(need(before)), rest[0]));
+    console.log(oneLine(s));
+    // THE LOCK-CHAIN fires exactly on ARRIVAL at step 10 (never on a re-type),
+    // after the step change is already saved — outward work can fail without
+    // touching the LOCK (Ruling 2, 8 Aug 2026).
+    if (s.step === 10 && !wasAtLock) lockChain(s);
+    break;
+  }
   case "axis": {
     // FROZEN 7 Aug 2026 (full-organism audit P4.1) — the original dispatch, verbatim:
     //   case "axis":   console.log(oneLine(apply(markAxis(live(need(load())), rest[0], rest[1] || "done")))); break;
@@ -1536,6 +1642,14 @@ switch (mode) {
     break;
   }
   case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
+  case "lockchain": {
+    // Read-only PREVIEW of what arrival at step 10 will run — proves the wiring
+    // live without staging a premature L-mission or advancing any state.
+    const s = load();
+    if (!s || !s.concept) { console.error("forge_session: no session on disk"); process.exit(1); }
+    lockChain(s, { dry: true });
+    break;
+  }
   case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
   case "contract": {                      // HOOK PATH — silence is the default
     // SELF-INJECTION GUARD (same scar as hooks/afferent-post.mjs): every headless
