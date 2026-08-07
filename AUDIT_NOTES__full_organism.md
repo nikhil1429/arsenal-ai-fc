@@ -93,3 +93,18 @@
 **BUILD ORDER:** (1) `benchmark.mjs` — AI_PE_ROADMAP 5 buckets × dossier_weights (§1 rubric: fundamentals 17.8 + system_design 26.7 = 44.5%) × live evidence (capsules/axes-held-cold via `rejirah held` · python_state tier · course.json done · shipped artifacts) → have/need per bucket, no invented numbers; rides wall + matchday; (2) mission generator (in nightshift or scout) + `capture.mjs research-paste`-style door + diff→captains_call card (canon edits = his word); (3) LOCK-chain hook in forge_session step 10; (4) M-2→M-5 Manager (prereqs complete — signal agents done); (5) SEASON.md writer in postmatch (Claude fills 100%, he writes ZERO).
 **HIS EVENTS (machine waits):** first Re-Jirah round · first /full-time · hallucinations LOCK · course/python start · driving 3 widgets.
 **Sources already mapped:** OPPONENT_SCOUT §1/§4/§5/§9 · AI_PE_ROADMAP buckets+80/20 · GEMINI_RIG_SETUP (prompt home) · brain market_scan→card wiring · watchman c4b projection guard.
+
+**RULING 5 — THE MAX-FLOW DOCTRINE (his words, 8 Aug 2026 00:3x: "data from everywhere should flow everywhere where it is required in the most number of times"):**
+Every producer's output must reach EVERY consumer that could act on it, at the highest
+useful frequency — a signal read once a week when it could steer every turn is a defect.
+Concrete NEW edges to wire during the outward-loop build (each is a reader addition, single-writer law intact):
+- benchmark → wall + team_sheet(matchday) + kickoff brief line + captains_call card on bucket regression
+- missions output → DOSSIER diff → dossier_weights → next-turn probes + setpiece drills + examiner shapes + scrimmage grammar (already 7 readers — verify each re-reads after regen)
+- rejirah grades → calibration/nemesis lane DECISION AT FIRST R1 (deferred question, sealed earlier — decide with real data, not silently dropped)
+- gemini_quality.jsonl → scout readiness + watchman honesty line (today: written, zero readers)
+- season/logbook → kickoff streak line + wall + twin's bets
+- teaching_audit drift-rates → BootRoom genome proposals (teaching evidence should feed method mutations)
+- timeaudit 3-bucket → benchmark (Building% is evidence for bucket-5) + team_sheet shape
+- capsule locks → benchmark + decoy-gate check + mission generator, same LOCK-chain event
+- AUDIT every new organ: "who ELSE could act on this output?" is a standing design question, asked at build time, answered in the file header.
+**Also on the not-done ledger (from the granular 17):** turnstile port has no watcher (self-heals 09:15 only) · NotebookLM/Colab rig account-side setup unverified until 1-05/1-07 open.
