@@ -195,6 +195,22 @@ export function gather(now = new Date()) {
       }
     }
   } catch { /* absent = 0 rows, which is exactly what c1 tests */ }
+  // THE OUTWARD LOOP (8 Aug 2026, Ruling 5 edges) — the ≥2×/week floor's inputs
+  // (HIS ruled 2, never a guess) + gemini_quality's honesty count. Reads only.
+  w.gemini_quality = { rows: 0 };
+  try {
+    const gq = join(STATE_DIR, "gemini_quality.jsonl");
+    if (existsSync(gq)) w.gemini_quality.rows = readFileSync(gq, "utf8").split("\n").filter((l) => l.trim()).length;
+  } catch { /* unreadable = 0 recorded — c-gemini stays quiet */ }
+  w.outward = { has_desk: existsSync(join(STATE_DIR, "missions.json")), returns7d: 0, benchRuns7d: 0 };
+  try {
+    const mj = readJson(join(STATE_DIR, "missions.json"));
+    const bj = readJson(join(STATE_DIR, "benchmark.json"));
+    const cutoff = now.getTime() - 7 * 86400000;
+    const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= cutoff && t <= now.getTime(); };
+    w.outward.returns7d = ((mj && mj.events) || []).filter((e) => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
+    w.outward.benchRuns7d = ((bj && bj.runs) || []).filter(inWin).length;
+  } catch { /* unreadable desks make no floor claim */ }
   return w;
 }
 
@@ -309,6 +325,29 @@ export function checks(w) {
       id: "tier2-vanished", level: "RED",
       finding: "a Tier-2 repair child started on a previous day and left NO exit stamp and NO journal row — the repair arm died silently mid-run (the maiden-run class: minutes of work, zero bytes of trace)",
       evidence: `last TIER 2 START ${w.tier2_trail.last_start} · no "TIER2 EXIT" line after it in watchman_repair.log · no watchman_repairs.jsonl row at-or-after it`,
+    });
+  }
+
+  // c10 · THE OUTWARD FLOOR (outward loop, 8 Aug 2026 — Ruling 2's ≥2×/week is
+  // HIS ruled number). INFO, never an escalation: the floor nudges, it never owes.
+  // Fires only once the missions desk EXISTS — before that there is no outward
+  // machinery to have a floor about.
+  if (w.outward && w.outward.has_desk && (w.outward.returns7d + w.outward.benchRuns7d) < 2) {
+    F.push({
+      id: "outward-floor-unmet", level: "INFO",
+      finding: `outward checks this week: ${w.outward.returns7d + w.outward.benchRuns7d}/2 (his 7 Aug floor) — mission returns ${w.outward.returns7d} · benchmark runs ${w.outward.benchRuns7d}`,
+      evidence: "missions.json events (ingest/audit_close) + benchmark.json runs[], trailing 7 local days",
+    });
+  }
+
+  // c11 · GEMINI-QUALITY HONESTY (P6.1's outcome lane — Ruling 5 gave it its first
+  // reader). Recorded batches are NAMED, and named as UNJUDGED: no number gets a
+  // verdict before the 30-45d review (his 1 Aug rule).
+  if (w.gemini_quality && w.gemini_quality.rows > 0) {
+    F.push({
+      id: "gemini-quality-recorded", level: "INFO",
+      finding: `gemini_quality: ${w.gemini_quality.rows} paste-batch(es) recorded — judged by NO ONE until the 30-45d review (his rule); the lane exists so that review has data`,
+      evidence: "dressing-room/state/gemini_quality.jsonl (writer: capture.mjs paste door)",
     });
   }
 
@@ -644,6 +683,20 @@ function selftest() {
   assert("c2 — the same words with the session genuinely closed are the TRUTH, not a lie",
     !checks({ ...base, forge: { exists: true, json: { concept: "x", closed_at: "2026-08-06T14:00:00Z" }, shapeless: false }, auditRowsToday: 0, affToday: { total: 5, teaching: 2, readable: true }, auditLast: { stop: { at: "2026-08-06T13:00:00+05:30", audited: false, why: "no open forge session — THE METHOD does not apply to this turn" } } })
       .some((f) => f.id === "audit-liar"));
+
+  // c10/c11 — THE OUTWARD LOOP (8 Aug 2026)
+  assert("c10 OUTWARD FLOOR — desk exists + <2 outward checks this week ⇒ INFO with both counts",
+    checks({ ...base, outward: { has_desk: true, returns7d: 1, benchRuns7d: 0 } })
+      .some((f) => f.id === "outward-floor-unmet" && f.level === "INFO" && /1\/2/.test(f.finding) && /mission returns 1/.test(f.finding)));
+  assert("c10 OUTWARD FLOOR — floor met (1 return + 1 bench run) ⇒ silence",
+    !checks({ ...base, outward: { has_desk: true, returns7d: 1, benchRuns7d: 1 } }).some((f) => f.id === "outward-floor-unmet"));
+  assert("c10 OUTWARD FLOOR — no missions desk yet ⇒ no floor claim (machinery precedes the floor)",
+    !checks({ ...base, outward: { has_desk: false, returns7d: 0, benchRuns7d: 0 } }).some((f) => f.id === "outward-floor-unmet")
+    && !checks(base).some((f) => f.id === "outward-floor-unmet"));
+  assert("c11 GEMINI-QUALITY — recorded batches surface as UNJUDGED (30-45d rule named), zero rows stay silent",
+    checks({ ...base, gemini_quality: { rows: 3 } })
+      .some((f) => f.id === "gemini-quality-recorded" && f.level === "INFO" && /3 paste-batch/.test(f.finding) && /30-45d/.test(f.finding))
+    && !checks({ ...base, gemini_quality: { rows: 0 } }).some((f) => f.id === "gemini-quality-recorded"));
   assert("c3 RED — rows today without today's checked_at stamp = the heartbeat wire broke between the two organs",
     checks({ ...base, contract: { exists: true, json: { rules: [], checked_at: "2026-08-01T10:00:00Z" }, unreadable: false } })
       .some((f) => f.id === "heartbeat-broken"));

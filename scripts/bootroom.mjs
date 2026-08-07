@@ -159,7 +159,20 @@ function scoreMutation(m, profile, metricValue, eventCount, now = new Date()) {
 // null — main() supplies {have, need} from the SAME physio_config.json key that
 // physio.mjs:375 used to decide `gateOpen`, so there is exactly one number and
 // nobody guesses a second one. NO GATE IS LOWERED by any of this.
-function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = null) {
+// RULING 5 (outward loop, 8 Aug 2026): teaching evidence feeds method mutations.
+// The teaching contract's top drift-ranked rule rides a proposal as CONTEXT
+// evidence — it informs the captain's haan/na; it never ORIGINATES a mutation
+// (the lapse-count metric stays the only basis; AI-proposes law intact).
+function topDrift(contract) {
+  const rules = contract && Array.isArray(contract.rules) ? contract.rules : [];
+  const ranked = rules
+    .map((r) => ({ id: r.id, n: (Number(r.hits) || 0) + (Number(r.auto_hits) || 0) }))
+    .filter((r) => r.n > 0)
+    .sort((a, b) => b.n - a.n);
+  return ranked[0] || null;
+}
+
+function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = null, teaching = null) {
   if (!gateOpen) {
     const counter = (gate && Number.isFinite(gate.have) && Number.isFinite(gate.need))
       ? `${gate.have}/${gate.need} reps` : `${reps.length} rep(s) — threshold unreadable`;
@@ -197,7 +210,8 @@ function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = n
       id: `mut-${localDate(now)}-axis${axis}`,
       target: "rejirah_intervals_days",
       diff: { old: cur, new: [cur[0], Math.max(7, Math.round(cur[1] * 0.75)), Math.max(21, Math.round(cur[2] * 0.66))] },
-      evidence: [`${n} late-checkpoint lapses on axis-${axis} (≥14d after first correct)`],
+      evidence: [`${n} late-checkpoint lapses on axis-${axis} (≥14d after first correct)`,
+        ...(teaching ? [`teaching-drift CONTEXT (Ruling 5): rule "${teaching.id}" drifted ${teaching.n}× — context for his haan/na, never the basis`] : [])],
       predicted_effect: `axis-${axis} late-lapse rate falls`,
       metric: { name: `axis_${axis}_late_lapse_count`, min_events: 20, window_days: 21, improves_when_below: Math.ceil(n / 2) },
       review_after_days: 21,
@@ -303,6 +317,21 @@ async function selftest() {
   assert("...and zero evidence reads 0/5, not silence", /0\/5 late-checkpoint lapses/.test(nothing.reason) && nothing.counter.have === 0);
   assert("the evidence bar is UNCHANGED at 5 — surfaced, not lowered", MIN_LATE_LAPSES === 5 && thin.proposal === null);
 
+  // RULING 5 (8 Aug 2026) — teaching drift-rates reach the genome as CONTEXT
+  assert("topDrift ranks by hits+auto_hits and stays null on a silent contract",
+    topDrift({ rules: [{ id: "hinglish", hits: 2, auto_hits: 7 }, { id: "dheema", hits: 0, auto_hits: 30 }] }).id === "dheema"
+    && topDrift({ rules: [{ id: "x", hits: 0, auto_hits: 0 }] }) === null && topDrift(null) === null);
+  const propT = proposeFromEvidence(reps, profile(), true, now, null, { id: "dheema", n: 30 });
+  assert("a proposal carries the teaching-drift line as CONTEXT, never the basis (metric/diff unchanged)",
+    propT.proposal.evidence.some((e) => /teaching-drift CONTEXT.*dheema.*30×/.test(e))
+    && propT.proposal.evidence.some((e) => /never the basis/.test(e))
+    && JSON.stringify(propT.proposal.diff) === JSON.stringify(prop.proposal.diff)
+    && propT.proposal.metric.name === prop.proposal.metric.name);
+  assert("no teaching context ⇒ no context line (absence, not a fabricated zero)",
+    !prop.proposal.evidence.some((e) => /teaching-drift/.test(e)));
+  assert("teaching context still validates against the profile whitelist",
+    validateMutation(propT.proposal, profile()).ok);
+
   // changelog line
   const line = changelogLine(kept.m, 1);
   assert("changelog line human-readable with outcome", /Beat 1:/.test(line) && /KEPT/.test(line));
@@ -362,7 +391,9 @@ async function main() {
   const gate = gateNeed === null ? null : { have: reps.length, need: gateNeed };
 
   if (mode === "propose" || (mode === "run" && now.getDay() === 0)) {
-    const { proposal, reason, counter } = proposeFromEvidence(reps, profile, gateOpen, now, gate);
+    // Ruling 5 reader: teaching_contract.json is teaching_contract.mjs's file — read-only here.
+    const { proposal, reason, counter } = proposeFromEvidence(reps, profile, gateOpen, now, gate,
+      topDrift(readJson(join(STATE_DIR, "teaching_contract.json"))));
     if (proposal) {
       if (!muts.some(m => m.id === proposal.id)) {
         appendFileSync(MUTS, JSON.stringify(proposal) + "\n");
@@ -467,4 +498,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { validateMutation, approveMutation, scoreMutation, proposeFromEvidence, changelogLine, resolvePath, runLogRow, logRun, RUNLOG, MIN_LATE_LAPSES };
+export { validateMutation, approveMutation, scoreMutation, proposeFromEvidence, changelogLine, resolvePath, runLogRow, logRun, RUNLOG, MIN_LATE_LAPSES, topDrift };

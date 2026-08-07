@@ -289,6 +289,27 @@ function assembleWallData(bus, now = new Date()) {
       low_confidence: calibration.low_confidence !== false,
       status: calibration.status || null,
     } : null,
+    // THE OUTWARD LANE (outward loop, 8 Aug 2026 — Ruling 5: benchmark + missions
+    // reach the wall). Pre-composed one-liners; absent files ⇒ null ⇒ no panel.
+    outward: (() => {
+      const mj = bus.missions, bj = bus.benchmark;
+      if (!mj && !bj) return null;
+      const lines = [];
+      if (mj && Array.isArray(mj.missions) && mj.missions.length) {
+        const audit = mj.missions.filter(r => r.type === "audit");
+        const closed = !!(mj.syllabus_audit && mj.syllabus_audit.closed_at);
+        if (audit.length && !closed) {
+          const done = audit.filter(r => r.ingested_at).length;
+          lines.push(done < 4 ? `full-syllabus audit ${done}/4 returned — next fire: ${(audit.find(r => !r.ingested_at) || {}).id || "?"}`
+            : `all 4 audit returns in — awaiting audit-close (his word)`);
+        }
+        const gen = mj.missions.filter(r => r.type !== "audit" && !r.ingested_at);
+        if (gen.length) lines.push(`${gen[0].id} staged — fire on Gemini when he sits`);
+      }
+      if (bj) lines.push(bj.status === "gated_pre_audit" ? `benchmark GATED (pre-audit)`
+        : `benchmark: ${(bj.buckets || []).map(b => `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bj.regressions || []).length ? ` · ⚠ ${bj.regressions.length} regression(s)` : ""}`);
+      return lines.length ? { lines } : null;
+    })(),
     derby: learning_state && Array.isArray(learning_state.confusion_pairs) ? learning_state.confusion_pairs.slice(0, 5) : [],
     // same absent-vs-zero distinction as the season ledger (#84)
     tape_open: !!tape_room,
@@ -470,6 +491,14 @@ function renderSeason(d) {
         <div style="font-size:11px;color:${C.dim}">the cabinet ${esc(s.trophy_state)}</div></div>`
     : dark("the cabinet · unknown until the ledger opens"));
   return panel("Season", `<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap">${parts.join("")}</div>`);
+}
+
+// THE SCOUT'S DESK (outward loop, 8 Aug 2026) — missions in flight + the
+// benchmark line. Absent ⇒ no panel (absence, not a zero).
+function renderOutward(d) {
+  if (!d.outward || !d.outward.lines || !d.outward.lines.length) return "";
+  return panel("The scout's desk",
+    d.outward.lines.map(l => `<div style="font-size:13px;color:${C.body};margin:3px 0">· ${esc(l)}</div>`).join(""));
 }
 
 function renderCalibration(d) {
@@ -752,7 +781,7 @@ function renderWall(data, insights) {
     const insightHtml = insightShelf(insights);
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
-      renderNow(data) + renderMaidan(data) + renderSeason(data) + renderCalibration(data) + renderDerby(data) +
+      renderNow(data) + renderMaidan(data) + renderSeason(data) + renderOutward(data) + renderCalibration(data) + renderDerby(data) +
       renderDrills(data) + renderMedia(data) + renderCommitments(data) + renderBody(data) + renderBrain(data) + renderWallTrend(data) + `</div>` + voice + insightHtml;
   }
   return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
@@ -874,9 +903,23 @@ async function selftest() {
     drills: { drills: [{ kind: "tape_room", probe_type_emoji: "🟣", concepts: ["tokenization"], mode: "defend" }] },
     twin: { voice: null },
     kal_line: "pehla move: context Re-Jirah",
+    // THE SCOUT'S DESK fixture (outward loop, 8 Aug 2026)
+    missions: { missions: [
+      { id: "M01", type: "audit", ingested_at: "2026-07-12T10:00:00Z" },
+      { id: "M02", type: "audit", ingested_at: null },
+      { id: "M03", type: "audit", ingested_at: null },
+      { id: "M04", type: "audit", ingested_at: null },
+    ], syllabus_audit: { closed_at: null } },
+    benchmark: { status: "gated_pre_audit", gate: { missions_line: "x" } },
   };
   const data = assembleWallData(bus, now);
   const html = renderWall(data, null);
+  assert("THE SCOUT'S DESK — audit progress + gated benchmark reach the wall (Ruling 5)",
+    html.includes("The scout&#39;s desk") || html.includes("The scout's desk")
+      ? (html.includes("full-syllabus audit 1/4 returned") && html.includes("benchmark GATED (pre-audit)"))
+      : false);
+  assert("THE SCOUT'S DESK — absent outward files ⇒ no panel (absence, not a zero)",
+    !renderWall(assembleWallData({ history: [] }, now), null).includes("scout"));
   assert("Maidan pitch SVG renders with frayed pass", html.includes("<svg") && html.includes("frayed pass"));
   assert("doubts_retired + matches_played render big", html.includes(">24<") && html.includes(">12<"));
   assert("NO RAW BIOMETRICS — hrv/rhr numbers never render", !html.includes("22.7") && !html.includes("76.4"));
@@ -1219,6 +1262,9 @@ async function main() {
     pitch_read: readJson(join(STATE_DIR, "pitch_read.json")),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     repsToday: reps.rows.filter(r => tsLocalDay(r.ts) === today).length,   // local day, not the UTC slice (E2E audit 25 Jul 2026)
+    // the outward loop (8 Aug 2026) — scout.mjs owns missions.json, benchmark.mjs owns benchmark.json
+    missions: readJson(join(STATE_DIR, "missions.json")),
+    benchmark: readJson(join(STATE_DIR, "benchmark.json")),
   };
   // COMMITMENTS (U4): last week of kal-lines + what the next day said
   const commitments = [];

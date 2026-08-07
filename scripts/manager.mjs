@@ -79,6 +79,9 @@ function loadBus(P, today) {
     // as "you did nothing". Both are read-only here; the Manager only ever proposes.
     capsule_map: readJSON("capsule_map.json"),
     shipped: readJSON("shipped.json"),
+    // THE BENCHMARK (outward loop, 8 Aug 2026 — Ruling 5: "benchmark → team_sheet").
+    // Read-only; benchmark.mjs owns it. Gated pre-audit ⇒ the sheet says GATED, honestly.
+    benchmark: readJSON("benchmark.json"),
     captain_note: readText("captain_note.md"),
     last_post_match: readText(join("post_match", yday + ".md")),
   };
@@ -254,6 +257,11 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
       shipped: bus.shipped.shipped,
       events: (bus.shipped.artifact_events || []).map(e => e.kind),
     } : (bus.shipped && bus.shipped.status === "unreadable" ? { dark: true } : null),
+    // the outward benchmark — ONE line, pre-composed here so the sheet and the
+    // FEATURES table can never disagree on a number (no-invented-number law).
+    benchmark: bus.benchmark ? (bus.benchmark.status === "gated_pre_audit"
+      ? { line: `GATED (pre-audit) — ${bus.benchmark.gate?.missions_line || ""}` }
+      : { line: `${(bus.benchmark.buckets || []).map(b => `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bus.benchmark.regressions || []).length ? ` · ⚠ ${bus.benchmark.regressions.length} regression(s)` : ""}` }) : null,
     study: okCards ? {
       due_today: bus.cards.due_today ?? 0, overdue: bus.cards.overdue ?? 0,
       hardest_due: bus.cards.hardest_due || [],
@@ -582,6 +590,9 @@ function fallbackSkeleton(F, fin, stale = {}) {
       ? `   • shipped: ${F.shipped.commits} commit(s)${F.shipped.new_files ? `, ${F.shipped.new_files} new file(s)` : ""}${ev}`
       : `   • shipped: nothing committed yet today${ev}`);
   }
+  // THE BENCHMARK (outward loop, 8 Aug 2026) — one pre-composed line; GATED renders as
+  // GATED (Ruling 6: a stale-map measurement never rides a surface as truth).
+  if (F.benchmark?.line) rep.push(`   • benchmark: ${F.benchmark.line}`);
   // THE CAPSULES SPEAK — Re-Jirah is date-driven off lockedOn (FORGE_SPEC §4) and had never
   // reached a single surface. One line, worst debt first, with the ready-made probe count.
   if (F.capsules?.rejirah_overdue?.length) {
@@ -959,6 +970,27 @@ async function selftest() {
     /Re-Jirah overdue: embeddings 36d/.test(wit.sheet) && /36 strike sawaal ready/.test(wit.sheet));
   ok("shipped speaks: artifacts render beside hours, with the day's events",
     /shipped: 3 commit\(s\), 2 new file\(s\) · capsule_locked/.test(wit.sheet));
+
+  // 6e-quinquies) THE BENCHMARK REACHES THE SHEET (outward loop, 8 Aug 2026 — Ruling 5).
+  // Gated renders as GATED; a full run renders counts; absence renders nothing.
+  const bgDir = stage("rich");
+  writeFileSync(join(bgDir, "benchmark.json"), JSON.stringify({
+    date: TODAY, status: "gated_pre_audit",
+    gate: { missions_line: "full-syllabus audit 1/4 returned — next fire: M02" },
+  }));
+  const bg = await runManager({ today: TODAY, stateDir: bgDir });
+  ok("benchmark GATED reaches the sheet as GATED (never as numbers)",
+    /benchmark: GATED \(pre-audit\) — full-syllabus audit 1\/4 returned/.test(bg.sheet));
+  const boDir = stage("rich");
+  writeFileSync(join(boDir, "benchmark.json"), JSON.stringify({
+    date: TODAY, status: "ok", regressions: ["B2: cold-held 2 → 1"],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }, { id: "B2", counts: { locked: 1, core_total: 5 } }],
+  }));
+  const bo = await runManager({ today: TODAY, stateDir: boDir });
+  ok("benchmark full run renders bucket counts + names its regression count",
+    /benchmark: B1 3\/8 · B2 1\/5 · ⚠ 1 regression\(s\)/.test(bo.sheet));
+  ok("no benchmark.json ⇒ no benchmark line (absence, not a zero)",
+    !/benchmark:/.test(wit.sheet));
 
   // and the distinction that justifies the whole organ: dark ≠ zero
   const sdDir = stage("rich");

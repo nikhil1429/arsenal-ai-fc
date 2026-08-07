@@ -81,6 +81,49 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE = join(__dirname, "..", "dressing-room", "state");
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+
+// THE OUTWARD LINES (outward loop, 8 Aug 2026 — Ruling 5: benchmark + missions
+// reach the kickoff brief; Ruling 2: the ≥2×/week floor is HIS ruled number).
+// ≤2 mission lines + floor-when-unmet + season streak — doors, never debts.
+// Derivation deliberately inline (house pattern: a reader derives its own
+// display from the owner's state; scout.mjs owns missions.json, benchmark.mjs
+// owns benchmark.json, postmatch.mjs owns season.json).
+function outwardLines(dir, nowMs) {
+  const L = [];
+  const mj = readJson(join(dir, "missions.json"));
+  const bj = readJson(join(dir, "benchmark.json"));
+  if (mj && Array.isArray(mj.missions) && mj.missions.length) {
+    const audit = mj.missions.filter((r) => r.type === "audit");
+    const closed = !!(mj.syllabus_audit && mj.syllabus_audit.closed_at);
+    if (audit.length && !closed) {
+      const todo = audit.filter((r) => !r.ingested_at);
+      L.push(todo.length
+        ? `OUTWARD: full-syllabus audit ${audit.length - todo.length}/4 returned — fire ${todo[0].id} on Gemini Deep Research (dressing-room/missions/) · benchmark gated till audit-close`
+        : `OUTWARD: all 4 audit returns in — diff review + audit-close (his word) unlocks the benchmark`);
+    }
+    const gen = mj.missions.filter((r) => r.type !== "audit" && !r.ingested_at);
+    if (gen.length) L.push(`OUTWARD: ${gen[0].id} staged — fire when he sits with Gemini (EMPHASIS only, syllabus canon)`);
+    // the floor line only when UNMET — a met floor is silence, not applause
+    const cutoff = nowMs - 7 * 86400000;
+    const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= cutoff && t <= nowMs; };
+    const returns = (mj.events || []).filter((e) => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
+    const benchRuns = ((bj && bj.runs) || []).filter(inWin).length;
+    if (returns + benchRuns < 2) L.push(`OUTWARD FLOOR: ${returns + benchRuns}/2 this week (his 7 Aug ruling) — a mission return or a benchmark run touches it`);
+  }
+  if (bj && bj.status === "ok" && Array.isArray(bj.regressions) && bj.regressions.length) {
+    L.push(`OUTWARD: benchmark regression — ${bj.regressions[0]}`);
+  }
+  return L;
+}
+
+function seasonLine(dir) {
+  const s = readJson(join(dir, "season.json"));
+  if (!s || !s.season_day) return null;
+  const rows = Array.isArray(s.rows) ? s.rows : [];
+  let run = 0;
+  for (let i = rows.length - 1; i >= 0; i--) { if (["HIT", "PARTIAL", "REST"].includes(rows[i].result)) run++; else break; }
+  return `SEASON: day ${s.season_day} · matchday ${s.matches_played}${run ? ` · run ${run} won-day(s)` : ""} (logbook: dressing-room/SEASON.md)`;
+}
 const clip = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
 
 // E2E audit 25 Jul 2026 (freshness): working_set.json carries a `ts` (the distiller
@@ -372,6 +415,13 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     const dueLine = rejirahDueLine(dir, now);   // #108 — the brief's clock, so the age tag is deterministic in test
     if (dueLine) L.push(dueLine);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  try {
+    for (const ol of outwardLines(dir, now)) L.push(ol);   // outward loop (8 Aug 2026)
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  try {
+    const sl = seasonLine(dir);
+    if (sl) L.push(sl);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
   if (memory) {
     L.push("--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---");
     L.push(memory);
@@ -543,6 +593,39 @@ function selftest() {
   assert("the RE-JIRAH OVERDUE slot is still ONE line (the kickoff is not a wall)",
     (oldMap.split("\n").find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "").length > 0
     && oldMap.split("\n").filter((l) => l.startsWith("RE-JIRAH OVERDUE")).length === 1);
+
+  // ---- THE OUTWARD LINES + SEASON (outward loop, 8 Aug 2026)
+  const dirO = mkdtempSync(join(tmpdir(), "learnstate-outward-"));
+  writeFileSync(join(dirO, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-04", task: "Hallucinations", track: "concept" } } }));
+  writeFileSync(join(dirO, "missions.json"), JSON.stringify({ missions: [
+    { id: "M01", type: "audit", staged_at: iso(1), ingested_at: null },
+    { id: "M02", type: "audit", staged_at: iso(1), ingested_at: null },
+    { id: "M03", type: "audit", staged_at: iso(1), ingested_at: null },
+    { id: "M04", type: "audit", staged_at: iso(1), ingested_at: null },
+    { id: "T-hallucinations", type: "topic_open", staged_at: iso(1), ingested_at: null },
+  ], syllabus_audit: { closed_at: null }, events: [] }));
+  const ob = brief(dirO, NOW);
+  assert("OUTWARD — audit status + next fire ride the kickoff brief",
+    ob.includes("OUTWARD: full-syllabus audit 0/4 returned — fire M01"));
+  assert("OUTWARD — a staged topic mission surfaces with the EMPHASIS-only reminder",
+    ob.includes("OUTWARD: T-hallucinations staged") && ob.includes("EMPHASIS only"));
+  assert("OUTWARD — the unmet floor surfaces as have/need (his ruled 2, never shame)",
+    ob.includes("OUTWARD FLOOR: 0/2 this week") && !/behind|late|failed/i.test(ob.split("\n").find((l) => l.startsWith("OUTWARD FLOOR")) || ""));
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", regressions: [],
+    runs: [new Date(NOW - 86400000).toISOString(), new Date(NOW - 2 * 86400000).toISOString()] }));
+  assert("OUTWARD — floor met (2 benchmark runs this week) ⇒ the floor line goes SILENT",
+    !brief(dirO, NOW).includes("OUTWARD FLOOR"));
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", runs: [],
+    regressions: ["B2 RAG: cold-held 2 → 1"] }));
+  assert("OUTWARD — a benchmark regression reaches the kickoff brief (Ruling 5 edge)",
+    brief(dirO, NOW).includes("OUTWARD: benchmark regression — B2 RAG"));
+  writeFileSync(join(dirO, "season.json"), JSON.stringify({ season_day: 3, matches_played: 2,
+    rows: [{ result: "HIT" }, { result: "MISS" }, { result: "REST" }] }));
+  assert("SEASON — the streak line rides the brief once a season exists",
+    brief(dirO, NOW).includes("SEASON: day 3 · matchday 2 · run 1 won-day(s)"));
+  assert("BACKWARD-COMPATIBLE — a world with no missions/benchmark/season shows ZERO outward noise",
+    !brief(dir, NOW).includes("OUTWARD") && !brief(dir, NOW).includes("SEASON:"));
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
