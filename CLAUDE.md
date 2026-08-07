@@ -155,6 +155,23 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`
 (`due` = the queue, questions only and **cold**; `<concept> <axis>` = one axis fully opened).
 
+## THE OUTWARD LOOP (built 8 Aug 2026 on his sealed rulings — AUDIT_NOTES__full_organism.md §NEXT BUILD)
+Gemini Pro is the INTERNET ARM: the machine writes missions, **HE fires them**, output returns
+through `node scripts/scout.mjs mission ingest <ID> [--file <p>]` (or a session paste — zero tax).
+- **THE MISSIONS DESK** lives in `scout.mjs` (missions.json + `dressing-room/missions/`).
+  FIRST MISSION EVER = the full-syllabus audit M01–M04 (Deep Research, one per bucket-cluster).
+  Returns → diff cards (captains_call) → **canon changes only with his word** →
+  `mission audit-close --note "<his word>"` = THE BENCHMARK GATE (an event, never a date).
+- **benchmark.mjs** = have/need per ROADMAP bucket × DOSSIER §1 weights, COUNTS + NAMES only —
+  never a composite score. It stays GATED until audit-close (Ruling 6: a stale map is half a lie).
+  Read it live (`benchmark.mjs report`), never from any doc.
+- **LOCK-chain**: forge step 10 arrival auto-fires stage-lock mission + benchmark + gate-report;
+  forge `start` auto-stages the topic-open mission. GUARD (his ruling, non-negotiable):
+  **missions tune EMPHASIS, never reopen the SYLLABUS.**
+- **≥2×/week outward floor** (HIS ruled number): mission returns + benchmark runs; surfaces on
+  kickoff/watchman only when unmet. **SEASON.md** (dressing-room/) = postmatch's logbook —
+  Claude fills 100%, he writes ZERO; rows begin at his first /full-time.
+
 **Added 5 Aug 2026 (audit #107 repair — all selftested and run live):**
 - `scripts/rejirah.mjs` — **the Re-Jirah controller and the loop's missing back edge.**
   `grade <concept> <axis> held|cracked --gut <word>` records a cold round; `state` and `due`

@@ -123,3 +123,37 @@ The doctrine runs BEFORE teaching, not only after LOCK. Three-layer final shape:
 3. **LOCK harvest + ≥2×/week floor** stay as Ruling 2 set them (prevent at open, validate at lock).
 Honest note recorded: fundamentals (~44.5% rubric weight) churn slowly; agents/LLMOps/tooling churn
 fast — topic-boundaries + the floor absorb that difference without any invented cadence constant.
+
+---
+
+# BUILD RESULT — THE OUTWARD LOOP SHIPPED (8 Aug 2026, "outward loop build karo")
+
+Order executed missions-first (Ruling 6 amended the 23:52 order: first mission ever ships BEFORE benchmark).
+1. **THE MISSIONS DESK** (scout.mjs — missions.json sole writer): M01–M04 full-syllabus-audit
+   prompts hand-authored in `dressing-room/missions/` + STAGED live; `mission ingest` door
+   (file/stdin, verbatim → scout_reports/); `audit-close --note "<his word>"` = the benchmark
+   gate EVENT; T-/L- generated missions (EMPHASIS-guard baked in the prompt text). Selftests green.
+2. **benchmark.mjs** (new organ, 20/20): 5 ROADMAP buckets × §1 weights (arithmetic shown as
+   arithmetic) × live evidence (capsule_map + rejirah_log cold-helds + python_state + course +
+   shipped + timeaudit) — counts/names only, NO composite score. Live `run` = GATED (correct);
+   `preview` labelled PRE-AUDIT. runs[] feeds the floor. In squad:selftest; coverage floor 58→59.
+3. **LOCK-chain** (forge_session 149/149): step-10 ARRIVAL fires mission stage-lock + benchmark
+   run (fail-silent, after save) + data-gates report (decoy 4/60 — ALREADY OPEN at 4 capsules ·
+   112 doubts · R1 0/1 · confusion 0/6) + widget/gist/dossier lines; `lockchain` = dry preview
+   (proven live, his open session untouched). `start` stages the T- mission (Ruling 6 L2).
+4. **SEASON.md** (postmatch): renderSeasonMd + rows[] ledger + `season` regen mode — live
+   scaffold written today; honest-empty until his first /full-time. Deferred-not-faked: M1%,
+   floor/surplus/save-flag columns, won-day=5 scoring (no machine source yet).
+5. **Ruling-5 edges closed**: kickoff brief OUTWARD+FLOOR+SEASON lines (learnstate) · wall
+   "scout's desk" panel (viz) · team_sheet benchmark bullet (manager 89/89) · captains_call
+   missions.desk + benchmark.regression PULL-DERIVE sources (29/29; fire-nudge card minted live)
+   · watchman c10 outward-floor + c11 gemini-quality INFO (33/33) · scout gemini lane (P6.1's
+   first readers) · bootroom topDrift teaching-context (context-not-basis). dossier_weights'
+   7 readers re-read per-run (no caching) — verified by inspection, nothing to wire.
+   rejirah→calibration lane stays the SEALED R1 deferral (unchanged, on record).
+6. **Manager M-2→M-5 NOT advanced — by design, not by drift**: M-2 is captain-approved
+   line-by-line (RESUME #6 PRECEDENCE; #8 meds-naming = his open decision). Needs his seat;
+   sequential law holds for M-3→M-5 behind it. SEASON (item 5) built ahead of it because it
+   has no dependency on the Manager — conflict surfaced, not silently reordered.
+Docs: ORGANISM_CLOCK §3/§4/§5 updated · LEARNING_LAYER_MAP +4 single-writer rows · CLAUDE.md
+outward-loop pointer. Full `npm test` green before commit (see the commits of this day).

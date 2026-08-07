@@ -91,6 +91,12 @@ scheduler ne khud chalaya. Tier-2 lane aaj live-fire mein end-to-end proven.)*
 - **Course 1-05 / Python 1-07 shuru karna** — course.json 6 real chapters ke saath loaded;
   python_state pehli declaration ka intezaar mein (design se — fluency declare hoti hai,
   compute nahi).
+- **MISSION FIRE (outward loop, 8 Aug 2026)** — M01–M04 (full-syllabus audit) staged,
+  files `dressing-room/missions/` mein; TU Gemini Pro → Deep Research pe paste karta hai,
+  return `scout.mjs mission ingest` se wapas aata hai (ya session mein paste). Diff cards
+  banti hain; canon sirf TERE word se badalta hai; `mission audit-close --note "<tera
+  word>"` = THE BENCHMARK GATE khulne ka event. Topic-open (T-) missions forge `start`
+  pe khud stage hoti hain, lock-harvest (L-) step 10 pe — dono EMPHASIS-only.
 
 ---
 
@@ -103,7 +109,16 @@ scheduler ne khud chalaya. Tier-2 lane aaj live-fire mein end-to-end proven.)*
 - **Drift ranking**: ab har lane se bhar rahi hai (aaj 25 auto dheema + 9 hinglish + 7
   migrated self-reports) — 30-45 din mein iski shakal teri asli aadat hogi
 - **gemini_quality.jsonl**: har paste-batch record hoga, faisla 30-45d data ke baad
+  *(8 Aug se pehle reader mile: scout readiness lane + watchman c11 INFO — ab likha bhi jaata hai, dikhta bhi hai)*
 - **Tier-2 / Re-Jirah controller constants**: pehli R1 run par spec honge (deferral, refusal nahi)
+- **THE BENCHMARK (8 Aug 2026)**: built + selftested, par **event-gated** — Ruling 6 ke
+  mutabik full-syllabus audit ke `audit-close` (tera word) tak `run` sirf GATED status
+  likhta hai (stale map pe naapna aadha jhooth). `preview` console pe PRE-AUDIT label ke
+  saath dikhata hai. Gate khulte hi: wall + team_sheet + kickoff line + regression cards.
+- **SEASON.md (8 Aug 2026)**: writer postmatch mein live (`postmatch season` bhi) — scaffold
+  aaj se maujood; asli rows TERI pehli /full-time se aayengi. Outward floor (≥2×/hafta,
+  TERA 7 Aug ruling): mission returns + benchmark runs — kickoff/watchman par tabhi bolta
+  hai jab unmet.
 
 ---
 
@@ -117,7 +132,10 @@ scheduler ne khud chalaya. Tier-2 lane aaj live-fire mein end-to-end proven.)*
 4. **Turnstile (:4111 clipboard capture) abhi DOWN hai** — subah 09:15 conductor use
    wapas uthata hai; sirf Gemini-paste clipboard path par asar, in-session rep door
    ise use nahi karta. (Chhota gap: port ka koi watcher nahi — sirf subah ka restart.)
-5. **Manager M-2→M-5 bane nahi** — design se (capstone, build-order ka aakhri kadam).
+5. **Manager M-2→M-5 bane nahi** — M-2 (system.md soul) #1–#5 locked hain aur woh
+   LINE-BY-LINE TERE approval se banta hai (CONDUCTOR_LOG: "RESUME #6 PRECEDENCE" + #8
+   pe tera khula decision) — autonomous session ise seal NAHI kar sakti; teri baithak
+   chahiye. M-3→M-5 uske baad, sequential law se.
 6. **SelfKnowledge frozen, tool-less surface nahi banega** — teri permanent ruling.
 7. **3 naye widgets built-NOT-driven** (tokenization/inference/context) — gates tab
    ginenge jab TU chalayega. Registry sach bolti hai.
