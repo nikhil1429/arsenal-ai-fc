@@ -138,16 +138,18 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   if it cannot ride an anchor, it does not need the captain.** Never hand him a report to read,
   never a list of asks, never a command to remember — file a card instead
   (`node scripts/captains_call.mjs file --line "…"`), max ONE dealt per anchor.
-- **DRIFT IS SELF-REPORTED, HIS WORD PROMOTES IT** (6 Aug 2026 — this is the missing caller).
+- **DRIFT IS SELF-REPORTED, AND IT COUNTS THE MOMENT IT IS FILED** (6 Aug 2026 design,
+  **AMENDED BY HIS RULING 7 Aug 2026** — asked "if i say automate it and do not bring it to
+  me will it be ok", answered with the practical trace, he ruled **"ok do it.."**).
   The moment you catch yourself breaking a teaching-contract rule — you cut his scope, you
   answered in English, you dumped a quiz, you put his level above his own — run
   `node scripts/teaching_contract.mjs flag <rule-id> --why "<what you did>"` **in that turn**.
-  It STAGES only: `hits` is untouched, so the thing being ranked can never rank itself. He
-  promotes with `confirm <id>` or kills it with `dismiss <id>`, and the staged queue rides the
-  contract block every turn so it cannot rot. Until 6 Aug NOTHING called `hit`, so the whole
-  drift RANKING was frozen on 31 Jul data while the forge close report printed "NOT MEASURED"
-  — the code was fine, the data was starved. Do not wait to be asked; do not grade yourself
-  into canon either.
+  Since 7 Aug it AUTO-COUNTS into the `auto_hits` lane (no card, no confirm — he is never
+  asked): the ranking moves immediately, the why is preserved in `self_reports`, and the
+  guard is VISIBILITY + REVERSIBILITY, not a gate — `unhit-auto <id>` walks any count back,
+  and the nightly watchman reviews the day's auto-hits. His `hits` lane stays his alone
+  (`hit`/`confirm` only — never write it). The pre-ruling staging path is frozen in the file,
+  and the old 6 Aug scar stays true: do not wait to be asked, and never hand-edit the state.
 
 **The surfaces:** `/forge` (he named a concept) · `/learn` (he didn't — read state and route) ·
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`

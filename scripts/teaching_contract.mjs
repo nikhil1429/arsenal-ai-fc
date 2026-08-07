@@ -285,6 +285,42 @@ function flagRule(state, id, why, now = new Date()) {
   const staged = [...(state.staged || []), { id, why: String(why || ""), at: now.toISOString() }];
   return { ok: true, state: { ...state, staged } };
 }
+
+// ── THE SELF-REPORT LANE, AUTOMATED (7 Aug 2026 — HIS RULING) ────────────────
+// His words, verbatim, after the practical trace was laid out ("haan/na se sirf
+// counter tick hota hai; enforcement teri haan pe kabhi tiki nahi thi"):
+//   "if i say automate it and do not bring it to me will it be ok" → "ok do it.."
+// So: a model self-report now COUNTS the moment it is filed — same auto_hits lane
+// as the code-measured drifts, same `unhit-auto` revert, and the WHY is preserved
+// in `self_reports` (append-only, uncapped per his no-limits ruling) so the
+// nightly watchman review has evidence, not just a number. The old staging path
+// (flagRule/confirmFlag/dismissFlag above) is FROZEN, not deleted — layering law —
+// and stays legal for any legacy staged entry. What this knowingly trades away:
+// the model now classifies its own violations unreviewed (the 6 Aug evidence says
+// it classifies coarsely). The guard is VISIBILITY + REVERSIBILITY, not a gate.
+function selfReport(state, id, why, now = new Date()) {
+  const hit = autoHitRule(state, id, why, now);
+  if (!hit.ok) return hit;
+  const self_reports = [...(state.self_reports || []), { id, why: String(why || ""), at: now.toISOString() }];
+  return { ok: true, state: { ...hit.state, self_reports } };
+}
+
+// One-time migration for the queue that existed when the ruling landed: every
+// staged entry counts AS FILED (no re-classification — re-classifying them here
+// would be the same coarse self-judgement the old gate existed to catch), its
+// why moves to self_reports with the ORIGINAL filing time preserved, and the
+// staged queue empties. Idempotent: an empty queue migrates to nothing.
+function promoteStaged(state, now = new Date()) {
+  let s = state;
+  const q = [...(s.staged || [])];
+  for (const e of q) {
+    const hit = autoHitRule(s, e.id, e.why, now);
+    if (!hit.ok) continue;                       // an unknown rule id stays staged rather than vanishing
+    s = { ...hit.state, self_reports: [...(s.self_reports || []), { id: e.id, why: e.why, at: e.at, promoted_at: now.toISOString() }],
+          staged: (s.staged || []).filter((x) => x !== e) };
+  }
+  return { ok: true, state: s, promoted: q.length - (s.staged || []).length, left: (s.staged || []).length };
+}
 function confirmFlag(state, id, now = new Date()) {
   const staged = state.staged || [];
   if (!staged.some((s) => s.id === id)) return { ok: false, why: `nothing staged for "${id}"`, state };
@@ -1063,6 +1099,25 @@ function selftest() {
   // question ("keep me out of the picture") are what authorise the auto lane; these
   // assertions are what keep it honest. None is a tautology.
   const auto2 = autoHitRule(autoHitRule(base, "one-idea", "x", T0).state, "one-idea", "y", T0).state;
+  // THE 7 AUG RULING — self-reports auto-count, whys preserved, migration idempotent
+  assert("SELF-REPORT — flag's engine now counts into auto_hits AND preserves the why in self_reports",
+    (() => { const r = selfReport(base, "one-idea", "maine do sawaal pooche", T0);
+      return r.ok && r.state.rules.find((x) => x.id === "one-idea").auto_hits === 1
+        && r.state.self_reports.length === 1 && r.state.self_reports[0].why === "maine do sawaal pooche"; })());
+  assert("SELF-REPORT — an unknown rule id still refuses (a typo must not vanish into a count)",
+    !selfReport(base, "no-such-rule", "x").ok);
+  assert("PROMOTE-STAGED — the pre-ruling queue counts AS FILED, whys+original timestamps preserved, queue empties, idempotent",
+    (() => { const st = { ...base, staged: [{ id: "one-idea", why: "w1", at: "2026-08-06T12:00:00Z" }, { id: "his-word", why: "w2", at: "2026-08-06T13:00:00Z" }] };
+      const p = promoteStaged(st, T0);
+      const again = promoteStaged(p.state, T0);
+      return p.promoted === 2 && p.state.staged.length === 0
+        && p.state.rules.find((x) => x.id === "one-idea").auto_hits === 1
+        && p.state.rules.find((x) => x.id === "his-word").auto_hits === 1
+        && p.state.self_reports.length === 2 && p.state.self_reports[0].at === "2026-08-06T12:00:00Z"
+        && again.promoted === 0; })());
+  assert("PROMOTE-STAGED — an unknown rule id STAYS staged rather than vanishing",
+    (() => { const p = promoteStaged({ ...base, staged: [{ id: "ghost-rule", why: "w", at: "x" }] }, T0);
+      return p.state.staged.length === 1 && p.promoted === 0; })());
   assert("AUTO LANE — autohit increments auto_hits and stamps last_auto_hit, never touching his `hits`",
     auto2.rules.find((r) => r.id === "one-idea").auto_hits === 2
     && auto2.rules.find((r) => r.id === "one-idea").hits === 0
@@ -1108,7 +1163,7 @@ function selftest() {
 // to having. Hoisted into a const so the selftest can assert every live command
 // appears here — a command can be forgotten in prose, not in an assertion.
 const USAGE = "teaching_contract: print | list | add <id> <line...> | hit <id>"
-  + " | flag <id> --why \"...\" | confirm <id> | dismiss <id> | staged"
+  + " | flag <id> --why \"...\" (auto-counts — his 7 Aug ruling) | confirm <id> | dismiss <id> | staged | promote-staged"
   + " | autohit <id> --why \"...\" | unhit-auto <id> [--n <k>] | checked"
   + " | drop <id> | reset-turns | selftest";
 
@@ -1197,7 +1252,7 @@ switch (cmd) {
     console.log(`teaching_contract · rules ${s.rules.length} · turn ${t.count || 0}/${s.context_warn_at || DEFAULT_WARN_AT}`
       + ` · clock anchor ${anchorKindOf(t)} ${storedAnchorOf(t) || "(none)"}`
       + ` · drift hits recorded ${hs.ever_hit}/${hs.total} rules, last ${hs.newest_hit ? hs.newest_hit.slice(0, 10) : "never"}`
-      + ` (a real hit comes only from \`hit <id>\` or your \`confirm <id>\`; Claude's \`flag <id>\` STAGES and never ranks)`);
+      + ` (hits = his word/hand; auto = code-measured AND model self-reports — the latter auto-count since his 7 Aug ruling, reversible via unhit-auto)`);
     for (const r of rank(s.rules)) console.log(`  ${r.id.padEnd(12)} hits=${String(r.hits).padStart(2)}  ${r.line}`);
     break;
   }
@@ -1217,12 +1272,22 @@ switch (cmd) {
     console.log(`teaching_contract: "${arg}" now ${r.hits}× — it moves up the injection order`);
     break;
   }
-  case "flag": {                                // CLAUDE'S PATH — stages only, never ranks
+  case "flag": {                                // CLAUDE'S PATH — auto-counts since his 7 Aug ruling
+    // FROZEN 7 Aug 2026 (the staging dispatch, verbatim, until his "ok do it.." ruling):
+    //   const res = flagRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
+    //   console.log(`teaching_contract: "${arg}" STAGED (${...} awaiting his word) — hits unchanged; only he promotes it.`);
     const wi = process.argv.indexOf("--why");
-    const res = flagRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
+    const res = selfReport(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
     save(res.state);
-    console.log(`teaching_contract: "${arg}" STAGED (${(res.state.staged || []).length} awaiting his word) — hits unchanged; only he promotes it.`);
+    const r = res.state.rules.find((x) => x.id === arg);
+    console.log(`teaching_contract: "${arg}" self-report auto-counted → ${r.auto_hits}× auto (${ruleWeight(r)}× total) — his 7 Aug ruling ("ok do it"): nobody is asked. Why preserved in self_reports; revert: unhit-auto ${arg}`);
+    break;
+  }
+  case "promote-staged": {                      // one-time migration of the pre-ruling queue
+    const res = promoteStaged(load());
+    save(res.state);
+    console.log(`teaching_contract: ${res.promoted} staged report(s) promoted as filed → auto lane (whys preserved in self_reports)${res.left ? ` · ${res.left} left (unknown rule id)` : ""}`);
     break;
   }
   case "confirm": {                             // HIS WORD — the only path to a real hit
