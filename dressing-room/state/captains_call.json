@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 10,
+  "next_id": 11,
   "cards": [
     {
       "id": "c1",
@@ -150,6 +150,23 @@
         "kind": "none"
       },
       "filed_at": "2026-08-07T14:05:50.002Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c10",
+      "key": "mission:audit-fire",
+      "source": "missions.desk",
+      "line": "Outward: full-syllabus audit taiyaar (M01–M04, Gemini Deep Research) — abhi M01 saath fire karein?",
+      "dispatch": {
+        "kind": "open",
+        "path": "dressing-room/missions/M01__audit_fundamentals_rubric.md"
+      },
+      "filed_at": "2026-08-07T20:57:32.166Z",
       "dealt": [],
       "answer": null,
       "answered_at": null,

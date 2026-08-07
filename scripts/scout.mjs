@@ -31,7 +31,12 @@
 // INPUT (read-only): learning_state.json · concepts.json · dossier_weights.json ·
 //   season.json · scout_config.json (canon)
 // OUTPUT: dressing-room/state/scout.json (sole writer)
-// MODES:  run (default) · selftest
+//         dressing-room/state/missions.json (sole writer — THE MISSIONS DESK, 8 Aug 2026)
+//         dressing-room/missions/T-*.md · L-*.md (generated mission prompts; M01–M04 are
+//         hand-authored audit missions this organ only REGISTERS, never rewrites)
+//         dressing-room/state/scout_reports/mission_*.md (ingested returns, verbatim)
+// MODES:  run (default) · selftest · mission <stage-audit|stage-topic|stage-lock|ingest|
+//         audit-close|list> · outward
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
@@ -199,6 +204,208 @@ function buildScout(staged, edges, now, war_room = { active: false, mode: null }
 }
 
 // ---------------------------------------------------------------------------
+// THE MISSIONS DESK — the outward loop's Gemini arm (his rulings, 7–8 Aug 2026)
+// ---------------------------------------------------------------------------
+// Ruling 1 (Gemini Pro doctrine, his words: "leave the internet things to
+//   gemini ai pro"): his Pro subscription is the INTERNET ARM — the machine
+//   writes missions, HE fires them on Gemini, the output returns through the
+//   ingest door below. No API, no automation of his account, ever.
+// Ruling 6 layer 1: FIRST MISSION EVER = the full-syllabus audit (M01–M04,
+//   one per bucket-cluster, hand-authored in dressing-room/missions/). The
+//   benchmark organ stays GATED until `mission audit-close` records his word —
+//   an EVENT on his study, never a date (his 1 Aug rule).
+// Ruling 6 layer 2: TOPIC-OPEN scouting — forge `start` stages T-<concept>.
+//   GUARD (non-negotiable): missions tune EMPHASIS, never reopen the SYLLABUS.
+// Ruling 2: LOCK harvest — forge step 10 stages L-<concept>. Plus the ≥2×/week
+//   outward floor (HIS ruled number, not a guess): `outward` counts the week.
+// WHO ELSE COULD ACT ON THIS OUTPUT (Ruling 5 standing question, answered):
+//   captains_call.mjs (mints mission cards — PULL-DERIVE, zero code here) ·
+//   benchmark.mjs (reads the audit gate) · forge_session.mjs (stages T-/L-) ·
+//   learnstate kickoff + /matchday (mission lines) · watchman (floor INFO).
+// ---------------------------------------------------------------------------
+const MISSIONS      = join(STATE_DIR, "missions.json");
+const MISSIONS_DIR  = join(__dirname, "..", "dressing-room", "missions");
+const REPORTS_DIR   = join(STATE_DIR, "scout_reports");
+const BENCH_PATH    = join(STATE_DIR, "benchmark.json");
+const OUTWARD_FLOOR = 2; // per week — HIS ruling (7 Aug 2026 night), not an invented threshold
+
+const AUDIT_MISSIONS = [
+  { id: "M01", cluster: "fundamentals + the rubric itself", file: "M01__audit_fundamentals_rubric.md" },
+  { id: "M02", cluster: "RAG cluster",                      file: "M02__audit_rag_cluster.md" },
+  { id: "M03", cluster: "agents + LLM-API cluster",         file: "M03__audit_agents_api_cluster.md" },
+  { id: "M04", cluster: "LLMOps + Python/shipping + market", file: "M04__audit_llmops_python_market.md" },
+];
+
+const AXES_LINE = "kya/analogy · kyun/first-principles · mechanism · math+range · limits/failure-modes · tradeoffs · FinOps-spot · scale/cost · 3-ways";
+
+const emptyMissions = () => ({
+  version: 1,
+  missions: [],
+  syllabus_audit: { returns_complete_at: null, closed_at: null, note: null },
+  events: [],
+});
+
+function stageAudit(state, now) {
+  const added = [];
+  for (const m of AUDIT_MISSIONS) {
+    if (state.missions.some(r => r.id === m.id)) continue;
+    state.missions.push({
+      id: m.id, type: "audit", cluster: m.cluster, concept: null,
+      file: `dressing-room/missions/${m.file}`,
+      staged_at: now.toISOString(), ingested_at: null, report: null,
+    });
+    state.events.push({ ts: now.toISOString(), kind: "stage_audit", id: m.id });
+    added.push(m.id);
+  }
+  return { state, added };
+}
+
+// Generated mission prompts. Both are REGULAR Gemini Pro research (Deep
+// Research is reserved for the four audits + rare deep-dives — rig cost rule).
+function topicMissionMd(concept, now) {
+  return `# MISSION T-${concept} — topic-open scouting: ${concept}
+<!-- outward loop · Ruling 6 layer 2 (staged at forge start, ${now.toISOString().slice(0, 10)}) -->
+<!-- GUARD (his ruling, non-negotiable): missions tune EMPHASIS, never reopen the SYLLABUS. -->
+<!-- Fire on: Gemini Pro (regular research — NOT Deep Research; that is reserved for audits). -->
+<!-- Return door: paste back in a Claude session, or: node scripts/scout.mjs mission ingest T-${concept} --file <path> -->
+
+---- PASTE FROM HERE (into Gemini) ----
+
+Research task. I am preparing for AI Product Engineer / Applied AI Engineer interviews in India (Aug–Oct 2026, product/applied ladder, ₹20–25 LPA band). TODAY I am opening the concept "${concept}" for deep study. Before I start, scout the live field on THIS topic only:
+
+1. The 8–12 most-reported REAL interview questions on ${concept} right now (July–August 2026 sources preferred; candidate-reported over prep-guides). Verbatim where possible, each with source + date.
+2. Which angles interviewers currently push hardest on ${concept} — with evidence. My study axes are: ${AXES_LINE}. Tell me which of these deserve extra weight.
+3. One thing that CHANGED about how ${concept} is asked vs early 2026, if anything (evidence, else say "no visible shift").
+
+OUTPUT FORMAT (strict):
+## LIVE PROBES — the questions, verbatim, sourced + dated
+## EMPHASIS READ — which axes deserve extra weight, one line of evidence each
+## SHIFT — what moved since early 2026 (or "none found")
+## SOURCES — dated list
+
+Rules: this steers EMPHASIS inside a FIXED syllabus — do NOT propose adding or removing topics; date every claim; no padding — an empty section says "nothing found".
+`;
+}
+
+function lockMissionMd(concept, now) {
+  return `# MISSION L-${concept} — lock-harvest: ${concept} just LOCKED
+<!-- outward loop · Ruling 2 cadence (outward check rides every topic completion, ${now.toISOString().slice(0, 10)}) -->
+<!-- Fire on: Gemini Pro (regular research — NOT Deep Research). -->
+<!-- Return door: paste back in a Claude session, or: node scripts/scout.mjs mission ingest L-${concept} --file <path> -->
+
+---- PASTE FROM HERE (into Gemini) ----
+
+Research task. I am preparing for AI Product Engineer / Applied AI Engineer interviews in India (Aug–Oct 2026, product/applied ladder, ₹20–25 LPA band). I have just finished deep study of "${concept}" (9 angles: ${AXES_LINE}). Validate my coverage against the live field:
+
+1. The 10 HARDEST real questions currently asked on ${concept} at product-company interviews (dated sources; candidate-reported preferred) — I will answer these cold as a self-test.
+2. The 3 most common WRONG answers candidates give on ${concept} — so I can check I do not hold them.
+3. Any live probe on ${concept} that my 9 angles above would NOT have prepared me for — name the gap. (EMPHASIS evidence only — my syllabus itself is fixed; do not propose new topics.)
+
+OUTPUT FORMAT (strict):
+## HARDEST 10 — verbatim, sourced + dated
+## COMMON WRONG ANSWERS — each with why it is wrong
+## GAP READ — probes my angles miss (or "none found")
+## SOURCES — dated list
+
+Rules: date every claim; candidate-reported sources over prep-guides; no padding.
+`;
+}
+
+// Stage a generated mission row. Idempotent while a same-id row sits
+// un-ingested; after ingestion a re-stage gets a dated suffix (rare path —
+// a concept re-opened or re-locked).
+function stageGenerated(state, concept, kind, now) {
+  const base = (kind === "topic_open" ? "T-" : "L-") + concept;
+  const open = state.missions.find(r => r.id === base && !r.ingested_at);
+  if (open) return { state, row: open, skipped: true };
+  const id = state.missions.some(r => r.id === base) ? `${base}@${localDate(now)}` : base;
+  const row = {
+    id, type: kind, cluster: null, concept,
+    file: `dressing-room/missions/${id}.md`,
+    staged_at: now.toISOString(), ingested_at: null, report: null,
+  };
+  state.missions.push(row);
+  state.events.push({ ts: now.toISOString(), kind: kind === "topic_open" ? "stage_topic" : "stage_lock", id });
+  return { state, row, skipped: false };
+}
+
+function ingestMission(state, id, reportRelPath, now) {
+  const row = state.missions.find(r => r.id.toLowerCase() === String(id || "").toLowerCase());
+  if (!row) return { ok: false, error: `no mission "${id}" — see: node scripts/scout.mjs mission list` };
+  row.ingested_at = now.toISOString();
+  row.report = reportRelPath;
+  state.events.push({ ts: now.toISOString(), kind: "ingest", id: row.id });
+  const auditIds = AUDIT_MISSIONS.map(m => m.id);
+  const allIn = auditIds.every(a => state.missions.some(r => r.id === a && r.ingested_at));
+  let auditComplete = false;
+  if (allIn && !state.syllabus_audit.returns_complete_at) {
+    state.syllabus_audit.returns_complete_at = now.toISOString();
+    auditComplete = true;
+  }
+  return { ok: true, state, row, auditComplete };
+}
+
+// THE BENCHMARK GATE EVENT. Canon edits = his word — the --note carries it.
+// Refuses until all four audit returns are in (event-gate on HIS study).
+function auditClose(state, note, now) {
+  const missing = AUDIT_MISSIONS.map(m => m.id).filter(a => !state.missions.some(r => r.id === a && r.ingested_at));
+  if (missing.length) return { ok: false, missing };
+  if (!note || !String(note).trim()) return { ok: false, error: "canon = his word — pass it with --note \"<what he ruled on the diffs>\"" };
+  state.syllabus_audit.closed_at = now.toISOString();
+  state.syllabus_audit.note = String(note).trim();
+  state.events.push({ ts: now.toISOString(), kind: "audit_close" });
+  return { ok: true, state };
+}
+
+// ≥2×/week outward floor (Ruling 2). Counts REAL outward work in the trailing
+// 7 local days: mission RETURNS (ingest/audit_close — his fire came back) +
+// benchmark runs. Staging is machine prep and deliberately does NOT count —
+// else the floor reads "met" on a week where nothing outward actually happened.
+// Distance-surfacing only — never a block, never a debt.
+function outwardWeek(state, bench, now) {
+  const cutoff = now.getTime() - 7 * 86400000;
+  const inWin = (iso) => { const t = new Date(iso).getTime(); return !Number.isNaN(t) && t >= cutoff && t <= now.getTime(); };
+  const missionEvents = ((state && state.events) || []).filter(e => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
+  const benchRuns = ((bench && bench.runs) || []).filter(inWin).length;
+  const count = missionEvents + benchRuns;
+  return { count, floor: OUTWARD_FLOOR, missionEvents, benchRuns,
+    line: `outward checks this week: ${count}/${OUTWARD_FLOOR} (missions ${missionEvents} · benchmark ${benchRuns}) — floor is his 7 Aug ruling` };
+}
+
+// P6.1 → Ruling 5: gemini_quality.jsonl gets its first reader. COUNT only —
+// "recorded, judged by no one until the 30-45d review" (his rule). No dates
+// ride scout.json (NO-DATES law), so the lane carries a count and a note.
+function attachGemini(out, batches) {
+  if (!Number.isInteger(batches) || batches <= 0) return out;
+  out.gemini = { batches, note: "recorded, unjudged till the 30-45d review" };
+  out.readiness_line = out.readiness_line ? `${out.readiness_line} · gemini ${batches} batch(es) recorded` : `gemini ${batches} batch(es) recorded`;
+  return out;
+}
+
+// One–two lines for the kickoff brief / matchday. Doors, never debts.
+function missionLines(state, now) {
+  const lines = [];
+  const rows = (state && state.missions) || [];
+  if (!rows.length) return lines;
+  const audit = (state && state.syllabus_audit) || {};
+  const auditRows = rows.filter(r => r.type === "audit");
+  if (auditRows.length && !audit.closed_at) {
+    const done = auditRows.filter(r => r.ingested_at).map(r => r.id);
+    const todo = auditRows.filter(r => !r.ingested_at).map(r => r.id);
+    lines.push(todo.length
+      ? `OUTWARD · full-syllabus audit ${done.length}/4 returned — next fire: ${todo[0]} (Gemini Deep Research, file in dressing-room/missions/)`
+      : `OUTWARD · all 4 audit returns in — diff review + audit-close ride this session (benchmark unlocks on his word)`);
+  }
+  const gen = rows.filter(r => r.type !== "audit" && !r.ingested_at);
+  if (gen.length) {
+    const r = gen[0];
+    const age = Math.floor((now.getTime() - new Date(r.staged_at).getTime()) / 86400000);
+    lines.push(`OUTWARD · ${r.id} staged${age > 0 ? ` ${age}d ago` : ""} — fire on Gemini when you sit (EMPHASIS only, syllabus canon)`);
+  }
+  return lines.slice(0, 2);
+}
+
+// ---------------------------------------------------------------------------
 // selftest — fixtures only
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -281,9 +488,173 @@ async function selftest() {
   assert("#106 even awaiting_data reports 0/3 — the distance, not just the word", /0\/3/.test(bloodless.readiness_line));
   assert("NO-DATES LAW holds with the new readiness fields", !/\d{4}-\d{2}-\d{2}/.test(JSON.stringify({ ...bloodless, date: "", generated_at: "" })));
 
+  // -------------------------------------------------------------------------
+  // THE MISSIONS DESK (8 Aug 2026) — pure-core checks, no disk
+  // -------------------------------------------------------------------------
+  {
+    const t0 = new Date(2026, 7, 8, 10, 0, 0);
+    let st = emptyMissions();
+    const s1 = stageAudit(st, t0);
+    assert("missions: stage-audit stages all four, once", s1.added.length === 4 && st.missions.length === 4);
+    const s2 = stageAudit(st, new Date(2026, 7, 9));
+    assert("missions: stage-audit idempotent (re-run adds zero)", s2.added.length === 0 && st.missions.length === 4);
+    assert("missions: staged rows are un-ingested and point at the hand-authored files",
+      st.missions.every(r => !r.ingested_at && /^dressing-room\/missions\/M0[1-4]__/.test(r.file)));
+
+    const bad = ingestMission(st, "M99", "x.md", t0);
+    assert("missions: ingest refuses an unknown id", bad.ok === false && /no mission/.test(bad.error));
+    ingestMission(st, "M01", "scout_reports/mission_M01.md", t0);
+    ingestMission(st, "m02", "scout_reports/mission_M02.md", t0);
+    assert("missions: ingest is case-insensitive and stamps the report path",
+      st.missions.find(r => r.id === "M02").report === "scout_reports/mission_M02.md");
+    assert("missions: audit NOT complete at 2/4", !st.syllabus_audit.returns_complete_at);
+    const early = auditClose(st, "his word", t0);
+    assert("missions: audit-close REFUSES before all four are in (names the missing)",
+      early.ok === false && early.missing.join(",") === "M03,M04");
+    ingestMission(st, "M03", "r3.md", t0);
+    const last = ingestMission(st, "M04", "r4.md", t0);
+    assert("missions: fourth return completes the audit returns", last.auditComplete === true && !!st.syllabus_audit.returns_complete_at);
+    const noWord = auditClose(st, "  ", t0);
+    assert("missions: audit-close refuses an empty note — canon = his word", noWord.ok === false && /his word/.test(noWord.error));
+    const closed = auditClose(st, "dossier holds, 2 SHIFTED cards dealt", t0);
+    assert("missions: audit-close with his word opens THE BENCHMARK GATE", closed.ok === true && !!st.syllabus_audit.closed_at);
+
+    const g1 = stageGenerated(st, "hallucinations", "topic_open", t0);
+    const g2 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 9));
+    assert("missions: topic mission idempotent while open", g1.skipped === false && g2.skipped === true && g2.row.id === "T-hallucinations");
+    ingestMission(st, "T-hallucinations", "rt.md", t0);
+    const g3 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 20));
+    assert("missions: re-stage after ingest gets a dated suffix", g3.skipped === false && /^T-hallucinations@\d{4}-/.test(g3.row.id));
+    const gl = stageGenerated(st, "hallucinations", "lock_harvest", t0);
+    assert("missions: lock mission stages as L-<concept>", gl.row.id === "L-hallucinations");
+
+    const tMd = topicMissionMd("embeddings", t0), lMd = lockMissionMd("embeddings", t0);
+    assert("missions: topic prompt carries the EMPHASIS-not-SYLLABUS guard",
+      /tune EMPHASIS, never reopen the SYLLABUS/.test(tMd) && /do NOT propose adding or removing topics/.test(tMd));
+    assert("missions: both prompts carry the paste marker + the ingest door",
+      [tMd, lMd].every(m => /PASTE FROM HERE/.test(m) && /mission ingest/.test(m)));
+    assert("missions: prompts are doors, not debts (no owe/should/deadline language)",
+      [tMd, lMd].every(m => !/you (should|must|owe)|deadline/i.test(m)));
+
+    const week = outwardWeek(st, { runs: [new Date(2026, 7, 7).toISOString(), new Date(2026, 6, 1).toISOString()] }, new Date(2026, 7, 9));
+    assert("missions: outward floor counts only the trailing 7 days (bench 1 of 2 in-window)", week.benchRuns === 1 && week.floor === 2);
+    assert("missions: staging is machine prep — only RETURNS count toward the floor",
+      outwardWeek({ events: [{ ts: t0.toISOString(), kind: "stage_audit" }, { ts: t0.toISOString(), kind: "stage_topic" }] }, null, t0).count === 0
+      && outwardWeek({ events: [{ ts: t0.toISOString(), kind: "ingest" }] }, null, t0).count === 1);
+    assert("missions: outward line is have/need, never shame", /\d+\/2/.test(week.line) && !/behind|failed|late/i.test(week.line));
+    assert("missions: outward safe on a bloodless world", outwardWeek(null, null, t0).count === 0);
+
+    const g0 = buildScout([], { learn: [], ratify: [] }, t0, undefined, stageReadiness(null, loadConfig("__no_such__")));
+    assert("gemini lane: batches attach as a COUNT + unjudged note, and ride the readiness line",
+      attachGemini({ ...g0 }, 3).gemini.batches === 3
+      && /unjudged till the 30-45d/.test(attachGemini({ ...g0 }, 3).gemini.note)
+      && /gemini 3 batch\(es\) recorded/.test(attachGemini({ ...g0 }, 3).readiness_line));
+    assert("gemini lane: zero batches attach NOTHING (absence, not a zero-claim)",
+      attachGemini({ ...g0 }, 0).gemini === undefined && attachGemini({ ...g0 }, null).gemini === undefined);
+    assert("gemini lane: NO-DATES law still holds with the lane attached",
+      !/\d{4}-\d{2}-\d{2}/.test(JSON.stringify({ ...attachGemini({ ...g0 }, 5), date: "", generated_at: "" })));
+
+    const linesFire = missionLines({ missions: st.missions.filter(r => r.type === "audit").map(r => ({ ...r, ingested_at: null })), syllabus_audit: { closed_at: null } }, t0);
+    assert("missions: kickoff line says which mission to fire NEXT", /next fire: M01/.test(linesFire[0]));
+    const linesIn = missionLines({ missions: st.missions.filter(r => r.type === "audit"), syllabus_audit: { closed_at: null } }, t0);
+    assert("missions: all-returned line routes to diff review + his word", /diff review \+ audit-close/.test(linesIn[0]));
+    assert("missions: no mission rows → no lines (absence, not noise)", missionLines(emptyMissions(), t0).length === 0);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
+}
+
+// ---------------------------------------------------------------------------
+// missions CLI (impure — the only writer of missions.json + generated T-/L- files)
+// ---------------------------------------------------------------------------
+function missionCli(mode) {
+  const now = new Date();
+  const state = readJson(MISSIONS) || emptyMissions();
+  const sub = mode === "outward" ? "outward" : (process.argv[3] || "list").toLowerCase();
+  const argAfter = (flag) => { const i = process.argv.indexOf(flag); return i > -1 ? process.argv[i + 1] : null; };
+
+  if (sub === "stage-audit") {
+    const missingFiles = AUDIT_MISSIONS.filter(m => !existsSync(join(MISSIONS_DIR, m.file))).map(m => m.file);
+    const { added } = stageAudit(state, now);
+    writeAtomic(MISSIONS, state);
+    console.log(added.length
+      ? `MISSIONS DESK · staged ${added.join(", ")} — the FIRST MISSION EVER (full-syllabus audit, Ruling 6).`
+      : `MISSIONS DESK · audit already staged (${state.missions.filter(r => r.type === "audit").length}/4 rows).`);
+    if (missingFiles.length) console.log(`  ⚠ prompt file(s) missing on disk: ${missingFiles.join(", ")}`);
+    console.log(`  fire: open dressing-room/missions/M01…M04, paste each into Gemini Pro → Deep Research.`);
+    console.log(`  return: node scripts/scout.mjs mission ingest M01 --file <saved-output.md>  (or paste in a Claude session)`);
+    console.log(`  gate: benchmark ships only after: node scripts/scout.mjs mission audit-close --note "<his word>"`);
+    return;
+  }
+
+  if (sub === "stage-topic" || sub === "stage-lock") {
+    const concept = (process.argv[4] || "").toLowerCase().trim();
+    if (!concept) { console.error(`usage: scout.mjs mission ${sub} <concept>`); process.exit(1); }
+    const kind = sub === "stage-topic" ? "topic_open" : "lock_harvest";
+    const { row, skipped } = stageGenerated(state, concept, kind, now);
+    if (!skipped) {
+      mkdirSync(MISSIONS_DIR, { recursive: true });
+      writeFileSync(join(__dirname, "..", row.file), kind === "topic_open" ? topicMissionMd(concept, now) : lockMissionMd(concept, now), "utf8");
+      writeAtomic(MISSIONS, state);
+    }
+    console.log(skipped
+      ? `MISSIONS DESK · ${row.id} already staged (${row.file}) — fire it, don't re-stage.`
+      : `MISSIONS DESK · staged ${row.id} → ${row.file} — paste into Gemini Pro when he sits. EMPHASIS only; syllabus stays canon.`);
+    return;
+  }
+
+  if (sub === "ingest") {
+    const id = process.argv[4];
+    if (!id) { console.error("usage: scout.mjs mission ingest <ID> [--file <path>]"); process.exit(1); }
+    const file = argAfter("--file");
+    let text = "";
+    try { text = file ? readFileSync(file, "utf8") : readFileSync(0, "utf8"); } catch { text = ""; }
+    if (!text || text.trim().length < 40) {
+      console.error("ingest refused: return is empty/too thin (<40 chars). Pass --file <path> or pipe the Gemini output on stdin.");
+      process.exit(1);
+    }
+    const reportName = `mission_${id.toUpperCase()}_${localDate(now)}.md`;
+    const res = ingestMission(state, id, `scout_reports/${reportName}`, now);
+    if (!res.ok) { console.error(`ingest refused: ${res.error}`); process.exit(1); }
+    mkdirSync(REPORTS_DIR, { recursive: true });
+    writeFileSync(join(REPORTS_DIR, reportName), text, "utf8");
+    writeAtomic(MISSIONS, state);
+    console.log(`MISSIONS DESK · ${res.row.id} ingested → dressing-room/state/scout_reports/${reportName} (verbatim).`);
+    console.log(`  next: diff review rides the next session anchor — canon (OPPONENT_SCOUT/ROADMAP) changes only with his word.`);
+    if (res.auditComplete) console.log(`  🔓 all 4 audit returns in — after the diffs are dealt: mission audit-close --note "<his word>" (opens the benchmark gate).`);
+    return;
+  }
+
+  if (sub === "audit-close") {
+    const res = auditClose(state, argAfter("--note"), now);
+    if (!res.ok) {
+      console.error(res.missing ? `audit-close refused — still awaiting: ${res.missing.join(", ")}` : `audit-close refused — ${res.error}`);
+      process.exit(1);
+    }
+    writeAtomic(MISSIONS, state);
+    console.log(`MISSIONS DESK · FULL-SYLLABUS AUDIT CLOSED on his word: "${state.syllabus_audit.note}"`);
+    console.log(`  🔓 THE BENCHMARK GATE IS OPEN — run: node scripts/benchmark.mjs run`);
+    return;
+  }
+
+  if (sub === "outward") {
+    const week = outwardWeek(state, readJson(BENCH_PATH), now);
+    console.log(week.line);
+    for (const l of missionLines(state, now)) console.log(l);
+    return;
+  }
+
+  // list (default)
+  const rows = state.missions;
+  if (!rows.length) { console.log("MISSIONS DESK · empty — first move: node scripts/scout.mjs mission stage-audit"); return; }
+  console.log(`== MISSIONS DESK ==   audit gate: ${state.syllabus_audit.closed_at ? "OPEN (closed on his word)" : state.syllabus_audit.returns_complete_at ? "returns in — awaiting audit-close (his word)" : "gated — audit in flight"}`);
+  for (const r of rows) {
+    const age = Math.max(0, Math.floor((now.getTime() - new Date(r.staged_at).getTime()) / 86400000));
+    console.log(`  ${r.id.padEnd(22)} ${r.type.padEnd(12)} ${r.ingested_at ? "✓ ingested" : `staged ${age}d`}  ${r.report || r.file}`);
+  }
+  for (const l of missionLines(state, now)) console.log(l);
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +663,7 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if (mode === "mission" || mode === "missions" || mode === "outward") return missionCli(mode);
   const cfg = loadConfig();
   const now = new Date();
   const ls = readJson(join(STATE_DIR, "learning_state.json"));
@@ -300,6 +672,10 @@ async function main() {
   const season = readJson(join(STATE_DIR, "season.json"));
   const staged = stageTriggers(ls, cfg, dossier, season);
   const out = buildScout(staged, edgeSplit(ls, registry, dossier, cfg), now, warRoomRead(season, cfg, now), stageReadiness(ls, cfg));
+  try {
+    const gq = join(STATE_DIR, "gemini_quality.jsonl");
+    attachGemini(out, existsSync(gq) ? readFileSync(gq, "utf8").split("\n").filter((l) => l.trim()).length : 0);
+  } catch { /* an unreadable lane makes no claim */ }
   writeAtomic(OUT, out);
   // #106 — the console line carries the counter too, so "0 staged" is readable
   // as distance-to-the-door rather than as a dead organ.
@@ -308,4 +684,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { stageTriggers, stageReadiness, readinessLine, edgeSplit, buildScout, warRoomRead, loadConfig };
+export { stageTriggers, stageReadiness, readinessLine, edgeSplit, buildScout, warRoomRead, loadConfig,
+  // THE MISSIONS DESK (8 Aug 2026)
+  emptyMissions, stageAudit, stageGenerated, ingestMission, auditClose, outwardWeek, missionLines,
+  topicMissionMd, lockMissionMd, AUDIT_MISSIONS, attachGemini };

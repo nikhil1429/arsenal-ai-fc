@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "missions": [
+    {
+      "id": "M01",
+      "type": "audit",
+      "cluster": "fundamentals + the rubric itself",
+      "concept": null,
+      "file": "dressing-room/missions/M01__audit_fundamentals_rubric.md",
+      "staged_at": "2026-08-07T20:55:12.812Z",
+      "ingested_at": null,
+      "report": null
+    },
+    {
+      "id": "M02",
+      "type": "audit",
+      "cluster": "RAG cluster",
+      "concept": null,
+      "file": "dressing-room/missions/M02__audit_rag_cluster.md",
+      "staged_at": "2026-08-07T20:55:12.812Z",
+      "ingested_at": null,
+      "report": null
+    },
+    {
+      "id": "M03",
+      "type": "audit",
+      "cluster": "agents + LLM-API cluster",
+      "concept": null,
+      "file": "dressing-room/missions/M03__audit_agents_api_cluster.md",
+      "staged_at": "2026-08-07T20:55:12.812Z",
+      "ingested_at": null,
+      "report": null
+    },
+    {
+      "id": "M04",
+      "type": "audit",
+      "cluster": "LLMOps + Python/shipping + market",
+      "concept": null,
+      "file": "dressing-room/missions/M04__audit_llmops_python_market.md",
+      "staged_at": "2026-08-07T20:55:12.812Z",
+      "ingested_at": null,
+      "report": null
+    }
+  ],
+  "syllabus_audit": {
+    "returns_complete_at": null,
+    "closed_at": null,
+    "note": null
+  },
+  "events": [
+    {
+      "ts": "2026-08-07T20:55:12.812Z",
+      "kind": "stage_audit",
+      "id": "M01"
+    },
+    {
+      "ts": "2026-08-07T20:55:12.812Z",
+      "kind": "stage_audit",
+      "id": "M02"
+    },
+    {
+      "ts": "2026-08-07T20:55:12.812Z",
+      "kind": "stage_audit",
+      "id": "M03"
+    },
+    {
+      "ts": "2026-08-07T20:55:12.812Z",
+      "kind": "stage_audit",
+      "id": "M04"
+    }
+  ]
+}

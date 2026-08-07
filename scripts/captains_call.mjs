@@ -41,9 +41,17 @@
 //      a session files the ask instead of parking it in a scratchpad he will
 //      never open). v1 hand-filed cards carry NO exec — haan retires the card
 //      and the session acts on his word; safety first, wiring later if earned.
+//   4. THE MISSIONS DESK (outward loop, 8 Aug 2026) — missions.json (scout.mjs
+//      owns it; this only reads): the fire-nudge while the full-syllabus audit
+//      sits un-fired, and one diff-review card per ingested return (canon =
+//      his word — the card is how the diff reaches him, per Ruling 6).
+//   5. benchmark regression — benchmark.json (benchmark.mjs owns): a bucket's
+//      counted evidence went DOWN since the last run (Ruling 5 max-flow edge:
+//      "captains_call card on bucket regression").
 //
 // WRITES: dressing-room/state/captains_call.json (sole).
-// READS (RO): teaching_contract.json · forge_session.json · brain_out/market/.
+// READS (RO): teaching_contract.json · forge_session.json · brain_out/market/ ·
+//   missions.json · benchmark.json · tape_room.json.
 // MODES: sync · deal · answer <id> <haan|na|baad> · file --line "…" · status ·
 //        list · selftest
 // ============================================================================
@@ -92,7 +100,7 @@ function loadState() {
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
-export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null } = {}, now = new Date()) {
+export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -144,6 +152,72 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     }
   }
 
+  // 3. THE MISSIONS DESK (outward loop, 8 Aug 2026) — PULL-DERIVE off scout's
+  // missions.json. Two card shapes, both anchor-lawful:
+  //   fire-nudge — while the full-syllabus audit sits staged with ZERO returns;
+  //     haan = the session opens M01 and walks the fire with him right now.
+  //     Auto-retires the moment any return lands (resolved at the source).
+  //   diff-review — one per ingested return; haan = the session walks the diff
+  //     in ≤3 lines. Canon changes only on his word (Ruling 6). Audit diff
+  //     cards auto-retire when `mission audit-close` records that word.
+  if (missions && Array.isArray(missions.missions)) {
+    const rows = missions.missions;
+    const auditRows = rows.filter((r) => r.type === "audit");
+    const anyReturn = rows.some((r) => r.ingested_at);
+    const auditClosed = !!(missions.syllabus_audit && missions.syllabus_audit.closed_at);
+    if (auditRows.length && !anyReturn && !auditClosed) {
+      const key = "mission:audit-fire";
+      if (!byKey.has(key)) {
+        s.cards.push({
+          id: `c${s.next_id++}`, key, source: "missions.desk",
+          line: `Outward: full-syllabus audit taiyaar (M01–M04, Gemini Deep Research) — abhi M01 saath fire karein?`,
+          dispatch: { kind: "open", path: auditRows[0].file },
+          filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+          retired_at: null, resolution: null,
+        });
+      }
+    }
+    for (const c of s.cards) {
+      if (c.key === "mission:audit-fire" && !c.retired_at && !c.answer && (anyReturn || auditClosed)) {
+        c.retired_at = ts; c.resolution = "resolved-at-source (a return landed — the fire happened)";
+      }
+    }
+    for (const r of rows.filter((r) => r.ingested_at)) {
+      if (r.type === "audit" && auditClosed) continue;
+      const key = `mission:diff:${r.id}`;
+      if (byKey.has(key)) continue;
+      s.cards.push({
+        id: `c${s.next_id++}`, key, source: "missions.desk",
+        line: `Mission ${r.id} wapas aa gaya — diff 3 line mein sunein? (canon badlega sirf aapke word se)`,
+        dispatch: { kind: "open", path: `dressing-room/state/${r.report}` },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
+    }
+    if (auditClosed) {
+      for (const c of s.cards) {
+        if (/^mission:diff:M0[1-4]$/.test(c.key) && !c.answer && !c.retired_at) {
+          c.retired_at = ts; c.resolution = "resolved-at-source (audit closed on his word)";
+        }
+      }
+    }
+  }
+
+  // 4. benchmark regression (Ruling 5 edge) — one card per regression DAY;
+  // the line carries the first regression verbatim, count of the rest beside it.
+  if (bench && Array.isArray(bench.regressions) && bench.regressions.length && bench.date) {
+    const key = `benchmark:regression:${bench.date}`;
+    if (!byKey.has(key)) {
+      s.cards.push({
+        id: `c${s.next_id++}`, key, source: "benchmark.regression",
+        line: `Benchmark: ${clip(bench.regressions[0], 95)}${bench.regressions.length > 1 ? ` (+${bench.regressions.length - 1} aur)` : ""} — sunein?`,
+        dispatch: { kind: "none" },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
+    }
+  }
+
   // 2. the newest market proposal — one card per FILE, ever.
   if (marketFile) {
     const key = `market:${marketFile}`;
@@ -161,8 +235,9 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
 }
 
 // Pick THE one card to deal. Order (an ORDER, not a number): hand-filed →
-// staged drifts oldest-first → gate2 doubt-repairs → market. Sleeping and
-// answered cards never deal.
+// staged drifts oldest-first → gate2 doubt-repairs → the outward tier
+// (missions desk · benchmark · market — oldest filed first within the tier).
+// Sleeping and answered cards never deal.
 export function pickCard(state, { today }) {
   const live = state.cards.filter((c) => !c.answer && !c.retired_at
     && !(c.sleep_until && c.sleep_until >= today));
@@ -242,7 +317,12 @@ function gatherSources() {
       if (nextDoubt) gate2 = { doubt: nextDoubt, total: flagged.length, fixed_or_carded: carded.size };
     }
   } catch { /* no tape room yet — no card */ }
-  return { staged, marketFile, marketHonest, gate2 };
+  // THE MISSIONS DESK + benchmark (outward loop, 8 Aug 2026) — read-only pulls;
+  // scout.mjs owns missions.json, benchmark.mjs owns benchmark.json. Absence of
+  // either file = no cards, never an error.
+  const missions = readJson(join(STATE_DIR, "missions.json"));
+  const bench = readJson(join(STATE_DIR, "benchmark.json"));
+  return { staged, marketFile, marketHonest, gate2, missions, bench };
 }
 
 function sync(now = new Date()) {
@@ -424,6 +504,46 @@ function selftest() {
     applyAnswer(a2.state, a2.state.cards[0].id, "na", T0).action.kind === "error");
   assert("answer — an unknown id is an error, never a silent no-op",
     applyAnswer(s1, "c404", "haan", T0).action.kind === "error");
+
+  // THE MISSIONS DESK + benchmark (outward loop, 8 Aug 2026)
+  const MISS_STAGED = { missions: [
+    { id: "M01", type: "audit", file: "dressing-room/missions/M01__x.md", staged_at: "2026-08-08T09:00:00Z", ingested_at: null, report: null },
+    { id: "M02", type: "audit", file: "dressing-room/missions/M02__x.md", staged_at: "2026-08-08T09:00:00Z", ingested_at: null, report: null },
+  ], syllabus_audit: { closed_at: null } };
+  const sm1 = deriveCards(blank(), { missions: MISS_STAGED }, T0);
+  assert("MISSIONS — staged audit with zero returns ⇒ ONE fire-nudge card opening M01",
+    sm1.cards.length === 1 && sm1.cards[0].key === "mission:audit-fire"
+    && sm1.cards[0].dispatch.kind === "open" && /M01/.test(sm1.cards[0].dispatch.path));
+  assert("MISSIONS — fire-nudge idempotent across syncs",
+    deriveCards(sm1, { missions: MISS_STAGED }, T0).cards.length === 1);
+  const MISS_RET = { missions: [
+    { id: "M01", type: "audit", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: "2026-08-09T10:00:00Z", report: "scout_reports/mission_M01_2026-08-09.md" },
+    { id: "M02", type: "audit", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: null, report: null },
+    { id: "T-embeddings", type: "topic_open", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: "2026-08-09T11:00:00Z", report: "scout_reports/mission_T-EMBEDDINGS_2026-08-09.md" },
+  ], syllabus_audit: { closed_at: null } };
+  const sm2 = deriveCards(sm1, { missions: MISS_RET }, T0);
+  assert("MISSIONS — a landed return auto-retires the fire-nudge (resolved at source)",
+    sm2.cards.find((c) => c.key === "mission:audit-fire").retired_at !== null);
+  assert("MISSIONS — one diff-review card per ingested return, dispatch opens the verbatim report",
+    sm2.cards.filter((c) => c.key.startsWith("mission:diff:")).length === 2
+    && sm2.cards.find((c) => c.key === "mission:diff:M01").dispatch.path.endsWith("mission_M01_2026-08-09.md"));
+  assert("MISSIONS — diff line names his word as the only canon key",
+    /aapke word/.test(sm2.cards.find((c) => c.key === "mission:diff:M01").line));
+  const MISS_CLOSED = { ...MISS_RET, syllabus_audit: { closed_at: "2026-08-10T10:00:00Z" } };
+  const sm3 = deriveCards(sm2, { missions: MISS_CLOSED }, T0);
+  assert("MISSIONS — audit-close on his word auto-retires unanswered audit diff cards, topic diffs live on",
+    sm3.cards.find((c) => c.key === "mission:diff:M01").retired_at !== null
+    && sm3.cards.find((c) => c.key === "mission:diff:T-embeddings").retired_at === null);
+
+  const sb1 = deriveCards(blank(), { bench: { date: "2026-08-15", regressions: ["bucket-2 RAG: held-cold 2 → 1 (embeddings cracked in Re-Jirah)", "bucket-5: chapters covered 3 → 2"] } }, T0);
+  assert("BENCH — a regression day mints ONE card carrying the first regression + count of the rest",
+    sb1.cards.length === 1 && sb1.cards[0].key === "benchmark:regression:2026-08-15"
+    && /bucket-2 RAG/.test(sb1.cards[0].line) && /\+1 aur/.test(sb1.cards[0].line));
+  assert("BENCH — no regressions ⇒ no card (silence is the default)",
+    deriveCards(blank(), { bench: { date: "2026-08-15", regressions: [] } }, T0).cards.length === 0);
+  assert("OUTWARD TIER — hand-filed and drifts still outrank mission/bench cards",
+    (() => { const mix = deriveCards(sm1, { staged: [STAGED[0]], missions: MISS_STAGED }, T0);
+      return pickCard(mix, { today: "2026-08-08" }).key.startsWith("drift:"); })());
 
   // deal guards
   assert("guard — ARSENAL_ORGAN=1 is silent (an organ must never be dealt his card)",
