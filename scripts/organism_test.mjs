@@ -48,7 +48,7 @@ const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 
 
 // run an organ as a child; never import (a top-level side effect must not leak in)
 const run = (args, opts = {}) => {
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: opts.timeout || 120000 });
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: opts.timeout || 120000, ...(opts.env ? { env: opts.env } : {}) });
   return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
 };
 
@@ -213,7 +213,25 @@ function hermetic() {
   // shared append-only lane). No selftest bills the live board by design: fuelboard's
   // uses mem() fixtures, dmn/council/nightshift inject recordUse, distiller's T8
   // billing lives in defaultGen which selftests replace via deps.gen.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json/;
+  // bg_queue.jsonl + wake_queue.jsonl + wake.json added 7 Aug 2026, per this list's own
+  // proof protocol. STATIC PROOF: createNucleus (thalamus.mjs:592) has exactly TWO callers
+  // in the repo — the selftest rig at :1178, which injects appendBgQueue/appendWakeQueue/
+  // writeWake into in-memory arrays, and the DAEMON at :1925, which injects only `log` and
+  // is therefore the ONLY path that can reach the disk-writing defaults at :597/:601/:603.
+  // No selftest can write these three files. The daemon on :4113 writes them whenever a real
+  // afferent is gated (M22 :804 "queued", :924 "returned") or the DMN posts a drained thought
+  // back (:1024) — and .claude/settings.json fires hooks/afferent-post.mjs on EVERY
+  // UserPromptSubmit and Stop, so ANY session running during a sweep feeds that gate. The
+  // flagging run's rows were ONE real moment, m_1786109201204_1055369738: its id encodes
+  // 13:26:41.204Z (matching its own ts), carrying a 14,763-char live spotlight suppressed as
+  // "capped", then drained 14:15:15Z and returned 14:17:37Z — the organism breathing straight
+  // through the suite window. It is also FLAPPING, which is the daemon-race signature: the
+  // very next full run, same code, same machine, was green on hermeticity.
+  // PROOF (the price this header sets): all 65 selftests were run ONE AT A TIME with the whole
+  // state tree stat-ed after each. ZERO selftests touched dressing-room/state at all — these
+  // three included. M14 (wake_queue) and M22 (bg_queue) added nucleus writers without updating
+  // this list; that omission, not any test, is the defect. Excluding them hides nothing.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);
@@ -291,7 +309,15 @@ function path() {
     const rep = run([S("capture.mjs"), "rep", "--concept", "embeddings", "--axis", "a", "--q", "probe", "--gut", "shaky", "--correct", "true"], { cwd: sb });
     assert("CAPTURE · one valid rep lands with zero capture tax", rep.code === 0 && /appended 1/.test(rep.out));
 
-    const brief = run([S("learnstate.mjs"), "brief"], { cwd: sb });
+    // ORGAN-SAFE, INVERTED (7 Aug 2026). learnstate.mjs:562 prints NOTHING when
+    // ARSENAL_ORGAN=1 — correct by design (a headless organ prompt must never carry his
+    // personal memory), but it makes these two assertions depend on who is running the
+    // suite. Measured: suite run from inside an organ -> 12 passed / 2 failed; the same
+    // code with ARSENAL_ORGAN stripped -> 14 / 0. The HUMAN-facing brief is what is under
+    // test here, so the child is given the human's env explicitly rather than inheriting
+    // an organ's. A test that reports a defect because of who launched it is not a net.
+    const humanEnv = { ...process.env }; delete humanEnv.ARSENAL_ORGAN;
+    const brief = run([S("learnstate.mjs"), "brief"], { cwd: sb, env: humanEnv });
     assert("BRIEF · SessionStart still assembles and reports its byte manifest",
       brief.code === 0 && /context manifest:/.test(brief.out));
     assert("BRIEF · the assembled brief stays inside the declared 12,000-char ceiling",
