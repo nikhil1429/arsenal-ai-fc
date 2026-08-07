@@ -11,6 +11,16 @@ visuals over walls of text, no hype, no calendar pressure, never streaks.
 1. Run: `node scripts/heartbeat.mjs` then `node scripts/brain.mjs status`.
 2. Read (do not dump raw): `dressing-room/state/team_sheet.md`,
    `dressing-room/state/drills.json`, `dressing-room/state/loop_vitals.json`.
+   Also glance the newest file in `dressing-room/state/brain_out/market/` — the
+   Scout's weekly MARKET PROPOSAL (added 7 Aug 2026; until then it had no reader
+   at all and reconcile bled it as an orphan). If one exists that is newer than
+   the captain's last matchday, add ONE line to the reply: its "Honest read"
+   sentence + the file path. THE FLOW (his ruling, 7 Aug): he reads it against
+   `learning-layer/OPPONENT_SCOUT.md`; only HE edits that canon; if he does,
+   `dressing-room/state/dossier_weights.json` must be regenerated to match — the
+   watchman's nightly `projection-stale` check catches a canon edit whose
+   projection lagged. Never summarize the whole proposal into the sheet; one
+   line + path, his to open.
 3. Reply in ≤10 lines, in this order:
    - His KAL-line verbatim, first — the sheet resumes him, never addresses him.
    - THE ONE THING from the sheet (one line, why in half a line).

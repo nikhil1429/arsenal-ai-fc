@@ -80,7 +80,7 @@
 // MODES: run [--no-tier2] [--skip-suite] | brief | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -132,6 +132,15 @@ export function gather(now = new Date()) {
     affToday: { total: 0, teaching: 0, readable: existsSync(AFFERENT) },
     auditRowsToday: 0,
     auditLogExists: existsSync(AUDIT_LOG),
+    // THE OPPONENT PAIR (7 Aug 2026, captain's market_scan ruling). OPPONENT_SCOUT.md
+    // is canon; dossier_weights.json is its machine projection (the projection's own
+    // _comment says so), and SEVEN organs read only the projection — setpiece, scout,
+    // nightshift, dugout, scorer, forge_session (teaching line), the demo sandbox.
+    // mtimeMs of each side, null when absent; the comparison lives in checks().
+    scout_pair: {
+      canon_mtime: (() => { try { return statSync(join(ROOT, "learning-layer", "OPPONENT_SCOUT.md")).mtimeMs; } catch { return null; } })(),
+      projection_mtime: (() => { try { return statSync(join(STATE_DIR, "dossier_weights.json")).mtimeMs; } catch { return null; } })(),
+    },
   };
   if (w.forge.exists) {
     const j = readJson(FORGE);
@@ -230,6 +239,23 @@ export function checks(w) {
       id: "audit-hook-dead", level: "RED",
       finding: "afferents landed today but the auditor's Stop hook never wrote its last-run record — the wire from settings.json to teaching_audit.mjs is dead",
       evidence: `afferent rows today: ${w.affToday.total} · teaching_audit_last.stop.at: ${stopAt ? stopAt.at : "(never written)"}`,
+    });
+  }
+
+  // c4b · THE PROJECTION LAG (7 Aug 2026 — the market_scan ruling's integrity
+  // guard). The captain reads a market proposal and edits OPPONENT_SCOUT.md; if
+  // dossier_weights.json is not regenerated to match, every drill, probe bank,
+  // scrimmage and teaching line keeps running on the OLD opponent — a canon edit
+  // that changes nothing, silently. Binary mtime comparison, no threshold: this
+  // sweep runs at 23:55, so any lag it sees has already survived the whole day
+  // (a mid-morning edit projected by evening never fires). Both mtimes print,
+  // so a git-touch false positive is diagnosable on sight.
+  if (w.scout_pair && w.scout_pair.canon_mtime != null && w.scout_pair.projection_mtime != null
+      && w.scout_pair.canon_mtime > w.scout_pair.projection_mtime) {
+    F.push({
+      id: "projection-stale", level: "RED",
+      finding: "OPPONENT_SCOUT.md moved after dossier_weights.json — the canon changed and its machine projection did not, so all seven dossier readers are running on the old opponent",
+      evidence: `canon mtime ${new Date(w.scout_pair.canon_mtime).toISOString()} > projection mtime ${new Date(w.scout_pair.projection_mtime).toISOString()} — regenerate dossier_weights.json from OPPONENT_SCOUT.md (its _comment names the doc as source of truth)`,
     });
   }
 
@@ -512,6 +538,15 @@ function selftest() {
     affToday: { total: 20, teaching: 8, readable: true },
     auditRowsToday: 8, auditLogExists: true,
   };
+  assert("c4b PROJECTION LAG — canon newer than its projection → RED projection-stale, both mtimes in evidence",
+    checks({ ...base, scout_pair: { canon_mtime: 2000, projection_mtime: 1000 } })
+      .some((f) => f.id === "projection-stale" && f.level === "RED" && /canon mtime/.test(f.evidence)));
+  assert("c4b PROJECTION LAG — projection newer-or-equal is clean, and a missing side stays silent (never guesses)",
+    !checks({ ...base, scout_pair: { canon_mtime: 1000, projection_mtime: 1000 } }).some((f) => f.id === "projection-stale")
+    && !checks({ ...base, scout_pair: { canon_mtime: 1000, projection_mtime: 2000 } }).some((f) => f.id === "projection-stale")
+    && !checks({ ...base, scout_pair: { canon_mtime: null, projection_mtime: 1000 } }).some((f) => f.id === "projection-stale")
+    && !checks({ ...base, scout_pair: { canon_mtime: 2000, projection_mtime: null } }).some((f) => f.id === "projection-stale")
+    && !checks({ ...base }).some((f) => f.id === "projection-stale"));
 
   assert("CLEAN — a healthy day yields ZERO findings (the detector can fail, so a clean is a measured clean)",
     checks(base).length === 0);

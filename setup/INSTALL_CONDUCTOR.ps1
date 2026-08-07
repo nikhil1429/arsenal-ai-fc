@@ -14,10 +14,9 @@
 #   removed from the *code* while leaving it in the *comment*.
 #   Verified on this box, 6 Aug 2026, off the live Task Scheduler - not inferred:
 #     - ArsenalFC-Morning-Conductor EXISTS, State = Ready, trigger 08:45.
-#       (7 Aug 2026: the LIVE trigger now reads 09:15 - moved on the box after this
-#       verification, not by this script, which still registers 08:45. If re-run,
-#       this installer will move it BACK to 08:45 - re-apply the 09:15 by hand or
-#       edit the /ST below first.)
+#       (7 Aug 2026: the captain ruled 09:15 is correct - the box had been moved
+#       there by hand after the 6 Aug verification above. The /ST below now writes
+#       09:15 too, so a re-run no longer silently reverts the morning to 08:45.)
 #     - Its action is the run_logged.cmd form this script writes:
 #         cmd /c C:\...\setup\run_logged.cmd scripts\conductor.mjs morning
 #     - StartWhenAvailable = True; DisallowStartIfOnBatteries = False;
@@ -49,7 +48,7 @@
 #   one. Its selftest is green against the real organs.
 #
 # WHAT THIS DOES
-#   1. Registers ArsenalFC-Morning-Conductor at 08:45.
+#   1. Registers ArsenalFC-Morning-Conductor at 09:15 (08:45 until 7 Aug 2026).
 #   2. Disables the 14 tasks the conductor now runs itself.
 #   3. Does NOT touch: BrainTick (every 30 min, all day), CapturePull, Context,
 #      Presence, Distiller, Throwin, Touchline, Tone, HippoIndex, the evening
@@ -112,10 +111,13 @@ if ($Revert) {
 # Uses run_logged.cmd so the chain report survives the window closing
 # (audit #98 - the Boot Room's weekly verdict was lost exactly this way).
 $tr = "cmd /c $repo\setup\run_logged.cmd scripts\conductor.mjs morning"
-Say "Registering $conductorTask at 08:45 ..."
-if ($WhatIf) { Say "  would run: schtasks /Create /F /TN $conductorTask /TR `"$tr`" /SC DAILY /ST 08:45" }
+# 09:15, the captain's word (7 Aug 2026) - the box had been moved to 09:15 by hand
+# while this script still wrote 08:45, so every re-run would have silently pulled
+# the morning back 30 minutes. Script and box now agree.
+Say "Registering $conductorTask at 09:15 ..."
+if ($WhatIf) { Say "  would run: schtasks /Create /F /TN $conductorTask /TR `"$tr`" /SC DAILY /ST 09:15" }
 else {
-  schtasks /Create /F /TN $conductorTask /TR $tr /SC DAILY /ST 08:45 | Out-Null
+  schtasks /Create /F /TN $conductorTask /TR $tr /SC DAILY /ST 09:15 | Out-Null
   if ($LASTEXITCODE -eq 0) { Say "  + $conductorTask" } else { Say "  ! FAILED to create $conductorTask"; return }
 
   # Power conditions (E2E finding, 12 Jul 2026): schtasks defaults set
