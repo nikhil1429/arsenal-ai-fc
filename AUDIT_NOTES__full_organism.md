@@ -108,3 +108,18 @@ Concrete NEW edges to wire during the outward-loop build (each is a reader addit
 - capsule locks → benchmark + decoy-gate check + mission generator, same LOCK-chain event
 - AUDIT every new organ: "who ELSE could act on this output?" is a standing design question, asked at build time, answered in the file header.
 **Also on the not-done ledger (from the granular 17):** turnstile port has no watcher (self-heals 09:15 only) · NotebookLM/Colab rig account-side setup unverified until 1-05/1-07 open.
+
+**RULING 6 — PRE-MATCH SCOUTING (his doubt, 8 Aug 2026 ~01:00, upheld after thinking deep):**
+The doctrine runs BEFORE teaching, not only after LOCK. Three-layer final shape:
+1. **FIRST MISSION EVER = FULL-SYLLABUS AUDIT** (one-time, before the benchmark organ ships):
+   4 Deep Research missions, one per bucket-cluster, entire syllabus (17 concepts + Python tiers
+   + courses) vs TODAY's AI-PE interview reality — the DOSSIER was researched 29 Jun and is
+   6 weeks old. Output → DOSSIER/ROADMAP diffs → cards (canon = his word) → dossier_weights regen.
+   Benchmark ships AFTER this refresh (measuring against a stale map is half a lie).
+2. **TOPIC-OPEN scouting** (step 0, before teaching starts): one mission on that topic's live
+   interview probes → emphasis tuning (which axes deep, which probes drilled). GUARD, non-negotiable:
+   missions tune EMPHASIS, never reopen the SYLLABUS — curriculum churn is the ADHD trap this
+   system exists to prevent. Syllabus stays canon; scouting steers focus only.
+3. **LOCK harvest + ≥2×/week floor** stay as Ruling 2 set them (prevent at open, validate at lock).
+Honest note recorded: fundamentals (~44.5% rubric weight) churn slowly; agents/LLMOps/tooling churn
+fast — topic-boundaries + the floor absorb that difference without any invented cadence constant.
