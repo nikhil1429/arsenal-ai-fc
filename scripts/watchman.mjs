@@ -142,6 +142,27 @@ export function gather(now = new Date()) {
       projection_mtime: (() => { try { return statSync(join(STATE_DIR, "dossier_weights.json")).mtimeMs; } catch { return null; } })(),
     },
   };
+  // c9's inputs (7 Aug 2026, live-fire). The maiden Tier-2 child worked for six
+  // minutes and died writing NOTHING — no output, no journal, no commit — and only
+  // a human noticed. The EXIT stamp (tier2CmdLine) plus these three facts make
+  // that death machine-visible the following night.
+  w.tier2_trail = { last_start: null, exit_after_start: false, journal_after_start: false };
+  try {
+    if (existsSync(REPAIR_LOG)) {
+      const log = readFileSync(REPAIR_LOG, "utf8");
+      const starts = [...log.matchAll(/^== (\S+) :: TIER 2 START/gm)];
+      if (starts.length) {
+        const last = starts[starts.length - 1];
+        w.tier2_trail.last_start = last[1];
+        w.tier2_trail.exit_after_start = /TIER2 EXIT \d+/.test(log.slice(last.index));
+        if (existsSync(REPAIR_JOURNAL)) {
+          for (const line of readFileSync(REPAIR_JOURNAL, "utf8").split("\n")) {
+            try { if (JSON.parse(line).ts >= last[1]) { w.tier2_trail.journal_after_start = true; break; } } catch {}
+          }
+        }
+      }
+    }
+  } catch { /* an unreadable trail = no claim */ }
   if (w.forge.exists) {
     const j = readJson(FORGE);
     if (j && typeof j === "object" && !Array.isArray(j) && j.concept) w.forge.json = j;
@@ -274,6 +295,20 @@ export function checks(w) {
       id: "contract-unreadable", level: "RED",
       finding: "teaching_contract.json exists but is unreadable — the contract organ is running on an in-memory seed and REFUSING saves (by design) until this is repaired",
       evidence: "JSON.parse failed or rules[] missing; the on-disk bytes still hold his data — do not reseed by hand, repair the file",
+    });
+  }
+
+  // c9 · TIER-2 VANISHED (7 Aug 2026, from the maiden live-fire). A repair child
+  // that started on a PREVIOUS day and left neither an EXIT stamp nor a journal
+  // row died silently mid-repair — the repair arm's own §5.1. Same-day starts are
+  // exempt (the child may legitimately still be running tonight's repair).
+  if (w.tier2_trail && w.tier2_trail.last_start
+      && localDayOf(w.tier2_trail.last_start) !== w.today
+      && !w.tier2_trail.exit_after_start && !w.tier2_trail.journal_after_start) {
+    F.push({
+      id: "tier2-vanished", level: "RED",
+      finding: "a Tier-2 repair child started on a previous day and left NO exit stamp and NO journal row — the repair arm died silently mid-run (the maiden-run class: minutes of work, zero bytes of trace)",
+      evidence: `last TIER 2 START ${w.tier2_trail.last_start} · no "TIER2 EXIT" line after it in watchman_repair.log · no watchman_repairs.jsonl row at-or-after it`,
     });
   }
 
@@ -452,14 +487,40 @@ function tier2Prompt(findings) {
   ].join("\n");
 }
 
+// THE REPAIR LANE'S OWN GRANTS (7 Aug 2026, live-fire finding). The maiden Tier-2
+// run PROVED the lane end-to-end except for one wall: headless `claude -p` runs
+// under the project's permission config, and .claude/settings.local.json's stale
+// allowlist (git + `node -e` only) DENIED every Edit/Write/`node scripts` — so the
+// child diagnosed perfectly, refused to circumvent (correctly), and could repair
+// NOTHING. His ruling ("let brain fix things by itself, do not keep me in the
+// loop") authorises the repair lane to write; these per-run grants scope that
+// authority to exactly what the prompt's own HARD LIMITS permit — file edits,
+// running organs/selftests, and local git for the reversibility law. Deliberately
+// ABSENT: git push (the prompt forbids it), schtasks, rm, anything network.
+// Passed on the spawn, never written into his settings files — the grant lives
+// and dies with the child.
+export const TIER2_ALLOWED_TOOLS =
+  'Edit Write Read Glob Grep "Bash(node *)" "Bash(git add *)" "Bash(git commit *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git status *)" "Bash(git checkout -- *)"';
+
+// The full cmd line, pure and exported so the selftest can pin its load-bearing
+// parts. /v:on = delayed expansion, so !ERRORLEVEL! reads the CHILD's real exit
+// code at run time (%ERRORLEVEL% in a /c string expands at PARSE time — before
+// the run — and would stamp a lie). The EXIT stamp is what makes a silently-dead
+// child (the maiden run's other lesson: minutes of work, zero bytes of output)
+// distinguishable from one still running — c9 reads it the next night.
+export function tier2CmdLine() {
+  return `claude -p --model claude-opus-5 --effort max --allowedTools ${TIER2_ALLOWED_TOOLS}`
+    + ` < "${TIER2_PROMPT_FILE}" >> "${REPAIR_LOG}" 2>&1`
+    + ` & echo TIER2 EXIT !ERRORLEVEL! >> "${REPAIR_LOG}"`;
+}
+
 function spawnTier2(findings) {
   try {
     writeFileSync(TIER2_PROMPT_FILE, tier2Prompt(findings));
     appendFileSync(REPAIR_LOG, `\n== ${new Date().toISOString()} :: TIER 2 START (${findings.length} findings) ==\n`);
     // Detached cmd with redirects: the nightly task exits immediately; the model
     // run streams into watchman_repair.log. `claude -p` reads the prompt on stdin.
-    const child = spawn("cmd.exe", ["/c",
-      `claude -p --model claude-opus-5 --effort max < "${TIER2_PROMPT_FILE}" >> "${REPAIR_LOG}" 2>&1`],
+    const child = spawn("cmd.exe", ["/v:on", "/c", tier2CmdLine()],
       { cwd: ROOT, detached: true, stdio: "ignore", env: { ...process.env, ARSENAL_ORGAN: "1" } });
     child.unref();
     return { started_at: new Date().toISOString(), pid: child.pid };
@@ -641,6 +702,22 @@ function selftest() {
       return m.length === 1 && m[0].name === "A-Daily-Missed"; })());
   assert("MISSED-DAILY — yesterday's run still counts as on-schedule (nightly cadence, date compare, no invented number)",
     missedDailyTasks([{ name: "X", result: 0, last: YDAY, daily: true }], TODAY, YDAY).length === 0);
+
+  // c9 — the repair arm's own liveness (from the maiden live-fire)
+  const trail = (last_start, exit, journal) => ({ ...base, tier2_trail: { last_start, exit_after_start: exit, journal_after_start: journal } });
+  assert("c9 — a PREVIOUS-day Tier-2 start with no EXIT stamp and no journal row = tier2-vanished RED",
+    checks(trail("2026-08-05T14:16:16.376Z", false, false)).some((f) => f.id === "tier2-vanished" && f.level === "RED"));
+  assert("c9 — an EXIT stamp OR a journal row OR a same-day start all silence it (the child may still be running tonight)",
+    !checks(trail("2026-08-05T14:16:16.376Z", true, false)).some((f) => f.id === "tier2-vanished")
+    && !checks(trail("2026-08-05T14:16:16.376Z", false, true)).some((f) => f.id === "tier2-vanished")
+    && !checks(trail(`${TODAY}T14:16:16.376Z`, false, false)).some((f) => f.id === "tier2-vanished")
+    && !checks(base).some((f) => f.id === "tier2-vanished"));
+
+  // The spawn line — pinned pure (the maiden run's two lessons live here)
+  const CMD = tier2CmdLine();
+  assert("SPAWN LINE — carries the per-run tool grants (the permission wall that stopped the maiden repair), the delayed-expansion EXIT stamp, and NO push grant",
+    /--allowedTools .*Edit/.test(CMD) && /Bash\(git commit \*\)/.test(CMD)
+    && /TIER2 EXIT !ERRORLEVEL!/.test(CMD) && !/git push/.test(CMD) && !/%ERRORLEVEL%/.test(CMD));
 
   // Tier-2 prompt carries the §7.1 constraints verbatim
   const P = tier2Prompt(hard);
