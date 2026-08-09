@@ -323,6 +323,40 @@ function forgetFact(id, deps = {}) {
   (deps.write || ((o) => writeAtomic(FACTS, o)))(facts);
   return { ok: true, forgotten: id };
 }
+
+// ---------------------------------------------------------------------------
+// LADDER B6 (9 Aug 2026) — THE MISSING CONFIRM DOOR. The MCP's remember_fact has
+// STAGED to identity_facts.pending.jsonl since it was built (Law 4: proposes,
+// never acts on canon), but no verb ever existed to walk a staged fact THROUGH
+// the confirmation — the only path was him re-typing the text into `remember`.
+// These two verbs are that door, and they are dispatched ONLY by captains_call
+// on his haan/na (the card is the anchor; these are the hands).
+//   promote --at <ts>       staged row → rememberFact (canon), row marked promoted
+//   drop-pending --at <ts>  staged row marked dropped — canon untouched
+// `at` is the row's own ts — the same stable-identity choice the staged-drift
+// dispatch made (indexes renumber; text can repeat).
+// ---------------------------------------------------------------------------
+const PENDING_FACTS = join(HIPPO_DIR, "identity_facts.pending.jsonl");
+function readPendingFacts(deps = {}) {
+  const read = deps.readRaw || (() => { try { return readFileSync(PENDING_FACTS, "utf8"); } catch { return ""; } });
+  const rows = [];
+  for (const l of read().split("\n")) { if (!l.trim()) continue; try { rows.push(JSON.parse(l)); } catch { } }
+  return rows;
+}
+function settlePendingFact(at, verb, deps = {}) {
+  const rows = deps.rows || readPendingFacts(deps);
+  const row = rows.find(r => r.ts === at && r.status === "pending");
+  if (!row) return { ok: false, error: `no pending fact at ${at} (already settled, or never staged)` };
+  if (verb === "promote") {
+    const r = rememberFact(row.text, deps.factDeps || {});
+    if (!r.ok) return r;                       // cap hit / empty — the row stays pending, out loud
+    row.status = "promoted"; row.settled_at = (deps.now || new Date()).toISOString(); row.fact_id = r.id;
+  } else {
+    row.status = "dropped"; row.settled_at = (deps.now || new Date()).toISOString();
+  }
+  (deps.writeRaw || ((text) => writeAtomic(PENDING_FACTS, text)))(rows.map(r => JSON.stringify(r)).join("\n") + "\n");
+  return { ok: true, status: row.status, id: row.fact_id || null, text: row.text };
+}
 // LEGACY (frozen verbatim, layering law) — the undated renderer. Kept so the
 // shape of the bug stays readable next to its fix; no caller points here.
 function identityCartridgeLegacy(facts = readJson(FACTS)) {
@@ -988,6 +1022,34 @@ async function selftest() {
     assert("cartridge carries EVERY fact, marked always-present", cart.includes("ALWAYS present") && cart.includes("mornings"));
     assert("no facts → empty cartridge, constitution unchanged", identityCartridge({ facts: [] }) === "");
   }
+  // LADDER B6 (9 Aug 2026) — the confirm door: staged → canon on HIS word only
+  {
+    let store = { facts: [] };
+    const factDeps = { read: () => store, write: (o) => { store = o; }, now: new Date("2026-08-09T10:00:00Z") };
+    const mkRows = () => [
+      { ts: "2026-08-09T08:00:00.000Z", text: "sunday mornings are for FinOps", status: "pending", source: "mcp" },
+      { ts: "2026-08-09T09:00:00.000Z", text: "already settled", status: "dropped", source: "mcp" },
+    ];
+    let written = null;
+    const rows = mkRows();
+    const pr = settlePendingFact("2026-08-09T08:00:00.000Z", "promote", { rows, factDeps, writeRaw: (t) => { written = t; }, now: new Date("2026-08-09T10:00:00Z") });
+    assert("B6 PROMOTE: staged row lands in the ledger AND the row is marked promoted with the fact id",
+      pr.ok && store.facts.length === 1 && store.facts[0].text.includes("FinOps")
+      && rows[0].status === "promoted" && rows[0].fact_id === pr.id && written.includes("promoted"));
+    const rows2 = mkRows(); let store2 = { facts: [] };
+    const dr = settlePendingFact("2026-08-09T08:00:00.000Z", "drop", { rows: rows2, factDeps: { read: () => store2, write: (o) => { store2 = o; } }, writeRaw: () => { } });
+    assert("B6 DROP: dropped row never touches canon", dr.ok && dr.status === "dropped" && store2.facts.length === 0);
+    assert("B6: an unknown/settled ts is an honest error, never a silent no-op",
+      settlePendingFact("2026-08-09T09:00:00.000Z", "promote", { rows: mkRows(), factDeps, writeRaw: () => { } }).ok === false
+      && settlePendingFact("2099-01-01T00:00:00.000Z", "promote", { rows: mkRows(), factDeps, writeRaw: () => { } }).ok === false);
+    {
+      let full = { facts: Array.from({ length: FACTS_CAP }, (_, i) => ({ id: `f${i}`, ts: "2026-08-01T00:00:00Z", text: `fact ${i}` })) };
+      const rows3 = mkRows(); let wrote = false;
+      const capHit = settlePendingFact("2026-08-09T08:00:00.000Z", "promote", { rows: rows3, factDeps: { read: () => full, write: (o) => { full = o; } }, writeRaw: () => { wrote = true; } });
+      assert("B6: a cap-full promote fails OUT LOUD and the row STAYS pending (no silent loss)",
+        capHit.ok === false && rows3[0].status === "pending" && wrote === false);
+    }
+  }
   // AUDIT 4 Aug 2026 (#13) — the stored `ts` was silently discarded at render,
   // so a 17-Jul assertion arrived looking exactly like something he said today.
   // Reproduced with the LIVE fact texts (identity_facts.json, both ts 17 Jul).
@@ -1301,6 +1363,16 @@ async function main() {
   if (mode === "mark") { console.log(JSON.stringify(await markMoment(process.argv[3], stdin()))); return; }
   if (mode === "remember") { console.log(JSON.stringify(rememberFact(stdin()))); return; }
   if (mode === "forget") { console.log(JSON.stringify(forgetFact(process.argv[3]))); return; }
+  // LADDER B6 — the confirm door for MCP-staged facts (dispatched by captains_call on his word)
+  if (mode === "promote" || mode === "drop-pending") {
+    const ai = process.argv.indexOf("--at");
+    const at = ai >= 0 ? process.argv[ai + 1] : null;
+    if (!at) { console.error(`hippocampus: ${mode} --at <ts-of-staged-row>`); process.exit(1); }
+    const r = settlePendingFact(at, mode === "promote" ? "promote" : "drop", {});
+    console.log(JSON.stringify(r));
+    if (!r.ok) process.exit(1);
+    return;
+  }
   // E2E audit (25 Jul 2026): "0 pending episode(s) embedded" used to mean BOTH
   // "healthy, nothing to do" and "the batch was rejected on every key". Say which.
   if (mode === "index") {
@@ -1363,7 +1435,7 @@ async function main() {
     console.log(`hippocampus: store → hot ${r.hot} · sharded ${r.sharded} · forgotten ${r.cold} (moved, never deleted)`);
     return;
   }
-  console.log("hippocampus.mjs — mark <kind> | remember | forget <id> | index | recall \"...\" | recall-hint \"...\" [--explain] | arc | cartridge | consolidate [--force] | consolidate-store | selftest");
+  console.log("hippocampus.mjs — mark <kind> | remember | forget <id> | promote --at <ts> | drop-pending --at <ts> | index | recall \"...\" | recall-hint \"...\" [--explain] | arc | cartridge | consolidate [--force] | consolidate-store | selftest");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

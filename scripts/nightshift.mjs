@@ -836,6 +836,20 @@ async function runShift(deps = {}) {
     if (gt.md) write(`gate_tune_${day}.md`, gt.md);
     out.jobs.gate_tune = gt.md ? { proposed: true, engine: "legacy", file: `gate_tune_${day}.md` } : { silent: gt.why };
   }
+  // LADDER B5 (9 Aug 2026) — the applier's nightly score ride. gate_tune.mjs is
+  // the declared owner of applied tier mutations (window · min-events extend ·
+  // out-of-band auto-revert). This is a CALL, not a write — the owner does its
+  // own writing; nothing here touches thalamus_config. Fail-soft: a missing or
+  // erroring scorer is recorded, never fatal to the shift.
+  if (!deps.skipGateTuneScore) {
+    try {
+      const { execFileSync } = await import("node:child_process");
+      const sout = execFileSync(process.execPath, [join(__dirname, "gate_tune.mjs"), "score"], { encoding: "utf8", timeout: 30000 });
+      out.jobs.gate_tune_score = { ran: true, said: String(sout).trim().slice(0, 200) };
+    } catch (e) {
+      out.jobs.gate_tune_score = { ran: false, error: String((e && e.message) || e).slice(0, 160) };
+    }
+  }
 
   const pa = await preAnswerEngine(jobDeps);
   // #56 — the corpus report rides the record on BOTH paths. "0 of his own turns

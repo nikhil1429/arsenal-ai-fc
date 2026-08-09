@@ -206,6 +206,9 @@ export function gather(now = new Date()) {
     const gq = join(STATE_DIR, "gemini_quality.jsonl");
     if (existsSync(gq)) w.gemini_quality.rows = readFileSync(gq, "utf8").split("\n").filter((l) => l.trim()).length;
   } catch { /* unreadable = 0 recorded — c-gemini stays quiet */ }
+  // LADDER B3 (9 Aug 2026) — the claude CLI's login health, as brain.mjs already
+  // measures it every tick (failureStreak → token_vitals.json.health). Read-only.
+  w.token_health = ((readJson(join(STATE_DIR, "token_vitals.json")) || {}).health) || null;
   w.outward = { has_desk: existsSync(join(STATE_DIR, "missions.json")), returns7d: 0, benchRuns7d: 0 };
   try {
     const mj = readJson(join(STATE_DIR, "missions.json"));
@@ -352,6 +355,18 @@ export function checks(w) {
       id: "gemini-quality-recorded", level: "INFO",
       finding: `gemini_quality: ${w.gemini_quality.rows} paste-batch(es) recorded — judged by NO ONE until the 30-45d review (his rule); the lane exists so that review has data`,
       evidence: "dressing-room/state/gemini_quality.jsonl (writer: capture.mjs paste door)",
+    });
+  }
+
+  // LADDER B3 · CLAUDE CLI LOGGED OUT — the single failure that silently kills
+  // all 19 LLM jobs at once. brain.mjs's own failureStreak verdict (dead ≥ 5 with
+  // auth-shaped errors) is the evidence; the card organ derives the same signal
+  // into ONE card, and the morning sheet push carries one line (brain.mjs B3).
+  if (w.token_health && w.token_health.not_logged_in === true) {
+    F.push({
+      id: "claude-logged-out", level: "RED",
+      finding: `the claude CLI is NOT LOGGED IN — ${w.token_health.streak} consecutive failures with auth-shaped errors; every overnight LLM job is dark until his hands run /login`,
+      evidence: w.token_health.hint || "token_vitals.json.health (brain.mjs failureStreak)",
     });
   }
 
@@ -665,6 +680,48 @@ async function probeDaemons() {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// LADDER B8 (9 Aug 2026) — THE CANON WATCH. The four canonical .md files change
+// only on HIS word (CLAUDE.md's no-auto-approve law), yet nothing ever checked.
+// This probe asks git for uncommitted working-tree deltas on exactly those four;
+// any hit is a RED finding AND one idempotent card (key: canon:<file>:<day>) so
+// the question "aapke word se tha?" reaches him at an anchor, once per file per
+// day, never as a list. Injectable for the selftest (no git, no card spawn).
+// ---------------------------------------------------------------------------
+export const CANON_FILES = ["OPS_STATE.md", "ARSENAL_AI_FC_MASTERPLAN.md", "THE_MANAGER__Master_Prompt.md", "THE_GAFFER.md"];
+export function probeCanon(today, deps = {}) {
+  const git = deps.git || (() => {
+    const r = spawnSync("git", ["status", "--porcelain", "--", ...CANON_FILES], { cwd: ROOT, encoding: "utf8", timeout: 15000 });
+    return r.status === 0 ? String(r.stdout || "") : null;
+  });
+  const fileCard = deps.fileCard || ((line, key) => {
+    try {
+      spawnSync(process.execPath, [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", key],
+        { encoding: "utf8", timeout: 15000, env: { ...process.env, ARSENAL_ORGAN: "" } });
+      return true;
+    } catch { return false; }
+  });
+  const out = [];
+  const porcelain = git();
+  if (porcelain == null) {
+    out.push({ id: "canon-watch-unrunnable", level: "INFO", finding: "git status failed — the canon watch measured nothing tonight", evidence: "spawnSync git status --porcelain on the 4 canon files" });
+    return out;
+  }
+  for (const l of porcelain.split("\n")) {
+    const m = l.match(/^\s*([MADRC?]{1,2})\s+(.+)$/);
+    if (!m) continue;
+    const file = m[2].trim();
+    if (!CANON_FILES.includes(file)) continue;
+    const carded = fileCard(`Canon ${file} mein UNCOMMITTED badlav hai (${m[1].trim()}) — aapke word se tha? Nahi to git checkout se wapas.`, `canon:${file}:${today}`);
+    out.push({
+      id: `canon-drift-${file}`, level: "RED",
+      finding: `${file} has an uncommitted working-tree change (${m[1].trim()}) — canon moves only on HIS word; a card ${carded ? "is filed" : "could NOT be filed"} asking whether this one had it`,
+      evidence: `git status --porcelain → "${l.trim()}" · card key canon:${file}:${today} (idempotent — one per file per day)`,
+    });
+  }
+  return out;
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -677,6 +734,7 @@ async function run(argv) {
   findings.push(...probeOutwork());
   findings.push(...await probeDaemons());
   findings.push(...probeReconcile());
+  findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);
@@ -825,6 +883,32 @@ function selftest() {
     (() => { const f = checks({ ...base, now: "2026-08-07T18:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
       const under = checks({ ...base, now: "2026-08-06T20:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
       return f && f.level === "INFO" && !under; })());
+
+  // LADDER B3 — the claude CLI's login health rides the sweep
+  assert("B3 RED — token_vitals health.not_logged_in ⇒ claude-logged-out with the streak; healthy or absent stays silent",
+    checks({ ...base, token_health: { streak: 7, dead: true, not_logged_in: true, hint: "run /login" } })
+      .some((f) => f.id === "claude-logged-out" && f.level === "RED" && /7 consecutive/.test(f.finding))
+    && !checks({ ...base, token_health: { streak: 0, dead: false, not_logged_in: false } }).some((f) => f.id === "claude-logged-out")
+    && !checks(base).some((f) => f.id === "claude-logged-out"));
+
+  // LADDER B8 — the canon watch (injected: no git, no card spawn)
+  {
+    const filed = [];
+    const f1 = probeCanon(TODAY, {
+      git: () => " M OPS_STATE.md\n?? scratch.txt\n M scripts/brain.mjs\n",
+      fileCard: (line, key) => { filed.push(key); return true; },
+    });
+    assert("B8 — an uncommitted canon delta is RED + files ONE idempotent day-keyed card; non-canon files are ignored",
+      f1.length === 1 && f1[0].id === "canon-drift-OPS_STATE.md" && f1[0].level === "RED"
+      && filed.length === 1 && filed[0] === `canon:OPS_STATE.md:${TODAY}`);
+    assert("B8 — a clean tree measures ZERO findings; a dead git is an INFO honest-unknown, never a fake clean",
+      probeCanon(TODAY, { git: () => "", fileCard: () => true }).length === 0
+      && probeCanon(TODAY, { git: () => null, fileCard: () => true })
+        .some((f) => f.id === "canon-watch-unrunnable" && f.level === "INFO"));
+    assert("B8 — all four canon files are watched (the exact four CLAUDE.md names)",
+      CANON_FILES.length === 4 && CANON_FILES.includes("THE_GAFFER.md")
+      && probeCanon(TODAY, { git: () => CANON_FILES.map((f) => ` M ${f}`).join("\n"), fileCard: () => true }).length === 4);
+  }
 
   // Tier-2 gate
   const hard = [{ id: "x", level: "DEAD", finding: "f", evidence: "e" }];

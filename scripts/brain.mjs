@@ -1414,7 +1414,11 @@ async function runJob(job, cfg, deps) {
         // here (captains_call.json is READ only; the card organ stays sole writer).
         const callState = readJson(join(STATE_DIR, "captains_call.json"));
         const nag = callState ? redealtSheetLine(callState.cards, today) : null;
-        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${nag ? "\n\n" + nag : ""}${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+        // LADDER B3 — the one line that reaches his phone when the CLI is logged
+        // out (this very push still works: it is fetch, not claude).
+        const tvHealth = ((readJson(TOKEN_VITALS) || {}).health) || {};
+        const loginLine = tvHealth.not_logged_in === true ? "🔑 claude CLI LOGGED OUT — terminal kholke `claude` → /login, warna raat ka brain andhera." : null;
+        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${loginLine ? "\n\n" + loginLine : ""}${nag ? "\n\n" + nag : ""}${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
         // marked only on a REAL send, so a network blip retries next beat instead of
         // burning the day's one utterance on a push that never left the machine.
         if (qs && pushed.sent) { qs.mouth_said = qs.mouth_said || {}; qs.mouth_said[today] = "sheet"; }

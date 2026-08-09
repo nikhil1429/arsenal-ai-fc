@@ -895,6 +895,14 @@ async function fetchNights(lookback = 45) {
 // persistable ONLY if it is a real verdict; otherwise the last real one stands.
 export const isPersistableVerdict = (a) => !!(a && a.ok === true && a.verdict);
 
+// LADDER B4 (9 Aug 2026): an auth-FATAL used to exit 1 leaving NO on-disk trace —
+// readiness.json is (correctly) untouched, so the only witness was a console line
+// in a scheduled-task window nobody sees. The captains_call organ needs ONE
+// readable field to derive its card from. This sibling file is that field, and
+// this organ is its sole writer: fatal:true on an auth death, fatal:false on the
+// next successful verdict. It never carries biometrics — status only.
+const AUTH_STATE_FILE = join(STATE_DIR, "oura_auth_state.json");
+
 async function main() {
   // finding 42cb354c: this parse used to sit OUTSIDE the try/catch below, so one
   // trailing comma in the hand-maintained intake log killed the run outright.
@@ -902,7 +910,10 @@ async function main() {
   let nights;
   try { nights = await fetchNights(45); }
   catch (e) {
-    if (e.auth) { console.error("\n🔑 " + e.message + "\n"); process.exit(1); }
+    if (e.auth) {
+      writeJsonAtomic(AUTH_STATE_FILE, { fatal: true, why: String(e.message).slice(0, 200), at: new Date().toISOString() });
+      console.error("\n🔑 " + e.message + "\n"); process.exit(1);
+    }
     console.error("\nCould not fetch Oura data:", e.message, "\n");
     console.error(`(${OUT_FILE} left UNTOUCHED — stale-but-real beats fresh-but-fabricated.)\n`);
     process.exit(1);
@@ -914,6 +925,8 @@ async function main() {
     process.exit(1);
   }
   writeJsonAtomic(OUT_FILE, a);                   // atomic — finding 7c1db339
+  // B4 — a verdict that landed proves the token works: clear the auth flag.
+  writeJsonAtomic(AUTH_STATE_FILE, { fatal: false, at: new Date().toISOString() });
   console.log("\n" + brief(a) + "\n");
   console.log(`(full verdict written -> ${OUT_FILE})`);
 }
