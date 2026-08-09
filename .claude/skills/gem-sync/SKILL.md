@@ -24,6 +24,7 @@ description: Refresh THE EXAMINER Gem on the captain's Gemini Pro account with t
 After a successful sync, stamp it through the file's OWNER so physio stops reminding until it is due again:
 ```
 node scripts/nightshift.mjs gem-stamp
+node scripts/scout.mjs chrome-stamp gem-sync
 ```
 
 > ✅ **LAW-BREAK RESOLVED (D9, 9 Aug 2026 — his "build all the things" word).** From audit #108

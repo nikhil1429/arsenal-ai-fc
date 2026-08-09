@@ -29,7 +29,8 @@ exactly ONE human moment: the Save click. That click IS the master write.
    patch bhara hua hai — Save dabao."* HIS CLICK is the write.
 5. After his click: run `node scripts/mirror.mjs` (re-fetch the gist), then
    `node scripts/rejirah.mjs pending` — the round must have LEFT the pending
-   list. Report the delta in one line ("R1 landed — 5 organs ab round dekhte
+   list. Press the rail stamp too (LADDER E7):
+   `node scripts/scout.mjs chrome-stamp gist-patch`. Report the delta in one line ("R1 landed — 5 organs ab round dekhte
    hain"). Still pending after the mirror run = say so honestly (the Save may
    not have landed) and stop; never mark anything done by assumption.
 6. Chrome tools not connected? Fall back honestly: print the patch line for ONE

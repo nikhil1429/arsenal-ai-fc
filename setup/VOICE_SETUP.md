@@ -44,7 +44,11 @@ session and speak: "matchday" · "rematch" · "full time" — the skills run by
 voice. Your rituals are now speakable.
 
 ## Lane 3 — THE ORGANISM SPEAKS ALOUD (optional, offline, free)
-`setup/SPEAK.ps1` reads the morning sheet's opening lines out loud through
+> **DELETED (LADDER E6, 9 Aug 2026):** `SPEAK.ps1` was removed from the repo —
+> audit #55 had already named it an orphaned pre-neural duplicate (`speak.mjs:19`),
+> and nothing scheduled or imported it. The section below is kept as history only.
+
+`setup/SPEAK.ps1` (now deleted) read the morning sheet's opening lines out loud through
 Windows TTS at 08:46 (its only other utterance: the 21:30 bell line). Enable
 only if a talking laptop suits your room:
 

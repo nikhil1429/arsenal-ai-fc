@@ -130,3 +130,6 @@ Write-Host "  ~ BrainDaemon is primary; BrainTick stays as a lock-coordinated fa
 
 Write-Host ""
 Write-Host "Done. The Kennel's heartbeat task is NOT installed yet - it ships when the Pi arrives (groundsman.mjs header: TRANSPORT)."
+# LADDER E1 - every installer ENDS by showing the spine it just touched.
+node "$repo\scripts\conductor.mjs" plan
+node "$repo\scripts\conductor.mjs" plan evening

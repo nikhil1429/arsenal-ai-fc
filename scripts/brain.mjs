@@ -47,7 +47,7 @@
 // MODES:  tick (default) · run <job_id> · status · selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync, rmSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -67,6 +67,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CFG_PATH  = join(STATE_DIR, "brain_config.json");
 const LEDGER    = join(STATE_DIR, "brain_ledger.jsonl");
+// LADDER E4 (9 Aug 2026): every utterance ATTEMPT leaves a row — sent or not,
+// and why. Before this, "the mouth said nothing today" was invisible: the sheet
+// absence line covers one slot of two, and a failed bell vanished into stdout.
+// Sole appender: brain.mjs (the three pushNtfy call sites below). The watchman
+// reads today's rows nightly.
+const MOUTH_LOG = join(STATE_DIR, "mouth_log.jsonl");
+function recordMouth(kind, pushed) {
+  try { appendFileSync(MOUTH_LOG, JSON.stringify({ ts: new Date().toISOString(), kind, sent: !!(pushed && pushed.sent), why: (pushed && pushed.why) || null }) + "\n"); } catch { }
+}
 const QUEUE     = join(STATE_DIR, "brain_queue.json");
 const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
@@ -1422,6 +1431,7 @@ async function runJob(job, cfg, deps) {
         // marked only on a REAL send, so a network blip retries next beat instead of
         // burning the day's one utterance on a push that never left the machine.
         if (qs && pushed.sent) { qs.mouth_said = qs.mouth_said || {}; qs.mouth_said[today] = "sheet"; }
+        recordMouth("sheet", pushed);   // E4 — the attempt is a row either way
       }
     }
     return {
@@ -1548,6 +1558,14 @@ async function tick(cfg, deps) {
     console.log("brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing risk). Unset it; the brain runs on the Max subscription only.");
     return { ran: [], refused: true };
   }
+  // LADDER E3 (9 Aug 2026): the ledger rolls at 2 MB — run_logged.cmd's own
+  // measured precedent, one generation kept. Rolled HERE and ONLY here: brain.mjs
+  // alone rolls its ledger (talk.mjs is a second APPENDER, never a roller — two
+  // rollers racing the rename is how a journal loses rows). Tail readers
+  // (failureStreak's last-25, the card organ's gemini tail) ride the hot file.
+  if (!deps.ledger && !deps.dry) {
+    try { if (statSync(LEDGER).size > 2 * 1024 * 1024) { rmSync(LEDGER + ".1", { force: true }); renameSync(LEDGER, LEDGER + ".1"); } } catch { }
+  }
   // HERMETIC-TEST SEAM (E2E audit 25 Jul 2026): tick() used to always read the
   // LIVE ledger/queue, so the selftest's mocked clock saw real rows and the two
   // tick checks went red the moment the machine had history. Production passes
@@ -1665,6 +1683,7 @@ async function tick(cfg, deps) {
         `**No sheet this morning, captain.**\n\n${why}.\n\nNothing is lost — the wall and the state are untouched, and yesterday's sheet is still on disk (do not read it as today's). Open the laptop and ask for it whenever you want.`,
         undefined, { tags: "soccer,mute" });
       if (r.sent) { queueState.mouth_said = queueState.mouth_said || {}; queueState.mouth_said[today] = "absence"; }
+      recordMouth("sheet-absence", r);   // E4 — the attempt is a row either way
       console.log(`brain: ${sheetJob.window} window closed with no ${sheetJob.id} — ${r.sent ? "said so on the phone" : "phone unreachable (" + r.why + "), will say it next beat"}`);
     }
   } catch (e) { console.error(`brain: absence check failed — ${e.message}`); }
@@ -2610,6 +2629,7 @@ async function main() {
     }
     const tt = teamtalkLine("pm", now);   // rides INSIDE the bell — never a third utterance
     const r = await pushNtfy(cfg, bell.title, bell.body + (tt ? "\n" + tt : ""));
+    recordMouth(`bell:${kind}`, r);   // E4 — the attempt is a row either way
     console.log(`brain: bell '${kind}' ${r.sent ? "rang on the phone" : "silent (" + r.why + ")"}`);
     return;
   }

@@ -118,7 +118,6 @@ const ANN = {
   "setup/INSTALL_TASKS.ps1": "The one-paste installer — creates all the ArsenalFC-* scheduled tasks and (E2E fix) clears the battery kill-conditions.",
   "setup/UNINSTALL_TASKS.ps1": "The clean revert — removes only the tasks INSTALL_TASKS created.",
   "setup/WALLPAPER.ps1": "The Ambient Maidan — pure PowerShell/.NET drawing your KAL-line + season strip onto the desktop wallpaper.",
-  "setup/SPEAK.ps1": "The scheduled-utterance voice lane (the two sanctioned spoken pushes only).",
   "setup/VOICE_SETUP.md": "How to wire the voice: Gemini keys, the LAN phone flag + one-time mic unlock.",
   "setup/GEMINI_CLI_SETUP.md": "How to log the free Gemini CLI into your Google account (the second brain).",
   "setup/NTFY_SETUP.md": "How to subscribe your phone to the private throw-in channel.",

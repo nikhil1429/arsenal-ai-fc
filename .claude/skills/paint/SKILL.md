@@ -26,3 +26,17 @@ render, current numbers embedded — dressing-room/club/prompts/).
 4. Laws travel with the prompt (they're baked into the generated files):
    numbers only from the embedded data · no hype · no streaks · no raw
    biometrics · cold-steel-warm-core palette.
+
+## FILM KIT — on demand only (LADDER E5, 9 Aug 2026)
+
+The wall renders a `filmkit_<date>.md` link that NOTHING has ever produced — a
+dead flag with no writer and no scheduled lane (verified repo-wide, 9 Aug 2026).
+It is now an on-demand verb of THIS skill, never a schedule:
+- When he says **"film kit"** / "paint film kit": assemble the kit yourself from
+  the day's real state (team_sheet.md opening lines · today's reps count from
+  reps_log.jsonl · the KAL-line · the season strip) as a short shot-list
+  markdown, write it to `dressing-room/club/filmkit_<today>.md` (the wall's own
+  link target), and tell him it's on the wall.
+- Same laws as every render: numbers only from the state you read, no hype, no
+  streaks, no raw biometrics. If a state file is missing, its shot is OMITTED —
+  never invented.

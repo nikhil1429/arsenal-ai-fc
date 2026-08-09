@@ -655,6 +655,20 @@ export async function runManager({ today = todayISO(), llm = async () => null, s
     else if (out != null) reason = `llm rejected: ${v.reason}`;
   } catch (e) { reason = `llm error: ${e.message}`; }
   if (!sheet) sheet = fallbackSkeleton(F, fin, stale);                // sheet appears UNCONDITIONALLY
+  // LADDER E4 (9 Aug 2026): the STALE-SHEET HEADER — physio's own readiness-stale
+  // bleed, relayed onto the sheet at publish so BOTH paths (llm and skeleton)
+  // carry it. Inserted after line 1, so the output contract's first characters
+  // stay '⚪🔴'. Read-only on loop_vitals.json (physio stays its sole writer);
+  // the bleed line is physio's verbatim words, never a number minted here.
+  try {
+    const lv = JSON.parse(readFileSync(P("loop_vitals.json"), "utf8"));
+    const b = (lv.bleeds || []).find((x) => x && x.organ === "readiness" && x.kind === "stale");
+    if (b) {
+      const lines = sheet.split("\n");
+      lines.splice(1, 0, `⚠ ${b.line || b.evidence}`);
+      sheet = lines.join("\n");
+    }
+  } catch { /* no vitals on disk = no header, never a crash */ }
   writeAtomic(dir, P("team_sheet.md"), sheet);
   const notes = { last_run: F.date, matchday: F.matchday, phase: F.phase.key, source, reason, staleness: stale };
   writeAtomic(dir, P("manager_notes.json"), JSON.stringify(notes, null, 2));
@@ -732,6 +746,24 @@ async function selftest() {
   ok("cold: SHAPE renders a real window from timing object", /🕐 SHAPE:.*11:00/.test(cold.sheet));
   ok("cold: workType directive rendered in ENERGY", /🔋 ENERGY:.*ENCODE/.test(cold.sheet));
   ok("cold: readiness reads fresh (day===today, Oura-lag tolerant)", cold.staleness.readiness === "fresh");
+
+  // LADDER E4 (9 Aug 2026) — the stale-sheet header rides physio's own bleed
+  {
+    const hdrDir = stage("rich");
+    writeFileSync(join(hdrDir, "loop_vitals.json"), JSON.stringify({
+      bleeds: [{ organ: "readiness", kind: "stale", evidence: "content 119h old", line: "readiness is writing on time but saying nothing new — its content is 119h old." }],
+    }));
+    const hdr = await runManager({ today: TODAY, stateDir: hdrDir });
+    const hdrLines = hdr.sheet.split("\n");
+    ok("E4: a physio readiness-stale bleed becomes line 2 of the sheet, verbatim, and '⚪🔴' still opens it",
+      hdrLines[0].startsWith("⚪🔴") && hdrLines[1] === "⚠ readiness is writing on time but saying nothing new — its content is 119h old."
+      && readFileSync(join(hdrDir, "team_sheet.md"), "utf8").split("\n")[1].startsWith("⚠"));
+    const noHdrDir = stage("rich");
+    writeFileSync(join(noHdrDir, "loop_vitals.json"), JSON.stringify({ bleeds: [{ organ: "gem", kind: "gem_sync_due", line: "x" }] }));
+    const noHdr = await runManager({ today: TODAY, stateDir: noHdrDir });
+    ok("E4: any OTHER bleed (or no vitals at all) adds nothing — the header is the readiness-stale relay only",
+      !noHdr.sheet.split("\n")[1].startsWith("⚠"));
+  }
 
   // 2) RICH — verbatim real agent outputs
   const rich = await runManager({ today: TODAY, stateDir: stage("rich") });

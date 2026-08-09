@@ -699,6 +699,20 @@ async function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   if (mode === "mission" || mode === "missions" || mode === "outward") return missionCli(mode);
+  // LADDER E7 (9 Aug 2026) — THE CHROME-RAIL STAMP. Four skills drive his Chrome
+  // (/fire · /harvest · /gem-sync · /gist-patch) and nothing recorded that a
+  // drive ever SUCCEEDED — so a rail that quietly broke (extension dead, login
+  // lost) stayed broken until he noticed by hand. Each skill now presses this
+  // after a successful drive; physio bleeds when the newest stamp goes stale.
+  // Sole writer of chrome_rail_stamp.json (same ownership ruling as nightshift's
+  // gem-stamp — a skill never writes state raw).
+  if (mode === "chrome-stamp") {
+    const rail = process.argv[3];
+    if (!rail) { console.error("scout: chrome-stamp <fire|harvest|gem-sync|gist-patch>"); process.exit(1); }
+    writeAtomic(join(STATE_DIR, "chrome_rail_stamp.json"), { at: new Date().toISOString(), rail });
+    console.log(`scout: chrome rail stamped — ${rail} drove successfully`);
+    return;
+  }
   const cfg = loadConfig();
   const now = new Date();
   const ls = readJson(join(STATE_DIR, "learning_state.json"));

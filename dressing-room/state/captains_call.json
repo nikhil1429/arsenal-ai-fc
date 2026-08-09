@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 21,
+  "next_id": 22,
   "cards": [
     {
       "id": "c1",
@@ -355,6 +355,22 @@
         "id": "88e5349a"
       },
       "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c21",
+      "key": "secrets:runbook",
+      "source": "hand-filed",
+      "line": "Secrets ek hi disk pe hain — 5 min: setup/SECRETS_RUNBOOK.md kholke chaaron cheezein password manager mein copy karo",
+      "dispatch": {
+        "kind": "none"
+      },
+      "filed_at": "2026-08-09T17:19:27.193Z",
       "dealt": [],
       "answer": null,
       "answered_at": null,

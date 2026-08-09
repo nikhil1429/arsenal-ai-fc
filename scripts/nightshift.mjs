@@ -812,7 +812,12 @@ async function runShift(deps = {}) {
   // #106 — what the cartridge actually carries, not a literal that cannot fail
   out.jobs.gem_cartridge = { ...gc.filled, empty: !(gc.filled.capsules || gc.filled.probe_concepts || gc.filled.has_fingerprint || gc.filled.danger_topics) };
 
-  const rows = deps.ledgerRows || readLines(join(STATE_DIR, "salience_ledger.jsonl"));
+  // E3 (9 Aug 2026): the ledger rolls at 2 MB now — read the .1 generation too,
+  // so the tunnel's 200-decision sample survives a roll that happened yesterday.
+  const rows = deps.ledgerRows || [
+    ...readLines(join(STATE_DIR, "salience_ledger.jsonl.1")),
+    ...readLines(join(STATE_DIR, "salience_ledger.jsonl")),
+  ];
   const wt = windTunnel(rows, deps.thalamusCfg || loadThalamusConfig(), { now, ...(deps.tunnel || {}) });
   // ── #73 · GIVE THE WIND TUNNEL AN ADDRESS ─────────────────────────────────
   // gate_tune_<date>.md has been written nightly since 20 Jul with no reader

@@ -256,3 +256,13 @@ dressing-room/state/watchman_tier2_prompt.txt
 # outwork_audit per-run state (7 Aug 2026, P8.2). Same class as watchman_last:
 # machine-local sweep output, rebuilt nightly, meaningless on another machine.
 dressing-room/state/outwork_audit_last.json
+# LADDER E (9 Aug 2026): the mirror's dated gist backups (E9 — local recovery
+# lane; the gist itself is the cloud master), the mouth's outcome journal (E4),
+# the rolled generations of the two big journals (E3), and the watchdog's own
+# state (D2) — all machine-local, all rebuilt by their owners.
+dressing-room/state/capsule_backups/
+dressing-room/state/mouth_log.jsonl
+dressing-room/state/salience_ledger.jsonl.1
+dressing-room/state/brain_ledger.jsonl.1
+dressing-room/state/daemon_watchdog.json
+dressing-room/state/chrome_rail_stamp.json

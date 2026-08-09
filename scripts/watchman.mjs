@@ -209,6 +209,25 @@ export function gather(now = new Date()) {
   // LADDER B3 (9 Aug 2026) — the claude CLI's login health, as brain.mjs already
   // measures it every tick (failureStreak → token_vitals.json.health). Read-only.
   w.token_health = ((readJson(join(STATE_DIR, "token_vitals.json")) || {}).health) || null;
+  // LADDER E4 + E8 (9 Aug 2026) — today's utterance rows (brain's mouth_log) and
+  // whether THIS morning got its night-coach lesson. Both read-only.
+  {
+    const bc = readJson(join(STATE_DIR, "brain_config.json"));
+    w.mouth = { enabled: !!(bc && bc.ntfy && bc.ntfy.enabled), attempts_today: 0, sent_today: 0 };
+    try {
+      const ml = join(STATE_DIR, "mouth_log.jsonl");
+      if (existsSync(ml)) {
+        for (const line of readFileSync(ml, "utf8").split("\n")) {
+          if (!line.trim()) continue;
+          try { const r = JSON.parse(line); if (localDayOf(r.ts) === today) { w.mouth.attempts_today++; if (r.sent) w.mouth.sent_today++; } } catch { }
+        }
+      }
+    } catch { /* unreadable log = 0 rows, the check stays honest about counts */ }
+    w.night_coach = {
+      enabled: !!(((bc && bc.jobs) || []).find((j) => j.id === "night_coach" && j.enabled !== false)),
+      today_file: existsSync(join(STATE_DIR, "brain_out", "night_coach", `${today}.md`)),
+    };
+  }
   w.outward = { has_desk: existsSync(join(STATE_DIR, "missions.json")), returns7d: 0, benchRuns7d: 0 };
   try {
     const mj = readJson(join(STATE_DIR, "missions.json"));
@@ -367,6 +386,29 @@ export function checks(w) {
       id: "claude-logged-out", level: "RED",
       finding: `the claude CLI is NOT LOGGED IN — ${w.token_health.streak} consecutive failures with auth-shaped errors; every overnight LLM job is dark until his hands run /login`,
       evidence: w.token_health.hint || "token_vitals.json.health (brain.mjs failureStreak)",
+    });
+  }
+
+  // LADDER E4 · THE SILENT MOUTH — the organism gets two utterances a day; a day
+  // with ZERO sent rows while ntfy is enabled means the phone heard nothing at
+  // all. INFO, not RED: a sleeping laptop is covered by the cloud sentinel, and
+  // the absence line already speaks for the morning slot — this is the tally.
+  if (w.mouth && w.mouth.enabled && w.mouth.sent_today === 0) {
+    F.push({
+      id: "mouth-silent-today", level: "INFO",
+      finding: `the mouth sent NOTHING today (${w.mouth.attempts_today} attempt(s) recorded, 0 delivered) — expected 1-2 utterances; if the laptop slept the sentinel covered the morning`,
+      evidence: "mouth_log.jsonl (brain.mjs records every pushNtfy attempt since LADDER E4)",
+    });
+  }
+
+  // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
+  // morning's lesson file never appeared. The map, the examiner probe, the
+  // kickoff line and the Gaffer's cartridge all ran without it today.
+  if (w.night_coach && w.night_coach.enabled && !w.night_coach.today_file) {
+    F.push({
+      id: "night-coach-absent", level: "WARN",
+      finding: `night_coach produced nothing for ${w.today} — this morning had no misconception map (setpiece/examiner/kickoff/Gaffer all ran uncoached)`,
+      evidence: `brain_out/night_coach/${w.today}.md missing — check brain_ledger.jsonl for the overnight run's error`,
     });
   }
 
@@ -726,6 +768,82 @@ export function probeCanon(today, deps = {}) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// LADDER E2 (9 Aug 2026) — THE EXPECTED SHAPE. tasks_expected.json is the
+// schedule's declared truth (snapshotted post-ladder); this probe diffs the live
+// Task Scheduler against it nightly. A vanished expected task is RED, a
+// designed-absent task REAPPEARING is RED (an installer resurrected something
+// his word killed), enabled/disabled drift is WARN, an unlisted new task INFO.
+// ---------------------------------------------------------------------------
+export function probeExpectedTasks(deps = {}) {
+  const expected = deps.expected !== undefined ? deps.expected : readJson(join(STATE_DIR, "tasks_expected.json"));
+  if (!expected) return [];                              // no snapshot on this box = no claim
+  const live = deps.live !== undefined ? deps.live : (() => {
+    const ps = spawnSync("powershell", ["-NoProfile", "-Command",
+      'Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object { "$($_.TaskName)|$($_.State)" }'],
+      { encoding: "utf8", timeout: 30000, windowsHide: true });
+    if (ps.status !== 0) return null;
+    const m = new Map();
+    for (const l of String(ps.stdout || "").split("\n")) { const [n, s] = l.trim().split("|"); if (n) m.set(n, s); }
+    return m;
+  })();
+  if (!live) return [{ id: "tasks-expected-unrunnable", level: "INFO", finding: "Get-ScheduledTask failed — the schedule diff measured nothing tonight", evidence: "spawnSync powershell Get-ScheduledTask" }];
+  const out = [];
+  for (const n of expected.expected_enabled || []) {
+    if (!live.has(n)) out.push({ id: `task-vanished-${n}`, level: "RED", finding: `${n} is EXPECTED and GONE — a lane the organism counts on no longer exists`, evidence: "tasks_expected.json expected_enabled vs live Get-ScheduledTask" });
+    else if (live.get(n) === "Disabled") out.push({ id: `task-darkened-${n}`, level: "WARN", finding: `${n} is expected ENABLED but sits Disabled — its lane is dark`, evidence: "tasks_expected.json vs live state" });
+  }
+  for (const n of expected.expected_disabled || []) {
+    if (live.has(n) && live.get(n) !== "Disabled") out.push({ id: `task-double-run-${n}`, level: "WARN", finding: `${n} is designed-DISABLED (a conductor owns its organ) but sits enabled — it will double-run against its chain`, evidence: "tasks_expected.json expected_disabled vs live state" });
+  }
+  for (const n of Object.keys(expected.designed_absent || {})) {
+    if (live.has(n)) out.push({ id: `task-resurrected-${n}`, level: "RED", finding: `${n} is designed-ABSENT and has REAPPEARED — ${expected.designed_absent[n]}`, evidence: "tasks_expected.json designed_absent vs live state" });
+  }
+  const known = new Set([...(expected.expected_enabled || []), ...(expected.expected_disabled || []), ...Object.keys(expected.designed_absent || {})]);
+  for (const n of live.keys()) {
+    if (!known.has(n)) out.push({ id: `task-unlisted-${n}`, level: "INFO", finding: `${n} exists live but tasks_expected.json has never heard of it — a new build should update the snapshot in its own commit`, evidence: "live Get-ScheduledTask vs tasks_expected.json" });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// LADDER E8 (9 Aug 2026) — THE SENTINEL'S PULSE. The cloud routine is the one
+// organ that cannot die with the laptop — and therefore the one organ nothing
+// on the laptop was watching. Proof-of-life for any given day: SOMETHING put a
+// row on the ntfy topic — the laptop's own badge-signed pushes (sheet/bells/
+// absence, all RFC2047-encoded ⚪🔴 titles) or the sentinel's "Laptop soya"
+// fallback. A day with NEITHER means the mouth AND the sentinel are both dead.
+// ---------------------------------------------------------------------------
+export async function probeSentinel(today, deps = {}) {
+  const topic = deps.topic !== undefined ? deps.topic : (() => {
+    if (process.env.ARSENAL_NTFY_TOPIC && process.env.ARSENAL_NTFY_TOPIC.trim()) return process.env.ARSENAL_NTFY_TOPIC.trim();
+    try { const t = readFileSync(join(STATE_DIR, "throwin_topic.txt"), "utf8").trim(); if (t) return t; } catch { }
+    const bc = readJson(join(STATE_DIR, "brain_config.json"));
+    return (bc && bc.ntfy && bc.ntfy.topic) || null;
+  })();
+  if (!topic) return [{ id: "sentinel-unmeasurable", level: "INFO", finding: "no ntfy topic reachable on this machine — the sentinel pulse measured nothing", evidence: "env ARSENAL_NTFY_TOPIC / throwin_topic.txt / brain_config ntfy.topic all empty" }];
+  let rows = null;
+  try {
+    const since = Math.floor(new Date(`${today}T00:00:00`).getTime() / 1000);
+    const r = await (deps.fetchFn || fetch)(`https://ntfy.sh/${encodeURIComponent(topic)}/json?poll=1&since=${since}`, { signal: AbortSignal.timeout(deps.timeoutMs || 8000) });
+    if (r.ok) {
+      rows = [];
+      for (const line of (await r.text()).split("\n")) {
+        if (!line.trim()) continue;
+        try { const j = JSON.parse(line); if (j.event === "message") rows.push(j); } catch { }
+      }
+    }
+  } catch { /* offline night — an honest unknown below */ }
+  if (rows == null) return [{ id: "sentinel-unmeasurable", level: "INFO", finding: "ntfy history unreachable tonight — the sentinel pulse measured nothing (offline?)", evidence: "GET ntfy.sh/<topic>/json failed" }];
+  const ours = (m) => /⚪🔴/.test(String(m.title || "")) || /^=\?UTF-8\?B\?/.test(String(m.title || "")) || /Laptop soya/i.test(`${m.title || ""} ${m.message || ""}`);
+  if (!rows.some(ours)) {
+    return [{ id: "sentinel-blind", level: "RED",
+      finding: `today's ntfy history holds NEITHER a laptop row NOR the sentinel's fallback (${rows.length} row(s), none ours) — the mouth and the cloud sentinel cannot both be silent on the same day; check claude.ai/code/routines`,
+      evidence: "ntfy.sh JSON history since local midnight — no ⚪🔴-badged title, no RFC2047 title, no 'Laptop soya'" }];
+  }
+  return [];
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -739,6 +857,8 @@ async function run(argv) {
   findings.push(...await probeDaemons());
   findings.push(...probeReconcile());
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch
+  findings.push(...probeExpectedTasks()); // LADDER E2 — the schedule diff
+  findings.push(...await probeSentinel(w.today)); // LADDER E8 — the sentinel's pulse
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);
@@ -819,7 +939,7 @@ function geminiLane() {
 }
 
 // ---------------------------------------------------------------------------
-function selftest() {
+async function selftest() {   // async since LADDER E8 — probeSentinel checks await injected fetches
   let pass = 0, fail = 0;
   const assert = (name, cond) => { if (cond) { pass++; console.log(`  ✓ ${name}`); } else { fail++; console.log(`  ✗ ${name}`); } };
   console.log("\n== watchman selftest ==\n");
@@ -912,6 +1032,64 @@ function selftest() {
     assert("B8 — all four canon files are watched (the exact four CLAUDE.md names)",
       CANON_FILES.length === 4 && CANON_FILES.includes("THE_GAFFER.md")
       && probeCanon(TODAY, { git: () => CANON_FILES.map((f) => ` M ${f}`).join("\n"), fileCard: () => true }).length === 4);
+  }
+
+  // LADDER E4 — the silent mouth (tally, INFO)
+  assert("E4 — ntfy enabled + zero sent rows today ⇒ mouth-silent-today with the attempt count; a sent row or disabled ntfy stays quiet",
+    checks({ ...base, mouth: { enabled: true, attempts_today: 2, sent_today: 0 } })
+      .some((f) => f.id === "mouth-silent-today" && f.level === "INFO" && /2 attempt/.test(f.finding))
+    && !checks({ ...base, mouth: { enabled: true, attempts_today: 2, sent_today: 1 } }).some((f) => f.id === "mouth-silent-today")
+    && !checks({ ...base, mouth: { enabled: false, attempts_today: 0, sent_today: 0 } }).some((f) => f.id === "mouth-silent-today")
+    && !checks(base).some((f) => f.id === "mouth-silent-today"));
+
+  // LADDER E8 — the coach that didn't teach (WARN)
+  assert("E8 — night_coach enabled + no lesson file for today ⇒ WARN; file present or job disabled stays quiet",
+    checks({ ...base, night_coach: { enabled: true, today_file: false } })
+      .some((f) => f.id === "night-coach-absent" && f.level === "WARN")
+    && !checks({ ...base, night_coach: { enabled: true, today_file: true } }).some((f) => f.id === "night-coach-absent")
+    && !checks({ ...base, night_coach: { enabled: false, today_file: false } }).some((f) => f.id === "night-coach-absent"));
+
+  // LADDER E2 — the schedule diff (injected)
+  {
+    const EXP = {
+      expected_enabled: ["ArsenalFC-Watchman", "ArsenalFC-BrainDaemon"],
+      expected_disabled: ["ArsenalFC-Scorer"],
+      designed_absent: { "ArsenalFC-SelfKnowledge": "his 7 Aug freeze" },
+    };
+    const mkLive = (pairs) => new Map(pairs);
+    assert("E2 — vanished expected task is RED; darkened is WARN; a re-enabled designed-disabled is a double-run WARN",
+      probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Ready"]]) })
+        .some((f) => f.id === "task-vanished-ArsenalFC-Watchman" && f.level === "RED")
+      && probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Disabled"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"]]) })
+        .some((f) => f.id === "task-darkened-ArsenalFC-Watchman" && f.level === "WARN")
+      && probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Ready"]]) })
+        .some((f) => f.id === "task-double-run-ArsenalFC-Scorer" && f.level === "WARN"));
+    assert("E2 — a designed-absent task REAPPEARING is RED with the why; an unlisted new task is only INFO; a clean diff is zero findings",
+      probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"], ["ArsenalFC-SelfKnowledge", "Disabled"]]) })
+        .some((f) => f.id === "task-resurrected-ArsenalFC-SelfKnowledge" && f.level === "RED" && /7 Aug freeze/.test(f.finding))
+      && probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"], ["ArsenalFC-NewThing", "Ready"]]) })
+        .some((f) => f.id === "task-unlisted-ArsenalFC-NewThing" && f.level === "INFO")
+      && probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"]]) }).length === 0
+      && probeExpectedTasks({ expected: null }).length === 0
+      && probeExpectedTasks({ expected: EXP, live: null }).some((f) => f.id === "tasks-expected-unrunnable"));
+  }
+
+  // LADDER E8 — the sentinel's pulse (injected fetch)
+  {
+    const day = "2026-08-09";
+    const mkFetch = (lines) => async () => ({ ok: true, text: async () => lines.join("\n") });
+    const sheetRow = JSON.stringify({ event: "message", title: "⚪🔴 Team sheet is up", message: "x" });
+    const encRow = JSON.stringify({ event: "message", title: "=?UTF-8?B?4pqq8J+UtA==?=", message: "x" });
+    const sentinelRow = JSON.stringify({ event: "message", title: "Laptop soya", message: "mini-brief" });
+    const noise = JSON.stringify({ event: "message", title: "someone else", message: "spam" });
+    assert("E8 SENTINEL — a badge-signed row, an RFC2047 row, or the fallback each count as proof-of-life; pure noise is RED sentinel-blind",
+      (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sheetRow]) })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([encRow]) })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sentinelRow]) })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]) })).some((f) => f.id === "sentinel-blind" && f.level === "RED"));
+    assert("E8 SENTINEL — no topic and a dead fetch are each an honest INFO unknown, never a fake RED",
+      (await probeSentinel(day, { topic: null })).some((f) => f.id === "sentinel-unmeasurable")
+      && (await probeSentinel(day, { topic: "t", fetchFn: async () => { throw new Error("offline"); } })).some((f) => f.id === "sentinel-unmeasurable"));
   }
 
   // Tier-2 gate

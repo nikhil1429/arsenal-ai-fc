@@ -192,7 +192,8 @@ function main() {
     const rows = readLines(LEDGER());
     const live = liveMutation(rows);
     if (!live) { console.log("gate_tune: no live mutation — nothing in a window (a measured absence, not a failure)"); return; }
-    const v = scoreMutation(live, readLines(SALIENCE()), now);
+    // E3: the salience journal rolls at 2 MB — the window reads both generations.
+    const v = scoreMutation(live, [...readLines(SALIENCE() + ".1"), ...readLines(SALIENCE())], now);
     if (v.action === "waiting") { console.log(`gate_tune: ${live.id} waiting — ${v.why}`); return; }
     if (v.action === "extended") {
       appendFileSync(LEDGER(), JSON.stringify({ ts: now.toISOString(), kind: "extended", id: live.id, review_after_days: v.review_after_days, measured: v.measured, why: v.why }) + "\n");

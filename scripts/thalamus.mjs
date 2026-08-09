@@ -597,7 +597,13 @@ function createNucleus(cfg, deps = {}) {
   const D = {
     now: deps.now || (() => Date.now()),
     appendAfferent: deps.appendAfferent || ((row) => appendFileSync(AFFERENT, JSON.stringify(row) + "\n")),
-    appendLedger: deps.appendLedger || ((row) => appendFileSync(SLEDGER, JSON.stringify(row) + "\n")),
+    // LADDER E3 (9 Aug 2026): the journal rolls at 2 MB — run_logged.cmd's own
+    // measured precedent, one generation kept. Windowed readers (wind tunnel,
+    // gate_tune) read the .1 sibling too, so no 14-day window ever goes hungry.
+    appendLedger: deps.appendLedger || ((row) => {
+      try { if (statSync(SLEDGER).size > 2 * 1024 * 1024) { rmSync(SLEDGER + ".1", { force: true }); renameSync(SLEDGER, SLEDGER + ".1"); } } catch { }
+      appendFileSync(SLEDGER, JSON.stringify(row) + "\n");
+    }),
     writeWorkspace: deps.writeWorkspace || ((o) => writeAtomic(WORKSPACE, o)),
     writeWake: deps.writeWake || ((o) => writeAtomic(WAKE, o)),
     // M14 — wakes QUEUE (append), they never clobber; wake.json stays as the

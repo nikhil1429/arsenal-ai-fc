@@ -33,6 +33,8 @@ the same sitting is always safe: old turns skip, new turns land.
 5. Close with the owner's delta line only (≤3 lines): turns posted (his/gem split) ·
    dupes skipped · anything undelivered. If undelivered > 0, say the thalamus was down
    and that `node scripts/harvest.mjs resync` re-delivers — then run it once yourself.
+   On a successful read, press the rail stamp (LADDER E7):
+   `node scripts/scout.mjs chrome-stamp harvest`.
 6. Chrome tools not connected? Fall back honestly: ask him to paste the conversation
    once, run the same parse → owner hand-off, and say this is the taxed path —
    reconnect Chrome next time.

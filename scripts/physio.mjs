@@ -319,6 +319,12 @@ function compute(world, cfg, now = new Date()) {
     bleeds.push({ organ: "bootroom", kind: "genome_pending", evidence: "a proposed mutation sits unreviewed in mutations.jsonl",
       line: "the boot room filed a proposal — /genome for your word when ready." });
   }
+  // LADDER E7 — a Chrome rail that hasn't driven in a week may be quietly broken
+  // (extension dead, login lost); the machine says so before he finds out mid-fire.
+  if (world.chromeRailStale) {
+    bleeds.push({ organ: "chrome", kind: "chrome_rail_stale", evidence: world.chromeRailStale,
+      line: "the Chrome rails have not driven in a week — next /fire or /harvest, watch whether the extension still connects." });
+  }
 
   // 1) STALE — only files that have EXISTED bleed (never-born ≠ bleeding).
   // AUDIT (30 Jul 2026): this read MTIME ONLY. A file rewritten on schedule with
@@ -731,6 +737,15 @@ function gatherWorld() {
       for (const m of readLines(join(STATE_DIR, "mutations.jsonl"))) if (m && m.id) last[m.id] = m;
       return Object.values(last).some(m => m.status === "proposed");
     })(),
+    // LADDER E7 (9 Aug 2026) — the Chrome rails' last successful drive. The gem
+    // stamp's own 7-day bar, reused; ABSENCE stays silent (the stamp was born
+    // 9 Aug — bleeding on never-driven history would nag forever about nothing).
+    chromeRailStale: (() => {
+      const s = readJson(join(STATE_DIR, "chrome_rail_stamp.json"));
+      if (!s || !s.at) return null;
+      const days = (Date.now() - Date.parse(s.at)) / 86400000;
+      return Number.isFinite(days) && days >= 7 ? `last successful drive (${s.rail}) ${Math.floor(days)} day(s) ago` : null;
+    })(),
   };
 }
 
@@ -753,6 +768,12 @@ async function selftest() {
   const quiet = compute({ ...base, files: { "cards.json": { exists: false } } }, cfg, now);
   assert("never-born files do NOT bleed (bloodless ≠ wounded)", quiet.bleeds.length === 0);
   assert("EXCEPTION-ONLY VOICE — line null when nothing bleeds", quiet.line === null);
+
+  // LADDER E7 — the Chrome rails' pulse rides the same weekly-ritual lane
+  assert("E7: a stale chrome-rail stamp bleeds once with the rail named; absent stamp stays silent (born 9 Aug — no retro-nag)",
+    compute({ ...base, files: {}, chromeRailStale: "last successful drive (fire) 9 day(s) ago" }, cfg, now)
+      .bleeds.some(b => b.kind === "chrome_rail_stale" && /fire.*9 day/.test(b.evidence))
+    && quiet.bleeds.every(b => b.kind !== "chrome_rail_stale"));
 
   // audit #108 — THE WAKE-GATE VERDICT IS REPORTED, NEVER TUNED.
   // The tuner's own out-of-band finding lived in a markdown file nothing read.

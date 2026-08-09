@@ -26,7 +26,9 @@ the machine = every finger-movement around it.**
 4. THE FIRE STAMP (LADDER C2, 9 Aug 2026): the moment he clicks Start, run
    `node scripts/scout.mjs mission fired <ID>` — the stamp is what lets the
    return-leg watcher wake ("le lo?" card) if 24h pass with no return. No
-   stamp = a fired mission the organism cannot miss.
+   stamp = a fired mission the organism cannot miss. Also press the rail stamp
+   (LADDER E7): `node scripts/scout.mjs chrome-stamp fire` — physio watches the
+   rails' pulse through it.
 5. One closing line only: what this mission will bring back, and that he can walk
    away — Deep Research takes minutes; the return leg waits for his word, today
    or any day.

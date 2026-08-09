@@ -90,6 +90,56 @@ if ($gk) {
   Write-Host "  ~ Goalkeeper cloaked (hidden_run.vbs) — no more visible console to close"
 }
 
+# ============================================================================
+# LADDER E1 (9 Aug 2026) — THE ORPHANS COME HOME. Four live tasks existed on the
+# box with NO installer row anywhere, so one Windows reset would have silently
+# dropped them and nothing could prove they ever existed. Reproduced here AT
+# THEIR LIVE TIMES (read off schtasks 9 Aug 2026, not off a doc), routed through
+# run_logged.cmd (the #98 default). Bell-FullTime, once on this orphan list, now
+# lives in INSTALL_EVENING_CONDUCTOR.ps1 instead — do not re-add it here.
+# ============================================================================
+Write-Host "Adopting the four orphans (LADDER E1) ..."
+Mk "ArsenalFC-CapturePull"     "capture.mjs pull"   @("/SC","HOURLY","/ST","09:00")
+Mk "ArsenalFC-TimeAuditor-Full" "timeaudit.mjs full" @("/SC","DAILY","/ST","22:00")
+Mk "ArsenalFC-Wall-Live"       "viz.mjs"            @("/SC","MINUTE","/MO","30","/ST","10:38")
+# TimeAuditor-Pulse = ONE task, THREE calendar triggers (12:00/15:00/18:00 — the
+# 3-bucket day split, ORGANISM_CLOCK.md:48). schtasks /Create cannot express
+# that, so: create at 12:00, then append the 15:00 + 18:00 triggers via XML.
+Mk "ArsenalFC-TimeAuditor-Pulse" "timeaudit.mjs pulse" @("/SC","DAILY","/ST","12:00")
+$px = [xml](schtasks /Query /TN "ArsenalFC-TimeAuditor-Pulse" /XML)
+$trigNode = $px.Task.Triggers
+if (@($trigNode.CalendarTrigger).Count -lt 3) {
+  foreach ($hh in "15:00","18:00") {
+    $ct = $px.CreateElement("CalendarTrigger", $px.DocumentElement.NamespaceURI)
+    $sb = $px.CreateElement("StartBoundary", $px.DocumentElement.NamespaceURI)
+    $sb.InnerText = "2026-07-08T${hh}:00+05:30"
+    $sd = $px.CreateElement("ScheduleByDay", $px.DocumentElement.NamespaceURI)
+    $di = $px.CreateElement("DaysInterval", $px.DocumentElement.NamespaceURI)
+    $di.InnerText = "1"
+    $sd.AppendChild($di) | Out-Null
+    $ct.AppendChild($sb) | Out-Null
+    $ct.AppendChild($sd) | Out-Null
+    $trigNode.AppendChild($ct) | Out-Null
+  }
+  $ptmp = Join-Path $env:TEMP "pulse_task.xml"
+  $px.Save($ptmp)
+  schtasks /Create /F /TN "ArsenalFC-TimeAuditor-Pulse" /XML $ptmp | Out-Null
+  $verify = [xml](schtasks /Query /TN "ArsenalFC-TimeAuditor-Pulse" /XML)
+  Write-Host ("  ~ Pulse triggers on disk: {0}/3" -f @($verify.Task.Triggers.CalendarTrigger).Count)
+}
+
+# LADDER E1/F14 — THE WAKE-TEST, registered as a standing measurement: a daily
+# 03:52 one-liner with WakeToRun. If wakeprobe.log gains lines on lid-closed
+# nights, wake timers WORK on this box (the F14 closed-lid night is real); if it
+# stays empty on a closed-lid night, StartWhenAvailable catch-up is the truth.
+schtasks /Create /F /TN "ArsenalFC-WakeProbe" /TR "cmd /c echo woke %DATE% %TIME% >> $repo\scripts\wakeprobe.log" /SC DAILY /ST 03:52 | Out-Null
+$wp = Get-ScheduledTask -TaskName "ArsenalFC-WakeProbe" -ErrorAction SilentlyContinue
+if ($wp) { $wp.Settings.WakeToRun = $true; $wp.Settings.StartWhenAvailable = $false; $wp | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-WakeProbe (03:52, WakeToRun, NO catch-up — a woken line means a real wake)" }
+
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"
 Write-Host "Post-match stays a human ritual: npm run postmatch (30 seconds, evening)."
+# LADDER E1 — every installer ENDS by showing the spine it just touched.
+Write-Host ""
+node "$repo\scripts\conductor.mjs" plan
+node "$repo\scripts\conductor.mjs" plan evening

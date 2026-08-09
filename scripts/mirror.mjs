@@ -334,6 +334,26 @@ async function main() {
   const { manifest, writes } = await pull(cfg, defaultFetch, hasLocal, new Date());
   for (const w of writes) writeAtomicText(w.path, w.text);
   writeAtomic(join(STATE_DIR, "mirror_manifest.json"), manifest);
+  // LADDER E9 (9 Aug 2026) — THE GIST-MASTER'S BACKUP. The gist is the MASTER
+  // copy of everything he will defend out loud in an interview, and it lived in
+  // exactly one place a mis-click could destroy. After each good pull, the day's
+  // capsules are snapshotted to capsule_backups/<date>/ — the mirror's own lane,
+  // beside its mirror, one dated dir per day (an idempotent same-day re-run just
+  // rewrites today's). Capsules are KBs; no pruning number is invented here.
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const bdir = join(STATE_DIR, "capsule_backups", day);
+    const src = join(STATE_DIR, "capsules");
+    if (existsSync(src)) {
+      mkdirSync(bdir, { recursive: true });
+      const { readdirSync } = await import("node:fs");
+      let n = 0;
+      for (const f of readdirSync(src).filter((x) => x.endsWith(".json"))) {
+        writeAtomicText(join(bdir, f), readFileSync(join(src, f), "utf8")); n++;
+      }
+      console.log(`mirror: backup — ${n} capsule(s) snapshotted to capsule_backups/${day}/`);
+    }
+  } catch (e) { console.log(`mirror: backup FAILED (${String(e.message).slice(0, 80)}) — the mirror itself is untouched`); }
   // The console denominator is the MANIFEST's need (enumeration-aware), never the
   // configured floor — cfg.ids.length is 4 forever, so a fifth locked capsule would
   // have printed "5/4 capsules mirrored" while the manifest itself was right. (7 Aug 2026)
