@@ -948,6 +948,55 @@ export function probeEveningChain(today, nowHM, deps = {}) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// H1 (10 Aug 2026) — THE SCOREBOARD'S NIGHT READER. brain_outcomes.jsonl is
+// H1's outcome journal (sole writer scoreboard.mjs, evening chain 22:38).
+// Conditional by the house law — a clean day emits NOTHING (H2/H6 read the
+// journal directly; the watchman is for anomalies):
+//   · cracked>0 on YESTERDAY (settled by the evening-D revisit; today's rows
+//     are still subject to tomorrow's straggler supersede) → INFO naming them
+//   · the evening chain RAN yesterday yet the journal has no yesterday rows
+//     → WARN (a broken wire between conductor and scoreboard)
+//   · this morning's night_coach .md exists with NO .json sibling → INFO —
+//     the sibling is Join 1's whole food and its live emission rate was 0-for-1
+//     when H1 shipped; a silent parse-miss must not stay silent for a week.
+// ---------------------------------------------------------------------------
+export function probeOutcomes(today, yday, deps = {}) {
+  const out = [];
+  const rows = deps.rows !== undefined ? deps.rows : (() => {
+    const r = [];
+    try {
+      for (const line of readFileSync(join(STATE_DIR, "brain_outcomes.jsonl"), "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { r.push(JSON.parse(line)); } catch { }
+      }
+    } catch { }
+    return r;
+  })();
+  const last = new Map();
+  for (const r of rows) last.set(`${r.day}|${r.kind}|${r.subject}`, r);   // append order = last wins
+  const yRows = [...last.values()].filter((r) => r.day === yday);
+  const cracked = yRows.filter((r) => (r.kind === "misconception" || r.kind === "lesson") && r.verdict === "cracked");
+  if (cracked.length) {
+    out.push({ id: "outcomes-cracked", level: "INFO",
+      finding: `yesterday's named misconception(s) CRACKED again in his own reps: ${cracked.map((r) => r.subject).join(", ")} — the lesson has not landed`,
+      evidence: `brain_outcomes.jsonl day ${yday}: ${cracked.map((r) => `${r.subject} ${r.n_correct}✓/${r.n_wrong}✗`).join(" · ")}` });
+  }
+  const evRep = deps.eveningReport !== undefined ? deps.eveningReport : readJson(join(STATE_DIR, "conductor_evening.json"));
+  if (!yRows.length && evRep && localDayOf(evRep.started) === yday) {
+    out.push({ id: "scoreboard-silent", level: "WARN",
+      finding: `the evening chain RAN yesterday (conductor_evening ${yday}) but the scoreboard journal holds NO rows for that day — the wire between conductor and scoreboard is broken`,
+      evidence: `brain_outcomes.jsonl has 0 ${yday} rows · conductor_evening.json started=${evRep.started}` });
+  }
+  const ncDir = deps.ncDir || join(STATE_DIR, "brain_out", "night_coach");
+  if (existsSync(join(ncDir, today + ".md")) && !existsSync(join(ncDir, today + ".json"))) {
+    out.push({ id: "coach-json-absent", level: "INFO",
+      finding: `this morning's night_coach lesson exists as .md only — the machine sibling (.json) did not parse, so H1's misconception join reads 'unmeasurable' today`,
+      evidence: `brain_out/night_coach/${today}.md present, ${today}.json absent (the sibling's live emission rate was 0-for-1 when H1 shipped)` });
+  }
+  return out;
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -966,6 +1015,7 @@ async function run(argv) {
   findings.push(...probeWakeEconomy());   // LADDER G15 — the honest wake re-fit
   const nowHM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   findings.push(...probeEveningChain(w.today, nowHM)); // H0 — the evening report's first reader
+  findings.push(...probeOutcomes(w.today, yday));      // H1 — the scoreboard's night reader
 
   const prevLast = readJson(LAST);
   // H0 (10 Aug 2026): the overnight window rides brain_config (same night the
@@ -1270,6 +1320,21 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
   assert("EVENING PROBE — never-born says so once (INFO), and only after the chain's hour",
     probeEveningChain(TODAY, "23:55", { report: null, lastAt: "23:10" }).some((f) => f.id === "evening-chain-unborn")
     && probeEveningChain(TODAY, "12:00", { report: null, lastAt: "23:10" }).length === 0);
+
+  // --- H1: the scoreboard's night reader (conditional by the house law) -----
+  const noNc = { ncDir: join(STATE_DIR, "__no_such_dir__") };
+  const oRows = (v) => [{ day: YDAY, kind: "misconception", subject: "hallucinations", verdict: v, n_correct: v === "cracked" ? 0 : 2, n_wrong: v === "cracked" ? 2 : 0 }];
+  assert("OUTCOMES PROBE — a clean/held yesterday emits NOTHING (quiet-when-clean)",
+    probeOutcomes(TODAY, YDAY, { rows: oRows("held"), eveningReport: null, ...noNc }).length === 0);
+  assert("OUTCOMES PROBE — a cracked misconception speaks (INFO), naming the concept",
+    probeOutcomes(TODAY, YDAY, { rows: oRows("cracked"), eveningReport: null, ...noNc })
+      .some((f) => f.id === "outcomes-cracked" && /hallucinations/.test(f.finding)));
+  assert("OUTCOMES PROBE — chain ran + journal empty = WARN broken wire; chain absent = silence (never guesses)",
+    probeOutcomes(TODAY, YDAY, { rows: [], eveningReport: { started: `${YDAY}T18:00:00+05:30` }, ...noNc })
+      .some((f) => f.id === "scoreboard-silent" && f.level === "WARN")
+    && probeOutcomes(TODAY, YDAY, { rows: [], eveningReport: null, ...noNc }).length === 0);
+  assert("OUTCOMES PROBE — supersede rows read last-wins (a cracked row superseded by held is silence)",
+    probeOutcomes(TODAY, YDAY, { rows: oRows("cracked").concat(oRows("held")), eveningReport: null, ...noNc }).length === 0);
 
   // The brief
   assert("BRIEF — silent on a clean, fresh night (no line he learns to ignore)",

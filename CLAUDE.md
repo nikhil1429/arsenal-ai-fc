@@ -144,7 +144,10 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules) · `captains_call.mjs`
   (captains_call.json — added 7 Aug 2026 with his "yes do it all") · `harvest.mjs`
   (harvest_log.jsonl — added 9 Aug 2026 with his P7 "data flows everywhere" word; the
-  afferent bus itself is reached only through the thalamus POST door). Never hand-edit a state file.
+  afferent bus itself is reached only through the thalamus POST door) · `scoreboard.mjs`
+  (brain_outcomes.jsonl — added 10 Aug 2026 under his Phase-H "let's build everything"
+  ruling; the name is the approved map's own, NOT brain.mjs's — the journal deliberately
+  lives outside brain_out/). Never hand-edit a state file.
 - **THE CAPTAIN'S CALL** (7 Aug 2026, his ADHD-PI ruling): reports are MACHINE-face — Claude
   reads them whole; anything needing HIS word becomes ONE one-line card dealt at an anchor he
   already hits (SessionStart hook · /matchday · /full-time). He answers haan/na/baad, the organ

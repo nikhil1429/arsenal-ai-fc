@@ -266,3 +266,9 @@ dressing-room/state/salience_ledger.jsonl.1
 dressing-room/state/brain_ledger.jsonl.1
 dressing-room/state/daemon_watchdog.json
 dressing-room/state/chrome_rail_stamp.json
+# PHASE H · H1 (10 Aug 2026): the scoreboard's outcome journal. It re-exports
+# day facts from two explicitly-ignored sources (timeaudit.json minutes,
+# drills.json verdicts via slip.jsonl) — tracking it in the PUBLIC repo would
+# leak what those ignore lines protect. Tracking it later is a captain ruling
+# (the reps_log D10 class), never a build decision.
+dressing-room/state/brain_outcomes.jsonl

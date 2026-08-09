@@ -84,7 +84,11 @@ export const MORNING = [
 // disease the morning had before this file existed: the stagger WAS the order,
 // and one overslept evening collapses into a single unordered catch-up burst.
 // One task, one chain. `at` = each retired row's LIVE time (Bell 22:00 is HIS
-// ruled time, not drift — read live off schtasks 9 Aug 2026, not off a doc).
+// ruled time, not drift — read live off schtasks 9 Aug 2026, not off a doc);
+// scoreboard (H1, 10 Aug 2026) is the one born-in-chain step, its `at` derived
+// from its neighbours — AFTER the scorer has proposed + matured today's gaffer
+// rows (its slip read needs them), BEFORE setpiece rewrites drills.json for
+// TOMORROW (the refuter-caught trap: any post-22:40 slot reads tomorrow's file).
 // `needs` marks the real read-dependencies: the wall renders what the scorer and
 // set-piece wrote, the wallpaper paints the wall's own render, the examiner
 // stages against the set-piece's drills. A missed need still RUNS (the report
@@ -92,6 +96,7 @@ export const MORNING = [
 export const EVENING = [
   { id: "bell",       at: "22:00", args: ["scripts/brain.mjs", "bell", "fulltime"] },
   { id: "scorer",     at: "22:35", args: ["scripts/scorer.mjs"] },
+  { id: "scoreboard", at: "22:38", args: ["scripts/scoreboard.mjs", "run"], needs: ["scorer"] },
   { id: "setpiece",   at: "22:40", args: ["scripts/setpiece.mjs"] },
   { id: "doubtminer", at: "22:45", args: ["scripts/doubtminer.mjs"] },
   { id: "physio-pm",  at: "22:50", args: ["scripts/physio.mjs"] },
@@ -647,9 +652,19 @@ async function selftest() {
     ok("EVENING — bell opens at HIS 22:00, wallpaper closes; order is the chain, not the clock",
       rep.order[0] === "bell" && rep.order[rep.order.length - 1] === "wallpaper"
       && EVENING[0].at === "22:00" && rep.steps.every(s => s.ok));
-    ok("EVENING — the nine retired rows are all here and no step is a daemon or a gate",
-      EVENING.length === 9 && EVENING.every(s => !s.daemon && !s.arm)
-      && ["bell", "scorer", "setpiece", "doubtminer", "physio-pm", "examiner", "wall-pm", "scout", "wallpaper"].every(id => EVENING.some(s => s.id === id)));
+    // H1 AMENDMENT (10 Aug 2026): the D1 witness is re-stated, never erased —
+    // the nine retired rows STAY asserted verbatim, the closed world tightens to
+    // exactly one born-in-chain addition (scoreboard, between scorer + setpiece,
+    // needs [scorer]) — a length check alone would pass with ANY tenth step.
+    ok("EVENING — the nine retired rows are all here, the ONE addition is exactly the scoreboard, and no step is a daemon or a gate",
+      EVENING.length === 10 && EVENING.every(s => !s.daemon && !s.arm)
+      && ["bell", "scorer", "setpiece", "doubtminer", "physio-pm", "examiner", "wall-pm", "scout", "wallpaper"].every(id => EVENING.some(s => s.id === id))
+      && (() => {
+        const sb = EVENING.find(s => s.id === "scoreboard");
+        const i = EVENING.indexOf(sb);
+        return sb && EVENING[i - 1].id === "scorer" && EVENING[i + 1].id === "setpiece"
+          && (sb.needs || []).join() === "scorer" && sb.at === "22:38";
+      })());
     ok("EVENING — the ps1 step runs through its OWN executor, never the node runner",
       execs.length === 1 && /WALLPAPER\.ps1/.test(execs[0]) && !seen.some(s => /WALLPAPER/.test(s)));
     const repFail = await conduct(EVENING, {
