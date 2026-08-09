@@ -2184,6 +2184,16 @@ async function selftest() {
     // the meter (t0=0) instead of bare-returning with a stale t0 (see mins()).
     assert("minutes bill only while the wire is up (parked tab = free)", PAGE.includes("if(!ws||ws.readyState!==1||!setupDone){t0=0;return}const dTok"));
     assert("CFG refreshes every 10 min (the constitution no longer freezes at START)", PAGE.includes("600000"));
+    // LADDER G16 sliver (10 Aug 2026): the re-fetch ARMS the reconnect instead of
+    // waiting for one — a system/thinking/server-VAD delta rides the EXISTING
+    // goAway quiet-beat stitch. No second rotation mechanism, no new timer.
+    assert("G16 — a config delta on the 10-min re-fetch arms the quiet-beat stitch",
+      PAGE.includes("const delta=CFG.system!==c.system||CFG.thinking!==c.thinking") &&
+      PAGE.includes("constitution delta on re-fetch"));
+    assert("G16 — delta arming rides the existing goAway lane, only while a session is LIVE",
+      PAGE.includes("if(delta&&!goAwayAt&&ws&&ws.readyState===1&&setupDone){goAwayAt=Date.now()"));
+    assert("G16 — the stitch pre-bills the part-minute before the wire drops (park-path parity)",
+      PAGE.includes("stitching=true;mins()"));
     // recall quality bar
     assert("recall bar: shards + transliterated garble never enter the index", recallWorthy("क्या फल आई वांट टू नो? अंडरस्टैंड एवरीथिंग") === false && recallWorthy("haan ok") === false && recallWorthy(", can you be able to") === false && recallWorthy("tokenization subwords wala doubt phir se aa raha hai") === true);
     // the nag is dead
@@ -3246,8 +3256,13 @@ setInterval(()=>{if(talking)flushAudio()},100);
 setInterval(()=>{
  // M0 — goAway stitch: rotate PROACTIVELY at the first quiet beat, with the
  // fresh handle, instead of waiting for the server to kill the socket mid-word
+ // G16 sliver refuter (10 Aug 2026): pre-bill the part-minute BEFORE the wire
+ // drops — park-path parity (:idle branch below). Without it every stitch
+ // silently discarded the un-ticked minute (mins() zeroes t0 on a down wire),
+ // which was survivable while goAways were rare and stops being survivable now
+ // that a config delta can arm a stitch during any active session.
  if(goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length){
-  goAwayAt=0;stitching=true;log('· stitching now (quiet beat) — same session, new socket');ws.close(1000);return}
+  goAwayAt=0;stitching=true;mins();log('· stitching now (quiet beat) — same session, new socket');ws.close(1000);return}
  if(ws&&ws.readyState===1&&setupDone&&lastVoice&&!talking&&!liveSrcs.length&&!vidKind&&CFG&&Date.now()-lastVoice>CFG.vad.idle_disconnect_ms){
  // E2E audit 25 Jul 2026: bill the part-minute BEFORE the line parks (the wire
  // is still up here, so it is honest) — then the meter is off until reconnect
@@ -3323,7 +3338,29 @@ setInterval(mins,60000);window.addEventListener('beforeunload',()=>{closing=true
 // scan-fix 15 Jul: CFG froze at START-click — a morning session carried the
 // 9AM constitution at 8PM. Re-fetch every 10 min; the NEXT (re)connect rides
 // the fresh instruction, tone, day-phase and memory cartridges.
-setInterval(async()=>{try{const c=await(await fetch('/config?mode='+MODE)).json();if(c&&c.system){CFG.system=c.system;CFG.thinking=c.thinking;CFG.vad_server=c.vad_server;CFG.tanks=c.tanks}}catch(e){}},600000);
+// LADDER G16 sliver (10 Aug 2026): "the NEXT (re)connect" used to mean
+// "whenever one happens to happen" — a fresh constitution sat unapplied until
+// goAway, idle-park or a reload. Now a DELTA in what setup actually consumes
+// (the system text — day-phase register and memory cartridges ride inside it —
+// thinking, server-VAD) ARMS the existing goAway quiet-beat stitch: same
+// session (resume handle), new socket, fresh instruction at the next silence.
+// No new timer, no new number — the 600s fetch and the 5s quiet-beat loop both
+// pre-exist; this only joins them. Armed only while a session is LIVE (a
+// parked line picks the fresh CFG up on its natural reconnect anyway), never
+// re-armed over a pending goAway, and setupComplete zeroes goAwayAt as always.
+// CHURN, said honestly (refuter pass, same day): the system text also carries
+// per-turn measured lines — the THINK-TIME BASELINE median moves as stamps
+// land, seasonContext's rep count moves on log_reps — so during active
+// drilling a delta can land on most 10-min fetches and stitch once per window.
+// That is his state actually changing (the sliver's whole point), the stitch
+// is quiet-beat-gated + resume-handled, and the part-minute is now pre-billed
+// at the stitch (see the quiet-beat consumer); each one logs, so the live
+// cadence is measurable before anyone tunes anything.
+setInterval(async()=>{try{const c=await(await fetch('/config?mode='+MODE)).json();if(c&&c.system){
+ const delta=CFG.system!==c.system||CFG.thinking!==c.thinking||JSON.stringify(CFG.vad_server||null)!==JSON.stringify(c.vad_server||null);
+ CFG.system=c.system;CFG.thinking=c.thinking;CFG.vad_server=c.vad_server;CFG.tanks=c.tanks;
+ if(delta&&!goAwayAt&&ws&&ws.readyState===1&&setupDone){goAwayAt=Date.now();log('· constitution delta on re-fetch — fresh instruction rides the next quiet beat')}
+}}catch(e){}},600000);
 
 // MIC P0 — every failure SURFACED with the fix, never swallowed
 function micHelp(e){

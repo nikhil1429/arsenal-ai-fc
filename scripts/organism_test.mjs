@@ -241,7 +241,14 @@ function hermetic() {
   // writes can race a multi-minute suite run. Their files join the exemption
   // for the same reason the originals did: a scheduled OWNER writing its OWN
   // state mid-suite is not a selftest leak.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl/;
+  // G16 sliver (10 Aug 2026): distiller_latency.jsonl — the switch-to-read
+  // latency journal, written by the same ArsenalFC-Distiller 15-min task that
+  // already earned working_set.json its exemption above. STATIC PROOF (the
+  // price this list sets): the one appendFileSync to it sits inside
+  // distiller.mjs run(), which no selftest calls — distiller's own selftest
+  // exercises detectSwitches/measureLatency/latencyReport on fixtures only
+  // (same class as the createNucleus two-caller proof above).
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

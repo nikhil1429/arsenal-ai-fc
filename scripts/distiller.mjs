@@ -12,12 +12,13 @@
 // ENGINE: the FREE Gemini-flash pool (hippocampus.generatePool) — ZERO Max budget
 //   — with a DETERMINISTIC FLOOR built from the raw stream so the set is never
 //   empty or broken even when the pool is dry. (Registered as fuelboard tank T8.)
-// LAWS: SINGLE WRITER of working_set.json. Reads afferent.jsonl + workspace.json
+// LAWS: SINGLE WRITER of working_set.json AND distiller_latency.jsonl (the G16
+//   switch-to-read counter, 10 Aug 2026). Reads afferent.jsonl + workspace.json
 //   + presence_log.jsonl + drills.json READ-ONLY (single-writer law intact).
 //   Never invents a next_step — it comes from drills.json or stays empty.
-// MODES: run (default) · selftest
+// MODES: run (default) · latency (the G16 counter's read-only report) · selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 // #51 — the shared, archive-tolerant tail reader owned by presence.mjs (the ledger's
@@ -28,6 +29,7 @@ import { presenceTail } from "./presence.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const WORKING_SET = join(STATE_DIR, "working_set.json");
+const LATENCY_LOG = join(STATE_DIR, "distiller_latency.jsonl");   // G16 — this file's second owned lane (gitignored)
 
 // ---------------------------------------------------------------------------
 // #21 — HIS WORDS, NOT HIS WINDOW CAPTIONS (audit 2 Aug 2026, findings 14 & 15)
@@ -317,8 +319,102 @@ function summaryLine(set) {
   return bits.join(" · ") || "(quiet)";
 }
 
+// ---------------------------------------------------------------------------
+// LADDER G16 sliver — THE SWITCH-TO-READ LATENCY COUNTER (10 Aug 2026)
+// ---------------------------------------------------------------------------
+// The 15-min cadence is a GUESSED number — limits.mjs CADENCES records it as
+// origin:"guessed" — and the cadence's whole justification is switch-to-read
+// latency: he switches surfaces, and working_set should already hold the
+// post-switch picture by the time he next reads it. Nothing ever MEASURED that
+// gap, so the next cadence decision would have been another hunch. This window
+// measures it — COUNTER ONLY: no threshold, no gate, no verdict (his 1 Aug law:
+// numbers come from 30-45-60 days of real data, never from a vibe).
+// What one run records:
+//   · a context-switch = the ambient stream's `app` CHANGING between
+//     consecutive `context` rows (title churn inside one app is not a surface
+//     switch; the first-ever row has no prior, so it is an appearance, not a
+//     switch)
+//   · attribution: a switch belongs to the FIRST working_set write at/after it
+//     — prev_write_ts < switch_ts <= this_write_ts — so every switch is
+//     counted exactly once, by the write that first caught it. The journal's
+//     own last row is the SECOND WITNESS on that claim (refuter pass, same
+//     day): the window's left edge is clipped to the last counted ts, so a
+//     racing concurrent run (the writeAtomic per-pid scar class above) or a
+//     backward clock step can never re-count an already-journaled switch.
+//   · lag_ms = this_write_ts − switch_ts, raw, per switch
+// KNOWN BIASES, stated where the data will be read (all UNDERCOUNT or
+// understate; none fabricate — the safe direction for a counter that will one
+// day argue for a faster cadence):
+//   · a context row still in flight (sensed before this write's ts, landed on
+//     disk after the snapshot read) is missed by this run and excluded by the
+//     next one's left edge — edge rows near a run boundary undercount
+//   · afferent.jsonl rolls monthly (thalamus.mjs) — rows archived unseen are
+//     missed, and the roll-boundary pair reads as an appearance, not a switch
+//   · this_write_ts binds at run() START, so lag omits the distill call's own
+//     seconds — the true switch-to-READABLE latency is slightly larger
+// Journal: distiller_latency.jsonl (gitignored — app names + his activity
+// timing, same class as presence_log). THIS FILE is its sole writer, and the
+// one appendFileSync sits inside run() — no selftest path can reach it (that
+// static fact is the hermeticity proof organism_test.mjs records for it).
+// A quiet window measures nothing: rows land only when >= 1 switch was caught.
+// The very first run (no previous working_set ts) measures nothing at all —
+// an unbounded since-forever window would be a fake lag, not a measurement.
+function detectSwitches(rows) {
+  const amb = (rows || []).filter(a => a && AMBIENT.includes(a.modality) && a.ts);
+  const out = [];
+  for (let i = 1; i < amb.length; i++) {
+    const from = String(amb[i - 1].app || ""), to = String(amb[i].app || "");
+    if (to && to !== from) out.push({ ts: amb[i].ts, app: to, from });
+  }
+  return out;
+}
+// the second witness — the window may never start before the journal's own
+// last counted edge (exactly-once under racing runs + backward clock steps).
+// ISO-8601 strings compare lexicographically = chronologically.
+function latencyLeftEdge(prevTs, lastRowTs) {
+  const c = [prevTs, lastRowTs].filter(Boolean).map(String);
+  return c.length ? c.sort()[c.length - 1] : null;
+}
+function measureLatency(prevTs, nowTs, switches) {
+  if (!prevTs) return null;                              // first run ever: no window, nothing measured
+  const p = new Date(prevTs).getTime(), n = new Date(nowTs).getTime();
+  if (!Number.isFinite(p) || !Number.isFinite(n)) return null;
+  const caught = (switches || [])
+    .filter(s => { const t = new Date(s.ts).getTime(); return Number.isFinite(t) && t > p && t <= n; })
+    .map(s => ({ ts: s.ts, app: s.app, lag_ms: n - new Date(s.ts).getTime() }));
+  if (!caught.length) return { n: 0 };                   // quiet window: measured, empty — no row
+  const lags = caught.map(c => c.lag_ms);
+  return {
+    n: caught.length,
+    min_ms: Math.min(...lags),
+    max_ms: Math.max(...lags),
+    mean_ms: Math.round(lags.reduce((a, b) => a + b, 0) / lags.length),
+    switches: caught,
+  };
+}
+// the read side — counts + names, never a verdict. The cadence row in
+// limits.mjs stays "15min / guessed" until the captain reads this and rules.
+function latencyReport(file = LATENCY_LOG) {
+  const rows = readLines(file);
+  const all = rows.flatMap(r => (r.switches || []).map(s => s.lag_ms)).filter(Number.isFinite).sort((a, b) => a - b);
+  return {
+    runs: rows.length, switches: all.length,
+    min_ms: all.length ? all[0] : null,
+    median_ms: all.length ? all[(all.length - 1) >> 1] : null,   // lower median — a counter, not a statistic dressed up
+    mean_ms: all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : null,
+    max_ms: all.length ? all[all.length - 1] : null,
+    span: rows.length ? `${String(rows[0].ts).slice(0, 10)} → ${String(rows[rows.length - 1].ts).slice(0, 10)}` : null,
+  };
+}
+
 async function run(now = new Date()) {
-  const set = await distill({});
+  // G16: the PREVIOUS write's ts is the left edge of this run's latency
+  // window — read it before the overwrite below destroys it.
+  const prevWS = readJson(WORKING_SET);
+  // one parse of afferent.jsonl serves the his-words stream, the ambient
+  // current-window line, AND the G16 switch detection.
+  const afferent = readLines(join(STATE_DIR, "afferent.jsonl"));
+  const set = await distill({ afferent });
   const out = { ts: now.toISOString(), ...set, summary: summaryLine(set) };
   writeAtomic(WORKING_SET, out);
   const h = set.have_need || {};
@@ -328,6 +424,17 @@ async function run(now = new Date()) {
     (h.captions_rejected ? ` (${h.captions_rejected} window caption(s) rejected)` : "") +
     ` · slots from ${Object.entries(set.slot_sources || {}).map(([k, v]) => k.split("_")[0] + ":" + v).join(", ")}` +
     (set.current_window ? ` · he is in: ${set.current_window}` : ""));
+  // G16 — which context-switches did THIS write catch first, and how late?
+  // Append-only journal; a row lands only when something was actually measured.
+  // The left edge is prev write ⊔ the journal's own last row (second witness —
+  // see the block comment above), and the row records the edge ACTUALLY used.
+  const lastRow = readLines(LATENCY_LOG).slice(-1)[0];
+  const leftEdge = latencyLeftEdge(prevWS && prevWS.ts, lastRow && lastRow.ts);
+  const m = measureLatency(leftEdge, out.ts, detectSwitches(afferent));
+  if (m && m.n) {
+    try { appendFileSync(LATENCY_LOG, JSON.stringify({ ts: out.ts, prev_ts: leftEdge, ...m }) + "\n"); } catch { /* the counter must never block the working set */ }
+    console.log(`  G16 latency: caught ${m.n} switch(es) — mean ${Math.round(m.mean_ms / 1000)}s · max ${Math.round(m.max_ms / 1000)}s after the switch`);
+  }
   return out;
 }
 
@@ -467,6 +574,52 @@ async function selftest() {
 
   assert("SUMMARY — reads as one glanceable line", summaryLine(set).includes("on:") && summaryLine(set).includes("open:"));
 
+  // ------------------------------------------------------------------------
+  // LADDER G16 sliver (10 Aug 2026) — THE SWITCH-TO-READ LATENCY COUNTER.
+  // Pure functions on fixtures only: the one append lives in run(), which this
+  // selftest never calls — that static fact is the hermeticity proof
+  // organism_test.mjs records for distiller_latency.jsonl.
+  // ------------------------------------------------------------------------
+  {
+    const amb = [
+      { ts: "2026-08-10T10:00:00.000Z", modality: "context", app: "chrome.exe", title: "Docs" },
+      { ts: "2026-08-10T10:01:00.000Z", modality: "context", app: "chrome.exe", title: "Gmail" },       // title churn, same app
+      { ts: "2026-08-10T10:04:00.000Z", modality: "context", app: "claude.exe", title: "Claude" },      // SWITCH
+      { ts: "2026-08-10T10:06:00.000Z", modality: "code", source: "claude-code", text: "not ambient" }, // not the ambient stream
+      { ts: "2026-08-10T10:09:00.000Z", modality: "context", app: "WindowsTerminal.exe", title: "T" },  // SWITCH
+    ];
+    const sw = detectSwitches(amb);
+    assert("G16 — a switch is the ambient app CHANGING; title churn and non-ambient rows are not switches",
+      sw.length === 2 && sw[0].app === "claude.exe" && sw[1].app === "WindowsTerminal.exe");
+    assert("G16 — the first-ever ambient row is an appearance, never a switch", detectSwitches([amb[0]]).length === 0);
+    const m = measureLatency("2026-08-10T10:02:00.000Z", "2026-08-10T10:15:00.000Z", sw);
+    assert("G16 — lag is write_ts minus switch_ts, raw per switch",
+      m && m.n === 2 && m.switches[0].lag_ms === 11 * 60000 && m.switches[1].lag_ms === 6 * 60000);
+    assert("G16 — aggregates are computed, never guessed (min/mean/max over the caught lags)",
+      m.min_ms === 6 * 60000 && m.max_ms === 11 * 60000 && m.mean_ms === Math.round((11 + 6) * 60000 / 2));
+    assert("G16 — a switch BEFORE the previous write belongs to that earlier write, never double-counted",
+      measureLatency("2026-08-10T10:05:00.000Z", "2026-08-10T10:15:00.000Z", sw).n === 1);
+    assert("G16 — a switch after this write (clock skew / future row) is not caught by it",
+      measureLatency("2026-08-10T10:02:00.000Z", "2026-08-10T10:05:00.000Z", sw).n === 1);
+    assert("G16 — first run ever (no previous write) measures NOTHING — null, not a fake since-forever lag",
+      measureLatency(null, "2026-08-10T10:15:00.000Z", sw) === null);
+    assert("G16 — a quiet window is {n:0}: measured-and-empty, distinct from unmeasured; run() appends no row for it",
+      measureLatency("2026-08-10T10:10:00.000Z", "2026-08-10T10:12:00.000Z", sw).n === 0);
+    assert("G16 — the report on an absent journal answers honestly: zero counts, null lags, no verdict anywhere",
+      (() => { const r = latencyReport(join("no-dir", "nothing.jsonl")); return r.runs === 0 && r.switches === 0 && r.median_ms === null && !("verdict" in r) && !("threshold" in r); })());
+    // the second witness (refuter pass, 10 Aug 2026): a racing concurrent run
+    // and a backward clock step both try to re-open an already-counted window —
+    // the journal's last row clips the left edge and exactly-once holds.
+    assert("G16 — the journal's last row clips the window: a racing run can never re-count a switch",
+      latencyLeftEdge("2026-08-10T10:02:00.000Z", "2026-08-10T10:08:00.000Z") === "2026-08-10T10:08:00.000Z" &&
+      measureLatency(latencyLeftEdge("2026-08-10T10:02:00.000Z", "2026-08-10T10:08:00.000Z"), "2026-08-10T10:15:00.000Z", sw).n === 1);
+    assert("G16 — a backward clock step (prev write ts regressed below the journal edge) is disarmed the same way",
+      latencyLeftEdge("2026-08-10T09:00:00.000Z", "2026-08-10T10:10:00.000Z") === "2026-08-10T10:10:00.000Z" &&
+      measureLatency(latencyLeftEdge("2026-08-10T09:00:00.000Z", "2026-08-10T10:10:00.000Z"), "2026-08-10T10:15:00.000Z", sw).n === 0);
+    assert("G16 — no previous write AND no journal → still nothing measured (never a since-forever lag)",
+      latencyLeftEdge(null, undefined) === null && measureLatency(latencyLeftEdge(null, undefined), "2026-08-10T10:15:00.000Z", sw) === null);
+  }
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -475,9 +628,20 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  if (mode === "latency") {
+    // G16 — the measurement window, read out loud. Counts + names only; the
+    // cadence decision itself stays HIS, made on this data when it has aged.
+    const r = latencyReport();
+    if (!r.runs) { console.log("distiller latency: nothing measured yet — the window opens on the first run that catches a context-switch."); return; }
+    console.log("distiller switch-to-read latency — MEASUREMENT WINDOW (counter only; the 15-min cadence stays guessed until this data rules):");
+    console.log(`  ${r.runs} run(s) recorded · ${r.switches} switch(es) caught · ${r.span}`);
+    if (r.switches) console.log(`  lag: min ${Math.round(r.min_ms / 1000)}s · median ${Math.round(r.median_ms / 1000)}s · mean ${Math.round(r.mean_ms / 1000)}s · max ${Math.round(r.max_ms / 1000)}s`);
+    return;
+  }
   await run();
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { distill, deterministicSet, parseSet, merge, mergeLegacy, mergeV2Legacy, recentStream, currentWindow,
-         hisWords, looksLikeWindowCaption, buildPrompt, summaryLine, run, INTERACTIVE, INTERACTIVE_LEGACY, AMBIENT };
+         hisWords, looksLikeWindowCaption, buildPrompt, summaryLine, run, INTERACTIVE, INTERACTIVE_LEGACY, AMBIENT,
+         detectSwitches, measureLatency, latencyReport, latencyLeftEdge };

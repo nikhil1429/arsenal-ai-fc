@@ -280,3 +280,8 @@ dressing-room/state/brain_outcomes.jsonl
 dressing-room/state/nikhil_model.json
 dressing-room/state/nikhil_model_grid.jsonl
 dressing-room/state/nikhil_model_slip.jsonl
+# LADDER G16 sliver (10 Aug 2026): the distiller's switch-to-read latency
+# journal — app names + his activity timing, same class as presence_log /
+# context_state. The repo is PUBLIC; the counter's numbers are read live via
+# `node scripts/distiller.mjs latency`, never from the remote.
+dressing-room/state/distiller_latency.jsonl
