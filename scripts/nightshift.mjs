@@ -1183,6 +1183,18 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
+  if (mode === "gem-stamp") {
+    // D9 (9 Aug 2026, launch worklist): gem_sync_stamp.json finally gets an OWNER.
+    // The gem-sync skill used to write it via a raw `node -e` — a self-documented
+    // ownerless state write awaiting a ruling. The Gem's cartridges are this
+    // organ's produce, so the sync stamp is this organ's record. physio reads it.
+    const p = join(STATE_DIR, "gem_sync_stamp.json");
+    const tmp = `${p}.tmp${process.pid}`;
+    writeFileSync(tmp, JSON.stringify({ at: new Date().toISOString() }, null, 1));
+    renameSync(tmp, p);
+    console.log(`nightshift: gem sync stamped — ${p}`);
+    return;
+  }
   if (mode === "status") {
     const s = readJson(join(OUT_DIR, `shift_${localDate()}.json`));
     console.log(s ? `nightshift: last shift ${s.date} — ${JSON.stringify(s.jobs)}` : "nightshift: no shift filed today");

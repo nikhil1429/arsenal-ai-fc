@@ -233,6 +233,20 @@ function getContext(deps = {}) {
     const shown = pend.slice(-5).map(p => `  · "${clip(p.text, 160)}"   (staged ${String(p.ts || "").slice(0, 10) || "?"})`);
     parts.push(`PENDING IDENTITY FACTS — ${pend.length} staged, awaiting HIS word (Law 4: nothing is canon until he says so):\n${shown.join("\n")}\n  → ask him to confirm or drop each; only he promotes it.`);
   }
+  // D11 (9 Aug 2026, launch worklist): open _ack tickets were invisible — the retry
+  // lane existed (`resync`) but nothing SAID there was something to retry, so a note
+  // written while the thalamus was down waited forever. Same open-set derivation as
+  // resyncScribeLog; the one door every session opens now names the backlog.
+  try {
+    const srows = deps.scribe !== undefined ? deps.scribe : readLines(SCRIBE_LOG);
+    const openAcks = new Set();
+    for (const a of srows) {
+      if (!a || a.kind !== "_ack" || !a.ref) continue;
+      if (a.posted === true) openAcks.delete(a.ref); else openAcks.add(a.ref);
+    }
+    const waiting = srows.filter(r => r && r.text && openAcks.has(r.ts)).length;
+    if (waiting) parts.push(`UNDELIVERED MOMENTS — ${waiting} note(s) never reached the live bus (thalamus was down when they were written). They are durable here, but the working memory has not seen them: run \`node scripts/mcp-memory.mjs resync\`.`);
+  } catch { /* surfacing must never break the door */ }
   // #14 — THE TEACHING CARD. Framed exactly as learnstate.mjs:177-181 frames it
   // in the SessionStart brief, so a session that arrives through either door
   // gets the same rules in the same words. REPAIR TOWARD SILENCE: a missing

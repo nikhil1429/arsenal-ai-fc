@@ -1,19 +1,30 @@
 ' ============================================================================
-' START_DAEMONS.vbs - reboot persistence for the organism's background brain.
-' A copy of this lives in the user's Startup folder, so on EVERY logon it
-' silently (re)starts the three always-on daemons. Each is a singleton via a
-' localhost port lock (:4111 turnstile, :4112 cortex, :4113 thalamus), so if the
-' daily scheduled task already started one, this second start just stands down.
-' Fixes the 18-Jul finding: the daemons had a DAILY trigger only, so a mid-day
-' reboot left the deep brain (cortex) and capture (turnstile) dead until the
-' next day. The Dugout (:4114) is NOT started here - it starts when he opens
-' THE GAFFER (its launcher does kill-then-start so it always serves fresh code).
+' START_DAEMONS.vbs - manual daemon (re)start for the organism's background brain.
+' STATUS (9 Aug 2026, launch audit): the Startup-folder copy of this file was
+' SUPERSEDED by ArsenalFC-Brain.bat (audit #108) - the .bat is the live logon
+' persistence and also starts the brain pacemaker; the old Startup copy is
+' parked as ArsenalFC-Daemons.vbs.superseded-audit108. This file remains the
+' MANUAL restart verb ("wscript setup\START_DAEMONS.vbs" - the watchman's
+' daemon-down evidence line points here), so it must behave exactly like the
+' .bat: every organ through hidden_run.vbs, because the bare `cmd /c node`
+' form is a GAG (finding #10 - stdout AND stderr die on a closed handle).
+' Until 9 Aug this file still used the bare form AND its header claimed the
+' Startup copy was alive - both false; both fixed here.
+' Singletons via port locks (:4111 turnstile, :4112 cortex, :4113 thalamus,
+' :4116 brain pacer), so a double start harmlessly stands down.
+' The Dugout (:4114) is NOT started here - its launcher kill-then-starts.
 ' ============================================================================
 Dim sh, repo
 Set sh = CreateObject("WScript.Shell")
 repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 sh.CurrentDirectory = repo
-' window style 0 = hidden, False = don't wait; the daemons run forever
-sh.Run "cmd /c node scripts\thalamus.mjs", 0, False
-sh.Run "cmd /c node scripts\cortex.mjs", 0, False
-sh.Run "cmd /c node scripts\turnstile.mjs", 0, False
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\thalamus.mjs", 0, False
+WScript.Sleep 3000
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\cortex.mjs", 0, False
+WScript.Sleep 2000
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\turnstile.mjs", 0, False
+WScript.Sleep 2000
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\brain.mjs daemon", 0, False
+WScript.Sleep 2000
+' D7 (9 Aug 2026): the context bridge is the 5th resident daemon (context.mjs #22).
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\context.mjs daemon", 0, False

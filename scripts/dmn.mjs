@@ -441,7 +441,16 @@ async function drainBg(deps = {}) {
   // #8 — the drain had NO limit handling at all: a refusing engine burned all
   // BG_DRAIN_CAP jobs one after another to be told the same thing six times.
   const engine = { down: null, error: null };
-  const post = deps.post || (async (body) => { const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return r.json(); });
+  // D12 (9 Aug 2026): the one thalamus POST in this cluster with no abort — a hung
+  // socket held the whole drain. 3s mirrors the family pattern (hook uses 250ms;
+  // this lane is background so it can afford more, but never forever).
+  const post = deps.post || (async (body) => {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 3000);
+    try {
+      const r = await fetch("http://127.0.0.1:4113/bg-drained", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal });
+      return r.json();
+    } finally { clearTimeout(t); }
+  });
   const batch = open.slice(0, BG_DRAIN_CAP);
   let drained = 0;
   for (let i = 0; i < batch.length; i++) {

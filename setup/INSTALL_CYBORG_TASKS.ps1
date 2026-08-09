@@ -81,6 +81,11 @@ Mk "ArsenalFC-ConceptGraph"   "cortex.mjs consolidate"       @("/SC","DAILY","/S
 # Mk "ArsenalFC-SelfKnowledge"  "selfknowledge.mjs"          @("/SC","WEEKLY","/D","SUN","/ST","04:00")   # frozen, kept as history
 # the stall sensor fits itself to HIS baselines, weekly
 Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/D","SUN","/ST","03:30")
+# D4 (9 Aug 2026, launch worklist) - the constitution's unconditional reminder promise
+# (dugout.mjs :775) finally gets its out-of-process caller, and the shadow sampler stops
+# depending on the Dugout window being open. Both lanes existed since #52/#53; no task ran them.
+Mk "ArsenalFC-DugoutReminders" "dugout.mjs fire-reminders"    @("/SC","MINUTE","/MO","30","/ST","08:00")
+Mk "ArsenalFC-ShadowDetect"    "dugout.mjs shadow-detect"     @("/SC","HOURLY","/ST","09:05")
 
 # POWER CONDITIONS (the E2E scar): clear battery kill-flags on every task
 Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {

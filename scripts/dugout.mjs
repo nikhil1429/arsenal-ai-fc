@@ -2852,7 +2852,7 @@ function adoptResume(){if(CFG&&CFG.resume&&CFG.resume.handle){resumeHandle=CFG.r
 function postHandle(h){const n=Date.now();if(h&&n-lastHandlePost<5000)return;lastHandlePost=n;
  fetch('/handle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h,key_index:keyIdx,model:CFG?CFG.model:'',mode:MODE})}).catch(()=>{})}
 function dropResume(why){if(resumeHandle||resumingWith)log('· resume handle dropped ('+why+') — fresh line + rehydrate');resumeHandle=null;resumingWith=null;postHandle(null)}
-const _m=new URLSearchParams(location.search).get('mode');const MODE=['scrimmage','brief-club','brief-brain','signing'].includes(_m)?_m:'gaffer';
+const _m=new URLSearchParams(location.search).get('mode');const MODE=['scrimmage','brief-club','brief-brain','signing','cinematic-tour'].includes(_m)?_m:'gaffer';
 if(MODE==='scrimmage')document.title='THE DUGOUT — SCRIMMAGE';if(MODE.startsWith('brief-'))document.title='THE DUGOUT — BRIEFING';
 const st=t=>document.getElementById('st').textContent=t;
 const diag=t=>document.getElementById('diag').textContent=t;

@@ -161,8 +161,10 @@ function edgeSplit(ls, registry, dossier, cfg) {
   return { learn, ratify };
 }
 
-// WAR-ROOM (compressed-season protocol): the captain logs interview_dates in
-// season.json; inside the taper window the whole body shifts — short sharp
+// WAR-ROOM (compressed-season protocol): interview_dates land in season.json via
+// ITS OWNER — `node scripts/postmatch.mjs interview --date YYYY-MM-DD` (D14,
+// 9 Aug 2026: this comment used to tell the captain to hand-log an owned file,
+// against the owners-only law). Inside the taper window the whole body shifts — short sharp
 // mocks, DEFEND/NOVEL polish, no first-exposure, sleep-first. CONSTITUTIONAL:
 // the flag carries NO date and NO days-remaining — the body prepares; it never
 // counts down at him.

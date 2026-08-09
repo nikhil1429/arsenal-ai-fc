@@ -1319,6 +1319,7 @@ async function main() {
   // O(recent) by construction; if that invariant ever breaks, this is the first
   // thing to re-measure.
   if (mode === "recall-hint") {
+    if (process.env.ARSENAL_ORGAN === "1") return;   // D1: headless organs get no memory theatre
     const explain = process.argv.includes("--explain");
     const argText = process.argv.slice(3).filter(a => a !== "--explain").join(" ");
     // A Claude Code UserPromptSubmit hook delivers its payload as JSON on

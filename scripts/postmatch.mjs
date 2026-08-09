@@ -343,6 +343,22 @@ async function main() {
     console.log(`postmatch: SEASON.md regenerated → ${SEASON_MD}`);
     return;
   }
+  if (mode === "interview") {
+    // D14 (9 Aug 2026): the WAR-ROOM's missing lawful writer. scout.mjs reads
+    // season.interview_dates but season.json's owner (this file) had no verb to
+    // write them — the comment told the captain to hand-edit, against the
+    // owners-only law. His word arrives as a date; this owner records it.
+    const di = process.argv.indexOf("--date");
+    const d = di > -1 ? String(process.argv[di + 1] || "") : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { console.error("postmatch: interview --date YYYY-MM-DD (add) · add --drop to remove that date"); process.exit(1); }
+    const s = readJson(SEASON) || {};
+    const dates = new Set(Array.isArray(s.interview_dates) ? s.interview_dates : []);
+    if (process.argv.includes("--drop")) dates.delete(d); else dates.add(d);
+    s.interview_dates = [...dates].sort();
+    writeAtomic(SEASON, s);
+    console.log(`postmatch: interview_dates = [${s.interview_dates.join(", ")}] — scout's war-room reads this (taper window, no countdown at him)`);
+    return;
+  }
   if (mode === "route") {
     // routing WITHOUT re-running the evening ledger (the Dugout's spoken gate
     // lands here; season/notebook untouched — no double matchday, ever)

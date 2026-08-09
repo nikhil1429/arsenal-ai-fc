@@ -13,7 +13,9 @@
 //        briefed — is the membrane at its thinnest.
 // LAWS:  Spoken register ≤3 sentences per turn (enforced in prompt AND
 //        clipped in code). Honest frame; no hype; no countdowns; cracks are
-//        data. Usage logs through brain.mjs's ledger writer (one window
+//        data. Usage APPENDS DIRECTLY to brain_ledger.jsonl — a documented
+//        shared append lane (brain_ledger has multiple appenders by design);
+//        this header used to claim routing through brain.mjs's writer (one window
 //        accounting). Exchanges transcript → brain_out/talk/<date>.md.
 // MODES: node scripts/talk.mjs [--robot] [--opus] · selftest
 //        In the loop:  just talk (Win+H) · "bye" ends · "sheet" reads the sheet

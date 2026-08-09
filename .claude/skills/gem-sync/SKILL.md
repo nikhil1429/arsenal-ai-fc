@@ -21,20 +21,14 @@ description: Refresh THE EXAMINER Gem on the captain's Gemini Pro account with t
 5. Close with one line: what changed in the cartridge (new probes/threads count).
 
 ## THE STAMP (the machine holds the calendar)
-After a successful sync, write the stamp so physio stops reminding until it is due again:
+After a successful sync, stamp it through the file's OWNER so physio stops reminding until it is due again:
 ```
-node -e "require('fs').writeFileSync('dressing-room/state/gem_sync_stamp.json', JSON.stringify({ at: new Date().toISOString() }))"
+node scripts/nightshift.mjs gem-stamp
 ```
 
-> 🚩 **KNOWN LAW-BREAK — this write has no owner (audit #108, 6 Aug 2026, UNRESOLVED).**
-> The one-liner above is a **raw hand-write into `dressing-room/state/`**, which CLAUDE.md's
-> single-writer law forbids outright: *"Never hand-edit a state file"*, writes go through
-> owners only. Every other state file has a named owning script; `gem_sync_stamp.json` has
-> **none** — no `.mjs` in `scripts/` writes it, so the skill writes it itself and the law is
-> broken every single sync. It is flagged here rather than quietly fixed because the fix is a
-> real decision, not an edit: either an owner organ takes the file (physio is the reader, so
-> it is the obvious candidate) or the stamp moves into a file that already has one. Inventing
-> an owner inside this skill would just be a second unowned writer. **Until the captain rules,
-> run the line knowingly — and know it is a state write with no owning script behind it.**
-> *(Verified 6 Aug 2026: the only other reference to this file anywhere in the repo is
-> `physio.mjs` (the gem_sync_stamp read — line-ref dropped 9 Aug, it had drifted :672→:724), which READS it. Nothing writes it but this skill.)*
+> ✅ **LAW-BREAK RESOLVED (D9, 9 Aug 2026 — his "build all the things" word).** From audit #108
+> until today this section carried a raw `node -e` hand-write into `dressing-room/state/` —
+> a self-documented ownerless write, flagged UNRESOLVED because giving the file an owner was
+> a real decision. The decision landed: **nightshift.mjs owns `gem_sync_stamp.json`** (the
+> Gem's cartridges are its produce, so the sync record is its record; atomic tmp+rename like
+> every owner). `physio.mjs` stays the reader. Never write this file any other way.

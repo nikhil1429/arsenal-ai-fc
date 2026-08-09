@@ -84,6 +84,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, sta
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
+import net from "node:net";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -482,6 +483,42 @@ function probeOutwork() {
   }
 }
 
+// D3 (9 Aug 2026, launch worklist): reconcile.mjs — the produce-and-consume
+// instrument the 2 Aug audit said would have caught most of that audit — was
+// itself unproduced-for: no schedule, no hook, no skill ever ran it, and its
+// reconcile.json had zero readers. Same ride as the outwork audit ("one
+// schedule, two layers, zero new tasks"): the nightly watchman runs it and
+// surfaces its BLEEDS as INFO findings (reconcile's own exit-0 law means the
+// verdict rides the JSON, never the exit code).
+function probeReconcile() {
+  try {
+    const r = spawnSync(process.execPath, [join(__dirname, "reconcile.mjs"), "json"],
+      { timeout: 60000, encoding: "utf8" });
+    if (r.error || r.status !== 0) {
+      return [{ id: "reconcile-unrunnable", level: "WARN", finding: "the produce-and-consume reconciliation could not run", evidence: String(r.error || `exit ${r.status}: ${String(r.stderr || "").slice(0, 200)}`) }];
+    }
+    const j = JSON.parse(String(r.stdout || "{}").trim() || "{}");
+    // live shape (verified 9 Aug): lanes_bleeding count + lanes[] rows with .bleeds[],
+    // plus orphans[] for state files nobody reads.
+    const rows = [];
+    for (const lane of (Array.isArray(j.lanes) ? j.lanes : [])) {
+      for (const b of (Array.isArray(lane.bleeds) ? lane.bleeds : [])) {
+        rows.push(`${lane.job || lane.out || "?"}: ${typeof b === "string" ? b : JSON.stringify(b).slice(0, 120)}`);
+      }
+    }
+    for (const o of (Array.isArray(j.orphans) ? j.orphans : [])) {
+      rows.push(`orphan state file (no reader): ${typeof o === "string" ? o : (o.file || JSON.stringify(o).slice(0, 100))}`);
+    }
+    return rows.slice(0, 5).map((line, i) => ({
+      id: `reconcile-bleed-${i + 1}`, level: "INFO",
+      finding: line,
+      evidence: "reconcile.mjs json — full report in dressing-room/state/reconcile.json",
+    })).concat(rows.length > 5 ? [{ id: "reconcile-bleed-more", level: "INFO", finding: `${rows.length - 5} more reconcile bleed(s) — read reconcile.json`, evidence: "cap keeps the night readable; nothing is dropped from the file" }] : []);
+  } catch (e) {
+    return [{ id: "reconcile-unrunnable", level: "WARN", finding: "the produce-and-consume reconciliation could not run", evidence: String(e) }];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TIER 2 — escalation, per his §7.1/§7.2 rulings. Fires ONLY on non-INFO
 // findings, at most once per local day, detached so the nightly task never
@@ -592,7 +629,41 @@ export function briefLines(lastJson, today, yesterday) {
 }
 
 // ---------------------------------------------------------------------------
-function run(argv) {
+// D8 (9 Aug 2026, launch worklist): the daemons finally get a night watcher.
+// Turnstile (:4111) had NO port watcher at all (AUDIT_NOTES' not-done ledger) —
+// only the 09:15 conductor restart, so a mid-day death stayed invisible until
+// the next morning. Same probe shape as conductor.portOpen; a closed port on a
+// daemon that should be 24/7 is a WARN with the restart path in the evidence.
+const DAEMON_PORTS = [
+  { port: 4111, name: "turnstile" },
+  { port: 4112, name: "cortex" },
+  { port: 4113, name: "thalamus" },
+];
+function probePort(port, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; try { sock.destroy(); } catch {} resolve(v); } };
+    sock.setTimeout(timeoutMs);
+    sock.once("connect", () => finish(true));
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+    try { sock.connect(port, "127.0.0.1"); } catch { finish(false); }
+  });
+}
+async function probeDaemons() {
+  const out = [];
+  for (const d of DAEMON_PORTS) {
+    if (!(await probePort(d.port))) {
+      out.push({ id: `daemon-down-${d.name}`, level: "WARN",
+        finding: `${d.name} (:${d.port}) is not answering — the capture/memory nerve is degraded until it restarts`,
+        evidence: `TCP connect to 127.0.0.1:${d.port} failed/timed out · restart: wscript setup/START_DAEMONS.vbs (or the 09:15 conductor relaunches it)` });
+    }
+  }
+  return out;
+}
+
+async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
   const now = new Date();
@@ -602,6 +673,8 @@ function run(argv) {
   const yday = localDate(new Date(now.getTime() - 24 * 3.6e6));
   findings.push(...probeTasks(w.today, yday));
   findings.push(...probeOutwork());
+  findings.push(...await probeDaemons());
+  findings.push(...probeReconcile());
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);

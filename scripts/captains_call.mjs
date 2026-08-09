@@ -100,7 +100,7 @@ function loadState() {
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
-export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null } = {}, now = new Date()) {
+export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null, tiers = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -203,6 +203,33 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     }
   }
 
+  // 3b. TRUST-TIER RATIFICATION (D2, 9 Aug 2026) — scorer.mjs computes when a
+  // market qualifies for no-look and sets pending_ratification:true, and its own
+  // header says "the captain ratifies once, out loud" — but NOTHING ever brought
+  // the ask to him, so the door (`scorer.mjs ratify <type>`) could never be
+  // walked through. One card per pending tier; haan = this organ walks the door.
+  if (tiers && Array.isArray(tiers.tiers)) {
+    for (const t of tiers.tiers.filter((x) => x && x.pending_ratification === true)) {
+      const key = `trust:ratify:${t.type}`;
+      if (byKey.has(key)) continue;
+      s.cards.push({
+        id: `c${s.next_id++}`, key, source: "trust_tiers.ratify",
+        line: `Market "${t.type}" ${t.n} din se ${Math.round((t.hit_rate || 0) * 100)}% sahi — ab NO-LOOK (bina jhaanke) chale? Aapka word chahiye.`,
+        dispatch: { kind: "ratify", type: t.type },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
+    }
+    // a tier that stopped pending (ratified elsewhere, or fell below the bar)
+    // takes its unanswered card with it.
+    const pending = new Set((tiers.tiers || []).filter((x) => x && x.pending_ratification === true).map((x) => `trust:ratify:${x.type}`));
+    for (const c of s.cards) {
+      if (c.source === "trust_tiers.ratify" && !c.retired_at && !c.answer && !pending.has(c.key)) {
+        c.retired_at = ts; c.resolution = "resolved-at-source (tier no longer pending)";
+      }
+    }
+  }
+
   // 4. benchmark regression (Ruling 5 edge) — one card per regression DAY;
   // the line carries the first regression verbatim, count of the rest beside it.
   if (bench && Array.isArray(bench.regressions) && bench.regressions.length && bench.date) {
@@ -273,6 +300,10 @@ export function applyAnswer(state, id, word, now = new Date()) {
     c.resolution = "haan — the session walks it now";
     return { state: s, action: { kind: "open", path: c.dispatch.path } };
   }
+  if (c.dispatch.kind === "ratify" && word === "haan") {
+    // D2: his word walks scorer's own door — the CLI layer executes it.
+    return { state: s, action: { kind: "ratify-dispatch", type: c.dispatch.type, cardId: c.id } };
+  }
   c.resolution = word === "haan" ? "haan — done on his word (no exec by design, v1)" : "na — retired";
   c.retired_at = ts;
   return { state: s, action: { kind: "done", resolution: c.resolution } };
@@ -324,7 +355,8 @@ function gatherSources() {
   // either file = no cards, never an error.
   const missions = readJson(join(STATE_DIR, "missions.json"));
   const bench = readJson(join(STATE_DIR, "benchmark.json"));
-  return { staged, marketFile, marketHonest, gate2, missions, bench };
+  const tiers = readJson(join(STATE_DIR, "trust_tiers.json"));   // D2: scorer owns it, this only reads
+  return { staged, marketFile, marketHonest, gate2, missions, bench, tiers };
 }
 
 function sync(now = new Date()) {
@@ -404,6 +436,19 @@ function main() {
       c.resolution = r.note; c.retired_at = now.toISOString();
       writeAtomic(CALL, state);
       console.log(`captains_call: ${id} ${word} → ${r.note}`);
+      return;
+    }
+    if (action.kind === "ratify-dispatch") {
+      try {
+        const out = execFileSync(process.execPath, [join(__dirname, "scorer.mjs"), "ratify", action.type], { encoding: "utf8" });
+        const c = state.cards.find((x) => x.id === id);
+        c.resolution = clip(out.trim() || `ratified ${action.type}`, 140); c.retired_at = now.toISOString();
+        writeAtomic(CALL, state);
+        console.log(`captains_call: ${id} haan → ${c.resolution}`);
+      } catch (e) {
+        console.error(`captains_call: ${id} haan NOT recorded — scorer ratify failed: ${clip(e.message, 100)} (card stays live)`);
+        process.exit(1);
+      }
       return;
     }
     writeAtomic(CALL, state);
@@ -521,6 +566,21 @@ function selftest() {
   const a3 = applyAnswer(s1, s1.cards.find((c) => c.key.startsWith("market:")).id, "haan", T0);
   assert("answer — haan on the market card hands the PATH to the session (Claude reads, captain listens)",
     a3.action.kind === "open" && /brain_out\/market\/2026-08-01\.md$/.test(a3.action.path));
+  {
+    // D2 (9 Aug) — trust-tier ratification lane: pending tier ⇒ ONE card whose haan
+    // dispatches scorer's own door; tier no longer pending ⇒ card resolves at source.
+    const TIERS = { tiers: [{ type: "first_focus_by_0930", n: 24, hit_rate: 0.92, no_look: false, pending_ratification: true }] };
+    const st = deriveCards(blank(), { tiers: TIERS }, T0);
+    assert("D2 — a pending_ratification tier mints exactly one ratify card",
+      st.cards.length === 1 && st.cards[0].dispatch.kind === "ratify" && st.cards[0].dispatch.type === "first_focus_by_0930"
+      && deriveCards(st, { tiers: TIERS }, T0).cards.length === 1);
+    const rat = applyAnswer(st, st.cards[0].id, "haan", T0);
+    assert("D2 — haan on a ratify card hands the scorer dispatch to the CLI layer",
+      rat.action.kind === "ratify-dispatch" && rat.action.type === "first_focus_by_0930");
+    const gone = deriveCards(st, { tiers: { tiers: [{ type: "first_focus_by_0930", pending_ratification: false }] } }, T0);
+    assert("D2 — a tier that stopped pending takes its unanswered card with it",
+      gone.cards[0].retired_at && /resolved-at-source/.test(gone.cards[0].resolution));
+  }
   assert("answer — a settled card refuses a second word",
     applyAnswer(a2.state, a2.state.cards[0].id, "na", T0).action.kind === "error");
   assert("answer — an unknown id is an error, never a silent no-op",

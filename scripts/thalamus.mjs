@@ -1922,6 +1922,22 @@ async function main() {
   // #10 — console.log alone went to a closed handle under hidden_run.vbs. Both,
   // always: the console for a foreground run, the file for the cloak.
   const log = (m) => { console.log(m); fileLog(cfg, m); };
+  // D10 (9 Aug 2026, launch worklist): afferent.jsonl had no rotation owner while
+  // distiller whole-file-parses it every 15 minutes. Same monthly-roll shape as
+  // presence_log: at daemon boot, if the file's FIRST row belongs to a previous
+  // month, the whole file renames to afferent.<that-month>.jsonl and the current
+  // month starts fresh. This organ is the file's single writer, so the roll is its.
+  try {
+    if (existsSync(AFFERENT)) {
+      const first = readLines(AFFERENT)[0];
+      const m = String((first && first.ts) || "").slice(0, 7);
+      const cur = localDate().slice(0, 7);
+      if (/^\d{4}-\d{2}$/.test(m) && m !== cur) {
+        renameSync(AFFERENT, join(STATE_DIR, `afferent.${m}.jsonl`));
+        log(`thalamus: rolled afferent.jsonl → afferent.${m}.jsonl (monthly roll, D10)`);
+      }
+    }
+  } catch { /* a failed roll never blocks the nerve */ }
   const nucleus = createNucleus(cfg, { log });
   // boot re-seed: yesterday's tail keeps NOV/HAB honest across restarts
   for (const row of readLines(AFFERENT).slice(-500)) {

@@ -179,6 +179,37 @@ function tunnelRead(windowEvents, buckets, cfg, now, prevSameDay) {
   };
 }
 
+// D5 (9 Aug 2026, launch worklist): THE MORNING INSTRUMENT scorer.mjs has waited
+// for since the evening-tunnel proxy was frozen — its own comment: "no morning
+// instrument has ever stamped first_focus_at, so this market is DARK" (five
+// fabricated MISSes came from the proxy before the freeze). This is that stamp.
+// NO NEW NUMBERS: the block length is the market's own session_min_minutes
+// (scorer_config.json, committed), and the run-break unit is one minute — the
+// timeaudit layer's own unit, not a tuned threshold. A stamp, once made for a
+// date, never moves (first means FIRST). scorer.mjs resolves the market from
+// pitch_read's `first_focus_at` — additive field, sole writer stays this organ.
+export function firstFocusRead(windowEvents, buckets, prevStamp, sessionMinMinutes) {
+  if (prevStamp) return prevStamp;
+  if (!windowEvents || !windowEvents.length || !sessionMinMinutes) return null;
+  const evs = [...windowEvents].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  let runStart = null, runSec = 0, lastEnd = null;
+  for (const e of evs) {
+    const t0 = new Date(e.timestamp).getTime();
+    if (!Number.isFinite(t0)) continue;
+    const dur = e.duration || 0;
+    const productive = ["Learning", "Building"].includes(classifyApp(e.data && e.data.app, e.data && e.data.title, buckets));
+    const gapSec = lastEnd === null ? 0 : (t0 - lastEnd) / 1000;
+    if (!productive || gapSec > 60) { runStart = null; runSec = 0; }
+    if (productive) {
+      if (runStart === null) runStart = t0;
+      runSec += dur;
+      if (runSec >= sessionMinMinutes * 60) return new Date(runStart).toISOString();
+    }
+    lastEnd = t0 + dur * 1000;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // THE UNGATE (organism audit #106, 4 Aug 2026)
 // ---------------------------------------------------------------------------
@@ -339,6 +370,20 @@ async function selftest() {
 
   // TUNNEL
   const hop = (minAgo, app, durS = 30) => ({ timestamp: new Date(now.getTime() - minAgo * 60000).toISOString(), duration: durS, data: { app, title: "" } });
+
+  // D5 — FIRST FOCUS (the morning instrument scorer waited for)
+  {
+    const at = (h, m, app, durS) => ({ timestamp: new Date(2026, 6, 12, h, m, 0).toISOString(), duration: durS, data: { app, title: "" } });
+    const focus45 = [at(9, 0, "code", 1800), at(9, 30, "code", 900)];           // 45 contiguous productive min from 09:00
+    const stamped = firstFocusRead(focus45, buckets, null, 45);
+    assert("D5 — 45 contiguous productive minutes stamp first_focus_at at the RUN START", stamped === new Date(2026, 6, 12, 9, 0, 0).toISOString());
+    assert("D5 — a Meta interruption ≥1min breaks the run (no stamp from two 25-min halves)",
+      firstFocusRead([at(9, 0, "code", 1500), at(9, 25, "youtube", 120), at(9, 27, "code", 1500)], buckets, null, 45) === null);
+    assert("D5 — an existing stamp NEVER moves (first means first)",
+      firstFocusRead(focus45, buckets, "2026-07-12T08:00:00.000Z", 45) === "2026-07-12T08:00:00.000Z");
+    assert("D5 — no events / no session length ⇒ null, never a guess",
+      firstFocusRead(null, buckets, null, 45) === null && firstFocusRead(focus45, buckets, null, 0) === null);
+  }
   const wallEvents = Array.from({ length: 14 }, (_, i) => hop(i * 3, i % 2 ? "explorer" : "spotify"));
   const t1 = tunnelRead(wallEvents, buckets, cfg, now, null);
   assert("tunnel: many hops + no Learning = wall", t1.state === "wall" && t1.wall_minutes_today > 0);
@@ -522,6 +567,11 @@ async function main() {
     weak_foot: weakFootRead(history, repsByDate, cfg, today),     // today is watched, not judged (E2E audit 25 Jul 2026)
     now,
   });
+  // D5: the first_focus stamp — the market's own session length, read from the
+  // market's own config (scorer_config.json, read-only; scorer owns the market).
+  const scorerCfg = readJson(join(STATE_DIR, "scorer_config.json"));
+  const sessionMin = scorerCfg && typeof scorerCfg.session_min_minutes === "number" ? scorerCfg.session_min_minutes : 45;
+  read.first_focus_at = firstFocusRead(windowEvents, buckets, prev && prev.first_focus_at, sessionMin);
   writeAtomic(OUT, read);
   // one daily summary line in history — still exactly one per date, but now
   // refreshed on every run instead of frozen at the 00:00 run (E2E audit 25 Jul

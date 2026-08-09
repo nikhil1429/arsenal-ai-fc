@@ -7,7 +7,8 @@
           { "type": "command", "command": "node hooks/afferent-post.mjs" },
           { "type": "command", "command": "node scripts/forge_session.mjs contract" },
           { "type": "command", "command": "node scripts/teaching_contract.mjs print" },
-          { "type": "command", "command": "node scripts/teaching_audit.mjs hook" }
+          { "type": "command", "command": "node scripts/teaching_audit.mjs hook" },
+          { "type": "command", "command": "node scripts/hippocampus.mjs recall-hint" }
         ]
       }
     ],
