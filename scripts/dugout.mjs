@@ -442,9 +442,22 @@ function medianThinkMs(stamps) {
   const t = stamps.filter(s => s.kind === "captain_think" && Number.isFinite(s.ms)).slice(-50).map(s => s.ms).sort((a, b) => a - b);
   return t.length >= 5 ? { ms: t[Math.floor(t.length / 2)], n: t.length } : null;   // thin data stays silent
 }
-function composeCartridgeSection(cart, stamps = []) {
+// P2 (9 Aug 2026, his unleash word) — the night coach's read, VERBATIM to the
+// voice: same today-then-yesterday gate as the day cartridge (the producer
+// serves next_morning, so the newest file is named for the morning it teaches),
+// same explicit clip. The Gaffer speaks the coach's words, not a paraphrase —
+// that is why this is a loader, not another day_cartridge input.
+function loadNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out", "night_coach")) {
+  for (const d of [now, new Date(now.getTime() - 86400000)]) {
+    const p = join(dir, localDate(d) + ".md");
+    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1200) }; } catch { } }
+  }
+  return null;
+}
+function composeCartridgeSection(cart, stamps = [], night = null) {
   const parts = [];
   if (cart) parts.push(`THE DAY CARTRIDGE (compiled overnight by the slow brain · ${cart.date}):\n${cart.text}`);
+  if (night) parts.push(`THE NIGHT COACH (overnight misconception read · ${night.date} — speak from it when his doubt circles one of these, never as a lecture):\n${night.text}`);
   const med = medianThinkMs(stamps);
   if (med) parts.push(`THINK-TIME BASELINE (measured): his median think-time is ~${Math.round(med.ms / 100) / 10}s over ${med.n} answers — silence under that is him THINKING; do not jump in.`);
   return parts.length ? "\n\n" + parts.join("\n\n") : "";
@@ -958,7 +971,7 @@ THE TOUCHLINE EYES (he turns them on; you never ask): when frames arrive you are
 SPOKEN GATES (constitutional — his word IS the signature): FULL-TIME by voice: when he says full time / din khatam / done for today, run the 30-second ritual — result (HIT/MISS/PARTIAL/REST), one signal worth naming, then his KAL-line VERBATIM (tomorrow's pre-decided first move, his words not yours). Read the three back. Only his explicit go-word — "haan, chalao", "lock it" — calls run_postmatch. GENOME: read the mutation aloud (target, predicted effect, revert plan); only his explicit approval word calls approve_genome — hesitation is a no. Throw-ins route only on his word (route_throwins). NEVER call a gate tool from your own inference; no word, no write.
 
 INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or on-steroids; no calendar pressure, no countdowns, ever; a crack is data, never a verdict; no shame, no streak talk; rivalry only vs kal-wala-Nikhil; praise earned-and-specific or unsaid; medical territory = one sentence, "show your doctor." If the body verdict (get_today) is RED: the only agenda is rest — one five-minute floor-touch, nothing else, voiced as rotation.${currentTone().effects.reflex_note ? `\n\nTONE (neuromodulation, standing): ${currentTone().effects.reflex_note}` : ""}` +
-  composeCartridgeSection(loadDayCartridge(), readLines(STAMPS));
+  composeCartridgeSection(loadDayCartridge(), readLines(STAMPS), loadNightCoach());
 }
 
 const TOOL_DECLS = [
@@ -1830,6 +1843,14 @@ async function selftest() {
   assert("no cartridge + no stamps → empty section, constitution unchanged", composeCartridgeSection(null, []) === "");
   const noCart = loadDayCartridge(new Date("2026-07-12T08:00:00"), join(os.tmpdir(), "dugout-nocart-" + Date.now()));
   assert("missing cartridge dir → null, never crashes", noCart === null);
+  // P2 — THE NIGHT COACH reaches the voice verbatim (9 Aug 2026, his unleash word)
+  const nightSec = composeCartridgeSection(null, [], { date: "2026-08-10", text: "attention pe woh soch raha hai ki poora matrix ek saath banta hai." });
+  assert("P2 night-coach part rides the cartridge section, labelled + dated, spoken-from not lectured",
+    nightSec.includes("THE NIGHT COACH") && nightSec.includes("2026-08-10") && nightSec.includes("never as a lecture"));
+  assert("P2 no night file → section unchanged (compose(null,[],null) === compose(null,[]))",
+    composeCartridgeSection(null, [], null) === composeCartridgeSection(null, []));
+  assert("P2 missing night dir → null, never crashes",
+    loadNightCoach(new Date("2026-07-12T08:00:00"), join(os.tmpdir(), "dugout-nonight-" + Date.now())) === null);
   assert("page seeds fresh WS from today's record (clientContent, history-only)", PAGE.includes("REHYDRATE") && PAGE.includes("clientContent") && PAGE.includes("rehydrated"));
   assert("ACK lines obey the no-hype law (banned-phrase check)", ACK_LINES.every(l => bannedPhraseCheck(l, BANNED).length === 0 && l.length < 60));
   assert("think-time stamps wired: page measures both directions", PAGE.includes("captain_think") && PAGE.includes("gaffer_respond") && PAGE.includes("/stamps"));

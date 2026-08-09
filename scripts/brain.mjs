@@ -1298,6 +1298,68 @@ function surfaceAudit(cfg) {
 }
 
 // ---------------------------------------------------------------------------
+// THE NIGHT COACH (P2 unleash, 9 Aug 2026 — his verbatim "yes lets build p1 p2
+// p3 p7 to the peak of its powers and make sure data flows everywhere wherever
+// it is required"). A nightly Opus read of the study day WHOLE — his turns, the
+// coach's answers, the gut-words, the audit rows — that writes tomorrow's
+// misconception map + pre-written lesson. The regex doubtminer catches shapes;
+// this catches MEANING. It rides the SHARED analysis path (exec → validate →
+// write → acct), never a manager_m3-style early return.
+// ---------------------------------------------------------------------------
+// The day's teaching lanes, DAY-FILTERED and roll-safe. The default .jsonl
+// input read is a blind last-200-rows tail (neither "today" nor a stable span
+// on a 4,500-row bus), so the night coach gathers its own: readLinesTail
+// survives the monthly roll via archiveSiblings, the filter is the study day
+// (shift day) in LOCAL time, and only the four teaching lanes ride. Counts are
+// reported beside the sample so a trimmed day never reads as a complete one.
+function nightCoachAfferents(dayStr, dir = STATE_DIR) {
+  const LANES = new Set(["claude-code", "claude-code-teaching", "gemini-study", "gemini-study-teaching"]);
+  let rows = [];
+  try {
+    rows = readLinesTail(join(dir, "afferent.jsonl"), 4000)
+      .filter(a => a && a.text && LANES.has(a.source))
+      .filter(a => { const t = new Date(a.ts || 0); return !isNaN(t.getTime()) && localDate(t) === dayStr; })
+      .map(a => ({ t: String(a.ts).slice(11, 16), who: a.source, text: String(a.text).slice(0, 600) }));
+  } catch { }
+  const kept = rows.slice(-120);
+  return {
+    study_day: dayStr, turns_total: rows.length, turns_shown: kept.length,
+    note: rows.length > kept.length ? "older turns trimmed — turns_total is the truth, the tail is the sample" : "the complete day",
+    turns: kept,
+  };
+}
+
+function buildNightCoachPrompt(job, inputs, fingerprint = gatherFingerprint(), banned = DEFAULTS.guards.banned_phrases) {
+  const head = `You are THE NIGHT COACH of ARSENAL AI FC — the slow brain reading one study day whole, so tomorrow's teaching starts where today's confusion actually was.
+${fingerprint ? "\n" + fingerprint + "\n" : ""}
+THE DAY'S EVIDENCE is in the INPUT sections below: his own turns and the coach's answers (the claude-code and gemini lanes), his reps with gut-words (confidence ∈ knew|shaky|guessed, committed BEFORE the answer — never re-graded), and the teaching-audit rows (drift against THE METHOD).
+
+DO, IN ORDER:
+1. THE MISCONCEPTION MAP — every place he holds a wrong or half-formed model TODAY. For each: the concept, ONE VERBATIM quote of his own words as evidence (quote him exactly, never paraphrase him), what he currently thinks, what is actually true. A day with none is a finding, not a failure — say so plainly.
+2. TOMORROW'S LESSON for the single most load-bearing misconception: 2-3 SAMJHAO passes (Hinglish, ONE idea per pass, everyday-physical analogies only — khana/ghar/dukaan/sheher, never geometry), up to 3 widget guess-gate questions, and EXACTLY ONE check-question (the four-question-moments law: one, never a quiz-dump).
+3. END the reply with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"date": "<the morning this teaches>", "study_day": "<the day read>", "misconceptions": [{"concept": "...", "evidence": "<his verbatim words>", "what_he_thinks": "...", "whats_true": "..."}], "lesson": {"concept": "...", "samjhao_passes": ["..."], "widget_gates": ["..."], "check_question": "..."}}
+
+LAWS: Hinglish body, technical words stay English. Evidence only — every claim traceable to the inputs; a thin day = say less, never invent. No dates, deadlines or countdowns in any teaching line. NEVER these phrases: ${(banned || []).join(", ")}. ≤ 80 lines before the json block.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+
+// the machine-face sibling is DERIVED from the same single call — the trailing
+// fenced json block, parsed after the validator has passed. A miss returns null
+// and the run degrades to note-only: a throw here would kill the whole
+// overnight drain (tick has no per-job try/catch).
+export function parseNightCoachJson(text) {
+  try {
+    const m = [...String(text || "").matchAll(/```json\s*\n([\s\S]*?)```/gi)];
+    if (!m.length) return null;
+    const j = JSON.parse(m[m.length - 1][1]);
+    if (!j || typeof j !== "object" || !Array.isArray(j.misconceptions)) return null;
+    return j;
+  } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------
 // JOB RUNNER
 // ---------------------------------------------------------------------------
 async function runJob(job, cfg, deps) {
@@ -1378,6 +1440,12 @@ async function runJob(job, cfg, deps) {
   if (job.kind === "render" && job.prompt_file) {
     const pf = join(STATE_DIR, "..", "club", "prompts", job.prompt_file);
     prompt = existsSync(pf) ? readFileSync(pf, "utf8") + "\nOutput ONLY the artifact — first character '<'." : buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
+  } else if (job.kind === "night_coach") {
+    // P2: swap the blind afferent tail for the day-filtered teaching lanes, and
+    // the ≤25-line analysis head for the coach's own — everything else (exec,
+    // validator, write, acct) stays the shared path.
+    inputs[`afferent lanes (study day ${today})`] = nightCoachAfferents(today);
+    prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args);
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
@@ -1408,6 +1476,15 @@ async function runJob(job, cfg, deps) {
     let note = `→ brain_out/${job.out || job.id}/${outDay}.md`
       + (srf.where ? ` · reads at: ${srf.where}` : " · ⚠ NO SURFACE DECLARED — nothing points at this file")
       + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "");
+    // P2 — the night coach's machine sibling: same call, same outDay, derived
+    // by parsing the trailing fenced json AFTER the validator passed. A parse
+    // miss is degradation said out loud in the note, never a thrown error.
+    if (job.kind === "night_coach") {
+      const nc = parseNightCoachJson(r.text);
+      if (nc && !dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".json"), nc);
+      note += nc ? ` + ${outDay}.json (machine sibling: ${nc.misconceptions.length} misconception(s))`
+        : " · json sibling ABSENT — no valid fenced json in the reply (degraded, not fatal)";
+    }
     // MEDIA ENGINE: speak_to jobs render their validated text to an mp3 in
     // club/media/ (speak.mjs synthToFile — earClean inside). Offline = honest
     // skip; the text output stands either way.
@@ -2407,6 +2484,33 @@ async function selftest() {
       const sa = surfaceAudit({ jobs: [{ id: "a", surface: { kind: "code", where: "x" } }, { id: "b" }, { id: "c", enabled: false }] });
       assert("#106 — the surface report is a have/need pair and NAMES the gap, never the bare word 'ok'",
         sa.have === 1 && sa.need === 2 && sa.orphans.length === 1 && sa.orphans[0] === "b");
+    }
+
+    // ---- P2 · THE NIGHT COACH (9 Aug 2026, his unleash word) --------------
+    {
+      const nj = cfg.jobs.find(j => j.id === "night_coach");
+      assert("NIGHT COACH — committed job: opus · overnight · serve next_morning · kind night_coach · enabled",
+        !!nj && nj.model === "opus" && nj.window === "overnight" && nj.serve === "next_morning"
+        && nj.kind === "night_coach" && nj.enabled === true && (nj.engine || "claude") === "claude");
+      assert("NIGHT COACH — reps + teaching audit REQUIRED, surface names all four consumers",
+        !!nj && nj.inputs.filter(i => i && i.required).length === 2
+        && /setpiece/.test(nj.surface.where) && /examiner/.test(nj.surface.where)
+        && /learnstate/.test(nj.surface.where) && /dugout/.test(nj.surface.where));
+      const good = "misconception map yahan hai\n```json\n{\"date\":\"2026-08-10\",\"study_day\":\"2026-08-09\",\"misconceptions\":[{\"concept\":\"hallucinations\",\"evidence\":\"x\"}],\"lesson\":{\"concept\":\"hallucinations\",\"samjhao_passes\":[\"a\"],\"widget_gates\":[],\"check_question\":\"?\"}}\n```";
+      assert("NIGHT COACH — the machine sibling parses out of the LAST fenced json block",
+        parseNightCoachJson("```json\n{\"misconceptions\":[]}\n```\nbeech ka text\n" + good).misconceptions.length === 1);
+      assert("NIGHT COACH — no block / broken json / shapeless json → null, never a throw",
+        parseNightCoachJson("koi block nahi") === null && parseNightCoachJson("```json\n{broken\n```") === null
+        && parseNightCoachJson("```json\n{\"no_misconceptions_key\":1}\n```") === null);
+      assert("NIGHT COACH — the day filter reports counts beside the sample (a trimmed day never reads complete)",
+        (() => { const a = nightCoachAfferents("1999-01-01"); return a.study_day === "1999-01-01" && a.turns_total === 0 && Array.isArray(a.turns); })());
+      const ncFix = { id: "nc_fixture", kind: "night_coach", inputs: [], out: "nc_fixture", serve: "next_morning", surface: { kind: "code", where: "x" } };
+      const rNC = await runJob(ncFix, cfg, { exec: () => ({ ok: true, text: good, total_tokens: 9, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("NIGHT COACH — rides the SHARED path: ok run, sibling named in the note, acct present",
+        rNC.usage.ok === true && /machine sibling: 1 misconception/.test(rNC.note) && typeof rNC.inputs_declared === "number");
+      const rNC2 = await runJob(ncFix, cfg, { exec: () => ({ ok: true, text: "sirf prose, koi json block nahi", total_tokens: 9, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
+      assert("NIGHT COACH — a reply without the json block DEGRADES out loud, never fails the run",
+        rNC2.usage.ok === true && /json sibling ABSENT/.test(rNC2.note));
     }
   }
 

@@ -681,6 +681,33 @@
    },
    "_inputs_note": "AUDIT #64/#71: 3 of 6 inputs (season.json, notebook.json, mutations.jsonl) have never existed — exactly 50%, which is why the proposed majority-ratio guard would NOT have fired on the very job it was written for. They arrive the moment postmatch runs (it writes season.json and notebook.json unconditionally on every run) and the Boot Room files a mutation, so this is `waiting`, not broken. It has spent ZERO tokens in its life: it is trigger-gated and the only automatic arming path needs matches_played % 30 === 0, which is 30 postmatch runs away. Kept ENABLED for that reason — it cannot spend unless he asks it to.",
    "_note": "DEEP RE-READ (U4, JARVIS harvest — trigger-only until 9 Aug 2026, nightly since P1 unleash): re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts)."
+  },
+  {
+   "id": "night_coach",
+   "engine": "claude",
+   "model": "opus",
+   "window": "overnight",
+   "priority": 72,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "night_coach",
+   "serve": "next_morning",
+   "inputs": [
+    {
+     "path": "reps_log.jsonl",
+     "required": true
+    },
+    {
+     "path": "teaching_audit.jsonl",
+     "required": true
+    }
+   ],
+   "out": "night_coach",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/setpiece.mjs readNightCoach() → drills.json annotations + night_coach_read receipt · scripts/examiner.mjs stageDrill() → examiner_drill.json enrichment · scripts/learnstate.mjs nightCoachLine() → the kickoff brief · scripts/dugout.mjs loadNightCoach() → the Gaffer's system instruction"
+   },
+   "_note": "THE NIGHT COACH (P2 unleash, 9 Aug 2026 — his verbatim 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required'): the machine teaches itself at night, him in the morning. Reads the study day WHOLE — his turns + the coach's answers (runJob swaps in a day-filtered, roll-safe read of the four teaching lanes; the default 200-row tail is neither 'today' nor stable), reps_log gut-words, teaching_audit drift rows — and writes the misconception map + tomorrow's pre-written lesson (SAMJHAO passes · widget gates · ONE check-question, the four-question-moments law) to brain_out/night_coach/<serve-date>.md, plus a DERIVED .json sibling parsed from the same single call (a parse miss degrades to note-only). serve:next_morning names the file for the morning it teaches, which is why no job lists it as a TODAY input — the four consumers read it by calendar lookback. The regex doubtminer catches shapes; this catches MEANING. Proposes only; every consumer treats it as optional icing, never load-bearing."
   }
  ],
  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad."

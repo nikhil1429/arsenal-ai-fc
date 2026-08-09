@@ -230,6 +230,21 @@ function pickConcept(deps = {}) {
   return { concept: "tokenization", why: "capsule floor (no live signal yet)" };
 }
 
+// P2 (9 Aug 2026, his unleash word) — the night coach's machine sibling,
+// brain_out/night_coach/<date>.json, served under the morning it teaches
+// (producer declares serve:next_morning) → calendar lookback [today, yesterday],
+// shape-checked because an LLM-written file is exactly the class that arrives
+// half-valid. Enrichment only: it may annotate the staged drill, never pick the
+// concept, never perturb the family or the day rotation.
+function readNight(now = new Date(), dir = join(STATE_DIR, "brain_out/night_coach")) {
+  const ms = now instanceof Date ? now.getTime() : now;
+  for (const d of [localDate(new Date(ms)), localDate(new Date(ms - 86400000))]) {
+    const nc = readJson(join(dir, d + ".json"));
+    if (nc && Array.isArray(nc.misconceptions)) return { ...nc, _resolved_date: d };
+  }
+  return null;
+}
+
 function stageDrill(deps = {}) {
   const now = deps.now || new Date();
   const { concept, why } = pickConcept(deps);
@@ -252,6 +267,24 @@ function stageDrill(deps = {}) {
   if (!verified) {
     drill.adapt_note = `SHAPE UNVERIFIED — "${concept}" is not classified, so this drill assumes it is a buildable mechanism. If it is really a phenomenon (something that happens TO a system) or a judgment call, say so and switch the drill to "write a probe that elicits it + a check that detects it" instead. Then tell the captain to add "drill_shape" to concepts.json.`;
   }
+  // P2 — night-coach enrichment, the adapt_note pattern: present only when the
+  // overnight map names THIS drill's concept, so a coach-less night stages a
+  // byte-identical drill. Template/family/rotation are never touched.
+  const night = deps.night !== undefined ? deps.night : readNight(now);
+  if (night) {
+    const key = String(concept || "").toLowerCase().trim();
+    const m = (night.misconceptions || []).find((x) => {
+      const c = String((x && x.concept) || "").toLowerCase().trim();
+      return c && key && (c === key || key.includes(c) || c.includes(key));
+    });
+    if (m) {
+      const note = [
+        m.what_he_thinks ? `raat ke coach ne pakda — woh soch raha hai: ${m.what_he_thinks}` : null,
+        m.whats_true ? `sach: ${m.whats_true}` : null,
+      ].filter(Boolean).join(" · ");
+      if (note) drill.night_note = note.slice(0, 240);
+    }
+  }
   (deps.write || ((o) => writeAtomic(DRILL, o)))(drill);
   return drill;
 }
@@ -271,7 +304,10 @@ function drillSection(d) {
   // a default rather than a classification, so an unverified guess can never be read
   // as a verified instruction.
   const adapt = d.adapt_note ? `\n⚠ ${d.adapt_note}\n` : "";
-  return `\nTHE CODE ROUND (the Live Examiner staged this — run it as the heaviest probe, on the CHALKBOARD):\nConcept: ${d.concept} (${d.template} shape${d.shape ? ` · ${d.shape}` : ""})\nTASK (read to him verbatim): ${d.task}\nHIDDEN TESTS — reveal each ONLY as you RUN it, never up front:\n${d.hidden_tests.map((h, i) => `${i + 1}. ${h}`).join("\n")}${adapt}\nGrade the CODE, never the coder — the result is data; a miss resolves silently into the reps.\n`;
+  // P2 — the night coach's read rides to the examiner the same way the adapt note
+  // does: present only when real, aimed at the examiner (probe WHERE the crack is).
+  const night = d.night_note ? `\n🌙 ${d.night_note} — probe isi darar pe.\n` : "";
+  return `\nTHE CODE ROUND (the Live Examiner staged this — run it as the heaviest probe, on the CHALKBOARD):\nConcept: ${d.concept} (${d.template} shape${d.shape ? ` · ${d.shape}` : ""})\nTASK (read to him verbatim): ${d.task}\nHIDDEN TESTS — reveal each ONLY as you RUN it, never up front:\n${d.hidden_tests.map((h, i) => `${i + 1}. ${h}`).join("\n")}${adapt}${night}\nGrade the CODE, never the coder — the result is data; a miss resolves silently into the reps.\n`;
 }
 
 async function selftest() {
@@ -363,6 +399,24 @@ async function selftest() {
   });
   assert("CANON WINS: a drill_shape in concepts.json overrides the built-in registry",
     overridden.shape === "judgment" && overridden.shape_source === "concepts.json canon");
+
+  // --- P2: THE NIGHT COACH enrichment (9 Aug 2026, his unleash word) --------
+  {
+    const nightFix = { study_day: "2026-07-13", misconceptions: [
+      { concept: "attention", what_he_thinks: "poora matrix ek saath ban jaata hai", whats_true: "har token ka score alag-alag ban ke softmax se milta hai" },
+    ], lesson: { concept: "attention", samjhao_passes: ["p"], widget_gates: [], check_question: "?" } };
+    const base = { ls: { concepts: [{ name: "attention", trend: "stalling" }] }, cards: null, now, write: () => {} };
+    const dn = stageDrill({ ...base, night: nightFix });
+    assert("P2 night note rides the drill when the map names the picked concept", /woh soch raha hai/.test(dn.night_note || ""));
+    assert("P2 the note reaches the examiner through drillSection (probe the crack)", drillSection(dn).includes("🌙") && drillSection(dn).includes("darar"));
+    const dn0 = stageDrill({ ...base, night: null });
+    assert("P2 no night file ⇒ no night_note key, drill byte-identical", !("night_note" in dn0) && dn0.task === d.task && dn0.template === d.template);
+    const dnMiss = stageDrill({ ls: { concepts: [{ name: "rag", trend: "stalling" }] }, cards: null, now, night: nightFix, write: () => {} });
+    assert("P2 a map naming a DIFFERENT concept attaches nothing", !("night_note" in dnMiss));
+    assert("P2 enrichment never perturbs the template rotation", dn.template === d.template);
+    assert("P2 a shapeless night file resolves to null at the reader (readJson can't tell missing from malformed)",
+      stageDrill({ ...base, night: undefined, write: () => {} }) !== null);   // live-dir default path never throws
+  }
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

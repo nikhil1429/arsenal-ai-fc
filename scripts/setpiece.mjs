@@ -121,6 +121,45 @@ const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSyn
 const fill = (template, slots) => String(template || "").replace(/\{(\w+)\}/g, (_, k) => (slots[k] !== undefined ? slots[k] : `{${k}}`));
 
 // ---------------------------------------------------------------------------
+// P2 — THE NIGHT COACH's machine sibling (9 Aug 2026, his unleash word).
+// brain_out/night_coach/<date>.json, produced overnight with serve:next_morning
+// (the newest file is NAMED for the morning it teaches), read here by calendar
+// lookback [today, yesterday] — the dugout.mjs probe-bank pattern, and the only
+// shape that works when this compiles at 21:40 for tomorrow. The resolver IS
+// the staleness gate: older than yesterday simply never resolves. Shape-checked
+// because readJson cannot tell MISSING from MALFORMED, and an LLM-written file
+// is exactly the class that arrives half-valid (the DOSSIER_FLOOR scar).
+// License (header line 23): enrichment may TUNE wording/ranking/annotations —
+// it never decides whether a prompt exists. So the night file ANNOTATES drills
+// and stamps a read-receipt; it sources no drill of its own.
+function readNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out/night_coach")) {
+  for (const d of [localDate(now), localDate(new Date(now.getTime() - 86400000))]) {
+    const nc = readJson(join(dir, d + ".json"));
+    if (nc && Array.isArray(nc.misconceptions)) return { ...nc, _resolved_date: d };
+  }
+  return null;
+}
+
+// the annotation: attached ONLY when the overnight map names this drill's
+// concept (same conditional law as prereqs — a coach-less bus is byte-identical)
+function nightNoteFor(concepts, nc) {
+  if (!nc || !Array.isArray(nc.misconceptions) || !Array.isArray(concepts) || !concepts.length) return null;
+  const ids = concepts.map((c) => String(c).toLowerCase());
+  for (const m of nc.misconceptions) {
+    const c = String((m && m.concept) || "").toLowerCase().trim();
+    if (!c) continue;
+    if (ids.some((id) => id === c || id.includes(c) || c.includes(id))) {
+      const note = [
+        m.what_he_thinks ? `night coach — woh soch raha hai: ${m.what_he_thinks}` : null,
+        m.whats_true ? `sach: ${m.whats_true}` : null,
+      ].filter(Boolean).join(" · ");
+      return note ? note.slice(0, 240) : null;
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // pure core
 // ---------------------------------------------------------------------------
 // E2E audit (25 Jul 2026, LOW): the council split drill shipped
@@ -538,6 +577,7 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
       concept_graph_read: world.concept_graph
         ? { nodes: world.concept_graph.node_count ?? null, edges: world.concept_graph.edge_count ?? null, built: String(world.concept_graph.generated_at || "").slice(0, 10) || null }
         : null,
+      night_coach_read: nightCoachRead(world.night_coach),
     };
   }
 
@@ -595,7 +635,12 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     // audit #72 — the graph's second address: the ground this drill stands on. Only
     // attached when the graph actually knows something, so a graph-less bus is unchanged.
     const pre = prereqsOf(d.concepts, world.concept_graph);
-    return pre.length ? { ...withModality, prereqs: pre } : withModality;
+    const withPre = pre.length ? { ...withModality, prereqs: pre } : withModality;
+    // P2 — the night coach's annotation, same conditional law: attached only when the
+    // overnight map names this drill's concept. Rides beside the prompt, never inside it
+    // (the prompt stays deterministic; LLM prose never enters a prompt string).
+    const nn = nightNoteFor(d.concepts, world.night_coach);
+    return nn ? { ...withPre, night_note: nn } : withPre;
   });
   // audit #87 — the packet states, on its own face, whether it reached the curriculum.
   // `covered: null` means "no sprint concept could be resolved", never a silent false.
@@ -625,7 +670,16 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     concept_graph_read: world.concept_graph
       ? { nodes: world.concept_graph.node_count ?? null, edges: world.concept_graph.edge_count ?? null, built: String(world.concept_graph.generated_at || "").slice(0, 10) || null }
       : null,
+    // P2 — proof the night coach's map was opened, and which morning it was named for.
+    night_coach_read: nightCoachRead(world.night_coach),
   };
+}
+
+// the read-receipt (both envelopes carry it — the same-envelope-keys law at the RED branch)
+function nightCoachRead(nc) {
+  return nc
+    ? { date: nc._resolved_date || null, study_day: nc.study_day || null, misconceptions: (nc.misconceptions || []).length }
+    : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -912,6 +966,29 @@ async function selftest() {
       compile({ readiness: { verdict: "GREEN" }, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now).scheduler_note === null);
   }
 
+  // P2 — THE NIGHT COACH (9 Aug 2026): annotation + receipt, never a drill source.
+  {
+    const nc = { date: "2026-08-10", study_day: "2026-08-09", _resolved_date: "2026-08-10",
+      misconceptions: [{ concept: "context", evidence: "x", what_he_thinks: "prompt ek setting hai", whats_true: "prompt sirf text hai jo context window mein baithta hai" }],
+      lesson: { concept: "context", samjhao_passes: ["p1"], widget_gates: [], check_question: "?" } };
+    const nw = { readiness: { verdict: "GREEN" }, cards: { hardest_due: ["context"] }, night_coach: nc };
+    const n1 = compile(nw, cfg, ladderCfg, dossier, now);
+    assert("P2 night coach is READ — the receipt carries date/study_day/count",
+      n1.night_coach_read && n1.night_coach_read.date === "2026-08-10" && n1.night_coach_read.misconceptions === 1);
+    assert("P2 the annotation rides ONLY the drill whose concept the map names, beside the prompt never inside it",
+      n1.drills.some(d => d.concepts.includes("context") && /night coach/.test(d.night_note || ""))
+      && !n1.drills.some(d => d.night_note && (d.prompt || "").includes(d.night_note)));
+    assert("P2 the night file sources NO drill of its own (enrichment license: tune, never load-bear)",
+      !n1.drills.some(d => d.kind === "night_coach"));
+    const n0 = compile({ readiness: { verdict: "GREEN" }, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now);
+    assert("P2 no night file ⇒ null receipt, no night_note key anywhere, no crash",
+      n0.night_coach_read === null && !n0.drills.some(d => "night_note" in d));
+    assert("P2 a RED packet still carries the receipt key (absent ≠ not-today)",
+      "night_coach_read" in compile({ ...nw, readiness: { verdict: "RED" } }, cfg, ladderCfg, dossier, now));
+    assert("P2 a shapeless night file (no misconceptions[]) is degraded, never trusted",
+      nightNoteFor(["context"], { lesson: {} }) === null);
+  }
+
   // THE LAYERING LAW — the frozen dossier-only ranker is still here, and the live ranker
   // reduces to it EXACTLY when none of the new signals are present. This is the guarantee
   // that adding two rank keys changed no existing night's packet.
@@ -957,11 +1034,12 @@ async function main() {
     sprint: readJson(join(STATE_DIR, "sprint.json")),             // audit #87 — the curriculum
     concept_graph: readJson(join(STATE_DIR, "concept_graph.json")), // audit #72 — its only reader
     capsule_map: readJson(join(STATE_DIR, "capsule_map.json")),   // audit #33 — the two schedulers
+    night_coach: readNightCoach(new Date()),                      // P2 — the overnight misconception map
   };
   // audit #72/#87/#33 — a missing input is NAMED, never silently treated as "no signal".
   // These three are new readers; if any is dark the packet still compiles, but the night's
   // log says which sense was closed rather than letting a quiet default look like a reading.
-  for (const [name, val] of [["sprint.json", world.sprint], ["concept_graph.json", world.concept_graph], ["capsule_map.json", world.capsule_map]]) {
+  for (const [name, val] of [["sprint.json", world.sprint], ["concept_graph.json", world.concept_graph], ["capsule_map.json", world.capsule_map], ["brain_out/night_coach/<date>.json", world.night_coach]]) {
     if (!val) console.warn(`setpiece: WARN ${name} missing or MALFORMED → compiled without it (this is blindness, not an absence of signal).`);
   }
   const out = compile(world, cfg, ladderCfg, dossier, new Date());

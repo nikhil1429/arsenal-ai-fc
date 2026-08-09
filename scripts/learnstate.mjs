@@ -116,6 +116,25 @@ function outwardLines(dir, nowMs) {
   return L;
 }
 
+// P2 (9 Aug 2026, his unleash word) — the night coach spoke overnight; the
+// kickoff says so in ONE line. The producer serves next_morning (the file is
+// NAMED for the morning it teaches), so: today's file = fresh, no tag (the
+// healthy case stays quiet); yesterday's = tagged with its age; absent = SILENT
+// (a brand-new organ that has not run is not a finding every morning).
+// LOCAL date, never toISOString — in IST that reads yesterday's file all evening.
+const ncLocalDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function nightCoachLine(dir, now) {
+  const nowD = new Date(now);
+  for (const [d, tag] of [[ncLocalDate(nowD), ""], [ncLocalDate(new Date(nowD.getTime() - 86400000)), " (1d purana — kal raat ka)"]]) {
+    const nc = readJson(join(dir, "brain_out/night_coach", d + ".json"));
+    if (nc && Array.isArray(nc.misconceptions)) {
+      const lesson = nc.lesson && nc.lesson.concept ? ` · lesson tayyar: ${clip(nc.lesson.concept, 40)}` : "";
+      return `🌙 NIGHT COACH${tag}: ${nc.misconceptions.length} misconception(s) mapped${lesson} — brain_out/night_coach/${d}.md`;
+    }
+  }
+  return null;
+}
+
 function seasonLine(dir) {
   const s = readJson(join(dir, "season.json"));
   if (!s || !s.season_day) return null;
@@ -419,6 +438,10 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     for (const ol of outwardLines(dir, now)) L.push(ol);   // outward loop (8 Aug 2026)
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
+    const ncl = nightCoachLine(dir, now);   // P2 — the overnight coach, one line, freshness-tagged
+    if (ncl) L.push(ncl);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  try {
     const sl = seasonLine(dir);
     if (sl) L.push(sl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
@@ -496,6 +519,31 @@ function selftest() {
   assert("build task routes to BUILD — never a stray FORGE label", buildBrief.includes("BUILD") && !buildBrief.includes("FORGE"));
   const dir2 = mkdtempSync(join(tmpdir(), "learnstate-empty-"));
   assert("empty state -> a valid brief, never a crash", typeof brief(dir2, NOW) === "string" && brief(dir2, NOW).includes("KICKOFF"));
+
+  // ---- P2 — THE NIGHT COACH line (9 Aug 2026, his unleash word) ------------
+  {
+    const dirN = mkdtempSync(join(tmpdir(), "learnstate-nightcoach-"));
+    const ld = (ms) => { const t = new Date(ms); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+    mkdirSync(join(dirN, "brain_out", "night_coach"), { recursive: true });
+    writeFileSync(join(dirN, "brain_out", "night_coach", ld(NOW) + ".json"),
+      JSON.stringify({ date: ld(NOW), study_day: ld(NOW - 86400000), misconceptions: [{ concept: "context" }, { concept: "hallucinations" }], lesson: { concept: "context", check_question: "?" } }));
+    const nb = brief(dirN, NOW);
+    assert("P2 a TODAY night-coach file yields one line, NO age tag (healthy case stays quiet)",
+      nb.includes("🌙 NIGHT COACH:") && nb.includes("2 misconception(s)") && !nb.includes("purana"));
+    const dirN2 = mkdtempSync(join(tmpdir(), "learnstate-nightcoach-stale-"));
+    mkdirSync(join(dirN2, "brain_out", "night_coach"), { recursive: true });
+    writeFileSync(join(dirN2, "brain_out", "night_coach", ld(NOW - 86400000) + ".json"),
+      JSON.stringify({ misconceptions: [{ concept: "context" }] }));
+    assert("P2 a YESTERDAY file is tagged with its age, never served as fresh",
+      brief(dirN2, NOW).includes("1d purana"));
+    assert("P2 no night file ⇒ zero new lines (a new organ's silence is not a finding)",
+      !brief(dir2, NOW).includes("NIGHT COACH"));
+    const dirN3 = mkdtempSync(join(tmpdir(), "learnstate-nightcoach-shapeless-"));
+    mkdirSync(join(dirN3, "brain_out", "night_coach"), { recursive: true });
+    writeFileSync(join(dirN3, "brain_out", "night_coach", ld(NOW) + ".json"), JSON.stringify({ lesson: {} }));
+    assert("P2 a shapeless file (no misconceptions[]) stays silent, never crashes the brief",
+      typeof brief(dirN3, NOW) === "string" && !brief(dirN3, NOW).includes("NIGHT COACH"));
+  }
 
   // ---- P7.B — THE ARBITER (7 Aug 2026): one winner, stated precedence, losers named
   const dirA = mkdtempSync(join(tmpdir(), "learnstate-arbiter-"));
