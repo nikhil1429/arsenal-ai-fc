@@ -655,6 +655,10 @@ const DAEMON_PORTS = [
   { port: 4111, name: "turnstile" },
   { port: 4112, name: "cortex" },
   { port: 4113, name: "thalamus" },
+  // LADDER D2 (9 Aug 2026): the brain PACEMAKER joins the night watch — :4116 is
+  // its daemon singleton (:4115 is only the tick lock). The dugout (:4114) stays
+  // deliberately absent here AND in the 10-min watchdog: his surface, his hands.
+  { port: 4116, name: "brain" },
 ];
 function probePort(port, timeoutMs = 1500) {
   return new Promise((resolve) => {

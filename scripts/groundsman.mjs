@@ -161,6 +161,38 @@ async function nightPass(hostId, deps = {}) {
   return { ok: true, ticked: true, pushed: false, why: "nothing public to push" };
 }
 
+// ---------------------------------------------------------------------------
+// LADDER D3 (9 Aug 2026) — THE PUSH-ONLY LANE (laptop side).
+// RECEIPT, dated, per the _gemini_lane pattern: this lane pushes UNATTENDED
+// under his 9 Aug 2026 blanket ladder ruling — "okay let's implement every
+// thing" — which explicitly covered the groundsman unattended-push (the one
+// NEEDS-CARD item on the approved list), on top of his same-day words about the
+// public repo: "i do not care putting my data in the public repo". Credentials
+// stay gitignored; both allowlist locks below are the SAME two locks nightPass
+// carries, unchanged.
+// WHY a separate lane: nightPass is the KENNEL's loop — pull → lease → TICK →
+// push. On the laptop the BrainDaemon already owns the beat, so running
+// nightPass here double-ticks the brain by construction. This lane is the push
+// HALF alone: stage (tracked, allowlisted) → verify the index back → commit →
+// push. No pull, no lease, no tick. A push rejection (remote moved) is reported
+// honestly and retried by the next night's task — never forced.
+// ---------------------------------------------------------------------------
+async function pushOnlyPass(hostId, deps = {}) {
+  const run = (c, a) => (deps.sh || sh)(c, a, deps);
+  const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
+  if (!add.ok) return { ok: true, pushed: false, why: `staging refused: ${add.out}` };
+  const diff = run("git", ["diff", "--cached", "--quiet"]);
+  if (diff.ok) return { ok: true, pushed: false, why: "nothing public to push" };
+  const staged = run("git", ["diff", "--cached", "--name-only"]);
+  if (!staged.ok) return { ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" };
+  const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
+  if (offending.length) return { ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` };
+  run("git", ["commit", "-m", `groundsman: unattended state push (${hostId}) — his 9 Aug 2026 ruling, receipt in pushOnlyPass`]);
+  const push = run("git", ["push"]);
+  if (!push.ok) return { ok: true, pushed: false, why: `push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` };
+  return { ok: true, pushed: true };
+}
+
 async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
@@ -231,6 +263,32 @@ async function selftest() {
       read: () => mkLease("laptop", "lap1", 25), write: () => {}, now,
     });
     assert("can't READ the index back → fail closed, no push", r5.pushed === false && r5.refused === true && !calls5.some(c => c.includes("push")));
+
+    // LADDER D3 — the push-only lane (laptop): same two locks, ZERO tick, ZERO pull
+    const c6 = [];
+    const r6 = await pushOnlyPass("laptop", {
+      sh: (c, a) => { c6.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/captains_call.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("D3: push-only stages→verifies→commits→pushes, and NEVER ticks or pulls (the daemon owns the beat)",
+      r6.ok && r6.pushed === true
+      && !c6.some(x => x.includes("brain.mjs")) && !c6.some(x => x.includes("pull"))
+      && c6.some(x => x.startsWith("git add -u --")) && c6.some(x => x.includes("commit")) && c6.some(x => x.includes("push")));
+    const c7 = [];
+    const r7 = await pushOnlyPass("laptop", {
+      sh: (c, a) => { c7.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "scripts/brain.mjs\nTHE_DOCTORS_LETTER.md\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("D3: the SAME allowlist locks hold — one off-list path refuses the whole push",
+      r7.pushed === false && r7.refused === true && !c7.some(x => x.includes("commit")));
+    const r8 = await pushOnlyPass("laptop", {
+      sh: (c, a) => { if (c === "git" && a[0] === "diff" && !a.includes("--name-only")) return { ok: true, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("D3: a clean index is 'nothing public to push', never an empty commit",
+      r8.pushed === false && /nothing public/.test(r8.why));
+    const r9 = await pushOnlyPass("laptop", {
+      sh: (c, a) => { if (c === "git" && a[0] === "push") return { ok: false, out: "rejected (fetch first)" }; if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "scripts/brain.mjs\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("D3: a rejected push is reported honestly and NEVER forced (tomorrow retries)",
+      r9.pushed === false && /retries/.test(r9.why) && /nothing forced/.test(r9.why));
   }
 
   const passed = checks.every(c => c[1]);
@@ -257,9 +315,15 @@ async function main() {
     setInterval(pass, 30 * 60000);
     return;
   }
-  console.log("groundsman.mjs — heartbeat | night --host <id> | status | selftest");
+  if (mode === "push") {
+    // LADDER D3 — the unattended laptop push (see pushOnlyPass's receipt header).
+    const r = await pushOnlyPass("laptop");
+    console.log(`groundsman: push-only — ${r.pushed ? "PUSHED (the sentinel's mini-brief reads tonight's truth)" : r.why}`);
+    return;
+  }
+  console.log("groundsman.mjs — heartbeat | night --host <id> | push | status | selftest");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, TTL_MIN, isPublishablePath, PUBLISH_ALLOWLIST };
+export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, pushOnlyPass, TTL_MIN, isPublishablePath, PUBLISH_ALLOWLIST };

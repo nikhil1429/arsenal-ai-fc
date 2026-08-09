@@ -79,6 +79,29 @@ export const MORNING = [
   { id: "wall",          at: "08:50", args: ["scripts/viz.mjs"] },
 ];
 
+// ---- LADDER D1 (9 Aug 2026) — THE EVENING SPINE -----------------------------
+// The evening was nine loose Task Scheduler rows staggered 22:00→23:10, the same
+// disease the morning had before this file existed: the stagger WAS the order,
+// and one overslept evening collapses into a single unordered catch-up burst.
+// One task, one chain. `at` = each retired row's LIVE time (Bell 22:00 is HIS
+// ruled time, not drift — read live off schtasks 9 Aug 2026, not off a doc).
+// `needs` marks the real read-dependencies: the wall renders what the scorer and
+// set-piece wrote, the wallpaper paints the wall's own render, the examiner
+// stages against the set-piece's drills. A missed need still RUNS (the report
+// records the degradation) — order is the product, absence is the alarm.
+export const EVENING = [
+  { id: "bell",       at: "22:00", args: ["scripts/brain.mjs", "bell", "fulltime"] },
+  { id: "scorer",     at: "22:35", args: ["scripts/scorer.mjs"] },
+  { id: "setpiece",   at: "22:40", args: ["scripts/setpiece.mjs"] },
+  { id: "doubtminer", at: "22:45", args: ["scripts/doubtminer.mjs"] },
+  { id: "physio-pm",  at: "22:50", args: ["scripts/physio.mjs"] },
+  { id: "examiner",   at: "22:55", args: ["scripts/examiner.mjs", "stage"], needs: ["setpiece"] },
+  { id: "wall-pm",    at: "23:00", args: ["scripts/viz.mjs"], needs: ["scorer", "setpiece"] },
+  { id: "scout",      at: "23:05", args: ["scripts/scout.mjs"] },
+  // the one non-node step: WALLPAPER.ps1 paints the wall's render onto the desktop.
+  { id: "wallpaper",  at: "23:10", exec: { cmd: "powershell", args: ["-ExecutionPolicy", "Bypass", "-File", "setup\\WALLPAPER.ps1"] }, needs: ["wall-pm"] },
+];
+
 const STEP_TIMEOUT_MS = 180000;   // 3 min per organ — a hung organ must not eat the morning
 
 function writeAtomic(path, text) {
@@ -342,7 +365,13 @@ export async function conduct(chain = MORNING, opts = {}) {
       continue;
     }
 
-    const r = run(step.args);
+    // D1 — a non-node step (WALLPAPER.ps1) runs through its own executor, same
+    // isolation/timeout/record shape as every node one-shot. Injectable.
+    const r = step.exec
+      ? (opts.runExec || ((ex) => spawnSync(ex.cmd, ex.args, {
+          cwd: REPO, timeout: opts.timeoutMs || STEP_TIMEOUT_MS, encoding: "utf8", windowsHide: true,
+        })))(step.exec)
+      : run(step.args);
     const ms = Date.now() - t0;
     const timedOut = !!(r && (r.error && /ETIMEDOUT|timed out/i.test(String(r.error.message || r.error))));
     steps.push({
@@ -606,6 +635,34 @@ async function selftest() {
     }
   }
 
+  // ---- LADDER D1 (9 Aug 2026) — THE EVENING SPINE ---------------------------
+  {
+    const seen = [];
+    const execs = [];
+    const rep = await conduct(EVENING, {
+      ...base,
+      run: (a) => { seen.push(a.join(" ")); return { status: 0, stderr: "" }; },
+      runExec: (ex) => { execs.push(`${ex.cmd} ${ex.args.join(" ")}`); return { status: 0, stderr: "" }; },
+    });
+    ok("EVENING — bell opens at HIS 22:00, wallpaper closes; order is the chain, not the clock",
+      rep.order[0] === "bell" && rep.order[rep.order.length - 1] === "wallpaper"
+      && EVENING[0].at === "22:00" && rep.steps.every(s => s.ok));
+    ok("EVENING — the nine retired rows are all here and no step is a daemon or a gate",
+      EVENING.length === 9 && EVENING.every(s => !s.daemon && !s.arm)
+      && ["bell", "scorer", "setpiece", "doubtminer", "physio-pm", "examiner", "wall-pm", "scout", "wallpaper"].every(id => EVENING.some(s => s.id === id)));
+    ok("EVENING — the ps1 step runs through its OWN executor, never the node runner",
+      execs.length === 1 && /WALLPAPER\.ps1/.test(execs[0]) && !seen.some(s => /WALLPAPER/.test(s)));
+    const repFail = await conduct(EVENING, {
+      ...base,
+      run: (a) => ({ status: a.join(" ").includes("viz.mjs") ? 1 : 0, stderr: a.join(" ").includes("viz.mjs") ? "render died" : "" }),
+      runExec: () => ({ status: 0, stderr: "" }),
+    });
+    ok("EVENING — a dead wall still lets the wallpaper RUN, flagged degraded, never silently skipped",
+      repFail.steps.find(s => s.id === "wallpaper").ok === true
+      && /wall-pm/.test(repFail.steps.find(s => s.id === "wallpaper").degraded || "")
+      && repFail.steps.find(s => s.id === "examiner").degraded === null);
+  }
+
   console.log(fail === 0 ? `\nALL CHECKS PASSED (${pass} passed, 0 failed)` : `\n${fail} FAILED (${pass} passed)`);
   return fail === 0;
 }
@@ -619,22 +676,27 @@ async function main() {
   // failing inside. `plan` shows the chain and touches nothing; `--no-report` is the
   // honest name for "really run, just don't publish the report".
   if (mode === "plan") {
-    for (const s of MORNING) console.log(`  ${String(s.at).padEnd(6)} ${s.id.padEnd(14)} ${s.arm ? `arm ${s.arm}` : "node " + s.args.join(" ")}${s.writes ? "  → " + s.writes : ""}${s.needs ? "  needs: " + s.needs.join(", ") : ""}`);
-    console.log(`conductor: ${MORNING.length} steps, sequential. Nothing was run.`);
+    // D1 — `plan evening` shows the evening chain; bare `plan` stays the morning.
+    const chain = process.argv[3] === "evening" ? EVENING : MORNING;
+    for (const s of chain) console.log(`  ${String(s.at).padEnd(6)} ${s.id.padEnd(14)} ${s.arm ? `arm ${s.arm}` : s.exec ? `${s.exec.cmd} ${s.exec.args.join(" ")}` : "node " + s.args.join(" ")}${s.writes ? "  → " + s.writes : ""}${s.needs ? "  needs: " + s.needs.join(", ") : ""}`);
+    console.log(`conductor: ${chain.length} steps, sequential. Nothing was run.`);
     return;
   }
-  if (mode !== "morning") { console.error("usage: node scripts/conductor.mjs [morning|plan|selftest] [--no-report]"); process.exit(1); }
+  if (mode !== "morning" && mode !== "evening") { console.error("usage: node scripts/conductor.mjs [morning|evening|plan [evening]|selftest] [--no-report]"); process.exit(1); }
   // B4 (9 Aug 2026, launch worklist): --no-report used to map onto opts.dry, and dry
   // ALSO skips the daemon probe/launch step — so the flag documented as "really run,
   // just don't publish" silently left thalamus/cortex/turnstile unprobed. noReport
   // now suppresses ONLY the report write; dry stays the selftest's isolation switch.
   const noReport = process.argv.includes("--no-report");
-  const rep = await conduct(MORNING, { noReport });
+  // D1 — the evening spine writes its OWN report file; the morning keeps its name.
+  const chain = mode === "evening" ? EVENING : MORNING;
+  const reportPath = mode === "evening" ? join(STATE_DIR, "conductor_evening.json") : REPORT;
+  const rep = await conduct(chain, { noReport, report: reportPath });
   for (const s of rep.steps) {
     const mark = s.ok ? "ok  " : "FAIL";
     console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}`);
   }
-  console.log(`conductor: morning chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${REPORT}`}`);
+  console.log(`conductor: ${mode} chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${reportPath}`}`);
   // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).
   // This function printed its FAIL lines and then fell off the end, so the process
   // exited 0 no matter what broke. That is the single most expensive silence in the

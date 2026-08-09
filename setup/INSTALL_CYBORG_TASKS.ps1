@@ -86,6 +86,15 @@ Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/
 # depending on the Dugout window being open. Both lanes existed since #52/#53; no task ran them.
 Mk "ArsenalFC-DugoutReminders" "dugout.mjs fire-reminders"    @("/SC","MINUTE","/MO","30","/ST","08:00")
 Mk "ArsenalFC-ShadowDetect"    "dugout.mjs shadow-detect"     @("/SC","HOURLY","/ST","09:05")
+# LADDER D2 (9 Aug 2026) - the daemon watchdog: probe :4111/:4112/:4113/:4116
+# every 10 min, relaunch DOWN daemons via the VBS cloak, resync one pass after
+# the thalamus recovers. The dugout (:4114) is deliberately excluded (his surface).
+Mk "ArsenalFC-Daemon-Watchdog" "daemon_watchdog.mjs pass"     @("/SC","MINUTE","/MO","10")
+# LADDER D3 (9 Aug 2026) - the unattended state push (receipt: groundsman.mjs
+# pushOnlyPass header, his 9 Aug blanket ruling). 03:45 = after the night lane's
+# writers (nightshift 02:40, conceptgraph 03:00) so the push carries tonight's
+# outputs, and hours before the cloud sentinel's 10:30 read.
+Mk "ArsenalFC-Groundsman-Push" "groundsman.mjs push"          @("/SC","DAILY","/ST","03:45")
 
 # POWER CONDITIONS (the E2E scar): clear battery kill-flags on every task
 Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
