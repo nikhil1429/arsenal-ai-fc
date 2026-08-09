@@ -38,7 +38,7 @@
   "push_after": [
    "formation_read"
   ],
-  "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed."
+  "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 22:00 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed."
  },
  "gemini": {
   "enabled": true,
@@ -646,7 +646,7 @@
    "speak_to": "teamtalk_DATE_pm.mp3",
    "surface": {
     "kind": "media",
-    "where": "dressing-room/club/media/teamtalk_<date>_pm.mp3 (speak.mjs synthToFile) → announced inside the 21:30 full-time bell"
+    "where": "dressing-room/club/media/teamtalk_<date>_pm.mp3 (speak.mjs synthToFile) → announced inside the 22:00 full-time bell"
    },
    "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk.",
    "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"

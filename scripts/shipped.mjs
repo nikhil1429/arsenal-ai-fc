@@ -157,12 +157,30 @@ function readRepo(repo, day) {
 // now that did not this morning".
 function artifactEvents(day) {
   const events = [];
+  // B8 (9 Aug 2026): reJirahDone stores DUE dates (capsule_bridge reads it as a
+  // done-Set over due days), so `includes(day)` could only ever fire when a round
+  // was served ON its exact due day — and every live round is served late, so the
+  // event was unreachable in practice. The round's own log carries the SERVE date;
+  // the capsule check stays as the mirror-confirmed fallback for on-time rounds.
+  const rjServed = new Set();
+  const rjLog = join(STATE_DIR, "rejirah_log.jsonl");
+  if (existsSync(rjLog)) {
+    for (const ln of readFileSync(rjLog, "utf8").split("\n")) {
+      if (!ln.trim()) continue;
+      try {
+        const r = JSON.parse(ln);
+        if (String(r.ts || "").slice(0, 10) === day && r.concept && !rjServed.has(r.concept)) {
+          rjServed.add(r.concept); events.push({ kind: "rejirah_served", what: r.concept });
+        }
+      } catch {}
+    }
+  }
   const capsDir = join(STATE_DIR, "capsules");
   if (existsSync(capsDir)) {
     for (const f of readdirSync(capsDir).filter(x => x.endsWith(".json"))) {
       const c = readJson(join(capsDir, f));
       if (c && c.lockedOn === day) events.push({ kind: "capsule_locked", what: c.id || f });
-      if (c && Array.isArray(c.reJirahDone) && c.reJirahDone.includes(day)) events.push({ kind: "rejirah_served", what: c.id || f });
+      if (c && Array.isArray(c.reJirahDone) && c.reJirahDone.includes(day) && !rjServed.has(c.id || f)) events.push({ kind: "rejirah_served", what: c.id || f });
     }
   }
   const pmDir = join(STATE_DIR, "post_match");

@@ -239,8 +239,10 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
 // (missions desk · benchmark · market — oldest filed first within the tier).
 // Sleeping and answered cards never deal.
 export function pickCard(state, { today }) {
+  // B5 (9 Aug 2026): was `>=`, which kept a card asleep THROUGH its wake day —
+  // "baad" promised tomorrow and delivered the day after. sleep_until IS the wake day.
   const live = state.cards.filter((c) => !c.answer && !c.retired_at
-    && !(c.sleep_until && c.sleep_until >= today));
+    && !(c.sleep_until && c.sleep_until > today));
   const rank = (c) => (c.source === "hand-filed" ? 0
     : c.source === "teaching_contract.staged" ? 1
     : c.source === "tape_room.gate2" ? 2 : 3);
@@ -507,9 +509,9 @@ function selftest() {
   assert("answer — 'baad' sleeps until the NEXT local day and stays unanswered",
     a1.action.kind === "sleep" && a1.action.until === "2026-08-08"
     && a1.state.cards[0].answer === null);
-  assert("answer — a sleeping card does not deal today, and WAKES tomorrow",
+  assert("answer — a sleeping card does not deal today, and WAKES ON its wake day (B5: was >=, slept one day too long)",
     pickCard(a1.state, { today: "2026-08-07" }).id !== a1.state.cards[0].id
-    && pickCard(a1.state, { today: "2026-08-09" }).id === a1.state.cards[0].id);
+    && pickCard(a1.state, { today: "2026-08-08" }).id === a1.state.cards[0].id);
   const a2 = applyAnswer(s1, s1.cards[0].id, "haan", T0);
   assert("answer — haan on a drift card ⇒ staged-dispatch action carrying the stable `at` (never a stored index)",
     a2.action.kind === "staged-dispatch" && a2.action.verb === "confirm" && a2.action.at === STAGED[0].at);

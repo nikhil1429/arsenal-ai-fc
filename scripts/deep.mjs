@@ -44,7 +44,7 @@
 //        node scripts/deep.mjs due                   · Re-Jirah queue, questions only (COLD)
 //        node scripts/deep.mjs <concept>             · the capsule's spine + axis list
 //        node scripts/deep.mjs <concept> <axis>      · ONE axis, fully opened
-//        node scripts/deep.mjs <concept> all         · every axis (asks you to confirm the wall)
+//        node scripts/deep.mjs <concept> all --yes   · every axis (--yes IS the wall-confirm; without it, it refuses)
 //        node scripts/deep.mjs <concept> doubts      · his 112-doubt bank for that concept
 //        node scripts/deep.mjs selftest
 // ============================================================================
@@ -79,12 +79,18 @@ function loadCapsules(dir = CAPSULES) {
 export function rejirahStatus(capsule, intervals, now = new Date()) {
   const locked = new Date(capsule.lockedOn + "T00:00:00Z");
   if (Number.isNaN(locked.getTime())) return { round: null, status: "unknown", overdueDays: null, nextDue: null };
-  const done = Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone.length : 0;
-  if (done >= intervals.length) return { round: done, status: "complete", overdueDays: 0, nextDue: null };
-  const nextDue = new Date(locked.getTime() + intervals[done] * 86400000);
+  // B7 (9 Aug 2026): this counted reJirahDone.length raw, while capsule_bridge (the
+  // reading this claims to mirror) ISO-filters the entries into a done-Set keyed by
+  // DUE date. A junk entry or an out-of-order round made the two organs disagree on
+  // which round is next. Now it really mirrors: rounds match by their due date.
+  const doneSet = new Set((Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone : []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))));
+  const dueStr = (n) => new Date(locked.getTime() + n * 86400000).toISOString().slice(0, 10);
+  const nextIdx = intervals.findIndex((n) => !doneSet.has(dueStr(n)));
+  if (nextIdx === -1) return { round: intervals.length, status: "complete", overdueDays: 0, nextDue: null };
+  const nextDue = new Date(locked.getTime() + intervals[nextIdx] * 86400000);
   const overdueDays = Math.floor((now.getTime() - nextDue.getTime()) / 86400000);
   const status = overdueDays > 0 ? "overdue" : overdueDays === 0 ? "due" : "up";
-  return { round: done + 1, status, overdueDays: Math.max(0, overdueDays), nextDue: nextDue.toISOString().slice(0, 10) };
+  return { round: nextIdx + 1, status, overdueDays: Math.max(0, overdueDays), nextDue: nextDue.toISOString().slice(0, 10) };
 }
 
 // ---------------------------------------------------------------------------
@@ -218,8 +224,9 @@ function selftest() {
     r.round === 1 && r.status === "overdue" && r.overdueDays === 41 && r.nextDue === "2026-06-24");
   ok("a completed round advances to the NEXT interval, never repeats R1",
     rejirahStatus({ ...cap, reJirahDone: ["2026-06-24"] }, iv, now).round === 2);
-  ok("all rounds done → 'complete', never a phantom overdue",
-    rejirahStatus({ ...cap, reJirahDone: ["a", "b", "c"] }, iv, now).status === "complete");
+  ok("all rounds done → 'complete', never a phantom overdue (B7: matched by DUE date, junk entries no longer count)",
+    rejirahStatus({ ...cap, reJirahDone: ["2026-06-24", "2026-07-05", "2026-08-02"] }, iv, now).status === "complete"
+    && rejirahStatus({ ...cap, reJirahDone: ["a", "b", "c"] }, iv, now).status !== "complete");
   ok("a future due-date reads 'up', not overdue",
     rejirahStatus({ ...cap, lockedOn: "2026-08-03" }, iv, now).status === "up");
   ok("a junk lockedOn degrades honestly instead of throwing",
@@ -279,7 +286,17 @@ function main() {
   const sub = String(arg2 || "").toLowerCase();
   if (!sub) return capsuleSpine(c, intervals, now);
   if (sub === "doubts") return doubts(c);
-  if (sub === "all") { for (const a of c.faultLines || []) oneAxis(c, String(a.axis).toLowerCase()); return; }
+  // B6 (9 Aug 2026): the header always promised "asks you to confirm the wall" and
+  // this line never asked — it dumped every axis on a fat-fingered `all`. --yes IS
+  // the confirmation (deterministic, works headless and TTY alike).
+  if (sub === "all") {
+    if (!process.argv.includes("--yes")) {
+      console.log(`\ndeep: "${c.id} all" poori wall kholta hai — ${(c.faultLines || []).length} axes ek saath. Pakka? To:\n  node scripts/deep.mjs ${c.id} all --yes\n`);
+      return;
+    }
+    for (const a of c.faultLines || []) oneAxis(c, String(a.axis).toLowerCase());
+    return;
+  }
   if (AXES.includes(sub)) return oneAxis(c, sub);
   console.log(`\ndeep: "${arg2}" samajh nahi aaya. axis a-i, ya "doubts", ya "all".\n`);
 }

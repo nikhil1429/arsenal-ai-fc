@@ -1033,7 +1033,11 @@ function mouthMaySpeak(cfg, queueState, day, jobId) {
   return !(((queueState && queueState.mouth_said) || {})[day]);
 }
 const BELLS = {
-  fulltime: { at: "21:30", grace_min: 75, title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
+  // B3 (9 Aug 2026, HIS RULING): "bell time 10:00 krdo, i come back home at that
+  // time" — 22:00, aligned in all three places (here, the Bell-FullTime task, the
+  // config _note). It was 21:30 here while the task fired 22:30 — 60 of the 75
+  // grace minutes burned before the bell even rang.
+  fulltime: { at: "22:00", grace_min: 75, title: "⚪🔴 Full-time, captain", body: "**30 seconds, then sleep.**\n\nDugout se bolo **\"full time\"** — ya `npm run postmatch`\n\n• HIT ya MISS — honest\n• one signal worth naming\n• **KAL-line** — the weld that wins tomorrow's morning\n\nCOYG ⚪🔴" },
 };
 
 // the inner claude is an agentic CLI — it may wrap the sheet in chatter or try
@@ -1557,7 +1561,13 @@ async function tick(cfg, deps) {
   // at most once — this is that one utterance when there was nothing to announce.
   try {
     const sheetJob = (cfg.jobs || []).find(j => j.enabled !== false && (cfg.ntfy.push_after || []).includes(j.id));
-    const closeHM = (jobWindows(cfg)[sheetJob?.window] || jobWindows(cfg).any)[1];
+    // B2 (9 Aug 2026, launch worklist): an "any"-window sheet closed at "24:00" — an
+    // hour hhmm() can never reach — so this whole block was mathematically unreachable,
+    // the exact silent absence it exists to kill. An at-anchored job now gets a MORNING
+    // deadline (at + 90min); a windowed job keeps its close, clamped inside the clock.
+    const addMin = (hm, m) => { const [H, M] = String(hm).split(":").map(Number); const t = H * 60 + M + m; return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
+    const winClose = (jobWindows(cfg)[sheetJob?.window] || jobWindows(cfg).any)[1];
+    const closeHM = sheetJob?.at ? addMin(sheetJob.at, 90) : (winClose >= "24:00" ? "23:59" : winClose);
     if (!deps.dry && sheetJob && hhmm(now) >= closeHM
         && !(queueState.jobs_run[today] || {})[sheetJob.id]
         && mouthMaySpeak(cfg, queueState, today, sheetJob.id)) {
@@ -1919,9 +1929,9 @@ async function selftest() {
       const lateBy = (hh * 60 + mm) - (bh * 60 + bm);
       return !(lateBy < -5 || lateBy > (b.grace_min || 75));
     };
-    assert("BELL HOUR — the fulltime bell declares its hour + grace", BELLS.fulltime.at === "21:30" && BELLS.fulltime.grace_min > 0);
-    assert("BELL HOUR — rings at 21:30", onTime(21, 30));
-    assert("BELL HOUR — rings a little late (21:55, inside grace)", onTime(21, 55));
+    assert("BELL HOUR — the fulltime bell declares its hour + grace (B3: HIS ruling, 22:00 — he is home by 10pm)", BELLS.fulltime.at === "22:00" && BELLS.fulltime.grace_min > 0);
+    assert("BELL HOUR — rings at 22:00", onTime(22, 0));
+    assert("BELL HOUR — rings a little late (22:25, inside grace)", onTime(22, 25));
     assert("BELL HOUR — SILENT at 15:23, the real catch-up time that caused this", onTime(15, 23) === false);
     assert("BELL HOUR — SILENT hours early (08:00)", onTime(8, 0) === false);
     assert("BELL HOUR — SILENT past the grace (23:30)", onTime(23, 30) === false);

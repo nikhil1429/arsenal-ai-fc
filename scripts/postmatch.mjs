@@ -378,7 +378,12 @@ async function main() {
   const diag = argOf("--diag");
   const route = (argOf("--route") || "").toLowerCase();
 
-  if (!hit) hit = ((await promptIfTTY("Result? HIT / MISS / PARTIAL / REST → ")) || "HIT").toUpperCase();
+  // B1 (9 Aug 2026, launch worklist): this line used to default a declined or
+  // non-TTY run to "HIT" — a fabricated result in the one field the whole season
+  // logbook is built on, two lines above the audit-#82 comment that forbids
+  // exactly this for kal. No answer = no result = refuse honestly.
+  if (!hit) hit = ((await promptIfTTY("Result? HIT / MISS / PARTIAL / REST → ")) || "").toUpperCase() || null;
+  if (!hit) { console.error("postmatch: no result given — pass --hit HIT|MISS|PARTIAL|REST (nothing recorded, nothing fabricated)"); process.exit(1); }
   if (!["HIT", "MISS", "PARTIAL", "REST"].includes(hit)) { console.log("postmatch: --hit must be HIT|MISS|PARTIAL|REST"); process.exit(1); }
   if (!signal) signal = await promptIfTTY("One signal worth naming (data, not verdict) → ");
   // audit #82: NO fabricated fallback here. If he declines, `kal` stays null and

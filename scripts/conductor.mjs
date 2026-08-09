@@ -365,7 +365,7 @@ export async function conduct(chain = MORNING, opts = {}) {
     order: steps.map(s => s.id),
     steps,
   };
-  if (!opts.dry) writeAtomic(opts.report || REPORT, JSON.stringify(report, null, 2));
+  if (!opts.dry && !opts.noReport) writeAtomic(opts.report || REPORT, JSON.stringify(report, null, 2));
   return report;
 }
 
@@ -623,13 +623,17 @@ async function main() {
     return;
   }
   if (mode !== "morning") { console.error("usage: node scripts/conductor.mjs [morning|plan|selftest] [--no-report]"); process.exit(1); }
-  const dry = process.argv.includes("--no-report");
-  const rep = await conduct(MORNING, { dry });
+  // B4 (9 Aug 2026, launch worklist): --no-report used to map onto opts.dry, and dry
+  // ALSO skips the daemon probe/launch step — so the flag documented as "really run,
+  // just don't publish" silently left thalamus/cortex/turnstile unprobed. noReport
+  // now suppresses ONLY the report write; dry stays the selftest's isolation switch.
+  const noReport = process.argv.includes("--no-report");
+  const rep = await conduct(MORNING, { noReport });
   for (const s of rep.steps) {
     const mark = s.ok ? "ok  " : "FAIL";
     console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}`);
   }
-  console.log(`conductor: morning chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${dry ? " (dry — no report written)" : ` → ${REPORT}`}`);
+  console.log(`conductor: morning chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${REPORT}`}`);
   // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).
   // This function printed its FAIL lines and then fell off the end, so the process
   // exited 0 no matter what broke. That is the single most expensive silence in the
