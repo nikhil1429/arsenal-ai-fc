@@ -272,3 +272,11 @@ dressing-room/state/chrome_rail_stamp.json
 # leak what those ignore lines protect. Tracking it later is a captain ruling
 # (the reps_log D10 class), never a build decision.
 dressing-room/state/brain_outcomes.jsonl
+# PHASE H · H3 (10 Aug 2026): the Nikhil-model triple — edges, the day-fact
+# grid, and the bet slip. They re-export day facts from ignored sources
+# (timeaudit day fields, brain_outcomes verdicts) — the H1 precedent.
+# readiness.json itself is PUBLIC by his D10 ruling; that ruling is not the
+# operative reason here.
+dressing-room/state/nikhil_model.json
+dressing-room/state/nikhil_model_grid.jsonl
+dressing-room/state/nikhil_model_slip.jsonl

@@ -76,6 +76,7 @@ import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex, learningArcVerdict, conceptVocabulary } from "./hippocampus.mjs";
 import { projectVitals, projectScout, projectDrills, projectTwin } from "./talk.mjs";   // LADDER F2 — fields, never envelopes (the :41-51 scar)
+import { renderEdge as renderModelEdge } from "./nikhil_model.mjs";   // H3 — the formatter law: every reader renders edges through the owner's own line
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
@@ -1031,6 +1032,9 @@ const TOOL_DECLS = [
   // page, pull-able. Direct read (loadNightCoach's shape), never a shell —
   // the diary is a plain file, not a derived composition like the cartridge.
   { name: "get_diary", description: "THE BRAIN'S NIGHT DIARY — what the machine attended to, believed, tested, got WRONG and will change, in its own hand (DATED — last night's page). Call when he asks what the brain did overnight, why a lesson/drill changed, or whether the machine caught its own mistake. Transparency, not status: quote its WILL CHANGE line when he asks what is different today.", parameters: { type: "OBJECT", properties: {} } },
+  // PHASE H · H3 (10 Aug 2026) — the model's pull door. Every edge line is the
+  // owner's own render (n + p + the not-medical-guidance frame BY CONSTRUCTION).
+  { name: "get_model", description: "THE NIKHIL MODEL — the machine's tracked cause→effect edges about HIM (each DATED and counted: 'hypothesis (n=3)' honesty built in; observed co-occurrence in his own data, never medical guidance). Call when he asks what patterns the machine sees in him, or before shaping advice on timing/energy — TESTED edges only may steer; warming/proposed are hypotheses to NAME as hypotheses.", parameters: { type: "OBJECT", properties: {} } },
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
@@ -1493,6 +1497,15 @@ function execTool(name, args, deps = {}) {
       }
       return { ok: true, page: null, note: "no diary yet — the brain writes it overnight (03:00); a missed morning means the laptop slept through the slot" };
     }
+    // H3 — the model door: the owner's render, statuses grouped, nothing derived here.
+    if (name === "get_model") {
+      const nm = readJson(join(STATE_DIR, "nikhil_model.json"));
+      if (!nm || !Array.isArray(nm.edges) || !nm.edges.length) {
+        return { ok: true, edges: [], note: "no edges yet — model_mine proposes overnight, the evening ingest re-derives; the fact grid fills one day per evening" };
+      }
+      return { ok: true, as_of: nm.as_of || null, counts: nm.counts || {},
+        edges: nm.edges.map(renderModelEdge).slice(0, 40) };
+    }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
         .filter(l => localDayOf(l.ts) === localDate(now))
@@ -1902,7 +1915,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 27);   // 27 since PHASE H H6 (get_diary; 26 = LADDER F1)
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 28);   // 28 since PHASE H H3 (get_model; 27 = H6 get_diary, 26 = LADDER F1)
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -2217,7 +2230,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("27 club tools now (H6: get_diary joined F1's two memory pull-doors)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 27);
+    assert("28 club tools now (H3: get_model joined H6's get_diary)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 28);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -2244,7 +2257,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 27 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 28 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):

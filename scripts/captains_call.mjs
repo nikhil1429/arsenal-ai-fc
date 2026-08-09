@@ -102,7 +102,7 @@ function loadState() {
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null, tiers = null,
-  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, gatetune = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [] } = {}, now = new Date()) {
+  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, gatetune = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -417,6 +417,24 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   const liveStale = new Set((staleFacts || []).map((f) => `fact:forget:${f.id}`));
   retireAtSource((c) => c.source === "hippocampus.stale_fact" && !liveStale.has(c.key), "the fact is already gone");
 
+  // H3 (10 Aug 2026) — THE WEEKLY MODEL AUDIT, the H-verdict's replacement for
+  // the dead calendar gate: ONE card per week, keyed to that week's Sunday,
+  // minted from the Sunday ONWARD so a slept-through Sunday still mints at
+  // Monday's first anchor. Counts + the warming-but-never-resolving number
+  // (expiry's event-gated heir) are PRECOMPUTED by the owner — this file never
+  // derives. Last week's unanswered card is superseded, never stacked.
+  if (model && Array.isArray(model.edges) && model.edges.length) {
+    const d = new Date(now);
+    const sKey = localDate(new Date(d.getTime() - d.getDay() * 86400000));   // this week's Sunday
+    const mc = model.counts || {};
+    const stale = model.stale_warming || 0;
+    mint(`model:audit:${sKey}`, "nikhil_model.weekly",
+      `Model audit (hafta): ${mc.tested || 0} tested · ${mc.warming || 0} warming · ${mc.retired || 0} retired${stale ? ` · ${stale} warming-jo-kabhi-resolve-nahi-hue` : ""} — koi edge galat lage to \`node scripts/nikhil_model.mjs galat <id>\`, warna haan`,
+      { kind: "none" });
+    retireAtSource((c) => c.source === "nikhil_model.weekly" && c.key !== `model:audit:${sKey}` && !c.answer,
+      "superseded by this week's audit card");
+  }
+
   return s;
 }
 
@@ -666,9 +684,11 @@ function gatherSources() {
       if (row) staleFacts.push({ id, text: row.text });
     }
   } catch { /* ledger unreadable — no card */ }
+  // H3 — the model file, read whole (counts + stale_warming precomputed by its owner)
+  const model = readJson(join(STATE_DIR, "nikhil_model.json"));
 
   return { staged, marketFile, marketHonest, gate2, missions, bench, tiers,
-    rejirah, gem, claudeOut, oura, geminiLogin, gatetune, pendingFacts, m2, canonPatches, staleFacts };
+    rejirah, gem, claudeOut, oura, geminiLogin, gatetune, pendingFacts, m2, canonPatches, staleFacts, model };
 }
 
 function sync(now = new Date()) {
@@ -1102,6 +1122,21 @@ function selftest() {
       && sfN.action.kind === "done" && /na — retired/.test(sfN.action.resolution));
     assert("B11 — a fact already gone retires its card at source",
       deriveCards(ssf, { staleFacts: [SF[1]] }, T).cards.find((c) => c.key === "fact:forget:fb5d5a86").retired_at !== null);
+    // H3 — the weekly model audit: week-keyed to Sunday, minted from Sunday
+    // ONWARD (a slept-through Sunday still mints Monday), counts precomputed
+    // by the owner, last week's unanswered card superseded never stacked.
+    const NM = { edges: [{ id: "a>b", status: "tested" }], counts: { tested: 1, warming: 0, retired: 0 }, stale_warming: 0 };
+    const tueT = new Date(2026, 7, 11, 10, 0);   // Tue 11 Aug — Sunday of that week = 09 Aug
+    const snm = deriveCards(blank(), { model: NM }, tueT);
+    assert("H3 — the weekly model-audit card mints week-keyed to Sunday, even minted mid-week, counts from the owner",
+      snm.cards.length === 1 && snm.cards[0].key === "model:audit:2026-08-09"
+      && /1 tested/.test(snm.cards[0].line) && snm.cards[0].source === "nikhil_model.weekly");
+    const nextWk = deriveCards(snm, { model: NM }, new Date(2026, 7, 18, 10, 0));   // Tue next week
+    assert("H3 — next week's card supersedes the unanswered one (retired at source, never stacked)",
+      nextWk.cards.some((c) => c.key === "model:audit:2026-08-16")
+      && nextWk.cards.find((c) => c.key === "model:audit:2026-08-09").retired_at !== null);
+    assert("H3 — an empty model mints NO card (machinery precedes the audit)",
+      deriveCards(blank(), { model: { edges: [] } }, tueT).cards.length === 0);
     // ranks — integrity tier vs outward tier
     const mixed = deriveCards(blank(), { rejirah: RJ, gem: { days: 10, stamp: "2026-07-30" } }, T);
     assert("B — rejirah (integrity) outranks the infra tier on a fresh deck",

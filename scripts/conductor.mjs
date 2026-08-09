@@ -97,6 +97,10 @@ export const EVENING = [
   { id: "bell",       at: "22:00", args: ["scripts/brain.mjs", "bell", "fulltime"] },
   { id: "scorer",     at: "22:35", args: ["scripts/scorer.mjs"] },
   { id: "scoreboard", at: "22:38", args: ["scripts/scoreboard.mjs", "run"], needs: ["scorer"] },
+  // H3 (10 Aug 2026): the model's deterministic evening step — finalize
+  // yesterday's fact grid, resolve its bets, seal today's, re-derive statuses.
+  // AFTER the scoreboard (its outcomes feed two facts), BEFORE setpiece.
+  { id: "nikhil-model", at: "22:39", args: ["scripts/nikhil_model.mjs", "ingest"], needs: ["scoreboard"] },
   { id: "setpiece",   at: "22:40", args: ["scripts/setpiece.mjs"] },
   { id: "doubtminer", at: "22:45", args: ["scripts/doubtminer.mjs"] },
   { id: "physio-pm",  at: "22:50", args: ["scripts/physio.mjs"] },
@@ -652,18 +656,22 @@ async function selftest() {
     ok("EVENING — bell opens at HIS 22:00, wallpaper closes; order is the chain, not the clock",
       rep.order[0] === "bell" && rep.order[rep.order.length - 1] === "wallpaper"
       && EVENING[0].at === "22:00" && rep.steps.every(s => s.ok));
-    // H1 AMENDMENT (10 Aug 2026): the D1 witness is re-stated, never erased —
-    // the nine retired rows STAY asserted verbatim, the closed world tightens to
-    // exactly one born-in-chain addition (scoreboard, between scorer + setpiece,
-    // needs [scorer]) — a length check alone would pass with ANY tenth step.
-    ok("EVENING — the nine retired rows are all here, the ONE addition is exactly the scoreboard, and no step is a daemon or a gate",
-      EVENING.length === 10 && EVENING.every(s => !s.daemon && !s.arm)
+    // H1+H3 AMENDMENTS (10 Aug 2026): the D1 witness is re-stated, never
+    // erased — the nine retired rows STAY asserted verbatim, and the closed
+    // world names the TWO born-in-chain additions exactly (scoreboard 22:38
+    // then nikhil-model 22:39, pinned scorer ← scoreboard ← nikhil-model ←
+    // setpiece) — a length check alone would pass with ANY extra step.
+    ok("EVENING — the nine retired rows are all here, the TWO additions are exactly scoreboard→nikhil-model, and no step is a daemon or a gate",
+      EVENING.length === 11 && EVENING.every(s => !s.daemon && !s.arm)
       && ["bell", "scorer", "setpiece", "doubtminer", "physio-pm", "examiner", "wall-pm", "scout", "wallpaper"].every(id => EVENING.some(s => s.id === id))
       && (() => {
         const sb = EVENING.find(s => s.id === "scoreboard");
+        const nm = EVENING.find(s => s.id === "nikhil-model");
         const i = EVENING.indexOf(sb);
-        return sb && EVENING[i - 1].id === "scorer" && EVENING[i + 1].id === "setpiece"
-          && (sb.needs || []).join() === "scorer" && sb.at === "22:38";
+        return sb && nm && EVENING[i - 1].id === "scorer" && EVENING[i + 1].id === "nikhil-model"
+          && EVENING[i + 2].id === "setpiece"
+          && (sb.needs || []).join() === "scorer" && sb.at === "22:38"
+          && (nm.needs || []).join() === "scoreboard" && nm.at === "22:39";
       })());
     ok("EVENING — the ps1 step runs through its OWN executor, never the node runner",
       execs.length === 1 && /WALLPAPER\.ps1/.test(execs[0]) && !seen.some(s => /WALLPAPER/.test(s)));

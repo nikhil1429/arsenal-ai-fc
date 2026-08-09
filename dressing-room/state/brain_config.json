@@ -812,6 +812,24 @@
    },
    "_note": "PHASE H · H6 (10 Aug 2026): the brain's nightly one page in its own hand — attended · believed · tested · was wrong · will change. Inputs: tonight's ledger SUMMARIZED with every count precomputed (the no-derive law: the page may only repeat given counts, never sum or average — no validator, the prompt contract + hype_guard carry it; a computed summary is the whole point), the agenda's sibling (declared input so reconcile sees the pair), H1 outcomes, watchman finding ids, and the coach's misconception CONCEPT NAMES ONLY — the evidence field is his verbatim words, and injecting it makes this a G8 opus lane (model sonnet stands ONLY while inputs stay names-only + machine summaries; revert = model opus). at 03:00 rides the H2 wrap-aware at-gate (after the night writers: nightshift task 02:40, its last write minutes later; a laptop asleep through 03:00-07:30 = no diary that morning, said in the kickoff by absence — acceptable degradation, window stays overnight). ≤25 lines (the analysis head's own cap, brain.mjs buildAnalysisPrompt — cited, not guessed). serve next_morning: the page is named for the morning it is read. Machine sibling {date, will_change} keeps diaryLine/get_diary deterministic; the .md is the him-optional page. NEVER a card, never a push — him reading it is optional by design.",
    "_metacognition_note": "MEASUREMENT WINDOW (the pulse pattern, G14): metacognition spend = ledger rows job∈{agenda,diary} ÷ overnight total, MEASURED from the G1 honest meter — no cap is set here because no cap has been measured; when the window has rows, the fraction and any cap land in this note AND limits.mjs BUDGETS in the same commit."
+  },
+  {
+   "id": "model_mine",
+   "engine": "claude",
+   "model": "opus",
+   "window": "overnight",
+   "priority": 20,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "model_mine",
+   "hype_guard": false,
+   "inputs": [],
+   "out": "model_mine",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/nikhil_model.mjs ingest (evening chain 22:39) reads brain_out/model_mine/<d>.json — the sanitized sibling is the proposals' ONLY door"
+   },
+   "_note": "PHASE H · H3 (10 Aug 2026): the nightly edge PROPOSER — reads the owner's own 14-day fact grid (three-valued: null = UNOBSERVED, never false), currently-tracked edges, and H1 outcomes; proposes ≤3 cause→effect pairs from the CLOSED VOCABULARY (nikhil_model.mjs FACTS — an out-of-vocabulary or medication-flavoured proposal is rejected at the sibling door with the reason recorded). The LLM proposes WHICH edges; nikhil_model.mjs re-derives every NUMBER from the grid (AI proposes · code validates · his galat retires). ONE-NIGHT LAG BY DESIGN: this writes overnight AFTER the 22:39 ingest, so tonight's proposals enter TOMORROW's ingest — recorded in both files so nobody 'fixes' it into a race. The ledger note carries the sibling's edge/rejection counts; the proposer's grid input makes an empty grid VISIBLE (day 1: readiness/timeaudit facts accrue only from launch — the grid journal is born empty and fills at one finalized day per evening)."
   }
  ],
  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",

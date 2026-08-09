@@ -49,6 +49,9 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+// H3 (10 Aug 2026): the model's own doors — the sanitizer is the sibling's
+// only entry, the formatter/guard pair is the night coach's only read.
+import { sanitizeModelMine, testedEdgeLines, FACTS } from "./nikhil_model.mjs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -1453,11 +1456,37 @@ export function parseDiaryJson(text) {
 
 // the per-kind sibling parser map — the night_coach mechanism, generalized
 // (it was hardcoded twice; H2/H6 are its second and third users).
+// H3 — model_mine's sibling: the ONLY door proposals enter by, sanitized by
+// the owner's own sanitizer (closed vocabulary, med hard-block, dedupe against
+// the edges already tracked). The LLM proposes WHICH edges; every NUMBER is
+// re-derived by nikhil_model.mjs ingest from its grid.
+function parseModelMineJson(text) {
+  const j = lastJsonBlock(text);
+  const existing = (readJson(join(STATE_DIR, "nikhil_model.json")) || {}).edges || [];
+  return sanitizeModelMine(j, existing);
+}
+
 const SIBLING_PARSERS = {
   night_coach: (text) => parseNightCoachJson(text),
   agenda: (text, cfg) => parseAgendaJson(text, cfg),
   diary: (text) => parseDiaryJson(text),
+  model_mine: (text) => parseModelMineJson(text),
 };
+
+function buildModelMinePrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
+  const vocab = Object.entries(FACTS).map(([id, f]) => `- ${id}: ${f.desc} (src: ${f.src})`).join("\n");
+  const head = `You are the MODEL MINER of ARSENAL AI FC — the night's hypothesis engine about the CAPTAIN. Propose which cause→effect day-edges are worth WATCHING, from the evidence below. You propose WHICH edges; the code owns every number (counts are re-derived from the fact grid — nothing you write becomes a statistic).
+
+THE CLOSED VOCABULARY (cause and effect must EACH be one of these ids — anything else is rejected at the door):
+${vocab}
+
+DO: read the inputs, write ≤ 20 lines of reasoning (which co-occurrences look real, which are noise), then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"edges": [{"cause": "<vocab id>", "effect": "<vocab id>", "statement": "<ONE plain line naming the observed co-occurrence — his data, never advice, NEVER medication/dose language (hard-blocked)>"}]}
+
+LAWS: ≤ 3 new edges a night — fewer is better; an edge repeats existing tracked pairs = wasted. Evidence only. This is observed co-occurrence, never medical guidance. NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
 
 // H2 — the tick-side lookup: tonight's sanitized allocations for THIS job.
 // Only overnight-window jobs can resolve tonight's file (shiftDay keying);
@@ -1680,7 +1709,25 @@ async function runJob(job, cfg, deps) {
     // the ≤25-line analysis head for the coach's own — everything else (exec,
     // validator, write, acct) stays the shared path.
     inputs[`afferent lanes (study day ${today})`] = nightCoachAfferents(today);
+    // H3 — TESTED edges only (the load-bearing law): rendered by the owner's
+    // own formatter (n + p + the not-medical-guidance frame by construction);
+    // readiness-caused edges withheld while the coach is stale. Empty = the
+    // key is absent, the coach teaches exactly as before — optional icing.
+    try {
+      const tel = testedEdgeLines();
+      if (tel.length) inputs["nikhil model (TESTED edges — observed co-occurrence, never guidance)"] = tel;
+    } catch { }
     prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
+  } else if (job.kind === "model_mine") {
+    // H3 — the proposer's food: the owner's own grid tail + current edges +
+    // H1 outcomes. All computed/read, never guessed; the ledger note carries
+    // per-fact observable-day counts so an empty grid is VISIBLE, not silent.
+    const grid = readLinesTail(join(STATE_DIR, "nikhil_model_grid.jsonl"), 14);
+    inputs["fact grid (last 14 finalized days — null = UNOBSERVED, never false)"] = grid;
+    inputs["edges currently tracked"] = ((readJson(join(STATE_DIR, "nikhil_model.json")) || {}).edges || [])
+      .map((e) => ({ id: e.id, status: e.status, n: `${e.n_cooccur}/${e.n_cause_days}` }));
+    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    prompt = buildModelMinePrompt(job, inputs, cfg.guards.banned_phrases);
   } else if (job.kind === "agenda") {
     // H2: the day's evidence, all code-computed (never a raw ledger dump).
     // Wake residue rides the salience summary's own escalation rows — the
@@ -1705,6 +1752,9 @@ async function runJob(job, cfg, deps) {
     const ncServe = readJson(join(OUT_DIR, "night_coach", outDate(job, now, today) + ".json"));
     inputs["tomorrow's lesson (concept names ONLY)"] = ncServe && Array.isArray(ncServe.misconceptions)
       ? ncServe.misconceptions.map((m) => m && m.concept).filter(Boolean) : null;
+    // H3 — the model's status counts (precomputed — the no-derive law)
+    const nm = readJson(join(STATE_DIR, "nikhil_model.json"));
+    if (nm && nm.counts) inputs["nikhil model status counts"] = nm.counts;
     prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
