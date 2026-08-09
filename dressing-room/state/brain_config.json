@@ -769,6 +769,49 @@
     "where": "scripts/setpiece.mjs readNightCoach() → drills.json annotations + night_coach_read receipt · scripts/examiner.mjs stageDrill() → examiner_drill.json enrichment · scripts/learnstate.mjs nightCoachLine() → the kickoff brief · scripts/dugout.mjs loadNightCoach() → the Gaffer's system instruction"
    },
    "_note": "THE NIGHT COACH (P2 unleash, 9 Aug 2026 — his verbatim 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required'): the machine teaches itself at night, him in the morning. Reads the study day WHOLE — his turns + the coach's answers (runJob swaps in a day-filtered, roll-safe read of the four teaching lanes; the default 200-row tail is neither 'today' nor stable), reps_log gut-words, teaching_audit drift rows — and writes the misconception map + tomorrow's pre-written lesson (SAMJHAO passes · widget gates · ONE check-question, the four-question-moments law) to brain_out/night_coach/<serve-date>.md, plus a DERIVED .json sibling parsed from the same single call (a parse miss degrades to note-only). serve:next_morning names the file for the morning it teaches, which is why no job lists it as a TODAY input — the four consumers read it by calendar lookback. The regex doubtminer catches shapes; this catches MEANING. Proposes only; every consumer treats it as optional icing, never load-bearing."
+  },
+  {
+   "id": "agenda",
+   "engine": "claude",
+   "model": "opus",
+   "window": "overnight",
+   "at": "22:45",
+   "priority": 95,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "agenda",
+   "hype_guard": false,
+   "inputs": [],
+   "out": "agenda",
+   "surface": {
+    "kind": "code",
+    "where": "brain.mjs tick agendaAllocationFor() → per-job lean/skip THIS shift · diary lists brain_out/agenda/TODAY.json in inputs"
+   },
+   "_note": "PHASE H · H2 (10 Aug 2026, his 'let's build everything'): the first thought of the night lane — spend follows surprise. Inputs are ALL code-computed in the runJob branch (salience day-summary with escalation rows as the wake residue — brain_ledger cortex_wake rows carry metering only, refuter-verified; H1's brain_outcomes last-per-key; teaching-drift top rules). Output: ≤25-line reasoning page + a SANITIZED machine sibling — allocations only on enabled OVERNIGHT jobs (any other window's shiftDay never resolves tonight's file: formation_read is unreachable BY CONSTRUCTION, not by demotion), depth ∈ {lean, skip} only ('deep' is a NO-OP — G4 already gives every overnight job the 48k ceiling), night_coach + diary NEVER skippable, and the tick's skip-safety gate demotes any skip whose lane is not <24h fresh (one declared period; reconcile's bleed bar is two, so a legal skip can never bleed). A skip consumes ALL max_per_day slots (the capsule_premap:3 lesson) and writes ONE ok-less ledger row (failureStreak samples boolean-ok rows only — a fake ok:true would reset the dead-brain alarm). at 22:45 DERIVED: H1's scoreboard writes at 22:38 in the evening chain — the agenda reads a post-scoreboard bus; rides the H2 wrap-aware at-gate. priority 95 DERIVED: above deep_reanalysis 85 (the true overnight max — night_coach is 72) and the evening_voice 90 tie, below the sheet's 100.",
+   "_validator_note": "validate is DELIBERATELY absent: the sanitizer in parseAgendaJson IS the validation (structural, deterministic), and no_new_numbers would bounce legal job ids (midday_digest_2) and times. Do not 'harden' this."
+  },
+  {
+   "id": "diary",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "overnight",
+   "at": "03:00",
+   "priority": 10,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "diary",
+   "serve": "next_morning",
+   "hype_guard": true,
+   "inputs": [
+    "brain_out/agenda/TODAY.json"
+   ],
+   "out": "diary",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/learnstate.mjs diaryLine() → the kickoff brief · scripts/dugout.mjs get_diary tool → the Gaffer"
+   },
+   "_note": "PHASE H · H6 (10 Aug 2026): the brain's nightly one page in its own hand — attended · believed · tested · was wrong · will change. Inputs: tonight's ledger SUMMARIZED with every count precomputed (the no-derive law: the page may only repeat given counts, never sum or average — no validator, the prompt contract + hype_guard carry it; a computed summary is the whole point), the agenda's sibling (declared input so reconcile sees the pair), H1 outcomes, watchman finding ids, and the coach's misconception CONCEPT NAMES ONLY — the evidence field is his verbatim words, and injecting it makes this a G8 opus lane (model sonnet stands ONLY while inputs stay names-only + machine summaries; revert = model opus). at 03:00 rides the H2 wrap-aware at-gate (after the night writers: nightshift task 02:40, its last write minutes later; a laptop asleep through 03:00-07:30 = no diary that morning, said in the kickoff by absence — acceptable degradation, window stays overnight). ≤25 lines (the analysis head's own cap, brain.mjs buildAnalysisPrompt — cited, not guessed). serve next_morning: the page is named for the morning it is read. Machine sibling {date, will_change} keeps diaryLine/get_diary deterministic; the .md is the him-optional page. NEVER a card, never a push — him reading it is optional by design.",
+   "_metacognition_note": "MEASUREMENT WINDOW (the pulse pattern, G14): metacognition spend = ledger rows job∈{agenda,diary} ÷ overnight total, MEASURED from the G1 honest meter — no cap is set here because no cap has been measured; when the window has rows, the fraction and any cap land in this note AND limits.mjs BUDGETS in the same commit."
   }
  ],
  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",

@@ -132,6 +132,7 @@ export const BUDGETS = [
   { name: "overnight target fraction", where: "brain_config.budget.overnight_target_frac",    value: 0.95,     origin: "guessed",  note: "how hard the night is allowed to run" },
   { name: "gemini defer threshold",    where: "brain_config.dugout_pool.gemini_defer_threshold_min", value: 30, origin: "guessed", note: "voice minutes before daytime gemini steps aside" },
   { name: "pulse min headroom",        where: "brain.mjs pulseConfig.min_headroom_tokens",    value: 20000,    origin: "guessed",  note: "" },
+  { name: "metacognition night fraction", where: "brain_config jobs.diary._metacognition_note", value: "unset", origin: "measured-pending", note: "H2/H6 (10 Aug 2026): NO cap set — the measurement window is open (ledger rows job∈{agenda,diary} ÷ overnight total, the G14 pulse pattern); when measured, the fraction + any cap land here AND in that _note in the same commit" },
 ];
 
 // ---- GUARDS: not budgets. They stop ONE identical failure repeating forever. --
@@ -177,6 +178,8 @@ export const CADENCES = [
   { name: "concept graph",            where: "schtasks ArsenalFC-ConceptGraph",          value: "03:00",      origin: "guessed",  note: "the ONE nightly Opus path (cortex consolidate)" },
   { name: "watchman",                 where: "schtasks ArsenalFC-Watchman",              value: "23:55",      origin: "derived",  note: "after the whole day, before midnight rolls the local date" },
   { name: "thalamus refractory",      where: "thalamus_config.refractory_min",           value: "45min",      origin: "guessed",  note: "same-key wake suppression" },
+  { name: "agenda (night's 1st thought)", where: "brain_config jobs.agenda.at",           value: "22:45",      origin: "derived",  note: "H2 (10 Aug 2026) — after H1's scoreboard writes at 22:38 in the evening chain; rides the wrap-aware at-gate" },
+  { name: "diary (night's last page)",  where: "brain_config jobs.diary.at",              value: "03:00",      origin: "derived",  note: "H6 (10 Aug 2026) — after the night writers (nightshift 02:40 + minutes); a slept-through slot = no page that morning, said by absence" },
 ];
 
 // ---- generic sweep: every numeric leaf in every *_config.json ---------------

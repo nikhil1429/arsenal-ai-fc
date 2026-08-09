@@ -48,6 +48,7 @@
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -753,7 +754,23 @@ function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
     // conductor claimed since day one but nothing enforced until this line.
     if (j.trigger && !(queueState && queueState.triggers && queueState.triggers[j.trigger])
         && !(j.trigger_fallback_hm && nowHM >= j.trigger_fallback_hm)) return false;
-    if (j.at) return nowHM >= j.at && inRange(nowHM, ...(windows[j.window] || windows.any));
+    // H2 (10 Aug 2026, refuter-caught BLOCKER): the at-gate was a plain string
+    // compare, blind to the overnight window's midnight wrap — an `at` in the
+    // after-midnight segment (e.g. diary 03:00) read as ELIGIBLE 22:00-23:59
+    // ("22:05" >= "03:00" is string-true), so the job ran hours BEFORE the
+    // moment its at named. No overnight job had ever carried an `at`, so the
+    // hole sat unexercised until H6. Wrap-aware now: when the window wraps and
+    // j.at sits in the after-midnight half (at < window start), eligibility is
+    // the [at → end) segment alone. Pre-midnight ats keep the old behaviour.
+    // In a wrapped window BOTH halves collapse to inRange(now, at, end): a
+    // pre-midnight at (agenda 22:45) stays eligible across the wrap (02:00 is
+    // "after 22:45" within this shift), an after-midnight at (diary 03:00)
+    // waits out the evening half — inRange's own wrap branch carries both.
+    if (j.at) {
+      const [ws, we] = windows[j.window] || windows.any;
+      if (ws > we) return inRange(nowHM, j.at, we);
+      return nowHM >= j.at && inRange(nowHM, ws, we);
+    }
     return inRange(nowHM, ...(windows[j.window] || windows.any));
   }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
 }
@@ -1388,6 +1405,187 @@ export function parseNightCoachJson(text) {
 }
 
 // ---------------------------------------------------------------------------
+// PHASE H · H2 AGENDA + H6 DIARY (10 Aug 2026, his "let's build everything")
+// ---------------------------------------------------------------------------
+const lastJsonBlock = (text) => {
+  try {
+    const m = [...String(text || "").matchAll(/```json\s*\n([\s\S]*?)```/gi)];
+    return m.length ? JSON.parse(m[m.length - 1][1]) : null;
+  } catch { return null; }
+};
+
+// H2 — the agenda's machine sibling, SANITIZED at parse time (allocates only,
+// never invents): keys must be ENABLED jobs in the OVERNIGHT window (any other
+// window's shiftDay never resolves tonight's file — a non-overnight allocation
+// is a dead letter, refuter-proven, so it is dropped HERE and recorded), the
+// agenda cannot allocate itself, NEVER_SKIP lanes (night_coach — tomorrow's
+// lesson — and diary — the night's own record) demote skip→lean, and depth is
+// {lean, skip} ONLY: "deep" is a NO-OP overnight (maxThinkingFor already gives
+// every non-study phase the 48k ceiling — G4), so it is dropped, never obeyed.
+export function parseAgendaJson(text, cfg) {
+  const j = lastJsonBlock(text);
+  if (!j || typeof j !== "object" || !j.allocations || typeof j.allocations !== "object") return null;
+  const NEVER_SKIP = new Set(["night_coach", "diary"]);
+  const legal = new Map(((cfg && cfg.jobs) || [])
+    .filter((x) => x.enabled !== false && x.window === "overnight" && x.kind !== "agenda")
+    .map((x) => [x.id, x]));
+  const allocations = {}; const dropped = [];
+  for (const [id, a] of Object.entries(j.allocations)) {
+    const depth = a && typeof a === "object" ? String(a.depth || "") : String(a || "");
+    const why = (a && typeof a === "object" && a.why) ? String(a.why).slice(0, 200) : "";
+    if (!legal.has(id)) { dropped.push({ id, why: "not an enabled overnight job — outside the agenda's date key" }); continue; }
+    if (depth !== "lean" && depth !== "skip") { dropped.push({ id, why: `depth "${depth}" not in {lean, skip} ("deep" is the 48k default already)` }); continue; }
+    if (depth === "skip" && NEVER_SKIP.has(id)) { allocations[id] = { depth: "lean", why: `NEVER_SKIP demoted skip→lean: ${why}` }; continue; }
+    allocations[id] = { depth, why };
+  }
+  return { date: typeof j.date === "string" ? j.date : null,
+    focus: typeof j.focus === "string" ? j.focus.slice(0, 300) : null,
+    allocations, ...(dropped.length ? { dropped } : {}) };
+}
+
+// H6 — the diary's machine sibling: one deterministic line for diaryLine and
+// get_diary, so the healthy read path never parses LLM prose.
+export function parseDiaryJson(text) {
+  const j = lastJsonBlock(text);
+  if (!j || typeof j !== "object" || typeof j.will_change !== "string") return null;
+  return { date: typeof j.date === "string" ? j.date : null, will_change: j.will_change.slice(0, 300) };
+}
+
+// the per-kind sibling parser map — the night_coach mechanism, generalized
+// (it was hardcoded twice; H2/H6 are its second and third users).
+const SIBLING_PARSERS = {
+  night_coach: (text) => parseNightCoachJson(text),
+  agenda: (text, cfg) => parseAgendaJson(text, cfg),
+  diary: (text) => parseDiaryJson(text),
+};
+
+// H2 — the tick-side lookup: tonight's sanitized allocations for THIS job.
+// Only overnight-window jobs can resolve tonight's file (shiftDay keying);
+// the agenda never allocates itself. Absent file / absent key = null = default.
+export function agendaAllocationFor(job, cfg, now, dir = OUT_DIR) {
+  if (!job || job.window !== "overnight" || job.kind === "agenda") return null;
+  const sd = shiftDay(job, now, cfg);
+  const ag = readJson(join(dir, "agenda", sd + ".json"));
+  const a = ag && ag.allocations && ag.allocations[job.id];
+  return a && typeof a === "object" && (a.depth === "lean" || a.depth === "skip")
+    ? { depth: a.depth, why: a.why || "" } : null;
+}
+
+// H2 — the skip-safety gate: a lane may rest tonight ONLY if its newest output
+// file is younger than ONE declared period (24h). reconcile's staleness bar is
+// two periods (48h, its own derivation law) — so a legal skip can never bleed,
+// and every non-agenda cause of a missed night (failed attempts, dead laptop,
+// validator rejects) closes the gate by itself, no proxy needed.
+export function laneRestable(job, dir = OUT_DIR, nowMs = Date.now()) {
+  try {
+    const lane = join(dir, job.out || job.id);
+    let newest = 0;
+    for (const f of readdirSync(lane)) {
+      try { const m = statSync(join(lane, f)).mtimeMs; if (m > newest) newest = m; } catch { }
+    }
+    return newest > 0 && (nowMs - newest) < 24 * 3600000;
+  } catch { return false; }   // no lane dir = never produced = never restable
+}
+
+function buildAgendaPrompt(job, inputs, cfg, banned = DEFAULTS.guards.banned_phrases) {
+  const targets = ((cfg && cfg.jobs) || [])
+    .filter((x) => x.enabled !== false && x.window === "overnight" && x.kind !== "agenda")
+    .map((x) => `${x.id} (priority ${x.priority || 0}, out brain_out/${x.out || x.id})`);
+  const head = `You are THE AGENDA of ARSENAL AI FC — the first thought of the night lane. Spend follows surprise: tonight's depth goes where today's evidence says it matters, and is TAKEN AWAY where the food is stale or absent. You ALLOCATE only — the job table is canon and you may never invent, reorder or re-schedule a job.
+
+LEGAL ALLOCATION TARGETS (overnight lane only — any other id is dropped by the sanitizer):
+${targets.map((t) => "- " + t).join("\n")}
+
+DO: read the day's evidence below, then write ≤ 25 lines of reasoning (what surprised, what the night should chase, what is a waste tonight), then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"date": "<tonight's shift day>", "focus": "<ONE line — the single most surprising thing today>", "allocations": {"<job_id>": {"depth": "lean"|"skip", "why": "<one line of tonight's evidence>"}}}
+
+LAWS: an absent job = default depth (the night's 48k ceiling) — allocate ONLY where the evidence says lean (the lane's food is thin tonight) or skip (its food is absent/stale and one night's rest costs nothing). night_coach and diary can never be skipped. Evidence only — every why must trace to an INPUT line. Use only numbers present in the inputs. NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+
+function buildDiaryPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
+  const head = `You are the BRAIN of ARSENAL AI FC writing tonight's ONE-PAGE DIARY in your own first person — the page a captain may glance at over chai, and the page your own tomorrow reads. Five headed sections, in this order: ATTENDED (what tonight actually ran) · BELIEVED (what the agenda thought would matter) · TESTED (what the scoreboard measured) · WAS WRONG (where belief and measurement disagree — say it plainly) · WILL CHANGE (one concrete thing tomorrow does differently).
+
+LAWS: ≤ 25 lines total (the analysis head's own cap — one glance, one story). Plain English, first person, no hype. USE ONLY THE COUNTS GIVEN in the inputs — never sum, average or derive a new number; if a count is not given, say "uncounted", never invent it. END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"date": "<the morning this serves>", "will_change": "<the WILL CHANGE line, verbatim, one line>"}
+NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+
+// H2 — the day's evidence, computed DETERMINISTICALLY (the nightCoachAfferents
+// pattern: code summarizes, the model reads summaries — never a 2MB raw dump).
+// Salience day-filter uses r.day (the ledger's own local-day field), .1-roll-aware.
+export function salienceDaySummary(day, dir = STATE_DIR) {
+  const p = join(dir, "salience_ledger.jsonl");
+  const rows = [];
+  for (const f of [p + ".1", p]) {
+    try {
+      for (const line of readFileSync(f, "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { const r = JSON.parse(line); if (r.day === day) rows.push(r); } catch { }
+      }
+    } catch { }
+  }
+  const hist = {}; const tiers = {}; const keys = {};
+  let pulseComps = 0;
+  for (const r of rows) {
+    hist[r.outcome || "?"] = (hist[r.outcome || "?"] || 0) + 1;
+    tiers["t" + (r.tier ?? "?")] = (tiers["t" + (r.tier ?? "?")] || 0) + 1;
+    keys[r.key] = (keys[r.key] || 0) + 1;
+    if (r.comps && r.comps.pulse > 0) pulseComps++;
+  }
+  const escalations = rows.filter((r) => r.outcome && r.outcome !== "reflex")
+    .sort((a, b) => (b.S || 0) - (a.S || 0)).slice(0, 8)
+    .map((r) => ({ key: r.key, S: r.S, outcome: r.outcome, tier: r.tier }));
+  const topKeys = Object.entries(keys).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => `${k}×${n}`);
+  return { day, rows: rows.length, outcomes: hist, tiers, top_keys: topKeys, escalations, pulse_comp_rows: pulseComps };
+}
+
+// H1's journal, read the readers' way: last row per (day|kind|subject) key.
+export function outcomesFor(days, dir = STATE_DIR) {
+  const last = new Map();
+  try {
+    for (const line of readFileSync(join(dir, "brain_outcomes.jsonl"), "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      try { const r = JSON.parse(line); last.set(`${r.day}|${r.kind}|${r.subject}`, r); } catch { }
+    }
+  } catch { }
+  return [...last.values()].filter((r) => days.includes(r.day));
+}
+
+// H6 — tonight's ledger, summarized with EVERY count precomputed (the diary's
+// no-derive law only works if the summary already carries every number the
+// five sections could want). Explicit .1+live read — readLinesTail can miss a
+// freshly-rolled generation (E3).
+export function ledgerShiftSummary(shiftDayStr, dir = STATE_DIR) {
+  const p = join(dir, "brain_ledger.jsonl");
+  const rows = [];
+  for (const f of [p + ".1", p]) {
+    try {
+      for (const line of readFileSync(f, "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { rows.push(JSON.parse(line)); } catch { }
+      }
+    } catch { }
+  }
+  // the shift = 22:00 of the shift day → now (the diary runs inside the shift)
+  const start = new Date(`${shiftDayStr}T22:00:00+05:30`).getTime();
+  const shift = rows.filter((r) => { const t = new Date(r.ts).getTime(); return Number.isFinite(t) && t >= start; });
+  const perJob = {};
+  let ok = 0, failed = 0, skipped = 0, tokens = 0;
+  for (const r of shift) {
+    const j = perJob[r.job] = perJob[r.job] || { runs: 0, ok: 0, failed: 0, agenda_skips: 0, tokens: 0 };
+    j.runs++; j.tokens += r.total_tokens || 0; tokens += r.total_tokens || 0;
+    if (r.agenda_skip) { j.agenda_skips++; skipped++; }
+    else if (r.ok === true) { j.ok++; ok++; }
+    else if (r.ok === false) { j.failed++; failed++; }
+  }
+  return { shift_day: shiftDayStr, rows: shift.length, ok, failed, agenda_skips: skipped, total_tokens: tokens, per_job: perJob };
+}
+
+// ---------------------------------------------------------------------------
 // JOB RUNNER
 // ---------------------------------------------------------------------------
 async function runJob(job, cfg, deps) {
@@ -1483,6 +1681,31 @@ async function runJob(job, cfg, deps) {
     // validator, write, acct) stays the shared path.
     inputs[`afferent lanes (study day ${today})`] = nightCoachAfferents(today);
     prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
+  } else if (job.kind === "agenda") {
+    // H2: the day's evidence, all code-computed (never a raw ledger dump).
+    // Wake residue rides the salience summary's own escalation rows — the
+    // brain_ledger's cortex_wake rows carry metering only (refuter-verified),
+    // so the ledger contributes nothing here but cost lines the diary reads.
+    inputs[`salience day-summary (computed, ${today})`] = salienceDaySummary(today);
+    inputs["brain_outcomes (last-per-key, yesterday+today)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    const tc = readJson(join(STATE_DIR, "teaching_contract.json"));
+    inputs["teaching drifts (top rules)"] = ((tc && tc.rules) || [])
+      .map((r) => ({ id: r.id, hits: (r.hits || 0) + (r.auto_hits || 0) }))
+      .sort((a, b) => b.hits - a.hits).slice(0, 5);
+    prompt = buildAgendaPrompt(job, inputs, cfg, cfg.guards.banned_phrases);
+  } else if (job.kind === "diary") {
+    // H6: every count precomputed (the no-derive law), agenda via declared
+    // input (brain_out/agenda/TODAY.json — reconcile sees the pair), coach
+    // names ONLY — the evidence field is his verbatim words, and injecting it
+    // would make this a G8 opus lane (the _note carries the tripwire).
+    inputs[`tonight's ledger (computed, shift ${today})`] = ledgerShiftSummary(today);
+    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    const wl = readJson(join(STATE_DIR, "watchman_last.json"));
+    inputs["watchman findings (last sweep)"] = ((wl && wl.findings) || []).map((f) => ({ id: f.id, level: f.level }));
+    const ncServe = readJson(join(OUT_DIR, "night_coach", outDate(job, now, today) + ".json"));
+    inputs["tomorrow's lesson (concept names ONLY)"] = ncServe && Array.isArray(ncServe.misconceptions)
+      ? ncServe.misconceptions.map((m) => m && m.concept).filter(Boolean) : null;
+    prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
@@ -1513,13 +1736,19 @@ async function runJob(job, cfg, deps) {
     let note = `→ brain_out/${job.out || job.id}/${outDay}.md`
       + (srf.where ? ` · reads at: ${srf.where}` : " · ⚠ NO SURFACE DECLARED — nothing points at this file")
       + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "");
-    // P2 — the night coach's machine sibling: same call, same outDay, derived
-    // by parsing the trailing fenced json AFTER the validator passed. A parse
-    // miss is degradation said out loud in the note, never a thrown error.
-    if (job.kind === "night_coach") {
-      const nc = parseNightCoachJson(r.text);
-      if (nc && !dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".json"), nc);
-      note += nc ? ` + ${outDay}.json (machine sibling: ${nc.misconceptions.length} misconception(s))`
+    // P2 — the machine sibling: same call, same outDay, derived by parsing the
+    // trailing fenced json AFTER the validator passed. A parse miss is
+    // degradation said out loud in the note, never a thrown error. H2/H6
+    // (10 Aug 2026) generalized the night_coach mechanism into a per-kind
+    // parser map — agenda's sibling is SANITIZED at parse (allocates only),
+    // diary's carries the one deterministic will_change line its readers need.
+    if (SIBLING_PARSERS[job.kind]) {
+      const sib = SIBLING_PARSERS[job.kind](r.text, cfg);
+      if (sib && !dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".json"), sib);
+      const detail = sib && job.kind === "night_coach" ? `: ${sib.misconceptions.length} misconception(s)`
+        : sib && job.kind === "agenda" ? `: ${Object.keys(sib.allocations).length} allocation(s)${sib.dropped ? `, ${sib.dropped.length} dropped` : ""}`
+        : "";
+      note += sib ? ` + ${outDay}.json (machine sibling${detail})`
         : " · json sibling ABSENT — no valid fenced json in the reply (degraded, not fatal)";
     }
     // MEDIA ENGINE: speak_to jobs render their validated text to an mp3 in
@@ -1638,6 +1867,37 @@ async function tick(cfg, deps) {
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
     const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)), queueState, now, deps.signals);
     if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
+    // H2 (10 Aug 2026) — THE AGENDA'S HAND, economize-only. Tonight's file is
+    // keyed on the job's own shiftDay (stable across midnight for overnight
+    // jobs — brain.mjs:688-692; the sanitizer already scoped allocations to
+    // the overnight window, so a resolvable allocation is the only kind here).
+    const alloc = agendaAllocationFor(job, cfg, now);
+    if (alloc && alloc.depth === "skip") {
+      if (!laneRestable(job)) {
+        // the skip-safety gate: one night's rest is legal only while the lane's
+        // newest file is younger than ONE declared period (24h) — reconcile's
+        // own staleness bar is two periods (48h), so a legal skip can never
+        // bleed, and a lane already starved by a failed/dead night is protected
+        // no matter what yesterday's agenda believed (refuter-closed hole).
+        alloc.depth = "lean"; alloc.why = `skip demoted — lane not fresh enough to rest (${alloc.why || ""})`;
+      } else {
+        // a REAL night's rest: ALL slots consumed (the capsule_premap
+        // max_per_day:3 lesson — one recordJobRun would leave 2 live slots),
+        // ONE ledger row with NO boolean ok — failureStreak samples only
+        // boolean-ok rows (:628), and a fake ok:true would reset the
+        // dead-brain alarm across a night of skips.
+        const sd = shiftDay(job, now, cfg);
+        queueState.jobs_run = queueState.jobs_run || {};
+        queueState.jobs_run[sd] = queueState.jobs_run[sd] || {};
+        queueState.jobs_run[sd][job.id] = job.max_per_day || 1;
+        const srow = { ts: now.toISOString(), job: job.id, engine: "agenda", model: null,
+          total_tokens: 0, duration_ms: 0, agenda_skip: true,
+          note: `agenda:skip (${alloc.why || "no why given"})` };
+        if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(srow) + "\n");
+        ran.push({ job: job.id, skipped: `agenda:skip (${alloc.why || ""})`, ledgerRow: srow });
+        continue;
+      }
+    }
     // queueState rides along so runJob can claim the day's ONE morning utterance
     // (`mouth_said`) — a failed llm keeps its slot and retries, and without this the
     // existence-gated push would fire once per attempt.
@@ -1647,7 +1907,10 @@ async function tick(cfg, deps) {
     // 16k, overnight 48k, always ≤ half the allowed window); claudeExec turns
     // it into MAX_THINKING_TOKENS. Depth before breadth: 12 overnight jobs ×
     // 48k thinking is idle-pool-funded 4.6× over.
-    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, thinkTokens: maxThinkingFor(h.phase, h.allowed).max_thinking_tokens });
+    // H2: "lean" borrows the study phase's own 16k constant — no new number;
+    // absent allocation (or any non-overnight job) = the phase default (G4).
+    const thinkPhase = alloc && alloc.depth === "lean" ? "study" : h.phase;
+    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, thinkTokens: maxThinkingFor(thinkPhase, h.allowed).max_thinking_tokens });
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
@@ -1798,6 +2061,75 @@ async function selftest() {
     assert("A2 — armed trigger opens the gate", eligibleJobs(trigCfg, { triggers: { morning_signals: { ts: "x" } } }, at850).some(j => j.id === "t1"));
     assert("A2 — past the fallback the gate opens even unarmed", eligibleJobs(trigCfg, { triggers: {} }, at931).some(j => j.id === "t1"));
     assert("A2 — formation_read carries the trigger + fallback in canon config", (() => { const f = cfg.jobs.find(j => j.id === "formation_read"); return f && f.trigger === "morning_signals" && !!f.trigger_fallback_hm; })());
+  }
+
+  // PHASE H · H2/H6 (10 Aug 2026) — the wrap-aware at-gate + the agenda's hand
+  {
+    const hCfg = { ...cfg, jobs: [
+      { id: "diary_fx", engine: "claude", window: "overnight", at: "03:00", priority: 10 },
+      { id: "agenda_fx", engine: "claude", window: "overnight", at: "22:45", priority: 95 },
+      { id: "plain_fx", engine: "claude", window: "overnight", priority: 50 },
+    ] };
+    const at2230 = new Date(2026, 6, 12, 22, 30), at2300 = new Date(2026, 6, 12, 23, 0),
+      at0200 = new Date(2026, 6, 13, 2, 0), at0305 = new Date(2026, 6, 13, 3, 5), at0745 = new Date(2026, 6, 13, 7, 45);
+    assert("H2 AT-GATE — an after-midnight at WAITS OUT the evening half (the H6 blocker: 03:00 must not run at 23:00)",
+      !eligibleJobs(hCfg, {}, at2300).some(j => j.id === "diary_fx")
+      && eligibleJobs(hCfg, {}, at0305).some(j => j.id === "diary_fx")
+      && !eligibleJobs(hCfg, {}, at0745).some(j => j.id === "diary_fx"));
+    assert("H2 AT-GATE — a pre-midnight at stays eligible ACROSS the wrap (22:45 is still past at 02:00)",
+      !eligibleJobs(hCfg, {}, at2230).some(j => j.id === "agenda_fx")
+      && eligibleJobs(hCfg, {}, at2300).some(j => j.id === "agenda_fx")
+      && eligibleJobs(hCfg, {}, at0200).some(j => j.id === "agenda_fx"));
+    assert("H2 AT-GATE — at-less overnight jobs untouched on both sides of midnight (regression)",
+      eligibleJobs(hCfg, {}, at2300).some(j => j.id === "plain_fx")
+      && eligibleJobs(hCfg, {}, at0200).some(j => j.id === "plain_fx"));
+
+    const sanCfg = { jobs: [
+      { id: "night_coach", enabled: true, window: "overnight", kind: "night_coach" },
+      { id: "diary", enabled: true, window: "overnight", kind: "diary" },
+      { id: "wall_insights", enabled: true, window: "overnight" },
+      { id: "midday_digest", enabled: true, window: "midday" },
+      { id: "agenda", enabled: true, window: "overnight", kind: "agenda" },
+    ] };
+    const agTxt = "soch\n```json\n" + JSON.stringify({ date: "2026-08-10", focus: "f", allocations: {
+      wall_insights: { depth: "lean", why: "thin day" },
+      night_coach: { depth: "skip", why: "silence the coach" },
+      midday_digest: { depth: "skip", why: "wrong window" },
+      invented_job: { depth: "skip", why: "not real" },
+      agenda: { depth: "skip", why: "self" },
+      diary: { depth: "deep", why: "no-op depth" },
+    } }) + "\n```";
+    const ag = parseAgendaJson(agTxt, sanCfg);
+    assert("H2 SANITIZER — legal lean kept · NEVER_SKIP demotes skip→lean · invented/non-overnight/self/deep all dropped with reasons",
+      ag.allocations.wall_insights.depth === "lean"
+      && ag.allocations.night_coach.depth === "lean" && /NEVER_SKIP/.test(ag.allocations.night_coach.why)
+      && !ag.allocations.midday_digest && !ag.allocations.invented_job && !ag.allocations.agenda
+      && ag.dropped.length === 4);
+    assert("H2 SANITIZER — prose-only / shapeless json → null, never a throw",
+      parseAgendaJson("prose only", sanCfg) === null && parseAgendaJson("```json\n{\"x\":1}\n```", sanCfg) === null);
+    assert("H6 SIBLING — {date, will_change} parses; shapeless → null",
+      parseDiaryJson("x\n```json\n{\"date\":\"2026-08-10\",\"will_change\":\"one line\"}\n```").will_change === "one line"
+      && parseDiaryJson("```json\n{\"date\":\"x\"}\n```") === null);
+
+    const hDir = join(tmpdir(), "brain-h2-" + process.pid);
+    mkdirSync(join(hDir, "agenda"), { recursive: true });
+    mkdirSync(join(hDir, "wall_insights"), { recursive: true });
+    writeFileSync(join(hDir, "agenda", "2026-07-12.json"), JSON.stringify({ allocations: { wall_insights: { depth: "skip", why: "w" } } }));
+    writeFileSync(join(hDir, "wall_insights", "2026-07-12.md"), "fresh page");
+    assert("H2 LOOKUP — an overnight job resolves tonight's sanitized allocation; a non-overnight job never can",
+      agendaAllocationFor({ id: "wall_insights", window: "overnight" }, cfg, at2300, hDir).depth === "skip"
+      && agendaAllocationFor({ id: "wall_insights", window: "midday" }, cfg, at2300, hDir) === null
+      && agendaAllocationFor({ id: "agenda", window: "overnight", kind: "agenda" }, cfg, at2300, hDir) === null);
+    assert("H2 REST GATE — a lane rests only when its newest file is <24h old; stale or never-produced lanes refuse",
+      laneRestable({ id: "wall_insights", out: "wall_insights" }, hDir) === true
+      && laneRestable({ id: "wall_insights", out: "wall_insights" }, hDir, Date.now() + 25 * 3600000) === false
+      && laneRestable({ id: "ghost", out: "ghost" }, hDir) === false);
+    rmSync(hDir, { recursive: true, force: true });
+    assert("H2/H6 CANON — both jobs committed: agenda opus/overnight/22:45/95, diary sonnet/overnight/03:00/serve, sibling parsers wired",
+      (() => { const a = cfg.jobs.find(j => j.id === "agenda"), d = cfg.jobs.find(j => j.id === "diary");
+        return a && a.kind === "agenda" && a.at === "22:45" && a.priority === 95 && a.model === "opus"
+          && d && d.kind === "diary" && d.at === "03:00" && d.serve === "next_morning" && d.model === "sonnet"
+          && d.inputs.some(i => /agenda\/TODAY\.json/.test(typeof i === "string" ? i : i.path)); })());
   }
 
   // MEDIA ENGINE — team talks: validated text → mp3 in club/media/

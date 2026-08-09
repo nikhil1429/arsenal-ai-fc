@@ -135,6 +135,24 @@ function nightCoachLine(dir, now) {
   return null;
 }
 
+// H6 (10 Aug 2026) — the diary's kickoff one-liner: the brain's own WILL CHANGE
+// line from last night's page. The machine sibling (.json, deterministic) is
+// the healthy path; the .md's first non-heading line is the degraded fallback.
+// Today's serve file first, yesterday's tagged — the nightCoachLine shape.
+function diaryLine(dir, now) {
+  const nowD = new Date(now);
+  for (const [d, tag] of [[ncLocalDate(nowD), ""], [ncLocalDate(new Date(nowD.getTime() - 86400000)), " (1d purana)"]]) {
+    const j = readJson(join(dir, "brain_out/diary", d + ".json"));
+    if (j && j.will_change) return `📔 BRAIN DIARY${tag}: will change — ${clip(j.will_change, 120)} · brain_out/diary/${d}.md`;
+    try {
+      const md = readFileSync(join(dir, "brain_out/diary", d + ".md"), "utf8");
+      const line = md.split("\n").find((l) => l.trim() && !/^#/.test(l.trim()));
+      if (line) return `📔 BRAIN DIARY${tag}: ${clip(line.trim(), 120)} · brain_out/diary/${d}.md`;
+    } catch { }
+  }
+  return null;
+}
+
 function seasonLine(dir) {
   const s = readJson(join(dir, "season.json"));
   if (!s || !s.season_day) return null;
@@ -442,6 +460,10 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     if (ncl) L.push(ncl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
+    const dl = diaryLine(dir, now);   // H6 — the brain's own night page, one line
+    if (dl) L.push(dl);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  try {
     const sl = seasonLine(dir);
     if (sl) L.push(sl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
@@ -543,6 +565,20 @@ function selftest() {
     writeFileSync(join(dirN3, "brain_out", "night_coach", ld(NOW) + ".json"), JSON.stringify({ lesson: {} }));
     assert("P2 a shapeless file (no misconceptions[]) stays silent, never crashes the brief",
       typeof brief(dirN3, NOW) === "string" && !brief(dirN3, NOW).includes("NIGHT COACH"));
+
+    // ---- H6 (10 Aug 2026) — THE DIARY line: sibling first, md fallback -----
+    mkdirSync(join(dirN, "brain_out", "diary"), { recursive: true });
+    writeFileSync(join(dirN, "brain_out", "diary", ld(NOW) + ".json"),
+      JSON.stringify({ date: ld(NOW), will_change: "teach axis d through the artefact first" }));
+    assert("H6 a TODAY diary sibling yields the WILL CHANGE line, deterministic path",
+      brief(dirN, NOW).includes("📔 BRAIN DIARY:") && brief(dirN, NOW).includes("teach axis d"));
+    const dirD2 = mkdtempSync(join(tmpdir(), "learnstate-diary-md-"));
+    mkdirSync(join(dirD2, "brain_out", "diary"), { recursive: true });
+    writeFileSync(join(dirD2, "brain_out", "diary", ld(NOW) + ".md"), "# DIARY\nattended: nine jobs ran clean tonight\n");
+    assert("H6 no sibling ⇒ the md's first non-heading line (degraded path still speaks)",
+      brief(dirD2, NOW).includes("nine jobs ran clean"));
+    assert("H6 no diary at all ⇒ zero new lines (absence is silence, never a nag)",
+      !brief(dir2, NOW).includes("BRAIN DIARY"));
   }
 
   // ---- P7.B — THE ARBITER (7 Aug 2026): one winner, stated precedence, losers named

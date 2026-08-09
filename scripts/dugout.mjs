@@ -1027,6 +1027,10 @@ const TOOL_DECLS = [
   // way back to who he is. These two shell the hippocampus's own tested doors.
   { name: "get_context", description: "REHYDRATE HIS DURABLE MEMORY — the hippocampus cartridge: identity facts (each DATED — true as of its date), who-he-is, his last durable episodes, open threads. Call at session start, after any reconnection or context compression, or the moment you feel a gap about who he is — you ASK, he is never made to re-explain.", parameters: { type: "OBJECT", properties: {} } },
   { name: "recall_memory", description: "TARGETED PULL from his durable memory — 'what confused him about X', 'kya usne Y decide kiya tha'. Searches the hippocampus's DURABLE moments (doubts/wins/threads/facts); different from semantic_recall, which searches his verbatim words index. Call whenever a past doubt, win or decision would change what you say next.", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
+  // PHASE H · H6 (10 Aug 2026) — GAFFER TRANSPARENCY: the brain's own night
+  // page, pull-able. Direct read (loadNightCoach's shape), never a shell —
+  // the diary is a plain file, not a derived composition like the cartridge.
+  { name: "get_diary", description: "THE BRAIN'S NIGHT DIARY — what the machine attended to, believed, tested, got WRONG and will change, in its own hand (DATED — last night's page). Call when he asks what the brain did overnight, why a lesson/drill changed, or whether the machine caught its own mistake. Transparency, not status: quote its WILL CHANGE line when he asks what is different today.", parameters: { type: "OBJECT", properties: {} } },
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
@@ -1477,6 +1481,18 @@ function execTool(name, args, deps = {}) {
       const said = sh("hippocampus.mjs", ["recall", String(args.query || "")], "");
       return { ok: true, recall: String(said || "").trim().slice(0, 4000) };
     }
+    // H6 — the diary door: today's serve file first, yesterday tagged (the
+    // nightCoachLine lookback shape); sibling's will_change + the page itself.
+    if (name === "get_diary") {
+      for (const [d, tag] of [[localDate(now), "today"], [localDate(new Date(now.getTime() - 86400000)), "1d old"]]) {
+        const dir = join(STATE_DIR, "brain_out", "diary");
+        const sib = readJson(join(dir, d + ".json"));
+        let page = null;
+        try { page = readFileSync(join(dir, d + ".md"), "utf8").slice(0, 6000); } catch { }
+        if (sib || page) return { ok: true, date: d, age: tag, will_change: (sib && sib.will_change) || null, page: page || "(sibling only — the page did not write)" };
+      }
+      return { ok: true, page: null, note: "no diary yet — the brain writes it overnight (03:00); a missed morning means the laptop slept through the slot" };
+    }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
         .filter(l => localDayOf(l.ts) === localDate(now))
@@ -1886,7 +1902,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 26);   // 26 since LADDER F1 (get_context + recall_memory)
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 27);   // 27 since PHASE H H6 (get_diary; 26 = LADDER F1)
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -2001,6 +2017,11 @@ async function selftest() {
         && execTool("get_context", {}, { sh: fsh }).cartridge.includes("IDENTITY")
         && (execTool("recall_memory", { query: "embeddings doubt" }, { sh: fsh }),
           f1Calls.some(c => c.script === "hippocampus.mjs" && c.argv[0] === "recall" && c.argv[1] === "embeddings doubt")));
+      // H6 — the diary door: declared with the WILL CHANGE hook, direct read
+      // (no shell), and an empty world answers honestly instead of erroring.
+      assert("H6 — get_diary DECLARED (transparency, not status) and an empty world says why it is empty",
+        TOOL_DECLS.some(t => t.name === "get_diary" && /WILL CHANGE/.test(t.description))
+        && (() => { const r = execTool("get_diary", {}, {}); return r.ok === true && (r.page === null ? /overnight/.test(r.note) : true); })());
       // F2 — [BUS DELTA]: primes silently, ships only the changed fields, then quiets
       const rt2 = {};
       const p1 = { vitals: "VITALS: A", scout: "SCOUT: A", drills: "DRILLS: A", twin: "TWIN: A" };
@@ -2196,7 +2217,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("26 club tools now (F1: the two memory pull-doors joined get_organism's squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 26);
+    assert("27 club tools now (H6: get_diary joined F1's two memory pull-doors)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 27);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -2223,7 +2244,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 26 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 27 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
