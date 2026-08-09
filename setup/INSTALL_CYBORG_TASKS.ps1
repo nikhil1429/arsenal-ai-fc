@@ -51,15 +51,18 @@ MkHidden "ArsenalFC-Turnstile" "turnstile.mjs"               @("/SC","DAILY","/S
 # working-memory (P3): the resident PACEMAKER daemon (~75s poll). Singleton via the
 # tick lock (:4115), so a stray BrainTick can never double-run it.
 MkHidden "ArsenalFC-BrainDaemon" "brain.mjs daemon"          @("/SC","DAILY","/ST","07:06")
-# neuromodulation - hourly (cheap; follows the Governor wherever it goes)
-Mk "ArsenalFC-Tone"           "tone.mjs"                     @("/SC","HOURLY")
-# predictive presence - the stall sensor, every 10 minutes
-Mk "ArsenalFC-Presence"       "presence.mjs sense"           @("/SC","MINUTE","/MO","10")
+# neuromodulation - every 5 min (G16, 9 Aug 2026: zero-LLM and LATENCY is its
+# failure mode - an hour-old tone modulates the wrong hour)
+Mk "ArsenalFC-Tone"           "tone.mjs"                     @("/SC","MINUTE","/MO","5")
+# predictive presence - the stall sensor, every minute (G6, 9 Aug 2026: the
+# sensor samples fast; its detection WINDOW is untouched)
+Mk "ArsenalFC-Presence"       "presence.mjs sense"           @("/SC","MINUTE","/MO","1")
 # working-memory (P1): the FREE distiller (working_set) every 15 min
 Mk "ArsenalFC-Distiller"      "distiller.mjs"                @("/SC","MINUTE","/MO","15")
-# working-memory (P3): the ambient CONTEXT bridge - AW window deltas -> the thalamus
-# river, every minute (the ~60s floor is this cadence; each run only emits on a change)
-Mk "ArsenalFC-Context"        "context.mjs once"             @("/SC","MINUTE","/MO","1")
+# LADDER G6 (9 Aug 2026): the ArsenalFC-Context row is GONE — the brain daemon's
+# own header carries the context bridge now, and this per-minute task was its
+# double-ingesting duplicate. tasks_expected.json lists it designed-absent; the
+# watchman REDs its resurrection. (Was: Mk "ArsenalFC-Context" "context.mjs once" MINUTE/1)
 # the Rest Room - hourly; its own gates (away/tone/headroom) do the deciding
 Mk "ArsenalFC-DMN"            "dmn.mjs"                      @("/SC","HOURLY")
 # the hippocampus - nightly consolidation + store maintenance + hourly sweep
@@ -84,8 +87,12 @@ Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/
 # D4 (9 Aug 2026, launch worklist) - the constitution's unconditional reminder promise
 # (dugout.mjs :775) finally gets its out-of-process caller, and the shadow sampler stops
 # depending on the Dugout window being open. Both lanes existed since #52/#53; no task ran them.
-Mk "ArsenalFC-DugoutReminders" "dugout.mjs fire-reminders"    @("/SC","MINUTE","/MO","30","/ST","08:00")
-Mk "ArsenalFC-ShadowDetect"    "dugout.mjs shadow-detect"     @("/SC","HOURLY","/ST","09:05")
+# G6 (9 Aug 2026): both cadences RECONCILED to the constants the code itself
+# declares — reminders mirror dugout.mjs's own 30000ms in-process interval (a
+# 30-min task was 60x slower than the promise it carries), shadows mirror the
+# 600000ms interval at dugout.mjs's sampler.
+Mk "ArsenalFC-DugoutReminders" "dugout.mjs fire-reminders"    @("/SC","MINUTE","/MO","1")
+Mk "ArsenalFC-ShadowDetect"    "dugout.mjs shadow-detect"     @("/SC","MINUTE","/MO","10")
 # LADDER D2 (9 Aug 2026) - the daemon watchdog: probe :4111/:4112/:4113/:4116
 # every 10 min, relaunch DOWN daemons via the VBS cloak, resync one pass after
 # the thalamus recovers. The dugout (:4114) is deliberately excluded (his surface).

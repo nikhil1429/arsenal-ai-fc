@@ -900,7 +900,12 @@ function createNucleus(cfg, deps = {}) {
     // zero latency and zero Opus. Attaching is NOT speech (recall-hint
     // pattern): the Gaffer weaves it only if it earns the turn; no gate moved.
     let preAnswer = carry(N.workspace.pre_answer, "pre-answer");     // #9
-    if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0)) {
+    // LADDER G14 (9 Aug 2026) — CONSUMER BEFORE WEIGHT: a pulse-flagged moment
+    // (comps.pulse > 0) may query the night's answer cache too. The pulse's
+    // WEIGHT stays 0.00 (pure instrument — it moves no salience); this is the
+    // first CONSUMER of its verdicts, landed before any weight is fitted, so
+    // the instrument's precision gets measured against real serves.
+    if (cfg.pre_answer.enabled && tier >= 1 && (g.spotlight.comps.self > 0 || g.spotlight.comps.err > 0 || g.spotlight.comps.pulse > 0)) {
       const cache = D.answerCache() || [];
       if (cache.length) {
         const qtext = `${(g.spotlight.evt.concept_tokens || []).join(" ")} ${g.spotlight.evt.text || ""}`.trim();

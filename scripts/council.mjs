@@ -184,7 +184,11 @@ async function convene(question, deps = {}) {
       if (r && r.ok && r.text) {
         drafts.push({ seat: cross.id, family: cross.family || "claude", text: String(r.text).slice(0, 1200) });
         // the spend rides the SHARED brain ledger — the window sees every token
-        (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({ ts: new Date().toISOString(), job: "council_chair", engine: "claude", model: cross.model, input_tokens: r.input_tokens || 0, output_tokens: r.output_tokens || 0, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: true, error: null, limit_hit: false });
+        // G1 (9 Aug 2026): limit_hit was hardcoded false — a plan-limit chair
+        // reply ledgered as an ordinary ok row, so the window never learned it
+        // was locked. The call's own verdict rides now, and the cache pair
+        // joins the row (the honest meter).
+        (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({ ts: new Date().toISOString(), job: "council_chair", engine: "claude", model: cross.model, input_tokens: r.input_tokens || 0, output_tokens: r.output_tokens || 0, cache_creation_tokens: r.cache_creation_tokens || 0, cache_read_tokens: r.cache_read_tokens || 0, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: true, error: null, limit_hit: r.limit_hit === true });
       }
     })());
   }

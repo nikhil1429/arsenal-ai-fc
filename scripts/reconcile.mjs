@@ -112,6 +112,23 @@ function readersOf(needle, corpus, excludeBasenames = []) {
   return [...new Set(hits)];
 }
 
+// LADDER G13 (9 Aug 2026) — THE PHANTOM NEEDLE. The bare quoted `"<out>"` form
+// matched ANY string equal to a lane name anywhere in the tree: deep_twin's out
+// "twin" collected 7 phantom consumers (slip rows' book:"twin", type tags…),
+// none of which ever opened the lane. A quoted name now counts ONLY inside a
+// join(...) call — the one shape that is actually a path being opened.
+export function readersOfJoinContext(out, corpus, excludeBasenames = []) {
+  const esc = String(out).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp("join\\s*\\([^)]*[\"']" + esc + "[\"']");
+  const hits = [];
+  for (const { file, text } of corpus) {
+    const b = basename(file);
+    if (excludeBasenames.includes(b)) continue;
+    if (re.test(stripComments(text))) hits.push(b);
+  }
+  return [...new Set(hits)];
+}
+
 // ---------------------------------------------------------------------------
 // cadence → how old is TOO old, derived from the job's own declaration
 // ---------------------------------------------------------------------------
@@ -202,7 +219,7 @@ function reconcileBrainLanes(deps = {}) {
     // fix reads the lexicon lane: `minedAnchors(dir = join(OUT_DIR, "lexicon"))`.
     // Comments are stripped first, so the audit's prose about a lane is not a reader.
     const consumers = readersOf(`brain_out/${job.out}`, corpus, ["reconcile.mjs"])
-      .concat(readersOf(`"${job.out}"`, corpus, ["reconcile.mjs"]))
+      .concat(readersOfJoinContext(job.out, corpus, ["reconcile.mjs"]))   // G13 — join()-context only, phantoms dead
       .concat(consumedBy[job.out] || []);
     const uniqueConsumers = [...new Set(consumers)];
 
@@ -215,6 +232,13 @@ function reconcileBrainLanes(deps = {}) {
     const notes = [];
     if (!enabled) {
       // a disabled job is not a defect — it is a decision. Recorded, never bled.
+      // G13 INVERSE SIGNAL (9 Aug 2026): but the moment a DISABLED job's
+      // measured consumers go NON-empty, its own re-enable condition is met —
+      // and until this line, nothing could ever say so: the notes that promise
+      // "RE-ENABLE WHEN a reader exists" were promises with no messenger.
+      if (uniqueConsumers.length) {
+        notes.push(`re-enable condition MET — disabled, yet ${uniqueConsumers.length} reader(s) reference brain_out/${job.out}: ${uniqueConsumers.slice(0, 4).join(", ")}`);
+      }
     } else if (newestMs === null) {
       bleeds.push(fileCount === 0 && !existsSync(dir)
         ? `never produced — ${job.out}/ does not exist`
@@ -241,6 +265,36 @@ function reconcileBrainLanes(deps = {}) {
     });
   }
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// LADDER G13 · PASS 1b (9 Aug 2026) — THE UNDECLARED LANES. PASS 1 walks the
+// CONFIG, so a brain_out/ dir no job declares as its `out` was never even
+// looked at: nightshift/ and dugout/ (two of the busiest dirs on the machine)
+// were structurally invisible to the very report that hunts unread output.
+// readdir(brain_out) minus declared outs = the dirs written by side channels;
+// each is reported with its measured reader count, same disease, same net.
+// ---------------------------------------------------------------------------
+function reconcileUndeclaredLanes(deps = {}) {
+  const cfg = deps.cfg !== undefined ? deps.cfg : readJson(join(STATE_DIR, "brain_config.json"));
+  const corpus = gatherCorpus(deps);
+  const outDir = deps.outDir || OUT_DIR;
+  const declared = new Set(((cfg && cfg.jobs) || []).map((j) => j.out).filter(Boolean));
+  const rows = [];
+  if (!existsSync(outDir)) return rows;
+  for (const name of readdirSync(outDir)) {
+    let st; try { st = statSync(join(outDir, name)); } catch { continue; }
+    if (!st.isDirectory() || declared.has(name)) continue;
+    let files = 0;
+    try { files = readdirSync(join(outDir, name)).length; } catch { }
+    // consumers = code readers + config-DECLARED job inputs (brain_out/dugout is
+    // opened by nothing in code, but midday_digest/dugout_digest list it — a
+    // declared input is a reader we can trust, same as consumptionMap's rule).
+    const viaInputs = (((cfg && cfg.jobs) || []).filter((j) => (j.inputs || []).some((i) => String(typeof i === "string" ? i : (i && i.path) || "").startsWith(`brain_out/${name}`)))).map((j) => `${j.id} (job input)`);
+    const consumers = [...new Set(readersOf(`brain_out/${name}`, corpus, ["reconcile.mjs"]).concat(viaInputs))];
+    rows.push({ dir: name, files, consumers, orphan: consumers.length === 0 });
+  }
+  return rows.sort((a, b) => Number(b.orphan) - Number(a.orphan) || b.files - a.files);
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +333,7 @@ function reconcileStateBus(deps = {}) {
 function build(deps = {}) {
   const cfg = deps.cfg !== undefined ? deps.cfg : readJson(join(STATE_DIR, "brain_config.json"));
   const lanes = reconcileBrainLanes(deps);
+  const undeclared = reconcileUndeclaredLanes(deps);   // G13 PASS 1b
   const bus = reconcileStateBus(deps);
   const laneBleeds = lanes.filter((r) => r.bleeds.length);
   const orphans = bus.filter((r) => r.orphan);
@@ -287,6 +342,7 @@ function build(deps = {}) {
     brain_paused: !!(cfg && cfg.paused === true),
     lanes_checked: lanes.length,
     lanes_bleeding: laneBleeds.length,
+    undeclared_lanes: undeclared,
     state_files_checked: bus.length,
     state_orphans: orphans.length,
     lanes,
@@ -301,6 +357,10 @@ function printReport(r) {
   console.log(`\n== PRODUCE-AND-CONSUME RECONCILIATION  [${r.generated_at.slice(0, 10)}] ==`);
   if (r.brain_paused) console.log(`NOTE: brain_config.paused === true — no job is running, so staleness is EXPECTED and is reported as a note, not a bleed. "No reader" findings are still live.`);
   console.log(`brain lanes: ${r.lanes_checked} checked · ${r.lanes_bleeding} bleeding`);
+  if ((r.undeclared_lanes || []).length) {
+    console.log(`undeclared lanes (G13 PASS 1b — dirs no job declares): ${r.undeclared_lanes.length}`);
+    for (const u of r.undeclared_lanes) console.log(`  ${u.orphan ? "⚠" : "·"} brain_out/${u.dir}/ — ${u.files} file(s), ${u.consumers.length} reader(s)${u.consumers.length ? ` (${u.consumers.slice(0, 3).join(", ")})` : " — written by a side channel, read by NOTHING"}`);
+  }
   for (const l of r.lanes.filter((x) => x.bleeds.length)) {
     console.log(`  ✗ ${l.job} → brain_out/${l.out}`);
     for (const b of l.bleeds) console.log(`      ${b}`);

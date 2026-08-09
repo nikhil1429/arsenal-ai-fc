@@ -99,5 +99,6 @@
   "मतलब क्या",
   "डाउट"
  ],
- "_gaffer_lane_2026_08_09": "LADDER F4, 9 Aug 2026, under his blanket ladder haan (same receipt pattern as _gemini_lane): the Gaffer's own spoken turns now post as afferents with source dugout-gaffer-teaching — DENY-listed here so the coach's voice is never mistaken for his (the deny list WINS, per _self_sources_doc #1)."
+ "_gaffer_lane_2026_08_09": "LADDER F4, 9 Aug 2026, under his blanket ladder haan (same receipt pattern as _gemini_lane): the Gaffer's own spoken turns now post as afferents with source dugout-gaffer-teaching — DENY-listed here so the coach's voice is never mistaken for his (the deny list WINS, per _self_sources_doc #1).",
+ "_g14_pulse_bound_note": "LADDER G14 (9 Aug 2026, blanket ladder haan — receipt like _gemini_lane): THE DERIVED TWO-SIDED BOUND for any future w_pulse. tau1_eff floor = tau1_base 0.4 - budget_k reaches at most 0.03 headroom credit in practice → floor ~0.37; the measured non-pulse salience ceiling on a pulse-flagged moment = 0.32029; so the TRUE weight ceiling = 0.37 - 0.32029 = 0.04971 (the printed 0.07971 used tau1_base raw — wrong side of the budget coupling). Any fitted w_pulse must sit in (0, 0.04971], derived as measured precision × 0.04971. min_headroom is TWO-SIDED for the same reason: a bound that only guards one side lets the other drift. weights.pulse stays 0 until the fit."
 }

@@ -78,7 +78,29 @@ const BIN = () => {
 // zero argv strings carry spaces (fixed flags only) and the prompt rides stdin,
 // so shell:true here cannot become an injection surface.
 const needsShell = (bin) => bin.endsWith(".cmd");
-const ARGS = (model) => ["-p", "--output-format", "json", "--model", model || "sonnet"];
+// LADDER G0 (9 Aug 2026): THE LEAN FLAGS RIDE THIS ENGINE TOO. brain.mjs proved
+// them 6 Aug — measured 88.5% off a bare probe, 57.5% off 11 real jobs
+// (brain.mjs:867-880) — while every DMN/nightshift/council/adjudicator call
+// through HERE kept paying the ~44k full-CLI boot tax (DMN alone: 58.7M real
+// tokens in 3 days, mostly this). Same prompt discipline as brain's
+// ORGAN_SYSTEM_PROMPT (mirrored verbatim — one law, two engines), same
+// reversibility: ARSENAL_CLAUDEGEN_FULL=1 restores the old invocation verbatim.
+// SHIM GUARD: the lean system-prompt carries spaces, which shell:true (the .cmd
+// path) would mangle — so a shimmed box keeps the full CLI and SAYS so via the
+// env probe below, never silently. This box runs the native exe (verified 9 Aug:
+// ~/.local/bin/claude.exe, no %APPDATA% shim), so lean is live here.
+const ORGAN_SYSTEM_PROMPT =
+  "You are a deterministic text transformer inside a personal accountability system. "
+  + "Everything you need is in the prompt: data is embedded, never fetched. "
+  + "Return ONLY what the prompt asks for — no preamble, no commentary, no apology, "
+  + "and no markdown fences unless the prompt explicitly asks for them.";
+const LEAN_ARGS = ["--system-prompt", ORGAN_SYSTEM_PROMPT, "--tools", "", "--strict-mcp-config"];
+const ARGS = (model) => {
+  const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
+  if (process.env.ARSENAL_CLAUDEGEN_FULL === "1") return base;
+  if (needsShell(BIN())) return base;   // spaced args + shell:true don't mix — full CLI, out loud in the ledger's spend
+  return [...base, ...LEAN_ARGS];
+};
 
 // audit 4 Aug 2026 (#7): the token SPLIT now rides every result. The DMN meters
 // its ~57 nightly calls into brain_ledger.jsonl and the ledger's own honesty law
@@ -98,7 +120,15 @@ function parseOut(stdout, prompt, t0) {
       cacheRead = j.usage.cache_read_input_tokens ?? null;
     }
   } catch { /* non-json → raw text */ }
-  const measured = (inTok || 0) + (outTok || 0);
+  // LADDER G1 (9 Aug 2026): THE HONEST METER — all four usage fields sum into
+  // total_tokens. The old in+out pair saw ~1.7% of real spend (the cache pair is
+  // where a CLI call's bulk lives; DMN under-reported 57.3×). NOTE, measured
+  // context: 58.7M real tokens in 3.5 days on a 24M plan drew only 3 limit rows
+  // — the PLAN does not charge cache reads at full weight, so this honest total
+  // OVER-weights vs the wall. That is a MEASUREMENT WINDOW (his no-guessed-
+  // numbers law): record honest totals now, fit lane-weights to observed limit
+  // events before trusting any governor arithmetic built on them.
+  const measured = (inTok || 0) + (outTok || 0) + (cacheCreate || 0) + (cacheRead || 0);
   const total = measured || Math.ceil((String(prompt).length + String(text).length) / 4);
   const cls = isErr ? classifyLimit(envelope, resultText) : { limit_hit: false, http_status: null, limit_signal: "none" };
   return {

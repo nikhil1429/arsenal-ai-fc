@@ -61,6 +61,27 @@ import { generatePool, embedPool } from "./hippocampus.mjs";
 // starved the night). generatePool stays imported for the PHYSICS lanes only:
 // the 400k-char season re-read (1M context) and embeddings.
 import { claudeGen } from "./claudegen.mjs";
+
+// LADDER G1 (9 Aug 2026): THE NIGHT SHIFT METERS ITSELF. Five claudeGen sites,
+// zero ledger rows — the governor's window never saw this lane's spend at all.
+// Every default generate now lands the same row shape brain.mjs writes, on the
+// SHARED brain ledger, 4-field honest totals included (claudegen G1). Injected
+// deps in the selftest bypass this wrapper, so tests stay hermetic.
+const genLedgered = async (prompt, model, jobLabel) => {
+  const r = await claudeGen(prompt, model);
+  try {
+    const { appendFileSync: app } = await import("node:fs");
+    const { join: j2 } = await import("node:path");
+    app(j2(STATE_DIR, "brain_ledger.jsonl"), JSON.stringify({
+      ts: new Date().toISOString(), job: jobLabel, engine: "claude", model,
+      input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+      cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+      total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0,
+      ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+    }) + "\n");
+  } catch { /* an unmetered call is still a made call — never fail the job on the meter */ }
+  return r;
+};
 import { loadBoard, headroomOf, recordUse } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
 import { indexRecall } from "./dugout.mjs";
@@ -145,7 +166,7 @@ function drillConcepts(deps = {}) {
 // JOB 1 — THE PROBE BANK (validated JSON; junk rejected per-item)
 // ---------------------------------------------------------------------------
 async function probeBank(deps = {}) {
-  const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
+  const gen = deps.generate || ((p) => genLedgered(p, "sonnet", "ns_probe_bank"));
   const use = deps.recordUse || meterUse;
   const budget = deps.budget || NO_BUDGET;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "dossier_weights.json"));
@@ -199,8 +220,8 @@ async function gradeProbes(bank, deps = {}) {
   // haiku plays the hot seats (mechanical, ×24/night), sonnet plays the pro.
   // NOTE: claude CLI has no temperature flag — the GRADE.temp knob is retired;
   // natural sampling variance still separates contested from settled ground.
-  const genHot = deps.generateHot || ((p) => claudeGen(p, "haiku"));
-  const genPro = deps.generatePro || ((p) => claudeGen(p, "sonnet"));
+  const genHot = deps.generateHot || ((p) => genLedgered(p, "haiku", "ns_grade_probes"));
+  const genPro = deps.generatePro || ((p) => genLedgered(p, "sonnet", "ns_grade_probes"));
   const targets = [];
   for (const [concept, v] of Object.entries(bank || {})) for (const pr of v.probes || []) {
     if (["novel", "negative-space"].includes(pr.type)) targets.push({ concept, probe: pr });
@@ -232,7 +253,7 @@ async function gradeProbes(bank, deps = {}) {
 // JOB 2 — PERSONALIZED DISTRACTORS (his own confusion shapes make the wrong answers)
 // ---------------------------------------------------------------------------
 async function distractorBank(deps = {}) {
-  const gen = deps.generate || ((p) => claudeGen(p, "sonnet"));
+  const gen = deps.generate || ((p) => genLedgered(p, "sonnet", "ns_distractors"));
   const use = deps.recordUse || meterUse;
   const budget = deps.budget || NO_BUDGET;
   const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"));
@@ -286,6 +307,17 @@ function gemCartridge(deps = {}, now = new Date()) {
   const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
   const caps = deps.capsuleFiles || (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { return []; } })();
   const bank = deps.probeBank || readJson(join(OUT_DIR, `probe_bank_${localDate(now)}.json`));
+  // LADDER G10 (9 Aug 2026): the revived capsule_premap joins the cartridge —
+  // the night's repeatable filler. The viz-style i<=2 day-lookback is MANDATORY,
+  // not decoration: premap files land under the SHIFT day, minutes AFTER this
+  // very job's own write, so tonight's cartridge reads the newest of three days.
+  const premap = deps.premap !== undefined ? deps.premap : (() => {
+    for (let i = 0; i <= 2; i++) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      try { const t = readFileSync(join(STATE_DIR, "brain_out", "premap", `${localDate(d)}.md`), "utf8"); if (t.trim()) return { day: localDate(d), text: t }; } catch { }
+    }
+    return null;
+  })();
   const md = [
     `# GEM CARTRIDGE · ${localDate(now)} — paste into your Gem's instructions (your own data → your own Google account)`,
     "",
@@ -296,6 +328,7 @@ function gemCartridge(deps = {}, now = new Date()) {
     "",
     "RULES: one probe at a time · demand my gut-word (knew/shaky/guessed) BEFORE I answer · honest verdicts, no flattery · after each session output a JSON array of reps, EVERY item exactly: {\"surface\":\"gem\",\"track\":\"concept\",\"concept\":\"...\",\"axis\":\"a-i\",\"question\":\"...\",\"confidence\":\"knew|shaky|guessed\",\"correct\":true|false} so I can paste it into my capture system.",
     bank && Object.keys(bank.bank || bank).length ? `\nFRESH PROBES (tonight's bank — use these first):\n${Object.entries(bank.bank || bank).slice(0, 4).map(([c, v]) => `- ${c}: ${(v.probes || []).slice(0, 2).map(p => p.probe).join(" · ")}`).join("\n")}` : "",
+    premap ? `\nPRE-MAPPED FAULT-LINES (the night's read of where he will crack — probe these, from ${premap.day}):\n${premap.text.slice(0, 1200)}` : "",
   ].filter(Boolean).join("\n");
   // #106 — the shift record used to log this job as the literal `{ ok: true }`,
   // written unconditionally right after the file write, so it could never be
@@ -305,7 +338,7 @@ function gemCartridge(deps = {}, now = new Date()) {
   const probeConcepts = bank ? Object.keys(bank.bank || bank).length : 0;
   return {
     md,
-    filled: { capsules: caps.length, probe_concepts: probeConcepts, has_fingerprint: !!(who && who.fingerprint), open_threads: ((who && who.open_threads) || []).length, danger_topics: ((cal && cal.danger_zone) || []).length },
+    filled: { capsules: caps.length, probe_concepts: probeConcepts, has_fingerprint: !!(who && who.fingerprint), open_threads: ((who && who.open_threads) || []).length, danger_topics: ((cal && cal.danger_zone) || []).length, premap_day: premap ? premap.day : null },   // G10 — the accounting sees the premap too
   };
 }
 
@@ -591,7 +624,7 @@ async function preAnswerEngine(deps = {}) {
   const now = deps.now || new Date();
   // thinking models spend thoughts from the SAME output budget — the 25-item
   // predict needs real room or the wire returns an empty candidate (probed live)
-  const gen = deps.generate || ((p, big) => claudeGen(p, "sonnet"));
+  const gen = deps.generate || ((p, big) => genLedgered(p, "sonnet", "ns_pre_answers"));
   const use = deps.recordUse || meterUse;
   const budget = deps.budget || NO_BUDGET;
   const material = deps.material || preAnswerMaterial(deps, now);
@@ -810,7 +843,7 @@ async function runShift(deps = {}) {
   const gc = gemCartridge({ ...deps, probeBank: Object.keys(pb.bank).length ? { bank: pb.bank } : undefined }, now);
   write("gem_cartridge.md", gc.md);
   // #106 — what the cartridge actually carries, not a literal that cannot fail
-  out.jobs.gem_cartridge = { ...gc.filled, empty: !(gc.filled.capsules || gc.filled.probe_concepts || gc.filled.has_fingerprint || gc.filled.danger_topics) };
+  out.jobs.gem_cartridge = { ...gc.filled, empty: !(gc.filled.capsules || gc.filled.probe_concepts || gc.filled.has_fingerprint || gc.filled.danger_topics || gc.filled.premap_day) };   // G10 — premap counts as filling
 
   // E3 (9 Aug 2026): the ledger rolls at 2 MB now — read the .1 generation too,
   // so the tunnel's 200-decision sample survives a roll that happened yesterday.

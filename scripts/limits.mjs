@@ -124,8 +124,8 @@ export const GATES = [
 
 // ---- BUDGETS: numbers that cap SPEND ---------------------------------------
 export const BUDGETS = [
-  { name: "pulse daily call cap",      where: "brain.mjs pulseConfig.daily_cap",              value: 200,      origin: "guessed",  note: "reclassified #66/#67: a runaway-loop backstop, NOT a budget — at the 0.10 window (~36 pulses/day) it can never bind; pulse itself PAUSED since 2 Aug (brain_config.pulse.enabled:false)" },
-  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.10,     origin: "guessed",  note: "was 0.05 (1 Aug guess); DOUBLED 2 Aug as a MEASUREMENT WINDOW — arithmetic recorded in brain_config.pulse._measurement_window_note; this row said 0.05 until 7 Aug 2026, exactly the rot this file warns about" },
+  { name: "pulse daily call cap",      where: "brain.mjs pulseConfig.daily_cap",              value: 200,      origin: "guessed",  note: "G3 INVERSION (9 Aug 2026): post-lean (~1.1k/pulse est) this backstop BINDS FIRST — 2.4M/1.1k ≈ 2,180 » 200; crossover at 12k tok/pulse. The old 'can never bind' was 12M-era arithmetic at 32,480 tok/pulse. Re-fit after G14's metered probes" },
+  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.10,     origin: "guessed",  note: "was 0.05 (1 Aug guess); DOUBLED 2 Aug as a MEASUREMENT WINDOW; G3 (9 Aug): 24M-era daily window = 2.4M tok — the split ruling's arithmetic lives in brain.mjs pulseConfig's own header (his verbatim 20x words recorded there)" },
   { name: "window capacity estimate",  where: "brain_config.budget.window_capacity_est_tokens", value: 1600000, origin: "measured", note: "SELF-TUNES from observed limit events (observed_window_ceiling); DOUBLED 9 Aug 2026 (P1 unleash, his word) for the doubled plan" },
   { name: "weekly capacity estimate",  where: "brain_config.budget.weekly_capacity_est_tokens", value: 24000000, origin: "external", note: "the Claude Max plan's real wall — not ours to choose; DOUBLED 9 Aug 2026 (P1 unleash) for the doubled plan" },
   { name: "day reserve fraction",      where: "brain_config.budget.day_reserve_frac",         value: 0.4,      origin: "guessed",  note: "how much of the window is held back during his study hours" },
@@ -142,6 +142,41 @@ export const GUARDS = [
   { name: "step timeout",             where: "conductor.mjs STEP_TIMEOUT_MS",              value: 180000, earned: "a hung organ must not eat the morning" },
   { name: "heartbeat timeout",        where: "heartbeat.mjs timeout_ms",                   value: 120000, earned: "" },
   { name: "sheet line cap",           where: "manager.mjs LINE_CAP",                       value: 40,     earned: "one glance = one story; a 200-line sheet is not a sheet" },
+];
+
+// ---- LADDER G5 (9 Aug 2026) — CADENCES: every timer the organism runs on, ----
+// with its provenance. ZERO rows existed before this; every cadence was a
+// number someone typed once and nobody could audit. origin ∈ measured (from a
+// live observation) · derived (arithmetic from another number, shown) · ruled
+// (his word or an approved-plan number) · guessed (typed on a vibe — the ones
+// to re-fit first). Timer changes update this table IN THE SAME COMMIT.
+export const CADENCES = [
+  { name: "brain daemon beat",        where: "brain_config.daemon.poll_ms",              value: "15s",        origin: "ruled",    note: "G5 (approved ladder) — was fallback 75000ms; :2771 re-read makes the config value live" },
+  { name: "pulse spacing",            where: "brain.mjs pulseConfig.min_spacing_s",      value: "150s",       origin: "derived",  note: "2 old beats × 75s — pinned in SECONDS so a faster pacer cannot quintuple the pulse (G5 coupling fix)" },
+  { name: "BrainTick fallback",       where: "schtasks ArsenalFC-BrainTick",             value: "30min",      origin: "guessed",  note: "lock-coordinated fallback when the daemon is down" },
+  { name: "morning conductor",        where: "schtasks ArsenalFC-Morning-Conductor",     value: "09:15",      origin: "ruled",    note: "his 7 Aug word" },
+  { name: "evening conductor",        where: "schtasks ArsenalFC-Evening-Conductor",     value: "22:00",      origin: "ruled",    note: "the Bell's hour is HIS (D1)" },
+  { name: "daemon watchdog",          where: "schtasks ArsenalFC-Daemon-Watchdog",       value: "10min",      origin: "guessed",  note: "D2 — probe + VBS relaunch; resync one pass after thalamus answers" },
+  { name: "groundsman push",          where: "schtasks ArsenalFC-Groundsman-Push",       value: "03:45",      origin: "derived",  note: "after the night writers (02:40/03:00), before the sentinel's 10:30 read (D3)" },
+  { name: "wake probe",               where: "schtasks ArsenalFC-WakeProbe",             value: "03:52",      origin: "derived",  note: "inside the night lane it measures; WakeToRun, NO catch-up (E1/F14)" },
+  { name: "timeaudit pulse",          where: "schtasks ArsenalFC-TimeAuditor-Pulse",     value: "12/15/18h",  origin: "ruled",    note: "the 3-bucket day split (ORGANISM_CLOCK.md:48)" },
+  { name: "timeaudit full",           where: "schtasks ArsenalFC-TimeAuditor-Full",      value: "22:00",      origin: "guessed",  note: "day's end read" },
+  { name: "capture pull",             where: "schtasks ArsenalFC-CapturePull",           value: "60min",      origin: "guessed",  note: "" },
+  { name: "wall live render",         where: "schtasks ArsenalFC-Wall-Live",             value: "30min",      origin: "guessed",  note: "" },
+  { name: "dugout reminders task",    where: "schtasks ArsenalFC-DugoutReminders",       value: "1min",       origin: "derived",  note: "G6 — reconciled to dugout.mjs:3371's own 30000ms in-process interval (was 30min: a task 60× slower than the code it mirrors)" },
+  { name: "shadow detect task",       where: "schtasks ArsenalFC-ShadowDetect",          value: "10min",      origin: "derived",  note: "G6 — reconciled to dugout.mjs:3377's own 600000ms interval (was hourly)" },
+  { name: "presence sense",           where: "schtasks ArsenalFC-Presence",              value: "1min",       origin: "ruled",    note: "G6 — the stall sensor samples fast, its WINDOW is untouched" },
+  { name: "distiller",                where: "schtasks ArsenalFC-Distiller",             value: "15min",      origin: "guessed",  note: "the free working-set refresh" },
+  { name: "DMN",                      where: "schtasks ArsenalFC-DMN",                   value: "60min",      origin: "ruled",    note: "G16 KEEPS hourly — its gate is human-timescale (away/tone/headroom decide, not the timer)" },
+  { name: "tone",                     where: "schtasks ArsenalFC-Tone",                  value: "5min",       origin: "ruled",    note: "G16 — zero-LLM; LATENCY is its failure mode, so it samples fast" },
+  { name: "hippo index sweep",        where: "schtasks ArsenalFC-HippoIndex",            value: "60min",      origin: "guessed",  note: "" },
+  { name: "recall arrival debounce",  where: "dugout.mjs /afferent-relay",               value: "300s",       origin: "ruled",    note: "F3/G16 — embeds ≤116/day vs the 1,000 embedding quota" },
+  { name: "consolidate",              where: "schtasks ArsenalFC-Consolidate",           value: "02:10",      origin: "guessed",  note: "night lane order: consolidate → store → nightshift → conceptgraph" },
+  { name: "hippo store",              where: "schtasks ArsenalFC-HippoStore",            value: "02:20",      origin: "guessed",  note: "" },
+  { name: "night shift",              where: "schtasks ArsenalFC-NightShift",            value: "02:40",      origin: "guessed",  note: "" },
+  { name: "concept graph",            where: "schtasks ArsenalFC-ConceptGraph",          value: "03:00",      origin: "guessed",  note: "the ONE nightly Opus path (cortex consolidate)" },
+  { name: "watchman",                 where: "schtasks ArsenalFC-Watchman",              value: "23:55",      origin: "derived",  note: "after the whole day, before midnight rolls the local date" },
+  { name: "thalamus refractory",      where: "thalamus_config.refractory_min",           value: "45min",      origin: "guessed",  note: "same-key wake suppression" },
 ];
 
 // ---- generic sweep: every numeric leaf in every *_config.json ---------------
@@ -189,7 +224,7 @@ export function report(stateDir = STATE) {
     const have = g.have ? g.have(m) : null;
     return { ...g, have, open: have == null || g.need == null ? null : have >= g.need, have_fn: undefined };
   });
-  return { measured: m, gates, budgets: BUDGETS, guards: GUARDS, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
+  return { measured: m, gates, budgets: BUDGETS, guards: GUARDS, cadences: CADENCES, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
 }
 
 function human(r) {
@@ -212,6 +247,10 @@ function human(r) {
   console.log("\n=== GUARDS — not budgets; they stop one failure repeating ===");
   for (const g of r.guards) console.log(`  ${String(g.value).padStart(7)}  ${g.name.padEnd(26)} ${g.earned ? "earned: " + g.earned : ""}`);
 
+  console.log("\n=== CADENCES — every timer, with its provenance (G5) ===");
+  for (const c of r.cadences) console.log(`  ${c.origin.padEnd(8)} ${String(c.value).padStart(9)}  ${c.name.padEnd(26)} ·  ${c.where}`);
+  console.log(`  → ${r.cadences.filter(c => c.origin === "guessed").length} of ${r.cadences.length} cadences are GUESSES — the re-fit list.`);
+
   console.log(`\n=== SWEEP === ${r.config_numbers.length} numeric knobs across ${new Set(r.config_numbers.map(c => c.file)).size} config files · ${r.script_defaults.length} in script DEFAULTS blocks`);
   console.log("(run `node scripts/limits.mjs json` for the full machine-readable dump)\n");
 }
@@ -225,6 +264,12 @@ function selftest() {
   ok("a gate's status is computed from live data, never asserted", r.gates.filter(g => g.have != null).every(g => g.open === (g.have >= g.need)));
   ok("the sweep finds config knobs", r.config_numbers.length > 0);
   ok("the sweep finds script DEFAULTS knobs", r.script_defaults.length > 0);
+  // LADDER G5 — the cadence registry: zero rows existed before 9 Aug 2026
+  ok("G5: every cadence row carries a tagged origin and a where",
+    r.cadences.length >= 26 && r.cadences.every(c => ["measured", "derived", "ruled", "guessed"].includes(c.origin) && c.where && c.name));
+  ok("G5: the two coupling-critical rows exist — the 15s beat and the SECONDS-pinned pulse spacing",
+    r.cadences.some(c => c.where === "brain_config.daemon.poll_ms" && c.value === "15s")
+    && r.cadences.some(c => /min_spacing_s/.test(c.where) && c.origin === "derived"));
   ok("comment text is stripped — no prose number reported as a knob", !r.script_defaults.some(d => d.key === "E2E" || d.key === "audit"));
 
   // ---- AUDIT #78 — THE TWIN MAPPING ----------------------------------------

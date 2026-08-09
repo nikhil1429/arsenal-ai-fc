@@ -1472,10 +1472,11 @@ function selftest() {
   // never spawns another organ, so the spawn argv itself is what gets asserted.
   {
     const cmds = chainCommands("hallucinations");
-    assert("lock-chain: exact spawn argv (mission stage-lock + benchmark run)",
-      cmds.length === 2
+    assert("lock-chain: exact spawn argv (mission stage-lock + benchmark run + G16's event-driven mirror)",
+      cmds.length === 3
       && /scout\.mjs$/.test(cmds[0].args[0]) && cmds[0].args.slice(1).join(" ") === "mission stage-lock hallucinations"
-      && /benchmark\.mjs$/.test(cmds[1].args[0]) && cmds[1].args[1] === "run");
+      && /benchmark\.mjs$/.test(cmds[1].args[0]) && cmds[1].args[1] === "run"
+      && /mirror\.mjs$/.test(cmds[2].args[0]));
     const cm3 = { concepts: [
       { concept: "a1", locked_on: "2026-06-01", counts: { doubts: 20 } },
       { concept: "a2", locked_on: "2026-06-02", counts: { doubts: 25 } },
@@ -1519,6 +1520,10 @@ function chainCommands(concept) {
   return [
     { name: "mission",   args: [join(__dirname, "scout.mjs"), "mission", "stage-lock", concept], timeout: 15000 },
     { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 },
+    // LADDER G16 (9 Aug 2026): the mirror goes EVENT-DRIVEN on the lock-close —
+    // a capsule locked at 15:00 used to stay invisible to every reader until the
+    // next 06:55 morning pull. No number introduced: the event IS the schedule.
+    { name: "mirror",    args: [join(__dirname, "mirror.mjs")], timeout: 30000 },
   ];
 }
 

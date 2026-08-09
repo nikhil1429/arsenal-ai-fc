@@ -354,27 +354,32 @@ function pulseConfig(cfg) {
   // nobody derived. What IS measured: 32,480 tok/pulse (853 ledger rows, of which
   // ~31,970 is the `claude -p` boot tax and ~510 is the pulse's own payload).
   //
-  // So the window is now sized to buy MEASUREMENT, and the arithmetic is written down:
-  //     weekly plan            12,000,000 tok
-  //     × PULSE_MEASURE_FRAC        0.10           (doubled from 0.05 — #67)
-  //     = daily window          1,200,000 tok
-  //     ÷ measured cost/pulse      32,480 tok
-  //     ≈ 36 pulses/day of real observation
-  // Paired with HALVED frequency (pulse_every_n_beats — #67), a ~75s daemon beat pulses
-  // every ~150s, so ~36 pulses covers ~90 engaged minutes/day at full cadence and the
-  // TOKEN window is what actually binds on a long day. That is the point: it is a
-  // window sized to produce a cost distribution, not a budget asserted from a vibe.
-  // It re-fits itself whenever the plan's real shape is re-learned (see self-tune), and
-  // `brain status` now prints the measured tok/pulse beside it so the next value comes
-  // off the ledger and not off a hunch.
+  // So the window is now sized to buy MEASUREMENT, and the arithmetic is written down.
+  // RE-DERIVED, LADDER G3 (9 Aug 2026) — THE SPLIT RULING, his verbatim 20x words:
+  // "i am on claude 20x plan now, nidhi... 5x, i need 5x to study then... rest 10x just
+  // for the organism." 20x = 4 × (800k/12M) = 3.2M window / 48M week TOTAL; the split:
+  // Nidhi 800k/12M + his study 800k/12M + THE ORGANISM 1.6M/24M — zero remainder, and
+  // budget.window/weekly (P1) already equal the organism's share exactly.
+  //     organism weekly        24,000,000 tok   (his ruled share)
+  //     × PULSE_MEASURE_FRAC        0.10
+  //     = daily window          2,400,000 tok
+  //     ÷ post-lean cost/pulse     ~1,100 tok   (G0 est — re-measure on the first
+  //                                              10 metered probes before trusting)
+  //     ≈ ~2,180 pulses/day the TOKEN window would allow
+  // WHICH INVERTS THE OLD TEXT: the 200-call backstop now binds FIRST (crossover at
+  // 12,000 tok/pulse — above that the token window binds, below it the calls do).
+  // The 12M-era line here said the cap "can never bind"; post-lean it is the binding
+  // rail, and that is fine — it is a runaway backstop doing backstop work. Re-fit both
+  // from the ledger after G14's measured probes; `brain status` prints tok/pulse live.
   const PULSE_MEASURE_FRAC = 0.10;
   return {
     enabled: p.enabled !== false,
     model: p.model || "haiku",
     // rail 2a — CALLS. Not a budget: a runaway-loop backstop (an explicitly permitted
-    // exception to the no-guessed-limits order — it stops one identical failure
-    // repeating forever). At the window above it can never bind: 1,200,000 / 32,480
-    // ≈ 36 pulses, far under 200. It only fires if a bug makes pulses free.
+    // exception to the no-guessed-limits order). G3 INVERSION (9 Aug 2026): post-lean
+    // (~1.1k/pulse est) this binds FIRST — 2.4M/1.1k ≈ 2,180 » 200 — so the backstop
+    // is now the working rail until G14's metered probes re-fit it. The old "can never
+    // bind" was 12M-era arithmetic at 32,480 tok/pulse.
     daily_cap: p.daily_cap || 200,
     daily_token_frac: p.daily_token_frac || PULSE_MEASURE_FRAC,
     daily_token_budget: p.daily_token_budget || Math.round(weekly * (p.daily_token_frac || PULSE_MEASURE_FRAC)),
@@ -383,6 +388,11 @@ function pulseConfig(cfg) {
     // the same stream cost half as much and lose almost nothing, because the afferent
     // tail moves far slower than a 75-second beat.
     every_n_beats: Math.max(1, Number(p.every_n_beats) || 2),
+    // LADDER G5 (9 Aug 2026) — SPACING PINNED IN SECONDS. every_n_beats was born
+    // on a ~75s beat (2 beats ≈ 150s). The pacer now beats at daemon.poll_ms
+    // 15000, and a beat-counted gate would have silently QUINTUPLED the pulse
+    // the day G14 unpauses it. Default DERIVES from the old world: beats × 75s.
+    min_spacing_s: Math.max(1, Number(p.min_spacing_s) || Math.max(1, Number(p.every_n_beats) || 2) * 75),
     // rail 2c — a deterministically failing pulse burned all 200 slots on 21 Jul (164
     // failures, CLI logged out) and killed the organ for the rest of that day. The job
     // runner has had attemptsOn() since the 25 Jul audit; runPulse is called separately
@@ -898,13 +908,14 @@ function leanEnabled() {
   return _lean;
 }
 
-function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null) {
+function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null) {
   if (lean === null) lean = leanEnabled();
   const t0 = Date.now();
   try {
     const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet",
       ...(lean ? LEAN_ARGS : []), ...(Array.isArray(extraArgs) ? extraArgs : [])],
-      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+      // G4 — extended thinking via env, same mechanism the cortex has always used
+      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
     let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
     try {
       const j = JSON.parse(stdout);
@@ -1473,7 +1484,7 @@ async function runJob(job, cfg, deps) {
     inputs[`afferent lanes (study day ${today})`] = nightCoachAfferents(today);
     prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
-  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args);
+  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
   // was actually built from — including the failures.
   const acct = { inputs_absent: gi.absent.length, inputs_declared: gi.declared, inputs_absent_names: gi.absent };
@@ -1583,6 +1594,28 @@ async function tick(cfg, deps) {
   queueState.jobs_run = queueState.jobs_run || {};
   queueState.jobs_run[today] = queueState.jobs_run[today] || {};
 
+  // LADDER G2 (9 Aug 2026): the ceiling learns from ANY lane's wall — not only a
+  // limit the tick itself hits. Council, nightshift, cortex and the pulse all
+  // write limit_hit rows onto the SHARED ledger now (G1); each unprocessed one is
+  // an observation of the account's real ceiling at its own moment. SHARE-AWARE
+  // by construction: window_capacity_est is the organism's SHARE of one account
+  // (G3's split ruling), so a wall seen by any lane is evidence about the same
+  // shared ceiling. The cursor starts at 2026-08-07 so the one empirical datum on
+  // record — the 2026-08-07T19:16 session wall — is the first observation fed in.
+  if (cfg.budget && cfg.budget.self_tune) {
+    const cursor = queueState.foreign_limit_seen_ts || "2026-08-07T00:00:00.000Z";
+    let newest = cursor;
+    for (const r of ledger) {
+      if (!(r && r.limit_hit === true && typeof r.ts === "string" && r.ts > cursor)) continue;
+      const at = new Date(r.ts);
+      if (isNaN(at.getTime())) continue;
+      const observed = windowUsage(ledger.filter(x => x && x.ts && x.ts <= r.ts), at, cfg.budget.window_hours);
+      queueState.observed_window_ceiling = blendCeiling(queueState.observed_window_ceiling, observed, cfg.budget.window_capacity_est_tokens);
+      if (r.ts > newest) newest = r.ts;
+    }
+    queueState.foreign_limit_seen_ts = newest;
+  }
+
   // THE DEAD-BRAIN ALARM, spoken every tick (E2E audit 25 Jul 2026 — live):
   // four days of "Not logged in" and the runtime never once said it was blind.
   // PAUSED, OUT LOUD. A quiet brain and a paused brain look identical from the
@@ -1608,7 +1641,13 @@ async function tick(cfg, deps) {
     // queueState rides along so runJob can claim the day's ONE morning utterance
     // (`mouth_said`) — a failed llm keeps its slot and retries, and without this the
     // existence-gated push would fire once per attempt.
-    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState });
+    // LADDER G4 (9 Aug 2026): extended thinking, funded by the idle pool —
+    // maxThinkingFor was built, tested, EXPORTED, and never called by the
+    // runtime. The phase + this beat's own headroom derive the budget (study
+    // 16k, overnight 48k, always ≤ half the allowed window); claudeExec turns
+    // it into MAX_THINKING_TOKENS. Depth before breadth: 12 overnight jobs ×
+    // 48k thinking is idle-pool-funded 4.6× over.
+    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, thinkTokens: maxThinkingFor(h.phase, h.allowed).max_thinking_tokens });
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
@@ -2325,8 +2364,20 @@ async function selftest() {
       assert("#63 — every DISABLED job says WHY and names what would bring it back",
         liveCfg.jobs.filter(j => j.enabled === false).length > 0
         && liveCfg.jobs.filter(j => j.enabled === false).every(j => /RE-ENABLE WHEN/.test(JSON.stringify(j))));
-      assert("#63 — midday_reread (560,465 tok of an 800,000 window, no reader) is off",
-        (liveCfg.jobs.find(j => j.id === "midday_reread") || {}).enabled === false);
+      // G9 (9 Aug 2026) INVERTED #63's midday_reread half: the job is back ON —
+      // but ONLY because its reader finally exists. The regression this line now
+      // guards is the ORIGINAL sin returning: enabled with no consumer. The exact
+      // re-enable condition the 2-Aug note named (evening_voice lists the file)
+      // must hold as long as the job is on, and the input must NEVER be required
+      // (orphanChain law — a missing midday must not kill the evening voice).
+      assert("#63/G9 — midday_reread is ON only WITH its reader: evening_voice lists brain_out/midday/TODAY.md, un-required",
+        (() => {
+          const mr = liveCfg.jobs.find(j => j.id === "midday_reread") || {};
+          const ev = liveCfg.jobs.find(j => j.id === "evening_voice") || {};
+          const listed = (ev.inputs || []).some(i => (typeof i === "string" ? i : i.path) === "brain_out/midday/TODAY.md");
+          const req = (ev.inputs || []).some(i => typeof i === "object" && i.path === "brain_out/midday/TODAY.md" && i.required === true);
+          return mr.enabled !== false ? (listed && !req) : true;
+        })());
       assert("#63 — an undeclared surface is reported, never silently trusted",
         jobSurface({}).declared === false && jobSurface({ surface: { kind: "banana" } }).declared === false
         && jobSurface({ surface: { kind: "code", where: "viz.mjs:647" } }).where === "viz.mjs:647");
@@ -2776,7 +2827,7 @@ async function main() {
     const isFirst = await new Promise((res) => { resident.once("error", () => res(false)); resident.listen(4116, "127.0.0.1", () => res(true)); });
     if (!isFirst) { console.log("brain: --daemon ALREADY RESIDENT (:4116 held) — this instance exits instead of piling up."); return; }
     const pollMs = (cfg.daemon && cfg.daemon.poll_ms) || 75000;
-    let stop = false, beats = 0;
+    let stop = false, beats = 0, lastPulseAt = 0;   // G5 — the pulse's seconds-pinned clock
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
@@ -2825,9 +2876,14 @@ async function main() {
           // far slower than 75 seconds, so this loses observations, not signal — and the
           // measured tok/pulse now prints beside it so the next value comes off the ledger.
           const pcfg = pulseConfig(cfg);
-          if (pcfg.enabled && beats % pcfg.every_n_beats === 0) {
+          // G5 — the gate is SECONDS-pinned (min_spacing_s), never beat-counted:
+          // the beat is just a clock now, and a faster pacer cannot speed the pulse.
+          if (pcfg.enabled && (Date.now() - lastPulseAt) >= pcfg.min_spacing_s * 1000) {
             const pr = await runPulse(cfg, bdeps);
-            if (pr.pulsed) console.log(`brain: pulse ${pr.escalated ? "ESCALATED" : "hold"} (${(pr.tokens || 0).toLocaleString()} tok · ${pr.count}/${pr.cap} calls · ${(pr.tokens_today || 0).toLocaleString()}/${(pr.token_budget || 0).toLocaleString()} tok window)`);
+            if (pr.pulsed) {
+              lastPulseAt = Date.now();
+              console.log(`brain: pulse ${pr.escalated ? "ESCALATED" : "hold"} (${(pr.tokens || 0).toLocaleString()} tok · ${pr.count}/${pr.cap} calls · ${(pr.tokens_today || 0).toLocaleString()}/${(pr.token_budget || 0).toLocaleString()} tok window)`);
+            }
           }
         }
       } catch (e) {

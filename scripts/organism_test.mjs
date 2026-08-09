@@ -236,7 +236,12 @@ function hermetic() {
   // state tree stat-ed after each. ZERO selftests touched dressing-room/state at all — these
   // three included. M14 (wake_queue) and M22 (bg_queue) added nucleus writers without updating
   // this list; that omission, not any test, is the defect. Excluding them hides nothing.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json/;
+  // G6/G16 additions (9 Aug 2026): tone now writes every 5 min, the daemon
+  // watchdog every 10, reminders/shadows every 1-10 — all LIVE tasks whose own
+  // writes can race a multi-minute suite run. Their files join the exemption
+  // for the same reason the originals did: a scheduled OWNER writing its OWN
+  // state mid-suite is not a selftest leak.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

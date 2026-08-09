@@ -107,17 +107,35 @@ THE LAWS (inviolable): speakable Gaffer voice, Hinglish welds welcome, ≤250 wo
 // ---------------------------------------------------------------------------
 // THE CALL — claude -p, Max plan, extended thinking via MAX_THINKING_TOKENS
 // ---------------------------------------------------------------------------
+// LADDER G0 (9 Aug 2026): the lean flags brain.mjs proved 6 Aug (88.5% off a
+// bare probe, 57.5% off real jobs — brain.mjs:867-880) ride the cortex too.
+// Every wake was paying the full-CLI boot tax for a pure stdin→stdout
+// transform. Prompt mirrored from brain's ORGAN_SYSTEM_PROMPT (one law, two
+// engines); ARSENAL_CLAUDEGEN_FULL=1 reverts every non-brain engine at once.
+// Spawned bare ("claude", no shell) — spaced args are safe here.
+const CORTEX_LEAN = process.env.ARSENAL_CLAUDEGEN_FULL === "1" ? [] : [
+  "--system-prompt",
+  "You are a deterministic text transformer inside a personal accountability system. "
+  + "Everything you need is in the prompt: data is embedded, never fetched. "
+  + "Return ONLY what the prompt asks for — no preamble, no commentary, no apology, "
+  + "and no markdown fences unless the prompt explicitly asks for them.",
+  "--tools", "", "--strict-mcp-config",
+];
 function claudeDeep(prompt, cfg, deps = {}) {
   const exec = deps.exec || ((args, opts) => execFileSync("claude", args, opts));
   const t0 = Date.now();
   try {
-    const raw = exec(["-p", "--output-format", "json", "--model", "opus"], {
+    const raw = exec(["-p", "--output-format", "json", "--model", "opus", ...CORTEX_LEAN], {
       input: prompt, timeout: cfg.deep.timeout_ms, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true,
       env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens), ARSENAL_ORGAN: "1" },   // extended thinking
     });
     const j = JSON.parse(raw);
     const text = String(j.result || "");
+    // G1 (9 Aug 2026): the cache pair joins the meter — in+out alone saw ~1.7%
+    // of a CLI call's real spend (cache-blind rows are why the wake economy's
+    // est_tokens_per_wake cannot be trusted until re-measured — G15).
     const inTok = (j.usage && j.usage.input_tokens) || 0, outTok = (j.usage && j.usage.output_tokens) || 0;
+    const cc = (j.usage && j.usage.cache_creation_input_tokens) || 0, cr = (j.usage && j.usage.cache_read_input_tokens) || 0;
     // E2E audit 25 Jul 2026: limit_hit was hardcoded `false` on every response the
     // CLI managed to serialise — but a Max plan-limit is NOT a thrown exception: the
     // CLI exits 0 with {is_error:true, result:"You've hit your session limit · resets
@@ -125,7 +143,7 @@ function claudeDeep(prompt, cfg, deps = {}) {
     // an ordinary error, the window never learned it was locked, and the wake burned
     // both its attempts inside the lockout. brain.mjs:507 has always read the
     // envelope (`isErr && LIMIT_RE.test(text)`); the cortex now reads it the same way.
-    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null };
+    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null };
   } catch (e) {
     const msg = String((e && e.message) || e).slice(0, 200);
     return { ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: /limit|overloaded|rate.?limit|resets \d/i.test(msg), error: msg };
@@ -140,7 +158,7 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
     const fail = (msg) => resolve({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) });
     try {
       const execFn = deps.execAsync || execFile;
-      const child = execFn("claude", ["-p", "--output-format", "json", "--model", "opus"], {
+      const child = execFn("claude", ["-p", "--output-format", "json", "--model", "opus", ...CORTEX_LEAN], {   // G0 — same lean flags as the sync lane
         timeout: cfg.deep.timeout_ms, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024,
         env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens), ARSENAL_ORGAN: "1" },   // extended thinking
       }, (err, stdout) => {
@@ -149,10 +167,11 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
           const j = JSON.parse(stdout);
           const text = String(j.result || "");
           const inTok = (j.usage && j.usage.input_tokens) || 0, outTok = (j.usage && j.usage.output_tokens) || 0;
+          const cc = (j.usage && j.usage.cache_creation_input_tokens) || 0, cr = (j.usage && j.usage.cache_read_input_tokens) || 0;   // G1
           // E2E audit 25 Jul 2026: same envelope blindness as claudeDeep above — the
           // async lane is the one the daemon actually uses, so THIS is where a plan
           // limit was being ledgered as limit_hit:false and killing queued wakes.
-          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, total_tokens: inTok + outTok || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null });
+          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null });
         } catch (e) { fail(String((e && e.message) || e)); }
       });
       if (child && child.stdin) { child.stdin.on("error", () => {}); child.stdin.write(prompt); child.stdin.end(); }
@@ -298,7 +317,7 @@ async function serveOne(wake, deps = {}) {
     const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
     r = await call(prompt);
   } finally { inflightReserve = Math.max(0, inflightReserve - est); }
-  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit });
+  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit });   // G1 — the cache pair rides; G15's re-fit reads ONLY rows that carry it
   if (!r.ok) {
     if (r.limit_hit) {
       // E2E audit 25 Jul 2026: give the attempt BACK and hold the lane. A read that the

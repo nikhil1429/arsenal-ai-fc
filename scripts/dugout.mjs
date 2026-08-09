@@ -3491,7 +3491,7 @@ async function main() {
   // sampled only on days he happens to open the bridge.
   setInterval(() => { detectShadows(); }, 600000);
   indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} of his words`); }).catch(() => { });
-  setInterval(() => indexRecall().catch(() => { }), 3600000);   // his words become findable, hourly
+  setInterval(() => indexRecall().catch(() => { }), 300000);   // G16 (9 Aug 2026): hourly → 5-min — embeds ≤116/day vs the 1,000 quota; his words become findable in minutes
   // ── THE LAN DOOR (E2E audit 25 Jul 2026) ────────────────────────────────────
   // `--lan` binds 0.0.0.0 so the phone can reach the Dugout — but every route was
   // UNAUTHENTICATED, and GET /config hands back the entire raw Gemini key pool

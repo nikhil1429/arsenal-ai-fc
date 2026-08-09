@@ -844,6 +844,49 @@ export async function probeSentinel(today, deps = {}) {
   return [];
 }
 
+// ---------------------------------------------------------------------------
+// LADDER G15 (9 Aug 2026) — THE WAKE-ECONOMY RE-FIT. est_tokens_per_wake (40k)
+// was fitted on CACHE-BLIND rows from the full un-lean CLI — both wrong sides
+// of G0+G1. The re-fit reads ONLY honest rows (job cortex_wake, ok, cache pair
+// PRESENT — those exist only post-G1), needs ten of them (the G14 probe-count
+// precedent, stated not hidden), takes p95×2, and writes it into
+// thalamus_config.deep.est_tokens_per_wake with a dated receipt (the same
+// blanket-ruling note pattern gate_tune uses for tiers; this probe owns ONLY
+// this one key + its receipt). wake_cap 15 is untouched — the humane clamp.
+// ---------------------------------------------------------------------------
+export function probeWakeEconomy(deps = {}) {
+  const rows = deps.rows !== undefined ? deps.rows : (() => {
+    const out = [];
+    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch { }
+    return out;
+  })();
+  const honest = rows.filter((r) => r && r.job === "cortex_wake" && r.ok === true && r.cache_read_tokens != null && Number.isFinite(r.total_tokens) && r.total_tokens > 0);
+  if (honest.length < 10) {
+    return [{ id: "wake-economy-unmeasured", level: "INFO",
+      finding: `wake-economy re-fit waiting — ${honest.length}/10 honest cortex rows (post-G1, cache pair present); est_tokens_per_wake stays as-is until the sample exists`,
+      evidence: "brain_ledger.jsonl job=cortex_wake with cache_read_tokens non-null" }];
+  }
+  const totals = honest.map((r) => r.total_tokens).sort((a, b) => a - b);
+  const p95 = totals[Math.min(totals.length - 1, Math.floor(totals.length * 0.95))];
+  const fit = Math.ceil(p95 * 2);
+  const write = deps.writeCfg || ((f) => {
+    const p = join(STATE_DIR, "thalamus_config.json");
+    const c = readJson(p);
+    if (!c || !c.deep) return null;
+    const prev = c.deep.est_tokens_per_wake;
+    if (prev === f) return { prev, unchanged: true };
+    c.deep.est_tokens_per_wake = f;
+    c._wake_economy_refit = { at: new Date().toISOString(), n: honest.length, p95, fit: f, prev, by: "watchman probeWakeEconomy (LADDER G15, blanket ladder haan — this probe owns only this key + this receipt)" };
+    try { writeFileSync(p + ".tmp" + process.pid, JSON.stringify(c, null, 1)); renameSync(p + ".tmp" + process.pid, p); return { prev }; } catch { return null; }
+  });
+  const res = write(fit);
+  return [{ id: "wake-economy-refit", level: "INFO",
+    finding: res === null ? `wake-economy re-fit computed (p95×2 = ${fit} from ${honest.length} honest rows) but the config write failed — nothing changed`
+      : res.unchanged ? `wake-economy holds — p95×2 = ${fit} over ${honest.length} honest rows, already the configured est`
+        : `wake-economy RE-FIT — est_tokens_per_wake ${res.prev} → ${fit} (p95 ${p95} × 2, ${honest.length} honest post-G1 rows); receipt in thalamus_config._wake_economy_refit`,
+    evidence: "honest rows only: cortex_wake + ok + cache pair present (cache-blind rows can never re-enter the fit)" }];
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -859,6 +902,7 @@ async function run(argv) {
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch
   findings.push(...probeExpectedTasks()); // LADDER E2 — the schedule diff
   findings.push(...await probeSentinel(w.today)); // LADDER E8 — the sentinel's pulse
+  findings.push(...probeWakeEconomy());   // LADDER G15 — the honest wake re-fit
 
   const prevLast = readJson(LAST);
   const gate = tier2Gate(prevLast, findings, w.today, noTier2);
@@ -1090,6 +1134,22 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     assert("E8 SENTINEL — no topic and a dead fetch are each an honest INFO unknown, never a fake RED",
       (await probeSentinel(day, { topic: null })).some((f) => f.id === "sentinel-unmeasurable")
       && (await probeSentinel(day, { topic: "t", fetchFn: async () => { throw new Error("offline"); } })).some((f) => f.id === "sentinel-unmeasurable"));
+  }
+
+  // LADDER G15 — the wake-economy re-fit (injected rows + write stub)
+  {
+    const mkRow = (tok, cache) => ({ job: "cortex_wake", ok: true, total_tokens: tok, cache_read_tokens: cache });
+    const blind = Array.from({ length: 20 }, () => ({ job: "cortex_wake", ok: true, total_tokens: 40000, cache_read_tokens: null }));
+    assert("G15 — cache-blind rows can NEVER enter the fit; under ten honest rows the probe waits out loud",
+      probeWakeEconomy({ rows: blind }).some((f) => f.id === "wake-economy-unmeasured" && /0\/10/.test(f.finding)));
+    const honest = Array.from({ length: 19 }, (_, i) => mkRow(10000 + i * 500, 5000)).concat([mkRow(30000, 5000)]);
+    let wrote = null;
+    const f2 = probeWakeEconomy({ rows: honest, writeCfg: (fit) => { wrote = fit; return { prev: 40000 }; } });
+    assert("G15 — ten+ honest rows re-fit at p95×2 with the receipt named, and the write carries the new number",
+      f2.some((x) => x.id === "wake-economy-refit" && /RE-FIT/.test(x.finding)) && wrote === 60000);   // p95 idx floor(20×.95)=19 → 30000 × 2
+    assert("G15 — an unchanged fit reports HOLD, never a phantom rewrite",
+      probeWakeEconomy({ rows: honest, writeCfg: () => ({ prev: 38000, unchanged: true }) })
+        .some((x) => /wake-economy holds/.test(x.finding)));
   }
 
   // Tier-2 gate

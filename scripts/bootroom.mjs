@@ -34,7 +34,7 @@
 //         validate <id> · approve <id> · score · selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -390,10 +390,30 @@ async function main() {
     : (physioCfg && physioCfg.gates && Number.isFinite(physioCfg.gates.bootroom_min_reps) ? physioCfg.gates.bootroom_min_reps : null);
   const gate = gateNeed === null ? null : { have: reps.length, need: gateNeed };
 
-  if (mode === "propose" || (mode === "run" && now.getDay() === 0)) {
+  // LADDER G12 (9 Aug 2026) — THE CALENDAR-DAY GATE (the refuter's double-fire
+  // fix, chosen over `serve` which only changes the filename, never the cap):
+  // a Sunday with both a catch-up run AND the scheduled run must file at most
+  // ONE proposal. The mutation rows' own proposed_on field is the gate.
+  const localDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const filedToday = muts.some(m => m && m.proposed_on === localDay);
+  if (mode === "propose" || (mode === "run" && now.getDay() === 0 && !filedToday)) {
     // Ruling 5 reader: teaching_contract.json is teaching_contract.mjs's file — read-only here.
     const { proposal, reason, counter } = proposeFromEvidence(reps, profile, gateOpen, now, gate,
       topDrift(readJson(join(STATE_DIR, "teaching_contract.json"))));
+    // G12 — the SEASON READ, wording only: the newest season file (season_review's
+    // out, lookback across the dir) may COLOR the human_note — never a target,
+    // never a number; the constitution's validateMutation still hard-rejects any
+    // LLM-sourced target, and this field never reaches diff/evidence/metric.
+    if (proposal) {
+      try {
+        const sdir = join(STATE_DIR, "brain_out", "season");
+        const sfiles = readdirSync(sdir).filter(f => f.endsWith(".md")).sort();
+        if (sfiles.length) {
+          const seasonLine = readFileSync(join(sdir, sfiles[sfiles.length - 1]), "utf8").split("\n").find(l => l.trim());
+          if (seasonLine) proposal.human_note = `${proposal.human_note || ""} · season's own read (wording only, ${sfiles[sfiles.length - 1]}): ${seasonLine.slice(0, 140)}`.trim();
+        }
+      } catch { /* no season file yet — his first /full-time births it */ }
+    }
     if (proposal) {
       if (!muts.some(m => m.id === proposal.id)) {
         appendFileSync(MUTS, JSON.stringify(proposal) + "\n");
