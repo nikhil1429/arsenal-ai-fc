@@ -1872,6 +1872,20 @@ async function runJob(job, cfg, deps) {
     // H3 — the model's status counts (precomputed — the no-derive law)
     const nm = readJson(join(STATE_DIR, "nikhil_model.json"));
     if (nm && nm.counts) inputs["nikhil model status counts"] = nm.counts;
+    // H-BREATH — the wind tunnel's pending threshold proposals (gate_tune's
+    // lane, B5): the diary SEES them so its WILL CHANGE line can name one —
+    // but the diary's prose never BECOMES a proposal: thresholds enter only
+    // through the wind tunnel's MEASURED lane + his card (a prose-to-threshold
+    // converter would be a guessed-number factory; deferred until the
+    // metacognition window has data, the rejirah controller-v0 pattern).
+    try {
+      const tdir = join(OUT_DIR, "nightshift");
+      const wt = readdirSync(tdir).filter((f) => /^wind_tunnel_\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().pop();
+      if (wt) {
+        const wj = readJson(join(tdir, wt));
+        if (wj) inputs["threshold proposal pending (the wind tunnel — his card decides, never this page)"] = { file: wt, id: wj.id || null, effect: wj.effect || null };
+      }
+    } catch { }
     prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
   } else if (job.kind === "dreams") {
     // H5 — refuse BEFORE the spend when there is nothing to recombine: an
