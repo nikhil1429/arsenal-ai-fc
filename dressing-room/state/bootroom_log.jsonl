@@ -1,1 +1,2 @@
 {"at":"2026-08-05T13:58:59.617Z","day":"2026-08-05","mode":"run","outcome":"quiet_day","gate_open":false,"counter":{"have":9,"need":200,"kind":"volume_gate"}}
+{"at":"2026-08-09T14:52:51.995Z","day":"2026-08-09","mode":"run","outcome":"gate_closed","reason":"17/200 reps — the genome is listening, not proposing yet (speak-gate on volume)","gate_open":false,"counter":{"have":17,"need":200,"kind":"volume_gate"}}

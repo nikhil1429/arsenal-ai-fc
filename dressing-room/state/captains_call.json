@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 12,
+  "next_id": 21,
   "cards": [
     {
       "id": "c1",
@@ -167,7 +167,9 @@
         "2026-08-09T10:41:10.518Z",
         "2026-08-09T10:43:17.279Z",
         "2026-08-09T11:07:26.340Z",
-        "2026-08-09T11:07:51.168Z"
+        "2026-08-09T11:07:51.168Z",
+        "2026-08-09T16:15:55.861Z",
+        "2026-08-09T16:16:53.113Z"
       ],
       "answer": null,
       "answered_at": null,
@@ -202,6 +204,157 @@
         "path": "dressing-room/state/brain_out/market/2026-08-08.md"
       },
       "filed_at": "2026-08-09T10:41:10.518Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c12",
+      "key": "market:2026-08-09.md",
+      "source": "brain_out/market",
+      "line": "Scout ka market proposal (2026-08-09) — 3 line mein sunna hai?",
+      "dispatch": {
+        "kind": "open",
+        "path": "dressing-room/state/brain_out/market/2026-08-09.md"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c13",
+      "key": "gem:sync:2026-07-30",
+      "source": "gem.sync_due",
+      "line": "EXAMINER Gem 10 din se sync nahi hua — abhi /gem-sync bol dein? (5 min, Chrome)",
+      "dispatch": {
+        "kind": "none"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c14",
+      "key": "gemini:login:2026-07-17",
+      "source": "brain.gemini_login",
+      "line": "Gemini CLI 10 baar lagatar fail — ek baar terminal mein `gemini` chala ke login kar dein? Raat ke renders ruke hain.",
+      "dispatch": {
+        "kind": "none"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c15",
+      "key": "gatetune:wt-2026-08-09-tau0-epsilon",
+      "source": "nightshift.gate_tune",
+      "line": "Gate-tune wt-2026-08-09-tau0-epsilon: wakes/day moves toward the [1, 8] band with fewer suppressed surprise… — apply karein? (14 din watch, out-of-band au…",
+      "dispatch": {
+        "kind": "gate-tune",
+        "file": "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-08-09.json"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c16",
+      "key": "m2:review:6-PRECEDENCE",
+      "source": "manager.m2_review",
+      "line": "Manager system.md §6 PRECEDENCE — 5-10 min line-by-line review abhi saath karein? (M-2 ka bacha hua kaam)",
+      "dispatch": {
+        "kind": "open",
+        "path": "dressing-room/manager/system.md"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c17",
+      "key": "canon:cloud-routine-skip",
+      "source": "canon.patch",
+      "line": "PROJECT_OS kehta \"Cloud-Routine = SKIP\" par sentinel LIVE chal raha hai (P3) — canon patch karein? (sirf aapke word se)",
+      "dispatch": {
+        "kind": "open",
+        "path": "learning-layer/PROJECT_OS.md"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c18",
+      "key": "canon:drive-append-stale",
+      "source": "canon.patch",
+      "line": "PROJECT_OS kehta Drive doc append impossible — Drive tools ab hain, paste-ritual retire karein? (sirf aapke word se)",
+      "dispatch": {
+        "kind": "open",
+        "path": "learning-layer/PROJECT_OS.md"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c19",
+      "key": "fact:forget:fb5d5a86",
+      "source": "hippocampus.stale_fact",
+      "line": "Purana fact (17 Jul, ab jhootha): \"this is the first day that we are working together on the organism\" — bhool jaun?",
+      "dispatch": {
+        "kind": "forget-fact",
+        "id": "fb5d5a86"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c20",
+      "key": "fact:forget:88e5349a",
+      "source": "hippocampus.stale_fact",
+      "line": "Purana fact (17 Jul, ab jhootha): \"I am bringing my friend to whom you need to explain everything\" — bhool jaun?",
+      "dispatch": {
+        "kind": "forget-fact",
+        "id": "88e5349a"
+      },
+      "filed_at": "2026-08-09T16:49:14.121Z",
       "dealt": [],
       "answer": null,
       "answered_at": null,
