@@ -210,10 +210,19 @@ async function selftest() {
   // noticed for days. This check fails loudly the moment the binary is unreachable.
   {
     const bin = BIN();
-    const resolvable = existsSync(bin) || (() => {
-      try { execFileSync(process.platform === "win32" ? "where" : "which", [bin], { stdio: "pipe" }); return true; } catch { return false; }
-    })();
-    assert(`claude binary is resolvable (${bin})`, resolvable);
+    // 9 Aug 2026 (the first away-day red after joining the suite): the CI runner
+    // has no claude CLI BY CONSTRUCTION — asserting its presence there is "a truth
+    // about a different computer" (commit 55335a1's law), not a defect. GitHub sets
+    // CI=true; at home the check stays strict, because here a missing binary is the
+    // EINVAL silent-death this check was born from.
+    if (process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true") {
+      console.log(`  – claude binary check SKIPPED (away-day runner has no claude CLI by construction)`);
+    } else {
+      const resolvable = existsSync(bin) || (() => {
+        try { execFileSync(process.platform === "win32" ? "where" : "which", [bin], { stdio: "pipe" }); return true; } catch { return false; }
+      })();
+      assert(`claude binary is resolvable (${bin})`, resolvable);
+    }
   }
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
