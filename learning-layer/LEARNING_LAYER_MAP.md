@@ -335,6 +335,7 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 | **UserPromptSubmit** | `node hooks/afferent-post.mjs` | uske shabd thalamus (:4113) ko — zero capture-tax |
 | **UserPromptSubmit** | `node scripts/forge_session.mjs contract` | **THE METHOD ka 12-step order + dono anti-quiz-dump laws, HAR TURN.** ≤9 lines (anti-wall law). Fresh unclosed session na ho to chup. |
 | **UserPromptSubmit** | `node scripts/teaching_contract.mjs print` | **HOW-TO-TEACH rules, har turn**, ≤5 lines, drift-ranked + rotating + turn-counter (context warning) |
+| **UserPromptSubmit** *(9 Aug)* | `node scripts/hippocampus.mjs recall-hint` | uske turn ka lexical match uske apne purane words se — RECALL line sirf jab score bar paar kare (win-only, never theatre); ARSENAL_ORGAN-silent. |
 | **UserPromptSubmit** *(7 Aug)* | `node scripts/teaching_audit.mjs hook` | uske PROMPT ki recording — Stop payload mein user-text hota hi nahi, isliye confusion-is-literal check ke liye prompt yahan record hota hai, Stop pe consume. |
 | **Stop** | `node hooks/afferent-post.mjs` | **jo padhaya gaya** woh bhi memory mein (`claude-code-teaching`) |
 | **Stop** *(7 Aug)* | `node scripts/teaching_audit.mjs hook` | turn ka audit LIVE forge session ke against — drifts measure, auto-count (uski 7 Aug do-lane ruling), `checked_at` heartbeat. |

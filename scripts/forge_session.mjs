@@ -1684,7 +1684,7 @@ switch (mode) {
     // CONCEPT is in motion. On a Python/course/build/career day this stays silent,
     // which is why it cannot become the always-fires warning that trains him to
     // ignore it (the audit's #38 failure mode).
-    console.log(nudgeLine());
+    { const n = nudgeLine(); if (n) console.log(n); }   // F5 (9 Aug): the silence law means ZERO bytes, not one newline
     break;
   }
   case "boot": {                          // HOOK PATH — read-only, at most two lines
@@ -1712,8 +1712,9 @@ switch (mode) {
     // snapshot of disk, not re-read after the close has already moved things.
     const reps = repsBanked(s.started_at);
     console.log(JSON.stringify(cov, null, 2));
+    let recorded = null;                  // F5 (9 Aug): the "recorded" line stops asserting what it never checked
     if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
-      appendCoverage(s, "close", drifts ? { teaching_drifts: drifts } : {});
+      recorded = appendCoverage(s, "close", drifts ? { teaching_drifts: drifts } : {});
       save({ ...s, closed_at: nowISO() });
     }
     // ALWAYS printed — never gated on failure. The draft printed this block only
@@ -1744,7 +1745,11 @@ switch (mode) {
     const rl = repsBankedLine(reps);
     if (rl) R.push(`  ${rl}`);
     R.push("  → say all of this out loud to him, verbatim, before the delta.");
-    R.push(`forge_session: recorded to ${HISTORY}`);
+    R.push(recorded === false
+      ? `forge_session: history append FAILED — the coverage above is the ONLY copy; save it (F5)`
+      : recorded === null
+        ? `forge_session: already closed earlier — nothing re-recorded (the history line exists)`
+        : `forge_session: recorded to ${HISTORY}`);
     console.log(R.join("\n"));
     break;
   }

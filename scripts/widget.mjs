@@ -112,6 +112,10 @@ export function report(deps = {}) {
 export function registerWidget(reg, concept, file, gates, now = new Date()) {
   const id = String(concept || "").toLowerCase().trim();
   if (!id) return { ok: false, why: "concept is required" };
+  // F4 (9 Aug 2026): a relative path used to be stored and later resolved against
+  // whatever cwd the READER happened to have — register from anywhere, open from
+  // anywhere. Absolute at the door; existing rows resolve against the repo root.
+  if (file && !/^(?:[A-Za-z]:[\\/]|[\\/])/.test(String(file))) file = join(ROOT, String(file));
   if (!file || !existsSync(file)) return { ok: false, why: `no such file: ${file}` };
   const g = Number.isInteger(gates) ? gates : (reg.widgets[id] && reg.widgets[id].gates_driven) || 0;
   return { ok: true, reg: { ...reg, widgets: { ...reg.widgets, [id]: { file, gates_driven: g, registered_at: now.toISOString() } } } };

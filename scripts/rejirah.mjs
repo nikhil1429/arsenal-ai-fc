@@ -825,6 +825,12 @@ function main() {
 
   if (mode === "state") {
     const want = String(rest[0] || "").toLowerCase();
+    if (want && !caps.some((c) => c.id === want)) {   // F3a (9 Aug): silence looked like death
+      console.log(`
+rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) => c.id).join(", ") || "(koi nahi)"}
+`);
+      return;
+    }
     for (const c of caps) {
       if (want && c.id !== want) continue;
       const st = conceptState(c, rows, intervals, now);

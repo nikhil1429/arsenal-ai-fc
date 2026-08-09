@@ -69,6 +69,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { join, dirname, basename, extname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -625,7 +626,9 @@ function selftest() {
     // the live file never sees.
     const built = mergeCourse(emptyState(), parseCourse(PASTE), T0).state;
     const staged = markCurrent(markDone(built, 1, T1).state, 2, T1).state;
-    const tmpPath = join(STATE_DIR, `__course_selftest_${process.pid}.json`);
+    // F2 (9 Aug 2026): scratch lives in the OS tmpdir, not beside live state — a
+    // killed selftest must never leave debris where the organs read.
+    const tmpPath = join(tmpdir(), `__course_selftest_${process.pid}.json`);
     let brief;
     try {
       writeAtomic(tmpPath, staged);

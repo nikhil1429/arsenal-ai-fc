@@ -65,7 +65,8 @@ export const MORNING = [
   { id: "turnstile",     at: "07:04", args: ["scripts/turnstile.mjs"], daemon: { port: 4111 } },
   { id: "physio",        at: "07:30", args: ["scripts/physio.mjs"] },
   // ---- the body read. EVERYTHING below depends on this file existing and being today's.
-  { id: "goalkeeper",    at: "08:30", args: ["scripts/oura_coach.mjs"], writes: "readiness.json", network: true },
+  // (network flag removed 9 Aug F6 — nothing ever read it; the chain treats every step alike)
+  { id: "goalkeeper",    at: "08:30", args: ["scripts/oura_coach.mjs"], writes: "readiness.json" },
   { id: "twin",          at: "08:35", args: ["scripts/twin.mjs"] },
   { id: "heartbeat",     at: "08:39", args: ["scripts/heartbeat.mjs"] },
   { id: "fsrs",          at: "08:40", args: ["scripts/fsrs.mjs", "recompute"], writes: "cards.json" },

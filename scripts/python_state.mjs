@@ -79,6 +79,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -437,7 +438,7 @@ function selftest() {
   // UNRUN = HYPOTHESIS — the write path is exercised for real against a temp file.
   assert("THE WRITE PATH — state round-trips through disk and reads back identical",
     (() => {
-      const p = join(STATE_DIR, `.python_state.selftest.${process.pid}.json`);
+      const p = join(tmpdir(), `.python_state.selftest.${process.pid}.json`);   // F2: never beside live state
       try {
         writeAtomic(c1.state, p);
         const back = loadState(p);

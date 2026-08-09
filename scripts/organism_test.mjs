@@ -56,7 +56,9 @@ const run = (args, opts = {}) => {
 // `selftest` mode to wire anywhere. Named here rather than filtered silently.
 const SELF = "organism_test.mjs";
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
-const hasSelftest = (f) => /['"`]selftest['"`]/.test(readFileSync(join(ROOT, "scripts", f), "utf8"));
+// 9 Aug 2026 (launch F1): also match a bare `function selftest(` — claudegen defines
+// one and runs it as its whole CLI, and the quoted-string-only regex was blind to it.
+const hasSelftest = (f) => { const src = readFileSync(join(ROOT, "scripts", f), "utf8"); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
 // The meta-test package.json's own prose asks for and never got.

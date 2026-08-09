@@ -1270,7 +1270,7 @@ switch (cmd) {
       + ` · clock anchor ${anchorKindOf(t)} ${storedAnchorOf(t) || "(none)"}`
       + ` · drift hits recorded ${hs.ever_hit}/${hs.total} rules, last ${hs.newest_hit ? hs.newest_hit.slice(0, 10) : "never"}`
       + ` (hits = his word/hand; auto = code-measured AND model self-reports — the latter auto-count since his 7 Aug ruling, reversible via unhit-auto)`);
-    for (const r of rank(s.rules)) console.log(`  ${r.id.padEnd(12)} hits=${String(r.hits).padStart(2)}  ${r.line}`);
+    for (const r of rank(s.rules)) console.log(`  ${r.id.padEnd(12)} hits=${String(r.hits).padStart(2)} auto=${String(r.auto_hits || 0).padStart(3)}  ${r.line}`)   // F5 (9 Aug): the ranking sorts on BOTH lanes — hiding auto made a top rule read inexplicable;
     break;
   }
   case "add": {

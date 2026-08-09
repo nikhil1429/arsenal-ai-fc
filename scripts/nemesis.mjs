@@ -388,8 +388,7 @@ function selftest() {
   const cfg = loadConfig("__no_such_config__");    // ⇒ DEFAULTS
   const REG = { conceptAlias: new Map(), skillAlias: new Map(), loaded: true };   // axis authority present
   const now = new Date(2026, 7, 1, 12, 0, 0);
-  const nowIso = "2026-08-01T09:00:00Z";
-  const checks = [];
+  const checks = [];   // (F6, 9 Aug: dropped an unused nowIso constant)
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   let T = 0;
   const at = (day) => new Date(Date.parse("2026-07-01T00:00:00Z") + day * 86400000 + (T++) * 60000).toISOString();
