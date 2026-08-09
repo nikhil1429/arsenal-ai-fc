@@ -203,6 +203,27 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
         }
       }
     }
+    // LADDER C2 (9 Aug 2026) — the return-leg watcher: HIS click fired it (the
+    // /fire stamp), 24h passed (the ladder's own number), nothing came back.
+    // One card per fire-epoch; a landed return retires it at source.
+    for (const r of rows.filter((x) => x.fired_at && !x.ingested_at)) {
+      const hrs = (now - new Date(r.fired_at)) / 36e5;
+      if (!(Number.isFinite(hrs) && hrs > 24)) continue;
+      const key = `mission:return:${r.id}:${String(r.fired_at).slice(0, 10)}`;
+      if (byKey.has(key)) continue;
+      s.cards.push({
+        id: `c${s.next_id++}`, key, source: "missions.desk",
+        line: `Mission ${r.id} ${Math.floor(hrs / 24)} din pehle fire hua tha — Gemini mein report taiyaar hogi. "le lo" bol dein to utha lun?`,
+        dispatch: { kind: "none" },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
+    }
+    for (const c of s.cards) {
+      if (!/^mission:return:/.test(c.key) || c.retired_at || c.answer) continue;
+      const row = rows.find((x) => x.id === c.key.split(":")[2]);
+      if (!row || row.ingested_at) { c.retired_at = ts; c.resolution = "resolved-at-source (the return landed)"; }
+    }
   }
 
   // 3b. TRUST-TIER RATIFICATION (D2, 9 Aug 2026) — scorer.mjs computes when a
@@ -1085,6 +1106,19 @@ function selftest() {
     const mixed = deriveCards(blank(), { rejirah: RJ, gem: { days: 10, stamp: "2026-07-30" } }, T);
     assert("B — rejirah (integrity) outranks the infra tier on a fresh deck",
       pickCard(mixed, { today: "2026-08-09" }).source === "rejirah.pending");
+    // LADDER C2 — the return-leg watcher
+    const MISS_FIRED = { missions: [
+      { id: "M01", type: "audit", file: "f", staged_at: "2026-08-06T09:00:00Z", fired_at: "2026-08-07T10:00:00Z", ingested_at: null, report: null },
+      { id: "M02", type: "audit", file: "f", staged_at: "2026-08-06T09:00:00Z", fired_at: "2026-08-09T09:30:00+05:30", ingested_at: null, report: null },
+      { id: "M03", type: "audit", file: "f", staged_at: "2026-08-06T09:00:00Z", fired_at: "2026-08-07T10:00:00Z", ingested_at: "2026-08-08T10:00:00Z", report: "r.md" },
+    ], syllabus_audit: { closed_at: null } };
+    const src2 = deriveCards(blank(), { missions: MISS_FIRED }, T);
+    assert("C2 — fired >24h with no return ⇒ ONE 'le lo?' card; a fresh fire and an ingested one stay silent",
+      src2.cards.filter((c) => /^mission:return:/.test(c.key)).length === 1
+      && src2.cards.some((c) => c.key === "mission:return:M01:2026-08-07" && /le lo/.test(c.line)));
+    const src3 = deriveCards(src2, { missions: { ...MISS_FIRED, missions: MISS_FIRED.missions.map((m) => (m.id === "M01" ? { ...m, ingested_at: "2026-08-09T11:00:00Z" } : m)) } }, T);
+    assert("C2 — the return landing retires the watcher card at source",
+      src3.cards.find((c) => c.key === "mission:return:M01:2026-08-07").retired_at !== null);
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);

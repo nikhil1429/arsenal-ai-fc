@@ -23,12 +23,17 @@ the machine = every finger-movement around it.**
    paste the full mission prompt into the input.
    **DO NOT press send/start.** Say: *"<ID> loaded — Start dabao."* HIS CLICK is
    the fire (the ruling's letter and its spirit).
-4. One closing line only: what this mission will bring back, and that he can walk
+4. THE FIRE STAMP (LADDER C2, 9 Aug 2026): the moment he clicks Start, run
+   `node scripts/scout.mjs mission fired <ID>` — the stamp is what lets the
+   return-leg watcher wake ("le lo?" card) if 24h pass with no return. No
+   stamp = a fired mission the organism cannot miss.
+5. One closing line only: what this mission will bring back, and that he can walk
    away — Deep Research takes minutes; the return leg waits for his word, today
    or any day.
    The browser tools not connected? Fall back honestly: open the mission file
    content in the chat for a single manual copy, and say that this is the taxed
-   path — reconnect Chrome next time.
+   path — reconnect Chrome next time (and still press the fire stamp once he
+   says he pasted it).
 
 ## RETURN LEG — he said "le lo" / "report aa gayi"
 
@@ -43,6 +48,20 @@ the machine = every finger-movement around it.**
    line that his word closes the gate — `node scripts/scout.mjs mission audit-close
    --note "<his words>"` — and that benchmark starts speaking the moment he says it.
    Ask nothing else; the audit-close is a card/anchor moment, not a chase.
+
+## PYTHON COURIER LEG (LADDER C3, 9 Aug 2026) — the CLOSE-PACKET rides this rail
+
+When he closes a Python subtopic (or says "packet bhejo" / "fire packet"):
+1. `node scripts/python_state.mjs packet` — the CLOSE-PACKET is the owner's
+   verbatim emission (GEMINI_LOOP §11 template). Never reword it.
+2. Same Chrome rail as a mission: gemini.google.com (his normal Gemini chat, NOT
+   Deep Research), paste the packet, **he clicks Send** — his word stays the
+   trigger, exactly as with missions.
+3. The return leg is /harvest, NOT mission ingest: the sitting's CLAUDE-HANDOFF
+   block comes home on the bus with the whole conversation when he says
+   "harvest". Say that in one line and stop.
+4. SOLVE/BOLO/REWRITE stay untouched — the courier carries the packet only; the
+   drills themselves are his hands in Gemini, never pre-filled.
 
 ## NEVER
 - Never press Start yourself. Never reword a mission prompt (scout owns them).

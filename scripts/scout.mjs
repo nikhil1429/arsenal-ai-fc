@@ -347,6 +347,21 @@ function ingestMission(state, id, reportRelPath, now) {
   return { ok: true, state, row, auditComplete };
 }
 
+// LADDER C2 (9 Aug 2026) — THE FIRE STAMP. /fire drives his Chrome and HE clicks
+// Start, but nothing ever recorded THAT the click happened — so a mission could
+// sit fired-and-forgotten with no return-leg watcher possible. `mission fired
+// <ID>` is the stamp /fire presses right after his click; the card organ reads
+// fired_at + !ingested_at (>24h, the ladder's own number) into ONE 'le lo?' card.
+// Re-firing re-stamps (a mission genuinely re-fired restarts its clock).
+function fireMission(state, id, now) {
+  const row = state.missions.find(r => r.id.toLowerCase() === String(id || "").toLowerCase());
+  if (!row) return { ok: false, error: `no mission "${id}" — see: node scripts/scout.mjs mission list` };
+  if (row.ingested_at) return { ok: false, error: `${row.id} already returned (${row.report}) — firing an ingested mission is a no-op` };
+  row.fired_at = now.toISOString();
+  state.events.push({ ts: now.toISOString(), kind: "fired", id: row.id });
+  return { ok: true, state, row };
+}
+
 // THE BENCHMARK GATE EVENT. Canon edits = his word — the --note carries it.
 // Refuses until all four audit returns are in (event-gate on HIS study).
 function auditClose(state, note, now) {
@@ -505,7 +520,15 @@ async function selftest() {
 
     const bad = ingestMission(st, "M99", "x.md", t0);
     assert("missions: ingest refuses an unknown id", bad.ok === false && /no mission/.test(bad.error));
+    // LADDER C2 — the fire stamp
+    const f1 = fireMission(st, "m01", t0);
+    assert("C2: fired stamps fired_at (case-insensitive) + a 'fired' event; unknown id refuses",
+      f1.ok === true && !!st.missions.find(r => r.id === "M01").fired_at
+      && st.events.some(e => e.kind === "fired" && e.id === "M01")
+      && fireMission(st, "M99", t0).ok === false);
     ingestMission(st, "M01", "scout_reports/mission_M01.md", t0);
+    assert("C2: firing an already-returned mission is refused out loud",
+      fireMission(st, "M01", t0).ok === false && /already returned/.test(fireMission(st, "M01", t0).error));
     ingestMission(st, "m02", "scout_reports/mission_M02.md", t0);
     assert("missions: ingest is case-insensitive and stamps the report path",
       st.missions.find(r => r.id === "M02").report === "scout_reports/mission_M02.md");
@@ -629,6 +652,16 @@ function missionCli(mode) {
     return;
   }
 
+  if (sub === "fired") {
+    const id = process.argv[4];
+    if (!id) { console.error("usage: scout.mjs mission fired <ID>"); process.exit(1); }
+    const res = fireMission(state, id, now);
+    if (!res.ok) { console.error(`fired refused: ${res.error}`); process.exit(1); }
+    writeAtomic(MISSIONS, state);
+    console.log(`MISSIONS DESK · ${res.row.id} FIRED (${res.row.fired_at}) — the return-leg watcher wakes if 24h pass without a return.`);
+    return;
+  }
+
   if (sub === "audit-close") {
     const res = auditClose(state, argAfter("--note"), now);
     if (!res.ok) {
@@ -688,5 +721,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
 export { stageTriggers, stageReadiness, readinessLine, edgeSplit, buildScout, warRoomRead, loadConfig,
   // THE MISSIONS DESK (8 Aug 2026)
-  emptyMissions, stageAudit, stageGenerated, ingestMission, auditClose, outwardWeek, missionLines,
+  emptyMissions, stageAudit, stageGenerated, ingestMission, fireMission, auditClose, outwardWeek, missionLines,
   topicMissionMd, lockMissionMd, AUDIT_MISSIONS, attachGemini };
