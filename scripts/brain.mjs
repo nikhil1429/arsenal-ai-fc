@@ -1533,6 +1533,34 @@ LAWS: an absent job = default depth (the night's 48k ceiling) — allocate ONLY 
   return head + body;
 }
 
+// ---------------------------------------------------------------------------
+// PHASE H · H4 REHEARSAL (10 Aug 2026) — draft → simulated-Nikhil → final,
+// for the night coach's lesson (the morning's highest-stakes teaching page).
+// THE SHEET IS DELIBERATELY NOT REHEARSED in v1: formation_read's draft lives
+// inside manager.mjs's own validate/publish path (the capstone — CLAUDE.md's
+// M-2..M-5 caution), so its rehearsal is a captain-approved item, not a build
+// decision. SIMULATED-HIM IS DESIGN ONLY: this edits the DRAFT before
+// publication — it never writes reps, never grades, never touches capture/
+// FSRS state. LOAD-BEARING ONLY ON TESTED: the critic reads nikhil_model's
+// TESTED edges alone (via the owner's formatter + morning guard), plus
+// doubt_grammar and the lexicon fingerprint — both real his-data from day 1,
+// so zero tested edges still leaves a working critic.
+// ---------------------------------------------------------------------------
+function buildRehearsalPrompt(draft) {
+  const dg = readJson(join(STATE_DIR, "doubt_grammar.json"));
+  let edges = [];
+  try { edges = testedEdgeLines(); } catch { }
+  return `You are SIMULATED-NIKHIL — reading tomorrow's lesson as HIM, hunting where a sentence CRACKS for this exact brain (ADHD-PI, Hinglish, one idea at a time, everyday-physical analogies only, cold-start honesty).
+${gatherFingerprint() || ""}
+${edges.length ? "\nTESTED patterns about him (observed co-occurrence, his own data):\n" + edges.map((e) => "- " + e).join("\n") : ""}
+${dg ? "\nHIS DOUBT GRAMMAR (how his confusion actually phrases itself):\n" + clip(dg) : ""}
+
+THE DRAFT:
+${draft}
+
+DO: read it as him. Reply with AT MOST 5 numbered cracks — each quoting the exact sentence and ONE line on why it cracks for THIS brain (too many ideas, English where Hinglish belongs, geometry analogy, assumed recall, a question-moment beyond the four). If nothing cracks, reply with exactly: STANDS`;
+}
+
 function buildDiaryPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
   const head = `You are the BRAIN of ARSENAL AI FC writing tonight's ONE-PAGE DIARY in your own first person — the page a captain may glance at over chai, and the page your own tomorrow reads. Five headed sections, in this order: ATTENDED (what tonight actually ran) · BELIEVED (what the agenda thought would matter) · TESTED (what the scoreboard measured) · WAS WRONG (where belief and measurement disagree — say it plainly) · WILL CHANGE (one concrete thing tomorrow does differently).
 
@@ -1768,6 +1796,37 @@ async function runJob(job, cfg, deps) {
     // the wrapper itself handed it. Same fix the manager already carries.
     const v = validateOutput(job, r.text, inputs, cfg, prompt);
     if (!v.ok) return { usage: { ...r, ok: false, error: "validator: " + v.reason }, note: `rejected (${v.reason}) — nothing written`, ...acct };
+    // H4 (10 Aug 2026) — REHEARSAL: a passing draft is read by SIMULATED-NIKHIL
+    // (tested edges + doubt grammar + the fingerprint) and revised ONCE if it
+    // cracks. Bounded at 2 extra execs; runs only when the phase is not his
+    // live study hours AND this beat's headroom covers 2× the draft's own cost
+    // (a measured gate — no invented number). Usage is SUMMED into the one
+    // returned object so the G1 meter and windowUsage stay honest. A failing
+    // revision KEEPS THE DRAFT — a passing draft is never lost to a bad rewrite.
+    let rehearseNote = "";
+    if (job.rehearse && deps.hr && deps.hr.phase !== "study"
+        && (deps.hr.allowed || 0) >= 2 * (r.total_tokens || 0)) {
+      const addUsage = (base, x) => {
+        for (const k of ["input_tokens", "output_tokens", "cache_creation_tokens", "cache_read_tokens", "total_tokens", "duration_ms"])
+          base[k] = (base[k] || 0) + ((x && x[k]) || 0);
+      };
+      const adv = exec(buildRehearsalPrompt(r.text), job.model, job.extra_args, undefined, null, deps.thinkTokens || null);
+      addUsage(r, adv);
+      if (adv.ok && adv.text && !/^\s*STANDS\s*$/i.test(adv.text.trim())) {
+        const cracks = adv.text.trim();
+        const nCracks = (cracks.match(/^\s*\d+[.)]/gm) || []).length || 1;
+        const rv = exec(prompt + "\n\nYOUR DRAFT:\n" + r.text
+          + "\n\nSIMULATED-NIKHIL READ IT AS HIM AND FOUND THESE CRACKS:\n" + cracks
+          + "\n\nRewrite the FULL reply fixing ONLY the cracks — every law above still binds, the trailing fenced json block included.",
+          job.model, job.extra_args, undefined, null, deps.thinkTokens || null);
+        addUsage(r, rv);
+        if (rv.ok && rv.text && validateOutput(job, rv.text, inputs, cfg, prompt).ok) {
+          r.text = rv.text;   // the sibling below parses from the FINAL, for free
+          rehearseNote = ` · rehearsed: ${nCracks} crack(s), REVISED`;
+        } else rehearseNote = ` · rehearsed: ${nCracks} crack(s), revision failed — DRAFT KEPT`;
+      } else if (adv.ok) rehearseNote = " · rehearsed: STANDS";
+      else rehearseNote = " · rehearsal exec failed — draft stands";
+    }
     // WHICH DATE THE ARTIFACT IS FOR (2 Aug 2026 audit, finding #65). The write used to
     // hardcode `today` = shiftDay(), which is YESTERDAY for any overnight job run before
     // 07:30 — and the night shift fires 02:40–03:00. viz reads the CALENDAR date, so
@@ -1785,6 +1844,7 @@ async function runJob(job, cfg, deps) {
     const srf = jobSurface(job);
     let note = `→ brain_out/${job.out || job.id}/${outDay}.md`
       + (srf.where ? ` · reads at: ${srf.where}` : " · ⚠ NO SURFACE DECLARED — nothing points at this file")
+      + rehearseNote
       + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "");
     // P2 — the machine sibling: same call, same outDay, derived by parsing the
     // trailing fenced json AFTER the validator passed. A parse miss is
@@ -1960,7 +2020,7 @@ async function tick(cfg, deps) {
     // H2: "lean" borrows the study phase's own 16k constant — no new number;
     // absent allocation (or any non-overnight job) = the phase default (G4).
     const thinkPhase = alloc && alloc.depth === "lean" ? "study" : h.phase;
-    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, thinkTokens: maxThinkingFor(thinkPhase, h.allowed).max_thinking_tokens });
+    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, hr: h, thinkTokens: maxThinkingFor(thinkPhase, h.allowed).max_thinking_tokens });
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
@@ -2979,6 +3039,32 @@ async function selftest() {
       const rNC2 = await runJob(ncFix, cfg, { exec: () => ({ ok: true, text: "sirf prose, koi json block nahi", total_tokens: 9, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
       assert("NIGHT COACH — a reply without the json block DEGRADES out loud, never fails the run",
         rNC2.usage.ok === true && /json sibling ABSENT/.test(rNC2.note));
+
+      // ---- H4 REHEARSAL (10 Aug 2026): draft → simulated-Nikhil → final ----
+      const draft = "draft lesson\n```json\n{\"date\":\"2026-08-10\",\"misconceptions\":[{\"concept\":\"a\"}],\"lesson\":{}}\n```";
+      const final_ = "revised lesson\n```json\n{\"date\":\"2026-08-10\",\"misconceptions\":[{\"concept\":\"a\"},{\"concept\":\"b\"}],\"lesson\":{}}\n```";
+      const rhFix = { ...ncFix, rehearse: true };
+      const seq = (replies) => { let i = 0; return () => ({ ok: true, text: replies[Math.min(i++, replies.length - 1)], total_tokens: 10, duration_ms: 1, limit_hit: false, error: null }); };
+      const HR = { phase: "overnight", allowed: 1000000 };
+      const rRH = await runJob(rhFix, cfg, { exec: seq([draft, "1. \"draft lesson\" — do ideas ek saath", final_]), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, hr: HR });
+      assert("H4 — a cracking draft is REVISED once, the sibling parses from the FINAL, and all 3 execs' usage is SUMMED",
+        /rehearsed: 1 crack\(s\), REVISED/.test(rRH.note) && /machine sibling: 2 misconception/.test(rRH.note)
+        && rRH.usage.total_tokens === 30);
+      const rST = await runJob(rhFix, cfg, { exec: seq([draft, "STANDS"]), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, hr: HR });
+      assert("H4 — STANDS keeps the draft (2 execs only) and says so",
+        /rehearsed: STANDS/.test(rST.note) && rST.usage.total_tokens === 20 && /machine sibling: 1 misconception/.test(rST.note));
+      const rBAD = await runJob(rhFix, cfg, { exec: seq([draft, "1. crack", "broken revision — a god-tier lesson, no json block"]), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, hr: HR });
+      assert("H4 — a failing revision KEEPS THE DRAFT (a passing draft is never lost to a bad rewrite)",
+        /DRAFT KEPT/.test(rBAD.note) && /machine sibling: 1 misconception/.test(rBAD.note));
+      const rSTUDY = await runJob(rhFix, cfg, { exec: seq([draft, "1. crack", final_]), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, hr: { phase: "study", allowed: 1000000 } });
+      assert("H4 — his live study hours are protected: no rehearsal in the study phase (draft ships, 1 exec)",
+        !/rehearsed/.test(rSTUDY.note) && rSTUDY.usage.total_tokens === 10);
+      const rPOOR = await runJob(rhFix, cfg, { exec: seq([draft, "1. crack", final_]), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, hr: { phase: "overnight", allowed: 15 } });
+      assert("H4 — the measured gate: headroom under 2× the draft's own cost skips the adversary",
+        !/rehearsed/.test(rPOOR.note) && rPOOR.usage.total_tokens === 10);
+      assert("H4 — canon: night_coach carries rehearse:true, formation_read does NOT (the capstone needs his word)",
+        (() => { const nj2 = cfg.jobs.find(j => j.id === "night_coach"), fr = cfg.jobs.find(j => j.id === "formation_read");
+          return nj2 && nj2.rehearse === true && fr && !fr.rehearse; })());
     }
   }
 

@@ -752,6 +752,8 @@
    "enabled": true,
    "max_per_day": 1,
    "kind": "night_coach",
+   "rehearse": true,
+   "_rehearse_note": "PHASE H · H4 (10 Aug 2026): draft → simulated-Nikhil (nikhil_model TESTED edges only + doubt_grammar + the lexicon fingerprint — real his-data from day 1) → ONE revision, re-validated, DRAFT KEPT on a failed rewrite. Bounded 2 extra execs; runs only outside his study phase AND when the beat's headroom covers 2× the draft's own measured cost. THE SHEET IS NOT REHEARSED in v1: formation_read's draft lives inside manager.mjs (the capstone) — its rehearsal is a captain-approved item. Simulated-him is DESIGN only: it edits the draft, never reps/grades/state.",
    "serve": "next_morning",
    "inputs": [
     {
