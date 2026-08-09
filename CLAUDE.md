@@ -186,6 +186,13 @@ through `node scripts/scout.mjs mission ingest <ID> [--file <p>]` (or a session 
   kickoff/watchman only when unmet. **SEASON.md** (dressing-room/) = postmatch's logbook —
   Claude fills 100%, he writes ZERO; rows begin at his first /full-time.
 
+## THE CLOUD SENTINEL (P3 unleash, 9 Aug 2026 — the organ that cannot die with the laptop)
+A claude.ai cloud routine (NOT a repo script — see `setup/CLOUD_SENTINEL.md` for the whole
+contract) polls the ntfy topic's JSON history daily at 10:30 IST; a morning with neither a
+sheet push nor the laptop's own absence bell → ONE fallback push ("Laptop soya…") + a
+mini-brief from last-pushed repo state. READ + PUSH ONLY, badge-signed, dedup-by-title.
+The topic secret lives in the routine's prompt on his account, never in the repo.
+
 **Added 5 Aug 2026 (audit #107 repair — all selftested and run live):**
 - `scripts/rejirah.mjs` — **the Re-Jirah controller and the loop's missing back edge.**
   `grade <concept> <axis> held|cracked --gut <word>` records a cold round; `state` and `due`
