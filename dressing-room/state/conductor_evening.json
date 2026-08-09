@@ -1,0 +1,102 @@
+{
+  "started": "2026-08-09T17:03:29.758Z",
+  "finished": "2026-08-09T17:03:33.155Z",
+  "total_ms": 3396,
+  "ran": 9,
+  "ok": 9,
+  "failed": 0,
+  "order": [
+    "bell",
+    "scorer",
+    "setpiece",
+    "doubtminer",
+    "physio-pm",
+    "examiner",
+    "wall-pm",
+    "scout",
+    "wallpaper"
+  ],
+  "steps": [
+    {
+      "id": "bell",
+      "ok": true,
+      "ms": 1032,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "scorer",
+      "ok": true,
+      "ms": 109,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "setpiece",
+      "ok": true,
+      "ms": 106,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "doubtminer",
+      "ok": true,
+      "ms": 176,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "physio-pm",
+      "ok": true,
+      "ms": 124,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "examiner",
+      "ok": true,
+      "ms": 90,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "wall-pm",
+      "ok": true,
+      "ms": 204,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "scout",
+      "ok": true,
+      "ms": 94,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "wallpaper",
+      "ok": true,
+      "ms": 1461,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    }
+  ]
+}

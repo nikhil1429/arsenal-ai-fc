@@ -1,16 +1,16 @@
 {
-  "date": "2026-08-08",
-  "staged_at": "2026-08-08T17:25:03.093Z",
-  "concept": "embeddings",
-  "picked_because": "earliest ladder stage",
-  "shape": "mechanism",
+  "date": "2026-08-09",
+  "staged_at": "2026-08-09T17:03:31.375Z",
+  "concept": "hallucinations",
+  "picked_because": "stalling/regressing in learning_state",
+  "shape": "phenomenon",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "debug",
-  "task": "The examiner will write a SHORT embeddings implementation containing ONE planted conceptual bug (not a typo). Read it aloud, find the flaw, fix it live.",
+  "template": "measure",
+  "task": "Build the smallest honest MEASUREMENT of hallucinations in Python — a tiny labelled set and a score. Ten examples is enough if they are honest. Talk through what the number would have to say to change your mind.",
   "hidden_tests": [
-    "run the buggy version so the failure is SEEN, not described",
-    "run his fixed version on the same input to prove the fix",
-    "ask why the bug produced THAT failure mode, not a crash"
+    "run it and ask what the number MEANS — a score with no interpretation is not a measurement",
+    "ask how many examples his score would need before he would trust it, and why that number",
+    "plant one mislabelled example and see whether he notices the score move"
   ]
 }
