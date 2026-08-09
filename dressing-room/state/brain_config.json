@@ -832,6 +832,24 @@
     "where": "scripts/nikhil_model.mjs ingest (evening chain 22:39) reads brain_out/model_mine/<d>.json — the sanitized sibling is the proposals' ONLY door"
    },
    "_note": "PHASE H · H3 (10 Aug 2026): the nightly edge PROPOSER — reads the owner's own 14-day fact grid (three-valued: null = UNOBSERVED, never false), currently-tracked edges, and H1 outcomes; proposes ≤3 cause→effect pairs from the CLOSED VOCABULARY (nikhil_model.mjs FACTS — an out-of-vocabulary or medication-flavoured proposal is rejected at the sibling door with the reason recorded). The LLM proposes WHICH edges; nikhil_model.mjs re-derives every NUMBER from the grid (AI proposes · code validates · his galat retires). ONE-NIGHT LAG BY DESIGN: this writes overnight AFTER the 22:39 ingest, so tonight's proposals enter TOMORROW's ingest — recorded in both files so nobody 'fixes' it into a race. The ledger note carries the sibling's edge/rejection counts; the proposer's grid input makes an empty grid VISIBLE (day 1: readiness/timeaudit facts accrue only from launch — the grid journal is born empty and fills at one finalized day per evening)."
+  },
+  {
+   "id": "dreams",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "overnight",
+   "priority": 15,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "dreams",
+   "hype_guard": false,
+   "inputs": [],
+   "out": "dreams",
+   "surface": {
+    "kind": "code",
+    "where": "brain.mjs agenda branch reads brain_out/dreams/<yesterday>.json (the agenda is THE reader — it may dream_pick ONE bridge; night_coach verifies the pick against the same file)"
+   },
+   "_note": "PHASE H · H5 (10 Aug 2026): DMN recombination — cracked axes (rejirah grades + scoreboard cracks with axes recovered from that day's own wrong reps) × his lexicon × the concept registry → ≤10 LOW-confidence bridges (the sanitizer stamps confidence:low regardless; from/to must resolve to known concept ids, axis a-i). REFUSES BEFORE SPEND when the inventory is empty — an empty inventory + a model told to dream = invented cracks; few axes = few dreams is honest, none = none (day 1 truth: the inventory IS empty until his Re-Jirah rounds or a measured crack land). THE DREAM LAW: the agenda is the only reader — a bridge it never picks is INERT BY CONSTRUCTION (yesterday's file is the only one ever read again), not deleted; a picked bridge reaches night_coach as an OPTIONAL seed that may color the lesson's fabric, NEVER add a question-moment (the four-question-moments law untouched). Model sonnet: cheap by the map's own word ('cheap low-confidence hypothesis bridges')."
   }
  ],
  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",

@@ -52,6 +52,9 @@ import { tmpdir } from "node:os";
 // H3 (10 Aug 2026): the model's own doors — the sanitizer is the sibling's
 // only entry, the formatter/guard pair is the night coach's only read.
 import { sanitizeModelMine, testedEdgeLines, FACTS } from "./nikhil_model.mjs";
+// H5 (10 Aug 2026): the dreams sanitizer resolves concepts through the same
+// alias machinery the scoreboard already carries (capture.mjs's pattern).
+import { loadAliasMap, repLocalDay } from "./scoreboard.mjs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -1441,9 +1444,19 @@ export function parseAgendaJson(text, cfg) {
     if (depth === "skip" && NEVER_SKIP.has(id)) { allocations[id] = { depth: "lean", why: `NEVER_SKIP demoted skip→lean: ${why}` }; continue; }
     allocations[id] = { depth, why };
   }
+  // H5 — the dream pick: strings-only sanitize HERE; whether it quotes a REAL
+  // bridge is verified at the CONSUMER (night_coach reads the actual dreams
+  // file — the sanitizer has no date context, refuter-confirmed).
+  let dream_pick = null;
+  if (j.dream_pick && typeof j.dream_pick === "object") {
+    const p = j.dream_pick;
+    if (typeof p.from_concept === "string" && typeof p.to_concept === "string" && /^[a-i]$/.test(String(p.axis || "")))
+      dream_pick = { from_concept: p.from_concept.slice(0, 60), to_concept: p.to_concept.slice(0, 60),
+        axis: String(p.axis), hypothesis: String(p.hypothesis || "").slice(0, 240) };
+  }
   return { date: typeof j.date === "string" ? j.date : null,
     focus: typeof j.focus === "string" ? j.focus.slice(0, 300) : null,
-    allocations, ...(dropped.length ? { dropped } : {}) };
+    allocations, ...(dream_pick ? { dream_pick } : {}), ...(dropped.length ? { dropped } : {}) };
 }
 
 // H6 — the diary's machine sibling: one deterministic line for diaryLine and
@@ -1466,12 +1479,69 @@ function parseModelMineJson(text) {
   return sanitizeModelMine(j, existing);
 }
 
+// H5 — the dreams sibling: ≤10 bridges, from/to resolved through the alias
+// machinery against known concept ids, axis a-i, confidence ALWAYS "low"
+// (a dream is a dream — the sanitizer stamps it, the model cannot raise it).
+export function parseDreamsJson(text, _cfg, aliasMap = null) {
+  const j = lastJsonBlock(text);
+  if (!j || typeof j !== "object" || !Array.isArray(j.bridges)) return null;
+  const map = aliasMap || loadAliasMap(join(STATE_DIR, "concepts.json"));
+  const known = [...new Set([...map.values()])];
+  const resolve = (raw) => {
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    const key = raw.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (map.has(key)) return map.get(key);
+    for (const id of known) { const n = id.toLowerCase(); if (n === key || n.includes(key) || key.includes(n)) return id; }
+    return null;
+  };
+  const bridges = []; const dropped = [];
+  for (const b of j.bridges.slice(0, 10)) {
+    const from = resolve(b && b.from_concept), to = resolve(b && b.to_concept);
+    const axis = String((b && b.axis) || "");
+    if (!from || !to || from === to) { dropped.push({ raw: b, why: !from || !to ? "unknown concept" : "self-bridge" }); continue; }
+    if (!/^[a-i]$/.test(axis)) { dropped.push({ raw: b, why: "axis outside a-i" }); continue; }
+    bridges.push({ from_concept: from, to_concept: to, axis,
+      hypothesis: String((b && b.hypothesis) || "").slice(0, 240), confidence: "low" });
+  }
+  return { date: typeof j.date === "string" ? j.date : null, bridges, ...(dropped.length ? { dropped } : {}) };
+}
+
 const SIBLING_PARSERS = {
   night_coach: (text) => parseNightCoachJson(text),
   agenda: (text, cfg) => parseAgendaJson(text, cfg),
   diary: (text) => parseDiaryJson(text),
   model_mine: (text) => parseModelMineJson(text),
+  dreams: (text, cfg) => parseDreamsJson(text, cfg),
 };
+
+// H5 — the cracked-axes inventory, computed (never guessed): rejirah grades
+// carry concept×axis directly; scoreboard cracks carry the concept, and the
+// axis is recovered from that day's own wrong reps (reps carry axis per rep).
+export function crackedAxesInventory(dir = STATE_DIR) {
+  const inv = new Map();
+  const bump = (c, a, src) => { const k = `${c}×${a}`; const e = inv.get(k) || { concept: c, axis: a, n: 0, src: new Set() }; e.n++; e.src.add(src); inv.set(k, e); };
+  for (const r of readLinesTail(join(dir, "rejirah_log.jsonl"), 500) || [])
+    if (r && r.result === "cracked" && r.concept && r.axis) bump(r.concept, r.axis, "rejirah");
+  const outs = readLinesTail(join(dir, "brain_outcomes.jsonl"), 500) || [];
+  const last = new Map();
+  for (const r of outs) last.set(`${r.day}|${r.kind}|${r.subject}`, r);
+  const reps = readLinesTail(join(dir, "reps_log.jsonl"), 500) || [];
+  for (const o of [...last.values()].filter((r) => (r.kind === "misconception" || r.kind === "lesson") && (r.verdict === "cracked" || r.verdict === "mixed")))
+    for (const rp of reps.filter((r) => repLocalDay(r.ts) === o.day && r.concept === o.subject && r.correct === false && r.axis))
+      bump(rp.concept, rp.axis, "scoreboard");
+  return [...inv.values()].map((e) => ({ concept: e.concept, axis: e.axis, n: e.n, src: [...e.src].join("+") }));
+}
+
+function buildDreamsPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
+  const head = `You are the DREAMER of ARSENAL AI FC — the DMN's night recombination. Take the captain's CRACKED axes (where his model of a concept actually broke), his own lexicon (the metaphors HIS brain already runs on), and the syllabus graph — and dream CHEAP, LOW-CONFIDENCE bridges: "what if the crack in X's axis is the same shape as Y?" A dream is a hypothesis for ONE future lesson to test, never a claim.
+
+DO: ≤ 15 lines of recombination, then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"date": "<shift day>", "bridges": [{"from_concept": "<cracked concept>", "to_concept": "<known concept>", "axis": "<a-i>", "hypothesis": "<ONE line in HIS lexicon's imagery — everyday-physical, never geometry>"}]}
+
+LAWS: ≤ 10 bridges, fewer is better. from_concept must be a genuinely cracked one (the inventory below), to_concept a known syllabus concept. Confidence is ALWAYS low — the sanitizer stamps it regardless. NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
 
 function buildModelMinePrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
   const vocab = Object.entries(FACTS).map(([id, f]) => `- ${id}: ${f.desc} (src: ${f.src})`).join("\n");
@@ -1526,7 +1596,8 @@ LEGAL ALLOCATION TARGETS (overnight lane only — any other id is dropped by the
 ${targets.map((t) => "- " + t).join("\n")}
 
 DO: read the day's evidence below, then write ≤ 25 lines of reasoning (what surprised, what the night should chase, what is a waste tonight), then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
-{"date": "<tonight's shift day>", "focus": "<ONE line — the single most surprising thing today>", "allocations": {"<job_id>": {"depth": "lean"|"skip", "why": "<one line of tonight's evidence>"}}}
+{"date": "<tonight's shift day>", "focus": "<ONE line — the single most surprising thing today>", "allocations": {"<job_id>": {"depth": "lean"|"skip", "why": "<one line of tonight's evidence>"}}, "dream_pick": {"from_concept": "...", "to_concept": "...", "axis": "a-i", "hypothesis": "..."}}
+(dream_pick is OPTIONAL and at most ONE — copy a bridge VERBATIM from the dreams input, and only if tomorrow's lesson could genuinely test it in one line; omit the field otherwise.)
 
 LAWS: an absent job = default depth (the night's 48k ceiling) — allocate ONLY where the evidence says lean (the lane's food is thin tonight) or skip (its food is absent/stale and one night's rest costs nothing). night_coach and diary can never be skipped. Evidence only — every why must trace to an INPUT line. Use only numbers present in the inputs. NEVER these phrases: ${(banned || []).join(", ")}.`;
   const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
@@ -1745,6 +1816,19 @@ async function runJob(job, cfg, deps) {
       const tel = testedEdgeLines();
       if (tel.length) inputs["nikhil model (TESTED edges — observed co-occurrence, never guidance)"] = tel;
     } catch { }
+    // H5 — the agenda's picked dream, verified against the REAL bridge file
+    // (the pick must quote an actual bridge — a hallucinated pick is dropped
+    // here, at the consumer, where the file is; refuter-placed).
+    try {
+      const ag = readJson(join(OUT_DIR, "agenda", today + ".json"));
+      const pick = ag && ag.dream_pick;
+      if (pick) {
+        const dj = readJson(join(OUT_DIR, "dreams", localDate(new Date(now.getTime() - 86400000)) + ".json"));
+        const real = dj && Array.isArray(dj.bridges)
+          && dj.bridges.find((b) => b.from_concept === pick.from_concept && b.to_concept === pick.to_concept && b.axis === pick.axis);
+        if (real) inputs["dream to test (agenda's pick — OPTIONAL seed: weave into the lesson's FABRIC only if it fits in one line; NEVER a new question-moment; drop silently if it does not fit)"] = real;
+      }
+    } catch { }
     prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   } else if (job.kind === "model_mine") {
     // H3 — the proposer's food: the owner's own grid tail + current edges +
@@ -1767,6 +1851,11 @@ async function runJob(job, cfg, deps) {
     inputs["teaching drifts (top rules)"] = ((tc && tc.rules) || [])
       .map((r) => ({ id: r.id, hits: (r.hits || 0) + (r.auto_hits || 0) }))
       .sort((a, b) => b.hits - a.hits).slice(0, 5);
+    // H5 — last night's dreams (the agenda is THE reader; unpicked bridges are
+    // inert by construction — never read again, never deleted)
+    const dj = readJson(join(OUT_DIR, "dreams", localDate(new Date(now.getTime() - 86400000)) + ".json"));
+    if (dj && Array.isArray(dj.bridges) && dj.bridges.length)
+      inputs["last night's dreams (you MAY dream_pick exactly ONE, verbatim)"] = dj.bridges;
     prompt = buildAgendaPrompt(job, inputs, cfg, cfg.guards.banned_phrases);
   } else if (job.kind === "diary") {
     // H6: every count precomputed (the no-derive law), agenda via declared
@@ -1784,6 +1873,23 @@ async function runJob(job, cfg, deps) {
     const nm = readJson(join(STATE_DIR, "nikhil_model.json"));
     if (nm && nm.counts) inputs["nikhil model status counts"] = nm.counts;
     prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
+  } else if (job.kind === "dreams") {
+    // H5 — refuse BEFORE the spend when there is nothing to recombine: an
+    // empty cracked-axes inventory + a model told to dream anyway = invented
+    // cracks (the refuter's trap). The required_absent shape — honest skip,
+    // named food, sits out after max_attempts like any deterministic skip.
+    const inv = deps.crackedInv !== undefined ? deps.crackedInv : crackedAxesInventory();
+    if (!inv.length) {
+      return {
+        usage: { ok: false, total_tokens: 0, duration_ms: 0, limit_hit: false, error: "cracked-axes inventory empty" },
+        note: "skipped before spend — the cracked-axes inventory is EMPTY (dreams need his Re-Jirah rounds or measured scoreboard cracks; few axes = few dreams is honest, none = none)",
+        inputs_absent: 1, inputs_declared: 1, inputs_absent_names: ["cracked-axes inventory"],
+      };
+    }
+    inputs["cracked axes (computed inventory — concept×axis, counted)"] = inv;
+    inputs["his lexicon (the metaphors his brain runs on)"] = readJson(join(STATE_DIR, "lexicon.json"));
+    inputs["known concepts"] = [...new Set([...loadAliasMap(join(STATE_DIR, "concepts.json")).values()])];
+    prompt = buildDreamsPrompt(job, inputs, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
@@ -3065,6 +3171,34 @@ async function selftest() {
       assert("H4 — canon: night_coach carries rehearse:true, formation_read does NOT (the capstone needs his word)",
         (() => { const nj2 = cfg.jobs.find(j => j.id === "night_coach"), fr = cfg.jobs.find(j => j.id === "formation_read");
           return nj2 && nj2.rehearse === true && fr && !fr.rehearse; })());
+
+      // ---- H5 DREAMS (10 Aug 2026): sanitizer + refuse-before-spend --------
+      const aMap = new Map([["hallucinations", "hallucinations"], ["context window", "context"], ["embeddings", "embeddings"]]);
+      const dTxt = "soch\n```json\n" + JSON.stringify({ date: "2026-08-10", bridges: [
+        { from_concept: "Hallucinations", to_concept: "context window", axis: "d", hypothesis: "dono mein bhoolna scale ka sawaal hai" },
+        { from_concept: "hallucinations", to_concept: "hallucinations", axis: "a", hypothesis: "self" },
+        { from_concept: "quantum flux", to_concept: "embeddings", axis: "b", hypothesis: "unknown from" },
+        { from_concept: "embeddings", to_concept: "context", axis: "z", hypothesis: "bad axis" },
+        { from_concept: "embeddings", to_concept: "context", axis: "c", hypothesis: "ok", confidence: "HIGH" },
+      ] }) + "\n```";
+      const dp = parseDreamsJson(dTxt, cfg, aMap);
+      assert("H5 SANITIZER — aliases resolve, self-bridges/unknowns/bad-axes drop with reasons, confidence is ALWAYS stamped low",
+        dp.bridges.length === 2 && dp.dropped.length === 3
+        && dp.bridges[0].from_concept === "hallucinations" && dp.bridges[0].to_concept === "context"
+        && dp.bridges.every((b) => b.confidence === "low"));
+      assert("H5 SANITIZER — no bridges array / broken json → null, never a throw",
+        parseDreamsJson("prose", cfg, aMap) === null && parseDreamsJson("```json\n{\"x\":1}\n```", cfg, aMap) === null);
+      const dreamsFix = { id: "dreams_fx", kind: "dreams", inputs: [], out: "dreams_fx", surface: { kind: "code", where: "x" } };
+      const rDR = await runJob(dreamsFix, cfg, { exec: () => { throw new Error("exec must not be called on an empty inventory"); }, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, crackedInv: [] });
+      assert("H5 — an EMPTY cracked-axes inventory refuses BEFORE the spend (no exec, food named)",
+        rDR.usage.ok === false && /inventory is EMPTY/.test(rDR.note) && rDR.inputs_absent_names[0] === "cracked-axes inventory");
+      const rDR2 = await runJob(dreamsFix, cfg, { exec: () => ({ ok: true, text: dTxt, total_tokens: 8, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true, crackedInv: [{ concept: "hallucinations", axis: "d", n: 2, src: "rejirah" }] });
+      assert("H5 — a real inventory dreams: the run ships and the sanitized sibling is named in the note",
+        rDR2.usage.ok === true && /machine sibling/.test(rDR2.note));
+      assert("H5 — agenda dream_pick sanitizes strings-only (bridge-reality is the consumer's check)",
+        (() => { const ag = parseAgendaJson("x\n```json\n" + JSON.stringify({ allocations: {}, dream_pick: { from_concept: "a", to_concept: "b", axis: "c", hypothesis: "h" } }) + "\n```", { jobs: [] });
+          return ag && ag.dream_pick && ag.dream_pick.axis === "c"
+            && parseAgendaJson("x\n```json\n" + JSON.stringify({ allocations: {}, dream_pick: { from_concept: "a", to_concept: "b", axis: "zz" } }) + "\n```", { jobs: [] }).dream_pick === undefined; })());
     }
   }
 
