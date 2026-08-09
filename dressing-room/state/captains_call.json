@@ -189,7 +189,9 @@
         "path": "dressing-room/missions/M01__audit_fundamentals_rubric.md"
       },
       "filed_at": "2026-08-07T20:57:32.166Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T21:07:45.615Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
@@ -206,7 +208,9 @@
         "path": "dressing-room/state/brain_out/market/2026-08-08.md"
       },
       "filed_at": "2026-08-09T10:41:10.518Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T21:10:12.503Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
