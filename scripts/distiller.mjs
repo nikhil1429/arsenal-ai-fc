@@ -52,7 +52,9 @@ const WORKING_SET = join(STATE_DIR, "working_set.json");
 // brain.mjs:366 keeps "context" in its own liveSignal list — that consumer wants
 // exactly this signal and is explicitly out of scope.
 const INTERACTIVE_LEGACY = ["voice", "code", "desktop-study", "note", "context", "throwin"];   // FROZEN: the pre-audit window
-const INTERACTIVE = ["voice", "code", "desktop-study", "note", "throwin"];
+// "gemini" joined 9 Aug 2026 (P7 harvest lane, his 'data flows everywhere' word):
+// his harvested Gemini sittings are interactive study, same class as "code".
+const INTERACTIVE = ["voice", "code", "desktop-study", "note", "throwin", "gemini"];
 const AMBIENT = ["context"];                     // sensed, carried, but never a his-words slot
 const DOUBT_RE = /\?|kyun|kyu|samajh|confus|doubt|nahi aa|stuck|matlab|difference|kaise|why|how does/i;
 // A window caption, measured shapes from the live afferent log: "claude.exe · Claude",
@@ -131,7 +133,7 @@ function currentWindow(dir = STATE_DIR, rows = null) {
 // thalamus_config.json), hippocampus.mjs. We copy them EXACTLY rather than inventing a
 // broader rule: `claude-code` is HIS 538 typed prompts and must keep passing — a prefix
 // match on /^claude-code/ would have silently deleted his single largest written source.
-const NOT_HIS_SOURCES = new Set(["claude-code-teaching"]);
+const NOT_HIS_SOURCES = new Set(["claude-code-teaching", "gemini-study-teaching"]);   // gemini pair added 9 Aug 2026 (P7)
 const isHisSource = (s) => !NOT_HIS_SOURCES.has(String((s && s.source) || "").toLowerCase());
 const hisWords = (stream) => (stream || []).filter(s => s && !AMBIENT.includes(s.modality) && !looksLikeWindowCaption(s.text) && isHisSource(s));
 

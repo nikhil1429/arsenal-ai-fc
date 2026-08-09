@@ -98,8 +98,10 @@ function coverage() {
     "package.json has no `test` script pointing at the independent runner");
   const members = suiteMembers(pkg);
   // floor ratcheted 58 → 59 on 8 Aug 2026: benchmark.mjs (the outward loop) joined squad:selftest.
+  // floor ratcheted 59 → 69 on 9 Aug 2026: harvest.mjs (P7, the Gemini harvest lane) joined
+  // organism:selftest at a live count of 69 — the floor rides the real count, not the last edit.
   assert("the runner covers every member of both suites (coverage cannot shrink on a red)",
-    members.length >= 59, `only ${members.length} members parsed out of the two suites`);
+    members.length >= 69, `only ${members.length} members parsed out of the two suites`);
 }
 
 // the two suite strings stay the single membership record; the runner parses them

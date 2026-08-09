@@ -142,7 +142,9 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   no rep.
 - **Owners-only writes**: `capture.mjs` · `hippocampus.mjs` · `forge_session.mjs` · `rejirah.mjs` ·
   `widget.mjs` · `python_state.mjs` · `mirror.mjs` (capsules) · `captains_call.mjs`
-  (captains_call.json — added 7 Aug 2026 with his "yes do it all"). Never hand-edit a state file.
+  (captains_call.json — added 7 Aug 2026 with his "yes do it all") · `harvest.mjs`
+  (harvest_log.jsonl — added 9 Aug 2026 with his P7 "data flows everywhere" word; the
+  afferent bus itself is reached only through the thalamus POST door). Never hand-edit a state file.
 - **THE CAPTAIN'S CALL** (7 Aug 2026, his ADHD-PI ruling): reports are MACHINE-face — Claude
   reads them whole; anything needing HIS word becomes ONE one-line card dealt at an anchor he
   already hits (SessionStart hook · /matchday · /full-time). He answers haan/na/baad, the organ

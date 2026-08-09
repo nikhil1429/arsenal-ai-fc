@@ -509,9 +509,13 @@ function learningArcTurns(now = new Date(), deps = {}) {
   const days = deps.days || [localDate(now), localDate(new Date(now.getTime() - DAY_MS))];
   const rows = deps.afferent || readLines(AFFERENT);
   const vocab = deps.vocab || conceptVocabulary(deps);
-  // HIS words only. `claude-code-teaching` is the coach's own output and must
-  // never become his fingerprint (same law as the paraphrase guard at L1).
-  const mine = rows.filter(r => r && r.source === "claude-code" && r.modality === "code"
+  // HIS words only. `claude-code-teaching` / `gemini-study-teaching` are the
+  // coach's own output and must never become his fingerprint (same law as the
+  // paraphrase guard at L1). `gemini-study` joined 9 Aug 2026 (P7 harvest lane):
+  // a harvested Gem sitting is his study voice, same class as claude-code.
+  const mine = rows.filter(r => r
+    && ((r.source === "claude-code" && r.modality === "code")
+      || (r.source === "gemini-study" && r.modality === "gemini"))
     && days.includes(String(r.ts || "").slice(0, 10)));
   const seen = new Set(), kept = [];
   for (const r of mine) {

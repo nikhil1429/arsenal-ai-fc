@@ -463,19 +463,19 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// P6.1 — THE GEMINI SURFACE'S HONEST ANSWER (full-organism audit, 7 Aug 2026).
-// Stated plainly and permanently: a TRANSCRIPT-level compliance check for the
-// Gemini/Colab surface CANNOT exist on this machine — the teaching happens on a
-// surface whose transcript never arrives; only the rep JSON does. No
-// deterministic checker can audit turns it cannot see, and inventing an LLM
-// re-grader over rep text would judge a summary, not the teaching.
-// WHAT REPLACES IT (outcome over process):
+// P6.1 — THE GEMINI SURFACE'S HONEST ANSWER (full-organism audit, 7 Aug 2026;
+// AMENDED 9 Aug 2026 by the P7 harvest lane, his 'data flows everywhere' word).
+// The 7 Aug text said "permanently impossible — the transcript never arrives".
+// That boundary MOVED: since /harvest (scripts/harvest.mjs), a Gem sitting's
+// transcript CAN arrive on the afferent bus — but only for the sittings he
+// harvests, so transcript-level compliance is measurable exactly as harvested
+// and no further. This lane stays what it always was, OUTCOME, not process:
 //   1. shape validation at the door (validateRep — ts/gut/axis law, already live),
 //   2. THIS: per-batch MEASURED stats, recorded to gemini_quality.jsonl and
 //      judged by nobody until 30-45d of real data exists (his standing rule),
 //   3. the day's cold Examiner retrieval test — if the teaching was bad, the
 //      cold outcome cracks HERE, where the machine can see it.
-// The watchman's report prints this same boundary every night (§6.2).
+// The watchman's report measures the harvest lane live every night (§6.2).
 // Pure — the selftest drives it with fixtures.
 export function geminiBatchStats(rows, observedAt = null) {
   const n = (Array.isArray(rows) ? rows : []).length;
@@ -1096,7 +1096,7 @@ function main() {
       if (stats) {
         try { appendFileSync(GEMINI_QUALITY, JSON.stringify(stats) + "\n", "utf8"); } catch { /* a ledger miss never blocks reps */ }
         console.log(`paste: gemini-quality row recorded (n ${stats.n} · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
-        console.log("paste: (Gemini ka TRANSCRIPT is machine tak kabhi nahi aata — process-compliance wahan unmeasurable hai. Yeh lane sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
+        console.log("paste: (Gemini ka TRANSCRIPT ab /harvest se aa sakta hai — jo sitting harvest hui, wahan process bhi dikhta hai. Yeh lane phir bhi sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
       }
     }
     // #26 — the paste lane's recompute. OPT-IN, and that is deliberate: the forge

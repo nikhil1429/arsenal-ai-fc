@@ -577,11 +577,15 @@ function gatherRecallSources() {
     const vocab = conceptVocabulary();
     if (vocab.length) {
       for (const r of readLines(join(STATE_DIR, "afferent.jsonl"))) {
-        // HIS words only. `claude-code-teaching` is the coach's own output; embedding it
-        // would let recall quote me back to him as his own memory (see distiller #108).
-        if (!r || r.source !== "claude-code" || r.modality !== "code" || !r.text) continue;
+        // HIS words only. `claude-code-teaching` / `gemini-study-teaching` are the coach's
+        // own output; embedding them would let recall quote me back to him as his own
+        // memory (see distiller #108). `gemini-study` joined 9 Aug 2026 (P7 harvest lane).
+        const his = r && r.text
+          && ((r.source === "claude-code" && r.modality === "code")
+            || (r.source === "gemini-study" && r.modality === "gemini"));
+        if (!his) continue;
         if (!learningArcVerdict(String(r.text), vocab).ok) continue;
-        items.push({ ts: r.ts, source: "claude-code", text: String(r.text) });
+        items.push({ ts: r.ts, source: r.source, text: String(r.text) });
       }
     }
   } catch { }

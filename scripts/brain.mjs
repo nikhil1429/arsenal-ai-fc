@@ -589,7 +589,7 @@ function liveSignal(now, dir = STATE_DIR) {
     // freshest row and nothing else. readLinesTail reads only the bytes it needs and
     // tolerates a rolled/archived presence_log, so the monthly roll cannot turn "he was
     // at the keyboard 4 minutes ago" into "no signal at all".
-    scan(readLinesTail(join(dir, "afferent.jsonl"), 40).filter(a => ["voice", "code", "desktop-study", "note", "context"].includes(a.modality)));
+    scan(readLinesTail(join(dir, "afferent.jsonl"), 40).filter(a => ["voice", "code", "desktop-study", "note", "context", "gemini"].includes(a.modality)));
     scan(readLinesTail(join(dir, "presence_log.jsonl"), 6).filter(r => r.kind === "focus" && (r.focus_min || 0) > 0));
     scan(readLinesTail(join(dir, "dugout_stamps.jsonl"), 10));
   } catch {}

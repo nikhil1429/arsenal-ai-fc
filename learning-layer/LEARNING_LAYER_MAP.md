@@ -365,7 +365,7 @@ SessionStart pe. 5-ghante ki session ka nateeja: **zero method-drift, chaar teac
 `hit <id>` se drift record hoti hai → sabse zyada hits wala rule pehle inject hota hai. Contract khud ko
 tez karta hai us cheez ke against jo **actually** galat ho rahi hai.
 
-### 8.2 SKILLS (`.claude/skills/`) — 12
+### 8.2 SKILLS (`.claude/skills/`) — ginti LIVE karo (`ls .claude/skills/`), yahan likha number rot chuka tha (audit: "12" jab disk pe 13 the)
 
 **Learning:** `/forge` (concept NAAM diya ho) · `/learn` (naam nahi diya — state padho, route karo) ·
 `/scrimmage` (staged R-late graded mock, DOSSIER grammar) · `/rematch` (tape-room — past-Nikhil ka doubt
@@ -374,6 +374,10 @@ opponent ban ke wapas; saaf jeeto to doubt retire) · `/paste-session` (Gem/Cola
 
 **Din:** `/matchday` (kickoff) · `/full-time` (30-second close: HIT/MISS · ek signal · KAL-line) ·
 `/organism-doctor` (health check) · `/talk` (voice) · `/paint` (Gemini viz lane) · `/gem-sync` (phone Examiner Gem refresh)
+
+**Outward:** `/fire` (staged Gemini mission — uska click hi trigger; "le lo" = return leg) ·
+`/harvest` *(9 Aug 2026, P7)* — Gem sitting poori ki poori afferent bus pe (his turns `gemini-study`,
+Gem ke `gemini-study-teaching`), owner `harvest.mjs`, dedup + resync built-in
 
 **Routing:** *"forge embeddings"* → `/forge`. *"padhai karte hain" / "aaj ka session" / "continue" /
 "where was I"* → `/learn` (woh state padhta hai aur zaroorat ho to `/forge` ko de deta hai).
@@ -464,7 +468,8 @@ nahi hua" value). **Clean outcome se `knew` gadho mat.**
 | `rejirah_log.jsonl` | `rejirah.mjs` *(5 Aug 2026)* | Re-Jirah ke axis-GRADE rows + round-CLOSE rows, append-only. Controller-v0 ke saare reserved field isse **DERIVE** hote hain. |
 | `python_state.json` | `python_state.mjs` *(5 Aug 2026)* | Python track: subtopic · tier · 🔴🟡🟢 · close_sign_at · JS-hangover watch-list (×N) · last_packet |
 | `widgets.json` | `widget.mjs` *(5 Aug 2026)* | Visualization Contract ka registry — kaunse concept ka widget maujood hai aur kitne guess-gate **actually driven** hue. **Generate kabhi nahi karta.** |
-| `gemini_quality.jsonl` | `capture.mjs` *(7 Aug 2026, P6.1)* | Gemini surface ka OUTCOME ledger — har paste-batch ke measured stats (gut mix · correct rate · span), **judge koi nahi 30-45d tak**. Transcript-level compliance wahan ho hi nahi sakti (transcript machine tak aata hi nahi) — replacement = yeh lane + day-end cold Examiner. |
+| `gemini_quality.jsonl` | `capture.mjs` *(7 Aug 2026, P6.1)* | Gemini surface ka OUTCOME ledger — har paste-batch ke measured stats (gut mix · correct rate · span), **judge koi nahi 30-45d tak**. Transcript ab `/harvest` se aa sakta hai *(9 Aug 2026, P7)* — jo sitting harvest hui, uski compliance measurable; yeh lane phir bhi OUTCOME hi rahegi. Cold check = day-end Examiner. |
+| `harvest_log.jsonl` | `harvest.mjs` *(9 Aug 2026, P7 — uske 'data flows everywhere' word se)* | Gemini HARVEST lane ka delivery ledger — har harvested turn (his `gemini-study` / Gem `gemini-study-teaching`), thalamus door se post, dedup (ledger + bus, roll-safe), `resync` undelivered rows ko phir bhejta hai. Bus pe likhne ka LAWFUL raasta sirf POST door hai. |
 | `outwork_audit_last.json` | `outwork_audit.mjs` *(7 Aug 2026, P8.2)* | OUTWORK layer ka behavioural audit — "din ne apna kaam kiya?": full-time close · KAL→kickoff weld · RESULT paper-trail · 3-bucket split · season/post_match sync · presence≠output. Watchman ki nightly run ise `run --json` se ride karti hai. WON-DAY ke unmachine-checkable hisse `report` mein NAAM se stated. |
 | `missions.json` | `scout.mjs` *(8 Aug 2026 — THE MISSIONS DESK)* | Gemini-arm ka ledger: M01–M04 full-syllabus audit + T-/L- (topic-open/lock-harvest) rows, ingest events, `syllabus_audit.closed_at` = THE BENCHMARK GATE (uska word, event — date nahi). Mission prompt files `dressing-room/missions/` (M0x hand-authored, sirf REGISTER hoti hain; T-/L- scout hi likhta hai). Returns verbatim `scout_reports/mission_*.md`. |
 | `benchmark.json` | `benchmark.mjs` *(8 Aug 2026)* | 5 ROADMAP buckets × DOSSIER §1 weights × live evidence — have/need COUNTS + NAMES only (koi composite score nahi, 1 Aug usool). `audit-close` tak GATED (Ruling 6). `runs[]` outward floor ko feed karta hai. Readers: wall · team_sheet · kickoff line · captains_call regression card. |

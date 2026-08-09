@@ -64,12 +64,14 @@
 // above it (hooks themselves dead) is covered by c4's capture check the next
 // night, and the level above THAT is him noticing no kickoff block at all.
 //
-// COVERAGE HONESTY (§5.7 · §6.2): `report` states what is NOT covered — the
-// Gemini surface has NO compliance check (nothing deterministic can audit
-// teaching turns that never reach this machine; reps arrive shape-validated by
-// capture.mjs but teaching quality is unmeasured until Gemini transcripts flow
-// into the afferent bus), and the teaching audit covers only CHECKED_RULES.
-// Stated, not fixed silently — "no finding" must never read as "all covered".
+// COVERAGE HONESTY (§5.7 · §6.2): `report` states what is NOT covered. The
+// Gemini surface carried "NO compliance check — permanently impossible" until
+// 9 Aug 2026, when the /harvest lane shipped (scripts/harvest.mjs, his 'data
+// flows everywhere' word): his sittings CAN reach the afferent bus now, so the
+// report measures the lane LIVE — covered exactly as harvested, never assumed
+// from the lane's existence, and un-harvested sittings stay stated as invisible.
+// The teaching audit still covers only CHECKED_RULES. Stated, not fixed
+// silently — "no finding" must never read as "all covered".
 //
 // LAWS: deterministic Tier 1, no LLM, no guessed thresholds — every check is a
 // comparison or a presence test; the two numbers it carries (STALE_HOURS=18,
@@ -80,7 +82,7 @@
 // MODES: run [--no-tier2] [--skip-suite] | brief | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -717,9 +719,41 @@ function report() {
     const unchecked = tc.rules.map((r) => r.id).filter((id) => !al.checked_rules.includes(id));
     if (unchecked.length) console.log(`\n  NOT COVERED — teaching audit has no check for: ${unchecked.join(" · ")} ("no drift caught" ≠ "taught correctly")`);
   }
-  console.log("  NOT COVERED — the GEMINI surface: no compliance check exists for teaching that happens off this machine;");
-  console.log("    reps arrive shape-validated (capture.mjs) but teaching quality there is UNMEASURED until Gemini transcripts");
-  console.log("    flow into the afferent bus. This line stays until that lane exists (§6.2 — stated, not silently absent).\n");
+  // §6.2, remeasured live every print (P7, 9 Aug 2026): "permanently impossible" fell
+  // the day scripts/harvest.mjs shipped. Coverage = what actually reached the bus —
+  // the same conditional-live-read shape as the CHECKED_RULES block above, because a
+  // hardcoded prose line here is exactly what rotted for a month before this.
+  const gl = geminiLane();
+  if (gl.turns > 0) {
+    console.log("  COVERED AS HARVESTED — the GEMINI surface: /harvest lane live since 9 Aug 2026; coverage = the sittings");
+    console.log(`    he harvests. On the bus: ${gl.his} of his turns · ${gl.gem} Gem turns · last ${String(gl.last || "?").slice(0, 10)}. Un-harvested`);
+    console.log("    sittings stay invisible; reps stay shape-validated (capture.mjs), outcomes in gemini_quality.jsonl.\n");
+  } else {
+    console.log("  NOT COVERED YET — the GEMINI surface: the /harvest lane exists (since 9 Aug 2026) but no sitting has been");
+    console.log("    harvested yet — until he says \"harvest\" after a Gem sitting, teaching there stays UNMEASURED. Reps arrive");
+    console.log("    shape-validated (capture.mjs); outcome lane = gemini_quality.jsonl (§6.2 — stated, not silently absent).\n");
+  }
+}
+
+// the gemini lane, read off the bus itself — live file AND monthly archives
+// (afferent.YYYY-MM.jsonl: the roll is boot-armed; a reader that forgets the
+// siblings goes blind the morning after a daemon restart). Read-only.
+function geminiLane() {
+  const out = { turns: 0, his: 0, gem: 0, last: null };
+  try {
+    const files = readdirSync(STATE_DIR).filter((f) => /^afferent(\.\d{4}-\d{2})?\.jsonl$/.test(f));
+    for (const f of files) {
+      for (const line of readFileSync(join(STATE_DIR, f), "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        let r; try { r = JSON.parse(line); } catch { continue; }
+        if (!r || (r.source !== "gemini-study" && r.source !== "gemini-study-teaching")) continue;
+        out.turns += 1;
+        if (r.source === "gemini-study") out.his += 1; else out.gem += 1;
+        if (r.ts && (!out.last || r.ts > out.last)) out.last = r.ts;
+      }
+    }
+  } catch { }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

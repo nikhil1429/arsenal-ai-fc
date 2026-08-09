@@ -530,8 +530,10 @@ function gateTuneReport(rows, now = new Date()) {
 //              engine predict itself. This one is a hard deny, never a default.
 // Legacy shape (layering): the 271 voice afferents carry NO `source` field at
 // all, so modality "voice" maps to provenance "voice" and keeps reading.
-const HIS_SOURCES = new Set(["voice", "claude-code", "organism-memory"]);
-const NOT_HIS_SOURCES = new Set(["claude-code-teaching"]);
+// gemini pair added 9 Aug 2026 (P7 harvest lane): `gemini-study` is HIS turns from
+// a harvested Gem sitting, `gemini-study-teaching` is the Gem's answers — hard deny.
+const HIS_SOURCES = new Set(["voice", "claude-code", "organism-memory", "gemini-study"]);
+const NOT_HIS_SOURCES = new Set(["claude-code-teaching", "gemini-study-teaching"]);
 function provenanceOf(a) {
   if (!a) return "";
   const s = String(a.source || "").toLowerCase();

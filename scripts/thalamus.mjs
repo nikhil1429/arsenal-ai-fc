@@ -176,8 +176,12 @@ const DEFAULT_CONFIG = {
   // answers (hooks/afferent-post.mjs:56) — scoring the machine's confidence
   // language as HIS doubt is exactly the self-talk scar the capture guard
   // exists to close.
-  self_sources: ["voice", "claude-code", "organism-memory"],
-  self_deny_sources: ["claude-code-teaching"],
+  // P7 harvest lane (9 Aug 2026, his 'data flows everywhere' word): `gemini-study`
+  // is HIS turns arriving via scripts/harvest.mjs; `gemini-study-teaching` is the
+  // Gem's answers — same allow/deny law as the claude-code pair. Defaults mirror
+  // thalamus_config.json, which is the live authority.
+  self_sources: ["voice", "claude-code", "organism-memory", "gemini-study"],
+  self_deny_sources: ["claude-code-teaching", "gemini-study-teaching"],
   // #10 — the diagnostics that had nowhere to land. Rotation size is DERIVED,
   // not guessed: salience_ledger.jsonl holds 5,481 bound moments over 16 days =
   // 342.6 moments/day, and the worst case is one ~160-byte log line per moment
