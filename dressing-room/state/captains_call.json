@@ -338,7 +338,9 @@
         "id": "fb5d5a86"
       },
       "filed_at": "2026-08-09T16:49:14.121Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T18:06:10.060Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
@@ -371,7 +373,9 @@
         "kind": "none"
       },
       "filed_at": "2026-08-09T17:19:27.193Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T18:05:36.978Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
