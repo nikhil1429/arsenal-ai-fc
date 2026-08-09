@@ -85,7 +85,7 @@
 // (`autohit` / `checked`), exactly as the owners-only law requires.
 // ---------------------------------------------------------------------------
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, cpSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, cpSync, rmSync, readdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -446,9 +446,11 @@ export function seedTerms({ concept = null, sinceSession = null } = {}) {
     }
   }
   const last = readLast() || {};
+  const seededTerms = { concept: c, opened: [...opened].sort(), flagged: (last.terms && last.terms.concept === c ? last.terms.flagged : []) || [], seeded_from_history_at: new Date().toISOString() };
   writeLastReal({
     ...last,
-    terms: { concept: c, opened: [...opened].sort(), flagged: (last.terms && last.terms.concept === c ? last.terms.flagged : []) || [], seeded_from_history_at: new Date().toISOString() },
+    terms: seededTerms,
+    terms_by_concept: { ...((last.terms_by_concept && typeof last.terms_by_concept === "object") ? last.terms_by_concept : {}), [c]: seededTerms },   // C4
     linkback: { concept: c, session: startISO, seen: linkSeen, flagged: false, seeded_from_history_at: new Date().toISOString() },
     checked_rules: CHECKED_RULES,
   });
@@ -846,7 +848,14 @@ const stampChecked = () => contractCall(["checked"]);
 
 function readLast() { return readJson(LAST); }
 function writeLastReal(obj) {
-  try { writeFileSync(LAST, JSON.stringify(obj, null, 1)); } catch { /* never block */ }
+  // C2 (9 Aug 2026): was a bare truncate-then-write firing on EVERY prompt AND Stop —
+  // the exact torn-read window teaching_contract.mjs documents repairing on 6 Aug.
+  // Per-pid tmp + rename: a parallel session sees old bytes or new, never half.
+  try {
+    const tmp = `${LAST}.tmp${process.pid}`;
+    writeFileSync(tmp, JSON.stringify(obj, null, 1));
+    renameSync(tmp, LAST);
+  } catch { /* never block */ }
 }
 function appendLogReal(row) {
   try { appendFileSync(LOG, JSON.stringify(row) + "\n", "utf8"); } catch { /* never block */ }
@@ -898,7 +907,14 @@ export function stopHook(hook, io) {
   // is "pehli baar", first time EVER for this concept, not first time today).
   // This file is teaching_audit's own (single-writer law), so the state rides it.
   const concept = session ? String(session.concept || "") : "";
-  const terms0 = (last.terms && last.terms.concept === concept) ? last.terms : { concept, opened: [], flagged: [] };
+  // C4 (9 Aug 2026): terms state is now a per-concept MAP — the old single slot
+  // meant switching concepts discarded the previous concept's opened-set, so a
+  // later re-forge could re-fire neev-pehle on terms he already owns (canon is
+  // "pehli baar EVER for this concept"). The legacy `terms` slot still reads as
+  // a fallback so live state migrates without a manual step.
+  const termsByConcept = (last.terms_by_concept && typeof last.terms_by_concept === "object") ? last.terms_by_concept : {};
+  const terms0 = termsByConcept[concept]
+    || ((last.terms && last.terms.concept === concept) ? last.terms : { concept, opened: [], flagged: [] });
   const link0 = (last.linkback && last.linkback.concept === concept && last.linkback.session === (session && session.started_at))
     ? last.linkback : { concept, session: session && session.started_at, seen: false, flagged: false };
   const closed = closedDerive();
@@ -947,6 +963,7 @@ export function stopHook(hook, io) {
       axes_deferred: session && Array.isArray(session.axes_deferred) ? session.axes_deferred : [],
     },
     terms: terms1,
+    terms_by_concept: { ...termsByConcept, [concept]: terms1 },   // C4: no concept's opened-set is ever displaced again
     linkback: link1,
     checked_rules: CHECKED_RULES,
   });

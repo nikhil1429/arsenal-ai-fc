@@ -13,7 +13,7 @@
 // ============================================================================
 import http from "node:http";
 import { createInterface } from "node:readline";
-import { writeFileSync, existsSync, readFileSync } from "node:fs";
+import { writeFileSync, existsSync, readFileSync, renameSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -147,7 +147,11 @@ export function makeCallbackHandler({ state, secrets: s, closeServer, fetchImpl 
       if (!r.ok) throw new Error(`token exchange HTTP ${r.status}: ${await r.text()}`);
       const tok = await r.json();
       tok.expires_at = Date.now() + (tok.expires_in || 86400) * 1000;
-      writeFileSync(TOKENS, JSON.stringify(tok, null, 2));
+      // C2 (9 Aug 2026): tmp+rename — oura_coach's own header names a half-written
+      // token file as the one write that destroys the refresh chain for good.
+      const tmp = `${TOKENS}.tmp${process.pid}`;
+      writeFileSync(tmp, JSON.stringify(tok, null, 2));
+      renameSync(tmp, TOKENS);
       // VERIFY against REAL ring data (not just personal_info — an anonymous /
       // wrong-account token returns 200 on personal_info but 401 on data).
       let verifyMsg = "", verified = false;

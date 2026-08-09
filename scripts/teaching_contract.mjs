@@ -148,6 +148,11 @@ function seed(now = new Date()) {
       // machine-readable fingerprint (core axis deferred); the semantic rest
       // stays his to flag — now under its own name.
       r("coverage", "Har axis ka POORA scope kholna Claude ka kaam hai — COVERAGE uske sawaalon pe kabhi depend nahi. Aadha jawab, kata scope, dabaya doubt, core-axis defer = drift."),
+      // C1 (9 Aug 2026, launch worklist): teaching_audit has auto-counted against
+      // neev-pehle since 7 Aug (P1.2, the sequencing defect) but the seed never
+      // carried it — the exact re-seed trap the header above forbids: one corrupt
+      // teaching_contract.json and every neev-pehle autohit exits 1 forever.
+      r("neev-pehle", "Naya naam pehli baar aate hi EK line mein kholo — conclusion se pehle neev. Jis shabd pe imarat khadi hai, wo shabd pehle khulta hai."),
     ],
   };
 }
@@ -864,9 +869,9 @@ function selftest() {
   const T0 = new Date("2026-07-31T18:00:00Z");
   const base = seed(T0);
 
-  assert("seed carries all eleven rules he named himself (grown 6 Aug, again 7 Aug: a re-seed must never orphan the audit's rule ids)", base.rules.length === 11);
-  assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed)",
-    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage"]
+  assert("seed carries all twelve rules (grown 6 Aug, 7 Aug, and 9 Aug C1: a re-seed must never orphan the audit's rule ids)", base.rules.length === 12);
+  assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed — incl. neev-pehle, the one it missed)",
+    ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle"]
       .every((id) => base.rules.some((r) => r.id === id)));
 
   const hit = hitRule(hitRule(base, "hinglish", T0).state, "hinglish", T0).state;
@@ -881,10 +886,10 @@ function selftest() {
     secondSlots.size === hit.rules.length - 1);
 
   const grown = addRule(base, "no-praise", "Praise sirf jab kamayi ho, aur specific ho.", T0);
-  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 12);
+  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 13);
   assert("add refuses a duplicate id", addRule(grown.state, "no-praise", "x", T0).ok === false);
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
-  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 10);
+  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 11);
 
   // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
   const t1L = bumpTurnLegacy(base, "S1");
@@ -954,9 +959,9 @@ function selftest() {
   // i.e. the warning costs a ROTATING RULE, which is exactly the trade the audit asked
   // for and the reverse of what the slice used to do.
   assert("HAVE/NEED — the header says how many rules are actually shown out of how many exist, so a truncation is visible",
-    /rules 2\/11/.test(atShowN(4, 40)[0]) && /rules 3\/11/.test(atShowN(4, 1)[0]));
+    /rules 2\/12/.test(atShowN(4, 40)[0]) && /rules 3\/12/.test(atShowN(4, 1)[0]));
   assert("NO REGRESSION AT THE LIVE VALUE — at show_n 2 he still gets both rules, the link-back AND the warning, in 5 lines",
-    atShowN(2, 40).length === 5 && /rules 2\/11/.test(atShowN(2, 40)[0])
+    atShowN(2, 40).length === 5 && /rules 2\/12/.test(atShowN(2, 40)[0])
     && atShowN(2, 40).filter((l) => /^ {2}⚠/.test(l)).length === 2
     && atShowN(2, 40).some((l) => /link back BY NAME/.test(l))
     && atShowN(2, 40).some((l) => /CONTEXT WARNING/.test(l)));
@@ -1098,7 +1103,7 @@ function selftest() {
 
   // ---- audit #40's numbers, computed here so the close report never has to guess
   assert("HIT STATS — total / ever-hit / newest are measured from the rules, and 'never hit' is null, never 0",
-    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 11
+    hitStats(base.rules).ever_hit === 0 && hitStats(base.rules).newest_hit === null && hitStats(base.rules).total === 12
     && hitStats(hit.rules).ever_hit === 1 && hitStats(hit.rules).newest_hit === T0.toISOString());
 
   // ---- 6 Aug 2026 — THE TWO-LANE RULING, pinned. His exact words on the exact

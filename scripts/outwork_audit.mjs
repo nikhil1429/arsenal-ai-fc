@@ -54,7 +54,7 @@
 // MODES: run [--json] | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -213,8 +213,11 @@ function run(argv) {
   const w = gather();
   const findings = checks(w);
   try {
-    writeFileSync(LAST(), JSON.stringify({ at: w.now, today: w.today, findings,
+    // C2 (9 Aug 2026): tmp+rename — same house pattern as every other _last writer.
+    const out = LAST(), tmp = `${out}.tmp${process.pid}`;
+    writeFileSync(tmp, JSON.stringify({ at: w.now, today: w.today, findings,
       counts: { afferents: w.afferents_today, teaching: w.teaching_today, reps: w.reps_today } }, null, 1));
+    renameSync(tmp, out);
   } catch {}
   if (asJson) { console.log(JSON.stringify(findings)); return; }
   console.log(`outwork_audit: ${findings.length} finding(s)`);

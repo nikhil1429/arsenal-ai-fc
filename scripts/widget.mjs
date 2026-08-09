@@ -24,7 +24,7 @@
 //   because nobody registered it.
 // CLI: list | register <concept> <file> [--gates N] | open <concept> | selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, renameSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -71,8 +71,11 @@ export function loadRegistry(path = REGISTRY) {
 }
 
 function save(reg, path = REGISTRY) {
+  // C2 (9 Aug 2026): tmp+rename — this was the last state-file OWNER still writing bare.
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(reg, null, 2) + "\n");
+  const tmp = `${path}.tmp${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(reg, null, 2) + "\n");
+  renameSync(tmp, path);
 }
 
 // THE REPORT. Every locked capsule appears, present or not — that is the point. A

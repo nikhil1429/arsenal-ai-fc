@@ -80,7 +80,7 @@
 // MODES: run [--no-tier2] [--skip-suite] | brief | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -609,12 +609,16 @@ function run(argv) {
   try { mkdirSync(STATE_DIR, { recursive: true }); } catch {}
   try { appendFileSync(LOGJ, JSON.stringify({ ts: w.now, findings, tier2: gate }) + "\n"); } catch {}
   try {
-    writeFileSync(LAST, JSON.stringify({
+    // C2 (9 Aug 2026): tmp+rename — the SessionStart brief reads this file at every
+    // boot; a torn read there means a silent no-brief morning.
+    const tmp = `${LAST}.tmp${process.pid}`;
+    writeFileSync(tmp, JSON.stringify({
       at: w.now, today: w.today, findings,
       counts: { afferents_today: w.affToday.total, teaching_today: w.affToday.teaching, audit_rows_today: w.auditRowsToday },
       tier2: tier2 ? { day: w.today, ...tier2 } : (prevLast && prevLast.tier2) || null,
       tier2_gate: gate.why,
     }, null, 1));
+    renameSync(tmp, LAST);
   } catch {}
 
   console.log(`watchman: ${findings.length} finding(s) · ${findings.filter((f) => f.level !== "INFO").length} escalation-grade`);

@@ -14,8 +14,13 @@ import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
+// C7 (9 Aug 2026): the whole file is top-level statements — importing it used to
+// silently regenerate the 5MB bundle. A generator with side effects refuses import.
+if (!(process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
+  throw new Error("repo_bundle.mjs is a CLI generator with top-level effects — run it (npm run bundle), never import it");
+}
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "ARSENAL_FC_FULL_REPO_BUNDLE.md");
 
@@ -146,8 +151,9 @@ const ANN = {
 };
 
 // tracked files, minus binaries + auto-generated noise
-const tracked = execSync("git ls-files", { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
-  .split("\n").map(s => s.trim()).filter(Boolean)
+const allTracked = execSync("git ls-files", { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+  .split("\n").map(s => s.trim()).filter(Boolean);
+const tracked = allTracked
   .filter(f => !/\.(png|jpe?g|gif|xlsx|ods|ico|pdf|zip)$/i.test(f))
   .filter(f => f !== "package-lock.json")
   .filter(f => f !== "ARSENAL_FC_FULL_REPO_BUNDLE.md");
@@ -207,7 +213,7 @@ out += `# ⚪🔴 ARSENAL AI FC — THE COMPLETE REPO, IN ONE FILE\n`;
 out += `### Every tracked file, top to bottom, so you can read the whole thing you built.\n`;
 out += `*Generated ${now}. Byte-exact concatenation of every tracked TEXT file (${tracked.length} files). `;
 out += `Gitignored personal data — your reps, biometrics, transcripts, tokens — is deliberately NOT here. `;
-out += `Two binary files (an .xlsx and the npm lockfile) are the only tracked files excluded.*\n\n`;
+out += `${allTracked.length - tracked.length} tracked files are excluded by construction (binary extensions, the npm lockfile, and this bundle itself) — counted live, never hardcoded.*\n\n`;
 out += `> **How to read this.** Read the sections in order — they go from the highest-level "what is this" docs, `;
 out += `down through every line of code, down to the setup scripts and the founding learning-layer docs. `;
 out += `Each file below is introduced by a one-line note telling you what it is and why it matters. `;

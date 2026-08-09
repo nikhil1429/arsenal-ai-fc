@@ -278,7 +278,15 @@ async function indexEpisodesDetailed(deps = {}) {
     chunk.forEach((r, j) => { if (vecs[j]) { r.vec = vecs[j]; n++; } else failed++; });
   }
   if (n || recalls) {
-    (deps.write || ((rs) => writeAtomic(file, rs.map(x => JSON.stringify(x)).join("\n") + "\n")))(rows);
+    // C3 (9 Aug 2026, launch worklist): the snapshot above can be MINUTES old by the
+    // time the network embeds return; every other writer of episodes.jsonl APPENDS,
+    // so a moment landed mid-embed used to be erased by this whole-file rewrite.
+    // Re-read at write time and carry the appended tail forward.
+    (deps.write || ((rs) => {
+      const fresh = readLines(file);
+      const tail = fresh.length > rs.length ? fresh.slice(rs.length) : [];
+      writeAtomic(file, rs.concat(tail).map(x => JSON.stringify(x)).join("\n") + "\n");
+    }))(rows);
     // clear the journal only when it was the real one AND we really persisted
     if (recalls && !deps.bumps && !deps.write) { try { writeFileSync(RECALL_BUMPS, ""); } catch { } }
   }

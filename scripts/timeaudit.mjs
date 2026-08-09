@@ -31,6 +31,12 @@ const NTFY_TOPIC_ENV = "ARSENAL_NTFY_TOPIC";
 const NTFY_TOPIC_FILE = join(STATE_DIR, "throwin_topic.txt");
 
 const MODE = (process.argv[2] || "pulse").toLowerCase();
+// C5 (9 Aug 2026): "pulse" was the default for EVERY unknown argv — a typo'd
+// "fulll" silently ran a live pulse instead of refusing. Three modes exist; say so.
+if (!["pulse", "full", "selftest"].includes(MODE)) {
+  console.error(`timeaudit: unknown mode "${MODE}" — pulse | full | selftest`);
+  process.exit(1);
+}
 
 // ---------- config ----------
 function loadConfig() {

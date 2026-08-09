@@ -62,7 +62,10 @@ const BASE = "https://api.ouraring.com/v2/usercollection";
 // atomic on NTFS, so a reader sees either the old bytes or the new ones, never
 // a half file.
 function writeJsonAtomic(file, obj) {
-  const tmp = `${file}.tmp`;
+  // C2 (9 Aug 2026): per-pid tmp — a fixed `.tmp` name means two concurrent writers
+  // of the SAME file clobber each other's tmp (the 7 Aug sweep fixed this class in
+  // 35 organs; this one kept the shared name).
+  const tmp = `${file}.tmp${process.pid}`;
   writeFileSync(tmp, JSON.stringify(obj, null, 2));
   renameSync(tmp, file);
 }
@@ -1047,5 +1050,9 @@ async function selftest() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
+  // C5 (9 Aug 2026): a typo'd mode ("selftst") used to fall straight through to a
+  // LIVE Oura run — the unknown-argv guard manager.mjs already carries. Bare = live
+  // (the conductor's chain calls it bare); anything else must say what it means.
+  if (mode) { console.error(`oura_coach: unknown mode "${mode}" — run bare for the live pass, or: selftest`); process.exit(1); }
   main();
 }
