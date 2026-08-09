@@ -1,682 +1,685 @@
 {
-  "_comment": "THE BRAIN's job table + budget policy (ORGANISM_ANATOMY §5). The brain runs HOT by the captain's standing order (12 Jul 2026, with Nidhi): exhaust the Claude Max 5x plan every rolling window and every week; weight the heavy work overnight; protect his study hours; never touch an API key. brain.mjs is the sole reader; edits here are canon edits.",
-  "version": 1,
-  "paused": false,
-  "_paused_note": "PAUSED by the captain 2 Aug 2026 — all 23 LLM jobs held. WHY: the rolling 7d window stood at 85,16,836 / 1,20,00,000 (71%) with headroom 0, and a measurement of that week showed the shape of the spend: 178 calls, average 47,847 tokens each, of which ~23,947 is `claude -p` boot tax (system prompt + tool definitions re-sent every call) and only 1,706 is generated output. 96% of every call was the machine loading itself; 3.6% was thinking. He is spending the next two days studying in Claude Code while the rolling window decays (5 Aug -> 54.6%, 6 Aug -> 43.7%, 7 Aug -> the 24-lakh 31 Jul day falls out). WHAT STILL RUNS: everything deterministic — capture, fsrs, calibration, nemesis, learning_state, presence, thalamus, distiller, the wall, the Goalkeeper's Oura pull. The organism keeps RECORDING while it stops THINKING, so the pause ends with real data instead of a blank week. UN-PAUSE: set false. Nothing else here changes. || UN-PAUSED 6 Aug 2026 by the captain, after the BOOT TAX was closed in brain.mjs claudeExec (--system-prompt + --tools \"\" + --strict-mcp-config). Measured on the same probe: 49,411 -> 5,663 tokens per call, 88.5% off. The pause existed because 96% of every call was the CLI loading itself; that is now ~5k of overhead instead of ~44k. Revert the optimisation with budget.lean_calls=false; re-pause with paused=true.",
-  "budget": {
-    "window_hours": 5,
-    "window_capacity_est_tokens": 800000,
-    "weekly_capacity_est_tokens": 12000000,
-    "day_reserve_frac": 0.4,
-    "overnight_target_frac": 0.95,
-    "self_tune": true,
-    "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it.",
-    "lean_calls": true
-  },
-  "study_hours": {
-    "start": "09:00",
-    "end": "21:00"
-  },
-  "overnight": {
-    "start": "22:00",
-    "end": "07:30"
-  },
-  "guards": {
-    "refuse_if_api_key_env": true,
-    "banned_phrases": [
-      "10x",
-      "on steroids",
-      "god-tier",
-      "time is short"
-    ],
-    "_note": "Hype in output is a bug (CONDUCTOR §1). The API-key guard keeps the hard $100 ceiling: subscription only, ever.",
-    "_exponential_removed_2026_08_02": "AUDIT #62. 'exponential' was dropped from this list. bannedPhraseCheck is a naive lowercase substring test, so it also caught 'exponentially' and 'exponent' — and this organism's whole syllabus is transformers, where softmax IS an exponential and quadratic-vs-exponential is a real claim about complexity, not a sales pitch. Measured: 12 rejections / 185,983 tokens destroyed AFTER the spend (capsule_premap 10, deep_twin 1, lexicon_mine 1). The remaining four have no legitimate technical reading in his register. Companion fix: the guard is now opt-out per job via \"hype_guard\": false, set only on machine-side mining jobs he never reads. The obvious gate (job.speak_to || validate==='no_new_numbers') was NOT used — it would have stripped the guard from evening_voice, which has neither."
-  },
-  "ntfy": {
-    "enabled": true,
-    "topic": "",
-    "push_after": [
-      "formation_read"
-    ],
-    "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed."
-  },
-  "gemini": {
-    "enabled": true,
-    "binary": "gemini",
-    "_note": "Second brain — visualization + long-context. Free CLI on the captain's Google account (the AI Pro one, …2914). ENABLED: until his one-time login, gemini jobs fail gracefully and retry next tick (failed jobs don't spend their daily slot) — the first night after login, the renders just start."
-  },
-  "dugout_pool": {
-    "enabled": true,
-    "gemini_defer_threshold_min": 30,
-    "_note": "THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text. On a heavy voice day (≥threshold minutes in dugout_ledger), DAYTIME gemini jobs step aside so the voice keeps the free-tier pool; they run overnight regardless. Claude jobs unaffected."
-  },
-  "pulse": {
-    "enabled": false,
-    "daily_token_frac": 0.1,
-    "every_n_beats": 2,
-    "_measurement_window_note": "AUDIT #66/#67 (2 Aug 2026). These two keys are a MEASUREMENT WINDOW, not a guessed cap — the captain's standing order forbids setting a numerical limit by guessing. The arithmetic, written down so the next value comes off the ledger and not off a hunch: weekly plan 12,000,000 tok × 0.10 = 1,200,000 tok/day ÷ the MEASURED 32,480 tok/pulse (853 ledger rows; ~31,970 of it the `claude -p` boot tax, ~510 the pulse's own payload) ≈ 36 pulses/day of real observation. daily_token_frac was DOUBLED from 0.05 (window opened) and every_n_beats HALVES the frequency: the pulse used to fire on every ~75s daemon beat, so it rode the stream a pulse a minute and a quarter and became 27,62,471 tok = 32.4% of the rolling week. The afferent tail moves far slower than 75 seconds, so wider spacing loses observations, not signal. daily_cap (200 calls) is untouched and is NOT a budget — it is a runaway-loop backstop, one of the two permitted exceptions (a failure guard); at this window it can never bind (1,200,000/32,480 ≈ 36). `brain status` now prints the measured tok/pulse beside the window, and reports 0 pulses as NOT MEASURED YET rather than as a mean of zero.",
-    "_note": "PAUSED by the captain 2 Aug 2026, and this is the first day the switch could even be honoured — brain.mjs's loadConfig returned a hardcoded key literal, so a `pulse` block was parsed and silently dropped and `enabled:false` was literally unreachable code (fixed 1 Aug). WHY PAUSED, measured not assumed: haiku_pulse is 27,62,471 tokens = 32.4% of the organism's rolling-7d spend, the single largest consumer of a 12M/week plan. It is NOT paused for being wasteful by nature — it is paused because its verdict currently reaches nobody: thalamus.mjs has zero handling for modality 'pulse', so all 124 escalations scored a ceiling of 0.244 against a 0.40-0.85 wake bar, and 853 calls have produced 0 tier-2 wakes. Paying 32% of the plan for an opinion nothing can act on is the wrong order of operations. UNPAUSE ONLY AFTER the nucleus wiring lands (plan group G3: a real pulse:* base_rate, stopword-filtered concept_tokens, and a weighted pulse term below self's 0.45) — then re-measure its wake rate before restoring any budget. Re-enable: set true. Nothing else here changes."
-  },
-  "_surface_law": "AUDIT #63 (2 Aug 2026). EVERY job must declare `surface` — where its output actually appears — because eight-to-ten jobs were writing into brain_out dirs no line of code opened: 28,65,782 tokens all-time, ~32,73,067 of one 82,53,985-token week. midday_reread alone ate 5,60,465 of an 8,00,000-token 5h window for a file with no reader, while formation_read (the sheet, priority 100) got 1,03,010 all week. kind ∈ {code, job_input, human_file, media, sheet, none}: `code` = a .mjs opens it (cite file:line); `job_input` = another job here lists it in `inputs`; `human_file` = designed for the captain to read, nothing automated will (brain.mjs prints these by path in `brain status`, and runJob's note — which the ledger row now carries — names the surface on every run); `media` = an mp3/artifact; `sheet` = team_sheet.md. A job with no address is NOT silently blocked — the runtime reports it with a have/need counter and keeps running, because a missing config key must never be able to silence an organ. What is off is off EXPLICITLY below, with the exact re-enable condition named.",
-  "_inputs_law": "AUDIT #64 (2 Aug 2026). An input may be a plain string (optional — the original shape, unchanged) or {\"path\": \"...\", \"required\": true}. gatherInputs used to map a missing path to null with no warning and buildAnalysisPrompt rendered the literal `null` under its own `## INPUT season.json` heading; teamtalk_am has produced the morning talk 85 times at 3-of-4 inputs absent at ~45k tok/run, reporting ok:true every time. A REQUIRED input that is absent skips the job BEFORE the spend and names the file. NO RATIO GUARD — a majority rule misses deep_reanalysis at exactly 50% and kills teamtalk_am at 75%, which currently degrades gracefully in words. Every `required: true` set below was verified PRESENT ON DISK on 2026-08-04, so this changes no behaviour today; it is a regression net, not a new gate. The genuinely-absent files (season.json, notebook.json, mutations.jsonl, post_match/, brain_out/dugout/TODAY.md) are left OPTIONAL on purpose — they arrive when /full-time, the Boot Room and the voice bridge run, and the absent count now rides every ledger row so the spend on nulls is finally visible.",
-  "jobs": [
-    {
-      "id": "midday_digest",
-      "engine": "claude",
-      "model": "sonnet",
-      "window": "midday",
-      "at": "14:00",
-      "priority": 62,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        "brain_out/dugout/TODAY.md",
-        "dugout_notes.jsonl",
-        "presence_log.jsonl",
-        {
-          "path": "timeaudit.json",
-          "required": true
-        }
-      ],
-      "out": "dugout_digest",
-      "surface": {
-        "kind": "job_input",
-        "where": "input to midday_cartridge + day_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's system instruction"
-      },
-      "_note": "HANDBRAKE-OFF (17 Jul): the SAME-DAY memory refresh — mine the morning's voice + behavior at 14:00 so the afternoon Gaffer already knows the morning. Overwrites today's digest with a richer read; the overnight run still does the full mine."
-    },
-    {
-      "id": "midday_cartridge",
-      "engine": "claude",
-      "model": "sonnet",
-      "window": "midday",
-      "at": "14:20",
-      "priority": 61,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "brain_out/dugout_digest/TODAY.md",
-          "required": true
-        },
-        "drills.json",
-        "pitch_read.json"
-      ],
-      "out": "day_cartridge",
-      "validate": "no_new_numbers",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/dugout.mjs:325 loadDayCartridge() → the Dugout voice agent's system instruction, verbatim"
-      },
-      "_note": "HANDBRAKE-OFF (17 Jul): recompile the Gaffer's briefing from the midday digest — an afternoon Dugout session boots on a cartridge that includes TODAY so far, not just yesterday. Same laws: <=15 lines, second person, no new numbers, no hype."
-    },
-    {
-      "id": "formation_read",
-      "engine": "claude",
-      "model": "opus",
-      "window": "any",
-      "_window_note": "audit #108, 6 Aug 2026 — was \"morning\" (07:30-12:00). Combined with at:08:45 the job was eligible for barely three hours a day, and this laptop is asleep through nearly all of them: brain_queue.json shows formation_read ran on 1 of the last 9 days, and team_sheet.md — the Manager's ONLY output, the capstone of the whole build order — sat frozen at 2026-08-01 saying \"Matchday 1 · Introduction ... I don't know you yet\" while the Dugout served it every morning as today's sheet. The organism noticed honestly (mouth_said pushed 'absence' on 08-02/03/04/05); nothing fixed the cause. \"any\" keeps at:08:45 as the EARLIEST time (eligibleJobs requires nowHM >= j.at) and lets the sheet build whenever the machine actually wakes. max_per_day:1 still means one sheet a day. No new number was introduced.",
-      "at": "08:45",
-      "priority": 100,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "manager_m3",
-      "surface": {
-        "kind": "sheet",
-        "where": "dressing-room/state/team_sheet.md (manager.mjs is the sole writer) → the 08:45 ntfy push + the Wall + /matchday"
-      },
-      "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless."
-    },
-    {
-      "id": "midday_reread",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (small inputs, cognitive)",
-      "window": "midday",
-      "at": "13:30",
-      "priority": 60,
-      "enabled": false,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        "pulse.json",
-        "pitch_read.json",
-        "drills.json",
-        "presence_log.jsonl",
-        "timeaudit.json"
-      ],
-      "out": "midday",
-      "surface": {
-        "kind": "human_file",
-        "where": "brain_out/midday/<date>.md — DISABLED: nothing opens this today"
-      },
-      "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work.",
-      "_DISABLED_2026_08_02": "AUDIT #63 — THE WORST OFFENDER, disabled. This job is the single most expensive thing the organism does: ~1,59,000 tok/run, 7 runs, 11,21,460 tok since 26 Jul, and ONE run ate 5,60,465 of an 8,00,000-token 5h window — 70% of the whole window — for a file with no reader. `grep -rn brain_out/midday scripts/ .claude/ hooks/ setup/` returns ZERO hits, and no other job lists it in `inputs`. The _note above is itself the lie: 'analysis for the wall and the evening' — the wall reads brain_out/wall_insights (viz.mjs:647), and evening_voice's inputs are twin.json / slip.jsonl / pitch_read.json / pulse.json. Meanwhile formation_read, the sheet he actually reads at priority 100, got 1,03,010 tokens all week. RE-ENABLE WHEN: something opens dressing-room/state/brain_out/midday/<date>.md — either viz.mjs reads it into a wall panel, or evening_voice/day_cartridge lists brain_out/midday/TODAY.md in `inputs` (a one-line config edit, and then set enabled:true and surface.kind to code/job_input). Do NOT re-enable it just to un-quiet the afternoon: it has never reached a human.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
-      "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63) and kept off 6 Aug. Its output has NO READER: nothing in scripts/ opens brain_out/midday/, and 7 files sit there unread. It was also the #2 all-time spender (2,645,734 tokens). The boot-tax fix of 6 Aug makes it ~9x cheaper, but cheap output nobody reads is still 100% waste. TO ENABLE: give it a consumer first — either list brain_out/midday/TODAY.md as an input to an enabled job, or commit to opening the file yourself, then flip enabled:true."
-    },
-    {
-      "id": "evening_voice",
-      "engine": "claude",
-      "model": "opus",
-      "window": "any",
-      "at": "21:50",
-      "priority": 90,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        "twin.json",
-        "slip.jsonl",
-        {
-          "path": "pitch_read.json",
-          "required": true
-        },
-        "pulse.json"
-      ],
-      "out": "evening_voice",
-      "surface": {
-        "kind": "job_input",
-        "where": "input to day_cartridge (brain_out/evening_voice/TODAY.md) → the Dugout's dawn system instruction"
-      },
-      "_hype_guard_note": "AUDIT #62 TRAP: evening_voice has NEITHER speak_to NOR validate, so the obvious gate would have stripped the hype guard from exactly the Opus job that writes in his ear's register. It KEEPS the guard — no hype_guard key here, deliberately."
-    },
-    {
-      "id": "deep_twin",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 50,
-      "enabled": false,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        "predictions.jsonl",
-        "slip.jsonl",
-        {
-          "path": "twin.json",
-          "required": true
-        }
-      ],
-      "out": "twin",
-      "surface": {
-        "kind": "human_file",
-        "where": "brain_out/twin/<date>.md — DISABLED: nothing opens this today"
-      },
-      "_DISABLED_2026_08_02": "AUDIT #63 — no address. 2,38,210 tokens all-time into brain_out/twin/, which no .mjs opens and no other job lists in `inputs` (6 dated .md files sitting there unread). Distinct from twin.json, which IS read — that is the deterministic organ's own state, written by twin.mjs; this is the LLM's re-read of it, and it lands nowhere. RE-ENABLE WHEN: scripts/twin.mjs reads brain_out/twin/<date>.md as market-tuning evidence (the seam the audit named), OR the captain declares it a read-it-yourself file — in which case flip surface.kind to \"human_file\" with a `where` and set enabled:true, and it will start printing by path in `brain status`. Nothing else here changes.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
-      "_disabled_reason": "DISABLED with NO STATED REASON until 6 Aug 2026 — the exact ambiguity brain.mjs:123 warns about (\"no way to tell later which were paused deliberately and which were forgotten\"). Reconstructed from evidence: surface was kind:none and nothing opens brain_out/twin/ (7 files unread), so it fell to the same audit #63 sweep as the other three. Recorded now so it reads as a DECISION, not an oversight. TO ENABLE: give it a reader, then flip enabled:true."
-    },
-    {
-      "id": "doubt_clusters",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 55,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        {
-          "path": "doubt_grammar.json",
-          "required": true
-        },
-        "tape_room.json"
-      ],
-      "out": "doubts",
-      "surface": {
-        "kind": "human_file",
-        "where": "dressing-room/state/brain_out/doubts/<date>.md — the captain batch-glances it; `brain status` prints the newest by path"
-      },
-      "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules.",
-      "_surface_note": "AUDIT #63: kept ON. This is one of the four jobs DESIGNED to be human-read — wiring a code consumer would be the wrong seam. Its defect was that no surface ever pointed at the file: runJob's `→ brain_out/<out>/<date>.md` note was the only pointer that existed and the ledger row dropped it, while stdout went to a hidden window. Both are fixed; the address is now the note on every ledger row plus the by-path listing in `brain status`.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "lexicon_mine",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 45,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        {
-          "path": "lexicon.json",
-          "required": true
-        }
-      ],
-      "out": "lexicon",
-      "validate": "quotes_only",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/brain.mjs minedAnchors() → buildFingerprint's MINED ANCHORS line → the cognitive fingerprint at the head of EVERY analysis prompt"
-      },
-      "_note": "Anchor-metaphor assist. Extraction, never invention: validator rejects any anchor text not verbatim-present in the input.",
-      "_wired_2026_08_02": "AUDIT #5 + #61, both fixed together. (#61) This job was 0-for-115 — 5,48,556 tokens in 7 days, every failure `validator: non-verbatim quote` — and it was UNWINNABLE: the old quotes_only pattern /\"([^\"]{12,})\"/g put the ≥12-char floor INSIDE the pair matcher, so quoting any anchor shorter than 12 chars desynced the pairing and captured the annotation between two phrases as if it were a quote. His own lexicon holds \"one picture\" (11), \"tera finops\" (11), \"naya sawaal\" (11), so doing exactly what the job exists to do guaranteed rejection. scripts/validators.mjs now pairs quotes sequentially, then applies the floor. (#5) Its output had no reader; it now feeds the fingerprint, which is safe by construction because quotes_only means every quoted span is verbatim-present in lexicon.json — the miner cannot invent a phrase into his own voice.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "drill_forge",
-      "engine": "claude",
-      "model": "opus",
-      "window": "overnight",
-      "priority": 70,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "drills.json",
-          "required": true
-        },
-        "doubt_grammar.json",
-        "weaknesses.json"
-      ],
-      "out": "drill_forge",
-      "validate": "no_new_numbers",
-      "surface": {
-        "kind": "human_file",
-        "where": "dressing-room/state/brain_out/drill_forge/<date>.md — enrichment the captain reads beside drills.json; `brain status` prints the newest by path"
-      },
-      "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only.",
-      "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its config note already said 'enrichment only'; what was missing was any surface naming the file. KEEPS the hype guard (no hype_guard key): this text is written in the register he reads."
-    },
-    {
-      "id": "wall_insights",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 40,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "wall_data.json",
-          "required": true
-        }
-      ],
-      "out": "wall_insights",
-      "validate": "no_new_numbers",
-      "serve": "next_morning",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/viz.mjs:647 → the 'The read' panel on club/wall.html"
-      },
-      "_serve_note": "AUDIT #65. The write site used to hardcode shiftDay(), which is YESTERDAY for any overnight job run before 07:30 — and the night shift fires 02:40–03:00 IST. viz reads the CALENDAR date with no lookback, so this file, the poster and the Gemini render (~6,75,000 tok/week, 11 successful runs since 26 Jul) all landed in filenames viz can never open; club/poster.svg and club/wall_gemini.html are frozen at 21 Jul. Fixed at the PRODUCER with `serve`, which brain.mjs already proved on the mp3 lane (club/media/teamtalk_<tomorrow>_am.mp3 folds correctly today for exactly this reason). NOT fixed with a viz-side lookback — that fights posterFlag's freshness law and would serve a two-day-old poster as today's. shiftDay REMAINS the ledger/eligibility key; only the filename moves.",
-      "_note": "≤3 insight lines; viz.mjs re-validates before rendering. NUMBERS: quote them EXACTLY as they appear in the data — NEVER sum, average, or derive new ones (515 from 402+113 gets the whole output rejected); if a comparison needs arithmetic, describe it in words without the computed figure.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "season_review",
-      "engine": "claude",
-      "model": "opus",
-      "window": "overnight",
-      "days": [
-        "Sun"
-      ],
-      "priority": 80,
-      "enabled": false,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        {
-          "path": "slip.jsonl",
-          "required": true
-        },
-        "season.json",
-        "mutations.jsonl",
-        "loop_vitals.json"
-      ],
-      "out": "season",
-      "surface": {
-        "kind": "human_file",
-        "where": "brain_out/season/<date>.md — DISABLED: nothing opens this today"
-      },
-      "_note": "The week in evidence lines; words the Boot Room's deterministic proposal — never invents evidence.",
-      "_DISABLED_2026_08_02": "AUDIT #63 — no address, and the _note above names a seam that does not exist. 17 runs / 48,781 Opus tokens into brain_out/season/, which no .mjs opens; scripts/bootroom.mjs contains no brain_out reference at all, so it has never 'worded the Boot Room's proposal'. It is also structurally starved: 2 of its 4 inputs (season.json, mutations.jsonl) have never existed, because postmatch has never run and the Boot Room has never filed a mutation. RE-ENABLE WHEN: (a) /full-time runs once so season.json exists, AND (b) scripts/bootroom.mjs reads brain_out/season/<date>.md into its weekly proposal — then set enabled:true and surface.kind to \"code\" with bootroom's file:line. If the captain would rather just read it himself on a Sunday, flip surface.kind to \"human_file\" instead and set enabled:true; it will then print by path in `brain status`.",
-      "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/season/ (3 files unread). NOTE the near-miss — season.json in the state bus IS read by teamtalk_am, teamtalk_pm and deep_reanalysis, but that is a DIFFERENT artifact written by a different path; this job's own output is unread. It is also the only opus job of the four. TO ENABLE: point a consumer at brain_out/season/, then flip enabled:true."
-    },
-    {
-      "id": "capsule_premap",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 20,
-      "enabled": false,
-      "max_per_day": 3,
-      "repeatable": true,
-      "kind": "analysis",
-      "hype_guard": false,
-      "inputs": [
-        {
-          "path": "doubt_grammar.json",
-          "required": true
-        },
-        "learning_state.json"
-      ],
-      "out": "premap",
-      "surface": {
-        "kind": "human_file",
-        "where": "brain_out/premap/<date>.md — DISABLED: nothing opens this today"
-      },
-      "_DISABLED_2026_08_02": "AUDIT #63 — no address, and the _note below names a seam that does not exist. 6,09,504 tokens all-time (the #3 spender) into brain_out/premap/, which no .mjs opens. The claim 'feeds the Gem prompt pack' is false: the string `premap` occurs in ZERO .mjs files including scripts/nightshift.mjs, which is what actually builds brain_out/nightshift/gem_cartridge.md. It is also the job the hype guard hurt most — 10 of its rejections were `banned phrase: exponential` on writing about attention scaling, where the word is a real claim about complexity (that half is fixed above: 'exponential' is gone from the list and this job now carries hype_guard:false). RE-ENABLE WHEN: scripts/nightshift.mjs reads brain_out/premap/<date>.md into the Gem cartridge — the seam its own note already promises — then set enabled:true and surface.kind to \"code\" with nightshift's file:line. Note it also runs max_per_day 3 as 'exhaustion filler', so it is the first thing that should come back once it lands somewhere.",
-      "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
-      "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/premap/ (5 files unread), and it carried max_per_day 3 — the highest of any job. Its stated value (pre-drafting Daraar-map probe angles) is real but lands nowhere. TO ENABLE: wire it into the Gem prompt pack it claims to feed, then flip enabled:true."
-    },
-    {
-      "id": "scrimmage_staging",
-      "engine": "claude",
-      "model": "sonnet",
-      "window": "overnight",
-      "priority": 30,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "scout.json",
-          "required": true
-        },
-        "learning_state.json"
-      ],
-      "out": "scrimmage",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/dugout.mjs:364 (?mode=scrimmage) + .claude/skills/scrimmage/SKILL.md step 2"
-      },
-      "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
-    },
-    {
-      "id": "gemini_render",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
-      "window": "overnight",
-      "priority": 35,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "render",
-      "prompt_file": "wall_painter.md",
-      "out": "gemini_wall",
-      "serve": "next_morning",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/viz.mjs:666 → club/wall_gemini.html (through the sanitizer) + the wall's 'Gemini render' button"
-      },
-      "_serve_note": "AUDIT #65 — see wall_insights' _serve_note for the full reasoning. Written at 02:40–03:00 under shiftDay = YESTERDAY while viz reads calendar today; club/wall_gemini.html has been frozen at 21 Jul since the 25 Jul shiftDay change.",
-      "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer."
-    },
-    {
-      "id": "maidan_poster",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
-      "window": "overnight",
-      "priority": 25,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "render",
-      "prompt_file": "match_poster.md",
-      "out": "poster",
-      "serve": "next_morning",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/viz.mjs:618 → club/poster.svg + the poster card on club/wall.html (posterFlag freshness law at viz.mjs:335)"
-      },
-      "_serve_note": "AUDIT #65 — see wall_insights' _serve_note. club/poster.svg is frozen at 21 Jul, the last night the pre-shiftDay calendar stamp still matched; the wall currently prints 'the shelf is empty right now — the night shift stocks it while you sleep', which is false: it stocked it under yesterday's name.",
-      "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly)."
-    },
-    {
-      "id": "widget_spec",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
-      "window": "overnight",
-      "days": [
-        "Wed"
-      ],
-      "priority": 22,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "mirror_manifest.json",
-          "required": true
-        },
-        "learning_state.json"
-      ],
-      "out": "widget_spec",
-      "surface": {
-        "kind": "human_file",
-        "where": "dressing-room/state/brain_out/widget_spec/<date>.md — the captain carries it into a Claude-Design/Gem session; `brain status` prints the newest by path"
-      },
-      "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its own note already says 'Proposal only — flows into a Claude-Design/Gem session via the captain'; the missing piece was any surface naming the file. Weekly (Wed), 46,064 tok all-time.",
-      "_note": "Resurrects the FORGE's RESERVED viz layer: drafts the per-axis widget/viz spec for the NEWEST locked capsule (mechanism + exact values honored; visual freedom per FORGE_DESIGN). Proposal only — flows into a Claude-Design/Gem session via the captain."
-    },
-    {
-      "id": "market_scan",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "days": [
-        "Sun"
-      ],
-      "priority": 28,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "extra_args": [
-        "--allowedTools",
-        "WebSearch"
-      ],
-      "inputs": [
-        {
-          "path": "scout.json",
-          "required": true
-        },
-        "learning_state.json"
-      ],
-      "out": "market",
-      "validate": null,
-      "surface": {
-        "kind": "human_file",
-        "where": "dressing-room/state/brain_out/market/<date>.md — a PROPOSAL the captain reads against OPPONENT_SCOUT.md; `brain status` prints the newest by path"
-      },
-      "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs; its own note says 'Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon'. Weekly (Sun). Note the audit's arithmetic was stale here: 2,76,781 tok all-time, not 13,003 — the 1 Aug WebSearch run alone was 2,63,778.",
-      "_note": "THE SCOUT resurrected (masterplan P6, DOSSIER §9 closed-loop): weekly live scan — 5 most-requested AI-PE skills in India this week, diff vs his current coverage, 3 real postings, every claim cited. Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon. Degrades to a no-op if this claude CLI build rejects the tool flag.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "wall_review",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
-      "window": "overnight",
-      "priority": 24,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "wall_data.json",
-          "required": true
-        },
-        "../club/wall_gemini.html"
-      ],
-      "out": "wall_review",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/viz.mjs:653-656 (≤2-day lookback) → the next night's Gemini prompt pack in club/prompts/wall_painter.md"
-      },
-      "_serve_note": "AUDIT #65: deliberately NOT given `serve`. wall_review is the one of the four overnight artifacts whose consumer already loops i<=2 over recent dates (viz.mjs:653-656), so it folds correctly today. Changing what is not broken is how the next audit gets written.",
-      "_note": "THE CLAUDE↔GEMINI LOOP, closing: critique last night's Gemini render against the captain's design laws (one glance = one story; ≤4 working-memory slots; no walls of text; cold-steel-warm-core palette; no hype/streaks/biometrics). Output = ≤10 concrete render-notes; viz.mjs feeds them into the NEXT night's Gemini prompt pack. The wall improves itself nightly, zero taps from the captain.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "dugout_digest",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the free pool 17 Jul — Google cut the free tier to ~20 req/day/model, the digest starved daily and the Gaffer went hollow; the Max window never runs dry",
-      "window": "overnight",
-      "priority": 65,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        "brain_out/dugout/TODAY.md",
-        "dugout_notes.jsonl",
-        "tape_room.json",
-        {
-          "path": "lexicon.json",
-          "required": true
-        },
-        "presence_log.jsonl",
-        "timeaudit.json"
-      ],
-      "out": "dugout_digest",
-      "surface": {
-        "kind": "job_input",
-        "where": "input to day_cartridge + midday_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's dawn system instruction"
-      },
-      "_inputs_note": "AUDIT #64: brain_out/dugout/TODAY.md is left OPTIONAL on purpose. It is absent because the voice bridge has been silent since 30 Jul, and the digest still produces real output from notes + lexicon + presence + timeaudit. Marking it required would kill the digest AND day_cartridge behind it — the exact over-correction the no-ratio-guard trap warns about. The absent count now rides the ledger row instead.",
-      "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "day_cartridge",
-      "engine": "claude",
-      "model": "sonnet",
-      "_engine_note": "moved off the free pool 17 Jul — the cartridge IS the Gaffer's daily brain; it rides the engine that never runs dry",
-      "window": "overnight",
-      "priority": 58,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "brain_out/dugout_digest/TODAY.md",
-          "required": true
-        },
-        "brain_out/evening_voice/TODAY.md",
-        "drills.json",
-        "pitch_read.json"
-      ],
-      "out": "day_cartridge",
-      "validate": "no_new_numbers",
-      "surface": {
-        "kind": "code",
-        "where": "scripts/dugout.mjs:325 loadDayCartridge() → the Dugout voice agent's dawn system instruction, verbatim"
-      },
-      "_note": "THE DAY CARTRIDGE (L3 — the slow brain programs the fast brain across the sleep boundary): compile tomorrow's briefing for the Live voice, ≤15 lines, written TO the Gaffer in second person: yesterday's thread in 3 lines · what he's circling (from the digest) · today's drill focus · one voiced doubt to listen for · anything he asked to carry over. This text is INJECTED into the Dugout's dawn system instruction verbatim. No new numbers, no hype, no calendar pressure.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
-    },
-    {
-      "id": "teamtalk_am",
-      "engine": "claude",
-      "model": "sonnet",
-      "window": "overnight",
-      "priority": 52,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        {
-          "path": "drills.json",
-          "required": true
-        },
-        "post_match/TODAY.md",
-        "season.json",
-        "notebook.json"
-      ],
-      "out": "teamtalk_am",
-      "validate": "no_new_numbers",
-      "speak_to": "teamtalk_DATE_am.mp3",
-      "serve": "next_morning",
-      "surface": {
-        "kind": "media",
-        "where": "dressing-room/club/media/teamtalk_<date>_am.mp3 (speak.mjs synthToFile) → announced inside the 08:45 sheet push"
-      },
-      "_inputs_note": "AUDIT #64 — this is the job the finding was really about: 85 runs at 3-of-4 inputs ABSENT (post_match/TODAY.md, season.json, notebook.json all still nonexistent), ~45k tok each, ok:true every time, with nothing anywhere recording it. They are deliberately left OPTIONAL: the LAWS line does real work — its 1 Aug output reads 'Baaki sab quiet hai — season aur match record se koi naya signal nahi aaya, toh us par kuch bolne ka nahi' — and all three arrive the moment /full-time runs once. drills.json is the one thing a set-piece talk cannot be written without, so that alone is required. A majority-ratio guard would have killed this job at 75%.",
-      "_note": "THE MORNING TEAM TALK (media engine): the Gaffer's 90-second spoken team talk for TOMORROW MORNING — plain spoken prose, NO markdown/lists/emoji, ~220 words, coach register, Hinglish welds natural. Open from the KAL-line if present (his own words), name the set pieces waiting, one earned-and-specific note from the record, close on 'kal phir'. Evidence-based motivation ONLY — every number from the data; thin data = say less, never invent.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
-    },
-    {
-      "id": "teamtalk_pm",
-      "engine": "claude",
-      "model": "sonnet",
-      "window": "evening",
-      "at": "20:40",
-      "priority": 45,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        "pulse.json",
-        {
-          "path": "pitch_read.json",
-          "required": true
-        },
-        "slip.jsonl",
-        "season.json"
-      ],
-      "out": "teamtalk_pm",
-      "validate": "no_new_numbers",
-      "speak_to": "teamtalk_DATE_pm.mp3",
-      "surface": {
-        "kind": "media",
-        "where": "dressing-room/club/media/teamtalk_<date>_pm.mp3 (speak.mjs synthToFile) → announced inside the 21:30 full-time bell"
-      },
-      "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
-    },
-    {
-      "id": "deep_reanalysis",
-      "engine": "claude",
-      "model": "opus",
-      "window": "any",
-      "trigger": "reanalysis",
-      "priority": 85,
-      "enabled": true,
-      "max_per_day": 1,
-      "kind": "analysis",
-      "inputs": [
-        "season.json",
-        "notebook.json",
-        {
-          "path": "slip.jsonl",
-          "required": true
-        },
-        "mutations.jsonl",
-        "doubt_grammar.json",
-        "learning_state.json"
-      ],
-      "out": "reanalysis",
-      "surface": {
-        "kind": "human_file",
-        "where": "dressing-room/state/brain_out/reanalysis/<date>.md — the captain arms it by hand (`node scripts/brain.mjs trigger reanalysis \"<reason>\"`) and reads the result; `brain status` prints the newest by path"
-      },
-      "_inputs_note": "AUDIT #64/#71: 3 of 6 inputs (season.json, notebook.json, mutations.jsonl) have never existed — exactly 50%, which is why the proposed majority-ratio guard would NOT have fired on the very job it was written for. They arrive the moment postmatch runs (it writes season.json and notebook.json unconditionally on every run) and the Boot Room files a mutation, so this is `waiting`, not broken. It has spent ZERO tokens in its life: it is trigger-gated and the only automatic arming path needs matches_played % 30 === 0, which is 30 postmatch runs away. Kept ENABLED for that reason — it cannot spend unless he asks it to.",
-      "_note": "EVENT-TRIGGERED DEEP RE-READ (U4, JARVIS harvest): fires ONLY when a milestone/crisis arms the trigger (postmatch auto-arms every 30th matchday; the captain can arm it any time: node scripts/brain.mjs trigger reanalysis 'reason'). Re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts). Trigger is consumed on success."
-    }
+ "_comment": "THE BRAIN's job table + budget policy (ORGANISM_ANATOMY §5). The brain runs HOT by the captain's standing order (12 Jul 2026, with Nidhi): exhaust the Claude Max 5x plan every rolling window and every week; weight the heavy work overnight; protect his study hours; never touch an API key. brain.mjs is the sole reader; edits here are canon edits.",
+ "version": 1,
+ "paused": false,
+ "_paused_note": "PAUSED by the captain 2 Aug 2026 — all 23 LLM jobs held. WHY: the rolling 7d window stood at 85,16,836 / 1,20,00,000 (71%) with headroom 0, and a measurement of that week showed the shape of the spend: 178 calls, average 47,847 tokens each, of which ~23,947 is `claude -p` boot tax (system prompt + tool definitions re-sent every call) and only 1,706 is generated output. 96% of every call was the machine loading itself; 3.6% was thinking. He is spending the next two days studying in Claude Code while the rolling window decays (5 Aug -> 54.6%, 6 Aug -> 43.7%, 7 Aug -> the 24-lakh 31 Jul day falls out). WHAT STILL RUNS: everything deterministic — capture, fsrs, calibration, nemesis, learning_state, presence, thalamus, distiller, the wall, the Goalkeeper's Oura pull. The organism keeps RECORDING while it stops THINKING, so the pause ends with real data instead of a blank week. UN-PAUSE: set false. Nothing else here changes. || UN-PAUSED 6 Aug 2026 by the captain, after the BOOT TAX was closed in brain.mjs claudeExec (--system-prompt + --tools \"\" + --strict-mcp-config). Measured on the same probe: 49,411 -> 5,663 tokens per call, 88.5% off. The pause existed because 96% of every call was the CLI loading itself; that is now ~5k of overhead instead of ~44k. Revert the optimisation with budget.lean_calls=false; re-pause with paused=true.",
+ "budget": {
+  "window_hours": 5,
+  "window_capacity_est_tokens": 800000,
+  "weekly_capacity_est_tokens": 12000000,
+  "day_reserve_frac": 0.4,
+  "overnight_target_frac": 0.95,
+  "self_tune": true,
+  "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it.",
+  "lean_calls": true
+ },
+ "study_hours": {
+  "start": "09:00",
+  "end": "21:00"
+ },
+ "overnight": {
+  "start": "22:00",
+  "end": "07:30"
+ },
+ "guards": {
+  "refuse_if_api_key_env": true,
+  "banned_phrases": [
+   "10x",
+   "on steroids",
+   "god-tier",
+   "time is short"
   ],
-  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad."
+  "_note": "Hype in output is a bug (CONDUCTOR §1). The API-key guard keeps the hard $100 ceiling: subscription only, ever.",
+  "_exponential_removed_2026_08_02": "AUDIT #62. 'exponential' was dropped from this list. bannedPhraseCheck is a naive lowercase substring test, so it also caught 'exponentially' and 'exponent' — and this organism's whole syllabus is transformers, where softmax IS an exponential and quadratic-vs-exponential is a real claim about complexity, not a sales pitch. Measured: 12 rejections / 185,983 tokens destroyed AFTER the spend (capsule_premap 10, deep_twin 1, lexicon_mine 1). The remaining four have no legitimate technical reading in his register. Companion fix: the guard is now opt-out per job via \"hype_guard\": false, set only on machine-side mining jobs he never reads. The obvious gate (job.speak_to || validate==='no_new_numbers') was NOT used — it would have stripped the guard from evening_voice, which has neither."
+ },
+ "ntfy": {
+  "enabled": true,
+  "topic": "",
+  "push_after": [
+   "formation_read"
+  ],
+  "_note": "The organism's mouth on the phone — TWO utterances only, ever: the 08:45 sheet (after formation_read) and the 21:30 full-time bell (ArsenalFC-Bell task). topic stays \"\" here — the SECRET resolves at runtime from env ARSENAL_NTFY_TOPIC or the gitignored throwin_topic.txt; it is never committed."
+ },
+ "gemini": {
+  "enabled": true,
+  "binary": "gemini",
+  "_note": "Second brain — visualization + long-context. Free CLI on the captain's Google account (the AI Pro one, …2914). ENABLED: until his one-time login, gemini jobs fail gracefully and retry next tick (failed jobs don't spend their daily slot) — the first night after login, the renders just start."
+ },
+ "dugout_pool": {
+  "enabled": true,
+  "gemini_defer_threshold_min": 30,
+  "_note": "THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text. On a heavy voice day (≥threshold minutes in dugout_ledger), DAYTIME gemini jobs step aside so the voice keeps the free-tier pool; they run overnight regardless. Claude jobs unaffected."
+ },
+ "pulse": {
+  "enabled": false,
+  "daily_token_frac": 0.1,
+  "every_n_beats": 2,
+  "_measurement_window_note": "AUDIT #66/#67 (2 Aug 2026). These two keys are a MEASUREMENT WINDOW, not a guessed cap — the captain's standing order forbids setting a numerical limit by guessing. The arithmetic, written down so the next value comes off the ledger and not off a hunch: weekly plan 12,000,000 tok × 0.10 = 1,200,000 tok/day ÷ the MEASURED 32,480 tok/pulse (853 ledger rows; ~31,970 of it the `claude -p` boot tax, ~510 the pulse's own payload) ≈ 36 pulses/day of real observation. daily_token_frac was DOUBLED from 0.05 (window opened) and every_n_beats HALVES the frequency: the pulse used to fire on every ~75s daemon beat, so it rode the stream a pulse a minute and a quarter and became 27,62,471 tok = 32.4% of the rolling week. The afferent tail moves far slower than 75 seconds, so wider spacing loses observations, not signal. daily_cap (200 calls) is untouched and is NOT a budget — it is a runaway-loop backstop, one of the two permitted exceptions (a failure guard); at this window it can never bind (1,200,000/32,480 ≈ 36). `brain status` now prints the measured tok/pulse beside the window, and reports 0 pulses as NOT MEASURED YET rather than as a mean of zero.",
+  "_note": "PAUSED by the captain 2 Aug 2026, and this is the first day the switch could even be honoured — brain.mjs's loadConfig returned a hardcoded key literal, so a `pulse` block was parsed and silently dropped and `enabled:false` was literally unreachable code (fixed 1 Aug). WHY PAUSED, measured not assumed: haiku_pulse is 27,62,471 tokens = 32.4% of the organism's rolling-7d spend, the single largest consumer of a 12M/week plan. It is NOT paused for being wasteful by nature — it is paused because its verdict currently reaches nobody: thalamus.mjs has zero handling for modality 'pulse', so all 124 escalations scored a ceiling of 0.244 against a 0.40-0.85 wake bar, and 853 calls have produced 0 tier-2 wakes. Paying 32% of the plan for an opinion nothing can act on is the wrong order of operations. UNPAUSE ONLY AFTER the nucleus wiring lands (plan group G3: a real pulse:* base_rate, stopword-filtered concept_tokens, and a weighted pulse term below self's 0.45) — then re-measure its wake rate before restoring any budget. Re-enable: set true. Nothing else here changes."
+ },
+ "_surface_law": "AUDIT #63 (2 Aug 2026). EVERY job must declare `surface` — where its output actually appears — because eight-to-ten jobs were writing into brain_out dirs no line of code opened: 28,65,782 tokens all-time, ~32,73,067 of one 82,53,985-token week. midday_reread alone ate 5,60,465 of an 8,00,000-token 5h window for a file with no reader, while formation_read (the sheet, priority 100) got 1,03,010 all week. kind ∈ {code, job_input, human_file, media, sheet, none}: `code` = a .mjs opens it (cite file:line); `job_input` = another job here lists it in `inputs`; `human_file` = designed for the captain to read, nothing automated will (brain.mjs prints these by path in `brain status`, and runJob's note — which the ledger row now carries — names the surface on every run); `media` = an mp3/artifact; `sheet` = team_sheet.md. A job with no address is NOT silently blocked — the runtime reports it with a have/need counter and keeps running, because a missing config key must never be able to silence an organ. What is off is off EXPLICITLY below, with the exact re-enable condition named.",
+ "_inputs_law": "AUDIT #64 (2 Aug 2026). An input may be a plain string (optional — the original shape, unchanged) or {\"path\": \"...\", \"required\": true}. gatherInputs used to map a missing path to null with no warning and buildAnalysisPrompt rendered the literal `null` under its own `## INPUT season.json` heading; teamtalk_am has produced the morning talk 85 times at 3-of-4 inputs absent at ~45k tok/run, reporting ok:true every time. A REQUIRED input that is absent skips the job BEFORE the spend and names the file. NO RATIO GUARD — a majority rule misses deep_reanalysis at exactly 50% and kills teamtalk_am at 75%, which currently degrades gracefully in words. Every `required: true` set below was verified PRESENT ON DISK on 2026-08-04, so this changes no behaviour today; it is a regression net, not a new gate. The genuinely-absent files (season.json, notebook.json, mutations.jsonl, post_match/, brain_out/dugout/TODAY.md) are left OPTIONAL on purpose — they arrive when /full-time, the Boot Room and the voice bridge run, and the absent count now rides every ledger row so the spend on nulls is finally visible.",
+ "jobs": [
+  {
+   "id": "midday_digest",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "midday",
+   "at": "14:00",
+   "priority": 62,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    "brain_out/dugout/TODAY.md",
+    "dugout_notes.jsonl",
+    "presence_log.jsonl",
+    {
+     "path": "timeaudit.json",
+     "required": true
+    }
+   ],
+   "out": "dugout_digest",
+   "surface": {
+    "kind": "job_input",
+    "where": "input to midday_cartridge + day_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's system instruction"
+   },
+   "_note": "HANDBRAKE-OFF (17 Jul): the SAME-DAY memory refresh — mine the morning's voice + behavior at 14:00 so the afternoon Gaffer already knows the morning. Overwrites today's digest with a richer read; the overnight run still does the full mine."
+  },
+  {
+   "id": "midday_cartridge",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "midday",
+   "at": "14:20",
+   "priority": 61,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "brain_out/dugout_digest/TODAY.md",
+     "required": true
+    },
+    "drills.json",
+    "pitch_read.json"
+   ],
+   "out": "day_cartridge",
+   "validate": "no_new_numbers",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/dugout.mjs:325 loadDayCartridge() → the Dugout voice agent's system instruction, verbatim"
+   },
+   "_note": "HANDBRAKE-OFF (17 Jul): recompile the Gaffer's briefing from the midday digest — an afternoon Dugout session boots on a cartridge that includes TODAY so far, not just yesterday. Same laws: <=15 lines, second person, no new numbers, no hype."
+  },
+  {
+   "id": "formation_read",
+   "engine": "claude",
+   "model": "opus",
+   "window": "any",
+   "_window_note": "audit #108, 6 Aug 2026 — was \"morning\" (07:30-12:00). Combined with at:08:45 the job was eligible for barely three hours a day, and this laptop is asleep through nearly all of them: brain_queue.json shows formation_read ran on 1 of the last 9 days, and team_sheet.md — the Manager's ONLY output, the capstone of the whole build order — sat frozen at 2026-08-01 saying \"Matchday 1 · Introduction ... I don't know you yet\" while the Dugout served it every morning as today's sheet. The organism noticed honestly (mouth_said pushed 'absence' on 08-02/03/04/05); nothing fixed the cause. \"any\" keeps at:08:45 as the EARLIEST time (eligibleJobs requires nowHM >= j.at) and lets the sheet build whenever the machine actually wakes. max_per_day:1 still means one sheet a day. No new number was introduced.",
+   "at": "08:45",
+   "priority": 100,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "manager_m3",
+   "surface": {
+    "kind": "sheet",
+    "where": "dressing-room/state/team_sheet.md (manager.mjs is the sole writer) → the 08:45 ntfy push + the Wall + /matchday"
+   },
+   "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless.",
+   "trigger": "morning_signals",
+   "trigger_fallback_hm": "09:30",
+   "_trigger_note": "A2 launch worklist 9 Aug 2026: the sheet waits on the conductor morning_signals arm (conductor.mjs:76 — the law its LAWS block always claimed); past 09:30 unarmed the gate opens anyway so a dead conductor delays the sheet but never starves it (brain.mjs eligibleJobs gate)."
+  },
+  {
+   "id": "midday_reread",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (small inputs, cognitive)",
+   "window": "midday",
+   "at": "13:30",
+   "priority": 60,
+   "enabled": false,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    "pulse.json",
+    "pitch_read.json",
+    "drills.json",
+    "presence_log.jsonl",
+    "timeaudit.json"
+   ],
+   "out": "midday",
+   "surface": {
+    "kind": "human_file",
+    "where": "brain_out/midday/<date>.md — DISABLED: nothing opens this today"
+   },
+   "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work.",
+   "_DISABLED_2026_08_02": "AUDIT #63 — THE WORST OFFENDER, disabled. This job is the single most expensive thing the organism does: ~1,59,000 tok/run, 7 runs, 11,21,460 tok since 26 Jul, and ONE run ate 5,60,465 of an 8,00,000-token 5h window — 70% of the whole window — for a file with no reader. `grep -rn brain_out/midday scripts/ .claude/ hooks/ setup/` returns ZERO hits, and no other job lists it in `inputs`. The _note above is itself the lie: 'analysis for the wall and the evening' — the wall reads brain_out/wall_insights (viz.mjs:647), and evening_voice's inputs are twin.json / slip.jsonl / pitch_read.json / pulse.json. Meanwhile formation_read, the sheet he actually reads at priority 100, got 1,03,010 tokens all week. RE-ENABLE WHEN: something opens dressing-room/state/brain_out/midday/<date>.md — either viz.mjs reads it into a wall panel, or evening_voice/day_cartridge lists brain_out/midday/TODAY.md in `inputs` (a one-line config edit, and then set enabled:true and surface.kind to code/job_input). Do NOT re-enable it just to un-quiet the afternoon: it has never reached a human.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+   "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63) and kept off 6 Aug. Its output has NO READER: nothing in scripts/ opens brain_out/midday/, and 7 files sit there unread. It was also the #2 all-time spender (2,645,734 tokens). The boot-tax fix of 6 Aug makes it ~9x cheaper, but cheap output nobody reads is still 100% waste. TO ENABLE: give it a consumer first — either list brain_out/midday/TODAY.md as an input to an enabled job, or commit to opening the file yourself, then flip enabled:true."
+  },
+  {
+   "id": "evening_voice",
+   "engine": "claude",
+   "model": "opus",
+   "window": "any",
+   "at": "21:50",
+   "priority": 90,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    "twin.json",
+    "slip.jsonl",
+    {
+     "path": "pitch_read.json",
+     "required": true
+    },
+    "pulse.json"
+   ],
+   "out": "evening_voice",
+   "surface": {
+    "kind": "job_input",
+    "where": "input to day_cartridge (brain_out/evening_voice/TODAY.md) → the Dugout's dawn system instruction"
+   },
+   "_hype_guard_note": "AUDIT #62 TRAP: evening_voice has NEITHER speak_to NOR validate, so the obvious gate would have stripped the hype guard from exactly the Opus job that writes in his ear's register. It KEEPS the guard — no hype_guard key here, deliberately."
+  },
+  {
+   "id": "deep_twin",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 50,
+   "enabled": false,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    "predictions.jsonl",
+    "slip.jsonl",
+    {
+     "path": "twin.json",
+     "required": true
+    }
+   ],
+   "out": "twin",
+   "surface": {
+    "kind": "human_file",
+    "where": "brain_out/twin/<date>.md — DISABLED: nothing opens this today"
+   },
+   "_DISABLED_2026_08_02": "AUDIT #63 — no address. 2,38,210 tokens all-time into brain_out/twin/, which no .mjs opens and no other job lists in `inputs` (6 dated .md files sitting there unread). Distinct from twin.json, which IS read — that is the deterministic organ's own state, written by twin.mjs; this is the LLM's re-read of it, and it lands nowhere. RE-ENABLE WHEN: scripts/twin.mjs reads brain_out/twin/<date>.md as market-tuning evidence (the seam the audit named), OR the captain declares it a read-it-yourself file — in which case flip surface.kind to \"human_file\" with a `where` and set enabled:true, and it will start printing by path in `brain status`. Nothing else here changes.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+   "_disabled_reason": "DISABLED with NO STATED REASON until 6 Aug 2026 — the exact ambiguity brain.mjs:123 warns about (\"no way to tell later which were paused deliberately and which were forgotten\"). Reconstructed from evidence: surface was kind:none and nothing opens brain_out/twin/ (7 files unread), so it fell to the same audit #63 sweep as the other three. Recorded now so it reads as a DECISION, not an oversight. TO ENABLE: give it a reader, then flip enabled:true."
+  },
+  {
+   "id": "doubt_clusters",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 55,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    {
+     "path": "doubt_grammar.json",
+     "required": true
+    },
+    "tape_room.json"
+   ],
+   "out": "doubts",
+   "surface": {
+    "kind": "human_file",
+    "where": "dressing-room/state/brain_out/doubts/<date>.md — the captain batch-glances it; `brain status` prints the newest by path"
+   },
+   "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules.",
+   "_surface_note": "AUDIT #63: kept ON. This is one of the four jobs DESIGNED to be human-read — wiring a code consumer would be the wrong seam. Its defect was that no surface ever pointed at the file: runJob's `→ brain_out/<out>/<date>.md` note was the only pointer that existed and the ledger row dropped it, while stdout went to a hidden window. Both are fixed; the address is now the note on every ledger row plus the by-path listing in `brain status`.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "lexicon_mine",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 45,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    {
+     "path": "lexicon.json",
+     "required": true
+    }
+   ],
+   "out": "lexicon",
+   "validate": "quotes_only",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/brain.mjs minedAnchors() → buildFingerprint's MINED ANCHORS line → the cognitive fingerprint at the head of EVERY analysis prompt"
+   },
+   "_note": "Anchor-metaphor assist. Extraction, never invention: validator rejects any anchor text not verbatim-present in the input.",
+   "_wired_2026_08_02": "AUDIT #5 + #61, both fixed together. (#61) This job was 0-for-115 — 5,48,556 tokens in 7 days, every failure `validator: non-verbatim quote` — and it was UNWINNABLE: the old quotes_only pattern /\"([^\"]{12,})\"/g put the ≥12-char floor INSIDE the pair matcher, so quoting any anchor shorter than 12 chars desynced the pairing and captured the annotation between two phrases as if it were a quote. His own lexicon holds \"one picture\" (11), \"tera finops\" (11), \"naya sawaal\" (11), so doing exactly what the job exists to do guaranteed rejection. scripts/validators.mjs now pairs quotes sequentially, then applies the floor. (#5) Its output had no reader; it now feeds the fingerprint, which is safe by construction because quotes_only means every quoted span is verbatim-present in lexicon.json — the miner cannot invent a phrase into his own voice.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "drill_forge",
+   "engine": "claude",
+   "model": "opus",
+   "window": "overnight",
+   "priority": 70,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "drills.json",
+     "required": true
+    },
+    "doubt_grammar.json",
+    "weaknesses.json"
+   ],
+   "out": "drill_forge",
+   "validate": "no_new_numbers",
+   "surface": {
+    "kind": "human_file",
+    "where": "dressing-room/state/brain_out/drill_forge/<date>.md — enrichment the captain reads beside drills.json; `brain status` prints the newest by path"
+   },
+   "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only.",
+   "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its config note already said 'enrichment only'; what was missing was any surface naming the file. KEEPS the hype guard (no hype_guard key): this text is written in the register he reads."
+  },
+  {
+   "id": "wall_insights",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 40,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "wall_data.json",
+     "required": true
+    }
+   ],
+   "out": "wall_insights",
+   "validate": "no_new_numbers",
+   "serve": "next_morning",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/viz.mjs:647 → the 'The read' panel on club/wall.html"
+   },
+   "_serve_note": "AUDIT #65. The write site used to hardcode shiftDay(), which is YESTERDAY for any overnight job run before 07:30 — and the night shift fires 02:40–03:00 IST. viz reads the CALENDAR date with no lookback, so this file, the poster and the Gemini render (~6,75,000 tok/week, 11 successful runs since 26 Jul) all landed in filenames viz can never open; club/poster.svg and club/wall_gemini.html are frozen at 21 Jul. Fixed at the PRODUCER with `serve`, which brain.mjs already proved on the mp3 lane (club/media/teamtalk_<tomorrow>_am.mp3 folds correctly today for exactly this reason). NOT fixed with a viz-side lookback — that fights posterFlag's freshness law and would serve a two-day-old poster as today's. shiftDay REMAINS the ledger/eligibility key; only the filename moves.",
+   "_note": "≤3 insight lines; viz.mjs re-validates before rendering. NUMBERS: quote them EXACTLY as they appear in the data — NEVER sum, average, or derive new ones (515 from 402+113 gets the whole output rejected); if a comparison needs arithmetic, describe it in words without the computed figure.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "season_review",
+   "engine": "claude",
+   "model": "opus",
+   "window": "overnight",
+   "days": [
+    "Sun"
+   ],
+   "priority": 80,
+   "enabled": false,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    {
+     "path": "slip.jsonl",
+     "required": true
+    },
+    "season.json",
+    "mutations.jsonl",
+    "loop_vitals.json"
+   ],
+   "out": "season",
+   "surface": {
+    "kind": "human_file",
+    "where": "brain_out/season/<date>.md — DISABLED: nothing opens this today"
+   },
+   "_note": "The week in evidence lines; words the Boot Room's deterministic proposal — never invents evidence.",
+   "_DISABLED_2026_08_02": "AUDIT #63 — no address, and the _note above names a seam that does not exist. 17 runs / 48,781 Opus tokens into brain_out/season/, which no .mjs opens; scripts/bootroom.mjs contains no brain_out reference at all, so it has never 'worded the Boot Room's proposal'. It is also structurally starved: 2 of its 4 inputs (season.json, mutations.jsonl) have never existed, because postmatch has never run and the Boot Room has never filed a mutation. RE-ENABLE WHEN: (a) /full-time runs once so season.json exists, AND (b) scripts/bootroom.mjs reads brain_out/season/<date>.md into its weekly proposal — then set enabled:true and surface.kind to \"code\" with bootroom's file:line. If the captain would rather just read it himself on a Sunday, flip surface.kind to \"human_file\" instead and set enabled:true; it will then print by path in `brain status`.",
+   "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/season/ (3 files unread). NOTE the near-miss — season.json in the state bus IS read by teamtalk_am, teamtalk_pm and deep_reanalysis, but that is a DIFFERENT artifact written by a different path; this job's own output is unread. It is also the only opus job of the four. TO ENABLE: point a consumer at brain_out/season/, then flip enabled:true."
+  },
+  {
+   "id": "capsule_premap",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 20,
+   "enabled": false,
+   "max_per_day": 3,
+   "repeatable": true,
+   "kind": "analysis",
+   "hype_guard": false,
+   "inputs": [
+    {
+     "path": "doubt_grammar.json",
+     "required": true
+    },
+    "learning_state.json"
+   ],
+   "out": "premap",
+   "surface": {
+    "kind": "human_file",
+    "where": "brain_out/premap/<date>.md — DISABLED: nothing opens this today"
+   },
+   "_DISABLED_2026_08_02": "AUDIT #63 — no address, and the _note below names a seam that does not exist. 6,09,504 tokens all-time (the #3 spender) into brain_out/premap/, which no .mjs opens. The claim 'feeds the Gem prompt pack' is false: the string `premap` occurs in ZERO .mjs files including scripts/nightshift.mjs, which is what actually builds brain_out/nightshift/gem_cartridge.md. It is also the job the hype guard hurt most — 10 of its rejections were `banned phrase: exponential` on writing about attention scaling, where the word is a real claim about complexity (that half is fixed above: 'exponential' is gone from the list and this job now carries hype_guard:false). RE-ENABLE WHEN: scripts/nightshift.mjs reads brain_out/premap/<date>.md into the Gem cartridge — the seam its own note already promises — then set enabled:true and surface.kind to \"code\" with nightshift's file:line. Note it also runs max_per_day 3 as 'exhaustion filler', so it is the first thing that should come back once it lands somewhere.",
+   "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+   "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/premap/ (5 files unread), and it carried max_per_day 3 — the highest of any job. Its stated value (pre-drafting Daraar-map probe angles) is real but lands nowhere. TO ENABLE: wire it into the Gem prompt pack it claims to feed, then flip enabled:true."
+  },
+  {
+   "id": "scrimmage_staging",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "overnight",
+   "priority": 30,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "scout.json",
+     "required": true
+    },
+    "learning_state.json"
+   ],
+   "out": "scrimmage",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/dugout.mjs:364 (?mode=scrimmage) + .claude/skills/scrimmage/SKILL.md step 2"
+   },
+   "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive.",
+   "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+  },
+  {
+   "id": "gemini_render",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
+   "window": "overnight",
+   "priority": 35,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "render",
+   "prompt_file": "wall_painter.md",
+   "out": "gemini_wall",
+   "serve": "next_morning",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/viz.mjs:666 → club/wall_gemini.html (through the sanitizer) + the wall's 'Gemini render' button"
+   },
+   "_serve_note": "AUDIT #65 — see wall_insights' _serve_note for the full reasoning. Written at 02:40–03:00 under shiftDay = YESTERDAY while viz reads calendar today; club/wall_gemini.html has been frozen at 21 Jul since the 25 Jul shiftDay change.",
+   "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer."
+  },
+  {
+   "id": "maidan_poster",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
+   "window": "overnight",
+   "priority": 25,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "render",
+   "prompt_file": "match_poster.md",
+   "out": "poster",
+   "serve": "next_morning",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/viz.mjs:618 → club/poster.svg + the poster card on club/wall.html (posterFlag freshness law at viz.mjs:335)"
+   },
+   "_serve_note": "AUDIT #65 — see wall_insights' _serve_note. club/poster.svg is frozen at 21 Jul, the last night the pre-shiftDay calendar stamp still matched; the wall currently prints 'the shelf is empty right now — the night shift stocks it while you sleep', which is false: it stocked it under yesterday's name.",
+   "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly)."
+  },
+  {
+   "id": "widget_spec",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
+   "window": "overnight",
+   "days": [
+    "Wed"
+   ],
+   "priority": 22,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "mirror_manifest.json",
+     "required": true
+    },
+    "learning_state.json"
+   ],
+   "out": "widget_spec",
+   "surface": {
+    "kind": "human_file",
+    "where": "dressing-room/state/brain_out/widget_spec/<date>.md — the captain carries it into a Claude-Design/Gem session; `brain status` prints the newest by path"
+   },
+   "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its own note already says 'Proposal only — flows into a Claude-Design/Gem session via the captain'; the missing piece was any surface naming the file. Weekly (Wed), 46,064 tok all-time.",
+   "_note": "Resurrects the FORGE's RESERVED viz layer: drafts the per-axis widget/viz spec for the NEWEST locked capsule (mechanism + exact values honored; visual freedom per FORGE_DESIGN). Proposal only — flows into a Claude-Design/Gem session via the captain."
+  },
+  {
+   "id": "market_scan",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "days": [
+    "Sun"
+   ],
+   "priority": 28,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "extra_args": [
+    "--allowedTools",
+    "WebSearch"
+   ],
+   "inputs": [
+    {
+     "path": "scout.json",
+     "required": true
+    },
+    "learning_state.json"
+   ],
+   "out": "market",
+   "validate": null,
+   "surface": {
+    "kind": "human_file",
+    "where": "dressing-room/state/brain_out/market/<date>.md — a PROPOSAL the captain reads against OPPONENT_SCOUT.md; `brain status` prints the newest by path"
+   },
+   "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs; its own note says 'Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon'. Weekly (Sun). Note the audit's arithmetic was stale here: 2,76,781 tok all-time, not 13,003 — the 1 Aug WebSearch run alone was 2,63,778.",
+   "_note": "THE SCOUT resurrected (masterplan P6, DOSSIER §9 closed-loop): weekly live scan — 5 most-requested AI-PE skills in India this week, diff vs his current coverage, 3 real postings, every claim cited. Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon. Degrades to a no-op if this claude CLI build rejects the tool flag.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "wall_review",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
+   "window": "overnight",
+   "priority": 24,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "wall_data.json",
+     "required": true
+    },
+    "../club/wall_gemini.html"
+   ],
+   "out": "wall_review",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/viz.mjs:653-656 (≤2-day lookback) → the next night's Gemini prompt pack in club/prompts/wall_painter.md"
+   },
+   "_serve_note": "AUDIT #65: deliberately NOT given `serve`. wall_review is the one of the four overnight artifacts whose consumer already loops i<=2 over recent dates (viz.mjs:653-656), so it folds correctly today. Changing what is not broken is how the next audit gets written.",
+   "_note": "THE CLAUDE↔GEMINI LOOP, closing: critique last night's Gemini render against the captain's design laws (one glance = one story; ≤4 working-memory slots; no walls of text; cold-steel-warm-core palette; no hype/streaks/biometrics). Output = ≤10 concrete render-notes; viz.mjs feeds them into the NEXT night's Gemini prompt pack. The wall improves itself nightly, zero taps from the captain.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "dugout_digest",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the free pool 17 Jul — Google cut the free tier to ~20 req/day/model, the digest starved daily and the Gaffer went hollow; the Max window never runs dry",
+   "window": "overnight",
+   "priority": 65,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    "brain_out/dugout/TODAY.md",
+    "dugout_notes.jsonl",
+    "tape_room.json",
+    {
+     "path": "lexicon.json",
+     "required": true
+    },
+    "presence_log.jsonl",
+    "timeaudit.json"
+   ],
+   "out": "dugout_digest",
+   "surface": {
+    "kind": "job_input",
+    "where": "input to day_cartridge + midday_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's dawn system instruction"
+   },
+   "_inputs_note": "AUDIT #64: brain_out/dugout/TODAY.md is left OPTIONAL on purpose. It is absent because the voice bridge has been silent since 30 Jul, and the digest still produces real output from notes + lexicon + presence + timeaudit. Marking it required would kill the digest AND day_cartridge behind it — the exact over-correction the no-ratio-guard trap warns about. The absent count now rides the ledger row instead.",
+   "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "day_cartridge",
+   "engine": "claude",
+   "model": "sonnet",
+   "_engine_note": "moved off the free pool 17 Jul — the cartridge IS the Gaffer's daily brain; it rides the engine that never runs dry",
+   "window": "overnight",
+   "priority": 58,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "brain_out/dugout_digest/TODAY.md",
+     "required": true
+    },
+    "brain_out/evening_voice/TODAY.md",
+    "drills.json",
+    "pitch_read.json"
+   ],
+   "out": "day_cartridge",
+   "validate": "no_new_numbers",
+   "surface": {
+    "kind": "code",
+    "where": "scripts/dugout.mjs:325 loadDayCartridge() → the Dugout voice agent's dawn system instruction, verbatim"
+   },
+   "_note": "THE DAY CARTRIDGE (L3 — the slow brain programs the fast brain across the sleep boundary): compile tomorrow's briefing for the Live voice, ≤15 lines, written TO the Gaffer in second person: yesterday's thread in 3 lines · what he's circling (from the digest) · today's drill focus · one voiced doubt to listen for · anything he asked to carry over. This text is INJECTED into the Dugout's dawn system instruction verbatim. No new numbers, no hype, no calendar pressure.",
+   "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+  },
+  {
+   "id": "teamtalk_am",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "overnight",
+   "priority": 52,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    {
+     "path": "drills.json",
+     "required": true
+    },
+    "post_match/TODAY.md",
+    "season.json",
+    "notebook.json"
+   ],
+   "out": "teamtalk_am",
+   "validate": "no_new_numbers",
+   "speak_to": "teamtalk_DATE_am.mp3",
+   "serve": "next_morning",
+   "surface": {
+    "kind": "media",
+    "where": "dressing-room/club/media/teamtalk_<date>_am.mp3 (speak.mjs synthToFile) → announced inside the 08:45 sheet push"
+   },
+   "_inputs_note": "AUDIT #64 — this is the job the finding was really about: 85 runs at 3-of-4 inputs ABSENT (post_match/TODAY.md, season.json, notebook.json all still nonexistent), ~45k tok each, ok:true every time, with nothing anywhere recording it. They are deliberately left OPTIONAL: the LAWS line does real work — its 1 Aug output reads 'Baaki sab quiet hai — season aur match record se koi naya signal nahi aaya, toh us par kuch bolne ka nahi' — and all three arrive the moment /full-time runs once. drills.json is the one thing a set-piece talk cannot be written without, so that alone is required. A majority-ratio guard would have killed this job at 75%.",
+   "_note": "THE MORNING TEAM TALK (media engine): the Gaffer's 90-second spoken team talk for TOMORROW MORNING — plain spoken prose, NO markdown/lists/emoji, ~220 words, coach register, Hinglish welds natural. Open from the KAL-line if present (his own words), name the set pieces waiting, one earned-and-specific note from the record, close on 'kal phir'. Evidence-based motivation ONLY — every number from the data; thin data = say less, never invent.",
+   "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+  },
+  {
+   "id": "teamtalk_pm",
+   "engine": "claude",
+   "model": "sonnet",
+   "window": "evening",
+   "at": "20:40",
+   "priority": 45,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    "pulse.json",
+    {
+     "path": "pitch_read.json",
+     "required": true
+    },
+    "slip.jsonl",
+    "season.json"
+   ],
+   "out": "teamtalk_pm",
+   "validate": "no_new_numbers",
+   "speak_to": "teamtalk_DATE_pm.mp3",
+   "surface": {
+    "kind": "media",
+    "where": "dressing-room/club/media/teamtalk_<date>_pm.mp3 (speak.mjs synthToFile) → announced inside the 21:30 full-time bell"
+   },
+   "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk.",
+   "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+  },
+  {
+   "id": "deep_reanalysis",
+   "engine": "claude",
+   "model": "opus",
+   "window": "any",
+   "trigger": "reanalysis",
+   "priority": 85,
+   "enabled": true,
+   "max_per_day": 1,
+   "kind": "analysis",
+   "inputs": [
+    "season.json",
+    "notebook.json",
+    {
+     "path": "slip.jsonl",
+     "required": true
+    },
+    "mutations.jsonl",
+    "doubt_grammar.json",
+    "learning_state.json"
+   ],
+   "out": "reanalysis",
+   "surface": {
+    "kind": "human_file",
+    "where": "dressing-room/state/brain_out/reanalysis/<date>.md — the captain arms it by hand (`node scripts/brain.mjs trigger reanalysis \"<reason>\"`) and reads the result; `brain status` prints the newest by path"
+   },
+   "_inputs_note": "AUDIT #64/#71: 3 of 6 inputs (season.json, notebook.json, mutations.jsonl) have never existed — exactly 50%, which is why the proposed majority-ratio guard would NOT have fired on the very job it was written for. They arrive the moment postmatch runs (it writes season.json and notebook.json unconditionally on every run) and the Boot Room files a mutation, so this is `waiting`, not broken. It has spent ZERO tokens in its life: it is trigger-gated and the only automatic arming path needs matches_played % 30 === 0, which is 30 postmatch runs away. Kept ENABLED for that reason — it cannot spend unless he asks it to.",
+   "_note": "EVENT-TRIGGERED DEEP RE-READ (U4, JARVIS harvest): fires ONLY when a milestone/crisis arms the trigger (postmatch auto-arms every 30th matchday; the captain can arm it any time: node scripts/brain.mjs trigger reanalysis 'reason'). Re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts). Trigger is consumed on success."
+  }
+ ],
+ "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad."
 }

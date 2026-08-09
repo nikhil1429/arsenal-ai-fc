@@ -331,19 +331,29 @@ function sync(now = new Date()) {
   return next;
 }
 
+// LAUNCH AUDIT A1 (9 Aug 2026): this used to send `confirm <idx+1>` — a positional
+// number teaching_contract's dispatch has NEVER accepted (confirmFlag matches staged
+// rule IDs), so every haan on a drift card would exit 1 while the card got consumed
+// and the drift stayed staged forever. The args are now built by stagedDispatchArgs
+// (pure, selftested): rule id + `--at`, so the owner drops the EXACT entry this card
+// asked about — not the most recent entry sharing its rule id.
+export function stagedDispatchArgs(verb, entry) {
+  return [verb, entry.id, "--at", entry.at];
+}
 function runStagedDispatch(action) {
-  // Resolve the CURRENT index of the staged entry by its `at` — confirm/dismiss
-  // are positional and the queue renumbers on every settle, so a stored index
-  // would rot between anchors. `at` is the stable identity.
+  // `at` is the stable identity — indexes renumber on every settle and id can repeat.
   const contract = readJson(CONTRACT);
   const staged = contract && Array.isArray(contract.staged) ? contract.staged : [];
-  const idx = staged.findIndex((e) => e.at === action.at);
-  if (idx === -1) return { ok: false, note: "resolved-at-source (staged entry already settled elsewhere)" };
+  const entry = staged.find((e) => e.at === action.at);
+  if (!entry) return { ok: false, settle: true, note: "resolved-at-source (staged entry already settled elsewhere)" };
   try {
-    const out = execFileSync(process.execPath, [CONTRACT_MJS, action.verb, String(idx + 1)], { encoding: "utf8" });
-    return { ok: true, note: clip(out, 140) };
+    const out = execFileSync(process.execPath, [CONTRACT_MJS, ...stagedDispatchArgs(action.verb, entry)], { encoding: "utf8" });
+    return { ok: true, settle: true, note: clip(out, 140) };
   } catch (e) {
-    return { ok: false, note: `dispatch failed: ${clip(e.message, 100)}` };
+    // A failed dispatch must NOT consume the card (that was the second half of the
+    // blocker): his word stays unrecorded, so the card must come back at the next
+    // anchor instead of dying with a "dispatch failed" epitaph.
+    return { ok: false, settle: false, note: `dispatch failed: ${clip(e.message, 100)}` };
   }
 }
 
@@ -382,6 +392,12 @@ function main() {
     if (action.kind === "error") { console.error(`captains_call: ${action.why}`); process.exit(1); }
     if (action.kind === "staged-dispatch") {
       const r = runStagedDispatch(action);
+      if (!r.settle) {
+        // his word did NOT land — discard the in-memory answer so the card
+        // stays live and re-deals at the next anchor (A1, 9 Aug 2026).
+        console.error(`captains_call: ${id} ${word} NOT recorded — ${r.note} (card stays live, agle anchor pe wapas)`);
+        process.exit(1);
+      }
       const c = state.cards.find((x) => x.id === id);
       c.resolution = r.note; c.retired_at = now.toISOString();
       writeAtomic(CALL, state);
@@ -497,6 +513,9 @@ function selftest() {
   const a2 = applyAnswer(s1, s1.cards[0].id, "haan", T0);
   assert("answer — haan on a drift card ⇒ staged-dispatch action carrying the stable `at` (never a stored index)",
     a2.action.kind === "staged-dispatch" && a2.action.verb === "confirm" && a2.action.at === STAGED[0].at);
+  assert("A1 (9 Aug) — dispatch args are rule ID + --at, never a positional index",
+    JSON.stringify(stagedDispatchArgs("confirm", { id: "his-word", at: "2026-08-07T10:00:00Z" }))
+    === JSON.stringify(["confirm", "his-word", "--at", "2026-08-07T10:00:00Z"]));
   const a3 = applyAnswer(s1, s1.cards.find((c) => c.key.startsWith("market:")).id, "haan", T0);
   assert("answer — haan on the market card hands the PATH to the session (Claude reads, captain listens)",
     a3.action.kind === "open" && /brain_out\/market\/2026-08-01\.md$/.test(a3.action.path));

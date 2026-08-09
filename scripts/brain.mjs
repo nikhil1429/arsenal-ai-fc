@@ -726,7 +726,13 @@ function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
         voiceMinToday !== null && voiceMinToday >= cfg.dugout_pool.gemini_defer_threshold_min) return false;
     // EVENT-TRIGGERED jobs (U4): eligible ONLY while their trigger is armed
     // (brain.mjs trigger <name> "<reason>"); the tick consumes it on success.
-    if (j.trigger && !(queueState && queueState.triggers && queueState.triggers[j.trigger])) return false;
+    // A2 (9 Aug 2026, launch worklist): a job may also declare trigger_fallback_hm —
+    // past that HH:MM the gate opens even unarmed, so a dead conductor can DELAY the
+    // sheet but never starve it. Before the fallback, unarmed = wait: the catch-up
+    // burst stays ordered (signals first, sheet second), which is the law the
+    // conductor claimed since day one but nothing enforced until this line.
+    if (j.trigger && !(queueState && queueState.triggers && queueState.triggers[j.trigger])
+        && !(j.trigger_fallback_hm && nowHM >= j.trigger_fallback_hm)) return false;
     if (j.at) return nowHM >= j.at && inRange(nowHM, ...(windows[j.window] || windows.any));
     return inRange(nowHM, ...(windows[j.window] || windows.any));
   }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -1622,6 +1628,17 @@ async function selftest() {
     assert("pool committed to canon config", !!cfg.dugout_pool && cfg.dugout_pool.enabled === true);
   }
 
+  // A2 (9 Aug 2026) — the sheet really does wait on its inputs, and a dead
+  // conductor delays it but can never starve it (trigger_fallback_hm).
+  {
+    const trigCfg = { ...cfg, jobs: [{ id: "t1", engine: "claude", window: "any", at: "08:45", priority: 5, trigger: "morning_signals", trigger_fallback_hm: "09:30" }] };
+    const at850 = new Date(2026, 6, 12, 8, 50), at931 = new Date(2026, 6, 12, 9, 31);
+    assert("A2 — unarmed trigger gates the job before the fallback hour", !eligibleJobs(trigCfg, { triggers: {} }, at850).some(j => j.id === "t1"));
+    assert("A2 — armed trigger opens the gate", eligibleJobs(trigCfg, { triggers: { morning_signals: { ts: "x" } } }, at850).some(j => j.id === "t1"));
+    assert("A2 — past the fallback the gate opens even unarmed", eligibleJobs(trigCfg, { triggers: {} }, at931).some(j => j.id === "t1"));
+    assert("A2 — formation_read carries the trigger + fallback in canon config", (() => { const f = cfg.jobs.find(j => j.id === "formation_read"); return f && f.trigger === "morning_signals" && !!f.trigger_fallback_hm; })());
+  }
+
   // MEDIA ENGINE — team talks: validated text → mp3 in club/media/
   const ttam = cfg.jobs.find(j => j.id === "teamtalk_am"), ttpm = cfg.jobs.find(j => j.id === "teamtalk_pm");
   assert("teamtalk jobs wired with speak_to + no-new-numbers validator", !!ttam && !!ttpm && ttam.speak_to === "teamtalk_DATE_am.mp3" && ttpm.speak_to === "teamtalk_DATE_pm.mp3" && ttam.validate === "no_new_numbers" && ttpm.validate === "no_new_numbers");
@@ -1792,10 +1809,13 @@ async function selftest() {
 
       // ---- THE MASTER PAUSE (2 Aug 2026) ----
       assert("PAUSE — paused ⇒ not one job is eligible, at any hour", eligibleJobs({ ...cfg, paused: true }, { jobs_run: {} }, now(8, 45)).length === 0 && eligibleJobs({ ...cfg, paused: true }, { jobs_run: {} }, now(2, 0)).length === 0);
-      assert("PAUSE — un-paused ⇒ the job table works exactly as before", eligibleJobs({ ...cfg, paused: false }, { jobs_run: {} }, now(8, 45)).some(j => j.id === "formation_read"));
+      // A2 (9 Aug 2026): formation_read now waits on morning_signals, so these
+      // three arm the trigger — pause semantics unchanged, sheet gate respected.
+      const qArmed = { jobs_run: {}, triggers: { morning_signals: { ts: "x" } } };
+      assert("PAUSE — un-paused ⇒ the job table works exactly as before", eligibleJobs({ ...cfg, paused: false }, qArmed, now(8, 45)).some(j => j.id === "formation_read"));
       // the safe direction is RUNNING: only a literal true may silence the organism.
-      assert("PAUSE — a truthy typo can never pause it (string)", loadConfig.length >= 0 && eligibleJobs({ ...cfg, paused: "true" }, { jobs_run: {} }, now(8, 45)).length > 0);
-      assert("PAUSE — a missing key can never pause it", eligibleJobs({ ...cfg, paused: undefined }, { jobs_run: {} }, now(8, 45)).length > 0);
+      assert("PAUSE — a truthy typo can never pause it (string)", loadConfig.length >= 0 && eligibleJobs({ ...cfg, paused: "true" }, qArmed, now(8, 45)).length > 0);
+      assert("PAUSE — a missing key can never pause it", eligibleJobs({ ...cfg, paused: undefined }, qArmed, now(8, 45)).length > 0);
     }
     assert("OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve", headroom(cfg, [], qEmpty, now(6, 0)).cap === dayCap);
     assert("OVERNIGHT — 23:30 still floods to the overnight target", headroom(cfg, [], qEmpty, now(23, 30)).cap === nightCap);
@@ -1803,9 +1823,11 @@ async function selftest() {
   }
 
   // eligibility
-  const q = { jobs_run: { "2026-07-12": { formation_read: 1 } } };
-  const elig845 = eligibleJobs(cfg, { jobs_run: {} }, now(8, 45));
+  const q = { jobs_run: { "2026-07-12": { formation_read: 1 } }, triggers: { morning_signals: { ts: "x" } } };
+  // A2: armed trigger — the sheet is eligible at 08:45 only behind its inputs now.
+  const elig845 = eligibleJobs(cfg, { jobs_run: {}, triggers: { morning_signals: { ts: "x" } } }, now(8, 45));
   assert("formation_read eligible at 08:45", elig845.some(j => j.id === "formation_read"));
+  assert("A2 — formation_read WAITS at 08:45 when the conductor has not armed its inputs", !eligibleJobs(cfg, { jobs_run: {} }, now(8, 45)).some(j => j.id === "formation_read"));
   assert("max_per_day dedup — second run same day blocked", !eligibleJobs(cfg, q, now(9, 0)).some(j => j.id === "formation_read"));
   assert("overnight jobs ineligible mid-day", !eligibleJobs(cfg, { jobs_run: {} }, now(14, 0)).some(j => j.window === "overnight"));
   const eligNight = eligibleJobs(cfg, { jobs_run: {} }, now(23, 30));

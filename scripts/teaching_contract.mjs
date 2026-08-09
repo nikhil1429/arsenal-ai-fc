@@ -321,19 +321,25 @@ function promoteStaged(state, now = new Date()) {
   }
   return { ok: true, state: s, promoted: q.length - (s.staged || []).length, left: (s.staged || []).length };
 }
-function confirmFlag(state, id, now = new Date()) {
+// A1 (9 Aug 2026): both flags take an optional `at` — captains_call dispatches a
+// CARD, and a card is one exact staged entry (id+at), not "the most recent entry
+// sharing this rule id". Without `at` the CLI behavior is unchanged: drop the most
+// recent entry for that id.
+function confirmFlag(state, id, now = new Date(), at = null) {
   const staged = state.staged || [];
-  if (!staged.some((s) => s.id === id)) return { ok: false, why: `nothing staged for "${id}"`, state };
+  const match = (s) => s.id === id && (!at || s.at === at);
+  if (!staged.some(match)) return { ok: false, why: at ? `nothing staged for "${id}" at ${at}` : `nothing staged for "${id}"`, state };
   let dropped = false;   // drop exactly ONE — a rule drifted twice is two hits
-  const rest = [...staged].reverse().filter((s) => (s.id === id && !dropped) ? (dropped = true, false) : true).reverse();
+  const rest = [...staged].reverse().filter((s) => (match(s) && !dropped) ? (dropped = true, false) : true).reverse();
   const hit = hitRule({ ...state, staged: rest }, id, now);
   return hit.ok ? hit : { ok: false, why: hit.why, state };
 }
-function dismissFlag(state, id) {
+function dismissFlag(state, id, at = null) {
   const staged = state.staged || [];
-  if (!staged.some((s) => s.id === id)) return { ok: false, why: `nothing staged for "${id}"`, state };
+  const match = (s) => s.id === id && (!at || s.at === at);
+  if (!staged.some(match)) return { ok: false, why: at ? `nothing staged for "${id}" at ${at}` : `nothing staged for "${id}"`, state };
   let dropped = false;
-  const rest = [...staged].reverse().filter((s) => (s.id === id && !dropped) ? (dropped = true, false) : true).reverse();
+  const rest = [...staged].reverse().filter((s) => (match(s) && !dropped) ? (dropped = true, false) : true).reverse();
   return { ok: true, state: { ...state, staged: rest } };
 }
 // The staged queue must be VISIBLE or it becomes the very thing it replaced: a silent
@@ -1118,6 +1124,12 @@ function selftest() {
   assert("PROMOTE-STAGED — an unknown rule id STAYS staged rather than vanishing",
     (() => { const p = promoteStaged({ ...base, staged: [{ id: "ghost-rule", why: "w", at: "x" }] }, T0);
       return p.state.staged.length === 1 && p.promoted === 0; })());
+  assert("A1 (9 Aug) — confirm with --at drops the EXACT entry (not the most recent of that id), and a wrong at refuses",
+    (() => { const st = { ...base, staged: [{ id: "one-idea", why: "old", at: "2026-08-06T12:00:00Z" }, { id: "one-idea", why: "new", at: "2026-08-07T12:00:00Z" }] };
+      const r = confirmFlag(st, "one-idea", T0, "2026-08-06T12:00:00Z");
+      return r.ok && r.state.staged.length === 1 && r.state.staged[0].why === "new"
+        && !confirmFlag(st, "one-idea", T0, "1999-01-01T00:00:00Z").ok
+        && dismissFlag(st, "one-idea", "2026-08-07T12:00:00Z").state.staged[0].why === "old"; })());
   assert("AUTO LANE — autohit increments auto_hits and stamps last_auto_hit, never touching his `hits`",
     auto2.rules.find((r) => r.id === "one-idea").auto_hits === 2
     && auto2.rules.find((r) => r.id === "one-idea").hits === 0
@@ -1291,7 +1303,8 @@ switch (cmd) {
     break;
   }
   case "confirm": {                             // HIS WORD — the only path to a real hit
-    const res = confirmFlag(load(), arg);
+    const atIdx = process.argv.indexOf("--at");  // A1: captains_call names the exact entry
+    const res = confirmFlag(load(), arg, new Date(), atIdx > -1 ? process.argv[atIdx + 1] : null);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
     save(res.state);
     const r = res.state.rules.find((x) => x.id === arg);
@@ -1299,7 +1312,8 @@ switch (cmd) {
     break;
   }
   case "dismiss": {
-    const res = dismissFlag(load(), arg);
+    const atIdx = process.argv.indexOf("--at");
+    const res = dismissFlag(load(), arg, atIdx > -1 ? process.argv[atIdx + 1] : null);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
     save(res.state);
     console.log(`teaching_contract: "${arg}" dismissed — a wrong self-report costs nothing`);
