@@ -5,12 +5,13 @@
  "_paused_note": "PAUSED by the captain 2 Aug 2026 — all 23 LLM jobs held. WHY: the rolling 7d window stood at 85,16,836 / 1,20,00,000 (71%) with headroom 0, and a measurement of that week showed the shape of the spend: 178 calls, average 47,847 tokens each, of which ~23,947 is `claude -p` boot tax (system prompt + tool definitions re-sent every call) and only 1,706 is generated output. 96% of every call was the machine loading itself; 3.6% was thinking. He is spending the next two days studying in Claude Code while the rolling window decays (5 Aug -> 54.6%, 6 Aug -> 43.7%, 7 Aug -> the 24-lakh 31 Jul day falls out). WHAT STILL RUNS: everything deterministic — capture, fsrs, calibration, nemesis, learning_state, presence, thalamus, distiller, the wall, the Goalkeeper's Oura pull. The organism keeps RECORDING while it stops THINKING, so the pause ends with real data instead of a blank week. UN-PAUSE: set false. Nothing else here changes. || UN-PAUSED 6 Aug 2026 by the captain, after the BOOT TAX was closed in brain.mjs claudeExec (--system-prompt + --tools \"\" + --strict-mcp-config). Measured on the same probe: 49,411 -> 5,663 tokens per call, 88.5% off. The pause existed because 96% of every call was the CLI loading itself; that is now ~5k of overhead instead of ~44k. Revert the optimisation with budget.lean_calls=false; re-pause with paused=true.",
  "budget": {
   "window_hours": 5,
-  "window_capacity_est_tokens": 800000,
-  "weekly_capacity_est_tokens": 12000000,
+  "window_capacity_est_tokens": 1600000,
+  "weekly_capacity_est_tokens": 24000000,
   "day_reserve_frac": 0.4,
   "overnight_target_frac": 0.95,
   "self_tune": true,
-  "_note": "Anthropic publishes no exact Max-5x token caps, so these start conservative and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it.",
+  "_note": "Anthropic publishes no exact Max token caps, so these start as estimates and SELF-TUNE: any observed limit event records the true ceiling into brain_queue.json (observed_window_ceiling) and the runtime re-fits. The ledger learns the plan's real shape instead of pretending to know it.",
+  "_unleashed_2026_08_09": "P1 of THE PEAK PLAN, his verbatim word: 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required.' window 800000→1600000, weekly 12000000→24000000 (~doubled for the doubled plan). Overshoot self-corrects: a limit event still re-fits observed_window_ceiling, and that learned value only ever RAISES the cap (brain.mjs cap0 = max(est, observed)), so until the next limit event the estimate IS the working cap. Named side effect: the pulse's daily token authorisation derives from weekly×0.10 and doubles with this — pulse stays enabled:false, so nothing spends it today. limits.mjs BUDGETS registry rows updated in the same commit (that registry rotted silently once already — its own note says so).",
   "lean_calls": true
  },
  "study_hours": {
@@ -567,7 +568,8 @@
   {
    "id": "day_cartridge",
    "engine": "claude",
-   "model": "sonnet",
+   "model": "opus",
+   "_model_note": "P1 unleash, 9 Aug 2026 (his word) — sonnet→opus. The cartridge programs the Gaffer's entire day; the routine-soul→sonnet reassignment (M13) is reversed for this one job. Revert: set back to sonnet.",
    "_engine_note": "moved off the free pool 17 Jul — the cartridge IS the Gaffer's daily brain; it rides the engine that never runs dry",
    "window": "overnight",
    "priority": 58,
@@ -655,8 +657,8 @@
    "id": "deep_reanalysis",
    "engine": "claude",
    "model": "opus",
-   "window": "any",
-   "trigger": "reanalysis",
+   "window": "overnight",
+   "_window_note": "P1 unleash, 9 Aug 2026 (his word) — was window:any + trigger:reanalysis, i.e. trigger-only. Now NIGHTLY: every overnight window, max 1/day, priority 85 (top of the overnight drain). The old arming paths still exist and still ARM a trigger (postmatch every 30th matchday; `node scripts/brain.mjs trigger reanalysis \"<reason>\"`) but nothing consumes it while this job is un-gated — harmless, and left in place so RE-GATING is one edit: restore \"trigger\": \"reanalysis\" and set window back to \"any\".",
    "priority": 85,
    "enabled": true,
    "max_per_day": 1,
@@ -675,10 +677,10 @@
    "out": "reanalysis",
    "surface": {
     "kind": "human_file",
-    "where": "dressing-room/state/brain_out/reanalysis/<date>.md — the captain arms it by hand (`node scripts/brain.mjs trigger reanalysis \"<reason>\"`) and reads the result; `brain status` prints the newest by path"
+    "where": "dressing-room/state/brain_out/reanalysis/<date>.md — NIGHTLY since 9 Aug 2026 (P1 unleash); the captain reads the newest when he wants the season re-read; `brain status` prints it by path"
    },
    "_inputs_note": "AUDIT #64/#71: 3 of 6 inputs (season.json, notebook.json, mutations.jsonl) have never existed — exactly 50%, which is why the proposed majority-ratio guard would NOT have fired on the very job it was written for. They arrive the moment postmatch runs (it writes season.json and notebook.json unconditionally on every run) and the Boot Room files a mutation, so this is `waiting`, not broken. It has spent ZERO tokens in its life: it is trigger-gated and the only automatic arming path needs matches_played % 30 === 0, which is 30 postmatch runs away. Kept ENABLED for that reason — it cannot spend unless he asks it to.",
-   "_note": "EVENT-TRIGGERED DEEP RE-READ (U4, JARVIS harvest): fires ONLY when a milestone/crisis arms the trigger (postmatch auto-arms every 30th matchday; the captain can arm it any time: node scripts/brain.mjs trigger reanalysis 'reason'). Re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts). Trigger is consumed on success."
+   "_note": "DEEP RE-READ (U4, JARVIS harvest — trigger-only until 9 Aug 2026, nightly since P1 unleash): re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts)."
   }
  ],
  "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad."

@@ -1684,7 +1684,11 @@ async function selftest() {
   assert("STUDY HOURS — cap = day_reserve_frac (protect the captain)", hStudy.phase === "study" && hStudy.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.day_reserve_frac));
   const hNight = headroom(cfg, ledger, qEmpty, now(23, 30));
   assert("OVERNIGHT — cap = overnight_target_frac (exhaust deliberately)", hNight.phase === "overnight" && hNight.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac));
-  assert("self-tuned ceiling ABOVE estimate overrides (learns the plan is bigger)", headroom(cfg, ledger, { observed_window_ceiling: 1200000 }, now(23, 30)).cap === Math.round(1200000 * cfg.budget.overnight_target_frac));
+  // P1 unleash (9 Aug 2026): these ceiling fixtures were literals from the 800k era and went
+  // red the day the estimate doubled — they now derive from cfg.budget so they assert the
+  // RELATION (observed-above-estimate wins), not a number the captain is free to change.
+  const aboveEst = Math.round(cfg.budget.window_capacity_est_tokens * 1.5);
+  assert("self-tuned ceiling ABOVE estimate overrides (learns the plan is bigger)", headroom(cfg, ledger, { observed_window_ceiling: aboveEst }, now(23, 30)).cap === Math.round(aboveEst * cfg.budget.overnight_target_frac));
   assert("STARVATION GUARD — a too-low/corrupt ceiling is floored at the estimate", headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac) && headroom(cfg, ledger, { observed_window_ceiling: 1 }, now(23, 30)).allowed > 100000);
 
   // ---- PHASE-0 GOVERNOR: token vitals · live reserve · ceiling EWMA · thinking depth ----
@@ -1698,7 +1702,7 @@ async function selftest() {
     assert("LIVE RESERVE — at the keyboard, daytime spend stays protective", headroom(cfg, [], qEmpty, now(14, 0), { idle_min: 1 }).cap === dayCap);
     assert("LIVE RESERVE — idle at the desk, spend rises toward the flood", headroom(cfg, [], qEmpty, now(14, 0), { idle_min: 30 }).cap === nightCap);
     assert("LIVE RESERVE — no signal ⇒ unchanged static behavior (selftests safe)", headroom(cfg, [], qEmpty, now(14, 0)).cap === dayCap);
-    assert("CEILING EWMA — blends observed toward the running ceiling", blendCeiling(1000000, 1400000, estC, 0.5) === 1200000);
+    assert("CEILING EWMA — blends observed toward the running ceiling", blendCeiling(estC * 1.25, estC * 1.75, estC, 0.5) === estC * 1.5);
     assert("CEILING EWMA — floored at the estimate (a low read can't starve)", blendCeiling(null, 1, estC) === estC);
     assert("CEILING EWMA — self-corrects DOWN (not a one-way ratchet)", blendCeiling(2000000, 900000, estC, 0.5) < 2000000);
     assert("THINKING DEPTH — lean live, deep overnight", maxThinkingFor("study", 1000000).max_thinking_tokens === 16000 && maxThinkingFor("overnight", 1000000).max_thinking_tokens === 48000);
@@ -1740,11 +1744,18 @@ async function selftest() {
       // now bites at ceil(1,200,000 / 32,480) = 37 pulses → 37 × 32,480 = 1,201,760.
       // 37 calls is still nowhere near the 200-call backstop, which is the whole point:
       // the unit that binds is tokens, and the call cap is a runaway guard, not a budget.
+      // HERMETIC BUDGET (9 Aug 2026, P1 unleash). This fixture's arithmetic (37 × 32,480
+      // just over a 1.2M/day window) was derived from the 12M-era weekly plan but rode the
+      // LIVE cfg.budget — the exact defect the HERMETIC CONFIG note above records for
+      // `enabled`. The moment the captain doubled the budget, 37 pulses stopped exceeding
+      // the window and the mock threw. The fixture now PINS the weekly plan it was
+      // measured against; the live budget is asserted separately in the CONFIG block.
+      const pTokCfg = { ...pCfg, budget: { ...(pCfg.budget || {}), weekly_capacity_est_tokens: 12000000 } };
       const bigRows = Array.from({ length: 37 }, () => ({ job: "haiku_pulse", ts: now(14, 0).toISOString(), total_tokens: 32480, ok: true }));
       assert("PULSE tokens — today's spend is summed from the ledger, not inferred", pulseTokensToday(bigRows, now(14, 0)) === 1201760);
       assert("PULSE tokens — a yesterday row never counts against today", pulseTokensToday([...bigRows, { job: "haiku_pulse", ts: new Date(now(14, 0).getTime() - 86400000).toISOString(), total_tokens: 999999, ok: true }], now(14, 0)) === 1201760);
-      const tokCapped = await runPulse(pCfg, { ...base, ledger: bigRows, appendLedger: () => { throw new Error("pulsed over the TOKEN budget"); }, mockCall: () => { throw new Error("called over the TOKEN budget"); } });
-      assert("PULSE — token budget bites where the CALL cap never could (37 calls, 1.2M tokens, cap 200)", tokCapped.pulsed === false && /token budget/.test(tokCapped.skipped) && bigRows.length < pulseConfig(pCfg).daily_cap);
+      const tokCapped = await runPulse(pTokCfg, { ...base, ledger: bigRows, appendLedger: () => { throw new Error("pulsed over the TOKEN budget"); }, mockCall: () => { throw new Error("called over the TOKEN budget"); } });
+      assert("PULSE — token budget bites where the CALL cap never could (37 calls, 1.2M tokens, cap 200)", tokCapped.pulsed === false && /token budget/.test(tokCapped.skipped) && bigRows.length < pulseConfig(pTokCfg).daily_cap);
       assert("PULSE — the measurement window is a FRACTION of the weekly plan, so it re-fits itself", pulseConfig({ budget: { weekly_capacity_est_tokens: 12000000 } }).daily_token_budget === 1200000);
       assert("PULSE — an explicit daily_token_budget in config wins over the fraction", pulseConfig({ pulse: { daily_token_budget: 123456 } }).daily_token_budget === 123456);
 
@@ -2032,7 +2043,11 @@ async function selftest() {
       const drainThenLimit = () => (++n <= 3)
         ? { ok: true, text: "steady read, nothing invented", total_tokens: 300000, duration_ms: 5, limit_hit: false, error: null }
         : { ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "session limit · resets 7am" };
-      await tick({ ...cfg, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3").map(j => ({ ...j, inputs: [] })) },
+      // The whole regression's arithmetic (prev 1.0M · drain 900k · blend 960k · floor)
+      // was measured in the 800k-estimate era, so the estimate is PINNED here — with the
+      // live doubled estimate (P1 unleash, 9 Aug 2026) the 1.6M floor would swallow the
+      // 960k blend and the assertion would test the floor, not the observation.
+      await tick({ ...cfg, budget: { ...cfg.budget, window_capacity_est_tokens: 800000 }, jobs: cfg.jobs.filter(j => j.kind !== "manager_m3").map(j => ({ ...j, inputs: [] })) },
         { exec: drainThenLimit, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ledger: [], queueState: qCeil });
       // 3×300k spent inside this tick, then the limit. blend(prev 1.0M, observed 900k)
       // = 960k. Reading only the START-OF-TICK ledger observes 0 → blend collapses to
