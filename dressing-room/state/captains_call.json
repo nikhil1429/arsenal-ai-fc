@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "next_id": 11,
+  "next_id": 12,
   "cards": [
     {
       "id": "c1",
@@ -163,7 +163,11 @@
         "2026-08-08T16:39:51.694Z",
         "2026-08-08T16:40:06.313Z",
         "2026-08-08T16:40:28.270Z",
-        "2026-08-08T16:40:30.819Z"
+        "2026-08-08T16:40:30.819Z",
+        "2026-08-09T10:41:10.518Z",
+        "2026-08-09T10:43:17.279Z",
+        "2026-08-09T11:07:26.340Z",
+        "2026-08-09T11:07:51.168Z"
       ],
       "answer": null,
       "answered_at": null,
@@ -181,6 +185,23 @@
         "path": "dressing-room/missions/M01__audit_fundamentals_rubric.md"
       },
       "filed_at": "2026-08-07T20:57:32.166Z",
+      "dealt": [],
+      "answer": null,
+      "answered_at": null,
+      "sleep_until": null,
+      "retired_at": null,
+      "resolution": null
+    },
+    {
+      "id": "c11",
+      "key": "market:2026-08-08.md",
+      "source": "brain_out/market",
+      "line": "Scout ka market proposal (2026-08-08) — 3 line mein sunna hai?",
+      "dispatch": {
+        "kind": "open",
+        "path": "dressing-room/state/brain_out/market/2026-08-08.md"
+      },
+      "filed_at": "2026-08-09T10:41:10.518Z",
       "dealt": [],
       "answer": null,
       "answered_at": null,
