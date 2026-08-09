@@ -102,9 +102,12 @@ function mayTick(hostId, role, deps = {}) {
 //   1. `git add -u -- <allowlist>` — `-u` stages ONLY files git already TRACKS,
 //      so a brand-new file on disk cannot be staged by the Kennel at all.
 //      Publishing something NEW stays a deliberate human act at the laptop.
-//      (This is also why dressing-room/state/ can sit on the list: only the
-//      already-published config/canon files there are tracked; every personal
-//      state file is untracked and therefore unreachable by `-u`.)
+//      (dressing-room/state/ sits on the list KNOWINGLY: since decision D10 and
+//      his 9 Aug 2026 ruling — "i do not care putting my data in the public repo" —
+//      his personal study/biometric state files ARE tracked and DO ride this push.
+//      That is accepted by his word, not an oversight. Only credentials stay
+//      ignored; lock 1 still blocks brand-new files, lock 2 still blocks off-list
+//      paths.)
 //   2. the index is read BACK with --name-only and every staged path matched
 //      against this list; anything off it and the pass REFUSES to commit or
 //      push. Lock 2 catches what lock 1 can't: paths left staged in the index

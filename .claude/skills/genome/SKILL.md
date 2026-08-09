@@ -6,7 +6,8 @@ description: Review the Boot Room's pending mutation — evidence, predicted eff
 # /genome — the method changes only through your mouth
 
 1. Read `dressing-room/state/mutations.jsonl` — find status "proposed".
-   None? Say "no proposal filed — the genome is quiet" and stop.
+   None, or the file does not exist yet (it is born with the first proposal)?
+   Say "no proposal filed — the genome is quiet" and stop.
 2. Present the ONE proposal (≤8 lines): target · current → proposed value ·
    evidence lines verbatim · metric + review window · the auto-revert plan.
    Never advocate. Never stack multiple proposals (serial law).

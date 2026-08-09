@@ -37,4 +37,4 @@ node -e "require('fs').writeFileSync('dressing-room/state/gem_sync_stamp.json', 
 > an owner inside this skill would just be a second unowned writer. **Until the captain rules,
 > run the line knowingly — and know it is a state write with no owning script behind it.**
 > *(Verified 6 Aug 2026: the only other reference to this file anywhere in the repo is
-> `physio.mjs:672`, which READS it. Nothing writes it but this skill.)*
+> `physio.mjs` (the gem_sync_stamp read — line-ref dropped 9 Aug, it had drifted :672→:724), which READS it. Nothing writes it but this skill.)*

@@ -147,7 +147,10 @@ Teaching contract: **10 rules** (5 seeded + `one-idea` + `deeper-not-longer` +
 
 ## 5. STILL OPEN — split honestly
 
-**Blocked on him (one command, needs an admin terminal):**
+**~~Blocked on him~~ SUPERSEDED — DO NOT RUN (9 Aug 2026 launch audit):** the five tasks
+below are now DELIBERATELY Disabled — heartbeat chain + conductor + START_DAEMONS own those
+organs, and re-enabling the tasks would double-run them. The command is kept only as history:
+
 ```
 schtasks /change /tn ArsenalFC-Heartbeat /enable && schtasks /change /tn ArsenalFC-SprintSync /enable && schtasks /change /tn ArsenalFC-Mirror /enable && schtasks /change /tn ArsenalFC-Turnstile /enable && schtasks /change /tn ArsenalFC-Thalamus /enable
 ```
@@ -156,9 +159,11 @@ chain runs all four (one writer-chain, one failure surface). Turnstile and Thala
 running now but **die on reboot** without their tasks. Also: `git push` is his.
 
 **Open code, not done:**
-- **#19 `THE-FORGE.html`** — referenced by 7 docs and by `deep.mjs`, **does not exist in this repo**.
-  Off-repo, baked-only, renders neither `deep` nor `viz`. Browser-side work; vehicle is
-  `FORGE_DEEP_RENDER_BRIEF.md`.
+- **#19 `THE-FORGE.html`** — **CLOSED 9 Aug 2026** (his word: "as of now forge.html mein hi
+  rakho"): built IN-REPO at the root (the off-repo copy was lost — the exact out-of-git rot
+  the Drive-tag scar documents). Live gist fetch + baked SNAP fallback, renders EVERY capsule
+  field incl. `deep`+`viz` with a completeness footer (FORGE_DESIGN §4). Regenerate:
+  `node setup/build_forge_html.mjs`.
 - **#26 `python_state.json`** — spec above, not built.
 - `dressing-room/state/bootroom_log.jsonl` and `conductor.json` are **untracked and uncovered by
   `.gitignore`** — daemon output, deliberately left out of this commit. A small separate decision.

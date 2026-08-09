@@ -31,7 +31,9 @@
 //   forge_session.json      — the FORGE pacer's live position (read-only; forge_session.mjs owns it)
 //   forge_sessions.jsonl    — append-only history of ENDED forge sessions (read-only, same owner)
 //
-// OUTPUT: dressing-room/state/learning_state.json (single writer; gitignored — derived PII).
+// OUTPUT: dressing-room/state/learning_state.json (single writer; TRACKED in the public
+//   repo — his 9 Aug 2026 ruling, verbatim: "i do not care putting my data in the public
+//   repo". This header claimed "gitignored — derived PII" while the file was tracked.)
 //   Manager §10 surface fields (maidan_stage_focus, weak_connection, python_fluency,
 //   rejirah_due, core_vs_light) + rich additive (concepts[], axes[], maidan{}, position{}).
 //

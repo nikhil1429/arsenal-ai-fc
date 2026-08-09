@@ -3314,10 +3314,10 @@ async function main() {
   }
   // #52 (caller side) — THE HEADLESS SHADOW SAMPLE. Same disease as the
   // reminders: `detect`'s only caller was a setInterval inside the bridge, so
-  // shadows were sampled only on days he opened the window. The scorer's
-  // date-scoping bug lives in shadow.mjs and is NOT fixed here (different
-  // owner) — schedule this lane only after that lands, or the catch-up run
-  // fabricates verdicts from days the shadows did not happen on.
+  // shadows were sampled only on days he opened the window. (9 Aug 2026: the
+  // shadow.mjs date-scoping fix LANDED on 4 Aug — the warning that used to sit
+  // here said it was unfixed and outlived its truth by five days. The lane is
+  // schedulable now; see ArsenalFC-DugoutLanes.)
   if ((process.argv[2] || "").toLowerCase() === "shadow-detect") {
     const r = detectShadows();
     console.log(r.ok ? `dugout shadow-detect: ${r.said || "(shadow.mjs said nothing — no shadow cast this pass)"}` : `dugout shadow-detect: FAILED — ${r.error}`);

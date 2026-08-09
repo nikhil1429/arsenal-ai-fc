@@ -380,7 +380,7 @@ Finding **#2** says: *visualisation does not produce understanding for him; plai
 hand-run trace does, and a failed visual makes him ask for a better visual rather than for
 plainer text.* Three dated failures; one strong success on a plain code-block whiteboard.
 
-`learning-layer/PROJECT_OS.md:328` (VISUALIZATION CONTRACT) says the opposite, as law:
+`learning-layer/PROJECT_OS.md` VISUALIZATION CONTRACT section (line-ref dropped 9 Aug — :328 had drifted to ~:347) says the opposite, as law:
 **"har concept ka EK widget; widget HI lesson hai, text side mein."** THE METHOD step 4
 (DIKHAO) is built on it, and `.claude/skills/forge/SKILL.md` renders it as an obligation the
 pacer prints every turn at step 4.

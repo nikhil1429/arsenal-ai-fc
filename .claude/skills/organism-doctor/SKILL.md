@@ -45,10 +45,9 @@ description: Full health check of the organism — vitals, brain budget, selftes
      · `ArsenalFC-SelfKnowledge` returns 0x800710E0 ("operator or administrator
        refused") and the organ reports itself FROZEN (`node scripts/selfknowledge.mjs
        consumers` → 0 live consumers). Note it, don't red the organism for it.
-   - **THE FUEL TANKS** (issue #93, 2026-08-04). No health surface read tank
-     state until this line existed — `physio.mjs` and `viz.mjs` have zero "tank"
-     hits, and this skill never touched it, so the seven free-tier accounts
-     could all be COLD and the chart still read green. **READ**
+   - **THE FUEL TANKS** (issue #93, 2026-08-04; justification updated 9 Aug 2026 —
+     physio.mjs has long since grown tank sight (42 hits), so the old "zero hits"
+     line here was rot. The tank READ below still stands on its own feet.) **READ**
      `dressing-room/state/tanks.json` (the Read tool is enough — it is a small
      JSON file), or run this read-only one-liner:
      `node -e "const fs=require('fs'),p='dressing-room/state/tanks.json';if(!fs.existsSync(p)){console.log('TANKS: NOT MEASURED - tanks.json has never been written');process.exit(0)}const b=JSON.parse(fs.readFileSync(p,'utf8')),d=new Date(),t=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');console.log('TANKS board day='+b.day+' today='+t+(b.day===t?' (fresh)':' STALE - nothing spent today'));for(const k in b.tanks){const v=b.tanks[k];console.log('  '+k+' '+v.state+' used '+v.used_today+'/'+v.observed_ceiling+(v.last_429?' last_429 '+v.last_429:''))}"`

@@ -64,7 +64,8 @@ LEARNING_LAYER_MAP.md (yeh)   ← sabse neeche. Kisi cheez pe authority nahi.
 **Verified 4 Aug 2026:** `PROJECT_OS.md` mein aisi koi EK-LINE "conflict rule" hai hi nahi — conflict
 clauses **per-section bikhri** hui hain: `:9` (design → FORGE_DESIGN jeet-ti) · `:43` (loop/rhythm →
 GEMINI_LOOP) · `:121` (DESIGN SYSTEM → FORGE_DESIGN) · `:131` (PYTHON TRACK → OS) · `:138` (OUTWORK → OS)
-· `:212` (Kickoff/Full-Time → OUTWORK) · `:479`. Aur **`OPS_STATE` ka naam PROJECT_OS mein kahin nahi
+· (Kickoff/Full-Time → OUTWORK) · (LOGBOOK → SEASON). *(9 Aug: in do ke line-numbers hata diye —
+dono refs ek hafte mein do baar drift hue; section-naam grep karo.)* Aur **`OPS_STATE` ka naam PROJECT_OS mein kahin nahi
 aata** (grep = 0) — "Arsenal pe OPS_STATE = live truth" OPS_STATE ka apna claim hai (`OPS_STATE.md:2`),
 PROJECT_OS ka nahi. Upar ka tree sahi hai; woh quoted one-liner galat tha.
 
@@ -269,9 +270,12 @@ file "done"**.
 
 > ⚠️ **Live defect:** `.claude/skills/forge/SKILL.md` khud likhta hai — audit #34, 2026-08-04 —
 > ki Gate 2 **ek baar bhi nahi chala**, aur **112 live doubts mein se 17 spec ke apne named
-> failure-patterns todte hain** (cryptic 7 · meta 8 · fragment 2 · near-duplicate 0). `tape_room.json` mein **saare 112** doubts verbatim rematch-prompts ban ke queued hain (sab
-> `eligible: true`); unme se **17 apna `gate2_flag` bhi carry karte hain**, matlab cold future-Nikhil ko *"ye to inference vali cheez hi hai na?"* serve hoga bina ye pata
-> ki "ye" kya tha. **Yeh khula kaam hai.**
+> failure-patterns todte hain** (cryptic 7 · meta 8 · fragment 2 · near-duplicate 0). *(9 Aug 2026
+> launch audit — live sach: `tape_room.json` queue mein 112 doubts hain, **95 eligible:true**, aur
+> **17 gate2-flagged wale INELIGIBLE hold pe hain** — matlab cold-reader-fail doubts ab serve NAHI
+> hote jab tak repair nahi hota. Is note ka purana dar — "17 bina context serve honge" — ab code
+> mein band hai; khula kaam sirf un 17 ki repair hai, jo captains_call gate2 card se ek-ek karke
+> aati hai. Live padho: `node -e` se queue ka eligible count, is note se kabhi nahi.)*
 
 **Research base (LOCKED — dobara research nahi):** Wozniak 20-rules (R4 atomic · R11 anti-interference ·
 R12 wording) + Zettelkasten (autonomous notes) + Tulving (encoding specificity) + curse-of-knowledge.
@@ -331,7 +335,11 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 | **UserPromptSubmit** | `node hooks/afferent-post.mjs` | uske shabd thalamus (:4113) ko — zero capture-tax |
 | **UserPromptSubmit** | `node scripts/forge_session.mjs contract` | **THE METHOD ka 12-step order + dono anti-quiz-dump laws, HAR TURN.** ≤9 lines (anti-wall law). Fresh unclosed session na ho to chup. |
 | **UserPromptSubmit** | `node scripts/teaching_contract.mjs print` | **HOW-TO-TEACH rules, har turn**, ≤5 lines, drift-ranked + rotating + turn-counter (context warning) |
+| **UserPromptSubmit** *(7 Aug)* | `node scripts/teaching_audit.mjs hook` | uske PROMPT ki recording — Stop payload mein user-text hota hi nahi, isliye confusion-is-literal check ke liye prompt yahan record hota hai, Stop pe consume. |
 | **Stop** | `node hooks/afferent-post.mjs` | **jo padhaya gaya** woh bhi memory mein (`claude-code-teaching`) |
+| **Stop** *(7 Aug)* | `node scripts/teaching_audit.mjs hook` | turn ka audit LIVE forge session ke against — drifts measure, auto-count (uski 7 Aug do-lane ruling), `checked_at` heartbeat. |
+| **SessionStart** *(7 Aug)* | `node scripts/watchman.mjs brief` | EK line, sirf jab kal raat Tier-1 ne kuch pakda ho ya watchman khud na chala ho — saaf raat pe chup. |
+| **SessionStart** *(7 Aug)* | `node scripts/captains_call.mjs deal` | THE ANCHOR LAW — max EK card, haan/na/baad. Fresh forge session khula ho to chup (rule #12). |
 | **PreCompact** *(5 Aug)* | `node scripts/learnstate.mjs brief` | compaction ke paar orientation zinda rahe — SessionStart ke compact-source firing pe bharosa karne ke bajaye brief dobara print hoti hai. |
 
 > **CONTEXT WARNING (5 Aug, badla hua):** ab woh **transcript ke SIZE** pe hai, turn-counter pe nahi.
@@ -469,18 +477,24 @@ Pehle yahan likha tha ki `reps_log.jsonl` · `learning_state.json` · `examiner_
 hain — **ab woh galat hai.** Captain ne D10 mein (do baar, files naam le kar) ruling di: **uska
 personal study data repo ke SAATH travel karta hai.** `.gitignore` ab in teeno ko TRACK karta hai,
 aur purane rules comment mein frozen hain taaki reversal auditable rahe. **Jo ab bhi ignored hai:**
-credentials (`oura_*`), biometrics (`readiness.json`, `intake_log.json`), aur kuch bhi jo **doosre
-logon ka naam** leta hai — D10 ne unhe cover NAHI kiya.
+sirf credentials (`oura_*`). *(9 Aug 2026 launch audit: is line ne `readiness.json` + `intake_log.json`
+ko "ab bhi ignored" bataya jabki dono TRACKED hain — aur usi din captain ne khud ruling di, uske
+shabd: "i do not care putting my data in the public repo". Biometric/medication state ka public repo
+mein hona ab ACCEPTED hai, defect nahi. Yeh map ki teesri baar hai jab gitignore-claim rota — is
+list pe kabhi bharosa mat karo, `git check-ignore -v <file>` chalao.)*
 `capsules/` bhi gitignored hai — matlab **git in 210 KB capsules ka backup nahi hai; gist hi master
 aur ekmatra backup hai.**
 Naye tracked state (5 Aug): `python_state.json` · `rejirah_log.jsonl` · `widgets.json` — teeno study
 data hain, D10 ke andar. `course.json` bhi tracked hai (pehle se flagged tha; D10 ke baad yeh ab
 consistent hai, defect nahi). **Har push se pehle ek glance — yeh list badalti rehti hai.**
 
-   "KAB"        "kitna IMAANDAAR"  "kaunsa PATTERN"  "KAHAN khade ho"
-```
+### 8.5 FSRS — kya khilata hai
+*(9 Aug 2026 launch audit: is section ka heading + ASCII diagram kisi purane edit mein kat gaya tha —
+sirf caption-line `"KAB" · "kitna IMAANDAAR" · "kaunsa PATTERN" · "KAHAN khade ho"` aur ek akela
+band-fence bacha tha, jo aage ke render todta. Diagram wapas nahi banaya — niche ke do bullet hi
+poora sach hain.)*
 
-**Do input jo yeh diagram chhupa deta hai:**
+**Do input jo upar wala summary chhupa deta hai:**
 - **FSRS ka doosra input = THE CAPSULE FLOOR.** `capsuleSeedReps()` `dressing-room/state/capsules/*.json`
   padhta hai aur har `lockedOn` / re-weld date ko `surface:"capsule"` knew-correct review event bana ke
   replay karta hai (undated capsule = ZERO seed, fabricate kabhi nahi). **Isi wajah se `reJirahDone` ka
@@ -534,7 +548,8 @@ aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+sh
   --gates <n>` · `open <c>`. **Generate KABHI nahi karta** (captain ka D5): widget ki poori keemat
   bespoke hero example hai ("Aristo Eco — ₹81,500"), aur generator theek woh generic widget banata hai
   jo canon mana karti hai. `--gates` < 2 pe woh **"built, NOT driven"** bolta — Contract ke apne
-  Chala-mode clause ke hisaab se **undriven widget = FAILED widget**. Live: **0/4** locked capsules.
+  Chala-mode clause ke hisaab se **undriven widget = FAILED widget**. Live coverage YAHAN se kabhi
+  mat padho (yeh line do baar rot chuki hai — 9 Aug audit) — hamesha `node scripts/widget.mjs list`.
 - `python_state.mjs` *(5 Aug 2026)* — Python track ka single writer (subtopic · tier · 🔴🟡🟢 ·
   JS-hangover watch-list · last_packet). Fluency **declare** hoti hai `--why` ke saath, compute nahi —
   us file mein ek bhi threshold nahi hai (uska standing usool: *"koi bhi number GUESS karke mat lagao"*).
@@ -545,7 +560,7 @@ aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+sh
 - `course.mjs` — chapter position tracker. **EK LAW: chapter kabhi invent mat karo.** Sirf explicit
   `Chapter N: Title` header chapter banata; gaps verbatim rehte (1,2,5 → 1,2,5, beech mein 3-4 gadhe nahi
   jaate); zero-chapter paste = **loud refusal**, khaali course likh ke asli ko overwrite nahi.
-  *(Issue #35, 4 Aug: 670 lines the, ZERO callers — ab THEEK ho chuka: `learnstate.mjs` `courseBrief()` import karke SessionStart brief mein splice karta hai, aur `/learn` ka course-branch `course.mjs brief` chalata hai. File ab 756 lines ki hai. Baaki hai sirf pehla paste — `course.json` abhi disk pe bana hi nahi, `brief` `present:false` deta hai.)*
+  *(Issue #35, 4 Aug: 670 lines the, ZERO callers — ab THEEK ho chuka: `learnstate.mjs` `courseBrief()` import karke SessionStart brief mein splice karta hai, aur `/learn` ka course-branch `course.mjs brief` chalata hai. 9 Aug audit: pehla paste HO CHUKA — `course.json` disk pe hai, 7 Aug se, Anthropic API Fundamentals ingested. Live: `node scripts/course.mjs brief`.)*
 
 ---
 
@@ -610,9 +625,10 @@ update**"*.) Asli wajah §5 hai: local `capsules/` ek read-only mirror hai jiska
 
 **round close → gist patch → uska paste → `mirror.mjs` → PENDING khatam.** Jab tak paste nahi landa,
 round **PENDING** padha jaata hai — yeh *saboot* hai ki paste hua, anumaan nahi. **Paanch organ
-`reJirahDone` pe khade hain:** `fsrs.mjs:143` (poori review-history isi se banti) · `deep.mjs:82`
-(round counter) · `capsule_bridge.mjs:75` (done/overdue/due) · `dugout.mjs` · `shipped.mjs:165`
-(`rejirah_served`). Paste na ho to paanchon maante hain round hua hi nahi — isliye SessionStart brief
+`reJirahDone` pe khade hain:** `fsrs.mjs` (`capsuleSeedReps` — poori review-history isi se banti) ·
+`deep.mjs` (`rejirahStatus` round counter) · `capsule_bridge.mjs` (done/overdue/due) · `dugout.mjs` ·
+`shipped.mjs` (`rejirah_served`). *(Line numbers deliberately hataye — 9 Aug audit pe teeno refs rot
+chuke the; function ka naam grep karo.)* Paste na ho to paanchon maante hain round hua hi nahi — isliye SessionStart brief
 bhi PENDING line uthati hai.
 
 `close` canon ka **SUCCESSIVE-RELEARNING criterion** bhi report karta hai ("har round har due-axis cold
@@ -632,7 +648,8 @@ Captain ne yeh resolve kar diya, merge karke nahi — **kaam baant ke**:
 (`fundamentals` [tokenization] · `rag_pipeline` [chunking, embeddings, retrieval, rag_eval] ·
 `agents` [tool_use]) aur **4 handoffs** (text→vectors · chunks→vectors · vectors→top-k · results→eval),
 config `dressing-room/state/learning_state_config.json` se; `sanitizeMaidan()` ek malformed stage pe
-crash nahi hota (25 Jul E2E audit fix). Field abhi `awaiting_data` hai kyunki reps **9 < 12**.
+crash nahi hota (25 Jul E2E audit fix). Gate ka live sach `learning_state.json` se padho — 9 Aug
+audit pe yeh line "9 < 12 awaiting_data" bol rahi thi jabki live gate **14/12 OPEN** tha.
 
 Forge ka unit = **CONCEPT** (capsule); goal ka unit = **FIELD** (poora juda hua runnable naksha).
 17 capsules tempered ho jaayein tab bhi field apne aap nahi chalega — **tempered players ≠ drilled team.**

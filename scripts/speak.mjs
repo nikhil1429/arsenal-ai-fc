@@ -6,7 +6,8 @@
 //        Microsoft Edge neural TTS (msedge-tts — free, no key, no billing
 //        possible; "JARVIS-adjacent"). Fallback: Windows System.Speech
 //        (offline, robotic, always works).
-// WHO ACTUALLY CALLS IT (audited 4 Aug 2026 — this list is the truth, keep it so):
+// WHO ACTUALLY CALLS IT (audited 4 Aug 2026; line-numbers dropped 9 Aug — they rot,
+// the CALLER NAMES are the truth, grep them):
 //        say()          ← talk.mjs:128/:141/:146 (TALK MODE) · dugout.mjs:241
 //                         (fireReminders) · turnstile.mjs:176/:181 (the live
 //                         capture daemon) · .claude/skills/talk/SKILL.md:11

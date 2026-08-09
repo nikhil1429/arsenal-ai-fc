@@ -25,7 +25,8 @@
 **Status: LAUNCHED (verified A-to-Z, 15 Jul 2026 · zero RED).** The loop is built. The only thing left is your reps.
 
 **The shareable scorecard (pull this up for Nidhi):** https://claude.ai/code/artifact/689780b7-839a-48ec-a31a-f104d10f621e
-*(private to you — share it from the page's share menu)*
+*(the URL sits in a PUBLIC repo — anyone with it can request the page; treat it as
+shareable-by-link, not private. Wording fixed 9 Aug 2026; his ruling accepts public data.)*
 
 ---
 

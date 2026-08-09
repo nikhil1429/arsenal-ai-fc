@@ -154,4 +154,8 @@ Capstone step 2 of 5 (§9 SPLIT Part 2 — the Gaffer soul / Opus system-prompt)
 - OPEN at #8: meds by-name vs generic "your stack" (system.md is PUBLIC-committed) — captain decides.
 - Scaffolding (top-of-file comment + section numbers) STRIPPED at M-2 completion, before M-3; #1 light-tighten then.
 - RESUME: continue M-2 from #6 PRECEDENCE.
+- [9 Aug 2026, launch audit] That RESUME line rotted: system.md is COMPLETE at 586 lines
+  (every section through THE EXEMPLARS), M-3's claude -p runs LIVE in brain.mjs (manager_m3,
+  billing guard, formation_read daily 08:45 Opus). What actually remains his: the line-by-line
+  captain review of system.md, and any §11-sandbox hardening he still wants.
 - Files: dressing-room/manager/system.md (#1+#2+#3+#4+#5 locked · pending markers #6–#11 in header comment). Commit #3: 50c7b29 · Commit #4: 2dfa6bd · Commit #5: <hash on push>.

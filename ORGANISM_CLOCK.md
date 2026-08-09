@@ -27,7 +27,7 @@ Jo NAHI chal raha woh bhi neeche §5 mein **naam se** likha hai — chhupa kuch 
 - **02:20 HippoStore** — durable memory store/index refresh. ✓ aaj 02:20
 - **02:40 NightShift** — night cartridges (Examiner Gem refresh material). ✓ aaj (05:15 catch-up — laptop soya tha, StartWhenAvailable ne pakda)
 - **03:00 ConceptGraph** — concepts ka rishton-ka-graph rebuild. ✓ aaj (05:15 catch-up)
-- **03:30 Sat PresenceFit** — WEEKLY presence-model fit (5 din purana dikhe to woh normal hai). ✓ Sat 02 Aug
+- **03:30 Sun PresenceFit** — WEEKLY presence-model fit (5 din purana dikhe to woh normal hai; task /D SUN hai — yeh line 9 Aug tak "Sat" bolti thi). ✓
 
 **AMBIENT BRAIN (poore din, apne-apne interval par — sab aaj 21:44-21:56 ke beech fire hue ✓):**
 - **har 1 min** Context (context_state) · **har 10 min** Presence (AW se hazri)
@@ -41,8 +41,9 @@ mirror (gist→capsules verbatim) · sprintsync (Sheet→sprint.json) · thalamu
 (daemon checks) · physio (state-staleness doctor) · **goalkeeper (Oura readiness verdict)** ·
 twin (self-model bets) · **heartbeat → fsrs + calibration + nemesis + learningstate**
 (chaaron signal-agents ka recompute) · signals · **sheet (THE GAFFER ki team_sheet)** · wall.
-*(Isi liye scheduler mein 13 task "Disabled" dikhte hain — woh MARE nahi, 4 Aug ko is chain
-mein SAMA gaye. Disabled + conductor-green = sahi halat.)*
+*(Isi liye scheduler mein Disabled tasks dikhte hain — woh MARE nahi, 4 Aug ko is chain
+mein SAMA gaye (count yahan se mat padho — 9 Aug pe yeh "13" likha tha, sach 15 tha;
+`schtasks /query /fo csv | findstr ArsenalFC` chalao). Disabled + conductor-green = sahi halat.)*
 
 **DIN:** **12:00 / 15:00 / 18:00 TimeAuditor-Pulse** — 3-bucket time split (aaj 18:00 ✓:
 Learning 91.4% · Building 0.9% · Meta 7.7%). **20:00 Sun BootRoom** — WEEKLY genome

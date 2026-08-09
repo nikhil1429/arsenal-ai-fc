@@ -39,9 +39,10 @@
 //      which is a real proof his paste landed, not an assumption that it did.
 // That is the back edge closed through the master store, with no ownership broken.
 //
-// WHAT DEPENDS ON `reJirahDone` (why the pending-nag is not pedantry): fsrs.mjs:143
-// builds a concept's entire review history from lockedOn + these dates, deep.mjs:82
-// counts them for the round number, capsule_bridge.mjs:75 derives done/overdue/due from
+// WHAT DEPENDS ON `reJirahDone` (why the pending-nag is not pedantry): fsrs.mjs
+// (capsuleSeedReps) builds a concept's entire review history from lockedOn + these
+// dates, deep.mjs (rejirahStatus) counts them for the round number, capsule_bridge.mjs
+// derives done/overdue/due from
 // them, dugout.mjs reports them and shipped.mjs:165 emits `rejirah_served` from them.
 // Until the date reaches the gist, all five believe the round never happened.
 //

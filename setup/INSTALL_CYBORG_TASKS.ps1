@@ -73,10 +73,12 @@ Mk "ArsenalFC-Examiner"       "examiner.mjs stage"           @("/SC","DAILY","/S
 Mk "ArsenalFC-NightShift"     "nightshift.mjs"               @("/SC","DAILY","/ST","02:40")
 # working-memory (P5): overnight deepening - the concept graph, the ONE Opus path (cortex)
 Mk "ArsenalFC-ConceptGraph"   "cortex.mjs consolidate"       @("/SC","DAILY","/ST","03:00")
-# the Gaffer's SELF-KNOWLEDGE - Claude rebuilds the organism self-portrait from the live
-# code so the voice can explain any layer, current + in full (never a stale script). Weekly
-# safety-regen; regenerate on demand before a demo with:  npm run selfknowledge
-Mk "ArsenalFC-SelfKnowledge"  "selfknowledge.mjs"            @("/SC","WEEKLY","/D","SUN","/ST","04:00")
+# the Gaffer's SELF-KNOWLEDGE - PERMANENTLY FROZEN by his 7 Aug 2026 ruling ("mujhe organism
+# kisi ko explain nahi karna hai" - the guest/keynote surface is NOT to be built, thread
+# closed). This installer used to recreate the task ENABLED on every re-run, silently undoing
+# the freeze (9 Aug launch audit). The task is no longer created at all; if an old copy
+# exists, disable it:  schtasks /change /tn ArsenalFC-SelfKnowledge /disable
+# Mk "ArsenalFC-SelfKnowledge"  "selfknowledge.mjs"          @("/SC","WEEKLY","/D","SUN","/ST","04:00")   # frozen, kept as history
 # the stall sensor fits itself to HIS baselines, weekly
 Mk "ArsenalFC-PresenceFit"    "presence.mjs calibrate"       @("/SC","WEEKLY","/D","SUN","/ST","03:30")
 

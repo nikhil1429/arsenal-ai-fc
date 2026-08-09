@@ -15,9 +15,12 @@
 ## 1. STORE
 - **Master** = GitHub Gist — **ONE JSON file per capsule** (`<id>.json`: `tokenization.json`, `embeddings.json`, `inference.json`, `context.json`, ...). Each file = a SINGLE capsule object (array wrapper NAHI). Raw URL pattern: `.../raw/<id>.json`. (Purana single `forge-capsules.json` flat-array **DEAD** — migrated per-file 2026-06-24.)
 - Raw URL pattern: `https://gist.githubusercontent.com/nikhil1429/ce50c28d585c2fcd915a9dbf61871a56/raw/<id>.json` (e.g. `.../raw/tokenization.json`, `.../raw/embeddings.json`, `.../raw/inference.json`, `.../raw/context.json`).
-- **Engine** = `THE-FORGE.html` (laptop + git, NEVER project files).
-  - *Intended:* renders from gist + baked SNAP fallback.
-  - *Current shipped (2026-06-22):* **baked-only** (~115KB vanilla) — no live `fetch()`, `deep`/`viz` NOT rendered yet. Reconcile at **next engine rebuild**. See §4 NOTE.
+- **Engine** = `THE-FORGE.html` — **ab REPO ROOT mein** (9 Aug 2026, uska word: "as of now
+  forge.html mein hi rakho". Purani "laptop + git, NEVER project files" copy KHO GAYI — out-of-git
+  ka wahi rot jo THE_GAFFER.md ke Drive-tag ne sikhaya tha; ab git hi engine ka ghar hai).
+  - *Shipped (2026-08-09):* **intended shape** — live gist fetch per capsule + baked SNAP fallback
+    (never-empty), HAR field render hota hai `deep`+`viz` samet, completeness footer ke saath
+    (FORGE_DESIGN §4/§12). Rebuild: `node setup/build_forge_html.mjs`.
 - **Never-empty**: engine has a baked `SNAP` (copy of the gist) so it renders even offline / if fetch blocked.
 
 ## 2. WRITE PATH (Option A — manual, at concept LOCK) — PER-FILE

@@ -40,6 +40,16 @@
       "staged_at": "2026-08-07T20:55:12.812Z",
       "ingested_at": null,
       "report": null
+    },
+    {
+      "id": "T-hallucinations",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "hallucinations",
+      "file": "dressing-room/missions/T-hallucinations.md",
+      "staged_at": "2026-08-08T16:30:58.818Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -67,6 +77,11 @@
       "ts": "2026-08-07T20:55:12.812Z",
       "kind": "stage_audit",
       "id": "M04"
+    },
+    {
+      "ts": "2026-08-08T16:30:58.818Z",
+      "kind": "stage_topic",
+      "id": "T-hallucinations"
     }
   ]
 }

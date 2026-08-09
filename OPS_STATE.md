@@ -1,6 +1,10 @@
 ⚪🔴 ARSENAL AI FC — OPS_STATE
 THE thread-agnostic anchor. A fresh thread reads THIS ONE file first and knows everything: what the organism is, what's built, what's live, what's launched. Keep BOUNDED (~2 pages). This is STATE, not a log — history lives in git commits (`git log --oneline -30`). Design/anatomy detail: CYBORG_BRAIN.md · CYBORG_STRETCH.md · THE_ORGANISM_A_TO_Z.md · learning-layer/. No zip, ever.
 
+⚠ 9 Aug 2026 (launch audit): the 6-Aug refresh block below ITSELF rotted within three days
+  (its "62 members / 61 selftests / 9 reps" were 67 / 67 / 17 when re-measured). The lesson is
+  now structural, not another number: NEVER read a count from this file — run `npm test`,
+  `wc -l dressing-room/state/reps_log.jsonl`, `ls .claude/skills/`. The block stays as history.
 ⚠ NUMBERS REFRESHED 2026-08-06 (cross-organ test pass). What this file said, and what was actually true:
   · "reps_log = 0 by design" → 9 rows. The learning half started; this doc did not notice for three weeks.
   · "Skills (11)" → 12 (/learn was missing from the list).
@@ -41,7 +45,7 @@ LAUNCHED. The deepest pre-launch verification is done — 39 selftest suites gre
 - THE FINAL VERIFICATION passed: 31 organism + 8 squad selftest suites green; 16 organs live-verified GREEN + 4 DORMANT-BY-LAW (of 29 built, all selftest-green), ZERO RED; all 24 Dugout tools exercised (23 live/contract-verified, read_url honest-dormant on a dry free-pool quota); the Hinglish (0.65) + Devanagari (0.65) gate → TIER-2 → Opus → fold-back proven live in both scripts; FSRS floor (4 cards, 3 overdue: embeddings/inference/context) confirmed; the 08:45 sheet proven real-Opus (formation_read OK, validated, not skeleton); the evening spine + all 8 night-shift jobs run live (season_read on gemini-flash-latest → 6 contradictions); media engine renders (wall.html, a real TTS MP3, poster.svg); privacy sweep GREEN (9 sensitive files gitignored, reps_log.jsonl 0 bytes preserved).
 - THE GAFFER NOW KNOWS THE WHOLE ORGANISM: a new get_organism tool (the 24th) + a full-anatomy lecture section in his constitution. Say "explain the whole organism / walk me through the cyborg brain" → a structured ~10-min lecture, every number read LIVE (zero hallucination, zero hype). Proven end-to-end through the wire.
 - FOUR SCAN-FIXES (prior era) intact: Gaffer's capsules + get_capsule; the two-script gate; the FSRS capsule floor; memory honesty.
-- CLEAN SLATE preserved: 46 test-era files vaulted (moved, never deleted). reps_log.jsonl = 9 rows (6 Aug 2026 — the learning half is NO LONGER dormant; it started. This line read "= 0 by design" for three weeks after that stopped being true).
+- CLEAN SLATE preserved: 46 test-era files vaulted (moved, never deleted). reps_log.jsonl: count it live (`wc -l`) — this line has now been wrong TWICE ("0 by design" for three weeks, then "9 rows" while the log held 17), so it no longer carries a number at all. The learning half is NO LONGER dormant; it started.
 
 ⏳ PENDING (all the captain's — his logins, his reps)
 1. THE REPS — reps_log = 9 (6 Aug 2026). The learning half has STARTED but is still under every floor: Calibration & Nemesis @20 reps, Learning-State @12, the Twin's book @30 resolutions. Those organs are dormant-by-law, not broken. That's his, and only his.

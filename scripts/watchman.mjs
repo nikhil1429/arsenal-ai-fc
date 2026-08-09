@@ -99,7 +99,8 @@ const REPAIR_LOG = join(STATE_DIR, "watchman_repair.log");
 const REPAIR_JOURNAL = join(STATE_DIR, "watchman_repairs.jsonl");
 const TIER2_PROMPT_FILE = join(STATE_DIR, "watchman_tier2_prompt.txt");
 
-// Mirrored from forge_session.mjs:114 (its number, not a new one): past this the
+// Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
+// dropped 9 Aug: it had already rotted once): past this the
 // pacer calls a session STALE and goes silent. The auditor deliberately does NOT
 // gate on it (his "sab audit, no gates" ruling) — which is exactly why a
 // forgotten-open session is worth a nightly INFO line.

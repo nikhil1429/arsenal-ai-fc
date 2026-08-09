@@ -112,8 +112,10 @@
 
 # THREAD OPENER (har naye thread ke pehle 60 sec)
 1. Yeh doc hi OS hai — isi se chalo.
-2. Forge gist CURL karo — ab PER-CAPSULE files (tokenization.json, embeddings.json, inference.json,
-   context.json, ...). Sab curl karo, live state. Kisi bhi capsule JSON se pehle mandatory.
+2. Capsule state = `dressing-room/state/capsules/` (mirror.mjs roz subah gist se refresh karta hai) —
+   wahi padho. *(9 Aug 2026: yeh step "har thread gist CURL karo" kehta tha, jo isi doc ke apne 4-Aug
+   FORGE section se takraata tha — "ab CURL ki zaroorat nahi, mirror hai". Mirror ke PENDING hone par
+   hi (SessionStart brief bolta hai) gist raw URL curl karna banta hai.)*
 3. Build thread ho to SESSION_LOG.md padho.
 3b. Visual-notes / Forge-engine / Claude-Design kaam ho (naye concept ke notes design karna, build extend
    karna, viz mechanism-spec likhna, design handoff brief banana) → FORGE_DESIGN.md padho — canonical design
@@ -217,7 +219,10 @@ PATCH — Delivery line replace (VISUALIZATION CONTRACT):
 #   tracks (ladder/M1/Python) + due Re-Jirah → aaj ka FLOOR propose (~5 min hard time-box).
 #   (Existing opener step-4 "blank recall" ko full Kickoff mein upgrade karta.)
 # THREAD CLOSE = cadence ka FULL-TIME: honest floor HIT/MISS + SAVE-FLAG (step 4a) + KAL-line decide.
-# Logbook SEASON.md abhi PARKED — uska OS-wiring + SESSION_LOG→daily-logbook tab jab woh bane.
+# Logbook SEASON.md — UN-PARKED (7-8 Aug 2026, uske word se): dressing-room/SEASON.md zinda hai,
+#   postmatch.mjs owner hai, Claude 100% bharta hai, woh ZERO likhta. Rows uske pehle /full-time se
+#   shuru hote hain. (9 Aug audit tak yeh line "abhi PARKED" bol rahi thi — canon apne hi logbook
+#   se peeche tha.)
 
 # LEARNING MODE — ALWAYS ON
 - Har thread mein, topic koi bhi ho. Naya concept/tool/library/error/design decision aaye to

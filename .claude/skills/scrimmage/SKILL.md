@@ -10,7 +10,10 @@ not apply here — this is the one place they don't).
 
 1. Read `dressing-room/state/scout.json` (staged brief), `dossier_weights.json`
    (probe grammar + round weights), `doubt_grammar.json` (his wrong-prior
-   shapes — use them to design traps, NEVER name them to him).
+   shapes — use them to design traps, NEVER name them to him). If the staged
+   brief carries a CODE round (the Live-Examiner lane the dugout voice
+   scrimmage runs), run it here too — 9 Aug 2026: this skill used to skip it,
+   so the laptop scrimmage was quietly easier than the voice one.
 2. If a brain-staged brief exists in `dressing-room/state/brain_out/scrimmage/`,
    use it exactly — the organism prepared that door.
 3. Run 5 probes, ONE at a time, time-weighted like the real onsite
