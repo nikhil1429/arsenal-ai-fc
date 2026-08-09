@@ -52,6 +52,7 @@ import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { runManager } from "./manager.mjs";
+import { redealtSheetLine } from "./captains_call.mjs";   // LADDER A1 — pure helper, no state writes
 // THE ONE ZERO-HALLUCINATION VALIDATOR (2 Aug 2026 audit, findings #59/#60/#61).
 // `allowedNumbers`/`noNewNumbers` used to exist THREE times — here, in manager.mjs and
 // in viz.mjs — and only the manager's carried the 25 Jul fix. The two copies here still
@@ -1409,7 +1410,11 @@ async function runJob(job, cfg, deps) {
         const lead = res.source === "llm"
           ? "**The sheet is up, captain.**"
           : `**The sheet is up, captain** — skeleton, not the Gaffer's read.\n\n_${res.reason || "no llm"}_`;
-        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+        // LADDER A1 — a card re-dealt past 10 times without his word earns ONE line
+        // here (captains_call.json is READ only; the card organ stays sole writer).
+        const callState = readJson(join(STATE_DIR, "captains_call.json"));
+        const nag = callState ? redealtSheetLine(callState.cards, today) : null;
+        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${nag ? "\n\n" + nag : ""}${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
         // marked only on a REAL send, so a network blip retries next beat instead of
         // burning the day's one utterance on a push that never left the machine.
         if (qs && pushed.sent) { qs.mouth_said = qs.mouth_said || {}; qs.mouth_said[today] = "sheet"; }

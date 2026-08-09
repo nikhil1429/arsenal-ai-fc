@@ -273,8 +273,49 @@ export function pickCard(state, { today }) {
   const rank = (c) => (c.source === "hand-filed" ? 0
     : c.source === "teaching_contract.staged" ? 1
     : c.source === "tape_room.gate2" ? 2 : 3);
-  live.sort((a, b) => rank(a) - rank(b) || String(a.filed_at).localeCompare(String(b.filed_at)));
-  return live[0] || null;
+  // LADDER A1 (9 Aug 2026): the c9 monopoly. A serialized card nobody answered used
+  // to deal at EVERY anchor forever while the outward tier waited behind it, never
+  // seen once. Two rules end that, and neither invents a number:
+  //   · a card dealt at any anchor TODAY rests for the rest of the day — the same
+  //     day-unit "baad" already uses ("no nagging inside a day"), so the deck
+  //     rotates to the next card at the next anchor instead of repeating itself;
+  //   · among the rested deck, the LEAST-DEALT-EVER card goes first — every card
+  //     gets its first hearing before any card gets its second; rank still breaks
+  //     ties, so hand-filed leads any fresh deck exactly as before.
+  const dealtToday = (c) => (c.dealt || []).some((t) => localDate(new Date(t)) === today);
+  const fresh = live.filter((c) => !dealtToday(c));
+  fresh.sort((a, b) => (a.dealt || []).length - (b.dealt || []).length
+    || rank(a) - rank(b) || String(a.filed_at).localeCompare(String(b.filed_at)));
+  return fresh[0] || null;
+}
+
+// LADDER A1 — the word alone, when the id would be noise. `answer haan` with no id
+// binds to the card most recently DEALT (that is the one he just heard); if nothing
+// was ever dealt but exactly one card is live, that one. Ambiguity errors out loud —
+// a guessed dispatch would put his word on the wrong ask.
+export function resolveAnswerArgs(state, a, b) {
+  const WORDS = ["haan", "na", "baad"];
+  if (WORDS.includes(a) && !b) {
+    const live = state.cards.filter((c) => !c.answer && !c.retired_at);
+    const dealt = live.filter((c) => (c.dealt || []).length)
+      .sort((x, y) => String(y.dealt[y.dealt.length - 1]).localeCompare(String(x.dealt[x.dealt.length - 1])));
+    if (dealt.length) return { id: dealt[0].id, word: a };
+    if (live.length === 1) return { id: live[0].id, word: a };
+    return { error: live.length ? "kaunsa card? id bhi do (node scripts/captains_call.mjs list)" : "koi live card nahi" };
+  }
+  return { id: a, word: b };
+}
+
+// LADDER A1 — a card re-dealt PAST TEN times without his word earns ONE line on the
+// morning sheet push (brain.mjs manager_m3 reads captains_call.json and calls this).
+// The 10 is the approved ladder's own floor ("re-dealt>10"), not a guess made here.
+export function redealtSheetLine(cards, today) {
+  const worn = (cards || []).filter((c) => !c.answer && !c.retired_at
+    && !(c.sleep_until && c.sleep_until > today) && (c.dealt || []).length > 10)
+    .sort((a, b) => b.dealt.length - a.dealt.length);
+  if (!worn.length) return null;
+  const c = worn[0];
+  return `🎴 ${c.id} ab tak ${c.dealt.length}× poochha, jawab nahi${worn.length > 1 ? ` (+${worn.length - 1} aur)` : ""} — ek word kaafi: haan/na/baad.`;
 }
 
 // Apply his word. Returns {state, action} — the CLI layer EXECUTES the action so
@@ -412,15 +453,22 @@ function main() {
     if (!c) return;
     c.dealt.push(now.toISOString());
     writeAtomic(CALL, s);
-    console.log(`🎴 CAPTAIN'S CALL [${c.id}]: ${c.line}`);
-    console.log(`   → haan / na / baad  (bol de — session chala degi: node scripts/captains_call.mjs answer ${c.id} <word>)`);
+    // LADDER A1 — one live card ⇒ the id is noise; his word alone routes (resolveAnswerArgs).
+    const liveCount = s.cards.filter((x) => !x.answer && !x.retired_at).length;
+    console.log(`🎴 CAPTAIN'S CALL${liveCount === 1 ? "" : ` [${c.id}]`}: ${c.line}`);
+    console.log(liveCount === 1
+      ? `   → haan / na / baad  (bas word bol de — session chala degi: node scripts/captains_call.mjs answer <word>)`
+      : `   → haan / na / baad  (bol de — session chala degi: node scripts/captains_call.mjs answer ${c.id} <word>)`);
     return;
   }
 
   if (mode === "answer") {
-    const [, , , id, word] = process.argv;
+    // LADDER A1 — `answer haan` (id elided) binds to the most recently dealt live card.
+    const r = resolveAnswerArgs(loadState(), process.argv[3], process.argv[4]);
+    if (r.error) { console.error(`captains_call: ${r.error}`); process.exit(1); }
+    const { id, word } = r;
     if (!id || !["haan", "na", "baad"].includes(word)) {
-      console.error("captains_call: answer <id> <haan|na|baad>"); process.exit(1);
+      console.error("captains_call: answer [<id>] <haan|na|baad>"); process.exit(1);
     }
     const { state, action } = applyAnswer(loadState(), id, word, now);
     if (action.kind === "error") { console.error(`captains_call: ${action.why}`); process.exit(1); }
@@ -635,6 +683,46 @@ function selftest() {
     dealGuard({ organEnv: undefined, forge: { concept: "x", started_at: "2026-08-05T08:00:00+05:30" }, now: T0 }).silent === false
     && dealGuard({ organEnv: undefined, forge: { concept: "x", started_at: "2026-08-07T08:00:00+05:30", closed_at: "2026-08-07T09:00:00+05:30" }, now: T0 }).silent === false
     && dealGuard({ organEnv: undefined, forge: null, now: T0 }).silent === false);
+
+  // LADDER A1 (9 Aug 2026) — the monopoly is dead: rotation, day-rest, word-alone, sheet nag
+  {
+    const T = new Date("2026-08-09T10:00:00+05:30");
+    const mk = (id, source, filed, dealt) => ({ id, key: `k:${id}`, source, line: "x",
+      dispatch: { kind: "none" }, filed_at: filed, dealt, answer: null, answered_at: null,
+      sleep_until: null, retired_at: null, resolution: null });
+    const deck = { version: 1, next_id: 9, cards: [
+      mk("g1", "tape_room.gate2", "2026-08-07T09:00:00Z", ["2026-08-09T03:00:00Z"]),  // dealt TODAY (08:30 IST)
+      mk("m1", "missions.desk", "2026-08-08T09:00:00Z", []),
+      mk("b1", "benchmark.regression", "2026-08-08T10:00:00Z", []),
+    ] };
+    assert("A1 — a card dealt today RESTS; the next live card deals at the next anchor (monopoly dead)",
+      pickCard(deck, { today: localDate(T) }).id === "m1");
+    const allDealtToday = { ...deck, cards: deck.cards.map((c) => ({ ...c, dealt: ["2026-08-09T03:00:00Z"] })) };
+    assert("A1 — every live card already dealt today ⇒ silence (the day-unit baad already uses)",
+      pickCard(allDealtToday, { today: localDate(T) }) === null);
+    const acrossDays = { ...deck, cards: [
+      { ...deck.cards[0], dealt: ["2026-08-07T03:00:00Z", "2026-08-08T03:00:00Z"] },
+      { ...deck.cards[1], dealt: ["2026-08-08T04:00:00Z"] },
+      { ...deck.cards[2], dealt: [] },
+    ] };
+    assert("A1 — least-dealt-ever first: every card gets its first hearing before any gets its third",
+      pickCard(acrossDays, { today: localDate(T) }).id === "b1");
+    assert("A1 — rank still breaks a fresh-deck tie (hand-filed leads, gate2 before outward)",
+      pickCard({ ...deck, cards: deck.cards.map((c) => ({ ...c, dealt: [] })) }, { today: localDate(T) }).id === "g1");
+    const r1 = resolveAnswerArgs(deck, "haan", undefined);
+    assert("A1 — word alone binds to the most recently dealt live card",
+      r1.id === "g1" && r1.word === "haan");
+    assert("A1 — word alone with NOTHING dealt and one live card binds to it; ambiguous errors out loud",
+      resolveAnswerArgs({ version: 1, next_id: 2, cards: [mk("solo", "hand-filed", "2026-08-09T05:00:00Z", [])] }, "na", undefined).id === "solo"
+      && !!resolveAnswerArgs({ ...deck, cards: deck.cards.map((c) => ({ ...c, dealt: [] })) }, "haan", undefined).error);
+    assert("A1 — explicit id + word passes through untouched",
+      JSON.stringify(resolveAnswerArgs(deck, "m1", "baad")) === JSON.stringify({ id: "m1", word: "baad" }));
+    const eleven = Array.from({ length: 11 }, (_, i) => `2026-07-${String(i + 10).padStart(2, "0")}T03:00:00Z`);
+    assert("A1 — redealt line only PAST ten deals, carries the count and the word menu",
+      redealtSheetLine([mk("c9", "tape_room.gate2", "2026-07-01T09:00:00Z", eleven)], "2026-08-09").includes("11×")
+      && redealtSheetLine([mk("c9", "tape_room.gate2", "2026-07-01T09:00:00Z", eleven.slice(0, 10))], "2026-08-09") === null
+      && redealtSheetLine([], "2026-08-09") === null);
+  }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
