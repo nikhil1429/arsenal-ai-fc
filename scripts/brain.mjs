@@ -1323,13 +1323,20 @@ function surfaceAudit(cfg) {
 // (shift day) in LOCAL time, and only the four teaching lanes ride. Counts are
 // reported beside the sample so a trimmed day never reads as a complete one.
 function nightCoachAfferents(dayStr, dir = STATE_DIR) {
-  const LANES = new Set(["claude-code", "claude-code-teaching", "gemini-study", "gemini-study-teaching"]);
+  // LADDER F10 (9 Aug 2026): the coach HEARS THE VOICE. The filter carried only
+  // the four typed/gemini lanes, so his SPOKEN confusion never reached the
+  // misconception map. Voice rows carry no `source` at all (thalamus_config
+  // _self_sources_doc #1: a voice modality IS his provenance), so modality
+  // "voice" with no source = him; `dugout-gaffer-teaching` (F4) is the coach's
+  // spoken half, deny-listed as self but exactly the teaching evidence this
+  // reader wants.
+  const LANES = new Set(["claude-code", "claude-code-teaching", "gemini-study", "gemini-study-teaching", "dugout-gaffer-teaching"]);
   let rows = [];
   try {
     rows = readLinesTail(join(dir, "afferent.jsonl"), 4000)
-      .filter(a => a && a.text && LANES.has(a.source))
+      .filter(a => a && a.text && (LANES.has(a.source) || (a.modality === "voice" && !a.source)))
       .filter(a => { const t = new Date(a.ts || 0); return !isNaN(t.getTime()) && localDate(t) === dayStr; })
-      .map(a => ({ t: String(a.ts).slice(11, 16), who: a.source, text: String(a.text).slice(0, 600) }));
+      .map(a => ({ t: String(a.ts).slice(11, 16), who: a.source || "voice(him)", text: String(a.text).slice(0, 600) }));
   } catch { }
   const kept = rows.slice(-120);
   return {

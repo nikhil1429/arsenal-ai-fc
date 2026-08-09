@@ -263,6 +263,22 @@ async function main() {
     const r = callClaude(prompt, model);
     const reply = r.ok ? clampSpoken(r.text) : "Line dropped — say that again, captain.";
     console.log("GAFFER: " + reply);
+    // LADDER F5 (9 Aug 2026): TALK MODE joins the bus — zero afferent hits
+    // before this, so every word here was invisible to recall, the night coach
+    // and the Gaffer's other surface. Both sides post, same provenance law as
+    // the Dugout (F4): his line = voice/self, the reply = the deny-listed
+    // teaching source. Fire-and-forget with a hard timeout — the thalamus
+    // being down never costs the talk loop a millisecond.
+    const relay = (evt) => {
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 1500);
+        fetch((process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113") + "/afferent", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evt), signal: ctrl.signal,
+        }).then(() => clearTimeout(t)).catch(() => clearTimeout(t));
+      } catch { }
+    };
+    relay({ modality: "voice", text: line });
+    relay({ modality: "voice", source: "dugout-gaffer-teaching", text: reply });
     history.push({ who: "CAPTAIN", text: line }, { who: "GAFFER", text: reply });
     appendFileSync(join(OUT_DIR, today + ".md"), `CAPTAIN: ${line}\nGAFFER: ${reply}\n\n`);
     appendFileSync(LEDGER, JSON.stringify({ ts: new Date().toISOString(), job: "talk", engine: "claude", model, input_tokens: null, output_tokens: null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error || null, limit_hit: false }) + "\n");

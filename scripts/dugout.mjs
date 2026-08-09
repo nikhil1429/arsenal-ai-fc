@@ -75,6 +75,7 @@ import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex, learningArcVerdict, conceptVocabulary } from "./hippocampus.mjs";
+import { projectVitals, projectScout, projectDrills, projectTwin } from "./talk.mjs";   // LADDER F2 — fields, never envelopes (the :41-51 scar)
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
@@ -167,6 +168,26 @@ function readDeepState(deps = {}) {
   out.bg_hint = (ws && ws.bg_hint && new Date(ws.bg_hint.expires) > new Date()) ? ws.bg_hint : null;
   // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
   out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
+  // LADDER F2 (9 Aug 2026) — [BUS DELTA]: what CHANGED on the bus since the last
+  // poll, as talk.mjs's own PROJECTED FIELDS (never raw envelopes — the :41-51
+  // scar). A rep logged at 14:05 reaches the live Gaffer's ground at the next
+  // poll, no reconnect. First poll PRIMES (no replay-at-boot theatre); only a
+  // genuine change ships, and only the projections that changed.
+  out.bus_delta = null;
+  try {
+    const proj = deps.busProjection !== undefined ? deps.busProjection : {
+      vitals: projectVitals(readJson(join(STATE_DIR, "loop_vitals.json"))),
+      scout: projectScout(readJson(join(STATE_DIR, "scout.json"))),
+      drills: projectDrills(readJson(join(STATE_DIR, "drills.json")), localDate()),
+      twin: projectTwin(readJson(join(STATE_DIR, "twin.json"))),
+    };
+    if (proj) {
+      const prev = rt.busProjection || null;
+      const changed = prev ? Object.keys(proj).filter((k) => proj[k] !== prev[k]) : [];
+      rt.busProjection = proj;
+      if (changed.length) out.bus_delta = { changed, lines: Object.fromEntries(changed.map((k) => [k, proj[k]])) };
+    }
+  } catch { /* a broken projection never breaks the poll */ }
   // M7 — THE EARNED-VOICE GATE at the mouth: the whisper passes ONLY when
   // (1) fresh (the stuck→gone window), (2) wall_breaker is PROVEN + RATIFIED
   // in the shadow ledger, (3) the body verdict is not RED and the tone is not
@@ -295,7 +316,11 @@ const DEPTH_REGISTERS = {
   lecture:  "DEPTH = LECTURE (standing): treat every concept question as 'give me the full lecture' — go maximally deep and long, cover it end to end, name the interviewer's follow-ups, and do NOT stop until the topic is exhausted.",
 };
 function loadPrefs() { return readJson(PREFS) || {}; }
-function currentDepth() { return (loadPrefs().depth && DEPTH_REGISTERS[loadPrefs().depth]) ? loadPrefs().depth : "adaptive"; }
+// LADDER F12 (9 Aug 2026, his ruling verbatim: "make gaffer as talkative and
+// elaborative as possible"): the DEFAULT register is now the deepest standing
+// one — the model was chosen for its 65,536-token output budget; use it.
+// set_depth stays HIS lever to dial DOWN — the machine never shortens itself.
+function currentDepth() { return (loadPrefs().depth && DEPTH_REGISTERS[loadPrefs().depth]) ? loadPrefs().depth : "lecture"; }
 
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 // E2E audit (25 Jul 2026): every "today" counter sliced a UTC ISO stamp to 10
@@ -586,20 +611,21 @@ function gatherRecallSources() {
   // only turns that name canon vocabulary get in — not every keystroke — and
   // recallWorthy() still applies to every one of them at the door.
   try {
-    // built once per call — conceptVocabulary() reads concepts.json + sprint.json
-    const vocab = conceptVocabulary();
-    if (vocab.length) {
-      for (const r of readLines(join(STATE_DIR, "afferent.jsonl"))) {
-        // HIS words only. `claude-code-teaching` / `gemini-study-teaching` are the coach's
-        // own output; embedding them would let recall quote me back to him as his own
-        // memory (see distiller #108). `gemini-study` joined 9 Aug 2026 (P7 harvest lane).
-        const his = r && r.text
-          && ((r.source === "claude-code" && r.modality === "code")
-            || (r.source === "gemini-study" && r.modality === "gemini"));
-        if (!his) continue;
-        if (!learningArcVerdict(String(r.text), vocab).ok) continue;
-        items.push({ ts: r.ts, source: r.source, text: String(r.text) });
-      }
+    // LADDER F3 (9 Aug 2026) — THE GATE WIDENS. The double gate here
+    // (learningArcVerdict canon-vocab match + recallWorthy) let 32 of 1,232 code
+    // rows through — ~97% of his typed study was unsearchable by voice. The
+    // canon-vocab half is the wrong filter for a MEMORY (it measures curriculum
+    // relevance, not whether these are his real words), so it is gone; the
+    // recallWorthy quality bar at the caller stays (garble and shards still
+    // carry no recall signal). The provenance filter is untouched: HIS words
+    // only — the teaching sources would let recall quote me back to him as his
+    // own memory (distiller #108).
+    for (const r of readLines(join(STATE_DIR, "afferent.jsonl"))) {
+      const his = r && r.text
+        && ((r.source === "claude-code" && r.modality === "code")
+          || (r.source === "gemini-study" && r.modality === "gemini"));
+      if (!his) continue;
+      items.push({ ts: r.ts, source: r.source, text: String(r.text) });
     }
   } catch { }
   return items;
@@ -995,6 +1021,12 @@ const TOOL_DECLS = [
   { name: "scrimmage_report", description: "SCRIMMAGE ONLY — after probe 5: file the graded mock (score /25, two weakest cracks, tomorrow's drill).", parameters: { type: "OBJECT", properties: { total_25: { type: "NUMBER" }, weakest: { type: "ARRAY", items: { type: "STRING" } }, drill: { type: "STRING" }, persona: { type: "STRING" } }, required: ["total_25", "weakest", "drill"] } },
   { name: "set_depth", description: "Set how deep/long you talk, STANDING until changed. Call when he says 'give me full lectures', 'always go deep', 'keep it short', 'stop lecturing', etc. adaptive=match each ask · brief=tight · deep=thorough by default · lecture=maximal every time. Confirm the new register in one line.", parameters: { type: "OBJECT", properties: { register: { type: "STRING", enum: ["adaptive", "brief", "deep", "lecture"] } }, required: ["register"] } },
   { name: "mark_moment", description: "THE SCRIBE — silently bank a DURABLE moment the instant it happens: a doubt he names, a win, a stated preference, an open thread to pick up later. text = HIS words, verbatim. Call async, never mention it.", parameters: { type: "OBJECT", properties: { kind: { type: "STRING", enum: ["doubt", "win", "preference", "thread"] }, text: { type: "STRING" } }, required: ["kind", "text"] } },
+  // LADDER F1 (9 Aug 2026) — THE MEMORY HALF of the 29 Jul "it ASKS instead of
+  // being told" ruling. The state half (get_today etc.) was built then; the
+  // durable-memory half never was, so an evicted or compressed session had no
+  // way back to who he is. These two shell the hippocampus's own tested doors.
+  { name: "get_context", description: "REHYDRATE HIS DURABLE MEMORY — the hippocampus cartridge: identity facts (each DATED — true as of its date), who-he-is, his last durable episodes, open threads. Call at session start, after any reconnection or context compression, or the moment you feel a gap about who he is — you ASK, he is never made to re-explain.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "recall_memory", description: "TARGETED PULL from his durable memory — 'what confused him about X', 'kya usne Y decide kiya tha'. Searches the hippocampus's DURABLE moments (doubts/wins/threads/facts); different from semantic_recall, which searches his verbatim words index. Call whenever a past doubt, win or decision would change what you say next.", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
   { name: "remember", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly says 'remember (that) I…' / 'yaad rakhna…'. text = his fact, verbatim. Confirm in one line what you now hold. Never call from your own inference.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
@@ -1108,6 +1140,16 @@ function execTool(name, args, deps = {}) {
         now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now)).length,
         // M11 — the Gaffer can NAME tonight's staged work by voice
         nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a fresh Deep Research scout pack is staged — mention it ONCE at a natural stoppage, never as an upsell; if he's not interested, drop it for the day" : null }; })(),
+        // LADDER F7 (9 Aug 2026) — talk.mjs's four PROJECTIONS join get_today:
+        // fields, never envelopes. The voice surface used to get a one-line
+        // vitals clip while TALK MODE got the full projected read of the same
+        // four files — one organism, two densities. Now both mouths read alike.
+        projected: {
+          vitals: projectVitals(readJson(join(STATE_DIR, "loop_vitals.json"))),
+          scout: projectScout(readJson(join(STATE_DIR, "scout.json"))),
+          drills_read: projectDrills(readJson(join(STATE_DIR, "drills.json")), localDate(now)),
+          twin: projectTwin(readJson(join(STATE_DIR, "twin.json"))),
+        },
       };
     }
     if (name === "get_tape_room") {
@@ -1425,6 +1467,16 @@ function execTool(name, args, deps = {}) {
       const said = sh("hippocampus.mjs", ["forget", String(args.id || "")], "");
       return { ok: true, said: String(said || "").trim().slice(0, 200) };
     }
+    // LADDER F1 (9 Aug 2026) — the pull doors for durable memory. Generous
+    // slices: the cartridge IS the payload, not a status line.
+    if (name === "get_context") {
+      const said = sh("hippocampus.mjs", ["cartridge"], "");
+      return { ok: true, cartridge: String(said || "").trim().slice(0, 8000) || "(the organ is empty — it fills as he talks)" };
+    }
+    if (name === "recall_memory") {
+      const said = sh("hippocampus.mjs", ["recall", String(args.query || "")], "");
+      return { ok: true, recall: String(said || "").trim().slice(0, 4000) };
+    }
     if (name === "scrimmage_report") {
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
         .filter(l => localDayOf(l.ts) === localDate(now))
@@ -1491,13 +1543,20 @@ function composeRehydrate(cartridge, tail) {
 }
 
 // rehydrate: today's transcript tail — seeds a fresh WS when no resumption
-// handle exists (page reload, morning), so the thread never truly breaks
-function buildRehydrate(now = new Date()) {
+// handle exists (page reload, morning, key-rotation cold start — dropResume
+// resets the `rehydrated` flag since LADDER F6, so EVERY fresh line re-seeds).
+// LADDER F6 (9 Aug 2026): the cap DERIVES from the session's own compression
+// budget — sliding_window_tokens (8192, declared in this file's config) × 4
+// chars/token (the standard heuristic, stated, not hidden) — instead of the
+// 25-line/2000-char guess this function was born with. The cartridge rides in
+// front (composeRehydrate), so callers hand the tail whatever chars the
+// cartridge left of that derived budget.
+function buildRehydrate(now = new Date(), charBudget = 2000) {
   const p = join(OUT_DIR, localDate(now) + ".md");
   if (!existsSync(p)) return null;
   try {
     const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
-    return lines.length ? lines.slice(-25).join("\n").slice(-2000) : null;
+    return lines.length ? lines.join("\n").slice(-Math.max(0, charBudget)) : null;
   } catch { return null; }
 }
 
@@ -1562,7 +1621,13 @@ function buildConfig(keys, mode = "gaffer") {
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
-    rehydrate: mode === "scrimmage" ? null : composeRehydrate(buildRehydrateCartridge(), buildRehydrate()),
+    // LADDER F6 — the tail's budget is what the cartridge LEAVES of the session's
+    // own compression window (sliding_window 8192 tok × 4 chars/tok), derived
+    // fresh each build; the old fixed 2000 chars threw away ~30k of legal room.
+    rehydrate: mode === "scrimmage" ? null : (() => {
+      const cart = buildRehydrateCartridge();
+      return composeRehydrate(cart, buildRehydrate(new Date(), 8192 * 4 - String(cart || "").length));
+    })(),
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
@@ -1821,7 +1886,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 24);
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 26);   // 26 since LADDER F1 (get_context + recall_memory)
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -1924,6 +1989,43 @@ async function selftest() {
     assert("bridge /deep carries a FRESH recall hit", rds.recall && rds.recall.id === "r1");
     const rdsStale = readDeepState({ workspace: null, wake: null, runtime: { recallHint: { id: "r1", hint: "x", ts: Date.now() - 120000 } } });
     assert("a stale recall hit expires (never late theatre)", rdsStale.recall === null);
+
+    // ---- LADDER F (9 Aug 2026) — the Gaffer's brain grows ----
+    {
+      // F1 — the pull doors for durable memory (the 29 Jul ruling's missing half)
+      const f1Calls = [];
+      const fsh = (script, argv) => { f1Calls.push({ script, argv }); return argv[0] === "cartridge" ? "IDENTITY — facts…" : '{"hits":[]}'; };
+      assert("F1 — get_context + recall_memory DECLARED, both shelling the hippocampus's own doors",
+        TOOL_DECLS.some(t => t.name === "get_context" && /DATED/.test(t.description))
+        && TOOL_DECLS.some(t => t.name === "recall_memory")
+        && execTool("get_context", {}, { sh: fsh }).cartridge.includes("IDENTITY")
+        && (execTool("recall_memory", { query: "embeddings doubt" }, { sh: fsh }),
+          f1Calls.some(c => c.script === "hippocampus.mjs" && c.argv[0] === "recall" && c.argv[1] === "embeddings doubt")));
+      // F2 — [BUS DELTA]: primes silently, ships only the changed fields, then quiets
+      const rt2 = {};
+      const p1 = { vitals: "VITALS: A", scout: "SCOUT: A", drills: "DRILLS: A", twin: "TWIN: A" };
+      const fd1 = readDeepState({ workspace: null, wake: null, queueRows: [], runtime: rt2, busProjection: p1 });
+      const fd2 = readDeepState({ workspace: null, wake: null, queueRows: [], runtime: rt2, busProjection: { ...p1, drills: "DRILLS: B" } });
+      const fd3 = readDeepState({ workspace: null, wake: null, queueRows: [], runtime: rt2, busProjection: { ...p1, drills: "DRILLS: B" } });
+      assert("F2 — bus delta primes on poll 1, ships ONLY the changed projection on poll 2, quiets on poll 3",
+        fd1.bus_delta === null && fd2.bus_delta && fd2.bus_delta.changed.join(",") === "drills"
+        && fd2.bus_delta.lines.drills === "DRILLS: B" && !("vitals" in fd2.bus_delta.lines) && fd3.bus_delta === null);
+      assert("F2 — the page injects the delta at a quiet beat as updated ground, never a status report",
+        PAGE.includes("BUS DELTA") && PAGE.includes("bus_delta"));
+      // F4 — both halves of the conversation on the bus, untruncated
+      assert("F4 — the 600-char beheading is dead; the Gaffer's own turns post with the deny-listed teaching source",
+        !PAGE.includes("affBuf.slice(0,600)") && PAGE.includes("affGaffer") && PAGE.includes("dugout-gaffer-teaching"));
+      // F6 — rotation cold starts re-rehydrate; the tail budget DERIVES
+      assert("F6 — dropResume resets the rehydrate flag, and the tail cap derives from the compression window (no 25-line guess)",
+        PAGE.includes("rehydrated=false;postHandle") && buildRehydrate.toString().includes("charBudget")
+        && buildRehydrate("1999-01-01" && new Date("1999-01-01"), 0) === null);
+      // F7 — get_today carries the four projections (fields, never envelopes)
+      assert("F7 — get_today.projected carries all four projected reads",
+        (() => { const t = execTool("get_today", {}, { sh: fsh }); return t.projected && ["vitals", "scout", "drills_read", "twin"].every(k => typeof t.projected[k] === "string"); })());
+      // F12 — the standing default is the deepest register; set_depth dials DOWN
+      assert("F12 — default register is LECTURE (his 'as talkative and elaborative as possible' ruling)",
+        currentDepth.toString().includes('"lecture"') && DEPTH_REGISTERS.lecture.includes("maximally deep"));
+    }
     // #76 — THIS ASSERTION COULD NOT FAIL. It read
     //   assert("REHYDRATOR: …", buildConfig(["k1"]).rehydrate === null || true)
     // and `x || true` is unconditionally true — the suite has been counting a
@@ -2094,7 +2196,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("24 club tools now (get_organism — the full-anatomy lecture — joined the squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 24);
+    assert("26 club tools now (F1: the two memory pull-doors joined get_organism's squad)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 26);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -2121,7 +2223,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 24 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 26 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -2876,7 +2978,7 @@ let resumingWith=null,goAwayAt=0,lastHandlePost=0,stitching=false;
 function adoptResume(){if(CFG&&CFG.resume&&CFG.resume.handle){resumeHandle=CFG.resume.handle;keyIdx=CFG.resume.key_index||0;log('· resuming today\\'s session (handle restored — same key, memory intact)')}}
 function postHandle(h){const n=Date.now();if(h&&n-lastHandlePost<5000)return;lastHandlePost=n;
  fetch('/handle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h,key_index:keyIdx,model:CFG?CFG.model:'',mode:MODE})}).catch(()=>{})}
-function dropResume(why){if(resumeHandle||resumingWith)log('· resume handle dropped ('+why+') — fresh line + rehydrate');resumeHandle=null;resumingWith=null;postHandle(null)}
+function dropResume(why){if(resumeHandle||resumingWith)log('· resume handle dropped ('+why+') — fresh line + rehydrate');resumeHandle=null;resumingWith=null;rehydrated=false;postHandle(null)}
 const _m=new URLSearchParams(location.search).get('mode');const MODE=['scrimmage','brief-club','brief-brain','signing','cinematic-tour'].includes(_m)?_m:'gaffer';
 if(MODE==='scrimmage')document.title='THE DUGOUT — SCRIMMAGE';if(MODE.startsWith('brief-'))document.title='THE DUGOUT — BRIEFING';
 const st=t=>document.getElementById('st').textContent=t;
@@ -3039,7 +3141,7 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  const sc=m.serverContent;if(!sc)return;
  if(sc.interrupted)stopPlayback();
  if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text)}
- if(sc.outputTranscription&&sc.outputTranscription.text)post('GAFFER',sc.outputTranscription.text);
+ if(sc.outputTranscription&&sc.outputTranscription.text){post('GAFFER',sc.outputTranscription.text);affGaffer(sc.outputTranscription.text)}
  if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[])){
   if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
   // M4 — THE CHALKBOARD, visible: the Gaffer's live code runs land in the record
@@ -3117,12 +3219,22 @@ setInterval(()=>{
  // is still up here, so it is honest) — then the meter is off until reconnect
  mins();parking=true;log('· idle — parking the line (tokens saved; session held)');ws.close(1000)}},5000);
 
-// M1 — THE AFFERENT NERVE (voice): each finished captain turn → the thalamus
-let affBuf='',affAt=0;
+// M1 — THE AFFERENT NERVE (voice): each finished captain turn → the thalamus.
+// LADDER F4 (9 Aug 2026): the 600-char truncation DIED (his 6 Aug "there should
+// be no limit" precedent — a long spoken doubt was arriving beheaded), and the
+// GAFFER'S OWN TURNS now post too (source dugout-gaffer-teaching, deny-listed at
+// the thalamus like claude-code-teaching) — both halves of the conversation on
+// the bus, so the night coach and recall can see what was TAUGHT, never quoting
+// it back as his words.
+let affBuf='',affAt=0,affGBuf='',affGAt=0;
 function affVoice(t){affBuf+=t;affAt=Date.now()}
+function affGaffer(t){affGBuf+=t;affGAt=Date.now()}
 setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
- fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'voice',text:affBuf.slice(0,600)})}).catch(()=>{});
- affBuf=''}},1000);
+ fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'voice',text:affBuf})}).catch(()=>{});
+ affBuf=''}
+ if(affGBuf&&Date.now()-affGAt>2000){
+ fetch('/afferent-relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modality:'voice',source:'dugout-gaffer-teaching',text:affGBuf})}).catch(()=>{});
+ affGBuf=''}},1000);
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
@@ -3146,6 +3258,9 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.bg_hint&&d.bg_hint.moment_id!==lastBgHintId){lastBgHintId=d.bg_hint.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[SECOND SPOTLIGHT — earlier the gate suppressed a thought on '+d.bg_hint.concept+'; he just touched that ground again. Weave it ONLY if it earns the turn, never as theatre: '+d.bg_hint.insight+']'}}));
   log('· second spotlight returned (suppressed thought, recall-matched)');return}
+ if(d.bus_delta&&d.bus_delta.changed&&d.bus_delta.changed.length){
+  ws.send(JSON.stringify({realtimeInput:{text:'[BUS DELTA — the live state CHANGED mid-session ('+d.bus_delta.changed.join(', ')+'). This is your updated ground; weave it only where it changes what you would say next, never as a status report:]\\n'+Object.values(d.bus_delta.lines).join('\\n')}}));
+  log('· bus delta injected ('+d.bus_delta.changed.join(',')+')');return}
  if(d.mouth_hint&&d.mouth_hint.expires!==lastHintExp){lastHintExp=d.mouth_hint.expires;
   ws.send(JSON.stringify({realtimeInput:{text:'[TIMING HINT — non-spoken, about delivery only, never content: '+d.mouth_hint.hint+']'}}));
   log('· timing hint (affect firewall output — delivery only)');return}
@@ -3486,6 +3601,18 @@ async function main() {
         if (req.url === "/afferent-relay") {
           // M1 — the page's senses → the thalamus, fire-and-forget
           relayAfferent(body);
+          // LADDER F3 (9 Aug 2026) — index on ARRIVAL, debounced: his words
+          // become findable minutes after being spoken, not at the top of the
+          // hour. One timer coalesces a burst into one sweep; the 300000ms is
+          // the ladder's own approved recall cadence (G16 — embeds ≤116/day vs
+          // the 1,000 quota), not a number minted here. The hourly interval
+          // below stays as the backstop.
+          if (!runtime.recallIndexTimer) {
+            runtime.recallIndexTimer = setTimeout(() => {
+              runtime.recallIndexTimer = null;
+              indexRecall().then(n => { if (n) console.log(`dugout: recall index +${n} (arrival sweep)`); }).catch(() => { });
+            }, 300000);
+          }
           // M2 — THE THALAMIC RECALL REFLEX: the same voice turn probes his
           // durable memory (async, fail-silent); a hit waits in runtime for
           // the page's next /deep poll — non-spoken, win-only by law.
