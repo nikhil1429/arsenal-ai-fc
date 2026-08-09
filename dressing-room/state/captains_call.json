@@ -117,7 +117,9 @@
         "path": "dressing-room/state/brain_out/market/2026-08-01.md"
       },
       "filed_at": "2026-08-07T05:38:03.010Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T20:12:40.200Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
@@ -357,7 +359,9 @@
         "id": "88e5349a"
       },
       "filed_at": "2026-08-09T16:49:14.121Z",
-      "dealt": [],
+      "dealt": [
+        "2026-08-09T20:12:26.958Z"
+      ],
       "answer": null,
       "answered_at": null,
       "sleep_until": null,
