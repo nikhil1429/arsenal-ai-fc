@@ -87,6 +87,10 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
+// H0 FLOW AUDIT (10 Aug 2026): the evening chain's declared shape — its last
+// step's `at` is the moment after which "silent tonight" is a fair claim.
+// conductor.mjs is import-safe (main() is argv-guarded, zero side effects).
+import { EVENING } from "./conductor.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -584,10 +588,33 @@ function probeReconcile() {
 // hangs on a model run. ARSENAL_ORGAN=1 so the child's own hooks stay silent
 // and its transcript is never captured as the captain's words.
 // ---------------------------------------------------------------------------
-export function tier2Gate(lastJson, findings, today, noTier2) {
+// HH:MM inside a possibly-midnight-wrapping window (22:00→07:30 wraps; string
+// compare is safe on zero-padded HH:MM).
+export function inWindow(hm, start, end) {
+  return start <= end ? (hm >= start && hm <= end) : (hm >= start || hm <= end);
+}
+
+export function tier2Gate(lastJson, findings, today, noTier2, nowHM = null, win = null) {
   const hard = findings.filter((f) => f.level !== "INFO");
   if (!hard.length) return { fire: false, why: "clean night — Tier 2 costs nothing (the split IS the billing guard)" };
   if (noTier2) return { fire: false, why: "--no-tier2 flag (manual/demo run)" };
+  // H0 FLOW AUDIT (10 Aug 2026) — the 8 Aug maiden-class death, diagnosed: the
+  // watchman task itself fired as a mid-day CATCH-UP (13:13 IST, seconds after a
+  // wake), spawned the detached repair child, and the laptop re-slept minutes
+  // later — the process tree died before even the UNCONDITIONAL exit echo could
+  // run (zero bytes after START; a claude-side failure would have stamped EXIT).
+  // The repair arm is the NIGHT engineer by design (§7.2), so Tier 2 now fires
+  // only inside the overnight window (brain_config overnight.start/end — the
+  // same 22:00→07:30 the whole night lane rides; no new number). A daytime run
+  // with real findings DEFERS to the scheduled night sweep, which re-measures
+  // and fires on fresh findings. That same mechanism is the recovery path for a
+  // vanished child: c9's tier2-vanished RED is non-INFO, so the following night
+  // re-arms automatically (asserted in selftest). A keep-awake assertion is
+  // deliberately NOT built: whether wake windows hold through a night run is
+  // exactly F14's open measurement (the WakeProbe) — mechanism after data.
+  if (nowHM && win && !inWindow(nowHM, win.start, win.end)) {
+    return { fire: false, why: `outside the overnight window (${nowHM}, window ${win.start}→${win.end}) — deferred to the scheduled night sweep (8 Aug maiden-class death: a mid-day catch-up spawn died with the re-sleep)` };
+  }
   if (lastJson && lastJson.tier2 && lastJson.tier2.day === today) {
     return { fire: false, why: `Tier 2 already ran today (${lastJson.tier2.started_at}) — once per night, structural, not a threshold` };
   }
@@ -887,6 +914,40 @@ export function probeWakeEconomy(deps = {}) {
     evidence: "honest rows only: cortex_wake + ok + cache pair present (cache-blind rows can never re-enter the fit)" }];
 }
 
+// ---------------------------------------------------------------------------
+// H0 FLOW AUDIT (10 Aug 2026) — THE EVENING CHAIN'S FIRST READER. LADDER D1
+// gave the evening a spine and a report (conductor_evening.json, 9/9 on its
+// maiden run) — and the H0 wire-check found ZERO readers anywhere: doctor and
+// sentinel both read only the MORNING conductor.json, so a failed evening
+// (scorer dead, wallpaper degraded, chain never fired) was invisible to every
+// watcher. QUIET vs DEAD holds: the "silent tonight" claim is conditional on
+// the sweep running AFTER the chain's own last step (EVENING's wallpaper `at`,
+// the chain's declared shape — not a new number), so a morning or manual
+// daytime sweep never cries wolf, and the just-past-midnight catch-up can't
+// misread yesterday's report as tonight's absence (nowHM drops below lastAt).
+// ---------------------------------------------------------------------------
+export function probeEveningChain(today, nowHM, deps = {}) {
+  const rep = deps.report !== undefined ? deps.report : readJson(join(STATE_DIR, "conductor_evening.json"));
+  const lastAt = deps.lastAt || (EVENING.length && EVENING[EVENING.length - 1].at) || "23:10";
+  if (!rep) {
+    return nowHM >= lastAt
+      ? [{ id: "evening-chain-unborn", level: "INFO", finding: "the evening conductor has NEVER written its report — the chain may never have run on this box", evidence: "conductor_evening.json absent" }]
+      : [];
+  }
+  const day = localDayOf(rep.started);
+  const out = [];
+  if (Array.isArray(rep.steps)) {
+    const failed = rep.steps.filter((s) => s && s.ok === false).map((s) => s.id);
+    if (failed.length) out.push({ id: "evening-step-failed", level: "WARN", finding: `the evening chain's last run has ${failed.length} FAILED step(s): ${failed.join(", ")}`, evidence: `conductor_evening.json (${day}) failed=${rep.failed}` });
+    const degraded = rep.steps.filter((s) => s && s.ok !== false && s.degraded).map((s) => s.id);
+    if (degraded.length) out.push({ id: "evening-step-degraded", level: "INFO", finding: `evening step(s) ran DEGRADED: ${degraded.join(", ")}`, evidence: `conductor_evening.json (${day})` });
+  }
+  if (nowHM >= lastAt && day !== today) {
+    out.push({ id: "evening-chain-silent", level: "WARN", finding: `tonight's evening chain has NOT reported (last report ${day}) — bell/scorer/examiner/wallpaper may not have run`, evidence: `conductor_evening.json started=${rep.started} vs today ${today}, sweep at ${nowHM} (chain's last step ${lastAt})` });
+  }
+  return out;
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -903,9 +964,15 @@ async function run(argv) {
   findings.push(...probeExpectedTasks()); // LADDER E2 — the schedule diff
   findings.push(...await probeSentinel(w.today)); // LADDER E8 — the sentinel's pulse
   findings.push(...probeWakeEconomy());   // LADDER G15 — the honest wake re-fit
+  const nowHM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  findings.push(...probeEveningChain(w.today, nowHM)); // H0 — the evening report's first reader
 
   const prevLast = readJson(LAST);
-  const gate = tier2Gate(prevLast, findings, w.today, noTier2);
+  // H0 (10 Aug 2026): the overnight window rides brain_config (same night the
+  // whole lane rides); fallback = brain.mjs DEFAULTS.overnight, not a new number.
+  const bcfgOvernight = ((readJson(join(STATE_DIR, "brain_config.json")) || {}).overnight) || {};
+  const win = { start: bcfgOvernight.start || "22:00", end: bcfgOvernight.end || "07:30" };
+  const gate = tier2Gate(prevLast, findings, w.today, noTier2, nowHM, win);
   const tier2 = gate.fire ? spawnTier2(findings.filter((f) => f.level !== "INFO")) : null;
 
   try { mkdirSync(STATE_DIR, { recursive: true }); } catch {}
@@ -1166,6 +1233,43 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     && tier2Gate({ tier2: { day: YDAY, started_at: "x" } }, hard, TODAY, false).fire === true);
   assert("TIER-2 GATE — --no-tier2 (manual/demo) is honoured and says so",
     tier2Gate(null, hard, TODAY, true).fire === false && /no-tier2/.test(tier2Gate(null, hard, TODAY, true).why));
+
+  // --- H0 FLOW AUDIT (10 Aug 2026): the maiden-class death's guards ---------
+  const WIN = { start: "22:00", end: "07:30" };
+  assert("TIER-2 GATE H0 — a mid-day catch-up spawn DEFERS (the 8 Aug death class), and says why",
+    tier2Gate(null, hard, TODAY, false, "13:13", WIN).fire === false
+    && /re-sleep/.test(tier2Gate(null, hard, TODAY, false, "13:13", WIN).why));
+  assert("TIER-2 GATE H0 — inside the overnight window (both sides of midnight) still fires",
+    tier2Gate(null, hard, TODAY, false, "23:55", WIN).fire === true
+    && tier2Gate(null, hard, TODAY, false, "02:30", WIN).fire === true);
+  assert("TIER-2 GATE H0 — no clock supplied (legacy caller/selftest) keeps the old behaviour",
+    tier2Gate(null, hard, TODAY, false).fire === true);
+  assert("TIER-2 GATE H0 — a tier2-vanished RED alone RE-ARMS the lane the following night (the recovery path is the gate itself)",
+    tier2Gate(null, [{ id: "tier2-vanished", level: "RED", finding: "f", evidence: "e" }], TODAY, false, "23:55", WIN).fire === true);
+  assert("inWindow — wraps midnight and honours a plain window",
+    inWindow("23:55", "22:00", "07:30") && inWindow("02:30", "22:00", "07:30")
+    && !inWindow("13:13", "22:00", "07:30") && inWindow("12:00", "09:00", "21:00") && !inWindow("22:00", "09:00", "21:00"));
+
+  // --- H0: the evening chain's first reader ---------------------------------
+  const evOk = { started: `${TODAY}T17:03:29.758Z`, failed: 0, steps: [{ id: "bell", ok: true }, { id: "scorer", ok: true }] };
+  assert("EVENING PROBE — a clean same-day report after the chain's last step = silence",
+    probeEveningChain(TODAY, "23:55", { report: { ...evOk, started: `${TODAY}T18:00:00+05:30` }, lastAt: "23:10" }).length === 0);
+  assert("EVENING PROBE — a FAILED step is a WARN naming the step, whenever the sweep runs",
+    probeEveningChain(TODAY, "12:00", { report: { ...evOk, failed: 1, steps: [{ id: "bell", ok: true }, { id: "scorer", ok: false }] }, lastAt: "23:10" })
+      .some((f) => f.id === "evening-step-failed" && /scorer/.test(f.finding)));
+  assert("EVENING PROBE — a DEGRADED step is an INFO, not a WARN (it ran; it limped)",
+    probeEveningChain(TODAY, "23:55", { report: { ...evOk, started: `${TODAY}T18:00:00+05:30`, steps: [{ id: "wallpaper", ok: true, degraded: "wall dead" }] }, lastAt: "23:10" })
+      .some((f) => f.id === "evening-step-degraded" && f.level === "INFO"));
+  assert("EVENING PROBE — silent tonight fires ONLY after the chain's own last step (QUIET vs DEAD)",
+    probeEveningChain(TODAY, "23:55", { report: { ...evOk, started: `${YDAY}T18:00:00+05:30` }, lastAt: "23:10" })
+      .some((f) => f.id === "evening-chain-silent")
+    && !probeEveningChain(TODAY, "12:00", { report: { ...evOk, started: `${YDAY}T18:00:00+05:30` }, lastAt: "23:10" })
+      .some((f) => f.id === "evening-chain-silent"));
+  assert("EVENING PROBE — just-past-midnight catch-up cannot misread yesterday's report as tonight's absence",
+    probeEveningChain(TODAY, "00:15", { report: { ...evOk, started: `${YDAY}T18:00:00+05:30` }, lastAt: "23:10" }).length === 0);
+  assert("EVENING PROBE — never-born says so once (INFO), and only after the chain's hour",
+    probeEveningChain(TODAY, "23:55", { report: null, lastAt: "23:10" }).some((f) => f.id === "evening-chain-unborn")
+    && probeEveningChain(TODAY, "12:00", { report: null, lastAt: "23:10" }).length === 0);
 
   // The brief
   assert("BRIEF — silent on a clean, fresh night (no line he learns to ignore)",

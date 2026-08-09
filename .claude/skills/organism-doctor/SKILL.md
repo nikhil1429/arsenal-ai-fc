@@ -34,6 +34,13 @@ description: Full health check of the organism — vitals, brain budget, selftes
      `finished` is not today's local date, or if `failed` > 0 — naming each failed
      step id. The morning chain now carries FOURTEEN organs in ONE scheduled task,
      so this file is the only per-organ record of the morning that exists.
+     ALSO read `dressing-room/state/conductor_evening.json` the same way (H0
+     audit, 10 Aug 2026 — the evening spine's report had ZERO readers until
+     then): 🔴 if `failed` > 0 naming each step, and 🔴 if `started` is older
+     than yesterday's local date — the evening chain (Bell 22:00 → Wallpaper
+     23:10) writes it nightly, so two silent nights = the spine is dark. The
+     watchman's `probeEveningChain` covers this nightly; the doctor's read is
+     the on-demand mirror.
    - schedule alive? Use PowerShell, NOT the Bash tool — under Git Bash the
      forward-slash flags get MSYS-mangled into a path and schtasks errors out:
      `Get-ScheduledTask -TaskName ArsenalFC-* | ForEach-Object { $_ | Get-ScheduledTaskInfo }`

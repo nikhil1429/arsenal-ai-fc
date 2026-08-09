@@ -212,8 +212,8 @@
    ],
    "out": "midday",
    "surface": {
-    "kind": "human_file",
-    "where": "brain_out/midday/<date>.md — DISABLED: nothing opens this today"
+    "kind": "job_input",
+    "where": "input to evening_voice (brain_out/midday/TODAY.md) — the G9 reader; H0 audit 10 Aug 2026 flipped this block, which G9 forgot (it still said 'DISABLED: nothing opens this today' on an enabled lane)"
    },
    "_note": "Acts through files only — analysis for the wall and the evening; never a ping, never new work.",
    "_DISABLED_2026_08_02": "AUDIT #63 — THE WORST OFFENDER, disabled. This job is the single most expensive thing the organism does: ~1,59,000 tok/run, 7 runs, 11,21,460 tok since 26 Jul, and ONE run ate 5,60,465 of an 8,00,000-token 5h window — 70% of the whole window — for a file with no reader. `grep -rn brain_out/midday scripts/ .claude/ hooks/ setup/` returns ZERO hits, and no other job lists it in `inputs`. The _note above is itself the lie: 'analysis for the wall and the evening' — the wall reads brain_out/wall_insights (viz.mjs:647), and evening_voice's inputs are twin.json / slip.jsonl / pitch_read.json / pulse.json. Meanwhile formation_read, the sheet he actually reads at priority 100, got 1,03,010 tokens all week. RE-ENABLE WHEN: something opens dressing-room/state/brain_out/midday/<date>.md — either viz.mjs reads it into a wall panel, or evening_voice/day_cartridge lists brain_out/midday/TODAY.md in `inputs` (a one-line config edit, and then set enabled:true and surface.kind to code/job_input). Do NOT re-enable it just to un-quiet the afternoon: it has never reached a human.",

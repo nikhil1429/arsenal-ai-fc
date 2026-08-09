@@ -249,7 +249,19 @@ function reconcileBrainLanes(deps = {}) {
       else bleeds.push(`stale — ${line}`);
     }
     if (enabled && !uniqueConsumers.length) {
-      bleeds.push(declared
+      // H0 FLOW AUDIT (10 Aug 2026): brain_config's _surface_law defined kind
+      // "human_file" — "designed for the captain to read, nothing automated will" —
+      // on 2 Aug, and this file never learned the word (grep human_file → zero):
+      // six designed-for-his-eyes lanes (doubts, drill_forge, widget_spec, market,
+      // twin_read, reanalysis) bled "no reader" on every sweep, drowning the one
+      // real defect a sweep exists to surface. A DECLARED human_file lane with
+      // zero measured readers is the declaration WORKING — a note, not a bleed.
+      // Staleness above stays fully live for these lanes, and the bleed remains
+      // for enabled lanes with no surface or kind code/job_input measuring zero
+      // readers — exactly the distinction _surface_law was written to enable.
+      if (declared && declared.kind === "human_file") {
+        notes.push(`human_file by declaration — the reader is the captain (${String(declared.where || "").slice(0, 60)}); brain status prints it by path`);
+      } else bleeds.push(declared
         ? `no reader — job declares surface "${String(declared.where || declared.kind).slice(0, 60)}" but nothing in the tree references brain_out/${job.out}`
         : `no reader and no declared surface — brain_out/${job.out} is written and opened by nothing`);
     }
@@ -285,6 +297,12 @@ function reconcileUndeclaredLanes(deps = {}) {
   for (const name of readdirSync(outDir)) {
     let st; try { st = statSync(join(outDir, name)); } catch { continue; }
     if (!st.isDirectory() || declared.has(name)) continue;
+    // H0 FLOW AUDIT (10 Aug 2026): a dir carrying _VAULTED.md is retired residue,
+    // kept by the layering law (never delete), explained by its own marker file.
+    // First case: brain_out/twin/ — G11 renamed deep_twin's out to twin_read and
+    // the 7 old files became permanent orphans PASS 1b re-surfaced every sweep.
+    // A vaulted dir is reported (never hidden) but is not an orphan finding.
+    const vaulted = existsSync(join(outDir, name, "_VAULTED.md"));
     let files = 0;
     try { files = readdirSync(join(outDir, name)).length; } catch { }
     // consumers = code readers + config-DECLARED job inputs (brain_out/dugout is
@@ -292,7 +310,7 @@ function reconcileUndeclaredLanes(deps = {}) {
     // declared input is a reader we can trust, same as consumptionMap's rule).
     const viaInputs = (((cfg && cfg.jobs) || []).filter((j) => (j.inputs || []).some((i) => String(typeof i === "string" ? i : (i && i.path) || "").startsWith(`brain_out/${name}`)))).map((j) => `${j.id} (job input)`);
     const consumers = [...new Set(readersOf(`brain_out/${name}`, corpus, ["reconcile.mjs"]).concat(viaInputs))];
-    rows.push({ dir: name, files, consumers, orphan: consumers.length === 0 });
+    rows.push({ dir: name, files, consumers, vaulted, orphan: !vaulted && consumers.length === 0 });
   }
   return rows.sort((a, b) => Number(b.orphan) - Number(a.orphan) || b.files - a.files);
 }
@@ -359,7 +377,7 @@ function printReport(r) {
   console.log(`brain lanes: ${r.lanes_checked} checked · ${r.lanes_bleeding} bleeding`);
   if ((r.undeclared_lanes || []).length) {
     console.log(`undeclared lanes (G13 PASS 1b — dirs no job declares): ${r.undeclared_lanes.length}`);
-    for (const u of r.undeclared_lanes) console.log(`  ${u.orphan ? "⚠" : "·"} brain_out/${u.dir}/ — ${u.files} file(s), ${u.consumers.length} reader(s)${u.consumers.length ? ` (${u.consumers.slice(0, 3).join(", ")})` : " — written by a side channel, read by NOTHING"}`);
+    for (const u of r.undeclared_lanes) console.log(`  ${u.orphan ? "⚠" : "·"} brain_out/${u.dir}/ — ${u.files} file(s), ${u.consumers.length} reader(s)${u.vaulted ? " — VAULTED (retired residue, see its _VAULTED.md)" : u.consumers.length ? ` (${u.consumers.slice(0, 3).join(", ")})` : " — written by a side channel, read by NOTHING"}`);
   }
   for (const l of r.lanes.filter((x) => x.bleeds.length)) {
     console.log(`  ✗ ${l.job} → brain_out/${l.out}`);
@@ -396,6 +414,11 @@ function selftest() {
   mkfile("fresh_lane/2026-08-04.md", 2);
   mkfile("stale_lane/2026-07-20.md", 24 * 15);
   mkfile("orphan_lane/2026-08-04.md", 2);
+  mkfile("his_lane/2026-08-04.md", 2);
+  mkfile("his_stale_lane/2026-07-20.md", 24 * 15);
+  mkfile("vault_lane/_VAULTED.md", 2);
+  mkfile("vault_lane/2026-07-18.md", 24 * 20);
+  mkfile("side_lane/2026-08-04.md", 2);
 
   const cfg = { jobs: [
     { id: "fresh_job",  out: "fresh_lane",  enabled: true, at: "08:00" },
@@ -403,6 +426,8 @@ function selftest() {
     { id: "orphan_job", out: "orphan_lane", enabled: true, at: "08:00", surface: { kind: "human_read", where: "he opens it" } },
     { id: "never_job",  out: "never_lane",  enabled: true, at: "08:00" },
     { id: "off_job",    out: "off_lane",    enabled: false, at: "08:00" },
+    { id: "his_file_job",  out: "his_lane",       enabled: true, at: "08:00", surface: { kind: "human_file", where: "the captain batch-glances it" } },
+    { id: "his_stale_job", out: "his_stale_lane", enabled: true, at: "08:00", surface: { kind: "human_file", where: "the captain reads it" } },
   ] };
   // a fake corpus: only fresh_lane and stale_lane are referenced by anything
   const corpus = [{ file: "viz.mjs", text: `join("brain_out/fresh_lane", d); join("brain_out/stale_lane", d);` }];
@@ -421,10 +446,25 @@ function selftest() {
     !by("never_job").bleeds.some((b) => /stale/.test(b)));
   ok("a DISABLED job is a decision, not a defect — no bleed", by("off_job").bleeds.length === 0);
   ok("the headline is COMPUTED, never the literal 'ok' (findings #68/#69)",
-    /lane\(s\) bleeding/.test(r.status) && r.lanes_bleeding === 3);
+    /lane\(s\) bleeding/.test(r.status) && r.lanes_bleeding === 4);
   ok("a weekly job gets a WEEKLY bar, derived from its own /days declaration",
     Math.round(expectedMaxAgeHours({ days: ["sun"], at: "20:00" })) === 336);
   ok("a daily job gets a two-day bar", Math.round(expectedMaxAgeHours({ at: "08:00" })) === 48);
+
+  // --- H0 FLOW AUDIT (10 Aug 2026): the human_file exemption + the vault ----
+  ok("HUMAN_FILE declared + no measured reader = a NOTE, never a bleed (the declaration working)",
+    by("his_file_job").bleeds.length === 0 &&
+    by("his_file_job").notes.some((n) => /human_file by declaration/.test(n)));
+  ok("HUMAN_FILE staleness stays FULLY LIVE — the exemption covers readers, not freshness",
+    by("his_stale_job").bleeds.some((b) => /stale/.test(b)) &&
+    !by("his_stale_job").bleeds.some((b) => /no reader/.test(b)));
+  ok("a lesser surface kind (human_read, not the law's human_file) still bleeds — no accidental blanket",
+    by("orphan_job").bleeds.some((b) => /no reader/.test(b)));
+  const und = (id) => (r.undeclared_lanes || []).find((u) => u.dir === id);
+  ok("PASS 1b — a _VAULTED.md dir is reported but NOT an orphan (retired residue, layering law)",
+    und("vault_lane") && und("vault_lane").vaulted === true && und("vault_lane").orphan === false);
+  ok("PASS 1b — an undeclared dir WITHOUT the marker still surfaces as an orphan",
+    und("side_lane") && und("side_lane").orphan === true);
 
   // --- THE THREE FALSE POSITIVES from the first live run -------------------
   // A reconciler that cries wolf is the exact defect it exists to remove, so each
