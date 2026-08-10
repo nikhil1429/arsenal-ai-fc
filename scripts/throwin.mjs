@@ -26,12 +26,15 @@
 //           cross-run dedup memory for phone-delivered cartridges (E2E audit
 //           25 Jul 2026: it was documented away here and dropped by three of the
 //           four writers; every write now goes through buildState()).
+// RELAY:  every ball the bus has not seen is ALSO posted through the thalamus
+//         door (:4113/afferent) as modality "throwin" — this file writes NOTHING
+//         there; thalamus.mjs stays afferent.jsonl's sole writer. See #WIRE below.
 // MODES:  run (default) · selftest
 // RULES (CONDUCTOR §4): deterministic · zero-LLM · network ONLY to the ntfy
 //   server (injectable fetchFn) · atomic writes · empty-safe · never fabricate.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, unlinkSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -49,6 +52,52 @@ const DEFAULTS = {
   topic_env: "ARSENAL_NTFY_TOPIC",
   timeout_ms: 15000,
 };
+
+// ---------------------------------------------------------------------------
+// #WIRE (dead-wire sweep, 11 Aug 2026) — THE THROW-IN NEVER REACHED THE BUS.
+// ---------------------------------------------------------------------------
+// distiller.mjs's INTERACTIVE window has listed "throwin" since it was written.
+// That organ's whole job is the captain's OPEN LOOP, and a throw-in is the
+// purest open-loop material this organism has — the doubt caught at the moment
+// of confusion, nowhere near the desk. But nothing ever posted that modality:
+// measured on the live bus the hour this was found, 0 of 5,252 afferent rows
+// carry it (context 3,022 · code 1,409 · voice 356 · pulse 204 · bus 185 ·
+// vision 70 · desktop-study 6). This file appended loose_balls.jsonl and
+// stopped. A consumer with no producer is dead, and so was the lane: the
+// re-entry card, the thalamus's binding, the salience ledger — every reader of
+// the bus was structurally blind to anything he threw in from his phone.
+//
+// THE ORDER IS THE GUARD: the ledger append happens FIRST, the post second.
+// loose_balls.jsonl is the verbatim, recoverable store (the same reasoning the
+// M12 diversion gate is built on); a door that is down must never cost a ball.
+//
+// NO NEW STATE — THE BUS IS ITS OWN LEDGER. harvest.mjs keeps a delivery ledger
+// because a harvested turn has no other id; a ball already carries the ntfy id
+// this organ dedups on everywhere else, so "has it been relayed" is answered by
+// reading the bus for event_key `throwin:<id>`. That matters here specifically:
+// IRON GUARD #2 pins throwin_state.json's schema to STATE_KEYS and the selftest
+// asserts it, so a `posted` flag or a relay counter would have been a law break.
+// The side effect is free self-healing — a thalamus asleep at 03:00 costs
+// nothing, the next 15-minute poll relays the backlog.
+//
+// PROVENANCE IS DELIBERATELY MODEST: source "throwin", which is NOT in
+// thalamus_config.json's self_sources, so these score self=0 and get no derived
+// concept_tokens. Every addition to that list carries a receipt of HIS ruling
+// (_gemini_lane_2026_08_09, _gaffer_lane_2026_08_09) and the file is
+// approval-gated — his most raw doubts arguably belong there, but that is his
+// word to give, not this pass's to assume. The wire this repair owes is the
+// distiller's, and the distiller filters on MODALITY, so it closes fully here.
+//
+// NOT WIRED, ON PURPOSE: brain.mjs's liveSignal() modality list. That function
+// answers "is he at the desk right now" so the daemon can leave him alone; a
+// phone dictation at 23:40 is the exact opposite of that signal and adding it
+// there would un-protect him.
+// ---------------------------------------------------------------------------
+const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
+// NOT NEW NUMBERS — both mirrored verbatim from harvest.mjs, the other organ that
+// feeds this same door from outside the desk. Same door, same budget.
+const POST_TIMEOUT_MS = 400;
+const POST_SPACING_MS = 150;   // harvest.mjs BURST LAW: binding_ms is 900, so spaced posts stay distinct moments
 
 function loadConfig(path = CFG_PATH) {
   try {
@@ -147,6 +196,89 @@ function loadExistingIds(path = BALLS) {
     }
   } catch { /* unreadable → empty */ }
   return ids;
+}
+
+// every ball on disk, newest last. loadExistingIds above is left byte-for-byte
+// alone: it answers a different question (ids only, for the ntfy dedup) on the
+// hottest path in the file, and rewriting it to share this reader would be a
+// modification with no defect behind it.
+function loadBalls(path = BALLS) {
+  const out = [];
+  try {
+    if (existsSync(path)) {
+      for (const line of readFileSync(path, "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { out.push(JSON.parse(line)); } catch { /* corrupt line skipped, same as loadExistingIds */ }
+      }
+    }
+  } catch { /* unreadable → empty */ }
+  return out;
+}
+
+// the ids the bus already holds — ROLL-SAFE. thalamus.mjs renames afferent.jsonl
+// to afferent.YYYY-MM.jsonl at boot on a month boundary, so a reader that opens
+// only the live file goes blind on the 1st of every month and would re-post the
+// whole backlog into his re-entry card. Same trap harvest.mjs's busTurnHashes
+// closes; no hashing needed here because the ntfy id is already the dedup key.
+function busThrowinIds(stateDir = STATE_DIR) {
+  const ids = new Set();
+  let files = [];
+  try { files = readdirSync(stateDir).filter(f => /^afferent(\.\d{4}-\d{2})?\.jsonl$/.test(f)); } catch { /* no dir → nothing on the bus */ }
+  for (const f of files) {
+    try {
+      for (const line of readFileSync(join(stateDir, f), "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          const r = JSON.parse(line);
+          if (r && r.modality === "throwin" && typeof r.event_key === "string" && r.event_key.startsWith("throwin:")) {
+            ids.add(r.event_key.slice("throwin:".length));
+          }
+        } catch { /* corrupt bus line skipped */ }
+      }
+    } catch { /* unreadable archive skipped — better a re-post than a lost lane */ }
+  }
+  return ids;
+}
+
+// ONE ball through the door. Fail-silent by design: the ball is already safe in
+// loose_balls.jsonl before this runs, and an unreachable thalamus must not turn
+// a captured thought into a crashed poll.
+async function postBall(ball, fetchFn) {
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), POST_TIMEOUT_MS);
+    try {
+      await fetchFn(THALAMUS + "/afferent", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          modality: "throwin", source: "throwin",
+          text: ball.text,                       // VERBATIM — iron guard #1, the same bytes the ledger holds
+          ts: ball.ts,                           // HIS moment (ntfy's time), never the poll's clock
+          event_key: `throwin:${ball.id}`,       // stable + unique ⇒ no habituation collapse, and it IS the dedup key
+        }),
+        signal: ctl.signal,
+      });
+    } finally { clearTimeout(t); }
+    return true;
+  } catch { return false; }
+}
+
+// relay every ball the bus has never seen. The return is CONSOLE-ONLY: iron
+// guard #2 holds because nothing here is persisted, so no organ anywhere can
+// read a "throw-ins relayed" figure and coach the verb at him.
+async function relayBalls(balls, deps = {}) {
+  const fetchFn = deps.fetchFn || fetch;
+  const sleepFn = deps.sleepFn || ((ms) => new Promise(r => setTimeout(r, ms)));
+  const onBus = deps.onBus !== undefined ? deps.onBus : busThrowinIds(deps.stateDir || STATE_DIR);
+  const all = (balls || []).filter(b => b && b.id && String(b.text || "").trim().length > 0);
+  const todo = all.filter(b => !onBus.has(b.id));
+  const out = { posted: 0, skipped_on_bus: all.length - todo.length, failed: 0 };
+  for (let i = 0; i < todo.length; i++) {
+    if (await postBall(todo[i], fetchFn)) { out.posted += 1; onBus.add(todo[i].id); }
+    else out.failed += 1;                                    // unburned: the next poll finds it missing from the bus and retries
+    if (i < todo.length - 1) await sleepFn(POST_SPACING_MS);
+  }
+  return out;
 }
 
 async function defaultFetch(url, timeout_ms) {
@@ -371,6 +503,84 @@ async function selftest() {
   assert("atomic state write lands", existsSync(p) && JSON.parse(readFileSync(p, "utf8")).wired === true);
   assert("config fallback to DEFAULTS", loadConfig("__no_such__").server === "https://ntfy.sh");
 
+  // ------------------------------------------------------------------------
+  // #WIRE — THE BUS LEG (dead-wire sweep, 11 Aug 2026). Zero network, zero live
+  // state: an injected fetchFn, an injected sleep, and a tmpdir standing in for
+  // dressing-room/state. These are the assertions that fail if the lane dies
+  // again — one for each way it was dead: nobody posted, and nobody would have
+  // noticed because no consumer names the modality it is waiting for.
+  // ------------------------------------------------------------------------
+  {
+    const raw2 = "  seedhiyon pe khayal aaya — attention ka softmax temperature se kya hota hai?  ";
+    const b1 = { ts: "2026-08-11T09:00:00Z", id: "n1", text: raw2, routed: false };
+    const b2 = { ts: "2026-08-11T09:05:00Z", id: "n2", text: "kal ka pehla move", routed: false };
+    const sent = [];
+    const okFetch = async (url, opt) => { sent.push({ url, body: JSON.parse(opt.body) }); return { ok: true }; };
+    const noSleep = async () => { };
+
+    const r1 = await relayBalls([b1, b2], { fetchFn: okFetch, sleepFn: noSleep, onBus: new Set() });
+    assert("#WIRE every unseen ball goes through the THALAMUS DOOR (never a direct afferent write)",
+      r1.posted === 2 && sent.length === 2 && sent.every(s => s.url === THALAMUS + "/afferent"));
+    // THE ASSERTION THAT FAILS IF THE PRODUCER SIDE BREAKS: 0 of 5,252 live rows
+    // carried this modality before today, and distiller.mjs had been filtering for
+    // it the whole time.
+    assert("#WIRE the relayed event is modality 'throwin', sourced, and keyed by the ntfy id",
+      sent[0].body.modality === "throwin" && sent[0].body.source === "throwin" && sent[0].body.event_key === "throwin:n1");
+    assert("#WIRE IRON GUARD #1 survives the hop — text byte-for-byte, HIS ts not the poll's",
+      sent[0].body.text === raw2 && sent[0].body.ts === "2026-08-11T09:00:00Z");
+    // THE ASSERTION THAT FAILS IF THE CONSUMER SIDE BREAKS: this is a live import
+    // of the organ that named the gap, run against the exact event shape posted
+    // above. If distiller drops "throwin" from INTERACTIVE, or this file renames
+    // the modality, the wire is cut and this line goes red — which is precisely
+    // what nothing did for the whole life of the lane.
+    {
+      const D = await import("./distiller.mjs");
+      const busRows = sent.map(s => s.body);
+      const seen = D.recentStream("no-dir", 25, D.INTERACTIVE, busRows);
+      assert("#WIRE the working set can SEE it — distiller's INTERACTIVE window still carries 'throwin' and picks the row up",
+        D.INTERACTIVE.includes("throwin") && seen.length === 2 && seen[0].text === raw2.trim());
+      const floor = D.deterministicSet(seen, [], null);
+      assert("#WIRE a thrown-in DOUBT lands in his open_loop (the slot the lane exists to feed)",
+        floor.open_loop.startsWith("seedhiyon pe khayal aaya") && floor.where_left_off.length > 0);
+    }
+
+    // dedup: the bus is the ledger, so a ball already relayed never doubles
+    const r2 = await relayBalls([b1, b2], { fetchFn: okFetch, sleepFn: noSleep, onBus: new Set(["n1", "n2"]) });
+    assert("#WIRE a ball already on the bus is never re-posted (the bus IS the ledger, no new state)",
+      r2.posted === 0 && r2.skipped_on_bus === 2 && sent.length === 2);
+
+    // door down → the ball is NOT lost, it is un-relayed, and the next tick heals it
+    const deadFetch = async () => { throw new Error("ECONNREFUSED"); };
+    const down = await relayBalls([b1], { fetchFn: deadFetch, sleepFn: noSleep, onBus: new Set() });
+    assert("#WIRE thalamus down = fail-silent, counted, never a crashed poll", down.posted === 0 && down.failed === 1);
+    const healed = await relayBalls([b1], { fetchFn: okFetch, sleepFn: noSleep, onBus: new Set() });
+    assert("#WIRE SELF-HEALING — the un-relayed ball posts on the next tick with no state remembering it",
+      healed.posted === 1 && healed.failed === 0);
+
+    // roll-safety: the bus rolls to afferent.YYYY-MM.jsonl monthly. A reader that
+    // only opened the live file would re-post his whole backlog every 1st.
+    const bd = join(os.tmpdir(), "throwin-selftest-bus-" + Date.now());
+    mkdirSync(bd, { recursive: true });
+    writeFileSync(join(bd, "afferent.2026-07.jsonl"), JSON.stringify({ modality: "throwin", event_key: "throwin:old1", text: "purana khayal" }) + "\n");
+    writeFileSync(join(bd, "afferent.jsonl"),
+      JSON.stringify({ modality: "throwin", event_key: "throwin:n1", text: raw2 }) + "\n"
+      + JSON.stringify({ modality: "code", source: "claude-code", text: "not a throw-in" }) + "\n"
+      + "{corrupt\n");
+    const onBus = busThrowinIds(bd);
+    assert("#WIRE bus dedup is ROLL-SAFE (archived months count) and ignores other lanes + corrupt rows",
+      onBus.has("old1") && onBus.has("n1") && onBus.size === 2);
+    assert("#WIRE no bus at all (fresh machine) → empty set, never a crash", busThrowinIds("__no_such_dir__").size === 0);
+    const r3 = await relayBalls([b1, { ts: "t", id: "old1", text: "purana khayal" }], { fetchFn: okFetch, sleepFn: noSleep, stateDir: bd });
+    assert("#WIRE the real bus reader drives the real relay — both already-seen balls skip", r3.posted === 0 && r3.skipped_on_bus === 2);
+
+    // IRON GUARD #2 at the new door: the relay persists NOTHING, so no organ can
+    // ever read a throw-in usage count out of it.
+    assert("#WIRE NEVER-COUNTS law holds at the bus leg — the relay writes no state file",
+      !/writeAtomic\(|appendFileSync\(/.test(String(relayBalls)) && !/writeAtomic\(|appendFileSync\(/.test(String(postBall)));
+    assert("#WIRE the ball schema is untouched by the relay (still exactly id,routed,text,ts)",
+      Object.keys(b1).sort().join(",") === "id,routed,text,ts");
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -454,9 +664,18 @@ async function main() {
     last_since: nextWatermark(prevSince, maxTime, retryFloor),
     rep_ids: priorRepIds.concat(settledRepIds),
   }));
-  console.log(`throwin: ${balls.length} ball(s) landed → ${BALLS}`);
+  // #WIRE — THE BUS LEG (11 Aug 2026). Runs AFTER the ledger append and after the
+  // watermark write, so no failure in here can cost a ball or stall the poller.
+  // It relays every ball the bus is missing, not just this tick's, which is what
+  // makes a thalamus-down window heal itself with no state to remember it by.
+  let relay = { posted: 0, skipped_on_bus: 0, failed: 0 };
+  try { relay = await relayBalls(loadBalls()); } catch { /* the bus can never block the throw-in */ }
+  console.log(`throwin: ${balls.length} ball(s) landed → ${BALLS}`
+    + (relay.posted ? ` · ${relay.posted} relayed to the bus` : "")
+    + (relay.failed ? ` · ${relay.failed} bus post(s) failed — retry next tick` : ""));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { ingest, resolveTopic, loadConfig, loadExistingIds, completeReps, readPriorState, buildState, nextWatermark };
+export { ingest, resolveTopic, loadConfig, loadExistingIds, completeReps, readPriorState, buildState, nextWatermark,
+         loadBalls, busThrowinIds, relayBalls, postBall };

@@ -30,12 +30,23 @@
 //
 // OUTPUTS (single writer = this file; both gitignored — personal study data):
 //   dressing-room/state/cards.json      → { date, engine, request_retention,
-//       total_cards, due_today, overdue, hardest_due:[concept...], status,
+//       total_cards, due_today, overdue, hardest_due:[concept...],
+//       naming:{named,due_total,cap,complete,unnamed,line}, status,
 //       generated_at }  (Manager-facing summary, THE_MANAGER §10 shape;
 //       status:"awaiting_data" when there are no reps yet).
+//       `naming` (wiring audit 10 Aug 2026) is hardest_due's COMPLETENESS: the list
+//       is capped at cfg.hardestDueMax and every reader was treating it as whole.
+//       complete:false ⇒ hardest_due is a HEAD, not the due set. Read the field;
+//       do not re-derive it from due_today+overdue.
+//       `evidence` (wiring audit 11 Aug 2026) is WHERE the history came from:
+//       {measured, rejirah_graded, legacy_gist, unmeasured_cards[], line, note}.
+//       measured+rejirah_graded+legacy_gist == collapse.raw_reps. A name in
+//       `unmeasured_cards` has NO measured recall behind its interval.
 //   dressing-room/state/fsrs_store.json → { date, engine, request_retention,
 //       generated_at, cards:[{concept,id,stability,difficulty,last_review,due,
-//       reps,lapses,state}] }  (per-card store).
+//       reps,lapses,state,seed_basis,evidence}] }  (per-card store).
+//       seed_basis ∈ measured | rejirah-graded | legacy-gist | mixed — the card-level
+//       summary of capsuleSeedReps' per-rep tag, which reached NO file until 11 Aug 2026.
 //
 // EMPTY-SAFE: no reps → cards.json = {due_today:0, overdue:0, hardest_due:[],
 //   status:"awaiting_data"} and an empty store. NEVER fabricates a card.
@@ -163,11 +174,21 @@ function writeAtomic(path, obj) {
 // entries from before the controller existed, and we have no grades for them. They
 // are TAGGED `seed_basis:"legacy-gist"` so an unmeasured pass can never again be
 // mistaken for a measured one.
-function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl")) {
+// `faults` is an OUT-PARAM, added by the dead-wire sweep of 10 Aug 2026 — the two
+// empty catches below swallowed an unparseable round row and an unreadable log alike,
+// and the caller could not tell "he has sat no rounds" from "I could not read them".
+// The difference is not cosmetic: with the map empty EVERY reJirahDone date falls back
+// to the frozen `legacy-gist` assumption (knew/correct), so a round he honestly cracked
+// replays as Rating.Easy — audit #108's bug, arriving through the back door.
+// ADDITIVE, never a replacement (LAYERING law): the return value and every branch are
+// byte-for-byte what they were, and the default `[]` means every existing caller and
+// every frozen selftest fixture behaves exactly as before.
+function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl"), faults = []) {
   const grades = [];               // {ts, concept, axis, result, gut, round}
   const closes = [];               // {ts, concept, round, due, axes_graded}
+  const why = (e) => String((e && e.message) || e).slice(0, 140);
   try {
-    if (!existsSync(path)) return new Map();
+    if (!existsSync(path)) return new Map();   // absent log = honest absence, never a fault
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
       const s = line.trim(); if (!s) continue;
       try {
@@ -175,9 +196,9 @@ function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl")) {
         if (!j || !j.concept) continue;
         if (j.kind === "round-close") closes.push(j);
         else if (j.axis) grades.push(j);
-      } catch { }
+      } catch (e) { faults.push({ file: "rejirah_log.jsonl", why: `unparseable row: ${why(e)}`, blocking: false }); }
     }
-  } catch { return new Map(); }
+  } catch (e) { faults.push({ file: "rejirah_log.jsonl", why: `unreadable: ${why(e)}`, blocking: true }); return new Map(); }
 
   // Key on concept + the DUE date's calendar day, because that is the only field
   // the capsule's reJirahDone array carries back. Day-granularity, not instant:
@@ -235,14 +256,36 @@ function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl")) {
   return out;
 }
 
-function capsuleSeedReps(dir = join(STATE_DIR, "capsules"), rounds = readRejirahRounds()) {
+// `report` is an OUT-PARAM — dead-wire sweep, 10 Aug 2026. THE DEFECT: the two empty
+// catches at the bottom of this function swallowed an unparseable capsule and an
+// unreadable capsules/ dir alike, and emitted no count of what was read or skipped.
+// The capsule floor is the DECAY GUARD for every locked concept; mirror.mjs re-fetches
+// capsules/ every morning (06:55 + the forge lock-close event), so one truncated or
+// half-written fetch quietly removed that concept's card from the schedule while
+// cards.json still said status "ok" with a smaller total_cards and not one field
+// naming the loss. Counting costs nothing and turns a silent subtraction into a
+// declared one — same idiom capsule_bridge.mjs:loadCapsules got the same day.
+// ADDITIVE, never a replacement (LAYERING law): the seed math is untouched, the
+// return value is still the seed array, and with no `report` passed every existing
+// caller — including the four frozen selftest fixtures below — behaves identically.
+function capsuleSeedReps(dir = join(STATE_DIR, "capsules"), rounds = readRejirahRounds(), report = null) {
   const out = [];
+  const concepts = [];                 // every capsule this run could actually READ
+  const faults = [];
+  let files = 0, read = 0, skipped = 0;
+  const dir_present = existsSync(dir);
+  const why = (e) => String((e && e.message) || e).slice(0, 140);
   try {
     for (const f of readdirSync(dir).filter(x => x.endsWith(".json"))) {
+      files++;
       try {
         const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
         const concept = String(j.id || f.replace(".json", "")).trim();
-        if (!concept) continue;
+        // A capsule with neither an id nor a filename to name it cannot become a card.
+        // It used to `continue` in silence, which is the same subtraction as a parse
+        // failure and is now counted as one.
+        if (!concept) { skipped++; faults.push({ file: `capsules/${f}`, why: "parsed, but carries no id — cannot be mapped to a concept", blocking: true }); continue; }
+        read++; concepts.push(concept);
         const dates = [];
         if (j.lockedOn && !Number.isNaN(Date.parse(j.lockedOn))) dates.push(j.lockedOn);
         for (const d of (Array.isArray(j.reJirahDone) ? j.reJirahDone : [])) if (d && !Number.isNaN(Date.parse(d))) dates.push(d);
@@ -280,10 +323,62 @@ function capsuleSeedReps(dir = join(STATE_DIR, "capsules"), rounds = readRejirah
             seed_basis: round ? "rejirah-graded" : "legacy-gist",
           });
         }
-      } catch { }
+      } catch (e) { skipped++; faults.push({ file: `capsules/${f}`, why: why(e), blocking: true }); }
     }
-  } catch { }
+  } catch (e) {
+    // An ABSENT capsules/ is an honest absence, never a fault (capsule_bridge.mjs:278's
+    // precedent, same dir, same day). A dir that exists and still cannot be listed is.
+    if (dir_present) faults.push({ file: "capsules/", why: `directory unreadable: ${why(e)}`, blocking: true });
+  }
+  if (report && typeof report === "object") Object.assign(report, { dir_present, files, read, skipped, concepts, faults, seeds: out.length });
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// THE FLOOR, DECLARED (dead-wire sweep, 10 Aug 2026)
+// ---------------------------------------------------------------------------
+// Turns the counters above into the block cards.json carries — same idiom as `gate`,
+// `collapse` and `naming`: a counter with its denominator and a printable line, written
+// by the producer instead of inferred by a neighbour.
+//
+// WHERE THE DENOMINATOR COMES FROM — NOT A NUMBER CHOSEN HERE. `files` only says how
+// many capsule files happened to be on disk this second, so a fetch that never landed
+// is invisible to it (3 files, all parsing cleanly, reads as complete). mirror.mjs —
+// the capsules/ dir's ONLY writer — already publishes what SHOULD be there in
+// mirror_manifest.json: `enumeration.ids`, the gist's own list, with `enumeration.ok`
+// saying whether that list was actually retrieved. So `expected` is the mirror's own
+// count, read off its own file, and `missing` names the concepts the mirror says exist
+// and this run could not seed.
+// An unreadable/absent manifest ⇒ expected_known:false and expected null — UNKNOWN,
+// never a measured zero (capsule_bridge.mjs's rule for exactly this case). `complete`
+// then rests on `skipped` alone and says so in the line, so a missing manifest can
+// never manufacture a false alarm.
+function floorReport(report, manifest, roundsFaults = []) {
+  const r = report || {};
+  const files = Number(r.files) || 0, read = Number(r.read) || 0, skipped = Number(r.skipped) || 0;
+  const faults = Array.isArray(r.faults) ? r.faults : [];
+  const enume = manifest && typeof manifest === "object" ? manifest.enumeration : null;
+  const ids = (enume && enume.ok === true && Array.isArray(enume.ids)) ? enume.ids.map(normId).filter(Boolean) : null;
+  const expected = ids ? ids.length : null;
+  const got = new Set((Array.isArray(r.concepts) ? r.concepts : []).map(normId));
+  const missing = ids ? ids.filter((id) => !got.has(id)) : [];
+  const complete = skipped === 0 && missing.length === 0 && faults.length === 0;
+  const denom = expected === null ? files : expected;
+  const line = `${read}/${denom} capsules seeded${expected === null ? " (expected UNKNOWN — mirror_manifest unreadable)" : ""}`
+    + (skipped ? ` · ${skipped} SKIPPED` : "")
+    + (missing.length ? ` · MISSING ${missing.join(", ")} (mirror has them, this run does not)` : "")
+    + ` · ${Number(r.seeds) || 0} seed reps`;
+  return {
+    dir_present: r.dir_present !== false,
+    files, read, skipped, seeds: Number(r.seeds) || 0,
+    expected, expected_known: expected !== null, expected_source: expected === null ? null : "mirror_manifest.enumeration.ids",
+    missing, complete,
+    faults: faults.map((x) => x.file), fault_details: faults,
+    rounds_faults: roundsFaults.map((x) => x.file),
+    line, owner: "mirror.mjs (sole writer of capsules/)",
+    note: complete ? null
+      : "the capsule floor is SHORT — a locked concept with no seed has NO FSRS card, so its decay guard is OFF and total_cards under-counts (dead-wire sweep, 10 Aug 2026)",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +495,26 @@ function buildStore(reps, f, cfg = CFG) {
     const events = collapseReviews(sorted, cfg);
     let card = createEmptyCard(new Date(events[0].rep.ts));
     for (const e of events) card = f.next(card, new Date(e.rep.ts), ratingOf(e.rep)).card;
+    // WIRING AUDIT 11 Aug 2026 — THE TAG THAT NEVER LEFT MEMORY (see the push below).
+    // Counted over the RAW reps, not the events: a collapsed day can hold a capsule
+    // seed AND a live rep, and the merged event has no single basis to report. So
+    // these three sum to raw_reps (never review_events), and a reader who wants the
+    // difference already has `collapsed` sitting beside them.
+    // NOT A NEW NUMBER AND NOT A THRESHOLD — it is a classification of rows already
+    // on the bus. `measured` = a rep that carries no seed_basis, i.e. one capture.mjs
+    // wrote because he actually sat it. The other two are capsuleSeedReps' own words,
+    // carried verbatim (:285).
+    let measured = 0, rejirahGraded = 0, legacyGist = 0;
+    for (const r of sorted) {
+      if (r.seed_basis === "rejirah-graded") rejirahGraded++;
+      else if (r.seed_basis === "legacy-gist") legacyGist++;
+      else measured++;
+    }
+    const seeded = rejirahGraded + legacyGist;
+    const basis = seeded === 0 ? "measured"
+      : measured === 0 && legacyGist === 0 ? "rejirah-graded"
+      : measured === 0 && rejirahGraded === 0 ? "legacy-gist"
+      : "mixed";
     store.push({
       concept: g.display, id,
       stability: round(card.stability),
@@ -413,6 +528,23 @@ function buildStore(reps, f, cfg = CFG) {
       raw_reps: sorted.length, review_events: events.length,
       collapsed: sorted.length - events.length,
       review_unit: (cfg && cfg.review_unit) || "none",
+      // WIRING AUDIT 11 Aug 2026 — THE TAG THAT NEVER LEFT MEMORY.
+      // capsuleSeedReps stamps every seeded rep `seed_basis` — "rejirah-graded" when
+      // the gist date matched a real graded round, "legacy-gist" when it is one of his
+      // hand-written pre-controller dates that we replay as knew/correct BECAUSE WE
+      // HAVE NO GRADE FOR IT (:167-170). The tag was written so "an unmeasured pass can
+      // never again be mistaken for a measured one" — and then it died right here: this
+      // push never carried it, so `grep -rn seed_basis dressing-room/` returned 0 and
+      // the tag lived only in memory and in the selftest. Built, correct, unwired.
+      // MEASURED ON THE LIVE BUS, 10 Aug 2026: tokenization sat at stability 112.0174,
+      // due 2026-10-19 — three reviews, ALL of them capsule seeds, TWO of them ungraded
+      // gist dates replayed as Rating.Easy — and fsrs_store.json said nothing that could
+      // distinguish it from a card he had actually re-sat three times cold.
+      // `seed_basis` here is the CARD-level summary word (same name on purpose, so the
+      // grep that found this dead closes on the live file). "legacy-gist" is the
+      // dangerous one: nothing in that card's history was ever measured.
+      evidence: { measured, rejirah_graded: rejirahGraded, legacy_gist: legacyGist },
+      seed_basis: basis,
     });
   }
   return store;
@@ -431,7 +563,28 @@ function bucketize(store, now, cfg) {
   }
   dueCards.sort((a, b) => (Date.parse(a.due) - Date.parse(b.due)) || (a.stability - b.stability));
   const hardest_due = dueCards.slice(0, cfg.hardestDueMax).map((c) => c.concept);
-  return { overdue, due_today, hardest_due };
+  // WIRING AUDIT 10 Aug 2026 — THE CUT THAT NEVER SAID SO.
+  // The slice above has capped this list since the day it shipped and cards.json
+  // carried NOTHING naming the cap, so every reader downstream took a capped list
+  // for the whole due set: manager.mjs:572 renders it to the Gaffer as "N due,
+  // M overdue [names]", dugout/nightshift/examiner re-slice it, and
+  // capsule_bridge.mjs had to RECONSTRUCT the truncation by arithmetic
+  // (due_today+overdue vs names.length) precisely because the producer stayed
+  // silent — an inference about a neighbour's slice, which is the wrong organ's job.
+  // Not biting on 10 Aug (4 due < cap 8); silently wrong the first morning he has 9.
+  // NO NEW NUMBER: `cap` is cfg.hardestDueMax, already in this file, and due_total
+  // is this run's own two counters — every card in dueCards was counted by exactly
+  // one of them, so named can never exceed due_total.
+  const due_total = overdue + due_today;
+  const unnamed = due_total - hardest_due.length;
+  const naming = {
+    named: hardest_due.length, due_total, cap: cfg.hardestDueMax,
+    complete: unnamed <= 0, unnamed: Math.max(0, unnamed),
+    line: unnamed <= 0
+      ? `${hardest_due.length}/${due_total} due cards named (complete list)`
+      : `${hardest_due.length}/${due_total} due cards named — ${unnamed} CUT by hardestDueMax=${cfg.hardestDueMax}; hardest_due is NOT the whole due set`,
+  };
+  return { overdue, due_today, hardest_due, naming };
 }
 
 function compute(reps, now, cfg, f) {
@@ -443,10 +596,31 @@ function compute(reps, now, cfg, f) {
   // logged and what FSRS scheduled from is a printed number and not an inference.
   const raw = store.reduce((a, c) => a + (c.raw_reps || 0), 0);
   const events = store.reduce((a, c) => a + (c.review_events || 0), 0);
+  // WIRING AUDIT 11 Aug 2026 — the same evidence basis, summed, plus the NAMES of the
+  // cards that rest on nothing measured. fsrs_store.json carries it per card; this is
+  // the Manager-facing half, because cards.json is the file ten organs actually open
+  // (capsule_bridge · manager · dugout · nemesis · setpiece · rejirah · heartbeat …)
+  // and a per-card field none of them read would be the same dead wire one level up.
+  // No threshold and no judgement: `unmeasured_cards` is exactly the set whose
+  // seed_basis is "legacy-gist". Whether an unmeasured card should be FORCED due, or
+  // ranked differently, is a change to what he studies — that is the captain's call and
+  // is deliberately not made here (AI proposes · code validates · human approves).
+  const ev = store.reduce((a, c) => {
+    const e = (c && c.evidence) || {};
+    a.measured += e.measured || 0;
+    a.rejirah_graded += e.rejirah_graded || 0;
+    a.legacy_gist += e.legacy_gist || 0;
+    if (c && c.seed_basis === "legacy-gist") a.unmeasured_cards.push(c.concept);
+    return a;
+  }, { measured: 0, rejirah_graded: 0, legacy_gist: 0, unmeasured_cards: [] });
   const cards = {
     date, engine: ENGINE, request_retention: cfg.request_retention,
     total_cards: store.length,
     due_today: b.due_today, overdue: b.overdue, hardest_due: b.hardest_due,
+    // WIRING AUDIT 10 Aug 2026 — hardest_due's completeness, declared by its own
+    // producer instead of inferred downstream. Same idiom as `gate` and `collapse`
+    // below: a counter with its denominator and a printable line. See bucketize().
+    naming: b.naming,
     status: store.length ? "ok" : "awaiting_data",
     // ORGANISM AUDIT #106 — THE UNGATE. A refusal must be a measurement with its
     // denominator shown, never the bare word. fsrs's only gate is "does one card
@@ -463,6 +637,15 @@ function compute(reps, now, cfg, f) {
       raw_reps: raw, review_events: events, collapsed: raw - events,
       line: `${events}/${raw} review events (${raw - events} same-day reps merged)`,
       note: "FSRS schedules in whole days; reps inside one day carry elapsed_days=0 and cannot inform an interval (organism audit #24)",
+    },
+    // WIRING AUDIT 11 Aug 2026 — where each card's history CAME FROM, on the bus.
+    // The three counts sum to collapse.raw_reps (they classify raw reps, not events).
+    evidence: {
+      measured: ev.measured, rejirah_graded: ev.rejirah_graded, legacy_gist: ev.legacy_gist,
+      unmeasured_cards: ev.unmeasured_cards,
+      line: `${ev.measured}/${raw} reps measured · ${ev.rejirah_graded} re-Jirah-graded · ${ev.legacy_gist} ungraded gist`
+        + (ev.unmeasured_cards.length ? ` · UNMEASURED cards: ${ev.unmeasured_cards.join(", ")}` : ""),
+      note: "a card whose seed_basis is 'legacy-gist' has NO measured recall in it — its whole interval rests on hand-written gist dates replayed as knew/correct because no grade for them exists (fsrs.mjs, THE RE-JIRAH BRIDGE). Per-card seed_basis + evidence ride fsrs_store.json.",
     },
     generated_at,
   };
@@ -524,6 +707,36 @@ function selftest() {
   ];
   const bt = bucketize(tie, now, CFG);
   assert("hardest_due tie-break by lowest-stability", bt.hardest_due[0] === "tieLow");
+
+  // --- WIRING AUDIT 10 Aug 2026: the CAP must name itself in cards.json ---
+  // Would fail again the moment hardest_due goes back to being sliced silently.
+  assert("naming: an uncapped list declares itself COMPLETE with its own denominator",
+    b.naming.complete === true && b.naming.named === 3 && b.naming.due_total === 3
+    && b.naming.unnamed === 0 && b.naming.cap === CFG.hardestDueMax);
+  {
+    // cap+1 overdue cards through the REAL path (compute → cards.json shape), so a
+    // silent slice cannot pass: 9 due, 8 named, and the cut is a printed number.
+    const many = Array.from({ length: CFG.hardestDueMax + 1 }, (_, i) => ({
+      concept: `c${i}`, id: `c${i}`, due: D(-(i + 1) * 86400000), stability: 1 + i,
+    }));
+    const bm = bucketize(many, now, CFG);
+    assert("naming: a CAPPED hardest_due is declared incomplete, with the count that was cut",
+      bm.hardest_due.length === CFG.hardestDueMax && bm.naming.complete === false
+      && bm.naming.due_total === CFG.hardestDueMax + 1 && bm.naming.unnamed === 1
+      && /CUT by hardestDueMax/.test(bm.naming.line));
+    // ...and through the REAL path — compute() from actual reps, not a hand-made
+    // cards object. #33's lesson: a fixture the producer never wrote is a fixture
+    // that can hide the bug. cap+1 concepts, one old rep each ⇒ all overdue.
+    const manyReps = Array.from({ length: CFG.hardestDueMax + 1 }, (_, i) => ({
+      ts: `2026-06-${String(i + 1).padStart(2, "0")}T09:00:00Z`, surface: "gem",
+      track: "concept", concept: `r${i}`, question: `q${i}`, confidence: "knew", correct: true,
+    }));
+    const cm = compute(manyReps, now, CFG, f).cards;
+    assert("naming: the block reaches cards.json itself, and names the cut on the real path",
+      cm.hardest_due.length === CFG.hardestDueMax
+      && cm.naming.due_total === cm.due_today + cm.overdue
+      && cm.naming.complete === false && cm.naming.unnamed === cm.naming.due_total - CFG.hardestDueMax);
+  }
 
   // --- empty-safe ---
   const empty = compute([], now, CFG, f);
@@ -602,6 +815,49 @@ function selftest() {
       seedFor("cracked").find(s => s.ts === "2026-06-01T00:00:00.000Z").correct === true);
     assert("#108 a missing rejirah_log is empty-safe (no throw, every date reads legacy)",
       readRejirahRounds(join(tmp, "nope.jsonl")).size === 0 && capsuleSeedReps(rjDir, new Map()).every(s => s.seed_basis === "legacy-gist" || s.correct === true));
+    // --- WIRING AUDIT 11 Aug 2026: the tag must LEAVE MEMORY -----------------
+    // Every assertion above proves capsuleSeedReps STAMPS seed_basis. Not one of
+    // them followed it out of the function — and it never got out: buildStore's
+    // push dropped it, so no file on disk carried it and no consumer could tell an
+    // assumed pass from a measured one. These four are the lock on the way OUT.
+    // Fixture reading: `legacy`'s two dates are both ungraded (lock + a reJirahDone
+    // with no close row) ⇒ the whole card is unmeasured. `cracked` has the same
+    // ungraded lock PLUS a graded re-weld ⇒ mixed. Neither number is invented; both
+    // are counted off the rows written five lines above.
+    {
+      const wStore = buildStore(rjSeeds, f, CFG);
+      const wCard = (id) => wStore.find(c => c.id === id);
+      assert("WIRE: seed_basis reaches the per-card store — an all-ungraded card says legacy-gist out loud",
+        wCard("legacy").seed_basis === "legacy-gist"
+        && wCard("legacy").evidence.legacy_gist === 2 && wCard("legacy").evidence.measured === 0
+        && wCard("legacy").evidence.rejirah_graded === 0);
+      assert("WIRE: a graded re-weld on an ungraded lock reads MIXED, never a flat 'measured'",
+        wCard("cracked").seed_basis === "mixed"
+        && wCard("cracked").evidence.rejirah_graded === 1 && wCard("cracked").evidence.legacy_gist === 1);
+      // a real logged rep merged onto a seeded card: `measured` must count it, and the
+      // three counts must still sum to raw_reps (they classify RAW reps, not events)
+      const wMix = buildStore([...rjSeeds, { ts: "2026-08-09T09:00:00Z", surface: "gem", track: "concept", concept: "legacy", question: "cold", confidence: "shaky", correct: true }], f, CFG)
+        .find(c => c.id === "legacy");
+      assert("WIRE: a rep he actually sat counts as MEASURED, and the counts sum to raw_reps",
+        wMix.seed_basis === "mixed" && wMix.evidence.measured === 1
+        && wMix.evidence.measured + wMix.evidence.rejirah_graded + wMix.evidence.legacy_gist === wMix.raw_reps);
+      // ...and the summary half reaches cards.json, where the Manager-facing readers look
+      const wCards = compute(rjSeeds, now, CFG, f).cards;
+      assert("WIRE: cards.json carries the evidence basis and NAMES the cards with nothing measured",
+        wCards.evidence.legacy_gist === 4 && wCards.evidence.rejirah_graded === 2
+        && wCards.evidence.measured === 0
+        && wCards.evidence.measured + wCards.evidence.rejirah_graded + wCards.evidence.legacy_gist === wCards.collapse.raw_reps
+        && wCards.evidence.unmeasured_cards.includes("legacy")
+        && !wCards.evidence.unmeasured_cards.includes("cracked")
+        && /UNMEASURED cards: /.test(wCards.evidence.line));
+      // the honest negative: a card built ONLY from reps_log must never be tarred as
+      // seeded, and must never appear in unmeasured_cards
+      const wPure = compute([{ ts: "2026-07-20T09:00:00Z", surface: "gem", track: "concept", concept: "pure", question: "p1", confidence: "knew", correct: true }], now, CFG, f);
+      assert("WIRE: a card built only from real reps reads 'measured' and is never named unmeasured",
+        wPure.fsrsStore.cards[0].seed_basis === "measured"
+        && wPure.fsrsStore.cards[0].evidence.measured === 1
+        && wPure.cards.evidence.unmeasured_cards.length === 0);
+    }
     // THE TWO-ROUND FIXTURE THE FIRST CUT DID NOT HAVE (verify pass, 6 Aug 2026).
     // Every assertion above hand-writes round:1 on its grade rows — a shape the live
     // CLI never produces, because `rejirah.mjs grade` passes no round number at all.
@@ -736,7 +992,7 @@ function main() {
   const { cards, fsrsStore } = compute(reps, new Date(), CFG, f);
   writeAtomic(CARDS, cards);
   writeAtomic(STORE, fsrsStore);
-  console.log(`fsrs: ${cards.status} (${cards.gate.line}) — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}] · ${cards.collapse.line}  →  ${CARDS}`);
+  console.log(`fsrs: ${cards.status} (${cards.gate.line}) — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}] · ${cards.collapse.line} · ${cards.evidence.line}  →  ${CARDS}`);
   process.exit(0);
 }
 

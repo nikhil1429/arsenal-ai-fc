@@ -44,6 +44,7 @@ export function measureReality(stateDir = STATE) {
   const reps = readLines(join(stateDir, "reps_log.jsonl")).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const capsules = (() => { try { return readdirSync(join(stateDir, "capsules")).filter(f => f.endsWith(".json")).length; } catch { return 0; } })();
   const dg = readJson(join(stateDir, "doubt_grammar.json"));
+  const lex = readJson(join(stateDir, "lexicon.json"));
   const ledger = readLines(join(stateDir, "brain_ledger.jsonl")).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const days = (() => {
     const ts = reps.map(r => String(r.ts || "").slice(0, 10)).filter(Boolean).sort();
@@ -56,6 +57,60 @@ export function measureReality(stateDir = STATE) {
     span_days: days,
     capsules,
     doubts: dg && Array.isArray(dg.doubts) ? dg.doubts.length : (dg && dg.total_doubts) || 0,
+    // WIRING AUDIT (11 Aug 2026) — THE LEXICON'S OWN COUNTERS, which no organ read.
+    // doubtminer.mjs publishes three numbers about how his anchor list was built:
+    // `filtered_connectives` (#4's rejection count, live value 38) and, since the
+    // same-day cap repair, `anchors_mined` + `dropped_by_cap`. A grep for any of
+    // them across scripts/ and .claude/skills/ hit doubtminer.mjs and nothing else —
+    // producer with no consumer, the same shape as brain_calls_estimated below.
+    // Worse, doubtminer.mjs's own DEFAULTS comment stated as fact that max_anchors
+    // "is registered in limits.mjs BUDGETS as `guessed`" while `grep -n max_anchors
+    // scripts/limits.mjs` returned nothing — the ONE lexicon knob that had just been
+    // given a config key still had no ledger row, and the evidence for whether 25 is
+    // still the right cap reached a console.log and stopped. That row now EXISTS
+    // ("lexicon anchor cap", BUDGETS, below) — landed in this same 11 Aug wiring
+    // pass, minutes after this paragraph was written, which is why the paragraph is
+    // in the past tense. The counters below are the other half: the row carries the
+    // number, these carry what the number actually did to his anchor list.
+    // A NAME IS NOT A READ. That row's note first ended by POINTING at these counters
+    // ("read that before retuning this") — a measurement discharged by asking someone
+    // to remember where to look, which is the same ANCHOR-LAW break the distiller
+    // cadence row was repaired for hours earlier in this file ("sat unread by every
+    // organ for its whole life"). So the row READS them, via `measure` — the device
+    // GATES has always used for `have` — and these fields are that read.
+    // COUNTS ONLY — this file never judges the number, it exposes it for his
+    // 30-45-60-day read (the whole contract in this file's header).
+    // ABSENT IS NOT ZERO: the lexicon.json this paragraph was written against was
+    // the 2026-08-10 file, which predates anchors_mined/dropped_by_cap and carried
+    // neither key. (The owner has since re-run — the file on disk now carries both,
+    // 25 of 45 kept, 20 dropped — but the guard stands for every stale or
+    // never-re-run copy, and doubtminer's task sits Disabled in schtasks.) Reporting
+    // 0 dropped for a cap that in fact cut 20 of his phrases is the exact lie
+    // doubtminer's own selftest is written against — "a counter that reports 0 for a
+    // filter that fired". A missing key reads null here and prints "?" in the table.
+    lexicon_date: lex && lex.date ? String(lex.date) : null,
+    lexicon_anchors: lex && Array.isArray(lex.anchors) ? lex.anchors.length : null,
+    lexicon_anchors_mined: lex && Number.isFinite(lex.anchors_mined) ? lex.anchors_mined : null,
+    lexicon_dropped_by_cap: lex && Array.isArray(lex.dropped_by_cap) ? lex.dropped_by_cap.length : null,
+    lexicon_connectives_filtered: lex && Number.isFinite(lex.filtered_connectives) ? lex.filtered_connectives : null,
+    // WIRING AUDIT (11 Aug 2026) — THE FSRS COLLAPSE ARITHMETIC, the FOURTH
+    // producer-with-no-consumer this ledger has adopted (after cal_gate,
+    // tokens_estimated and distiller_latency — all three below/above, same shape,
+    // same repair). fsrs.mjs:413-415 writes per-card raw_reps / review_events /
+    // collapsed / review_unit into fsrs_store.json, and :455-466 sums them into
+    // cards.json's `collapse` block plus publishes its ungate counter as `gate`
+    // (audit #106's "a refusal must be a measurement with its denominator shown").
+    // A grep for raw_reps / review_events / cards.collapse / cards.gate across every
+    // .mjs, .md and .json in the repo hit fsrs.mjs and the two state files it writes
+    // — nothing else. Every real consumer of cards.json (manager · dugout ·
+    // setpiece · examiner · capsule_bridge · thalamus · nightshift) reads only the
+    // counters and the names. So audit #24's whole point — its own words, "a
+    // printed number and not an inference" — reached fsrs's stdout and stopped
+    // there, and conductor.mjs keeps only stderr on failure. Live on 10 Aug 2026:
+    // 27 raw reps → 12 review events, 15 merged. Objects, not scalars, so `human()`
+    // skips them here and the GATES + BUDGETS tables print them on their own rows.
+    fsrs_gate: (readJson(join(stateDir, "cards.json")) || {}).gate || null,
+    fsrs_collapse: fsrsCollapse(readJson(join(stateDir, "cards.json")), readJson(join(stateDir, "fsrs_store.json"))),
     afferents: readLines(join(stateDir, "afferent.jsonl")).length,
     salience_moments: readLines(join(stateDir, "salience_ledger.jsonl")).length,
     wakes: readLines(join(stateDir, "wake_queue.jsonl")).length,
@@ -103,6 +158,11 @@ export function measureReality(stateDir = STATE) {
     // read what the OWNER computed, never re-guess the owner's arithmetic here.
     // Object, not a scalar: `human()` skips it and the GATES table displays it.
     cal_gate: (readJson(join(stateDir, "calibration.json")) || {}).gate || null,
+    // WIRING AUDIT (11 Aug 2026) — the distiller's switch-to-read journal, read
+    // at last. Same shape and same reason as cal_gate directly above: an object,
+    // so `human()`'s scalar ledger skips it and the CADENCES table prints it on
+    // the one row it judges — the distiller's own. See distillerLatency().
+    distiller_latency: distillerLatency(readLines(join(stateDir, "distiller_latency.jsonl"))),
   };
 }
 
@@ -137,6 +197,84 @@ export function twinBestType(slipLines = []) {
   return counts.length ? Math.max(...counts) : 0;   // the gate opens on ONE type, not the sum
 }
 
+// ---- THE REP→REVIEW COLLAPSE (wiring audit, 11 Aug 2026) -------------------
+// The reading behind the BUDGETS row "rep→review collapse unit". Pure, so the
+// selftest can prove it on fixtures without this read-only file ever opening a
+// writer — same construction as twinBestType above and distillerLatency below.
+//
+// IT READS, IT DOES NOT RE-DERIVE. `line` is taken VERBATIM from cards.json,
+// because re-computing the owner's arithmetic here is precisely how this table
+// came to print `window_size 21/20 OPEN` on the morning calibration.json said
+// 21/40 (see cal_gate). fsrs.mjs is the only writer of both files; this is a copy
+// of its sentence, not a second opinion.
+//
+// COUNTS ONLY, NO CONCEPT NAMES — deliberately, and for the distiller journal's
+// reason: cards.json and fsrs_store.json are BOTH gitignored ("derived personal
+// study data: concepts + schedule", .gitignore:56), so only numbers come back out
+// of here. That is why the per-card half reports how many cards carry a merge and
+// the largest single merge, rather than naming them the way the lexicon row names
+// dropped_by_cap (lexicon.json is not ignored).
+//
+// ABSENT IS NOT ZERO. Producer never ran ⇒ null, and the table prints "?". A
+// pre-#24 cards.json with no `collapse` block reads null per field, never 0 —
+// reporting "0 merged" for a policy that in fact merged 15 of his 27 reps is the
+// exact lie the counter was built to end.
+export function fsrsCollapse(cards, store) {
+  const c = cards && typeof cards === "object" && cards.collapse ? cards.collapse : null;
+  const hasStore = !!(store && Array.isArray(store.cards));
+  if (!c && !hasStore) return null;                       // neither producer output on disk
+  const rows = hasStore ? store.cards.filter(Boolean) : [];
+  const merges = rows.map(r => r.collapsed).filter(Number.isFinite);
+  const num = (v) => (Number.isFinite(v) ? v : null);
+  return {
+    unit: c && c.unit != null ? String(c.unit) : null,
+    rating: c && c.rating != null ? String(c.rating) : null,
+    raw_reps: c ? num(c.raw_reps) : null,
+    review_events: c ? num(c.review_events) : null,
+    collapsed: c ? num(c.collapsed) : null,
+    line: c && c.line ? String(c.line) : null,            // the owner's own sentence, verbatim
+    cards_total: hasStore ? rows.length : null,
+    cards_merged: merges.length ? merges.filter(n => n > 0).length : null,
+    worst_card_merged: merges.length ? Math.max(...merges) : null,
+    on: cards && cards.date ? String(cards.date) : null,
+  };
+}
+
+// ---- THE DISTILLER'S SWITCH-TO-READ LATENCY (wiring audit, 11 Aug 2026) ----
+// The THIRD producer-with-no-consumer this ledger has adopted, after cal_gate
+// and tokens_estimated (both 10 Aug 2026, both below). distiller.mjs has
+// journalled every context-switch it caught into distiller_latency.jsonl since
+// the G16 sliver (10 Aug 2026) — 64 rows on the day this was wired — and the
+// ONLY address that measurement had in the whole organism was a note STRING on
+// the distiller CADENCE row telling a reader to run `node scripts/distiller.mjs
+// latency` by hand. THE ANCHOR LAW forbids exactly that ("never a command to
+// remember"), so the counter built to retire this table's own `15min / guessed`
+// row could not reach the table, or him. It does now: the row carries the reading.
+// REPLICATED, not imported, for the same reason twinBestType above is — this file
+// keeps zero importers and imports no organ. It is deliberately only the
+// AGGREGATION half of distiller.mjs latencyReport(): the journal's ROWS are the
+// contract between the two files, and the arithmetic here is min/median/mean/max
+// over their `switches[].lag_ms`. Lower median (`(n-1) >> 1` after an ascending
+// sort) is taken verbatim from the owner — a counter, not a statistic dressed up.
+// NO VERDICT, NO THRESHOLD, and NO APP NAMES: the journal is gitignored because
+// its rows name his apps, so only counts and lags come back out of here. The
+// 15-min value stays tagged `guessed` until the captain reads this data and
+// rules — his 30-45-60-day standing rule, which is this file's reason to exist.
+export function distillerLatency(lines = []) {
+  const rows = [];
+  for (const l of lines) { try { rows.push(JSON.parse(l)); } catch { /* one bad row must not poison the read */ } }
+  const all = rows.flatMap(r => (r && Array.isArray(r.switches) ? r.switches : []).map(s => s && s.lag_ms))
+    .filter(Number.isFinite).sort((a, b) => a - b);
+  return {
+    runs: rows.length, switches: all.length,
+    min_ms: all.length ? all[0] : null,
+    median_ms: all.length ? all[(all.length - 1) >> 1] : null,
+    mean_ms: all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : null,
+    max_ms: all.length ? all[all.length - 1] : null,
+    span: rows.length ? `${String(rows[0].ts).slice(0, 10)} → ${String(rows[rows.length - 1].ts).slice(0, 10)}` : null,
+  };
+}
+
 // ---- THE GATES: numbers that decide whether an organ may SPEAK AT ALL -------
 // Each carries the LIVE reading it is judged against, so "shut" is a fact, not a claim.
 export const GATES = [
@@ -165,6 +303,15 @@ export const GATES = [
   { organ: "apni ghadi",    file: "physio.mjs",        key: "gates.apni_ghadi.min_cards",  need: 8,   have: (m) => m.capsules,          origin: "guessed", effect: "no personal-interval calibration" },
   { organ: "body archive",  file: "physio.mjs",        key: "gates.body_archive_min_days", need: 84,  have: (m) => m.span_days,         origin: "external", effect: "seasonal body baseline — 12 weeks is a real physiological window" },
   { organ: "signal table",  file: "physio.mjs",        key: "signal_table.min_n",          need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no per-signal reliability table" },
+  // WIRING AUDIT (11 Aug 2026) — fsrs published an ungate counter (audit #106) that
+  // no organ read. Reads the PRODUCER's have/need, exactly as the calibration rows
+  // do; no cards.json ⇒ both read "?" and the row prints "  ?  ", never an invented
+  // number. ORIGIN `derived`, not `guessed`: fsrs.mjs's need is 1 because you cannot
+  // rank an empty set — arithmetic, not a typed threshold — and the CADENCES table
+  // already defines `derived` as exactly that. Tagging it `guessed` would put a
+  // false row on his 30-45-60-day re-fit list, which is the failure this table exists
+  // to prevent (the bundle already caught two rows mis-tagged the other way).
+  { organ: "fsrs",          file: "fsrs.mjs",          key: "gate.need — one card must exist", need: (m) => (m.fsrs_gate ? m.fsrs_gate.need : null), have: (m) => (m.fsrs_gate ? m.fsrs_gate.have : null), origin: "derived", effect: "no due_today, no overdue, no hardest_due — the decay guard says nothing" },
   { organ: "thalamus",      file: "thalamus_config.json", key: "wake threshold (tau1)",    need: null, have: null,                      origin: "guessed", effect: "TIER-2 wake bar — pulse maxes at 0.244 against a 0.40-0.85 bar" },
 ];
 
@@ -178,6 +325,37 @@ export const BUDGETS = [
   { name: "overnight target fraction", where: "brain_config.budget.overnight_target_frac",    value: 0.95,     origin: "guessed",  note: "how hard the night is allowed to run" },
   { name: "gemini defer threshold",    where: "brain_config.dugout_pool.gemini_defer_threshold_min", value: 30, origin: "guessed", note: "voice minutes before daytime gemini steps aside" },
   { name: "pulse min headroom",        where: "brain.mjs pulseConfig.min_headroom_tokens",    value: 20000,    origin: "guessed",  note: "" },
+  // 11 Aug 2026 — this row exists because the knob had NO address at all: the 25
+  // was a literal inside doubtminer.mjs's keep-loop, so the config sweep could not
+  // see it, this table could not carry it, and the lexicon's own output never said
+  // it had fired. It caps SPEND in the truest sense here — the anchors ride the
+  // cognitive fingerprint at the head of EVERY LLM call (brain.mjs buildFingerprint,
+  // the Gaffer's system prompt via dugout.mjs + talk.mjs) — but its real cost was
+  // his voice: on 11 Aug it silently cut 20 of 45 mined anchors, "kv cache" (23×,
+  // 2× the top survivor) among them, because the cut ran in DEDUP order (longest
+  // phrase first) instead of by recurrence. The ordering is repaired; the NUMBER is
+  // untouched and stays `guessed` until he reads the data — his 30-45-60-day rule.
+  { name: "lexicon anchor cap",        where: "doubtminer_config.json lexicon.max_anchors",   value: 25,       origin: "guessed",  note: "how many of his mined anchors reach every prompt. What it CUT is named in lexicon.json dropped_by_cap — and READ here rather than pointed at, so the cap's cost arrives with the cap",
+    measure: (m) => m.lexicon_anchors == null ? null : {
+      shipped: m.lexicon_anchors, mined: m.lexicon_anchors_mined,
+      dropped: m.lexicon_dropped_by_cap, connectives: m.lexicon_connectives_filtered, on: m.lexicon_date } },
+  // WIRING AUDIT (11 Aug 2026) — the same defect as the lexicon cap directly above,
+  // one organ over. This knob caps SPEND in the only currency the learning layer has:
+  // how much of the work he actually logged reaches the scheduler. On 10 Aug it cut
+  // 27 reps to 12 review events — 15 merged, 56% of what he logged — and that
+  // arithmetic, which fsrs.mjs itself calls "a printed number and not an inference",
+  // reached fsrs's stdout and NOTHING ELSE. It is read here now, verbatim.
+  // ORIGIN `external` on the owner's own evidence, not on a shrug: fsrs.mjs's THE
+  // REVIEW UNIT (:290) shows ts-fsrs floors the millisecond gap to whole days, so two
+  // reviews inside one day carry elapsed_days = 0 and are arithmetically incapable of
+  // carrying interval information — "the unit is read off the algorithm's own
+  // resolution, not chosen". That is a wall we do not own, which is this table's
+  // definition of external. The DIRECTION (`worst`) is ours and is a documented
+  // choice, not a measured number — it is named in the value so it cannot hide behind
+  // the tag. Nothing here judges the 56%: whether that much merging is right is HIS
+  // read on his 30-45-60-day rule, which is this file's whole reason to exist.
+  { name: "rep→review collapse unit",  where: "fsrs.mjs CFG.review_unit + collapse_rating",   value: "local_day/worst", origin: "external", note: "how much of what he LOGGED becomes a review FSRS can schedule from. Same-day reps merge to one event at the day's worst grade; the pre-audit per-rep replay is frozen as buildStoreLegacy (review_unit \"none\"). What it MERGED is published in cards.json collapse + fsrs_store per-card — and READ here rather than pointed at, so the policy's cost arrives with the policy",
+    measure: (m) => m.fsrs_collapse },
   { name: "metacognition night fraction", where: "brain_config jobs.diary._metacognition_note", value: "unset", origin: "measured-pending", note: "H2/H6 (10 Aug 2026): NO cap set — the measurement window is open (ledger rows job∈{agenda,diary} ÷ overnight total, the G14 pulse pattern); when measured, the fraction + any cap land here AND in that _note in the same commit" },
 ];
 
@@ -213,7 +391,14 @@ export const CADENCES = [
   { name: "dugout reminders task",    where: "schtasks ArsenalFC-DugoutReminders",       value: "1min",       origin: "derived",  note: "G6 — reconciled to dugout.mjs:3371's own 30000ms in-process interval (was 30min: a task 60× slower than the code it mirrors)" },
   { name: "shadow detect task",       where: "schtasks ArsenalFC-ShadowDetect",          value: "10min",      origin: "derived",  note: "G6 — reconciled to dugout.mjs:3377's own 600000ms interval (was hourly)" },
   { name: "presence sense",           where: "schtasks ArsenalFC-Presence",              value: "1min",       origin: "ruled",    note: "G6 — the stall sensor samples fast, its WINDOW is untouched" },
-  { name: "distiller",                where: "schtasks ArsenalFC-Distiller",             value: "15min",      origin: "guessed",  note: "the free working-set refresh; switch-to-read latency now MEASURED (G16 sliver, 10 Aug 2026) — read `node scripts/distiller.mjs latency`; value stays guessed until that data rules" },
+  // WIRING AUDIT (11 Aug 2026): this row's note used to END at an address — "read
+  // `node scripts/distiller.mjs latency`" — i.e. it discharged a measurement by
+  // asking someone to remember a command, which the ANCHOR LAW forbids, and so the
+  // G16 counter sat unread by every organ for its whole life. `measure` is the same
+  // device the GATES table has always used for `have`: the row now READS the
+  // producer's journal, and report() resolves it to plain data.
+  { name: "distiller",                where: "schtasks ArsenalFC-Distiller",             value: "15min",      origin: "guessed",  note: "the free working-set refresh; its switch-to-read latency is MEASURED (G16 sliver, 10 Aug 2026) and printed live beside this guess — counts + lags only, no verdict. The value stays guessed until he rules on that data",
+    measure: (m) => m.distiller_latency },
   { name: "DMN",                      where: "schtasks ArsenalFC-DMN",                   value: "60min",      origin: "ruled",    note: "G16 KEEPS hourly — its gate is human-timescale (away/tone/headroom decide, not the timer)" },
   { name: "tone",                     where: "schtasks ArsenalFC-Tone",                  value: "5min",       origin: "ruled",    note: "G16 — zero-LLM; LATENCY is its failure mode, so it samples fast" },
   { name: "hippo index sweep",        where: "schtasks ArsenalFC-HippoIndex",            value: "60min",      origin: "guessed",  note: "" },
@@ -278,7 +463,17 @@ export function report(stateDir = STATE) {
     const need = typeof g.need === "function" ? g.need(m) : g.need;
     return { ...g, have, need, open: have == null || need == null ? null : have >= need, have_fn: undefined };
   });
-  return { measured: m, gates, budgets: BUDGETS, guards: GUARDS, cadences: CADENCES, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
+  // A cadence row may carry a live MEASUREMENT since the 11 Aug 2026 wiring audit —
+  // the same device as `have` above, resolved here so the JSON dump and the printed
+  // table never see a function. `measured: null` is the honest reading for the rows
+  // whose number nothing measures yet; it is never a zero.
+  const cadences = CADENCES.map(c => ({ ...c, measured: c.measure ? c.measure(m) : null, measure: undefined }));
+  // A BUDGET row may carry a live measurement too (11 Aug 2026) — same device, same
+  // reason as the cadences above: a capped number whose COST is only reachable by
+  // remembering another command is a number nobody re-fits. Rows without `measure`
+  // resolve to `measured: null` and are byte-identical to before.
+  const budgets = BUDGETS.map(b => ({ ...b, measured: b.measure ? b.measure(m) : null, measure: undefined }));
+  return { measured: m, gates, budgets, guards: GUARDS, cadences, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
 }
 
 function human(r) {
@@ -299,14 +494,43 @@ function human(r) {
   console.log(`  → ${shut.length} of ${r.gates.length} gates SHUT. ${r.gates.filter(g => g.origin === "guessed").length} of them are GUESSES.`);
 
   console.log("\n=== BUDGETS — numbers that cap spend ===");
-  for (const b of r.budgets) console.log(`  ${b.origin.padEnd(9)} ${String(b.value).padStart(9)}  ${b.name}  ·  ${b.where}`);
+  for (const b of r.budgets) {
+    console.log(`  ${b.origin.padEnd(9)} ${String(b.value).padStart(9)}  ${b.name}  ·  ${b.where}`);
+    // What the cap COST, printed where the cap is. A "?" is the honest reading for a
+    // producer that has not re-run since it gained the counter — never a 0.
+    if (!b.measured) continue;
+    const q = b.measured, n = (v) => v == null ? "?" : v;
+    // TWO measured rows since 11 Aug 2026, so this can no longer print ONE hardcoded
+    // sentence — it printed "? of ? mined anchors shipped" for anything that was not
+    // the lexicon. A row whose producer already PHRASED the number arrives carrying
+    // `line`; it is echoed verbatim, for the cal_gate reason (re-wording an owner's
+    // arithmetic here is how this table came to disagree with its own producer).
+    if (q.line !== undefined) {
+      console.log(`           MEASURED  └─ ${n(q.line)}${q.on ? `  ·  cards.json ${q.on}` : ""}`);
+      console.log(`                     └─ ${n(q.cards_merged)} of ${n(q.cards_total)} card(s) carry a merge · largest single-card merge ${n(q.worst_card_merged)} rep(s) · unit ${n(q.unit)}/${n(q.rating)}${q.raw_reps == null ? "  [cards.json predates the collapse counter — re-run fsrs]" : ""}`);
+      continue;
+    }
+    console.log(`           MEASURED  └─ ${n(q.shipped)} of ${n(q.mined)} mined anchors shipped · ${n(q.dropped)} dropped by the cap · ${n(q.connectives)} connective n-gram(s) rejected (#4)${q.mined == null ? "  [lexicon.json " + n(q.on) + " predates the mined/dropped counters — re-run doubtminer]" : ""}`);
+  }
 
   console.log("\n=== GUARDS — not budgets; they stop one failure repeating ===");
   for (const g of r.guards) console.log(`  ${String(g.value).padStart(7)}  ${g.name.padEnd(26)} ${g.earned ? "earned: " + g.earned : ""}`);
 
   console.log("\n=== CADENCES — every timer, with its provenance (G5) ===");
-  for (const c of r.cadences) console.log(`  ${c.origin.padEnd(8)} ${String(c.value).padStart(9)}  ${c.name.padEnd(26)} ·  ${c.where}`);
-  console.log(`  → ${r.cadences.filter(c => c.origin === "guessed").length} of ${r.cadences.length} cadences are GUESSES — the re-fit list.`);
+  const secs = (ms) => (Number.isFinite(ms) ? `${Math.round(ms / 1000)}s` : "-");
+  for (const c of r.cadences) {
+    console.log(`  ${c.origin.padEnd(8)} ${String(c.value).padStart(9)}  ${c.name.padEnd(26)} ·  ${c.where}`);
+    // The measurement a guessed row is waiting on, printed WHERE THE GUESS IS —
+    // that is the whole repair (11 Aug 2026). Counts and lags, never a verdict:
+    // "is 15 minutes too slow" stays his ruling, on his 30-45-60-day rule.
+    if (!c.measured) continue;
+    const q = c.measured;
+    console.log(q.switches
+      ? `           MEASURED  └─ ${q.switches} switch(es) caught over ${q.runs} run(s) · ${q.span} · lag min ${secs(q.min_ms)} · median ${secs(q.median_ms)} · mean ${secs(q.mean_ms)} · max ${secs(q.max_ms)}`
+      : `           MEASURED  └─ nothing yet (${q.runs} run(s) journalled) — the window opens on the first run that catches a switch`);
+  }
+  const measuredRows = r.cadences.filter(c => c.measured);
+  console.log(`  → ${r.cadences.filter(c => c.origin === "guessed").length} of ${r.cadences.length} cadences are GUESSES — the re-fit list. ${measuredRows.length} of them carry a live measurement; none carries a verdict (that is his).`);
 
   console.log(`\n=== SWEEP === ${r.config_numbers.length} numeric knobs across ${new Set(r.config_numbers.map(c => c.file)).size} config files · ${r.script_defaults.length} in script DEFAULTS blocks`);
   console.log("(run `node scripts/limits.mjs json` for the full machine-readable dump)\n");
@@ -317,7 +541,11 @@ function selftest() {
   const ok = (n, c) => { if (c) { pass++; console.log("  ✓ " + n); } else { fail++; console.log("  ✗ " + n); } };
   const r = report();
   ok("measures reality from the live bus, never from a constant", typeof r.measured.reps === "number" && typeof r.measured.capsules === "number");
-  ok("every gate declares an origin", r.gates.every(g => ["guessed", "measured", "external", "guard"].includes(g.origin)));
+  // `derived` joined the vocabulary 11 Aug 2026 with the fsrs row — the CADENCES
+  // table has always defined it ("arithmetic from another number, shown") and a
+  // gate that is arithmetic must not be filed under `guessed`, or his re-fit list
+  // grows a row with nothing to re-fit.
+  ok("every gate declares an origin", r.gates.every(g => ["guessed", "measured", "external", "guard", "derived"].includes(g.origin)));
   ok("a gate's status is computed from live data, never asserted", r.gates.filter(g => g.have != null).every(g => g.open === (g.have >= g.need)));
   ok("the sweep finds config knobs", r.config_numbers.length > 0);
   ok("the sweep finds script DEFAULTS knobs", r.script_defaults.length > 0);
@@ -328,6 +556,114 @@ function selftest() {
     r.cadences.some(c => c.where === "brain_config.daemon.poll_ms" && c.value === "15s")
     && r.cadences.some(c => /min_spacing_s/.test(c.where) && c.origin === "derived"));
   ok("comment text is stripped — no prose number reported as a knob", !r.script_defaults.some(d => d.key === "E2E" || d.key === "audit"));
+
+  // ---- WIRING AUDIT (11 Aug 2026) — THE LEXICON CAP READS ITS OWN COST --------
+  // The defect this is written against: doubtminer.mjs publishes filtered_connectives
+  // / anchors_mined / dropped_by_cap and NO organ read them; the ledger row that
+  // finally named the 25-cap ended at an ADDRESS instead of a read. This goes red if
+  // the row loses its `measure`, if measureReality stops reading lexicon.json, or if
+  // a missing counter is ever reported as 0 instead of null (that last one is the
+  // whole lesson — doubtminer's own selftest calls a false 0 "the same class of lie").
+  {
+    const cap = r.budgets.find(b => b.name === "lexicon anchor cap");
+    ok("the lexicon cap is registered as doubtminer.mjs's comment claims (BUDGETS, guessed)",
+      !!cap && cap.origin === "guessed" && /max_anchors/.test(cap.where));
+    ok("and it READS the lexicon's own counters — a named cap with no measurement is the address-only defect again",
+      !!cap && cap.measured !== undefined
+      && (cap.measured === null || Number.isFinite(cap.measured.shipped)));
+    // ABSENT ≠ ZERO, proved on fixtures rather than asserted about today's file.
+    const bare = measureReality(join(REPO, "scripts"));   // no lexicon.json here
+    ok("a lexicon that was never written reads null on every counter, never 0",
+      bare.lexicon_anchors === null && bare.lexicon_anchors_mined === null
+      && bare.lexicon_dropped_by_cap === null && bare.lexicon_connectives_filtered === null);
+    // the LIVE file (2026-08-10) predates the cap counters but DOES carry #4's — so
+    // this pins both halves at once: the old counter read, the new ones honestly null.
+    ok("the live lexicon's #4 rejection counter now has a reader outside doubtminer.mjs",
+      r.measured.lexicon_connectives_filtered === null || Number.isFinite(r.measured.lexicon_connectives_filtered));
+    // MEASURED rows are a NAMED set, so adding one is a deliberate act and a row
+    // that quietly grows a `measure` still trips this. Two since 11 Aug 2026.
+    const MEASURED_ROWS = ["lexicon anchor cap", "rep→review collapse unit"];
+    ok("rows with no measurement are untouched — `measure` never leaks into the dump",
+      r.budgets.every(b => !("measure" in b) || b.measure === undefined)
+      && r.budgets.filter(b => !MEASURED_ROWS.includes(b.name)).every(b => b.measured === null));
+  }
+
+  // ---- THE FSRS COLLAPSE (11 Aug 2026 wiring audit) ------------------------
+  // THE DEFECT: fsrs.mjs wrote cards.json's `collapse` + `gate` blocks and
+  // fsrs_store's per-card raw_reps / review_events / collapsed / review_unit on
+  // every run, and NO organ in the repo read one of them — a producer with no
+  // consumer is a black box, not a feedback loop. Live cost the day this was
+  // wired: 27 raw reps → 12 review events, 15 merged; audit #24's "a printed
+  // number and not an inference" was reachable only through fsrs's stdout, which
+  // the conductor discards. These assertions are the net: the read on fixtures,
+  // then BOTH WIRES, then the producer.
+  {
+    const cards = { date: "2026-08-10", gate: { have: 5, need: 1, line: "5/1 cards", open: true },
+      collapse: { unit: "local_day", rating: "worst", raw_reps: 27, review_events: 12, collapsed: 15,
+                  line: "12/27 review events (15 same-day reps merged)" } };
+    const store = { cards: [ { collapsed: 0 }, { collapsed: 1 }, { collapsed: 14 }, { collapsed: 0 }, { collapsed: 0 } ] };
+    const q = fsrsCollapse(cards, store);
+    // the owner's sentence, character for character — a paraphrase here is the
+    // cal_gate defect (this table disagreeing with the organ that owns the number).
+    ok("the collapse row copies the PRODUCER's own line verbatim, and never re-derives it",
+      q.line === "12/27 review events (15 same-day reps merged)" && q.raw_reps === 27 && q.review_events === 12 && q.collapsed === 15);
+    ok("the per-card half counts CARDS that merged and the largest single merge (2 of 5, worst 14)",
+      q.cards_merged === 2 && q.cards_total === 5 && q.worst_card_merged === 14);
+    // ABSENT ≠ ZERO — the whole lesson of the lexicon repair, proved on fixtures.
+    ok("a pre-#24 cards.json with no collapse block reads null per field, never a measured 0",
+      (() => { const p = fsrsCollapse({ date: "2026-07-01", total_cards: 3 }, store);
+               return p.raw_reps === null && p.collapsed === null && p.line === null && p.cards_total === 5; })());
+    ok("neither producer on disk ⇒ null, so the table prints '?' instead of inventing a number",
+      fsrsCollapse(null, null) === null && fsrsCollapse(undefined, undefined) === null);
+    // COUNTS ONLY: cards.json + fsrs_store.json are gitignored personal study data
+    // (.gitignore:56), so no concept name may leave this read — the distiller
+    // journal's own rule, held here.
+    ok("no concept NAME leaves the read — gitignored study data comes back out as counts only",
+      !JSON.stringify(q).toLowerCase().includes("concept") && Object.values(q).every(v => v === null || typeof v === "number" || typeof v === "string")
+      && !Object.values(q).some(v => Array.isArray(v)));
+
+    // THE WIRE #1 — the BUDGETS row. Strip `measure` and this goes red, instead of
+    // fsrs journalling its own arithmetic into the dark for another few weeks.
+    const cRow = r.budgets.find(b => b.name === "rep→review collapse unit");
+    // IDENTITY, not tolerance. This first read `measured === null || …`, to be kind to
+    // a machine where fsrs never ran — and that made it UNFAILABLE: cutting `measure`
+    // left it green (proved by cutting it and re-running; only the two gate rows went
+    // red). An assertion that cannot fail is the same class of defect as the unread
+    // counter it guards, so the row must now equal the bus read EXACTLY — object for
+    // object when the producer has run, null for null when it has not.
+    ok("THE WIRE: the collapse budget row CARRIES the live reading (it had no row at all until 11 Aug 2026)",
+      !!cRow && cRow.measured === r.measured.fsrs_collapse
+      && (r.measured.fsrs_collapse === null || typeof cRow.measured === "object"));
+    ok("the measurement stays a COUNTER: no verdict, no threshold, no pass/fail on how much merged",
+      !!cRow && (!cRow.measured || (!("verdict" in cRow.measured) && !("threshold" in cRow.measured) && !("open" in cRow.measured) && !("ok" in cRow.measured))));
+    // THE WIRE #2 — the GATES row, reading fsrs's published ungate counter.
+    const gRow = r.gates.find(g => g.organ === "fsrs");
+    ok("THE WIRE: fsrs's #106 ungate counter has a reader outside fsrs.mjs at last",
+      !!gRow && gRow.origin === "derived" && (r.measured.fsrs_gate === null
+        ? (gRow.have === null && gRow.need === null)
+        : (gRow.have === r.measured.fsrs_gate.have && gRow.need === r.measured.fsrs_gate.need)));
+    ok("no cards.json ⇒ the fsrs gate reads '?', never a number invented in this file",
+      (() => { const g = GATES.find(x => x.organ === "fsrs"); const blind = { fsrs_gate: null };
+               return g.have(blind) === null && g.need(blind) === null; })());
+    // LIVE, when the producer has run on this machine: the printed row IS the file.
+    ok("LIVE: the printed collapse row equals cards.json's own published block",
+      (() => { const disk = readJson(join(STATE, "cards.json"));
+               if (!disk || !disk.collapse || !cRow || !cRow.measured) return true;   // producer never ran here
+               return cRow.measured.line === disk.collapse.line && cRow.measured.raw_reps === disk.collapse.raw_reps
+                 && cRow.measured.review_events === disk.collapse.review_events; })());
+    // ANTI-STRAND (the calibration + claudegen + distiller repairs' own check): the
+    // fields this reads must be the fields the producer still writes. Rename them in
+    // fsrs.mjs and it goes red HERE, instead of the counters stranding again silently.
+    const fSrc = readFileSync(join(SCRIPTS, "fsrs.mjs"), "utf8");
+    ok("fsrs.mjs still publishes the collapse block + the per-card counters this row depends on",
+      /collapse:\s*\{/.test(fSrc) && /raw_reps:\s*raw,\s*review_events:\s*events/.test(fSrc)
+      && /raw_reps:\s*sorted\.length,\s*review_events:\s*events\.length/.test(fSrc)
+      && /gate:\s*\{/.test(fSrc));
+    // THE LAW THAT BROKE, held table-wide (the cadences carry the same one): a
+    // BUDGETS row may not discharge its measurement by naming a command to run.
+    ok("ANCHOR LAW: no budget row hands its measurement to a human as a command to run",
+      !r.budgets.some(b => /`node scripts\//.test(b.note || "")));
+  }
 
   // ---- AUDIT #78 — THE TWIN MAPPING ----------------------------------------
   // The bug was that the twin gate's `have` read dugout_notes.jsonl (voice
@@ -427,6 +763,57 @@ function selftest() {
     const nsRow = nsSrc.slice(nsSrc.indexOf("function nsLedgerRow"), nsSrc.indexOf("const genLedgered"));
     ok("the night shift's ledger ROW BUILDER still carries the flag (50 ns_ rows had none before 10 Aug 2026)",
       nsRow.length > 0 && /tokens_estimated:/.test(nsRow) && /\.\.\.ledgerForensics\(/.test(nsRow));
+  }
+
+  // ---- THE DISTILLER LATENCY JOURNAL (11 Aug 2026 wiring audit) ------------
+  // distiller.mjs wrote distiller_latency.jsonl every run and NO organ read it —
+  // a producer with no consumer is a black box, not a feedback loop. Its only
+  // address was a note STRING on the cadence row below. These assertions are the
+  // net: the aggregation on a fixture, then THE WIRE ITSELF, then the producer.
+  {
+    const lines = [
+      JSON.stringify({ ts: "2026-08-10T10:15:00.000Z", n: 2, switches: [{ lag_ms: 1000 }, { lag_ms: 3000 }] }),
+      JSON.stringify({ ts: "2026-08-10T10:30:00.000Z", n: 1, switches: [{ lag_ms: 2000 }] }),
+      "{ not json",                                                    // one bad row must not poison the read
+      JSON.stringify({ ts: "2026-08-11T10:45:00.000Z", n: 1, switches: [{ lag_ms: 9000 }] }),
+    ];
+    const q = distillerLatency(lines);
+    // mean 3750 vs median 2000: the fixture is skewed ON PURPOSE, because the owner
+    // publishes a LOWER MEDIAN and a mean, and a copy that quietly averaged instead
+    // would read as healthy while disagreeing with distiller.mjs latency.
+    ok("the journal aggregates per SWITCH, not per run — 4 switches over 3 readable rows",
+      q.runs === 3 && q.switches === 4);
+    ok("min/median/mean/max are computed off lag_ms, lower-median exactly as distiller.mjs publishes it",
+      q.min_ms === 1000 && q.median_ms === 2000 && q.mean_ms === 3750 && q.max_ms === 9000 && q.span === "2026-08-10 → 2026-08-11");
+    ok("an absent or empty journal reads zero runs and NULL lags — never a number invented in this file",
+      (() => { const e = distillerLatency([]); return e.runs === 0 && e.switches === 0 && e.min_ms === null && e.median_ms === null && e.span === null; })());
+    // THE WIRE. If the row ever goes back to being a note-string address, `measured`
+    // is null and this goes red — instead of the counter journalling into the dark
+    // for another few weeks the way it did from 10 Aug 2026 until this audit.
+    const dRow = r.cadences.find(c => c.name === "distiller");
+    ok("THE WIRE: the distiller cadence row CARRIES the live journal reading (it was a note-string address until 11 Aug 2026)",
+      !!dRow && !!dRow.measured && Number.isInteger(dRow.measured.runs) && Number.isInteger(dRow.measured.switches));
+    // both of the next two are guarded on the wire above rather than assuming it:
+    // a severed wire must read as ONE clean red line, not a TypeError that takes
+    // the rest of the suite down with it (proven by cutting `measure` and re-running).
+    ok("the measurement stays a COUNTER: no verdict, no threshold, and the 15-min value is still tagged guessed",
+      !!dRow && !!dRow.measured && dRow.origin === "guessed" && dRow.value === "15min"
+      && !("verdict" in dRow.measured) && !("threshold" in dRow.measured) && !("open" in dRow.measured));
+    ok("LIVE: the printed row equals the journal on disk, row for row",
+      (() => { if (!dRow || !dRow.measured) return false;
+               const disk = distillerLatency(readLines(join(STATE, "distiller_latency.jsonl")));
+               return dRow.measured.runs === disk.runs && dRow.measured.switches === disk.switches && dRow.measured.median_ms === disk.median_ms; })());
+    // ANTI-STRAND (the calibration + claudegen repairs' own check, same reason):
+    // the fields this read depends on must be the fields the producer still writes.
+    // Rename the journal or drop lag_ms in distiller.mjs and this goes red HERE.
+    const dSrc = readFileSync(join(SCRIPTS, "distiller.mjs"), "utf8");
+    ok("distiller.mjs still appends distiller_latency.jsonl rows carrying switches[].lag_ms (the producer this row depends on)",
+      /LATENCY_LOG\s*=\s*join\(STATE_DIR,\s*"distiller_latency\.jsonl"\)/.test(dSrc)
+      && /appendFileSync\(LATENCY_LOG/.test(dSrc) && /lag_ms:\s*n\s*-\s*new Date/.test(dSrc));
+    // THE LAW THAT BROKE, held table-wide: a row may not discharge a measurement by
+    // asking a human to remember a command. If it can be measured, this table reads it.
+    ok("ANCHOR LAW: no cadence row hands its measurement to a human as a command to run",
+      !r.cadences.some(c => /`node scripts\//.test(c.note || "")));
   }
 
   // This used to be `typeof globalThis.writeFileSync === "undefined"` — always true

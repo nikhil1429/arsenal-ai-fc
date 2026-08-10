@@ -31,6 +31,11 @@
 //   capsule_map.json (audit #33 — where FSRS and FORGE's Re-Jirah agree/disagree; and
 //     since the 10 Aug 2026 dead-wire sweep its `strike_bank` too — this file is that
 //     bank's FIRST reader, see strikeFor())
+//   dugout_scrimmage.jsonl (dead-wire sweep 11 Aug 2026 — the graded oral mock's
+//     `kind:"report"` rows; setpiece is that row's FIRST and only consumer, and
+//     the reason the scrimmage's "drill for tomorrow" now reaches a sheet at all.
+//     Written by dugout.mjs, its single writer; shadow.mjs reads the same lane
+//     for a different fact. See the GRADED MOCK block in candidates())
 // OUTPUT: dressing-room/state/drills.json (sole writer)
 // MODES:  run (default: compile for tomorrow) · selftest
 // ============================================================================
@@ -38,6 +43,14 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// DEAD-WIRE SWEEP (11 Aug 2026) — cortex.mjs ends with these two symbols exported
+// under the comment "so a consumer can assert the contract it relies on", and for a
+// week NO file in the repo imported cortex.mjs at all. setpiece is that consumer: it
+// is concept_graph.json's only reader (audit #72, one screen down) and it opened the
+// file with a bare readJson — no version check, no age. The producer's own standard
+// now reaches its only reader instead of sitting in an export nobody named.
+// (cortex's main() is guarded by the argv[1] check, so this import runs no daemon.)
+import { graphFreshness, CONCEPT_GRAPH_SCHEMA } from "./cortex.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -119,6 +132,10 @@ function writeAtomic(path, obj) {
   renameSync(tmp, path);
 }
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+// dead-wire sweep (11 Aug 2026) — this file had no jsonl reader because every
+// input it had was a .json. dugout_scrimmage.jsonl is the first append-lane it
+// reads; malformed lines are skipped, never thrown (the shadow.mjs readLines law).
+const readLines = (p) => { try { if (existsSync(p)) return readFileSync(p, "utf8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch {} return []; };
 
 const fill = (template, slots) => String(template || "").replace(/\{(\w+)\}/g, (_, k) => (slots[k] !== undefined ? slots[k] : `{${k}}`));
 
@@ -235,6 +252,52 @@ function sprintFocus(world) {
 // NO freshness threshold is invented here: a prerequisite map is structural knowledge,
 // not a dated observation, and the graph's build date is PRINTED in `source` so its age
 // is visible rather than silently trusted.
+//
+// THE CONTRACT CHECK — dead-wire sweep, 11 Aug 2026. The paragraph above rules that
+// AGE never blocks, and that ruling stands untouched: a prerequisite map is structural
+// knowledge. But "no threshold" was implemented as "no check of any kind", and the two
+// are not the same thing. Two separate facts, handled differently:
+//   · SCHEMA — cortex's header says the shape "may not be renamed or reordered without
+//     updating the reader in the same change", and stamps schema_version for exactly
+//     that. A stamp this reader was not written against means the reader is the stale
+//     one; it refuses to compile drills off a shape it cannot claim to understand, and
+//     SAYS SO on the packet. This is not an invented number — it is cortex's own
+//     CONCEPT_GRAPH_SCHEMA, imported, so the two move together or the selftest fails.
+//   · AGE — never blocks, now VISIBLE, measured by cortex's graphFreshness (whose
+//     standard is the DAILY cadence itself, not a number chosen here). The 4 Aug
+//     comment promised the age would be visible; it printed the build DATE only, and
+//     the reader of a drill sheet at 22:00 does not do date arithmetic. Live on 11 Aug
+//     the graph was generated_at 2026-08-08 — two passes missed on no-headroom — and
+//     nothing on the sheet said so.
+function graphContract(graph, now = new Date()) {
+  if (!graph) return { present: false, usable: false, schema_version: null, expects: CONCEPT_GRAPH_SCHEMA, age_days: null, fresh: null, note: null };
+  const sv = Number.isInteger(graph.schema_version) ? graph.schema_version : null;
+  const f = graphFreshness(now, { graph });
+  const usable = sv === CONCEPT_GRAPH_SCHEMA;
+  return {
+    present: true, usable, schema_version: sv, expects: CONCEPT_GRAPH_SCHEMA,
+    age_days: f.age_days, fresh: f.fresh,
+    note: usable ? null
+      : sv === null
+        ? "concept_graph.json carries no schema_version — an unlabelled shape is not the contract this reader was written against"
+        : `concept_graph.json is schema_version ${sv}, this reader implements ${CONCEPT_GRAPH_SCHEMA} — the reader is stale, not the map`,
+  };
+}
+// the graph's read-receipt — ONE builder, so the RED envelope and the normal envelope
+// cannot drift (the same-envelope-keys law). Until 11 Aug 2026 this object was written
+// out literally in BOTH branches, which is how a contract field gets added to one of
+// them and quietly missed on the other. nightCoachRead below is the pattern being
+// followed here, not a new idea.
+function conceptGraphRead(graph, gc) {
+  if (!graph) return null;
+  return {
+    nodes: graph.node_count ?? null, edges: graph.edge_count ?? null,
+    built: String(graph.generated_at || "").slice(0, 10) || null,
+    // dead-wire sweep 11 Aug 2026 — proof the contract was checked, not just the file opened
+    schema_version: gc.schema_version, expects: gc.expects, usable: gc.usable,
+    age_days: gc.age_days, fresh: gc.fresh, contract_note: gc.note,
+  };
+}
 const pairKey = (a, b) => [String(a || "").toLowerCase(), String(b || "").toLowerCase()].sort().join("|");
 function prereqsOf(concepts, graph) {
   const edges = graph && Array.isArray(graph.edges) ? graph.edges : [];
@@ -442,6 +505,38 @@ function candidates(world, dossier, now = new Date()) {
     });
   }
 
+  // THE GRADED MOCK (dead-wire sweep, 11 Aug 2026) — the scrimmage's verdict,
+  // which used to die on disk. dugout.mjs's scrimmage_report tool has always
+  // been instructed (dugout.mjs:538) to name "ONE concrete drill for tomorrow"
+  // after probe 5, and it filed that drill into brain_out/dugout/scrimmage_
+  // <date>.md — a file NO organ in the repo opened. Tomorrow's drill sheet is
+  // compiled here, so this is the address it was written to and never had.
+  // Guards, deliberately the same three the Rest Room lane above carries:
+  //  (a) FRESHNESS GATES THE CANDIDATE. Only a report stamped for TODAY feeds
+  //      tomorrow's sheet — a drill named after last week's mock is a drill for
+  //      a session he has already moved past. (The row carries its own captain-
+  //      local `day`, written by the producer, so no clock is re-derived here.)
+  //  (b) IT IS CLASSED "reconstruct", NOT DEFAULTED. The drill is free text an
+  //      examiner authored under pressure; classing it recall would smuggle it
+  //      past the AMBER ladder as if it were a light lap. reconstruct means the
+  //      body still wins: AMBER (recall only) and RED (floor-touch only) both
+  //      drop it, disclosed at post-match like everything else.
+  //  (c) THE SOURCE LINE CARRIES THE GRADE, VERBATIM AND UNJUDGED. score/25 and
+  //      the persona are the producer's own numbers — nothing here re-scores,
+  //      re-weights or thresholds on them (no number is invented in this lane:
+  //      a mock played today with a drill named IS the whole eligibility rule).
+  const scrims = (world.scrimmage_rows || []).filter(r => r && r.kind === "report" && r.day === localDate(now) && String(r.drill || "").trim());
+  if (scrims.length) {
+    const s = scrims[scrims.length - 1];        // the day's most recent grading
+    const cracks = (Array.isArray(s.weakest) ? s.weakest : []).map(String).filter(Boolean);
+    out.push({
+      kind: "scrimmage", probe_type_emoji: "🔴", concepts: cracks,
+      prompt: String(s.drill),
+      source: `graded mock ${s.day}${s.persona ? ` vs ${s.persona}` : ""} · ${Number.isFinite(Number(s.total_25)) ? `${Number(s.total_25)}/25` : "ungraded"}${cracks.length ? ` · weakest: ${cracks.join(" · ")}` : ""} · the examiner's own drill for tomorrow`,
+      winnable: false, mode: "reconstruct",
+    });
+  }
+
   // DERBY — hottest confusion pair, interleaved discrimination
   const pairs = world.learning_state && Array.isArray(world.learning_state.confusion_pairs) ? world.learning_state.confusion_pairs : [];
   if (pairs.length) {
@@ -472,7 +567,8 @@ function candidates(world, dossier, now = new Date()) {
   // Skipped when the pair is already covered by learning_state or the season re-read, so
   // the graph adds a blur nobody else named rather than a third copy of the same one.
   const cg = world.concept_graph;
-  const cgEdges = cg && Array.isArray(cg.edges) ? cg.edges : [];
+  const gc = graphContract(cg, now);
+  const cgEdges = cg && gc.usable && Array.isArray(cg.edges) ? cg.edges : [];
   if (cgEdges.length) {
     const covered = new Set([
       ...pairs.map(p => pairKey(p.from, p.to)),
@@ -481,10 +577,14 @@ function candidates(world, dossier, now = new Date()) {
     const e = cgEdges.find(x => x && x.kind === "confused-with" && x.from && x.to && !covered.has(pairKey(x.from, x.to)));
     if (e) {
       const built = String(cg.generated_at || "").slice(0, 10) || "date unknown";
+      // 11 Aug 2026 — the age rides the source line in DAYS, not only as a date the
+      // captain has to subtract at 22:00. graphFreshness (cortex's own, imported) is
+      // where the number comes from; age never withholds the drill.
+      const age = gc.age_days === null ? "" : gc.age_days <= 0 ? ", today's" : `, ${gc.age_days} day(s) old`;
       out.push({
         kind: "graph_edge", probe_type_emoji: "🟡", concepts: [e.from, e.to],
         prompt: fill(dossier && dossier.contrast_template, { a: e.from, b: e.to, differentiator: "which one an interviewer means" }),
-        source: `concept graph (${cgEdges.length} edges, built ${built}): ${e.from} ↔ ${e.to} marked confused-with`,
+        source: `concept graph (${cgEdges.length} edges, built ${built}${age}): ${e.from} ↔ ${e.to} marked confused-with`,
         winnable: false, mode: "reconstruct",
       });
     }
@@ -697,6 +797,10 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
   const tier = (ladderCfg && ladderCfg[verdict]) || (ladderCfg && ladderCfg.GREEN) || { drill_modes_allowed: ["recall", "reconstruct", "defend", "novel", "negative_space"], max_drills: 3 };
   const withheld = [];
   if (dossierDegraded) withheld.push(DOSSIER_DEGRADED_NOTE);
+  // dead-wire sweep 11 Aug 2026 — the graph's contract, resolved ONCE per packet so the
+  // candidate lane, the prereq lane and both read-receipts cannot disagree about it.
+  const gcontract = graphContract(world.concept_graph, now);
+  if (gcontract.present && !gcontract.usable) withheld.push(`concept graph withheld — ${gcontract.note}`);
   // KAAM 2 guard (c) — AN EMPTY INVENTORY WRITES ITS REASON, never a silent zero.
   // The Rest Room lane can be empty for four genuinely different reasons and they
   // are NOT the same news: it never dreamed, it dreamed a different day, it
@@ -711,6 +815,19 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     // dream is dreamed TONIGHT, so tonight's date is the one that means "fresh".
     else if (p.date !== localDate(now)) withheld.push(`rest room: the newest dream is for ${p.date}, not tonight — not served`);
     else if (!verified.length) withheld.push(`rest room: ${(p.entries || []).length} dream(s) tonight, ZERO survived verification — unverified ammunition is never served`);
+  }
+  // dead-wire sweep (11 Aug 2026) — the graded mock's lane obeys the same law:
+  // AN EMPTY INVENTORY WRITES ITS REASON. "No scrimmage drill" has three
+  // different meanings and they are not the same news — he never played one, he
+  // played one on another day, or he played one today and the examiner named no
+  // drill (which is the tool call going half-done, and the only one of the three
+  // that is a defect worth seeing).
+  {
+    const reports = (world.scrimmage_rows || []).filter(r => r && r.kind === "report");
+    const today = reports.filter(r => r.day === localDate(now));
+    if (!reports.length) withheld.push("graded mock: no scrimmage has ever been filed — the lane fills the first time he plays one");
+    else if (!today.length) withheld.push(`graded mock: the newest scrimmage is ${reports[reports.length - 1].day}, not today — its drill was for a session already past`);
+    else if (!today.some(r => String(r.drill || "").trim())) withheld.push("graded mock: played today but the report named NO drill — nothing to compile (the examiner's call went half-done)");
   }
   // resolved before the RED branch so every packet — including a floor-touch one — carries
   // the same envelope keys. A consumer must never have to tell "absent" from "not today".
@@ -735,9 +852,7 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
         note: "ladder RED — the curriculum is deliberately not touched today (rest is the work)",
       },
       scheduler_note: schedulerNote(world.capsule_map),
-      concept_graph_read: world.concept_graph
-        ? { nodes: world.concept_graph.node_count ?? null, edges: world.concept_graph.edge_count ?? null, built: String(world.concept_graph.generated_at || "").slice(0, 10) || null }
-        : null,
+      concept_graph_read: conceptGraphRead(world.concept_graph, gcontract),
       night_coach_read: nightCoachRead(world.night_coach),
     };
   }
@@ -795,7 +910,9 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     const withModality = { ...d, modality: ((dossier && dossier.modality_map) || {})[d.mode] || "voice" };
     // audit #72 — the graph's second address: the ground this drill stands on. Only
     // attached when the graph actually knows something, so a graph-less bus is unchanged.
-    const pre = prereqsOf(d.concepts, world.concept_graph);
+    // 11 Aug 2026: and only when the SHAPE is the contract this reader implements — an
+    // off-contract `edges` array is not a prerequisite claim we may put in front of him.
+    const pre = gcontract.usable ? prereqsOf(d.concepts, world.concept_graph) : [];
     const withPre = pre.length ? { ...withModality, prereqs: pre } : withModality;
     // P2 — the night coach's annotation, same conditional law: attached only when the
     // overnight map names this drill's concept. Rides beside the prompt, never inside it
@@ -828,9 +945,9 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     // audit #33 — the two schedulers, on the surface the captain reads at night.
     scheduler_note: schedulerNote(world.capsule_map),
     // audit #72 — proof the nightly Opus map was opened, and how old it was when it was.
-    concept_graph_read: world.concept_graph
-      ? { nodes: world.concept_graph.node_count ?? null, edges: world.concept_graph.edge_count ?? null, built: String(world.concept_graph.generated_at || "").slice(0, 10) || null }
-      : null,
+    // 11 Aug 2026 — "how old" is now a measured age from cortex's own graphFreshness,
+    // plus the schema stamp this reader checked it against.
+    concept_graph_read: conceptGraphRead(world.concept_graph, gcontract),
     // P2 — proof the night coach's map was opened, and which morning it was named for.
     night_coach_read: nightCoachRead(world.night_coach),
   };
@@ -989,6 +1106,45 @@ async function selftest() {
       (compile({ ...world, dmn_precache: null }, cfg, ladderCfg, dossier, now).withheld || []).some(w => /no dream on disk/.test(w)));
     assert("KAAM2 — the <=3 drill law survives the extra candidate", withDream.drills.length <= 3);
   }
+
+  // === DEAD-WIRE SWEEP (11 Aug 2026) — THE GRADED MOCK REACHES THE SHEET =====
+  // dugout.mjs graded a scrimmage /25, named the two weakest cracks and ONE
+  // drill for tomorrow, wrote it to brain_out/dugout/scrimmage_<date>.md — and
+  // no organ in the repo ever opened that file. These assertions fail the moment
+  // that wire is cut again at EITHER end: the producer's row shape (asserted in
+  // dugout.mjs's own suite) and this consumer's read of it.
+  {
+    const report = (over = {}) => ({
+      ts: "2026-07-12T15:40:00.000Z", day: localDate(now), kind: "report", total_25: 17,
+      weakest: ["eval metrics", "context handoff"],
+      drill: "reconstruct the eval harness cold — every handoff named", persona: "scenario_bomb", ...over,
+    });
+    const withScrim = candidates({ ...world, scrimmage_rows: [{ ts: "2026-07-12T15:00:00.000Z", hedges: 3 }, report()] }, dossier, now);
+    const sd = withScrim.find(d => d.kind === "scrimmage");
+    assert("#wire: TODAY's graded mock reaches the drill pool — its drill is the prompt, its two cracks are the concepts",
+      !!sd && sd.prompt === "reconstruct the eval harness cold — every handoff named"
+      && sd.concepts.join("|") === "eval metrics|context handoff");
+    assert("#wire: the source line carries the grade + persona verbatim, and nothing here re-scores it",
+      /17\/25/.test(sd.source) && /scenario_bomb/.test(sd.source) && /graded mock/.test(sd.source));
+    assert("#wire: a hedge row in the same lane is NOT a report (the additive row shape stays readable)",
+      withScrim.filter(d => d.kind === "scrimmage").length === 1);
+    assert("#wire: guard (b) — CLASSED reconstruct, so AMBER and RED both drop it (the body still wins)",
+      sd.mode === "reconstruct"
+      && compile({ ...world, scrimmage_rows: [report()], readiness: { verdict: "AMBER" } }, cfg, ladderCfg, dossier, now).drills.every(d => d.kind !== "scrimmage")
+      && compile({ ...world, scrimmage_rows: [report()], readiness: { verdict: "RED" } }, cfg, ladderCfg, dossier, now).drills.every(d => d.kind !== "scrimmage"));
+    const staleScrim = compile({ ...world, scrimmage_rows: [report({ day: "2026-07-01" })] }, cfg, ladderCfg, dossier, now);
+    assert("#wire: guard (a) — a mock from another day never compiles, and the withheld line NAMES that day",
+      staleScrim.drills.every(d => d.kind !== "scrimmage")
+      && (staleScrim.withheld || []).some(w => /newest scrimmage is 2026-07-01, not today/.test(w)));
+    const noDrill = compile({ ...world, scrimmage_rows: [report({ drill: "  " })] }, cfg, ladderCfg, dossier, now);
+    assert("#wire: played today but NO drill named is a half-done tool call, said in words — never a silent zero",
+      noDrill.drills.every(d => d.kind !== "scrimmage")
+      && (noDrill.withheld || []).some(w => /named NO drill/.test(w)));
+    assert("#wire: an empty lane is absence WITH a reason",
+      (compile({ ...world, scrimmage_rows: [] }, cfg, ladderCfg, dossier, now).withheld || []).some(w => /no scrimmage has ever been filed/.test(w)));
+    assert("#wire: the <=3 drill law survives this candidate too",
+      compile({ ...world, scrimmage_rows: [report()] }, cfg, ladderCfg, dossier, now).drills.length <= 3);
+  }
   assert("MODALITY ROUTING — every drill tagged voice/screen per dossier map", green.drills.every(d => ["voice", "screen"].includes(d.modality)));
   assert("recall/defend route VOICE, reconstruct routes SCREEN", green.drills.every(d => d.mode === "reconstruct" ? d.modality === "screen" : (d.mode === "recall" || d.mode === "defend") ? d.modality === "voice" : true));
   // E2E audit (25 Jul 2026, LOW): the week number must ride the INJECTED clock.
@@ -1146,7 +1302,10 @@ async function selftest() {
 
   // ORGANISM audit #72 — concept_graph.json: a nightly Opus pass with zero readers.
   {
-    const graph = { generated_at: "2026-07-11T03:00:00.000Z", node_count: 3, edge_count: 3,
+    // 11 Aug 2026: the fixture now carries schema_version, because the CONTRACT carries
+    // it and a fixture that skips a contract field is how a reader gets away with never
+    // checking one. Sourced from cortex's export, never a literal 1 typed in here.
+    const graph = { schema_version: CONCEPT_GRAPH_SCHEMA, generated_at: "2026-07-11T03:00:00.000Z", node_count: 3, edge_count: 3,
       edges: [{ from: "tokenization", to: "chunking", kind: "confused-with" },
         { from: "tokenization", to: "context", kind: "prereq" },
         { from: "context", to: "inference", kind: "prereq" }] };
@@ -1164,6 +1323,34 @@ async function selftest() {
     const noGraph = compile({ readiness: { verdict: "GREEN" }, cards: { hardest_due: ["inference"] } }, cfg, ladderCfg, dossier, now);
     assert("#72 no graph ⇒ null read-receipt, no graph drill, no prereqs key, no crash",
       noGraph.concept_graph_read === null && !noGraph.drills.some(d => d.kind === "graph_edge") && !noGraph.drills.some(d => "prereqs" in d));
+
+    // ── DEAD-WIRE SWEEP (11 Aug 2026) — cortex.mjs exported graphFreshness and
+    // CONCEPT_GRAPH_SCHEMA "so a consumer can assert the contract it relies on", and for a
+    // week nothing in the repo imported cortex.mjs. These four assertions are that wire:
+    // delete the import and they stop compiling; stop USING the imports and they fail.
+    assert("#DEADWIRE the reader gates on cortex's OWN exported schema number, not a literal",
+      graphContract(graph, now).usable === true && graphContract(graph, now).expects === CONCEPT_GRAPH_SCHEMA
+      && graphContract({ ...graph, schema_version: CONCEPT_GRAPH_SCHEMA + 1 }, now).usable === false);
+    const offContract = compile({ ...gw, concept_graph: { ...graph, schema_version: CONCEPT_GRAPH_SCHEMA + 1 } }, cfg, ladderCfg, dossier, now);
+    assert("#DEADWIRE an off-contract graph compiles NO drill and NO prereqs — and is NAMED, never silently dropped",
+      !offContract.drills.some(d => d.kind === "graph_edge") && !offContract.drills.some(d => "prereqs" in d)
+      && offContract.concept_graph_read.usable === false
+      && offContract.withheld.some(w => /concept graph withheld/.test(w) && new RegExp(`schema_version ${CONCEPT_GRAPH_SCHEMA + 1}`).test(w)));
+    assert("#DEADWIRE an UNSTAMPED graph is refused too — an unlabelled shape is not the contract",
+      graphContract({ ...graph, schema_version: undefined }, now).usable === false
+      && /no schema_version/.test(graphContract({ ...graph, schema_version: undefined }, now).note));
+    // AGE: cortex's graphFreshness is the standard (its cadence, no number invented here),
+    // it reaches BOTH the receipt and the captain-facing source line, and it NEVER blocks —
+    // the 4 Aug ruling that a prerequisite map is structural knowledge stands.
+    const truth = graphFreshness(now, { graph });
+    assert("#DEADWIRE the AGE on the packet is cortex's graphFreshness, visible on the sheet, and never withholds",
+      truth.age_days !== null && truth.fresh === false
+      && g.concept_graph_read.age_days === truth.age_days && g.concept_graph_read.fresh === truth.fresh
+      && ge.source.includes(`${truth.age_days} day(s) old`)
+      && !g.withheld.some(w => /concept graph withheld/.test(w)));
+    assert("#DEADWIRE the RED envelope carries the same contract keys as the normal one (one builder)",
+      Object.keys(compile({ ...gw, readiness: { verdict: "RED" } }, cfg, ladderCfg, dossier, now).concept_graph_read).join(",")
+        === Object.keys(g.concept_graph_read).join(","));
   }
 
   // ORGANISM audit #33 — capsule_bridge's two-schedulers report finally has an address.
@@ -1368,6 +1555,10 @@ async function main() {
     // that were already there.
     dmn_precache: readJson(join(STATE_DIR, "dmn_precache.json")),
     night_coach: readNightCoach(new Date()),                      // P2 — the overnight misconception map
+    // dead-wire sweep (11 Aug 2026) — the graded mock's own lane. Same shape of
+    // repair as dmn_precache one line up: a producer that had been filing a
+    // verdict + tomorrow's drill for weeks with no consumer anywhere in the repo.
+    scrimmage_rows: readLines(join(STATE_DIR, "dugout_scrimmage.jsonl")),
   };
   // audit #72/#87/#33 — a missing input is NAMED, never silently treated as "no signal".
   // These three are new readers; if any is dark the packet still compiles, but the night's
@@ -1381,6 +1572,11 @@ async function main() {
   const sa = out.sprint_alignment || {};
   console.log(`  sprint ${sa.current_code || "-"} ${sa.current_task || "(none)"} → ${sa.covered === null ? "unresolvable" : sa.covered ? `covered by ${sa.drills_on_current} drill(s)` : "NOT COVERED"}${sa.note ? " · " + sa.note : ""}`);
   if (out.scheduler_note) console.log(`  schedulers: ${out.scheduler_note}`);
+  // dead-wire sweep 11 Aug 2026 — the night's log states the map's contract + age, so a
+  // packet compiled off a two-day-old graph is a visible fact in scripts' output rather
+  // than something only a JSON read would reveal. Never a reason to fail the run.
+  const cgr = out.concept_graph_read;
+  if (cgr) console.log(`  concept graph: ${cgr.nodes} nodes / ${cgr.edges} edges · built ${cgr.built}${cgr.age_days === null ? "" : ` (${cgr.age_days}d old${cgr.fresh ? ", today's" : ""})`} · schema ${cgr.schema_version} vs reader ${cgr.expects}${cgr.usable ? "" : ` → NOT USED: ${cgr.contract_note}`}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

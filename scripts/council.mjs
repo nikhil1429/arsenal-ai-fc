@@ -24,14 +24,21 @@
 //          read the same question disjointly, council_flag.json is written
 //          (this organ's ONE file) and the set-piece coach compiles it into
 //          a defend drill — disagreement-as-curriculum.
-// LAWS:  free-pool drafts ride T7's lane; the sonnet chair rides the Max
-//        window, ledgered + headroom-gated + refused outright if a metered
-//        key is set. Failure degrades gracefully: 0 drafts → cortex proceeds
-//        cold, exactly as before.
+// LAWS:  EVERY SEAT IS BILLED TO THE BOOK THAT ACTUALLY PAID (corrected 11 Aug
+//        2026 — this read "free-pool drafts ride T7's lane", which was true for
+//        1 chair of 3: the prosecutor and the captain's-voice have ridden
+//        `claude -p` haiku since 17 Jul, and both were charged to T7, a GEMINI
+//        key's quota, while writing no brain_ledger row at all). Gemini seats
+//        charge T7; every Claude seat — free-pool haiku and the sonnet
+//        cross-chair alike — rides the Max window and ledgers into
+//        brain_ledger.jsonl, so headroom() sees the spend the council causes.
+//        The sonnet chair additionally is headroom-gated + refused outright if
+//        a metered key is set. Failure degrades gracefully: 0 drafts → cortex
+//        proceeds cold, exactly as before.
 // MODES: node scripts/council.mjs ask "<question>" · selftest
 // ============================================================================
 
-import { readFileSync, existsSync, readdirSync, appendFileSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, appendFileSync, mkdirSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
@@ -65,6 +72,11 @@ const DEFAULT_SEATS = [
 // fail differently; where they diverge is exactly where his understanding
 // needs a drill, not a consensus.
 const CROSS_SEAT = { id: "cross_examiner", family: "claude", model: "sonnet", brief: "You are THE CROSS-EXAMINER, from a different model family than the other chairs. Answer the question yourself, first-principles, mechanism-first, dense. Do NOT hedge toward consensus; if the obvious answer has a crack, name it plainly." };
+// The FREE-POOL seats that ride Claude do it on haiku (17 Jul: "the bus leaves
+// in 25s"). Named ONCE, 11 Aug 2026, because the call site and the ledger row
+// must never be able to disagree about which model was actually spent — the
+// literal used to live only inside seatGen, where nothing else could read it.
+const FREE_CLAUDE_MODEL = "haiku";
 
 function loadSeats(cfgObj) {
   const c = cfgObj !== undefined ? cfgObj : readJson(CONFIG);
@@ -73,8 +85,110 @@ function loadSeats(cfgObj) {
   return { seats, cross, min_headroom: (c && c.cross_min_headroom_tokens) || 20000 };
 }
 
-// his own words seed the third chair (read-only; mirror.mjs owns the capsules)
-function capsuleExcerpts(dir = join(STATE_DIR, "capsules"), cap = 900) {
+// ─────────────────────────────────────────────────────────────────────────────
+// THE CAPTAIN'S DOOR (11 Aug 2026) — the FOURTH door found cut to the same shape.
+//
+// WHAT WAS BROKEN. capsuleExcerptsLegacy (frozen below) seeded the CAPTAIN'S-OWN-
+// VOICE chair — the one seat whose entire job is his idiom — with three stacked
+// silent cuts: `.slice(0, 200)` per bolo, `.slice(0, 900)` on the join, and
+// `readdirSync().slice(0, 4)` on the file list. Measured live 11 Aug 2026: it
+// returned 857 characters against 5,773 characters of `bolo` on disk = 14.8%,
+// and every one of the four excerpts ended mid-WORD ("yaad nahi r", "vendor naam
+// ke", "sab e^scores", "Vocab fact"). Worse than the arithmetic: only `bolo` was
+// ever read. The chair's own brief says "Hinglish welds fine" — and the nine
+// welds, threeWays and interviewLines, 40,822 further characters of his first-
+// person voice, had no path into the seat AT ALL. Nothing in the payload named
+// the drop. So the seat meant to argue in HIS idiom drafted from four cut-off
+// sentences, and that draft is what councilSection() hands to cortex's ONE Opus
+// integration call. Built, present, not wired — the same shape dugout.mjs:880-929
+// fixed on 10 Aug (its 220-char per-axis cut) and cortex.mjs:102-141 fixed this
+// morning (its 1,500-byte raw-bytes cut). The 200/900/4 shipped with no comment
+// justifying any of them: three guessed numbers, which his standing rule forbids.
+//
+// THE FIX carries cortex's RULING across, not its code: emit his prose VERBATIM
+// AND UNCUT, and NAME every layer deliberately left out with its exact character
+// count, so the chair knows what it is not holding. NO NEW CAP REPLACES THE OLD
+// CAPS — there is no `cap` argument any more, and the file list is no longer
+// sliced (a fifth locked capsule used to be invisible here forever).
+//
+// WHY NOT simply import cortex.findCapsule(): cortex.mjs:55 imports THIS file, so
+// the reverse edge would close an ESM cycle on the organism's most expensive
+// lane. And the two doors have different jobs — cortex projects ONE capsule the
+// wake is actually about (whole: mechanism, traps, all 26 doubts) into a one-shot
+// Opus prompt; this door projects ALL capsules into a ≤150-word chair whose seed
+// is labelled "HIS CAPSULE ANCHORS (his real words — use his idiom)".
+//
+// WHICH LAYERS TRAVEL, AND WHERE THAT CHOICE COMES FROM — not a threshold I
+// picked. The default set is the four layers this repo ALREADY labels as his own
+// first-person words: `bolo` ("how HE says it out loud — his voice, not yours",
+// cortex.mjs:169), the faultLines strike+weld pair ("his own strike + weld,
+// VERBATIM", cortex.mjs:172), `threeWays` ("THREE WAYS he explains it") and
+// `interviewLines` ("INTERVIEW LINES (his own)"). Measured across the four live
+// capsules that is 46,595 chars ≈ 11.6k tokens, 54x what the legacy door passed.
+// Everything else — hook, mechanism, why, traps, doubts, and the `deep` re-learn
+// layer (89,788 chars alone) — is CONTENT rather than idiom, and each is named in
+// the payload footer with its size. If he wants any of them seated too, that is a
+// one-key edit in council_config.json (`capsule_layers`), canon where the chairs
+// already live — no code change, and no organ guessing on his behalf.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const S_ = (v) => String(v == null ? "" : v);
+// every layer a capsule can carry, and how to render it in HIS words. Order is
+// the emission order; `id` is what council_config.capsule_layers names.
+const CAPSULE_LAYERS = [
+  { id: "bolo",           label: "BOLO (how HE says it out loud — his voice, not yours)", get: (j) => S_(j.bolo || j.anchor || (j.capsule && j.capsule.bolo)) },
+  { id: "welds",          label: "HIS NINE AXES — his own strike + weld, VERBATIM (the Hinglish is his; keep it)", get: (j) => (Array.isArray(j.faultLines) ? j.faultLines : []).map(a => {
+      const o = (a && typeof a === "object") ? a : {};
+      return `[${S_(o.axis)}] ${S_(o.title)}${o.status ? ` (${S_(o.status)})` : ""}\n  STRIKE: ${S_(o.strike)}\n  WELD:   ${S_(o.weld)}`;
+    }).join("\n") },
+  { id: "threeWays",      label: "THREE WAYS he explains it", get: (j) => { const w = j.threeWays || {}; return (w.ceo || w.junior || w.skeptic) ? `  CEO:     ${S_(w.ceo)}\n  JUNIOR:  ${S_(w.junior)}\n  SKEPTIC: ${S_(w.skeptic)}` : ""; } },
+  { id: "interviewLines", label: "INTERVIEW LINES (his own)", get: (j) => (Array.isArray(j.interviewLines) ? j.interviewLines : []).map(x => "- " + S_(x)).join("\n") },
+  { id: "hook",           label: "HOOK", get: (j) => S_(j.hook) },
+  { id: "mechanism",      label: "MECHANISM", get: (j) => S_(j.mechanism) },
+  { id: "why",            label: "WHY", get: (j) => S_(j.why) },
+  { id: "traps",          label: "TRAPS he has already walked into", get: (j) => (Array.isArray(j.traps) ? j.traps : []).map(t => "- " + (typeof t === "string" ? t : JSON.stringify(t))).join("\n") },
+  { id: "doubts",         label: "DOUBTS HE ALREADY FOUGHT", get: (j) => (Array.isArray(j.doubts) ? j.doubts : []).map((d, i) => `${i + 1}. Q: ${S_(d.q || d.question)}\n   A: ${S_(d.a || d.answer)}`).join("\n") },
+  { id: "deep",           label: "DEEP (his scratch-from-zero re-teach)", get: (j) => [...(Array.isArray(j.faultLines) ? j.faultLines : []).map(a => S_(a && a.deep)), S_(j.deep)].filter(x => x.trim()).join("\n\n") },
+];
+const VOICE_LAYERS = ["bolo", "welds", "threeWays", "interviewLines"];
+
+// his own words seed the third chair (READ-ONLY: capsules/ belongs to mirror.mjs
+// — this file never writes there, never rewords a line, never re-emits one as
+// its own). No cap, no file-list slice: see THE CAPTAIN'S DOOR above.
+function capsuleExcerpts(dir = join(STATE_DIR, "capsules"), deps = {}) {
+  try {
+    const cfg = deps.config !== undefined ? deps.config : readJson(CONFIG);
+    const want = (cfg && Array.isArray(cfg.capsule_layers) && cfg.capsule_layers.length) ? cfg.capsule_layers : VOICE_LAYERS;
+    const on = CAPSULE_LAYERS.filter(L => want.includes(L.id));
+    const off = CAPSULE_LAYERS.filter(L => !want.includes(L.id));
+    const files = readdirSync(dir).filter(f => f.endsWith(".json"));   // ALL of them — a 5th capsule used to be invisible forever
+    const blocks = [];
+    const dropped = new Map();                                          // layer id → chars left behind, for the honest footer
+    for (const f of files) {
+      let j = null;
+      try { j = JSON.parse(readFileSync(join(dir, f), "utf8")); } catch { continue; }
+      if (!j || typeof j !== "object") continue;
+      const id = f.replace(/\.json$/, "");
+      const parts = [`=== ${id}${j.title ? ` · ${S_(j.title)}` : ""}${j.lockedOn ? ` · locked ${S_(j.lockedOn)}` : ""} ===`];
+      for (const L of on) { const t = L.get(j); if (t.trim()) parts.push(`${L.label}:\n${t}`); }   // VERBATIM AND UNCUT
+      for (const L of off) { const n = L.get(j).length; if (n) dropped.set(L.id, (dropped.get(L.id) || 0) + n); }
+      if (parts.length > 1) blocks.push(parts.join("\n"));
+    }
+    if (!blocks.length) return null;
+    // ABSENCE IS NAMED — the silent drop IS the defect being removed here, so the
+    // payload says its own shape and every layer it is not carrying says its size.
+    const foot = dropped.size
+      ? `\n(NOT INCLUDED, named so you know what you are not holding: ${[...dropped].map(([k, n]) => `${k} ${n} chars`).join(" · ")}. Everything above is his own words, VERBATIM and UNCUT, from ${blocks.length} locked capsule(s).)`
+      : `\n(Every layer of all ${blocks.length} locked capsule(s) is above, VERBATIM and UNCUT — nothing was dropped.)`;
+    return blocks.join("\n\n") + "\n" + foot;
+  } catch { return null; }
+}
+
+// FROZEN VERBATIM (LAYERING law — the old engine never leaves the file). This is
+// the door as it shipped until 11 Aug 2026; kept so the 14.8% starvation it
+// caused stays auditable, and so any council_flag.json / cortex draft written
+// before today can be read with the function that actually produced it in hand.
+function capsuleExcerptsLegacy(dir = join(STATE_DIR, "capsules"), cap = 900) {
   try {
     const files = readdirSync(dir).filter(f => f.endsWith(".json")).slice(0, 4);
     const bits = [];
@@ -177,6 +291,69 @@ function claudeChairAsyncLegacy(prompt, model = "sonnet", timeoutMs = 20000, dep
   });
 }
 
+// ── A CHAIR THAT DIES MUST SAY WHY ──────────────────────────────────────────
+// 11 Aug 2026 (wiring audit). Both seat call sites ended `.catch(() => ({ ok:
+// false }))`. The rejection's message went on the floor, and the ledger row
+// built from that object came out with every field at its nothing-value. There
+// is one on disk from the last live sitting:
+//   {"ts":"2026-08-10T17:51:41.913Z","job":"council_chair", … "total_tokens":0,
+//    "duration_ms":0,"ok":false,"error":null,"limit_hit":false,
+//    "limit_signal":"none","http_status":null}
+// The organism recorded that a chair died and recorded NOTHING about why —
+// reproduced exactly by making the injected chair reject.
+// THE CONSUMER IS REAL AND IT IS THE DAEMON ALARM. brain.mjs failureStreak()
+// takes the non-gemini ok:false rows and reads forensicText(r) =
+// `error_envelope || error` to name the cause; with both null the cause falls
+// through to "unknown" (brain.mjs cause ladder) and the hint dies with it. So a
+// council chair that dies because the CLI is NOT LOGGED IN — whose hint is
+// "run `claude`, then /login" — is indistinguishable from one that hit the plan
+// wall, whose hint is the opposite instruction. councilLedgerRow ALREADY reads
+// r.error; the row was wired and the message never reached it. Built, present,
+// not wired — the same shape as this morning's capsule door 200 lines up.
+// duration_ms is MEASURED, never guessed: t0 is taken at the call site, the
+// same way claudeChairAsync's own catch has always done it.
+const seatFailure = (e, t0) => ({
+  ok: false, text: "", total_tokens: 0, duration_ms: Date.now() - t0,
+  error: String((e && e.message) || e || "chair threw with no message").slice(0, 160),
+});
+
+// ── ONE ROW SHAPE FOR EVERY CLAUDE SEAT AT THIS TABLE ───────────────────────
+// Extracted 11 Aug 2026 (wiring audit) from the cross-chair's inline literal,
+// field for field, so the free-pool seats could not be billed by a different
+// hand than the 4th chair. The seat id rides too: `job: "council_chair"` keeps
+// every existing council-spend reader working, and `seat` is what tells the 38
+// haiku drafts apart from the 6 sonnet cross-reads inside it.
+// WHY each field is what it is — the scars, in order:
+//   · G1 (9 Aug 2026): limit_hit was hardcoded false, so a plan-limit chair
+//     reply ledgered as an ordinary ok row and the window never learned it was
+//     locked. The call's own verdict rides now.
+//   · the CACHE PAIR is the honest meter (claudegen.mjs parseOut) — an
+//     in+out-only row under-reports a CLI call by ~30x, and the governor
+//     budgets on this number.
+//   · the row is written for `r` at all, not only a good `r`: it used to live
+//     inside the `if (r.ok && r.text)` branch, so the sitting the window most
+//     needed to see — the chair that hit the wall — was the one that vanished.
+//     A refused chair still paid the boot (brain.mjs does the same for every
+//     night-shift job).
+//   · `?? null`, never `|| 0`: an UNMEASURED number rendered as a measured zero
+//     is the exact lie claudegen forbids; tokens_estimated rides beside it.
+//   · ...ledgerForensics(r) is SPREAD, never hand-copied. The one caller that
+//     copied its fields one at a time forgot error_envelope — the field
+//     brain.mjs forensicText ORs FIRST, and the only thing that tells a 429
+//     plan wall from a 500 server bug. claudegen.mjs's own selftest scans this
+//     file's source for the spread; it goes red if a future edit drops it.
+function councilLedgerRow(seatId, model, r) {
+  return {
+    ts: new Date().toISOString(), job: "council_chair", seat: seatId, engine: "claude", model,
+    input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+    cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+    total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated === true,
+    duration_ms: r.duration_ms || 0, ok: !!(r.ok && r.text), error: r.error || null,
+    limit_hit: r.limit_hit === true,
+    ...ledgerForensics(r),
+  };
+}
+
 async function convene(question, deps = {}) {
   const q = String(question || "").trim();
   if (!q) return { drafts: [], disagreement: 0, note: "no question" };
@@ -185,101 +362,208 @@ async function convene(question, deps = {}) {
   // steelman seat, kept on Gemini deliberately: cross-FAMILY disagreement is
   // M15's whole signal, and an all-Claude bench would argue with one accent.
   const gen = deps.generate || null;
-  const seatGen = (seat, p) => gen ? gen(p)
-    : seat.id === "steelman" ? generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 })
-    : claudeGenAsync(p, "haiku", 20000);
-  const use = deps.recordUse || recordUse;
-  const capsules = deps.capsules !== undefined ? deps.capsules : capsuleExcerpts();
-  const drafts = [];
+  // THE ROUTE IS DECIDED ONCE (11 Aug 2026, wiring audit — see FREE_CLAUDE_MODEL).
+  // The call, the tank charge, the ledger row and the family label all read this
+  // one value now. They used to be two separate expressions — the `seat.id ===
+  // "steelman"` test below and the identical one that built `fam` — which is how
+  // the spend and the label could describe different engines without ever
+  // disagreeing in a way a test could see.
+  const routeOf = (seat) => gen ? "injected" : (seat.id === "steelman" ? "gemini" : "claude");
+  const poolGen = deps.pool || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 }));
   // THE BUS LEAVES ON TIME (live-arc scar, 14 Jul): a chair that misses the
   // deadline is dropped — the deep answer must land in the stuck→gone window,
   // and three perfect drafts 90s late are worth less than one on time.
   const deadline = deps.deadline_ms || 25000;
+  // THE FREE SEATS GET THE BOARDING MARGIN TOO (11 Aug 2026, capsule-door audit).
+  // These seats carried a HARDCODED 20000ms while the bus does not leave until
+  // `deadline` (25000ms) — so a free seat shot itself 5s BEFORE the bus it was
+  // trying to catch. seatMs is not a new number: it is the cross chair's own
+  // formula below, verbatim, the one that already carries the comment "a hard 20s
+  // cap benched it under contention (probed live: 11s alone, >20s busy)". The
+  // free seats never got that lesson.
+  // MEASURED on this lane 11 Aug 2026 — captains_voice on haiku, three live calls:
+  //   · no capsule seed at all ....... 18,315ms  (cache_creation 10,457)
+  //   · the legacy 857-char seed ..... 22,173ms  (cache_creation 10,737)  ← >20s: this
+  //     seat was ALREADY being killed by its own cap, seed or no seed
+  //   · the full 49,442-char payload . 19,033ms  (cache_creation 26,512)
+  // So the wall clock is `claude -p` BOOT and is essentially flat in prompt size:
+  // 2.5x the input tokens moved it by under a second, and the widest payload beat
+  // the narrowest one. Serving his prose whole did not create this exposure — it
+  // is what made it measurable. THE BUS DEADLINE IS UNTOUCHED: 25000 is his
+  // number and it is tied to the stuck→gone window, not something this file may
+  // widen on its own.
+  const seatMs = Math.max(5000, deadline - 2000);
+  // seatMs rides as a THIRD ARG rather than being closed over, so a test can see
+  // the number the seat is actually given — a margin nothing can observe is how
+  // the 20000 sat here unnoticed since 17 Jul (additive: an injected freeClaude
+  // that only declares (p, model) is unaffected).
+  const freeClaude = deps.freeClaude || ((p, model, ms) => claudeGenAsync(p, model, ms));
+  const seatGen = (seat, route, p) => route === "injected" ? gen(p)
+    : route === "gemini" ? poolGen(p)
+    : freeClaude(p, seat.model || FREE_CLAUDE_MODEL, seatMs);
+  const use = deps.recordUse || recordUse;
+  const appendLedger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
+  const capsules = deps.capsules !== undefined ? deps.capsules : capsuleExcerpts();
+  const drafts = [];
+  // EVERY EMPTY SEAT, AND WHY (11 Aug 2026, wiring audit — see seatFailure and
+  // councilSection). A chair failure used to be surfaced in exactly ONE case:
+  // when ALL of them failed, via the `note` below. Anything short of a total
+  // wipe — his own voice chair dying, the cross-family chair benched — left the
+  // council looking merely smaller, never damaged.
+  const benched = [];
+  const bench = (seat, why) => benched.push({ seat, why: String(why).slice(0, 160) });
   const jobs = seats.map(async (seat) => {
     const seed = seat.id === "captains_voice" && capsules ? `\nHIS CAPSULE ANCHORS (his real words — use his idiom):\n${capsules}\n` : "";
-    const r = await seatGen(seat, `${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
-    use("T7", 1, 2500);
+    const route = routeOf(seat);
+    const t0 = Date.now();
+    const r = await seatGen(seat, route, `${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch((e) => seatFailure(e, t0));
+    // THE FREE SEATS' SPEND (11 Aug 2026, wiring audit — the defect this block
+    // exists to close). Two of the three "free-pool" chairs have ridden
+    // `claude -p` haiku since 17 Jul, and BOTH costs were being charged to the
+    // wrong book:
+    //   · the CHARGE. `use("T7", 1, 2500)` ran for every seat unconditionally.
+    //     T7 is the DMN tank — key_index 5, model gemini-flash-latest, a numbered
+    //     GEMINI key with a daily quota (fuelboard_config.json). A `claude -p`
+    //     call never touched that key, so every sitting burned 3 units off a
+    //     Gemini lane that had spent 1, and a 429 on that lane would have been
+    //     charged to calls that never made it.
+    //   · the LEDGER. claudeGenAsync is a pure ENGINE — it meters, it does not
+    //     write (grep: no appendFileSync in claudegen.mjs); every caller writes
+    //     its own brain_ledger row. These two seats never did. Census of the live
+    //     brain_ledger.jsonl this morning: 4,564 rows, council_chair:6 — all six
+    //     the 4th chair — and not one row for any free seat, against ~19
+    //     cortex_wake convenes = up to 38 unledgered Max-window calls.
+    //     brain.mjs windowUsage() sums ledger rows and nothing else, so
+    //     headroom() — the gate that decides whether the deep Opus read may run,
+    //     and the gate the 4th chair below is itself blocked by — was blind to
+    //     spend the council itself caused. The header's LAW "free-pool drafts
+    //     ride T7's lane" was true for 1 chair of 3.
+    // The tank now sees only what actually hit a Gemini key; the window sees
+    // every Claude token. Same row shape and same forensics spread as the 4th
+    // chair (councilLedgerRow) — one shape, so the next seat added cannot be
+    // forgotten the way these two were.
+    if (route === "claude") appendLedger(councilLedgerRow(seat.id, seat.model || FREE_CLAUDE_MODEL, r));
+    else use("T7", 1, 2500);
     // the family label follows the ENGINE that actually spoke — the
     // disagreement math groups by family and must never be lied to
-    const fam = gen ? (seat.family || "gemini") : (seat.id === "steelman" ? (seat.family || "gemini") : "claude");
+    const fam = route === "injected" ? (seat.family || "gemini") : route;
     if (r.ok && r.text) drafts.push({ seat: seat.id, family: fam, text: String(r.text).slice(0, 1200) });
+    // the GEMINI seat's death has nowhere else to go: it writes no ledger row by
+    // law (the tank sees only what hit a Gemini key), so without this line a dry
+    // pool takes the steelman off the bench leaving no trace in any file.
+    else bench(seat.id, (r && r.error) || "empty reply — the chair spoke no words");
   });
   // M15 — the cross-family chair: headroom-gated, $100-law-guarded, ledgered
   if (cross) {
     jobs.push((async () => {
       const env = deps.env || process.env;
-      if (env.ANTHROPIC_API_KEY) return;               // never metered, ever
+      // never metered, ever — and the refusal now NAMES itself, in claudegen's
+      // own refuse() wording, so the two lawful benches below can never be read
+      // as the same event as a crash.
+      if (env.ANTHROPIC_API_KEY) { bench(cross.id, "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)"); return; }
       let hr = deps.headroom;
       if (hr === undefined) {
-        try { hr = headroom(loadBrainConfig(), readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date()); } catch { hr = { allowed: 0 }; }
+        const hrFn = deps.headroomFn || (() => headroom(loadBrainConfig(), readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date()));
+        // BENCHING ON A CRASH STAYS RIGHT: an unreadable window is not a spare
+        // window, and the chair must never spend against a number nobody has.
+        // What was wrong until 11 Aug 2026 is that the crash erased itself —
+        // `catch { hr = { allowed: 0 } }` rendered an unparseable brain_config,
+        // a corrupt brain_queue and an honestly-thin window as ONE silent bench,
+        // so the seat could sit out indefinitely with nothing anywhere naming
+        // the difference between "no room tonight" and "this is broken".
+        try { hr = hrFn(); }
+        catch (e) { hr = { allowed: 0 }; bench(cross.id, `headroom unreadable — ${String((e && e.message) || e)}`); }
       }
-      if (!hr || hr.allowed < min_headroom) return;    // the window belongs to deep reads first
+      // the window belongs to deep reads first. The two numbers are MEASURED
+      // (hr.allowed as returned, min_headroom as configured) — nothing here is
+      // a threshold this file invented.
+      if (!hr || hr.allowed < min_headroom) {
+        if (!benched.some(b => b.seat === cross.id)) bench(cross.id, `window too thin — ${(hr && hr.allowed) || 0} < ${min_headroom} tokens allowed, deep reads have first call`);
+        return;
+      }
       // the chair gets the full bus window minus the boarding margin — a hard
       // 20s cap benched it under contention (probed live: 11s alone, >20s busy)
       const call = deps.claudeChair || ((p) => claudeChairAsync(p, cross.model, Math.max(5000, deadline - 2000)));
-      const r = await call(`${cross.brief}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
+      const tX = Date.now();
+      const r = await call(`${cross.brief}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch((e) => seatFailure(e, tX));
       // the spend rides the SHARED brain ledger — the window sees every token.
-      // G1 (9 Aug 2026): limit_hit was hardcoded false — a plan-limit chair
-      // reply ledgered as an ordinary ok row, so the window never learned it
-      // was locked. The call's own verdict rides now, and the cache pair
-      // joins the row (the honest meter).
-      // 10 Aug 2026 (wiring audit) — two things G1 asked for but did not get:
-      //   · the row lived INSIDE the `if (r.ok && r.text)` below, so limit_hit
-      //     could never once be true: the chair that hit the wall was the one
-      //     row that vanished. A refused chair still paid the boot, so it
-      //     ledgers now, with its own verdict on it (brain.mjs:2405-2410 does
-      //     the same for every night-shift job).
-      //   · `|| 0` on the components rendered an UNMEASURED number as a
-      //     measured zero — the exact lie claudegen.mjs:106-108 forbids. `?? null`
-      //     and tokens_estimated ride instead; the row shape is brain.mjs:591's.
-      if (r) (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({
-        ts: new Date().toISOString(), job: "council_chair", engine: "claude", model: cross.model,
-        input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
-        cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
-        total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated === true,
-        duration_ms: r.duration_ms || 0, ok: !!(r.ok && r.text), error: r.error || null,
-        limit_hit: r.limit_hit === true,
-        //   · and the THIRD forensics field, still dropped. The pair above was
-        //     hand-rolled here while claudegen.ledgerForensics (10 Aug) exists
-        //     to be spread — nightshift's genLedgered and dmn's ledgerRow both
-        //     spread it; this was the one caller copying two of three fields by
-        //     hand, and the one it forgot is error_envelope. That is the field
-        //     brain.mjs:662 forensicText ORs FIRST when the dead-brain alarm
-        //     tries to name a cause, and the only thing that tells a 429 plan
-        //     wall from a 500 server bug (brain.mjs:3203-3213). Measured the
-        //     same morning: 0 of 4,558 live ledger rows carry it. Spreading the
-        //     shared shape is what stops the next caller forgetting a field.
-        //     No production delta on the pair: claudegen's parseOut/parseErr set
-        //     limit_signal on EVERY result ("none" on success), so `|| null`
-        //     only bites the chair's own throw-catch — where null is honest, the
-        //     call never reached a classifier at all.
-        ...ledgerForensics(r),
-      });
+      // The row is built by councilLedgerRow (above): the field-by-field WHY —
+      // G1's limit_hit, the honest meter, the ?? null law, the forensics spread
+      // — lives there, because as of 11 Aug this seat is no longer the only
+      // caller and a rationale nailed to one call site is how the free seats
+      // went eight weeks unledgered.
+      if (r) appendLedger(councilLedgerRow(cross.id, cross.model, r));
       if (r && r.ok && r.text) {
         drafts.push({ seat: cross.id, family: cross.family || "claude", text: String(r.text).slice(0, 1200) });
-      }
+      } else bench(cross.id, (r && r.error) || "empty reply — the chair spoke no words");
     })());
   }
   await Promise.race([Promise.all(jobs), new Promise((res) => setTimeout(res, deadline))]);
   const seated = drafts.slice();                     // late chairs talk to an empty room
+  const empty = benched.slice();                     // …and the empty chairs travel WITH the drafts, not instead of them
   const dis = disagreement(seated);
   // M15 — cross-family disagreement is CURRICULUM: flag it for the set-piece
   const cf = crossFamilySplit(seated);
   const crossSplit = !!(cf && cf.disagreement >= 0.85);
   if (crossSplit) {
+    // THE DOOR TO THE DRILL (11 Aug 2026, wiring audit) — the FIFTH door found cut
+    // to the same shape as the capsule door above, and the one that reaches HIM.
+    //
+    // WHAT WAS BROKEN. This wrote `question: q.slice(0, 200)`. The live
+    // council_flag.json on disk this morning ends mid-WORD: "…Review: ~early
+    // Septembe". That string is not a machine key — `q` is wake.spotlight.text
+    // (cortex.mjs:623), which on this lane is HIS OWN typed Hinglish line — and it
+    // has exactly two consumers, both in setpiece.mjs, both downstream of the cut:
+    //   · :588 builds the defend drill's claim as `your own read of: "<question>"`,
+    //     so the amputated sentence is quoted back to him AS HIS OWN WORDS. He is
+    //     asked to defend a claim that stops mid-syllable.
+    //   · :585 resolves the drill's `concepts` by running conceptsFromText() over
+    //     that same truncated text against the concepts.json registry. A registry
+    //     id living in the tail is simply gone, so the drill attaches to the wrong
+    //     ids or to none — and scorer.gafferPropose() turns those ids into the
+    //     gaffer book's CLAIM (the exact ledger poisoning setpiece.mjs:175-184
+    //     already had to fix once, from the other end).
+    // The 200 shipped with no comment justifying it: a guessed number, which his
+    // standing rule forbids. Nothing downstream wants a shorter string — and this
+    // file already hands the chairs the FULL `q` in a paid prompt at line 385, so
+    // the whole question has always been affordable; only the drill was starved.
+    //
+    // THE FIX is the ruling this file already carried across for the captain's
+    // door: VERBATIM AND UNCUT. No new cap replaces the old cap. No legacy freeze —
+    // an inline `.slice()` is not an engine, and the record of what the 7 Aug flag
+    // was produced by is this comment plus the file on disk.
     (deps.writeFlag || ((o) => writeAtomic(FLAG, o)))({
       date: localDate(deps.now || new Date()), ts: new Date().toISOString(),
-      question: q.slice(0, 200), disagreement: cf.disagreement, families: cf.families,
+      question: q, disagreement: cf.disagreement, families: cf.families,
       seats: seated.map(d => `${d.seat}(${d.family})`),
     });
   }
-  return { drafts: seated, disagreement: dis, split: dis >= 0.85 && seated.length >= 2, cross_split: crossSplit, note: seated.length ? undefined : "every chair empty (pool dry/late) — the Bridge proceeds cold" };
+  return { drafts: seated, benched: empty, disagreement: dis, split: dis >= 0.85 && seated.length >= 2, cross_split: crossSplit, note: seated.length ? undefined : "every chair empty (pool dry/late) — the Bridge proceeds cold" };
 }
 
 // what cortex embeds in the Opus integration prompt
+//
+// ABSENCE IS NAMED HERE TOO (11 Aug 2026, wiring audit). cortex.mjs is the ONE
+// caller of convene(), and it reads exactly one field off the result — this
+// section — so `note`, and every empty chair, reached the deep read as nothing
+// at all. A council that lost the CAPTAIN'S-OWN-VOICE seat and a council that
+// never had one are the same three-block payload, and Opus is told to
+// "integrate, don't average" a bench it cannot know is short. Worse, the two
+// numbers underneath are computed over SURVIVORS: disagreement() ignores the
+// chair that never spoke, and crossFamilySplit() returns null the moment the
+// claude seat dies — so a dead chair reads downstream as CONSENSUS, and the
+// council_flag → setpiece defend-drill lane goes quiet with nothing naming why.
+// Same law this file applied to the capsule door 300 lines up this morning:
+// say what you are not holding. The SEATS travel to the model, the CAUSES stay
+// on the ledger row where brain.mjs's alarm reads them — a spawn EINVAL string
+// is diagnostics, not context, and does not belong in a teaching prompt.
 function councilSection(c) {
   if (!c || !c.drafts || !c.drafts.length) return "";
-  return `\nTHE COUNCIL SAT FIRST (cheap adversarial drafts — integrate, don't average; name what each got right):\n${c.drafts.map(d => `[${d.seat.toUpperCase()}${d.family && d.family !== "gemini" ? " · " + d.family.toUpperCase() : ""}]\n${d.text}`).join("\n\n")}\n${c.split ? `\n⚠ THE CHAIRS SPLIT HARD (disagreement ${c.disagreement}) — the split itself is signal: name the crux they disagree on before answering.` : ""}${c.cross_split ? `\n⚠ TWO MODEL FAMILIES read this differently — the divergence is curriculum: say which family's read holds, and why.` : ""}\n`;
+  const empty = (c.benched || []).filter(b => b && b.seat);
+  const absent = empty.length
+    ? `\n(NOT AT THE TABLE — named so you do not read a short bench as a full one: ${empty.map(b => b.seat.toUpperCase()).join(" · ")}. Their reads are MISSING, not withheld and not agreement; the disagreement number above is over the chairs that spoke.)`
+    : "";
+  return `\nTHE COUNCIL SAT FIRST (cheap adversarial drafts — integrate, don't average; name what each got right):\n${c.drafts.map(d => `[${d.seat.toUpperCase()}${d.family && d.family !== "gemini" ? " · " + d.family.toUpperCase() : ""}]\n${d.text}`).join("\n\n")}\n${absent}${c.split ? `\n⚠ THE CHAIRS SPLIT HARD (disagreement ${c.disagreement}) — the split itself is signal: name the crux they disagree on before answering.` : ""}${c.cross_split ? `\n⚠ TWO MODEL FAMILIES read this differently — the divergence is curriculum: say which family's read holds, and why.` : ""}\n`;
 }
 
 async function selftest() {
@@ -357,6 +641,45 @@ async function selftest() {
     const rThrow = await claudeChairAsync("p", "sonnet", 1000, { gen: async () => { throw new Error("spawn EINVAL"); } });
     assert("a thrown engine degrades, never rejects (the bus still leaves)", rThrow.ok === false && rThrow.error.includes("EINVAL"));
   }
+  // ── THE FREE SEATS' BOOK (11 Aug 2026 wiring audit) ───────────────────────
+  // Two of three "free-pool" chairs spend the Max window on `claude -p` haiku
+  // and were charged to T7, a GEMINI key's daily quota, while writing NO ledger
+  // row: 4,564 live rows, council_chair:6 (all six the sonnet chair), zero free
+  // seats, against ~19 cortex_wake convenes. headroom() sums ledger rows only,
+  // so the gate that decides whether the deep Opus read may run was blind to
+  // spend the council itself caused.
+  // These run the REAL routing path — no `generate` override — with both
+  // engines injected, which is the only way the route/charge/label wiring is
+  // actually under test. Every assertion here goes red if the free seats stop
+  // ledgering, or start billing a Gemini tank for a Claude call again.
+  {
+    const rows = [], tanks = [];
+    const HAIKU = { ok: true, text: "the premise conflates memory with compute entirely different bottlenecks", input_tokens: 2, output_tokens: 340, cache_creation_tokens: 14434, cache_read_tokens: 0, total_tokens: 14776, tokens_estimated: false, duration_ms: 8100, limit_hit: false, http_status: null, limit_signal: "none", error: null };
+    const realRoute = {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null }, capsules: null, env: {},
+      pool: async () => ({ ok: true, text: "because the cache stores keys values but every new token still attends across all previous positions" }),
+      freeClaude: async () => ({ ...HAIKU }),
+      recordUse: (t) => tanks.push(t), appendLedger: (r) => rows.push(r), writeFlag: () => {},
+    };
+    const c = await convene("why does quadratic attention survive the kv cache?", realRoute);
+    assert("THE FREE CLAUDE SEATS LEDGER (up to 38 Max-window calls the governor could not see)",
+      rows.length === 2 && rows.every(r => r.job === "council_chair" && r.engine === "claude" && r.model === "haiku")
+      && rows.map(r => r.seat).sort().join(",") === "captains_voice,prosecutor");
+    // (rows[0] || {}) deliberately: when this wire breaks the array is EMPTY, and
+    // a suite that dies on a TypeError reports one red line instead of five.
+    assert("…with the honest meter intact (cache pair + estimated flag), same shape as the 4th chair",
+      (rows[0] || {}).cache_creation_tokens === 14434 && (rows[0] || {}).total_tokens === 14776 && (rows[0] || {}).tokens_estimated === false && "error_envelope" in (rows[0] || {}));
+    assert("ONLY THE GEMINI SEAT CHARGES T7 (a `claude -p` call never touched that key)",
+      tanks.length === 1 && tanks[0] === "T7");
+    assert("the family label still follows the engine that actually spoke",
+      c.drafts.length === 3 && c.drafts.filter(d => d.family === "claude").length === 2 && c.drafts.filter(d => d.family === "gemini").length === 1);
+    // a refused free seat still paid the CLI boot — same law as the 4th chair,
+    // whose limit-hit row used to vanish inside the ok-branch.
+    rows.length = 0; tanks.length = 0;
+    await convene("q question here", { ...realRoute, freeClaude: async () => ({ ok: false, text: "", total_tokens: 44000, duration_ms: 900, limit_hit: true, http_status: 429, limit_signal: "api_error_status", error: "You've hit your weekly limit · resets Aug 12" }) });
+    assert("a REFUSED free seat ledgers too (it paid the boot; the window must learn it is locked)",
+      rows.length === 2 && rows.every(r => r.ok === false && r.limit_hit === true && r.http_status === 429 && r.total_tokens === 44000));
+  }
   // ── THE LEDGER WIRE: what the governor actually reads ─────────────────────
   {
     const rows = [];
@@ -393,6 +716,100 @@ async function selftest() {
     assert("unmeasured components ride as NULL, never a fake zero (claudegen's law)",
       rows[0].input_tokens === null && rows[0].cache_creation_tokens === null && rows[0].tokens_estimated === true);
   }
+  // ── THE CAPTAIN'S DOOR (11 Aug 2026 wiring audit) ─────────────────────────
+  // The seat whose whole job is his idiom was fed 857 of 5,773 bolo chars (14.8%)
+  // through three stacked slices, and read only `bolo` — his welds/threeWays/
+  // interviewLines had no path in at all. Every assertion here goes red the
+  // moment any of that comes back. The fixture is a HERMETIC capsule dir, so the
+  // suite never depends on how many capsules happen to be locked today.
+  {
+    const capDir = join(STATE_DIR, "..", "..", "node_modules", ".arsenal-council-selftest");
+    mkdirSync(capDir, { recursive: true });
+    const long = (w, n) => Array.from({ length: n }, (_, i) => `${w}${i}`).join(" ");
+    const mk = (id) => ({
+      id, title: `${id} title`, lockedOn: "2026-07-01",
+      bolo: `BOLOSTART ${long("bo", 120)} BOLOEND`,                          // ~700 chars — past the legacy's 200
+      faultLines: [{ axis: "a", title: "ax-a", strike: "st-a", weld: `WELDSTART ${long("we", 90)} WELDEND` },
+                   { axis: "b", title: "ax-b", strike: "st-b", weld: "WELD-B body", deep: "deep-b body text" }],
+      threeWays: { ceo: "3W-CEO line", junior: "3W-JUNIOR line", skeptic: "3W-SKEPTIC line" },
+      interviewLines: ["IVLINE one", "IVLINE two"],
+      hook: "hook body", mechanism: "mech body", why: "why body",
+      traps: ["trap one"], doubts: [{ q: "DOUBTQ?", a: "DOUBTA." }], deep: "capsule deep body",
+    });
+    // FIVE capsules — the legacy's readdirSync().slice(0,4) made the fifth invisible forever
+    const ids = ["c1", "c2", "c3", "c4", "c5"];
+    for (const id of ids) writeFileSync(join(capDir, `${id}.json`), JSON.stringify(mk(id)));
+    writeFileSync(join(capDir, "notacapsule.txt"), "ignored");
+    const out = capsuleExcerpts(capDir, { config: null });
+
+    assert("HIS BOLO ARRIVES WHOLE (legacy cut every one at 200 chars, mid-word)",
+      ids.every(id => out.includes(`${id} title`)) && (out.match(/BOLOSTART/g) || []).length === 5 && (out.match(/BOLOEND/g) || []).length === 5);
+    assert("THE WELDS TRAVEL — the chair's own brief says \"Hinglish welds fine\" and they never arrived",
+      out.includes("WELDSTART") && out.includes("WELDEND") && out.includes("WELD-B body") && out.includes("STRIKE: st-a"));
+    assert("threeWays + interviewLines travel too (his other first-person layers)",
+      out.includes("3W-CEO line") && out.includes("3W-SKEPTIC line") && out.includes("IVLINE one") && out.includes("IVLINE two"));
+    assert("NO FILE-LIST SLICE: a 5th locked capsule is no longer invisible forever",
+      out.includes("=== c5") && !out.includes("notacapsule"));
+    assert("NO CAP anywhere: the payload is longer than the legacy's hard 900-char ceiling",
+      out.length > 900 && capsuleExcerptsLegacy(capDir).length <= 900);
+    assert("NOTHING ENDS MID-WORD (the legacy left 'yaad nahi r', 'vendor naam ke')",
+      !/[A-Za-z0-9]$/.test(out.trimEnd().slice(-1) + "") || out.trimEnd().endsWith(")"));
+    // the anti-silent-drop law: what is NOT carried says its own size
+    assert("ABSENCE IS NAMED with exact sizes (hook/mechanism/why/traps/doubts/deep)",
+      out.includes("NOT INCLUDED") && ["hook", "mechanism", "why", "traps", "doubts", "deep"].every(k => new RegExp(`${k} \\d+ chars`).test(out)));
+    assert("…and the omitted layers are genuinely absent from the payload, not half-cut",
+      !out.includes("DOUBTQ?") && !out.includes("capsule deep body") && !out.includes("mech body"));
+    // CANON WIDENS IT, NOT CODE — council_config.capsule_layers is his one-key edit
+    const wide = capsuleExcerpts(capDir, { config: { capsule_layers: ["bolo", "doubts", "deep"] } });
+    assert("council_config.capsule_layers is honored (his call, no code change, no organ guessing)",
+      wide.includes("DOUBTQ?") && wide.includes("capsule deep body") && !wide.includes("WELDSTART") && /welds \d+ chars/.test(wide));
+    const all = capsuleExcerpts(capDir, { config: { capsule_layers: CAPSULE_LAYERS.map(L => L.id) } });
+    assert("every layer selected → nothing dropped, and the footer says so honestly",
+      all.includes("nothing was dropped") && !all.includes("NOT INCLUDED"));
+    assert("a missing/empty capsule dir still returns null (the chair seats unseeded, as before)",
+      capsuleExcerpts(join(capDir, "nope"), { config: null }) === null);
+
+    // THE WIRE ITSELF: the payload must reach the captain's_voice PROMPT, whole.
+    const seen = [];
+    // HERMETIC — writeFlag is stubbed on EVERY convene() in this suite. Learned
+    // the hard way 11 Aug 2026: two fixtures here ran without it, tripped the
+    // >=0.85 cross-family split, and wrote a fixture question into the LIVE
+    // council_flag.json — the file setpiece.mjs:751 compiles into his drills
+    // inside a +/-2 day window. A test must never be able to reach his curriculum.
+    await convene("does the kv cache remove quadratic attention?", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null }, recordUse: () => {}, writeFlag: () => {},
+      capsules: out, generate: async (p) => { seen.push(p); return { ok: true, text: "draft" }; },
+    });
+    const voiceP = seen.find(p => p.includes("CAPTAIN'S OWN VOICE"));
+    assert("THE WIRE: his whole voice payload reaches the captain's chair prompt UNCUT",
+      voiceP && voiceP.includes(out) && voiceP.includes("WELDEND") && voiceP.includes("=== c5"));
+    assert("…and the OTHER chairs are still never seeded with it (only his seat argues in his idiom)",
+      seen.filter(p => p.includes("WELDSTART")).length === 1);
+
+    // THE BOARDING MARGIN. A free seat used to be killed at a hardcoded 20000ms
+    // while its own bus did not leave until 25000ms — measured live 11 Aug 2026,
+    // this seat took 18.3s with NO seed and 22.2s with the legacy 857-char seed,
+    // so it was already dying on its own cap. Goes red if anyone re-hardcodes it.
+    const ms = [];
+    await convene("q question here", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null }, recordUse: () => {}, capsules: null,
+      pool: async () => ({ ok: true, text: "gemini draft" }),
+      freeClaude: async (p, model, t) => { ms.push(t); return { ok: true, text: "haiku draft" }; },
+      appendLedger: () => {}, writeFlag: () => {},
+    });
+    assert("THE BOARDING MARGIN reaches the free seats (no seat dies 5s before its own bus)",
+      ms.length === 2 && ms.every(t => t === 23000));
+    const msShort = [];
+    await convene("q question here", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null }, recordUse: () => {}, capsules: null, deadline_ms: 6000,
+      pool: async () => ({ ok: true, text: "g" }), freeClaude: async (p, m, t) => { msShort.push(t); return { ok: true, text: "h" }; },
+      appendLedger: () => {}, writeFlag: () => {},
+    });
+    assert("…derived from the bus, never hardcoded — and floored at 5s like the cross chair",
+      msShort.every(t => t === 5000) && !/claudeGenAsync\(p, model, 20000\)/.test(String(convene)));
+    for (const f of readdirSync(capDir)) rmSync(join(capDir, f));
+    rmSync(capDir, { recursive: true, force: true });
+  }
   // M15 — cross-family disagreement ⇒ council_flag ⇒ curriculum
   {
     let flag = null;
@@ -406,9 +823,99 @@ async function selftest() {
     });
     assert("CROSS-FAMILY split ⇒ council_flag written (disagreement-as-curriculum)", c.cross_split && flag && flag.disagreement >= 0.85 && flag.families.length === 2 && flag.question.includes("retrieval"));
     assert("the flag is dated + names the seats", flag.date === "2026-07-15" && flag.seats.some(s => s.includes("claude")));
+    // ── THE DOOR TO THE DRILL (11 Aug 2026 wiring audit) ──────────────────────
+    // `question` was written `.slice(0, 200)`; the live flag on disk ends mid-word
+    // ("…~early Septembe"). setpiece.mjs:588 quotes it back to him as HIS OWN
+    // claim and :585 resolves the drill's registry ids off the same amputated
+    // text. The fixture below is the REAL live question, restored to full length.
+    // Both assertions go red the moment any cap comes back — the first on the
+    // value, the second structurally, so a cut re-introduced under a different
+    // spelling (a cap arg, a helper) still cannot pass unnoticed.
+    const longQ = "Decoy shapes (≥4 capsules + ≥60 doubts) · confusion-pairs (≥6 cracked) · R1 controller constants · saare thresholds — inke din ab ginne shuru honge kyunki data ab beh raha hai. Review: ~early September, uske baad hi number set honge.";
+    let flagLong = null; const askedWith = [];
+    await convene(longQ, {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 },
+      generate: async (p) => { askedWith.push(p); return { ok: true, text: "retrieval grounding recall precision chunks reranker corpus quality embedding" }; },
+      recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 },
+      claudeChair: async () => ({ ok: true, text: "parameters scaling emergent capability reasoning breadth compute frontier", total_tokens: 500, duration_ms: 100 }),
+      appendLedger: () => {}, writeFlag: (o) => { flagLong = o; },
+    });
+    assert("HIS QUESTION REACHES THE DRILL WHOLE (the live flag ended mid-word at 200)",
+      flagLong && flagLong.question === longQ && flagLong.question.length > 200 && flagLong.question.endsWith("number set honge."));
+    // CODE ONLY, never the prose. String(fn) hands back the comments too, and the
+    // block above deliberately quotes the removed `q.slice(0, 200)` verbatim so the
+    // defect stays auditable — which made the first version of this guard fail on
+    // its own documentation. Stripping `//` comments is what makes "the cut is
+    // gone" checkable at all; the same trap sits under the boarding-margin guard
+    // further down, and under any future structural assertion in this file.
+    const codeOf = (fn) => String(fn).replace(/^[ \t]*\/\/[^\n]*$/gm, "").replace(/\s\/\/[^\n]*/g, "");
+    assert("…and the flag can never disagree with what the chairs were actually asked",
+      askedWith.length && askedWith.every(p => p.includes(longQ)) && !/q\.slice\(/.test(codeOf(convene)));
     let flag2 = null;
     const cSame = await convene("q question here", { seatsCfg: threeSeats, generate: async () => ({ ok: true, text: "identical words every chair speaks identical words every chair speaks" }), recordUse: () => {}, capsules: null, writeFlag: (o) => { flag2 = o; } });
     assert("same-family agreement → NO flag (the drill is for real splits)", flag2 === null && !cSame.cross_split);
+  }
+  // ── A CHAIR THAT DIES SAYS WHY (11 Aug 2026 wiring audit) ─────────────────
+  // The defect, verbatim from the live file before this block existed: a
+  // council_chair row stamped 2026-08-10T17:51:41.913Z reading ok:false with
+  // error:null, duration_ms:0, total_tokens:0 — every field at its nothing-
+  // value, because `.catch(() => ({ ok: false }))` threw the message away.
+  // These assertions go red the moment either catch site forgets again.
+  {
+    const rows = [];
+    const cDead = await convene("does the kv cache remove quadratic attention?", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 10000 },
+      pool: async () => { throw new Error("T7 key 429 daily quota exhausted"); },
+      freeClaude: async () => { throw new Error("Invalid API key · Please run /login"); },
+      claudeChair: async () => { throw new Error("spawn claude EINVAL"); },
+      recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 },
+      appendLedger: (r) => rows.push(r), writeFlag: () => {},
+    });
+    assert("A REJECTING CHAIR CARRIES ITS CAUSE INTO THE LEDGER ROW (the live 10 Aug row read error:null)",
+      rows.length === 3 && rows.every(r => typeof r.error === "string" && r.error.length > 0));
+    // the consumer, named: brain.mjs failureStreak() reads forensicText(r) =
+    // `error_envelope || error`, and with both null its cause ladder falls to
+    // "unknown" — so not_logged_in and plan_limit, whose hints are OPPOSITE
+    // instructions, become the same row.
+    assert("…so brain.mjs failureStreak can NAME it (not_logged_in vs plan_limit are opposite hints)",
+      rows.some(r => /Please run \/login/.test(String(r.error_envelope || r.error || "")))
+      && rows.some(r => /EINVAL/.test(String(r.error_envelope || r.error || ""))));
+    assert("EVERY empty seat is on the record, gemini one included (it writes no ledger row by law)",
+      cDead.benched.length === 4 && cDead.benched.some(b => b.seat === "steelman" && /429/.test(b.why))
+      && cDead.benched.some(b => b.seat === "cross_examiner"));
+    assert("…and a TOTAL wipe still returns the old honest note + empty section (layering)",
+      cDead.drafts.length === 0 && cDead.note.includes("cold") && councilSection(cDead) === "");
+
+    // THE WIRE TO CORTEX: a PARTIAL council must say it is partial. His own
+    // voice chair dying used to look identical to a council that never had one.
+    const cPart = await convene("does the kv cache remove quadratic attention?", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null },
+      generate: async (p) => p.includes("CAPTAIN'S OWN VOICE") ? { ok: false, text: "" } : { ok: true, text: "a real draft about caches attention and recompute" },
+      recordUse: () => {}, capsules: null,
+    });
+    const secPart = councilSection(cPart);
+    assert("A PARTIAL COUNCIL SAYS SO IN THE OPUS PROMPT (his seat can go missing silently)",
+      cPart.drafts.length === 2 && secPart.includes("NOT AT THE TABLE") && secPart.includes("CAPTAINS_VOICE"));
+    assert("…and the CAUSE stays on the ledger, never in the teaching prompt (EINVAL is not context)",
+      !/EINVAL|429|spawn/.test(councilSection(cDead) + secPart));
+    assert("a FULL bench adds nothing — a healthy council reads byte-identical to before",
+      !councilSection({ drafts: [{ seat: "a", family: "gemini", text: "x" }], benched: [] }).includes("NOT AT THE TABLE"));
+
+    // the three cross-chair benches are now THREE DIFFERENT sentences. They used
+    // to be one silent `return` each, so "no room tonight" and "brain_config is
+    // corrupt" were indistinguishable for as long as it lasted.
+    const benchWhy = async (extra) => (await convene("q question here", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 },
+      generate: genThree, recordUse: () => {}, capsules: null, env: {},
+      claudeChair: async () => { throw new Error("must not be called"); },
+      appendLedger: () => {}, writeFlag: () => {}, ...extra,
+    })).benched.find(b => b.seat === "cross_examiner");
+    assert("A HEADROOM CRASH NO LONGER ERASES ITSELF (it read exactly like a thin window)",
+      /headroom unreadable/.test((await benchWhy({ headroomFn: () => { throw new Error("brain_config.json: Unexpected token }"); } })).why));
+    assert("a THIN WINDOW says its own two measured numbers, and neither is invented here",
+      /window too thin — 5000 < 20000 tokens/.test((await benchWhy({ headroom: { allowed: 5000 } })).why));
+    assert("the $100 LAW refusal names itself in claudegen's own words",
+      /ANTHROPIC_API_KEY set/.test((await benchWhy({ headroom: { allowed: 300000 }, env: { ANTHROPIC_API_KEY: "sk-nope" } })).why));
   }
   // disagreement math + graceful degradation (unchanged laws)
   {
@@ -442,4 +949,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { convene, councilSection, disagreement, crossFamilySplit, capsuleExcerpts, loadSeats, claudeChairAsync, claudeChairAsyncLegacy, DEFAULT_SEATS, CROSS_SEAT };
+export { convene, councilSection, disagreement, crossFamilySplit, capsuleExcerpts, capsuleExcerptsLegacy, CAPSULE_LAYERS, VOICE_LAYERS, loadSeats, claudeChairAsync, claudeChairAsyncLegacy, DEFAULT_SEATS, CROSS_SEAT };

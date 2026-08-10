@@ -437,6 +437,112 @@ export function moreAxesLine(axes, concept, shown) {
     + `   → poori list: \`node scripts/rejirah.mjs state ${concept}\``;
 }
 
+// ── THE DEFERRED CARRY (dead-wire repair, 11 Aug 2026) ───────────────────────
+// WHAT WAS DEAD. forge_session.mjs's LAWS say, verbatim: "Deferred is not dropped: axes
+// marked `defer` are reported at close so Re-Jirah can pick them up (THE METHOD step 0 —
+// 'deferred ≠ dropped')". This organ IS Re-Jirah, and it had never read the field once.
+// MEASURED 11 Aug 2026: `grep -rn axes_deferred scripts/` returned brain.mjs,
+// forge_session.mjs, learning_state.mjs, teaching_audit.mjs — four organs that RENDER the
+// field, not one that QUEUES it — and this file was absent from that list entirely. Its
+// axis universe is the fixed a-i of a LOCKED capsule (dueReport iterates loadCapsules()),
+// so on a concept that never locks a deferred axis entered no queue anywhere: BEFORE lock,
+// `defer` was functionally `drop`, which is the one thing the law says it is not. All 8
+// rows in forge_sessions.jsonl today are `hallucinations`, and hallucinations has no
+// capsule — so the only concept he has actually worked is exactly the uncovered case.
+//
+// WHY THIS IS A BACKLOG AND NOT A DUE-DATE. An interval schedule is earned at LOCK —
+// roundSchedule() refuses without `lockedOn` and says so, because inventing a lock day
+// would be a fabricated date. A deferred axis on an unlocked concept has no day to count
+// from. So the carry reports only what the data already says: which axis, its type (from
+// AXIS_TYPE above, which is read off PROJECT_OS), the moment it was deferred, and how long
+// ago that was. No due-date, no interval, no age cutoff, no threshold of any kind.
+//
+// WHAT CLEARS AN AXIS OFF THE CARRY — both are real pick-ups, nothing else counts:
+//   1. it is re-marked `done` in a later forge session (markAxis MOVES it between the two
+//      lists, so the newest event for that axis simply stops being a defer), or
+//   2. it is graded cold here — a rejirah grade row for that concept+axis AFTER the defer.
+// A defer never expires on its own. Age is reported; age is not a clearing rule.
+export function readSessions(path = SESSIONS_LOG) {
+  const out = [];
+  try {
+    if (!existsSync(path)) return out;
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      const s = line.trim(); if (!s) continue;
+      try { const j = JSON.parse(s); if (j && j.concept) out.push(j); } catch {}
+    }
+  } catch {}
+  return out;
+}
+
+export function deferredCarry(history, live, caps, rows, now = new Date()) {
+  const capIds = new Set((caps || []).map((c) => c && c.id).filter(Boolean));
+  const grades = (rows || []).filter(isGrade);
+  // ONE EVENT PER (concept, axis) MARK, timestamped. The per-axis stamp is the honest
+  // clock — forge's markAxis writes `axes_marked_at[axis].at` and the CLI passes no time
+  // from argv, so it cannot be typed in. `ended_at`/`updated_at` is the fallback for the
+  // older rows written before that stamp existed (the first history row's map is `{}`).
+  const events = [];
+  const collect = (row, fallbackTs, isLive) => {
+    if (!row || !row.concept) return;
+    const marks = row.axes_marked_at || {};
+    const at = (a) => (marks[a] && marks[a].at) || fallbackTs || "";
+    for (const a of (Array.isArray(row.axes_done) ? row.axes_done : [])) {
+      if (AXES.includes(a)) events.push({ concept: row.concept, axis: a, kind: "done", at: at(a), live: !!isLive });
+    }
+    for (const a of (Array.isArray(row.axes_deferred) ? row.axes_deferred : [])) {
+      if (AXES.includes(a)) events.push({ concept: row.concept, axis: a, kind: "defer", at: at(a), live: !!isLive });
+    }
+  };
+  for (const r of (history || [])) collect(r, r.ended_at || r.updated_at || r.started_at, false);
+  // THE LIVE SESSION COUNTS THE MOMENT IT IS FILED, same rule the teaching-contract runs on:
+  // a session that is abandoned instead of closed never reaches the history file at all, and
+  // that is precisely the run whose defers would otherwise vanish. It is marked LIVE on the
+  // screen so nobody reads an open claim as a closed one.
+  if (live && live.concept) collect(live, live.updated_at || live.started_at, true);
+
+  const last = new Map();
+  for (const e of events) {
+    const k = `${e.concept} ${e.axis}`;
+    const prev = last.get(k);
+    if (!prev || String(e.at) >= String(prev.at)) last.set(k, e);   // ISO strings sort as time
+  }
+
+  const byConcept = new Map();
+  for (const e of last.values()) {
+    if (e.kind !== "defer") continue;
+    // Graded cold since the defer = Re-Jirah DID pick it up. That is the wire working, and
+    // a carry that kept nagging afterwards would be teaching him to ignore the screen.
+    const pickedUp = grades.some((g) => g.concept === e.concept && g.axis === e.axis && String(g.ts) > String(e.at));
+    if (pickedUp) continue;
+    const ms = Date.parse(e.at);
+    const ageDays = Number.isFinite(ms) ? Math.floor((now.getTime() - ms) / 86400000) : null;
+    const entry = { axis: e.axis, axisType: AXIS_TYPE[e.axis], at: e.at || null, ageDays, live: e.live };
+    if (!byConcept.has(e.concept)) byConcept.set(e.concept, { concept: e.concept, locked: capIds.has(e.concept), axes: [] });
+    byConcept.get(e.concept).axes.push(entry);
+  }
+  // Oldest defer first — derived from the rows themselves, not from a ranking constant.
+  for (const c of byConcept.values()) c.axes.sort((a, b) => String(a.at).localeCompare(String(b.at)) || a.axis.localeCompare(b.axis));
+  return [...byConcept.values()].sort((a, b) => String(a.axes[0].at).localeCompare(String(b.axes[0].at)));
+}
+
+// The carry's own screen block, shared by `due` and `state` so the two can never drift.
+export function carryLines(carry) {
+  const L = [];
+  if (!carry.length) return L;
+  L.push(`\n== DEFERRED, NOT DROPPED ==   (forge ne \`defer\` kiya — ab Re-Jirah tak pahunchta hai · koi due-date nahi: lock ke bina woh gadha hua number hota)\n`);
+  for (const c of carry) {
+    L.push(`${c.concept}${c.locked ? "" : "   [NOT LOCKED — iska koi interval schedule nahi; yeh line hi iska poora queue hai]"}`);
+    for (const a of c.axes) {
+      L.push(`   ${a.axis} · ${String(a.axisType).padEnd(11)} deferred ${String(a.at || "?").slice(0, 10)}`
+        + (a.ageDays === null ? "" : ` (${a.ageDays}d ago)`)
+        + (a.live ? "   · LIVE session, abhi khuli hui" : ""));
+    }
+    L.push(`   → padhake band karo: \`node scripts/forge_session.mjs axis <axis> done\`   ·   ya cold uthao: \`node scripts/rejirah.mjs grade ${c.concept} <axis> held|cracked --gut <word>\``);
+    L.push("");
+  }
+  return L;
+}
+
 function intervalsOf() {
   const p = readJson(PROFILE) || {};
   return Array.isArray(p.rejirah_intervals_days) && p.rejirah_intervals_days.length
@@ -671,6 +777,40 @@ function selftest() {
   assert("THE CAPSULE IS STILL NEVER MUTATED — patching derives a NEW array, it does not touch his",
     (() => { const before = JSON.stringify(TOK); gistPatch(TOK, ["2026-07-27"]); return JSON.stringify(TOK) === before; })());
 
+  // ── THE DEFERRED CARRY (dead-wire repair, 11 Aug 2026) ─────────────────────
+  // The first assertion is the WIRE ITSELF: it fails the instant this organ stops reading
+  // forge's axes_deferred, which is the state it shipped in for weeks.
+  const sess = (o) => ({ concept: "hallucinations", ended_at: "2026-08-04T10:00:00Z", axes_done: [], axes_deferred: [], axes_marked_at: {}, ...o });
+  const CARRY_NOW = new Date("2026-08-11T12:00:00Z");
+  assert("DEFERRED CARRY — an axis deferred on an UNLOCKED concept REACHES Re-Jirah (forge LAWS:32 — 'deferred ≠ dropped'; before this it entered no queue at all)",
+    (() => { const c = deferredCarry([sess({ axes_deferred: ["g"] })], null, [{ id: "embeddings" }], [], CARRY_NOW);
+      return c.length === 1 && c[0].concept === "hallucinations" && c[0].locked === false
+        && c[0].axes.length === 1 && c[0].axes[0].axis === "g" && c[0].axes[0].axisType === "defend"; })());
+  assert("DEFERRED CARRY — the age is DERIVED from the row's own stamp, and no due-date is ever emitted (no lock day ⇒ no honest schedule)",
+    (() => { const a = deferredCarry([sess({ axes_deferred: ["g"] })], null, [], [], CARRY_NOW)[0].axes[0];
+      return a.ageDays === 7 && a.at === "2026-08-04T10:00:00Z" && !("nextDue" in a) && !("due" in a); })());
+  assert("DEFERRED CARRY — the per-axis mark stamp wins over the session's ended_at (the unforgeable clock)",
+    deferredCarry([sess({ axes_deferred: ["g"], axes_marked_at: { g: { at: "2026-08-01T00:00:00Z" } } })], null, [], [], CARRY_NOW)[0].axes[0].ageDays === 10);
+  assert("DEFERRED CARRY — re-marking the axis DONE in a later session clears it (markAxis moves it; the newest event wins)",
+    deferredCarry([sess({ axes_deferred: ["g"] }), sess({ ended_at: "2026-08-06T10:00:00Z", axes_done: ["g"] })], null, [], [], CARRY_NOW).length === 0);
+  assert("DEFERRED CARRY — a COLD GRADE after the defer clears it: that is the pick-up the law asks for",
+    deferredCarry([sess({ axes_deferred: ["g"] })], null, [],
+      [{ concept: "hallucinations", axis: "g", result: "held", ts: "2026-08-05T10:00:00Z" }], CARRY_NOW).length === 0);
+  assert("DEFERRED CARRY — a grade from BEFORE the defer does NOT clear it (he deferred it after, so it is still owed)",
+    deferredCarry([sess({ axes_deferred: ["g"] })], null, [],
+      [{ concept: "hallucinations", axis: "g", result: "held", ts: "2026-08-01T10:00:00Z" }], CARRY_NOW).length === 1);
+  assert("DEFERRED CARRY — the LIVE open session counts the moment it is filed, flagged as live (an abandoned session never reaches the history file)",
+    (() => { const c = deferredCarry([], { concept: "zzq_live", updated_at: "2026-08-11T09:00:00Z", axes_deferred: ["d"] }, [], [], CARRY_NOW);
+      return c.length === 1 && c[0].axes[0].live === true && c[0].axes[0].axis === "d"; })());
+  assert("DEFERRED CARRY — a locked concept is carried too, but MARKED locked (its 9 axes already have an interval queue)",
+    deferredCarry([sess({ concept: "embeddings", axes_deferred: ["b"] })], null, [{ id: "embeddings" }], [], CARRY_NOW)[0].locked === true);
+  assert("DEFERRED CARRY — the screen block names the axis, the concept and the two ways to pick it up",
+    (() => { const t = carryLines(deferredCarry([sess({ axes_deferred: ["g"] })], null, [], [], CARRY_NOW)).join("\n");
+      return /DEFERRED, NOT DROPPED/.test(t) && /hallucinations/.test(t) && /\bg · defend/.test(t)
+        && /forge_session\.mjs axis <axis> done/.test(t) && /rejirah\.mjs grade hallucinations/.test(t); })());
+  assert("DEFERRED CARRY — junk in, silence out: a garbage axis letter and a missing field never fabricate a row",
+    deferredCarry([sess({ axes_deferred: ["zz", 7, null] }), { concept: "x" }], null, [], [], CARRY_NOW).length === 0);
+
   console.log(`\nrejirah selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
@@ -829,6 +969,12 @@ function main() {
       console.log(`
 rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) => c.id).join(", ") || "(koi nahi)"}
 `);
+      // …but "no capsule" is not "nothing owed" (dead-wire repair, 11 Aug 2026). An UNLOCKED
+      // concept is exactly the case where a deferred axis has no other queue, and `due`'s own
+      // carry block points the reader here — so this branch had to stop being a dead end.
+      const carryHere = deferredCarry(readSessions(), readJson(join(STATE, "forge_session.json")), caps, rows, now)
+        .filter((c) => c.concept === want);
+      for (const l of carryLines(carryHere)) console.log(l);
       return;
     }
     for (const c of caps) {
@@ -856,8 +1002,19 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
     // silently makes every other number on this screen wrong.
     const pend = pendingCloses(caps, rows);
     if (pend.length) console.log(`\n⚠ ${pend.length} closed round(s) NOT in the gist yet — \`node scripts/rejirah.mjs pending\` for the patch. Until then five organs still read them as never-served.`);
+    // THE DEFERRED CARRY, printed BEFORE the empty-queue return below (dead-wire repair,
+    // 11 Aug 2026). That return used to fire on an unlocked concept with open deferred axes
+    // and print "kuch due nahi" — a clean sheet laid straight over a backlog, which is the
+    // exact reading that let `defer` mean `drop` for weeks.
+    const carry = deferredCarry(readSessions(), readJson(join(STATE, "forge_session.json")), caps, rows, now);
+    for (const l of carryLines(carry)) console.log(l);
     const rep = dueReport(caps, rows, intervals, readJson(CARDS), now);
-    if (!rep.length) { console.log("\nrejirah: kuch due nahi.\n"); return; }
+    if (!rep.length) {
+      console.log(carry.length
+        ? "\nrejirah: locked capsules pe kuch due nahi — par upar ka deferred carry khaali nahi hai.\n"
+        : "\nrejirah: kuch due nahi.\n");
+      return;
+    }
     console.log(`\n== RE-JIRAH — AXES DUE ==   (FSRS says WHEN · this says WHICH AXES + HOW HARD)\n`);
     for (const r of rep) {
       console.log(`${r.concept}${r.fsrs_rank >= 0 ? `  [FSRS hardest #${r.fsrs_rank + 1}]` : ""}`);

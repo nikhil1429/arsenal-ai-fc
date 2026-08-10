@@ -50,8 +50,19 @@
 //            never reads reps_log (capture.mjs owns it).  ← TRUE UNTIL audit #108,
 //            6 Aug 2026: `close` now reads reps_log.jsonl on the SAME terms — one
 //            direction, capture.mjs still the sole writer, a bad file costs nothing.
-// MODES: start <concept> [--force] · step <0-11> · axis <a-i> [done|defer]
-//        · moment <kind> · status · contract · boot · close · selftest
+// THE LIST BELOW IS DERIVED FROM THE DISPATCH BY THE SELFTEST — do not hand-edit it
+// out of step with the switch (DEAD_COMMAND repair, 10 Aug 2026). It advertised
+// `axis <a-i> [done|defer]` — the OPTIONAL-argument form the dispatch has REFUSED
+// since 7 Aug (P4.1: bare `axis b` prints a 4-line refusal and exits 1, state
+// untouched) — and named neither `now`, the declaration that replaced the old silent
+// default, nor `lockchain`, dispatched since the outward loop landed 8 Aug. Both cost
+// something real: the forge skill sends a session HERE to grep the contract
+// (`grep -n "WRITER OF" scripts/forge_session.mjs`, .claude/skills/forge/SKILL.md:29),
+// so a session mid-teaching typed the advertised bare form and ate an exit 1, and the
+// read-only lock-chain preview was invisible to anyone who read this header or ran the
+// script bare. The two docs now fail the selftest the moment either drops a verb.
+// MODES: start <concept> [--force] · step <0-11> · axis <a-i> now|done|defer
+//        · moment <kind> · lockchain · status · contract · boot · close · selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -649,6 +660,31 @@ function appendCoverage(s, ended_by, extra = {}, path = HISTORY, now = new Date(
   } catch { return false; }
 }
 
+// THE DISCARD REPORT (dead-wire repair, 10 Aug 2026). `start --force` called
+// appendCoverage and THREW THE RETURN VALUE AWAY, then blanked + saved on the very
+// next line. appendCoverage returns false on failure and never throws (:649), so a
+// failed append silently erased the discarded session's entire record: no row, no
+// line on screen, no non-zero exit. The :1619 promise — "a --force overwrite still
+// leaves a row behind" — was true only on the happy path, and the one moment it
+// mattered was the one moment nothing said anything.
+//
+// `close` already had the answer: it prints the whole coverage BEFORE the append,
+// so a failed append there still leaves the captain a copy on screen ("the coverage
+// above is the ONLY copy", F5). `--force` prints nothing of its own, so on failure
+// this hands back the coverage itself — the record it could not file.
+//
+// It stays a COURTESY, never a blocker (the same law stated at :634 and the same
+// one `close` follows): a failed append does not stop the new session from opening,
+// and does not change the exit code. It only stops being SILENT.
+function forceDiscardLines(prev, recorded, cov) {
+  if (recorded !== false) return [`forge_session: '${prev.concept}' discarded — force row recorded to ${HISTORY}`];
+  return [
+    `forge_session: history append FAILED — '${prev.concept}' was discarded and its row could NOT be written.`,
+    "  the coverage below is the ONLY copy of that session; save it before you type anything else (F5)",
+    JSON.stringify(cov, null, 2),
+  ];
+}
+
 // Reads the history once and answers the only two questions `boot` asks: what was
 // the last recorded session, and how many recorded runs share its concept. The
 // COUNT is reported, never judged — a threshold on "re-ran after a dirty close"
@@ -1242,6 +1278,33 @@ function selftest() {
     H.last && H.last.ended_by === "force" && H.same_concept === 2);
   assert("lastHistory on a missing file returns a null row and count 0",
     lastHistory(join(tmpdir(), "forge_no_such_history.jsonl")).last === null);
+
+  // THE DROPPED RETURN VALUE (dead-wire repair, 10 Aug 2026). `start --force` used to
+  // discard the return of appendCoverage, so a failed append erased the session with
+  // ZERO output. Its own path is a temp file so the asserts above keep their counts.
+  const hpF = join(tmpdir(), `forge_force_selftest_${process.pid}.jsonl`);
+  rmSync(hpF, { force: true });
+  assert("FORCE DISCARD SPEAKS ON SUCCESS — one line, and it names the history file the row went to",
+    (() => { const L = forceDiscardLines(clean, appendCoverage(clean, "force", {}, hpF, T(30)), coverage(clean, T(30)));
+      return L.length === 1 && /force row recorded/.test(L[0]) && L[0].includes(HISTORY); })());
+  assert("FORCE DISCARD IS NEVER SILENT — a FAILED append prints the loud warning AND the discarded session's whole coverage, so the only record survives on screen",
+    (() => { const L = forceDiscardLines(clean, appendCoverage(clean, "force", {}, join(hpF, "nope", "x.jsonl"), T0), coverage(clean, T(30)));
+      return L.length === 3 && /append FAILED/.test(L[0]) && /hallucinations/.test(L[0]) && /ONLY copy/.test(L[1])
+        && JSON.parse(L[2]).concept === "hallucinations" && Array.isArray(JSON.parse(L[2]).axes_ungraded); })());
+  // …and the WIRE itself, not just the renderer (precedent: scoreboard.mjs:599). The two
+  // asserts above would stay green if the CLI dropped the return value all over again —
+  // which is EXACTLY the defect. This reads the `start --force` block out of this file's
+  // own source and fails if the value stops being taken or stops being printed.
+  assert("FORCE DISCARD WIRE — `start --force` takes appendCoverage's return and prints it (the dropped-return defect cannot come back silently)",
+    (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      // The needles are BUILT, never written whole: a literal here sits earlier in this
+      // same file than the block it hunts, so a plain indexOf matched the assert's own
+      // string and sliced 41 characters of itself (caught on the first run, 10 Aug 2026).
+      const from = src.indexOf("// RECORD BEFORE " + "DISCARD");
+      const blk = from < 0 ? "" : src.slice(from, src.indexOf("const s = blank(" + "concept)", from));
+      return blk.length > 0 && /const\s+recorded\s*=\s*appendCoverage\(prev,\s*"force"/.test(blk)
+        && /forceDiscardLines\(prev,\s*recorded,\s*cov\)/.test(blk); })());
+  rmSync(hpF, { force: true });
   assert("DOUBLE-CLOSE GUARD — shouldRecordClose is true once, false after closed_at is set",
     shouldRecordClose(clean) === true && shouldRecordClose({ ...clean, closed_at: nowISO(T0) }) === false);
   assert("THE DELETED FALL-THROUGH — startBlocked is TRUE for a STALE unclosed prev (the 30 Jul erasure path)",
@@ -1503,6 +1566,67 @@ function selftest() {
       gateLines(null, [])[0].includes("capsules 0/4"));
   }
 
+  // THE LOCK-CHAIN DOOR — the 10 Aug 2026 TRUNCATED_AT_DOOR scar. These strings are
+  // the REAL stdout shapes of the spawned organs, copied from their console.log
+  // templates: mirror.mjs:354 + :360, benchmark.mjs:866 + :870, scout.mjs:721.
+  {
+    const MIRROR_OUT = [
+      "mirror: backup — 4 capsule(s) snapshotted to capsule_backups/2026-08-10/",
+      "mirror: 3/4 · SHORT (inference) → C:\\repo\\dressing-room\\state\\mirror_manifest.json",
+    ].join("\n");
+    const mr = chainReport("mirror", MIRROR_OUT);
+    assert("LOCK-CHAIN DOOR — the mirror's RESULT survives its backup line (the scar: line 1 was all that got through)",
+      mr.length === 2 && /3\/4 · SHORT/.test(mr[1]));
+    assert("LOCK-CHAIN DOOR — a mirror SHORTFALL can never be swallowed by a successful backup",
+      mr.join(" ").includes("SHORT (inference)"));
+    assert("LOCK-CHAIN DOOR — a backup FAILURE is kept too (a 'last line' fix would have hidden exactly this)",
+      chainReport("mirror", "mirror: backup FAILED (EPERM) — the mirror itself is untouched\nmirror: 4/4 · ok (all ok) → x").length === 2);
+    assert("LOCK-CHAIN DOOR — benchmark's documented first-line contract is untouched, and its indented ⚠ faults stay below",
+      (() => { const b = chainReport("benchmark", "benchmark: ok · 7 buckets · regressions 0 · run #12 → x\n  ⚠ dossier.json MALFORMED (non-blocking): bad JSON");
+        return b.length === 1 && b[0].startsWith("benchmark: ok ·"); })());
+    assert("LOCK-CHAIN DOOR — an organ that never self-names (scout speaks as 'MISSIONS DESK ·') still reports line 1, prefixed once",
+      chainReport("mission", "MISSIONS DESK · staged L-embeddings → dressing-room/missions/L-embeddings.md\n  more").join() ===
+      "mission: MISSIONS DESK · staged L-embeddings → dressing-room/missions/L-embeddings.md");
+    assert("LOCK-CHAIN DOOR — no line is ever double-prefixed with the organ's name",
+      chainReport("mirror", MIRROR_OUT).every((l) => !/^mirror: mirror:/.test(l)));
+    assert("LOCK-CHAIN DOOR — a silent organ reports 'ran', never throws",
+      chainReport("mirror", "").join() === "mirror: ran" && chainReport("mirror", null).join() === "mirror: ran");
+  }
+
+  // THE DISPATCH DOC WIRE — the 10 Aug 2026 DEAD_COMMAND scar. This file's header
+  // MODES block and its bare-invocation usage line are the ONLY two places a session
+  // learns what this organ accepts, and the forge skill sends it here to read them
+  // (.claude/skills/forge/SKILL.md:29). Both had drifted off the switch: the header
+  // still sold `axis <a-i> [done|defer]`, refused since 7 Aug, and neither named
+  // `lockchain`, dispatched since 8 Aug. Prose does not stay in step with code on its
+  // own, so this derives the verb list FROM THE DISPATCH and fails the moment either
+  // doc drops one — the same self-source technique as the FORCE DISCARD WIRE assert
+  // above, for the same reason: the renderer can be green while the wire is cut.
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    // Needles are BUILT, never written whole — a literal written here sits EARLIER in
+    // this same file than the block it hunts, so a plain indexOf matches the assert's
+    // own string (that scar was paid for once already, two asserts up).
+    const dispatch = src.slice(src.indexOf("switch (mode" + ") {"));
+    const verbs = [...dispatch.matchAll(/^ {2}case "([a-z]+)":/gm)].map((m) => m[1]);
+    const hAt = src.indexOf("// MODES:");   // first hit IS the header block — no line address, addresses rot
+    const header = hAt < 0 ? "" : src.slice(hAt, src.indexOf("\n// " + "=".repeat(12), hAt));
+    const uAt = src.indexOf("forge_session: start <" + "concept> [--force] |");
+    const usage = uAt < 0 ? "" : src.slice(uAt, src.indexOf("\n", uAt));
+    // No count is asserted — a hardcoded verb count is exactly the kind of number that
+    // rots on the next `case`. Presence of the two verbs the scar was about is the
+    // emptiness guard: an empty `verbs` would make `.every` vacuously true.
+    assert("DISPATCH DOC WIRE — the dispatch still parses, and carries the two verbs the 10 Aug scar was about",
+      verbs.includes("axis") && verbs.includes("lockchain"));
+    assert("DISPATCH DOC WIRE — every verb the switch accepts is named in the header MODES block (a verb the header hides does not exist to a session that greps it)",
+      header.length > 0 && verbs.every((v) => header.includes(v)));
+    assert("DISPATCH DOC WIRE — every verb the switch accepts is named in the bare-invocation usage line too",
+      usage.length > 0 && verbs.every((v) => usage.includes(v)));
+    assert("DISPATCH DOC WIRE — neither doc re-advertises the OPTIONAL axis argument refused since 7 Aug; both name all three explicit forms",
+      !/\[done\|defer\]/.test(header) && !/\[done\|defer\]/.test(usage)
+      && /now\|done\|defer/.test(header) && /now\|done\|defer/.test(usage));
+  }
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -1543,6 +1667,33 @@ function gateLines(capsuleMap, rejirahRows) {
   ];
 }
 
+// THE DOOR (repaired 10 Aug 2026 — a TRUNCATED_AT_DOOR defect, live since 9 Aug).
+// This loop printed `out.trim().split("\n")[0]` — line 1 of a spawned organ and
+// nothing else. benchmark.mjs and scout.mjs were BUILT around that contract and say
+// so in their own comments (`grep -n "forge_session" scripts/benchmark.mjs`), so
+// line 1 stays the fallback and their output is unchanged by this repair.
+// mirror.mjs is the one that broke it: it joined the chain on 9 Aug (LADDER G16)
+// already printing LADDER E9's backup line FIRST — `mirror: backup — N capsule(s)
+// snapshotted …` (mirror.mjs:354) — and its actual answer SECOND —
+// `mirror: <counter> · <status> (<shortfall>)` (mirror.mjs:360). capsules/ is never
+// empty, so the backup line always fired first and the ONE question the mirror was
+// spawned to answer at step 10 — did the capsule he just locked land, what is short —
+// never reached his terminal. A backup line read as success.
+// THE RULE NOW: every line an organ SELF-NAMES (`<name>: …`) is kept, in order. No
+// line is chosen on the organ's behalf, no failure is guessed away — including
+// `mirror: backup FAILED …`, which under the old door was the only line that showed
+// and under a naive "take the last line" fix would have been the only one hidden.
+// Live shapes today (10 Aug 2026): mirror 2 self-named lines · benchmark 1
+// (`benchmark: ok` / `benchmark: WARN`; its indented ⚠ fault lines do not self-name
+// and stay below, as benchmark.mjs intends) · scout 0 — it speaks as "MISSIONS DESK ·",
+// so it takes the line-1 fallback, byte-identical to what it printed before.
+function chainReport(name, out) {
+  const lines = String(out || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const own = lines.filter((l) => l.toLowerCase().startsWith(name.toLowerCase() + ":"));
+  if (own.length) return own;                       // the organ named itself — believe all of it
+  return [`${name}: ${lines[0] || "ran"}`];         // it didn't — the old contract, unchanged
+}
+
 function lockChain(s, { dry = false } = {}) {
   const safeJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
   const safeJsonl = (p) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
@@ -1551,7 +1702,7 @@ function lockChain(s, { dry = false } = {}) {
     if (dry) { console.log(`  would run: node scripts/${cmd.args[0].replace(/^.*[\\/]/, "")} ${cmd.args.slice(1).join(" ")}`); continue; }
     try {
       const out = execFileSync(process.execPath, cmd.args, { encoding: "utf8", timeout: cmd.timeout });
-      console.log(`  ${cmd.name}: ${out.trim().split("\n")[0] || "ran"}`);
+      for (const l of chainReport(cmd.name, out)) console.log(`  ${l}`);
     } catch (e) { console.log(`  ${cmd.name}: skipped (${String(e.message || e).slice(0, 70)}) — non-blocking`); }
   }
   for (const l of gateLines(safeJson(join(STATE_DIR, "capsule_map.json")), safeJsonl(join(STATE_DIR, "rejirah_log.jsonl")))) console.log(`  ${l}`);
@@ -1594,10 +1745,15 @@ switch (mode) {
       // The discarded session's teaching drifts ride along too: a --force row is a
       // session ending WITHOUT a close report, so this row is the only trace it leaves.
       const d = teachingDrifts(loadTeaching(), prev.started_at);
-      appendCoverage(prev, "force", {
+      // Computed BEFORE the append and off the SAME disk snapshot the row carries —
+      // `close`'s rule, and it is what lets the failure branch print the record
+      // instead of losing it (the return value used to be dropped right here).
+      const cov = coverage(prev);
+      const recorded = appendCoverage(prev, "force", {
         ...(prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {}),
         ...(d ? { teaching_drifts: d } : {}),
       });
+      for (const l of forceDiscardLines(prev, recorded, cov)) console.log(l);
     }
     const s = blank(concept);
     save(s);
@@ -1760,5 +1916,10 @@ switch (mode) {
   }
   case "selftest": selftest(); break;
   default:
-    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | status | contract | boot | close | selftest");
+    // `lockchain` was missing here too until the 10 Aug DEAD_COMMAND repair — a verb
+    // dispatched at the `case` below but named by neither doc is a command only its
+    // author knows exists. Keep this line and the header MODES block in step with the
+    // switch; the selftest reads all three out of this file's own source and fails if
+    // they diverge (grep -n "DISPATCH DOC WIRE").
+    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | status | contract | boot | close | selftest");
 }

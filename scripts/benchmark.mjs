@@ -845,8 +845,11 @@ function main() {
   // Exit stays 0 on purpose: both shell callers (forge_session.mjs's lock-chain,
   // scout.mjs refreshBenchmark) are fail-silent by design and PIPE stdio, so a
   // non-zero exit would turn a named fault back into an anonymous "skipped".
-  // The WARN is the FIRST console line because forge_session:1554 prints
-  // exactly `out.trim().split("\n")[0]`.
+  // The WARN is the FIRST console line, and it also SELF-NAMES (`benchmark: …`).
+  // Either one is now enough: forge_session.mjs's lock-chain door (chainReport)
+  // keeps every self-named line and falls back to line 1 for organs that name none.
+  // (10 Aug 2026 — it used to print ONLY `out.trim().split("\n")[0]`, which is why
+  // this line was placed first; the placement stays, the single point of failure goes.)
   if (b.blocking_faults.length) {
     console.log(`benchmark: WARN ${b.blocking_faults.join(", ")} MALFORMED (unreadable JSON, not empty) — refusing to overwrite ${prev ? "the last true benchmark" : "anything"}; no counts, no regression claimed. Fix the file (owner: ${b.blocking_faults.map((f) => FAULT_OWNER[f] || "?").join(", ")}).`);
     for (const f of b.input_faults) console.log(`  ${f.file}: ${f.why}`);
@@ -859,8 +862,10 @@ function main() {
   writeAtomic(OUT, b);
   if (b.status === "gated_pre_audit") console.log(`benchmark: GATED (pre-audit) — ${b.gate.missions_line} → ${OUT}`);
   // The need rides the FIRST console line on purpose: forge_session.mjs's
-  // lock-chain (:1554) prints `out.trim().split("\n")[0]` of this very command
-  // at step 10 of every lock, so a second line would be swallowed. First need +
+  // lock-chain runs this very command at step 10 of every lock and prints ONE line
+  // per self-named `benchmark: …` line (chainReport, repaired 10 Aug 2026; before
+  // that it was line 1 only, so a second line was swallowed outright). Keeping the
+  // need on this line keeps it in his terminal either way. First need +
   // a count of the rest — the same brevity learnstate.mjs:114 already uses for
   // regressions[0]. Not a ranking (see flattenNeeds): first in ROADMAP order.
   else console.log(`benchmark: ok · ${b.buckets.length} buckets · regressions ${b.regressions.length} · run #${b.runs.length}${b.needs.length ? ` · need: ${b.needs[0]}${b.needs.length > 1 ? ` (+${b.needs.length - 1} more — benchmark.mjs report)` : ""}` : ""} → ${OUT}`);

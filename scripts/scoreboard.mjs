@@ -61,6 +61,10 @@
 //      file is distinguishable). NO invented verdict — the row is ground for H2
 //      (agenda) and H6 (diary), and timeaudit's onTrack/flags are that organ's
 //      own derivations, recorded as-is.
+//   4. DMN AIM (11 Aug 2026) — the Rest Room's journalled weak-point vector for
+//      day D vs his local-day-D reps on those concepts. Same canonicalization
+//      and same verdict vocabulary as JOIN 1 (a weak-point call IS a prediction);
+//      the DMN's own spend rides a data-only day row, never a verdict.
 //
 // READERS: watchman probeOutcomes (conditional — cracked>0 INFO, scoreboard-
 // silent WARN, coach-json-absent INFO) · H2 agenda (job input) · H6 diary.
@@ -289,6 +293,83 @@ export function joinSheetDay(day, deps) {
 }
 
 // ---------------------------------------------------------------------------
+// JOIN 4 — DMN AIM: what the Rest Room aimed at that day vs HIS reps on it
+// ---------------------------------------------------------------------------
+// THE WIRE THIS CLOSES (11 Aug 2026). dmn.mjs has appended one row per pass to
+// dmn_weak_vector.jsonl since KAAM 2 (10 Aug), for a stated reason — "without
+// it, every later measurement of whether the DMN aimed well is a guess". A
+// repo-wide grep the next day returned exactly ONE hit outside dmn.mjs itself:
+// .gitignore:311. Four live rows, zero readers. A producer with no consumer is a
+// black box, not a feedback loop: the only way to read the aim was for him to
+// open a gitignored .jsonl himself, which is the report-to-read the ANCHOR LAW
+// forbids. The join belongs HERE and nowhere else — H1 is the organ whose whole
+// job is what the machine PREDICTED vs what his own data says happened, and
+// "these concepts are weak tonight" is a prediction like any other.
+//
+// THE GOODHART GUARD HOLDS (the file's law up top). The verdict comes from his
+// reps and nothing else — the DMN's own numbers (rollouts spent, entries
+// dreamed, verified) are prediction-side context riding the data-only day row,
+// JOIN 3's shape exactly. The selftest proves the invariance behaviourally
+// rather than by regex: same reps + gutted DMN numbers = same verdict.
+//
+// The vocabulary is JOIN 1's on purpose (untested/held/cracked/mixed) — one word
+// means one thing across this journal. Both live readers filter on
+// kind === "misconception"|"lesson" (watchman probeOutcomes:979, nikhil_model
+// cracked_concept_present:140), so the new kinds cannot silently change what
+// they already report; a reader that wants the aim must ask for it by name.
+export function joinDmnAim(day, deps) {
+  const ts = deps.nowIso;
+  // the writer stamps `date` with dmn.mjs's own localDate at dream time; `at` is
+  // ISO-UTC and is the fallback for any row written before that field existed.
+  const passes = (deps.dmnAim || []).filter((r) => (r.date || repLocalDay(r.at)) === day);
+  const sum = (k) => passes.reduce((a, r) => a + (typeof r[k] === "number" ? r[k] : 0), 0);
+  const reps = (deps.reps || []).filter((r) => repLocalDay(r.ts) === day);
+  const known = [...new Set(reps.concat(deps.allReps || []).map((r) => r.concept).filter(Boolean))]
+    .concat([...deps.aliasMap.values()]);
+  // dedupe across the day's passes: the DMN runs hourly and aims at the same
+  // weak point all night — that is ONE aim seen N times, not N aims.
+  const aims = new Map();
+  for (const p of passes) {
+    for (const w of (Array.isArray(p.weak_vector) ? p.weak_vector : [])) {
+      const res = resolveConcept(w && w.concept, deps.aliasMap, known);
+      const subject = res.id || (res.method === "absent" ? "raw:?" : `raw:${String(w.concept).slice(0, 40)}`);
+      const prev = aims.get(subject) || { res, passes: 0, whys: [] };
+      prev.passes += 1;
+      const why = w && w.why ? String(w.why) : null;
+      if (why && !prev.whys.includes(why)) prev.whys.push(why);
+      aims.set(subject, prev);
+    }
+  }
+  const rows = [];
+  for (const [subject, a] of aims) {
+    if (!a.res.id) {
+      rows.push({ ts, day, kind: "dmn_aim", subject,
+        verdict: a.res.method === "absent" ? "unmeasurable" : "unresolvable_name",
+        raw_concept: a.res.raw, passes: a.passes, whys: a.whys });
+      continue;
+    }
+    const cr = reps.filter((r) => r.concept === a.res.id);
+    const nCorrect = cr.filter((r) => r.correct === true).length;
+    const nWrong = cr.filter((r) => r.correct === false).length;
+    const gut = {};
+    for (const r of cr) gut[r.confidence] = (gut[r.confidence] || 0) + 1;
+    const verdict = cr.length === 0 ? "untested" : nWrong === 0 ? "held" : nCorrect === 0 ? "cracked" : "mixed";
+    rows.push({ ts, day, kind: "dmn_aim", subject, verdict, raw_concept: a.res.raw, match: a.res.method,
+      passes: a.passes, whys: a.whys, reps_n: cr.length, n_correct: nCorrect, n_wrong: nWrong, gut });
+  }
+  // the day row — data only, no invented verdict (JOIN 3's law). passes:0 is a
+  // MEASURED zero and an honest one: the Rest Room dreams only when he is away
+  // (dmn.mjs isAway) and never on a conserve tone, so a no-dream day is a real
+  // state of the organism, not a missing file.
+  rows.push({ ts, day, kind: "dmn_aim_day", subject: day, passes: passes.length,
+    rollouts: sum("rollouts"), planned_rollouts: sum("planned_rollouts"),
+    entries_dreamed: sum("entries_this_pass"), verified: sum("verified_this_pass"),
+    concepts_aimed: [...aims.keys()].length,
+    ...(passes.length ? {} : { why: "no Rest Room pass journalled for this day — it dreams only when he is away, and never on a conserve tone" }) });
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
 // run + report
 // ---------------------------------------------------------------------------
 function liveDeps(now = new Date()) {
@@ -299,6 +380,8 @@ function liveDeps(now = new Date()) {
     allReps: [],
     aliasMap: loadAliasMap(join(STATE_DIR, "concepts.json")),
     slip: readLines(join(STATE_DIR, "slip.jsonl")),
+    // JOIN 4's food — dmn.mjs is the sole writer, this is a read (11 Aug 2026).
+    dmnAim: readLines(join(STATE_DIR, "dmn_weak_vector.jsonl")),
     mouthSaid: (readJson(join(STATE_DIR, "brain_queue.json")) || {}).mouth_said || {},
     ledger: readLinesRolled(join(STATE_DIR, "brain_ledger.jsonl")),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
@@ -312,6 +395,7 @@ export function runDay(day, deps, dry = false) {
     ...joinMisconceptions(day, deps),
     ...joinDrills(day, deps),
     ...joinSheetDay(day, deps),
+    ...joinDmnAim(day, deps),
   ];
   const appended = appendMissing(candidates, existing, deps.outPath, dry);
   const settled = appendMissing(settleDrills(readLines(deps.outPath), deps), readLines(deps.outPath), deps.outPath, dry);
@@ -330,6 +414,10 @@ function report(daysArg) {
     for (const r of dr) {
       const detail = r.kind === "sheet_day"
         ? `push=${r.sheet_push_sent ?? "—"} · sheet_ok=${r.formation_read_ok ?? "—"}${r.formation_inputs ? ` · built on ${r.formation_inputs.present}/${r.formation_inputs.declared}${r.formation_inputs.absent_names.length ? ` (absent: ${r.formation_inputs.absent_names.join(", ")})` : ""}` : ""} · reps=${r.reps_n}${r.timeaudit ? ` · active ${r.timeaudit.active_min}m` : " · timeaudit n/a"}`
+        : r.kind === "dmn_aim_day"
+          ? `${r.passes} rest-room pass(es) · ${r.rollouts}/${r.planned_rollouts} rollouts · ${r.concepts_aimed} concept(s) aimed · ${r.verified} verified${r.why ? ` — ${r.why}` : ""}`
+        : r.kind === "dmn_aim"
+          ? `${r.verdict}${r.reps_n !== undefined ? ` (${r.n_correct}✓/${r.n_wrong}✗ of ${r.reps_n})` : ""} · aimed ×${r.passes}${r.whys && r.whys.length ? ` — ${r.whys.join("; ")}` : ""}`
         : r.kind === "drill" ? `${r.verdict}${r.evidence ? ` (${String(r.evidence).slice(0, 60)})` : ""}`
         : `${r.verdict}${r.reps_n !== undefined ? ` (${r.n_correct}✓/${r.n_wrong}✗ of ${r.reps_n})` : ""}${r.why ? ` — ${r.why}` : ""}`;
       console.log(`  ${r.kind.padEnd(18)} ${String(r.subject).padEnd(24)} ${detail}${r.rev ? `  [rev ${r.rev}]` : ""}`);
@@ -368,6 +456,22 @@ function selftest() {
     ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm",
       inputs_present: 2, inputs_declared: 3, inputs_absent: 1, inputs_absent_names: ["season.json"] }],
     timeaudit: { date: D, activeMinutes: 252, productiveMinutes: 197, onTrack: false, flags: ["f1"], generatedAt: "2026-08-09T16:30:04.905Z" },
+    // JOIN 4 fixture — dmn.mjs's real journal shape (dmn.mjs:522-524), including
+    // the hourly repeat that made the live file say "hallucinations" four times
+    // on 10 Aug, and a pass from the day before that must never leak in.
+    dmnAim: [
+      { at: "2026-08-09T04:14:00.000Z", date: D, engine: "stadium", rollouts: 25, planned_rollouts: 25,
+        weak_vector: [{ concept: "Hallucinations (axis d)", why: "trajectory regressing" }],
+        entries_this_pass: 3, verified_this_pass: 3 },
+      { at: "2026-08-09T05:14:00.000Z", date: D, engine: "stadium", rollouts: 25, planned_rollouts: 50,
+        weak_vector: [{ concept: "Hallucinations (axis d)", why: "trajectory regressing" },
+          { concept: "context window", why: "confident-but-wrong (danger zone)" },
+          { concept: "quantum flux", why: "confident-but-wrong (danger zone)" }],
+        entries_this_pass: 2, verified_this_pass: 1 },
+      { at: "2026-08-08T04:14:00.000Z", date: "2026-08-08", engine: "stadium", rollouts: 99, planned_rollouts: 99,
+        weak_vector: [{ concept: "embeddings", why: "trajectory regressing" }],
+        entries_this_pass: 1, verified_this_pass: 1 },
+    ],
     ...over,
   });
 
@@ -435,6 +539,33 @@ function selftest() {
     joinSheetDay("2026-08-08", mkDeps())[0].sheet_push_sent === "absence"
     && joinSheetDay("2026-08-08", mkDeps())[0].timeaudit === null);
 
+  // JOIN 4 — the Rest Room's aim, joined to his own reps
+  rows = joinDmnAim(D, mkDeps());
+  const aim = (s) => rows.find((r) => r.kind === "dmn_aim" && r.subject === s);
+  ok("JOIN4 — the day's hourly passes dedupe to ONE aim per concept (passes counted, why kept once) and join his reps as MIXED",
+    aim("hallucinations") && aim("hallucinations").passes === 2 && aim("hallucinations").match === "substring"
+    && aim("hallucinations").whys.length === 1 && aim("hallucinations").verdict === "mixed"
+    && aim("hallucinations").n_correct === 1 && aim("hallucinations").n_wrong === 1);
+  ok("JOIN4 — a concept the DMN aimed at with zero same-day reps is UNTESTED, and an unresolvable name never masquerades as one",
+    aim("context") && aim("context").verdict === "untested"
+    && rows.some((r) => r.kind === "dmn_aim" && r.verdict === "unresolvable_name" && r.raw_concept === "quantum flux"));
+  const aimDay = rows.find((r) => r.kind === "dmn_aim_day");
+  ok("JOIN4 — the day row carries the DMN's own spend as DATA ONLY (no verdict), and yesterday's pass never leaks in",
+    aimDay && aimDay.passes === 2 && aimDay.rollouts === 50 && aimDay.planned_rollouts === 75
+    && aimDay.verified === 4 && aimDay.concepts_aimed === 3 && aimDay.verdict === undefined
+    && !rows.some((r) => r.subject === "embeddings"));
+  ok("JOIN4 — a day with no journalled pass reads passes:0 with the away-gate said out loud (a measured zero, not a missing file)",
+    (() => { const z = joinDmnAim("2026-08-07", mkDeps()); return z.length === 1 && z[0].passes === 0 && /away/.test(z[0].why); })());
+  // GOODHART, proven behaviourally rather than by regex: gut the DMN's own
+  // numbers to zero and the verdict must not move by one character. If a later
+  // hand ever lets rollouts/verified touch the verdict, this is what goes red.
+  ok("JOIN4/GOODHART — the verdict is invariant to the DMN's own numbers (his reps are the only outcome input)",
+    (() => {
+      const gutted = mkDeps({ dmnAim: mkDeps().dmnAim.map((p) => ({ ...p, rollouts: 0, planned_rollouts: 0, entries_this_pass: 0, verified_this_pass: 0 })) });
+      const g = joinDmnAim(D, gutted).find((r) => r.kind === "dmn_aim" && r.subject === "hallucinations");
+      return g.verdict === aim("hallucinations").verdict && g.n_wrong === aim("hallucinations").n_wrong;
+    })());
+
   // the journal: append-only + supersede-by-append + idempotency
   let r1 = runDay(D, mkDeps());
   ok("RUN — first run appends rows", r1.appended > 0);
@@ -456,6 +587,18 @@ function selftest() {
   const drillRows = readLines(outPath).filter((r) => r.subject === "hallucinations" && r.kind === "drill");
   ok("RUN — a pending drill settles when the gaffer book matures (supersede row, journal-driven, no own window math)",
     drillRows.length === 2 && drillRows[1].verdict === "hit" && drillRows[1].rev === 1);
+
+  // THE WIRE ITSELF (11 Aug 2026). Both halves, because either one alone can rot
+  // silently: a perfect join that runDay never calls, or a runDay that calls it
+  // with food liveDeps never reads. dmn_weak_vector.jsonl spent a day live with
+  // four rows and zero readers — this is the pair of assertions that goes red if
+  // it is ever unplugged again.
+  ok("WIRE — runDay writes the DMN's aim into the journal (the join is not orphaned from the run)",
+    readLines(outPath).some((r) => r.kind === "dmn_aim" && r.subject === "hallucinations")
+    && readLines(outPath).some((r) => r.kind === "dmn_aim_day" && r.day === D));
+  const wireSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  ok("WIRE — liveDeps feeds JOIN 4 the REAL file (dmn_weak_vector.jsonl), so the live run reads what dmn.mjs writes",
+    /dmnAim:\s*readLines\(join\(STATE_DIR, "dmn_weak_vector\.jsonl"\)\)/.test(wireSrc));
 
   // Goodhart guard — the outcome path reads no brain-internal metric
   const src = readFileSync(fileURLToPath(import.meta.url), "utf8");

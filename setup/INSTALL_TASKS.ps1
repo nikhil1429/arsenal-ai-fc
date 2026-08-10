@@ -31,7 +31,43 @@ function Mk($name, $args_, $sched) {
   $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
+  HonourExpectedState $name
 }
+
+# ============================================================================
+# THE EXPECTED-STATE GUARD (11 Aug 2026) - an installer may never RE-ARM a row
+# the schedule's own contract says is designed-OFF. Written first in
+# INSTALL_CYBORG_TASKS.ps1 for the ArsenalFC-Examiner scar (its re-runs staged
+# tomorrow's drill at 21:55, 45 min BEFORE the setpiece it depends on) and
+# brought here in the SAME pass, because the two installers disagreeing on the
+# same Mk() line is this repo's oldest schedule scar (audit #98 / #108).
+# ELEVEN rows created below are designed-off today: the six evening organs
+# conductor.mjs now runs in order (Scorer/SetPiece/Doubtminer/Physio-PM/
+# Wall-PM/Scout) and five the morning chain owns (Mirror/Physio-AM/Twin/
+# Heartbeat/Wall-AM). Every one of them was re-armed, ENABLED, by a re-run of
+# this file - each a second, unordered runner racing its own chain.
+# WHY A FILE AND NOT A LIST HERE: dressing-room/state/tasks_expected.json is
+# already the contract watchman.mjs judges the live schedule by, so the decision
+# lives in ONE place; the rows stay as history so the -Revert paths still work.
+# FAIL-OPEN and loud: no contract = no guard, and it says so.
+# ============================================================================
+$ExpectedPath = "$repo\dressing-room\state\tasks_expected.json"
+$ExpectedDisabled = @()
+if (Test-Path $ExpectedPath) {
+  try { $ExpectedDisabled = @((Get-Content $ExpectedPath -Raw | ConvertFrom-Json).expected_disabled) }
+  catch { Write-Host "  ! tasks_expected.json unreadable - EXPECTED-STATE GUARD IS OFF this run; check disabled rows by hand" }
+} else {
+  Write-Host "  ! tasks_expected.json missing - EXPECTED-STATE GUARD IS OFF this run; check disabled rows by hand"
+}
+function HonourExpectedState($name) {
+  if ($ExpectedDisabled -notcontains $name) { return }
+  try { schtasks /Change /TN $name /DISABLE 2>$null | Out-Null } catch { }
+  # read back OFF DISK - the lesson INSTALL_EVENING_CONDUCTOR.ps1's disable-loop paid for
+  $row = schtasks /query /tn $name /fo csv /v 2>$null | ConvertFrom-Csv | Select-Object -First 1
+  if ($row -and $row.Status -eq "Disabled") { Write-Host "    - $name re-DISABLED (tasks_expected.json: designed-off, a conductor chain owns it)" }
+  else { Write-Host "    ! $name is STILL ENABLED against tasks_expected.json - it will RACE its chain; disable it by hand" }
+}
+
 Write-Host "Installing THE ORGANISM's schedule..."
 
 # morning spine

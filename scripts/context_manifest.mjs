@@ -53,6 +53,9 @@ const PENDING_FACTS = join(ROOT, "dressing-room", "hippocampus", "identity_facts
 export const CEILING = 12_000;
 export const MEMORY_CAP = 6_000;      // the cartridge is 4,157 today; this is headroom, not a trim
 export const FOOTER_RESERVE = 260;    // the manifest line must always fit — it is the point
+// …and since 11 Aug 2026 the reserve is MEASURED against, not merely assumed: the printed
+// `assembled N` figure counts the footer itself, so a footer that outgrows 260 (DROPPED +
+// render_probe + UNREADABLE notes stack fast) shows up as N > ceiling instead of hiding.
 
 const clipTo = (s, n) => (typeof s === "string" && s.length > n)
   ? s.slice(0, n) + "\n… (truncated — full recall via the organism-memory MCP `get_context`)"
@@ -337,6 +340,8 @@ export async function assemble(deps = {}) {
   // the memory or card block cannot show up in the `base` probe, because that probe passes
   // nulls): text contained neither leg, footer read
   //   `orientation 13 · card 99 · pending_facts EMPTY (0 staged) · memory 3856 · assembled 13/12000`
+  //   (that `13` is the pre-11-Aug body-only figure; the same run today prints the whole
+  //   shipped length — see the fixed point below. The lie it exposes is unchanged.)
   // — the manifest's one job, inverted, at the single moment it matters most.
   //
   // The fallback itself is UNCHANGED — a brief must never be the thing that breaks
@@ -362,10 +367,38 @@ export async function assemble(deps = {}) {
   reconcile("card", card);
   if (pend.present) text += "\n" + pend.text;
 
-  const total = text.length + FOOTER_RESERVE;
-  const footer = `[context manifest: ${spent.map((s) =>
-    `${s.id} ${s.state === "ok" ? s.bytes : s.state}${s.note ? ` (${s.note})` : ""}`).join(" · ")}`
-    + ` · assembled ${text.length}/${ceiling}]`;
+  // THE NUMBER THAT SHIPS IS THE SIZE THAT SHIPPED (audit 11 Aug 2026). One line, two holes:
+  //   (a) `total` was `text.length + FOOTER_RESERVE` — the RESERVE, never the footer. RAN on
+  //       live state today: body 8,998 · footer 117 · returned string 9,116 · `total` said
+  //       9,258. A third number, matching neither the body nor the brief, wrong by 142.
+  //   (b) It had NO consumer — learnstate.mjs:821 takes `out.text` only, organism_test.mjs:444
+  //       reads the PRINTED footer — so the wrong estimate was computed and discarded at every
+  //       SessionStart. And the printed `assembled` figure was the BODY, footer excluded, which
+  //       means the one ceiling check this organism owns (organism_test.mjs:443, "the assembled
+  //       brief stays inside the declared 12,000-char ceiling") was measuring the brief MINUS
+  //       the manifest line — structurally blind to a FOOTER_RESERVE overrun, i.e. to exactly
+  //       the failure the reserve exists to prevent.
+  // The repair wires the two together instead of adding an organ: the footer prints the TRUE
+  // delivered length, so that existing suite assertion becomes a real end-to-end ceiling check,
+  // and `total` is that same number rather than an estimate of it — `total === (returned
+  // text).length` by construction, which is what the new selftest pins.
+  //
+  // SELF-REFERENCE, SOLVED BY FIXED POINT, NOT BY A GUESS: the printed number counts the line
+  // that prints it. f(n) = text.length + 1 + render(n).length is non-decreasing in n (only the
+  // digit count moves) and we start at text.length, which is below the answer, so the climb is
+  // monotone and adds at most one digit per pass. 8 passes is DERIVED, not chosen: the ceiling
+  // is 12,000 and even the un-budgeted fallback is one brief, so the figure can never carry the
+  // 8 digits that would be needed to outlast the loop.
+  // NO NEW ENGINE, so nothing is frozen — same call as the 6 Aug `trimmed` fix and the 10 Aug
+  // `memFull` fix, both of which corrected this module's accounting in place: the parts, their
+  // order and the footer's wording are untouched; only the number becomes true.
+  const manifestHead = `[context manifest: ${spent.map((s) =>
+    `${s.id} ${s.state === "ok" ? s.bytes : s.state}${s.note ? ` (${s.note})` : ""}`).join(" · ")}`;
+  const render = (n) => `${manifestHead} · assembled ${n}/${ceiling}]`;
+  let n = text.length;
+  for (let i = 0; i < 8; i++) { const next = text.length + 1 + render(n).length; if (next === n) break; n = next; }
+  const footer = render(n);
+  const total = text.length + 1 + footer.length;   // the "\n" the return joins on is part of what ships
   return { text: text + "\n" + footer, manifest: spent, bytes: text.length, ceiling, total, footer };
 }
 
@@ -487,6 +520,29 @@ function selftest() {
       && /memory 4157/.test(eatsCard.footer) && eatsCard.text.includes("HIS MEMORY"));
     assert("NO FALSE POSITIVES — a healthy assembly never says DROPPED or render_probe",
       !/DROPPED/.test(r.footer) && !/render_probe/.test(r.footer));
+
+    // ── THE REPORTED SIZE IS THE SHIPPED SIZE (audit 11 Aug 2026) ────────────
+    // The wire that broke: `total` was text.length + FOOTER_RESERVE — an estimate nobody
+    // read, of a thing nobody measured — and the PRINTED figure was the body with the footer
+    // left out, so organism_test.mjs:443's ceiling check could not see a reserve overrun.
+    // These run against a healthy assembly, a squeezed one and a note-heavy one (whose footer
+    // is longest, which is precisely when the old formula was furthest from the truth).
+    for (const [name, x] of [["healthy", r], ["squeezed", tight], ["note-heavy", dropped]]) {
+      assert(`TOTAL IS THE SHIPPED SIZE — ${name}: total === the length of the string assemble() actually returns`,
+        x.total === x.text.length);
+      assert(`THE FOOTER PRINTS THAT SAME SIZE — ${name}: \`assembled N\` counts the manifest line that prints it, so the suite's ceiling check measures the WHOLE brief`,
+        Number((/assembled (\d+)\//.exec(x.footer) || [])[1]) === x.text.length);
+    }
+    // The regression, stated as itself: bytes + FOOTER_RESERVE is not the answer and never was.
+    assert("THE OLD ESTIMATE IS GONE — total is no longer bytes + FOOTER_RESERVE (a 142-char lie on live state, 11 Aug 2026)",
+      r.total !== r.bytes + FOOTER_RESERVE && dropped.total !== dropped.bytes + FOOTER_RESERVE);
+    // AN OVERRUN MUST BE VISIBLE — the only reason any of this matters. Under an absurd
+    // ceiling the brief plus its manifest line cannot fit, and the printed figure says so
+    // instead of hiding behind a body-only count.
+    const over = await assemble({ learnstate: stub, memoryFullLength: 4157,
+      pending: { present: false, state: "EMPTY", text: "", count: 0 }, ceiling: 100 });
+    assert("AN OVERRUN IS VISIBLE — when brief+footer exceeds the ceiling the printed figure exceeds it too, which is what organism_test.mjs:443 asserts against",
+      Number((/assembled (\d+)\/(\d+)/.exec(over.footer) || [])[1]) > 100 && over.total === over.text.length);
 
     // the real reader, against the real file
     const pf = pendingFactsBlock(join(HERE, "__no_such_file__.jsonl"));

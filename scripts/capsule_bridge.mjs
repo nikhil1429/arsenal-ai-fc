@@ -321,25 +321,41 @@ function fsrsDueConceptsLegacy() {
 // It reads hardest_due (the only field FSRS has ever put names in) and KEEPS the
 // array-tolerant pick on due_today/overdue so a future fsrs that writes arrays still works.
 // It also carries a HAVE/NEED counter, because hardest_due is a TRUNCATED list:
-// fsrs.mjs:198 slices it to cfg.hardestDueMax (canon default 8). With more due cards than
+// fsrs.mjs slices it to cfg.hardestDueMax (canon default 8). With more due cards than
 // that, "capsule_says_due_fsrs_quiet" over-reports — so the truncation is measured and
 // disclosed rather than assumed away. Unreadable cards.json ⇒ due_total null and
 // complete null: FSRS's list is UNKNOWN, never a measured empty.
+//
+// WIRING AUDIT 10 Aug 2026 — READ THE DECLARATION, STOP INFERRING IT.
+// fsrs.mjs now writes cards.naming {named,due_total,cap,complete,unnamed,line}: the
+// producer names its own cut. This organ was the ONLY place in the body that knew the
+// list was capped, and it knew by arithmetic on a neighbour's counters — right, but the
+// wrong organ's job, and it could not see a cut fsrs made for any reason other than the
+// two counters. So the declaration wins when present. The arithmetic stays live
+// underneath (not frozen — it is still the answer for a cards.json written before this
+// pass, and it stays the cross-check when both are readable).
 function fsrsDueFromCards(cards) {
   if (!cards || typeof cards !== "object") {
-    return { names: [], due_total: null, names_known: 0, complete: null,
+    return { names: [], due_total: null, names_known: 0, complete: null, naming_source: null,
       why: "cards.json missing or malformed — FSRS's due list is UNKNOWN, not empty" };
   }
   const pick = (arr) => (Array.isArray(arr) ? arr : []).map(c => String(c && (c.concept ?? c.id ?? c) || "").toLowerCase()).filter(Boolean);
   const names = [...new Set([...pick(cards.hardest_due), ...pick(cards.due_today), ...pick(cards.overdue)])];
   const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const dt = num(cards.due_today), od = num(cards.overdue);
-  const due_total = dt === null && od === null ? null : (dt || 0) + (od || 0);
-  const complete = due_total === null ? null : names.length >= due_total;
+  const derived_total = dt === null && od === null ? null : (dt || 0) + (od || 0);
+  const derived_complete = derived_total === null ? null : names.length >= derived_total;
+
+  const d = cards.naming && typeof cards.naming === "object" ? cards.naming : null;
+  const declared = d && typeof d.complete === "boolean";
+  const due_total = declared && num(d.due_total) !== null ? num(d.due_total) : derived_total;
+  const complete = declared ? d.complete : derived_complete;
+  const naming_source = declared ? "declared" : (derived_complete === null ? null : "derived");
+  const cap = declared && num(d.cap) !== null ? d.cap : "fsrs_config.hardestDueMax";
   return {
-    names, due_total, names_known: names.length, complete,
+    names, due_total, names_known: names.length, complete, naming_source,
     why: complete === false
-      ? `FSRS reports ${due_total} due card(s) but names only ${names.length} (cards.hardest_due is capped by fsrs_config.hardestDueMax) — "capsule_says_due_fsrs_quiet" may over-report`
+      ? `FSRS reports ${due_total} due card(s) but names only ${names.length} (cards.hardest_due is capped at ${cap}${declared ? ", per fsrs's own cards.naming" : ""}) — "capsule_says_due_fsrs_quiet" may over-report`
       : null,
   };
 }
@@ -434,7 +450,17 @@ function selftest() {
     // hardest_due is capped (fsrs_config.hardestDueMax, canon 8): more due than named ⇒ say so
     const trunc = fsrsDueFromCards({ due_today: 3, overdue: 8, hardest_due: ["a", "b", "c", "d", "e", "f", "g", "h"] });
     assert("#33 a TRUNCATED name list is disclosed as a have/need counter, never assumed whole",
-      trunc.complete === false && trunc.names_known === 8 && trunc.due_total === 11 && /over-report/.test(trunc.why));
+      trunc.complete === false && trunc.names_known === 8 && trunc.due_total === 11 && /over-report/.test(trunc.why)
+      && trunc.naming_source === "derived");
+    // WIRING AUDIT 10 Aug 2026 — fsrs now DECLARES the cut in cards.naming; this reads it.
+    // Would fail again if this organ went back to inferring, or if fsrs stopped declaring.
+    const declTrunc = fsrsDueFromCards({ due_today: 3, overdue: 8, hardest_due: ["a", "b", "c", "d", "e", "f", "g", "h"],
+      naming: { named: 8, due_total: 11, cap: 8, complete: false, unnamed: 3, line: "8/11 due cards named — 3 CUT by hardestDueMax=8" } });
+    assert("WIRING: the producer's own cards.naming is READ, not re-derived (source: declared, cap named)",
+      declTrunc.naming_source === "declared" && declTrunc.complete === false && declTrunc.due_total === 11
+      && /capped at 8/.test(declTrunc.why) && /cards\.naming/.test(declTrunc.why));
+    assert("WIRING: a cards.json with NO naming block still works — the arithmetic stays live underneath",
+      fsrsDueFromCards({ due_today: 3, overdue: 8, hardest_due: ["a"] }).complete === false);
     assert("#33 an unreadable cards.json is UNKNOWN, never a measured zero",
       fsrsDueFromCards(null).complete === null && fsrsDueFromCards(null).due_total === null
       && build([cap()], DEFAULT_INTERVALS, TODAY, fsrsDueFromCards(null)).fsrs_due_note !== null);

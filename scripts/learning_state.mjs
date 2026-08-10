@@ -259,7 +259,12 @@ const emptyPosition = () => ({
 //   · null means "no valid history row", never "there is a session open". Those two
 //     are different facts and a consumer must be able to tell them apart.
 // Each clause is asserted in the selftest under "#29".
-function projectLastClosed(row) {
+//
+// FROZEN VERBATIM (layering law, CLAUDE.md) — the 4 Aug 2026 projection, the one that
+// carried coverage and dropped every PACING field. Called by NOTHING on the live path;
+// the selftest holds it as the regression witness, so if the four fields are ever
+// dropped again the diff against this function is the proof.
+function projectLastClosedLegacy(row) {
   if (!row || typeof row !== "object" || Array.isArray(row) || typeof row.concept !== "string") return null;
   const arr = (x) => (Array.isArray(x) ? x.slice() : []);
   return {
@@ -267,6 +272,48 @@ function projectLastClosed(row) {
     ended_at: typeof row.ended_at === "string" ? row.ended_at : null,
     steps_ran: arr(row.steps_ran), steps_missed: arr(row.steps_missed),
     axes_done: arr(row.axes_done), axes_deferred: arr(row.axes_deferred), axes_untouched: arr(row.axes_untouched),
+  };
+}
+
+// WIRING AUDIT, 10 Aug 2026 — THE ANTI-FORGERY SIGNAL HAD NO WIRE.
+// forge_session.mjs's coverage() stamps four things at every close that nothing but
+// its own close report and boot line could ever see: `elapsed_min` and
+// `axis_marks_span_min` (THE TWO CLOCKS — forge_session.mjs:383-389, "a twelve-step
+// session in 1.4 minutes with every axis marked in the same second is theatre"),
+// `check_q_refused` (the quiz-dump counter), and `core_missing` (the CORE axis the
+// method forbids deferring). `grep -rn` over scripts/ for all four returned hits in
+// forge_session.mjs and NOWHERE else, while all four sat in 8/8 live rows on disk —
+// one of them elapsed_min 5.2, which is exactly the shape the two clocks exist to
+// catch. This function is the ONLY cross-organ reader of forge_sessions.jsonl, so
+// the drop happened here: durable on disk, invisible to the bus.
+//
+// REPORTED, NEVER THRESHOLDED — carried forward verbatim from the producer's own
+// rule. No cutoff is invented here and none may be: there is no calibrated body of
+// closed sessions to derive one from, and a guessed "under N minutes is theatre"
+// would be the exact over-build this repo keeps undoing. The consumer states the
+// numbers; the judgement stays his.
+//
+// ABSENT IS NOT ZERO. Rows written before these fields existed have no `check_q_refused`
+// and no `core_missing`. Defaulting them to 0 / [] would turn "not recorded" into the
+// positive claims "no quiz-dump attempts" and "CORE fully closed" — a laundered fact,
+// the same direction projectPosition refuses when it downgrades a malformed grade to
+// ungraded. Missing ⇒ null, and a consumer must be able to tell the two apart.
+function projectLastClosed(row) {
+  if (!row || typeof row !== "object" || Array.isArray(row) || typeof row.concept !== "string") return null;
+  const arr = (x) => (Array.isArray(x) ? x.slice() : []);
+  const num = (x) => (Number.isFinite(x) ? x : null);     // producer writes null on an unparseable started_at
+  return {
+    concept: row.concept,
+    ended_at: typeof row.ended_at === "string" ? row.ended_at : null,
+    steps_ran: arr(row.steps_ran), steps_missed: arr(row.steps_missed),
+    axes_done: arr(row.axes_done), axes_deferred: arr(row.axes_deferred), axes_untouched: arr(row.axes_untouched),
+    // THE TWO CLOCKS — the only two facts in a forge row that cannot be typed by hand.
+    elapsed_min: num(row.elapsed_min),
+    axis_marks_span_min: num(row.axis_marks_span_min),
+    // The quiz-dump counter and the CORE gap: the method's two hard refusals, made
+    // legible to every organ that reads the bus instead of only to the close report.
+    check_q_refused: Number.isInteger(row.check_q_refused) ? row.check_q_refused : null,
+    core_missing: Array.isArray(row.core_missing) ? row.core_missing.slice() : null,
   };
 }
 
@@ -854,6 +901,30 @@ function selftest() {
     assert("#29 it reaches learning_state.json on BOTH compute paths, zero reps included",
       compute([], [], REG, cfg, now, open29, row).position.last_closed?.concept === "qqx_prior_concept"
       && compute([cf("chunking")], [], REG, cfg, now, open29, row).position.last_closed?.concept === "qqx_prior_concept");
+
+    // --- WIRING AUDIT (10 Aug 2026): THE TWO CLOCKS CROSS THE BUS ------------
+    // These four were written to every forge_sessions.jsonl row and read by no organ
+    // in the repo. This is the wire; break it and this fails.
+    const paced = { ...row, elapsed_min: 5.2, axis_marks_span_min: 0, check_q_refused: 2, core_missing: ["d"] };
+    const lcPaced = projectLastClosed(paced);
+    assert("WIRE · the two clocks, the quiz-dump counter and the CORE gap all reach position.last_closed",
+      lcPaced.elapsed_min === 5.2 && lcPaced.axis_marks_span_min === 0
+      && lcPaced.check_q_refused === 2 && lcPaced.core_missing.join("") === "d");
+    assert("WIRE · and they survive the whole compute path onto learning_state.json",
+      (() => { const p = compute([], [], REG, cfg, now, open29, paced).position.last_closed;
+        return p.elapsed_min === 5.2 && p.axis_marks_span_min === 0 && p.check_q_refused === 2 && p.core_missing.join("") === "d"; })());
+    assert("WIRE · REPORTED, NEVER THRESHOLDED — a 5.2-minute twelve-step close is passed through, not judged",
+      !Object.prototype.hasOwnProperty.call(lcPaced, "theatre") && !Object.prototype.hasOwnProperty.call(lcPaced, "method_clean_verdict")
+      && projectLastClosed({ ...paced, elapsed_min: 900 }).elapsed_min === 900);
+    assert("WIRE · ABSENT IS NOT ZERO — a pre-field row reports null, never 'no refusals' / 'CORE closed'",
+      projectLastClosed(row).check_q_refused === null && projectLastClosed(row).core_missing === null
+      && projectLastClosed(row).elapsed_min === null && projectLastClosed(row).axis_marks_span_min === null);
+    assert("WIRE · a real 0 is preserved as 0 and never collapsed into the absent case",
+      projectLastClosed({ ...row, check_q_refused: 0, core_missing: [] }).check_q_refused === 0
+      && projectLastClosed({ ...row, check_q_refused: 0, core_missing: [] }).core_missing.length === 0);
+    assert("WIRE · the FROZEN pre-repair projection is the witness: it still drops all four",
+      projectLastClosedLegacy(paced).elapsed_min === undefined && projectLastClosedLegacy(paced).check_q_refused === undefined
+      && projectLastClosedLegacy(paced).core_missing === undefined && projectLastClosedLegacy(paced).concept === "qqx_prior_concept");
   }
 
   const passed = checks.every(([, c]) => c);
@@ -888,4 +959,4 @@ function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { compute, idFluency, isColdFast, buildGate, loadReps, loadConfig, loadRegistry, loadFsrsCards, projectPosition, projectLastClosed, loadForgeSession, loadForgeLastClosed };
+export { compute, idFluency, isColdFast, buildGate, loadReps, loadConfig, loadRegistry, loadFsrsCards, projectPosition, projectLastClosed, projectLastClosedLegacy, loadForgeSession, loadForgeLastClosed };

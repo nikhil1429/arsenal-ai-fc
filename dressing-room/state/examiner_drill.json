@@ -12,5 +12,6 @@
     "run it and confirm hallucinations actually appeared — if it did not, his hypothesis about the cause was wrong; ask what he expected",
     "ask him to change ONE thing he predicts will make it worse, then run it and compare",
     "ask what a FALSE POSITIVE would look like here, and whether his script could tell the difference"
-  ]
+  ],
+  "served": []
 }

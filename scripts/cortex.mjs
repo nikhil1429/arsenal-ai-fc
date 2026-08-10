@@ -24,8 +24,25 @@
 //        the banned-phrase validator (honest frame) or it is DECLINED, never
 //        softened. A declined wake is still reported back — nothing dangles.
 // MODES: node scripts/cortex.mjs             → daemon (watch + 5s poll)
-//        node scripts/cortex.mjs tick        → serve one pending wake, exit
+//        node scripts/cortex.mjs consolidate → OVERNIGHT DEEPENING (P5): one nightly
+//                                              Opus pass → concept_graph.json (its only
+//                                              reader is setpiece.mjs). THE ONLY MODE A
+//                                              SCHEDULER FIRES — ArsenalFC-ConceptGraph,
+//                                              Enabled, DAILY 03:00. Its exit code is the
+//                                              whole surface: 0 iff the graph on disk is
+//                                              today's (#71).
+//        node scripts/cortex.mjs tick        → serve one pending wake, exit. A HAND POKE:
+//                                              no scheduler, script or skill invokes it
+//                                              (verified 11 Aug 2026 — the only repo-wide
+//                                              hit for "cortex.mjs tick" is this line).
 //        node scripts/cortex.mjs selftest
+// (wiring audit, 11 Aug 2026 — INVERSE DEAD COMMAND: this block advertised daemon/tick/
+//  selftest and did NOT name `consolidate`, while the daemon's own task ArsenalFC-Cortex
+//  sits Disabled. Skills learn an organ's surface by grepping its header — see
+//  .claude/skills/full-time/SKILL.md's `grep -n "^// MODES"` — so a session reading this
+//  file's OWN contract concluded the nightly Opus consolidation did not exist and would
+//  not think to ask whether it had run. The header is a wire; it is now held answerable
+//  to main()'s dispatcher by a selftest, see "THE CONTRACT HEADER IS A WIRE" below.)
 // ============================================================================
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch, readdirSync } from "node:fs";
@@ -81,13 +98,114 @@ function writeAtomic(path, obj) {
 // ---------------------------------------------------------------------------
 // THE PROMPT — laws travel with every wake; the moment is the question
 // ---------------------------------------------------------------------------
-function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
+// ─────────────────────────────────────────────────────────────────────────────
+// THE CAPSULE DOOR (11 Aug 2026) — the THIRD door found cut to the same shape.
+//
+// WHAT WAS BROKEN. This door read the capsule file as RAW BYTES and cut it at
+// 1,500 characters, then handed the stump to a prompt that calls it "his own
+// locked knowledge on this concept — build on HIS words". Measured live across
+// all four capsules on 11 Aug 2026: embeddings.json 57,984 chars → 1,500 (2.6%),
+// inference 2.4%, context 3.0%, tokenization 3.6%. The cut lands mid-string
+// inside an unterminated JSON value (embeddings ends "...call karta, k"), so
+// even the 2.6% arrives as broken JSON. Because a capsule's key order puts the
+// short header fields first, EVERY layer that carries his actual thinking —
+// bolo, the nine welds, traps, threeWays, interviewLines, doubts, deep — fell
+// entirely outside the 1,500 in all four capsules, and NO field named the drop.
+// That is byte-for-byte the defect dugout.mjs:880-929 fixed on 10 Aug (its 220-
+// char per-axis cut) and the same silent-omission sin found in the recital lane.
+// The 1500 shipped with no comment justifying it — a guessed number, which his
+// standing rule forbids.
+//
+// WHY THE FIX IS NOT dugout's capsuleProjection(). That engine is built for a
+// VOICE reader: it pages (one weld per call, priced in spoken seconds) because
+// he must be able to interrupt. The cortex is a ONE-SHOT prompt — it cannot ask
+// for page two — so paging here would be the silent drop wearing a new hat.
+// What travels across from dugout is its RULING, not its code: nothing is
+// truncated, and the read unit is the WELD, with `deep` a separate layer opened
+// only on request (dugout.mjs:896-908).
+//
+// SO: parse the capsule, emit his prose VERBATIM AND UNCUT, and name the one
+// layer deliberately left out. NO NEW CAP REPLACES THE OLD CAP. Measured cost
+// of the whole projection, 11 Aug 2026: context 19,241 · embeddings 25,009 ·
+// inference 20,155 · tokenization 23,476 chars — worst case ~6.3k tokens against
+// a lane that already reserves est_tokens_per_wake (40k) and gates on a 50k
+// floor. That is a measurement, not a limit: it caps nothing.
+//
+// THE ONE OMISSION, AND IT IS NAMED IN THE PAYLOAD: the `deep` re-learn layer
+// (9,333–29,427 chars per capsule). It is his scratch-from-zero re-teach, which
+// dugout's ruling already made an explicitly-asked-for layer rather than part of
+// the read unit — and the cortex's job is to give a fresh mechanism-level read,
+// not to replay a re-teach. Its exact character count rides in the prompt, so
+// the deep brain knows the layer exists and knows it is not holding it. Whether
+// it should ride too is HIS call, not this file's (see the report).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Frozen verbatim (LAYERING law — the old engine never leaves the file). This is
+// the door as it shipped until 11 Aug 2026; kept so the truncation it caused
+// stays auditable, and so the fallback below can still use it when a capsule on
+// disk will not parse (a broken file must still yield something, as it did).
+function findCapsuleLegacy(tokens = [], dir = join(STATE_DIR, "capsules")) {
   try {
     const files = readdirSync(dir).filter(f => f.endsWith(".json"));
     for (const t of tokens.map(x => String(x).toLowerCase())) {
       const f = files.find(f => f.toLowerCase().includes(t));
       if (f) return { name: f, text: readFileSync(join(dir, f), "utf8").slice(0, 1500) };
     }
+  } catch { }
+  return null;
+}
+
+// His prose, whole. READ-ONLY: capsules/ belongs to mirror.mjs and this file
+// never writes there, never rewords a line, and never re-emits one as its own.
+function capsuleText(src, id) {
+  const S = (v) => String(v == null ? "" : v);
+  const axes = Array.isArray(src.faultLines) ? src.faultLines : [];
+  const doubts = Array.isArray(src.doubts) ? src.doubts : [];
+  const traps = Array.isArray(src.traps) ? src.traps : [];
+  const lines = Array.isArray(src.interviewLines) ? src.interviewLines : [];
+  const w = src.threeWays || {};
+  const out = [];
+  out.push(`${id} · ${S(src.title || id)}${src.status ? ` · ${S(src.status)}` : ""}${src.lockedOn ? ` · locked ${S(src.lockedOn)}` : ""}${Array.isArray(src.reJirahDone) ? ` · ${src.reJirahDone.length} Re-Jirah round(s)` : ""}`);
+  if (S(src.bolo).trim()) out.push(`BOLO (how HE says it out loud — his voice, not yours):\n${S(src.bolo)}`);
+  if (S(src.hook).trim()) out.push(`HOOK:\n${S(src.hook)}`);
+  if (S(src.mechanism).trim()) out.push(`MECHANISM:\n${S(src.mechanism)}`);
+  if (axes.length) out.push("THE NINE AXES — his own strike + weld, VERBATIM:\n" + axes.map((a) => {
+    const o = (a && typeof a === "object") ? a : {};
+    return `[${S(o.axis)}] ${S(o.title)}${o.status ? ` (${S(o.status)})` : ""}\n  STRIKE: ${S(o.strike)}\n  WELD:   ${S(o.weld)}`;
+  }).join("\n"));
+  if (traps.length) out.push("TRAPS he has already walked into:\n" + traps.map(t => "- " + (typeof t === "string" ? t : JSON.stringify(t))).join("\n"));
+  if (w.ceo || w.junior || w.skeptic) out.push(`THREE WAYS he explains it:\n  CEO:     ${S(w.ceo)}\n  JUNIOR:  ${S(w.junior)}\n  SKEPTIC: ${S(w.skeptic)}`);
+  if (lines.length) out.push("INTERVIEW LINES (his own):\n" + lines.map(x => "- " + S(x)).join("\n"));
+  if (doubts.length) out.push(`DOUBTS HE ALREADY FOUGHT (${doubts.length}) — never answer one of these back to him as if it were new ground:\n`
+    + doubts.map((d, i) => `${i + 1}. Q: ${S(d.q || d.question)}\n   A: ${S(d.a || d.answer)}`).join("\n"));
+  // ABSENCE IS NAMED — the silent drop is the defect being removed, so the one
+  // omitted layer says its own size, and an EMPTY deep says that too.
+  const deepAxes = axes.filter(a => a && S(a.deep).trim());
+  const deepChars = deepAxes.reduce((s, a) => s + S(a.deep).length, 0) + S(src.deep).length;
+  out.push(deepChars
+    ? `NOT INCLUDED, and named so you know what you are not holding: his \`deep\` re-learn layer — ${deepAxes.length} axis deep(s)${S(src.deep).trim() ? " plus the capsule-level deep" : ""}, ${deepChars} characters in all. That is his scratch-from-zero re-teach; everything above is his COMPRESSED truth and every word of it above is VERBATIM and UNCUT.`
+    : `His \`deep\` re-learn layer is EMPTY in this capsule — nothing was dropped. Everything above is VERBATIM and UNCUT.`);
+  return out.join("\n\n");
+}
+
+function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
+  try {
+    const files = readdirSync(dir).filter(f => f.endsWith(".json"));
+    const toks = tokens.map(x => String(x).toLowerCase()).filter(Boolean);
+    // EXACT id first — dugout.mjs:1398 resolves a capsule as `id + ".json"`, and the
+    // old substring-only scan let short tokens open the wrong book ("context.json"
+    // contains "on", "text", "one"). The substring pass is kept UNCHANGED beneath it,
+    // so nothing that resolved before stops resolving; exactness only wins ties.
+    let hit = files.find(f => toks.includes(f.slice(0, -5).toLowerCase())) || null;
+    if (!hit) for (const t of toks) { const f = files.find(f => f.toLowerCase().includes(t)); if (f) { hit = f; break; } }
+    if (!hit) return null;
+    const id = hit.slice(0, -5);
+    const raw = readFileSync(join(dir, hit), "utf8");
+    let src = null;
+    try { src = JSON.parse(raw); } catch { }
+    // a capsule that will not parse still yields what it always yielded (layering)
+    if (!src || typeof src !== "object") return { name: hit, id, text: raw.slice(0, 1500), unparsed: true };
+    return { name: hit, id, text: capsuleText(src, id) };
   } catch { }
   return null;
 }
@@ -145,6 +263,101 @@ function ambientWindow(deps = {}) {
     age_min: Number.isFinite(t) ? Math.max(0, Math.round((now - t) / 60000)) : null,
   };
 }
+// ---------------------------------------------------------------------------
+// WIRING AUDIT (11 Aug 2026) — THE MOMENT'S SKELETON SURVIVES THE DOOR
+// ---------------------------------------------------------------------------
+// The bound moment was JSON.stringify'd whole and then head-cut at 2,500 chars
+// (the one-liner frozen below as momentBlockLegacy). `text` is the SECOND key in
+// the envelope and it is the only field that can be huge, so on any long paste
+// the cut landed inside it and everything after it — event_key, concept_tokens,
+// salience, components, and the ENTIRE bound_context — never reached the deep
+// brain. Nothing said so; the block did not even arrive as parseable JSON.
+// MEASURED on the live queue this run (38 rows, 19 carrying a spotlight): the two
+// biggest moments serialise to 72,091 and 49,483 chars and delivered 3.5% / 5.1%.
+// On both, `concept_tokens`, `salience`, `components` and `bound_context` were all
+// absent from the served block, and JSON.parse of the slice fails with
+// "Unterminated string in JSON at position 2500". The thalamus's 900ms binding and
+// its salience score — the whole reason the wake fired — were computed, attached,
+// and dropped at the door. Built. Present. Not wired.
+//
+// THE FIX IS AN ALLOCATION, NOT A NEW BUDGET. 2,500 stays exactly what it was —
+// the file's own pre-existing door budget, unchanged, no new number invented (the
+// bus slice's 1,500 and the capsule's 1,500 are its siblings). What changes is WHO
+// pays for it: the SKELETON (every short structural field) is never cut, and only
+// the free-text fields are trimmed, sharing whatever the skeleton leaves over. The
+// shares are water-filled — equal split, and a text shorter than its share hands
+// the unused chars back to the others — so no constant is chosen anywhere in here.
+// How much of a 71k paste SHOULD reach Opus is a token-spend question with his name
+// on it; this repair does not answer it and does not move the budget to fake one.
+//
+// ABSENCE IS NAMED, never silently omitted — the same law the ambient-window repair
+// above obeys, and the exact sin the capsule-door defect (weld cut at 220 chars, no
+// field saying so) was made of: a trimmed text carries a sibling `text_truncated`
+// saying how many characters were dropped, so the deep read knows it is holding a
+// fragment instead of mistaking the first 5% for the whole question.
+const MOMENT_BUDGET_CHARS = 2500;   // NOT a new number — the pre-11-Aug door's own .slice(0, 2500)
+
+// frozen verbatim (LAYERING, never replace) — the pre-11-Aug-2026 door: one blind
+// head-cut across the whole envelope. Kept so the old behaviour stays readable in
+// the same file next to the reason it was retired.
+function momentBlockLegacy(wake) {
+  const spot = wake.spotlight || {};
+  return JSON.stringify({ spotlight: { modality: spot.modality, text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens, salience: spot.S, components: spot.comps }, bound_context: (wake.bound_context || []).map(c => ({ modality: c.modality, text: c.text, event_key: c.event_key })) }, null, 1).slice(0, 2500);
+}
+
+function momentBlock(wake, budget = MOMENT_BUDGET_CHARS) {
+  const spot = wake.spotlight || {};
+  const out = {
+    spotlight: { modality: spot.modality, text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens, salience: spot.S, components: spot.comps },
+    bound_context: (wake.bound_context || []).map(c => ({ modality: c.modality, text: c.text, event_key: c.event_key })),
+  };
+  const render = () => JSON.stringify(out, null, 1);
+  const whole = render();
+  // the short-moment path — 17 of the live 19 — comes out BYTE-IDENTICAL to the legacy door
+  if (whole.length <= budget) return whole;
+
+  // the free-text slots: the only fields that can be long, and the only ones cuttable
+  const slots = [];
+  if (typeof out.spotlight.text === "string") slots.push({ own: out.spotlight, full: out.spotlight.text });
+  for (const c of out.bound_context) if (typeof c.text === "string") slots.push({ own: c, full: c.text });
+  if (!slots.length) return whole;   // nothing prose-shaped to trim → the skeleton rides whole, over budget or not
+
+  const note = (kept, full) => `${kept} of ${full} chars — ${full - kept} DROPPED at the cortex door (moment budget ${budget}); you are holding a FRAGMENT of his paste, not the whole of it`;
+  const apply = (keep) => slots.forEach((s, i) => {
+    s.own.text = s.full.slice(0, keep[i]);
+    if (keep[i] < s.full.length) s.own.text_truncated = note(keep[i], s.full.length); else delete s.own.text_truncated;
+  });
+
+  // skeleton cost = the envelope with every long text emptied but its absence-note in
+  // place (the note is part of the structure, so it is paid for before the prose is)
+  const keep = slots.map(() => 0);
+  apply(keep);
+  let pool = Math.max(0, budget - render().length);
+  // water-filling: equal shares, and whoever needs less than its share returns the rest
+  const order = slots.map((s, i) => i).sort((a, b) => slots[a].full.length - slots[b].full.length);
+  let left = order.length;
+  for (const i of order) {
+    const share = Math.floor(pool / left);
+    keep[i] = Math.min(slots[i].full.length, share);
+    pool -= keep[i]; left--;
+  }
+  apply(keep);
+  // the notes' own digits shift by a char or two once the real kept-lengths land; give the
+  // overflow back from the biggest slot. Removing characters can never lengthen the JSON,
+  // so this converges — and it stops when no slot has anything left to give, at which point
+  // the SKELETON rides over budget on purpose. Structure over prose: a blind cut is the
+  // defect being repaired here, never the fallback.
+  for (let guard = 0; guard < 8; guard++) {
+    const over = render().length - budget;
+    if (over <= 0) break;
+    const biggest = keep.indexOf(Math.max(...keep));
+    if (keep[biggest] <= 0) break;
+    keep[biggest] = Math.max(0, keep[biggest] - over);
+    apply(keep);
+  }
+  return render();
+}
+
 function buildDeepPrompt(wake, bus = {}, extraSection = "") {
   const spot = wake.spotlight || {};
   const win = bus.current_window !== undefined ? bus.current_window : ambientWindow();
@@ -162,7 +375,7 @@ function buildDeepPrompt(wake, bus = {}, extraSection = "") {
   return `You are THE BRIDGE — the deep brain of Arsenal AI FC, woken by the thalamus for the ~5% of moments that need real reasoning. Your captain is Nikhil (#14), ADHD-PI, training for an AI Product Engineer interview. The reflex brain already answered fast; you now give the PROFOUND read the moment deserves.
 
 THE MOMENT (bound by the thalamus — the spotlight is why you were woken):
-${JSON.stringify({ spotlight: { modality: spot.modality, text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens, salience: spot.S, components: spot.comps }, bound_context: (wake.bound_context || []).map(c => ({ modality: c.modality, text: c.text, event_key: c.event_key })) }, null, 1).slice(0, 2500)}
+${momentBlock(wake)}
 
 WHERE HE WAS (the ambient window stream — CORROBORATION ONLY. Never the question, never evidence, and never a reason to answer about the app instead of the moment. Judge it by its age: minutes_old says how old this reading is, and nothing here claims it is still true):
 ${JSON.stringify(win ? { window: win.text, concept: win.concept, minutes_old: win.age_min }
@@ -324,9 +537,32 @@ async function serveOne(wake, deps = {}) {
   // reach him even if the wake has otherwise run out of attempts.
   runtime.unsent = runtime.unsent || {};
   if (runtime.unsent[wake.moment_id]) {
+    // WIRING AUDIT (11 Aug 2026) — THE PHANTOM DELIVERY. Delivery used to be inferred from
+    // the ABSENCE of a held row, and drainUnsent returns held_ids:[] on an EMPTY spool — so
+    // a spool that never received the write (the append below was wrapped in a bare `catch
+    // {}`) read back as a clean handover. PROBED on the pre-repair file: pass 1 returned
+    // spooled:true AFTER the spool threw; pass 2 returned served:true, redelivered:true,
+    // reported:true with ZERO POSTs and the paid text nowhere. Nothing posted means the
+    // thalamus never closes the wake, so the daemon re-fires and buys the same thought
+    // again — precisely the re-buy this lifeboat exists to prevent, now wearing a success
+    // log. DELIVERY IS POSITIVE EVIDENCE ONLY: this moment's id must come back in
+    // delivered_ids from a POST that actually got through.
+    // The pre-drain's receipt counts as that evidence too: serveWakes drains the spool
+    // BEFORE dispatching, so on that path the row is legitimately gone by the time this
+    // guard looks. Its delivered_ids now ride down in deps.preDrain — that result used to
+    // be discarded, which is why absence had to be guessed at in the first place.
+    const pre = deps.preDrain || {};
     const d = await drainUnsent({ ...deps, log });
     const stillHeld = (d.held_ids || []).includes(wake.moment_id);
+    const delivered = (d.delivered_ids || []).includes(wake.moment_id) || (pre.delivered_ids || []).includes(wake.moment_id);
     if (!stillHeld) { delete runtime.unsent[wake.moment_id]; saveRuntime(runtime); }
+    if (!stillHeld && !delivered) {
+      // neither on the wire nor on disk: the paid text is GONE (a lost spool write, or the
+      // file truncated under us). Say so — never report a close nobody made. The wake stays
+      // pending and the attempts cap below governs the honest re-think.
+      log(`cortex: ${wake.moment_id} was flagged ALREADY PAID FOR but the spool holds no such answer — the paid text is LOST, not delivered (flag cleared, wake stays pending, nothing reported)`);
+      return { served: false, spool_lost: true, reported: false, moment_id: wake.moment_id };
+    }
     log(`cortex: ${wake.moment_id} is ALREADY PAID FOR — ${stillHeld ? "thalamus still unreachable, holding the spooled answer" : "spooled answer delivered"} (no second Opus read)`);
     return { served: !stillHeld, redelivered: !stillHeld, reported: !stillHeld, moment_id: wake.moment_id };
   }
@@ -380,16 +616,51 @@ async function serveOne(wake, deps = {}) {
   // M8 — THE COUNCIL sits first (three free adversarial drafts), then ONE
   // Opus integration adjudicates. Council dry/failed → the old cold path.
   let council = null, r;
+  // WIRING AUDIT (11 Aug 2026) — THE DRY COUNCIL LEFT NO TRACE. convene() has
+  // always returned a `note` when every chair came back empty ("every chair
+  // empty (pool dry/late) — the Bridge proceeds cold", council.mjs:457) and
+  // NOTHING ever read it: councilSection() renders drafts/split/cross_split
+  // only, and this block dropped the object on the floor once the prompt was
+  // built. So a sitting where all three free chairs AND the cross-examiner came
+  // back empty left evidence IDENTICAL to a healthy four-chair council — one
+  // cortex_wake row, no log line, no field anywhere — and an Opus read that ran
+  // cold could never be told apart afterwards from one that had breadth. The
+  // inner `catch {}` made it worse: "council off", "convene threw" and "chairs
+  // sat and brought nothing" were one indistinguishable silence.
+  // The census rides the LOG (the daemon's lane, line ~1574 passes console.log)
+  // and the cortex_wake ledger row, which is the durable record of the sitting.
+  // The PROMPT is deliberately UNTOUCHED — a dry council must stay the
+  // byte-identical cold path (selftest: "council dry → the old cold path,
+  // byte-identical shape (layering)"). Recording an absence must not become
+  // buying context for it.
+  let councilNote = null, councilSeats = null;
   inflightReserve += est;                       // the lane is committed from here
   try {
     if (deps.council !== undefined) council = deps.council;
-    else if (cfg.council !== false) {
-      try { council = await convene(String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || ""), {}); } catch { council = null; }
+    else if (cfg.council === false) councilNote = "council off (thalamus_config.council=false)";
+    else {
+      try { council = await convene(String((wake.spotlight || {}).text || (wake.spotlight || {}).event_key || ""), {}); }
+      catch (e) { council = null; councilNote = `convene threw: ${String((e && e.message) || e).slice(0, 160)}`; }
     }
+    // convene's own word rides VERBATIM when it gave one — this file never
+    // re-phrases another organ's honest note (same rule as the capsule prose).
+    if (!councilNote && council && council.note) councilNote = council.note;
+    // `null`, never 0, when no council object came back at all: an UNMEASURED
+    // bench written down as a measured zero is the exact lie the `?? null` law
+    // in council.mjs's councilLedgerRow forbids one file over. 0 means chairs
+    // actually sat and every one of them came back empty.
+    councilSeats = council && Array.isArray(council.drafts) ? council.drafts.length : null;
+    if (!councilSeats) log(`cortex: THE COUNCIL BROUGHT NOTHING for ${wake.moment_id} — the Bridge proceeds cold${councilNote ? ` (${councilNote})` : ""}`);
     const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
     r = await call(prompt);
   } finally { inflightReserve = Math.max(0, inflightReserve - est); }
-  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit });   // G1 — the cache pair rides; G15's re-fit reads ONLY rows that carry it
+  // G1 — the cache pair rides; G15's re-fit reads ONLY rows that carry it.
+  // council_seats / council_note added 11 Aug 2026 (wiring audit, above): the
+  // row is the only durable record of a sitting, so it must say what breadth
+  // the Opus read was actually given. Purely additive — every reader of this
+  // lane keys off `job`/`total_tokens`/the cache pair (watchman.mjs:890's
+  // honest-row filter, brain.mjs windowUsage) and none of them enumerate fields.
+  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit, council_seats: councilSeats, council_note: councilNote || null });
   if (!r.ok) {
     if (r.limit_hit) {
       // E2E audit 25 Jul 2026: give the attempt BACK and hold the lane. A read that the
@@ -417,7 +688,18 @@ async function serveOne(wake, deps = {}) {
   const sent = await post("/deep-answer", payload);
   if (sent && sent.ok === false) {
     // the answer is BOUGHT AND GOOD — the wire failed, not the thought. Spool it.
-    try { (deps.spool || spoolUnsent)(payload); } catch { }
+    // WIRING AUDIT (11 Aug 2026): this catch was BARE. A failed append (a Windows file
+    // lock on cortex_unsent.jsonl, a full or read-only disk) vanished without a word, and
+    // the unsent flag below — whose entire meaning is "a paid answer is ON DISK, waiting"
+    // — was written anyway. The next pass then found an empty spool and read that empty
+    // file as a delivery (see the phantom-delivery guard at the top of serveOne). The
+    // write either LANDS or it is NAMED; the flag rides only on a spool that took the text.
+    let spoolErr = null;
+    try { (deps.spool || spoolUnsent)(payload); } catch (e) { spoolErr = String((e && e.message) || e).slice(0, 160); }
+    if (spoolErr) {
+      log(`cortex: deep answer for ${wake.moment_id} could NOT be reported (${sent.error}) AND the spool write FAILED (${spoolErr}) — the paid text is LOST; no paid-and-waiting flag is set (attempt ${tries + 1}/2, wake stays pending)`);
+      return { served: false, spooled: false, spool_failed: spoolErr, moment_id: wake.moment_id, error: sent.error };
+    }
     // E2E audit 25 Jul 2026: remember, in the runtime, that this moment is ALREADY PAID
     // FOR. The wake stays pending (only the thalamus closes rows), so without this flag
     // the next pass re-read the same question on Opus — the spool saved the text but not
@@ -444,14 +726,19 @@ async function drainUnsent(deps = {}) {
   const rows = deps.readUnsent ? deps.readUnsent() : readLines(UNSENT);
   // E2E audit 25 Jul 2026: held_ids added so serveOne's re-buy guard can tell whether
   // THIS moment's paid answer got through, rather than guessing from a global count.
-  if (!rows.length) return { delivered: 0, still_held: 0, held_ids: [] };
-  const held = [];
-  let delivered = 0;
+  // WIRING AUDIT (11 Aug 2026): held_ids alone could only ever answer "is it STILL held",
+  // and its empty-file early return answers that with "no" for a spool that never held the
+  // row at all — which the guard read as a delivery. delivered_ids is the positive half:
+  // an id lands there only after a POST for that exact row came back not-failed. The two
+  // together let a caller tell handed-over from never-arrived from still-waiting.
+  if (!rows.length) return { delivered: 0, still_held: 0, held_ids: [], delivered_ids: [] };
+  const held = [], deliveredIds = [];
   for (const row of rows) {
     const { spooled_at, ...payload } = row;
     const r = await post("/deep-answer", payload);
-    if (r && r.ok === false) held.push(row); else delivered++;
+    if (r && r.ok === false) held.push(row); else deliveredIds.push(row && row.moment_id);
   }
+  const delivered = deliveredIds.length;
   const write = deps.writeUnsent || ((lines) => { if (lines.length) writeFileSync(UNSENT, lines.map(l => JSON.stringify(l)).join("\n") + "\n"); else if (existsSync(UNSENT)) writeFileSync(UNSENT, ""); });
   write(held);
   // E2E audit 25 Jul 2026: this said `(deps.log || log)` — there is no module-level
@@ -459,7 +746,7 @@ async function drainUnsent(deps = {}) {
   // serveWakes swallows it in its try/catch, but the daemon's re-buy guard now calls
   // drainUnsent on every held moment, so the throw would have masked the recovery.
   if (delivered) (deps.log || (() => {}))(`cortex: delivered ${delivered} spooled deep answer(s) that would otherwise have been lost`);
-  return { delivered, still_held: held.length, held_ids: held.map(h => h && h.moment_id).filter(Boolean) };
+  return { delivered, still_held: held.length, held_ids: held.map(h => h && h.moment_id).filter(Boolean), delivered_ids: deliveredIds.filter(Boolean) };
 }
 
 // the legacy single-slot contract, byte-compatible (layering — never replace)
@@ -475,8 +762,14 @@ async function serveWakes(deps = {}) {
   const cfg = deps.cfg || loadThalamusConfig();
   const now = deps.now || new Date();
   const post = deps.post || defaultPost;
-  // deliver anything a previous pass paid for but could not hand over
-  if (deps.drain !== false) { try { await drainUnsent(deps); } catch { } }
+  // deliver anything a previous pass paid for but could not hand over.
+  // WIRING AUDIT (11 Aug 2026): this drain's RECEIPT used to be discarded — a producer
+  // whose only consumer threw the result away. serveOne's re-buy guard therefore had no
+  // way to tell "the pre-drain, seconds ago, already handed this answer over" from "the
+  // spool never held it", so it inferred delivery from an empty file (the phantom
+  // delivery). The receipt now rides down to the guard as deps.preDrain.
+  let preDrain = deps.preDrain || null;
+  if (deps.drain !== false) { try { preDrain = await drainUnsent(deps); } catch { } }
   const rows = deps.readQueue ? deps.readQueue() : readLines(WQUEUE);
   let pending = pendingWakes(rows);
   if (!pending.length) {
@@ -504,7 +797,7 @@ async function serveWakes(deps = {}) {
   // whole history (see pruneRuntime). Pending — not `live` — is the survival set: a
   // wake awaiting its expiry decline still owns its attempt row.
   if (pruneRuntime(runtime, pending.map(w => w.moment_id))) (deps.saveRuntime || ((o) => writeAtomic(RUNTIME, o)))(runtime);
-  const results = await Promise.all(batch.map(w => serveOne(w, { ...deps, cfg, now, post, runtime })));
+  const results = await Promise.all(batch.map(w => serveOne(w, { ...deps, cfg, now, post, runtime, preDrain })));
   return { served: results.filter(r => r.served).length, results, expired, queued: live.length - batch.length };
 }
 
@@ -638,6 +931,28 @@ async function selftest() {
     dCold.call = (p) => { coldPrompt = p; return { ok: true, text: "cold read", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; };
     await serveWake(dCold);
     assert("council dry → the old cold path, byte-identical shape (layering)", coldPrompt && !coldPrompt.includes("[STEELMAN]") && coldPrompt.includes("YOUR JOB"));
+    // WIRING AUDIT (11 Aug 2026) — THE DRY COUNCIL'S TRACE. convene() returns a
+    // `note` when every chair came back empty; until today nothing read it, so a
+    // cold Bridge and a four-chair one left the same evidence. These three guard
+    // the wire end-to-end: the note reaches the ledger VERBATIM, it reaches the
+    // log, and a healthy sitting is still recorded as healthy (a note that fires
+    // always is the same blindness wearing the opposite mask).
+    {
+      const dryFix = { drafts: [], disagreement: 0, note: "every chair empty (pool dry/late) — the Bridge proceeds cold" };
+      const lines = [];
+      const { deps: dDry, out: oDry } = mkDeps({ deps: { council: dryFix, log: (s) => lines.push(s) } });
+      let dryPrompt = null;
+      dDry.call = (p) => { dryPrompt = p; return { ok: true, text: "cold read", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; };
+      await serveWake(dDry);
+      assert("DRY COUNCIL: convene's note reaches the cortex_wake ledger row VERBATIM (seats 0, never null)",
+        oDry.rows[0].council_note === dryFix.note && oDry.rows[0].council_seats === 0);
+      assert("DRY COUNCIL: the cold Bridge says so in the log, and the prompt is STILL the untouched cold path",
+        lines.some((l) => l.includes("THE COUNCIL BROUGHT NOTHING") && l.includes("proceeds cold")) && dryPrompt && !dryPrompt.includes("THE COUNCIL SAT FIRST"));
+      const { deps: dOk, out: oOk } = mkDeps({ deps: { council: councilFix } });
+      await serveWake(dOk);
+      assert("HEALTHY COUNCIL: the same row records the bench that actually sat (2 seats, no note)",
+        oOk.rows[0].council_seats === 2 && oOk.rows[0].council_note === null);
+    }
   }
 
   // THE PAID-ANSWER LIFEBOAT (E2E audit 25 Jul 2026) — a report-back failure must
@@ -673,6 +988,60 @@ async function selftest() {
     deps.writeUnsent = () => {};
     const second = await serveWake(deps);
     assert("NO RE-BUY: the still-pending wake is re-DELIVERED from the spool, Opus is never called twice", second.redelivered === true && bought === 0 && redeliver.length === 1 && redeliver[0].text === "the expensive read");
+  }
+
+  // ── WIRING AUDIT (11 Aug 2026) · THE PHANTOM DELIVERY ──────────────────────
+  // The lifeboat's own hole, and the reason these three are here: a failed spool
+  // write was swallowed by a bare `catch {}`, and drainUnsent's empty-file early
+  // return was then read as proof the paid answer had been handed over. PROBED on
+  // the pre-repair file: pass 1 returned spooled:true AFTER the spool threw; pass 2
+  // returned served:true, redelivered:true, reported:true with ZERO POSTs and the
+  // text nowhere. Nothing posted = the thalamus never closes the wake = the daemon
+  // re-fires and buys the same thought again, wearing a success log.
+  {
+    // (a) the spool write itself fails → NAMED, and never flagged paid-and-waiting
+    const { deps, out } = mkDeps({});
+    deps.call = () => ({ ok: true, text: "the expensive read", input_tokens: 10, output_tokens: 90, total_tokens: 100, duration_ms: 5, limit_hit: false, error: null });
+    deps.post = async () => ({ ok: false, error: "connect ECONNREFUSED 127.0.0.1:4113" });
+    deps.spool = () => { throw new Error("EPERM: cortex_unsent.jsonl busy"); };
+    const rFail = await serveWake(deps);
+    assert("#wire: a FAILED spool write is never silent, and never sets the paid-and-waiting flag",
+      rFail.served === false && rFail.spooled === false && /EPERM/.test(rFail.spool_failed || "")
+      && !out.saved.some(s => s.unsent && s.unsent.m_1));
+
+    // (b) the flag is set but the spool holds NOTHING → the answer is LOST, never
+    // "delivered": no served, no reported close, no second Opus read claimed either way
+    let bought = 0;
+    const { deps: dLost, out: oLost } = mkDeps({ runtime: { attempts: { m_1: 1 }, unsent: { m_1: "2026-08-11T00:00:00.000Z" } } });
+    dLost.call = () => { bought++; return { ok: true, text: "a SECOND paid read of the same doubt", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; };
+    dLost.readUnsent = () => [];          // the append never landed — the spool is empty
+    dLost.writeUnsent = () => {};
+    const rLost = await serveWake(dLost);
+    assert("#wire: an EMPTY spool is NEVER read as a delivery — reported LOST, nothing served, nothing closed",
+      rLost.served === false && rLost.spool_lost === true && rLost.reported === false
+      && oLost.posts.length === 0 && bought === 0 && laneResolved(rLost) === false);
+
+    // (c) the receipt that makes (b) safe: serveWakes drains the spool BEFORE dispatch,
+    // so on that path the row is legitimately gone by the time the guard looks. Its
+    // delivered_ids must REACH serveOne, or a real handover reads as the loss in (b).
+    const spoolRow = { moment_id: "m_p", text: "the expensive read", provenance: "opus-extended", tokens: 100, spooled_at: "2026-08-11T00:00:00.000Z" };
+    let reads = 0, boughtP = 0;
+    const postsP = [];
+    const rPre = await serveWakes({
+      cfg: CFG_FIX, brainCfg, env: {}, now: new Date("2026-07-15T03:00:00Z"), council: null, bus,
+      readQueue: () => [{ moment_id: "m_p", ts: "2026-07-15T02:59:00Z", status: "pending", spotlight: { modality: "voice", text: "doubt", concept_tokens: [], S: 0.7, comps: {} }, bound_context: [] }],
+      readWake: () => null,
+      runtime: { attempts: { m_p: 1 }, unsent: { m_p: "2026-08-11T00:00:00.000Z" } }, saveRuntime: () => {},
+      headroom: { allowed: 300000, used: 0, cap: 800000, phase: "overnight" },
+      appendLedger: () => {},
+      call: () => { boughtP++; return { ok: true, text: "a SECOND paid read of the same doubt", input_tokens: 1, output_tokens: 1, total_tokens: 2, duration_ms: 1, limit_hit: false, error: null }; },
+      post: async (p, b) => { postsP.push(b); return { ok: true }; },
+      readUnsent: () => (reads++ === 0 ? [spoolRow] : []),   // the pre-drain empties it
+      writeUnsent: () => {},
+    });
+    assert("#wire: the PRE-DRAIN's receipt reaches the re-buy guard — a real handover is served, not mourned as lost",
+      rPre.served === 1 && postsP.length === 1 && postsP[0].text === "the expensive read"
+      && boughtP === 0 && rPre.results[0].redelivered === true);
   }
 
   // M14 — THE OVERLAP: the queue serves TWO at once; expiry declines; legacy floor
@@ -791,6 +1160,103 @@ async function selftest() {
     assert("#wire: ambientWindow reads the NEWEST context row, keeps its canon concept, and derives age from ITS ts",
       aw.text === "Code.exe · attention.py" && aw.concept === "attention" && aw.age_min === 7 &&
       ambientWindow({ rows: [{ modality: "code", text: "no ambient here" }] }) === null);
+
+    // ---------------------------------------------------------------------
+    // WIRING AUDIT (11 Aug 2026) — THE MOMENT DOOR, HELD OPEN.
+    // The old door head-cut the whole envelope at 2,500 chars, so a long paste
+    // delivered its first 3.5–5% and NOTHING else: no event_key, no
+    // concept_tokens, no salience, no components, no bound_context, and not even
+    // parseable JSON. The fixture below is shaped like the live wake that proved
+    // it (m_1786360829154…, 71,417-char spotlight text, 8 components, 4 tokens) —
+    // the old suite could never trip, because its only fixture was 28 chars long.
+    // Re-introduce a blind slice and every one of these goes red.
+    // ---------------------------------------------------------------------
+    const longWake = { moment_id: "m_long", status: "pending",
+      spotlight: { modality: "code", text: "x".repeat(71417), event_key: "paste:gemini", concept_tokens: ["first", "analyze", "gemini", "result"], S: 0.65,
+        comps: { pe: 0.4, nov: 0.9, gov: 0, err: 0, self: 1, dead: 0, hab: 0.2, pulse: 0.1 } },
+      bound_context: [{ modality: "voice", text: "y".repeat(4000), event_key: "voice:doubt" }] };
+    const mb = momentBlock(longWake);
+    // parsed defensively on purpose: with the blind slice back the block is NOT JSON
+    // (verified 11 Aug 2026 — "Unterminated string in JSON at position 2500", the same
+    // error the live queue throws), and a bare JSON.parse here would kill the whole
+    // suite mid-run instead of showing every wire that broke.
+    const mbj = (() => { try { return JSON.parse(mb); } catch { return null; } })();
+    const at = (path, dflt) => { try { return path(); } catch { return dflt; } };
+    assert("#wire: a LONG moment still arrives as VALID JSON (the old door cut mid-string)", mbj !== null);
+    assert("#wire: the SKELETON survives — event_key, concept_tokens, salience and ALL 8 components reach the deep brain",
+      at(() => mbj.spotlight.event_key === "paste:gemini" && mbj.spotlight.concept_tokens.length === 4
+        && mbj.spotlight.salience === 0.65 && Object.keys(mbj.spotlight.components).length === 8, false));
+    assert("#wire: bound_context is never sacrificed to a long spotlight (why he was woken outlives his prose)",
+      at(() => mbj.bound_context.length === 1 && mbj.bound_context[0].event_key === "voice:doubt" && mbj.bound_context[0].modality === "voice", false));
+    assert("#wire: ABSENCE IS NAMED — a trimmed text says how many chars were dropped, on BOTH slots",
+      at(() => /71417 chars/.test(mbj.spotlight.text_truncated) && /DROPPED at the cortex door/.test(mbj.spotlight.text_truncated)
+        && /4000 chars/.test(mbj.bound_context[0].text_truncated), false));
+    assert("#wire: the door's own budget is unchanged and still honoured (no new number invented)",
+      at(() => MOMENT_BUDGET_CHARS === 2500 && mb.length <= MOMENT_BUDGET_CHARS && mbj.spotlight.text.length > 0, false));
+    assert("#wire: the long moment reaches the PROMPT itself, skeleton intact (buildDeepPrompt is the caller under test)",
+      (() => { const pl = buildDeepPrompt(longWake, bus); return pl.includes('"salience": 0.65') && pl.includes("paste:gemini") && pl.includes("bound_context") && pl.includes("DROPPED at the cortex door"); })());
+    // LAYERING: the short path must stay byte-identical to the frozen legacy door
+    assert("#wire/LAYERING: a moment inside budget is byte-identical to the pre-repair door",
+      momentBlock(wake) === momentBlockLegacy(wake) && momentBlock(longWake) !== momentBlockLegacy(longWake));
+  }
+
+  // ---------------------------------------------------------------------------
+  // WIRING AUDIT (11 Aug 2026) — THE CAPSULE DOOR, HELD OPEN.
+  // The old door cut the RAW capsule JSON at 1,500 chars: 2.4–3.6% of each of his
+  // four capsules, severed mid-string, and EVERY layer carrying his actual thinking
+  // (bolo, the nine welds, traps, threeWays, interviewLines, doubts, deep) fell
+  // entirely outside it with no field naming the drop. The fixture weld below is
+  // 1,973 chars on its own — longer than the ENTIRE old budget — so re-introducing
+  // any head-cut at this door turns these red on the next run.
+  // ---------------------------------------------------------------------------
+  {
+    const WELD_A = "weld-a ".repeat(280) + "END-OF-WELD-A";     // 1,973 chars — the old door carried 0 of it
+    const capFix = {
+      id: "fixture", title: "Fixture Concept", status: "tempered", lockedOn: "2026-06-28", reJirahDone: [{ at: "x" }],
+      bolo: "bolo-verbatim", hook: "hook-verbatim", mechanism: "mechanism-verbatim",
+      faultLines: [
+        { axis: "a", title: "Axis A", status: "held", strike: "strike-a", weld: WELD_A, deep: "d".repeat(1200) },
+        { axis: "b", title: "Axis B", status: "cracked", strike: "strike-b", weld: "weld-b-verbatim", deep: "" },
+      ],
+      traps: ["trap-one"], threeWays: { ceo: "ceo-line", junior: "junior-line", skeptic: "skeptic-line" },
+      interviewLines: ["interview-line-one"], doubts: [{ q: "doubt-q-one", a: "doubt-a-one" }],
+      deep: "D".repeat(800),
+    };
+    const cText = capsuleText(capFix, "fixture");
+    assert("#wire: HIS WELD ARRIVES WHOLE — a 1,973-char weld reaches the deep brain uncut (the old 1,500 door carried none of it)",
+      cText.includes(WELD_A) && cText.includes("END-OF-WELD-A") && cText.length > 1500);
+    assert("#wire: EVERY prose layer reaches it verbatim — bolo, hook, mechanism, both welds, traps, threeWays, lines, doubts",
+      ["bolo-verbatim", "hook-verbatim", "mechanism-verbatim", "strike-a", "weld-b-verbatim", "trap-one", "ceo-line", "skeptic-line", "interview-line-one", "doubt-q-one", "doubt-a-one"].every(s => cText.includes(s)));
+    assert("#wire: ABSENCE IS NAMED — the one omitted layer (`deep`) states its EXACT size, never a silent drop",
+      /NOT INCLUDED/.test(cText) && /1 axis deep\(s\) plus the capsule-level deep/.test(cText) && cText.includes(String(1200 + 800)));
+    assert("#wire: an EMPTY deep says so too (absence is named in BOTH directions)",
+      /`deep` re-learn layer is EMPTY/.test(capsuleText({ faultLines: [{ axis: "a", weld: "w" }], bolo: "b" }, "bare")));
+    assert("#wire: capsule prose is SACRED — nothing reworded, nothing elided with an ellipsis",
+      cText.includes("BOLO (how HE says it out loud") && !/\.\.\.|\[truncated\]/.test(cText));
+    // end to end: the door's output must actually reach the ONE Opus prompt
+    assert("#wire: the whole weld survives all the way into buildDeepPrompt (door → prompt, the wire under repair)",
+      buildDeepPrompt(wake, { ...bus, capsule: { name: "fixture.json", id: "fixture", text: cText } }).includes(WELD_A));
+
+    // the door itself, against his REAL locked capsules — the strongest proof there is.
+    // GUARDED: capsules/ is a mirror.mjs artefact and is NOT git-tracked, so a fresh
+    // clone has none and must not go red for their absence.
+    const liveDir = join(STATE_DIR, "capsules");
+    const liveFiles = existsSync(liveDir) ? readdirSync(liveDir).filter(f => f.endsWith(".json")) : [];
+    if (liveFiles.length) {
+      const id = liveFiles[0].slice(0, -5);
+      const got = findCapsule([id]);
+      const live = JSON.parse(readFileSync(join(liveDir, liveFiles[0]), "utf8"));
+      const welds = (live.faultLines || []).map(a => String((a && a.weld) || "")).filter(x => x.trim());
+      assert(`#wire LIVE: all ${welds.length} welds in his real "${id}" capsule reach the prompt whole (raw-JSON door served 2.6%)`,
+        !!got && got.id === id && welds.length > 0 && welds.every(w => got.text.includes(w)) && got.text.length > 1500);
+    }
+    // EXACT id beats an accidental substring — "context.json" contains "on", "text" and
+    // "one", so a stopword could open the wrong book. The substring pass is kept intact
+    // beneath it (LAYERING): a token that resolved before still resolves the same way.
+    if (liveFiles.includes("context.json") && liveFiles.includes("embeddings.json")) {
+      assert("#wire: an EXACT capsule id beats a short accidental substring, and the old substring pass still resolves",
+        (findCapsule(["on", "embeddings"]) || {}).id === "embeddings" && (findCapsule(["on"]) || {}).id === "context");
+    }
   }
 
   // OVERNIGHT DEEPENING (P5) — the concept graph, deps-injected (no live Opus)
@@ -866,6 +1332,28 @@ async function selftest() {
       assert("#72/#106: the graph ships its own have/need counter — fluency measured for N of M",
         g.concepts_considered === 4 && g.fluency_known === 2);
     }
+  }
+
+  // ── THE CONTRACT HEADER IS A WIRE (wiring audit, 11 Aug 2026) ───────────────
+  // `consolidate` — the only mode any scheduler fires (ArsenalFC-ConceptGraph,
+  // Enabled, DAILY 03:00, `node scripts\cortex.mjs consolidate`) — was missing from
+  // the MODES header for as long as the mode has existed, so this organ's own
+  // contract denied the nightly Opus pass. Skills read a surface by grepping
+  // `^// MODES` (.claude/skills/full-time/SKILL.md), which is why a doc-only defect
+  // is a dead wire and not a typo. From here the header answers to the dispatcher:
+  // every mode main() branches on must be NAMED above, or this suite goes red.
+  // Scoped to main() on purpose — a `mode === "…"` in a comment or a fixture is
+  // not a surface, and must never be able to fail this check.
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const header = (src.match(/^\/\/ MODES:[\s\S]*?(?=^\/\/ ={10,})/m) || [""])[0];
+    const mainSrc = src.slice(src.indexOf("async function main()"));
+    const dispatched = [...new Set([...mainSrc.matchAll(/\bmode === "([a-z_-]+)"/g)].map(m => m[1]))].sort();
+    const undocumented = dispatched.filter(m => !header.includes(m));
+    assert(`MODES header names every mode main() dispatches (${dispatched.join(", ")}) — none undocumented${undocumented.length ? `: ${undocumented.join(", ")}` : ""}`,
+      header.length > 0 && dispatched.length >= 3 && undocumented.length === 0);
+    assert("MODES header names `consolidate` — the ONE mode a scheduler fires (ArsenalFC-ConceptGraph, DAILY 03:00)",
+      dispatched.includes("consolidate") && /consolidate/.test(header));
   }
 
   const passed = checks.every(c => c[1]);
@@ -1156,6 +1644,11 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDeepAsync, findCapsule, runConsolidation, buildConsolidationPrompt, gatherCorpus,
+  // WIRING AUDIT 11 Aug 2026 — the moment door and the engine it replaced, exported
+  // for the same reason graphFreshness below is: an auditor must be able to assert
+  // what actually reaches the deep brain without re-implementing the door and
+  // measuring its own copy (which is how the 220-char capsule cut stayed invisible).
+  momentBlock, momentBlockLegacy, MOMENT_BUDGET_CHARS,
   // audit 4 Aug 2026 — #71/#72 seams: the staleness standard and the reader's
   // schema version, exported so a consumer can assert the contract it relies on
   graphFreshness, CONCEPT_GRAPH_SCHEMA, CONCEPT_GRAPH };

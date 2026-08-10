@@ -33,7 +33,51 @@ function Mk($name, $args_, $sched) {
   $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
+  HonourExpectedState $name
 }
+
+# ============================================================================
+# THE EXPECTED-STATE GUARD (11 Aug 2026) - an installer may never RE-ARM a row
+# the schedule's own contract says is designed-OFF.
+# ----------------------------------------------------------------------------
+# THE SCAR: Mk uses `schtasks /Create /F`, which registers ENABLED and has no
+# "keep the current state" mode. So every re-run of this file un-retired
+# ArsenalFC-Examiner at 21:55 - a row LADDER D1 disabled on 9 Aug when
+# conductor.mjs took the step (EVENING, 22:55, needs:["setpiece"]). Un-retired
+# it does REAL damage, not a duplicate: 21:55 is BEFORE setpiece rewrites
+# drills.json at 22:40, so the drill stages against YESTERDAY's file and 22:55
+# then overwrites it. (The row's own comment - "staged after the evening
+# spine" - was written when the spine started at 21:35; it has been false since
+# the chain moved the spine to 22:00.) MkHidden carried the identical hole for
+# Thalamus / Cortex / Turnstile, all three designed-off today.
+#
+# THE WIRE: dressing-room/state/tasks_expected.json is ALREADY the schedule's
+# contract - watchman.mjs diffs live schtasks against it nightly and REDs /
+# WARNs the drift ("an expected-disabled task ENABLED is a double-run WARN").
+# It had exactly one blind spot: the installers that CAUSE that drift never
+# read it. Now they do. Nothing is hardcoded here and no row is deleted - the
+# rows stay as history, so INSTALL_EVENING_CONDUCTOR.ps1 -Revert still works,
+# and the ONE place that decides which organs are designed-off stays the file
+# the watchman already judges by. FAIL-OPEN: an unreadable/missing contract
+# leaves every row enabled and SAYS so - a silent install is the worse failure.
+# ============================================================================
+$ExpectedPath = "$repo\dressing-room\state\tasks_expected.json"
+$ExpectedDisabled = @()
+if (Test-Path $ExpectedPath) {
+  try { $ExpectedDisabled = @((Get-Content $ExpectedPath -Raw | ConvertFrom-Json).expected_disabled) }
+  catch { Write-Host "  ! tasks_expected.json unreadable - EXPECTED-STATE GUARD IS OFF this run; check disabled rows by hand" }
+} else {
+  Write-Host "  ! tasks_expected.json missing - EXPECTED-STATE GUARD IS OFF this run; check disabled rows by hand"
+}
+function HonourExpectedState($name) {
+  if ($ExpectedDisabled -notcontains $name) { return }
+  try { schtasks /Change /TN $name /DISABLE 2>$null | Out-Null } catch { }
+  # read back OFF DISK - the lesson INSTALL_EVENING_CONDUCTOR.ps1's disable-loop paid for
+  $row = schtasks /query /tn $name /fo csv /v 2>$null | ConvertFrom-Csv | Select-Object -First 1
+  if ($row -and $row.Status -eq "Disabled") { Write-Host "    - $name re-DISABLED (tasks_expected.json: designed-off, a conductor chain owns it)" }
+  else { Write-Host "    ! $name is STILL ENABLED against tasks_expected.json - it will RACE its chain; disable it by hand" }
+}
+
 Write-Host "Installing THE CYBORG BRAIN's schedule..."
 
 # the two daemons - daily 07:00 start, INVISIBLE via hidden_run.vbs (scar
@@ -44,6 +88,7 @@ function MkHidden($name, $args_, $sched) {
   $tr = "wscript.exe `"$repo\setup\hidden_run.vbs`" node scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name (hidden)" } else { Write-Host "  ! FAILED $name" }
+  HonourExpectedState $name
 }
 MkHidden "ArsenalFC-Thalamus" "thalamus.mjs"                 @("/SC","DAILY","/ST","07:00")
 MkHidden "ArsenalFC-Cortex"   "cortex.mjs"                   @("/SC","DAILY","/ST","07:02")
@@ -69,7 +114,14 @@ Mk "ArsenalFC-DMN"            "dmn.mjs"                      @("/SC","HOURLY")
 Mk "ArsenalFC-Consolidate"    "hippocampus.mjs consolidate"  @("/SC","DAILY","/ST","02:10")
 Mk "ArsenalFC-HippoStore"     "hippocampus.mjs consolidate-store" @("/SC","DAILY","/ST","02:20")
 Mk "ArsenalFC-HippoIndex"     "hippocampus.mjs index"        @("/SC","HOURLY")
-# the Live Examiner - tomorrow's code round staged after the evening spine
+# the Live Examiner - tomorrow's code round. RETIRED as a standalone alarm by
+# LADDER D1 (9 Aug 2026): conductor.mjs runs it INSIDE the evening chain at
+# 22:55 with needs:["setpiece"], because staging reads the drills.json setpiece
+# rewrites at 22:40. The 21:55 row below is kept ONLY as history + the revert
+# path (INSTALL_EVENING_CONDUCTOR.ps1 -Revert re-enables it); the expected-state
+# guard disables it the instant it is created, so a re-run of this installer can
+# no longer stage tomorrow's drill against YESTERDAY's file. Its old comment
+# said "staged after the evening spine" - false since the spine moved to 22:00.
 Mk "ArsenalFC-Examiner"       "examiner.mjs stage"           @("/SC","DAILY","/ST","21:55")
 # THE NIGHT SHIFT (M11) - the idle free-quota drain: probe banks, distractors,
 # embed backfill, the Scout pack, the Gem cartridge, the gate-tune report

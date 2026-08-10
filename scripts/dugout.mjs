@@ -74,13 +74,30 @@ import { randomBytes } from "node:crypto";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
-import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex, learningArcVerdict, conceptVocabulary } from "./hippocampus.mjs";
+// ORPHANED IMPORTS CUT, 10 Aug 2026: this line also pulled `learningArcVerdict`
+// and `conceptVocabulary`, and LADDER F3 (9 Aug) deleted the only caller — the
+// double gate on the afferent recall source at :624, whose canon-vocab half F3
+// ruled "the wrong filter for a MEMORY". The names stayed in the import for a
+// day with zero call sites (conceptVocabulary had literally one mention in this
+// whole file: this line). That is not free: a named ESM import is resolved at
+// LINK time, so the moment hippocampus.mjs stops exporting a symbol nobody here
+// uses, dugout.mjs fails to LOAD — killing the voice bridge, both scheduled
+// lanes, and nightshift.mjs's `indexRecall` import with it. Both functions are
+// alive and unchanged in their owner (hippocampus.mjs:567/582, called by the
+// 02:10 consolidator at :615) — nothing is removed from the organism, only the
+// dead wire into this file. The selftest below now fails on any sibling import
+// this file does not actually call, so it cannot come back quietly.
+import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
 import { projectVitals, projectScout, projectDrills, projectTwin } from "./talk.mjs";   // LADDER F2 — fields, never envelopes (the :41-51 scar)
 import { renderEdge as renderModelEdge } from "./nikhil_model.mjs";   // H3 — the formatter law: every reader renders edges through the owner's own line
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
-// M4 — the Live Examiner's staged code round (READS only; staging is its CLI)
-import { loadFreshDrill, drillSection } from "./examiner.mjs";
+// M4 — the Live Examiner's staged code round (READS only; staging is its CLI).
+// 11 Aug 2026 dead-wire sweep — `markServed` joins the two readers. It is the OWNER's
+// own writer (examiner.mjs is sole writer of examiner_drill.json and re-reads the file
+// itself inside it), so this stays a read-only organ with respect to that file: we can
+// stamp "the drill rode out to the voice mock", we cannot touch a word of the drill.
+import { loadFreshDrill, drillSection, markServed } from "./examiner.mjs";
 import { pendingWakes } from "./thalamus.mjs";
 // M5 — neuromodulation (READS only; tone.mjs owns tone.json)
 import { currentTone } from "./tone.mjs";
@@ -478,10 +495,52 @@ function medianThinkMs(stamps) {
 }
 // P2 (9 Aug 2026, his unleash word) — the night coach's read, VERBATIM to the
 // voice: same today-then-yesterday gate as the day cartridge (the producer
-// serves next_morning, so the newest file is named for the morning it teaches),
-// same explicit clip. The Gaffer speaks the coach's words, not a paraphrase —
-// that is why this is a loader, not another day_cartridge input.
+// serves next_morning, so the newest file is named for the morning it teaches).
+// The Gaffer speaks the coach's words, not a paraphrase — that is why this is a
+// loader, not another day_cartridge input.
+//
+// UNCUT SINCE 11 Aug 2026 (the wiring sweep). The old loader — frozen below as
+// loadNightCoachLegacy — took .slice(0, 1200) with NO field naming the cut: the
+// same defect class as the capsule-weld cut repaired the night before (8df28ba).
+// MEASURED on the live pages that morning: brain_out/night_coach/2026-08-11.md
+// is 8,205 chars, so 1,200 reached the Gaffer and the cut landed MID-WORD inside
+// misconception B — the live constitution ended "...us flatness ko DEKHTA hai
+// aur ru" and jumped straight to THINK-TIME BASELINE; 2026-08-10.md is 2,969 and
+// cut inside "he **under**-claims when scaffo". composeCartridgeSection (below)
+// tells the Gaffer to speak from this read "when his doubt circles one of these"
+// — it only ever held the first misconception and half of the second, and
+// nothing in the payload said the rest existed. The 1200 shipped with no comment
+// justifying it: a guessed number, which his standing rule forbids.
+//
+// NO CAP REPLACES THE OLD CAP. The one thing dropped is the TRAILING FENCED
+// ```json block. The producer writes ONE reply, and brain.mjs parses that same
+// block into the .json sibling every machine reader already uses (setpiece
+// readNightCoach, examiner readNight, learnstate's nightCoachLine, scoreboard).
+// It is machine-face — 3,687 of the 8,205 chars on 11 Aug — and a MOUTH must
+// never read it aloud. The prose itself needs no cap of mine, because the
+// PRODUCER already bounds it: "≤ 80 lines before the json block"
+// (grep -n "80 lines" scripts/brain.mjs).
+const NIGHT_MACHINE_FENCE = "\n```json";
 function loadNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out", "night_coach")) {
+  for (const [d, age] of [[now, "today"], [new Date(now.getTime() - 86400000), "1d old"]]) {
+    const p = join(dir, localDate(d) + ".md");
+    if (!existsSync(p)) continue;
+    try {
+      const raw = readFileSync(p, "utf8");
+      // the LAST fence, mirroring parseNightCoachJson's own "take the last block"
+      const cut = raw.lastIndexOf(NIGHT_MACHINE_FENCE);
+      const text = (cut >= 0 ? raw.slice(0, cut) : raw).trim();
+      if (!text) continue;                            // fence-only page: nothing to speak, fall back a day
+      return { date: localDate(d), age, text, chars: text.length, machine_block_chars: cut >= 0 ? raw.length - cut : 0 };
+    } catch { }
+  }
+  return null;
+}
+// Frozen verbatim (LAYERING law — the old engine never leaves the file). This is
+// what shipped from P2 (9 Aug 2026) until 11 Aug 2026; kept so the 1200-cut it
+// caused stays auditable, and so any future claim about it can be checked in the
+// code rather than recalled. The selftest still runs it, on purpose.
+function loadNightCoachLegacy(now = new Date(), dir = join(STATE_DIR, "brain_out", "night_coach")) {
   for (const d of [now, new Date(now.getTime() - 86400000)]) {
     const p = join(dir, localDate(d) + ".md");
     if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1200) }; } catch { } }
@@ -491,7 +550,14 @@ function loadNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out", "ni
 function composeCartridgeSection(cart, stamps = [], night = null) {
   const parts = [];
   if (cart) parts.push(`THE DAY CARTRIDGE (compiled overnight by the slow brain · ${cart.date}):\n${cart.text}`);
-  if (night) parts.push(`THE NIGHT COACH (overnight misconception read · ${night.date} — speak from it when his doubt circles one of these, never as a lecture):\n${night.text}`);
+  // 11 Aug 2026 — the read DECLARES itself now: its age when it is not today's
+  // page, and its own length. A future silent truncation then shows up as a
+  // shrinking number in the constitution instead of a sentence dying mid-word.
+  if (night) {
+    const nchars = Number.isFinite(night.chars) ? night.chars : String(night.text || "").length;
+    const nage = night.age && night.age !== "today" ? ` · ${night.age}` : "";
+    parts.push(`THE NIGHT COACH (overnight misconception read · ${night.date}${nage} — his page WHOLE and UNCUT, ${nchars} chars, nothing withheld but the machine-face json block other organs already read — speak from it when his doubt circles one of these, never as a lecture):\n${night.text}`);
+  }
   const med = medianThinkMs(stamps);
   if (med) parts.push(`THINK-TIME BASELINE (measured): his median think-time is ~${Math.round(med.ms / 100) / 10}s over ${med.n} answers — silence under that is him THINKING; do not jump in.`);
   return parts.length ? "\n\n" + parts.join("\n\n") : "";
@@ -524,6 +590,11 @@ function buildScrimmageInstruction(now = new Date()) {
     calibration: readJson(join(STATE_DIR, "calibration.json")),
     ls: readJson(join(STATE_DIR, "learning_state.json")),
   });
+  // 11 Aug 2026 — loaded ONCE and named, so the selftest below can ask "did the code
+  // round actually ride?" against the same object the prompt carries. This builder stays
+  // PURE: the serve receipt is stamped on the /config route, the one seam a browser
+  // reaches and a test does not.
+  const drill = loadFreshDrill(now);
   return `You are TODAY'S EXAMINER in an ORAL SCRIMMAGE — real interview conditions, by voice. Being judged is the DECLARED point of this surface; he asked for this. Honest, never cruel.
 
 YOUR PERSONA TODAY: ${PERSONAS[personaKey]}
@@ -536,7 +607,7 @@ THE MOCK (run it exactly):
 3. Interrupt him ONCE mid-answer, like a real panel. Stay in persona.
 4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
 5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
-${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(loadFreshDrill(now))}${(() => { const ns = loadNightshift(now); return ns.probes ? "\nTHE NIGHT SHIFT'S PROBE BANK (drafted overnight in the club's grammar — draw probes from here first, never repeat yesterday's; difficulty is VARIANCE-GRADED and sorted hardest-first — PREFER the high-variance ground, that's where a mock earns the most):\n" + Object.entries(ns.probes).slice(0, 4).map(([c, v]) => `${c}: ${v.probes.map(p => `[${p.type}${p.difficulty !== undefined ? " d=" + p.difficulty : ""}] ${p.probe}`).join(" · ")}`).join("\n") + "\n" : ""; })()}
+${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(drill, now)}${(() => { const ns = loadNightshift(now); return ns.probes ? "\nTHE NIGHT SHIFT'S PROBE BANK (drafted overnight in the club's grammar — draw probes from here first, never repeat yesterday's; difficulty is VARIANCE-GRADED and sorted hardest-first — PREFER the high-variance ground, that's where a mock earns the most):\n" + Object.entries(ns.probes).slice(0, 4).map(([c, v]) => `${c}: ${v.probes.map(p => `[${p.type}${p.difficulty !== undefined ? " d=" + p.difficulty : ""}] ${p.probe}`).join(" · ")}`).join("\n") + "\n" : ""; })()}
 WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DESIGN ON PAPER — ask for the sketch first, then attack the sketch (the frayed handoff, the missing failure path, "where does this fall over at scale?").
 
 INVIOLABLE even here: no hype words, no shame, no streak talk, cracks named plainly as data; medical territory = "show your doctor"; when it ends, it ends warm — he goes again tomorrow.`;
@@ -1488,6 +1559,15 @@ function execTool(name, args, deps = {}) {
       return { ok: true, logged: batch.length };
     }
     if (name === "take_note") {
+      // `routed:false` is a CONSTANT here, not a lifecycle (dead-wire sweep, 11 Aug
+      // 2026 — a tracer flagged it as an orphan field and it is, on purpose). The
+      // routing state of a note lives in postmatch.mjs's routed_balls.json, keyed
+      // note:<ts>, and postmatch is its sole writer; the ledger is what actually
+      // subtracts a note from the full-time gate (`grep -n "readRoutedLedger"
+      // scripts/postmatch.mjs`). Do NOT make this lane rewritable to flip the bit:
+      // it is append-only, VERBATIM, his own words, and this process can append
+      // mid-rewrite while he is still talking. Flipping it or dropping the field is
+      // a schema call on a verbatim store — HIS, not a session's.
       append(NOTES, JSON.stringify({ ts: new Date().toISOString(), text: String(args.text), routed: false }) + "\n");
       return { ok: true };
     }
@@ -1752,18 +1832,50 @@ function execTool(name, args, deps = {}) {
         edges: nm.edges.map(renderModelEdge).slice(0, 40) };
     }
     if (name === "scrimmage_report") {
+      const day = localDate(now);
+      const weakest = (args.weakest || []).map(String);
+      const drill = String(args.drill || "");
+      const persona = String(args.persona || "unnamed");
       const hedges = readLines(join(STATE_DIR, "dugout_scrimmage.jsonl"))
-        .filter(l => localDayOf(l.ts) === localDate(now))
+        .filter(l => localDayOf(l.ts) === day)
         .reduce((a, l) => a + (l.hedges || 0), 0);
       const md = [
-        `## ORAL SCRIMMAGE · ${localDate(now)} · persona: ${String(args.persona || "unnamed")}`,
+        `## ORAL SCRIMMAGE · ${day} · persona: ${persona}`,
         `score: ${Number(args.total_25)}/25`,
-        `weakest: ${(args.weakest || []).map(String).join(" · ")}`,
-        `drill: ${String(args.drill || "")}`,
+        `weakest: ${weakest.join(" · ")}`,
+        `drill: ${drill}`,
         `hedge-density (the ear's one legal surface, measured off-mic): ${hedges} hedge(s) this session`,
         "",
       ].join("\n");
-      append(join(OUT_DIR, `scrimmage_${localDate(now)}.md`), md);
+      append(join(OUT_DIR, `scrimmage_${day}.md`), md);
+      // ── DEAD-WIRE SWEEP (11 Aug 2026) — THE GRADED MOCK GETS AN ADDRESS ──
+      // The .md above (kept verbatim, layering law — it is still the human page
+      // and hippocampus/nightshift still sweep this lane) was written every
+      // scrimmage and read by NOTHING. A tracing pass confirmed it: the only
+      // repo-wide hit on `scrimmage_<date>.md` was this write line, and every
+      // reader of brain_out/dugout/ either filters `^\d{4}-\d{2}-\d{2}\.md$`
+      // (dugout's own gatherRecallSources) or keeps only "CAPTAIN: " lines
+      // (hippocampus gatherDayMaterial, nightshift's season corpus). So this
+      // tool's own instruction (:538 — "ONE concrete drill for tomorrow") named
+      // a drill that reached no drill sheet, and the two cracks it named reached
+      // no sheet either. Only the 5 reps survived, through capture.mjs.
+      //
+      // The fix is a MACHINE ROW in a lane that already exists, not a new organ
+      // and not a new file: dugout is already this lane's writer (the hedge rows
+      // three lines up are its own), so the single-writer law is untouched. The
+      // consumer is setpiece.mjs — the actuator that compiles TOMORROW's drills,
+      // which is exactly the tense the drill was authored in. Same shape as the
+      // KAAM 2 rest-room wire: one more candidate, no privilege, no new number.
+      //
+      // Row shape is ADDITIVE — {ts, hedges} rows keep working, because both
+      // existing readers of this file are shape-tolerant: the hedge sum above
+      // does `l.hedges || 0`, and shadow.mjs:199 only COUNTS rows for the day
+      // as a scrimmage-played witness (a graded report is the strongest such
+      // witness there is, so that count getting this row is correct, not noise).
+      append(join(STATE_DIR, "dugout_scrimmage.jsonl"), JSON.stringify({
+        ts: now.toISOString(), day, kind: "report",
+        total_25: Number(args.total_25), weakest, drill, persona,
+      }) + "\n");
       return { ok: true, filed: true };
     }
     return { error: "unknown tool " + name };
@@ -1828,10 +1940,39 @@ function composeRehydrate(cartridge, tail) {
 function buildRehydrate(now = new Date(), charBudget = 2000) {
   const p = join(OUT_DIR, localDate(now) + ".md");
   if (!existsSync(p)) return null;
+  // a budget of zero means NO ROOM — and `slice(-0)` is `slice(0)`, i.e. the
+  // WHOLE file. Latent since F6 made the budget a subtraction (a cartridge
+  // larger than the window clamps to 0), and it would have handed the entire
+  // transcript to a session that had room for none of it. Named here because
+  // rehydrateTailBudget() below now clamps to 0 on purpose. (11 Aug 2026)
+  if (!(charBudget > 0)) return null;
   try {
     const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
-    return lines.length ? lines.join("\n").slice(-Math.max(0, charBudget)) : null;
+    return lines.length ? lines.join("\n").slice(-charBudget) : null;
   } catch { return null; }
+}
+
+// THE BUDGET, IN ONE PLACE — and THE COMPOSITION, IN ONE PLACE.
+// 11 Aug 2026, wiring pass. LADDER F6 (7f3a07f, 9 Aug 23:04) derived the tail
+// budget inside buildConfig as the literal `8192 * 4 - cartridge.length`, but
+// the REHYDRATOR selftest kept rebuilding its expected tail with
+// buildRehydrate()'s DEFAULT 2000. Two numbers for one rule: the check matched
+// only on a day with no dugout transcript (or one under 2000 chars) and went
+// RED on every day he actually talks — 10 Aug's transcript is 26,363 chars, so
+// the assert compared 26,363 chars against 2,000. `npm test` therefore scored
+// the crown organ FAILING exactly on the days it was used, which makes a real
+// dugout regression indistinguishable from that noise. Not an engine change —
+// the expression below is byte-for-byte what buildConfig computed inline (the
+// Math.max(0,…) was already applied inside buildRehydrate), so there is no old
+// engine to freeze; it is the same lane with a name, and two callers.
+const REHYDRATE_WINDOW_TOKENS  = 8192;   // MUST equal the compression.sliding_window_tokens the config ships (selftest pins them together)
+const REHYDRATE_CHARS_PER_TOKEN = 4;     // F6's stated heuristic, not hidden
+function rehydrateTailBudget(cartridgeChars = 0) {
+  return Math.max(0, REHYDRATE_WINDOW_TOKENS * REHYDRATE_CHARS_PER_TOKEN - Number(cartridgeChars || 0));
+}
+function buildRehydrateBlock(now = new Date()) {
+  const cart = buildRehydrateCartridge();
+  return composeRehydrate(cart, buildRehydrate(now, rehydrateTailBudget(String(cart || "").length)));
 }
 
 // per-session config the page fetches (key never rests in the repo)
@@ -1892,16 +2033,22 @@ function buildConfig(keys, mode = "gaffer") {
     // kardo, no need to explain it to anyone" — and `selfknowledge.mjs consumers`
     // reports 0 live consumers. NOTHING reads organism_self.md any more; the
     // briefings stand on their own instructions.)
+    // buildConfig stays PURE — the selftest below calls it four times in scrimmage mode
+    // (:2232, :2596, :2632, :2836) and a test run is not a serve. Measured, not guessed:
+    // the first version of this wire put markServed here and one `dugout.mjs selftest`
+    // stamped a real receipt into examiner_drill.json at 2026-08-10T20:37:06Z, claiming a
+    // voice mock that never happened. The stamp lives on the /config ROUTE instead — the
+    // one line only a live browser can reach.
     system: mode === "scrimmage" ? buildScrimmageInstruction() : buildSystemInstruction(),
     // M2 — THE REHYDRATOR: durable memory (identity + who-he-is + last episodes)
     // rides IN FRONT of the transcript tail; a mock still starts cold.
     // LADDER F6 — the tail's budget is what the cartridge LEAVES of the session's
     // own compression window (sliding_window 8192 tok × 4 chars/tok), derived
     // fresh each build; the old fixed 2000 chars threw away ~30k of legal room.
-    rehydrate: mode === "scrimmage" ? null : (() => {
-      const cart = buildRehydrateCartridge();
-      return composeRehydrate(cart, buildRehydrate(new Date(), 8192 * 4 - String(cart || "").length));
-    })(),
+    // 11 Aug 2026 — the inline IIFE that used to live here (its budget written
+    // as the bare literal `8192 * 4 - cart.length`) is now buildRehydrateBlock,
+    // so the selftest can check THE SAME budget instead of a second copy of it.
+    rehydrate: mode === "scrimmage" ? null : buildRehydrateBlock(),
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
@@ -2024,6 +2171,24 @@ async function selftest() {
   assert("scrimmage: real-panel interruption + honest-never-cruel", scrim.includes("Interrupt him ONCE") && scrim.includes("never cruel"));
   assert("scrimmage: reps + report both mandatory at the whistle", scrim.includes("log_reps") && scrim.includes("scrimmage_report"));
   assert("EAR LAW — the model is never told about hedge counting", !/hedge/i.test(scrim));
+  // DEAD-WIRE GUARD (11 Aug 2026) — THE CODE ROUND'S SERVE RECEIPT.
+  // examiner.mjs staged a drill every night and nothing on disk ever said whether a
+  // surface picked it up; served and dropped were the same silence, which is why its
+  // header's "the reps flow through log_reps" clause went unchecked for weeks
+  // (reps_log.jsonl: 21 rows, ZERO tagged "scrimmage-voice"). These go RED if the stamp
+  // is ever cut out of the live route, or if it creeps back into the pure builder — the
+  // first draft of this repair put it in buildConfig and one selftest run wrote a real
+  // receipt claiming a mock that never happened.
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("SERVE RECEIPT — the scrimmage /config route tells the OWNER the code round went out, named 'scrimmage-voice'",
+      /mode === "scrimmage"\s*\)\s*\{\s*try\s*\{\s*markServed\("scrimmage-voice"\)/.test(src) && /import \{[^}]*\bmarkServed\b[^}]*\} from "\.\/examiner\.mjs"/.test(src));
+    assert("SERVE RECEIPT — the PROMPT BUILDER stays pure: no stamp on a path the suite walks (a rehearsal is not a serve)",
+      // a CALL, not the word — the tombstone comment inside buildConfig names markServed
+      // on purpose, and a check that cannot tell prose from a call is not a check
+      !/markServed\s*\(/.test(/function buildScrimmageInstruction[\s\S]*?\n\}/.exec(src)[0])
+      && !/markServed\s*\(/.test(/function buildConfig[\s\S]*?\n\}/.exec(src)[0]));
+  }
   assert("all three personas exist; today's picked deterministically", Object.keys(PERSONAS).length === 3 && PERSONAS[todaysPersona(new Date(2026, 6, 12))] !== undefined);
   assert("hedge counter hears Hinglish + English hedges", countHedges("CAPTAIN: Shayad yeh matlab I think sahi hai") === 3 && countHedges("CAPTAIN: cosine normalizes magnitude, full stop") === 0);
   execTool("log_reps", { reps: [{ concept: "rag", question: "q", confidence: "guessed", correct: false }] }, { sh, mode: "scrimmage", runtime: { last_think_ms: null } });
@@ -2031,6 +2196,24 @@ async function selftest() {
   assert("scrimmage reps tagged scrimmage-voice (declared surface)", scrimPaste[0].note === "scrimmage-voice");
   const rep = execTool("scrimmage_report", { total_25: 17, weakest: ["eval metrics", "context handoff"], drill: "reconstruct the eval harness cold", persona: "scenario_bomb" }, { sh, append });
   assert("scrimmage report filed with score + cracks + hedge line", rep.ok === true && appends.some(a => a.text.includes("17/25") && a.text.includes("eval metrics") && a.text.includes("hedge-density")));
+  // WIRE GUARD (dead-wire sweep, 11 Aug 2026) — the .md above is the human page
+  // and NO organ parses it: every reader of brain_out/dugout/ keeps only
+  // "CAPTAIN: " lines or filters `^<date>.md$`. So for weeks the graded verdict,
+  // the two cracks and the examiner's own drill-for-tomorrow died on disk while
+  // only the 5 reps survived through capture.mjs. setpiece.mjs — the organ that
+  // compiles TOMORROW's drills — is now this row's consumer (see its GRADED MOCK
+  // block). These three fail the instant the machine row stops being written,
+  // loses the `kind`/`day` keys the consumer filters on, or drops the drill.
+  const scrimRow = appends.filter(a => String(a.path).endsWith("dugout_scrimmage.jsonl")).pop();
+  const scrimJson = scrimRow ? JSON.parse(scrimRow.text) : null;
+  assert("SCRIMMAGE HAS A MACHINE ROW, not just a page nobody reads (setpiece is its consumer)",
+    !!scrimJson && scrimJson.kind === "report" && scrimJson.drill === "reconstruct the eval harness cold");
+  assert("the row carries the two keys the consumer FILTERS on — kind + captain-local day",
+    scrimJson.day === localDate(new Date()) && typeof scrimJson.ts === "string");
+  assert("the cracks + grade travel as DATA, so nothing downstream has to parse prose",
+    Array.isArray(scrimJson.weakest) && scrimJson.weakest.join("|") === "eval metrics|context handoff" && scrimJson.total_25 === 17);
+  assert("the human page is UNCHANGED beside it (layering — the .md was never replaced)",
+    appends.some(a => String(a.path).includes("scrimmage_") && String(a.path).endsWith(".md")));
 
   const keys = loadKeys("GEMINI_API_KEY=k1\nGEMINI_API_KEY_2=k2\n# comment\nGEMINI_API_KEY_3=k3\n");
   assert("key-pool parses numbered keys for rotation", keys.filter(k => ["k1", "k2", "k3"].includes(k)).length === 3);
@@ -2201,6 +2384,30 @@ async function selftest() {
     composeCartridgeSection(null, [], null) === composeCartridgeSection(null, []));
   assert("P2 missing night dir → null, never crashes",
     loadNightCoach(new Date("2026-07-12T08:00:00"), join(os.tmpdir(), "dugout-nonight-" + Date.now())) === null);
+  // 11 Aug 2026 — THE WIRE, ASSERTED. The 1200-char cut above shipped for two
+  // nights and was caught mid-word inside the live constitution. This fixture is
+  // longer than that cut BY CONSTRUCTION, so a re-introduced cap fails here
+  // instead of on his ear, and the tail (where the coach's actual ruling lives)
+  // is what the assertion reads.
+  {
+    const { mkdtempSync } = await import("node:fs");
+    const nd = mkdtempSync(join(os.tmpdir(), "dugout-night-"));
+    const head = "**THE DAY, PLAINLY** — " + "misconception A ka evidence, uske baad B. ".repeat(40);
+    const tail = "\nSACH: andar koi brake nahi hai — flatness sirf bahar se dikhta hai.";
+    const fence = "\n```json\n{\"date\":\"2026-08-11\",\"misconceptions\":[]}\n```";
+    writeFileSync(join(nd, "2026-08-11.md"), head + tail + fence, "utf8");
+    const nc = loadNightCoach(new Date("2026-08-11T08:00:00"), nd);
+    assert("THE NIGHT COACH ARRIVES WHOLE — the page's LAST line reaches the loader (the 1200-cut ate it mid-word)",
+      !!nc && nc.text.endsWith("flatness sirf bahar se dikhta hai.") && nc.text.length > 1200 && nc.chars === (head + tail).trim().length);
+    assert("…and the machine-face json fence never reaches the mouth (brain.mjs already parses it into the .json sibling)",
+      !!nc && !nc.text.includes("```json") && nc.machine_block_chars === fence.length);
+    assert("…and the constitution carries that same last line + declares the page's length",
+      composeCartridgeSection(null, [], nc).includes("flatness sirf bahar se dikhta hai.")
+      && composeCartridgeSection(null, [], nc).includes(`${nc.chars} chars`));
+    assert("LAYERING — the old 1200-cut engine stays in the file, auditable, and still truncates",
+      typeof loadNightCoachLegacy === "function"
+      && loadNightCoachLegacy(new Date("2026-08-11T08:00:00"), nd).text.length === 1200);
+  }
   assert("page seeds fresh WS from today's record (clientContent, history-only)", PAGE.includes("REHYDRATE") && PAGE.includes("clientContent") && PAGE.includes("rehydrated"));
   assert("ACK lines obey the no-hype law (banned-phrase check)", ACK_LINES.every(l => bannedPhraseCheck(l, BANNED).length === 0 && l.length < 60));
   assert("think-time stamps wired: page measures both directions", PAGE.includes("captain_think") && PAGE.includes("gaffer_respond") && PAGE.includes("/stamps"));
@@ -2337,11 +2544,43 @@ async function selftest() {
         && composeRehydrate(null, "TRANSCRIPT") === "TRANSCRIPT"
         && composeRehydrate(null, null) === null
         && composeRehydrate("", "") === null);
-      // and the live config really is built by that composer, on this machine
+      // and the live config really is built by that composer, on this machine.
+      // 11 Aug 2026 — THIS LINE WAS SILENTLY RED. It rebuilt the expected tail
+      // with buildRehydrate()'s DEFAULT 2000 while buildConfig had derived the
+      // budget from the compression window since LADDER F6, so it passed only
+      // on a day with no transcript and failed on every day he actually talks.
+      // Both sides now go through rehydrateTailBudget — one budget, two callers.
       const cart = buildRehydrateCartridge();
-      const tail = buildRehydrate();
+      const cartChars = String(cart || "").length;
+      const tail = buildRehydrate(new Date(), rehydrateTailBudget(cartChars));
       assert(`REHYDRATOR: the live config carries exactly that composition (cartridge ${cart ? "present" : "absent"} · tail ${tail ? "present" : "absent"})`,
         buildConfig(["k1"]).rehydrate === composeRehydrate(cart, tail));
+      // …and the budget is the SHIPPED compression window, not a second copy of
+      // it. This is the wire that broke: change one number, this goes red.
+      assert("REHYDRATOR: the tail budget derives from the very window the page is told to compress at (one number, not two)",
+        rehydrateTailBudget(0) === buildConfig(["k1"]).compression.sliding_window_tokens * REHYDRATE_CHARS_PER_TOKEN
+        && rehydrateTailBudget(1000) === rehydrateTailBudget(0) - 1000
+        && rehydrateTailBudget(REHYDRATE_WINDOW_TOKENS * REHYDRATE_CHARS_PER_TOKEN + 1) === 0);
+      // …and it is checked on a REAL transcript, whatever today happens to hold.
+      // The old check could only ever exercise TODAY's file, so on a quiet
+      // morning it asserted nothing at all — which is how the drift above sat
+      // undetected from 9 Aug to 11 Aug while npm test reported the organ red.
+      const tDays = (() => { try { return readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).map(f => f.slice(0, 10)).sort().reverse(); } catch { return []; } })();
+      const tBody = (d) => { try { return readFileSync(join(OUT_DIR, d + ".md"), "utf8").split("\n").filter(Boolean).join("\n"); } catch { return ""; } };
+      const bigDay = tDays.find(d => tBody(d).length > 2000);
+      if (bigDay) {
+        const full = tBody(bigDay);
+        const at = new Date(bigDay + "T12:00:00");
+        assert(`REHYDRATOR: on a REAL transcript (${bigDay}, ${full.length} chars) the tail carries the derived budget's worth, NEVER the retired 2000-char default`,
+          buildRehydrateBlock(at) === composeRehydrate(cart, full.slice(-rehydrateTailBudget(cartChars)))
+          && buildRehydrateBlock(at) !== composeRehydrate(cart, full.slice(-2000)));
+        assert("REHYDRATOR: a zero budget is NO ROOM, never the whole file (slice(-0) is slice(0) — the F6 subtraction can clamp to zero)",
+          buildRehydrate(at, 0) === null && buildRehydrate(at, 10) === full.slice(-10));
+      } else {
+        // honest skip — and the absence is CHECKED, never a swallowed error
+        assert(`REHYDRATOR: no transcript over 2000 chars on this machine (${tDays.length} day-files) — the real-transcript budget check has nothing to bite on`,
+          tDays.every(d => tBody(d).length <= 2000));
+      }
       // the other half of the same law: a mock must never see his memory
       assert("REHYDRATOR: a scrimmage still starts COLD (no cartridge, no tail)", buildConfig(["k1"], "scrimmage").rehydrate === null);
     }
@@ -2496,6 +2735,28 @@ async function selftest() {
     assert("the page injects EVERY unseen deep answer (two lanes, zero loss)", PAGE.includes("seenDeep") && PAGE.includes("deep_recent"));
     // page hygiene
     assert("transcript fragments coalesce per speaker (no more word-salad record)", PAGE.includes("coFlush") && PAGE.includes("coWho"));
+    // THE PAGE MUST PARSE (11 Aug 2026 — written the morning after it did not).
+    // Every other page assertion in this file is PAGE.includes("...") — a STRING
+    // MATCH. A string match cannot tell working code from broken code, and on
+    // 10 Aug that gap shipped a dead Gaffer: `'\n\n'` written inside this file's
+    // PAGE template literal was consumed by the TEMPLATE, so the browser received
+    // a single-quoted string split across two real lines — "Uncaught SyntaxError:
+    // Invalid or unexpected token (index):711". The page never booted, no AWAKEN
+    // button rendered, and the whole voice surface was gone. The selftest was
+    // green the entire time, because every one of its checks only asked whether
+    // the text was PRESENT. This one asks whether it RUNS.
+    // new Function() parses without executing — browser globals are never touched.
+    {
+      const blocks = [...PAGE.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+      let parseErr = null;
+      for (const code of blocks) { try { new Function(code); } catch (e) { parseErr = e.message; break; } }
+      assert(`THE PAGE ACTUALLY PARSES — all ${blocks.length} inline script block(s), not merely "the string is in there"${parseErr ? " · " + parseErr : ""}`,
+        blocks.length > 0 && parseErr === null);
+      // and the specific trap that caused it: a bare \n inside the template becomes a
+      // real newline in the browser's source. In page code it must always be written \\n.
+      assert("no RAW newline hides inside a page-code quoted string (the \\n-eaten-by-the-template trap)",
+        !/=\s*'[^'\n]*$/m.test(blocks.join("\n").split("\n").filter(l => !l.trim().startsWith("//")).join("\n")) || parseErr === null);
+    }
     // E2E audit 25 Jul 2026: same law, new shape — the down-wire branch now CLEARS
     // the meter (t0=0) instead of bare-returning with a stale t0 (see mins()).
     assert("minutes bill only while the wire is up (parked tab = free)", PAGE.includes("if(!ws||ws.readyState!==1||!setupDone){t0=0;return}const dTok"));
@@ -2797,6 +3058,65 @@ async function selftest() {
       ids.length
         ? (typeof named === "string" && named.split("/").slice().sort().join("|") === ids.slice().sort().join("|"))
         : named === undefined);
+  }
+
+  // ── NO ORPHAN IMPORTS (10 Aug 2026) ──────────────────────────────────────
+  // The wire this catches: LADDER F3 deleted the afferent double gate and left
+  // `learningArcVerdict, conceptVocabulary` standing in the hippocampus import
+  // for a day with no caller. Harmless-looking, and it is not: a named ESM
+  // import is resolved at LINK time, so an unused name still binds this whole
+  // bridge — plus nightshift.mjs's `indexRecall` import — to a symbol nobody
+  // here calls. Drop it from the owner and dugout.mjs stops LOADING.
+  // Comment mentions do NOT count as use: learningArcVerdict survived a plain
+  // `grep -c` at 2 hits because one of them was the F3 tombstone comment, which
+  // is exactly how this hid. So the source is stripped of //-lines and /* */
+  // blocks before the count — deliberately conservative (a name used ONLY
+  // inside a trailing comment on a code line would still pass; a name used only
+  // in a whole-line comment, which is this file's habit, will not).
+  {
+    const src = readFileSync(join(__dirname, "dugout.mjs"), "utf8");
+    const importLines = src.split("\n").filter(l => /^import\s.*from\s+"\.\/[a-z_]+\.mjs";?/.test(l));
+    const body = src
+      .replace(/\/\*[\s\S]*?\*\//g, " ")                                  // block comments
+      .split("\n").filter(l => !/^\s*\/\//.test(l) && !/^import\s/.test(l))  // //-lines + the import block itself
+      .join("\n");
+    const orphans = [];
+    for (const line of importLines) {
+      const inner = (line.match(/^import\s*\{([^}]*)\}/) || [])[1];
+      if (!inner) continue;                                               // default/namespace imports aren't named bindings
+      const from = (line.match(/from\s+"(\.\/[a-z_]+\.mjs)"/) || [])[1];
+      for (const spec of inner.split(",")) {
+        const local = spec.trim().split(/\s+as\s+/).pop().trim();         // `renderEdge as renderModelEdge` → the LOCAL binding
+        if (!local) continue;
+        if (!new RegExp(`\\b${local}\\b`).test(body)) orphans.push(`${local} (${from})`);
+      }
+    }
+    assert(`every sibling import is actually CALLED here — ${importLines.length} import lines scanned, 0 orphans`,
+      orphans.length === 0 || (console.log(`    ORPHANS: ${orphans.join(" · ")}`), false));
+  }
+
+  // ── THE FAULT DOOR — BOTH HALVES (11 Aug 2026) ───────────────────────────
+  // The dead wire this repair closed: fuelboard.record429 existed, was correct,
+  // and had NO producer for any live tank. This socket detected real quota
+  // exhaustion, rotated the pool and benched him — and the board never heard, so
+  // T1/T2 could never read COLD and physio's `mouth_cold` bleed was unreachable
+  // by the real fault path. BOTH halves are asserted, because either one alone
+  // is the same defect again: a page that reports into a door that isn't there,
+  // or a door nothing ever knocks on. Needles that live in SRC are SPLIT — see
+  // the #57 note; PAGE needles are safe (the assertion is not inside PAGE).
+  {
+    assert("the page tells the BOARD before nextKey() moves keyIdx (after the rotation, which tank ran dry is unknowable)",
+      /reportFault\(keyIdx,[\s\S]{0,220}const k=nextKey\(\)/.test(PAGE));
+    assert("the faulted tank is DERIVED from the key that 429'd, never guessed (no mapping → no post)",
+      PAGE.includes("g.find(x=>x.key_index===idx)") && PAGE.includes("const g=(CFG&&CFG.tanks&&CFG.tanks.gauge)||[]"));
+    assert("the Watcher's own exhaustion reaches the board too (else T2 never reads COLD)",
+      PAGE.includes("reportFault(CFG.tanks.watcher.key_index"));
+    assert("ONE evidence rule for 'this was really quota', shared by both sockets (a bare early 1011 is still a wire fault)",
+      (PAGE.match(/QUOTAISH/g) || []).length >= 3 && !PAGE.includes("const quotaish=/quota|"));
+    const doorAt = SRC.indexOf('req.url === "/tank-fa' + 'ult"');
+    assert("the fault door exists in the LIVE POST router, beside /tank-use", doorAt > 0);
+    assert("the door shells the OWNER — fuelboard writes tanks.json, this bridge never does (single writer)",
+      /join\(__dirname, "fuelboard\.mjs"\), "fault", id\]/.test(SRC.slice(doorAt, doorAt + 1200)));
   }
 
   const passed = checks.every(c => c[1]);
@@ -3361,6 +3681,27 @@ const log=t=>{const el=document.getElementById('log');el.textContent=(t+"\\n"+el
 const b64=b=>{let s='';const u=new Uint8Array(b);for(let i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)};
 const unb64=s=>{const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer};
 function nextKey(){keyIdx=(keyIdx+1)%CFG.keys.length;return keyIdx===0?null:CFG.keys[keyIdx]}
+// THE EVIDENCE RULE for "this was really quota" — ONE copy, both sockets. The
+// E2E audit's scar (25 Jul 2026, see the Gaffer's onclose) lived only in the
+// Gaffer's lane; the Watcher now needs the same rule to report its own faults,
+// and two copies of a rule drift apart the first time one is tuned.
+const QUOTAISH=/quota|exhaust|resource|rate limit|429/i;
+// THE FAULT DOOR (wired 11 Aug 2026) — the dead wire this closes: fuelboard's
+// record429 had NO producer for the LIVE tanks. This socket DETECTED real
+// exhaustion, rotated the key pool and benched him with "free juice dry" — and
+// never told the board. So stateOf() could never return COLD for T1/T2, the
+// STARVATION GUARD never learned a real ceiling for any live tank, and
+// physio.mjs's mouth_cold bleed — added precisely because "T1 and T2 sat COLD
+// from a 429 storm and no organ in the body said so" — was unreachable by the
+// real fault path. Live tanks.json + both vault snapshots agreed: last_429 null
+// on all 8 tanks, ever.
+// The tank is DERIVED, never guessed: the gauge carries each tank's key_index
+// (fuelboard summary()), and the key that just 429'd is the one at keyIdx — so
+// the fault lands on the tank that OWNS that key. No mapping → no post; a wrong
+// tank benched for the day is worse than a fault the board never heard.
+function tankForKey(idx){const g=(CFG&&CFG.tanks&&CFG.tanks.gauge)||[];const t=g.find(x=>x.key_index===idx);return t?t.id:null}
+function reportFault(idx,why){const id=tankForKey(idx);if(!id)return;
+ fetch('/tank-fault',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,why:String(why||'').slice(0,120)})}).catch(()=>{})}
 
 // SPEAKERS — native-rate output context; 24k PCM buffers, browser resamples (scar: never lock out-ctx to 24k)
 let playT=0,liveSrcs=[],lastPlayEnd=0,awaitThink=false,segEndAt=0,awaitGaffer=false;
@@ -3457,6 +3798,13 @@ function watcherConnect(){
    // C3 strip-scar: an early 1007/1011 with LOW-res set → retry once full-res
    if(!wSetup&&CFG.tanks.watcher.media_resolution&&!wMediaStrip&&wOpenAt&&(Date.now()-wOpenAt<15000)&&(e.code===1007||e.code===1011)){
     wMediaStrip=true;wsW=null;log('· watcher scar bit: mediaResolution stripped — full-res frames ride');watcherConnect();return}
+   // THE FAULT DOOR, second socket: the Watcher burns its OWN key, so its
+   // exhaustion must reach the board too — otherwise T2 can never read COLD and
+   // the eyes go dark with the gauge still showing HOT. Same evidence rule as
+   // the Gaffer's lane (QUOTAISH above): a bare early 1011 is a WIRE fault (the
+   // strip-scar right above owns that case), never a busy day.
+   if(e.code===1008||QUOTAISH.test(e.reason||'')||(e.code===1011&&wSetup&&wOpenAt&&(Date.now()-wOpenAt>=20000)))
+    reportFault(CFG.tanks.watcher.key_index,'watcher close '+e.code+(e.reason?' — '+String(e.reason).slice(0,80):''));
    wsW=null;wSetup=false};
   wsW.onerror=()=>{};
  }catch(e){}
@@ -3518,11 +3866,11 @@ function recitalHear(txt){if(!RCT||RCT.graded)return;RCT.spoken+=' '+txt;
 
 function showVerbatim(res){const el=document.getElementById('verbatim');if(!el)return;
  recitalGrade(); // close the previous page's audit before the next one opens
- const body=res&&res.ok?(typeof res.weld==='string'?res.weld:(typeof res.text==='string'?res.text:(typeof res.a==='string'?res.q+'\n\n'+res.a:null))):null;
+ const body=res&&res.ok?(typeof res.weld==='string'?res.weld:(typeof res.text==='string'?res.text:(typeof res.a==='string'?res.q+'\\n\\n'+res.a:null))):null;
  if(body===null){RCT=null;el.style.display='none';el.textContent='';return}
  const secs=typeof res.est_seconds==='number'?res.est_seconds:null;
  const head=[res.id,res.page,res.axis?('axis '+res.axis):null,(res.seg&&res.of)?('segment '+res.seg+' of '+res.of):null,secs!==null?(secs+'s spoken'):null].filter(Boolean).join(' · ');
- el.textContent=head+'\n\n'+body;el.style.display='block';el.scrollTop=0;
+ el.textContent=head+'\\n\\n'+body;el.style.display='block';el.scrollTop=0;
  RCT={capsule:res.id||'',page:res.page||'',words:rWords(body),spoken:'',graded:false,transcript:outTxEnabled}}
 
 async function toolCall(fc){const r=await fetch('/tool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fc.name,args:fc.args||{},mode:MODE})});
@@ -3597,9 +3945,13 @@ ws.onclose=e=>{if(closing)return;
  // reason, or a 1011 that arrives on a socket that had been LIVE for a while
  // (a genuine mid-session exhaustion). A bare early 1011 rides the scar ladder
  // and the reconnect backoff instead — and every honest exit names code+reason.
- const quotaish=/quota|exhaust|resource|rate limit|429/i.test(e.reason||'');
+ const quotaish=QUOTAISH.test(e.reason||'');
  const livedAWhile=setupDone&&setupAt&&(Date.now()-setupAt>=20000);
  if(e.code===1008||quotaish||(e.code===1011&&livedAWhile)){
+   // tell the BOARD before we rotate away from this key — nextKey() moves
+   // keyIdx, and after it moves there is no honest way back to which tank
+   // actually ran dry. This is the producer record429 never had.
+   reportFault(keyIdx,'live close '+e.code+(e.reason?' — '+String(e.reason).slice(0,80):''));
    const k=nextKey();if(k){log('· quota on key '+(keyIdx)+' — rotating pool');dropResume('key rotation — a handle is per-project');connect();return}
    st('🪑 free juice dry for today (close '+e.code+(e.reason?' — '+String(e.reason).slice(0,80):'')+') — bench: node scripts/talk.mjs');mins();return}
  // a socket that never reached setupComplete is a WIRE problem, not a busy day:
@@ -3979,6 +4331,12 @@ async function main() {
       }
       if (req.method === "GET" && req.url.startsWith("/config")) {
         const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour"].includes(_q) ? _q : "gaffer";
+        // THE ONE REAL SERVE (11 Aug 2026 dead-wire sweep): a browser asking for the
+        // scrimmage config is a mock actually starting — the only event in this repo that
+        // means the staged code round reached a surface. buildConfig itself must stay
+        // pure (the suite calls it), so the receipt is stamped here, through the OWNER
+        // (examiner.mjs), fail-silent: bookkeeping never costs him the mock.
+        if (mode === "scrimmage") { try { markServed("scrimmage-voice"); } catch {} }
         return send(200, buildConfig(keys, mode));
       }
       if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
@@ -4049,6 +4407,25 @@ async function main() {
           if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", id, String(Math.max(1, Number(body.units) || 1))], { windowsHide: true, timeout: 15000 }); } catch { } }
           // C2 — a tank's true tokens land in the same voice ledger
           if (Number(body.tokens) > 0) appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), tokens: Math.round(Number(body.tokens)), tank: id || "T?" }) + "\n");
+          return send(200, { ok: true });
+        }
+        if (req.url === "/tank-fault") {
+          // THE FAULT DOOR (11 Aug 2026) — the missing twin of /tank-use. There
+          // was a door for "this tank spent a unit" and none for "this tank ran
+          // DRY", so fuelboard.record429 had no producer for any live tank: the
+          // page rotated keys and benched him, the board stayed HOT forever, and
+          // physio's `mouth_cold` bleed could never fire from a real 429.
+          // Same single-writer shape as /tank-use: we carry the news, the OWNER
+          // writes tanks.json. record429's STARVATION GUARD does the arithmetic
+          // (observed_ceiling = max(estimate, used)) — nothing is computed here.
+          const id = String(body.id || "");
+          if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", id], { windowsHide: true, timeout: 15000 }); } catch { } }
+          // the WHY rides the voice ledger (close code + reason, already
+          // truncated by the page) so a later reader can tell a real exhaustion
+          // from a wire fault without re-guessing it. brain.mjs's
+          // dugoutMinutesToday sums `l.minutes || 0`, so a minutes-less row here
+          // costs the voice-pool arithmetic nothing.
+          try { appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), tank: id || "T?", fault: true, why: String(body.why || "").slice(0, 120) }) + "\n"); } catch { }
           return send(200, { ok: true });
         }
         if (req.url === "/handle") {

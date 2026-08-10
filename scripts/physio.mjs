@@ -176,6 +176,116 @@ function fuelRead(tanksJson, tankRegistry, now) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// THE DAEMONS (wire repair, 11 Aug 2026) — the watchdog's verdict had NO reader
+// ---------------------------------------------------------------------------
+// daemon_watchdog.mjs probes the five resident daemons (turnstile · cortex ·
+// thalamus · brain pacemaker · context bridge) on its own timer and writes
+// daemon_watchdog.json. A repo-wide grep the day of this repair found that file
+// named in .gitignore, package.json's selftest chain, setup/INSTALL_CYBORG_
+// TASKS.ps1, a cadence row in limits.mjs, organism_test.mjs's write-EXEMPTION
+// regex (not a content read) and docs — and in ZERO organs. The nervous
+// system's liveness was measured all day into a file nobody opened.
+//
+// THE PHYSIO, NOT ANOTHER ORGAN: this is the FUEL read's shape exactly (#93 —
+// "no health surface read tank state"). A dark daemon is a body fact,
+// proprioception is what this organ is, and loop_vitals.json already reaches
+// surfaces a human opens (talk.mjs clips its first 400 chars, /organism-doctor
+// runs this organ first, the matchday skill opens it).
+//
+// EVERY RULE BORROWED, NOTHING INVENTED:
+//  · UP / DOWN / UNKNOWN is daemon_watchdog.mjs's own upWord(): a name in
+//    `unknown` is a probe that could not be TAKEN and must never read as DOWN.
+//  · `ports` also carries synthetic `<name>_relaunched` receipts written beside
+//    the probe results, so those keys are filtered — they are dispatch records,
+//    not daemons, and counting them would inflate the roster.
+//  · THE DAY GATE is fuelRead's rule verbatim: a pass that is not today's is
+//    not today's reading, so it is REPORTED and never bled on. That same gate
+//    is what makes the WATCHER'S OWN death visible — a frozen "all UP" can no
+//    longer read as green.
+// No cadence number is copied here; the only unit is the calendar day, which
+// both this organ and daemon_watchdog.mjs already gate on. The file is read RAW
+// and read-only: daemon_watchdog.mjs is its sole writer, and a health probe
+// must never shell the organ it is measuring.
+function daemonRead(wd, now) {
+  if (!wd || !wd.ports || typeof wd.ports !== "object") return null;   // never born ≠ bleeding
+  const unknown = Array.isArray(wd.unknown) ? wd.unknown : [];
+  const names = Object.keys(wd.ports).filter(n => !/_relaunched$/.test(n));
+  const up   = names.filter(n => wd.ports[n] === true);
+  const down = names.filter(n => wd.ports[n] !== true && !unknown.includes(n));
+  // repLocalDay is reused rather than re-written: the watchdog stamps `at` with
+  // a plain toISOString(), the same UTC-vs-IST trap that helper already exists
+  // to defuse (a 02:00 IST pass carries yesterday's UTC day).
+  const reading_is_today = !!wd.at && repLocalDay(wd.at) === localDate(now);
+  return {
+    at: wd.at || null,
+    reading_is_today,
+    up, down,
+    unknown: unknown.filter(n => names.includes(n)),
+    note: reading_is_today
+      ? `${up.length}/${names.length} residents answered at the watchdog's last pass${down.length ? ` — DOWN: ${down.join(", ")}` : ""}`
+      : `NOT TODAY'S READING — the watchdog's last pass was ${wd.at || "(no stamp)"}; these words are what stood then, not now`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// THE REST ROOM'S PULSE — restRoomRead (wire repair, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// dmn.mjs appends one brain-ledger row per rollout and holds its ONLY readout
+// behind `node scripts/dmn.mjs status`. A repo-wide grep the day of this repair
+// found that command in exactly two places, both prose: the organ's own MODES
+// header (dmn.mjs:35) and the generated repo bundle. No task, no hook, no
+// conductor step, no skill ran it — so the Rest Room's health was readable only
+// if the captain typed a command he has no reason to remember. Same shape as
+// the tank read (#93) and the daemon read above: a producer with no consumer.
+// WHY THE BRAIN'S OWN METER DOES NOT COVER THIS: brain.mjs's failureStreak()
+// samples the TAIL of the shared lane across ALL jobs, so a DMN-only outage
+// sitting beside healthy brain ticks still scores "health OK". Not hypothetical
+// — 1-2 Aug 2026 this organ was down ~22h reporting a false reason, and the
+// scar is written into dmn.mjs's own header (#8, cross-engine fault attribution).
+// WHAT BLEEDS, AND WHAT DELIBERATELY DOES NOT:
+//  · A FAILED LAST ATTEMPT bleeds — the newest dmn_* row on the lane is
+//    ok:false. Self-clearing by construction: the next good pass silences it,
+//    so old scars (22 of the 1,319 rows on the day of this repair) never nag.
+//  · SILENCE NEVER BLEEDS. Standing down is this organ's DESIGNED behaviour —
+//    it skips when the captain is at his desk, when the tone reads conserve,
+//    and when the lanes have no measured headroom. Bleeding on absence would
+//    need a cadence number, and inventing one would accuse an honest skip.
+// NO NUMBER IS INTRODUCED: the only test is a boolean already on the row. The
+// spend beside it is COUNTED and reported, never judged — his standing rule is
+// that no threshold gets picked before 30-45-60 days of real data.
+// Rows are matched on the `dmn_` PREFIX rather than by copying dmn.mjs's
+// DMN_JOBS list, so a fourth lane joins this reader for free (all three live
+// names carry it — `grep -n "const DMN_JOBS" scripts/dmn.mjs`).
+// Read RAW and read-only, for the same two reasons the tanks and watchdog reads
+// are: importing dmn.mjs would drag claudegen + fuelboard + the hippocampus +
+// the thalamus into the one organ that must survive its neighbours breaking,
+// and shelling `dmn.mjs status` would be a health probe running the engine it
+// is measuring.
+function restRoomRead(rows, now) {
+  if (!Array.isArray(rows) || !rows.length) return null;   // never dreamed ≠ bleeding
+  const last = rows[rows.length - 1];
+  // repLocalDay again, for the third time in this file and the same reason:
+  // `ts` is ISO-UTC and the captain lives in IST, so a 02:00-local pass carries
+  // yesterday's UTC day. dmn.mjs status converts the same way before counting.
+  const today = rows.filter(r => r && repLocalDay(r.ts) === localDate(now));
+  return {
+    at: last.ts || null,
+    job: last.job || null,
+    lane: last.lane || null,
+    ok: last.ok !== false,
+    limit_hit: !!last.limit_hit,
+    error: last.ok === false ? String(last.error || "").slice(0, 200) : null,
+    calls_today: today.length,
+    failed_today: today.filter(r => r.ok === false).length,
+    // HONESTY, carried from dmn.mjs's ledgerRow: a total the engine did not
+    // report is a length-ESTIMATE. The count of estimated rows rides along so
+    // no reader can mistake this sum for engine truth.
+    tokens_today: today.reduce((a, r) => a + (r.total_tokens || 0), 0),
+    tokens_estimated_rows: today.filter(r => r.tokens_estimated).length,
+  };
+}
+
 function loadConfig(path = CFG_PATH) {
   try {
     if (existsSync(path)) {
@@ -496,6 +606,43 @@ function compute(world, cfg, now = new Date()) {
     }
   }
 
+  // 7) THE DAEMONS — wire repair, 11 Aug 2026. See daemonRead's header: the
+  //    watchdog wrote its verdict every pass and no organ in the body read it.
+  //    Two bleeds, both decided by the day gate alone:
+  //      · daemon_dark   — today's pass says a resident is not answering.
+  //      · watchdog_dark — the watchdog itself stopped writing, so every "UP"
+  //        on disk is a memory. The watcher needed a watcher; a stale-green
+  //        liveness file is the exact "live-looking corpse" shape this organ
+  //        exists to refuse.
+  //    Both REPORT. Nothing here relaunches or kills: daemon_watchdog.mjs owns
+  //    that arm and is itself forbidden to kill, so the escalation past a failed
+  //    relaunch is HIS hand on setup/START_DAEMONS.vbs — the same lane the night
+  //    watchman already names.
+  const daemons = daemonRead(world.daemons, now);
+  if (daemons && daemons.reading_is_today && daemons.down.length) {
+    bleeds.push({ organ: "daemons", kind: "daemon_dark",
+      evidence: `${daemons.down.join(", ")} not answering at the watchdog's last pass (${daemons.at}) · up: ${daemons.up.join(", ") || "none"}${daemons.unknown.length ? ` · probe not takeable: ${daemons.unknown.join(", ")}` : ""}`,
+      line: `${daemons.down.join(" + ")} daemon dark — the watchdog keeps relaunching it; agar phir bhi nahi chadha to setup/START_DAEMONS.vbs aapke haath se.` });
+  } else if (daemons && !daemons.reading_is_today) {
+    bleeds.push({ organ: "daemon-watchdog", kind: "watchdog_dark",
+      evidence: `daemon_watchdog.json's last pass is ${daemons.at || "(no stamp)"}, which is not today — its UP/DOWN words are a memory, not a reading`,
+      line: "the daemon watchdog itself has stopped — check task ArsenalFC-Daemon-Watchdog; until it runs, nothing is watching the daemons." });
+  }
+
+  // 8) THE REST ROOM — wire repair, 11 Aug 2026. See restRoomRead's header: the
+  //    organ's only readout (`dmn.mjs status`) had no caller anywhere in the
+  //    organism, and the brain's own health meter is structurally blind to a
+  //    DMN-only outage. ONE bleed, on the one fact that needs no threshold: the
+  //    newest attempt failed. A silent Rest Room is an honest skip and stays
+  //    silent here. This organ REPORTS; it never re-runs the dream and never
+  //    touches a tank — dmn.mjs owns both.
+  const restRoom = restRoomRead(world.dmnLedger, now);
+  if (restRoom && !restRoom.ok) {
+    bleeds.push({ organ: "dmn", kind: "rest_room_engine_fault",
+      evidence: `the newest ${restRoom.job || "dmn"} row (${restRoom.at}${restRoom.lane ? ` on ${restRoom.lane}` : ""}) came back ok:false${restRoom.limit_hit ? " · limit_hit" : ""} :: ${restRoom.error || "(no error text on the row)"}`,
+      line: "Rest Room ka aakhri call engine pe fail hua — jab tak agla pass nahi chadhta, aapke weak points pe koi ammunition load nahi ho rahi." });
+  }
+
   // SPEAK-GATES — computed from real volumes; fitted organs defer to these.
   // A gate counts MARKET-DAYS, not ledger rows: lastWinsSlip collapses the
   // scorer's appended corrections (E2E audit 25 Jul 2026, finding 029c3bae) so a
@@ -634,6 +781,13 @@ function compute(world, cfg, now = new Date()) {
     // ORGANISM AUDIT #93 — tank state now HAS a health address. null when
     // tanks.json has never existed (never-born ≠ bleeding).
     fuel,
+    // WIRE REPAIR 11 Aug 2026 — same idea, one layer deeper: daemon liveness now
+    // HAS a health address too. null when the watchdog has never run on this box.
+    daemons,
+    // WIRE REPAIR 11 Aug 2026 — and the Rest Room gets the same address: its
+    // last engine verdict plus today's counted spend, which until now lived only
+    // inside a command nobody ran. null when the organ has never dreamed.
+    rest_room: restRoom,
     // ORGANISM AUDIT #98 — the Boot Room's weekly line used to die in a closing
     // cmd window, so "did the genome run?" was unanswerable and /organism-doctor
     // read `Last Result: 0` and called it green. bootroom.mjs now appends one
@@ -697,6 +851,27 @@ function gatherWorld() {
     // fuelboard.mjs (the anemia organ must not inherit another organ's deps).
     tanks: readJson(join(STATE_DIR, "tanks.json")),
     tankRegistry: readJson(join(STATE_DIR, "fuelboard_config.json")),
+    // WIRE REPAIR 11 Aug 2026 — THE FIRST READER daemon_watchdog.json ever had.
+    // RAW and read-only, for the same two reasons the tanks read is: shelling
+    // `daemon_watchdog.mjs pass` would make a health probe MUTATE the thing it
+    // measures (and fire real relaunches), and importing that module would drag
+    // conductor.mjs's process-table and port machinery into the one organ that
+    // must survive its neighbours breaking. If this line is ever deleted the
+    // file goes back to being a black box — the selftest holds it by source.
+    daemons: readJson(join(STATE_DIR, "daemon_watchdog.json")),
+    // WIRE REPAIR 11 Aug 2026 — the Rest Room's first health reader. The shared
+    // append lane is read RAW and read-only (brain.mjs owns its SCHEMA, not this
+    // read) and filtered to `dmn_` rows AT THE DOOR — the rest of the lane is
+    // another organ's business and must not enter this world. See restRoomRead's
+    // header for why this is neither an import of dmn.mjs nor a shell of
+    // `dmn.mjs status`. Delete this line and the organ is a black box again.
+    // COST, MEASURED 11 Aug 2026 rather than assumed: read+parse+filter of the
+    // whole 1,783KB lane is 61-81ms over 5 runs, inside a gatherWorld() that
+    // already takes ~262ms, on an organ that runs twice a day (conductor 07:30 +
+    // 22:50) and on demand from /organism-doctor. Cheap enough to read whole;
+    // a tail-only read would be the kind of silent truncation this file's own
+    // clipStderr scar exists to refuse.
+    dmnLedger: readLines(join(STATE_DIR, "brain_ledger.jsonl")).filter(r => r && /^dmn_/.test(String(r.job || ""))),
     // ORGANISM AUDIT #98 — the last row of the Boot Room's own run ledger.
     // Read-only; physio never writes it (bootroom.mjs is its single writer).
     genomeLastRun: (() => { const rows = readLines(join(STATE_DIR, "bootroom_log.jsonl")); return rows.length ? rows[rows.length - 1] : null; })(),
@@ -895,6 +1070,104 @@ async function selftest() {
   assert("a tanks.json that never existed is null, not a wound (never-born ≠ bleeding)",
     compute(base, cfg, now).fuel === null);
 
+  // THE DAEMONS — wire repair, 11 Aug 2026. daemon_watchdog.json was written
+  // every pass and read by NOTHING; every check below goes red the moment it
+  // goes back to being a black box.
+  {
+    const wdToday = (ports, unknown = []) => ({ at: now.toISOString(), ports, unknown });
+    const allUp = { turnstile: true, cortex: true, thalamus: true, brain: true, context: true };
+
+    const dark = compute({ ...base, daemons: wdToday({ ...allUp, thalamus: false }) }, cfg, now);
+    const db = dark.bleeds.find(b => b.kind === "daemon_dark");
+    assert("DAEMONS · a resident DOWN at today's watchdog pass bleeds, named (it had no reader at all until this)",
+      !!db && /thalamus/.test(db.evidence) && /watchdog's last pass/.test(db.evidence) && dark.daemons.down.join(",") === "thalamus");
+    assert("DAEMONS · the bleed points past the machine's own arm — the watchdog may relaunch, only HIS hand runs the VBS",
+      !!db && /START_DAEMONS\.vbs/.test(db.line));
+    assert("DAEMONS · all five answering ⇒ silence (the exception-only voice keeps its meaning)",
+      compute({ ...base, daemons: wdToday(allUp) }, cfg, now).bleeds.every(b => !/daemon/.test(b.kind)));
+
+    // upWord's law, held here too: a probe that could not be TAKEN is not a verdict.
+    const unk = compute({ ...base, daemons: wdToday({ ...allUp, context: false }, ["context"]) }, cfg, now);
+    assert("DAEMONS · an UNKNOWN probe never reads as DOWN and never bleeds (daemon_watchdog.mjs's own upWord law)",
+      unk.bleeds.every(b => b.kind !== "daemon_dark") && unk.daemons.down.length === 0
+      && unk.daemons.unknown.join(",") === "context");
+
+    // the launch loop writes `<name>_relaunched: true` INTO ports; those are
+    // dispatch receipts, and counting them as residents inflates the roster.
+    const withReceipt = compute({ ...base, daemons: wdToday({ ...allUp, thalamus_relaunched: true }) }, cfg, now);
+    assert("DAEMONS · `<name>_relaunched` receipts are filtered out of the roster, not counted as daemons",
+      withReceipt.daemons.up.length === 5 && !withReceipt.daemons.up.includes("thalamus_relaunched"));
+
+    // THE WATCHER'S OWN WATCHER — the whole reason for the day gate. A frozen
+    // file full of `true` must never be able to read as a healthy organism.
+    const frozen = compute({ ...base, daemons: { at: "2026-07-01T09:00:00.000Z", ports: allUp, unknown: [] } }, cfg, now);
+    assert("DAEMONS · a watchdog that stopped writing bleeds as watchdog_dark — a stale 'all UP' is a memory, not a reading",
+      frozen.bleeds.some(b => b.kind === "watchdog_dark" && /ArsenalFC-Daemon-Watchdog/.test(b.line))
+      && frozen.daemons.reading_is_today === false && /NOT TODAY'S READING/.test(frozen.daemons.note));
+    assert("DAEMONS · …and a stale pass NEVER doubles as today's daemon verdict (no accusing a daemon off a memory)",
+      compute({ ...base, daemons: { at: "2026-07-01T09:00:00.000Z", ports: { ...allUp, thalamus: false }, unknown: [] } }, cfg, now)
+        .bleeds.every(b => b.kind !== "daemon_dark"));
+
+    assert("DAEMONS · a watchdog that never ran on this box is null, not a wound (never-born ≠ bleeding)",
+      compute(base, cfg, now).daemons === null);
+
+    // THE WIRE ITSELF, held by source: compute() can only see what gatherWorld
+    // loads. Delete that read and every assertion above still passes on
+    // fixtures while the live organ goes blind again — which is exactly how this
+    // defect survived for weeks. Source-truth, the same net daemon_watchdog.mjs
+    // keeps on setup/START_DAEMONS.vbs.
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const gw = src.slice(src.indexOf("function gatherWorld()"), src.indexOf("// selftest — fixture world"));
+    assert("DAEMONS · gatherWorld() REALLY reads daemon_watchdog.json — the producer's first consumer, held by source",
+      /daemons:\s*readJson\(join\(STATE_DIR,\s*"daemon_watchdog\.json"\)\)/.test(gw));
+  }
+
+  // THE REST ROOM — wire repair, 11 Aug 2026. `node scripts/dmn.mjs status` was
+  // the organ's only readout and NOTHING ran it: a 2.5M-token day and a real
+  // engine failure ("Command failed: claude -p", 2026-08-09T08:41:51.605Z on T1)
+  // were visible only to a command he has no reason to type. Every check below
+  // goes red the moment the Rest Room goes back to being a black box.
+  {
+    const row = (o) => ({ ts: now.toISOString(), job: "dmn_rollout", engine: "claude", lane: "T1", ok: true, limit_hit: false, error: null, total_tokens: 100, tokens_estimated: true, ...o });
+    const ok3 = [row({}), row({ job: "dmn_counter" }), row({ job: "dmn_bg_drain" })];
+
+    const failed = compute({ ...base, dmnLedger: [...ok3, row({ ok: false, error: "Command failed: claude -p --output-format json --model sonnet" })] }, cfg, now);
+    const rb = failed.bleeds.find(b => b.kind === "rest_room_engine_fault");
+    assert("REST ROOM · the newest dmn_* row failing BLEEDS, named with lane + the engine's own words (it had no reader at all until this)",
+      !!rb && /T1/.test(rb.evidence) && /claude -p/.test(rb.evidence) && failed.rest_room.ok === false);
+    assert("REST ROOM · the bleed line is the captain's language and hands him no command to remember (the anchor law)",
+      !!rb && !/scripts\/|node /.test(rb.line));
+
+    // SELF-CLEARING, and this is the whole reason the test is "newest row", not
+    // "any failure": 22 of the live lane's 1,319 rows are historic ok:false. A
+    // bleed that counted them would nag forever about an outage already over.
+    assert("REST ROOM · a good newest row after older failures does NOT bleed — old scars never nag",
+      compute({ ...base, dmnLedger: [row({ ok: false, error: "old outage" }), row({ ok: false, error: "old outage" }), ...ok3] }, cfg, now)
+        .bleeds.every(b => b.kind !== "rest_room_engine_fault"));
+    assert("REST ROOM · a healthy lane is silent (the exception-only voice keeps its meaning)",
+      compute({ ...base, dmnLedger: ok3 }, cfg, now).bleeds.every(b => b.kind !== "rest_room_engine_fault"));
+
+    // SILENCE IS NOT A WOUND: standing down (captain at his desk / tone conserve
+    // / no measured headroom) is dmn.mjs's designed behaviour, and bleeding on it
+    // would need a cadence number nobody has earned the data to pick.
+    assert("REST ROOM · a lane that has never dreamed is null, not a wound (never-born ≠ bleeding)",
+      compute(base, cfg, now).rest_room === null);
+
+    // THE SPEND, REPORTED AND NEVER JUDGED — counted on the LOCAL day (a 02:00
+    // IST pass carries yesterday's UTC date), with estimates declared as such.
+    const spend = compute({ ...base, dmnLedger: [row({ ts: "2026-01-01T00:00:00.000Z" }), ...ok3] }, cfg, now).rest_room;
+    assert("REST ROOM · today's calls + tokens are COUNTED on the local day, and length-estimates say so",
+      spend.calls_today === 3 && spend.tokens_today === 300 && spend.tokens_estimated_rows === 3 && spend.failed_today === 0);
+
+    // THE WIRE ITSELF, held by source — same net as the daemon read above: every
+    // fixture check passes while the live organ is blind if gatherWorld stops
+    // reading the lane.
+    const src2 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const gw2 = src2.slice(src2.indexOf("function gatherWorld()"), src2.indexOf("// selftest — fixture world"));
+    assert("REST ROOM · gatherWorld() REALLY reads the dmn_ rows off brain_ledger.jsonl — the readout's first consumer, held by source",
+      /dmnLedger:\s*readLines\(join\(STATE_DIR,\s*"brain_ledger\.jsonl"\)\)\.filter\([^)]*\^dmn_/.test(gw2));
+  }
+
   // GENOME — ORGANISM AUDIT #98. The Boot Room's weekly line vanished into a
   // closing cmd window; bootroom.mjs now leaves a row, and this is its address.
   const gen = compute({ ...base, genomeLastRun: { at: "2026-07-12T14:30:00.000Z", day: "2026-07-12", mode: "run", outcome: "gate_closed", reason: "9/200 reps — the genome is listening, not proposing yet (speak-gate on volume)", counter: { have: 9, need: 200, kind: "volume_gate" } } }, cfg, now);
@@ -1053,4 +1326,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 // gatherWorld is exported so a health surface can take a READ-ONLY preview of
 // the vitals without shelling `physio.mjs run` (which writes loop_vitals.json).
 // It performs no writes of any kind — readJson / readLines / statSync only.
-export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy, gatherWorld, fuelRead };
+export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy, gatherWorld, fuelRead, daemonRead, restRoomRead };

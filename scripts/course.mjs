@@ -50,7 +50,15 @@
 //     current: n|null, current_at: ISO|null, updated_at }
 //   `current_at` is ADDITIVE to the agreed shape and load-bearing: `updated_at` is
 //   clobbered by the next `done`, so without it the answer to "when did he reach this
-//   chapter" is destroyed by the very next command. Consumers may ignore it.
+//   chapter" is destroyed by the very next command.
+//   WIRED 11 Aug 2026 (dead-wire sweep) — it was written here from day one, carried
+//   through mergeCourse, coerced in normalize, and called "load-bearing" in this very
+//   header, with ZERO readers anywhere in the organism: courseBrief() below never
+//   returned it, and `json` (the only other surface that would expose it) is run by no
+//   hook, task, skill or script. So nothing could ask how long he has been parked on a
+//   chapter, while every other track already carried a staleness signal (working_set's
+//   age tag, sprint's synced_at tag). courseBrief() returns it now and learnstate.mjs's
+//   SessionStart brief tags the course line with its age.
 //   `course: null` + `chapters: []` is the honest empty envelope — a consumer never
 //   has to special-case a missing file.
 //
@@ -386,30 +394,83 @@ function statusLine(state) {
 // sprintsync.mjs: sprint.json is Google-Sheet-driven and single-writer, and splicing
 // another organ's state into it makes it mixed-provenance and one Sheet-sync away
 // from clobbering his chapter position (sprintsync.mjs:101 writeAtomic(SPRINT, …)).
+//
+// AN UNREADABLE COURSE IS NOT AN ABSENT ONE (wiring pass, 11 Aug 2026 — the scar):
+// this function destructured only `{ ok, state }` and threw `why` away, so a corrupt
+// or half-written course.json fell through `!ok` into `statusLine(emptyState())` and
+// answered EVERY reader with the exact words a file that never existed produces —
+// "course: nothing ingested yet". Measured before the fix, on a state whose `chapters`
+// was an object: loadState().ok === false, why === "course.json exists but is not a
+// course state (no chapters array)", while courseBrief() returned
+// {"present":false,"line":"course: nothing ingested yet — …ingest <file>…","total":0}.
+// THE DAMAGE WAS A LOOP WITH NO EXIT: the SessionStart brief (learnstate.mjs:446
+// splices `cb.line` verbatim) and `status` both told him to ingest; `ingest` then
+// REFUSES by design (:701 "refusing to overwrite progress I cannot read") — while
+// weeks of `covered` marks read as never made.
+// The honest answer was already WRITTEN in this file, in the catch below — it was
+// simply unreachable, because loadState() never throws, it catches internally and
+// reports through `ok`/`why`. So the repair is not a new engine: `unreadableBrief()`
+// is that same answer, hoisted, now reached by the branch that actually fires, with
+// loadState's own reason carried through VERBATIM instead of being re-worded.
+// House precedent, one file over and one day older — benchmark.mjs:55-81 names
+// course.json a BLOCKING input for this identical reason: "a field that says a thing
+// is missing is the whole difference between a gap and a lie."
+// `present:false` is UNCHANGED, so a reader that only checks `present` behaves exactly
+// as before; `readable` and `why` are additive fields for one that wants the truth.
+function unreadableBrief(why) {
+  const reason = why || "course.json could not be read";
+  return {
+    present: false,
+    readable: false,
+    why: reason,
+    // Never statusLine()'s empty words. "nothing is lost" is the load-bearing half:
+    // it is what stops him from re-pasting a chapter list over progress that is
+    // still on disk and merely unparseable.
+    line: `course: UNREADABLE — ${reason} · nothing is lost; \`node scripts/course.mjs status\` for the exit`,
+    title: null, current: null, current_at: null, current_title: null, total: 0, done: 0,
+  };
+}
+
 export function courseBrief(path = STATE) {
   try {
-    const { ok, state } = loadState(path);
+    const { ok, why, state } = loadState(path);
+    if (!ok) return unreadableBrief(why);
     const line = statusLine(state);
-    if (!ok || !state || !state.course || !Array.isArray(state.chapters) || !state.chapters.length) {
-      return { present: false, line, title: null, current: null, current_title: null, total: 0, done: 0 };
+    if (!state || !state.course || !Array.isArray(state.chapters) || !state.chapters.length) {
+      // A genuinely empty/absent course: readable, just nothing in it yet.
+      return { present: false, readable: true, why: null, line, title: null, current: null, current_at: null, current_title: null, total: 0, done: 0 };
     }
     const total = state.chapters.length;
     const done = state.chapters.filter((c) => c.covered).length;
     const cur = state.current !== null ? state.chapters.find((c) => c.n === state.current) || null : null;
     return {
       present: true,
+      readable: true, why: null,              // 11 Aug 2026 — same keys on every path, so a
+                                              // reader destructures one shape, never three
       line,                                   // #106 — always a have/need counter, never a bare word
       title: state.course.title || null,
       current: cur ? cur.n : null,
+      // THE DEAD WIRE (11 Aug 2026 sweep): `current_at` is stamped by markCurrent()
+      // on every `at <n>`, merged, normalized, and called load-bearing in this file's
+      // header — and until this line it had ZERO readers in the whole organism,
+      // because THIS is the only address other organs use and it did not return the
+      // field. Consequence: nothing could ask how long he has been parked on a
+      // chapter, alone among the tracks (working_set carries its age tag, sprint its
+      // synced_at tag). Kept null when `current` is null — a course he has not started
+      // has no position to age, and a state written before `at` ever ran has no stamp.
+      current_at: cur ? (state.current_at || null) : null,
       current_title: cur ? cur.title : null,
       start_seconds: cur ? cur.start_seconds : null,
       total, done,
       next: state.chapters.find((c) => !c.covered && (cur === null || c.n > cur.n)) || null,
     };
-  } catch {
+  } catch (e) {
     // A course tracker must NEVER be able to block his prompt (the HOOK-SAFE law
-    // in the header). An unreadable file reads as "no course", loudly-but-safely.
-    return { present: false, line: "course: unreadable — `node scripts/course.mjs status` for the reason", title: null, current: null, current_title: null, total: 0, done: 0 };
+    // in the header). Kept as the last-resort net ONLY: loadState() catches its own
+    // errors, so nothing below it has ever reached here — the real unreadable path
+    // is the `!ok` branch above. If this ever does fire it is a NEW fault (normalize,
+    // statusLine), so it carries its own message rather than pretending to be empty.
+    return unreadableBrief(`course.json read failed (${(e && e.message) || e})`);
   }
 }
 
@@ -621,7 +682,7 @@ function selftest() {
     assert("#35 — courseBrief on a MISSING course answers honestly instead of throwing (his prompt is never at risk)",
       absent.present === false && absent.total === 0 && typeof absent.line === "string" && absent.line.length > 0);
     assert("#35 — the absent answer still carries every field a reader destructures (no undefined at the call site)",
-      ["present", "line", "title", "current", "current_title", "total", "done"].every((k) => k in absent));
+      ["present", "line", "title", "current", "current_at", "current_title", "total", "done"].every((k) => k in absent));
     // and on a real state — built through the pure core, written to a scratch path
     // the live file never sees.
     const built = mergeCourse(emptyState(), parseCourse(PASTE), T0).state;
@@ -641,7 +702,76 @@ function selftest() {
       brief.next && brief.next.n === 3);
     assert("#35 (#106) — the brief's line is a have/need counter, never a bare gated word",
       /chapter 2\/4/.test(brief.line) && /\(1 done\)/.test(brief.line));
+    // DEAD-WIRE SWEEP (11 Aug 2026). `current_at` was stamped by markCurrent since
+    // day one and returned by NOBODY, so his chapter position had no age while every
+    // other track had one. This is the assertion that fails if the field is ever
+    // dropped from the brief again — the state carried it fine the whole time; the
+    // ADDRESS was the broken half.
+    assert("DEAD WIRE — the brief carries `current_at`, so a reader can age his position (it had zero readers until today)",
+      brief.current_at === T1.toISOString());
+    // and the honest null: a course nobody has opened has no position to age. Built
+    // from the same pure core, so this proves the branch, not a fixture.
+    {
+      const notStarted = mergeCourse(emptyState(), parseCourse(PASTE), T0).state;
+      const p2 = join(tmpdir(), `__course_selftest_nostart_${process.pid}.json`);
+      let nb;
+      try { writeAtomic(p2, notStarted); nb = courseBrief(p2); }
+      finally { try { rmSync(p2, { force: true }); } catch { /* best effort */ } }
+      assert("DEAD WIRE — `current: null` reports `current_at: null`, never a fabricated stamp",
+        nb.present === true && nb.current === null && nb.current_at === null);
+    }
     assert("#35 — the scratch state left no trace beside the live file", !existsSync(tmpPath));
+  }
+
+  // ---- WIRING PASS (11 Aug 2026) — AN UNREADABLE COURSE MUST NOT READ AS AN ABSENT ONE ----
+  // The regression this catches, in one sentence: courseBrief() dropped loadState's
+  // `why`, so a corrupt course.json answered learnstate.mjs's SessionStart splice
+  // (:446, `cb.line` verbatim) with the words a file that never existed produces —
+  // sending him to `ingest`, which refuses (:701). If anyone re-collapses the two
+  // cases, THESE fail, and #4 is the one that fails loudest: it asserts the two
+  // answers are not the same sentence.
+  {
+    const scratch = (name, body) => {
+      const p = join(tmpdir(), `__course_fault_${process.pid}_${name}.json`);
+      writeFileSync(p, body);
+      return p;
+    };
+    // (a) structurally wrong: parses fine, is not a course state
+    const pBad = scratch("shape", JSON.stringify({ version: 1, course: { id: "x", title: "Python for AI" }, chapters: { 1: { n: 1 } }, current: 1 }));
+    // (b) half-written: the atomic-rename window, or a killed writer
+    const pTrunc = scratch("trunc", '{"version":1,"course":{"id":"x","title":"Py"},"chapters":[{"n":1,"cov');
+    // and a HEALTHY one, built through the pure core, to compare all three answers
+    const pOk = scratch("ok", JSON.stringify(markCurrent(mergeCourse(emptyState(), parseCourse(PASTE), T0).state, 2, T1).state));
+    let bad, trunc, good, badWhy;
+    try { bad = courseBrief(pBad); trunc = courseBrief(pTrunc); good = courseBrief(pOk); badWhy = loadState(pBad).why; }
+    finally { for (const p of [pBad, pTrunc, pOk]) { try { rmSync(p, { force: true }); } catch { /* best effort */ } } }
+
+    assert("WIRE — a CORRUPT course.json reports UNREADABLE, never the empty-state words",
+      bad.readable === false && /UNREADABLE/.test(bad.line) && !/nothing ingested yet/.test(bad.line));
+    assert("WIRE — a HALF-WRITTEN course.json reports UNREADABLE too (the atomic-rename window)",
+      trunc.readable === false && /UNREADABLE/.test(trunc.line) && !/nothing ingested yet/.test(trunc.line));
+    // VERBATIM, not paraphrased — the reason a reader shows him must be the reason
+    // the loader actually had, or we have just invented a second story about his disk.
+    assert("WIRE — loadState's own reason survives to the reader, VERBATIM and not re-worded",
+      bad.why === badWhy && /not a course state/.test(bad.why) && bad.line.includes(bad.why));
+    assert("WIRE — a PARSE error names the parser's own complaint, not a generic word",
+      /position/.test(trunc.why) && trunc.line.includes(trunc.why));
+    // THE LOAD-BEARING ONE: absent and corrupt must never be the same sentence.
+    const absent2 = courseBrief(join(tmpdir(), `__course_fault_${process.pid}_none.json`));
+    assert("WIRE — ABSENT and CORRUPT are DIFFERENT answers (the whole defect, in one check)",
+      absent2.readable === true && absent2.line !== bad.line && /nothing ingested yet/.test(absent2.line));
+    assert("WIRE — the unreadable answer tells him nothing is lost, so he never re-pastes over live progress",
+      /nothing is lost/.test(bad.line));
+    assert("WIRE — every path returns the SAME KEYS, so no reader gets undefined",
+      // `current_at` is in this list because the SAME 11 Aug sweep wired it (see the
+      // DEAD WIRE block above): two fixes landed in this function on one day, and a
+      // key either exists on ALL THREE answers or a reader gets undefined on one of them.
+      ["present", "readable", "why", "line", "title", "current", "current_at", "current_title", "total", "done"]
+        .every((k) => k in bad && k in absent2 && k in good));
+    assert("WIRE — a HEALTHY course still answers exactly as before (the fix touched no good path)",
+      good.present === true && good.readable === true && good.why === null && good.current === 2 && good.total === 4);
+    assert("WIRE — an unreadable course is still `present:false`, so the old reader contract is intact",
+      bad.present === false && bad.total === 0 && bad.done === 0);
   }
 
   // ---- THE DISK-FREE CLAIM, MEASURED ----
@@ -657,18 +787,43 @@ function selftest() {
 // CLI
 // ---------------------------------------------------------------------------
 
-const fmtStamp = (s) => s === null ? "--:--" : `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+// EXPORTED 11 Aug 2026 (dead-wire sweep, pass 2). It stayed a private CLI helper while
+// `start_seconds` — the second inside the video where a chapter begins — reached the
+// SessionStart brief unformatted and unprinted. learnstate.mjs now prints the resume
+// address, and it imports THIS rather than growing a second time-formatter that can
+// drift from `at <n>`'s output. Unmoved and unchanged otherwise (LAYERING law).
+export const fmtStamp = (s) => s === null ? "--:--" : `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
 function main() {
   const cmd = (process.argv[2] || "").toLowerCase();
 
   // HOOK PATHS FIRST — these two can be read by any organ and must never throw.
   if (cmd === "status") {
-    try { console.log(statusLine(loadState().state)); } catch { /* silence is the contract */ }
+    // 11 Aug 2026 — `status` is the command courseBrief's unreadable line POINTS AT
+    // ("…status for the exit"), and until today it dropped `why` exactly like the
+    // brief did and answered "nothing ingested yet" over a corrupt file. It now
+    // prints loadState's reason and the ONE exit — the same two lines `ingest`
+    // refuses with (:701-703) — so the reader and the writer stop contradicting
+    // each other. Still exit 0, still never throws: the HOOK-SAFE law is untouched.
+    try {
+      const cur = loadState();
+      if (!cur.ok) {
+        console.log(`course: UNREADABLE — ${cur.why}`);
+        console.log(`course:   your progress is still in that file, unparsed. Move ${STATE} aside yourself, then re-run \`ingest\`.`);
+      } else {
+        console.log(statusLine(cur.state));
+      }
+    } catch { /* silence is the contract */ }
     process.exit(0);
   }
   if (cmd === "json") {
-    try { console.log(JSON.stringify(loadState().state, null, 2)); } catch { console.log(JSON.stringify(emptyState(), null, 2)); }
+    // stdout stays PURE JSON for a parser; the fault goes to stderr, named, so a
+    // machine reading this does not mistake the empty envelope for an empty course.
+    try {
+      const cur = loadState();
+      if (!cur.ok) console.error(`course: UNREADABLE — ${cur.why} (the envelope below is empty, the FILE is not)`);
+      console.log(JSON.stringify(cur.state, null, 2));
+    } catch { console.log(JSON.stringify(emptyState(), null, 2)); }
     process.exit(0);
   }
   // #35 — the compact address for a SKILL (markdown, no import): one small JSON

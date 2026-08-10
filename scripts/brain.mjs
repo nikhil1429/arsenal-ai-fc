@@ -1362,11 +1362,27 @@ function buildFingerprint({ lexicon, grammar, calibration, ls, mined } = {}) {
     const done = (lc.axes_done || []).join("") || "none";
     const untouched = (lc.axes_untouched || []).join("") || "none";
     const missed = (lc.steps_missed || []).length;
+    // HOW IT RAN, not just how far (wiring audit, 10 Aug 2026). forge_session's
+    // coverage() stamps two clocks that cannot be typed by hand — total elapsed and
+    // the span across the axis marks — plus the quiz-dump refusal count and the CORE
+    // axis it never closed. All four were durable in every forge_sessions.jsonl row
+    // and read by no organ anywhere; learning_state now carries them across the bus,
+    // and this is the surface. REPORTED, NEVER JUDGED: the producer refuses to
+    // threshold them (forge_session.mjs:388) because no calibrated body of closed
+    // sessions exists to derive a fair cutoff from, so the numbers are stated and the
+    // reading is left to whoever is looking. null means NOT RECORDED (a row written
+    // before the fields existed) and prints nothing — never a fabricated zero.
+    const pace = [];
+    if (typeof lc.elapsed_min === "number") pace.push(`${lc.elapsed_min} min elapsed`);
+    if (typeof lc.axis_marks_span_min === "number") pace.push(`axis marks spread over ${lc.axis_marks_span_min} min`);
     parts.push(
       `LAST CLOSED SESSION: ${lc.concept}${lc.ended_at ? ` (ended ${String(lc.ended_at).slice(0, 10)})` : ""}`
       + ` — axes closed ${done}, untouched ${untouched}`
       + ((lc.axes_deferred || []).length ? `, deferred ${lc.axes_deferred.join("")}` : "")
       + `; ${(lc.steps_ran || []).length}/${(lc.steps_ran || []).length + missed} steps ran.`
+      + (pace.length ? ` PACE (reported, not a verdict): ${pace.join(", ")}.` : "")
+      + (lc.check_q_refused ? ` ${lc.check_q_refused} check-question(s) REFUSED as quiz-dump.` : "")
+      + ((lc.core_missing || []).length ? ` CORE axis ${lc.core_missing.join("")} was never closed — canon forbids deferring it, so that lap owes it.` : "")
       + " That is where the last lap actually stopped — pick up from it, do not assume the concept is finished.");
   }
   parts.push("FIXED TRAITS: ADHD-PI, ~4 working-memory slots, visual-first, Hinglish welds, walls of text = shutdown, finance-ops instincts (Zomato/Blinkit) — teach through business impact.");
@@ -2094,6 +2110,10 @@ async function runJob(job, cfg, deps) {
     // Wake residue rides the salience summary's own escalation rows — the
     // brain_ledger's cortex_wake rows carry metering only (refuter-verified),
     // so the ledger contributes nothing here but cost lines the diary reads.
+    // (11 Aug 2026: those rows now also carry council_seats/council_note — the
+    // bench census cortex.mjs added so a dry council leaves a trace. Still not
+    // wake residue: it says how much breadth the read was given, never what the
+    // moment was about, so this input set is unchanged.)
     inputs[`salience day-summary (computed, ${today})`] = salienceDaySummary(today);
     inputs["brain_outcomes (last-per-key, yesterday+today)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
     const tc = readJson(join(STATE_DIR, "teaching_contract.json"));
@@ -3604,6 +3624,25 @@ async function selftest() {
         /3\/6 steps ran/.test(fpDead) && !/taught|understood|explained/i.test(fpDead));
       assert("#29 — no last_closed ⇒ no line (never a fabricated 'last session')",
         !/LAST CLOSED SESSION/.test(buildFingerprint({ ls: { position: { session_open: false, last_closed: null } } })));
+
+      // ---- WIRING AUDIT (10 Aug 2026) · the two clocks reach the prompt ----
+      // elapsed_min / axis_marks_span_min / check_q_refused / core_missing were
+      // written to every forge row and read by NOTHING. This is the consumer end
+      // of that wire; if learning_state stops carrying them, or this stops
+      // printing them, these fail.
+      const fpPaced = buildFingerprint({ ls: { position: { session_open: false, last_closed:
+        { ...lastClosed, elapsed_min: 5.2, axis_marks_span_min: 0, check_q_refused: 2, core_missing: ["d"] } } } });
+      assert("WIRE — the two clocks, the refusal count and the CORE gap all reach the analysis prompt",
+        /PACE \(reported, not a verdict\): 5\.2 min elapsed, axis marks spread over 0 min/.test(fpPaced)
+        && /2 check-question\(s\) REFUSED/.test(fpPaced) && /CORE axis d was never closed/.test(fpPaced));
+      assert("WIRE — REPORTED, NEVER JUDGED: no verdict word is invented around the clocks",
+        !/theatre|forged|replayed|fake|cheat/i.test(fpPaced));
+      assert("WIRE — a pre-field row (all four null/absent) prints the old line and fabricates no zero",
+        /LAST CLOSED SESSION/.test(fpDead) && !/PACE \(/.test(fpDead)
+        && !/REFUSED/.test(fpDead) && !/CORE axis/.test(fpDead));
+      assert("WIRE — a genuinely clean lap says nothing about refusals or CORE (0 and [] are not noise)",
+        !/REFUSED|CORE axis/.test(buildFingerprint({ ls: { position: { session_open: false, last_closed:
+          { ...lastClosed, elapsed_min: 42, axis_marks_span_min: 31, check_q_refused: 0, core_missing: [] } } } })));
     }
 
     // ---- #51 · the unbounded presence log is read by the tail ------------

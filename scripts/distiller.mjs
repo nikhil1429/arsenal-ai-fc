@@ -21,6 +21,9 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// #WIRE (11 Aug 2026) — read-only, selftest-only: the voice-has-an-address check
+// below asks the live Task Scheduler what THIS organ's action actually is.
+import { spawnSync } from "node:child_process";
 // #51 — the shared, archive-tolerant tail reader owned by presence.mjs (the ledger's
 // sole writer). presence_log.jsonl now rolls monthly, so a reader that only ever
 // opened `presence_log.jsonl` would silently read a rolled month as an empty history.
@@ -56,6 +59,18 @@ const LATENCY_LOG = join(STATE_DIR, "distiller_latency.jsonl");   // G16 — thi
 const INTERACTIVE_LEGACY = ["voice", "code", "desktop-study", "note", "context", "throwin"];   // FROZEN: the pre-audit window
 // "gemini" joined 9 Aug 2026 (P7 harvest lane, his 'data flows everywhere' word):
 // his harvested Gemini sittings are interactive study, same class as "code".
+// #WIRE (dead-wire sweep, 11 Aug 2026) — TWO NAMES IN THIS LIST HAD NO PRODUCER,
+// and they were two DIFFERENT problems, so they got two different answers:
+//   · "throwin" was genuinely dead. throwin.mjs appended loose_balls.jsonl and
+//     posted nothing, so 0 of 5,252 live afferent rows carried the modality while
+//     this window waited for it — and a throw-in is the purest open_loop material
+//     the organism has. FIXED AT THE PRODUCER, not here: throwin.mjs now relays
+//     every ball through the thalamus door (see its #WIRE block).
+//   · "note" is a vestigial ALIAS, not a gap. The MCP note tool is live and his
+//     notes DO arrive — mcp-memory.mjs:182 posts them as "desktop-study", which is
+//     already in this list. It stays anyway: keeping it costs one string compare
+//     and it catches a future producer that uses the obvious name; deleting it
+//     would be a replace with no defect behind it (LAYERING).
 const INTERACTIVE = ["voice", "code", "desktop-study", "note", "throwin", "gemini"];
 const AMBIENT = ["context"];                     // sensed, carried, but never a his-words slot
 const DOUBT_RE = /\?|kyun|kyu|samajh|confus|doubt|nahi aa|stuck|matlab|difference|kaise|why|how does/i;
@@ -78,7 +93,63 @@ function writeAtomic(path, obj) {
   writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
   renameSync(tmp, path);
 }
-const clampStr = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
+// #WIRE (11 Aug 2026) — NORMALISE and CUT are two different jobs and they had been
+// welded into one. `normStr` collapses whitespace and stops there; `clampStr` is
+// normStr + a cut, and every caller of it below is a caller that owns a real budget
+// (a 4-slot card the captain reads, a 120-char window line). The evidence rows are
+// NOT such a caller — see recentStream.
+const normStr = (s) => String(s || "").replace(/\s+/g, " ").trim();
+// ---------------------------------------------------------------------------
+// THE CUT THAT SAID NOTHING (wiring pass, 11 Aug 2026) — TRUNCATED_AT_DOOR.
+// ---------------------------------------------------------------------------
+// The line above fixed WHERE the evidence is cut. This one fixes what the cut
+// SAYS. Every slot below is capped — concept_in_motion 80 · open_loop 160 ·
+// where_left_off 200 · next_step 120 · the window line 120 · the LLM's own
+// parseSet 200 — and every one of those caps was a bare .slice(): his sentence
+// stopped mid-word and not one character anywhere downstream said more had
+// existed. Measured on the live afferent log the hour this was found: 449 of his
+// 677 doubt rows are longer than open_loop's 160 (66%), 510 of 1,147 interactive
+// rows exceed where_left_off's 200 (44%), 796 exceed concept_in_motion's 80
+// (69%). Not an edge case — the normal path, and MORE normal since the evidence
+// rows stopped being pre-cut at 400 directly above.
+// WHY IT MATTERS AT THIS DOOR: working_set.json is his RE-ENTRY CARD, and
+// mcp-memory.mjs:234 prints open_loop RAW into get_context. So every session read
+// his open question stopping mid-sentence, with nothing saying it had been cut,
+// and answered the half it could see. Same shape as the 220-char capsule cut
+// found the day before: a thing that EXISTS is not a thing that ARRIVES.
+// THE FIX IS THE MARKER, NOT A BIGGER CAP. No number is invented (his standing
+// law): every cap stays the exact integer it already was, and the marker is spent
+// from INSIDE it — n-1 chars + "…" — so nothing downstream that budgeted on these
+// caps moves by a byte. A reader that sees "…" knows to open the source; a reader
+// that saw a bare cut could not know a source existed.
+const TRUNC_MARK = "…";                                  // ONE char, spent inside the cap — the cap itself is unchanged
+// FROZEN verbatim (LAYERING law; siblings mergeLegacy / mergeV2Legacy /
+// recentStreamLegacy). The bare cut, kept so the delta stays visible and the
+// selftest can show what it used to hand him. Reference only; clampStr is record.
+const clampStrLegacy = (s, n) => normStr(s).slice(0, n);
+function clampStr(s, n) {
+  const t = normStr(s);
+  if (t.length <= n) return t;
+  return n <= 1 ? t.slice(0, n) : t.slice(0, n - 1) + TRUNC_MARK;   // n<=1 has no room for a marker; a silly cap must never crash the card
+}
+// A slot ending in the marker was CUT. KNOWN FALSE POSITIVE, stated where the
+// counter is read: if HE himself ends a line in "…", that slot counts as cut.
+// That direction OVERSTATES how much the machine admits losing and can never
+// understate it — the same safe-direction rule the G16 biases below follow.
+const wasTruncated = (s) => String(s || "").endsWith(TRUNC_MARK);
+
+// FROZEN — the pre-11-Aug-2026 projection, verbatim (LAYERING law; siblings
+// mergeLegacy / mergeV2Legacy / INTERACTIVE_LEGACY above). It cut every evidence row
+// at 400 chars, which is the defect `recentStream` now fixes. Reference only.
+// It calls clampStrLegacy, not clampStr: a frozen function that silently inherits
+// a later engine change is no longer frozen, and the delta it exists to show would
+// quietly shrink by one marker char every time the helper moves under it.
+function recentStreamLegacy(dir = STATE_DIR, n = 25, modalities = INTERACTIVE, rows = null) {
+  return (rows || readLines(join(dir, "afferent.jsonl")))
+    .filter(a => modalities.includes(a.modality) && String(a.text || "").trim().length > 2)
+    .slice(-n)
+    .map(a => ({ ts: a.ts, modality: a.modality, source: a.source, text: clampStrLegacy(a.text, 400) }));
+}
 
 // the freshest slice of what he's been doing, newest last — HIS surfaces only.
 // `rows` is injectable so one parse of afferent.jsonl serves both readers below.
@@ -93,7 +164,22 @@ function recentStream(dir = STATE_DIR, n = 25, modalities = INTERACTIVE, rows = 
     // tested green only because its assertions injected `deps.stream` by hand, a
     // shape no real caller produces. A filter is worth exactly as much as the field
     // it filters on surviving the hop before it.
-    .map(a => ({ ts: a.ts, modality: a.modality, source: a.source, text: clampStr(a.text, 400) }));
+    //
+    // #WIRE — TRUNCATED AT THE DOOR (wiring pass, 11 Aug 2026). The same projection
+    // also did `clampStr(a.text, 400)`, silently, with no marker and no field naming
+    // the cut. Measured on the live 25-row window the hour this was found: 15 of 25
+    // rows exceed 400 chars (longest 3,635), 22,397 of 29,653 characters dropped —
+    // 75.5%. That cut ran BEFORE every consumer in this file: DOUBT_RE could not see
+    // a doubt stated past char 400, hisWords()/the caption guard judged a quarter of
+    // a row, and the floor built his re-entry card from it.
+    // THE CUT WAS IN THE WRONG PLACE, not the wrong size. Nothing about the EVIDENCE
+    // needs bounding — the slots it feeds already carry their own budgets right here
+    // in this file (concept_in_motion 80 · open_loop 160 · where_left_off 200 · the
+    // window line 120), and those are the numbers the captain actually reads. The one
+    // consumer with a genuine size constraint is the LLM prompt, because the afferent
+    // door caps nothing (live afferent.jsonl holds a 105,011-char row), so the bound
+    // moved there — buildPrompt, marked and counted. Detection now reads all of it.
+    .map(a => ({ ts: a.ts, modality: a.modality, source: a.source, text: normStr(a.text) }));
 }
 // THE ADDRESS FOR THE AMBIENT STREAM (rule 3: never delete an organ because nobody
 // reads its output — give it a surface). context.mjs's ~145 emits/day are no longer
@@ -139,6 +225,31 @@ const NOT_HIS_SOURCES = new Set(["claude-code-teaching", "gemini-study-teaching"
 const isHisSource = (s) => !NOT_HIS_SOURCES.has(String((s && s.source) || "").toLowerCase());
 const hisWords = (stream) => (stream || []).filter(s => s && !AMBIENT.includes(s.modality) && !looksLikeWindowCaption(s.text) && isHisSource(s));
 
+// #WIRE (dead-wire sweep, 11 Aug 2026) — WHY a row was not counted, not just HOW MANY.
+// `captions_rejected` was computed as `stream.length - own.length` and printed as
+// "N window caption(s) rejected". Measured on the live 25-row window the hour this was
+// found (last 25 INTERACTIVE rows of afferent.jsonl): 0 captions, 13 rows of MY OWN
+// teaching — sources were {claude-code: 12, claude-code-teaching: 13}. So the file and
+// the console both named the wrong disease. The two are not interchangeable:
+//   · captions climbing = context.mjs leaking back into his surfaces (the #21 scar)
+//   · self rows climbing = the #108 self-capture leak returning — the organism reading
+//     its own output back as his words, which is how the brief once printed MY audit
+//     task as his LAST SESSION.
+// The old aggregate is NOT lost, it is derived: captions_rejected + self_rows_excluded
+// === sources_scanned − his_words (asserted in the selftest). Classification is
+// exclusive and caption-first, matching hisWords()' own order of guards. A falsy row —
+// which recentStream cannot produce — lands in neither bucket, the safe direction for a
+// counter (undercount, never fabricate), same rule the G16 biases are stated under.
+function notHisBreakdown(stream) {
+  let captions = 0, self = 0;
+  for (const s of (stream || [])) {
+    if (!s) continue;
+    if (AMBIENT.includes(s.modality) || looksLikeWindowCaption(s.text)) captions++;
+    else if (!isHisSource(s)) self++;
+  }
+  return { captions_rejected: captions, self_rows_excluded: self };
+}
+
 function deterministicSet(stream, presence, drills) {
   const own = hisWords(stream);
   const last = own[own.length - 1];
@@ -165,8 +276,34 @@ function deterministicSet(stream, presence, drills) {
   };
 }
 
+// THE PROMPT BUDGET — the only place in this file a bound on his words belongs
+// (#WIRE, 11 Aug 2026). NOT A NEW NUMBER: it is the SAME 400 that recentStream used
+// to apply to every consumer, relocated to the single consumer that has a real
+// constraint. It stays because the afferent door caps nothing — a 105,011-char row
+// exists in the live log today, and 25 of those would be a 2.6 MB prompt.
+// Two things it now does that the silent slice did not:
+//   · the cut is MARKED, so the model is told the row continues instead of reading a
+//     sentence that stops mid-clause as a finished thought;
+//   · it is COUNTED (evidenceChars → working_set.have_need), so how much of his own
+//     words reach the model is a measured number in the file he reads, not a guess.
+// Whether 400 is the RIGHT bound stays open — his standing law: counters first, the
+// number is ruled on when there is real data (same pattern as the G16 counter below).
+const PROMPT_ROW_CHARS = 400;
+function promptRow(s) {
+  const t = String(s.text || "");
+  const head = t.slice(0, PROMPT_ROW_CHARS);
+  const cut = t.length - head.length;
+  return `[${String(s.ts).slice(11, 16)} ${s.modality}] ${head}${cut ? ` … [+${cut} chars cut]` : ""}`;
+}
+// have/need for the evidence itself: chars he wrote vs chars the model was shown.
+function evidenceChars(stream) {
+  let total = 0, shown = 0;
+  for (const s of (stream || [])) { const n = String(s.text || "").length; total += n; shown += Math.min(n, PROMPT_ROW_CHARS); }
+  return { evidence_chars: total, evidence_chars_to_llm: shown };
+}
+
 function buildPrompt(stream, workspace, window = null) {
-  const lines = stream.map(s => `[${String(s.ts).slice(11, 16)} ${s.modality}] ${s.text}`).join("\n");
+  const lines = stream.map(promptRow).join("\n");
   const moment = workspace && workspace.moment ? JSON.stringify(workspace.moment).slice(0, 600) : "(none)";
   // The ambient window is CORROBORATION, labelled as such, and the model is told in
   // as many words that a window caption is not an answer (#21: 21 of the old 25
@@ -254,6 +391,44 @@ function merge(llm, floor) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// #WIRE (dead-wire sweep, 11 Aug 2026) — A CODE BUG AND A DRY POOL WERE THE SAME EVENT.
+// ---------------------------------------------------------------------------
+// distill()'s LLM leg ended in `catch { /* pool dry → floor stands */ }` — the error
+// was never even BOUND. So a genuinely dry free pool, a 429'd lane, junk text, and a
+// TypeError from a renamed import all left exactly ONE trace: engine === "deterministic".
+// That word is also what a perfectly healthy quiet stream writes, so no reader could
+// tell a working organ from a dead one. The floor standing is CORRECT and is unchanged
+// here; the silence about WHY was the defect.
+// THE SHARPEST PART, which the console line hid: hippocampus.generatePool does NOT
+// throw on failure — it returns { ok:false, text:null, error:"every key dry on every
+// model", status:<last HTTP status> } (hippocampus.mjs:196). So a 429'd lane never
+// reached the catch at all; it fell through `if (text)` and looked identical to a quiet
+// day, carrying its own diagnosis in a field this file discarded. A producer whose error
+// string reaches a consumer that throws it away is the same dead wire as a producer with
+// no consumer — the shape this sweep exists to find.
+// NAMES ONLY, NO VERDICT — the house rule the counters beside it already follow (his
+// standing law: numbers are ruled on after 30-45-60 days of real data). `llm_status`
+// records WHICH of the five real code paths ran and stays NULL on the healthy path, so
+// the card is silent when there is nothing to say. No threshold, no gate, no card dealt
+// to him: the floor still stands byte-for-byte as before and nothing acts on his behalf.
+// NO ENGINE IS REPLACED, so nothing is frozen *Legacy here (context.mjs:92 precedent):
+// `engine` keeps its exact two values and its exact meaning; a field is ADDED beside it.
+// ITS READER: learnstate.mjs wsEvidenceLine — the same SessionStart line that already
+// prints `engine`, which is where "deterministic" was reading healthy every session.
+const STATUS_CHARS = 160;   // NOT a new number: open_loop's existing cap (deterministicSet), borrowed — this string rides the same brief line those slots ride
+// The pool's own words, not ours. Falls back only when the generator returned something
+// shapeless (a bare string, null) — then all that is honestly known is "no text".
+function poolStatus(r) {
+  if (r && typeof r === "object") {
+    const bits = [];
+    if (r.error) bits.push(String(r.error));
+    if (r.status !== undefined && r.status !== null) bits.push(`status ${r.status}`);
+    if (bits.length) return `pool-failed: ${bits.join(" · ")}`;
+  }
+  return "pool-failed: no text returned";
+}
+
 async function distill(deps = {}) {
   const dir = deps.dir || STATE_DIR;
   // ONE parse of afferent.jsonl serves both the his-words stream and the ambient line.
@@ -266,18 +441,33 @@ async function distill(deps = {}) {
   const drills = deps.drills !== undefined ? deps.drills : readJson(join(dir, "drills.json"));
   const workspace = deps.workspace !== undefined ? deps.workspace : readJson(join(dir, "workspace.json"));
   const floor = deterministicSet(stream, presence, drills);
-  let llm = null, engine = "deterministic";
-  if (stream.length && deps.gen !== null) {
+  let llm = null, engine = "deterministic", llmStatus = null;
+  // #WIRE — the five paths, each named. Same control flow as before (empty stream or
+  // gen:null → no call; anything else → try), so the floor stands exactly where it did.
+  if (!stream.length) llmStatus = "not-called: no interactive activity in the window";
+  else if (deps.gen === null) llmStatus = "not-called: generator disabled by the caller";
+  else {
     try {
       const r = await (deps.gen || defaultGen)(buildPrompt(stream, workspace, window));
       const text = typeof r === "string" ? r : (r && r.text);
-      if (text) { llm = parseSet(text); if (llm) engine = "gemini-flash"; }
-    } catch { /* pool dry → floor stands */ }
+      if (!text) llmStatus = poolStatus(r);                       // the NON-throwing failure — a 429 never reached the old catch
+      else if (!(llm = parseSet(text))) llmStatus = `unparsed: ${String(text).length} char(s) back, no slot matched`;
+      else engine = "gemini-flash";
+    } catch (e) {
+      // BOUND, not swallowed — this is the whole repair. `${e.name}: ${e.message}` on a
+      // renamed export reads "TypeError: generatePool is not a function": the exact
+      // shape that used to vanish into a comment and leave the card reading healthy.
+      llmStatus = `threw: ${e && e.message ? `${e.name || "Error"}: ${e.message}` : String(e)}`;
+    }
   }
   const slots = merge(llm, floor);
   const own = hisWords(stream);
   return {
     ...slots, engine,
+    // #WIRE (11 Aug 2026) — WHY the floor is standing, or null when it is not standing
+    // at all. Clamped with the marked cut every other string in this card uses, so a
+    // long provider error is bounded and SAYS it was bounded.
+    llm_status: llmStatus ? clampStr(llmStatus, STATUS_CHARS) : null,
     sources: stream.length, last_surface: stream.length ? stream[stream.length - 1].modality : null,
     // #106 / #4 — have/need counters instead of a status word. `his_words` vs
     // `sources` is exactly the ratio the audit measured at 4 of 25; if it ever
@@ -285,7 +475,22 @@ async function distill(deps = {}) {
     have_need: {
       his_words: own.length, sources_scanned: stream.length,
       slots_filled: ["concept_in_motion", "open_loop", "where_left_off", "next_step"].filter(k => slots[k]).length, slots_total: 4,
-      captions_rejected: stream.length - own.length,
+      // #WIRE (11 Aug 2026): the same total, split by CAUSE — see notHisBreakdown above.
+      // Both keys are read by learnstate.mjs's brief (wsEvidenceLine), which is the
+      // consumer these counters lacked for the five weeks they had been written.
+      ...notHisBreakdown(stream),
+      // #WIRE (11 Aug 2026) — how many of the 4 slots the cap actually bit. The
+      // marker already tells HIM ("…" travels raw into get_context via
+      // mcp-memory.mjs:234); this is the same fact made machine-legible, in the
+      // counter block that already made the self-capture leak visible. Counter
+      // only — no threshold, no verdict. If it sits at 4/4 for weeks, that is the
+      // data on which he rules whether these caps are still the right numbers.
+      slots_truncated: ["concept_in_motion", "open_loop", "where_left_off", "next_step"].filter(k => wasTruncated(slots[k])).length,
+      // #WIRE (11 Aug 2026) — the truncation is no longer silent. Detection reads
+      // 100% of his words; these two say how much of them the LLM was shown. If the
+      // gap ever gets wide enough to matter, it is visible HERE, in the card, the
+      // same way his_words/sources_scanned made the self-capture leak visible.
+      ...evidenceChars(stream),
     },
     current_window: window ? window.text : null,     // the ambient stream's ADDRESS (rule 3)
   };
@@ -421,9 +626,23 @@ async function run(now = new Date()) {
   console.log(`distiller: working_set updated (${set.engine}, ${set.sources} sources) — ${out.summary}`);
   // #106: the counters, out loud. "4/4 slots" is a measurement; "ok" would not be.
   console.log(`  ${h.slots_filled}/${h.slots_total} slot(s) filled · ${h.his_words}/${h.sources_scanned} row(s) are HIS words` +
+    // #WIRE (11 Aug 2026): two clauses, because they mean two different failures.
+    // The old single clause called 13 rows of my own teaching "window captions".
     (h.captions_rejected ? ` (${h.captions_rejected} window caption(s) rejected)` : "") +
+    (h.self_rows_excluded ? ` (${h.self_rows_excluded} row(s) were MY OWN teaching, not his)` : "") +
+    // #WIRE — and say it out loud when a slot hit its cap. The card carries the "…";
+    // the run that wrote it says how many. A counter, no verdict, silent when zero.
+    (h.slots_truncated ? ` · ${h.slots_truncated} slot(s) cut at the cap (marked "…")` : "") +
+    // #WIRE — say it out loud when the prompt saw less than he wrote. A counter, no verdict.
+    (h.evidence_chars > h.evidence_chars_to_llm
+      ? ` · LLM saw ${h.evidence_chars_to_llm}/${h.evidence_chars} char(s) of his words (detection read all)` : "") +
     ` · slots from ${Object.entries(set.slot_sources || {}).map(([k, v]) => k.split("_")[0] + ":" + v).join(", ")}` +
     (set.current_window ? ` · he is in: ${set.current_window}` : ""));
+  // #WIRE — and say WHY the LLM leg produced nothing. Silent on the healthy path (the
+  // same silent-when-zero rule as the counters above). The console is not the wire —
+  // learnstate's brief is — but a 15-min task that fails on every run should not need
+  // a file read to be diagnosed.
+  if (set.llm_status) console.log(`  LLM path: ${set.llm_status} (deterministic floor stands)`);
   // G16 — which context-switches did THIS write catch first, and how late?
   // Append-only journal; a row lands only when something was actually measured.
   // The left edge is prev write ⊔ the journal's own last row (second witness —
@@ -436,6 +655,64 @@ async function run(now = new Date()) {
     console.log(`  G16 latency: caught ${m.n} switch(es) — mean ${Math.round(m.mean_ms / 1000)}s · max ${Math.round(m.max_ms / 1000)}s after the switch`);
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// #WIRE (11 Aug 2026) — THIS ORGAN'S VOICE HAD NO ADDRESS.
+// ---------------------------------------------------------------------------
+// Audit #98 (2 Aug) ended the "spoke into a cmd window that closed" defect for
+// ~35 organs by routing every scheduled task through setup\run_logged.cmd, and
+// finding #108 (6 Aug) brought INSTALL_CYBORG_TASKS.ps1's Mk() along. But that
+// installer's own comment says the quiet part out loud: "Already-registered
+// tasks keep their old bare command until this file is RE-RUN". ArsenalFC-
+// Distiller was registered 2026-08-06T03:44 and never re-registered, so it was
+// STILL running the bare form — read live off the scheduler on 11 Aug 2026:
+//     cmd /c cd /d <repo> && node scripts\distiller.mjs
+// no redirect, 96 runs a day. Corroboration: `ls scripts/*.log` listed 30 organ
+// logs that morning and distiller.log was not one of them.
+//
+// WHAT WAS ACTUALLY LOST — stated honestly, because the first draft of this
+// finding overstated it: run()'s two console lines MIRROR state that is already
+// persisted (engine · sources · have_need land in working_set.json; the G16 row
+// lands in distiller_latency.jsonl), so none of THAT was unrecoverable. What had
+// nowhere to land was the OTHER stream — an exception out of distill(), a bad
+// import, a writeAtomic failure. Those go to stderr, and on the bare form stderr
+// died with the window. The one organ that owns his re-entry card could crash
+// every 15 minutes and leave no trace anywhere in the organism.
+//
+// THE FIX WAS THE REGISTRATION, NOT THE CODE: the live action was re-pointed at
+// setup\run_logged.cmd IN PLACE, via Set-ScheduledTask on the fetched task
+// object, so the 15-min repetition, StartWhenAvailable and the cleared battery
+// flags all survived. A `schtasks /Create /F` would have re-created it with
+// DisallowStartIfOnBatteries back at its default TRUE — on a laptop that is a
+// worse defect than the one being repaired, which is why the whole installer
+// was not re-run either (it would also re-ENABLE the rows tasks_expected.json
+// lists as designed-disabled, e.g. Examiner → a double-run against its chain).
+//
+// WHY THE GUARD LIVES HERE: nothing in the organism reads a task's ACTION.
+// watchman.mjs probeExpectedTasks diffs live schtasks against
+// tasks_expected.json on NAME and STATE only — its PowerShell emits
+// `"$($_.TaskName)|$($_.State)"` — so a task silently reverted to the bare form
+// is invisible to every organ. The selftest below is this organ asking, out
+// loud, whether its own voice still has an address; the suite (organism_test
+// runs every script's selftest) is its consumer. It follows watchman's own rule
+// for a box that cannot answer — no snapshot = NO CLAIM, never a false red.
+const WRAPPED_RE = /run_logged\.cmd/i;
+// null = unanswerable (not this box's business); true/false = a real answer.
+function voiceIsWired(action) {
+  return action == null ? null : WRAPPED_RE.test(String(action));
+}
+function registeredAction(name = "ArsenalFC-Distiller", deps = {}) {
+  if (deps.action !== undefined) return deps.action;              // fixtures never touch the scheduler
+  if (process.platform !== "win32") return null;                  // no Task Scheduler = no claim
+  if (!/^[A-Za-z0-9-]+$/.test(name)) return null;                 // the name is interpolated into PS — keep it a name
+  try {
+    const ps = spawnSync("powershell", ["-NoProfile", "-Command",
+      `$t = Get-ScheduledTask -TaskName '${name}' -ErrorAction SilentlyContinue; if ($t) { $t.Actions | ForEach-Object { "$($_.Execute) $($_.Arguments)" } }`],
+      { encoding: "utf8", timeout: 30000, windowsHide: true });
+    if (ps.status !== 0) return null;
+    return String(ps.stdout || "").trim() || null;                // task absent on this box = no claim
+  } catch { return null; }
 }
 
 async function selftest() {
@@ -546,6 +823,25 @@ async function selftest() {
     leaked.have_need.his_words === 1 && leaked.have_need.sources_scanned === 2);
   assert("#108 where_left_off can never be my own sign-off line",
     !/Working tree clean|everything is on main/.test(String(leaked.where_left_off || "")));
+  // #WIRE (11 Aug 2026) — THE COUNTER NAMES THE RIGHT DISEASE.
+  // `leaked` is one his row + one claude-code-teaching row: the OLD code reported that
+  // as `captions_rejected: 1` and run() printed "1 window caption(s) rejected", the
+  // exact mislabel measured live at 13. Second half of the assertion is the frozen
+  // aggregate identity — the number the old key carried is still derivable, so nothing
+  // that ever read it lost information.
+  assert("#WIRE the not-his counter splits by CAUSE (my teaching ≠ a window caption)",
+    leaked.have_need.self_rows_excluded === 1 && leaked.have_need.captions_rejected === 0);
+  {
+    const mixed = [
+      { ts: "2026-08-11T04:00:00Z", modality: "code", source: "claude-code", text: "grounding aur retrieval alag kaise hain?" },
+      { ts: "2026-08-11T04:01:00Z", modality: "code", source: "claude-code-teaching", text: "Both pushed. Working tree clean." },
+      { ts: "2026-08-11T04:02:00Z", modality: "code", source: "claude-code", text: "chrome.exe · Google Search" },
+    ];
+    const b = notHisBreakdown(mixed);
+    assert("#WIRE captions + self rows == the aggregate the single old counter carried",
+      b.captions_rejected === 1 && b.self_rows_excluded === 1 &&
+      b.captions_rejected + b.self_rows_excluded === mixed.length - hisWords(mixed).length);
+  }
   // THE ASSERTION THAT WOULD HAVE CAUGHT THE DEAD FIX (verify pass, 6 Aug 2026).
   // Every assertion above injects `deps.stream` by hand — a shape no production
   // caller ever builds. main() goes through recentStream(), which projected rows to
@@ -564,6 +860,100 @@ async function selftest() {
       hisWords(viaReal).length === 1 && hisWords(viaReal)[0].source === "claude-code");
   }
 
+  // ------------------------------------------------------------------------
+  // #WIRE — TRUNCATED AT THE DOOR (wiring pass, 11 Aug 2026). recentStream cut
+  // every evidence row at 400 chars before ANY consumer saw it, silently. The
+  // fixture below is the exact live shape that broke: he opens a long message with
+  // the topic, works through it, and states the doubt at the END — past char 400.
+  // Under the frozen legacy projection that doubt is invisible and open_loop falls
+  // back to an OLDER, already-answered one. Run through the PRODUCTION path (raw
+  // afferent rows → recentStream → deterministicSet), which is the lesson the #108
+  // block above paid for: an assertion on an injected `deps.stream` proves nothing.
+  // ------------------------------------------------------------------------
+  {
+    const pad = "grounding step ke baad retrieval wala part likha, phir index rebuild kiya, ".repeat(7);
+    const longRow = "cosine similarity wala part likh raha hoon, " + pad + " par yeh kyun use karte hain?";
+    const rawLong = [
+      { ts: "2026-08-11T03:00:00Z", modality: "code", source: "claude-code", text: "tokenization ka doubt tha" },
+      { ts: "2026-08-11T03:01:00Z", modality: "code", source: "claude-code", text: longRow },
+    ];
+    // guards the fixture itself: if padding ever grows a doubt word, the test below
+    // would pass for the wrong reason and this repair would rot back in unnoticed.
+    assert("#WIRE fixture is honest — the long row's first 400 chars carry NO doubt marker, the doubt is past the old cut",
+      longRow.length > 400 && !DOUBT_RE.test(longRow.slice(0, 400)) && DOUBT_RE.test(longRow));
+    // the invariant is "normalised, never cut" — so it is stated against normStr(),
+    // not against the raw fixture: whitespace collapsing is the projection's job and
+    // asserting on raw length would make this test fail for the wrong reason.
+    assert("#WIRE recentStream no longer cuts the evidence — the row arrives whole",
+      recentStream("no-dir", 25, INTERACTIVE, rawLong)[1].text === normStr(longRow) && normStr(longRow).length > 400);
+    assert("#WIRE the frozen legacy projection still shows the defect (why it was superseded)",
+      recentStreamLegacy("no-dir", 25, INTERACTIVE, rawLong)[1].text.length === 400);
+    const floorNow = deterministicSet(recentStream("no-dir", 25, INTERACTIVE, rawLong), [], null);
+    const floorOld = deterministicSet(recentStreamLegacy("no-dir", 25, INTERACTIVE, rawLong), [], null);
+    assert("#WIRE THE WIRE — a doubt stated past char 400 now reaches open_loop; the legacy cut fell back to an older one",
+      floorNow.open_loop.includes("cosine") && floorOld.open_loop === "tokenization ka doubt tha");
+    // the bound did not vanish, it MOVED to the only consumer with a real constraint
+    // (the afferent door caps nothing — live max row is 105,011 chars) and it is marked.
+    const promptLong = buildPrompt(recentStream("no-dir", 25, INTERACTIVE, rawLong), null, null);
+    assert("#WIRE the prompt still bounds each row — the cut moved to buildPrompt, it was not deleted",
+      !promptLong.includes(" par yeh kyun use karte hain?") && promptLong.includes("cosine similarity wala part"));
+    assert("#WIRE …and the cut is MARKED, never silent — the model is told the row continues",
+      /… \[\+\d+ chars cut\]/.test(promptLong) && !/\[\+\d+ chars cut\]/.test(buildPrompt(stream, null, null)));
+    const wired = await distill({ dir: "no-dir", afferent: rawLong, presence: [], drills: null, workspace: null, gen: null });
+    assert("#WIRE the card COUNTS the gap: detection read every char, the LLM was shown fewer (a counter, no verdict)",
+      wired.have_need.evidence_chars === normStr(longRow).length + "tokenization ka doubt tha".length &&
+      wired.have_need.evidence_chars_to_llm === PROMPT_ROW_CHARS + "tokenization ka doubt tha".length &&
+      wired.have_need.evidence_chars > wired.have_need.evidence_chars_to_llm);
+    assert("#WIRE a stream that fits shows NO gap — the counters read equal, not a fake shortfall",
+      (() => { const e = evidenceChars(stream); return e.evidence_chars === e.evidence_chars_to_llm && e.evidence_chars > 0; })());
+  }
+
+  // ------------------------------------------------------------------------
+  // #WIRE — THE CUT THAT SAID NOTHING (wiring pass, 11 Aug 2026). The slot caps
+  // were bare .slice()s: his question stopped mid-word in the one file every
+  // session reads, and mcp-memory.mjs:234 prints open_loop RAW into get_context,
+  // so the cut arrived at the captain with nothing naming it. These run the
+  // PRODUCTION path — raw afferent rows → recentStream → deterministicSet →
+  // distill — because the #108 block above paid for the lesson that an assertion
+  // on an injected `deps.stream` proves nothing about what he actually reads.
+  // ------------------------------------------------------------------------
+  {
+    // his real shape: one long doubt, stated fully. 66% of his live doubt rows
+    // are longer than open_loop's 160-char cap; this is one of them.
+    const longDoubt = "cosine similarity ka doubt hai — dot product bhi to similarity deta hai na, phir normalize karke angle nikalne ka faayda kya hai jab dono vectors already same scale pe hain, aur euclidean distance kyun nahi chalega yahan pe?";
+    const rawCut = [{ ts: "2026-08-11T04:00:00Z", modality: "code", source: "claude-code", text: longDoubt }];
+    const cutStream = recentStream("no-dir", 25, INTERACTIVE, rawCut);
+    const cutFloor = deterministicSet(cutStream, [], null);
+    assert("#WIRE fixture is honest — the row really does overrun open_loop's 160 and where_left_off's 200 caps",
+      longDoubt.length > 200 && DOUBT_RE.test(longDoubt));
+    // THE ASSERTION THAT FAILS IF THIS WIRE BREAKS AGAIN: a cut slot must SAY it
+    // was cut, and must not spend a byte more than the cap it always had.
+    assert("#WIRE a slot cut at the cap SAYS SO — the marker is there and the cap is not exceeded",
+      cutFloor.open_loop.endsWith(TRUNC_MARK) && cutFloor.open_loop.length === 160 &&
+      cutFloor.where_left_off.endsWith(TRUNC_MARK) && cutFloor.where_left_off.length === 200 &&
+      cutFloor.concept_in_motion.endsWith(TRUNC_MARK) && cutFloor.concept_in_motion.length === 80);
+    assert("#WIRE the frozen bare cut still shows the defect (why it was superseded): 160 chars, mid-word, silent",
+      clampStrLegacy(longDoubt, 160).length === 160 && !clampStrLegacy(longDoubt, 160).endsWith(TRUNC_MARK) &&
+      clampStr(longDoubt, 160).slice(0, 159) === clampStrLegacy(longDoubt, 159));
+    assert("#WIRE a slot that FITS is never marked — no fake cut on a short answer",
+      !wasTruncated(clampStr("why cosine", 160)) && clampStr("why cosine", 160) === "why cosine");
+    // the marker must survive into the file, because that file is read RAW by
+    // get_context (mcp-memory.mjs:234) — that hop is the whole point of the wire.
+    const cutSet = await distill({ dir: "no-dir", afferent: rawCut, presence: [], drills: null, workspace: null, gen: null });
+    assert("#WIRE the marker reaches the written card — get_context prints open_loop raw, so this is what he reads",
+      wasTruncated(cutSet.open_loop) && wasTruncated(cutSet.where_left_off));
+    assert("#WIRE the card COUNTS how many slots the cap bit (counter only — no threshold, no verdict)",
+      cutSet.have_need.slots_truncated === 3 && !("verdict" in cutSet.have_need) && !("threshold" in cutSet.have_need));
+    assert("#WIRE a card with nothing cut counts ZERO — the counter never invents a shortfall",
+      (await distill({ dir: "no-dir", afferent: [{ ts: "2026-08-11T04:00:00Z", modality: "code", source: "claude-code", text: "why cosine?" }], presence: [], drills: null, workspace: null, gen: null })).have_need.slots_truncated === 0);
+    // the OTHER two doors that cut: the LLM's own slots (parseSet, 200) and the
+    // ambient window line (120). Both were bare slices too; both are the same card.
+    assert("#WIRE the LLM path is marked as well — parseSet's 200-char cap no longer cuts silently",
+      wasTruncated(parseSet(JSON.stringify({ concept_in_motion: longDoubt + " " + longDoubt })).concept_in_motion));
+    assert("#WIRE a silly cap (n<=1) degrades to a bare cut instead of crashing the card",
+      clampStr("abc", 1) === "a" && clampStr("abc", 0) === "");
+  }
+
   // distill — mocked LLM, no network
   const set = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null, gen: async () => '{"concept_in_motion":"embeddings","open_loop":"why cosine similarity","where_left_off":"","next_step":""}' });
   assert("DISTILL — LLM path fills slots + floor covers where_left_off", set.engine === "gemini-flash" && set.concept_in_motion === "embeddings" && set.where_left_off.includes("cosine"));
@@ -571,6 +961,58 @@ async function selftest() {
   assert("DISTILL — pool dry → deterministic floor stands, never breaks", setDry.engine === "deterministic" && setDry.where_left_off.includes("cosine"));
   const setEmpty = await distill({ dir: "no-dir", stream: [], presence: [], drills: null, workspace: null, gen: null });
   assert("DISTILL — no activity → empty but valid set", setEmpty.sources === 0 && typeof setEmpty.concept_in_motion === "string");
+
+  // ------------------------------------------------------------------------
+  // #WIRE — SILENT_FAILURE (dead-wire sweep, 11 Aug 2026). The catch above used to be
+  // `catch { /* pool dry → floor stands */ }` with the error UNBOUND, so the four
+  // failure paths below all wrote the same word a healthy quiet morning writes. These
+  // assertions fail the moment that silence returns: each path must be DISTINCT and
+  // each must be NAMED. The floor's behaviour is asserted unchanged alongside — the
+  // repair is about what the card SAYS, never about what it serves him.
+  // ------------------------------------------------------------------------
+  {
+    // 1. THE ONE THAT WOULD HAVE CAUGHT THE REAL BUG. defaultGen does
+    //    `const { generatePool } = await import("./hippocampus.mjs")` — rename that
+    //    export and this is the exact error, which used to vanish into a comment.
+    const threw = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null,
+      gen: async () => { throw new TypeError("generatePool is not a function"); } });
+    assert("#WIRE a THROWN generator is NAMED, not swallowed — a code bug no longer reads as a dry pool",
+      threw.engine === "deterministic" && threw.llm_status === "threw: TypeError: generatePool is not a function"
+      && threw.where_left_off.includes("cosine"));
+    // 2. The failure the old catch could never even see: generatePool RETURNS
+    //    { ok:false, text:null, error:"every key dry on every model", status } and does
+    //    not throw (hippocampus.mjs:196). This is the real 429 shape, verbatim.
+    const dry = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null,
+      gen: async () => ({ ok: false, text: null, error: "every key dry on every model", status: 429 }) });
+    assert("#WIRE the pool's OWN error + status reach the card — a 429 never threw, so the catch never saw it",
+      dry.engine === "deterministic" && dry.llm_status === "pool-failed: every key dry on every model · status 429");
+    // 3. Text came back and parsed to nothing — a prompt/model problem, not a dry lane.
+    const junk = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null, gen: async () => "sorry I can't do that" });
+    assert("#WIRE junk text is 'unparsed' with its size — NOT the same event as a dry pool",
+      junk.engine === "deterministic" && junk.llm_status === "unparsed: 21 char(s) back, no slot matched");
+    // 4. The two not-called paths, which are the ones that legitimately read healthy.
+    assert("#WIRE a quiet window says so — and can never be confused with any of the three failures",
+      setEmpty.llm_status === "not-called: no interactive activity in the window"
+      && new Set([threw.llm_status, dry.llm_status, junk.llm_status, setEmpty.llm_status]).size === 4);
+    // 5. THE POINT OF THE WHOLE REPAIR: healthy is silent, so a reader that sees a
+    //    string knows something happened. Before this, "deterministic" meant all five.
+    assert("#WIRE the healthy path says NOTHING — llm_status is null only when the pool actually answered",
+      set.engine === "gemini-flash" && set.llm_status === null && setDry.llm_status === "threw: Error: pool dry");
+    // 6. Names only. No verdict, no threshold, no card — the house rule these counters
+    //    ride under (his standing law: numbers get ruled on after real data).
+    assert("#WIRE NAMES ONLY — no verdict, no threshold, no ok/fail flag rides this field",
+      typeof threw.llm_status === "string" && !("verdict" in threw) && !("threshold" in threw)
+      && !("healthy" in threw) && !("llm_ok" in threw));
+    // 7. A shapeless return degrades honestly instead of inventing a cause.
+    assert("#WIRE a generator returning nothing at all reports what is honestly known, never a guessed reason",
+      (await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null, gen: async () => null })).llm_status === "pool-failed: no text returned");
+    // 8. A provider error longer than the borrowed 160 cap is cut AND says it was cut —
+    //    the same marked-cut law every other string in this card follows.
+    const longErr = await distill({ dir: "no-dir", stream, presence: [], drills, workspace: null,
+      gen: async () => ({ ok: false, error: "x".repeat(400) }) });
+    assert("#WIRE a huge provider error is bounded at open_loop's borrowed 160 and MARKED, never a silent cut",
+      longErr.llm_status.length === STATUS_CHARS && wasTruncated(longErr.llm_status));
+  }
 
   assert("SUMMARY — reads as one glanceable line", summaryLine(set).includes("on:") && summaryLine(set).includes("open:"));
 
@@ -620,6 +1062,28 @@ async function selftest() {
       latencyLeftEdge(null, undefined) === null && measureLatency(latencyLeftEdge(null, undefined), "2026-08-10T10:15:00.000Z", sw) === null);
   }
 
+  // ------------------------------------------------------------------------
+  // #WIRE (11 Aug 2026) — THE VOICE-HAS-AN-ADDRESS CHECK. See the block above
+  // registeredAction() for the whole finding. The last assertion here is the
+  // one that fails loudly if ArsenalFC-Distiller is ever re-registered bare.
+  // ------------------------------------------------------------------------
+  {
+    assert("#WIRE the bare form is recognised as VOICELESS — the exact action string that was live on 11 Aug 2026",
+      voiceIsWired("cmd /c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc && node scripts\\distiller.mjs") === false);
+    assert("#WIRE the wrapper form is recognised as WIRED — the shape INSTALL_CYBORG_TASKS.ps1's Mk() writes",
+      voiceIsWired("cmd /c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\distiller.mjs") === true);
+    assert("#WIRE an unanswerable box makes NO CLAIM — watchman's own rule, never a false red on a fresh clone",
+      voiceIsWired(null) === null && registeredAction("ArsenalFC-Distiller", { action: null }) === null &&
+      registeredAction("not a task name", {}) === null);
+    // THE LIVE ONE. On the captain's box the task exists, so this is a real
+    // assertion about the real scheduler; anywhere else it abstains out loud.
+    const liveAction = registeredAction();
+    assert(liveAction === null
+      ? "#WIRE (no claim — ArsenalFC-Distiller is not registered on this box, so there is nothing to check)"
+      : `#WIRE THE LIVE TASK ROUTES THROUGH run_logged.cmd, so stdout AND stderr reach scripts/distiller.log — action: ${liveAction}`,
+      liveAction === null || voiceIsWired(liveAction) === true);
+  }
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -642,6 +1106,9 @@ async function main() {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { distill, deterministicSet, parseSet, merge, mergeLegacy, mergeV2Legacy, recentStream, currentWindow,
-         hisWords, looksLikeWindowCaption, buildPrompt, summaryLine, run, INTERACTIVE, INTERACTIVE_LEGACY, AMBIENT,
+export { distill, deterministicSet, parseSet, merge, mergeLegacy, mergeV2Legacy, recentStream, recentStreamLegacy,
+         currentWindow, hisWords, looksLikeWindowCaption, buildPrompt, promptRow, evidenceChars, summaryLine, run,
+         INTERACTIVE, INTERACTIVE_LEGACY, AMBIENT, PROMPT_ROW_CHARS,
+         clampStr, clampStrLegacy, wasTruncated, TRUNC_MARK,
+         voiceIsWired, registeredAction,
          detectSwitches, measureLatency, latencyReport, latencyLeftEdge };

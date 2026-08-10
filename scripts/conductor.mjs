@@ -1210,6 +1210,46 @@ async function selftest() {
       && repFail.steps.find(s => s.id === "examiner").degraded === null);
   }
 
+  // ---- THE SCHEDULE CONTRACT (11 Aug 2026) — an installer may never re-arm a
+  // row this chain owns. THE DEAD WIRE THIS CLOSES: INSTALL_CYBORG_TASKS.ps1
+  // went on creating ArsenalFC-Examiner at 21:55 with `schtasks /Create /F`,
+  // which registers ENABLED — 45 minutes BEFORE the setpiece the step below
+  // declares as its need. One re-run of the installer therefore staged
+  // tomorrow's drill against YESTERDAY's drills.json, and the chain's own 22:55
+  // run then overwrote it. D1 disabled the row on the live box; nothing stopped
+  // the installer putting it back. Both installers now route every create through
+  // HonourExpectedState, which reads dressing-room/state/tasks_expected.json —
+  // the same contract watchman.mjs already diffs the live schedule against, so
+  // the decision lives in ONE file instead of being copied into three.
+  // THIS IS THE TRIPWIRE: red if the guard is dropped, red if a new creator
+  // function appears without it, red if the Examiner row stops being designed-off.
+  {
+    const off = new Set(JSON.parse(readFileSync(join(REPO, "dressing-room", "state", "tasks_expected.json"), "utf8")).expected_disabled || []);
+    // a PowerShell function body here ends at a `}` in column 0 — the shape both files use
+    const guarded = (src, fn) => {
+      const m = src.match(new RegExp(`function\\s+${fn}\\s*\\([\\s\\S]*?\\n\\}`));
+      return !!m && /HonourExpectedState/.test(m[0]);
+    };
+    const holes = [], checked = [];
+    for (const f of ["INSTALL_TASKS.ps1", "INSTALL_CYBORG_TASKS.ps1"]) {
+      const src = readFileSync(join(REPO, "setup", f), "utf8");
+      const wired = /tasks_expected\.json/.test(src) && /function\s+HonourExpectedState/.test(src);
+      for (const line of src.split(/\r?\n/)) {
+        const m = line.match(/^\s*(Mk[A-Za-z]*)\s+"(ArsenalFC-[\w-]+)"/);
+        if (!m || !off.has(m[2])) continue;              // a row that SHOULD be enabled is not this check's business
+        checked.push(m[2]);
+        if (!wired || !guarded(src, m[1])) holes.push(`${f} ${m[1]} ${m[2]}`);
+      }
+    }
+    // `checked` is the witness — holes.length===0 alone would pass vacuously if the
+    // creator lines were renamed out of the regex's reach.
+    ok("SCHEDULE CONTRACT — every designed-off row the installers still create goes through the expected-state guard (the 21:55 Examiner scar)",
+      checked.includes("ArsenalFC-Examiner") && checked.length > 1 && holes.length === 0);
+    ok("SCHEDULE CONTRACT — the examiner is a CHAIN step (22:55, needs setpiece) and tasks_expected.json still calls its standalone row designed-off",
+      off.has("ArsenalFC-Examiner")
+      && (() => { const s = EVENING.find(x => x.id === "examiner"); return !!s && s.at === "22:55" && (s.needs || []).join() === "setpiece"; })());
+  }
+
   console.log(fail === 0 ? `\nALL CHECKS PASSED (${pass} passed, 0 failed)` : `\n${fail} FAILED (${pass} passed)`);
   return fail === 0;
 }

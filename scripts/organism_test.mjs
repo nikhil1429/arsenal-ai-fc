@@ -387,6 +387,22 @@ function path() {
       cov.method_clean === false);
     assert("FORGE · the undriven widget gate is named (built is not driven)", cov.widget_gates < 2);
 
+    // ── THE DEFERRED-CARRY WIRE (dead-wire repair, 11 Aug 2026) ──────────────
+    // forge_session.mjs's LAWS promise deferred axes are reported "so Re-Jirah can pick
+    // them up"; for weeks rejirah.mjs never read axes_deferred at all, and since its axis
+    // universe is a LOCKED capsule's a-i, a defer on an unlocked concept (all 8 live rows
+    // are `hallucinations`, unlocked) entered no queue anywhere. This drives the whole wire
+    // end to end — forge WRITES the defer, rejirah READS it — so it breaks the moment the
+    // two organs are disconnected again, which a same-file selftest alone cannot catch.
+    run([S("forge_session.mjs"), "start", "e2e-defer", "--force"], { cwd: sb });
+    run([S("forge_session.mjs"), "axis", "g", "defer"], { cwd: sb });
+    run([S("forge_session.mjs"), "close"], { cwd: sb });
+    const carry = run([S("rejirah.mjs"), "due"], { cwd: sb });
+    assert("RE-JIRAH · a DEFERRED axis on an unlocked concept reaches the Re-Jirah queue (forge LAWS: 'deferred ≠ dropped')",
+      carry.code === 0 && /DEFERRED, NOT DROPPED/.test(carry.out) && /e2e-defer/.test(carry.out) && /\bg · defend/.test(carry.out));
+    assert("RE-JIRAH · the carry names it as UNLOCKED and invents no due-date for it (no lockedOn ⇒ no honest schedule)",
+      /NOT LOCKED/.test(carry.out));
+
     const grade = run([S("rejirah.mjs"), "grade", "embeddings", "a", "held", "--gut", "knew"], { cwd: sb });
     assert("RE-JIRAH · a cold round grades and schedules the next due date", grade.code === 0 && /next due/.test(grade.out));
 

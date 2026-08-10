@@ -52,7 +52,15 @@ import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
 import { claudeGenAsync, ledgerForensics } from "./claudegen.mjs";
 import { loadBoard, headroomOf, recordUse, record429, stateOf } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
-import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the thalamus owns bg_queue.jsonl
+// WIRING AUDIT (11 Aug 2026): dossierKey/conceptRegistry come from here too —
+// the weak vector's `concept` slot has to survive thalamus's OWN precache join
+// (thalamus.mjs:900), so it is resolved with thalamus's OWN resolver rather than
+// a second matcher that could drift away from it. Read-only, same as pendingBg.
+import { pendingBg, dossierKey, conceptRegistry } from "./thalamus.mjs";   // M22 — read-only; the thalamus owns bg_queue.jsonl
+// WIRING AUDIT (11 Aug 2026): the SECOND SPOTLIGHT serves the same moment shape the
+// WAKE does, so it now serves it through the SAME door instead of its own blind cut.
+// Read-only import — cortex.mjs owns that door; see the block above drainBg for why.
+import { momentBlock } from "./cortex.mjs";
 
 // E2E audit 25 Jul 2026: claudeGen is SYNCHRONOUS (execFileSync) and returns a
 // plain object — calling .catch() on it is a TypeError that kills the whole pass
@@ -224,6 +232,12 @@ export function mergePrecacheLegacy(_prior, fresh) {
 // One line per pass. Append-only, and it is the ONLY durable record of what the
 // Rest Room was aiming at on a given night — the precache itself rolls at the day
 // boundary and its two inputs are gitignored with no history.
+// ITS READER, since 11 Aug 2026: scoreboard.mjs JOIN 4 (`dmn_aim` / `dmn_aim_day`
+// rows in brain_outcomes.jsonl, evening chain 22:38), which joins each night's
+// aim to HIS reps on those concepts the same local day. For its first day alive
+// this journal had NO reader at all — four rows, zero consumers — which made the
+// measurement it exists for impossible without him opening a gitignored .jsonl
+// himself. If that join is ever removed, this file is a black box again.
 function journalWeakVector(row) {
   try {
     mkdirSync(dirname(WEAK_JOURNAL), { recursive: true });
@@ -247,6 +261,72 @@ function weakVector(deps = {}) {
   // signals — was structurally dead: a concept could stall for weeks and never once
   // reach a dream. Mirrors examiner.mjs:75; the old keys stay in the chain (layering,
   // never replace) so injected/older shapes keep reading.
+  for (const c of (Array.isArray(concepts) ? concepts : [])) {
+    const slope = String((c.velocity && c.velocity.slope) || c.trend || c.trajectory || "");
+    if (["stalling", "regressing"].includes(slope)) out.push({ concept: c.id || c.name || c.concept, why: `trajectory ${slope}` });
+  }
+  const twin = deps.twin !== undefined ? deps.twin : readJson(join(STATE_DIR, "twin.json"));
+  // WIRING AUDIT (11 Aug 2026) — THE TWIN LEG PUT PROSE IN A CONCEPT FIELD.
+  // It read `out.push({ concept: m.desc, ... })`. `desc` is the market's ENGLISH
+  // SENTENCE, copied verbatim out of twin_config.json (twin.mjs:221 emits it
+  // unchanged) — live today all three are BEHAVIOUR markets: "a real study
+  // session happens today", "the never-zero floor is touched today", "first
+  // Learning-bucket focus lands by 09:30". Every consumer treats this field as a
+  // CONCEPT ID: rolloutPrompt() below writes it into "the candidate's known soft
+  // spot" and fans ROLLOUTS_PER_WEAK personas + a counter-rollout at it,
+  // setpiece.mjs:492 renders the surviving entry as a rest_room drill's
+  // `concepts: [d.concept]`, and thalamus's precache join (thalamus.mjs:900)
+  // resolves entry.concept through the concepts.json registry — where a
+  // habit-tracking sentence can NEVER match, so a twin-sourced entry is
+  // un-joinable by the very reader it was drafted for. Dormant on 11 Aug (live
+  // markets at p=0.25/0.29/0.71, all outside the ±0.15 band) — one market
+  // drifting to the coin-flip was all it took to fire.
+  // THE FIX IS THE FIELD'S CONTRACT, NOT THE LEG. A market may enter the weak
+  // vector only when it actually NAMES CANON: `conceptRegistry`/`dossierKey` are
+  // thalamus's own resolvers, already exported and already the exact join this
+  // entry has to survive downstream — reuse, not a second matcher. An explicit
+  // `market.concept` wins if the config ever grows one (same shape as
+  // setpiece.mjs:583's "council.mjs may carry ids one day"), else the desc's
+  // WORDS are resolved one by one. Verified live 11 Aug: all three descs resolve
+  // to nothing, so the leg is honestly dormant instead of loudly wrong.
+  // NOT DECIDED HERE: whether the Twin should carry a concept-level market at
+  // all. That is the captain's call on twin_config.json, not code's.
+  const reg = deps.registry !== undefined ? deps.registry : conceptRegistry();
+  for (const m of (twin && twin.markets) || []) {
+    if (!(m.alive && m.n_resolved >= 5 && Math.abs(m.p - 0.5) < 0.15)) continue;
+    const id = marketConcept(m, reg);
+    if (!id) continue;                 // names no concept → no dream about it (better silent than absurd)
+    out.push({ concept: id, why: "the Twin can't call it (max uncertainty)", market: m.id, market_desc: m.desc });
+  }
+  const seen = new Set();
+  return out.filter(w => w.concept && !seen.has(w.concept) && seen.add(w.concept)).slice(0, 4);
+}
+
+// A Twin market → a canonical concept id, or null when it names none.
+// The `reg.loaded` guard is load-bearing: dossierKey() passes ANY token straight
+// back lowercased when the registry failed to load (thalamus.mjs:608), so
+// without it a missing/held concepts.json would hand every word of the sentence
+// back as a "concept" — the original bug, one word at a time.
+function marketConcept(m, reg) {
+  if (!(reg && reg.loaded)) return null;
+  if (m.concept) return dossierKey(String(m.concept).toLowerCase(), reg);
+  for (const w of String(m.desc || "").toLowerCase().split(/[^a-z0-9]+/)) {
+    if (!w) continue;
+    const id = dossierKey(w, reg);
+    if (id) return id;
+  }
+  return null;
+}
+
+// FROZEN, per the layering law: the pre-11-Aug-2026 vector, verbatim, so the
+// repair stays a MEASURED difference rather than a claim. Nothing calls it; the
+// selftest pins what it used to emit (a prose sentence in the concept slot).
+function weakVectorLegacy(deps = {}) {
+  const out = [];
+  const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
+  for (const d of (cal && cal.danger_zone) || []) out.push({ concept: d.topic || d.concept, why: "confident-but-wrong (danger zone)" });
+  const ls = deps.ls !== undefined ? deps.ls : readJson(join(STATE_DIR, "learning_state.json"));
+  const concepts = (ls && (ls.concepts || [])) || [];
   for (const c of (Array.isArray(concepts) ? concepts : [])) {
     const slope = String((c.velocity && c.velocity.slope) || c.trend || c.trajectory || "");
     if (["stalling", "regressing"].includes(slope)) out.push({ concept: c.id || c.name || c.concept, why: `trajectory ${slope}` });
@@ -534,6 +614,44 @@ async function dream(deps = {}) {
 // Mid-day the mouth/eyes lanes (T1/T2) are NEVER borrowed — pickTank's law.
 // ---------------------------------------------------------------------------
 const BG_DRAIN_CAP = 6;
+
+// ── WIRING AUDIT (11 Aug 2026) — TRUNCATED_AT_DOOR ──────────────────────────
+// The drain handed the model `JSON.stringify({text, event_key, concept_tokens})
+// .slice(0, 600)` — frozen verbatim below as bgMomentBlockLegacy. `text` is the
+// FIRST key and the only unbounded one, so on any real moment the cut landed
+// inside it and BOTH structural fields fell off the end entirely.
+// MEASURED on the only moment that has ever entered bg_queue.jsonl
+// (m_1786109201204_1055369738, queued "capped", drained 2026-08-07T14:15Z):
+// text 14,763 chars, envelope 15,133 → 600 delivered, 14,533 dropped. The kept
+// fragment ends mid-string ("…budget is for\n   studying, not for ag") so it is
+// not parseable JSON, and `.includes("concept_tokens") === false` — the field
+// the nucleus's recall-shelf keys the returned insight on (matchBg,
+// thalamus.mjs) never reached the model at all. `bound_context` — bound by the
+// thalamus at 900ms and written into the queue row — was never even asked for.
+// Nothing in the prompt, the queue row, or the :4113 body said one character had
+// been dropped, so the shelved insight reads as a full read of the moment.
+//
+// FIX: the door the WAKE path was repaired through earlier today —
+// cortex.momentBlock — imported, not re-written. A bg_queue row IS wake-shaped
+// ({spotlight, bound_context}, written by thalamus.mjs's appendBgQueue), so it
+// fits with no adapter: the SKELETON (event_key, concept_tokens, salience,
+// components, every bound-context header) is never cuttable, only free text is
+// trimmed, the shares are water-filled, the block always parses, and a trimmed
+// text carries a sibling `text_truncated` naming the MEASURED chars dropped.
+// THE BUDGET DOES NOT MOVE: 600 is this drain's own pre-11-Aug number, kept to
+// the character. Cortex's default is 2,500 and is deliberately NOT adopted here
+// — how much of a 14k paste is worth a BACKGROUND lane's tokens is a spend
+// question with his name on it, and this repair does not answer it.
+// The trade is stated, not hidden: at 600 the skeleton + the absence-note cost
+// prose, so that live row now delivers 261 text chars instead of ~580 — but the
+// 580 were malformed JSON, blind to the concept, and silent about the loss.
+const BG_MOMENT_BUDGET_CHARS = 600;   // NOT a new number — the pre-11-Aug drain door's own .slice(0, 600)
+
+// frozen verbatim (LAYERING, never replace) — the pre-11-Aug-2026 drain door: one
+// blind head-cut across the whole envelope with `text` serialised first. Kept
+// runnable as the regression witness the selftest asserts against.
+const bgMomentBlockLegacy = (spot) => JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600);
+
 async function drainBg(deps = {}) {
   const tone = deps.tone || currentTone();
   if (!tone.effects.dmn_allowed) return { ok: false, skipped: "tone is conserve — the drain rests too" };
@@ -581,7 +699,10 @@ async function drainBg(deps = {}) {
     if (!lane) break;
     lane.spent++;
     const spot = b.spotlight || {};
-    const r = await genSafe(() => gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly. THE MOMENT: ${JSON.stringify({ text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens }).slice(0, 600)}. Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane));
+    const r = await genSafe(() => gen(`A learning system's attention gate suppressed this moment (reason: ${b.reason} — it deserved deep thought but the deep lane was busy). Give it its second spotlight now, briefly.
+THE MOMENT (bound by the thalamus. A \`text_truncated\` field, if present, states the MEASURED characters dropped at the door — where you see one, you are holding a fragment and must say so rather than read the opening as the whole):
+${momentBlock(b, BG_MOMENT_BUDGET_CHARS)}
+Output STRICT JSON, no fences: {"concept":"<the one concept this is really about>","insight":"<the short useful read he'd want when he next touches this ground, <=280 chars, honest, no hype>"}`, lane));
     safeUse(lane.tank.id, 1, 2500);
     meter("dmn_bg_drain", r, lane.tank.id);          // #7
     if (!r.ok) {
@@ -602,6 +723,36 @@ async function drainBg(deps = {}) {
   }
   return { ok: true, drained, waiting: open.length - drained, engine_down: engine.down || null, engine_error: engine.error || null };
 }
+
+// ── WIRING AUDIT (11 Aug 2026) — ORPHAN_FIELD ───────────────────────────────
+// drainBg has computed engine_down/engine_error since #8 hardened it, and BOTH
+// call sites dropped them on the floor: `dmn drain` printed drained/waiting/note
+// only, and the hourly pass printed under `if (bg.ok && bg.drained)` — a walled
+// drain returns ok:true with drained:0, so that predicate was FALSE for exactly
+// the outage it was supposed to report. Measured consequence: a conserve-tone
+// mute, a no-borrowable-lane refusal, a Claude plan wall and a clean pass over an
+// empty queue all produced THE SAME OUTPUT on the hourly lane — nothing. dream(),
+// this organ's other half, has named its refusing engine on the `PARTIAL:` line
+// since that same commit; the drain, hardened in the same breath, stayed mute.
+// That is the false-reason class the 1 Aug 22-hour outage taught: an organ that
+// is DOWN looking exactly like an organ that had nothing to do.
+// ONE sentence, ONE builder, both call sites, exported for the suite — the next
+// rot can only happen in one place, and an assertion now sits on it.
+// SILENCE IS STILL EARNED, not lost: an hourly pass that found an empty queue
+// says nothing (it fires 24×/day and a true no-op is not news). Anything else —
+// a skip, a wall, a backlog that did not move — speaks. `dmn drain` was asked
+// for by hand, so it answers even then (verbose).
+// The 140-char error clip is NOT a new number: it is main()'s own dream-line
+// clip, copied so both halves of the organ truncate a refusal identically.
+const drainLine = (d, verbose = false) => {
+  if (!d) return null;
+  if (!d.ok) return `dmn: no drain — ${d.skipped}`;
+  if (!d.drained && !d.waiting && !d.engine_down && !verbose) return null;
+  return `dmn: second spotlight — ${d.drained} suppressed thought(s) drained`
+    + (d.waiting ? `, ${d.waiting} waiting` : "")
+    + (d.note ? ` (${d.note})` : "")
+    + (d.engine_down ? ` · PARTIAL: the ${d.engine_down} engine refused mid-drain — ${String(d.engine_error).slice(0, 140)} · the rest stay queued (honest retry, never a raid on the core)` : "");
+};
 
 // ---------------------------------------------------------------------------
 // dreamLegacy — the pre-M16 engine, FROZEN VERBATIM (layering, never replace):
@@ -674,6 +825,28 @@ async function selftest() {
     assert("WEAK VECTOR: the producer's real schema (id + velocity.slope) feeds the dream", wReal.length === 1 && wReal[0].concept === "attention" && wReal[0].why.includes("stalling"));
     const wLegacy = weakVector({ calibration: null, twin: null, ls: { concepts: [{ name: "kv cache", trend: "regressing" }] } });
     assert("WEAK VECTOR: the legacy trend/name shape still reads (layering, never replace)", wLegacy.length === 1 && wLegacy[0].concept === "kv cache");
+  }
+
+  // WIRING AUDIT 11 Aug 2026 — THE TWIN LEG'S CONCEPT SLOT. It pushed the
+  // market's PROSE `desc` into a field four organs read as a concept id
+  // (rolloutPrompt's "known soft spot", setpiece.mjs:492 `concepts: [d.concept]`,
+  // thalamus.mjs:900's registry join, scoreboard's JOIN-4 key). These three
+  // assertions fail the moment prose can reach that slot again.
+  {
+    // the LIVE market shape, verbatim from twin.json 11 Aug 2026, forced into the band
+    const behaviour = { markets: [{ id: "session_happened", desc: "a real study session happens today", p: 0.5, n_resolved: 15, alive: true }] };
+    // capture.mjs:120's real registry shape — alias Maps, not the raw JSON
+    const regFix = { loaded: true, conceptAlias: new Map([["hallucinations", "hallucinations"], ["hallucination", "hallucinations"]]), skillAlias: new Map() };
+    const wB = weakVector({ calibration: null, ls: null, twin: behaviour, registry: regFix });
+    assert("TWIN LEG: a BEHAVIOUR market at max uncertainty never reaches the dream — prose is not a concept id",
+      wB.length === 0);
+    assert("TWIN LEG (legacy pin): the frozen vector still emits the prose sentence, so the repair is a measured difference",
+      weakVectorLegacy({ calibration: null, ls: null, twin: behaviour }).map(w => w.concept).join("") === "a real study session happens today");
+    const named = { markets: [{ id: "halluc_held", desc: "he holds hallucination cold today", p: 0.5, n_resolved: 15, alive: true }] };
+    assert("TWIN LEG: a market that DOES name canon still dreams — resolved to the registry id, not the sentence",
+      (() => { const w = weakVector({ calibration: null, ls: null, twin: named, registry: regFix }); return w.length === 1 && w[0].concept === "hallucinations" && w[0].market === "halluc_held"; })());
+    assert("TWIN LEG: an UNLOADED registry resolves nothing (dossierKey passes tokens through — that guard is the bug, one word at a time)",
+      marketConcept({ id: "x", desc: "hallucination" }, { loaded: false }) === null);
   }
 
   // E2E audit 25 Jul 2026 — THE AFK CLOCK. aw-watcher-afk merges a continuous
@@ -871,6 +1044,84 @@ async function selftest() {
     assert("DRAIN: thalamus down → thoughts stay queued (honest retry, nothing lost)", rDown.ok && rDown.drained === 0 && rDown.waiting === 2);
     const rNone = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
     assert("DRAIN: empty queue → quiet no-op", rNone.ok && rNone.drained === 0 && rNone.note);
+
+    // ── THE DOOR (wiring audit, 11 Aug 2026) ────────────────────────────────
+    // These ride the PROMPT THE GENERATOR ACTUALLY RECEIVED, not the helper, so
+    // they fail the moment the door is unwired again — which is exactly how the
+    // 600-char blind cut survived from M22 to 11 Aug with nobody noticing.
+    {
+      const LONGDOUBT = `OPEN: mujhe attention ka scaling samajh nahi aata. ${"x".repeat(14000)} CLOSE: yahin pe atak gaya.`;
+      const bigSpot = { modality: "voice", text: LONGDOUBT, event_key: "voice:doubt", concept_tokens: ["attention", "kv"], S: 0.65, comps: { surprise: 0.4 } };
+      const bigRow = [{ moment_id: "bgBig", status: "queued", reason: "capped", spotlight: bigSpot,
+        bound_context: [{ modality: "context", text: "Code.exe — attention.py", event_key: "context:Code.exe" }] }];
+      let seen = "";
+      const genSpy = async (p) => { seen = p; return { ok: true, text: JSON.stringify({ concept: "attention", insight: "the suppressed read: caching kills recompute, the handshakes stay — hold that distinction" }) }; };
+      const rDoor = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bigRow, board: twoLanes, keys: keysFix, generate: genSpy, recordUse: () => {}, post: async () => ({ ok: true }) });
+      assert("DOOR: a 14k moment still drains (the repair did not break the lane)", rDoor.ok && rDoor.drained === 1 && seen.length > 0);
+      assert("DOOR: concept_tokens REACH the model — the field the recall-shelf keys on (the old 600-char cut dropped them entirely)",
+        seen.includes("concept_tokens") && seen.includes("attention") && seen.includes("kv"));
+      assert("DOOR: the skeleton survives whole — event_key, salience and the bound context all arrive",
+        seen.includes("voice:doubt") && seen.includes("0.65") && seen.includes("context:Code.exe"));
+      assert("DOOR: what is dropped is NAMED with a measured count, never silent",
+        /\d+ of \d+ chars — \d+ DROPPED/.test(seen) && seen.includes("text_truncated"));
+      const blk = momentBlock(bigRow[0], BG_MOMENT_BUDGET_CHARS);
+      let parses = true; try { JSON.parse(blk); } catch { parses = false; }
+      assert("DOOR: the served block is PARSEABLE JSON (the old slice ended mid-string literal)", parses);
+      // the LIVE shape — the one moment that has ever entered bg_queue.jsonl carries
+      // no bound context — fits the drain's own 600 and still delivers real prose.
+      const liveShaped = { spotlight: bigSpot, bound_context: [] };
+      const liveBlk = momentBlock(liveShaped, BG_MOMENT_BUDGET_CHARS);
+      assert("DOOR: the budget did not move — still this drain's own 600, and the live moment shape fits it with prose to spare",
+        BG_MOMENT_BUDGET_CHARS === 600 && liveBlk.length <= 600 && JSON.parse(liveBlk).spotlight.text.length > 0);
+      // OPEN, HIS CALL (11 Aug 2026): with bound context attached, the skeleton plus
+      // its absence-notes already exceed 600, so ZERO prose survives — the engine
+      // rides over budget on purpose (structure over prose, cortex.mjs's own law) and
+      // SAYS "0 of N chars" rather than dropping the structure silently. Raising this
+      // door to cortex's 2,500 is the obvious cure and would 4× a background lane's
+      // prompt spend, which is a number with the captain's name on it. Not guessed
+      // here; this assertion pins the behaviour so the day he rules, it is one edit.
+      assert("DOOR: skeleton-eats-the-budget is LOUD, never silent (the open question, pinned)",
+        JSON.parse(blk).spotlight.text === "" && /0 of \d+ chars — \d+ DROPPED/.test(blk) && blk.length > BG_MOMENT_BUDGET_CHARS);
+      const smallBlk = momentBlock({ spotlight: { text: "kv cache doubt again", concept_tokens: ["kv"] }, bound_context: [] }, BG_MOMENT_BUDGET_CHARS);
+      assert("DOOR: a short moment still rides WHOLE, uncut and unmarked", smallBlk.includes("kv cache doubt again") && !smallBlk.includes("text_truncated"));
+      let legacyParses = true; try { JSON.parse(bgMomentBlockLegacy(bigSpot)); } catch { legacyParses = false; }
+      assert("DOOR: bgMomentBlockLegacy stays FROZEN verbatim as the witness — still tokenless, still mid-string",
+        !bgMomentBlockLegacy(bigSpot).includes("concept_tokens") && legacyParses === false && bgMomentBlockLegacy(bigSpot).length === 600);
+    }
+
+    // ── THE VOICE (wiring audit, 11 Aug 2026) — ORPHAN_FIELD ────────────────
+    // These ride the SENTENCE, not the field, because the field was never the
+    // problem: drainBg computed engine_down honestly and both call sites binned
+    // it. An assertion on `r.engine_down` would have stayed green through the
+    // whole outage. Break the wire again — drop the PARTIAL clause, restore the
+    // `ok && drained` predicate, swallow a skip — and these fail.
+    {
+      // a Claude plan wall mid-drain: engineFault = (limit_hit || threw) && not gemini
+      const genWall = async () => ({ ok: false, limit_hit: true, error: "Claude usage limit reached — resets 22:00" });
+      const rWallBg = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genWall, recordUse: () => {}, post: async () => ({ ok: true }) });
+      assert("VOICE — THE DEFECT ITSELF, pinned: a walled drain returns ok:true with drained 0, so the old `bg.ok && bg.drained` call site was FALSE for exactly the outage it was meant to report",
+        rWallBg.ok === true && rWallBg.drained === 0 && rWallBg.engine_down === "claude" && !(rWallBg.ok && rWallBg.drained));
+      const wallLine = drainLine(rWallBg);
+      assert("VOICE — the hourly pass now SPEAKS on a wall, and names the engine and its real error",
+        typeof wallLine === "string" && wallLine.includes("PARTIAL") && wallLine.includes("claude") && wallLine.includes("usage limit reached"));
+      assert("VOICE — and says the thoughts were kept, not lost (honest retry, never a raid on the core)",
+        wallLine.includes("2 waiting") && wallLine.includes("stay queued"));
+      // a skip is a reason, not a silence — all three skip shapes reach a human
+      assert("VOICE — a conserve-tone mute is printed, not swallowed",
+        String(drainLine(rMute)).includes("no drain") && String(drainLine(rMute)).includes("conserve"));
+      assert("VOICE — a no-borrowable-lane refusal is printed, and is DISTINGUISHABLE from the conserve mute",
+        String(drainLine(rT12)).includes("never spend the core") && drainLine(rT12) !== drainLine(rMute));
+      // silence stays EARNED: only the true no-op is quiet, and only on the hourly lane
+      assert("VOICE — an empty queue stays silent on the hourly pass (24 passes a day; a true no-op is not news)",
+        drainLine(rNone) === null);
+      assert("VOICE — but `dmn drain`, asked for by hand, always answers",
+        String(drainLine(rNone, true)).includes("no suppressed thoughts waiting"));
+      // a backlog that did not move is itself news, even with nothing drained
+      assert("VOICE — a thalamus-down pass drained 0 yet still reports the 2 it is holding",
+        String(drainLine(rDown)).includes("0 suppressed thought(s) drained") && String(drainLine(rDown)).includes("2 waiting"));
+      assert("VOICE — ONE builder serves both call sites, so this can only rot in one place",
+        typeof drainLine === "function");
+    }
   }
 
   // clustering determinism
@@ -970,6 +1221,23 @@ async function main() {
   if (mode === "status") {
     const p = readJson(PRECACHE);
     console.log(p ? `dmn: precache ${p.date} — ${p.entries.length} predicted stall(s) loaded (${p.rollouts}${p.planned_rollouts ? `/${p.planned_rollouts} planned` : ""} rollouts${p.engine === "stadium" ? ` · stadium across ${(p.lanes || []).join("+")} · ${p.verified || 0} verified` : " · legacy"})${p.engine_down ? ` · PARTIAL: the ${p.engine_down} engine stood the stadium down (${String(p.engine_error).slice(0, 120)})` : ""} · INERT until M7 serves it through the earned-voice gate` : "dmn: no precache yet — it dreams when he's away");
+    // #8's OTHER HALF, wired 11 Aug 2026. The drain's reason is stdout-only, and
+    // the hourly task's stdout is not captured today — verified live this morning:
+    // `schtasks /Query /TN ArsenalFC-DMN /V` still shows the bare pre-run_logged
+    // /TR (`cmd /c cd /d <repo> && node scripts\dmn.mjs`), so its console closes
+    // with the pass and there is no scripts\dmn.log at all. So the drain's new
+    // sentence would land nowhere on the one lane that runs 24×/day. THE DURABLE
+    // EVIDENCE of a drain that kept refusing is the queue it did not drain — read
+    // it here, at the address a human actually opens. Read-only: thalamus.mjs owns
+    // bg_queue.jsonl. No threshold is set on the backlog — the number that would
+    // make one "too old" is his, and none is guessed here.
+    const openBg = pendingBg(readLines(join(STATE_DIR, "bg_queue.jsonl")));
+    if (!openBg.length) console.log("dmn: second-spotlight queue empty — every suppressed thought has had its second look");
+    else {
+      const ages = openBg.map(r => (Date.now() - new Date(r.ts || 0).getTime()) / 36e5).filter(h => Number.isFinite(h) && h >= 0);
+      const oldest = ages.length ? Math.max(...ages) : null;
+      console.log(`dmn: second-spotlight queue — ${openBg.length} suppressed thought(s) still waiting${oldest === null ? "" : `, oldest ${oldest < 24 ? `${oldest.toFixed(1)}h` : `${(oldest / 24).toFixed(1)}d`} old`} (a backlog that never moves IS the drain refusing; the reason rides the drain's own line)`);
+    }
     // #7/#8 — THE ADDRESS. The DMN's spend and its outages now live in the shared
     // brain ledger; this is where a human reads them back. Before this, a Claude
     // refusal left only a `last_429` timestamp on the wrong instrument.
@@ -995,12 +1263,17 @@ async function main() {
   }
   if (mode === "drain") {
     const d = await drainBg({});
-    console.log(d.ok ? `dmn: second spotlight — ${d.drained} suppressed thought(s) drained${d.waiting ? `, ${d.waiting} waiting` : ""}${d.note ? ` (${d.note})` : ""}` : `dmn: no drain — ${d.skipped}`);
+    console.log(drainLine(d, true));   // 11 Aug: he asked by hand, so it answers even when the answer is "nothing was waiting" — and now names a refusing engine
     return;
   }
   // the drain rides every pass first (cheap, ≤6, mouth/eyes lanes excluded mid-day)
-  const bg = await drainBg({}).catch(() => ({ ok: false, skipped: "drain error" }));
-  if (bg.ok && bg.drained) console.log(`dmn: second spotlight — ${bg.drained} suppressed thought(s) drained`);
+  // 11 Aug 2026: the catch used to flatten every throw into the bare words "drain
+  // error" — the same discard as the orphaned engine fields one line down, so a
+  // crashed drain and a refused one read alike. The message rides now, clipped to
+  // the organ's own 140.
+  const bg = await drainBg({}).catch((e) => ({ ok: false, skipped: `drain error — ${String((e && e.message) || e).slice(0, 140)}` }));
+  const bgLine = drainLine(bg);            // null ONLY for the true no-op (empty queue) — every skip/wall/backlog speaks
+  if (bgLine) console.log(bgLine);
   const r = await dream({ force: process.argv.includes("--force") });
   console.log(r.ok
     ? `dmn: dreamed — ${r.entries} stall signature(s) from ${r.rollouts}/${r.planned_rollouts} planned rollouts across ${(r.lanes || []).join("+")} (${r.verified} verified; INERT ammunition for M7)${r.engine_down ? ` · PARTIAL: the ${r.engine_down} engine refused mid-pass — ${String(r.engine_error).slice(0, 140)}` : ""}`
@@ -1009,7 +1282,11 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { weakVector, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP,
+export { weakVector, weakVectorLegacy, marketConcept, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP,
   // audit 4 Aug 2026 — the new seams, exported so the doctor/other suites can
   // hold the fault-attribution (#8) and the meter (#7) to the same rules
-  geminiFault, engineFault, ledgerRow, genSafe, DMN_JOBS, DMN_MODEL, MIN_STADIUM_BUDGET };
+  geminiFault, engineFault, ledgerRow, genSafe, DMN_JOBS, DMN_MODEL, MIN_STADIUM_BUDGET,
+  // wiring audit 11 Aug 2026 — the drain's ONE voice, exported so the suite (and
+  // any doctor) asserts on the sentence a human actually reads, not on a field
+  // that a call site is free to throw away again
+  drainLine };

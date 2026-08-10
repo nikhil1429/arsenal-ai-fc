@@ -195,12 +195,25 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   // other flagged doubt has had its first — the queue moves, nothing loops forever.
   if (gate2 && gate2.doubt) {
     const g = gate2.doubt;
-    const key = `gate2:${g.capsule}:${g.doubt_index}`;
+    // 11 Aug 2026 — the candidate may now be a DOUBT (`doubt_index`/`q_verbatim`,
+    // the shape this lane has always been handed) or a BRIDGE (`ref`/`q`). Both
+    // shapes are read here rather than normalized upstream so the pure-function
+    // seam this file's selftest drives keeps accepting the original one.
+    const ref = g.ref !== undefined ? String(g.ref) : String(g.doubt_index);
+    const qText = g.q !== undefined ? g.q : g.q_verbatim;
+    const isBridge = g.kind === "bridge";
+    const key = `gate2:${g.capsule}:${ref}`;
     const liveGate2 = s.cards.some((c) => c.source === "tape_room.gate2" && !c.answer && !c.retired_at);
     if (!byKey.has(key) && !liveGate2) {
       s.cards.push({
         id: `c${s.next_id++}`, key, source: "tape_room.gate2",
-        line: `Doubt cold-readable nahi (${g.capsule}): "${clip(g.q_verbatim, 70)}" — abhi 1 line mein saath theek karein? (${gate2.fixed_or_carded + 1}/${gate2.total}+, regex floor)`,
+        // The card must name WHICH ARRAY on the gist: `doubts[]` and `bridges[]` are
+        // different rows in the same file, and a card that says "doubt" for a bridge
+        // sends him editing the wrong one. A bridge is addressed the way it is
+        // findable — by the concept it points at, never by its index.
+        line: isBridge
+          ? `Bridge-Q cold-readable nahi (${g.capsule} → ${g.to || "?"}): "${clip(qText, 60)}" — abhi 1 line mein saath theek karein? (${gate2.fixed_or_carded + 1}/${gate2.total}+, regex floor)`
+          : `Doubt cold-readable nahi (${g.capsule}): "${clip(qText, 70)}" — abhi 1 line mein saath theek karein? (${gate2.fixed_or_carded + 1}/${gate2.total}+, regex floor)`,
         dispatch: { kind: "none" },
         filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
         retired_at: null, resolution: null,
@@ -711,11 +724,27 @@ function gatherSources() {
     const tape = readJson(join(STATE_DIR, "tape_room.json"));
     const q = (tape && Array.isArray(tape.queue)) ? tape.queue : [];
     const flagged = q.filter((x) => Array.isArray(x.gate2_flag) && x.gate2_flag.length);
-    if (flagged.length) {
+    // THE BRIDGES WIRE (11 Aug 2026) — GATE 2's other half reaches him HERE, and
+    // this is the only lawful door it has. FORGE_SPEC §5 binds `bridges[].q` to the
+    // same COLD-READER STANDARD as `doubts[].q`, doubtminer scans both since today
+    // (`grep -n "bridges_checked" scripts/doubtminer.mjs`) — but a bridge flag has
+    // no rematch queue to ride on (bridges are deliberately not queued; that call
+    // is his), so without this read it would be a file nobody opens.
+    // A flagged DOUBT still outranks a flagged BRIDGE: the doubt is armed as a
+    // verbatim rematch prompt, so its wording costs him something every day it
+    // stands. Same serialization as before — ONE gate2 card lives at a time.
+    const bridgeFlagged = (tape && tape.gate2 && Array.isArray(tape.gate2.bridge_flags)) ? tape.gate2.bridge_flags : [];
+    const cands = [
+      ...flagged.map((x) => ({ kind: "doubt", capsule: x.capsule, ref: String(x.doubt_index), q: x.q_verbatim })),
+      ...bridgeFlagged.map((f) => ({ kind: "bridge", capsule: f.capsule, ref: `b${f.bridge_index}`, q: f.q_first_100, to: f.to || null })),
+    ];
+    if (cands.length) {
       const call = loadState();
       const carded = new Set(call.cards.filter((c) => c.source === "tape_room.gate2").map((c) => c.key));
-      const nextDoubt = flagged.find((x) => !carded.has(`gate2:${x.capsule}:${x.doubt_index}`));
-      if (nextDoubt) gate2 = { doubt: nextDoubt, total: flagged.length, fixed_or_carded: carded.size };
+      // the key gains a `b` prefix for bridges — doubt keys are numeric, so the two
+      // id-spaces can never collide and an old doubt card keeps its exact identity.
+      const nextDoubt = cands.find((x) => !carded.has(`gate2:${x.capsule}:${x.ref}`));
+      if (nextDoubt) gate2 = { doubt: nextDoubt, total: cands.length, fixed_or_carded: carded.size };
     }
   } catch { /* no tape room yet — no card */ }
   // THE MISSIONS DESK + benchmark (outward loop, 8 Aug 2026) — read-only pulls;
@@ -1097,6 +1126,22 @@ function selftest() {
     deriveCards(sg, { gate2: { ...G2, doubt: { capsule: "inference", doubt_index: 3, q_verbatim: "doosra" } } }, T0).cards.length === 1);
   assert("GATE2 — idempotent on the same doubt (key is identity)",
     deriveCards(sg, { gate2: G2 }, T0).cards.length === 1);
+  // THE BRIDGES WIRE (11 Aug 2026) — GATE 2's other half had no door to him.
+  // doubtminer now scans `bridges[].q` (FORGE_SPEC §5 demanded it from 2026-07-02
+  // and the code never did it), but a bridge flag rides no rematch queue, so this
+  // card IS its only path to the captain. These go red if that read is removed.
+  const G2B = { doubt: { kind: "bridge", capsule: "tokenization", ref: "b2", to: "hallucinations", q: "ye wala kaise judta?" }, total: 3, fixed_or_carded: 0 };
+  const sb = deriveCards(blank(), { gate2: G2B }, T0);
+  assert("GATE2/BRIDGE — a flagged bridge q becomes ONE card that names the BRIDGE and the concept it points at (not 'doubt' — wrong array on the gist)",
+    sb.cards.length === 1 && sb.cards[0].source === "tape_room.gate2"
+    && /Bridge-Q/.test(sb.cards[0].line) && /tokenization → hallucinations/.test(sb.cards[0].line)
+    && /ye wala kaise judta/.test(sb.cards[0].line));
+  assert("GATE2/BRIDGE — its key is b-prefixed, so a bridge and a doubt at the same index can never collide",
+    sb.cards[0].key === "gate2:tokenization:b2" && sb.cards[0].key !== "gate2:tokenization:2");
+  assert("GATE2/BRIDGE — the doubt shape still works unchanged (this lane's original callers are untouched)",
+    /^Doubt cold-readable nahi/.test(sg.cards[0].line) && sg.cards[0].key === "gate2:embeddings:0");
+  assert("GATE2/BRIDGE — serialization holds across kinds: one live gate2 card blocks the next, doubt or bridge",
+    deriveCards(sg, { gate2: G2B }, T0).cards.length === 1);
   assert("GATE2 — ranks AFTER staged drifts, BEFORE market (his confirmations first)",
     (() => { const mix = deriveCards(sg, { staged: [STAGED[0]], marketFile: "2026-08-01.md" }, T0);
       const first = pickCard(mix, { today: "2026-08-07" });

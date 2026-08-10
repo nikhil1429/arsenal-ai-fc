@@ -18,8 +18,22 @@
 //   · GATED — shape clusters stay null until ≥4 capsules AND ≥60 doubts
 //     (counts always emitted honestly).
 //   · retire is idempotent; doubts_retired only ever climbs by real retires.
+//   · BRIDGES (11 Aug 2026) — this organ walked `doubts[]` only for its whole
+//     life while the capsules also carried `bridges[]` ({to, conn, q, a}), his
+//     CROSS-CONCEPT confusions, same q/a shape. Where each engine now stands,
+//     and WHY, is written at its own site — read the site before changing it:
+//       · GATE 2 (gate2Flags)  READS them. Canon demanded it from 2026-07-02.
+//       · THE TAPE ROOM        carries the verdict; does NOT queue them — that
+//                              moves what `doubts_retired` counts, so it is HIS.
+//       · GHAR KI BOLI         does NOT mine bridges[].a. Measured: it deletes
+//         (extractAnchors)     his 10× anchor behind a 2× container, silently.
+//       · THE DECOY MAP        does NOT count them. `total_doubts` is a gate.
+//     Three of those four are deliberate NON-wires with the measurement beside
+//     them, so the next tracer inherits the REASON and not just the silence.
 //
 // INPUT (read-only): dressing-room/state/capsules/*.json (mirror's output)
+//                    dressing-room/state/mirror_manifest.json (mirror's receipt —
+//                    GUARD 4b; this organ is its first content-reader anywhere)
 // OUTPUT: doubt_grammar.json · lexicon.json · tape_room.json (sole writer of all 3)
 // MODES:  run (default) · retire <capsule> <doubt_index> · selftest
 // ============================================================================
@@ -35,6 +49,7 @@ const CFG_PATH  = join(STATE_DIR, "doubtminer_config.json");
 const GRAMMAR   = join(STATE_DIR, "doubt_grammar.json");
 const LEXICON   = join(STATE_DIR, "lexicon.json");
 const TAPE      = join(STATE_DIR, "tape_room.json");
+const MANIFEST  = join(STATE_DIR, "mirror_manifest.json");   // GUARD 4b — read-only; mirror.mjs owns it
 
 const DEFAULTS = {
   shapes: [
@@ -48,7 +63,15 @@ const DEFAULTS = {
   // min_content_words (#4) — see isConnectivePhrase() for the measurement that
   // earned the 1. It is a config key precisely so it can be retuned from data
   // rather than re-argued in code.
-  lexicon: { min_ngram: 2, max_ngram: 5, min_count: 2, min_content_words: 1 },
+  // max_anchors (11 Aug 2026) — NOT a new number. 25 is the incumbent: it was a
+  // literal inside the keep-loop from the day this engine was written, and it is
+  // the exact figure that produced every live lexicon.json to date (the file on
+  // disk today holds exactly 25 anchors). Naming it here changes nothing about
+  // what ships and everything about whether it can be seen and retuned — it was
+  // the ONE lexicon knob with no config key, so nothing could audit it and no
+  // output said it had fired. It is registered in limits.mjs BUDGETS as `guessed`
+  // because that is what it is: a typed constant awaiting his 30-45-60-day read.
+  lexicon: { min_ngram: 2, max_ngram: 5, min_count: 2, min_content_words: 1, max_anchors: 25 },
   // GATE 2 (#34) — FORGE_SPEC's cold-reader slip-catcher. fragment_max_tokens is
   // MEASURED, not guessed: across the 112 live doubts (4 Aug 2026) the token-count
   // distribution is p10=4, p25=6, median=8 — only ONE doubt in the whole bank sits
@@ -84,7 +107,36 @@ function writeAtomic(path, obj) {
 }
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 
-function loadCapsules(dir = CAPS_DIR) {
+// ---------------------------------------------------------------------------
+// GUARD 4 — A CAPSULE THAT CANNOT BE READ IS NOT A CAPSULE THAT DOES NOT EXIST.
+// (traced + repaired 11 Aug 2026.)
+// Every number this organ writes hangs off the capsule count, and the count was
+// arrived at by silence: readJson's entire error handler is `catch {}` (:102), the
+// `if (j && j.id)` gate dropped the rest without a word, and the dir `catch` turned
+// an unreadable directory into an honest-looking empty world. One bad capsule — a
+// hand-edit, a restore out of capsule_backups/, one lost byte in the gist — takes
+// 4 → 3, and gates.min_capsules is 4: mineGrammar then writes `clusters: null` with
+// note "clusters gated (need ≥4 capsules…)" to disk, which is a WRONG REASON stated
+// as fact, buildTapeRoom rebuilds the rematch queue without that capsule's doubts,
+// gate2's denominator shrinks to match so the flagged ratio still looks healthy —
+// and stdout said "3 capsule(s)" and exited 0.
+// This is the exact class GUARD 1 (:588) already refuses to run over on ONE file,
+// and it takes the same answer for the same reason: a skipped night costs nothing;
+// a state file full of confidently wrong numbers costs whatever reads it next
+// (limits.mjs:197 reads `capsules` as its have; captains_call.mjs:708 deals the
+// gate2 flags to him at an anchor; /rematch serves the queue). Unlike the retires,
+// capsules are re-fetchable — `node scripts/mirror.mjs` is the whole repair — so
+// this abort is never a lockout, and the message says so.
+// READER ONLY still holds absolutely: this NAMES a broken file and stops. It does
+// not repair it, re-parse it, guess at it, or write one byte of it. capsules/ has
+// exactly one writer and it is mirror.mjs.
+// Same repair, same night, in the two sibling organs that had it first:
+// deep.mjs:110 classifyCapsuleFile + capsule_bridge.mjs:276 loadCapsules.
+//
+// LEGACY (frozen verbatim, layering rule): the silent loader. Nothing on the run
+// path calls it; it stands as the shape of the defect, and the selftest runs BOTH
+// against the same real directory so the difference is proven, not asserted.
+function loadCapsulesLegacy(dir = CAPS_DIR) {
   const out = [];
   try {
     if (existsSync(dir)) for (const f of readdirSync(dir)) {
@@ -96,6 +148,89 @@ function loadCapsules(dir = CAPS_DIR) {
   return out;
 }
 
+// Returns { capsules, faults } — same capsules as before for every file that used
+// to load; the only new thing is an error channel where there was none. (The .sort()
+// is new too: readdirSync order is filesystem-defined, and the lexicon's per-anchor
+// `sources` order rode on it.)
+function loadCapsules(dir = CAPS_DIR) {
+  const faults = [];
+  if (!existsSync(dir)) return { capsules: [], faults };   // absent dir = honest absence (a fresh clone), never a fault
+  let names;
+  try { names = readdirSync(dir); }
+  catch (e) { return { capsules: [], faults: [{ file: "capsules/", why: `directory unreadable — ${String((e && e.message) || e).slice(0, 140)}`, blocking: true }] }; }
+  const capsules = [];
+  for (const f of names.filter(n => n.toLowerCase().endsWith(".json")).sort()) {
+    let j;
+    try { j = JSON.parse(readFileSync(join(dir, f), "utf8")); }
+    catch (e) { faults.push({ file: `capsules/${f}`, why: `unreadable — ${String((e && e.message) || e).slice(0, 140)}`, blocking: true }); continue; }
+    // Parses, but every mode in this file addresses a capsule BY id (mineGrammar's
+    // examples, validateRetireTarget, every queue row). An id-less capsule vanishes
+    // as completely as an unparseable one, so it is named the same way.
+    if (!j || typeof j !== "object" || !String(j.id || "").trim()) {
+      faults.push({ file: `capsules/${f}`, why: "parses, but carries no id — no mode in this file can address it", blocking: true });
+      continue;
+    }
+    capsules.push(j);
+  }
+  return { capsules, faults };
+}
+
+// GUARD 4b — THE MIRROR'S RECEIPT, FINALLY READ.
+// The guard above can only see a file that is THERE and broken. A capsule that is
+// simply GONE leaves nothing to catch — a loader cannot miss what it never
+// enumerated. The expectation has existed on disk this whole time and no organ had
+// ever opened it: mirror.mjs writes mirror_manifest.json on every pull with
+// per_id{ok, error, kept_last_good} beside enumeration.ids, and says why in its own
+// comment (mirror.mjs:199-204 — "Mark it so the manifest is honest about what the
+// reader will actually see on disk"). Live today it reads have:4 · need:4 ·
+// "4/4 capsules mirrored". Its only reader anywhere in the organism was
+// physio.mjs:42, which checks the file's AGE for staleness and never looks inside.
+// A producer with no consumer is a black box, not a feedback loop.
+// EXPECTED = the ids the mirror says are on disk: ok:true (written this pull) or
+// kept_last_good:true (a bad fetch that deliberately left a good local copy alone).
+// Deliberately NOT have/need — those count the FETCH, and a 404 on a not-yet-locked
+// capsule is normal, not a drop.
+// A manifest that is absent or unreadable yields NO expectation and never blocks: a
+// fresh clone has no mirror run behind it, and inventing a floor there would be a
+// guessed number. Extras on disk beyond the manifest are never a fault either — the
+// manifest can only be stale in that direction, because mirror never deletes.
+function expectedCapsuleIds(manifest) {
+  const per = manifest && typeof manifest === "object" ? manifest.per_id : null;
+  if (!per || typeof per !== "object") return null;              // no manifest → no expectation
+  return Object.entries(per)
+    .filter(([, v]) => v && (v.ok === true || v.kept_last_good === true))
+    .map(([id]) => id);
+}
+
+// The judgement, split out from the disk read so both refusal branches are testable
+// without this file writing a fixture (same reason deep.mjs:105 split its own out).
+function capsuleIntegrity(capsules, faults, expectedIds) {
+  const have = new Set(capsules.map(c => c.id));
+  const local = (faults || []).filter(f => f && f.blocking);
+  // A truncated capsule trips BOTH halves — the local read fails AND the manifest
+  // then reports it missing. It is one broken file, so it counts once: the abort
+  // line is a COUNT OF CAPSULES, and a count that says 2 for one file is the same
+  // shape of lie this whole guard exists to stop. mirror.mjs:191 writes each id to
+  // `<id>.json`, so the file name is the join key.
+  const named = new Set(local.map(f => f.file));
+  const blocking = local.concat(
+    (expectedIds || []).filter(id => !have.has(id) && !named.has(`capsules/${id}.json`)).map(id => ({
+      file: `capsules/${id}.json`,
+      why: "mirror_manifest.json says this capsule is on disk, and it did not load",
+      blocking: true,
+    })));
+  return {
+    ok: blocking.length === 0,
+    blocking,
+    loaded: capsules.length,
+    expected: expectedIds ? expectedIds.length : null,
+    // #106 — a have/need pair, never a bare word
+    line: expectedIds
+      ? `${capsules.length}/${expectedIds.length} capsules the mirror says are on disk actually loaded`
+      : `${capsules.length} capsule(s) loaded · no mirror_manifest.json to check against`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // THE DECOY MAP — wrong-prior shapes (heuristic v0, honestly labeled)
 // ---------------------------------------------------------------------------
@@ -105,6 +240,25 @@ function classifyShape(text, shapes) {
   return hits.map(s => s.id);
 }
 
+// THE BRIDGES WIRE, leg 3 — A DELIBERATE NON-WIRE (11 Aug 2026). Read this
+// before "fixing" it: the other three engines in this file learned to read
+// `bridges[]` today and THIS ONE DID NOT, on purpose.
+//   1. THE DENOMINATOR. `total` below is the ≥60 bar in `cfg.gates.min_doubts` —
+//      a threshold set against DOUBTS. Folding 17 bridges in would push the live
+//      count 112 → 129 and move a gate by arithmetic rather than by evidence,
+//      which is the one thing his standing rule forbids ("no number gets set
+//      before 30-45-60 days of real data").
+//   2. WHAT A BRIDGE q IS. FORGE_SPEC §3's schema calls it the "cross Q" and
+//      pairs it with `to`/`conn`: it is authored as a JOIN question ("Embedding
+//      ka input kahan se aata?"), while this map exists to cluster WRONG PRIORS —
+//      the "maine socha X, phir laga Y" shape. Different intent, same file.
+//   3. MEASURED, not assumed (live capsules, 11 Aug 2026): exactly 1 of 17
+//      bridge q's matches any decoy marker at all ("Logit aur embedding - same
+//      cheez?" → mechanism_conflation), against 8 of 112 doubts. Honest reading:
+//      that one IS a real conflation signal, so this is a judgement about intent
+//      and about the gate, not a claim that bridges carry nothing.
+// If he ever wants that signal, it needs a lane of its own with a reader named
+// up front — never a silent addition to a counter another organ gates on.
 function mineGrammar(capsules, cfg, now = new Date()) {
   const shape_counts = Object.fromEntries(cfg.shapes.map(s => [s.id, 0]));
   const examples = Object.fromEntries(cfg.shapes.map(s => [s.id, []]));
@@ -250,6 +404,33 @@ function extractAnchors(capsules, cfg, stats = null) {
     if (typeof c.bolo === "string" && c.bolo.trim()) sources.push({ capsule: c.id, field: "bolo", text: c.bolo });
     if (typeof c.deep === "string" && c.deep.trim()) sources.push({ capsule: c.id, field: "deep", text: c.deep });
     for (const d of (c.doubts || [])) if (typeof d.a === "string") sources.push({ capsule: c.id, field: "doubts.a", text: d.a });
+    // THE BRIDGES WIRE, leg 2 — BUILT, MEASURED, AND DELIBERATELY NOT SHIPPED
+    // (11 Aug 2026). `bridges[].a` is NOT in this corpus, and that is a decision,
+    // not an oversight. Do not "fix" it without reading this.
+    //   THE CASE FOR: FORGE_SPEC §3 writes one rule for both fields in one breath —
+    //   *"A-fields (`doubts[].a`, `bridges[].a`): complete standalone — mechanism +
+    //   why"*. Same class of authored prose, and this miner reads one of them.
+    //   MEASURED live: bridges[].a holds 3,159 chars against doubts[].a's 19,924, so
+    //   13.7% of his answer corpus is invisible to the organ whose whole job is to
+    //   find the phrases he actually says. Adding it is ONE line here, and it does
+    //   real good: "kv cache" 23×→27×, and "context window" (10×) enters the list.
+    //   WHY IT IS NOT SHIPPED: it silently DELETES his third-most-used anchor.
+    //   One bridge answer contains "(Aristo vs Aristo Eco)". That makes
+    //   "aristo vs aristo eco" (2×) a candidate, the longest-first dedup below lets
+    //   it SWALLOW "aristo eco" — 10×, present in ALL FOUR capsules, his own
+    //   duplicate-vendor anchor — and then the cap cuts the 2× container. Net: his
+    //   ×10 phrase vanishes from "HIS ANCHOR METAPHORS" in every LLM call, and
+    //   NOTHING says so: `dropped_by_cap` reports the 2× container, because the ×10
+    //   phrase died in DEDUP, one step earlier, and dedup has no receipt.
+    //   That is this file's own #4 scar ("a filler n-gram can no longer swallow, via
+    //   longest-first dedup, the real anchor nested inside it and then be discarded
+    //   itself, taking the anchor with it") reappearing with CONTENT instead of
+    //   filler — so the #4 fix does not catch it.
+    //   WHAT WOULD UNBLOCK IT: dedup must stop absorbing a sub-phrase that recurs
+    //   MORE than its container (a comparison already in the data — no new number),
+    //   and it needs a receipt like the cap's. That is an engine change to the
+    //   selector, which is a separate repair with its own layering freeze; widening
+    //   the corpus first would trade a leak for a silent loss of his voice.
   }
   const counts = new Map(); // phrase -> {count, sources:Set}
   for (const src of sources) {
@@ -304,6 +485,68 @@ function extractAnchors(capsules, cfg, stats = null) {
     })
     .sort((a, b) => b[0].length - a[0].length || b[1].count - a[1].count);
   if (stats) stats.connectives_filtered = filtered;
+  const cap = Number.isFinite(cfg.lexicon && cfg.lexicon.max_anchors) ? cfg.lexicon.max_anchors : DEFAULTS.lexicon.max_anchors;
+  return selectAnchors(cands, cap, stats);
+}
+
+// ---------------------------------------------------------------------------
+// THE SHIP LIST — dedup, THEN rank, THEN cut (11 Aug 2026, the "connected to
+// everywhere" wiring pass; his word: "make sure everything in the entire
+// organism is connected to everywhere where it is required")
+// ---------------------------------------------------------------------------
+// THE DEFECT: the cap ran INSIDE the dedup loop, so the traversal order was also
+// the ship order — and that order is `.sort(longest-first)` two lines above,
+// whose own comment says what it is for: "longest-first dedup (drop sub-phrases
+// of kept ones)". A dedup order is not a ranking. Using it as one meant the list
+// was cut by PHRASE LENGTH, and the whole point of an anchor is RECURRENCE — the
+// filter above admits a phrase only when it "recurs across ≥min_count occurrences
+// AND ≥2 capsules (a personal anchor, not a one-capsule phrase)".
+// MEASURED on the live capsules (11 Aug 2026, replaying this exact pipeline with
+// the cut removed): 59 candidates survive every filter · 45 survive dedup · 25
+// shipped · 20 DROPPED SILENTLY. The top phrase among the dropped was "kv cache"
+// at 23 occurrences — 2× the most-repeated phrase that DID ship (11) — while the
+// weakest survivor sat at the bar, 2. His single most-repeated phrase was absent
+// from "HIS ANCHOR METAPHORS (reach for these FIRST; verbatim from his own Bolo)"
+// in every LLM call the organism makes (brain.mjs buildFingerprint → the Gaffer's
+// system prompt via dugout.mjs + talk.mjs), and no field anywhere said it had
+// been cut. Order matters twice over: that fingerprint ships only `.slice(0, 6)`,
+// so it was serving the six LONGEST phrases as his voice, not the six he says.
+// THE REPAIR: dedup unchanged (still longest-first, so the containing phrase
+// still wins), then rank the survivors by recurrence, then cut. The cut is now
+// NAMED in the output (`dropped_by_cap`), and the cap is a config key, not a
+// constant — see DEFAULTS.lexicon.max_anchors for where its 25 comes from.
+// The pre-repair selector is frozen verbatim below (layering law) and the
+// selftest runs the two side by side, so the difference is measured, not claimed.
+function selectAnchors(cands, maxAnchors, stats = null) {
+  const deduped = [];
+  for (const [phrase, e] of cands) {
+    if (deduped.some(k => k.phrase.includes(phrase))) continue;   // sub-phrase of one already kept
+    deduped.push({ phrase, count: e.count, sources: [...e.capsules], breaking_point: null });
+  }
+  // RANK: recurrence first — the one signal this engine already uses to decide
+  // that a phrase is his at all. Ties break on longer phrase, then alphabetical,
+  // so two runs over the same capsules ship the same list in the same order (an
+  // anchor list that reshuffles itself would make every prompt diff noise).
+  const ranked = deduped.sort((a, b) =>
+    b.count - a.count || b.phrase.length - a.phrase.length || (a.phrase < b.phrase ? -1 : a.phrase > b.phrase ? 1 : 0));
+  const kept = Number.isFinite(maxAnchors) && maxAnchors > 0 ? ranked.slice(0, maxAnchors) : ranked;
+  if (stats) {
+    stats.mined = ranked.length;
+    stats.max_anchors = Number.isFinite(maxAnchors) && maxAnchors > 0 ? maxAnchors : null;
+    // the receipt: WHAT was cut, with its count, so a reader can see whether the
+    // cap is throwing away his voice. Same lesson as #4's rejection counter — a
+    // filter nobody can see fire is a filter nobody can audit.
+    stats.dropped_by_cap = ranked.slice(kept.length).map(a => ({ phrase: a.phrase, count: a.count }));
+  }
+  return kept;
+}
+
+// FROZEN VERBATIM (CLAUDE.md layering law) — the selector as it stood inside
+// extractAnchors until 11 Aug 2026: cap INSIDE the dedup loop, hardcoded 25, ship
+// order = dedup order. Kept reachable and exported so the selftest can MEASURE the
+// difference rather than assert it. Its 25 stays a literal on purpose: a frozen
+// engine that reads live config is not frozen (same reasoning as STOP_V0 above).
+function selectAnchorsLegacy(cands) {
   const kept = [];
   for (const [phrase, e] of cands) {
     if (kept.some(k => k.phrase.includes(phrase))) continue;
@@ -316,7 +559,7 @@ function extractAnchors(capsules, cfg, stats = null) {
 function buildLexicon(capsules, cfg, now = new Date()) {
   // #4 — the filter's own receipt: how many candidate n-grams were rejected as
   // connective tissue. Printed, not gated on; it is how a future drift shows up.
-  const stats = { connectives_filtered: 0 };
+  const stats = { connectives_filtered: 0, mined: 0, max_anchors: null, dropped_by_cap: [] };
   const anchors = extractAnchors(capsules, cfg, stats);
   return {
     date: localDate(now),
@@ -324,8 +567,18 @@ function buildLexicon(capsules, cfg, now = new Date()) {
     low_confidence: capsules.length < 4,
     generated_at: now.toISOString(),
     // #106 — a counter, not a bare word
-    anchor_line: `${anchors.length} anchors kept · ${stats.connectives_filtered} connective n-gram(s) rejected (#4)`,
+    // 11 Aug 2026: the line said "N anchors kept" and stopped there, so a cut of 20
+    // of his phrases — "kv cache" (23×) among them — read as "25 anchors kept" and
+    // nothing else. The cap now reports itself the way the #4 filter does.
+    anchor_line: `${anchors.length} of ${stats.mined} mined anchors kept (cap ${stats.max_anchors === null ? "none" : stats.max_anchors})`
+      + ` · ${stats.dropped_by_cap.length} dropped by the cap · ${stats.connectives_filtered} connective n-gram(s) rejected (#4)`,
     filtered_connectives: stats.connectives_filtered,
+    anchors_mined: stats.mined,
+    max_anchors: stats.max_anchors,
+    // NAMED, not just counted: which of his phrases the cap threw away, and how
+    // often he actually said each one. This is the field a future reader checks
+    // before deciding whether 25 is still the right number.
+    dropped_by_cap: stats.dropped_by_cap,
     anchors,
     law: "reach for his anchors first; a foreign analogy only when no anchor fits — and never past its breaking point",
   };
@@ -390,31 +643,83 @@ const gate2Norm = (q) => String(q || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/
 
 // Returns { checked, flagged, by_pattern, flags[] } — never throws, never writes,
 // never rewrites a single character of his content.
+// THE PATTERN BATTERY, extracted so BOTH halves run the SAME one (11 Aug 2026).
+// These are the identical three lines that scanned `doubts[].q` from #34 onward —
+// lifted into a function, not rewritten — because the bridges half below must
+// never drift into a second, softer standard. Near-duplicate is NOT here: it is
+// stateful (it needs the prefix map that spans a whole capsule) and stays at the
+// call site where that map lives.
+function gate2PatternHits(q, tokens, g) {
+  const hit = [];
+  if (GATE2_PATTERNS.cryptic.some(r => r.test(q))) hit.push("cryptic");
+  // a one- or two-word question carries no confusion-journey — the spec's
+  // "ATOMIC ≠ terse" clause. Threshold is config, derivation in DEFAULTS.
+  if (GATE2_PATTERNS.fragment.some(r => r.test(q)) || tokens.length <= g.fragment_max_tokens) hit.push("fragment");
+  if (GATE2_PATTERNS.meta.some(r => r.test(q))) hit.push("meta");
+  return hit;
+}
+
 function gate2Flags(capsules, cfg = DEFAULTS, now = new Date()) {
   const g = { ...DEFAULTS.gate2, ...((cfg && cfg.gate2) || {}) };
   const flags = [];
+  // THE BRIDGES WIRE, leg 1 (11 Aug 2026) — GATE 2's OTHER HALF, finally armed.
+  // FORGE_SPEC §5 has demanded this in its own words since 2026-07-02: *"har LOCK
+  // ya SAVE pe … us file ke saare `doubts[]` + `bridges[].q` COLD-READER STANDARD
+  // (§3) ke against VERIFY hote"*, and §3's field rules bind `bridges[].q` to the
+  // same Q-field law as `doubts[].q` (SUBJECT-anchored · answer-HIDDEN · atomic).
+  // The machine only ever walked `doubts[]`. The spec KNEW — its own §5 note says
+  // *"machine sirf `doubts[]` chalta hai — `grep -n "bridges" scripts/doubtminer.mjs`
+  // = zero hits … Gate 2 ka aadha ilaaka aaj bhi bina automation ke hai"* — and the
+  // forge skill (SKILL.md, "AND KNOW GATE 2's HALF-BLIND SPOT") says the same. A
+  // gap that three documents describe and no code closes is still a gap.
+  // Bridge flags ride their OWN array. `flags`/`flagged`/`by_pattern`/`checked`
+  // keep counting doubts and only doubts, byte-for-byte as they have since #34,
+  // because buildTapeRoom keys the rematch queue off `flags` and captains_call
+  // reads that queue — one array with two kinds in it would have silently changed
+  // what both of them mean.
+  const bridge_flags = [];
   const by_pattern = { cryptic: 0, fragment: 0, meta: 0, near_duplicate: 0 };
-  let checked = 0;
-  const prefixes = new Map();   // first-N-tokens → the doubt that claimed it
+  let checked = 0, bridges_checked = 0;
+  const prefixes = new Map();   // first-N-tokens → the doubt (or bridge) that claimed it
   for (const c of capsules || []) {
     for (const [i, d] of (c.doubts || []).entries()) {
       checked++;
       const q = String((d && d.q) || "");
       const tokens = gate2Norm(q);
-      const hit = [];
-      if (GATE2_PATTERNS.cryptic.some(r => r.test(q))) hit.push("cryptic");
-      // a one- or two-word question carries no confusion-journey — the spec's
-      // "ATOMIC ≠ terse" clause. Threshold is config, derivation in DEFAULTS.
-      if (GATE2_PATTERNS.fragment.some(r => r.test(q)) || tokens.length <= g.fragment_max_tokens) hit.push("fragment");
-      if (GATE2_PATTERNS.meta.some(r => r.test(q))) hit.push("meta");
+      const hit = gate2PatternHits(q, tokens, g);
       const key = `${c.id}|${tokens.slice(0, g.near_duplicate_prefix_tokens).join(" ")}`;
       if (tokens.length && prefixes.has(key)) hit.push("near_duplicate");
       else if (tokens.length) prefixes.set(key, `${c.id}#${i}`);
       if (!hit.length) continue;
       for (const h of hit) by_pattern[h]++;
       flags.push({
-        capsule: c.id, doubt_index: i, patterns: hit,
+        capsule: c.id, doubt_index: i, kind: "doubt", patterns: hit,
         // VERBATIM, truncated only for the report — the queue still carries the full q
+        q_first_100: q.slice(0, 100),
+        duplicate_of: hit.includes("near_duplicate") ? prefixes.get(key) : undefined,
+      });
+    }
+    // The bridges, scanned AFTER this capsule's doubts and through the SAME prefix
+    // map on purpose: a bridge q that merely restates a doubt he already has is a
+    // near-duplicate by §3's rule, and the flag then NAMES the doubt it echoes.
+    // MEASURED before it was wired (live capsules, 11 Aug 2026): scanning all 129
+    // q-fields through one shared map produces the same 17 doubt flags and not one
+    // additional flag of any kind — so sharing the map costs zero false positives
+    // today and only arms the check for the day a bridge really does echo a doubt.
+    for (const [i, b] of (c.bridges || []).entries()) {
+      bridges_checked++;
+      const q = String((b && b.q) || "");
+      const tokens = gate2Norm(q);
+      const hit = gate2PatternHits(q, tokens, g);
+      const key = `${c.id}|${tokens.slice(0, g.near_duplicate_prefix_tokens).join(" ")}`;
+      if (tokens.length && prefixes.has(key)) hit.push("near_duplicate");
+      else if (tokens.length) prefixes.set(key, `${c.id}#b${i}`);
+      if (!hit.length) continue;
+      bridge_flags.push({
+        capsule: c.id, bridge_index: i, kind: "bridge", patterns: hit,
+        // `to` rides along because a bridge has no index he can see: on the gist he
+        // finds the row by the concept it points at, not by its position.
+        to: typeof b.to === "string" ? b.to : null,
         q_first_100: q.slice(0, 100),
         duplicate_of: hit.includes("near_duplicate") ? prefixes.get(key) : undefined,
       });
@@ -422,8 +727,12 @@ function gate2Flags(capsules, cfg = DEFAULTS, now = new Date()) {
   }
   return {
     checked, flagged: flags.length, by_pattern, flags,
-    // #106 — a have/need counter, never a bare gated word
-    line: `${flags.length}/${checked} live doubts violate FORGE_SPEC GATE 2 (cold-reader standard)`,
+    // the bridges half, counted separately for the reason given above
+    bridges_checked, bridges_flagged: bridge_flags.length, bridge_flags,
+    // #106 — a have/need counter, never a bare gated word. Both halves are named:
+    // "0/17 bridge q's" is the only shape that distinguishes "all clean" from
+    // "never looked", and "never looked" is exactly what this line used to hide.
+    line: `${flags.length}/${checked} live doubts · ${bridge_flags.length}/${bridges_checked} bridge q's violate FORGE_SPEC GATE 2 (cold-reader standard)`,
     law: "FLAG ONLY. Capsules mirror the gist — the repair reaches the gist through the captain, never through this organ.",
     checked_at: now.toISOString(),
   };
@@ -439,6 +748,10 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
   // flagged doubt (or serve it with the warning) instead of confronting a cold
   // future-Nikhil with "ye to inference vali cheez hi hai na?" and no antecedent.
   const g2 = gate2Flags(capsules, cfg, now);
+  // `g2.flags` is doubts-only by construction (bridge flags ride g2.bridge_flags),
+  // so this map — and therefore the queue's whole key space — is untouched by the
+  // 11 Aug bridges wire. That separation is the reason the wire needed no change
+  // to a single consumer of the queue.
   const g2By = new Map(g2.flags.map(f => [`${f.capsule}#${f.doubt_index}`, f.patterns]));
   const queue = [];
   for (const c of capsules) {
@@ -489,7 +802,24 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
     gate2: { checked: g2.checked, flagged: g2.flagged, by_pattern: g2.by_pattern, line: g2.line, law: g2.law, flags: g2.flags,
       // #107 — say what the flag now COSTS, so "flagged" is never read as "noted and served anyway"
       withheld_from_queue: queue.filter(q => q.gate2_flag && !q.eligible).length,
-      withheld_note: "flagged doubts are held OUT of the rematch queue until the wording is repaired — content untouched, re-admitted automatically" },
+      withheld_note: "flagged doubts are held OUT of the rematch queue until the wording is repaired — content untouched, re-admitted automatically",
+      // THE BRIDGES WIRE (11 Aug 2026) — the bridges half of GATE 2 rides here, and
+      // it has a READER: captains_call.mjs deals a flagged bridge as ONE card at an
+      // anchor he already hits (`grep -n "bridge_flags" scripts/captains_call.mjs`).
+      // That reader is the whole point. A flag written to disk and read by nobody is
+      // the prose gate all over again — the exact defect this pass exists to kill —
+      // so if that grep ever comes back empty, this field is dead and the wire broke.
+      bridges_checked: g2.bridges_checked, bridges_flagged: g2.bridges_flagged, bridge_flags: g2.bridge_flags,
+      // BRIDGES ARE NOT QUEUED — that leg is the captain's call, not the machine's.
+      // Adding 17 bridges to the rematch queue would move `doubts_retired`'s
+      // denominator (this file's own header calls it "the one progress bar this
+      // brain believes") from 112 to 129 with no work of his undone, and the retire
+      // key space is `capsule#doubt_index` — a bridge at index 0 would collide with
+      // doubt 0 unless every consumer (dugout's retire_doubt tool, setpiece's drill
+      // compile, the `retire` CLI) learned a second namespace. That is a semantic
+      // change to a number he reads, so it waits for his word.
+      bridges_in_queue: false,
+      bridges_note: "bridges[].q are GATE-2 scanned but not queued as rematch opponents — that would change what doubts_retired counts, which is his call" },
     retired,  // raw list kept verbatim — it carries retired_on dates; it is his data, not a derived count
   };
 }
@@ -599,6 +929,58 @@ async function selftest() {
   assert("anchors carry source capsules", lex.anchors[0].sources.length >= 2);
   const lexEmpty = buildLexicon([], cfg, now);
   assert("no capsules → lexicon awaiting_data", lexEmpty.status === "awaiting_data");
+
+  // ---- THE CAP (11 Aug 2026) — his most-repeated phrase was being cut in silence
+  // The live failure, reproduced with his real numbers: on 11 Aug the miner had 45
+  // deduped anchors and shipped 25 in DEDUP order (longest-first), so "kv cache" —
+  // 23 occurrences, 2× the most-repeated phrase that survived — never reached
+  // "HIS ANCHOR METAPHORS" in a single LLM call, and nothing said it had been cut.
+  {
+    // candidates in the exact shape + order extractAnchors hands the selector:
+    // [phrase, {count, capsules:Set}], pre-sorted longest-first for the dedup.
+    const filler = Array.from({ length: 25 }, (_, i) =>
+      [`anchor phrase number ${String(i).padStart(2, "0")} khaka`, { count: 2, capsules: new Set(["tok", "emb"]) }]);
+    const capCands = [...filler, ["kv cache", { count: 23, capsules: new Set(["tok", "ctx"]) }]]
+      .sort((a, b) => b[0].length - a[0].length || b[1].count - a[1].count);
+    const legacyShip = selectAnchorsLegacy(capCands).map(a => a.phrase);
+    const capStats = { };
+    const newShip = selectAnchors(capCands, 25, capStats).map(a => a.phrase);
+    assert("CAP — the FROZEN selector really does drop his most-repeated phrase (the bug, reproduced)",
+      legacyShip.length === 25 && !legacyShip.includes("kv cache"));
+    assert("CAP — the plan-of-record selector ships it FIRST (recurrence, not phrase length, decides)",
+      newShip.length === 25 && newShip[0] === "kv cache");
+    assert("CAP — and the cut is NAMED, with the count, not merely counted",
+      capStats.mined === 26 && capStats.max_anchors === 25
+      && capStats.dropped_by_cap.length === 1 && capStats.dropped_by_cap[0].count === 2);
+    assert("CAP — no cap ⇒ nothing dropped and nothing invented (0/null is honest, not empty)",
+      selectAnchors(capCands, null, capStats).length === 26 && capStats.max_anchors === null && capStats.dropped_by_cap.length === 0);
+    // THE INVARIANT — this is the check that would have caught the live defect on
+    // ANY fixture, and the one that goes red if the ranking ever regresses to
+    // dedup order: nothing the cap throws away may be said MORE often than the
+    // weakest phrase it keeps.
+    // END TO END, through the real engine. The fixture is the live shape in
+    // miniature: one SHORT phrase he says constantly, three LONG ones he says
+    // twice. Sentence punctuation is load-bearing — the EXTRACTION LAW above
+    // refuses phrases that leap a full stop, which is what keeps "kv cache kv
+    // cache" out of the candidate set and "kv cache" in it.
+    const capText = "kv cache. kv cache. kv cache. warehouse wala naksha ledger. vendor allocation jaise pura khaka. frozen vocab dictionary bahar.";
+    const capFixture = ["tok", "emb"].map(id => ({ id, lockedOn: "2026-06-15", bolo: capText, doubts: [] }));
+    const capCfg = { ...cfg, lexicon: { ...cfg.lexicon, max_anchors: 3 } };
+    const lexCapped = buildLexicon(capFixture, capCfg, now);
+    const weakestKept = Math.min(...lexCapped.anchors.map(a => a.count));
+    assert("CAP — end to end, the short phrase he actually repeats survives the cut (the live failure's shape)",
+      lexCapped.anchors[0].phrase === "kv cache" && lexCapped.anchors[0].count === 6
+      && !lexCapped.dropped_by_cap.some(d => d.phrase === "kv cache"));
+    assert("CAP — the cap is a CONFIG key now, and it bites where config says",
+      lexCapped.max_anchors === 3 && lexCapped.anchors.length === 3
+      && lexCapped.anchors_mined > 3 && lexCapped.dropped_by_cap.length === lexCapped.anchors_mined - 3);
+    assert("CAP INVARIANT — no dropped phrase recurs more than the weakest kept one",
+      lexCapped.dropped_by_cap.every(d => d.count <= weakestKept));
+    assert("CAP — the lexicon's own line reports the cut (a silent cut is how this survived weeks)",
+      /of \d+ mined anchors kept \(cap 3\)/.test(lexCapped.anchor_line) && /\d+ dropped by the cap/.test(lexCapped.anchor_line));
+    assert("CAP — the default cap is the incumbent 25, unchanged (naming a knob must not move it)",
+      DEFAULTS.lexicon.max_anchors === 25 && loadConfig().lexicon.max_anchors === 25);
+  }
 
   // TAPE ROOM
   const tape = buildTapeRoom(caps(3), [], cfg, now);
@@ -719,6 +1101,84 @@ async function selftest() {
       (() => { const clean = gate2Flags([{ id: "x", doubts: [{ q: g2caps[0].doubts[7].q }] }], cfg, now); return clean.flagged === 0 && clean.checked === 1 && /0\/1 live doubts/.test(clean.line); })());
   }
 
+  // ---- THE BRIDGES WIRE (11 Aug 2026) — BUILT, PRESENT, NOT WIRED ---------------
+  // The defect, in one line: `capsules/*.json` have always carried `bridges[]`
+  // ({to, conn, q, a}) — 17 of them live, his CROSS-CONCEPT confusions, the same
+  // q/a shape as `doubts[]` — and `grep -n "bridges" scripts/doubtminer.mjs`
+  // returned ZERO. FORGE_SPEC §5 demanded a GATE 2 scan of `bridges[].q` from
+  // 2026-07-02 and said out loud that the code did not do it; §3 binds
+  // `bridges[].a` to the same A-field law as `doubts[].a`, and the miner read one.
+  // Every assertion below goes RED if either wire is pulled out again.
+  {
+    const bcaps = [{
+      id: "tok", lockedOn: "2026-06-15",
+      bolo: "tokenizer frozen vocab pe chalta",
+      doubts: [{ q: "tokenizer frozen vocab ke bahar ka shabd kaise todta hai jab woh dictionary mein hai hi nahi", a: "sub-word tukdon mein" }],
+      bridges: [
+        // clean: a real cross-concept join question of his shape — must NOT flag
+        { to: "embeddings", conn: "tokenization -> embeddings", q: "Tokenization ID-list pe khatam - phir un IDs ka kya hota hai?", a: "har id ko meaning-vector milta, warehouse wala naksha yahan chalta hai" },
+        // cryptic: the spec's own dangling-`ye` pattern, in a BRIDGE this time
+        { to: "inference", conn: "x -> y", q: "ye to inference vali cheez hi hai na?", a: "nahi" },
+        // near-duplicate of the DOUBT above — only a shared prefix map can see it
+        { to: "context", conn: "x -> y", q: "tokenizer frozen vocab ke bahar ka shabd kaise todta hai — dobara wahi sawaal", a: "same" },
+      ],
+    }];
+    const gb = gate2Flags(bcaps, cfg, now);
+    assert("BRIDGES — GATE 2 scans bridges[].q at all (FORGE_SPEC §5's other half; this was zero-hits for weeks)",
+      gb.bridges_checked === 3 && gb.bridges_flagged === 2);
+    assert("BRIDGES — the SAME battery runs on both halves (a cryptic bridge flags exactly like a cryptic doubt)",
+      gb.bridge_flags.find(f => f.bridge_index === 1).patterns.includes("cryptic"));
+    assert("BRIDGES — a clean bridge q is NOT flagged (a scanner that flags everything flags nothing)",
+      !gb.bridge_flags.some(f => f.bridge_index === 0));
+    assert("BRIDGES — a bridge echoing a DOUBT is caught by the shared prefix map, and NAMES the doubt it echoes",
+      (() => { const f = gb.bridge_flags.find(x => x.bridge_index === 2); return !!f && f.patterns.includes("near_duplicate") && f.duplicate_of === "tok#0"; })());
+    assert("BRIDGES — each flag is addressable the way he finds the row on the gist (kind + index + the concept it bridges TO)",
+      gb.bridge_flags.every(f => f.kind === "bridge" && Number.isInteger(f.bridge_index) && typeof f.to === "string" && f.q_first_100.length > 0));
+    assert("BRIDGES — the doubts lane is UNTOUCHED: flags/checked/by_pattern still count doubts and only doubts",
+      gb.checked === 1 && gb.flags.length === gb.flagged && gb.flags.every(f => f.kind === "doubt")
+      && gb.by_pattern.cryptic === 0 && gb.by_pattern.near_duplicate === 0);
+    assert("BRIDGES — the line names BOTH halves, so 'all clean' can never again read the same as 'never looked'",
+      /2\/3 bridge q's/.test(gb.line) && /live doubts/.test(gb.line));
+    // the ADDRESS: the flag has to reach the only organ that can reach the captain
+    const tb = buildTapeRoom(bcaps, [], cfg, now);
+    assert("BRIDGES — the flags ride tape_room.json where captains_call.mjs reads them (a flag nobody reads is the prose gate again)",
+      Array.isArray(tb.gate2.bridge_flags) && tb.gate2.bridge_flags.length === 2 && tb.gate2.bridges_checked === 3 && tb.gate2.bridges_flagged === 2);
+    assert("BRIDGES — and they are NOT queued as rematch opponents (that would move doubts_retired's denominator — his call, not ours)",
+      tb.gate2.bridges_in_queue === false && tb.queue.every(q => Number.isInteger(q.doubt_index) && q.doubt_index < bcaps[0].doubts.length)
+      && tb.retire_line === `0/${bcaps[0].doubts.length} doubts retired`);
+    // LEG 2 — THE NON-WIRE, AND THE REASON IT IS ONE, BOTH EXECUTABLE.
+    // This fixture is the live failure in miniature: a phrase he says many times
+    // ("aristo eco", 10× across all four capsules) and a rare container that
+    // appears only in a BRIDGE answer ("aristo vs aristo eco", 2×). Feed the
+    // bridge prose in and the container swallows his phrase in dedup, then the
+    // cap cuts the container — his anchor gone, with no receipt anywhere.
+    // The contexts differ per capsule ON PURPOSE — that is what makes "aristo eco"
+    // recur while no container of it does, exactly as in his real capsules. The
+    // bridge answer is the same in both, so its container clears min_count and the
+    // ≥2-capsule bar, and can therefore swallow.
+    {
+      const ctx = { p: ["pehla aristo eco chala", "warehouse mein aristo eco pada"],
+                    q: ["dusre din aristo eco mila", "ledger pe aristo eco likha"] };
+      const lexCaps = ["p", "q"].map((id) => ({
+        id, lockedOn: "2026-06-15",
+        bolo: ctx[id][0], deep: ctx[id][1],
+        doubts: [{ q: "x", a: "vendor dedupe" }],
+        bridges: [{ to: "z", conn: "a -> b", q: "cross q", a: "tera duplicate-vendor detection aristo vs aristo eco pe khada" }],
+      }));
+      const shipped = buildLexicon(lexCaps, cfg, now).anchors.map(a => a.phrase);
+      const withBridgeProse = extractAnchors(
+        lexCaps.map(c => ({ ...c, doubts: [...c.doubts, ...c.bridges.map(b => ({ q: b.q, a: b.a }))] })), cfg).map(a => a.phrase);
+      assert("BRIDGES leg 2 — the corpus is deliberately doubts-only: his high-count anchor survives (this is what ships)",
+        shipped.includes("aristo eco"));
+      assert("BRIDGES leg 2 — and the reason is REAL, not a hunch: feeding bridge prose in makes his 10× anchor vanish behind a 2× container",
+        !withBridgeProse.includes("aristo eco") && withBridgeProse.some(p => p.includes("aristo vs aristo eco")));
+    }
+    // LEG 3 — the DELIBERATE non-wire. If someone folds bridges into the decoy map,
+    // the ≥60 doubts gate moves by arithmetic instead of evidence. This is the guard.
+    assert("BRIDGES — the DECOY MAP deliberately does NOT count them (total_doubts must stay a count of doubts; the gate rides on it)",
+      mineGrammar(bcaps, cfg, now).total_doubts === 1);
+  }
+
   // ---- AUDIT #106 — every gated status carries its have/need counter -----------
   {
     const gated = mineGrammar(caps(5), cfg, now);
@@ -730,6 +1190,54 @@ async function selftest() {
     const t = buildTapeRoom(caps(3), [{ capsule: "tok", doubt_index: 0 }], cfg, now);
     assert("#106 — doubts_retired is reported as retired/total, so 0 is never read as 'fine'",
       t.retire_line === `1/${t.queue.length + 1} doubts retired`);
+  }
+
+  // ---- GUARD 4 — THE SILENT CAPSULE DOOR (traced + repaired 11 Aug 2026) -------
+  // The fixture is REAL DISK and costs nothing to make: the repo root holds three
+  // .json files (package.json · package-lock.json · ci_manifest.json) that parse
+  // fine and carry no `id`, which is precisely the second silent-drop shape. Both
+  // engines run over the same directory; only one of them can say so.
+  {
+    const probeDir = join(__dirname, "..");
+    const before = loadCapsulesLegacy(probeDir);
+    const after = loadCapsules(probeDir);
+    assert("GUARD 4 — the FROZEN loader drops an unusable capsule file with no channel to say so (the bug, reproduced)",
+      before.length === 0 && after.faults.length > 0);
+    assert("GUARD 4 — the repaired loader NAMES every .json it could not use, and each name blocks",
+      after.faults.every(f => /^capsules\/.+\.json$/.test(f.file) && typeof f.why === "string" && f.why.length > 0 && f.blocking === true));
+    assert("GUARD 4 — a named fault REFUSES the run (nothing derived from a short count reaches disk)",
+      capsuleIntegrity(after.capsules, after.faults, null).ok === false);
+    assert("GUARD 4 — a missing directory is honest absence, never a fault (a fresh clone has no mirror behind it)",
+      (() => { const r = loadCapsules(join(probeDir, "__no_such_dir__")); return r.capsules.length === 0 && r.faults.length === 0 && capsuleIntegrity(r.capsules, r.faults, null).ok === true; })());
+
+    // GUARD 4b — the manifest wire. These are the assertions that go red if the
+    // mirror's receipt is ever unplugged from this organ again.
+    const good = [{ id: "tok" }, { id: "emb" }, { id: "inf" }, { id: "ctx" }];
+    const manifest = { per_id: { tok: { ok: true }, emb: { ok: true }, inf: { ok: true }, ctx: { ok: true } } };
+    assert("GUARD 4b — the mirror's receipt is READ: ok:true and kept_last_good:true both mean 'on disk', a 404 does not",
+      JSON.stringify(expectedCapsuleIds({ per_id: { a: { ok: true }, b: { ok: false, kept_last_good: true }, c: { ok: false, error: "not_locked" } } })) === '["a","b"]');
+    assert("GUARD 4b — a capsule the manifest says is on disk that did NOT load blocks the run, and is named",
+      (() => { const r = capsuleIntegrity(good.slice(0, 3), [], expectedCapsuleIds(manifest));
+               return r.ok === false && r.blocking.length === 1 && r.blocking[0].file === "capsules/ctx.json" && /mirror_manifest/.test(r.blocking[0].why); })());
+    assert("GUARD 4b — a full set passes, and the line is a have/need pair (#106), never a bare count",
+      (() => { const r = capsuleIntegrity(good, [], expectedCapsuleIds(manifest)); return r.ok === true && r.line === "4/4 capsules the mirror says are on disk actually loaded"; })());
+    assert("GUARD 4b — no manifest = NO expectation and never a block (inventing a floor there would be a guessed number)",
+      expectedCapsuleIds(null) === null && expectedCapsuleIds({}) === null && capsuleIntegrity(good.slice(0, 1), [], null).ok === true);
+    assert("GUARD 4b — a capsule on disk beyond the manifest is never a fault (mirror never deletes, so staleness only runs that way)",
+      capsuleIntegrity(good.concat([{ id: "extra" }]), [], expectedCapsuleIds(manifest)).ok === true);
+    assert("GUARD 4b — ONE broken capsule trips both halves and still counts ONCE (a count that says 2 for one file is the lie this guard exists to stop)",
+      (() => { const r = capsuleIntegrity(good.slice(0, 3), [{ file: "capsules/ctx.json", why: "unreadable — Unterminated string", blocking: true }], expectedCapsuleIds(manifest));
+               return r.ok === false && r.blocking.length === 1 && /Unterminated/.test(r.blocking[0].why); })());
+
+    // LIVE — the wire itself, against real state. This is the canary: it goes red
+    // the day the manifest stops being written, changes shape, or stops matching
+    // what is actually on disk. Reads only; writes nothing.
+    const liveExpected = expectedCapsuleIds(readJson(MANIFEST));
+    assert("GUARD 4b — LIVE: mirror_manifest.json is on disk and names the capsules it put there (this organ is its first content-reader anywhere)",
+      Array.isArray(liveExpected) && liveExpected.length > 0);
+    const live = loadCapsules();
+    const liveIntegrity = capsuleIntegrity(live.capsules, live.faults, liveExpected);
+    assert(`GUARD 4b — LIVE: every capsule the mirror says is on disk actually loads (${liveIntegrity.line})`, liveIntegrity.ok);
   }
 
   const passed = checks.every(c => c[1]);
@@ -756,7 +1264,21 @@ async function main() {
   }
   let retired = prevTape.retired;
 
-  const capsules = loadCapsules();   // loaded BEFORE retire now — GUARD 2 validates the target against it
+  const { capsules, faults } = loadCapsules();   // loaded BEFORE retire now — GUARD 2 validates the target against it
+
+  // GUARD 4 — a capsule that did not LOAD must never be read as a capsule that
+  // does not EXIST. Checked here, before retire and before the first write, so the
+  // refusal covers every mode (a retire validated against a short capsule set is
+  // GUARD 2 rejecting a real doubt as "unknown capsule").
+  const integrity = capsuleIntegrity(capsules, faults, expectedCapsuleIds(readJson(MANIFEST)));
+  if (!integrity.ok) {
+    console.error(`doubtminer: REFUSING TO RUN — ${integrity.blocking.length} capsule(s) did not load. Nothing was written.`);
+    for (const f of integrity.blocking) console.error(`  ✗ ${f.file} · ${f.why}`);
+    console.error(`  ${integrity.line}`);
+    console.error(`  Running anyway writes the shortfall as fact: gates.min_capsules is ${cfg.gates.min_capsules}, so a missing capsule saves "clusters: null" blaming the DOUBT count, and rebuilds the rematch queue without that capsule's doubts.`);
+    console.error("  capsules/ is a read-only mirror of the gist and the repair is one command: node scripts/mirror.mjs");
+    process.exit(1);
+  }
 
   if (mode === "retire") {
     const capsule = process.argv[3];
@@ -774,17 +1296,29 @@ async function main() {
   }
 
   writeAtomic(GRAMMAR, mineGrammar(capsules, cfg, now));
-  writeAtomic(LEXICON, buildLexicon(capsules, cfg, now));
+  const lexicon = buildLexicon(capsules, cfg, now);
+  writeAtomic(LEXICON, lexicon);
   const tape = buildTapeRoom(capsules, retired, cfg, now);
   writeAtomic(TAPE, tape);
-  console.log(`doubtminer: ${capsules.length} capsule(s), ${tape.queue.length} in the tape-room queue, ${tape.retire_line} → ${TAPE}`);
+  // GUARD 4 — the capsule count now says what it was CHECKED against, so "4" can
+  // never again be a number nobody compared to anything.
+  console.log(`doubtminer: ${capsules.length} capsule(s) [${integrity.line}], ${tape.queue.length} in the tape-room queue, ${tape.retire_line} → ${TAPE}`);
+  // 11 Aug 2026 — the cap used to cut his phrases in silence. Same rule as GATE 2
+  // below: a number nobody sees is a number nobody can retune. Printed, never gated.
+  console.log(`doubtminer: LEXICON — ${lexicon.anchor_line}`);
+  if (lexicon.dropped_by_cap && lexicon.dropped_by_cap.length) {
+    console.log(`  cut by the cap (his phrase × times he said it): ${lexicon.dropped_by_cap.slice(0, 8).map(d => `"${d.phrase}"×${d.count}`).join(" · ")}${lexicon.dropped_by_cap.length > 8 ? ` … +${lexicon.dropped_by_cap.length - 8} more (full list in lexicon.json dropped_by_cap)` : ""}`);
+  }
   // #34 — GATE 2's whole point is that the captain SEES the count. A flag nobody
   // reads is the prose gate all over again.
-  if (tape.gate2.flagged) {
+  if (tape.gate2.flagged || tape.gate2.bridges_flagged) {
     console.log(`doubtminer: ⚠ GATE 2 — ${tape.gate2.line}`);
     console.log(`  by pattern: ${Object.entries(tape.gate2.by_pattern).filter(([, n]) => n).map(([k, n]) => `${k}=${n}`).join(" · ")}`);
     for (const f of tape.gate2.flags) console.log(`    ${f.patterns.join("+").padEnd(18)} ${(f.capsule + "#" + f.doubt_index).padEnd(16)} ${JSON.stringify(f.q_first_100)}`);
-    console.log("  These are queued as VERBATIM rematch prompts. Capsules mirror the gist — repair them there, not here.");
+    // 11 Aug 2026 — the bridges half prints in the same block, addressed the way he
+    // will actually find the row on the gist: capsule → the concept it bridges to.
+    for (const f of tape.gate2.bridge_flags || []) console.log(`    ${f.patterns.join("+").padEnd(18)} ${(f.capsule + "#b" + f.bridge_index).padEnd(16)} → ${String(f.to || "?").padEnd(14)} ${JSON.stringify(f.q_first_100)}`);
+    console.log("  Flagged doubts are queued as VERBATIM rematch prompts; flagged bridges are not queued at all. Capsules mirror the gist — repair them there, not here.");
   } else {
     console.log(`doubtminer: GATE 2 — ${tape.gate2.line}`);
   }
@@ -795,4 +1329,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { mineGrammar, buildLexicon, buildTapeRoom, extractAnchors, classifyShape, loadConfig, loadCapsules,
          loadRetiredSafe, validateRetireTarget, resolveMode,     // guards exported for the audit's regression tests (25 Jul 2026)
          extractAnchorsLegacy, isConnectivePhrase, STOP, STOP_V0,   // #4 — frozen engine + the filter, both reachable
-         gate2Flags, GATE2_PATTERNS };                              // #34 — GATE 2, so a reader can flag without re-implementing
+         selectAnchors, selectAnchorsLegacy,                        // 11 Aug 2026 — the ship list + its frozen predecessor
+         gate2Flags, GATE2_PATTERNS,                                // #34 — GATE 2, so a reader can flag without re-implementing
+         loadCapsulesLegacy, capsuleIntegrity, expectedCapsuleIds };   // GUARD 4 — the frozen silent loader + the mirror-receipt wire (11 Aug 2026)

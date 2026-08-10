@@ -18,9 +18,10 @@ import { readFileSync, existsSync, mkdtempSync, writeFileSync, mkdirSync } from 
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { courseBrief } from "./course.mjs";   // audit #35 — the course tracker's one reader
+import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the course tracker's one reader (fmtStamp: 11 Aug sweep, the resume address)
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
+import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
@@ -194,7 +195,30 @@ function seasonLine(dir) {
   for (let i = rows.length - 1; i >= 0; i--) { if (["HIT", "PARTIAL", "REST"].includes(rows[i].result)) run++; else break; }
   return `SEASON: day ${s.season_day} · matchday ${s.matches_played}${run ? ` · run ${run} won-day(s)` : ""} (logbook: dressing-room/SEASON.md)`;
 }
-const clip = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
+// ---------------------------------------------------------------------------
+// #WIRE (11 Aug 2026) — THE SECOND DOOR ON THE SAME CUT (TRUNCATED_AT_DOOR).
+// ---------------------------------------------------------------------------
+// distiller.mjs was repaired the same hour: its slot caps (open_loop 160,
+// where_left_off 200, the LLM's own parseSet 200) were bare .slice()s, so his
+// question stopped mid-word with nothing saying more had existed. It now spends
+// one char of each cap on a "…" marker so the loss is legible.
+// THIS clip is the door immediately after it, and it was a bare slice too — and
+// its 180 is BELOW the producer's 200, so a slot the distiller had honestly
+// marked would arrive here, get sliced at 180, LOSE THE MARKER, and reach the
+// SessionStart brief as a silent mid-word cut again. Marking upstream and slicing
+// downstream is not a repair; it is the same defect one hop later.
+// Same rule as upstream, no new number: every cap stays the integer it was, the
+// marker is spent from INSIDE it. Also used by the night-coach (40), diary (120)
+// and every future caller — all of them were cutting his prose silently too.
+const CLIP_MARK = "…";   // must match distiller.mjs TRUNC_MARK — one char, deliberately not imported: this file is a SessionStart hook and must not pull the distiller's import chain (presence.mjs, the pool) into the editor's boot path
+// FROZEN verbatim (LAYERING law) — the bare cut, kept so the delta stays visible
+// and the selftest can show what the brief used to hand him. Reference only.
+const clipLegacy = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
+function clip(s, n) {
+  const t = String(s || "").replace(/\s+/g, " ").trim();
+  if (t.length <= n) return t;
+  return n <= 1 ? t.slice(0, n) : t.slice(0, n - 1) + CLIP_MARK;   // n<=1 has no room for a marker; a silly cap must never break SessionStart
+}
 
 // E2E audit 25 Jul 2026 (freshness): working_set.json carries a `ts` (the distiller
 // stamps it every run) but the brief printed its slots verbatim, forever. If the
@@ -205,6 +229,56 @@ const clip = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
 // (hiding it would silently blind the kickoff instead of telling the truth).
 const WS_STALE_DAYS = 7;
 const ageDays = (ts, now) => { const t = Date.parse(String(ts || "")); return Number.isFinite(t) ? (now - t) / 86400000 : null; };
+
+// ---------------------------------------------------------------------------
+// DEAD-WIRE SWEEP, 11 Aug 2026 — THE RE-ENTRY CARD SAYS WHAT IT STOOD ON.
+// distiller.mjs has written `have_need` (his_words vs sources_scanned) and
+// `slot_sources` (llm | floor | empty, per slot) into working_set.json since the
+// #106 pass — deliberately counters instead of a status word — and NOTHING in the
+// organism read either one. Repo-wide grep: the only other `have_need` is dugout's
+// unrelated presence-scan counter. So the collapse those counters exist to expose
+// ran invisible: live on 11 Aug 2026 the card read his_words 12 / sources_scanned 25,
+// and 13 of the 25 rows behind the LAST SESSION line below were MY OWN teaching
+// output (the #108 self-capture class) — the brief printed the resulting slots with
+// nothing saying half the evidence was the machine reading itself back.
+// This is the brief's FOURTH provenance tag, same law as wsTag / spTag / cTag: a fact
+// the reader would otherwise assume. COUNTS AND NAMES ONLY — no threshold, no verdict
+// (his standing rule: numbers are ruled on after 30-45-60 days of real data), and it
+// stays silent on a working_set that carries no counters at all.
+function wsEvidenceLine(ws) {
+  const h = ws && ws.have_need;
+  if (!h || !Number.isFinite(h.his_words) || !Number.isFinite(h.sources_scanned)) return null;
+  const why = [];
+  if (Number.isFinite(h.self_rows_excluded)) {
+    // the post-11-Aug card, split by cause
+    if (h.self_rows_excluded) why.push(`${h.self_rows_excluded} were MY OWN teaching, not his`);
+    if (h.captions_rejected) why.push(`${h.captions_rejected} window caption(s)`);
+  } else if (h.sources_scanned > h.his_words) {
+    // A pre-11-Aug card: its `captions_rejected` is the OLD AGGREGATE (captions + my
+    // own rows) under a label that named only one of the two. Report the total it
+    // really is rather than repeat the mislabel — the split arrives on the next
+    // distiller run (15-min cadence).
+    why.push(`${h.sources_scanned - h.his_words} were not his (older card — cause not recorded)`);
+  }
+  const src = ws.slot_sources && typeof ws.slot_sources === "object"
+    ? ["where_left_off", "open_loop"].filter(k => ws[k] && ws.slot_sources[k]).map(k => `${k} ← ${ws.slot_sources[k]}`).join(" · ")
+    : "";
+  return `  ↳ EVIDENCE BEHIND THOSE LINES: ${h.his_words}/${h.sources_scanned} scanned row(s) were HIS words`
+    + (why.length ? ` (${why.join(", ")})` : "")
+    + (src ? ` · ${src}` : "")
+    + (ws.engine ? ` · engine ${ws.engine}` : "")
+    // DEAD-WIRE SWEEP, 11 Aug 2026 — "engine deterministic" READ HEALTHY WHEN IT WASN'T.
+    // The line above has printed `engine` since this function was written, but that word
+    // had exactly two values and FOUR causes behind them: a quiet stream, a dry free
+    // pool, junk text back, and a thrown TypeError from a broken import all wrote
+    // "deterministic". distiller.mjs swallowed the error unbound (`catch { /* pool dry →
+    // floor stands */ }`), so a dead pool and a normal quiet morning were the same word
+    // on this line, forever. The distiller now names which of the five paths ran
+    // (`llm_status`, null on the healthy path) and THIS is its reader — the one surface
+    // that already prints the slots that failure produces. Names only, no verdict: the
+    // floor is legitimate output and this never calls it a fault.
+    + (ws.llm_status ? ` (${ws.llm_status})` : "");
+}
 
 // ---------------------------------------------------------------------------
 // MEMORY SPLICE (research 31 Jul 2026 — defect #4). This brief was the ONLY thing
@@ -340,7 +414,8 @@ function gather(dir = STATE, now = Date.now()) {
 //      five organs read the round as never-served
 //   3. the most-overdue Re-Jirah round — proof decays; overdue = ripe, not late
 //   4. the sprint's current task — the plan of record
-//   5. a staged Examiner drill — retrieval practice on the day's concept
+//   5. a staged Examiner drill — retrieval practice on the day's concept, and ONLY
+//      one the owner's freshness gate passes (11 Aug 2026 sweep — see below)
 // The WATCHMAN deliberately never ranks: organ repair is the machine's job (his
 // 6 Aug ruling — "keep me out of this picture") and must never become his next
 // thing. Nemesis feeds WHICH drill, not WHETHER — it rides inside 4/5, not beside
@@ -368,12 +443,37 @@ export function nextup(dir = STATE, now = Date.now()) {
   } catch {}
   const sprint = readJson(join(dir, "sprint.json")) || {};
   const cur = (sprint.progress && sprint.progress.current) || null;
-  const exam = readJson(join(dir, "examiner_drill.json"));
+  // DEAD-WIRE SWEEP (11 Aug 2026) — THE EXAMINER'S AGE GATE WAS BYPASSED HERE.
+  // This read examiner_drill.json RAW, so a drill staged in JANUARY could win the
+  // PEHLA KAAM slot in AUGUST. Measured before the fix: nextup(tmp, 2026-08-10) on a
+  // drill dated 2026-01-04 returned winner {name:"examiner", line:"staged drill on
+  // tokenization"} — while the owner's loadFreshDrill() on that same object, that same
+  // day, returned null. The gate is NOT invented here and no threshold is guessed: it
+  // is the owner's own ("fresh = staged today OR yesterday evening", examiner.mjs, so
+  // the 21:55 staging still rides tomorrow's session), and dugout.mjs — the scrimmage,
+  // the drill's other consumer — has always gone through it (`grep -n "loadFreshDrill"
+  // scripts/dugout.mjs`). This screen was the ONE bypass. `read` is pointed at the row
+  // already loaded from THIS dir so the tmpdir selftests keep working and the file is
+  // read exactly once.
+  const examRaw = readJson(join(dir, "examiner_drill.json"));
+  const exam = examRaw ? loadFreshDrill(new Date(now), { read: () => examRaw }) : null;
+  const examStale = !!(examRaw && examRaw.concept && !exam);
 
   if (pend.length) losers.push({ name: "rejirah-pending", line: `${pend.length} closed round(s) un-pasted — \`node scripts/rejirah.mjs pending\`` });
   if (overdue.length) losers.push({ name: "rejirah-due", line: `R${overdue[0].round} ${overdue[0].concept} ${overdue[0].overdue_days}d ripe (+${overdue.length - 1} more) — \`node scripts/deep.mjs due\`` });
   if (cur) losers.push({ name: "sprint", line: `${cur.id} ${cur.task} [${cur.track}]` });
-  if (exam && exam.concept) losers.push({ name: "examiner", line: `staged drill on ${exam.concept} (${exam.date || "?"})` });
+  // a gated-out drill stays VISIBLE, tagged, never silently vanished — same rule the
+  // working_set's age tag follows two screens up: an old thing you can see beats an old
+  // thing that disappeared, because only one of them tells him to re-stage.
+  // 11 Aug 2026 dead-wire sweep — THE SERVE RECEIPT REACHES HIS ANCHOR.
+  // examiner.mjs now stamps `served:[{by,at}]` when a surface actually embeds the drill
+  // (it staged one nightly for weeks with nothing recording whether it was ever opened).
+  // The card carries that fact and NOTHING else changes — the ranking is untouched, no
+  // threshold is read, no organ acts: "already played today" and "still waiting" simply
+  // stop looking identical on the one screen he actually opens.
+  const examServed = Array.isArray(examRaw && examRaw.served) ? examRaw.served.filter((r) => r && r.by) : [];
+  const examTag = examServed.length ? ` — khela ja chuka (${examServed.map((r) => r.by).join(" · ")})` : "";
+  if (examRaw && examRaw.concept) losers.push({ name: "examiner", line: `staged drill on ${examRaw.concept} (${examRaw.date || "?"})${examStale ? " — STALE, gate ne rok diya: \`node scripts/examiner.mjs stage\`" : ""}${examTag}` });
 
   if (forgeOpen) {
     const stale = (now - Date.parse(forge.started_at || "")) / 3600000 > 18;
@@ -395,9 +495,19 @@ export function nextup(dir = STATE, now = Date.now()) {
     return winnerOf("sprint", `${cur.id} ${cur.task} [${cur.track}] — plan of record`, "koi khula loop nahi, koi overdue proof nahi — ab aage ka kaam", losers.filter((l) => l.name !== "sprint"));
   }
   if (exam && exam.concept) {
-    return winnerOf("examiner", `staged drill on ${exam.concept}`, "sprint khali hai — staged drill hi agla kaam hai", losers.filter((l) => l.name !== "examiner"));
+    // the date rides ON the card now: this slot dispatches him to work, and the one
+    // thing that decides whether the work is today's was the one thing not printed.
+    return winnerOf("examiner", `staged drill on ${exam.concept} (${exam.date || "?"})${examTag}`, "sprint khali hai — staged drill hi agla kaam hai", losers.filter((l) => l.name !== "examiner"));
   }
-  return winnerOf("none", "kuch nahi mila — `node scripts/sprintsync.mjs` chala ke sprint wapas lao", "har source khali/unreadable tha", losers);
+  // last resort. If the ONLY thing on the board is a drill the gate just rejected, say
+  // that instead of "kuch nahi mila" — otherwise the screen goes quiet about the very
+  // file it just refused, which is how this wire stayed dead for weeks.
+  return examStale
+    ? winnerOf("none", `sirf PURANA drill pada hai (${examRaw.date || "?"} · '${examRaw.concept}') — usko aaj ka kaam mat samjho; naya: \`node scripts/examiner.mjs stage\``,
+        // the drill is NOT filtered out here the way a winner's own row is: it did not
+        // win, it LOST to its own age, and the contender row is where that stays legible.
+        "har live source khali tha, aur jo mila woh owner ke freshness gate se bahar hai", losers)
+    : winnerOf("none", "kuch nahi mila — `node scripts/sprintsync.mjs` chala ke sprint wapas lao", "har source khali/unreadable tha", losers);
 }
 
 function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
@@ -443,8 +553,49 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     // NOTE: the reader is HERE, never sprintsync — sprint.json is Sheet-driven, single-writer.
     if (cur.track === "course") {
       try {
-        const cb = courseBrief();
-        if (cb && cb.line) L.push(`  📼 ${cb.line}`);
+        // DEAD-WIRE SWEEP, 11 Aug 2026 — THE COURSE LINE GETS AN AGE, like the two
+        // tags above it. course.mjs has stamped `current_at` on every `at <n>` since
+        // 1 Aug and NOTHING in the organism read it, so a chapter he opened this
+        // morning and one he stalled on for three weeks printed the identical line.
+        // Same law as wsTag/spTag: a missing stamp is CALLED OUT rather than assumed
+        // fresh, and the healthy same-day case stays quiet.
+        // THE THRESHOLD IS NOT A NEW NUMBER — it is WS_STALE_DAYS, already in this
+        // file (see its definition above), so the working_set, the sprint spine and
+        // the course position all go stale on ONE clock instead of three.
+        // The PATH is passed on purpose: courseBrief() defaults to the live
+        // course.json, which would read the real file from a fixture dir and leave
+        // this branch untestable. `dir` is the same state dir in production.
+        const cb = courseBrief(join(dir, "course.json"));
+        if (cb && cb.line) {
+          const cAge = cb.current === null ? null : ageDays(cb.current_at, now);
+          const cTag = cb.current === null ? ""     // not started: there is no position to age
+            : cAge === null ? " (no position stamp — `node scripts/course.mjs at <n>` stamps it)"
+            : cAge >= WS_STALE_DAYS ? ` (PARKED · ${Math.floor(cAge)}d on this chapter)`
+            : cAge >= 1 ? ` (${Math.floor(cAge)}d ago)`
+            : "";
+          // DEAD-WIRE SWEEP, 11 Aug 2026 (pass 2) — THE NEXT CHAPTER GETS SPOKEN.
+          // `cb.line` is course.mjs's statusLine(), and statusLine only ever describes
+          // WHERE HE IS. On day one — the exact state on disk right now, current:null —
+          // it reads "Anthropic API Fundamentals: not started — 6 chapters (0 done)" and
+          // names no chapter, while the SAME object already carries
+          // next={"n":1,"title":"Getting started"}. The organ computed the answer; this
+          // door threw it away. Of the fields statusLine leaves out, `current_title`,
+          // `total` and `done` are already inside its text (course.mjs:374-377) — the two
+          // genuinely lost are the two he needs to press play: `next` (which chapter) and
+          // `start_seconds` (where inside the video to resume).
+          // NO FABRICATION: a chapter list pasted without timestamps stores
+          // start_seconds:null on purpose (course.mjs "no timestamp anywhere ⇒ null,
+          // never a fabricated 0"), so the stamp prints only when it is a real integer —
+          // fmtStamp's own "--:--" placeholder is deliberately not shown here, because a
+          // kickoff line must not imply a resume point that was never recorded.
+          const at = (s) => (Number.isInteger(s) && s >= 0 ? ` @ ${fmtStamp(s)}` : "");
+          // his position's own stamp — only meaningful once he is ON a chapter
+          const resume = cb.current !== null ? at(cb.start_seconds) : "";
+          const nextTag = cb.next && Number.isInteger(cb.next.n)
+            ? ` → agla: ch${cb.next.n} ${cb.next.title || ""}${at(cb.next.start_seconds)}`
+            : "";   // no `next` = every chapter covered; naming nothing is the honest answer
+          L.push(`  📼 ${cb.line}${resume}${cTag}${nextTag}`);
+        }
       } catch { /* a brief must never be the thing that breaks SessionStart */ }
     }
     // audit #107 item #26 — THE PYTHON TRACK GETS ITS ADDRESS. Same defect as #35 above,
@@ -467,6 +618,15 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   }
   if (ws.where_left_off) L.push(`LAST SESSION${wsTag}: ${clip(ws.where_left_off, 180)}`);
   if (ws.open_loop) L.push(`OPEN LOOP (still hanging)${wsTag}: ${clip(ws.open_loop, 180)}`);
+  // the distiller's counters get their consumer (see wsEvidenceLine above). Only ever
+  // printed under the slots it describes — an evidence line with nothing above it would
+  // be a report, and this brief is orientation.
+  if (ws.where_left_off || ws.open_loop) {
+    try {
+      const ev = wsEvidenceLine(ws);
+      if (ev) L.push(ev);
+    } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  }
   if (watch.length) L.push(`WATCH-LIST (his repeat JS-hangovers — catch these): ${watch.join(" · ")}`);
   const nx = (sprint.progress && sprint.progress.next_up) || [];
   if (nx.length) L.push(`NEXT UP: ${nx.slice(0, 3).join(" · ")}`);
@@ -556,6 +716,66 @@ function selftest() {
   const staleBrief = brief(dirS, NOW);
   assert("an 11-day-old working_set is flagged STALE with its age", staleBrief.includes("STALE") && staleBrief.includes("11d"));
   assert("a same-day working_set carries NO age tag (healthy case stays quiet)", !b.includes("STALE") && !b.includes("age unknown") && b.includes("LAST SESSION:"));
+  // ------------------------------------------------------------------------
+  // DEAD-WIRE SWEEP (11 Aug 2026) — THE DISTILLER'S COUNTERS GET THEIR READER.
+  // have_need + slot_sources had been written into working_set.json since the #106
+  // pass with ZERO readers repo-wide, so the very collapse they exist to expose
+  // (live that morning: his_words 12 / sources_scanned 25, 13 rows of my own
+  // teaching) never reached the one surface that prints those slots. These fail if
+  // this brief ever stops reading them — which is exactly how the wire died before.
+  // The fixture mirrors distiller.mjs's real output shape, not an eyeballed one.
+  // ------------------------------------------------------------------------
+  const dirE = mkdtempSync(join(tmpdir(), "learnstate-evidence-"));
+  writeFileSync(join(dirE, "working_set.json"), JSON.stringify({
+    ts: iso(0.1), where_left_off: "was on cosine similarity", open_loop: "why cosine not euclidean",
+    engine: "deterministic", slot_sources: { concept_in_motion: "floor", open_loop: "llm", where_left_off: "floor", next_step: "empty" },
+    have_need: { his_words: 12, sources_scanned: 25, slots_filled: 3, slots_total: 4, captions_rejected: 0, self_rows_excluded: 13 },
+  }));
+  const evBrief = brief(dirE, NOW);
+  const evLine = evBrief.split("\n").find(l => l.includes("EVIDENCE BEHIND")) || "";
+  assert("the brief now READS have_need — the his-words ratio rides under the slots it explains",
+    evLine.includes("12/25 scanned row(s) were HIS words"));
+  assert("…and it names the CAUSE, so a self-capture leak is legible (#108's disease, not a caption's)",
+    evLine.includes("13 were MY OWN teaching") && !evLine.includes("13 window caption"));
+  assert("…and slot_sources rides too: the reader sees which slot came from the LLM vs the floor",
+    evLine.includes("where_left_off ← floor") && evLine.includes("open_loop ← llm"));
+  assert("a pre-#106 working_set (no counters at all) stays completely quiet — no invented numbers",
+    !b.includes("EVIDENCE BEHIND"));
+  // SILENT_FAILURE (dead-wire sweep, 11 Aug 2026) — "engine deterministic" is what a
+  // healthy quiet morning writes AND what a dead pool writes, so this line could not
+  // tell them apart. The distiller now names the path (llm_status); this is its only
+  // reader. The fixture carries the exact string a renamed hippocampus export produces.
+  const dirL = mkdtempSync(join(tmpdir(), "learnstate-llmstatus-"));
+  writeFileSync(join(dirL, "working_set.json"), JSON.stringify({
+    ts: iso(0.1), where_left_off: "was on cosine similarity", open_loop: "why cosine not euclidean",
+    engine: "deterministic", llm_status: "threw: TypeError: generatePool is not a function",
+    have_need: { his_words: 12, sources_scanned: 25, slots_filled: 3, slots_total: 4 },
+  }));
+  const llLine = brief(dirL, NOW).split("\n").find(l => l.includes("EVIDENCE BEHIND")) || "";
+  assert("a BROKEN pool no longer reads as a healthy quiet morning — the brief names why the floor is standing",
+    llLine.includes("engine deterministic") && llLine.includes("threw: TypeError: generatePool is not a function"));
+  assert("…and a card the pool actually answered stays quiet: no llm_status, nothing appended (silent when healthy)",
+    evLine.includes("engine deterministic") && !/engine deterministic \(/.test(evLine));
+  // ------------------------------------------------------------------------
+  // #WIRE (11 Aug 2026) — TRUNCATED_AT_DOOR, the second door. The distiller's LLM
+  // path clamps a slot at 200 and now marks the cut; this brief clips at 180. A
+  // bare slice here re-cut the marked slot BELOW its marker and served the captain
+  // a silent mid-word stop all over again. The fixture is the real shape: a
+  // 200-char open_loop that arrived already marked.
+  // ------------------------------------------------------------------------
+  const dirC = mkdtempSync(join(tmpdir(), "learnstate-clip-"));
+  // built to EXACTLY the producer's 200-char cap (199 chars + the 1-char marker),
+  // the way distiller.mjs's parseSet hands it over — not eyeballed to a length.
+  const marked200 = "cosine similarity ka doubt hai — dot product bhi similarity deta hai na, phir normalize karke angle nikalne ka faayda kya hai jab dono vectors already same scale pe hain aur euclidean bhi kaam karega kya".slice(0, 199) + "…";
+  writeFileSync(join(dirC, "working_set.json"), JSON.stringify({ ts: iso(0.1), where_left_off: marked200, open_loop: marked200 }));
+  const clipBrief = brief(dirC, NOW);
+  const openLine = clipBrief.split("\n").find(l => l.startsWith("OPEN LOOP")) || "";
+  assert("#WIRE fixture is honest — the slot really is longer than this brief's 180 clip and arrives marked",
+    marked200.length === 200 && marked200.endsWith(CLIP_MARK));
+  assert("#WIRE the brief's own clip never hands him a silent mid-word cut — the marker survives the second door",
+    openLine.includes("…") && !clipLegacy(marked200, 180).endsWith("…"));
+  assert("#WIRE …and the clip still respects its cap exactly (marker spent from inside, no budget moved)",
+    clip(marked200, 180).length === 180 && clip("short enough", 180) === "short enough");
   // REGRESSION (E2E audit): sprint match needs the "-" separator — "10-01" must not
   // fall into sprint 1 just because find() reaches n=1 first.
   const dirD = mkdtempSync(join(tmpdir(), "learnstate-doubledigit-"));
@@ -569,6 +789,69 @@ function selftest() {
   writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-05", task: "Anthropic API", track: "course", subtopics: "messages, models" } } }));
   const courseBrief = brief(dir, NOW);
   assert("course task routes to COURSE (Colab) — NOT mislabeled FORGE", courseBrief.includes("COURSE") && !courseBrief.includes("FORGE"));
+  // ---- DEAD-WIRE SWEEP (11 Aug 2026) — THE COURSE POSITION GETS ITS AGE ----
+  // course.mjs stamped `current_at` on every `at <n>` from day one and no organ in the
+  // repo read it, so a chapter he opened this morning printed the SAME line as one he
+  // had been parked on for three weeks. These three fail if the field is dropped from
+  // courseBrief() again, or if this branch stops asking for it.
+  {
+    const courseState = (currentAtIso) => JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals" },
+      chapters: [
+        { n: 1, title: "Getting started", covered: true, covered_at: iso(20) },
+        { n: 2, title: "Messages format" },
+      ],
+      current: 2, current_at: currentAtIso, updated_at: iso(0),
+    });
+    writeFileSync(join(dir, "course.json"), courseState(iso(21)));   // 21d, well past WS_STALE_DAYS
+    const parked = brief(dir, NOW);
+    assert("a 21-day-old chapter position is flagged PARKED with its age (current_at finally has a reader)",
+      parked.includes("📼") && parked.includes("PARKED") && parked.includes("21d"));
+    writeFileSync(join(dir, "course.json"), courseState(iso(0.2)));
+    const freshCourse = brief(dir, NOW);
+    assert("a chapter he opened today carries NO age tag (the healthy case stays quiet)",
+      freshCourse.includes("📼") && !freshCourse.includes("PARKED") && !freshCourse.includes("no position stamp"));
+    writeFileSync(join(dir, "course.json"), courseState(null));
+    assert("a position with NO stamp is called out, never assumed fresh (same law as wsTag/spTag)",
+      brief(dir, NOW).includes("no position stamp"));
+  }
+  // ---- DEAD-WIRE SWEEP pass 2 (11 Aug 2026) — THE NEXT CHAPTER GETS SPOKEN ----
+  // The regression these catch: this splice took `cb.line` alone, and statusLine() only
+  // describes where he IS. On day one (current:null — the live state on disk) the kickoff
+  // said "not started" and named no chapter, though courseBrief() had already worked out
+  // that chapter 1 is "Getting started". Fails if `next`/`start_seconds` are dropped at
+  // this door again, or from courseBrief() upstream.
+  {
+    const notStarted = JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals" },
+      chapters: [
+        { n: 1, title: "Getting started", start_seconds: 0, covered: false },
+        { n: 2, title: "Messages format", start_seconds: 271, covered: false },
+      ],
+      current: null, current_at: null, updated_at: iso(0),
+    });
+    writeFileSync(join(dir, "course.json"), notStarted);
+    const day1 = brief(dir, NOW);
+    assert("DAY ONE — a not-started course still NAMES the chapter to open (the `next` field finally has a reader)",
+      day1.includes("📼") && day1.includes("agla: ch1 Getting started"));
+    writeFileSync(join(dir, "course.json"), JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals" },
+      chapters: [
+        { n: 1, title: "Getting started", start_seconds: 0, covered: true, covered_at: iso(2) },
+        { n: 2, title: "Messages format", start_seconds: 271, covered: false },
+        { n: 3, title: "Streaming", start_seconds: null, covered: false },
+      ],
+      current: 2, current_at: iso(0.2), updated_at: iso(0),
+    }));
+    const mid = brief(dir, NOW);
+    assert("mid-course — his own chapter carries the resume second, and the NEXT one is named",
+      mid.includes("@ 00:04:31") && mid.includes("agla: ch3 Streaming"));
+    assert("a chapter with NO timestamp shows no stamp at all — never a fabricated 00:00:00",
+      !mid.includes("--:--") && !/agla: ch3 Streaming @/.test(mid));
+  }
   writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-08", task: "FinOps repo", track: "build", subtopics: "scaffold" } } }));
   const buildBrief = brief(dir, NOW);
   assert("build task routes to BUILD — never a stray FORGE label", buildBrief.includes("BUILD") && !buildBrief.includes("FORGE"));
@@ -633,6 +916,29 @@ function selftest() {
   writeFileSync(join(dirA, "rejirah_log.jsonl"), JSON.stringify({ kind: "round-close", concept: "tokenization", round: 1, due: "2026-06-18", closed_at: iso(1), axes_graded: ["a"] }) + "\n");
   assert("ARBITER — a round SAT-but-unpasted beats a merely-due round (five organs read it as never-served)",
     nextup(dirA, NOW).winner.name === "rejirah-pending");
+  // ---- DEAD-WIRE SWEEP (11 Aug 2026): the Examiner slot must go through the OWNER's
+  // freshness gate. Before the fix these three passed with a 7-month-old drill winning
+  // the PEHLA KAAM slot. The dir carries no sprint/forge/rejirah, so the drill is the
+  // only candidate — exactly the state in which the bug fired.
+  const dirX = mkdtempSync(join(tmpdir(), "learnstate-examiner-"));
+  const stamp = (d) => JSON.stringify({ date: d, staged_at: d + "T16:25:00.000Z", concept: "tokenization", template: "implement" });
+  writeFileSync(join(dirX, "examiner_drill.json"), stamp("2026-01-04"));
+  assert("EXAMINER GATE — a 7-month-stale drill NEVER wins PEHLA KAAM (owner's loadFreshDrill, not a raw read)",
+    (() => { const n = nextup(dirX, NOW); return n.winner.name === "none" && /PURANA drill/.test(n.winner.line) && /examiner\.mjs stage/.test(n.winner.line); })());
+  assert("EXAMINER GATE — the rejected drill stays VISIBLE as a contender, tagged STALE and dated",
+    (() => { const c = nextup(dirX, NOW).contenders.find((x) => x.name === "examiner"); return !!c && /STALE/.test(c.line) && c.line.includes("2026-01-04"); })());
+  writeFileSync(join(dirX, "examiner_drill.json"), stamp("2026-07-24"));   // NOW is 2026-07-25 → yesterday's 21:55 staging
+  assert("EXAMINER GATE — yesterday's 21:55 staging still wins, and the card now carries its DATE",
+    (() => { const n = nextup(dirX, NOW); return n.winner.name === "examiner" && n.winner.line.includes("tokenization") && n.winner.line.includes("2026-07-24"); })());
+  // DEAD-WIRE GUARD (11 Aug 2026) — THE SERVE RECEIPT REACHES HIS ANCHOR.
+  // The drill was staged nightly and nothing said whether a surface ever opened it, so
+  // this card offered him work he might already have done. Both states must be legible,
+  // and the ranking must NOT move — the receipt informs, it never decides.
+  assert("EXAMINER RECEIPT — an unserved drill's card says nothing extra (silence is the honest default)",
+    !/khela ja chuka/.test(nextup(dirX, NOW).winner.line));
+  writeFileSync(join(dirX, "examiner_drill.json"), JSON.stringify({ ...JSON.parse(stamp("2026-07-24")), served: [{ by: "scrimmage-voice", at: "2026-07-25T04:00:00.000Z" }] }));
+  assert("EXAMINER RECEIPT — a SERVED drill says so on the card, names the surface, and still ranks identically",
+    (() => { const n = nextup(dirX, NOW); return n.winner.name === "examiner" && /khela ja chuka \(scrimmage-voice\)/.test(n.winner.line) && n.winner.line.includes("2026-07-24"); })());
   assert("ARBITER — the watchman NEVER appears, winner or loser",
     (() => { const n = nextup(dirA, NOW); return n.winner.name !== "watchman" && !n.contenders.some((c) => c.name === "watchman"); })());
   assert("ARBITER — brief() carries exactly one PEHLA KAAM line",

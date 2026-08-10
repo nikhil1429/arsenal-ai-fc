@@ -17,6 +17,9 @@
 //     disclosures + drills.withheld render always).
 //   · The twin's line renders IFF twin.json.voice is non-null (win-only law
 //     lives in twin.mjs; this organ never invents a line).
+//   · The ROUTING LEDGER (routed_balls.json) is the ONLY durable record of what
+//     he routed — the rows' own `routed:false` is inert by design. An unreadable
+//     ledger therefore REFUSES the write instead of starting from empty.
 //   · MISS never writes shame: no "failure/failed/streak broken" strings;
 //     REST = LOAD-MANAGED and increments matches_played (conscious rest is a
 //     won day by the outwork law).
@@ -253,6 +256,57 @@ function pickBallsToRoute(pending, which, ids = []) {
 }
 
 // ---------------------------------------------------------------------------
+// THE ROUTING LEDGER — dead-wire sweep, 11 Aug 2026.
+//
+// A tracer flagged `routed:false` on every dugout note and loose ball as an
+// ORPHAN FIELD: nothing in this repo ever writes routed:true. That is TRUE, and
+// as far as this organ is concerned it is also deliberate — throwin.mjs stamps
+// it on arrival under its own never-auto-routed law (`grep -n "routed:false on
+// arrival" scripts/throwin.mjs`), dugout.mjs stamps the same on take_note, and
+// BOTH lanes are declared append-only, sole-writer, VERBATIM stores of his own
+// words. Flipping a bit inside them means rewriting those lanes from a second
+// process while the live Gaffer can append mid-rewrite — risking his spoken
+// words to maintain a bookkeeping bit whose information already lives here.
+// Not done, not guessed: whether that field gets a writer or gets dropped is a
+// schema call on a verbatim store, and that is HIS.
+//
+// What WAS broken is the record that actually carries the routing state. Both
+// call sites read it as `readJson(ROUTED) || { routed: [] }`, and readJson (:73)
+// swallows a parse error and returns null. So a truncated or half-written
+// routed_balls.json read as EMPTY — every ball he had ever routed re-appeared as
+// pending, and the very next write concat'd onto [] and OVERWROTE the history for
+// good. That is the tracer's damage clause exactly, one silent catch away from
+// live, on a gitignored file with no second home anywhere in the organism.
+// Now: ABSENT = legitimately empty (nothing routed yet). PRESENT-but-unreadable
+// = refuse to write, say so loudly, and show everything as pending — the honest
+// read when we cannot know what was routed.
+function readRoutedLedger(path = ROUTED) {
+  if (!existsSync(path)) return { present: false, readable: true, rows: [] };
+  try {
+    const obj = JSON.parse(readFileSync(path, "utf8"));
+    // shape, not just parse: `{routed:"…"}` maps to [] just as silently as a torn file
+    if (!obj || !Array.isArray(obj.routed)) return { present: true, readable: false, rows: [] };
+    return { present: true, readable: true, rows: obj.routed };
+  } catch { return { present: true, readable: false, rows: [] }; }
+}
+
+// THE ONE FILTER that decides what he is shown at full-time. It lived twice
+// (route mode + the main close), byte-drifted apart — only one copy carried the
+// 〔dugout〕 suffix — and in each copy the inert `!routed` check sat next to the
+// ledger subtraction that does all the real work, which is precisely how a
+// reader concludes the flag is load-bearing and goes off to "repair" a verbatim
+// lane. The check stays (a row hand-repaired by him may legitimately say true)
+// but it is no longer alone, and no longer duplicated.
+function pendingThrowIns(routedIds, { dugoutSuffix = "" } = {}, dir = STATE_DIR) {
+  return [
+    ...readLines(join(dir, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id)),
+    ...readLines(join(dir, "dugout_notes.jsonl"))
+      .filter(n => !n.routed && n.text && !routedIds.has("note:" + n.ts))
+      .map(n => ({ id: "note:" + n.ts, text: String(n.text) + dugoutSuffix })),
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // selftest — fixtures only, everything in-memory
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -313,6 +367,47 @@ async function selftest() {
   assert("route picker: 'all' takes everything", pickBallsToRoute(pend, "all").length === 2);
   assert("route picker: explicit ids take the subset only", pickBallsToRoute(pend, "ids", ["m2"]).map(b => b.id).join() === "m2");
   assert("route picker: unknown id routes nothing (safe no-op)", pickBallsToRoute(pend, "ids", ["zz"]).length === 0);
+
+  // DEAD-WIRE SWEEP (11 Aug 2026) — THE ROUTING LEDGER, the ONLY durable record
+  // of what he routed. Off DISK, through the real reader, because the bug was in
+  // the read and never in the render: `readJson(ROUTED) || {routed:[]}` turned a
+  // torn file into an empty one, and the next write erased the history for good.
+  // The `routed:false` flag on the rows is inert BY DESIGN (see readRoutedLedger's
+  // header) — these checks pin that the LEDGER is what does the subtracting, so a
+  // future reader cannot delete the ledger arm believing the flag covers it.
+  {
+    const tmp = mkdtempSync(join(tmpdir(), "arsenal-postmatch-route-"));
+    try {
+      const led = join(tmp, "routed_balls.json");
+      // both lanes carry routed:false, exactly as their owners stamp them on arrival
+      writeFileSync(join(tmp, "loose_balls.jsonl"), JSON.stringify({ ts: "2026-07-17T07:53:33.000Z", id: "m1", text: "dot vs cosine same cheez?", routed: false }) + "\n");
+      writeFileSync(join(tmp, "dugout_notes.jsonl"), JSON.stringify({ ts: "2026-08-10T10:12:11.964Z", text: "study hallucinations from scratch", routed: false }) + "\n");
+
+      const absent = readRoutedLedger(led);
+      assert("ROUTING LEDGER: an ABSENT file is legitimately empty — nothing routed yet, and safe to write",
+        absent.present === false && absent.readable === true && absent.rows.length === 0);
+
+      writeFileSync(led, JSON.stringify({ routed: [{ id: "m1", routed_on: "2026-08-10" }] }));
+      const good = readRoutedLedger(led);
+      assert("ROUTING GATE: the LEDGER — not the inert routed:false flag — is what drops a routed ball from pending",
+        good.readable === true
+        && pendingThrowIns(new Set(good.rows.map(r => r.id)), {}, tmp).map(b => b.id).join() === "note:2026-08-10T10:12:11.964Z");
+
+      writeFileSync(led, '{"routed":[{"id":"m1",');            // half a write — the crash-mid-rename shape
+      const torn = readRoutedLedger(led);
+      assert("ROUTING LEDGER: a TORN file is present-but-UNREADABLE, never a silent empty (the old readJson swallowed it and the next write wiped the history)",
+        torn.present === true && torn.readable === false);
+      writeFileSync(led, JSON.stringify({ routed: "not-an-array" }));
+      assert("ROUTING LEDGER: a WRONG-SHAPED file is unreadable too — shape is checked, not just parseability",
+        readRoutedLedger(led).readable === false);
+      assert("ROUTING LEDGER: on an unreadable ledger nothing is subtracted — every throw-in shows as pending, which is the honest read when we cannot know",
+        pendingThrowIns(new Set(readRoutedLedger(led).rows.map(r => r.id)), {}, tmp).length === 2);
+
+      assert("ROUTING GATE: one filter, two callers — the 〔dugout〕 suffix rides only where it is asked for (the two copies had drifted apart)",
+        pendingThrowIns(new Set(), { dugoutSuffix: " 〔dugout〕" }, tmp).some(b => b.id.startsWith("note:") && b.text.endsWith(" 〔dugout〕"))
+        && !pendingThrowIns(new Set(), {}, tmp).some(b => b.text.includes("〔dugout〕")));
+    } finally { rmSync(tmp, { recursive: true, force: true }); }
+  }
 
   // SEASON.md — the logbook (8 Aug 2026)
   {
@@ -431,15 +526,18 @@ async function main() {
     // lands here; season/notebook untouched — no double matchday, ever)
     const rest = process.argv.slice(3);
     const which = !rest.length || rest[0].toLowerCase() === "all" ? "all" : "ids";
-    const routedPrev = readJson(ROUTED) || { routed: [] };
-    const routedIds = new Set(routedPrev.routed.map(r => r.id));
-    const pending = [
-      ...readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id)),
-      ...readLines(join(STATE_DIR, "dugout_notes.jsonl")).filter(n => !n.routed && n.text && !routedIds.has("note:" + n.ts)).map(n => ({ id: "note:" + n.ts, text: String(n.text) })),
-    ];
+    const ledger = readRoutedLedger();
+    // this verb exists ONLY to write the ledger; if it cannot write it safely it
+    // must refuse, not "start fresh" and erase every routing decision he ever made.
+    if (!ledger.readable) {
+      console.error(`postmatch: routed_balls.json is present but unreadable — REFUSING to route. Writing now would replace the whole routing history with tonight's picks. Repair or move ${ROUTED}, then re-run.`);
+      process.exit(1);
+    }
+    const routedIds = new Set(ledger.rows.map(r => r.id));
+    const pending = pendingThrowIns(routedIds);
     const pick = pickBallsToRoute(pending, which, rest);
     if (!pick.length) { console.log("postmatch: no pending throw-ins to route"); return; }
-    writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pick.map(b => ({ id: b.id, routed_on: localDate(new Date()) }))) });
+    writeAtomic(ROUTED, { routed: ledger.rows.concat(pick.map(b => ({ id: b.id, routed_on: localDate(new Date()) }))) });
     console.log(`postmatch: routed ${pick.length} throw-in(s) [${pick.map(b => b.id).join(", ")}]`);
     return;
   }
@@ -481,14 +579,16 @@ async function main() {
     ...((pulse && pulse.withheld_disclosures) || []),
     ...((drills && drills.withheld) || []),
   ];
-  const routedPrev = readJson(ROUTED) || { routed: [] };
-  const routedIds = new Set(routedPrev.routed.map(r => r.id));
+  const ledger = readRoutedLedger();
+  const routedIds = new Set(ledger.rows.map(r => r.id));
   // throw-ins + dugout notes ride the same routing gate (U4): notes he voiced
   // to the Gaffer surface here verbatim, keyed note:<ts> in routed_balls
-  const pendingBalls = [
-    ...readLines(join(STATE_DIR, "loose_balls.jsonl")).filter(b => !b.routed && !routedIds.has(b.id)),
-    ...readLines(join(STATE_DIR, "dugout_notes.jsonl")).filter(n => !n.routed && n.text && !routedIds.has("note:" + n.ts)).map(n => ({ id: "note:" + n.ts, text: String(n.text) + " 〔dugout〕" })),
-  ];
+  const pendingBalls = pendingThrowIns(routedIds, { dugoutSuffix: " 〔dugout〕" });
+  // the close itself must NEVER be blocked by the routing lane (same law as the
+  // SEASON.md render below) — so on a torn ledger the ritual runs, everything
+  // shows as pending because we genuinely cannot know what was routed, and the
+  // ledger write is skipped rather than rewritten from nothing.
+  if (!ledger.readable) console.error(`postmatch: routed_balls.json unreadable — showing EVERY throw-in as pending (we cannot know what was routed) and writing NOTHING to ${ROUTED} tonight. Repair it before using --route.`);
 
   const season = readJson(SEASON);
   const matchday = ((season && season.matches_played) || 0) + 1;
@@ -518,13 +618,20 @@ async function main() {
     const { execFileSync } = await import("node:child_process");
     execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "score"], { windowsHide: true, timeout: 30000 });
   } catch { }
-  if (route === "all" && pendingBalls.length) {
-    writeAtomic(ROUTED, { routed: routedPrev.routed.concat(pendingBalls.map(b => ({ id: b.id, routed_on: dateStr }))) });
+  const routedTonight = route === "all" && pendingBalls.length > 0 && ledger.readable;
+  if (routedTonight) {
+    writeAtomic(ROUTED, { routed: ledger.rows.concat(pendingBalls.map(b => ({ id: b.id, routed_on: dateStr }))) });
   }
   // audit #82: this used to say "KAL-line locked" even when he declined the prompt.
-  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${route === "all" ? ` · ${pendingBalls.length} throw-in(s) routed` : ""} → ${join(PM_DIR, dateStr + ".md")}`);
+  // 11 Aug 2026, same shape one field over: the routed count came off the FLAG
+  // (--route all) and not off the write, so a refused ledger write would still
+  // have printed "N throw-in(s) routed" at him. It reports what happened now.
+  const routeNote = route !== "all" ? ""
+    : ledger.readable ? ` · ${pendingBalls.length} throw-in(s) routed`
+    : " · throw-ins NOT routed (routing ledger unreadable — see above)";
+  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote} → ${join(PM_DIR, dateStr + ".md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, KAL_RE, renderSeasonMd, seasonStreak };
+export { renderPostMatch, updateSeason, updateNotebook, pickBallsToRoute, readRoutedLedger, pendingThrowIns, KAL_RE, renderSeasonMd, seasonStreak };

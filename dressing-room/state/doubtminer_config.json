@@ -8,5 +8,6 @@
   ],
   "gates": { "min_capsules": 4, "min_doubts": 60 },
   "tape_room": { "min_age_days": 14 },
-  "lexicon": { "min_ngram": 2, "max_ngram": 5, "min_count": 2 }
+  "_lexicon_comment": "max_anchors + min_content_words were live knobs with no key here until 11 Aug 2026 — both carried their value as a literal in doubtminer.mjs, so neither could be audited or retuned from config. Both are written at their INCUMBENT values (nothing moves today): max_anchors 25 is the constant that produced every lexicon.json to date, min_content_words 1 is audit #4's MEASURED value. max_anchors is the one that was cutting his voice in silence — see doubtminer.mjs selectAnchors.",
+  "lexicon": { "min_ngram": 2, "max_ngram": 5, "min_count": 2, "min_content_words": 1, "max_anchors": 25 }
 }

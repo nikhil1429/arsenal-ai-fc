@@ -330,6 +330,26 @@ async function selftest() {
     assert("a REJECTED spend still releases the lock (no wedged fuelboard)", held2 === 1 && freed2 === 1);
   }
 
+  // THE FAULT WIRE (11 Aug 2026) — record429 sat in this file for weeks with NO
+  // producer for the LIVE tanks: only dmn.mjs (borrowed lanes) and distiller.mjs
+  // (T8) ever called it. The Dugout socket DETECTED real quota exhaustion,
+  // rotated the key pool and benched the captain with "free juice dry" — and
+  // never told this board, so stateOf() could not return COLD for T1/T2, the
+  // STARVATION GUARD never learned a real ceiling for any live tank, and
+  // physio.mjs's `mouth_cold` bleed (written because "T1 and T2 sat COLD from a
+  // 429 storm and no organ in the body said so") was unreachable by the real
+  // path. Live tanks.json and both vault snapshots agreed: last_429 null on all
+  // eight tanks, ever. A consumer with no producer is a black box, not a
+  // feedback loop — so this asserts the PRODUCER, from the consumer's side.
+  {
+    let dugoutSrc = "";
+    try { dugoutSrc = readFileSync(join(__dirname, "dugout.mjs"), "utf8"); } catch { }
+    assert("record429 HAS a live producer: the Dugout's /tank-fault door shells `fuelboard.mjs fault`",
+      dugoutSrc.includes("/tank-fault") && /"fuelboard\.mjs"\), "fault", id\]/.test(dugoutSrc));
+    assert("…and the voice page still knocks on it when a key really runs dry",
+      dugoutSrc.includes("function reportFault(") && dugoutSrc.includes("reportFault(keyIdx,"));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;

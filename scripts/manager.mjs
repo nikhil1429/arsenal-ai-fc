@@ -304,6 +304,12 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
     study: okCards ? {
       due_today: bus.cards.due_today ?? 0, overdue: bus.cards.overdue ?? 0,
       hardest_due: bus.cards.hardest_due || [],
+      // WIRING AUDIT 10 Aug 2026 — hardest_due is a CAPPED list (fsrs.mjs slices it to
+      // cfg.hardestDueMax) and the sheet has always rendered it as the whole due set.
+      // fsrs now declares the cut in cards.naming; carry it so CARDS: can say so.
+      // Null when absent — a cards.json from before that pass says nothing, and an
+      // absent declaration must never be rendered as "complete".
+      naming: (bus.cards.naming && typeof bus.cards.naming === "object") ? bus.cards.naming : null,
     } : null,
     calibration: okCal ? {
       gap: bus.calibration.calibration_gap, trend: bus.calibration.trend || null,
@@ -475,6 +481,21 @@ function repsCounter(f) {
 // reader is told which one it is. No number is invented here: `accuracy` is the
 // producer's own band WORD ("low"/"mid"), passed through, never a computed rate.
 // Order is the producer's — worst knew-accuracy first (calibration.mjs:226).
+// WIRING AUDIT 10 Aug 2026 — THE CARDS LINE THAT OVER-CLAIMED.
+// `CARDS: 9 due, 3 overdue [a, b, c, d, e, f, g, h]` reads as the whole due set;
+// hardest_due is capped at fsrs's cfg.hardestDueMax, so on any morning past the cap
+// the Gaffer was handed a HEAD and told nothing was missing. fsrs now declares the
+// cut (cards.naming) and this renders it — same voice as the TIME line's "instruments
+// dark — do NOT read this as a zero": the model is told what it is NOT looking at.
+// Silent when the list is whole, and silent when there is no declaration to read
+// (an absent naming block is unknown, never "complete").
+function cardsCutTail(study) {
+  const n = study && study.naming;
+  if (!n || typeof n !== "object" || n.complete !== false) return "";
+  const unnamed = (typeof n.unnamed === "number" && n.unnamed > 0) ? n.unnamed : null;
+  return ` — LIST IS CAPPED${unnamed ? ` at ${n.cap ?? "the fsrs cap"}: ${unnamed} more due card(s) are NOT named here` : ` (${n.line || "hardest_due is a head, not the due set"})`}; treat these as the hardest few, never as everything due`;
+}
+
 function dangerLine(danger) {
   if (!Array.isArray(danger) || !danger.length) return null;
   return danger.map((d) => {
@@ -569,7 +590,7 @@ function assemblePrompt(F, fin, stale = {}) {
     `SHAPE (his real windows — never a generic clock): ${shapeFromTiming(F.readiness?.timing)}`,
     `TIME: ${F.time && F.time.dark ? "instruments dark — the time camera was unreachable; do NOT read this as a zero"
       : F.time && F.time.building_pct != null ? `Building ${F.time.building_pct}%${F.time.building_target != null ? `/${F.time.building_target}%` : ""}${F.time.meta_pct != null ? ` · Meta ${F.time.meta_pct}%` : ""}${F.time.on_track ? ` · on track: ${F.time.on_track}` : ""}` : "no audit yet"}`,
-    `CARDS: ${F.study ? `${F.study.due_today} due, ${F.study.overdue} overdue [${F.study.hardest_due.join(", ")}]` : "awaiting data"}`,
+    `CARDS: ${F.study ? `${F.study.due_today} due, ${F.study.overdue} overdue [${F.study.hardest_due.join(", ")}]${cardsCutTail(F.study)}` : "awaiting data"}`,
     `WEAKNESS: ${F.headline ? F.headline.one_line : "none surfaced (bias-to-silence)"}`,
     `AXIS PATTERN: ${F.axis_pattern?.note || "none"}`,
     `DANGER (confident-wrong = he said "knew" and was wrong; the axis is the KIND of thinking that keeps breaking — attack that, not just the topic): ${dangerLine(F.calibration?.danger) || "none"}`,
@@ -941,6 +962,33 @@ async function selftest() {
   ok("#wire: empty/absent danger ⇒ null, so the prompt still says 'none' (bias-to-silence intact)",
     dangerLine([]) === null && dangerLine(undefined) === null);
   ok("rich: cards line = 0 due (+2 overdue)", /cards due: 0 \(\+2 overdue\)/.test(rich.sheet));
+
+  // WIRING AUDIT (10 Aug 2026) — THE CAPPED DUE LIST. fsrs slices hardest_due to
+  // cfg.hardestDueMax and said nothing; the CARDS line handed the Gaffer a HEAD as if it
+  // were the whole due set. fsrs now declares it in cards.naming and this reads it. The
+  // rich fixture is a VERBATIM 10 Jul output — from BEFORE that field existed — so it also
+  // pins the silence case: no declaration must never render as "complete".
+  ok("#wire: a cards.json with NO naming block adds nothing to CARDS (absence ≠ complete)",
+    /^CARDS: 0 due, 2 overdue \[tool_use, chunking\]$/m.test(rich.prompt));
+  {
+    const capDir = stage("rich");
+    const capped = { ...FX.rich.cards, total_cards: 14, due_today: 3, overdue: 8,
+      hardest_due: ["a", "b", "c", "d", "e", "f", "g", "h"],
+      naming: { named: 8, due_total: 11, cap: 8, complete: false, unnamed: 3,
+        line: "8/11 due cards named — 3 CUT by hardestDueMax=8; hardest_due is NOT the whole due set" } };
+    writeFileSync(join(capDir, "cards.json"), JSON.stringify(capped));
+    const capRun = await runManager({ today: TODAY, stateDir: capDir });
+    ok("#wire: a CAPPED hardest_due tells the Gaffer what it is NOT looking at (3 unnamed, cap 8)",
+      /^CARDS: 3 due, 8 overdue \[a, b, c, d, e, f, g, h\] — LIST IS CAPPED at 8: 3 more due card\(s\) are NOT named here; treat these as the hardest few, never as everything due$/m.test(capRun.prompt));
+    ok("#wire: the cut rides F.study, so any future surface can read it (not a render-only string)",
+      capRun.features.study.naming.complete === false && capRun.features.study.naming.unnamed === 3);
+    const wholeDir = stage("rich");
+    writeFileSync(join(wholeDir, "cards.json"), JSON.stringify({ ...FX.rich.cards,
+      naming: { named: 2, due_total: 2, cap: 8, complete: true, unnamed: 0, line: "2/2 due cards named (complete list)" } }));
+    const wholeRun = await runManager({ today: TODAY, stateDir: wholeDir });
+    ok("#wire: a COMPLETE list stays silent — the tail is a disclosure, not decoration",
+      !/LIST IS CAPPED/.test(wholeRun.prompt) && !/LIST IS CAPPED/.test(wholeRun.sheet));
+  }
   ok("rich: formation weak_connection in prompt", rich.prompt.includes("chunking → embeddings"));
   ok("rich: core_vs_light read as {core} fixed key (not dummy arbitrary)", rich.features.formation.core_vs_light.core === "spine: 2/6 fluent");
   ok("rich: AMBER intensity = consolidate held", rich.prompt.includes("consolidate one HELD"));
