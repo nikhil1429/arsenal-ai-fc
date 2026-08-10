@@ -309,3 +309,14 @@ dressing-room/state/captains_call.json
 # already ignored. The repo is PUBLIC. Read it live, never from the remote.
 # Reversal: delete this line. Nothing else depends on it being ignored.
 dressing-room/state/dmn_weak_vector.jsonl
+
+# 10 Aug 2026: the Oura auth-state marker, born during the morning conductor's
+# 09:15 run. Its CONTENT today is not a credential — {fatal, at}, a failure flag
+# and a timestamp, inspected before this line was written. It is ignored anyway,
+# for two reasons: it sits in the oura_secrets/oura_tokens lane, where the cost
+# of being wrong once is unrecoverable on a PUBLIC repo; and new state files in
+# this organism are private by default (the groundsman's `git add -u` can only
+# ever stage TRACKED paths, so only a manual `git add -A` could have published
+# it — which is exactly what nearly happened).
+# Reversal: delete this line. Nothing reads it from the remote.
+dressing-room/state/oura_auth_state.json
