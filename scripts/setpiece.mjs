@@ -317,6 +317,41 @@ function candidates(world, dossier, now = new Date()) {
     });
   }
 
+  // THE REST ROOM (KAAM 2, 10 Aug 2026) — the night's best VERIFIED dream.
+  // Three guards, each one deliberate:
+  //  (a) THE SOURCE LINE SAYS WHEN IT WAS DREAMED. A drill sourced from a
+  //      simulation must never read like a drill sourced from his own reps, and
+  //      the only honest way to hold that line is to date it in the sentence he
+  //      reads. Votes are shown too: they are how many independent rollouts
+  //      landed on this same stall, which is the only evidence it carries.
+  //  (b) IT IS EXPLICITLY CLASSED, NOT DEFAULTED THROUGH. mode "reconstruct"
+  //      means the ladder drops it on AMBER (recall only) and on RED
+  //      (floor_touch only) — deliberately, because this is the most SPECULATIVE
+  //      source on the board and should be the first thing withheld when his
+  //      body says rest. The existing AMBER/RED withholding already discloses it
+  //      at post-match, so nothing is hidden. A dreamed drill is a GREEN-day drill.
+  //  (c) UNVERIFIED IS NOT ELIGIBLE. Only entries the counter-rollout confirmed
+  //      may reach him — this file's own "better no ammunition than wrong
+  //      ammunition" law, applied at the consumer as well as the producer.
+  //      An empty inventory says why, below, instead of a silent zero.
+  //  (d) FRESHNESS GATES THE CANDIDATE, not just the note. The first cut of this
+  //      lane checked the date only where the reason is WRITTEN, so a dream from
+  //      any night still reached the sheet while the note said it had not — the
+  //      lane would have served a week-old simulation as tonight's drill. The
+  //      test that says "this branch was never entered" is the one that caught it.
+  const dmn = world.dmn_precache && world.dmn_precache.date === localDate(now) ? world.dmn_precache : null;
+  const dreamt = dmn && Array.isArray(dmn.entries) ? dmn.entries.filter(e => e.verified && e.drill && e.stall_signature) : [];
+  if (dreamt.length) {
+    const d = dreamt[0];   // already in cut order: verified → votes → recency
+    const when = d.last_seen || dmn.dreamed_at || dmn.date || "?";
+    out.push({
+      kind: "rest_room", probe_type_emoji: "🔵", concepts: [d.concept],
+      prompt: d.drill,
+      source: `dreamed ${String(when).slice(0, 16).replace("T", " ")} · ${d.votes || 1} independent rollout(s) landed on this stall: "${d.stall_signature}" · SIMULATED, not from your reps`,
+      winnable: false, mode: "reconstruct",
+    });
+  }
+
   // DERBY — hottest confusion pair, interleaved discrimination
   const pairs = world.learning_state && Array.isArray(world.learning_state.confusion_pairs) ? world.learning_state.confusion_pairs : [];
   if (pairs.length) {
@@ -551,6 +586,21 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
   const tier = (ladderCfg && ladderCfg[verdict]) || (ladderCfg && ladderCfg.GREEN) || { drill_modes_allowed: ["recall", "reconstruct", "defend", "novel", "negative_space"], max_drills: 3 };
   const withheld = [];
   if (dossierDegraded) withheld.push(DOSSIER_DEGRADED_NOTE);
+  // KAAM 2 guard (c) — AN EMPTY INVENTORY WRITES ITS REASON, never a silent zero.
+  // The Rest Room lane can be empty for four genuinely different reasons and they
+  // are NOT the same news: it never dreamed, it dreamed a different day, it
+  // dreamed and everything failed verification, or it is simply not wired. A
+  // silent absence reads as "nothing to say", which is the one thing this
+  // organism is not allowed to fake.
+  {
+    const p = world.dmn_precache;
+    const verified = p && Array.isArray(p.entries) ? p.entries.filter(e => e.verified && e.drill) : [];
+    if (!p) withheld.push("rest room: no dream on disk — it dreams only while you are away");
+    // localDate(now), NOT tomorrowStr(now): the sheet is FOR tomorrow but the
+    // dream is dreamed TONIGHT, so tonight's date is the one that means "fresh".
+    else if (p.date !== localDate(now)) withheld.push(`rest room: the newest dream is for ${p.date}, not tonight — not served`);
+    else if (!verified.length) withheld.push(`rest room: ${(p.entries || []).length} dream(s) tonight, ZERO survived verification — unverified ammunition is never served`);
+  }
   // resolved before the RED branch so every packet — including a floor-touch one — carries
   // the same envelope keys. A consumer must never have to tell "absent" from "not today".
   const focus = sprintFocus(world);
@@ -770,6 +820,42 @@ async function selftest() {
   assert("drills compiled for TOMORROW", green.for === "2026-07-13");
   assert("no deadline language in prompts", !green.drills.some(d => /deadline|days left|time is short|hurry/i.test(d.prompt)));
   assert("bench note names what was benched (never silent)", green.bench_note === null || /benched/.test(green.bench_note));
+
+  // === KAAM 2 (10 Aug 2026) — THE REST ROOM GETS AN ADDRESS ================
+  // EVERY ONE OF THESE EXERCISES A BRANCH WITH A PRECACHE PRESENT. The first
+  // version of this lane shipped with an undefined `todayKey` in the freshness
+  // check — the whole suite stayed green because no fixture ever put a precache
+  // on the bus, so the branch was never entered. It would have thrown on its
+  // FIRST real run, tonight at 22:40, inside an evening chain that has never
+  // fired. Fixtures that never enter the branch are not coverage.
+  {
+    const dreamt = (over = {}) => ({
+      date: localDate(now), dreamed_at: "2026-07-14T20:00:00.000Z",
+      entries: [{ concept: "hallucinations", stall_signature: "cannot name the measure", drill: "hand-label 10 outputs as grounded/not, then name the measure", votes: 3, verified: true, last_seen: "2026-07-14T20:00:00.000Z" }],
+      ...over,
+    });
+    const withDream = compile({ ...world, dmn_precache: dreamt() }, cfg, ladderCfg, dossier, now);
+    const dreamDrill = withDream.drills.find(d => d.kind === "rest_room");
+    assert("KAAM2 — a VERIFIED dream reaches the sheet as one more candidate (no privilege, no new number)",
+      !!dreamDrill && dreamDrill.concepts[0] === "hallucinations");
+    assert("KAAM2 — guard (a): the source line DATES the dream and says it is SIMULATED, never his own reps",
+      /dreamed 2026-07-14/.test(dreamDrill.source) && /SIMULATED, not from your reps/.test(dreamDrill.source)
+      && /3 independent rollout\(s\)/.test(dreamDrill.source));
+    assert("KAAM2 — guard (b): it is CLASSED, not defaulted — AMBER and RED both withhold it",
+      compile({ ...world, dmn_precache: dreamt(), readiness: { verdict: "AMBER" } }, cfg, ladderCfg, dossier, now).drills.every(d => d.kind !== "rest_room")
+      && compile({ ...world, dmn_precache: dreamt(), readiness: { verdict: "RED" } }, cfg, ladderCfg, dossier, now).drills.every(d => d.kind !== "rest_room"));
+    const unver = compile({ ...world, dmn_precache: dreamt({ entries: [{ concept: "x", stall_signature: "s", drill: "d", votes: 9, verified: false }] }) }, cfg, ladderCfg, dossier, now);
+    assert("KAAM2 — guard (c): an UNVERIFIED dream never reaches him, and the reason is written down",
+      unver.drills.every(d => d.kind !== "rest_room")
+      && (unver.withheld || []).some(w => /ZERO survived verification/.test(w)));
+    const stale = compile({ ...world, dmn_precache: dreamt({ date: "2026-07-01" }) }, cfg, ladderCfg, dossier, now);
+    assert("KAAM2 — THE todayKey BUG: a precache from another day is compared against TONIGHT's date and says so (this branch is what was never entered)",
+      stale.drills.every(d => d.kind !== "rest_room")
+      && (stale.withheld || []).some(w => /newest dream is for 2026-07-01, not tonight/.test(w)));
+    assert("KAAM2 — no dream at all is absence with a reason, never a silent zero",
+      (compile({ ...world, dmn_precache: null }, cfg, ladderCfg, dossier, now).withheld || []).some(w => /no dream on disk/.test(w)));
+    assert("KAAM2 — the <=3 drill law survives the extra candidate", withDream.drills.length <= 3);
+  }
   assert("MODALITY ROUTING — every drill tagged voice/screen per dossier map", green.drills.every(d => ["voice", "screen"].includes(d.modality)));
   assert("recall/defend route VOICE, reconstruct routes SCREEN", green.drills.every(d => d.mode === "reconstruct" ? d.modality === "screen" : (d.mode === "recall" || d.mode === "defend") ? d.modality === "voice" : true));
   // E2E audit (25 Jul 2026, LOW): the week number must ride the INJECTED clock.
@@ -1034,6 +1120,15 @@ async function main() {
     sprint: readJson(join(STATE_DIR, "sprint.json")),             // audit #87 — the curriculum
     concept_graph: readJson(join(STATE_DIR, "concept_graph.json")), // audit #72 — its only reader
     capsule_map: readJson(join(STATE_DIR, "capsule_map.json")),   // audit #33 — the two schedulers
+    // KAAM 2 (10 Aug 2026) — THE REST ROOM FINALLY HAS AN ADDRESS. It dreamed
+    // every night since 6 Aug and its best verified drill reached nobody: the
+    // precache is INERT by design (it waits on the earned-voice gate, which is
+    // at 2 of the 10 shadows it needs and only moves on a "spinning" verdict —
+    // weeks away at best). The drill sheet is a surface that already exists, is
+    // already ranked, and he already reads. No privilege and no new number: the
+    // dream enters as one more candidate and wins or loses on the ordering keys
+    // that were already there.
+    dmn_precache: readJson(join(STATE_DIR, "dmn_precache.json")),
     night_coach: readNightCoach(new Date()),                      // P2 — the overnight misconception map
   };
   // audit #72/#87/#33 — a missing input is NAMED, never silently treated as "no signal".
