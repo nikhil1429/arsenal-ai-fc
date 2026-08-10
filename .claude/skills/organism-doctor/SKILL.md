@@ -38,6 +38,42 @@ description: Full health check of the organism — vitals, brain budget, selftes
 1. Run in order (don't stop on failure — report all):
    - `node scripts/physio.mjs` (bleeds + speak-gates)
    - `node scripts/brain.mjs status` (budget phase, ceiling, eligibility)
+   - `node scripts/limits.mjs` — THE NUMBERS LEDGER: every gate, budget, guard
+     and cadence next to the live data it is judged against. Read the two lines
+     it ends each table with: how many gates are SHUT, and how many cadences are
+     still GUESSES. **Report only what has actually CHANGED shape** — a guess is
+     not a fault, it is a number waiting on 30-45-60 days of his data.
+     (added 11 Aug 2026, wiring audit. WHY IT IS HERE AT ALL: the ledger had no
+     task, no hook, no skill and no importer — `grep -rn "limits.mjs" scripts/
+     .claude/ package.json` finds it only in `organism:selftest`, so every
+     producer wired INTO it was still writing into the dark. Three lanes now
+     terminate here — calibration's published gate counter, claudegen's
+     `tokens_estimated`, and the distiller's switch-to-read journal — and this
+     bullet is the anchor all three arrive at. A `MEASURED └─` line under a
+     cadence is the shape to look for: counts and lags, never a verdict. If one
+     of them ever argues a number should move, that is ONE captain's-call card,
+     not a paragraph in your reply.
+     SAFE TO RUN, unlike `fuelboard.mjs status` two bullets down: limits.mjs is
+     read-only and its own selftest MEASURES that against its own source rather
+     than asserting it — `grep -n "READ-ONLY: this file calls no writer"
+     scripts/limits.mjs`.)
+   - `node scripts/dmn.mjs status` — THE REST ROOM'S ONLY READOUT: today's
+     precache, how many calls the organ has put on his Max window today, and the
+     **last failed call with the engine's own words**.
+     (added 11 Aug 2026, wiring audit. WHY IT IS HERE AT ALL: this command had
+     no caller anywhere in the organism — `grep -rn "dmn.mjs status"` found it
+     only in dmn.mjs's own MODES header and the generated repo bundle, so a
+     2.5M-token day and a real `Command failed: claude -p` fault were readable
+     only if HE typed a command he has no reason to remember. The bleed half of
+     that signal is now machine-wired: physio.mjs reads the lane's `dmn_` rows
+     and bleeds `rest_room_engine_fault` into loop_vitals.json when the NEWEST
+     attempt failed — so if physio is green here, do not re-litigate it; this
+     command is for the forensics behind a bleed and for the spend line.
+     Do NOT red the organism on a quiet DMN: standing down is designed
+     behaviour (he is at his desk / tone conserve / no measured headroom).
+     SAFE TO RUN, unlike `fuelboard.mjs status` further down: it only reads
+     dmn_precache.json and brain_ledger.jsonl — `grep -n 'mode === "status"'
+     scripts/dmn.mjs` and read the branch; there is no writer in it.)
    - `npm test` — **this is the authority, and the only correct net.**
      Report per-organ PASS/FAIL and name EVERY red one.
      (Audit #108, 6 Aug 2026: this line used to read `npm run organism:selftest`

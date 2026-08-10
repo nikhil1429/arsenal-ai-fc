@@ -217,10 +217,15 @@ is not.
   its own words — "Ginti yahan MAT likho — live padho". Read it live:*
   `node scripts/doubtminer.mjs`  *(prints the line + the by-pattern split), or straight off state:*
   `node -e "const t=require('./dressing-room/state/tape_room.json');console.log(t.gate2.line, JSON.stringify(t.gate2.by_pattern))"`*.)*
-  **AND KNOW GATE 2's HALF-BLIND SPOT** *(added 10 Aug 2026 — this page has always told you to
-  re-read `doubts[]` AND `bridges[].q`, and implied the code covers both. It does not:*
-  `grep -n "bridges" scripts/doubtminer.mjs` *returns ZERO hits. The machine scans `doubts[]`
-  only. So `bridges[].q` has no automation at all and is 100% eye-work at every LOCK/SAVE.)*
+  **GATE 2's HALF-BLIND SPOT IS CLOSED — the eye-work is NOT** *(added 10 Aug 2026, corrected
+  11 Aug 2026. The 10 Aug text said* `grep -n "bridges" scripts/doubtminer.mjs` *"returns ZERO
+  hits … `bridges[].q` has no automation at all", and that was true the day it was written. It
+  is false now: the scan was wired on 11 Aug, so the same grep returns hits and the machine
+  checks BOTH halves —* `node -e "const t=require('./dressing-room/state/tape_room.json');console.log(t.gate2.line)"`
+  *prints the doubts count AND the bridge-q count in one line. Read them live, never off this
+  page. What has NOT changed: the detector is a fixed pattern-list, so its number is a MACHINE
+  FLOOR and never the truth — on both halves. A flagged bridge reaches you as ONE captain's-call
+  card naming the capsule and the concept it bridges to; nothing is ever rewritten for him.)*
   So: at **every LOCK and every SAVE** — including 4a back-writes and Re-Jirah — re-read
   ALL `doubts[]` and `bridges[].q` against the COLD-READER STANDARD above. Flag anything
   **cryptic** (dangling `ye`/`woh`/`Map`/`second enemy` with no named subject), any

@@ -60,6 +60,14 @@ Triggers: *"revise"*, *"purana dohrana hai"*, *"re-jirah"*, *"yaad nahi raha"*, 
 2. `node scripts/deep.mjs <concept> <axis>` — only then the weld and the full `deep` layer, in his
    own words. Never paraphrase it back at him; it is the text he will defend in an interview.
 3. Held clean → note it. Cracked → re-weld NOW, and the crack is **data, never a verdict**.
+   **Re-weld from HIS OWN capsule-level layers, never from your own words** — the material is
+   already written and it is his: `node scripts/deep.mjs <concept> traps` (the seductive-wrong
+   that probably caught him) · `bridges` (where the concept joins its neighbours) · `threeways` ·
+   `lines` · `calibration` · `build`. Those seven commands did not exist until 10 Aug 2026: the
+   fields were in every capsule from lock day and `deep.mjs` rendered NONE of them, so a re-weld
+   here reached for the model's phrasing while ~38k characters of his defended prose sat one
+   `readFileSync` away. `node scripts/deep.mjs <concept>` (the spine) indexes all of them live
+   with counts — read the counts off that screen, never from this line.
    **Then RECORD it — `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>`.**
    Before 5 Aug 2026 this had no write path, which is why three of four capsules showed
    `reJirahDone: []` — never re-tempered once. The row lands in `rejirah_log.jsonl` and the

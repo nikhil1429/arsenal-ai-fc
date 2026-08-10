@@ -36,6 +36,20 @@ not apply here — this is the one place they don't).
    read to him VERBATIM, the `hidden_tests` are revealed ONE AT A TIME and only as
    you RUN each, and you grade the CODE, never the coder — a miss resolves
    silently into the reps.)
+   **THE MOMENT YOU READ THE `task` TO HIM, RUN
+   `node scripts/examiner.mjs served scrimmage-skill`** — one command, then carry on;
+   it stamps a serve receipt on the drill through its owner and writes nothing else.
+   (added 11 Aug 2026, dead-wire sweep: until today the examiner staged a drill every
+   night and NOTHING recorded whether any surface picked it up — "he played the code
+   round and missed" and "the drill was never opened" left byte-identical traces, so
+   the organ's own "a miss resolves silently into the reps" clause could not be
+   checked by anyone. Evidence it had never ridden: reps_log.jsonl held 21 rows and
+   ZERO tagged `scrimmage-voice`. The voice lane now stamps itself on its /config
+   route; the laptop lane is out-of-process and has to say so with this command.
+   `node scripts/examiner.mjs status` prints the receipt back as its SECOND line, and
+   the nightly `stage` says out loud when the outgoing drill carried none. If you
+   stamp one by mistake, `node scripts/examiner.mjs unserve scrimmage-skill` walks it
+   back — a wrong receipt is a lie, so remove it, never leave it.)
 2. If a brain-staged brief exists in `dressing-room/state/brain_out/scrimmage/`,
    use it exactly — the organism prepared that door.
    (annotated 10 Aug 2026: EXISTENCE is not the signal, and this line implied it
