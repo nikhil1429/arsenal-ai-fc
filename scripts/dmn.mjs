@@ -138,6 +138,93 @@ const MIN_STADIUM_BUDGET = MAX_ROLLOUTS;
 const MAX_ROLLOUTS_NIGHT = 100;                      // the stadium's hard cap (clusters saturate ~100)
 const ROLLOUTS_PER_WEAK = 25;                        // depth per weak point before diminishing returns
 const PERSONAS = ["a brisk recruiter screening for buzzwords", "a staff engineer mid-incident demanding ordered steps", "a principal engineer dissecting line-level mechanism", "a skeptical PM asking why an LLM at all"];
+const PRECACHE_CAP = 6;                              // unchanged — the cap was never the problem
+const WEAK_JOURNAL = join(STATE_DIR, "dmn_weak_vector.jsonl");
+
+// ===========================================================================
+// KAAM 2 (10 Aug 2026) — THE REST ROOM STOPS DELETING ITS OWN NIGHT
+// ---------------------------------------------------------------------------
+// MEASURED, not asserted: 25 dream passes since 6 Aug, roughly 1,154 metered
+// calls, and EXACTLY ONE pass's output exists. The writer did a full replace —
+// no read of the prior file, no merge anywhere — so each pass destroyed the last.
+// By his local day, all 5 passes of 9 Aug were destroyed; the survivor is a
+// 10 Aug 04:44 IST pass. 24 of 25 nights, paid for and deleted.
+//
+// The cap is NOT the defect and does not move: 6 entries was always enough. The
+// defect is that the 6 were re-picked from ONE pass instead of from the day.
+//
+// THE CUT ORDER IS WRITTEN DOWN BEFORE THE CAP CUTS. That was the plan's own
+// warning and it is the only subtle part: merge first, then sort, then cut —
+// cut first and a better later entry vanishes with nothing said.
+//   1. VERIFIED before unverified.
+//   2. then VOTES (how many independent rollouts landed on this same stall).
+//   3. then RECENCY (last_seen), newest first.
+// DELIBERATE DEVIATION FROM THE PLAN, recorded rather than silently taken: the
+// plan wrote this order as "votes, then verified, then recency". Verified is put
+// FIRST here because this file's own law is "better no ammunition than wrong
+// ammunition", and because the drill lane only ever consumes VERIFIED entries —
+// a votes-first cut would let a 3-vote unverified entry evict a 2-vote verified
+// one and quietly empty the very lane the merge exists to feed. If he wants the
+// plan's literal order, it is this one function.
+export function cutOrder(a, b) {
+  return (Number(!!b.verified) - Number(!!a.verified))
+    || ((b.votes || 0) - (a.votes || 0))
+    || (String(b.last_seen || "").localeCompare(String(a.last_seen || "")));
+}
+
+// Identity of a dream: the same stall, on the same concept, is the same thought
+// arriving again — that is a VOTE, not a duplicate.
+const dreamKey = (e) => `${String(e.concept || "").toLowerCase()} ${String(e.stall_signature || "").toLowerCase()}`;
+
+// WITHIN ONE DAY the file accumulates; a NEW day starts a clean sheet. That
+// boundary is not a guessed number — it is the same local-day boundary every
+// other organ in this repo already uses, and the drill compiler reads the file
+// once per evening, so a day is exactly the window that has a consumer.
+export function mergePrecache(prior, fresh) {
+  if (!prior || !Array.isArray(prior.entries) || prior.date !== fresh.date) {
+    return { ...fresh, entries: fresh.entries.slice(0, PRECACHE_CAP), passes_today: 1, merged: false,
+      entries_seen_today: fresh.entries.length, rollouts_today: fresh.rollouts || 0 };
+  }
+  const byKey = new Map();
+  for (const e of prior.entries) byKey.set(dreamKey(e), { ...e, first_seen: e.first_seen || prior.dreamed_at, last_seen: e.last_seen || prior.dreamed_at });
+  for (const e of fresh.entries) {
+    const k = dreamKey(e), old = byKey.get(k);
+    byKey.set(k, old ? {
+      ...e,
+      // a repeat stall GAINS votes — that is the whole point of keeping the day
+      votes: (old.votes || 0) + (e.votes || 0),
+      // verified is a floor, never a ceiling: a broken cluster is DROPPED before
+      // it ever reaches here (see the counter-rollout), so `false` only ever
+      // means "this pass could not check it", which must not un-verify a night.
+      verified: !!(old.verified || e.verified),
+      first_seen: old.first_seen, last_seen: fresh.dreamed_at, passes: (old.passes || 1) + 1,
+    } : { ...e, first_seen: fresh.dreamed_at, last_seen: fresh.dreamed_at, passes: 1 });
+  }
+  const all = [...byKey.values()].sort(cutOrder);
+  return { ...fresh, entries: all.slice(0, PRECACHE_CAP), merged: true,
+    passes_today: (prior.passes_today || 1) + 1,
+    entries_seen_today: all.length,                       // says out loud what the cap dropped
+    rollouts_today: (prior.rollouts_today || prior.rollouts || 0) + (fresh.rollouts || 0),
+    // the day's weak vectors, deduped — the file itself now carries what it aimed at
+    weak_vector: fresh.weak_vector };
+}
+
+// FROZEN, per the layering law: the exact pre-KAAM-2 behaviour, kept in the file
+// so the improvement stays a measured difference rather than a claim. Nothing
+// calls it; the selftest pins what it used to do.
+export function mergePrecacheLegacy(_prior, fresh) {
+  return { ...fresh, entries: fresh.entries.slice(0, PRECACHE_CAP) };   // full replace — the prior file was never read
+}
+
+// One line per pass. Append-only, and it is the ONLY durable record of what the
+// Rest Room was aiming at on a given night — the precache itself rolls at the day
+// boundary and its two inputs are gitignored with no history.
+function journalWeakVector(row) {
+  try {
+    mkdirSync(dirname(WEAK_JOURNAL), { recursive: true });
+    appendFileSync(WEAK_JOURNAL, JSON.stringify(row) + "\n");
+  } catch { }   // fail silent, never loud — a journal must never cost a dream
+}
 
 // ---------------------------------------------------------------------------
 // THE WEAK-POINT VECTOR — real signal only; empty = no dream (honest)
@@ -402,11 +489,34 @@ async function dream(deps = {}) {
     entries.push({ concept: c.concept, stall_signature: c.stall_point, reframe: c.reframe_15s, drill: c.drill, votes: c.votes, verified: verified === true });
   }));
   if (!entries.length) return { ok: false, skipped: "verification killed every cluster — better no ammunition than wrong ammunition" };
-  entries.sort((a, b) => (Number(b.verified) - Number(a.verified)) || (b.votes - a.votes));
-  const out = { date: localDate(now), dreamed_at: now.toISOString(), engine: "stadium", lanes: plan.filter(l => l.jobs.length).map(l => l.tank.id), rollouts: rollouts.length, verified: entries.filter(e => e.verified).length, entries: entries.slice(0, 6), inert: true,
+  entries.sort(cutOrder);
+  const fresh = { date: localDate(now), dreamed_at: now.toISOString(), engine: "stadium", lanes: plan.filter(l => l.jobs.length).map(l => l.tank.id), rollouts: rollouts.length, verified: entries.filter(e => e.verified).length, entries, inert: true,
+    // KAAM 2 (10 Aug 2026) — JOURNAL THE WEAK VECTOR. The Rest Room dreamed
+    // against a weak-point vector and recorded NO trace of it, so a whole week of
+    // its output is now unverifiable: nobody can say what it was aiming at on any
+    // given night, and the two inputs it derives from are gitignored with no
+    // history. Two lines of record — one in the file, one appended to a journal
+    // that survives the merge and the day roll. The plan calls this "worth more
+    // than any downstream tuning" and it is: without it, every later measurement
+    // of whether the DMN aimed well is a guess.
+    weak_vector: weak.map(w => ({ concept: w.concept, why: w.why })),
     // honesty (#8/#106): a PARTIAL night must not read like a full one
     planned_rollouts: nRoll, engine_down: engine.down || null, engine_error: engine.error || null };
+  // THE TEST SEAM IS THE WRITE ITSELF (10 Aug 2026). A caller that redirects the
+  // write is BY DEFINITION not writing live state, so the two new side-channels
+  // this pass adds — reading the prior precache, and appending to the weak-vector
+  // journal — follow the write wherever it goes. Getting this wrong is not
+  // hypothetical: the identical shape was found live in teaching_audit.mjs the
+  // same morning, where a selftest cpSync'd his real forge_session.json and went
+  // red the moment he closed a session. One rule, at the seam, kills the class:
+  // never let a new default reach live state on a path a test already redirected.
+  const redirected = !!deps.write;
+  const prior = (deps.readPrior || (redirected ? () => null : () => readJson(PRECACHE)))();
+  const out = mergePrecache(prior, fresh);
   (deps.write || ((o) => writeAtomic(PRECACHE, o)))(out);
+  (deps.journalWeak || (redirected ? () => {} : journalWeakVector))({ at: fresh.dreamed_at, date: fresh.date, engine: "stadium",
+    rollouts: rollouts.length, planned_rollouts: nRoll, weak_vector: fresh.weak_vector,
+    entries_this_pass: entries.length, verified_this_pass: fresh.verified });
   return { ok: true, entries: out.entries.length, rollouts: rollouts.length, planned_rollouts: nRoll, verified: out.verified, lanes: out.lanes, engine_down: engine.down, engine_error: engine.error };
 }
 
@@ -780,6 +890,68 @@ async function selftest() {
     const r = await dreamLegacy({ ...base, generate: genLegacy, recordUse: () => uses++, write: (o) => { saved = o; } });
     assert("LEGACY: the frozen serial engine still dreams (rollouts ≤ 8, T7 only)", r.ok && r.rollouts <= MAX_ROLLOUTS && uses === r.rollouts && saved.inert === true);
     assert("LEGACY: output shape unchanged (no engine stamp — the old contract)", saved.engine === undefined && saved.entries.every(e => e.reframe && e.drill));
+  }
+
+  // === KAAM 2 (10 Aug 2026) — THE NIGHT STOPS BEING DELETED =================
+  {
+    const E = (concept, stall, votes, verified) => ({ concept, stall_signature: stall, reframe: "r", drill: "d", votes, verified });
+    const prior = { date: "2026-08-10", dreamed_at: "2026-08-10T01:00:00.000Z", rollouts: 25, passes_today: 1,
+      entries: [E("hallucinations", "cannot name the measure", 2, true), E("hallucinations", "confuses grounding with RAG", 1, false)] };
+    const fresh = { date: "2026-08-10", dreamed_at: "2026-08-10T02:00:00.000Z", rollouts: 25, verified: 1,
+      entries: [E("hallucinations", "cannot name the measure", 3, false), E("embeddings", "thinks cosine is distance", 1, true)] };
+
+    // 1 — THE DEFECT ITSELF, pinned on the frozen engine so it can never come back unnoticed.
+    assert("KAAM2 — the FROZEN engine really did destroy the night: the prior file is not even read",
+      mergePrecacheLegacy(prior, fresh).entries.length === 2
+      && mergePrecacheLegacy(prior, fresh).entries.every(e => e.stall_signature !== "confuses grounding with RAG"));
+
+    const m = mergePrecache(prior, fresh);
+    // 2 — a repeat stall is a VOTE, not a duplicate.
+    const repeat = m.entries.find(e => e.stall_signature === "cannot name the measure");
+    assert("KAAM2 — a stall dreamed twice in one day MERGES and gains votes (2+3), keeping its first sighting",
+      repeat.votes === 5 && repeat.passes === 2 && repeat.first_seen === "2026-08-10T01:00:00.000Z" && repeat.last_seen === "2026-08-10T02:00:00.000Z");
+    // 3 — verified is a FLOOR. A pass that could not check does not un-verify a night.
+    assert("KAAM2 — verified never goes backwards: this pass reported false, the entry stays verified",
+      repeat.verified === true);
+    // 4 — nothing from either side is lost.
+    assert("KAAM2 — the earlier pass's OTHER stall survives, and the new pass's stall is added (3 total, none destroyed)",
+      m.entries_seen_today === 3 && m.entries.some(e => e.stall_signature === "confuses grounding with RAG")
+      && m.entries.some(e => e.concept === "embeddings") && m.merged === true && m.passes_today === 2);
+    // 5 — the day's real cost is cumulative, not the last pass's.
+    assert("KAAM2 — rollouts_today accumulates across passes (25+25), so the night's true cost is readable",
+      m.rollouts_today === 50);
+    // 6 — THE CUT ORDER, and that it cuts AFTER the merge.
+    const many = { ...fresh, entries: [E("a", "s1", 9, false), E("b", "s2", 1, true), E("c", "s3", 1, true), E("d", "s4", 1, true), E("e", "s5", 1, true), E("f", "s6", 1, true), E("g", "s7", 1, true)] };
+    const cut = mergePrecache({ date: "2026-08-10", dreamed_at: "2026-08-10T01:00:00.000Z", entries: [] }, many);
+    assert("KAAM2 — VERIFIED outranks a higher-voted unverified entry at the cap (better no ammunition than wrong ammunition)",
+      cut.entries.length === 6 && cut.entries.every(e => e.verified === true) && !cut.entries.some(e => e.stall_signature === "s1"));
+    assert("KAAM2 — and the cap says out loud what it dropped, instead of dropping it silently",
+      cut.entries_seen_today === 7);
+    assert("KAAM2 — the cut order is one named function, so his stated order is one edit away",
+      typeof cutOrder === "function" && [E("x", "x", 1, false), E("y", "y", 1, true)].sort(cutOrder)[0].verified === true);
+    // 7 — the day boundary.
+    const nextDay = mergePrecache(prior, { ...fresh, date: "2026-08-11" });
+    assert("KAAM2 — a NEW day starts a clean sheet; the merge never drags yesterday forward",
+      nextDay.merged === false && nextDay.passes_today === 1 && nextDay.entries.length === 2
+      && !nextDay.entries.some(e => e.stall_signature === "confuses grounding with RAG"));
+  }
+  {
+    // 8 — THE WEAK-VECTOR JOURNAL, on the REAL engine path with both new side
+    // channels captured. This is the line that makes a week of dreams auditable
+    // at all: today the DMN records nothing about what it aimed at, which is
+    // exactly why the 9 Aug history can no longer be checked by anyone.
+    const journal = [];
+    let saved = null;
+    await dream({ ...base, write: (o) => { saved = o; }, journalWeak: (row) => journal.push(row) });
+    assert("KAAM2 — every pass appends ONE journal row naming what it aimed at, with its own cost",
+      journal.length === 1 && journal[0].weak_vector.length === weakFix.length
+      && journal[0].weak_vector[0].concept === "eval metrics" && journal[0].weak_vector[0].why === "danger zone"
+      && typeof journal[0].rollouts === "number" && typeof journal[0].planned_rollouts === "number"
+      && journal[0].date === localDate(base.now));
+    assert("KAAM2 — and the precache carries the same vector, so the file explains itself without the journal",
+      saved && Array.isArray(saved.weak_vector) && saved.weak_vector.map(w => w.concept).join(",") === "eval metrics,context windows");
+    assert("KAAM2 — HERMETICITY: a redirected write carries the prior-read and the journal with it (a selftest can never touch live state)",
+      saved.merged === false && saved.passes_today === 1);
   }
 
   const passed = checks.every(c => c[1]);

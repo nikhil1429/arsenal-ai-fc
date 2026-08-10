@@ -302,3 +302,10 @@ dressing-room/state/distiller_latency.jsonl
 #       names as field keys) and re-confirmed: "dono rehne do".
 # Reversal, one command: git add -f dressing-room/state/captains_call.json
 dressing-room/state/captains_call.json
+
+# KAAM 2 (10 Aug 2026): the DMN's weak-vector journal — one line per dream pass
+# naming what it aimed at. It carries his CONCEPT WEAKNESSES by name (the
+# calibration danger zone + stalling concepts), which is the dmn_precache class,
+# already ignored. The repo is PUBLIC. Read it live, never from the remote.
+# Reversal: delete this line. Nothing else depends on it being ignored.
+dressing-room/state/dmn_weak_vector.jsonl
