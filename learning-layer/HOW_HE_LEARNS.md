@@ -13,7 +13,15 @@
 > first live Claude Code study session on 31 Jul 2026 — before this document existed.
 > Treat the patterns as load-bearing; treat individual dates as approximate.
 >
-> **One conflict with canon is unresolved — see the note at the end. Read it.**
+> **One conflict with canon is RESOLVED — see the note at the end. Read it.**
+>
+> *(corrected 10 Aug 2026: this line said "**is unresolved**" until today, while the section it
+> points at has been headed "RESOLVED — 2026-08-01 · the captain ruled: the VISUALIZATION
+> CONTRACT STANDS" since 1 Aug. The file's own front door was inviting a re-litigation its own
+> back page had already closed — and that is not theoretical: the last paragraph of this
+> document records that "a session on 4 Aug 2026 nearly demoted the contract". Evidence: the
+> heading itself — `grep -n "the captain ruled" learning-layer/HOW_HE_LEARNS.md` — and the
+> ruling carried as law in CLAUDE.md, `grep -n "11 point yes" CLAUDE.md`. Do not re-open it.)*
 
 ---
 
@@ -348,7 +356,28 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
      the rules here and every future session gets them on its next boot. Keep it short —
      it is injected on every session start, and a wall of text read every time is a wall
      ignored every time. Remove or rename a marker and the splice goes SILENT (by design;
-     it never guesses at the boundaries). -->
+     it never guesses at the boundaries).
+
+     (corrected 10 Aug 2026 — THREE DOORS, not one, and "verbatim" has two exceptions the
+      code makes. Nothing above is deleted; it was true and it is now incomplete.
+
+      THREE DOORS. The parser `loadTeachingCard` is EXPORTED and reused, so this block also
+      reaches (a) the organism-memory MCP `get_context`, the call CLAUDE.md mandates at
+      session start — `grep -n "loadTeachingCard" scripts/mcp-memory.mjs` — and (b) the
+      SessionStart budget assembler that decides what actually fits —
+      `grep -n "TEACHING CARD" scripts/context_manifest.mjs`. One parser, three doors:
+      edit here and all three change on their next run; fork the parser and they drift.
+
+      "VERBATIM", precisely: the loader strips bold `**` and caps the block, appending a
+      "truncated" tail past the cap — `grep -n "CARD_MAX" scripts/learnstate.mjs` and
+      `grep -n "strips bold" scripts/learnstate.mjs`. So the rules arrive un-bolded, and a
+      long enough card arrives CUT. Never assume it fits — measure it. Two live reads:
+      `node scripts/learnstate.mjs selftest` asserts the shipped doc still yields all
+      seventeen rules, and `node scripts/learnstate.mjs brief` prints what actually lands
+      under "HOW TO TEACH HIM". Both were run on 10 Aug 2026 and both were green.
+
+      Wiring, verified the same day: SessionStart runs `learnstate.mjs brief` and PreCompact
+      re-prints it — `grep -n "learnstate.mjs brief" .claude/settings.json`.) -->
 
 1. Give **ONE** new idea per message, and **ONE** check-question at the end.
 2. Teach in **Hinglish** — English only for the interview rep.
@@ -380,10 +409,18 @@ Finding **#2** says: *visualisation does not produce understanding for him; plai
 hand-run trace does, and a failed visual makes him ask for a better visual rather than for
 plainer text.* Three dated failures; one strong success on a plain code-block whiteboard.
 
-`learning-layer/PROJECT_OS.md` VISUALIZATION CONTRACT section (line-ref dropped 9 Aug — :328 had drifted to ~:347) says the opposite, as law:
+`learning-layer/PROJECT_OS.md` VISUALIZATION CONTRACT section (line-ref dropped 9 Aug — :328 had
+drifted to ~:347; **re-checked 10 Aug 2026 and it had drifted AGAIN, to :440** — which is exactly
+why the ref stays dropped and does not come back: find the section live with
+`grep -n "VISUALIZATION CONTRACT" learning-layer/PROJECT_OS.md`) says the opposite, as law:
 **"har concept ka EK widget; widget HI lesson hai, text side mein."** THE METHOD step 4
 (DIKHAO) is built on it, and `.claude/skills/forge/SKILL.md` renders it as an obligation the
 pacer prints every turn at step 4.
+*(all three re-verified 10 Aug 2026 and all three held — the header quote is verbatim; step 4 is
+still DIKHAO, `grep -n "DIKHAO" scripts/forge_session.mjs`; and the PACER — unnamed above, it is
+`scripts/forge_session.mjs contract`, fired every turn by the UserPromptSubmit hook in
+`.claude/settings.json` — still prints the step-4 obligation, `grep -n "owes a WIDGET"
+scripts/forge_session.mjs`.)*
 
 On 31 Jul 2026 the widget was built to contract and he did not drive it; the concept advanced
 only through plain text in chat.
@@ -410,7 +447,12 @@ answering, not a pointer to rule 11 of the cold-start card — rule 11 is about 
 failures and the BPE hand-trace success are still the strongest evidence in this document.
 Under the ruling they are re-read: **#2 is the specification for what makes a widget BAD — it
 is not proof that visuals do not work.** Read the failures as a defect list and every single
-one was already outlawed by the contract's own clauses (`PROJECT_OS.md:328-342`):
+one was already outlawed by the contract's own clauses (find them live —
+`grep -n "Load budget\|Spotlight\|Story hook\|Chala mode" learning-layer/PROJECT_OS.md`.
+*Corrected 10 Aug 2026: this cited `PROJECT_OS.md:328-342`, and those lines now hold something
+else entirely — the clause block sits at :447-472 this morning, so the number was pointing four
+sections wrong. The grep replaces it permanently. All four clauses quoted in the table below
+were re-read against the live file today and every one is still verbatim, word for word.*):
 
 | #2's evidence | the contract clause it was already breaking |
 |---|---|
@@ -429,6 +471,17 @@ not a passed one — so it is at minimum a build defect too. The ruling stands o
 is the named falsifier: if widgets that genuinely meet every clause keep going undriven, that
 is new evidence and it goes back to the captain as new evidence — it does not re-open the
 question by itself.
+
+*(added 10 Aug 2026 — THE FALSIFIER IS NOW MEASURABLE, which it was not when this paragraph was
+written. Since 5 Aug 2026 the contract has a code owner: `scripts/widget.mjs` is the REGISTRY —
+`list` · `register <concept> <file> --gates <n>` · `open <concept>` — and it tracks built versus
+DRIVEN per concept, so "kept going undriven" is now a command instead of somebody's memory:
+`node scripts/widget.mjs list`. The step-4 pacer counts the same thing rather than asserting a
+widget exists — `grep -n "owes a WIDGET" scripts/forge_session.mjs` shows it demanding a widget
+"DRIVEN not just delivered" and counting `moment widget_gate` calls. **Read the counts off those
+commands, never off this page** — any number written here rots on the very next `register`
+(first landed `2aff0a0`, 5 Aug 2026; `git log -- scripts/widget.mjs`). Nothing about the ruling
+changes; only the bookkeeping stopped being manual.)*
 
 ### REJECTED, and why — so this is never re-argued from scratch
 
@@ -469,10 +522,21 @@ competition for one moment:
   stuck-story) — see `.claude/skills/forge/SKILL.md`.
 - **Step 4 · DIKHAO is the WIDGET.** The Visualization Contract owns this step, in full, undemoted.
 So the order is **text first, then the widget** — which is exactly rule 3's *"visuals samajh ke
-BAAD"* and exactly the contract's own position in the step list. Neither is weakened: a widget
+BAAD"* *(corrected 10 Aug 2026: the MEANING is rule 3's, the quote marks were never earned.
+Rule 3's shipped words are English — "visuals only after understanding" — and the Hinglish
+phrasing exists nowhere in the repo except this sentence and the generated repo bundle that
+copies it (checked with a multiline grep, since the phrase breaks across a line here and a
+plain `grep -rn "samajh ke BAAD" .` therefore returns nothing at all — including here). Read
+it as a gloss, not a citation. Rule 3 itself:
+`grep -n "numbered trace" learning-layer/HOW_HE_LEARNS.md`.)* and exactly the contract's own
+position in the step list. Neither is weakened: a widget
 delivered before the mechanism is understood breaks rule 3, and a step 4 with no widget breaks
 the contract. **This does NOT re-open the ruling** — the contract's status, its clauses, and the
 "undriven widget = FAILED widget" law are all unchanged.
 *(Recorded because a session on 4 Aug 2026 nearly demoted the contract on the false premise that
 a terminal cannot deliver a widget. It can: the contract's own clause says "delivery inline, and
-if the render fails, a self-contained `.html` immediately — laptop-first.")*
+if the render fails, a self-contained `.html` immediately — laptop-first." — verified 10 Aug 2026,
+and noted honestly: that sentence is an ENGLISH RENDERING, not a quotation. Canon writes the
+clause in Hinglish — "Delivery: inline render; render fail ho to self-contained .html turant.
+… Laptop-first (mobile fallback)." Read the original, don't trust the translation:
+`grep -n "Delivery: inline render" learning-layer/PROJECT_OS.md`.)*

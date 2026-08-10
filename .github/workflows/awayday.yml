@@ -1,7 +1,15 @@
 # THE AWAY-DAY RUNNER (CYBORG_BRAIN.md §9) — a CI lane, NOT a home for the brain.
 # Runs ONLY the public_safe-flagged jobs in ci_manifest.json; the runner script
-# refuses the whole run if even one job lacks the flag. Personal data is
-# gitignored and therefore absent in this checkout by construction.
+# refuses the whole run if even one job lacks the flag, and refuses a flagged job
+# whose command names the personal lane.
+# CORRECTED 10 Aug 2026 (wire-audit): this comment used to end by claiming the
+# ignore rules kept personal data out of this checkout "by construction". False
+# since captain decision D10 (5 Aug, re-confirmed 10 Aug) — readiness.json,
+# intake_log.json and reps_log.jsonl are TRACKED, so this checkout DOES carry his
+# biometric, medication-timing and study state. His repo, his ruling; the runner
+# does not reverse it. It reads the checkout live and prints what is exposed
+# before any job dispatches, so this log names the open lock instead of a comment
+# promising a closed one.
 name: away-day
 on:
   push:

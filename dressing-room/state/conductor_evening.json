@@ -1,13 +1,15 @@
 {
-  "started": "2026-08-09T17:03:29.758Z",
-  "finished": "2026-08-09T17:03:33.155Z",
-  "total_ms": 3396,
-  "ran": 9,
-  "ok": 9,
+  "started": "2026-08-10T16:30:03.364Z",
+  "finished": "2026-08-10T16:30:17.593Z",
+  "total_ms": 14225,
+  "ran": 11,
+  "ok": 11,
   "failed": 0,
   "order": [
     "bell",
     "scorer",
+    "scoreboard",
+    "nikhil-model",
     "setpiece",
     "doubtminer",
     "physio-pm",
@@ -20,7 +22,7 @@
     {
       "id": "bell",
       "ok": true,
-      "ms": 1032,
+      "ms": 2922,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -29,7 +31,25 @@
     {
       "id": "scorer",
       "ok": true,
-      "ms": 109,
+      "ms": 4703,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "scoreboard",
+      "ok": true,
+      "ms": 702,
+      "exit": 0,
+      "error": null,
+      "stderr": null,
+      "degraded": null
+    },
+    {
+      "id": "nikhil-model",
+      "ok": true,
+      "ms": 319,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -38,7 +58,7 @@
     {
       "id": "setpiece",
       "ok": true,
-      "ms": 106,
+      "ms": 296,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -47,7 +67,7 @@
     {
       "id": "doubtminer",
       "ok": true,
-      "ms": 176,
+      "ms": 431,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -56,7 +76,7 @@
     {
       "id": "physio-pm",
       "ok": true,
-      "ms": 124,
+      "ms": 256,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -65,7 +85,7 @@
     {
       "id": "examiner",
       "ok": true,
-      "ms": 90,
+      "ms": 263,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -74,7 +94,7 @@
     {
       "id": "wall-pm",
       "ok": true,
-      "ms": 204,
+      "ms": 743,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -83,7 +103,7 @@
     {
       "id": "scout",
       "ok": true,
-      "ms": 94,
+      "ms": 341,
       "exit": 0,
       "error": null,
       "stderr": null,
@@ -92,7 +112,7 @@
     {
       "id": "wallpaper",
       "ok": true,
-      "ms": 1461,
+      "ms": 3249,
       "exit": 0,
       "error": null,
       "stderr": null,

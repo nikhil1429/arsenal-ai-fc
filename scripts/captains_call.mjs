@@ -24,6 +24,10 @@
 //     (owners-only law) — this file never edits another organ's state.
 //   · ONE card per deal, silent otherwise. A list is a wall; a wall is unread.
 //   · "baad" sleeps the card until the NEXT LOCAL DAY — no nagging inside a day.
+//   · AT-SOURCE (10 Aug 2026 wiring repair, see AT_SOURCE_KEY): a card that runs
+//     nothing AND whose key only moves when the work lands is NOT finished by his
+//     haan — the haan is recorded, the card sleeps a day and stays live, and only
+//     retire-at-source may kill it. An ask must never be destroyed by being answered.
 //   · silent for headless organs (ARSENAL_ORGAN=1) and while a FRESH forge
 //     session is open (his rule #12 — no system work mid-concept; cards wait
 //     at /matchday, /full-time, or a session with no concept in motion).
@@ -97,15 +101,65 @@ function loadState() {
 
 // ── PURE CORE (no disk — the selftest never needs a file) ─────────────────────
 
+// Is there still an ENGINE behind the B4b gemini-login ask? (pure, so the selftest
+// needs no brain_config.json.) This is deliberately brain.mjs's OWN eligibility gate,
+// mirrored — brain.mjs:810 `if (j.engine === "gemini" && !cfg.gemini.enabled) return
+// false`, plus the job table itself: a lane with the flag on and nobody riding it
+// renders nothing, so a login changes nothing. Absent `gemini` block = disabled,
+// which is brain.mjs's own DEFAULTS (`gemini: { enabled: false }`), not a guess.
+export function geminiLaneLive(brainCfg) {
+  if (!brainCfg || !brainCfg.gemini || brainCfg.gemini.enabled === false) return false;
+  const jobs = Array.isArray(brainCfg.jobs) ? brainCfg.jobs : [];
+  return jobs.some((j) => j && j.engine === "gemini" && j.enabled !== false);
+}
+
+// ── WIRING REPAIR (10 Aug 2026) — AN ASK MUST NOT BE DESTROYED BY BEING ANSWERED
+// A dead-wire tracing pass found three cards that carry NO exec (`kind:"none"`)
+// AND a key pinned to a source that only moves when the WORK lands:
+//   gem:sync:<date>        the LAST SUCCESSFUL sync (gem_sync_stamp.at, :689)
+//   rejirah:<c>:<due>      moves when the gist paste lands and the mirror re-fetches
+//   mission:return:<id>:…  moves when the return is ingested (scout's ingested_at)
+// A haan on those set answer + retired_at ("no exec by design, v1", applyAnswer)
+// and mint()'s `if (byKey.has(key)) return` then refused that key FOREVER — so
+// answering the card KILLED the ask while the work stayed undone, silently.
+// Live proof at the moment of this repair: card c13, key `gem:sync:2026-07-30`,
+// stamp unmoved for 11 days — one haan there and THE EXAMINER Gem goes stale
+// forever with the organ printing "done on his word".
+// The fix keeps v1's no-exec rule and moves the FINISH LINE to the source: these
+// now dispatch `kind:"at-source"` — his haan is RECORDED (acted[]) and the card
+// SLEEPS one day (the file's own day-unit, the same one "baad" and the A1
+// rest-rule already use — no new number invented) but stays LIVE, so ONLY
+// retire-at-source may kill it, with the true epitaph it already writes ("the
+// Gem got synced" · "the paste landed" · "the return landed"). Work landed ⇒
+// gone at the next sync. Work didn't ⇒ back tomorrow, carrying his haan.
+// `na` still retires on the spot: a refusal IS a decision, and it needs no proof.
+// KEY-SHAPED, not source-shaped, on purpose: `missions.desk` also mints the
+// fire-nudge and the diff-review (both `kind:"open"`, both genuinely finished by
+// his word), and `hand-filed` has no source condition at all — a haan there MUST
+// still retire. The key prefix is the exact identity of the three affected mints.
+export const AT_SOURCE_KEY = /^(gem:sync:|rejirah:|mission:return:)/;
+
 // Derive the card set from the sources. Existing cards keep their identity (key),
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null, tiers = null,
-  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, gatetune = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null } = {}, now = new Date()) {
+  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
+
+  // MIGRATION for the repair above (10 Aug 2026). Cards minted BEFORE it still
+  // carry `kind:"none"`, and mint() will never re-mint their keys — so the live
+  // deck (c13 `gem:sync:2026-07-30` among them) would still be destroyed by the
+  // next haan. Only UNSETTLED cards are touched; a retired card's history is its
+  // own and is never rewritten.
+  for (const c of s.cards) {
+    if (c.answer || c.retired_at) continue;
+    if (AT_SOURCE_KEY.test(String(c.key || "")) && c.dispatch && c.dispatch.kind === "none") {
+      c.dispatch = { kind: "at-source" };
+    }
+  }
 
   // 1. staged teaching drifts — one card per staged entry, keyed by its `at`.
   const stagedAts = new Set(staged.map((e) => e.at));
@@ -156,33 +210,43 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
 
   // 3. THE MISSIONS DESK (outward loop, 8 Aug 2026) — PULL-DERIVE off scout's
   // missions.json. Two card shapes, both anchor-lawful:
-  //   fire-nudge — while the full-syllabus audit sits staged with ZERO returns;
-  //     haan = the session opens M01 and walks the fire with him right now.
-  //     Auto-retires the moment any return lands (resolved at the source).
+  //   fire-nudge — ONE card for the NEXT un-fired audit mission (auditFireTarget,
+  //     keyed by that mission's id); haan = the session opens it and walks the
+  //     fire with him right now. His fire (scout's `fired_at`) retires it, the
+  //     nudge then advances M01→M02→M03→M04, and it stays silent while one is
+  //     in flight. See auditFireTarget's header for the 10 Aug wiring repair.
   //   diff-review — one per ingested return; haan = the session walks the diff
   //     in ≤3 lines. Canon changes only on his word (Ruling 6). Audit diff
   //     cards auto-retire when `mission audit-close` records that word.
   if (missions && Array.isArray(missions.missions)) {
     const rows = missions.missions;
     const auditRows = rows.filter((r) => r.type === "audit");
-    const anyReturn = rows.some((r) => r.ingested_at);
     const auditClosed = !!(missions.syllabus_audit && missions.syllabus_audit.closed_at);
-    if (auditRows.length && !anyReturn && !auditClosed) {
-      const key = "mission:audit-fire";
-      if (!byKey.has(key)) {
-        s.cards.push({
-          id: `c${s.next_id++}`, key, source: "missions.desk",
-          line: `Outward: full-syllabus audit taiyaar (M01–M04, Gemini Deep Research) — abhi M01 saath fire karein?`,
-          dispatch: { kind: "open", path: auditRows[0].file },
-          filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
-          retired_at: null, resolution: null,
-        });
-      }
+    const fireTarget = auditFireTarget(rows, auditClosed);
+    const fireKey = fireTarget ? `mission:audit-fire:${fireTarget.id}` : null;
+    if (fireTarget && !byKey.has(fireKey)) {
+      const back = auditRows.filter((r) => r.ingested_at).length;
+      s.cards.push({
+        id: `c${s.next_id++}`, key: fireKey, source: "missions.desk",
+        line: `Outward: full-syllabus audit ${back}/${auditRows.length} wapas — abhi ${fireTarget.id} saath fire karein? (Gemini Deep Research)`,
+        dispatch: { kind: "open", path: fireTarget.file },
+        filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
+        retired_at: null, resolution: null,
+      });
     }
+    // retire-at-source: a fire card that is no longer THE target. The reason is
+    // read off that mission's own row so the epitaph is never a guess — and the
+    // pre-repair key ("mission:audit-fire", no id) retires here too.
     for (const c of s.cards) {
-      if (c.key === "mission:audit-fire" && !c.retired_at && !c.answer && (anyReturn || auditClosed)) {
-        c.retired_at = ts; c.resolution = "resolved-at-source (a return landed — the fire happened)";
-      }
+      if (!/^mission:audit-fire(?::|$)/.test(c.key) || c.retired_at || c.answer) continue;
+      if (fireKey && c.key === fireKey) continue;
+      const row = rows.find((r) => r.id === c.key.split(":")[2]);
+      c.retired_at = ts;
+      c.resolution = "resolved-at-source (" + (
+        row && row.fired_at ? "he fired it — scout stamped fired_at"
+        : row && row.ingested_at ? "the return landed"
+        : auditClosed ? "audit closed on his word"
+        : "no longer the next fire") + ")";
     }
     for (const r of rows.filter((r) => r.ingested_at)) {
       if (r.type === "audit" && auditClosed) continue;
@@ -214,7 +278,8 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
       s.cards.push({
         id: `c${s.next_id++}`, key, source: "missions.desk",
         line: `Mission ${r.id} ${Math.floor(hrs / 24)} din pehle fire hua tha — Gemini mein report taiyaar hogi. "le lo" bol dein to utha lun?`,
-        dispatch: { kind: "none" },
+        // 10 Aug repair: only the INGESTED return finishes this (see AT_SOURCE_KEY)
+        dispatch: { kind: "at-source" },
         filed_at: ts, dealt: [], answer: null, answered_at: null, sleep_until: null,
         retired_at: null, resolution: null,
       });
@@ -310,7 +375,7 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     if (!liveRe) {
       mint(`rejirah:${p.concept}:${p.due}`, "rejirah.pending",
         `Re-Jirah ${p.concept} R${p.round} band hua par gist mein NAHI — patch abhi saath paste karein? (5 organs tab tak round ko andekha)`,
-        { kind: "none" });
+        { kind: "at-source" });   // 10 Aug repair: only the LANDED paste finishes this
     }
   }
 
@@ -318,7 +383,7 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   if (gem) {
     mint(`gem:sync:${gem.stamp}`, "gem.sync_due",
       `EXAMINER Gem ${gem.days == null ? "kabhi" : gem.days + " din se"} sync nahi hua — abhi /gem-sync bol dein? (5 min, Chrome)`,
-      { kind: "none" });
+      { kind: "at-source" });   // 10 Aug repair: only a MOVED stamp finishes this
   }
   retireAtSource((c) => c.source === "gem.sync_due" && !gem, "the Gem got synced");
 
@@ -340,12 +405,29 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   retireAtSource((c) => c.source === "oura.auth_fatal" && !oura, "a verdict landed — the token works");
 
   // B4b — Gemini CLI needs its one-time login (dead-streak ≥ 5, brain's own bar).
-  if (geminiLogin) {
-    mint(`gemini:login:${geminiLogin.day}`, "brain.gemini_login",
-      `Gemini CLI ${geminiLogin.streak} baar lagatar fail — ek baar terminal mein \`gemini\` chala ke login kar dein? Raat ke renders ruke hain.`,
+  // DEAD WIRE, repaired 10 Aug 2026 — this was a CONSUMER WITH NO PRODUCER. The card
+  // asks him to log in so "raat ke renders" resume, and it retires only when a gemini
+  // row lands with ok:true. But on 17 Jul the captain's own ENGINE LAW moved every
+  // committed job onto Claude (brain.mjs asserts it: `cfg.jobs.every(j => (j.engine ||
+  // "claude") === "claude")`), so brain_ledger.jsonl's LAST gemini row is dated
+  // 2026-07-17 and no further row of either polarity can ever be written. Measured
+  // this run: 10 gemini rows in 4,558, all ok:false, all 17 Jul; 0 of 30 configured
+  // jobs carry engine=gemini. The streak froze at 10, the retire test became
+  // unreachable, and card c14 held a permanent seat in a one-card-per-anchor deck
+  // telling him about a 24-day-old failure of an engine nothing calls — even after a
+  // login. The ask is now gated on the engine still HAVING a rider (geminiLane, from
+  // geminiLaneLive below); add a gemini job back to brain_config.json and the card
+  // re-arms by itself. No new threshold: the streak bar is still brain.mjs's own 5.
+  const geminiAsk = geminiLane && geminiLane.live === false ? null : geminiLogin;
+  if (geminiAsk) {
+    mint(`gemini:login:${geminiAsk.day}`, "brain.gemini_login",
+      `Gemini CLI ${geminiAsk.streak} baar lagatar fail — ek baar terminal mein \`gemini\` chala ke login kar dein? Raat ke renders ruke hain.`,
       { kind: "none" });
   }
-  retireAtSource((c) => c.source === "brain.gemini_login" && !geminiLogin, "a gemini run succeeded");
+  retireAtSource((c) => c.source === "brain.gemini_login" && !geminiAsk,
+    geminiLane && geminiLane.live === false
+      ? "no committed job rides the gemini engine — the ask has no engine behind it"
+      : "a gemini run succeeded");
 
   // B5 — the wind tunnel's un-applied proposal; haan = gate_tune.mjs apply (the
   // declared owner), then a 14d watch with out-of-band auto-revert.
@@ -438,6 +520,40 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   return s;
 }
 
+// WIRING REPAIR (10 Aug 2026) — THE FIRE-NUDGE READS THE FIRE STAMP.
+// scout.mjs:365 has stamped `fired_at` since LADDER C2 (9 Aug), and this lane —
+// the one card that ASKS him to fire — never read it. Two live consequences,
+// both found on the real missions.json (M01 fired 11:12, ingested 15:41):
+//   · between fire and return the nudge kept dealing "abhi M01 saath fire
+//     karein?" — a haan there re-fires a Deep Research run he already spent;
+//   · the retire test was `anyReturn || auditClosed`, so M01's RETURN retired
+//     the nudge forever (c10, retired 17:15) and M02–M04 never got a fire card
+//     at all — the outward loop's first leg died on its own first success.
+// The target is now DERIVED, per-mission, from the row's own two stamps:
+//   fired_at answers the ask (the fire happened) · ingested_at ends the mission.
+// While an audit mission is IN FLIGHT (fired, no return) this stays SILENT —
+// that state already has its own card, the C2 return-leg watcher below, and the
+// file's serialization law (gate2 · B1 · B6 · B7) puts one ask on his desk at a
+// time. No number invented: every branch reads a stamp that already exists.
+export function auditFireTarget(rows, auditClosed) {
+  if (auditClosed) return null;
+  const audit = (rows || []).filter((r) => r && r.type === "audit");
+  if (!audit.length) return null;
+  if (audit.some((r) => r.fired_at && !r.ingested_at)) return null;   // in flight — C2 owns it
+  return audit.find((r) => !r.fired_at && !r.ingested_at) || null;
+}
+
+// FROZEN VERBATIM (layering law) — the pre-repair engine, kept so the change is
+// readable next to what it replaced. It took no target: one card, always pointed
+// at auditRows[0], minted only while ZERO returns existed, and retired on the
+// first return. Reference only; nothing calls it.
+export function auditFireTargetLegacy(rows, auditClosed) {
+  const auditRows = (rows || []).filter((r) => r.type === "audit");
+  const anyReturn = (rows || []).some((r) => r.ingested_at);
+  if (auditRows.length && !anyReturn && !auditClosed) return auditRows[0];
+  return null;
+}
+
 // Pick THE one card to deal. Order (an ORDER, not a number): hand-filed →
 // staged drifts oldest-first → gate2 doubt-repairs → the outward tier
 // (missions desk · benchmark · market — oldest filed first within the tier).
@@ -512,6 +628,24 @@ export function applyAnswer(state, id, word, now = new Date()) {
     const d = new Date(now); d.setDate(d.getDate() + 1);
     c.sleep_until = localDate(d);
     return { state: s, action: { kind: "sleep", until: c.sleep_until } };
+  }
+  // WIRING REPAIR (10 Aug 2026) — see AT_SOURCE_KEY's header for the full trace.
+  // These cards run NOTHING (v1's rule, unchanged) and their key only moves when
+  // the WORK lands, so `answer` must not be the finish line: his haan is recorded
+  // and the card sleeps one day, but stays LIVE for retire-at-source to kill with
+  // the truth. This sits ABOVE `c.answer = word` on purpose — an `answer` would
+  // both hide the card from pickCard and disqualify it from every retireAtSource
+  // predicate (`!c.answer`), which is the zombie the old path created.
+  if (c.dispatch.kind === "at-source") {
+    if (word === "na") {
+      c.answer = word; c.answered_at = ts;
+      c.resolution = "na — retired"; c.retired_at = ts;
+      return { state: s, action: { kind: "done", resolution: c.resolution } };
+    }
+    const d = new Date(now); d.setDate(d.getDate() + 1);   // same day-unit as "baad"
+    c.acted = [...(c.acted || []), ts];
+    c.sleep_until = localDate(d);
+    return { state: s, action: { kind: "at-source", source: c.source, until: c.sleep_until, times: c.acted.length } };
   }
   c.answer = word; c.answered_at = ts;
   if (c.dispatch.kind === "staged") {
@@ -636,6 +770,11 @@ function gatherSources() {
     for (let i = g.length - 1; i >= 0 && g[i].ok === false; i--) streak++;
     if (streak >= 5) geminiLogin = { streak, day: String((g[g.length - 1] || {}).ts || now.toISOString()).slice(0, 10) };
   } catch { /* no ledger — no card */ }
+  // …and does that streak still MEAN anything? brain.mjs owns brain_config.json; this
+  // only reads it. An unreadable config is UNKNOWN, not dead — same discipline as B2's
+  // "unreadable = unknown, not a card" — and unknown must never retire his card.
+  const brainCfg = readJson(join(STATE_DIR, "brain_config.json"));
+  const geminiLane = { live: brainCfg ? geminiLaneLive(brainCfg) : true };
   // B5 — the newest un-applied wind-tunnel proposal (gate_tune.mjs is the applier)
   let gatetune = null;
   try {
@@ -688,7 +827,7 @@ function gatherSources() {
   const model = readJson(join(STATE_DIR, "nikhil_model.json"));
 
   return { staged, marketFile, marketHonest, gate2, missions, bench, tiers,
-    rejirah, gem, claudeOut, oura, geminiLogin, gatetune, pendingFacts, m2, canonPatches, staleFacts, model };
+    rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, pendingFacts, m2, canonPatches, staleFacts, model };
 }
 
 function sync(now = new Date()) {
@@ -705,6 +844,43 @@ function sync(now = new Date()) {
 // asked about — not the most recent entry sharing its rule id.
 export function stagedDispatchArgs(verb, entry) {
   return [verb, entry.id, "--at", entry.at];
+}
+
+// ---------------------------------------------------------------------------
+// THE ROLLING-KEY GUARD (10 Aug 2026, wire repair — pure so the selftest can
+// hold it). B8's `--key` idempotency was EXACT-MATCH ONLY, and its only nightly
+// caller defeated it: watchman.mjs probeCanon files `canon:<file>:<today>`, so
+// an UNCHANGED condition minted four brand-new keys every night. Live proof at
+// the time of the repair: c23–c26 filed 2026-08-10T13:31 while `git status
+// --porcelain` on the same four canon files still returned the same four ` M`
+// rows — so tonight would have minted c32–c35, tomorrow four more. Hand-filed
+// is rank 0 and the fresh deck sorts least-dealt-first, so four fresh
+// top-priority duplicates a night out-run his ~3 anchors/day: c9's gate2 doubt,
+// gem-sync, gate-tune, the m2 review and the market cards become unreachable
+// for as long as any canon file sits uncommitted. "baad" died the same way — a
+// slept card is not an answered card, so the next night's mint walked straight
+// past his own "not now".
+// The caller does not have to change its key (watchman is owned elsewhere). A
+// key ending in a bare :YYYY-MM-DD is a ROLLING key; its FAMILY — everything
+// before that date — is the real identity. Family already LIVE (his word not
+// yet on it, sleeping counts) ⇒ the ask is on the deck ⇒ nothing mints. Once he
+// answers it, the same condition recurring tomorrow is a NEW fact and mints
+// normally, which is the daily-key's only defensible intent.
+// NOT touched: the event-day keys minted inside deriveCards (gem:sync:<stamp>,
+// oura:auth:<day>, gemini:login:<day>) — their date names WHEN THE EVENT
+// HAPPENED, so it is already stable and they never roll.
+// ---------------------------------------------------------------------------
+export const ROLLING_KEY = /^(.+):(\d{4}-\d{2}-\d{2})$/;
+export function fileGuard(cards, key, keyed) {
+  if (!keyed) return { mint: true, why: null };                       // no --key = the old free-mint path
+  if ((cards || []).some((c) => c.key === key)) return { mint: false, why: `${key} already filed — nothing minted (idempotent by key)` };
+  const m = ROLLING_KEY.exec(key);
+  if (!m) return { mint: true, why: null };
+  const family = m[1];
+  const live = (cards || []).find((c) => !c.answer && !c.retired_at
+    && ROLLING_KEY.test(String(c.key || "")) && ROLLING_KEY.exec(String(c.key))[1] === family);
+  if (live) return { mint: false, why: `${family} already live as ${live.id} (${live.key}) — rolling day-key, nothing minted (same unanswered ask)` };
+  return { mint: true, why: null };
 }
 function runStagedDispatch(action) {
   // `at` is the stable identity — indexes renumber on every settle and id can repeat.
@@ -747,6 +923,10 @@ function main() {
     // LADDER A1 — one live card ⇒ the id is noise; his word alone routes (resolveAnswerArgs).
     const liveCount = s.cards.filter((x) => !x.answer && !x.retired_at).length;
     console.log(`🎴 CAPTAIN'S CALL${liveCount === 1 ? "" : ` [${c.id}]`}: ${c.line}`);
+    // 10 Aug repair: an at-source card can return AFTER a haan. Asking him the
+    // same thing with no memory of his last word would read as the organ
+    // forgetting — say it out loud instead. Count comes from acted[], not a guess.
+    if ((c.acted || []).length) console.log(`   (pehle ${c.acted.length}× haan bola tha — source pe abhi tak nahi utra)`);
     console.log(liveCount === 1
       ? `   → haan / na / baad  (bas word bol de — session chala degi: node scripts/captains_call.mjs answer <word>)`
       : `   → haan / na / baad  (bol de — session chala degi: node scripts/captains_call.mjs answer ${c.id} <word>)`);
@@ -813,6 +993,17 @@ function main() {
     }
     writeAtomic(CALL, state);
     if (action.kind === "sleep") console.log(`captains_call: ${id} sota hai — kal ke pehle anchor pe wapas (${action.until})`);
+    else if (action.kind === "at-source") {
+      // 10 Aug repair. His haan is recorded, not spent: the card comes back
+      // tomorrow unless the SOURCE says the work landed. The door named here is
+      // the existing owner surface for that source — this organ runs none of it
+      // (no auto-act), it tells the session what he just said yes to.
+      const door = action.source === "gem.sync_due" ? "run the /gem-sync skill NOW (it ends with `node scripts/nightshift.mjs gem-stamp`, which is what clears this card)"
+        : action.source === "rejirah.pending" ? "run the /gist-patch skill NOW (his Save + mirror.mjs re-fetch is what clears this card)"
+        : "walk the return leg NOW — /fire's \"le lo\", i.e. `node scripts/scout.mjs mission ingest <ID>` (the ingest is what clears this card)";
+      console.log(`captains_call: ${id} haan (${action.times}× ab tak) — ${door}`);
+      console.log(`   → card RETIRED nahi hui: source pe kaam dikhega tabhi jayegi, warna kal wapas (${action.until}).`);
+    }
     else if (action.kind === "open") console.log(`captains_call: ${id} haan — read it now and walk him through it in ≤3 lines: ${action.path}`);
     else console.log(`captains_call: ${id} — ${action.resolution}`);
     return;
@@ -824,12 +1015,15 @@ function main() {
     if (!line) { console.error("captains_call: file --line \"<one-line ask>\" [--key <stable-key>]"); process.exit(1); }
     // LADDER B8 (9 Aug 2026): --key makes filing IDEMPOTENT so a nightly organ
     // (the watchman's canon check) can re-file without minting duplicates — a
-    // key ever seen (live OR settled) files nothing.
+    // key ever seen (live OR settled) files nothing. The decision moved into
+    // fileGuard() on 10 Aug (see its header) because exact-match alone was
+    // silently defeated by that very caller's rolling `:<today>` suffix.
     const ki = process.argv.indexOf("--key");
     const key = ki >= 0 && process.argv[ki + 1] ? process.argv[ki + 1] : `manual:${now.toISOString()}`;
     const s = loadState();
-    if (ki >= 0 && s.cards.some((c) => c.key === key)) {
-      console.log(`captains_call: ${key} already filed — nothing minted (idempotent by key)`);
+    const guard = fileGuard(s.cards, key, ki >= 0);
+    if (!guard.mint) {
+      console.log(`captains_call: ${guard.why}`);
       return;
     }
     s.cards.push({
@@ -962,18 +1156,39 @@ function selftest() {
   ], syllabus_audit: { closed_at: null } };
   const sm1 = deriveCards(blank(), { missions: MISS_STAGED }, T0);
   assert("MISSIONS — staged audit with zero returns ⇒ ONE fire-nudge card opening M01",
-    sm1.cards.length === 1 && sm1.cards[0].key === "mission:audit-fire"
+    sm1.cards.length === 1 && sm1.cards[0].key === "mission:audit-fire:M01"
     && sm1.cards[0].dispatch.kind === "open" && /M01/.test(sm1.cards[0].dispatch.path));
   assert("MISSIONS — fire-nudge idempotent across syncs",
     deriveCards(sm1, { missions: MISS_STAGED }, T0).cards.length === 1);
+  {
+    // WIRING REPAIR (10 Aug 2026) — the fire-nudge must READ scout's fire stamp.
+    // Pre-repair, `fired_at` had no reader here: the card kept asking him to fire
+    // an already-fired M01 (a haan = a re-burnt Deep Research run), and the first
+    // RETURN retired the nudge forever so M02–M04 never got a fire card (live
+    // proof: c10 in captains_call.json, retired 2026-08-10T17:15 on M01's ingest).
+    const fired = (over) => ({ ...MISS_STAGED, missions: MISS_STAGED.missions.map((m) => (m.id === "M01" ? { ...m, ...over } : m)) });
+    const smF = deriveCards(sm1, { missions: fired({ fired_at: "2026-08-10T11:12:14.640Z" }) }, T0);
+    assert("FIRE STAMP — his fire retires the M01 nudge by reading fired_at, and NOTHING re-asks while it is in flight",
+      smF.cards.find((c) => c.key === "mission:audit-fire:M01").retired_at !== null
+      && /fired_at/.test(smF.cards.find((c) => c.key === "mission:audit-fire:M01").resolution)
+      && !smF.cards.some((c) => /^mission:audit-fire/.test(c.key) && !c.retired_at));
+    const smA = deriveCards(smF, { missions: fired({ fired_at: "2026-08-10T11:12:14.640Z", ingested_at: "2026-08-10T15:41:08.736Z", report: "scout_reports/m1.md" }) }, T0);
+    assert("FIRE STAMP — the return ADVANCES the nudge to M02 (pre-repair the first return killed it forever)",
+      smA.cards.some((c) => c.key === "mission:audit-fire:M02" && !c.retired_at && /M02/.test(c.dispatch.path) && /1\/2 wapas/.test(c.line)));
+    assert("FIRE STAMP — target is derived from the row's own stamps; the frozen legacy engine still shows the old blindness",
+      auditFireTarget(fired({ fired_at: "2026-08-10T11:12:14.640Z" }).missions, false) === null
+      && auditFireTargetLegacy(fired({ fired_at: "2026-08-10T11:12:14.640Z" }).missions, false).id === "M01"
+      && auditFireTarget(MISS_STAGED.missions, true) === null);
+  }
   const MISS_RET = { missions: [
     { id: "M01", type: "audit", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: "2026-08-09T10:00:00Z", report: "scout_reports/mission_M01_2026-08-09.md" },
     { id: "M02", type: "audit", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: null, report: null },
     { id: "T-embeddings", type: "topic_open", file: "f", staged_at: "2026-08-08T09:00:00Z", ingested_at: "2026-08-09T11:00:00Z", report: "scout_reports/mission_T-EMBEDDINGS_2026-08-09.md" },
   ], syllabus_audit: { closed_at: null } };
   const sm2 = deriveCards(sm1, { missions: MISS_RET }, T0);
-  assert("MISSIONS — a landed return auto-retires the fire-nudge (resolved at source)",
-    sm2.cards.find((c) => c.key === "mission:audit-fire").retired_at !== null);
+  assert("MISSIONS — a landed return auto-retires THAT mission's fire-nudge and hands the seat to the next un-fired one",
+    sm2.cards.find((c) => c.key === "mission:audit-fire:M01").retired_at !== null
+    && sm2.cards.some((c) => c.key === "mission:audit-fire:M02" && !c.retired_at));
   assert("MISSIONS — one diff-review card per ingested return, dispatch opens the verbatim report",
     sm2.cards.filter((c) => c.key.startsWith("mission:diff:")).length === 2
     && sm2.cards.find((c) => c.key === "mission:diff:M01").dispatch.path.endsWith("mission_M01_2026-08-09.md"));
@@ -1070,6 +1285,85 @@ function selftest() {
     const healed = deriveCards(sg2, {}, T);
     assert("B2/B3/B4 — every infra card retires at source the moment the thing heals",
       healed.cards.every((c) => c.retired_at !== null && /resolved-at-source/.test(c.resolution)));
+
+    // ── WIRING REPAIR (10 Aug 2026) — AN ASK MUST NOT DIE BY BEING ANSWERED ───
+    // The dead wire, verbatim from the live deck: c13 `gem:sync:2026-07-30`,
+    // dispatch `none`, stamp unmoved 11 days. A haan retired it AND mint() then
+    // refused that key forever, so the Gem could go stale in silence with the
+    // organ printing "done on his word". These five checks fail if that returns.
+    {
+      const GEM = { days: 11, stamp: "2026-07-30" };
+      const s0 = deriveCards(blank(), { gem: GEM }, T);
+      const card = s0.cards.find((c) => c.source === "gem.sync_due");
+      assert("REPAIR 10 Aug — the three source-verified asks dispatch `at-source`, never `none`",
+        card.dispatch.kind === "at-source"
+        && deriveCards(blank(), { rejirah: RJ }, T).cards[0].dispatch.kind === "at-source"
+        && deriveCards(blank(), { missions: { missions: [{ id: "M01", type: "audit", file: "f", fired_at: "2026-08-07T09:00:00Z", ingested_at: null }], syllabus_audit: { closed_at: null } } }, T)
+             .cards.find((c) => c.key.startsWith("mission:return:")).dispatch.kind === "at-source");
+
+      const h = applyAnswer(s0, card.id, "haan", T);
+      const after = h.state.cards.find((c) => c.id === card.id);
+      assert("REPAIR 10 Aug — haan RECORDS his word and sleeps a day, but does NOT retire and does NOT set answer",
+        h.action.kind === "at-source" && h.action.until === "2026-08-10"
+        && after.answer === null && after.retired_at === null && (after.acted || []).length === 1
+        && after.sleep_until === "2026-08-10");
+
+      // THE WIRE ITSELF: source unmoved ⇒ the same card is back tomorrow. Under
+      // the old engine this deck was empty forever and the ask was unreachable.
+      const T2 = new Date("2026-08-10T10:00:00+05:30");
+      const stillDue = deriveCards(h.state, { gem: GEM }, T2);
+      assert("REPAIR 10 Aug — stamp unmoved ⇒ the SAME card is live again the next day (the ask survived his haan)",
+        stillDue.cards.filter((c) => c.source === "gem.sync_due").length === 1
+        && stillDue.cards.find((c) => c.id === card.id).retired_at === null
+        && (pickCard(stillDue, { today: "2026-08-10" }) || {}).id === card.id);
+
+      // …and the work landing is still the ONLY true ending.
+      const done = deriveCards(h.state, { gem: null }, T2);
+      assert("REPAIR 10 Aug — the Gem actually synced ⇒ retire-at-source, with the true epitaph",
+        done.cards.find((c) => c.id === card.id).retired_at !== null
+        && /the Gem got synced/.test(done.cards.find((c) => c.id === card.id).resolution || ""));
+
+      // GUARDS on the other side of the line: `na` is a decision (needs no proof),
+      // and a hand-filed card has NO source condition — haan must still end it.
+      const n = applyAnswer(s0, card.id, "na", T);
+      const hf = { ...blank(), cards: [{ id: "cH", key: "manual:x", source: "hand-filed", line: "x", dispatch: { kind: "none" }, filed_at: "2026-08-09T09:00:00Z", dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null }] };
+      const hfA = applyAnswer(hf, "cH", "haan", T);
+      assert("REPAIR 10 Aug — na still retires on the spot, and a hand-filed haan still ends its card (no source to verify)",
+        n.action.kind === "done" && n.state.cards.find((c) => c.id === card.id).retired_at !== null
+        && hfA.action.kind === "done" && hfA.state.cards[0].retired_at !== null);
+
+      // MIGRATION: a pre-repair card already on the live deck (exactly c13's shape)
+      // gets the new dispatch at the next sync; settled history is never rewritten.
+      const legacy = { version: 1, next_id: 2, cards: [
+        { id: "c13", key: "gem:sync:2026-07-30", source: "gem.sync_due", line: "x", dispatch: { kind: "none" }, filed_at: "2026-08-09T09:00:00Z", dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null },
+        { id: "c1", key: "rejirah:old:2026-07-01", source: "rejirah.pending", line: "y", dispatch: { kind: "none" }, filed_at: "2026-07-01T09:00:00Z", dealt: [], answer: "haan", answered_at: "2026-07-02T09:00:00Z", sleep_until: null, retired_at: "2026-07-02T09:00:00Z", resolution: "haan — done on his word (no exec by design, v1)" },
+      ] };
+      const mig = deriveCards(legacy, { gem: GEM }, T);
+      assert("REPAIR 10 Aug — the live pre-repair card migrates to at-source; a settled one keeps its history verbatim",
+        mig.cards.find((c) => c.id === "c13").dispatch.kind === "at-source"
+        && mig.cards.find((c) => c.id === "c1").dispatch.kind === "none"
+        && mig.cards.find((c) => c.id === "c1").retired_at === "2026-07-02T09:00:00Z");
+    }
+    // B4b DEAD-WIRE GUARD (10 Aug 2026) — the ask must have an ENGINE behind it.
+    // brain_config live this run: gemini.enabled=true but 0 of 30 jobs ride it, and
+    // the ledger's last gemini row is 17 Jul, so the streak can never move again.
+    // If this ever fails, c14 is back to holding an anchor seat forever.
+    const GL = { streak: 6, day: "2026-08-09" };
+    const DEAD = { live: false };
+    assert("B4b — engine liveness is brain's own gate: flag ON but no job riding it = DEAD (that is today's brain_config)",
+      geminiLaneLive({ gemini: { enabled: true }, jobs: [{ id: "x", engine: "claude" }] }) === false
+      && geminiLaneLive({ gemini: { enabled: true }, jobs: [{ id: "g1", engine: "gemini" }] }) === true
+      && geminiLaneLive({ gemini: { enabled: false }, jobs: [{ id: "g1", engine: "gemini" }] }) === false
+      && geminiLaneLive({ jobs: [{ id: "g1", engine: "gemini" }] }) === false
+      && geminiLaneLive(null) === false);
+    assert("B4b — a frozen streak with NO engine behind it mints NOTHING (a consumer with no producer must not ask him)",
+      deriveCards(blank(), { geminiLogin: GL, geminiLane: DEAD }, T).cards.length === 0);
+    const sgDead = deriveCards(deriveCards(blank(), { geminiLogin: GL }, T), { geminiLogin: GL, geminiLane: DEAD }, T);
+    assert("B4b — an already-live gemini card retires when the engine retires, with the HONEST reason (not 'a gemini run succeeded' — that row can never be written)",
+      sgDead.cards.length === 1 && sgDead.cards[0].retired_at !== null
+      && /no committed job rides the gemini engine/.test(sgDead.cards[0].resolution));
+    assert("B4b — the day a gemini job returns to brain_config, the ask re-arms by itself (gated, never deleted)",
+      deriveCards(blank(), { geminiLogin: GL, geminiLane: { live: true } }, T).cards.some((c) => c.key === "gemini:login:2026-08-09"));
     // B5 — gate-tune: haan dispatches the owner's apply
     const sgt = deriveCards(blank(), { gatetune: { id: "wt-2026-08-09-tau1_base", file: "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-08-09.json", effect: "wakes/day toward band", window: 14 } }, T);
     const gtA = applyAnswer(sgt, sgt.cards[0].id, "haan", T);
@@ -1154,6 +1448,40 @@ function selftest() {
     const src3 = deriveCards(src2, { missions: { ...MISS_FIRED, missions: MISS_FIRED.missions.map((m) => (m.id === "M01" ? { ...m, ingested_at: "2026-08-09T11:00:00Z" } : m)) } }, T);
     assert("C2 — the return landing retires the watcher card at source",
       src3.cards.find((c) => c.key === "mission:return:M01:2026-08-07").retired_at !== null);
+
+    // ── THE ROLLING-KEY GUARD (10 Aug 2026 wire repair) ────────────────────
+    // Replayed exactly as watchman.mjs probeCanon fires it: one
+    // `file --key canon:<file>:<today>` per dirty canon file, EVERY night,
+    // against a condition that has not changed. Before the guard that minted
+    // four permanent rank-0 duplicates a night — live evidence c23–c26, filed
+    // 2026-08-10T13:31, with the same four ` M` rows still in git status.
+    const mkFiled = (id, key, over = {}) => ({
+      id, key, source: "hand-filed", line: "Canon OPS_STATE.md mein UNCOMMITTED badlav hai (M) — aapke word se tha?",
+      dispatch: { kind: "none" }, filed_at: "2026-08-10T13:31:04.054Z", dealt: [], answer: null,
+      answered_at: null, sleep_until: null, retired_at: null, resolution: null, ...over,
+    });
+    const night1 = [mkFiled("c24", "canon:OPS_STATE.md:2026-08-10")];
+    assert("ROLLING KEY — the same unchanged canon drift on a NEW day mints NOTHING (a :<today> suffix can no longer defeat --key)",
+      fileGuard(night1, "canon:OPS_STATE.md:2026-08-11", true).mint === false
+      && fileGuard(night1, "canon:OPS_STATE.md:2026-08-12", true).mint === false
+      && fileGuard(night1, "canon:OPS_STATE.md:2026-08-10", true).mint === false);
+    assert("ROLLING KEY — 'baad' is not an answer: a sleeping card still blocks tomorrow's re-mint (no walking past his own not-now)",
+      fileGuard([mkFiled("c24", "canon:OPS_STATE.md:2026-08-10", { sleep_until: "2026-08-11" })], "canon:OPS_STATE.md:2026-08-11", true).mint === false);
+    assert("ROLLING KEY — a DIFFERENT canon file is a different ask and still mints (the guard dedups the ask, not the lane)",
+      fileGuard(night1, "canon:THE_GAFFER.md:2026-08-11", true).mint === true);
+    assert("ROLLING KEY — once his word lands, the condition recurring tomorrow is a NEW fact and mints again",
+      fileGuard([mkFiled("c24", "canon:OPS_STATE.md:2026-08-10", { answer: "haan", answered_at: "2026-08-10T18:00:00Z" })], "canon:OPS_STATE.md:2026-08-11", true).mint === true
+      && fileGuard([mkFiled("c24", "canon:OPS_STATE.md:2026-08-10", { retired_at: "2026-08-10T18:00:00Z" })], "canon:OPS_STATE.md:2026-08-11", true).mint === true);
+    assert("ROLLING KEY — non-rolling keys untouched: awayday's run-id key and an un-keyed hand file behave exactly as before",
+      fileGuard([mkFiled("c27", "awayday:red:31359935125")], "awayday:red:31359935126", true).mint === true
+      && fileGuard([mkFiled("c27", "awayday:red:31359935125")], "awayday:red:31359935125", true).mint === false
+      && fileGuard(night1, "manual:2026-08-11T05:00:00.000Z", false).mint === true);
+    // The guard is only real if the CLI actually routes through it (awayday.mjs:538
+    // precedent — assert the shape of the code, not just the pure function).
+    const ownSrc = readFileSync(join(__dirname, "captains_call.mjs"), "utf8");
+    const fileMode = ownSrc.slice(ownSrc.indexOf('if (mode === "file")'), ownSrc.indexOf('if (mode === "status")'));
+    assert("ROLLING KEY — `file` mode routes its mint decision through fileGuard, with no inline exact-match left to regress to",
+      /fileGuard\(s\.cards, key, ki >= 0\)/.test(fileMode) && !/s\.cards\.some\(\(c\) => c\.key === key\)/.test(fileMode));
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);

@@ -36,10 +36,21 @@
 //        answers arrive THROUGH :4113/deep-answer, never as a file write).
 //        All five are gitignored
 //        (they carry his words/moments; the public repo holds machinery only).
+//        ONE file outside that five is written, and only as an APPENDER on the
+//        DOCUMENTED shared lane: brain_ledger.jsonl, where the ε-band
+//        adjudicator bills its own `claude -p` (10 Aug 2026 — see THE
+//        ADJUDICATOR METERS ITSELF). brain.mjs still owns that schema; this
+//        organ owns nothing there and reads nothing back but its own honesty.
 //        The gate decides what gets THOUGHT ABOUT, never what gets SAID —
 //        outbound speech still passes the shadow ratify-gate + win-only law.
-//        No metered key: the adjudicator rides the free Gemini pool; the deep
-//        lane is claude -p (Max) in cortex.mjs. Localhost only.
+//        No metered key ANYWHERE. The ε-band adjudicator rides `claude -p` (Max)
+//        through claudegen.mjs — it has since 17 Jul 2026, when the Gemini free
+//        tier shrank and the captain moved all cognition onto the engine that
+//        never runs dry. This line read "the adjudicator rides the free Gemini
+//        pool" until the 10 Aug 2026 ORPHAN_FIELD repair below — three weeks of
+//        header naming an engine the code had stopped using. WHICH model it
+//        spends is the config's to choose now (adjudicator.model, live since that
+//        repair). The deep lane is claude -p (Max) in cortex.mjs. Localhost only.
 // MODES: node scripts/thalamus.mjs            → daemon on http://127.0.0.1:4113
 //        node scripts/thalamus.mjs selftest   → deterministic bar (§4.7)
 //        node scripts/thalamus.mjs status     → workspace + today's gate ledger
@@ -107,6 +118,10 @@ const DOSSIER   = join(STATE_DIR, "dossier.json");
 const CONCEPTS  = join(STATE_DIR, "concepts.json");        // canon vocab — capture.mjs owns it; this nucleus READS
 const ACACHE    = join(STATE_DIR, "answer_cache.jsonl");   // M17 — nightshift owns it; this nucleus READS
 const SPRINT    = join(STATE_DIR, "sprint.json");          // #6 — the curriculum spine; READ-ONLY (sprintsync owns it)
+// 10 Aug 2026 — the SHARED append lane (brain.mjs owns its SCHEMA only; dmn,
+// nightshift, council, cortex, talk, selfknowledge all append their own spend).
+// The adjudicator joins it below: see THE ADJUDICATOR METERS ITSELF.
+const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagnostics that had nowhere to land (*.log is gitignored)
 const PORT = 4113;                                  // one below the Dugout's 4114
 
@@ -157,7 +172,15 @@ const DEFAULT_CONFIG = {
   // live table (dressing-room/state/thalamus_config.json) carries the measured
   // pulse rate; this default block stays as the hermetic fallback.
   pe: { norm_bits: 4, base_rates: { default: 0.5 } },
-  adjudicator: { model: "gemini-flash-lite-latest", enabled: true },
+  // ORPHAN_FIELD repair 10 Aug 2026: this default read "gemini-flash-lite-latest"
+  // — the engine retired 17 Jul — while the code spent haiku regardless, because
+  // nothing read the field at all. Now that it IS wired (resolveAdjModel below), a
+  // stale default stops being wrong prose and becomes a wrong live answer. "haiku"
+  // is not a new choice: it is the literal this call site has actually spent since
+  // 17 Jul, moved here verbatim. thalamus_config.json is approval-gated and still
+  // names the retired engine — that value is HIS to change, and until he does the
+  // resolver falls back here and says so in the ledger row and in `status`.
+  adjudicator: { model: "haiku", enabled: true },
   deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30 },
   // M17 — the pre-answer serve side: cosine bar, the free overlap floor, and
   // the one embed call's hard timeout (dry/slow → the floor, never a stall).
@@ -1077,17 +1100,94 @@ function defaultAllowedTokens() {
 }
 let brainMod = null;
 
+// ── THE ADJUDICATOR METERS ITSELF (10 Aug 2026 — a BUILT-BUT-NOT-WIRED repair) ─
+// claudeGenAsync has returned honest spend since claudegen G1 (total_tokens plus
+// the four components, duration_ms, limit_hit, http_status, error). This call
+// site read ONE field — r.text — and threw the rest away, and it wrote no ledger
+// row at all. MEASURED 10 Aug 2026 on the live files: 4,558 brain_ledger rows,
+// 41 distinct jobs, ZERO from this organ; 8 rows in salience_ledger.jsonl carry
+// adjudicated:true, i.e. 8 real `claude -p` haiku calls (~15s each) that the
+// governor's 5h window never saw. Two harms, both live on a running daemon
+// (daemon_watchdog.json, 10 Aug 15:31):
+//   1. UNMETERED SPEND — brain.mjs windowUsage() sums total_tokens over rows
+//      with engine === "claude". A call it cannot see is budget it cannot
+//      reserve, and this is the one lane that fires while he is AT the keyboard.
+//   2. A SILENT WALL — a limit_hit / timeout / spawn death returned the same
+//      bare `false` as a genuine "not reasoning-hard", so a plan wall read as
+//      "this moment wasn't important" with nothing anywhere naming the outage.
+// The row shape is nightshift's genLedgered verbatim (LADDER G1) — same shared
+// lane, same 4-field honest totals — so limits.mjs, the Dugout's brain panel and
+// captains_call's engine-freshness read all pick it up with no change.
+// The meter NEVER decides: the verdict below is byte-for-byte the old one.
+// ── THE MODEL KNOB IS LIVE (10 Aug 2026 — an ORPHAN_FIELD repair) ────────────
+// thalamus_config.json has carried `adjudicator.model` since this organ was born
+// and NOTHING has ever read it: adjudicateLive hardcoded the literal "haiku" into
+// the engine call, and the meter below hardcoded it a second time into the ledger
+// row. Live value on the day of this repair: "gemini-flash-lite-latest" — the
+// engine retired 17 Jul 2026 (claudegen.mjs's own header records that move). So
+// the knob was dead AND the name was stale: turning it did nothing, and any tuning
+// pass reading the config reasoned about the wrong model and the wrong cost.
+// THE WIRE, not a rename — the configured value is what reaches claudegen now.
+// THE GUARD: claudegen spawns `claude -p --model <x>`, so a name that engine
+// cannot take is not a model choice, it is an outage — a Gemini alias would die in
+// the CLI and the fail-closed verdict would come back looking exactly like a
+// genuine "not reasoning-hard", which is the SILENT WALL the meter below exists to
+// end. A non-Claude name therefore resolves to the live-proven default, NEVER
+// silently: the row carries `model_requested` + why, and `status` prints it.
+// The alias set is not invented — it is the same three words brain.mjs's whole job
+// table runs on (brain.mjs:390 `p.model || "haiku"`); full `claude-*` ids pass
+// through because the CLI takes them verbatim.
+const ADJ_MODEL_FALLBACK = "haiku";        // what this call site has actually spent since 17 Jul
+const CLAUDE_MODEL_ALIASES = new Set(["opus", "sonnet", "haiku"]);
+function resolveAdjModel(cfg) {
+  const requested = String(((cfg || {}).adjudicator || {}).model || "").trim();
+  const alias = requested.toLowerCase();
+  if (CLAUDE_MODEL_ALIASES.has(alias)) return { model: alias, requested, fallback: null };
+  if (/^claude-/i.test(requested)) return { model: requested, requested, fallback: null };
+  return {
+    model: ADJ_MODEL_FALLBACK, requested: requested || null,
+    fallback: requested
+      ? `"${requested}" is not a model \`claude -p\` can spawn (this engine has been claude -p since 17 Jul 2026)`
+      : "no adjudicator.model configured",
+  };
+}
+
+function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requested: null, fallback: null }) {
+  const row = {
+    ts: new Date().toISOString(), job: "thalamus_adjudicator", engine: "claude",
+    // the row records what was SPENT — and, only when the two differ, what the
+    // config ASKED for and why the ask was refused. A ledger that bills a Gemini
+    // name for a Claude call is the misbilling the E2E audit killed in nightshift;
+    // a substitution nobody can see is the same lie one layer up.
+    model: mdl.model,
+    ...(mdl.requested && mdl.requested !== mdl.model ? { model_requested: mdl.requested, model_fallback: mdl.fallback } : {}),
+    input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+    cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+    total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0,
+    ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+  };
+  // an unmetered call is still a made call — a locked/full ledger must never take
+  // the gate down with it (nightshift's genLedgered law, same reason)
+  try { (deps.appendBrainLedger || ((o) => appendFileSync(BLEDGER, JSON.stringify(o) + "\n")))(row); } catch { }
+  return row;
+}
+
 // the ONLY sub-Opus paid thought: one Flash-Lite adjudication in the ε-band
-async function adjudicateLive(evt, S) {
-  const cfg = loadConfig();
+async function adjudicateLive(evt, S, deps = {}) {
+  const cfg = deps.cfg || loadConfig();
   if (!cfg.adjudicator.enabled) return false;
   const q = `A personal learning system must decide if a moment needs its EXPENSIVE deep-reasoning brain or the free reflex is enough. Moment: ${JSON.stringify({ modality: evt.modality, text: String(evt.text || "").slice(0, 300), event_key: evt.event_key || null }).slice(0, 500)}. Is this a genuinely reasoning-hard moment (conceptual confusion, strategy question, contradiction) rather than routine chat/logging? Answer with exactly one word: yes or no.`;
-  // 17 Jul: the adjudicator rides Claude (haiku, one word, async — the gate's
-  // event loop never blocks). 15s ceiling: the CLI cold-starts slower than a
-  // REST call. Any failure → the same conservative verdict as ever: no wake.
+  // 17 Jul: the adjudicator rides Claude (one word, async — the gate's event loop
+  // never blocks). 15s ceiling: the CLI cold-starts slower than a REST call. Any
+  // failure → the same conservative verdict as ever: no wake.
+  // 10 Aug 2026: the model is the CONFIG's now, not a literal (see THE MODEL KNOB
+  // IS LIVE). With the live file as it stands this still spends haiku, byte for
+  // byte what it spent yesterday — the difference is that the knob now works.
+  const mdl = resolveAdjModel(cfg);
   try {
-    const { claudeGenAsync } = await import("./claudegen.mjs");
-    const r = await claudeGenAsync(q, "haiku", 15000);
+    const gen = deps.gen || (await import("./claudegen.mjs")).claudeGenAsync;
+    const r = await gen(q, mdl.model, 15000);
+    meterAdjudication(r, deps, mdl);   // meter FIRST: a failed call is spend too, and it is the one worth seeing
     const text = String(r.text || "").trim().toLowerCase();
     if (r.ok && text) return text.startsWith("y");
   } catch { }
@@ -1327,6 +1427,82 @@ async function selftest() {
     const { n: n3, wr: wr3 } = rig();
     await n3.ingest({ modality: "bus", event_key: "boring" }); await n3.flush();
     assert("clear cases never pay the adjudicator", wr3.adjCalls === 0);
+  }
+
+  // (6b) THE ADJUDICATOR IS METERED (10 Aug 2026 — the built-but-not-wired repair).
+  // The rig at (6) injects `adjudicate`, so it can never reach the real engine;
+  // these drive adjudicateLive ITSELF with an injected generator + an injected
+  // ledger sink, which is the only way a broken meter goes red instead of silent.
+  // MEASURED BEFORE THE FIX: 4,558 live brain_ledger rows, 0 from this organ,
+  // against 8 salience rows carrying adjudicated:true.
+  {
+    const evt = { modality: "voice", text: "i don't get attention", event_key: "voice:doubt" };
+    const bandCfg = { adjudicator: { model: "haiku", enabled: true } };
+    // the shape claudegen G1 actually returns on a good call
+    const rows = [];
+    const yes = await adjudicateLive(evt, 0.44, {
+      cfg: bandCfg, appendBrainLedger: (o) => rows.push(o),
+      gen: async () => ({ ok: true, text: "yes", total_tokens: 4210, input_tokens: 300, output_tokens: 2, cache_creation_tokens: 3900, cache_read_tokens: 8, duration_ms: 9123, limit_hit: false, error: null }),
+    });
+    assert("METER: an ε-band adjudication bills the shared brain ledger (job + engine the governor's window filters on)",
+      yes === true && rows.length === 1 && rows[0].job === "thalamus_adjudicator" && rows[0].engine === "claude");
+    assert("METER: the honest 4-field spend rides the row — not just in+out (claudegen G1's whole point)",
+      rows[0].total_tokens === 4210 && rows[0].cache_creation_tokens === 3900 && rows[0].cache_read_tokens === 8 && rows[0].duration_ms === 9123);
+    // THE SILENT WALL: a plan limit used to return the same bare `false` as a real
+    // "not reasoning-hard" verdict, with nothing anywhere naming the outage.
+    const wall = [];
+    const walled = await adjudicateLive(evt, 0.44, {
+      cfg: bandCfg, appendBrainLedger: (o) => wall.push(o),
+      gen: async () => ({ ok: false, text: null, total_tokens: 180, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, duration_ms: 640, limit_hit: true, error: "You've hit your session limit · resets 8:30pm" }),
+    });
+    assert("METER: a PLAN WALL is no longer silent — the row carries limit_hit + the error, and the verdict stays fail-closed",
+      walled === false && wall.length === 1 && wall[0].limit_hit === true && wall[0].ok === false && String(wall[0].error).includes("session limit"));
+    assert("METER: an unmeasured component stays NULL, never a fake zero (the ledger's honesty law)",
+      wall[0].input_tokens === null && wall[0].cache_read_tokens === null);
+    // a call that was never made must never be billed
+    const none = [];
+    const off = await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { enabled: false } }, appendBrainLedger: (o) => none.push(o), gen: async () => { throw new Error("must not call while disabled"); } });
+    assert("METER: a disabled adjudicator makes no call and writes no row", off === false && none.length === 0);
+    // the meter must never become a new way for the gate to die
+    const survived = await adjudicateLive(evt, 0.44, {
+      cfg: bandCfg, appendBrainLedger: () => { throw new Error("EPERM: brain_ledger.jsonl busy"); },
+      gen: async () => ({ ok: true, text: "yes", total_tokens: 10, duration_ms: 1 }),
+    });
+    assert("METER: a locked ledger never takes the gate down — the verdict still lands", survived === true);
+  }
+
+  // (6c) THE MODEL KNOB IS LIVE (10 Aug 2026 — the ORPHAN_FIELD repair).
+  // Before this, cfg.adjudicator.model was read by NOTHING: "haiku" was hardcoded
+  // into the engine call and again into the ledger row, while the live config named
+  // gemini-flash-lite-latest, an engine retired 17 Jul. The generator below RECORDS
+  // the model argument it was handed — that recording is what goes red the moment a
+  // future edit re-hardcodes the literal, which is the only failure mode that hid
+  // for three weeks last time.
+  {
+    const evt = { modality: "voice", text: "i don't get attention", event_key: "voice:doubt" };
+    const okGen = (seen) => async (_q, model) => { seen.push(model); return { ok: true, text: "yes", total_tokens: 10, duration_ms: 1 }; };
+    const seen = [], rows = [];
+    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "sonnet", enabled: true } }, gen: okGen(seen), appendBrainLedger: (o) => rows.push(o) });
+    assert("KNOB: the CONFIGURED adjudicator model reaches the engine AND the ledger row (it reached neither before)",
+      seen.length === 1 && seen[0] === "sonnet" && rows[0].model === "sonnet" && rows[0].model_requested === undefined);
+    // the live file's own value on the day of the repair
+    const seen2 = [], rows2 = [];
+    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "gemini-flash-lite-latest", enabled: true } }, gen: okGen(seen2), appendBrainLedger: (o) => rows2.push(o) });
+    assert("KNOB: a name `claude -p` cannot spawn falls back to the live-proven default — and the row NAMES the substitution instead of hiding it",
+      seen2[0] === "haiku" && rows2[0].model === "haiku" && rows2[0].model_requested === "gemini-flash-lite-latest" && /claude -p/.test(String(rows2[0].model_fallback)));
+    assert("KNOB: an empty/missing model never blanks the --model flag", resolveAdjModel({ adjudicator: { enabled: true } }).model === "haiku" && resolveAdjModel({}).model === "haiku");
+    assert("KNOB: a full claude-* model id passes through untouched (the CLI takes them verbatim)",
+      resolveAdjModel({ adjudicator: { model: "claude-haiku-4-5-20251001" } }).model === "claude-haiku-4-5-20251001");
+    // THE LIVE FILE, not a fixture — and stated as an invariant, not a value, so it
+    // survives him legitimately turning the knob tomorrow.
+    const live = resolveAdjModel(loadConfig());
+    assert(`KNOB: whatever thalamus_config.json names (${JSON.stringify(live.requested)}), the daemon only ever spawns a model claude -p can take (${live.model})`,
+      CLAUDE_MODEL_ALIASES.has(live.model) || /^claude-/i.test(live.model));
+    // and the knob must be READABLE — a live knob nobody can see is how the last
+    // three weeks happened
+    const st = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, loadConfig());
+    assert("KNOB: `status` prints the adjudicator's REAL engine + any refused config value (1/1 verdicts bought)",
+      /adjudicator\s+: on · spends /.test(st) && /1\/1 ε-band verdict/.test(st));
   }
 
   // the door + the gates
@@ -1911,6 +2087,15 @@ function buildStatus(rows, allRows, w, cfg) {
   const pulseRows = allRows.filter(r => (r.comps && r.comps.pulse > 0) || String(r.key || "").startsWith("pulse:"));
   const pulseLive = pulseRows.filter(r => r.tier >= 1).length;
   L.push(`  pulse sentinel : ${pulseLive}/${pulseRows.length} escalations reached tier≥1 · weight ${(cfg.weights.pulse ?? 0).toFixed(2)} (need a verdict source before it can be raised — 0 of ${pulseRows.length} has ever been humanly or adjudicator-verdicted; safe ceiling ${(cfg.tiers.tau1_base - 0.32029).toFixed(3)})`);
+  // ORPHAN_FIELD repair 10 Aug 2026 — a knob that is live must be READABLE, or the
+  // next tuning pass reads the config and believes it. have/need per #106: verdicts
+  // bought against moments that reached the band at all.
+  const adj = resolveAdjModel(cfg);
+  const adjBought = allRows.filter(r => r.adjudicated === true).length;
+  const adjBand = allRows.filter(r => r.outcome === "adjudicated_up" || r.outcome === "adjudicated_down" || r.adjudicated === true).length;
+  L.push(`  adjudicator    : ${((cfg.adjudicator || {}).enabled === false) ? "OFF" : "on"} · spends ${adj.model} via claude -p`
+    + (adj.fallback ? ` — thalamus_config asks "${adj.requested}", REFUSED: ${adj.fallback}; the live-proven default is spent instead (his call to change)` : ` (straight from thalamus_config.json)`)
+    + ` · ${adjBought}/${adjBand} ε-band verdict(s) bought lifetime`);
   // #10 — is the log actually landing?
   let logState = "MISSING — no diagnostic has been written yet";
   try { if (existsSync(LOGFILE)) logState = `${statSync(LOGFILE).size}/${cfg.log.max_bytes} bytes before rotation`; } catch { }

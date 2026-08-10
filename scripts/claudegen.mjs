@@ -13,7 +13,7 @@
 // ============================================================================
 
 import { execFileSync, execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";   // readFileSync: the selftest's WIRE scan of the callers (10 Aug 2026)
 import { join } from "node:path";
 
 // ── THE LIMIT CLASSIFIER (organism audit 4 Aug 2026, issue #8) ──────────────
@@ -141,10 +141,26 @@ function parseOut(stdout, prompt, t0) {
     // The envelope prefix is kept, because the discriminating field lives in it.
     error: isErr ? String(resultText !== null ? resultText : envelope).slice(0, ERR_KEEP) : null,
     error_envelope: isErr ? envelope.slice(0, ERR_KEEP) : null,
+    // ONE shape across all three producers (THE SILENT KILL repair, 10 Aug 2026
+    // — see resolveChild below): a reader must never have to ask whether the
+    // field exists. A parsed envelope means the child SPOKE; resolveChild is the
+    // only place that knows whether it also FINISHED, so it stamps these.
+    killed: false, kill_signal: null,
   };
 }
 function parseErr(e, prompt, t0) {
-  const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
+  const killed = !!(e.killed || e.signal);
+  // THE KILL IS NAMED IN THE TEXT TOO (10 Aug 2026). Probed on this box: a
+  // timed-out execFile hands back `err.message === "Command failed: <cmd>"` and
+  // NOTHING else — no "timeout", no "SIGTERM", and `err.stdout` is undefined.
+  // Every reader of a failure in this organism reads TEXT (brain.mjs:662
+  // forensicText → the dead-brain hint, watchman's token_health line, the
+  // doctor), so a kill that lives only in a new field is a kill nobody reads.
+  // The duration is DERIVED from t0, not a threshold — it is how long the call
+  // actually ran before the axe, which is the one number that tells him whether
+  // the ceiling was hit or the CLI hung early.
+  const kmark = killed ? `KILLED (${e.signal || "no-signal"}) after ${Date.now() - t0}ms — the CLI was cut off, not answered. ` : "";
+  const msg = kmark + String((e.stderr || "") + (e.stdout || "") + e.message);
   // a thrown spawn/timeout carries no `result` field — the envelope IS the message
   const cls = classifyLimit(msg, null);
   return {
@@ -154,9 +170,100 @@ function parseErr(e, prompt, t0) {
     duration_ms: Date.now() - t0,
     limit_hit: cls.limit_hit, http_status: cls.http_status, limit_signal: cls.limit_signal,
     error: msg.slice(0, ERR_KEEP), error_envelope: msg.slice(0, ERR_KEEP),
+    // the SYNC lane gets this for free: execFileSync's thrown error carries
+    // `.signal === "SIGTERM"` on a timeout, so nightshift's five claudeGen sites
+    // now name their own kills without a line of their own changing.
+    killed, kill_signal: e.signal || null,
   };
 }
-const refuse = () => ({ ok: false, text: null, total_tokens: 0, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: false, duration_ms: 0, limit_hit: false, http_status: null, limit_signal: "none", error: "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)", error_envelope: null });
+const refuse = () => ({ ok: false, text: null, total_tokens: 0, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: false, duration_ms: 0, limit_hit: false, http_status: null, limit_signal: "none", error: "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)", error_envelope: null, killed: false, kill_signal: null });
+
+// ── THE SILENT KILL (wiring audit, 10 Aug 2026) ─────────────────────────────
+// claudeGenAsync's callback used to branch on "an error AND no stdout at all".
+// A child killed at the timeout AFTER flushing any bytes therefore landed in
+// parseOut — where a truncated envelope fails JSON.parse and is swallowed by the
+// deliberate raw-text lane at :122. The call came back **ok:true, error:null,
+// limit_hit:false, with a FRAGMENT as the answer.** PROBED LIVE on this box,
+// 10 Aug 2026 (execFile, timeout 600ms, child writes
+// `{"type":"result","is_error":false,"result":"partial answ` then hangs):
+//   err.killed=true · err.signal=SIGTERM · err.code=null · err.stdout=undefined
+//   → the old expression routed it to parseOut.
+// Timeouts are not hypothetical on this lane: 18 dmn rows died at duration_ms
+// ≈301,000 (the 300s default) on 8 Aug, council caps a chair at 20s
+// (council.mjs:190) and the thalamus adjudicator at 15s (thalamus.mjs:1137) —
+// and that adjudicator's verdict is literally `text.startsWith("y")` on this
+// string, so a fragment beginning "y" woke the expensive brain on a call that
+// never finished, while a killed chair took a seat with half a sentence.
+// THE RULE — `err` is the only truth about whether the child FINISHED:
+//   · no err              → parseOut, byte-for-byte as before (a clean raw-text
+//                           pass-through stays legal — that is a real lane, and
+//                           the selftest above pins it).
+//   · err + COMPLETE json → still parseOut: the CLI runs --output-format json,
+//                           so a parseable envelope is a WHOLE envelope, and it
+//                           carries the usage block and api_error_status that
+//                           parseErr would throw away. The plan-wall shape
+//                           (non-zero exit + full 429 envelope) must keep them.
+//   · err + anything else → parseErr, with the partial stdout folded in BY HAND:
+//                           execFile's error carries no `.stdout` (probed), so
+//                           the fragment survives only if this passes it.
+// Either way the kill is stamped, in the field and in the error text.
+const jsonWhole = (s) => { if (!String(s).trim()) return false; try { JSON.parse(s); return true; } catch { return false; } };
+function resolveChild(err, stdout, prompt, t0) {
+  const out = String(stdout || "");
+  if (!err) return parseOut(out, prompt, t0);
+  if (!jsonWhole(out)) {
+    // parseErr writes ok:false by construction — a fragment is never an answer.
+    return parseErr({ message: String((err && err.message) || err), stdout: out, stderr: "", killed: err.killed, signal: err.signal }, prompt, t0);
+  }
+  const r = parseOut(out, prompt, t0);
+  // it SPOKE in full and then died: keep the answer and the meter, say the axe
+  // fell. ok still follows the envelope's own is_error — discarding a complete
+  // reply because the exit code was ugly would trade one silent lie for another.
+  r.killed = !!(err.killed || err.signal);
+  r.kill_signal = err.signal || null;
+  return r;
+}
+// FROZEN VERBATIM (layering law) — the pre-10-Aug branch, the one that reported a
+// SIGTERM'd call as a success. Kept because every claudegen-produced row already
+// on brain_ledger.jsonl came from it: an `ok:true` row with a short `text` and no
+// error was NOT necessarily a call that finished. Read the history with this
+// function in hand, not the one above.
+const resolveChildLegacy = (err, stdout, prompt, t0) => (err && !stdout ? parseErr(err, prompt, t0) : parseOut(stdout || "", prompt, t0));
+
+// ── THE LEDGER PROJECTION (wiring audit, 10 Aug 2026) ───────────────────────
+// #8 BUILT the forensics above and not one caller carried them. Measured on the
+// live dressing-room/state/brain_ledger.jsonl the same morning — 4,558 rows,
+// 2,587 of them failures:
+//   ·     0 rows carry error_envelope. Every caller hand-writes its own row
+//         literal and none of them copied the field across, so the #8 repair
+//         stopped at this door and a failure's cause stayed unrecoverable.
+//   ·     3 rows carry http_status (dmn.mjs, the only caller that ever wired
+//         it) — while 2,365 of the 2,587 failures have `"api_error_status":…`
+//         sitting UNPARSED inside their error text. The discriminator was on
+//         disk for weeks with nobody reading it.
+// ONE shape, spread by every caller, so the next caller cannot forget a field.
+// error_envelope rides ONLY when it says more than `error` already does:
+// parseErr sets the two to the same string, and parseOut differs only when the
+// CLI returned a `result` (the plan-wall shape). A null therefore means "the
+// envelope IS the error field" — a reader takes `row.error_envelope || row.error`,
+// never the envelope alone (brain.mjs failureStreak does exactly that). That
+// rule keeps a 600-char blob off ~95% of failure rows in a journal brain.mjs
+// rolls at 2 MB (brain.mjs:2285), so forensics cost retention nothing.
+function ledgerForensics(r) {
+  const o = r || {};
+  return {
+    error_envelope: (o.error_envelope && o.error_envelope !== o.error) ? o.error_envelope : null,
+    http_status: Number.isFinite(o.http_status) ? o.http_status : null,
+    limit_signal: o.limit_signal || null,
+    // THE KILL RIDES THE ROW TOO (the SILENT KILL repair, same day). A timeout is
+    // a death the other two fields cannot describe: no status, no limit phrase —
+    // http_status stays null and the cause reads "unknown" forever. Same "say it
+    // only when it says something" rule as error_envelope: null when the child
+    // finished, so a healthy row grows by nothing.
+    killed: o.killed === true ? true : null,
+    kill_signal: o.kill_signal || null,
+  };
+}
 
 function claudeGen(prompt, model = "sonnet", timeoutMs = 300000) {
   if (process.env.ANTHROPIC_API_KEY) return refuse();
@@ -174,7 +281,7 @@ function claudeGenAsync(prompt, model = "sonnet", timeoutMs = 300000) {
   const bin = BIN();
   return new Promise((resolve) => {
     const child = execFile(bin, ARGS(model), { timeout: timeoutMs, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } },
-      (err, stdout) => resolve(err && !stdout ? parseErr(err, prompt, t0) : parseOut(stdout || "", prompt, t0)));
+      (err, stdout) => resolve(resolveChild(err, stdout, prompt, t0)));
     child.stdin.on("error", () => { });   // child died early — the callback reports it
     child.stdin.end(String(prompt));
   });
@@ -235,6 +342,94 @@ async function selftest() {
     assert("FORENSICS: the failing envelope is preserved, not truncated one field short",
       fp.error_envelope && fp.error_envelope.includes("stop_sequence") && fp.error.length > 0);
   }
+
+  // ── THE LEDGER PROJECTION — the wire #8 never had (10 Aug 2026) ───────────
+  {
+    const wall = parseOut('{"type":"result","is_error":true,"api_error_status":429,"session_id":"abc-123","result":"You\'ve hit your weekly limit · resets Jul 20, 11:30pm"}', "p", Date.now());
+    const f = ledgerForensics(wall);
+    assert("LEDGER PROJECTION: the discriminator rides the row (a plan wall stays nameable after the fact)",
+      f.http_status === 429 && f.limit_signal === "api_error_status"
+      && f.error_envelope && f.error_envelope.includes("session_id") && f.error_envelope !== wall.error);
+    // parseErr sets error === error_envelope byte for byte; copying 600 chars
+    // twice onto a 2 MB rolling journal buys no forensics at all, so the
+    // projection drops the duplicate and the READER ORs the two fields.
+    const spawnFail = parseErr(new Error("spawnSync claude ETIMEDOUT"), "p", Date.now());
+    const f2 = ledgerForensics(spawnFail);
+    assert("LEDGER PROJECTION: no envelope copy when it says nothing `error` doesn't (the reader ORs them)",
+      spawnFail.error_envelope === spawnFail.error && f2.error_envelope === null
+      && f2.http_status === null && f2.limit_signal === "none");
+    // THE WIRE ITSELF — the assertion this file was missing. A shape with no
+    // caller IS the defect being repaired here (error_envelope: produced on
+    // every failure since 4 Aug, read by nobody, 0 of 4,558 ledger rows), and a
+    // source scan is the only check that goes red the moment a future edit
+    // quietly drops the spread out of a row literal. Reads siblings by URL so
+    // it works from any cwd.
+    // council.mjs joined the scan 10 Aug 2026: it was the third caller writing a
+    // brain_ledger row by hand, and it hand-rolled http_status + limit_signal
+    // while dropping error_envelope entirely — proof that a caller copying
+    // fields one at a time WILL miss one. The scan is what makes that structural.
+    for (const [file, builder] of [["nightshift.mjs", "genLedgered"], ["dmn.mjs", "ledgerRow"], ["council.mjs", "convene (the cross-family chair)"]]) {
+      let src = "";
+      try { src = readFileSync(new URL("./" + file, import.meta.url), "utf8"); } catch { }
+      // COMMENTS ARE STRIPPED FIRST (10 Aug 2026, found by the negative control
+      // that added council.mjs to this list). With the spread deleted off
+      // council's row the scan still passed — because the comment ABOVE the row
+      // names `...ledgerForensics(r)` in prose, and the raw-source regex cannot
+      // tell an explanation from a call. A guard a comment can satisfy is not a
+      // guard, which is the same built-but-not-wired shape this scan exists to
+      // catch. This repo comments its WHY heavily, so that hole was wide open on
+      // all three callers. (Line comments only; none of the three has a `//`
+      // inside a string literal on the lines that matter, and stripping can only
+      // make this check STRICTER, never let a missing wire through.)
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      assert(`WIRE: ${file} (${builder}) still spreads ledgerForensics onto its brain_ledger row`,
+        /import\s*\{[^}]*ledgerForensics[^}]*\}\s*from\s*"\.\/claudegen\.mjs"/.test(code) && /\.\.\.ledgerForensics\(/.test(code));
+    }
+  }
+
+  // ── THE SILENT KILL — a killed call must never come back as an answer ──────
+  // Every fixture below is the LIVE PROBE of 10 Aug 2026, verbatim: execFile with
+  // timeout 600ms against a child that writes a partial envelope and then hangs
+  // gives killed=true · signal=SIGTERM · code=null · stdout=the fragment · and NO
+  // err.stdout. These go red the moment the callback stops routing through
+  // resolveChild, or the fragment is allowed to be an answer again.
+  {
+    const FRAG = '{"type":"result","is_error":false,"result":"partial answ';
+    const sigterm = Object.assign(new Error("Command failed: node.exe"), { killed: true, signal: "SIGTERM", code: null });
+    const k = resolveChild(sigterm, FRAG, "p", Date.now());
+    assert("SILENT KILL: a SIGTERM'd child that flushed a PARTIAL envelope is a FAILURE, never an answer",
+      k.ok === false && k.text === null && k.killed === true && k.kill_signal === "SIGTERM");
+    assert("SILENT KILL: the kill is NAMED in the error text (the field brain/watchman/doctor already read) and the fragment survives",
+      /^KILLED \(SIGTERM\) after \d+ms/.test(k.error) && k.error.includes('"result":"partial answ'));
+    assert("SILENT KILL: a cut-off call is never mistaken for a plan wall (no status, no phrase — just dead)",
+      k.limit_hit === false && k.http_status === null);
+    // the repair must cost the two lanes that were always right: nothing.
+    const clean = resolveChild(null, "plain", "p", Date.now());
+    assert("SILENT KILL: a CLEAN raw-text call still passes through untouched (no err ⇒ the old lane, byte for byte)",
+      clean.ok === true && clean.text === "plain" && clean.killed === false && clean.kill_signal === null);
+    const wallExit = resolveChild(Object.assign(new Error("Command failed"), { code: 1 }),
+      '{"type":"result","is_error":true,"api_error_status":429,"result":"You\'ve hit your weekly limit · resets Jul 20, 11:30pm","usage":{"input_tokens":7,"output_tokens":2}}', "p", Date.now());
+    assert("SILENT KILL: a non-zero exit beside a COMPLETE envelope keeps its status AND its usage (parseErr would bin both)",
+      wallExit.limit_hit === true && wallExit.http_status === 429 && wallExit.input_tokens === 7 && wallExit.tokens_estimated === false);
+    // the projection — a killed row must still be nameable months later, and a
+    // healthy row must not grow by two null fields it never needed
+    const fk = ledgerForensics(k);
+    assert("LEDGER PROJECTION: the kill rides the brain_ledger row, and a finished call adds nothing",
+      fk.killed === true && fk.kill_signal === "SIGTERM"
+      && ledgerForensics(clean).killed === null && ledgerForensics(clean).kill_signal === null);
+    // LAYERING: the old branch is frozen beside the new one and still tells the lie
+    const old = resolveChildLegacy(sigterm, FRAG, "p", Date.now());
+    assert("…and the FROZEN legacy branch still reproduces the defect verbatim (ok:true, error:null, a fragment as the answer)",
+      old.ok === true && old.error === null && old.text === FRAG);
+    // THE WIRE ITSELF: a correct resolveChild that nothing calls is exactly the
+    // built-but-not-wired shape this repair belongs to. Source scan, same
+    // technique as the ledgerForensics checks above — re-inline the old
+    // expression in the callback and this goes red in the same second.
+    let self = "";
+    try { self = readFileSync(new URL(import.meta.url), "utf8"); } catch { }
+    assert("WIRE: claudeGenAsync's callback still routes through resolveChild (the async engine is the only one that can be killed mid-flush)",
+      /\(err,\s*stdout\)\s*=>\s*resolve\(resolveChild\(err,\s*stdout,\s*prompt,\s*t0\)\)/.test(self));
+  }
   // THE ENGINE MUST BE SPAWNABLE (E2E audit 25 Jul): the old BIN() pointed at a
   // shim that does not exist here, so every organ failed with EINVAL and nobody
   // noticed for days. This check fails loudly the moment the binary is unreachable.
@@ -262,4 +457,4 @@ async function selftest() {
 import { pathToFileURL } from "node:url";
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) selftest().then(ok => process.exit(ok ? 0 : 1));
 
-export { claudeGen, claudeGenAsync, classifyLimit, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };
+export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };

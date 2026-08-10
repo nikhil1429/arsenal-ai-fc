@@ -36,6 +36,12 @@ import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinking
 import { loadConfig as loadThalamusConfig, pendingWakes } from "./thalamus.mjs";
 // M8 — the Back Room: three cheap adversarial drafts before the one deep call
 import { convene, councilSection } from "./council.mjs";
+// WIRING AUDIT (10 Aug 2026) — the ambient window's engine is IMPORTED, never copied.
+// `currentWindow`/`AMBIENT` are the distiller's own definition of "where he is"
+// (distiller.mjs:98-107); `presenceTailReport` is presence.mjs's file-GENERIC jsonl
+// tail reader, already borrowed the same way by context.mjs:42. See ambientWindow().
+import { currentWindow, AMBIENT } from "./distiller.mjs";
+import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -85,19 +91,85 @@ function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
   } catch { }
   return null;
 }
+// ---------------------------------------------------------------------------
+// WIRING AUDIT (10 Aug 2026) — THE CONTEXT RIVER FINALLY REACHES THE CORTEX
+// ---------------------------------------------------------------------------
+// context.mjs's own header (its lines 8-9) says the ambient bridge exists to be "the
+// multi-surface RIVER that finally gives the never-fired cortex something to reason
+// over ... so every bound moment carries what-app / what-concept he was on." It never
+// arrived here. MEASURED this run: salience_ledger.jsonl holds 2,999 moments whose
+// `modalities` include `context` and ALL 2,999 are outcome:"reflex" (highest S ever
+// 0.244, against a tau1_eff that never fell below 0.40); of the 48 moments in the whole
+// ledger that DID leave reflex, not one carries `context` at all — so wake_queue.jsonl's
+// 38 rows contain zero context, and this file, the stated destination, had read exactly
+// none of the stream built to feed it. Built, present, emitting, unwired.
+//
+// WHY it never arrived, and why the repair belongs HERE and not in the scorer: binding is
+// co-temporal inside thalamus_config.binding_ms = 900ms (thalamus.mjs bindGroups), while
+// context.mjs emits at most once per FLOOR_MS ~60s and only on a window CHANGE. For the
+// ambient stream to bind, he must type his doubt inside the same 900ms as an app switch.
+// Widening that window, or giving `context` a salience weight, moves the wake bar for
+// EVERY lane at once — an approval-gated, curriculum-shaping number that is the captain's
+// to set (thalamus_config.json's own _doc says so, and his standing rule is that no number
+// is chosen before the data is in). So the stream arrives the way the DISTILLER already
+// solved this exact problem for itself: as ONE labelled line of corroboration — never the
+// spotlight, never evidence, never a substitute for the question.
+//
+// IT CARRIES ITS OWN AGE, and no staleness cut-off is invented: a cut-off would be a
+// guessed number. The age rides in the prompt and the deep read judges it — a 3-minute-old
+// window is where he is, a 3-hour-old one plainly is not, and the model is told which one
+// it is holding instead of being handed a bare app name that always reads as "now".
+// ABSENCE IS NAMED, never silently omitted: when the tail holds no context row the field
+// is null WITH its reason. (That is the exact sin the capsule-door defect was made of —
+// a layer that simply did not appear, with no field saying it was missing.)
+//
+// TAIL DEPTH is MEASURED, not chosen, and twice over: across the whole live afferent.jsonl
+// (5,223 rows) the deepest gap between two consecutive `context` rows is exactly 40 rows
+// (median 1, p95 4), and brain.mjs:625's liveSignal already tails this same file at 40 for
+// the same "freshest trace" job. Deeper is waste; a miss is reported, never guessed.
+const AMBIENT_TAIL_ROWS = 40;
+function ambientWindow(deps = {}) {
+  const now = deps.now !== undefined ? deps.now : Date.now();
+  const rows = deps.rows !== undefined ? deps.rows
+    : jsonlTailReport(AMBIENT_TAIL_ROWS, { file: join(STATE_DIR, "afferent.jsonl") }).rows;
+  const w = currentWindow("", rows);                      // the distiller's engine — one definition, two organs
+  if (!w) return null;
+  // what-CONCEPT, the other half of the header's promise: context.mjs admits a window title
+  // only through concepts.json's canon (its conceptOfTitle), so this is a registered concept
+  // id or nothing — a raw window word can never reach the deep brain through this door.
+  const last = rows.filter(r => r && AMBIENT.includes(r.modality)).pop() || {};
+  const t = Date.parse(w.ts);
+  return {
+    text: w.text,
+    concept: (Array.isArray(last.concept_tokens) && last.concept_tokens[0]) || null,
+    age_min: Number.isFinite(t) ? Math.max(0, Math.round((now - t) / 60000)) : null,
+  };
+}
 function buildDeepPrompt(wake, bus = {}, extraSection = "") {
   const spot = wake.spotlight || {};
+  const win = bus.current_window !== undefined ? bus.current_window : ambientWindow();
   const capsule = bus.capsule !== undefined ? bus.capsule : findCapsule(spot.concept_tokens);
   const twin = bus.twin !== undefined ? bus.twin : readJson(join(STATE_DIR, "twin.json"));
   const cal = bus.calibration !== undefined ? bus.calibration : readJson(join(STATE_DIR, "calibration.json"));
   const ls = bus.learning_state !== undefined ? bus.learning_state : readJson(join(STATE_DIR, "learning_state.json"));
+  // WIRING AUDIT (10 Aug 2026): the bus slice below sent `danger_topics` as bare names
+  // (`.map(d => d.topic)`). calibration stamps every entry with its TRACK, and — concept track
+  // only — the AXIS that keeps breaking (calibration.mjs:189-224). The deep brain got neither,
+  // so it could not tell a Python skill miss from a concept miss and would answer a `pydantic`
+  // danger with 9-axis concept teaching, the grammar GEMINI_LOOP.md §11.3 refuses on Python.
+  // Both fields ride through VERBATIM — nothing computed here — and `track || "concept"` leaves
+  // pre-25-Jul entries reading exactly as they did.
   return `You are THE BRIDGE — the deep brain of Arsenal AI FC, woken by the thalamus for the ~5% of moments that need real reasoning. Your captain is Nikhil (#14), ADHD-PI, training for an AI Product Engineer interview. The reflex brain already answered fast; you now give the PROFOUND read the moment deserves.
 
 THE MOMENT (bound by the thalamus — the spotlight is why you were woken):
 ${JSON.stringify({ spotlight: { modality: spot.modality, text: spot.text, event_key: spot.event_key, concept_tokens: spot.concept_tokens, salience: spot.S, components: spot.comps }, bound_context: (wake.bound_context || []).map(c => ({ modality: c.modality, text: c.text, event_key: c.event_key })) }, null, 1).slice(0, 2500)}
 
+WHERE HE WAS (the ambient window stream — CORROBORATION ONLY. Never the question, never evidence, and never a reason to answer about the app instead of the moment. Judge it by its age: minutes_old says how old this reading is, and nothing here claims it is still true):
+${JSON.stringify(win ? { window: win.text, concept: win.concept, minutes_old: win.age_min }
+  : { window: null, reason: `no context afferent in the last ${AMBIENT_TAIL_ROWS} afferent rows` }, null, 1)}
+
 THE BUS SLICE (his real, live state — never invent beyond it):
-${JSON.stringify({ twin_markets: ((twin || {}).markets || []).map(m => ({ id: m.id, p: m.p })), calibration_gap: (cal || {}).calibration_gap ?? null, danger_topics: ((cal || {}).danger_zone || []).map(d => d.topic).slice(0, 5), learning_state_status: (ls || {}).status || null }, null, 1).slice(0, 1500)}
+${JSON.stringify({ twin_markets: ((twin || {}).markets || []).map(m => ({ id: m.id, p: m.p })), calibration_gap: (cal || {}).calibration_gap ?? null, danger_topics: ((cal || {}).danger_zone || []).slice(0, 5).map(d => ({ topic: d.topic, track: d.track || "concept", axis: d.axis || null })), learning_state_status: (ls || {}).status || null }, null, 1).slice(0, 1500)}
 ${capsule ? `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):\n${capsule.text}\n` : ""}${extraSection}
 YOUR JOB: one deep, mechanism-level read. If it is a concept doubt: the real mechanism, a worked example, where it breaks, and the one reframe that dissolves HIS specific confusion. If it is a pattern/strategy moment: what is REALLY going on underneath, and the single next move that changes his next ten minutes. Think hard first; then answer.
 
@@ -443,7 +515,11 @@ async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const wake = { moment_id: "m_1", status: "pending", spotlight: { modality: "voice", text: "i don't get attention scaling", concept_tokens: ["attention"], S: 0.7, comps: { self: 1 } }, bound_context: [{ modality: "vision", event_key: "frame" }] };
-  const bus = { capsule: null, twin: { markets: [{ id: "session_happened", p: 0.5 }] }, calibration: { calibration_gap: 0.12, danger_zone: [{ topic: "eval metrics" }] }, learning_state: { status: "ok" } };
+  // `current_window` is INJECTED here for the same reason every other bus slot is: without
+  // it buildDeepPrompt would fall through to the live ambient read and the suite's verdict
+  // would depend on whichever window the captain happened to have open (the FIXTURE law —
+  // context.mjs's FIXTURE registry, presence.mjs's FIXTURE_BUCKETS).
+  const bus = { capsule: null, twin: { markets: [{ id: "session_happened", p: 0.5 }] }, calibration: { calibration_gap: 0.12, danger_zone: [{ topic: "eval metrics" }] }, learning_state: { status: "ok" }, current_window: { text: "chrome.exe · Attention Is All You Need", concept: "attention", age_min: 3 } };
   const brainCfg = { guards: { refuse_if_api_key_env: true, banned_phrases: ["10x", "exponential", "on steroids"] }, budget: {} };
   // E2E audit 25 Jul 2026: the suite used to build its cfg with loadThalamusConfig(),
   // i.e. it read the LIVE, approval-gated dressing-room/state/thalamus_config.json —
@@ -681,6 +757,40 @@ async function selftest() {
     assert("prompt carries the bus slice, and the no-invented-numbers law", p.includes("calibration_gap") && p.includes("never a number that is not in the data"));
     assert("prompt carries the honest-frame law + speakable contract", p.includes('never "10x"') && p.includes("250 words"));
     assert("prompt itself breaks no banned-phrase law", bannedPhraseCheck(p.replace(/never "10x", "exponential", "on steroids"/, ""), ["on steroids"]).length === 0);
+    // WIRING AUDIT (10 Aug 2026) — a danger topic reaches the deep brain WITH the domain it
+    // belongs to. Live shape: `pydantic` (skill) sorts above `chunking` (concept, axis f),
+    // and the old slice made them indistinguishable names in a list.
+    const pTrack = buildDeepPrompt(wake, { ...bus, calibration: { calibration_gap: 0.12, danger_zone: [
+      { topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" },
+      { topic: "chunking", track: "concept", confidence: "high", accuracy: "low", axis: "f" },
+    ] } });
+    assert("#wire: danger topics arrive TRACK-stamped (skill ≠ concept) and carry their axis",
+      /"topic": "pydantic"/.test(pTrack) && /"track": "skill"/.test(pTrack) && /"track": "concept"/.test(pTrack) && /"axis": "f"/.test(pTrack));
+
+    // ---------------------------------------------------------------------
+    // WIRING AUDIT (10 Aug 2026) — THE DEAD WIRE, HELD OPEN.
+    // These four fail the moment the context river stops reaching the deep brain:
+    // drop the prompt block, drop the age, silently omit the absent case, or let
+    // ambientWindow stop reading the newest context row, and the suite goes red.
+    // Before this repair, 2,999 of 2,999 scored context moments died at reflex and
+    // this file had consumed none of them.
+    // ---------------------------------------------------------------------
+    assert("#wire: the ambient window REACHES the deep brain — what-app AND what-concept, the header's whole promise",
+      /"window": "chrome\.exe · Attention Is All You Need"/.test(p) && /"concept": "attention"/.test(p));
+    assert("#wire: it carries its own AGE and is framed as corroboration, never as the question",
+      /"minutes_old": 3/.test(p) && /CORROBORATION ONLY/.test(p));
+    const pNoWin = buildDeepPrompt(wake, { ...bus, current_window: null });
+    assert("#wire: ABSENCE IS NAMED — no ambient row prints a null window WITH its reason, never a silent omission",
+      /"window": null/.test(pNoWin) && /no context afferent in the last 40/.test(pNoWin));
+    // the reader itself, on a fixture shaped like the live afferent tail
+    const aw = ambientWindow({ now: Date.parse("2026-08-10T18:07:00Z"), rows: [
+      { modality: "code", text: "typed something", ts: "2026-08-10T17:00:00Z" },
+      { modality: "context", app: "chrome.exe", title: "old tab", text: "chrome.exe · old tab", concept_tokens: [], ts: "2026-08-10T17:30:00Z" },
+      { modality: "context", app: "Code.exe", title: "attention.py", text: "Code.exe · attention.py", concept_tokens: ["attention"], ts: "2026-08-10T18:00:00Z" },
+    ] });
+    assert("#wire: ambientWindow reads the NEWEST context row, keeps its canon concept, and derives age from ITS ts",
+      aw.text === "Code.exe · attention.py" && aw.concept === "attention" && aw.age_min === 7 &&
+      ambientWindow({ rows: [{ modality: "code", text: "no ambient here" }] }) === null);
   }
 
   // OVERNIGHT DEEPENING (P5) — the concept graph, deps-injected (no live Opus)

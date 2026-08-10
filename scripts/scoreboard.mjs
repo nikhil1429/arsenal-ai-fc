@@ -51,7 +51,11 @@
 //      disagreeing about the same truth is the exact disease H1 exists to end.
 //      Unresolved rows are "pending_horizon", superseded when the slip matures.
 //   3. SHEET DAY — data-only row: mouth_said[day] verbatim ("sheet"/"absence"),
-//      formation_read ok from the brain ledger (.1-roll-aware read), reps_n,
+//      formation_read ok from the brain ledger (.1-roll-aware read) plus, since
+//      10 Aug 2026, that same row's inputs_present/declared/absent_names — brain's
+//      finding-#64 accounting, written nightly since 2 Aug and read by no organ at
+//      all until this join took it (formation_inputs; null today by MEASUREMENT, and
+//      the comment on it says why — the cross-job answer is `brain status`), reps_n,
 //      and timeaudit's own day fields (camelCase source mapped explicitly, only
 //      when timeaudit.date == day; its generatedAt recorded so a stale same-date
 //      file is distinguishable). NO invented verdict — the row is ground for H2
@@ -247,7 +251,32 @@ export function joinSheetDay(day, deps) {
   const push = (deps.mouthSaid || {})[day] ?? null;         // "sheet" | "absence" | null
   const led = (deps.ledger || []).filter((r) => r.job === "formation_read" && repLocalDay(r.ts) === day);
   const ok = led.some((r) => r.ok === true);
-  const lastNote = led.length ? (led[led.length - 1].note || null) : null;
+  const lastRow = led.length ? led[led.length - 1] : null;
+  const lastNote = lastRow ? (lastRow.note || null) : null;
+  // WHAT THE SHEET WAS BUILT FROM (10 Aug 2026 wiring pass). brain.mjs has written
+  // inputs_present / inputs_declared / inputs_absent_names on every ledger row since
+  // its finding #64 — and a grep on 10 Aug found ZERO readers outside brain.mjs, so
+  // "the sheet went out, but on how much evidence?" was recorded nightly and
+  // answerable by nobody. It rides the row this join ALREADY opens: no new file, no
+  // new read, no import. Prediction-side context on a data-only row, exactly like
+  // formation_read_ok beside it — never an outcome (the Goodhart guard up top).
+  // `null` when the row predates the accounting or the job declares no inputs at all
+  // (the manager_m3 class) — the two cases brain's own comment keeps apart, and
+  // neither is a measured zero.
+  // MEASURED TODAY, SAID OUT LOUD (10 Aug 2026): formation_read is currently IN that
+  // second class — its last four live rows (7/8/9/10 Aug) all carry inputs_declared:
+  // null, because the sheet builds from live signals, not declared input files. So
+  // this reads null every night as things stand, and that is the honest answer, not
+  // a broken read. The lane is here so the day the sheet declares an input, the
+  // journal records what it was built on instead of finding out weeks later — which
+  // is the whole shape of the defect this repair came from. The full cross-job
+  // answer lives where the aggregation lives: `node scripts/brain.mjs status`. It is
+  // NOT re-derived here — two organs deriving the same truth is the disease H1 exists
+  // to end (JOIN 2's own law), and brain.mjs already imports this file.
+  const fInputs = (lastRow && typeof lastRow.inputs_declared === "number")
+    ? { present: lastRow.inputs_present ?? null, declared: lastRow.inputs_declared,
+        absent_names: lastRow.inputs_absent_names || [] }
+    : null;
   const repsN = (deps.reps || []).filter((r) => repLocalDay(r.ts) === day).length;
   const ta = deps.timeaudit;
   const taRow = (ta && ta.date === day)
@@ -256,7 +285,7 @@ export function joinSheetDay(day, deps) {
     : null;
   return [{ ts, day, kind: "sheet_day", subject: day,
     sheet_push_sent: push, formation_read_ok: led.length ? ok : null, formation_note: lastNote,
-    reps_n: repsN, timeaudit: taRow }];
+    formation_inputs: fInputs, reps_n: repsN, timeaudit: taRow }];
 }
 
 // ---------------------------------------------------------------------------
@@ -300,7 +329,7 @@ function report(daysArg) {
     console.log(`\n${d}:`);
     for (const r of dr) {
       const detail = r.kind === "sheet_day"
-        ? `push=${r.sheet_push_sent ?? "—"} · sheet_ok=${r.formation_read_ok ?? "—"} · reps=${r.reps_n}${r.timeaudit ? ` · active ${r.timeaudit.active_min}m` : " · timeaudit n/a"}`
+        ? `push=${r.sheet_push_sent ?? "—"} · sheet_ok=${r.formation_read_ok ?? "—"}${r.formation_inputs ? ` · built on ${r.formation_inputs.present}/${r.formation_inputs.declared}${r.formation_inputs.absent_names.length ? ` (absent: ${r.formation_inputs.absent_names.join(", ")})` : ""}` : ""} · reps=${r.reps_n}${r.timeaudit ? ` · active ${r.timeaudit.active_min}m` : " · timeaudit n/a"}`
         : r.kind === "drill" ? `${r.verdict}${r.evidence ? ` (${String(r.evidence).slice(0, 60)})` : ""}`
         : `${r.verdict}${r.reps_n !== undefined ? ` (${r.n_correct}✓/${r.n_wrong}✗ of ${r.reps_n})` : ""}${r.why ? ` — ${r.why}` : ""}`;
       console.log(`  ${r.kind.padEnd(18)} ${String(r.subject).padEnd(24)} ${detail}${r.rev ? `  [rev ${r.rev}]` : ""}`);
@@ -334,7 +363,10 @@ function selftest() {
       { date: D, book: "twin", type: "floor_touched", claim: "x", resolved: true, hit: true },
     ],
     mouthSaid: { [D]: "sheet", "2026-08-08": "absence" },
-    ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm" }],
+    // the inputs_* quartet is brain.mjs's own row shape since its finding #64 — a
+    // sheet built on 2 of 3 declared inputs, saying WHICH one was missing.
+    ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm",
+      inputs_present: 2, inputs_declared: 3, inputs_absent: 1, inputs_absent_names: ["season.json"] }],
     timeaudit: { date: D, activeMinutes: 252, productiveMinutes: 197, onTrack: false, flags: ["f1"], generatedAt: "2026-08-09T16:30:04.905Z" },
     ...over,
   });
@@ -389,6 +421,14 @@ function selftest() {
   rows = joinSheetDay(D, mkDeps());
   ok("JOIN3 — sheet_push_sent carries mouth_said VERBATIM and formation_read_ok rides the ledger day-join",
     rows[0].sheet_push_sent === "sheet" && rows[0].formation_read_ok === true && rows[0].reps_n === 2);
+  // the wire, netted (10 Aug 2026): brain's inputs_* accounting had no reader
+  // outside brain.mjs for eight days. If this join stops carrying it, the journal
+  // goes back to saying the sheet ran without ever saying what it ran ON.
+  ok("JOIN3 — formation_inputs carries brain's finding-#64 accounting off the SAME ledger row (present/declared + the absent names)",
+    rows[0].formation_inputs && rows[0].formation_inputs.present === 2
+    && rows[0].formation_inputs.declared === 3 && rows[0].formation_inputs.absent_names[0] === "season.json");
+  ok("JOIN3 — a ledger row with NO inputs accounting reads null, never a measured zero (pre-#64 rows and the declares-no-inputs class)",
+    joinSheetDay(D, mkDeps({ ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm" }] }))[0].formation_inputs === null);
   ok("JOIN3 — timeaudit camelCase mapped explicitly + generatedAt kept (stale same-date detectable)",
     rows[0].timeaudit && rows[0].timeaudit.active_min === 252 && rows[0].timeaudit.generated_at === "2026-08-09T16:30:04.905Z");
   ok("JOIN3 — an 'absence' morning reads through verbatim; a day timeaudit doesn't cover reads null",

@@ -151,6 +151,87 @@ function integrity() {
   }
   assert("every state .json parses (the bus is the contract between organs)", badJson.length === 0, badJson.join(", "));
   assert("every state .jsonl parses on every row (one bad row poisons a whole reader)", badJsonl.length === 0, badJsonl.join(", "));
+
+  // ── 2b. THE DISCOVERY-PATH CONTRACT (wiring audit, 10 Aug 2026) ────────────
+  // A fifth defect class, and it is the same shape as the four above: it lives
+  // BETWEEN a doc and an organ, so no organ's own selftest can ever see it.
+  // Six docs tell a session "read the surface from the CODE, never from here" and
+  // hand it a literal command — e.g. talk/SKILL.md:39 `grep -n "MODES:"
+  // scripts/capture.mjs`, MORNING_RUNBOOK.md:127 the same for postmatch. That
+  // makes the `// MODES:` header a WIRE, not a comment: it is the only surface a
+  // session following the documented path ever sees.
+  // MEASURED THE DAY THIS WAS WRITTEN — three organs' headers had rotted behind
+  // their own dispatch: capture.mjs omitted `rep` (audit #107's one-rep door, so
+  // the documented path taught a capture that cannot bank a rep as it happens),
+  // scout.mjs omitted `chrome-stamp` + the `missions` alias, postmatch.mjs omitted
+  // `interview`. All three were live, all three invisible on the path the docs name.
+  // DIRECTION IS DELIBERATE: dispatch ⊆ header only. The reverse (a header word
+  // with no dispatch) was probed across all 74 organs and is unusable as a net —
+  // default modes are fallthroughs, not `===` compares, and prose bleeds into the
+  // token stream. A red here must be a real defect, so the noisy half is not run.
+  const paths = discoveryPaths();
+  const liars = [];
+  for (const [organ, where] of paths) {
+    const f = join(ROOT, "scripts", organ + ".mjs");
+    if (!existsSync(f)) { liars.push(`${organ}.mjs — named by ${where.join(", ")}, but NO SUCH SCRIPT`); continue; }
+    const src = readFileSync(f, "utf8");
+    const blk = headerModesBlock(src);
+    if (blk === null) { liars.push(`${organ}.mjs has NO "// MODES:" header, and ${where.join(", ")} greps for one`); continue; }
+    const dispatched = argvModes(src);
+    if (!dispatched) continue;   // no argv[2] dispatch to compare against
+    // word-boundary match, hyphen-aware: `rep` must not be satisfied by `reps_log`
+    const missing = [...dispatched].filter((t) => !new RegExp(`(^|[^a-z0-9_-])${t}([^a-z0-9_-]|$)`, "m").test(blk));
+    if (missing.length) liars.push(`${organ}.mjs dispatches ${missing.join(", ")} — absent from its MODES header (${where.join(", ")} sends a session there)`);
+  }
+  assert(`the MODES header of all ${paths.size} organs a doc points a session at names EVERY mode that organ dispatches (a documented discovery path may not lie)`,
+    liars.length === 0, liars.join("\n         "));
+}
+
+// Which organs does a skill or runbook tell a session to discover by grepping its
+// MODES header? Derived, never listed: the day a new skill names a new organ, that
+// organ joins the net on its own. The generated repo bundle is skipped by NAME for
+// the same reason repo_bundle.mjs:158 skips it — it inlines every script's source,
+// so it matches everything and means nothing.
+const BUNDLE_MD = "ARSENAL_FC_FULL_REPO_BUNDLE.md";
+function discoveryPaths() {
+  const docs = [];
+  const skills = join(ROOT, ".claude", "skills");
+  const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) walk(p); else if (f.endsWith(".md")) docs.push(p); } };
+  if (existsSync(skills)) walk(skills);
+  for (const f of readdirSync(ROOT)) if (f.endsWith(".md") && f !== BUNDLE_MD) docs.push(join(ROOT, f));
+  const out = new Map();
+  for (const p of docs) {
+    const rel = p.slice(ROOT.length + 1).replace(/\\/g, "/");
+    // same line, ≤80 chars between: a doc that says MODES and then names a script.
+    for (const m of readFileSync(p, "utf8").matchAll(/MODES:[^\n]{0,80}?scripts\/([a-z0-9_]+)\.mjs/g)) {
+      if (!out.has(m[1])) out.set(m[1], []);
+      if (!out.get(m[1]).includes(rel)) out.get(m[1]).push(rel);
+    }
+  }
+  return out;
+}
+
+// the header's MODES line plus its indented continuation lines (scout + postmatch wrap)
+function headerModesBlock(src) {
+  const lines = src.split(/\r?\n/);
+  const i = lines.findIndex((l) => /^\/\/\s*MODES:/.test(l));
+  if (i < 0) return null;
+  let b = lines[i];
+  for (let j = i + 1; j < lines.length && /^\/\/\s+\S/.test(lines[j]) && !/^\/\/\s*={4}/.test(lines[j]); j++) b += "\n" + lines[j];
+  return b;
+}
+
+// modes the CLI actually accepts. The dispatch variable is LEARNED from its own
+// `= process.argv[2]` assignment, then only literals compared against THAT name are
+// collected — so an unrelated `model === "opus"` can never be mistaken for a mode.
+function argvModes(src) {
+  const m = src.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(?\s*process\.argv\[2\]/);
+  if (!m) return null;
+  const region = src.slice(src.indexOf(m[0]));   // the entry block only, never the selftest above it
+  const out = new Set();
+  const re = new RegExp(`${m[1]}\\s*===\\s*"([a-z][a-z0-9_\\-]*)"`, "g");
+  let x; while ((x = re.exec(region))) out.add(x[1]);
+  return out;
 }
 
 // ── 3. CROSS-ORGAN LAW CONSISTENCY ───────────────────────────────────────────
@@ -325,6 +406,28 @@ function path() {
 
     const rep = run([S("capture.mjs"), "rep", "--concept", "embeddings", "--axis", "a", "--q", "probe", "--gut", "shaky", "--correct", "true"], { cwd: sb });
     assert("CAPTURE · one valid rep lands with zero capture tax", rep.code === 0 && /appended 1/.test(rep.out));
+
+    // ── THE GEMINI-QUALITY WIRE (wiring audit, 10 Aug 2026) ──────────────────
+    // gemini_quality.jsonl had TWO wired readers (scout.mjs attachGemini ·
+    // watchman.mjs c11) and had NEVER existed on disk: capture.mjs only recorded a
+    // row when `mode === "paste"`, while 19 of the 21 live reps arrive through
+    // `rep`. A producer-less consumer reports 0 forever and looks healthy doing it.
+    // This is the CLI half of the repair, and it belongs here rather than in
+    // capture's own selftest because GEMINI_QUALITY resolves against the real state
+    // dir — only this sandbox can let the real door write a real ledger safely.
+    // It goes red the moment the recorder is re-gated on the door, or the row stops
+    // naming which door wrote it.
+    assert("CAPTURE→GEMINI-QUALITY · the `rep` door WRITES the outcome ledger its two readers count (it never did until 10 Aug 2026)",
+      (() => {
+        const gq = join(sb, "dressing-room", "state", "gemini_quality.jsonl");
+        if (!existsSync(gq)) return false;
+        const lines = readFileSync(gq, "utf8").split("\n").filter((l) => l.trim());
+        if (!lines.length) return false;
+        const row = JSON.parse(lines[lines.length - 1]);
+        return row.door === "rep" && row.n === 1 && row.of_batch === 1
+          && row.surfaces && row.surfaces.gem === 1 && row.confidence_mix.shaky === 1;
+      })(),
+      "the rep door produced no gemini_quality row — the lane is a black box again (scout + watchman will report 0 forever)");
 
     // ORGAN-SAFE, INVERTED (7 Aug 2026). learnstate.mjs:562 prints NOTHING when
     // ARSENAL_ORGAN=1 — correct by design (a headless organ prompt must never carry his

@@ -36,7 +36,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
 import { generatePool } from "./hippocampus.mjs";
-import { claudeGenAsync } from "./claudegen.mjs";
+import { claudeGenAsync, ledgerForensics } from "./claudegen.mjs";
 import { recordUse } from "./fuelboard.mjs";
 import { headroom, loadConfig as loadBrainConfig } from "./brain.mjs";
 
@@ -116,8 +116,45 @@ function crossFamilySplit(drafts) {
   return { disagreement: Math.round((1 - minJac) * 100) / 100, families: fams };
 }
 
-// the sonnet chair — async so the free chairs keep drafting while it thinks
+// the sonnet chair — async so the free chairs keep drafting while it thinks.
+//
+// LAYERING (10 Aug 2026, wiring audit): claudeChairAsyncLegacy below is the
+// PRE-AUDIT chair, frozen verbatim; it is NO LONGER the plan of record. It
+// spawned its own `claude -p` while this very file imported the shared engine
+// at line 39 and used it for the haiku seats — built, present, not wired.
+// Three costs, all measured in the live brain_ledger.jsonl:
+//   · SPEND BLINDNESS. Its parser kept usage.input_tokens + output_tokens and
+//     nothing else. All 5 council_chair rows ever written (7 Aug 2026) read
+//     input 2 / total 340-473 and carry NO cache_creation key at all; same-
+//     engine dmn_counter rows carry cache_creation ~14,400 on the same input 2.
+//     The bulk of a CLI call lives in the cache pair (claudegen.mjs:123-127),
+//     so the most expensive seat under-reported its real spend by ~30x into
+//     the shared ledger the governor budgets against. The row builder below
+//     was ALREADY reading r.cache_creation_tokens and r.limit_hit — the G1
+//     honest meter arrived at the consumer and never at the producer.
+//   · THE BOOT TAX. claudegen's LEAN_ARGS (G0, 9 Aug — measured 88.5% off a
+//     bare probe) never reached this call, so the chair paid the full-CLI boot
+//     every sitting, which is precisely the ~44k the lean flags exist to kill.
+//   · THE SHIM. `execFile("claude", …)` used the bare name where claudegen's
+//     BIN() probes %APPDATA%\npm\claude.cmd first — the exact EINVAL silent
+//     death the 25 Jul E2E audit fixed in every other organ.
+// The plan of record delegates to claudeGenAsync: one engine, one limit
+// classifier, one honest meter, one binary probe. `ok` keeps the legacy's
+// STRICTER reading (ok AND text) so a wordless seat still never sits — callers
+// see byte-identical seating behaviour, only the meter changed.
 function claudeChairAsync(prompt, model = "sonnet", timeoutMs = 20000, deps = {}) {
+  const t0 = Date.now();
+  const gen = deps.gen || claudeGenAsync;
+  return Promise.resolve()
+    .then(() => gen(prompt, model, timeoutMs))
+    .then((r) => ({ ...r, ok: !!(r && r.ok && r.text), text: (r && r.text) || "" }))
+    .catch((e) => ({ ok: false, text: "", total_tokens: 0, duration_ms: Date.now() - t0, error: String((e && e.message) || e).slice(0, 160) }));
+}
+
+// FROZEN VERBATIM (layering law) — the pre-10-Aug chair. Kept because it is the
+// only record of what the 5 council_chair ledger rows above were produced by:
+// read them with this function in hand, not the one above.
+function claudeChairAsyncLegacy(prompt, model = "sonnet", timeoutMs = 20000, deps = {}) {
   const t0 = Date.now();
   return new Promise((resolve) => {
     const fail = (msg) => resolve({ ok: false, text: "", total_tokens: 0, duration_ms: Date.now() - t0, error: String(msg).slice(0, 160) });
@@ -181,14 +218,45 @@ async function convene(question, deps = {}) {
       // 20s cap benched it under contention (probed live: 11s alone, >20s busy)
       const call = deps.claudeChair || ((p) => claudeChairAsync(p, cross.model, Math.max(5000, deadline - 2000)));
       const r = await call(`${cross.brief}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch(() => ({ ok: false }));
+      // the spend rides the SHARED brain ledger — the window sees every token.
+      // G1 (9 Aug 2026): limit_hit was hardcoded false — a plan-limit chair
+      // reply ledgered as an ordinary ok row, so the window never learned it
+      // was locked. The call's own verdict rides now, and the cache pair
+      // joins the row (the honest meter).
+      // 10 Aug 2026 (wiring audit) — two things G1 asked for but did not get:
+      //   · the row lived INSIDE the `if (r.ok && r.text)` below, so limit_hit
+      //     could never once be true: the chair that hit the wall was the one
+      //     row that vanished. A refused chair still paid the boot, so it
+      //     ledgers now, with its own verdict on it (brain.mjs:2405-2410 does
+      //     the same for every night-shift job).
+      //   · `|| 0` on the components rendered an UNMEASURED number as a
+      //     measured zero — the exact lie claudegen.mjs:106-108 forbids. `?? null`
+      //     and tokens_estimated ride instead; the row shape is brain.mjs:591's.
+      if (r) (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({
+        ts: new Date().toISOString(), job: "council_chair", engine: "claude", model: cross.model,
+        input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+        cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+        total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated === true,
+        duration_ms: r.duration_ms || 0, ok: !!(r.ok && r.text), error: r.error || null,
+        limit_hit: r.limit_hit === true,
+        //   · and the THIRD forensics field, still dropped. The pair above was
+        //     hand-rolled here while claudegen.ledgerForensics (10 Aug) exists
+        //     to be spread — nightshift's genLedgered and dmn's ledgerRow both
+        //     spread it; this was the one caller copying two of three fields by
+        //     hand, and the one it forgot is error_envelope. That is the field
+        //     brain.mjs:662 forensicText ORs FIRST when the dead-brain alarm
+        //     tries to name a cause, and the only thing that tells a 429 plan
+        //     wall from a 500 server bug (brain.mjs:3203-3213). Measured the
+        //     same morning: 0 of 4,558 live ledger rows carry it. Spreading the
+        //     shared shape is what stops the next caller forgetting a field.
+        //     No production delta on the pair: claudegen's parseOut/parseErr set
+        //     limit_signal on EVERY result ("none" on success), so `|| null`
+        //     only bites the chair's own throw-catch — where null is honest, the
+        //     call never reached a classifier at all.
+        ...ledgerForensics(r),
+      });
       if (r && r.ok && r.text) {
         drafts.push({ seat: cross.id, family: cross.family || "claude", text: String(r.text).slice(0, 1200) });
-        // the spend rides the SHARED brain ledger — the window sees every token
-        // G1 (9 Aug 2026): limit_hit was hardcoded false — a plan-limit chair
-        // reply ledgered as an ordinary ok row, so the window never learned it
-        // was locked. The call's own verdict rides now, and the cache pair
-        // joins the row (the honest meter).
-        (deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n")))({ ts: new Date().toISOString(), job: "council_chair", engine: "claude", model: cross.model, input_tokens: r.input_tokens || 0, output_tokens: r.output_tokens || 0, cache_creation_tokens: r.cache_creation_tokens || 0, cache_read_tokens: r.cache_read_tokens || 0, total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0, ok: true, error: null, limit_hit: r.limit_hit === true });
       }
     })());
   }
@@ -259,8 +327,71 @@ async function selftest() {
     assert("HEADROOM GATE: a thin window benches the chair (window = deep reads first)", cLow.drafts.length === 3);
     const cKey = await convene("q question here", { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: { ANTHROPIC_API_KEY: "sk-nope" }, headroom: { allowed: 300000 }, claudeChair: async () => { throw new Error("must not be called"); }, writeFlag: () => {} });
     assert("$100 LAW: a metered key benches the chair outright", cKey.drafts.length === 3);
-    const cFail = await convene("q question here", { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 }, claudeChair: async () => ({ ok: false }), writeFlag: () => {} });
+    const failRows = [];                               // hermetic — a refused chair now ledgers, and never into the real file
+    const cFail = await convene("q question here", { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 }, claudeChair: async () => ({ ok: false }), appendLedger: (r) => failRows.push(r), writeFlag: () => {} });
     assert("a failed chair degrades to the 3-chair council (layering)", cFail.drafts.length === 3 && !cFail.cross_split);
+  }
+  // ── THE ENGINE WIRE (10 Aug 2026 wiring audit) ────────────────────────────
+  // The chair used to spawn its OWN `claude -p` — no lean flags, no BIN() shim
+  // probe, and a parser that read only input+output. Every assertion here fails
+  // the moment that regresses: the cache pair is where a CLI call's real spend
+  // lives, and the governor budgets on this row.
+  {
+    let seen = null;
+    const fakeEngine = async (p, m, t) => { seen = { p, m, t }; return { ok: true, text: "the cache amortizes projections only", input_tokens: 2, output_tokens: 471, cache_creation_tokens: 14434, cache_read_tokens: 0, total_tokens: 14907, tokens_estimated: false, duration_ms: 16220, limit_hit: false, http_status: null, limit_signal: "none", error: null };
+    };
+    const r = await claudeChairAsync("brief + question", "sonnet", 18000, { gen: fakeEngine });
+    assert("THE CHAIR RIDES THE SHARED ENGINE (model + timeout reach claudegen)", seen && seen.m === "sonnet" && seen.t === 18000 && seen.p.includes("question"));
+    assert("THE CACHE PAIR SURVIVES THE DOOR (in+out-only parser = ~30x under-report)",
+      r.ok === true && r.cache_creation_tokens === 14434 && r.cache_read_tokens === 0 && r.total_tokens === 14907);
+    assert("the limit classifier travels with it (the chair no longer has its own)",
+      r.limit_signal === "none" && r.tokens_estimated === false && "http_status" in r);
+    // NO RAW SPAWN in the plan of record — the structural guard. If someone
+    // re-inlines an execFile here, the lean flags and BIN() are lost again and
+    // this assertion is the one that says so.
+    assert("plan-of-record chair spawns NOTHING itself; the LEGACY is frozen beside it and still does",
+      !/execFile|output-format/.test(String(claudeChairAsync))
+      && /execFile/.test(String(claudeChairAsyncLegacy)) && /output-format/.test(String(claudeChairAsyncLegacy)));
+    const rEmpty = await claudeChairAsync("p", "sonnet", 1000, { gen: async () => ({ ok: true, text: "" }) });
+    assert("a wordless reply still never sits (legacy's stricter ok, byte-identical)", rEmpty.ok === false);
+    const rThrow = await claudeChairAsync("p", "sonnet", 1000, { gen: async () => { throw new Error("spawn EINVAL"); } });
+    assert("a thrown engine degrades, never rejects (the bus still leaves)", rThrow.ok === false && rThrow.error.includes("EINVAL"));
+  }
+  // ── THE LEDGER WIRE: what the governor actually reads ─────────────────────
+  {
+    const rows = [];
+    const base = { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 }, appendLedger: (r) => rows.push(r), writeFlag: () => {} };
+    await convene("why does quadratic attention survive the kv cache?", { ...base, claudeChair: async () => ({ ok: true, text: "the cache only amortizes projections", input_tokens: 2, output_tokens: 471, cache_creation_tokens: 14434, cache_read_tokens: 0, total_tokens: 14907, tokens_estimated: false, duration_ms: 16220 }) });
+    assert("THE LEDGER SEES THE BOOT TAX (all 5 live rows pre-fix carried no cache key at all)",
+      rows.length === 1 && rows[0].cache_creation_tokens === 14434 && rows[0].total_tokens === 14907 && rows[0].tokens_estimated === false);
+    // the row G1 added limit_hit for, which could never be written: it lived
+    // inside the ok-branch, so the one sitting the window most needed to see
+    // — the chair that hit the wall — was the one that vanished.
+    rows.length = 0;
+    const cLim = await convene("q question here", { ...base, claudeChair: async () => ({ ok: false, text: "", total_tokens: 44000, duration_ms: 900, limit_hit: true, http_status: 429, limit_signal: "api_error_status", error: "You've hit your weekly limit · resets Aug 12" }) });
+    assert("A LIMIT-HIT CHAIR NOW LEDGERS (it used to vanish; the window never learned it was locked)",
+      rows.length === 1 && rows[0].limit_hit === true && rows[0].ok === false && rows[0].http_status === 429 && rows[0].total_tokens === 44000);
+    assert("…and it still degrades to the 3-chair council", cLim.drafts.length === 3);
+    // #8 FORENSICS, THE THIRD FIELD (10 Aug 2026). The row hand-wrote
+    // http_status + limit_signal and never carried error_envelope — the field
+    // brain.mjs:662 forensicText reads FIRST, and the only discriminator
+    // between a 429 plan wall and a 500 server bug (brain.mjs:3203-3213). This
+    // goes red the moment someone drops `...ledgerForensics(r)` off the row.
+    rows.length = 0;
+    const envelope = '{"type":"result","is_error":true,"api_error_status":429,"session_id":"c-1","result":"You\'ve hit your weekly limit · resets Aug 12"}';
+    await convene("q question here", { ...base, claudeChair: async () => ({ ok: false, text: "", total_tokens: 0, duration_ms: 700, limit_hit: true, http_status: 429, limit_signal: "api_error_status", error: "You've hit your weekly limit · resets Aug 12", error_envelope: envelope }) });
+    assert("#8 FORENSICS: the failing ENVELOPE rides the row (0 of 4,558 live rows had it; the alarm reads it first)",
+      rows[0].error_envelope === envelope && rows[0].http_status === 429 && rows[0].limit_signal === "api_error_status");
+    // …and never a duplicate: parseErr sets error === error_envelope byte for
+    // byte, so the projection drops the copy and brain.mjs ORs the two fields.
+    rows.length = 0;
+    await convene("q question here", { ...base, claudeChair: async () => ({ ok: false, text: "", total_tokens: 0, duration_ms: 700, error: "spawn EINVAL", error_envelope: "spawn EINVAL" }) });
+    assert("…and no 600-char duplicate when the envelope says nothing `error` doesn't", rows[0].error_envelope === null && rows[0].error === "spawn EINVAL");
+    // honesty law: an unmeasured number is null, never a measured zero
+    rows.length = 0;
+    await convene("q question here", { ...base, claudeChair: async () => ({ ok: true, text: "some answer", total_tokens: 500, tokens_estimated: true, duration_ms: 100 }) });
+    assert("unmeasured components ride as NULL, never a fake zero (claudegen's law)",
+      rows[0].input_tokens === null && rows[0].cache_creation_tokens === null && rows[0].tokens_estimated === true);
   }
   // M15 — cross-family disagreement ⇒ council_flag ⇒ curriculum
   {
@@ -311,4 +442,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { convene, councilSection, disagreement, crossFamilySplit, capsuleExcerpts, loadSeats, claudeChairAsync, DEFAULT_SEATS, CROSS_SEAT };
+export { convene, councilSection, disagreement, crossFamilySplit, capsuleExcerpts, loadSeats, claudeChairAsync, claudeChairAsyncLegacy, DEFAULT_SEATS, CROSS_SEAT };

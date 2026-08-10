@@ -36,7 +36,18 @@
 //        carries the gate; this organ enforces shape). Layering: the batch
 //        recall_index.jsonl + indexRecall() stay untouched as the back-fill
 //        floor — this is the live layer on top.
+//        10 Aug 2026 — that first line was HALF TRUE and is now true: one file
+//        under this tree, identity_facts.pending.jsonl, had a SECOND live writer
+//        (mcp-memory.mjs appended a staged fact itself, while settlePendingFact
+//        here rewrites the whole file — a rewrite racing an append silently drops
+//        a staged fact). Both organs' headers declared themselves the owner, so
+//        the docs could not even name the conflict; it sat flagged-but-unrepaired
+//        in ARSENAL_AI_FC_MASTERPLAN.md:142, ORGANISM_ANATOMY.md:112 and
+//        CYBORG_BRAIN.md:257, all three ending "needs the captain's ruling".
+//        He ruled today: ONE OWNER — this organ — and the MCP comes through the
+//        `stage-pending` door below.
 // MODES: mark <kind>  (text on stdin) · remember (stdin) · forget <id> ·
+//        stage-pending (stdin) · promote --at <ts> · drop-pending --at <ts> ·
 //        index · consolidate [--force] · consolidate-store · cartridge ·
 //        recall "<text>" · recall-hint "<text>" · selftest
 // AUDIT (4 Aug 2026, organism repair G4 "MEMORY THAT ARRIVES TRUE"):
@@ -338,12 +349,49 @@ function forgetFact(id, deps = {}) {
 // ---------------------------------------------------------------------------
 const PENDING_FACTS = join(HIPPO_DIR, "identity_facts.pending.jsonl");
 function readPendingFacts(deps = {}) {
-  const read = deps.readRaw || (() => { try { return readFileSync(PENDING_FACTS, "utf8"); } catch { return ""; } });
+  const file = deps.file || PENDING_FACTS;
+  const read = deps.readRaw || (() => { try { return readFileSync(file, "utf8"); } catch { return ""; } });
   const rows = [];
   for (const l of read().split("\n")) { if (!l.trim()) continue; try { rows.push(JSON.parse(l)); } catch { } }
   return rows;
 }
+// ---------------------------------------------------------------------------
+// 10 AUG 2026 — THE STAGING DOOR (his single-writer ruling; see the LAWS scar at
+// the top of this file). Until today mcp-memory.mjs appended a staged fact to
+// this file itself. That append is a safe write on its own — but not BESIDE
+// settlePendingFact below, which rewrites every row. THE LOST UPDATE: this organ
+// reads all rows at T, the MCP appends at T+1, this organ renames its stale copy
+// over the file at T+2, and the fact he asked to be remembered is gone with no
+// error anywhere. writeAtomic only ever protected against a TORN file.
+// NOTHING about the row is redesigned here. The shape is the exact one the MCP
+// has written since day one — {ts, text, status:"pending", source}, in that key
+// order — because captains_call.mjs:656, context_manifest.mjs:45 and the MCP's own
+// getContext read these rows today, and three real facts were staged through the
+// old path earlier this same morning (11:42, 12:32, 12:32).
+// 400 is not a new number either: it is the clip mcp-memory.mjs:71 has always
+// applied (`clip(text, 400)`), and all three of those live rows measure exactly
+// 400 chars. Measured off the file, not chosen here.
+// ---------------------------------------------------------------------------
+const PENDING_MAX_CHARS = 400;
+function stagePendingFact(text, deps = {}) {
+  // the same normalisation mcp-memory.mjs's clip() does (collapse whitespace,
+  // trim, then cut), so a fact staged through this door is byte-identical to what
+  // the old direct append would have written for the same input
+  const t = String(text || "").replace(/\s+/g, " ").trim().slice(0, PENDING_MAX_CHARS);
+  if (!t) return { ok: false, error: "empty text" };
+  // `source` stays a free string, defaulting to the caller's own name: the MCP
+  // passes --source mcp so its rows keep reading exactly as the three live ones
+  // do, and a hand-run staging is not allowed to LIE about where it came from.
+  const row = { ts: (deps.now || new Date()).toISOString(), text: t, status: "pending", source: String(deps.source || "cli") };
+  const file = deps.file || PENDING_FACTS;
+  // APPEND, never a rewrite — the same reason bumpRecall states above: an O_APPEND
+  // line cannot clobber a concurrent write, a read-modify-write can.
+  const append = deps.append || ((o) => { mkdirSync(dirname(file), { recursive: true }); appendFileSync(file, JSON.stringify(o) + "\n"); });
+  append(row);
+  return { ok: true, staged: true, ts: row.ts, text: row.text };
+}
 function settlePendingFact(at, verb, deps = {}) {
+  const file = deps.file || PENDING_FACTS;
   const rows = deps.rows || readPendingFacts(deps);
   const row = rows.find(r => r.ts === at && r.status === "pending");
   if (!row) return { ok: false, error: `no pending fact at ${at} (already settled, or never staged)` };
@@ -354,7 +402,18 @@ function settlePendingFact(at, verb, deps = {}) {
   } else {
     row.status = "dropped"; row.settled_at = (deps.now || new Date()).toISOString();
   }
-  (deps.writeRaw || ((text) => writeAtomic(PENDING_FACTS, text)))(rows.map(r => JSON.stringify(r)).join("\n") + "\n");
+  // ONE OWNER is now true, but one owner can still run TWICE: the MCP shells
+  // `stage-pending` (an append) while captains_call dispatches `promote` (this
+  // rewrite), so the snapshot in `rows` can be stale by the time we write. Same
+  // scar, same fix as indexEpisodesDetailed's C3 (9 Aug 2026): re-read at write
+  // time and carry the appended tail forward. The tail is identified by COUNT,
+  // which is exactly what an append-only file allows — `rows` is a prefix of the
+  // fresh file, or the file did not grow.
+  (deps.writeRaw || ((text) => {
+    const fresh = readPendingFacts({ file });
+    const tail = fresh.length > rows.length ? fresh.slice(rows.length) : [];
+    writeAtomic(file, text + (tail.length ? tail.map(r => JSON.stringify(r)).join("\n") + "\n" : ""));
+  }))(rows.map(r => JSON.stringify(r)).join("\n") + "\n");
   return { ok: true, status: row.status, id: row.fact_id || null, text: row.text };
 }
 // LEGACY (frozen verbatim, layering law) — the undated renderer. Kept so the
@@ -1050,6 +1109,46 @@ async function selftest() {
         capHit.ok === false && rows3[0].status === "pending" && wrote === false);
     }
   }
+  // 10 AUG 2026 — THE STAGING DOOR (single-writer repair, his ruling). The row
+  // shape below IS the contract: three real facts were staged through the MCP's
+  // old direct-append path earlier this same morning and must keep reading the
+  // same way at captains_call.mjs:656, context_manifest.mjs:45 and get_context.
+  {
+    let row = null;
+    const st = stagePendingFact("  prefers Hinglish,\n  direct — not a hype-man  ", { append: (o) => { row = o; }, now: new Date("2026-08-10T12:32:24.372Z"), source: "mcp" });
+    assert("STAGE: the staged row is byte-identical to the MCP's own — {ts,text,status,source}, in that key ORDER, whitespace collapsed",
+      st.ok && st.staged === true && JSON.stringify(row) === JSON.stringify({ ts: "2026-08-10T12:32:24.372Z", text: "prefers Hinglish, direct — not a hype-man", status: "pending", source: "mcp" }));
+    assert("STAGE: the 400-char clip is PRESERVED (mcp-memory.mjs:71's number — all three live rows measure exactly 400)",
+      stagePendingFact("x".repeat(900), { append: (o) => { row = o; } }).ok && row.text.length === PENDING_MAX_CHARS && PENDING_MAX_CHARS === 400);
+    let touched = false;
+    assert("STAGE: empty/whitespace text is refused and NOTHING is written",
+      stagePendingFact("   ", { append: () => { touched = true; } }).ok === false && stagePendingFact("").error === "empty text" && touched === false);
+    // the write is an APPEND — an existing staged row must survive byte-for-byte
+    const tmpP = join(os.tmpdir(), `hippo-pending-${Date.now()}.jsonl`);
+    const existing = JSON.stringify({ ts: "2026-08-10T11:42:01.778Z", text: "an already-staged fact", status: "pending", source: "mcp" });
+    writeFileSync(tmpP, existing + "\n");
+    stagePendingFact("a second fact, staged through the door", { file: tmpP, now: new Date("2026-08-10T13:00:00Z") });
+    const back = readFileSync(tmpP, "utf8").split("\n").filter(Boolean);
+    assert("STAGE: the default write APPENDS, never rewrites — the earlier staged row survives byte-for-byte, and a hand-run says source:cli",
+      back.length === 2 && back[0] === existing && JSON.parse(back[1]).text.startsWith("a second fact") && JSON.parse(back[1]).source === "cli");
+    // THE LOST UPDATE ITSELF, reproduced: rows read at T · a fact staged at T+1 ·
+    // the settle rewrite at T+2. That third step used to erase the second.
+    const tmpR = join(os.tmpdir(), `hippo-race-${Date.now()}.jsonl`);
+    const snapshot = [{ ts: "2026-08-10T08:00:00.000Z", text: "staged first", status: "pending", source: "mcp" }];
+    writeFileSync(tmpR, snapshot.map(r => JSON.stringify(r)).join("\n") + "\n");
+    stagePendingFact("staged DURING the settle", { file: tmpR, now: new Date("2026-08-10T08:00:01Z") });
+    let raceStore = { facts: [] };
+    const raced = settlePendingFact("2026-08-10T08:00:00.000Z", "promote", {
+      rows: JSON.parse(JSON.stringify(snapshot)), file: tmpR,
+      factDeps: { read: () => raceStore, write: (o) => { raceStore = o; } }, now: new Date("2026-08-10T08:00:02Z"),
+    });
+    const after = readLines(tmpR);
+    assert("STAGE: a fact staged BETWEEN the settle's read and its write is CARRIED, not erased (the lost update, reproduced)",
+      raced.ok && after.length === 2 && after[0].status === "promoted" && after[1].text === "staged DURING the settle" && after[1].status === "pending");
+    // and the door is reachable as a VERB — the MCP shells this exact argv
+    assert("STAGE: `stage-pending` is a real subcommand (the MCP's door), advertised in the usage line",
+      /mode === "stage-pending"/.test(main.toString()) && /stage-pending \[--source <who>\]/.test(main.toString()));
+  }
   // AUDIT 4 Aug 2026 (#13) — the stored `ts` was silently discarded at render,
   // so a 17-Jul assertion arrived looking exactly like something he said today.
   // Reproduced with the LIVE fact texts (identity_facts.json, both ts 17 Jul).
@@ -1363,6 +1462,19 @@ async function main() {
   if (mode === "mark") { console.log(JSON.stringify(await markMoment(process.argv[3], stdin()))); return; }
   if (mode === "remember") { console.log(JSON.stringify(rememberFact(stdin()))); return; }
   if (mode === "forget") { console.log(JSON.stringify(forgetFact(process.argv[3]))); return; }
+  // 10 AUG 2026 — THE STAGING DOOR. Text on STDIN, exactly like `remember` above,
+  // so his Hinglish never meets shell quoting (dugout.mjs:1688 drives this organ
+  // the same way). The only caller today is mcp-memory.mjs's remember_fact, which
+  // used to write the file itself; it exits non-zero on a refusal like promote/
+  // drop-pending do, and prints its JSON verdict either way so a shell caller can
+  // read the reason instead of guessing.
+  if (mode === "stage-pending") {
+    const si = process.argv.indexOf("--source");
+    const r = stagePendingFact(stdin(), { source: si >= 0 ? process.argv[si + 1] : undefined });
+    console.log(JSON.stringify(r));
+    if (!r.ok) process.exit(1);
+    return;
+  }
   // LADDER B6 — the confirm door for MCP-staged facts (dispatched by captains_call on his word)
   if (mode === "promote" || mode === "drop-pending") {
     const ai = process.argv.indexOf("--at");
@@ -1435,7 +1547,7 @@ async function main() {
     console.log(`hippocampus: store → hot ${r.hot} · sharded ${r.sharded} · forgotten ${r.cold} (moved, never deleted)`);
     return;
   }
-  console.log("hippocampus.mjs — mark <kind> | remember | forget <id> | promote --at <ts> | drop-pending --at <ts> | index | recall \"...\" | recall-hint \"...\" [--explain] | arc | cartridge | consolidate [--force] | consolidate-store | selftest");
+  console.log("hippocampus.mjs — mark <kind> | remember | forget <id> | stage-pending [--source <who>] | promote --at <ts> | drop-pending --at <ts> | index | recall \"...\" | recall-hint \"...\" [--explain] | arc | cartridge | consolidate [--force] | consolidate-store | selftest");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
@@ -1444,6 +1556,11 @@ export {
   markMoment, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact,
   identityCartridge, whoCartridge, whoStale, consolidate, validateWho, recallReflex,
   bumpRecall, applyRecallBumps, buildRehydrateCartridge, consolidateStore,
+  // 10 Aug 2026 — the staging door mcp-memory.mjs now goes through instead of
+  // writing identity_facts.pending.jsonl itself (single-writer, his ruling).
+  // Exported so the MCP's selftest can prove SHAPE PARITY against its own frozen
+  // legacy row — not so anything writes this file in another process's memory.
+  stagePendingFact, readPendingFacts, settlePendingFact, PENDING_MAX_CHARS,
   memoryStrength, generatePool, embedPool, loadKeys as loadHippoKeys,
   // #17 — exported so the recall indexer (dugout.mjs gatherRecallSources /
   // nightshift.mjs embed_backfill) can adopt the SAME tighter-than-recallWorthy

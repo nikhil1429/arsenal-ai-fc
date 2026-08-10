@@ -28,7 +28,9 @@
 //   ladder_config.json · dossier_weights.json · setpiece_config.json (canon) ·
 //   sprint.json (audit #87 — the curriculum this packet must not drift off) ·
 //   concept_graph.json (audit #72 — cortex's nightly map; this is its ONLY reader) ·
-//   capsule_map.json (audit #33 — where FSRS and FORGE's Re-Jirah agree/disagree)
+//   capsule_map.json (audit #33 — where FSRS and FORGE's Re-Jirah agree/disagree; and
+//     since the 10 Aug 2026 dead-wire sweep its `strike_bank` too — this file is that
+//     bank's FIRST reader, see strikeFor())
 // OUTPUT: dressing-room/state/drills.json (sole writer)
 // MODES:  run (default: compile for tomorrow) · selftest
 // ============================================================================
@@ -264,8 +266,96 @@ function schedulerNote(cm) {
   if (cm.fsrs_due_names_complete === false) {
     parts.push(`(FSRS named ${cm.fsrs_due_names_known}/${cm.fsrs_due_total} of its due cards — "Re-Jirah only" may over-report)`);
   }
+  // THE HALF OF #33 THAT WAS WIRED AT THE PRODUCER AND NOWHERE ELSE (10 Aug 2026).
+  // capsule_bridge has THREE FSRS states, not two: COMPLETE (true), TRUNCATED
+  // (false — the branch above), and UNKNOWN (null — cards.json missing or
+  // malformed, capsule_bridge.mjs:265-267). The `=== false` test above meant
+  // UNKNOWN fell through every branch, and UNKNOWN is the dangerous one: with no
+  // names read, `scheduler_agreement` and `fsrs_says_due_capsule_quiet` both go
+  // empty and EVERY overdue capsule prints as "Re-Jirah only: X" — a positive
+  // claim that FSRS is quiet about X, made on a night FSRS was never opened. The
+  // producer computes the disclaimer for exactly this case and until now NO file
+  // in the repo read the field (`grep -n fsrs_due_note scripts/*.mjs` returned
+  // capsule_bridge alone): it lived only on capsule_bridge.mjs:415's console, and
+  // its one automated invoker — heartbeat.mjs:146, via conductor.mjs:71 at 08:39 —
+  // runs it with stdio:"pipe" and discards stdout. Built, correct, unread.
+  // VERBATIM, never re-worded: the producer owns the words for its own state.
+  // `else if` so the truncated case keeps its existing counter and never doubles.
+  // Appended even when `parts` is otherwise empty, per this file's own law at
+  // :606-608 — "a silent absence reads as 'nothing to say', which is the one
+  // thing this organism is not allowed to fake".
+  else if (cm.fsrs_due_note) parts.push(`⚠ ${cm.fsrs_due_note}`);
+  // THE CAVEAT THAT REACHED NO READER — dead-wire sweep (10 Aug 2026).
+  // capsule_bridge.mjs:207 writes `scheduler_disagreement_doc` on EVERY run: the one
+  // sentence that stops a reader treating a disagreement as a FAULT — "EXPECTED, not an
+  // error … neither overrides the other". `grep -rn scheduler_disagreement_doc` found it
+  // repo-wide in exactly two places: the line that writes it, and the file it writes into.
+  // This note composed its own sentence out of the arms and dropped the caveat, so on the
+  // nights the two arms disagree — live today, tokenization Re-Jirah-only and
+  // hallucinations FSRS-only, BOTH sides right, answering different questions — the packet
+  // carried a bare contradiction with nothing on it saying that is normal. Same shape as
+  // the fsrs_due_note wire above: built, correct, unread.
+  // VERBATIM, never re-worded here: the producer owns the words for its own state.
+  // GATE — derived from fields already on the map, no new threshold invented:
+  //   · an arm must be non-empty (no disagreement ⇒ no caveat to give), AND
+  //   · the FSRS side must have actually been READ. fsrs_due_names_complete is the
+  //     producer's own true/false/UNKNOWN marker (capsule_bridge.mjs:265-267); on null,
+  //     "Re-Jirah only: X" is not two schedulers disagreeing but one scheduler nobody
+  //     opened, and calling that EXPECTED would be false reassurance — that night already
+  //     carries the ⚠ disclaimer above, which says the opposite and must stand alone.
+  // Missing field (a map written before this doc existed) ⇒ nothing added. Absence stays
+  // absence; this file never invents another organ's sentence.
+  const measured = cm.fsrs_due_names_complete === true || cm.fsrs_due_names_complete === false;
+  const disagrees = only(d.capsule_says_due_fsrs_quiet).length > 0 || only(d.fsrs_says_due_capsule_quiet).length > 0;
+  const doc = typeof cm.scheduler_disagreement_doc === "string" ? cm.scheduler_disagreement_doc.trim() : "";
+  if (measured && disagrees && doc) parts.push(doc);
   return parts.length ? parts.join(" · ") : null;
 }
+
+// THE STRIKE BANK, SERVED — dead-wire sweep (2026-08-10).
+// capsule_bridge.mjs:133-148 builds `strike_bank`: every axis question the captain has
+// already survived, VERBATIM, sorted hardest-first (most overdue, then cracked before
+// held). Its own header calls it "the single largest thing the bus was throwing away —
+// the scout generates probes from scratch while 36 sit here". Measured today: 36
+// entries, 6,434 bytes, rebuilt and re-sorted on every run — and `grep -rn strike_bank`
+// found readers in exactly ONE file, capsule_bridge itself (its own emit line and its own
+// selftest). A producer with no consumer is a black box, not a feedback loop.
+// This is the address. setpiece already opens capsule_map.json (audit #33 wired the
+// scheduler arms), and two of its recall prompts synthesised their question out of a bare
+// concept id — `${due[0]} — the core mechanism, cold` — while HIS OWN interviewer question
+// for that exact concept sat unread in the bank.
+// LAWS OBEYED HERE, each of them load-bearing:
+//   · CAPSULE PROSE IS SACRED. The strike is copied byte-for-byte and QUOTED — never
+//     reworded, never trimmed, never summarised. Quoting is this file's own established
+//     grammar for a verbatim captain string (rematch_template, :67, quotes
+//     {doubt_verbatim} exactly this way). Nothing here writes to capsules/.
+//   · NO INVENTED POLICY. "Which strike" is not decided here: the bank arrives already
+//     ordered hardest-first and its producer's comment says that ordering exists "for a
+//     consumer that wants one" (capsule_bridge.mjs:146). So the consumer takes the top
+//     entry for that concept and nothing else — no rotation, no threshold, no re-scoring.
+//     A same-concept repeat across nights is the producer's ordering speaking, and if the
+//     captain wants it varied that is HIS call to make, not a number to guess here.
+//   · ABSENCE STAYS ABSENCE. No capsule_map, no bank, or no entry for that concept ⇒
+//     null, and the caller keeps its existing synthesised question BYTE-IDENTICAL.
+function strikeFor(concept, capsuleMap) {
+  const bank = capsuleMap && Array.isArray(capsuleMap.strike_bank) ? capsuleMap.strike_bank : [];
+  const want = String(concept || "").toLowerCase().trim();
+  if (!want || !bank.length) return null;
+  const hit = bank.find(s => s && String(s.concept || "").toLowerCase() === want && String(s.strike || "").trim());
+  return hit ? { strike: String(hit.strike), axis: hit.axis || null, status: hit.status || null } : null;
+}
+// The {question} slot for a cold recall: his own words when the bank has them, else the
+// caller's stub, unchanged. Returns the strike alongside so the drill can carry its
+// provenance (which axis, and JIRAH's grade on it) instead of the captain having to
+// wonder where a question he half-recognises came from.
+function recallQuestion(concept, capsuleMap, fallback) {
+  const s = strikeFor(concept, capsuleMap);
+  if (!s) return { question: fallback, strike: null };
+  return { question: `${concept}${s.axis ? ` (axis ${s.axis})` : ""} — "${s.strike}"`, strike: s };
+}
+// the drill fields a served strike adds — kept in one place so both call sites agree
+const strikeFields = (s) => (s ? { strike_axis: s.axis, strike_status: s.status, strike_verbatim: true } : {});
+const strikeSource = (s) => (s ? ` · his own axis-${s.axis} strike served verbatim (capsule_map.strike_bank)` : "");
 
 // THE RECURRENCE THAT WAS NEVER THERE — ORGANISM audit #32 (2026-08-04).
 // This read `wk.headline.recurrence`. nemesis.mjs builds the headline as
@@ -401,13 +491,27 @@ function candidates(world, dossier, now = new Date()) {
   }
 
   // DANGER-ZONE — knew-but-wrong → reconstruct probe on that exact topic+axis
-  const dz = world.calibration && Array.isArray(world.calibration.danger_zone) ? world.calibration.danger_zone : [];
-  if (dz.length) {
-    const d = dz[0];
+  //
+  // WIRING AUDIT (10 Aug 2026): this took `dz[0]` blind, and calibration sorts worst
+  // knew-accuracy FIRST across BOTH tracks (calibration.mjs:226) — so a Python skill topic
+  // could take the single danger slot and be drilled in DOSSIER concept grammar, with
+  // `concepts: [d.topic]` claiming a concepts.json id a skill name does not have. This file
+  // already knows better one screen up: sprintFocus:215-220 resolves registry ids for the
+  // concept track ONLY. The track stamp calibration has carried since 25 Jul is what makes
+  // that possible here too, and it was being ignored. Skipped skill entries are NOT silent —
+  // they ride the drill's own `source` string, which is the line the captain reads on the
+  // sheet. No Python drill is invented in their place: setpiece has no skill grammar, and
+  // GEMINI_LOOP.md §11.3 keeps the Python close light on purpose. `|| "concept"` default
+  // leaves pre-25-Jul entries behaving exactly as before.
+  const dzAll = world.calibration && Array.isArray(world.calibration.danger_zone) ? world.calibration.danger_zone : [];
+  const dzSkill = dzAll.filter((x) => x && String(x.track || "concept") === "skill");
+  const d = dzAll.find((x) => x && String(x.track || "concept") !== "skill");
+  if (d) {
+    const skipNote = dzSkill.length ? ` (${dzSkill.length} skill-track entr${dzSkill.length === 1 ? "y" : "ies"} skipped — Python carries no axis grammar, §11.3)` : "";
     out.push({
       kind: "reconstruct", probe_type_emoji: (probes.reconstruct && probes.reconstruct.emoji) || "🟡", concepts: [d.topic],
       prompt: fill(probes.reconstruct && probes.reconstruct.template, { question: `${d.topic}${d.axis ? " (axis " + d.axis + ")" : ""} — the one you were sure about` }),
-      source: `danger_zone: knew-wrong on ${d.topic}`,
+      source: `danger_zone: knew-wrong on ${d.topic}${skipNote}`,
       winnable: false, mode: "reconstruct",
     });
   }
@@ -456,11 +560,14 @@ function candidates(world, dossier, now = new Date()) {
   // DUE — plain recall on the hardest due card
   const due = world.cards && Array.isArray(world.cards.hardest_due) ? world.cards.hardest_due : [];
   if (due.length) {
+    // dead-wire sweep 10 Aug 2026 — see strikeFor(): his own strike, verbatim, when the
+    // bank has one for this concept; the old synthesised stub otherwise, unchanged.
+    const q = recallQuestion(due[0], world.capsule_map, `${due[0]} — the core mechanism, cold`);
     out.push({
       kind: "recall", probe_type_emoji: (probes.recall && probes.recall.emoji) || "🔵", concepts: [due[0]],
-      prompt: fill(probes.recall && probes.recall.template, { question: `${due[0]} — the core mechanism, cold` }),
-      source: `hardest_due[0]`,
-      winnable: false, mode: "recall",
+      prompt: fill(probes.recall && probes.recall.template, { question: q.question }),
+      source: `hardest_due[0]${strikeSource(q.strike)}`,
+      winnable: false, mode: "recall", ...strikeFields(q.strike),
     });
   }
 
@@ -474,14 +581,18 @@ function candidates(world, dossier, now = new Date()) {
 // the wrong one — verified against live state on an AMBER evening, where the only candidate
 // touching `hallucinations` was a `defend`-mode rejirah that AMBER then dropped, leaving a
 // packet of two `inference` recalls and a sprint the packet never mentions.
-function sprintCandidate(dossier, focus) {
+// `capsuleMap` defaults to null (dead-wire sweep 10 Aug 2026) so the exported signature
+// stays back-compatible: an existing caller that passes two arguments gets the identical
+// synthesised question it always did.
+function sprintCandidate(dossier, focus, capsuleMap = null) {
   if (!focus || !focus.id) return null;
   const probes = (dossier && dossier.probe_types) || {};
+  const q = recallQuestion(focus.id, capsuleMap, `${focus.id} — the core mechanism, cold`);
   return {
     kind: "recall", probe_type_emoji: (probes.recall && probes.recall.emoji) || "🔵", concepts: [focus.id],
-    prompt: fill(probes.recall && probes.recall.template, { question: `${focus.id} — the core mechanism, cold` }),
-    source: `sprint current task${focus.code ? " " + focus.code : ""}: ${focus.task}`,
-    winnable: false, mode: "recall", sprint_sourced: true,
+    prompt: fill(probes.recall && probes.recall.template, { question: q.question }),
+    source: `sprint current task${focus.code ? " " + focus.code : ""}: ${focus.task}${strikeSource(q.strike)}`,
+    winnable: false, mode: "recall", sprint_sourced: true, ...strikeFields(q.strike),
   };
 }
 
@@ -663,7 +774,7 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     && (verdict !== "AMBER" || mode === "recall")
     && (!warRoom || ["defend", "novel", "negative_space"].includes(mode));
   if (focus.id && !pool.some(onFocusDrill)) {
-    const sc = sprintCandidate(dossier, focus);
+    const sc = sprintCandidate(dossier, focus, world.capsule_map);
     if (sc && modeAllowed(sc.mode)) pool = rankPool([sc, ...pool], world, dossier, focus);
   }
 
@@ -820,6 +931,28 @@ async function selftest() {
   assert("drills compiled for TOMORROW", green.for === "2026-07-13");
   assert("no deadline language in prompts", !green.drills.some(d => /deadline|days left|time is short|hurry/i.test(d.prompt)));
   assert("bench note names what was benched (never silent)", green.bench_note === null || /benched/.test(green.bench_note));
+
+  // === WIRING AUDIT (10 Aug 2026) — THE DANGER ZONE'S TRACK STAMP ==========
+  // calibration sorts worst-knew-accuracy first across BOTH namespaces, so the top entry
+  // is regularly a Python skill topic (live run: `pydantic` ahead of `chunking`). Asserted
+  // on `candidates`, not `compile`, because the ≤3 law can bench a real candidate — testing
+  // the survivor would hide the bug the day the ranker changed its mind.
+  {
+    const mixed = candidates({ ...world, calibration: { danger_zone: [
+      { topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" },
+      { topic: "context", track: "concept", confidence: "high", accuracy: "low", axis: "e" },
+    ] } }, dossier, now);
+    const dc = mixed.filter(c => String(c.source || "").startsWith("danger_zone:"));
+    assert("#wire: the danger drill skips the skill track (no Python in concept grammar), takes the concept behind it, and SAYS it skipped",
+      dc.length === 1 && dc[0].concepts[0] === "context" && /1 skill-track entry skipped/.test(dc[0].source)
+      && !JSON.stringify(mixed).includes("pydantic"));
+    const allSkill = candidates({ ...world, calibration: { danger_zone: [{ topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" }] } }, dossier, now);
+    assert("#wire: a danger zone that is ALL skill-track makes no drill here (no Python grammar is invented — §11.3)",
+      !allSkill.some(c => String(c.source || "").startsWith("danger_zone:")));
+    const untracked = candidates({ ...world, calibration: { danger_zone: [{ topic: "context", confidence: "high", accuracy: "low", axis: "e" }] } }, dossier, now);
+    assert("#wire: an untracked (pre-25-Jul) danger entry still drills exactly as before",
+      untracked.some(c => String(c.source || "") === "danger_zone: knew-wrong on context"));
+  }
 
   // === KAAM 2 (10 Aug 2026) — THE REST ROOM GETS AN ADDRESS ================
   // EVERY ONE OF THESE EXERCISES A BRANCH WITH A PRECACHE PRESENT. The first
@@ -1050,6 +1183,111 @@ async function selftest() {
       r33.drills[0].concepts.includes("embeddings"));
     assert("#33 no capsule_map ⇒ scheduler_note null, never an invented agreement",
       compile({ readiness: { verdict: "GREEN" }, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now).scheduler_note === null);
+
+    // DEAD-WIRE SWEEP (2026-08-10) — THE THIRD FSRS STATE HAD NO ADDRESS.
+    // The `cm` above is HAND-MADE, which is the precise thing that let audit #33's
+    // original bug live for weeks (capsule_bridge.mjs:349-352 names that lesson in
+    // its own words). These fixtures are built by the PRODUCER itself, so a renamed
+    // or dropped field on EITHER side of the wire fails here instead of shipping a
+    // confidently wrong sentence onto the night's packet.
+    const { build: cbBuild, fsrsDueFromCards } = await import("./capsule_bridge.mjs");
+    const CB_INTERVALS = [3, 14, 42];                 // capsule_bridge DEFAULT_INTERVALS (FORGE_SPEC §4)
+    const CB_TODAY = "2026-07-30";                    // same clock capsule_bridge's own suite uses
+    const capFix = { id: "inference", lockedOn: "2026-06-24", status: "tempered", reJirahDone: [],
+      faultLines: [{ axis: "a", status: "held", strike: "s" }] };
+    const unknown = cbBuild([capFix], CB_INTERVALS, CB_TODAY, fsrsDueFromCards(null));
+    assert("#33 UNKNOWN is a real THIRD producer state (null), not the truncated one and not a measured empty",
+      unknown.fsrs_due_names_complete === null && typeof unknown.fsrs_due_note === "string"
+      && unknown.scheduler_agreement.length === 0
+      && unknown.scheduler_disagreement.fsrs_says_due_capsule_quiet.length === 0
+      && unknown.scheduler_disagreement.capsule_says_due_fsrs_quiet.join() === "inference");
+    const rUnknown = compile({ readiness: { verdict: "GREEN" }, capsule_map: unknown, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now);
+    assert("#33 an UNREADABLE cards.json is DISCLOSED on the packet — \"Re-Jirah only\" never stands alone as a positive claim about a scheduler nobody opened",
+      typeof rUnknown.scheduler_note === "string" && /Re-Jirah only: inference/.test(rUnknown.scheduler_note)
+      && rUnknown.scheduler_note.includes(unknown.fsrs_due_note));
+    assert("#33 the disclosure is the PRODUCER's own words, verbatim — this file re-words no other organ's state",
+      rUnknown.scheduler_note.endsWith(unknown.fsrs_due_note));
+    // …and the healthy night is untouched: a COMPLETE read still adds no disclaimer.
+    const okMap = cbBuild([capFix], CB_INTERVALS, CB_TODAY, fsrsDueFromCards({ due_today: 0, overdue: 1, hardest_due: ["inference"] }));
+    const rOk = compile({ readiness: { verdict: "GREEN" }, capsule_map: okMap, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now);
+    assert("#33 a COMPLETE FSRS read carries no disclaimer (the healthy packet is unchanged by this wire)",
+      okMap.fsrs_due_note === null && !/⚠/.test(rOk.scheduler_note || "")
+      && /both schedulers say due: inference/.test(rOk.scheduler_note));
+
+    // DEAD-WIRE SWEEP (2026-08-10) — `scheduler_disagreement_doc` REACHED NO READER.
+    // Producer-built again, and shaped like the LIVE map on the day this was wired:
+    // the capsule calls one concept due, FSRS calls a different one due, both are right.
+    // These go RED if capsule_bridge drops/renames the field OR if schedulerNote stops
+    // carrying it — which is precisely how it sat unread since 4 Aug.
+    const disMap = cbBuild([capFix], CB_INTERVALS, CB_TODAY,
+      fsrsDueFromCards({ due_today: 0, overdue: 1, hardest_due: ["hallucinations"] }));
+    const rDis = compile({ readiness: { verdict: "GREEN" }, capsule_map: disMap, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now);
+    assert("SWEEP a MEASURED disagreement carries the producer's \"EXPECTED, not an error\" caveat onto the packet — the sentence that stops a reader calling this a fault",
+      typeof disMap.scheduler_disagreement_doc === "string" && disMap.scheduler_disagreement_doc.length > 0
+      && /Re-Jirah only: inference/.test(rDis.scheduler_note) && /FSRS only: hallucinations/.test(rDis.scheduler_note)
+      && rDis.scheduler_note.endsWith(disMap.scheduler_disagreement_doc));
+    assert("SWEEP no disagreement ⇒ no caveat (it explains a contradiction; with none it is noise)",
+      !rOk.scheduler_note.includes(okMap.scheduler_disagreement_doc));
+    assert("SWEEP UNKNOWN withholds the caveat — one scheduler nobody opened is not two disagreeing, and the ⚠ that says so stays last",
+      !rUnknown.scheduler_note.includes(unknown.scheduler_disagreement_doc)
+      && rUnknown.scheduler_note.endsWith(unknown.fsrs_due_note));
+    const { scheduler_disagreement_doc: _drop, ...noDoc } = disMap;
+    assert("SWEEP an older map with no doc field invents nothing — absence stays absence, and the arms still ride",
+      !("scheduler_disagreement_doc" in noDoc)
+      && /FSRS only: hallucinations/.test(compile({ readiness: { verdict: "GREEN" }, capsule_map: noDoc, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now).scheduler_note)
+      && !compile({ readiness: { verdict: "GREEN" }, capsule_map: noDoc, cards: { hardest_due: ["context"] } }, cfg, ladderCfg, dossier, now).scheduler_note.includes("EXPECTED"));
+    // …and the LIVE producer contract on disk, exercised for real (capsule_bridge's own
+    // suite does the same with cards.json). Shape only — the VALUES are capsule_bridge's
+    // to compute and are deliberately not asserted. Unreadable map ⇒ skipped, never faked.
+    const liveMap = readJson(join(STATE_DIR, "capsule_map.json"));
+    assert("SWEEP the LIVE capsule_map on disk still carries the caveat this wire depends on (skipped if the map is unreadable)",
+      !liveMap || (typeof liveMap.scheduler_disagreement_doc === "string" && liveMap.scheduler_disagreement_doc.length > 0));
+  }
+
+  // DEAD-WIRE SWEEP (2026-08-10) — THE STRIKE BANK HAD ZERO READERS.
+  // 36 verbatim strike questions, rebuilt and re-sorted hardest-first on every
+  // capsule_bridge run, read by nobody repo-wide while this file synthesised
+  // `<concept> — the core mechanism, cold` for the same concept. These checks go RED the
+  // day the bank stops reaching a drill, which is exactly how the wire died unseen before.
+  {
+    const STRIKE_A = "Embedding exactly kya hai, token ID se kaise alag cheez hai?";
+    const bank = {
+      strike_bank: [
+        { concept: "embeddings", axis: "d", status: "cracked", strike: STRIKE_A, overdue_days: 47 },
+        { concept: "embeddings", axis: "a", status: "held", strike: "second one, never served", overdue_days: 47 },
+        { concept: "context", axis: "b", status: "held", strike: "context ka apna sawaal?", overdue_days: 40 },
+      ],
+    };
+    const wS = { readiness: { verdict: "GREEN" }, capsule_map: bank, cards: { hardest_due: ["embeddings"] } };
+    const rS = compile(wS, cfg, ladderCfg, dossier, now);
+    const dS = rS.drills.find(d => d.strike_verbatim);
+    assert("SWEEP the strike bank REACHES a drill — a hardest_due recall now carries his own question",
+      !!dS && dS.concepts.includes("embeddings") && dS.mode === "recall");
+    assert("SWEEP the strike travels VERBATIM inside the dossier's own recall grammar (prose is sacred)",
+      dS.prompt.includes(STRIKE_A) && dS.prompt.startsWith("Cold, no notes —") && dS.prompt.endsWith("Bolo."));
+    assert("SWEEP the bank's hardest-first order is OBEYED, not re-scored here (axis d, not axis a)",
+      dS.strike_axis === "d" && dS.strike_status === "cracked" && !dS.prompt.includes("never served"));
+    assert("SWEEP provenance is on the drill's face — which bank, which axis",
+      /capsule_map\.strike_bank/.test(dS.source) && /axis-d/.test(dS.source) && /hardest_due\[0\]/.test(dS.source));
+    // the second address: the sprint backstop candidate, which had the same synthesised stub
+    const scS = sprintCandidate(dossier, { id: "context", code: "1-04", task: "Context windows" }, bank);
+    assert("SWEEP the sprint backstop serves the bank too (its stub was the same synthesised line)",
+      scS.strike_verbatim === true && scS.prompt.includes("context ka apna sawaal?") && scS.strike_axis === "b");
+    assert("SWEEP back-compat — sprintCandidate with the OLD two-arg signature is byte-identical to before",
+      sprintCandidate(dossier, { id: "context", code: "1-04", task: "Context windows" }).prompt
+        === fill(dossier.probe_types.recall.template, { question: "context — the core mechanism, cold" }));
+    // ABSENCE STAYS ABSENCE — three shapes of "no bank", none of which may fabricate one
+    const noBank = compile({ readiness: { verdict: "GREEN" }, cards: { hardest_due: ["embeddings"] } }, cfg, ladderCfg, dossier, now);
+    assert("SWEEP no capsule_map ⇒ the OLD synthesised question, byte-identical, and no strike_* keys",
+      noBank.drills.some(d => d.prompt.includes("embeddings — the core mechanism, cold"))
+      && !noBank.drills.some(d => "strike_verbatim" in d || "strike_axis" in d));
+    assert("SWEEP a bank with no entry for THIS concept invents nothing (falls back, stays quiet)",
+      !compile({ ...wS, capsule_map: { strike_bank: [{ concept: "tokenization", axis: "a", status: "held", strike: "x?" }] } },
+        cfg, ladderCfg, dossier, now).drills.some(d => d.strike_verbatim));
+    assert("SWEEP a malformed bank (not an array / empty strike) degrades to the stub, never crashes",
+      strikeFor("embeddings", { strike_bank: "nope" }) === null
+      && strikeFor("embeddings", { strike_bank: [{ concept: "embeddings", axis: "a", strike: "   " }] }) === null
+      && strikeFor("embeddings", null) === null);
   }
 
   // P2 — THE NIGHT COACH (9 Aug 2026): annotation + receipt, never a drill source.
@@ -1150,4 +1388,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { compile, candidates, winnableOpener, loadConfig,
   // audit #32/#33/#72/#87 (2026-08-04): the headline-count reader, the sprint anchor, the
   // graph readers, the scheduler note, and both rankers (legacy frozen beside the live one).
-  headlineCount, sprintFocus, sprintCandidate, prereqsOf, schedulerNote, rankPool, rankByDossierLegacy, dossierWeightOf };
+  headlineCount, sprintFocus, sprintCandidate, prereqsOf, schedulerNote, rankPool, rankByDossierLegacy, dossierWeightOf,
+  // dead-wire sweep (2026-08-10): capsule_bridge's strike_bank finally has a reader.
+  strikeFor, recallQuestion };

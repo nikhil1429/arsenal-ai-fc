@@ -2,6 +2,14 @@
 > **Build this → ship M1 → interview-grade Python.** Yeh `FINOPS_AI_CONCEPTS.md` ke dangling
 > `PYTHON_SYLLABUS.md` ref ko resolve karta hai. Project files ka canonical Python plan — har naya thread isse padhe.
 >
+> *(corrected 10 Aug 2026 — woh "dangling ref" repo-copy mein ab hai hi nahi. `grep -in "syllabus"
+> learning-layer/FINOPS_AI_CONCEPTS.md` ZERO deta hai: FINOPS_AI_CONCEPTS.md is file ka naam kahin nahi leti.
+> Ulta wire ZINDA hai — §6 wali Bucket-5 line wahaan maujood hai (`grep -n "FULL backend from Day 1"
+> learning-layer/FINOPS_AI_CONCEPTS.md`). Line delete nahi ki (Drive-era mein woh ref rahi ho sakti hai), par
+> aaj yeh justification CHECK NAHI hoti — isliye claim ke taur pe padho, proof ke taur pe nahi. Is file ka
+> canonical-hona ab PROSE se nahi, CODE se sabit hota hai: `scripts/python_state.mjs` apne tier-refusal message
+> mein isi file ko naam se quote karta hai — `grep -n "PYTHON_SYLLABUS tiers are" scripts/python_state.mjs`.)*
+>
 > **01 Aug 2026 sync:** do asli gaps band kiye. (1) **Classes/OOP tier ADDED — T0.5, T1 se PEHLE.** File mein
 > classes ka ek bullet tak nahi tha, jabki T1 Pydantic *poora* class-based hai = dependency-break, gap nahi.
 > **T1–T4 numbers jaanboojh ke NAHI badle** (GEMINI_LOOP §9/§11 unhe naam se reference karte) — isliye decimal
@@ -16,9 +24,20 @@
 > (1-07 basics-start · 2-10 basics-finish · 2-11 FastAPI · 2-12 Pydantic). **Yeh file unhi rows ke ANDAR ka
 > tier+resource breakdown hai.** Board = epic tracker; yeh = execution detail. Conflict zero.
 >
+> *(verified 10 Aug 2026 — xlsx khud khol ke padha (zip → `xl/worksheets/sheet2.xml` + `xl/sharedStrings.xml`),
+> file repo mein hai: `learning-layer/Nikhil_AI_Sprint_Plan.xlsx`. 'Sprint Board' sheet ki saari task-rows mein
+> `Stream / Epic = Python` waali **theek chaar** hain, aur wahi chaar IDs: 1-07 Python basics (start) ·
+> 2-10 Python basics (finish) · 2-11 FastAPI · 2-12 Pydantic. Row-count / status kabhi yahan se mat padho —
+> board ka live chehra Sheet pe hai aur `sprint.json` mein utarta hai, §6 ka ⚠️ box dekho.)*
+>
 > **Resource verification:** Dave Pydantic = exact URL+title+date confirmed. FastAPI/Instructor = official docs.
 > mCoding async + Dave Claude-Code = Nikhil ne click-confirm kiya (links khule). Baaki Phase-B = trusted channel,
 > exact video-ID click-verify pending (marked 🟡 neeche). Honest, padded nahi.
+>
+> *(NOT VERIFIED 10 Aug 2026 — is poore verification-block ka ek bhi ✅/🟡 repo code se check NAHI ho sakta:
+> yeh sab BAAHAR ke YouTube/docs URLs hain, aur inka saboot Nikhil ke apne click hain, kisi script ka output
+> nahi. Kuch delete nahi kiya, kuch naya assert nahi kiya. Jo BADLA hai woh yeh: aaj in 🟡 ko band karne ka
+> ek asli RASTA hai — §4 ka missions-desk note padho.)*
 >
 > **Status:** ✅ verified · 🟡 trusted-channel, ID click-verify pending · ⚠️ caveat
 
@@ -48,11 +67,32 @@
   FastAPI · async · API+error-handling · parsers · data-manip — + 1 saal Outlier (AI-eval) work justify karega.
   Peripheral (skip-list §5: PyTorch, metaclasses, event-loop internals) = "look it up", drill NAHI. God-tier
   JAHAAN matter karta (har jagah = misallocation, reps galat rock pe). Ritual light, reps bhaari.
+  > *(added 10 Aug 2026 — yeh rule ab SIRF prose nahi, CODE hai, aur code ka "peripheral" is bullet se CHAUDA
+  > hai. `scripts/python_state.mjs` har tier pe ek `core: true|false` flag rakhta hai, aur `core: false` waale
+  > hain **T0 · T5 · T6 · Interview-Polish** — yaani T0 raw fundamentals aur Phase-B ke teen tier bhi 🟢 pe
+  > pace-guard uthate hain, sirf §5 ki skip-list nahi. Guard WARN karta hai, BLOCK kabhi nahi (captain ka D7:
+  > "his agency, not the machine's") — warning `guard_warnings` mein record hoti hai aur write phir bhi hota hai.
+  > Doosra guard: CORE tier pe Bolo `done` na ho to bhi WARN. Live padho, yahan se mat ginno —
+  > `grep -n "core: false\|PACE-GUARD" scripts/python_state.mjs`.)*
 - **CLOSE-PACKET pipeline (kaise chalega — canonical = GEMINI_LOOP §11-13):** har Python subtopic-close pe Claude
   ek COMPLETE copy-paste packet AUTO-emit karta — 5 ladder-drills + Coach-review-prompt + Bolo-cue + NotebookLM
   quiz/audio-video prompts + close-sign. Nikhil sirf EXECUTE karta (prompt/drill khud nahi banata); reps se
   fluency-state 🔴→🟡→🟢 advance hoti (Gemini = volume, Nikhil = solve); log Claude auto-draft. FinOps-flavor =
   gradient (raw fundamentals varied/neutral OK; build-artifacts FinOps). Process-load Nikhil ke sar pe ZERO.
+  > *(corrected 10 Aug 2026 — is bullet ne is track ko poori tarah CHAT mein rakha tha ("log Claude auto-draft"),
+  > aur woh 5 Aug 2026 se sach nahi. Python track ka apna STATE FILE aur apna CODE OWNER hai:
+  > **`scripts/python_state.mjs`** = sole writer of `dressing-room/state/python_state.json`. Verbs:
+  > `subtopic <name> --tier T0` · `close <name> --why "…" [--fluency held|🟢] [--bolo done] [--floor]` ·
+  > `tier-close <tier> --artifact "…"` · `watch/unwatch <name>` (JS-hangover ledger) · `packet <name>` ·
+  > `status` · `brief` · `json` · `selftest`. Live padho: `node scripts/python_state.mjs status`.
+  > **Ek mechanism-claim yahan galat tha:** "reps se fluency-state advance hoti" — code mein rep-count se koi
+  > rung advance NAHI hoti. Rungs 🔴/🟡/🟢 sahi hain, par fluency **DECLARE hoti hai ek wajah ke saath**, compute
+  > nahi (`close` bina `--why` REFUSE karta hai, aur file mein ek bhi threshold nahi — captain ka standing rule:
+  > 30-45 din ka asli data se pehle koi number guess nahi). Evidence: `grep -n "why is required\|NO INVENTED
+  > NUMBERS" scripts/python_state.mjs`. Reps aaj bhi substrate hain; rung ka FINAL call declared rehta hai.
+  > **Aur §0 ka "Forge capsule Python pe KABHI nahi" ab code-enforced hai** — capsule/jirah/9-axis/axis/tempered/
+  > forge jaisa koi bhi shabd is organ pe aaya to hard REFUSAL (`grep -n "CAPSULE_WORDS\|capsuleGuard"
+  > scripts/python_state.mjs`). Yeh file ki ek hi hard "nahi" hai; baaki sab guards warn karte hain.)*
 
 ---
 
@@ -60,12 +100,32 @@
 
 > **Phase A** (ship M1, ~57h, Sprint 1–2) → **Phase B** (fluency + interview-grade, ~55h directed, Sprint 3–6 + Phase-2)
 
-Directed-study ≈ 112h. Sprint file ka **~125h** figure = iske upar hands-on build-practice. **~46h** (board ka
+Directed-study ≈ 112h. Sprint file ka **~100–130h** figure *(is line pe 10 Aug 2026 tak **~125h** likha tha —
+board mein woh number hai hi nahi, neeche dekho)* = iske upar hands-on build-practice. **~46h** (board ka
 Phase-A slice) = "build-enough w/ Claude Code 70/30" — yeh syllabus usi slice ko tier-wise kholta hai.
+
+> *(corrected 10 Aug 2026 — do figures, ek galat ek bilkul theek.*
+> *(1) **~125h sprint file mein hai hi nahi.** Board ki 'Read Me (Nidhi)' sheet likhti hai: "Biggest single rock:
+> Python / FastAPI / Pydantic (**~100–130 hrs**, spread across Sprints 1–2)" — yaani sprint file ka figure ek
+> RANGE hai, ek point-number nahi. `~125h` poore repo mein sirf isi FILE mein milta tha (`grep -rn "~125"
+> --include=*.md .` → sirf yeh file), aur `grep -n "100–130" SPRINT.md` range dikhata hai. Range ke andar hone
+> ki wajah se yeh jhoot nahi tha, par "sprint file ka figure" kehna galat quote hai — ab dono likhe hain.*
+> *(2) **~46h EXACT nikla.** Board ke Est-Hrs column se Python-stream ki chaaron rows: 1-07 = 16 · 2-10 = 12 ·
+> 2-11 = 10 · 2-12 = 8 → **46**. Source = `learning-layer/Nikhil_AI_Sprint_Plan.xlsx`, 'Sprint Board' sheet
+> (xlsx = zip; sheet2.xml + sharedStrings.xml se padha, 10 Aug 2026). Tier-hours ka apna jod bhi milta hai:
+> Phase A 12+5+12+16+6+6 = 57 · Phase B 9+14+10+10+12 = 55 · total 112.)*
 
 ---
 
 ## 2. PHASE A — SHIP M1 (~57h · Sprint 1–2 · all P0)
+
+> *(added 10 Aug 2026 — **§2 aur §3 ke tier-IDs ab load-bearing hain, decorative nahi.**
+> `scripts/python_state.mjs` apni `TIERS` table is file ke §2-§3 se VERBATIM copy karke rakhta hai (ID + title +
+> phase + core-flag), aur ek anjaan tier pe seedha REFUSE karta hai: *"unknown tier … PYTHON_SYLLABUS tiers are
+> …"*. 10 Aug 2026 ko dono taraf ki gyarah IDs exactly match kar rahi thin. Matlab: **yahan tier renumber kiya
+> to tool tootega** — 01 Aug wala `T0.5` decimal-wala faisla (§7) ab sirf GEMINI_LOOP §9/§11 ke references
+> nahi, is script ko bhi bachata hai. Copy mat karo, live padho:
+> `grep -n "export const TIERS" -A 14 scripts/python_state.mjs`.)*
 
 ### T0 — Python Core, JS-bridged (~12h)
 **Covers:** variables/types · lists vs JS-arrays · **dicts vs JS-objects** (sabse zyada use) · functions
@@ -186,6 +246,10 @@ basic error handling · DEMO_MODE caching flag.
 ### 🏁 MILESTONE A
 **M1 backend bana + KHUD defend kar sakta** — upload → extraction → typed JSON, Postman pe live.
 *(Yeh apply-trigger nahi — apply = M1 *demo-able* = UI + eval dashboard = Sprint 4. Yeh backend-slice hai.)*
+*(verified 10 Aug 2026 — apply-trigger board se HU-BA-HU milta hai. 'Read Me (Nidhi)' sheet: "🚩 Applications
+START when M1 (Invoice Intelligence) is demo-able — slick UI + an eval dashboard proving accuracy… That lands at
+the start of Sprint 4", aur Sprint Board pe row `4-36 🚩 APPLICATIONS BEGIN` Sprint 4 mein hi baithi hai. Aur
+Milestone-A ka apna backend-slice bhi board pe hai: `2-19 M1: Upload -> extraction (Postman)` — "no UI yet".)*
 
 ---
 
@@ -234,6 +298,18 @@ DataFrames basics · CSV/Excel read (SheetJS-equiv) · numpy arrays (embeddings 
 **❌ DROPPED (flagged — unknown channels, search mein surface nahi hue):**
 TipsCode (Python-for-JS 15-min · anyway too thin for T0) · Coder's Column (pgvector).
 
+> *(added 10 Aug 2026 — **in 🟡 ko band karne ka ab ek asli rasta hai, aur woh haath se link kholna NAHI hai.**
+> 8 Aug 2026 ko THE MISSIONS DESK bani: Gemini internet-arm hai, machine mission LIKHTI hai, **firing captain ki
+> rehti hai**, return `node scripts/scout.mjs mission ingest <ID>` se aata hai. Owner = `scripts/scout.mjs`
+> (sole writer of `dressing-room/state/missions.json` + `dressing-room/missions/`). Is file ki slice **M04** mein
+> baithti hai — `dressing-room/missions/M04__audit_llmops_python_market.md` apne "MY CURRENT MAP CLAIMS" #3 mein
+> theek yahi stack verify karwata hai (Python core JS-bridged · Pydantic v2 · FastAPI · async · Anthropic SDK →
+> phir openai SDK, pandas/numpy-light, pytest/logging/Docker) + §5 ki skip-list. GEMINI_LOOP §9 ka purana
+> link-verify Deep-Research prompt bhi zinda hai aur aaj bhi chalne laayak.
+> **Kitne mission khade/lauta hain, yeh line kabhi mat maano — live padho: `node scripts/scout.mjs mission list`.**
+> GUARD jo tootna nahi chahiye (captain ki ruling): **missions EMPHASIS tune karte hain, SYLLABUS kabhi reopen
+> nahi** — aur mission ka return EVIDENCE hai, canon nahi; canon uske word pe hi badalta hai.)*
+
 ---
 
 ## 5. SKIP LIST (yeh pace protect karta hai — deliberately NAHI seekhna)
@@ -250,13 +326,20 @@ T1 ≈ 2-12 (Pydantic) · T2 ≈ 2-11 (FastAPI) · T3/T4 thread through 2-10/2-1
 
 **→ FINOPS_AI_CONCEPTS.md (Bucket 5):** "Python / FastAPI / Pydantic / asyncio — [B] FULL backend from Day 1."
 Yeh us line ka execution-plan hai.
+*(verified 10 Aug 2026 — line waise ki waise maujood hai, "## BUCKET 5 — Full-Stack + Engineering (AI app
+delivery)" ke neeche: `grep -n "FULL backend from Day 1" learning-layer/FINOPS_AI_CONCEPTS.md`.)*
 
 **→ FinOps M1 build:** T0 core → **T0.5 classes** → T1 typed extraction → T2 upload+stream endpoint →
 T3 concurrent calls → T4 Claude-call engine. Phase-A done = M1 backend live.
 
 **→ Anthropic courses unlock:** API-Fundamentals + Tool-Use Colab pe Python pe chalte — T0-T2 inhe support karta.
+*(verified 10 Aug 2026 — dono board-rows asli hain: `1-05 Anthropic: API Fundamentals` (Sprint 1, Courses) aur
+`2-13 Anthropic: Tool Use` (Sprint 2, Courses), source = xlsx 'Sprint Board' sheet. Upar wali row-mapping bhi
+board se milti hai: 2-10 = Python basics (finish) · 2-11 = FastAPI · 2-12 = Pydantic. **"Colab pe chalte hain"
+wali baat repo code se check nahi hoti — woh claim hai, aur §6 ke ⚠️ box ka poora jhagda usi pe hai.**)*
 
-> ⚠️ **CANON CONFLICT — ordering (recorded 01 Aug 2026 · RESOLVED).**
+> ⚠️ **CANON CONFLICT — ordering (recorded 01 Aug 2026 · RESOLVED on paper — par sheet-fix 10 Aug 2026 tak
+> LAGA NAHI hai; neeche live-check).**
 > `dressing-room/state/sprint.json` yeh order rakhta hai: **1-05 Anthropic API-Fundamentals → 1-06 Prompt
 > Engineering → 1-07 Python basics (start)** — yaani courses PEHLE. Upar wali line uska ulta kehti hai: courses
 > Colab pe, **Python mein** chalte, to Python pehle. Dono canon hain, dono ek doosre ko kaat rahe the.
@@ -272,10 +355,37 @@ T3 concurrent calls → T4 Claude-call engine. Phase-A done = M1 backend live.
 > (start)` uthaa ke `1-05 Anthropic: API Fundamentals` ke UPAR drop kar do — ID text mat badalna* (order
 > row-position se aata hai, ID se nahi; IDs ko doosri files reference karti hain).
 > *(Yeh file ya koi bhi doc `sprint.json` ko nahi likhta — uske `progress` ka single writer `sprintsync.mjs` hai.)*
+>
+> *(verified + sharpened 10 Aug 2026 — poora box code se check kiya. Chaar cheezein:*
+> *(1) **Conflict AAJ BHI zinda hai, "RESOLVED" ka matlab "ho gaya" nahi tha.** Live `sprint.json` ka `next_up`
+> aaj bhi `1-05 → 1-06 → 1-07` hi hai, `synced_at` `2026-08-10T03:45Z` — yaani aaj subah ke sync ne bhi wahi
+> purana order laaya, kyunki sheet-row abhi tak nahi khiski. Isliye header mein "sheet-fix laga nahi" likha.
+> **Yahan se mat maano — live padho:** `node -e "console.log(require('./dressing-room/state/sprint.json').progress.next_up)"`.
+> Jis din woh `1-07` se shuru ho, tab yeh box band ho gaya.*
+> *(2) **Single-writer claim SAHI hai** — poore repo mein asli `sprint.json` path pe sirf ek write hai,
+> `sprintsync.mjs` ka `writeAtomic(SPRINT, sprint)` (`grep -rn "writeAtomic(SPRINT" scripts/`; baaki hits
+> selftests ke temp-dir hain). `learnstate.mjs`/`setpiece.mjs`/`teaching_contract.mjs`/`dugout.mjs` sab READERS.*
+> *(3) **`next_up` = ROW ORDER claim SAHI hai, par adhoora tha** — poora line `data.slice(curIdx + 1)
+> .filter(r => r.status !== "done").slice(0, 3)` hai: current row ke BAAD wali rows, sheet-order mein,
+> done-rows chhod ke, **max TEEN**. Isliye live file mein hamesha 3 hi dikhte hain.
+> Evidence: `grep -n "data.slice(curIdx" scripts/sprintsync.mjs`.*
+> *(4) **"JSON ya markdown mein kuch bhi likho, agle sync pe mit jayega" thoda ZYADA keh raha tha.** ORDER ke
+> liye bilkul sach (woh sheet se aata hai), par sync andhaa overwrite nahi karta: agar `current.id` wahi rahe
+> to captain ke apne fields (`track`/`stream`/`subtopics`/`mode`) preserve hote hain, `examiner_daily` bhi
+> preserve hota hai, aur fetch/parse fail ho to **maujooda file chhoo ke bhi nahi jaata**. Agar sheet configure
+> hi na ho (`dressing-room/state/sprint_config.json` — **gitignored**, `.gitignore` mein naam se listed) to
+> sync ek graceful no-op hai. Evidence: `grep -n "preserve captain-authored\|no sheet configured\|keeping
+> existing sprint.json" scripts/sprintsync.mjs`.)*
 
 ---
 
 ## 7. DECISION LOG
+
+> *(note added 10 Aug 2026 — §7 ki entries captain ke FAISLON ka record hain, kisi script ka output nahi;
+> "kyun" wala hissa repo code se check nahi hota aur usse chheda bhi nahi gaya. Sirf woh do entries verify hui
+> hain jo LIVE files ko chhoti hain — T0.5 wali (tier-IDs ab `python_state.mjs` bhi padhta hai, §2 ka note) aur
+> ordering wali (neeche).)*
+
 - **Node FULLY DROPPED (20 Jun):** M1 backend = Python/FastAPI Day-1. Trade-off: Node existing-strength tha →
   shipping safety-net gaya. M1-ship ab Python-timing pe depend. Mitigant: side-by-side Python shuru + verified
   resources ready. *Accepted, milestone-gated — slip = fine, failure nahi.*
@@ -292,12 +402,22 @@ T3 concurrent calls → T4 Claude-call engine. Phase-A done = M1 backend live.
   hunt zero). Depth = CORE/dṛḍhabhūmi (§0), skip-list nahi — kyunki yeh interview mein COLD likhna padega
   (har Pydantic model ek class hai). Cost: Phase-A ~52h → ~57h, directed ≈107h → ≈112h.
   *Accepted — yeh 5h T1 ke 12h ko bachate hain, warna T1 aadha syntax-debugging ban jaata.*
+  *(verified 10 Aug 2026 — renumber-na-karne ki wajah aaj bhi khadi hai, teen jagah se: GEMINI_LOOP §9 ka
+  Deep-Research prompt ab bhi "Tiers: T0 … T1 Pydantic v2 · T2 FastAPI · T3 asyncio · T4 Anthropic+OpenAI SDK"
+  naam se ginta hai (T0.5 wahan nahi — decimal ka yahi faayda tha), §11.3 ka TIER-close "T0 = invoice
+  calculator" ko artifact ke roop mein naam se pukarta hai (aur woh T0 ka yahi `Aristo Eco → GST → total`
+  artifact hai), aur ab teesri jagah CODE hai — `python_state.mjs` ki TIERS table (§2 ka note). Grep:
+  `grep -n "Tiers: T0\|T0 = invoice calculator" learning-layer/GEMINI_LOOP.md` — line-number mat likhna,
+  woh file aaj bhi edit ho rahi hai.)*
 - **Ordering conflict settled — Python T0 pehle, phir Anthropic Colab courses (01 Aug):** `sprint.json`
   (1-05/1-06 courses → 1-07 Python) aur is file ka §6 ("courses Colab pe Python pe chalte") aapas mein takra rahe
   the; dono canon, isliye chup rehna = har thread mein dobara bahes. Resolution + wajah + captain ka exact
   sheet-fix = §6 ka ⚠️ box. Yahaan sirf record: **durable fix SHEET mein hai** — `sprint.json` ka `progress`
   block `scripts/sprintsync.mjs` har sync pe live-sheet se overwrite karta hai, to JSON/markdown mein likha
   koi bhi order temporary patch hai, fix nahi. (sprint.json is task mein CHHUA NAHI gaya — single-writer law.)
+  *(status-check 10 Aug 2026: writer-claim code se verify ho gaya, par **sheet-fix abhi tak laga NAHI hai** —
+  aaj 03:45Z ke sync ke baad bhi `next_up` = `1-05 → 1-06 → 1-07`. Yaani yeh entry "decided" hai, "done" nahi.
+  §6 ka ⚠️ box + wahan diya live command padho, is line ko status ke liye kabhi mat maano.)*
 - **Depth-rule reconciled (05 Jul):** "Python = tool, light touch" line → "light RITUAL / heavy REPS / god-tier
   CORE" (§0). Root cause: "light touch" ko "shallow" padha jaa raha tha (recurring). Light = no Forge-capsule
   ritual; depth = ladder × reps × build, selective on core. CLOSE-PACKET pipeline (GEMINI_LOOP §11-13) = kaise chalega.

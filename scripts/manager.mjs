@@ -156,6 +156,23 @@ function timeFeature(T, buckets) {
 // `stale` is threaded in from runManager; a stale source degrades down the SAME null path a
 // missing one already took, so bias-to-silence propagates for free. readiness keeps its ≤2d
 // Oura-lag tolerance (readinessFresh) — that lag is normal, not staleness.
+// AN INPUT FAULT ON A COUNTING FILE (10 Aug 2026 wiring pass) — the consumer half.
+// Named `benchFault` when it served benchmark.json alone; renamed in the dead-wire sweep
+// the same day, when capsule_bridge.mjs started speaking the identical vocabulary
+// (blocking_faults + date + a preserved last-true record). It reads those two keys and
+// nothing else, so it serves both files unchanged — one reader, no second dialect.
+// benchmark.mjs now refuses to overwrite its last true record when a counting
+// input (capsule_map/concepts/course/missions) is half-written, and stamps
+// input_faults on the file instead. That refusal is only honest if a reader can
+// tell: without this, the sheet would render 2026-08-09's counts under today's
+// date forever and call it live evidence — the same lie, quieter. The sheet is
+// MACHINE-face (Claude reads it whole), so the fault is stated here and never
+// dealt as a card: mirror.mjs owns the broken file, not the captain
+// (THE ANCHOR LAW). Empty string when clean, so a healthy sheet is unchanged.
+const inputFault = (bj) => ((bj && bj.blocking_faults) || []).length
+  ? `⚠ ${bj.blocking_faults.join(", ")} UNREADABLE — numbers below are ${bj.date || "an earlier run"}'s, not today's · `
+  : "";
+
 function computeFeatures(bus, today, stale = staleness(bus, today)) {
   const fresh = (k) => stale[k] === "fresh";
   const minReps = (bus.ls_config && bus.ls_config.thresholds && bus.ls_config.thresholds.warming_up_min_reps) ?? null;
@@ -249,6 +266,16 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
       strike_questions: bus.capsule_map.totals.strike_questions,
       rejirah_overdue: (bus.capsule_map.rejirah_overdue || []).slice(0, 3),
       cracked_axes: bus.capsule_map.totals.axes_cracked,
+      // wiring audit 10 Aug 2026 — the NAMES behind that integer (see capsuleAxisNames).
+      ...capsuleAxisNames(bus.capsule_map),
+      // DEAD-WIRE SWEEP (10 Aug 2026) — the same consumer half, now for the OTHER counting
+      // file. A capsule that could not be parsed used to vanish inside capsule_bridge with
+      // no name and no counter, so `locked` above quietly shrank and the sheet stated it as
+      // fact. capsule_bridge now keeps its last true map and stamps blocking_faults on it —
+      // the identical vocabulary benchmark.json already speaks, which is why inputFault()
+      // reads both with no new code. Composed HERE, once, so the sheet and the FEATURES
+      // table can never disagree (no-invented-number law).
+      fault: inputFault(bus.capsule_map) || null,
     } : null,
     // shipped carries timeaudit's own dataOk envelope: dark is reported as dark, never 0.
     shipped: bus.shipped && bus.shipped.status === "ok" ? {
@@ -260,8 +287,20 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
     // the outward benchmark — ONE line, pre-composed here so the sheet and the
     // FEATURES table can never disagree on a number (no-invented-number law).
     benchmark: bus.benchmark ? (bus.benchmark.status === "gated_pre_audit"
-      ? { line: `GATED (pre-audit) — ${bus.benchmark.gate?.missions_line || ""}` }
-      : { line: `${(bus.benchmark.buckets || []).map(b => `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bus.benchmark.regressions || []).length ? ` · ⚠ ${bus.benchmark.regressions.length} regression(s)` : ""}` }) : null,
+      ? { line: `${inputFault(bus.benchmark)}GATED (pre-audit) — ${bus.benchmark.gate?.missions_line || ""}` }
+      // 10 Aug 2026 wiring pass — the NEED names ride the sheet too. The counts
+      // alone said "B1 3/8 · B2 1/5" and never named a single thing to unlock;
+      // benchmark.mjs owns needs[] (flattenNeeds) and this renders it whole,
+      // because the sheet is MACHINE-face — Claude reads it entire and turns it
+      // into ONE anchor line. Absent needs[] (pre-wire state file) ⇒ silence.
+      // Same pass — RENDER THE OWNER'S PROJECTION, don't rebuild it. This line
+      // used to compose `${b.id} ${locked}/${core_total}` itself, which printed
+      // "B5 0/0" for the one bucket whose concept_buckets is [] by design (its
+      // evidence is the shipped product). benchmark.mjs now hands over a
+      // `projection` per bucket — byte-identical for concept-cored buckets, and
+      // honest for B5. The old form stays here as the fallback so a benchmark.json
+      // written before this pass still renders exactly as it did.
+      : { line: `${inputFault(bus.benchmark)}${(bus.benchmark.buckets || []).map(b => b.projection || `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bus.benchmark.regressions || []).length ? ` · ⚠ ${bus.benchmark.regressions.length} regression(s)` : ""}${(bus.benchmark.needs || []).length ? ` · need: ${bus.benchmark.needs.join(" · ")}` : ""}` }) : null,
     study: okCards ? {
       due_today: bus.cards.due_today ?? 0, overdue: bus.cards.overdue ?? 0,
       hardest_due: bus.cards.hardest_due || [],
@@ -411,6 +450,101 @@ function repsCounter(f) {
     : ` · WARMING ${f.reps}/${f.reps_needed} reps — indicative, not a verdict`;
 }
 
+// ---- THE DANGER ZONE, UN-TRUNCATED (wiring audit, 10 Aug 2026) --------------
+// calibration.mjs:206-224 emits, per confident-wrong topic:
+//   { topic, track, confidence:"high", accuracy:"low"|"mid", axis?, note }
+// and BOTH doors here reduced that to `.map(d => d.topic).join(", ")` — :466 (the
+// Gaffer's prompt) and :596 (the sheet). So the AXIS-SHARPEN result — WHICH of the
+// 9 axes keeps breaking on a topic he is CONFIDENT about, the knew-wrong plurality
+// computed at calibration.mjs:216-223 — reached neither the model nor the sheet,
+// and the track stamp the 25 Jul namespace split added on purpose (concept vs skill,
+// calibration.mjs:189-198, so the Manager "could tell which domain was in danger")
+// was dropped on the floor the same turn it arrived. Built, present, not wired: the
+// sheet could only ever say "confident-wrong: chunking → tighter interval" and never
+// which KIND of thinking to attack, which is the whole point of the 9-axis model.
+// Same shape as the capsule-door truncation found earlier today.
+//
+// ONE builder, shared by the prompt and the skeleton, so the two can never disagree
+// about what the danger zone says — the same de-duplication reasoning as axesLine
+// and timeauditBridge.
+//
+// ABSENCE IS NAMED, never silent (the other half of today's capsule-door lesson: the
+// truncated door had no field saying anything was missing). calibration computes the
+// axis for the CONCEPT track only (`r.track === "concept"`, :218) and only when one
+// axis wins the misses by ≥2 (:220), so "no axis" has TWO different causes and the
+// reader is told which one it is. No number is invented here: `accuracy` is the
+// producer's own band WORD ("low"/"mid"), passed through, never a computed rate.
+// Order is the producer's — worst knew-accuracy first (calibration.mjs:226).
+function dangerLine(danger) {
+  if (!Array.isArray(danger) || !danger.length) return null;
+  return danger.map((d) => {
+    const bits = [];
+    if (d.track) bits.push(d.track);                       // pre-25-Jul entries carry none
+    if (d.accuracy) bits.push(`knew-acc ${d.accuracy}`);
+    bits.push(d.axis ? `axis ${d.axis}`
+      : d.track === "skill" ? "axis n/a — skill track carries none"
+        : "axis unresolved — no single axis owns the misses");
+    return `${d.topic}${bits.length ? ` [${bits.join(" · ")}]` : ""}`;
+  }).join(", ");
+}
+
+// ---- WHICH AXIS CRACKED, NOT HOW MANY (wiring audit, 10 Aug 2026) -----------
+// capsule_bridge.mjs builds, per locked capsule, `axes[]` = {status, has_weld,
+// has_deep, strike} for all nine, plus `axes_cracked` (JIRAH's own grade at lock —
+// the ONLY place the organism ever names which axis failed the cross-examination)
+// and `axes_missing` (axes DEFERRED at lock, surfaced on purpose per THE METHOD
+// step 0 — "deferred ≠ dropped"). Traced 10 Aug 2026: every live consumer of
+// capsule_map.json read `concept`/`locked_on` (benchmark.mjs:152, postmatch.mjs:213)
+// or `counts.doubts` (forge_session.mjs:1535), and this file took the one rolled-up
+// integer `totals.axes_cracked` (:264) which then reached NEITHER assemblePrompt nor
+// fallbackSkeleton. So the bus could hold "2 cracked axes" and no organ anywhere
+// could say which two, on which concept — a per-axis grade thrown away at the last
+// hop. Same shape as the danger-zone truncation directly above and the capsule-door
+// truncation found earlier today: built, present, not wired.
+//
+// A READ ONLY, in this file's existing grammar: names, producer's order, no ranking,
+// no threshold, no new number. The `strike` text is deliberately NOT lifted — it is
+// the captain's sacred prose and `deep.mjs <concept> <axis>` is its surface; a sheet
+// that quotes the question would also be handing him a report to read (anchor law).
+//
+// ABSENCE IS NAMED. Honesty counter copied from capsule_bridge's own
+// fsrs_due_names_complete: a capsule_map with no `concepts[]` (a half-written file,
+// or the pre-bridge shape) yields complete:null — the names are UNKNOWN, never a
+// measured zero — so the sheet says "which ones is unreadable" instead of going
+// quiet on a signal that exists.
+function capsuleAxisNames(cm) {
+  const rows = Array.isArray(cm && cm.concepts) ? cm.concepts : null;
+  if (!rows) return { cracked_named: [], deferred_named: [], axis_names_complete: null };
+  const flat = (key) => rows.flatMap((c) => (Array.isArray(c[key]) ? c[key] : [])
+    .map((ax) => `${c.concept} [axis ${ax}]`));
+  const cracked = flat("axes_cracked");
+  const total = typeof (cm.totals && cm.totals.axes_cracked) === "number" ? cm.totals.axes_cracked : null;
+  return {
+    cracked_named: cracked,
+    deferred_named: flat("axes_missing"),
+    // concepts[] present ⇒ the names ARE the ground truth; only a totals/concepts
+    // disagreement (a half-written file) can make them incomplete.
+    axis_names_complete: total === null ? true : cracked.length >= total,
+  };
+}
+// ONE builder, shared by the prompt and the skeleton, so the two can never disagree
+// about which axes cracked — the same de-duplication reasoning as axesLine and
+// dangerLine. Returns null when there is nothing to say, so bias-to-silence holds
+// (today's live capsule_map: 36/36 held, 0 cracked, 0 deferred ⇒ silence, which is
+// exactly why a dead wire here looked identical to a healthy one).
+function capsuleAxisLine(cap) {
+  if (!cap) return null;
+  const bits = [];
+  if (cap.cracked_named && cap.cracked_named.length) bits.push(`cracked at lock: ${cap.cracked_named.join(" · ")}`);
+  else if (cap.cracked_axes > 0 && cap.axis_names_complete === null) {
+    bits.push(`${cap.cracked_axes} cracked — WHICH ones is unreadable (capsule_map carries no concepts[]); one \`node scripts/capsule_bridge.mjs\` rebuilds it`);
+  } else if (cap.cracked_axes > 0 && cap.axis_names_complete === false) {
+    bits.push(`cracked at lock: ${cap.cracked_named.join(" · ")} — ${cap.cracked_axes} counted, ${cap.cracked_named.length} named (capsule_map half-written)`);
+  }
+  if (cap.deferred_named && cap.deferred_named.length) bits.push(`deferred at lock, never captured: ${cap.deferred_named.join(" · ")}`);
+  return bits.length ? bits.join(" | ") : null;
+}
+
 // ---- assemble the compressed prompt (FEATURES + formation, NOT raw JSON) -----
 // E2E audit (25 Jul 2026): the prompt starved the LLM of half the output contract, then the
 // validator punished it for filling the gaps. system.md's contract (lines 452-469) demands a
@@ -438,13 +572,18 @@ function assemblePrompt(F, fin, stale = {}) {
     `CARDS: ${F.study ? `${F.study.due_today} due, ${F.study.overdue} overdue [${F.study.hardest_due.join(", ")}]` : "awaiting data"}`,
     `WEAKNESS: ${F.headline ? F.headline.one_line : "none surfaced (bias-to-silence)"}`,
     `AXIS PATTERN: ${F.axis_pattern?.note || "none"}`,
-    `DANGER: ${F.calibration?.danger?.length ? F.calibration.danger.map((d) => d.topic).join(", ") : "none"}`,
+    `DANGER (confident-wrong = he said "knew" and was wrong; the axis is the KIND of thinking that keeps breaking — attack that, not just the topic): ${dangerLine(F.calibration?.danger) || "none"}`,
     `FORMATION: ${F.formation?.weak_connection ? `weak handoff ${F.formation.weak_connection}` : "awaiting data"}`,
     // #27: the per-axis rollup and the core/light split, handed to the LLM for the first
     // time. Both ride while the state is still warming — with the counter attached, so the
     // model is told plainly that this is indicative and must not be spoken as a hard read.
     axesLine(F.formation) ? `AXES (9-axis fluency rollup${repsCounter(F.formation)}): ${axesLine(F.formation)}` : null,
     F.formation?.core_vs_light?.core ? `CORE vs LIGHT: ${F.formation.core_vs_light.core}${F.formation.core_vs_light.light ? ` · light ${F.formation.core_vs_light.light}` : ""}${repsCounter(F.formation)}` : null,
+    // wiring audit 10 Aug 2026 — the capsules' per-axis grade reaches the Gaffer for the
+    // first time. It sits beside the fluency rollup on purpose: that one is REP-derived
+    // and warming, this one is JIRAH's cold verdict on a capsule the captain already
+    // defended, so the model can tell an un-evidenced axis from a beaten one.
+    capsuleAxisLine(F.capsules) ? `CAPSULE AXES (JIRAH's grade at lock — cold, not rep-derived): ${capsuleAxisLine(F.capsules)}` : null,
     `DUE (highest-leverage): ${dueHL ? `${dueHL.concept || dueHL}${dueHL.axis ? ` · axis ${dueHL.axis}` : ""}` : "none"}`,
     `INTENSITY: ${fin.intensity}`,
     `SHIPPING: ${fin.shipping_candidate || "n/a"}`,
@@ -568,7 +707,7 @@ function fallbackSkeleton(F, fin, stale = {}) {
   L.push("📋 SQUAD REPORTS (reconciled):");
   const rep = [];
   if (F.headline) rep.push(`   • ${F.headline.one_line}`);
-  if (F.calibration?.danger?.length) rep.push(`   • confident-wrong: ${F.calibration.danger.map((d) => d.topic).join(", ")} → tighter interval`);
+  if (F.calibration?.danger?.length) rep.push(`   • confident-wrong: ${dangerLine(F.calibration.danger)} → tighter interval`);
   if (F.study && (F.study.due_today || F.study.overdue)) rep.push(`   • cards due: ${F.study.due_today} (+${F.study.overdue} overdue)`);
   const tline = timeReportLine(F.time);
   if (tline) rep.push(tline);
@@ -597,8 +736,21 @@ function fallbackSkeleton(F, fin, stale = {}) {
   // reached a single surface. One line, worst debt first, with the ready-made probe count.
   if (F.capsules?.rejirah_overdue?.length) {
     const o = F.capsules.rejirah_overdue[0];
-    rep.push(`   • Re-Jirah overdue: ${o.concept} ${o.overdue_days}d (${F.capsules.rejirah_overdue.length} concept(s)) — ${F.capsules.strike_questions} strike sawaal ready`);
+    rep.push(`   • ${F.capsules.fault || ""}Re-Jirah overdue: ${o.concept} ${o.overdue_days}d (${F.capsules.rejirah_overdue.length} concept(s)) — ${F.capsules.strike_questions} strike sawaal ready`);
   }
+  // DEAD-WIRE SWEEP (10 Aug 2026) — a capsule that could not be READ is a dark camera, and
+  // this file's own law (the 25 Jul staleness block above) is that dark is named as dark.
+  // The prefix rides the Re-Jirah line when there IS one; when nothing is overdue the fault
+  // would otherwise disappear exactly as the capsule did, so it gets its own line. The sheet
+  // is MACHINE-face — never a card: mirror.mjs owns the broken file, not the captain
+  // (THE ANCHOR LAW).
+  if (F.capsules?.fault && !F.capsules.rejirah_overdue?.length) {
+    rep.push(`   • capsules: ${F.capsules.fault.replace(/ · $/, "")}`);
+  }
+  // wiring audit 10 Aug 2026 — WHICH axis, not how many. The integer alone could never
+  // be acted on; the name routes straight to `node scripts/deep.mjs <concept> <axis>`.
+  const capAx = capsuleAxisLine(F.capsules);
+  if (capAx) rep.push(`   • capsule axes: ${capAx}`);
   if (F.season_read) {                                 // M18 — one line, the sharpest find first
     const sr = F.season_read;
     if (sr.contradiction) rep.push(`   • season re-read: "${sr.contradiction.a}" vs "${sr.contradiction.b}" — un-reconciled`);
@@ -771,6 +923,23 @@ async function selftest() {
   ok("rich: matchday = 13", rich.features.matchday === 13);
   ok("rich: consumes nemesis headline VERBATIM (not re-derived)", rich.sheet.includes("5× miss on chunking"));
   ok("rich: danger line fires on chunking", /confident-wrong: chunking/.test(rich.sheet));
+  // WIRING AUDIT (10 Aug 2026) — the danger door truncated to `.topic` at BOTH ends, so the
+  // axis-sharpen result and the track stamp died between calibration.mjs and the Gaffer. These
+  // fail the moment either door goes back to a bare topic list. The rich fixture is a VERBATIM
+  // 10 Jul agent output, i.e. from before the 25 Jul track split — so it carries axis but no
+  // track, which is exactly the shape that must not crash or print "undefined".
+  ok("#wire: the AXIS reaches the SHEET (not just the topic)", /confident-wrong: chunking \[knew-acc low · axis f\] → tighter interval/.test(rich.sheet));
+  ok("#wire: the AXIS reaches the GAFFER'S PROMPT, and the line says what an axis IS",
+    /^DANGER \(confident-wrong[^\n]*KIND of thinking[^\n]*\): chunking \[knew-acc low · axis f\]$/m.test(rich.prompt));
+  // and the two ends are the SAME builder — they can never drift apart again
+  ok("#wire: prompt and sheet render the danger zone identically", dangerLine(rich.features.calibration.danger) === "chunking [knew-acc low · axis f]");
+  // ABSENCE IS NAMED — a missing axis has two causes and they are different facts
+  ok("#wire: skill-track entry says the axis does not apply (calibration computes it for concept only)",
+    dangerLine([{ topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" }]) === "pydantic [skill · knew-acc low · axis n/a — skill track carries none]");
+  ok("#wire: concept-track entry with no plurality winner says UNRESOLVED, never silence",
+    dangerLine([{ topic: "rag", track: "concept", confidence: "high", accuracy: "mid" }]) === "rag [concept · knew-acc mid · axis unresolved — no single axis owns the misses]");
+  ok("#wire: empty/absent danger ⇒ null, so the prompt still says 'none' (bias-to-silence intact)",
+    dangerLine([]) === null && dangerLine(undefined) === null);
   ok("rich: cards line = 0 due (+2 overdue)", /cards due: 0 \(\+2 overdue\)/.test(rich.sheet));
   ok("rich: formation weak_connection in prompt", rich.prompt.includes("chunking → embeddings"));
   ok("rich: core_vs_light read as {core} fixed key (not dummy arbitrary)", rich.features.formation.core_vs_light.core === "spine: 2/6 fluent");
@@ -1000,8 +1169,82 @@ async function selftest() {
   const wit = await runManager({ today: TODAY, stateDir: wDir });
   ok("capsules speak: Re-Jirah debt + the ready-made probe count reach the sheet",
     /Re-Jirah overdue: embeddings 36d/.test(wit.sheet) && /36 strike sawaal ready/.test(wit.sheet));
+  ok("capsules speak: a clean capsule_map adds NO fault prefix (the healthy sheet is byte-unchanged)",
+    wit.features.capsules.fault === null && !/UNREADABLE/.test(wit.sheet));
+
+  // 6e-sexies) DEAD-WIRE SWEEP (10 Aug 2026) — THE VANISHING CAPSULE, consumer half.
+  // A capsule file that would not parse used to disappear inside capsule_bridge with no
+  // name and no counter, and `locked` here shrank silently. capsule_bridge now preserves
+  // its last true map and stamps blocking_faults; the sheet must SAY so on both branches —
+  // riding the Re-Jirah line when there is one, standing alone when there is not — because
+  // a dark camera named as nothing is exactly the defect this pass exists to kill.
+  const cfDir = stage("rich");
+  const brokenMap = (overdue) => JSON.stringify({
+    date: "2026-08-09", status: "ok", capsules_complete: false,
+    blocking_faults: ["capsules/embeddings.json"],
+    input_faults: [{ file: "capsules/embeddings.json", why: "Unexpected end of JSON input", blocking: true }],
+    totals: { capsules: 3, axes_present: 27, axes_cracked: 0, strike_questions: 27 },
+    rejirah_overdue: overdue, last_attempt_at: `${TODAY}T08:39:00Z`,
+  });
+  writeFileSync(join(cfDir, "capsule_map.json"), brokenMap([{ concept: "tokenization", overdue_days: 12, next_due: "2026-07-29", rounds_done: 1 }]));
+  const cf = await runManager({ today: TODAY, stateDir: cfDir });
+  ok("#dead-wire: an unreadable CAPSULE is named on the sheet, with the date its counts really came from",
+    cf.features.capsules.locked === 3
+    && /⚠ capsules\/embeddings\.json UNREADABLE — numbers below are 2026-08-09's, not today's · Re-Jirah overdue: tokenization 12d/.test(cf.sheet));
+  writeFileSync(join(cfDir, "capsule_map.json"), brokenMap([]));
+  const cf2 = await runManager({ today: TODAY, stateDir: cfDir });
+  ok("#dead-wire: with nothing overdue the fault gets its OWN line — it can never vanish with the capsule",
+    /• capsules: ⚠ capsules\/embeddings\.json UNREADABLE — numbers below are 2026-08-09's, not today's/.test(cf2.sheet));
   ok("shipped speaks: artifacts render beside hours, with the day's events",
     /shipped: 3 commit\(s\), 2 new file\(s\) · capsule_locked/.test(wit.sheet));
+  // the fixture above carries totals.axes_cracked:2 and NO concepts[] — exactly the
+  // half-written / pre-bridge shape. It must say so out loud, never go quiet on it.
+  ok("wiring 10 Aug: an integer with no names is DISCLOSED as unreadable, never rendered as silence",
+    /capsule axes: 2 cracked — WHICH ones is unreadable/.test(wit.sheet)
+    && wit.features.capsules.axis_names_complete === null);
+
+  // 6e-sexies) WHICH AXIS CRACKED, NOT HOW MANY (wiring audit, 10 Aug 2026).
+  // THE DEAD WIRE: capsule_bridge emitted concepts[].axes[] / axes_cracked / axes_missing
+  // for all 36 axes and no organ on the bus read one of them — only totals.axes_cracked,
+  // a bare integer, reached this file, and it then reached neither door. "2 cracked axes"
+  // with nothing able to say WHICH two.
+  //
+  // THE FIXTURE IS BUILT BY THE PRODUCER ITSELF, not by hand. capsule_bridge's own audit
+  // #33 was hidden for weeks by a hand-made fixture that did not match what the writer
+  // really emits; a hand-typed capsule_map here would pass just as happily after a field
+  // rename on the other side. Importing build() means the field NAMES are under test too,
+  // which is the half that actually breaks. Dynamic import: selftest only, run path clean.
+  {
+    const { build: buildCapsuleMap } = await import("./capsule_bridge.mjs");
+    const mk = (faultLines) => ({ id: "tokenization", title: "Tokenization", lockedOn: "2026-06-15",
+      status: "tempered", reJirahDone: [], faultLines, doubts: [], traps: [], bridges: [], interviewLines: [] });
+    // a..g captured (f CRACKED by JIRAH), h+i deferred at lock — "deferred ≠ dropped".
+    const lines = "abcdefg".split("").map((a) => ({ axis: a, status: a === "f" ? "cracked" : "held",
+      strike: `strike-${a}`, weld: "w", deep: "d" }));
+    const axDir = stage("rich");
+    writeFileSync(join(axDir, "capsule_map.json"),
+      JSON.stringify(buildCapsuleMap([mk(lines)], [3, 14, 42], TODAY, [])));
+    const ax = await runManager({ today: TODAY, stateDir: axDir });
+    ok("wiring 10 Aug: JIRAH's cracked axis reaches the SHEET by NAME (concept + axis), not as a count",
+      /capsule axes: cracked at lock: tokenization \[axis f\]/.test(ax.sheet));
+    ok("wiring 10 Aug: ...and reaches the GAFFER's prompt too — the LLM sees only what is serialized here",
+      /CAPSULE AXES \(JIRAH's grade at lock[^\n]*cracked at lock: tokenization \[axis f\]/.test(ax.prompt));
+    ok("wiring 10 Aug: axes DEFERRED at lock are named as deferred (THE METHOD step 0 — never silently dropped)",
+      /deferred at lock, never captured: tokenization \[axis h\] · tokenization \[axis i\]/.test(ax.sheet)
+      && ax.features.capsules.deferred_named.length === 2);
+    ok("wiring 10 Aug: the count and the names agree — the honesty counter reads complete",
+      ax.features.capsules.cracked_axes === 1 && ax.features.capsules.cracked_named.length === 1
+      && ax.features.capsules.axis_names_complete === true);
+    // BIAS-TO-SILENCE, and the reason this wire could rot unseen: his LIVE capsule_map today
+    // is 36/36 held, 0 cracked, 0 deferred — a dead wire and a healthy one look identical.
+    const qDir2 = stage("rich");
+    writeFileSync(join(qDir2, "capsule_map.json"), JSON.stringify(buildCapsuleMap(
+      [mk("abcdefghi".split("").map((a) => ({ axis: a, status: "held", strike: `s-${a}`, weld: "w", deep: "d" })))],
+      [3, 14, 42], TODAY, [])));
+    const q2 = await runManager({ today: TODAY, stateDir: qDir2 });
+    ok("wiring 10 Aug: all nine held ⇒ the line stays silent (bias-to-silence, both doors)",
+      !/capsule axes:/.test(q2.sheet) && !/CAPSULE AXES/.test(q2.prompt));
+  }
 
   // 6e-quinquies) THE BENCHMARK REACHES THE SHEET (outward loop, 8 Aug 2026 — Ruling 5).
   // Gated renders as GATED; a full run renders counts; absence renders nothing.
@@ -1017,10 +1260,36 @@ async function selftest() {
   writeFileSync(join(boDir, "benchmark.json"), JSON.stringify({
     date: TODAY, status: "ok", regressions: ["B2: cold-held 2 → 1"],
     buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }, { id: "B2", counts: { locked: 1, core_total: 5 } }],
+    needs: ["2-rag: unlock chunking, retrieval, rag_eval", "course: 6 chapters remain"],
   }));
   const bo = await runManager({ today: TODAY, stateDir: boDir });
   ok("benchmark full run renders bucket counts + names its regression count",
     /benchmark: B1 3\/8 · B2 1\/5 · ⚠ 1 regression\(s\)/.test(bo.sheet));
+  // 10 Aug 2026 wiring pass — the sheet showed "B2 1/5" and never named one thing
+  // to unlock, because benchmark.mjs's needs[] had no reader in the organism.
+  ok("benchmark NEED NAMES reach the sheet, not just the counts (the half that says what to DO)",
+    /need: 2-rag: unlock chunking, retrieval, rag_eval · course: 6 chapters remain/.test(bo.sheet));
+  // 10 Aug 2026 wiring pass — the INPUT-FAULT consumer. benchmark.mjs preserves
+  // its last true record when capsule_map.json is half-written; unread, that
+  // record renders as today's live evidence. This is the assertion that fails if
+  // the sheet ever goes back to showing preserved counts as fresh ones.
+  const bfDir = stage("rich");
+  writeFileSync(join(bfDir, "benchmark.json"), JSON.stringify({
+    date: "2026-07-09", status: "ok", regressions: [],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
+    input_faults: [{ file: "capsule_map.json", why: "Unexpected end of JSON input", blocking: true }],
+    blocking_faults: ["capsule_map.json"], last_attempt_at: `${TODAY}T09:00:00Z`,
+  }));
+  ok("a preserved benchmark says WHY it is preserved and whose day it is (a stale number that admits it is stale)",
+    /benchmark: ⚠ capsule_map\.json UNREADABLE — numbers below are 2026-07-09's, not today's · B1 3\/8/
+      .test((await runManager({ today: TODAY, stateDir: bfDir })).sheet));
+  const bnDir = stage("rich");
+  writeFileSync(join(bnDir, "benchmark.json"), JSON.stringify({
+    date: TODAY, status: "ok", regressions: [],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
+  }));
+  ok("a benchmark.json with no needs[] renders counts only — never an empty 'need:' (absence, not a zero)",
+    !/need:/.test((await runManager({ today: TODAY, stateDir: bnDir })).sheet));
   ok("no benchmark.json ⇒ no benchmark line (absence, not a zero)",
     !/benchmark:/.test(wit.sheet));
 

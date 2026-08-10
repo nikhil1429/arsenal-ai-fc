@@ -8,8 +8,9 @@
       "concept": null,
       "file": "dressing-room/missions/M01__audit_fundamentals_rubric.md",
       "staged_at": "2026-08-07T20:55:12.812Z",
-      "ingested_at": null,
-      "report": null
+      "ingested_at": "2026-08-10T15:41:08.736Z",
+      "report": "scout_reports/mission_M01_2026-08-10.md",
+      "fired_at": "2026-08-10T11:12:14.640Z"
     },
     {
       "id": "M02",
@@ -48,8 +49,9 @@
       "concept": "hallucinations",
       "file": "dressing-room/missions/T-hallucinations.md",
       "staged_at": "2026-08-08T16:30:58.818Z",
-      "ingested_at": null,
-      "report": null
+      "ingested_at": "2026-08-10T15:41:16.499Z",
+      "report": "scout_reports/mission_T-HALLUCINATIONS_2026-08-10.md",
+      "fired_at": "2026-08-10T11:12:14.462Z"
     }
   ],
   "syllabus_audit": {
@@ -81,6 +83,26 @@
     {
       "ts": "2026-08-08T16:30:58.818Z",
       "kind": "stage_topic",
+      "id": "T-hallucinations"
+    },
+    {
+      "ts": "2026-08-10T11:12:14.462Z",
+      "kind": "fired",
+      "id": "T-hallucinations"
+    },
+    {
+      "ts": "2026-08-10T11:12:14.640Z",
+      "kind": "fired",
+      "id": "M01"
+    },
+    {
+      "ts": "2026-08-10T15:41:08.736Z",
+      "kind": "ingest",
+      "id": "M01"
+    },
+    {
+      "ts": "2026-08-10T15:41:16.499Z",
+      "kind": "ingest",
       "id": "T-hallucinations"
     }
   ]

@@ -33,7 +33,7 @@
 import { spawnSync, spawn } from "node:child_process";
 import net from "node:net";
 import http from "node:http";
-import { writeFileSync, renameSync, readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { writeFileSync, appendFileSync, renameSync, readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -66,7 +66,13 @@ export const MORNING = [
   { id: "physio",        at: "07:30", args: ["scripts/physio.mjs"] },
   // ---- the body read. EVERYTHING below depends on this file existing and being today's.
   // (network flag removed 9 Aug F6 — nothing ever read it; the chain treats every step alike)
-  { id: "goalkeeper",    at: "08:30", args: ["scripts/oura_coach.mjs"], writes: "readiness.json" },
+  // `log` overrides the derived log name ONLY where the retired task itself used a
+  // different one. The Goalkeeper predates audit #98's wrapper: INSTALL_TASKS.ps1:87
+  // hand-wired `>> scripts\coach.log`, and that file — not oura_coach.log — is what
+  // CLAUDE.md cites as the proof this organ ever ran live, and what
+  // GOALKEEPER_v2_migration.md:185 tells him to grep. Deriving "oura_coach" here
+  // would have left the documented file dead forever while a new one filled up.
+  { id: "goalkeeper",    at: "08:30", args: ["scripts/oura_coach.mjs"], writes: "readiness.json", log: "coach" },
   { id: "twin",          at: "08:35", args: ["scripts/twin.mjs"] },
   { id: "heartbeat",     at: "08:39", args: ["scripts/heartbeat.mjs"] },
   { id: "fsrs",          at: "08:40", args: ["scripts/fsrs.mjs", "recompute"], writes: "cards.json" },
@@ -113,6 +119,44 @@ export const EVENING = [
 
 const STEP_TIMEOUT_MS = 180000;   // 3 min per organ — a hung organ must not eat the morning
 
+// The stderr budget — UNCHANGED, this file's own number, lifted out of the inline
+// `.slice(-400)` it used to live in so the two places that spend it agree.
+const STDERR_CAP = 400;
+
+// THE REASON LINE. A node crash prints, in this order: `<file>:<line>`, the offending
+// source line, the caret, a BLANK line, then `SyntaxError: …` / `Error: …`, then the
+// stack, then `Node.js vX`. This finds that middle line — the only part a human needs.
+const REASON_RE = /^(?:[A-Za-z_$][\w$]*)?(?:Error|Exception)\b[^\r\n]*/m;
+
+// ---- clipStderr — WHAT SURVIVES OF A DEAD ORGAN'S LAST WORDS ------------------
+// (wire-audit, 10 Aug 2026.) The cut used to be `String(r.stderr).trim().slice(-400)`:
+// TAIL-only, and silent about it — so the record kept the least useful end and never
+// admitted anything was missing. MEASURED today on two REAL node crashes:
+//   · a JSON.parse SyntaxError — 573 chars, reason line at byte 40; the kept tail began
+//     at byte 173, so the record carried four anonymous stack frames and NO reason;
+//   · a thrown Error inside a script — 1051 chars, reason at byte 358, tail began at
+//     byte 651 → the same loss, on the shape every organ here actually fails in.
+// The reason sits at no fixed offset (40 vs 358 above), so NO head/tail split can be
+// trusted to catch it — it has to be FOUND. So: hoist the reason line verbatim, spend
+// what the same 400-char budget has left on the tail (where the entry-point frame and
+// the node version live), and NAME the cut — in the string AND in a `stderr_bytes`
+// field. A truncation nobody can see is the same class of lie as a silent success,
+// which is this file's own opening law.
+export function clipStderr(raw, cap = STDERR_CAP) {
+  const s = String(raw || "").trim();
+  if (!s) return { stderr: null, stderr_bytes: null };
+  if (s.length <= cap) return { stderr: s, stderr_bytes: null };  // nothing dropped, nothing to declare
+  const m = REASON_RE.exec(s);
+  // A reason already inside the tail we were going to keep anyway is NOT hoisted —
+  // no duplicated lines, no budget spent twice.
+  const reason = m && m.index < s.length - cap ? m[0].slice(0, cap) : "";
+  const cut = (n) => `… [conductor: ${n} of ${s.length} chars cut] …`;
+  const markLen = cut(s.length).length + 2;   // upper bound (dropped ≤ total) + the two newlines
+  const tail = s.slice(s.length - Math.max(0, cap - reason.length - markLen));
+  const dropped = s.length - reason.length - tail.length;
+  return { stderr: (reason ? reason + "\n" : "") + cut(dropped) + "\n" + tail, stderr_bytes: s.length };
+}
+
 function writeAtomic(path, text) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
@@ -120,12 +164,125 @@ function writeAtomic(path, text) {
   renameSync(tmp, path);
 }
 
+// ---- THE ORGAN'S VOICE — restored (10 Aug 2026) -----------------------------
+// THE DEFECT: every one-shot step below runs through spawnSync with piped stdio, so
+// each organ's stdout was captured into `r.stdout` and then never referenced — not
+// by conduct(), not by the report, not by anything. The step row keeps stderr only,
+// truncated to 400 chars, and ONLY when the exit code was non-zero. So an organ that
+// fails SOFT — prints its reason and still exits 0, which is how the validators, the
+// mirror's fetch and brain.mjs's own fallbacks all fail — left ZERO trace anywhere.
+// That is the exact silence run_logged.cmd was written to end (audit #98: ~35 organs
+// "spoke into a cmd window that closed the instant they finished").
+//
+// MEASURED, NOT ASSUMED — the chain took those tasks over and their logs stopped
+// dead on the takeover hour. `ls scripts/*.log`, 10 Aug 2026:
+//   coach · fsrs · calibration · nemesis · learning_state → all 04-08-2026 16:29,
+//     the INSTALL_CONDUCTOR hour — while conductor.json for 2026-08-10 records every
+//     one of those five steps as ok that morning;
+//   scorer · setpiece · doubtminer · physio · viz · scout → all 08-08 22:35–23:05,
+//     the last evening before INSTALL_EVENING_CONDUCTOR took those rows (D1, 9 Aug).
+// The conductor's OWN log is alive (scripts/conductor.log, still via run_logged.cmd)
+// but it holds only the summary lines this file prints — "ok fsrs 100ms" — never one
+// word of what fsrs actually said.
+//
+// THE WIRE: tee each step's captured output into the log its retired task owned, in
+// run_logged.cmd's format and under run_logged.cmd's contract. Nothing is invented —
+// the cap, the one-generation roll and the `== <stamp> :: <cmdline>` header are that
+// file's, so a log written by this chain and a log written by a task that still runs
+// the old way (ArsenalFC-BrainTick does, verified live on schtasks today) are the
+// same artefact for grep and for him.
+//
+// WHY IN NODE, NOT BY RE-WRAPPING EACH STEP IN run_logged.cmd: precedent —
+// tone.mjs writes scripts/tone.log itself "rather than relying on the scheduler"
+// (ORGANISM_REPAIR_PLAN.md:1249). And the re-wrap would actively cost us something:
+// run_logged.cmd sends stderr into the file with `2>&1`, which would empty the pipe
+// and blank the report's `stderr` field — trading this silence for a different one,
+// the very field selfknowledge.mjs's undiagnosable-failure bug was about.
+//
+// KNOWN, PRE-EXISTING, NOT MADE NEW: `sheet` and `bell` both run brain.mjs, so they
+// tee into scripts/brain.log — which the BrainDaemon holds open through the VBS
+// cloak. ArsenalFC-BrainTick has appended to and rolled that same file the whole
+// time; this adds volume to that lane, not a new hazard class.
+const LOG_MAX_BYTES = 2097152;   // run_logged.cmd's own 2 MB cap, verbatim — not a new number
+
+// The log a step owns. run_logged.cmd derives it from `%~n1` (basename of the script
+// it was handed) and hidden_run.vbs from GetBaseName of the first *.mjs argument —
+// one rule, already written twice, so it is the rule here. It falls out correctly for
+// the doubled organs: `wall`+`wall-pm` both land in the one viz.log that Wall-AM and
+// Wall-PM always shared, and `physio`+`physio-pm` in physio.log, exactly as before.
+export function stepLogName(step) {
+  if (step.log) return step.log;
+  const argv = step.exec ? (step.exec.args || []) : (step.args || []);
+  const f = argv.find(a => /\.(mjs|cjs|js|ps1|cmd)$/i.test(String(a)));
+  return f ? String(f).split(/[\\/]/).pop().replace(/\.[^.]+$/, "") : step.id;
+}
+
+// Append one run's output, rolling exactly the way run_logged.cmd rolls: at the cap
+// above, one generation kept, the rename overwriting the old .1 (its `move /y`).
+// `dir` is a parameter for the same reason armTrigger's is — so the selftest can
+// prove the real write against a temp directory and leave the live logs untouched.
+// FAIL-SOFT BY DESIGN: a log that cannot be written must never cost him the chain,
+// so every error returns null and the step is recorded as having no trace.
+export function logStep(name, cmdline, body, dir = join(REPO, "scripts")) {
+  const p = join(dir, `${name}.log`);
+  try {
+    mkdirSync(dir, { recursive: true });
+    try { if (statSync(p).size > LOG_MAX_BYTES) renameSync(p, `${p}.1`); } catch { }
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    // run_logged.cmd's `%DATE% %TIME%` shape on this box, e.g. "10-08-2026 22:00:02".
+    const stamp = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${d.toTimeString().slice(0, 8)}`;
+    // The header goes down even when the organ said nothing, because "it woke and was
+    // silent" and "it never woke at all" are different facts — run_logged.cmd stamps
+    // unconditionally for precisely that reason, and a soft failure exits 0.
+    appendFileSync(p, `\n== ${stamp} :: ${cmdline}\n${body}${body.endsWith("\n") ? "" : "\n"}`);
+    return p;
+  } catch { return null; }
+}
+
 // Arming is a WRITE to brain_queue.json, and brain.mjs's tick re-reads that file at
 // write time (its own lost-update fix), so a concurrent tick cannot erase this.
+//
+// THE REFUSAL (10 Aug 2026, wiring audit) — A NON-OWNER MAY ADD A KEY, NEVER RESET THE
+// FILE. brain.mjs:92 owns brain_queue.json; this function is a guest that writes exactly
+// one key. The old body was:
+//     let q = { observed_window_ceiling: null, jobs_run: {} };
+//     try { if (existsSync(p)) q = JSON.parse(readFileSync(p, "utf8")); } catch { }
+// — the empty catch fell through to that two-key default and writeAtomic'd it OVER a file
+// that exists. So one torn read (a half-flushed tick, a killed write, a disk hiccup) and
+// the guest deletes the owner's whole state. Measured on the live file the same day, it
+// carries SEVEN keys: observed_window_ceiling · jobs_run · last_tick · jobs_failed ·
+// triggers · mouth_said · foreign_limit_seen_ts. What each loss costs, named:
+//   · jobs_run is what stops a once-a-day LLM job re-running — wiping it re-bills the day;
+//   · triggers is every OTHER organ's arming, erased by the one organ arming its own;
+//   · mouth_said is read by scoreboard.mjs:302; observed_window_ceiling is the budget
+//     ceiling brain.mjs self-tuned from a real limit event and cannot re-derive.
+// And it returned `true` regardless, so conduct() recorded the gate as GREEN. A silent
+// wipe reported as a pass is the worst shape in this repo.
+//
+// THE THREE CASES NOW: absent ⇒ create (the cold-checkout case, unchanged). Readable ⇒
+// merge (unchanged — byte-for-byte the same write as before). Present-but-unreadable ⇒
+// REFUSE: return false, touch nothing, let the on-disk data survive until a good read.
+// That is exactly teaching_contract.mjs load()/save() (6 Aug 2026, "never clobber a live
+// file we could not read") applied to the file next door — and like that repair, no engine
+// is replaced, so there is nothing to freeze under a *Legacy name: the success path is
+// unchanged and the only new branch is the one that used to destroy data.
+//
+// THE REFUSAL IS NOT SILENT. conduct() records the gate step FAILED with the reason, which
+// is what the organism-doctor skill turns 🔴 off conductor.json and what the cloud sentinel
+// reads. It also means the sheet is NOT told its signals are fresh — correct: an unreadable
+// queue is exactly when brain.mjs must not be handed a permission.
 export function armTrigger(name, reason, dir = STATE_DIR) {
   const p = join(dir, "brain_queue.json");
-  let q = { observed_window_ceiling: null, jobs_run: {} };
-  try { if (existsSync(p)) q = JSON.parse(readFileSync(p, "utf8")); } catch { }
+  let q = { observed_window_ceiling: null, jobs_run: {} };   // cold checkout only
+  if (existsSync(p)) {
+    let disk = null;
+    try { disk = JSON.parse(readFileSync(p, "utf8")); } catch { }
+    // `null`, `[]` and `"…"` all parse cleanly and are still not this file's shape —
+    // spreading a trigger onto any of them and writing it back is the same wipe.
+    if (!disk || typeof disk !== "object" || Array.isArray(disk)) return false;
+    q = disk;
+  }
   q.triggers = q.triggers || {};
   q.triggers[name] = { ts: new Date().toISOString(), reason };
   writeAtomic(p, JSON.stringify(q, null, 2));
@@ -191,6 +348,14 @@ export function mtimeOf(relPath) {
   try { return statSync(join(__dirname, "..", relPath)).mtimeMs; } catch { return null; }
 }
 
+// mtime of a file a step DECLARED it writes, or null if it is not on disk at all.
+// Anchored on STATE_DIR for the same reason mtimeOf is anchored on __dirname — the
+// answer must never depend on the caller's CWD — and it takes a bare filename because
+// that is exactly what the chain's `writes:` declares ("readiness.json", not a path).
+export function stateMtimeMs(name, dir = STATE_DIR) {
+  try { return statSync(join(dir, name)).mtimeMs; } catch { return null; }
+}
+
 // THE IMPORT GRAPH, NOT JUST THE ENTRY FILE (audit #108 verify pass, 6 Aug 2026).
 // The first cut compared only the daemon's own file. But thalamus.mjs imports
 // capture.mjs — repaired the same day — so editing a DEPENDENCY after boot left a
@@ -254,6 +419,10 @@ export async function conduct(chain = MORNING, opts = {}) {
     cwd: REPO, timeout: opts.timeoutMs || STEP_TIMEOUT_MS, encoding: "utf8", windowsHide: true,
   }));
   const arm = opts.arm || armTrigger;
+  const tee = opts.logStep || logStep;
+  const logDir = opts.logDir || join(REPO, "scripts");
+  // the report names the trace repo-relative when the trace is in the repo
+  const rel = (p) => p ? (p.startsWith(REPO) ? p.slice(REPO.length + 1) : p).replace(/\\/g, "/") : null;
   const nowISO = opts.nowISO || (() => new Date().toISOString());
   const started = nowISO();
   const steps = [];
@@ -270,14 +439,33 @@ export async function conduct(chain = MORNING, opts = {}) {
       // that armed on a dead body read, which is the exact failure it exists to prevent.
       const writers = chain.filter(c => c.writes).map(c => c.id);
       const upstream = steps.filter(s => writers.includes(s.id));
-      const broken = upstream.filter(s => !s.ok).map(s => s.id);
+      // A STALE WRITE IS A BROKEN UPSTREAM (10 Aug 2026). The production check above
+      // folds "declared a file and did not rewrite it" into the step's own `ok`, so
+      // this branch catches it with no new condition — but it must SAY WHICH, because
+      // "goalkeeper failed" and "goalkeeper exited 0 and left readiness.json alone"
+      // send an operator to two different places.
+      const broken = upstream.filter(s => !s.ok).map(s => s.produced === false ? `${s.id} (exit 0, ${s.wrote} not rewritten)` : s.id);
       if (broken.length) {
         steps.push({ id: step.id, ok: false, ms: 0, skipped: `not armed — upstream failed: ${broken.join(", ")}` });
         continue;
       }
+      // The reason used to assert "N signal organs fresh" on the strength of N exit
+      // codes — the word `fresh` was the claim this gate could not actually make.
+      // Now it can, so it states the evidence: how many of the declared files were
+      // seen rewritten by this run. `unverified` is never silently counted as fresh.
+      const verified = upstream.filter(s => s.produced === true).length;
+      const reason = `morning conductor: ${upstream.length} signal organs ok, ${verified}/${upstream.length} declared files verified rewritten this run`;
       let ok = false;
-      try { ok = !!arm(step.arm, `morning conductor: ${upstream.length} signal organs fresh`); } catch (e) { steps.push({ id: step.id, ok: false, ms: Date.now() - t0, error: e.message }); continue; }
-      steps.push({ id: step.id, ok, ms: Date.now() - t0, armed: step.arm });
+      try { ok = !!arm(step.arm, reason); } catch (e) { steps.push({ id: step.id, ok: false, ms: Date.now() - t0, error: e.message }); continue; }
+      // A REFUSAL IS NOT A SHRUG (10 Aug 2026). armTrigger now returns false rather than
+      // resetting an unreadable brain_queue.json, and a row reading `ok:false` next to
+      // `armed:"morning_signals"` would be a mystery to whoever finds it — the report is
+      // the only thing anyone reads. So the field tells the truth about what happened,
+      // and the one condition that can produce it is named in place.
+      steps.push({
+        id: step.id, ok, ms: Date.now() - t0, armed: ok ? step.arm : null,
+        error: ok ? null : `not armed — ${step.arm}: brain_queue.json exists but did not parse, and this chain does not own it. Refused to overwrite brain.mjs's file; the queue is intact, the trigger is lost for this run.`,
+      });
       continue;
     }
     // A step whose declared prerequisites failed still RUNS — the sheet must appear
@@ -383,13 +571,96 @@ export async function conduct(chain = MORNING, opts = {}) {
       : run(step.args);
     const ms = Date.now() - t0;
     const timedOut = !!(r && (r.error && /ETIMEDOUT|timed out/i.test(String(r.error.message || r.error))));
+
+    // ---- DID IT ACTUALLY PRODUCE? (10 Aug 2026) -------------------------------
+    // THE DEFECT: `writes:` has named a state file on five steps since this chain was
+    // written, and NOTHING ever read the name. The gate below did
+    // `chain.filter(c => c.writes)` and used only the TRUTHINESS to build an id list —
+    // so what it certified was EXIT CODES, never freshness. An organ that exits 0
+    // without rewriting its file still armed morning_signals, and the sheet was then
+    // built on yesterday's readiness: the 1 Aug failure in this file's own header,
+    // reached by a second route the file had left open. Built, declared, not wired.
+    //
+    // THE TEST IS THE RUN ITSELF, NOT A THRESHOLD (his no-guessed-numbers rule): the
+    // declared file must be newer than the moment THIS step started. Nothing is
+    // chosen — t0 is already on the stack for the duration measurement. `>=` and not
+    // `>` because both clocks are this one process's, and a write landing inside t0's
+    // own millisecond happened DURING the run, not before it.
+    //
+    // MEASURED FIRST, so it can only ever fire on a real defect — every declared
+    // writer writes unconditionally on its exit-0 path and exits NON-zero on every
+    // path that skips the write: oura_coach.mjs refuses a non-persistable verdict and
+    // exits 1 leaving readiness.json untouched by design ("stale-but-real beats
+    // fresh-but-fabricated"), and fsrs / calibration / nemesis / learning_state each
+    // end `writeAtomic(...); process.exit(0)`. Live mtimes 10 Aug 2026: all five
+    // rewritten that day. So a red here means the organ genuinely did not produce.
+    //
+    // THE MARGIN IS MEASURED TOO, because Windows stamps file times off a coarser
+    // clock (~15.6ms tick) than Date.now() reads, so a write could land a tick BEHIND
+    // the moment it happened. conductor.json for 2026-08-10 gives the real step
+    // durations: goalkeeper 1276ms, fsrs 100ms, calibration 82ms, nemesis 99ms,
+    // learningstate 103ms — the tightest is ~5× the tick, and node's own startup
+    // floors it. There is nothing to tune here; the gap is structural.
+    //
+    // A SIMULATED RUN CANNOT BE CHECKED, and "simulated" is NOT just `dry` — an
+    // INJECTED runner is the real test (caught by the VOICE block's own non-dry
+    // fixture, which declares `writes: "cards.json"` and stubs `run`). Either way no
+    // child was spawned, so nothing could have written; measuring the live STATE_DIR
+    // there would fail a step for a write that was never attempted — a lie in the
+    // opposite direction. So the check runs when the child was REAL, or when the
+    // caller injected a clock, which is how the assertions below exercise the whole
+    // path without a single real process. Same short-circuit shape as the daemon
+    // branch above, and the same reason.
+    const exited0 = !timedOut && r && r.status === 0;
+    const simulated = !!opts.dry || !!(step.exec ? opts.runExec : opts.run);
+    const checkWrites = !!step.writes && !!exited0 && (!simulated || !!opts.stateMtimeMs);
+    const wroteAt = checkWrites ? (opts.stateMtimeMs || stateMtimeMs)(step.writes) : null;
+    const produced = checkWrites ? (wroteAt != null && wroteAt >= t0) : null;
+    // THE VOICE (10 Aug 2026) — whatever the organ said goes to the log its retired
+    // task owned, on a GREEN step too: a soft failure exits 0, so "log it when it
+    // fails" would still hide exactly the failures the report cannot see. stdout
+    // first, then stderr, which is the interleave `>> log 2>&1` produced before.
+    // Suppressed under `dry`, because dry has to keep meaning "nothing happens".
+    const said = `${String((r && r.stdout) || "")}${String((r && r.stderr) || "")}`;
+    const cmdline = step.exec ? `${step.exec.cmd} ${step.exec.args.join(" ")}` : `node ${step.args.join(" ")}`;
+    const logPath = opts.dry ? null : tee(stepLogName(step), cmdline, said, logDir);
+    const clipped = clipStderr((!timedOut && r && r.status === 0) ? null : (r && r.stderr));
     steps.push({
-      id: step.id, ok: !timedOut && r && r.status === 0, ms,
+      // EXIT 0 IS NOT PRODUCTION. A step that declared a file and did not rewrite it
+      // is FAILED here — which is not a new severity, it is this file's oldest law
+      // ("SILENT SUCCESS IS STILL A LIE", and its own `--dry` note on "a task
+      // returning 0 after failing inside"). Folding it into `ok` is what wires it:
+      // the gate's existing broken-upstream branch refuses to arm, `needs` marks the
+      // sheet degraded and names the organ, and rep.failed makes the process exit
+      // non-zero so Task Scheduler's Last Result says so — three live consumers, no
+      // new organ.
+      id: step.id, ok: !!exited0 && produced !== false, ms,
       exit: r ? r.status : null,
+      // THE DECLARATION, ANSWERED. `wrote` echoes what the chain claimed so the report
+      // can be read without the chain next to it; `produced` is deliberately TRI-STATE
+      // — true verified, false caught stale, null NOT CHECKED (no declaration, a step
+      // that already failed, or a dry run). Collapsing null into false would fabricate
+      // a verdict, which is the defect one line up.
+      wrote: step.writes || null,
+      produced,
+      stale: produced === false
+        ? `declared ${step.writes} but this run did not rewrite it — ${wroteAt == null ? "the file is not on disk" : `last written ${new Date(wroteAt).toISOString()}, before this step started ${new Date(t0).toISOString()}`}`
+        : null,
+      // A green row now points at its own evidence. Without this the report is the
+      // only thing anyone reads, and it is the one place a soft failure looks fine.
+      log: rel(logPath),
       error: timedOut ? `timed out after ${opts.timeoutMs || STEP_TIMEOUT_MS}ms` : (r && r.error ? String(r.error.message || r.error) : null),
       // stderr is kept SHORT and only on failure: selfknowledge.mjs's whole
-      // undiagnosable-failure bug was a runner that threw away e.stderr.
-      stderr: (!timedOut && r && r.status === 0) ? null : String((r && r.stderr) || "").trim().slice(-400) || null,
+      // undiagnosable-failure bug was a runner that threw away e.stderr. WHAT it keeps
+      // changed 10 Aug 2026 — the tail-only cut threw away the error MESSAGE, which is
+      // the same bug one layer in. clipStderr keeps the reason and declares the cut.
+      stderr: clipped.stderr,
+      // NON-NULL MEANS CUT, and says how big the original was. Nothing named the
+      // truncation before, so the doctor skill and the captain read a mid-stack
+      // fragment as if it were the organ's whole complaint. The uncut text lives in
+      // the step's own `log` above (THE VOICE, same day) — this field is what makes
+      // a reader go there instead of trusting the fragment.
+      stderr_bytes: clipped.stderr_bytes,
       degraded: missing.length ? `ran on stale input — ${missing.join(", ")} failed` : null,
     });
   }
@@ -567,6 +838,58 @@ async function selftest() {
     ok("ISOLATION — the report counts honestly", rep.ran === MORNING.length && rep.failed === 1);
   }
 
+  // ---- THE REASON SURVIVES THE DOOR (wire-audit, 10 Aug 2026) ----------------
+  // The cut was `.slice(-400)` — tail-only and silent. A REAL node crash, captured
+  // verbatim today (573 chars; reason at byte 40; the old tail began at byte 173),
+  // is the fixture: it is the exact shape every organ in both chains dies in.
+  {
+    const CRASH = [
+      "<anonymous_script>:1",
+      "{bad json}",
+      " ^",
+      "",
+      "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+      "    at JSON.parse (<anonymous>)",
+      "    at file:///C:/Users/nikhi/GitHub/arsenal-ai-fc/scripts/learning_state.mjs:118:31",
+      "    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)",
+      "    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)",
+      "    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)",
+      "",
+      "Node.js v22.14.0",
+    ].join("\n");
+    const c = clipStderr(CRASH);
+
+    // THE REGRESSION WITNESS — the old engine fails this line, the new one passes it.
+    ok("STDERR — the REASON line survives the clip (the old tail-only cut dropped it — proven right here)",
+      CRASH.length > STDERR_CAP
+      && /SyntaxError: Expected property name/.test(c.stderr)
+      && !/SyntaxError: Expected property name/.test(CRASH.slice(-STDERR_CAP)));
+    ok("STDERR — the truncation NAMES ITSELF, in the string and in stderr_bytes",
+      c.stderr_bytes === CRASH.length && /\[conductor: \d+ of \d+ chars cut\]/.test(c.stderr));
+    ok("STDERR — the tail is still kept (entry frame + node version), inside the SAME 400-char budget",
+      /Node\.js v22/.test(c.stderr) && c.stderr.length <= STDERR_CAP);
+    ok("STDERR — an stderr that FITS is passed through byte-for-byte and declares NO cut",
+      (() => { const s = clipStderr("boom"); return s.stderr === "boom" && s.stderr_bytes === null; })());
+    ok("STDERR — nothing to say stays null (a green step adds no noise)",
+      clipStderr("").stderr === null && clipStderr(null).stderr_bytes === null);
+    ok("STDERR — a reason already inside the kept tail is kept ONCE, never hoisted twice",
+      (() => {
+        // 500 chars of noise pushes the whole thing past the cap, but the reason still
+        // lands inside the last 400 — the branch where hoisting would only duplicate.
+        const s = clipStderr("x".repeat(500) + "\nError: late reason\n" + "y".repeat(50));
+        return s.stderr_bytes > STDERR_CAP && (s.stderr.match(/Error: late reason/g) || []).length === 1;
+      })());
+
+    // THE WIRE ITSELF — clipStderr must be what the runner actually spends on a
+    // failed step. Asserting the function alone would pass with line 527 reverted.
+    const repC = await conduct(
+      [{ id: "learningstate", args: ["scripts/learning_state.mjs", "recompute"] }],
+      { ...base, run: () => ({ status: 1, stderr: CRASH }) });
+    const row = repC.steps[0];
+    ok("STDERR — the RECORDED row carries the reason and admits the cut (the door, not just the helper)",
+      row.ok === false && /SyntaxError: Expected property name/.test(row.stderr) && row.stderr_bytes === CRASH.length);
+  }
+
   // the gate — a sheet is never built on inputs that did not compute
   {
     const rep = await conduct(MORNING, { ...base, run: (a) => (a[0].includes("oura_coach") ? { status: 1, stderr: "oura down" } : { status: 0, stderr: "" }), arm: () => { throw new Error("armed despite a dead body read"); } });
@@ -574,6 +897,88 @@ async function selftest() {
     ok("GATE — a failed body read does NOT arm the sheet", gate.ok === false && /goalkeeper/.test(gate.skipped));
     ok("GATE — the sheet step still RUNS (the sheet appears unconditionally)", rep.steps.find(s => s.id === "sheet").exit === 0);
     ok("GATE — but the sheet is flagged as running on stale input, never silently", /goalkeeper/.test(rep.steps.find(s => s.id === "sheet").degraded || ""));
+  }
+
+  // ---- THE PRODUCTION CHECK (10 Aug 2026) — `writes:` WAS AN ORPHAN FIELD ------
+  // Declared on five steps since this chain was born, and read by NOTHING: the gate
+  // did `chain.filter(c => c.writes)`, kept the truthiness to build an id list, and
+  // certified EXIT CODES. So the 1 Aug disaster this whole file exists to prevent —
+  // a sheet built on a stale readiness.json — stayed reachable by a quieter route:
+  // any signal organ that exits 0 without rewriting its file armed the gate anyway.
+  // Every assertion below goes RED against that code, which is the only reason they
+  // are worth the lines.
+  {
+    const writers = MORNING.filter(s => s.writes);
+
+    // (1) the wire itself — an organ that exits 0 and leaves its file untouched
+    const stale = await conduct(MORNING, {
+      ...base,
+      run: () => ({ status: 0, stdout: "", stderr: "" }),
+      // every declared file looks rewritten EXCEPT the body read
+      stateMtimeMs: (name) => (name === "readiness.json" ? 1000 : Date.now()),
+      arm: () => { throw new Error("armed on a file that was never rewritten") },
+    });
+    const gk = stale.steps.find(s => s.id === "goalkeeper");
+    ok("#WIRE — an organ that EXITS 0 without rewriting its declared file is FAILED, never green",
+      gk.exit === 0 && gk.ok === false && gk.produced === false && gk.wrote === "readiness.json");
+    ok("#WIRE — the row names the declared file AND both clocks, so the fix needs no archaeology",
+      /readiness\.json/.test(gk.stale) && /before this step started/.test(gk.stale));
+    const gate = stale.steps.find(s => s.id === "signals");
+    ok("#WIRE — the gate REFUSES to arm on a stale write (the 1 Aug failure's second route, closed)",
+      gate.ok === false && /goalkeeper \(exit 0, readiness\.json not rewritten\)/.test(gate.skipped));
+    ok("#WIRE — and the sheet still runs, flagged degraded, naming the organ that did not produce",
+      stale.steps.find(s => s.id === "sheet").exit === 0
+      && /goalkeeper/.test(stale.steps.find(s => s.id === "sheet").degraded || ""));
+    ok("#WIRE — a stale write reaches the EXIT CODE, so Task Scheduler's Last Result says so",
+      stale.failed > 0);
+
+    // (2) the happy path is untouched — this must not cost him a morning
+    const armed = [];
+    const fresh = await conduct(MORNING, {
+      ...base,
+      run: () => ({ status: 0, stdout: "", stderr: "" }),
+      stateMtimeMs: () => Date.now(),
+      arm: (n, why) => { armed.push([n, why]); return true; },
+    });
+    ok("#WIRE — every declared file rewritten ⇒ the gate arms exactly as it always did",
+      armed.length === 1 && fresh.steps.find(s => s.id === "signals").ok === true
+      && writers.every(s => fresh.steps.find(r => r.id === s.id).produced === true));
+    // the count is READ OFF THE CHAIN, never typed in — a sixth writer must not need
+    // this assertion edited, and a writer silently dropped must break it.
+    ok("#WIRE — the arm reason carries the EVIDENCE (n/n verified), not a bare claim of 'fresh'",
+      new RegExp(`${writers.length}/${writers.length} declared files verified rewritten this run`).test(armed[0][1]));
+
+    // (3) NOT CHECKED must never read as CHECKED-AND-FINE — fabricating a green here
+    // would re-open the same hole from the other side.
+    const dry = await conduct(MORNING, { ...base, run: () => ({ status: 0, stderr: "" }), arm: () => true });
+    ok("#WIRE — a DRY run reports produced:null (not checked), never a fabricated true",
+      writers.every(s => dry.steps.find(r => r.id === s.id).produced === null)
+      && dry.steps.find(s => s.id === "twin").produced === null);
+
+    // (4) the reader really touches a disk — otherwise (1)-(3) only prove the stub works
+    {
+      const dir = mkdtempSync(join(tmpdir(), "conductor-writes-"));
+      try {
+        ok("#WIRE — stateMtimeMs is null for a file that is simply not there",
+          stateMtimeMs("readiness.json", dir) === null);
+        writeFileSync(join(dir, "readiness.json"), "{}");
+        const first = stateMtimeMs("readiness.json", dir);
+        writeFileSync(join(dir, "readiness.json"), '{"again":true}');
+        const second = stateMtimeMs("readiness.json", dir);
+        // compared against ITSELF, never against Date.now(): one clock, no tolerance
+        // to invent, and it still proves the number moves when the file is rewritten.
+        ok("#WIRE — and it reads a REAL mtime off disk that MOVES when the file is rewritten",
+          first != null && second != null && second >= first);
+      } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { } }
+    }
+
+    // (5) ORPHAN GUARD — the declaration must keep matching the organ. A `writes:` is
+    // a bare state filename, and the organ that declares it names that same file in
+    // its own source. Rename either side and the gate would go back to certifying a
+    // file nobody writes, which is precisely the defect being closed here.
+    ok("#WIRE — every `writes:` is a bare filename AND appears in its own organ's source",
+      writers.length > 0 && writers.every(s =>
+        !/[\\/]/.test(s.writes) && readFileSync(join(REPO, s.args[0]), "utf8").includes(s.writes)));
   }
 
   // a hung organ must not eat the morning
@@ -634,6 +1039,59 @@ async function selftest() {
       ok("ARM — a missing queue is CREATED (the cloud-checkout case), never crashed on",
         !!cold.triggers.morning_signals && typeof cold.jobs_run === "object");
 
+      // ---- THE REFUSAL (10 Aug 2026, wiring audit) --------------------------
+      // The clobber this file used to perform, reproduced against a REAL torn queue on
+      // disk: the empty catch made the guest reset the owner's file to two keys and
+      // still return true. These go red the moment that behaviour comes back. The
+      // fixture is the LIVE file's own key set (7 keys, read off
+      // dressing-room/state/brain_queue.json on 10 Aug 2026), truncated mid-object the
+      // way an interrupted write actually leaves it.
+      const torn = mkdtempSync(join(tmpdir(), "conductor-arm-torn-"));
+      try {
+        const tPath = join(torn, "brain_queue.json");
+        const WHOLE = JSON.stringify({
+          observed_window_ceiling: 1600000,
+          jobs_run: { "2026-08-10": { formation_read: 1, teamtalk_am: 1 } },
+          last_tick: "2026-08-10T17:59:39.095Z",
+          jobs_failed: { "2026-08-10": { widget_spec: 2 } },
+          triggers: { nightshift: { ts: "2026-08-09T18:00:00.000Z", reason: "armed by another organ" } },
+          mouth_said: { "2026-08-10": "sheet" },          // scoreboard.mjs:302 reads this
+          foreign_limit_seen_ts: "2026-08-07T19:16:26.250Z",
+        }, null, 2).slice(0, 260);                        // a write cut off part-way
+        writeFileSync(tPath, WHOLE);
+
+        const refused = armTrigger("morning_signals", "morning conductor: 5 signal organs fresh", torn);
+        ok("ARM REFUSAL — an UNREADABLE queue is left byte-for-byte alone, and arming returns FALSE (the old code reset it to 2 keys and returned true)",
+          refused === false && readFileSync(tPath, "utf8") === WHOLE);
+
+        // the shapes that parse cleanly and are still not this file — spreading a
+        // trigger onto any of them and writing it back is the same wipe by another door
+        for (const [shape, text] of [["null", "null"], ["an array", "[]"], ["a string", '"queue"']]) {
+          const d2 = mkdtempSync(join(tmpdir(), "conductor-arm-shape-"));
+          try {
+            writeFileSync(join(d2, "brain_queue.json"), text);
+            ok(`ARM REFUSAL — ${shape} parses fine but is not the queue's shape ⇒ refused, file untouched`,
+              armTrigger("morning_signals", "x", d2) === false
+              && readFileSync(join(d2, "brain_queue.json"), "utf8") === text);
+          } finally { try { rmSync(d2, { recursive: true, force: true }); } catch { } }
+        }
+
+        // THE WIRE, not just the helper: the refusal has to reach the REPORT, because
+        // conductor.json is the only thing the doctor skill and the cloud sentinel read.
+        // A green gate row over a refused write is precisely the lie being closed.
+        const repRef = await conduct(MORNING, {
+          ...base, run: () => ({ status: 0, stdout: "", stderr: "" }),
+          probe: async () => false, launch: () => { },
+          arm: (n, r) => armTrigger(n, r, torn),          // the real function, torn file
+        });
+        const gate = repRef.steps.find(s => s.id === "signals");
+        ok("ARM REFUSAL — the gate step is recorded FAILED, never green, when the write was refused",
+          gate.ok === false && gate.armed === null && repRef.failed >= 1);
+        ok("ARM REFUSAL — the report NAMES the reason, so a 🔴 arrives with its cause instead of a mystery",
+          /brain_queue\.json exists but did not parse/.test(gate.error || "")
+          && /queue is intact/.test(gate.error || ""));
+      } finally { try { rmSync(torn, { recursive: true, force: true }); } catch { } }
+
       const liveAfter = existsSync(live) ? readFileSync(live, "utf8") : null;
       ok("ARM — the LIVE queue is byte-for-byte untouched by this selftest (measured, not claimed)",
         liveAfter === liveBefore);
@@ -641,6 +1099,72 @@ async function selftest() {
       // no orphan temp survives a pass OR a failure
       try { rmSync(dir, { recursive: true, force: true }); } catch { }
       try { rmSync(fresh, { recursive: true, force: true }); } catch { }
+    }
+  }
+
+  // ---- THE ORGAN'S VOICE (10 Aug 2026) --------------------------------------
+  // These would all have been GREEN on 9 Aug with every per-organ log frozen since
+  // the takeover hour — that is the point. Same discipline as the ARM block above:
+  // the writes are REAL (a temp dir, because logStep takes its directory for exactly
+  // this reason), and the live logs are fingerprinted so "the selftest writes
+  // nothing" stays measured rather than promised.
+  {
+    const liveFsrs = join(REPO, "scripts", "fsrs.log");
+    const liveBefore = existsSync(liveFsrs) ? readFileSync(liveFsrs, "utf8") : null;
+    const dir = mkdtempSync(join(tmpdir(), "conductor-voice-"));
+    const dryDir = mkdtempSync(join(tmpdir(), "conductor-voice-dry-"));
+    try {
+      const rep = await conduct(
+        [{ id: "fsrs", args: ["scripts/fsrs.mjs", "recompute"], writes: "cards.json" },
+         { id: "goalkeeper", args: ["scripts/oura_coach.mjs"], log: "coach" }],
+        { nowISO: base.nowISO, noReport: true, logDir: dir,
+          // the soft failure this whole wire exists for: a real complaint, exit 0.
+          run: (a) => a[0].includes("fsrs")
+            ? { status: 0, stdout: "fsrs: recompute skipped — store unreadable\n", stderr: "" }
+            : { status: 0, stdout: "", stderr: "oura: token refresh warning\n" } });
+      const fsrsLog = readFileSync(join(dir, "fsrs.log"), "utf8");
+      ok("VOICE — a step's STDOUT reaches its own log (the whole defect: r.stdout was captured and then never referenced)",
+        /fsrs: recompute skipped — store unreadable/.test(fsrsLog));
+      ok("VOICE — the log is written on a GREEN step too, because a soft failure exits 0 and no report field can see it",
+        rep.steps[0].ok === true && rep.steps[0].exit === 0
+        && /^\s*== \d\d-\d\d-\d{4} \d\d:\d\d:\d\d :: node scripts\/fsrs\.mjs recompute$/m.test(fsrsLog));
+      ok("VOICE — stderr lands in the log even at exit 0, which the report's stderr field deliberately drops",
+        /oura: token refresh warning/.test(readFileSync(join(dir, "coach.log"), "utf8")));
+      ok("VOICE — the report NAMES each step's log, so a green row points at its own evidence",
+        /fsrs\.log$/.test(rep.steps[0].log || "") && /coach\.log$/.test(rep.steps[1].log || ""));
+
+      // the naming rule, on the REAL chains — one rule, taken from run_logged.cmd
+      ok("VOICE — both viz slots and both physio slots name the ONE log their retired tasks shared (Wall-AM/PM, Physio-AM/PM)",
+        stepLogName(MORNING.find(s => s.id === "wall")) === "viz"
+        && stepLogName(EVENING.find(s => s.id === "wall-pm")) === "viz"
+        && stepLogName(MORNING.find(s => s.id === "physio")) === "physio"
+        && stepLogName(EVENING.find(s => s.id === "physio-pm")) === "physio");
+      ok("VOICE — the ps1 step is named from its FILE, never left as 'powershell'",
+        stepLogName(EVENING.find(s => s.id === "wallpaper")) === "WALLPAPER");
+      ok("VOICE — the Goalkeeper keeps feeding scripts/coach.log, the file CLAUDE.md cites and GOALKEEPER_v2_migration.md greps",
+        stepLogName(MORNING.find(s => s.id === "goalkeeper")) === "coach");
+      ok("VOICE — every one-shot step in BOTH chains resolves to a log name (no organ left mute)",
+        [...MORNING, ...EVENING].filter(s => !s.arm && !s.daemon)
+          .every(s => typeof stepLogName(s) === "string" && stepLogName(s).length > 0));
+
+      // a restored voice must not become a disk leak (finding #51's class)
+      const big = join(dir, "roll.log");
+      writeFileSync(big, "x".repeat(LOG_MAX_BYTES + 1));
+      logStep("roll", "node scripts/roll.mjs", "after the roll", dir);
+      ok("VOICE — a log past run_logged.cmd's own 2 MB cap rolls to .1 and starts clean, one generation kept",
+        existsSync(`${big}.1`) && statSync(big).size < 1024 && /after the roll/.test(readFileSync(big, "utf8")));
+
+      const repDry = await conduct([{ id: "fsrs", args: ["scripts/fsrs.mjs"] }],
+        { ...base, logDir: dryDir, run: () => ({ status: 0, stdout: "must never be written", stderr: "" }) });
+      ok("VOICE — a DRY run writes no log at all (dry has to keep meaning 'nothing happens')",
+        !existsSync(join(dryDir, "fsrs.log")) && repDry.steps[0].log === null);
+
+      const liveAfter = existsSync(liveFsrs) ? readFileSync(liveFsrs, "utf8") : null;
+      ok("VOICE — the LIVE scripts/fsrs.log is byte-for-byte untouched by this selftest (measured, not claimed)",
+        liveAfter === liveBefore);
+    } finally {
+      try { rmSync(dir, { recursive: true, force: true }); } catch { }
+      try { rmSync(dryDir, { recursive: true, force: true }); } catch { }
     }
   }
 
@@ -717,7 +1241,14 @@ async function main() {
   const rep = await conduct(chain, { noReport, report: reportPath });
   for (const s of rep.steps) {
     const mark = s.ok ? "ok  " : "FAIL";
-    console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}`);
+    // a FAIL line names the log, because the summary in scripts/conductor.log is the
+    // first thing read after a red morning and the organ's own words are the next.
+    // It also names the REASON now (10 Aug 2026): `error` is only ever set on a timeout
+    // or a spawn failure, so an organ that merely exited 1 printed a bare "FAIL <id>
+    // 812ms" here and made the reader open a file to learn anything at all. clipStderr
+    // hoists the reason to the FIRST line, so this is that line and nothing else.
+    const reason = !s.ok && s.stderr ? s.stderr.split("\n")[0] : "";
+    console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${reason ? "  " + reason : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}${!s.ok && s.log ? "  → " + s.log : ""}`);
   }
   console.log(`conductor: ${mode} chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${reportPath}`}`);
   // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).

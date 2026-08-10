@@ -60,25 +60,52 @@ import { generatePool, embedPool } from "./hippocampus.mjs";
 // 17 Jul: cognition rides Claude (the Gemini free tier shrank to ~20 req/day and
 // starved the night). generatePool stays imported for the PHYSICS lanes only:
 // the 400k-char season re-read (1M context) and embeddings.
-import { claudeGen } from "./claudegen.mjs";
+import { claudeGen, ledgerForensics } from "./claudegen.mjs";
 
 // LADDER G1 (9 Aug 2026): THE NIGHT SHIFT METERS ITSELF. Five claudeGen sites,
 // zero ledger rows — the governor's window never saw this lane's spend at all.
 // Every default generate now lands the same row shape brain.mjs writes, on the
 // SHARED brain ledger, 4-field honest totals included (claudegen G1). Injected
 // deps in the selftest bypass this wrapper, so tests stay hermetic.
+// WIRING AUDIT (10 Aug 2026, pass 2) — THE FOURTH HONESTY FIELD, and the row
+// gets a NAME so it can be tested. The forensics trio landed this morning (see
+// below); `tokens_estimated` did not, and this was the last Claude-lane writer
+// omitting it — dmn.mjs:107 and council.mjs stamp it, this row did not.
+// Measured on the live brain_ledger.jsonl the same night: 4,559 rows, 3,239
+// carrying no such key at all, 50 of them this lane's (`ns_*`), 0 stamped.
+// WHY IT IS NOT COSMETIC: claudegen.mjs:132 falls back to a LENGTH ESTIMATE
+// ((prompt+text).length/4) whenever the CLI returns no usage block — and
+// parseErr ALWAYS does — while brain.mjs windowUsage:256 sums total_tokens
+// blind. Unstamped, a length-guess and a measured number are the same row to
+// the governor that rations the window. 0 of the 50 ns_ rows have failed yet,
+// so the lie is LATENT, not yet told: the first failed night shift tells it.
+// The derivation is dmn.mjs:107's, byte for byte, so the two lanes can never
+// disagree about what "estimated" means (a result that never carried the flag
+// and reported no components is an estimate — never a measured zero).
+function nsLedgerRow(r, model, jobLabel, now = new Date()) {
+  return {
+    ts: now.toISOString(), job: jobLabel, engine: "claude", model,
+    input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+    cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+    total_tokens: r.total_tokens || 0,
+    tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+    duration_ms: r.duration_ms || 0,
+    ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+    // #8 FORENSICS, WIRED 10 Aug 2026 (wiring audit). claudegen has computed
+    // http_status / limit_signal / error_envelope on every failure since
+    // 4 Aug and this row literal copied none of them across — so a failed
+    // night left a timestamp and a truncated message, and brain.mjs's
+    // dead-brain alarm had nothing to name the cause with. ONE shape, defined
+    // once in claudegen.ledgerForensics (dmn.mjs's ledgerRow spreads the same).
+    ...ledgerForensics(r),
+  };
+}
 const genLedgered = async (prompt, model, jobLabel) => {
   const r = await claudeGen(prompt, model);
   try {
     const { appendFileSync: app } = await import("node:fs");
     const { join: j2 } = await import("node:path");
-    app(j2(STATE_DIR, "brain_ledger.jsonl"), JSON.stringify({
-      ts: new Date().toISOString(), job: jobLabel, engine: "claude", model,
-      input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
-      cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
-      total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0,
-      ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
-    }) + "\n");
+    app(j2(STATE_DIR, "brain_ledger.jsonl"), JSON.stringify(nsLedgerRow(r, model, jobLabel)) + "\n");
   } catch { /* an unmetered call is still a made call — never fail the job on the meter */ }
   return r;
 };
@@ -148,10 +175,28 @@ function makeBudget(n) {
 const NO_BUDGET = { left: Infinity, spent: 0, take: () => true };
 
 // concepts worth drilling: weak first, locked capsules as the floor (Re-Jirah fodder)
+//
+// WIRING AUDIT (10 Aug 2026) — THE DANGER ZONE ARRIVES STAMPED WITH ITS TRACK, and this
+// door threw the stamp away. calibration.mjs:189-198 split the namespace on 25 Jul for
+// exactly one reason, in its own words: "the entry also carried no track, so the Manager
+// could not tell which domain was in danger". Both consumers of this list — probeBank:173
+// and distractorBank:261 — spend LLM calls making 9-AXIS CONCEPT-grammar probes, and
+// GEMINI_LOOP.md §11.3 hard-refuses that grammar on the Python track ("Forge-9-axis-capsule
+// Python pe KABHI nahi — skill hai, decay-prone concept nahi"). So a skill-track danger
+// topic (live example: `pydantic`, which sorts FIRST because worst knew-accuracy leads)
+// became an examiner probe with an axis on it, and came back through capture.mjs as
+// track:"concept" — poisoning the very split that stamp exists to protect. Skill danger is
+// not dropped in silence: gemCartridge names the exclusion in the shift record, and the
+// captain already reads it on the sheet (manager.mjs dangerLine, same audit, same day).
+// `d.track || "concept"` keeps pre-25-Jul entries behaving exactly as before — the same
+// default manager.mjs takes; no entry changes meaning, only skill-stamped ones are held back.
 function drillConcepts(deps = {}) {
   const out = [];
   const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
-  for (const d of (cal && cal.danger_zone) || []) out.push({ concept: d.topic || d.concept, why: "danger zone" });
+  for (const d of (cal && cal.danger_zone) || []) {
+    if (String(d.track || "concept") === "skill") continue;
+    out.push({ concept: d.topic || d.concept, why: "danger zone" });
+  }
   const ls = deps.ls !== undefined ? deps.ls : readJson(join(STATE_DIR, "learning_state.json"));
   for (const c of ((ls && ls.concepts) || [])) if (["stalling", "regressing", "learning"].includes(String(c.trend || c.trajectory || c.stage || ""))) out.push({ concept: c.name || c.concept, why: c.trend || c.stage });
   try {
@@ -318,13 +363,30 @@ function gemCartridge(deps = {}, now = new Date()) {
     }
     return null;
   })();
+  // WIRING AUDIT (10 Aug 2026) — the cartridge's return contract is HARDCODED
+  // `"track":"concept"` with an `"axis":"a-i"` on every rep (see RULES below), so anything
+  // named on the "drill these HARDEST" line comes back as a CONCEPT rep. The line took
+  // `.topic` alone, and calibration's danger zone carries BOTH tracks (calibration.mjs:189-198)
+  // — so a Python skill topic was drilled by the concept examiner and re-entered reps_log
+  // mislabelled, which is the one thing the 25 Jul namespace split exists to prevent. It is
+  // also a §11.3 breach: the 9-axis grammar is never run on Python. THIS GEM IS THE CONCEPT
+  // EXAMINER, so skill-track danger is withheld from its text entirely (naming it here and
+  // asking the model not to probe it would still leave the mislabelled rep one disobeyed
+  // instruction away) and the withholding is NAMED in the shift record below — the machine
+  // face, per the Captain's Call. He already sees the skill entry on the sheet, track-stamped,
+  // via manager.mjs dangerLine. The AXIS the same producer computes rides along now too: it
+  // exists on concept entries only (calibration.mjs:216-223) and is passed through verbatim,
+  // never computed here. Default `|| "concept"` = pre-25-Jul entries behave exactly as before.
+  const dz = ((cal && cal.danger_zone) || []).filter((d) => d && (d.topic || d.concept));
+  const dzConcept = dz.filter((d) => String(d.track || "concept") !== "skill");
+  const dzSkill = dz.filter((d) => String(d.track || "concept") === "skill");
   const md = [
     `# GEM CARTRIDGE · ${localDate(now)} — paste into your Gem's instructions (your own data → your own Google account)`,
     "",
     `You are my interview examiner. Locked concepts (probe these for decay): ${caps.join(", ") || "none yet"}.`,
     who && who.fingerprint ? `Where I stand right now: ${who.fingerprint}` : "",
     ((who && who.open_threads) || []).length ? `Open threads to attack: ${who.open_threads.join(" · ")}` : "",
-    ((cal && cal.danger_zone) || []).length ? `My confident-but-wrong zone (drill these HARDEST): ${cal.danger_zone.map(d => d.topic || d.concept).join(", ")}` : "",
+    dzConcept.length ? `My confident-but-wrong zone (drill these HARDEST): ${dzConcept.map(d => `${d.topic || d.concept}${d.axis ? ` — axis ${d.axis} is the kind of thinking that keeps breaking, attack that` : ""}`).join(", ")}` : "",
     "",
     "RULES: one probe at a time · demand my gut-word (knew/shaky/guessed) BEFORE I answer · honest verdicts, no flattery · after each session output a JSON array of reps, EVERY item exactly: {\"surface\":\"gem\",\"track\":\"concept\",\"concept\":\"...\",\"axis\":\"a-i\",\"question\":\"...\",\"confidence\":\"knew|shaky|guessed\",\"correct\":true|false} so I can paste it into my capture system.",
     bank && Object.keys(bank.bank || bank).length ? `\nFRESH PROBES (tonight's bank — use these first):\n${Object.entries(bank.bank || bank).slice(0, 4).map(([c, v]) => `- ${c}: ${(v.probes || []).slice(0, 2).map(p => p.probe).join(" · ")}`).join("\n")}` : "",
@@ -338,7 +400,12 @@ function gemCartridge(deps = {}, now = new Date()) {
   const probeConcepts = bank ? Object.keys(bank.bank || bank).length : 0;
   return {
     md,
-    filled: { capsules: caps.length, probe_concepts: probeConcepts, has_fingerprint: !!(who && who.fingerprint), open_threads: ((who && who.open_threads) || []).length, danger_topics: ((cal && cal.danger_zone) || []).length, premap_day: premap ? premap.day : null },   // G10 — the accounting sees the premap too
+    // `danger_topics` keeps its name and its job — how many danger topics FILLED this
+    // cartridge — which is now the concept-track count, because those are the only ones that
+    // reach the text (see the wiring note above). `danger_skill_withheld` names the rest, so
+    // an entry the concept examiner must not touch is still counted and still auditable
+    // rather than vanishing between two organs. (10 Aug 2026 wiring audit.)
+    filled: { capsules: caps.length, probe_concepts: probeConcepts, has_fingerprint: !!(who && who.fingerprint), open_threads: ((who && who.open_threads) || []).length, danger_topics: dzConcept.length, danger_skill_withheld: dzSkill.map(d => d.topic || d.concept), premap_day: premap ? premap.day : null },   // G10 — the accounting sees the premap too
   };
 }
 
@@ -915,6 +982,28 @@ async function selftest() {
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
   const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), now: new Date("2026-07-15T02:45:00") };
 
+  // ── THE LEDGER ROW: the whole honest shape, or the governor is lied to ─────
+  // Fixtures are claudegen's own outputs, verbatim in shape (claudegen.mjs:134
+  // parseOut / :150 parseErr). This block goes red the moment a field is dropped
+  // off the row again — which is exactly how the four honesty fields spent weeks
+  // being computed and thrown away at this door (measured 10 Aug 2026: 50 ns_
+  // rows, 0 carrying tokens_estimated / http_status / limit_signal / error_envelope).
+  {
+    const measured = nsLedgerRow({ ok: true, total_tokens: 14907, input_tokens: 2, output_tokens: 471, cache_creation_tokens: 14434, cache_read_tokens: 0, tokens_estimated: false, duration_ms: 16220, limit_hit: false, http_status: null, limit_signal: "none", error: null, error_envelope: null }, "sonnet", "ns_probe_bank", new Date("2026-07-15T02:45:00"));
+    assert("LEDGER ROW: a MEASURED total says so, and the cache pair survives the door",
+      measured.tokens_estimated === false && measured.cache_creation_tokens === 14434 && measured.total_tokens === 14907 && measured.job === "ns_probe_bank");
+    // the shape claudegen hands back when the CLI returned no usage block: the
+    // total is (prompt+text).length/4 — a GUESS that windowUsage sums as spend.
+    const est = nsLedgerRow({ ok: true, total_tokens: 500, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: true, duration_ms: 900, limit_hit: false, http_status: null, limit_signal: "none", error: null, error_envelope: null }, "sonnet", "ns_pre_answers", new Date("2026-07-15T02:45:00"));
+    assert("LEDGER ROW: a LENGTH-ESTIMATED total is stamped as one (a guess must never read as a measurement)",
+      est.tokens_estimated === true && est.input_tokens === null && est.total_tokens === 500);
+    // the failure path — the one the dead-brain alarm reads (brain.mjs:662/679)
+    const envelope = '{"type":"result","is_error":true,"api_error_status":429,"session_id":"ns-1","result":"You\'ve hit your weekly limit · resets Aug 12"}';
+    const wall = nsLedgerRow({ ok: false, total_tokens: 0, tokens_estimated: true, duration_ms: 700, limit_hit: true, http_status: 429, limit_signal: "api_error_status", error: "You've hit your weekly limit · resets Aug 12", error_envelope: envelope }, "sonnet", "ns_grade_probes", new Date("2026-07-15T02:45:00"));
+    assert("LEDGER ROW: a failed night is NAMEABLE — 429 vs 500 vs timeout rides the row, envelope included",
+      wall.http_status === 429 && wall.limit_signal === "api_error_status" && wall.error_envelope === envelope && wall.limit_hit === true && wall.tokens_estimated === true);
+  }
+
   // gates
   assert("daytime → no shift (it works while he sleeps)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T14:00:00") })).skipped.includes("not overnight"));
   assert("conserve tone → no shift (the machine rests too)", (await runShift({ ...base, force: false, now: new Date("2026-07-15T02:45:00"), tone: { arousal: "conserve", effects: {} } })).skipped.includes("conserve"));
@@ -957,6 +1046,18 @@ async function selftest() {
     const bare = gemCartridge({ who: null, calibration: null, capsuleFiles: [], probeBank: undefined }, new Date("2026-07-15T02:45:00"));
     assert("#106: an EMPTY cartridge says it is empty (it still writes, and still would have said ok)",
       bare.filled.capsules === 0 && bare.filled.probe_concepts === 0 && bare.filled.has_fingerprint === false);
+    // WIRING AUDIT (10 Aug 2026) — the cartridge's rep contract is hardcoded track:"concept",
+    // so whatever this text names comes back a concept rep. A skill-track danger topic must
+    // therefore never appear in it, must still be COUNTED (withheld ≠ vanished), and the axis
+    // calibration computes for concept entries must actually arrive at the examiner.
+    const mixedCart = gemCartridge({ who: null, capsuleFiles: [], probeBank: undefined, premap: null, calibration: { danger_zone: [
+      { topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" },
+      { topic: "chunking", track: "concept", confidence: "high", accuracy: "low", axis: "f" },
+    ] } }, new Date("2026-07-15T02:45:00"));
+    assert("#wire: skill-track danger is WITHHELD from the concept examiner's cartridge, named in the record, and the concept entry arrives WITH its axis",
+      !mixedCart.md.includes("pydantic") && mixedCart.md.includes("chunking") && mixedCart.md.includes("axis f")
+      && mixedCart.filled.danger_topics === 1 && mixedCart.filled.danger_skill_withheld[0] === "pydantic"
+      && mixedCart.md.includes('"track":"concept"'));
     assert("gate tuner: silent under 20 decisions (no early false alarms)", r.jobs.gate_tune.silent && r.jobs.gate_tune.silent.includes("20"));
   }
   // validation honesty
@@ -1051,6 +1152,19 @@ async function selftest() {
     const c = drillConcepts({ calibration: { danger_zone: [{ topic: "eval metrics" }] }, ls: { concepts: [{ name: "rag", trend: "stalling" }] }, capsuleFiles: ["tokenization.json", "embeddings.json"] });
     assert("concepts: danger zone > stalling > locked capsules, deduped", c[0].concept === "eval metrics" && c[1].concept === "rag" && c.some(x => x.concept === "tokenization"));
     assert("Day-0 floor: locked capsules alone still make a bank (dormant-safe)", drillConcepts({ calibration: null, ls: null, capsuleFiles: ["context.json"] }).length === 1);
+    // WIRING AUDIT (10 Aug 2026) — the live shape that broke it: worst knew-accuracy leads,
+    // and that was `pydantic` (track "skill"). It became a 9-axis concept probe and returned
+    // through capture stamped track:"concept". Both halves are asserted: the skill entry never
+    // reaches the concept probe list, and the concept entry behind it still does — a filter
+    // that swallowed everything would pass a one-sided check.
+    const mixed = drillConcepts({ calibration: { danger_zone: [
+      { topic: "pydantic", track: "skill", confidence: "high", accuracy: "low" },
+      { topic: "chunking", track: "concept", confidence: "high", accuracy: "low", axis: "f" },
+    ] }, ls: null, capsuleFiles: [] });
+    assert("#wire: a skill-track danger topic NEVER becomes a 9-axis concept probe (§11.3), the concept behind it still does",
+      !mixed.some(x => x.concept === "pydantic") && mixed.some(x => x.concept === "chunking"));
+    assert("#wire: an untracked (pre-25-Jul) danger entry is still drilled — the default is concept, nothing changes meaning",
+      drillConcepts({ calibration: { danger_zone: [{ topic: "eval metrics" }] }, ls: null, capsuleFiles: [] })[0].concept === "eval metrics");
   }
 
   // JOB 6 — M21 THE WIND TUNNEL: replay → grid → bootroom-grammar proposal
@@ -1270,6 +1384,10 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { runShift, probeBank, distractorBank, scoutPack, gemCartridge, gateTuneReport, windTunnel, replayGate, replayGateLegacy, tunnelScore, preAnswerEngine, preAnswerMaterial, seasonReRead, seasonCorpus, validateSeasonRead, gradeProbes, answerVariance, drillConcepts, isOvernight, makeBudget, CAPS, CLAUDE_LANE, TUNNEL, SEASON_CAPS, GRADE,
+  // wiring audit 10 Aug 2026 — the ledger row is a NAMED pure builder now, so the
+  // governor's row shape is assertable from outside instead of living inside an
+  // append-only side effect nobody could test (dmn.mjs's ledgerRow precedent)
+  nsLedgerRow,
   // audit 4 Aug 2026 — #1/#56 seams: the provenance gate is now testable from
   // outside, so the thalamus side of the same wire can assert the SAME rule
   isHisWords, provenanceOf, HIS_SOURCES, NOT_HIS_SOURCES };

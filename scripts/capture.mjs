@@ -50,10 +50,15 @@
 //   Missing/empty = valid (awaiting data). NEVER fabricates a rep.
 //
 // REGISTRY: dressing-room/state/concepts.json (canon, hand-curated). capture only
-//   READS it (single-writer preserved). Missing registry = still logs (all reps
-//   unregistered:true), no crash.
+//   READS it (single-writer preserved). Missing or UNREADABLE registry = still logs,
+//   no crash — but it JUDGES NOTHING: `unregistered` reads null (unknown), history on
+//   disk is never re-canonicalized, and a captain's card is filed. See THE REGISTRY
+//   GATE (10 Aug 2026) below; before it, a single trailing comma in the canon rewrote
+//   every stored concept id into a phantom twin.
 //
-// MODES: paste [file] · pull · selftest
+// MODES: paste [file] · rep · pull · quarantine [retry] · selftest
+//   quarantine (10 Aug 2026) is the READ end of reps_log.jsonl.quarantine.jsonl —
+//   the sidecar this file has written since 30 Jul and NOTHING in the organism read.
 // RULES (CONDUCTOR §4): deterministic · no API key · Node 22 ESM · Windows-safe
 //   entry guard · atomic write (temp→rename) · empty-safe · never fabricate.
 // ============================================================================
@@ -105,12 +110,16 @@ function resolveInbox() {
 // stored concept silently flipped from an unregistered " embeddings" to the real
 // `embeddings` — fabricated reps landing on a real FSRS card. Fold first, THEN trim.
 const normText = (s) => String(s).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-const EMPTY_REG = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false };
+// `error` (10 Aug 2026, THE REGISTRY GATE below) — WHY it did not load. `loaded:false`
+// alone cannot tell "canon is missing" from "canon is unreadable", and the two need
+// different words from the captain. Additive: the two importers read only `.loaded`
+// (presence.mjs:632 · thalamus.mjs:585) and are untouched by it.
+const EMPTY_REG = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false, error: null };
 
 function loadRegistry(path = CONCEPTS_PATH) {
-  const reg = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false };
+  const reg = { conceptAlias: new Map(), skillAlias: new Map(), loaded: false, error: null };
   try {
-    if (!existsSync(path)) return reg;
+    if (!existsSync(path)) { reg.error = `concepts.json not found at ${path}`; return reg; }
     const j = JSON.parse(readFileSync(path, "utf8"));
     for (const [id, def] of Object.entries(j.concepts || {})) {
       reg.conceptAlias.set(normText(id), id);
@@ -121,7 +130,11 @@ function loadRegistry(path = CONCEPTS_PATH) {
       for (const a of (def?.aliases || [])) reg.skillAlias.set(normText(a), id);
     }
     reg.loaded = true;
-  } catch { /* malformed registry → treat as empty (empty-safe) */ }
+  } catch (e) {
+    // malformed registry → treat as empty (empty-safe), but SAY why. The gate below
+    // is what stops "empty" from being read as "this concept does not exist".
+    reg.error = `concepts.json unreadable: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}`;
+  }
   return reg;
 }
 
@@ -131,6 +144,68 @@ function canonicalize(raw, track, reg) {
   const map = track === "skill" ? reg.skillAlias : reg.conceptAlias;
   if (map.has(key)) return { canonical: map.get(key), unregistered: false };
   return { canonical: key, unregistered: true };
+}
+
+// ---------------------------------------------------------------------------
+// THE REGISTRY GATE (wiring audit, 10 Aug 2026 — his "make sure everything in the
+// entire organism is connected to everywhere where it is required")
+// ---------------------------------------------------------------------------
+// loadRegistry has SET `loaded` since v2 (:123) and this file — the registry's OWNER —
+// never read it. All three occurrences were writes. Both IMPORTERS gate on it
+// (presence.mjs:632 `if (!reg || !reg.loaded) return null`, thalamus.mjs:585 falls back
+// to the raw token) and nemesis.mjs:314 passes its own `reg.loaded` into analyzeTopic.
+// The owner was the single organ that read "canon unreadable" as "canon empty".
+//
+// PROVEN before the repair, on a SANDBOX COPY of the real concepts.json with one
+// trailing comma appended (85 concepts → 0):
+//   paste ⇒ "⚠ UNREGISTERED concept(s): embeddings — these coined phantom topics.
+//            add them to dressing-room/state/concepts.json"
+//   …and `embeddings` is IN that file. One typo, and the advice is to add what is
+//   already there while the whole hand-curated corpus is orphaned.
+//
+// The half nobody had seen is worse, and it is why this is a GATE and not a warning:
+// loadReps re-validates EVERY line already on disk (:315) and ingestUnlocked then
+// rewrites the file from that result (:449). So one trailing comma REWROTE HISTORY.
+// Measured on a fixture in the same run:
+//   before          ⇒ tool_use unregistered=false · vector_search unregistered=false
+//   after ONE ingest ⇒ tool use unregistered=true  · vector search unregistered=true
+// Every stored canonical id de-canonicalized ON DISK, permanently. That is precisely
+// the fabricated-rep failure the 30 Jul normText audit fought (its own comment, :100)
+// arriving through a different door: fsrs cards, nemesis entries and calibration
+// topics all key on `concept`, so every real topic silently forks a phantom twin.
+//
+// THE RULE: a registry that could not be read MAKES NO CLAIM. It does not fold the id,
+// it does not assert `unregistered`, and it never edits what is already stored.
+//   unregistered === true   the registry was read and does NOT have this concept
+//   unregistered === false  the registry was read and DOES
+//   unregistered === null   the registry could not be read — WE DO NOT KNOW
+// `null` is this file's established vocabulary for an unmeasured value, not a new one:
+// `observed_at` is null on pre-#24 rows for the identical reason (:157 — "an unmeasured
+// silence is never a measured zero"). It is FALSY, so physio's phantom bleed
+// (physio.mjs:372 `.filter(r => r.unregistered)`) correctly stops accusing real
+// concepts, and a later healthy load re-derives it — which is the "reps retro-register
+// on next load" the paste output has always promised.
+//
+// The stored string is kept VERBATIM rather than trimmed or folded, because trimming
+// is already a judgement and this branch exists to make none. A row written by the
+// healthy path is canonical to begin with, so verbatim is exactly what preserves it.
+
+// FROZEN (layering law) — the pre-gate enrichment, verbatim, as it ran from v2 until
+// 10 Aug 2026. Kept because every row currently on disk was written by it, and a reader
+// comparing the two must be able to see that the ONLY difference is the guard.
+const enrichConceptLegacy = (o, reg) => canonicalize(o.concept, o.track, reg);
+
+// PLAN OF RECORD.
+function enrichConcept(o, reg) {
+  if (!reg || reg.loaded !== true) {
+    return {
+      canonical: o.concept,
+      // carried through, never re-asserted: a row that a HEALTHY registry already
+      // judged keeps that judgement. Only an unjudged row reads null.
+      unregistered: typeof o.unregistered === "boolean" ? o.unregistered : null,
+    };
+  }
+  return enrichConceptLegacy(o, reg);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +328,9 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   let confused_with = null;
   if (o.confused_with !== undefined && o.confused_with !== null) {
     if (typeof o.confused_with !== "string" || o.confused_with.trim() === "") return { ok: false, error: "confused_with not string" };
-    confused_with = canonicalize(o.confused_with, o.track, reg).canonical;
+    // through the GATE, same as `concept` — an unreadable registry must not rewrite
+    // a stored confusion-pair into its own folded spelling either.
+    confused_with = enrichConcept({ concept: o.confused_with, track: o.track }, reg).canonical;
   }
   // edge (v3): optional; null or free-text string stored VERBATIM (not canonicalized)
   let edge = null;
@@ -263,8 +340,9 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   }
   if (o.note !== undefined && typeof o.note !== "string") return { ok: false, error: "note not string" };
 
-  // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged)
-  const { canonical, unregistered } = canonicalize(o.concept, o.track, reg);
+  // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged).
+  // Through THE REGISTRY GATE since 10 Aug 2026 — an unreadable canon claims nothing.
+  const { canonical, unregistered } = enrichConcept(o, reg);
   const rep = {
     ts: clocks.ts, surface: o.surface, track: o.track, concept: canonical,
     axis: o.axis, question: o.question, confidence: o.confidence, correct: o.correct,
@@ -454,6 +532,13 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
     appended: toAppend.length, rejected, duplicates,
     total: existing.length + toAppend.length, errors,
     observed_at: observedAt, ts_corrected,
+    // THE REGISTRY GATE's report half (10 Aug 2026). Without this a caller cannot tell
+    // "zero unregistered concepts" from "the registry could not be read, so nothing was
+    // checked" — and those are opposite facts. `unregistered` below is EMPTY on a dead
+    // registry by construction (the gate stores null, which never enters this array),
+    // so the count alone would read as a clean bill of health.
+    registry_loaded: !!(reg && reg.loaded),
+    registry_error: (reg && reg.error) || null,
     unregistered: [...new Set(unregistered)],
     skipped_existing: loadStats.skipped || 0,
     skipped_reasons: [...new Set(loadStats.skipped_reasons || [])],
@@ -477,7 +562,18 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
 //      cold outcome cracks HERE, where the machine can see it.
 // The watchman's report measures the harvest lane live every night (§6.2).
 // Pure — the selftest drives it with fixtures.
-export function geminiBatchStats(rows, observedAt = null) {
+//
+// ── FROZEN 10 Aug 2026 (LAYERING law) ──────────────────────────────────────
+// This is the 7 Aug engine VERBATIM, kept under a *Legacy name exactly as
+// hippocampus.identityCartridgeLegacy / dugout.capsuleProjectionLegacy /
+// fsrs.buildStoreLegacy are kept. Why it stays: the two wired readers
+// (scout.mjs attachGemini · watchman.mjs c11) were written against THIS row
+// shape, and a 30-45d review must be able to re-derive a row with the code that
+// would have written it. No migration was needed — the ledger had never been
+// written even once (that is the defect the plan of record below repairs), so
+// there is not a single legacy row on disk. The plan of record is
+// geminiBatchStats.
+export function geminiBatchStatsLegacy(rows, observedAt = null) {
   const n = (Array.isArray(rows) ? rows : []).length;
   if (!n) return null;
   const by = (f) => rows.reduce((o, r) => { const k = String(r[f]); o[k] = (o[k] || 0) + 1; return o; }, {});
@@ -499,6 +595,110 @@ export function geminiBatchStats(rows, observedAt = null) {
   };
 }
 
+// ── THE PLAN OF RECORD — THE LANE THAT HAD NO PRODUCER (wiring audit, 10 Aug 2026)
+// Traced live: gemini_quality.jsonl has TWO wired readers (scout.mjs:795 →
+// attachGemini · watchman.mjs:210/376 → c11) and HAS NEVER EXISTED ON DISK. Cause:
+// the recorder in main() was gated on `mode === "paste"`, justified by a comment
+// making two claims that are both false in this repo —
+//   • "the paste door IS the off-machine handoff" — it is not. THREE in-session
+//     organs shell it: dugout.mjs:1486 (voice), turnstile.mjs:74 (clipboard),
+//     throwin.mjs:440 (phone lane), and all three hardcode surface "gem".
+//   • "the `rep` door is the in-session surface the teaching audit already covers" —
+//     teaching_audit.mjs audits CLAUDE'S TURNS for contract drift; it never reads a
+//     rep. And audit #107 built `rep` precisely so a sitting's reps are banked one at
+//     a time instead of on a clean close, which makes `rep` the PRIMARY door for the
+//     very sittings this lane exists to measure. Evidence on live state: 19 of the 21
+//     reps in reps_log.jsonl arrived through it (each with its own distinct
+//     observed_at, i.e. its own ingest); the other 2 are dugout-voice.
+// So the gate moves off the DOOR and onto the ROWS. Two changes, both DERIVED from
+// fields already on the rep — no new schema, no threshold, nothing guessed:
+//   1. only surface "gem" rows are measured (a `colab` Drive-pull batch has no
+//      business in a lane named gemini), and `of_batch` says how much of the ingest
+//      that was, so a mixed batch is readable rather than silently trimmed;
+//   2. the row NAMES its own provenance — `door` ("paste"|"rep") and `notes` (the
+//      distinct note strings the calling organ declared: dugout writes
+//      "dugout-voice think:140ms" / "scrimmage-voice"). This is the honest half.
+//      surface "gem" is a CLAIM, not a measurement: the `rep` door DEFAULTS it and
+//      the three organs above hardcode it, so NOTHING in the schema proves a row came
+//      from Gemini. Recording door+notes is what lets HIS 30-45d review slice the lane
+//      instead of trusting a label the machine cannot verify. Whether `surface` should
+//      gain a third value so a Claude-Code rep stops calling itself "gem" is HIS
+//      vocabulary call, not this repair's — it is canon (INPUT CONTRACT :33 ·
+//      MANUAL_WIRING.md · throwin's cartridge contract) and nothing downstream reads
+//      surface today (grepped: zero `.surface` reads on a rep outside this file).
+// Still judged by NOBODY until 30-45d of real data exists (his standing rule).
+// Pure — the selftest drives it with fixtures.
+export function geminiBatchStats(rows, observedAt = null, door = null) {
+  const all = Array.isArray(rows) ? rows : [];
+  const gem = all.filter((r) => r && r.surface === "gem");
+  const n = gem.length;
+  if (!n) return null;
+  const by = (f) => gem.reduce((o, r) => { const k = String(r[f]); o[k] = (o[k] || 0) + 1; return o; }, {});
+  const tss = gem.map((r) => Date.parse(r.ts)).filter(Number.isFinite);
+  return {
+    at: observedAt || new Date().toISOString(),
+    door,                                  // which CLI door recorded it: "paste" | "rep"
+    n,
+    of_batch: all.length,                  // rows in the whole ingest; n of them were surface "gem"
+    // the calling organ's own words, verbatim — the only provenance the machine
+    // actually holds. Empty array = nobody declared anything (the bare CLI door).
+    notes: [...new Set(gem.map((r) => r.note).filter((s) => typeof s === "string" && s.trim()))].sort(),
+    surfaces: by("surface"),
+    tracks: by("track"),
+    concepts: [...new Set(gem.map((r) => r.concept))],
+    axes: [...new Set(gem.map((r) => r.axis).filter(Boolean))].sort(),
+    confidence_mix: by("confidence"),
+    correct_rate: +(gem.filter((r) => r.correct === true).length / n).toFixed(2),
+    // measured, never judged: a batch that is 100% knew-correct is RECORDED here —
+    // whether that is mastery or a surface that never commits a real gut-word is a
+    // 30-45d question, not this line's.
+    all_knew_correct: gem.every((r) => r.confidence === "knew" && r.correct === true),
+    ts_span_min: tss.length >= 2 ? Math.round((Math.max(...tss) - Math.min(...tss)) / 60000) : 0,
+  };
+}
+
+// P6.1 REPAIR — THE APPEND THAT LIED (wiring audit, 10 Aug 2026).
+// Shipped 7 Aug as `try { appendFileSync(GEMINI_QUALITY, …) } catch { /* a ledger
+// miss never blocks reps */ }` followed by an UNCONDITIONAL "gemini-quality row
+// recorded … → gemini_quality.jsonl". PROVEN in a sandbox copy with the ledger made
+// un-appendable: the paste printed "row recorded (n 1 …)" and the ledger stayed EMPTY.
+// That is the worst shape this lane can take — it exists to hold 30-45d of evidence
+// for HIS Gemini review (his standing rule: no number until the data is real), and its
+// only two readers count LINES (scout.mjs:794 · watchman.mjs:210), so a lane losing
+// every row reports an honest-looking zero and nothing anywhere says a write failed.
+// The 7 Aug intent is KEPT — the reps are already on disk when we get here, so this
+// returns a REPORT and never throws, never changes the exit code. What changes is that
+// a miss is now SAID, at the one place a human is looking, exactly like the
+// unregistered / skipped-line warnings the 30 Jul audit added above it.
+// Two deliberate choices:
+//   • VERIFIED ON DISK, not on the absence of an exception. An append that throws and
+//     an append that silently writes nothing are the same lie to the reader, so we
+//     compare the file's size before and after against the bytes we handed it.
+//   • On failure the row goes to a QUARANTINE sidecar — same pattern, same file, as
+//     the reps quarantine (ingestUnlocked's `path + ".quarantine.jsonl"`). This row is
+//     NOT reproducible by re-pasting: the CLI only computes stats when r.appended > 0,
+//     and a re-paste of the same batch dedups to 0 appended. Lose it here and the
+//     evidence for his review is gone for good. The sidecar is NOT counted by scout or
+//     the watchman — it is salvage, and the console says so.
+export function recordGeminiQuality(path, stats) {
+  const line = JSON.stringify(stats) + "\n";
+  const bytes = Buffer.byteLength(line, "utf8");
+  const sizeOf = (p) => { try { return existsSync(p) ? statSync(p).size : 0; } catch { return null; } };
+  const before = sizeOf(path);
+  const fail = (why) => {
+    const sidecar = path + ".quarantine.jsonl";
+    let saved = false;
+    try { appendFileSync(sidecar, line, "utf8"); saved = true; } catch { /* salvage is best-effort; the console still tells the truth */ }
+    return { ok: false, why, saved, sidecar: saved ? sidecar : null };
+  };
+  try { appendFileSync(path, line, "utf8"); }
+  catch (e) { return fail(`${(e && e.code) || "error"}: ${(e && e.message) || e}`); }
+  const after = sizeOf(path);
+  if (after === null) return fail("the append threw nothing but the ledger cannot be stat'd — treat as NOT recorded");
+  if (before !== null && after < before + bytes) return fail(`the ledger grew ${after - before} of ${bytes} bytes — the row is NOT fully on disk`);
+  return { ok: true, bytes, size: after };
+}
+
 // the plan of record: the same ingest, with the read-modify-rewrite window held
 // under the writer lock so a concurrent paste/pull can't overwrite the other's reps.
 // (opts carries lock tuning — selftest uses it to age a lock out instantly, callers
@@ -516,16 +716,61 @@ function parseBlob(text) {
   return Array.isArray(j) ? j : [j];
 }
 
+// ---------------------------------------------------------------------------
+// THE REJECTION THAT NAMED NO REASON, AND THE LOG NOBODY READ (wiring audit,
+// 10 Aug 2026 — his "everything connected to everywhere it is required")
+// ---------------------------------------------------------------------------
+// ingestUnlocked has built `errors` since v1 (:429, returned :455) and exactly ONE
+// caller ever read it — `paste` (:1167, "rejected reasons: …"). pullFromInbox took
+// the COUNT (`r.rejected`) and dropped the REASONS on the floor, and its own
+// line-parse catch below was a bare `rejected++` with no reason at all. The file
+// then archived to done/ regardless, and the run never came back.
+// PROVEN before the repair, on a 4-rep fixture carrying 3 bad reps (bad axis "a-i",
+// missing ts, malformed JSON): `pulled 1 from 1 file(s) (rejected 3, duplicates 0)`
+// — three rejections, zero reasons, and `errors` was not even a KEY on the return.
+// This is the one lane that runs 14×/day with nobody watching, so it is the one
+// lane where a silent drop is permanent: a malformed Colab export dies whole.
+//
+// TWO HALVES, and the second is the one that matters:
+//  1. THE REASONS ARE CARRIED — per file, per line number — into the return and
+//     the note, exactly like the unregistered / ts_corrected / quarantined
+//     warnings the 30 Jul audit already added beside them.
+//  2. THE WIRE. The note's only destination is scripts/capture.log, and a grep of
+//     the whole repo finds ZERO readers of that file — only prose in
+//     MANUAL_WIRING.md and two audit docs telling a HUMAN to `tail` it, which is
+//     not a wire. A producer with no consumer is a black box. So a pull that
+//     rejected reps hands ONE one-line card to captains_call.mjs through the
+//     OWNER'S OWN CLI, never its state file (owners-only; precedent
+//     awayday.mjs:411 and watchman.mjs:772, both `file --line … --key …`).
+//     THE ANCHOR LAW is why a card and not a fatter log line: the machine must
+//     NEVER repair a rep it could not read (that would be inventing his data), so
+//     the only actor who can fix a malformed export and re-drop it is HIM — and an
+//     ask that needs the captain rides an anchor he already hits.
+//
+// NO NEW THRESHOLD IS INVENTED HERE:
+//   · the key is `capture:rejected:<local day>` — the ROLLING shape
+//     captains_call.fileGuard already understands (its own header, 10 Aug). 14
+//     pulls a day mint at most ONE card, and while that card sits unanswered
+//     tomorrow's pull mints nothing either. No nagging, no deck flood.
+//   · the spawn ceiling is LOCK_STALE_MS (:375), this file's own already-written
+//     answer to "how long may another local process hold us before we call it
+//     dead". Borrowed, not chosen.
+//   · counts, filenames and reasons in the line are MEASURED. Nothing rounded.
+// The card is a PROPOSAL: it asks, it never re-ingests anything on his behalf.
 // pull: ingest new *.jsonl from the Drive inbox → move processed files to /done.
-function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
+// deps.fileCard is the selftest's seam (awayday.mjs:409 pattern) — production passes nothing.
+function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
   if (!existsSync(inboxPath)) {
-    return { pulled: 0, files: 0, wired: false, note: `inbox not found (${inboxPath}) — Google Drive for Desktop not wired yet; nothing pulled` };
+    return { pulled: 0, files: 0, wired: false, rejections: [], carded: false, card_error: null, note: `inbox not found (${inboxPath}) — Google Drive for Desktop not wired yet; nothing pulled` };
   }
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
   let pulled = 0, rejected = 0, duplicates = 0, failed = 0, quarantined = 0, quarantinePath = null, ts_corrected = 0;
   const failures = [];
   const unregistered = [];
+  // one string per lost rep, "<file>[:L<n>] — <why>". INVARIANT: rejections.length
+  // === rejected, always. That equality is the whole repair and the selftest holds it.
+  const rejections = [];
   for (const f of files) {
     const full = join(inboxPath, f);
     // PER-FILE ISOLATION (E2E audit 25 Jul 2026): the read + ingest + move used to run
@@ -537,12 +782,21 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
     // unreadable file must cost one file, never the batch.
     try {
       const cands = [];
+      let lineNo = 0;
       for (const line of readFileSync(full, "utf8").split(/\r?\n/)) {
+        lineNo++;
         const s = line.trim(); if (!s) continue;
-        try { cands.push(JSON.parse(s)); } catch { rejected++; }
+        // WAS `catch { rejected++; }` — a rep counted and buried. The raw text does
+        // survive in done/, so naming file + LINE NUMBER is the whole difference
+        // between "rejected 3" and a rep he can actually find and re-export.
+        try { cands.push(JSON.parse(s)); }
+        catch (e) { rejected++; rejections.push(`${f}:L${lineNo} unreadable JSON — ${(e && e.message) || String(e)}`); }
       }
       const r = ingest(repsPath, cands, reg);
       pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
+      // THE FIELD NOBODY READ: ingestUnlocked has returned `errors` since v1 and only
+      // `paste` (:1167) ever looked. Attributed by file — a pull spans many.
+      for (const err of r.errors || []) rejections.push(`${f} — ${err}`);
       // The unattended lane must carry the same two warnings the interactive one does —
       // CapturePull runs 14×/day with nobody watching, and it was the ONLY lane that
       // stayed mute about a phantom concept or a quarantined line. (regression audit 30 Jul)
@@ -567,13 +821,185 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG) {
       continue;
     }
   }
+  // THE WIRE (see this function's header). Only fires when reps were actually lost —
+  // an empty inbox, the other thirteen pulls a day, and a clean file all cost nothing.
+  const carding = cardRejectedReps(rejections, deps);
   const uniqUnreg = [...new Set(unregistered)];
   const note = `pulled ${pulled} from ${files.length - failed} file(s)`
     + (failed ? `; ${failed} file(s) FAILED and stay in the inbox: ${failures.slice(0, 5).join("; ")}` : "")
     + (uniqUnreg.length ? `; ⚠ UNREGISTERED concept(s) coined: ${uniqUnreg.join(", ")} — add them to concepts.json` : "")
+    // THE REGISTRY GATE (10 Aug 2026). This note is the pull lane's ONLY written record
+    // (it is what reaches capture.log), and before the gate it could say "0 unregistered"
+    // on a run where the registry was unreadable and nothing had been checked at all.
+    + (reg && reg.loaded ? "" : `; ⚠ REGISTRY DOWN — ${(reg && reg.error) || "concepts.json not loaded"}; nothing canonicalized, nothing rewritten`)
     + (ts_corrected ? `; ⚠ ${ts_corrected} rep(s) claimed a ts AFTER arrival — corrected to the observed clock` : "")
-    + (quarantined ? `; ⚠ ${quarantined} unreadable reps_log line(s) moved to ${quarantinePath}` : "");
-  return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, ts_corrected, quarantined, quarantine_path: quarantinePath, wired: true, note };
+    + (quarantined ? `; ⚠ ${quarantined} unreadable reps_log line(s) moved to ${quarantinePath}` : "")
+    // the reasons the count never carried. Capped at 5 like the `failures` line above it,
+    // and the remainder is COUNTED rather than dropped — the full list is on the return.
+    + (rejections.length ? `; ⚠ ${rejections.length} rep(s) REJECTED — ${rejections.slice(0, 5).join(" · ")}`
+        + (rejections.length > 5 ? ` · +${rejections.length - 5} more` : "")
+        + `; raw text is in ${doneDir}` : "");
+  return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, ts_corrected, quarantined, quarantine_path: quarantinePath, wired: true, note, rejections, carded: carding.carded, card_said: carding.said, card_error: carding.error,
+    registry_loaded: !!(reg && reg.loaded), registry_error: (reg && reg.error) || null };
+}
+
+// The one door out of the unattended lane. Returns a REPORT and NEVER throws: the
+// reps that DID land are already on disk by the time we get here, and a card that
+// cannot be filed must not turn a good pull into a failed scheduled task (same rule
+// as chainHeartbeat above, and as awayday.mjs's own fileCard catch).
+// The line is front-loaded — captains_call clips every card at 140 chars
+// (captains_call.mjs:1030 `clip(line, 140)`), so the ASK comes first and the reason
+// takes whatever is left rather than the other way round.
+// (the done/ path is deliberately NOT in the line — the card is clipped at 140 and a
+//  Windows Drive path would eat the reason; the full path is in the note, for Claude.)
+function cardRejectedReps(rejections, deps = {}) {
+  if (!rejections.length) return { carded: false, said: null, error: null };
+  const fileCard = deps.fileCard || ((line, key) => execFileSync(process.execPath,
+    [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", key],
+    { encoding: "utf8", windowsHide: true, timeout: LOCK_STALE_MS }));
+  // LOCAL day, from this file's OWN localDate() (the helper cardQuarantine keys on,
+  // same shape as captains_call.localDate). A UTC day would roll the key at 05:30 IST
+  // — mid-morning — and split one day's asks across two key families.
+  const line = `Colab/Gem inbox se ${rejections.length} rep REJECT hue — raw done/ mein safe hai, export theek karke dobara daalein? ${rejections[0]}`;
+  try {
+    // THE OWNER'S OWN WORD, echoed — not our guess at it (live run, 10 Aug 2026: the
+    // second rejected pull of the same day printed "card filed" while fileGuard had
+    // actually minted NOTHING, because `capture:rejected:<day>` was already live. The
+    // suppression is correct and wanted; claiming a fresh card for it is not).
+    const said = String(fileCard(line, `capture:rejected:${localDate()}`) || "").trim().split("\n")[0];
+    return { carded: true, said: said || null, error: null };
+  } catch (e) {
+    // NOT recorded as filed. If this is swallowed, the rejection reaches nobody at
+    // all — capture.log has no readers, which is the defect this wire exists to fix.
+    return { carded: false, said: null, error: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// THE QUARANTINE'S MISSING CONSUMER (wiring audit, 10 Aug 2026)
+// ---------------------------------------------------------------------------
+// The 30 Jul repair above stopped the data LOSS — an unreadable reps_log line is
+// parked in `reps_log.jsonl.quarantine.jsonl` before the rewrite deletes it. What it
+// never built was the other end of that wire. A grep over scripts/*.mjs on 10 Aug
+// 2026 found "quarantine.jsonl" in exactly ONE script: this one. No organ read it, no
+// organ counted it (repo-wide it appears only in .gitignore:111 and MANUAL_WIRING.md).
+// A producer with no consumer is a black box, not a feedback loop — real reps left
+// the corpus and the only notice was console text telling him to "Inspect that file",
+// which is a command to remember, and THE ANCHOR LAW forbids that. Worse in the pull
+// lane: ArsenalFC-CapturePull fires 14× a day unattended, so that console goes to a
+// log nobody opens.
+// Both ends are connected here, inside the OWNER of both files:
+//   READ   — quarantineTriage() re-runs the SAME validator over the parked raw text
+//            and says which lines would come back today, which are already back, and
+//            which are still broken and why. `capture.mjs quarantine` prints it.
+//   NOTICE — cardQuarantine() hands the ask to captains_call.mjs's own CLI, so it
+//            rides an anchor he already hits instead of a console line. OWNERS-ONLY
+//            (precedent: dugout.mjs shells doubtminer.mjs; awayday.mjs:411 and
+//            watchman.mjs:772 file their cards through this exact door) — this file
+//            never opens captains_call.json, and the selftest asserts that.
+// Restoring is NEVER automatic: `quarantine retry` is a command a session runs on HIS
+// word, and it goes through `ingest` — same validator, same writer lock, same dedupe
+// key — so a parked line can only return the way any rep returns. Nothing is deleted
+// from the sidecar either: the dedupe makes a second retry a no-op, so the salvage
+// text stays readable forever.
+const quarantinePathFor = (repsPath) => repsPath + ".quarantine.jsonl";
+const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+// Pure read — never writes, never spawns. `recoverable` holds the RAW parked objects
+// (not the enriched reps): retry must re-enter through the front door so the arrival
+// clock, the canonicalisation and the dedupe all run exactly once more.
+export function quarantineTriage(repsPath, reg = EMPTY_REG) {
+  const sidecar = quarantinePathFor(repsPath);
+  if (!existsSync(sidecar)) return { sidecar, exists: false, parked: 0, recoverable: [], already_back: 0, broken: [] };
+  const existingKeys = new Set(loadReps(repsPath, reg).map(keyOf));
+  const recoverable = [], broken = [];
+  let parked = 0, already_back = 0;
+  for (const line of readFileSync(sidecar, "utf8").split(/\r?\n/)) {
+    const s = line.trim();
+    if (!s) continue;
+    parked++;
+    let o;
+    try { o = JSON.parse(s); } catch { broken.push({ line: s, why: "unparseable JSON line" }); continue; }
+    const v = validateRep(o, reg);
+    if (!v.ok) { broken.push({ line: s, why: v.error }); continue; }
+    if (existingKeys.has(keyOf(v.rep))) { already_back++; continue; }   // an earlier retry (or a re-paste) already restored it
+    recoverable.push(o);
+  }
+  return { sidecar, exists: true, parked, recoverable, already_back, broken };
+}
+
+// The card is IDEMPOTENT by day AND by family: captains_call.fileGuard treats a key
+// ending in a bare YYYY-MM-DD as ROLLING, so a second quarantine while the first ask
+// is still unanswered mints nothing (captains_call.mjs:874). Returns a REPORT and
+// never throws — the reps are already on disk by the time we get here, and a card
+// that could not be filed must not turn a successful ingest into a failure. It must,
+// however, be SAID: an unfiled card means the parked lines reach nobody at all.
+export function cardQuarantine({ count, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+  if (!count) return { filed: false, why: "nothing quarantined" };
+  const cc = join(scriptsDir, "captains_call.mjs");
+  if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
+  const line = `${count} rep line(s) reps_log se padhi hi nahi gayi — quarantine mein park hain, corpus se BAHAR. Wapas daalein?`;
+  const key = `reps:quarantine:${day}`;
+  try {
+    exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
+    return { filed: true, key, line };
+  } catch (e) {
+    return { filed: false, key, line, why: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// THE REGISTRY GATE's anchor (10 Aug 2026). Same shape, same organ, same rolling-day
+// key family as cardQuarantine above — deliberately, because it is the same law: only
+// the CAPTAIN can fix this. concepts.json is hand-curated canon (this file's own header,
+// :52) and the machine repairing it would be inventing his syllabus. And the lane that
+// matters is unattended: ArsenalFC-CapturePull fires 14×/day into a stdout nobody reads,
+// which is physio.mjs:369's own recorded lesson ("a defect only visible on a console
+// nobody reads is still invisible"). A rolling YYYY-MM-DD key mints at most ONE card a
+// day and mints nothing while the first is unanswered (captains_call.mjs:874), so 14
+// pulls cannot flood the deck. It PROPOSES; it never edits concepts.json.
+export function cardRegistryDown({ why, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+  if (!why) return { filed: false, why: "registry loaded — nothing to ask" };
+  const cc = join(scriptsDir, "captains_call.mjs");
+  if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
+  // front-loaded: captains_call clips at 140 chars (captains_call.mjs:1030), so the ASK
+  // comes first and the reason takes whatever is left.
+  const line = `concepts.json padha hi nahi gaya — naye reps bina registry ke log ho rahe hain, purane chhue nahi gaye. Theek karein? (${why})`;
+  const key = `capture:registry:${day}`;
+  try {
+    exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
+    return { filed: true, key, line };
+  } catch (e) {
+    return { filed: false, key, line, why: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// The CLI half of the gate, shared by BOTH write lanes — mirrors noticeQuarantine below.
+// It says the ONE thing the old output could not: the reps landed, nothing on disk was
+// rewritten, and `unregistered` is UNKNOWN rather than true. The pre-gate code printed
+// the opposite ("these coined phantom topics · add them to concepts.json") about
+// concepts that were already in the file.
+function noticeRegistry(lane, reg) {
+  if (!reg || reg.loaded === true) return null;
+  const why = reg.error || "concepts.json not loaded";
+  const c = cardRegistryDown({ why });
+  console.log(`${lane}: ⚠ REGISTRY DOWN — ${why}`);
+  console.log(`${lane}:   Reps ARE captured and NOTHING already in reps_log was rewritten, but no concept was canonicalized: unregistered reads null (unknown), never true.`);
+  console.log(c.filed
+    ? `${lane}:   A captain's card is filed (${c.key}); it deals at his next anchor. concepts.json is hand-curated canon — only he edits it. Reps retro-register on the next healthy load.`
+    : `${lane}:   The captain's card could NOT be filed (${c.why}), so nothing else in the organism knows. Fix dressing-room/state/concepts.json now.`);
+  return c;
+}
+
+// The CLI half, shared by BOTH lanes — the pull lane was the one that mattered and
+// the one the 30 Jul repair could not reach, because a warning printed into an
+// unattended scheduled task's stdout is a warning nobody receives.
+function noticeQuarantine(lane, r) {
+  if (!r || !r.quarantined) return null;
+  const c = cardQuarantine({ count: r.quarantined });
+  console.log(c.filed
+    ? `${lane}:   ⚠ their raw text is parked in ${r.quarantine_path} — they are NOT in reps_log any more. A captain's card is filed (${c.key}); it deals at his next anchor. Triage: node scripts/capture.mjs quarantine`
+    : `${lane}:   ⚠ their raw text is parked in ${r.quarantine_path} — they are NOT in reps_log any more, and the captain's card could NOT be filed (${c.why}), so NOTHING else in the organism knows. Triage now: node scripts/capture.mjs quarantine`);
+  return c;
 }
 
 // ---------------------------------------------------------------------------
@@ -680,6 +1106,84 @@ function selftest() {
         && s.ts_span_min === 30 && s.all_knew_correct === false && all.all_knew_correct === true
         && geminiBatchStats([]) === null;
     })());
+  // ── P6.1 REPAIR · THE LANE THAT HAD NO PRODUCER (wiring audit, 10 Aug 2026) ──
+  // THIS is the assertion the 7 Aug shape could never fail. gemini_quality.jsonl had
+  // two wired readers and had never existed, because the recorder was gated on
+  // `mode === "paste"` while 19 of the 21 live reps arrive through `rep`. If anyone
+  // re-gates the lane on the DOOR, or drops the provenance the 30-45d review needs,
+  // this goes red. (The CLI half of the same wire — a real `capture.mjs rep` run
+  // producing a real ledger line — lives in organism_test.mjs, in a sandbox, because
+  // GEMINI_QUALITY resolves against the real state dir.)
+  assert("P6.1 WIRE — the `rep` door PRODUCES a stats row, and the row NAMES its door (the paste-only gate is gone)",
+    (() => {
+      const one = [{ ts: "2026-08-10T10:47:15.190Z", surface: "gem", track: "concept", concept: "hallucinations", axis: "a", confidence: "guessed", correct: true }];
+      const s = geminiBatchStats(one, "2026-08-10T10:47:15.194Z", "rep");
+      const p = geminiBatchStats(one, null, "paste");
+      return s !== null && s.door === "rep" && s.n === 1 && s.of_batch === 1 && Array.isArray(s.notes) && s.notes.length === 0
+        && p.door === "paste";
+    })());
+  assert("P6.1 WIRE — provenance is the calling organ's own words, verbatim and deduped (dugout-voice / scrimmage-voice)",
+    (() => {
+      const rows = [
+        { ts: "2026-07-17T19:00:29.304Z", surface: "gem", track: "concept", concept: "embeddings", axis: "a", confidence: "shaky", correct: false, note: "dugout-voice think:140ms" },
+        { ts: "2026-07-17T19:01:55.561Z", surface: "gem", track: "concept", concept: "embeddings", axis: "d", confidence: "knew", correct: true, note: "dugout-voice think:140ms" },
+      ];
+      const s = geminiBatchStats(rows, null, "paste");
+      // one distinct note, not two — and it is the organ's string untouched, which is
+      // what makes a voice batch separable from an off-machine one at review time.
+      return s.notes.length === 1 && s.notes[0] === "dugout-voice think:140ms";
+    })());
+  assert("P6.1 WIRE — a colab batch is NOT recorded into a lane named gemini, and a mixed batch says how much of it was gem",
+    (() => {
+      const colab = [{ ts: "2026-08-10T10:00:00Z", surface: "colab", track: "skill", concept: "pydantic", axis: null, confidence: "knew", correct: true }];
+      const mixed = colab.concat([{ ts: "2026-08-10T10:05:00Z", surface: "gem", track: "concept", concept: "hallucinations", axis: "a", confidence: "shaky", correct: false }]);
+      const m = geminiBatchStats(mixed, null, "pull");
+      return geminiBatchStats(colab, null, "pull") === null
+        && m.n === 1 && m.of_batch === 2 && m.surfaces.colab === undefined && m.surfaces.gem === 1;
+    })());
+  assert("LAYERING — the 7 Aug engine is FROZEN verbatim as geminiBatchStatsLegacy (no filter, no door), and both still live here",
+    (() => {
+      const colab = [{ ts: "2026-08-10T10:00:00Z", surface: "colab", track: "skill", concept: "pydantic", axis: null, confidence: "knew", correct: true }];
+      const l = geminiBatchStatsLegacy(colab, "2026-08-10T11:00:00Z");
+      return typeof geminiBatchStatsLegacy === "function" && typeof geminiBatchStats === "function"
+        && l !== null && l.n === 1 && l.door === undefined && l.of_batch === undefined
+        && geminiBatchStats(colab, "2026-08-10T11:00:00Z", "pull") === null;   // the two DIFFER — that is the change, and it is visible
+    })());
+  // P6.1 REPAIR (10 Aug 2026) — THE APPEND MUST NOT BE ABLE TO LIE AGAIN.
+  // This is the assertion the 7 Aug shape could never fail: the write sat in an
+  // empty catch and the "row recorded" line printed unconditionally, so a ledger
+  // that took nothing still read as success. These three drive the real function
+  // against a real filesystem — a green here means a blocked ledger is REPORTED.
+  assert("P6.1 — recordGeminiQuality: a written row is verified ON DISK (ok + the line is really there)",
+    (() => {
+      const okPath = join(dir, "gq_ok.jsonl");
+      if (existsSync(okPath)) rmSync(okPath);
+      const res = recordGeminiQuality(okPath, { at: "2026-08-10T00:00:00Z", n: 1 });
+      const lines = readFileSync(okPath, "utf8").split("\n").filter((l) => l.trim());
+      return res.ok === true && lines.length === 1 && JSON.parse(lines[0]).n === 1;
+    })());
+  assert("P6.1 — recordGeminiQuality: an unwritable ledger returns ok:false (never a silent success)",
+    (() => {
+      // a path under a directory that does not exist → the append throws ENOENT.
+      const dead = join(dir, "no_such_dir_" + process.pid, "gemini_quality.jsonl");
+      const res = recordGeminiQuality(dead, { at: "2026-08-10T00:00:00Z", n: 1 });
+      return res.ok === false && typeof res.why === "string" && res.why.length > 0 && res.saved === false;
+    })());
+  assert("P6.1 — recordGeminiQuality: a blocked ledger salvages the row to the quarantine sidecar",
+    (() => {
+      // the ledger path is occupied by a DIRECTORY → the append throws, but the
+      // state dir itself is writable, which is exactly the sandbox case that proved
+      // the original defect (ledger un-appendable, everything else fine).
+      const blocked = join(dir, "gq_blocked.jsonl");
+      if (existsSync(blocked)) rmSync(blocked, { recursive: true });
+      mkdirSync(blocked, { recursive: true });
+      const side = blocked + ".quarantine.jsonl";
+      if (existsSync(side)) rmSync(side);
+      const res = recordGeminiQuality(blocked, { at: "2026-08-10T00:00:00Z", n: 2 });
+      const saved = existsSync(side) ? readFileSync(side, "utf8").split("\n").filter((l) => l.trim()) : [];
+      return res.ok === false && res.saved === true && res.sidecar === side
+        && saved.length === 1 && JSON.parse(saved[0]).n === 2;
+    })());
 
   // 3) malformed-reject (7): missing ts, out-of-set conf, numeric conf, bad surface, missing concept, non-bool correct, note wrong type
   const bad = [
@@ -741,9 +1245,18 @@ function selftest() {
   // concepts.json missing ⇒ still logs (empty registry)
   const p2 = join(dir, "reps_noreg.jsonl"); if (existsSync(p2)) rmSync(p2);
   const nr = ingest(p2, [rep({ ts: "2026-07-11T11:12:00Z", question: "noreg" })], loadRegistry(join(dir, "no_such_concepts.json")));
-  assert("concepts.json missing ⇒ still logs (unregistered:true)", nr.appended === 1);
+  assert("concepts.json missing ⇒ still logs (never a crash, never a lost rep)", nr.appended === 1);
   assert("UNREGISTERED IS NAMED, not just flagged (the count had no consumer before)",
-    Array.isArray(ur.unregistered) && ur.unregistered.includes("brand new concept") && nr.unregistered.length === 1);
+    Array.isArray(ur.unregistered) && ur.unregistered.includes("brand new concept"));
+  // AMENDED BY THE REGISTRY GATE (10 Aug 2026). This line used to read
+  // `nr.unregistered.length === 1` — a MISSING concepts.json was allowed to accuse the
+  // rep of being a phantom. It is the same false claim the malformed case made against
+  // the live canon (85 real concepts, all suddenly "unregistered"), and it fed the same
+  // consumer: physio.mjs:372 bleeds every truthy `unregistered` as a phantom topic. A
+  // registry that was never read judges nothing, whether it is missing or broken.
+  assert("GATE: a MISSING registry accuses nobody either — the rep lands unjudged (null), and the report says the registry was down",
+    nr.unregistered.length === 0 && nr.registry_loaded === false && /not found/.test(nr.registry_error || "")
+    && loadReps(p2, loadRegistry(join(dir, "no_such_concepts.json")))[0].unregistered === null);
 
   // ---- audit 30 Jul 2026 ----
   // SNAKE_CASE ↔ PROSE: ids are snake_case, reps are prose. They must meet.
@@ -854,6 +1367,51 @@ function selftest() {
   const pr2 = pullFromInbox(inbox2, p, reg);
   assert("pull archive: collision keeps BOTH files in done/ (no silent overwrite)",
     pr2.pulled === 1 && pr2.failed === 0 && readdirSync(join(inbox2, "done")).filter((f) => f.startsWith("ccc")).length === 2);
+
+  // ── THE REJECTION LANE'S REASONS + ITS ONE READER (wiring audit, 10 Aug 2026) ──
+  // These are the assertions that FAIL if the wire breaks again. Before the repair
+  // this exact fixture printed "pulled 1 from 1 file(s) (rejected 3, duplicates 0)"
+  // and `errors` was not even a key on the return.
+  {
+    const inbox3 = join(dir, "inbox3"); mkdirSync(inbox3, { recursive: true });
+    writeFileSync(join(inbox3, "colab_export.jsonl"), [
+      JSON.stringify(rep({ ts: "2026-07-11T12:10:00Z", question: "rej_ok" })),          // good
+      JSON.stringify(rep({ ts: "2026-07-11T12:11:00Z", question: "rej_axis", axis: "a-i" })), // validateRep: bad axis
+      JSON.stringify({ surface: "gem", track: "concept", concept: "tokenization", axis: "b", question: "rej_ts", confidence: "shaky", correct: false }), // no ts
+      '{"ts":"2026-07-11T12:13:00Z","surface":"colab" BROKEN',                            // unparseable line
+    ].join("\n") + "\n");
+    const cards = [];
+    const pr3 = pullFromInbox(inbox3, p, reg, { fileCard: (line, key) => { cards.push({ line, key }); return `captains_call: filed c9 — it deals at his next anchor\n`; } });
+    assert("REJECTIONS CARRY A REASON: every rejected rep is named, count matches exactly (was: a bare count, reasons dropped)",
+      pr3.rejected === 3 && Array.isArray(pr3.rejections) && pr3.rejections.length === 3);
+    assert("...the validateRep reasons come from ingest's `errors`, which pull never read before",
+      pr3.rejections.some((s) => /colab_export\.jsonl — .*axis/i.test(s)) && pr3.rejections.some((s) => /colab_export\.jsonl — .*ts/i.test(s)));
+    assert("...and an unparseable inbox line names its FILE and LINE NUMBER, not just `rejected++`",
+      pr3.rejections.some((s) => /^colab_export\.jsonl:L4 unreadable JSON — /.test(s)));
+    assert("...the note SAYS the reasons and points at the raw text in done/ (capture.log's line is no longer a bare count)",
+      /3 rep\(s\) REJECTED/.test(pr3.note) && /unreadable JSON/.test(pr3.note) && /raw text is in /.test(pr3.note));
+    assert("THE WIRE: a rejected pull files exactly ONE captain's card through captains_call's own CLI — the lane's only reader (capture.log has none)",
+      pr3.carded === true && cards.length === 1 && /\d+ rep REJECT hue/.test(cards[0].line) && cards[0].line.includes("colab_export.jsonl"));
+    assert("...keyed capture:rejected:<local day> — the ROLLING shape fileGuard already dedups, so 14 pulls a day mint at most one card",
+      /^capture:rejected:\d{4}-\d{2}-\d{2}$/.test(cards[0].key));
+    assert("...and the deck's OWN word is echoed back, never our guess at it (a suppressed re-file must not read as a fresh card)",
+      pr3.card_said === "captains_call: filed c9 — it deals at his next anchor");
+    assert("...the good rep still landed (the card is a proposal, never a gate on capture)", !!findQ("rej_ok"));
+    // a clean pull must stay silent — no card for an ordinary night
+    const inbox4 = join(dir, "inbox4"); mkdirSync(inbox4, { recursive: true });
+    writeFileSync(join(inbox4, "clean.jsonl"), JSON.stringify(rep({ ts: "2026-07-11T12:20:00Z", question: "rej_clean" })) + "\n");
+    const clean = [];
+    const pr4 = pullFromInbox(inbox4, p, reg, { fileCard: (line, key) => clean.push({ line, key }) });
+    assert("...and a CLEAN pull files nothing (13 of the 14 daily pulls must cost the deck zero)",
+      pr4.rejections.length === 0 && pr4.carded === false && clean.length === 0);
+    // the card must never be able to fail the pull, or one un-writable deck kills capture
+    // (a fresh inbox — inbox3's file is already archived to done/ by the pull above)
+    const inbox5 = join(dir, "inbox5"); mkdirSync(inbox5, { recursive: true });
+    writeFileSync(join(inbox5, "boom.jsonl"), "{ not json at all\n");
+    const boom = pullFromInbox(inbox5, p, reg, { fileCard: () => { throw new Error("deck locked"); } });
+    assert("...a card that CANNOT be filed is reported, never thrown, and never recorded as filed",
+      boom.rejections.length === 1 && boom.carded === false && /deck locked/.test(String(boom.card_error)));
+  }
 
   // CONCURRENT READER (31 Jul 2026). Nineteen scripts read reps_log with no lock,
   // and on Windows a rename over a path another process holds open fails EPERM —
@@ -971,6 +1529,126 @@ function selftest() {
       chainTimeoutMs(tcfg) === 3000 && chainTimeoutMs(join(dir, "__no_hb_cfg__")) === null);
   }
 
+  // --- THE QUARANTINE WIRE (wiring audit, 10 Aug 2026) ----------------------
+  // These four exist because the sidecar was written for eleven days and read by
+  // NOTHING. Break any end of the wire again and one of them goes red.
+  {
+    const qp = join(dir, "q_reps.jsonl");
+    if (existsSync(qp)) rmSync(qp);
+    if (existsSync(quarantinePathFor(qp))) rmSync(quarantinePathFor(qp));
+    // one good rep on disk, then a hand-mangled line beside it, then an ingest that
+    // rewrites the file — exactly the 30 Jul scenario that parks and deletes.
+    ingest(qp, [rep({ question: "q-keep" })], reg);
+    appendFileSync(qp, '{"ts":"2026-08-10T09:00:00Z","surface":"gem","track":"concept","concept":"tokenization","axis":"a","question":"q-park","confidence":"knew"\n', "utf8");  // truncated → unparseable
+    appendFileSync(qp, JSON.stringify({ ts: "2026-08-10T09:05:00Z", surface: "gem", track: "concept", concept: "tokenization", axis: "a", question: "q-fixable", confidence: "knew", correct: true }) + "\n", "utf8");
+    const qr = ingest(qp, [rep({ question: "q-new" })], reg);
+    assert("quarantine wire — the sidecar is still WRITTEN before the rewrite (the 30 Jul repair)",
+      qr.quarantined === 1 && existsSync(quarantinePathFor(qp)));
+    // Only the truncated line parks (the second appended line was valid and survived
+    // the rewrite). A REPAIRED line goes into the sidecar by hand, because that is the
+    // real recovery path: parked text is text, he fixes it, and retry re-ingests it.
+    appendFileSync(quarantinePathFor(qp), JSON.stringify({ ts: "2026-08-10T09:10:00Z", surface: "gem", track: "concept", concept: "tokenization", axis: "b", question: "q-repaired", confidence: "shaky", correct: false }) + "\n", "utf8");
+    const t = quarantineTriage(qp, reg);
+    assert("quarantine wire — the parked text is READ BACK and triaged (until 10 Aug 2026 no organ read this file at all)",
+      t.exists && t.parked === 2 && t.recoverable.length === 1 && t.broken.length === 1
+      && /unparseable/.test(t.broken[0].why) && t.recoverable[0].question === "q-repaired");
+    // retry returns a parked rep through the FRONT DOOR, and is idempotent after it.
+    const back = ingest(qp, t.recoverable, reg);
+    const again = quarantineTriage(qp, reg);
+    assert("quarantine wire — retry restores a recoverable line through ingest, and a second pass is a no-op (already_back)",
+      back.appended === 1 && loadReps(qp, reg).some((x) => x.question === "q-repaired")
+      && again.recoverable.length === 0 && again.already_back === 1 && again.parked === 2);
+    // THE NOTICE. It must leave this process as a captain's card, on the owner's CLI.
+    const calls = [];
+    const c = cardQuarantine({ count: 3, day: "2026-08-10", scriptsDir: __dirname, exec: (bin, argv) => { calls.push({ bin, argv }); return ""; } });
+    assert("quarantine wire — the notice rides an ANCHOR: it shells captains_call.mjs file --line with a ROLLING day-key (reps:quarantine:<day>)",
+      c.filed === true && calls.length === 1 && calls[0].argv[0].endsWith("captains_call.mjs")
+      && calls[0].argv[1] === "file" && calls[0].argv[2] === "--line"
+      && calls[0].argv.includes("--key") && calls[0].argv[calls[0].argv.indexOf("--key") + 1] === "reps:quarantine:2026-08-10"
+      && /3 rep line/.test(calls[0].argv[3])
+      // a card that cannot be filed is REPORTED, never thrown — the reps are on disk already
+      && cardQuarantine({ count: 1, scriptsDir: __dirname, exec: () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }); } }).filed === false);
+    // OWNERS-ONLY, asserted on this file's own source (precedent: awayday.mjs:538).
+    // OWNERS-ONLY, asserted on this file's own source — scoped to the wire's body the
+    // way awayday.mjs:538 scopes its own, because the whole-file grep matches the
+    // sentence you are reading (a check that fails on its own documentation is noise).
+    const ownSrc = readFileSync(join(__dirname, "capture.mjs"), "utf8");
+    const wireSrc = ownSrc.slice(ownSrc.indexOf("export function cardQuarantine"), ownSrc.indexOf("function noticeQuarantine"));
+    assert("quarantine wire — capture never opens the deck's state file; it hands the ask to that organ's CLI (owners-only)",
+      wireSrc.length > 0 && /captains_call\.mjs/.test(wireSrc) && !/captains_call\.json/.test(wireSrc)
+      && !/(writeFileSync|appendFileSync|writeAtomic|rmSync)\s*\([^)]*captains_call/.test(ownSrc));
+    // BOTH ENDS STILL CONNECTED. A helper nobody calls is the same dead wire in a new
+    // coat, so the call sites are asserted too — paste, pull, and the read door.
+    assert("quarantine wire — both ingest lanes still fire the notice, and the read door is still on the CLI",
+      /noticeQuarantine\("paste", r\)/.test(ownSrc) && /noticeQuarantine\("pull", r\)/.test(ownSrc)
+      && /mode === "quarantine"/.test(ownSrc) && /quarantineTriage\(REPS_LOG, reg\)/.test(ownSrc));
+  }
+
+  // --- THE REGISTRY GATE (wiring audit, 10 Aug 2026) ------------------------
+  // `loaded` was SET at :123 and read NOWHERE in its own owner. Both facts asserted
+  // here were MEASURED on a sandbox copy of the live concepts.json (85 concepts, one
+  // trailing comma appended) before the gate existed — remove the gate and the
+  // history-rewrite assertion fails on exactly that evidence again.
+  {
+    const okPath  = join(dir, "gate_concepts.json");
+    const badPath = join(dir, "gate_concepts_bad.json");
+    const canon = { concepts: { tool_use: { aliases: ["tool use"] }, vector_search: { aliases: [] } } };
+    writeFileSync(okPath, JSON.stringify(canon));
+    writeFileSync(badPath, JSON.stringify(canon) + ",");   // ONE trailing comma: the realistic hand-edit slip on hand-curated canon
+    const good = loadRegistry(okPath), dead = loadRegistry(badPath);
+
+    assert("GATE: a malformed concepts.json loads dead AND names why (loaded:false was SET and never READ by its own owner before 10 Aug)",
+      good.loaded === true && dead.loaded === false && /unreadable/.test(dead.error || ""));
+    assert("GATE: 'not found' and 'unreadable' stay DIFFERENT errors — the captain needs different words for a missing canon and a broken one",
+      /not found/.test(loadRegistry(join(dir, "__no_such_concepts__.json")).error || ""));
+
+    const gp = join(dir, "reps_gate.jsonl"); if (existsSync(gp)) rmSync(gp);
+    const gRep = (n, c) => ({ ts: `2026-07-1${n}T10:00:00Z`, surface: "gem", track: "concept", concept: c, axis: "a", question: "g" + n, confidence: "knew", correct: true });
+    ingest(gp, [gRep(1, "tool use"), gRep(2, "vector_search")], good);
+    assert("GATE: a HEALTHY registry canonicalizes exactly as it always did — the gate did not weaken the normal path",
+      loadReps(gp, good).map((r) => `${r.concept}:${r.unregistered}`).join("|") === "tool_use:false|vector_search:false");
+
+    // THE MEASURED DAMAGE, frozen. loadReps re-validates every stored line (:315) and
+    // ingestUnlocked rewrites the file from that result (:449), so before the gate this
+    // ONE ingest turned both stored rows into `tool use`/`vector search`,
+    // unregistered=true — every real topic forking a phantom twin on disk, forever.
+    const gr = ingest(gp, [gRep(3, "tool use")], dead);
+    const after = readFileSync(gp, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert("GATE: a dead registry NEVER rewrites history — both stored canonical ids survive an ingest (measured before the gate: tool_use → 'tool use', unregistered false → true)",
+      after[0].concept === "tool_use" && after[0].unregistered === false
+      && after[1].concept === "vector_search" && after[1].unregistered === false);
+    assert("GATE: the NEW rep makes NO CLAIM — unregistered is null (unknown), never the phantom accusation an unreadable canon used to produce",
+      gr.appended === 1 && after[2].unregistered === null);
+    assert("GATE: the report SAYS the registry was down — an empty `unregistered` array alone reads as a clean bill of health and is not one",
+      gr.registry_loaded === false && /unreadable/.test(gr.registry_error || "") && gr.unregistered.length === 0);
+
+    // IDEMPOTENCE — the law normText (:100) and #24 both obey. A second dead-registry
+    // pass must not move a byte, or the dedupe key splits and reps re-append forever.
+    const snap = readFileSync(gp, "utf8");
+    const again = ingest(gp, [gRep(3, "tool use")], dead);
+    assert("GATE: a second dead-registry ingest is a pure duplicate and moves NOTHING on disk",
+      again.appended === 0 && again.duplicates === 1 && readFileSync(gp, "utf8") === snap);
+
+    // RETRO-REGISTRATION — the promise the paste output has always printed out loud.
+    const healed = loadReps(gp, good);
+    assert("GATE: once the canon parses again the unjudged rep retro-registers (null → a real verdict), which is what the paste output has always promised",
+      healed[2].concept === "tool_use" && healed[2].unregistered === false);
+
+    assert("LAYERING: the frozen pre-gate engine is still in the file and still agrees with the plan of record whenever the registry IS readable",
+      JSON.stringify(enrichConcept({ concept: "tool use", track: "concept" }, good))
+      === JSON.stringify(enrichConceptLegacy({ concept: "tool use", track: "concept" }, good)));
+
+    // THE WIRE. concepts.json is hand-curated canon — only HE can fix it — and the lane
+    // that breaks is unattended (CapturePull, 14×/day, stdout nobody reads).
+    const gcalls = [];
+    const rc = cardRegistryDown({ why: "concepts.json unreadable: Unexpected token", day: "2026-08-10", scriptsDir: __dirname, exec: (bin, argv) => { gcalls.push(argv); return ""; } });
+    assert("GATE WIRE: the ask rides an ANCHOR — capture shells captains_call.mjs's OWN CLI with a ROLLING day-key (capture:registry:<day>), so 14 pulls mint at most one card",
+      rc.filed === true && gcalls.length === 1 && gcalls[0][0].endsWith("captains_call.mjs")
+      && gcalls[0][gcalls[0].indexOf("--key") + 1] === "capture:registry:2026-08-10");
+    assert("GATE WIRE: an unfilable card is REPORTED, never thrown — the reps are already on disk and a dead deck must not fail the pull",
+      cardRegistryDown({ why: "x", scriptsDir: __dirname, exec: () => { throw new Error("deck locked"); } }).filed === false);
+  }
+
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -1074,6 +1752,9 @@ function main() {
       process.exit(1);
     }
     console.log(`paste: appended ${r.appended}, rejected ${r.rejected}, duplicates ${r.duplicates} → ${REPS_LOG} (total ${r.total})`);
+    // FIRST, because it changes how every line under it must be read: if the registry is
+    // down, "0 unregistered" means "nothing was checked", not "all clean". (10 Aug 2026)
+    noticeRegistry(mode === "rep" ? "rep" : "paste", reg);
     // The two silences the 30 Jul audit found: an unknown concept, and a dropped line.
     // Both are now LOUD at the one place a human is looking.
     if (r.unregistered && r.unregistered.length) {
@@ -1082,21 +1763,46 @@ function main() {
     }
     if (r.skipped_existing) {
       console.log(`paste: ⚠ ${r.skipped_existing} EXISTING line(s) in reps_log could not be read: ${r.skipped_reasons.join(" · ")}`);
-      console.log(r.quarantined
-        ? `paste:   their raw text was saved to ${r.quarantine_path} before the rewrite — they are NOT in reps_log any more. Inspect that file.`
-        : `paste:   nothing was rewritten this run, so they are still in reps_log. Inspect it before the next successful ingest.`);
+      // 10 Aug 2026 — "Inspect that file" used to be the WHOLE notice, and nothing in
+      // the organism read that file. The card is the notice now (see noticeQuarantine).
+      if (!noticeQuarantine("paste", r)) {
+        console.log(`paste:   nothing was rewritten this run, so they are still in reps_log. Inspect it before the next successful ingest.`);
+      }
     }
     if (r.ts_corrected) console.log(`paste: ⚠ ${r.ts_corrected} rep(s) claimed a timestamp AFTER they arrived — ts corrected to the observed clock (ts_claimed keeps the original).`);
     if (r.errors.length) console.log(`  rejected reasons: ${r.errors.slice(0, 10).join("; ")}`);
-    // P6.1 — the Gemini surface's outcome ledger (paste lane only: the paste door IS
-    // the off-machine handoff; the `rep` door is the in-session surface the teaching
-    // audit already covers). Recorded, never judged.
-    if (mode === "paste" && r.appended > 0) {
-      const stats = geminiBatchStats(r.appended_rows, r.observed_at);
+    // P6.1 REPAIR — THE LANE'S PRODUCER (wiring audit, 10 Aug 2026). This gate read
+    // `mode === "paste"`, which is the whole reason gemini_quality.jsonl had two wired
+    // readers and had never once been written. The traced cause and the evidence live
+    // in geminiBatchStats' header above — read it before touching this line again.
+    // BOTH doors record now. There is no second engine to drift: `rep` and `paste`
+    // already share one ingest, one validator and one writer lock, and what decides
+    // what gets measured is the ROWS (surface "gem"), not which door they walked in.
+    // `mode` rides along so the row can NAME its door — the label the 30-45d review
+    // needs and the machine can actually prove.
+    if (r.appended > 0) {
+      const stats = geminiBatchStats(r.appended_rows, r.observed_at, mode);
       if (stats) {
-        try { appendFileSync(GEMINI_QUALITY, JSON.stringify(stats) + "\n", "utf8"); } catch { /* a ledger miss never blocks reps */ }
-        console.log(`paste: gemini-quality row recorded (n ${stats.n} · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
-        console.log("paste: (Gemini ka TRANSCRIPT ab /harvest se aa sakta hai — jo sitting harvest hui, wahan process bhi dikhta hai. Yeh lane phir bhi sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
+        // 10 Aug 2026 — the write REPORTS now (see recordGeminiQuality): the success
+        // line is printed only when the row is verified on disk. It used to print
+        // either way, which is how a dead lane could look alive for weeks.
+        const gq = recordGeminiQuality(GEMINI_QUALITY, stats);
+        // the surrounding lines in this block have always printed a fixed "paste:"
+        // prefix even on the `rep` door (a pre-existing wart this repair does not
+        // widen); these lines carry the REAL door, because "which door" is now data.
+        if (gq.ok) {
+          console.log(`${mode}: gemini-quality row recorded (door ${mode} · n ${stats.n}/${stats.of_batch} gem · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
+          // the §6.2 harvest note belongs to the OFF-MACHINE handoff, so it stays on
+          // the paste door — an in-session `rep` does not need it once per rep.
+          if (mode === "paste") console.log("paste: (Gemini ka TRANSCRIPT ab /harvest se aa sakta hai — jo sitting harvest hui, wahan process bhi dikhta hai. Yeh lane phir bhi sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
+        } else {
+          console.log(`${mode}: ⚠ gemini-quality row NOT recorded — ${gq.why}`);
+          console.log(`${mode}:   your ${r.appended} rep(s) ARE safe in reps_log; only this batch's OUTCOME stats missed ${GEMINI_QUALITY}.`);
+          console.log(gq.saved
+            ? `${mode}:   the row was salvaged to ${gq.sidecar} — scout.mjs and the watchman count the LEDGER only, so until it is merged back this batch is invisible to both.`
+            : `${mode}:   the salvage sidecar could not be written either — this batch's stats are LOST.`);
+          console.log(`${mode}:   re-running this door does NOT recover it: the same reps dedup to 0 appended and no stats row is computed. Free the ledger file first.`);
+        }
       }
     }
     // #26 — the paste lane's recompute. OPT-IN, and that is deliberate: the forge
@@ -1128,6 +1834,19 @@ function main() {
     const r = pullFromInbox(inbox, REPS_LOG, reg);
     console.log(`pull: ${r.note}` + (r.wired ? ` (rejected ${r.rejected || 0}, duplicates ${r.duplicates || 0})` : ""));
     if (!r.wired) console.log(`  to enable: create ${inbox} (or fix ARSENAL_REPS_INBOX / capture_config.json), then enable task ArsenalFC-CapturePull.`);
+    // THE REGISTRY GATE's anchor on the unattended lane — the whole reason it is a card
+    // and not a console line. This runs 14×/day into a stdout nobody reads. (10 Aug 2026)
+    noticeRegistry("pull", reg);
+    // The card is the ONLY reader this lane has (see pullFromInbox's header): whether
+    // it was filed decides whether the rejection reached a human or died in capture.log.
+    if (r.rejections && r.rejections.length) {
+      console.log(r.carded
+        ? `pull: ⚠ ${r.rejections.length} rejected rep(s) → captains_call (key capture:rejected:${localDate()}): ${r.card_said || "handed to the deck"}`
+        : `pull: ⚠ ${r.rejections.length} rejected rep(s) and the card could NOT be filed${r.card_error ? ` (${r.card_error})` : ""} — nothing else reads this lane, so the reasons above are the only record.`);
+    }
+    // 10 Aug 2026 — THE LANE THAT NEEDED IT MOST. `pull` runs 14× a day with nobody
+    // reading its stdout, so a quarantine here reached no one at all until the card.
+    noticeQuarantine("pull", r);
     // #25 — THE FIX. A rep pulled at 14:00 used to leave every derived organ on
     // yesterday's answer until 08:39 tomorrow. Now the pull that actually brought
     // reps in triggers the same ordered recompute the morning beat runs.
@@ -1140,11 +1859,31 @@ function main() {
     process.exit(0);
   }
 
-  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs selftest                 run baked-mock checks");
+  // THE QUARANTINE DOOR (10 Aug 2026) — the read end of the sidecar nothing read.
+  if (mode === "quarantine") {
+    const t = quarantineTriage(REPS_LOG, reg);
+    if (!t.exists) { console.log(`quarantine: nothing parked — ${t.sidecar} does not exist (no reps_log line has ever been unreadable).`); process.exit(0); }
+    console.log(`quarantine: ${t.parked} line(s) parked in ${t.sidecar} — ${t.recoverable.length} would come back today, ${t.already_back} already back in reps_log, ${t.broken.length} still broken.`);
+    for (const b of t.broken.slice(0, 10)) console.log(`  ✗ ${b.why}\n     ${b.line.slice(0, 160)}`);
+    if (t.broken.length > 10) console.log(`  … and ${t.broken.length - 10} more`);
+    if (process.argv[3] !== "retry") {
+      console.log(t.recoverable.length
+        ? "quarantine: `node scripts/capture.mjs quarantine retry` puts the recoverable ones back through the front door (same validator, same dedupe). HIS word first — this is his corpus."
+        : "quarantine: nothing is recoverable as-is. A broken line is TEXT: fix it in the sidecar by hand, then retry. Nothing here is ever deleted.");
+      process.exit(0);
+    }
+    if (!t.recoverable.length) { console.log("quarantine retry: nothing recoverable — reps_log untouched."); process.exit(0); }
+    const rr = ingest(REPS_LOG, t.recoverable, reg);
+    console.log(`quarantine retry: appended ${rr.appended}, duplicates ${rr.duplicates}, rejected ${rr.rejected} → ${REPS_LOG} (total ${rr.total}). The sidecar is NOT cleared — a second retry dedups to 0.`);
+    if (rr.appended > 0) console.log("quarantine retry: derived state does NOT yet include these — run `node scripts/heartbeat.mjs`.");
+    process.exit(0);
+  }
+
+  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs quarantine [retry]       triage the reps parked out of reps_log (retry = re-ingest the recoverable ones)\n  node capture.mjs selftest                 run baked-mock checks");
   process.exit(0);
 }
 
 // Windows-safe entry guard (normalise argv[1] to a file:// URL, like timeaudit.mjs)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { validateRep, ingest, loadReps, pullFromInbox, keyOf, keyOfLegacy, loadRegistry, canonicalize, resolveClocks, chainHeartbeat, chainTimeoutMs };
+export { validateRep, ingest, loadReps, pullFromInbox, keyOf, keyOfLegacy, loadRegistry, canonicalize, resolveClocks, chainHeartbeat, chainTimeoutMs, quarantinePathFor, enrichConcept, enrichConceptLegacy };

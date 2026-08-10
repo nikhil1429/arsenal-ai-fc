@@ -997,6 +997,95 @@ export function probeOutcomes(today, yday, deps = {}) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// THE RECITAL WATCH (10 Aug 2026) — the second reader of a journal that had one.
+// Today the Gaffer learned to read the captain's locked capsules back to him
+// VERBATIM, and every recital is graded BY THE MACHINE (dugout.mjs /recital →
+// recital_audit.jsonl, its single writer — he is never asked to check it, per
+// THE ANCHOR LAW). dugout's recitalScar() then injects the Gaffer's own worst
+// verdicts into his constitution every session, so the organ self-corrects.
+// That is exactly half a loop: it corrects itself where nobody can see it. If
+// he drifts every night for a week, the constitution knows and the captain does
+// not — the black box he objected to. This probe is the visible half. READ-ONLY;
+// a cross-organ write would break the single-writer law for no gain.
+//
+// The four verdicts, and why they are not equal:
+//   DRIFT      his own prose paraphrased back at him (dugout's coverage < 85%).
+//              The worst of the four by construction — the entire surface exists
+//              to give him HIS sentences, so a smoother version does not degrade
+//              the feature, it defeats it. Ranked first here because dugout ranks
+//              it first itself: it paints DRIFT Arsenal red (#EF0107) and both
+//              others amber (#d29922). Among the amber pair, by count — the same
+//              worst-first tally recitalScar() already sorts by.
+//   NO-PRICE   it began reading without saying what the read costs; he cannot
+//              see the text, so the price is his only way to know the length.
+//   OVERRUN    it kept going past the page instead of stopping for his word.
+//   UNVERIFIED no transcript that session (the wire strips its own
+//              outputTranscription after two early closes). NEVER a pass — and
+//              never a failure either. Ungraded rows are counted apart, kept out
+//              of the denominator, and named, so "clean" can never be a night
+//              nothing was actually measured.
+//
+// WINDOW: the local day — the same filter gather() puts on afferent rows, audit
+// rows and mouth rows. This is the 23:55 sweep, so the day is closed when it
+// reads. THRESHOLD: none invented. ANY failing verdict in the window speaks;
+// dugout owns the one real number (its 85% coverage cut) and a second threshold
+// here would be a guess. QUIET vs DEAD holds at both ends: an absent journal and
+// a day with no recitals are both silence, because a day he never opened the
+// dugout is a day off, not a failure.
+// ---------------------------------------------------------------------------
+export function probeRecital(today, deps = {}) {
+  const rows = deps.rows !== undefined ? deps.rows : (() => {
+    const r = [];
+    try {
+      for (const line of readFileSync(join(STATE_DIR, "recital_audit.jsonl"), "utf8").split("\n")) {
+        if (!line.trim()) continue;
+        try { r.push(JSON.parse(line)); } catch { }
+      }
+    } catch { /* never born = no recital has ever been graded, which is not a wound */ }
+    return r;
+  })();
+  const day = rows.filter((r) => r && localDayOf(r.ts) === today);
+  if (!day.length) return [];
+  const ungraded = day.filter((r) => r.verdict === "UNVERIFIED");
+  const graded = day.filter((r) => r.verdict && r.verdict !== "UNVERIFIED");
+  if (!graded.length) {
+    return [{ id: "recital-unverified", level: "INFO",
+      finding: `all ${ungraded.length} recital(s) today came back UNVERIFIED — the transcript was stripped, so NOTHING about the Gaffer's reading could be graded tonight, in either direction`,
+      evidence: "recital_audit.jsonl verdict=UNVERIFIED (dugout: the wire drops its own outputTranscription after two early closes) — an UNVERIFIED row is never counted as a pass, in any organ" }];
+  }
+  const bad = graded.filter((r) => r.verdict !== "PASS");
+  if (!bad.length) return [];
+  const tally = {};
+  for (const r of bad) tally[r.verdict] = (tally[r.verdict] || 0) + 1;
+  const worst = Object.entries(tally)
+    .sort((a, b) => (a[0] === "DRIFT" ? 0 : 1) - (b[0] === "DRIFT" ? 0 : 1) || b[1] - a[1] || a[0].localeCompare(b[0]));
+  const WHAT = {
+    DRIFT: "HIS OWN PROSE PARAPHRASED BACK AT HIM",
+    "NO-PRICE": "started reading without first saying what the read costs",
+    OVERRUN: "kept reading past the page instead of stopping for his word",
+  };
+  // Both caps are mirrored, not chosen: 5 rows is probeReconcile's own display cap
+  // (the night stays readable, the journal keeps everything), and 8 dropped words
+  // is recitalScar's slice — the Gaffer and the captain read the same sample.
+  const dropped = [...new Set(bad.filter((r) => r.verdict === "DRIFT").flatMap((r) => r.missing || []))].slice(0, 8);
+  return [{
+    // WARN, not INFO, and the choice is deliberate: INFO never reaches briefLines,
+    // and a record he cannot see is the defect this probe exists to close. Non-INFO
+    // also arms Tier 2, which is in-lane — the repair, if there is one, lives in
+    // dugout.mjs's recital law; the capsules whose prose was smoothed are already
+    // forbidden ground in the Tier-2 prompt's HARD LIMITS.
+    id: "recital-failed", level: "WARN",
+    finding: `the Gaffer failed ${bad.length} of ${graded.length} graded recital(s) today — `
+      + worst.map(([v, c]) => `${v} ×${c} (${WHAT[v] || "re-read THE RECITAL LAW"})`).join(" · "),
+    evidence: bad.slice(0, 5).map((r) => `${r.capsule || "?"} ${r.page || "?"}: ${r.verdict}, ${r.coverage}% of his words in order (${r.spoken_words} spoken vs ${r.payload_words} handed over)`).join(" · ")
+      + (bad.length > 5 ? ` · ${bad.length - 5} more in recital_audit.jsonl` : "")
+      + (ungraded.length ? ` · ${ungraded.length} further recital(s) UNVERIFIED tonight — ungraded, counted as neither pass nor failure` : "")
+      + (dropped.length ? ` · words of HIS that were dropped: ${dropped.join(", ")}` : "")
+      + " — dugout.mjs recitalScar() already feeds this into the Gaffer's own constitution; this line exists so the captain sees what the machine corrected",
+  }];
+}
+
 async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
@@ -1016,6 +1105,7 @@ async function run(argv) {
   const nowHM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   findings.push(...probeEveningChain(w.today, nowHM)); // H0 — the evening report's first reader
   findings.push(...probeOutcomes(w.today, yday));      // H1 — the scoreboard's night reader
+  findings.push(...probeRecital(w.today));             // the recital watch — the Gaffer's graded reads
 
   const prevLast = readJson(LAST);
   // H0 (10 Aug 2026): the overnight window rides brain_config (same night the
@@ -1335,6 +1425,49 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     && probeOutcomes(TODAY, YDAY, { rows: [], eveningReport: null, ...noNc }).length === 0);
   assert("OUTCOMES PROBE — supersede rows read last-wins (a cracked row superseded by held is silence)",
     probeOutcomes(TODAY, YDAY, { rows: oRows("cracked").concat(oRows("held")), eveningReport: null, ...noNc }).length === 0);
+
+  // --- THE RECITAL WATCH (10 Aug 2026): fixtures only, never the live journal --
+  {
+    const rct = (verdict, over = {}) => ({
+      ts: `${TODAY}T20:15:00+05:30`, capsule: "embeddings", page: "weld", verdict,
+      coverage: verdict === "DRIFT" ? 61 : 97, priced: verdict !== "NO-PRICE", overrun: verdict === "OVERRUN",
+      payload_words: 180, spoken_words: verdict === "OVERRUN" ? 600 : 176, missing: [], ...over,
+    });
+    assert("RECITAL — a night of clean reads says NOTHING (silence is the contract; a line that always fires is one he learns to ignore)",
+      probeRecital(TODAY, { rows: [rct("PASS"), rct("PASS")] }).length === 0);
+    assert("RECITAL — an empty/never-born journal and a day with no recitals are both silence (QUIET vs DEAD: he simply did not open the dugout)",
+      probeRecital(TODAY, { rows: [] }).length === 0
+      && probeRecital(TODAY, { rows: [rct("DRIFT", { ts: `${YDAY}T20:15:00+05:30` })] }).length === 0);
+    assert("RECITAL — DRIFT is named as HIS PROSE PARAPHRASED and ranked FIRST even when outnumbered (dugout paints it red, the other two amber)",
+      (() => {
+        const f = probeRecital(TODAY, { rows: [rct("NO-PRICE"), rct("NO-PRICE"), rct("NO-PRICE"), rct("DRIFT", { missing: ["jhoot", "confidently"] })] });
+        return f.length === 1 && f[0].id === "recital-failed" && f[0].level === "WARN"
+          && /DRIFT ×1.*NO-PRICE ×3/.test(f[0].finding) && /PARAPHRASED BACK AT HIM/.test(f[0].finding)
+          && /failed 4 of 4/.test(f[0].finding) && /jhoot, confidently/.test(f[0].evidence);
+      })());
+    assert("RECITAL — OVERRUN and NO-PRICE each speak on their own: ANY failure in the window, no invented percentage",
+      probeRecital(TODAY, { rows: [rct("PASS"), rct("OVERRUN")] }).some((f) => f.id === "recital-failed" && /OVERRUN ×1/.test(f.finding))
+      && probeRecital(TODAY, { rows: [rct("PASS"), rct("NO-PRICE")] }).some((f) => f.id === "recital-failed" && /NO-PRICE ×1/.test(f.finding)));
+    assert("RECITAL — UNVERIFIED is never a PASS: it stays out of the graded denominator and is named separately in the evidence",
+      (() => {
+        const f = probeRecital(TODAY, { rows: [rct("PASS"), rct("DRIFT"), rct("UNVERIFIED"), rct("UNVERIFIED")] });
+        return f.length === 1 && /failed 1 of 2 graded/.test(f[0].finding)
+          && /2 further recital\(s\) UNVERIFIED/.test(f[0].evidence);
+      })());
+    assert("RECITAL — UNVERIFIED is never a FAILURE either: passes plus stripped transcripts stay silent",
+      probeRecital(TODAY, { rows: [rct("PASS"), rct("UNVERIFIED")] }).length === 0);
+    assert("RECITAL — a night that is ENTIRELY UNVERIFIED says so plainly (INFO): the transcript was stripped, nothing could be graded",
+      (() => {
+        const f = probeRecital(TODAY, { rows: [rct("UNVERIFIED"), rct("UNVERIFIED")] });
+        return f.length === 1 && f[0].id === "recital-unverified" && f[0].level === "INFO"
+          && /all 2 recital\(s\) today came back UNVERIFIED/.test(f[0].finding) && /never counted as a pass/.test(f[0].evidence);
+      })());
+    assert("RECITAL — the finding is WARN, so it REACHES the kickoff line: the self-correcting loop is no longer invisible to the captain",
+      (() => {
+        const f = probeRecital(TODAY, { rows: [rct("DRIFT")] });
+        return briefLines({ at: `${TODAY}T23:55:00+05:30`, findings: f }, TODAY, YDAY).some((l) => /WARN:recital-failed/.test(l));
+      })());
+  }
 
   // The brief
   assert("BRIEF — silent on a clean, fresh night (no line he learns to ignore)",

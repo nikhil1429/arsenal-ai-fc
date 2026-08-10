@@ -37,7 +37,17 @@
 //   two-schedulers block: scheduler_agreement[] (audit #33 — the arm that never existed),
 //   scheduler_disagreement{}, and the honesty counters fsrs_due_names_known /
 //   fsrs_due_total / fsrs_due_names_complete / fsrs_due_note. CONSUMER: setpiece.mjs
-//   (evening packet) reads the agreement to rank and prints the note verbatim.
+//   (evening packet) reads the agreement to rank, the have/need counter when the FSRS
+//   name list is TRUNCATED, and — only since the dead-wire sweep of 10 Aug 2026 —
+//   fsrs_due_note verbatim when the FSRS side is UNKNOWN. That last field had ZERO
+//   readers repo-wide until then (`grep -n fsrs_due_note scripts/*.mjs` returned this
+//   file alone): it existed only on main()'s console at :415, and this organ's ONE
+//   automated invoker — heartbeat_config.json:6, run by heartbeat.mjs:146 with
+//   stdio:"pipe" from conductor.mjs:71 at 08:39 — discards stdout. So on every
+//   scheduled run the WARN was printed to nobody, which is the same silence that let
+//   audit #33's wrong output stand for weeks. The console lines below are now a
+//   SECOND, human-facing copy of a fact that reaches the packet through the file;
+//   they are not the wire. Do not delete them, and do not rely on them either.
 // READS:     dressing-room/state/capsules/*.json (read-only) · forge_profile.json
 //            (rejirah_intervals_days — the genome owns the schedule, not this file) ·
 //            cards.json (FSRS's due NAMES live in hardest_due, not in the integer counters)
@@ -45,6 +55,7 @@
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";                      // selftest only — the disk exercise (mirror.mjs:315 precedent)
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -147,7 +158,7 @@ function strikeBank(entries) {
   return out.sort((x, y) => (y.overdue_days - x.overdue_days) || ((x.status === "held") - (y.status === "held")));
 }
 
-function build(capsules, intervals, today, fsrsDue = []) {
+function build(capsules, intervals, today, fsrsDue = [], faults = []) {
   const entries = capsules.filter(c => c && c.id).map(c => mapCapsule(c, intervals, today))
     .sort((a, b) => String(a.concept).localeCompare(String(b.concept)));
   const bank = strikeBank(entries);
@@ -175,6 +186,18 @@ function build(capsules, intervals, today, fsrsDue = []) {
     date: today,
     generated_at: new Date().toISOString(),
     status: entries.length ? "ok" : "awaiting_data",
+    // wiring pass 10 Aug 2026 — the fault fields. `capsules_complete:false` means THIS
+    // attempt could not read every file in capsules/, so `totals` and `concepts` below
+    // are SHORT. main() therefore never ships them (see REFUSE TO SHIP A SHORT COUNT):
+    // a map on disk carrying complete:false is always a PRESERVED last-true record with
+    // these three keys stamped on top — which is why a consumer's whole test is
+    // "complete === false ⇒ these numbers are `date`'s, not today's".
+    // status stays "ok": the entries that DID read are true, and status is the gate five
+    // organs use to decide whether to speak at all (manager.mjs:260) — degrading it would
+    // silence four good capsules to report one broken file, which is a worse lie.
+    capsules_complete: faults.length === 0,
+    input_faults: faults,
+    blocking_faults: faults.filter(f => f.blocking).map(f => f.file),
     engine: "capsule-bridge-v1 (reader — creates no cards, schedules nothing)",
     rejirah_intervals_days: intervals,
     concepts: entries,
@@ -222,10 +245,51 @@ function build(capsules, intervals, today, fsrsDue = []) {
 }
 
 // ---------------------------------------------------------------------------
-function loadCapsules(dir = CAPSULES) {
+// THE PRIMARY INPUT, TRACKED (wiring pass, 10 Aug 2026)
+// ---------------------------------------------------------------------------
+// readJson()'s empty catch (:59) feeding .filter(Boolean) meant a truncated or
+// half-written capsule VANISHED: no name, no counter, no stderr, exit 0. PROVEN
+// on a copy of the real bytes — 2 files in capsules/, one a truncated write ⇒
+// totals.capsules=1, concepts=["alpha"], and not one of the 17 emitted keys
+// named the second file.
+// That silence is not cosmetic, because three organs then state the short number
+// as FACT:
+//   benchmark.mjs:152  lockedSet   ⇒ a ROADMAP bucket loses a "have", and
+//                                    findRegressions turns it into "locked 3 → 2",
+//                                    which captains_call deals to him at an anchor
+//   postmatch.mjs:214  lockedCount ⇒ written into SEASON.md, the permanent logbook
+//   manager.mjs:261    locked      ⇒ rides the team sheet
+// This file already refuses exactly this silence on its OTHER input (:266 —
+// "cards.json missing or malformed ⇒ UNKNOWN, never a measured zero"); it now
+// applies its own rule to its primary one. Grammar and field names are copied
+// from benchmark.mjs:80-88 / :801-810 on purpose, so the two organs fault alike
+// and manager.mjs's existing reader (its `inputFault` prefix, which only wants
+// `blocking_faults` + `date`) works on this file with no new vocabulary.
+// LEGACY (frozen verbatim, layering rule): the silent reader. Nothing on the run
+// path calls it; it stands as the shape of the defect.
+function loadCapsulesLegacy(dir = CAPSULES) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter(f => f.toLowerCase().endsWith(".json"))
     .map(f => readJson(join(dir, f))).filter(Boolean);
+}
+
+function loadCapsules(dir = CAPSULES) {
+  const faults = [];
+  if (!existsSync(dir)) return { capsules: [], faults };   // absent dir = honest absence, never a fault
+  const capsules = [];
+  for (const f of readdirSync(dir).filter(n => n.toLowerCase().endsWith(".json")).sort()) {
+    let j;
+    try { j = JSON.parse(readFileSync(join(dir, f), "utf8")); }
+    catch (e) { faults.push({ file: `capsules/${f}`, why: String((e && e.message) || e).slice(0, 140), blocking: true }); continue; }
+    // Parsed, but build() drops an id-less capsule (and must — a phantom concept is
+    // worse than a named gap). Same vanish, same damage, so it is named here too.
+    if (!j || typeof j !== "object" || !String(j.id || "").trim()) {
+      faults.push({ file: `capsules/${f}`, why: "parsed, but carries no id — cannot be mapped to a concept", blocking: true });
+      continue;
+    }
+    capsules.push(j);
+  }
+  return { capsules, faults };
 }
 
 function loadIntervals(path = PROFILE) {
@@ -396,6 +460,59 @@ function selftest() {
   assert("IT SCHEDULES NOTHING — the emitted shape carries no card, no drill, no due-date for FSRS",
     !("cards" in b) && !("drills" in b) && !("fsrs" in b) && /reader/.test(b.engine));
 
+  // -------------------------------------------------------------------------
+  // WIRING PASS (2026-08-10) — THE VANISHING CAPSULE.
+  // Exercised THROUGH THE DISK READER on real files, never through a fixture: the
+  // whole defect was that readJson's empty catch + .filter(Boolean) turned a
+  // half-written capsule into nothing, and a hand-made array of objects can never
+  // reproduce a JSON.parse failure (the same fixture blindness that kept audit
+  // #33's FSRS bug green for weeks — see that block above).
+  // -------------------------------------------------------------------------
+  {
+    const dir = join(tmpdir(), `capsule-bridge-selftest-${process.pid}-${Date.now()}`);
+    mkdirSync(dir, { recursive: true });
+    const good = { id: "alpha", title: "Alpha", lockedOn: "2026-06-24", status: "tempered",
+      faultLines: [{ axis: "a", status: "held", strike: "s", weld: "w" }] };
+    writeFileSync(join(dir, "alpha.json"), JSON.stringify(good));
+    writeFileSync(join(dir, "beta.json"), JSON.stringify({ ...good, id: "beta" }).slice(0, 120));  // a truncated write, mid-mirror
+    writeFileSync(join(dir, "gamma.json"), JSON.stringify({ title: "no id here", faultLines: [] }));
+    const { capsules, faults } = loadCapsules(dir);
+    assert("WIRE — a truncated capsule is NAMED by file, not silently filtered away",
+      capsules.length === 1 && faults.length === 2
+      && faults.some(f => f.file === "capsules/beta.json" && /JSON/i.test(f.why) && f.blocking === true));
+    assert("WIRE — a parseable capsule with no id is named too (build() would drop it just as quietly)",
+      faults.some(f => f.file === "capsules/gamma.json" && /no id/.test(f.why)));
+    const short = build(capsules, DEFAULT_INTERVALS, TODAY, [], faults);
+    assert("WIRE — the map declares the count SHORT: capsules_complete false + blocking_faults named",
+      short.capsules_complete === false && short.totals.capsules === 1
+      && short.blocking_faults.join() === "capsules/beta.json,capsules/gamma.json");
+    // The defect, preserved and PROVEN on the same three files: legacy hands back a bare
+    // array (2 of 3 — the truncated one gone, the id-less one still to be dropped later by
+    // build), no fault channel of any kind, and the map it produces then claims a clean
+    // bill of health — 1 capsule, complete:true — over a directory with two broken files.
+    const lg = loadCapsulesLegacy(dir);
+    const lgMap = build(lg, DEFAULT_INTERVALS, TODAY);
+    assert("WIRE — the frozen legacy reader still vanishes it, and its map claims complete",
+      lg.length === 2 && !("faults" in lg)
+      && lgMap.totals.capsules === 1 && lgMap.capsules_complete === true);
+    // clean dir ⇒ byte-identical behaviour to before this pass, and complete:true
+    rmSync(join(dir, "beta.json"), { force: true }); rmSync(join(dir, "gamma.json"), { force: true });
+    const clean = loadCapsules(dir);
+    const okMap = build(clean.capsules, DEFAULT_INTERVALS, TODAY, [], clean.faults);
+    assert("WIRE — a clean capsules/ reads complete, with no fault noise on the bus",
+      okMap.capsules_complete === true && okMap.input_faults.length === 0
+      && okMap.blocking_faults.length === 0 && okMap.totals.capsules === 1);
+    assert("WIRE — a missing capsules/ dir is an honest ABSENCE, never a fault",
+      loadCapsules(join(dir, "__nope__")).faults.length === 0);
+    rmSync(dir, { recursive: true, force: true });
+    // and the LIVE capsules/ flows through the tracked reader — shape only; the count is
+    // mirror.mjs's to own and is deliberately not asserted here.
+    const live = loadCapsules();
+    assert("WIRE — the LIVE capsules/ reads through the tracked reader (names anything it cannot parse)",
+      Array.isArray(live.capsules) && Array.isArray(live.faults)
+      && live.faults.every(f => typeof f.file === "string" && typeof f.why === "string"));
+  }
+
   console.log(`\ncapsule_bridge selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -404,8 +521,34 @@ function selftest() {
 function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") return selftest();
-  const out = build(loadCapsules(), loadIntervals(), localDate(), fsrsDueConcepts());
+  const { capsules, faults } = loadCapsules();
+  const out = build(capsules, loadIntervals(), localDate(), fsrsDueConcepts(), faults);
   if (mode === "show") { console.log(JSON.stringify(out, null, 2)); return; }
+  // REFUSE TO SHIP A SHORT COUNT (10 Aug 2026 wiring pass; benchmark.mjs:785-810 is the
+  // house precedent, word for word). An unreadable capsule does not make the map wrong in
+  // some abstract way — it makes `totals.capsules` and `concepts[]` SMALLER, and three
+  // organs restate that number as evidence. So the short map never reaches the bus: the
+  // LAST TRUE record is kept verbatim — its own date, generated_at, totals, concepts — and
+  // only the fault fields are stamped on top. Nothing is fabricated, nothing true is lost.
+  // Consequences that are deliberate:
+  //   · `generated_at` stays yesterday's, so learnstate.mjs:69-72 ("MAP Nd purana") starts
+  //     saying so at the next SessionStart — an existing reader notices, no new organ.
+  //   · no prior map ⇒ NOTHING is written. Absence is already handled honestly downstream
+  //     (manager.mjs:260 gates on status "ok"; postmatch.mjs:214 renders "—").
+  // Exit stays 0: heartbeat.mjs:146 shells this with stdio "pipe" and turns any non-zero
+  // into `ran:false` in pulse.json — which would relabel a NAMED fault as an anonymous
+  // "capsule_bridge never ran". The fault rides the bus and stdout instead.
+  if (out.blocking_faults.length) {
+    const prev = readJson(OUT);
+    console.log(`capsule_bridge: WARN ${out.blocking_faults.join(", ")} UNREADABLE (malformed JSON, not an empty file) — refusing to overwrite ${prev ? "the last true map" : "anything"} with a short count. Owner: mirror.mjs (\`node scripts/mirror.mjs\`).`);
+    for (const f of out.input_faults) console.log(`  ${f.file}: ${f.why}`);
+    if (prev && Array.isArray(prev.concepts)) {
+      writeAtomic(OUT, { ...prev, capsules_complete: false, input_faults: out.input_faults,
+        blocking_faults: out.blocking_faults, last_attempt_at: new Date().toISOString() });
+      console.log(`  kept: ${prev.date || "?"}'s map verbatim (${(prev.totals && prev.totals.capsules) ?? "?"} capsule(s)) → ${OUT}`);
+    } else console.log(`  no prior map to keep — nothing written (absence, not a zero).`);
+    return;
+  }
   writeAtomic(OUT, out);
   console.log(`capsule_bridge: ${out.totals.capsules} capsule(s) · ${out.totals.axes_present} axes · ${out.totals.strike_questions} strike questions · ${out.rejirah_overdue.length} overdue → ${OUT}`);
   if (out.line) console.log(`  ${out.line}`);
@@ -417,6 +560,9 @@ function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { build, mapCapsule, rejirahRounds, strikeBank, loadIntervals,
+  // wiring pass (2026-08-10): the tracked capsule reader that NAMES what it could not
+  // read, with the silent one frozen beside it.
+  loadCapsules, loadCapsulesLegacy,
   // audit #33 (2026-08-04): the fixed FSRS due reader (pure + shell) with the frozen
   // legacy pick beside it, and the array/object normaliser build() accepts.
   fsrsDueFromCards, fsrsDueConcepts, fsrsDueConceptsLegacy, normalizeFsrsDue };

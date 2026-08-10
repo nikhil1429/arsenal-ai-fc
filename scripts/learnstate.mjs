@@ -65,6 +65,27 @@ function rejirahDueLine(dir, now = Date.now()) {
   if (!od.length) return null;
   const never = od.filter((r) => (r.rounds_done || 0) === 0).length;
   const head = od.slice(0, 3).map((r) => `${r.concept} ${r.overdue_days}d`).join(" · ");
+  // DEAD-WIRE SWEEP (10 Aug 2026) — THE OWNER'S OWN HEADLINE HAD NO READER.
+  // capsule_bridge composes ONE Hinglish sentence (`line`, capsule_bridge.mjs:239-243)
+  // naming the worst-overdue capsule AND how many strike questions are already written
+  // for it. Live today: "embeddings ka Re-Jirah 47 din overdue hai — aur uske 9 strike
+  // sawaal already likhe rakhe hain." Repo-wide it had ZERO consumers — its only other
+  // surface is that organ's stdout, and its one automated invoker (heartbeat.mjs:54,
+  // shelled with stdio "pipe") discards stdout, so on every scheduled run the sentence
+  // was composed for nobody.
+  // The counts above this brief DOES derive (rejirah_overdue carries them). What it can
+  // never derive is the strike count — and that is the half that removes the activation
+  // cost: "queue khol, sawaal already likhe hue hain" is a different ask from "queue
+  // khol". So the owner's sentence is rendered VERBATIM, never re-composed — the same
+  // producer-composes/reader-renders rule the benchmark `needs[]` line at :124 follows,
+  // and the same one setpiece uses for capsule_bridge's `fsrs_due_note`. The one-concept
+  // overlap with the head is the deliberate price of not writing a SECOND sentence about
+  // the same fact (a re-derived strike count here is exactly the drift that left `line`
+  // orphaned in the first place).
+  // ABSENCE STAYS ABSENCE: no `line` (a map written before the field existed, or a
+  // half-written one) ⇒ nothing appended, and this slot renders byte-identically to
+  // before. Nothing is invented to fill it.
+  const ownLine = typeof m.line === "string" && m.line.trim() ? `  ${m.line.trim()}` : "";
   const mapAge = ageDays(m.generated_at, now);
   const mapTag = mapAge === null
     ? `  (is map pe koi generated_at nahi — ye din-ginti kitni purani hai, pata nahi: \`node scripts/capsule_bridge.mjs\`)`
@@ -74,6 +95,7 @@ function rejirahDueLine(dir, now = Date.now()) {
   return `RE-JIRAH OVERDUE (${od.length}): ${head}${od.length > 3 ? " …" : ""}`
     + (never ? ` — ${never} ka ek bhi round nahi hua.` : "")
     + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`
+    + ownLine
     + mapTag;
 }
 
@@ -112,6 +134,17 @@ function outwardLines(dir, nowMs) {
   }
   if (bj && bj.status === "ok" && Array.isArray(bj.regressions) && bj.regressions.length) {
     L.push(`OUTWARD: benchmark regression — ${bj.regressions[0]}`);
+  }
+  // THE BENCHMARK'S NEEDS REACH THE KICKOFF (10 Aug 2026 wiring pass). Until
+  // today the counts travelled to every surface and the NAMES travelled nowhere
+  // — this brief said "B2 1/5" and never "unlock chunking, retrieval", which is
+  // the only half that says what to DO. benchmark.mjs owns needs[] and composes
+  // it (flattenNeeds); we render, never re-derive. First + a count of the rest,
+  // the same brevity the regression line above already uses — a full list here
+  // would be a report handed to him, which the ANCHOR LAW forbids; the sheet,
+  // the wall and SEASON.md carry the whole list.
+  if (bj && bj.status === "ok" && Array.isArray(bj.needs) && bj.needs.length) {
+    L.push(`OUTWARD: benchmark need — ${bj.needs[0]}${bj.needs.length > 1 ? ` (+${bj.needs.length - 1} more · node scripts/benchmark.mjs report)` : ""}`);
   }
   return L;
 }
@@ -678,6 +711,28 @@ function selftest() {
     (oldMap.split("\n").find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "").length > 0
     && oldMap.split("\n").filter((l) => l.startsWith("RE-JIRAH OVERDUE")).length === 1);
 
+  // ---- DEAD-WIRE SWEEP (10 Aug 2026) — capsule_bridge's `line` had ZERO readers.
+  // The fixtures above deliberately carry NO `line` (that is the pre-wire shape, and it
+  // must keep rendering byte-identically). This one carries the sentence off today's real
+  // capsule_map.json. These fail the moment the brief goes back to speaking only its own
+  // derived day-counts and drops the owner's strike-readiness fact — which is the whole
+  // defect: the questions already exist and no surface said so.
+  const OWN_LINE = "embeddings ka Re-Jirah 47 din overdue hai — aur uske 9 strike sawaal already likhe rakhe hain.";
+  const lineDir = mkdtempSync(join(tmpdir(), "learnstate-mapline-"));
+  writeFileSync(join(lineDir, "capsule_map.json"), JSON.stringify({
+    generated_at: iso(0.2),
+    rejirah_overdue: [{ concept: "embeddings", overdue_days: 47, rounds_done: 0 }],
+    line: OWN_LINE,
+  }));
+  const withLine = brief(lineDir, NOW);
+  assert("SWEEP capsule_bridge's own headline reaches the kickoff VERBATIM — strike count and all",
+    withLine.includes(OWN_LINE) && /9 strike sawaal/.test(withLine));
+  assert("SWEEP it rides the SAME RE-JIRAH line, never re-composed into a second one",
+    (withLine.split("\n").find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "").includes(OWN_LINE)
+    && withLine.split("\n").filter((l) => l.includes("strike sawaal")).length === 1);
+  assert("SWEEP a map with NO `line` renders exactly as before (absence stays absence, nothing invented)",
+    !freshMap.includes("strike sawaal") && freshMap.includes("RE-JIRAH OVERDUE (1): embeddings 42d"));
+
   // ---- THE OUTWARD LINES + SEASON (outward loop, 8 Aug 2026)
   const dirO = mkdtempSync(join(tmpdir(), "learnstate-outward-"));
   writeFileSync(join(dirO, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-04", task: "Hallucinations", track: "concept" } } }));
@@ -703,6 +758,20 @@ function selftest() {
     regressions: ["B2 RAG: cold-held 2 → 1"] }));
   assert("OUTWARD — a benchmark regression reaches the kickoff brief (Ruling 5 edge)",
     brief(dirO, NOW).includes("OUTWARD: benchmark regression — B2 RAG"));
+  // 10 Aug 2026 wiring pass — benchmark.mjs's needs[] had NO reader anywhere in
+  // the organism; this brief is the SessionStart anchor, so it is where the
+  // "what to DO" half has to land. Fails the moment the wire is cut again.
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", runs: [], regressions: [],
+    needs: ["2-rag: unlock chunking, retrieval", "course: 6 chapters remain", "python: Phase A tiers T0→T4-lite"] }));
+  const obN = brief(dirO, NOW);
+  assert("OUTWARD — the benchmark's NEED NAMES reach the kickoff, first + count (never the whole list — ANCHOR LAW)",
+    obN.includes("OUTWARD: benchmark need — 2-rag: unlock chunking, retrieval (+2 more")
+    && !obN.includes("course: 6 chapters remain"));
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", runs: [], regressions: [], needs: [] }));
+  assert("OUTWARD — zero needs ⇒ the need line goes SILENT (absence, never an empty debt)",
+    !brief(dirO, NOW).includes("benchmark need"));
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", runs: [],
+    regressions: ["B2 RAG: cold-held 2 → 1"] }));
   writeFileSync(join(dirO, "season.json"), JSON.stringify({ season_day: 3, matches_played: 2,
     rows: [{ result: "HIT" }, { result: "MISS" }, { result: "REST" }] }));
   assert("SEASON — the streak line rides the brief once a season exists",

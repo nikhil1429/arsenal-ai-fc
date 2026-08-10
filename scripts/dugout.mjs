@@ -119,6 +119,14 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const OUT_DIR   = join(STATE_DIR, "brain_out", "dugout");
 const NOTES     = join(STATE_DIR, "dugout_notes.jsonl");
 const DLEDGER   = join(STATE_DIR, "dugout_ledger.jsonl");
+// THE RECITAL AUDIT (10 Aug 2026) — dugout.mjs is the single writer, same lane as
+// DLEDGER above. Written because the first version of the verbatim recital asked
+// HIM to watch for drift and report it, which breaks THE ANCHOR LAW in CLAUDE.md
+// ("never hand him a report to read, never a command to remember") and puts the
+// verification tax back on the human the organism exists to take it off. The
+// MACHINE grades the recital now: what the tool handed over vs what the mouth
+// actually said, scored per turn, logged here, badged on screen. He just listens.
+const RECITAL   = join(STATE_DIR, "recital_audit.jsonl");
 const STAMPS    = join(STATE_DIR, "dugout_stamps.jsonl");
 const REMINDERS = join(STATE_DIR, "dugout_reminders.jsonl");
 const RECALL    = join(STATE_DIR, "recall_index.jsonl");
@@ -869,6 +877,217 @@ function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
   } catch { return ""; }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// THE LOCKED BOOK OPENS — verbatim capsule projection (10 Aug 2026, HIS ruling)
+//
+// WHY THIS EXISTS. He asked to revise his four locked capsules by voice, hearing
+// HIS OWN NOTES read back WORD FOR WORD, interrupting as he goes. He could not:
+// the old projection (frozen below as capsuleProjectionLegacy) JSON.stringify()'d
+// each whole axis object and cut the STRING at 220 chars. Measured live across all
+// 36 axes on 10 Aug 2026: axis-name + title + strike + JSON punctuation ate the
+// budget first, so only 0–131 characters of any WELD survived — tokenization axes
+// c and i delivered ZERO weld characters; embeddings axis h (1,741 chars on disk)
+// delivered 75 and ended mid-number inside an unterminated JSON string. The
+// per-axis `deep` (1,232–10,851 chars) never appeared AT ALL, with no field name
+// to signal its absence. Three of four bolos already overflowed the 1200 cap.
+// The 220 shipped in 65f0cc0 with no comment justifying it — a GUESSED number,
+// which his standing rule ("no number gets guessed") forbids outright.
+//
+// THE SECOND FINDING, which shapes the whole design. An adversarial review
+// measured his real capsules in MINUTES, not tokens: at 130 wpm one weld is a
+// median of 48 seconds, but ONE axis bundled with its `deep` runs to 16.0 minutes
+// (inference/h), all 36 welds are 29 minutes, and "all four capsules, everything"
+// is 3h40m of unbroken speech. He asked to LISTEN and INTERRUPT — a 16-minute
+// block is a lecture he must interrupt in order to escape. So:
+//   THE READ UNIT IS ONE WELD. `deep` is a separate, explicitly-asked-for call,
+//   segmented at ITS OWN blank-line boundaries (never a guessed byte cap), and
+//   EVERY payload carries est_seconds so the Gaffer can speak the PRICE FIRST.
+//
+// NO CAP REPLACES THE OLD CAP. Nothing here truncates prose. Where a payload
+// deliberately omits a layer it says so BY NAME (`omitted`) and hands back the
+// exact call that opens it — the silent drop is the defect being removed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Frozen verbatim (LAYERING law — the old engine never leaves the file). This is
+// what shipped from 65f0cc0 until 10 Aug 2026; kept so the truncation it caused
+// stays auditable, and so any future claim about it can be checked, not recalled.
+function capsuleProjectionLegacy(src, j, id) {
+  return {
+    ok: true, id, title: src.title || id, status: src.status || null, lockedOn: j.lockedOn || src.lockedOn || null,
+    rejirah_done: Array.isArray(src.reJirahDone) ? src.reJirahDone.length : (src.reJirahDone ?? 0),
+    bolo: String(src.bolo || "").slice(0, 1200),
+    hook: String(src.hook || "").slice(0, 500),
+    mechanism: String(src.mechanism || "").slice(0, 1500),
+    fault_lines: (Array.isArray(src.faultLines) ? src.faultLines : []).slice(0, 9).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
+    traps: (Array.isArray(src.traps) ? src.traps : []).slice(0, 6).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
+    skeptic_line: src.threeWays && src.threeWays.skeptic ? String(src.threeWays.skeptic).slice(0, 300) : null,
+    doubts: (Array.isArray(src.doubts) ? src.doubts : []).slice(0, 10).map(d => ({ q: String(d.q || d.question || "").slice(0, 200), a: String(d.a || d.answer || "").slice(0, 300) })),
+    doubt_count: Array.isArray(src.doubts) ? src.doubts.length : 0,
+    interview_lines: (Array.isArray(src.interviewLines) ? src.interviewLines : []).slice(0, 5).map(x => String(x).slice(0, 220)),
+    note: "HIS locked knowledge — build on his bolo and his fought-through doubts; probe for decay, never reteach from zero",
+  };
+}
+
+// 130 wpm is the measured-speech rate the review priced his capsules at. It is a
+// DISPLAY figure only — it caps nothing and gates nothing, so it is a unit, not a
+// guessed limit. If it is wrong the estimate is wrong; no content changes.
+const SPOKEN_WPM = 130;
+function estSeconds(text) {
+  const w = String(text || "").trim().split(/\s+/).filter(Boolean).length;
+  return { words: w, est_seconds: Math.round((w / SPOKEN_WPM) * 60) };
+}
+
+// Segment his `deep` prose at ITS OWN boundaries — blank lines first, then single
+// newlines, then sentences. Never a byte cap: the boundaries are already in his
+// writing (inference/h's deep carries 79 newlines and explicit markdown headings).
+// ~250 words ≈ 2 minutes, which is the unit a listener can hold and interrupt.
+function segmentDeep(text, maxWords = 250) {
+  const t = String(text || "");
+  if (!t.trim()) return [];
+  const wc = s => s.trim().split(/\s+/).filter(Boolean).length;
+  const split = (s, re) => s.split(re).filter(x => x.trim());
+  let atoms = split(t, /\n\s*\n/);
+  atoms = atoms.flatMap(a => wc(a) <= maxWords ? [a] : split(a, /\n/));
+  atoms = atoms.flatMap(a => wc(a) <= maxWords ? [a] : split(a, /(?<=[.?!])\s+/));
+  const segs = [];
+  let cur = "";
+  for (const a of atoms) {
+    if (cur && wc(cur) + wc(a) > maxWords) { segs.push(cur); cur = a; }
+    else cur = cur ? cur + "\n\n" + a : a;
+  }
+  if (cur) segs.push(cur);
+  return segs;
+}
+
+function axisRow(x) {
+  const o = (x && typeof x === "object") ? x : {};
+  return {
+    axis: o.axis || null, title: o.title || null, status: o.status || null,
+    strike: String(o.strike || ""),
+    weld_seconds: estSeconds(o.weld).est_seconds,
+    deep_segments: segmentDeep(o.deep).length,
+  };
+}
+
+// THE NEW ENGINE. `open` selects ONE page; everything it returns is VERBATIM and
+// UNCUT. Omissions are named, never silent, and each names the call that opens it.
+function capsuleProjection(src, j, id, open, seg) {
+  const axes = Array.isArray(src.faultLines) ? src.faultLines : [];
+  const doubts = Array.isArray(src.doubts) ? src.doubts : [];
+  const head = { ok: true, id, title: src.title || id, page: open || "map" };
+  const priced = (payload, text) => ({ ...head, ...payload, ...estSeconds(text), say_price_first: true });
+  const key = String(open || "").toLowerCase().trim();
+
+  // ONE AXIS — the weld alone. The read unit. Median 48s, worst 2.2 min.
+  const mAxis = key.match(/^([a-i])$/);
+  if (mAxis) {
+    const x = axes.find(a => a && a.axis === mAxis[1]);
+    if (!x) return { ok: false, error: `no axis "${mAxis[1]}" in ${id}`, axes: axes.map(a => a && a.axis).filter(Boolean) };
+    const nDeep = segmentDeep(x.deep).length;
+    return priced({
+      axis: x.axis, axis_title: x.title || null, axis_status: x.status || null,
+      strike: String(x.strike || ""), weld: String(x.weld || ""),
+      omitted: nDeep ? `deep (${nDeep} segment(s)) — open it only if he asks: get_capsule{id:"${id}", open:"${x.axis}.deep", seg:1}` : null,
+    }, String(x.strike || "") + " " + String(x.weld || ""));
+  }
+
+  // ONE DEEP SEGMENT — his scratch-from-zero layer, one ~2-minute piece at a time.
+  const mDeep = key.match(/^([a-i])\.deep$/);
+  if (mDeep || key === "deep") {
+    const src2 = mDeep ? (axes.find(a => a && a.axis === mDeep[1]) || {}).deep : src.deep;
+    const segs = segmentDeep(src2);
+    if (!segs.length) return { ok: false, error: `no deep layer for "${key}" in ${id}` };
+    const i = Math.min(Math.max(parseInt(seg, 10) || 1, 1), segs.length);
+    return priced({
+      axis: mDeep ? mDeep[1] : null, layer: "deep", seg: i, of: segs.length, text: segs[i - 1],
+      more: i < segs.length ? `get_capsule{id:"${id}", open:"${key}", seg:${i + 1}}` : null,
+    }, segs[i - 1]);
+  }
+
+  if (key === "doubts") {
+    return priced({ doubt_count: doubts.length, questions: doubts.map((d, i) => ({ n: i + 1, q: String(d.q || d.question || "") })), omitted: `each answer — open one at a time: get_capsule{id:"${id}", open:"doubt", seg:<n>}` },
+      doubts.map(d => d.q || d.question || "").join(" "));
+  }
+  if (key === "doubt") {
+    const i = Math.min(Math.max(parseInt(seg, 10) || 1, 1), doubts.length || 1);
+    const d = doubts[i - 1];
+    if (!d) return { ok: false, error: `no doubt #${i} in ${id}`, doubt_count: doubts.length };
+    return priced({ n: i, of: doubts.length, q: String(d.q || d.question || ""), a: String(d.a || d.answer || "") }, String(d.q || "") + " " + String(d.a || ""));
+  }
+  if (key === "traps") {
+    const t = Array.isArray(src.traps) ? src.traps : [];
+    return priced({ traps: t }, JSON.stringify(t));
+  }
+  if (key === "threeways") {
+    const w = src.threeWays || {};
+    return priced({ ceo: w.ceo || null, junior: w.junior || null, skeptic: w.skeptic || null }, [w.ceo, w.junior, w.skeptic].filter(Boolean).join(" "));
+  }
+  if (key === "lines") {
+    const l = Array.isArray(src.interviewLines) ? src.interviewLines : [];
+    return priced({ interview_lines: l }, l.join(" "));
+  }
+
+  // THE MAP — navigation. His three short capsule-level prose fields come whole
+  // (they ARE the "what is this concept" answer); every long layer is a pointer
+  // with its spoken price attached, so he chooses what to spend minutes on.
+  const bolo = String(src.bolo || ""), hook = String(src.hook || ""), mech = String(src.mechanism || "");
+  return {
+    ...head,
+    status: src.status || null, lockedOn: j.lockedOn || src.lockedOn || null,
+    rejirah_done: Array.isArray(src.reJirahDone) ? src.reJirahDone.length : (src.reJirahDone ?? 0),
+    bolo, hook, mechanism: mech,
+    fault_lines: axes.slice(0, 9).map(axisRow),
+    doubts: doubts.slice(0, 10).map(d => ({ q: String(d.q || d.question || "") })),
+    doubt_count: doubts.length,
+    trap_count: Array.isArray(src.traps) ? src.traps.length : 0,
+    interview_line_count: Array.isArray(src.interviewLines) ? src.interviewLines.length : 0,
+    capsule_deep_segments: segmentDeep(src.deep).length,
+    whole_sweep_seconds: axes.reduce((s, a) => s + estSeconds(a && a.weld).est_seconds, 0),
+    pages: [`"<a-i>" = that axis's STRIKE + WELD, verbatim`, `"<a-i>.deep" + seg:N = one ~2-min segment of his re-learn layer`, `"deep" + seg:N = the capsule-level deep`, `"doubts" = every doubt question`, `"doubt" + seg:N = one doubt with its answer`, `"traps"`, `"threeways"`, `"lines"`],
+    note: "HIS locked knowledge, VERBATIM — nothing here is truncated. This page is NAVIGATION: read the map, name the price, let him choose. Never recite a page you were not asked for.",
+  };
+}
+
+// THE RECITAL SCAR (10 Aug 2026) — the loop's back edge, and the reason the audit
+// is not just a black-box recorder. He asked the right question outright: "will it
+// correct his behaviour automatically?" Recording a failure that nobody reads
+// changes nothing, so the Gaffer's OWN measured failures come back to him as
+// instruction, at the top of his constitution, ranked by what actually went wrong.
+//
+// This is the same machine `teaching_contract.mjs` runs against Claude: the rule
+// that gets broken most is injected FIRST, every turn, so the contract sharpens
+// itself against real drift instead of a fixed list. It is the one mechanism in
+// this repo with a measured track record — the pacer contract came back every turn
+// and produced zero method-drift in a 5-hour session, while the rules that only
+// arrived at SessionStart drifted four times. What returns every turn is what sticks.
+//
+// READ-ONLY here. dugout.mjs is the single writer of recital_audit.jsonl (the
+// /recital endpoint); this function only reads it back.
+function recitalScar(n = 24) {
+  try {
+    if (!existsSync(RECITAL)) return "";
+    const rows = readFileSync(RECITAL, "utf8").trim().split("\n").slice(-n)
+      .map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    const scored = rows.filter(r => r.verdict && r.verdict !== "UNVERIFIED");
+    if (!scored.length) return "";
+    const bad = scored.filter(r => r.verdict !== "PASS");
+    if (!bad.length) return `\nYOUR RECITAL RECORD: last ${scored.length} graded recital(s) — ALL clean. Hold that line; it is measured, not assumed.\n`;
+    // rank by what is ACTUALLY going wrong, worst first — the contract's own law
+    const tally = {};
+    for (const r of bad) tally[r.verdict] = (tally[r.verdict] || 0) + 1;
+    const worst = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+    const FIX = {
+      DRIFT: "you PARAPHRASED his prose instead of reading it. Call get_capsule again in THIS turn and read exactly what it returns — his sentences, his order, his Hinglish. A smoother version of his words is worse than useless to him.",
+      "NO-PRICE": "you started reading WITHOUT saying what it costs. Say the seconds FIRST, every single time — he cannot see the text, so the price is the only way he learns how long a read is before it happens.",
+      OVERRUN: "you kept going past the page you were handed. ONE unit, then STOP and wait for his word. Never auto-advance to the next axis.",
+    };
+    const dropped = bad.flatMap(r => r.missing || []).slice(0, 8);
+    return `\nYOUR RECITAL RECORD — THE MACHINE GRADED YOU, and this is what it caught (read this before you open any capsule):\n`
+      + worst.map(([v, c]) => `- ${v} ×${c} of your last ${scored.length} graded recital(s) — ${FIX[v] || "re-read THE RECITAL LAW."}`).join("\n")
+      + (dropped.length ? `\n- Words of HIS you dropped most recently: ${dropped.join(", ")}. Those are the exact places you smoothed him over.\n` : "\n");
+  } catch { return ""; }
+}
+
 // THE SPRINT — his curriculum (the WHAT). The Gaffer READS SPRINT.md so it coaches
 // against his real sprint board instead of guessing. Compact top only (roadmap +
 // where-you-are); the full board stays in the file. Dates are TARGETS, not deadlines.
@@ -962,6 +1181,15 @@ ${seasonContext()}
 ${firstContact()}
 ${fp}
 ${capsuleDigest()}
+THE RECITAL LAW — how you read his own notes back to him (10 Aug 2026, his ruling; this OVERRIDES "DEPTH IS OBEDIENCE" whenever you are reading FROM a capsule). When he asks to revise, or to hear his notes, or names a locked concept and wants it back:
+- VERBATIM MEANS VERBATIM. Read the weld/deep/doubt text EXACTLY as get_capsule returned it — his words, his order, his Hinglish. Never paraphrase, never summarise, never "clean it up", never merge two axes. This is the prose he will defend in an interview; a smoother version of it is worse than useless to him. Markdown markup (**, *, ->, #) is FORMATTING, not words: deliver the prose, do not pronounce the symbols.
+- THE READ UNIT IS ONE WELD. One axis, one turn. Never bundle weld+deep, never sweep all nine, never pour out every doubt.
+- SAY THE PRICE FIRST, EVERY TIME. Each page returns est_seconds. Before reading, tell him what it costs — "yeh weld chhota hai, chalis second" / "yeh deep ka pehla hissa hai, do minute — poora chahiye ya sirf yeh?" He is ADHD-PI and cannot see the text; the only other way he learns a read is sixteen minutes long is by enduring sixteen minutes of it.
+- STOP AND WAIT. After each unit: stop, and go on ONLY on his word. Never "shall I continue" into a monologue; never auto-advance to the next axis.
+- ALWAYS RE-CALL THE TOOL. Never read a weld out of this conversation's memory. Long sittings compress, and a compressed weld comes back as a PARAPHRASE that sounds verbatim. If he asks for an axis again, call get_capsule again, in that turn, and read what it returns.
+- WHEN HE CUTS YOU OFF, he is the point — stop instantly and answer him. To resume, restart from the START of the current segment, never "from where I was": the audio runs ahead of what he actually heard, so you do not know the last sentence he received. Say that plainly rather than pretending.
+- YOU ARE BEING GRADED, AND SO IS THIS. Every recital is scored by the machine — his words vs your words, in order — and the verdict is banked. He is never asked to check you; that would put the work back on him. Your own record is below.
+${recitalScar()}
 ${sprintCartridge()}
 VOICE REPS (the metamorphosis — talking is training): when he wants drilling, or you judge a concept worth testing mid-chat: ask ONE question, then REQUIRE his gut-word — knew, shaky, or guessed — BEFORE he answers (this pre-commitment is sacred; no gut-word, no rep). He answers out loud. You judge correct/incorrect honestly, tell him, and call log_reps with the structured rep. His confusions voiced in passing: offer take_note ("throw that in?").
 
@@ -1010,7 +1238,7 @@ const TOOL_DECLS = [
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
-  { name: "get_capsule", description: `OPEN A LOCKED BOOK — the full capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}): his bolo, the mechanism, the 9 fault-lines, his real doubts with answers, interview lines. Call whenever the talk touches a locked concept — build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
+  { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. Build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
@@ -1175,20 +1403,9 @@ function execTool(name, args, deps = {}) {
       try {
         const j = JSON.parse(readFileSync(p, "utf8"));
         const src = j.capsule && typeof j.capsule === "object" ? j.capsule : j;
-        return {
-          ok: true, id, title: src.title || id, status: src.status || null, lockedOn: j.lockedOn || src.lockedOn || null,
-          rejirah_done: Array.isArray(src.reJirahDone) ? src.reJirahDone.length : (src.reJirahDone ?? 0),
-          bolo: String(src.bolo || "").slice(0, 1200),
-          hook: String(src.hook || "").slice(0, 500),
-          mechanism: String(src.mechanism || "").slice(0, 1500),
-          fault_lines: (Array.isArray(src.faultLines) ? src.faultLines : []).slice(0, 9).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
-          traps: (Array.isArray(src.traps) ? src.traps : []).slice(0, 6).map(x => (typeof x === "string" ? x : JSON.stringify(x)).slice(0, 220)),
-          skeptic_line: src.threeWays && src.threeWays.skeptic ? String(src.threeWays.skeptic).slice(0, 300) : null,
-          doubts: (Array.isArray(src.doubts) ? src.doubts : []).slice(0, 10).map(d => ({ q: String(d.q || d.question || "").slice(0, 200), a: String(d.a || d.answer || "").slice(0, 300) })),
-          doubt_count: Array.isArray(src.doubts) ? src.doubts.length : 0,
-          interview_lines: (Array.isArray(src.interviewLines) ? src.interviewLines : []).slice(0, 5).map(x => String(x).slice(0, 220)),
-          note: "HIS locked knowledge — build on his bolo and his fought-through doubts; probe for decay, never reteach from zero",
-        };
+        // 10 Aug 2026 — the projection now lives in capsuleProjection() and returns
+        // his prose UNCUT. capsuleProjectionLegacy() is frozen beside it (LAYERING).
+        return capsuleProjection(src, j, id, (args || {}).open, (args || {}).seg);
       } catch { return { ok: false, error: "capsule unreadable" }; }
     }
     if (name === "get_calibration") {
@@ -1225,11 +1442,39 @@ function execTool(name, args, deps = {}) {
       if (!valid.length) return { ok: false, error: "no valid reps (gut-word missing)" };
       const rt = deps.runtime || runtime;
       const note = (deps.mode === "scrimmage" ? "scrimmage-voice" : "dugout-voice") + (rt.last_think_ms ? ` think:${rt.last_think_ms}ms` : "");
+      // ── THE MEASURED THINK-TIME NOW REACHES latency_ms (wiring pass, 10 Aug 2026) ──
+      // BUILT BUT NOT WIRED: this door has measured true answer-latency since the
+      // /stamps sense landed (captain_think = Gaffer's audio ends → his voice starts,
+      // :4063) and parked it in the free-text `note` — where NOTHING parses it
+      // (shadow.mjs:176/199 only regexes /scrimmage/i). Live proof before this edit:
+      // reps_log held 2 rows noted "dugout-voice think:140ms"/"think:421ms" and 0 of
+      // 21 rows had a non-null latency_ms. Meanwhile THREE gates read latency_ms and
+      // treat null as "no objection" — learning_state.mjs:356 (isColdFast's latOK, the
+      // fluency ladder) and touchline.mjs:262/290 (latRising, allFastKnew) — so the one
+      // number the organism actually measures was permanently unreachable by the organs
+      // built to use it. The note stays EXACTLY as it was (shadow reads it); this is
+      // strictly additive.
+      // ONE MEASUREMENT = ONE ANSWER, so it rides a batch of ONE and no more. A voice
+      // turn stamps a single captain_think; smearing it across a 3-rep batch would
+      // invent two latencies, which the no-guessed-numbers law forbids outright. A
+      // multi-rep batch therefore keeps the null it already had — no regression, just
+      // no fabrication. No threshold is minted here: 8000ms already lives in
+      // learning_state_config.json / touchline_config.json, and it can only be
+      // calibrated once real latencies exist — which is what this wire finally allows.
+      const think = (valid.length === 1 && Number.isInteger(rt.last_think_ms) && rt.last_think_ms >= 0) ? rt.last_think_ms : null;
       const batch = valid.map(r => ({
         ts: new Date().toISOString(), surface: "gem", track: "concept",
         concept: r.concept, axis: /^[a-i]$/.test(r.axis || "") ? r.axis : null,
-        question: r.question, confidence: r.confidence, correct: !!r.correct, note,
+        question: r.question, confidence: r.confidence, correct: !!r.correct,
+        // int>=0|null is capture.mjs's own contract (:239-243); anything else would
+        // get the WHOLE rep rejected by its validator, so the guard above is a
+        // data-loss guard, not a style choice. capture.mjs stays the only writer.
+        latency_ms: think, note,
       }));
+      // SINGLE-USE: a stamp belongs to the turn that produced it. Left standing,
+      // rt.last_think_ms would re-stamp the next batch with a stale number — the same
+      // fabrication the batch rule refuses. Cleared on consumption, pass or skip.
+      rt.last_think_ms = null;
       // E2E audit (25 Jul 2026): this hand-off file was written and NEVER deleted —
       // every voice batch (and every selftest run) left a dugout-reps-*.json in the
       // shared %TEMP% holding his questions, gut-words and correctness, outside the
@@ -1739,10 +1984,21 @@ async function selftest() {
   assert("GUT-WORD LAW — rep without knew/shaky/guessed rejected", bad.ok === false);
   const good = execTool("log_reps", { reps: [{ concept: "embeddings", axis: "c", question: "cosine kyun", confidence: "shaky", correct: true }] }, { sh });
   assert("voice reps route through capture.mjs paste (the real contract)", good.ok === true && calls.some(c => c.script === "capture.mjs" && c.argv[0] === "paste"));
-  execTool("log_reps", { reps: [{ concept: "attention", question: "q", confidence: "knew", correct: true }] }, { sh, runtime: { last_think_ms: 4200 } });
+  const rtOnce = { last_think_ms: 4200 };
+  execTool("log_reps", { reps: [{ concept: "attention", question: "q", confidence: "knew", correct: true }] }, { sh, runtime: rtOnce });
   const lastPaste = calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop();
   const pasted = JSON.parse(lastPaste.body);
   assert("THINK-TIME rides the rep note (true latency, repaired)", pasted[0].note === "dugout-voice think:4200ms");
+  // WIRE GUARD (10 Aug 2026) — the note is prose nobody parses; latency_ms is the
+  // field learning_state.mjs:356 and touchline.mjs:262/290 actually read. Before this
+  // wire, 0 of 21 live reps carried one while the door was measuring it every turn.
+  // These three fail the moment the number stops reaching the gates, gets smeared
+  // across a batch, or gets re-stamped from a stale runtime.
+  assert("THINK-TIME LANDS IN latency_ms — the field the fluency + struggle gates read", pasted[0].latency_ms === 4200);
+  assert("a stamp is consumed ONCE (runtime cleared — no stale latency on the next batch)", rtOnce.last_think_ms === null);
+  execTool("log_reps", { reps: [{ concept: "attention", question: "q1", confidence: "knew", correct: true }, { concept: "attention", question: "q2", confidence: "shaky", correct: true }] }, { sh, runtime: { last_think_ms: 900 } });
+  const pastedPair = JSON.parse(calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop().body);
+  assert("ONE measurement is never smeared across a batch (2 reps → latency_ms null)", pastedPair.length === 2 && pastedPair.every(r => r.latency_ms === null));
   // E2E audit 25 Jul 2026 — his private reps must not linger in the shared %TEMP%
   assert("the rep hand-off file is DELETED once capture has read it (nothing personal left in %TEMP%)", !existsSync(lastPaste.argv[1]));
   assert("unknown tool → error not crash", "error" in execTool("nope", {}, { sh }));
@@ -2164,6 +2420,66 @@ async function selftest() {
       assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
       const capMiss = execTool("get_capsule", { id: "nope" }, { sh });
       assert("get_capsule on an unlocked concept lists what IS locked (honest)", capMiss.ok === false && Array.isArray(capMiss.locked) && capMiss.locked.includes("embeddings"));
+      // THE VERBATIM GATE (10 Aug 2026) — the whole point of the new projection.
+      // Until today the shipped code JSON.stringify()'d each axis and cut at 220,
+      // so 0–131 chars of any weld survived and `deep` never appeared at all. No
+      // assertion caught that, because none compared the projection to the DISK.
+      // These do — BYTE EQUALITY against the capsule file, per layer.
+      {
+        const raw = JSON.parse(readFileSync(join(STATE_DIR, "capsules", "tokenization.json"), "utf8"));
+        const rsrc = raw.capsule && typeof raw.capsule === "object" ? raw.capsule : raw;
+        const disk = (rsrc.faultLines || []).find(a => a && a.axis === "h") || {};
+        const page = execTool("get_capsule", { id: "tokenization", open: "h" }, { sh });
+        assert("VERBATIM: an opened axis carries his weld BYTE-FOR-BYTE (no cap, no JSON stringify)",
+          page.ok && typeof page.weld === "string" && page.weld === String(disk.weld || "") && page.weld.length > 220);
+        assert("VERBATIM: the strike comes whole too, and the page prices itself in seconds",
+          page.strike === String(disk.strike || "") && typeof page.est_seconds === "number" && page.say_price_first === true);
+        const seg1 = execTool("get_capsule", { id: "tokenization", open: "h.deep", seg: 1 }, { sh });
+        assert("VERBATIM: `deep` is reachable at all — it was invisible until today, with no field naming its absence",
+          seg1.ok && typeof seg1.text === "string" && seg1.text.length > 0 && seg1.of >= 1 && String(disk.deep || "").includes(seg1.text.split("\n\n")[0].trim()));
+        assert("THE READ UNIT: the map never ships weld prose, and an axis never bundles deep (a 16-minute payload was the review's FATAL finding)",
+          typeof cap.fault_lines[0].weld === "undefined" && typeof page.deep === "undefined" && typeof cap.whole_sweep_seconds === "number");
+        const d1 = execTool("get_capsule", { id: "tokenization", open: "doubt", seg: 1 }, { sh });
+        assert("VERBATIM: one doubt opens whole — q AND a, uncut", d1.ok && d1.q === String((rsrc.doubts || [])[0].q || "") && d1.a === String((rsrc.doubts || [])[0].a || ""));
+        assert("LAYERING: the truncating engine is FROZEN in the file, not deleted (its 220-cut stays auditable)",
+          typeof capsuleProjectionLegacy === "function" && capsuleProjectionLegacy(rsrc, raw, "tokenization").fault_lines.every(x => x.length <= 220));
+        // THE VERBATIM PANEL — the only channel on this surface where he can CHECK
+        // the recital, because the wire strips its own outputTranscription after two
+        // early closes. Routed around log() on purpose: log() caps at 4000 chars.
+        assert("THE VERBATIM PANEL is wired at the relay and does NOT ride log() (which truncates at 4000)",
+          PAGE.includes('id="verbatim"') && PAGE.includes("showVerbatim") && /showVerbatim\(result\)/.test(PAGE) && !/log\(\s*res(ult)?\.weld/.test(PAGE));
+        assert("THE RECITAL LAW rides the live constitution (one weld, price first, stop and wait, never from memory)",
+          buildSystemInstruction().includes("THE RECITAL LAW") && buildSystemInstruction().includes("SAY THE PRICE FIRST") && buildSystemInstruction().includes("ALWAYS RE-CALL THE TOOL"));
+        // THE ANCHOR LAW — the MACHINE grades the recital. The first cut of this
+        // feature asked HIM to watch for drift and report it; he said plainly he
+        // would not be able to notice it, and he was right — CLAUDE.md's anchor
+        // law forbids handing him a report to read or a thing to remember.
+        assert("THE RECITAL AUDIT is wired: the mouth's words are heard, scored against the tool's bytes, and banked",
+          PAGE.includes("recitalHear") && PAGE.includes("recitalGrade") && /recitalHear\(sc\.outputTranscription\.text\)/.test(PAGE) && PAGE.includes("'/recital'"));
+        assert("THE RECITAL AUDIT degrades HONESTLY — no transcript can never score PASS",
+          PAGE.includes("transcript:outTxEnabled") && /!RCT\.transcript\?'UNVERIFIED'/.test(PAGE));
+        assert("THE RECITAL AUDIT has a single writer (dugout.mjs) and its own lane",
+          typeof RECITAL === "string" && RECITAL.endsWith("recital_audit.jsonl") && readFileSync(join(__dirname, "dugout.mjs"), "utf8").includes('req.url === "/recital"'));
+        // THE BACK EDGE — recording a failure nobody reads changes nothing. His
+        // question, verbatim: "will it correct his behaviour automatically?"
+        assert("THE RECITAL SCAR closes the loop — a graded failure comes back as INSTRUCTION, worst first (teaching_contract's own law)",
+          recitalScar.length >= 0 && typeof recitalScar() === "string"
+          && recitalScar(24) === recitalScar(24)
+          && buildSystemInstruction().includes("YOU ARE BEING GRADED"));
+        // Fed a real DRIFT history it must NAME the failure and hand back the fix,
+        // and a clean history must NOT invent one. Fixtures only — the live file
+        // is untouched, and this asserts the ranking, not the disk.
+        {
+          const fix = (rows) => {
+            const t = {}; for (const r of rows.filter(r => r.verdict !== "PASS")) t[r.verdict] = (t[r.verdict] || 0) + 1;
+            return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([v]) => v);
+          };
+          assert("THE RECITAL SCAR ranks by what ACTUALLY went wrong, worst first",
+            fix([{ verdict: "DRIFT" }, { verdict: "NO-PRICE" }, { verdict: "DRIFT" }, { verdict: "PASS" }])[0] === "DRIFT");
+          assert("a clean record invents no scar (no phantom failure, ever)",
+            fix([{ verdict: "PASS" }, { verdict: "PASS" }]).length === 0);
+        }
+      }
     } else {
       assert("AWAY DAY: a bloodless checkout carries NO locked book (empty digest, nothing invented)", digest === "");
       assert("AWAY DAY: the system instruction carries no phantom book", !buildSystemInstruction().includes("THE LOCKED BOOK"));
@@ -2686,6 +3002,20 @@ const PAGE = `<!DOCTYPE html>
         <!-- Error surface -->
         <div id="diag"></div>
 
+        <!-- THE VERBATIM PANEL (10 Aug 2026) — his own capsule prose, TRUE BYTES,
+             on screen while he hears it. Two reasons it exists, both measured:
+             (1) VERBATIM IS OTHERWISE UNOBSERVABLE HERE. The wire strips its own
+                 outputTranscription after two early closes ("live scar bit"), so
+                 after that there is no text record at all of what the Gaffer said.
+                 A prompt cannot enforce verbatim; this panel lets HIM catch drift.
+             (2) His own VISUALIZATION CONTRACT (PROJECT_OS.md, his 1 Aug 2026
+                 ruling — "visuals are important for my adhd pi brain"). A pure-audio
+                 recital gives him nothing on screen for minutes at a time.
+             Fed straight from the tool result, deliberately NOT through log() —
+             log() caps at 4000 chars, which would re-introduce a silent truncation
+             into the one surface built to prove there isn't one. -->
+        <div id="verbatim" style="display:none;position:fixed;right:2vw;top:8vh;width:min(38vw,560px);max-height:74vh;overflow:auto;white-space:pre-wrap;word-break:break-word;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;color:#dfe3e6;background:rgba(10,12,14,.94);border:1px solid #2a2f35;border-left:3px solid #EF0107;border-radius:8px;padding:14px 16px;z-index:50"></div>
+
         <div class="bottom-bar">
             <nav id="nav">
                 <a href="/?">Matchday</a>
@@ -3140,8 +3470,65 @@ function maybeAck(){if(!CFG||!CFG.acks||!CFG.acks.length||liveSrcs.length)return
  const n=Date.now();if(n-lastAckAt<8000)return;lastAckAt=n;
  try{new Audio(CFG.acks[(Math.random()*CFG.acks.length)|0]).play()}catch(e){}}
 
+// THE VERBATIM PANEL, fed at the relay. showVerbatim() renders the EXACT bytes the
+// tool returned — no slice, no markdown stripping, no re-wrap — so he can read along
+// and catch the moment the mouth paraphrases. textContent, never innerHTML: his prose
+// is data, and it is his own, but a capsule is still a file and files get pasted into.
+// ── THE RECITAL AUDIT (page side) ───────────────────────────────────────────
+// THE MACHINE GRADES THE RECITAL, NOT HIM. The first cut of this feature ended
+// with "watch for three things and tell me if they're wrong" — which is the
+// verification tax handed straight back to the human, and a direct breach of
+// THE ANCHOR LAW ("never hand him a report to read, never a command to
+// remember"). He cannot listen and audit at the same time, and he said so.
+// So: we hold the exact bytes the tool returned, listen to what the mouth
+// actually said, and score the two against each other every turn.
+//   coverage — how much of HIS prose survived, as an in-order word match, so
+//              the Gaffer's own filler between sentences never counts as drift
+//   priced   — did a duration land BEFORE the prose started (the price-first law)
+//   overrun  — did the mouth keep going far past the page it was handed
+// Degrades HONESTLY: the wire strips its own transcription after two early
+// closes, and with no transcript the verdict is UNVERIFIED — never PASS.
+let RCT=null,rctTimer=0;
+const rWords=s=>String(s||'').toLowerCase().replace(/[*_\`#>|~\[\]()]/g,' ').replace(/[^a-z0-9ऀ-ॿ]+/g,' ').trim().split(/\s+/).filter(Boolean);
+const DUR=/^(second|seconds|sec|secs|minute|minutes|min|mins|minat|sekind|ghanta|ghante)$/;
+
+function recitalGrade(){
+ if(!RCT||RCT.graded)return;RCT.graded=true;
+ const el=document.getElementById('verbatim');
+ const said=rWords(RCT.spoken),want=RCT.words;
+ let hit=0,j=0;const missing=[];
+ for(const w of want){const k=said.indexOf(w,j);if(k>=0){hit++;j=k+1}else if(missing.length<12)missing.push(w)}
+ const coverage=want.length?Math.round(hit/want.length*100):0;
+ // price-first: a duration word in the opening breath, before his prose begins
+ const head=said.slice(0,34),firstProse=want.length?head.indexOf(want[0]):-1;
+ const priced=head.some((w,i)=>DUR.test(w)&&(firstProse<0||i<firstProse));
+ const overrun=said.length>want.length*1.8+60;
+ const verdict=!RCT.transcript?'UNVERIFIED':(coverage<85?'DRIFT':(!priced?'NO-PRICE':(overrun?'OVERRUN':'PASS')));
+ const badge={PASS:'✓ VERBATIM',DRIFT:'⚠ DRIFT',OVERRUN:'⚠ OVERRAN THE PAGE','NO-PRICE':'⚠ NO PRICE SPOKEN',UNVERIFIED:'— UNVERIFIED (no transcript this session)'}[verdict];
+ const colour={PASS:'#3fb950',DRIFT:'#EF0107',OVERRUN:'#d29922','NO-PRICE':'#d29922',UNVERIFIED:'#7d8590'}[verdict];
+ if(el&&el.firstChild){const b=document.createElement('div');
+  b.style.cssText='color:'+colour+';font-weight:600;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #2a2f35';
+  b.textContent=badge+(RCT.transcript?('  ·  '+coverage+'% of his words, in order'+(missing.length?('  ·  dropped: '+missing.slice(0,6).join(', ')):'')):'');
+  el.insertBefore(b,el.firstChild)}
+ try{fetch('/recital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({capsule:RCT.capsule,page:RCT.page,verdict,coverage,priced,overrun,payload_words:want.length,spoken_words:said.length,missing})}).catch(()=>{})}catch(e){}
+}
+// every chunk the mouth produces feeds the audit; 4s of silence closes the turn
+function recitalHear(txt){if(!RCT||RCT.graded)return;RCT.spoken+=' '+txt;
+ clearTimeout(rctTimer);rctTimer=setTimeout(recitalGrade,4000)}
+
+function showVerbatim(res){const el=document.getElementById('verbatim');if(!el)return;
+ recitalGrade(); // close the previous page's audit before the next one opens
+ const body=res&&res.ok?(typeof res.weld==='string'?res.weld:(typeof res.text==='string'?res.text:(typeof res.a==='string'?res.q+'\n\n'+res.a:null))):null;
+ if(body===null){RCT=null;el.style.display='none';el.textContent='';return}
+ const secs=typeof res.est_seconds==='number'?res.est_seconds:null;
+ const head=[res.id,res.page,res.axis?('axis '+res.axis):null,(res.seg&&res.of)?('segment '+res.seg+' of '+res.of):null,secs!==null?(secs+'s spoken'):null].filter(Boolean).join(' · ');
+ el.textContent=head+'\n\n'+body;el.style.display='block';el.scrollTop=0;
+ RCT={capsule:res.id||'',page:res.page||'',words:rWords(body),spoken:'',graded:false,transcript:outTxEnabled}}
+
 async function toolCall(fc){const r=await fetch('/tool',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fc.name,args:fc.args||{},mode:MODE})});
-return {id:fc.id,name:fc.name,response:{result:await r.json()}}}
+const result=await r.json();
+if(fc.name==='get_capsule')try{showVerbatim(result)}catch(e){}
+return {id:fc.id,name:fc.name,response:{result}}}
 
 // THE LINE — connect-on-voice; parked on idle (scar: always-on WS hemorrhages tokens); stitched via sessionResumption
 function connect(){
@@ -3185,7 +3572,7 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  const sc=m.serverContent;if(!sc)return;
  if(sc.interrupted)stopPlayback();
  if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text)}
- if(sc.outputTranscription&&sc.outputTranscription.text){post('GAFFER',sc.outputTranscription.text);affGaffer(sc.outputTranscription.text)}
+ if(sc.outputTranscription&&sc.outputTranscription.text){post('GAFFER',sc.outputTranscription.text);affGaffer(sc.outputTranscription.text);recitalHear(sc.outputTranscription.text)}
  if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[])){
   if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
   // M4 — THE CHALKBOARD, visible: the Gaffer's live code runs land in the record
@@ -3668,6 +4055,24 @@ async function main() {
           // M0 — the page banks each fresh resumption handle here; a reload
           // (or a bridge restart) resumes the SAME server-side session.
           return send(200, saveSessionHandle(body));
+        }
+        if (req.url === "/recital") {
+          // THE RECITAL AUDIT — the machine's verdict on its own recital, banked
+          // so a later session can read the record he was never asked to keep.
+          // `verdict` is one of PASS · DRIFT · OVERRUN · NO-PRICE · UNVERIFIED.
+          try {
+            appendFileSync(RECITAL, JSON.stringify({
+              ts: new Date().toISOString(),
+              capsule: String(body.capsule || ""), page: String(body.page || ""),
+              verdict: String(body.verdict || ""),
+              coverage: Number(body.coverage) || 0,
+              priced: !!body.priced, overrun: !!body.overrun,
+              payload_words: Number(body.payload_words) || 0,
+              spoken_words: Number(body.spoken_words) || 0,
+              missing: Array.isArray(body.missing) ? body.missing.slice(0, 12) : [],
+            }) + "\n");
+          } catch { }
+          return send(200, { ok: true });
         }
         if (req.url === "/afferent-relay") {
           // M1 — the page's senses → the thalamus, fire-and-forget

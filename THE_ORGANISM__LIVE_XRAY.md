@@ -1,7 +1,7 @@
 # THE ORGANISM — LIVE X-RAY
 
-> **Snapshot: 10 August 2026.** Built by reading every line of all 74 scripts (~54,500 lines),
-> every .md in the repo, every hook, every installer, every skill, and the live state bus —
+> **Snapshot: 10 August 2026.** Built by reading every line of every script (`cat scripts/*.mjs | wc -l`
+> — 55,321 the day of this audit), every .md in the repo, every hook, every installer, every skill, and the live state bus —
 > plus a live check of the running daemons, the scheduler, and git.
 >
 > **THIS FILE WILL ROT. That is the repo's own most-repeated law.** Nothing here is canon.
@@ -9,7 +9,18 @@
 > re-checkable with the commands in Appendix A. When this file and the code disagree,
 > **the code wins and this file is wrong.**
 >
-> Repo: 282 commits, 8 Jul → 10 Aug 2026 (33 days), 246 tracked files, branch `main`, PUBLIC.
+> Repo: branch `main`, PUBLIC, first commit 8 Jul 2026. **Count the rest live, never from here:**
+> `git rev-list --count HEAD` · `git ls-files | wc -l` · `git ls-files "scripts/*.mjs" | wc -l`
+> · `cat scripts/*.mjs | wc -l`.
+>
+> *(corrected 10 Aug 2026, self-audit: this header read "all 74 scripts (~54,500 lines)" and
+> "282 commits … 246 tracked files". Live the same day: **287** commits, **247** tracked files,
+> **75** tracked `.mjs` under `scripts/`, **55,321** lines. The file proved its own thesis inside
+> one day — so the numbers are now commands. The "74" is not nonsense: `organism_test.mjs` counts
+> organs as everything in `scripts/` **except itself** (`scripts/organism_test.mjs`, the line
+> `const scripts = () => readdirSync(…).filter((f) => f.endsWith(".mjs") && f !== SELF)` — find it
+> with `grep -n "f !== SELF" scripts/organism_test.mjs`), so 75 tracked files = 74 organs + the
+> test runner. Both numbers are true of different things; neither should be typed into prose.)*
 
 ---
 
@@ -18,7 +29,7 @@
 - **PART 0** — What this thing actually is, in one page
 - **PART 1** — YOUR DAY (the routine, hour by hour, surface by surface)
 - **PART 2** — YOUR SURFACES (every place you touch it)
-- **PART 3** — THE ORGANS (all 74 scripts, what each one does)
+- **PART 3** — THE ORGANS (every script, what each one does) *(corrected 10 Aug 2026: this said "all 74 scripts")*
 - **PART 4** — THE CLOCK (every scheduled thing, in time order)
 - **PART 5** — THE LAWS (the constitution, and where each law came from)
 - **PART 6** — THE NUMBERS (every gate and threshold + its origin)
@@ -36,14 +47,28 @@ for you is **the rep**.
 
 Physically it is:
 
-- **74 deterministic `.mjs` scripts** on Windows/Node 22, no framework, no database.
-- **A JSON state bus** at `dressing-room/state/` — ~110 files, **one writer per file, always**.
-- **~50 Windows scheduled tasks** + **5 resident daemons** on ports 4111–4116.
+- **Deterministic `.mjs` scripts** on Windows/Node 22, no framework, no database — count them live:
+  `git ls-files "scripts/*.mjs" | wc -l`.
+- **A JSON state bus** at `dressing-room/state/` — count live:
+  `find dressing-room/state -maxdepth 1 -type f | wc -l` — **one writer per file**, with exactly one
+  deliberate, code-documented exception (see PART 5, law 9).
+- **~50 Windows scheduled tasks** (`Get-ScheduledTask -TaskName ArsenalFC-* | Measure-Object`)
+  + **5 resident daemons** on ports 4111–4116.
 - **LLM calls only through `claude -p`** on your Max subscription. The code **refuses to start**
-  if `ANTHROPIC_API_KEY` is set — that is the hard $0-marginal-cost ceiling, enforced in 7+ files.
-- **Free Gemini keys** (10 in `~/.gemini/.env`) for exactly three things Claude physically cannot do:
-  the live voice, embeddings, and the 1M-token whole-season re-read.
+  if `ANTHROPIC_API_KEY` is set — that is the hard $0-marginal-cost ceiling. Count the enforcing
+  files live: `grep -rln "ANTHROPIC_API_KEY" scripts/*.mjs`.
+- **Free Gemini keys** in `~/.gemini/.env` (`GEMINI_API_KEY`, `_2`, `_3`… — the loader that reads them
+  is `grep -n "GEMINI_API_KEY" scripts/dugout.mjs`; count the keys with
+  `grep -c "^GEMINI_API_KEY" ~/.gemini/.env`) for exactly three things Claude physically
+  cannot do: the live voice, embeddings, and the 1M-token whole-season re-read.
 - **Two phone pushes a day**, constitutionally. That is the entire notification surface.
+
+*(corrected 10 Aug 2026, self-audit — four hardcoded numbers in this one list, three already wrong
+the day they were written: the state bus held **120** top-level files, not "~110"; the API-key
+refusal lives in **8** scripts, not "7+"; `~/.gemini/.env` holds **9** keys (`GEMINI_API_KEY`
+through `_9`), not 10. "~50 scheduled tasks" and "5 daemons on 4111–4116" both held exactly. The
+single-writer line over-claimed — `brain_ledger.jsonl` has six live appenders by design; corrected
+at law 9 rather than deleted, because the law is real and the exception is deliberate.)*
 
 Logically it is **four layers**:
 
@@ -150,8 +175,16 @@ node scripts/rejirah.mjs close <c>           ← prints the one-line gist patch
 /gist-patch                                  ← Claude drives your Chrome, pre-fills it, YOU click Save
 node scripts/mirror.mjs                      ← pulls it back; only now does the round exist
 ```
-Until that paste lands, **five organs believe the round never happened** (fsrs, deep, capsule_bridge,
-dugout, shipped) — which is why the kickoff brief shouts PENDING.
+Until that paste lands, **seven organs believe the round never happened** — `fsrs` · `deep` ·
+`capsule_bridge` · `dugout` · `shipped` · `captains_call` (it files the pending-paste card) ·
+`learnstate` (the brief's PENDING line). Which is why the kickoff brief shouts PENDING.
+Count them live: `grep -rln "reJirahDone" scripts/*.mjs` — subtract `rejirah.mjs` (the owner) and
+`organism_test.mjs` (the runner); the rest are consumers.
+*(corrected 10 Aug 2026: this said "five organs" and named five. Two more read the same field and
+were left out — `captains_call.mjs` (`grep -n "reJirahDone" scripts/captains_call.mjs`, the
+mirror-of-rejirah check that files the card) and `learnstate.mjs`. **CLAUDE.md carries the same
+"Five organs read `reJirahDone`" line and is wrong in the same way** — flagged, not edited: that
+file is not this task's to touch.)*
 
 ## 1.5 — The outward loop (Gemini)
 
@@ -236,9 +269,15 @@ The moment a session starts, **13 hooks fire without you asking**:
 5. `hippocampus.mjs recall-hint` — a **network-free** lexical recall reflex (~3.6% of turns earn a line quoting your own past words, with its date)
 
 **Stop (2, on every answer):** the answer captured as `claude-code-teaching`; then the turn is
-**audited against 11 canon-scoped checks** and every measured drift **auto-counts** into the ranking —
-which changes what gets re-injected on your very next prompt. Nobody asks you. Reversible with
+**audited against 12 canon-scoped checks** — `one-idea · dheema-not-lamba · hinglish · his-level ·
+no-system-mid-concept · confusion-is-literal · his-word · coverage · neev-pehle · link-back ·
+terminology · decided` — and every measured drift **auto-counts** into the ranking, which changes
+what gets re-injected on your very next prompt. Nobody asks you. Reversible with
 `unhit-auto`. **PreCompact (1):** the whole brief is reprinted so orientation survives compaction.
+*(corrected 10 Aug 2026: this said 11. Count them live —
+`sed -n '/^export function auditTurn(/,/^export function readForgeSessionLegacy/p' scripts/teaching_audit.mjs | grep -c 'rule: "'` —
+and note that the file also carries a FROZEN `auditTurnLegacy` with the first SIX of these, per the
+layering law; grepping the whole file counts both engines and gives 18.)*
 
 **The 15 skills — word → ritual:**
 
@@ -302,8 +341,9 @@ One self-contained dark HTML file, zero network, opens from disk, **refreshes it
 and is re-rendered every 30. Panels: the NOW strip (reps today, learning minutes, building minutes,
 struggle read — odometers that only count **up**, never quota bars) · the Maidan pitch with your weak
 handoff drawn as a frayed pass · season (matches, doubts retired, weekly consistency — **never a
-streak**) · calibration curve · the derby table of confusion pairs · drills · commitments (8 days of
-KAL-lines paired with the next day's result) · the body strip (**verdict word and colour only — never
+streak**) · calibration curve · the derby table of confusion pairs · drills · commitments (**the last
+7** KAL-lines paired with the next day's result — `grep -n "commitments:" scripts/viz.mjs` shows
+`slice(-7)`; *corrected 10 Aug 2026, this said 8 days*) · the body strip (**verdict word and colour only — never
 a raw biometric**) · the brain · the twin's book · ≤3 insight lines. **On a RED day the wall collapses
 to your KAL-line and one sentence:** *"Rotation day. One five-minute floor-touch is the whole match."*
 
@@ -327,12 +367,19 @@ inbox swept hourly.
 
 # PART 3 — THE ORGANS
 
-All 74 scripts. Format: **name** — what it is · when it runs · what it owns.
+Every script. Format: **name** — what it is · when it runs · what it owns.
+*(corrected 10 Aug 2026: this said "All 74 scripts" and then names roughly sixty. Roster live:
+`git ls-files "scripts/*.mjs"` — 75 tracked the day of this audit. The named-here set is a tour,
+not an inventory; the inventory is that command.)*
 
 ## 3.1 — THE BRAIN
 
-**`brain.mjs`** (3,537 lines) — the LLM job runtime. A resident daemon beats **every 15 seconds**
+**`brain.mjs`** (`wc -l scripts/brain.mjs` — 3,582 the day of this audit; *corrected 10 Aug 2026,
+this said 3,537*) — the LLM job runtime. A resident daemon beats **every 15 seconds**
 (singleton on :4116), re-reads its config every beat, computes headroom, and runs one tick.
+The 15s is the **live config** (`brain_config.daemon.poll_ms`), not the code's own fallback —
+`grep -n "daemon.poll_ms) || 75000" scripts/brain.mjs` shows the default is still 75,000ms, so
+read the beat off the config, never off the source.
 - **Budget:** 5h window ≈ **1,600,000 tokens**, week ≈ **24,000,000** — your share of the 20x plan
   under your own split ruling (Nidhi 800k/12M + your study 800k/12M + the organism 1.6M/24M, zero remainder).
 - **Phases:** study 09:00–21:00 caps at **40%** ("the organism is forbidden from spending your study
@@ -440,7 +487,8 @@ schedulers agree and disagree) · `widget.mjs` (built ≠ **driven**) · `python
 
 ## 3.5 — THE HANDS
 
-`manager.mjs` + `dressing-room/manager/system.md` (587 lines — the Gaffer's constitution: two brains,
+`manager.mjs` + `dressing-room/manager/system.md` (`wc -l` it — 586 the day of this audit;
+*corrected 10 Aug 2026, this said 587* — the Gaffer's constitution: two brains,
 8 precedence rungs, the formation-read, the season arc, the honesty-overrides) · `setpiece.mjs`
 (tomorrow's ≤3 drills; **first ball winnable by law**; RED ⇒ exactly one 5-minute floor-touch and the
 withheld harder work is **disclosed at post-match, never hidden**) · `scorer.mjs` (the Slip: three books,
@@ -475,8 +523,13 @@ selftest scans the entire output for dose/advice language. It never comments on 
 only ever *explains* a bad-REM night, never counts against you.
 
 `timeaudit.mjs` (Learning/Building/Meta from ActivityWatch, browser-focus-clipped, targets Building ≥60% /
-Meta ≤25%) · `physio.mjs` · `fuelboard.mjs` (8 free-Gemini tanks with a starvation guard and a cross-process
-lock) · `conductor.mjs` (the two chains).
+Meta ≤25%) · `physio.mjs` · `fuelboard.mjs` (**8 tanks, T1–T8, of which 7 are Gemini-keyed** — T4
+"Bridge" is `opus-via-cortex` with `key_index: null` and is budgeted by the brain ledger, not here:
+`grep -n "DEFAULT_TANKS" -A 9 scripts/fuelboard.mjs` — with a starvation guard and a cross-process
+lock; live usable count comes from `node scripts/physio.mjs`, never from this line) · `conductor.mjs`
+(the two chains).
+*(corrected 10 Aug 2026: this read "8 free-Gemini tanks", which counts the one tank that has no
+Gemini key at all.)*
 
 ---
 
@@ -511,7 +564,7 @@ lock) · `conductor.mjs` (the two chains).
 | 03:30 Sun | presence threshold refit |
 | **03:45** | groundsman push to the public repo |
 | 03:52 | wake probe |
-| 07:00–07:06 | thalamus · cortex · turnstile · brain daemon boot |
+| 07:06 | **brain daemon** boot (`ArsenalFC-BrainDaemon`, the only one of these four still Ready) |
 | **08:45** | **the team sheet + PHONE PUSH #1** |
 | **09:15** | **THE MORNING CONDUCTOR** (16 organs, ordered) |
 | 10:30 IST | cloud sentinel (only if the morning was silent) |
@@ -521,12 +574,33 @@ lock) · `conductor.mjs` (the two chains).
 | 14:20 | midday cartridge (the afternoon Gaffer reboots knowing your morning) |
 | 20:00 Sun | **THE BOOT ROOM** (one genome proposal) |
 | 20:40 | evening team-talk mp3 |
-| 21:50 | evening voice · physio-PM |
+| 21:50 | evening voice |
 | **22:00** | **THE BELL + PHONE PUSH #2** + the evening conductor |
 | 22:35→23:10 | scorer → scoreboard → model ingest → **setpiece** → doubtminer → physio → examiner → wall → scout → wallpaper |
 | 22:45 | **the agenda** (the night's allocation) |
 | 22:00–07:30 | the overnight drain (~20 LLM jobs by priority) |
 | **23:55** | **THE WATCHMAN** (+ Opus repair child if needed) |
+
+**TWO CORRECTIONS, 10 Aug 2026 (self-audit) — and one warning about reading this table at all:**
+
+1. This row used to read `07:00–07:06 | thalamus · cortex · turnstile · brain daemon boot`.
+   Live, `ArsenalFC-Thalamus` (07:00), `-Cortex` (07:02) and `-Turnstile` (07:04) are all
+   **Disabled** — only `ArsenalFC-BrainDaemon` (07:06) is Ready. The three daemons are launched
+   instead by the **Morning Conductor's own daemon steps** (`conductor.mjs` MORNING carries
+   `daemon: { port: 4113 / 4112 / 4111 }`, probe-first, launched detached through the VBS cloak —
+   `grep -n "daemon: { port" scripts/conductor.mjs`), and, failing that, by the Dugout's boot
+   side-effect. Reading the old row would have you hunting a 07:00 task that is switched off.
+2. `21:50 | evening voice · physio-PM` was wrong on physio: `physio-pm` is step 7 of the **EVENING
+   chain at 22:50**, exactly as §1.6 already said (`grep -n '"physio-pm"' scripts/conductor.mjs`).
+   Only `evening_voice` sits at 21:50 (`brain_config` jobs, `at: "21:50"`).
+
+**THE WARNING:** most of the individual rows above now exist in Task Scheduler as **Disabled**
+tombstones, because their work was absorbed into the two conductors (`ArsenalFC-Morning-Conductor`
+09:15, `ArsenalFC-Evening-Conductor` 22:00). `ArsenalFC-Bell-FullTime` is Disabled and the bell
+still rings — as EVENING step 1. So a Disabled row here does **not** mean the organ is dead; it
+means the chain owns it now. Never conclude "it stopped" from the task state alone; read the chain:
+`node scripts/conductor.mjs plan` · `node scripts/conductor.mjs plan evening` ·
+`Get-ScheduledTask -TaskName ArsenalFC-* | Select TaskName,State`.
 
 ## 4.3 — The brain's job table (30 jobs, priority order)
 
@@ -538,10 +612,14 @@ lock) · `conductor.mjs` (the two chains).
 `maidan_poster` 25 · `wall_review` 24 · `widget_spec` 22 · `capsule_premap` 20 · `model_mine` 20 ·
 `dreams` 15 · `diary` 10.
 
-**Every job must declare a `surface`** — where its output actually appears — because eight jobs were
-once writing 3.27M tokens/week into directories no line of code ever opened. Four categories:
-`code` (a .mjs opens it, cite file:line) · `job_input` · `human_file` (for your eyes, listed by path
-in `brain status`) · `media`. **A job with no address is reported, not silenced.**
+**Every job must declare a `surface`** — where its output actually appears — because eight-to-ten
+jobs were once writing 3.27M tokens/week into directories no line of code ever opened. **Six kinds**,
+not four: `code` (a .mjs opens it, cite file:line) · `job_input` (another job lists it in `inputs`) ·
+`human_file` (for your eyes, listed by path in `brain status`) · `media` (an mp3/artefact) ·
+`sheet` (team_sheet.md) · `none`. **A job with no address is reported, not silenced.**
+*(corrected 10 Aug 2026: this said "Four categories" and omitted `sheet` and `none` — and `sheet` is
+the surface of `formation_read`, the highest-priority job in the whole table. The law's own text is
+the authority: `node -e "console.log(JSON.parse(require('fs').readFileSync('dressing-room/state/brain_config.json','utf8'))._surface_law)"`.)*
 
 ---
 
@@ -562,7 +640,19 @@ Every one of these is enforced in code, not prose. Most were bought with a real 
 8. **A green selftest, an `ok:true`, and an exit code 0 are claims — the file is the fact.**
 
 ## Structure
-9. **One writer per file, always.**
+9. **One writer per file** — with exactly one deliberate, code-documented exception.
+   *(corrected 10 Aug 2026: this read "One writer per file, **always**", and the "always" is false.
+   `brain_ledger.jsonl` is a **shared append lane by design**, with six live appenders — brain,
+   cortex (×2 sites), council, selfknowledge, nightshift, dmn. `brain.mjs` owns the **row schema**
+   only, not the file; the arrangement is stated in code, not smuggled — see `talk.mjs:16-17`,
+   `dmn.mjs:118`, `organism_test.mjs:212-218`, or find it live with
+   `grep -rn "brain_ledger" scripts/*.mjs`. Append-only + one schema is what makes it safe, and
+   that is a different law from single-writer. **Separately and NOT resolved:**
+   `dressing-room/hippocampus/identity_facts.pending.jsonl` has TWO live writers with INCOMPATIBLE
+   modes — `hippocampus.mjs` rewrites the whole file, `mcp-memory.mjs` appends to it
+   (`grep -n "identity_facts.pending" scripts/hippocampus.mjs scripts/mcp-memory.mjs`). A rewrite
+   racing an append is a genuine breach of this law, not an exception to it. **Needs the captain's
+   ruling — do not silently pick an owner.**)*
 10. **Layering, never replace.** Every superseded engine is frozen verbatim in the same file (`analyzeLegacy`, `modeAxisLegacy`, `deadVerdictLegacy`…) so the improvement is a measured difference, not a claim.
 11. **Never delete an organ for having no reader — give it an address.**
 12. **Fail silent, never loud.** Every hook path exits 0; every failure resolves to no wake, no whisper, no fabrication.
@@ -572,7 +662,11 @@ Every one of these is enforced in code, not prose. Most were bought with a real 
 14. **Only four question-moments exist.** Anything else is a quiz-dump, and the fifth is refused by code.
 15. **The visualization contract.** One widget per concept; the widget **is** the lesson; **driven**, not merely built.
 16. **Capsule prose is sacred.** Immutable; never re-emitted; only ever a targeted edit — and **your paste** is the only master write.
-17. **Dheema ≠ lamba.** One idea per message, opened all the way down. (Currently your #1 measured drift: 47 hits.)
+17. **Dheema ≠ lamba.** One idea per message, opened all the way down. (Still your #1 measured
+    drift — read the live count off `node scripts/teaching_contract.mjs print`, never off this line.
+    *Corrected 10 Aug 2026: this said "47 hits"; the live ranking that same day printed **78×, all
+    auto-counted**. A drift tally rises on the very next turn — it is the single most rot-prone
+    number in this file.*)
 18. **THE ANCHOR LAW.** If a thing needs you, it rides an anchor you already hit. If it can't ride an anchor, it doesn't need you. **Max one card per anchor.**
 19. **Automate the friction, protect the baking.** Anything you have to remember is a design defect, not a discipline problem.
 
@@ -589,21 +683,37 @@ Every one of these is enforced in code, not prose. Most were bought with a real 
 
 # PART 6 — THE NUMBERS (and where each came from)
 
-**Cold-start gates — dormant by law, not broken:**
+**Cold-start gates — dormant by law, not broken.**
+**Read HAVE/NEED live from `node scripts/limits.mjs human` — this table is NEEDS only, and even
+the needs move when he rules on one.** The organ's own status line is the second authority
+(`node scripts/nemesis.mjs`, `node scripts/fsrs.mjs status`, `node scripts/shadow.mjs status`).
 
 | Gate | Needs | Origin |
 |---|---|---|
-| Calibration ECE + danger zone | 20 reps | design |
-| Nemesis axis-pattern | 20 reps + 3 concepts | design (headline is live from rep 1) |
-| Learning-state fluency | 12 reps | design, v0 hypothesis |
-| Twin's voice | 30 scored resolutions | design |
-| Boot Room's first mutation | 200 reps | design |
-| Doubt clusters | 4 capsules **and** 60 doubts | design — **already open** |
-| Tape-room rematch | doubt ≥14 days old | design |
-| Confusion pairs | 6 cracked grades across ≥2 concepts | design |
+| Calibration ECE + danger zone | 20 reps (`min_reps`/`window_size`); **the TREND needs 2 full windows = 40** | `limits.mjs` calls it **guessed** |
+| Nemesis axis-pattern | 20 reps + 3 concepts | guessed (headline is live from rep 1) |
+| Learning-state fluency | 12 reps | guessed, v0 hypothesis |
+| Twin's voice | 30 scored resolutions | guessed |
+| Boot Room's first mutation | 200 reps | guessed |
+| Doubt clusters | 4 capsules **and** 60 doubts | **HIS ruled numbers** — **already open** |
+| Tape-room rematch | doubt ≥14 days old | guessed |
+| Confusion pairs | **6 cracked cold grades** | **HIS ruled number** |
 | Body archive lines | 84 body-days | **external** (12 weeks is a real physiological window) |
-| Shadow → voice | ≥10 scorable **and** ≥0.70 hit-rate | design |
-| Widget "driven" | ≥2 gates driven | the contract's own 2–3 |
+| Shadow → voice | ≥10 scorable **and** ≥0.70 hit-rate | `shadow.mjs` `VOICE_GATE`, guessed |
+| Widget "driven" | ≥2 gates driven (`widget.mjs` `GATES_MIN = 2`) | the contract's own 2–3 |
+
+*(three corrections, 10 Aug 2026, self-audit:*
+- *"Confusion pairs | 6 cracked grades **across ≥2 concepts**" — the second clause does not exist.
+  The gate is a bare count: `g("confusion-pairs", cracked >= 6, …)` — find it with
+  `grep -n '"confusion-pairs"' scripts/forge_session.mjs`. Anyone planning around "spread it over
+  two concepts" would be inventing work the code never asks for.*
+- *The whole **Origin** column said "design". `limits.mjs` — the organ whose entire job is to name
+  each number's provenance — labels **17 of 18 gates "guessed"** and only the body archive
+  "external". And the 4/60/6 counts are neither: the code calls them **HIS ruled numbers**,
+  "verbatim from the sealed rulings, not guesses" (`grep -n "HIS ruled numbers" scripts/forge_session.mjs`).
+  "Design" flattered all three into one word.*
+- *`forge_session.mjs` ships a **third** data-gate this table never listed: **R1-constants —
+  Re-Jirah rounds closed ≥1**. Same function, same three lines.)*
 
 **Measured, not guessed:** the boot tax (49,411→5,663) · think-pause hangover 1400ms · the
 transcript-fill budget (4.1 bytes/token × 1M) · the presence stall signature (p95 of calm × 1.25) ·
@@ -619,15 +729,44 @@ self-repair without asking · public-repo data · the selfknowledge freeze.
 15-minute cadence · several v0 learning-state thresholds. All waiting on 30–45–60 days of real data —
 your own rule, applied to your own machine.
 
+*(corrected 10 Aug 2026: those three examples read as if they were the whole guessed list. Run
+`node scripts/limits.mjs human` and the footers say **"17 of 18 gates are GUESSES"** and **"12 of 28
+cadences are GUESSES"** — the honest scale is most of the board, not three rows. The three named
+above are real examples; they were never the population. Never quote a count from here — the report
+prints its own footer.)*
+
+**One instrument disagrees with the config it reports on** (found 10 Aug 2026, NOT repaired here —
+this file may not touch code): `limits.mjs` prints `thalamus refractory · 45min ·
+thalamus_config.refractory_min`, but that key is **15** in the live
+`dressing-room/state/thalamus_config.json`, which is what `thalamus.mjs` actually loads. The 45 is a
+hardcoded literal in the limits row (`grep -n "thalamus refractory" scripts/limits.mjs`); the 45 also
+survives as `thalamus.mjs`'s own DEFAULT_CONFIG fallback (`grep -n "refractory_min: 45" scripts/thalamus.mjs`),
+which is why it looks plausible. **The running value is 15.** Needs the captain: either the limits row
+reads the config, or the config moves — a numbers-registry that hardcodes the number it is registering
+is the exact failure this whole file is about.
+
 ---
 
 # PART 7 — LIVE vs DARK (10 Aug 2026)
 
 ## Running and healthy
-All 5 daemons up (turnstile · cortex · thalamus · brain daemon · AW). 282 commits. `npm test` at
-**73 members across 32 suites**. Last night produced a **complete H-phase chain** — agenda → model_mine
-→ dreams → reanalysis → night_coach — plus the full nightshift bundle, the wall, the poster, and the
-morning team-talk mp3, all dated 10 Aug and **waiting for you**.
+All 5 daemons up (turnstile · cortex · thalamus · brain daemon · AW) — probe them, don't trust this:
+`foreach($p in 4111,4112,4113,4114,4116,5600){ Test-NetConnection 127.0.0.1 -Port $p -InformationLevel Quiet }`
+(4115 answering False is *correct* — it is the transient tick lock).
+`npm test` runs **73 members across TWO named suites** — `organism:selftest` (51) + `squad:selftest` (22)
+in `package.json`; count them with
+`node -e "const p=require('./package.json');for(const k of ['organism:selftest','squad:selftest'])console.log(k,(p.scripts[k].match(/&&/g)||[]).length+1)"`.
+Last night produced a **complete H-phase chain** — agenda → model_mine → dreams → reanalysis →
+night_coach — plus the full nightshift bundle, the wall, the poster, and the morning team-talk mp3,
+all dated 10 Aug and **waiting for you**.
+
+*(two corrections, 10 Aug 2026, self-audit: the commit count "282" was already **287** — deleted, not
+re-typed; use `git rev-list --count HEAD`. And "**73 members across 32 suites**" welds two unrelated
+numbers: there are **two** suites, and the "32" is the count of `organism_test.mjs`'s **own** check
+groups, which prints as "N passed, M failed" at the end of the run. The 73 is right; the 32 was never
+a suite count. Read the run's own last line — never this sentence — for pass/fail; and note that a
+concurrent edit to any organ can turn a member red mid-audit, so a single red is a reason to re-run,
+not a reason to write "the suite is broken" into prose.)*
 
 **And it produced them honestly**, which is the most important sentence in this file:
 - `model_mine` proposed **0 edges** and said why: the 14-day fact grid has 0 finalized days.
@@ -638,26 +777,59 @@ morning team-talk mp3, all dated 10 Aug and **waiting for you**.
 
 ## Waiting on you (the honest list)
 
-| Thing | State |
-|---|---|
-| **The forge session on `hallucinations`** | **Open, reopened 7 times since 30 Jul, never past 50% step coverage, 0 axes graded, `method_clean:false` on all 7.** Currently step 3, axis a, 1 question-moment used. |
-| **Reps** | **17 total.** Calibration warming (17/40 for trend), nemesis 1/20, genome 17/200. |
-| **Re-Jirah** | 4 capsules locked, **3 never re-tempered**: embeddings 46d · inference 43d · context 39d overdue. Only tokenization has rounds (2/3). |
-| **FSRS** | 5 cards, **4 overdue**, 0 due today. |
-| **`/full-time`** | **Never run.** `SEASON.md` has zero rows. That's why the sheet still says "Matchday 1 · Introduction". |
-| **Missions** | 5 staged (M01–M04 + T-hallucinations), **0 fired**. Benchmark stays hard-gated behind them. Outward floor 0/2 this week. |
-| **Widgets** | 4 built; only embeddings has been **driven** (3 gates). The other three are, by the registry's own doctrine, failed widgets. |
-| **Python** | `python_state.json` completely blank — the 16h biggest rock hasn't opened. |
-| **Course** | 6 chapters ingested, 0 covered. |
-| **Cards open** | ~8, incl. gem-sync 10d overdue · **Gemini CLI login failing 10× straight (blocking night renders)** · the gate-tune proposal · your own Manager §6 review. |
-| **Identity facts** | The two 17-Jul facts are still the ledger, both flagged stale, both dealt as forget-cards. |
-| **Oura** | Writing on schedule but the **content is >100h stale** — the ring data hasn't refreshed. |
+**EVERY CELL IN THIS TABLE IS A SNAPSHOT AND EVERY ONE OF THEM MOVES.** The "read it live" column is
+the point of the table; the numbers are illustration, dated 10 Aug 2026 and re-checked the same day.
+
+| Thing | State (10 Aug 2026) | Read it live |
+|---|---|---|
+| **The forge session on `hallucinations`** | Open, **8 recorded runs** of that concept since 30 Jul, never past 50% step coverage, 0 axes graded, `method_clean:false`. Currently step 3, 1 question-moment used. | `node scripts/forge_session.mjs boot` |
+| **Reps** | **21.** Calibration trend 21/40, nemesis axis-pattern gate **now MET** at 21/20, genome 21/200. | `node scripts/limits.mjs human` |
+| **Re-Jirah** | 4 capsules locked, **3 never re-tempered** (embeddings · inference · context, all 40+ days overdue). Only tokenization has rounds. | `node scripts/rejirah.mjs due` |
+| **FSRS** | 5 cards, **3 overdue, 1 due today**; hardest = inference, context, embeddings, hallucinations. | `node scripts/fsrs.mjs status` |
+| **`/full-time`** | **Never run.** No `season.json`, no `post_match/`, `SEASON.md` has zero rows. That's why the sheet still says "Matchday 1 · Introduction". | `head -1 dressing-room/state/team_sheet.md` |
+| **Missions** | 5 staged (M01–M04 + T-hallucinations). **M01 and T-hallucinations were FIRED on 10 Aug** (`fired_at` stamps); **0 returned/ingested**, so the audit gate is still shut and the outward floor still reads 0/2. | `node scripts/scout.mjs missions` · `node scripts/scout.mjs outward` |
+| **Widgets** | 4 built; only embeddings **driven** (3 gates). The other three are, by the registry's own doctrine, failed widgets. | `node scripts/widget.mjs list` |
+| **Python** | `python_state.json` still absent (`present:false`) — the 16h biggest rock hasn't opened. | `node scripts/python_state.mjs brief` |
+| **Course** | 6 chapters ingested, 0 covered. | `node scripts/course.mjs status` |
+| **Cards open** | **20 LIVE**, incl. gem-sync 10d overdue · **Gemini CLI login failing 10× straight (blocking night renders)** · two gate-tune proposals · your own Manager §6 review (`manager.m2_review`) · two canon-patch cards · two stale-fact cards. | `node scripts/captains_call.mjs list` |
+| **Identity facts** | **3 facts**, not 2: the two 17-Jul ones (both stale, both dealt as forget-cards) plus one filed **10 Aug**. | `node -e "console.log(require('fs').readFileSync('dressing-room/hippocampus/identity_facts.json','utf8'))"` |
+| **Oura** | Writing on schedule, **content days stale** — `readiness.json` still carries `day: 2026-08-04`; the morning sheet printed its own staleness line ("content is 126h old"). The ring data hasn't refreshed. | `node -e "console.log(require('./dressing-room/state/readiness.json').day)"` |
+
+*(seven corrections, 10 Aug 2026, self-audit — this table rotted faster than any other block in the
+file, several cells inside the same day they were written:*
+- ***Missions "0 fired" is the one that would have cost you an action.** `missions.json` carries
+  `fired_at: "2026-08-10T11:12"` on both M01 and T-hallucinations. PART 8 still told you to go fire
+  M01 — that is the wrong next move; the open move is the **return leg** ("le lo" / `mission ingest`).
+  Note `scout.mjs missions` prints "staged" for a fired-but-unreturned row, so the desk view alone
+  will not tell you — read `fired_at` in the JSON, or the return-leg card.*
+- *reps 17 → **21** · nemesis "1/20" → gate **MET** at 21/20 (`node scripts/nemesis.mjs` says so in
+  words: "axis-pattern gate met") · genome 17/200 → 21/200.*
+- *FSRS "4 overdue, 0 due today" → **3 overdue, 1 due today**.*
+- *Re-Jirah "embeddings 46d · inference 43d · context 39d" → each ticked up a day overnight. Exact
+  day-counts deleted rather than re-typed: they are wrong every morning by construction.*
+- *cards "~8" → **20 LIVE**. `captains_call.mjs list` prints settled rows too, so count the LIVE
+  ones, not the lines.*
+- *identity facts "the two 17-Jul facts are still the ledger" → a third landed 10 Aug at 15:42.*
+- *Oura ">100h" was true but understated and unanchored; the day stamp is the durable fact.)*
 
 ## Dark until fed
-The twin's voice (5–14 of 30 resolutions) · the DMN precache (loaded, deliberately inert until the
-earned-voice gate opens) · shadow whispers (7 logged, 0 resolved, gate shut) · the deep brain's adjudicator
-(0 of 131 escalations has ever produced a verified verdict) · the Kennel/Pi lane · the pulse weight (0.00
-by design until its own cost is measured) · the wall's Gemini render lane (needs the one-time `gemini` CLI login).
+The twin's voice (**15 of 30** resolutions on its best claim-type — `node scripts/physio.mjs` prints
+the climb) · the DMN precache (loaded, deliberately inert until the earned-voice gate opens) ·
+shadow whispers (**9 logged, 0 ever scored** — `proactivity_ledger.json` does not exist yet, so all
+four types read 0/10; `node scripts/shadow.mjs status`) · the deep brain's adjudicator · the
+Kennel/Pi lane (`bus_lease.json` has never been created; `groundsman.mjs` **is** wired for its push
+half — `ArsenalFC-Groundsman-Push` 03:45 is Ready — but the two-node lease half is unbuilt) ·
+the pulse weight (**0.00** in `thalamus_config.weights.pulse`, by design until its own cost is
+measured) · the wall's Gemini render lane (needs the one-time `gemini` CLI login).
+
+*(corrected 10 Aug 2026, self-audit: twin "5–14 of 30" → **15/30** · shadows "7 logged" → **9**, and
+"0 resolved" understated it — nothing has ever been *scored*, which is why the gate cannot move on
+its own. The claim "**0 of 131 escalations has ever produced a verified verdict**" is **NOT VERIFIED
+10 Aug 2026** — 131 is demonstrably the *pulse base-rate numerator* (`thalamus_config.pe.base_rates`
+holds `"pulse:*": 0.148695`, and 131/881 = 0.148695…, the same 131/881 quoted two sections above),
+so a pulse-lane count appears to have been borrowed for an adjudicator count. Could not confirm an
+adjudicator figure from code; treat the "0 of 131" as a claim, and read wakes live instead —
+`node scripts/limits.mjs human` prints `wakes` in its HAVE block.)*
 
 ---
 
@@ -669,20 +841,35 @@ Every automated organ ran last night. Every one of them refused to invent data. 
 pre-wrote today's lesson for you — a measured misconception map on `hallucinations`: axis-d
 (measure + range) is **0/2 cold**; axis-a is **scaffold-dependent** (0/4 cold-bare, 2/2 when a concrete
 artefact is in front of you); axis-c "holds warm, dies cold." That page is sitting in
-`brain_out/night_coach/2026-08-10.md` right now.
+`dressing-room/state/brain_out/night_coach/2026-08-10.md` right now.
+*(path corrected 10 Aug 2026: this read `brain_out/night_coach/…`, which resolves to nothing from the
+repo root — `brain_out/` is a subdirectory of the state bus. The file itself is real and verified.)*
 
 Meanwhile the deep re-read wrote the sharper sentence: **intake has badly outrun retrieval.**
-112 doubts captured; 17 reps done; 0 concepts held cold. Four capsules locked in June, three never
-re-tested. The FSRS card served `inference` seven times for zero conversions.
+112 doubts captured against a rep count you should read live (`node scripts/limits.mjs human` — 21
+on 10 Aug, up from the 17 this paragraph was written with); 0 concepts held cold. Four capsules
+locked, three never re-tested. The FSRS card served `inference` seven times for zero conversions.
 
 Nothing in this system can fix that, and by design nothing will try — because the one thing it is
 forbidden to do is the rep. Five things close the loop, in this order:
 
-1. **`node scripts/forge_session.mjs close`** — the open `hallucinations` session has been hanging for 29 hours. One closed loop unblocks the arbiter, the drills and the coverage report.
+1. **`node scripts/forge_session.mjs close`** — the `hallucinations` session is open. One closed loop unblocks the arbiter, the drills and the coverage report.
 2. **One `/full-time`, tonight.** It costs 30 seconds and it births `season.json`, `SEASON.md`, the matchday counter, the KAL→kickoff weld, and three brain jobs that are currently starved of inputs.
-3. **One Re-Jirah round** on embeddings — `deep.mjs due` → grade → close → paste. Five organs are waiting on that one paste.
-4. **Fire M01.** One click on Gemini opens the benchmark gate — the whole outward loop is staged and untouched.
-5. **Reps.** 3 more unlock nemesis's axis-pattern; 23 more unlock the calibration trend. One serious forge day does both.
+3. **One Re-Jirah round** on embeddings — `deep.mjs due` → grade → close → paste. **Seven** organs are waiting on that one paste (see §1.4 — *corrected 10 Aug 2026, this said five in both places*).
+4. **Bring M01 home.** It was **fired on 10 Aug** and has not returned — the open move is the return leg (`/fire` → "le lo", or `node scripts/scout.mjs mission ingest M01 --file <path>`), not another fire. The benchmark stays gated until the report lands and you close the audit with your own word.
+5. **Reps.** The nemesis axis-pattern gate is **already met**; the calibration trend still needs the balance of 40 (`node scripts/limits.mjs human` prints have/need per row). One serious forge day moves it.
+
+*(three corrections, 10 Aug 2026, self-audit — all three would have sent you to do the wrong thing:*
+- ***Item 4 said "Fire M01. One click on Gemini opens the benchmark gate."** M01 was already fired
+  that morning (`fired_at` in `missions.json`). Following the old line means firing a live mission
+  twice and still not opening the gate — the gate needs the **return**, then `mission audit-close`.*
+- ***Item 5 said "3 more unlock nemesis's axis-pattern; 23 more unlock the calibration trend."**
+  Both were computed off 17 reps. Nemesis is already open (`node scripts/nemesis.mjs` → "axis-pattern
+  gate met"), so 3 of those reps would have been spent chasing a door that is not shut. Deltas
+  deleted, not re-typed: a countdown in prose is wrong the moment a single rep lands.*
+- ***Item 1 said the session "has been hanging for 29 hours."** `forge_session.mjs boot` reported it
+  started **3.2h ago** with **8 recorded runs** of that concept — the session had been restarted.
+  The instruction (close it) survives; the elapsed number did not.)*
 
 ---
 
@@ -700,11 +887,30 @@ node scripts/rejirah.mjs due                    # the cold queue + pending paste
 node scripts/deep.mjs due                       # the questions themselves
 node scripts/widget.mjs list                    # built vs driven
 node scripts/scout.mjs outward                  # the ≥2/week floor
-node scripts/captains_call.mjs list             # every open card
+node scripts/scout.mjs missions                 # the desk — but read fired_at in missions.json:
+                                                #   a FIRED-but-unreturned row still prints "staged"
+node scripts/captains_call.mjs list             # every open card (count the LIVE ones)
+node scripts/conductor.mjs plan                 # the morning chain, in order
+node scripts/conductor.mjs plan evening         # the evening chain, in order
+node scripts/forge_session.mjs boot             # is a session open, how long, how many runs
+node scripts/nemesis.mjs                        # the axis-pattern gate, in words
+node scripts/shadow.mjs status                  # earned proactivity: shadows vs scores
+node scripts/course.mjs status                  # chapters ingested vs covered
+node scripts/python_state.mjs brief             # the Python track, or `present:false`
+node scripts/teaching_contract.mjs print        # the live drift ranking (#1 drift + its count)
 ```
 ```powershell
 Get-ScheduledTask -TaskName ArsenalFC-* | Get-ScheduledTaskInfo   # the real clock
+Get-ScheduledTask -TaskName ArsenalFC-* | Select TaskName,State   # …and which rows are Disabled
+                                                                  # tombstones absorbed by a conductor
+foreach($p in 4111,4112,4113,4114,4116,5600){ Test-NetConnection 127.0.0.1 -Port $p -InformationLevel Quiet }
 ```
+*(appendix extended 10 Aug 2026, self-audit. Every command above was run before it was written here.
+The additions are exactly the reads that would have caught this file's own worst rot: `scout.mjs
+missions` + `fired_at` (PART 7 said "0 fired" when two were), `forge_session.mjs boot` (PART 8 said
+"29 hours" for a session restarted that morning), `nemesis.mjs` (PART 8 told you to spend 3 reps on
+an open gate), `captains_call.mjs list` (PART 7 said "~8" for 20), and the port probe (the only
+honest way to say "the daemons are up").)*
 
 **And the standing rule this whole file lives under:** when the prose and the code disagree,
 the code is right. Fix the prose.

@@ -1,14 +1,14 @@
 {
   "date": "2026-08-10",
-  "generated_at": "2026-08-10T03:45:11.868Z",
-  "total_reps": 17,
+  "generated_at": "2026-08-10T14:22:49.544Z",
+  "total_reps": 21,
   "status": "ok",
   "low_confidence": false,
   "gate": {
-    "have": 17,
+    "have": 21,
     "need": 12,
     "unit": "reps",
-    "line": "17/12 reps",
+    "line": "21/12 reps",
     "open": true,
     "withheld": [],
     "emitted_regardless": [
@@ -22,18 +22,18 @@
     "sub": [
       {
         "name": "weak_connection",
-        "have": 17,
+        "have": 21,
         "need": 12,
         "unit": "reps",
-        "line": "17/12 reps",
+        "line": "21/12 reps",
         "open": true
       },
       {
         "name": "maidan_stage_focus",
-        "have": 17,
+        "have": 21,
         "need": 12,
         "unit": "reps",
-        "line": "17/12 reps",
+        "line": "21/12 reps",
         "open": true
       },
       {
@@ -76,7 +76,7 @@
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 1
+      "overdue_days": 0
     }
   ],
   "core_vs_light": {
@@ -108,11 +108,11 @@
       "axis": "a",
       "fluency": "🔴 learning",
       "core": true,
-      "reps": 15,
-      "last_seen": "2026-08-08",
+      "reps": 19,
+      "last_seen": "2026-08-10",
       "velocity": {
         "slope": "regressing",
-        "reps_to_state": 13,
+        "reps_to_state": 18,
         "stalled": false
       },
       "edge": null,
@@ -130,6 +130,17 @@
         "fluent": 0
       },
       "due_count": 2
+    },
+    {
+      "axis": "b",
+      "label": "kyun/first-principles",
+      "fluent_frac": 0,
+      "counts": {
+        "learning": 1,
+        "held": 0,
+        "fluent": 0
+      },
+      "due_count": 0
     },
     {
       "axis": "c",
@@ -226,17 +237,27 @@
     ]
   },
   "position": {
-    "session_open": false,
-    "concept": null,
-    "step": null,
-    "step_name": null,
+    "session_open": true,
+    "concept": "hallucinations",
+    "step": 3,
+    "step_name": "SAMJHAO",
     "axes_done": [],
     "axes_deferred": [],
-    "axes_left": [],
+    "axes_left": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+      "i"
+    ],
     "axes_ungraded": [],
-    "started_at": null,
+    "started_at": "2026-08-10T10:27:40.579Z",
     "stale": false,
-    "stale_as_of": null,
+    "stale_as_of": "2026-08-10T14:22:49.544Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-08-10T01:10:49.568Z",

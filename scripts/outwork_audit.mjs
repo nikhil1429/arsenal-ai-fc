@@ -47,6 +47,23 @@
 //   o6 PRESENCE≠OUTPUT    Learning-bucket minutes > 0 AND zero reps AND zero
 //                         teaching afferents today — presence without a single
 //                         learning signal (his own guard, made visible; INFO)
+//   o7 REP-CLOCK-CORRECTED  a rep on today's ledger whose AUTHORED timestamp was
+//                         impossible — capture moved `ts` to the arrival clock (INFO)
+//   o8 REP-OFF-DOOR       a rep on today's ledger with NO arrival stamp — it did not
+//                         pass capture's ingest door (RED; see the block below)
+//
+// THE THREE CLOCKS FINALLY GET A READER (wiring audit, 10 Aug 2026).
+//   capture.mjs's #24 amendment (4 Aug 2026) enriches every stored rep with
+//   `ts_claimed` · `observed_at` · `ts_source` — built because the ledger caught the
+//   model AUTHORING its own timestamps (reps_log rows 3-6: four reps across ninety
+//   minutes sharing one millisecond). A repo-wide grep on 10 Aug 2026 found ZERO
+//   readers of `observed_at` / `ts_source` outside capture.mjs itself: the provenance
+//   was written to disk on every rep and consumed by nobody, so no organ could tell a
+//   corrected rep from a claimed one. It is read HERE because this organ already opens
+//   reps_log for `reps_today` (o6), already asks "did today's paper trail hold", and
+//   already rides the watchman's one nightly schedule — a consumer, not a new organ.
+//   Both checks are day-scoped and threshold-free, exactly like o1-o6: presence tests
+//   on fields the writer either stamped or did not.
 //
 // WRITES: outwork_audit_last.json (single writer). READ-ONLY on everything else.
 // The watchman's nightly run rides this via `run --json` and merges findings —
@@ -54,9 +71,11 @@
 // MODES: run [--json] | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -85,6 +104,9 @@ export function gather(now = new Date()) {
   const w = {
     now: now.toISOString(), today, yesterday, hour: now.getHours(),
     afferents_today: 0, teaching_today: 0, reps_today: 0,
+    // THE THREE CLOCKS (o7/o8) — named rows, never bare counts: a finding this file
+    // cannot point at is a finding he cannot check.
+    reps_clock_corrected: [], reps_clock_unstamped: [],
     post_match_today: existsSync(join(pmDir, `${today}.md`)),
     post_match_yesterday_kal: null,
     post_match_files: [],
@@ -105,7 +127,17 @@ export function gather(now = new Date()) {
   try {
     for (const line of readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n")) {
       if (!line.trim()) continue;
-      try { if (localDayOf(JSON.parse(line).ts) === today) w.reps_today++; } catch {}
+      try {
+        const r = JSON.parse(line);
+        if (localDayOf(r.ts) !== today) continue;
+        w.reps_today++;
+        // The clocks, as capture.mjs stamps them (resolveClocks — its names, read
+        // verbatim, never re-derived here). A corrected rep is one whose claim was
+        // impossible; an unstamped rep is one capture never saw arrive.
+        const who = `${r.concept}${r.axis ? "/" + r.axis : ""}`;
+        if (r.ts_source && r.ts_source !== "claimed") w.reps_clock_corrected.push(`${who} (claimed ${r.ts_claimed} · ts ${r.ts})`);
+        if (!r.observed_at) w.reps_clock_unstamped.push(`${who} (ts ${r.ts})`);
+      } catch {}
     }
   } catch {}
   try {
@@ -204,6 +236,39 @@ export function checks(w) {
     });
   }
 
+  // o7 — an AUTHORED rep-time that was impossible. capture.mjs only sets
+  // ts_source ≠ "claimed" for one reason: the rep claims to have happened AFTER the
+  // instant capture saw it, so the claim is a fact-check failure, not a judgement
+  // call (no threshold anywhere in that path). capture has already corrected `ts` to
+  // the arrival clock — the ledger is right. What was missing until today is anyone
+  // SAYING it happened, on the day it happened: the #24 evidence reached consumers
+  // only through `ts`, never through the provenance built to preserve it. INFO,
+  // because the row is correct on disk; what this line reports is who wrote its clock.
+  if ((w.reps_clock_corrected || []).length) {
+    F.push({
+      id: "rep-clock-corrected", level: "INFO",
+      finding: `${w.reps_clock_corrected.length} rep aaj ke ledger mein aisi hai jiska authored timestamp NAAMUMKIN tha (rep apne aane se pehle hui hoti hai, baad mein nahi) — capture ne ts ko arrival clock pe khiska diya; us rep ka waqt LIKHA gaya tha, naapa nahi gaya`,
+      evidence: `${w.reps_clock_corrected.join(" · ")} — ts_source "observed(claim_after_arrival)" (capture.mjs resolveClocks, organism audit #24). The stored ts is already the arrival clock; this finding names the authorship, it does not re-correct anything.`,
+    });
+  }
+
+  // o8 — a rep on today's ledger that never passed capture's door. Since #24 every
+  // rep that goes through ingest is stamped (ingestUnlocked always supplies
+  // observedAt; loadReps deliberately supplies none, so a stored value is preserved
+  // and never restamped). observed_at:null is the HONEST value for rows written
+  // before 4 Aug 2026 — we do not know when those arrived — but a row whose `ts`
+  // lands on TODAY cannot be one of them, and capture.mjs is the single writer of
+  // reps_log (throwin and dugout both shell `capture.mjs paste`). So a null arrival
+  // clock on a today-row means the line was written out-of-band. Same class, and the
+  // same RED, as o3's "a file without one was not written by its owner".
+  if ((w.reps_clock_unstamped || []).length) {
+    F.push({
+      id: "rep-off-door", level: "RED",
+      finding: `${w.reps_clock_unstamped.length} rep aaj ke ledger mein bina arrival stamp ke hai (observed_at:null) — since 4 Aug har ingested rep stamp hoti hai, to yeh line capture ke darwaze se nahi aayi: single-writer law toota hai ya koi purana capture.mjs chal raha hai`,
+      evidence: `${w.reps_clock_unstamped.join(" · ")} — capture.mjs is the ONLY writer of reps_log.jsonl and stamps observed_at on every ingest (resolveClocks + ingestUnlocked). Check: \`node scripts/capture.mjs selftest\`, and whether anything hand-edited reps_log.jsonl today.`,
+    });
+  }
+
   return F;
 }
 
@@ -257,6 +322,7 @@ function selftest() {
     team_sheet_today: true,
     timeaudit: { date: TODAY, activeMinutes: 179, buckets: { Learning: { minutes: 163 } } },
     season_last_date: TODAY,
+    reps_clock_corrected: [], reps_clock_unstamped: [],
   };
   assert("CLEAN — a fully-closed day yields ZERO findings (measured clean, the detector can fail)",
     checks(base).length === 0);
@@ -282,6 +348,50 @@ function selftest() {
     checks({ ...base, reps_today: 0, teaching_today: 0 }).some((x) => x.id === "presence-not-output")
     && !checks({ ...base, reps_today: 0, teaching_today: 3 }).some((x) => x.id === "presence-not-output")
     && !checks({ ...base, reps_today: 0, teaching_today: 0, timeaudit: { date: TODAY, buckets: { Learning: { minutes: 0 } } } }).some((x) => x.id === "presence-not-output"));
+  assert("o7 — a rep whose authored ts was impossible is NAMED (INFO); an all-\"claimed\" day is silent",
+    (() => { const f = checks({ ...base, reps_clock_corrected: ["embeddings/c (claimed 2026-08-07T23:30:00.000Z · ts 2026-08-07T11:00:00.000Z)"] })
+      .find((x) => x.id === "rep-clock-corrected");
+      return f && f.level === "INFO" && f.evidence.includes("embeddings/c") && !checks(base).some((x) => x.id === "rep-clock-corrected"); })());
+  assert("o8 — a today-rep with NO arrival stamp is RED and named; a stamped ledger is silent",
+    (() => { const f = checks({ ...base, reps_clock_unstamped: ["hallucinations/a (ts 2026-08-07T12:00:00.000Z)"] })
+      .find((x) => x.id === "rep-off-door");
+      return f && f.level === "RED" && f.evidence.includes("hallucinations/a") && !checks(base).some((x) => x.id === "rep-off-door"); })());
+
+  // THE WIRE ITSELF, disk to finding — a real child process against its own STATE_DIR.
+  // The pure assertions above hand `checks()` a fixture and would stay green even if
+  // gather() stopped reading the clocks entirely: that is precisely how teaching_audit
+  // sat 25/25 green while its disk reader was dead (its header, THE BLIND SELFTEST).
+  // This one writes three real rows — one clean, one corrected, one unstamped — and
+  // asserts the findings come back out of `run --json`, the same call the watchman
+  // makes every night. If observed_at / ts_source ever lose their reader again, THIS
+  // assertion is what goes red.
+  {
+    const dir = join(tmpdir(), `arsenal_outwork_selftest_${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    const n = new Date();
+    const at = (h) => new Date(n.getFullYear(), n.getMonth(), n.getDate(), h, 0, 0).toISOString();
+    const row = (o) => JSON.stringify({ surface: "gem", track: "concept", axis: "a", question: "q", confidence: "knew", correct: true, ...o });
+    writeFileSync(join(dir, "reps_log.jsonl"), [
+      row({ ts: at(10), concept: "wireprobe-clean",     ts_claimed: at(10), observed_at: at(10), ts_source: "claimed" }),
+      row({ ts: at(11), concept: "wireprobe-corrected", ts_claimed: at(23), observed_at: at(11), ts_source: "observed(claim_after_arrival)" }),
+      row({ ts: at(12), concept: "wireprobe-offdoor",   ts_claimed: at(12), observed_at: null,   ts_source: "claimed" }),
+    ].join("\n") + "\n");
+    const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "run", "--json"],
+      { encoding: "utf8", timeout: 60000, env: { ...process.env, ARSENAL_OUTWORK_STATE_DIR: dir } });
+    let live = [];
+    try { live = JSON.parse(String(child.stdout || "[]").trim() || "[]"); } catch {}
+    const got = (id) => live.find((x) => x.id === id);
+    assert("WIRE e2e — gather() really reads ts_source off disk: the corrected rep comes back out of `run --json`, named",
+      (() => { const f = got("rep-clock-corrected"); return !!f && f.evidence.includes("wireprobe-corrected") && !f.evidence.includes("wireprobe-clean"); })());
+    assert("WIRE e2e — gather() really reads observed_at off disk: the unstamped rep is RED, the stamped ones are not in it",
+      (() => { const f = got("rep-off-door");
+        return !!f && f.level === "RED" && f.evidence.includes("wireprobe-offdoor")
+          && !f.evidence.includes("wireprobe-clean") && !f.evidence.includes("wireprobe-corrected"); })());
+    assert("WIRE e2e — the counts block still rides along (all three rows counted as today's reps)",
+      (() => { try { return JSON.parse(readFileSync(join(dir, "outwork_audit_last.json"), "utf8")).counts.reps === 3; } catch { return false; } })());
+    try { rmSync(dir, { recursive: true, force: true }); } catch {}
+  }
+
   assert("EVERY finding carries evidence with the actual numbers/files in it",
     checks({ ...base, post_match_today: false, team_sheet_today: false, season_last_date: "2026-08-01", result_line_missing: ["x.md"] })
       .every((f) => typeof f.evidence === "string" && f.evidence.length > 20));

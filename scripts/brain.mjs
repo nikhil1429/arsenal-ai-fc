@@ -69,6 +69,12 @@ import { redealtSheetLine } from "./captains_call.mjs";   // LADDER A1 — pure 
 // day_cartridge system instruction. The frozen originals stay below (layering law) as
 // `allowedNumbersLegacy` / `noNewNumbersLegacy`; every LIVE call now routes here.
 import { allowedNumbers as allowedNumbersShared, noNewNumbers as noNewNumbersShared, quotesOnly } from "./validators.mjs";
+// THE FAILURE CLASSIFIER, BORROWED NOT COPIED (wiring audit 10 Aug 2026). The
+// dead-brain alarm below needs to tell a plan wall from a server bug, and that
+// rule was already fitted to this very ledger's evidence in claudegen.mjs — one
+// definition, imported. claudegen pulls in nothing but node builtins, so this
+// adds no cycle and no side effect at load.
+import { classifyLimit } from "./claudegen.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -631,19 +637,62 @@ function liveSignal(now, dir = STATE_DIR) {
 // must SAY SO, every tick, in the one place a human already looks (the ledger's
 // consumers: tick log, status, token_vitals.json → the doctor).
 // Deliberately reads the TAIL only: an old outage must not alarm forever.
+//
+// THE CAUSE, NAMED (wiring audit, 10 Aug 2026). Until today this alarm knew two
+// states — "logged out" and "check the last error in brain_ledger.jsonl", which
+// is an ASK handed to the captain in place of an answer the rows could already
+// give. Measured on the live ledger that morning: of 2,587 failure rows, 2,365
+// carry `"api_error_status":…` inside their error text and exactly 3 carry the
+// http_status FIELD — the discriminator between a plan wall (nothing to fix, the
+// window reopens itself) and a server/CLI bug (a real fault) sat on disk for
+// weeks with no reader at all. claudegen.mjs was already computing it, and
+// already handing back error_envelope on every failure, and NO organ read either.
+// classifyLimit is IMPORTED, never re-implemented: the 429/529 rule stays fitted
+// to the ledger evidence in one place (claudegen.mjs:26-46), and asking it about
+// a synthesised `{"api_error_status":<code>}` is how this decides whether a code
+// is a back-off wall — so no status list is invented or duplicated here.
+// ADDITIVE ONLY: streak · sampled · dead · not_logged_in keep their exact
+// meanings (the auth scan only widened its haystack to include the envelope), so
+// nothing is being replaced — token_vitals.json.health, the doctor, watchman and
+// captains_call's B3 card read the same fields they always did.
+const AUTH_FAIL_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized/i;
+// claudegen's ledger projection writes error_envelope ONLY when it says more
+// than `error` does (a null means "the envelope IS the error field"), so every
+// reader ORs the two — never the envelope alone.
+const forensicText = (r) => String((r && r.error_envelope) || (r && r.error) || "");
+const isBackoffStatus = (code) => Number.isFinite(code) && classifyLimit(JSON.stringify({ api_error_status: code }), null).limit_hit === true;
 function failureStreak(ledger, n = 25) {
   const rows = (ledger || []).filter(r => r && r.engine !== "gemini" && typeof r.ok === "boolean").slice(-n);
   let streak = 0;
   for (let i = rows.length - 1; i >= 0; i--) { if (rows[i].ok) break; streak++; }
-  const authRe = /not logged in|please run \/login|invalid api key|authenticat|unauthorized/i;
   const dead = streak >= 5;
-  const auth = dead && rows.slice(-streak).some(r => authRe.test(String(r.error || "")));
-  return {
-    streak, sampled: rows.length, dead, not_logged_in: auth,
-    hint: !dead ? null : auth
+  const tail = dead ? rows.slice(-streak) : [];
+  const auth = tail.some(r => AUTH_FAIL_RE.test(forensicText(r)));
+  // The NEWEST failure that can name itself wins: an outage's cause is its
+  // latest state, not its first. A row's own http_status is trusted ahead of a
+  // re-parse of its text — the field is the producer's structured verdict, the
+  // text scan is the retro-fit that recovers the 2,365 rows already on disk.
+  let http = null, signal = null, sample = "";
+  for (let i = tail.length - 1; i >= 0 && http === null; i--) {
+    const r = tail[i], hay = forensicText(r);
+    if (!sample) sample = hay;
+    if (Number.isFinite(r.http_status)) { http = r.http_status; signal = r.limit_signal || "row_field"; break; }
+    const cls = classifyLimit(hay, null);
+    if (cls.http_status !== null) { http = cls.http_status; signal = cls.limit_signal; }
+  }
+  const cause = !dead ? null
+    : auth ? "not_logged_in"
+      : http === null ? "unknown"
+        : isBackoffStatus(http) ? "plan_limit" : "api_error";
+  const hint = !dead ? null
+    : cause === "not_logged_in"
       ? "the claude CLI is NOT LOGGED IN for the account this daemon runs under — open a terminal AS THAT USER, run `claude`, then /login."
-      : "every recent brain call failed — check the last error in brain_ledger.jsonl.",
-  };
+      : cause === "plan_limit"
+        ? `the PLAN WALL, not a bug: the CLI answered HTTP ${http} on the failing tail (via ${signal}). Nothing to fix — the window reopens on its own.`
+        : cause === "api_error"
+          ? `HTTP ${http} from the CLI (via ${signal}) — a server/CLI fault, NOT a plan wall, so waiting will not clear it.`
+          : `every recent brain call failed and no row named a status. Last error reads: ${sample.slice(0, 160) || "(empty)"}`;
+  return { streak, sampled: rows.length, dead, not_logged_in: auth, cause, http_status: http, limit_signal: signal, hint };
 }
 
 // TOKEN VITALS — the plan's fuel gauge, always current: both windows the Max-5x
@@ -656,6 +705,15 @@ function tokenVitals(cfg, ledger, queueState, now, signals = null) {
   const ceiling = Math.max(est, (queueState && queueState.observed_window_ceiling) || est);
   const win = windowUsage(ledger, now, cfg.budget.window_hours);
   const wk = weekUsage(ledger, now), wkCap = cfg.budget.weekly_capacity_est_tokens;
+  // STARVATION RIDES THE FUEL GAUGE (10 Aug 2026 wiring audit). Additive only — every
+  // existing field keeps its exact meaning, so no engine is being replaced here and
+  // nothing is frozen. This is the file the doctor skill (step 0), captains_call.mjs and
+  // organism_test.mjs already open, so the fact reaches its readers without a new organ.
+  // `recent` is DERIVED, never a new threshold: inside the very rolling window this gauge
+  // measures (cfg.budget.window_hours) — a starvation older than the window is history,
+  // one inside it is happening now.
+  const st = starvation(queueState, now);
+  const recent = !!(st && st.age_min !== null && st.age_min <= cfg.budget.window_hours * 60);
   const pct = (a, b) => b > 0 ? Math.round((a / b) * 1000) / 10 : 0;
   return {
     ts: now.toISOString(), phase: h.phase,
@@ -665,7 +723,11 @@ function tokenVitals(cfg, ledger, queueState, now, signals = null) {
     // E2E audit 25 Jul 2026: the fuel gauge showed a brain burning fuel while it
     // was in fact dead (every call failing). Ship the ok-rate WITH the fuel.
     health: failureStreak(ledger),
-    summary: `${h.phase} · 5h ${win.toLocaleString()}/${ceiling.toLocaleString()} (${pct(win, ceiling)}%) · week ${wk.toLocaleString()}/${wkCap.toLocaleString()} (${pct(wk, wkCap)}%) · headroom now ${h.allowed.toLocaleString()}`,
+    // `health` answers "did the calls fail?"; this answers "were there any calls to
+    // fail?". They are different silences and this organism has now been bitten by both.
+    starved: st ? { ...st, recent } : null,
+    summary: `${h.phase} · 5h ${win.toLocaleString()}/${ceiling.toLocaleString()} (${pct(win, ceiling)}%) · week ${wk.toLocaleString()}/${wkCap.toLocaleString()} (${pct(wk, wkCap)}%) · headroom now ${h.allowed.toLocaleString()}`
+      + (recent ? ` · ⚠ STARVED: ${st.summary}` : ""),
   };
 }
 
@@ -722,6 +784,54 @@ function recordJobRun(queueState, job, now, cfg) {
   const b = queueState.jobs_run[sd] = queueState.jobs_run[sd] || {};
   b[job.id] = (b[job.id] || 0) + 1;
   return queueState;
+}
+// THE STARVED NIGHT, WRITTEN DOWN (10 Aug 2026 wiring audit). The budget refusal in
+// tick() built the exact reason — `budget (overnight: 1999481/1520000)` — and threw the
+// string away: no ledger row, no state write, and the daemon's own line said only
+// "0/1 ran" into a window that is HIDDEN (hidden_run.vbs). Measured on this repo: 1,135
+// beats printed that line, `diary` (priority 10, at 03:00) has NEVER run — 0 rows in
+// 4,530 — and `brain status` still said "health OK", because failureStreak() samples
+// boolean-`ok` rows and a starvation produces none. Absence again, the RC-4 shape: the
+// organism detects FAILURE and not ABSENCE.
+// TWO records, deliberately different in cost:
+//   · queueState (brain owns brain_queue.json) counts EVERY starved beat — same
+//     per-shift-day shape as jobs_run/jobs_failed, so it keys the whole night at once.
+//   · the LEDGER gets exactly ONE row per (shift day, job) episode — `first` below.
+//     A row per beat would be 1,135 rows a night and would roll the 2 MB ledger's real
+//     history off the disk to record nothing but silence.
+// The block NEVER consumes the job's slot (unlike agenda:skip, which is a decision):
+// starvation is a wall, and the job must still run the moment headroom returns.
+function recordBudgetBlock(queueState, job, h, now, cfg) {
+  const sd = shiftDay(job, now, cfg);
+  queueState.budget_starved = queueState.budget_starved || {};
+  const day = queueState.budget_starved[sd] = queueState.budget_starved[sd] || {};
+  const first = !day[job.id];
+  const b = day[job.id] = day[job.id] || { beats: 0, first_ts: now.toISOString(), phase: h.phase, priority: job.priority ?? null };
+  b.beats++;
+  b.last_ts = now.toISOString();
+  b.phase = h.phase;                       // the latest phase — a block can span the taper
+  b.used = h.used; b.cap = h.cap;          // the numbers AS MEASURED, never a derived verdict
+  return { first, shift_day: sd, record: b };
+}
+// The read side: the most recent starved shift, shaped for a consumer that must not
+// guess. It reports the SHIFT DAY and the raw counts and lets the reader decide what is
+// current — no staleness threshold is invented here (his standing rule: no number before
+// the data). tokenVitals/status compare against the window this gauge already measures.
+function starvation(queueState, now = new Date()) {
+  const all = (queueState && queueState.budget_starved) || {};
+  const days = Object.keys(all).sort();
+  if (!days.length) return null;
+  const sd = days[days.length - 1];
+  const jobs = Object.entries(all[sd] || {}).map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => (b.priority ?? -1) - (a.priority ?? -1) || (b.beats || 0) - (a.beats || 0));
+  if (!jobs.length) return null;
+  const beats = jobs.reduce((a, j) => a + (j.beats || 0), 0);
+  const last = jobs.map(j => j.last_ts || j.first_ts).sort().pop() || null;
+  const age_min = last ? Math.max(0, Math.round((now.getTime() - new Date(last).getTime()) / 60000)) : null;
+  return {
+    shift_day: sd, jobs, beats, last_ts: last, age_min,
+    summary: `${jobs.length} job(s) starved on the ${sd} shift — ${beats} beat(s) refused for budget · ${jobs.map(j => `${j.id}×${j.beats}`).join(", ")}`,
+  };
 }
 // hoisted out of eligibleJobs (1 Aug 2026) so the absence alarm in tick() reads the
 // SAME window boundary the eligibility check uses — a duplicated "12:00" literal would
@@ -1098,7 +1208,87 @@ function sliceSheet(text) {
 // ---------------------------------------------------------------------------
 // PROMPT BUILDERS
 // ---------------------------------------------------------------------------
-const clip = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stringify(s, null, 1); return t.length > n ? t.slice(0, n) + "\n…[clipped]" : t; };
+// FROZEN VERBATIM (LAYERING law) — the pre-10-Aug-2026 clipper. Head-only: it kept the
+// FIRST n and dropped the tail. Kept in the file as the regression witness for the
+// double-cut finding below; nothing on the live path may call it.
+const clipLegacy = (s, n = 14000) => { const t = typeof s === "string" ? s : JSON.stringify(s, null, 1); return t.length > n ? t.slice(0, n) + "\n…[clipped]" : t; };
+
+// ---------------------------------------------------------------------------
+// THE DOUBLE CUT (10 Aug 2026 wiring audit — TRUNCATED_AT_DOOR)
+// ---------------------------------------------------------------------------
+// A .md input was cut TWICE and only one cut was named. gatherInputsAudited kept the
+// LAST 20,000 chars (head dropped, SILENTLY), then clipLegacy kept the FIRST 14,000 of
+// those (tail dropped, marked). The model received the MIDDLE of the day.
+// MEASURED on brain_out/dugout/2026-08-10.md, 27,890 ch: the model never saw the
+// opening ("CAPTAIN: Hello. / GAFFER: Hello captain. Match record resume kar raha ho")
+// nor the close ("GAFFER: Cheers, Captain. Karte hain baat jab aap ready honge.").
+// NINE enabled jobs declare a .md/.html input — including dugout_digest, which feeds
+// day_cartridge, which IS the Gaffer's next-day system instruction. So the Gaffer was
+// being briefed on a day with both its ends amputated.
+//
+// THE REPAIR IS ONE NAMED CUT, NOT A BIGGER ONE. The read-side slice is gone (see
+// gatherInputsAudited) and this clipper now elides the MIDDLE, keeping both ends — a
+// transcript's opening and close are the two spans that carry intent. Budget is
+// UNCHANGED at n = 14000, so token spend does not move by a single char; the split is
+// n/2 either side, DERIVED from n itself (no new threshold invented — his standing
+// no-guessed-numbers rule), and the marker states the MEASURED elided count.
+const clipMiddle = (t, n) => {
+  if (t.length <= n) return t;
+  const head = Math.ceil(n / 2), tail = n - head;   // derived from n, not chosen
+  const elided = t.length - n;
+  return t.slice(0, head)
+    + `\n…[${elided} chars elided from the MIDDLE of this input — head ${head} + tail ${tail} kept, opening and close intact]…\n`
+    + t.slice(t.length - tail);
+};
+
+// ---------------------------------------------------------------------------
+// THE SAME CUT, BUT A LOG IS NOT A TRANSCRIPT (10 Aug 2026 wiring audit, second pass)
+// ---------------------------------------------------------------------------
+// clipMiddle above is kept BYTE-FOR-BYTE — it is the right engine for prose, and the
+// .md double-cut it was written for is genuinely fixed. This is the shape it cannot
+// serve: gatherInputsAudited renders a .jsonl input as readLinesTail(p, 200), an ARRAY
+// of parsed rows, oldest→newest. Cut that by CHARACTERS and both seams land mid-object.
+// MEASURED on live state the hour this was written, at the current n = 14000:
+//   teaching_audit.jsonl — 200 rows tailed, the newest-end fragment handed to the model
+//   opens `ndhe jaate hain. Beec"\n ],\n "measured": {…` — a headless object with no
+//   `ts`, no `rule`, its first evidence string sheared through the middle of a Hindi
+//   word. presence_log.jsonl opens mid-timestamp: `T17:00:04.266Z",\n "day":…`.
+// So the row the job reasons about hardest — the newest one it can see — arrives as a
+// corpse, and the marker's "opening and close intact" is a true sentence about a
+// transcript and a false one about a log. It also counts CHARS, which cannot tell the
+// reader he lost 192 of 200 rows.
+//
+// FIX: rows are elided by ROW, never mid-row, and the marker states the MEASURED row
+// counts. Both ends are kept for the same reason clipMiddle keeps them — the oldest
+// rows carry the log's time-span, the newest are what the job is actually reading —
+// and the split is the SAME n/2 derived from n, so token spend does not move a char.
+// Each side is emitted as its own valid JSON array: two honest arrays beat one mangled.
+function clipRows(s, n) {
+  const whole = JSON.stringify(s, null, 1);
+  if (whole.length <= n) return whole;
+  const headBudget = Math.ceil(n / 2), tailBudget = n - headBudget;   // derived from n, not chosen
+  // largest row-count from each end that still fits its half — halving, so no row size
+  // is ever assumed (rows in this organism range from ~60 to ~2,000 chars).
+  const widest = (budget, take) => {
+    let lo = 0, hi = s.length;
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (JSON.stringify(take(mid), null, 1).length <= budget) lo = mid; else hi = mid - 1; }
+    return lo;
+  };
+  let k = widest(tailBudget, m => s.slice(-m));        // NEWEST rows — the ones the job reasons about
+  let j = widest(headBudget, m => s.slice(0, m));      // OLDEST rows — the span's other edge
+  if (j + k > s.length) j = s.length - k;              // never show a row twice
+  // a single row wider than half the budget: deliver the NEWEST one cut by clipMiddle
+  // rather than nothing, and say which row it is. Silence here is the whole finding.
+  if (k === 0) return `…[every row exceeds the ${tailBudget}-char tail budget; ${s.length - 1} of ${s.length} rows dropped, the NEWEST kept and cut (rows_dropped=${s.length - 1})]…\n`
+    + clipMiddle(JSON.stringify(s[s.length - 1], null, 1), n);
+  const dropped = s.length - j - k;
+  if (dropped <= 0) return whole;
+  return (j ? JSON.stringify(s.slice(0, j), null, 1) : "")
+    + `\n…[${dropped} of ${s.length} rows elided from the MIDDLE of this log — OLDEST ${j} + NEWEST ${k} kept WHOLE, never cut mid-row; the two blocks below are separate arrays, not one (rows_dropped=${dropped})]…\n`
+    + JSON.stringify(s.slice(-k), null, 1);
+}
+const clip = (s, n = 14000) =>
+  Array.isArray(s) ? clipRows(s, n) : clipMiddle(typeof s === "string" ? s : JSON.stringify(s, null, 1), n);
 
 // THE COGNITIVE FINGERPRINT — every LLM call this brain makes is conditioned
 // on the captain's MEASURED mind, not an assumed one: his own metaphor
@@ -1290,7 +1480,12 @@ function gatherInputsAudited(job, now = new Date(), dateStr = null) {
     // rolls monthly. Only the last 200 rows were ever used; now only those are read, and
     // a rolled file resolves through its archives instead of reading as empty.
     if (name.endsWith(".jsonl")) inputs[name] = readLinesTail(p, 200);
-    else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = there ? readFileSync(p, "utf8").slice(-20000) : null;
+    // WHOLE FILE (10 Aug 2026, the double-cut repair — see clip()). This line used to
+    // end `.slice(-20000)`: a SECOND, unnamed budget that dropped the head of every
+    // transcript before clip's own named budget then dropped the tail. It is deleted,
+    // not widened — a .md input is now bounded in exactly ONE place, by the clipper
+    // that says so in the prompt. JSON inputs were always read whole; .md now matches.
+    else if (name.endsWith(".md") || name.endsWith(".html")) inputs[name] = there ? readFileSync(p, "utf8") : null;
     else inputs[name] = readJson(p);
     // "absent" is about the FILE, not about emptiness — an empty log is a measured zero
     // and must never be reported as a missing input (that is the honesty law running
@@ -1299,6 +1494,53 @@ function gatherInputsAudited(job, now = new Date(), dateStr = null) {
   }
   const declared = Object.keys(inputs).length;
   return { inputs, declared, absent, required_absent, present: declared - absent.length };
+}
+
+// ---------------------------------------------------------------------------
+// #64, THE READ BACK (10 Aug 2026 wiring pass — a producer with no consumer)
+// ---------------------------------------------------------------------------
+// #64 put inputs_present / inputs_declared / inputs_absent / inputs_absent_names on
+// every ledger row because "85 teamtalk_am runs billed full price on 3-of-4 absent,
+// with nothing anywhere recording it". The RECORDING landed and the READING never
+// did: a live grep for those four names outside this file returned zero hits, and
+// `brain status` re-derived presence from TODAY's disk (gatherInputsAudited) without
+// ever opening the history. So #64's own question — "how many nights has this job
+// billed on absent evidence" — was being written down every run and no organ could
+// answer it. This is the answer, and it is the ledger's, not a fresh stat().
+//
+// TWO HONESTY LANES, because a bare "unaccounted" would lie in both directions:
+//   · `unaccounted` = rows with NO inputs_declared key at all — everything written
+//     before #64 shipped, plus the other appenders on this shared lane (talk,
+//     nightshift, cortex, agenda:skip). Never folded into a denominator.
+//   · `no_inputs` = rows whose key is present and null — the manager_m3 class, a
+//     job that DECLARES no inputs. Nothing can be absent, so it is not a gap.
+// No threshold, no ratio (the #64 TRAP above still stands), no sort by anything but
+// the count the ledger itself carries. Nights are HIS local days (localDayOf).
+export function absentEvidenceHistory(ledger) {
+  const jobs = new Map();
+  let unaccounted = 0, noInputs = 0, accounted = 0;
+  for (const r of (ledger || [])) {
+    if (!r || !("inputs_declared" in r)) { unaccounted++; continue; }
+    if (typeof r.inputs_declared !== "number") { noInputs++; continue; }
+    accounted++;
+    const id = r.job || "?";
+    if (!jobs.has(id)) jobs.set(id, { runs: 0, runs_absent: 0, nights: new Set(), last: null, names: {} });
+    const j = jobs.get(id);
+    j.runs++;
+    if (!(typeof r.inputs_absent === "number" && r.inputs_absent > 0)) continue;
+    j.runs_absent++;
+    const day = localDayOf(r.ts);
+    j.nights.add(day);
+    if (!j.last || day > j.last) j.last = day;
+    for (const n of (r.inputs_absent_names || [])) j.names[n] = (j.names[n] || 0) + 1;
+  }
+  const gaps = [...jobs.entries()]
+    .filter(([, j]) => j.runs_absent > 0)
+    .map(([job, j]) => ({ job, runs: j.runs, runs_absent: j.runs_absent, nights: j.nights.size,
+      last_absent_day: j.last,
+      absent_names: Object.entries(j.names).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n}×${c}`) }))
+    .sort((a, b) => b.runs_absent - a.runs_absent);
+  return { accounted, unaccounted, no_inputs: noInputs, jobs: gaps };
 }
 
 // ---------------------------------------------------------------------------
@@ -1703,14 +1945,21 @@ export function ledgerShiftSummary(shiftDayStr, dir = STATE_DIR) {
   const shift = rows.filter((r) => { const t = new Date(r.ts).getTime(); return Number.isFinite(t) && t >= start; });
   const perJob = {};
   let ok = 0, failed = 0, skipped = 0, tokens = 0;
+  let starved = 0;
   for (const r of shift) {
-    const j = perJob[r.job] = perJob[r.job] || { runs: 0, ok: 0, failed: 0, agenda_skips: 0, tokens: 0 };
+    const j = perJob[r.job] = perJob[r.job] || { runs: 0, ok: 0, failed: 0, agenda_skips: 0, budget_skips: 0, tokens: 0 };
     j.runs++; j.tokens += r.total_tokens || 0; tokens += r.total_tokens || 0;
     if (r.agenda_skip) { j.agenda_skips++; skipped++; }
+    // THE NIGHT THE DIARY LOST (10 Aug 2026 wiring audit): budget_skip rows exist from
+    // today, and without this arm they fell into `runs` and out of every other bucket —
+    // a phantom run in the one summary the diary reads. A starved lane must be COUNTED,
+    // and it is separate from agenda_skips because the two are opposite facts: an agenda
+    // skip is a choice this organism made, a budget skip is a wall it hit.
+    else if (r.budget_skip) { j.budget_skips++; starved++; }
     else if (r.ok === true) { j.ok++; ok++; }
     else if (r.ok === false) { j.failed++; failed++; }
   }
-  return { shift_day: shiftDayStr, rows: shift.length, ok, failed, agenda_skips: skipped, total_tokens: tokens, per_job: perJob };
+  return { shift_day: shiftDayStr, rows: shift.length, ok, failed, agenda_skips: skipped, budget_skips: starved, total_tokens: tokens, per_job: perJob };
 }
 
 // ---------------------------------------------------------------------------
@@ -1908,7 +2157,17 @@ async function runJob(job, cfg, deps) {
   const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
   // was actually built from — including the failures.
-  const acct = { inputs_absent: gi.absent.length, inputs_declared: gi.declared, inputs_absent_names: gi.absent };
+  // …and so does the ELISION accounting (10 Aug 2026 wiring audit). An input that is
+  // PRESENT but arrives half-eaten was invisible everywhere: the run reported
+  // `inputs 4/4 present` while the model saw 8 of 200 rows. Counted off the BUILT
+  // PROMPT — clipRows stamps `rows_dropped=<n>` on every cut it makes — so one read
+  // covers all six prompt builders with no plumbing threaded through any of them.
+  const rowDrops = String(prompt).match(/rows_dropped=(\d+)/g) || [];
+  const acct = {
+    inputs_absent: gi.absent.length, inputs_declared: gi.declared, inputs_absent_names: gi.absent,
+    inputs_clipped: rowDrops.length || null,
+    inputs_rows_dropped: rowDrops.length ? rowDrops.reduce((a, m) => a + Number(m.split("=")[1]), 0) : null,
+  };
   if (r.ok && r.text) {
     // `prompt` is threaded in as `shown` (finding #59): buildAnalysisPrompt injects the
     // literal 25 in its own LAWS line plus every fingerprint digit, none of which are in
@@ -1992,7 +2251,11 @@ async function runJob(job, cfg, deps) {
     let note = `→ brain_out/${job.out || job.id}/${outDay}.md`
       + (srf.where ? ` · reads at: ${srf.where}` : " · ⚠ NO SURFACE DECLARED — nothing points at this file")
       + rehearseNote
-      + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "");
+      + (gi.absent.length ? ` · inputs ${gi.present}/${gi.declared} present (absent: ${gi.absent.join(", ")})` : "")
+      // the elision rides the SAME note (10 Aug 2026 wiring audit), so the one string the
+      // ledger carries and `brain status` echoes can no longer say a job read a log whole
+      // when it read 8 rows of 200. Present-but-half-eaten was the invisible failure.
+      + (acct.inputs_clipped ? ` · ⚠ ${acct.inputs_clipped} input(s) CLIPPED — ${acct.inputs_rows_dropped} log rows never reached the model` : "");
     // P2 — the machine sibling: same call, same outDay, derived by parsing the
     // trailing fenced json AFTER the validator passed. A parse miss is
     // degradation said out loud in the note, never a thrown error. H2/H6
@@ -2123,7 +2386,24 @@ async function tick(cfg, deps) {
   const consumedTriggers = [];
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
     const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)), queueState, now, deps.signals);
-    if (h.allowed <= 0) { ran.push({ job: job.id, skipped: `budget (${h.phase}: ${h.used}/${h.cap})` }); break; }
+    if (h.allowed <= 0) {
+      // …and the reason is now KEPT (see recordBudgetBlock above). The row copies the
+      // agenda:skip precedent exactly — engine that is not "claude" (windowUsage counts
+      // only claude rows, so a starvation can never read as spend) and NO boolean `ok`
+      // (failureStreak samples boolean-ok rows; a fake ok:true would reset the dead-brain
+      // alarm across a starved night, a fake ok:false would fake a dead brain).
+      const why = `budget (${h.phase}: ${h.used}/${h.cap})`;
+      const blk = recordBudgetBlock(queueState, job, h, now, cfg);
+      const brow = { ts: now.toISOString(), job: job.id, engine: "budget", model: null,
+        total_tokens: 0, duration_ms: 0, budget_skip: true,
+        phase: h.phase, budget_used: h.used, budget_cap: h.cap, shift_day: blk.shift_day,
+        note: `budget:skip — ${why}; nothing spent, slot NOT consumed, the job retries the moment headroom returns` };
+      // ONE row per (shift day, job) — the episode, not the beat. queueState.beats counts
+      // the rest, and `brain status` / token_vitals.json read it from there.
+      if (blk.first && !deps.dry) appendFileSync(LEDGER, JSON.stringify(brow) + "\n");
+      ran.push({ job: job.id, skipped: why, ledgerRow: blk.first ? brow : null });
+      break;
+    }
     // H2 (10 Aug 2026) — THE AGENDA'S HAND, economize-only. Tonight's file is
     // keyed on the job's own shiftDay (stable across midnight for overnight
     // jobs — brain.mjs:688-692; the sanitizer already scoped allocations to
@@ -2167,7 +2447,7 @@ async function tick(cfg, deps) {
     // H2: "lean" borrows the study phase's own 16k constant — no new number;
     // absent allocation (or any non-overnight job) = the phase default (G4).
     const thinkPhase = alloc && alloc.depth === "lean" ? "study" : h.phase;
-    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names } = await runJob(job, cfg, { ...deps, queueState, hr: h, thinkTokens: maxThinkingFor(thinkPhase, h.allowed).max_thinking_tokens });
+    const { usage, note, inputs_absent, inputs_declared, inputs_absent_names, inputs_clipped, inputs_rows_dropped } = await runJob(job, cfg, { ...deps, queueState, hr: h, thinkTokens: maxThinkingFor(thinkPhase, h.allowed).max_thinking_tokens });
     const row = {
       ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null,
       input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null,
@@ -2191,6 +2471,13 @@ async function tick(cfg, deps) {
       inputs_declared: typeof inputs_declared === "number" ? inputs_declared : null,
       inputs_absent: typeof inputs_absent === "number" ? inputs_absent : null,
       inputs_absent_names: (inputs_absent_names && inputs_absent_names.length) ? inputs_absent_names : null,
+      // PRESENT IS NOT THE SAME AS WHOLE (10 Aug 2026 wiring audit). The have/need pair
+      // above counts FILES; these count what the budget ate on the way in. A run that
+      // reads `inputs 4/4 present · 1 clipped · 192 rows dropped` is telling the truth
+      // the old row could not: the file was there and the model still never saw the day.
+      // null (not 0) when nothing was cut — same no-bare-"ok" rule as the pair above.
+      inputs_clipped: inputs_clipped ?? null,
+      inputs_rows_dropped: inputs_rows_dropped ?? null,
     };
     if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(row) + "\n");
     // a FAILED job does not consume its daily slot — it retries next tick
@@ -2660,6 +2947,70 @@ async function selftest() {
   const t2 = await tick({ ...cfg, jobs: inputFree(cfg.jobs) }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
   assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
 
+  // ---- THE STARVED NIGHT (10 Aug 2026 wiring audit) ------------------------------
+  // The refusal at the top of the job loop built its reason and DISCARDED it: no ledger
+  // row, no state write, and the hidden daemon window printed "0/1 ran" 1,135 times while
+  // `diary` (priority 10, 03:00) sat at 0 rows in 4,530. These hold the whole wire —
+  // tick → brain_queue.budget_starved → the ledger row → ledgerShiftSummary (the diary's
+  // own input) → token_vitals.json (the doctor's step 0) — and go red if any link drops.
+  // The fixture is the MEASURED case, not an invented one: 2,000,000 tokens already spent
+  // against the committed overnight cap (window_capacity_est × overnight_target_frac =
+  // 1,520,000) reproduces the 2026-08-10 03:00 IST reading of 1,999,481/1,520,000.
+  {
+    const starvedLedger = [{ ts: now(23, 0).toISOString(), engine: "claude", ok: true, total_tokens: 2000000 }];
+    const qs = { observed_window_ceiling: null, jobs_run: {} };
+    const sCfg = { ...cfg, jobs: inputFree(cfg.jobs) };
+    const never = () => { throw new Error("a starved tick must never call the model"); };
+    const s1 = await tick(sCfg, { exec: never, gexec: never, now: now(23, 30), dry: true, ledger: starvedLedger, queueState: qs });
+    const row = s1.ran[0] && s1.ran[0].ledgerRow;
+    assert("STARVED — the budget refusal is RECORDED, not discarded: one ledger row carrying the exact reason",
+      s1.ran.length === 1 && /^budget \(overnight: 2000000\/1520000\)$/.test(s1.ran[0].skipped)
+      && !!row && row.budget_skip === true && row.note.includes("budget:skip — budget (overnight: 2000000/1520000)"));
+    assert("STARVED — the row cannot corrupt the two meters it sits beside: not spend (engine ≠ claude), not health (no boolean ok)",
+      row.engine === "budget" && row.total_tokens === 0 && typeof row.ok !== "boolean"
+      && windowUsage(starvedLedger.concat([row]), now(23, 30), 5) === 2000000
+      && failureStreak(starvedLedger.concat([row])).sampled === 1
+      && failureStreak(starvedLedger.concat([row])).streak === 0);
+    const starvedJob = Object.keys(qs.budget_starved[Object.keys(qs.budget_starved)[0]])[0];
+    assert("STARVED — brain_queue.budget_starved keys the whole night by shift day and names the job",
+      !!qs.budget_starved && !!starvedJob && qs.budget_starved[Object.keys(qs.budget_starved)[0]][starvedJob].beats === 1);
+    // the flood guard: a second starved beat must NOT write a second row (1,135 rows a
+    // night would roll the 2 MB ledger's real history off the disk to record silence).
+    const s2 = await tick(sCfg, { exec: never, gexec: never, now: now(23, 31), dry: true, ledger: starvedLedger, queueState: qs });
+    assert("STARVED — one row per (shift day, job) EPISODE, never one per beat; the beats keep counting in state",
+      s2.ran[0].ledgerRow === null
+      && qs.budget_starved[Object.keys(qs.budget_starved)[0]][starvedJob].beats === 2);
+    assert("STARVED — a wall never consumes the slot: the job is still un-run and retries when headroom returns",
+      !((qs.jobs_run[localDate(now(23, 31))] || {})[starvedJob]) && !((qs.jobs_run["2026-07-12"] || {})[starvedJob]));
+    // the READ side, all three consumers
+    const stv = starvation(qs, now(23, 32));
+    assert("STARVED — starvation() reads it back: the shift, the job, the beats, the age",
+      !!stv && stv.beats === 2 && stv.jobs[0].id === starvedJob && stv.age_min === 1 && stv.summary.includes(`${starvedJob}×2`));
+    const tv = tokenVitals(cfg, starvedLedger, qs, now(23, 32));
+    assert("STARVED — it reaches token_vitals.json (doctor step 0 · captains_call · organism_test) and the summary SAYS it",
+      !!tv.starved && tv.starved.recent === true && /⚠ STARVED/.test(tv.summary)
+      && tv.health.dead === false);
+    assert("STARVED — and the OLD silence is exactly reproduced without it: health is computed off boolean-ok rows, so a starved night still scores 'OK'",
+      failureStreak([row, row, row]).sampled === 0 && failureStreak([row, row, row]).dead === false);
+    // ledgerShiftSummary is the DIARY'S input — the very job starved here. Before this
+    // wire a budget_skip row landed in `runs` and in no other bucket: a phantom run.
+    {
+      const { mkdtempSync } = await import("node:fs");
+      const oss = await import("node:os");
+      const sd = mkdtempSync(join(oss.tmpdir(), "brain-starve-"));
+      writeFileSync(join(sd, "brain_ledger.jsonl"),
+        [{ ts: "2026-07-12T23:30:00+05:30", job: "diary", engine: "budget", budget_skip: true, total_tokens: 0 },
+         { ts: "2026-07-12T23:40:00+05:30", job: "night_coach", engine: "claude", ok: true, total_tokens: 500 }]
+          .map(r => JSON.stringify(r)).join("\n") + "\n");
+      const sum = ledgerShiftSummary("2026-07-12", sd);
+      assert("STARVED — the diary's own summary counts it as a STARVATION, never as a run, and never as a failure",
+        sum.budget_skips === 1 && sum.per_job.diary.budget_skips === 1
+        && sum.per_job.diary.ok === 0 && sum.per_job.diary.agenda_skips === 0
+        && sum.ok === 1 && sum.failed === 0);
+      rmSync(sd, { recursive: true, force: true });
+    }
+  }
+
   // cognitive fingerprint — 2050-grade personalization, measured not assumed
   const fp = buildFingerprint({
     lexicon: { anchors: [{ phrase: "warehouse wala naksha" }] },
@@ -2836,6 +3187,37 @@ async function selftest() {
       failureStreak(deadRows.concat([{ engine: "claude", ok: true, ts: now(22, 5).toISOString() }])).dead === false);
     assert("DEAD BRAIN — the fuel gauge carries the ok-rate, so the doctor can see a dead brain",
       tokenVitals(cfg, deadRows, qEmpty, now(23, 0)).health.dead === true);
+    // ── THE CAUSE IS READ, NOT ASKED FOR (wiring audit, 10 Aug 2026) ─────────
+    // claudegen produced error_envelope on every failure from 4 Aug and 0 of the
+    // organism's 4,558 ledger rows ever carried it, because no caller wrote it
+    // and no reader wanted it. These three checks are the wire: drop the
+    // envelope out of forensicText(), or stop spreading ledgerForensics in
+    // nightshift/dmn, and the first one goes red.
+    {
+      const wallRows = Array.from({ length: 6 }, () => ({
+        engine: "claude", ok: false, ts: now(22, 0).toISOString(), total_tokens: 0,
+        error: "You've hit your weekly limit · resets Jul 20, 11:30pm",   // the human message alone names no status
+        error_envelope: '{"type":"result","is_error":true,"api_error_status":429,"result":"You\'ve hit your weekly limit · resets Jul 20, 11:30pm"}',
+      }));
+      const hWall = failureStreak(wallRows);
+      assert("DEAD BRAIN — error_envelope is READ: a 429 wall is named a PLAN WALL, not a mystery",
+        hWall.cause === "plan_limit" && hWall.http_status === 429 && hWall.limit_signal === "api_error_status"
+        && /PLAN WALL/.test(hWall.hint) && !/brain_ledger\.jsonl/.test(hWall.hint));
+      // the discrimination that matters: same shape, server fault — waiting will
+      // not clear it, and it must never be excused as a quota death
+      const bugRows = wallRows.map(r => ({ ...r, error_envelope: '{"is_error":true,"api_error_status":500,"result":"internal error"}', error: "internal error" }));
+      const hBug = failureStreak(bugRows);
+      assert("DEAD BRAIN — a 500 is a SERVER fault, never excused as the plan wall",
+        hBug.cause === "api_error" && hBug.http_status === 500 && /NOT a plan wall/.test(hBug.hint));
+      // the 2,365 rows already on disk: status only in the error TEXT, no field,
+      // no envelope — the retro-fit must still name them
+      const legacyRows = wallRows.map(r => ({ engine: "claude", ok: false, ts: r.ts, total_tokens: 0, error: r.error_envelope.slice(0, 200) }));
+      assert("DEAD BRAIN — a legacy row whose status lives only in its error TEXT is still named",
+        failureStreak(legacyRows).cause === "plan_limit" && failureStreak(legacyRows).http_status === 429);
+      // …and the login verdict still outranks every status (it is the one a human must act on)
+      assert("DEAD BRAIN — logged-out still wins over any status code",
+        failureStreak(deadRows).cause === "not_logged_in" && failureStreak(deadRows).not_logged_in === true);
+    }
 
     // 9. CONFIG UNREADABLE must be loud, not a silent zero-job brain
     {
@@ -3073,6 +3455,82 @@ async function selftest() {
         { exec: () => ({ ok: true, text: "thin data, saying less", total_tokens: 7, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
       assert("#64 — an OPTIONAL absent input still runs, and the run reports what it was built from",
         rOpt.usage.ok === true && rOpt.inputs_absent === 1 && rOpt.inputs_declared === 2 && /inputs 1\/2 present/.test(rOpt.note));
+
+      // ---- #64's READ BACK (10 Aug 2026) · the wire, netted --------------------
+      // The assert above nets the WRITER, and the writer was never the problem: the
+      // four inputs_* fields have ridden every row since #64 and NOTHING read them
+      // (grep, 10 Aug: zero hits outside this file — brain itself only ever saw them
+      // on runJob's return value, never back off the ledger). A writer-only net can
+      // never catch that, so these three net the READER.
+      // TIMEZONE-STABLE BY CONSTRUCTION (the CLOCK scar 30 lines up): the three
+      // absent rows straddle a UTC midnight such that they bucket into exactly two of
+      // HIS days whether the machine runs IST or UTC, and the newest day is asserted
+      // by SHAPE, never by a literal that would be true only on his laptop.
+      const fixLedger = [
+        { ts: "2026-08-08T18:30:00.000Z", job: "teamtalk_am", inputs_declared: 4, inputs_present: 1, inputs_absent: 3, inputs_absent_names: ["season.json", "match_record.md", "tape_room.json"] },
+        { ts: "2026-08-08T20:00:00.000Z", job: "teamtalk_am", inputs_declared: 4, inputs_present: 1, inputs_absent: 3, inputs_absent_names: ["season.json", "match_record.md", "tape_room.json"] },
+        { ts: "2026-08-09T19:00:00.000Z", job: "teamtalk_am", inputs_declared: 4, inputs_present: 3, inputs_absent: 1, inputs_absent_names: ["season.json"] },
+        { ts: "2026-08-09T19:05:00.000Z", job: "night_coach", inputs_declared: 2, inputs_present: 2, inputs_absent: 0, inputs_absent_names: null },
+        { ts: "2026-08-09T19:10:00.000Z", job: "manager_m3", inputs_declared: null, inputs_present: null, inputs_absent: null, inputs_absent_names: null },
+        { ts: "2026-07-01T19:10:00.000Z", job: "teamtalk_am", total_tokens: 900 },   // pre-#64 row: none of the four keys exist
+      ];
+      const ah64 = absentEvidenceHistory(fixLedger);
+      const tta64 = ah64.jobs.find(j => j.job === "teamtalk_am");
+      assert("#64 READ BACK — the ledger finally ANSWERS its own question: which job billed on absent evidence, how many runs, across how many of HIS days, and which input was missing most",
+        ah64.jobs.length === 1 && tta64.runs === 3 && tta64.runs_absent === 3 && tta64.nights === 2
+        && tta64.absent_names[0] === "season.json×3" && /^\d{4}-\d{2}-\d{2}$/.test(tta64.last_absent_day));
+      assert("#64 READ BACK — both honesty lanes, so neither direction lies: a manager_m3-class row (DECLARES no inputs) is not a gap, and a pre-#64 row is UNCOUNTED, never a measured zero",
+        ah64.accounted === 4 && ah64.no_inputs === 1 && ah64.unaccounted === 1);
+      // the wire itself. If someone deletes the print, the aggregation above still
+      // passes and the fields go dark again exactly as they did for eight days.
+      // lastIndexOf, not indexOf: these two literals also appear in THIS assertion,
+      // and the selftest sits ABOVE main() — an indexOf slice measured itself and went
+      // red (seen live, 10 Aug). main() is the last thing in the file, so the last
+      // occurrence is the real handler.
+      const brainSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const stStart = brainSrc.lastIndexOf(`if (mode === "status")`);
+      const statusBlock = brainSrc.slice(stStart, brainSrc.indexOf(`if (mode === "run")`, stStart));
+      assert("#64 READ BACK — `brain status` OPENS the history (.1-roll-aware) and SAYS it: the consumer that makes the accounting more than a black box",
+        statusBlock.length > 0 && /absentEvidenceHistory\(/.test(statusBlock)
+        && /LEDGER \+ "\.1"/.test(statusBlock) && /brain: inputs history —/.test(statusBlock));
+    }
+
+    // ---- THE DOUBLE CUT (10 Aug 2026) · a .md input is bounded ONCE, and both ends live
+    // The regression this nets: a .md was cut at the READ door (last 20,000, silently)
+    // and again at the PROMPT door (first 14,000, marked), so the model got the middle
+    // of the day — no opening, no close — across nine enabled jobs, one of which
+    // (dugout_digest) feeds day_cartridge, the Gaffer's own next-day instruction.
+    // Hermetic by construction: the fixture is written to tmp and declared through a
+    // `../` relative path, the shape brain_config already uses for ../club/wall_gemini.html.
+    {
+      const { mkdtempSync } = await import("node:fs");
+      const osc = await import("node:os");
+      const { relative, sep } = await import("node:path");
+      const tdc = mkdtempSync(join(osc.tmpdir(), "brain-doublecut-"));
+      // Bigger than BOTH old budgets — the only size that can expose a double cut. The
+      // multiplier is derived from the clipper's own default (clip's n), never chosen.
+      const OPEN = "CAPTAIN: Hello.", CLOSE = "GAFFER: Cheers, Captain.";
+      const doc = `${OPEN}\n${"m".repeat(14000 * 3)}\n${CLOSE}\n`;
+      writeFileSync(join(tdc, "2026-07-12.md"), doc);
+      const decl = relative(STATE_DIR, join(tdc, "TODAY.md")).split(sep).join("/");
+      const key = decl.replace(/TODAY/g, "2026-07-12");
+      const giMd = gatherInputsAudited({ id: "doublecut", inputs: [decl], out: "dc" }, new Date(2026, 6, 12));
+      assert("DOUBLE CUT — the READ door hands over the WHOLE .md; no second, unnamed budget upstream of clip()",
+        typeof giMd.inputs[key] === "string" && giMd.inputs[key].length === doc.length);
+      const promptMd = buildAnalysisPrompt({ id: "doublecut" }, giMd.inputs, "", []);
+      assert("DOUBLE CUT — the transcript's OPENING reaches the model (the head the read-cut used to eat)",
+        promptMd.includes(OPEN));
+      assert("DOUBLE CUT — the transcript's CLOSE reaches the model (the tail clipLegacy used to eat)",
+        promptMd.includes(CLOSE));
+      assert("DOUBLE CUT — what IS dropped is named with a measured count, never silent",
+        /\[\d+ chars elided from the MIDDLE/.test(promptMd));
+      assert("DOUBLE CUT — the budget did not move: still one clip() window, not a bigger one",
+        clip(doc).length - doc.length < 0 && clip(doc).replace(/\n…\[[^\]]*\]…\n/, "").length === 14000);
+      // LAYERING witness: the frozen head-only engine still behaves exactly as it did,
+      // and still fails the claim above — which is why it was replaced, not tuned.
+      assert("DOUBLE CUT — clipLegacy is FROZEN verbatim and still drops the close (the regression witness)",
+        clipLegacy(doc).startsWith(OPEN) && !clipLegacy(doc).includes(CLOSE) && clipLegacy(doc).endsWith("\n…[clipped]"));
+      try { rmSync(tdc, { recursive: true, force: true }); } catch {}
     }
 
     // ---- #65 · the night shift's artifacts land where viz looks ----------
@@ -3172,6 +3630,47 @@ async function selftest() {
         typeof liveSignal(now(14, 0), td51) === "object");
     }
 
+    // ---- TRUNCATED_AT_DOOR · the tail survives the clipper, ROW-ALIGNED --
+    // (10 Aug 2026 wiring audit.) The regression these guard is exact: readLinesTail
+    // hands the prompt builder 200 rows oldest→newest, and the clipper decides which of
+    // them the model is allowed to see. Cut by characters and the newest row arrives
+    // headless; cut from the head alone and the newest three days vanish entirely
+    // (MEASURED before the fix: night_coach's teaching_audit tail spanned 06 Aug →
+    // 10 Aug and the newest row that reached the model was stamped 07 Aug 06:12).
+    {
+      // 300 rows, each far larger than 1/200th of the budget, so the clip is forced.
+      const rowsT = Array.from({ length: 300 }, (_, i) => ({ i, ts: `2026-08-${String((i % 28) + 1).padStart(2, "0")}T00:00:00Z`, pad: "y".repeat(300) }));
+      const outT = clip(rowsT);
+      assert("DOOR — the clipper does not silently drop the NEWEST rows: the last row on the bus reaches the model",
+        outT.includes('"i": 299'));
+      assert("DOOR — and it is the WHOLE row, never sheared mid-object (the newest block parses as JSON on its own)",
+        (() => { const blk = outT.split("]…\n")[1]; try { const a = JSON.parse(blk); return Array.isArray(a) && a[a.length - 1].i === 299 && typeof a[a.length - 1].ts === "string"; } catch { return false; } })());
+      assert("DOOR — the marker NAMES the cut in ROWS (chars cannot tell him he lost 192 of 200) and stamps the machine tag",
+        /\d+ of 300 rows elided/.test(outT) && /rows_dropped=\d+/.test(outT));
+      assert("DOOR — the oldest end is kept too, and it is whole (the log's time-span survives)",
+        outT.includes('"i": 0') && JSON.parse(outT.split("\n…[")[0])[0].i === 0);
+      assert("DOOR — the budget did not move: the clip still fits the n it was always given",
+        outT.length < 14000 + 400 && clip(rowsT, 14000).length === outT.length);
+      assert("DOOR — an array that FITS is passed through untouched, with no marker invented",
+        clip(rowsT.slice(0, 3)) === JSON.stringify(rowsT.slice(0, 3), null, 1) && !/elided/.test(clip(rowsT.slice(0, 3))));
+      // a single row wider than the whole budget: deliver the newest, say so, never nothing.
+      const fat = [{ i: 0, pad: "z".repeat(40000) }, { i: 1, pad: "q".repeat(40000) }];
+      assert("DOOR — one over-wide row still yields the NEWEST one and names the drop, never silence",
+        /rows_dropped=1/.test(clip(fat)) && clip(fat).includes('"i": 1'));
+      // PROSE IS NOT A LOG — the .md middle-elide engine must be untouched by all this.
+      const prose = "OPEN" + "m".repeat(30000) + "CLOSE";
+      assert("DOOR — a STRING input still rides clipMiddle: both ends of a transcript intact, chars named",
+        clip(prose).startsWith("OPEN") && clip(prose).endsWith("CLOSE") && /chars elided from the MIDDLE/.test(clip(prose)));
+      assert("DOOR — clipLegacy stays frozen verbatim as the witness (head-only, one bare marker)",
+        clipLegacy(prose).startsWith("OPEN") && !clipLegacy(prose).endsWith("CLOSE") && clipLegacy(prose).endsWith("…[clipped]"));
+      // the LEDGER seam: the drop is countable off the built prompt, which is how
+      // runJob's acct sees it without threading a counter through six builders.
+      const promptT = buildAnalysisPrompt({ id: "x" }, { "a_log.jsonl": rowsT }, "", []);
+      const tags = promptT.match(/rows_dropped=(\d+)/g) || [];
+      assert("DOOR — the drop is visible to the LEDGER: the built prompt carries a countable rows_dropped tag",
+        tags.length === 1 && Number(tags[0].split("=")[1]) > 0);
+    }
+
     // ---- #106 · status lines are have/need counters ----------------------
     {
       const sa = surfaceAudit({ jobs: [{ id: "a", surface: { kind: "code", where: "x" } }, { id: "b" }, { id: "c", enabled: false }] });
@@ -3189,6 +3688,36 @@ async function selftest() {
         !!nj && nj.inputs.filter(i => i && i.required).length === 2
         && /setpiece/.test(nj.surface.where) && /examiner/.test(nj.surface.where)
         && /learnstate/.test(nj.surface.where) && /dugout/.test(nj.surface.where));
+      // THE LANE, asserted at BOTH ENDS (10 Aug 2026 tracing pass). The .json
+      // sibling sat unwritten for weeks — the 9-Aug run predated P2's emitter,
+      // so five machine readers watched an empty lane and nothing said so. The
+      // wire closed itself on the 10-Aug 22:06 run (ledger: "+ 2026-08-11.json
+      // (machine sibling: 4 misconception(s))"), but NOTHING here tied the two
+      // ends together: the fixture below runs on out:"nc_fixture", so the real
+      // `out` was never read by any check, and a rename would have the producer
+      // writing to a lane no consumer opens while every assertion still passed.
+      // That is #63's sin one level down — the surface PROSE names the readers,
+      // it never proves they read THIS lane. So: derive the lane exactly as the
+      // emitter does (job.out || job.id, line ~2004) and demand it appear as a
+      // literal in every sibling reader, in one of the two join() spellings the
+      // tree actually uses. The closing quote is load-bearing — it excludes the
+      // prose mentions in each file's header comment.
+      // WHAT THIS PROVES: both ends name the same lane, and each consumer reads
+      // the .json sibling (not just the human .md — dugout is absent from this
+      // list for exactly that reason). WHAT IT CANNOT PROVE: that the reader
+      // ever executes. The runtime detector for a silent producer already
+      // exists — watchman's "md present, json absent" check.
+      {
+        const ncLane = nj && (nj.out || nj.id);
+        const spellings = [`"brain_out/${ncLane}"`, `"brain_out", "${ncLane}"`];
+        const SIBLING_READERS = ["setpiece.mjs", "examiner.mjs", "learnstate.mjs", "scoreboard.mjs", "watchman.mjs"];
+        const orphaned = SIBLING_READERS.filter((f) => {
+          const src = readFileSync(join(__dirname, f), "utf8");
+          return !(spellings.some((q) => src.includes(q)) && src.includes('".json"'));
+        });
+        assert(`NIGHT COACH — the machine sibling's lane is the SAME string at both ends: producer "${ncLane}" reaches all ${SIBLING_READERS.length} .json readers${orphaned.length ? ` (ORPHANED: ${orphaned.join(", ")})` : ""}`,
+          !!ncLane && orphaned.length === 0);
+      }
       const good = "misconception map yahan hai\n```json\n{\"date\":\"2026-08-10\",\"study_day\":\"2026-08-09\",\"misconceptions\":[{\"concept\":\"hallucinations\",\"evidence\":\"x\"}],\"lesson\":{\"concept\":\"hallucinations\",\"samjhao_passes\":[\"a\"],\"widget_gates\":[],\"check_question\":\"?\"}}\n```";
       assert("NIGHT COACH — the machine sibling parses out of the LAST fenced json block",
         parseNightCoachJson("```json\n{\"misconceptions\":[]}\n```\nbeech ka text\n" + good).misconceptions.length === 1);
@@ -3261,6 +3790,44 @@ async function selftest() {
     }
   }
 
+  // THE ALLOWED-SET SIDECAR AND ITS DELIVERY (10 Aug 2026 — the KAAM 1 scar).
+  // Two failures, one wire. The sidecar's TRIGGER is `validate: "no_new_numbers"`
+  // on wall_insights (runJob writes <out>/<outDay>.allowed.json off exactly that
+  // predicate, and viz.mjs re-validates "The read" against it) — and the fix's
+  // DELIVERY is a resident daemon that has to notice its own code moved. On 10 Aug
+  // both were broken at once: the code was right at 08:51 and the process running
+  // it had booted at 01:29, so zero .allowed.json files existed all day.
+  {
+    const wi = cfg.jobs.find((j) => j.id === "wall_insights");
+    assert("SIDECAR TRIGGER — wall_insights still declares validate:no_new_numbers, the ONLY predicate that writes the <date>.allowed.json viz.mjs re-validates 'The read' against",
+      !!wi && wi.validate === "no_new_numbers" && wi.out === "wall_insights" && wi.serve === "next_morning");
+    // the real scar, to the second: daemon boot 01:29:33, dfe3c51 landed 08:51:23
+    const BOOT = Date.parse("2026-08-10T01:29:33+05:30");
+    const FIXED = Date.parse("2026-08-10T08:51:23+05:30");
+    const mt = { "/r/brain.mjs": FIXED, "/r/validators.mjs": BOOT - 60000 };
+    assert("STALE-CODE RETIREMENT — a source edited AFTER boot is named (this is the 10 Aug daemon: it would have written tonight's wall_insights with the pre-fix code)",
+      staleSources(Object.keys(mt), BOOT, (p) => mt[p]).map((s) => s.path).join(",") === "/r/brain.mjs");
+    assert("STALE-CODE RETIREMENT — nothing newer than boot ⇒ the resident stays up (no grace window either way: the comparison is strict, both sides measured)",
+      staleSources(Object.keys(mt), FIXED, (p) => mt[p]).length === 0
+      && staleSources(["/r/brain.mjs"], FIXED, () => FIXED).length === 0);
+    assert("STALE-CODE RETIREMENT — an unreadable/vanished source is NOT evidence of a newer one; the pacer never retires on a read error",
+      staleSources(["/r/gone.mjs"], BOOT, () => { throw new Error("ENOENT"); }).length === 0);
+    const fake = { "/r/brain.mjs": 'import { x } from "./validators.mjs";\nimport { y } from "./manager.mjs";\nconst z = await import("./late.mjs");\nimport g from "./ghost.mjs";\nimport http from "node:http";',
+                   "/r/validators.mjs": 'import { q } from "./manager.mjs";', "/r/manager.mjs": 'import { r } from "./brain.mjs";', "/r/late.mjs": "" };
+    // separator-normalising reader: join() returns native separators, and the
+    // whole point of the Map key is that those must not fork the walk.
+    const g = sourceGraph("/r/brain.mjs", (p) => { const k = p.replace(/\\/g, "/"); if (!(k in fake)) throw new Error("ENOENT"); return fake[k]; }).map((p) => p.replace(/\\/g, "/")).sort();
+    assert("SOURCE GRAPH — transitive + dynamic imports are watched, node: builtins are not, a cycle terminates, and each file appears ONCE whatever separators it arrived with",
+      g.join(",") === "/r/brain.mjs,/r/late.mjs,/r/manager.mjs,/r/validators.mjs");
+    assert("SOURCE GRAPH — an unreadable specifier is NOT watched: ./ghost.mjs never enters the list (this is what kept the selftest's own fixture strings out of the LIVE watch — measured, they were in it)",
+      !g.some((p) => p.includes("ghost")));
+    // and the LIVE graph: brain.mjs's real sibling imports must be in it, or a
+    // repair landing in one of them would ride a frozen resident unnoticed.
+    const live = sourceGraph(fileURLToPath(import.meta.url), (p) => readFileSync(p, "utf8")).map((p) => basename(p));
+    assert("SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/nikhil_model/captains_call)",
+      ["brain.mjs", "validators.mjs", "manager.mjs", "scoreboard.mjs", "nikhil_model.mjs", "captains_call.mjs"].every((f) => live.includes(f)));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -3301,6 +3868,78 @@ async function withTickLock(fn, deps = {}) {
     return await fn();
   }
   try { return await fn(); } finally { try { lock.close(); } catch {} }
+}
+
+// ---------------------------------------------------------------------------
+// THE RESIDENT MUST NOT OUTLIVE ITS OWN SOURCE (10 Aug 2026 — the KAAM 1 scar).
+// KAAM 1 shipped the allowed-set sidecar at 08:51:23 (dfe3c51). The resident
+// daemon holding :4116 had booted at 01:29:33 the SAME morning — 7h22m earlier —
+// and an ESM process never re-reads its own modules. So the repair was live in
+// the FILE and absent from the PROCESS that beats every ~75s and would have
+// written tonight's wall_insights: no `<date>.allowed.json` on disk, viz.mjs
+// falling back to shown = "" exactly as before, and "The read" dead a fifth
+// night with its fix sitting committed in the repo. `find brain_out -name
+// '*.allowed.json'` → empty, all day, on a fixed codebase.
+// Audit #108 caught the twin of this on the PAUSE switch and fixed it by
+// RE-READING THE CONFIG each beat (see liveCfg below) — but no amount of
+// re-reading state can refresh code. The only honest move is to retire.
+//
+// RETIRING IS SAFE, because two organs already cover the gap and both are live:
+//   · daemon_watchdog.mjs (every 10 min, LADDER D2) probes :4116, finds it DOWN
+//     and relaunches `brain.mjs daemon` through the VBS cloak — on the NEW code.
+//     Its "never kills anything, relaunch only" law is exactly why the resident
+//     has to be the one that steps down.
+//   · ArsenalFC-BrainTick spawns a FRESH `brain.mjs tick` every 30 min, and has
+//     always been immune to this because it is a new process every time.
+// So this is not "stop the brain" — it is "hand the brain to a process that can
+// read today's repair". Nothing is killed: the loop ends between beats, the same
+// clean stop SIGTERM already performs, so no beat dies mid-`claude -p`.
+//
+// NO THRESHOLD AND NO GRACE WINDOW: both sides are MEASURED, never chosen — this
+// process's own boot instant (Date.now() - process.uptime()*1000) against each
+// source file's mtime, compared strictly. A grace period would be a guessed
+// number; the price of strictness is one extra relaunch during an editing
+// session, which the watchdog absorbs on its own schedule.
+//
+// The graph is walked, not hardcoded: brain.mjs imports nikhil_model, scoreboard,
+// manager, captains_call and validators today, and a repair landing in any of
+// them is just as frozen in a running resident as one landing here.
+export function sourceGraph(entry, readSrc) {
+  // keyed on separator-normalised paths: join() returns native separators, so a
+  // caller handing in "C:/…/brain.mjs" and manager.mjs's own "./brain.mjs" would
+  // otherwise be watched TWICE and named twice in the retirement line (seen live,
+  // 10 Aug). Separators only — case-folding would be a guess about the platform.
+  const seen = new Map();
+  const key = (p) => String(p).replace(/[\\/]+/g, "/");
+  const queue = [entry];
+  while (queue.length) {
+    const p = queue.shift();
+    if (seen.has(key(p))) continue;
+    let src;
+    // A module we cannot READ is not watched AT ALL: never treated as changed
+    // (a transient read error must not retire the pacer) and never added to the
+    // list. That second half matters — the regex below cannot tell an import
+    // statement from a specifier sitting inside a STRING LITERAL, and this very
+    // file's selftest fixtures contain both. Requiring the file to open is what
+    // keeps "./late.mjs" out of the live watch list (measured: it was in it).
+    try { src = readSrc(p); } catch { continue; }
+    seen.set(key(p), p);
+    // static `from "./x.mjs"` and dynamic `import("./x.mjs")`, both local only:
+    // node: builtins and bare specifiers are not ours to watch. Built fresh each
+    // call so no lastIndex can leak between walks.
+    for (const m of String(src).matchAll(/(?:from|import)\s*\(?\s*["'](\.\/[^"'\n]+\.mjs)["']/g)) queue.push(join(dirname(p), m[1]));
+  }
+  return [...seen.values()];
+}
+export function staleSources(paths, bootMs, mtimeOf) {
+  const out = [];
+  for (const p of paths) {
+    let mt = null;
+    // a file that vanished is not evidence of a NEWER one — same fail-quiet rule
+    try { mt = mtimeOf(p); } catch { continue; }
+    if (typeof mt === "number" && mt > bootMs) out.push({ path: p, mtime_ms: mt });
+  }
+  return out;
 }
 
 // DRY MEANS DRY (E2E audit 25 Jul 2026). --dry only ever suppressed WRITES: the
@@ -3392,6 +4031,14 @@ async function main() {
     console.log(hh.dead
       ? `brain: ⚠⚠ DEAD BRAIN — the last ${hh.streak} of ${hh.sampled} calls ALL FAILED. ${hh.hint}`
       : `brain: health OK — ${hh.streak} failure(s) at the tail of the last ${hh.sampled} call(s).`);
+    // …and the OTHER silence (10 Aug 2026 wiring audit): "health OK" is computed from
+    // boolean-ok rows, so a night where the budget refused every job scores a perfect
+    // health line off ZERO calls. Said out loud here, beside it, so the two can never be
+    // confused again. Not a verdict and not a tuning suggestion — raising the cap or
+    // moving a job's hour is the captain's call, and this only hands him the measurement.
+    const stv = starvation(q, now);
+    if (stv) console.log(`brain: ⚠ STARVED — ${stv.summary}${stv.age_min !== null ? ` (last refusal ${stv.age_min} min ago)` : ""}. Nothing was spent and no slot was consumed; each of these retries the moment headroom returns.`);
+    else console.log("brain: starvation — no budget-refused job on record (brain_queue.budget_starved is empty).");
     if (cfg._config_error) console.log(`brain: ⚠⚠ CONFIG BROKEN (${cfg._config_error}) — running on DEFAULTS with zero jobs.`);
 
     // ---- SURFACES: where every enabled job's output actually appears (finding #63) ----
@@ -3419,6 +4066,26 @@ async function main() {
     console.log(gaps.length
       ? `brain: inputs — ${gaps.length} enabled job(s) are running on absent evidence:\n  · ${gaps.join("\n  · ")}`
       : "brain: inputs — every enabled job's declared inputs resolve on disk.");
+
+    // ---- INPUTS, THE HISTORY (10 Aug 2026) — the ledger read BACK -------------
+    // The block above answers "is a job short of evidence RIGHT NOW" off today's
+    // disk. #64's actual complaint was about the past: 85 runs already billed on
+    // absent inputs before anyone noticed. Those rows have been on the ledger ever
+    // since and nothing opened them (grep: zero readers outside this file). Now the
+    // history stands beside the live read, and a job that has been quietly billing
+    // on nulls for weeks is one `brain status` away — the same command /matchday and
+    // organism-doctor already run, so it rides an anchor he already hits.
+    // E3's windowed-reader law: this ledger rolls at 2MB keeping one .1 generation
+    // (the roll lives in tick), so a HISTORY query must open .1 first. The reads
+    // above are 5h/7d windows and cannot reach across a roll, so they stay as-is.
+    const ah = absentEvidenceHistory(readLines(LEDGER + ".1").concat(ledger));
+    const ahTail = `${ah.accounted.toLocaleString()} accounted row(s)`
+      + (ah.no_inputs ? ` · ${ah.no_inputs.toLocaleString()} declared no inputs` : "")
+      + (ah.unaccounted ? ` · ${ah.unaccounted.toLocaleString()} row(s) predate the accounting and are UNCOUNTED` : "");
+    console.log(ah.jobs.length
+      ? `brain: inputs history — ${ah.jobs.length} job(s) have BILLED on absent evidence (${ahTail}):\n  · `
+        + ah.jobs.map(j => `${j.job} — ${j.runs_absent}/${j.runs} run(s) across ${j.nights} day(s), last ${j.last_absent_day} — ${j.absent_names.join(", ")}`).join("\n  · ")
+      : `brain: inputs history — no accounted run has ever billed on an absent input (${ahTail}).`);
 
     // ---- PULSE: the measurement, never a verdict (findings #66/#67) ----
     const pc = pulseConfig(cfg);
@@ -3492,6 +4159,13 @@ async function main() {
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
+    // STALE-CODE RETIREMENT (see sourceGraph/staleSources above) — measured ONCE
+    // at boot, checked every beat. The console this prints to is not a void: the
+    // VBS cloak redirects it to scripts/brain.log (audit finding #10).
+    const SELF_SRC = fileURLToPath(import.meta.url);
+    const BOOT_MS = Date.now() - process.uptime() * 1000;
+    const SOURCES = sourceGraph(SELF_SRC, (p) => readFileSync(p, "utf8"));
+    console.log(`brain: --daemon booted ${new Date(BOOT_MS).toISOString()} · watching ${SOURCES.length} of its own source file(s) for edits after that instant — a resident that outlives its own code runs the old brain all night (the KAAM 1 scar, 10 Aug 2026).`);
     // THE PACEMAKER RE-READS ITS OWN SWITCH (audit #108, 6 Aug 2026).
     // `cfg` was loaded ONCE in main() and this loop reused it forever, so a resident
     // daemon kept obeying whatever brain_config.json said at boot. Measured live: PID
@@ -3507,6 +4181,13 @@ async function main() {
     // than crashing the pacer or silently falling back to defaults.
     let liveCfg = cfg;
     while (!stop) {
+      // Checked BEFORE the beat spends anything, so an out-of-date resident never
+      // runs one more job with code the repo has already moved past.
+      const stale = staleSources(SOURCES, BOOT_MS, (p) => statSync(p).mtimeMs);
+      if (stale.length) {
+        console.log(`brain: --daemon RETIRING — booted ${new Date(BOOT_MS).toISOString()}, and ${stale.length} of its own source file(s) changed AFTER that: ${stale.map((s) => `${basename(s.path)} @ ${new Date(s.mtime_ms).toISOString()}`).join(" · ")}. An ESM process cannot reload its code, so staying up means running the OLD brain. Releasing :4116 — daemon_watchdog.mjs relaunches this daemon on the new code within its next pass (≤10 min), and ArsenalFC-BrainTick covers the 30-min lane meanwhile.`);
+        break;
+      }
       const bnow = new Date();
       const bdeps = buildDeps(bnow);   // --dry ⇒ the beat calls NOTHING real (E2E audit 25 Jul 2026)
       try {
@@ -3527,7 +4208,12 @@ async function main() {
         } else {
           beats++;
           const done = t.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
-          console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]`);
+          // THE REASON, IN THE LOG (10 Aug 2026 wiring audit). This line printed only
+          // "0/1 ran" — identical for a starved job, a failed job and a rested one — into
+          // a window the captain cannot see (hidden_run.vbs). Measured: 1,135 such beats.
+          // The skip reasons were already on every `ran` entry; they were simply not read.
+          const skips = t.ran.filter(r => r.skipped).map(r => `${r.job}: ${r.skipped}`).join(" · ");
+          console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]${skips ? ` — ${skips}` : ""}`);
           // the HAIKU PULSE rides every Nth beat — self-gated (engaged + cap + headroom)
           // and metered every fire; skipped when another tick owns the beat (no double-pulse).
           // FREQUENCY HALVED (2 Aug 2026 audit, #67): it used to fire on EVERY beat, so a
@@ -3570,6 +4256,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, validateOutput, noNewNumbers, bannedPhraseCheck, tick, runJob, loadConfig, sliceSheet, resolveNtfyTopic, pushNtfy, buildFingerprint, buildAnalysisPrompt, serveDate, teamtalkLine, dugoutMinutesToday, tokenVitals, reserveNow, blendCeiling, maxThinkingFor, targetBurn, runPulse, pulseConfig, pulsesToday, liveSignal,
   // E2E audit 25 Jul 2026 — new seams, exported so the doctor/selftest can see them
   usageTotal, failureStreak, gatherInputs, recordJobRun, recordJobFail, attemptsOn, mergeTriggers, geminiCommand, lockVerdict, buildDeps, SHEET_PUSH_TITLE,
+  // 10 Aug 2026 wiring audit — the starved night's two halves (write + read), exported
+  // so the suite can hold the wire from tick() all the way to token_vitals.json.
+  recordBudgetBlock, starvation,
   // 1 Aug 2026 — the absence utterance + the shared window map, exported so the
   // selftest can hold them to the same badge/boundary rules as the other two.
   SHEET_ABSENCE_TITLE, jobWindows, mouthMaySpeak, pulseTokensToday, pulseFailStreak,

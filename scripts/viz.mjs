@@ -306,8 +306,20 @@ function assembleWallData(bus, now = new Date()) {
         const gen = mj.missions.filter(r => r.type !== "audit" && !r.ingested_at);
         if (gen.length) lines.push(`${gen[0].id} staged — fire on Gemini when he sits`);
       }
+      // Same pass — the bucket string is the OWNER's now (benchmark.mjs
+      // `projection`), not rebuilt here. This line composed `${locked}/
+      // ${core_total}` itself and so printed "B5 0/0" for the one bucket with
+      // concept_buckets: [] by design — its evidence is the shipped product, and
+      // it read on the wall as literally nothing. Identical output for B1-B4.
+      // Fallback = the old expression verbatim, for a pre-wire benchmark.json.
       if (bj) lines.push(bj.status === "gated_pre_audit" ? `benchmark GATED (pre-audit)`
-        : `benchmark: ${(bj.buckets || []).map(b => `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bj.regressions || []).length ? ` · ⚠ ${bj.regressions.length} regression(s)` : ""}`);
+        : `benchmark: ${(bj.buckets || []).map(b => b.projection || `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bj.regressions || []).length ? ` · ⚠ ${bj.regressions.length} regression(s)` : ""}`);
+      // 10 Aug 2026 wiring pass — the NEED names reach the wall. The counts line
+      // above shipped since 8 Aug; the names it is measured against never left
+      // benchmark.mjs, so the desk showed where he stands and never what to do
+      // next. benchmark.mjs owns needs[]; its own line, so the counts line keeps
+      // its shape. Absent/empty ⇒ no line (absence, not a zero — house rule).
+      if (bj && Array.isArray(bj.needs) && bj.needs.length) lines.push(`benchmark need: ${bj.needs.join(" · ")}`);
       return lines.length ? { lines } : null;
     })(),
     derby: learning_state && Array.isArray(learning_state.confusion_pairs) ? learning_state.confusion_pairs.slice(0, 5) : [],
@@ -1047,6 +1059,16 @@ async function selftest() {
       : false);
   assert("THE SCOUT'S DESK — absent outward files ⇒ no panel (absence, not a zero)",
     !renderWall(assembleWallData({ history: [] }, now), null).includes("scout"));
+  // 10 Aug 2026 wiring pass — the desk carried the benchmark's COUNTS from 8 Aug
+  // and its NAMES never left benchmark.mjs, so the wall said where he stands and
+  // never what to do next. Fails if the wire is cut again.
+  const wallNeeds = renderWall(assembleWallData({ history: [], benchmark: { status: "ok",
+    buckets: [{ id: "B2", counts: { locked: 1, core_total: 5 } }], regressions: [],
+    needs: ["2-rag: unlock chunking, retrieval", "course: 6 chapters remain"] } }, now), null);
+  assert("THE SCOUT'S DESK — the benchmark's NEED NAMES reach the wall, not only its counts",
+    wallNeeds.includes("benchmark need: 2-rag: unlock chunking, retrieval · course: 6 chapters remain"));
+  assert("THE SCOUT'S DESK — a benchmark with no needs[] shows no need line (absence, not a zero)",
+    !renderWall(assembleWallData({ history: [], benchmark: { status: "ok", buckets: [], regressions: [] } }, now), null).includes("benchmark need"));
   assert("Maidan pitch SVG renders with frayed pass", html.includes("<svg") && html.includes("frayed pass"));
   assert("doubts_retired + matches_played render big", html.includes(">24<") && html.includes(">12<"));
   assert("NO RAW BIOMETRICS — hrv/rhr numbers never render", !html.includes("22.7") && !html.includes("76.4"));

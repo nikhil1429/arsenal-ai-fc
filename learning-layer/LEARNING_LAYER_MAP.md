@@ -21,6 +21,18 @@
 > Us pass ke baad usi din ka repair bhi land hua, toh HONEST LEDGER ke item **1 aur 3 ab CLOSED** hain
 > aur item **2 badal chuka hai** (Gate 2 ab code mein hai aur chal chuka hai).
 > **Yeh file phir bhi canon nahi hai.** Canon se takraye to canon jeet-ti — aur tab yeh file galat hai.
+>
+> **STALE-PROSE PASS — 10 Aug 2026 (uska order: "a lot of .md files content is old and stale, we need
+> to correct it as per the current code").** Poori file line-by-line LIVE CODE ke against padhi gayi —
+> doosri doc se kabhi nahi, sirf script padh ke / command chala ke / state JSON khol ke. Jo galat mila
+> woh **jagah pe theek kiya gaya, scar ke saath** (`(corrected 10 Aug 2026: …)` — purani baat mit-ti
+> nahi, dikhti hai). Sabse mehnge chaar: (1) gitignore-list — "ab ignored sirf `oura_*`" **jhoot** tha,
+> aaj bhi darjanon state files ignored hain; (2) `THE-FORGE.html` "deep/viz render nahi karta" —
+> **karta hai**, aur gist ko live fetch bhi karta hai (9 Aug ka E6 rebuild); (3) teaching-contract ke
+> "5 seeded rules" — **12** hain, aur drift ki asli lane `flag` hai, `hit` nahi; (4) §13 ka "brief
+> hippocampus ko chhoo-ti hi nahi" — **chhoo-ti hai**. **Sabak wahi jo CLAUDE.md ke scars kehte hain:
+> prose mein likhi ginti agli run pe sad jaati hai — is file ka har number ab apne command ke saath
+> chalta hai.**
 
 ---
 
@@ -66,12 +78,29 @@ clauses **per-section bikhri** hui hain: `:9` (design → FORGE_DESIGN jeet-ti) 
 GEMINI_LOOP) · `:121` (DESIGN SYSTEM → FORGE_DESIGN) · `:131` (PYTHON TRACK → OS) · `:138` (OUTWORK → OS)
 · (Kickoff/Full-Time → OUTWORK) · (LOGBOOK → SEASON). *(9 Aug: in do ke line-numbers hata diye —
 dono refs ek hafte mein do baar drift hue; section-naam grep karo.)* Aur **`OPS_STATE` ka naam PROJECT_OS mein kahin nahi
-aata** (grep = 0) — "Arsenal pe OPS_STATE = live truth" OPS_STATE ka apna claim hai (`OPS_STATE.md:2`),
-PROJECT_OS ka nahi. Upar ka tree sahi hai; woh quoted one-liner galat tha.
+aata** (grep = 0) — "Arsenal pe OPS_STATE = live truth" OPS_STATE ka apna claim hai
+(`grep -n "thread-agnostic anchor" OPS_STATE.md`), PROJECT_OS ka nahi. Upar ka tree sahi hai; woh quoted
+one-liner galat tha.
+*(re-verified 10 Aug 2026, aur mool baat aaj bhi khadi hai: `grep -c "OPS_STATE" learning-layer/PROJECT_OS.md`
+= **0** — us din se aaj tak zero, mahino ke edits ke baawajood. Conflict-clauses abhi bhi per-section
+bikhri hui hain aur section-naam se hi milti hain, jaisa 9 Aug ka note kehta hai
+(`grep -n "Conflict = " learning-layer/PROJECT_OS.md` → DESIGN SYSTEM · PYTHON TRACK · OUTWORK).*
+*Do chhote fix: (1) `OPS_STATE.md:2` ek line-number citation tha aur is repo mein woh sadta hai — grep
+laga diya; (2) `"live truth"` un shabdon mein OPS_STATE mein hai hi nahi — woh paraphrase hai, quote nahi
+(`grep -n "live truth" OPS_STATE.md` = zero). Uski apni line kehti hai "THE thread-agnostic anchor …
+reads THIS ONE file first and knows everything" — **aur khud us line pe 10 Aug 2026 ko warning chipak
+chuki hai ki "knows everything" ab sach nahi.** Yaani jo daawa yahan quote hota tha, woh apne ghar mein
+hi downgrade ho chuka hai. Is map ki §1 ranking phir bhi wahi rehti: OPS_STATE method pe authority
+NAHI hai, aur ab woh live-state pe bhi apne aap ko poora nahi bolta.)*
 
 ---
 
 ## 2. FILE MAP — `learning-layer/` ke 24 files (23 + yeh map khud), ek-ek line
+
+*(verified 10 Aug 2026 — 24 abhi bhi sahi hai: `git ls-files learning-layer/ | wc -l` → 24, aur
+`ls -1 learning-layer/ | wc -l` → 24 bhi, matlab koi untracked file bhi nahi padi hai. **Par ginti
+LIVE karo, is line se kabhi nahi** — ek naya doc add hote hi yeh number rot ho jaayega, theek waise
+jaise §8.2 ka skills-count do baar ho chuka hai.)*
 
 Raw base: `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/learning-layer/`
 (repo mein sirf GIST pe `web_fetch` BLOCKED likha hai — raw.githubusercontent.com wala reject repo se verify nahi hota, so isse claim ki tarah mat likho. `curl -s` use karo. Claude Code mein seedha `Read` bhi chalega.)
@@ -80,10 +109,19 @@ Raw base: `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/learn
 
 | file | kis cheez ka MALIK hai |
 |---|---|
-| `PROJECT_OS.md` (v3.13, 08 Jul 2026) | THE METHOD 0-11 · 9-axis daraar-map · HARD RULES · STYLE · syllabus · SYSTEM RULES · VISUALIZATION CONTRACT · THE FORGE · dono execution layer. **Ek hi source of truth for HOW we work.** |
+| `PROJECT_OS.md` (v3.13, 08 Jul 2026 — **version line STALE, neeche padho**) | THE METHOD 0-11 · 9-axis daraar-map · HARD RULES · STYLE · syllabus · SYSTEM RULES · VISUALIZATION CONTRACT · THE FORGE · dono execution layer. **Ek hi source of truth for HOW we work.** |
 | `FORGE_SPEC.md` | capsule JSON schema (exact) · store + write-path · COLD-READER STANDARD · Gate 1 + Gate 2 · engine adapter · controller-v0 reserved fields |
 | `HOW_HE_LEARNS.md` (31 Jul, ruling 1 Aug) | 21 forensic findings + THE COLD-START CARD (17 rules, hook isko splice karta) + NEVER-DO (8) + visualization ruling |
 | `FORGE_DESIGN.md` (v2, 30 Jun) | "Cold steel, warm core" design language · 4 non-negotiables · division of labour · completeness verification |
+
+*(corrected 10 Aug 2026 — **`PROJECT_OS.md` ka "v3.13" is table mein ab bharosemand nahi.** Us file ka
+apna header line abhi bhi `v3.13, 08 Jul 2026` bolta hai, par `OS_CHANGELOG.md` ki SABSE NAYI entry
+**v3.14 (05 Aug 2026) — AUDIT #107, THE LEARNING-LAYER WIRING REPAIR** hai. Yaani OS aage badh chuka
+aur uska version-line peechhe reh gaya. Version-line badalna HIS call hai, isliye yahan sirf naam ke
+saath scar chipka hai. **Live version hamesha changelog se:**
+`grep -n "^# v3\." learning-layer/OS_CHANGELOG.md | head -1`. Evidence: `head -1 learning-layer/PROJECT_OS.md`
+vs usi grep ka pehla hit. Baaki teen versions RE-VERIFIED aur SAHI: GEMINI_LOOP v2.4 · GEMINI_RIG_SETUP
+v2.3 · FORGE_DESIGN v2 — teenon ke apne header lines se, `head -3 learning-layer/<file>`.)*
 
 **PYTHON TRACK — foundations se ALAG, mix mat karo**
 
@@ -107,7 +145,7 @@ Raw base: `https://raw.githubusercontent.com/nikhil1429/arsenal-ai-fc/main/learn
 `EXECUTION_FINAL_Tier2_Metamorphosis.md` · `Tier-2_Accountability_Rig_on_Windows__A_Max_5x_Implementation_Guide.md` · `DAILY_CADENCE.md` (Kickoff · Ground pe · Full-Time; WON-DAY = 5 non-negotiables; KAL→KICKOFF weld)
 
 **META / AUDIT (padho jab "system kyun aisa hai" poochha jaaye)**
-`SYSTEM_METACOGNITION.md` (Pass-1 diagnosis) · `SYSTEM_BLUEPRINT.md` (Pass-2 repair-blueprint, 9 open forks) · `SYSTEM_FOUNDATION.md` (dono ka verbatim merge) · `THE_ORGANISM.md` (vision draft) · `OS_CHANGELOG.md` (v3.4→v3.13) · `About.md` (pace rules — **koi countdown nahi chalta**) · `FORGE_DEEP_RENDER_BRIEF.md` (Design handoff) · `Nikhil_AI_Sprint_Plan.xlsx`
+`SYSTEM_METACOGNITION.md` (Pass-1 diagnosis) · `SYSTEM_BLUEPRINT.md` (Pass-2 repair-blueprint, 9 open forks) · `SYSTEM_FOUNDATION.md` (dono ka verbatim merge) · `THE_ORGANISM.md` (vision draft) · `OS_CHANGELOG.md` (v3.4→**v3.14** — *corrected 10 Aug 2026: yahan "v3.4→v3.13" likha tha; newest entry ab v3.14, 05 Aug 2026. Range likhna hi rot hai — padho live: `grep -n "^# v3\." learning-layer/OS_CHANGELOG.md | head -1`*) · `About.md` (pace rules — **koi countdown nahi chalta**) · `FORGE_DEEP_RENDER_BRIEF.md` (Design handoff) · `Nikhil_AI_Sprint_Plan.xlsx`
 
 ---
 
@@ -181,6 +219,14 @@ Raw: `https://gist.githubusercontent.com/nikhil1429/ce50c28d585c2fcd915a9dbf6187
 Files abhi: `tokenization.json` · `embeddings.json` · `inference.json` · `context.json`.
 **404 = woh concept abhi locked nahi.** Purana single `forge-capsules.json` flat-array **DEAD**.
 `web_fetch` gist pe **blocked** → `curl -s`.
+*(re-verified 10 Aug 2026 — raw base BYTE-FOR-BYTE sahi hai, aur teen jagah se ek jaisa nikla:
+`grep -n "base" dressing-room/state/mirror_config.json` · `grep -n "GIST_RAW" setup/build_forge_html.mjs` ·
+`grep -o "gist[a-z.]*githubusercontent[^\"']*" THE-FORGE.html`. `forge-capsules.json` sach mein MAR chuka:
+`grep -rln "forge-capsules.json" --include=*.mjs --include=*.html .` = **zero**. **Char-file wali line ginti
+hai, isliye rot-prone — live padho:** `ls -1 dressing-room/state/capsules/` (ya `grep -n "ids" dressing-room/state/mirror_config.json`,
+jo mirror ke liye sirf FLOOR hai — mirror gist ko ENUMERATE karta hai aur config ko sach nahi maanta).
+`web_fetch`-blocked wala hissa **NOT VERIFIED 10 Aug 2026** — woh tool-environment ka behaviour hai,
+repo ke code se saabit nahi hota; claim ki tarah lo. `curl -s` waise bhi kaam karta hai.)*
 
 **WRITE PATH (Option A — manual, per-file):**
 - naya lock → Claude sirf us EK naye capsule ka file deta → Nikhil 'Add file' → paste → Save
@@ -229,7 +275,20 @@ Files abhi: `tokenization.json` · `embeddings.json` · `inference.json` · `con
 threads/Bolo se recover karke Nikhil verify karta hai. Existing ko sirf **VERIFY** karo, rewrite NAHI.
 *Kyun: yeh woh content hai jo woh interview mein khud defend karega — reword/invent = woh apni samajh nahi rata.*
 
-**IDMAP (engine):** `tokenization→tok · embeddings→emb · inference→inf · neuralnet→nn · training/rlhf→rlhf · context→ctx · hallucinations→hal · tooluse→tus · jagged→jag`. Filename hamesha **long id**.
+~~**IDMAP (engine):** `tokenization→tok · embeddings→emb · inference→inf · neuralnet→nn · training/rlhf→rlhf · context→ctx · hallucinations→hal · tooluse→tus · jagged→jag`.~~ Filename hamesha **long id**.
+
+> **(corrected 10 Aug 2026 — IDMAP MAR CHUKA HAI, engine mein woh hai hi nahi.)** Yeh line kehti thi
+> ki engine long-id ko short-id pe map karta hai. Live check: `grep -rn "IDMAP" --include=*.mjs --include=*.html .`
+> = **ZERO hits** (poore repo ke code + engine mein). Aaj ka engine `id` ko **seedha** use karta hai —
+> nav-label bhi wahi, aur gist ka fetch URL bhi `<GIST>/<id>.json`
+> (`grep -n 'fetch(' THE-FORGE.html` → `` fetch(`${GIST}/${c.id}.json`) ``). Long id hi aakhri sach hai
+> aur har jagah wahi chalta: gist filename · `mirror_config.json` ki `ids[]` · `capsules/<id>.json` ·
+> `deep.mjs` / `rejirah.mjs` / `capsule_bridge.mjs` ka concept-argument. **Filename hamesha long id —
+> yeh aadhi line SAHI thi aur SAHI hai.**
+> *(ek live naming-mismatch, chhod ke ja raha hoon kyunki yeh code se tay nahi hota: upar wali dead
+> list `tooluse` likhti thi, par registry mein woh concept `tool_use` hai —
+> `grep -n "tool_use" dressing-room/state/concepts.json`. Woh abhi locked nahi hai isliye aaj kuch toota
+> nahi. **NOT VERIFIED 10 Aug 2026 — lock ke waqt kaunsi spelling jeetegi, yeh captain ki call hai.)*
 
 ---
 
@@ -276,6 +335,14 @@ file "done"**.
 > hote jab tak repair nahi hota. Is note ka purana dar — "17 bina context serve honge" — ab code
 > mein band hai; khula kaam sirf un 17 ki repair hai, jo captains_call gate2 card se ek-ek karke
 > aati hai. Live padho: `node -e` se queue ka eligible count, is note se kabhi nahi.)*
+> *(re-verified 10 Aug 2026 — **saare paanch number aaj bhi bilkul theek hain**, aur is baar command
+> bhi likha ja raha hai taaki agli baar koi ginti prose se na uthaye:
+> `node -e "const t=require('fs').readFileSync('dressing-room/state/tape_room.json','utf8');const j=JSON.parse(t);console.log(j.gate2.checked,j.gate2.flagged,JSON.stringify(j.gate2.by_pattern),j.queue.filter(x=>x.eligible===true).length)"`
+> → aaj: checked **112** · flagged **17** · `{cryptic:7, fragment:2, meta:8, near_duplicate:0}` ·
+> eligible **95**. Aur ek cheez jo yeh note nahi bolta thi par ab code se pakki hai: flagged aur
+> eligible ka **overlap ZERO** hai — koi bhi gate2-flagged doubt queue mein serve nahi hota
+> (`gate2.withheld_from_queue: 17`, `withheld_note: "flagged doubts are held OUT of the rematch queue
+> until the wording is repaired — content untouched, re-admitted automatically"`).)*
 
 **Research base (LOCKED — dobara research nahi):** Wozniak 20-rules (R4 atomic · R11 anti-interference ·
 R12 wording) + Zettelkasten (autonomous notes) + Tulving (encoding specificity) + curse-of-knowledge.
@@ -284,7 +351,17 @@ R12 wording) + Zettelkasten (autonomous notes) + Tulving (encoding specificity) 
 
 ## 7. TRACKS — kaunsa kaam kis ritual se chalta hai
 
-`sprint.json` ka `current.track` route decide karta hai (`.claude/skills/learn/SKILL.md` §1):
+`sprint.json` ka **`progress.current.track`** route decide karta hai (`.claude/skills/learn/SKILL.md` §1):
+
+*(corrected 10 Aug 2026: yahan `sprint.json` ka `current.track` likha tha — **top-level `current` us file
+mein hai hi nahi.** Live: `node -e "const s=JSON.parse(require('fs').readFileSync('dressing-room/state/sprint.json','utf8'));console.log(Object.keys(s).join(' '), '|', JSON.stringify(s.current))"`
+→ keys `_comment sprint_master start pace playlist_anchor two_tracks progress sprints tasks`, aur
+`s.current` = **undefined**. Asli raasta `sprint.progress.current` hai —
+`grep -n "sprint.progress && sprint.progress.current" scripts/learnstate.mjs`. Skill khud `cur.track`
+padhta hai, aur woh `cur` `learnstate.mjs json` ka output-field hai, sprint.json ka nahi:
+`node scripts/learnstate.mjs json` ke top keys = `sprint ws cur watch modeLine wsAge`. Aaj live
+`progress.current` = `{"id":"1-04","task":"Hallucinations","track":"concept", …}`. Chhoti si galti,
+mehngi: jo bhi `current.track` grep karega usko sprint.json mein **kuch nahi** milega.)*
 
 | track | ritual | rep shape |
 |---|---|---|
@@ -348,22 +425,59 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 > **1 → 1 → 2** ho gaya — yaani woh theek us pal zero hua jab context sabse bada tha. #38 ka
 > "hamesha firing" ulat ke uske bure roop "kabhi nahi firing" mein badal gaya tha. Naya transcript
 > file history INHERIT karti hai (710,280 → 958,257 bytes), toh **size fork ke paar bachta hai,
-> identity nahi.** Budget 1,500,000 bytes — uske apne 3,780 transcripts pe p95 = 99,557 aur sirf
+> identity nahi.** ~~Budget 1,500,000 bytes~~ — uske apne 3,780 transcripts pe p95 = 99,557 aur sirf
 > **49 (1.3%)** kabhi 1 MB paar karte hain, isliye yeh line woh kabhi ignore karna nahi seekhega.
+>
+> **(corrected 10 Aug 2026 — budget 1,500,000 ab LEGACY hai, live nahi.)** Us number ka apna naam hi
+> ab `DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY` hai (`grep -n "DEFAULT_TRANSCRIPT_WARN_BYTES" scripts/teaching_contract.mjs`).
+> Live budget **derive** hota hai, hardcode nahi: `MEASURED_BYTES_PER_TOKEN = 4.1` (6 Aug ka naapa hua
+> 964,000 bytes ↔ 234,700 tokens) × `CONTEXT_WINDOW_TOKENS = 1_000_000` = **4,100,000 bytes**, aur ek
+> soft line `SOFT_FRACTION = 0.6` pe pehle bajti hai (~2.46 MB). Yaani warn ab ASLI window pe baitha hai,
+> ek guess pe nahi. State se retune ho sakta (`transcript_warn_bytes`), file chhue bina. **Number yahan
+> se mat uthao — `grep -n "MEASURED_BYTES_PER_TOKEN\|CONTEXT_WINDOW_TOKENS\|SOFT_FRACTION" scripts/teaching_contract.mjs`.**
+> *(Aur is badlaav se upar wala "1 MB paar" wala tark ab purana ho gaya: 1.5 MB pe woh 1.3% transcripts
+> ko chhoo raha tha, 4.1 MB pe aur bhi kam. Reasoning wahi rehti — jhoota alarm gauge ko marta hai —
+> par uske saath jo ginti likhi thi woh ab us budget ki nahi hai.)*
 
 **Kyun do alag contract:** 31 Jul ko naapa gaya — pacer har turn aata tha, teaching-rules sirf
 SessionStart pe. 5-ghante ki session ka nateeja: **zero method-drift, chaar teaching-drift**
 (scope · role · language · terminology). *Jo har turn wapas aata hai, wahi tikta hai.*
 
-**teaching_contract ke 5 seeded rules** (aur `add` se badhte hain, state mein rehte hain, code mein nahi):
+**teaching_contract ke 12 seeded rules** (aur `add` se badhte hain, state mein rehte hain, code mein nahi):
 1. `his-word` — uska saaf bola hua instruction > meri samajh. Scope kaatna ho to **pehle poochho**.
 2. `hinglish` — HINGLISH, shuddh Hindi nahi. Technical shabd **angrezi mein hi**.
 3. `terminology` — asli terminology bolo (token · vocabulary · next-token · sampling · groundedness). Hindi anuvaad se naam mat badlo — **analogy alag cheez, naam alag**.
 4. `link-back` — naya concept hamesha band ho chuke concepts se **naam le kar** jodo (yeh line `sprint.json → progress.done` se **live derive** hoti hai, hardcode nahi).
 5. `decided` — jo faisla woh pehle le chuka hai woh **zinda hai** — har naye message se intent dobara mat nikaalo.
+6. `one-idea` — EK naya idea per message + ant mein EK check-question. **Uska rule #1, aur sabse zyada tootne wala.**
+7. `his-level` — uska level uske apne shabd se upar mat rakho — koi "dormant", koi "yeh to tujhe aata hai".
+8. `no-system-mid-concept` — concept ke beech koi system/notes/tool kaam nahi — naam lo, park karo, micro-question wapas.
+9. `confusion-is-literal` — "samajh nahi aaya" ko literally lo — wahin ruko, zero se shuru karo.
+10. `dheema-not-lamba` — DHEEMA = EK cheez poori kholi hui. LAMBA = ek message mein bahut cheezein. **Kabhi lamba nahi, hamesha gehra.**
+11. `coverage` *(7 Aug 2026)* — har axis ka POORA scope kholna Claude ka kaam. Aadha jawab · kata scope · dabaya doubt · core-axis defer = drift.
+12. `neev-pehle` *(9 Aug 2026)* — naya naam pehli baar aate hi EK line mein kholo; conclusion se pehle neev.
 
-`hit <id>` se drift record hoti hai → sabse zyada hits wala rule pehle inject hota hai. Contract khud ko
-tez karta hai us cheez ke against jo **actually** galat ho rahi hai.
+> **(corrected 10 Aug 2026: yahan "5 seeded rules" likha tha aur sirf pehle paanch gine the — seed mein
+> ab 12 hain.)** 6-10 ko 6 Aug 2026 ko seed mein daala gaya tha (self-sustaining repair) theek isliye ki
+> paanch rule SIRF state file mein zinda the — ek re-seed event un paanchon check ko chupchap hamesha ke
+> liye maar deta (`flag`/`autohit` unknown id ko refuse karte hain aur caller failure nigal jaata hai);
+> 11 aur 12 baad mein usi wajah se aaye. **Seed ko har us rule ko carry karna hai jispe koi automatic
+> path khada hai.** Padho live: `sed -n "/── SEED ─/,/^}/p" scripts/teaching_contract.mjs`, ya
+> `node scripts/teaching_contract.mjs list` (jo hits + auto dono lanes ke saath ranked list deta hai).
+
+**DO LANE hain, aur yeh farak jaanna zaroori hai** *(corrected 10 Aug 2026: pehle yahan sirf itna likha
+tha — "`hit <id>` se drift record hoti hai" — jo Claude ko **uske apne** rasta se bilkul door bhej deta
+tha)*:
+- **`hits` — USKI lane.** Sirf `hit` / `confirm` isse chhoote hain. **Claude yeh kabhi nahi likhta.**
+- **`auto_hits` — CODE ki lane.** Claude apni hi drift pakde to **usi turn mein**
+  `node scripts/teaching_contract.mjs flag <rule-id> --why "<jo kiya>"` — 7 Aug ki uski ruling ("ok do it..")
+  ke baad yeh **turant count** hota hai, na card, na confirm. `teaching_audit.mjs` measured drifts ke liye
+  `autohit` chalata hai (apne CLI se, kabhi seedha JSON nahi — `grep -n "never touches teaching_contract.json itself" scripts/teaching_audit.mjs`).
+  Wapas chalna ek command: `unhit-auto <id>`.
+- **Ranking DONO ko jodti hai:** `const ruleWeight = (r) => (Number(r.hits) || 0) + (Number(r.auto_hits) || 0);`
+  (`grep -n "ruleWeight" scripts/teaching_contract.mjs`) — sabse bhaari rule slot 1 pe, baaki rotate.
+
+Contract khud ko tez karta hai us cheez ke against jo **actually** galat ho rahi hai.
 
 ### 8.2 SKILLS (`.claude/skills/`) — ginti LIVE karo (`ls .claude/skills/`), yahan likha number rot chuka tha (audit: "12" jab disk pe 13 the)
 
@@ -377,7 +491,15 @@ opponent ban ke wapas; saaf jeeto to doubt retire) · `/paste-session` (Gem/Cola
 
 **Outward:** `/fire` (staged Gemini mission — uska click hi trigger; "le lo" = return leg) ·
 `/harvest` *(9 Aug 2026, P7)* — Gem sitting poori ki poori afferent bus pe (his turns `gemini-study`,
-Gem ke `gemini-study-teaching`), owner `harvest.mjs`, dedup + resync built-in
+Gem ke `gemini-study-teaching`), owner `harvest.mjs`, dedup + resync built-in ·
+`/gist-patch` — closed Re-Jirah round ka `reJirahDone` patch gist ke edit page pe pre-fill; **Save uska
+hi rehta**, phir `mirror.mjs` wapas laata to PENDING usi baithak mein khatam (§9)
+
+*(corrected 10 Aug 2026: upar ki teen list se `/gist-patch` **gayab tha** — disk pe woh maujood hai
+(`ls .claude/skills/`), aur woh theek us GAP ka zero-tax raasta hai jise §9 aur HONEST LEDGER item 6b
+dono "khula kaam" bolte hain. Ek surface jo naksha mein nahi hai woh kisi session ko milta hi nahi.
+**Aur ginti phir se: aaj disk pe 15 skills hain, is heading ka apna sabak hi yahi hai — `ls .claude/skills/`
+chalao, kisi bhi list se mat gino.** Baaki 14 naam ek-ek karke disk se milaye gaye aur sahi nikle.)*
 
 **Routing:** *"forge embeddings"* → `/forge`. *"padhai karte hain" / "aaj ka session" / "continue" /
 "where was I"* → `/learn` (woh state padhta hai aur zaroorat ho to `/forge` ko de deta hai).
@@ -391,8 +513,18 @@ node scripts/forge_session.mjs step <0-11>
 node scripts/forge_session.mjs axis <a-i> now|done|defer   # arg REQUIRED (7 Aug 2026, P4.1: bare form REFUSES — purana default `done` do baar Jirah se pehle axis "complete" kar gaya). `now` = "ab is axis par hoon", sirf declare
 node scripts/forge_session.mjs status                     # hook-safe, ek line
 node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
+node scripts/forge_session.mjs lockchain               # read-only PREVIEW — step 10 pe kya-kya apne aap chalega (kuch stage nahi hota, state aage nahi badhti)
 node scripts/forge_session.mjs close                   # "session khatam" pe → coverage report
 ```
+
+*(added 10 Aug 2026: `lockchain` is block se **chhoot gaya tha** — woh dispatch mein maujood hai
+(`grep -n 'case "lockchain"' scripts/forge_session.mjs`) aur ise jaanna is liye zaroori hai ki
+**step 10 pe ARRIVAL par LOCK-CHAIN apne aap fire hoti hai** — stage-lock mission + benchmark +
+gate-report — sirf pehli baar aane pe, dobara `step 10` type karne pe nahi
+(`grep -n "wasAtLock" scripts/forge_session.mjs`). `lockchain` woh sab dikha deta hai bina L-mission
+stage kiye. Ek aur cheez jo yahan likhi nahi thi par live hai: `start` ke baad scout apne aap
+topic-open T-mission stage karta hai, aur fail-silent hai — scouting padhai ko kabhi rokti nahi
+(`grep -n "stage-topic" scripts/forge_session.mjs`).)*
 
 - SessionStart ne **OPEN session** bataya → pehle `close` karo aur coverage **zor se padho**; us session
   ke axes **dobara mat padhao**, step 0 se **restart mat karo**. Koi bhi unclosed session ho (stale bhi)
@@ -426,8 +558,15 @@ tmpfile mein save → node scripts/capture.mjs paste <tmpfile> → node scripts/
 - `axis` = **ek hi akshar `a`–`i`**. Literal string `"a-i"` bhi reject hota hai.
   *(In dono ne 30 Jul audit se pehle ek live session ke reps kha liye the.)*
 - skill/coding session → `surface:"colab"`, `track:"skill"`, `axis` **MUST be `null`**.
-- `latency_ms` **sirf tab jab actually observable ho** — invent kabhi nahi (genome ka
-  `criterion_gated_pass` isse padhta hai; jhootha number fluency-ladder corrupt karta hai).
+- `latency_ms` **sirf tab jab actually observable ho** — invent kabhi nahi (jhootha number fluency-ladder
+  corrupt karta hai). *(corrected 10 Aug 2026: yahan likha tha "genome ka `criterion_gated_pass` isse
+  padhta hai" — **aaj koi script `criterion_gated_pass` padhta hi nahi.**
+  `grep -rn "criterion_gated_pass" scripts/*.mjs` = ek hi hit, aur woh `capture.mjs` ka **comment** hai,
+  reader nahi; field khud `forge_profile.json` mein baitha hai as genome-data. Jo ASLI reader hai woh
+  fluency-ladder hai: `grep -n "latency_fast_ms" scripts/learning_state.mjs` →
+  `const latOK = (r.latency_ms == null) || (r.latency_ms <= cfg.thresholds.latency_fast_ms);`
+  aur `latency_fast_ms: 8000` `learning_state_config.json` se. **Rule zinda hai, wajah badli:**
+  jhoota latency 🟢-fluent ko jhootha bana deta hai, aaj hi, is turn se.)*
 - `unregistered:true` aaya → concept `state/concepts.json` mein hai hi nahi. **Bol do** — woh registry
   hand-curated canon hai, uski approval chahiye, chupke se edit kabhi nahi.
 `capture.mjs` v4 (audit #24, 4 Aug 2026): ab woh apna **`observed_at`** khud stamp karta hai (sirf `paste`/`pull` ke ingest path pe — **ek batch = EK arrival instant**; pehle likhi rows pe `observed_at:null`, kyunki hum jaante hi nahi ki woh kab aayi) aur model ka claim `ts_claimed` mein rakhta hai (**canonical ISO mein normalize karke, kabhi destroy nahi**). `ts` ab bhi CLAIM hi rehta — sirf tab observation jeet-ta hai jab claim NAAMUMKIN ho (rep apne aane ke BAAD nahi ho sakta); tab `ts_source` `"observed(claim_after_arrival)"` ban jaata aur ingest report us correction ko GINTI karta, chupke se rewrite nahi. — kyunki reps_log mein saabit hua ki 90 minute
@@ -455,10 +594,10 @@ nahi hua" value). **Clean outcome se `knew` gadho mat.**
 | `fsrs_store.json` / `cards.json` | `fsrs.mjs` | schedule |
 | `calibration.json` | `calibration.mjs` | ECE + danger-zone |
 | `weaknesses.json` | `nemesis.mjs` | ranked recurring misses |
-| `learning_state.json` | `learning_state.mjs` | fluency + Maidan (gitignored — derived PII) |
+| `learning_state.json` | `learning_state.mjs` | fluency + Maidan (**TRACKED** — *corrected 10 Aug 2026: yahan "gitignored — derived PII" likha tha; D10 ne 5 Aug ko yeh palta diya aur `.gitignore:66` ab sirf ek comment hai — "Learning-state agent output --- D10, 5 Aug 2026: now tracked (his ruling)". Live: `git check-ignore -v dressing-room/state/learning_state.json` = kuch nahi, `git ls-files` = tracked. **Isi table ka apna paragraph neeche yeh sahi bolta tha — table peechhe reh gayi thi.***) |
 | `capsule_map.json` | `capsule_bridge.mjs` | capsules ka extract |
 | `doubt_grammar.json` · `lexicon.json` · `tape_room.json` | `doubtminer.mjs` | decoy-map · ghar ki boli · tape room |
-| `examiner_drill.json` | `examiner.mjs` | staged code-round (gitignored — weaknesses naam leta hai) |
+| `examiner_drill.json` | `examiner.mjs` | staged code-round (**TRACKED** — *corrected 10 Aug 2026: "gitignored — weaknesses naam leta hai" ab galat hai. `.gitignore:183` ab bolta hai "the live examiner (M4) — D10, 5 Aug 2026: now tracked (his ruling)". Live: `git check-ignore -v dressing-room/state/examiner_drill.json` = kuch nahi.*) |
 | `course.json` | `course.mjs` | chapter position |
 | `teaching_contract.json` | `teaching_contract.mjs` | rules + hits + turn counter |
 | `sprint.json` (`progress` block) | `sprintsync.mjs` | uski live Google Sheet se |
@@ -482,17 +621,51 @@ kabhi edit mat karo**. Doubts → `node scripts/hippocampus.mjs mark doubt` (usk
 Pehle yahan likha tha ki `reps_log.jsonl` · `learning_state.json` · `examiner_drill.json` gitignored
 hain — **ab woh galat hai.** Captain ne D10 mein (do baar, files naam le kar) ruling di: **uska
 personal study data repo ke SAATH travel karta hai.** `.gitignore` ab in teeno ko TRACK karta hai,
-aur purane rules comment mein frozen hain taaki reversal auditable rahe. **Jo ab bhi ignored hai:**
-sirf credentials (`oura_*`). *(9 Aug 2026 launch audit: is line ne `readiness.json` + `intake_log.json`
+aur purane rules comment mein frozen hain taaki reversal auditable rahe. ~~**Jo ab bhi ignored hai:**
+sirf credentials (`oura_*`).~~
+
+> **(corrected 10 Aug 2026 — "ab ignored sirf `oura_*`" SAAF JHOOT hai, aur yeh is file ka sabse
+> khatarnaak wala jhoot tha.)** D10 ne TEEN files ko track kiya, poori `.gitignore` ko nahi. Aaj bhi
+> is learning layer ke aadhe se zyada state files IGNORED hain — sirf naam ginate hue:
+> `cards.json` · `fsrs_store.json` · `calibration.json` · `weaknesses.json` · `capsule_map.json` ·
+> `doubt_grammar.json` · `lexicon.json` · `tape_room.json` · `forge_session.json` ·
+> `forge_sessions.jsonl` · `teaching_contract.json` · `sprint.json` · `capsules/` · `scout_reports/` ·
+> `capture_config.json` · `capsule_backups/` — aur inke alawa poora cyborg-brain lane
+> (hippocampus, thalamus/cortex, dugout, presence, twin …). **Yeh koi bug nahi hai — har line ka apna
+> likha hua kaaran `.gitignore` mein hi baitha hai.** Yeh line galat isliye khatarnak thi ki iske
+> bharose koi "sab kuch travel karta hai" maan kar clone/restore plan bana leta.
+> **Kabhi is list se mat padho, file se poochho:** `git check-ignore -v <file>` (khaali output = tracked),
+> ya poora naksha ek baar mein —
+> `for f in dressing-room/state/*.json dressing-room/state/*.jsonl; do printf "%-58s %s\n" "$f" "$(git check-ignore -q "$f" && echo IGNORED || echo tracked)"; done`.
+> **Yeh gitignore-claim is file mein CHAUTHI baar rot hui hai.** Isliye ab yahan koi list-of-record
+> nahi hai — sirf command hai.
+
+*(9 Aug 2026 launch audit: is line ne `readiness.json` + `intake_log.json`
 ko "ab bhi ignored" bataya jabki dono TRACKED hain — aur usi din captain ne khud ruling di, uske
 shabd: "i do not care putting my data in the public repo". Biometric/medication state ka public repo
 mein hona ab ACCEPTED hai, defect nahi. Yeh map ki teesri baar hai jab gitignore-claim rota — is
 list pe kabhi bharosa mat karo, `git check-ignore -v <file>` chalao.)*
-`capsules/` bhi gitignored hai — matlab **git in 210 KB capsules ka backup nahi hai; gist hi master
-aur ekmatra backup hai.**
-Naye tracked state (5 Aug): `python_state.json` · `rejirah_log.jsonl` · `widgets.json` — teeno study
+`capsules/` bhi gitignored hai (`.gitignore:79`, 10 Aug 2026 ko dobara check kiya) — matlab **git uske
+capsules ka backup nahi hai; gist hi master hai.** ~~gist hi ... ekmatra backup hai~~
+*(corrected 10 Aug 2026: "**ekmatra** backup" ab galat hai — LADDER E9 (9 Aug) ne mirror ko ek LOCAL
+recovery-lane de di: `mirror.mjs` roz `capsules/` ka dated snapshot `capsule_backups/<date>/` mein
+rakhta hai (`grep -n "capsule_backups" scripts/mirror.mjs`), aur woh directory bhi gitignored hai
+(`.gitignore:263`). Aaj disk pe: `ls -1 dressing-room/state/capsule_backups/` → `2026-08-10`.
+**Gist ab bhi CLOUD master + ekmatra OFF-machine backup hai — par "koi doosri copy nahi hai" ab sach
+nahi.** Aur "210 KB" bhi ginti hai jo har naye lock pe badlegi: `du -sh dressing-room/state/capsules/`.)*
+
+Naye tracked state (5 Aug): `python_state.json` · ~~`rejirah_log.jsonl`~~ · `widgets.json` — study
 data hain, D10 ke andar. `course.json` bhi tracked hai (pehle se flagged tha; D10 ke baad yeh ab
-consistent hai, defect nahi). **Har push se pehle ek glance — yeh list badalti rehti hai.**
+consistent hai, defect nahi).
+*(corrected 10 Aug 2026: **`rejirah_log.jsonl` TRACKED nahi hai — woh disk pe hai hi nahi.**
+`git ls-files dressing-room/state/rejirah_log.jsonl` = khaali, aur `git check-ignore` bhi khaali —
+yaani na ignored, na tracked: **kabhi bana hi nahi.** Wajah HONEST LEDGER 6b hai, koi gitignore-bug
+nahi — aaj tak ek bhi Re-Jirah round record nahi hua, isliye owner ne file likhi hi nahi.
+Khud organ yeh saaf bolta hai: `node scripts/rejirah.mjs pending` → *"rejirah_log.jsonl does not exist
+— 0 axis grade(s), 0 rounds EVER closed, on 4 locked capsule(s). … Yeh clean sheet nahi hai — yeh
+un-run hai."* Pehla `grade` chalte hi file banegi; tab dobara dekhna padega ki woh track honi chahiye
+ya nahi — **woh D10-class captain ruling hai, build decision nahi.**)*
+**Har push se pehle ek glance — yeh list badalti rehti hai.**
 
 ### 8.5 FSRS — kya khilata hai
 *(9 Aug 2026 launch audit: is section ka heading + ASCII diagram kisi purane edit mein kat gaya tha —
@@ -517,7 +690,18 @@ aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+sh
 - **Calibration (`calibration.mjs`)** — ECE = Σ (n_b/N)·|accuracy_b − target_b| over knew/shaky/guessed.
   Targets: **knew ≈ 0.95 · shaky ≈ 0.65 · guessed ≈ 0.30**. `overconfidence_rate = P(wrong | "knew")`.
   Danger-zone sirf **knew-WRONG** se banta (≥3 knew-reps + knew-accuracy < 0.67). **Dono track padhta**.
-  Same thresholds (verified unchanged), plus: dono agent ab apna gate **have/need counter** ke saath bolte hain, bare word ke bajaye — calibration `"9/20 reps"` aur `"2/3 knew-reps"` print karta, nemesis `gate_line` `"4/4 capsules · 20/60 doubts"`-style deta. Gate LOWER nahi hua, sirf uski doori ab dikhti hai.
+  Same thresholds (**10 Aug 2026 ko dobara `calibration_config.json` se milaye — knew 0.95 · shaky 0.65 ·
+  guessed 0.30 · `min_reps` 20 · `danger.min_knew_reps` 3 · `danger.accuracy_mid` 0.67, sab jyon ke tyon**),
+  plus: dono agent ab apna gate **have/need counter** ke saath bolte hain, bare word ke bajaye — calibration `"9/20 reps"` aur `"2/3 knew-reps"` print karta, ~~nemesis `gate_line` `"4/4 capsules · 20/60 doubts"`-style deta~~. Gate LOWER nahi hua, sirf uski doori ab dikhti hai.
+  *(corrected 10 Aug 2026: counter ki SHAKAL do alag hain, aur ek field ka naam galat agent pe chipka
+  tha. **Nemesis `gate_line` naam ka koi field emit karta hi nahi** — woh
+  `gate:{reps_have, reps_need, met, short_by}` + `status_line` deta hai (`"… — 1/20 reps toward the
+  axis-pattern gate"`); `grep -n "reps_have" scripts/nemesis.mjs`, aur aaj live `weaknesses.json` mein
+  `gate:{reps_have:21, reps_need:20, met:true, short_by:0}`. `gate_line` **doubtminer.mjs ka field hai**,
+  aur `"4/4 capsules · N/60 doubts"` uski hi shakal hai: `grep -n "gate_line" scripts/*.mjs` = sirf
+  `doubtminer.mjs`, aaj live `doubt_grammar.json` mein `"4/4 capsules · 112/60 doubts"`.
+  Calibration ka apna wala `gate.line` hai — `grep -n "buildGate" scripts/calibration.mjs`.
+  **Teen agent, teen alag counter — ek doosre ka naam mat lagao.**)*
 - **Nemesis (`nemesis.mjs`)** — unique signal: **alag-alag concepts ke misses EK AXIS pe cluster karna**
   ("tokenization + chunking + retrieval — teenon axis-e pe tootte") → nemesis ek **soch ka tareeka** hai,
   topic nahi. Miss = relapse · confident-wrong · shaky-wrong. `guessed-wrong` akela miss **nahi** (woh
@@ -539,8 +723,16 @@ aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+sh
   har anchor kisi source field ka verbatim substring hai), **TAPE ROOM** queue. Decoy shapes upstream
   **probes** ki shakal badalte hain — Pehle-Guess se **pehle kabhi nahi dikhte** (generation effect ke liye
   galti actually commit honi chahiye). Shape-clusters ≥4 capsules **aur** ≥60 doubts tak `null` rehte.
-- `examiner.mjs` — deterministic pick-order se ek concept chunta: **stalling pehle → phir learning (worst first) → phir FSRS ka hardest → phir floor** — uspe build-it-live code-round stage karta, hidden tests. Deterministic,
+- `examiner.mjs` — deterministic pick-order se ek concept chunta: **stalling/regressing pehle → phir
+  ladder ka sabse pehla 🔴 learning wala → phir FSRS ka `hardest_due` → phir capsule floor
+  (`tokenization`)** — uspe build-it-live code-round stage karta, hidden tests. Deterministic,
   koi LLM nahi. Law: **code grade hota hai, coder kabhi nahi.**
+  *(corrected 10 Aug 2026: doosra step "learning (worst first)" likha tha, jo ek sorting ka daawa hai jo
+  code karta hi nahi — woh `learning[0]` uthata hai aur apni hi wajah `"earliest ladder stage"` likhta hai,
+  koi worst-first sort nahi. Chautha step ka naam bhi ab likha hai: floor = `tokenization`, wajah
+  `"capsule floor (no live signal yet)"`. Poora order: `grep -n "function pickConcept" -A 16 scripts/examiner.mjs`.
+  Aur ek cheez jo yahan likhi nahi thi: bare `node scripts/examiner.mjs` **read-only** hai (aaj ka staged
+  drill print karta), `stage` naya stage karta — yeh §15 mein sahi likha hai aur live confirm bhi hua.)*
 - `turnstile.mjs` — zero-tax capture daemon: **copy hi poora move hai.** Clipboard pe jo cheez capture-contract
   ki shakal ki hai woh `capture.mjs` se ho ke andar jaati; **baaki sab kuch ignore** (parse bhi nahi hota,
   log bhi nahi). Singleton :4111.
@@ -630,12 +822,21 @@ update**"*.) Asli wajah §5 hai: local `capsules/` ek read-only mirror hai jiska
 `mirror.mjs` hai, jo roz subah gist se overwrite kar deta hai. Isliye:
 
 **round close → gist patch → uska paste → `mirror.mjs` → PENDING khatam.** Jab tak paste nahi landa,
-round **PENDING** padha jaata hai — yeh *saboot* hai ki paste hua, anumaan nahi. **Paanch organ
+round **PENDING** padha jaata hai — yeh *saboot* hai ki paste hua, anumaan nahi. **Kai organ
 `reJirahDone` pe khade hain:** `fsrs.mjs` (`capsuleSeedReps` — poori review-history isi se banti) ·
 `deep.mjs` (`rejirahStatus` round counter) · `capsule_bridge.mjs` (done/overdue/due) · `dugout.mjs` ·
-`shipped.mjs` (`rejirah_served`). *(Line numbers deliberately hataye — 9 Aug audit pe teeno refs rot
-chuke the; function ka naam grep karo.)* Paste na ho to paanchon maante hain round hua hi nahi — isliye SessionStart brief
+`shipped.mjs` (`rejirah_served`) · `learnstate.mjs` (SessionStart ki PENDING line) · `captains_call.mjs`
+(rejirah-pending card). *(Line numbers deliberately hataye — 9 Aug audit pe teeno refs rot
+chuke the; function ka naam grep karo.)* Paste na ho to yeh sab maante hain round hua hi nahi — isliye SessionStart brief
 bhi PENDING line uthati hai.
+
+*(corrected 10 Aug 2026: yahan "**Paanch** organ" likha tha aur paanch naam gine the. Live count zyada
+hai: `grep -rln "reJirahDone" scripts/*.mjs` → `capsule_bridge · captains_call · deep · dugout · fsrs ·
+learnstate · organism_test · rejirah · shipped`. Do naye readers upar jod diye (`learnstate.mjs`,
+`captains_call.mjs`); `rejirah.mjs` khud writer/derive-side hai aur `organism_test.mjs` suite hai, isliye
+woh "organ" list mein nahi. **Aur yahi seekh: ginti prose mein likhne se hi rot hoti hai — reader-count
+hamesha usi grep se lo, is line se kabhi nahi.** Poora dar aaj bhi sach hai: ek bhi round abhi tak close
+nahi hua — `node scripts/rejirah.mjs pending` khud bolta hai "0 rounds EVER closed".)*
 
 `close` canon ka **SUCCESSIVE-RELEARNING criterion** bhi report karta hai ("har round har due-axis cold
 ek baar sahi") — report karta hai, **rokta nahi**: adhoora round bhi asli round hai, aur jo axes cracked
@@ -656,6 +857,10 @@ Captain ne yeh resolve kar diya, merge karke nahi — **kaam baant ke**:
 config `dressing-room/state/learning_state_config.json` se; `sanitizeMaidan()` ek malformed stage pe
 crash nahi hota (25 Jul E2E audit fix). Gate ka live sach `learning_state.json` se padho — 9 Aug
 audit pe yeh line "9 < 12 awaiting_data" bol rahi thi jabki live gate **14/12 OPEN** tha.
+*(10 Aug 2026: stages/handoffs dobara `learning_state_config.json` se milaye — **3 stages** aur
+**4 handoffs**, naam-ba-naam wahi jo upar likhe hain, aur `warming_up_min_reps: 12` bhi wahi. Gate aaj
+**21/12 OPEN** hai — aur yeh number bhi kal jhoot ho jaayega, isliye poori line ka point yahi hai:
+`node -e "console.log(JSON.parse(require('fs').readFileSync('dressing-room/state/learning_state.json','utf8')).gate.line)"`.)*
 
 Forge ka unit = **CONCEPT** (capsule); goal ka unit = **FIELD** (poora juda hua runnable naksha).
 17 capsules tempered ho jaayein tab bhi field apne aap nahi chalega — **tempered players ≠ drilled team.**
@@ -758,9 +963,14 @@ Finding #2 kehti thi: visualisation samajh paida nahi karti; plain text + haath 
 `PROJECT_OS.md` ki law kehti hai ulta: **"har concept ka EK widget; widget HI lesson hai."**
 Teen readings uske saamne rakhe gaye. **Uska jawab, uske shabdon mein:**
 
-> *Imaandaar note (`HOW_HE_LEARNS.md:403-405` se, warna quote galat padha jaata): us quote mein "11 point"
-> uska **ANSWER-NUMBER** hai us question-set pe jiska woh jawab de raha tha — cold-start card ke **rule 11
-> ka pointer NAHI** (rule 11 do-option stop ke baare mein hai). Confidence **[SHAYAD]**, reply ki shape se.*
+> *Imaandaar note (`grep -n "11 point yes" learning-layer/HOW_HE_LEARNS.md` se, warna quote galat padha
+> jaata): us quote mein "11 point" uska **ANSWER-NUMBER** hai us question-set pe jiska woh jawab de raha
+> tha — cold-start card ke **rule 11 ka pointer NAHI** (rule 11 do-option stop ke baare mein hai).
+> Confidence **[SHAYAD]**, reply ki shape se.*
+> *(corrected 10 Aug 2026: is citation mein `HOW_HE_LEARNS.md:403-405` likha tha — **drift ho chuka tha.**
+> Aaj quote `:436` pe hai aur yeh imaandaar note `:440` pe; `:403-405` ab COLD-START CARD ka aakhri hissa
+> hai, poori tarah alag baat. Number hata diya, grep laga diya — is repo mein line-citation hafte mein
+> do baar sad chuki hai.)*
 
 #2 mein se kuch delete ya soften nahi hua aur usme kuch
 galat bhi nahi tha — uska **KAAM** badla, uski sachchai nahi: **#2 ab spec hai ki ek widget BAD kyun hota
@@ -804,9 +1014,12 @@ inka exact sequencing ruling ne chhua nahi.
   Parked axis → us axis ka widget element bhi parked.
 - **CORE-NEVER-DEFERRED.** Core measure/formula/range **MAIN explanation mein**, kabhi side-section ya
   "baad mein" nahi. Overwhelm = **aaj kam concepts** (syllabus se drop nahi hota), **correctness kabhi nahi**.
-- **PAST THREADS.** *(Canon verbatim from PROJECT_OS.md:182-184 — par ab STALE IN PRACTICE:
-  `conversation_search` / `recent_chats` Claude WEB ke tools hain aur Claude Code mein maujood hi
-  nahi hain. Claude Code mein iska Claude-Code-wala jawab = hippocampus + the SessionStart brief.)*
+- **PAST THREADS.** *(Canon verbatim from PROJECT_OS.md — `grep -n "PAST THREADS" learning-layer/PROJECT_OS.md` —
+  par ab STALE IN PRACTICE: `conversation_search` / `recent_chats` Claude WEB ke tools hain aur Claude Code
+  mein maujood hi nahi hain. Claude Code mein iska Claude-Code-wala jawab = hippocampus + the SessionStart
+  brief.)* *(corrected 10 Aug 2026: yahan `PROJECT_OS.md:182-184` likha tha — **drift ho chuka tha**, woh
+  clause aaj `:253-256` pe hai (`grep -n "conversation_search" learning-layer/PROJECT_OS.md`) aur canon ne
+  khud usi jagah wahi correction likh di hai. Number ki jagah ab grep — canon file roz badal rahi hai.)*
    "Pichla thread padh" = `conversation_search` se **verbatim** messages. `recent_chats` =
   sirf AI-summary — usse kabhi "poora padh liya" bol ke present mat karo; sirf summary padhi ho to **saaf bolo**.
 - **LEARNING MODE ALWAYS ON.** Har thread mein, topic koi bhi ho. Naya concept/tool/library/error/design-decision
@@ -832,9 +1045,21 @@ inka exact sequencing ruling ne chhua nahi.
 1. `learnstate.mjs brief` chalti hai → sprint position · kahan chhoda · open loop · watch-list · next-up ·
    **17-rule cold-start card** · course brief.
 2. `forge_session.mjs boot` chalti hai → koi session **OPEN** to nahi?
-3. **`organism-memory` MCP tool `get_context` call karo** (`CLAUDE.md` — non-negotiable). Brief hippocampus
-   ko chhoo-ti hi nahi, toh iske bina uski memory session tak pahunchti hi nahi aur usse dobara apne baare
-   mein batana padta hai. **Usne yeh teen baar bola hai.**
+3. **`organism-memory` MCP tool `get_context` call karo** (`CLAUDE.md` — non-negotiable). ~~Brief hippocampus
+   ko chhoo-ti hi nahi, toh iske bina uski memory session tak pahunchti hi nahi~~ — **wajah badal chuki
+   hai, hukum nahi:** brief ab hippocampus ka rehydrate-cartridge splice karti hai, par woh ek **BUDGETED
+   SNAPSHOT** hai (12,000-char ceiling, worst-priority-first kharch), poora store nahi. `get_context`
+   gehra aur LIVE read hai; `recall` targeted lookup ke liye. Brief ke maujood hone se yeh call **kabhi
+   mat chhodo**. Aur usse dobara apne baare mein batana kabhi mat padho — **usne yeh teen baar bola hai.**
+
+   *(corrected 10 Aug 2026: "Brief hippocampus ko chhoo-ti hi nahi" **GALAT** hai, aur galat tareeke se
+   khatarnaak — yeh `get_context` ki wajah ek aisi kami pe tikaati thi jo band ho chuki hai, matlab jis
+   din koi note karta ki brief mein memory aa rahi hai, us din woh MCP call ko hi faltu samajh leta.
+   Live saboot, teen jagah se: (1) `node scripts/learnstate.mjs brief` ke output mein seedha
+   `--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---` chhapta hai;
+   (2) `grep -n "hippocampus" scripts/learnstate.mjs` → cartridge ka lazy dynamic import + splice;
+   (3) `grep -n "CEILING" scripts/context_manifest.mjs` → `export const CEILING = 12_000`.
+   **Asli wajah `CLAUDE.md` wali hai:** brief BUDGETED snapshot hai, `get_context` live store hai.)*
 4. **EK line** se kholo: woh kis pe hai + open loop kya hai. Phir route karo.
 
 **CHALNA:**
@@ -873,7 +1098,12 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
    Yeh is map ka #1 finding tha aur bilkul sach tha: grep count **0**. Ab CLAUDE.md mein
    `## The LEARNING LAYER` section hai jo is map ko, canon ko (PROJECT_OS · FORGE_SPEC ·
    FORGE_DESIGN · HOW_HE_LEARNS), the Visualization Ruling ko, sacred-fields law ko, aur surfaces
-   (`/forge` · `/learn` · `deep.mjs`) ko naam se bolta hai. Grep ab **11**.
+   (`/forge` · `/learn` · `deep.mjs`) ko naam se bolta hai. ~~Grep ab **11**.~~
+   *(corrected 10 Aug 2026: yahan "Grep ab 11" ek hardcoded ginti thi — theek wahi cheez jiske khilaaf
+   yeh file har doosre paragraph mein warn karti hai, aur woh bhi ek CLOSED item ke andar jahan ab uska
+   koi kaam bhi nahi. Item CLOSED hi rehta hai; number hata diya. Agar kabhi dobara naapna ho:
+   `grep -c "learning-layer\|/forge\|PROJECT_OS\|FORGE_SPEC\|HOW_HE_LEARNS" CLAUDE.md` — aaj 17,
+   par yeh bhi kal badal jaayega, isliye is line se kabhi mat uthana.)*
    *(Woh chhota bacha hua bhi **CLOSED 5 Aug 2026** — CLAUDE.md ab OPS_STATE ko repo root pe batati hai
    aur yeh bhi likhti hai ki woh learning layer ke liye STALE hai.)*
 2. **GATE 2 ab CODE mein hai aur CHAL chuka hai** — 4 Aug 2026 repair. `doubtminer.mjs` ka
@@ -891,14 +1121,29 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
    **Fix: `node scripts/deep.mjs`** — reader-only, LLM nahi, local mirrored capsules se padhta hai.
    `due` = Re-Jirah queue, **sirf strike-sawaal, notes band** (controller-v0 knob 1, ALWAYS-COLD) ·
    `<concept> <axis>` = ek axis poora khula, uske shabd verbatim.
-   **Abhi bhi khula:** shipped `THE-FORGE.html` abhi bhi `deep`/`viz` render nahi karta (item 8).
-   Woh browser-side kaam hai; `FORGE_DEEP_RENDER_BRIEF.md` uska vehicle rehta hai.
+   ~~**Abhi bhi khula:** shipped `THE-FORGE.html` abhi bhi `deep`/`viz` render nahi karta (item 8).~~
+   **BROWSER PE BHI CLOSED — 9 Aug 2026 (E6 rebuild).**
+   *(corrected 10 Aug 2026: yeh line ab galat hai. Live: `grep -n "\.deep\b" THE-FORGE.html` → do hits —
+   per-axis `deep` ek `<details>summary "deep — poora khol"</details>` mein, aur capsule-level `deep`
+   apne section `"Deep — the god-tier re-learn layer"` mein. `viz` ka bhi apna section hai
+   (`grep -n "sec(\"Viz\"" THE-FORGE.html`). Engine ab `setup/build_forge_html.mjs` se banti hai, jiska
+   apna header FORGE_DESIGN §4 ka non-negotiable #4 naam se likhta hai: **har data field render hoti hai**,
+   plus ek generic walker naye fields ke liye, plus per-capsule verification footer jo rendered-vs-present
+   ginta hai. `FORGE_DEEP_RENDER_BRIEF.md` ab historical vehicle hai, pending kaam nahi. Naapa hua sach
+   jyon ka tyon: **80,511 characters of `deep` across 36 of 36 axes** — aaj bhi bilkul yahi, live count
+   se milaya gaya.)*
 4. ~~**Do Re-Jirah duniya**~~ — **CLOSED 5 Aug 2026 (D4).** Merge karke nahi, kaam baant ke:
    **FSRS = KAB · `rejirah.mjs` = KAUNSE AXES + KITNA HARD.** `rejirah.mjs` koi concept-level date
    emit hi nahi karta, toh takraav structurally khatam. Detail §9.
-5. **`OPS_STATE.md` learning layer ke liye STALE hai** — 15 Jul ka hai, "Skills (11)" bolta hai (ab 12 hain,
-   `/learn` add hua), aur `reps_log = 0` bolta hai. `capture.mjs` ka v4 amendment (4 Aug) live reps quote
-   karta hai. **Yeh number live padho, doc pe bharosa mat karo.**
+5. **`OPS_STATE.md` learning layer ke liye STALE hai** — 15 Jul ka hai, aur uske skill/rep counts kab ke
+   aage nikal chuke hain. **Yeh number live padho, doc pe bharosa mat karo:**
+   `ls .claude/skills/ | wc -l` aur `wc -l dressing-room/state/reps_log.jsonl`.
+   *(corrected 10 Aug 2026: is item ne khud DO hardcoded ginti carry ki thi aur dono sad chuki thi.
+   Likha tha `"Skills (11)" bolta hai (ab 12 hain, /learn add hua)` — aaj disk pe **15** skills hain
+   (`/gist-patch` · `/harvest` · `/fire` sab uske baad aaye). Aur `reps_log = 0` wali baat bhi ab
+   OPS_STATE mein nahi khadi — us doc ne khud yeh line repair kar li hai aur ab live command deta hai.
+   **Sabse tez sabak yahi hai: yeh item ek doc ki stale-ginti ko stale-ginti se correct kar raha tha.**
+   Isliye ab yahan koi number nahi, sirf do command. Item khud OPEN hi rehta — OPS_STATE 15 Jul ka hai.)*
 6. **Controller v0 schema abhi populate nahi hua** — per-axis `axisType`/`nextDue`/`lastResult`/
    `calibrationGap`/`fluencyState` + capsule `edgeMap`/`confusionPairs` **reserved** hain, first R1 run pe
    spec + populate honge. Constants (interval multipliers, reset window, R-mid→R-late switch, weave fraction)
@@ -907,20 +1152,46 @@ Yeh anumaan nahi hain; sab repo mein **likhe hue** hain ya file-dates se saaf ha
    POPULATE-at-R1 bolti hai, aur woh baaki hai.)*
 6b. **KHULA — R1 ka gist paste abhi kisi ne kiya hi nahi.** `close` patch bana deta hai, par capsule
    `reJirahDone` tab tak nahi badalta jab tak **woh** gist mein paste na kare aur `mirror.mjs` use wapas
-   na laaye. Aaj live: **teen capsules (embeddings · inference · context) pe abhi bhi `reJirahDone: []`,
-   34-42 din overdue, aur ek bhi round nahi baitha.** Machine ab poora rasta jaanti hai — round abhi baitha
+   na laaye. Aaj bhi live: **teen capsules (embeddings · inference · context) pe abhi bhi `reJirahDone: []`,
+   bahut overdue, aur ek bhi round nahi baitha.** Machine ab poora rasta jaanti hai — round abhi baitha
    nahi gaya. `node scripts/rejirah.mjs due` se shuru.
+   *(corrected 10 Aug 2026: "34-42 din overdue" ab galat hai — woh us din ki ginti thi aur roz badhti hai.
+   Aaj `node scripts/rejirah.mjs due` bolta hai **embeddings 47d · inference 44d · context 40d**, aur kal
+   yeh bhi galat ho jaayegi. **Overdue-din prose mein likhna hi bug hai — hamesha command chalao.**
+   Baaki sab jyon ka tyon aur dukhad tarike se sahi: `rejirah_log.jsonl` abhi tak bana hi nahi hai, aur
+   `node scripts/rejirah.mjs pending` khud bolta hai — *"0 axis grade(s), 0 rounds EVER closed … Yeh clean
+   sheet nahi hai — yeh un-run hai."* Zero-tax raasta ab maujood hai: `/gist-patch` (§8.2).)*
 7. **Registry-vs-syllabus seam** — `PROJECT_OS.md` ka syllabus **17 concepts / 3 streams** kehta hai;
    `concepts.json` **26 concepts + 12 skills** register karta hai (buckets 1-7). Yeh takrav nahi hai —
    OS ka syllabus Foundations ki ladder hai, `concepts.json` poori sprint ki rep-vocabulary hai (30 Jul ko
    register hua jab audit ne paaya ki ~115 sprint strings mein sirf 8 resolve ho rahe the, baaki chupchap
    phantom topics gadh rahe the). Par **yeh do alag lists hain** — sochte waqt mila mat do.
-8. **Engine drift** — shipped `THE-FORGE.html` **baked-only** hai (~115KB vanilla), gist ko live `fetch()`
-   nahi karta, aur `deep`/`viz` render nahi karta. Gist = canonical; engine baked SNAP dikhata hai.
+8. ~~**Engine drift** — shipped `THE-FORGE.html` **baked-only** hai (~115KB vanilla), gist ko live `fetch()`
+   nahi karta, aur `deep`/`viz` render nahi karta.~~ — **CLOSED 9 Aug 2026 (E6, uske word pe: "as of now
+   forge.html mein hi rakho").** Engine ab **live gist pehle, baked SNAP floor** hai: page khulte hi SNAP
+   se render hota hai (kabhi khaali nahi), phir har capsule ka `<GIST>/<id>.json` fetch karta hai aur saare
+   fetch safal hue to CAPS swap karke badge `"LIVE gist"` kar deta hai. Gist ab bhi canonical.
+   *(corrected 10 Aug 2026 — is item ki **teenon** baatein galat ho chuki thi:*
+   *(a) `~115KB` → `ls -la THE-FORGE.html` = **210,655 bytes**;*
+   *(b) `live fetch() nahi karta` → `grep -n "fetch(" THE-FORGE.html` = `` fetch(`${GIST}/${c.id}.json`, { cache: "no-store" }) ``,
+   comment ke saath: `// live gist first (FORGE_SPEC §1 intended), SNAP is the never-empty floor.`;*
+   *(c) `deep/viz render nahi karta` → dono render hote hain, item 3 mein poora evidence.*
+   *Engine ab repo mein rehti hai aur ek command se rebuild hoti hai — `node setup/build_forge_html.mjs` —
+   jo `dressing-room/state/capsules/` (mirror ki read-only copy) se VERBATIM bytes bake karta hai.
+   **Yeh line theek us waqt "engine drift" bol rahi thi jab engine repair ho chuki thi** — us drift se
+   ulta khatra: pehle se band kaam dobara plan hota.)*
 9. **Learning subsystems dormant-BY-LAW** jab tak reps na aayein: Calibration + Nemesis @20 reps ·
    Learning-State @12 (teeno config se verified). doubtminer ke shape-clusters ka gate **≥4 capsules +
-   ≥60 doubts** hai — woh **abhi hi khula hai** (4 capsules, 112 doubts), toh yeh row dormant nahi hai. **Yeh toota hua nahi hai —
+   ≥60 doubts** hai — woh **abhi hi khula hai**, toh yeh row dormant nahi hai. **Yeh toota hua nahi hai —
    bias-to-silence hai.** Ek jhoota alarm ek missed alarm se bura hai.
+   *(re-verified 10 Aug 2026 — **chaaron threshold jyon ke tyon hain**, aur is baar teenon config se
+   naam le kar: `calibration_config.json → min_reps: 20` · `nemesis_config.json → warming_up_min_reps: 20` ·
+   `learning_state_config.json → thresholds.warming_up_min_reps: 12` ·
+   `doubtminer_config.json → gates: { min_capsules: 4, min_doubts: 60 }`. **Jo hata diya woh ginti hai:**
+   "(4 capsules, 112 doubts)" prose mein baithi thi aur agle lock pe sad jaati. Live ek line mein:
+   `node -e "console.log(JSON.parse(require('fs').readFileSync('dressing-room/state/doubt_grammar.json','utf8')).gate_line)"`
+   → aaj `"4/4 capsules · 112/60 doubts"`, status `ok`. Chaaron gate aaj OPEN hain — teeno rep-gate
+   `reps_log` ke live count se, aur doubtminer ka apna.)*
 
 ---
 
@@ -969,9 +1240,19 @@ node scripts/capsule_bridge.mjs selftest
 node scripts/doubtminer.mjs [run | retire <capsule> <doubt_index> | selftest]   # default = run (writes)
 node scripts/examiner.mjs [stage|selftest]    # bare = read-only (prints today's staged drill)
 
-# teaching contract
-node scripts/teaching_contract.mjs print|list|add <id> <line>|hit <id>|drop <id>|reset-turns|selftest
+# teaching contract — DO LANE (10 Aug 2026: pehle yahan sirf `hit` tha, jo CLAUDE ka rasta hai hi nahi)
+node scripts/teaching_contract.mjs flag <id> --why "<jo maine kiya>"   # ← CLAUDE KA RASTA. Apni drift usi turn mein. Auto-counts (uski 7 Aug ruling), koi card nahi, koi confirm nahi.
+node scripts/teaching_contract.mjs unhit-auto <id>                     # auto-count wapas (reversibility)
+node scripts/teaching_contract.mjs hit <id> | confirm | dismiss | staged   # ← USKI LANE. Claude yeh kabhi nahi likhta.
+node scripts/teaching_contract.mjs autohit <id>                        # CODE lane — sirf teaching_audit.mjs
+node scripts/teaching_contract.mjs print|list|add <id> <line>|drop <id>|reset-turns|checked|selftest
 ```
+
+*(corrected 10 Aug 2026: purani line — `print|list|add|hit|drop|reset-turns|selftest` — aath commands
+chhod deti thi aur, iska sabse bura asar, **Claude ko `hit` ki taraf bhej rahi thi.** `hit` uski lane
+hai (CLAUDE.md: "His `hits` lane stays his alone — `hit`/`confirm` only — never write it"). Claude ka
+apna rasta `flag <id> --why` hai. Poora dispatch:
+`grep -n '^  case "' scripts/teaching_contract.mjs`.)*
 
 ```bash
 # canon padho (web_fetch raw URLs pe reject karta — curl use karo)

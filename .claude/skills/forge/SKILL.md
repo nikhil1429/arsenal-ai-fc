@@ -23,11 +23,21 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 
 `scripts/forge_session.mjs` is the sole writer of `state/forge_session.json`, and a
 `UserPromptSubmit` hook re-injects the contract **every turn**. You MUST drive it:
+*(precision added 10 Aug 2026 — both halves re-verified true, and one thing was missing. It is
+sole writer of **two** files, not one: `forge_session.json` (live pacer state) AND
+`forge_sessions.jsonl` (the append-only history `close` writes) — its own header says so,
+`grep -n "WRITER OF" scripts/forge_session.mjs`. The hook wiring is real and is in
+`.claude/settings.json`: `UserPromptSubmit` runs `forge_session.mjs contract`, `SessionStart`
+runs `forge_session.mjs boot` — `grep -n "forge_session.mjs" .claude/settings.json`.)*
 
 > **What the pacer can and cannot do — say it the way the code says it** *(6 Aug 2026, audit
 > #108).* This heading used to read "it is how the steps stop being prose", which claims an
 > enforcement the organ does not have and cannot have. Its own LAWS header
-> (`forge_session.mjs:30-39`) is blunt about it: *"The step number is a CLAIM Claude makes, not
+> (find it, never chase the address — `grep -n "The step number is a CLAIM" scripts/forge_session.mjs`
+> *(corrected 10 Aug 2026: this read `forge_session.mjs:30-39` until today. Both quotes below are
+> still VERBATIM in the file — only the address had drifted: the LAWS block now runs :22-43, with
+> the CLAIM law at :34-35 and METHOD_CLEAN at :38. Line citations in this repo rot within days;
+> a grep does not.)*) is blunt about it: *"The step number is a CLAIM Claude makes, not
 > a proof. This organ makes the claim VISIBLE and the skipping COUNTABLE — it cannot make it
 > impossible,"* and *"METHOD_CLEAN IS A FLOOR, NOT A CERTIFICATE"* — a session that never ran
 > `start` is invisible to it, `check_q` is self-reported, and elapsed/axis-span are reported
@@ -54,10 +64,32 @@ nobody had written down: with no open session, **THE METHOD's step order, the
 four-legal-question-moments law and META-FREEZE reach the turn not at all.** Measured that
 day: `contract` printed zero bytes for an entire session while the sprint's current task
 was a concept mid-flight, and the four recorded runs on `hallucinations` scored 6/12, 4/12,
-3/12, 3/12 steps with `method_clean false` every time. The captain ruled (D9) that the
+3/12, 3/12 steps with `method_clean false` every time.
+*(re-measured 10 Aug 2026: those four step-counts are still the first four rows on disk, exactly
+— but there are **8** recorded runs on `hallucinations` now, and `method_clean` is STILL `false`
+on every one of them. "Four runs" is a 5-Aug snapshot, not the record; the pattern it describes
+has only deepened. Read it live, never from here:*
+`node -e "const fs=require('fs');fs.readFileSync('dressing-room/state/forge_sessions.jsonl','utf8').split(/\r?\n/).filter(l=>l.trim()).map(JSON.parse).forEach(r=>console.log(r.ended_at,r.concept,'steps',r.steps_ran.length+'/12','clean',r.method_clean))"`*.)*
+The captain ruled (D9) that the
 contract must NOT print a METHOD block without a session — a line that always fires is a
 line he learns to ignore — so the obligation lands **here**: opening the session is the
 skill's job, not something he has to remember.
+*(corrected 10 Aug 2026: "`contract` is silent on three conditions" is now true of the 12-STEP
+BLOCK only, not of the command. D9's own fix has since been wired: with no open session the
+CLI falls through to `nudgeLine()`, which prints **ONE** line — never the block — and only when
+`sprint.json`'s current task is `track: "concept"`. Live today, `sprint.json` current = `1-04
+Hallucinations · track concept`, so that nudge WOULD fire on a session with nothing open. On a
+Python/course/build/career day it stays silent by design. Evidence:
+`grep -n "export function nudgeLine" scripts/forge_session.mjs` and
+`grep -n "the silence law means ZERO bytes" scripts/forge_session.mjs`. The obligation on this
+skill is unchanged — the nudge is a backstop, not a substitute for opening the session.)*
+
+**`start` HAS A SIDE EFFECT — know it before you run it** *(added 10 Aug 2026; this block
+described `start` as if it only wrote pacer state).* On success `start` also spawns
+`scout.mjs mission stage-topic <concept>` — the outward loop's topic-open mission — and prints
+one `scout:` line. It is fail-silent and non-blocking (a scout failure prints "topic mission not
+staged … non-blocking" and the session still opens). Evidence:
+`grep -n "stage-topic" scripts/forge_session.mjs`. Missions tune EMPHASIS, never the syllabus.
 
 **If SessionStart reported an OPEN session, `close` it FIRST and read the coverage aloud** —
 do NOT re-teach the axes it lists and do NOT restart from step 0. `start` will **REFUSE**
@@ -129,7 +161,16 @@ is not.
   he registers a widget, then lies to the next session about the very gap the check exists to
   close.)* The reason the check exists is unchanged: **when the registry was first run on
   5 Aug 2026, no locked capsule had a widget at all**, and the single widget in the repo
-  belonged to a concept that was not locked. The Contract had no code owner at all (viz.mjs is
+  belonged to a concept that was not locked.
+  *(NOT VERIFIED 10 Aug 2026 — that last clause could not be confirmed either way from code: the
+  widget `.html` files under `dressing-room/club/widgets/` are UNTRACKED, so git holds no history
+  of them. What IS on disk today points the other way and is worth knowing before you trust it:
+  the registry's oldest row is `embeddings`, registered `2026-08-05T22:51:19.956Z` with 3 gates,
+  and `embeddings` IS a locked capsule (`dressing-room/state/capsules/embeddings.json`,
+  `lockedOn 2026-06-21`). Both statements can be true if the first registry run was earlier that
+  same day. Treat the clause as a claim, not a fact. The GAP the check exists for is unchanged
+  and is still live — read it off the command, not off this page.)*
+  The Contract had no code owner at all (viz.mjs is
   the club WALL, not a concept-widget engine), so nothing could see that. The registry only KNOWS —
   it never generates, because a widget's whole value is the bespoke hero example
   ("Aristo Eco — ₹81,500") and a generator produces exactly the generic widget canon forbids.
@@ -167,6 +208,19 @@ is not.
   antecedent. The rows stay verbatim and untouched; repairing the wording on the gist
   re-admits them automatically. **17 is a MACHINE FLOOR, not the truth** — the detector is a
   fixed pattern list, so the real count is ≥17, and only he can fix the text.
+  **NEVER READ THOSE FOUR NUMBERS OFF THIS PAGE — RUN THE COMMAND** *(added 10 Aug 2026: as of
+  today `node scripts/doubtminer.mjs` still prints exactly `17/112 · cryptic=7 · fragment=2 ·
+  meta=8` and near-dup absent = 0, so every figure above re-verified TRUE. That is the problem:
+  these are LIVE state, they move the day he repairs one line on the gist, and a figure typed
+  into a skill file goes on lying long after it stops being true — the same rot that put
+  "0 of 4 locked capsules had a widget" two bullets up. FORGE_SPEC §5 gives the same order in
+  its own words — "Ginti yahan MAT likho — live padho". Read it live:*
+  `node scripts/doubtminer.mjs`  *(prints the line + the by-pattern split), or straight off state:*
+  `node -e "const t=require('./dressing-room/state/tape_room.json');console.log(t.gate2.line, JSON.stringify(t.gate2.by_pattern))"`*.)*
+  **AND KNOW GATE 2's HALF-BLIND SPOT** *(added 10 Aug 2026 — this page has always told you to
+  re-read `doubts[]` AND `bridges[].q`, and implied the code covers both. It does not:*
+  `grep -n "bridges" scripts/doubtminer.mjs` *returns ZERO hits. The machine scans `doubts[]`
+  only. So `bridges[].q` has no automation at all and is 100% eye-work at every LOCK/SAVE.)*
   So: at **every LOCK and every SAVE** — including 4a back-writes and Re-Jirah — re-read
   ALL `doubts[]` and `bridges[].q` against the COLD-READER STANDARD above. Flag anything
   **cryptic** (dangling `ye`/`woh`/`Map`/`second enemy` with no named subject), any
@@ -174,6 +228,17 @@ is not.
   any **near-duplicate**, and anything carrying a bare `(pehle-guess)` marker. Show him the
   flagged lines as a BATCH → fix on his approval → only then is the lock "done".
   A doubt that cannot be understood by someone who was not in the room is not a doubt yet.
+  **`step 10` FIRES THE LOCK-CHAIN — know this before you type it** *(added 10 Aug 2026; this
+  step described only what YOU do, and said nothing about what the pacer does the moment you
+  ARRIVE at step 10).* On the transition into 10 (never on a re-type of 10),
+  `forge_session.mjs step 10` spawns three organs in order — `scout.mjs mission stage-lock
+  <concept>` · `benchmark.mjs run` · `mirror.mjs` — then prints the three data-gates
+  (decoy-drills · R1-constants · confusion-pairs), the widget's registry status, and the gist
+  line. Every lane is fail-silent and runs AFTER the step change is already saved, so no outward
+  failure can touch the LOCK. Preview it without advancing anything:
+  `node scripts/forge_session.mjs lockchain` (read-only, names the spawns, fires nothing).
+  Evidence: `grep -n "THE LOCK-CHAIN" scripts/forge_session.mjs` and
+  `grep -n "function chainCommands" scripts/forge_session.mjs`.
 - **11 · RE-JIRAH.** ~3 din / ~2 hafte / ~6 hafte (`forge_profile.json`:
   `rejirah_intervals_days`). Day-3's opening move = widget Chala mode, cold.
   **Run it from here (added 4 Aug 2026):**
@@ -186,7 +251,22 @@ is not.
   `node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut knew|shaky|guessed`
   Until this existed, a cold round could be run and its result had nowhere to land, which is
   why three of four capsules sat at `reJirahDone: []` — never re-tempered once, 34-42 days
-  overdue, 80,511 characters of his own prose never withdrawn. The row goes to
+  overdue, 80,511 characters of his own prose never withdrawn.
+  **THE PAST TENSE IN THAT SENTENCE IS A TRAP — RE-MEASURED 10 AUG 2026 AND IT IS STILL TRUE
+  TODAY, ONLY WORSE.** The back edge exists in CODE; it has never once been RUN. Live:
+  `rejirah_log.jsonl` **does not exist** — 0 axis grades, 0 rounds ever closed, on 4 locked
+  capsules (`node scripts/rejirah.mjs pending` says exactly that, and calls it "un-run", not a
+  clean sheet). `context` · `embeddings` · `inference` are all still `reJirahDone: []`; only
+  `tokenization` has any (`["2026-06-18","2026-06-29"]`). The overdue window has stretched from
+  34-42 days to **40-47** — `node scripts/deep.mjs due` prints, today: embeddings R1 47d ·
+  inference R1 44d · context R1 40d · tokenization R3 14d. The 80,511
+  figure re-measured EXACTLY: 36 of 36 `faultLines[].deep` across the four capsules. Do not read
+  "the loop has a back edge now" as "the loop has closed" — building the organ and running it
+  are two different events, and this repo's own law is *un-run system = hypothesis*. Never trust
+  these numbers from this page either; re-measure:
+  `node scripts/rejirah.mjs pending` · `node scripts/rejirah.mjs due`
+  `node -e "const fs=require('fs'),d='dressing-room/state/capsules';for(const f of fs.readdirSync(d))console.log(f,JSON.stringify(JSON.parse(fs.readFileSync(d+'/'+f,'utf8')).reJirahDone))"`
+  The row goes to
   `rejirah_log.jsonl`, and per-axis `axisType` / `nextDue` / `lastResult` / `calibrationGap` /
   `fluencyState` plus capsule-level `edgeMap` are **DERIVED** from it —
   `node scripts/rejirah.mjs state <concept>`. A clean hold expands that axis's interval; a
@@ -209,6 +289,13 @@ is not.
   says so too. **It matters because five organs read `reJirahDone`** — `fsrs.mjs` builds the whole
   review history from it, plus `deep.mjs`, `capsule_bridge.mjs`, `dugout.mjs`, `shipped.mjs`.
   Until the date lands, all five believe the round never happened.
+  *(corrected 10 Aug 2026: **five is the floor, not the count.** Those five are the set
+  `rejirah.mjs` itself names at close — and today the live grep finds MORE readers than that:
+  `captains_call.mjs` (it re-checks "did his paste land?" against `reJirahDone`) and
+  `learnstate.mjs` (the SessionStart brief's PENDING line) both read it too, plus
+  `organism_test.mjs` on the test side. Seven live scripts, not five. Never take the number
+  from here — count it:*
+  `grep -rln "reJirahDone" scripts/`*.)*
   `close` also reports canon's **SUCCESSIVE-RELEARNING criterion** (PROJECT_OS §LEARNING EXECUTION
   LAYER: *"har round har due-axis cold ek baar sahi"*) — every due axis held clean at least once.
   It reports, never blocks: an interrupted round is still a real round, and axes that stayed
@@ -217,6 +304,17 @@ is not.
   because compounding-avoidance is the ADHD-PI failure mode this step exists to beat.
   *(Until today those 80,511 characters of `deep` — all 36 axes — were readable only by opening a
   JSON file by hand. `FORGE_SPEC.md` has marked this "MUST RENDER … fix PENDING" since 30 Jun.)*
+  *(corrected 10 Aug 2026: **that render gap is CLOSED — the "fix PENDING" half of the line is
+  no longer true.** `deep` now renders on BOTH surfaces of the engine: per-axis as a click-reveal
+  `<details>` under the weld, and capsule-level as its own section. Verified in the generator,
+  not in a doc — `grep -n "deep — poora khol" setup/build_forge_html.mjs` and
+  `grep -n "god-tier re-learn layer" setup/build_forge_html.mjs`. The fix did not arrive by the
+  route the old note predicted: `FORGE_DEEP_RENDER_BRIEF.md` (still in `learning-layer/`, and
+  still the file that names the "interview-failure risk" cited at step 3 above) turned out to be
+  the RECORD, not the vehicle — `setup/build_forge_html.mjs` was. Rebuild with
+  `node scripts/mirror.mjs && node setup/build_forge_html.mjs`; a rebuild on a stale mirror
+  bakes a stale page. The 4 Aug half of the sentence stays true as history, and `deep.mjs`
+  remains the way to read a single axis inside a session.)*
 
 ## THE 9 AXES (this is the daraar-map of step 1)
 
@@ -253,13 +351,35 @@ When he says "session khatam / done / bas":
    - skill/coding sessions: `"surface":"colab"`, `"track":"skill"`, `axis` MUST be `null`.
    - Include `latency_ms` only when actually observable — never invent it (the genome's
      `criterion_gated_pass` reads it, and a faked number corrupts the fluency ladder).
+     *(corrected 10 Aug 2026 — **the rule is right, the named reader is wrong.** `criterion_gated_pass`
+     lives in `forge_profile.json` as `{correct, confidence, latency_under_median}` and is read by
+     NO script: `grep -rn "criterion_gated_pass" scripts/` returns exactly one hit, a COMMENT in
+     `capture.mjs` — this page copied that comment's claim. The organs that really consume
+     `latency_ms` are `learning_state.mjs` (`grep -n "latency_fast_ms" scripts/learning_state.mjs`)
+     and `touchline.mjs` (`grep -n "latency_ms" scripts/touchline.mjs`) — and those two ARE the
+     fluency ladder and the struggle detector, so a faked number does exactly the damage the line
+     warns about. `capture.mjs` also refuses a non-integer or negative `latency_ms` outright
+     (`latency_ms not int>=0 or null`). Obey the rule; just don't cite the genome for it.)*
    **CAPTURE AS YOU GO, do not bank the whole day on a clean close (added 5 Aug 2026):**
    `node scripts/capture.mjs rep --concept <c> --axis <a> --q "<what was tested>" --gut <word> --correct true|false`
    Same door, same validator, same dedupe as `paste` — just one rep, stamped when it
    actually happened. It exists because every rep used to hinge on a perfect close, and
    the record says closes are not clean: four recorded sessions, `method_clean false` in
    all four, `reps_log` still at **nine lines total** — which is why calibration (gate 20),
-   nemesis (20) and learning_state (12) are ALL still dormant. Run the paste at close too;
+   nemesis (20) and learning_state (12) are ALL still dormant.
+   **CORRECTED 10 AUG 2026 — EVERY NUMBER IN THE SENTENCE ABOVE HAS MOVED, AND THE VERDICT AT
+   THE END OF IT IS NOW FLATLY WRONG. DO NOT TELL HIM THOSE THREE ORGANS ARE DORMANT.** Measured
+   live today: `reps_log.jsonl` holds **21** rows, not nine; `forge_sessions.jsonl` holds **8**
+   recorded sessions on `hallucinations`, not four. All three gates have since OPENED and all
+   three organs run — `calibration: 21/20 reps` (gap 0.0929, and it says it is still
+   *establishing baseline at 21/40*, which is a different and honest caveat), `nemesis:
+   21/20 reps — axis-pattern gate met · weaknesses 2`, `learning-state: 21/12 reps`.
+   What is UNCHANGED and is the real reason this bullet exists: **`method_clean` is still
+   `false` on every one of the 8 rows** — the closes are still not clean. So capture as you go.
+   Never quote any of these figures from this page; they rot on the next rep. Re-measure:
+   `node scripts/calibration.mjs` · `node scripts/nemesis.mjs` · `node scripts/learning_state.mjs`
+   `node -e "const fs=require('fs');console.log(fs.readFileSync('dressing-room/state/reps_log.jsonl','utf8').split(/\r?\n/).filter(l=>l.trim()).length+' reps')"`
+   Run the paste at close too;
    duplicates are detected, so capturing twice costs nothing and losing a session costs the day.
 2. Save to a temp file → `node scripts/capture.mjs paste <tmpfile>` → `node scripts/heartbeat.mjs`.
    Report capture's output **verbatim** if it rejects. If a rep comes back
@@ -294,6 +414,16 @@ When he says "session khatam / done / bas":
   full stop.
 - **Writes go through owners only** (capture.mjs, hippocampus.mjs, forge_session.mjs). Never
   edit `reps_log.jsonl`, `concepts.json`, or any state file by hand.
+  *(corrected 10 Aug 2026: that parenthesis lists three owners, and **this skill itself commands
+  two more** — a session running the file as written writes state through organs the law's own
+  list does not name. Add them, verified from each script's own LAWS header:*
+  `rejirah.mjs` *= single writer of* `rejirah_log.jsonl` *(*`grep -n "single writer of rejirah_log" scripts/rejirah.mjs`*)
+  and* `widget.mjs` *= single writer of* `widgets.json` *(*`grep -n "single writer of widgets.json" scripts/widget.mjs`*).
+  Two more that this skill READS but must never write:* `dressing-room/state/capsules/` *belongs
+  to* `mirror.mjs` *alone (*`grep -n "Single writer of capsules" scripts/mirror.mjs`*) — a local
+  edit there is erased by the 06:55 pull — and* `forge_sessions.jsonl` *is written by*
+  `forge_session.mjs` *only. The wider club-wide owners list lives in CLAUDE.md, not here; the
+  point of this line is only that "three owners" was never the whole set even for THIS skill.)*
 - **META-FREEZE:** process/system edits only at a concept-lock boundary, max 10 min — never
   mid-concept, unless he is explicit and repeated.
 - Doubts he voices in passing → bank them: keep them verbatim, and at capture time run

@@ -49,7 +49,7 @@ import { generatePool, loadHippoKeys } from "./hippocampus.mjs";
 // real promise, so Promise.all across lanes finally buys real concurrency while
 // each lane stays serial for RPM sanity. (It also removes the sync-return trap
 // that made the old `gen(...).catch(...)` a TypeError.)
-import { claudeGenAsync } from "./claudegen.mjs";
+import { claudeGenAsync, ledgerForensics } from "./claudegen.mjs";
 import { loadBoard, headroomOf, recordUse, record429, stateOf } from "./fuelboard.mjs";
 import { currentTone } from "./tone.mjs";
 import { pendingBg } from "./thalamus.mjs";          // M22 — read-only; the thalamus owns bg_queue.jsonl
@@ -107,8 +107,13 @@ function ledgerRow(job, r, lane, now = new Date()) {
     cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
     total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
     duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
-    // #8 forensics: which lane, and what the engine actually said
-    lane: lane || null, limit_signal: r.limit_signal || null, http_status: r.http_status ?? null,
+    // #8 forensics: which lane, and what the engine actually said. The three
+    // engine fields moved to claudegen's ledgerForensics on 10 Aug 2026 (wiring
+    // audit): they were hand-written HERE and nowhere else, so error_envelope —
+    // the one field carrying stop_reason/session_id when the CLI still returns a
+    // `result` — reached 0 of the organism's 4,558 ledger rows. Same shape now
+    // in nightshift's genLedgered; `lane` stays dmn's own.
+    lane: lane || null, ...ledgerForensics(r),
   };
 }
 

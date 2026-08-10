@@ -8,7 +8,17 @@
 A football-club-themed **multi-agent personal accountability + execution system**
 for Nikhil (human captain #14). Deterministic Node scripts (`.mjs`, Windows /
 Node 22). Agents read/write a JSON **state bus** at `dressing-room/state/*.json`
-(single writer per file). Scheduling via Windows Task Scheduler (`schtasks`) +
+(single writer per file — with ONE deliberate, code-documented exception:
+**`brain_ledger.jsonl` is a SHARED APPEND LANE**, six live appenders, and `brain.mjs` owns
+the SCHEMA only. Corrected 10 Aug 2026: this read a flat "(single writer per file)" until
+today, so a session reading it as absolute law would have "repaired" a lane the code designs
+on purpose. Evidence: `grep -n "shared append lane" scripts/talk.mjs` ·
+`grep -n "brain_ledger" scripts/organism_test.mjs scripts/dmn.mjs`. Related, and NOT resolved:
+`identity_facts.pending.jsonl` has TWO live writers — `hippocampus.mjs` rewrites the whole
+file, `mcp-memory.mjs` appends to it — which IS a real breach of this law, not an exception.
+Do not "fix" it in code; it needs HIS ruling. Verify:
+`grep -n "identity_facts.pending" scripts/hippocampus.mjs scripts/mcp-memory.mjs`).
+Scheduling via Windows Task Scheduler (`schtasks`) +
 `ntfy.sh`. LLM calls via `claude -p` (Max subscription — **never** an API key).
 
 ## Build order (STRICT — one agent at a time, sequential)
@@ -23,10 +33,18 @@ Node 22). Agents read/write a JSON **state bus** at `dressing-room/state/*.json`
    `manager.mjs` deterministic wrapper, **no LLM**, is **PLACED and re-tested green against the REAL agent JSONs** — commit `1d4e158`, live run on 2026-07-11 state; read the pass count from `node scripts/manager.mjs selftest`, never from here (audit #108, 6 Aug 2026: this line still read "already built + tested green in a web sandbox = reference-only; place + re-test it … when the Manager's turn comes", a full capstone step behind the repo, so sessions kept re-planning work already committed. Review pass, same day: the repair first copied `35 passed / 0 failed` in here out of `CONDUCTOR_LOG.md` — that is M-1's PLACEMENT figure from 11 Jul and it has not been true for weeks; a re-run on 6 Aug passed with **zero failures** on a suite that has grown well past 35 checks. Exactly the rot this same audit deleted from the widget and OPS_STATE lines, re-introduced two bullets above them.)
    **M-2→M-5 status — READ THE CODE, this line rotted once already** (launch audit, 9 Aug 2026:
    this bullet still said "M-2→M-5 are NOT done … The Manager is not finished" while
-   `dressing-room/manager/system.md` sat complete at 586 lines, M-3's `claude -p` ran LIVE in
+   `dressing-room/manager/system.md` sat complete at 586 lines (count it live —
+   `wc -l dressing-room/manager/system.md` — still 586 on 10 Aug 2026, but a line count
+   written into prose is exactly the thing that rots), M-3's `claude -p` ran LIVE in
    `brain.mjs` (`job.kind === "manager_m3"` reads SYSTEM_MD into a real llm call, billing guard
    refuses on `ANTHROPIC_API_KEY`), and `brain_config.json` had `formation_read =
-   {kind: "manager_m3", model: "opus", enabled: true, at: "08:45"}` on the daily schedule — the
+   {kind: "manager_m3", model: "opus", enabled: true, at: "08:45"}` on the daily schedule (all
+   four fields still true 10 Aug 2026 — but read `at: "08:45"` as the EARLIEST time, not a
+   morning window: the job carries `window: "any"` since audit #108 precisely because a
+   morning-only window starved the sheet to 1 run in 9 days on a laptop that sleeps through
+   the morning, and a 9 Aug addition gates it on the conductor's `morning_signals` arm with a
+   `trigger_fallback_hm: "09:30"` opening. Do NOT re-narrow the window; read the job live —
+   `node -e "console.log(JSON.stringify(require('./dressing-room/state/brain_config.json').jobs.find(j=>j.kind==='manager_m3'),null,1))"`) — the
    capstone was RUNNING while canon called it unbuilt, the same rot audit #108 fixed in the
    opposite direction). What remains HIS: the line-by-line captain review of `system.md`
    (CONDUCTOR_LOG's "RESUME: continue M-2 from #6 PRECEDENCE" refers to that review), and any
@@ -75,7 +93,17 @@ Do not start a new agent until the current one is proven (see "unrun" below).
 - Repo is **PUBLIC**. `oura_secrets.json` + `oura_tokens.json` are gitignored —
   **never commit them.** If already tracked: `git rm --cached <file>`.
 - `readiness.json` / `intake_log.json` hold biometric + medication-timing data.
-  Treat as private (gitignore or keep repo awareness).
+  **DO NOT GITIGNORE THEM — HE RULED, TWICE, THAT THEY STAY IN THE PUBLIC REPO.**
+  (Corrected 10 Aug 2026: this said "Treat as private (gitignore or keep repo awareness)"
+  until today, which reads as an instruction to reverse a captain's decision. Both files are
+  TRACKED right now — `git ls-files dressing-room/state/readiness.json
+  dressing-room/state/intake_log.json` returns both. The ruling is written into `.gitignore`
+  itself, twice, with the old ignore lines frozen as history: `grep -n "RULED BY THE CAPTAIN,
+  5 Aug 2026" .gitignore` — *"He was shown both files by name, was told plainly that a public
+  push is irreversible, and ruled twice that they go in the repo"* — and re-put to him BY
+  CLASS on 10 Aug during KAAM 0: `grep -n "dono rehne do" .gitignore`. What is NOT covered by
+  that ruling and stays hard-ignored: live credentials — `scripts/oura_secrets.json` ·
+  `scripts/oura_tokens.json` — and anything naming OTHER people.)
 - **Glance before every push.**
 
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
@@ -100,9 +128,13 @@ working set. Use `recall` for a targeted lookup ("what confused him about X").
 - Hinglish, direct, honest — not a hype-man. Push back on vague/wrong.
 - Business-first thinker; frame through impact, not jargon.
 - Finance concepts (if they come up): teach from zero, no assumed recall.
-- Live Oura run needs the gitignored tokens → run it in the real project folder
-  (or add a `.worktreeinclude` listing the token files) so a Git-worktree
-  session can see them.
+- Live Oura run needs the gitignored tokens → run it in the real project folder,
+  or let the existing `.worktreeinclude` carry them, so a Git-worktree session can see them.
+  (Corrected 10 Aug 2026: this said "**or add** a `.worktreeinclude` listing the token
+  files" — it has existed at the repo root since 10 Jul 2026 and already lists both
+  (`scripts/oura_secrets.json` · `scripts/oura_tokens.json`). A session reading "add"
+  would have written a second one over the live file. Evidence: `cat .worktreeinclude`.
+  Note the PATH the manifest gives: both token files live in `scripts/`, not the repo root.)
 
 ## The LEARNING LAYER — this is where he actually studies
 > Added 4 Aug 2026. Until then this file said **nothing** about the learning layer — no `/forge`,
@@ -124,8 +156,13 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
 
 **Laws that are easy to break and expensive to break:**
 - **The Visualization Contract is NOT demoted.** He ruled on it himself, 1 Aug 2026, in his own
-  words — *"11 point yes visuals are important for my adhd pi brain"* (`HOW_HE_LEARNS.md`, THE
-  VISUALIZATION RULING). Every concept gets ONE widget and **the widget IS the lesson**. Delivery
+  words — *"11 point yes visuals are important for my adhd pi brain"* (`HOW_HE_LEARNS.md`;
+  find it with `grep -n "11 point yes" learning-layer/HOW_HE_LEARNS.md`. Corrected 10 Aug 2026:
+  this pointed at a section called "THE VISUALIZATION RULING", which does not exist and never
+  greps — the real headings are `## RESOLVED — 2026-08-01 · the captain ruled: the VISUALIZATION
+  CONTRACT STANDS` and, under it, `### THE RULING — 1 Aug 2026, in his own words`. A session
+  hunting the named heading finds nothing and can conclude the ruling was never written down).
+  Every concept gets ONE widget and **the widget IS the lesson**. Delivery
   is inline, and if a render fails, a self-contained `.html` — laptop-first. Do not re-open this.
 - **Capsules are IMMUTABLE and their prose is SACRED** (`bolo`, `weld`, `deep`, `mechanism`, `hook`,
   `why`, `traps`, `threeWays`, `interviewLines`). Never invent them, never reword them, never
@@ -134,8 +171,17 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   sentence: *"Claude purane locked capsules KABHI re-emit nahi karta"* AND *"existing file sirf
   apne Re-Jirah/doubt pe edit hoti"*; §6 names the mechanism — *"re-emit nahi, targeted update"*).
   Two writes are legitimate and both are HIS, by paste: `reJirahDone` on a Re-Jirah round, and a
-  `doubts[]` back-write. No script writes `dressing-room/state/capsules/` — that is a read-only
-  mirror owned by `mirror.mjs`, which re-fetches the gist every morning.
+  `doubts[]` back-write. **No OTHER organ writes `dressing-room/state/capsules/`** — it is a
+  read-only MIRROR of the gist, and `mirror.mjs` is its sole writer: it re-fetches every
+  morning (`ArsenalFC-Mirror`, DAILY 06:55 — `grep -n "ArsenalFC-Mirror" setup/INSTALL_TASKS.ps1`)
+  and, since LADDER G16, also on the forge lock-close event (`grep -n "event-driven mirror"
+  scripts/forge_session.mjs`). It additionally snapshots to `capsule_backups/<date>/`.
+  (Corrected 10 Aug 2026: this said "**No script writes** `dressing-room/state/capsules/` — that
+  is a read-only mirror owned by `mirror.mjs`", a sentence that negates itself — `mirror.mjs`
+  IS a script and it DOES write there. Evidence: `grep -n "capsules" scripts/mirror.mjs` shows
+  the write path and the declared law *"Single writer of capsules/ + mirror_manifest.json"*.
+  The point being made was always "no other organ", and read literally the old wording would
+  have made a session treat a legitimate mirror write as a law breach.)
 - **Only four question-moments exist by design** — Pehle-Guess · widget guess-gates · ONE sharp
   check-question across steps 3–6 · Jirah. Anything else is a quiz-dump, which canon forbids.
 - **Gut-word before the answer** (`knew`/`shaky`/`guessed`), never re-graded after. No gut-word,
@@ -148,6 +194,16 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   (brain_outcomes.jsonl — added 10 Aug 2026 under his Phase-H "let's build everything"
   ruling; the name is the approved map's own, NOT brain.mjs's — the journal deliberately
   lives outside brain_out/). Never hand-edit a state file.
+  **This list is the LEARNING LAYER's owners, not the organism's — do not read it as complete**
+  (added 10 Aug 2026: it has never been exhaustive and reads as if it were. Verified live the
+  same day, every one of these is an owner this line does not name: `nemesis.mjs` → weaknesses.json ·
+  `scout.mjs` → missions.json + scout.json · `gate_tune.mjs` → thalamus_config.json AND
+  gate_tune_ledger.jsonl (which no document in this repo names at all) · `thalamus.mjs` →
+  workspace.json · `distiller.mjs` → working_set.json · `doubtminer.mjs` → lexicon.json ·
+  `postmatch.mjs` → five files · `throwin.mjs` → three · `bootroom.mjs` → bootroom_log.jsonl ·
+  `capture.mjs` → also gemini_quality.jsonl. The rule that matters is universal and unchanged:
+  **never hand-edit a state file**; find its owner by grepping the script headers, which declare
+  it — `grep -rn "SOLE WRITER\|sole writer\|single writer" scripts/*.mjs` — never from a list here.)
 - **THE CAPTAIN'S CALL** (7 Aug 2026, his ADHD-PI ruling): reports are MACHINE-face — Claude
   reads them whole; anything needing HIS word becomes ONE one-line card dealt at an anchor he
   already hits (SessionStart hook · /matchday · /full-time). He answers haan/na/baad, the organ
@@ -163,14 +219,32 @@ and a canon file disagree, **canon wins and the map is wrong** — fix the map.
   `node scripts/teaching_contract.mjs flag <rule-id> --why "<what you did>"` **in that turn**.
   Since 7 Aug it AUTO-COUNTS into the `auto_hits` lane (no card, no confirm — he is never
   asked): the ranking moves immediately, the why is preserved in `self_reports`, and the
-  guard is VISIBILITY + REVERSIBILITY, not a gate — `unhit-auto <id>` walks any count back,
-  and the nightly watchman reviews the day's auto-hits. His `hits` lane stays his alone
+  guard is VISIBILITY + REVERSIBILITY, not a gate — `unhit-auto <id>` walks any count back
+  (the evidence for WHICH auto-hit to revert is in `teaching_audit.jsonl`, one row per
+  measured drift, each carrying session_id + step + evidence).
+  **(Corrected 10 Aug 2026: this line ended "and the nightly watchman reviews the day's
+  auto-hits" — the watchman does NOT do that. It reads `teaching_contract.json` for three
+  things only: does it exist, is it readable, and which rules the auditor has no check for
+  (`grep -n CONTRACT scripts/watchman.mjs` finds four reads and not one of them touches the
+  lanes; `grep -c auto_hits scripts/watchman.mjs` and `grep -c self_reports scripts/watchman.mjs`
+  both return 0). The sentence was copied from a design
+  note in `teaching_audit.mjs` — `grep -n "reviews the day's auto-hits" scripts/teaching_audit.mjs`
+  — where it is stated as the intended safety net; no organ implements it. Live readers of
+  `auto_hits` today are `bootroom.mjs` (drift-ranking for a genome proposal) and `brain.mjs`;
+  `self_reports` is read by NO organ at all. Treat the reversibility guard as manual —
+  `unhit-auto` run by whoever notices — until someone builds the nightly review.)**
+  His `hits` lane stays his alone
   (`hit`/`confirm` only — never write it). The pre-ruling staging path is frozen in the file,
   and the old 6 Aug scar stays true: do not wait to be asked, and never hand-edit the state.
 
 **The surfaces:** `/forge` (he named a concept) · `/learn` (he didn't — read state and route) ·
 `/rematch` · `/scrimmage`. Re-read and Re-Jirah run from `node scripts/deep.mjs`
 (`due` = the queue, questions only and **cold**; `<concept> <axis>` = one axis fully opened).
+(All four verified live 10 Aug 2026 — `ls .claude/skills/`, `node scripts/deep.mjs`. Do not
+read this as the FULL surface list: it names the four study surfaces only, and the skill set
+has grown past them — `/harvest`, `/gist-patch`, `/fire`, `/paste-session` and `/gem-sync` all
+feed the same learning loop. Count and name them live with `ls .claude/skills/`, never from
+here — any list written into prose rots on the next skill added.)
 
 ## THE OUTWARD LOOP (built 8 Aug 2026 on his sealed rulings — AUDIT_NOTES__full_organism.md §NEXT BUILD)
 Gemini Pro is the INTERNET ARM: the machine writes missions, **HE fires them**, output returns
@@ -182,8 +256,16 @@ through `node scripts/scout.mjs mission ingest <ID> [--file <p>]` (or a session 
 - **benchmark.mjs** = have/need per ROADMAP bucket × DOSSIER §1 weights, COUNTS + NAMES only —
   never a composite score. It stays GATED until audit-close (Ruling 6: a stale map is half a lie).
   Read it live (`benchmark.mjs report`), never from any doc.
-- **LOCK-chain**: forge step 10 arrival auto-fires stage-lock mission + benchmark + gate-report;
-  forge `start` auto-stages the topic-open mission. GUARD (his ruling, non-negotiable):
+- **LOCK-chain**: forge step 10 arrival auto-fires stage-lock mission + benchmark + gate-report
+  **+ the mirror** (added 10 Aug 2026: the chain has spawned THREE commands since LADDER G16,
+  9 Aug — `scout.mjs mission stage-lock <concept>` · `benchmark.mjs run` · `mirror.mjs` — plus
+  the report-only data-gate lines. The mirror leg went event-driven so a capsule locked at
+  15:00 is not invisible to every reader until the next 06:55 pull; this line still named only
+  two spawns. Read the chain live: `grep -n "function chainCommands" -A8 scripts/forge_session.mjs`.
+  Every lane is fail-silent and runs AFTER the step change is saved — no outward failure can
+  touch the LOCK itself);
+  forge `start` auto-stages the topic-open mission (`grep -n "stage-topic" scripts/forge_session.mjs`).
+  GUARD (his ruling, non-negotiable):
   **missions tune EMPHASIS, never reopen the SYLLABUS.**
 - **≥2×/week outward floor** (HIS ruled number): mission returns + benchmark runs; surfaces on
   kickoff/watchman only when unmet. **SEASON.md** (dressing-room/) = postmatch's logbook —
@@ -200,16 +282,31 @@ The topic secret lives in the routine's prompt on his account, never in the repo
 - `scripts/rejirah.mjs` — **the Re-Jirah controller and the loop's missing back edge.**
   `grade <concept> <axis> held|cracked --gut <word>` records a cold round; `state` and `due`
   derive it. Every reserved controller-v0 field (`axisType` · `nextDue` · `lastResult` ·
-  `calibrationGap` · `fluencyState` · `edgeMap`) is DERIVED from `rejirah_log.jsonl` — a
+  `calibrationGap` · `fluencyState` · `edgeMap` · `confusionPairs` — the last one added
+  10 Aug 2026: `FORGE_SPEC.md` §6 reserves it alongside `edgeMap` and `rejirah.mjs` derives
+  it too, so the old list read as if one reserved field had been skipped. Evidence:
+  `grep -n "confusionPairs" scripts/rejirah.mjs learning-layer/FORGE_SPEC.md`)
+  is DERIVED from `rejirah_log.jsonl` — a
   **deferral until R1**, which is what canon asks for, not a refusal. **FSRS owns WHEN a concept
   returns; this owns WHICH AXES and HOW HARD** — the two schedulers no longer disagree.
   **`close <concept>` ends a round** (5 Aug, pass 2) and prints the one-line `reJirahDone` patch
   for the gist — **his paste**, per `FORGE_SPEC.md` §2 2b, because nothing auto-saves and
   `capsules/` belongs to `mirror.mjs`. Until the mirror brings it back, the round reads
-  **PENDING** (`rejirah.mjs pending`, and the SessionStart brief says so) — which is *proof* the
-  paste landed, not an assumption. **Five organs read `reJirahDone`** — `fsrs.mjs:143` builds the
-  entire review history from it, plus `deep.mjs`, `capsule_bridge.mjs`, `dugout.mjs`,
-  `shipped.mjs` — so until it lands, all five believe the round never happened. `close` also
+  **PENDING** (`rejirah.mjs pending`, and the SessionStart brief says so — `grep -n
+  "rejirahPendingLine" scripts/learnstate.mjs`) — which is *proof* the
+  paste landed, not an assumption. **Count the organs that read `reJirahDone` live —
+  `grep -rln "reJirahDone" scripts/*.mjs`** — `fsrs.mjs` builds the entire review history
+  from it (`grep -n "the capsule's reJirahDone array carries back" scripts/fsrs.mjs`), and
+  until it lands every one of them believes the round never happened.
+  (Corrected 10 Aug 2026: this said "**Five** organs" and named `fsrs.mjs`, `deep.mjs`,
+  `capsule_bridge.mjs`, `dugout.mjs`, `shipped.mjs` — the live grep returns NINE files, and
+  the reader this list missed is `captains_call.mjs`, which is the one that DEALS HIM THE
+  PENDING CARD (`grep -n "reJirahDone" scripts/captains_call.mjs`). `learnstate.mjs` reads it
+  through `rejirah.mjs`'s `pendingCloses`; `rejirah.mjs` itself is the writer and
+  `organism_test.mjs` is the suite. The old `fsrs.mjs:143` citation is dropped for a grep —
+  :143 now lands mid-way through a bug-history comment, not on the code that builds the
+  history. A hardcoded reader-count in this file rots on the next organ that opens a capsule.)
+  `close` also
   reports canon's SUCCESSIVE-RELEARNING criterion (every due axis held cold once); it reports,
   it never blocks.
 - `scripts/python_state.mjs` — the **Python track's state**, which the biggest rock on the sprint
@@ -236,7 +333,10 @@ The topic secret lives in the routine's prompt on his account, never in the repo
 ## Files of record
 - `OPS_STATE.md` (**repo root**, committed — not Google Drive; that line was wrong until
   5 Aug 2026) — live operational anchor; read first each thread. **It is STALE for the
-  learning layer**: it is dated 15 Jul, and its skill/rep counts moved on long ago. Read
+  learning layer**: its body is dated 15 Jul (`grep -n "Last updated" OPS_STATE.md` — still
+  `2026-07-15` on 10 Aug 2026, though two dated audit banners were prepended to the top of the
+  file on 6 and 9 Aug, so do not read a recent file-mtime as a recent body), and its skill/rep
+  counts moved on long ago. Read
   those numbers live — count `.claude/skills/` and the lines in
   `dressing-room/state/reps_log.jsonl` — never from that doc, and never from here either
   (audit #108, 6 Aug 2026: this line's own "corrections" had themselves rotted — it claimed

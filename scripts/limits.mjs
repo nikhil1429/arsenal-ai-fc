@@ -61,6 +61,20 @@ export function measureReality(stateDir = STATE) {
     wakes: readLines(join(stateDir, "wake_queue.jsonl")).length,
     brain_calls: ledger.length,
     pulses: ledger.filter(r => r.job === "haiku_pulse").length,
+    // WIRING AUDIT (10 Aug 2026) — THE HONESTY FLAG NOBODY READ. claudegen.mjs:137
+    // stamps `tokens_estimated` on every result, because :132 falls back to a LENGTH
+    // ESTIMATE — (prompt+text).length/4 — whenever the CLI returns no usage block,
+    // and parseErr ALWAYS does. brain.mjs windowUsage:256 then sums total_tokens
+    // BLIND: unstamped, a guess and a measurement are the same row to the governor
+    // that rations the window (and to window_capacity_est_tokens, which self-tunes
+    // against that same arithmetic — see BUDGETS below). Producer with no consumer,
+    // exactly the cal_gate shape repaired below. Measured this night: 4,559 rows →
+    // 1,320 stamped, 3,239 carrying no such key at all, and 23 rows with a nonzero
+    // total and all four components null (an estimate by construction, stamped or
+    // not). COUNTS ONLY — nothing here judges the number or sets a bar; it exposes
+    // how much of the window's arithmetic rests on a guess, which is this file's job.
+    brain_calls_estimated: ledger.filter(r => r.tokens_estimated === true).length,
+    brain_calls_unstamped: ledger.filter(r => !("tokens_estimated" in r)).length,
     // KEPT (layering law) — this is what the twin gate USED to be judged against,
     // wrongly. It is a real number about a real file (voice take_notes), it is
     // just not the twin's denominator. See twin_resolutions_best_type below.
@@ -78,8 +92,34 @@ export function measureReality(stateDir = STATE) {
     // imported because limits.mjs must stay a read-only observer with no importers.
     twin_resolutions_best_type: twinBestType(readLines(join(stateDir, "slip.jsonl"))),
     throwins: readLines(join(stateDir, "loose_balls.jsonl")).length,
+    // AUDIT (10 Aug 2026) — THE PUBLISHED CALIBRATION COUNTER, finally read.
+    // calibration.mjs:264-279 buildGate() computes have/need for ALL THREE of its
+    // gates and writes them into calibration.json (`gate` + `gate.sub`). Nothing in
+    // the organism read that field — a producer with no consumer — so this ledger
+    // re-derived the answer from the raw rep count and got it wrong: on 10 Aug it
+    // printed `window_size 21/20 OPEN` on the same morning calibration.json wrote
+    // "establishing baseline (21/40 reps)" and its own gate.sub said trend
+    // {have:21, need:40, open:false}. Same shape as the #78 twin repair below —
+    // read what the OWNER computed, never re-guess the owner's arithmetic here.
+    // Object, not a scalar: `human()` skips it and the GATES table displays it.
+    cal_gate: (readJson(join(stateDir, "calibration.json")) || {}).gate || null,
   };
 }
+
+// One sub-gate out of calibration's published counter, BY NAME. Returns null when
+// the producer has not run — a "?" row is the honest read, and a number invented
+// here would be exactly the lie this file exists to catch. `__root__` is the
+// top-level gate (calibration.mjs:267-269), which is the min_reps/danger_zone one.
+export function calGateRead(calGate, name) {
+  if (!calGate) return null;
+  if (name === "__root__") {
+    return Number.isFinite(calGate.have) && Number.isFinite(calGate.need) ? { have: calGate.have, need: calGate.need } : null;
+  }
+  const s = Array.isArray(calGate.sub) ? calGate.sub.find((x) => x && x.name === name) : null;
+  return s && Number.isFinite(s.have) && Number.isFinite(s.need) ? { have: s.have, need: s.need } : null;
+}
+const calHave = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.have : null; };
+const calNeed = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.need : null; };
 
 // The twin's real denominator, as a PURE function of the slip lines, so the
 // selftest can prove it on a fixture without this read-only file ever opening a
@@ -100,9 +140,15 @@ export function twinBestType(slipLines = []) {
 // ---- THE GATES: numbers that decide whether an organ may SPEAK AT ALL -------
 // Each carries the LIVE reading it is judged against, so "shut" is a fact, not a claim.
 export const GATES = [
-  { organ: "calibration",   file: "calibration.mjs",   key: "min_reps",                    need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no calibration_gap, no overconfidence read" },
-  { organ: "calibration",   file: "calibration.mjs",   key: "window_size",                 need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "trend window" },
-  { organ: "calibration",   file: "calibration.mjs",   key: "danger.min_knew_reps",        need: 3,   have: (m) => m.reps,              origin: "guessed", effect: "no danger-zone topics surfaced" },
+  // The three calibration rows read the PRODUCER's published counter (see cal_gate
+  // above). `need` is a function here for the same reason `have` always was: the
+  // trend gate's denominator is 2 × window_size (calibration.mjs:265), not
+  // window_size — this table hardcoded 20 and so called it OPEN at 21 when the
+  // producer had it SHUT at 21/40. Nothing is guessed; every number arrives from
+  // the organ that owns the threshold, and reads "-  ?" if that organ never ran.
+  { organ: "calibration",   file: "calibration.mjs",   key: "min_reps",                    need: calNeed("__root__"),             have: calHave("__root__"),             origin: "guessed", effect: "no calibration_gap, no overconfidence read" },
+  { organ: "calibration",   file: "calibration.mjs",   key: "window_size",                 need: calNeed("trend"),                have: calHave("trend"),                origin: "guessed", effect: "trend window — the gate is 2 × window_size reps" },
+  { organ: "calibration",   file: "calibration.mjs",   key: "danger.min_knew_reps",        need: calNeed("danger.min_knew_reps"), have: calHave("danger.min_knew_reps"), origin: "guessed", effect: "no danger-zone topics surfaced (counts KNEW-reps, not all reps)" },
   { organ: "nemesis",       file: "nemesis.mjs",       key: "warming_up_min_reps",         need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no weakness headline reaches the sheet" },
   { organ: "nemesis",       file: "nemesis.mjs",       key: "axis_cluster_min_concepts",   need: 3,   have: (m) => m.capsules,          origin: "guessed", effect: "no axis-pattern read" },
   { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.warming_up_min_reps", need: 12, have: (m) => m.reps,           origin: "guessed", effect: "no fluency state, no maidan focus" },
@@ -225,7 +271,12 @@ export function report(stateDir = STATE) {
   const m = measureReality(stateDir);
   const gates = GATES.map(g => {
     const have = g.have ? g.have(m) : null;
-    return { ...g, have, open: have == null || g.need == null ? null : have >= g.need, have_fn: undefined };
+    // `need` may be a function too (10 Aug 2026) — a row whose denominator is
+    // PUBLISHED by the organ that owns it reads it live instead of carrying a copy
+    // that rots. Both are resolved to plain numbers here, so the JSON dump and the
+    // printed table never see a function.
+    const need = typeof g.need === "function" ? g.need(m) : g.need;
+    return { ...g, have, need, open: have == null || need == null ? null : have >= need, have_fn: undefined };
   });
   return { measured: m, gates, budgets: BUDGETS, guards: GUARDS, cadences: CADENCES, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
 }
@@ -233,7 +284,10 @@ export function report(stateDir = STATE) {
 function human(r) {
   const m = r.measured;
   console.log("\n=== WHAT HE ACTUALLY HAS ===");
-  for (const [k, v] of Object.entries(m)) console.log(`  ${k.padEnd(20)} ${String(v).padStart(7)}`);
+  // SCALAR ledger — one number per row. Published counters read from another
+  // organ's state (cal_gate) are objects; they are printed in the GATES table
+  // below, with their own have/need, so skipping them here hides nothing.
+  for (const [k, v] of Object.entries(m)) { if (v && typeof v === "object") continue; console.log(`  ${k.padEnd(20)} ${String(v).padStart(7)}`); }
 
   console.log("\n=== GATES — numbers that decide whether an organ MAY SPEAK ===");
   console.log(`  ${"organ".padEnd(15)}${"knob".padEnd(38)}${"have".padStart(6)}${"need".padStart(7)}   status   origin`);
@@ -299,6 +353,80 @@ function selftest() {
     const twinRow = GATES.find(g => g.organ === "twin");
     ok("#78 — the twin row's have() reads twin_resolutions_best_type, NOT dugout_notes' take_note count",
       !!twinRow && twinRow.have({ voice_resolutions: 7, twin_resolutions_best_type: 3 }) === 3);
+  }
+
+  // ---- THE CALIBRATION COUNTER (10 Aug 2026) -------------------------------
+  // calibration.mjs publishes have/need for all three of its gates in
+  // calibration.json (`gate`/`gate.sub`) and NO organ read it, so this ledger
+  // judged all three against the raw rep count — and printed `window_size 21/20
+  // OPEN` on the morning the producer wrote "establishing baseline (21/40 reps)".
+  // The fixture makes the two candidate sources DISAGREE on purpose (21 raw reps
+  // vs a trend gate at 21/40 and 3 knew-reps of 3): the old mapping returns 21/20
+  // OPEN for the trend row, the wired one returns 21/40 SHUT.
+  {
+    const calGate = {
+      have: 21, need: 20, open: true,
+      sub: [
+        { name: "danger_zone",          have: 21, need: 20, open: true },
+        { name: "trend",                have: 21, need: 40, open: false },
+        { name: "danger.min_knew_reps", have: 3,  need: 3,  open: true },
+      ],
+    };
+    const rd = (key, m) => { const g = GATES.find(x => x.organ === "calibration" && x.key === key);
+      return { have: g.have(m), need: typeof g.need === "function" ? g.need(m) : g.need }; };
+    const m = { reps: 21, cal_gate: calGate };
+    ok("the trend gate reads the PRODUCER's 21/40 (2 × window_size) and is SHUT — not the raw rep count against 20",
+      rd("window_size", m).have === 21 && rd("window_size", m).need === 40 && rd("window_size", m).have < rd("window_size", m).need);
+    ok("danger.min_knew_reps counts KNEW-reps (3/3), never every rep (21/3)",
+      rd("danger.min_knew_reps", m).have === 3 && rd("danger.min_knew_reps", m).need === 3);
+    ok("min_reps reads the published root counter (21/20)",
+      rd("min_reps", m).have === 21 && rd("min_reps", m).need === 20);
+    const blind = { reps: 21, cal_gate: null };
+    ok("no calibration.json ⇒ all three rows read '?', never a number invented in this file",
+      ["min_reps", "window_size", "danger.min_knew_reps"].every(k => rd(k, blind).have === null && rd(k, blind).need === null));
+    // THE ANTI-STRAND CHECK: the names this table asks for must be the names the
+    // producer still emits. Rename a sub in calibration.mjs and this goes red here
+    // instead of silently stranding the field again for another few weeks.
+    const calSrc = readFileSync(join(SCRIPTS, "calibration.mjs"), "utf8");
+    ok("the sub-gate names this table maps to are the ones calibration.mjs buildGate() still emits",
+      ['name: "danger_zone"', 'name: "trend"', 'name: "danger.min_knew_reps"'].every(n => calSrc.includes(n)));
+    // And the live wire, when the producer has actually run on this machine.
+    const liveGate = r.measured.cal_gate;
+    ok("LIVE: the three printed rows equal calibration.json's own published counter",
+      !liveGate || ["min_reps", "window_size", "danger.min_knew_reps"].every(k => {
+        const row = r.gates.find(x => x.organ === "calibration" && x.key === k);
+        const src = calGateRead(liveGate, k === "min_reps" ? "__root__" : k === "window_size" ? "trend" : k);
+        return row && src && row.have === src.have && row.need === src.need;
+      }));
+  }
+
+  // ---- THE TOKEN-HONESTY FLAG (10 Aug 2026 wiring audit) -------------------
+  // `tokens_estimated` was produced by claudegen on every result and read by NO
+  // organ — so these two counters are its first consumer. Both are derived from
+  // the live bus, never asserted; the second one only ever shrinks as writers are
+  // wired, which is the point of printing it.
+  {
+    const m = r.measured;
+    ok("the ledger's estimated/unstamped counts are READ from the bus, and neither can exceed the rows they came from",
+      Number.isInteger(m.brain_calls_estimated) && Number.isInteger(m.brain_calls_unstamped)
+      && m.brain_calls_estimated <= m.brain_calls && m.brain_calls_unstamped <= m.brain_calls);
+    // ANTI-STRAND (the calibration repair's own check, same reason): the field
+    // this row reads must be the field the producer still emits. Drop the stamp
+    // in claudegen and this goes red here, instead of the counter quietly
+    // reading 0 forever and calling every guess a measurement.
+    const cgSrc = readFileSync(join(SCRIPTS, "claudegen.mjs"), "utf8");
+    ok("claudegen still STAMPS tokens_estimated on its results (the producer this counter depends on)",
+      /tokens_estimated:\s*!measured/.test(cgSrc) && /tokens_estimated:\s*true/.test(cgSrc));
+    // and the night shift — the lane that carried 50 unstamped rows until this
+    // audit — still puts the flag on the row it appends to the shared ledger.
+    // Scoped to the ROW BUILDER, not the file: a bare /tokens_estimated/ over
+    // nightshift.mjs stayed GREEN with the field cut out of the row, because the
+    // selftest fixtures below still name it — an assertion that cannot fail is
+    // the defect this whole audit is about, so it is anchored to the builder.
+    const nsSrc = readFileSync(join(SCRIPTS, "nightshift.mjs"), "utf8");
+    const nsRow = nsSrc.slice(nsSrc.indexOf("function nsLedgerRow"), nsSrc.indexOf("const genLedgered"));
+    ok("the night shift's ledger ROW BUILDER still carries the flag (50 ns_ rows had none before 10 Aug 2026)",
+      nsRow.length > 0 && /tokens_estimated:/.test(nsRow) && /\.\.\.ledgerForensics\(/.test(nsRow));
   }
 
   // This used to be `typeof globalThis.writeFileSync === "undefined"` — always true

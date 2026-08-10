@@ -31,6 +31,11 @@
 // MODES:  --hit HIT|MISS|PARTIAL|REST --signal "…" --kal "…" [--diag start|block|sleep]
 //         [--route all|none] [--dry] · route [all|<id>…] (route-only, no ledger)
 //         · season (regen SEASON.md only — no ledger, no matchday)
+//         · interview --date YYYY-MM-DD [--drop] (season.json's interview_dates —
+//           D14's lawful writer, which scout's war-room reads; dispatched at :408 and
+//           unnamed here until the wiring audit, 10 Aug 2026. MORNING_RUNBOOK.md:127
+//           sends a session to THIS line for postmatch's surface, so the one verb that
+//           exists to keep him off a hand-edit was invisible on the documented path.)
 //         · selftest  (interactive prompts if TTY, no flags)
 // SEASON.md (DAILY_CADENCE.md compact design, honest subset): TABLE standings +
 //   MATCH ROWS newest-top + streak/form-line (rest-dot neutral) + KAL→kickoff
@@ -41,8 +46,9 @@
 //   · viz wall · twin (bets read season.json) · outwork_audit o5 (sync watch).
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";                      // selftest only — the on-disk seam (benchmark.mjs:644 precedent)
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -151,7 +157,7 @@ function seasonStreak(rows) {
   return k;
 }
 
-function renderSeasonMd({ season, lockedCount, python, benchmark, now }) {
+function renderSeasonMd({ season, lockedCount, lockedNote, python, benchmark, now }) {
   const dateStr = localDate(now);
   const rows = (season && Array.isArray(season.rows) ? season.rows : []);
   const L = [];
@@ -169,12 +175,25 @@ function renderSeasonMd({ season, lockedCount, python, benchmark, now }) {
     const tail = rows.slice(-7);
     if (tail.length) L.push(`- form (last ${tail.length} close${tail.length > 1 ? "s" : ""}, oldest→newest): ${tail.map((r) => FORM_GLYPH[r.result] || "·").join(" ")}   (● won · ◦ rest — a won day too · «·» not-won: data, not a verdict)`);
   }
-  L.push(`- capsules locked: ${typeof lockedCount === "number" ? lockedCount : "—"}`);
+  L.push(`- capsules locked: ${typeof lockedCount === "number" ? lockedCount : "—"}${lockedNote ? ` ⚠ ${lockedNote}` : ""}`);
   L.push(`- python: ${python ? `tier ${python.tier || "—"} · ${python.fluency || "—"}` : "no track state yet"}`);
   if (benchmark) {
     L.push(benchmark.status === "gated_pre_audit"
       ? `- benchmark: GATED (pre-audit) — ${(benchmark.gate && benchmark.gate.missions_line) || ""}`
-      : `- benchmark: ${(benchmark.buckets || []).map((b) => `${b.id} locked ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}`);
+      // Same pass — the per-bucket string comes from benchmark.mjs (`projection`),
+      // not rebuilt here. This row composed `locked ${locked}/${core_total}` for
+      // every bucket, which wrote "B5 locked 0/0" into the permanent logbook for
+      // the one bucket whose concept_buckets is [] BY DESIGN (its evidence is the
+      // shipped product). The word "locked" moves into the row label because it is
+      // no longer true of every bucket. Fallback = the old expression verbatim.
+      : `- benchmark (locked/core per bucket; a bucket with no concept core names its own evidence): ${(benchmark.buckets || []).map((b) => b.projection || `${b.id} locked ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}`);
+    // 10 Aug 2026 wiring pass — the NEED names enter the logbook. The standings
+    // row above carried counts only since 8 Aug, so SEASON.md recorded where he
+    // stood on a date and never what was still open on that date — and this file
+    // is the record we read back months later. benchmark.mjs owns needs[]; the
+    // whole list, because a logbook that summarises is a logbook that lies.
+    if (Array.isArray(benchmark.needs) && benchmark.needs.length)
+      L.push(`- benchmark need: ${benchmark.needs.join(" · ")}`);
   } else L.push(`- benchmark: never run`);
   const lastKal = [...rows].reverse().find((r) => r.kal);
   L.push(`- KAL→KICKOFF weld: ${lastKal ? `"${lastKal.kal}" (${lastKal.date})` : "no KAL-line on record yet"}`);
@@ -194,13 +213,28 @@ function renderSeasonMd({ season, lockedCount, python, benchmark, now }) {
   return L.join("\n") + "\n";
 }
 
-function gatherSeasonExtras(now) {
-  const capsuleMap = readJson(join(STATE_DIR, "capsule_map.json"));
+// `dir` is a DEFAULTED parameter, not a new mode (benchmark.mjs:731 precedent): main()
+// still calls gatherSeasonExtras(now) and gets STATE_DIR exactly as before. It exists so
+// the selftest can point the REAL reader at a real directory — the wire below lives HERE,
+// and a fixture handed straight to renderSeasonMd can never prove this function reads it.
+function gatherSeasonExtras(now, dir = STATE_DIR) {
+  const capsuleMap = readJson(join(dir, "capsule_map.json"));
   return {
     season: readJson(SEASON),
     lockedCount: capsuleMap && Array.isArray(capsuleMap.concepts) ? capsuleMap.concepts.filter((c) => c.locked_on).length : null,
-    python: readJson(join(STATE_DIR, "python_state.json")),
-    benchmark: readJson(join(STATE_DIR, "benchmark.json")),
+    // DEAD-WIRE SWEEP (10 Aug 2026). SEASON.md is the PERMANENT logbook — 100% machine-
+    // written, he writes zero — so a number that lands here wrong stays wrong forever.
+    // Until today a capsule file that could not be parsed VANISHED inside capsule_bridge
+    // (empty catch → .filter(Boolean)) and this line published the short count as fact.
+    // capsule_bridge now refuses to ship a short count and stamps capsules_complete:false
+    // on its last true map instead; so the count above is still TRUE but may be OLD, and
+    // an old count printed under today's date is the same lie one level quieter. Named,
+    // with the owner, so the fix is one hop away. Clean map ⇒ null ⇒ the row is unchanged.
+    lockedNote: capsuleMap && capsuleMap.capsules_complete === false
+      ? `as of ${capsuleMap.date || "an earlier run"} — capsule_map incomplete: ${(capsuleMap.blocking_faults || []).join(", ") || "a capsule"} unreadable, owner mirror.mjs`
+      : null,
+    python: readJson(join(dir, "python_state.json")),
+    benchmark: readJson(join(dir, "benchmark.json")),
     now,
   };
 }
@@ -299,6 +333,17 @@ async function selftest() {
       mdSeason.indexOf("| 2026-08-12 |") < mdSeason.indexOf("| 2026-08-10 |") && /REST \(load-managed\)/.test(mdSeason));
     assert("SEASON.md: benchmark gate line passes through honestly",
       /benchmark: GATED \(pre-audit\) — full-syllabus audit 0\/4 returned/.test(mdSeason));
+    // 10 Aug 2026 wiring pass — the standings row carried counts only, so the
+    // logbook recorded where he stood on a date and never what was still open on
+    // that date. benchmark.mjs owns needs[]; this is its record.
+    const mdNeeds = renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
+      benchmark: { status: "ok", buckets: [{ id: "B2", counts: { locked: 1, core_total: 5 } }],
+        needs: ["2-rag: unlock chunking, retrieval", "course: 6 chapters remain"] } });
+    assert("SEASON.md: the benchmark's NEED NAMES enter the logbook whole (a logbook that summarises lies)",
+      /- benchmark need: 2-rag: unlock chunking, retrieval · course: 6 chapters remain/.test(mdNeeds));
+    assert("SEASON.md: a benchmark with no needs[] writes no need row (absence, not a zero)",
+      !/benchmark need/.test(renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
+        benchmark: { status: "ok", buckets: [], regressions: [] } })));
     assert("NO SHAME LAW on the logbook — no failure/broken-streak words, MISS renders a neutral dot",
       !/fail|failure|broke|shame/i.test(mdSeason));
     assert("NO-COUNTDOWN LAW on the logbook — no deadline/days-left language",
@@ -308,6 +353,28 @@ async function selftest() {
       /no matchday closed yet/.test(mdEmpty) && /starts when he plays/.test(mdEmpty) && /khaali — pehla full-time/.test(mdEmpty));
     assert("SEASON.md: he writes ZERO — the file says who writes it",
       /machine-written 100% by postmatch\.mjs/.test(mdSeason));
+
+    // DEAD-WIRE SWEEP (10 Aug 2026) — THE VANISHING CAPSULE reaches the logbook.
+    // Off DISK through the real gatherSeasonExtras, because that is where the wire is:
+    // a fixture handed to renderSeasonMd proves only that the renderer can print a note
+    // somebody else computed. Delete the lockedNote lines and both halves fail.
+    {
+      const tmp = mkdtempSync(join(tmpdir(), "arsenal-postmatch-cap-"));
+      try {
+        const capMap = (extra) => JSON.stringify({ date: "2026-08-09", status: "ok",
+          concepts: [{ concept: "tokenization", locked_on: "2026-06-15" }, { concept: "inference", locked_on: "2026-06-24" }], ...extra });
+        writeFileSync(join(tmp, "capsule_map.json"), capMap({ capsules_complete: false, blocking_faults: ["capsules/embeddings.json"] }));
+        const short = gatherSeasonExtras(new Date(2026, 7, 12), tmp);
+        const mdShort = renderSeasonMd(short);
+        assert("SEASON.md: an INCOMPLETE capsule_map never writes a bare locked count into the permanent logbook",
+          short.lockedNote !== null
+          && /- capsules locked: 2 ⚠ as of 2026-08-09 — capsule_map incomplete: capsules\/embeddings\.json unreadable, owner mirror\.mjs/.test(mdShort));
+        writeFileSync(join(tmp, "capsule_map.json"), capMap({ capsules_complete: true }));
+        const whole = gatherSeasonExtras(new Date(2026, 7, 12), tmp);
+        assert("SEASON.md: a COMPLETE capsule_map writes the row exactly as before (no noise on the healthy path)",
+          whole.lockedNote === null && /- capsules locked: 2\n/.test(renderSeasonMd(whole)));
+      } finally { rmSync(tmp, { recursive: true, force: true }); }
+    }
   }
 
   const passed = checks.every(c => c[1]);

@@ -36,12 +36,24 @@
 //         hand-authored audit missions this organ only REGISTERS, never rewrites)
 //         dressing-room/state/scout_reports/mission_*.md (ingested returns, verbatim)
 // MODES:  run (default) · selftest · mission <stage-audit|stage-topic|stage-lock|ingest|
-//         audit-close|list> · outward
+//         audit-close|list> (alias: missions) · outward · chrome-stamp <fire|harvest|
+//         gem-sync|gist-patch>
+//   `chrome-stamp` (:800) and the `missions` alias (:792) were DISPATCHED and unnamed
+//   here until the wiring audit, 10 Aug 2026. THE_DAILY_LOOP.md:82 sends a session to
+//   this exact line for scout's surface, so the verb four Chrome skills must press
+//   after every successful drive (/fire · /harvest · /gem-sync · /gist-patch) was
+//   invisible on the only discovery path the docs name. Header and dispatch are held
+//   together now — organism_test.mjs, THE DISCOVERY-PATH CONTRACT.
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// THE BENCHMARK WIRE (10 Aug 2026) — see refreshBenchmark() below. Same
+// cross-organ shell pattern forge_session.mjs's LOCK-CHAIN already uses
+// (chainCommands → execFileSync, fail-silent): the owner is invoked, never
+// bypassed. This file still writes only missions.json + its own outputs.
+import { execFileSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -392,10 +404,24 @@ function outwardWeek(state, bench, now) {
 // P6.1 → Ruling 5: gemini_quality.jsonl gets its first reader. COUNT only —
 // "recorded, judged by no one until the 30-45d review" (his rule). No dates
 // ride scout.json (NO-DATES law), so the lane carries a count and a note.
+//
+// WORDING REPAIRED 10 Aug 2026 (wiring audit). This line said "gemini N batch(es)
+// recorded" and rode the kickoff/talk readiness line. It was harmless only because
+// the lane was DEAD — capture.mjs recorded a row solely on its `paste` door, and
+// nothing pastes, so the file had never existed. Closing that wire (capture.mjs
+// geminiBatchStats, same audit) makes this line FIRE, and it would have fired the
+// word "gemini" over dugout-voice, turnstile-clipboard and throwin batches, which
+// all hardcode surface "gem" and never touch Gemini. capture.mjs cannot prove a
+// Gemini origin — nothing in the rep schema carries one — so this reader stops
+// claiming it. The key `out.gemini` and the {batches,note} shape are UNCHANGED (a
+// rename would be a second, unrelated break); what changes is the sentence a human
+// reads. The lane's own rows now carry `door` + `notes`, which is what HIS 30-45d
+// review slices on.
 function attachGemini(out, batches) {
   if (!Number.isInteger(batches) || batches <= 0) return out;
-  out.gemini = { batches, note: "recorded, unjudged till the 30-45d review" };
-  out.readiness_line = out.readiness_line ? `${out.readiness_line} · gemini ${batches} batch(es) recorded` : `gemini ${batches} batch(es) recorded`;
+  out.gemini = { batches, note: "rep-batch outcomes recorded at the capture door (paste + rep); origin is NOT verified as Gemini — unjudged till the 30-45d review" };
+  const line = `rep-batch outcomes ${batches} recorded (unjudged)`;
+  out.readiness_line = out.readiness_line ? `${out.readiness_line} · ${line}` : line;
   return out;
 }
 
@@ -573,7 +599,15 @@ async function selftest() {
     assert("gemini lane: batches attach as a COUNT + unjudged note, and ride the readiness line",
       attachGemini({ ...g0 }, 3).gemini.batches === 3
       && /unjudged till the 30-45d/.test(attachGemini({ ...g0 }, 3).gemini.note)
-      && /gemini 3 batch\(es\) recorded/.test(attachGemini({ ...g0 }, 3).readiness_line));
+      && /rep-batch outcomes 3 recorded/.test(attachGemini({ ...g0 }, 3).readiness_line));
+    // 10 Aug 2026 — the lane went LIVE this day (capture.mjs's paste-only gate was the
+    // reason it had never been written). The count is real now, so the word must be
+    // true: dugout-voice / turnstile / throwin batches all carry surface "gem" without
+    // ever meeting Gemini, and nothing in the rep schema proves an origin. If a future
+    // pass re-introduces the claim, this goes red.
+    assert("gemini lane: the reader does NOT claim a Gemini origin it cannot prove (dugout-voice batches would be 'gem' too)",
+      !/gemini/i.test(attachGemini({ ...g0 }, 3).readiness_line)
+      && /NOT verified as Gemini/.test(attachGemini({ ...g0 }, 3).gemini.note));
     assert("gemini lane: zero batches attach NOTHING (absence, not a zero-claim)",
       attachGemini({ ...g0 }, 0).gemini === undefined && attachGemini({ ...g0 }, null).gemini === undefined);
     assert("gemini lane: NO-DATES law still holds with the lane attached",
@@ -584,11 +618,69 @@ async function selftest() {
     const linesIn = missionLines({ missions: st.missions.filter(r => r.type === "audit"), syllabus_audit: { closed_at: null } }, t0);
     assert("missions: all-returned line routes to diff review + his word", /diff review \+ audit-close/.test(linesIn[0]));
     assert("missions: no mission rows → no lines (absence, not noise)", missionLines(emptyMissions(), t0).length === 0);
+
+    // THE BENCHMARK WIRE (10 Aug 2026) — these fail the moment the wire is cut.
+    // Source-read assertions follow dugout.mjs:2589 / scoreboard.mjs:421.
+    const bcmd = benchmarkRefreshCmd();
+    assert("benchmark wire: exact spawn argv — the OWNER's CLI (benchmark.mjs run), never a raw write here",
+      /benchmark\.mjs$/.test(bcmd.args[0]) && bcmd.args[1] === "run" && bcmd.args.length === 2);
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    // lastIndexOf, not indexOf: this very assertion mentions the name, and the
+    // selftest sits ABOVE the CLI in the file. The refreshBenchmark DEFINITION
+    // also sits above missionCli, so only its CALL SITES fall inside `cli`.
+    const cli = SRC.slice(SRC.lastIndexOf("function missionCli(mode)"));
+    assert("benchmark wire: every missions.json write that moves the gate line refreshes it (stage-audit · ingest · audit-close)",
+      (cli.match(/refreshBenchmark\(/g) || []).length === 3);
+    const closeBlock = cli.slice(cli.indexOf('sub === "audit-close"'), cli.indexOf('sub === "outward"'));
+    assert("benchmark wire: audit-close FIRES the benchmark, never hands him a command to remember (ANCHOR LAW)",
+      /refreshBenchmark\(/.test(closeBlock) && !/run: node scripts\/benchmark\.mjs/.test(closeBlock));
+    assert("benchmark wire: scout still never writes benchmark.json itself (sole-writer law)",
+      !/writeAtomic\([^)]*benchmark\.json|writeFileSync\([^)]*benchmark\.json/.test(SRC));
   }
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
+}
+
+// ---------------------------------------------------------------------------
+// THE BENCHMARK WIRE (10 Aug 2026 — his "everything connected to everywhere
+// where it is required")
+// ---------------------------------------------------------------------------
+// BUILT BUT NOT WIRED, found live: benchmark.json's stored `gate.missions_line`
+// is printed verbatim by manager.mjs:263 (team sheet), postmatch.mjs:176
+// (SEASON.md) and viz.mjs:309 (the wall), and learnstate's kickoff brief reads
+// the same file. Every event that CHANGES that line is a missions.json write in
+// THIS file — stage-audit, ingest, audit-close — and none of them told the
+// benchmark. Only forge_session's LOCK-CHAIN ever re-ran it, i.e. on a capsule
+// lock, an event with nothing to do with the audit. Proof it bit: M01 came back
+// 2026-08-10T15:41 and benchmark.json still read "full-syllabus audit 0/4
+// returned — next fire: M01", generated 2026-08-07T21:01. audit-close was worse:
+// it only PRINTED "run: node scripts/benchmark.mjs run" — a command to remember,
+// which THE ANCHOR LAW forbids outright.
+// WHY A SHELL, NOT AN IMPORT: benchmark.mjs is the SOLE WRITER of benchmark.json
+// (its header says so). The precedent for crossing an organ boundary is the
+// owner's own CLI — dugout.mjs shells doubtminer.mjs, forge_session shells this
+// file and benchmark.mjs. Nothing here touches benchmark.json.
+// NOT AUTO-ACTING: `run` only re-derives a read from state he already moved by
+// his own command. The GATE still opens only on his word (--note); a gated
+// benchmark refreshes its gate line and stays gated.
+// TIMEOUT: 20000ms, taken verbatim from forge_session.mjs's benchmark lane
+// (chainCommands, 8 Aug 2026) — not a new number.
+function benchmarkRefreshCmd() {
+  return { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 };
+}
+
+// Fail-silent by design, same as the LOCK-CHAIN: an outward refresh must never
+// break the mission write that already landed on disk.
+function refreshBenchmark(why) {
+  const cmd = benchmarkRefreshCmd();
+  try {
+    const out = execFileSync(process.execPath, cmd.args, { encoding: "utf8", timeout: cmd.timeout });
+    console.log(`  benchmark refreshed (${why}): ${out.trim().split("\n").pop() || "ran"}`);
+  } catch (e) {
+    console.log(`  benchmark refresh skipped (${String(e.message || e).slice(0, 70)}) — non-blocking; the wire retries on the next mission event`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +703,7 @@ function missionCli(mode) {
     console.log(`  fire: open dressing-room/missions/M01…M04, paste each into Gemini Pro → Deep Research.`);
     console.log(`  return: node scripts/scout.mjs mission ingest M01 --file <saved-output.md>  (or paste in a Claude session)`);
     console.log(`  gate: benchmark ships only after: node scripts/scout.mjs mission audit-close --note "<his word>"`);
+    refreshBenchmark("audit staged — gate line moves from 'not yet staged' to 0/4");
     return;
   }
 
@@ -649,6 +742,7 @@ function missionCli(mode) {
     console.log(`MISSIONS DESK · ${res.row.id} ingested → dressing-room/state/scout_reports/${reportName} (verbatim).`);
     console.log(`  next: diff review rides the next session anchor — canon (OPPONENT_SCOUT/ROADMAP) changes only with his word.`);
     if (res.auditComplete) console.log(`  🔓 all 4 audit returns in — after the diffs are dealt: mission audit-close --note "<his word>" (opens the benchmark gate).`);
+    refreshBenchmark(`${res.row.id} returned — the gate line the sheet/SEASON/wall print just changed`);
     return;
   }
 
@@ -670,7 +764,11 @@ function missionCli(mode) {
     }
     writeAtomic(MISSIONS, state);
     console.log(`MISSIONS DESK · FULL-SYLLABUS AUDIT CLOSED on his word: "${state.syllabus_audit.note}"`);
-    console.log(`  🔓 THE BENCHMARK GATE IS OPEN — run: node scripts/benchmark.mjs run`);
+    // ANCHOR LAW (10 Aug 2026): this line used to print the command and stop —
+    // so the sheet, SEASON.md and the wall kept saying GATED until a human
+    // remembered it. His word already fired here; the gate opens in the same breath.
+    console.log(`  🔓 THE BENCHMARK GATE IS OPEN — firing it now (no command to remember).`);
+    refreshBenchmark("audit-close on his word — the gate is open");
     return;
   }
 

@@ -9,10 +9,55 @@
 #       Examiner = mock WARM-UP (Python-scoped, pre-scrimmage). Asli graded adversarial Mock = OS OUTWORK
 #       LAYER ka THE SCRIMMAGE (Claude-side agent, THE DOSSIER [= OPPONENT_SCOUT.md] ki probe-bank+weights pe
 #       grade). Examiner-Gem PROMPT khud "warm-up, not the final boss" bolta — naturally fit, prompt UNCHANGED.
+#       *(corrected 10 Aug 2026: **THE DOSSIER = OPPONENT_SCOUT.md HOLDS** — us file ki apni doosri line khud
+#        ko "THE DOSSIER" naam deti hai (`grep -n "THE DOSSIER" learning-layer/OPPONENT_SCOUT.md`). Par
+#        "Claude-side AGENT" ab galat SHAPE hai: is repo mein `.claude/agents/` folder hai hi nahi
+#        (`ls -d .claude/agents` → kuch nahi). THE SCRIMMAGE ek Claude Code **SKILL** hai —
+#        `.claude/skills/scrimmage/SKILL.md` — jise `scripts/scout.mjs` stage karta (uske apne OUTPUT header
+#        mein: "dressing-room/state/scout.json (sole writer)") aur jo `dressing-room/state/dossier_weights.json`
+#        ki probe-grammar + round-weights pe grade karta. Woh weights-file HAND-MAINTAINED canon hai — koi
+#        script use likhti nahi (`grep -rn "dossier_weights" scripts/*.mjs` sirf readers deta; setpiece.mjs
+#        khud likhta hai "dossier_weights.json is hand-maintained canon"). Surfaces LIVE ginno, kabhi prose se
+#        nahi: `ls .claude/skills/`.
+#        AUR — EXAMINER ka ab ek DOOSRA, MACHINE-owned lane bhi hai jiska is file mein zikr nahi hai: raat ko
+#        `scripts/nightshift.mjs` ek cartridge likhta hai (`grep -n "gem_cartridge" scripts/nightshift.mjs` →
+#        `dressing-room/state/brain_out/nightshift/gem_cartridge.md`) aur `/gem-sync` skill use **THE EXAMINER
+#        ⚪🔴** naam ke Gem ki Instructions box mein paste karta (`.claude/skills/gem-sync/SKILL.md`). Woh
+#        cartridge locked-concept probes + gut-word law + reps-JSON contract carry karta — STEP 6 wale STATIC
+#        prompt se BILKUL alag cheez. Agar dono ek hi Gem hain to STEP 6 ka prompt paste karna raat ke cartridge
+#        ko MITA dega; do alag Gem rakhne ka faisla USKA hai, machine ne kabhi nahi kiya. Cadence bhi badli:
+#        `scripts/physio.mjs` `gem_sync_stamp.json` dekh ke **>=7 din** pe `gem_sync_due` bleed karta
+#        (`grep -n "gemSyncDue" scripts/physio.mjs`), aur kickoff brief ROZ "DAILY EXAMINER" line print karta
+#        jab `sprint.json.progress.examiner_daily` set ho (`grep -n "DAILY EXAMINER" scripts/learnstate.mjs`).
+#        Matlab "week-3 se 1×/week" cadence ab sirf STEP 6 ke Gem-warm-up ki hai — examiner-lane ki nahi.)*
 #   (2) LEDGER = MIRROR (pointer-note): packet ka ⚠️ WATCH-LIST (Coach code ke against check karta) = OS
 #       OUTWORK LAYER ke canonical `ledger-keeper` ka packet-mirror (ek store, do projection). Coach/Examiner
 #       prompts mein NAHI likha (Gemini ko Claude-agent ka pata nahi hona chahiye — packet-mechanic same).
+#       *(corrected 10 Aug 2026: **`ledger-keeper` IS repo mein exist hi nahi karta.** `grep -rn "ledger-keeper"
+#        scripts/` sirf DO hits deta aur woh dono `scripts/python_state.mjs` ke COMMENT hain jo yahi baat likhte
+#        hain; `.claude/agents/` folder hai hi nahi. Woh naam PURANE Tier-2 rig ka hai. IS repo mein Python-track
+#        ke JS-hangover watch-list ka **SOLE writer `scripts/python_state.mjs`** hai — uska apna header khud
+#        likhta hai "sole writer of dressing-room/state/python_state.json … the JS-hangover watch-list"
+#        (`grep -n "sole writer of dressing-room/state/python_state.json" scripts/python_state.mjs`), aur baaki
+#        saare (benchmark.mjs, postmatch.mjs) sirf READ karte hain (`grep -rn "python_state.json" scripts/*.mjs`).
+#        Uska "THE WATCH-LIST BOUNDARY" section khud likhta hai ki nemesis `reps_log.jsonl` se concept-MISSES
+#        derive karta, aur ek Gemini 📋 HANDOFF se aaya JS-hangover us store mein structurally aa hi nahi sakta —
+#        isliye "ek store, do projection" ab do ALAG signals hain, do alag owners ke saath: nemesis =
+#        concept-misses (`weaknesses.json`), python_state = JS-hangovers (`python_state.json.watch_list`).
+#        Evidence: `grep -n "THE WATCH-LIST BOUNDARY" scripts/python_state.mjs`. Live watch-list padhne ka
+#        tareeka: `node scripts/python_state.mjs status` — kabhi kisi doc se nahi.)*
 #   Companion: GEMINI_LOOP.md v2.4 (§1 + §5.7 + §13.4 same cross-refs) + PROJECT OS v3.13. Baaki v2.2 se UNCHANGED.
+#       *(corrected 10 Aug 2026, teen alag cheezein is ek line mein: (a) GEMINI_LOOP.md **abhi bhi v2.4 hai** —
+#        yeh HOLD karta (`grep -n "^# v2\." learning-layer/GEMINI_LOOP.md | head -1`). (b) **§5.7 naam ka koi
+#        section GEMINI_LOOP.md mein hai hi nahi** — uske headings hain `## 5. DAILY LOOP` … `## 13` +
+#        `### 13.1-13.4`, koi `### 5.x` nahi (`grep -nE "^##+ " learning-layer/GEMINI_LOOP.md`). Examiner
+#        cross-ref asal mein §5 ke NUMBERED item 7 ("1×/week (week-3 se): Examiner Gem warm-up") aur §13.3 WEEK
+#        RHYTHM mein baitha hai — `§13.4` us doosre (LEDGER) item ka cross-ref hai, Examiner ka nahi; yeh line
+#        do items ke pointers ko ek mein mila deti hai. Sahi pointers grep se lo:
+#        `grep -n "warm-up" learning-layer/GEMINI_LOOP.md`. (c) **PROJECT OS ab v3.13 pe nahi khada** —
+#        `OS_CHANGELOG.md` ka SABSE NAYA entry v3.14 (05 Aug 2026) hai; PROJECT_OS.md ka header abhi bhi v3.13
+#        chhapta par version-line uski apni hai, isliye wahan bhi sirf annotate hua. LIVE padho:
+#        `grep -n "^# v3\." learning-layer/OS_CHANGELOG.md | head -1`.)*
 # v2.2 changes (06 Jul 2026 · OS v3.12 boundary): teen Python-track friction-fixes:
 #   (1) STEP 7 Colab: HINT-ONLY reframe — Nikhil drills notebook mein TOP-TO-BOTTOM khud likhta+run karta
 #       (ek cell per drill); Gemini-tab sirf HINT deta (atke to), solution nahi. Purana "packet BLOCK-A paste
@@ -24,6 +69,11 @@
 #       → "predict-output (drill-4)".)
 #   (3) STEP 2 Progress Tracker: fresh Claude-thread ISKO PEHLE padhta (Drive fileId = states/watch-list
 #       PRIMARY source) → paste RECOMMENDED. WRITE manual (Claude DRAFT, Nikhil paste — append nahi kar sakta).
+#       *(corrected 10 Aug 2026: yeh 06 Jul ka RECORD hai aur us din SACH tha — record chhoda hai — par aaj
+#        yeh behaviour LIVE NAHI hai. Fresh thread ka primary state-read ab `.claude/settings.json` ka
+#        SessionStart hook `node scripts/learnstate.mjs brief` hai, jo `dressing-room/state/*` se padhta;
+#        koi thread us Drive doc ko nahi kholta. Poora saboot + kya-kahan ab rakha hai: STEP 2 ke neeche wala
+#        ⛔ block. Verify: `grep -n "learnstate.mjs brief" .claude/settings.json`.)*
 #   Companion: GEMINI_LOOP.md v2.2 + OS v3.12. Steps ka ORDER + model-table + seam-guards = UNCHANGED.
 # v2.1 changes: SELF-DRIVING + RELAY har prompt mein baked (Nikhil ADHD-PI — usse kabhi yaad nahi rahega
 # kab kya bolna; ab GEMINI session chalata hai, Nikhil sirf PASTE → SOLVE → BOLO → COPY-BACK):
@@ -47,6 +97,29 @@
 #   REVIEW+REP-FORGE+weak-spot; Colab ladder-aware; NotebookLM Studio god-tier set.
 > ⏱️ ~30–40 min · 9 steps · order mein · har step ka ✅ finish-line · sab ek baithak.
 
+> **STATUS — 10 Aug 2026 (correction pass, uske order pe: "a lot of .md files content is old and stale").**
+> Yeh file **11 Jul 2026 ke baad ek baar bhi edit nahi hui** — `git log -1 --format="%ci %h %s" --
+> learning-layer/GEMINI_RIG_SETUP.md` → `2026-07-11 … bf13cfa chore: migrate learning-layer canon into repo`.
+> Us ek mahine mein repo ke andar ek poora skill-layer khada ho gaya jo yahan likhi hui paste-mehnat ka bada
+> hissa machine pe daal deta hai. Jo BADLA hai woh har step pe INLINE annotate kar diya gaya. Do cheezein
+> pehle saaf kar lo:
+> - **STEP 3/4/8/9 ke andar ka Google-UI kaam (Saved Info · toggles · NotebookLM Studio · Docs) is repo se
+>   verify ho hi nahi sakta — NOT VERIFIED 10 Aug 2026.** Woh claim hain, sach nahi; app khol ke hi pata
+>   chalega. Jo claims REPO ke baare mein the, unhi ko is pass ne check kiya.
+> - **"CANONICAL PROMPT-HOME" wala daawa HOLD karta hai** — GEMINI_LOOP.md aaj bhi yahan point karta hai, apne
+>   §7 mein ("full = GEMINI_RIG_SETUP.md") aur §8 mein ("MASTER BRIEF — canonical text ab GEMINI_RIG_SETUP.md
+>   STEP 1"). Verify: `grep -n "GEMINI_RIG_SETUP.md" learning-layer/GEMINI_LOOP.md`. Paste-source aaj bhi
+>   YEH file hai.
+>
+> Uske aage jo sabse zaroori hai:
+> - **Saare PASTE-PROMPT blocks (STEP 1/3/5/6/7/8) ko is repair pass ne ek BYTE bhi nahi chhua.** File khud
+>   kehti hai woh byte-frozen hain kyunki woh Gems/Colab/NotebookLM mein load hote hain. Corrections HAMESHA
+>   code-fence ke BAHAR hain.
+> - **Surfaces LIVE ginno, is doc se kabhi nahi:** `ls .claude/skills/` (aaj is lane ke: `fire` · `harvest` ·
+>   `gem-sync` · `gist-patch` · `paste-session` · `learn` · `scrimmage` — count mat likho, list karo).
+> - **`.md` mein likha koi count/status/line-number sach nahi maano** — is repo mein woh dinon mein sad jaata.
+>   Har jagah command di gayi hai; command chalao.
+
 ---
 
 ## 0. READ FIRST (3 line — poore rig ka DNA)
@@ -58,10 +131,36 @@ first-code (tera generation effect). Gemini deta: Python VOLUME drills, *tere* c
 recall-quiz, research. (5 CORE curated drills Claude ke — quality-spine; BULK volume Gemini ka. Teacher
 problems deta, student solutions generate karta.)
 
+*(corrected 10 Aug 2026 — SEAM ab bhi ZINDA hai par uske DO naye kinare hain, dono code se verified:*
+*(1) **Seam ab machine-enforced hai, sirf discipline pe nahi.** `/harvest` skill poori Gem-sitting Chrome se*
+*uthata aur `scripts/harvest.mjs` har turn ko thalamus door se bus pe daalta — USKE turns `gemini-study`,*
+*Gem ke turns `gemini-study-teaching`. Provenance file mein `gemini-study` `self_sources` mein hai aur*
+*`gemini-study-teaching` `self_deny_sources` mein — yaani Gem ke jawab uski aawaz ki tarah kabhi score nahi*
+*hote. Evidence: `grep -n "gemini-study" dressing-room/state/thalamus_config.json scripts/harvest.mjs`.*
+*(2) **Ek asli EXCEPTION ban chuka hai jo yahan likha hi nahi:** Dugout ka GAFFER Gemini Live API pe chalta*
+*hai (`grep -n "DEFAULT_MODEL" scripts/dugout.mjs` → `gemini-3.1-flash-live-preview`) aur uske apne 10 Aug*
+*2026 ruling pe wahan woh **padha bhi sakta, revise bhi kara sakta, grade bhi kar sakta** hai — THE_GAFFER.md*
+*§7 ka teacher-ban LIFT ho gaya. Code side live dekho, kisi doc se nahi: `grep -n "teaching-grade lecture"*
+*scripts/dugout.mjs` · `grep -n "judge correct/incorrect" scripts/dugout.mjs`. **Yeh exception SIRF Dugout-***
+***Gaffer ka hai** — is file ke Gemini-APP surfaces (Coach · Examiner · Colab · NotebookLM) pe seam jyon ka*
+*tyon hai, aur THE MANAGER ka morning-sheet wala same ban abhi bhi khada hai (us pe uska faisla aaya hi nahi).)*
+
 **SELF-DRIVING DNA (v2.1):** har surface SESSION khud chalata hai — har reply exactly EK next-action pe
 end · choices numbered · options/phrases Gemini khud surface karta (teri memory pe kabhi depend nahi) ·
 paste se intent infer · session-end **📋 CLAUDE-HANDOFF** jo tu Claude ko VERBATIM wapas paste karta
 (tu = courier, narrate kabhi nahi). Tera din: **PASTE → SOLVE → BOLO → COPY-BACK.**
+
+*(corrected 10 Aug 2026 — **"tu = courier" ab poora sach nahi.** Jab yeh likha gaya tha tab har paste tera*
+*kaam tha; ab Chrome-rail skills woh ungli-mehnat machine pe le lete hain, aur teri jagah sirf WORD ya CLICK*
+*bachta hai. Jo LIVE hai (list live nikaalo — `ls .claude/skills/`):*
+*· `/harvest` — poori Gem-sitting Chrome se khud padhta, turns parse karta, `harvest.mjs` bus pe daalta.*
+*  Copy-paste ZERO. (`.claude/skills/harvest/SKILL.md`)*
+*· `/gem-sync` — raat ka cartridge khud Gem ki Instructions box mein paste + Save karta.*
+*· `/fire` — staged mission Gemini Deep Research mein paste karta, **Start ka click tera** (his ruling).*
+*· `/gist-patch` — closed Re-Jirah round ka patch gist edit-page pe pre-fill, **Save ka click tera**.*
+*· `/paste-session` — agar tu phir bhi JSON paste kare to `capture.mjs paste` chalata.*
+*Matlab handoff ko HAATH se wapas paste karna ab FALLBACK hai, default nahi. Jo 4 verbs abhi bhi TERE hain*
+*aur automate NAHI honge: **SOLVE · BOLO · gut-word · uska apna faisla-click** — baaki sab machine pe.)*
 
 **AI ka self-report bharosemand NAHI:** Gemini khud ko "1.5 Pro / 2024" bole → ignore. Facts app/docs se verify.
 
@@ -81,6 +180,19 @@ ACCOUNT TOGGLES        →  3 decisions (privacy + sync)
 ```
 Build tool ≠ isme: asli **M1 build = Claude Code** (OS: BUILD = Claude). Colab sirf learning-reps.
 
+*(corrected 10 Aug 2026 — is naksha ki DO lines ab live code se nahi milti; naksha khud chhoda hai, sirf sach*
+*neeche likha hai:*
+*· **"Progress Tracker … fresh-thread PRIMARY state"** — ab NAHI. Fresh Claude-thread ka PRIMARY state-read*
+*  ek HOOK hai, Drive doc nahi: `.claude/settings.json` ka `SessionStart` `node scripts/learnstate.mjs brief`*
+*  chalata hai (aur `PreCompact` bhi), jo `dressing-room/state/*` se padhta — kickoff line, watch-list,*
+*  re-jirah due, outward floor, hippocampus cartridge, pending identity-facts. Khud chala ke dekh:*
+*  `node scripts/learnstate.mjs brief`. Poora detail STEP 2 ke neeche.*
+*· **"2 GEMS"** — teesra Gem-shaped lane ab machine ka hai (nightly cartridge → `/gem-sync` → **THE EXAMINER*
+*  ⚪🔴**), aur missions ke liye Gemini **Deep Research** ek chautha surface hai (`/fire`). Yeh naksha unko*
+*  nahi ginta. Surfaces live ginno: `ls .claude/skills/` + `node scripts/scout.mjs mission list`.*
+*Baaki spine — Master Brief · Coach · Colab finops_lab · NotebookLM "Python" · toggles · Rosetta — as-written*
+*sahi hai, aur `finops_lab` naam abhi bhi live packet-grammar mein hai (`grep -rn "finops_lab" .claude/skills/`).)*
+
 ---
 
 ## 2. CURRENT-REALITY CHEAT SHEET (verified — ispe act kar)
@@ -91,6 +203,22 @@ Build tool ≠ isme: asli **M1 build = Claude Code** (OS: BUILD = Claude). Colab
 - **Canvas EXISTS ✓** · Guided Learning = desktop "Guided Learning" chip / mobile "Learn" chip.
 - **NotebookLM source-limit:** Pro-tier bahut zyada; 3-4 sources pe kahin-nahin pohanchega.
 - **Gemini Live = blind:** Gems/NotebookLM/Docs nahi dekhta. Sirf Saved Info (Step 3) → pure verbal warm-up.
+
+*(10 Aug 2026 pass — is poore section pe do alag verdict:*
+*· **"Gemini 3.1 Pro = flagship" HOLD karta** aur repo ke apne wire-names se milta hai: `scripts/fuelboard.mjs`*
+*  ka T5 "Scout" seat `gemini-3.1-pro-preview` chalata, `hippocampus.mjs` ka fallback ladder bhi wahi naam*
+*  leta (`grep -n "gemini-3.1-pro-preview" scripts/*.mjs`).*
+*· **"App default = 3 Flash / 3.5 Flash" — NOT VERIFIED 10 Aug 2026.** Yeh Gemini APP ke UI ka naam hai, jo*
+*  is repo se check ho hi nahi sakta, aur repo mein woh naam kahin hai bhi nahi. Jo naam ASAL wire pe chalte*
+*  hain woh alag hain: `gemini-flash-latest` · `gemini-2.5-flash-native-audio-latest` ·*
+*  `gemini-3.1-flash-live-preview` · `gemini-flash-lite-latest` (thalamus). Aur `scripts/hippocampus.mjs`*
+*  apne comment mein khud chetavani deta hai ki **bare `gemini-3.1-flash` wire pe hai hi nahi** —*
+*  `grep -n "is NOT on the wire" scripts/hippocampus.mjs`. Jab tak app khud kholke na dekhe, in dropdown-naamon*
+*  ko claim maano, sach nahi.*
+*· **"Gemini Live = blind" — app ke liye ab bhi sach, par ab ek ALAG Live lane hai** jo blind NAHI hai:*
+*  `scripts/dugout.mjs` Gemini Live API (v1beta WS, `gemini-3.1-flash-live-preview`) pe THE GAFFER chalata*
+*  hai jo repo-state + uske locked capsules verbatim padh sakta hai. Woh is rig ka hissa nahi hai — usse*
+*  is line ke saath mat mila dena.)*
 
 ---
 
@@ -173,6 +301,30 @@ Claude in tools se append NAHI kar sakta. Log STATES + WATCH-LIST carry karta �
 mein yahi id Master Brief ka tha — mismatch ho to Progress Tracker ka SAHI fileId yahan daalo (warna thread
 galat doc read karega).
 **✅ Done when:** Doc bana, naam sahi, fileId verify.
+
+> **⛔ corrected 10 Aug 2026 — is STEP ka heading-claim ab GALAT hai, aur yahi woh line hai jo kisi ko galat
+> kaam karwa deti.** "fresh-thread PRIMARY state source" **ab yeh Doc nahi hai.**
+> - **Asli primary read ek HOOK hai.** `.claude/settings.json` ka `SessionStart` block chaar organ chalata hai
+>   aur unmein doosra hai `node scripts/learnstate.mjs brief` (`PreCompact` bhi wahi dobara chhaapta hai).
+>   Verify: `grep -n "learnstate.mjs brief" .claude/settings.json`.
+> - **Woh brief kya deta hai** (khud chala ke dekh — read-only, hook-safe: `node scripts/learnstate.mjs brief`):
+>   aaj ka LEARNING NOW + mode + pehla kaam · LAST SESSION + open loop · **WATCH-LIST** · NEXT UP ·
+>   DAILY EXAMINER · RE-JIRAH OVERDUE · OUTWARD missions + floor · hippocampus ka durable-memory cartridge ·
+>   HOW-TO-TEACH card · pending identity-facts. Yaani jo-jo cheez yeh Doc "PRIMARY source" hone ka daawa karta
+>   hai, woh sab ab state-files se aati hai. Brief ka budget/assembly `scripts/context_manifest.mjs` mein hai.
+> - **Fluency-states ka ghar ab file hai, Doc nahi:** Python track ke liye
+>   `dressing-room/state/python_state.json`, jiska **SOLE writer `scripts/python_state.mjs`** hai (uska header
+>   line 5). Live padho: `node scripts/python_state.mjs status`. Watch-list bhi wahin
+>   (`python_state.json.watch_list`) — `watch` / `unwatch` verbs se, **kabhi haath se edit nahi**.
+> - **`ledger-keeper` wala pointer dead hai** — is repo mein woh naam kisi organ ka nahi (upar header ka
+>   correction dekho; `grep -rn "ledger-keeper" scripts/` sirf python_state.mjs ke comment deta hai).
+> - **fileId aur ⚠️ VERIFY note: NOT VERIFIED 10 Aug 2026.** Repo se yeh confirm ho hi nahi sakta ki
+>   `1CNMRxOLp5kfOPW255p4Jwm6xc5b0S4QmPknJXuhKehM` Progress Tracker hai ya Master Brief — woh id sirf prose
+>   mein zinda hai, kisi script mein nahi (`git grep -n "1CNMRxOLp5kfOPW255p4Jwm6xc5b0S4QmPknJXuhKehM"` → sirf
+>   `.md` files: yeh file, GEMINI_LOOP, OS_CHANGELOG, PROJECT_OS). 06 Jul ka shak aaj bhi khula shak hai.
+> **Doc ko rakhna hai ya nahi — yeh USKA faisla hai, machine ka nahi.** Agar cross-AI ke liye woh chahiye to
+> STEP 2 waise hi chalao; par **koi bhi thread ab isse state nahi padhta**, aur ise "PRIMARY" maan kar kaam
+> karna matlab stale state pe kaam karna.
 
 ---
 
@@ -324,6 +476,27 @@ My interview drill-sergeant — rapid-fire Python + FinOps interrogation with a 
 ```
 **✅ Done when:** Examiner save, Master Brief connected. (Use week-3 se.)
 
+> **⚠️ corrected 10 Aug 2026 — is STEP ke paas ab ek DOOSRA examiner-lane khada hai. Paste karne se pehle padh.**
+> Upar wala prompt **STATIC** hai: ek baar paste, hamesha wahi. Uske alawa ab ek **MACHINE-generated cartridge**
+> bhi hai jo **ROZ RAAT badalta hai** — `scripts/nightshift.mjs` use likhta hai
+> (`grep -n "gem_cartridge" scripts/nightshift.mjs` → `dressing-room/state/brain_out/nightshift/gem_cartridge.md`)
+> aur `/gem-sync` skill use **`THE EXAMINER ⚪🔴`** naam ke Gem ki Instructions box mein paste + Save karta hai
+> (`.claude/skills/gem-sync/SKILL.md`).
+> - **Dono ek cheez NAHI hain.** Cartridge locked-concepts ke decay-probes, uska aaj ka standing, open threads,
+>   raat ka fresh probe-bank, pre-mapped fault-lines, **gut-word law** aur **reps-JSON contract** carry karta —
+>   yaani uska output `capture.mjs` mein seedha ja sakta hai. Upar wala static prompt sirf GAP-LIST handoff deta.
+>   Khud dekh lo: `head -6 dressing-room/state/brain_out/nightshift/gem_cartridge.md`.
+> - **Khatra, saaf lafzon mein:** agar `THE EXAMINER ⚪🔴` aur "Interview Examiner" ek hi Gem hain, to STEP 6 ka
+>   static prompt paste karte hi raat ka cartridge **mit jaata hai**. Do alag Gem rakhna ya ek — **woh faisla
+>   uska hai; machine ne kabhi nahi kiya, aur yeh file bhi nahi karegi.**
+> - **Cadence bhi badal chuki:** "week-3 se 1×/week" sirf is static warm-up Gem pe laagu hai.
+>   `scripts/physio.mjs` `gem_sync_stamp.json` dekh ke **>=7 din** pe `gem_sync_due` bleed karta hai
+>   (`grep -n "gemSyncDue" scripts/physio.mjs`) — woh reminder khud aata hai, yaad rakhna uska kaam nahi.
+>   Aur kickoff brief roz ek "DAILY EXAMINER" line chhaap sakta hai
+>   (`grep -n "DAILY EXAMINER" scripts/learnstate.mjs`) — woh is Gem ki baat nahi kar raha.
+> - **Graded mock is Gem pe kabhi nahi:** woh `/scrimmage` skill hai (`.claude/skills/scrimmage/SKILL.md`),
+>   `scout.mjs` se staged, `dossier_weights.json` pe graded. Yeh Gem warm-up hi rahega.
+
 ---
 
 ### STEP 7 — COLAB "finops_lab" (coding dojo · HINT-ONLY v2.2)
@@ -383,6 +556,14 @@ How to work with my brain (ADHD-PI, visual):
 Batch (Flashcards/Audio/Video/MindMap) ka due-flag = CLAUDE (2-3×/wk) — tu track nahi karta.
 **✅ Done when:** Python notebook + 3-4 sources + persona-note pasted + ek mind map.
 
+*(checked 10 Aug 2026 — source-list ka repo-wala hissa **HOLD karta**, ek addition ke saath:*
+*`learning-layer/PYTHON_SYLLABUS.md` ka §2 sach mein `### T0 — Python Core, JS-bridged (~12h)` rakhta hai,*
+*aur uski §4 resource-table Dave Ebbelaar ki "Python for AI & Agents" playlist ko ✅ confirmed mark karti hai*
+*(`grep -n "Dave Ebbelaar" learning-layer/PYTHON_SYLLABUS.md`). PAR 01 Aug 2026 ko syllabus mein ek naya tier*
+*ADD hua jo yeh line nahi jaanti: **T0.5 — Classes/OOP, T1 se PEHLE, T1 ka HARD prerequisite***
+*(`grep -n "T0.5" learning-layer/PYTHON_SYLLABUS.md`). Wahi playlist, ch 61-66. Agar sources T0 pe hi rok*
+*diye to Pydantic pe pohanchne se pehle woh block khaali reh jaayega. Tier-list live padho, is doc se nahi.)*
+
 ---
 
 ### STEP 9 — ROSETTA STONE Doc (generation-effect on notes)
@@ -406,6 +587,15 @@ NotebookLM "Python" mein re-sync.
 
 **Compute rule:** poora codebase paste mat kar — relevant chunk. Deep Research allowance jaldi khaata; limit → Flash-Lite.
 
+*(corrected 10 Aug 2026 — **Deep Research ab "kabhi-kabhi resource-verify" nahi raha; woh OUTWARD LOOP ka*
+*apna lane ban chuka hai.** `scripts/scout.mjs` ek MISSIONS DESK chalata hai (uske OUTPUT header mein:*
+*"dressing-room/state/missions.json (sole writer — THE MISSIONS DESK, 8 Aug 2026)") aur mission prompts*
+*`dressing-room/missions/` mein files ki tarah baithe rehte hain. `/fire` skill unhe Gemini **Deep Research***
+*mein khud paste karta hai — aur **Start ka click uska rehta hai** (uski sealed ruling: machine mission*
+*likhti hai, FIRE woh karta hai). Return `scout.mjs mission ingest` se aata hai.*
+*Live status kabhi is table se mat padho: `node scripts/scout.mjs mission list`. Aaj-tak ke model-naam bhi*
+*upar §2 ke correction ke saath padho — is table ka "3 Flash / 3.5 Flash" app-UI ka naam hai, wire ka nahi.)*
+
 ---
 
 ## 5. DAILY LOOP (rig LIVE hone ke baad) — full = GEMINI_LOOP.md §5 + §11-13
@@ -418,6 +608,20 @@ NotebookLM "Python" mein re-sync.
 6. **2-3×/wk:** NotebookLM reinforce-BATCH (Claude flag karega). **1×/wk (week-3 se):** Examiner warm-up → GAP-LIST → Claude. **(Asli graded mock = OUTWORK SCRIMMAGE, Claude-side, DOSSIER-rubric.)**
 
 Tera din, poora: **PASTE → SOLVE → BOLO → COPY-BACK.**
+
+*(corrected 10 Aug 2026 — **loop ke 6 beats sahi hain, par unka DRIVER ab chat nahi, skills hain.** Aaj yeh*
+*loop poora Claude Code ke andar surfaces se chalta hai — list live nikaalo `ls .claude/skills/`, aur is doc*
+*se kabhi mat gino:*
+*· **din khulta** `/matchday` se (kickoff · sheet · drills · wall), chat mein "kahan tha main" se nahi.*
+*· **beat 1-2 (samajh + packet)** `/forge` (concept naam liya) ya `/learn` (naam nahi liya — state padh ke*
+*  route karta) se; CLOSE-PACKET ki grammar ab `.claude/skills/learn/SKILL.md` §2 mein LIVE baithi hai*
+*  (`grep -n "BLOCK-A → COLAB finops_lab" .claude/skills/learn/SKILL.md`), sirf GEMINI_LOOP §11.2 prose mein nahi.*
+*· **beat 5 (HANDOFF → Claude paste-back)** ab HAATH ka kaam nahi: `/harvest` poori Gem-sitting Chrome se*
+*  padh ke bus pe daal deta hai; JSON paste karna ho to `/paste-session` → `capture.mjs paste`.*
+*· **din band hota** `/full-time` se — HIT/MISS, ek signal, KAL-line, phir shaam ke organ.*
+*· **outward floor** ab ek ginna hua number hai (uski ruling: ≥2×/week) aur kickoff use khud chhaapta —*
+*  `node scripts/learnstate.mjs brief` mein "OUTWARD FLOOR" line.*
+*4 verbs mein se **PASTE ka bada hissa mar chuka hai**; SOLVE · BOLO · aur uska faisla-click zinda hain.)*
 
 ---
 
@@ -432,6 +636,16 @@ Tera din, poora: **PASTE → SOLVE → BOLO → COPY-BACK.**
 - ❌ **NotebookLM pe naya seekhna** — woh recall/reinforce only; seekhna Claude + Bolo.
 - ❌ **Coach ke random naye chats** — EK pinned chat roz (weak-spot memory wahin); majboori mein naya =
   packet watch-list cover karega.
+
+*(added 10 Aug 2026 — do naye seam-guard jo tab exist nahi karte the, dono CODE mein enforce hote hain:*
+*· ❌ **Mission ki report se SYLLABUS mat kholna.** `/fire` Deep Research se jo aata hai woh sirf EMPHASIS*
+*  tune karta — mission prompt khud yeh guard carry karta aur uska selftest use check karta:*
+*  `grep -n "tune EMPHASIS, never reopen the SYLLABUS" scripts/scout.mjs`. Canon sirf USKE shabd pe badalta*
+*  (`mission audit-close --note "<his word>"`), report padh ke kabhi nahi.*
+*· ❌ **Gem ke jawab ko apni aawaz mat banane dena.** `/harvest` ye khud sambhalta: uske turns `gemini-study`*
+*  (self), Gem ke turns `gemini-study-teaching` (deny-list) —*
+*  `grep -n "gemini-study" dressing-room/state/thalamus_config.json`. Handoff ko haath se kahin aur paste*
+*  karke yeh boundary mat todna.)*
 
 ---
 

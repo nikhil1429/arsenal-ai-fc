@@ -179,6 +179,24 @@ async function nightPass(hostId, deps = {}) {
 // ---------------------------------------------------------------------------
 async function pushOnlyPass(hostId, deps = {}) {
   const run = (c, a) => (deps.sh || sh)(c, a, deps);
+  // ── THE LANE READ-BACK (10 Aug 2026, wire-audit) ──────────────────────────
+  // WHY IT LIVES HERE: this lane's push is what FIRES the away-day CI workflow
+  // (.github/workflows/awayday.yml — push to main + a 03:00 IST cron), and until
+  // today nothing on this side of the wire ever read the result back. awayday.mjs
+  // wrote zero files and no organ knew whether the cloud lane was green or red;
+  // a red reached him only as a Gmail subject line, which the anchor law forbids.
+  // The organ that causes the run is the right organ to read its verdict.
+  // FIRST, and UNCONDITIONAL: the verdict now on GitHub belongs to LAST night's
+  // push, so it must be read even on a night with nothing new to push, and read
+  // before the staging gate so awayday.json rides tonight's push out to the
+  // remote (where the cloud sentinel's mini-brief can see it). This lane runs
+  // 03:45 and the cloud cron lands 03:00 — the verdict read here is ~45 minutes
+  // old, not a week.
+  // NEVER FATAL: a laptop with no internet at 03:45 must still push in the
+  // morning, so a failed read is reported and the pass carries on. awayday.mjs's
+  // own check keeps the last known verdict rather than blanking it — silence
+  // must never look green.
+  const back = run("node", [join(__dirname, "awayday.mjs"), "check"]);
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
   if (!add.ok) return { ok: true, pushed: false, why: `staging refused: ${add.out}` };
   const diff = run("git", ["diff", "--cached", "--quiet"]);
@@ -294,6 +312,28 @@ async function selftest() {
     });
     assert("D3: a rejected push is reported honestly and NEVER forced (tomorrow retries)",
       r9.pushed === false && /retries/.test(r9.why) && /nothing forced/.test(r9.why));
+
+    // THE LANE READ-BACK (10 Aug 2026, wire-audit) — see the header inside
+    // pushOnlyPass. awayday.mjs was a producer with no consumer for six weeks:
+    // this lane's push fires the cloud CI workflow and nothing on this side ever
+    // read the verdict back, so a red lane (it was red on HEAD when this was
+    // written) reached him only by email. These two fail the moment the wire is
+    // cut again — c6 is the pushing pass, r8/c8 the pass with nothing to push.
+    assert("THE LANE READ-BACK: the push pass reads the away-day CI verdict back, and does it BEFORE staging so tonight's verdict rides tonight's push",
+      c6.some(x => x.includes("awayday.mjs") && x.includes("check"))
+      && c6.findIndex(x => x.includes("awayday.mjs")) < c6.findIndex(x => x.startsWith("git add -u --")));
+    const c8 = [];
+    await pushOnlyPass("laptop", {
+      sh: (c, a) => { c8.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && !a.includes("--name-only")) return { ok: true, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("the read-back is UNCONDITIONAL — a night with nothing to push still reads yesterday's cloud verdict (that is exactly the night a red goes unseen)",
+      c8.some(x => x.includes("awayday.mjs") && x.includes("check")));
+    const c9 = [];
+    const rBack = await pushOnlyPass("laptop", {
+      sh: (c, a) => { c9.push(c + " " + a.join(" ")); if (c === "node") return { ok: false, out: "ENOTFOUND api.github.com" }; if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/brain_config.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+    });
+    assert("a failed read-back is NEVER fatal — an offline 03:45 still pushes in the morning",
+      rBack.pushed === true && c9.some(x => x.includes("push")));
   }
 
   const passed = checks.every(c => c[1]);
