@@ -285,3 +285,20 @@ dressing-room/state/nikhil_model_slip.jsonl
 # context_state. The repo is PUBLIC; the counter's numbers are read live via
 # `node scripts/distiller.mjs latency`, never from the remote.
 dressing-room/state/distiller_latency.jsonl
+
+# KAAM 0 (10 Aug 2026): THE CARD DECK. captains_call.json was tracked, was not
+# ignored, and had reached the PUBLIC remote (push receipt in groundsman.log,
+# 10-08-2026 03:45). It carries every card LINE, and one card (c19) contains a
+# >=20-character verbatim window of a hippocampus memory fact's own text — that
+# is the conversation-text class, which is already ignored everywhere else in
+# this file. Untracked from here; the file stays on the laptop and its single
+# writer (captains_call.mjs) is unchanged.
+# HIS RULINGS, asked and answered 10 Aug 2026:
+#   (a) history is NOT rewritten — those lines are already public and a rewrite
+#       is not a full erase (forks, GitHub's dangling-commit cache, clones), so
+#       this stops the bleed and does nothing else;
+#   (b) intake_log.json and readiness.json STAY tracked — his 5 Aug D10
+#       public-data ruling was re-put to him BY CLASS (medication timing, drug
+#       names as field keys) and re-confirmed: "dono rehne do".
+# Reversal, one command: git add -f dressing-room/state/captains_call.json
+dressing-room/state/captains_call.json

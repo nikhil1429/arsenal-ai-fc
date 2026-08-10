@@ -85,7 +85,9 @@
 // (`autohit` / `checked`), exactly as the owners-only law requires.
 // ---------------------------------------------------------------------------
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, cpSync, rmSync, readdirSync, renameSync } from "node:fs";
+// cpSync dropped 10 Aug 2026 with the E2E hermeticity scar below — the seed is
+// now written, not copied, so the one scope-deciding field can be normalised.
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, rmSync, readdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -1350,13 +1352,33 @@ function selftest() {
     // NO_SPAWN env keeps the child's hands off the live teaching_contract.json.
     const tmp = mkdtempSync(join(tmpdir(), "teach-audit-"));
     try {
+      // HERMETICITY SCAR (10 Aug 2026, KAAM-0 pass). This block used to `cpSync`
+      // the live forge_session.json in VERBATIM, which coupled a selftest to his
+      // study state: THE METHOD only applies to an OPEN session, so the moment he
+      // closed `hallucinations` at 06:40:49 IST the auditor correctly answered "no
+      // open forge session", wrote no row, and three asserts went red on a suite
+      // that had been 32/32 green at 02:07 the same night. The organ was never
+      // broken — the test was reading his day. Proven both ways before this edit:
+      // live bytes AS-IS ⇒ audited:false / 0 drifts / no jsonl; the SAME bytes with
+      // `closed_at` removed ⇒ status 0 / 1 row / 3 drifts.
+      // The live bytes are still the seed — that is deliberate, it is what makes
+      // this an end-to-end test of the REAL shape rather than of a hand-written
+      // idea of it. Only the ONE field that decides scope is normalised, and the
+      // seeded session is then asserted OPEN, so a future shape change fails as a
+      // named red line instead of as a confusing ENOENT four asserts later.
+      // (The reader-vs-reality pinning lives in the LIVE SHAPE block above; it
+      // reads the live file untouched and must keep doing so.)
       const livePath = join(__dirname, "..", "dressing-room", "state", "forge_session.json");
-      if (existsSync(livePath)) cpSync(livePath, join(tmp, "forge_session.json"));
-      else writeFileSync(join(tmp, "forge_session.json"), JSON.stringify({
+      const seed = existsSync(livePath) ? readJson(livePath) : null;
+      const openSeed = seed && typeof seed === "object" && !Array.isArray(seed) && seed.concept ? { ...seed } : {
         concept: "fixture", started_at: "2026-08-06T12:00:00Z", updated_at: "2026-08-06T12:00:00Z",
         step: 4, steps_done: [0, 1, 2, 3, 4], axes_done: [], axes_deferred: [], axes_marked_at: {},
         question_moments: { pehle_guess: 0, widget_gate: 0, check_q: 0, jirah: 0 }, check_q_this_pass: 0,
-      }, null, 2));
+      };
+      delete openSeed.closed_at;
+      writeFileSync(join(tmp, "forge_session.json"), JSON.stringify(openSeed, null, 2));
+      assert("END-TO-END — the seeded session is OPEN before the chain is driven (a closed seed makes the next three asserts meaningless, not failing)",
+        openSeed.closed_at === undefined && typeof openSeed.concept === "string" && Number.isInteger(openSeed.step));
       const env = { ...process.env, ARSENAL_AUDIT_STATE_DIR: tmp, ARSENAL_AUDIT_NO_SPAWN: "1" };
       delete env.ARSENAL_ORGAN;
       const payload = JSON.stringify({
@@ -1381,7 +1403,14 @@ function selftest() {
       const s2 = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "hook"],
         { input: JSON.stringify({ hook_event_name: "Stop", session_id: "selftest-e2e", last_assistant_message: "Aage badhte hain. Theek hai na?" }), env, timeout: 15000 });
       const lastJ2 = readJson(join(tmp, "teaching_audit_last.json"));
-      const rows2 = readFileSync(join(tmp, "teaching_audit.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+      // Same 10 Aug scar, second half: this was a BARE readFileSync, so the first
+      // time the chain legitimately wrote no row the whole selftest died on an
+      // ENOENT stack — one red assert became a crashed process and every later
+      // check in this file was lost, which is how a one-line diagnosis arrived
+      // looking like a suite-wide collapse. Read defensively; let the assert be
+      // the thing that reports.
+      const rows2 = existsSync(join(tmp, "teaching_audit.jsonl"))
+        ? readFileSync(join(tmp, "teaching_audit.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
       assert("END-TO-END — the prompt recorded at UserPromptSubmit is consumed by ITS OWN session's Stop with user_text_source 'fresh' (§5.3's wire, live)",
         p1.status === 0 && s2.status === 0 && rows2.length === 2 && rows2[1].user_text_source === "fresh"
         && lastJ2 && lastJ2.prompt && typeof lastJ2.prompt.consumed_at === "string");

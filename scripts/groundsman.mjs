@@ -265,9 +265,14 @@ async function selftest() {
     assert("can't READ the index back → fail closed, no push", r5.pushed === false && r5.refused === true && !calls5.some(c => c.includes("push")));
 
     // LADDER D3 — the push-only lane (laptop): same two locks, ZERO tick, ZERO pull
+    // KAAM 0 (10 Aug 2026): this fixture named captains_call.json until that pass
+    // gitignored it. A path that can never legitimately be staged is a misleading
+    // example of a PUBLISHABLE one — the assert would still pass while teaching a
+    // dead fact, which is the exact rot the claims register exists for. brain_config
+    // .json is tracked, on the list, and exercises the identical prefix rule.
     const c6 = [];
     const r6 = await pushOnlyPass("laptop", {
-      sh: (c, a) => { c6.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/captains_call.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+      sh: (c, a) => { c6.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/brain_config.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
     });
     assert("D3: push-only stages→verifies→commits→pushes, and NEVER ticks or pulls (the daemon owns the beat)",
       r6.ok && r6.pushed === true
