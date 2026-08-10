@@ -316,7 +316,25 @@ function assembleWallData(bus, now = new Date()) {
     doubts_retired: tape_room ? safe(tape_room.doubts_retired, 0) : 0,
     tape_queue: tape_room && Array.isArray(tape_room.queue) ? tape_room.queue.length : 0,
     wall_week_minutes,
-    body: { verdict },                                    // verdict ONLY — never raw biometrics
+    // KAAM 1 (10 Aug 2026) — THE BODY PANEL NOW KNOWS HOW OLD IT IS.
+    // The renderer had no freshness gate of ANY kind, so on 10 Aug the wall was
+    // showing a verdict computed from the night of 4 Aug — 6 days and 126+ hours
+    // old — with nothing on screen to say so, while the Goalkeeper task sat
+    // Disabled and the ring data had not refreshed. The organism already knew:
+    // loop_vitals.json carries the bleed. The wall was the last surface that
+    // didn't.
+    // verdict ONLY — never raw biometrics. The day and the age are PROVENANCE,
+    // not physiology: they say when the sensor last spoke, which is the opposite
+    // of a medical claim and is exactly what "a blind sensor reports blindness"
+    // asks for.
+    // NO THRESHOLD IS INTRODUCED. `age_days >= 1` is not a tuned number — it is
+    // the question "is this reading for today?", which has a yes/no answer. His
+    // no-guessed-numbers law is untouched; nothing here waits on 30-45-60 days.
+    body: (() => {
+      const day = readiness && readiness.day && /^\d{4}-\d{2}-\d{2}$/.test(String(readiness.day)) ? String(readiness.day) : null;
+      const age_days = day ? Math.round((Date.parse(today + "T00:00:00Z") - Date.parse(day + "T00:00:00Z")) / 86400000) : null;
+      return { verdict, day, age_days, present: !!(readiness && readiness.verdict) };
+    })(),
     bleeds: vitals && Array.isArray(vitals.bleeds) ? vitals.bleeds.map(b => b.kind) : [],
     brain: {
       calls_today: todayCalls.length,
@@ -404,9 +422,49 @@ const HYPE_RE = /10x|exponential|on steroids/i;
  *                        definition not invented)
  * @returns {{lines: string[]|null, rejected: boolean, reason?: string}}
  */
+// KAAM 1 (10 Aug 2026) — THE MODEL'S OWN FURNITURE IS NOT ONE OF HIS THREE LINES.
+// Measured over the 4 nights with evidence: on one of them the model opened with
+// its own dated title ("## 09 AUGUST 2026"), which (a) ate slot 1 of 3, so the
+// third real bullet was sliced away unread, and (b) carried "09", the ONLY token
+// in the whole file that failed the gate — so a title line killed three good
+// sentences. Dropping furniture BEFORE the slice fixes both at once, and it is
+// the cheap half: the other 3 of 4 deaths were a derived count and a quoted
+// session date, which only the allowed-set snapshot fixes. Ship both or the
+// panel is not back.
+// Conservative by construction: a heading must LOOK like a heading, and a title
+// line must carry no lowercase letter AND be short. A real insight is a Hinglish
+// sentence about his week — it has lowercase letters and it runs long — so the
+// filter cannot eat one. If it ever does, the panel loses a line rather than
+// showing furniture, and that is the right way round.
+// THE SHAPE WAS READ OFF THE ARTEFACT, NOT OFF THE AUDIT NOTE. The note called it
+// a "self-dated header" and the obvious guess is `## 09 AUGUST 2026`. The live
+// file for 10 Aug actually opens:
+//     **Wall Insights — 2026-08-09**
+// — a whole-line BOLD span, not a heading, and carrying lowercase letters, so a
+// heading-or-shouting filter sails straight past it. Built against the guess, this
+// filter would have passed its own tests and changed nothing on the wall. It was
+// caught by rendering the wall and reading the panel back, which is the only
+// reason this line is right.
+// (Note what that title also proves, in passing: the file NAMED 2026-08-10.md
+// says 2026-08-09 inside. That is the provenance defect above, caught live.)
+const MD_HEADING = /^#{1,6}\s/;
+const MD_RULE = /^([-*_=])\1{2,}$/;
+const TITLE_ONLY = /^[^a-z]+$/;
+// A whole line wrapped in one emphasis span is a title. A real insight is a
+// sentence about his week — it is never entirely bold, and it is never entirely
+// italic — so this cannot eat one.
+const WHOLE_LINE_EMPHASIS = /^(\*\*|__|\*|_)(?!\s)([\s\S]+?)(?<!\s)\1$/;
+const isFurniture = (l) => MD_HEADING.test(l) || MD_RULE.test(l)
+  || (TITLE_ONLY.test(l) && l.length <= 60)
+  || (WHOLE_LINE_EMPHASIS.test(l) && !/[.!?](\s|$)/.test(l.replace(/^(\*\*|__|\*|_)|(\*\*|__|\*|_)$/g, "")));
+// The model writes its three lines as markdown bullets. The bullet is furniture
+// too — just furniture that lives at the front of a real line rather than on a
+// line of its own — so it is stripped for display, never used to drop the line.
+const stripBullet = (l) => l.replace(/^\s*(?:[-*+•]|\d+[.)])\s+/, "");
+
 function readInsights(text, data, shown = "") {
   if (!text || !text.trim()) return { lines: null, rejected: false };
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean).slice(0, 3);
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean).filter(l => !isFurniture(l)).map(stripBullet).slice(0, 3);
   if (!lines.length) return { lines: null, rejected: false };
   const joined = lines.join(" ");
   const num = noNewNumbers(joined, data, shown);
@@ -534,10 +592,29 @@ function renderDerby(d) {
 function renderBody(d) {
   const col = d.verdict === "GREEN" ? C.green : d.verdict === "AMBER" ? C.yellow : C.red;
   const bleeds = d.bleeds.length ? `<div style="color:${C.yellow};font-size:12px;margin-top:6px">physio: ${esc(d.bleeds.join(", "))}</div>` : "";
+  // KAAM 1 — the freshness line. Three honest states, no fourth:
+  //   · today's reading      → say the day, quietly
+  //   · an older reading     → say the day AND the age, in the warning colour,
+  //                            and say plainly that it is not today's body
+  //   · no reading at all    → name the default AS a default (the GREEN fallback
+  //                            above is a policy, not a measurement, and the wall
+  //                            must never let a policy wear a sensor's clothes)
+  // The verdict is still SHOWN in every case. Hiding it would trade one silent
+  // lie for another, and "unmeasured is not zero" cuts both ways.
+  // DELIBERATELY NOT DONE HERE: the RED minimal-wall collapse still keys on the
+  // verdict alone, so a stale RED would keep collapsing the wall. Gating that on
+  // age is a BEHAVIOURAL change to a safety surface and it needs either his word
+  // or measured data — it is named here rather than slipped in.
+  const b = d.body || {};
+  const fresh = !b.present
+    ? `<div style="font-size:11px;color:${C.yellow};margin-top:6px">no reading on disk — this GREEN is the default, not a measurement.</div>`
+    : Number.isFinite(b.age_days) && b.age_days >= 1
+      ? `<div style="font-size:11px;color:${C.yellow};margin-top:6px">this reading is from ${esc(b.day)} — ${b.age_days} day(s) old. It is not today's body.</div>`
+      : b.day ? `<div style="font-size:11px;color:${C.dim};margin-top:6px">reading: ${esc(b.day)}</div>` : "";
   return panel("The body", `<div style="display:flex;align-items:center;gap:10px">
     <div style="width:16px;height:16px;border-radius:50%;background:${col}"></div>
     <div style="font-size:18px;color:${C.body}">${esc(d.verdict)}</div>
-    <div style="font-size:11px;color:${C.dim}">verdict only — the numbers stay with the Goalkeeper</div></div>${bleeds}`);
+    <div style="font-size:11px;color:${C.dim}">verdict only — the numbers stay with the Goalkeeper</div></div>${fresh}${bleeds}`);
 }
 
 function renderBrain(d) {
@@ -609,7 +686,12 @@ function renderMedia(d) {
   const label = (t) => `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${C.dim};margin-bottom:8px">${esc(t)}</div>`;
   const btn = (href, text, col) => `<a href="${esc(href)}" style="display:inline-block;padding:6px 12px;margin:4px 8px 0 0;border:1px solid ${col};border-radius:999px;color:${col};font-size:12px;text-decoration:none">${text}</a>`;
   const cards = [];
-  if (m.poster) cards.push(card(label("today's poster") + `<a href="poster.svg"><img src="poster.svg" alt="match poster" style="width:100%;border-radius:8px;display:block"></a>`, 2));
+  // KAAM 1 — "today's poster" was a caption that could not be wrong, because it
+  // asserted nothing checkable. It now states the artefact's own record, so the
+  // card and the page it opens can be compared by eye in one glance.
+  if (m.poster) cards.push(card(label(m.poster_prov ? "the poster" : "today's poster")
+    + `<a href="poster.svg"><img src="poster.svg" alt="match poster" style="width:100%;border-radius:8px;display:block"></a>`
+    + (m.poster_prov ? `<div style="font-size:10px;color:${C.dim};margin-top:6px">${esc(provLine(m.poster_prov))}</div>` : ""), 2));
   if (m.teamtalk_am) cards.push(card(label("🎙 morning team talk — 90s") + `<audio controls preload="none" style="width:100%;height:32px" src="media/teamtalk_${esc(d.date)}_am.mp3"></audio>`));
   if (m.teamtalk_pm) cards.push(card(label("🌙 evening team talk — 90s") + `<audio controls preload="none" style="width:100%;height:32px" src="media/teamtalk_${esc(d.date)}_pm.mp3"></audio>`));
   const shelf = cards.length
@@ -657,7 +739,7 @@ const KIT=${jsSafe(m.filmkit_text)};const VEO=${jsSafe(m.veo_text)};</script>`;
   // and on 2 Aug pointed at a 21 Jul artifact. The flag now rides on a
   // date-stamped twin (see geminiFlag / posterFlag) and the date is PRINTED, so an
   // undated link to an undated file can never be rendered again.
-  if (m.gemini_render) lanes += btn("wall_gemini.html", `🎨 the Gemini render · ${esc(m.gemini_render_date || d.date)}`, C.dim);
+  if (m.gemini_render) lanes += btn("wall_gemini.html", `🎨 the Gemini render · ${esc(m.gemini_prov ? m.gemini_prov.for_morning : (m.gemini_render_date || d.date))}`, C.dim);
   lanes += `<a href="filmkit_${esc(d.date)}.md" style="margin-left:6px;font-size:11px;color:${C.dim}">raw kit</a>`;
   lanes += `<div id="shipnote" style="margin-top:8px;font-size:11px;color:${C.dim}">nothing copied yet — the buttons above report success or failure here</div>`;
   return panel("Media — the club's channel", shelf + `<div style="margin-top:10px">${lanes}</div>`);
@@ -731,6 +813,47 @@ function geminiFlag(foldedToday, exists, dir, today) {
   return !!(foldedToday || exists(join(dir, `wall_gemini_${today}.html`)));
 }
 
+// KAAM 1 (10 Aug 2026) — PROVENANCE, and only where it is actually wrong.
+// The audit line was "every artefact is one day behind its own filename". That is
+// TRUE of the three MODEL-AUTHORED artefacts (poster.svg, wall_gemini*.html,
+// wall_insights/*.md) and FALSE of the deterministic ones — wall.html, filmkit_*
+// and wall_data.json all render the right day already. Two defensible conventions
+// were colliding: the FILENAME carries the service date (the morning the artefact
+// is FOR) while the model stamps its own GENERATION date inside the content. So
+// the caption read one date off the filename and the page showed another, and
+// there was no third thing either of them could be checked against.
+//
+// This is that third thing: a code-authored record of who made it, when, and for
+// which morning. Captions read THIS, never the filename.
+//
+// THE GUARD THAT MADE THIS THE SHAPE IT IS: the obvious alternative — "just tell
+// the painter which morning it is painting" — routes the date through the PROMPT,
+// and the prompt is the exact channel that tells the invented-number checker
+// which digits are legal (`shown`). Handing the model today's date would put its
+// digits in the allowed set of the one organ whose entire job is stopping
+// invented numbers, and it would go slack silently. So the model is never told
+// the date at all: provenance is written by CODE, after the fact, next to the
+// artefact. AI proposes, code validates — a date is not a proposal.
+//
+// WHAT THIS DOES NOT FIX, said out loud: the poster is stale in DATA, not only in
+// its date line — on 10 Aug it printed 86% / 6-of-7 days against a live 71% /
+// 5-of-7. Provenance makes the staleness VISIBLE and dateable. It does not make
+// the numbers current, and no label ever will.
+function artefactProvenance(madeBy, forMorning, now) {
+  return { made_by: madeBy, made_at: new Date(now).toISOString(), for_morning: forMorning };
+}
+function writeProvenance(writeFn, dir, base, madeBy, forMorning, now) {
+  const p = artefactProvenance(madeBy, forMorning, now);
+  writeFn(join(dir, `${base}.prov.json`), JSON.stringify({ artefact: base, ...p }, null, 2));
+  return p;
+}
+// The caption a human reads. Never the filename — that is the whole point.
+function provLine(prov) {
+  if (!prov || !prov.made_at) return "provenance unrecorded — this artefact predates the provenance line";
+  const when = String(prov.made_at).replace("T", " ").slice(0, 16) + "Z";
+  return `${prov.made_by || "unknown"} · made ${when} · for the morning of ${prov.for_morning || "?"}`;
+}
+
 // COMMITMENTS — his own kal-lines and what happened next. Won days get the
 // tick; a miss reads "went again" (no-shame law); the newest waits unjudged.
 function renderCommitments(d) {
@@ -753,11 +876,15 @@ function renderCommitments(d) {
 // job is to be trustworthy. A rejection is now shown, named, and framed: the gate
 // working is good news about the wall, not a blank shelf.
 // Accepts either the legacy array|null or readInsights' result object.
-function insightShelf(insights) {
+function insightShelf(insights, prov = null) {
   const r = Array.isArray(insights) ? { lines: insights, rejected: false }
     : (insights && typeof insights === "object") ? insights : { lines: null, rejected: false };
+  // KAAM 1 — the third model-authored artefact gets the same treatment as the
+  // other two. It needs no new sidecar: the allowed-set snapshot the brain writes
+  // beside the .md already records who wrote it, when, and for which morning.
+  const provHtml = prov ? `<div style="font-size:10px;color:${C.dim};margin-top:8px">${esc(provLine(prov))}</div>` : "";
   if (r.lines && r.lines.length) {
-    return panel("The read", r.lines.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join(""));
+    return panel("The read", r.lines.map(l => `<div style="font-size:13px;color:${C.body};margin:4px 0">${esc(l)}</div>`).join("") + provHtml);
   }
   if (r.rejected) {
     return panel("The read — held at the gate", `
@@ -778,7 +905,7 @@ function renderWall(data, insights) {
     // minimal wall: KAL-line + floor only — never a loss before he chooses to look
     body = kal + panel("Today", `<div style="font-size:15px;color:${C.body}">Rotation day. One five-minute floor-touch is the whole match. The rest of the wall waits for you.</div>`);
   } else {
-    const insightHtml = insightShelf(insights);
+    const insightHtml = insightShelf(insights, data.insight_prov || null);
     const voice = data.twin_voice ? panel("The book", `<div style="font-size:14px;color:${C.amber}">${esc(data.twin_voice)}</div>`) : "";
     body = kal + `<div style="display:flex;flex-wrap:wrap">` +
       renderNow(data) + renderMaidan(data) + renderSeason(data) + renderOutward(data) + renderCalibration(data) + renderDerby(data) +
@@ -1011,6 +1138,98 @@ async function selftest() {
   assert("...and the rejection NAMES the hype phrase, not a generic failure",
     readInsights("You are on an exponential trajectory.", data).reason.includes("exponential"));
   assert("insights capped at 3 lines", (validateInsights("a\nb\nc\nd", data) || []).length <= 3);
+
+  // === KAAM 1 (10 Aug 2026) — WHY "The read" WAS DEAD EVERY NIGHT ===========
+  // Two defects, one panel. Each is asserted on its own so a future pass cannot
+  // ship half of it and claim the panel is back.
+  // (1) THE MODEL'S OWN FURNITURE. Reproduced exactly as measured on the night
+  //     of 9 Aug: a dated title line ate slot 1 of 3, the third real bullet was
+  //     sliced off unread, and the title's own "09" was the ONLY token that
+  //     failed the gate — so furniture killed three good sentences.
+  const FURNITURE = "## 09 AUGUST 2026\n24 doubts retired.\nthe gap sits at 0.14.\nthe book is honest.";
+  assert("KAAM1 — a self-dated title line no longer eats a slot NOR kills the panel (all three real bullets survive)",
+    (validateInsights(FURNITURE, data) || []).length === 3
+    && !(validateInsights(FURNITURE, data) || []).some(l => /AUGUST/.test(l)));
+  assert("KAAM1 — the frozen behaviour is pinned: WITHOUT the furniture filter that same file dies on its own header",
+    readInsights("## 09 AUGUST 2026\n24 doubts retired.\nthe gap sits at 0.14.", data, "").rejected === false
+    && (() => { const l = "## 09 AUGUST 2026".trim(); return isFurniture(l); })());
+  assert("KAAM1 — the filter is CONSERVATIVE: a real lowercase sentence carrying a date is never furniture",
+    !isFurniture("on 2026-08-04 the gap sits at 0.14 and the book is honest")
+    && isFurniture("### The read") && isFurniture("-----") && !isFurniture("HE HELD IT COLD THIS WEEK AND THE CALIBRATION BOOK FINALLY AGREES WITH HIM"));
+  // THE REAL ARTEFACT, byte for byte off disk on 10 Aug 2026. This is the fixture
+  // that matters: the audit note's guessed shape (`## 09 AUGUST 2026`) passed the
+  // filter above while the LIVE file sailed through untouched and the panel stayed
+  // dead. Pinned here so the filter can never again be right about a shape the
+  // organism does not actually produce.
+  assert("KAAM1 — THE LIVE 10 AUG TITLE is furniture: a whole-line BOLD span, not a heading, with lowercase in it",
+    isFurniture("**Wall Insights — 2026-08-09**")
+    && !isFurniture("- Reps sit at 17 of 20 needed before calibration reads as anything but \"warming_up\" — thin data."));
+  assert("KAAM1 — the bullet marker is stripped for display but NEVER used to drop the line",
+    stripBullet("- The weak link is still the frayed pass.") === "The weak link is still the frayed pass."
+    && stripBullet("1. a numbered one") === "a numbered one" && stripBullet("no marker here") === "no marker here");
+  assert("KAAM1 — a bold-wrapped SENTENCE is not furniture (emphasis is not a title)",
+    !isFurniture("**he held it cold this week, and that is the whole story.**"));
+
+  // (2) THE ALLOWED-SET SNAPSHOT — the half that actually matters. The other 3
+  //     of 4 measured deaths were a derived count and a quoted session date,
+  //     neither of which the furniture filter touches. A number the brain was
+  //     HANDED in its prompt is legal where it was written; without the snapshot
+  //     it is "invented" where it is read, on the same bytes, hours later.
+  const HANDED = "he sat 47 minutes on it.";
+  assert("KAAM1 — a number the brain was handed in its prompt is REJECTED by the wall with no snapshot (the defect, pinned)",
+    readInsights(HANDED, { matchday: 7 }, "").rejected === true);
+  assert("KAAM1 — ...and PASSES once the wall judges by the producer's own recorded set",
+    (validateInsights(HANDED, { matchday: 7 }, ["47"].join(" ")) || []).length === 1);
+  assert("KAAM1 — the snapshot is not a loosening: a genuinely invented number still bounces WITH a snapshot present",
+    readInsights("he sat 47 minutes and retired 97 doubts.", { matchday: 7 }, ["47"].join(" ")).rejected === true);
+  assert("KAAM1 — an ABSENT snapshot fails CLOSED (old behaviour, strict), never open",
+    readInsights(HANDED, { matchday: 7 }, "").rejected === true);
+
+  // === KAAM 1 — THE BODY PANEL KNOWS ITS OWN AGE ===========================
+  const bodyToday = assembleWallData({ ...bus, readiness: { verdict: "AMBER", day: localDate(now) } }, now);
+  const bodyStale = assembleWallData({ ...bus, readiness: { verdict: "AMBER", day: "2026-08-04" } }, new Date("2026-08-10T12:00:00+05:30"));
+  const bodyNone = assembleWallData({ ...bus, readiness: null }, now);
+  assert("KAAM1 — a same-day reading is age 0 and the panel does not cry stale",
+    bodyToday.body.age_days === 0 && !renderBody(bodyToday).includes("not today's body"));
+  assert("KAAM1 — THE 10 AUG DEFECT: a 4 Aug reading read on 10 Aug is 6 days old and SAYS SO on the wall",
+    bodyStale.body.age_days === 6 && renderBody(bodyStale).includes("2026-08-04")
+    && renderBody(bodyStale).includes("6 day(s) old") && renderBody(bodyStale).includes("not today's body"));
+  assert("KAAM1 — the verdict is still SHOWN when stale (hiding it trades one silent lie for another)",
+    renderBody(bodyStale).includes("AMBER"));
+  assert("KAAM1 — no reading at all names the GREEN as a DEFAULT, never as a measurement",
+    bodyNone.body.present === false && bodyNone.verdict === "GREEN"
+    && renderBody(bodyNone).includes("not a measurement"));
+  assert("KAAM1 — the panel still leaks no biometric: only verdict, day and age ever reach data.body",
+    Object.keys(bodyStale.body).sort().join(",") === "age_days,day,present,verdict");
+
+  // === KAAM 1 — PROVENANCE, on the three MODEL-AUTHORED artefacts only =======
+  const PROV = { made_by: "maidan_poster (brain, model-authored)", made_at: "2026-08-09T21:30:00.000Z", for_morning: "2026-08-10" };
+  assert("KAAM1 — a provenance line names the maker, the make-time AND the morning it is for",
+    /maidan_poster/.test(provLine(PROV)) && /2026-08-09 21:30/.test(provLine(PROV)) && /for the morning of 2026-08-10/.test(provLine(PROV)));
+  assert("KAAM1 — an artefact with NO record says so; it never invents a date to fill the gap",
+    /provenance unrecorded/.test(provLine(null)) && !/\d{4}-\d{2}-\d{2}/.test(provLine(null)));
+  {
+    const written = {};
+    const p = writeProvenance((f, t) => { written[f] = t; }, "DIR", "poster.svg", "maidan_poster (brain, model-authored)", "2026-08-10", new Date("2026-08-09T21:30:00Z"));
+    const rec = JSON.parse(written[join("DIR", "poster.svg.prov.json")]);
+    assert("KAAM1 — the record is written BY CODE beside the artefact, carrying all three fields",
+      rec.artefact === "poster.svg" && rec.for_morning === "2026-08-10"
+      && rec.made_at === "2026-08-09T21:30:00.000Z" && /model-authored/.test(rec.made_by) && p.for_morning === "2026-08-10");
+  }
+  {
+    const withProv = renderWall(assembleWallData({ ...bus, media: { poster: true, poster_prov: PROV } }, now), null);
+    const noProv = renderWall(assembleWallData({ ...bus, media: { poster: true } }, now), null);
+    assert("KAAM1 — the poster caption reads the RECORD, not the filename",
+      withProv.includes("for the morning of 2026-08-10") && withProv.includes("maidan_poster"));
+    assert("KAAM1 — an artefact written before this pass renders exactly as it did (no regression, no fake stamp)",
+      noProv.includes("today's poster") && !noProv.includes("provenance unrecorded"));
+    const gem = renderWall(assembleWallData({ ...bus, media: { gemini_render: true, gemini_render_date: "2026-08-10", gemini_prov: { ...PROV, for_morning: "2026-08-09" } } }, now), null);
+    assert("KAAM1 — THE W7 DEFECT: the render button stops saying 'today' off the filename and says the morning the file is actually for",
+      gem.includes("the Gemini render · 2026-08-09") && !gem.includes("the Gemini render · 2026-08-10"));
+  }
+  assert("KAAM1 — the read panel carries its own provenance, derived from the snapshot (one record, one writer)",
+    renderWall({ ...assembleWallData(bus, now), insight_prov: { made_by: "wall_insights (brain, model-authored)", made_at: "2026-08-10T02:00:00.000Z", for_morning: "2026-08-10" } },
+      { lines: ["the book is honest."], rejected: false }).includes("wall_insights (brain, model-authored)"));
 
   // === #59/#60 — ONE VALIDATOR, AND A VISIBLE REJECTION ====================
   // The frozen legacy whitelist is kept as the witness; these two assertions are
@@ -1291,6 +1510,10 @@ async function main() {
     if (cleanPoster && /^<svg/i.test(cleanPoster)) {
       writeAtomic(join(CLUB_DIR, "poster.svg"), cleanPoster);
       writeAtomic(join(CLUB_DIR, `poster_${today}.svg`), cleanPoster);
+      // KAAM 1 — stamped by CODE, in the same breath as the write, so the record
+      // cannot disagree with the file it describes. `maidan_poster (brain, model)`
+      // names the author honestly: the SVG is the model's, the stamp is not.
+      writeProvenance(writeAtomic, CLUB_DIR, "poster.svg", "maidan_poster (brain, model-authored)", today, now);
       posterOk = true;
     }
   }
@@ -1314,11 +1537,28 @@ async function main() {
   } catch { }
   const insightPath = join(STATE_DIR, "brain_out", "wall_insights", today + ".md");
   // #59 — readInsights, not validateInsights: a rejection is a result the wall
-  // shows, not a silence it swallows. `shown` is empty here because viz does not
-  // hold the prompt brain.mjs assembled; validators.mjs still eats every number
-  // reachable from `data`, which IS what the job was fed (brain_config.json:
-  // wall_insights inputs = ["wall_data.json"]).
-  const insightRead = existsSync(insightPath) ? readInsights(readFileSync(insightPath, "utf8"), data) : { lines: null, rejected: false };
+  // shows, not a silence it swallows.
+  // KAAM 1 (10 Aug 2026) — `shown` IS NO LONGER EMPTY. The comment that stood
+  // here said viz "does not hold the prompt brain.mjs assembled", and treated
+  // that as a fact of life; it was the defect. Two validators judging one text
+  // against two different allowed-sets means the text can be legal where it was
+  // written and invented where it is read, which is exactly what happened on
+  // every night with evidence. brain.mjs now records the set it judged by beside
+  // the output (`<date>.allowed.json`); viz judges by THAT set.
+  //   · Absent sidecar ⇒ we fall back to the old behaviour rather than trusting
+  //     the file blind. An older .md, or a night the brain wrote before this
+  //     shipped, keeps being validated exactly as it is today — strictly, and
+  //     possibly rejected. Fail closed: a missing snapshot never widens the gate.
+  //   · Numbers are joined into a string because that is the `shown` contract
+  //     (validators.eat runs NUM_RE over it) — the round-trip is exact for every
+  //     token the set can hold.
+  const allowedSnap = readJson(join(STATE_DIR, "brain_out", "wall_insights", today + ".allowed.json"));
+  const shownSnap = allowedSnap && Array.isArray(allowedSnap.allowed) ? allowedSnap.allowed.join(" ") : "";
+  const insightRead = existsSync(insightPath) ? readInsights(readFileSync(insightPath, "utf8"), data, shownSnap) : { lines: null, rejected: false };
+  // KAAM 1 — the read's provenance, derived from the snapshot rather than from a
+  // second sidecar: one record, one writer, no chance of the two disagreeing.
+  data.insight_prov = allowedSnap && allowedSnap.written_at
+    ? { made_by: "wall_insights (brain, model-authored)", made_at: allowedSnap.written_at, for_morning: allowedSnap.out_day } : null;
   const insights = insightRead.lines;
   // the Gemini lane: tonight's ready-made prompts (with last night's design-
   // coach critique folded in) — built BEFORE the render so the shelf's
@@ -1342,12 +1582,21 @@ async function main() {
     if (clean) {
       writeAtomic(join(CLUB_DIR, "wall_gemini.html"), clean);                     // the served path (club links point here)
       writeAtomic(join(CLUB_DIR, `wall_gemini_${today}.html`), clean);            // the date-stamped PROOF the flag rides on
+      writeProvenance(writeAtomic, CLUB_DIR, "wall_gemini.html", "gemini_render (model-authored, sanitized fold)", today, now);   // KAAM 1
       geminiFoldedToday = true;
       geminiNote = " + gemini render folded in";
     } else geminiNote = " (gemini render REJECTED by sanitizer — deterministic wall stands)";
   }
   data.media.gemini_render = geminiFlag(geminiFoldedToday, existsSync, CLUB_DIR, today);
   data.media.gemini_render_date = data.media.gemini_render ? today : null;
+  // KAAM 1 — the caption stops reading the FILENAME. `gemini_render_date` above is
+  // literally "today if the file exists", which is how the wall came to label a
+  // render "· 2026-08-10" while the page it opened said "09 AUGUST 2026". These
+  // two reads are the artefacts' own code-written records; where one is present
+  // the caption uses it, and where it is absent the old filename behaviour stands
+  // so that artefacts written before this pass still render exactly as they did.
+  data.media.poster_prov = readJson(join(CLUB_DIR, "poster.svg.prov.json"));
+  data.media.gemini_prov = readJson(join(CLUB_DIR, "wall_gemini.html.prov.json"));
 
   // #90 — THE STATE SNAPSHOT IS TAKEN HERE, BEFORE THE SELF-COPY. veo_text and
   // filmkit_text are ~4.7KB of text the wall's inline <script> needs and NO state

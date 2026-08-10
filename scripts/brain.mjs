@@ -1958,6 +1958,33 @@ async function runJob(job, cfg, deps) {
     // jobs that explicitly declare `serve`.
     const outDay = outDate(job, now, today);
     if (!dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".md"), r.text);
+    // KAAM 1 (10 Aug 2026) — THE ALLOWED-SET SNAPSHOT, or: why "The read" died.
+    // Two validators were judging the same text against DIFFERENT allowed-sets.
+    // Here the prompt rides in as `shown` (line above), so every digit the wrapper
+    // itself handed the model is legal. viz re-validates the SAME file hours later
+    // with `shown = ""` — it never held the prompt — so anything the model quoted
+    // from its own instructions bounced, and the panel rendered "held at the gate"
+    // on all 4 nights with evidence. Only 1 of those 4 deaths was the self-dated
+    // header; the other two were a derived count and a quoted session date, and
+    // NEITHER is fixed by stripping a title line. This sidecar is that fix: the
+    // producer records the exact set it judged by, and the consumer judges by the
+    // same set. Not a loosening — it is the identical set, moved, so that one text
+    // cannot be legal at 03:00 and invented at 07:38.
+    // NUMBERS ONLY, never the prompt itself: the prompt carries his cognitive
+    // fingerprint and his live state, brain_out is on disk beside a PUBLIC repo,
+    // and the validator needs nothing but the tokens.
+    // Its reader is named: viz.mjs readInsights (wall_insights). Other
+    // no_new_numbers jobs get it for free on the same line; a job whose output
+    // nobody re-validates simply has an unread 200-byte sidecar, which costs zero
+    // tokens — this is derived data, not a generated artifact, so the
+    // "never produce what nothing reads" law is not in play.
+    if (!dry && job.validate === "no_new_numbers") {
+      writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".allowed.json"), JSON.stringify({
+        job: job.id, out_day: outDay, written_at: new Date(now).toISOString(),
+        why: "the exact allowed-number set this output was judged against — any downstream re-validation must use THIS, not a fresh set built from a later state",
+        allowed: [...allowedNumbersShared(inputs, prompt)],
+      }, null, 2));
+    }
     // THE ADDRESS, said out loud (finding #63). This note is what the ledger row carries
     // and what `brain status` echoes, so a file written for a human to glance at finally
     // names itself somewhere he can see.
@@ -2589,6 +2616,24 @@ async function selftest() {
   assert("banned-phrase validator rejects hype", validateOutput({ validate: null }, "this is a 10x week", {}, cfg).ok === false);
   assert("no_new_numbers rejects invented numbers", validateOutput({ validate: "no_new_numbers" }, "you did 97 reps", { reps: 12 }, cfg).ok === false);
   assert("no_new_numbers passes grounded numbers", validateOutput({ validate: "no_new_numbers" }, "12 reps, gap 0.14", { reps: 12, gap: 0.14 }, cfg).ok === true);
+  // KAAM 1 (10 Aug 2026) — THE ALLOWED-SET SNAPSHOT ROUND-TRIPS.
+  // The wall re-validates this file's output hours later using the recorded set
+  // instead of the prompt. That only holds if a set, joined back into a `shown`
+  // string, reproduces this file's own verdict EXACTLY — same passes, same
+  // bounces. If that ever stops being true, "The read" starts lying in one
+  // direction or the other, and it is this assertion that says so first.
+  {
+    const inputs = { reps: 12 };
+    const prompt = "LAWS: use at most 25 rollouts. he sat 47 minutes. weight 0.4375.";
+    const snap = [...allowedNumbersShared(inputs, prompt)].join(" ");
+    const via = (text, shown) => validateOutput({ validate: "no_new_numbers" }, text, inputs, cfg, shown).ok;
+    assert("KAAM1 — a snapshot reproduces the producer's verdict on the numbers it was HANDED",
+      via("47 minutes at weight 0.4375", prompt) === true && via("47 minutes at weight 0.4375", snap) === true);
+    assert("KAAM1 — a snapshot is not a loosening: an invented number bounces under BOTH",
+      via("he retired 97 doubts", prompt) === false && via("he retired 97 doubts", snap) === false);
+    assert("KAAM1 — and the defect it cures is real: the SAME text with an empty shown is 'invented'",
+      via("47 minutes at weight 0.4375", "") === false);
+  }
   assert("quotes_only rejects non-verbatim quotes", validateOutput({ validate: "quotes_only" }, 'anchor: "a phrase he never said anywhere"', { bolo: "warehouse wala naksha" }, cfg).ok === false);
   assert("quotes_only passes verbatim quotes", validateOutput({ validate: "quotes_only" }, 'anchor: "warehouse wala naksha"', { bolo: "warehouse wala naksha socho" }, cfg).ok === true);
 
