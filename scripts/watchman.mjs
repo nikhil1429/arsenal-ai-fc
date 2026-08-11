@@ -594,10 +594,49 @@ export function inWindow(hm, start, end) {
   return start <= end ? (hm >= start && hm <= end) : (hm >= start || hm <= end);
 }
 
-export function tier2Gate(lastJson, findings, today, noTier2, nowHM = null, win = null) {
+// ---------------------------------------------------------------------------
+// THE TIER-2 KILL SWITCH (11 Aug 2026 — HIS RULING: "find out if it is usefull
+// or not and if not then close it").
+//
+// MEASURED, not guessed. watchman_repair.log on the day of the ruling:
+//     TIER 2 START : 5   (7, 8, 9, 10, 10 Aug)
+//     TIER2 EXIT   : 0
+//     watchman_repairs.jsonl rows since 7 Aug : 0
+// Five `claude -p --model claude-opus-5 --effort max` runs, every one of them
+// silent: no exit stamp, no journal row, no repair anyone can point to. The arm
+// has produced nothing measurable since 7 Aug while spending the most expensive
+// call in the organism, nightly.
+//
+// AND IT CANNOT STOP ITSELF. c9's `tier2-vanished` finding is level RED, so a
+// vanished child guarantees a non-INFO finding tomorrow, which re-arms the gate,
+// which spawns another child that vanishes. The comment above the window check
+// calls that self-re-arming "the recovery path"; measured over five nights it is
+// a self-feeding loop, not a recovery.
+//
+// COST, on the night it was caught: the diary starved on the 2026-08-10 shift —
+// 127 beats refused at 17,62,791 tokens against the overnight cap of 6,40,000
+// (token_vitals.json `starved`). The night's own budget was gone.
+//
+// WHAT THIS DOES AND DOES NOT DO. It stops the SPEND, not the SIGHT: every
+// finding is still measured, still reported, still in the brief. Only the silent
+// Opus child is refused, and the gate says so out loud in `why` so a reader sees
+// a decision rather than an absence. OFF by default, one env var to re-arm:
+//     ARSENAL_TIER2=1 node scripts/watchman.mjs run
+// Re-open the question the honest way — when the arm can prove an exit stamp and
+// a journal row on a manual run, flip the default back.
+const TIER2_ENABLED = process.env.ARSENAL_TIER2 === "1";
+
+// `enabled` is a PARAMETER, not only a module constant, so the gate's LOGIC
+// stays testable while the POLICY is off: the selftest below passes `true` to
+// assert firing/deferring/once-per-day still behave, and one assertion pins the
+// DEFAULT to off. A policy that cannot be tested around is a policy that rots.
+export function tier2Gate(lastJson, findings, today, noTier2, nowHM = null, win = null, enabled = TIER2_ENABLED) {
   const hard = findings.filter((f) => f.level !== "INFO");
   if (!hard.length) return { fire: false, why: "clean night — Tier 2 costs nothing (the split IS the billing guard)" };
   if (noTier2) return { fire: false, why: "--no-tier2 flag (manual/demo run)" };
+  if (!enabled) {
+    return { fire: false, why: "DISABLED by his 11 Aug ruling — 5 starts / 0 exits / 0 journal rows since 7 Aug, and its own vanished-child RED re-armed it nightly. Findings are still measured and reported; only the silent Opus spend is refused. Re-arm with ARSENAL_TIER2=1" };
+  }
   // H0 FLOW AUDIT (10 Aug 2026) — the 8 Aug maiden-class death, diagnosed: the
   // watchman task itself fired as a mid-day CATCH-UP (13:13 IST, seconds after a
   // wake), spawned the detached repair child, and the laptop re-slept minutes
@@ -1368,30 +1407,44 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
   // Tier-2 gate
   const hard = [{ id: "x", level: "DEAD", finding: "f", evidence: "e" }];
   const info = [{ id: "y", level: "INFO", finding: "f", evidence: "e" }];
+  // ON = the 7th arg. These assertions pin the gate's LOGIC; the assertion right
+  // below them pins the POLICY (off by default, his 11 Aug ruling). Kept apart on
+  // purpose: if the switch is ever re-armed, the logic tests must already be green.
+  const ON = true;
   assert("TIER-2 GATE — fires on a non-INFO finding when it has not run today",
-    tier2Gate(null, hard, TODAY, false).fire === true);
+    tier2Gate(null, hard, TODAY, false, null, null, ON).fire === true);
   assert("TIER-2 GATE — a clean night never fires (the split IS the billing guard, M-3 does not exist yet)",
-    tier2Gate(null, [], TODAY, false).fire === false);
+    tier2Gate(null, [], TODAY, false, null, null, ON).fire === false);
   assert("TIER-2 GATE — INFO-only never fires",
-    tier2Gate(null, info, TODAY, false).fire === false);
+    tier2Gate(null, info, TODAY, false, null, null, ON).fire === false);
   assert("TIER-2 GATE — once per local day, structural, not a threshold",
-    tier2Gate({ tier2: { day: TODAY, started_at: "x" } }, hard, TODAY, false).fire === false
-    && tier2Gate({ tier2: { day: YDAY, started_at: "x" } }, hard, TODAY, false).fire === true);
+    tier2Gate({ tier2: { day: TODAY, started_at: "x" } }, hard, TODAY, false, null, null, ON).fire === false
+    && tier2Gate({ tier2: { day: YDAY, started_at: "x" } }, hard, TODAY, false, null, null, ON).fire === true);
   assert("TIER-2 GATE — --no-tier2 (manual/demo) is honoured and says so",
     tier2Gate(null, hard, TODAY, true).fire === false && /no-tier2/.test(tier2Gate(null, hard, TODAY, true).why));
+
+  // THE KILL SWITCH (11 Aug 2026, HIS RULING). Measured: 5 starts / 0 exits / 0
+  // journal rows since 7 Aug. Default OFF, and the refusal must SAY it is a
+  // decision — an absence that looks like a clean night is how this rots back in.
+  assert("TIER-2 KILL SWITCH — OFF by default even with real findings, and the why names the ruling",
+    tier2Gate(null, hard, TODAY, false).fire === false
+    && /DISABLED by his 11 Aug ruling/.test(tier2Gate(null, hard, TODAY, false).why)
+    && /ARSENAL_TIER2=1/.test(tier2Gate(null, hard, TODAY, false).why));
+  assert("TIER-2 KILL SWITCH — a clean night still reports the CLEAN reason, not the kill reason (the two must never blur)",
+    /clean night/.test(tier2Gate(null, [], TODAY, false).why));
 
   // --- H0 FLOW AUDIT (10 Aug 2026): the maiden-class death's guards ---------
   const WIN = { start: "22:00", end: "07:30" };
   assert("TIER-2 GATE H0 — a mid-day catch-up spawn DEFERS (the 8 Aug death class), and says why",
-    tier2Gate(null, hard, TODAY, false, "13:13", WIN).fire === false
-    && /re-sleep/.test(tier2Gate(null, hard, TODAY, false, "13:13", WIN).why));
+    tier2Gate(null, hard, TODAY, false, "13:13", WIN, ON).fire === false
+    && /re-sleep/.test(tier2Gate(null, hard, TODAY, false, "13:13", WIN, ON).why));
   assert("TIER-2 GATE H0 — inside the overnight window (both sides of midnight) still fires",
-    tier2Gate(null, hard, TODAY, false, "23:55", WIN).fire === true
-    && tier2Gate(null, hard, TODAY, false, "02:30", WIN).fire === true);
+    tier2Gate(null, hard, TODAY, false, "23:55", WIN, ON).fire === true
+    && tier2Gate(null, hard, TODAY, false, "02:30", WIN, ON).fire === true);
   assert("TIER-2 GATE H0 — no clock supplied (legacy caller/selftest) keeps the old behaviour",
-    tier2Gate(null, hard, TODAY, false).fire === true);
+    tier2Gate(null, hard, TODAY, false, null, null, ON).fire === true);
   assert("TIER-2 GATE H0 — a tier2-vanished RED alone RE-ARMS the lane the following night (the recovery path is the gate itself)",
-    tier2Gate(null, [{ id: "tier2-vanished", level: "RED", finding: "f", evidence: "e" }], TODAY, false, "23:55", WIN).fire === true);
+    tier2Gate(null, [{ id: "tier2-vanished", level: "RED", finding: "f", evidence: "e" }], TODAY, false, "23:55", WIN, ON).fire === true);
   assert("inWindow — wraps midnight and honours a plain window",
     inWindow("23:55", "22:00", "07:30") && inWindow("02:30", "22:00", "07:30")
     && !inWindow("13:13", "22:00", "07:30") && inWindow("12:00", "09:00", "21:00") && !inWindow("22:00", "09:00", "21:00"));
