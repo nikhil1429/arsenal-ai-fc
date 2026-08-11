@@ -1233,11 +1233,38 @@ async function selftest() {
     // the day the manifest stops being written, changes shape, or stops matching
     // what is actually on disk. Reads only; writes nothing.
     const liveExpected = expectedCapsuleIds(readJson(MANIFEST));
-    assert("GUARD 4b — LIVE: mirror_manifest.json is on disk and names the capsules it put there (this organ is its first content-reader anywhere)",
-      Array.isArray(liveExpected) && liveExpected.length > 0);
     const live = loadCapsules();
-    const liveIntegrity = capsuleIntegrity(live.capsules, live.faults, liveExpected);
-    assert(`GUARD 4b — LIVE: every capsule the mirror says is on disk actually loads (${liveIntegrity.line})`, liveIntegrity.ok);
+    // A BARE CHECKOUT IS NOT A BROKEN MIRROR (11 Aug 2026).
+    // Both mirror_manifest.json and capsules/ are gitignored, so a clean clone —
+    // which is exactly what the away-day CI lane checks out — has NEITHER. This
+    // canary read the manifest unconditionally and went red there every single
+    // run: the lane has been failing since 8 Aug, its card (c36) has re-dealt to
+    // him at anchor after anchor, and the red said nothing true. A CI that is
+    // always red is a CI nobody reads — the same disease as a permanent watchman
+    // RED, and this repo has already paid for that lesson once today.
+    //
+    // The distinction is principled, not an env sniff: the canary exists to catch
+    // "the mirror stopped writing its receipt". That failure is only OBSERVABLE
+    // where the mirror has something to write about.
+    //   capsules present, manifest missing/empty  → RED. That IS the defect.
+    //   no capsules AND no manifest               → nothing to watch; say so.
+    // The second case cannot hide a real fault: with zero capsules on disk there
+    // is no mirror output for a receipt to be missing FROM.
+    // expectedCapsuleIds returns NULL (not []) when there is no manifest — "no
+    // expectation" is deliberately distinct from "an empty expectation" in this
+    // organ, and reading .length off it is what crashed the first draft of this
+    // guard on the very checkout it was written for.
+    const expectedIds = Array.isArray(liveExpected) ? liveExpected : [];
+    const bareCheckout = !expectedIds.length && !(live.capsules || []).length;
+    if (bareCheckout) {
+      assert("GUARD 4b — LIVE: bare checkout (no capsules, no manifest) — the canary has nothing to watch, and says so instead of crying red",
+        true);
+    } else {
+      assert("GUARD 4b — LIVE: mirror_manifest.json is on disk and names the capsules it put there (this organ is its first content-reader anywhere)",
+        Array.isArray(liveExpected) && liveExpected.length > 0);
+      const liveIntegrity = capsuleIntegrity(live.capsules, live.faults, liveExpected);
+      assert(`GUARD 4b — LIVE: every capsule the mirror says is on disk actually loads (${liveIntegrity.line})`, liveIntegrity.ok);
+    }
   }
 
   const passed = checks.every(c => c[1]);
