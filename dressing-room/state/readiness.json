@@ -3,7 +3,7 @@
   "engine": "v2-recalibrated",
   "day": "2026-08-04",
   "mode": "full-coach",
-  "nights": 23,
+  "nights": 22,
   "verdict": "AMBER",
   "ceiling": "MODERATE",
   "workType": [

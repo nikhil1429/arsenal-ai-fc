@@ -1,17 +1,17 @@
 {
-  "date": "2026-08-10",
-  "staged_at": "2026-08-10T16:30:13.200Z",
+  "date": "2026-08-12",
+  "staged_at": "2026-08-11T21:06:17.571Z",
   "concept": "hallucinations",
   "picked_because": "stalling/regressing in learning_state",
   "shape": "phenomenon",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "elicit",
-  "task": "Write the SHORTEST prompt-and-script you can that reliably PROVOKES hallucinations from a model, in Python. Talk while you type; the examiner runs it when you say run. A single reproducible case beats a clever one.",
+  "template": "measure",
+  "task": "Build the smallest honest MEASUREMENT of hallucinations in Python — a tiny labelled set and a score. Ten examples is enough if they are honest. Talk through what the number would have to say to change your mind.",
   "hidden_tests": [
-    "run it and confirm hallucinations actually appeared — if it did not, his hypothesis about the cause was wrong; ask what he expected",
-    "ask him to change ONE thing he predicts will make it worse, then run it and compare",
-    "ask what a FALSE POSITIVE would look like here, and whether his script could tell the difference"
+    "run it and ask what the number MEANS — a score with no interpretation is not a measurement",
+    "ask how many examples his score would need before he would trust it, and why that number",
+    "plant one mislabelled example and see whether he notices the score move"
   ],
-  "served": []
+  "night_note": "raat ke coach ne pakda — woh soch raha hai: Jo output usko yaad nahi hai ya verify nahi hota, woh hallucination hai — label truth-value pe lagta hai. · sach: Label is pe lagta hai ki output grounded source se aaya ya generate hua. Gaffer ka purana-kaam recall grounded tha (state: step 3, 8 prior runs); asli fabrication uska palat kar 'fresh season, kuch baat hi nahi hui' kehna tha."
 }
