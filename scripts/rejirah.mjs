@@ -88,7 +88,28 @@ export const AXIS_TYPE = {
 };
 
 // ROUND-MODE ESCALATION (knob 4) — the three modes canon already names.
-const ROUND_MODE = ["R-early (gentle cold)", "R-mid (adversarial + traps + counterfactual)", "R-late (timed mini-mock, axes mixed, cross-concept)"];
+//
+// RE-WRITTEN 11 Aug 2026 ON HIS RULING. He read the old ladder — R1 "gentle cold",
+// hard only by R3 — and called it what it was: "this is too pathetic, intensity
+// increase karo pure revision process mein har ek cheez ki ... i am creating this
+// organism to dominate the market."
+//
+// He is right, and the old wording had a specific defect: "gentle" is an
+// INSTRUCTION. These strings are not labels for a dashboard — they ride into the
+// Gaffer's round and into deep.mjs, and they tell the examiner how hard to press.
+// A round-one probe described as gentle produces a gentle probe, which measures a
+// gentle thing. Nobody interviews him gently.
+//
+// What did NOT change, because it is the measurement and not the intensity: the
+// axes stay HIS nine, cold, gut-word first. Pressure is raised on the ASKING, never
+// on the yardstick. And the count is unchanged at three entries: axisState clamps
+// with min(roundsDone, len-1), so his 8-round genome runs R3's mode from round 3
+// onward — the hardest mode becomes the standing mode, which is the point.
+const ROUND_MODE = [
+  "R1 (cold, no warm-up: the question as an interviewer would ask it — no scaffolding, no hints, no restating it easier; silence after the question until he answers)",
+  "R-mid (adversarial: traps, counterfactuals, one interruption mid-answer, and 'why not the other way?' on every claim he makes)",
+  "R-late (interview conditions: timed, axes mixed and out of order, cross-concept, follow-ups until he either defends it or concedes — the room does not move on because he sounded confident)",
+];
 
 // CALIBRATION TARGETS — borrowed verbatim from calibration.mjs, which owns them.
 // Duplicating a number is how two organs drift; naming its owner is how they don't.
@@ -595,9 +616,22 @@ function selftest() {
     axisState(cap, "a", [row("a", "held", "guessed", "2026-08-01T00:00:00Z")], IV, NOW).calibrationGap.flag.startsWith("underconfident"));
   assert("NO GUT-WORD -> NO GAP (never fabricated)",
     axisState(cap, "a", [row("a", "held", null, "2026-08-01T00:00:00Z")], IV, NOW).calibrationGap === null);
-  assert("KNOB 4 — the round mode escalates R-early -> R-mid -> R-late with rounds done",
-    axisState(cap, "a", [], IV, NOW).mode.startsWith("R-early")
-    && axisState(cap, "a", clean2, IV, NOW).mode.startsWith("R-late"));
+  // Pinned on the ESCALATION and on ROUND_MODE itself, not on the label text: the
+  // 11 Aug intensity rewrite broke this assertion precisely because it matched the
+  // string "R-early", which was wording, not behaviour. Wording will change again.
+  assert("KNOB 4 — the round mode escalates with rounds done, and lands on the LAST (hardest) mode",
+    axisState(cap, "a", [], IV, NOW).mode === ROUND_MODE[0]
+    && axisState(cap, "a", clean2, IV, NOW).mode === ROUND_MODE[ROUND_MODE.length - 1]);
+  // His 8-round genome runs past the mode array on purpose — the hardest mode must
+  // become the STANDING mode, never an index error or a silent drop to gentle.
+  assert("KNOB 4 — past the last mode it CLAMPS to the hardest, never wraps back to round one",
+    axisState(cap, "a", clean2, IV, NOW).mode === ROUND_MODE[2]);
+  // Narrowed to the word he actually objected to. The first draft of this check
+  // banned "warm-up" too and failed on the new text's own "no warm-up" — a
+  // substring cannot tell a promise from its negation, and a check that fires on
+  // the fix it is meant to protect is worse than no check.
+  assert("INTENSITY (his 11 Aug ruling) — no round is described as gentle, and round one asks it as an interviewer would",
+    !/gentle/i.test(ROUND_MODE.join(" ")) && /interviewer would ask/i.test(ROUND_MODE[0]));
   assert("NEVER-GRADED — an ungraded axis inherits the capsule's own lockedOn schedule, never 'fresh'",
     (() => { const s = axisState(cap, "b", [], IV, NOW); return s.rounds === 0 && s.nextDue === "2026-06-24" && s.overdueDays > 40; })());
 
