@@ -1177,7 +1177,20 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const genProbes = async () => ({ ok: true, text: JSON.stringify(PROBE_TYPES.map(t => ({ type: t, probe: `a solid ${t} probe with enough length to pass validation` }))) });
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
-  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), now: new Date("2026-07-15T02:45:00") };
+  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }),
+    // 11 Aug 2026 — JOB 1c/1d MUST BE STUBBED HERE, and this line is the scar.
+    // Shipped without them, `base` fell through to the REAL generators: the suite
+    // fired live `claude -p --allowedTools WebSearch` calls, three per run, ~16k
+    // tokens and ~14s each (measured off brain_ledger.jsonl, job "ns_field_probes").
+    // Three consequences, all real: it broke this repo's "mock tests use no live
+    // credentials" law; it spent his subscription every time anyone ran the suite;
+    // and the added ~45s pushed organism_test's 120s per-member timeout over the
+    // edge, so the watchman reported `suite-red` for a suite whose members all pass.
+    // A new job that calls out MUST arrive with its stub in the same commit.
+    generateField: async () => ({ ok: true, text: JSON.stringify({ questions: [] }) }),
+    generateDeep: async () => { throw new Error("selftest: the round read must never reach a live model"); },
+    priorField: { concepts: {} }, rejirahRows: [],
+    now: new Date("2026-07-15T02:45:00") };
 
   // ── THE LEDGER ROW: the whole honest shape, or the governor is lied to ─────
   // Fixtures are claudegen's own outputs, verbatim in shape (claudegen.mjs:134
@@ -1316,12 +1329,26 @@ async function selftest() {
 
   {
     const writes = {};
-    const r = await runShift({ ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } });
+    // Built once and named, so the no-live-call guard below can inspect the EXACT
+    // object the shift receives — `generate` is supplied here and not in `base`,
+    // and a guard that reads `base` alone would have passed while missing it.
+    const shiftDeps = { ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } };
+    const r = await runShift(shiftDeps);
     assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
     assert("JOB 1c — the field probes ride the shift record too (a job with no record is a job nobody can audit)",
       "field_probes" in r.jobs);
     assert("JOB 1d — the round read rides the shift record, and says WHY when it skips",
       "round_read" in r.jobs && (r.jobs.round_read.skipped || r.jobs.round_read.axes));
+    // THE NO-LIVE-CALL GUARD (11 Aug 2026 scar). Every job in `base` that can reach
+    // a model must be stubbed there. Shipped without these, the suite fired three
+    // real `claude -p --allowedTools WebSearch` calls per run — his tokens, on every
+    // test — and the extra ~45s tripped organism_test's 120s per-member timeout, so
+    // the watchman cried suite-red about a suite whose members all pass. Asserted on
+    // `base` itself rather than on call counts: the failure mode is a MISSING stub,
+    // and this is the shape that catches the next job added without one.
+    assert("NO LIVE CALLS — every model-reaching job is stubbed in the deps the shift actually receives",
+      ["generate", "generateHot", "generatePro", "generateField", "generateDeep"]
+        .every((k) => typeof shiftDeps[k] === "function"));
     assert("probe bank: one per grammar type, validated, dated", writes["probe_bank_2026-07-15.json"].bank.tokenization.probes.length === 5);
     assert("distractors: one call is attempted per drill concept", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));
