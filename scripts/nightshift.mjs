@@ -1674,6 +1674,27 @@ async function main() {
   if (mode === "field-probes") {
     const only = process.argv.slice(3).filter((a) => !a.startsWith("--"));
     const concepts = only.length ? only.map((c) => ({ concept: c, why: "asked for by hand" })) : undefined;
+    // THE GOVERNOR APPLIES TO THIS DOOR TOO (11 Aug 2026, same evening it shipped).
+    // Written without this check, the by-hand door passed NO_BUDGET and therefore
+    // walked straight past the window governor that every other Claude-lane job
+    // obeys. Measured within the hour: the 5h window stood at 31,36,293 against a
+    // 16,00,000 ceiling — 196% — with allowed_now at ZERO, and cortex's daily
+    // ConceptGraph pass was already refusing itself for exactly that reason. A
+    // convenience door that can starve the organs is not a convenience.
+    // --force is his explicit override, and it says what it is overriding.
+    const force = process.argv.includes("--force");
+    try {
+      const { headroom, loadConfig: loadBrainCfg } = await import("./brain.mjs");
+      const hr = headroom(loadBrainCfg(), readLines(join(STATE_DIR, "brain_ledger.jsonl")),
+        readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date());
+      const allowed = Number(hr && (hr.allowed_now ?? hr.allowed)) || 0;
+      if (allowed <= 0 && !force) {
+        console.log(`field-probes: REFUSED — no window headroom (allowed_now ${allowed}). The governor every other Claude job obeys applies here too.`);
+        console.log(`  the window drains on its own (rolling 5h). Re-run later, or override with --force if you accept starving the budgeted organs.`);
+        return;
+      }
+      if (allowed <= 0) console.log(`field-probes: --force — running with ZERO headroom; budgeted organs (cortex/diary/night shift) may starve tonight.`);
+    } catch { /* governor unreadable — do not block the door on the meter */ }
     const r = await fieldProbes({ concepts, now: new Date() });
     if (Object.keys(r.bank).length) {
       writeAtomic(join(OUT_DIR, FIELD_PROBES_FILE), { updated: new Date().toISOString(), concepts: r.bank });
