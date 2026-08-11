@@ -2,32 +2,146 @@
   "_comment": "THE DOSSIER, machine-readable — distilled from learning-layer/OPPONENT_SCOUT.md (§1 round time-weights + §4 probe grammar). Consumed by setpiece.mjs (probe phrasing), scout.mjs (LEARN/RATIFY edge split), scorer.mjs (proposal typing). Content edits follow OPPONENT_SCOUT.md — that doc stays the source of truth; this file is its projection onto the bus.",
   "version": 1,
   "rounds": [
-    { "id": "system_design", "label": "LLM & RAG System Design", "minutes": 60, "weight": 0.267 },
-    { "id": "build", "label": "Hands-on Build & Integration", "minutes": 50, "weight": 0.222 },
-    { "id": "production_eval", "label": "Production & Evaluation", "minutes": 45, "weight": 0.2 },
-    { "id": "fundamentals", "label": "Applied AI Fundamentals", "minutes": 40, "weight": 0.178 },
-    { "id": "behavioral", "label": "Behavioral & Judgment", "minutes": 30, "weight": 0.133 }
+    {
+      "id": "system_design",
+      "label": "LLM & RAG System Design",
+      "minutes": 60,
+      "weight": 0.267
+    },
+    {
+      "id": "build",
+      "label": "Hands-on Build & Integration",
+      "minutes": 50,
+      "weight": 0.222
+    },
+    {
+      "id": "production_eval",
+      "label": "Production & Evaluation",
+      "minutes": 45,
+      "weight": 0.2
+    },
+    {
+      "id": "fundamentals",
+      "label": "Applied AI Fundamentals",
+      "minutes": 40,
+      "weight": 0.178
+    },
+    {
+      "id": "behavioral",
+      "label": "Behavioral & Judgment",
+      "minutes": 30,
+      "weight": 0.133
+    }
   ],
   "bucket_round_map": {
-    "1-fundamentals": ["fundamentals", "system_design"],
-    "2-rag": ["system_design", "production_eval", "build"],
-    "3-agents": ["system_design", "build"],
-    "4-llm-api": ["system_design", "build"],
-    "5-llmops": ["production_eval", "system_design"],
-    "6-cross-cut": ["system_design", "production_eval"],
-    "7-domain": ["fundamentals", "system_design"],
-    "skills": ["build", "production_eval"]
+    "1-fundamentals": [
+      "fundamentals",
+      "system_design"
+    ],
+    "2-rag": [
+      "system_design",
+      "production_eval",
+      "build"
+    ],
+    "3-agents": [
+      "system_design",
+      "build"
+    ],
+    "4-llm-api": [
+      "system_design",
+      "build"
+    ],
+    "5-llmops": [
+      "production_eval",
+      "system_design"
+    ],
+    "6-cross-cut": [
+      "system_design",
+      "production_eval"
+    ],
+    "7-domain": [
+      "fundamentals",
+      "system_design"
+    ],
+    "skills": [
+      "build",
+      "production_eval"
+    ]
   },
   "probe_types": {
-    "recall":    { "emoji": "🔵", "axis_types": ["a", "c", "d"], "template": "Cold, no notes — {question}. Bolo." },
-    "reconstruct": { "emoji": "🟡", "axis_types": ["b", "d", "h"], "template": "Derive it live: {question}. Walk me through it — every handoff named." },
-    "defend":    { "emoji": "🟣", "axis_types": ["e", "f", "g"], "template": "You chose {claim}. I think that's wrong. Defend it — or concede exactly where it breaks." },
-    "novel":     { "emoji": "🔴", "axis_types": ["e", "h"], "template": "Unseen: {scenario}. Before you touch a fix — what does 'wrong' mean here, and is anyone measuring it?" },
-    "negative_space": { "emoji": "⚫", "axis_types": ["e", "g", "i"], "template": "Would you even use an LLM for {task}? 'A really good prompt' is not an architecture — where does deterministic code win?" }
+    "recall": {
+      "emoji": "🔵",
+      "axis_types": [
+        "a",
+        "c",
+        "d"
+      ],
+      "template": "Cold, no notes — {question}. Bolo."
+    },
+    "reconstruct": {
+      "emoji": "🟡",
+      "axis_types": [
+        "b",
+        "d",
+        "h"
+      ],
+      "template": "Derive it live: {question}. Walk me through it — every handoff named."
+    },
+    "defend": {
+      "emoji": "🟣",
+      "axis_types": [
+        "e",
+        "f",
+        "g"
+      ],
+      "template": "You chose {claim}. I think that's wrong. Defend it — or concede exactly where it breaks."
+    },
+    "novel": {
+      "emoji": "🔴",
+      "axis_types": [
+        "e",
+        "h"
+      ],
+      "template": "Unseen: {scenario}. Before you touch a fix — what does 'wrong' mean here, and is anyone measuring it?"
+    },
+    "negative_space": {
+      "emoji": "⚫",
+      "axis_types": [
+        "e",
+        "g",
+        "i"
+      ],
+      "template": "Would you even use an LLM for {task}? 'A really good prompt' is not an architecture — where does deterministic code win?"
+    }
   },
   "contrast_template": "Both cold, back to back: {a} vs {b} — one sentence each, then the ONE difference that decides {differentiator}. Bolo.",
   "rematch_template": "Week-{week} Nikhil argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
-  "round_mode_map": { "R_early": ["recall"], "R_mid": ["reconstruct", "defend"], "R_late": ["novel", "negative_space"] },
-  "modality_map": { "recall": "voice", "defend": "voice", "novel": "voice", "negative_space": "voice", "reconstruct": "screen", "floor_touch": "voice" },
-  "_modality_note": "MODALITY ROUTING (organism U2c): voice-first = recall/defend/3-ways/Bolo (his interviews are spoken; the Dugout conducts these); screen-first = math-reconstruct/code (derivations need the written medium). setpiece.mjs tags every drill; the Dugout routes voice drills into sessions."
+  "round_mode_map": {
+    "R_early": [
+      "recall"
+    ],
+    "R_mid": [
+      "reconstruct",
+      "defend"
+    ],
+    "R_late": [
+      "novel",
+      "negative_space"
+    ]
+  },
+  "modality_map": {
+    "recall": "voice",
+    "defend": "voice",
+    "novel": "voice",
+    "negative_space": "voice",
+    "reconstruct": "screen",
+    "floor_touch": "voice"
+  },
+  "_modality_note": "MODALITY ROUTING (organism U2c): voice-first = recall/defend/3-ways/Bolo (his interviews are spoken; the Dugout conducts these); screen-first = math-reconstruct/code (derivations need the written medium). setpiece.mjs tags every drill; the Dugout routes voice drills into sessions.",
+  "_source": {
+    "file": "learning-layer/OPPONENT_SCOUT.md",
+    "sha256": "2b7087baedbdedf88c06dddbfd11f42c4dc3be8c82557e321c117cc6a83866ab",
+    "stamped": "2026-08-11",
+    "note": "Stamped 11 Aug 2026 on his word. The watchman compared MTIMES, not content, so the 10 Aug prose-only doc repair (20 insertions, 0 deletions, no weight row and no probe line touched) fired projection-stale forever - and nothing could clear it, because this file has no owner script. Every night that RED opened the Tier-2 gate and spawned claude -p --model opus-5 --effort max on a phantom. This hash is what a content check should compare against."
+  }
 }
