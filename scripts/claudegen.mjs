@@ -128,7 +128,25 @@ const ARG_PROFILE = () => {
 const ARGS = (model, extra = []) => {
   const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
   const chosen = ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
-  return Array.isArray(extra) && extra.length ? [...chosen, ...extra] : chosen;
+  if (!Array.isArray(extra) || !extra.length) return chosen;
+  // A CALLER THAT ASKS FOR A TOOL MUST NOT BE SILENTLY DISARMED (11 Aug 2026).
+  // LEAN_ARGS carries `--tools ""` — the organ lane runs tool-less by design — so
+  // appending `--allowedTools WebSearch` produced a call that LOOKED armed and
+  // came back with zero web access. Measured: the field-probe job answered from
+  // priors, 653 output tokens, no sources, and its own validator correctly threw
+  // every question away. A grant that is overridden downstream is worse than a
+  // refused one: it costs the tokens and returns confident, sourceless text.
+  // So when `extra` names tools at all, the lean disarm pair is dropped and the
+  // caller's grant stands alone. Nothing else about the profile changes, and a
+  // caller that names no tools still gets `--tools ""` exactly as before.
+  const wantsTools = extra.some((a) => a === "--allowedTools" || a === "--tools");
+  if (!wantsTools) return [...chosen, ...extra];
+  const stripped = [];
+  for (let i = 0; i < chosen.length; i++) {
+    if (chosen[i] === "--tools") { i++; continue; }      // drop the flag AND its value
+    stripped.push(chosen[i]);
+  }
+  return [...stripped, ...extra];
 };
 // FROZEN VERBATIM (layering law) — the pre-11-Aug chooser. Frozen not because the
 // invocation changed but because the repair's whole claim is that IT DID NOT: only
@@ -620,6 +638,25 @@ async function selftest() {
     assert("ARG-SET: the invocation did NOT change — the frozen legacy chooser returns the identical argv",
       JSON.stringify(ARGS("sonnet")) === JSON.stringify(ARGS_LEGACY("sonnet"))
       && JSON.stringify(ARGS("opus")) === JSON.stringify(ARGS_LEGACY("opus")));
+    // 2b. THE TOOL GRANT (11 Aug 2026). LEAN_ARGS carries `--tools ""` because the
+    // organ lane is tool-less by design. A caller asking for WebSearch was being
+    // silently disarmed by it: the call looked armed, cost 653 output tokens, and
+    // came back with no web access and no sources. Pinned three ways — the disarm
+    // pair is GONE when tools are asked for, the grant SURVIVES, and a caller that
+    // asks for nothing is byte-identical to yesterday.
+    {
+      const armed = ARGS("sonnet", ["--allowedTools", "WebSearch"]);
+      const i = armed.indexOf("--tools");
+      assert("TOOL GRANT: `--tools \"\"` is dropped when a caller names tools (a grant overridden downstream is worse than a refused one)",
+        i === -1);
+      assert("TOOL GRANT: the caller's grant actually survives into argv",
+        armed.includes("--allowedTools") && armed[armed.indexOf("--allowedTools") + 1] === "WebSearch");
+      assert("TOOL GRANT: a caller that names no tools gets EXACTLY the old argv (the tool-less organ lane is untouched)",
+        JSON.stringify(ARGS("sonnet", [])) === JSON.stringify(ARGS("sonnet"))
+        && JSON.stringify(ARGS("sonnet")) === JSON.stringify(ARGS_LEGACY("sonnet")));
+      assert("TOOL GRANT: a non-tool extra arg is appended WITHOUT disarming anything",
+        hasLean(ARGS("sonnet", ["--effort", "high"])) === (ARG_PROFILE() === "lean"));
+    }
     // 3. THE ENV LANE, WALKED FOR REAL (his documented revert switch).
     const oldFull = process.env.ARSENAL_CLAUDEGEN_FULL;
     process.env.ARSENAL_CLAUDEGEN_FULL = "1";

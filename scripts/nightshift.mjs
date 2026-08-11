@@ -50,7 +50,7 @@
 //        outputs land in gitignored
 //        brain_out/nightshift/ (job 7: gitignored answer_cache.jsonl — its
 //        sole writer; it names his doubts) · zero writes to any organ's file.
-// MODES: node scripts/nightshift.mjs [--force] · status · selftest
+// MODES: node scripts/nightshift.mjs [--force] · field-probes [concept...] · status · selftest
 // ============================================================================
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, readdirSync } from "node:fs";
@@ -1665,6 +1665,23 @@ async function selftest() {
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
+  // FIELD PROBES ON DEMAND (11 Aug 2026). The job runs inside the 02:40 shift, but
+  // he revises during the DAY and a round tonight would otherwise face an empty
+  // bank — "wait for tomorrow" is exactly the shape of tax his standing rule bans.
+  // Same owner, same validator, same refusals as the nightly path: this is a
+  // second DOOR to one job, never a second copy of it. Writes the same cumulative
+  // file, so a day-run and a night-run cannot disagree about what is banked.
+  if (mode === "field-probes") {
+    const only = process.argv.slice(3).filter((a) => !a.startsWith("--"));
+    const concepts = only.length ? only.map((c) => ({ concept: c, why: "asked for by hand" })) : undefined;
+    const r = await fieldProbes({ concepts, now: new Date() });
+    if (Object.keys(r.bank).length) {
+      writeAtomic(join(OUT_DIR, FIELD_PROBES_FILE), { updated: new Date().toISOString(), concepts: r.bank });
+    }
+    console.log(`field-probes: researched ${r.added} · refused ${r.refused} · considered ${r.considered} · banked total ${r.total_concepts}`);
+    for (const [c, e] of Object.entries(r.bank)) console.log(`  ${c}: ${e.questions.length} sourced question(s) · fetched ${String(e.fetched).slice(0, 10)}`);
+    return;
+  }
   if (mode === "gem-stamp") {
     // D9 (9 Aug 2026, launch worklist): gem_sync_stamp.json finally gets an OWNER.
     // The gem-sync skill used to write it via a raw `node -e` — a self-documented
