@@ -186,6 +186,57 @@ function validateRecitalRuling(m, profile) {
 }
 
 // ---------------------------------------------------------------------------
+// THE CAPTAIN'S ORDER (11 Aug 2026 — HIS RULING: "i want each topic to be
+// revised max number of times ... do not create jugad, do permanent stuff").
+//
+// WHY THE SPEAK-GATE DID NOT APPLY, AND WHY IT STAYS. proposeFromEvidence refuses
+// below 200 reps ("the genome is listening, not proposing yet"). That gate is
+// aimed at THE MACHINE: it must not rewrite his method off thin evidence of its
+// own reading. It was never aimed at the captain deciding how often he wants to
+// revise his own material — a study schedule is his call, and 21/200 reps is a
+// statement about the machine's standing to speak, not about his.
+//
+// WHAT IS NOT WAIVED — everything that makes a mutation safe:
+//   · the row still goes in as status "proposed" and still needs `approve <id>`
+//   · validateMutation still runs at approve: FORBIDDEN still bars the medical
+//     rules / ladder / Goalkeeper / honest frame, and the target must still
+//     resolve inside forge_profile.json
+//   · the SERIAL LAW still holds — one live mutation at a time
+//   · legacy{} still preserves the old value, so the revert is real
+// Only the VOLUME gate is bypassed, and the row says so in its own evidence
+// rather than dressing his order up as a measurement it does not have.
+function captainProposal(target, value, why, profile, now = new Date()) {
+  const spot = resolvePath(profile, target);
+  if (!spot) return { proposal: null, err: `target does not resolve into forge_profile.json: ${target}` };
+  const oldValue = spot.node[spot.leaf];
+  const slug = String(target).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  return {
+    proposal: {
+      id: `mut-${localDate(now)}-captain-${slug}`,
+      kind: "captain_order",
+      status: "proposed",
+      proposed_at: now.toISOString(),
+      target,
+      diff: { old: oldValue, new: value },
+      // Honest by construction: a captain order has no rep evidence and must not
+      // pretend to. The ruling IS the warrant, quoted, and the row says the gate
+      // was bypassed so no later reader mistakes this for a measured proposal.
+      evidence: [
+        `CAPTAIN'S ORDER — not derived from reps. His words: "${String(why).slice(0, 400)}"`,
+        `the volume speak-gate was BYPASSED on his ruling: that gate governs the MACHINE proposing from thin evidence, not the captain setting his own study schedule`,
+        `old value, read live off forge_profile.json at filing: ${JSON.stringify(oldValue)}`,
+      ],
+      predicted_effect: `the captain's stated intent, measured the same way every other mutation is: this organ predicts nothing on his behalf. If the change does not serve him he says so and it reverts — the revert_diff below is the exact old value.`,
+      metric: { name: `captain_${slug}`, min_events: 20, window_days: 42, improves_when_below: null },
+      review_after_days: 42,
+      scoring_note: "a captain order is not auto-scored against a threshold — he rules on whether it served him. The metric exists so the row is judgeable, not so the machine can overrule him.",
+      revert_diff: { new: oldValue },
+    },
+    err: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // APPROVE — serial law + legacy{} preservation
 // ---------------------------------------------------------------------------
 // FROZEN VERBATIM 10 Aug 2026 (LAYERING law). Unchanged body; approveMutation
@@ -765,6 +816,36 @@ async function main() {
       ? `bootroom: ${r.pattern.verdict} ×${r.pattern.rows.length} across ${r.pattern.days.length} sittings (${r.pattern.days.join(", ")}) of ${r.pattern.graded} graded — ESCALATABLE${recitalPending(muts, `recital:${r.pattern.verdict}`) ? ", but already filed and awaiting your word" : ""}`
       : `bootroom: ${r.reason}`);
     logRun(runLogRow(now, mode, r.pattern ? "recital_pattern" : "recital_no_pattern", { counter: r.counter }));
+    return;
+  }
+
+  // THE CAPTAIN'S ORDER — checked BEFORE the evidence lane, because it answers to
+  // his word and not to the rep counter. Everything downstream (validate, approve,
+  // serial law, legacy{}, revert) is the same door every other mutation walks.
+  if (mode === "propose" && process.argv.includes("--captain")) {
+    const flag = (n) => { const i = process.argv.indexOf("--" + n); return i >= 0 ? process.argv[i + 1] : undefined; };
+    const target = flag("target"), rawValue = flag("value"), why = flag("why");
+    if (!target || rawValue === undefined || !why) {
+      console.log(`bootroom: captain order needs --target <key> --value <json> --why "<your words>"`);
+      console.log(`  e.g. node scripts/bootroom.mjs propose --captain --target rejirah_intervals_days --value "[3,7,14,30,60,120,240]" --why "max revisions"`);
+      process.exit(1);
+    }
+    let value; try { value = JSON.parse(rawValue); } catch { console.log(`bootroom: --value must be JSON (got: ${rawValue})`); process.exit(1); }
+    const { proposal, err } = captainProposal(target, value, why, profile, now);
+    if (err) { console.log(`bootroom: ${err}`); logRun(runLogRow(now, mode, "captain_bad_target", { target, err })); process.exit(1); }
+    // Validate AT FILING as well as at approve: a row he cannot approve must never
+    // reach his card in the first place.
+    const v = validateMutation(proposal, profile);
+    if (!v.ok) { console.log(`bootroom: REFUSED — ${v.errs.join("; ")}`); logRun(runLogRow(now, mode, "captain_invalid", { target, errs: v.errs })); process.exit(1); }
+    if (muts.some(x => x.id === proposal.id && x.status === "proposed")) {
+      console.log(`bootroom: ${proposal.id} already filed and awaiting your word — not re-asking (THE ANCHOR LAW)`);
+      process.exit(0);
+    }
+    appendFileSync(MUTS, JSON.stringify(proposal) + "\n");
+    console.log(`bootroom: CAPTAIN ORDER ${proposal.id} filed`);
+    console.log(`  ${target}: ${JSON.stringify(proposal.diff.old)}  →  ${JSON.stringify(proposal.diff.new)}`);
+    console.log(`  approve: node scripts/bootroom.mjs approve ${proposal.id}`);
+    logRun(runLogRow(now, mode, "captain_order_filed", { id: proposal.id, target, old: proposal.diff.old, new: proposal.diff.new }));
     return;
   }
 

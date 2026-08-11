@@ -301,6 +301,95 @@ async function fieldProbes(deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// JOB 1d — THE ROUND READ (11 Aug 2026). HIS design, not mine: asked whether the
+// deep grade should block the live voice, he said no — "opus se answer aane mein
+// time lagega aur gaffer will wait ... ideally i should just give my revision to
+// gaffer and everything should be evaluated and given to me after some time."
+// He is right, and he is right for a reason worth writing down:
+//
+//   ONE OPUS PASS OVER THE WHOLE ROUND BEATS NINE LIVE ONES — not because it is
+//   cheaper (it is), but because it can see ACROSS the axes. "You dropped the
+//   mechanism on c and f both, and said knew on both" is the finding Re-Jirah
+//   exists for, and an axis-at-a-time judge can never produce it.
+//
+// The live verdict stays Flash's: fast, in the flow, and enough to keep the round
+// moving. This runs after, on the night, over the grades AND his actual spoken
+// answers from the day's Gaffer transcript.
+//
+// WHY IT IS SAFE TO BE WRONG HERE: it writes a READ, not a grade. It cannot move
+// an axis, a due date or a streak — rejirah.mjs owns those and this never calls
+// it. The worst a bad read can do is be unhelpful prose in a file.
+// ---------------------------------------------------------------------------
+const ROUND_READ_MIN_AXES = 3;
+
+// Exported for the selftest. The whole job hinges on picking the RIGHT rows: axis
+// grades from today only, and never a round-close row (kind:"round-close" carries
+// no axis and would silently inflate the count).
+export function todaysGrades(rows, day) {
+  if (!Array.isArray(rows)) return [];
+  return rows.filter((r) => r && r.axis && r.kind !== "round-close"
+    && typeof r.ts === "string" && r.ts.slice(0, 10) === day);
+}
+
+export function validateRoundRead(o) {
+  if (!o || typeof o !== "object") return null;
+  const arr = (k) => (Array.isArray(o[k]) ? o[k].filter((x) => typeof x === "string" && x.trim().length > 10).slice(0, 6) : []);
+  const patterns = arr("patterns"), next = arr("next");
+  const overconfident = Array.isArray(o.overconfident)
+    ? o.overconfident.filter((x) => typeof x === "string" && /^[a-i]$/.test(x.trim())).map((x) => x.trim()) : [];
+  // A read with no pattern AND no next step is not a read — it is filler, and
+  // filler in this file would teach him to stop opening it.
+  if (!patterns.length && !next.length) return null;
+  return { patterns, overconfident, next, note: typeof o.note === "string" ? o.note.slice(0, 400) : null };
+}
+
+async function roundRead(deps = {}) {
+  const day = deps.day || localDate(deps.now || new Date());
+  const rows = deps.rejirahRows !== undefined ? deps.rejirahRows : readLines(join(STATE_DIR, "rejirah_log.jsonl"));
+  const graded = todaysGrades(rows, day);
+  if (graded.length < ROUND_READ_MIN_AXES) {
+    return { skipped: `only ${graded.length} axis grade(s) today — a round read needs ≥${ROUND_READ_MIN_AXES}`, read: null, spent: 0 };
+  }
+  const gen = deps.generateDeep || ((p) => genLedgered(p, "opus", "ns_round_read"));
+  // His spoken answers live in the day's Gaffer transcript. Tail it: the round is
+  // the END of the sitting, and the whole file can be tens of thousands of chars.
+  let transcript = "";
+  try {
+    const t = deps.transcript !== undefined ? deps.transcript
+      : readFileSync(join(STATE_DIR, "brain_out", "dugout", `${day}.md`), "utf8");
+    transcript = String(t || "").slice(-12000);
+  } catch { transcript = ""; }
+
+  const grid = graded.map((r) => `${r.concept} · axis ${r.axis} · ${r.result} · he said "${r.gut}" BEFORE answering`).join("\n");
+  const r = await gen(
+`You are reading ONE Re-Jirah round for Nikhil, an ADHD-PI engineer training for an AI Product Engineer interview. He answered these axes OUT LOUD, cold, notes closed. A machine already gave each axis a live held/cracked verdict; your job is the thing that verdict CANNOT do — read ACROSS the axes for the shared shape.
+
+THE GRID (axis, live verdict, and the gut-word he committed BEFORE answering):
+${grid}
+
+HIS ACTUAL SPOKEN ANSWERS (tail of today's transcript; may be partial):
+${transcript || "(no transcript on disk for today — judge from the grid alone and say so in note)"}
+
+Look for, in this order:
+1. CROSS-AXIS PATTERNS — the same failure shape on more than one axis (e.g. "gave the definition, skipped the mechanism, on both c and f"). This is the whole point; a per-axis remark is worthless here.
+2. OVERCONFIDENCE — axes where he said "knew" and it cracked. That cell is the dangerous one.
+3. WHAT TO HIT NEXT — concrete, one line each, tied to an axis.
+Be honest and specific. Never praise. If the transcript is thin, say so rather than inventing a pattern.
+
+Return STRICT JSON only, no prose, no fences:
+{"patterns":["..."],"overconfident":["c"],"next":["..."],"note":"one honest sentence"}`
+  );
+  if (!r || !r.ok) return { skipped: "the deep read did not return", read: null, spent: 1 };
+  let read = null;
+  try {
+    const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+    read = validateRoundRead(JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw));
+  } catch { read = null; }
+  if (!read) return { skipped: "the deep read came back unusable (no pattern, no next step)", read: null, spent: 1 };
+  return { skipped: null, read: { ...read, day, axes: graded.length, grid: graded.map((g) => ({ concept: g.concept, axis: g.axis, result: g.result, gut: g.gut })) }, spent: 1 };
+}
+
+// ---------------------------------------------------------------------------
 // JOB 1 — THE PROBE BANK (validated JSON; junk rejected per-item)
 // ---------------------------------------------------------------------------
 async function probeBank(deps = {}) {
@@ -970,6 +1059,14 @@ async function runShift(deps = {}) {
   if (Object.keys(fp.bank).length) write(FIELD_PROBES_FILE, { updated: new Date().toISOString(), concepts: fp.bank });
   out.jobs.field_probes = { researched: fp.added, refused: fp.refused, considered: fp.considered, spent: fp.spent, concepts_banked: fp.total_concepts };
 
+  // JOB 1d — the round read. Day-stamped: this one IS about a particular day's
+  // round, unlike the field bank, and conflating them would lose the history.
+  const rr = await roundRead({ ...jobDeps, day });
+  if (rr.read) write(`round_read_${day}.json`, rr.read);
+  out.jobs.round_read = rr.read
+    ? { axes: rr.read.axes, patterns: rr.read.patterns.length, overconfident: rr.read.overconfident, spent: rr.spent, file: `round_read_${day}.json` }
+    : { skipped: rr.skipped, spent: rr.spent };
+
   const db = await distractorBank(jobDeps);
   if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
   out.jobs.distractors = { concepts: Object.keys(db.bank).length, spent: db.spent };
@@ -1131,6 +1228,42 @@ async function selftest() {
   }
 
   // the jobs
+  // --- JOB 1d: THE ROUND READ (11 Aug 2026) ---------------------------------
+  // Pinned hardest: it must never mistake a round-close row for an axis, and it
+  // must REFUSE filler — a read with nothing in it would teach him to stop
+  // opening the file, which is worse than no read at all.
+  {
+    const DAY = "2026-08-11";
+    const rows = [
+      { ts: `${DAY}T18:00:00Z`, concept: "embeddings", axis: "a", result: "held", gut: "knew" },
+      { ts: `${DAY}T18:05:00Z`, concept: "embeddings", axis: "c", result: "cracked", gut: "knew" },
+      { ts: `${DAY}T18:09:00Z`, concept: "embeddings", axis: "f", result: "cracked", gut: "shaky" },
+      { ts: `${DAY}T18:12:00Z`, concept: "embeddings", kind: "round-close" },
+      { ts: "2026-08-10T18:00:00Z", concept: "context", axis: "a", result: "held", gut: "knew" },
+    ];
+    assert("ROUND READ — picks today's AXIS grades only: yesterday is out, and a round-close row is not an axis",
+      todaysGrades(rows, DAY).length === 3 && todaysGrades(rows, DAY).every(r => /^[acf]$/.test(r.axis)));
+    const thin = await roundRead({ day: DAY, rejirahRows: rows.slice(0, 2), transcript: "", generateDeep: async () => { throw new Error("must not call opus for a 2-axis day"); } });
+    assert("ROUND READ — under the floor it SKIPS and says the number (no Opus call on a two-axis day)",
+      thin.read === null && thin.spent === 0 && /2 axis grade/.test(thin.skipped));
+    const good = await roundRead({
+      day: DAY, rejirahRows: rows, transcript: "…his spoken answers…",
+      generateDeep: async () => ({ ok: true, text: JSON.stringify({ patterns: ["definition given, mechanism dropped, on both c and f"], overconfident: ["c"], next: ["re-open c: derive the vector, do not describe it"], note: "one honest sentence about the round" }) }),
+    });
+    assert("ROUND READ — a real read carries the cross-axis pattern, the overconfident cell and the grid it judged",
+      good.read.patterns.length === 1 && good.read.overconfident[0] === "c"
+      && good.read.axes === 3 && good.read.grid.length === 3 && good.read.grid[1].gut === "knew");
+    assert("ROUND READ — FILLER IS REFUSED: no pattern and no next step is not a read",
+      validateRoundRead({ patterns: [], overconfident: ["c"], next: [], note: "hi" }) === null);
+    assert("ROUND READ — an invented axis label cannot enter the overconfident list",
+      validateRoundRead({ patterns: ["a real pattern sentence here"], overconfident: ["c", "zz", "axis f"], next: [] }).overconfident.join(",") === "c");
+    const bad = await roundRead({ day: DAY, rejirahRows: rows, transcript: "", generateDeep: async () => ({ ok: true, text: "not json at all" }) });
+    assert("ROUND READ — unusable output writes NOTHING and says so (a garbled night is not a finding)",
+      bad.read === null && /unusable/.test(bad.skipped));
+    const dead = await roundRead({ day: DAY, rejirahRows: rows, transcript: "", generateDeep: async () => ({ ok: false }) });
+    assert("ROUND READ — a failed call is honest silence, never an empty read", dead.read === null && /did not return/.test(dead.skipped));
+  }
+
   // --- JOB 1c: THE FIELD PROBES (11 Aug 2026) -------------------------------
   // The whole worth of this job is what it REFUSES, so that is what is pinned
   // hardest: a question with no source is an invented question wearing the word
@@ -1187,6 +1320,8 @@ async function selftest() {
     assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
     assert("JOB 1c — the field probes ride the shift record too (a job with no record is a job nobody can audit)",
       "field_probes" in r.jobs);
+    assert("JOB 1d — the round read rides the shift record, and says WHY when it skips",
+      "round_read" in r.jobs && (r.jobs.round_read.skipped || r.jobs.round_read.axes));
     assert("probe bank: one per grammar type, validated, dated", writes["probe_bank_2026-07-15.json"].bank.tokenization.probes.length === 5);
     assert("distractors: one call is attempted per drill concept", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));

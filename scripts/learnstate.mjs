@@ -182,6 +182,28 @@ function nightCoachLine(dir, now) {
   return null;
 }
 
+// JOB 1d (11 Aug 2026) — THE ROUND READ's kickoff line. Built on his own design:
+// the deep grade must not block the live voice, so it lands overnight and reaches
+// him the next morning. Same freshness grammar as the night coach above — today
+// untagged, yesterday tagged with its age, absent SILENT — because a lane that
+// speaks when it has nothing is a lane he learns to skip.
+// THE ONE LINE THAT MATTERS is the overconfident cell: axes he called "knew" and
+// still cracked. That is the cell his whole calibration book exists to find, so
+// it leads, ahead of the pattern count.
+function roundReadLine(dir, now) {
+  const nowD = new Date(now);
+  for (const [d, tag] of [[ncLocalDate(nowD), ""], [ncLocalDate(new Date(nowD.getTime() - 86400000)), " (kal raat ka)"]]) {
+    const rr = readJson(join(dir, "brain_out/nightshift", `round_read_${d}.json`));
+    if (rr && Array.isArray(rr.patterns)) {
+      const over = Array.isArray(rr.overconfident) && rr.overconfident.length
+        ? ` · ⚠ "knew" bola aur crack hua: ${rr.overconfident.join(", ")}` : "";
+      const first = rr.patterns.length ? ` — ${clip(rr.patterns[0], 90)}` : "";
+      return `🧠 ROUND READ${tag}: ${rr.axes} axis ka gehra paath${over}${first} — brain_out/nightshift/round_read_${d}.json`;
+    }
+  }
+  return null;
+}
+
 // H6 (10 Aug 2026) — the diary's kickoff one-liner: the brain's own WILL CHANGE
 // line from last night's page. The machine sibling (.json, deterministic) is
 // the healthy path; the .md's first non-heading line is the degraded fallback.
@@ -728,6 +750,10 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   try {
     const ncl = nightCoachLine(dir, now);   // P2 — the overnight coach, one line, freshness-tagged
     if (ncl) L.push(ncl);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  try {
+    const rrl = roundReadLine(dir, now);   // JOB 1d — last night's deep read of his round
+    if (rrl) L.push(rrl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const dl = diaryLine(dir, now);   // H6 — the brain's own night page, one line
