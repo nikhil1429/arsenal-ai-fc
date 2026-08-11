@@ -110,7 +110,9 @@ if ($Revert) {
 # --- 1. register the conductor ---------------------------------------------
 # Uses run_logged.cmd so the chain report survives the window closing
 # (audit #98 - the Boot Room's weekly verdict was lost exactly this way).
-$tr = "cmd /c $repo\setup\run_logged.cmd scripts\conductor.mjs morning"
+# 11 Aug 2026 - THE CLOAK (see setup\hidden_task.vbs): no visible console, and the
+# conductor's own exit code still reaches Task Scheduler's Last Result.
+$tr = "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c $repo\setup\run_logged.cmd scripts\conductor.mjs morning"
 # 09:15, the captain's word (7 Aug 2026) - the box had been moved to 09:15 by hand
 # while this script still wrote 08:45, so every re-run would have silently pulled
 # the morning back 30 minutes. Script and box now agree.

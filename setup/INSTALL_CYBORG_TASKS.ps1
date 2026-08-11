@@ -30,7 +30,16 @@ function Mk($name, $args_, $sched) {
   # path). MkHidden below is deliberately NOT changed here - it routes through
   # hidden_run.vbs for the console-cloak scar (0xC000013A) and wrapping it is a
   # different design question, not this repair.
-  $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
+  #
+  # 11 Aug 2026 - THE CLOAK, HIS RULING. A `cmd /c` action is launched by Task
+  # Scheduler with a VISIBLE console in his session; with the organs on 15- and
+  # 30-minute triggers that is a window flashing across his screen roughly every
+  # seven minutes, all day, while he studies. His words: "very distracting for my
+  # adhd brain." hidden_task.vbs takes the window away and STILL exits with the
+  # organ's own code, so run_logged.cmd's Last Result contract above survives
+  # intact - which is why it is hidden_task.vbs here and not hidden_run.vbs (that
+  # one is fire-and-forget, correct for a daemon, a lie for a scheduled row).
+  $tr = "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
   HonourExpectedState $name

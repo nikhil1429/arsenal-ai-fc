@@ -1,0 +1,231 @@
+﻿{
+    "note":  "Original scheduled-task actions before CLOAK_TASKS.ps1. Restore with: CLOAK_TASKS.ps1 -Revert",
+    "written":  "2026-08-11T19:13:43",
+    "rows":  [
+                 {
+                     "name":  "ArsenalFC-Bell-FullTime",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\brain.mjs bell fulltime"
+                 },
+                 {
+                     "name":  "ArsenalFC-BootRoom",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\bootroom.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-BrainTick",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\brain.mjs tick"
+                 },
+                 {
+                     "name":  "ArsenalFC-Calibration",
+                     "execute":  "cmd",
+                     "arguments":  "/c node C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\calibration.mjs recompute \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\calibration.log 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-CapturePull",
+                     "execute":  "cmd",
+                     "arguments":  "/c node C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\capture.mjs pull \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\capture.log 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-ConceptGraph",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\cortex.mjs consolidate"
+                 },
+                 {
+                     "name":  "ArsenalFC-Consolidate",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\hippocampus.mjs consolidate"
+                 },
+                 {
+                     "name":  "ArsenalFC-Daemon-Watchdog",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\daemon_watchdog.mjs pass"
+                 },
+                 {
+                     "name":  "ArsenalFC-Distiller",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\distiller.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-DMN",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\dmn.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Doubtminer",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\doubtminer.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-DugoutReminders",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\dugout.mjs fire-reminders"
+                 },
+                 {
+                     "name":  "ArsenalFC-Evening-Conductor",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\conductor.mjs evening"
+                 },
+                 {
+                     "name":  "ArsenalFC-Examiner",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\examiner.mjs stage"
+                 },
+                 {
+                     "name":  "ArsenalFC-FSRS",
+                     "execute":  "cmd",
+                     "arguments":  "/c node C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\fsrs.mjs recompute \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\fsrs.log 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-Groundsman-Push",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\groundsman.mjs push"
+                 },
+                 {
+                     "name":  "ArsenalFC-Heartbeat",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\heartbeat.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-HippoIndex",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\hippocampus.mjs index"
+                 },
+                 {
+                     "name":  "ArsenalFC-HippoStore",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\hippocampus.mjs consolidate-store"
+                 },
+                 {
+                     "name":  "ArsenalFC-LearningState",
+                     "execute":  "cmd",
+                     "arguments":  "/c node C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\learning_state.mjs recompute \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\learning_state.log 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-Mirror",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\mirror.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Morning-Conductor",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\conductor.mjs morning"
+                 },
+                 {
+                     "name":  "ArsenalFC-Nemesis",
+                     "execute":  "cmd",
+                     "arguments":  "/c node C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\nemesis.mjs recompute \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\nemesis.log 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-NightShift",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\nightshift.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Physio-AM",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\physio.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Physio-PM",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\physio.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Presence",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\presence.mjs sense"
+                 },
+                 {
+                     "name":  "ArsenalFC-PresenceFit",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\presence.mjs calibrate"
+                 },
+                 {
+                     "name":  "ArsenalFC-Scorer",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\scorer.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Scout",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\scout.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-SetPiece",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\setpiece.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-ShadowDetect",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\dugout.mjs shadow-detect"
+                 },
+                 {
+                     "name":  "ArsenalFC-SprintSync",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\sprintsync.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Throwin",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\throwin.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-TimeAuditor-Full",
+                     "execute":  "cmd.exe",
+                     "arguments":  "/c node \"C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\timeaudit.mjs\" full \u003e\u003e \"C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\timeaudit.log\" 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-TimeAuditor-Pulse",
+                     "execute":  "cmd.exe",
+                     "arguments":  "/c node \"C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\timeaudit.mjs\" pulse \u003e\u003e \"C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\timeaudit.log\" 2\u003e\u00261"
+                 },
+                 {
+                     "name":  "ArsenalFC-Tone",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\tone.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Touchline",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\touchline.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Twin",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\twin.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-WakeProbe",
+                     "execute":  "cmd",
+                     "arguments":  "/c echo woke %DATE% %TIME% \u003e\u003e C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\scripts\\wakeprobe.log"
+                 },
+                 {
+                     "name":  "ArsenalFC-Wall-AM",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\viz.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Wall-Live",
+                     "execute":  "cmd",
+                     "arguments":  "/c cd /d C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc \u0026\u0026 node scripts\\viz.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Wallpaper",
+                     "execute":  "powershell",
+                     "arguments":  "-ExecutionPolicy Bypass -File C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\WALLPAPER.ps1"
+                 },
+                 {
+                     "name":  "ArsenalFC-Wall-PM",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\viz.mjs"
+                 },
+                 {
+                     "name":  "ArsenalFC-Watchman",
+                     "execute":  "cmd",
+                     "arguments":  "/c C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\setup\\run_logged.cmd scripts\\watchman.mjs run"
+                 }
+             ]
+}

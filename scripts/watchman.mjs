@@ -683,8 +683,14 @@ function spawnTier2(findings) {
     appendFileSync(REPAIR_LOG, `\n== ${new Date().toISOString()} :: TIER 2 START (${findings.length} findings) ==\n`);
     // Detached cmd with redirects: the nightly task exits immediately; the model
     // run streams into watchman_repair.log. `claude -p` reads the prompt on stdin.
+    // windowsHide (11 Aug 2026, HIS ruling on the popping consoles): without it a
+    // detached cmd.exe draws a REAL console in his session, and unlike the 15-minute
+    // organs this one does not flash and vanish -- it is a `claude -p --effort max`
+    // run that can sit open on screen for the length of a Tier-2 repair. Every other
+    // detached spawn in the organism (conductor's launchDetached, dugout's restart)
+    // already passes it; this one was the last that did not.
     const child = spawn("cmd.exe", ["/v:on", "/c", tier2CmdLine()],
-      { cwd: ROOT, detached: true, stdio: "ignore", env: { ...process.env, ARSENAL_ORGAN: "1" } });
+      { cwd: ROOT, detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
     child.unref();
     return { started_at: new Date().toISOString(), pid: child.pid };
   } catch (e) {

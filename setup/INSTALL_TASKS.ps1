@@ -28,7 +28,18 @@ function Mk($name, $args_, $sched) {
   # NOTE: this changes tasks created BY THIS SCRIPT. Tasks already registered keep
   # their existing command until they are re-registered (re-running this file with
   # /F overwrites them, which is the intended upgrade path).
-  $tr = "cmd /c $repo\setup\run_logged.cmd scripts\$args_"
+  # 11 Aug 2026 - THE CLOAK, HIS RULING. Task Scheduler launches a `cmd /c` action
+  # with a VISIBLE console in his session. With Throwin on 15 minutes and BrainTick /
+  # Touchline / Wall-Live on 30, that is a window flashing across his screen roughly
+  # every seven minutes, all day, while he studies - his words: "very distracting for
+  # my adhd brain." hidden_task.vbs removes the window and STILL exits with the
+  # organ's own code, so the Last Result contract written above is untouched. It is
+  # hidden_task.vbs and NOT hidden_run.vbs on purpose: the latter is fire-and-forget
+  # (right for a daemon that must outlive its launcher, a lie for a scheduled organ,
+  # because the task would always report 0 and every health check would go blind).
+  # Rows registered before today are re-pointed by setup\CLOAK_TASKS.ps1, which also
+  # writes the revert receipt.
+  $tr = "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c $repo\setup\run_logged.cmd scripts\$args_"
   schtasks /Create /F /TN $name /TR $tr @sched | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  + $name" } else { Write-Host "  ! FAILED $name" }
   HonourExpectedState $name
@@ -168,7 +179,7 @@ if (@($trigNode.CalendarTrigger).Count -lt 3) {
 # 03:52 one-liner with WakeToRun. If wakeprobe.log gains lines on lid-closed
 # nights, wake timers WORK on this box (the F14 closed-lid night is real); if it
 # stays empty on a closed-lid night, StartWhenAvailable catch-up is the truth.
-schtasks /Create /F /TN "ArsenalFC-WakeProbe" /TR "cmd /c echo woke %DATE% %TIME% >> $repo\scripts\wakeprobe.log" /SC DAILY /ST 03:52 | Out-Null
+schtasks /Create /F /TN "ArsenalFC-WakeProbe" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c echo woke %DATE% %TIME% >> $repo\scripts\wakeprobe.log" /SC DAILY /ST 03:52 | Out-Null
 $wp = Get-ScheduledTask -TaskName "ArsenalFC-WakeProbe" -ErrorAction SilentlyContinue
 if ($wp) { $wp.Settings.WakeToRun = $true; $wp.Settings.StartWhenAvailable = $false; $wp | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-WakeProbe (03:52, WakeToRun, NO catch-up — a woken line means a real wake)" }
 
