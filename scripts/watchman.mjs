@@ -351,10 +351,21 @@ export function checks(w) {
   if (w.tier2_trail && w.tier2_trail.last_start
       && localDayOf(w.tier2_trail.last_start) !== w.today
       && !w.tier2_trail.exit_after_start && !w.tier2_trail.journal_after_start) {
+    // 11 Aug 2026 — A DEAD LANE'S LAST FOOTPRINT IS NOT A LIVE FAULT.
+    // The arm was switched off by his ruling, so this row can never clear on its
+    // own: the vanished child is history, and no future run will ever stamp an
+    // exit for it. Left as RED it becomes a permanent alarm, and a permanent
+    // alarm is how he learns to stop reading the watchman at all — the exact
+    // failure this organ exists to prevent. Kept VISIBLE (never deleted: the
+    // corpse is real and the day it happened is evidence), demoted to INFO, and
+    // it says in its own words that the silence is a decision.
+    const dead = !tier2Enabled();
     F.push({
-      id: "tier2-vanished", level: "RED",
-      finding: "a Tier-2 repair child started on a previous day and left NO exit stamp and NO journal row — the repair arm died silently mid-run (the maiden-run class: minutes of work, zero bytes of trace)",
-      evidence: `last TIER 2 START ${w.tier2_trail.last_start} · no "TIER2 EXIT" line after it in watchman_repair.log · no watchman_repairs.jsonl row at-or-after it`,
+      id: "tier2-vanished", level: dead ? "INFO" : "RED",
+      finding: dead
+        ? "the last Tier-2 repair child (before the lane was switched off) left no exit stamp and no journal row — history, not a live fault: the arm is DISABLED by his 11 Aug ruling, so nothing will ever stamp an exit for it"
+        : "a Tier-2 repair child started on a previous day and left NO exit stamp and NO journal row — the repair arm died silently mid-run (the maiden-run class: minutes of work, zero bytes of trace)",
+      evidence: `last TIER 2 START ${w.tier2_trail.last_start} · no "TIER2 EXIT" line after it in watchman_repair.log · no watchman_repairs.jsonl row at-or-after it${dead ? " · lane OFF (ARSENAL_TIER2 unset) — re-arming it makes this RED again, which is correct" : ""}`,
     });
   }
 
@@ -624,13 +635,16 @@ export function inWindow(hm, start, end) {
 //     ARSENAL_TIER2=1 node scripts/watchman.mjs run
 // Re-open the question the honest way — when the arm can prove an exit stamp and
 // a journal row on a manual run, flip the default back.
-const TIER2_ENABLED = process.env.ARSENAL_TIER2 === "1";
+// Read at CALL time, not at module load: the selftest has to be able to exercise
+// both the live-lane and the dead-lane behaviour in one process, and a frozen
+// const would leave whichever half is not the current default permanently untested.
+const tier2Enabled = () => process.env.ARSENAL_TIER2 === "1";
 
 // `enabled` is a PARAMETER, not only a module constant, so the gate's LOGIC
 // stays testable while the POLICY is off: the selftest below passes `true` to
 // assert firing/deferring/once-per-day still behave, and one assertion pins the
 // DEFAULT to off. A policy that cannot be tested around is a policy that rots.
-export function tier2Gate(lastJson, findings, today, noTier2, nowHM = null, win = null, enabled = TIER2_ENABLED) {
+export function tier2Gate(lastJson, findings, today, noTier2, nowHM = null, win = null, enabled = tier2Enabled()) {
   const hard = findings.filter((f) => f.level !== "INFO");
   if (!hard.length) return { fire: false, why: "clean night — Tier 2 costs nothing (the split IS the billing guard)" };
   if (noTier2) return { fire: false, why: "--no-tier2 flag (manual/demo run)" };
@@ -1557,8 +1571,25 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
 
   // c9 — the repair arm's own liveness (from the maiden live-fire)
   const trail = (last_start, exit, journal) => ({ ...base, tier2_trail: { last_start, exit_after_start: exit, journal_after_start: journal } });
-  assert("c9 — a PREVIOUS-day Tier-2 start with no EXIT stamp and no journal row = tier2-vanished RED",
-    checks(trail("2026-08-05T14:16:16.376Z", false, false)).some((f) => f.id === "tier2-vanished" && f.level === "RED"));
+  // Both halves exercised in one process by toggling the env the lane reads. The
+  // RED half is the one that would otherwise rot: with the lane off by default,
+  // an assertion that only checked today's behaviour would stop guarding the
+  // behaviour that returns the moment he re-arms it.
+  const withTier2 = (on, fn) => {
+    const prev = process.env.ARSENAL_TIER2;
+    if (on) process.env.ARSENAL_TIER2 = "1"; else delete process.env.ARSENAL_TIER2;
+    try { return fn(); } finally { if (prev === undefined) delete process.env.ARSENAL_TIER2; else process.env.ARSENAL_TIER2 = prev; }
+  };
+  assert("c9 — with the lane ARMED, a previous-day start with no exit and no journal row = tier2-vanished RED",
+    withTier2(true, () => checks(trail("2026-08-05T14:16:16.376Z", false, false)).some((f) => f.id === "tier2-vanished" && f.level === "RED")));
+  assert("c9 — with the lane DISABLED the same corpse is INFO, not RED: a dead lane's last footprint can never clear, and a permanent RED teaches him to stop reading the watchman",
+    withTier2(false, () => {
+      const f = checks(trail("2026-08-05T14:16:16.376Z", false, false)).find((x) => x.id === "tier2-vanished");
+      return f && f.level === "INFO" && /DISABLED by his 11 Aug ruling|history, not a live fault/.test(f.finding);
+    }));
+  assert("c9 — the corpse is never DELETED, in either state (the day it happened stays evidence)",
+    withTier2(false, () => checks(trail("2026-08-05T14:16:16.376Z", false, false)).some((f) => f.id === "tier2-vanished"))
+    && withTier2(true, () => checks(trail("2026-08-05T14:16:16.376Z", false, false)).some((f) => f.id === "tier2-vanished")));
   assert("c9 — an EXIT stamp OR a journal row OR a same-day start all silence it (the child may still be running tonight)",
     !checks(trail("2026-08-05T14:16:16.376Z", true, false)).some((f) => f.id === "tier2-vanished")
     && !checks(trail("2026-08-05T14:16:16.376Z", false, true)).some((f) => f.id === "tier2-vanished")
