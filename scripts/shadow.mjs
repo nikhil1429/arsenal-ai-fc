@@ -16,7 +16,7 @@
 //        hit-rate only OPENS the door; his word walks through it · one shadow
 //        per type per day (no spam even in the dark).
 // WRITER OF: shadow_log.jsonl · proactivity_ledger.json (single-writer law)
-// MODES: detect · score · ratify <type> · status · selftest
+// MODES: detect · score · ratify <type> [--captain] · unratify <type> · status · selftest
 //
 // SCORING IS DATE-SCOPED AND INDEPENDENTLY RUNNABLE (audit #52, 4 Aug 2026).
 //   `score` used to select EVERY unresolved row ever logged while building its
@@ -267,17 +267,54 @@ function updateLedger(prev, resolvedMoments) {
   led.updated = new Date().toISOString();
   return led;
 }
-function ratifyType(led, type) {
+// THE CAPTAIN'S OVERRIDE (11 Aug 2026 — HIS RULING, verbatim: "remove it right
+// now. my adhd brain won't remember shit").
+//
+// The two-key gate below (eligible = shadow evidence · ratified = his word) was
+// built so the machine could not nag him on a hunch. It assumes ONE thing that
+// turned out to be false for him: that he would still be reminded some other way
+// while the evidence accumulated. He will not — not remembering is the condition
+// the organism exists to carry, and making him wait ~10 shadows to be told what
+// is due asks his ADHD to cover for the machine's caution.
+//
+// So the FIRST key becomes overridable BY HIM and only by him. What is preserved:
+//   · the second key still exists — an override is still HIS explicit word
+//   · `eligible` is NOT faked; it stays the honest measurement it always was
+//   · `overridden` is stamped so the ledger says WHY the mouth opened, and the
+//     evidence lane keeps scoring underneath (if it later proves itself, the row
+//     stops depending on the override)
+//   · one word reverts it: `shadow.mjs unratify <type>`
+// This is a captain's exception to a design law, recorded as one. It is NOT the
+// law being deleted: an unratified type is still mute, and `score` still refuses
+// to invent eligibility.
+function ratifyType(led, type, opts = {}) {
   const e = led && led.types && led.types[type];
   if (!e) return { ok: false, why: `unknown type '${type}'` };
-  if (!e.eligible) {
+  if (!e.eligible && !opts.captain) {
     const unmeasured = led && led.never_scored ? " — and nothing has been scored yet, so that 0 is UNMEASURED, not a measured zero" : "";
     const unscorable = e.unscorable ? `, ${e.unscorable} unscorable` : "";
-    return { ok: false, why: `not proven yet — ${e.shadows}/${VOICE_GATE.min_shadows} shadows${unscorable}, hit-rate ${e.hit_rate ?? "—"} (needs ≥${VOICE_GATE.min_hit_rate})${unmeasured}` };
+    return { ok: false, why: `not proven yet — ${e.shadows}/${VOICE_GATE.min_shadows} shadows${unscorable}, hit-rate ${e.hit_rate ?? "—"} (needs ≥${VOICE_GATE.min_hit_rate})${unmeasured}. His word can still open it: shadow.mjs ratify ${type} --captain` };
   }
   if (e.ratified) return { ok: false, why: "already ratified" };
   e.ratified = true; e.voice = true;
+  if (!e.eligible) {
+    e.overridden = { at: new Date().toISOString(), why: "captain's override, 11 Aug 2026 — evidence gate waived by his ruling; the shadow lane keeps scoring underneath" };
+    return { ok: true, why: `OVERRIDDEN by the captain — the mouth is open for '${type}' WITHOUT shadow evidence (${e.shadows}/${VOICE_GATE.min_shadows} shadows). Revert: shadow.mjs unratify ${type}` };
+  }
   return { ok: true, why: "ratified by the captain's word — the mouth is earned for this type" };
+}
+
+// The revert door. A ratification he can only add and never take back is not a
+// ruling, it is a trap — and an OVERRIDE especially needs one, because it opened
+// on his word alone with no evidence behind it.
+function unratifyType(led, type) {
+  const e = led && led.types && led.types[type];
+  if (!e) return { ok: false, why: `unknown type '${type}'` };
+  if (!e.ratified) return { ok: false, why: `'${type}' is not ratified — nothing to walk back` };
+  e.ratified = false; e.voice = false;
+  const wasOverride = !!e.overridden;
+  delete e.overridden;
+  return { ok: true, why: `'${type}' is MUTE again${wasOverride ? " (the captain's override is withdrawn)" : ""}` };
 }
 
 // ---------------------------------------------------------------------------
@@ -387,6 +424,29 @@ async function selftest() {
   const r2 = ratifyType(led2, "due_at_kickoff");
   assert("ratify REFUSED before the proof (honest refusal, with numbers)", r2.ok === false && r2.why.includes("not proven"));
   assert("hit-rate math honest", led2.types.due_at_kickoff.hit_rate === 0.5);
+
+  // --- THE CAPTAIN'S OVERRIDE (11 Aug 2026 ruling) --------------------------
+  // The refusal must TEACH the door, not just say no; the override must open the
+  // mouth WITHOUT faking the evidence; and it must be walk-back-able. All three,
+  // because an override that hides itself in the ledger is worse than no override.
+  assert("the honest refusal now NAMES the captain's door instead of dead-ending him",
+    /--captain/.test(r2.why));
+  const ledOv = updateLedger(null, [{ type: "due_at_kickoff", hit: false }]);
+  const rOv = ratifyType(ledOv, "due_at_kickoff", { captain: true });
+  assert("OVERRIDE opens the mouth with zero evidence, on his word alone",
+    rOv.ok === true && ledOv.types.due_at_kickoff.voice === true);
+  assert("OVERRIDE never fakes the measurement — eligible stays honestly false",
+    ledOv.types.due_at_kickoff.eligible === false);
+  assert("OVERRIDE stamps WHY the mouth opened (a silent override is an unexplainable ledger)",
+    !!ledOv.types.due_at_kickoff.overridden && /captain/i.test(ledOv.types.due_at_kickoff.overridden.why));
+  const rUn = unratifyType(ledOv, "due_at_kickoff");
+  assert("UNRATIFY walks it back — mute again, and the override stamp is gone",
+    rUn.ok === true && ledOv.types.due_at_kickoff.voice === false
+    && ledOv.types.due_at_kickoff.ratified === false && !ledOv.types.due_at_kickoff.overridden);
+  assert("UNRATIFY on a mute type refuses honestly rather than pretending it did something",
+    unratifyType(ledOv, "due_at_kickoff").ok === false);
+  assert("OVERRIDE is opt-in only — a plain ratify on unproven evidence still refuses",
+    ratifyType(updateLedger(null, [{ type: "scrimmage_door", hit: true }]), "scrimmage_door").ok === false);
   led.types.wall_breaker.hits = 2; led.types.wall_breaker.shadows = 10;
   const led3 = updateLedger(led, []);
   assert("voice REVOKED if the hit-rate decays (ratification can't outlive proof)", led3.types.wall_breaker.voice === false);
@@ -496,10 +556,21 @@ async function main() {
   }
   if (mode === "ratify") {
     const type = process.argv[3];
+    // --captain = HIS override of the evidence gate (11 Aug 2026 ruling). Named,
+    // not silent: the flag has to be typed, so nothing opens the mouth by accident.
+    const captain = process.argv.includes("--captain");
     const led = readJson(LEDGER) || updateLedger(null, []);
-    const r = ratifyType(led, type);
+    const r = ratifyType(led, type, { captain });
     if (r.ok) writeAtomic(LEDGER, led);
     console.log(`shadow: ratify ${type} → ${r.why}`);
+    process.exit(r.ok ? 0 : 1);
+  }
+  if (mode === "unratify") {
+    const type = process.argv[3];
+    const led = readJson(LEDGER) || updateLedger(null, []);
+    const r = unratifyType(led, type);
+    if (r.ok) writeAtomic(LEDGER, led);
+    console.log(`shadow: unratify ${type} → ${r.why}`);
     process.exit(r.ok ? 0 : 1);
   }
   if (mode === "status") {

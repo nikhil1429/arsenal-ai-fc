@@ -1267,7 +1267,7 @@ VOICE REPS (the metamorphosis — talking is training): when he wants drilling, 
 
 TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
 
-RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first, honest verdicts, log_reps at the end. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
+RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first, honest verdicts, log_reps at the end. TWO LAWS ADDED 11 Aug 2026, both because a spoken round used to leave no trace: (1) THE QUESTIONS ARE HIS, NOT YOURS — get_rejirah hands you concepts, so open get_capsule and probe his own fault-lines a-i in his own words; inventing a probe when his is on disk is the one thing this surface must never do. (2) RECORD EVERY AXIS AS YOU GO — the moment you judge one, call grade_rejirah(concept, axis, held|cracked, gut). One call per axis, immediately, never saved up for the end of the round: a dropped connection mid-round must not cost him the axes he already defended. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
 
 HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT words (never your paraphrase) and the time he named. At fire time his own words come back through you — once, warm, done. Never add advice to a reminder.
 
@@ -1311,7 +1311,8 @@ const TOOL_DECLS = [
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
   { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. Build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
-  { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'. The queue gives you CONCEPTS, not questions: open his own capsule with get_capsule and probe HIS fault-lines a-i — never invent a question when his is on disk. Record each axis with grade_rejirah the moment you judge it.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "grade_rejirah", description: "RECORD ONE RE-JIRAH AXIS — call the instant you have judged an axis in a spoken round, one call per axis, never batched at the end. concept = the capsule id (embeddings/inference/context/tokenization) · axis = a-i · result = held|cracked · gut = the word he committed BEFORE answering (knew|shaky|guessed). This is what makes the round REAL: log_reps banks the rep, this moves the axis — its round number, its next due date, its fluency streak. Without it the controller believes the round never happened. If he never gave a gut-word, ASK him for it before calling; a grade without one is refused by law.", parameters: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, result: { type: "STRING" }, gut: { type: "STRING" } }, required: ["concept", "axis", "result", "gut"] } },
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
   { name: "semantic_recall", description: "\"When did I last mention X / maine kab bola tha\" — semantic search over HIS OWN past words (transcripts, notes, throw-ins, notebook). Returns dates + verbatim snippets.", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
@@ -1608,6 +1609,39 @@ function execTool(name, args, deps = {}) {
     if (name === "ratify_interruption") {
       const said = sh("shadow.mjs", ["ratify", String(args.type || "")]);
       return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
+    // ------------------------------------------------------------------------
+    // GRADE_REJIRAH (11 Aug 2026) — THE VOICE ROUND'S MISSING WRITE.
+    //
+    // get_rejirah has conducted spoken Re-Jirah rounds since it shipped, and
+    // log_reps banked the reps — but the ROUND itself had no door. rejirah.mjs
+    // owns the axis-level record (held/cracked, round number, nextDue, the
+    // fluency streak, the edge map) and nothing in this file could reach it, so
+    // a spoken round left the controller believing it never happened. The proof
+    // was on every FSRS card on the day this was written: `"rejirah_graded": 0`
+    // — not one Re-Jirah grade had ever landed, on any concept, ever.
+    //
+    // It shells the OWNER rather than writing state (the file-ownership law:
+    // rejirah_log.jsonl has exactly one writer, and this is not it), which also
+    // means the GUT-WORD LAW is enforced where it already lives — rejirah.mjs
+    // refuses a grade with no gut-word and this door inherits that refusal
+    // verbatim instead of re-implementing it and drifting from it.
+    // ------------------------------------------------------------------------
+    if (name === "grade_rejirah") {
+      const concept = String(args.concept || "").trim();
+      const axis = String(args.axis || "").trim().toLowerCase();
+      const result = String(args.result || "").trim().toLowerCase();
+      const gut = String(args.gut || "").trim().toLowerCase();
+      if (!concept || !/^[a-i]$/.test(axis)) return { ok: false, error: "need concept and axis a-i" };
+      if (!["held", "cracked"].includes(result)) return { ok: false, error: "result must be held|cracked" };
+      // Held here TOO, not only in the owner: a spoken round must fail at the
+      // moment of the missing gut-word, while the Gaffer can still ask for it —
+      // an error surfacing after the axis has moved on is an error he cannot fix.
+      if (!["knew", "shaky", "guessed"].includes(gut)) {
+        return { ok: false, error: "GUT-WORD LAW: gut must be knew|shaky|guessed, and he must have committed it BEFORE answering. No gut-word, no rep — ask him, then call again." };
+      }
+      const said = sh("rejirah.mjs", ["grade", concept, axis, result, "--gut", gut]);
+      return { ok: true, concept, axis, result, gut, said: String(said || "").trim().slice(0, 400) };
     }
     if (name === "set_depth") {
       const reg = String(args.register || "").toLowerCase();
@@ -2371,7 +2405,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 28);   // 28 since PHASE H H3 (get_model; 27 = H6 get_diary, 26 = LADDER F1)
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 29);   // 29 since the 11 Aug voice-round wire (grade_rejirah; 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1)
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -2859,7 +2893,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("28 club tools now (H3: get_model joined H6's get_diary)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 28);
+    assert("29 club tools now (11 Aug: grade_rejirah joined H3's get_model)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 29);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -2886,7 +2920,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 28 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 29 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -4460,8 +4494,12 @@ async function main() {
           // Same single-writer shape as /tank-use: we carry the news, the OWNER
           // writes tanks.json. record429's STARVATION GUARD does the arithmetic
           // (observed_ceiling = max(estimate, used)) — nothing is computed here.
+          // 11 Aug: shelled "use", not "fault" — a DRY tank filed as ordinary spend,
+          // so record429 still had no producer (this door's whole purpose, undone by
+          // one word). Its own selftest was RED on exactly this. Keep the call within
+          // 1200 chars of the door marker: that assertion reads a fixed window.
           const id = String(body.id || "");
-          if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "use", id], { windowsHide: true, timeout: 15000 }); } catch { } }
+          if (/^T[1-7]$/.test(id)) { try { execFileSync(process.execPath, [join(__dirname, "fuelboard.mjs"), "fault", id], { windowsHide: true, timeout: 15000 }); } catch { } }
           // the WHY rides the voice ledger (close code + reason, already
           // truncated by the page) so a later reader can tell a real exhaustion
           // from a wire fault without re-guessing it. brain.mjs's
