@@ -35,6 +35,10 @@
 //        The sonnet chair additionally is headroom-gated + refused outright if
 //        a metered key is set. Failure degrades gracefully: 0 drafts → cortex
 //        proceeds cold, exactly as before.
+//        A SEAT'S DECLARED `family` IS ITS ENGINE (11 Aug 2026 — until today it
+//        was an ORPHAN FIELD: council_config declared it, the router ignored it
+//        for a `seat.id === "steelman"` test, and renaming that one seat would
+//        have silently killed the cross-family lane. See familyRoute.)
 // MODES: node scripts/council.mjs ask "<question>" · selftest
 // ============================================================================
 
@@ -54,7 +58,36 @@ const FLAG      = join(STATE_DIR, "council_flag.json");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+// THE LEDGER IS HALF THE WINDOW, SO ITS READ MAY NOT SWALLOW (11 Aug 2026, wiring
+// audit). What stood here was, verbatim:
+//   const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+// — one bare catch{} wrapped around the ENTIRE read, and exactly one caller in this
+// file: the headroom() call that gates the 4th chair. brain.mjs's windowUsage() sums
+// ledger rows and nothing else, so [] does not mean "unknown", it means "nothing has
+// been spent" — the single most permissive answer the budget can be handed. Probed
+// against the live files this morning:
+//   headroom(loadConfig(), <4,694 real rows>, {}, now) → { allowed:         0, used: 1,831,748 }
+//   headroom(loadConfig(), [],                {}, now) → { allowed: 1,520,000, used:         0 }
+// …against the 10,000-token floor in council_config.json. So an EBUSY/EPERM on the
+// one file in this repo most likely to be mid-write when we open it — the SHARED
+// APPEND LANE, six live appenders — did not bench the chair: it took a HARD-EXHAUSTED
+// window and read it as FULL CAP. That is the exact inverse of the law 450 lines down
+// ("an unreadable window is not a spare window"), and only a throw out of
+// brain_config/brain_queue was ever actually reaching that bench.
+// The split below now matches what each failure MEANS:
+//   · file absent     → [], honestly zero spend (brain.mjs's own reader agrees, :2899)
+//   · torn tail line  → skipped in silence: a half-written last line on an append lane
+//                       with six writers is that file's normal state, not a fault
+//   · unreadable file → THROWS, into the bench-on-crash arm that already existed
+const readLedger = (p) => {
+  if (!existsSync(p)) return [];
+  const o = [];
+  for (const l of readFileSync(p, "utf8").split("\n")) {   // deliberately NOT wrapped — this throw IS the wire
+    if (!l.trim()) continue;
+    try { o.push(JSON.parse(l)); } catch {}
+  }
+  return o;
+};
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -63,10 +96,17 @@ function writeAtomic(path, obj) {
 }
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+// THE BAKED BENCH — the fallback when council_config.json is missing/unreadable.
+// FAMILIES CORRECTED 11 Aug 2026 (wiring audit, see familyRoute below): all three
+// read `family: "gemini"` while the router sent two of them to `claude -p` haiku,
+// so the baked bench lied about itself exactly the way the config file did. These
+// two now DECLARE the engine they have actually ridden since 17 Jul. NO ENGINE
+// MOVED — the selftest asserts familyRoute(s) === routeOfLegacy(s) for every seat
+// here, which is the guard that this correction changed who decides, not what runs.
 const DEFAULT_SEATS = [
   { id: "steelman", family: "gemini", brief: "You are THE STEELMAN. Build the strongest HONEST case / clearest mechanism-first explanation. No hedging, no straw." },
-  { id: "prosecutor", family: "gemini", brief: "You are THE PROSECUTOR. Attack the question's premises and every easy answer: where does it break, what's being conflated, what would a hostile staff engineer say. Honest attacks only." },
-  { id: "captains_voice", family: "gemini", brief: "You are THE CAPTAIN'S OWN VOICE — argue it the way HE would, using HIS anchors and phrasings from the capsule excerpts provided. Stay in his idiom (Hinglish welds fine)." },
+  { id: "prosecutor", family: "claude", brief: "You are THE PROSECUTOR. Attack the question's premises and every easy answer: where does it break, what's being conflated, what would a hostile staff engineer say. Honest attacks only." },
+  { id: "captains_voice", family: "claude", brief: "You are THE CAPTAIN'S OWN VOICE — argue it the way HE would, using HIS anchors and phrasings from the capsule excerpts provided. Stay in his idiom (Hinglish welds fine)." },
 ];
 // M15 — the 4th chair: a DIFFERENT family reads the same question. Families
 // fail differently; where they diverge is exactly where his understanding
@@ -77,6 +117,50 @@ const CROSS_SEAT = { id: "cross_examiner", family: "claude", model: "sonnet", br
 // must never be able to disagree about which model was actually spent — the
 // literal used to live only inside seatGen, where nothing else could read it.
 const FREE_CLAUDE_MODEL = "haiku";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE DECLARED FAMILY IS THE ROUTE (11 Aug 2026, wiring audit — the SIXTH door
+// found built-but-not-wired, and the one that let canon lie about the bench).
+//
+// WHAT WAS BROKEN. Every seat carries a `family`; council_config.json declares one
+// for all three chairs; loadSeats defaults it; councilSection prints it. NOTHING
+// READ IT on the live path. The router was `seat.id === "steelman" ? "gemini" :
+// "claude"` — an ID test — so a chair's declared family decided nothing about
+// which engine it rode. Probed against the file on disk this morning (3 seats, all
+// three declaring family "gemini"): ONE call reached the Gemini pool and TWO
+// reached `claude -p`, and the labels came back steelman=gemini, prosecutor=claude,
+// captains_voice=claude. The declaration and the engine had described different
+// benches since 17 Jul. Two costs, both silent:
+//   · ADD a chair to council_config declaring family "gemini" and it spends the
+//     MAX WINDOW instead of the free pool — the same spend-blindness the free-seat
+//     ledger block in convene() was written to end, walking back in through the
+//     config door, and against a window the 4th chair is itself gated on.
+//   · RENAME the steelman seat — a legitimate captain edit; the config's own _doc
+//     says chairs shape the curriculum — and the ID test sends the WHOLE bench to
+//     Claude. crossFamilySplit() then sees one family and returns null forever,
+//     council_flag.json is never written again, and M15's disagreement-as-
+//     curriculum lane dies with nothing in any file naming its death.
+//
+// THE FIX: the declared family picks the engine. An UNROUTABLE family is BENCHED
+// BY NAME rather than quietly handed whichever engine is cheapest to call — a
+// chair nobody can route is a canon typo, and this file's law is that an absence
+// is named (councilSection's NOT AT THE TABLE line carries it into the Opus
+// prompt). Adding a family here means teaching this map one key, in one place.
+//
+// NO BEHAVIOUR MOVED TODAY. The two seats that have ridden `claude -p` haiku since
+// 17 Jul now SAY SO, in DEFAULT_SEATS and in council_config.json, so the live bench
+// after this edit is the live bench before it. Whether those two belong back on the
+// free Gemini pool — which is what the config's _doc used to claim — is a spend and
+// latency call (17 Jul's reason was "the bus leaves in 25s"), HIS, not a wiring
+// one, and this file does not make it.
+const ENGINE_BY_FAMILY = { gemini: "gemini", claude: "claude" };
+const familyRoute = (seat) => ENGINE_BY_FAMILY[String((seat && seat.family) || "").trim().toLowerCase()] || null;
+// LAYERING — the PRE-AUDIT router, frozen verbatim; no longer the plan of record.
+// It is kept because it is the only remaining record of which chair rode what
+// before today, and because the selftest pins familyRoute against it across the
+// baked bench: that assertion is what proves this repair moved the DECISION and
+// not the ENGINES. It is also the shape any future id-test regression will match.
+const routeOfLegacy = (seat) => (seat.id === "steelman" ? "gemini" : "claude");
 
 function loadSeats(cfgObj) {
   const c = cfgObj !== undefined ? cfgObj : readJson(CONFIG);
@@ -152,6 +236,41 @@ const CAPSULE_LAYERS = [
 ];
 const VOICE_LAYERS = ["bolo", "welds", "threeWays", "interviewLines"];
 
+// ── THE TORN CAPSULE (11 Aug 2026, wiring audit) — the same hole, one level UP ──
+//
+// WHAT WAS BROKEN. THE CAPTAIN'S DOOR above rebuilt the absence law at LAYER
+// level: every layer left behind now names itself with its exact char count. The
+// FILE level kept the old silence. Three skips dropped a whole locked capsule
+// without a word: `catch { continue; }` on the parse, `if (!j || typeof j !==
+// "object") continue;` on a non-object, and the un-pushed `parts.length > 1`
+// tail. Then the footer — reached only by the survivors — affirmatively told the
+// model the opposite: "Every layer of all N locked capsule(s) is above … nothing
+// was dropped", with N counting the survivors, so a council that lost `inference`
+// entirely read as a complete council of three.
+// REPRODUCED, not assumed (probe, 11 Aug 2026, three fixture capsules a/b/c with
+// c's JSON torn): the payload carried a and b only and the footer read
+// "(Every layer of all 2 locked capsule(s) is above, VERBATIM and UNCUT — nothing
+// was dropped.)" — the string `c` appeared nowhere in it. The four live capsules
+// all parse today (checked the same morning: context 49,660 · embeddings 57,984 ·
+// inference 60,805 · tokenization 41,107 bytes, all clean), which is exactly why
+// this is worth wiring now rather than after: the producer is mirror.mjs, which
+// re-fetches from the gist every 06:55 AND on every forge lock-close, so a torn
+// pull is a network event away and this door is the one that would swallow it.
+// Same silent starvation the 200/900/4 cuts caused, arriving through the mirror.
+//
+// THE FIX is councilSection()'s ruling, applied one level down: the empty chairs
+// travel WITH the drafts. A file that could not be seated is named with its
+// reason, the survivor count is stated as `N of M`, and "nothing was dropped" is
+// now unreachable while anything was. No cap, no threshold, no new number — the
+// only numbers here are counted from the directory listing.
+// AND IT SURVIVES A TOTAL TEAR: with every file torn this used to return null,
+// which the chair reads as "he has no locked capsules" — a lie of a different
+// shape. It now returns the absence note alone. A genuinely EMPTY or missing
+// capsules/ dir still returns null, because that one is true.
+// No legacy freeze: this ADDS a report, it does not swap an engine — every
+// surviving capsule renders byte-identically to this morning, and the pre-11-Aug
+// door is already frozen verbatim as capsuleExcerptsLegacy below.
+//
 // his own words seed the third chair (READ-ONLY: capsules/ belongs to mirror.mjs
 // — this file never writes there, never rewords a line, never re-emits one as
 // its own). No cap, no file-list slice: see THE CAPTAIN'S DOOR above.
@@ -164,22 +283,38 @@ function capsuleExcerpts(dir = join(STATE_DIR, "capsules"), deps = {}) {
     const files = readdirSync(dir).filter(f => f.endsWith(".json"));   // ALL of them — a 5th capsule used to be invisible forever
     const blocks = [];
     const dropped = new Map();                                          // layer id → chars left behind, for the honest footer
+    const unseated = [];                                                // file → why it never made the table (see THE TORN CAPSULE)
     for (const f of files) {
       let j = null;
-      try { j = JSON.parse(readFileSync(join(dir, f), "utf8")); } catch { continue; }
-      if (!j || typeof j !== "object") continue;
+      // the reason travels, the way seatFailure() carries a dead chair's cause:
+      // "unreadable" and "the mirror wrote something that is not a capsule" are
+      // different repairs, and a bare count could not tell them apart.
+      try { j = JSON.parse(readFileSync(join(dir, f), "utf8")); }
+      catch (e) { unseated.push(`${f} (unreadable — ${String((e && e.message) || e).slice(0, 120)})`); continue; }
+      if (!j || typeof j !== "object") { unseated.push(`${f} (not a JSON object)`); continue; }
       const id = f.replace(/\.json$/, "");
       const parts = [`=== ${id}${j.title ? ` · ${S_(j.title)}` : ""}${j.lockedOn ? ` · locked ${S_(j.lockedOn)}` : ""} ===`];
       for (const L of on) { const t = L.get(j); if (t.trim()) parts.push(`${L.label}:\n${t}`); }   // VERBATIM AND UNCUT
       for (const L of off) { const n = L.get(j).length; if (n) dropped.set(L.id, (dropped.get(L.id) || 0) + n); }
       if (parts.length > 1) blocks.push(parts.join("\n"));
+      // read fine, but carries nothing in the selected layers — the layer footer
+      // cannot say this, because it reports SIZES summed across capsules and a
+      // capsule contributing zero to every one of them is invisible in a sum.
+      else unseated.push(`${id} (parsed, but no words in the selected layers: ${on.map(L => L.id).join("/")})`);
     }
-    if (!blocks.length) return null;
+    const torn = unseated.length
+      ? `\n(⚠ NOT AT THE TABLE — ${unseated.length} of ${files.length} capsule file(s) could not be seated, so HIS WORDS IN THEM ARE MISSING, not absent: ${unseated.join(" · ")}. Do not read the bench above as his whole locked body of work.)`
+      : "";
+    if (!blocks.length) return torn ? torn.trim() : null;   // a total tear must not read as "he has no capsules"
     // ABSENCE IS NAMED — the silent drop IS the defect being removed here, so the
     // payload says its own shape and every layer it is not carrying says its size.
+    // The `M` is the directory listing's own count, so the footer can no longer
+    // claim completeness over files it never opened.
     const foot = dropped.size
-      ? `\n(NOT INCLUDED, named so you know what you are not holding: ${[...dropped].map(([k, n]) => `${k} ${n} chars`).join(" · ")}. Everything above is his own words, VERBATIM and UNCUT, from ${blocks.length} locked capsule(s).)`
-      : `\n(Every layer of all ${blocks.length} locked capsule(s) is above, VERBATIM and UNCUT — nothing was dropped.)`;
+      ? `\n(NOT INCLUDED, named so you know what you are not holding: ${[...dropped].map(([k, n]) => `${k} ${n} chars`).join(" · ")}. Everything above is his own words, VERBATIM and UNCUT, from ${blocks.length} of ${files.length} locked capsule(s).)${torn}`
+      : torn
+        ? `\n(Every layer of the ${blocks.length} capsule(s) above is here, VERBATIM and UNCUT — but not every capsule got here.)${torn}`
+        : `\n(Every layer of all ${blocks.length} locked capsule(s) is above, VERBATIM and UNCUT — nothing was dropped.)`;
     return blocks.join("\n\n") + "\n" + foot;
   } catch { return null; }
 }
@@ -361,14 +496,19 @@ async function convene(question, deps = {}) {
   // 17 Jul: the chairs ride Claude (haiku — the bus leaves in 25s) EXCEPT the
   // steelman seat, kept on Gemini deliberately: cross-FAMILY disagreement is
   // M15's whole signal, and an all-Claude bench would argue with one accent.
+  // (11 Aug 2026: that arrangement is UNCHANGED, but it is now DECLARED — each
+  // seat's `family`, in council_config.json and DEFAULT_SEATS — instead of being
+  // hardcoded onto one seat's id, which is how a rename could kill the signal.)
   const gen = deps.generate || null;
   // THE ROUTE IS DECIDED ONCE (11 Aug 2026, wiring audit — see FREE_CLAUDE_MODEL).
   // The call, the tank charge, the ledger row and the family label all read this
-  // one value now. They used to be two separate expressions — the `seat.id ===
-  // "steelman"` test below and the identical one that built `fam` — which is how
-  // the spend and the label could describe different engines without ever
-  // disagreeing in a way a test could see.
-  const routeOf = (seat) => gen ? "injected" : (seat.id === "steelman" ? "gemini" : "claude");
+  // one value now. They used to be two separate expressions — an id === "steelman"
+  // test here and the identical one that built `fam` — which is how the spend and
+  // the label could describe different engines without ever disagreeing in a way a
+  // test could see. SECOND PASS, same day (see familyRoute): that surviving id test
+  // is gone too. The DECLARED family now picks the engine; an undeclarable one is
+  // benched by name and is never quietly given an engine it did not ask for.
+  const routeOf = (seat) => gen ? "injected" : familyRoute(seat);
   const poolGen = deps.pool || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 }));
   // THE BUS LEAVES ON TIME (live-arc scar, 14 Jul): a chair that misses the
   // deadline is dropped — the deep answer must land in the stuck→gone window,
@@ -404,6 +544,42 @@ async function convene(question, deps = {}) {
   const use = deps.recordUse || recordUse;
   const appendLedger = deps.appendLedger || ((row) => appendFileSync(BLEDGER, JSON.stringify(row) + "\n"));
   const capsules = deps.capsules !== undefined ? deps.capsules : capsuleExcerpts();
+  // ── THE DRAFTS' DOOR (11 Aug 2026, wiring audit) — the SIXTH door found cut to
+  // the same shape as the captain's door 300 lines up and the flag question below.
+  //
+  // WHAT WAS BROKEN. Both push sites wrote `text: String(r.text).slice(0, 1200)`.
+  // Every chair's draft was amputated on the way OUT of this file, and the 1200
+  // shipped with no comment justifying it: a guessed number, which his standing
+  // rule forbids. Two consumers, both downstream of the cut:
+  //   · cortex.mjs:735 — councilSection() is the ONLY field cortex reads off this
+  //     result, and it embeds `d.text` whole into the ONE Opus integration prompt.
+  //     So the deep read was handed drafts that stop mid-sentence and told to
+  //     "integrate, don't average" them, with nothing in the payload naming the
+  //     drop — the same silent-absence defect this file removed twice this morning.
+  //   · disagreement() and crossFamilySplit(), right here — the jaccard word-sets
+  //     are built from the SAME truncated strings. Two chairs that share a long
+  //     preamble and diverge only PAST the cut score as clones: identical prefixes,
+  //     jaccard 1, disagreement 0.00, cross_split false, no council_flag.json, no
+  //     setpiece defend drill. The gate that reaches HIS curriculum was reading an
+  //     amputated text. The selftest reproduces exactly that — search THE DRAFTS' DOOR.
+  // MEASURED, not assumed: all five ok council_chair rows on the live ledger
+  // (7 Aug 2026, job:"council_chair" ok:true) carry output_tokens 338 · 374 · 397 ·
+  // 404 · 471. At the chars-per-token this repo already assumes for text —
+  // claudegen's own estimator divides by 4 — that is ~1.35k-1.9k characters of
+  // prose per chair, i.e. AT or PAST 1200 on every one of the five. claudegen sets
+  // no thinking budget, so those are answer tokens, not hidden reasoning.
+  //
+  // THE FIX is the ruling this file has now carried across three times: VERBATIM
+  // AND UNCUT. No new cap replaces the old cap. The drafts are already bounded by
+  // the two things that legitimately bound them — the "≤150 words" every seat
+  // prompt ends with (below) and the bus deadline — and their real spend is
+  // ledgered per seat by councilLedgerRow, so the window sees the size honestly
+  // rather than the prompt pretending it away. Cortex's lane is unaffected: its
+  // reserve is a CONFIGURED est_tokens_per_wake of 40,000 (cortex.mjs:689), not a
+  // measure of prompt length, and four uncut ≤150-word drafts move it by ~1k.
+  // No legacy freeze — an inline `.slice()` is not an engine (same reading as the
+  // flag question below), and the record of what the 7 Aug drafts were produced
+  // by is this comment plus the ledger rows it cites.
   const drafts = [];
   // EVERY EMPTY SEAT, AND WHY (11 Aug 2026, wiring audit — see seatFailure and
   // councilSection). A chair failure used to be surfaced in exactly ONE case:
@@ -415,6 +591,13 @@ async function convene(question, deps = {}) {
   const jobs = seats.map(async (seat) => {
     const seed = seat.id === "captains_voice" && capsules ? `\nHIS CAPSULE ANCHORS (his real words — use his idiom):\n${capsules}\n` : "";
     const route = routeOf(seat);
+    // A CHAIR NOBODY CAN ROUTE DOES NOT GET A DEFAULT ENGINE (11 Aug 2026 — see
+    // familyRoute). Falling through to gemini would hide a canon typo behind a
+    // council that still looks healthy; falling through to claude would spend the
+    // Max window on one. So the chair sits out, SAYS why, charges no tank and
+    // writes no ledger row — a call that never happened must cost nothing and be
+    // invisible nowhere.
+    if (!route) { bench(seat.id, `unroutable family "${seat.family}" — this file routes ${Object.keys(ENGINE_BY_FAMILY).join(" / ")}; the chair sat out rather than be handed an engine it never declared`); return; }
     const t0 = Date.now();
     const r = await seatGen(seat, route, `${seat.brief}${seed}\nTHE QUESTION:\n${q}\n\nAnswer in ≤150 words, dense, no preamble.`).catch((e) => seatFailure(e, t0));
     // THE FREE SEATS' SPEND (11 Aug 2026, wiring audit — the defect this block
@@ -447,7 +630,7 @@ async function convene(question, deps = {}) {
     // the family label follows the ENGINE that actually spoke — the
     // disagreement math groups by family and must never be lied to
     const fam = route === "injected" ? (seat.family || "gemini") : route;
-    if (r.ok && r.text) drafts.push({ seat: seat.id, family: fam, text: String(r.text).slice(0, 1200) });
+    if (r.ok && r.text) drafts.push({ seat: seat.id, family: fam, text: String(r.text) });   // UNCUT — see THE DRAFTS' DOOR above
     // the GEMINI seat's death has nowhere else to go: it writes no ledger row by
     // law (the tank sees only what hit a Gemini key), so without this line a dry
     // pool takes the steelman off the bench leaving no trace in any file.
@@ -456,6 +639,19 @@ async function convene(question, deps = {}) {
   // M15 — the cross-family chair: headroom-gated, $100-law-guarded, ledgered
   if (cross) {
     jobs.push((async () => {
+      // THE 4th CHAIR'S DECLARED FAMILY IS LOAD-BEARING TOO (11 Aug 2026, same
+      // audit as familyRoute). This seat's engine is `claude -p` BY CONSTRUCTION —
+      // the headroom gate, the $100 refusal, the sonnet model and the brain_ledger
+      // row below are all Claude-shaped — yet its label was written straight from
+      // cross.family. So `cross_seat: {"family":"gemini"}` in council_config would
+      // have produced a CLAUDE draft wearing a GEMINI label, and crossFamilySplit()
+      // groups by that label: two Claude chairs would have been compared as two
+      // families, a >=0.85 divergence between them would have written
+      // council_flag.json, and setpiece would have compiled HIM a defend drill off
+      // a cross-family split that never happened. The free seats' law — the label
+      // follows the engine that actually spoke — now covers this chair too, and
+      // the bench says it out loud instead of the draft lying quietly.
+      if (familyRoute(cross) !== "claude") { bench(cross.id, `declared family "${cross.family}" — this chair's engine is \`claude -p\` by construction (headroom gate, $100 law, ${cross.model}); only family "claude" can ride it`); return; }
       const env = deps.env || process.env;
       // never metered, ever — and the refusal now NAMES itself, in claudegen's
       // own refuse() wording, so the two lawful benches below can never be read
@@ -463,7 +659,7 @@ async function convene(question, deps = {}) {
       if (env.ANTHROPIC_API_KEY) { bench(cross.id, "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)"); return; }
       let hr = deps.headroom;
       if (hr === undefined) {
-        const hrFn = deps.headroomFn || (() => headroom(loadBrainConfig(), readLines(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date()));
+        const hrFn = deps.headroomFn || (() => headroom(loadBrainConfig(), readLedger(BLEDGER), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date()));
         // BENCHING ON A CRASH STAYS RIGHT: an unreadable window is not a spare
         // window, and the chair must never spend against a number nobody has.
         // What was wrong until 11 Aug 2026 is that the crash erased itself —
@@ -471,6 +667,12 @@ async function convene(question, deps = {}) {
         // a corrupt brain_queue and an honestly-thin window as ONE silent bench,
         // so the seat could sit out indefinitely with nothing anywhere naming
         // the difference between "no room tonight" and "this is broken".
+        // …and the BIGGEST of the three inputs was never reaching this arm at all
+        // (same day, second pass): the ledger read swallowed its own errors and
+        // handed headroom() an empty array, which is not a crash — it is a
+        // confident "zero spent". readLedger() throws now (grep it — the whole
+        // measurement is in its header), so the input this guard cares about
+        // most finally lands in the catch with the other two.
         try { hr = hrFn(); }
         catch (e) { hr = { allowed: 0 }; bench(cross.id, `headroom unreadable — ${String((e && e.message) || e)}`); }
       }
@@ -494,7 +696,10 @@ async function convene(question, deps = {}) {
       // went eight weeks unledgered.
       if (r) appendLedger(councilLedgerRow(cross.id, cross.model, r));
       if (r && r.ok && r.text) {
-        drafts.push({ seat: cross.id, family: cross.family || "claude", text: String(r.text).slice(0, 1200) });
+        // UNCUT — see THE DRAFTS' DOOR above. This seat is the one the cut hurt
+        // most: it is the ONLY cross-family read, the only one paid for on the Max
+        // window, and crossFamilySplit() scores it against the gemini bench.
+        drafts.push({ seat: cross.id, family: cross.family || "claude", text: String(r.text) });
       } else bench(cross.id, (r && r.error) || "empty reply — the chair spoke no words");
     })());
   }
@@ -578,12 +783,23 @@ async function selftest() {
     const c = await convene("why does quadratic attention survive the kv cache?", {
       seatsCfg: threeSeats,
       generate: async (p) => { calls.push(p); return genThree(p); },
-      recordUse: () => {}, capsules: 'tokenization: "subwords are lego blocks"',
+      // writeFlag stubbed per the HERMETIC law further down. It became load-bearing
+      // HERE on 11 Aug 2026: with the baked bench now declaring its real families
+      // (2 claude · 1 gemini), injected mode is two-family for the first time, so
+      // genThree's three disjoint drafts trip the >=0.85 cross-family split and this
+      // fixture would write a test question into the LIVE council_flag.json.
+      recordUse: () => {}, capsules: 'tokenization: "subwords are lego blocks"', writeFlag: () => {},
     });
     assert("three adversarial chairs convene (steelman/prosecutor/his-voice)", c.drafts.length === 3 && new Set(c.drafts.map(d => d.seat)).size === 3);
     assert("the captain's chair is seeded with HIS capsule anchors", calls.some(p => p.includes("lego blocks")));
     const sec = councilSection(c);
-    assert("cortex gets all drafts, marked integrate-don't-average", sec.includes("[STEELMAN]") && sec.includes("[PROSECUTOR]") && sec.includes("integrate, don't average"));
+    // The prosecutor's tag was `[PROSECUTOR]` here until 11 Aug 2026 — and that was
+    // the STALE DECLARATION being asserted, not the live prompt. On the real path
+    // fam has always been the route, so cortex's Opus prompt has read
+    // `[PROSECUTOR · CLAUDE]` since 17 Jul; only this fixture, reading the baked
+    // family "gemini", ever saw the bare tag. Now that the bench declares its real
+    // engines the test says what the Opus call actually receives.
+    assert("cortex gets all drafts, marked integrate-don't-average", sec.includes("[STEELMAN]") && sec.includes("[PROSECUTOR · CLAUDE]") && sec.includes("integrate, don't average"));
   }
   // M15 — chairs live in CONFIG (canon), defaults as the floor
   {
@@ -613,7 +829,15 @@ async function selftest() {
     assert("$100 LAW: a metered key benches the chair outright", cKey.drafts.length === 3);
     const failRows = [];                               // hermetic — a refused chair now ledgers, and never into the real file
     const cFail = await convene("q question here", { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 }, claudeChair: async () => ({ ok: false }), appendLedger: (r) => failRows.push(r), writeFlag: () => {} });
-    assert("a failed chair degrades to the 3-chair council (layering)", cFail.drafts.length === 3 && !cFail.cross_split);
+    // `&& !cFail.cross_split` was the second half of this until 11 Aug 2026, and it
+    // only ever passed because the fixture's baked families were all "gemini". The
+    // free bench is TWO families on the live path and always has been — that is the
+    // whole reason 17 Jul kept the steelman on Gemini ("an all-Claude bench would
+    // argue with one accent"), so a cross-family split with the 4th chair benched is
+    // M15 working, not layering broken. What layering actually promises is the one
+    // thing now asserted: the failed chair does not sit, and the other three do.
+    assert("a failed chair degrades to the 3-chair council (layering)",
+      cFail.drafts.length === 3 && !cFail.drafts.some(d => d.seat === "cross_examiner"));
   }
   // ── THE ENGINE WIRE (10 Aug 2026 wiring audit) ────────────────────────────
   // The chair used to spawn its OWN `claude -p` — no lean flags, no BIN() shim
@@ -679,6 +903,72 @@ async function selftest() {
     await convene("q question here", { ...realRoute, freeClaude: async () => ({ ok: false, text: "", total_tokens: 44000, duration_ms: 900, limit_hit: true, http_status: 429, limit_signal: "api_error_status", error: "You've hit your weekly limit · resets Aug 12" }) });
     assert("a REFUSED free seat ledgers too (it paid the boot; the window must learn it is locked)",
       rows.length === 2 && rows.every(r => r.ok === false && r.limit_hit === true && r.http_status === 429 && r.total_tokens === 44000));
+  }
+  // ── THE DECLARED FAMILY IS THE ROUTE (11 Aug 2026 wiring audit) ───────────
+  // seats[].family was an ORPHAN FIELD: council_config declared it, loadSeats
+  // defaulted it, councilSection printed it — and routeOf ignored all of that for
+  // `seat.id === "steelman"`. Probed against the live file that morning, 3 seats
+  // all declaring "gemini": 1 reached the pool, 2 reached `claude -p`. These run
+  // the REAL router (no `generate` override, both engines injected) and watch
+  // which engine each chair actually reaches — the only way the wire is testable.
+  {
+    const bareCode = (fn) => String(fn).replace(/^[ \t]*\/\/[^\n]*$/gm, "").replace(/\s\/\/[^\n]*/g, "");
+    const hit = { pool: [], claude: [] }, tanks = [], rows = [];
+    const probe = {
+      seatsCfg: { seats: [
+        { id: "devil",     family: "gemini", brief: "BRIEF-DEVIL" },   // THE RENAME CASE: not "steelman", so the old id test shipped it to Claude
+        { id: "historian", family: "claude", brief: "BRIEF-HISTORIAN" },
+      ], cross: null },
+      capsules: null, env: {},
+      pool:       async (p) => { hit.pool.push(p);   return { ok: true, text: "pool draft keys values positions attend across previous handshakes" }; },
+      freeClaude: async (p) => { hit.claude.push(p); return { ok: true, text: "claude draft memory compute bottlenecks entirely different flash", total_tokens: 10 }; },
+      recordUse: (t) => tanks.push(t), appendLedger: (r) => rows.push(r), writeFlag: () => {},
+    };
+    const c = await convene("why does quadratic attention survive the kv cache?", probe);
+    assert("A RENAMED GEMINI CHAIR STILL RIDES GEMINI (the id test sent every non-steelman seat to Claude, killing the cross-family lane)",
+      hit.pool.length === 1 && hit.pool[0].includes("BRIEF-DEVIL")
+      && hit.claude.length === 1 && hit.claude[0].includes("BRIEF-HISTORIAN"));
+    assert("…and the declared family is what the BOOK is charged on (a config-added gemini chair must not spend the Max window)",
+      tanks.length === 1 && tanks[0] === "T7"
+      && rows.length === 1 && rows[0].seat === "historian" && rows[0].engine === "claude");
+    assert("…and the label each draft carries is the family it declared and rode",
+      c.drafts.find(d => d.seat === "devil").family === "gemini" && c.drafts.find(d => d.seat === "historian").family === "claude");
+    // NO ENGINE MOVED, only the decider. This is the guard on the whole repair:
+    // if a future edit re-declares a baked seat's family, it goes red and says so.
+    assert("NO ENGINE MOVED: the baked bench routes by family exactly as the frozen id-router did",
+      DEFAULT_SEATS.every(s => familyRoute(s) === routeOfLegacy(s)));
+    assert("LAYERING: the pre-audit id-router is frozen verbatim and is no longer the plan of record",
+      /seat\.id === "steelman"/.test(String(routeOfLegacy)) && !/seat\.id\s*===\s*"steelman"/.test(bareCode(convene)));
+    // CANON MUST STAY ROUTABLE. Not a freeze on his choices — he may flip any
+    // family here and the router obeys — a guard that the file on disk cannot
+    // declare a chair this file has no engine for and only find out at 3am.
+    const live = loadSeats();
+    assert("THE LIVE council_config DECLARES ONLY ROUTABLE FAMILIES (canon and the bench can no longer disagree)",
+      live.seats.length > 0 && live.seats.every(s => familyRoute(s) !== null) && (!live.cross || familyRoute(live.cross) === "claude"));
+    // an unroutable chair is BENCHED BY NAME — never silently given an engine.
+    const tanksU = [], rowsU = [];
+    const cU = await convene("q question here", {
+      ...probe, seatsCfg: { seats: [{ id: "oracle", family: "mistral", brief: "BRIEF-ORACLE" }], cross: null },
+      pool:       async () => { throw new Error("must not be called"); },
+      freeClaude: async () => { throw new Error("must not be called"); },
+      recordUse: (t) => tanksU.push(t), appendLedger: (r) => rowsU.push(r),
+    });
+    assert("AN UNROUTABLE FAMILY IS BENCHED BY NAME, never quietly handed the cheapest engine",
+      cU.drafts.length === 0 && cU.benched.length === 1 && cU.benched[0].seat === "oracle"
+      && /mistral/.test(cU.benched[0].why) && tanksU.length === 0 && rowsU.length === 0);
+    // THE 4th CHAIR: its gates are Claude-shaped, so a non-claude declaration must
+    // bench it, not produce a Claude draft wearing another family's label — that
+    // label is what crossFamilySplit groups on and what compiles HIS defend drill.
+    let called = false;
+    const cX = await convene("q question here", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: { ...CROSS_SEAT, family: "gemini" }, min_headroom: 20000 },
+      generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 },
+      claudeChair: async () => { called = true; return { ok: true, text: "a claude draft wearing a gemini label" }; },
+      appendLedger: () => {}, writeFlag: () => {},
+    });
+    assert("THE 4th CHAIR CANNOT WEAR A FAMILY IT DID NOT RIDE (a lying label = a fake cross-family split = a fake drill for him)",
+      called === false && !cX.drafts.some(d => d.seat === "cross_examiner")
+      && cX.benched.some(b => b.seat === "cross_examiner" && /gemini/.test(b.why)));
   }
   // ── THE LEDGER WIRE: what the governor actually reads ─────────────────────
   {
@@ -768,6 +1058,51 @@ async function selftest() {
       all.includes("nothing was dropped") && !all.includes("NOT INCLUDED"));
     assert("a missing/empty capsule dir still returns null (the chair seats unseeded, as before)",
       capsuleExcerpts(join(capDir, "nope"), { config: null }) === null);
+
+    // ── THE TORN CAPSULE (11 Aug 2026 wiring audit) ─────────────────────────
+    // The layer footer above was rebuilt this morning and the FILE level kept
+    // the old silence: three skips (parse throw · non-object · nothing in the
+    // selected layers) dropped a whole locked capsule with no word anywhere,
+    // and the survivor-counted footer then said "all N … nothing was dropped".
+    // Probed live before the fix with three fixtures, one torn: the payload
+    // carried two, the footer claimed all 2, and the torn id appeared nowhere.
+    // Every assertion here goes red the moment any of those three skips goes
+    // quiet again. mirror.mjs re-pulls this dir from the gist every 06:55 and
+    // on every forge lock-close, so a torn file is one bad fetch away.
+    writeFileSync(join(capDir, "tornfile.json"), '{"id":"tornfile","bolo":"BOLOSTART cut off here');
+    writeFileSync(join(capDir, "notobject.json"), '"a bare string, not a capsule"');
+    writeFileSync(join(capDir, "hollow.json"), "{}");
+    const cut = capsuleExcerpts(capDir, { config: null });
+    assert("A TORN CAPSULE IS NAMED, NOT SWALLOWED (the footer used to say 'nothing was dropped' over it)",
+      cut.includes("NOT AT THE TABLE") && cut.includes("tornfile.json") && /tornfile\.json \(unreadable — /.test(cut));
+    assert("…and each skip says WHICH repair it needs (unreadable ≠ not-a-capsule ≠ empty-in-these-layers)",
+      /notobject\.json \(not a JSON object\)/.test(cut) && /hollow \(parsed, but no words in the selected layers: bolo\/welds/.test(cut));
+    assert("the survivor count can no longer claim the files it never opened (N of M)",
+      /from 5 of 8 locked capsule\(s\)/.test(cut) && cut.includes("=== c5"));
+    // the exact sentence the probe caught lying — reachable ONLY when every
+    // layer is selected, which is why the layer-level fixture above never bit it
+    const allCut = capsuleExcerpts(capDir, { config: { capsule_layers: CAPSULE_LAYERS.map(L => L.id) } });
+    assert("'nothing was dropped' is now UNREACHABLE while anything was (the affirmative lie)",
+      !allCut.includes("nothing was dropped") && allCut.includes("but not every capsule got here") && allCut.includes("tornfile.json"));
+    // a TOTAL tear used to return null, which the chair reads as "he has no
+    // locked capsules" — a lie of a different shape, and the loudest failure
+    // of the mirror is the one that must not be silent.
+    const tornDir = join(capDir, "alltorn");
+    mkdirSync(tornDir, { recursive: true });
+    writeFileSync(join(tornDir, "only.json"), "{oops");
+    const allTorn = capsuleExcerpts(tornDir, { config: null });
+    assert("A TOTAL TEAR SAYS SO instead of returning null (null reads as 'he has no capsules')",
+      typeof allTorn === "string" && allTorn.includes("only.json") && /1 of 1 capsule file\(s\)/.test(allTorn));
+    // THE WIRE: it is worth nothing on disk — it has to reach the seat.
+    const sawTorn = [];
+    await convene("does the kv cache remove quadratic attention?", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: null }, recordUse: () => {}, writeFlag: () => {},
+      capsules: cut, generate: async (p) => { sawTorn.push(p); return { ok: true, text: "draft" }; },
+    });
+    assert("THE WIRE: the torn-capsule notice rides into the captain's chair prompt",
+      (sawTorn.find(p => p.includes("CAPTAIN'S OWN VOICE")) || "").includes("tornfile.json"));
+    rmSync(tornDir, { recursive: true, force: true });
+    for (const f of ["tornfile.json", "notobject.json", "hollow.json"]) rmSync(join(capDir, f), { force: true });
 
     // THE WIRE ITSELF: the payload must reach the captain's_voice PROMPT, whole.
     const seen = [];
@@ -891,7 +1226,7 @@ async function selftest() {
     const cPart = await convene("does the kv cache remove quadratic attention?", {
       seatsCfg: { seats: DEFAULT_SEATS, cross: null },
       generate: async (p) => p.includes("CAPTAIN'S OWN VOICE") ? { ok: false, text: "" } : { ok: true, text: "a real draft about caches attention and recompute" },
-      recordUse: () => {}, capsules: null,
+      recordUse: () => {}, capsules: null, writeFlag: () => {},   // hermetic — see the law above; the bench is two-family as of 11 Aug
     });
     const secPart = councilSection(cPart);
     assert("A PARTIAL COUNCIL SAYS SO IN THE OPUS PROMPT (his seat can go missing silently)",
@@ -916,6 +1251,65 @@ async function selftest() {
       /window too thin — 5000 < 20000 tokens/.test((await benchWhy({ headroom: { allowed: 5000 } })).why));
     assert("the $100 LAW refusal names itself in claudegen's own words",
       /ANTHROPIC_API_KEY set/.test((await benchWhy({ headroom: { allowed: 300000 }, env: { ANTHROPIC_API_KEY: "sk-nope" } })).why));
+    // …and the LEDGER's own failure now reaches that same bench (11 Aug 2026,
+    // second wiring pass). The fixture reads a DIRECTORY: existsSync says yes,
+    // readFileSync throws EISDIR — the portable stand-in for the EBUSY/EPERM a
+    // six-writer append lane can hand us on Windows. Before readLedger() this
+    // exact input produced `[]`, headroom() read it as zero spend, and the chair
+    // SAT on a window measured at allowed:0 — so this assertion goes red the
+    // moment any swallowing read comes back onto the budget path.
+    assert("AN UNREADABLE LEDGER BENCHES THE CHAIR — [] is not 'unknown', it is 'nothing spent', and it opened the window to full cap",
+      /headroom unreadable/.test((await benchWhy({ headroomFn: () => headroom(loadBrainConfig(), readLedger(STATE_DIR), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date()) })).why));
+    assert("…while the two HONEST reads still pass through untouched: a ledger never written is zero spend, and the live lane still parses",
+      readLedger(join(STATE_DIR, "__no_such_ledger_ever__.jsonl")).length === 0
+      && (!existsSync(BLEDGER) || readLedger(BLEDGER).length > 0));
+    // the shape guard, same reason as THE DRAFTS' DOOR below: the rationale at
+    // :57 only holds if the budget read keeps going through the strict reader.
+    assert("the budget read stays on readLedger — no catch-all can creep back onto the one input headroom() trusts most",
+      /readLedger\(BLEDGER\)/.test(String(convene)) && !/readLines\(BLEDGER\)/.test(String(convene)));
+  }
+  // ── THE DRAFTS' DOOR (11 Aug 2026 wiring audit) ───────────────────────────
+  // Both push sites cut every chair's draft at 1200 chars on the way out of this
+  // file — before cortex's Opus prompt AND before the jaccard math. The fixture
+  // below is built so the cut is not merely visible but DECISIVE, and so it bites
+  // on EITHER push site alone: the two families open with DIFFERENT 1,300-char
+  // preambles (one repeated word each — wordSet is a Set, so a preamble costs
+  // exactly one term) and CONVERGE on a shared conclusion that lives entirely past
+  // the old cut. That is the council working as designed: the steelman and the
+  // prosecutor frame it differently and land on the same mechanism.
+  //   · uncut  → jaccard 9/11, disagreement 0.18, no split, no flag. Correct.
+  //   · capped → the shared conclusion is amputated off whichever draft was cut,
+  //     the word-sets stop intersecting, jaccard 0.00, disagreement 1.00,
+  //     cross_split TRUE, council_flag.json written, and setpiece.mjs:588 compiles
+  //     a defend drill for HIM off a disagreement that does not exist.
+  // Every assertion goes red the moment any cap comes back — the first three on
+  // the values, the last structurally, so a cut re-introduced under a different
+  // spelling still cannot pass unnoticed.
+  {
+    const conclusion = "chairs converge recompute amortized projections bandwidth saturated kernels unavoidable";
+    const alpha = "attention ".repeat(130) + conclusion;                   // 1,300-char preamble, ONE unique word
+    const beta  = "quadratic ".repeat(130) + conclusion;                   // …a different one
+    let flagD = null;
+    const cD = await convene("does the kv cache remove quadratic attention?", {
+      seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 },
+      generate: async () => ({ ok: true, text: alpha }),
+      claudeChair: async () => ({ ok: true, text: beta, total_tokens: 500, duration_ms: 100 }),
+      recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 300000 },
+      appendLedger: () => {}, writeFlag: (o) => { flagD = o; },            // hermetic — a fixture must never reach his curriculum
+    });
+    assert("EVERY DRAFT LEAVES WHOLE (all 5 live ok chair rows measured 338-471 output tokens ≈ past 1200 chars)",
+      cD.drafts.length === 4 && cD.drafts.every(d => d.text.length === (d.family === "claude" ? beta.length : alpha.length))
+      && cD.drafts.every(d => d.text.length > 1200));
+    assert("…and the tail reaches the ONE Opus integration prompt (cortex reads no other field)",
+      (councilSection(cD).match(/saturated kernels unavoidable/g) || []).length === 4);
+    // the damage the cut actually did, reproduced: the gate that reaches HIM.
+    assert("THE JACCARD MATH SEES WHERE THEY AGREE — capped, chairs that converged read as DISJOINT (1.00) and a defend drill is compiled off an amputation",
+      cD.disagreement < 0.85 && cD.cross_split === false && flagD === null);
+    // comments stripped for the same reason as the flag-door guard above: the
+    // rationale at the push sites quotes the removed `.slice(0, 1200)` verbatim.
+    const codeOfD = (fn) => String(fn).replace(/^[ \t]*\/\/[^\n]*$/gm, "").replace(/\s\/\/[^\n]*/g, "");
+    assert("no cap survives at either push site, under any spelling",
+      !/drafts\.push\([^\n]*\.slice\(/.test(codeOfD(convene)) && !/r\.text[^\n]*\.slice\(/.test(codeOfD(convene)));
   }
   // disagreement math + graceful degradation (unchanged laws)
   {
@@ -924,7 +1318,7 @@ async function selftest() {
     assert("clones read ~0 disagreement; disjoint drafts read ~1", clones < 0.1 && split > 0.9);
     const cSplit = { drafts: [{ seat: "a", text: "x" }, { seat: "b", text: "y" }], disagreement: 0.92, split: true };
     assert("a hard split is SURFACED as the crux, never papered over", councilSection(cSplit).includes("SPLIT HARD") && councilSection(cSplit).includes("crux"));
-    const c = await convene("q", { seatsCfg: threeSeats, generate: async () => ({ ok: false }), recordUse: () => {}, capsules: null });
+    const c = await convene("q", { seatsCfg: threeSeats, generate: async () => ({ ok: false }), recordUse: () => {}, capsules: null, writeFlag: () => {} });
     assert("pool dry → empty council, honest note, the Bridge proceeds cold", c.drafts.length === 0 && c.note.includes("cold"));
     assert("empty council → empty section (the old one-call path, unchanged)", councilSection(c) === "");
     assert("no question → no spend", (await convene("", { generate: async () => { throw new Error("no"); } })).drafts.length === 0);
@@ -941,7 +1335,10 @@ async function main() {
   if (mode === "ask") {
     const c = await convene(process.argv.slice(3).join(" "));
     console.log(`council: ${c.drafts.length} chair(s) drafted · disagreement ${c.disagreement}${c.split ? " — SPLIT (the crux is the signal)" : ""}${c.cross_split ? " — FAMILIES SPLIT (flagged for a drill)" : ""}`);
-    for (const d of c.drafts) console.log(`\n[${d.seat}${d.family && d.family !== "gemini" ? " · " + d.family : ""}]\n${d.text.slice(0, 400)}`);
+    // uncut here too (11 Aug 2026): `ask` is the only window a human has into what
+    // the chairs actually said, and a silent 400-char display cut is how you read a
+    // whole draft off the terminal and conclude the chair said only that much.
+    for (const d of c.drafts) console.log(`\n[${d.seat}${d.family && d.family !== "gemini" ? " · " + d.family : ""}]\n${d.text}`);
     return;
   }
   console.log("council.mjs — ask \"<question>\" | selftest");

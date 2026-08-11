@@ -1,5 +1,6 @@
 {
-  "_doc": "THE COUNCIL's chairs (M15 — canon, committed; chairs shape the curriculum). seats = the free-pool adversarial chairs (family gemini). cross_seat = the 4th chair on a DIFFERENT family (claude sonnet via `claude -p`, Max plan) — headroom-gated by cross_min_headroom_tokens (the window belongs to deep reads first) and refused outright if a metered key is ever set. cross_family:false benches the 4th chair entirely. Cross-family disagreement >= 0.85 writes council_flag.json (gitignored) and the set-piece coach compiles it into a defend drill: disagreement-as-curriculum.",
+  "_doc": "THE COUNCIL's chairs (M15 — canon, committed; chairs shape the curriculum). seats = the adversarial chairs, and each seat's `family` IS its engine: gemini = the free pool (charges tank T7), claude = `claude -p` haiku on the Max window (ledgered into brain_ledger.jsonl). An unroutable family benches that chair BY NAME — it is never silently handed an engine. cross_seat = the 4th chair on a DIFFERENT family (claude sonnet via `claude -p`, Max plan) — headroom-gated by cross_min_headroom_tokens (the window belongs to deep reads first) and refused outright if a metered key is ever set; only family \"claude\" can ride it, because its gates are Claude-shaped. cross_family:false benches the 4th chair entirely. Cross-family disagreement >= 0.85 writes council_flag.json (gitignored) and the set-piece coach compiles it into a defend drill: disagreement-as-curriculum.",
+  "_families_corrected": "11 Aug 2026, wiring audit. This file used to read 'seats = the free-pool adversarial chairs (family gemini)' and all three seats declared \"gemini\" — while council.mjs routed on `seat.id === \"steelman\"` and sent the other two to `claude -p` haiku. The field decided nothing, so canon described a bench that did not exist (probed live: 1 call to the Gemini pool, 2 to `claude -p`). council.mjs:routeOf now reads `family`, and the two families below are corrected to name the engine those chairs have actually ridden since 17 Jul — so the live bench is UNCHANGED by the repair. Whether prosecutor + captains_voice belong back on the free Gemini pool is a spend/latency call for the captain (17 Jul moved them for latency: 'the bus leaves in 25s'); flip either family to \"gemini\" here and the router obeys, no code change.",
   "seats": [
     {
       "id": "steelman",
@@ -8,12 +9,12 @@
     },
     {
       "id": "prosecutor",
-      "family": "gemini",
+      "family": "claude",
       "brief": "You are THE PROSECUTOR. Attack the question's premises and every easy answer: where does it break, what's being conflated, what would a hostile staff engineer say. Honest attacks only."
     },
     {
       "id": "captains_voice",
-      "family": "gemini",
+      "family": "claude",
       "brief": "You are THE CAPTAIN'S OWN VOICE — argue it the way HE would, using HIS anchors and phrasings from the capsule excerpts provided. Stay in his idiom (Hinglish welds fine)."
     }
   ],

@@ -236,10 +236,15 @@ is not.
   **`step 10` FIRES THE LOCK-CHAIN — know this before you type it** *(added 10 Aug 2026; this
   step described only what YOU do, and said nothing about what the pacer does the moment you
   ARRIVE at step 10).* On the transition into 10 (never on a re-type of 10),
-  `forge_session.mjs step 10` spawns three organs in order — `scout.mjs mission stage-lock
-  <concept>` · `benchmark.mjs run` · `mirror.mjs` — then prints the three data-gates
+  `forge_session.mjs step 10` spawns four organs in order — `scout.mjs mission stage-lock
+  <concept>` · `mirror.mjs` · `capsule_bridge.mjs` · `benchmark.mjs run` — then prints the three data-gates
   (decoy-drills · R1-constants · confusion-pairs), the widget's registry status, and the gist
-  line. Every lane is fail-silent and runs AFTER the step change is already saved, so no outward
+  line. **That order is the data-flow, not a list** *(fixed 11 Aug 2026 — the chain ran
+  benchmark BEFORE the mirror and never ran `capsule_bridge.mjs` at all, so the gate line he
+  was shown seconds after a LOCK, and benchmark's locked count, both came off that morning's
+  08:39 map: `mirror.mjs` lands `capsules/`, `capsule_bridge.mjs` derives `capsule_map.json`
+  from them — it is that file's sole writer — and only then do benchmark and the gate lines
+  read it).* Every lane is fail-silent and runs AFTER the step change is already saved, so no outward
   failure can touch the LOCK. Preview it without advancing anything:
   `node scripts/forge_session.mjs lockchain` (read-only, names the spawns, fires nothing).
   Evidence: `grep -n "THE LOCK-CHAIN" scripts/forge_session.mjs` and

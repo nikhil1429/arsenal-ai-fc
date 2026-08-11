@@ -1535,11 +1535,30 @@ function selftest() {
   // never spawns another organ, so the spawn argv itself is what gets asserted.
   {
     const cmds = chainCommands("hallucinations");
-    assert("lock-chain: exact spawn argv (mission stage-lock + benchmark run + G16's event-driven mirror)",
-      cmds.length === 3
+    assert("lock-chain: exact spawn argv (mission stage-lock + G16's event-driven mirror + capsule_bridge + benchmark run)",
+      cmds.length === 4
       && /scout\.mjs$/.test(cmds[0].args[0]) && cmds[0].args.slice(1).join(" ") === "mission stage-lock hallucinations"
-      && /benchmark\.mjs$/.test(cmds[1].args[0]) && cmds[1].args[1] === "run"
-      && /mirror\.mjs$/.test(cmds[2].args[0]));
+      && /mirror\.mjs$/.test(cmds[1].args[0])
+      && /capsule_bridge\.mjs$/.test(cmds[2].args[0]) && cmds[2].args.length === 1
+      && /benchmark\.mjs$/.test(cmds[3].args[0]) && cmds[3].args[1] === "run");
+
+    // THE DERIVED-MAP WIRE (dead-wire sweep, 11 Aug 2026 — CONSUMER_NO_PRODUCER, live
+    // 8→11 Aug). gateLines() below is handed capsule_map.json, and benchmark opens the
+    // same file; its SOLE WRITER is capsule_bridge.mjs, which this chain never ran. The
+    // producer is asserted from the SOURCE of lockChain — not from a name typed here — so
+    // the check follows the file that is actually read even if that read is re-pointed.
+    // Both halves fail loudly if the wire is cut again: absence, and wrong order.
+    {
+      const at = (n) => cmds.findIndex((c) => c.name === n);
+      const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const start = src.indexOf("function lock" + "Chain(s,");
+      const body = src.slice(start, src.indexOf("const [mode, ...rest]", start));   // lockChain ends at the dispatch
+      const readsMap = body.includes("capsule_map.json");
+      assert("DERIVED-MAP WIRE — lockChain still reads capsule_map.json, and the chain now carries its SOLE WRITER (capsule_bridge.mjs) instead of leaving that morning's 08:39 heartbeat map on his lock line",
+        readsMap && at("capsule_bridge") >= 0);
+      assert("DERIVED-MAP WIRE — the ORDER is the data-flow: mirror lands capsules/ BEFORE capsule_bridge derives the map, and both land before benchmark reads it",
+        at("mirror") < at("capsule_bridge") && at("capsule_bridge") < at("benchmark"));
+    }
     const cm3 = { concepts: [
       { concept: "a1", locked_on: "2026-06-01", counts: { doubts: 20 } },
       { concept: "a2", locked_on: "2026-06-02", counts: { doubts: 25 } },
@@ -1581,9 +1600,28 @@ function selftest() {
       mr.join(" ").includes("SHORT (inference)"));
     assert("LOCK-CHAIN DOOR — a backup FAILURE is kept too (a 'last line' fix would have hidden exactly this)",
       chainReport("mirror", "mirror: backup FAILED (EPERM) — the mirror itself is untouched\nmirror: 4/4 · ok (all ok) → x").length === 2);
-    assert("LOCK-CHAIN DOOR — benchmark's documented first-line contract is untouched, and its indented ⚠ faults stay below",
+    assert("LOCK-CHAIN DOOR — benchmark's documented first-line contract is untouched; a line that names NO organ still stays below",
       (() => { const b = chainReport("benchmark", "benchmark: ok · 7 buckets · regressions 0 · run #12 → x\n  ⚠ dossier.json MALFORMED (non-blocking): bad JSON");
         return b.length === 1 && b[0].startsWith("benchmark: ok ·"); })());
+    // 11 Aug 2026 dead-wire sweep — the shape benchmark.mjs ACTUALLY emits now. Its soft
+    // fault line self-names, so the warning rides through with the summary instead of the
+    // chain printing a clean "ok" over a stale locked count. Fails if either side regresses.
+    assert("LOCK-CHAIN DOOR — a benchmark soft fault reaches his terminal at step 10, alongside the summary it contradicts",
+      (() => { const b = chainReport("benchmark", "benchmark: ok · 5 buckets · regressions 0 · run #12 → x\nbenchmark: ⚠ capsule_map.json MALFORMED (non-blocking — display only, owner mirror.mjs): locked counts below are 2026-08-10's");
+        return b.length === 2 && /capsule_map\.json MALFORMED/.test(b[1]) && !/^benchmark: benchmark:/.test(b[1]); })());
+    // 11 Aug 2026 dead-wire sweep — capsule_bridge's REAL stdout, pasted from a live run
+    // this session (`node scripts/capsule_bridge.mjs`). It self-names on the summary and
+    // indents the rest, so the count he is shown at lock-close is the one that rides
+    // through. The chain name must stay `capsule_bridge` for that to happen: rename the
+    // lane and the door silently falls back to line 1, which here would still be the
+    // summary — so this pins the SELF-NAMED path explicitly rather than the text.
+    assert("LOCK-CHAIN DOOR — capsule_bridge's freshly-derived count self-names and reaches him at step 10",
+      (() => { const c = chainReport("capsule_bridge",
+        "capsule_bridge: 4 capsule(s) · 36 axes · 36 strike questions · 4 overdue → C:\\repo\\dressing-room\\state\\capsule_map.json\n  embeddings ka Re-Jirah 48 din overdue hai\n  schedulers — agree: embeddings, inference, context");
+        return c.length === 1 && /^capsule_bridge: 4 capsule\(s\)/.test(c[0]); })());
+    assert("LOCK-CHAIN DOOR — and its REFUSAL (a malformed capsule leaves the last true map in place) is never printed as a success",
+      chainReport("capsule_bridge", "capsule_bridge: WARN capsules/inference.json UNREADABLE (malformed JSON, not an empty file) — refusing to overwrite the last true map with a short count. Owner: mirror.mjs.\n  capsules/inference.json: Unexpected end of JSON input")
+        .join(" ").includes("WARN capsules/inference.json UNREADABLE"));
     assert("LOCK-CHAIN DOOR — an organ that never self-names (scout speaks as 'MISSIONS DESK ·') still reports line 1, prefixed once",
       chainReport("mission", "MISSIONS DESK · staged L-embeddings → dressing-room/missions/L-embeddings.md\n  more").join() ===
       "mission: MISSIONS DESK · staged L-embeddings → dressing-room/missions/L-embeddings.md");
@@ -1640,14 +1678,37 @@ function selftest() {
 // outward failure can touch the LOCK itself or block his study moment.
 // The dossier/probe refresh is deliberately NOT automated here: it rides the
 // L-mission's return → diff card → HIS word (canon never auto-edits).
+// ORDER IS THE WIRE HERE — the list is a data-flow, not a menu. Each lane below
+// consumes what the lane above it wrote: mirror lands capsules/ → capsule_bridge
+// derives capsule_map.json from them → benchmark and gateLines() read that map.
 function chainCommands(concept) {
   return [
     { name: "mission",   args: [join(__dirname, "scout.mjs"), "mission", "stage-lock", concept], timeout: 15000 },
-    { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 },
     // LADDER G16 (9 Aug 2026): the mirror goes EVENT-DRIVEN on the lock-close —
     // a capsule locked at 15:00 used to stay invisible to every reader until the
     // next 06:55 morning pull. No number introduced: the event IS the schedule.
     { name: "mirror",    args: [join(__dirname, "mirror.mjs")], timeout: 30000 },
+    // DEAD-WIRE SWEEP, 11 Aug 2026 — a CONSUMER_NO_PRODUCER live since 8 Aug.
+    // G16 above refreshes `capsules/`, but almost nobody reads capsules/: they read
+    // the DERIVED capsule_map.json, whose SOLE WRITER is capsule_bridge.mjs — and this
+    // chain never ran it (`grep -c capsule_bridge scripts/forge_session.mjs` returned 0).
+    // Its only automated invoker is the 08:39 heartbeat (heartbeat_config.json `order`),
+    // so at every lock the map stayed at that morning's version while the capsule under
+    // it had just changed. Two unsynchronised paths, provable off disk: capsules/*
+    // 2026-08-10T16:09:35Z vs capsule_map.json 20:49:39Z. G16's stated goal was therefore
+    // met for capsules/ and UNMET for every capsule_map reader — the gate line printed to
+    // him seconds later at lock-close (gateLines below, :1708), benchmark's locked count,
+    // manager's sheet (manager.mjs:290), postmatch's SEASON.md row (postmatch.mjs:241),
+    // learnstate's brief (learnstate.mjs:62).
+    // The ORDER moved too, and that half matters as much: benchmark used to sit ABOVE the
+    // mirror, so it read the map before the newly locked capsule had even landed on disk.
+    // SINGLE-WRITER is honoured, not bent — this SHELLS the owner (dugout.mjs → doubtminer.mjs
+    // precedent); nothing here opens capsule_map.json for writing.
+    // No new number: 15000 is the mission lane's own local-only budget, copied because
+    // capsule_bridge is disk-only in exactly the same way — the 30000 above buys mirror's
+    // network round-trip, and this lane has none.
+    { name: "capsule_bridge", args: [join(__dirname, "capsule_bridge.mjs")], timeout: 15000 },
+    { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 },
   ];
 }
 
@@ -1683,10 +1744,16 @@ function gateLines(capsuleMap, rejirahRows) {
 // line is chosen on the organ's behalf, no failure is guessed away — including
 // `mirror: backup FAILED …`, which under the old door was the only line that showed
 // and under a naive "take the last line" fix would have been the only one hidden.
-// Live shapes today (10 Aug 2026): mirror 2 self-named lines · benchmark 1
-// (`benchmark: ok` / `benchmark: WARN`; its indented ⚠ fault lines do not self-name
-// and stay below, as benchmark.mjs intends) · scout 0 — it speaks as "MISSIONS DESK ·",
-// so it takes the line-1 fallback, byte-identical to what it printed before.
+// Live shapes today (11 Aug 2026): mirror 2 self-named lines · benchmark 1 or 2
+// (`benchmark: ok` / `benchmark: WARN`, plus one `benchmark: ⚠ <file> MALFORMED
+// (non-blocking …)` per soft fault) · scout 0 — it speaks as "MISSIONS DESK ·", so it
+// takes the line-1 fallback, byte-identical to what it printed before.
+// (Corrected 11 Aug 2026: this read "its indented ⚠ fault lines do not self-name and stay
+// below, as benchmark.mjs intends". True when written, and it named a real dead wire as an
+// intention: benchmark's soft-fault line was written unnamed to protect the OLD first-line-
+// only door, so the same pass that opened this door left that line locked outside it — a
+// stale locked count shipped under a clean `benchmark: ok` at every step-10 lock. Fixed in
+// benchmark.mjs, which now self-names it; this door needed no change, which is the point.)
 function chainReport(name, out) {
   const lines = String(out || "").split("\n").map((l) => l.trim()).filter(Boolean);
   const own = lines.filter((l) => l.toLowerCase().startsWith(name.toLowerCase() + ":"));

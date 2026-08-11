@@ -58,6 +58,20 @@ const DEFAULTS = {
     // here, because for these two "when was it last written" IS the health question.
     "team_sheet.md": 30,
     "brain_out/nightshift/gem_cartridge.md": 30,
+    // THE CLOUD READ-BACK'S OWN PULSE (wire repair, 11 Aug 2026). awayDayRead below
+    // reports the VERDICT; this line reports whether the verdict is still being
+    // FETCHED. They are different failures: a groundsman push lane that stops firing
+    // leaves a perfectly readable red (or green) on disk that nobody has re-checked
+    // in a week, and the verdict half cannot see that by construction.
+    // 30 is NOT a new number — same value every other daily organ in this table
+    // carries, and the read-back's only caller is a DAILY lane (groundsman.mjs:199,
+    // ArsenalFC-Groundsman-Push at 03:45), so this is the identical "a missed pass
+    // plus its catch-up window" reading. awayday.json carries no generated_at/day/date
+    // stamp, so it falls back to mtime — correct here, because checkLane rewrites the
+    // whole file on EVERY pass (including a failed one), which makes mtime an exact
+    // copy of `checked_at`. The case where the pass runs but GitHub cannot be reached
+    // keeps mtime fresh on purpose, and is covered by the unreachable bleed instead.
+    "awayday.json": 30,
   },
   grace_frac: 0.25,
   // A legitimate lag is not a bleed. The Oura pull is a day or two behind by nature
@@ -283,6 +297,137 @@ function restRoomRead(rows, now) {
     // no reader can mistake this sum for engine truth.
     tokens_today: today.reduce((a, r) => a + (r.total_tokens || 0), 0),
     tokens_estimated_rows: today.filter(r => r.tokens_estimated).length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// THE AWAY-DAY LANE — awayDayRead (wire repair, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// awayday.mjs's `check` fetches GitHub's verdict on the cloud CI lane and writes
+// 15 fields to awayday.json. A repo-wide trace the day of this repair found the
+// ONLY reader of that file was awayday.mjs ITSELF, and it reads exactly two keys
+// (`carded_run_id`, `state`) for its own duplicate-card lock. Thirteen fields —
+// state, why, run_url, head_sha, ran_at, checked_at, unreachable, card_error —
+// reached no organ at all. Producer with no consumer, the same shape as the tank
+// read (#93), the daemon read and the Rest Room read above; the organ's own
+// header even NAMED a consumer that did not exist ("a session Claude reads it
+// whole"). Live on the day of this repair: state "red" since 2026-08-10T22:15Z
+// on 8df28ba, its one card already dealt, and nothing in the body saying so.
+// WHY THE CARD IS NOT ENOUGH: awayday's LOCK 1 deliberately cards a red run ONCE
+// — right, because a week-long red must not deal seven cards. But that makes the
+// card an EDGE, not a state: once he has seen it, a lane that stays red is
+// invisible again. loop_vitals is the state surface (dugout, manager, talk and
+// bootroom already read it), so the red persists here until the lane is green.
+// WHY THE WATCHMAN CANNOT COVER IT: awayday.mjs's own header says it — the
+// nightly sweep runs the same suites LOCALLY, where the gitignored credentials
+// and the full working tree exist. A failure that only happens in a clean cloud
+// checkout is invisible to it by construction.
+// WHAT BLEEDS, AND WHAT DELIBERATELY DOES NOT:
+//  · state === "red" bleeds. "red" is GitHub's own conclusion vocabulary, already
+//    narrowed by awayday.mjs's RED_CONCLUSIONS — not a judgement made here.
+//    Self-clearing: the next green verdict silences it.
+//  · a failed READ bleeds (`unreachable` non-null on the newest write). The
+//    verdict beside it is then a MEMORY, and awayday.mjs keeps it verbatim on
+//    purpose — silence must never look green. Self-clearing on the next good read.
+//  · "running", "unknown", cancelled/skipped NEVER bleed — a run in flight is not
+//    a verdict, and awayday.mjs already refuses to card them.
+//  · a never-checked lane (no file) never bleeds. Never born ≠ bleeding.
+// NO NUMBER IS INTRODUCED: both tests are fields already on the row. This organ
+// REPORTS ONLY — it never files a card (captains_call is awayday.mjs's arm, and
+// one red = one card is that organ's law), never re-runs `check`, and never
+// writes awayday.json. Read RAW and read-only for the same reason as the tanks
+// and watchdog reads: shelling `awayday.mjs check` from a health probe would fire
+// a live network call and could file a card as a side effect of taking a
+// temperature.
+function awayDayRead(state) {
+  if (!state || typeof state !== "object" || !state.checked_at) return null;   // never checked ≠ bleeding
+  return {
+    checked_at: state.checked_at,
+    lane: String(state.state || "unknown"),
+    why: state.why || null,
+    run_id: state.run_id ?? null,
+    head_sha: state.head_sha || null,
+    run_url: state.run_url || null,
+    ran_at: state.ran_at || null,
+    // TRUE when the one card this run gets has already been dealt — which is
+    // precisely when this bleed becomes the only thing still reporting the red.
+    already_carded: state.run_id != null && state.carded_run_id === state.run_id,
+    card_error: state.card_error || null,
+    unreachable: state.unreachable || null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// THE BRAIN'S FUEL — brainFuelRead (wire repair, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// brain.mjs's tokenVitals() writes `starved` to token_vitals.json on EVERY tick:
+// the shift day, the jobs refused for budget, the beats each one lost, the age.
+// A repo-wide trace the day of this repair found NO organ reading it. Worse, the
+// comment above the write NAMED three readers that do not read it — "the doctor
+// skill (step 0), captains_call.mjs and organism_test.mjs already open it" — and
+// all three take `.health` only (captains_call.mjs:803 → health.not_logged_in ·
+// watchman.mjs:215 → .health · organism-doctor SKILL.md:10 → "health" ·
+// organism_test.mjs names the FILE in a live-writers regex and never opens it).
+// Same shape as the tank read (#93), the daemon read, the Rest Room read and the
+// away-day read above: a producer whose consumers were a comment.
+// WHY THE BRAIN'S OWN HEALTH METER CANNOT COVER IT — brain.mjs's own selftest
+// proves the gap in one line: failureStreak() is computed off boolean-ok rows and
+// a budget-skip row carries no boolean ok, so a night where NOTHING RAN scores a
+// perfectly clean `health`. "Did the calls fail?" and "were there any calls to
+// fail?" are different silences, and this organism has been bitten by both.
+// WHY NOT THE DIARY WIRE: brain.mjs exports starvedNightFor(), and dugout.mjs +
+// learnstate.mjs use it to explain ONE artifact (why the diary page is blank).
+// That answers "why is this page missing"; nothing answers "was the brain fed
+// last night" — the body-wide question this organ exists to ask.
+// WHAT BLEEDS, AND WHAT DELIBERATELY DOES NOT:
+//  · `starved.recent === true` bleeds. `recent` is the OWNER'S OWN derivation —
+//    brain.mjs computes it against the very rolling window the gauge measures
+//    (cfg.budget.window_hours), so a starvation older than that window is history
+//    by the brain's ruling, not by a number invented here.
+//  · a starvation that is NOT recent is PUBLISHED (brain_fuel) and never accused,
+//    the same "a stale board is an unread board" discipline fuelRead follows.
+//  · a reading that is not TODAY'S never bleeds: the day gate is the one already
+//    used by fuelRead and daemonRead. A vitals file frozen mid-starvation would
+//    otherwise nag forever off a brain that has stopped ticking entirely.
+//  · `starved: null`, an absent key (a gauge written before the field existed —
+//    exactly what sat on disk the day of this repair), or no file at all: silent.
+//    Never-born ≠ bleeding.
+// NO NUMBER IS INTRODUCED: every test is a boolean or a day comparison already on
+// disk. The beats and the jobs are COUNTED and quoted, never judged — his standing
+// rule is that no threshold is chosen before 30-45-60 days of real data.
+// TOKEN_VITALS.JSON IS DELIBERATELY NOT ADDED TO expected_cadence_hours: a brain
+// that stopped ticking is the watchman's and the daemon watchdog's beat (the
+// pacemaker is one of the four residents daemonRead already covers), and a second
+// organ accusing the same silence would double-count it in the one line the Gaffer
+// speaks aloud.
+// Read RAW and read-only for the third time in this file and the same two reasons:
+// importing brain.mjs would drag the whole pacemaker — claudegen, the queue, the
+// job table — into the one organ that must survive its neighbours breaking, and
+// shelling `brain.mjs status` would make a health probe REWRITE the gauge it is
+// taking a reading from (brain.mjs:4321 writes TOKEN_VITALS in that very mode).
+function brainFuelRead(vitals, now) {
+  if (!vitals || typeof vitals !== "object" || !vitals.ts) return null;   // never ticked ≠ bleeding
+  // repLocalDay again — `ts` is ISO-UTC and the captain lives in IST, so the tick
+  // that wrote 2026-08-10T23:23Z happened on the morning of the 11th for him.
+  const reading_is_today = repLocalDay(vitals.ts) === localDate(now);
+  const st = vitals.starved && typeof vitals.starved === "object" ? vitals.starved : null;
+  return {
+    at: vitals.ts,
+    reading_is_today,
+    phase: vitals.phase || null,
+    // absent key vs explicit null are the SAME fact to a reader (no starvation on
+    // record) and are reported as one — but which one it was is kept, because an
+    // absent key means the gauge predates the field and the wire cannot be trusted
+    // to be live yet, while null is the field saying "clean".
+    field_present: "starved" in vitals,
+    starved: st ? {
+      shift_day: st.shift_day || null,
+      jobs: Array.isArray(st.jobs) ? st.jobs.map(j => ({ id: j && j.id, beats: (j && j.beats) || 0 })) : [],
+      beats: st.beats || 0,
+      age_min: typeof st.age_min === "number" ? st.age_min : null,
+      recent: st.recent === true,
+      summary: st.summary || null,
+    } : null,
   };
 }
 
@@ -643,6 +788,45 @@ function compute(world, cfg, now = new Date()) {
       line: "Rest Room ka aakhri call engine pe fail hua — jab tak agla pass nahi chadhta, aapke weak points pe koi ammunition load nahi ho rahi." });
   }
 
+  // 9) THE AWAY-DAY LANE — wire repair, 11 Aug 2026. See awayDayRead's header:
+  //    awayday.json had exactly one reader (its own writer, two keys, for a card
+  //    lock) and the cloud verdict reached the body nowhere. Two bleeds, both on
+  //    a field already on the row — no threshold, nothing judged here that GitHub
+  //    has not already called. The lane's ONE card is awayday.mjs's arm and stays
+  //    there; this is the state surface that outlives the card.
+  const awayDay = awayDayRead(world.awayDay);
+  if (awayDay && awayDay.lane === "red") {
+    bleeds.push({ organ: "awayday", kind: "away_day_lane_red",
+      evidence: `the cloud CI lane is RED on ${awayDay.head_sha || "(no sha)"} — ${awayDay.why || "failure"} · run ${awayDay.run_id ?? "?"}${awayDay.ran_at ? ` at ${awayDay.ran_at}` : ""} · read back ${awayDay.checked_at}${awayDay.already_carded ? " · its one card has already been dealt, so this line is the only thing still saying so" : ""}${awayDay.card_error ? ` · card could NOT be filed: ${awayDay.card_error}` : ""}${awayDay.run_url ? ` · ${awayDay.run_url}` : ""}`,
+      line: "away-day CI lane laal hai — clean cloud checkout mein kuch toot raha hai jo yahan ghar pe green dikhta hai." });
+  } else if (awayDay && awayDay.unreachable) {
+    // The verdict beside this is the LAST KNOWN one, kept verbatim by design. It is
+    // reported as a memory, never as today's reading — the same rule the stale tank
+    // board follows two sections up.
+    bleeds.push({ organ: "awayday", kind: "away_day_read_blind",
+      evidence: `the last read-back (${awayDay.checked_at}) could not reach GitHub :: ${awayDay.unreachable} — the verdict on disk (${awayDay.lane}${awayDay.head_sha ? ` on ${awayDay.head_sha}` : ""}) is the last known one, not today's`,
+      line: "away-day ka verdict aaj padha hi nahi gaya — jo disk pe hai woh purani khabar hai, green nahi." });
+  }
+
+  // 10) THE BRAIN'S FUEL — wire repair, 11 Aug 2026. See brainFuelRead's header:
+  //     token_vitals.json.starved was written every tick and read by nobody, while
+  //     the comment above the write named three readers that all take `.health`.
+  //     ONE bleed, and only on the owner's own `recent` flag inside a reading that
+  //     is today's. This organ REPORTS: it never pauses a job, never edits
+  //     brain_config.json, and never re-runs the tick — the brain owns all three,
+  //     and WHICH lane to give the fuel back to is the captain's call, not a
+  //     health probe's. The evidence names the jobs and counts the beats so the
+  //     first thing he is told is which artifact went missing and why.
+  const brainFuel = brainFuelRead(world.tokenVitals, now);
+  if (brainFuel && brainFuel.reading_is_today && brainFuel.starved && brainFuel.starved.recent) {
+    const s = brainFuel.starved;
+    bleeds.push({ organ: "brain", kind: "brain_starved",
+      evidence: `${s.summary || `${s.jobs.length} job(s) starved on the ${s.shift_day} shift — ${s.beats} beat(s) refused for budget`}`
+        + ` · last refusal ${s.age_min === null ? "at an unstamped time" : `${s.age_min} min ago`} · gauge written ${brainFuel.at}`
+        + ` (${brainFuel.phase || "no phase"})`,
+      line: `raat ka brain FUEL pe ruka — ${s.jobs.map(j => j.id).join(" + ") || "job(s)"} chale hi nahi (${s.beats} beat refuse hue). Kaam toota nahi hai, budget khatam tha; jo pages missing hain unki wajah yahi hai.` });
+  }
+
   // SPEAK-GATES — computed from real volumes; fitted organs defer to these.
   // A gate counts MARKET-DAYS, not ledger rows: lastWinsSlip collapses the
   // scorer's appended corrections (E2E audit 25 Jul 2026, finding 029c3bae) so a
@@ -788,6 +972,17 @@ function compute(world, cfg, now = new Date()) {
     // last engine verdict plus today's counted spend, which until now lived only
     // inside a command nobody ran. null when the organ has never dreamed.
     rest_room: restRoom,
+    // WIRE REPAIR 11 Aug 2026 — the cloud CI verdict's address in the body. The
+    // bleed above only speaks on red; this publishes the verdict either way, so a
+    // reader can tell GREEN from NEVER-CHECKED, which a bleed-only surface cannot.
+    // null when the read-back has never run (never-born ≠ bleeding).
+    away_day: awayDay,
+    // WIRE REPAIR 11 Aug 2026 — the brain's fuel gauge gets a body address. The
+    // bleed above speaks only on a RECENT starvation inside today's reading; this
+    // publishes the gauge either way, so a reader can tell "fed" from "starved
+    // yesterday" from "the gauge predates the field" — three states a bleed-only
+    // surface flattens into silence. null when the brain has never ticked.
+    brain_fuel: brainFuel,
     // ORGANISM AUDIT #98 — the Boot Room's weekly line used to die in a closing
     // cmd window, so "did the genome run?" was unanswerable and /organism-doctor
     // read `Last Result: 0` and called it green. bootroom.mjs now appends one
@@ -872,6 +1067,22 @@ function gatherWorld() {
     // a tail-only read would be the kind of silent truncation this file's own
     // clipStderr scar exists to refuse.
     dmnLedger: readLines(join(STATE_DIR, "brain_ledger.jsonl")).filter(r => r && /^dmn_/.test(String(r.job || ""))),
+    // WIRE REPAIR 11 Aug 2026 — the cloud CI verdict's FIRST reader outside the
+    // organ that writes it. RAW and read-only: awayday.mjs stays its sole writer,
+    // and `awayday.mjs check` is deliberately NOT shelled — that would fire a live
+    // GitHub call and can file a captain's card, so a health probe running it would
+    // be both mutating and speaking for him. Delete this line and the lane goes back
+    // to being a black box; awayday.mjs's own selftest holds it by source.
+    awayDay: readJson(join(STATE_DIR, "awayday.json")),
+    // WIRE REPAIR 11 Aug 2026 — the FIRST reader token_vitals.json.starved ever
+    // had. RAW and read-only: brain.mjs stays its sole writer, and `brain.mjs
+    // status` is deliberately NOT shelled — that mode REWRITES this very file
+    // (brain.mjs:4321), so a health probe running it would overwrite the reading
+    // it came to take. Importing brain.mjs is refused for the same reason the DMN
+    // read refuses it: the anemia organ must not inherit the pacemaker's deps.
+    // Delete this line and the gauge goes back to being a black box — the
+    // selftest holds it by source.
+    tokenVitals: readJson(join(STATE_DIR, "token_vitals.json")),
     // ORGANISM AUDIT #98 — the last row of the Boot Room's own run ledger.
     // Read-only; physio never writes it (bootroom.mjs is its single writer).
     genomeLastRun: (() => { const rows = readLines(join(STATE_DIR, "bootroom_log.jsonl")); return rows.length ? rows[rows.length - 1] : null; })(),
@@ -1168,6 +1379,139 @@ async function selftest() {
       /dmnLedger:\s*readLines\(join\(STATE_DIR,\s*"brain_ledger\.jsonl"\)\)\.filter\([^)]*\^dmn_/.test(gw2));
   }
 
+  // THE AWAY-DAY LANE — wire repair, 11 Aug 2026. awayday.json was written every
+  // push-lane pass and read by NOBODY but its own writer (two keys, for a card
+  // lock). Live on the day of this repair the lane was RED on 8df28ba with its one
+  // card already dealt, and no organ in the body knew. Every check below goes red
+  // the moment the cloud verdict stops reaching the house.
+  {
+    const red = { version: 1, checked_at: "2026-08-10T22:15:05.461Z", repo: "nikhil1429/arsenal-ai-fc",
+      workflow: "awayday.yml", state: "red", why: "failure", run_id: 31436912105, status: "completed",
+      conclusion: "failure", head_sha: "8df28ba", event: "schedule", ran_at: "2026-08-10T22:07:41Z",
+      run_url: "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/31436912105",
+      carded_run_id: 31436912105, unreachable: null };
+
+    const vRed = compute({ ...base, awayDay: red }, cfg, now);
+    const ab = vRed.bleeds.find(b => b.kind === "away_day_lane_red");
+    assert("AWAY-DAY · a RED cloud lane BLEEDS in the body, named with sha + run + url (until this it reached no organ at all)",
+      !!ab && /8df28ba/.test(ab.evidence) && /31436912105/.test(ab.evidence) && /actions\/runs/.test(ab.evidence)
+      && vRed.away_day.lane === "red");
+    // THE POINT OF THE WHOLE REPAIR: awayday's LOCK 1 cards a red run ONCE, by
+    // design. Past that card the red used to be invisible; this line is what
+    // outlives it, and it says so in the evidence.
+    assert("AWAY-DAY · …and it keeps saying so AFTER the one card has been dealt — the card is an edge, this is the state",
+      !!ab && ab.already_carded !== false && /already been dealt/.test(ab.evidence) && vRed.away_day.already_carded === true);
+    assert("AWAY-DAY · the bleed line is his language and hands him no command to remember (the anchor law)",
+      !!ab && !/scripts\/|node /.test(ab.line));
+    assert("AWAY-DAY · a card that could NOT be filed is named in the evidence — otherwise the red reaches him nowhere at all",
+      compute({ ...base, awayDay: { ...red, carded_run_id: null, card_error: "captains_call exploded" } }, cfg, now)
+        .bleeds.some(b => b.kind === "away_day_lane_red" && /exploded/.test(b.evidence)));
+
+    // SELF-CLEARING, and never louder than GitHub itself: green is silent, and a
+    // run still in flight or cancelled is not a verdict — awayday.mjs refuses to
+    // card those too (RED_CONCLUSIONS), so this must refuse to bleed on them.
+    assert("AWAY-DAY · a GREEN lane is silent, and 'running'/'unknown' never bleed — a run in flight is not a verdict",
+      [{ ...red, state: "green", why: "success" }, { ...red, state: "running", why: "in_progress" }, { ...red, state: "unknown", why: "cancelled" }]
+        .every(s => compute({ ...base, awayDay: s }, cfg, now).bleeds.every(b => b.kind !== "away_day_lane_red")));
+    assert("AWAY-DAY · a GREEN verdict is still PUBLISHED — a reader must be able to tell green from never-checked",
+      compute({ ...base, awayDay: { ...red, state: "green", why: "success" } }, cfg, now).away_day.lane === "green");
+
+    // SILENCE MUST NEVER LOOK GREEN — awayday.mjs keeps the last known verdict
+    // verbatim when the fetch fails, so the body has to say the reading is a memory.
+    const blind = compute({ ...base, awayDay: { ...red, state: "green", why: "success", unreachable: "getaddrinfo ENOTFOUND api.github.com" } }, cfg, now);
+    assert("AWAY-DAY · a read-back that could not reach GitHub bleeds as BLIND, and says the verdict on disk is last-known, not today's",
+      blind.bleeds.some(b => b.kind === "away_day_read_blind" && /ENOTFOUND/.test(b.evidence) && /last known/.test(b.evidence)));
+    assert("AWAY-DAY · a red lane that ALSO could not be re-read reports the red, not the blindness — the worse news wins",
+      compute({ ...base, awayDay: { ...red, unreachable: "ENOTFOUND" } }, cfg, now).bleeds.filter(b => /^away_day_/.test(b.kind))
+        .map(b => b.kind).join() === "away_day_lane_red");
+
+    assert("AWAY-DAY · a lane never checked on this box is null, not a wound (never-born ≠ bleeding)",
+      compute(base, cfg, now).away_day === null && compute({ ...base, awayDay: {} }, cfg, now).away_day === null);
+
+    // THE READ-BACK'S OWN PULSE: the verdict half cannot see a push lane that
+    // stopped firing — a week-old red reads exactly like a fresh one. The stale
+    // table covers it on the cadence every other daily organ already carries.
+    assert("AWAY-DAY · a read-back that stopped firing bleeds as STALE — a verdict nobody re-checks is not a reading",
+      cfg.expected_cadence_hours["awayday.json"] === 30
+      && compute({ ...base, files: { "awayday.json": { exists: true, mtimeMs: now.getTime() - 60 * H } } }, cfg, now)
+           .bleeds.some(b => b.kind === "stale" && b.organ === "awayday"));
+
+    // THE WIRE ITSELF, held by source — the same net as the daemon and Rest Room
+    // reads above: every fixture check here passes while the live organ is blind
+    // if gatherWorld stops reading the file. That is exactly how this defect lived.
+    const src3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const gw3 = src3.slice(src3.indexOf("function gatherWorld()"), src3.indexOf("// selftest — fixture world"));
+    assert("AWAY-DAY · gatherWorld() REALLY reads awayday.json — the verdict's first consumer outside its own writer, held by source",
+      /awayDay:\s*readJson\(join\(STATE_DIR,\s*"awayday\.json"\)\)/.test(gw3));
+    // …and it READS, never RUNS. The word "awayday.mjs" appears in this file's own
+    // comments (deliberately — they explain why it is not shelled), so the test is
+    // on the exec families, not on the name: no line may both spawn and name it.
+    // The pattern is ASSEMBLED FROM FRAGMENTS at runtime for the same reason
+    // awayday.mjs's own rot guard does it: written out whole, this probe's own line
+    // matches itself and the check is red the day it is written.
+    const shellPat = new RegExp(["exec", "(File)?Sync|", "spawn", "(Sync)?\\("].join(""));
+    assert("AWAY-DAY · it READS the file and never shells `awayday.mjs check` — a probe must not fire a network call or file a card for him",
+      !src3.split("\n").some(l => shellPat.test(l) && /awayday/i.test(l)));
+  }
+
+  // BRAIN FUEL — wire repair 11 Aug 2026. token_vitals.json.starved was written
+  // every tick and read by NO organ; the comment above the write named three
+  // readers that all take `.health`. These hold the whole wire and go red if any
+  // link drops. The fixture is the MEASURED case, not an invented one: the
+  // 2026-08-10 overnight shift, `diary` refused 41 times for budget, which is
+  // exactly what starvedNightFor's own fixture in dugout.mjs/learnstate.mjs uses.
+  {
+    const tv = (over = {}) => ({
+      ts: new Date(now.getTime() - 30 * 60000).toISOString(), phase: "overnight",
+      health: { streak: 0, dead: false },
+      starved: { shift_day: "2026-07-11", beats: 41, age_min: 12, recent: true,
+        jobs: [{ id: "diary", beats: 41, phase: "overnight", used: 1901322, cap: 1520000 }],
+        summary: "1 job(s) starved on the 2026-07-11 shift — 41 beat(s) refused for budget · diary×41" },
+      ...over,
+    });
+    const starved = compute({ ...base, tokenVitals: tv() }, cfg, now);
+    const b = starved.bleeds.find(x => x.kind === "brain_starved");
+    assert("BRAIN FUEL · a RECENT starvation on today's gauge bleeds — the silence the brain's own health meter cannot see",
+      !!b && /diary×41/.test(b.evidence) && /12 min ago/.test(b.evidence) && /diary/.test(b.line));
+    assert("BRAIN FUEL · it REPORTS and never acts — no threshold, no pause, no config touched; the line says the work is not broken",
+      !!b && /budget khatam tha/.test(b.line) && !/pause|disable|band kar/i.test(b.line));
+    // the three silences, each of which MUST stay silent
+    assert("BRAIN FUEL · a fed brain never bleeds (starved: null is the field saying clean)",
+      compute({ ...base, tokenVitals: tv({ starved: null }) }, cfg, now).bleeds.every(x => x.kind !== "brain_starved"));
+    assert("BRAIN FUEL · a starvation the OWNER already called history (recent:false) is published, never accused",
+      (() => {
+        const old = compute({ ...base, tokenVitals: tv({ starved: { ...tv().starved, recent: false, age_min: 900 } }) }, cfg, now);
+        return old.bleeds.every(x => x.kind !== "brain_starved") && old.brain_fuel.starved.recent === false && old.brain_fuel.starved.beats === 41;
+      })());
+    assert("BRAIN FUEL · a gauge that is NOT today's cannot nag — a frozen vitals file mid-starvation is a memory, not a reading",
+      (() => {
+        const frozen = compute({ ...base, tokenVitals: tv({ ts: "2026-07-01T09:00:00.000Z" }) }, cfg, now);
+        return frozen.bleeds.every(x => x.kind !== "brain_starved") && frozen.brain_fuel.reading_is_today === false;
+      })());
+    // THE STATE THAT SAT ON DISK THE DAY OF THIS REPAIR: the live gauge carried no
+    // `starved` key at all (written by a brain that predates the field). It must read
+    // as "no record", never as "clean" — and field_present is how a reader tells.
+    const noField = compute({ ...base, tokenVitals: (() => { const v = tv(); delete v.starved; return v; })() }, cfg, now);
+    assert("BRAIN FUEL · a gauge written BEFORE the field existed reports field_present:false, bleeds nothing, and is never read as green",
+      noField.bleeds.every(x => x.kind !== "brain_starved") && noField.brain_fuel.field_present === false && noField.brain_fuel.starved === null);
+    assert("BRAIN FUEL · a brain that has never ticked reports null, never a green zero",
+      compute(base, cfg, now).brain_fuel === null);
+    // THE WIRE ITSELF, held by source — the same net as the daemon, Rest Room and
+    // away-day reads: every fixture above passes while the live organ is blind if
+    // gatherWorld stops opening the file. That is EXACTLY how this defect lived.
+    const src4 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const gw4 = src4.slice(src4.indexOf("function gatherWorld()"), src4.indexOf("// selftest — fixture world"));
+    assert("BRAIN FUEL · gatherWorld() REALLY reads token_vitals.json — starved's first consumer anywhere, held by source",
+      /tokenVitals:\s*readJson\(join\(STATE_DIR,\s*"token_vitals\.json"\)\)/.test(gw4));
+    // …and it READS, never RUNS. `brain.mjs status` rewrites token_vitals.json, so a
+    // probe that shelled it would overwrite its own reading. Pattern assembled from
+    // fragments for the same reason the away-day probe does it: written out whole,
+    // this line would match itself and the check would be red the day it was written.
+    const shellPat2 = new RegExp(["exec", "(File)?Sync|", "spawn", "(Sync)?\\("].join(""));
+    assert("BRAIN FUEL · it never shells the brain — a probe must not rewrite the gauge it is reading",
+      !src4.split("\n").some(l => shellPat2.test(l) && /brain\.mjs/i.test(l)));
+  }
+
   // GENOME — ORGANISM AUDIT #98. The Boot Room's weekly line vanished into a
   // closing cmd window; bootroom.mjs now leaves a row, and this is its address.
   const gen = compute({ ...base, genomeLastRun: { at: "2026-07-12T14:30:00.000Z", day: "2026-07-12", mode: "run", outcome: "gate_closed", reason: "9/200 reps — the genome is listening, not proposing yet (speak-gate on volume)", counter: { have: 9, need: 200, kind: "volume_gate" } } }, cfg, now);
@@ -1326,4 +1670,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 // gatherWorld is exported so a health surface can take a READ-ONLY preview of
 // the vitals without shelling `physio.mjs run` (which writes loop_vitals.json).
 // It performs no writes of any kind — readJson / readLines / statSync only.
-export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy, gatherWorld, fuelRead, daemonRead, restRoomRead };
+export { compute, loadConfig, fsrsSignal, fsrsSignalLegacy, gatherWorld, fuelRead, daemonRead, restRoomRead, awayDayRead };

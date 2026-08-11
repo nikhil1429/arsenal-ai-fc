@@ -185,6 +185,96 @@ function integrity() {
   }
   assert(`the MODES header of all ${paths.size} organs a doc points a session at names EVERY mode that organ dispatches (a documented discovery path may not lie)`,
     liars.length === 0, liars.join("\n         "));
+
+  // ── 2c. THE ARMING-DESTINATION CONTRACT (dead-wire pass, 11 Aug 2026) ──────
+  // A sixth defect class of the same shape: an organ ARMS a brain trigger and
+  // nothing on the other end ever fires. No organ's selftest can see it — the
+  // arming lives in one file, the destination in a state file, and both are green.
+  //
+  // WHY THIS IS NOT "every arming has a declared consumer". A tracer filed exactly
+  // that against postmatch.mjs (`brain.mjs trigger reanalysis`, every 30th matchday)
+  // and it would have gone red on a CAPTAIN'S RULING: deep_reanalysis was un-gated
+  // from trigger-only to nightly on 9 Aug 2026 (P1 unleash, his word), so the arming
+  // has no consumer BY DESIGN and the re-read fires every overnight window instead —
+  // strictly more often than the milestone it was armed for. brain_config's own
+  // `_window_note` records it, and says re-gating is one edit. A net that reddens on
+  // a deliberate, documented decision teaches sessions to ignore the net.
+  // So the law held here is the one that actually matters: an arming must still REACH
+  // the work it was armed for, which has exactly two legal shapes —
+  //   (a) a job DECLARES the trigger (consumed on run: brain.mjs:2831), or
+  //   (b) the P1-unleash shape — an enabled, UN-GATED job whose `out` is that name,
+  //       which runs on its own schedule and supersedes the arming.
+  // It goes red the day deep_reanalysis is disabled or deleted while postmatch still
+  // arms it, the day formation_read loses its trigger while the conductor still arms
+  // morning_signals, or the day a new arming is added with nothing on the far end.
+  // Names are DERIVED from source, never listed here: a new arming joins the net by
+  // existing. Both call shapes are matched — the brain.mjs CLI (postmatch) and
+  // conductor.mjs's direct armTrigger(), which writes brain_queue.json itself.
+  const armings = new Map();   // trigger name -> the organ that arms it
+  for (const f of scripts()) {
+    const src = readFileSync(join(ROOT, "scripts", f), "utf8");
+    for (const m of src.matchAll(/"trigger",\s*"([a-z_]+)"/g)) armings.set(m[1], f);
+    for (const m of src.matchAll(/\barmTrigger\(\s*"([a-z_]+)"/g)) armings.set(m[1], f);
+  }
+  const brainJobs = JSON.parse(readFileSync(join(STATE, "brain_config.json"), "utf8")).jobs || [];
+  const orphaned = [];
+  for (const [name, organ] of armings) {
+    const consumer = brainJobs.find((j) => j.trigger === name);                             // (a)
+    const superseder = brainJobs.find((j) => j.out === name && !j.trigger && j.enabled);    // (b)
+    if (consumer && !consumer.enabled) orphaned.push(`${organ} arms '${name}' but its only consumer (${consumer.id}) is DISABLED — the arming is inert and nothing says so`);
+    else if (!consumer && !superseder) orphaned.push(`${organ} arms '${name}' and NOTHING reaches it — no job declares that trigger, and no enabled un-gated job outs '${name}'`);
+  }
+  assert(`all ${armings.size} brain triggers armed anywhere in the organism reach live work (a declared consumer, or the un-gated job that supersedes it)`,
+    orphaned.length === 0, orphaned.join("\n         "));
+
+  // ── 2d. THE PRODUCER-CALLER CONTRACT (dead-wire pass, 11 Aug 2026) ─────────
+  // A seventh defect class, same shape as 2b/2c and invisible to every organ's own
+  // selftest: a WRITER that is the sole producer of a state field, whose CLI mode
+  // nothing ever invokes. The organ is green, the readers are green, and the field
+  // is null forever.
+  //
+  // THE SCAR THAT PUT THIS HERE. `course.mjs at <n>` is the only thing that writes
+  // course.json's `current` + `current_at` (markCurrent — `done` deliberately leaves
+  // the position where it was). It had ZERO callers: `grep -rn "course.mjs at"
+  // --exclude-dir=.git` returned its own usage banner, learnstate.mjs's hint string
+  // and doc prose; no hook, no skill, no scheduled task (`grep -i course setup/*.ps1`
+  // → 0). So `current` was null from the 7 Aug ingest onward, `brief` could only ever
+  // print "not started", the resume second never appeared, and learnstate.mjs's
+  // 11 Aug PARKED-age tag was unreachable — the wire hid its own absence.
+  //
+  // WHY A TABLE AND NOT A DERIVED SWEEP, unlike 2b/2c. The derived question — "does
+  // every CLI mode have a caller?" — is unusable as a net: most modes are meant to be
+  // typed by a human or by a session, and the majority would go red on purpose. What
+  // is checkable is the narrow case where a SPECIFIC producer's only legitimate caller
+  // is a named surface, established once and then liable to be dropped. Entries are
+  // added by whoever traces one, WITH the evidence, and each is two-sided so neither
+  // half can rot alone: the organ must still dispatch the mode, and the surface must
+  // still name it.
+  const PRODUCER_CALLERS = [{
+    organ: "course.mjs",
+    mode: "at",
+    // the caller is a SKILL, not an organ, on purpose: only the live session knows
+    // which chapter he opened. An organ inferring it would be guessing on his behalf.
+    callers: [".claude/skills/learn/SKILL.md"],
+    names: /course\.mjs at\b/,
+    field: "course.json `current` / `current_at`",
+  }];
+  const unwired = [];
+  for (const p of PRODUCER_CALLERS) {
+    const src = readFileSync(join(ROOT, "scripts", p.organ), "utf8");
+    const modes = argvModes(src);
+    if (!modes || !modes.has(p.mode)) {
+      unwired.push(`${p.organ} no longer dispatches \`${p.mode}\`, but ${p.callers.join(", ")} still calls it — the caller now names a command that does not exist`);
+      continue;
+    }
+    for (const c of p.callers) {
+      const f = join(ROOT, c);
+      if (!existsSync(f)) { unwired.push(`${c} is GONE — nothing calls \`${p.organ} ${p.mode}\`, so ${p.field} can never be written`); continue; }
+      if (!p.names.test(readFileSync(f, "utf8"))) unwired.push(`${c} no longer names \`${p.organ} ${p.mode}\` — the ONLY producer of ${p.field} is back to zero callers (the 11 Aug scar)`);
+    }
+  }
+  assert(`all ${PRODUCER_CALLERS.length} sole-producer command(s) are still both DISPATCHED by their organ and NAMED by the surface that calls them`,
+    unwired.length === 0, unwired.join("\n         "));
 }
 
 // Which organs does a skill or runbook tell a session to discover by grepping its
@@ -458,6 +548,40 @@ function path() {
       brief.code === 0 && /context manifest:/.test(brief.out));
     assert("BRIEF · the assembled brief stays inside the declared 12,000-char ceiling",
       (() => { const m = brief.out.match(/assembled (\d+)\/(\d+)/); return m && Number(m[1]) <= Number(m[2]); })());
+
+    // ── THE MANIFEST LEDGER'S CONSUMER (dead-wire repair, 11 Aug 2026) ───────
+    // assemble() has returned {manifest, bytes, ceiling, total, footer} since 5 Aug and
+    // the ONE production caller (learnstate.mjs:1201) reads `.text` and nothing else, so
+    // every structured field was consumed only by the selftest that computes it. The two
+    // assertions ABOVE are the proof: they are this suite regexing a SENTENCE for the one
+    // ceiling check the organism owns, because this file's header law forbids importing an
+    // organ and there was no out-of-process door onto the structure. There is now —
+    // `context_manifest.mjs ledger`, one JSON line, deliberately WITHOUT `text` so a net
+    // can read the accounting without ever holding his memory.
+    // Both stay. The prose pair tests the PRODUCTION path (the SessionStart hook really
+    // printing a footer); these test the LEDGER. Layering, not replacing.
+    const led = run([S("context_manifest.mjs"), "ledger"], { cwd: sb, env: humanEnv });
+    const L = (() => { try { return JSON.parse(led.out.trim().split(/\r?\n/).pop()); } catch { return null; } })();
+    assert("BRIEF · the manifest's accounting is reachable AS STRUCTURE — one JSON line, parts each carrying id + state + bytes",
+      led.code === 0 && L && Array.isArray(L.manifest) && L.manifest.length > 0
+      && L.manifest.every((p) => typeof p.id === "string" && typeof p.state === "string" && typeof p.bytes === "number"),
+      `context_manifest.mjs ledger did not return a parseable ledger (exit ${led.code}). Without it the only ceiling check in the organism is a regex over a printed sentence.`);
+    assert("BRIEF · the ceiling check reads the FIELD, not a sentence — total <= ceiling, both as numbers",
+      L && Number.isFinite(L.total) && Number.isFinite(L.ceiling) && L.total <= L.ceiling,
+      L ? `total ${L.total} vs ceiling ${L.ceiling} — a FOOTER_RESERVE overrun looks exactly like this` : "no ledger to read");
+    // DROPPED is the one state that is unambiguously a WIRE break: the part was produced,
+    // billed, and then did not appear in the delivered text (context_manifest.mjs's
+    // reconcile()). MISSING/EMPTY are data conditions — a bare CI checkout has no
+    // hippocampus and must stay green — so they are deliberately NOT asserted on here.
+    // Nothing in the organism catches a DROPPED leg today; the footer says it to a reader
+    // and no net reads the footer.
+    assert("BRIEF · no context part reads DROPPED — a leg that was measured and then did not reach the session is a wire break, and nothing else catches it",
+      L && !L.manifest.some((p) => p.state === "DROPPED"),
+      L ? `DROPPED: ${L.manifest.filter((p) => p.state === "DROPPED").map((p) => `${p.id} (${p.note})`).join(", ")}` : "no ledger to read");
+    // The omission is the reason the door is safe to open at all — pin it, or the next
+    // hand that "helpfully" adds `text` puts his memory on any consumer's stdout.
+    assert("BRIEF · the ledger NEVER carries the assembled text — his memory, card and staged rulings stay out of every consumer's stdout",
+      L && !("text" in L) && !JSON.stringify(L.manifest).includes("COLD-START"));
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 

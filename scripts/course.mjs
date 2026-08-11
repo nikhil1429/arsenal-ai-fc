@@ -59,6 +59,10 @@
 //   chapter, while every other track already carried a staleness signal (working_set's
 //   age tag, sprint's synced_at tag). courseBrief() returns it now and learnstate.mjs's
 //   SessionStart brief tags the course line with its age.
+//   `source_url` was the THIRD field on that same dead wire (same sweep, pass 3): read
+//   from his preamble, https-validated, merge-preserved, selftested — and returned by no
+//   reader, so the kickoff line named his chapter and never where to open it. courseBrief()
+//   returns it now and the brief prints it as the resume address.
 //   `course: null` + `chapters: []` is the honest empty envelope — a consumer never
 //   has to special-case a missing file.
 //
@@ -427,7 +431,7 @@ function unreadableBrief(why) {
     // it is what stops him from re-pasting a chapter list over progress that is
     // still on disk and merely unparseable.
     line: `course: UNREADABLE — ${reason} · nothing is lost; \`node scripts/course.mjs status\` for the exit`,
-    title: null, current: null, current_at: null, current_title: null, total: 0, done: 0,
+    title: null, source_url: null, current: null, current_at: null, current_title: null, total: 0, done: 0,
   };
 }
 
@@ -438,7 +442,7 @@ export function courseBrief(path = STATE) {
     const line = statusLine(state);
     if (!state || !state.course || !Array.isArray(state.chapters) || !state.chapters.length) {
       // A genuinely empty/absent course: readable, just nothing in it yet.
-      return { present: false, readable: true, why: null, line, title: null, current: null, current_at: null, current_title: null, total: 0, done: 0 };
+      return { present: false, readable: true, why: null, line, title: null, source_url: null, current: null, current_at: null, current_title: null, total: 0, done: 0 };
     }
     const total = state.chapters.length;
     const done = state.chapters.filter((c) => c.covered).length;
@@ -449,6 +453,18 @@ export function courseBrief(path = STATE) {
                                               // reader destructures one shape, never three
       line,                                   // #106 — always a have/need counter, never a bare word
       title: state.course.title || null,
+      // THE DEAD WIRE, pass 3 (11 Aug 2026 sweep): `source_url` is read from his
+      // preamble directive (:230), https-validated so a guess can never be stored
+      // (:231), coerced again in normalize (:270), deliberately PRESERVED across a
+      // re-ingest that omits it (:323) and asserted in the selftest — and it was
+      // returned to NOBODY, because this is the only address other organs use.
+      // Consequence: the kickoff line exists precisely so he is never asked where he
+      // is, and it named the chapter without ever naming where to OPEN it, while the
+      // real address sat on disk one field away from the reader printing the line
+      // (course.json today: the anthropics/courses fundamentals folder).
+      // null stays null — normalize() already refuses anything that is not http(s),
+      // so a reader either gets a real address or nothing, never a half-one.
+      source_url: state.course.source_url || null,
       current: cur ? cur.n : null,
       // THE DEAD WIRE (11 Aug 2026 sweep): `current_at` is stamped by markCurrent()
       // on every `at <n>`, merged, normalized, and called load-bearing in this file's
@@ -682,7 +698,7 @@ function selftest() {
     assert("#35 — courseBrief on a MISSING course answers honestly instead of throwing (his prompt is never at risk)",
       absent.present === false && absent.total === 0 && typeof absent.line === "string" && absent.line.length > 0);
     assert("#35 — the absent answer still carries every field a reader destructures (no undefined at the call site)",
-      ["present", "line", "title", "current", "current_at", "current_title", "total", "done"].every((k) => k in absent));
+      ["present", "line", "title", "source_url", "current", "current_at", "current_title", "total", "done"].every((k) => k in absent));
     // and on a real state — built through the pure core, written to a scratch path
     // the live file never sees.
     const built = mergeCourse(emptyState(), parseCourse(PASTE), T0).state;
@@ -709,6 +725,14 @@ function selftest() {
     // ADDRESS was the broken half.
     assert("DEAD WIRE — the brief carries `current_at`, so a reader can age his position (it had zero readers until today)",
       brief.current_at === T1.toISOString());
+    // DEAD-WIRE SWEEP pass 3 (11 Aug 2026). `source_url` travelled parse → validate →
+    // merge → normalize → disk and stopped dead HERE, at the only door other organs
+    // knock on, so the one line that tells him where he is could not tell him where to
+    // open it. This fails if the field is dropped from the brief again. It rides the
+    // PASTE fixture's own URL, so it also proves the value is carried VERBATIM and not
+    // re-derived from the title.
+    assert("DEAD WIRE — the brief carries `source_url`, the course's real address (it had zero readers until today)",
+      brief.source_url === "https://www.youtube.com/playlist?list=PL-Y17yukoyy0SupAJSPQYg_Lvre9Kt9EG");
     // and the honest null: a course nobody has opened has no position to age. Built
     // from the same pure core, so this proves the branch, not a fixture.
     {
@@ -719,6 +743,17 @@ function selftest() {
       finally { try { rmSync(p2, { force: true }); } catch { /* best effort */ } }
       assert("DEAD WIRE — `current: null` reports `current_at: null`, never a fabricated stamp",
         nb.present === true && nb.current === null && nb.current_at === null);
+    }
+    // NO ADDRESS IS AN ANSWER: a paste with no URL directive must report null through
+    // the brief, never a manufactured link. Same law as start_seconds.
+    {
+      const noUrl = mergeCourse(emptyState(), parseCourse("Title: Anthropic Prompt Engineering\nChapter 1: Basic prompt structure"), T0).state;
+      const p3 = join(tmpdir(), `__course_selftest_nourl_${process.pid}.json`);
+      let ub;
+      try { writeAtomic(p3, noUrl); ub = courseBrief(p3); }
+      finally { try { rmSync(p3, { force: true }); } catch { /* best effort */ } }
+      assert("DEAD WIRE — a course pasted with no URL reports `source_url: null`, never a guessed link",
+        ub.present === true && ub.source_url === null);
     }
     assert("#35 — the scratch state left no trace beside the live file", !existsSync(tmpPath));
   }
@@ -763,10 +798,11 @@ function selftest() {
     assert("WIRE — the unreadable answer tells him nothing is lost, so he never re-pastes over live progress",
       /nothing is lost/.test(bad.line));
     assert("WIRE — every path returns the SAME KEYS, so no reader gets undefined",
-      // `current_at` is in this list because the SAME 11 Aug sweep wired it (see the
-      // DEAD WIRE block above): two fixes landed in this function on one day, and a
-      // key either exists on ALL THREE answers or a reader gets undefined on one of them.
-      ["present", "readable", "why", "line", "title", "current", "current_at", "current_title", "total", "done"]
+      // `current_at` and `source_url` are in this list because the SAME 11 Aug sweep
+      // wired them (see the DEAD WIRE blocks above): three fixes landed in this function
+      // on one day, and a key either exists on ALL THREE answers or a reader gets
+      // undefined on one of them.
+      ["present", "readable", "why", "line", "title", "source_url", "current", "current_at", "current_title", "total", "done"]
         .every((k) => k in bad && k in absent2 && k in good));
     assert("WIRE — a HEALTHY course still answers exactly as before (the fix touched no good path)",
       good.present === true && good.readable === true && good.why === null && good.current === 2 && good.total === 4);

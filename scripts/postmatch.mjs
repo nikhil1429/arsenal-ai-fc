@@ -190,6 +190,23 @@ function renderSeasonMd({ season, lockedCount, lockedNote, python, benchmark, no
       // shipped product). The word "locked" moves into the row label because it is
       // no longer true of every bucket. Fallback = the old expression verbatim.
       : `- benchmark (locked/core per bucket; a bucket with no concept core names its own evidence): ${(benchmark.buckets || []).map((b) => b.projection || `${b.id} locked ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}`);
+    // DEAD-WIRE SWEEP 11 Aug 2026 — the differentiators enter the logbook. The row
+    // above maps over `buckets`, and 6-cross-cut + 7-domain are deliberately NOT
+    // buckets (the ROADMAP has five), so SEASON.md has recorded every bucket's standing
+    // on a date and never the two lanes that carry 46.7% and 44.5% of the interview.
+    // This file is what we read back months later; a standing that is missing from it
+    // never happened. benchmark.mjs owns the string; absent ⇒ no row (pre-wire file).
+    if (benchmark.differentiators_line) L.push(`- benchmark ${benchmark.differentiators_line}`);
+    // Same sweep — the HAVE half enters the logbook. The standings row above is
+    // `projection` (locked/core), so what he actually HELD on that date — cold
+    // re-proof, Re-Jirah rounds sat, which skills had reps and at what fluency,
+    // chapters covered, Building% — was recorded nowhere, while the need row two
+    // lines down has recorded the debt since 10 Aug. A logbook with a debt column
+    // and no credit column reads back as a season of pure arrears. Whole list, for
+    // the same reason the need row takes the whole list: a logbook that summarises
+    // is a logbook that lies. benchmark.mjs owns haves[]; absent ⇒ no row.
+    if (Array.isArray(benchmark.haves) && benchmark.haves.length)
+      L.push(`- benchmark have: ${benchmark.haves.join(" · ")}`);
     // 10 Aug 2026 wiring pass — the NEED names enter the logbook. The standings
     // row above carried counts only since 8 Aug, so SEASON.md recorded where he
     // stood on a date and never what was still open on that date — and this file
@@ -436,6 +453,29 @@ async function selftest() {
         needs: ["2-rag: unlock chunking, retrieval", "course: 6 chapters remain"] } });
     assert("SEASON.md: the benchmark's NEED NAMES enter the logbook whole (a logbook that summarises lies)",
       /- benchmark need: 2-rag: unlock chunking, retrieval · course: 6 chapters remain/.test(mdNeeds));
+    // DEAD-WIRE SWEEP 11 Aug 2026 — the standings row maps over buckets[], and the two
+    // differentiators are deliberately NOT buckets, so the logbook has recorded every
+    // bucket on a date and never the lanes carrying 46.7% + 44.5% of the interview.
+    const mdDx = renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
+      benchmark: { status: "ok", buckets: [{ id: "B2", counts: { locked: 1, core_total: 5 } }],
+        differentiators_line: "differentiators (not a 6th bucket — the #1 senior signal + the fintech moat): 6-cross-cut: locked 0/1 (rides: system_design 26.7% + production_eval 20% = 46.7% of the interview)" } });
+    assert("SEASON.md: the benchmark's DIFFERENTIATORS get their own permanent row, counts + interview weight (never folded into the bucket row)",
+      /^- benchmark differentiators \(not a 6th bucket[^\n]*6-cross-cut: locked 0\/1[^\n]*46\.7% of the interview/m.test(mdDx)
+      && !/locked\/core per bucket[^\n]*cross-cut/.test(mdDx));
+    assert("SEASON.md: a pre-wire benchmark (no differentiators_line) writes no differentiators row (absence, not a zero)",
+      !/differentiators/.test(mdNeeds));
+    // DEAD-WIRE SWEEP 11 Aug 2026 — the HAVE half enters the logbook. needs[] was
+    // wired 10 Aug; have[] had no reader anywhere in the organism, so SEASON.md has
+    // recorded this season's debt on every date and never its credit.
+    const mdHaves = renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
+      benchmark: { status: "ok", buckets: [{ id: "B2", counts: { locked: 1, core_total: 5 } }],
+        haves: ["2-rag: locked 1/5 · cold re-proof 1/1 · Re-Jirah rounds sat 1/1 (capsule reJirahDone)",
+          "skills: 1/3 with reps — anthropic_api 🔴 learning"] } });
+    assert("SEASON.md: the benchmark's HAVE lines enter the logbook whole — the credit column (cold re-proof, skills with reps), which lived on no surface at all",
+      /- benchmark have: 2-rag: locked 1\/5 · cold re-proof 1\/1 · Re-Jirah rounds sat 1\/1 \(capsule reJirahDone\) · skills: 1\/3 with reps — anthropic_api 🔴 learning/.test(mdHaves));
+    assert("SEASON.md: a benchmark with no haves[] writes no have row (absence, not a zero)",
+      !/benchmark have/.test(renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
+        benchmark: { status: "ok", buckets: [], regressions: [] } })));
     assert("SEASON.md: a benchmark with no needs[] writes no need row (absence, not a zero)",
       !/benchmark need/.test(renderSeasonMd({ season: s3r, lockedCount: 4, python: null, now: new Date(2026, 7, 12),
         benchmark: { status: "ok", buckets: [], regressions: [] } })));
@@ -606,6 +646,21 @@ async function main() {
   // 100%, he writes ZERO. Best-effort: a logbook render must never block the ritual.
   try { writeAtomic(SEASON_MD, renderSeasonMd({ ...gatherSeasonExtras(now), season: newSeason })); } catch { }
   // milestone → arm the brain's deep re-analysis (U4; every 30th matchday)
+  // WHERE THIS LANDS TODAY — read before "fixing" it (11 Aug 2026, dead-wire pass).
+  // A tracer filed this line as a PRODUCER_NO_CONSUMER: no job in brain_config.json
+  // declares `trigger: "reanalysis"`, so the arming is consumed by nothing and the key
+  // sits in brain_queue.json.triggers forever. The first half is TRUE; the conclusion
+  // drawn from it ("the milestone deep re-read never fires") is FALSE, and acting on it
+  // would reverse a captain's ruling. deep_reanalysis was un-gated from trigger-only to
+  // NIGHTLY on 9 Aug 2026 (P1 unleash, his word) — enabled, window overnight, priority 85
+  // — so the re-read now runs every night, which is strictly MORE than every 30th
+  // matchday, and the arming was left standing on purpose: brain_config's own
+  // `_window_note` says "RE-GATING is one edit: restore \"trigger\": \"reanalysis\" and set
+  // window back to \"any\"". The orphan key is inert — nothing but brain.mjs and
+  // conductor.mjs read `triggers` at all, and neither reports an armed one at him — so it
+  // is NOT aged out here: a TTL would be a guessed number for zero measured damage.
+  // The net that catches the real version of this (deep_reanalysis disabled or deleted
+  // while this line still arms) is organism_test.mjs § ARMING-DESTINATION CONTRACT.
   if (newSeason.matches_played > 0 && newSeason.matches_played % 30 === 0 && WON_DAY.has(hit)) {
     try {
       const { execFileSync } = await import("node:child_process");

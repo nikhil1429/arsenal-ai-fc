@@ -74,6 +74,84 @@ description: Full health check of the organism — vitals, brain budget, selftes
      SAFE TO RUN, unlike `fuelboard.mjs status` further down: it only reads
      dmn_precache.json and brain_ledger.jsonl — `grep -n 'mode === "status"'
      scripts/dmn.mjs` and read the branch; there is no writer in it.)
+   - `node scripts/context.mjs status` — THE AMBIENT BRIDGE'S ONLY READOUT:
+     emits/day, how many carry a canon concept, how many shipped a CUT
+     title/text, the last window it actually shipped, the live lane, the BUILD
+     the running process is on, and — the half nothing else in the organism can
+     see — what those emits BECAME downstream, as "N of M scored moment(s)
+     carrying context left reflex".
+     (added 11 Aug 2026, wiring audit. WHY IT IS HERE AT ALL: this command had
+     no caller anywhere — `grep -rn "context.mjs status|context:status" scripts/
+     hooks/ .claude/ setup/ package.json` returned exactly ONE hit in the live
+     tree, context.mjs's own MODES header at :21. Three repairs' worth of health
+     surface (#22 · D7 · D8, plus the downstream read) were dealt to nobody, and
+     it is the anchor law's exact forbidden shape: a command he must remember.
+     WHAT IS ALREADY MACHINE-WIRED, so do not re-litigate it here: LIVENESS.
+     daemon_watchdog.mjs probes the bridge as its 5th resident and relaunches it,
+     and physio.mjs's `daemonRead` bleeds off daemon_watchdog.json — if step 1's
+     physio run is green, the bridge is UP. This command answers the two things
+     nothing bleeds: whether an UP bridge is actually SPEAKING, and in whose
+     words.
+     **READ THE `running build:` LINE FIRST** (D9, added to this organ the same
+     day by the sibling repair). It compares the resident's boot stamp against
+     the newest mtime in its own module graph, so a daemon that has been up
+     since before the code it runs reads STALE with both stamps and the file
+     that moved. Live the hour it was written: booted 2026-08-09T07:38:39Z
+     against a graph written 2026-08-11T00:23:56Z — ~41 hours of ambient sight
+     on code the repo had already moved past, invisible to every other surface
+     (the watchdog relaunches only what is DOWN, and an UP daemon is never
+     reloaded). It self-heals: the resident retires itself on its next poll and
+     daemon_watchdog.mjs brings it back on the new code, so report STALE as a
+     🟡 that is already in hand, not a chore for him.
+     **THEN READ `loop faults:` — the opposite case, which does NOT self-heal**
+     (D10, added the same day by the same audit). Until 11 Aug the daemon's
+     entire error path was `catch { /* never taxes */ }`: a loop throwing on
+     every poll kept its PID, so the watchdog's process probe read UP, physio
+     bled green off it, and nothing on disk carried a mark — ambient sight could
+     have been dark for days. It now counts consecutive faulting polls into the
+     bridge's own context_state.json and prints them here with the first stamp,
+     the latest stamp and the last error verbatim. FAULTING is a 🔴 and it is
+     the one context reading that is NOT already in hand: no number in the
+     organism decides "wedged" (his standing rule — nothing is guessed), so
+     report the count and the error TEXT, and let the error name the fix. `none
+     recorded` is not the same claim as healthy — a fault whose own disk write
+     failed leaves its trace only in scripts/context.log, which no organ reads.
+     SAFE TO RUN — **but only with the verb.** `status` reads afferent.jsonl,
+     salience_ledger.jsonl, context_state.json, tasks_expected.json and the
+     process table, and writes nothing. Bare argv means `once`, which POSTs a
+     live afferent to the thalamus and rewrites context_state.json — a doctor
+     mutating the organ it is examining, the same trap as `fuelboard.mjs status`
+     below. Since this wire was added an unknown verb exits 1 instead of falling
+     through to that emit (`grep -n "const MODES = new Set" scripts/context.mjs`).
+     Feeds the **sensors** line of the step-3 chart.)
+   - `node scripts/context_manifest.mjs ledger` — DID SESSIONSTART ARRIVE WHOLE?
+     One JSON line: every context part with its state word and byte count, plus
+     `total` against `ceiling`. Read the state words FIRST, not the numbers —
+     `ok` is fine; `TRIMMED`/hidden/cut means a budget bit; **`DROPPED` is a 🔴
+     wire break** (the part was measured, billed, and then did not appear in the
+     delivered brief); `ERROR` carries the throw's own message in `note`, and
+     `MISSING`/`EMPTY` are data conditions, not faults — a leg that has nothing
+     stored yet is not a broken leg (that distinction is the module's oldest law,
+     6 Aug 2026). Then check `total <= ceiling`: over means the manifest line
+     itself outgrew FOOTER_RESERVE, which is the one overrun the reserve exists
+     to prevent.
+     (added 11 Aug 2026, dead-wire pass. WHY IT IS HERE AT ALL: assemble() has
+     returned this ledger since 5 Aug and the ONE production caller reads `.text`
+     only (`grep -n "out.text" scripts/learnstate.mjs`), so the whole accounting
+     was computed at every SessionStart and discarded. The `total` field was made
+     truthful on 11 Aug and STILL had no consumer. Nothing in the organism catches
+     a DROPPED leg — the footer says it to whoever is reading, and no organ reads
+     the footer. `npm test` now asserts the same three things in a sandbox
+     (`grep -n "MANIFEST LEDGER'S CONSUMER" scripts/organism_test.mjs`); this
+     command is the LIVE read, against his real memory and his real staged
+     rulings, which the sandbox by design does not have.
+     SAFE TO RUN — **but only with the verb.** The module writes nothing, ever
+     (its header's READ-ONLY law), so unlike `context.mjs` there is no mutation
+     trap here. The trap is the opposite one: **bare argv prints the assembled
+     brief**, which IS his durable memory, his teaching card and his staged
+     identity facts. `ledger` omits `text` on purpose — that omission is what
+     makes the readout safe to paste anywhere, and it is pinned by an assertion.
+     Feeds the **sensors** line of the step-3 chart, next to the bridge.)
    - `npm test` — **this is the authority, and the only correct net.**
      Report per-organ PASS/FAIL and name EVERY red one.
      (Audit #108, 6 Aug 2026: this line used to read `npm run organism:selftest`
@@ -128,6 +206,30 @@ description: Full health check of the organism — vitals, brain budget, selftes
      roster. Treat "writes it nightly" as the design until a report appears whose
      step list matches
      `node -e "import('./scripts/conductor.mjs').then(m=>console.log(m.EVENING.map(s=>s.id).join(', ')))"`.)
+   - **THE AWAY-DAY LANE** — the cloud CI verdict. **READ**
+     `dressing-room/state/awayday.json` (the Read tool is enough — a small JSON).
+     🔴 if `state` is `red`, naming `head_sha` and `run_url`; 🟡 if
+     `unreachable` is non-null (the last read-back could not reach GitHub, so the
+     verdict beside it is last-known, not today's) or if `checked_at` is not
+     within the last day (the read-back rides groundsman's DAILY 03:45 push lane,
+     so two silent days = nobody is fetching the verdict); 🟢 on `green`; file
+     absent → "NOT MEASURED", never "healthy". `running`/`unknown` are not
+     verdicts — report them as in-flight and move on.
+     **NEVER run `node scripts/awayday.mjs check` for this.** It is not read-only
+     in the way it looks: `checkLane()` writes awayday.json, fires a live GitHub
+     call, and on a NEW red run shells `captains_call.mjs file` — a doctor must
+     not mutate the organ it is examining, and must never deal the captain a card
+     as a side effect of taking a temperature.
+     (added 11 Aug 2026, wiring audit. WHY IT IS HERE AT ALL: awayday.json's only
+     reader in the entire repo was its own writer, using two of its fifteen fields
+     for a duplicate-card lock — the lane was RED on 8df28ba with its one card
+     already dealt and no organ knew. `physio.mjs` now bleeds `away_day_lane_red`
+     / `away_day_read_blind` into loop_vitals.json, so if step 1's physio run is
+     green here, do not re-litigate it; this read is for the sha and the link.
+     WHY THE WATCHMAN CANNOT COVER IT: its nightly sweep runs the same suites
+     LOCALLY, where the gitignored credentials and the full working tree exist —
+     a failure that only happens in a clean cloud checkout is invisible to it by
+     construction, which is the whole reason this lane exists.)
    - schedule alive? Use PowerShell, NOT the Bash tool — under Git Bash the
      forward-slash flags get MSYS-mangled into a path and schtasks errors out:
      `Get-ScheduledTask -TaskName ArsenalFC-* | ForEach-Object { $_ | Get-ScheduledTaskInfo }`

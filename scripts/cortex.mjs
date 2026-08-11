@@ -35,6 +35,13 @@
 //                                              no scheduler, script or skill invokes it
 //                                              (verified 11 Aug 2026 — the only repo-wide
 //                                              hit for "cortex.mjs tick" is this line).
+//        node scripts/cortex.mjs restart     → THE RESTART DOOR (11 Aug 2026): knock on the
+//                                              live daemon so it RETIRES ITSELF once no deep
+//                                              lane is in flight, freeing :4112 for a build
+//                                              that actually holds the repairs. Fired by
+//                                              captains_call.mjs when he answers haan on the
+//                                              STALE BUILD card — never by a scheduler, never
+//                                              on its own. See THE RESTART DOOR below.
 //        node scripts/cortex.mjs selftest
 // (wiring audit, 11 Aug 2026 — INVERSE DEAD COMMAND: this block advertised daemon/tick/
 //  selftest and did NOT name `consolidate`, while the daemon's own task ArsenalFC-Cortex
@@ -49,7 +56,11 @@ import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, ren
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync, execFile } from "node:child_process";
-import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinkingFor } from "./brain.mjs";
+// ledgerShiftSummary joined this import 11 Aug 2026 (wiring audit): it is the ONE
+// consumer of the bench census stamped below, and the selftest runs the real rows
+// through it so the producer goes red the day the reader is deleted. brain.mjs does
+// not import this file, so the edge stays one-way.
+import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinkingFor, ledgerShiftSummary } from "./brain.mjs";
 import { loadConfig as loadThalamusConfig, pendingWakes } from "./thalamus.mjs";
 // M8 — the Back Room: three cheap adversarial drafts before the one deep call
 import { convene, councilSection } from "./council.mjs";
@@ -209,6 +220,70 @@ function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
   } catch { }
   return null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE CAPSULE SLOT NAMES ITS ABSENCE (dead-wire sweep, 11 Aug 2026)
+//
+// WHAT WAS BROKEN. The 11-Aug repair above holds the door OPEN, but the slot
+// that renders it was still `${capsule ? … : ""}` — so every miss came out as
+// the empty string and the prompt simply had no capsule section. Four different
+// facts collapsed into that one silence: (1) no locked capsule matches these
+// tokens, (2) the thalamus bound the moment with NO concept_tokens so the door
+// was never asked anything, (3) capsules/ could not be read at all — mirror.mjs
+// owns it and a fresh clone has none — and (4) a capsule that would not parse,
+// served as the legacy 1,500-char raw stump under a header calling it "his own
+// locked knowledge". MEASURED on the live queue, 11 Aug 2026: of the 38 rows in
+// wake_queue.jsonl, 19 carry a spotlight and findCapsule returns null on 19 of
+// 19 — one of them for reason (2), the other 18 for reason (1) — so the flagship
+// capsule repair has never opened on a real wake and nothing in the prompt said
+// so. Built. Present. Not wired.
+//
+// WHY IT MATTERS MORE THAN A MISSING SECTION: "he has locked nothing here" is a
+// teaching instruction (lay the ground from zero), while "the door failed" is an
+// UNKNOWN. Handing the deep brain the same silence for both lets it answer as if
+// it had checked his knowledge when it never did.
+//
+// THE SHAPE IS BORROWED, NOT INVENTED: the ambient window prints
+// `{ window: null, reason: … }` (:397) and the moment door prints
+// `text_truncated` (:342) — this slot was the last door in the prompt that named
+// nothing. No threshold, no budget, no new number: the shelf listing is whatever
+// mirror.mjs put on disk, and the reason is derived, never guessed.
+//
+// READ-ONLY, like everything else that touches capsules/: this lists filenames
+// and never opens, rewords or re-emits a line of his prose.
+// ─────────────────────────────────────────────────────────────────────────────
+function capsuleAbsence(tokens = [], dir = join(STATE_DIR, "capsules"), deps = {}) {
+  const toks = (Array.isArray(tokens) ? tokens : []).map(x => String(x).toLowerCase()).filter(Boolean);
+  // injectable for the same FIXTURE reason every other reader here is (:828) — the
+  // suite must not swing on whatever mirror.mjs last fetched to the captain's disk
+  const list = deps.list || (() => readdirSync(dir).filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)));
+  let shelf = null, failure = null;
+  try { shelf = list(); } catch (e) { failure = String((e && e.code) || (e && e.message) || e).slice(0, 120); }
+  if (failure !== null) return { capsule: null, why: "door_failed",
+    reason: `THE DOOR FAILED — his capsules/ shelf could not be read (${failure}). mirror.mjs owns that folder. This is UNKNOWN, NOT a statement that he has locked nothing here: do not tell him he has no ground on this.`,
+    his_locked_capsules: null, moment_concept_tokens: toks };
+  if (!shelf.length) return { capsule: null, why: "shelf_empty",
+    reason: "his capsules/ shelf is EMPTY on this machine — mirror.mjs has fetched nothing here. UNKNOWN, not evidence about his knowledge.",
+    his_locked_capsules: [], moment_concept_tokens: toks };
+  if (!toks.length) return { capsule: null, why: "no_concept_tokens",
+    reason: "the thalamus bound this moment with NO concept_tokens, so the capsule door was never asked a question. This says nothing about what he has locked — the capsules he DOES hold are listed below.",
+    his_locked_capsules: shelf, moment_concept_tokens: [] };
+  return { capsule: null, why: "no_match",
+    reason: `none of his ${shelf.length} locked capsules matches these concept tokens — he has locked NOTHING on this concept yet. Teach it from the ground up; do not build on ground he has not laid.`,
+    his_locked_capsules: shelf, moment_concept_tokens: toks };
+}
+
+function capsuleSection(capsule, tokens, dir = join(STATE_DIR, "capsules"), deps = {}) {
+  if (capsule && String(capsule.text || "").trim()) {
+    // the fourth silence: findCapsule's unparsed fallback (:214) hands back the LEGACY
+    // raw head-cut, and until today it rode under the same header as his real prose.
+    const degraded = capsule.unparsed
+      ? `\n(THE DOOR IS DEGRADED AND SAYS SO: ${capsule.name || "this capsule"} would not JSON.parse, so what follows is the frozen legacy fallback — the first 1,500 raw characters of the file, severed mid-string. It is a DAMAGED FRAGMENT, not his prose laid out. Never quote it back to him as his own line.)`
+      : "";
+    return `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):${degraded}\n${capsule.text}\n`;
+  }
+  return `\nNO CAPSULE — and the reason is NAMED, never a silent gap. Read why before you assume anything about what he knows:\n${JSON.stringify(capsuleAbsence(tokens, dir, deps), null, 1)}\n`;
+}
 // ---------------------------------------------------------------------------
 // WIRING AUDIT (10 Aug 2026) — THE CONTEXT RIVER FINALLY REACHES THE CORTEX
 // ---------------------------------------------------------------------------
@@ -261,6 +336,16 @@ function ambientWindow(deps = {}) {
     text: w.text,
     concept: (Array.isArray(last.concept_tokens) && last.concept_tokens[0]) || null,
     age_min: Number.isFinite(t) ? Math.max(0, Math.round((now - t) / 60000)) : null,
+    // #WIRE (dead-wire sweep, 11 Aug 2026) — WHETHER THE READING IS WHOLE.
+    // context.mjs cuts a window title at 200 chars and text at 240 and has NAMED
+    // that cut on the row since D8 (title_truncated / text_truncated); until today
+    // no organ that RENDERS the title read the flag, so a sheared title reached
+    // this file — the deep brain — reading as the whole thing. The distiller's
+    // currentWindow is now the reader; the verdict rides here and is printed by
+    // name in the prompt below. Tri-state, never boolean: null means the row
+    // predates D8 and the honest answer is UNKNOWN, which is a different fact from
+    // "not cut" — the same three-state law this file keeps for an absent window.
+    door_cut: w.door_cut !== undefined ? w.door_cut : null,
   };
 }
 // ---------------------------------------------------------------------------
@@ -377,13 +462,13 @@ function buildDeepPrompt(wake, bus = {}, extraSection = "") {
 THE MOMENT (bound by the thalamus — the spotlight is why you were woken):
 ${momentBlock(wake)}
 
-WHERE HE WAS (the ambient window stream — CORROBORATION ONLY. Never the question, never evidence, and never a reason to answer about the app instead of the moment. Judge it by its age: minutes_old says how old this reading is, and nothing here claims it is still true):
-${JSON.stringify(win ? { window: win.text, concept: win.concept, minutes_old: win.age_min }
+WHERE HE WAS (the ambient window stream — CORROBORATION ONLY. Never the question, never evidence, and never a reason to answer about the app instead of the moment. Judge it by its age: minutes_old says how old this reading is, and nothing here claims it is still true. truncated_at_door: true means the sensor cut this title and a word IS missing — read it as a fragment, never quote it back as a whole title; false means it arrived complete; null means the reading is older than the flag and nobody knows):
+${JSON.stringify(win ? { window: win.text, concept: win.concept, minutes_old: win.age_min, truncated_at_door: win.door_cut === undefined ? null : win.door_cut }
   : { window: null, reason: `no context afferent in the last ${AMBIENT_TAIL_ROWS} afferent rows` }, null, 1)}
 
 THE BUS SLICE (his real, live state — never invent beyond it):
 ${JSON.stringify({ twin_markets: ((twin || {}).markets || []).map(m => ({ id: m.id, p: m.p })), calibration_gap: (cal || {}).calibration_gap ?? null, danger_topics: ((cal || {}).danger_zone || []).slice(0, 5).map(d => ({ topic: d.topic, track: d.track || "concept", axis: d.axis || null })), learning_state_status: (ls || {}).status || null }, null, 1).slice(0, 1500)}
-${capsule ? `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):\n${capsule.text}\n` : ""}${extraSection}
+${capsuleSection(capsule, spot.concept_tokens)}${extraSection}
 YOUR JOB: one deep, mechanism-level read. If it is a concept doubt: the real mechanism, a worked example, where it breaks, and the one reframe that dissolves HIS specific confusion. If it is a pattern/strategy moment: what is REALLY going on underneath, and the single next move that changes his next ten minutes. Think hard first; then answer.
 
 THE LAWS (inviolable): speakable Gaffer voice, Hinglish welds welcome, ≤250 words. Honest frame only — never "10x", "exponential", "on steroids"; no shame, no streaks, no countdowns; never a number that is not in the data above; medical territory = one sentence, "show your doctor". A crack is data, never a verdict.`;
@@ -952,6 +1037,28 @@ async function selftest() {
       await serveWake(dOk);
       assert("HEALTHY COUNCIL: the same row records the bench that actually sat (2 seats, no note)",
         oOk.rows[0].council_seats === 2 && oOk.rows[0].council_note === null);
+      // WIRING AUDIT (11 Aug 2026, second pass) — AND SOMEONE READS IT. The three
+      // assertions above only prove the row is WRITTEN; a tracing pass this morning
+      // found the pair read by nothing in the repo, which is the same blindness with
+      // an extra step. The reader is brain.mjs's ledgerShiftSummary().council — the
+      // DIARY's own ledger input — and this runs THE REAL ROWS produced above through
+      // it, so the wire goes red from THIS end if the consumer is ever deleted or
+      // stops counting. Only `ts` is rewritten (the rows carry a live clock; the
+      // summary is shift-windowed) — every census field rides verbatim.
+      {
+        const { mkdtempSync, rmSync } = await import("node:fs");
+        const oss = await import("node:os");
+        const wd = mkdtempSync(join(oss.tmpdir(), "cortex-council-wire-"));
+        writeFileSync(join(wd, "brain_ledger.jsonl"),
+          [{ ...oDry.rows[0], ts: "2026-07-12T23:10:00+05:30" },
+           { ...oOk.rows[0], ts: "2026-07-13T00:10:00+05:30" }]
+            .map((r) => JSON.stringify(r)).join("\n") + "\n");
+        const cs = ledgerShiftSummary("2026-07-12", wd).council;
+        assert("BENCH CENSUS IS CONSUMED: brain.mjs ledgerShiftSummary().council reads THESE rows back — 1 cold, 1 benched, convene's note verbatim",
+          !!cs && cs.reads === 2 && cs.cold === 1 && cs.with_bench === 1 && cs.seats === 2
+          && cs.unmeasured === 0 && cs.notes[dryFix.note] === 1);
+        rmSync(wd, { recursive: true, force: true });
+      }
     }
   }
 
@@ -1160,6 +1267,24 @@ async function selftest() {
     assert("#wire: ambientWindow reads the NEWEST context row, keeps its canon concept, and derives age from ITS ts",
       aw.text === "Code.exe · attention.py" && aw.concept === "attention" && aw.age_min === 7 &&
       ambientWindow({ rows: [{ modality: "code", text: "no ambient here" }] }) === null);
+    // #WIRE (dead-wire sweep, 11 Aug 2026) — A SHEARED READING MUST SAY SO HERE.
+    // context.mjs has named its 200/240-char cut on the row since D8 and no organ
+    // that RENDERS the title read it, so the deep brain took a stub for the whole
+    // title. These two go red if the flag stops travelling (distiller currentWindow)
+    // or stops being printed by name (the WHERE HE WAS block).
+    const awCut = ambientWindow({ now: Date.parse("2026-08-11T05:07:00Z"), rows: [
+      { modality: "context", app: "chrome.exe", title: "i can buy helium 10 platinum as well and want to first work w",
+        text: "chrome.exe · i can buy helium 10 platinum as well and want to first work w",
+        title_len: 227, title_truncated: true, text_len: 260, text_truncated: true,
+        concept_tokens: [], ts: "2026-08-11T05:00:00Z" },
+    ] });
+    assert("#wire: a DOOR-SHEARED window reaches the deep brain flagged, not disguised as a whole title",
+      awCut.door_cut === true && /…$/.test(awCut.text) &&
+      /"truncated_at_door": true/.test(buildDeepPrompt(wake, { ...bus, current_window: awCut })));
+    assert("#wire: THREE states in the prompt too — an unflagged (pre-D8) reading prints null, never a silent 'complete'",
+      ambientWindow({ rows: [{ modality: "context", app: "Code.exe", title: "drill.py", text: "Code.exe · drill.py", concept_tokens: [], ts: "2026-08-11T05:00:00Z" }] }).door_cut === null &&
+      /"truncated_at_door": null/.test(buildDeepPrompt(wake, { ...bus, current_window: { text: "x", concept: null, age_min: 1 } })) &&
+      /truncated_at_door: true means the sensor cut this title/.test(buildDeepPrompt(wake, bus)));
 
     // ---------------------------------------------------------------------
     // WIRING AUDIT (11 Aug 2026) — THE MOMENT DOOR, HELD OPEN.
@@ -1257,6 +1382,81 @@ async function selftest() {
       assert("#wire: an EXACT capsule id beats a short accidental substring, and the old substring pass still resolves",
         (findCapsule(["on", "embeddings"]) || {}).id === "embeddings" && (findCapsule(["on"]) || {}).id === "context");
     }
+
+    // -------------------------------------------------------------------
+    // WIRING AUDIT (11 Aug 2026, dead-wire sweep) — THE SLOT NAMES ITS MISS.
+    // Held open by the door repair above, the slot itself still rendered
+    // `${capsule ? … : ""}`: on the live queue findCapsule returns null for
+    // 19 of 19 spotlit wakes (18 no-match, 1 with no concept_tokens at all)
+    // and the prompt carried no capsule section and no reason. Put the empty
+    // string back and every one of these goes red. The shelf reader is
+    // INJECTED (the FIXTURE law, :828) so the verdict never swings on what
+    // mirror.mjs last fetched to his disk.
+    // -------------------------------------------------------------------
+    const shelfFix = { list: () => ["context", "embeddings", "inference", "tokenization"] };
+    const aNoMatch = capsuleAbsence(["attention"], liveDir, shelfFix);
+    const aNoToks  = capsuleAbsence([], liveDir, shelfFix);
+    const aFailed  = capsuleAbsence(["attention"], liveDir, { list: () => { const e = new Error("no shelf"); e.code = "ENOENT"; throw e; } });
+    const aEmpty   = capsuleAbsence(["attention"], liveDir, { list: () => [] });
+    assert("#wire: FOUR distinct misses, four distinct reasons — the slot can no longer render them all as one silence",
+      new Set([aNoMatch.why, aNoToks.why, aFailed.why, aEmpty.why]).size === 4 &&
+      aNoMatch.why === "no_match" && aNoToks.why === "no_concept_tokens" && aFailed.why === "door_failed" && aEmpty.why === "shelf_empty");
+    assert("#wire: a DOOR FAILURE is never reported as 'he has locked nothing' — it says UNKNOWN and refuses the inference",
+      /UNKNOWN/.test(aFailed.reason) && /ENOENT/.test(aFailed.reason) && aFailed.his_locked_capsules === null &&
+      /locked NOTHING on this concept/.test(aNoMatch.reason) && aNoMatch.his_locked_capsules.length === 4);
+    assert("#wire: a moment with NO concept_tokens says the door was never asked, and still lists what he DOES hold",
+      /never asked a question/.test(aNoToks.reason) && aNoToks.moment_concept_tokens.length === 0 && aNoToks.his_locked_capsules.includes("embeddings"));
+    // the wire under repair: door → SLOT → the one Opus prompt
+    const pNoCap = buildDeepPrompt(wake, { ...bus, capsule: null });
+    assert("#wire: ABSENCE REACHES THE PROMPT — a miss prints NO CAPSULE with its reason, never the empty string (19/19 live wakes hit this path)",
+      /NO CAPSULE — and the reason is NAMED/.test(pNoCap) && /"why":/.test(pNoCap) && /"reason":/.test(pNoCap) &&
+      !/THE CAPSULE \(his own locked knowledge/.test(pNoCap));
+    assert("#wire: an UNPARSED capsule is flagged as a damaged fragment, not served as his prose under the same header",
+      /DAMAGED FRAGMENT/.test(capsuleSection({ name: "broken.json", unparsed: true, text: "{\"id\":\"broken\",\"bolo\":\"cut mid-str" }, ["broken"])) &&
+      !/DEGRADED/.test(capsuleSection({ name: "ok.json", text: "his whole prose" }, ["ok"])));
+    // -------------------------------------------------------------------
+    // THE HALF-TESTED WIRE (dead-wire sweep, 11 Aug 2026 — second pass).
+    // The assertion directly above hands capsuleSection a capsule object
+    // BUILT BY HAND with `unparsed: true`. That proves the CONSUMER reads
+    // the flag; it proves nothing about the PRODUCER. findCapsule (:214) is
+    // the only thing that stamps it, and a tracing pass this same day filed
+    // this exact wire as dead because `grep -n unparsed` looked like a lone
+    // writer — the failure mode is real and it is a NAME. Rename the field
+    // there, or drop the stamp in a refactor, and the hand-built assertion
+    // above stays GREEN while a severed capsule goes back to riding under
+    // "his own locked knowledge on this concept — build on HIS words".
+    // So: no hand-built object here. A genuinely unparseable file on disk
+    // goes in one end and the prompt comes out the other — producer, slot,
+    // and prompt in one line. The parseable sibling in the SAME fixture dir
+    // is the control: it proves the flag discriminates rather than always
+    // firing. Fixture dir, never his capsules/ — mirror.mjs owns that folder
+    // and this file is read-only there (mkdtemp idiom borrowed from
+    // brain.mjs:3237, which dynamic-imports it for the same reason: the top
+    // of this file has no need of it outside the suite).
+    // -------------------------------------------------------------------
+    {
+      const { mkdtempSync, rmSync } = await import("node:fs");
+      const os = await import("node:os");
+      const fixDir = mkdtempSync(join(os.tmpdir(), "cortex-unparsed-"));
+      try {
+        // severed mid-string, exactly the shape a half-written mirror fetch leaves
+        writeFileSync(join(fixDir, "brokenfix.json"), '{"id":"brokenfix","bolo":"his line cut mid-str');
+        writeFileSync(join(fixDir, "goodfix.json"), JSON.stringify({ id: "goodfix", bolo: "good-bolo-verbatim" }));
+        const gotBad = findCapsule(["brokenfix"], fixDir);
+        const gotOk = findCapsule(["goodfix"], fixDir);
+        assert("#wire END-TO-END: a REAL unparseable capsule on disk arrives at the Opus prompt named a DAMAGED FRAGMENT — findCapsule stamps it, the slot reads it (rename the flag and this goes red, the hand-built assertion above does not)",
+          !!gotBad && gotBad.unparsed === true &&
+          /DAMAGED FRAGMENT/.test(buildDeepPrompt(wake, { ...bus, capsule: gotBad })) &&
+          /would not JSON.parse/.test(buildDeepPrompt(wake, { ...bus, capsule: gotBad })));
+        assert("#wire: the flag DISCRIMINATES — a parseable capsule from the same shelf carries no flag and no degraded note",
+          !!gotOk && gotOk.unparsed === undefined && gotOk.text.includes("good-bolo-verbatim") &&
+          !/DEGRADED|DAMAGED FRAGMENT/.test(buildDeepPrompt(wake, { ...bus, capsule: gotOk })));
+      } finally { rmSync(fixDir, { recursive: true, force: true }); }
+    }
+    // LAYERING: the HIT path is byte-identical to the pre-slot-repair render
+    assert("#wire/LAYERING: a resolved capsule renders byte-identical to the pre-repair slot",
+      capsuleSection({ name: "fixture.json", id: "fixture", text: cText }, ["fixture"])
+        === `\nTHE CAPSULE (his own locked knowledge on this concept — build on HIS words):\n${cText}\n`);
   }
 
   // OVERNIGHT DEEPENING (P5) — the concept graph, deps-injected (no live Opus)
@@ -1354,6 +1554,45 @@ async function selftest() {
       header.length > 0 && dispatched.length >= 3 && undocumented.length === 0);
     assert("MODES header names `consolidate` — the ONE mode a scheduler fires (ArsenalFC-ConceptGraph, DAILY 03:00)",
       dispatched.includes("consolidate") && /consolidate/.test(header));
+  }
+
+  // ── THE RESTART DOOR IS A WIRE (dead-wire repair, 11 Aug 2026) ─────────────
+  // These fail the moment a stale build loses its way out again: drop the route,
+  // let it exit on a live lane, stop consulting it where the lane count changes,
+  // or let captains_call stop naming this mode — and the suite goes red. Before
+  // this repair the live daemon (PID 13272, booted 09-08-2026 01:17:29) had been
+  // serving deep reads from two-day-old code with a green suite above it.
+  {
+    const ok = lockRoute("POST", "/restart");
+    assert("#wire: POST /restart ARMS the door and answers 200 (the lock is no longer a black hole)",
+      ok.arm === true && ok.status === 200 && ok.body.armed === true);
+    assert("#wire: every other request arms NOTHING and 404s — a stray probe can never retire the deep brain",
+      lockRoute("GET", "/restart").arm === false && lockRoute("POST", "/status").arm === false
+      && lockRoute("GET", "/").status === 404 && lockRoute(undefined, undefined).arm === false);
+    assert("#wire: an armed restart NEVER lands on a lane in flight (the paid Opus answer is not destroyed)",
+      restartReady({ armed: true, inflight: 0 }) === true && restartReady({ armed: true, inflight: 1 }) === false
+      && restartReady({ armed: false, inflight: 0 }) === false);
+
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const mainSrc = src.slice(src.indexOf("async function main()"));
+    // The door must be REACHED, not merely present: the lock server routes through
+    // lockRoute, and retireIfArmed is consulted at all FOUR points the lane count
+    // can change (arm · a served lane closing · an expired-in-queue lane closing ·
+    // the 5s poll). A count, because losing any one of them is a restart that
+    // silently never happens.
+    assert("#wire: main() actually routes the lock through lockRoute and re-checks retirement at all 4 lane-count changes",
+      /createServer\(\(req, res\) => \{[\s\S]{0,200}lockRoute\(req\.method, req\.url\)/.test(mainSrc)
+      && (mainSrc.match(/retireIfArmed\(\)/g) || []).length >= 5);   // 1 declaration + 4 call sites
+
+    // THE CROSS-ORGAN HALF. The door is only alive while something HIS word
+    // reaches can fire it. captains_call.mjs owns that end (RESTART_DOOR); read
+    // its source rather than importing it, so this check costs no module load and
+    // cannot be satisfied by a dead re-export.
+    const ccSrc = readFileSync(join(__dirname, "captains_call.mjs"), "utf8");
+    const door = /export const RESTART_DOOR = \{([^}]*)\}/.exec(ccSrc);
+    assert("#wire: captains_call's RESTART_DOOR still dispatches cortex to THIS mode — his haan on the STALE BUILD card has somewhere to land",
+      !!door && /cortex:\s*\["cortex\.mjs",\s*"restart"\]/.test(door[1])
+      && [...new Set([...mainSrc.matchAll(/\bmode === "([a-z_-]+)"/g)].map((m) => m[1]))].includes("restart"));
   }
 
   const passed = checks.every(c => c[1]);
@@ -1538,6 +1777,89 @@ function graphFreshness(now = new Date(), deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// THE RESTART DOOR (dead-wire repair, 11 Aug 2026) — A REPAIR NOBODY LOADS IS NOT A REPAIR
+// ---------------------------------------------------------------------------
+// WHAT WAS DEAD. Node caches a module at load, so the process serving wakes is
+// whatever code existed when it BOOTED. Measured on his box the hour this was
+// written: PID 13272 `node scripts\cortex.mjs`, CreationDate 09-08-2026
+// 01:17:29 — older than every repair in this file, including the two the header
+// above describes as fixed (the capsule door at :102, the moment door at :266).
+// So the live deep brain was still cutting his capsule at 1,500 raw chars and
+// head-cutting the bound moment at 2,500 while this file's suite ran green.
+//
+// THE ORGANISM ALREADY KNEW, AND THE CHAIN DIED ON THE LAST INCH. conductor.mjs
+// :558-567 catches it ("STALE BUILD — running code older than its module
+// graph"); daemon_watchdog.mjs:541 turns that verdict into a captain's card;
+// card c34 `daemon:stale:cortex:2026-08-10` has sat on the deck since 10 Aug
+// 18:04 asking "Restart karun?". And it carried dispatch {kind:"none"} — his
+// haan would have RETIRED the ask and restarted nothing, because NO ORGAN IN
+// THE REPO COULD RESTART A RESIDENT DAEMON. The only kill anywhere is
+// setup/open_dugout.ps1:12, and that is his own voice surface
+// (`grep -rn "taskkill\|Stop-Process" scripts setup`).
+//
+// WHY THE DOOR IS HERE AND NOT A KILL SOMEWHERE ELSE. daemon_watchdog.mjs's own
+// LAWS line reads "never kills anything (relaunch only)" and conductor.mjs says
+// "a stale daemon is still never auto-relaunched". Both stand untouched. This
+// is not a kill: the daemon retires ITSELF and releases :4112, and the
+// watchdog's EXISTING dead-port arm (decidePass → launchDetached, port-locked
+// daemons relaunch on the first false probe) brings the fresh build up on its
+// own 10-minute cadence — proven live, not assumed: last pass 2026-08-11
+// T00:51:43Z written into daemon_watchdog.json, schtasks "Last Run Time
+// 11-08-2026 06:21:01 / Next 06:31, Repeat every 10 minutes". No new launcher,
+// no new scheduler, and no second relauncher to race the first.
+//
+// NOTHING HERE FIRES ITSELF. The trigger is his haan on the card
+// (captains_call.mjs RESTART_DOOR → `node scripts/cortex.mjs restart`).
+// Auto-retiring on a source change would be the machine killing a live daemon
+// without his word, which is exactly what both files above refuse.
+//
+// NO /status ROUTE, DELIBERATELY. conductor's build check is two-tier: WITH a
+// /status stamp it compares only the ENTRY file's mtime (conductor.mjs:584);
+// WITHOUT one it falls through to the whole import GRAPH via the process table
+// (:558). Cortex's 10 Aug stale verdict came from `scripts/brain.mjs`, not from
+// cortex.mjs — so answering /status would have retired the wider instrument and
+// the detection would have MISSED. Silence is the more honest answer here until
+// conductor's tier 1 learns to read the graph too.
+//
+// THE PAID ANSWER IS NEVER DESTROYED. An armed restart waits for every lane to
+// close (restartReady) — the same money this file already spools to
+// cortex_unsent.jsonl rather than lose. There is no timeout and no forced exit:
+// a lane that never resolves keeps the OLD build alive, which is precisely
+// today's status quo and is strictly safer than dropping an Opus read in flight.
+// ---------------------------------------------------------------------------
+
+// Pure router for the :4112 lock server, which until today was
+// `createServer(() => {})` — a socket that accepts and answers nothing. Pure so
+// the suite can hold the contract without binding the port (the same reason
+// laneResolved lives outside main()).
+function lockRoute(method, url) {
+  if (String(method || "").toUpperCase() === "POST" && String(url || "") === "/restart") {
+    return { arm: true, status: 200, body: { ok: true, armed: true,
+      note: "cortex retires when no deep lane is in flight; daemon_watchdog's next pass launches the fresh build" } };
+  }
+  return { arm: false, status: 404, body: { ok: false,
+    error: "cortex holds :4112 as a singleton lock — the only door is POST /restart" } };
+}
+
+// An armed restart may only land on an IDLE daemon. Exported (at the foot of the
+// file, with its siblings) and explicit, so a future lane counter cannot quietly
+// stop being consulted.
+function restartReady({ armed, inflight }) {
+  return armed === true && inflight === 0;
+}
+
+// The knock is bounded by the ONE localhost-probe timeout this organism has
+// already MEASURED — conductor.mjs's PROBE_TIMEOUT_MS (400ms; its own header
+// records /status round-trips of 21-30ms on this box, i.e. 13x the worst case).
+// No number is invented here; it is copied with its source named, rather than
+// imported, so `restart` costs no extra module load on a hand poke. If conductor
+// ever re-tunes it: `grep -n PROBE_TIMEOUT_MS scripts/conductor.mjs`.
+// It matters because the port can also be held for a heartbeat by `tick`'s
+// no-response probe server — an unbounded fetch there would hang the anchor that
+// dealt him the card.
+const RESTART_KNOCK_MS = 400;
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -1564,6 +1886,27 @@ async function main() {
     } finally { try { held.close(); } catch { } }
     return;
   }
+  if (mode === "restart") {
+    // HIS WORD IS THE ONLY TRIGGER — captains_call.mjs dispatches this when he
+    // answers haan on the STALE BUILD card (RESTART_DOOR there names exactly
+    // this argv). It kills nothing: it knocks, and reports what the daemon said.
+    let said = null, err = null;
+    try {
+      const r = await fetch("http://127.0.0.1:4112/restart", { method: "POST", signal: AbortSignal.timeout(RESTART_KNOCK_MS) });
+      said = await r.json().catch(() => ({ ok: r.ok }));
+    } catch (e) { err = String((e && e.message) || e); }
+    if (err) {
+      // Nothing answered. Either no cortex is running (the watchdog's next pass
+      // starts one) or a `tick` holds the lock without a router — say which is
+      // possible, never guess which it was.
+      console.log(`cortex: :4112 did not answer the restart knock (${err.slice(0, 80)}) — either no daemon is up (daemon_watchdog's next pass launches one) or a tick holds the lock; nothing was changed.`);
+      return;
+    }
+    console.log(said && said.armed
+      ? "cortex: RESTART ARMED — the daemon retires as soon as no deep lane is in flight, then daemon_watchdog's next pass (its own 10-minute cadence) launches the build that HAS the repairs. Manual verb if you will not wait: wscript setup\\START_DAEMONS.vbs"
+      : `cortex: :4112 answered but did NOT arm — ${JSON.stringify(said).slice(0, 160)}`);
+    return;
+  }
   if (mode === "consolidate") {
     // OVERNIGHT DEEPENING (P5) — one nightly Opus pass → concept_graph.json
     const r = await runConsolidation({ log: console.log });
@@ -1586,11 +1929,40 @@ async function main() {
   // lock is a localhost port (4112, one below the thalamus), same pattern as
   // every daemon in the club: second instance stands down silently.
   const { createServer } = await import("node:http");
-  const lock = createServer(() => {});
+  // M14 — PER-LANE dispatch (see below). DECLARED BEFORE THE LOCK since 11 Aug
+  // 2026: the restart door answers requests the instant the port binds, and it
+  // reads this set to decide whether a paid lane is in flight.
+  const inflight = new Set();
+  let restartArmed = false;
+  // THE RESTART DOOR (see its header above) — the lock is no longer a black hole.
+  const lock = createServer((req, res) => {
+    const r = lockRoute(req.method, req.url);
+    if (r.arm) restartArmed = true;
+    res.writeHead(r.status, { "Content-Type": "application/json", "Connection": "close" });
+    res.end(JSON.stringify(r.body));
+    if (r.arm) {
+      console.log(`cortex: RESTART REQUESTED (his word, via captains_call) — ${inflight.size ? `${inflight.size} lane(s) in flight, retiring the moment they close` : "no lane in flight"}.`);
+      retireIfArmed();
+    }
+  });
   await new Promise((resolve) => {
     lock.on("error", (e) => { if (e.code === "EADDRINUSE") { console.log("cortex: another cortex holds the lock (:4112) — standing down."); process.exit(0); } throw e; });
     lock.listen(4112, "127.0.0.1", resolve);
   });
+  // Consulted at EVERY point the lane count can change — on arm, when a lane
+  // closes, and on the existing 5s poll — so an armed restart can never sit
+  // waiting on an event that already happened. Hoisted (function declaration) so
+  // the lock's handler above can call it.
+  function retireIfArmed() {
+    if (!restartReady({ armed: restartArmed, inflight: inflight.size })) return;
+    console.log("cortex: every lane idle — releasing :4112 and exiting. daemon_watchdog's next pass launches the fresh build (manual verb: wscript setup\\START_DAEMONS.vbs).");
+    // The OS frees the port on exit regardless; these two are tidiness, and
+    // closeAllConnections is what stops a keep-alive socket from holding close()
+    // open. No wait, no timeout — an exit that needs a deadline is a hang.
+    try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }
+    try { lock.close(); } catch { }
+    process.exit(0);
+  }
   console.log("cortex: deep-brain daemon — watching wake_queue.jsonl (fs.watch + 5s poll, up to 2 concurrent lanes)");
   // M14 — PER-LANE dispatch: a wake arriving while another is being served
   // starts IMMEDIATELY in a free lane (a batch-wide busy flag would serialize
@@ -1598,7 +1970,6 @@ async function main() {
   const cfgT = loadThalamusConfig();
   const K = Math.max(1, (cfgT.deep && cfgT.deep.concurrency) || 2);
   const ttlMs = ((cfgT.deep && cfgT.deep.queue_ttl_min) || 30) * 60000;
-  const inflight = new Set();
   const runtime = readJson(RUNTIME) || { attempts: {} };
   const fire = () => {
     try {
@@ -1617,7 +1988,7 @@ async function main() {
         inflight.add(w.moment_id);
         if (w.ts && now - new Date(w.ts) > ttlMs) {
           defaultPost("/deep-answer", { moment_id: w.moment_id, declined: true, reason: "expired-in-queue", provenance: "cortex" })
-            .catch(() => {}).finally(() => inflight.delete(w.moment_id));
+            .catch(() => {}).finally(() => { inflight.delete(w.moment_id); retireIfArmed(); });
           continue;
         }
         console.log(`cortex: lane open for ${w.moment_id} (${inflight.size}/${K})`);
@@ -1631,13 +2002,17 @@ async function main() {
         serveOne(w, { log: console.log, runtime })
           .then(r => { resolved = laneResolved(r); })
           .catch(e => console.log("cortex: " + String(e.message).slice(0, 120)))
-          .finally(() => { inflight.delete(w.moment_id); if (resolved) fire(); });
+          // retireIfArmed BEFORE the re-entry: an armed restart that waited for
+          // this lane must not be overtaken by the next dispatch (11 Aug 2026).
+          .finally(() => { inflight.delete(w.moment_id); retireIfArmed(); if (resolved) fire(); });
       }
     } catch (e) { console.log("cortex: " + String(e.message).slice(0, 120)); }
   };
   let deb = null;
   try { watch(STATE_DIR, (ev, f) => { if (f === "wake_queue.jsonl" || f === "wake.json") { clearTimeout(deb); deb = setTimeout(fire, 400); } }); } catch { }
-  setInterval(fire, 5000);
+  // The third and last place the lane count is re-read: a restart armed while
+  // the queue was empty has no lane close to ride, so the poll is its floor.
+  setInterval(() => { retireIfArmed(); fire(); }, 5000);
   fire();
 }
 
@@ -1649,6 +2024,10 @@ export { serveWake, serveWakes, serveOne, buildDeepPrompt, claudeDeep, claudeDee
   // what actually reaches the deep brain without re-implementing the door and
   // measuring its own copy (which is how the 220-char capsule cut stayed invisible).
   momentBlock, momentBlockLegacy, MOMENT_BUDGET_CHARS,
+  // dead-wire repair 11 Aug 2026 — the restart door's two decisions, exported for
+  // the same reason: an auditor must be able to assert that a stale build has a
+  // way out without binding :4112 and killing the live deep brain to find out.
+  lockRoute, restartReady,
   // audit 4 Aug 2026 — #71/#72 seams: the staleness standard and the reader's
   // schema version, exported so a consumer can assert the contract it relies on
   graphFreshness, CONCEPT_GRAPH_SCHEMA, CONCEPT_GRAPH };

@@ -386,15 +386,62 @@ export function newestGraphMtime(relPath, seen = new Set()) {
 // table knows when EVERY process started, without any daemon changing at all. Windows
 // only (this box), fail-soft everywhere: any error returns null and the caller reports
 // UNVERIFIED, which is an honest unknown and never a failure.
-export function processStartMs(relPath, deps = {}) {
+// ---------------------------------------------------------------------------
+// PROBE HONESTY (WIRING AUDIT, 11 Aug 2026) — "I COULD NOT LOOK" IS NOT "IT IS NOT THERE"
+// ---------------------------------------------------------------------------
+// This probe returned a bare `null` for two facts that are not the same fact, and
+// every caller downstream read that null as DOWN.
+//
+// MEASURED on his box the hour this was written, the three shapes side by side
+// (a ghost leaf and the real one, probed from a FILE so the match string was never
+// on the prober's own command line — the self-detection trap daemon_watchdog.mjs:92
+// records):
+//   · present    → status 0, stdout = the ISO stamp, stderr empty      (3.4-5.0s)
+//   · ABSENT     → status 0, stdout EMPTY, stderr empty                (8.9s)
+//   · could not look → status null, signal SIGTERM, error ETIMEDOUT — spawnSync
+//     killed the child at the 5000ms cap below. 2 of 5 consecutive live calls for a
+//     daemon that was demonstrably alive (PID 21308) landed here.
+// Get-CimInstance Win32_Process costs 3.4-8.9s on this laptop, so the cap is straddled
+// routinely, and a killed shell was printing as "NOT IN THE PROCESS TABLE".
+//
+// THE 5000 DOES NOT MOVE. It is what this probe has always used; re-picking it off five
+// samples on one laptop would be a guessed number (his standing rule), and a slower box
+// would just move the same lie further out. What was wrong was never the budget, it was
+// the REPORT: spawnSync already separates a killed child (`error`/`signal`) from a clean
+// run that found nothing (status 0, empty stdout), and that separation was being thrown
+// away on the very next line.
+//
+// NO ENGINE IS REPLACED, so nothing is frozen *Legacy (the clip()/clipNamed precedent in
+// context.mjs): processStartMs keeps its exact signature and its exact null-on-anything
+// contract for callers that only want a number, and now delegates to the read that knows
+// WHY the number is missing. `looked:false` is the honest third state the callers'
+// UNKNOWN lanes were already built for and could never be handed.
+export function processStartRead(relPath, deps = {}) {
   const run = deps.run || spawnSync;
   try {
     const leaf = relPath.split("/").pop();
     const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match '${leaf.replace(".", "\\.")}' } | Select-Object -First 1 -ExpandProperty CreationDate | ForEach-Object { $_.ToUniversalTime().ToString('o') }`;
     const r = run("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { encoding: "utf8", timeout: 5000 });
     const t = Date.parse(String((r && r.stdout) || "").trim());
-    return Number.isFinite(t) ? t : null;
-  } catch { return null; }
+    if (Number.isFinite(t)) return { ms: t, looked: true, reason: "found" };
+    // The child never got to answer: spawnSync sets `error` (ETIMEDOUT on the kill,
+    // ENOENT when powershell itself is missing) and reports the signal it killed with.
+    // Either way the process table was NOT read, so there is nothing to conclude from it.
+    const killed = !!(r && (r.error || (r.signal && r.status == null)));
+    if (killed) return { ms: null, looked: false, reason: String((r.error && r.error.code) || `killed:${r.signal}`) };
+    // A completed look that found nothing. stderr is deliberately NOT consulted: the
+    // measured absent case above prints nothing to it, so treating stderr as doubt would
+    // turn a genuinely dead daemon into a permanent UNKNOWN and stop it being relaunched.
+    return { ms: null, looked: true, reason: "absent" };
+  } catch (e) { return { ms: null, looked: false, reason: `throw:${(e && e.code) || "unknown"}` }; }
+}
+
+// THE UNCHANGED CONTRACT — ms when found, null for everything else. Its three live
+// callers (context.mjs's lane, daemon_watchdog's processProbe and its stale relay) are
+// migrating to processStartRead one at a time; this stays exactly as it was so none of
+// them has to move before it is ready.
+export function processStartMs(relPath, deps = {}) {
+  return processStartRead(relPath, deps).ms;
 }
 
 // Launch a long-running organ the way the schtasks entries always did: through the
@@ -760,6 +807,31 @@ async function selftest() {
           g.ms != null && typeof g.file === "string" && g.file.endsWith(".mjs"));
       }
 
+      // ---- PROBE HONESTY (11 Aug 2026): the three shapes, held apart --------
+      // These fail if a killed shell is ever folded back into "not in the table". The
+      // fixtures are the REAL spawnSync returns measured on his box (see the block above
+      // processStartRead): a timeout kills the child with SIGTERM and error ETIMEDOUT,
+      // while a genuine absence exits 0 with empty stdout AND empty stderr.
+      {
+        const found = processStartRead("scripts/x.mjs", { run: () => ({ status: 0, signal: null, stdout: "2026-08-09T07:38:39.399Z", stderr: "" }) });
+        const absent = processStartRead("scripts/x.mjs", { run: () => ({ status: 0, signal: null, stdout: "", stderr: "" }) });
+        const killed = processStartRead("scripts/x.mjs", { run: () => ({ status: null, signal: "SIGTERM", stdout: "", stderr: "", error: Object.assign(new Error("timeout"), { code: "ETIMEDOUT" }) }) });
+        ok("PROBE HONESTY — a found process carries its stamp and says it looked",
+          found.ms === Date.parse("2026-08-09T07:38:39.399Z") && found.looked === true);
+        ok("PROBE HONESTY — a clean look that finds nothing is ABSENT (looked:true), so a truly dead daemon is still relaunchable",
+          absent.ms === null && absent.looked === true && absent.reason === "absent");
+        ok("PROBE HONESTY — a shell KILLED at the timeout is looked:false with its reason, never an absence",
+          killed.ms === null && killed.looked === false && killed.reason === "ETIMEDOUT");
+        // the whole point of the split: absent and killed used to be the same bare null
+        ok("PROBE HONESTY — absent and could-not-look are DIFFERENT answers, and processStartMs's old ms|null contract is unchanged for both",
+          absent.looked !== killed.looked &&
+          processStartMs("scripts/x.mjs", { run: () => ({ status: 0, signal: null, stdout: "", stderr: "" }) }) === null &&
+          processStartMs("scripts/x.mjs", { run: () => ({ status: null, signal: "SIGTERM", stdout: "", error: { code: "ETIMEDOUT" } }) }) === null &&
+          processStartMs("scripts/x.mjs", { run: () => ({ status: 0, signal: null, stdout: "2026-08-09T07:38:39.399Z" }) }) === Date.parse("2026-08-09T07:38:39.399Z"));
+        ok("PROBE HONESTY — a throwing shell is could-not-look too, and never crashes the caller",
+          processStartRead("scripts/x.mjs", { run: () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }); } }).looked === false);
+      }
+
       // EXACT match ⇒ current. Measured live: both sides statSync the same file and
       // the delta was 0 on 5/5 reads, so there is no skew to tolerate and any
       // difference at all is a real stale build (the 1000ms tolerance the first cut
@@ -931,6 +1003,19 @@ async function selftest() {
       && /goalkeeper/.test(stale.steps.find(s => s.id === "sheet").degraded || ""));
     ok("#WIRE — a stale write reaches the EXIT CODE, so Task Scheduler's Last Result says so",
       stale.failed > 0);
+
+    // (1c) THE SENTENCE MUST REACH THE LOG (11 Aug 2026 — see stepLine's header).
+    // Everything above proves the verdict is CORRECT and on disk in conductor.json.
+    // None of it proved anyone ever sees it, and for four weeks nobody did: exit 0
+    // leaves `error` and `stderr` both null, so the printer's reason slots were empty
+    // and scripts/conductor.log said `FAIL goalkeeper 1276ms → scripts/coach.log`.
+    // These go RED the moment the fallback is dropped again.
+    const gkLine = stepLine(gk);
+    ok("#WIRE — the FAIL LINE speaks the stale reason, so the log names the file and both clocks without opening conductor.json",
+      /^ {2}FAIL goalkeeper/.test(gkLine) && /readiness\.json/.test(gkLine) && /before this step started/.test(gkLine));
+    ok("#WIRE — and it never doubles up or invents: real stderr still wins the slot, and a green step's line stays silent",
+      stepLine({ id: "x", ok: false, ms: 5, stderr: "boom: the real reason\nstack frame", stale: null }).includes("boom: the real reason")
+      && !/declared/.test(stepLine({ id: "y", ok: true, ms: 5, stderr: null, stale: null })));
 
     // (2) the happy path is untouched — this must not cost him a morning
     const armed = [];
@@ -1254,6 +1339,44 @@ async function selftest() {
   return fail === 0;
 }
 
+// ---- THE LINE HE ACTUALLY READS (11 Aug 2026) — `stale` WAS AN ORPHAN FIELD ----
+// The production check above (10 Aug) gave every step a `stale` sentence naming the
+// declared file and BOTH clocks (:646) — and NOTHING read it. Not this file's own FAIL
+// printer, which prints skipped/error/stderr-reason/degraded/log and never stale; not
+// conductor.json's only reader (daemon_watchdog.mjs's morning arm, which carries
+// `failed`, `stale`-the-DAEMON-verdict and `degraded`, and had no lane for this one).
+// Repo grep the day it was found: one writer, zero readers.
+//
+// WHY IT IS THE WORST FIELD TO LOSE: a stale write is the ONLY failure mode in this
+// chain that EXITS 0. `error` is set only on a timeout or a spawn failure; stderr is
+// captured only when the exit is non-zero (clipStderr's own argument, :628). So on the
+// one failure whose cause cannot be seen from outside, BOTH of the printer's reason
+// slots were null and the summary read `FAIL goalkeeper 1276ms → scripts/coach.log`,
+// pointing at a log that holds the organ's own cheerful exit-0 output. The comment
+// below calls this summary "the first thing read after a red morning"; it was the one
+// line that could not say why.
+//
+// MUTUALLY EXCLUSIVE, SO A PLAIN FALLBACK IS EXACT: `stale` is non-null only when
+// checkWrites was true, which requires exited0 — so whenever it speaks, `error` and
+// `stderr` are both null, and nothing can ever be printed twice.
+//
+// NOT CLIPPED, unlike stderr: this sentence is built by THIS file out of a declared
+// filename and two ISO stamps, so its length is bounded by construction — there is no
+// organ on the far end that can flood it. Extracted into a named function for the same
+// reason daemon_watchdog has morningLine/launchLine/outageLine: a line printed inline
+// inside main() cannot be asserted, which is how it went four weeks unread.
+export function stepLine(s) {
+  const mark = s.ok ? "ok  " : "FAIL";
+  // a FAIL line names the log, because the summary in scripts/conductor.log is the
+  // first thing read after a red morning and the organ's own words are the next.
+  // It also names the REASON now (10 Aug 2026): `error` is only ever set on a timeout
+  // or a spawn failure, so an organ that merely exited 1 printed a bare "FAIL <id>
+  // 812ms" here and made the reader open a file to learn anything at all. clipStderr
+  // hoists the reason to the FIRST line, so this is that line and nothing else.
+  const reason = !s.ok ? (s.stderr ? s.stderr.split("\n")[0] : (s.stale || "")) : "";
+  return `  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${reason ? "  " + reason : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}${!s.ok && s.log ? "  → " + s.log : ""}`;
+}
+
 async function main() {
   const mode = (process.argv[2] || "morning").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
@@ -1279,17 +1402,7 @@ async function main() {
   const chain = mode === "evening" ? EVENING : MORNING;
   const reportPath = mode === "evening" ? join(STATE_DIR, "conductor_evening.json") : REPORT;
   const rep = await conduct(chain, { noReport, report: reportPath });
-  for (const s of rep.steps) {
-    const mark = s.ok ? "ok  " : "FAIL";
-    // a FAIL line names the log, because the summary in scripts/conductor.log is the
-    // first thing read after a red morning and the organ's own words are the next.
-    // It also names the REASON now (10 Aug 2026): `error` is only ever set on a timeout
-    // or a spawn failure, so an organ that merely exited 1 printed a bare "FAIL <id>
-    // 812ms" here and made the reader open a file to learn anything at all. clipStderr
-    // hoists the reason to the FIRST line, so this is that line and nothing else.
-    const reason = !s.ok && s.stderr ? s.stderr.split("\n")[0] : "";
-    console.log(`  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${reason ? "  " + reason : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}${!s.ok && s.log ? "  → " + s.log : ""}`);
-  }
+  for (const s of rep.steps) console.log(stepLine(s));
   console.log(`conductor: ${mode} chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${reportPath}`}`);
   // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).
   // This function printed its FAIL lines and then fell off the end, so the process

@@ -22,6 +22,7 @@ import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the cou
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
+import { starvedNightFor } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine)
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
@@ -131,7 +132,19 @@ function outwardLines(dir, nowMs) {
     const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= cutoff && t <= nowMs; };
     const returns = (mj.events || []).filter((e) => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
     const benchRuns = ((bj && bj.runs) || []).filter(inWin).length;
-    if (returns + benchRuns < 2) L.push(`OUTWARD FLOOR: ${returns + benchRuns}/2 this week (his 7 Aug ruling) — a mission return or a benchmark run touches it`);
+    // THE FLOOR MAY ONLY PROMISE WHAT THE PRODUCER CAN DELIVER (wiring pass,
+    // 11 Aug 2026). The tail read "a mission return or a benchmark run touches
+    // it" on every branch — but pre-audit-close a benchmark run CANNOT touch
+    // it: computeBenchmark's gated branch passes `runs` through untouched
+    // (benchmark.mjs:406 + the early return at :417) and benchmark.mjs's own
+    // selftest pins that on purpose at :543. Live proof, not theory —
+    // benchmark.json is stamped generated_at 2026-08-10T17:15Z with `runs: []`.
+    // So this line named a door that was welded shut and left the open one
+    // (fire M02, bring the return back) as an afterthought. bj.status was
+    // already in hand two lines below; the fix is to read it here too. Counting
+    // is UNCHANGED — the ≥2 and "only RETURNS are outward work" are both his.
+    const benchGated = !!(bj && bj.status === "gated_pre_audit");
+    if (returns + benchRuns < 2) L.push(`OUTWARD FLOOR: ${returns + benchRuns}/2 this week (his 7 Aug ruling) — ${benchGated ? "benchmark GATED till audit-close (a gated run stamps nothing) — a mission return is what touches it" : "a mission return or a benchmark run touches it"}`);
   }
   if (bj && bj.status === "ok" && Array.isArray(bj.regressions) && bj.regressions.length) {
     L.push(`OUTWARD: benchmark regression — ${bj.regressions[0]}`);
@@ -184,6 +197,23 @@ function diaryLine(dir, now) {
       if (line) return `📔 BRAIN DIARY${tag}: ${clip(line.trim(), 120)} · brain_out/diary/${d}.md`;
     } catch { }
   }
+  // #WIRE (11 Aug 2026) — CONSUMER_NO_PRODUCER, the diary end of it.
+  // brain_out/diary/ has never existed: 0 `diary` RUNS in 4,693 ledger rows (the
+  // engine:"budget" refusal rows that start appearing today are refusals, not runs),
+  // so this line has been silent since H6 shipped and nothing said why. Traced at 04:37
+  // IST today — `diary` was the ONLY eligible job in its 03:00–07:30 window and
+  // headroom returned allowed 0 (used 1,901,322 / cap 1,520,000 in the rolling 5h
+  // window, burnt by dmn_* and ns_*, last row 03:48 IST). The brain HAS been writing
+  // that refusal down since 10 Aug (recordBudgetBlock → token_vitals.json.starved)
+  // and no organ ever connected it to the blank it explains.
+  // "Absence is silence, never a nag" still holds and the H6 assertion below still
+  // pins it: with no measured cause this returns null exactly as before. It speaks
+  // ONLY when the brain itself recorded the refusal — which is evidence, not a nag,
+  // and it rides an anchor he already hits instead of a report he has to open.
+  try {
+    const st = starvedNightFor(readJson(join(dir, "token_vitals.json")), "diary", ncLocalDate(nowD));
+    if (st) return `📔 BRAIN DIARY: page nahi likhi — ${st.why} · fuel: token_vitals.json`;
+  } catch { }
   return null;
 }
 
@@ -325,7 +355,20 @@ const CARD_FILE  = join(__dirname, "..", "learning-layer", "HOW_HE_LEARNS.md");
 const CARD_BEGIN = "<!-- COLD-START-CARD:BEGIN";
 const CARD_END   = "<!-- COLD-START-CARD:END";
 const CARD_MAX   = 1800;
-function loadTeachingCard(path = CARD_FILE) {
+// THE CAP IS THE CALLER'S TOO (dead-wire sweep, 11 Aug 2026) — the same repair
+// loadMemory got on 5 Aug (see the note under it), on the one door it was never applied
+// to. context_manifest.mjs is the party that knows the whole budget, and until today it
+// could not see this 1800: it called loadTeachingCard() bare, got back the ALREADY-CLIPPED
+// string, and recorded THAT length as the card's size — so its footer billed `card 1800`
+// as fully delivered and could never print `TRIMMED from N`. Exactly the ledger lie fixed
+// for memory on 10 Aug (`TRIMMED from 1523` on a cut from 3,856). Not firing today (the
+// live card is 1,431 chars, measured 11 Aug), which is why it survived: it is the
+// seventeen-rule card growing past 1800 that would have made it lie, silently.
+// THE DEFAULT IS UNCHANGED, so mcp-memory.mjs:273/494, main() below and every assertion in
+// the selftest behave byte-for-byte as before. A caller that passes a cap no string can
+// exceed now gets the card WHOLE and does its own cut — the only way it can honestly
+// report the size it cut FROM.
+function loadTeachingCard(path = CARD_FILE, cap = CARD_MAX) {
   try {
     if (!existsSync(path)) return null;
     const raw = readFileSync(path, "utf8");
@@ -334,7 +377,7 @@ function loadTeachingCard(path = CARD_FILE) {
     const b = raw.indexOf(CARD_END, open); if (b < 0) return null;
     const body = raw.slice(open + 3, b).replace(/\*\*/g, "").trim();
     if (!body) return null;
-    return body.length > CARD_MAX ? body.slice(0, CARD_MAX) + "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)" : body;
+    return body.length > cap ? body.slice(0, cap) + "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)" : body;
   } catch { return null; }
 }
 // AUDIT #107 (5 Aug 2026) — THE CAP IS NOW THE CALLER'S, NOT A CONSTANT.
@@ -568,7 +611,31 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
         const cb = courseBrief(join(dir, "course.json"));
         if (cb && cb.line) {
           const cAge = cb.current === null ? null : ageDays(cb.current_at, now);
-          const cTag = cb.current === null ? ""     // not started: there is no position to age
+          // DEAD-WIRE SWEEP, 11 Aug 2026 (pass 3) — THE UNSTAMPED POSITION SPEAKS.
+          // The `cb.current === null` arm used to be "" with the comment "not started:
+          // there is no position to age", and that was true of the AGE and false of
+          // everything else. `at <n>` is the ONLY producer of `current`, and on 11 Aug
+          // a trace found it had ZERO callers anywhere — no skill, no hook, no task
+          // (`grep -rn "course.mjs at" --exclude-dir=.git` hit only course.mjs's usage
+          // banner, the hint string on the line below, and doc prose). So `current`
+          // has been null since the 7 Aug ingest, and this arm printed NOTHING about
+          // it — while the hint that names the fix sat one line down, inside a branch
+          // `current === null` gates off. SELF-SEALING: the one line that could have
+          // reported the dead wire was unreachable BECAUSE of the dead wire.
+          // Two shapes on purpose. With `done > 0` the sentence course.mjs prints is
+          // self-contradictory — measured on the live state through the pure core,
+          // markDone 1..5 still yields "…: not started — 6 chapters (5 done)" — so the
+          // contradiction is named out loud rather than left for the reader to spot.
+          // No new number, no write, no inference: only this session knows which
+          // chapter he opened, so the brief ASKS for the stamp and never invents one.
+          // Gated on `present`: an absent or UNREADABLE course already says what is
+          // wrong in `cb.line` (course.mjs unreadableBrief), and a second complaint
+          // there would point him at the wrong repair.
+          const cTag = cb.present !== true ? ""
+            : cb.current === null
+              ? (cb.done > 0
+                ? ` (POSITION UNSTAMPED · ${cb.done} chapter(s) closed, yet the line above still reads "not started" — \`node scripts/course.mjs at <n>\` when he opens one)`
+                : " (position unstamped — `node scripts/course.mjs at <n>` the moment he opens one)")
             : cAge === null ? " (no position stamp — `node scripts/course.mjs at <n>` stamps it)"
             : cAge >= WS_STALE_DAYS ? ` (PARKED · ${Math.floor(cAge)}d on this chapter)`
             : cAge >= 1 ? ` (${Math.floor(cAge)}d ago)`
@@ -594,7 +661,17 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
           const nextTag = cb.next && Number.isInteger(cb.next.n)
             ? ` → agla: ch${cb.next.n} ${cb.next.title || ""}${at(cb.next.start_seconds)}`
             : "";   // no `next` = every chapter covered; naming nothing is the honest answer
-          L.push(`  📼 ${cb.line}${resume}${cTag}${nextTag}`);
+          // DEAD-WIRE SWEEP, 11 Aug 2026 (pass 3) — THE COURSE GETS ITS ADDRESS.
+          // Same shape as the two fixes above, one field further along: course.mjs has
+          // read `source_url` out of his paste, refused anything that is not http(s),
+          // and preserved it across every re-ingest since 1 Aug — and nothing printed
+          // it. So this line, which exists precisely so he is never asked where he is,
+          // told him the chapter and left him to go find the course himself. The live
+          // value is the anthropics/courses fundamentals folder.
+          // Printed in FULL, never clipped: a truncated URL is not an address, it is a
+          // riddle — unlike the prose slots above it, where clip() loses only detail.
+          const where = cb.source_url ? ` · ${cb.source_url}` : "";   // null = he pasted no URL; inventing one is the one law of that organ
+          L.push(`  📼 ${cb.line}${resume}${cTag}${nextTag}${where}`);
         }
       } catch { /* a brief must never be the thing that breaks SessionStart */ }
     }
@@ -815,6 +892,37 @@ function selftest() {
     writeFileSync(join(dir, "course.json"), courseState(null));
     assert("a position with NO stamp is called out, never assumed fresh (same law as wsTag/spTag)",
       brief(dir, NOW).includes("no position stamp"));
+    // ---- DEAD-WIRE SWEEP pass 3 (11 Aug 2026) — THE NULL POSITION SPEAKS ----
+    // THE DEFECT, exactly: `course.mjs at <n>` is the ONLY producer of `current`, and
+    // it had zero callers anywhere in the organism, so `current` stayed null from the
+    // 7 Aug ingest onward — and THIS branch printed nothing at all about that, while
+    // the hint naming the fix lived in the arm above, which `current === null` gates
+    // off. The dead wire hid itself. These two fail if the kickoff ever goes quiet
+    // about an unstamped position again, or if the /learn skill stops calling `at`
+    // (organism_test.mjs §2d holds the caller half of the same wire).
+    const noPosition = (doneCount) => JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals" },
+      chapters: [
+        { n: 1, title: "Getting started", covered: doneCount >= 1, covered_at: doneCount >= 1 ? iso(3) : null },
+        { n: 2, title: "Messages format", covered: false, covered_at: null },
+      ],
+      current: null, current_at: null, updated_at: iso(0),
+    });
+    writeFileSync(join(dir, "course.json"), noPosition(0));
+    assert("an ingested course with NO position asks for the stamp (the arm that used to print nothing)",
+      brief(dir, NOW).includes("position unstamped") && brief(dir, NOW).includes("course.mjs at <n>"));
+    writeFileSync(join(dir, "course.json"), noPosition(1));
+    const contradiction = brief(dir, NOW);
+    assert("chapters closed but no position → the \"not started\" contradiction is named, not left to be spotted",
+      contradiction.includes("POSITION UNSTAMPED") && contradiction.includes("1 chapter(s) closed")
+      && contradiction.includes("not started"));
+    // and the honest silence: an UNREADABLE course must not be told to stamp a
+    // position — its own line already names the real repair (course.mjs:unreadableBrief).
+    writeFileSync(join(dir, "course.json"), '{"version":1,"course":{"id":"x","title":"Py"},"chapters":[{"n":1,"cov');
+    const broken = brief(dir, NOW);
+    assert("an UNREADABLE course is NOT nagged for a stamp — one fault, one instruction",
+      broken.includes("UNREADABLE") && !broken.includes("unstamped") && !broken.includes("UNSTAMPED"));
   }
   // ---- DEAD-WIRE SWEEP pass 2 (11 Aug 2026) — THE NEXT CHAPTER GETS SPOKEN ----
   // The regression these catch: this splice took `cb.line` alone, and statusLine() only
@@ -851,6 +959,31 @@ function selftest() {
       mid.includes("@ 00:04:31") && mid.includes("agla: ch3 Streaming"));
     assert("a chapter with NO timestamp shows no stamp at all — never a fabricated 00:00:00",
       !mid.includes("--:--") && !/agla: ch3 Streaming @/.test(mid));
+    // ---- DEAD-WIRE SWEEP pass 3 (11 Aug 2026) — THE COURSE ADDRESS GETS SPOKEN ----
+    // course.mjs validated and stored `source_url` from day one and no organ returned
+    // it, so this line named his chapter and never where to open it. The URL below is
+    // the value live on disk today. Fails if the field is dropped at this door or from
+    // courseBrief() upstream; the second half fails if anyone ever clips it (a
+    // truncated address is worse than none).
+    writeFileSync(join(dir, "course.json"), JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals", source_url: "https://github.com/anthropics/courses/tree/master/anthropic_api_fundamentals" },
+      chapters: [{ n: 1, title: "Getting started", start_seconds: 0, covered: false }],
+      current: null, current_at: null, updated_at: iso(0),
+    }));
+    const addressed = brief(dir, NOW);
+    assert("the course line carries the course's ADDRESS, whole and unclipped (source_url finally has a reader)",
+      addressed.includes("📼") && addressed.includes("https://github.com/anthropics/courses/tree/master/anthropic_api_fundamentals"));
+    // and the honest absence: a paste with no URL prints no address and no empty tail
+    writeFileSync(join(dir, "course.json"), JSON.stringify({
+      version: 1,
+      course: { id: "anthropic-api-fundamentals", title: "Anthropic API Fundamentals" },
+      chapters: [{ n: 1, title: "Getting started", start_seconds: 0, covered: false }],
+      current: null, current_at: null, updated_at: iso(0),
+    }));
+    const noAddress = brief(dir, NOW);
+    assert("no URL in his paste ⇒ no address on the line, and no dangling ' · ' either",
+      noAddress.includes("📼") && !noAddress.includes("http") && !/Getting started · \s*$/m.test(noAddress));
   }
   writeFileSync(join(dir, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-08", task: "FinOps repo", track: "build", subtopics: "scaffold" } } }));
   const buildBrief = brief(dir, NOW);
@@ -895,6 +1028,41 @@ function selftest() {
       brief(dirD2, NOW).includes("nine jobs ran clean"));
     assert("H6 no diary at all ⇒ zero new lines (absence is silence, never a nag)",
       !brief(dir2, NOW).includes("BRAIN DIARY"));
+
+    // ---- #WIRE (11 Aug 2026) — A BLANK WITH A MEASURED CAUSE IS NOT A BLANK ------
+    // Goes red the moment this kickoff goes back to printing nothing while the brain
+    // has the refusal written down — the CONSUMER_NO_PRODUCER shape that kept the
+    // diary line silent for its whole life. Fixture is the LIVE record's shape
+    // (brain.mjs recordBudgetBlock → tokenVitals.starved), and the shift day is
+    // NOW − 1 because a `serve: next_morning` page is written on the night before
+    // the morning it is named for. Numbers are the ones measured on his repo at
+    // 04:37 IST on 11 Aug, not invented for the test.
+    const dirSv = mkdtempSync(join(tmpdir(), "learnstate-diary-starved-"));
+    writeFileSync(join(dirSv, "token_vitals.json"), JSON.stringify({
+      starved: { shift_day: ld(NOW - 86400000), beats: 41,
+        jobs: [{ id: "diary", beats: 41, phase: "overnight", used: 1901322, cap: 1520000, priority: 10 }] },
+    }));
+    const svLine = brief(dirSv, NOW).split("\n").find((l) => l.includes("BRAIN DIARY")) || "";
+    assert("#WIRE — no diary page + a RECORDED budget starvation ⇒ the kickoff says WHY, with the brain's own measured numbers, and refuses the slept-through story",
+      /page nahi likhi/.test(svLine) && /budget-starved on the /.test(svLine)
+      // grouped through toLocaleString exactly as brain's own fuel summary does, so the
+      // expectation is COMPUTED here rather than pasted — this box renders en-IN
+      // ("19,01,322") and a pasted en-US string would go red on his laptop alone.
+      && svLine.includes(`${(1901322).toLocaleString()}/${(1520000).toLocaleString()}`)
+      && /41 beat\(s\) refused/.test(svLine) && /slot not consumed/.test(svLine)
+      // and it stays ONE line — the ANCHOR LAW: the kickoff carries the measured fact,
+      // the longer "the machine was awake" correction belongs to the Gaffer's own door
+      // (dugout get_diary), which is the surface that would otherwise tell him the
+      // wrong story out loud.
+      && svLine.split("\n").length === 1 && !/slept-through/.test(svLine));
+    // …and the discrimination itself: a starvation from ANOTHER night, or of another
+    // job, explains nothing about this morning and must not be borrowed to fill it.
+    writeFileSync(join(dirSv, "token_vitals.json"), JSON.stringify({
+      starved: { shift_day: ld(NOW - 3 * 86400000), beats: 41,
+        jobs: [{ id: "diary", beats: 41, phase: "overnight", used: 1901322, cap: 1520000 }] },
+    }));
+    assert("#WIRE — an OLD night's starvation is not an excuse for this morning (and neither is another job's) — silence returns",
+      !brief(dirSv, NOW).includes("BRAIN DIARY"));
   }
 
   // ---- P7.B — THE ARBITER (7 Aug 2026): one winner, stated precedence, losers named
@@ -987,6 +1155,14 @@ function selftest() {
   writeFileSync(cf, `${CARD_BEGIN} n -->\n${"x".repeat(CARD_MAX + 500)}\n${CARD_END} -->\n`);
   assert("CARD PARSER — a runaway card is capped and says so (the brief stays orientation)",
     loadTeachingCard(cf).length <= CARD_MAX + 80 && loadTeachingCard(cf).includes("truncated"));
+  // THE CALLER'S CAP (dead-wire sweep, 11 Aug 2026). The assertion above pins the frozen
+  // DEFAULT; this one pins the parameter context_manifest.mjs needs, because a budget-owner
+  // that cannot ask for the card WHOLE can never report how much of it it cut. It fails the
+  // moment the cap goes back to being this file's private constant.
+  assert("CARD PARSER — a caller's cap is honoured, and the WHOLE card is reachable with a cap no card can exceed",
+    loadTeachingCard(cf, 50).length <= 50 + 80 && loadTeachingCard(cf, 50).includes("truncated")
+    && loadTeachingCard(cf, Number.MAX_SAFE_INTEGER).length === CARD_MAX + 500
+    && !loadTeachingCard(cf, Number.MAX_SAFE_INTEGER).includes("truncated"));
   assert("THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all seventeen rules",
     (() => { const c = loadTeachingCard(); return !!c && /^1\. Give ONE new idea/m.test(c) && /^16\. /m.test(c); })());
   // ---- AUDIT #108 (6 Aug 2026) — the RE-JIRAH OVERDUE day-counts must carry their age.
@@ -1056,6 +1232,16 @@ function selftest() {
     ob.includes("OUTWARD: T-hallucinations staged") && ob.includes("EMPHASIS only"));
   assert("OUTWARD — the unmet floor surfaces as have/need (his ruled 2, never shame)",
     ob.includes("OUTWARD FLOOR: 0/2 this week") && !/behind|late|failed/i.test(ob.split("\n").find((l) => l.startsWith("OUTWARD FLOOR")) || ""));
+  // THE GATED TERM (11 Aug 2026). Fails the moment this line goes back to
+  // promising "a benchmark run touches it" while benchmark.mjs is gated and
+  // structurally cannot stamp runs[] (its :406/:417 gated branch, pinned by its
+  // own selftest at :543). The gated fixture below is the LIVE file's shape.
+  writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "gated_pre_audit", runs: [],
+    gate: { reason: "Ruling 6 — benchmark ships AFTER the full-syllabus audit refresh", missions_line: "full-syllabus audit 0/4 returned" } }));
+  const obGated = brief(dirO, NOW).split("\n").find((l) => l.startsWith("OUTWARD FLOOR")) || "";
+  assert("OUTWARD — a GATED benchmark never promises a benchmark run can touch the floor; it names the one door that is open",
+    /0\/2 this week/.test(obGated) && /benchmark GATED/.test(obGated) && /mission return is what touches it/.test(obGated)
+    && !/or a benchmark run touches it/.test(obGated));
   writeFileSync(join(dirO, "benchmark.json"), JSON.stringify({ status: "ok", regressions: [],
     runs: [new Date(NOW - 86400000).toISOString(), new Date(NOW - 2 * 86400000).toISOString()] }));
   assert("OUTWARD — floor met (2 benchmark runs this week) ⇒ the floor line goes SILENT",

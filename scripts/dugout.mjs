@@ -72,7 +72,7 @@ import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
-import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
+import { buildFingerprint, bannedPhraseCheck, starvedNightFor } from "./brain.mjs";   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 // ORPHANED IMPORTS CUT, 10 Aug 2026: this line also pulled `learningArcVerdict`
 // and `conceptVocabulary`, and LADDER F3 (9 Aug) deleted the only caller — the
@@ -1820,7 +1820,23 @@ function execTool(name, args, deps = {}) {
         try { page = readFileSync(join(dir, d + ".md"), "utf8").slice(0, 6000); } catch { }
         if (sib || page) return { ok: true, date: d, age: tag, will_change: (sib && sib.will_change) || null, page: page || "(sibling only — the page did not write)" };
       }
-      return { ok: true, page: null, note: "no diary yet — the brain writes it overnight (03:00); a missed morning means the laptop slept through the slot" };
+      // #WIRE (11 Aug 2026) — THE EMPTY ANSWER WAS TELLING HIM THE WRONG STORY.
+      // This door has returned "the laptop slept through the slot" for its whole life
+      // and it has never once been true: 0 `diary` RUNS in 4,693 ledger rows (the
+      // engine:"budget" refusal rows that start appearing today are not runs), and the
+      // trace at 04:37 IST today found `diary` ELIGIBLE and ALONE in its 03:00–07:30
+      // window with headroom allowed 0 (used 1,901,322 / cap 1,520,000 in the rolling
+      // 5h window — dmn_* and ns_* had already spent the night). The machine was
+      // awake; the budget refused it. brain.mjs has written that refusal down since
+      // 10 Aug (recordBudgetBlock → token_vitals.json.starved) and nothing read it.
+      // Rendered through the OWNER's own line (the formatter law this file states at
+      // :92), so the Gaffer never invents a second version of the reason. No evidence
+      // ⇒ the original sentence, minus the guess it had no right to make.
+      const sv = starvedNightFor(readJson(join(STATE_DIR, "token_vitals.json")), "diary", localDate(now));
+      return { ok: true, page: null, starved: sv || null,
+        note: sv
+          ? `no diary page — ${sv.why}. ${sv.awake} Not a status problem and not his: the brain's own night page was refused for fuel. token_vitals.json carries the gauge.`
+          : "no diary yet — the brain writes it overnight (03:00). No starvation is recorded for last night either, so the likeliest reason is that the machine was not awake for the slot — say that as a possibility, never as a fact." };
     }
     // H3 — the model door: the owner's render, statuses grouped, nothing derived here.
     if (name === "get_model") {
@@ -2498,6 +2514,31 @@ async function selftest() {
       assert("H6 — get_diary DECLARED (transparency, not status) and an empty world says why it is empty",
         TOOL_DECLS.some(t => t.name === "get_diary" && /WILL CHANGE/.test(t.description))
         && (() => { const r = execTool("get_diary", {}, {}); return r.ok === true && (r.page === null ? /overnight/.test(r.note) : true); })());
+      // ---- #WIRE (11 Aug 2026) — the empty answer must not INVENT the reason -----
+      // This door answered "the laptop slept through the slot" for its whole life and
+      // it was never once true (0 `diary` rows in 4,693; traced live at 04:37 IST with
+      // the job ELIGIBLE, ALONE in its window, and headroom 0). Two halves, both
+      // pinned: the brain's own renderer produces the measured sentence, and THIS
+      // branch actually calls it — a source check, because the aggregate can stay
+      // green while the wire is quietly unhooked, which is the whole defect class.
+      const svFix = { starved: { shift_day: "2026-08-10",
+        jobs: [{ id: "diary", beats: 41, phase: "overnight", used: 1901322, cap: 1520000 }] } };
+      const svOut = starvedNightFor(svFix, "diary", "2026-08-11");
+      // own read: this file's `SRC` const is declared ~400 lines below and is in its TDZ here
+      const wireSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const diaryBranch = wireSrc.slice(wireSrc.indexOf(`if (name === "get_diary")`), wireSrc.indexOf(`if (name === "get_model")`));
+      assert("#WIRE — an empty get_diary reads the brain's RECORDED starvation instead of guessing that the laptop slept, and the branch is really wired to the owner's renderer",
+        svOut && /budget-starved on the 2026-08-10 night/.test(svOut.why) && /41 beat\(s\) refused/.test(svOut.why)
+        && /machine was awake/.test(svOut.awake) && /slot not consumed/.test(svOut.why)
+        && starvedNightFor(svFix, "diary", "2026-08-13") === null      // another morning's blank is not this night's fault
+        && starvedNightFor(svFix, "night_coach", "2026-08-11") === null // nor another job's
+        && diaryBranch.length > 0 && /starvedNightFor\(/.test(diaryBranch)
+        // and the no-evidence branch offers the sleep story as a POSSIBILITY only — it is
+        // still the likeliest cause on a laptop that sleeps, but it was being stated as
+        // fact on nights the machine was provably awake, and the Gaffer repeats what it
+        // is handed. (Matched on the RETURN's wording, not on the word "slept": this
+        // comment block lives inside the same slice.)
+        && /never as a fact/.test(diaryBranch));
       // F2 — [BUS DELTA]: primes silently, ships only the changed fields, then quiets
       const rt2 = {};
       const p1 = { vitals: "VITALS: A", scout: "SCOUT: A", drills: "DRILLS: A", twin: "TWIN: A" };

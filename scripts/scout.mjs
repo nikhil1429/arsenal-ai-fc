@@ -391,14 +391,36 @@ function auditClose(state, note, now) {
 // benchmark runs. Staging is machine prep and deliberately does NOT count —
 // else the floor reads "met" on a week where nothing outward actually happened.
 // Distance-surfacing only — never a block, never a debt.
+//
+// THE GATED TERM (wiring pass, 11 Aug 2026). This read `benchmark ${benchRuns}`
+// on every branch, and pre-audit-close that term is STRUCTURALLY zero, not
+// merely zero-so-far: computeBenchmark's gated branch (benchmark.mjs:406 +
+// its early return at :417) carries `runs` through untouched, and that organ's
+// own selftest asserts it on purpose ("GATE — a gated run does NOT stamp the
+// outward runs ledger", benchmark.mjs:543). Proof it is not theory: the live
+// dressing-room/state/benchmark.json is stamped generated_at 2026-08-10T17:15Z
+// with `runs: []` — it RAN and recorded nothing, because the gate was shut.
+// So the old line read "benchmark 0" at a man who could not have made it
+// anything else, and the kickoff's twin (learnstate.mjs:134) went further and
+// promised "a benchmark run touches it" — a promise the producer cannot keep
+// until `mission audit-close`. THE COUNT AND THE FLOOR ARE UNCHANGED (both his:
+// Ruling 2's ≥2, and the composition that says only RETURNS are outward work —
+// a gated run measures nothing, so it should not count, and the lock-chain
+// firing benchmark.mjs on every capsule lock must never auto-satisfy his
+// floor). What changes is only that the SHUT GATE now reaches the sentence:
+// benchmark.json's `status` was sitting right here, read by nobody on this path.
 function outwardWeek(state, bench, now) {
   const cutoff = now.getTime() - 7 * 86400000;
   const inWin = (iso) => { const t = new Date(iso).getTime(); return !Number.isNaN(t) && t >= cutoff && t <= now.getTime(); };
   const missionEvents = ((state && state.events) || []).filter(e => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
   const benchRuns = ((bench && bench.runs) || []).filter(inWin).length;
   const count = missionEvents + benchRuns;
-  return { count, floor: OUTWARD_FLOOR, missionEvents, benchRuns,
-    line: `outward checks this week: ${count}/${OUTWARD_FLOOR} (missions ${missionEvents} · benchmark ${benchRuns}) — floor is his 7 Aug ruling` };
+  const benchGated = !!(bench && bench.status === "gated_pre_audit");
+  const benchNote = !bench ? "benchmark not run yet"
+    : benchGated ? "benchmark GATED — a gated run stamps nothing, so a mission return is what moves this"
+    : `benchmark ${benchRuns}`;
+  return { count, floor: OUTWARD_FLOOR, missionEvents, benchRuns, benchGated,
+    line: `outward checks this week: ${count}/${OUTWARD_FLOOR} (missions ${missionEvents} · ${benchNote}) — floor is his 7 Aug ruling` };
 }
 
 // P6.1 → Ruling 5: gemini_quality.jsonl gets its first reader. COUNT only —
@@ -594,6 +616,16 @@ async function selftest() {
       && outwardWeek({ events: [{ ts: t0.toISOString(), kind: "ingest" }] }, null, t0).count === 1);
     assert("missions: outward line is have/need, never shame", /\d+\/2/.test(week.line) && !/behind|failed|late/i.test(week.line));
     assert("missions: outward safe on a bloodless world", outwardWeek(null, null, t0).count === 0);
+    // THE GATED TERM (11 Aug 2026). Fails the moment the floor line goes back to
+    // reading "benchmark 0" at a producer that structurally cannot stamp runs[]
+    // pre-audit-close (benchmark.mjs:406/:417, and its own selftest at :543).
+    const wGated = outwardWeek(st, { status: "gated_pre_audit", runs: [] }, t0);
+    assert("missions: a GATED benchmark is NAMED as gated — never counted as a missed check",
+      wGated.benchGated === true && /benchmark GATED/.test(wGated.line) && !/benchmark 0/.test(wGated.line));
+    assert("missions: the gate changes the WORDING only — his floor and his composition are untouched",
+      wGated.count === outwardWeek(st, { status: "gated_pre_audit", runs: [t0.toISOString()] }, t0).count - 1
+      && wGated.floor === 2
+      && /benchmark 1/.test(outwardWeek(st, { status: "ok", runs: [t0.toISOString()] }, t0).line));
 
     const g0 = buildScout([], { learn: [], ratify: [] }, t0, undefined, stageReadiness(null, loadConfig("__no_such__")));
     assert("gemini lane: batches attach as a COUNT + unjudged note, and ride the readiness line",

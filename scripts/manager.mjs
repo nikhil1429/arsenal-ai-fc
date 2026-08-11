@@ -169,9 +169,93 @@ function timeFeature(T, buckets) {
 // MACHINE-face (Claude reads it whole), so the fault is stated here and never
 // dealt as a card: mirror.mjs owns the broken file, not the captain
 // (THE ANCHOR LAW). Empty string when clean, so a healthy sheet is unchanged.
-const inputFault = (bj) => ((bj && bj.blocking_faults) || []).length
-  ? `⚠ ${bj.blocking_faults.join(", ")} UNREADABLE — numbers below are ${bj.date || "an earlier run"}'s, not today's · `
-  : "";
+//
+// THE NON-BLOCKING HALF (dead-wire sweep, 11 Aug 2026) — ORPHAN_FIELD, live since
+// the 10 Aug wiring pass. This read `blocking_faults` ONLY, and it is the organism's
+// single reader of the fault vocabulary, so the OTHER half of `input_faults[]` —
+// every fault the producer marked `blocking:false` — reached nobody at all. The case
+// it was built for is benchmark.mjs:788: capsule_bridge refuses to ship a short count,
+// keeps its last true map, and benchmark files a NON-blocking fault saying "locked
+// counts below are <an earlier run>'s". Non-blocking by benchmark's own derived rule
+// (the numbers did not MOVE, so no regression is falsely claimed) — but the counts on
+// this sheet are then a real day old under today's date, and nothing said so. A stale
+// count read as today's is the same lie the blocking branch above exists to stop, one
+// volume quieter.
+// ADDITIVE, not a replacement: the blocking branch is byte-identical (its wording is
+// asserted below and the sheet's healthy render is untouched), so no *Legacy freeze —
+// there is no old engine here to freeze, only a branch that was never written.
+// Still both files' reader, still no new vocabulary: capsule_bridge.mjs:199 stamps the
+// same `input_faults[{file,why,blocking}]` shape benchmark.mjs:416 does.
+// FIRST fault + a count of the rest — the brevity house pattern (learnstate.mjs:114,
+// benchmark.mjs's own needs line). The `why` is the OWNER's composed sentence, rendered
+// whole and never re-worded here, because the owner is the only organ that knows which
+// numbers went stale (no-invented-number law).
+//
+// THE BLOCKING HALF'S REASON + ITS CLOCK (dead-wire sweep, 11 Aug 2026) — ORPHAN_FIELD.
+// The soft branch below has rendered `why` since the note above; the BLOCKING branch never
+// did, and it is the branch that fires when a capsule will not parse. Two fields the two
+// producers write on every refusal reached NO consumer repo-wide:
+//   · `input_faults[].why` — capsule_bridge.mjs:342 (the parse error, capped 140 chars) and
+//     benchmark.mjs:597. The only surface it ever had was capsule_bridge.mjs:826's stdout,
+//     and heartbeat.mjs:146 shells that organ with stdio "pipe" — so on the scheduled run
+//     that actually catches the breakage, the one line separating "truncated write" from
+//     "bad escape" is thrown away. He was told WHICH file, never WHY, on the sheet Claude
+//     reads whole.
+//   · `last_attempt_at` — capsule_bridge.mjs:830 / benchmark.mjs:1318. `grep -rn
+//     last_attempt_at scripts/` returned the two writers and this file's own FIXTURES
+//     (:1353, :1531) and nothing else: written every refusal, read never. It answers the
+//     one question `date` cannot — a map dated 2026-08-09 with a retry stamp from THIS
+//     MORNING is an organ still running and still failing; the same map with no newer
+//     stamp is an organ that stopped running. Opposite fixes, and the sheet could not
+//     tell them apart.
+// ADDITIVE, same as the soft branch was: the file names and the "numbers below are X's"
+// clause are byte-identical and still first, so nothing that read this line loses its
+// footing — no old engine here to freeze under a *Legacy name, only two fields the render
+// never mentioned.
+// RELAYED VERBATIM, NEVER RE-WORDED, NEVER RE-DERIVED (no-invented-number law): `why` is
+// the owner's composed sentence and the stamp is the owner's clock. The only shaping is
+// cosmetic — an ISO stamp is trimmed to the minute (its seconds are noise on a sheet), and
+// anything not matching that shape is printed raw rather than silently dropped, which is
+// the exact disease this sweep exists to kill.
+// FIRST fault + a count of the rest, the same brevity pattern the soft branch uses.
+// MACHINE-face, never a card: mirror.mjs / capsule_bridge own these files, not him
+// (THE ANCHOR LAW).
+const faultStamp = (v) => {
+  if (typeof v !== "string" || !v) return "";
+  const iso = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(v);
+  return iso ? `${iso[1]} ${iso[2]}Z` : v;
+};
+const inputFault = (bj) => {
+  const blocking = (bj && bj.blocking_faults) || [];
+  if (blocking.length) {
+    const whys = ((bj && bj.input_faults) || []).filter((f) => f && f.blocking && f.why);
+    const why = whys.length
+      ? ` (${whys[0].why}${whys.length > 1 ? ` +${whys.length - 1} more in input_faults[]` : ""})`
+      : "";
+    const stamp = faultStamp(bj && bj.last_attempt_at);
+    return `⚠ ${blocking.join(", ")} UNREADABLE${why} — numbers below are ${bj.date || "an earlier run"}'s, not today's${stamp ? `; last retry ${stamp}` : ""} · `;
+  }
+  const soft = ((bj && bj.input_faults) || []).filter((f) => f && !f.blocking && f.file);
+  if (!soft.length) return "";
+  return `⚠ ${soft.map((f) => f.file).join(", ")} — ${soft[0].why || "input fault (no reason given)"}${soft.length > 1 ? ` (+${soft.length - 1} more in input_faults[])` : ""} · `;
+};
+
+// THE LOCKED COUNT THAT SPLIT IN THREE (dead-wire sweep, 11 Aug 2026) — ORPHAN_FIELD.
+// `capsules.locked` below is capsule_map's totals.capsules; benchmark.mjs:216 and
+// postmatch.mjs:236 count concepts[].locked_on instead. Those are the SAME number on every
+// capsule whose lockedOn is ISO — and different numbers the moment one is not, because
+// mapCapsule nulls an unparseable date rather than fake one. Proven 11 Aug on capsule_bridge's
+// own build(), two capsules, one locked "21 June 2026": this sheet said 2, SEASON.md — the
+// PERMANENT logbook — wrote 1, and NOTHING faulted (the file parses, so capsules_complete
+// stayed true). The only field that could ever name it, `rejirah.schedule_known`, had zero
+// readers repo-wide; capsule_bridge now derives locked_count_note from it and this reads it.
+// NOT an input fault, so it is kept out of inputFault() above: nothing was unreadable and
+// mirror.mjs's own file is fine — it is a data-quality warning about a DATE IN THE GIST.
+// It rides the same `fault` string only so it lands on the same two render sites (:816/:824)
+// with no new sheet grammar; both are MACHINE-face, never a card (THE ANCHOR LAW).
+// Relayed VERBATIM (no-invented-number law): only the writer knows both counts.
+const lockedSplitNote = (cm) =>
+  (cm && cm.locked_count_complete === false && cm.locked_count_note) ? `⚠ ${cm.locked_count_note} · ` : "";
 
 function computeFeatures(bus, today, stale = staleness(bus, today)) {
   const fresh = (k) => stale[k] === "fresh";
@@ -275,7 +359,13 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
       // the identical vocabulary benchmark.json already speaks, which is why inputFault()
       // reads both with no new code. Composed HERE, once, so the sheet and the FEATURES
       // table can never disagree (no-invented-number law).
-      fault: inputFault(bus.capsule_map) || null,
+      // ...and, since 11 Aug 2026, the locked-count split appended to it (lockedSplitNote
+      // above). Additive: a map with every lockedOn ISO — today's live one, all four —
+      // yields "" and this line is byte-identical to what it was.
+      fault: (inputFault(bus.capsule_map) + lockedSplitNote(bus.capsule_map)) || null,
+      // the honest breakdown behind `locked` above, so the FEATURES table carries both
+      // numbers and the LLM can never be shown one without the other.
+      locked_dated: typeof bus.capsule_map.locked_dated === "number" ? bus.capsule_map.locked_dated : null,
     } : null,
     // shipped carries timeaudit's own dataOk envelope: dark is reported as dark, never 0.
     shipped: bus.shipped && bus.shipped.status === "ok" ? {
@@ -300,7 +390,28 @@ function computeFeatures(bus, today, stale = staleness(bus, today)) {
       // `projection` per bucket — byte-identical for concept-cored buckets, and
       // honest for B5. The old form stays here as the fallback so a benchmark.json
       // written before this pass still renders exactly as it did.
-      : { line: `${inputFault(bus.benchmark)}${(bus.benchmark.buckets || []).map(b => b.projection || `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bus.benchmark.regressions || []).length ? ` · ⚠ ${bus.benchmark.regressions.length} regression(s)` : ""}${(bus.benchmark.needs || []).length ? ` · need: ${bus.benchmark.needs.join(" · ")}` : ""}` }) : null,
+      // DEAD-WIRE SWEEP 11 Aug 2026 — the two lanes that ride BESIDE the five buckets.
+      // benchmark.json has carried `differentiators[]` since 8 Aug and this line mapped
+      // over `buckets` alone, so the #1 senior signal (6-cross-cut) and the fintech moat
+      // (7-domain) had no counts on ANY surface — only their unlock names escaped, via
+      // needs[]. Their weight is the point: together they ride 46.7% + 44.5% of the
+      // interview by the DOSSIER's own numbers. Its OWN field, not appended to the line
+      // above, so the counts line stays byte-stable and the label can say "not a 6th
+      // bucket" out loud (ROADMAP has five). benchmark.mjs composes it; we render.
+      : { line: `${inputFault(bus.benchmark)}${(bus.benchmark.buckets || []).map(b => b.projection || `${b.id} ${b.counts.locked}/${b.counts.core_total}`).join(" · ")}${(bus.benchmark.regressions || []).length ? ` · ⚠ ${bus.benchmark.regressions.length} regression(s)` : ""}${(bus.benchmark.needs || []).length ? ` · need: ${bus.benchmark.needs.join(" · ")}` : ""}`,
+          differentiators: bus.benchmark.differentiators_line || null,
+          // DEAD-WIRE SWEEP 11 Aug 2026 — the HAVE half. The line above renders
+          // `projection` + needs[], so the sheet said "B1 3/8" and then listed the
+          // debt; the credit — the cold-re-proof and rounds-sat counts, WHICH skills
+          // have reps and at what fluency, chapters covered, Building% — lived in
+          // benchmark.json's per-bucket
+          // have[] and had no reader anywhere in the organism (its owner's own
+          // `report` command was the only door, and nothing shells it). Its OWN
+          // field for the same reason `differentiators` got one: the counts line
+          // stays byte-stable. Whole, uncapped — the sheet is MACHINE-face, Claude
+          // reads it entire, and benchmark.mjs's law is counts + names, no ranking.
+          // Absent haves[] (a benchmark.json written before this pass) ⇒ silence.
+          have: (bus.benchmark.haves || []).length ? bus.benchmark.haves.join(" · ") : null }) : null,
     study: okCards ? {
       due_today: bus.cards.due_today ?? 0, overdue: bus.cards.overdue ?? 0,
       hardest_due: bus.cards.hardest_due || [],
@@ -528,6 +639,24 @@ function dangerLine(danger) {
 // the captain's sacred prose and `deep.mjs <concept> <axis>` is its surface; a sheet
 // that quotes the question would also be handing him a report to read (anchor law).
 //
+// DEAD-WIRE SWEEP (11 Aug 2026) — THE HOLLOW AXIS, the third lane of the same read.
+// The comment above named `has_weld`/`has_deep` on 10 Aug and then read NEITHER: a
+// live grep that day returned capsule_bridge.mjs (the writer), capsule_map.json (the
+// bytes) and this comment — 72 booleans a run, 0 readers. They are the organism's ONLY
+// archive-wide statement of "this axis LOCKED, JIRAH graded it, and the layer under it
+// was never written" — precisely the fact the Gaffer-door truncation lost on 10 Aug
+// (`dugout.mjs capsuleProjectionLegacy`, where `deep` vanished with no field naming its
+// absence). `deep.mjs <concept> <axis>` already says it for ONE axis he happens to open
+// (deep.mjs:357, "is axis pe deep layer likhi hi nahi gayi — yeh gap hai"); nothing said
+// it for the archive, so a capsule locked hollow is invisible until he stumbles on it.
+// It rides the SAME line as cracked/deferred because it is the same kind of fact — a
+// per-axis defect recorded at lock — and it stays silent on his live map (36/36 carry
+// both), which is exactly why this wire could rot unseen and why the selftest below
+// builds a hollow capsule through the producer instead of asserting today's silence.
+// UNKNOWN IS NOT FALSE (capsule_bridge's own rule, :234): an axes[] row that does not
+// STATE has_weld/has_deep as booleans is unscanned and NAMED as unreadable — a field
+// rename on the writer's side must surface as a fault, never as 9 phantom hollow axes.
+//
 // ABSENCE IS NAMED. Honesty counter copied from capsule_bridge's own
 // fsrs_due_names_complete: a capsule_map with no `concepts[]` (a half-written file,
 // or the pre-bridge shape) yields complete:null — the names are UNKNOWN, never a
@@ -535,14 +664,32 @@ function dangerLine(danger) {
 // quiet on a signal that exists.
 function capsuleAxisNames(cm) {
   const rows = Array.isArray(cm && cm.concepts) ? cm.concepts : null;
-  if (!rows) return { cracked_named: [], deferred_named: [], axis_names_complete: null };
+  // no concepts[] at all ⇒ every lane is UNKNOWN. hollow_scan_complete stays null (not
+  // false): the cracked branch below already prescribes the rebuild for this shape, and a
+  // second "UNREADABLE" bit on the same line would be the same fault said twice.
+  if (!rows) return { cracked_named: [], deferred_named: [], hollow_named: [], hollow_unreadable: [], hollow_scan_complete: null, axis_names_complete: null };
   const flat = (key) => rows.flatMap((c) => (Array.isArray(c[key]) ? c[key] : [])
     .map((ax) => `${c.concept} [axis ${ax}]`));
   const cracked = flat("axes_cracked");
   const total = typeof (cm.totals && cm.totals.axes_cracked) === "number" ? cm.totals.axes_cracked : null;
+  // the hollow lane (11 Aug 2026). PRESENT axes only: an axis that was never captured is
+  // the DEFERRED lane above and must not be counted twice as "no weld".
+  const hollow = [], unreadable = [];
+  for (const c of rows) {
+    if (!Array.isArray(c.axes)) { unreadable.push(String(c.concept)); continue; }   // pre-bridge / half-written row
+    for (const ax of c.axes) {
+      if (!ax || !ax.present) continue;
+      if (typeof ax.has_weld !== "boolean" || typeof ax.has_deep !== "boolean") { unreadable.push(String(c.concept)); continue; }
+      const gaps = [!ax.has_weld ? "no weld" : null, !ax.has_deep ? "no deep" : null].filter(Boolean);
+      if (gaps.length) hollow.push(`${c.concept} [axis ${ax.axis} — ${gaps.join(" + ")}]`);
+    }
+  }
   return {
     cracked_named: cracked,
     deferred_named: flat("axes_missing"),
+    hollow_named: hollow,
+    hollow_unreadable: [...new Set(unreadable)],        // NAMES, never a count — this file's grammar
+    hollow_scan_complete: unreadable.length === 0,
     // concepts[] present ⇒ the names ARE the ground truth; only a totals/concepts
     // disagreement (a half-written file) can make them incomplete.
     axis_names_complete: total === null ? true : cracked.length >= total,
@@ -563,6 +710,11 @@ function capsuleAxisLine(cap) {
     bits.push(`cracked at lock: ${cap.cracked_named.join(" · ")} — ${cap.cracked_axes} counted, ${cap.cracked_named.length} named (capsule_map half-written)`);
   }
   if (cap.deferred_named && cap.deferred_named.length) bits.push(`deferred at lock, never captured: ${cap.deferred_named.join(" · ")}`);
+  // the hollow lane (11 Aug 2026). Held-but-hollow is NOT a re-study cue and must not be
+  // spoken as one — the axis was defended; the artefact under it is short. So the routing
+  // verb is the gist, his own surface (FORGE_SPEC §2 2b, his paste), not a drill.
+  if (cap.hollow_named && cap.hollow_named.length) bits.push(`locked HOLLOW — graded, but the layer under it was never written: ${cap.hollow_named.join(" · ")} (check with \`node scripts/deep.mjs <concept> <axis>\`; the gist is his to patch, nothing here writes a capsule)`);
+  if (cap.hollow_scan_complete === false) bits.push(`weld/deep presence UNREADABLE on ${cap.hollow_unreadable.join(" · ")} — capsule_map carries no has_weld/has_deep for it; one \`node scripts/capsule_bridge.mjs\` rebuilds it`);
   return bits.length ? bits.join(" | ") : null;
 }
 
@@ -753,6 +905,14 @@ function fallbackSkeleton(F, fin, stale = {}) {
   // THE BENCHMARK (outward loop, 8 Aug 2026) — one pre-composed line; GATED renders as
   // GATED (Ruling 6: a stale-map measurement never rides a surface as truth).
   if (F.benchmark?.line) rep.push(`   • benchmark: ${F.benchmark.line}`);
+  // Its own bullet (dead-wire sweep, 11 Aug 2026): the differentiators are not a 6th
+  // bucket, so they never join the counts string above. Absent field ⇒ no bullet — a
+  // benchmark.json written before this pass renders exactly as it did.
+  if (F.benchmark?.differentiators) rep.push(`   • benchmark ${F.benchmark.differentiators}`);
+  // Its own bullet, same sweep, same reason: the HAVE half is what he already holds, and
+  // the counts line above carries only `projection` + the debt. Below the counts and below
+  // the differentiators so the sheet's existing bytes are untouched. Absent ⇒ no bullet.
+  if (F.benchmark?.have) rep.push(`   • benchmark have: ${F.benchmark.have}`);
   // THE CAPSULES SPEAK — Re-Jirah is date-driven off lockedOn (FORGE_SPEC §4) and had never
   // reached a single surface. One line, worst debt first, with the ready-made probe count.
   if (F.capsules?.rejirah_overdue?.length) {
@@ -1238,11 +1398,23 @@ async function selftest() {
   const cf = await runManager({ today: TODAY, stateDir: cfDir });
   ok("#dead-wire: an unreadable CAPSULE is named on the sheet, with the date its counts really came from",
     cf.features.capsules.locked === 3
-    && /⚠ capsules\/embeddings\.json UNREADABLE — numbers below are 2026-08-09's, not today's · Re-Jirah overdue: tokenization 12d/.test(cf.sheet));
+    // the stamp is built from TODAY, not typed: the fixture writes `${TODAY}T08:39:00Z`, and a
+    // hardcoded date here would go green-then-wrong the day the suite's clock is moved.
+    && cf.sheet.includes(`⚠ capsules/embeddings.json UNREADABLE (Unexpected end of JSON input) — numbers below are 2026-08-09's, not today's; last retry ${TODAY} 08:39Z · Re-Jirah overdue: tokenization 12d`));
+  // 11 Aug 2026 dead-wire sweep — the two ORPHAN_FIELDs, asserted apart from the line above
+  // so a future re-word of the sentence cannot quietly take them with it. THE `why` half:
+  // the fixture's parse error is the OWNER's string, relayed whole. THE CLOCK half: the map
+  // is dated 2026-08-09 and the retry stamp is TODAY — an organ still running and still
+  // failing, which is a different repair from an organ that stopped. Both die the moment
+  // inputFault() goes back to reading blocking_faults + date alone.
+  ok("#dead-wire 11 Aug: the BLOCKING fault says WHY — the parse error reaches the sheet, not just the filename",
+    /UNREADABLE \(Unexpected end of JSON input\)/.test(cf.sheet));
+  ok("#dead-wire 11 Aug: last_attempt_at reaches a reader at last — a 2026-08-09 map retried TODAY is failing, not abandoned",
+    cf.sheet.includes(`last retry ${TODAY} 08:39Z`));
   writeFileSync(join(cfDir, "capsule_map.json"), brokenMap([]));
   const cf2 = await runManager({ today: TODAY, stateDir: cfDir });
   ok("#dead-wire: with nothing overdue the fault gets its OWN line — it can never vanish with the capsule",
-    /• capsules: ⚠ capsules\/embeddings\.json UNREADABLE — numbers below are 2026-08-09's, not today's/.test(cf2.sheet));
+    /• capsules: ⚠ capsules\/embeddings\.json UNREADABLE \(Unexpected end of JSON input\) — numbers below are 2026-08-09's, not today's; last retry/.test(cf2.sheet));
   ok("shipped speaks: artifacts render beside hours, with the day's events",
     /shipped: 3 commit\(s\), 2 new file\(s\) · capsule_locked/.test(wit.sheet));
   // the fixture above carries totals.axes_cracked:2 and NO concepts[] — exactly the
@@ -1292,6 +1464,64 @@ async function selftest() {
     const q2 = await runManager({ today: TODAY, stateDir: qDir2 });
     ok("wiring 10 Aug: all nine held ⇒ the line stays silent (bias-to-silence, both doors)",
       !/capsule axes:/.test(q2.sheet) && !/CAPSULE AXES/.test(q2.prompt));
+
+    // DEAD-WIRE SWEEP (11 Aug 2026) — THE LOCKED COUNT THAT SPLIT IN THREE.
+    // `locked` here is totals.capsules; benchmark.mjs:216 and postmatch.mjs:236 count
+    // concepts[].locked_on. Identical on an ISO date, DIFFERENT the moment one capsule
+    // carries a human-typed one ("21 June 2026") — and nothing faulted, because the file
+    // parses. So this sheet said 2 while SEASON.md, the permanent logbook, wrote 1.
+    // Producer-built like the two blocks above: a hand-typed map would keep passing after
+    // a rename on capsule_bridge's side, which is exactly how this wire dies twice.
+    const splitDir = stage("rich");
+    const undated = { ...mk(lines), id: "embeddings", title: "Embeddings", lockedOn: "21 June 2026" };
+    writeFileSync(join(splitDir, "capsule_map.json"),
+      JSON.stringify(buildCapsuleMap([mk(lines), undated], [3, 14, 42], TODAY, [])));
+    const sp = await runManager({ today: TODAY, stateDir: splitDir });
+    ok("dead-wire 11 Aug: a capsule with no readable lockedOn stops splitting the count in silence — the sheet names it and both numbers",
+      sp.features.capsules.locked === 2 && sp.features.capsules.locked_dated === 1
+      && /embeddings/.test(sp.sheet) && /totals\.capsules/.test(sp.sheet) && /SEASON\.md/.test(sp.sheet));
+    ok("dead-wire 11 Aug: ...and a map whose dates are ALL ISO adds nothing (the healthy sheet is byte-unchanged)",
+      q2.features.capsules.fault === null && q2.features.capsules.locked_dated === q2.features.capsules.locked
+      && !/totals\.capsules/.test(q2.sheet));
+
+    // DEAD-WIRE SWEEP (11 Aug 2026) — THE HOLLOW AXIS. has_weld/has_deep had 0 readers
+    // repo-wide. Built through the producer for the same reason as the block above: a
+    // hand-typed map would keep passing after a field rename on capsule_bridge's side,
+    // and a rename is the exact way this wire dies twice.
+    const hollowDir = stage("rich");
+    writeFileSync(join(hollowDir, "capsule_map.json"), JSON.stringify(buildCapsuleMap(
+      // c locked with no weld, d with no deep, e with neither; the rest whole.
+      [mk("abcdefghi".split("").map((a) => ({ axis: a, status: "held", strike: `s-${a}`,
+        weld: a === "c" || a === "e" ? "" : "w", deep: a === "d" || a === "e" ? "" : "d" })))],
+      [3, 14, 42], TODAY, [])));
+    const hw = await runManager({ today: TODAY, stateDir: hollowDir });
+    ok("wiring 11 Aug: a HOLLOW locked axis reaches the SHEET by name, with WHICH layer is missing",
+      /locked HOLLOW[^\n]*tokenization \[axis c — no weld\] · tokenization \[axis d — no deep\] · tokenization \[axis e — no weld \+ no deep\]/.test(hw.sheet)
+      && hw.features.capsules.hollow_named.length === 3 && hw.features.capsules.hollow_scan_complete === true);
+    ok("wiring 11 Aug: ...and the Gaffer's prompt carries it too — nine held is NOT nine whole",
+      /CAPSULE AXES[^\n]*locked HOLLOW[^\n]*axis e — no weld \+ no deep/.test(hw.prompt));
+    ok("wiring 11 Aug: a hollow axis is never spoken as a re-study cue, and routes to HIS gist, not to a write",
+      /the gist is his to patch, nothing here writes a capsule/.test(hw.sheet)
+      && !/cracked at lock/.test(hw.sheet) && hw.features.capsules.cracked_axes === 0);
+    ok("wiring 11 Aug: a DEFERRED axis is not double-counted as hollow (that lane is axes_missing)",
+      ax.features.capsules.hollow_named.length === 0 && ax.features.capsules.deferred_named.length === 2);
+    // UNKNOWN IS NOT FALSE: strip the two booleans (a writer-side rename) and the sheet must
+    // report the map unreadable, NOT nine phantom hollow axes. This is the assertion that
+    // fails the day capsule_bridge stops emitting the fields this line was wired to.
+    const rnDir = stage("rich");
+    const renamed = buildCapsuleMap([mk("abcdefghi".split("").map((a) => ({ axis: a, status: "held", strike: `s-${a}`, weld: "w", deep: "d" })))], [3, 14, 42], TODAY, []);
+    for (const c of renamed.concepts) for (const axRow of c.axes) { delete axRow.has_weld; delete axRow.has_deep; }
+    writeFileSync(join(rnDir, "capsule_map.json"), JSON.stringify(renamed));
+    const rn = await runManager({ today: TODAY, stateDir: rnDir });
+    ok("wiring 11 Aug: has_weld/has_deep GONE from the map ⇒ named UNREADABLE, never rendered as hollow or as silence",
+      /weld\/deep presence UNREADABLE on tokenization[^\n]*capsule_bridge\.mjs/.test(rn.sheet)
+      && rn.features.capsules.hollow_named.length === 0 && rn.features.capsules.hollow_scan_complete === false);
+    // and the LIVE map flows through the same reader — shape only; his archive is 36/36
+    // whole today, so the VALUE is deliberately not asserted (that silence is the rot).
+    const liveMap = (() => { try { return JSON.parse(readFileSync(join(DEFAULT_STATE, "capsule_map.json"), "utf8")); } catch { return null; } })();
+    ok("wiring 11 Aug: the LIVE capsule_map still states has_weld/has_deep per axis (skipped if unreadable)",
+      !liveMap || !Array.isArray(liveMap.concepts) || !liveMap.concepts.length
+      || liveMap.concepts.every((c) => Array.isArray(c.axes) && c.axes.every((a) => typeof a.has_weld === "boolean" && typeof a.has_deep === "boolean")));
   }
 
   // 6e-quinquies) THE BENCHMARK REACHES THE SHEET (outward loop, 8 Aug 2026 — Ruling 5).
@@ -1309,6 +1539,15 @@ async function selftest() {
     date: TODAY, status: "ok", regressions: ["B2: cold-held 2 → 1"],
     buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }, { id: "B2", counts: { locked: 1, core_total: 5 } }],
     needs: ["2-rag: unlock chunking, retrieval, rag_eval", "course: 6 chapters remain"],
+    // benchmark.mjs's composed string, verbatim shape (its selftest owns the wording)
+    differentiators_line: "differentiators (not a 6th bucket — the #1 senior signal + the fintech moat): 6-cross-cut: locked 0/1 (rides: system_design 26.7% + production_eval 20% = 46.7% of the interview) · 7-domain: locked 0/3 (rides: fundamentals 17.8% + system_design 26.7% = 44.5% of the interview)",
+    // haves[] — the same, for the credit half (benchmark.mjs flattenHaves, 11 Aug 2026).
+    // These four rows are the ones that exist in NO other field on that bus: the counts
+    // line above is `projection` (locked/core) and needs[] is the debt.
+    haves: ["2-rag: locked 1/5 · cold re-proof 1/1 · Re-Jirah rounds sat 1/1 (capsule reJirahDone)",
+      "skills: 1/3 with reps — anthropic_api 🔴 learning · no reps yet: prompt_engineering, streaming",
+      'course "Anthropic API Fundamentals": 1/3 chapters covered',
+      "Building time (single-day snapshot 2026-08-07): 0.7% of active"],
   }));
   const bo = await runManager({ today: TODAY, stateDir: boDir });
   ok("benchmark full run renders bucket counts + names its regression count",
@@ -1317,6 +1556,23 @@ async function selftest() {
   // to unlock, because benchmark.mjs's needs[] had no reader in the organism.
   ok("benchmark NEED NAMES reach the sheet, not just the counts (the half that says what to DO)",
     /need: 2-rag: unlock chunking, retrieval, rag_eval · course: 6 chapters remain/.test(bo.sheet));
+  // DEAD-WIRE SWEEP 11 Aug 2026 — differentiators[] rode benchmark.json from 8 Aug and
+  // this reader mapped over buckets[] only, so the #1 senior signal and the fintech moat
+  // had a standing on no surface at all. Fails the moment the bullet is dropped again.
+  ok("benchmark DIFFERENTIATORS reach the sheet with their counts AND their interview weight (they are not a 6th bucket, so they get their own line)",
+    /• benchmark differentiators \(not a 6th bucket[^\n]*6-cross-cut: locked 0\/1[^\n]*46\.7% of the interview[^\n]*7-domain: locked 0\/3/.test(bo.sheet));
+  ok("the differentiators never contaminate the counts line (B1/B2 row stays byte-stable — a 6th bucket is the one thing this must never become)",
+    /benchmark: B1 3\/8 · B2 1\/5 · ⚠ 1 regression\(s\)/.test(bo.sheet)
+    && !/benchmark: [^\n]*cross-cut/.test(bo.sheet));
+  // DEAD-WIRE SWEEP 11 Aug 2026, second half — have[] was the ONE part of a stated
+  // have/need organ with no reader anywhere in the organism. The sheet carried the
+  // counts and the debt and never what he already holds: cold re-proofs, which skills
+  // have reps and at what fluency, chapters covered, Building%. Fails the moment the
+  // bullet is dropped or benchmark.mjs stops shipping haves[].
+  ok("benchmark HAVE lines reach the sheet — the credit half (cold re-proof · skills with reps · chapters covered · Building%)",
+    /• benchmark have: 2-rag: locked 1\/5 · cold re-proof 1\/1[^\n]*skills: 1\/3 with reps — anthropic_api 🔴 learning[^\n]*1\/3 chapters covered[^\n]*single-day snapshot 2026-08-07\): 0\.7% of active/.test(bo.sheet));
+  ok("the have half never contaminates the counts line either, and an absent haves[] writes no bullet (absence, not a zero)",
+    !/benchmark: [^\n]*chapters covered/.test(bo.sheet) && !/benchmark have:/.test(bg.sheet));
   // 10 Aug 2026 wiring pass — the INPUT-FAULT consumer. benchmark.mjs preserves
   // its last true record when capsule_map.json is half-written; unread, that
   // record renders as today's live evidence. This is the assertion that fails if
@@ -1328,16 +1584,70 @@ async function selftest() {
     input_faults: [{ file: "capsule_map.json", why: "Unexpected end of JSON input", blocking: true }],
     blocking_faults: ["capsule_map.json"], last_attempt_at: `${TODAY}T09:00:00Z`,
   }));
+  const bf = await runManager({ today: TODAY, stateDir: bfDir });
   ok("a preserved benchmark says WHY it is preserved and whose day it is (a stale number that admits it is stale)",
-    /benchmark: ⚠ capsule_map\.json UNREADABLE — numbers below are 2026-07-09's, not today's · B1 3\/8/
-      .test((await runManager({ today: TODAY, stateDir: bfDir })).sheet));
+    // same rule as the capsule case above — the stamp comes from TODAY, never typed.
+    bf.sheet.includes(`benchmark: ⚠ capsule_map.json UNREADABLE (Unexpected end of JSON input) — numbers below are 2026-07-09's, not today's; last retry ${TODAY} 09:00Z · B1 3/8`));
+  // 11 Aug 2026 dead-wire sweep — ONE reader, BOTH producers. benchmark.mjs:1318 stamps the
+  // identical two fields capsule_bridge.mjs:830 does, so the wire proven on the capsule map
+  // above must hold here with no second dialect; this fails if it is ever wired for one file
+  // and not the other.
+  ok("#dead-wire 11 Aug: benchmark's own why + last_attempt_at ride the SAME reader (no second dialect)",
+    /UNREADABLE \(Unexpected end of JSON input\)/.test(bf.sheet) && bf.sheet.includes(`last retry ${TODAY} 09:00Z`));
+  // BACK-COMPAT / GRACEFUL SILENCE. A producer that files a blocking fault with neither
+  // field — or an older record written before either existed — must still render the
+  // pre-11-Aug sentence byte for byte, with no empty parens and no dangling "last retry".
+  // Absence stays absence; it is never printed as a blank.
+  const bnfDir = stage("rich");
+  writeFileSync(join(bnfDir, "benchmark.json"), JSON.stringify({
+    date: "2026-07-09", status: "ok", regressions: [],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
+    blocking_faults: ["capsule_map.json"],
+  }));
+  const bnf = await runManager({ today: TODAY, stateDir: bnfDir });
+  ok("#dead-wire 11 Aug: no why, no stamp ⇒ the old sentence unchanged — absence is never rendered as an empty bracket",
+    /benchmark: ⚠ capsule_map\.json UNREADABLE — numbers below are 2026-07-09's, not today's · B1 3\/8/.test(bnf.sheet)
+    && !/UNREADABLE \(\)/.test(bnf.sheet) && !/last retry/.test(bnf.sheet));
+  // THE NON-BLOCKING HALF (dead-wire sweep, 11 Aug 2026 — the ORPHAN_FIELD this
+  // reader was half-blind to). The scenario is the live one benchmark.mjs:788 files:
+  // capsule_bridge kept its last true map, so benchmark's own numbers did NOT move
+  // (blocking_faults stays [] and no false regression is claimed) — but the locked
+  // counts in them are an earlier run's, under TODAY's date. Before this repair the
+  // sheet printed "B1 3/8" with nothing naming it stale and the lock chain printed
+  // "benchmark: ok". These fail the moment the soft branch is deleted again.
+  const bsDir = stage("rich");
+  writeFileSync(join(bsDir, "benchmark.json"), JSON.stringify({
+    date: TODAY, status: "ok", regressions: [], blocking_faults: [],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
+    input_faults: [{ file: "capsule_map.json", blocking: false,
+      why: "capsule_bridge refused to ship a short count — capsules/embeddings.json unreadable; locked counts below are 2026-08-10's" }],
+  }));
+  const bs = await runManager({ today: TODAY, stateDir: bsDir });
+  ok("a NON-blocking input fault still reaches the sheet — a stale-but-true count is the same lie one volume quieter",
+    /benchmark: ⚠ capsule_map\.json — capsule_bridge refused to ship a short count[^\n]*locked counts below are 2026-08-10's · B1 3\/8/.test(bs.sheet));
+  ok("the soft fault is never smuggled into regressions[] — mirror.mjs owns the broken file, not him (THE ANCHOR LAW)",
+    !/regression/.test(bs.sheet.split("\n").find((l) => l.includes("benchmark:")) || ""));
+  const bmDir = stage("rich");
+  writeFileSync(join(bmDir, "benchmark.json"), JSON.stringify({
+    date: TODAY, status: "ok", regressions: [], blocking_faults: [],
+    buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
+    input_faults: [{ file: "capsule_map.json", blocking: false, why: "stale" },
+      { file: "learning_state.json", blocking: false, why: "Unexpected token }" }],
+  }));
+  ok("two soft faults name BOTH files and count the rest, never inventing a summary of them",
+    /benchmark: ⚠ capsule_map\.json, learning_state\.json — stale \(\+1 more in input_faults\[\]\)/
+      .test((await runManager({ today: TODAY, stateDir: bmDir })).sheet));
   const bnDir = stage("rich");
   writeFileSync(join(bnDir, "benchmark.json"), JSON.stringify({
     date: TODAY, status: "ok", regressions: [],
     buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }],
   }));
+  ok("input_faults [] ⇒ NO prefix: a healthy sheet is byte-unchanged by this reader (absence, not noise)",
+    /benchmark: B1 3\/8/.test((await runManager({ today: TODAY, stateDir: bnDir })).sheet));
   ok("a benchmark.json with no needs[] renders counts only — never an empty 'need:' (absence, not a zero)",
     !/need:/.test((await runManager({ today: TODAY, stateDir: bnDir })).sheet));
+  ok("a pre-wire benchmark.json (no differentiators_line) writes NO differentiators bullet — it renders exactly as it did (absence, not a zero)",
+    !/differentiators/.test((await runManager({ today: TODAY, stateDir: bnDir })).sheet));
   ok("no benchmark.json ⇒ no benchmark line (absence, not a zero)",
     !/benchmark:/.test(wit.sheet));
 

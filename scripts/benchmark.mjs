@@ -23,7 +23,9 @@
 //        card — PULL-DERIVE, zero code here) · scout.mjs `outward` (runs[]
 //        feed the ≥2×/week floor) · /matchday · watchman (INFO line).
 // INPUT (read-only): dossier_weights.json · concepts.json · capsule_map.json ·
-//        rejirah_log.jsonl · python_state.json · course.json · shipped.json ·
+//        rejirah_log.jsonl (ABSENT on this machine — see THE COLD-RE-PROOF LANE;
+//        its read-state now rides the output instead of a fabricated zero) ·
+//        python_state.json · course.json · shipped.json ·
 //        timeaudit.json · missions.json · learning_state.json (the skills lane —
 //        added 10 Aug 2026; the have-line had named it since 8 Aug and this file
 //        never opened it. See THE SKILLS LANE above buildBucket.)
@@ -34,6 +36,7 @@
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process"; // selftest ONLY — spawns THIS file to prove a main()-only wire (precedent: manager.mjs:43)
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -44,6 +47,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = process.env.ARSENAL_BENCH_STATE_DIR || join(__dirname, "..", "dressing-room", "state");
 const OUT = join(STATE_DIR, "benchmark.json");
 
+// KEPT, BUT NO LONGER CALLED (dead-wire sweep, 11 Aug 2026). Its last two callers were
+// main()'s reads of our OWN benchmark.json, and that silent null was the whole defect —
+// see BLOCKING_INPUTS. Frozen here verbatim rather than deleted (LAYERING) because the
+// comments below explain the fault line by reference to it. If you reach for it for a new
+// input, don't: readJsonTracked is the standard every input in this file is held to.
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 const readJsonl = (p) => {
   try {
@@ -76,7 +84,21 @@ const readJsonl = (p) => {
 // difference between a gap and a lie).
 // House precedent for the loud half: setpiece.mjs:1107 WARNs by name on a
 // malformed dossier. This adds the state half too — see main()'s `run`.
-const BLOCKING_INPUTS = new Set(["capsule_map.json", "concepts.json", "course.json", "missions.json"]);
+// benchmark.json (dead-wire sweep, 11 Aug 2026): OUR OWN prior record was the one
+// input this file did not hold to the rule above — main() read it with the plain
+// readJson() at both call sites, so a half-written one came back prev=null and was
+// indistinguishable from "never run". Run the rule on it and it is BLOCKING twice
+// over: prev IS the number findRegressions() compares against (a null prev makes
+// findRegressionsLegacy return [] outright), and prev.runs is the ≥2×/week outward
+// ledger the floor readers count (learnstate.mjs · watchman.mjs). PROVEN live 11 Aug
+// through the ARSENAL_BENCH_STATE_DIR seam: two clean runs → runs[] 2 entries;
+// truncated benchmark.json to half its bytes and dropped a lock from capsule_map in
+// the same breath; the next `run` printed `benchmark: ok · … run #1` and wrote
+// runs[]=1, regressions [], input_faults [] — the ledger restarted from scratch, a
+// REAL B2 locked 1 → 0 swallowed, and nothing anywhere named the file. It is the only
+// entry here that gatherInputs never reads (its R() has no benchmark.json call); it
+// rides this set so the blocking rule lives in ONE place, not two.
+const BLOCKING_INPUTS = new Set(["capsule_map.json", "concepts.json", "course.json", "missions.json", "benchmark.json"]);
 const readJsonTracked = (dir, name, faults) => {
   const p = join(dir, name);
   if (!existsSync(p)) return null; // absent — an honest absence, never a fault
@@ -134,6 +156,44 @@ function heldColdByConcept(rejirahRows) {
   return m;
 }
 
+// ---------------------------------------------------------------------------
+// THE COLD-RE-PROOF LANE — wired 11 Aug 2026 (dead-wire sweep)
+// ---------------------------------------------------------------------------
+// THE DEFECT: `held_cold` rode rejirah_log.jsonl and NOTHING ELSE, and that file has
+// never existed on this machine — `ls dressing-room/state/rejirah_log.jsonl` → no such
+// file, `git log --all -- <path>` → empty, and rejirah.mjs:934 measures and says so
+// itself. So heldColdByConcept() returned an EMPTY MAP on every run, every locked
+// capsule read "cold re-proof 0", and two of the fifteen live needs were arithmetic on
+// a file that is not there — with no field anywhere naming the absence. The skills lane
+// ONE FUNCTION AWAY (skillsGroup, below) already refuses this exact shape: source absent
+// ⇒ read:false ⇒ NO count claimed. That house rule (viz.mjs:314, "absence is not a
+// zero") was applied to learning_state.json and not to this.
+//
+// TWO SOURCES, TWO DIFFERENT FACTS — deliberately NOT merged into one number:
+//   · rejirah_log.jsonl = MEASURED GRADES. result:"held", cold not false. It is the only
+//     thing in the organism that can say an AXIS HELD. Absent ⇒ unmeasured, never zero.
+//   · capsule_map.json  = THE MASTER RECORD, and it has been in this file's hands since
+//     8 Aug (gatherInputs reads it for lockedSet). capsule_bridge projects the capsule's
+//     own `reJirahDone` — his gist paste, the canonical proof a round was SAT — into
+//     rejirah.rounds_done. Live today: tokenization 2, context/embeddings/inference 0.
+// A closed round is NOT a clean hold (rejirah.mjs buildCloseRow carries `forced`, and
+// fsrs.mjs's audit-#108 scar is precisely what happens when a close is read as a pass),
+// so rounds_done may NEVER be counted as held_cold. It answers the OTHER question — and
+// it is the one the need line was actually asking: has this locked capsule been
+// re-proofed AT ALL? That answer is measurable right now, and it was wrong: benchmark
+// has been sending him back to Re-Jirah tokenization, which he re-proofed twice.
+// UNKNOWN, NOT ZERO, HERE TOO: a capsule_map entry with no `rejirah` block (a map
+// written before capsule-bridge-v1) yields null for that concept, and one null unreads
+// the whole group — the same refusal, applied to this lane's own source.
+function roundsSatByConcept(capsuleMap) {
+  const m = new Map();
+  for (const c of ((capsuleMap && capsuleMap.concepts) || [])) {
+    const n = c && c.rejirah && c.rejirah.rounds_done;
+    if (c && c.concept && Number.isInteger(n)) m.set(c.concept, n);
+  }
+  return m;
+}
+
 function roundsLine(bucketIds, dossier) {
   // union of the DOSSIER rounds these concept-buckets feed, weights verbatim,
   // sum shown AS arithmetic (his quoted form: "17.8 + 26.7 = 44.5%").
@@ -146,20 +206,49 @@ function roundsLine(bucketIds, dossier) {
   return `rides: ${rounds.map((r) => `${r.id} ${pct(r.weight)}`).join(" + ")}${rounds.length > 1 ? ` = ${pct(sum)}` : ""} of the interview`;
 }
 
-function conceptGroup(bucketId, note, registry, capsuleMap, heldMap) {
+// coldRead defaults FALSE — the conservative default, because a caller that says
+// nothing about rejirah_log.jsonl has not read it, and this function may not invent a
+// measurement on its behalf. The arithmetic below is byte-for-byte what it was; the two
+// lanes gain a read-state beside their count, nothing more (see THE COLD-RE-PROOF LANE).
+function conceptGroup(bucketId, note, registry, capsuleMap, heldMap, coldRead = false) {
   const core = Object.entries((registry && registry.concepts) || {})
     .filter(([, v]) => v.bucket === bucketId && v.core).map(([k]) => k);
   const lockedSet = new Set(((capsuleMap && capsuleMap.concepts) || []).filter((c) => c.locked_on).map((c) => c.concept));
   const locked = core.filter((c) => lockedSet.has(c));
   const held = locked.filter((c) => (heldMap.get(c) || 0) > 0);
+  const satMap = roundsSatByConcept(capsuleMap);
+  // one unknown unreads the group: a partial count would be a positive claim built
+  // on the concepts that happened to carry the block.
+  const roundsRead = locked.every((c) => satMap.has(c));
+  const sat = locked.filter((c) => (satMap.get(c) || 0) > 0);
   return {
     bucket: bucketId, note: note || null,
-    core_total: core.length, locked: locked.length, held_cold: held.length,
+    core_total: core.length, locked: locked.length,
+    held_cold: coldRead ? held.length : null, cold_read: coldRead,
+    rounds_sat: roundsRead ? sat.length : null, rounds_read: roundsRead,
+    // the names behind the rounds count — "counts + names only" is this organ's
+    // whole product, and the need line below is the only half that says what to DO.
+    never_sat_names: roundsRead ? locked.filter((c) => !(satMap.get(c) > 0)) : [],
     locked_names: locked, unlocked_names: core.filter((c) => !lockedSet.has(c)),
   };
 }
-const groupLine = (g) =>
-  `${g.bucket}${g.note ? ` (${g.note})` : ""}: locked ${g.locked}/${g.core_total} · cold re-proof ${g.held_cold}/${g.locked || 0}`;
+const groupLine = (g) => {
+  const parts = [
+    `${g.bucket}${g.note ? ` (${g.note})` : ""}: locked ${g.locked}/${g.core_total}`,
+    g.cold_read ? `cold re-proof ${g.held_cold}/${g.locked || 0}`
+      : "cold re-proof UNMEASURED (rejirah_log.jsonl absent — rejirah.mjs owns it; no count claimed)",
+  ];
+  // the rounds lane speaks only where there IS something to re-proof. With nothing
+  // locked the question has no subject, and this same string is the differentiators'
+  // grammar too (differentiators_line, wired earlier today) — both of those sit at
+  // locked 0/1 and would otherwise carry a parenthetical tail about an empty set,
+  // immediately before their DOSSIER-weight parens. Measured-path bytes for a
+  // 0-locked group are therefore exactly what they were before this lane existed.
+  if (g.locked > 0) parts.push(g.rounds_read
+    ? `Re-Jirah rounds sat ${g.rounds_sat}/${g.locked} (capsule reJirahDone)`
+    : "rounds sat UNREAD (capsule_map carries no rejirah block — capsule_bridge.mjs owns it)");
+  return parts.join(" · ");
+};
 
 // ---------------------------------------------------------------------------
 // THE SKILLS LANE — wired 10 Aug 2026 (tracing pass)
@@ -221,8 +310,8 @@ const skillsHaveLine = (sg) => sg.read
   : `skills on this bucket: ${sg.no_reps_names.join(", ")} — fluency UNREAD (learning_state.json absent or unreadable; learning_state.mjs owns it). No count claimed.`;
 
 function buildBucket(spec, inputs) {
-  const { registry, capsuleMap, heldMap, dossier, python, course, shipped, timeaudit, learningState } = inputs;
-  const groups = spec.concept_buckets.map((cb) => conceptGroup(cb.id, cb.note, registry, capsuleMap, heldMap));
+  const { registry, capsuleMap, heldMap, coldRead, dossier, python, course, shipped, timeaudit, learningState } = inputs;
+  const groups = spec.concept_buckets.map((cb) => conceptGroup(cb.id, cb.note, registry, capsuleMap, heldMap, coldRead));
   const have = [], need = [];
   // evidence[] — the SHORT form of the have[] rows that are not concept-locks.
   // Same values, same sources; it exists so the projection line below can carry
@@ -231,7 +320,16 @@ function buildBucket(spec, inputs) {
   for (const g of groups) {
     have.push(groupLine(g));
     if (g.unlocked_names.length) need.push(`${g.bucket}: unlock ${g.unlocked_names.join(", ")}`);
-    if (g.locked > g.held_cold) need.push(`${g.bucket}: cold re-proof pending on ${g.locked - g.held_cold} locked (Re-Jirah)`);
+    // NEEDS RIDE THE MEASURED LANE (11 Aug 2026). The second line is byte-identical to
+    // the one that shipped 8 Aug — it is now GATED on cold_read, by the skills lane's
+    // own rule two screens down: "we never tell him to go do reps on the strength of a
+    // file we could not open". Since rejirah_log.jsonl has never existed, that line has
+    // never once been evidence, so the first line takes over the question it was really
+    // asking, from the source that CAN answer it today (capsule reJirahDone). Both stay:
+    // the day he runs `rejirah.mjs grade`, the graded half starts speaking again beside it.
+    if (g.rounds_read && g.never_sat_names.length)
+      need.push(`${g.bucket}: Re-Jirah never sat on ${g.never_sat_names.join(", ")} (${g.never_sat_names.length} of ${g.locked} locked)`);
+    if (g.cold_read && g.locked > g.held_cold) need.push(`${g.bucket}: cold re-proof pending on ${g.locked - g.held_cold} locked (Re-Jirah)`);
   }
   const sg = spec.skills.length ? skillsGroup(spec.id, spec.skills, learningState) : null;
   if (sg) {
@@ -276,9 +374,20 @@ function buildBucket(spec, inputs) {
   // skills lane onto all three. Concept-cored buckets ignore evidence[] entirely;
   // their skills reach the surfaces through needs[] (flattenNeeds) instead.
   if (sg) evidence.push(sg.read ? `skills ${sg.with_reps}/${sg.total} with reps` : `skills ${sg.total} named, fluency unread`);
+  // read-states first: they decide whether the two lanes below are a count or a null.
+  // every() on an empty groups[] is vacuously true, which is right — B5 has no concept
+  // core by design, so its 0 here is the same STRUCTURAL zero `basis` already names.
+  const coldLaneRead = groups.every((g) => g.cold_read);
+  const roundsLaneRead = groups.every((g) => g.rounds_read);
   const counts = {
     locked: groups.reduce((a, g) => a + g.locked, 0),
-    held_cold: groups.reduce((a, g) => a + g.held_cold, 0),
+    // null, not 0, when unmeasured (11 Aug 2026) — a consumer reading counts alone must
+    // not be able to render "0 cold re-proofs" out of a file that does not exist.
+    held_cold: coldLaneRead ? groups.reduce((a, g) => a + g.held_cold, 0) : null,
+    cold_read: coldLaneRead,
+    // the lane that CAN be counted today, from capsule_map's reJirahDone projection.
+    rounds_sat: roundsLaneRead ? groups.reduce((a, g) => a + g.rounds_sat, 0) : null,
+    rounds_read: roundsLaneRead,
     core_total: groups.reduce((a, g) => a + g.core_total, 0),
     // basis — WHAT these counts measure. B5's concept_buckets is [] by design
     // (its evidence is the shipped product, not a locked capsule), so its counts
@@ -347,8 +456,52 @@ function flattenNeeds(buckets, differentiators) {
   for (const b of buckets || []) for (const n of (b.need || [])) if (!out.includes(n)) out.push(n);
   for (const d of differentiators || []) {
     if (d.unlocked_names && d.unlocked_names.length) out.push(`${d.bucket}: unlock ${d.unlocked_names.join(", ")}`);
-    if (d.locked > d.held_cold) out.push(`${d.bucket}: cold re-proof pending on ${d.locked - d.held_cold} locked (Re-Jirah)`);
+    // same two shapes as buildBucket's loop, same gating (11 Aug 2026) — the
+    // differentiators' needs exist ONLY here, so an ungated line here is an unmeasured
+    // claim reaching the kickoff brief with nothing above it to qualify it.
+    if (d.rounds_read && d.never_sat_names && d.never_sat_names.length)
+      out.push(`${d.bucket}: Re-Jirah never sat on ${d.never_sat_names.join(", ")} (${d.never_sat_names.length} of ${d.locked} locked)`);
+    if (d.cold_read && d.locked > d.held_cold) out.push(`${d.bucket}: cold re-proof pending on ${d.locked - d.held_cold} locked (Re-Jirah)`);
   }
+  return out;
+}
+
+// THE HAVES, FLATTENED — the OTHER half of a have/need organ (dead-wire sweep,
+// 11 Aug 2026, same shape as the two orphans found earlier today). needs[] was
+// wired 10 Aug and `have[]` was left exactly where it was: `grep -rn "\.have\b"
+// --include=*.mjs scripts/` returns bootroom.mjs's unrelated `gate.have` and
+// nothing else, so every have row died inside renderBenchmark() — and nothing
+// shells `report` (forge_session:1652 and scout's wire both shell `run`).
+// WHAT WAS ACTUALLY LOST, once the gate opens: the surfaces carry `projection`
+// (`B1 3/8`), so the LOCKED half of a concept group escapes — but the cold
+// re-proof and rounds-sat halves of groupLine() do not, and the whole skills
+// lane on B1/B3/B4, the course line and the Building% line have no other door
+// at all (evidence[] is read only for evidence-only buckets, and Building is not
+// even in it). The asymmetry is the tell: the two DIFFERENTIATORS have shipped
+// their full groupLine to the sheet since this morning (differentiators_line,
+// manager.mjs:337) while the five ROADMAP buckets — his actual syllabus — ship a
+// bare locked/core.
+// SAME LAWS AS flattenNeeds, one screen up: ROADMAP order, NOT a ranking; no cap
+// and no sort (a "top 3" here is the invented priority his 1 Aug rule forbids);
+// rows VERBATIM, so one have-grammar exists in the organism and `report` and the
+// sheet can never word the same fact differently.
+// DEDUPE BY IDENTICAL STRING, and it bites LESS here than in flattenNeeds — a
+// need is `${bucket}: unlock …` and B1's and B2's shared 1-fundamentals group
+// collides into one row, but a have is groupLine, which carries the bucket's
+// NOTE, and those two notes are different sentences on purpose ("neenv — shared
+// with B2" / "… with B1", :127/:130). So the shared group rides twice, each row
+// naming its sibling. Deliberately NOT merged: picking one note over the other
+// is a choice this file has no basis for, and rewording them into a third
+// sentence would invent a second have-grammar. The numbers are identical by
+// construction and there is an assertion holding them that way.
+// DIFFERENTIATORS ARE DELIBERATELY NOT RE-LISTED HERE — unlike their needs,
+// which existed nowhere else, their have IS already wired as differentiators_line
+// to the same consumer; appending them would print the identical string twice on
+// one sheet. If that field is ever dropped, they belong back in this function.
+// NO NEW NUMBERS: every row is a string buildBucket already composed above.
+function flattenHaves(buckets) {
+  const out = [];
+  for (const b of buckets || []) for (const h of (b.have || [])) if (!out.includes(h)) out.push(h);
   return out;
 }
 
@@ -384,9 +537,37 @@ function findRegressionsLegacy(prev, buckets, courseCovered) {
 // regressions[] either: a half-written state file is a machine problem (its
 // owner is mirror.mjs / scout.mjs), and THE ANCHOR LAW says what does not need
 // the captain does not reach him. It rides input_faults instead.
+// AMENDED 11 Aug 2026 (dead-wire sweep) — two changes, both about provenance:
+//   1. A cold-held claim is DROPPED unless BOTH runs measured the lane. The frozen
+//      engine above compares with `<`, and in JS `null < 3` is TRUE (null coerces to 0),
+//      so the first run after rejirah_log.jsonl appears and then goes missing again
+//      would announce "cold-held 3 → null" at his anchor. That is absence read as a
+//      loss — the exact failure the blockingFiles guard exists for, arriving by a
+//      different door. Filtered by EXACT string, rebuilt from the same template the
+//      legacy engine uses, so no other regression line can be caught by accident.
+//   2. rounds_sat JOINS the comparison, because held_cold has never been ABLE to fire —
+//      its producer has never run (see THE COLD-RE-PROOF LANE), which left this engine
+//      with one working half out of two. rounds_sat is a counted cumulative off
+//      capsule_map.json, already BLOCKING here, so a malformed map still claims nothing.
+//      A drop means a `reJirahDone` date vanished from the gist mirror — a real loss of
+//      counted evidence, named under this engine's own stated rule (any decrease, no
+//      threshold), in the same grammar as `locked`.
 function findRegressions(prev, buckets, courseCovered, blockingFiles = []) {
   if (blockingFiles.length) return [];
-  return findRegressionsLegacy(prev, buckets, courseCovered);
+  const legacy = findRegressionsLegacy(prev, buckets, courseCovered);
+  if (!prev || prev.status !== "ok" || !Array.isArray(prev.buckets)) return legacy;
+  const prevBy = new Map(prev.buckets.map((b) => [b.id, b]));
+  const drop = new Set(), added = [];
+  for (const b of buckets) {
+    const p = prevBy.get(b.id);
+    if (!p || !p.counts) continue;
+    if (typeof b.counts.held_cold !== "number" || typeof p.counts.held_cold !== "number")
+      drop.add(`${b.id} ${b.label}: cold-held ${p.counts.held_cold} → ${b.counts.held_cold}`);
+    if (typeof b.counts.rounds_sat === "number" && typeof p.counts.rounds_sat === "number"
+      && b.counts.rounds_sat < p.counts.rounds_sat)
+      added.push(`${b.id} ${b.label}: Re-Jirah rounds sat ${p.counts.rounds_sat} → ${b.counts.rounds_sat}`);
+  }
+  return [...legacy.filter((l) => !drop.has(l)), ...added];
 }
 
 function gateState(missions) {
@@ -418,24 +599,62 @@ function computeBenchmark(inputs, now, prev) {
     };
   }
   const heldMap = heldColdByConcept(inputs.rejirahRows || []);
-  const buckets = ROADMAP_BUCKETS.map((spec) => buildBucket(spec, { ...inputs, heldMap }));
+  // rejirahRead is gatherInputs' existsSync answer, carried explicitly rather than
+  // inferred from an empty rejirahRows[] — readJsonl() returns [] for "not there" and
+  // for "there and empty" alike, and telling those apart is the whole repair.
+  const coldRead = !!inputs.rejirahRead;
+  const buckets = ROADMAP_BUCKETS.map((spec) => buildBucket(spec, { ...inputs, heldMap, coldRead }));
   const differentiators = DIFFERENTIATOR_BUCKETS.map((cb) => {
-    const g = conceptGroup(cb.id, null, inputs.registry, inputs.capsuleMap, heldMap);
+    const g = conceptGroup(cb.id, null, inputs.registry, inputs.capsuleMap, heldMap, coldRead);
     return { ...g, rounds_line: roundsLine([cb.id], inputs.dossier) };
   });
+  // THE DIFFERENTIATORS' LINE (11 Aug 2026 dead-wire sweep) — composed HERE, by
+  // the owner, for exactly the reason `projection` is (:320). `differentiators[]`
+  // was written to the bus on every ok run and read by NOTHING:
+  // `grep -rn "differentiators" --include=*.mjs scripts/` returned this file and
+  // no other, because all four renderers map over `bj.buckets` alone
+  // (manager.mjs:328 · viz.mjs:316 · postmatch.mjs:192 · learnstate.mjs:117-160).
+  // Only their unlock NAMES ever escaped, through flattenNeeds — so he could be
+  // told "unlock where_not_ai" and never be shown that the #1 senior signal
+  // stands at 0/1 while riding 46.7% of the interview. renderBenchmark:552 did
+  // print the whole block, but nothing shells `report` (the lock-chain and
+  // scout's wire both shell `run`), so it died in this file. Same shape as the
+  // two orphans found earlier today: built, present, not wired.
+  // GRAMMAR: groupLine(d) verbatim — the identical string `report` prints — so
+  // ONE differentiator grammar exists in the organism, and the rounds_line in
+  // PARENS because the DOSSIER weight is the whole reason these two ride at all.
+  // Parens and not another " · " separator: the round arithmetic already speaks
+  // in " + " and a flat join left "0/1 · rides…" ambiguous about whose weight it is.
+  // NOT A 6TH BUCKET (:133 — his ROADMAP has five): they stay out of buckets[],
+  // the label says so out loud, and a consumer mapping over buckets sees exactly
+  // what it saw before this field existed.
+  // NO NEW NUMBERS: every count and every % here is already computed above.
+  // STILL NOT REGRESSION-TRACKED, deliberately: findRegressionsLegacy compares
+  // prev.buckets only, so a differentiator that LOSES a lock is silent. That is a
+  // second wire and it ends in a captain card (captains_call.mjs:352) — a lane
+  // that reaches him is not opened in a sweep like this one. Named here so it is
+  // not lost.
+  const differentiatorsLine = differentiators.length
+    ? `differentiators (not a 6th bucket — the #1 senior signal + the fintech moat): ${differentiators.map((d) => `${groupLine(d)} (${d.rounds_line})`).join(" · ")}`
+    : null;
   const courseCovered = inputs.course && Array.isArray(inputs.course.chapters) ? inputs.course.chapters.filter((c) => c.covered).length : 0;
   const regressions = findRegressions(prev, buckets, courseCovered, blockingFiles);
   return {
     date: localDate(now), status: "ok",
     gate: { reason: null, missions_line: gate.line },
     input_faults: faults, blocking_faults: blockingFiles,
-    buckets, differentiators, course_covered: courseCovered,
+    buckets, differentiators, differentiators_line: differentiatorsLine, course_covered: courseCovered,
     // needs = the flat, ROADMAP-ordered union of every need[] plus the
     // differentiators' own (10 Aug 2026 wiring pass). It exists because the
     // per-bucket need[] reached no reader — see flattenNeeds. Consumers render
     // from THIS so the kickoff brief, the team sheet, the wall and SEASON.md
     // cannot drift into four different wordings of the same debt.
     needs: flattenNeeds(buckets, differentiators),
+    // haves = the same flattening for the half that says what he ALREADY HOLDS
+    // (11 Aug 2026 dead-wire sweep — see flattenHaves). Sits beside needs[] on
+    // purpose: a consumer that renders one and not the other is showing him a
+    // debt column with no credit column, which is what every surface did.
+    haves: flattenHaves(buckets),
     regressions,
     runs: [...runs, now.toISOString()],
     generated_at: now.toISOString(),
@@ -446,7 +665,10 @@ function computeBenchmark(inputs, now, prev) {
 // counts. A reader who stops after one line still learns the numbers below it
 // are not evidence. (setpiece.mjs:1107 is the house precedent for naming the
 // broken file out loud; this names its owner too, so the fix is one hop away.)
-const FAULT_OWNER = { "capsule_map.json": "mirror.mjs", "missions.json": "scout.mjs", "concepts.json": "capture.mjs", "course.json": "course.mjs", "learning_state.json": "learning_state.mjs" };
+// benchmark.json's owner is this file itself (sole writer, declared in the header) —
+// which is exactly why the one-hop fix it names is "delete or restore it", not "go
+// nudge another organ". Added 11 Aug 2026 with the prev-read repair.
+const FAULT_OWNER = { "capsule_map.json": "mirror.mjs", "missions.json": "scout.mjs", "concepts.json": "capture.mjs", "course.json": "course.mjs", "learning_state.json": "learning_state.mjs", "benchmark.json": "benchmark.mjs (this file — restore or delete it)" };
 function faultLines(b) {
   const f = (b && b.input_faults) || [];
   if (!f.length) return [];
@@ -532,7 +754,11 @@ function selftest() {
   // a KEY here only once it has a track:"skill" rep. Two of B5's seven and one of
   // B1's three, deliberately across all three rungs of the owner's ladder.
   const learningState = { python_fluency: { pydantic: "🟢 fluent", fastapi: "🟡 held", anthropic_api: "🔴 learning" } };
-  const base = { dossier, registry, capsuleMap, rejirahRows, python, course, shipped, timeaudit, learningState };
+  // rejirahRead: true — this fixture HANDS the reader rows, so it is stating that the
+  // log was there to read. The absent case is its own fixture below (THE COLD-RE-PROOF
+  // LANE); keeping the flag explicit here is what stops an empty [] ever standing in
+  // for a missing file again.
+  const base = { dossier, registry, capsuleMap, rejirahRows, rejirahRead: true, python, course, shipped, timeaudit, learningState };
 
   // THE GATE (Ruling 6)
   const gated = computeBenchmark({ ...base, missions: missionsGated }, now, null);
@@ -585,6 +811,28 @@ function selftest() {
   assert("WIRE — an old benchmark.json (no projection field) still renders exactly as it did (fallback path lives)",
     consumerLine({ buckets: [{ id: "B1", counts: { locked: 3, core_total: 8 } }] }) === "B1 3/8");
 
+  // THE DIFFERENTIATORS REACH THE THREE RENDERERS (11 Aug 2026 dead-wire sweep —
+  // these fail if THAT wire is cut again). Pre-today `differentiators[]` was on
+  // the bus and read by nothing: manager/viz/postmatch all map over buckets[],
+  // so the two lanes carrying 46.7% and 44.5% of the interview had a standing
+  // nowhere. consumerDx is those three call sites' shared expression, verbatim.
+  const consumerDx = (bench) => bench.differentiators_line || null;
+  assert("WIRE — differentiators_line puts BOTH lanes' counts AND their DOSSIER weight on the bus (report printed them; nothing shells report)",
+    typeof consumerDx(b) === "string"
+    && consumerDx(b).startsWith("differentiators (not a 6th bucket — the #1 senior signal + the fintech moat): ")
+    // counts + weights only. The cold/rounds lanes inside groupLine are pinned by
+    // their OWN assertions above and by the groupLine-verbatim check below; naming
+    // their wording twice would make this test fail on an honest edit one lane over.
+    && /6-cross-cut: locked 0\/1\b/.test(consumerDx(b)) && /\(rides: [^)]*= 46\.7% of the interview\)/.test(consumerDx(b))
+    && /7-domain: locked 0\/1\b/.test(consumerDx(b)) && /\(rides: [^)]*= 44\.5% of the interview\)/.test(consumerDx(b)));
+  assert("WIRE — the line is groupLine's grammar VERBATIM (one differentiator grammar in the organism; report:639 and the surfaces cannot drift)",
+    b.differentiators.every((d) => consumerDx(b).includes(`${groupLine(d)} (${d.rounds_line})`)));
+  assert("WIRE — they ride BESIDE the buckets, never inside them (his ROADMAP has FIVE — a 6th bucket is the one thing this must never become)",
+    b.buckets.length === 5 && !b.buckets.some((x) => /cross-cut|7-domain/.test(x.id))
+    && !/\bB[1-5]\b/.test(consumerDx(b)));
+  assert("WIRE — a GATED run ships no differentiators line (Ruling 6: a half-lie never rides a surface)",
+    gated.differentiators_line === undefined && !gated.differentiators);
+
   // THE NEEDS REACH THE BUS (10 Aug 2026 wiring pass — this is the assertion
   // that fails if the wire is cut again). Pre-10-Aug the names lived only inside
   // buckets[].need and no organ read them, so the whole "what to DO" half of
@@ -605,6 +853,59 @@ function selftest() {
     && b.needs.findIndex((n) => /^2-rag/.test(n)) < b.needs.findIndex((n) => /^6-cross-cut/.test(n)));
   assert("WIRE — a GATED run ships no needs (Ruling 6: a half-lie never rides a surface)",
     gated.needs === undefined);
+
+  // THE HAVES REACH THE BUS (11 Aug 2026 dead-wire sweep — these fail if THIS
+  // wire is cut again). needs[] was wired 10 Aug and have[] was not: it had zero
+  // readers in the organism (`grep -rn "\.have\b" --include=*.mjs scripts/` →
+  // bootroom's unrelated gate.have and nothing else), and nothing shells `report`,
+  // so the CREDIT half of a have/need organ died in this file while the debt half
+  // rode four surfaces. consumerHave is the sheet's and SEASON.md's shared
+  // expression, verbatim (manager.mjs:348 · postmatch.mjs:200).
+  const consumerHave = (bench) => ((bench.haves || []).length ? bench.haves.join(" · ") : null);
+  assert("WIRE — haves[] carries the credit half onto the bus: skills WITH reps, chapters covered, Building%",
+    Array.isArray(b.haves)
+    && b.haves.some((h) => /^skills: 1\/3 with reps — anthropic_api 🔴 learning/.test(h))
+    && b.haves.some((h) => /course "Anthropic API Fundamentals": 1\/3 chapters covered/.test(h))
+    && b.haves.some((h) => /Building time \(single-day snapshot 2026-08-07\): 0\.7% of active/.test(h)));
+  assert("WIRE — the five ROADMAP buckets' cold-re-proof lane reaches a surface at last (the differentiators' groupLine shipped this morning; the buckets' did not)",
+    /2-rag: locked 1\/2 · cold re-proof 1\/1/.test(consumerHave(b)));
+  // THE POINT OF THE WHOLE REPAIR, stated as arithmetic: these three facts exist
+  // in NO other field on the bus. If a later pass moves one into projection or
+  // needs, this assertion is the thing that says so out loud instead of leaving
+  // the same string on two surfaces.
+  assert("WIRE — projection + needs genuinely cannot carry these: the counted forms appear nowhere else on the bus",
+    (() => {
+      const elsewhere = `${consumerLine(b)} · ${b.needs.join(" · ")}`;
+      return !/skills: 1\/3 with reps/.test(elsewhere)
+        && !/chapters covered/.test(elsewhere)
+        && !/single-day snapshot/.test(elsewhere)
+        && !/cold re-proof \d+\/\d+/.test(elsewhere);
+    })());
+  assert("WIRE — rows are buildBucket's have[] VERBATIM (one have-grammar: `report` and the sheet can never word the same fact differently)",
+    b.buckets.every((bk) => bk.have.every((h) => b.haves.includes(h))));
+  // The shared group is the one place where haves and needs legitimately differ.
+  // A need is `${bucket}: unlock …` — no note — so B1's and B2's collide and
+  // dedupe to one row. A have is groupLine, which carries the NOTE, and the two
+  // notes are different sentences by design ("shared with B2" / "shared with B1",
+  // :127/:130). Both rows therefore survive, and that is correct: each says which
+  // sibling it is shared with. What must never differ is the arithmetic — the same
+  // group measured twice on one surface is only safe while the numbers are equal.
+  assert("WIRE — the shared 1-fundamentals group rides once per owning bucket, each naming its sharer, with IDENTICAL counts (never two readings of one group)",
+    (() => {
+      const rows = b.haves.filter((h) => /^1-fundamentals \(neenv/.test(h));
+      return rows.length === 2
+        && rows.some((h) => /shared with B2/.test(h)) && rows.some((h) => /shared with B1/.test(h))
+        && new Set(rows.map((h) => h.replace(/ \(neenv[^)]*\)/, ""))).size === 1;
+    })());
+  assert("WIRE — ROADMAP order, no ranking and no cap: B1's rows precede B2's, and every row survives",
+    b.haves.findIndex((h) => /^1-fundamentals/.test(h)) < b.haves.findIndex((h) => /^2-rag/.test(h))
+    && b.haves.length === new Set(b.buckets.flatMap((bk) => bk.have)).size);
+  assert("WIRE — the differentiators are NOT re-listed here (differentiators_line already ships them; twice on one sheet is noise)",
+    !b.haves.some((h) => /^6-cross-cut|^7-domain/.test(h)));
+  assert("WIRE — a GATED run ships no haves (Ruling 6: a half-lie never rides a surface)",
+    gated.haves === undefined);
+  assert("WIRE — an old benchmark.json (no haves field) renders NOTHING, never an empty row (absence, not a zero)",
+    consumerHave({ buckets: [{ id: "B1", have: ["x"] }] }) === null && consumerHave({ haves: [] }) === null);
 
   // THE SKILLS LANE REACHES THE BUS (10 Aug 2026 wiring pass — these are the
   // assertions that fail if THIS wire is cut again). Pre-10-Aug the row was a
@@ -633,6 +934,56 @@ function selftest() {
         && u5.counts.skills_read === false && u5.counts.skills_with_reps === null
         && !u.needs.some((n) => /skills: no reps yet/.test(n));
     })());
+  // THE COLD-RE-PROOF LANE (dead-wire sweep, 11 Aug 2026 — these are the assertions
+  // that fail if THIS wire is cut again). Pre-11-Aug `held_cold` rode rejirah_log.jsonl
+  // and nothing else; that file has never existed on this machine, so every locked
+  // capsule read "cold re-proof 0", two of the fifteen live needs were arithmetic on a
+  // missing file, and NOTHING in the output named the absence.
+  const capsWithRounds = { concepts: [
+    // capsule_bridge's own shape (capsule_map.json, rejirah.rounds_done) and his own
+    // live numbers: tokenization carries reJirahDone ["2026-06-18","2026-06-29"].
+    { concept: "tokenization", locked_on: "2026-06-15", rejirah: { rounds_done: 2 } },
+    { concept: "embeddings", locked_on: "2026-06-21", rejirah: { rounds_done: 0 } },
+  ] };
+  const noLog = computeBenchmark({ ...base, rejirahRead: false, capsuleMap: capsWithRounds, missions: missionsOpen }, now, null);
+  const n1 = noLog.buckets.find((x) => x.id === "B1"), n2 = noLog.buckets.find((x) => x.id === "B2");
+  assert("ABSENCE IS NOT A ZERO — no rejirah_log.jsonl ⇒ cold re-proof UNMEASURED, counts null, and not one 'cold re-proof pending' need",
+    n1.have.some((h) => /cold re-proof UNMEASURED \(rejirah_log\.jsonl absent — rejirah\.mjs/.test(h))
+    && !JSON.stringify(noLog.buckets).includes("cold re-proof 0")
+    && n1.counts.held_cold === null && n1.counts.cold_read === false
+    && !noLog.needs.some((n) => /cold re-proof pending/.test(n)));
+  assert("WIRE — the re-proof question is answered from capsule_map's reJirahDone projection instead, and tokenization (2 rounds sat) is NO LONGER sent back to Re-Jirah",
+    n1.have.some((h) => /1-fundamentals[^:]*: locked 1\/2 · cold re-proof UNMEASURED[^·]+· Re-Jirah rounds sat 1\/1 \(capsule reJirahDone\)/.test(h))
+    && n1.counts.rounds_sat === 1 && n1.counts.rounds_read === true
+    && !JSON.stringify(noLog.needs).includes("never sat on tokenization")
+    && noLog.needs.some((n) => n === "2-rag: Re-Jirah never sat on embeddings (1 of 1 locked)")
+    // the group line, not B2's counts: B2 sums 2-rag (0 sat) AND the shared
+    // 1-fundamentals neenv (1 sat) — the ROADMAP's own sharing, :64/:67.
+    && n2.have.some((h) => /2-rag: locked 1\/2 · cold re-proof UNMEASURED[^·]+· Re-Jirah rounds sat 0\/1/.test(h)));
+  assert("UNKNOWN IS NOT ZERO EITHER — a capsule_map with no rejirah block unreads the rounds lane, claims no count and files no need",
+    (() => {
+      const u = computeBenchmark({ ...base, rejirahRead: false, missions: missionsOpen }, now, null);
+      const u2 = u.buckets.find((x) => x.id === "B2");
+      return u2.have.some((h) => /rounds sat UNREAD \(capsule_map carries no rejirah block — capsule_bridge\.mjs/.test(h))
+        && u2.counts.rounds_sat === null && u2.counts.rounds_read === false
+        && !JSON.stringify(u.needs).includes("Re-Jirah never sat");
+    })());
+  assert("REGRESSION GUARD — an unmeasured cold lane is never a loss claim (`null < 1` is TRUE in JS: the frozen engine says 'cold-held 1 → null', the guard drops exactly that line)",
+    (() => {
+      const prevCold = computeBenchmark({ ...base, capsuleMap: capsWithRounds, missions: missionsOpen }, now, null);
+      const gone = computeBenchmark({ ...base, rejirahRead: false, capsuleMap: capsWithRounds, missions: missionsOpen }, now, prevCold);
+      return findRegressionsLegacy(prevCold, gone.buckets, gone.course_covered).some((r) => /cold-held 1 → null/.test(r))
+        && !JSON.stringify(gone.regressions).includes("cold-held");
+    })());
+  assert("REGRESSION — the half of this engine that CAN fire now does: a reJirahDone date vanishing from the mirror is named (any decrease, no threshold)",
+    (() => {
+      const prevSat = computeBenchmark({ ...base, capsuleMap: capsWithRounds, missions: missionsOpen }, now, null);
+      const lost = { concepts: capsWithRounds.concepts.map((c) => ({ ...c, rejirah: { rounds_done: 0 } })) };
+      const r = computeBenchmark({ ...base, capsuleMap: lost, missions: missionsOpen }, now, prevSat);
+      return r.regressions.some((x) => /^B1 .*: Re-Jirah rounds sat 1 → 0$/.test(x))
+        && !r.regressions.some((x) => /rounds sat 0 → 0/.test(x));
+    })());
+
   // THE ONE ASSERTION THAT TOUCHES DISK, and the only one that can catch the
   // ORIGINAL defect. Everything above hands computeBenchmark a fixture — but the
   // bug was never in the compute, it was that gatherInputs read nine files and
@@ -673,6 +1024,28 @@ function selftest() {
         const rendered = renderBenchmark(computeBenchmark({ ...base, ...got, missions: missionsOpen }, now, null));
         return !!f && f.blocking === false && /capsules\/embeddings\.json/.test(f.why) && /2026-08-09/.test(f.why)
           && /capsule_map\.json \(non-blocking[\s\S]*mirror\.mjs/.test(rendered);
+      } finally { rmSync(tmp, { recursive: true, force: true }); }
+    })());
+  // THE COLD LANE'S DISK SEAM (11 Aug 2026). Same reason as the two above: the wire is
+  // IN gatherInputs — it is an existsSync question, and no fixture can ask it. Delete
+  // the `rejirahRead:` line and the first half fails; stop passing it into
+  // computeBenchmark and the second half fails; both halves are the defect verbatim.
+  assert("WIRE (end-to-end) — gatherInputs asks disk whether rejirah_log.jsonl IS THERE, and the answer reaches the have-line both ways",
+    (() => {
+      const tmp = mkdtempSync(join(tmpdir(), "arsenal-bench-cold-"));
+      try {
+        writeFileSync(join(tmp, "concepts.json"), JSON.stringify(registry));
+        writeFileSync(join(tmp, "capsule_map.json"), JSON.stringify({ date: "2026-08-11", status: "ok", capsules_complete: true, concepts: capsWithRounds.concepts }));
+        const absent = gatherInputs(tmp);                       // the machine as it stands today
+        writeFileSync(join(tmp, "rejirah_log.jsonl"), JSON.stringify({ concept: "tokenization", axis: "a", result: "held", gut: "shaky", cold: true, ts: "2026-08-07T10:00:00Z" }) + "\n");
+        const present = gatherInputs(tmp);                      // the day he first runs `rejirah.mjs grade`
+        const b1Have = (got) => buildBucket(ROADMAP_BUCKETS.find((s) => s.id === "B1"),
+          { ...base, ...got, heldMap: heldColdByConcept(got.rejirahRows), coldRead: !!got.rejirahRead }).have;
+        // null-safe reads, same house reason as the learning_state seam above: a CUT
+        // wire must print a named ✗, not a TypeError the next reader misattributes.
+        return absent.rejirahRead === false && present.rejirahRead === true
+          && b1Have(absent).some((h) => /1-fundamentals[^:]*: locked 1\/2 · cold re-proof UNMEASURED[^·]+· Re-Jirah rounds sat 1\/1/.test(h))
+          && b1Have(present).some((h) => /1-fundamentals[^:]*: locked 1\/2 · cold re-proof 1\/1 · Re-Jirah rounds sat 1\/1/.test(h));
       } finally { rmSync(tmp, { recursive: true, force: true }); }
     })());
   assert("WIRE — a COMPLETE capsule_map adds no fault noise (the healthy path is untouched)",
@@ -739,6 +1112,72 @@ function selftest() {
       return f.blocking_faults.length === 0 && f.input_faults[0].file === "learning_state.json"
         && /learning_state\.json \(non-blocking[\s\S]*learning_state\.mjs/.test(renderBenchmark(f));
     })());
+  // THE LOCK-CHAIN DOOR (dead-wire sweep, 11 Aug 2026 — fails the moment this wire
+  // is cut again). Source-read, following scout.mjs:626 / dugout.mjs:2589: the thing
+  // under test is a console.log template in main(), which no pure function returns.
+  // The door is forge_session.mjs's chainReport — "keep every line the organ SELF-NAMES,
+  // else line 1" — so a fault line that does not start `benchmark:` is dropped at step 10
+  // of every lock and he is told `benchmark: ok` over a stale count. Both halves asserted:
+  // the template self-names, and a door-shaped filter (chainReport's exact predicate,
+  // re-stated here so this file needs no import of another organ) keeps it.
+  {
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const softLog = (SRC.match(/console\.log\(`[^`]*MALFORMED \(non-blocking[^`]*`\)/) || [])[0] || "";
+    assert("LOCK-CHAIN DOOR — the NON-blocking fault line SELF-NAMES, so chainReport cannot drop it (it did, silently, 10-11 Aug)",
+      /console\.log\(`benchmark: /.test(softLog));
+    const emitted = [
+      `benchmark: ok · 5 buckets · regressions 0 · run #12 → x`,
+      `benchmark: ⚠ capsule_map.json MALFORMED (non-blocking — display only, owner mirror.mjs): capsule_bridge refused to ship a short count`,
+    ];
+    const doorKeeps = emitted.map((l) => l.trim()).filter((l) => l.toLowerCase().startsWith("benchmark:"));
+    assert("LOCK-CHAIN DOOR — both lines reach his terminal: the summary AND the stale-count warning beneath it",
+      doorKeeps.length === 2 && /stale|short count|MALFORMED/.test(doorKeeps[1]));
+  }
+
+  // OUR OWN PRIOR RECORD (dead-wire sweep, 11 Aug 2026). Two halves, because the wire
+  // has two ends: the pure half proves a benchmark.json fault behaves like every other
+  // blocking one, and the CLI half proves main() actually GENERATES that fault — which
+  // is where it was cut. Fixtures alone could never catch this: computeBenchmark was
+  // always innocent, main() simply never told it the file was broken (precedent for
+  // spawning THIS file to prove a main()-only guard: manager.mjs:1447, examiner.mjs:40).
+  assert("PREV — a malformed benchmark.json is BLOCKING, named with its owner, and claims no loss",
+    (() => {
+      const f = computeBenchmark({ ...base, faults: [{ file: "benchmark.json", why: "Unexpected end of JSON input", blocking: BLOCKING_INPUTS.has("benchmark.json") }], missions: missionsOpen }, now, null);
+      return f.blocking_faults.join() === "benchmark.json" && f.regressions.length === 0
+        && /benchmark\.json \(BLOCKING[\s\S]*benchmark\.mjs \(this file/.test(renderBenchmark(f));
+    })());
+  assert("PREV (end-to-end, real CLI) — a half-written benchmark.json does NOT restart runs[], does NOT swallow a real locked-drop in silence, and `report` never calls it 'never run'",
+    (() => {
+      const tmp = mkdtempSync(join(tmpdir(), "arsenal-bench-prev-"));
+      const env = { ...process.env, ARSENAL_BENCH_STATE_DIR: tmp };
+      const self = fileURLToPath(import.meta.url);
+      const run = (mode) => { try { return String(execFileSync(process.execPath, [self, mode], { env, stdio: "pipe" })); } catch (e) { return String((e && e.stdout) || ""); } };
+      try {
+        writeFileSync(join(tmp, "missions.json"), JSON.stringify({ missions: [], syllabus_audit: { closed_at: "2026-08-10T00:00:00.000Z", note: "selftest fixture — not his word" } }));
+        writeFileSync(join(tmp, "concepts.json"), JSON.stringify({ concepts: [{ id: "tokenization", bucket: "1-fundamentals" }, { id: "embeddings", bucket: "2-rag" }] }));
+        const twoLocks = { date: "2026-08-10", status: "ok", capsules_complete: true, concepts: [{ concept: "tokenization", locked_on: "2026-06-15" }, { concept: "embeddings", locked_on: "2026-06-20" }] };
+        writeFileSync(join(tmp, "capsule_map.json"), JSON.stringify(twoLocks));
+        run("run"); run("run");
+        const out = join(tmp, "benchmark.json");
+        const before = readFileSync(out, "utf8");
+        if (JSON.parse(before).runs.length !== 2) return false; // the ledger this defect wiped
+        // half-write it, and drop a REAL lock in the same breath: the swallowed regression
+        // is what made the wipe dangerous rather than merely untidy.
+        writeFileSync(out, before.slice(0, Math.floor(before.length / 2)));
+        writeFileSync(join(tmp, "capsule_map.json"), JSON.stringify({ ...twoLocks, date: "2026-08-11", concepts: [twoLocks.concepts[0]] }));
+        const ran = run("run");
+        const after = readFileSync(out, "utf8");
+        const rep = run("report");
+        return after === before.slice(0, Math.floor(before.length / 2))       // untouched — no wipe, no overwrite of the bytes
+          && /^benchmark: WARN/m.test(ran) && /benchmark\.json/.test(ran)     // self-named, so chainReport carries it at step 10
+          && !/benchmark: ok/.test(ran) && !/run #1/.test(ran)                // never the cheerful lie this defect printed
+          // anchored, not a substring search: the honest line QUOTES the old lie
+          // (`… NOT "never run" …`), so a loose /never run/ fails on the repair itself.
+          // What must never come back is the whole-output claim `benchmark: never run`.
+          && !/^benchmark: never run/m.test(rep) && /MALFORMED/.test(rep);     // report tells the truth about an unreadable file
+      } finally { rmSync(tmp, { recursive: true, force: true }); }
+    })());
+
   assert("NO SKILLS REGRESSION — python_fluency emptying (owner simply not recomputed yet) never claims he LOST a skill",
     computeBenchmark({ ...base, learningState: { python_fluency: {} }, missions: missionsOpen }, now, prevOk).regressions.length === 0);
 
@@ -794,6 +1233,12 @@ function gatherInputs(dir = STATE_DIR) {
     registry: R("concepts.json"),
     capsuleMap,
     rejirahRows: readJsonl(join(dir, "rejirah_log.jsonl")),
+    // THE READ-STATE, not the rows (11 Aug 2026 dead-wire sweep). readJsonl above hands
+    // back [] whether the file is missing or merely empty, and that [] became a zero on
+    // every have-line and two needs. existsSync is the only thing that can separate the
+    // two — the same seam fsrs.mjs:190 already uses on this exact file, for this exact
+    // reason. rejirah.mjs is its single writer; today it has never run, so this is false.
+    rejirahRead: existsSync(join(dir, "rejirah_log.jsonl")),
     python: R("python_state.json"),
     course: R("course.json"),
     shipped: R("shipped.json"),
@@ -811,18 +1256,34 @@ function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
   if (mode === "selftest") process.exit(selftest() ? 0 : 1);
   const now = new Date();
+  // OUR OWN PRIOR STATE READS THROUGH THE TRACKER TOO (dead-wire sweep, 11 Aug 2026).
+  // See BLOCKING_INPUTS' benchmark.json note for the proof and the derivation. Both
+  // call sites below used the bare readJson(), which cannot tell "never run" from
+  // "half-written" — the single standard this file applies to every other input and
+  // not to itself.
+  const prevFaults = [];
+  const prev = readJsonTracked(STATE_DIR, "benchmark.json", prevFaults);
+  const prevUnreadable = prevFaults.length > 0;
   if (mode === "report") {
-    const b = readJson(OUT);
-    console.log(b ? renderBenchmark(b) : "benchmark: never run — node scripts/benchmark.mjs run");
+    // "never run" was a LIE on a malformed file, and the quietest kind: the reader
+    // goes and runs it, which is precisely the run that restarts the ledger.
+    if (prev) console.log(renderBenchmark(prev));
+    else if (prevUnreadable) console.log(`benchmark: WARN benchmark.json MALFORMED (unreadable JSON, not absent — NOT "never run"): ${prevFaults[0].why}. Owner ${FAULT_OWNER["benchmark.json"]}; runs[] and the last true counts are inside it, so restore it before the next run rather than after.`);
+    else console.log("benchmark: never run — node scripts/benchmark.mjs run");
     return;
   }
-  const prev = readJson(OUT);
-  const b = computeBenchmark(gatherInputs(), now, prev);
+  // the prev fault joins the input faults on the SAME array gatherInputs built, so it
+  // reaches computeBenchmark's input_faults/blocking_faults with no second channel.
+  const inputs = gatherInputs();
+  inputs.faults.push(...prevFaults);
+  const b = computeBenchmark(inputs, now, prev);
   if (mode === "preview") {
     if (b.status === "gated_pre_audit") {
       // preview computes what run refuses to ship — same inputs, forced open,
-      // console-only, loudly labelled. The bus never sees it.
-      const forced = computeBenchmark({ ...gatherInputs(), missions: { missions: [], syllabus_audit: { closed_at: "preview", note: "PREVIEW — not his word" } } }, now, null);
+      // console-only, loudly labelled. The bus never sees it. (11 Aug 2026: reuses
+      // `inputs` instead of re-gathering, so the prev fault above is still named in
+      // the preview render — a re-gather dropped it and re-read ten files for nothing.)
+      const forced = computeBenchmark({ ...inputs, missions: { missions: [], syllabus_audit: { closed_at: "preview", note: "PREVIEW — not his word" } } }, now, null);
       console.log("⚠ PRE-AUDIT PREVIEW — by his ruling this is measured against a 29 Jun map (half a lie). Console-only; benchmark.json stays gated.\n");
       console.log(renderBenchmark({ ...forced, runs: [] }));
     } else {
@@ -856,7 +1317,8 @@ function main() {
     if (prev) {
       writeAtomic(OUT, { ...prev, input_faults: b.input_faults, blocking_faults: b.blocking_faults, last_attempt_at: now.toISOString() });
       console.log(`  kept: ${prev.date || "?"}'s record verbatim (runs[] frozen at ${((prev.runs) || []).length}) → ${OUT}`);
-    } else console.log(`  no prior benchmark to keep — nothing written (absence, not a zero).`);
+    } else if (prevUnreadable) console.log(`  benchmark.json IS the unreadable one — left byte-for-byte untouched (an overwrite here is the exact wipe this branch exists to prevent: it would restart runs[] at 1 and bury whatever counts are still recoverable in those bytes). Recovers by itself on the next run once the file is valid JSON or gone.`);
+    else console.log(`  no prior benchmark to keep — nothing written (absence, not a zero).`);
     return;
   }
   writeAtomic(OUT, b);
@@ -869,10 +1331,21 @@ function main() {
   // a count of the rest — the same brevity learnstate.mjs:114 already uses for
   // regressions[0]. Not a ranking (see flattenNeeds): first in ROADMAP order.
   else console.log(`benchmark: ok · ${b.buckets.length} buckets · regressions ${b.regressions.length} · run #${b.runs.length}${b.needs.length ? ` · need: ${b.needs[0]}${b.needs.length > 1 ? ` (+${b.needs.length - 1} more — benchmark.mjs report)` : ""}` : ""} → ${OUT}`);
-  // non-blocking faults still get said out loud, below the summary line so the
-  // lock-chain's first-line read is untouched. Named on the console AND on the
-  // bus (input_faults) — a fault nobody can see is the defect we just fixed.
-  for (const f of b.input_faults) console.log(`  ⚠ ${f.file} MALFORMED (non-blocking — display only, owner ${FAULT_OWNER[f.file] || "?"}): ${f.why}`);
+  // non-blocking faults still get said out loud, below the summary line. Named on
+  // the console AND on the bus (input_faults) — a fault nobody can see is the defect
+  // we just fixed.
+  // …except it WAS still invisible where it matters most (dead-wire sweep, 11 Aug 2026).
+  // This line was written indented and unnamed on purpose, to protect a first-line-only
+  // door that no longer exists: the SAME 10 Aug pass repaired forge_session's chainReport
+  // to keep every line an organ SELF-NAMES (`<name>: …`) and fall back to line 1 only for
+  // organs that name none. So the lock chain — the one place a fault is read seconds after
+  // he locks a capsule — dropped this line and printed a clean `benchmark: ok`, while the
+  // warning survived only on a bus field with no reader. Self-naming is the whole fix; the
+  // door needs no change, and its "believe all of it" rule now carries this through.
+  // The BLOCKING branch above stays as it is: its headline (`benchmark: WARN …`) already
+  // self-names AND already lists every broken file with its owner, so the door carries the
+  // finding; only the per-file parse-error detail stays indented, which is detail, not news.
+  for (const f of b.input_faults) console.log(`benchmark: ⚠ ${f.file} MALFORMED (non-blocking — display only, owner ${FAULT_OWNER[f.file] || "?"}): ${f.why}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

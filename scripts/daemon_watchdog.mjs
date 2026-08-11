@@ -34,7 +34,7 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
-import { portOpen, launchDetached, processStartMs, clipStderr } from "./conductor.mjs";
+import { portOpen, launchDetached, processStartMs, processStartRead, clipStderr } from "./conductor.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
@@ -76,6 +76,10 @@ export const DAEMONS = [
 ];
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
+// The shared append lane — READ-ONLY here, and it is the only file this organ opens
+// that it does not own (brain.mjs owns its schema; six organs append to it).
+const LEDGER = () => join(STATE_DIR, "brain_ledger.jsonl");
+const readText = (p) => { try { return readFileSync(p, "utf8"); } catch { return null; } };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
@@ -86,10 +90,31 @@ function writeAtomic(path, obj) {
 // Liveness for a PORTLESS resident (the context bridge). null means UNKNOWN and
 // never "down": off Windows there is no Win32_Process to read at all, so "I could
 // not look" is the only honest answer — reporting that as DOWN would relaunch a
-// bridge that is very much alive. On Windows a null from the probe IS a real
-// not-in-the-table reading, and the confirm rule in decidePass covers the rare
-// case where the powershell call itself failed.
-// TRAP, hit while proving this live: processStartMs greps the command line of EVERY
+// bridge that is very much alive.
+//
+// PROBE HONESTY (WIRING AUDIT, 11 Aug 2026) — THE LINE ABOVE WAS RIGHT, THE CODE WAS NOT.
+// This comment used to continue: "On Windows a null from the probe IS a real
+// not-in-the-table reading, and the confirm rule in decidePass covers the rare case
+// where the powershell call itself failed." Both halves were false, and MEASURED false
+// on his box the hour this was written:
+//   · processStartMs collapsed "the shell was killed before it could answer" into the
+//     same bare null as "I read the table and it is not there". Get-CimInstance
+//     Win32_Process costs 3.4-8.9s on this laptop against that probe's 5000ms cap, so
+//     2 of 5 consecutive live calls for PID 21308 — a bridge that was up and emitting —
+//     came back null (spawnSync: error ETIMEDOUT, signal SIGTERM). Not rare. ~a third.
+//   · the confirm rule cannot cover it, because it only demands the PREVIOUS pass also
+//     read `false`, and a one-in-three flake clears two passes in a row within the hour.
+// The state file proved it was already armed: daemon_watchdog.json held
+// `ports.context: false` with `unknown: []` while PID 21308 was alive in the process
+// table — one more timed-out probe and decidePass would have launched a SECOND portless
+// bridge, and two of them both POST the thalamus door. That double-ingest is the exact
+// damage the portless entry exists to prevent.
+// The repair invents nothing: conductor.mjs's processStartRead now reports `looked`, so
+// a probe that could not run returns the UNKNOWN this function already had a lane for —
+// and decidePass already refuses to relaunch off a reading it could not take. A
+// genuinely dark bridge is still caught on any pass where the probe completes (~2 in 3),
+// so the cost is a delay, never a bridge left dark.
+// TRAP, hit while proving this live: the probe greps the command line of EVERY
 // node.exe, so a process that merely MENTIONS the match string reports itself as the
 // daemon (a `node -e "…context.mjs daemon…"` probe returned UP for a lane that does
 // not exist). The scheduled caller is `node scripts\daemon_watchdog.mjs pass`, which
@@ -98,7 +123,16 @@ function writeAtomic(path, obj) {
 export function processProbe(match, deps = {}) {
   const platform = deps.platform || process.platform;
   if (platform !== "win32") return null;
-  try { return (deps.procStart || processStartMs)(match) != null; } catch { return false; }
+  try {
+    // `procStart` stays the injection every existing check here uses: a plain ms|null,
+    // which by definition HAS looked (a fixture cannot time out). `procRead` is the
+    // richer door, and the live path takes it.
+    const read = deps.procRead
+      || (deps.procStart ? (m) => ({ ms: deps.procStart(m), looked: true }) : processStartRead);
+    const r = read(match);
+    if (!r || r.looked === false) return null;   // could not look → UNKNOWN, never DOWN
+    return r.ms != null;
+  } catch { return false; }
 }
 
 // ── PURE CORE — one pass, fully injected ────────────────────────────────────
@@ -412,14 +446,84 @@ export function resyncCardArgs(v, day) {
 // silence. `failed` (the whole chain's failed-step names) is carried from the
 // last report whatever its day, WITH the day named — exactly how
 // probeEveningChain reports its last run. Quiet is not dead at either end.
+//
+// ── THE DEGRADED LANE (11 Aug 2026 — the SAME defect, one field over) ───────
+// The 10 Aug repair above gave conductor.json a reader for `ok:false` and for
+// STALE BUILD, and stopped there. `degraded` — the field conductor.mjs:664
+// writes when a step's declared `needs` did not produce, "ran on stale input —
+// goalkeeper failed" — was still read by NOBODY. Repo-wide grep the day this
+// was found: conductor.mjs writes it on BOTH chains; watchman.mjs:942 reads the
+// EVENING twin only (conductor_evening.json) and the morning chain has no
+// watchman arm at all; this file filtered conductor.json on `ok === false` and
+// on /STALE BUILD/ in `daemon`, and a degraded step is `ok: TRUE` — it RAN. So
+// it fell through every filter in the one organ that opens the file.
+//
+// WHY THAT MATTERS AND `failed` DOES NOT COVER IT: the two fields make two
+// different claims. `failed` says an organ did not produce. `degraded` says a
+// LATER step produced ANYWAY, on input the chain itself knows is stale — the
+// 1 Aug scenario, the body read dies at 09:15 and the team sheet is built off
+// yesterday's readiness. The failure was loud; the CONSEQUENCE — which artefact
+// now on disk is untrustworthy — was the part nothing carried.
+//
+// NOT DAY-GATED, unlike `stale`. A STALE verdict is a claim about a process that
+// may have been restarted since; a degraded artefact is a claim about a FILE the
+// chain already wrote, and that file does not become fresh overnight. So it is
+// carried from the last report whatever its day, with the day named — the exact
+// treatment `failed` gets two lines up, and the exact treatment probeEveningChain
+// gives evening degradation.
+//
+// AND IT NEVER ASKS. probeEveningChain grades its degraded steps INFO, not WARN,
+// and files no card; the upstream organ that caused it is already named in this
+// same line's FAILED clause, which is the ask. `outageLine`'s law applies word
+// for word here — IT STATES, IT NEVER ASKS. A card would have to propose a
+// re-run, and whether a half-day-old chain may be re-fired is his call, not a
+// number this file gets to invent. `ok !== false` is watchman.mjs:942's own
+// filter, borrowed whole: a step that FAILED is already in `failed`, and naming
+// it twice would read as two defects where there is one.
+//
+// ── THE UNPRODUCED LANE (11 Aug 2026 — the SAME defect, one field further) ──
+// `failed` above carries NAMES and nothing else. For almost every failure that is
+// enough, because conductor.mjs also puts a reason on the row: `error` on a timeout
+// or a spawn failure, clipped `stderr` on a non-zero exit. There is exactly ONE
+// failure mode where BOTH of those are null by construction — the exit-0-but-did-
+// not-produce step. conductor.mjs only computes `produced` when the child exited 0
+// (its checkWrites), so a step that returns success and leaves its declared file
+// untouched carries its whole explanation in a THIRD field, `stale`: "declared
+// readiness.json but this run did not rewrite it — last written …, before this step
+// started …". Repo-wide grep the day this was found: conductor.mjs wrote it at :646
+// and NOTHING read it, including conductor's own FAIL printer (repaired the same
+// day). This filter is why it fell through here too — `failed` matched the step and
+// threw the sentence away, so the one failure that cannot explain itself anywhere
+// else arrived as the bare word "goalkeeper".
+//
+// IT RIDES THE FAILED NAME, IT DOES NOT GET ITS OWN CLAUSE (morningLine below): the
+// step is already in `failed`, and a second clause naming it again would read as two
+// defects where there is one — the same rule the DEGRADED LANE states one paragraph
+// up, applied from the other side.
+//
+// NOT DAY-GATED, and NO CARD, for the degraded lane's reasons word for word: this is
+// a claim about a FILE that is missing or old on disk, not about a live process that
+// may have been restarted since; and the ask — re-fire a half-day-old chain? — is
+// his call, not a number this file gets to invent.
 export function morningDaemonVerdicts(report, today) {
-  if (!report || !Array.isArray(report.steps)) return { day: null, started: null, failed: [], stale: [] };
+  if (!report || !Array.isArray(report.steps)) return { day: null, started: null, failed: [], stale: [], degraded: [], unproduced: [] };
   const day = localDayOf(report.started);
   const failed = report.steps.filter((s) => s && s.ok === false).map((s) => s.id);
   const stale = day !== today ? [] : report.steps
     .filter((s) => s && s.ok === false && /STALE BUILD/.test(String(s.daemon || "")))
     .map((s) => ({ name: s.id, port: s.port == null ? null : s.port, why: String(s.error || s.daemon || "").slice(0, 200) }));
-  return { day, started: report.started || null, failed, stale };
+  // Same clip as `why` above, same reason: the report keeps the full sentence,
+  // the line stays a line.
+  const degraded = report.steps
+    .filter((s) => s && s.ok !== false && s.degraded)
+    .map((s) => ({ name: s.id, why: String(s.degraded).slice(0, 200) }));
+  // Same clip again, same reason. `ok === false` is deliberate and not redundant:
+  // it is the guarantee that every name here is ALSO in `failed`, which is what
+  // lets morningLine attach the why to the existing name instead of adding a clause.
+  const unproduced = report.steps
+    .filter((s) => s && s.ok === false && s.stale)
+    .map((s) => ({ name: s.id, why: String(s.stale).slice(0, 200) }));
+  return { day, started: report.started || null, failed, stale, degraded, unproduced };
 }
 
 // A verdict can be OVERTAKEN between 09:15 and now: he reads the card, restarts
@@ -454,6 +558,97 @@ export function stuckCardArgs(name, day) {
   return ["captains_call.mjs", "file",
     "--line", `${name} daemon RELAUNCH NAHI CHADHA — watchdog ne start kiya, agla probe phir bhi chup. setup/START_DAEMONS.vbs aapke haath se chalana padega; machine yahan se aage nahi ja sakti.`,
     "--key", `daemon:stuck:${name}:${day}`];
+}
+
+// ── THE LEDGER IS A WITNESS TO THE BUILD (WIRING AUDIT, 11 Aug 2026) ────────
+// THE DEFECT, measured on his box the hour this was written: the cortex daemon
+//   (PID 13272) booted 2026-08-08T19:47:29Z and has never been restarted.
+//   LADDER G1 landed 22h11m LATER (76a5cbb, 9 Aug 23:28 IST) and taught cortex
+//   to parse the CLI's cache pair — so every cortex_wake row written since, the
+//   10 Aug 11:21 and 11:33 serves included, still carries the PRE-G1 key set.
+//   watchman.mjs:890's wake-economy re-fit accepts ONLY rows with the cache pair
+//   present, so it has read 0/10 honest rows since the day it was built and
+//   est_tokens_per_wake sits at the never-measured 40000 that cortex.mjs:618
+//   reserves per in-flight lane and thalamus.mjs:549 divides the window by. The
+//   re-fit built to kill that guess can never fire.
+//   THE PARSE IS NOT THE PROBLEM: 435 of the 447 ledger rows written since 10 Aug
+//   01:00 DO carry the pair, and every one of them came from the brain daemon —
+//   which booted 01:29 that morning, i.e. AFTER G1. Only the process is old.
+//
+// WHY A SECOND WITNESS, when the conductor already catches this: it does, and
+//   this file already cards it (c31/c34 `daemon:stale:cortex:2026-08-10` were
+//   filed off exactly that read — conductor.mjs:561, "STALE BUILD … via process
+//   table"). But that whole lane hangs on ONE artefact. morningDaemonVerdicts
+//   DAY-GATES `stale`, and the newest conductor.json on disk is from 10 Aug
+//   03:45, so on 11 Aug this organ's own state file says `stale: []` while the
+//   same pre-G1 process is still serving wakes. The verdict expired; the
+//   condition did not. And the probe behind it is the powershell process-table
+//   read that times out ~1 in 3 on this laptop (conductor.mjs:395). The ledger
+//   cannot expire and costs no spawn: it is dated by the writer itself.
+//
+// THE INFERENCE IS A PROOF, NOT A PROBE. cortex.mjs writes
+//   `cache_read_tokens: r.cache_read_tokens ?? null`, so the KEY is on every row
+//   today's code emits, even when the meter read null. A cortex_wake row with
+//   the key ABSENT can only have come from a build older than the field.
+//   Absence-of-key, never null-value: a null is an honest meter reading, a
+//   missing key is an old writer. The selftest pins that shape against
+//   cortex.mjs on disk, so this witness cannot go on believing in a field the
+//   producer has renamed.
+//
+// IT PROVES A PAST, NOT A PRESENT — so it takes this file's OWN existing answer
+//   to that, voidedByRestart(): a cortex process that booted AFTER the row is a
+//   different process and the verdict is void. No new instrument, no new number,
+//   and the powershell spawn is paid for ONLY once the ledger has already proved
+//   the shape is old — the same "a healthy morning pays nothing" rule the
+//   morning lane states above.
+//
+// IT PROPOSES, IT NEVER ACTS. The remedy is a KILL and this file may not kill
+//   (its own stated law). The card rides staleCardArgs' OWN key family,
+//   `daemon:stale:<name>:<day>`, so captains_call's rolling-key fileGuard dedups
+//   it against the conductor lane and against any card of his still unanswered.
+export const CORTEX_METER_KEY = "cache_read_tokens";
+
+// Newest-first scan: the only row that says anything about the CURRENT build is
+// the last one the serving process wrote. The cheap substring reject keeps the
+// JSON.parse off the ~4,400 rows this file has no interest in.
+export function newestCortexWake(raw) {
+  if (!raw) return null;
+  const lines = String(raw).split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i].trim();
+    if (!l || !l.includes('"cortex_wake"')) continue;
+    try { const j = JSON.parse(l); if (j && j.job === "cortex_wake") return j; } catch { /* a torn line is not a verdict */ }
+  }
+  return null;
+}
+
+export function ledgerBuildVerdict(row) {
+  if (!row || !row.ts) return null;
+  if (CORTEX_METER_KEY in row) return null;   // key present (null or number) ⇒ the serving build is current
+  const ms = Date.parse(row.ts);
+  return {
+    name: "cortex", row_ts: row.ts, row_ms: Number.isFinite(ms) ? ms : null,
+    why: `newest cortex_wake row (${row.ts}) carries no \`${CORTEX_METER_KEY}\` key — a shape today's cortex.mjs cannot write — so the process that served it predates LADDER G1; watchman's wake-economy re-fit discards every such row and est_tokens_per_wake stays at the unmeasured guess`,
+  };
+}
+
+// Same key family as staleCardArgs on purpose (see the header): one ask per
+// daemon per day, whichever witness gets there first. The line names the DAMAGE
+// rather than the symptom — a restart he is being asked to authorise should say
+// what it buys.
+export function ledgerStaleCardArgs(entry, day) {
+  return ["captains_call.mjs", "file",
+    "--line", `${entry.name} STALE BUILD — ledger ne pakda (wake rows purane shape mein, cache meter hi nahi). Isi wajah se wake-economy re-fit 0/10 pe atka hai aur est_tokens_per_wake abhi tak bina-naapa 40000 hai. Restart karun? Live daemon kill sirf aapke word se.`,
+    "--key", `daemon:stale:${entry.name}:${day}`];
+}
+
+// The one-line voice of the build witness — shared by `pass` and `status`, the
+// launchLine/morningLine precedent, so it can never be visible in only one of
+// them. Empty string = the ledger had nothing to say, which is the healthy case.
+export function buildWitnessLine(lb) {
+  if (!lb) return "";
+  if (lb.cleared) return `build witness: ${lb.name} has restarted since its last cache-blind wake row (${lb.row_ts}) — verdict VOID, the next wake will meter honestly`;
+  return `LEDGER BUILD WITNESS: ${lb.name} is serving from pre-meter code${lb.verified ? "" : " (process start unverified)"} — ${lb.why} · ${lb.card_error ? "card FAILED to file" : "card filed"}, restart needs HIS word`;
 }
 
 async function pass(deps = {}) {
@@ -552,7 +747,47 @@ async function pass(deps = {}) {
     }
     stale.push(row);
   }
-  state.morning_chain = { report_day: v.day, report_started: v.started, failed: v.failed, stale, read_at: nowIso };
+  // `degraded` rides straight through — no probe, no card, no spawn (see the
+  // DEGRADED LANE header). It costs nothing and it is now ON DISK, so the next
+  // organ that wants the morning's degradation does not have to re-open
+  // conductor.json to find it.
+  // `unproduced` rides through on the same terms as `degraded` (see the UNPRODUCED
+  // LANE header): no probe, no card, no spawn — the step is already named in
+  // `failed`, this is only the sentence that says WHY, and it is now on disk for the
+  // next organ instead of dying inside conductor.json.
+  state.morning_chain = { report_day: v.day, report_started: v.started, failed: v.failed, stale, degraded: v.degraded || [], unproduced: v.unproduced || [], read_at: nowIso };
+
+  // ---- the ledger's own build witness (see THE LEDGER IS A WITNESS header) --
+  // Gated on the port probe answering UP: "the build it is running is old" is
+  // not the ask a DARK daemon needs — that one belongs to the relaunch arm and
+  // the stuck card above, and a stale verdict on a dead process is noise.
+  // A name the morning lane already carded on THIS pass is skipped so one pass
+  // never spawns captains_call twice for one key.
+  const cardedStale = new Set(stale.filter((s) => !s.cleared).map((s) => s.name));
+  let ledgerStale = null;
+  // `cortexRow` is the injection door, and EVERY selftest fixture passes it
+  // (`cortexRow: null` = the ledger said nothing) — a hermetic pass must never
+  // read his live brain_ledger.jsonl, the same law as `report` and `procProbe`.
+  const lv = ledgerBuildVerdict(deps.cortexRow !== undefined ? deps.cortexRow : newestCortexWake(readText(LEDGER())));
+  if (lv && probes[lv.name] === true) {
+    const d = DAEMONS.find((x) => x.name === lv.name);
+    // The spawn is paid for HERE and nowhere earlier — the ledger has already
+    // proved the shape is old, so this call only ever answers "is it the same
+    // process". Unknowable ⇒ the verdict STANDS, marked unverified: the same
+    // honest-unknown rule voidedByRestart states for the morning lane.
+    const procMs = d ? (deps.procStart || processStartMs)(d.args[0]) : null;
+    const cleared = voidedByRestart(lv.row_ms, procMs);
+    ledgerStale = { ...lv, cleared, verified: procMs != null };
+    if (cleared) { /* a different process is serving now — nothing to ask */ }
+    else if (cardedStale.has(lv.name)) ledgerStale.card = "the morning lane already carded this name on this pass (same rolling key)";
+    else {
+      // captains_call's OWN cli, never its file — the owners-only law, same door
+      // and same clip as every other ask in this organ.
+      try { ledgerStale.card = clipSaid(String(shell(ledgerStaleCardArgs(lv, today)))).text; }
+      catch (err) { ledgerStale.card_error = clipSaid(childSaid(err)).text; }
+    }
+  }
+  state.ledger_build = ledgerStale;
 
   if (!deps.dry) writeAtomic(STATE(), state);
   return { state, actions };
@@ -603,10 +838,24 @@ export function outageLine(s) {
 export function morningLine(mc) {
   if (!mc || !mc.report_day) return "morning chain: NO report on disk (conductor.json absent — the chain may never have run here)";
   const open = (mc.stale || []).filter((s) => !s.cleared);
-  const head = `morning chain (${mc.report_day}): ${(mc.failed || []).length ? `FAILED ${mc.failed.join(", ")}` : "all steps ok"}`;
-  if (!(mc.stale || []).length) return head;
+  // THE UNPRODUCED WHY rides the FAILED name itself rather than earning a clause of
+  // its own (see the lane's header): the step is already listed here, and for the
+  // exit-0 failure mode this sentence is the ONLY explanation that exists anywhere —
+  // conductor's `error` and `stderr` are both null by construction on that path.
+  // Absent ⇒ nothing is appended, so every other failure's line is byte-identical.
+  const whyNotProduced = new Map((mc.unproduced || []).map((u) => [u.name, u.why]));
+  const head = `morning chain (${mc.report_day}): ${(mc.failed || []).length ? `FAILED ${mc.failed.map((n) => n + (whyNotProduced.get(n) ? ` — ${whyNotProduced.get(n)}` : "")).join(", ")}` : "all steps ok"}`;
+  // THE DEGRADED CLAUSE — appended to BOTH exits below, because the early return
+  // for "no stale daemons" is the common case and is exactly where a degraded
+  // sheet would otherwise disappear again: goalkeeper dies, no daemon is stale,
+  // the line says "FAILED goalkeeper" and never says the sheet was built anyway.
+  // Silent on a clean chain, like every other clause in this file.
+  const deg = (mc.degraded || []).length
+    ? ` · DEGRADED: ${mc.degraded.map((d) => `${d.name} — ${d.why}`).join(" · ")} (the step RAN and its artefact is on disk, built on input the chain could not refresh)`
+    : "";
+  if (!(mc.stale || []).length) return head + deg;
   const cleared = (mc.stale || []).filter((s) => s.cleared).map((s) => s.name);
-  return `${head} · STALE BUILD: ${open.length ? open.map((s) => s.name + (s.verified ? "" : " (unverified)")).join(", ") + " — card filed, restart needs HIS word" : "none open"}${cleared.length ? ` · cleared by restart since the report: ${cleared.join(", ")}` : ""}`;
+  return `${head} · STALE BUILD: ${open.length ? open.map((s) => s.name + (s.verified ? "" : " (unverified)")).join(", ") + " — card filed, restart needs HIS word" : "none open"}${cleared.length ? ` · cleared by restart since the report: ${cleared.join(", ")}` : ""}${deg}`;
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
@@ -626,6 +875,7 @@ async function main() {
     console.log(`daemon_watchdog: ${outageLine(s)}`);
     console.log(`daemon_watchdog: ${resyncLine(s)}`);
     console.log(`daemon_watchdog: ${morningLine(s.morning_chain)}`);
+    if (buildWitnessLine(s.ledger_build)) console.log(`daemon_watchdog: ${buildWitnessLine(s.ledger_build)}`);
     return;
   }
   const { state, actions } = await pass();
@@ -647,6 +897,9 @@ async function main() {
   // an owed delivery does not stop being owed ten minutes later.
   if (actions.resync || resyncStuck(resyncVerdicts(state)).length) console.log(`daemon_watchdog: ${resyncLine(state)}`);
   console.log(`daemon_watchdog: ${morningLine(state.morning_chain)}`);
+  // Printed only when the ledger has something to say — a healthy build does not
+  // repeat "the meter is current" 144 times a day (the outageLine rule).
+  if (buildWitnessLine(state.ledger_build)) console.log(`daemon_watchdog: ${buildWitnessLine(state.ledger_build)}`);
 }
 
 // ── SELFTEST — hermetic, injected, every check can fail ─────────────────────
@@ -678,6 +931,31 @@ async function selftest() {
       processProbe("context.mjs daemon", { platform: "win32", procStart: () => 1754800000000 }) === true
       && processProbe("context.mjs daemon", { platform: "win32", procStart: () => null }) === false
       && processProbe("context.mjs daemon", { platform: "linux", procStart: () => { throw new Error("must not shell off Windows"); } }) === null);
+    // ---- PROBE HONESTY (11 Aug 2026) — THE TWIN THAT WAS ONE FLAKE AWAY -------
+    // The probe below is the LIVE door (procRead), not the ms|null fixture above, because
+    // the defect lived precisely in the step that turned a killed shell into `false`.
+    // MEASURED the hour this was written: 2 of 5 consecutive real probes for PID 21308 —
+    // up and emitting — returned ETIMEDOUT, and daemon_watchdog.json on disk already held
+    // `ports.context:false` with `unknown:[]`, i.e. the confirm rule was one flake from
+    // launching a twin onto the thalamus door. These fail if a could-not-look reading is
+    // ever folded back into DOWN, or if an absent reading stops being actionable.
+    assert("PROBE HONESTY — a probe KILLED at the timeout reads UNKNOWN, never DOWN; a clean look that finds nothing still reads DOWN",
+      processProbe("context.mjs daemon", { platform: "win32", procRead: () => ({ ms: null, looked: false, reason: "ETIMEDOUT" }) }) === null
+      && processProbe("context.mjs daemon", { platform: "win32", procRead: () => ({ ms: null, looked: true, reason: "absent" }) }) === false
+      && processProbe("context.mjs daemon", { platform: "win32", procRead: () => ({ ms: 1754800000000, looked: true, reason: "found" }) }) === true);
+    // THE WHOLE POINT, end to end: the armed state that was sitting on his disk, plus one
+    // timed-out probe, must produce NO launch. Before this repair it produced a twin.
+    {
+      const armed = { ports: { turnstile: true, cortex: true, thalamus: true, brain: true, context: false }, unknown: [], thalamus_down_since: null, resync_pending: false, resyncs: [], launched: [] };
+      const timedOut = processProbe("context.mjs daemon", { platform: "win32", procRead: () => ({ ms: null, looked: false, reason: "ETIMEDOUT" }) });
+      const next = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, context: timedOut }, T(11));
+      assert("PROBE HONESTY — the ARMED state on disk (ports.context:false, unknown:[]) + a timed-out probe launches NOTHING, so a live bridge never gets a twin double-POSTing the door",
+        timedOut === null && next.actions.launch.length === 0 && next.state.unknown.join(",") === "context");
+      // and the genuinely-dark bridge is NOT sacrificed to that caution
+      const reallyDown = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, context: false }, T(12));
+      assert("PROBE HONESTY — a bridge that is genuinely absent on a probe that COMPLETED is still relaunched; the caution costs a delay, never a dark bridge",
+        reallyDown.actions.launch.join(",") === "context");
+    }
     // An unread probe must never become a launch — that is how a live bridge gets a twin.
     const unk = decidePass(null, { turnstile: true, cortex: true, thalamus: true, brain: true, context: null }, T(10));
     assert("THE 5th RESIDENT — an UNKNOWN probe launches NOTHING and prints UNKNOWN, not DOWN",
@@ -759,7 +1037,7 @@ async function selftest() {
 
     // THE WRITER must carry it too — a ledger the writer drops is the same orphan.
     const rp = await pass({
-      dry: true, prev: hold.state, now: new Date(T(14)), report: null,
+      dry: true, cortexRow: null, prev: hold.state, now: new Date(T(14)), report: null,
       probe: async () => true, procProbe: () => true, launch: () => {}, exec: () => "ok",
     });
     assert("OUTAGE LEDGER — pass(), the file's only writer, carries the closed outage onto the state it saves",
@@ -772,7 +1050,7 @@ async function selftest() {
     const launched = [];
     const execs = [];
     const r = await pass({
-      dry: true, prev: d3.state, now: new Date(T(13)),
+      dry: true, cortexRow: null, prev: d3.state, now: new Date(T(13)),
       probe: async () => true,
       procProbe: () => true,          // the portless resident's probe, injected — a selftest never shells the live process table
       launch: (a) => launched.push(a.join(" ")),
@@ -817,7 +1095,7 @@ async function selftest() {
       calls.push(a.join(" ")); return "captains_call: filed c77";
     };
     const r = await pass({
-      dry: true, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
+      dry: true, cortexRow: null, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
       probe: async () => true, procProbe: () => true, launch: () => { },
       exec: (a) => stuckOut(a),
     });
@@ -833,7 +1111,7 @@ async function selftest() {
       && /UNDELIVERED MOMENTS/.test(r.state.resyncs.slice(-1)[0].ran.find((x) => x.cmd === "mcp-memory.mjs resync").surfaced_by || "")
       && r.state.resyncs.slice(-1)[0].ran.find((x) => x.cmd === "harvest.mjs resync").card === "captains_call: filed c77");
     assert("RESYNC WIRE — a clean dispatch files NOTHING and says clean (a working recovery must never mint a card)",
-      (await pass({ dry: true, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
+      (await pass({ dry: true, cortexRow: null, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
         probe: async () => true, procProbe: () => true, launch: () => { },
         exec: (a) => { if (a[0] === "captains_call.mjs") throw new Error("a clean resync must never reach the captain"); return a[0] === "harvest.mjs" ? "harvest: resync — 0 pending, 0 delivered, 0 still undelivered" : '{"pending":0,"reposted":0}'; },
       })).state.resyncs.slice(-1)[0].ran.every((x) => x.ok && !x.card));
@@ -879,7 +1157,7 @@ async function selftest() {
 
     const calls = [];
     const r = await pass({
-      dry: true, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
+      dry: true, cortexRow: null, prev: d3.state, now: new Date(`${DAY}T18:00:00Z`), today: DAY, report: null,
       probe: async () => true, procProbe: () => true, launch: () => { },
       exec: (a) => {
         if (a[0] === "harvest.mjs") throw nodeErr();
@@ -906,7 +1184,11 @@ async function selftest() {
     const body = self.slice(self.indexOf("async function pass("), self.indexOf("// ── SELFTEST"));
     assert("THE DOOR — no blind .slice(0,120) survives ANYWHERE in pass() or its voices, and every catch here spends the child's stream",
       body.length > 0 && !/slice\(0, ?120\)/.test(body)
-      && (body.match(/clipSaid\(childSaid\(err?\)\)/g) || []).length === 3);   // resync arm + stuck card + stale card
+      // resync arm + stuck card + stale card, and since the LEDGER BUILD WITNESS
+      // (11 Aug 2026) its card too — a fourth ask through the same door, held to
+      // the same rule. This count is deliberately exact: a new catch that does
+      // NOT spend the child's stream cannot slip in beside them unnoticed.
+      && (body.match(/clipSaid\(childSaid\(err?\)\)/g) || []).length === 4);
   }
 
   // ---- THE DISPATCH IS NOT THE OUTCOME (11 Aug 2026 wire repair) -----------
@@ -918,7 +1200,7 @@ async function selftest() {
     const DAY = "2026-08-11";
     const thalDark = async (port) => port !== 4113;         // :4113 silent, the rest answer
     const boom = await pass({
-      dry: true, prev: null, now: new Date(`${DAY}T10:00:00Z`), today: DAY, report: null,
+      dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T10:00:00Z`), today: DAY, report: null,
       probe: thalDark, procProbe: () => true,
       launch: () => { throw new Error("wscript.exe not found"); },
       exec: () => { throw new Error("nothing may be filed on the FIRST failed dispatch — one reading is not proof"); },
@@ -934,7 +1216,7 @@ async function selftest() {
 
     const calls = [];
     const stuck = await pass({
-      dry: true, prev: boom.state, now: new Date(`${DAY}T10:10:00Z`), today: DAY, report: null,
+      dry: true, cortexRow: null, prev: boom.state, now: new Date(`${DAY}T10:10:00Z`), today: DAY, report: null,
       probe: thalDark, procProbe: () => true, launch: () => {},
       exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
@@ -948,7 +1230,7 @@ async function selftest() {
       && /START_DAEMONS\.vbs/.test(calls[0]) && stuck.state.stuck[0].card === "captains_call: filed c99");
 
     const back = await pass({
-      dry: true, prev: boom.state, now: new Date(`${DAY}T10:10:00Z`), today: DAY, report: null,
+      dry: true, cortexRow: null, prev: boom.state, now: new Date(`${DAY}T10:10:00Z`), today: DAY, report: null,
       probe: async () => true, procProbe: () => true, launch: () => {},
       exec: () => { throw new Error("a daemon that came back must file NOTHING"); },
     });
@@ -998,7 +1280,7 @@ async function selftest() {
     // captains_call's own CLI — never write the card file, never kill anything.
     const calls = [];
     const r = await pass({
-      dry: true, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
+      dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
       probe: async () => true, launch: () => { throw new Error("a stale daemon must never be relaunched — the double-ingest law"); },
       procStart: (rel) => (rel === "scripts/cortex.mjs" ? Date.parse(rep.started) + 3600000 : Date.parse(rep.started) - 3600000),
       exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
@@ -1018,11 +1300,175 @@ async function selftest() {
       && /HIS word/.test(morningLine(r.state.morning_chain))
       && /cleared by restart since the report: cortex/.test(morningLine(r.state.morning_chain)));
     assert("MORNING WIRE — an unverifiable boot time is marked UNVERIFIED and still asks (never a fabricated all-clear)",
-      (await pass({ dry: true, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
+      (await pass({ dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
         probe: async () => true, launch: () => {}, procStart: () => null, exec: () => "ok" }))
         .state.morning_chain.stale.every((s) => s.cleared === false && s.verified === false));
     assert("MORNING WIRE — it reads the REAL receipt path (a rename of conductor.json must break this, loudly)",
       MORNING_REPORT().replace(/\\/g, "/").endsWith("/dressing-room/state/conductor.json"));
+
+    // ---- THE DEGRADED LANE (11 Aug 2026 wire repair) -----------------------
+    // Every check here fails the moment conductor.json's `degraded` loses its
+    // reader again. The fixture is the 1 Aug scenario in the chain's own shape:
+    // the body read dies, and `sheet` (needs: goalkeeper, learningstate — line 84)
+    // is built ANYWAY off yesterday's readiness. No daemon is stale, so this walks
+    // the early-return path in morningLine, which is exactly where it vanished.
+    const degRep = {
+      started: `${DAY}T09:15:02.000+05:30`, ran: 4, ok: 3, failed: 1,
+      steps: [
+        { id: "goalkeeper", ok: false, degraded: null, error: "oura refused a non-persistable verdict" },
+        { id: "learningstate", ok: true, degraded: null },
+        { id: "sheet", ok: true, degraded: "ran on stale input — goalkeeper failed" },
+        { id: "turnstile", ok: true, port: 4111, daemon: "already running (build current — via process table)" },
+      ],
+    };
+    const dv = morningDaemonVerdicts(degRep, DAY);
+    assert("DEGRADED LANE — the step that RAN on stale input is read out by name AND by the chain's own reason (ok:TRUE, which is why every old filter missed it)",
+      dv.degraded.length === 1 && dv.degraded[0].name === "sheet"
+      && dv.degraded[0].why === "ran on stale input — goalkeeper failed"
+      && dv.failed.join(",") === "goalkeeper" && dv.stale.length === 0);
+    assert("DEGRADED LANE — a FAILED step is never ALSO counted degraded (one defect, named once), and a clean chain's lane is empty",
+      morningDaemonVerdicts({ started: degRep.started, steps: [{ id: "sheet", ok: false, degraded: "ran on stale input — goalkeeper failed" }] }, DAY).degraded.length === 0
+      && morningDaemonVerdicts({ started: degRep.started, steps: [{ id: "sheet", ok: true, degraded: null }] }, DAY).degraded.length === 0
+      && (morningDaemonVerdicts(null, DAY).degraded || []).length === 0);
+    assert("DEGRADED LANE — NOT day-gated like STALE: an artefact built on stale input does not go fresh overnight, and the day stays named",
+      morningDaemonVerdicts(degRep, "2026-08-11").degraded.length === 1
+      && morningDaemonVerdicts(degRep, "2026-08-11").day === DAY);
+
+    const degCalls = [];
+    const dr = await pass({
+      dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: degRep,
+      probe: async () => true, launch: () => {}, procStart: () => null,
+      exec: (a) => { degCalls.push(a.join(" ")); return "captains_call: filed c99"; },
+    });
+    assert("DEGRADED WIRE — pass() carries it onto disk in state.morning_chain (the whole defect: conductor wrote it, nobody read it)",
+      dr.state.morning_chain.degraded.length === 1 && dr.state.morning_chain.degraded[0].name === "sheet");
+    assert("DEGRADED WIRE — IT STATES, IT NEVER ASKS: a degraded step files ZERO cards (probeEveningChain grades its twin INFO, and a re-run is HIS call)",
+      degCalls.length === 0);
+    assert("DEGRADED WIRE — the verdict is VISIBLE with NO stale daemon in sight — the early-return path where it used to disappear — naming the step and its reason",
+      /FAILED goalkeeper/.test(morningLine(dr.state.morning_chain))
+      && /DEGRADED: sheet — ran on stale input — goalkeeper failed/.test(morningLine(dr.state.morning_chain))
+      && /artefact is on disk/.test(morningLine(dr.state.morning_chain)));
+    assert("DEGRADED WIRE — a clean morning stays silent about degradation (no clause, no noise 144 times a day)",
+      !/DEGRADED/.test(morningLine(r.state.morning_chain)));
+
+    // ---- THE UNPRODUCED LANE (11 Aug 2026 wire repair) ---------------------
+    // The fixture is a step in the shape conductor.mjs ACTUALLY writes on this path:
+    // exit 0, error null, stderr null, and the whole explanation in `stale`. That
+    // shape is the point — every other field a reader might fall back on is empty,
+    // which is why "FAILED goalkeeper" was the entire morning verdict for weeks.
+    const unpRep = {
+      started: `${DAY}T09:15:02.000+05:30`, ran: 2, ok: 1, failed: 1,
+      steps: [
+        { id: "goalkeeper", ok: false, exit: 0, error: null, stderr: null, wrote: "readiness.json", produced: false,
+          stale: "declared readiness.json but this run did not rewrite it — last written 2026-08-09T03:45:11.000Z, before this step started 2026-08-10T09:15:03.000Z" },
+        { id: "sheet", ok: true, degraded: "ran on stale input — goalkeeper failed" },
+      ],
+    };
+    const uv = morningDaemonVerdicts(unpRep, DAY);
+    assert("UNPRODUCED LANE — the exit-0-but-did-not-produce step is read out with the chain's own sentence (error AND stderr are null here, so nothing else in the report can say why)",
+      uv.unproduced.length === 1 && uv.unproduced[0].name === "goalkeeper"
+      && /readiness\.json/.test(uv.unproduced[0].why) && /before this step started/.test(uv.unproduced[0].why)
+      && uv.failed.join(",") === "goalkeeper");
+    assert("UNPRODUCED LANE — NOT day-gated (a file that was never written does not appear overnight), and a chain with no such step has an empty lane",
+      morningDaemonVerdicts(unpRep, "2026-08-11").unproduced.length === 1
+      && morningDaemonVerdicts(degRep, DAY).unproduced.length === 0
+      && (morningDaemonVerdicts(null, DAY).unproduced || []).length === 0);
+    const unpCalls = [];
+    const ur = await pass({
+      dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: unpRep,
+      probe: async () => true, launch: () => {}, procStart: () => null,
+      exec: (a) => { unpCalls.push(a.join(" ")); return "captains_call: filed c99"; },
+    });
+    assert("UNPRODUCED WIRE — pass() carries it to disk in state.morning_chain (the whole defect: conductor wrote the sentence, nobody read it)",
+      ur.state.morning_chain.unproduced.length === 1 && ur.state.morning_chain.unproduced[0].name === "goalkeeper");
+    assert("UNPRODUCED WIRE — morningLine says WHY beside the failed name, and files ZERO cards (it is already named in FAILED; a re-fire is HIS call)",
+      /FAILED goalkeeper — declared readiness\.json but this run did not rewrite it/.test(morningLine(ur.state.morning_chain))
+      && unpCalls.length === 0);
+    assert("UNPRODUCED WIRE — a failure with no such sentence gets no invented why: the FAILED clause stays byte-identical",
+      morningLine(dr.state.morning_chain).includes("FAILED goalkeeper ·")
+      && morningLine(r.state.morning_chain).includes("FAILED thalamus, cortex ·"));
+  }
+
+  // ---- THE LEDGER BUILD WITNESS (11 Aug 2026 wire repair) ------------------
+  // Every check below fails the moment this witness stops being able to tell a
+  // cache-blind wake row from an honest one — which is the whole defect: the
+  // cortex daemon served two wakes on 10 Aug from pre-G1 code, watchman's
+  // wake-economy re-fit discarded both, and NOTHING anywhere connected "0/10
+  // honest rows" to "the producer is running yesterday's build".
+  {
+    const DAY = "2026-08-11";
+    const OLD = { ts: "2026-08-10T11:33:50.563Z", job: "cortex_wake", engine: "claude", model: "opus", input_tokens: 2, output_tokens: 1115, total_tokens: 1117, ok: true, error: null, limit_hit: false };
+    const NEW = { ...OLD, ts: "2026-08-11T09:00:00.000Z", cache_creation_tokens: 0, cache_read_tokens: 0 };
+
+    // SOURCE TRUTH, not prose — the same rule the START_DAEMONS.vbs check above
+    // uses. Rename or drop that field in cortex.mjs and this goes red instead of
+    // this organ quietly waiting on a key the producer no longer writes.
+    const cortexSrc = (() => { try { return readFileSync(join(REPO, "scripts", "cortex.mjs"), "utf8"); } catch { return ""; } })();
+    assert("BUILD WITNESS — the key it filters on is a key cortex.mjs ACTUALLY writes on its cortex_wake row, unconditionally (`?? null`, so present even when the meter read nothing)",
+      new RegExp(`job:\\s*"cortex_wake"`).test(cortexSrc)
+      && new RegExp(`${CORTEX_METER_KEY}:\\s*r\\.${CORTEX_METER_KEY}\\s*\\?\\?\\s*null`).test(cortexSrc));
+
+    assert("BUILD WITNESS — key ABSENT ⇒ pre-meter writer · key present-but-NULL ⇒ honest meter, silence · key present ⇒ silence (a null is a reading, a missing key is an old build)",
+      ledgerBuildVerdict(OLD) !== null
+      && ledgerBuildVerdict({ ...OLD, cache_read_tokens: null }) === null
+      && ledgerBuildVerdict(NEW) === null
+      && ledgerBuildVerdict(null) === null);
+
+    assert("BUILD WITNESS — the scan takes the NEWEST cortex_wake row and ignores every other job, so one honest brain row cannot vouch for a stale cortex",
+      newestCortexWake([JSON.stringify(NEW), JSON.stringify({ ts: "2026-08-11T09:30:00Z", job: "haiku_pulse", cache_read_tokens: 0 }), JSON.stringify(OLD), "{torn"].join("\n")).ts === OLD.ts
+      && newestCortexWake(`${JSON.stringify(OLD)}\n${JSON.stringify(NEW)}`).ts === NEW.ts
+      && newestCortexWake("") === null);
+
+    // A stale verdict is a claim about a PAST row, so the restart escape has to
+    // hold here exactly as it does for the morning lane.
+    const calls = [];
+    const runWitness = (row, procMs, port = true) => pass({
+      dry: true, cortexRow: row, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: null,
+      probe: async (p) => (p === 4112 ? port : true), procProbe: () => true, launch: () => {},
+      procStart: () => procMs, exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
+    });
+
+    const stale2 = await runWitness(OLD, Date.parse("2026-08-08T19:47:29.714Z"));   // his real boot stamp — 22h11m BEFORE G1
+    assert("BUILD WITNESS — a cache-blind newest row + a process older than it ⇒ ONE card, on staleCardArgs' own rolling key (so the conductor lane cannot double-ask)",
+      stale2.state.ledger_build.cleared === false && stale2.state.ledger_build.verified === true
+      && calls.length === 1 && calls[0].startsWith("captains_call.mjs file --line ")
+      && calls[0].endsWith(`--key daemon:stale:cortex:${DAY}`));
+    assert("BUILD WITNESS — the card names the DAMAGE, not just the symptom: the re-fit it starves and the guess it leaves standing",
+      /wake-economy re-fit 0\/10/.test(calls[0]) && /est_tokens_per_wake/.test(calls[0])
+      && /aapke word se/.test(calls[0]));
+    assert("BUILD WITNESS — the verdict reaches BOTH surfaces through one line function (pass and status), never only one",
+      /LEDGER BUILD WITNESS: cortex is serving from pre-meter code/.test(buildWitnessLine(stale2.state.ledger_build))
+      && buildWitnessLine(null) === "");
+
+    calls.length = 0;
+    const void2 = await runWitness(OLD, Date.parse("2026-08-11T06:00:00Z"));        // restarted since that row
+    assert("BUILD WITNESS — voidedByRestart still governs: a process booted AFTER the row is a different process ⇒ verdict VOID, zero cards",
+      void2.state.ledger_build.cleared === true && calls.length === 0
+      && /verdict VOID/.test(buildWitnessLine(void2.state.ledger_build)));
+
+    calls.length = 0;
+    const dark = await runWitness(OLD, Date.parse("2026-08-08T19:47:29.714Z"), false);
+    assert("BUILD WITNESS — a DOWN cortex is the relaunch arm's business, not this one: no build verdict, no card, no powershell spawn",
+      dark.state.ledger_build === null && calls.length === 0);
+
+    calls.length = 0;
+    const healthy = await runWitness(NEW, Date.parse("2026-08-08T19:47:29.714Z"));
+    assert("BUILD WITNESS — an honest metered row says NOTHING even from an old process: the meter, not the clock, is the evidence",
+      healthy.state.ledger_build === null && calls.length === 0 && buildWitnessLine(healthy.state.ledger_build) === "");
+
+    // The double-ask guard, from the other side: when the morning report has
+    // ALREADY carded cortex on this pass, the ledger lane must not spawn again.
+    calls.length = 0;
+    const bothRep = { started: `${DAY}T03:45:00+05:30`, steps: [{ id: "cortex", ok: false, port: 4112, daemon: "STALE BUILD — running code older than its module graph (via process table)", error: "booted …" }] };
+    const both = await pass({
+      dry: true, cortexRow: OLD, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: bothRep,
+      probe: async () => true, procProbe: () => true, launch: () => {},
+      procStart: () => Date.parse("2026-08-08T19:47:29.714Z"),
+      exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
+    });
+    assert("BUILD WITNESS — both witnesses agreeing is still ONE ask: the morning lane cards it, the ledger lane stands down and says so",
+      calls.length === 1 && calls[0].endsWith(`--key daemon:stale:cortex:${DAY}`)
+      && /already carded this name on this pass/.test(both.state.ledger_build.card));
   }
 
   console.log(`\ndaemon_watchdog selftest: ${pass2} passed, ${fail} failed`);

@@ -130,6 +130,26 @@ export function measureReality(stateDir = STATE) {
     // how much of the window's arithmetic rests on a guess, which is this file's job.
     brain_calls_estimated: ledger.filter(r => r.tokens_estimated === true).length,
     brain_calls_unstamped: ledger.filter(r => !("tokens_estimated" in r)).length,
+    // WIRING AUDIT (11 Aug 2026) — WHICH CLI THE ORGANS ACTUALLY BOOTED. Same shape,
+    // same door, same day as the flag above. claudegen.mjs picks between the LEAN
+    // invocation (G0: --system-prompt + --tools "" + --strict-mcp-config, measured
+    // 88.5% off a bare probe) and the full CLI, and it picked SILENTLY: the fallback
+    // is not a config key he can open, it is `existsSync(%APPDATA%\npm\claude.cmd)`
+    // — an INSTALLATION. Reinstall the CLI via npm and every organ on that door
+    // (nightshift · dmn · council · thalamus) reverts to the full boot tax with
+    // nothing anywhere able to name why spend tripled; spend itself cannot say it,
+    // because a row that costs 3× looks the same whether the model thought harder or
+    // the tax came back. claudegen now names the lane on every result and projects
+    // it through ledgerForensics; these two counters are its first and only reader.
+    // NO `unstamped` COUNTER HERE, deliberately, and unlike the pair above: brain.mjs
+    // does NOT ride this door — it has its own claudeExec with its own LEAN_ARGS and
+    // its own switch (budget.lean_calls, a key he can read in brain_config.json), so
+    // an unstamped count would have a permanent floor that is not a defect, and this
+    // table's whole job is to not print a number that reads as a failing.
+    // COUNTS ONLY, no verdict: `full_cli` above 0 is not automatically wrong (he can
+    // set ARSENAL_CLAUDEGEN_FULL=1 himself) — it is the thing that must be VISIBLE.
+    brain_calls_lean: ledger.filter(r => r.arg_profile === "lean").length,
+    brain_calls_full_cli: ledger.filter(r => typeof r.arg_profile === "string" && r.arg_profile !== "lean").length,
     // KEPT (layering law) — this is what the twin gate USED to be judged against,
     // wrongly. It is a real number about a real file (voice take_notes), it is
     // just not the twin's denominator. See twin_resolutions_best_type below.
@@ -158,6 +178,43 @@ export function measureReality(stateDir = STATE) {
     // read what the OWNER computed, never re-guess the owner's arithmetic here.
     // Object, not a scalar: `human()` skips it and the GATES table displays it.
     cal_gate: (readJson(join(stateDir, "calibration.json")) || {}).gate || null,
+    // WIRING AUDIT (11 Aug 2026) — THE SWALLOWED LINE, read where it contradicts something.
+    // calibration.mjs's loader dropped every unparseable and every invalid reps_log line
+    // behind a bare `catch { /* skip */ }` with no count, no reason and no published field:
+    // total_reps and `N/20 reps` rode the survivors and said so nowhere. It counts and
+    // publishes now (calibration.json `corpus`), and THIS is the row that makes the count
+    // mean something, because `reps` at the top of this same ledger is the RAW line count of
+    // reps_log.jsonl — and four GATES rows (nemesis · learning_state ×3 · boot room · signal
+    // table) are judged against it. The day those two numbers disagree, one of the two
+    // denominators in this table is wrong, and until today nothing anywhere could see it.
+    // ABSENT IS NOT ZERO, the same law as the lexicon counters above: a calibration.json
+    // written before the block existed, or never written at all, reads null and prints
+    // "null" — reporting "0 dropped" for a read that in fact threw lines away is precisely
+    // the lie both organs are written against.
+    // COUNTS AND REASONS ONLY, NO REP TEXT — reps_log is gitignored derived study data, so
+    // only the producer's own field-name reasons come back out of here, joined into one
+    // scalar so the ledger's WHAT-HE-ACTUALLY-HAS table can print them beside the count.
+    cal_reps_used: (() => { const c = (readJson(join(stateDir, "calibration.json")) || {}).corpus; return c && Number.isFinite(c.reps_used) ? c.reps_used : null; })(),
+    cal_reps_dropped: (() => { const c = (readJson(join(stateDir, "calibration.json")) || {}).corpus; return c && Number.isFinite(c.dropped) ? c.dropped : null; })(),
+    cal_reps_dropped_why: (() => {
+      const c = (readJson(join(stateDir, "calibration.json")) || {}).corpus;
+      if (!c || !c.reasons || !c.dropped) return null;          // null = nothing dropped, or nothing measured
+      return Object.entries(c.reasons).map(([why, n]) => `${n}× ${why}`).join(" · ");
+    })(),
+    // WIRING AUDIT (11 Aug 2026) — IS THAT NEED EVEN HIS? The three rows above read
+    // calibration's published have/need and print them straight, and until today a
+    // DISCARDED edit was indistinguishable from an honoured one. calibration.mjs
+    // normalizeConfig() numOr-clamps every non-numeric leaf of calibration_config.json
+    // to its built-in DEFAULTS — proven: normalizeConfig({min_reps:"12"}) → 20 — and
+    // published nothing about it, while that config's own _comment invites him to
+    // retune ("A deliberate SEED, not sacred"). So the day he types "12" instead of
+    // 12, this ledger prints `min_reps 21 20 OPEN` and he reads 20 as HIS NUMBER.
+    // That is worse than the unread counters below: not a missing measurement, an
+    // ACTIVELY WRONG one, in the one table whose entire job is to say where a number
+    // came from. calibration.mjs now publishes the config read as `config`; this is
+    // its consumer. Object, not a scalar, so `human()`'s ledger skips it — it prints
+    // on the GATES rows it invalidates, which is the only place it means anything.
+    cal_config: (readJson(join(stateDir, "calibration.json")) || {}).config || null,
     // WIRING AUDIT (11 Aug 2026) — the distiller's switch-to-read journal, read
     // at last. Same shape and same reason as cal_gate directly above: an object,
     // so `human()`'s scalar ledger skips it and the CADENCES table prints it on
@@ -180,6 +237,16 @@ export function calGateRead(calGate, name) {
 }
 const calHave = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.have : null; };
 const calNeed = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.need : null; };
+
+// The discard, if any, behind ONE calibration knob. The GATES rows are keyed by the
+// very path calibration.mjs journals ("min_reps" · "window_size" ·
+// "danger.min_knew_reps"), so the two line up without a translation table to rot.
+// Null when the producer never ran, when it published no block (a pre-11-Aug
+// calibration.json), or when the leaf was honoured — never a manufactured "fine".
+export function calConfigRejected(calConfig, key) {
+  if (!calConfig || !Array.isArray(calConfig.rejected)) return null;
+  return calConfig.rejected.find((r) => r && r.key === key) || null;
+}
 
 // The twin's real denominator, as a PURE function of the slip lines, so the
 // selftest can prove it on a fixture without this read-only file ever opening a
@@ -287,6 +354,16 @@ export const GATES = [
   { organ: "calibration",   file: "calibration.mjs",   key: "min_reps",                    need: calNeed("__root__"),             have: calHave("__root__"),             origin: "guessed", effect: "no calibration_gap, no overconfidence read" },
   { organ: "calibration",   file: "calibration.mjs",   key: "window_size",                 need: calNeed("trend"),                have: calHave("trend"),                origin: "guessed", effect: "trend window — the gate is 2 × window_size reps" },
   { organ: "calibration",   file: "calibration.mjs",   key: "danger.min_knew_reps",        need: calNeed("danger.min_knew_reps"), have: calHave("danger.min_knew_reps"), origin: "guessed", effect: "no danger-zone topics surfaced (counts KNEW-reps, not all reps)" },
+  // WIRING AUDIT (11 Aug 2026) — THE SILENT REGISTRY, given an address. calibration.mjs
+  // swallowed a missing/malformed concepts.json in a bare catch and published nothing:
+  // the run came out byte-identical to a healthy one. It now publishes a `registry` sub
+  // row, and this is its consumer — the two rows above are only as true as the alias
+  // table that canonicalises their keys, so a shut row here means BOTH under-read (each
+  // spelling of a topic becomes its own namespace and falls under gate (a)).
+  // ORIGIN `derived`, not `guessed`, for fsrs's reason directly below: the need is 1
+  // because the file parsed or it did not — arithmetic, not a typed threshold. Tagging
+  // it `guessed` would put a phantom row on his 30-45-60-day re-fit list.
+  { organ: "calibration",   file: "concepts.json",     key: "registry — concepts.json must parse", need: calNeed("registry"),     have: calHave("registry"),             origin: "derived", effect: "aliases stop collapsing: the danger zone and the knew-gate both UNDER-read, and an empty danger_zone reads as acquittal" },
   { organ: "nemesis",       file: "nemesis.mjs",       key: "warming_up_min_reps",         need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no weakness headline reaches the sheet" },
   { organ: "nemesis",       file: "nemesis.mjs",       key: "axis_cluster_min_concepts",   need: 3,   have: (m) => m.capsules,          origin: "guessed", effect: "no axis-pattern read" },
   { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.warming_up_min_reps", need: 12, have: (m) => m.reps,           origin: "guessed", effect: "no fluency state, no maidan focus" },
@@ -452,8 +529,12 @@ export function sweepScriptDefaults(dir = SCRIPTS) {
   return out;
 }
 
-export function report(stateDir = STATE) {
-  const m = measureReality(stateDir);
+// `m` is a parameter (11 Aug 2026) purely so the selftest can drive the WHOLE table
+// off a fixture bus — this file may not write a fixture directory to disk (its own
+// last assertion proves it calls no writer), and a wire that can only be checked
+// against today's clean state is a wire that cannot be checked at all. Default
+// behaviour is byte-identical: nothing in the repo passes it.
+export function report(stateDir = STATE, m = measureReality(stateDir)) {
   const gates = GATES.map(g => {
     const have = g.have ? g.have(m) : null;
     // `need` may be a function too (10 Aug 2026) — a row whose denominator is
@@ -461,7 +542,12 @@ export function report(stateDir = STATE) {
     // that rots. Both are resolved to plain numbers here, so the JSON dump and the
     // printed table never see a function.
     const need = typeof g.need === "function" ? g.need(m) : g.need;
-    return { ...g, have, need, open: have == null || need == null ? null : have >= need, have_fn: undefined };
+    // ...and whether that `need` is the captain's edit or the organ's fallback after
+    // his edit was thrown away (11 Aug 2026). Calibration is the only organ publishing
+    // a config read today, so it is the only one asked; every other row carries null,
+    // which prints nothing — an honest "not known", never an implied "fine".
+    const rejected = g.organ === "calibration" ? calConfigRejected(m.cal_config, g.key) : null;
+    return { ...g, have, need, rejected, open: have == null || need == null ? null : have >= need, have_fn: undefined };
   });
   // A cadence row may carry a live MEASUREMENT since the 11 Aug 2026 wiring audit —
   // the same device as `have` above, resolved here so the JSON dump and the printed
@@ -489,9 +575,25 @@ function human(r) {
   for (const g of r.gates) {
     const st = g.open === null ? "  ?   " : g.open ? " OPEN " : " SHUT ";
     console.log(`  ${g.organ.padEnd(15)}${g.key.padEnd(38)}${String(g.have ?? "-").padStart(6)}${String(g.need ?? "-").padStart(7)}   ${st}  ${g.origin}`);
+    // A DISCARDED EDIT, PRINTED ON THE ROW IT INVALIDATED (11 Aug 2026). Not a
+    // footnote and not a separate section: the lie was that this row's `need` looked
+    // like his number, so the correction belongs under that number or nowhere.
+    if (!g.rejected) continue;
+    console.log(`           DISCARDED  └─ calibration_config.json  ${g.rejected.key} = ${g.rejected.got}  was THROWN AWAY (not a number) — the ${g.need} above is calibration.mjs's built-in default ${g.rejected.using}, NOT his edit`);
   }
   const shut = r.gates.filter(g => g.open === false);
   console.log(`  → ${shut.length} of ${r.gates.length} gates SHUT. ${r.gates.filter(g => g.origin === "guessed").length} of them are GUESSES.`);
+  // The rest of the same read: leaves with no gate row (the ECE targets), keys that
+  // are pure no-ops, and a config file that could not be parsed at all. Printed only
+  // when there is something to say — a line that always prints is a line nobody reads.
+  const cc = r.measured.cal_config;
+  if (cc && cc.clean === false) {
+    const rowKeys = new Set(r.gates.filter(g => g.rejected).map(g => g.rejected.key));
+    const rest = (cc.rejected || []).filter(x => !rowKeys.has(x.key));
+    if (cc.error) console.log(`  ! calibration_config.json is UNREADABLE (${cc.source}) — EVERY calibration number above is a built-in default: ${cc.error}`);
+    for (const x of rest) console.log(`  ! calibration_config.json  ${x.key} = ${x.got}  THROWN AWAY (not a number) — using ${x.using}`);
+    for (const k of (cc.unknown || [])) console.log(`  ! calibration_config.json  ${k}  is not a knob this organ reads — a misspelled key is a silent no-op`);
+  }
 
   console.log("\n=== BUDGETS — numbers that cap spend ===");
   for (const b of r.budgets) {
@@ -725,7 +827,31 @@ function selftest() {
     // instead of silently stranding the field again for another few weeks.
     const calSrc = readFileSync(join(SCRIPTS, "calibration.mjs"), "utf8");
     ok("the sub-gate names this table maps to are the ones calibration.mjs buildGate() still emits",
-      ['name: "danger_zone"', 'name: "trend"', 'name: "danger.min_knew_reps"'].every(n => calSrc.includes(n)));
+      ['name: "danger_zone"', 'name: "trend"', 'name: "danger.min_knew_reps"', 'name: "registry"'].every(n => calSrc.includes(n)));
+
+    // ---- THE SILENT REGISTRY (11 Aug 2026 wiring audit) --------------------
+    // calibration.mjs read concepts.json through a bare catch and published NOTHING
+    // when it failed, so a dead alias table produced a run byte-identical to a healthy
+    // one — and the two rows above (which key on canonicalised topics) under-read with
+    // nothing saying why. It now emits a `registry` sub row; this ledger is its
+    // consumer, so the fault has an address a human already visits.
+    const regGate = { have: 22, need: 20, open: true, sub: [
+      { name: "danger_zone", have: 22, need: 20, open: true },
+      { name: "trend", have: 22, need: 40, open: false },
+      { name: "danger.min_knew_reps", have: 2, need: 3, open: false },
+      { name: "registry", have: 0, need: 1, open: false, error: "concepts.json unreadable: Unexpected non-whitespace character" },
+    ] };
+    ok("a dead concepts.json prints as its own SHUT gate (0/1) beside the two rows it silently degrades",
+      rd("registry — concepts.json must parse", { cal_gate: regGate }).have === 0
+      && rd("registry — concepts.json must parse", { cal_gate: regGate }).need === 1
+      && rd("registry — concepts.json must parse", { cal_gate: regGate }).have < rd("registry — concepts.json must parse", { cal_gate: regGate }).need);
+    ok("a healthy registry reads 1/1, and a producer that never ran reads '?' — never a 1 invented in this file",
+      rd("registry — concepts.json must parse", { cal_gate: { ...regGate, sub: [{ name: "registry", have: 1, need: 1, open: true, error: null }] } }).have === 1
+      && rd("registry — concepts.json must parse", blind).have === null && rd("registry — concepts.json must parse", blind).need === null);
+    // and it is NOT tagged `guessed`: there is no threshold here to re-fit after 30-45-60
+    // days, only "the file parsed or it did not" (same reason as the fsrs row below).
+    ok("the registry row is ORIGIN derived — it must never land on his re-fit list as a phantom guessed number",
+      GATES.find(x => x.organ === "calibration" && x.key === "registry — concepts.json must parse").origin === "derived");
     // And the live wire, when the producer has actually run on this machine.
     const liveGate = r.measured.cal_gate;
     ok("LIVE: the three printed rows equal calibration.json's own published counter",
@@ -734,6 +860,104 @@ function selftest() {
         const src = calGateRead(liveGate, k === "min_reps" ? "__root__" : k === "window_size" ? "trend" : k);
         return row && src && row.have === src.have && row.need === src.need;
       }));
+  }
+
+  // ---- IS THAT NEED EVEN HIS? (11 Aug 2026 wiring audit) --------------------
+  // THE DEFECT, one layer under the block above: those three rows print calibration's
+  // published `need` as fact, and calibration.mjs silently numOr-clamped any
+  // non-numeric leaf of calibration_config.json to its own DEFAULTS —
+  // normalizeConfig({min_reps:"12"}) → 20, with no field anywhere naming the discard.
+  // The config's own _comment invites him to retune it, so the failure mode is not
+  // exotic: he edits, the edit is thrown away, and THIS TABLE tells him 20 is his
+  // number. Not an unread counter — an actively wrong one, in the ledger built to
+  // catch exactly that. The producer now publishes `config`; these are its consumer.
+  {
+    const cfgBlock = {
+      source: "file", path: "…/calibration_config.json", error: null,
+      rejected: [{ key: "min_reps", got: '"12"', using: 20 }],
+      defaults_used: ["min_reps"], unknown: ["min_rep"], clean: false,
+    };
+    ok("the discard is found by the very key the GATES row is named with — no translation table between the two",
+      calConfigRejected(cfgBlock, "min_reps").got === '"12"' && calConfigRejected(cfgBlock, "min_reps").using === 20);
+    ok("an honoured knob reads null, and so does a producer that never ran or predates the block — never a manufactured 'fine'",
+      calConfigRejected(cfgBlock, "window_size") === null && calConfigRejected(null, "min_reps") === null
+      && calConfigRejected({ source: "file" }, "min_reps") === null);
+
+    // THE WIRE, end to end through report() itself, on a bus where the published
+    // need (20) and the captain's edit ("12") DISAGREE — that disagreement is the
+    // whole defect. Cut `rejected` out of report()'s row map and this goes red.
+    const dirty = report(STATE, { ...r.measured, cal_config: cfgBlock });
+    const mrRow = dirty.gates.find(g => g.organ === "calibration" && g.key === "min_reps");
+    ok("THE WIRE: the row whose need was faked by a discarded edit now CARRIES that discard (it printed 20 as his number until 11 Aug 2026)",
+      !!mrRow && !!mrRow.rejected && mrRow.rejected.key === "min_reps" && mrRow.rejected.got === '"12"' && mrRow.rejected.using === 20);
+    ok("...and ONLY that row — the two honoured calibration knobs stay clean, so the flag means something when it appears",
+      dirty.gates.filter(g => g.organ === "calibration" && g.key !== "min_reps").every(g => g.rejected === null));
+    ok("every other organ's row carries an explicit null, never undefined — no organ is implied 'fine' by a missing field",
+      dirty.gates.filter(g => g.organ !== "calibration").every(g => g.rejected === null));
+    // and the live table, which must agree with whatever is actually on disk today
+    ok("LIVE: each calibration row's flag IS the live read — identity, so a severed wire cannot pass as a clean bus",
+      r.gates.filter(g => g.organ === "calibration")
+        .every(g => "rejected" in g && g.rejected === calConfigRejected(r.measured.cal_config, g.key)));
+    // ANTI-STRAND (the cal_gate / claudegen / distiller repairs' own check): the field
+    // and the key PATHS this reads must be the ones the producer still writes. Rename
+    // them in calibration.mjs and it goes red HERE, not weeks later in a doc audit.
+    const calSrc2 = readFileSync(join(SCRIPTS, "calibration.mjs"), "utf8");
+    ok("calibration.mjs still PUBLISHES the config read, and journals it under the same three key paths this table is named with",
+      /config:\s*configRead\(cfg\)/.test(calSrc2) && /read\.rejected\.push/.test(calSrc2)
+      && ['"min_reps"', '"window_size"', '"danger.min_knew_reps"'].every(k => calSrc2.includes(k)));
+  }
+
+  // ---- THE SWALLOWED LINE (11 Aug 2026 wiring audit) -----------------------
+  // THE DEFECT, one layer under the two blocks above: those rows print calibration's
+  // have/need as fact, and calibration.mjs's loader dropped every unparseable and every
+  // invalid reps_log line behind `catch { /* skip */ }` with no count and no published
+  // field — so `total_reps`, `N/20 reps` and this ledger's own `reps` scalar could quietly
+  // describe two different corpora and nothing in the organism could see the gap. The
+  // producer counts and publishes now (`corpus`); this is its consumer, and the fixture
+  // makes the two candidate denominators DISAGREE on purpose (23 raw lines, 21 counted).
+  {
+    // LIVE, when the producer has run on this machine: the two counters this ledger
+    // prints must add back up to the ledger the producer actually read.
+    const liveCorpus = (readJson(join(STATE, "calibration.json")) || {}).corpus || null;
+    ok("LIVE: the printed corpus counters ARE the producer's own, and used + dropped = the lines it read",
+      !liveCorpus
+      || (r.measured.cal_reps_used === liveCorpus.reps_used && r.measured.cal_reps_dropped === liveCorpus.dropped
+          && liveCorpus.reps_used + liveCorpus.dropped === liveCorpus.lines_seen));
+    // ABSENT IS NOT ZERO, on a fixture rather than asserted about today's file — the same
+    // law the lexicon rows above are written against. A calibration.json that predates the
+    // block, or was never written, must not report a clean read it never performed.
+    const bare = measureReality(join(REPO, "scripts"));   // no calibration.json here
+    ok("no calibration.json (or one predating the block) ⇒ every corpus counter reads null, never a confident 0 dropped",
+      bare.cal_reps_used === null && bare.cal_reps_dropped === null && bare.cal_reps_dropped_why === null);
+    // and a real block resolves through the same reader the live bus uses
+    const withBlock = { corpus: { lines_seen: 23, reps_used: 21, dropped: 2, clean: false,
+      reasons: { "unparseable JSON line": 1, "correct not boolean": 1 } } };
+    const read = (c) => ({
+      used: c.corpus && Number.isFinite(c.corpus.reps_used) ? c.corpus.reps_used : null,
+      dropped: c.corpus && Number.isFinite(c.corpus.dropped) ? c.corpus.dropped : null,
+      why: c.corpus && c.corpus.reasons && c.corpus.dropped
+        ? Object.entries(c.corpus.reasons).map(([w, n]) => `${n}× ${w}`).join(" · ") : null,
+    });
+    ok("a dropped line arrives WITH its reason — '2 dropped' alone sends a human hunting a gitignored ledger by eye",
+      read(withBlock).used === 21 && read(withBlock).dropped === 2
+      && read(withBlock).why === "1× unparseable JSON line · 1× correct not boolean");
+    ok("a clean read reports 0 dropped and no reason string — the flag means something because it is usually absent",
+      read({ corpus: { lines_seen: 21, reps_used: 21, dropped: 0, clean: true, reasons: {} } }).dropped === 0
+      && read({ corpus: { lines_seen: 21, reps_used: 21, dropped: 0, clean: true, reasons: {} } }).why === null);
+    // THE DISAGREEMENT THIS ROW EXISTS FOR: `reps` at the top of this ledger is the RAW
+    // line count, and four GATES rows are judged against it. When the producer says it
+    // counted fewer, the two denominators in this table are not the same number.
+    ok("the raw `reps` scalar and the producer's counted corpus are BOTH published, so a disagreement is visible instead of silent",
+      "reps" in r.measured && "cal_reps_used" in r.measured && "cal_reps_dropped" in r.measured
+      && (r.measured.cal_reps_used === null || r.measured.cal_reps_used <= r.measured.reps));
+    // ANTI-STRAND (the cal_gate / config / claudegen / distiller repairs' own check): the
+    // field this reads must be the field the producer still writes, and the loader must
+    // still be COUNTING. Re-swallow the drop in calibration.mjs and it goes red here.
+    const calSrc3 = readFileSync(join(SCRIPTS, "calibration.mjs"), "utf8");
+    ok("calibration.mjs still publishes `corpus` AND its loader still counts what it drops (the swallow cannot silently return)",
+      /corpus:\s*corpusBlock\(corpusStats\)/.test(calSrc3)
+      && /stats\.dropped\+\+/.test(calSrc3) && /dropped_reasons/.test(calSrc3)
+      && !/try\s*\{\s*const o = JSON\.parse\(s\); if \(validRep\(o\)\) out\.push\(o\); \}\s*catch\s*\{\s*\/\* skip \*\//.test(calSrc3));
   }
 
   // ---- THE TOKEN-HONESTY FLAG (10 Aug 2026 wiring audit) -------------------
@@ -763,6 +987,36 @@ function selftest() {
     const nsRow = nsSrc.slice(nsSrc.indexOf("function nsLedgerRow"), nsSrc.indexOf("const genLedgered"));
     ok("the night shift's ledger ROW BUILDER still carries the flag (50 ns_ rows had none before 10 Aug 2026)",
       nsRow.length > 0 && /tokens_estimated:/.test(nsRow) && /\.\.\.ledgerForensics\(/.test(nsRow));
+  }
+
+  // ---- WHICH CLI THE ORGANS BOOTED (11 Aug 2026 wiring audit) --------------
+  // claudegen's arg-set was chosen silently — the SHIM GUARD comment promised a
+  // shimmed box would "SAY so … never silently" and no field, row or organ carried
+  // the choice. It names the lane now; these counters are the read. Derived from
+  // the live bus, never asserted, and neither can exceed the rows it came from.
+  {
+    const m = r.measured;
+    ok("the arg-set counts are READ from the bus, and lean+full can never exceed the rows they came from",
+      Number.isInteger(m.brain_calls_lean) && Number.isInteger(m.brain_calls_full_cli)
+      && m.brain_calls_lean + m.brain_calls_full_cli <= m.brain_calls);
+    // ANTI-STRAND, both ends. The producer must still NAME the lane (ARG_PROFILE),
+    // still stamp it on the result, and still project it onto the row — cut any one
+    // of the three and these counters read 0 forever, which would print as "no organ
+    // ever booted the full CLI" on the very table whose job is to say where a number
+    // came from. Comments stripped first, for the reason claudegen's own scans give:
+    // a guard a comment can satisfy is not a guard.
+    const cgSrc2 = readFileSync(join(SCRIPTS, "claudegen.mjs"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    ok("claudegen still NAMES its arg-set, stamps it on the result, and projects it onto the ledger row",
+      /const ARG_PROFILE = \(\) =>/.test(cgSrc2)
+      && /return "full-shim";/.test(cgSrc2) && /return "lean";/.test(cgSrc2)
+      && /arg_profile: ARG_PROFILE\(\)/.test(cgSrc2)
+      && /arg_profile: o\.arg_profile \|\| null/.test(cgSrc2));
+    // …and ARGS must still be DERIVED from the name. Re-inline the two `return base`
+    // branches and the name can drift off the argv silently — the exact defect class
+    // this repair belongs to, one level up.
+    ok("…and ARGS is still DERIVED from that name, so the lane it reports cannot drift from the argv it sent",
+      /ARG_PROFILE\(\) === "lean" \? \[\.\.\.base, \.\.\.LEAN_ARGS\] : base/.test(cgSrc2));
   }
 
   // ---- THE DISTILLER LATENCY JOURNAL (11 Aug 2026 wiring audit) ------------

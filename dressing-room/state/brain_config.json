@@ -437,8 +437,8 @@
    ],
    "out": "premap",
    "surface": {
-    "kind": "human_file",
-    "where": "brain_out/premap/<date>.md — DISABLED: nothing opens this today"
+    "kind": "code",
+    "where": "scripts/nightshift.mjs:359 — gemCartridge() reads brain_out/premap/<date>.md on an i<=2 day-lookback into the Gem cartridge, and nightshift.mjs:408 counts premap_day in its accounting; WIRING AUDIT 11 Aug 2026 flipped this block, which G10 forgot (it still said 'human_file … DISABLED: nothing opens this today' on an ENABLED lane whose reader G10 itself had just built — the exact shape the H0 audit fixed on midday_reread the day before, and skipped here)"
    },
    "_DISABLED_2026_08_02": "AUDIT #63 — no address, and the _note below names a seam that does not exist. 6,09,504 tokens all-time (the #3 spender) into brain_out/premap/, which no .mjs opens. The claim 'feeds the Gem prompt pack' is false: the string `premap` occurs in ZERO .mjs files including scripts/nightshift.mjs, which is what actually builds brain_out/nightshift/gem_cartridge.md. It is also the job the hype guard hurt most — 10 of its rejections were `banned phrase: exponential` on writing about attention scaling, where the word is a real claim about complexity (that half is fixed above: 'exponential' is gone from the list and this job now carries hype_guard:false). RE-ENABLE WHEN: scripts/nightshift.mjs reads brain_out/premap/<date>.md into the Gem cartridge — the seam its own note already promises — then set enabled:true and surface.kind to \"code\" with nightshift's file:line. Note it also runs max_per_day 3 as 'exhaustion filler', so it is the first thing that should come back once it lands somewhere.",
    "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack.",

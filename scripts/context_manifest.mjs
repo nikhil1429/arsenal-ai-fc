@@ -22,8 +22,25 @@
 //   2. THE BUDGET IS EXPLICIT, and spent worst-priority-first, so a squeeze trims the
 //      most expendable part rather than whatever happens to be last in the string.
 //   3. WHAT WAS TRIMMED OR MISSING IS NAMED, in a footer, every time. A missing leg
-//      and an empty leg are different facts — the same law mcp-memory.mjs:249 already
-//      applies to get_context. One law, now applied at both doors.
+//      and an empty leg are different facts — the same law get_context already applies
+//      (grep -n "A missing leg is named, never silently absent" scripts/mcp-memory.mjs).
+//      One law, now applied at both doors.
+//
+// CITATIONS ARE GREPS HERE, NOT LINE NUMBERS (dead-wire sweep, 11 Aug 2026). This file's
+// comments carried 15 `<file>:<line>` citations and MEASURED today, 12 of them no longer
+// pointed at what they name. learnstate has grown ~350 lines since they were written, so
+// every one of its seven moved; organism_test's two moved; dugout's landed on a BLANK line.
+// The worst was the one the tracer scored as a hit: mcp-memory's still resolves to code —
+// the pending-facts block — but not to the missing-vs-empty law it was cited for, and a
+// citation that resolves READS VERIFIED. This repo's whole method is verify-by-line, so a
+// rotted citation does not merely fail to help: it argues the documented defect was never
+// real, or sends the next repair at the wrong line. Same producer-with-no-consumer shape
+// this module was built to abolish — evidence written down that nothing ever re-checked.
+// The form is now the one CLAUDE.md itself switched to when fsrs.mjs's :143 rotted:
+// `grep -n "<needle>" scripts/<file>.mjs` — pasteable, and it moves WITH the code. And it
+// is no longer a convention: selftest() resolves EVERY anchor in this file against the real
+// files on disk, and bans the bare line-number form, so the next one to rot fails the suite
+// instead of quietly misleading a session.
 //
 // LAWS INHERITED (unchanged):
 //   · READ-ONLY. Writes nothing. The single-writer law is untouched.
@@ -34,6 +51,13 @@
 //   · FROZEN BELOW. learnstate.mjs's brief() is untouched and still renders the
 //     memory and card blocks in their canonical positions (above the LAWS line).
 //     This module decides HOW MUCH each gets and REPORTS what it spent.
+//
+// MODES: node scripts/context_manifest.mjs         → the assembled brief itself (the
+//                                                    default; CARRIES HIS MEMORY)
+//        node scripts/context_manifest.mjs footer  → the manifest line only, as prose
+//        node scripts/context_manifest.mjs ledger  → THE SAME ACCOUNTING AS STRUCTURE:
+//                                                    one JSON line, and NEVER the text
+//        node scripts/context_manifest.mjs selftest
 // ============================================================================
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -57,8 +81,16 @@ export const FOOTER_RESERVE = 260;    // the manifest line must always fit — i
 // `assembled N` figure counts the footer itself, so a footer that outgrows 260 (DROPPED +
 // render_probe + UNREADABLE notes stack fast) shows up as N > ceiling instead of hiding.
 
-const clipTo = (s, n) => (typeof s === "string" && s.length > n)
-  ? s.slice(0, n) + "\n… (truncated — full recall via the organism-memory MCP `get_context`)"
+// ONE CLIP, TWO POINTERS (dead-wire sweep, 11 Aug 2026). The tail is now a parameter
+// because the card's cut moved here from learnstate (see §2): memory's tail is this
+// file's original wording, byte-for-byte, and the card's is verbatim the one its OWN owner
+// writes — grep -n "full evidence in learning-layer" scripts/learnstate.mjs — so a card cut
+// here does not send him to the memory door for the rest of it. Nothing about the memory
+// path changes: the default IS the old string.
+const MEMO_TAIL = "\n… (truncated — full recall via the organism-memory MCP `get_context`)";
+const CARD_TAIL = "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)";
+const clipTo = (s, n, tail = MEMO_TAIL) => (typeof s === "string" && s.length > n)
+  ? s.slice(0, n) + tail
   : s;
 
 // ── PENDING IDENTITY FACTS ───────────────────────────────────────────────────
@@ -80,8 +112,9 @@ const clipTo = (s, n) => (typeof s === "string" && s.length > n)
 // of HIS OWN RULINGS were dropped at every SessionStart, cut mid-word — row 0 lost "i do
 // not rush things, i execute them perfectly", row 1 lost the Gaffer-ban removal — and the
 // block then told the session to ask him to confirm or drop a fact it had shown 40% of.
-// A silent cut, inside the module built to abolish silent cuts. Same shape as dugout.mjs:885
-// (JSON.stringify + cut at 220 on the capsule door), found the same day.
+// A silent cut, inside the module built to abolish silent cuts. Same shape as the capsule
+// door in dugout.mjs — JSON.stringify + cut at 220 — found the same day:
+// grep -n "each whole axis object and cut the STRING at 220" scripts/dugout.mjs
 //
 // A QUEUE THAT WILL NOT PARSE IS NOT AN EMPTY QUEUE (audit 10 Aug 2026). The per-line
 // reader below swallowed every JSON.parse failure in a bare `catch {}`, so a truncated
@@ -105,9 +138,11 @@ const clipTo = (s, n) => (typeof s === "string" && s.length > n)
 // the selftest measures this door against.
 //
 // THE 160 IS GONE, NOT RE-TUNED — no new number replaces it. Every row is ALREADY clipped
-// to 400 characters by its OWNER at the staging door (mcp-memory.mjs:302/328, and the same
-// clip in hippocampus.mjs:371 which calls 400 "not a new number either"), so a second cut
-// here was a cut on top of a cut, and the only one nobody named. What bounds this block
+// to 400 characters by its OWNER at the staging door — two hits, the live door and its
+// frozen legacy: grep -n "clip(text, 400)" scripts/mcp-memory.mjs — and the same clip is in
+// the hippocampus, which calls 400 "not a new number either":
+// grep -n "400 is not a new number either" scripts/hippocampus.mjs
+// So a second cut here was a cut on top of a cut, and the only one nobody named. What bounds this block
 // instead is a BUDGET the caller derives from the constants already in this file — see
 // assemble() step 3 — and when that budget bites, the block AND the footer both say by how
 // much. The pre-repair renderer is frozen verbatim below as pendingFactsBlockLegacy
@@ -239,10 +274,59 @@ export async function assemble(deps = {}) {
   catch (e) { record("orientation", false, 0, "ERROR " + (e && e.message), "ERROR"); }
 
   // 2. TEACHING CARD — single-sourced from HOW_HE_LEARNS.md via learnstate's parser.
-  let card = null;
-  try { card = deps.card !== undefined ? deps.card : ls.loadTeachingCard(); }
-  catch { card = null; }
-  record("card", !!card, card ? card.length : 0, card ? null : "MISSING (marker or file absent)");
+  // THREE STATES, ON THIS LEG TOO (audit 11 Aug 2026). This catch was `catch { card = null; }`
+  // and the note was a flat string picked off `!!card`, so a THROW out of loadTeachingCard —
+  // a mangled HOW_HE_LEARNS.md, a parser that blew up — rendered the identical footer word as
+  // a file that simply has no marker in it. Same shape as the memory leg at §4 and the same law
+  // this module already applies twice: to pending_facts on 6 Aug ("a missing leg and an empty leg
+  // are different facts") and to render_probe on 10 Aug. It had never been applied to either of
+  // the module's own two primary legs — the ones the whole assembler exists to deliver.
+  // The error MESSAGE rides the note, because "which way did it break" is the first thing anyone
+  // asks and it was being thrown away at the catch.
+  //
+  // THE CARD WAS CLIPPED BY A NUMBER THIS MODULE COULD NOT SEE (dead-wire sweep, 11 Aug 2026).
+  // The call below was `ls.loadTeachingCard()` — bare — and learnstate cut at its own private
+  // CARD_MAX (1800) and handed back the SHORT string, which `record` then billed as the card's
+  // true size with the note hardcoded null. So this leg could never print TRIMMED: the identical
+  // defect the memory leg carried until 10 Aug, where `TRIMMED from 1523` was reported on a cut
+  // from 3,856. The 5 Aug audit moved MEMO_MAX's authority to this module and the 10 Aug repair
+  // made memory pass NO_CAP and clip locally; CARD_MAX got neither, even though learnstate
+  // exports it saying, in its own words, that it "rides along so a consumer can state the cap it
+  // is honouring instead of inventing its own" — grep -n "CARD_MAX rides along" scripts/learnstate.mjs
+  // — and the export has been sitting there unread. The consumer never asked. MEASURED 11 Aug: the
+  // live card body is 1,431 chars against the 1800 cap, so it does NOT bite today — this is the
+  // seventeen-rule card growing that would have made the footer lie, silently, exactly once.
+  //
+  // NO NEW NUMBER IS INVENTED. The cap is learnstate's OWN CARD_MAX, now read across the export
+  // that exists for it; if that export is ever unreadable this module does not guess a
+  // replacement — it takes the card whole, SAYS so in the note, and lets the pending and memory
+  // budgets below (which are derived and which already self-report) do the squeezing out loud.
+  // NO NEW ENGINE, so nothing is frozen: same call as the 6 Aug `trimmed` fix and the 10 Aug
+  // `memFull` fix, both of which corrected this module's accounting in place. The parser, the
+  // parts, their order and the clipped output are untouched — only the reported number and the
+  // place the scissors live change.
+  const NO_CAP = Number.MAX_SAFE_INTEGER;   // not a threshold: loadTeachingCard/loadMemory clip
+                                            // only when length > cap, so "hand it over whole"
+  const cardCap = Number.isFinite(ls.CARD_MAX) ? ls.CARD_MAX : NO_CAP;
+  let card = null, cardFull = 0, cardClipped = false, cardErr = null;
+  try {
+    card = deps.card !== undefined ? deps.card : ls.loadTeachingCard(undefined, NO_CAP);
+    // Only a caller injecting deps.card can state a pre-cut size we did not read ourselves —
+    // the same precedence deps.memoryFullLength gets at §4.
+    cardFull = deps.cardFullLength !== undefined ? deps.cardFullLength : (card ? card.length : 0);
+    if (card && card.length > cardCap) { card = clipTo(card, cardCap, CARD_TAIL); cardClipped = true; }
+  }
+  catch (e) { card = null; cardErr = (e && e.message) || String(e); }
+  // The note no longer re-prints the state word: the footer already renders `card <state>` ahead
+  // of it, so `MISSING (marker or file absent)` was shipping as `card MISSING (MISSING (marker or
+  // file absent))` at every SessionStart. Measured 11 Aug 2026, both legs.
+  record("card", !!card, card ? card.length : 0,
+    card
+      ? cardClipped ? `TRIMMED from ${cardFull} — cap ${cardCap}`
+        : cardCap === NO_CAP ? "no cap declared (learnstate.CARD_MAX unreadable) — card taken whole"
+        : null
+      : cardErr ? `loadTeachingCard threw (${cardErr})` : "marker or file absent",
+    card ? "ok" : cardErr ? "ERROR" : "MISSING");
 
   // OVERHEAD IS MEASURED, NOT GUESSED (audit 6 Aug 2026). This was `3 * 90` — a hunch,
   // against his standing rule of 1 Aug: no number goes in by guess. brief() renders its
@@ -291,10 +375,11 @@ export async function assemble(deps = {}) {
   const room = ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length : 0)
     - FOOTER_RESERVE - overhead;
   const memCap = Math.max(0, Math.min(MEMORY_CAP, room));
-  let memory = null, memFull = 0, clipped = false;
+  let memory = null, memFull = 0, clipped = false, memErr = null;
   try {
     // THE FULL LENGTH IS READ BEFORE THE CUT, NOT AFTER (audit 10 Aug 2026). This
-    // module used to call `loadMemory(memCap)` — which does its OWN clip at learnstate.mjs:280
+    // module used to call `loadMemory(memCap)` — which does its OWN clip
+    // (grep -n "raw.slice(0, n)" scripts/learnstate.mjs)
     // and returns the already-shortened string — and then measured memFull off that return
     // value. So memFull WAS the trimmed length, and the footer printed `TRIMMED from N`
     // where N equalled the trimmed size itself: a cut from 1523 to 1523. RAN 10 Aug on live
@@ -308,8 +393,9 @@ export async function assemble(deps = {}) {
     // NO_CAP is not a threshold and not a guess — it is a sentinel derived from loadMemory's
     // own contract: it clips only when `raw.length > n`, so any n no string can exceed means
     // "hand me the cartridge whole". The budget is then spent HERE, by clipTo, which is where
-    // learnstate.mjs:270 already says it belongs — "the party which knows the whole budget
-    // (context_manifest.mjs) decides the share, and says out loud whenever it had to cut."
+    // learnstate already says it belongs — "the party which knows the whole budget
+    // (context_manifest.mjs) decides the share, and says out loud whenever it had to cut"
+    // (grep -n "party which knows the whole budget" scripts/learnstate.mjs).
     // Output is byte-identical to before; only the reported number becomes true.
     const NO_CAP = Number.MAX_SAFE_INTEGER;
     memory = deps.memory !== undefined ? deps.memory : await ls.loadMemory(NO_CAP);
@@ -323,10 +409,26 @@ export async function assemble(deps = {}) {
     // reported as no loss: the exact silent-drop this module exists to abolish, reproduced
     // inside its own accounting. The flag is now set where the cut happens.
     if (memory && memory.length > memCap) { memory = clipTo(memory, memCap); clipped = true; }
-  } catch { memory = null; }
+  } catch (e) { memory = null; memErr = (e && e.message) || String(e); }
   const trimmed = clipped || !!(memory && memFull > memory.length);
+  // A THROW IS NOT AN ABSENCE — AND THIS IS THE LEG WHERE IT COSTS MOST (audit 11 Aug 2026).
+  // This catch was `catch { memory = null; }` and the note read `MISSING (hippocampus
+  // unreadable)` off `!memory` alone, so the day episodes.jsonl goes corrupt or
+  // buildRehydrateCartridge throws, his SessionStart footer says exactly what it says when
+  // there is simply nothing stored yet — and the reason is discarded at the catch. RAN before
+  // the repair, injecting a loadMemory that throws vs one that returns null: both printed
+  // `memory MISSING (MISSING (hippocampus unreadable))`, IDENTICAL, and the doubled MISSING is
+  // the second half of the same bug (the footer already prints the state word).
+  // "hippocampus unreadable" was itself the wrong word for the common case: null is what
+  // loadMemory returns for an ORGAN run and for a store with nothing in it, neither of which
+  // is unreadable. MISSING now says only what is true, ERROR carries the message.
+  // NO NEW ENGINE, so nothing is frozen: this is a CLASSIFICATION change, which is how the
+  // EMPTY/MISSING/ERROR split itself landed on pending_facts (6 Aug) and on render_probe
+  // (10 Aug) — the parts, their order and the footer's grammar are untouched.
   record("memory", !!memory, memory ? memory.length : 0,
-    !memory ? "MISSING (hippocampus unreadable)" : trimmed ? `TRIMMED from ${memFull} — budget` : null);
+    memory ? (trimmed ? `TRIMMED from ${memFull} — budget` : null)
+      : memErr ? `loadMemory threw (${memErr})` : "nothing returned (empty store, or an organ run)",
+    memory ? "ok" : memErr ? "ERROR" : "MISSING");
 
   // 5. RENDER. brief() places memory and card in their canonical slots (above LAWS);
   //    this module never re-orders them, it only decides how much they get.
@@ -345,10 +447,12 @@ export async function assemble(deps = {}) {
   // — the manifest's one job, inverted, at the single moment it matters most.
   //
   // The fallback itself is UNCHANGED — a brief must never be the thing that breaks
-  // SessionStart (learnstate.mjs:498, same law). What changes is that the ledger stops
-  // being an assumption and becomes an observation: brief() splices both legs VERBATIM
-  // (learnstate.mjs:505 `L.push(memory)`, :510 `L.push(card)`, joined on "\n"), so
-  // "is it in the delivered string?" is an exact, cheap test — not a heuristic. That also
+  // SessionStart, the same law learnstate repeats at every one of its own providers:
+  // grep -n "a brief must never be the thing that breaks SessionStart" scripts/learnstate.mjs
+  // What changes is that the ledger stops being an assumption and becomes an observation:
+  // brief() splices both legs VERBATIM and joins on "\n" —
+  // grep -n "L.push(memory)" scripts/learnstate.mjs · grep -n "L.push(card)" scripts/learnstate.mjs
+  // — so "is it in the delivered string?" is an exact, cheap test, not a heuristic. That also
   // catches the wider class, not just the throw: any future brief() that silently ignores
   // an argument now reads DROPPED instead of being billed as sent.
   let text, renderErr = null;
@@ -371,13 +475,15 @@ export async function assemble(deps = {}) {
   //   (a) `total` was `text.length + FOOTER_RESERVE` — the RESERVE, never the footer. RAN on
   //       live state today: body 8,998 · footer 117 · returned string 9,116 · `total` said
   //       9,258. A third number, matching neither the body nor the brief, wrong by 142.
-  //   (b) It had NO consumer — learnstate.mjs:821 takes `out.text` only, organism_test.mjs:444
-  //       reads the PRINTED footer — so the wrong estimate was computed and discarded at every
-  //       SessionStart. And the printed `assembled` figure was the BODY, footer excluded, which
-  //       means the one ceiling check this organism owns (organism_test.mjs:443, "the assembled
-  //       brief stays inside the declared 12,000-char ceiling") was measuring the brief MINUS
-  //       the manifest line — structurally blind to a FOOTER_RESERVE overrun, i.e. to exactly
-  //       the failure the reserve exists to prevent.
+  //   (b) It had NO consumer. The SessionStart path takes `out.text` only —
+  //       grep -n "const out = await assemble(" scripts/learnstate.mjs — and the suite reads the
+  //       PRINTED footer: grep -n "reports its byte manifest" scripts/organism_test.mjs
+  //       So the wrong estimate was computed and discarded at every SessionStart. And the
+  //       printed `assembled` figure was the BODY, footer excluded, which means the one ceiling
+  //       check this organism owns —
+  //       grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs
+  //       — was measuring the brief MINUS the manifest line: structurally blind to a
+  //       FOOTER_RESERVE overrun, i.e. to exactly the failure the reserve exists to prevent.
   // The repair wires the two together instead of adding an organ: the footer prints the TRUE
   // delivered length, so that existing suite assertion becomes a real end-to-end ceiling check,
   // and `total` is that same number rather than an estimate of it — `total === (returned
@@ -402,6 +508,37 @@ export async function assemble(deps = {}) {
   return { text: text + "\n" + footer, manifest: spent, bytes: text.length, ceiling, total, footer };
 }
 
+// ── THE LEDGER, REACHABLE (dead-wire repair, 11 Aug 2026) ────────────────────
+// assemble() has returned {manifest, bytes, ceiling, total, footer} since 5 Aug and the
+// ONE production caller reads `.text` and nothing else — grep -n "out.text" scripts/learnstate.mjs
+// — so every structured field this module computes was consumed only by the selftest that
+// computes it, and the 11 Aug repair that made `total` truthful gave it no consumer at all,
+// which was half of the defect that repair itself named in the comment above.
+//
+// The proof it stayed unreachable is the shape the ONE would-be consumer had to take: the
+// suite re-parses the PRINTED footer with /assembled (\d+)\/(\d+)/ — a regex over prose —
+// grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs
+// — for the single ceiling check this organism owns. It could not do
+// otherwise: that file's own header law is "spawns organs as CHILD PROCESSES (never
+// imports them, so a top-level side effect cannot leak in)", and until today there was no
+// out-of-process door onto the structure. Same for the watchman and the captain's call,
+// the other two organs that would want to act on a DROPPED/ERROR/UNREADABLE leg.
+//
+// This is that door, and it is deliberately NOT a new organ — it is one read-only verb on
+// the organ that already owns the accounting, the same shape `context.mjs status` took
+// when its readout was wired to the doctor on 11 Aug.
+//
+// WHAT IT OMITS IS THE POINT: `text`. The default verb prints the assembled brief, which
+// IS his durable memory, his teaching card and his staged rulings — the module's own
+// ORGAN-SAFE law says a headless organ prompt must never carry that. The ledger answers
+// "did everything arrive?" with byte counts and state words alone, so a suite, a watchman
+// or a doctor can read it without any of them ever holding his memory. Nothing is
+// computed here and no verdict is invented: this is assemble()'s return, minus one field.
+export function ledgerOf(r) {
+  const { text, ...ledger } = r;   // named, not filtered silently — `text` is the omission
+  return ledger;
+}
+
 // ── SELFTEST ─────────────────────────────────────────────────────────────────
 function selftest() {
   let pass = 0, fail = 0;
@@ -413,6 +550,9 @@ function selftest() {
     brief: (d, n, mem, card) => ["KICKOFF", mem ? "HIS MEMORY\n" + mem : "", card ? "HOW TO TEACH HIM\n" + card : "", "LAWS:"].filter(Boolean).join("\n"),
     loadTeachingCard: () => "1. one idea",
     loadMemory: async (cap) => "M".repeat(Math.min(4157, cap)),
+    CARD_MAX: 1800,   // the live owner's declared share — grep -n "CARD_MAX   =" scripts/learnstate.mjs
+                      // — the stub mirrors the real module so a healthy footer here reads as a
+                      // healthy footer there
   };
   const run = (over = {}) => assemble({ learnstate: stub, pending: { present: false, text: "", count: 0 }, memoryFullLength: 4157, ...over });
 
@@ -471,7 +611,8 @@ function selftest() {
     // injects deps.memoryFullLength — which is exactly why the suite ran green for weeks
     // over a live path that measured the cartridge AFTER learnstate had already trimmed it.
     // These two inject NOTHING and use a loadMemory that behaves like the real one
-    // (learnstate.mjs:273-282): it clips at the cap it is GIVEN and appends its own tail,
+    // (grep -n "async function loadMemory" scripts/learnstate.mjs): it clips at the cap it is
+    // GIVEN and appends its own tail,
     // so its return value can never reveal the pre-cut size. If the live call ever goes
     // back to handing loadMemory a budget, `TRIMMED from N` collapses to the trimmed
     // length again and both of these fail.
@@ -486,10 +627,70 @@ function selftest() {
     assert("NO CUT IS EVER REPORTED AS A CUT FROM ITSELF — `TRIMMED from N` with N = the trimmed size is the tautology this killed",
       Number((/TRIMMED from (\d+)/.exec(lm.note || "") || [])[1]) > lm.bytes);
 
+    // ── THE SAME LAW, ON THE CARD LEG (dead-wire sweep, 11 Aug 2026) ─────────
+    // The wire that broke: this module called `ls.loadTeachingCard()` bare, so learnstate cut
+    // at its private CARD_MAX and returned the SHORT string, and the row recorded that
+    // post-clip length with the note hardcoded null. `TRIMMED` was unreachable on this leg —
+    // the memory defect above, still live, one leg over, for the eight days since it was fixed
+    // there. Latent today (live card 1,431 < 1800) and permanent the day the card grows.
+    // The stub below behaves like the REAL parser
+    // (grep -n "function loadTeachingCard" scripts/learnstate.mjs): it clips at the cap
+    // it is GIVEN and appends its own tail, so its return can never reveal the pre-cut size.
+    // Both assertions fail the moment the call goes back to passing no cap.
+    const BIG_CARD = 5000;    // > the owner's 1800, so the cut is forced whatever the ceiling leaves
+    const cardish = { ...stub,
+      loadTeachingCard: (p, cap = 1800) => { const raw = "C".repeat(BIG_CARD); return raw.length > cap ? raw.slice(0, cap) + CARD_TAIL : raw; } };
+    const bigCard = await assemble({ learnstate: cardish, memoryFullLength: 4157,
+      pending: { present: false, state: "EMPTY", text: "", count: 0 } });
+    const bc = bigCard.manifest.find((m) => m.id === "card");
+    assert("CARD · TRIMMED NAMES THE PRE-CUT SIZE — the door reads the card WHOLE and reports what it cut FROM, and against which cap",
+      /TRIMMED from 5000 — cap 1800/.test(bc.note || "") && bc.bytes < BIG_CARD);
+    assert("CARD · NO CUT REPORTED AS A CUT FROM ITSELF — a bare loadTeachingCard() call makes this collapse to `from <the clipped size>`",
+      Number((/TRIMMED from (\d+)/.exec(bc.note || "") || [])[1]) > bc.bytes);
+    assert("CARD · A CUT MADE HERE POINTS AT THE CARD'S OWN SOURCE, never the memory door",
+      bigCard.text.includes(CARD_TAIL) && !bigCard.text.includes(MEMO_TAIL));
+    // NO CAP IS EVER INVENTED: an owner that stops declaring CARD_MAX gets the card whole and
+    // a note saying exactly that — never a number this module made up.
+    const noCap = await assemble({ learnstate: { ...cardish, CARD_MAX: undefined }, memoryFullLength: 4157,
+      pending: { present: false, state: "EMPTY", text: "", count: 0 } });
+    const nc = noCap.manifest.find((m) => m.id === "card");
+    assert("CARD · NO GUESSED CAP — with the owner's CARD_MAX unreadable the card is taken whole and the footer SAYS so",
+      nc.bytes === BIG_CARD && /no cap declared \(learnstate.CARD_MAX unreadable\)/.test(nc.note || ""));
+
     const broken = await assemble({ learnstate: { ...stub, loadMemory: async () => { throw new Error("boom"); } },
       pending: { present: false, text: "", count: 0 } });
+    // AMENDED 11 Aug 2026: this asserted `/memory MISSING/` on a THROW — i.e. it PINNED the
+    // defect below as correct behaviour, which is why the suite ran green over it for a week.
+    // The law it was written to protect (a throwing provider never breaks the brief) is
+    // unchanged and still asserted; what it may no longer accept is the throw reading MISSING.
     assert("REPAIR TOWARD SILENCE — a provider that THROWS never breaks the brief",
-      broken.text.includes("KICKOFF") && /memory MISSING/.test(broken.footer));
+      broken.text.includes("KICKOFF") && /memory ERROR \(loadMemory threw \(boom\)\)/.test(broken.footer));
+
+    // ── A THROW IS NOT AN ABSENCE, ON THE TWO PRIMARY LEGS (audit 11 Aug 2026) ─
+    // The wire that broke: both `catch`es discarded the error and both notes were picked off
+    // truthiness alone, so a corrupt hippocampus and an empty one printed the same word — the
+    // module's own "three states are three facts" law, applied to pending_facts and to
+    // render_probe, never applied to memory or card. These fail the moment either catch goes
+    // back to swallowing, and the null cases are asserted alongside so the fix cannot be a
+    // blanket rename of MISSING to ERROR.
+    const memNull = await assemble({ learnstate: { ...stub, loadMemory: async () => null },
+      pending: { present: false, state: "EMPTY", text: "", count: 0 } });
+    assert("MEMORY · THROW ≠ ABSENCE — a throwing hippocampus reads ERROR and never the same word as an empty one",
+      /memory ERROR/.test(broken.footer) && /memory MISSING/.test(memNull.footer)
+      && broken.manifest.find((m) => m.id === "memory").note !== memNull.manifest.find((m) => m.id === "memory").note);
+    assert("MEMORY · THE REASON SURVIVES THE CATCH — the thrown message rides the footer, it is not discarded",
+      /loadMemory threw \(boom\)/.test(broken.footer));
+    const cardThrew = await assemble({ learnstate: { ...stub, loadTeachingCard: () => { throw new Error("card parser blew up"); } },
+      memoryFullLength: 4157, pending: { present: false, state: "EMPTY", text: "", count: 0 } });
+    assert("CARD · THROW ≠ ABSENCE — a throwing loadTeachingCard reads ERROR with its message, a marker-less file still reads MISSING",
+      /card ERROR \(loadTeachingCard threw \(card parser blew up\)\)/.test(cardThrew.footer)
+      && /card MISSING \(marker or file absent\)/.test(noCard.footer));
+    assert("…and a card that throws still leaves the rest of the brief standing (REPAIR TOWARD SILENCE)",
+      cardThrew.text.includes("KICKOFF") && cardThrew.text.includes("HIS MEMORY"));
+    // THE DOUBLED WORD: the footer renders `<id> <state> (<note>)`, so a note that re-prints
+    // its own state shipped as `memory MISSING (MISSING (hippocampus unreadable))` every day.
+    assert("NO STATE WORD IS PRINTED TWICE — the note explains the state, it never repeats it",
+      !/(MISSING|ERROR|EMPTY|DROPPED) \((MISSING|ERROR|EMPTY|DROPPED)\b/.test(memNull.footer + noCard.footer + broken.footer + cardThrew.footer));
     assert("REPAIR TOWARD SILENCE — a broken orientation still yields a string, never a crash",
       typeof (await assemble({ learnstate: { ...stub, brief: () => { throw new Error("x"); } },
         pending: { present: false, text: "", count: 0 } })).text === "string");
@@ -524,7 +725,8 @@ function selftest() {
     // ── THE REPORTED SIZE IS THE SHIPPED SIZE (audit 11 Aug 2026) ────────────
     // The wire that broke: `total` was text.length + FOOTER_RESERVE — an estimate nobody
     // read, of a thing nobody measured — and the PRINTED figure was the body with the footer
-    // left out, so organism_test.mjs:443's ceiling check could not see a reserve overrun.
+    // left out, so the suite's ceiling check could not see a reserve overrun
+    // (grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs).
     // These run against a healthy assembly, a squeezed one and a note-heavy one (whose footer
     // is longest, which is precisely when the old formula was furthest from the truth).
     for (const [name, x] of [["healthy", r], ["squeezed", tight], ["note-heavy", dropped]]) {
@@ -533,6 +735,15 @@ function selftest() {
       assert(`THE FOOTER PRINTS THAT SAME SIZE — ${name}: \`assembled N\` counts the manifest line that prints it, so the suite's ceiling check measures the WHOLE brief`,
         Number((/assembled (\d+)\//.exec(x.footer) || [])[1]) === x.text.length);
     }
+    // ── THE LEDGER HAS A DOOR (dead-wire repair, 11 Aug 2026) ───────────────
+    // The other half of the 11 Aug defect: `total` was made truthful and given no consumer.
+    // These pin the door itself — every field survives it, and the ONE field that must not.
+    const lg = ledgerOf(r);
+    assert("LEDGER — every structured field assemble() computes survives the door (manifest · bytes · ceiling · total · footer)",
+      Array.isArray(lg.manifest) && lg.manifest.length === r.manifest.length
+      && lg.bytes === r.bytes && lg.ceiling === r.ceiling && lg.total === r.total && lg.footer === r.footer);
+    assert("LEDGER — `text` is the one omission, and it is the reason the door is safe: no consumer's stdout ever holds his memory",
+      !("text" in lg) && !JSON.stringify(lg).includes("HIS MEMORY"));
     // The regression, stated as itself: bytes + FOOTER_RESERVE is not the answer and never was.
     assert("THE OLD ESTIMATE IS GONE — total is no longer bytes + FOOTER_RESERVE (a 142-char lie on live state, 11 Aug 2026)",
       r.total !== r.bytes + FOOTER_RESERVE && dropped.total !== dropped.bytes + FOOTER_RESERVE);
@@ -541,7 +752,9 @@ function selftest() {
     // instead of hiding behind a body-only count.
     const over = await assemble({ learnstate: stub, memoryFullLength: 4157,
       pending: { present: false, state: "EMPTY", text: "", count: 0 }, ceiling: 100 });
-    assert("AN OVERRUN IS VISIBLE — when brief+footer exceeds the ceiling the printed figure exceeds it too, which is what organism_test.mjs:443 asserts against",
+    // The suite check it feeds is named by its own assertion text, not by a line number:
+    // organism_test's 'stays inside the declared 12,000-char ceiling'.
+    assert("AN OVERRUN IS VISIBLE — when brief+footer exceeds the ceiling the printed figure exceeds it too, which is what the suite's ceiling check asserts against",
       Number((/assembled (\d+)\/(\d+)/.exec(over.footer) || [])[1]) > 100 && over.total === over.text.length);
 
     // the real reader, against the real file
@@ -556,7 +769,8 @@ function selftest() {
     // FIXTURE that reproduces the live queue's shape — 7 rows at the owner's own 400-char
     // staging clip — plus the live file itself, and each fails the moment a cut returns.
     const fx = join(tmpdir(), `arsenal_pending_fixture_${process.pid}.jsonl`);
-    const FULL = "R".repeat(399) + "!";                       // 400 = the staging clip, mcp-memory.mjs:302
+    // 400 = the owner's staging clip: grep -n "clip(text, 400)" scripts/mcp-memory.mjs
+    const FULL = "R".repeat(399) + "!";
     writeFileSync(fx, Array.from({ length: 7 }, (_, k) =>
       JSON.stringify({ ts: `2026-08-0${k + 1}T00:00:00.000Z`, text: `F${k}` + FULL.slice(2), status: "pending", source: "mcp" })).join("\n") + "\n", "utf8");
     try {
@@ -631,6 +845,67 @@ function selftest() {
           .filter((j) => j && j.text && (j.status || "pending") === "pending")
           .every((j) => liveOut.text.includes(String(j.text).replace(/\s+/g, " ").trim()))));
 
+    // ── THE LIVE CARD WIRE (dead-wire sweep, 11 Aug 2026) ────────────────────
+    // Every card assertion above runs on a stub. These run on the REAL owner, because the
+    // defect was not in the logic — it was in the CALL: a cap the budget-owner could not see.
+    // If learnstate stops exporting CARD_MAX, or the parser stops taking a caller's cap, this
+    // module is silently back to billing a clipped card as whole and nothing else would notice.
+    const realLs = await import("./learnstate.mjs");
+    // Why it is exported, in the owner's words: grep -n "CARD_MAX rides along" scripts/learnstate.mjs
+    assert("LIVE · THE OWNER DECLARES THE SHARE — learnstate exports a finite CARD_MAX, which is the whole reason it is exported",
+      Number.isFinite(realLs.CARD_MAX));
+    const wholeCard = realLs.loadTeachingCard(undefined, Number.MAX_SAFE_INTEGER);
+    const tinyCard = realLs.loadTeachingCard(undefined, 50);
+    assert("LIVE · THE PARSER TAKES A CALLER'S CAP — the whole card is reachable, and a small cap really bites",
+      typeof wholeCard === "string" && wholeCard.length > 50
+      && typeof tinyCard === "string" && tinyCard.length < wholeCard.length && tinyCard.includes("truncated"));
+    const liveCard = liveOut.manifest.find((m) => m.id === "card");
+    assert("LIVE · THE CARD LEG'S BYTES ARE THE CARD THAT SHIPPED — and a cut, if the seventeen rules ever outgrow the cap, is NAMED",
+      liveCard.state !== "ok"
+      || (liveCard.bytes === (wholeCard.length > realLs.CARD_MAX ? realLs.CARD_MAX + CARD_TAIL.length : wholeCard.length)
+        && (wholeCard.length > realLs.CARD_MAX
+          ? new RegExp(`TRIMMED from ${wholeCard.length} — cap ${realLs.CARD_MAX}`).test(liveCard.note || "")
+          : liveCard.note === null)
+        && liveOut.text.includes(wholeCard.slice(0, Math.min(wholeCard.length, realLs.CARD_MAX)))));
+
+    // ── EVERY CITATION IN THIS FILE STILL RESOLVES (dead-wire sweep, 11 Aug 2026) ─
+    // The wire that broke: this file's comments carried 17 `<file>:<line>` citations and 14 of
+    // them no longer pointed at what they name. That is a producer — the written evidence —
+    // with NO consumer: nothing in the organism ever re-read a citation to see if it still
+    // landed, which is the precise shape this module was built to abolish, reproduced in its
+    // own header. Two of the fourteen were added by a same-day repair and were wrong within
+    // the hour (one named a comment about a different file, one named a `console.log`), which
+    // is the argument against the FORM, not against whoever wrote them: a line number cannot
+    // survive a file that grows, and learnstate has grown ~350 lines since these were written.
+    //
+    // This assertion is the missing consumer. It resolves every anchor against the real file
+    // on disk and NAMES the ones that failed, so a rotted citation tells you which one it is
+    // instead of merely that one exists. The pattern is assembled by concatenation so it can
+    // never match its own source line, and the `<file>` template in this module's header is
+    // skipped for free (`<` is not a filename character).
+    const SELF = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const ANCHOR = new RegExp('grep -n ' + '"([^"]+)" ' + '(scripts/[a-z_-]+\\.mjs)', "g");
+    const cited = [...SELF.matchAll(ANCHOR)].map(([, needle, file]) => ({ needle, file }));
+    const deadCites = cited.filter(({ needle, file }) => {
+      try { return !readFileSync(join(ROOT, file), "utf8").includes(needle); } catch { return true; }
+    });
+    assert(`EVERY CITATION RESOLVES — all ${cited.length} grep anchors in this file still find their code on disk`
+      + (deadCites.length ? ` · DEAD: ${deadCites.map((d) => `${d.file} <${d.needle}>`).join(" | ")}` : ""),
+      cited.length > 0 && deadCites.length === 0);
+    // NOT A COUNT THRESHOLD, AND NOT A GUESS — the five files this module cites as evidence,
+    // by name. A bare "some anchors exist" floor would pass a wholesale strip of the trail;
+    // this fails if the evidence for any one organ whose defect is documented here is deleted.
+    for (const f of ["learnstate.mjs", "organism_test.mjs", "mcp-memory.mjs", "hippocampus.mjs", "dugout.mjs"]) {
+      assert(`THE TRAIL TO ${f} SURVIVES — its defect notes here still carry a resolvable anchor`,
+        cited.some((c) => c.file.endsWith(f)));
+    }
+    // …and the rot-prone form stays banned in THIS file. A bare line number does not fail
+    // loudly when it goes wrong: it lands on unrelated code and reads verified, which is
+    // strictly worse than a citation that is obviously absent. Same call CLAUDE.md made for
+    // itself when fsrs.mjs's :143 rotted — it dropped the number and kept the grep.
+    assert("NO BARE LINE-NUMBER CITATIONS — the form that rotted 14 times in this file is not allowed back in",
+      !new RegExp('[a-z_-]+\\' + '.mjs:[0-9]').test(SELF));
+
     console.log(`\ncontext_manifest selftest: ${pass} passed, ${fail} failed`);
     process.exit(fail ? 1 : 0);
   })();
@@ -639,5 +914,10 @@ function selftest() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const mode = (process.argv[2] || "show").toLowerCase();
   if (mode === "selftest") selftest();
-  else assemble().then((r) => console.log(mode === "footer" ? r.footer : r.text));
+  // `ledger` is ONE JSON line so a child-spawning consumer can JSON.parse the last line
+  // and stop regexing a sentence. `footer` (prose) is untouched — layering, not replacing.
+  else assemble().then((r) => console.log(
+    mode === "ledger" ? JSON.stringify(ledgerOf(r))
+      : mode === "footer" ? r.footer
+        : r.text));
 }

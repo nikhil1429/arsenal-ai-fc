@@ -185,11 +185,64 @@ function recentStream(dir = STATE_DIR, n = 25, modalities = INTERACTIVE, rows = 
 // reads its output — give it a surface). context.mjs's ~145 emits/day are no longer
 // allowed to consume 21 of his 25 evidence rows; they arrive as ONE line of
 // corroboration: where the machine currently is, plainly labelled as such.
-function currentWindow(dir = STATE_DIR, rows = null) {
+// FROZEN verbatim (LAYERING law; siblings mergeLegacy / mergeV2Legacy /
+// recentStreamLegacy / clampStrLegacy). The pre-11-Aug-2026 projection: it read
+// `title`/`text` straight off the row and never asked whether the row it was
+// reading was ALREADY a stub. Reference only; currentWindow is record.
+function currentWindowLegacy(dir = STATE_DIR, rows = null) {
   const amb = (rows || readLines(join(dir, "afferent.jsonl"))).filter(a => AMBIENT.includes(a.modality));
   const last = amb[amb.length - 1];
   if (!last) return null;
   return { ts: last.ts, app: last.app || "", title: last.title || "", text: clampStr(last.text || `${last.app || ""} · ${last.title || ""}`, 120) };
+}
+// ---------------------------------------------------------------------------
+// #WIRE (dead-wire sweep, 11 Aug 2026) — THE DOOR'S CUT FINALLY HAS A READER
+// ---------------------------------------------------------------------------
+// context.mjs:186 has shipped `title_truncated` / `text_truncated` / the raw
+// pre-cut lengths since D8 (10 Aug 2026), for the stated reason that "the cut
+// travels WITH the row", and the bus keeps them: thalamus.mjs's sanitizeAfferent
+// has no whitelist (it strips affect and adds tokens, nothing else) and appends
+// the event whole. VERIFIED this run — `grep -rn 'title_truncated|text_len'
+// scripts/*.mjs` returns context.mjs and NOTHING else. Its own status() counter
+// was the only reader in the organism; a flag no consumer reads is the same black
+// box as a file nobody opens.
+// WHERE IT BIT, and why the repair belongs in THIS function: this is the one
+// engine for "where he is" — buildPrompt below pastes `window.title` RAW into the
+// HE IS CURRENTLY IN line, and cortex.mjs imports this same function for the deep
+// brain's WHERE HE WAS block. A title sheared at the door's 200 arrived at both
+// reading as the whole title, with no character anywhere saying a word was gone.
+// (Live afferent.jsonl today holds 35 context rows and NONE carries the flag —
+// the resident daemon is running a build older than context.mjs on disk, which
+// its own status() line already reports. So this is the wire that must be live
+// BEFORE the next restart, not after: the flags begin arriving the moment the
+// daemon is bounced, and today nothing downstream would notice.)
+// NO NEW NUMBER, NO NEW CAP: the 120 here is untouched and the door's 200/240 are
+// untouched. The marker is this file's own TRUNC_MARK, spent from INSIDE the
+// string exactly as clampStr spends it, so nothing that budgeted on these lengths
+// moves by a byte.
+// THREE STATES, never two — the same law context.mjs:181 keeps at the emit and in
+// its status(): true = measured cut, false = measured clean, null = the row
+// predates D8 and the honest answer is UNKNOWN. A pre-flag row is never folded
+// into "clean" (#4, honest by construction).
+const markCut = (s, cut) => (cut && s && !wasTruncated(s) ? (s.length > 1 ? s.slice(0, -1) + TRUNC_MARK : TRUNC_MARK) : s);
+function currentWindow(dir = STATE_DIR, rows = null) {
+  const amb = (rows || readLines(join(dir, "afferent.jsonl"))).filter(a => AMBIENT.includes(a.modality));
+  const last = amb[amb.length - 1];
+  if (!last) return null;
+  const tCut = last.title_truncated, xCut = last.text_truncated;
+  // door_cut is the ROW's verdict, not this function's: either side cut = cut.
+  const door_cut = (tCut === undefined && xCut === undefined) ? null : (tCut === true || xCut === true);
+  return {
+    ts: last.ts, app: last.app || "",
+    title: markCut(last.title || "", tCut === true),
+    // clampStr already marks its OWN 120-char cut; markCut only fires in the case
+    // clampStr cannot see — a row short enough to pass 120 that the door had
+    // already sheared. wasTruncated() keeps the two from double-marking.
+    text: markCut(clampStr(last.text || `${last.app || ""} · ${last.title || ""}`, 120), door_cut === true),
+    // the fact itself, machine-legible beside the marker, for a reader that wants
+    // more than a "…" (cortex.mjs's WHERE HE WAS block prints it by name).
+    door_cut, title_len: Number.isFinite(last.title_len) ? last.title_len : null,
+  };
 }
 
 // DETERMINISTIC FLOOR — honest, never fabricated. Fills every slot from real data
@@ -779,6 +832,38 @@ async function selftest() {
   assert("#21 CUT 1 — the ambient stream is NOT deleted, it gets an address: the current-window line",
     currentWindow("no-dir", captionAfferent).text === "claude.exe · Claude" &&
     buildPrompt(cleanStream, null, currentWindow("no-dir", captionAfferent)).includes("HE IS CURRENTLY IN"));
+
+  // ---------------------------------------------------------------------
+  // #WIRE (dead-wire sweep, 11 Aug 2026) — THE DOOR'S CUT, HELD OPEN.
+  // These four go red the moment currentWindow goes back to reading title/text
+  // without asking whether the row it read was already a stub: drop the marker,
+  // drop door_cut, double-mark, or fold a pre-D8 row into "clean". The fixture
+  // title is the real sheared one context.mjs's own D8 header quotes off the live
+  // bus, so the regression is tested against the sentence it actually happened to.
+  const SHEARED = "i can buy helium 10 platinum as well and want to first work w";
+  const cutRow = [{ ts: "2026-08-11T05:00:00Z", modality: "context", app: "chrome.exe",
+    title: SHEARED, text: `chrome.exe · ${SHEARED}`,
+    title_len: 227, title_truncated: true, text_len: 260, text_truncated: true }];
+  const cw = currentWindow("no-dir", cutRow);
+  assert("#wire: a title the DOOR sheared arrives MARKED — D8's flag finally has a reader downstream of context.mjs",
+    cw.door_cut === true && wasTruncated(cw.title) && cw.title_len === 227 &&
+    !wasTruncated(currentWindowLegacy("no-dir", cutRow).title));       // the frozen engine still shows the silent cut
+  assert("#wire: the marker is spent INSIDE the string — no cap moves by a byte, and it reaches the LLM prompt",
+    cw.title.length === SHEARED.length && wasTruncated(cw.text) &&
+    buildPrompt([], null, cw).includes(cw.title));
+  // a door-cut row LONGER than the 120 clamp: clampStr marks it, markCut must not mark it again
+  const longCut = [{ ts: "2026-08-11T05:01:00Z", modality: "context", app: "chrome.exe", title: "x".repeat(200),
+    text: "y".repeat(240), title_len: 300, title_truncated: true, text_len: 400, text_truncated: true }];
+  const lw = currentWindow("no-dir", longCut);
+  assert("#wire: one cut, one marker — clampStr's own 120 cut and the door's cut never double-mark the same string",
+    lw.text.length === 120 && wasTruncated(lw.text) && !lw.text.endsWith(TRUNC_MARK + TRUNC_MARK));
+  const cleanRow = [{ ts: "2026-08-11T05:02:00Z", modality: "context", app: "Code.exe", title: "drill.py",
+    text: "Code.exe · drill.py", title_len: 8, title_truncated: false, text_len: 19, text_truncated: false }];
+  const preD8Row = [{ ts: "2026-07-20T11:00:00Z", modality: "context", app: "Code.exe", title: "drill.py", text: "Code.exe · drill.py" }];
+  assert("#wire: THREE states, never two — measured-clean is false, a pre-D8 row is null (UNKNOWN), neither dressed as the other",
+    currentWindow("no-dir", cleanRow).door_cut === false && currentWindow("no-dir", preD8Row).door_cut === null &&
+    !wasTruncated(currentWindow("no-dir", cleanRow).title) && currentWindow("no-dir", preD8Row).title === "drill.py");
+
   const captionFloor = deterministicSet(recentStream("no-dir", 25, INTERACTIVE_LEGACY, captionAfferent), [], null);
   assert("#21 CUT 2 — even on the LEGACY window the floor refuses a caption: it takes his last real utterance",
     captionFloor.where_left_off.includes("grounding") && captionFloor.concept_in_motion.includes("hallucinations") &&
@@ -1107,7 +1192,7 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 export { distill, deterministicSet, parseSet, merge, mergeLegacy, mergeV2Legacy, recentStream, recentStreamLegacy,
-         currentWindow, hisWords, looksLikeWindowCaption, buildPrompt, promptRow, evidenceChars, summaryLine, run,
+         currentWindow, currentWindowLegacy, hisWords, looksLikeWindowCaption, buildPrompt, promptRow, evidenceChars, summaryLine, run,
          INTERACTIVE, INTERACTIVE_LEGACY, AMBIENT, PROMPT_ROW_CHARS,
          clampStr, clampStrLegacy, wasTruncated, TRUNC_MARK,
          voiceIsWired, registeredAction,

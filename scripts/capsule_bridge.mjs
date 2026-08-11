@@ -48,9 +48,16 @@
 //   audit #33's wrong output stand for weeks. The console lines below are now a
 //   SECOND, human-facing copy of a fact that reaches the packet through the file;
 //   they are not the wire. Do not delete them, and do not rely on them either.
+//   locked-count block (dead-wire sweep, 11 Aug 2026): locked_dated / locked_undated_names /
+//   locked_count_complete / locked_count_note — CONSUMER: manager.mjs, which relays the note
+//   verbatim onto the sheet's capsule line. It exists because `rejirah.schedule_known` — the
+//   ONLY field in the organism that can name a capsule with no readable lockedOn — had zero
+//   readers repo-wide, while that capsule silently split the locked count three ways (:196).
 // READS:     dressing-room/state/capsules/*.json (read-only) · forge_profile.json
 //            (rejirah_intervals_days — the genome owns the schedule, not this file) ·
 //            cards.json (FSRS's due NAMES live in hardest_due, not in the integer counters)
+//            ALL THREE now have a fault channel — capsules/ since 10 Aug (:248),
+//            cards.json since audit #33 (:326), forge_profile.json since 11 Aug (:295).
 // MODES: (default) write · show · selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
@@ -159,7 +166,18 @@ function strikeBank(entries) {
 }
 
 function build(capsules, intervals, today, fsrsDue = [], faults = []) {
-  const entries = capsules.filter(c => c && c.id).map(c => mapCapsule(c, intervals, today))
+  const iv = normalizeIntervals(intervals);
+  // THE GENOME'S FAULT RIDES THE EXISTING LANE (dead-wire sweep, 11 Aug 2026 — see
+  // loadIntervals below for the proof — `grep -n "THE THIRD INPUT, TRACKED" this file; the
+  // line numbers in this organ moved twice on 11 Aug alone, so anchor on the heading).
+  // It is merged into `input_faults[]` and it must
+  // NOT touch `capsules_complete`, which means ONE thing only: "this attempt could not
+  // read every file in capsules/". An unreadable genome leaves totals.capsules exactly
+  // right; flipping the flag would make postmatch.mjs:253 write "capsule_map incomplete
+  // … unreadable, owner mirror.mjs" into SEASON.md — the permanent logbook — about a file
+  // mirror.mjs does not own, and would send benchmark.mjs:1227 down the same wrong owner.
+  const allFaults = iv.fault ? [...faults, iv.fault] : faults;
+  const entries = capsules.filter(c => c && c.id).map(c => mapCapsule(c, iv.days, today))
     .sort((a, b) => String(a.concept).localeCompare(String(b.concept)));
   const bank = strikeBank(entries);
   const overdue = entries.filter(e => e.rejirah.overdue_days > 0)
@@ -182,6 +200,34 @@ function build(capsules, intervals, today, fsrsDue = [], faults = []) {
   // identical from the outside — which is how a permanently-empty arm went unnoticed.
   const agreement = [...capsuleDue].filter(c => fsrsSet.has(c));
 
+  // -------------------------------------------------------------------------
+  // DEAD-WIRE SWEEP (11 Aug 2026) — ORPHAN_FIELD: `rejirah.schedule_known`.
+  // -------------------------------------------------------------------------
+  // It has been emitted per capsule since day one and `grep -rn schedule_known` found
+  // exactly three hits: this file, the map it writes, and the repo bundle. NOTHING read
+  // it — and it is the only field in the organism that can name a capsule whose lockedOn
+  // is absent or not ISO. That capsule does not fault (the file parses, it has an id, so
+  // loadCapsules stays clean and `capsules_complete` reads true) and it does not vanish
+  // (build maps it) — it SPLITS THE LOCKED COUNT, because the three organs that state
+  // that count do not read the same field:
+  //   · manager.mjs:290    locked      = totals.capsules      ⇒ counts it
+  //   · benchmark.mjs:216  lockedSet   = concepts[].locked_on ⇒ does NOT (mapCapsule
+  //                                      nulls a non-ISO date rather than fake one)
+  //   · postmatch.mjs:236  lockedCount = concepts[].locked_on ⇒ does NOT
+  // PROVEN 11 Aug 2026 on this build(), two capsules, one with lockedOn "21 June 2026":
+  // totals.capsules 2 · lockedSet 1 · lockedCount 1 · capsules_complete true ·
+  // input_faults []. So the team sheet says 2 locked while SEASON.md — the PERMANENT
+  // logbook — writes 1, and benchmark's findRegressions can read the same gap on the
+  // next lock as "locked 2 → 1", a regression that never happened.
+  // The map is the only place that knows both numbers, so it states both, in this file's
+  // own honesty grammar (fsrs_due_names_known/_total/_complete/_note, :235): a count, the
+  // NAMES behind the gap, a boolean, and ONE owner-composed sentence a consumer relays
+  // verbatim (no-invented-number law — the reader must not re-word what only the writer
+  // can know). Nothing here decides WHICH count is the true one: this organ is a READER
+  // and resolves nothing (:17). It only makes the disagreement sayable.
+  const undated = entries.filter(e => e.rejirah.schedule_known === false).map(e => e.concept);
+  const lockedDated = entries.length - undated.length;
+
   return {
     date: today,
     generated_at: new Date().toISOString(),
@@ -196,10 +242,10 @@ function build(capsules, intervals, today, fsrsDue = [], faults = []) {
     // organs use to decide whether to speak at all (manager.mjs:260) — degrading it would
     // silence four good capsules to report one broken file, which is a worse lie.
     capsules_complete: faults.length === 0,
-    input_faults: faults,
-    blocking_faults: faults.filter(f => f.blocking).map(f => f.file),
+    input_faults: allFaults,
+    blocking_faults: allFaults.filter(f => f.blocking).map(f => f.file),
     engine: "capsule-bridge-v1 (reader — creates no cards, schedules nothing)",
-    rejirah_intervals_days: intervals,
+    rejirah_intervals_days: iv.days,
     concepts: entries,
     totals: {
       capsules: entries.length,
@@ -236,6 +282,19 @@ function build(capsules, intervals, today, fsrsDue = [], faults = []) {
     fsrs_due_total: fsrs.due_total,
     fsrs_due_names_complete: fsrs.complete,
     fsrs_due_note: fsrs.why || null,
+    // THE LOCKED COUNT, BOTH WAYS (dead-wire sweep 11 Aug 2026 — see :196). Same honesty
+    // grammar as the four fields directly above. `locked_count_complete:true` (today's
+    // live map: 4 capsules, 4 ISO dates) means the two counts are the same number and a
+    // consumer can stop thinking about it; false means they are NOT, and the note names
+    // the gap. CONSUMER: manager.mjs relays `locked_count_note` verbatim onto the team
+    // sheet's capsule line — the sheet is MACHINE-face, so this is never dealt as a card
+    // (THE ANCHOR LAW): the date lives in the gist and mirror.mjs owns the copy of it.
+    locked_dated: lockedDated,
+    locked_undated_names: undated,
+    locked_count_complete: undated.length === 0,
+    locked_count_note: undated.length
+      ? `${undated.length} locked capsule(s) carry no readable lockedOn (${undated.join(", ")}) — this map counts ${entries.length} in totals.capsules (manager's \`locked\`) and ${lockedDated} in concepts[].locked_on (benchmark's ROADMAP have · SEASON.md), so those two numbers disagree until the gist date is ISO; owner mirror.mjs`
+      : null,
     line: entries.length
       ? (overdue.length
         ? `${overdue[0].concept} ka Re-Jirah ${overdue[0].rejirah.overdue_days} din overdue hai — aur uske ${bank.filter(b => b.concept === overdue[0].concept).length} strike sawaal already likhe rakhe hain.`
@@ -292,10 +351,81 @@ function loadCapsules(dir = CAPSULES) {
   return { capsules, faults };
 }
 
-function loadIntervals(path = PROFILE) {
+// ---------------------------------------------------------------------------
+// THE THIRD INPUT, TRACKED (dead-wire sweep, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// This organ has three inputs, and until today only two could say they were broken:
+// capsules/ got a fault channel on 10 Aug ("THE PRIMARY INPUT, TRACKED" above),
+// cards.json has had an UNKNOWN channel since audit #33 ("unreadable ⇒ UNKNOWN, never a
+// measured empty" — fsrsDueFromCards). The GENOME had neither. loadIntervals read
+// forge_profile.json through readJson's empty catch (the one-liner at the top of this
+// file), so a half-written file reverted the WHOLE Re-Jirah schedule to canon
+// [3, 14, 42] with nothing said anywhere.
+// PROVEN on the real bytes, 11 Aug 2026 — the live genome with its R2 moved to 10 days
+// (exactly the mutation bootroom.mjs:298-302 files, and only ever on the captain's
+// word), then that same file truncated mid-write:
+//     intact    → rounds 2026-06-27 / 2026-07-04 / 2026-08-05
+//     truncated → rounds 2026-06-27 / 2026-07-08 / 2026-08-05
+// and the second map came out carrying capsules_complete:true, input_faults:[],
+// rejirah_intervals_days:[3,14,42] — byte-indistinguishable from a healthy read. So a
+// corrupted genome silently CANCELS an approved mutation: every next_due and
+// overdue_days moves, and learnstate.mjs:65-69 ("embeddings 42d"), setpiece's ranking
+// and the team sheet all restate the shifted number as this morning's fact.
+// NON-BLOCKING, deliberately. benchmark.mjs:101's BLOCKING_INPUTS rule is "a file whose
+// loss makes a COUNT short"; the genome makes no count short — totals.capsules and the
+// strike bank are untouched — it moves DATES. Marking it blocking would take main()'s
+// refuse-to-ship path ("REFUSE TO SHIP A SHORT COUNT") and freeze four good capsules'
+// counts over three integers,
+// a bigger lie than the one being fixed. So it rides `input_faults[{blocking:false}]`,
+// which manager.mjs:196 already reads and renders VERBATIM onto the team sheet. No new
+// field on the map, no new vocabulary, no new organ — the wire was the only thing
+// missing.
+// AN ABSENT KEY IS NOT A FAULT: bootroom.mjs:298 (`profile.rejirah_intervals_days ||
+// [3, 14, 42]`) tolerates a genome that never carried the key, and so does this — canon
+// is then the honest baseline, not a fallback FROM something. Same rule loadCapsules
+// applies to an absent capsules/ dir. Only a file that EXISTS and cannot be
+// parsed, or a key that exists and is junk, is named.
+// LEGACY (frozen verbatim, layering rule): the silent reader. Nothing on the run path
+// calls it; it stands as the shape of the defect.
+function loadIntervalsLegacy(path = PROFILE) {
   const j = readJson(path);
   const v = j && j.rejirah_intervals_days;
   return Array.isArray(v) && v.length && v.every(n => Number.isInteger(n) && n > 0) ? v : DEFAULT_INTERVALS;
+}
+
+// the validity test, lifted verbatim out of the legacy reader above so the two agree by
+// construction and cannot drift apart
+const validIntervals = (v) => Array.isArray(v) && v.length && v.every(n => Number.isInteger(n) && n > 0);
+const OWNER_HINT = "Owner: bootroom.mjs (the genome's sole writer — `node scripts/bootroom.mjs`)";
+
+function loadIntervals(path = PROFILE) {
+  const canon = { days: DEFAULT_INTERVALS, source: "canon-default", fault: null };
+  if (!existsSync(path)) return canon;                 // no genome yet = honest absence
+  let j;
+  try { j = JSON.parse(readFileSync(path, "utf8")); }
+  catch (e) {
+    return { days: DEFAULT_INTERVALS, source: "canon-default-genome-unreadable", fault: {
+      file: "forge_profile.json", blocking: false,
+      why: `forge_profile.json UNREADABLE (${String((e && e.message) || e).slice(0, 80)}) — the Re-Jirah schedule fell back to canon [${DEFAULT_INTERVALS.join(", ")}], so if the genome carried an approved mutation, every next_due/overdue_days here is that mutation CANCELLED, not today's schedule. ${OWNER_HINT}` } };
+  }
+  const v = j && j.rejirah_intervals_days;
+  if (v === undefined || v === null) return canon;     // key never written — the owner tolerates it, so do we
+  if (!validIntervals(v)) {
+    return { days: DEFAULT_INTERVALS, source: "canon-default-genome-unreadable", fault: {
+      file: "forge_profile.json", blocking: false,
+      why: `forge_profile.json parsed, but rejirah_intervals_days is not a list of positive whole days (${JSON.stringify(v).slice(0, 60)}) — the Re-Jirah schedule fell back to canon [${DEFAULT_INTERVALS.join(", ")}], so every next_due/overdue_days here is canon's, not the genome's. ${OWNER_HINT}` } };
+  }
+  return { days: v, source: "genome", fault: null };
+}
+
+// build() accepts either the rich reading above OR a bare array of days — the same
+// two-shape contract normalizeFsrsDue (:369) gives the FSRS input, so every existing
+// caller keeps working byte-for-byte (setpiece.mjs:1381 hands a bare [3, 14, 42], and
+// this file's own suite hands [1, 2]). A bare array is the caller ASSERTING the
+// schedule, so it carries no fault — there is nothing it failed to read.
+function normalizeIntervals(intervals) {
+  if (intervals && !Array.isArray(intervals) && typeof intervals === "object" && Array.isArray(intervals.days)) return intervals;
+  return { days: Array.isArray(intervals) ? intervals : DEFAULT_INTERVALS, source: "caller", fault: null };
 }
 
 // ORGANISM audit #33 (2026-08-04) — THE ARM THAT COULD NEVER BE NON-EMPTY.
@@ -475,14 +605,52 @@ function selftest() {
 
   assert("MALFORMED-SAFE — a capsule with no lockedOn reports schedule_known:false, never a fake date",
     build([cap({ lockedOn: null })], DEFAULT_INTERVALS, TODAY).concepts[0].rejirah.schedule_known === false);
+
+  // -------------------------------------------------------------------------
+  // DEAD-WIRE SWEEP (11 Aug 2026) — THE ORPHANED `schedule_known`, producer half.
+  // The assertion directly above has passed since day one and proved nothing about
+  // the DAMAGE: schedule_known had no reader anywhere, so a capsule with a human-typed
+  // date ("21 June 2026") was counted 2 by manager and 1 by benchmark/postmatch with
+  // capsules_complete:true and input_faults:[] — a clean bill of health over two
+  // organs stating different numbers as fact. These fail if the derived block goes
+  // away, if it stops deriving FROM schedule_known, or if the note stops naming both
+  // sides of the split (manager relays that sentence verbatim, so its content IS the
+  // wire, not decoration).
+  // -------------------------------------------------------------------------
+  {
+    const split = build([cap(), cap({ id: "context", lockedOn: "21 June 2026" })], DEFAULT_INTERVALS, TODAY);
+    const lockedOnCount = split.concepts.filter(c => c.locked_on).length;   // benchmark:216 / postmatch:236
+    assert("WIRE — a human-typed lockedOn splits the count (2 vs 1) and the map now STATES both numbers",
+      split.totals.capsules === 2 && lockedOnCount === 1
+      && split.locked_dated === 1 && split.locked_count_complete === false);
+    assert("WIRE — the gap is NAMED (which capsule), derived from the once-orphaned schedule_known",
+      split.locked_undated_names.join() === "context"
+      && split.concepts.find(c => c.concept === "context").rejirah.schedule_known === false);
+    assert("WIRE — the note names BOTH counts and both consumer groups, verbatim for the relay",
+      /totals\.capsules/.test(split.locked_count_note) && /locked_on/.test(split.locked_count_note)
+      && /SEASON\.md/.test(split.locked_count_note) && /mirror\.mjs/.test(split.locked_count_note));
+    assert("WIRE — it is NOT an input fault: nothing was unreadable, so the short-count refusal stays out of it",
+      split.capsules_complete === true && split.input_faults.length === 0 && split.blocking_faults.length === 0);
+    const agreeing = build([cap()], DEFAULT_INTERVALS, TODAY);
+    assert("WIRE — when every lockedOn is ISO the two counts agree, complete:true, note null (bias-to-silence)",
+      agreeing.locked_dated === agreeing.totals.capsules
+      && agreeing.locked_count_complete === true && agreeing.locked_count_note === null);
+    // and the LIVE capsules/ — shape only; the count is mirror.mjs's to own.
+    const liveSplit = build(loadCapsules().capsules, DEFAULT_INTERVALS, TODAY);
+    assert("WIRE — the LIVE capsules/ carries the block (today: every date ISO ⇒ complete, no note)",
+      typeof liveSplit.locked_dated === "number" && Array.isArray(liveSplit.locked_undated_names)
+      && liveSplit.locked_count_complete === (liveSplit.locked_undated_names.length === 0));
+  }
   assert("MALFORMED-SAFE — junk faultLines are skipped, not crashed on",
     build([cap({ faultLines: [null, { axis: "z" }, "nope"] })], DEFAULT_INTERVALS, TODAY).concepts[0].axes_present.length === 0);
   assert("a capsule with no id is not mapped at all (no phantom concept)",
     build([{ lockedOn: "2026-06-24" }], DEFAULT_INTERVALS, TODAY).totals.capsules === 0);
   assert("the genome owns the intervals — a custom schedule is honoured",
     build([cap()], [1, 2], TODAY).concepts[0].rejirah.rounds.map(x => x.due).join() === "2026-06-25,2026-06-26");
-  assert("intervals fall back to canon when the genome is unreadable",
-    loadIntervals("__no_such_file__").join() === "3,14,42");
+  // (11 Aug 2026: `.join()` here until today — loadIntervals now returns the tracked
+  // reading, and an ABSENT genome is still canon with no fault, which is what this asserts)
+  assert("intervals fall back to canon when there is no genome at all",
+    loadIntervals("__no_such_file__").days.join() === "3,14,42");
   assert("IT SCHEDULES NOTHING — the emitted shape carries no card, no drill, no due-date for FSRS",
     !("cards" in b) && !("drills" in b) && !("fsrs" in b) && /reader/.test(b.engine));
 
@@ -539,6 +707,95 @@ function selftest() {
       && live.faults.every(f => typeof f.file === "string" && typeof f.why === "string"));
   }
 
+  // -------------------------------------------------------------------------
+  // DEAD-WIRE SWEEP (2026-08-11) — THE GENOME THAT COULD NOT SAY IT WAS UNREADABLE.
+  // Exercised THROUGH THE DISK READER on real bytes, for the same reason the two blocks
+  // above are: readJson's empty catch IS the defect, and no in-memory fixture can
+  // reproduce a JSON.parse failure. The bytes are the LIVE forge_profile.json with its
+  // R2 moved to 10 days — the exact shape bootroom.mjs:298-302 mutates on his word — so
+  // a fallback to canon is visible as a real date shift, not just a flag.
+  // -------------------------------------------------------------------------
+  {
+    const dir = join(tmpdir(), `capsule-bridge-genome-${process.pid}-${Date.now()}`);
+    mkdirSync(dir, { recursive: true });
+    const mutated = { version: "1.0", rejirah_intervals_days: [3, 10, 42], axis_weights: { a: 1 } };
+    const good = join(dir, "good.json"), bad = join(dir, "bad.json"), junk = join(dir, "junk.json"), nokey = join(dir, "nokey.json");
+    writeFileSync(good, JSON.stringify(mutated, null, 2));
+    writeFileSync(bad, JSON.stringify(mutated, null, 2).slice(0, 40));      // a truncated write, mid-save
+    writeFileSync(junk, JSON.stringify({ ...mutated, rejirah_intervals_days: [3, "ten", -42] }));
+    writeFileSync(nokey, JSON.stringify({ version: "1.0", axis_weights: { a: 1 } }));
+
+    const okRead = loadIntervals(good);
+    assert("GENOME — an intact genome is honoured and files no fault",
+      okRead.days.join() === "3,10,42" && okRead.source === "genome" && okRead.fault === null);
+
+    const badRead = loadIntervals(bad);
+    assert("GENOME WIRE — a truncated genome is NAMED, not silently reverted to canon",
+      badRead.days.join() === "3,14,42" && badRead.source === "canon-default-genome-unreadable"
+      && badRead.fault && badRead.fault.file === "forge_profile.json" && badRead.fault.blocking === false
+      && /UNREADABLE/.test(badRead.fault.why) && /bootroom\.mjs/.test(badRead.fault.why));
+    assert("GENOME WIRE — a parseable genome with a junk interval list is named too",
+      loadIntervals(junk).fault !== null && /not a list of positive whole days/.test(loadIntervals(junk).fault.why));
+    assert("GENOME — an ABSENT key is an honest canon baseline, never a fault (bootroom.mjs:298 tolerates it)",
+      loadIntervals(nokey).fault === null && loadIntervals(nokey).source === "canon-default"
+      && loadIntervals(nokey).days.join() === "3,14,42");
+
+    // the whole point: the map must SAY the schedule below is canon's, not the genome's
+    const capG = cap({ lockedOn: "2026-06-24" });
+    const mGood = build([capG], okRead, TODAY), mBad = build([capG], badRead, TODAY);
+    assert("GENOME WIRE — the approved mutation really does move the dates (so a silent revert is a real lie)",
+      mGood.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-06-27,2026-07-04,2026-08-05"
+      && mBad.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-06-27,2026-07-08,2026-08-05");
+    assert("GENOME WIRE — the shifted map carries the fault on the bus (this was [] before 11 Aug 2026)",
+      mBad.input_faults.length === 1 && mBad.input_faults[0].file === "forge_profile.json"
+      && mBad.rejirah_intervals_days.join() === "3,14,42" && mGood.input_faults.length === 0);
+    // ...and it must NOT lie in the OTHER direction: the capsule count is not short, so
+    // capsules_complete stays true and main() still ships (postmatch/benchmark read that
+    // flag to blame mirror.mjs, which does not own the genome).
+    assert("GENOME WIRE — a bad genome never flips capsules_complete and never blocks the ship",
+      mBad.capsules_complete === true && mBad.blocking_faults.length === 0 && mBad.totals.capsules === 1);
+    // both faults on one map, both named, and only the capsule one blocks
+    const both = build([capG], badRead, TODAY, [], [{ file: "capsules/beta.json", why: "Unexpected end of JSON input", blocking: true }]);
+    assert("GENOME WIRE — a capsule fault and a genome fault coexist; only the capsule one blocks",
+      both.input_faults.length === 2 && both.blocking_faults.join() === "capsules/beta.json"
+      && both.capsules_complete === false);
+
+    // THE CONSUMER HALF. manager.mjs:193-199 `inputFault()` is the organism's only reader
+    // of this vocabulary, and its soft branch is what carries the genome onto the team
+    // sheet. Asserted the way forge_session.mjs:1556 asserts its chain reader: on the
+    // consumer's own source, so deleting the branch turns this RED instead of quietly
+    // orphaning the field again.
+    const mgr = readFileSync(join(__dirname, "manager.mjs"), "utf8");
+    assert("GENOME WIRE (consumer) — manager.mjs still reads the NON-blocking half of input_faults[] onto the sheet",
+      /input_faults\s*\)\s*\|\|\s*\[\]\)\.filter\(\(f\) => f && !f\.blocking && f\.file\)/.test(mgr));
+    // and the render the sheet would produce, replayed with manager's own expression
+    const soft = ((mBad && mBad.input_faults) || []).filter((f) => f && !f.blocking && f.file);
+    const rendered = `⚠ ${soft.map((f) => f.file).join(", ")} — ${soft[0].why}`;
+    assert("GENOME WIRE (consumer) — the sheet line names the file, the canon fallback and the owner",
+      /forge_profile\.json/.test(rendered) && /\[3, 14, 42\]/.test(rendered) && /bootroom\.mjs/.test(rendered));
+
+    // the defect, preserved and PROVEN on the same bytes: legacy hands back a bare array,
+    // canon and mutation are indistinguishable, and there is no fault channel of any kind.
+    const lg = loadIntervalsLegacy(bad);
+    assert("GENOME — the frozen legacy reader still reverts silently (the defect, preserved)",
+      Array.isArray(lg) && lg.join() === "3,14,42" && lg.join() === loadIntervalsLegacy("__no_such_file__").join());
+    // BACK-COMPAT: a bare-array caller (setpiece.mjs:1381 hands [3, 14, 42]; :483 above
+    // hands [1, 2]) must be byte-unchanged and must never have a fault invented for it —
+    // an array is the caller ASSERTING the schedule, and it read nothing that could fail.
+    const bare = build([capG], [1, 2], TODAY);
+    const rich = build([capG], { days: [1, 2], source: "caller", fault: null }, TODAY);
+    assert("GENOME — a bare-array caller is byte-identical to the rich reading, with no fault invented",
+      bare.rejirah_intervals_days.join() === "1,2" && bare.input_faults.length === 0
+      && JSON.stringify({ ...bare, generated_at: "" }) === JSON.stringify({ ...rich, generated_at: "" }));
+    rmSync(dir, { recursive: true, force: true });
+    // and the LIVE genome flows through the tracked reader — shape only; the VALUES are
+    // bootroom.mjs's to own and are deliberately not asserted here.
+    const live = loadIntervals();
+    assert("GENOME — the LIVE forge_profile.json reads through the tracked reader (names it if unreadable)",
+      Array.isArray(live.days) && live.days.length > 0 && typeof live.source === "string"
+      && (live.fault === null || (typeof live.fault.why === "string" && live.fault.blocking === false)));
+  }
+
   console.log(`\ncapsule_bridge selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -582,10 +839,23 @@ function main() {
   // produces a wrong one is visible the night it happens, not two audits later.
   console.log(`  schedulers — agree: ${out.scheduler_agreement.join(", ") || "none"} · Re-Jirah only: ${out.scheduler_disagreement.capsule_says_due_fsrs_quiet.join(", ") || "none"} · FSRS only: ${out.scheduler_disagreement.fsrs_says_due_capsule_quiet.join(", ") || "none"} (FSRS named ${out.fsrs_due_names_known}/${out.fsrs_due_total === null ? "?" : out.fsrs_due_total})`);
   if (out.fsrs_due_note) console.log(`  WARN ${out.fsrs_due_note}`);
+  // same standing as the WARN above (see the header): a SECOND, human-facing copy. The
+  // wire is the field — manager.mjs reads locked_count_note off the file; this line is
+  // for whoever is watching a run, and heartbeat's stdio:"pipe" throws it away.
+  if (out.locked_count_note) console.log(`  WARN ${out.locked_count_note}`);
+  // dead-wire sweep 11 Aug 2026 — the non-blocking faults (today: the genome) never reach
+  // the refuse-to-ship branch above, so this is their only console surface. Same standing:
+  // a SECOND, human-facing copy of a fact that reaches the sheet through the file (see the
+  // header note at :44-50). The wire is input_faults[]; this is not the wire.
+  for (const f of out.input_faults.filter(f => !f.blocking)) console.log(`  WARN ${f.file}: ${f.why}`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { build, mapCapsule, rejirahRounds, strikeBank, loadIntervals,
+export { build, mapCapsule, rejirahRounds, strikeBank,
+  // dead-wire sweep (2026-08-11): the tracked genome reader that NAMES an unreadable
+  // forge_profile.json instead of silently reverting the schedule to canon, with the
+  // silent one frozen beside it and the array/object normaliser build() accepts.
+  loadIntervals, loadIntervalsLegacy, normalizeIntervals,
   // wiring pass (2026-08-10): the tracked capsule reader that NAMES what it could not
   // read, with the silent one frozen beside it.
   loadCapsules, loadCapsulesLegacy,

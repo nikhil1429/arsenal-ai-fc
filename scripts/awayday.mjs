@@ -38,6 +38,9 @@
 // MODES: node scripts/awayday.mjs run · check · list · exposure · selftest
 //        `run` is the CLOUD half (it executes the jobs). `check` is the HOUSE
 //        half (it reads the cloud's verdict back home) — see THE READ-BACK.
+//        That list is no longer prose kept in step by hand: it is printed FROM
+//        the MODE TABLE at main(), and an unrecognised mode now REFUSES with
+//        exit 1 instead of printing help and exiting 0 — see the comment there.
 // ============================================================================
 
 import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, renameSync } from "node:fs";  // rm/tmpdir: selftest only. writeFileSync also carries the ONE state file this organ owns (awayday.json, house side) — never written from a cloud runner, which only ever calls `run`.
@@ -302,10 +305,25 @@ function ciAnnotate(r, env = process.env, out = console.error) {
 // 03:45), read-back FIRST and unconditional — last night's push is what produced
 // the verdict now sitting on GitHub, and the cloud cron lands at 03:00, so the
 // verdict read at 03:45 is ~45 minutes old, not a week.
-// WHO CONSUMES IT: (1) awayday.json, the machine-face record a session Claude
-// reads whole; (2) on RED ONLY, ONE captains_call card at his next anchor. The
-// card carries no exec — haan retires it and the session acts on his word. AI
-// proposes, human approves; nothing here acts for him.
+// WHO CONSUMES IT: (1) on RED ONLY, ONE captains_call card at his next anchor. The
+// card carries no exec — haan settles it and the session acts on his word. AI
+// proposes, human approves; nothing here acts for him. Since 11 Aug 2026 the
+// card also carries the failing run's URL on its `open` dispatch (--open), so
+// his haan hands the session a link instead of a run number to look up.
+// (2) physio.mjs reads awayday.json RAW and bleeds `away_day_lane_red` (and
+// `away_day_read_blind` when the FETCH itself failed) into loop_vitals.json — the
+// state surface dugout, manager, talk and bootroom already open — and carries this
+// file on its stale table, so a read-back that stops FIRING is caught too. (3)
+// /organism-doctor reads the verdict in its chart pass.
+// CORRECTED 11 Aug 2026 (wire audit): (1) used to read "awayday.json, the machine-
+// face record a session Claude reads whole". That consumer did not exist. Traced
+// this run: the ONLY reader of this file anywhere in the repo was THIS file, taking
+// two keys (carded_run_id, state) for its own card lock, while the lane sat RED on
+// 8df28ba with its one card already dealt — thirteen of the fifteen fields written
+// here reached no organ at all. And the card cannot cover it, because LOCK 1 makes
+// it an EDGE by design: one card per run id, so a week-long red is silent after the
+// first. physio's bleed is what persists, and it self-clears on green. The selftest
+// below holds that read by source — delete it and this organ is a black box again.
 // ============================================================================
 
 function writeAtomic(path, obj) {
@@ -315,15 +333,41 @@ function writeAtomic(path, obj) {
   renameSync(tmp, path);
 }
 
+// FROZEN VERBATIM (LAYERING law) — the pre-11-Aug reader, its comment included. Frozen rather
+// than edited away because this function is EXPORTED: a caller outside this file that expected a
+// bare string-or-null can still read exactly what it used to get, sitting next to the reason the
+// shape changed. Kept in-file, uncalled, like vetJobsLegacy and dispatchFailFastLegacy above.
 // The slug is READ from the remote, never hardcoded — a fork or a rename must
 // not leave this silently polling somebody else's repo.
-function repoSlug(deps = {}) {
+function repoSlugLegacy(deps = {}) {
   const git = deps.gitRemote || (() => execFileSync("git", ["remote", "get-url", "origin"],
     { encoding: "utf8", windowsHide: true, cwd: join(__dirname, ".."), timeout: NET_TIMEOUT_MS }));
   try {
     const m = String(git()).trim().match(/github\.com[:/]+([^/]+)\/(.+?)(?:\.git)?$/i);
     return m ? `${m[1]}/${m[2]}` : null;
   } catch { return null; }
+}
+
+// The slug is READ from the remote, never hardcoded — a fork or a rename must
+// not leave this silently polling somebody else's repo.
+// TELL "ABSENT" FROM "BROKEN", FOR GIT TOO (11 Aug 2026, wire-audit). Returns
+// { slug, gitError }: gitError is null unless the git call ITSELF failed — not on PATH, a
+// 120s timeout, not-a-repo. The frozen lane above swallowed all three into the SAME null a
+// gitlab remote returns, and its one caller could not tell them apart. This is not a new
+// invention: it is readJson's shape (:65), which split exactly this confusion for the
+// manifest on 10 Aug — "there is no github remote" and "git could not answer" are different
+// facts, and only one of them means there is no cloud lane to read back. Both still yield
+// slug:null, so the parse contract is unchanged; the caller now reads gitError beside it.
+function repoSlug(deps = {}) {
+  const git = deps.gitRemote || (() => execFileSync("git", ["remote", "get-url", "origin"],
+    { encoding: "utf8", windowsHide: true, cwd: join(__dirname, ".."), timeout: NET_TIMEOUT_MS }));
+  let out;
+  // ONLY the exec is inside the try — the regex below cannot throw, and leaving it in the
+  // catch's reach is what let an exec failure masquerade as a parse miss in the first place.
+  try { out = String(git()); }
+  catch (e) { return { slug: null, gitError: String((e && e.message) || e).split("\n")[0].slice(0, 160) }; }
+  const m = out.trim().match(/github\.com[:/]+([^/]+)\/(.+?)(?:\.git)?$/i);
+  return { slug: m ? `${m[1]}/${m[2]}` : null, gitError: null };
 }
 
 // GitHub's own vocabulary, not ours: `status` says whether it finished,
@@ -353,23 +397,51 @@ async function fetchLatestRun(slug, deps = {}) {
   return (j.workflow_runs || [])[0] || null;
 }
 
+// SILENCE MUST NEVER LOOK GREEN — ONE IMPLEMENTATION, TWO WAYS TO GO DARK (11 Aug 2026).
+// Lifted verbatim out of the fetch path below so the git path cannot drift from it. A laptop
+// that could not complete the read keeps the LAST KNOWN verdict character-for-character and
+// stamps the failed read beside it with the hour it failed: an unreachable check is not
+// evidence of a passing lane, and overwriting a red with a blank would be worse than not
+// checking at all. The `checked_at` move is the load-bearing half — a stale timestamp under a
+// verdict nobody re-read is exactly how "the lane is fine" gets believed for a week.
+function keepLastKnown(prior, now, unreachable, write) {
+  const next = { ...(prior || { version: 1, state: "unknown" }), checked_at: now.toISOString(), unreachable };
+  (write || ((o) => writeAtomic(STATE, o)))(next);
+  return next;
+}
+
 async function checkLane(deps = {}) {
   const now = deps.now || new Date();
   const prior = deps.prior !== undefined ? deps.prior : readJson(STATE).json;
-  const slug = deps.slug !== undefined ? deps.slug : repoSlug(deps);
+  // A BROKEN GIT IS NOT AN ABSENT LANE (11 Aug 2026, wire-audit). This line read a bare
+  // string-or-null, so a git EXEC failure arrived as the same null a gitlab remote returns and
+  // the refusal below fired: no verdict stamp, no unreachable field, no card, no write at all.
+  // Proven on this file's own exports BEFORE the fix:
+  //   repoSlug({gitRemote:()=>{throw new Error('spawn git ENOENT')}}) === null   ← identical to
+  //   repoSlug({gitRemote:()=>'git@gitlab.com:x/y.git'})             === null
+  //   checkLane({slug:null,…}) → {ok:false,state:"unknown",carded:false}, injected write() never called
+  // So one bad 03:45 — git off PATH, a 120s timeout, a half-cloned tree — left awayday.json
+  // holding an OLD verdict under its OLD checked_at with `unreachable: null` beside it, which
+  // reads as a check that ran and found nothing wrong. The fetch path fixed that shape at :370
+  // and readJson fixed it at :57; git was the third door and it was still open.
+  // deps.slug stays the selftest's direct seam and skips git entirely, so an injected fixture
+  // can never manufacture a git error — the two paths are driven separately below.
+  const { slug, gitError } = deps.slug !== undefined ? { slug: deps.slug, gitError: null } : repoSlug(deps);
+  if (gitError) {
+    const next = keepLastKnown(prior, now, `git could not be read here — ${gitError}`, deps.write);
+    return { ok: false, state: next.state || "unknown", carded: false, unreachable: next.unreachable,
+      why: `could not read origin's remote URL (${gitError}) — this is a MISSING READ, not an absent lane; last known verdict kept (${next.state || "unknown"})` };
+  }
+  // Genuinely no github remote: a fork or a rename, a permanent fact about this checkout and
+  // not a failed read. It stays a refusal with no write — deliberately unchanged.
   if (!slug) return { ok: false, state: "unknown", carded: false, why: "no github remote on origin — there is no cloud lane to read back" };
 
   let runRow = null, unreachable = null;
   try { runRow = await fetchLatestRun(slug, deps); }
   catch (e) { unreachable = String((e && e.message) || e).slice(0, 160); }
 
-  // SILENCE MUST NEVER LOOK GREEN. A laptop with no internet at 03:45 keeps the
-  // LAST KNOWN verdict verbatim and stamps the failed read beside it — an
-  // unreachable check is not evidence of a passing lane, and overwriting a red
-  // with a blank would be worse than not checking at all.
   if (unreachable) {
-    const next = { ...(prior || { version: 1, state: "unknown" }), checked_at: now.toISOString(), unreachable };
-    (deps.write || ((o) => writeAtomic(STATE, o)))(next);
+    const next = keepLastKnown(prior, now, unreachable, deps.write);
     return { ok: false, state: next.state || "unknown", carded: false, unreachable, why: `could not reach GitHub — last known verdict kept (${next.state || "unknown"})` };
   }
 
@@ -407,10 +479,20 @@ async function checkLane(deps = {}) {
     // selftest below asserts the path name appears nowhere in this function.
     const line = `away-day CI lane RED on ${next.head_sha} — the cloud clean-checkout is failing (run ${runId}). Dekh lein?`;
     const key = `awayday:red:${runId}`;
-    const fileCard = deps.fileCard || ((l, k) => execFileSync(process.execPath,
-      [join(__dirname, "captains_call.mjs"), "file", "--line", l, "--key", k],
+    // TRUNCATED AT THE DOOR (repaired 11 Aug 2026, wiring audit). The card used
+    // to carry the run NUMBER and nothing else — next.run_url sat right here in
+    // scope, `check` mode printed it, and the one sentence that actually reaches
+    // him dropped it (live: c27 + c36, both dispatch `none`, both naming a bare
+    // 11-digit run id). His haan then left the session with an integer to look
+    // up in a state file no session opens — a command to remember, which the
+    // ANCHOR LAW forbids. The URL now rides the card's `open` dispatch, so haan
+    // prints the link the session reads. The LINE is unchanged: 140 chars is his
+    // reading budget, and a URL spent half of it. Still no exec — captains_call
+    // only PRINTS an `open` locator; nothing acts for him.
+    const fileCard = deps.fileCard || ((l, k, u) => execFileSync(process.execPath,
+      [join(__dirname, "captains_call.mjs"), "file", "--line", l, "--key", k, ...(u ? ["--open", u] : [])],
       { encoding: "utf8", windowsHide: true, cwd: join(__dirname, ".."), timeout: NET_TIMEOUT_MS }));
-    try { fileCard(line, key); carded = true; }
+    try { fileCard(line, key, next.run_url); carded = true; }
     catch (e) {
       // A card that could not be filed must NOT be recorded as filed, or the red
       // never reaches him and lock 1 suppresses every retry after it.
@@ -525,7 +607,7 @@ async function selftest() {
     const drive = async (runRow, prior, extra = {}) => {
       let wrote = null; const cards = [];
       const r = await checkLane({ now: T, slug: "nikhil1429/arsenal-ai-fc", prior, fetchRun: async () => runRow,
-        write: (o) => { wrote = o; }, fileCard: (l, k) => cards.push({ l, k }), ...extra });
+        write: (o) => { wrote = o; }, fileCard: (l, k, u) => cards.push({ l, k, u }), ...extra });
       return { r, wrote, cards };
     };
 
@@ -533,9 +615,19 @@ async function selftest() {
     assert("A RED CLOUD LANE REACHES THE HOUSE: the verdict is written to state AND one card is filed at his next anchor — the wire that did not exist while the lane sat red on HEAD",
       red.r.state === "red" && red.wrote.state === "red" && red.wrote.run_id === redRun.id && red.wrote.head_sha === "2c23168"
       && red.cards.length === 1 && red.cards[0].k === `awayday:red:${redRun.id}` && /RED/.test(red.cards[0].l));
-    assert("the card rides the OWNER's CLI and carries no exec — haan retires it, the session acts on his word (AI proposes, human approves)",
+    assert("the card rides the OWNER's CLI and carries no exec — haan settles it and the session acts on his word (AI proposes, human approves)",
       (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
                return src.includes("captains_call.mjs") && src.includes('"file", "--line"') && !/captains_call\.json/.test(src.slice(src.indexOf("async function checkLane"), src.indexOf("async function selftest"))); })());
+    // TRUNCATED AT THE DOOR (11 Aug 2026). This is the assertion c27 and c36 did
+    // not have: the run_url the state file records must be the run_url the CARD
+    // carries. It fails if the door ever narrows back to line + key.
+    assert("THE LINK REACHES HIM: the red card carries the run's URL, verbatim and identical to the one written to awayday.json — never a bare run number he has to look up",
+      red.cards[0].u === redRun.html_url && red.wrote.run_url === redRun.html_url
+      && red.cards[0].u.endsWith(String(redRun.id))
+      // and the REAL door (not just the injected one) spells the owner's flag —
+      // captains_call.mjs `file --open` is the other half of this contract, held
+      // by its own selftest ("LOCATOR — …").
+      && /"--open", u/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
 
     const again = await drive(redRun, red.wrote);
     assert("LOCK 1 — the SAME red run never cards twice (a week-long red is one card, not seven), and awayday.json is what remembers it",
@@ -561,15 +653,59 @@ async function selftest() {
       cardDead.wrote.carded_run_id === null && /exploded/.test(cardDead.wrote.card_error));
 
     assert("the slug is READ from origin, never hardcoded — a fork must not poll somebody else's repo",
-      repoSlug({ gitRemote: () => "https://github.com/nikhil1429/arsenal-ai-fc.git\n" }) === "nikhil1429/arsenal-ai-fc"
-      && repoSlug({ gitRemote: () => "git@github.com:someone/other.git" }) === "someone/other"
-      && repoSlug({ gitRemote: () => "not-a-remote" }) === null);
+      repoSlug({ gitRemote: () => "https://github.com/nikhil1429/arsenal-ai-fc.git\n" }).slug === "nikhil1429/arsenal-ai-fc"
+      && repoSlug({ gitRemote: () => "git@github.com:someone/other.git" }).slug === "someone/other"
+      && repoSlug({ gitRemote: () => "not-a-remote" }).slug === null);
     assert("no remote → the check refuses instead of inventing a repo to poll",
       (await checkLane({ now: T, slug: null, prior: null, write: () => { throw new Error("must not write"); } })).ok === false);
+
+    // ── THE GIT SILENCE (11 Aug 2026, wire-audit) ──────────────────────────
+    // A git EXEC failure came back as the SAME null a gitlab remote returns, and the check
+    // then returned before any write: a 03:45 pass on a laptop where git could not run left
+    // the file's own last verdict standing under its old checked_at with `unreachable: null`
+    // beside it — a stale red (or a stale green) reading as freshly confirmed. These four
+    // fail the moment the two silences stop being told apart, or the broken one stops
+    // stamping. The last one keeps the FROZEN reader honest per the layering law.
+    assert("a git EXEC failure is NOT the same answer as a non-github remote — the reader names which one happened",
+      repoSlug({ gitRemote: () => { throw new Error("spawn git ENOENT"); } }).gitError !== null
+      && /ENOENT/.test(repoSlug({ gitRemote: () => { throw new Error("spawn git ENOENT"); } }).gitError)
+      && repoSlug({ gitRemote: () => "git@gitlab.com:x/y.git" }).gitError === null
+      && repoSlug({ gitRemote: () => "git@gitlab.com:x/y.git" }).slug === null);
+    const T2 = new Date("2026-08-11T04:00:00Z");
+    let gitWrote = null; const gitCards = [];
+    const gitDark = await checkLane({ now: T2, prior: red.wrote,
+      gitRemote: () => { throw new Error("spawn git ENOENT"); },
+      fetchRun: async () => { throw new Error("the network must not be reached without a slug"); },
+      write: (o) => { gitWrote = o; }, fileCard: (l, k) => gitCards.push({ l, k }) });
+    assert("A BROKEN GIT IS STAMPED, NOT SWALLOWED: the last known red is kept verbatim, `unreachable` names git, and checked_at MOVES — a failed read must never leave a stale verdict looking freshly confirmed",
+      gitDark.ok === false && !!gitWrote && gitWrote.state === "red" && gitWrote.run_id === redRun.id
+      && /git could not be read/.test(gitWrote.unreachable) && /ENOENT/.test(gitWrote.unreachable)
+      && gitWrote.checked_at === T2.toISOString() && gitWrote.checked_at !== red.wrote.checked_at
+      && /MISSING READ/.test(gitDark.why) && gitCards.length === 0);
+    let gitlabWrote = null;
+    const noLane = await checkLane({ now: T2, prior: red.wrote, gitRemote: () => "git@gitlab.com:x/y.git", write: (o) => { gitlabWrote = o; } });
+    assert("…and a GENUINELY absent lane (a non-github remote) still refuses without writing — the split is real, not both paths collapsed into one",
+      noLane.ok === false && noLane.state === "unknown" && !noLane.unreachable && /no github remote/.test(noLane.why) && gitlabWrote === null);
+    assert("the FROZEN pre-11-Aug reader is kept and still callable, returning the old bare shape it always did (layering, not deletion)",
+      repoSlugLegacy({ gitRemote: () => "git@github.com:someone/other.git" }) === "someone/other"
+      && repoSlugLegacy({ gitRemote: () => { throw new Error("spawn git ENOENT"); } }) === null);
     assert(`the workflow this organ reads back still exists at .github/workflows/${WORKFLOW} — a rename would leave the check polling a lane that is gone`,
       existsSync(join(__dirname, "..", ".github", "workflows", WORKFLOW)));
     assert("groundsman's push lane FIRES the read-back — a check nobody runs is the same dead wire in a new coat",
       /awayday\.mjs.{0,20}["']check["']/.test(readFileSync(join(__dirname, "groundsman.mjs"), "utf8")));
+    // THE OTHER HALF OF THE SAME WIRE (11 Aug 2026, wire audit). The check above
+    // proves the verdict is FETCHED; this proves it is READ. Until today nothing
+    // read it: the card is one-per-run-id by design, so past that single card a red
+    // lane was invisible to the whole body. physio.mjs is the consumer — it reads
+    // this file raw, bleeds on red, and publishes the verdict to loop_vitals.json.
+    // Held by source rather than by running physio (that writes loop_vitals.json,
+    // and a selftest must not mutate a neighbour's state file), exactly as the
+    // groundsman check above is held.
+    {
+      const physio = readFileSync(join(__dirname, "physio.mjs"), "utf8");
+      assert("physio.mjs READS the verdict back into the body — the consumer this organ went six weeks without",
+        /readJson\(join\(STATE_DIR,\s*"awayday\.json"\)\)/.test(physio) && /away_day_lane_red/.test(physio));
+    }
   }
 
   // ── THE VANISHED FIRST LOCK (10 Aug 2026, wire-audit) ────────────────────────────────
@@ -593,6 +729,53 @@ async function selftest() {
   assert("run() carries the checkout exposure out to its caller and prints it before any job — a read nobody can see is the defect this repair exists for",
     r1.exposure && r1.exposure.line && typeof r1.exposure.known === "boolean");
 
+  // ── THE CLI DOOR (11 Aug 2026, wire-audit) ───────────────────────────────────────────
+  // The four locks above all guard what happens AFTER a mode is recognised. Nothing
+  // guarded the door itself: an unrecognised mode printed a hand-typed usage line and
+  // exited 0 — measured, `node scripts/awayday.mjs runn` → exit 0, zero jobs. Both ends
+  // of this organ are a single string in someone else's file (the workflow's `run`, the
+  // groundsman's `check`), so a rename on either end failed OPEN. These four fail the
+  // moment that can happen again. See THE MODE TABLE at main() for the whole story.
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const mainTail = src.slice(src.indexOf("async function main"));
+    // Assembled from fragments, exactly like the rot guard below: written out whole this
+    // pattern would match its own source line and capture a mode that does not exist.
+    const branches = [...mainTail.matchAll(new RegExp("mode " + '=== "([a-z]+)"', "g"))].map(m => m[1]);
+    assert(`the MODE TABLE and main()'s dispatch branches are the SAME SET — a mode cannot be advertised without existing, or exist without being advertised (branches: ${branches.join(", ") || "NONE"} · table: ${Object.keys(MODES).join(", ")})`,
+      branches.length > 0 && branches.every(m => Object.hasOwn(MODES, m)) && Object.keys(MODES).every(m => branches.includes(m)));
+
+    // Driven through the REAL CLI, not the function: the exit code IS the defect, and an
+    // exit code cannot be asserted from inside the process that would have to exit.
+    const cli = (args) => {
+      try { return { code: 0, out: execFileSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8", windowsHide: true, timeout: NET_TIMEOUT_MS, stdio: ["ignore", "pipe", "pipe"] }) }; }
+      catch (e) { return { code: e.status ?? 1, out: String((e.stdout || "") + (e.stderr || "")) }; }
+    };
+    const typo = cli(["runn"]);
+    const bare = cli([]);
+    assert("A TYPO'D OR MISSING MODE FAILS THE LANE: both exit non-zero and say NOTHING RAN — before this they printed help and exited 0, so a renamed mode in awayday.yml or groundsman.mjs was a GREEN push that executed nothing",
+      typo.code !== 0 && bare.code !== 0 && /unknown mode "runn"/.test(typo.out) && /NOTHING RAN/.test(typo.out) && /no mode given/.test(bare.out));
+    assert("the usage the CLI prints is DERIVED from the table, so a live mode cannot stay undiscoverable — `exposure` was, from the day it shipped until this repair",
+      Object.keys(MODES).every(m => typo.out.includes(m)) && typo.out.includes("exposure") && typo.out.includes(usageLine()));
+
+    // BOTH ENDS OF THE WIRE, READ FROM THE FILES THAT HOLD THEM. The cloud half and the
+    // house half each name a mode in a string this file cannot see; if either is renamed
+    // or deleted, this is where it is caught — not in a green CI log that ran nothing.
+    const callSites = [
+      { file: join(__dirname, "..", ".github", "workflows", WORKFLOW), what: "the cloud half", re: /awayday\.mjs[ \t]+([a-z]+)/g },
+      { file: join(__dirname, "groundsman.mjs"),                       what: "the house half", re: /awayday\.mjs"\)\s*,\s*"([a-z]+)"/g },
+    ];
+    const siteModes = [], broken = [];
+    for (const s of callSites) {
+      if (!existsSync(s.file)) { broken.push(`${s.what}: ${s.file.split(/[\\/]/).pop()} is GONE`); continue; }
+      const hits = [...readFileSync(s.file, "utf8").matchAll(s.re)].map(m => m[1]);
+      if (!hits.length) { broken.push(`${s.what}: no awayday call site left in ${s.file.split(/[\\/]/).pop()}`); continue; }
+      for (const h of hits) { siteModes.push(`${s.what}=${h}`); if (!Object.hasOwn(MODES, h)) broken.push(`${s.what}: calls "${h}", which this file does not dispatch`); }
+    }
+    assert(`both call sites still exist AND still name a mode this file dispatches (${siteModes.join(" · ") || "NONE FOUND"})${broken.length ? " — BROKEN: " + broken.join(" · ") : ""}`,
+      broken.length === 0 && siteModes.length >= 2);
+  }
+
   // THE ROT GUARD. The defect repaired here was not a bug in a function — it was three files
   // promising a lock the captain had deliberately opened. This repo's scar tissue is full of
   // rot that got deleted and then re-typed verbatim (CLAUDE.md, audit #108: "exactly the rot
@@ -615,8 +798,43 @@ async function selftest() {
   return passed;
 }
 
+// ── THE MODE TABLE (11 Aug 2026, wire-audit) ─────────────────────────────────
+// WHY A TABLE AND NOT A STRING. main() ended with a hand-typed usage line and a
+// bare `return`, so ANY unrecognised mode printed help and exited 0. The whole
+// cloud lane is ONE step — .github/workflows/awayday.yml: `node scripts/awayday.mjs
+// run` — and the house half is ONE spawn — groundsman.mjs: `awayday.mjs check`.
+// A typo or a rename on either end therefore produced a GREEN push that executed
+// zero jobs and told nobody: exactly the silent green this file already refuses one
+// layer in, for an empty manifest (run(): "NOTHING TO RUN") and for an unparseable
+// one (`list`). Proven before the fix: `node scripts/awayday.mjs runn` → the usage
+// line, exit 0, nothing run.
+// The rot was already visible in that line. `exposure` shipped as a live mode
+// (dispatched below, advertised in the header) and the hand-typed string never
+// learned about it — so the one command that names what a public clone of his repo
+// carries was undiscoverable from the CLI. One table now feeds BOTH the dispatch
+// guard and the printed usage: a mode cannot exist without being advertised, and
+// cannot be advertised without existing. The selftest holds both directions.
+const MODES = {
+  run:      "execute the public-safe jobs — THE CLOUD HALF (.github/workflows/awayday.yml)",
+  check:    "read the cloud lane's verdict back home — THE HOUSE HALF (groundsman's push lane)",
+  list:     "print the runnable + refused jobs and this checkout's exposure",
+  exposure: "print what a public clone of this checkout carries (read live from git)",
+  selftest: "run this organ's own assertions",
+};
+const usageLine = () => `awayday.mjs — ${Object.keys(MODES).join(" | ")}`;
+
 async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
+  // THE REFUSAL — see THE MODE TABLE above. Exit 1, because a mode that dispatches
+  // nothing is a lane that ran nothing, and no CI step or spawn may read that as a
+  // pass. The typed word is echoed back: "unknown mode" without it costs the reader
+  // the one thing they need to see the typo.
+  if (!Object.hasOwn(MODES, mode)) {
+    console.error(mode ? `awayday: unknown mode "${mode}" — NOTHING RAN.` : "awayday: no mode given — NOTHING RAN.");
+    console.error(usageLine());
+    for (const [m, what] of Object.entries(MODES)) console.error(`  ${m.padEnd(9)} ${what}`);
+    process.exit(1);
+  }
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
   if (mode === "list") {
     // `list` used to print "0 public-safe job(s)" and exit 0 on an unparseable manifest —
@@ -662,7 +880,12 @@ async function main() {
     if (r.state === "red" && r.run_url) console.log(`awayday: ${r.run_url}`);
     return;
   }
-  console.log("awayday.mjs — run | check | list | selftest");
+  // UNREACHABLE BY CONSTRUCTION — a mode declared in the table with no branch above.
+  // Loud, never a clean return: a half-added mode must not look like a run that worked.
+  // The selftest asserts the table and the branches are the same set, so this line is
+  // the runtime half of a check that also fails at test time.
+  console.error(`awayday: mode "${mode}" is in the MODE TABLE but has no dispatch branch — half-added mode, NOTHING RAN`);
+  process.exit(1);
 }
 
 // a failing job must FAIL the run with a clean line, never an unhandled-rejection stack

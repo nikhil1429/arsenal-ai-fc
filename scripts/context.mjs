@@ -18,7 +18,12 @@
 //        node scripts/context.mjs once     → one delta check — the manual probe and the
 //                                            fallback (its per-minute schtask was DELETED
 //                                            9 Aug 2026; see D7 below)
-//        node scripts/context.mjs status   → what this bridge is buying, as counters
+//        node scripts/context.mjs status   → what this bridge is buying, as counters.
+//                                            CONSUMED, since 11 Aug 2026, by the
+//                                            /organism-doctor skill's step-1 pass — it
+//                                            had no caller at all before that (see THE
+//                                            WIRE in selftest). Read-only; every other
+//                                            verb is screened by MODES near main().
 //        node scripts/context.mjs selftest → baked-mock checks (no AW, no net)
 //
 // #22 (audit 2 Aug 2026, finding 14) — WHY `daemon` IS NOW THE SANCTIONED PATH.
@@ -52,7 +57,13 @@ import { canonToken, conceptRegistry, presenceTailReport as jsonlTailReport } fr
 // D7 — the process-table probe daemon_watchdog.mjs already uses for its four port-locked
 // daemons. This bridge holds NO port (it is a poll, not a server), so the command line in
 // the process table is the only place "is it up?" is answerable.
-import { processStartMs } from "./conductor.mjs";
+// D9 (11 Aug 2026) — newestGraphMtime is the SAME organ's stale-build instrument, the one
+// the conductor uses on its three port-daemons and this bridge could never reach. See the
+// D9 block above buildVerdict(). No new instrument was written for this repair.
+// PROBE HONESTY (11 Aug 2026) — processStartRead is the SAME probe processStartMs has
+// always run, reporting whether it actually got to look. See lane() and conductor's own
+// block: a killed shell used to arrive here as a bare null and print as a dark bridge.
+import { processStartRead, newestGraphMtime } from "./conductor.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -211,30 +222,169 @@ const SCAN_ROWS = 2000;
 // no longer exists, which the anchor law forbids.
 // The repair is not fresher prose (prose rots on the next schedule change, which is how
 // this line died). The lane is DERIVED from the authorities that already exist:
-//   · the PROCESS TABLE via conductor.mjs's exported processStartMs — is the bridge up;
+//   · the PROCESS TABLE via conductor.mjs's exported processStartRead — is the bridge up
+//     (it was processStartMs until 11 Aug 2026; see the PROBE HONESTY note in lane());
 //   · setup/START_DAEMONS.vbs — would a restart bring it back;
 //   · tasks_expected.json `designed_absent` — the same snapshot watchman.mjs:826 REDs
 //     the task's resurrection from. Read-only in all three; this organ owns only
 //     context_state.json.
 // Facts only, never an imperative: selftest asserts the printed lines carry no command.
+// ---------------------------------------------------------------------------
+// D9 (WIRING AUDIT, 11 Aug 2026) — A RESIDENT THAT OUTLIVES ITS OWN CODE
+// ---------------------------------------------------------------------------
+// The organism's ONE stale-build detector lives in conductor.mjs (the `if (up)` arm of
+// its daemon step) and it structurally cannot see this bridge: that arm is reached only
+// from a chain step carrying `daemon: { port }`, entered via `probe(step.daemon.port)`,
+// and MORNING holds exactly three of those — thalamus/cortex/turnstile. This bridge opens
+// no server, so it is in no such table and gets no build check at all. daemon_watchdog.mjs
+// added it to the LIVENESS table on 10 Aug (DAEMONS, via `match`), and that file's own
+// header says exactly what liveness buys: "up is not current". Its stale lane only RELAYS
+// verdicts it reads back out of conductor.json (morningDaemonVerdicts), so a daemon the
+// conductor never probes can never appear in it.
+//
+// MEASURED the hour this was written, 11 Aug 2026, off this box's own process table:
+// the live bridge booted 2026-08-09T07:38:39Z, and the newest file in its module graph
+// (scripts/conductor.mjs) was written 2026-08-11T00:23:56Z. ~41 hours of a resident
+// emitting on code the repo had already moved past — no card, no RED, no line anywhere.
+//
+// THE FIX IS THE ONE THIS ORGANISM ALREADY BLESSED, not a new one. brain.mjs's daemon
+// retires itself the moment a file in its own source graph is written after its boot
+// (the KAAM 1 scar, 10 Aug 2026 — "an ESM process cannot reload its code, so staying up
+// means running the OLD brain"), and daemon_watchdog.mjs relaunches it on the new code.
+// Same sentence, same instruments: the graph comes from conductor.mjs's exported
+// newestGraphMtime (the whole IMPORT GRAPH, not just the entry file — audit #108's own
+// correction, after a repaired dependency left a genuinely stale daemon reading "build
+// current"), and the comparison is the exact `>` the conductor makes, whose comment
+// records why there is no tolerance to invent: five consecutive live reads, delta 0.
+//
+// THE COST, NAMED. This bridge is PORTLESS, so the watchdog relaunches it only after TWO
+// consecutive down passes (its decidePass rule — a portless double-start would double-POST
+// the thalamus door, the very damage that entry exists to prevent) = up to ~20 min without
+// ambient sight after a retire, against days of a frozen bridge. And an edit to ANY file
+// in the graph retires it, not just this one: watching only the entry file is precisely
+// the defect audit #108 found in the conductor's first cut.
+//
+// IT NEVER ASKS, AND THE ONLY PROCESS IT EVER STOPS IS ITSELF.
+const SELF_REL = "scripts/context.mjs";     // the graph root, in the repo-relative shape conductor's probes take
+
+// Fail-soft like every other read in this file: a graph that cannot be walked is UNKNOWN,
+// never an implicit all-clear (buildVerdict turns it into checked:false).
+function graphNow(deps = {}) {
+  if (deps.graph !== undefined) return deps.graph;
+  try { return newestGraphMtime(SELF_REL); } catch { return { ms: null, file: null }; }
+}
+
+// PURE, and shared by BOTH callers — the daemon's retirement check and `status`'s printed
+// line — so the running organ and the health surface can never drift into two answers.
+// UNKNOWN is its own state and is never "current": an unreadable graph must not license a
+// stale resident to keep emitting, and must not fabricate a stale verdict either. Both
+// callers report `checked:false` as UNVERIFIED, the same honest unknown the conductor
+// prints when a daemon has no /status stamp.
+export function buildVerdict(bootMs, graph) {
+  const ms = graph && graph.ms != null ? graph.ms : null;
+  const file = (graph && graph.file) || null;
+  if (bootMs == null || ms == null) return { checked: false, stale: null, booted_ms: bootMs == null ? null : bootMs, newest_file: file, newest_ms: ms };
+  return { checked: true, stale: ms > bootMs, booted_ms: bootMs, newest_file: file, newest_ms: ms };
+}
+
+// ---------------------------------------------------------------------------
+// D10 (WIRING AUDIT, 11 Aug 2026) — A WEDGED POLL MUST NOT LOOK LIKE A QUIET ONE
+// ---------------------------------------------------------------------------
+// MEASURED in this file, before this repair: the daemon arm's ENTIRE error path was
+// `catch { /* never taxes */ }` — no counter, no console line, nothing on disk. Only
+// an EMIT ever printed. So all three ways this loop can break look identical to the
+// organism, and identical to a captain who simply did not change windows:
+//   · sense() throws every poll (an AW client change, an unreadable registry, an ESM
+//     error anywhere in the import graph) — the process keeps its PID and emits nothing;
+//   · writeAtomic() on context_state.json throws — state never advances, so the SAME
+//     window re-POSTs the thalamus door every 60s for as long as it lasts;
+//   · anything unforeseen — swallowed by the same empty catch.
+// Every liveness surface reads UP through all three: daemon_watchdog.mjs probes the
+// PROCESS TABLE (processProbe, :75 — "up is not current", and up is not WORKING either),
+// physio bleeds daemon_watchdog.json, and the conductor never probes a portless daemon
+// at all. Ambient sight could go dark for days with no surface anywhere able to say so.
+//
+// THE WIRE IS ONE THAT ALREADY EXISTS — no new file, no new organ. The fault is recorded
+// in context_state.json, the ONLY file this bridge owns, and read back out by `status`,
+// which has had a live caller since earlier today (the /organism-doctor step-1 pass,
+// pinned by THE WIRE assertions in the selftest). The console line goes to
+// scripts/context.log through the VBS cloak — the forensic lane, and NO organ reads that
+// log (`grep -rn "context.log" --include=*.mjs .` → awayday.mjs quotes it in a comment,
+// nothing opens it), which is exactly why the on-disk counter had to exist too.
+//
+// NO THRESHOLD IS INVENTED. This counts consecutive faults and stamps them. It does not
+// decide how many is "wedged", does not retire the resident, and does not ask the watchdog
+// to relaunch anything — that is a policy number, and numbers here wait for real data (his
+// standing rule). The reader draws the conclusion, same law as DOWNSTREAM and the build line.
+//
+// THE DELTA FIELDS ARE CARRIED THROUGH VERBATIM. A fault must never move `app`/`title`/
+// `emit_ts`, or the retry law above (never advance state on a failed post) would be broken
+// by the very code reporting the failure. withFault() is the only shape that touches them.
+const FAULT_MSG_CAP = TITLE_CAP;   // 200 — the cap this door already ships a title at, reused; not a new number
+
+// PURE. `fault` null = clear the block. Returns a NEW object; the delta fields ride through
+// untouched, and a state file that never had the block is unchanged by a clear.
+export function withFault(prev, fault) {
+  const base = prev && typeof prev === "object" ? { ...prev } : {};
+  delete base.daemon_fault;
+  return fault ? { ...base, daemon_fault: fault } : base;
+}
+
+// PURE. Builds the next block from the one on disk, so a streak SURVIVES the poll that
+// could not write (and survives a relaunch mid-streak: `since` is the first sighting,
+// `pid` is whoever is reporting now — a new resident that polls cleanly clears it anyway).
+export function faultNote(prev, err, nowIso, pid) {
+  const had = prev && prev.daemon_fault ? prev.daemon_fault : null;
+  const msg = String((err && err.message) || err || "unknown").replace(/\s+/g, " ").trim().slice(0, FAULT_MSG_CAP);
+  return {
+    consecutive: (had && Number.isFinite(had.consecutive) ? had.consecutive : 0) + 1,
+    since: (had && had.since) || nowIso,
+    last_ts: nowIso,
+    last_error: msg,
+    pid,
+  };
+}
+
 function lane(deps = {}) {
   const expected = deps.expected !== undefined ? deps.expected : readJson(TASKS_EXPECTED);
   const note = (expected && expected.designed_absent && expected.designed_absent["ArsenalFC-Context"]) || null;
   // The probe shells PowerShell (Win32_Process). On a non-Windows checkout — the away-day
   // CI shape — there is no process table to read, and "I could not look" must never print
   // as "it is down". null = UNKNOWN, and it says so.
-  let startedMs = null, probed = process.platform === "win32";
+  // PROBE HONESTY (11 Aug 2026) — a probe KILLED before it could read the table is not a
+  // dark bridge. This line used to take processStartMs's bare null and print "NOT IN THE
+  // PROCESS TABLE — the bridge is dark, nothing is emitting ambient context" over a
+  // resident that was up and emitting, roughly one run in three (the Get-CimInstance cost
+  // straddles that probe's 5s cap — see conductor.mjs's D10 block for the measurements).
+  // `looked:false` folds into the SAME UNKNOWN this function already reports off Windows,
+  // with the reason carried so the surface can say which unknown it is.
+  let startedMs = null, probed = process.platform === "win32", probeReason = null;
   if (deps.residentStartMs !== undefined) { startedMs = deps.residentStartMs; probed = true; }
-  else if (probed) { try { startedMs = processStartMs(RESIDENT_MATCH); } catch { startedMs = null; } }
+  else if (probed) {
+    let r; try { r = (deps.procRead || processStartRead)(RESIDENT_MATCH); }
+    catch { r = { ms: null, looked: false, reason: "throw" }; }
+    startedMs = r && r.ms != null ? r.ms : null;
+    if (!r || r.looked === false) { probed = false; probeReason = (r && r.reason) || "unreadable"; }
+  }
   const vbs = deps.vbs !== undefined ? deps.vbs
     : (existsSync(DAEMONS_VBS) ? (() => { try { return readFileSync(DAEMONS_VBS, "utf8"); } catch { return null; } })() : null);
   return {
     platform: process.platform,
     resident_running: probed ? startedMs != null : null,
     resident_since: startedMs != null ? new Date(startedMs).toISOString() : null,
+    // WHICH unknown this is: null off Windows (no table to read at all), otherwise the
+    // spawnSync reason the look never happened (ETIMEDOUT is the measured one).
+    probe_reason: probeReason,
     restart_verb_wired: vbs == null ? null : vbs.includes(RESIDENT_MATCH),
     per_minute_task_designed_absent: !!note,
     designed_absent_note: note,
+    // D9 — IS THE RUNNING BRIDGE THE BRIDGE ON DISK? The resident retires itself within a
+    // poll (see main's daemon arm), so this normally reads `current`; it reads STALE in the
+    // window before the next poll, and — the case that actually matters — on a resident
+    // whose loop is wedged and can never retire itself. The boot stamp is the same process
+    // table reading this lane already took, so the answer costs one graph walk and no new
+    // probe. UNVERIFIED whenever either side is unreadable, never a fabricated all-clear.
+    build: buildVerdict(startedMs, graphNow(deps)),
   };
 }
 
@@ -304,6 +454,11 @@ function status(deps = {}) {
     last_emit: st && st.emit_ts ? st.emit_ts : null,
     last_emit_age_min: Number.isFinite(emitMs) ? Math.round((nowMs - emitMs) / 60000) : null,
     last_window: st && st.app ? `${st.app} · ${clip(st.title, 60)}` : null,
+    // D10 — the loop's own fault block, straight off the file this bridge owns. Counters
+    // and stamps, never a verdict. `null` here means no fault RECORDED, which is not the
+    // same fact as "healthy" — see the printed line, which says so out loud.
+    daemon_fault: st && st.daemon_fault ? st.daemon_fault : null,
+    state_present: !!st,
     lane: deps.lane !== undefined ? deps.lane : lane(deps),
     // what the stream's emits actually BECAME downstream (see fate() above)
     fate: deps.fate !== undefined ? deps.fate : fate(deps),
@@ -322,9 +477,25 @@ function statusLines(s) {
     (s.rows_cut_unknown ? ` · ${s.rows_cut_unknown} older row(s) predate the flag — whether they were cut is UNKNOWN` : ""));
   l.push(`  LANE: the resident daemon is the live path (\`node scripts/context.mjs daemon\`); \`once\` is the manual probe + fallback.`);
   l.push(`    resident process: ` + (ln.resident_running === null
-    ? `UNKNOWN — the process probe is Windows-only (platform=${ln.platform})`
+    ? (ln.probe_reason
+      // PROBE HONESTY — the two UNKNOWNs are different facts and must never share a
+      // sentence: off Windows there is no table, here the table was never reached.
+      ? `UNKNOWN — the process probe never got to look (${ln.probe_reason}); a probe that could not run is not a DOWN reading`
+      : `UNKNOWN — the process probe is Windows-only (platform=${ln.platform})`)
     : ln.resident_running ? `UP since ${ln.resident_since}`
       : `NOT IN THE PROCESS TABLE — the bridge is dark, nothing is emitting ambient context`));
+  // D9 — the stale-build word this organ could never say. Facts and two stamps, no verdict
+  // adjective and no threshold: the reader draws the conclusion, same law as DOWNSTREAM.
+  const bd = ln.build || {};
+  l.push(`    running build: ` + (bd.checked !== true
+    ? `UNVERIFIED — ` + (ln.resident_running === null
+      ? (ln.probe_reason ? `the process probe never got to look (${ln.probe_reason})`
+        : `the process probe is Windows-only (platform=${ln.platform})`)
+      : ln.resident_running === false ? `nothing is running, so there is no build to compare`
+        : `its module graph could not be read from here`)
+    : bd.stale
+      ? `STALE — booted ${new Date(bd.booted_ms).toISOString()}, but ${bd.newest_file} was written ${new Date(bd.newest_ms).toISOString()}. An ESM process cannot reload its code; this resident retires itself on its next poll and daemon_watchdog.mjs relaunches it on the new code.`
+      : `current — nothing in its module graph has been written since it booted (newest: ${bd.newest_file} @ ${new Date(bd.newest_ms).toISOString()})`));
   l.push(`    restart verb: ` + (ln.restart_verb_wired === null
     ? `setup/START_DAEMONS.vbs not readable from here`
     : ln.restart_verb_wired ? `setup/START_DAEMONS.vbs carries the \`${RESIDENT_MATCH}\` line`
@@ -333,6 +504,15 @@ function statusLines(s) {
     ? `retired by design — tasks_expected.json: ${ln.designed_absent_note}`
     : `tasks_expected.json does not list ArsenalFC-Context as designed-absent — the retirement is unrecorded where the watchman reads it`));
   l.push(`    last emit: ` + (s.last_emit ? `${s.last_emit} (${s.last_emit_age_min} min ago) · ${s.last_window}` : `context_state.json holds no emit stamp yet`));
+  // D10 — the word a swallowed throw could never say. Three states, never two: FAULTING,
+  // nothing recorded, and no state at all. An absent block is reported as an absent block,
+  // not as health — the same honesty the D8 cut line keeps for its pre-flag rows.
+  const dfl = s.daemon_fault;
+  l.push(`    loop faults: ` + (dfl
+    ? `FAULTING — ${dfl.consecutive} consecutive poll(s) have thrown since ${dfl.since}, latest ${dfl.last_ts} (pid ${dfl.pid}): ${dfl.last_error}. Unlike a STALE build this does NOT self-heal: the process keeps its PID, so the watchdog's liveness probe and everything bleeding off it still read UP.`
+    : s.state_present
+      ? `none recorded — the resident clears this block on its first clean poll. Absence is not health: a state file written before 11 Aug 2026 carries no block either, and a fault whose own disk write failed leaves its trace only in scripts/context.log.`
+      : `UNKNOWN — context_state.json holds no state at all yet, so there is nothing to read a fault out of`));
   // WHERE THE EMITS LANDED — the half this surface could not see until 10 Aug 2026.
   const f = s.fate || {};
   l.push(`  DOWNSTREAM: ${f.left_reflex}/${f.scored_moments} scored moment(s) carrying context left reflex` +
@@ -480,14 +660,45 @@ async function selftest() {
   // the lane ever stops being DERIVED from the process table / restart verb /
   // tasks_expected.json.
   // ------------------------------------------------------------------------
+  // (D9 injects `graph` from here on, so the lane's build word is a fixture and never the
+  // mtimes of whatever the captain happened to edit this minute.)
   const laneUp = lane({ expected: { designed_absent: { "ArsenalFC-Context": "the bridge rides the resident daemon now" } },
-    residentStartMs: Date.parse("2026-08-10T04:00:00Z"), vbs: 'sh.Run "…hidden_run.vbs"" node scripts\\context.mjs daemon", 0, False' });
+    residentStartMs: Date.parse("2026-08-10T04:00:00Z"), vbs: 'sh.Run "…hidden_run.vbs"" node scripts\\context.mjs daemon", 0, False',
+    graph: { ms: Date.parse("2026-08-09T22:00:00Z"), file: "scripts/presence.mjs" } });
   assert("D7 the lane is DERIVED — process table + restart verb + tasks_expected, never prose",
     laneUp.resident_running === true && laneUp.resident_since === "2026-08-10T04:00:00.000Z" &&
     laneUp.restart_verb_wired === true && laneUp.per_minute_task_designed_absent === true);
-  const laneDark = lane({ expected: { designed_absent: {} }, residentStartMs: null, vbs: "' this restart verb forgot the bridge" });
+  const laneDark = lane({ expected: { designed_absent: {} }, residentStartMs: null, vbs: "' this restart verb forgot the bridge",
+    graph: { ms: null, file: null } });
   assert("D7 a dark bridge is NAMED, not silent (no process · unwired restart verb · unrecorded retirement)",
     laneDark.resident_running === false && laneDark.restart_verb_wired === false && laneDark.per_minute_task_designed_absent === false);
+  // ------------------------------------------------------------------------
+  // PROBE HONESTY REGRESSION (11 Aug 2026) — A KILLED PROBE IS NOT A DARK BRIDGE.
+  // Live when this was found: `status` printed "NOT IN THE PROCESS TABLE — the bridge is
+  // dark, nothing is emitting ambient context" while PID 21308 sat in the process table
+  // emitting, because Get-CimInstance costs 3.4-8.9s here against processStartMs's 5000ms
+  // cap and 2 of 5 consecutive probes were killed (ETIMEDOUT). The same false DOWN also
+  // silently voided D9: `build` degrades to UNVERIFIED and the resident's own row
+  // attribution disappears, so the surface loses BOTH halves at once.
+  // These fail if a could-not-look reading is ever printed as a down bridge again, or if
+  // the two different UNKNOWNs (off-Windows vs killed shell) get folded into one sentence.
+  // ------------------------------------------------------------------------
+  const laneKilled = lane({ expected: { designed_absent: {} }, vbs: "", graph: { ms: 1, file: "scripts/context.mjs" },
+    procRead: () => ({ ms: null, looked: false, reason: "ETIMEDOUT" }) });
+  assert("PROBE HONESTY — a probe that never got to look is UNKNOWN with its reason, never `false`, and never invents a boot stamp",
+    laneKilled.resident_running === null && laneKilled.probe_reason === "ETIMEDOUT" && laneKilled.resident_since === null);
+  const killedLines = statusLines(status({ rep: REP, lane: laneKilled, state: null, fate: FATE }));
+  assert("PROBE HONESTY — the surface says the probe never looked, and NEVER says the bridge is dark off a reading it could not take",
+    killedLines.some(l => /resident process: UNKNOWN — the process probe never got to look \(ETIMEDOUT\); a probe that could not run is not a DOWN reading/.test(l)) &&
+    killedLines.every(l => !/the bridge is dark/.test(l)) &&
+    killedLines.every(l => !/NOT IN THE PROCESS TABLE/.test(l)));
+  assert("PROBE HONESTY — the D9 build word degrades HONESTLY on a killed probe: UNVERIFIED naming the probe, never 'nothing is running'",
+    killedLines.some(l => /running build: UNVERIFIED — the process probe never got to look \(ETIMEDOUT\)/.test(l)) &&
+    killedLines.every(l => !/nothing is running, so there is no build to compare/.test(l)));
+  assert("PROBE HONESTY — the two UNKNOWNs stay different facts: a completed look that finds nothing is still a DARK bridge, and off-Windows still reads Windows-only",
+    lane({ expected: {}, vbs: "", graph: { ms: null, file: null }, procRead: () => ({ ms: null, looked: true, reason: "absent" }) }).resident_running === false &&
+    statusLines(status({ rep: REP, lane: laneDark, state: null, fate: FATE })).some(l => /NOT IN THE PROCESS TABLE/.test(l)) &&
+    laneDark.probe_reason == null);
   const upLines = statusLines(status({ rep: REP, lane: laneUp, now: "2026-08-10T05:00:00Z", fate: FATE,
     state: { app: "chrome.exe", title: "Embeddings 101", emit_ts: "2026-08-10T04:45:00Z" } }));
   assert("D7 status hands him NO command and names NO dead task — the anchor law",
@@ -521,13 +732,160 @@ async function selftest() {
     darkLines.some(l => /NOT IN THE PROCESS TABLE/.test(l)) &&
     darkLines.some(l => /has NO `context\.mjs daemon` line/.test(l)) &&
     darkLines.some(l => /holds no emit stamp yet/.test(l)));
+  // ------------------------------------------------------------------------
+  // D9 REGRESSION (11 Aug 2026) — THE STALE-BUILD WIRE THIS BRIDGE NEVER HAD.
+  // Before this fix the ONLY stale-build detector in the organism sat behind
+  // conductor.mjs's `daemon: { port }` gate, which a portless poll can never enter, and the
+  // live resident had been running 41h-old code with nothing anywhere able to say so.
+  // These fail if the retirement is lifted out of the daemon loop, if it stops reading the
+  // whole import GRAPH through conductor's own probe, if a tolerance is invented for the
+  // comparison, or if an unreadable graph ever starts reading as "current".
+  // ------------------------------------------------------------------------
+  const BOOT = Date.parse("2026-08-09T07:38:39Z");
+  assert("D9 a graph file written AFTER the boot is STALE; written before is current — conductor's own `>`, no tolerance invented",
+    buildVerdict(BOOT, { ms: Date.parse("2026-08-11T00:23:56Z"), file: "scripts/conductor.mjs" }).stale === true &&
+    buildVerdict(BOOT, { ms: Date.parse("2026-08-09T07:00:00Z"), file: "scripts/presence.mjs" }).stale === false &&
+    buildVerdict(BOOT, { ms: BOOT, file: "scripts/context.mjs" }).stale === false);
+  assert("D9 UNKNOWN is its own answer — an unreadable graph or an unfindable process is UNVERIFIED, never a fabricated all-clear",
+    buildVerdict(BOOT, { ms: null, file: null }).checked === false &&
+    buildVerdict(BOOT, { ms: null, file: null }).stale === null &&
+    buildVerdict(null, { ms: 1, file: "x.mjs" }).checked === false &&
+    buildVerdict(null, { ms: 1, file: "x.mjs" }).stale === null);
+  assert("D9 graphNow() takes the injected graph verbatim, and the LIVE walk answers with a real file + stamp (conductor's newestGraphMtime, not a bare mtime of this file)",
+    graphNow({ graph: { ms: 7, file: "scripts/z.mjs" } }).file === "scripts/z.mjs" &&
+    /\.mjs$/.test(String(graphNow().file || "")) && Number.isFinite(graphNow().ms));
+  const laneStale = lane({ expected: { designed_absent: {} }, residentStartMs: BOOT, vbs: "",
+    graph: { ms: Date.parse("2026-08-11T00:23:56Z"), file: "scripts/conductor.mjs" } });
+  const staleLines = statusLines(status({ rep: REP, lane: laneStale, state: null, fate: FATE }));
+  assert("D9 the health surface SAYS it — a running-but-stale bridge is named with BOTH stamps and the file that moved",
+    laneStale.build.stale === true &&
+    staleLines.some(l => /running build: STALE — booted 2026-08-09T07:38:39\.000Z, but scripts\/conductor\.mjs was written 2026-08-11T00:23:56\.000Z/.test(l)));
+  assert("D9 a current build and an unreadable one print DIFFERENTLY, and neither borrows the other's word",
+    statusLines(status({ rep: REP, lane: laneUp, state: null, fate: FATE }))
+      .some(l => /running build: current — nothing in its module graph has been written since it booted \(newest: scripts\/presence\.mjs/.test(l)) &&
+    statusLines(status({ rep: REP, lane: laneDark, state: null, fate: FATE }))
+      .some(l => /running build: UNVERIFIED — nothing is running/.test(l)));
+  // THE WIRE ITSELF, held by SOURCE — a pure verdict function nobody calls is exactly the
+  // defect class this repair exists to end (physio.mjs:1332 pins its own consumer the same
+  // way). The check must sit INSIDE the daemon arm and BEFORE the poll spends anything.
+  const SELF = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  // Split on the arm's own head as a REGEX — a plain-string split would also cut on this
+  // assertion's own copy of that literal and hand the check a slice of the selftest.
+  // (Found by this assertion failing on its first run, 11 Aug 2026.)
+  const arm = ((SELF.split(/if \(mode === "daemon" \|\| mode === "--daemon"\) \{/)[1]) || "").split("--daemon stopped")[0];
+  assert("D9 the daemon loop REALLY runs the check — buildVerdict(BOOT_MS, graphNow()) sits in the arm, ahead of sense(), and breaks the loop with a RETIRING line",
+    /const BOOT_MS = Date\.now\(\) - process\.uptime\(\) \* 1000;/.test(arm) &&
+    /buildVerdict\(BOOT_MS, graphNow\(\)\)/.test(arm) &&
+    arm.indexOf("buildVerdict(BOOT_MS") < arm.indexOf("await sense(") &&
+    /--daemon RETIRING/.test(arm) && /\bbreak;/.test(arm));
+  assert("D9 the instrument stays BORROWED — the graph walker is imported from conductor.mjs, so this file never grows a second stale-build engine",
+    /import \{[^}]*newestGraphMtime[^}]*\} from "\.\/conductor\.mjs";/.test(SELF) &&
+    /newestGraphMtime\(SELF_REL\)/.test(SELF));
+
+
+  // ------------------------------------------------------------------------
+  // THE WIRE (wiring audit, 11 Aug 2026) — status() HAD NO CALLER AT ALL.
+  // Measured the day of this repair: `grep -rn "context.mjs status|context:status"
+  // scripts/ hooks/ .claude/ setup/ package.json` returned exactly one hit in the
+  // live tree — this file's own MODES header, line 21. Three repairs' worth of
+  // health surface (#22's concept coverage, D7's derived lane, D8's cut counter,
+  // and the downstream fate read) were dealt to NOBODY: reachable only if the
+  // captain remembered to type a command, which is the shape the anchor law
+  // exists to refuse. The caller is now the /organism-doctor skill, an anchor he
+  // already hits ("doctor", "kya haal hai", anything feels off).
+  // HELD BY SOURCE, the same net physio.mjs uses on its own first-consumer wire
+  // (`gatherWorld() REALLY reads daemon_watchdog.json`): a doc wire lives BETWEEN
+  // two files, so neither file's normal tests can see it break. These go red the
+  // day the bullet is deleted, renamed, or reworded off the command.
+  // ------------------------------------------------------------------------
+  const DOCTOR = join(__dirname, "..", ".claude", "skills", "organism-doctor", "SKILL.md");
+  const doctorMd = existsSync(DOCTOR) ? readFileSync(DOCTOR, "utf8") : "";
+  assert("#wire the health surface HAS A CALLER — /organism-doctor runs `node scripts/context.mjs status`",
+    /node scripts\/context\.mjs status/.test(doctorMd));
+  assert("#wire the doctor is sent at the READ-ONLY verb — the bullet names `status`, never the bare command that emits",
+    doctorMd.split(/\r?\n/).filter(l => /scripts\/context\.mjs/.test(l))
+      .every(l => !/`node scripts\/context\.mjs`/.test(l)));
+  const selfSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  // The doctor bullet tells a session which line to read FIRST and quotes its
+  // label. That is a two-ended wire: rename the line here and the doc sends the
+  // reader hunting for text that no longer prints. Both ends, one assertion.
+  assert("#wire the doctor's named first-reading really EXISTS on the surface — `running build:` is printed and the bullet points at it",
+    /running build:/.test(doctorMd) && upLines.some(l => /^\s+running build: /.test(l)));
+  assert("#wire a fat-fingered verb can never turn that read into a WRITE — main() screens argv against the allowlist first",
+    MODES.has("status") && MODES.has("once") && MODES.has("daemon") && MODES.has("selftest") &&
+    !MODES.has("staus") && !MODES.has("zzznotamode") &&
+    /const mode = \(process\.argv\[2\] \|\| "once"\)\.toLowerCase\(\)\.trim\(\);\s*\n\s*if \(!MODES\.has\(mode\)\)/.test(selfSrc));
+
+  // ------------------------------------------------------------------------
+  // D10 REGRESSION (WIRING AUDIT, 11 Aug 2026) — THE SILENT CATCH.
+  // Before this fix the daemon arm's whole error path was `catch { /* never taxes */ }`.
+  // A loop throwing on EVERY poll kept its PID, so daemon_watchdog's process probe read
+  // UP, physio bled green off it, the conductor never probed a portless daemon at all,
+  // and not one file anywhere carried a mark. These go red if the catch goes silent
+  // again, if the streak stops being recorded in the bridge's own file, if a clean poll
+  // stops clearing it, if the fault ever moves the delta fields, or if the printed
+  // surface stops naming it.
+  // ------------------------------------------------------------------------
+  const PREV = { app: "chrome.exe", title: "Embeddings 101", emit_ts: "2026-08-11T04:45:00Z" };
+  const f1 = faultNote(PREV, new Error("connect ECONNREFUSED 127.0.0.1:5600"), "2026-08-11T05:00:00Z", 4242);
+  assert("D10 the first fault is counted, stamped and QUOTED — a throw is never nothing again",
+    f1.consecutive === 1 && f1.since === "2026-08-11T05:00:00Z" && f1.last_ts === "2026-08-11T05:00:00Z" &&
+    f1.pid === 4242 && /ECONNREFUSED/.test(f1.last_error));
+  const f2 = faultNote(withFault(PREV, f1), new Error("EPERM: operation not permitted, rename"), "2026-08-11T05:01:00Z", 4242);
+  assert("D10 faults ACCUMULATE off the block on disk and keep the FIRST stamp — a wedge is a streak, not an incident",
+    f2.consecutive === 2 && f2.since === "2026-08-11T05:00:00Z" && f2.last_ts === "2026-08-11T05:01:00Z" && /EPERM/.test(f2.last_error));
+  const held = withFault(PREV, f2);
+  assert("D10 the fault rides the bridge's OWN file and never moves the delta fields — the retry law is untouched by the code reporting the failure",
+    held.app === PREV.app && held.title === PREV.title && held.emit_ts === PREV.emit_ts && held.daemon_fault.consecutive === 2);
+  assert("D10 a clean poll CLEARS the block, delta fields still verbatim",
+    withFault(held, null).daemon_fault === undefined && withFault(held, null).emit_ts === PREV.emit_ts &&
+    withFault(PREV, null).app === "chrome.exe");
+  const faultLines = statusLines(status({ rep: REP, lane: laneUp, fate: FATE, state: held, now: "2026-08-11T05:02:00Z" }));
+  assert("D10 the health surface SAYS it — the count, the first stamp, the last error, and that an UP probe proves nothing here",
+    faultLines.some(l => /loop faults: FAULTING — 2 consecutive poll\(s\) have thrown since 2026-08-11T05:00:00Z/.test(l)) &&
+    faultLines.some(l => /EPERM/.test(l) && /does NOT self-heal/.test(l) && /still read UP/.test(l)));
+  assert("D10 no-fault and no-state print DIFFERENTLY, and neither is reported as health",
+    statusLines(status({ rep: REP, lane: laneUp, fate: FATE, state: PREV })).some(l => /loop faults: none recorded/.test(l) && /Absence is not health/.test(l)) &&
+    statusLines(status({ rep: REP, lane: laneUp, fate: FATE, state: null })).some(l => /loop faults: UNKNOWN/.test(l)));
+  assert("D10 no threshold and no verdict is invented — the block is five counters/stamps and nothing in it decides 'wedged'",
+    Object.keys(f2).sort().join() === "consecutive,last_error,last_ts,pid,since" &&
+    !/wedged|unhealthy|dead|ok\b/i.test(JSON.stringify(f2)));
+  // THE CATCH ITSELF, held by SOURCE — the defect was a SHAPE, not a value, and only the
+  // source can prove the shape is gone (the same net D9's arm assertion uses above; `arm`
+  // is that slice of main()).
+  assert("D10 the daemon arm's catch BINDS the error, counts it, records it in its own file and prints it — never `catch { /* never taxes */ }` again",
+    !/catch \{ \/\* never taxes \*\/ \}/.test(arm) && /catch \(e\) \{[\s\S]*faultNote\(/.test(arm) &&
+    /faults\+\+/.test(arm) && /writeAtomic\(CONTEXT_STATE, withFault\(readJson\(CONTEXT_STATE\), note\)\)/.test(arm) &&
+    /--daemon poll FAULTED/.test(arm) && /--daemon recovered/.test(arm));
+  assert("D10 the doctor is pointed at the new line, and the surface really prints that label — a two-ended wire, both ends here",
+    /loop faults:/.test(doctorMd) && faultLines.some(l => /^\s+loop faults: /.test(l)));
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
 }
 
+// ---------------------------------------------------------------------------
+// THE MODE GUARD (wiring audit, 11 Aug 2026) — ADDED THE DAY `status` GOT A CALLER
+// ---------------------------------------------------------------------------
+// Until today nothing invoked `status`, so the fall-through below was harmless.
+// It is not harmless the moment a doctor is sent here: every unrecognised argv
+// lands in the default branch, which is `once` — and `once` POSTs a live afferent
+// to the thalamus and rewrites context_state.json. `context.mjs staus` would have
+// MUTATED the organ someone was trying to take the temperature of, printed a
+// success-shaped line and exited 0. Same defect, same ruling as examiner.mjs
+// (11 Aug 2026) and timeaudit.mjs C5: modes are an ALLOWLIST, unknown → usage on
+// stderr + exit 1, before anything is read, posted or written.
+// BARE ARGV STILL MEANS `once`, byte for byte — that is what it has always meant
+// and no live caller passes it (START_DAEMONS.vbs and ArsenalFC-Brain.bat both
+// pass `daemon`; package.json passes `selftest`). Nothing is replaced here, so
+// nothing is frozen *Legacy.
+const MODES = new Set(["once", "status", "daemon", "--daemon", "selftest"]);
+const USAGE = "usage: node scripts/context.mjs [once | status | daemon | selftest]   (bare = once, which EMITS — `status` is the read-only one)";
+
 async function main() {
-  const mode = (process.argv[2] || "once").toLowerCase();
+  const mode = (process.argv[2] || "once").toLowerCase().trim();
+  if (!MODES.has(mode)) { console.error(`context: unknown mode "${process.argv[2]}"`); console.error(USAGE); process.exit(1); }
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
   if (mode === "status") {
     for (const l of statusLines(status())) console.log(l);
@@ -535,11 +893,54 @@ async function main() {
   }
   if (mode === "daemon" || mode === "--daemon") {
     let stop = false, emits = 0;
+    // D10 — this resident's own fault streak, plus whether a PREVIOUS resident left a block
+    // behind: a fault from a process that no longer exists must not read as live, so the
+    // first clean poll of a fresh daemon clears it too.
+    let faults = 0;
+    let faultOnDisk = !!(readJson(CONTEXT_STATE) || {}).daemon_fault;
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
-    console.log(`context: --daemon up (poll ~${FLOOR_MS / 1000}s) — ambient AW → :4113 on window change. Ctrl-C to stop.`);
+    // D9 — the boot instant, by brain.mjs's own formula (now minus uptime), so the stamp is
+    // the PROCESS's start and not the moment this line executed. Measured once at boot; the
+    // graph is re-read every poll, BEFORE the poll emits anything — an out-of-date resident
+    // must not ship one more afferent on code the repo has moved past.
+    const BOOT_MS = Date.now() - process.uptime() * 1000;
+    console.log(`context: --daemon up (poll ~${FLOOR_MS / 1000}s) — ambient AW → :4113 on window change. Booted ${new Date(BOOT_MS).toISOString()}; retires itself if any file in its own module graph is written after that (D9). Ctrl-C to stop.`);
     while (!stop) {
-      try { const r = await sense(); if (r.emitted) { emits++; console.log(`context: → ${r.evt.text}${r.evt.concept_tokens.length ? ` [${r.evt.concept_tokens.join(", ")}]` : ""}`); } } catch { /* never taxes */ }
+      const bv = buildVerdict(BOOT_MS, graphNow());
+      if (bv.checked && bv.stale) {
+        // The console is not a void: the VBS cloak redirects it to scripts/context.log
+        // (audit finding #10), which is the same lane brain.mjs's retirement prints to.
+        console.log(`context: --daemon RETIRING — booted ${new Date(bv.booted_ms).toISOString()}, and ${bv.newest_file} was written ${new Date(bv.newest_ms).toISOString()}. An ESM process cannot reload its code, so staying up means emitting on the OLD bridge. Releasing the lane: daemon_watchdog.mjs relaunches it on the new code (portless ⇒ after two consecutive down passes, ≤~20 min), and \`node scripts/context.mjs once\` is the manual probe meanwhile.`);
+        break;
+      }
+      try {
+        const r = await sense();
+        if (r.emitted) { emits++; console.log(`context: → ${r.evt.text}${r.evt.concept_tokens.length ? ` [${r.evt.concept_tokens.join(", ")}]` : ""}`); }
+        // D10 — a poll that RETURNED is a poll that did not throw, emit or no emit. Clear
+        // the block the moment the loop works again, or a healed bridge reads FAULTING
+        // forever. sense()'s own save writes only the delta fields, so an emit already
+        // drops it; this covers the quiet polls (no-change / no-window / post-failed),
+        // which are the majority and never write at all.
+        if (faults || faultOnDisk) {
+          const cur = readJson(CONTEXT_STATE);
+          if (cur && cur.daemon_fault) { try { writeAtomic(CONTEXT_STATE, withFault(cur, null)); } catch {} }
+          console.log(`context: --daemon recovered — ${faults} consecutive faulting poll(s) ended; the loop is polling again.`);
+          faults = 0; faultOnDisk = false;
+        }
+      } catch (e) {
+        // NEVER TAXES STILL HOLDS — the loop continues, nothing is pushed, nobody is asked.
+        // What changed is that it no longer happens in silence: the streak lands in the one
+        // file this bridge owns (delta fields untouched, per withFault) so `status` — and
+        // through it the /organism-doctor pass — can see a wedged loop that keeps its PID.
+        faults++;
+        const note = faultNote(readJson(CONTEXT_STATE), e, new Date().toISOString(), process.pid);
+        // Wrapped: a throwing writeAtomic is one of the three faults being reported, so the
+        // console line below has to survive it. That is the forensic lane; the disk block is
+        // the organ-readable one, and when the disk is the problem only the log will have it.
+        try { writeAtomic(CONTEXT_STATE, withFault(readJson(CONTEXT_STATE), note)); faultOnDisk = true; } catch {}
+        console.log(`context: --daemon poll FAULTED — ${faults} in a row in this resident, ${note.consecutive} on disk since ${note.since} (continuing; the health surface carries the streak): ${note.last_error}`);
+      }
       await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= FLOOR_MS) { clearInterval(iv); res(); } }, step); });
     }
     console.log(`context: --daemon stopped (${emits} emit(s)).`);

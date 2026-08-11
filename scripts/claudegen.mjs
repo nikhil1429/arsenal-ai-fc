@@ -13,7 +13,8 @@
 // ============================================================================
 
 import { execFileSync, execFile } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";   // readFileSync: the selftest's WIRE scan of the callers (10 Aug 2026)
+import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";   // readFileSync: the selftest's WIRE scan of the callers (10 Aug 2026). The four write/temp calls: the selftest's LIVE shim probe (11 Aug 2026) — a fake %APPDATA%\npm\claude.cmd in a temp dir is the only way to actually walk the npm-install lane on a box that has no shim.
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // ── THE LIMIT CLASSIFIER (organism audit 4 Aug 2026, issue #8) ──────────────
@@ -95,10 +96,42 @@ const ORGAN_SYSTEM_PROMPT =
   + "Return ONLY what the prompt asks for — no preamble, no commentary, no apology, "
   + "and no markdown fences unless the prompt explicitly asks for them.";
 const LEAN_ARGS = ["--system-prompt", ORGAN_SYSTEM_PROMPT, "--tools", "", "--strict-mcp-config"];
+// ── THE ARG-SET NAMES ITSELF (wiring audit, 11 Aug 2026) ────────────────────
+// The SHIM GUARD three lines up promised that a shimmed box "SAYS so via the env
+// probe below, never silently", and the old chooser said NOTHING: both full-CLI
+// lanes returned `base` and no field, row, or organ recorded which invocation a
+// call had used. The trailing comment claimed it was "out loud in the ledger's
+// spend" — spend is an effect, not a cause; a row that costs 3× cannot tell you
+// whether the model thought harder or the boot tax came back.
+// DAMAGE IS ZERO TODAY and the shape is the danger: this box resolves the native
+// ~/.local/bin/claude.exe (no %APPDATA%\npm\claude.cmd), so lean is live. But the
+// fallback is INSTALLATION-shaped, not config-shaped — reinstall the CLI via npm
+// and every organ on this door silently reverts to the full-CLI boot tax G0
+// measured at 88.5% off a bare probe / 57.5% off 11 real jobs (brain.mjs, "VERIFIED
+// THE SAME DAY ON 11 REAL JOBS"). brain.mjs's twin switch is at least READABLE —
+// budget.lean_calls, a key in brain_config.json you can open; this one was a
+// filesystem probe that left no trace anywhere.
+// ONE DECIDER, so the name and the args can never drift apart: ARGS is defined in
+// terms of ARG_PROFILE, not beside it. The three names are the three lanes that
+// already existed — nothing new is invented here, they are given a spelling.
+const ARG_PROFILE = () => {
+  if (process.env.ARSENAL_CLAUDEGEN_FULL === "1") return "full-env";    // his explicit revert
+  if (needsShell(BIN())) return "full-shim";                            // spaced args + shell:true don't mix
+  return "lean";
+};
 const ARGS = (model) => {
   const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
+  return ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+};
+// FROZEN VERBATIM (layering law) — the pre-11-Aug chooser. Frozen not because the
+// invocation changed but because the repair's whole claim is that IT DID NOT: only
+// the choice became readable. The selftest asserts the two agree argv-for-argv on
+// every lane, so the day they disagree this repair broke a spawn instead of
+// describing one, and it goes red in the same second.
+const ARGS_LEGACY = (model) => {
+  const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
   if (process.env.ARSENAL_CLAUDEGEN_FULL === "1") return base;
-  if (needsShell(BIN())) return base;   // spaced args + shell:true don't mix — full CLI, out loud in the ledger's spend
+  if (needsShell(BIN())) return base;
   return [...base, ...LEAN_ARGS];
 };
 
@@ -146,6 +179,14 @@ function parseOut(stdout, prompt, t0) {
     // field exists. A parsed envelope means the child SPOKE; resolveChild is the
     // only place that knows whether it also FINISHED, so it stamps these.
     killed: false, kill_signal: null,
+    // WHICH CLI WAS ACTUALLY SPOKEN TO (wiring audit, 11 Aug 2026 — see
+    // ARG_PROFILE). Same ONE-SHAPE rule as the pair above: it rides EVERY result,
+    // so no reader has to ask whether the field exists. Read here rather than
+    // threaded down from the spawn because ARG_PROFILE is a pure function of this
+    // process's env + the binary on disk, and both are the same at spawn and at
+    // parse — while threading it would have meant changing the two signatures the
+    // WIRE scans below pin, for no extra truth.
+    arg_profile: ARG_PROFILE(),
   };
 }
 function parseErr(e, prompt, t0) {
@@ -174,9 +215,13 @@ function parseErr(e, prompt, t0) {
     // `.signal === "SIGTERM"` on a timeout, so nightshift's five claudeGen sites
     // now name their own kills without a line of their own changing.
     killed, kill_signal: e.signal || null,
+    arg_profile: ARG_PROFILE(),   // a spawn that DIED still chose an arg-set — that is exactly the row you want it on
   };
 }
-const refuse = () => ({ ok: false, text: null, total_tokens: 0, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: false, duration_ms: 0, limit_hit: false, http_status: null, limit_signal: "none", error: "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)", error_envelope: null, killed: false, kill_signal: null });
+// refuse() carries arg_profile NULL, not "lean": the key refuses BEFORE any spawn,
+// so no arg-set was ever chosen. An unmade choice rendered as a made one is the
+// same lie as this file's unmeasured-number law (null components, never a fake 0).
+const refuse = () => ({ ok: false, text: null, total_tokens: 0, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: false, duration_ms: 0, limit_hit: false, http_status: null, limit_signal: "none", error: "REFUSED — ANTHROPIC_API_KEY set (subscription only, ever)", error_envelope: null, killed: false, kill_signal: null, arg_profile: null });
 
 // ── THE SILENT KILL (wiring audit, 10 Aug 2026) ─────────────────────────────
 // claudeGenAsync's callback used to branch on "an error AND no stdout at all".
@@ -207,13 +252,24 @@ const refuse = () => ({ ok: false, text: null, total_tokens: 0, input_tokens: nu
 //                           execFile's error carries no `.stdout` (probed), so
 //                           the fragment survives only if this passes it.
 // Either way the kill is stamped, in the field and in the error text.
+//
+// BOTH LANES RIDE THIS DOOR SINCE 11 Aug 2026 (wiring audit). The 10 Aug repair
+// above reached the ASYNC callback only — claudeGen kept its own `catch → parseErr`
+// and so threw away the usage block on exactly the shape this comment names at
+// :204-205. See the dated note on claudeGen below for the live two-lane probe.
 const jsonWhole = (s) => { if (!String(s).trim()) return false; try { JSON.parse(s); return true; } catch { return false; } };
 function resolveChild(err, stdout, prompt, t0) {
   const out = String(stdout || "");
   if (!err) return parseOut(out, prompt, t0);
   if (!jsonWhole(out)) {
     // parseErr writes ok:false by construction — a fragment is never an answer.
-    return parseErr({ message: String((err && err.message) || err), stdout: out, stderr: "", killed: err.killed, signal: err.signal }, prompt, t0);
+    // stderr (11 Aug 2026): the ASYNC caller's `err` never carries one — execFile
+    // hands stderr to the callback's THIRD argument, which this door does not take
+    // — so `|| ""` leaves that lane byte-for-byte as it was. The SYNC caller's DOES
+    // (probed this box: execFileSync's thrown error has a string `.stderr`), and
+    // parseErr:163 has always folded it into the message. Hardcoding "" here would
+    // have charged the sync lane forensics it already had for a meter it lacked.
+    return parseErr({ message: String((err && err.message) || err), stdout: out, stderr: err.stderr || "", killed: err.killed, signal: err.signal }, prompt, t0);
   }
   const r = parseOut(out, prompt, t0);
   // it SPOKE in full and then died: keep the answer and the meter, say the axe
@@ -262,17 +318,59 @@ function ledgerForensics(r) {
     // finished, so a healthy row grows by nothing.
     killed: o.killed === true ? true : null,
     kill_signal: o.kill_signal || null,
+    // THE ARG-SET RIDES THE ROW TOO (wiring audit, 11 Aug 2026). This one is
+    // stamped ALWAYS, and deliberately breaks the "say it only when it says
+    // something" rule the two fields above follow — because here the COMPARISON is
+    // the whole value. A ledger that named only the anomaly could not show him the
+    // night the lane flipped: an absent key already means "a row written before
+    // this wire existed", so a null lean-row would be indistinguishable from
+    // history. ~20 bytes against a 600-char envelope is why that trade is free on a
+    // journal brain.mjs rolls at 2 MB. Rides ledgerForensics rather than four hand-
+    // copied row literals for the reason the WIRE scan below was written down: a
+    // caller copying fields one at a time WILL miss one.
+    arg_profile: o.arg_profile || null,
   };
 }
 
+// FROZEN VERBATIM (layering law) — the pre-11-Aug catch, the one that binned a
+// complete envelope's usage block because the exit code was non-zero. Kept
+// because every ns_* row already on brain_ledger.jsonl came from it: a failed
+// night shift's `total_tokens` is a LENGTH GUESS of the prompt, not spend, and
+// `tokens_estimated:true` beside four nulls is the only marker saying so. Read
+// that history with this function in hand, not the one below.
+const claudeGenCatchLegacy = (e, prompt, t0) => parseErr(e, prompt, t0);
+
+// ── THE HALF-WIRED DOOR (wiring audit, 11 Aug 2026) ─────────────────────────
+// resolveChild landed 10 Aug and this lane never got it: claudeGen's catch went
+// straight to parseErr, which nulls all four usage components and substitutes
+// Math.ceil(prompt.length/4). The shape it cost is the one resolveChild was
+// written for and names at :204-205 — a non-zero exit BESIDE a complete 429
+// envelope — and the CLI hands that envelope over intact: probed on this box,
+// execFileSync's thrown error carries `.stdout` as a 232-char string that
+// JSON.parse accepts whole (status=1, signal=null).
+// LIVE TWO-LANE PROBE, 11 Aug 2026 — the real claudeGen and claudeGenAsync, one
+// fake CLI printing the plan-wall envelope (usage 7 + 2 + 14434 + 100) and
+// exiting 1, identical prompt:
+//   SYNC  → total_tokens=23     tokens_estimated=true   all four components null
+//   ASYNC → total_tokens=14543  tokens_estimated=false  in=7 out=2 cc=14434 cr=100
+// The CLASSIFIER was never hurt (both lanes returned limit_hit=true,
+// http_status=429 — parseErr's classifyLimit scans the folded-in stdout); the
+// METER was. And this is the only door nightshift has: nightshift.mjs:104
+// genLedgered funnels five job generators through it and appends every result to
+// the SHARED brain_ledger, so brain.mjs's window governor and limits.mjs's
+// brain_calls_estimated counter read a night's plan-wall spend as ~600× less
+// than it was. The success path routes through the same call for one door, not
+// two: with encoding:"utf8" `resolveChild(null, stdout, …)` IS `parseOut(stdout,
+// …)`, so that lane is unchanged byte-for-byte and the WIRE scan below can pin
+// the whole function on one shape.
 function claudeGen(prompt, model = "sonnet", timeoutMs = 300000) {
   if (process.env.ANTHROPIC_API_KEY) return refuse();
   const t0 = Date.now();
   const bin = BIN();
   try {
     const stdout = execFileSync(bin, ARGS(model), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
-    return parseOut(stdout, prompt, t0);
-  } catch (e) { return parseErr(e, prompt, t0); }
+    return resolveChild(null, stdout, prompt, t0);
+  } catch (e) { return resolveChild(e, e.stdout, prompt, t0); }
 }
 
 function claudeGenAsync(prompt, model = "sonnet", timeoutMs = 300000) {
@@ -368,7 +466,12 @@ async function selftest() {
     // brain_ledger row by hand, and it hand-rolled http_status + limit_signal
     // while dropping error_envelope entirely — proof that a caller copying
     // fields one at a time WILL miss one. The scan is what makes that structural.
-    for (const [file, builder] of [["nightshift.mjs", "genLedgered"], ["dmn.mjs", "ledgerRow"], ["council.mjs", "convene (the cross-family chair)"]]) {
+    // thalamus.mjs joined 11 Aug 2026 — the FOURTH caller, and the proof that a
+    // scan listing three doors guards three doors. meterAdjudication was written
+    // on 10 Aug, the same day the other three were moved onto this shape, and it
+    // hand-copied 8 fields: no error_envelope, no http_status, no limit_signal, no
+    // kill, no tokens_estimated. Nothing went red because this list did not name it.
+    for (const [file, builder] of [["nightshift.mjs", "genLedgered"], ["dmn.mjs", "ledgerRow"], ["council.mjs", "convene (the cross-family chair)"], ["thalamus.mjs", "meterAdjudication (the ε-band adjudicator)"]]) {
       let src = "";
       try { src = readFileSync(new URL("./" + file, import.meta.url), "utf8"); } catch { }
       // COMMENTS ARE STRIPPED FIRST (10 Aug 2026, found by the negative control
@@ -417,6 +520,25 @@ async function selftest() {
     assert("LEDGER PROJECTION: the kill rides the brain_ledger row, and a finished call adds nothing",
       fk.killed === true && fk.kill_signal === "SIGTERM"
       && ledgerForensics(clean).killed === null && ledgerForensics(clean).kill_signal === null);
+    // …AND SOMEBODY READS IT (wiring pass, 11 Aug 2026). For one day this pair
+    // was a producer with no consumer — the exact black-box shape the repair
+    // above was written to kill. `grep -rn kill_signal --include=*.mjs
+    // scripts/ hooks/` returned THIS FILE and nothing else, while brain.mjs's
+    // cause ladder (not_logged_in | plan_limit | api_error | unknown) sent every
+    // SIGTERM'd night to "unknown". brain.mjs now reads BOTH shapes — the field
+    // and parseErr's `KILLED (…) after <n>ms` text prefix — in killOf(), and
+    // resolves the tail to cause "timeout". Source scan with comments stripped,
+    // same technique (and same reason) as the ledgerForensics scan above: a
+    // guard a comment can satisfy is not a guard.
+    {
+      let bsrc = "";
+      try { bsrc = readFileSync(new URL("./brain.mjs", import.meta.url), "utf8"); } catch { }
+      const bcode = bsrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      assert("WIRE: brain.mjs still READS the kill (killed field + the KILLED text prefix) and still has a `timeout` cause",
+        /r\.killed\s*===\s*true/.test(bcode) && /KILL_TEXT_RE/.test(bcode)
+        && /KILLED \\\(\(SIG\[A-Z\]\+\|no-signal\)\\\) after/.test(bcode)
+        && /"timeout"/.test(bcode));
+    }
     // LAYERING: the old branch is frozen beside the new one and still tells the lie
     const old = resolveChildLegacy(sigterm, FRAG, "p", Date.now());
     assert("…and the FROZEN legacy branch still reproduces the defect verbatim (ok:true, error:null, a fragment as the answer)",
@@ -430,6 +552,131 @@ async function selftest() {
     assert("WIRE: claudeGenAsync's callback still routes through resolveChild (the async engine is the only one that can be killed mid-flush)",
       /\(err,\s*stdout\)\s*=>\s*resolve\(resolveChild\(err,\s*stdout,\s*prompt,\s*t0\)\)/.test(self));
   }
+  // ── THE HALF-WIRED DOOR — the SYNC lane rides resolveChild too (11 Aug 2026) ─
+  // Fixtures are the LIVE PROBE of this box, verbatim: execFileSync against a CLI
+  // that prints the plan-wall envelope and exits 1 gives status=1 · signal=null ·
+  // killed=undefined · `.stdout` = the WHOLE 232-char envelope · `.stderr` = a
+  // string. Before the repair the same envelope metered 14543 on the async lane
+  // and 23 on this one.
+  {
+    const WALL = '{"type":"result","is_error":true,"api_error_status":429,"result":"You\'ve hit your weekly limit · resets Jul 20, 11:30pm","usage":{"input_tokens":7,"output_tokens":2,"cache_creation_input_tokens":14434,"cache_read_input_tokens":100}}';
+    const exit1 = Object.assign(new Error("Command failed: claude"), { status: 1, signal: null, stdout: WALL, stderr: "" });
+    const sync = resolveChild(exit1, exit1.stdout, "p", Date.now());
+    assert("SYNC DOOR: a non-zero exit beside a COMPLETE envelope keeps the HONEST 4-field meter (nightshift's whole spend rode this)",
+      sync.total_tokens === 14543 && sync.tokens_estimated === false
+      && sync.input_tokens === 7 && sync.output_tokens === 2
+      && sync.cache_creation_tokens === 14434 && sync.cache_read_tokens === 100);
+    assert("SYNC DOOR: …and the classifier it never lost still names the wall",
+      sync.ok === false && sync.limit_hit === true && sync.http_status === 429 && sync.limit_signal === "api_error_status");
+    // LAYERING: the frozen catch still tells the lie, so the ns_* rows already on
+    // the ledger stay readable. 23 = Math.ceil("p…".length/4) of ITS prompt, which
+    // is the whole point — the number is the PROMPT's length, never the spend.
+    const oldSync = claudeGenCatchLegacy(exit1, "p", Date.now());
+    assert("…and the FROZEN legacy catch still reproduces the defect verbatim (length guess, four NULL components)",
+      oldSync.tokens_estimated === true && oldSync.input_tokens === null && oldSync.output_tokens === null
+      && oldSync.cache_creation_tokens === null && oldSync.cache_read_tokens === null
+      && oldSync.total_tokens === Math.ceil("p".length / 4));
+    // the two things the sync lane already had right must survive the re-route:
+    // a fragment is never an answer, and stderr stays in the forensics.
+    const frag = Object.assign(new Error("Command failed: claude"), { signal: "SIGTERM", stdout: '{"type":"result","result":"partial answ', stderr: "cli said something on stderr" });
+    const fr = resolveChild(frag, frag.stdout, "p", Date.now());
+    assert("SYNC DOOR: a killed sync child with a PARTIAL envelope is still a failure, and its stderr is not dropped by the re-route",
+      fr.ok === false && fr.text === null && fr.killed === true && fr.kill_signal === "SIGTERM"
+      && fr.error.includes("cli said something on stderr") && fr.error.includes('"result":"partial answ'));
+    // THE WIRE ITSELF — the assertion this file was missing, and the reason the
+    // 10 Aug repair could land on one lane and be called done. The async callback
+    // has had its own scan since that day (above); the sync lane had none, so
+    // nothing went red while it sat half-wired. Pins BOTH exits of claudeGen.
+    let self2 = "";
+    try { self2 = readFileSync(new URL(import.meta.url), "utf8"); } catch { }
+    const syncBody = self2.slice(self2.indexOf("function claudeGen(prompt"), self2.indexOf("function claudeGenAsync(prompt"));
+    assert("WIRE: BOTH of claudeGen's exits route through resolveChild (re-inline parseErr and this goes red in the same second)",
+      syncBody.length > 0
+      && /return resolveChild\(null, stdout, prompt, t0\);/.test(syncBody)
+      && /catch \(e\) \{ return resolveChild\(e, e\.stdout, prompt, t0\); \}/.test(syncBody)
+      && !/return parseErr\(/.test(syncBody));
+  }
+
+  // ── THE UNNAMED ARG-SET — which CLI did this call actually boot? (11 Aug 2026) ─
+  // The SHIM GUARD promised a shimmed box would SAY it kept the full CLI. Nothing
+  // said it: both full lanes returned the same argv as the lean lane returns minus
+  // LEAN_ARGS, and no field carried the choice. These go red if the name is dropped,
+  // if the name stops matching the argv, or if the reader on the other end is cut.
+  {
+    const hasLean = (a) => a.includes("--system-prompt") && a.includes("--strict-mcp-config");
+    // 1. THE NAME MATCHES THE ARGV — the only property that makes the name worth
+    //    anything. Asserted as an equivalence, never as a hardcoded lane: this box
+    //    is native today, an npm box is shimmed, and BOTH must hold here.
+    assert("ARG-SET: the profile NAMES the argv it chose (lean ⇔ LEAN_ARGS present), on whatever lane this box is on",
+      hasLean(ARGS("sonnet")) === (ARG_PROFILE() === "lean"));
+    // 2. LAYERING: the frozen pre-11-Aug chooser and the new one agree argv-for-argv.
+    assert("ARG-SET: the invocation did NOT change — the frozen legacy chooser returns the identical argv",
+      JSON.stringify(ARGS("sonnet")) === JSON.stringify(ARGS_LEGACY("sonnet"))
+      && JSON.stringify(ARGS("opus")) === JSON.stringify(ARGS_LEGACY("opus")));
+    // 3. THE ENV LANE, WALKED FOR REAL (his documented revert switch).
+    const oldFull = process.env.ARSENAL_CLAUDEGEN_FULL;
+    process.env.ARSENAL_CLAUDEGEN_FULL = "1";
+    const envArgs = ARGS("sonnet"), envProf = ARG_PROFILE(), envLegacy = ARGS_LEGACY("sonnet");
+    if (oldFull === undefined) delete process.env.ARSENAL_CLAUDEGEN_FULL; else process.env.ARSENAL_CLAUDEGEN_FULL = oldFull;
+    assert("ARG-SET: ARSENAL_CLAUDEGEN_FULL=1 reverts to the full CLI and SAYS `full-env` (the revert is legible, not just effective)",
+      envProf === "full-env" && !hasLean(envArgs) && JSON.stringify(envArgs) === JSON.stringify(envLegacy));
+    // 4. THE SHIM LANE — the one this repair exists for, walked LIVE. A fake
+    //    %APPDATA%\npm\claude.cmd in a temp dir IS the npm-install scenario: BIN()
+    //    finds it, needsShell() is true, the spaced system-prompt cannot ride
+    //    shell:true, and the box falls back to the full CLI. Before today that
+    //    fallback was invisible; now it has a name. win32-only because BIN()'s shim
+    //    probe is win32-only by construction — on the away-day runner there is no
+    //    lane to walk, and asserting one would be "a truth about a different
+    //    computer" (the same law as the binary check below).
+    if (process.platform === "win32") {
+      const fakeAppData = mkdtempSync(join(tmpdir(), "arsenal-shim-"));
+      const oldAppData = process.env.APPDATA;
+      try {
+        mkdirSync(join(fakeAppData, "npm"), { recursive: true });
+        writeFileSync(join(fakeAppData, "npm", "claude.cmd"), "@echo off\r\n");
+        process.env.APPDATA = fakeAppData;
+        const shimProf = ARG_PROFILE(), shimArgs = ARGS("sonnet"), shimLegacy = ARGS_LEGACY("sonnet");
+        const shimResult = parseOut(JSON.stringify({ result: "x", is_error: false }), "p", Date.now());
+        assert("ARG-SET: an npm-shimmed box falls back to the FULL CLI and says `full-shim` out loud (the silent revert that cost 88.5%)",
+          BIN().endsWith("claude.cmd") && shimProf === "full-shim" && !hasLean(shimArgs)
+          && JSON.stringify(shimArgs) === JSON.stringify(shimLegacy)
+          && shimResult.arg_profile === "full-shim"
+          && ledgerForensics(shimResult).arg_profile === "full-shim");
+      } finally {
+        if (oldAppData === undefined) delete process.env.APPDATA; else process.env.APPDATA = oldAppData;
+        try { rmSync(fakeAppData, { recursive: true, force: true }); } catch { }
+      }
+    } else {
+      console.log(`  – shim-lane probe SKIPPED (BIN()'s %APPDATA% shim probe is win32-only — no lane to walk on ${process.platform})`);
+    }
+    // 5. THE SHAPE — every result names its lane, and the one call that never
+    //    spawned names NULL instead of guessing "lean".
+    const good2 = parseOut(JSON.stringify({ result: "a", is_error: false }), "p", Date.now());
+    const bad2 = parseErr(new Error("spawnSync claude ENOENT"), "p", Date.now());
+    const oldKey = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "sk-test";
+    const refused = claudeGen("x");
+    if (oldKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = oldKey;
+    assert("ARG-SET: it rides EVERY result — the answer, the failure, and the kill — while an UNMADE call carries null, never a fake lane",
+      good2.arg_profile === ARG_PROFILE() && bad2.arg_profile === ARG_PROFILE()
+      && "arg_profile" in refused && refused.arg_profile === null);
+    // 6. THE LEDGER PROJECTION — always stamped, unlike the two conditional fields
+    //    beside it, because an absent key already means "written before the wire".
+    assert("LEDGER PROJECTION: the arg-set rides the row ALWAYS (a lean row that says nothing is indistinguishable from history)",
+      ledgerForensics(good2).arg_profile === ARG_PROFILE()
+      && ledgerForensics({}).arg_profile === null);
+    // 7. THE WIRE ITSELF — a name nobody reads is the black box this whole audit is
+    //    about. limits.mjs's WHAT-HE-ACTUALLY-HAS ledger is the consumer (the same
+    //    home that adopted tokens_estimated on 10 Aug, for the same reason). Source
+    //    scan with comments stripped, same technique and same reason as the scans
+    //    above: a guard a comment can satisfy is not a guard.
+    let lsrc = "";
+    try { lsrc = readFileSync(new URL("./limits.mjs", import.meta.url), "utf8"); } catch { }
+    const lcode = lsrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    assert("WIRE: limits.mjs still COUNTS the arg-set off the bus (drop the reader and this producer is a black box again)",
+      /brain_calls_lean:/.test(lcode) && /brain_calls_full_cli:/.test(lcode) && /arg_profile/.test(lcode));
+  }
+
   // THE ENGINE MUST BE SPAWNABLE (E2E audit 25 Jul): the old BIN() pointed at a
   // shim that does not exist here, so every organ failed with EINVAL and nobody
   // noticed for days. This check fails loudly the moment the binary is unreachable.

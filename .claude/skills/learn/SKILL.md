@@ -173,7 +173,8 @@ into item 3, beats 4-5 into the BLOCK-B script in §2). The count points at cano
 **FIRST, read where he already is — never ask him:** `node scripts/course.mjs brief`
 (also spliced into the SessionStart kickoff automatically). It names the chapter he is on out
 of how many. If it reports nothing ingested yet, the chapter list is a one-time paste:
-`node scripts/course.mjs ingest <chapters.txt>` — then `done <n>` as each chapter closes.
+`node scripts/course.mjs ingest <chapters.txt>` — then, **the moment he opens a chapter,
+`node scripts/course.mjs at <n>`**, and `done <n>` as each chapter closes.
 (Issue #35, 2026-08-04: this tracker was 670 lines with ZERO callers and `course.json` had
 never been created, while `next_up` was 1-05 and 1-06 — both course-track, 9 chapters. So the
 one thing built to stop him being asked "where are you?" was the one thing nobody called.)
@@ -186,6 +187,19 @@ even as history: **6 chapters, not 9** — 9 is what `sprint.json` labels 1-06 P
 ("9 ch"); 1-05 API Fundamentals is 6 in the live `course.json`. Line-count too: the file is no
 longer 670 lines — count it live, never from here. Read the position from `brief`, never from this
 paragraph.)*
+*(DEAD-WIRE SWEEP, 11 Aug 2026 — **`at <n>` is named here now, and that naming IS the repair.**
+It is the ONLY producer of `course.json`'s `current` + `current_at`, and until today NOTHING in the
+organism invoked it: `grep -rn "course.mjs at" --exclude-dir=.git` returned course.mjs's own usage
+banner, learnstate.mjs's hint string and doc prose — no skill, no hook, no scheduled task
+(`grep -i course setup/*.ps1` → 0 hits). So `current` has been `null` since the 7 Aug ingest and
+every reader built on top of it was dead with it: `brief` can only ever say **"not started"**
+(measured on the REAL state through the pure core — `markDone` 1..5 still printed "Anthropic API
+Fundamentals: not started — 6 chapters (5 done)"), the resume second never prints, and
+learnstate.mjs's PARKED-age tag is unreachable. **`done <n>` does NOT stamp a position** — it marks
+a chapter covered and deliberately leaves `current` where it was (course.mjs `markDone`), so a
+course closed chapter-by-chapter still reads "not started" to the end. Only THIS session knows
+which chapter he actually opened, which is why the caller is the skill and never an organ inferring
+it on his behalf.)*
 
 A guided active-recall pass, Colab-surfaced (not a Forge capsule, not the full Python packet).
 Per chapter: he predicts what it covers → works the Colab cells himself → you quiz for

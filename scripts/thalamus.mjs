@@ -100,6 +100,12 @@ import { createServer } from "node:http";
 // into normText (fold `_`/`-` first, THEN trim — non-idempotence there once
 // fabricated reps onto a real FSRS card) can never drift between the organs.
 import { loadRegistry, canonicalize } from "./capture.mjs";
+// THE LEDGER PROJECTION, borrowed not copied (wiring audit, 11 Aug 2026 — see
+// meterAdjudication). A pure function; claudegen's module body has no side
+// effects (its main guard is `import.meta.url === argv[1]`), so a static import
+// costs this daemon nothing at boot. The ENGINE stays lazily imported inside
+// adjudicateLive, exactly as before — only the row SHAPE moves up here.
+import { ledgerForensics } from "./claudegen.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Captured ONCE, at module load — this is the mtime of the code actually running in
@@ -1163,8 +1169,30 @@ function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requ
     ...(mdl.requested && mdl.requested !== mdl.model ? { model_requested: mdl.requested, model_fallback: mdl.fallback } : {}),
     input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
     cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
-    total_tokens: r.total_tokens || 0, duration_ms: r.duration_ms || 0,
+    total_tokens: r.total_tokens || 0,
+    // ── THE FOURTH CALLER (wiring audit, 11 Aug 2026) ────────────────────────
+    // This row literal was born 10 Aug — the same day the other three brain_ledger
+    // builders were moved onto claudegen's ONE shape — and it hand-copied 8 fields
+    // instead, dropping tokens_estimated, error_envelope, http_status, limit_signal,
+    // killed and kill_signal. claudegen's own WIRE scan (:413) listed nightshift ·
+    // dmn · council, so this door went unscanned and nothing went red. It is
+    // precisely the failure that scan was written against — claudegen:411 "a caller
+    // copying fields one at a time WILL miss one" — reproduced the same day, in the
+    // door claudegen guards. thalamus.mjs is now IN that scan list.
+    // WHY IT COSTS: limits.mjs:132 counts rows with no tokens_estimated key at all
+    // (brain_calls_unstamped — 3,239 of 4,559 the night it was measured) because
+    // brain.mjs's window governor sums total_tokens blind, unable to tell a measured
+    // spend from a length guess. And a walled adjudication would have landed with
+    // limit_hit:true and NOTHING naming the wall — the SILENT WALL this meter exists
+    // to end, one field short. 0 adjudicator rows on the live ledger today (the task
+    // is Disabled), so nothing is lost retroactively — every future row is honest.
+    // tokens_estimated is derived the same way at all four doors, byte for byte:
+    // nightshift.mjs nsLedgerRow:92 and dmn.mjs ledgerRow. It is not part of
+    // ledgerForensics because it is a fact about SPEND, not about the failure.
+    tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+    duration_ms: r.duration_ms || 0,
     ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+    ...ledgerForensics(r),
   };
   // an unmetered call is still a made call — a locked/full ledger must never take
   // the gate down with it (nightshift's genLedgered law, same reason)
@@ -1459,6 +1487,34 @@ async function selftest() {
       walled === false && wall.length === 1 && wall[0].limit_hit === true && wall[0].ok === false && String(wall[0].error).includes("session limit"));
     assert("METER: an unmeasured component stays NULL, never a fake zero (the ledger's honesty law)",
       wall[0].input_tokens === null && wall[0].cache_read_tokens === null);
+    // THE FOURTH CALLER (11 Aug 2026 — the wiring repair). The row above used to be
+    // 8 hand-copied fields: the wall arrived as limit_hit:true with NOTHING naming
+    // it, and the governor could not tell this row's guessed total from a measured
+    // one. Driven with the exact shape claudegen returns on a plan wall — a `result`
+    // envelope beside api_error_status 429 — so re-hand-copying the fields turns
+    // this red in the same second. (claudegen's own selftest scans this file's
+    // SOURCE for the spread; this one proves the row that reaches disk.)
+    const walled429 = [];
+    await adjudicateLive(evt, 0.44, {
+      cfg: bandCfg, appendBrainLedger: (o) => walled429.push(o),
+      gen: async () => ({
+        ok: false, text: null, total_tokens: 46, input_tokens: null, output_tokens: null,
+        cache_creation_tokens: null, cache_read_tokens: null, tokens_estimated: true, duration_ms: 782,
+        limit_hit: true, http_status: 429, limit_signal: "api_error_status",
+        error: "You've hit your weekly limit · resets Jul 20, 11:30pm",
+        error_envelope: '{"is_error":true,"api_error_status":429,"session_id":"abc-123","result":"You\'ve hit your weekly limit"}',
+        killed: false, kill_signal: null,
+      }),
+    });
+    assert("METER: the #8 FORENSICS ride the adjudicator's row — the discriminator, the envelope and the kill, spread not hand-copied",
+      walled429[0].http_status === 429 && walled429[0].limit_signal === "api_error_status"
+      && String(walled429[0].error_envelope).includes("session_id") && "killed" in walled429[0] && "kill_signal" in walled429[0]);
+    assert("METER: tokens_estimated is STAMPED — the governor never sums a length guess as if it were measured (limits.mjs brain_calls_unstamped)",
+      walled429[0].tokens_estimated === true && rows[0].tokens_estimated === false);
+    // …and the "say it only when it says something" rule survives the spread: a
+    // healthy call must not grow a 600-char duplicate of its own error field.
+    assert("METER: a clean call carries the forensic keys as nulls, never a duplicated envelope",
+      rows[0].error_envelope === null && rows[0].http_status === null && rows[0].killed === null);
     // a call that was never made must never be billed
     const none = [];
     const off = await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { enabled: false } }, appendBrainLedger: (o) => none.push(o), gen: async () => { throw new Error("must not call while disabled"); } });

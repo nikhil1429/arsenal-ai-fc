@@ -56,9 +56,11 @@
 //   GATE (10 Aug 2026) below; before it, a single trailing comma in the canon rewrote
 //   every stored concept id into a phantom twin.
 //
-// MODES: paste [file] · rep · pull · quarantine [retry] · selftest
+// MODES: paste [file] · rep · pull · quarantine [retry] · quarantine gem [retry] · selftest
 //   quarantine (10 Aug 2026) is the READ end of reps_log.jsonl.quarantine.jsonl —
 //   the sidecar this file has written since 30 Jul and NOTHING in the organism read.
+//   quarantine gem (11 Aug 2026) is the same read+merge end for the OTHER sidecar,
+//   gemini_quality.jsonl.quarantine.jsonl — see THE OTHER SIDECAR below.
 // RULES (CONDUCTOR §4): deterministic · no API key · Node 22 ESM · Windows-safe
 //   entry guard · atomic write (temp→rename) · empty-safe · never fabricate.
 // ============================================================================
@@ -516,15 +518,60 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
   // audit; what the first fix added was a warning that said the opposite, telling him to
   // "inspect it" at the exact moment the text stopped existing.) Nothing is destroyed now:
   // the raw text is appended to a sibling quarantine file first, and only then do we rewrite.
+  // WIRING AUDIT, 11 Aug 2026 — THE EMPTY CATCH REOPENED THE DATA LOSS IT WAS WRITTEN
+  // TO END. `catch { /* a courtesy */ }` left `quarantined` at 0 and the rewrite below
+  // fired ANYWAY from `existing` (validated lines only), so the unreadable lines were
+  // deleted for good: no card (noticeQuarantine gates on r.quarantined), and paste
+  // printed the literally false "nothing was rewritten this run, so they are still in
+  // reps_log." PROVEN on a sandbox copy with the sidecar path occupied by a directory
+  // (EISDIR — the same shape this file's own recordGeminiQuality test uses): BEFORE
+  // 2 lines with the mangled one present, report said quarantined 0 / path null, AFTER
+  // 2 lines and the mangled line GONE. Worst on the pull lane — 14 unattended fires a
+  // day, no card, no console reader. Two changes borrowed verbatim from
+  // recordGeminiQuality's 10 Aug repair, because it is the same lie in the same file:
+  //   • VERIFIED ON DISK, not on the absence of an exception — an append that throws
+  //     and an append that silently writes nothing read identically to a caller;
+  //   • the failure is NAMED on the report (`quarantine_error`), never swallowed.
   let quarantined = 0;
+  let quarantine_error = null;
+  const sidecar = path + ".quarantine.jsonl";
   if (toAppend.length && loadStats.skipped) {
+    const raw = loadStats.skipped_lines.map((l) => l + "\n").join("");
+    const bytes = Buffer.byteLength(raw, "utf8");
+    const sizeOf = (p) => { try { return existsSync(p) ? statSync(p).size : 0; } catch { return null; } };
+    const before = sizeOf(sidecar);
     try {
-      appendFileSync(path + ".quarantine.jsonl",
-        loadStats.skipped_lines.map((l) => l + "\n").join(""), "utf8");
-      quarantined = loadStats.skipped_lines.length;
-    } catch { /* quarantine is a courtesy, never a reason to lose the good reps */ }
+      appendFileSync(sidecar, raw, "utf8");
+      const after = sizeOf(sidecar);
+      if (after === null) quarantine_error = "the append threw nothing but the sidecar cannot be stat'd — treat as NOT parked";
+      else if (before !== null && after < before + bytes) quarantine_error = `the sidecar grew ${after - before} of ${bytes} bytes — the raw text is NOT fully on disk`;
+      else quarantined = loadStats.skipped_lines.length;
+    } catch (e) { quarantine_error = `${(e && e.code) || "error"}: ${(e && e.message) || e}`; }
   }
-  if (toAppend.length) writeAtomic(path, existing.concat(toAppend));
+  if (toAppend.length) {
+    if (quarantine_error) {
+      // THE FALLBACK, and the whole point of the repair: a rewrite from `existing`
+      // DELETES every line that could not be parked, and those lines are the one thing
+      // in this repo that cannot be regenerated. So when the park fails we do not
+      // rewrite at all — the good reps go on the END of the file and the unreadable
+      // lines stay exactly where they are, in their original positions, for the next
+      // run to park (self-healing: `skipped` stays >0 until the sidecar takes them).
+      // writeAtomic is UNTOUCHED — no engine is replaced here, this lane simply does
+      // not call it. What this path gives up is the re-canonicalisation of already
+      // stored rows (validateRep's ts/concept normalisation), which the next clean
+      // ingest redoes; what it saves is his reps. A trailing newline is ensured first
+      // because a hand-edited log can end without one and an append would then weld
+      // the new rep onto the last line. If THIS append throws it is allowed to escape,
+      // exactly as the rewrite's throw always did: paste exits 1 with "re-run the same
+      // command" (the source file is still there) and pull's per-file catch leaves the
+      // inbox file in place for the next hour's fire.
+      let lead = "";
+      try { const cur = readFileSync(path, "utf8"); if (cur.length && !cur.endsWith("\n")) lead = "\n"; } catch { /* unreadable here means the append below reports it */ }
+      appendFileSync(path, lead + toAppend.map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8");
+    } else {
+      writeAtomic(path, existing.concat(toAppend));
+    }
+  }
   // #24 HONESTY COUNTER: an authored timestamp is not a measurement, and the human
   // reading `appended 7` deserves to know which clock those seven rode in on.
   const ts_corrected = toAppend.filter((r) => r.ts_source !== "claimed").length;
@@ -542,7 +589,14 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
     unregistered: [...new Set(unregistered)],
     skipped_existing: loadStats.skipped || 0,
     skipped_reasons: [...new Set(loadStats.skipped_reasons || [])],
-    quarantined, quarantine_path: quarantined ? path + ".quarantine.jsonl" : null,
+    quarantined, quarantine_path: quarantined ? sidecar : null,
+    // 11 Aug 2026 — the two fields the failure branch needs. `quarantine_path` keeps
+    // meaning "your raw text is parked HERE" and stays null when nothing parked; the
+    // sidecar we TRIED is a separate fact, and a caller that cannot name it cannot tell
+    // the captain which path to clear. NOTE `total` above counts validated reps only —
+    // on the fallback path the file legitimately holds `skipped_existing` more lines
+    // than that, which is the point: they were kept, not deleted.
+    quarantine_error, quarantine_sidecar: sidecar,
     appended_rows: toAppend,      // P6.1 — the paste lane's quality stats read these
   };
 }
@@ -766,6 +820,23 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
   let pulled = 0, rejected = 0, duplicates = 0, failed = 0, quarantined = 0, quarantinePath = null, ts_corrected = 0;
+  // 11 Aug 2026 — the stuck-sidecar facts, carried the same way `quarantined` is. NOT
+  // summed: every ingest in this loop re-reads the SAME reps_log, so a sum would multiply
+  // one file's unreadable lines by the number of inbox files. Last write wins — the most
+  // recent read of the log is the current state of it.
+  let quarantineError = null, quarantineStuck = 0, quarantineSidecar = null;
+  // P6.1 WIRE, second door (wiring audit pass 2, 11 Aug 2026 — see noticeGeminiQuality).
+  // The rows this run actually appended, carried OUT of the per-file loop so the CLI can
+  // hand them to the same recorder the paste/rep door uses. Accumulated across files
+  // rather than recorded per file, because the paste door's unit is one INGEST RUN and
+  // the ledger's only two readers count LINES (scout.mjs:855 · watchman.mjs:211) — a
+  // per-file row would make one pull look like three batches to both of them.
+  // `observedAt` is the LAST ingest's measured arrival clock, not a fresh Date() taken
+  // after the loop: every ingest in this run stamps its own, they run sequentially, so
+  // the last one is the most recent measurement this process actually made. Per-row
+  // clocks stay on the reps themselves.
+  const appendedRows = [];
+  let observedAt = null;
   const failures = [];
   const unregistered = [];
   // one string per lost rep, "<file>[:L<n>] — <why>". INVARIANT: rejections.length
@@ -794,6 +865,12 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
       }
       const r = ingest(repsPath, cands, reg);
       pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
+      // THE OTHER FIELD NOBODY READ (11 Aug 2026). `appended_rows` has been on the
+      // ingest report since P6.1 and only the paste door ever took it, which is exactly
+      // how the outcome lane ended up with one door out of three. Same treatment
+      // `errors` got above: carry it, don't drop it.
+      if (r.appended_rows && r.appended_rows.length) appendedRows.push(...r.appended_rows);
+      if (r.observed_at) observedAt = r.observed_at;
       // THE FIELD NOBODY READ: ingestUnlocked has returned `errors` since v1 and only
       // `paste` (:1167) ever looked. Attributed by file — a pull spans many.
       for (const err of r.errors || []) rejections.push(`${f} — ${err}`);
@@ -804,6 +881,7 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
       ts_corrected += r.ts_corrected || 0;                       // #24 — carried into the unattended lane too
       quarantined += r.quarantined || 0;
       if (r.quarantine_path) quarantinePath = r.quarantine_path;
+      if (r.quarantine_error) { quarantineError = r.quarantine_error; quarantineStuck = r.skipped_existing || 0; quarantineSidecar = r.quarantine_sidecar || null; }
       mkdirSync(doneDir, { recursive: true });
       // collision-safe archive: renameSync OVERWRITES an existing destination on both
       // Windows and POSIX, so a same-named file from an earlier session (Colab reuses
@@ -834,12 +912,23 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
     + (reg && reg.loaded ? "" : `; ⚠ REGISTRY DOWN — ${(reg && reg.error) || "concepts.json not loaded"}; nothing canonicalized, nothing rewritten`)
     + (ts_corrected ? `; ⚠ ${ts_corrected} rep(s) claimed a ts AFTER arrival — corrected to the observed clock` : "")
     + (quarantined ? `; ⚠ ${quarantined} unreadable reps_log line(s) moved to ${quarantinePath}` : "")
+    // 11 Aug 2026 — this note IS the pull lane's written record (it is what reaches
+    // capture.log), and before today a failed park left no trace in it at all while the
+    // rewrite deleted the lines. Same treatment the REGISTRY DOWN line above gets.
+    + (quarantineError ? `; ⚠ quarantine sidecar UNWRITABLE (${quarantineError}) — ${quarantineStuck} unreadable line(s) were NOT deleted, they stay in reps_log; nothing parked` : "")
     // the reasons the count never carried. Capped at 5 like the `failures` line above it,
     // and the remainder is COUNTED rather than dropped — the full list is on the return.
     + (rejections.length ? `; ⚠ ${rejections.length} rep(s) REJECTED — ${rejections.slice(0, 5).join(" · ")}`
         + (rejections.length > 5 ? ` · +${rejections.length - 5} more` : "")
         + `; raw text is in ${doneDir}` : "");
   return { pulled, files: files.length, rejected, duplicates, failed, failures, unregistered: uniqUnreg, ts_corrected, quarantined, quarantine_path: quarantinePath, wired: true, note, rejections, carded: carding.carded, card_said: carding.said, card_error: carding.error,
+    // noticeQuarantine("pull", r) reads these three by the same names ingestUnlocked
+    // returns them under — the CLI hands it this report, not an ingest report. (11 Aug)
+    quarantine_error: quarantineError, quarantine_sidecar: quarantineSidecar, skipped_existing: quarantineStuck,
+    // named EXACTLY as ingestUnlocked names them, so noticeGeminiQuality reads a pull
+    // report and an ingest report through the same two keys (the same trick the three
+    // quarantine keys above already play). (11 Aug 2026)
+    appended_rows: appendedRows, observed_at: observedAt,
     registry_loaded: !!(reg && reg.loaded), registry_error: (reg && reg.error) || null };
 }
 
@@ -905,6 +994,40 @@ function cardRejectedReps(rejections, deps = {}) {
 const quarantinePathFor = (repsPath) => repsPath + ".quarantine.jsonl";
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+// ---------------------------------------------------------------------------
+// THE PREVIEW THAT LOOKED COMPLETE (wiring audit, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// Both read doors below printed a parked line raw-sliced at 160 chars — no marker, no
+// remainder — on the one surface in this organism whose entire job is to show him what
+// broke so he can repair it. Measured on the LIVE corpus the same day (21 lines in
+// reps_log.jsonl): median 440 chars, max 513, min 393 — 21 of 21 over the cap. So every
+// real parked rep was cut, and cut silently; the line that proved it lost 310 of 470
+// chars, with `confidence` and `correct` both past the edge.
+// The damage is not the missing text — the sidecar still holds it, and the print's own
+// advice is already "fix it in the sidecar by hand". The damage is the DIAGNOSIS. The
+// `why` beside it names a field; the fragment ends before that field; and a fragment
+// that looks whole reads as confirmation of the accusation. He goes and repairs a line
+// where it was never broken, and the field that actually failed he never saw.
+// Repaired the way learnstate.mjs:243 repaired this exact defect class one hop
+// downstream, and with brain.mjs clipMiddle's idiom for saying the loss out loud: the
+// cap stays the integer it already was, the marker is spent from INSIDE it, and the
+// count is stated (how many of how many). The sidecar LINE NUMBER rides along because
+// the advice is to open that file — a triage that says WHERE costs nothing and is the
+// whole point of a triage.
+const CLIP_MARK = "…";            // the same one char learnstate.mjs:243 / distiller.mjs mark a cut with
+const QUARANTINE_PREVIEW = 160;   // UNCHANGED — the cap both doors have always used. No number is invented here; the marker is paid for out of it.
+// FROZEN verbatim (LAYERING law) — the bare cut, kept so the delta stays visible and so
+// the selftest can measure what this door actually used to put on his screen. Reference
+// only; nothing calls it.
+const quarantinePreviewLegacy = (line) => String(line).slice(0, 160);
+function quarantinePreview(line, lineNo) {
+  const t = String(line == null ? "" : line);
+  if (t.length <= QUARANTINE_PREVIEW) return t;                    // nothing lost → no marker; the mark must only ever mean real loss
+  const kept = QUARANTINE_PREVIEW - 1;                             // one char of the cap buys the marker (learnstate.mjs:250's rule)
+  const where = Number.isFinite(lineNo) ? `, whole line = line ${lineNo} of the sidecar named above` : "";
+  return `${t.slice(0, kept)}${CLIP_MARK}  [PREVIEW — ${t.length - kept} of ${t.length} chars NOT shown${where}]`;
+}
+
 // Pure read — never writes, never spawns. `recoverable` holds the RAW parked objects
 // (not the enriched reps): retry must re-enter through the front door so the arrival
 // clock, the canonicalisation and the dedupe all run exactly once more.
@@ -914,14 +1037,19 @@ export function quarantineTriage(repsPath, reg = EMPTY_REG) {
   const existingKeys = new Set(loadReps(repsPath, reg).map(keyOf));
   const recoverable = [], broken = [];
   let parked = 0, already_back = 0;
+  // `lineNo` counts PHYSICAL lines, blanks included — it is what an editor's "go to
+  // line" wants, and the print hands it to him because a preview is only useful if it
+  // says where the whole thing is. `parked` deliberately stays the count of real rows.
+  let lineNo = 0;
   for (const line of readFileSync(sidecar, "utf8").split(/\r?\n/)) {
+    lineNo++;
     const s = line.trim();
     if (!s) continue;
     parked++;
     let o;
-    try { o = JSON.parse(s); } catch { broken.push({ line: s, why: "unparseable JSON line" }); continue; }
+    try { o = JSON.parse(s); } catch { broken.push({ line: s, why: "unparseable JSON line", lineNo }); continue; }
     const v = validateRep(o, reg);
-    if (!v.ok) { broken.push({ line: s, why: v.error }); continue; }
+    if (!v.ok) { broken.push({ line: s, why: v.error, lineNo }); continue; }
     if (existingKeys.has(keyOf(v.rep))) { already_back++; continue; }   // an earlier retry (or a re-paste) already restored it
     recoverable.push(o);
   }
@@ -940,6 +1068,130 @@ export function cardQuarantine({ count, day = localDate(), scriptsDir = __dirnam
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
   const line = `${count} rep line(s) reps_log se padhi hi nahi gayi — quarantine mein park hain, corpus se BAHAR. Wapas daalein?`;
   const key = `reps:quarantine:${day}`;
+  try {
+    exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
+    return { filed: true, key, line };
+  } catch (e) {
+    return { filed: false, key, line, why: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// THE STUCK-SIDECAR ANCHOR (wiring audit, 11 Aug 2026). Same shape and the same
+// rolling-day key family as cardQuarantine above, and it rides the anchor for the same
+// reason: only the CAPTAIN can clear it. When the park fails the machine's own repair
+// is already done and safe (the lines are kept in reps_log, see ingestUnlocked), so
+// there is nothing here for him to decide about the DATA — but the cause is a path in
+// his state folder that something else is occupying, or a directory gone read-only, and
+// the machine deleting whatever sits there would be auto-acting on his behalf. It also
+// does not self-heal: every later ingest hits the same wall, keeps the lines, and parks
+// nothing, forever, on a lane (pull) whose stdout nobody reads. `why` is clipped to the
+// error CODE because captains_call trims a card at 140 chars and the code is the part
+// that names the fix; the full text is on the report and on the console line above it.
+export function cardQuarantineStuck({ count, why, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+  if (!why) return { filed: false, why: "quarantine did not fail" };
+  const cc = join(scriptsDir, "captains_call.mjs");
+  if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
+  const code = String(why).split(":")[0].trim().slice(0, 24);
+  const line = `quarantine file ban hi nahi rahi (${code}) — ${count || 0} unreadable line reps_log mein hi SAFE hain, delete nahi hui. Path saaf karein?`;
+  const key = `reps:quarantine-stuck:${day}`;
+  try {
+    exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
+    return { filed: true, key, line };
+  } catch (e) {
+    return { filed: false, key, line, why: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// THE OTHER SIDECAR — gemini_quality.jsonl.quarantine.jsonl (wiring audit, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// The 10 Aug repair above gave reps_log's sidecar BOTH ends of a wire: a read door
+// (`quarantine`), a retry, and a captain's card. recordGeminiQuality (:706), written
+// the same day, salvages to the SAME shape of sidecar and got NEITHER end. Traced live
+// 11 Aug 2026: a grep for gemini-quality-quarantine across *.mjs/*.md/*.json returned
+// NOTHING outside the writer; the CLI door was hardcoded to
+// `quarantineTriage(REPS_LOG, reg)`; and the console told him the batch stays invisible
+// "until it is merged back" while naming no command that merges it — because none
+// existed. Built. Present. Not wired.
+// This lane is WORSE to lose than the reps one, and recordGeminiQuality's own header
+// says why: the row is NOT reproducible by re-pasting (stats are computed only when
+// r.appended > 0, and a re-paste of the same batch dedups to 0 appended). A batch
+// salvaged here was permanently absent from HIS 30-45d Gemini review — and on the voice
+// lane even the console saying so is thrown away (dugout.mjs:1557 drops capture's
+// stdout). Its two ledger readers COUNT LINES (scout.mjs:855 · watchman.mjs:211), so
+// the loss reads as an honest-looking smaller number in both.
+// Same three parts as the reps lane, same laws, same organ:
+//   READ   — geminiQuarantineTriage() below, printed by `capture.mjs quarantine gem`.
+//   MERGE  — `quarantine gem retry`, on HIS word, and it goes through
+//            recordGeminiQuality so the merge is VERIFIED ON DISK exactly like the
+//            original write. Nothing is deleted from the sidecar, ever.
+//   NOTICE — cardGeminiQuarantine() through captains_call.mjs's OWN CLI (owners-only),
+//            because a console line on a 14×/day unattended lane reaches nobody.
+const geminiQuarantinePathFor = (ledgerPath) => ledgerPath + ".quarantine.jsonl";
+
+// Pure read — never writes, never spawns. Mirrors quarantineTriage above, with the one
+// difference the two files force: a parked REP is re-validated by validateRep, and a
+// parked STATS ROW has no validator in this repo, so the shape check below is DERIVED
+// from geminiBatchStats' own return (:684 — every row it produces carries `at` as an
+// ISO string and `n` >= 1, since it returns null when the batch holds no gem row).
+// Nothing about the row's CONTENT is judged here; that is the 30-45d review's job.
+export function geminiQuarantineTriage(ledgerPath) {
+  const sidecar = geminiQuarantinePathFor(ledgerPath);
+  if (!existsSync(sidecar)) return { sidecar, exists: false, parked: 0, recoverable: [], already_back: 0, dupe_parked: 0, broken: [] };
+  // The dedupe key is the row RE-SERIALISED, not a key we invented: the ledger line and
+  // the parked line are both `JSON.stringify(stats)` of the same object (recordGeminiQuality
+  // :707), and JSON.parse→JSON.stringify preserves a plain object's key order, so this is
+  // an exact-identity test with nothing chosen by hand.
+  const canon = (o) => JSON.stringify(o);
+  const inLedger = new Set();
+  if (existsSync(ledgerPath)) {
+    try {
+      for (const l of readFileSync(ledgerPath, "utf8").split(/\r?\n/)) {
+        const s = l.trim(); if (!s) continue;
+        try { inLedger.add(canon(JSON.parse(s))); } catch { /* a mangled ledger line can match nothing; triaging the LEDGER is not this door's job */ }
+      }
+    } catch { /* unreadable ledger → every parked row reads recoverable, the safe direction: a merge that lands twice dedups on the next pass, a merge that never happens is data lost */ }
+  }
+  const seen = new Set();
+  const recoverable = [], broken = [];
+  let parked = 0, already_back = 0, dupe_parked = 0;
+  // Same physical-line counter as quarantineTriage, and named `lineNo` rather than the
+  // obvious `at`/`n` because BOTH of those already mean something else on a parked
+  // stats row (`at` is its ISO stamp, `n` its gem count) and the recoverable print
+  // below shows them side by side.
+  let lineNo = 0;
+  for (const line of readFileSync(sidecar, "utf8").split(/\r?\n/)) {
+    lineNo++;
+    const s = line.trim();
+    if (!s) continue;
+    parked++;
+    let o;
+    try { o = JSON.parse(s); } catch { broken.push({ line: s, why: "unparseable JSON line", lineNo }); continue; }
+    if (!o || typeof o !== "object" || Array.isArray(o) || typeof o.at !== "string" || !Number.isFinite(o.n) || o.n < 1) {
+      broken.push({ line: s, why: "not a gemini-quality stats row (geminiBatchStats always sets `at` string + `n` >= 1)", lineNo });
+      continue;
+    }
+    const k = canon(o);
+    if (inLedger.has(k)) { already_back++; continue; }        // an earlier merge already landed it
+    if (seen.has(k)) { dupe_parked++; continue; }             // a FAILED merge re-parks the same text; that is one row, not two
+    seen.add(k);
+    recoverable.push(o);
+  }
+  return { sidecar, exists: true, parked, recoverable, already_back, dupe_parked, broken };
+}
+
+// The anchor for the salvage. Same shape, same organ, same rolling-day key family as
+// cardQuarantine above (captains_call.fileGuard treats a bare YYYY-MM-DD key as ROLLING,
+// captains_call.mjs:874, so a second failed batch the same day mints nothing while the
+// first ask is unanswered). It PROPOSES: the merge itself is `quarantine gem retry`, a
+// command a session runs on HIS word — the machine never quietly rewrites the ledger
+// that his own review will read.
+export function cardGeminiQuarantine({ count, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+  if (!count) return { filed: false, why: "nothing salvaged" };
+  const cc = join(scriptsDir, "captains_call.mjs");
+  if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
+  const line = `${count} gemini batch ka OUTCOME row ledger mein gaya hi nahi — salvage mein park hai, 30-45d review se BAHAR. Wapas daalein?`;
+  const key = `capture:gemini-quarantine:${day}`;
   try {
     exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
     return { filed: true, key, line };
@@ -973,6 +1225,65 @@ export function cardRegistryDown({ why, day = localDate(), scriptsDir = __dirnam
   }
 }
 
+// ---------------------------------------------------------------------------
+// THE UNREADABLE FILE — THE WORST LOSS ON THE LANE, STILL ON THE DEAD LOG
+// (wiring audit pass 2, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// The 10 Aug repair above wired `rejections` (ONE bad rep) to a card and left
+// `failures` — a whole file that could not be READ AT ALL — on the note, whose only
+// destination is scripts/capture.log. PROVEN the same way the rejection defect was:
+// pullFromInbox run against an inbox holding one unreadable file returned
+// failed=1, failures=["colab_export.jsonl: EISDIR"], rejections=[], carded=false,
+// cards filed=0. A repo-wide grep for capture.log returns prose in MANUAL_WIRING.md
+// and two audit docs telling a HUMAN to `tail` it, plus this file's own comments at
+// :738/:873 — zero code readers. So the strictly WORSE case had the weaker wire:
+// one malformed rep reached him, a lost export did not.
+// The per-file isolation at :780 is what makes this permanent rather than loud — the
+// file stays in the inbox and the pull exits 0, so a Drive placeholder or a file the
+// sync engine holds open fails at 09:00, 10:00, 11:00 … forever, and nothing ever says so.
+//
+// WHY A CARD AND NOT A RETRY: the machine cannot open a file Windows refuses it, and
+// it must NEVER reconstruct a rep it could not read (that would be inventing his data).
+// Only he can un-wedge Drive / re-export. THE ANCHOR LAW: it rides an anchor he hits.
+// NO NEW THRESHOLD: the key is `capture:unreadable:<local day>`, the ROLLING shape
+// captains_call.fileGuard already understands (captains_call.mjs:1122) — 14 pulls a day
+// mint at most ONE card, and nothing mints at all while that ask sits unanswered.
+// Deliberately NOT gated on "failed twice": that would be a number nobody measured. The
+// honest cost is that a transient EBUSY which clears on the next hourly pull can leave
+// one stale card on the deck — a card he answers "na" to, against an export lost whole.
+// Same shape, same organ, same rolling-day family as cardQuarantine / cardRegistryDown.
+export function cardUnreadableFiles({ failures = [], day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+  if (!failures.length) return { filed: false, why: "every inbox file was readable — nothing to ask" };
+  const cc = join(scriptsDir, "captains_call.mjs");
+  if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
+  // front-loaded: captains_call clips at 140 chars (captains_call.mjs:1030), so the ASK
+  // comes first and the first failure's "<file>: <code>" takes whatever is left. The
+  // inbox path is deliberately absent — a Windows Drive path would eat the reason, and
+  // the full path is in the note, for Claude.
+  const line = `${failures.length} inbox file(s) PADHI HI NAHI GAYI — poora export atka hai, ek bhi rep nahi aaya. Theek karke dobara daalein? ${failures[0]}`;
+  const key = `capture:unreadable:${day}`;
+  try {
+    exec(process.execPath, [cc, "file", "--line", line, "--key", key], { encoding: "utf8", windowsHide: true, stdio: "pipe" });
+    return { filed: true, key, line };
+  } catch (e) {
+    return { filed: false, key, line, why: `${(e && e.code) || "error"}: ${String((e && e.message) || e).split("\n")[0].slice(0, 160)}` };
+  }
+}
+
+// The CLI half — one lane only, because only `pull` reads files. Mirrors
+// noticeQuarantine / noticeRegistry below: print what happened, then say whether the
+// ask actually REACHED him, because an unfiled card here means the lost export
+// reaches nobody at all.
+function noticeUnreadable(lane, r) {
+  if (!r || !r.failures || !r.failures.length) return null;
+  const c = cardUnreadableFiles({ failures: r.failures });
+  console.log(`${lane}: ⚠ ${r.failures.length} inbox file(s) could NOT be read — they stay in the inbox and will be retried on the next pull: ${r.failures.slice(0, 5).join("; ")}`);
+  console.log(c.filed
+    ? `${lane}:   A captain's card is filed (${c.key}); it deals at his next anchor. Nothing was reconstructed — the machine never invents a rep it could not read.`
+    : `${lane}:   The captain's card could NOT be filed (${c.why}), so NOTHING else in the organism knows this export was lost — capture.log has no readers.`);
+  return c;
+}
+
 // The CLI half of the gate, shared by BOTH write lanes — mirrors noticeQuarantine below.
 // It says the ONE thing the old output could not: the reps landed, nothing on disk was
 // rewritten, and `unregistered` is UNKNOWN rather than true. The pre-gate code printed
@@ -994,12 +1305,89 @@ function noticeRegistry(lane, reg) {
 // the one the 30 Jul repair could not reach, because a warning printed into an
 // unattended scheduled task's stdout is a warning nobody receives.
 function noticeQuarantine(lane, r) {
-  if (!r || !r.quarantined) return null;
+  if (!r) return null;
+  // THE FAILURE BRANCH (11 Aug 2026). Gated on `r.quarantined` alone this returned null
+  // when the park FAILED, which handed paste straight to its "nothing was rewritten this
+  // run, so they are still in reps_log" line — a sentence that was a lie at exactly the
+  // moment the rewrite had just deleted them. The fallback in ingestUnlocked makes the
+  // sentence true again; this makes the failure SAID, and carded, instead of invisible.
+  if (r.quarantine_error) {
+    const c = cardQuarantineStuck({ count: r.skipped_existing || 0, why: r.quarantine_error });
+    console.log(`${lane}:   ⚠ the quarantine sidecar could NOT be written (${r.quarantine_error}) — so reps_log was NOT rewritten: those raw lines are STILL IN IT, untouched, and the new reps were appended instead. Nothing is lost; nothing is parked either.`);
+    console.log(c.filed
+      ? `${lane}:   A captain's card is filed (${c.key}); it deals at his next anchor. Clear ${r.quarantine_sidecar} — the machine will not delete whatever is sitting on that path.`
+      : `${lane}:   The captain's card could NOT be filed (${c.why}), so NOTHING else in the organism knows. Clear ${r.quarantine_sidecar} by hand — every later ingest hits the same wall.`);
+    return c;
+  }
+  if (!r.quarantined) return null;
   const c = cardQuarantine({ count: r.quarantined });
   console.log(c.filed
     ? `${lane}:   ⚠ their raw text is parked in ${r.quarantine_path} — they are NOT in reps_log any more. A captain's card is filed (${c.key}); it deals at his next anchor. Triage: node scripts/capture.mjs quarantine`
     : `${lane}:   ⚠ their raw text is parked in ${r.quarantine_path} — they are NOT in reps_log any more, and the captain's card could NOT be filed (${c.why}), so NOTHING else in the organism knows. Triage now: node scripts/capture.mjs quarantine`);
   return c;
+}
+
+// ---------------------------------------------------------------------------
+// THE OUTCOME LANE'S OTHER DOOR (wiring audit pass 2, 11 Aug 2026)
+// ---------------------------------------------------------------------------
+// The 10 Aug repair moved the gate off the DOOR and onto the ROWS — its own header
+// says it: "what decides what gets measured is the ROWS (surface \"gem\"), not which
+// door they walked in" — and then wired the new engine into TWO of the three doors.
+// `pull` never called it. Traced live today: the only geminiBatchStats /
+// recordGeminiQuality call in main() sat inside `mode === "paste" || mode === "rep"`,
+// while geminiBatchStats already ACCEPTS door "pull" and the selftest already drove it
+// with that exact string — an assertion exercising a production the door could not
+// produce, which is the same "built but not wired" shape the 10 Aug pass was written
+// to kill. Net effect: a surface "gem" batch arriving through the Drive inbox — the
+// OFF-MACHINE handoff this lane is named for — was invisible to the 30-45d review.
+// Latent, not bleeding: the inbox has carried nothing since 10 Jul (done/ was never
+// created), so no row is known lost. That is a reason to close it while the ledger is
+// still empty, not a reason to leave it.
+// NOTHING ABOUT THE ENGINE CHANGES: no new door value invented (geminiBatchStats'
+// signature and the selftest already carried "pull"), no threshold, no schema field,
+// no second recorder to drift. This is the CLI half only — extracted out of the paste
+// branch so the two lanes cannot say different things, exactly as noticeQuarantine /
+// noticeRegistry / noticeUnreadable above are shared by both lanes.
+// Returns a REPORT and never throws: the reps are already on disk by the time we get
+// here, and a ledger miss must never turn a good ingest into a failed scheduled task.
+function noticeGeminiQuality(lane, rows, observedAt) {
+  if (!rows || !rows.length) return null;
+  const stats = geminiBatchStats(rows, observedAt, lane);
+  if (!stats) return null;                       // no surface "gem" row in this batch — a colab pull costs the lane nothing
+  // 10 Aug 2026 — the write REPORTS now (see recordGeminiQuality): the success line is
+  // printed only when the row is verified on disk. It used to print either way, which is
+  // how a dead lane could look alive for weeks.
+  const gq = recordGeminiQuality(GEMINI_QUALITY, stats);
+  // the surrounding lines in the paste block have always printed a fixed "paste:" prefix
+  // even on the `rep` door (a pre-existing wart this repair does not widen); these lines
+  // carry the REAL door, because "which door" is now data.
+  if (gq.ok) {
+    console.log(`${lane}: gemini-quality row recorded (door ${lane} · n ${stats.n}/${stats.of_batch} gem · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
+    // the §6.2 harvest note belongs to the OFF-MACHINE handoff, so it rides the two doors
+    // that ARE one — the paste he runs after a sitting, and the Drive inbox that sitting
+    // exports into. An in-session `rep` does not need it once per rep.
+    if (lane === "paste" || lane === "pull") console.log(`${lane}: (Gemini ka TRANSCRIPT ab /harvest se aa sakta hai — jo sitting harvest hui, wahan process bhi dikhta hai. Yeh lane phir bhi sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)`);
+    return { stats, gq, card: null };
+  }
+  console.log(`${lane}: ⚠ gemini-quality row NOT recorded — ${gq.why}`);
+  console.log(`${lane}:   your ${rows.length} rep(s) ARE safe in reps_log; only this batch's OUTCOME stats missed ${GEMINI_QUALITY}.`);
+  // 11 Aug 2026 — THE SALVAGE'S OTHER END. This branch used to stop at the sentence
+  // below: it named the sidecar, said the batch was invisible "until it is merged back",
+  // and named no command that merges it, because none existed (see THE OTHER SIDECAR
+  // above). Now the ask rides an anchor and the door has a name. Count is 1 by
+  // construction — one stats row per ingest.
+  let card = null;
+  if (gq.saved) {
+    card = cardGeminiQuarantine({ count: 1 });
+    console.log(`${lane}:   the row was salvaged to ${gq.sidecar} — scout.mjs and the watchman count the LEDGER only, so until it is merged back this batch is invisible to both.`);
+    console.log(card.filed
+      ? `${lane}:   A captain's card is filed (${card.key}); it deals at his next anchor. Read it: node scripts/capture.mjs quarantine gem — merge on HIS word: quarantine gem retry.`
+      : `${lane}:   The captain's card could NOT be filed (${card.why}), so NOTHING else in the organism knows this batch is missing. Triage now: node scripts/capture.mjs quarantine gem`);
+  } else {
+    console.log(`${lane}:   the salvage sidecar could not be written either — this batch's stats are LOST.`);
+  }
+  console.log(`${lane}:   re-running this door does NOT recover it: the same reps dedup to 0 appended and no stats row is computed. Free the ledger file, then merge the salvage back.`);
+  return { stats, gq, card };
 }
 
 // ---------------------------------------------------------------------------
@@ -1360,6 +1748,64 @@ function selftest() {
   assert("pull isolation: broken file counted as failed, the good file still ingested",
     pr.pulled === 1 && pr.failed === 1 && !!findQ("pulled_ok") && existsSync(join(inbox, "aaa_broken.jsonl")));
 
+  // --- THE OUTCOME LANE'S THIRD DOOR (wiring audit pass 2, 11 Aug 2026) -----
+  // `pr` above is the live proof of the defect too: bbb_good.jsonl carries a surface
+  // "gem" rep (the `rep()` fixture's own default), it was APPENDED, and before this
+  // repair pullFromInbox returned no appended_rows and no observed_at at all — so the
+  // CLI had nothing to hand geminiBatchStats and the pull door recorded nothing, ever.
+  // These two go red the moment either half of the wire is cut: the carry, and the
+  // production the door could not produce (the engine has accepted door "pull" since
+  // 10 Aug and only the selftest below ever drove it).
+  {
+    assert("gemini-quality wire — the pull CARRIES its appended rows and its measured arrival clock off the run (was: neither key existed)",
+      Array.isArray(pr.appended_rows) && pr.appended_rows.length === pr.pulled
+      && pr.appended_rows.every((x) => typeof x.ts === "string")
+      && typeof pr.observed_at === "string" && Number.isFinite(Date.parse(pr.observed_at)));
+    const ps = geminiBatchStats(pr.appended_rows, pr.observed_at, "pull");
+    assert("gemini-quality wire — those rows really do produce a door-\"pull\" stats row (the 30-45d review can now see a Drive export)",
+      !!ps && ps.door === "pull" && ps.n === 1 && ps.of_batch === 1 && ps.at === pr.observed_at && ps.surfaces.gem === 1);
+    // BOTH ENDS. A helper nobody calls is the same dead wire in a new coat — and this
+    // lane has now been half-wired twice (paste-only on 7 Aug, paste+rep on 10 Aug), so
+    // the assertion names ALL THREE doors that can append a rep.
+    const gSrc = readFileSync(join(__dirname, "capture.mjs"), "utf8");
+    assert("gemini-quality wire — every ingest door fires the SAME recorder: paste/rep via `mode`, and pull explicitly",
+      /noticeGeminiQuality\(mode, r\.appended_rows, r\.observed_at\)/.test(gSrc)
+      && /noticeGeminiQuality\("pull", r\.appended_rows, r\.observed_at\)/.test(gSrc)
+      // …and ONE recorder, not two: the paste branch's inline copy is gone, so a future
+      // change to the lane cannot land on one door and miss the others again. (The gem
+      // quarantine's merge door is the ledger's other legitimate writer and is excluded
+      // by name — it re-appends a PARKED row, it never computes stats.)
+      && !/geminiBatchStats\(r\.appended_rows/.test(gSrc)
+      && (gSrc.match(/geminiBatchStats\(rows, observedAt, lane\)/g) || []).length === 1);
+  }
+
+  // --- THE UNREADABLE-FILE WIRE (wiring audit pass 2, 11 Aug 2026) ----------
+  // `pr` above is the live proof of the defect: failed=1, failures=[…EISDIR], and
+  // before this repair carded=false with zero cards filed anywhere. These four exist
+  // because a LOST EXPORT reached nobody while a single rejected rep reached him.
+  {
+    assert("unreadable wire — the failure is CARRIED off the pull, named by file and errno (not just a count)",
+      Array.isArray(pr.failures) && pr.failures.length === pr.failed
+      && /^aaa_broken\.jsonl: (EISDIR|EPERM|EACCES|EBUSY)/.test(pr.failures[0]));
+    const ucalls = [];
+    const uc = cardUnreadableFiles({ failures: pr.failures, day: "2026-08-11", scriptsDir: __dirname, exec: (bin, argv) => { ucalls.push(argv); return ""; } });
+    assert("unreadable wire — it files ONE card through captains_call's OWN CLI, rolling day-key, and the line names the file",
+      uc.filed === true && ucalls.length === 1 && ucalls[0][0].endsWith("captains_call.mjs")
+      && ucalls[0][1] === "file" && ucalls[0][ucalls[0].indexOf("--key") + 1] === "capture:unreadable:2026-08-11"
+      && /PADHI HI NAHI GAYI/.test(uc.line) && uc.line.includes("aaa_broken.jsonl"));
+    assert("unreadable wire — a readable inbox asks NOTHING (13 of 14 daily pulls cost zero)",
+      cardUnreadableFiles({ failures: [], scriptsDir: __dirname, exec: () => { throw new Error("must not spawn"); } }).filed === false);
+    assert("unreadable wire — a deck that refuses the card is REPORTED, never thrown (the pulled reps are already on disk)",
+      cardUnreadableFiles({ failures: ["x.jsonl: EBUSY"], scriptsDir: __dirname, exec: () => { throw new Error("deck locked"); } }).filed === false);
+    // BOTH ENDS. A helper nobody calls is the same dead wire in a new coat — this is the
+    // assertion that goes red if the call site is ever deleted again. (Own source read
+    // locally: the quarantine block's `ownSrc` is scoped to its own block, below.)
+    const uSrc = readFileSync(join(__dirname, "capture.mjs"), "utf8");
+    assert("unreadable wire — the pull lane still FIRES it, and still through the owner's CLI (never captains_call.json)",
+      /noticeUnreadable\("pull", r\)/.test(uSrc) && /cardUnreadableFiles\(\{ failures: r\.failures \}\)/.test(uSrc)
+      && !/captains_call\.json/.test(uSrc.slice(uSrc.indexOf("export function cardUnreadableFiles"), uSrc.indexOf("function noticeRegistry"))));
+  }
+
   // pull archive: a name collision in done/ must not silently overwrite the older file.
   const inbox2 = join(dir, "inbox2"); mkdirSync(join(inbox2, "done"), { recursive: true });
   writeFileSync(join(inbox2, "done", "ccc.jsonl"), "");                  // an older session already archived
@@ -1582,6 +2028,139 @@ function selftest() {
     assert("quarantine wire — both ingest lanes still fire the notice, and the read door is still on the CLI",
       /noticeQuarantine\("paste", r\)/.test(ownSrc) && /noticeQuarantine\("pull", r\)/.test(ownSrc)
       && /mode === "quarantine"/.test(ownSrc) && /quarantineTriage\(REPS_LOG, reg\)/.test(ownSrc));
+
+    // --- THE PREVIEW THAT LOOKED COMPLETE (wiring audit, 11 Aug 2026) -------
+    // The fixture is the REAL shape, not a toy: longer than the cap the way all 21 live
+    // reps_log lines are (median 440 / max 513, measured 11 Aug 2026), and with the field
+    // a triage would accuse deliberately sitting PAST where the old cut landed.
+    const longRep = JSON.stringify({ ts: "2026-08-11T09:20:00Z", surface: "gem", track: "concept", concept: "tokenization",
+      axis: "a", question: ("q-long ").repeat(50).trim(), confidence: "knew", correct: true });
+    assert("preview — the fixture reproduces the live shape: over the cap, and `correct` (the field a `why` would accuse) sits past the old cut",
+      longRep.length > 400 && longRep.indexOf('"correct"') > QUARANTINE_PREVIEW);
+    const prevOut = quarantinePreview(longRep, 7);
+    assert("preview — a cut line SAYS it was cut, names how many of how many chars are missing, and names the sidecar line to open (it used to end mid-JSON with nothing on screen admitting more existed)",
+      prevOut.startsWith(longRep.slice(0, QUARANTINE_PREVIEW - 1)) && prevOut.includes(CLIP_MARK)
+      && prevOut.includes(`${longRep.length - (QUARANTINE_PREVIEW - 1)} of ${longRep.length} chars NOT shown`)
+      && /line 7 of the sidecar/.test(prevOut));
+    assert("preview — a line that FITS is printed whole and unmarked; the marker must only ever mean real loss",
+      quarantinePreview('{"a":1}', 1) === '{"a":1}' && quarantinePreview("x".repeat(QUARANTINE_PREVIEW), 2).length === QUARANTINE_PREVIEW);
+    assert("preview — LAYERING: the frozen bare cut is still in the file and still shows the damage — exactly 160 chars, no marker, no count, nothing saying it is a fragment",
+      quarantinePreviewLegacy(longRep) === longRep.slice(0, 160) && !quarantinePreviewLegacy(longRep).includes(CLIP_MARK));
+    // BOTH DOORS. A helper nobody calls is the same dead wire in a new coat, and the
+    // regression that brings this back is one raw cut in either lane. Counted against
+    // the number of broken-line print sites rather than a literal 2, so a THIRD door
+    // (this file has grown one already) is forced to wire itself instead of silently
+    // reopening the hole. The patterns below are escaped, so they never match the
+    // assertion you are reading — a check that fails on its own source is noise.
+    const brokenPrints = (ownSrc.match(/✗ \$\{b\.why\}/g) || []).length;
+    const markedPrints = (ownSrc.match(/\$\{quarantinePreview\(b\.line, b\.lineNo\)\}/g) || []).length;
+    assert("preview — EVERY broken-line print in this file goes through the marker, and no door slices a parked line raw any more (reps AND gemini-quality)",
+      brokenPrints >= 2 && markedPrints === brokenPrints
+      && !/b\.line\.slice\(/.test(ownSrc) && !/\(b\.line\)\.slice\(/.test(ownSrc));
+    // …and the triage must NUMBER the lines, or the print above has nothing to point at.
+    const tprev = quarantineTriage(qp, reg);
+    assert("preview — the triage numbers each parked line so the print can send him to it in the sidecar (physical line, blanks counted, the way an editor counts)",
+      tprev.broken.length > 0 && tprev.broken.every((b) => Number.isFinite(b.lineNo) && b.lineNo >= 1));
+
+    // --- THE EMPTY CATCH (wiring audit, 11 Aug 2026) ------------------------
+    // The 30 Jul repair above parks the raw text BEFORE the rewrite — but its catch was
+    // empty, so a park that failed left `quarantined` at 0 while the rewrite deleted the
+    // lines anyway, filed no card, and printed "they are still in reps_log." Occupy the
+    // sidecar path with a DIRECTORY (EISDIR — the shape that proved it, and the shape
+    // recordGeminiQuality's own blocked-ledger test uses). Put the empty catch back and
+    // this goes red on the only fact that matters: his unregenerable raw line survives.
+    const sp = join(dir, "stuck_reps.jsonl");
+    if (existsSync(sp)) rmSync(sp);
+    if (existsSync(quarantinePathFor(sp))) rmSync(quarantinePathFor(sp), { recursive: true });
+    ingest(sp, [rep({ question: "s-keep" })], reg);
+    const mangled = '{"ts":"2026-08-11T09:00:00Z","surface":"gem","concept":"tokenization","question":"s-park"';
+    appendFileSync(sp, mangled + "\n", "utf8");
+    mkdirSync(quarantinePathFor(sp), { recursive: true });      // the park cannot succeed
+    const sr = ingest(sp, [rep({ question: "s-new" })], reg);
+    const sAfter = readFileSync(sp, "utf8");
+    assert("quarantine wire — a park that FAILS is NAMED and the rewrite is not allowed to delete the raw lines (the 11 Aug empty catch)",
+      sr.appended === 1 && sr.quarantined === 0 && sr.quarantine_path === null
+      && typeof sr.quarantine_error === "string" && sr.quarantine_error.length > 0
+      && sr.quarantine_sidecar === quarantinePathFor(sp)
+      && sAfter.includes(mangled)                                        // THE fact: the unreadable line is STILL in reps_log
+      && loadReps(sp, reg).some((x) => x.question === "s-new")           // and the good rep still landed
+      && loadReps(sp, reg).some((x) => x.question === "s-keep"));        // and the old one was not clobbered by the append
+    rmSync(quarantinePathFor(sp), { recursive: true, force: true });
+    // and the failure reaches the CAPTAIN — own rolling key family, owner's CLI, and the
+    // console branch that stops paste printing the sentence that used to be a lie.
+    const scalls = [];
+    const sc = cardQuarantineStuck({ count: 1, why: "EISDIR: illegal operation on a directory", day: "2026-08-11", scriptsDir: __dirname, exec: (bin, argv) => { scalls.push({ bin, argv }); return ""; } });
+    assert("quarantine wire — a stuck sidecar rides the ANCHOR (reps:quarantine-stuck:<day>) and the notice branches on quarantine_error, not on quarantined",
+      sc.filed === true && scalls.length === 1 && scalls[0].argv[0].endsWith("captains_call.mjs")
+      && scalls[0].argv[scalls[0].argv.indexOf("--key") + 1] === "reps:quarantine-stuck:2026-08-11"
+      && scalls[0].argv[3].length <= 140 && /SAFE/.test(scalls[0].argv[3])
+      && /if \(r\.quarantine_error\)/.test(ownSrc)
+      && /quarantine_error: quarantineError/.test(ownSrc)      // and the pull lane carries it to that notice
+      && cardQuarantineStuck({ count: 1, why: "EISDIR", scriptsDir: __dirname, exec: () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }); } }).filed === false);
+  }
+
+  // --- THE OTHER SIDECAR'S WIRE (wiring audit, 11 Aug 2026) -----------------
+  // gemini_quality.jsonl.quarantine.jsonl had a writer (recordGeminiQuality's fail
+  // path, 10 Aug) and ZERO readers repo-wide, and the CLI door was hardcoded to
+  // quarantineTriage(REPS_LOG, reg). These assertions are the wire: cut any end and
+  // one goes red. The row parked here is UNREGENERABLE — a re-paste of the same batch
+  // dedups to 0 appended and computes no stats — so a black box here is data gone.
+  {
+    const gl = join(dir, "gq_wire.jsonl");
+    const gs = geminiQuarantinePathFor(gl);
+    for (const p of [gl, gs]) if (existsSync(p)) rmSync(p, { recursive: true, force: true });
+    // the shapes a real fail path parks: the row itself, verbatim JSON.stringify output.
+    const row = (at, n) => ({ at, door: "rep", n, of_batch: n, notes: [], surfaces: { gem: n }, concepts: ["hallucinations"] });
+    const landed = row("2026-08-11T09:00:00Z", 1);          // this one made it to the ledger later
+    const lost   = row("2026-08-11T10:00:00Z", 2);          // this one is still only in the salvage
+    appendFileSync(gl, JSON.stringify(landed) + "\n", "utf8");
+    appendFileSync(gs, JSON.stringify(landed) + "\n", "utf8");
+    appendFileSync(gs, JSON.stringify(lost) + "\n", "utf8");
+    appendFileSync(gs, JSON.stringify(lost) + "\n", "utf8");            // a FAILED merge re-parks the same text: one row, not two
+    appendFileSync(gs, '{"at":"2026-08-11T11:00:00Z","n":1\n', "utf8"); // truncated
+    appendFileSync(gs, JSON.stringify({ hello: "not a stats row" }) + "\n", "utf8");
+    const g = geminiQuarantineTriage(gl);
+    assert("gem-quarantine wire — the salvaged rows are READ BACK and triaged (before 11 Aug 2026 nothing in the repo opened this file)",
+      g.exists && g.parked === 5 && g.recoverable.length === 1 && g.recoverable[0].n === 2
+      && g.already_back === 1 && g.dupe_parked === 1 && g.broken.length === 2
+      && /unparseable/.test(g.broken[0].why) && /stats row/.test(g.broken[1].why));
+    // THE MERGE, through the same verified-on-disk writer the original batch used —
+    // and idempotent after it, which is what makes `retry` safe to run twice.
+    const back = recordGeminiQuality(gl, g.recoverable[0]);
+    const again = geminiQuarantineTriage(gl);
+    // already_back counts parked LINES that are in the ledger, so after the merge the
+    // repeat park counts there too (1 landed + 2 copies of the merged row = 3 of the 5
+    // parked lines). The number that matters is the one below it: the LEDGER grew by
+    // exactly one row, not two — a repeat park can never inflate his review's evidence.
+    assert("gem-quarantine wire — retry MERGES the parked row into the ledger through recordGeminiQuality, and a second pass reads it as already_back (nothing double-counted, nothing deleted)",
+      back.ok === true
+      && readFileSync(gl, "utf8").split("\n").filter((l) => l.trim()).length === 2
+      && again.recoverable.length === 0 && again.already_back === 3 && again.dupe_parked === 0 && again.parked === 5);
+    // a merge into a STILL-blocked ledger must not report success (the 10 Aug lesson).
+    const blocked = join(dir, "gq_wire_blocked.jsonl");
+    if (existsSync(blocked)) rmSync(blocked, { recursive: true, force: true });
+    mkdirSync(blocked, { recursive: true });
+    assert("gem-quarantine wire — merging into a ledger that is STILL blocked returns ok:false, so `retry` can never announce a recovery that did not land",
+      recordGeminiQuality(blocked, lost).ok === false);
+    // THE NOTICE. It must leave this process as a captain's card, on the OWNER's CLI.
+    const gcalls = [];
+    const gc = cardGeminiQuarantine({ count: 1, day: "2026-08-11", scriptsDir: __dirname, exec: (bin, argv) => { gcalls.push(argv); return ""; } });
+    assert("gem-quarantine wire — the salvage rides an ANCHOR: captains_call.mjs's own CLI, rolling day-key (capture:gemini-quarantine:<day>), clipped under the deck's 140",
+      gc.filed === true && gcalls.length === 1 && gcalls[0][0].endsWith("captains_call.mjs")
+      && gcalls[0][1] === "file" && gcalls[0][2] === "--line" && gcalls[0][3].length <= 140
+      && gcalls[0][gcalls[0].indexOf("--key") + 1] === "capture:gemini-quarantine:2026-08-11"
+      && cardGeminiQuarantine({ count: 0, scriptsDir: __dirname, exec: () => { throw new Error("x"); } }).filed === false
+      && cardGeminiQuarantine({ count: 1, scriptsDir: __dirname, exec: () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }); } }).filed === false);
+    // BOTH ENDS STILL CONNECTED — the defect was never in the helper, it was that no
+    // caller existed. The console branch must file the card, and the CLI must have the door.
+    const gwSrc = readFileSync(join(__dirname, "capture.mjs"), "utf8");
+    assert("gem-quarantine wire — the salvage console FILES the card and the read+merge door is on the CLI (a helper nobody calls is the same dead wire in a new coat)",
+      /cardGeminiQuarantine\(\{ count: 1 \}\)/.test(gwSrc)
+      && /geminiQuarantineTriage\(GEMINI_QUALITY\)/.test(gwSrc)
+      && /process\.argv\[3\] \|\| ""\)\.toLowerCase\(\) === "gem"/.test(gwSrc)
+      && /recordGeminiQuality\(GEMINI_QUALITY, row\)/.test(gwSrc)
+      // owners-only: the ask goes through captains_call's CLI, never its state file
+      && !/(writeFileSync|appendFileSync|writeAtomic|rmSync)\s*\([^)]*captains_call/.test(gwSrc));
   }
 
   // --- THE REGISTRY GATE (wiring audit, 10 Aug 2026) ------------------------
@@ -1765,6 +2344,9 @@ function main() {
       console.log(`paste: ⚠ ${r.skipped_existing} EXISTING line(s) in reps_log could not be read: ${r.skipped_reasons.join(" · ")}`);
       // 10 Aug 2026 — "Inspect that file" used to be the WHOLE notice, and nothing in
       // the organism read that file. The card is the notice now (see noticeQuarantine).
+      // 11 Aug 2026 — and the line below is only reachable when NOTHING was rewritten:
+      // noticeQuarantine now returns a card on a FAILED park too, which is precisely the
+      // case where this sentence used to print while the rewrite had just deleted them.
       if (!noticeQuarantine("paste", r)) {
         console.log(`paste:   nothing was rewritten this run, so they are still in reps_log. Inspect it before the next successful ingest.`);
       }
@@ -1780,31 +2362,12 @@ function main() {
     // what gets measured is the ROWS (surface "gem"), not which door they walked in.
     // `mode` rides along so the row can NAME its door — the label the 30-45d review
     // needs and the machine can actually prove.
-    if (r.appended > 0) {
-      const stats = geminiBatchStats(r.appended_rows, r.observed_at, mode);
-      if (stats) {
-        // 10 Aug 2026 — the write REPORTS now (see recordGeminiQuality): the success
-        // line is printed only when the row is verified on disk. It used to print
-        // either way, which is how a dead lane could look alive for weeks.
-        const gq = recordGeminiQuality(GEMINI_QUALITY, stats);
-        // the surrounding lines in this block have always printed a fixed "paste:"
-        // prefix even on the `rep` door (a pre-existing wart this repair does not
-        // widen); these lines carry the REAL door, because "which door" is now data.
-        if (gq.ok) {
-          console.log(`${mode}: gemini-quality row recorded (door ${mode} · n ${stats.n}/${stats.of_batch} gem · gut mix ${Object.entries(stats.confidence_mix).map(([k, v]) => `${k} ${v}`).join("/")} · correct ${Math.round(stats.correct_rate * 100)}%) → gemini_quality.jsonl`);
-          // the §6.2 harvest note belongs to the OFF-MACHINE handoff, so it stays on
-          // the paste door — an in-session `rep` does not need it once per rep.
-          if (mode === "paste") console.log("paste: (Gemini ka TRANSCRIPT ab /harvest se aa sakta hai — jo sitting harvest hui, wahan process bhi dikhta hai. Yeh lane phir bhi sirf OUTCOME record karti hai; faisla 30-45d ke data ke baad. Cold check = day-end Examiner.)");
-        } else {
-          console.log(`${mode}: ⚠ gemini-quality row NOT recorded — ${gq.why}`);
-          console.log(`${mode}:   your ${r.appended} rep(s) ARE safe in reps_log; only this batch's OUTCOME stats missed ${GEMINI_QUALITY}.`);
-          console.log(gq.saved
-            ? `${mode}:   the row was salvaged to ${gq.sidecar} — scout.mjs and the watchman count the LEDGER only, so until it is merged back this batch is invisible to both.`
-            : `${mode}:   the salvage sidecar could not be written either — this batch's stats are LOST.`);
-          console.log(`${mode}:   re-running this door does NOT recover it: the same reps dedup to 0 appended and no stats row is computed. Free the ledger file first.`);
-        }
-      }
-    }
+    // 11 Aug 2026 — the block that used to sit inline here is now noticeGeminiQuality,
+    // shared with the PULL door, which this repair had left out of "both doors". Not a
+    // second engine and not a rewrite: the same lines, moved beside their siblings
+    // (noticeQuarantine / noticeRegistry / noticeUnreadable), so the three doors that
+    // can append a rep cannot drift into saying different things about the same lane.
+    noticeGeminiQuality(mode, r.appended_rows, r.observed_at);
     // #26 — the paste lane's recompute. OPT-IN, and that is deliberate: the forge
     // skill (SKILL.md step 2) and turnstile.mjs:175 already chain heartbeat right
     // after their paste, and dugout.mjs:1143 shells this synchronously on every
@@ -1844,9 +2407,19 @@ function main() {
         ? `pull: ⚠ ${r.rejections.length} rejected rep(s) → captains_call (key capture:rejected:${localDate()}): ${r.card_said || "handed to the deck"}`
         : `pull: ⚠ ${r.rejections.length} rejected rep(s) and the card could NOT be filed${r.card_error ? ` (${r.card_error})` : ""} — nothing else reads this lane, so the reasons above are the only record.`);
     }
+    // 11 Aug 2026 — THE STRICTLY WORSE CASE THAT HAD THE WEAKER WIRE. A rejection
+    // costs one rep and got a card on 10 Aug; a file that cannot be READ costs the whole
+    // export and stayed on capture.log, which nothing reads. See cardUnreadableFiles.
+    noticeUnreadable("pull", r);
     // 10 Aug 2026 — THE LANE THAT NEEDED IT MOST. `pull` runs 14× a day with nobody
     // reading its stdout, so a quarantine here reached no one at all until the card.
     noticeQuarantine("pull", r);
+    // 11 Aug 2026 — THE THIRD DOOR. The 10 Aug repair said "BOTH doors record now" and
+    // meant paste+rep; the Drive inbox — the one door that actually IS the off-machine
+    // Gemini handoff — never called the recorder at all, so a gem export landing here
+    // was invisible to the 30-45d review. Same helper, same engine, same ROWS gate; the
+    // row names its door as "pull". See noticeGeminiQuality.
+    noticeGeminiQuality("pull", r.appended_rows, r.observed_at);
     // #25 — THE FIX. A rep pulled at 14:00 used to leave every derived organ on
     // yesterday's answer until 08:39 tomorrow. Now the pull that actually brought
     // reps in triggers the same ordered recompute the morning beat runs.
@@ -1861,15 +2434,52 @@ function main() {
 
   // THE QUARANTINE DOOR (10 Aug 2026) — the read end of the sidecar nothing read.
   if (mode === "quarantine") {
+    // TWO SIDECARS, ONE DOOR (11 Aug 2026). `quarantine` is reps_log's read end;
+    // `quarantine gem` is gemini_quality's, which had a writer and no reader at all.
+    // Same grammar on purpose — print first, merge only when he says `retry`.
+    if ((process.argv[3] || "").toLowerCase() === "gem") {
+      const g = geminiQuarantineTriage(GEMINI_QUALITY);
+      if (!g.exists) { console.log(`quarantine gem: nothing salvaged — ${g.sidecar} does not exist (no gemini-quality row has ever missed the ledger).`); process.exit(0); }
+      console.log(`quarantine gem: ${g.parked} row(s) parked in ${g.sidecar} — ${g.recoverable.length} would merge back today, ${g.already_back} already in the ledger, ${g.dupe_parked} repeat park(s) of a row already listed, ${g.broken.length} not a stats row.`);
+      for (const b of g.broken.slice(0, 10)) console.log(`  ✗ ${b.why}\n     ${quarantinePreview(b.line, b.lineNo)}`);
+      if (g.broken.length > 10) console.log(`  … and ${g.broken.length - 10} more`);
+      for (const r of g.recoverable.slice(0, 10)) console.log(`  ↺ ${r.at} · door ${r.door || "?"} · n ${r.n}/${r.of_batch === undefined ? "?" : r.of_batch} gem · concepts ${(r.concepts || []).join(",") || "?"}`);
+      if (g.recoverable.length > 10) console.log(`  … and ${g.recoverable.length - 10} more`);
+      if (process.argv[4] !== "retry") {
+        console.log(g.recoverable.length
+          ? "quarantine gem: `node scripts/capture.mjs quarantine gem retry` merges them into gemini_quality.jsonl (same verified-on-disk write as the original). HIS word first — this is the evidence HIS 30-45d review reads."
+          : "quarantine gem: nothing to merge. A row that is not a stats row is TEXT: fix it in the sidecar by hand, then retry. Nothing here is ever deleted.");
+        process.exit(0);
+      }
+      if (!g.recoverable.length) { console.log("quarantine gem retry: nothing recoverable — the ledger is untouched."); process.exit(0); }
+      // Through the SAME writer the original batch used, so a merge into a still-blocked
+      // ledger is caught on disk instead of being announced. A failed merge re-parks the
+      // row (recordGeminiQuality's fail path) — it is already in the sidecar, so that
+      // shows up as `dupe_parked` on the next triage, never as a second lost batch.
+      let merged = 0, failed = 0;
+      for (const row of g.recoverable) {
+        const res = recordGeminiQuality(GEMINI_QUALITY, row);
+        if (res.ok) { merged++; continue; }
+        failed++;
+        console.log(`  ✗ ${row.at}: ${res.why}${res.saved ? " (still parked)" : " (NOT parked — this row now exists only in your scrollback)"}`);
+      }
+      console.log(`quarantine gem retry: merged ${merged}, failed ${failed} → ${GEMINI_QUALITY}. The sidecar is NOT cleared — a second retry reads them as already back.`);
+      if (merged > 0) console.log("quarantine gem retry: scout.mjs and the watchman count LINES in that ledger, so these batches are visible to both from their next run. Nothing judges them — that is the 30-45d review, his rule.");
+      process.exit(0);
+    }
     const t = quarantineTriage(REPS_LOG, reg);
-    if (!t.exists) { console.log(`quarantine: nothing parked — ${t.sidecar} does not exist (no reps_log line has ever been unreadable).`); process.exit(0); }
+    // discoverability: one door, and the OTHER sidecar says so when it has anything in it.
+    const gemSide = geminiQuarantinePathFor(GEMINI_QUALITY);
+    const gemHint = () => { if (existsSync(gemSide)) console.log("quarantine: gemini-quality rows are ALSO parked (a separate lane) — read them with `node scripts/capture.mjs quarantine gem`."); };
+    if (!t.exists) { console.log(`quarantine: nothing parked — ${t.sidecar} does not exist (no reps_log line has ever been unreadable).`); gemHint(); process.exit(0); }
     console.log(`quarantine: ${t.parked} line(s) parked in ${t.sidecar} — ${t.recoverable.length} would come back today, ${t.already_back} already back in reps_log, ${t.broken.length} still broken.`);
-    for (const b of t.broken.slice(0, 10)) console.log(`  ✗ ${b.why}\n     ${b.line.slice(0, 160)}`);
+    for (const b of t.broken.slice(0, 10)) console.log(`  ✗ ${b.why}\n     ${quarantinePreview(b.line, b.lineNo)}`);
     if (t.broken.length > 10) console.log(`  … and ${t.broken.length - 10} more`);
     if (process.argv[3] !== "retry") {
       console.log(t.recoverable.length
         ? "quarantine: `node scripts/capture.mjs quarantine retry` puts the recoverable ones back through the front door (same validator, same dedupe). HIS word first — this is his corpus."
         : "quarantine: nothing is recoverable as-is. A broken line is TEXT: fix it in the sidecar by hand, then retry. Nothing here is ever deleted.");
+      gemHint();
       process.exit(0);
     }
     if (!t.recoverable.length) { console.log("quarantine retry: nothing recoverable — reps_log untouched."); process.exit(0); }
@@ -1879,7 +2489,7 @@ function main() {
     process.exit(0);
   }
 
-  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs quarantine [retry]       triage the reps parked out of reps_log (retry = re-ingest the recoverable ones)\n  node capture.mjs selftest                 run baked-mock checks");
+  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs quarantine [retry]       triage the reps parked out of reps_log (retry = re-ingest the recoverable ones)\n  node capture.mjs quarantine gem [retry]   triage the gemini-quality rows that missed the ledger (retry = merge them back)\n  node capture.mjs selftest                 run baked-mock checks");
   process.exit(0);
 }
 

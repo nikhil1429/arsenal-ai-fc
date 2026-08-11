@@ -113,6 +113,113 @@ export function geminiLaneLive(brainCfg) {
   return jobs.some((j) => j && j.engine === "gemini" && j.enabled !== false);
 }
 
+// ── WIRING REPAIR (11 Aug 2026) — THE MARKET CARD HAD NO CONTENT WIRE ────────
+// FOUND by a dead-wire tracing pass: the market card's ONLY content was a
+// `**Honest read:**` line scraped out of brain_out/market/<date>.md — a field
+// NOTHING in this organism produces. It is not in market_scan's job config, not
+// in its prompt, not in any doc (`grep -c "Honest read"
+// dressing-room/state/brain_config.json` → 0); exactly ONE of the four market
+// files ever written happens to contain the phrase (2026-08-01 — one LLM turn's
+// own choice of words). So the live deck carries c11 and c12 reading
+// `Scout ka market proposal (2026-08-09) — 3 line mein sunna hai?` with no quote
+// and no field naming the absence: an anchor spent asking him to hear a report
+// the card cannot describe. Worse — BOTH of those files say in their own text
+// "Market data: NOT AVAILABLE … Nothing to propose to `OPPONENT_SCOUT.md` this
+// week", so the honest answer to "sunna hai?" was "there is nothing to hear".
+// THE FIX is two wires, both CONSUMER-SIDE on purpose: brain_config.json is
+// brain.mjs's file and writing the producer a new output contract is neither
+// this organ's job nor a thing to do by hand.
+//   1. LAYERED extraction (marketGist) — the legacy scrape stays FIRST and
+//      verbatim, then the markers the four live files actually carry, then the
+//      first real prose line. A card now describes what it points at.
+//   2. the NO-OP gate (marketNoopWhy) — when the proposal declares IN ITS OWN
+//      WORDS that it has nothing to propose, no card is minted, and a card
+//      already standing on such a file retires AT SOURCE (never `answer` — his
+//      word is never forged). The ANCHOR LAW decides this, not a threshold:
+//      a thing that cannot be described cannot need the captain. Nothing is
+//      lost either way — the file stays on disk for the session Claude, and
+//      `brain status` still prints it by path (market_scan's own surface).
+
+// FROZEN VERBATIM (layering law) — the 7 Aug engine, and the entire content wire
+// this organ had until 11 Aug 2026. Kept as layer 1, not deleted, because when
+// the producer DOES write an honest-read line it is the best sentence in the
+// file (2026-08-01, live: "no contradiction with existing scout — this
+// reinforces it, doesn't overturn it").
+export function marketHonestLegacy(txt) {
+  const m = String(txt || "").match(/\*\*Honest read:\*\*\s*([^\n]+)/i);
+  return m ? m[1] : "";
+}
+
+// the lines under a `## <heading>` section, up to the next heading.
+function mdSection(txt, headingRe) {
+  const lines = String(txt || "").split(/\r?\n/);
+  const i = lines.findIndex((l) => headingRe.test(l.trim()));
+  if (i < 0) return "";
+  const out = [];
+  for (let j = i + 1; j < lines.length; j++) {
+    if (/^#{1,6}\s/.test(lines[j])) break;
+    out.push(lines[j]);
+  }
+  return out.join("\n").trim();
+}
+
+// last-ditch layer: the first line that is actual prose — not a heading, not the
+// italic sub-title every market file opens with, not a bare bold label ending in
+// a colon (`**Top 5 requested this week:**`), not a rule.
+function mdFirstProse(txt) {
+  for (const raw of String(txt || "").split(/\r?\n/)) {
+    const l = raw.trim();
+    if (!l) continue;
+    if (/^#{1,6}\s/.test(l) || /^[-*_]{3,}$/.test(l)) continue;
+    if (/^\*[^*].*\*$/.test(l)) continue;                 // wholly italic sub-title
+    if (/^\*\*[^*]+:\*\*$/.test(l)) continue;             // bare bold label
+    return l.replace(/^\d+\.\s*/, "").replace(/\*\*/g, "");
+  }
+  return "";
+}
+
+// Ordered probes. Every marker here is taken from a market file that EXISTS on
+// disk today — no field name is invented, which is the exact mistake being
+// repaired. Order = how much the sentence tells him, best first.
+const MARKET_PROBES = [
+  ["honest-read", (t) => marketHonestLegacy(t)],
+  // "## Recommendation" — the section 2026-08-08 and 2026-08-09 both end on.
+  ["recommendation", (t) => (mdSection(t, /^#{1,6}\s*recommendation\b/i).split(/\r?\n/)[0] || "").trim()],
+  // "**Diff vs your coverage:** …" (2026-07-19) / "**Diff vs your current coverage…**" (2026-08-01)
+  ["diff", (t) => { const m = String(t || "").match(/\*\*Diff vs[^*]*\*\*[:\s]*([^\n]+)/i); return m ? m[1] : ""; }],
+  // "**Confidence:** …" (2026-07-19)
+  ["confidence", (t) => { const m = String(t || "").match(/\*\*Confidence:\*\*\s*([^\n]+)/i); return m ? m[1] : ""; }],
+  ["first-prose", (t) => mdFirstProse(t)],
+];
+
+export function marketGist(txt) {
+  for (const [via, probe] of MARKET_PROBES) {
+    const g = String(probe(txt) || "").replace(/`/g, "").trim();
+    if (g) return { gist: g, via };
+  }
+  return { gist: "", via: null };            // unreadable ⇒ the old bare line, never a crash
+}
+
+// Does the proposal declare ITSELF a no-op? Structural on purpose — a heading, a
+// bold status line, or the Recommendation section — so the same words appearing
+// inside a REAL proposal's body can never silence it. Returns the reason (which
+// becomes the retire epitaph) or null.
+export function marketNoopWhy(txt) {
+  const t = String(txt || "");
+  for (const raw of t.split(/\r?\n/)) {
+    const l = raw.trim();
+    // 2026-08-09, live: "## Market data: NOT AVAILABLE"
+    if (/^#{1,6}\s*market data:\s*not available\b/i.test(l)) return "the file's own heading — market data NOT AVAILABLE, nothing to propose";
+    // 2026-08-08, live: "**Status: no-op this week.**"
+    if (/^\*\*status:\s*no-?op\b/i.test(l)) return "the file's own status line — no-op, nothing to propose";
+  }
+  // 2026-08-08 "No canon edit proposed." · 2026-08-09 "Nothing to propose to
+  // `OPPONENT_SCOUT.md` this week." — read ONLY inside ## Recommendation.
+  const rec = mdSection(t, /^#{1,6}\s*recommendation\b/i);
+  if (rec && /\b(no|nothing)\b[^.\n]{0,40}\bpropos/i.test(rec)) return "the file's own Recommendation — nothing to propose this week";
+  return null;
+}
+
 // ── WIRING REPAIR (10 Aug 2026) — AN ASK MUST NOT BE DESTROYED BY BEING ANSWERED
 // A dead-wire tracing pass found three cards that carry NO exec (`kind:"none"`)
 // AND a key pinned to a source that only moves when the WORK lands:
@@ -139,12 +246,38 @@ export function geminiLaneLive(brainCfg) {
 // still retire. The key prefix is the exact identity of the three affected mints.
 export const AT_SOURCE_KEY = /^(gem:sync:|rejirah:|mission:return:)/;
 
+// ── THE STALE-DAEMON CARD GETS A DOOR (11 Aug 2026, dead-wire repair) ────────
+// daemon_watchdog.mjs:541 files "<name> STALE BUILD — purane code pe chal raha
+// hai … Restart karun? Live daemon kill sirf aapke word se." through
+// `file --line`, which hardcodes dispatch {kind:"none"} — so his haan RETIRED
+// the ask and restarted nothing. The card promised an action the organism could
+// not perform: nothing in the repo could restart a resident daemon at all (the
+// only kill anywhere is setup/open_dugout.ps1:12, his own voice surface).
+// Live at the moment of this repair: c33 (thalamus) and c34 (cortex), both
+// filed 2026-08-10T18:04, both dealt 0×, while PID 13272 `node
+// scripts\cortex.mjs` (CreationDate 09-08-2026 01:17:29) went on serving deep
+// reads from code older than every repair in cortex.mjs — including the capsule
+// door and the moment door that file documents as fixed.
+//
+// A TABLE, NOT AN ARGV THE CARD CARRIES. A card must never be able to name an
+// arbitrary command to run; the card names a DAEMON and this file decides what
+// that means. A daemon earns a row only once it has a door that retires it
+// WITHOUT a kill — cortex's POST :4112/restart, which waits for its in-flight
+// Opus lanes and lets daemon_watchdog's existing dead-port arm bring the fresh
+// build up (`grep -n "THE RESTART DOOR" scripts/cortex.mjs`).
+// THALAMUS IS DELIBERATELY ABSENT. It has no such door yet, so c33 keeps v1's
+// no-exec behaviour rather than being handed a lie. Building that door is
+// thalamus.mjs's own repair; adding a row here is all this side then needs.
+export const RESTART_DOOR = { cortex: ["cortex.mjs", "restart"] };
+// The watchdog's own key shape (staleCardArgs: `daemon:stale:<name>:<day>`).
+export const STALE_DAEMON_KEY = /^daemon:stale:([a-z_]+):\d{4}-\d{2}-\d{2}$/;
+
 // Derive the card set from the sources. Existing cards keep their identity (key),
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
-export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", gate2 = null, missions = null, bench = null, tiers = null,
-  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null } = {}, now = new Date()) {
+export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", marketNoopFiles = [], gate2 = null, missions = null, bench = null, tiers = null,
+  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -159,6 +292,39 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     if (AT_SOURCE_KEY.test(String(c.key || "")) && c.dispatch && c.dispatch.kind === "none") {
       c.dispatch = { kind: "at-source" };
     }
+  }
+
+  // BACKFILL for the 11 Aug locator repair (see fileDispatch). c27 and c36 were
+  // filed by awayday.mjs BEFORE it could hand its URL over, and both are STILL
+  // LIVE — without this they keep dealing him a bare 11-digit run id, which is
+  // the very defect the repair exists to end. The link is DERIVED, never
+  // guessed: awayday.json's own `repo` + the run id already inside the card key,
+  // in the exact shape GitHub itself returned for c37, the first card filed
+  // under the repair (`https://github.com/<repo>/actions/runs/<id>`).
+  // No repo in state ⇒ nothing is written. A wrong link is worse than none.
+  const awaySlug = awayday && typeof awayday.repo === "string" && awayday.repo ? awayday.repo : null;
+  if (awaySlug) {
+    for (const c of s.cards) {
+      if (c.answer || c.retired_at) continue;                 // settled history is never rewritten
+      const m = /^awayday:red:(\d+)$/.exec(String(c.key || ""));
+      if (!m || !c.dispatch || c.dispatch.kind !== "none") continue;
+      c.dispatch = { kind: "open", path: `https://github.com/${awaySlug}/actions/runs/${m[1]}` };
+    }
+  }
+
+  // THE STALE-DAEMON DISPATCH (11 Aug 2026 — see RESTART_DOOR above). DERIVED
+  // here, not filed by the watchdog: daemon_watchdog.mjs owns the card's WORDS
+  // and this file owns its DISPATCH (the pull-derive law in the header), so the
+  // watchdog needs no change and every stale card — the ones already on the deck
+  // included — gets the door the moment its daemon has one. A daemon with no
+  // door keeps kind:"none" and v1's honest no-exec. Settled history is never
+  // rewritten; same rule as the two migrations above.
+  for (const c of s.cards) {
+    if (c.answer || c.retired_at) continue;
+    const m = STALE_DAEMON_KEY.exec(String(c.key || ""));
+    if (!m || !RESTART_DOOR[m[1]]) continue;
+    if (!c.dispatch || c.dispatch.kind !== "none") continue;
+    c.dispatch = { kind: "restart-daemon", name: m[1] };
   }
 
   // 1. staged teaching drifts — one card per staged entry, keyed by its `at`.
@@ -193,6 +359,35 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   // HONEST LEAK, on the record: a haan answered but never pasted to the gist retires
   // the card while the doubt stays flagged; it gets a second lap only after every
   // other flagged doubt has had its first — the queue moves, nothing loops forever.
+  //
+  // RETIRE-AT-SOURCE (11 Aug 2026 — this lane was a PRODUCER WITH NO CONSUMER for a
+  // month). Every other serialized lane in this file watches its source and hands the
+  // seat back when the ask dies at the source (B1 rejirah, B6 pending_fact, B2/B3/B4).
+  // Gate-2 had no such watch: doubtminer rewrites `gate2_flag` from the LIVE capsule
+  // doubts on every run, so the moment he rewrites a doubt on the gist and the mirror
+  // pulls it, the flag is gone — and the card sat on unchanged, unanswerable, holding
+  // the single seat this lane deliberately allows. Measured 11 Aug: c9
+  // (gate2:embeddings:0) dealt 20× since 7 Aug with the other 16 flagged doubts unable
+  // to reach him behind it. That is the same "a card must not outlive its ask" failure
+  // the drift lane's own retire (just above) exists to prevent.
+  // The retire runs BEFORE the mint on purpose, exactly as B1's does: a doubt repaired
+  // at the gist frees the seat for the next flagged one in the SAME sync, not the one
+  // after.
+  // GUARDED on `live_keys` being an ARRAY, never on its emptiness: `readJson` returns
+  // null for a missing or corrupt tape_room.json (line 84 — it swallows, it does not
+  // throw), so a file that failed to load would otherwise read as "nothing is flagged
+  // any more" and silently retire an ask he never answered. The producer attaches
+  // live_keys only when it actually read a queue; the old three-field shape (which
+  // this file's own selftest seam still passes) therefore retires nothing.
+  if (gate2 && Array.isArray(gate2.live_keys)) {
+    const stillFlagged = new Set(gate2.live_keys);
+    for (const c of s.cards) {
+      if (c.source === "tape_room.gate2" && !c.retired_at && !c.answer && !stillFlagged.has(c.key)) {
+        c.retired_at = ts;
+        c.resolution = "resolved-at-source (the q reads cold now — doubtminer's gate-2 flag is gone)";
+      }
+    }
+  }
   if (gate2 && gate2.doubt) {
     const g = gate2.doubt;
     // 11 Aug 2026 — the candidate may now be a DOUBT (`doubt_index`/`q_verbatim`,
@@ -347,7 +542,12 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   }
 
   // 2. the newest market proposal — one card per FILE, ever.
-  if (marketFile) {
+  // 11 Aug 2026 (see the MARKET CARD wiring repair above): `marketNoopFiles` are
+  // the proposals that declare themselves empty. They are not carded, and one
+  // already standing retires AT SOURCE — the source condition of this card was
+  // always "there is a proposal to hear", and for those files there never was.
+  const noopMkt = new Set(marketNoopFiles.map((x) => (x && x.file) || x));
+  if (marketFile && !noopMkt.has(marketFile)) {
     const key = `market:${marketFile}`;
     if (!byKey.has(key)) {
       s.cards.push({
@@ -358,6 +558,14 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
         retired_at: null, resolution: null,
       });
     }
+  }
+  for (const c of s.cards) {
+    if (c.source !== "brain_out/market" || c.retired_at || c.answer) continue;
+    const f = String(c.key || "").slice("market:".length);
+    const hit = marketNoopFiles.find((x) => ((x && x.file) || x) === f);
+    if (!hit) continue;
+    c.retired_at = ts;
+    c.resolution = `resolved-at-source (${(hit && hit.why) || "the file declares no proposal"} — nothing to hear)`;
   }
 
   // ── LADDER B (9 Aug 2026) — the card batch ─────────────────────────────────
@@ -444,6 +652,19 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
 
   // B5 — the wind tunnel's un-applied proposal; haan = gate_tune.mjs apply (the
   // declared owner), then a 14d watch with out-of-band auto-revert.
+  // Retire-at-source FIRST (B1/B6's same-sync seat-freeing): last night's card dies
+  // in the same sync that mints tonight's, so the deck holds AT MOST ONE gate-tune
+  // ask — which is what the SERIAL LAW downstream can actually honour. Both reasons
+  // come from the source's own two facts; no new threshold, no new file, no clock.
+  if (gatetuneSource) {
+    const gtId = (c) => (c.source === "nightshift.gate_tune" && c.key.startsWith("gatetune:") ? c.key.slice(9) : null);
+    retireAtSource((c) => { const id = gtId(c); return id !== null && gatetuneSource.ledgerIds.has(id); },
+      "gate_tune.mjs has a ledger row for this proposal");
+    // Superseded only against a proposal we actually SAW. newestId null (folder
+    // readable but every wind_tunnel file gone) = unknown ⇒ his card lives.
+    retireAtSource((c) => { const id = gtId(c); return id !== null && gatetuneSource.newestId !== null && id !== gatetuneSource.newestId; },
+      "a newer wind-tunnel proposal replaced it — the nightly tunnel re-measures the same knobs");
+  }
   if (gatetune) {
     mint(`gatetune:${gatetune.id}`, "nightshift.gate_tune",
       `Gate-tune ${gatetune.id}: ${clip(gatetune.effect, 70)} — apply karein? (${gatetune.window} din watch, out-of-band auto-revert)`,
@@ -685,6 +906,13 @@ export function applyAnswer(state, id, word, now = new Date()) {
   if (c.dispatch.kind === "gate-tune" && word === "haan") {
     return { state: s, action: { kind: "gatetune-dispatch", file: c.dispatch.file, cardId: c.id } };
   }
+  // 11 Aug 2026 dead-wire repair — haan on a STALE BUILD card walks the daemon's
+  // OWN restart door (RESTART_DOOR). `na` falls through to the retire below: a
+  // refusal IS a decision and the stale build simply keeps running, which is what
+  // it was doing anyway.
+  if (c.dispatch.kind === "restart-daemon" && word === "haan") {
+    return { state: s, action: { kind: "restart-dispatch", name: c.dispatch.name, cardId: c.id } };
+  }
   c.resolution = word === "haan" ? "haan — done on his word (no exec by design, v1)" : "na — retired";
   c.retired_at = ts;
   return { state: s, action: { kind: "done", resolution: c.resolution } };
@@ -707,14 +935,21 @@ export function dealGuard({ organEnv, forge, now = new Date() }) {
 function gatherSources() {
   const contract = readJson(CONTRACT);
   const staged = contract && Array.isArray(contract.staged) ? contract.staged : [];
-  let marketFile = null, marketHonest = "";
+  // 11 Aug 2026 wiring repair (see the MARKET CARD block above): the newest file
+  // gets a LAYERED gist so the card can describe what it points at, and EVERY
+  // market file is checked for a self-declared no-op — the whole set, not just
+  // the newest, because c11/c12 are already standing on two of them and only a
+  // retire-at-source pass can take them off the anchor without forging his word.
+  // Four files today, ~one a week: cheap enough to read whole, every sync.
+  let marketFile = null, marketHonest = "", marketVia = null;
+  const marketNoopFiles = [];
   try {
     const files = readdirSync(MARKET_DIR).filter((f) => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).sort().reverse();
-    if (files.length) {
-      marketFile = files[0];
-      const txt = readFileSync(join(MARKET_DIR, marketFile), "utf8");
-      const m = txt.match(/\*\*Honest read:\*\*\s*([^\n]+)/i);
-      if (m) marketHonest = m[1];
+    for (const f of files) {
+      let txt; try { txt = readFileSync(join(MARKET_DIR, f), "utf8"); } catch { continue; }
+      const why = marketNoopWhy(txt);
+      if (why) marketNoopFiles.push({ file: f, why });
+      if (f === files[0]) { marketFile = f; const g = marketGist(txt); marketHonest = g.gist; marketVia = g.via; }
     }
   } catch { /* no market dir yet — no card */ }
   // P5.2 — the first Gate-2 flagged doubt not yet carded (read-only on tape_room.json;
@@ -738,13 +973,23 @@ function gatherSources() {
       ...flagged.map((x) => ({ kind: "doubt", capsule: x.capsule, ref: String(x.doubt_index), q: x.q_verbatim })),
       ...bridgeFlagged.map((f) => ({ kind: "bridge", capsule: f.capsule, ref: `b${f.bridge_index}`, q: f.q_first_100, to: f.to || null })),
     ];
-    if (cands.length) {
+    // THE READ-BACK (11 Aug 2026, dead-wire repair) — `live_keys` is every key that
+    // is STILL flagged right now, and it is what lets a repaired doubt's card die
+    // (see the retire in deriveCards). It is attached only when tape_room.json really
+    // parsed with a queue array: `readJson` returns null for a missing/corrupt file
+    // instead of throwing, so a bad read must look like "I don't know", never like
+    // "nothing is flagged". No queue ⇒ no live_keys ⇒ nothing retires.
+    const readOk = !!(tape && Array.isArray(tape.queue));
+    const liveKeys = readOk ? cands.map((x) => `gate2:${x.capsule}:${x.ref}`) : null;
+    if (cands.length || readOk) {
       const call = loadState();
       const carded = new Set(call.cards.filter((c) => c.source === "tape_room.gate2").map((c) => c.key));
       // the key gains a `b` prefix for bridges — doubt keys are numeric, so the two
       // id-spaces can never collide and an old doubt card keeps its exact identity.
-      const nextDoubt = cands.find((x) => !carded.has(`gate2:${x.capsule}:${x.ref}`));
-      if (nextDoubt) gate2 = { doubt: nextDoubt, total: cands.length, fixed_or_carded: carded.size };
+      // `|| null` because the payload now also travels with NO next doubt — the last
+      // flagged q can be repaired, and its card must still be told so.
+      const nextDoubt = cands.find((x) => !carded.has(`gate2:${x.capsule}:${x.ref}`)) || null;
+      gate2 = { doubt: nextDoubt, total: cands.length, fixed_or_carded: carded.size, live_keys: liveKeys };
     }
   } catch { /* no tape room yet — no card */ }
   // THE MISSIONS DESK + benchmark (outward loop, 8 Aug 2026) — read-only pulls;
@@ -805,19 +1050,37 @@ function gatherSources() {
   const brainCfg = readJson(join(STATE_DIR, "brain_config.json"));
   const geminiLane = { live: brainCfg ? geminiLaneLive(brainCfg) : true };
   // B5 — the newest un-applied wind-tunnel proposal (gate_tune.mjs is the applier)
-  let gatetune = null;
+  // …and, since 11 Aug 2026, the READ-BACK that lets an old one die. DEAD WIRE,
+  // PRODUCER_NO_CONSUMER: B5 was the only lane in this file that minted with no
+  // retire-at-source (`grep -n 'retireAtSource(' scripts/captains_call.mjs` — ten
+  // lanes, this one absent). The ledger row gated the MINT only, so the nightly
+  // tunnel filed ONE PERMANENT CARD PER NIGHT for the identical diff: measured on
+  // the live deck this morning, c15 (wt-2026-08-09), c22 (wt-2026-08-10) and c38
+  // (wt-2026-08-11), all tau0-epsilon, all answer=null, all retired_at=null. Worse
+  // than clutter — apply ONE and gate_tune's SERIAL LAW (gate_tune.mjs:99) refuses
+  // every sibling, and the dispatch here exits 1 with "card stays live" (:1055), so
+  // the leftovers become unanswerable AND unretirable forever.
+  // `gatetuneSource` carries the two facts the mint already reads, and is null when
+  // the folder is UNREADABLE — B2's discipline, unknown never retires his card.
+  let gatetune = null, gatetuneSource = null;
   try {
     const dir = join(STATE_DIR, "brain_out", "nightshift");
     const fs2 = readdirSync(dir).filter((f) => /^wind_tunnel_\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
+    // Same "any row with this id" test the mint gate has always used (a revert row
+    // settles a proposal too) — one read, now shared by the mint and the retire.
+    const ledgerIds = new Set(readLinesJson(join(STATE_DIR, "gate_tune_ledger.jsonl"))
+      .map((r) => r && r.id).filter(Boolean));
+    let newestId = null;
     if (fs2.length) {
       const f = fs2[fs2.length - 1];
       const p = readJson(join(dir, f));
-      if (p && p.status === "proposed" && p.id
-          && !readLinesJson(join(STATE_DIR, "gate_tune_ledger.jsonl")).some((r) => r.id === p.id)) {
+      if (p && p.id) newestId = p.id;
+      if (p && p.status === "proposed" && p.id && !ledgerIds.has(p.id)) {
         gatetune = { id: p.id, file: `dressing-room/state/brain_out/nightshift/${f}`, effect: p.predicted_effect || "", window: p.review_after_days };
       }
     }
-  } catch { /* no proposals — no card */ }
+    gatetuneSource = { newestId, ledgerIds };
+  } catch { /* no proposals — no card, and UNKNOWN never retires one */ }
   // B6 — MCP-staged identity facts awaiting HIS word (hippocampus.mjs promote/drop-pending are the hands)
   let pendingFacts = [];
   try {
@@ -854,9 +1117,12 @@ function gatherSources() {
   } catch { /* ledger unreadable — no card */ }
   // H3 — the model file, read whole (counts + stale_warming precomputed by its owner)
   const model = readJson(join(STATE_DIR, "nikhil_model.json"));
+  // 11 Aug locator backfill — READ-ONLY on awayday.mjs's own state; all this
+  // needs from it is the repo slug (see the backfill block in deriveCards).
+  const awayday = readJson(join(STATE_DIR, "awayday.json"));
 
-  return { staged, marketFile, marketHonest, gate2, missions, bench, tiers,
-    rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, pendingFacts, m2, canonPatches, staleFacts, model };
+  return { staged, marketFile, marketHonest, marketVia, marketNoopFiles, gate2, missions, bench, tiers,
+    rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, gatetuneSource, pendingFacts, m2, canonPatches, staleFacts, model, awayday };
 }
 
 function sync(now = new Date()) {
@@ -911,6 +1177,29 @@ export function fileGuard(cards, key, keyed) {
   if (live) return { mint: false, why: `${family} already live as ${live.id} (${live.key}) — rolling day-key, nothing minted (same unanswered ask)` };
   return { mint: true, why: null };
 }
+// ---------------------------------------------------------------------------
+// THE HAND-FILED LOCATOR (11 Aug 2026, wire repair — pure so the selftest can
+// hold it). `file --line` hardcoded `dispatch:{kind:"none"}`, so an organ that
+// KNEW where the evidence lived could not hand that over: awayday.mjs had the
+// failing run's html_url in scope and could only spell the run NUMBER into the
+// 140-char line (live proof: c27/c36, dispatch none, line "…(run 31359935125).
+// Dekh lein?" while awayday.json:14 held the URL). His haan then left the
+// session holding a bare integer — a command to remember, which the ANCHOR LAW
+// forbids. `--open` lets the FILING organ carry the locator on the card, using
+// the dispatch kind the derived mission cards have always used.
+// NOT clipped, deliberately: this is a machine-supplied locator, not prose, and
+// a URL cut at the tail is worse than no URL — it points nowhere and looks
+// right. `clip` stays on `line`, which is what he actually reads.
+// STILL NO EXEC: `open` only PRINTS the locator on haan (see applyAnswer) — the
+// session reads it and walks him through it. Nothing acts for him.
+// ---------------------------------------------------------------------------
+export function fileDispatch(argv) {
+  const oi = (argv || []).indexOf("--open");
+  const path = oi >= 0 ? argv[oi + 1] : "";
+  if (!path || String(path).startsWith("--")) return { kind: "none" };
+  return { kind: "open", path: String(path) };
+}
+
 function runStagedDispatch(action) {
   // `at` is the stable identity — indexes renumber on every settle and id can repeat.
   const contract = readJson(CONTRACT);
@@ -1002,12 +1291,23 @@ function main() {
     // LADDER B — the three owner-CLI dispatches, all on the ratify pattern:
     // success retires the card with the owner's own words; failure keeps the
     // card LIVE (his word must never be consumed by a dispatch that died).
-    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch"].includes(action.kind)) {
+    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "restart-dispatch"].includes(action.kind)) {
+      // 11 Aug 2026: restart-dispatch joins the same pattern. The argv comes from
+      // the RESTART_DOOR TABLE keyed by the daemon's name — never from the card —
+      // so a hand-edited state file can name a daemon but never a command. An
+      // unknown name is a refusal, not a guess.
+      const doorArgv = action.kind === "restart-dispatch" ? RESTART_DOOR[action.name] : null;
+      if (action.kind === "restart-dispatch" && !doorArgv) {
+        console.error(`captains_call: ${id} ${word} NOT recorded — no restart door for daemon "${action.name}" (card stays live)`);
+        process.exit(1);
+      }
       const argvFor = action.kind === "pending-fact-dispatch"
         ? [join(__dirname, "hippocampus.mjs"), action.verb, "--at", action.at]
         : action.kind === "forget-dispatch"
           ? [join(__dirname, "hippocampus.mjs"), "forget", action.id]
-          : [join(__dirname, "gate_tune.mjs"), "apply", join(__dirname, "..", action.file)];
+          : action.kind === "restart-dispatch"
+            ? [join(__dirname, doorArgv[0]), ...doorArgv.slice(1)]
+            : [join(__dirname, "gate_tune.mjs"), "apply", join(__dirname, "..", action.file)];
       try {
         const out = execFileSync(process.execPath, argvFor, { encoding: "utf8" });
         const c = state.cards.find((x) => x.id === id);
@@ -1041,7 +1341,7 @@ function main() {
   if (mode === "file") {
     const li = process.argv.indexOf("--line");
     const line = li >= 0 ? process.argv[li + 1] : "";
-    if (!line) { console.error("captains_call: file --line \"<one-line ask>\" [--key <stable-key>]"); process.exit(1); }
+    if (!line) { console.error("captains_call: file --line \"<one-line ask>\" [--key <stable-key>] [--open <path-or-url>]"); process.exit(1); }
     // LADDER B8 (9 Aug 2026): --key makes filing IDEMPOTENT so a nightly organ
     // (the watchman's canon check) can re-file without minting duplicates — a
     // key ever seen (live OR settled) files nothing. The decision moved into
@@ -1057,7 +1357,8 @@ function main() {
     }
     s.cards.push({
       id: `c${s.next_id++}`, key, source: "hand-filed",
-      line: clip(line, 140), dispatch: { kind: "none" },
+      // `--open` (11 Aug 2026) — the filing organ's own locator, see fileDispatch.
+      line: clip(line, 140), dispatch: fileDispatch(process.argv),
       filed_at: now.toISOString(), dealt: [], answer: null, answered_at: null,
       sleep_until: null, retired_at: null, resolution: null,
     });
@@ -1111,6 +1412,36 @@ function selftest() {
     deriveCards(s1, { staged: STAGED, marketFile: "2026-08-01.md" }, T0).cards.length === 3);
   assert("derive — a card line is ONE line with the ask, never the whole report",
     s1.cards.every((c) => !c.line.includes("\n") && c.line.length <= 160));
+  // ── THE MARKET CARD'S CONTENT WIRE (11 Aug 2026 dead-wire repair) ─────────
+  // Fixtures are the LIVE files' own shapes, trimmed: 2026-07-19 (a real proposal
+  // that carries NO honest-read line — 3 of the 4 files on disk are this shape)
+  // and 2026-08-09 (the producer declaring its own no-op).
+  const MKT_HONEST = "## proposal\n\n**Honest read:** no contradiction with existing scout — this reinforces it.\n";
+  const MKT_REAL = "# OPPONENT_SCOUT — Weekly Scan Proposal (2026-07-19)\n*THE SCOUT · proposal only, not written to canon*\n\n**Top 5 requested this week:**\n1. RAG — 6,196 open roles\n\n**Diff vs your coverage:** Maidan shape already matches — rag_pipeline stage = skills #1/#4.\n\n**Confidence:** counts are live posting totals — directional.\n";
+  const MKT_NOOP = "# OPPONENT_SCOUT — Weekly Market Scan (proposal, 2026-08-09)\n\n## Market data: NOT AVAILABLE\nNo live scan payload in this job's input.\n\n## Recommendation\nNothing to propose to `OPPONENT_SCOUT.md` this week.\n";
+  assert("market gist — LAYERING: the frozen honest-read scrape still wins when the producer writes one",
+    marketGist(MKT_HONEST).via === "honest-read" && /no contradiction with existing scout/.test(marketGist(MKT_HONEST).gist));
+  // THE DEAD WIRE ITSELF. `**Honest read:**` is a field NOTHING produces (grep it
+  // in brain_config.json → 0), so on 3 of 4 live files the card had zero content.
+  // This fails the moment the extraction narrows back to one unproduced field.
+  assert("market gist — a file with NO 'Honest read:' line still yields a real quote (the dead wire, 11 Aug 2026)",
+    marketHonestLegacy(MKT_REAL) === "" && /Maidan shape already matches/.test(marketGist(MKT_REAL).gist));
+  assert("market card — the LINE carries that quote (no more anchor spent on a report it cannot describe)",
+    (() => { const c = deriveCards(blank(), { marketFile: "2026-07-19.md", marketHonest: marketGist(MKT_REAL).gist }, T0)
+      .cards.find((x) => x.key === "market:2026-07-19.md");
+      return !!c && /Maidan shape already matches/.test(c.line); })());
+  assert("market no-op — the producer's own 'NOT AVAILABLE' declaration mints NO card (anchor law)",
+    marketNoopWhy(MKT_NOOP) !== null
+    && !deriveCards(blank(), { marketFile: "2026-08-09.md", marketNoopFiles: [{ file: "2026-08-09.md", why: marketNoopWhy(MKT_NOOP) }] }, T0)
+      .cards.some((c) => c.key === "market:2026-08-09.md"));
+  assert("market no-op — a card already standing on a no-op file retires AT SOURCE, never as his answer",
+    (() => { const pre = deriveCards(blank(), { marketFile: "2026-08-09.md" }, T0);          // minted the pre-repair way
+      const post = deriveCards(pre, { marketFile: "2026-08-09.md", marketNoopFiles: [{ file: "2026-08-09.md", why: marketNoopWhy(MKT_NOOP) }] }, T0);
+      const c = post.cards.find((x) => x.key === "market:2026-08-09.md");
+      return !!c && !!c.retired_at && c.answer === null && /NOT AVAILABLE/.test(c.resolution); })());
+  assert("market no-op — a REAL proposal is never silenced by the gate",
+    marketNoopWhy(MKT_REAL) === null && marketNoopWhy(MKT_HONEST) === null);
+
   const gone = deriveCards(s1, { staged: [STAGED[1]], marketFile: "2026-08-01.md" }, T0);
   assert("derive — a staged entry settled at the source auto-retires its card (a card must not outlive its ask)",
     gone.cards.find((c) => c.key === `drift:${STAGED[0].at}`).retired_at !== null
@@ -1142,6 +1473,24 @@ function selftest() {
     /^Doubt cold-readable nahi/.test(sg.cards[0].line) && sg.cards[0].key === "gate2:embeddings:0");
   assert("GATE2/BRIDGE — serialization holds across kinds: one live gate2 card blocks the next, doubt or bridge",
     deriveCards(sg, { gate2: G2B }, T0).cards.length === 1);
+  // RETIRE-AT-SOURCE (11 Aug 2026) — the dead wire. These four go red if the read-back
+  // is dropped again: 1+2 are the wire itself and the same-sync seat hand-back, 3 is the
+  // safety that stops an unreadable tape_room.json from retiring an ask he never
+  // answered, 4 is the old payload shape still being inert.
+  const NEXT = { capsule: "inference", doubt_index: 3, q_verbatim: "doosra flagged doubt" };
+  const sgFixed = deriveCards(sg, { gate2: { doubt: NEXT, total: 16, fixed_or_carded: 1, live_keys: ["gate2:inference:3"] } }, T0);
+  assert("GATE2/RETIRE — a doubt repaired at the gist (its flag gone) retires its card: it must not outlive its ask",
+    sgFixed.cards.find((c) => c.key === "gate2:embeddings:0").retired_at !== null
+    && /gate-2 flag is gone/.test(sgFixed.cards.find((c) => c.key === "gate2:embeddings:0").resolution));
+  assert("GATE2/RETIRE — the freed seat is refilled in the SAME sync (B1's discipline), so the next flagged doubt is not one anchor late",
+    sgFixed.cards.length === 2
+    && sgFixed.cards.some((c) => c.key === "gate2:inference:3" && !c.retired_at && !c.answer));
+  assert("GATE2/RETIRE — a still-flagged doubt is NEVER retired (live_keys still holds its key)",
+    deriveCards(sg, { gate2: { ...G2, live_keys: ["gate2:embeddings:0"] } }, T0)
+      .cards.find((c) => c.key === "gate2:embeddings:0").retired_at === null);
+  assert("GATE2/RETIRE — unknown ≠ repaired: no live_keys (unreadable tape_room.json, or the pre-11-Aug payload) retires NOTHING",
+    deriveCards(sg, { gate2: null }, T0).cards.find((c) => c.key === "gate2:embeddings:0").retired_at === null
+    && deriveCards(sg, { gate2: G2 }, T0).cards.find((c) => c.key === "gate2:embeddings:0").retired_at === null);
   assert("GATE2 — ranks AFTER staged drifts, BEFORE market (his confirmations first)",
     (() => { const mix = deriveCards(sg, { staged: [STAGED[0]], marketFile: "2026-08-01.md" }, T0);
       const first = pickCard(mix, { today: "2026-08-07" });
@@ -1415,6 +1764,31 @@ function selftest() {
     assert("B5 — the wind-tunnel card carries the proposal file; haan hands gate_tune.mjs apply to the CLI layer",
       sgt.cards.length === 1 && sgt.cards[0].key === "gatetune:wt-2026-08-09-tau1_base"
       && gtA.action.kind === "gatetune-dispatch" && /wind_tunnel_2026-08-09\.json$/.test(gtA.action.file));
+    // B5 RETIRE-AT-SOURCE (11 Aug 2026) — the dead wire that let three cards
+    // (c15/c22/c38, one per night, identical tau0-epsilon diff) sit unretirable in
+    // the live deck. Fails loudly if the read-back is ever unwired again.
+    const GT9 = { id: "wt-2026-08-09-tau1_base", file: "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-08-09.json", effect: "wakes/day toward band", window: 14 };
+    const GT10 = { id: "wt-2026-08-10-tau1_base", file: "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-08-10.json", effect: "wakes/day toward band", window: 14 };
+    const src = (newestId, ids = []) => ({ newestId, ledgerIds: new Set(ids) });
+    const gtNight2 = deriveCards(sgt, { gatetune: GT10, gatetuneSource: src("wt-2026-08-10-tau1_base") }, T);
+    const gtOld = gtNight2.cards.find((c) => c.key === "gatetune:wt-2026-08-09-tau1_base");
+    const gtNew = gtNight2.cards.find((c) => c.key === "gatetune:wt-2026-08-10-tau1_base");
+    assert("B5 — tonight's proposal RETIRES last night's card in the same sync: never two gate-tune asks in the deck (the SERIAL LAW cannot honour two)",
+      gtNight2.cards.length === 2 && gtOld.retired_at !== null && /newer wind-tunnel proposal replaced it/.test(gtOld.resolution)
+      && gtNew.retired_at === null
+      && gtNight2.cards.filter((c) => c.source === "nightshift.gate_tune" && !c.answer && !c.retired_at).length === 1);
+    const gtApplied = deriveCards(sgt, { gatetune: null, gatetuneSource: src("wt-2026-08-09-tau1_base", ["wt-2026-08-09-tau1_base"]) }, T);
+    assert("B5 — a ledger row (apply OR revert) retires the card at source: gate_tune.mjs settled it, so the ask is over",
+      gtApplied.cards[0].retired_at !== null && /ledger row for this proposal/.test(gtApplied.cards[0].resolution));
+    assert("B5 — an UNREADABLE proposal folder retires NOTHING (B2's discipline: unknown never kills his card), and neither does an empty one",
+      deriveCards(sgt, { gatetune: null, gatetuneSource: null }, T).cards[0].retired_at === null
+      && deriveCards(sgt, { gatetune: null, gatetuneSource: src(null) }, T).cards[0].retired_at === null);
+    assert("B5 — a card he ALREADY answered keeps HIS resolution; the retire never rewrites his word",
+      (() => {
+        const answered = applyAnswer(deriveCards(blank(), { gatetune: GT9, gatetuneSource: src("wt-2026-08-09-tau1_base") }, T), "c1", "na", T).state;
+        const after = deriveCards(answered, { gatetune: GT10, gatetuneSource: src("wt-2026-08-10-tau1_base") }, T);
+        return after.cards.find((c) => c.key === "gatetune:wt-2026-08-09-tau1_base").resolution === "na — retired";
+      })());
     // B6 — pending fact: serialized; haan → promote, na → drop-pending
     const PF = [{ ts: "2026-08-09T08:00:00Z", text: "sunday mornings are for FinOps", status: "pending" }];
     const spf = deriveCards(blank(), { pendingFacts: PF }, T);
@@ -1461,6 +1835,27 @@ function selftest() {
       && sfN.action.kind === "done" && /na — retired/.test(sfN.action.resolution));
     assert("B11 — a fact already gone retires its card at source",
       deriveCards(ssf, { staleFacts: [SF[1]] }, T).cards.find((c) => c.key === "fact:forget:fb5d5a86").retired_at !== null);
+    // ── THE STALE-DAEMON DOOR (11 Aug 2026 dead-wire repair — see RESTART_DOOR) ──
+    // These fail the moment a STALE BUILD card goes back to promising a restart it
+    // cannot perform. The fixture is the LIVE shape, copied off c33/c34 on the deck:
+    // watchdog-worded, hand-filed, dispatch kind "none".
+    const staleCard = (name, id) => ({ id, key: `daemon:stale:${name}:2026-08-10`, source: "hand-filed",
+      line: `${name} STALE BUILD — purane code pe chal raha hai (aaj ke conductor ne pakda). Restart karun? Live daemon kill sirf aapke word se.`,
+      dispatch: { kind: "none" }, filed_at: "2026-08-10T18:04:50.824Z", dealt: [], answer: null,
+      answered_at: null, sleep_until: null, retired_at: null, resolution: null });
+    const deck = deriveCards({ ...blank(), cards: [staleCard("cortex", "c34"), staleCard("thalamus", "c33")] }, {}, T);
+    const dCortex = deck.cards.find((c) => c.id === "c34"), dThal = deck.cards.find((c) => c.id === "c33");
+    assert("STALE DAEMON — a daemon WITH a restart door loses the dead kind:\"none\"; one without keeps v1's honest no-exec rather than a lie",
+      dCortex.dispatch.kind === "restart-daemon" && dCortex.dispatch.name === "cortex"
+      && dThal.dispatch.kind === "none" && !RESTART_DOOR.thalamus);
+    const rH = applyAnswer(deck, "c34", "haan", T), rN = applyAnswer(deck, "c34", "na", T);
+    assert("STALE DAEMON — haan walks the daemon's OWN door from the table (never an argv the card carries); na retires and the stale build just keeps running",
+      rH.action.kind === "restart-dispatch" && rH.action.name === "cortex"
+      && (RESTART_DOOR[rH.action.name] || []).join(" ") === "cortex.mjs restart"
+      && rN.action.kind === "done" && /na — retired/.test(rN.action.resolution));
+    assert("STALE DAEMON — settled history is never rewritten, and the CLI's dispatch block still routes restart-dispatch to the owner",
+      deriveCards({ ...blank(), cards: [{ ...staleCard("cortex", "c40"), retired_at: "2026-08-10T19:00:00Z" }] }, {}, T).cards[0].dispatch.kind === "none"
+      && /"restart-dispatch"\]\.includes\(action\.kind\)/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
     // H3 — the weekly model audit: week-keyed to Sunday, minted from Sunday
     // ONWARD (a slept-through Sunday still mints Monday), counts precomputed
     // by the owner, last week's unanswered card superseded never stacked.
@@ -1527,6 +1922,47 @@ function selftest() {
     const fileMode = ownSrc.slice(ownSrc.indexOf('if (mode === "file")'), ownSrc.indexOf('if (mode === "status")'));
     assert("ROLLING KEY — `file` mode routes its mint decision through fileGuard, with no inline exact-match left to regress to",
       /fileGuard\(s\.cards, key, ki >= 0\)/.test(fileMode) && !/s\.cards\.some\(\(c\) => c\.key === key\)/.test(fileMode));
+
+    // ── THE HAND-FILED LOCATOR (11 Aug 2026) ────────────────────────────────
+    // These fail the moment a filing organ's locator stops reaching him: either
+    // the parser drops it, the CLI hardcodes `none` again, or haan stops
+    // printing it. c27/c36 (awayday) are the live cards that had no locator.
+    const URL_ = "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/31436912105";
+    assert("LOCATOR — `--open` on a hand file becomes an `open` dispatch carrying the URL VERBATIM (a clipped URL points nowhere and looks right)",
+      fileDispatch(["node", "captains_call.mjs", "file", "--line", "x", "--key", "awayday:red:1", "--open", URL_]).kind === "open"
+      && fileDispatch(["node", "captains_call.mjs", "file", "--line", "x", "--open", URL_]).path === URL_);
+    assert("LOCATOR — no `--open` (or a bare flag with no value) stays `none`: every existing caller is untouched",
+      fileDispatch(["node", "x", "file", "--line", "x"]).kind === "none"
+      && fileDispatch(["node", "x", "file", "--open"]).kind === "none"
+      && fileDispatch(["node", "x", "file", "--open", "--key", "k"]).kind === "none");
+    assert("LOCATOR — `file` mode actually WIRES fileDispatch; the hardcoded `{ kind: \"none\" }` is gone from it",
+      /dispatch: fileDispatch\(process\.argv\)/.test(fileMode) && !/dispatch: \{ kind: "none" \}/.test(fileMode));
+    {
+      // The far end: his haan must hand the SESSION the locator, not a number.
+      const s0 = { ...blank(), next_id: 2, cards: [{
+        id: "c1", key: "awayday:red:31436912105", source: "hand-filed",
+        line: "away-day CI lane RED on 8df28ba — the cloud clean-checkout is failing (run 31436912105). Dekh lein?",
+        dispatch: { kind: "open", path: URL_ }, filed_at: "2026-08-11T00:00:00Z",
+        dealt: ["2026-08-11T01:00:00Z"], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null }] };
+      const hn = applyAnswer(s0, "c1", "haan", new Date("2026-08-11T02:00:00Z"));
+      assert("LOCATOR — haan on an awayday red hands the session the RUN URL (no exec, no auto-act — it is printed for the session to read)",
+        hn.action.kind === "open" && hn.action.path === URL_);
+
+      // The two cards already on the deck (c27, c36) were filed before the repair.
+      const AW = { repo: "nikhil1429/arsenal-ai-fc", run_url: URL_ };
+      const old = { ...blank(), next_id: 3, cards: [
+        mkFiled("c27", "awayday:red:31359935125"),
+        mkFiled("c36", "awayday:red:31436912105", { answer: "haan", answered_at: "2026-08-11T00:00:00Z" }),
+      ] };
+      const mg = deriveCards(old, { awayday: AW }, T0);
+      assert("LOCATOR BACKFILL — a live pre-repair awayday card gains the derived run link (repo from awayday.json + the run id in its own key); a settled one is never rewritten",
+        mg.cards[0].dispatch.kind === "open"
+        && mg.cards[0].dispatch.path === "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/31359935125"
+        && mg.cards[1].dispatch.kind === "none");
+      assert("LOCATOR BACKFILL — no repo in awayday.json ⇒ NOTHING is written (a wrong link is worse than none)",
+        deriveCards(old, { awayday: null }, T0).cards[0].dispatch.kind === "none"
+        && deriveCards(old, { awayday: { repo: "" } }, T0).cards[0].dispatch.kind === "none");
+    }
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);

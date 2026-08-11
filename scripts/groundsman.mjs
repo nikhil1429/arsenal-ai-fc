@@ -197,18 +197,40 @@ async function pushOnlyPass(hostId, deps = {}) {
   // own check keeps the last known verdict rather than blanking it — silence
   // must never look green.
   const back = run("node", [join(__dirname, "awayday.mjs"), "check"]);
+  // ── AND THE ANSWER IS READ (11 Aug 2026, wire-audit second pass) ──────────
+  // The line above landed yesterday with `back` assigned and never touched again:
+  // the read fired and its answer went in the bin. sh() CAPTURES stdout (:130 —
+  // encoding "utf8", not stdio "inherit"), so the one human-readable line `check`
+  // prints — "awayday: cloud lane RED on <sha> — failure" — reached no log at all;
+  // and a `check` that crashed, got renamed, or died with node came back {ok:false}
+  // into a variable nobody read while this lane went on printing "push-only —
+  // PUSHED". A read whose answer is discarded is the SAME dead wire as no read —
+  // exactly the shape the header above was written to close, re-grown one line
+  // lower. The verdict now leaves on every return path and main()'s push mode
+  // prints it, so it lands in scripts/groundsman.log (this task is registered
+  // through run_logged.cmd — setup/INSTALL_CYBORG_TASKS.ps1 Mk()).
+  // STILL NEVER FATAL, and still no new escalation invented here: a failed read is
+  // NAMED and the pass carries on to the push. The RED card is awayday.mjs's own
+  // job and stays there (owners-only); this lane only stops swallowing what it asked for.
+  const readback = back.ok
+    ? { ok: true, line: String(back.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).join(" · ") || "check ran and printed nothing" }
+    : { ok: false, line: `READ-BACK FAILED — ${String(back.out || "").split(/\r?\n/)[0]}` };
+  // EVERY exit carries it. A verdict that survives only on the happy path is an
+  // orphan again the first night the staging gate refuses — and a refusing night
+  // is precisely a night somebody is reading this log.
+  const withVerdict = (o) => ({ ...o, readback });
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
-  if (!add.ok) return { ok: true, pushed: false, why: `staging refused: ${add.out}` };
+  if (!add.ok) return withVerdict({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
   const diff = run("git", ["diff", "--cached", "--quiet"]);
-  if (diff.ok) return { ok: true, pushed: false, why: "nothing public to push" };
+  if (diff.ok) return withVerdict({ ok: true, pushed: false, why: "nothing public to push" });
   const staged = run("git", ["diff", "--cached", "--name-only"]);
-  if (!staged.ok) return { ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" };
+  if (!staged.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" });
   const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
-  if (offending.length) return { ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` };
+  if (offending.length) return withVerdict({ ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` });
   run("git", ["commit", "-m", `groundsman: unattended state push (${hostId}) — his 9 Aug 2026 ruling, receipt in pushOnlyPass`]);
   const push = run("git", ["push"]);
-  if (!push.ok) return { ok: true, pushed: false, why: `push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` };
-  return { ok: true, pushed: true };
+  if (!push.ok) return withVerdict({ ok: true, pushed: false, why: `push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
+  return withVerdict({ ok: true, pushed: true });
 }
 
 async function selftest() {
@@ -334,6 +356,34 @@ async function selftest() {
     });
     assert("a failed read-back is NEVER fatal — an offline 03:45 still pushes in the morning",
       rBack.pushed === true && c9.some(x => x.includes("push")));
+
+    // ── THE ANSWER IS HEARD (11 Aug 2026, wire-audit second pass) ────────────
+    // The read above fired from 10 Aug and its result was assigned to `back` and
+    // never read: sh() captures stdout, so the verdict line reached NO log and a
+    // crashed `check` was indistinguishable from a green one. These three fail the
+    // moment the answer stops leaving the pass, or stops being printed.
+    const VERDICT = "awayday: cloud lane RED on 2c23168 — failure\nawayday: https://github.com/x/y/actions/runs/31359935125\n";
+    const rHeard = await pushOnlyPass("laptop", {
+      sh: (c, a) => { if (c === "node") return { ok: true, out: VERDICT }; if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/brain_config.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+    });
+    // …and on the night with NOTHING to push, which is the night the old code's
+    // one surviving line ("nothing public to push") said the least.
+    const rQuiet = await pushOnlyPass("laptop", {
+      sh: (c, a) => { if (c === "node") return { ok: true, out: VERDICT }; if (c === "git" && a[0] === "diff" && !a.includes("--name-only")) return { ok: true, out: "" }; return { ok: true, out: "" }; },
+    });
+    // read through a defaulting accessor, never `r.readback.line` — a cut wire
+    // must come back as a ✗ naming the broken assertion, not a TypeError stack
+    // that buries which one it was (proven: the un-guarded first draft threw).
+    const rb = (r) => (r && r.readback) || { ok: null, line: "" };
+    assert("THE ANSWER LEAVES THE PASS: the verdict `check` printed is carried out of pushOnlyPass — on the pushing night AND the nothing-to-push night, not just the happy path",
+      /RED on 2c23168/.test(rb(rHeard).line) && rb(rHeard).ok === true
+      && /RED on 2c23168/.test(rb(rQuiet).line) && rQuiet.pushed === false);
+    assert("A CRASHED READ-BACK IS NAMED, never silence: a non-zero `check` is reported as FAILED and the push still happens",
+      rb(rBack).ok === false && /READ-BACK FAILED/.test(rb(rBack).line) && /ENOTFOUND/.test(rb(rBack).line) && rBack.pushed === true);
+    assert("main()'s push mode PRINTS it — the consumer RUNS, it does not merely exist (the awayday.mjs:483 probe pattern)",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const tail = src.slice(src.indexOf("async function main"));
+               return /r\.readback/.test(tail) && /console\.log/.test(tail); })());
   }
 
   const passed = checks.every(c => c[1]);
@@ -363,6 +413,11 @@ async function main() {
   if (mode === "push") {
     // LADDER D3 — the unattended laptop push (see pushOnlyPass's receipt header).
     const r = await pushOnlyPass("laptop");
+    // THE CONSUMER (11 Aug 2026). Printed FIRST because it happened first, and
+    // because a RED cloud lane is the more important news of the two lines. This
+    // is the only place the away-day verdict becomes readable on the house side at
+    // 03:45 — without it the read below is a call whose answer nobody hears.
+    if (r.readback) console.log(`groundsman: away-day read-back — ${r.readback.line}`);
     console.log(`groundsman: push-only — ${r.pushed ? "PUSHED (the sentinel's mini-brief reads tonight's truth)" : r.why}`);
     return;
   }

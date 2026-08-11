@@ -319,6 +319,13 @@ function assembleWallData(bus, now = new Date()) {
       // benchmark.mjs, so the desk showed where he stands and never what to do
       // next. benchmark.mjs owns needs[]; its own line, so the counts line keeps
       // its shape. Absent/empty ⇒ no line (absence, not a zero — house rule).
+      // DEAD-WIRE SWEEP 11 Aug 2026 — the differentiators reach the desk. The counts
+      // line above maps over `buckets` and always has, so 6-cross-cut (#1 senior signal)
+      // and 7-domain (the fintech moat) — written to benchmark.json since 8 Aug, riding
+      // 46.7% and 44.5% of the interview — appeared on this wall as nothing at all.
+      // Their own line, above the needs, because they are counts and not a 6th bucket.
+      // benchmark.mjs composes the string (differentiators_line); absent ⇒ no line.
+      if (bj && bj.status === "ok" && bj.differentiators_line) lines.push(bj.differentiators_line);
       if (bj && Array.isArray(bj.needs) && bj.needs.length) lines.push(`benchmark need: ${bj.needs.join(" · ")}`);
       return lines.length ? { lines } : null;
     })(),
@@ -1069,6 +1076,17 @@ async function selftest() {
     wallNeeds.includes("benchmark need: 2-rag: unlock chunking, retrieval · course: 6 chapters remain"));
   assert("THE SCOUT'S DESK — a benchmark with no needs[] shows no need line (absence, not a zero)",
     !renderWall(assembleWallData({ history: [], benchmark: { status: "ok", buckets: [], regressions: [] } }, now), null).includes("benchmark need"));
+  // DEAD-WIRE SWEEP 11 Aug 2026 — the counts line maps over buckets[] and always did,
+  // so the two lanes that ride BESIDE the five (46.7% and 44.5% of the interview by the
+  // DOSSIER's own weights) reached this wall as nothing. Fails if the line is cut again.
+  const wallDx = renderWall(assembleWallData({ history: [], benchmark: { status: "ok",
+    buckets: [{ id: "B2", counts: { locked: 1, core_total: 5 } }], regressions: [],
+    differentiators_line: "differentiators (not a 6th bucket — the #1 senior signal + the fintech moat): 6-cross-cut: locked 0/1 (rides: system_design 26.7% + production_eval 20% = 46.7% of the interview)" } }, now), null);
+  assert("THE SCOUT'S DESK — the benchmark's DIFFERENTIATORS reach the wall with their interview weight, on their own line",
+    wallDx.includes("differentiators (not a 6th bucket") && wallDx.includes("6-cross-cut: locked 0/1") && wallDx.includes("46.7% of the interview")
+    && !/benchmark: B2 1\/5[^<]*cross-cut/.test(wallDx));
+  assert("THE SCOUT'S DESK — a pre-wire benchmark (no differentiators_line) shows no differentiators line (absence, not a zero)",
+    !renderWall(assembleWallData({ history: [], benchmark: { status: "ok", buckets: [], regressions: [] } }, now), null).includes("differentiators"));
   assert("Maidan pitch SVG renders with frayed pass", html.includes("<svg") && html.includes("frayed pass"));
   assert("doubts_retired + matches_played render big", html.includes(">24<") && html.includes(">12<"));
   assert("NO RAW BIOMETRICS — hrv/rhr numbers never render", !html.includes("22.7") && !html.includes("76.4"));
