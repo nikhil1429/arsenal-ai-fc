@@ -100,8 +100,8 @@ function nsLedgerRow(r, model, jobLabel, now = new Date()) {
     ...ledgerForensics(r),
   };
 }
-const genLedgered = async (prompt, model, jobLabel) => {
-  const r = await claudeGen(prompt, model);
+const genLedgered = async (prompt, model, jobLabel, extraArgs = []) => {
+  const r = await claudeGen(prompt, model, undefined, extraArgs);
   try {
     const { appendFileSync: app } = await import("node:fs");
     const { join: j2 } = await import("node:path");
@@ -205,6 +205,99 @@ function drillConcepts(deps = {}) {
   } catch { }
   const seen = new Set();
   return out.filter(c => c.concept && !seen.has(c.concept) && seen.add(c.concept));
+}
+
+// ---------------------------------------------------------------------------
+// JOB 1c — THE FIELD PROBES (11 Aug 2026, HIS RULING: the probe bank's questions
+// are "andaaze, asli sawaal nahi" — resolve it).
+//
+// THE DEFECT. probeBank below asks Sonnet to *invent* what an interviewer would
+// ask. That is a model's prior about interviews, not the interview. He caught it
+// himself, and he is right: he is training to survive a real room, and a probe
+// nobody has ever been asked is a probe that cannot fail him honestly.
+//
+// WHY IT COULD NOT BE BUILT BEFORE, AND WHY IT CAN NOW. Real questions need the
+// actual internet. The organism's only outward arm was the Gemini missions desk,
+// which is a HUMAN surface — he has to fire it. That is exactly the ADHD tax he
+// ruled out ("everything in the organism which do not need me, keep me free").
+// Measured live on 11 Aug: `claude -p --allowedTools WebSearch` returns real,
+// sourced interview questions on the Max subscription. So this lane needs nobody.
+//
+// THREE PROPERTIES, all deliberate:
+//   1. AUTOMATIC FOR EVERY FUTURE TOPIC. It walks drillConcepts() — the same list
+//      probeBank uses, which already includes every locked capsule. A concept
+//      locked next month is researched the first night after, with no edit here
+//      and nothing for him to remember. That is the "no jugaad" requirement made
+//      structural rather than promised.
+//   2. A QUESTION WITHOUT A SOURCE IS NOT A FIELD QUESTION. Every item must carry
+//      at least one http(s) source or it is dropped. Without that rule this job
+//      degrades silently into probeBank — the model inventing again, now wearing
+//      the word "real". The rule IS the feature.
+//   3. IT REFRESHES, IT DOES NOT RE-ASK. A concept already banked inside
+//      FIELD_REFRESH_DAYS is skipped, so the nightly cost is the NEW topics plus
+//      the slow rotation of the old ones — not the whole syllabus every night.
+//      (The night that starved the diary is one day old; this lane must not
+//      become the next thing eating that budget.)
+// ---------------------------------------------------------------------------
+const FIELD_PROBES_FILE = "field_probes.json";        // cumulative, in OUT_DIR (nightshift owns it)
+const FIELD_REFRESH_DAYS = 30;
+const FIELD_MAX_PER_NIGHT = 3;                        // new/stale concepts per shift — a floor on the spend
+const FIELD_MIN_QS = 3;
+
+const isHttpUrl = (s) => typeof s === "string" && /^https?:\/\/\S+$/i.test(s.trim());
+
+// Exported for the selftest: the whole value of this job lives in what it REFUSES.
+export function validateFieldItems(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x) => ({
+      q: typeof x?.q === "string" ? x.q.trim() : (typeof x?.question === "string" ? x.question.trim() : ""),
+      sources: Array.isArray(x?.sources) ? x.sources.filter(isHttpUrl) : [],
+    }))
+    .filter((x) => x.q.length > 15 && x.q.length <= 400 && x.sources.length > 0);
+}
+
+// Stale = never fetched, or fetched longer ago than the refresh window. Written as
+// its own function so the selftest can pin "never fetched" and "fetched today"
+// without a clock in the test.
+export function fieldStale(entry, now, days = FIELD_REFRESH_DAYS) {
+  if (!entry || !entry.fetched) return true;
+  const t = new Date(entry.fetched).getTime();
+  if (!Number.isFinite(t)) return true;
+  return (now.getTime() - t) > days * 86400000;
+}
+
+async function fieldProbes(deps = {}) {
+  const now = deps.now || new Date();
+  const gen = deps.generateField
+    || ((p) => genLedgered(p, "sonnet", "ns_field_probes", ["--allowedTools", "WebSearch"]));
+  const budget = deps.budget || NO_BUDGET;
+  const prior = deps.priorField !== undefined ? deps.priorField : (readJson(join(OUT_DIR, FIELD_PROBES_FILE)) || { concepts: {} });
+  const bank = { ...(prior.concepts || {}) };
+  const concepts = (deps.concepts || drillConcepts(deps));
+  const todo = concepts.filter((c) => c.concept && fieldStale(bank[c.concept], now)).slice(0, FIELD_MAX_PER_NIGHT);
+  let spent = 0, added = 0, refused = 0;
+
+  for (const c of todo) {
+    if (!budget.take()) break;
+    const r = await gen(
+      `Search the web for REAL interview questions that have actually been asked about "${c.concept}" in AI Engineer / AI Product Engineer / ML Engineer interviews. Prefer interview-experience write-ups, company-specific guides and question banks over generic blog posts. Do NOT invent questions: every question must come from a page you actually read, and must carry that page's URL.\nReturn STRICT JSON only, no prose, no code fences:\n{"questions":[{"q":"<the question as asked>","sources":["<https url>"]}]}`
+    );
+    spent++;
+    if (!r || !r.ok) { refused++; continue; }
+    let items = [];
+    try {
+      const raw = String(r.text); const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+      items = validateFieldItems(JSON.parse(s >= 0 ? raw.slice(s, e + 1) : raw).questions);
+    } catch { items = []; }
+    // Too few sourced questions is a REFUSAL, not a thin success: a bank entry
+    // stamped today blocks the refresh for a month, so a bad night must not
+    // masquerade as a fetched one.
+    if (items.length < FIELD_MIN_QS) { refused++; continue; }
+    bank[c.concept] = { fetched: now.toISOString(), why: c.why, questions: items };
+    added++;
+  }
+  return { bank, spent, added, refused, considered: todo.length, total_concepts: Object.keys(bank).length };
 }
 
 // ---------------------------------------------------------------------------
@@ -870,6 +963,13 @@ async function runShift(deps = {}) {
   if (Object.keys(pb.bank).length) write(`probe_bank_${day}.json`, { date: day, bank: pb.bank });
   out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent, graded: gr.graded, grade_spent: gr.spent };
 
+  // JOB 1c — the field probes. Written to ONE cumulative file, not a day-stamped
+  // one: this bank is the organism's standing memory of what the real world asks,
+  // and a reader must never have to guess which night's file is current.
+  const fp = await fieldProbes(jobDeps);
+  if (Object.keys(fp.bank).length) write(FIELD_PROBES_FILE, { updated: new Date().toISOString(), concepts: fp.bank });
+  out.jobs.field_probes = { researched: fp.added, refused: fp.refused, considered: fp.considered, spent: fp.spent, concepts_banked: fp.total_concepts };
+
   const db = await distractorBank(jobDeps);
   if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
   out.jobs.distractors = { concepts: Object.keys(db.bank).length, spent: db.spent };
@@ -1031,10 +1131,62 @@ async function selftest() {
   }
 
   // the jobs
+  // --- JOB 1c: THE FIELD PROBES (11 Aug 2026) -------------------------------
+  // The whole worth of this job is what it REFUSES, so that is what is pinned
+  // hardest: a question with no source is an invented question wearing the word
+  // "real", and a thin night must not stamp a fetch date that blocks the refresh
+  // for a month.
+  {
+    const NOWF = new Date("2026-08-11T22:00:00Z");
+    const ok2 = [
+      { q: "Explain HNSW versus IVF and when you would pick each in production.", sources: ["https://example.com/a"] },
+      { q: "Your embedding model changed dimensions mid-quarter — how do you migrate?", sources: ["https://example.com/b"] },
+      { q: "Why does pure vector search fail on exact IDs and rare proper nouns?", sources: ["https://example.com/c"] },
+    ];
+    assert("FIELD — a question with NO source is DROPPED (this is the entire difference from probeBank)",
+      validateFieldItems([...ok2, { q: "Some plausible-sounding invented interview question here", sources: [] }]).length === 3);
+    assert("FIELD — a non-http 'source' is not a source",
+      validateFieldItems([{ q: "A long enough question to pass the length floor here", sources: ["my training data"] }]).length === 0);
+    assert("FIELD — a stub question is dropped even WITH a source",
+      validateFieldItems([{ q: "what is it", sources: ["https://example.com/a"] }]).length === 0);
+    assert("FIELD — `question` is accepted as an alias for `q` (the model writes both shapes)",
+      validateFieldItems([{ question: "Explain HNSW versus IVF and when you would pick each.", sources: ["https://example.com/a"] }]).length === 1);
+    assert("FIELD — never fetched = stale; fetched now = fresh (the refresh window is real)",
+      fieldStale(undefined, NOWF) === true
+      && fieldStale({ fetched: NOWF.toISOString() }, NOWF) === false
+      && fieldStale({ fetched: "2026-01-01T00:00:00Z" }, NOWF) === true);
+    assert("FIELD — a garbage `fetched` counts as stale, never as fresh (a bad date must not block a refresh forever)",
+      fieldStale({ fetched: "not-a-date" }, NOWF) === true);
+
+    const fdeps = { now: NOWF, priorField: { concepts: {} }, concepts: [{ concept: "embeddings", why: "locked capsule" }] };
+    const thin = await fieldProbes({ ...fdeps, generateField: async () => ({ ok: true, text: JSON.stringify({ questions: [ok2[0]] }) }) });
+    assert("FIELD — a THIN night is REFUSED, not banked (a fetch stamp would block the retry for a month)",
+      thin.added === 0 && thin.refused === 1 && !thin.bank.embeddings);
+    const good = await fieldProbes({ ...fdeps, generateField: async () => ({ ok: true, text: "```json\n" + JSON.stringify({ questions: ok2 }) + "\n```" }) });
+    assert("FIELD — a real return is banked WITH its fetch date and its sources, fences and all",
+      good.added === 1 && good.bank.embeddings.questions.length === 3
+      && good.bank.embeddings.fetched === NOWF.toISOString()
+      && good.bank.embeddings.questions[0].sources[0] === "https://example.com/a");
+    const fresh = await fieldProbes({
+      ...fdeps,
+      priorField: { concepts: { embeddings: { fetched: NOWF.toISOString(), questions: ok2 } } },
+      generateField: async () => { throw new Error("must not be called for a fresh concept"); },
+    });
+    assert("FIELD — an already-fresh concept is NOT re-asked (the nightly cost is new topics, not the whole syllabus)",
+      fresh.spent === 0 && fresh.considered === 0 && fresh.total_concepts === 1);
+    const failed = await fieldProbes({ ...fdeps, generateField: async () => ({ ok: false, text: "" }) });
+    assert("FIELD — a failed call banks NOTHING (silence is never a fetch)",
+      failed.added === 0 && Object.keys(failed.bank).length === 0);
+    assert("FIELD — every FUTURE locked capsule is picked up with no edit here: the concept list is drillConcepts', which reads capsules/ live",
+      /deps\.concepts \|\| drillConcepts\(deps\)/.test(readFileSync(fileURLToPath(import.meta.url), "utf8").split("async function fieldProbes")[1].slice(0, 900)));
+  }
+
   {
     const writes = {};
     const r = await runShift({ ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } });
     assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
+    assert("JOB 1c — the field probes ride the shift record too (a job with no record is a job nobody can audit)",
+      "field_probes" in r.jobs);
     assert("probe bank: one per grammar type, validated, dated", writes["probe_bank_2026-07-15.json"].bank.tokenization.probes.length === 5);
     assert("distractors: one call is attempted per drill concept", r.jobs.distractors.spent >= 1);
     assert("scout pack: ready-to-paste Deep Research prompts for the Pro lane", writes["scout_pack.md"].includes("Deep-research") && writes["scout_pack.md"].includes("paste"));

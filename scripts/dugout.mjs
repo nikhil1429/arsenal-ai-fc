@@ -1498,11 +1498,26 @@ function execTool(name, args, deps = {}) {
       // M11 — the night shift's personalized distractors ride along per concept
       const ns = loadNightshift(now);
       for (const q of due) if (ns.distractors && ns.distractors[q.concept]) q.distractors = ns.distractors[q.concept].map(d => d.distractor);
+      // JOB 1c (11 Aug 2026) — THE FIELD PROBES ride too: real interview questions
+      // the night shift researched off the live web, each carrying its source. Read
+      // from the CUMULATIVE file, not a day-stamped one, so a concept researched
+      // last month still arms tonight's round. Rides as a SEPARATE field from his
+      // capsule's own fault-lines and must stay that way: his nine axes are the
+      // measurement, these are the pressure around it. A lane nobody reads is a
+      // lane that was never built — this is the read.
+      const fieldBank = (readJson(join(STATE_DIR, "brain_out", "nightshift", "field_probes.json")) || {}).concepts || {};
+      for (const q of due) {
+        const f = fieldBank[q.concept];
+        if (f && Array.isArray(f.questions) && f.questions.length) {
+          q.field_questions = f.questions.slice(0, 5).map(x => x.q);
+          q.field_fetched = f.fetched ? String(f.fetched).slice(0, 10) : null;
+        }
+      }
       return {
         due_today: summary.due_today ?? due.length, overdue: summary.overdue ?? 0,
         hardest_due: Array.isArray(summary.hardest_due) ? summary.hardest_due.slice(0, 3) : [],
         queue: due,
-        note: due.length ? "conduct these by voice — recall probes, gut-word first; offer a distractor as a tempting wrong option where provided; reps close the FSRS loop through capture" : "nothing due — the decay guard is quiet",
+        note: due.length ? "conduct these by voice — HIS nine fault-lines from get_capsule are the round (never invent a probe when his is on disk); gut-word BEFORE each answer; grade_rejirah the moment you judge an axis; log_reps closes the FSRS loop. `field_questions`, where present, are REAL interview questions researched off the live web — use them as the pressure AFTER his own axis is answered, never as a replacement for it." : "nothing due — the decay guard is quiet",
       };
     }
     if (name === "retire_doubt") {

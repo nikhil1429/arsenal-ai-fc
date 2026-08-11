@@ -119,9 +119,16 @@ const ARG_PROFILE = () => {
   if (needsShell(BIN())) return "full-shim";                            // spaced args + shell:true don't mix
   return "lean";
 };
-const ARGS = (model) => {
+// `extra` (11 Aug 2026) — per-call argv a CALLER needs and the shared lane cannot
+// assume, e.g. `--allowedTools WebSearch` for the field-probe job that has to read
+// the actual internet. It is APPENDED, never merged into the base, so the profile
+// choice above is untouched and ARGS_LEGACY still agrees argv-for-argv on every
+// existing call (extra defaults to [], and [...x].concat([]) is x). A caller that
+// passes nothing gets exactly the bytes it got yesterday.
+const ARGS = (model, extra = []) => {
   const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
-  return ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+  const chosen = ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+  return Array.isArray(extra) && extra.length ? [...chosen, ...extra] : chosen;
 };
 // FROZEN VERBATIM (layering law) — the pre-11-Aug chooser. Frozen not because the
 // invocation changed but because the repair's whole claim is that IT DID NOT: only
@@ -363,12 +370,12 @@ const claudeGenCatchLegacy = (e, prompt, t0) => parseErr(e, prompt, t0);
 // two: with encoding:"utf8" `resolveChild(null, stdout, …)` IS `parseOut(stdout,
 // …)`, so that lane is unchanged byte-for-byte and the WIRE scan below can pin
 // the whole function on one shape.
-function claudeGen(prompt, model = "sonnet", timeoutMs = 300000) {
+function claudeGen(prompt, model = "sonnet", timeoutMs = 300000, extraArgs = []) {
   if (process.env.ANTHROPIC_API_KEY) return refuse();
   const t0 = Date.now();
   const bin = BIN();
   try {
-    const stdout = execFileSync(bin, ARGS(model), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    const stdout = execFileSync(bin, ARGS(model, extraArgs), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
     return resolveChild(null, stdout, prompt, t0);
   } catch (e) { return resolveChild(e, e.stdout, prompt, t0); }
 }
