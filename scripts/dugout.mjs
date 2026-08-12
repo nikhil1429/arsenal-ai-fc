@@ -1317,8 +1317,14 @@ function gafferSittingSection() {
 // says the target is the least spend that still does the job WELL. Generating
 // prose that already exists in his own words would also break B15: the content
 // must come from a SOURCE, and his capsule IS the source.
-function buildPreparedSitting() {
+// deps injected ONLY so the suite can hold this on a fixture. capsule_map.json,
+// weaknesses.json and calibration.json are all GITIGNORED — a clean CI checkout
+// has NONE of them, so an assertion that reads the live files passes at home and
+// goes red on the away-day lane. That is the 7 Aug "DORMANT-SAFE" red exactly, and
+// this function's first selftest reproduced it within the hour.
+function buildPreparedSitting(deps = {}) {
   try {
+    const readJson = deps.readJson || ((p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch { } return null; });
     const map = readJson(join(STATE_DIR, "capsule_map.json"));
     const locked = ((map && map.concepts) || []).filter(c => c && c.locked_on);
     if (!locked.length) return "";
@@ -2875,23 +2881,43 @@ async function selftest() {
       // Built as free ASSEMBLY, not as an overnight generation job, because every
       // input already exists on disk. Three defects were caught by RUNNING it and
       // reading the output, not by reasoning about it — all three held here.
-      const ps = buildPreparedSitting();
+      // HERMETIC FIXTURE — every file this reads is gitignored, so asserting against
+      // the LIVE ones passes at home and goes red on the away-day lane. Caught by
+      // reproducing a clean checkout (`git archive HEAD`) within the hour: all five
+      // of these assertions were the ONLY failures in the whole CI run.
+      const psFix = (over = {}) => buildPreparedSitting({
+        readJson: (p) => {
+          const s = String(p);
+          if (s.endsWith("capsule_map.json")) return over.map !== undefined ? over.map : { concepts: [
+            { concept: "context", title: "Context Window", locked_on: "2026-06-20", counts: { doubts: 15, traps: 7, bridges: 4, interview_lines: 10 }, rejirah: { overdue_days: 42 }, axes_missing: [], axes_cracked: [] },
+            { concept: "tokenization", title: "Tokenization", locked_on: "2026-06-15", counts: { doubts: 26, traps: 11, bridges: 4, interview_lines: 9 }, rejirah: { overdue_days: 51 }, axes_missing: [], axes_cracked: ["a"] },
+          ] };
+          if (s.endsWith("weaknesses.json")) return over.weak !== undefined ? over.weak : { headline: { one_line: "9x miss on hallucinations" }, low_confidence: false };
+          if (s.endsWith("calibration.json")) return over.cal !== undefined ? over.cal : { danger_zone: [], low_confidence: false };
+          return null;
+        },
+      });
+      const ps = psFix();
       assert("B6/B11 — the sitting is prepared before he arrives, and the Gaffer is told not to improvise a plan",
         ps.includes("THE SITTING IS ALREADY PREPARED") && ps.includes("do NOT improvise a plan"));
       assert("B6 — it hands the Gaffer HIS OWN material and forbids paraphrasing it from memory (B15)",
         ps.includes("IN HIS OWN WORDS") && ps.includes("do not paraphrase them from memory"));
-      assert("B11 — DEFECT 1, held: the due queue is ordered by the OWNER'S REAL FIELD (rejirah.overdue_days). Written as a guessed field name, every value was 0, the sort was a no-op, and it opened on the WRONG concept",
+      assert("B11 — DEFECT 1, held: the due queue is ordered by the OWNER'S REAL FIELD (rejirah.overdue_days). Written as a guessed field name, every value was 0, the sort was a no-op, and it opened on the WRONG concept — the fixture puts Context Window FIRST in the array precisely so a broken sort cannot pass",
         /FIRST CONCEPT: Tokenization/.test(ps) && /51 days overdue/.test(ps));
       assert("B11 — and overdue is framed as RIPE, not late (the kickoff's own framing, and his)",
         ps.includes("RIPE, not late"));
       assert("B6 — DEFECT 2, held: weaknesses.headline is an OBJECT; String() on it printed a literal '[object Object]' into his live preamble",
-        !ps.includes("[object Object]"));
+        !ps.includes("[object Object]") && ps.includes("9x miss on hallucinations"));
       assert("B6 — DEFECT 3, held: an EMPTY ARRAY IS TRUTHY, so an empty danger_zone rendered a bare '[]' as if it were a finding (C3.4 — silence must be free)",
-        !/OVERCONFIDENT[^\n]*: \[\]/.test(ps));
+        !/OVERCONFIDENT/.test(ps));
       assert("B6/B11 — and it ends by handing the shape to B7's map law rather than starting the walk itself",
         ps.includes("DECLARE THIS SHAPE TO HIM FIRST") && ps.includes("take ONE axis and stop"));
+      // DORMANT-SAFE: a clean checkout has NO capsule_map.json, and the right answer
+      // there is silence — not a half-rendered sitting and not a crash.
+      assert("B6/B11 — with NO capsule map on disk (every CI checkout, forever) it says NOTHING rather than half a plan",
+        psFix({ map: null }) === "");
       assert("B6/B11 — the whole thing is deterministic assembly: no model call, which is what makes 'prepared before he arrives' free AND never stale",
-        SI.includes(ps) && typeof ps === "string");
+        typeof buildPreparedSitting() === "string" && SI.includes(buildPreparedSitting()));
     }
 
     // B2 — the rolling state is DRIVEN by the door that already holds the delta.
