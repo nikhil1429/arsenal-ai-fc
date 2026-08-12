@@ -1,5 +1,38 @@
 # NEXT SESSION — THE COMPLETE WORK LIST
 
+---
+## ⏱ STATUS AFTER THE 12 AUG SESSION (read this before re-planning anything)
+> Nine commits. **Do not re-derive the measurements below — they are on the ledger.**
+> Statuses are marked inline in every section too. Where this list and a section
+> disagree, the section is the one that was edited last; check `git log`.
+>
+> **DONE + PROVEN:** C1 · C2 · B1 · B2 · B4 · B5 · B7 · B8 · B9 · B10 · B12 · B13 ·
+> B14 · B15 · E2 · E6 · E8(partly) · C3.8 · the whole of A (it is the architecture
+> B1–B15 were built to, not separate work).
+>
+> **THREE FINDINGS IN THIS DOCUMENT WERE WRONG, all three caught by measuring:**
+> 1. **C1's flagged contradiction is resolved and BOTH halves were true** — but in
+>    lanes this doc did not separate. Under-count (dmn, 856+143 rows, 5.86 crore
+>    metered as 10 lakh) was REAL and was already repaired on 9 Aug 18:14. Over-count
+>    (haiku_pulse, 101 rows, 32.9 lakh written against 72k real) was a third fault
+>    nobody had named. Mis-weight (cache_read at full price, 67.5% of all traffic)
+>    was the live one. See commit `407bfca`.
+> 2. **E8 is wrong about `shipped`** — heartbeat's own chain has driven it daily all
+>    along. Three organs were undriven, not four.
+> 3. **E6 is a misread, not a dead wire** — `auto_hits` is a PER-RULE field inside
+>    `rules[]`, never a top-level key. Live: 277 auto-hits across 12 rules.
+>
+> **STILL OPEN (honest list):** B3 · B6 · B11 · E1 · E3 · E5 · E7 · E9 · E10 · F.
+> **B3 is the biggest remaining piece** and the keystone of A2/A3 — its delivery
+> channel now exists (B5 proved the `realtimeInput` lane end-to-end), so what is
+> left is the Flash watcher itself, not the wiring.
+>
+> **ONE THING THAT NEEDS HIS WORD:** `THE_GAFFER.md` is canon and was NOT edited.
+> The live constitution in `dugout.mjs` now carries five laws it does not. They
+> have diverged deliberately rather than silently.
+---
+
+
 > Written 12 Aug 2026 at the end of the session that produced it, on his instruction:
 > *"bhai ek ek cheez push kardo, do not miss any single thing. literally every single thing.
 > that token saving architecture should be done for the entire organism with optimal level of
@@ -77,7 +110,7 @@ the bar exactly when the budget is tight. Cost silences it, not design.
 Removing the cartridge (`7832506`, preamble 75,925 → 49,153) was only honest if the call that
 replaces it is made. It now is, and the constitution says why. Asserted.
 
-### B1 — KEY-ROTATION CONTINUITY *(his own diagnosis)*
+### B1 — KEY-ROTATION CONTINUITY *(his own diagnosis)* ✅ DONE 12 Aug (`77fedb2`) — the handle-drop was never the bug; the STALE PAGE-LOAD SEED was. New live `/rehydrate` door.
 `dugout.mjs:1994` — `loadSessionHandle` returns **null when `key_index` no longer matches**.
 The dugout rotates keys across seven tanks; a rotation invalidates the handle and the Live
 session restarts cold. He found this before I did: *"Have you changed your key?"*
@@ -86,7 +119,7 @@ session restarts cold. He found this before I did: *"Have you changed your key?"
 - **CONSUMER:** every live sitting
 - **DONE:** a forced rotation mid-sitting costs him nothing he can notice
 
-### B2 — THE ROLLING STATE + THE CONTINUOUS LOOP *(keystone)*
+### B2 — THE ROLLING STATE ✅ DONE 12 Aug (`77fedb2`) — `gaffer_state.mjs`, O(1)/turn measured at 12.3ms for 114 deltas, driven by the `/transcript` door. **THE CONTINUOUS LOOP (the Flash watcher) IS B3 AND IS NOT DONE.**
 State living OUTSIDE the session, updated per turn: what was agreed, the declared plan, where
 they are in it, what he told it to remember, what has been covered. **Makes B1 instant, B3
 possible, and the whole loop O(1).**
@@ -95,7 +128,7 @@ possible, and the whole loop O(1).**
 - **CONSUMER:** B3, B1's re-seed, B4's briefing, the Gaffer via injection
 - **DONE:** the state answers "where are we?" without reading the transcript
 
-### B3 — THE SUPERVISOR: a SECOND PAIR OF EARS, not a deep thinker
+### B3 — THE SUPERVISOR ⬜ **NOT DONE — THE BIGGEST REMAINING PIECE.** Its inputs now all exist (B2's rolling state, B8's standing instructions, B10's score) and B5 proved the `realtimeInput` delivery lane end-to-end. What is missing is only the Flash watcher itself.
 His complaints were about ATTENTION, not depth: *"you forgot what we were doing"* · *"did you
 forget the intensity thing?"* · *"why are you talking to me in a different accent all of a
 sudden?"* · saying "samajh nahi aaya" and being walked past. It pushes notes through the SAME
@@ -110,7 +143,7 @@ sudden?"* · saying "samajh nahi aaya" and being walked past. It pushes notes th
 - **CONSUMER:** the live Gaffer, mid-conversation
 - **DONE:** it catches a drift he would otherwise have had to catch himself
 
-### B4 — THE OPENING BRIEFING: it speaks FIRST
+### B4 — THE OPENING BRIEFING ✅ DONE 12 Aug (`e103348`) — deterministic off disk, therefore FREE, therefore unconditional. Live: 42 cards open.
 He had to ASK *"what decisions are pending on me?"*. A being that watched all night opens with
 it. **Not a report he requests — the first sentence out of its mouth.**
 - **IN:** `captains_call` cards · `watchman_last.json` · `round_read_<date>.json` · rejirah due · `missions.json` · overnight output
@@ -118,7 +151,7 @@ it. **Not a report he requests — the first sentence out of its mouth.**
 - **CONSUMER:** him, in the first ten seconds
 - **DONE:** he never again has to ask what is pending
 
-### B5 — ONE MIND, BOTH MOUTHS
+### B5 — ONE MIND, BOTH MOUTHS ✅ DONE 12 Aug (`b030998`) — **one direction only.** Claude Code → Gaffer is live-within-seconds; the reverse still arrives at SessionStart, because nothing can inject into a running Claude Code session from outside.
 He talks to Claude Code for hours; the Gaffer knows none of it live. Both already write to the
 same bus (claude-code 595 rows · dugout 246) — but the Gaffer never reads the bus
 mid-conversation. **The most conspicuously missing wire in "one organism".**
@@ -127,7 +160,7 @@ mid-conversation. **The most conspicuously missing wire in "one organism".**
 - **CONSUMER:** the Gaffer and the Claude Code surface, both ways
 - **DONE:** something said HERE is known THERE within seconds, and the reverse
 
-### B6 — PRE-COMPUTE THE INTELLIGENCE, so Flash never needs to be smart
+### B6 — PRE-COMPUTE THE INTELLIGENCE ⬜ NOT DONE (night lane).
 Overnight, when the budget is idle, a smart model writes the whole sitting: the plan per axis,
 the order, the analogies, where he will stumble and what to say when he does. `pre_answers`
 already predicts his next 15–25 doubts, so the machinery exists. **Flash stays Flash — but the
@@ -137,7 +170,7 @@ words in its mouth were written by Opus.**
 - **CONSUMER:** the Gaffer at sitting start; the briefing (B4)
 - **DONE:** a morning sitting reads a prepared lesson instead of improvising one
 
-### B7 — THE DECLARED MAP *(he asked three times and never got it)*
+### B7 — THE DECLARED MAP ✅ DONE 12 Aug (`e103348`) — a law of the whole Gaffer, carrying his own reason verbatim.
 His reason, verbatim: *"if in my mind I know that you are just giving me the definition first,
 so I will not overthink about vocab — I will just store it and know you'll explain it later."*
 He needs the SHAPE before the walk. **Applies to EVERY kind of sitting** — he was explicit:
@@ -147,7 +180,7 @@ He needs the SHAPE before the walk. **Applies to EVERY kind of sitting** — he 
 - **CONSUMER:** him
 - **DONE:** he stops having to ask what the strategy is
 
-### B8 — STANDING SPOKEN INSTRUCTIONS
+### B8 — STANDING SPOKEN INSTRUCTIONS ✅ DONE 12 Aug (`77fedb2`+`e103348`) — survives reconnect, rotation AND the day; reaches every preamble. Measured and tightened: a directive marker cut a 40% false-positive rate to zero without losing one real law.
 Today: `set_depth` persists · an explicit "remember that…" persists (verified — all three facts
 he dictated to the Gaffer landed in the ledger) · **everything else dies with the session** —
 "dheere bolo", "ye mat karo", "pehle mujhse poocho".
@@ -156,13 +189,13 @@ he dictated to the Gaffer landed in the ledger) · **everything else dies with t
 - **CONSUMER:** every future session's preamble; the supervisor (B3)
 - **DONE:** an instruction survives a reconnect AND a key rotation
 
-### B9 — "I DON'T KNOW" AS A LAW
+### B9 — "I DON'T KNOW" AS A LAW ✅ DONE 12 Aug (`e103348`).
 His words: *"don't lie to me because I can go into the files."* A machine that says *"ye mujhe
 yaad nahi, ruk dekhta hoon"* and then calls the tool beats a thousand that confabulate.
 - **IN:** the constitution · **OUT:** refusal-and-fetch instead of a confident guess
 - **CONSUMER:** him · **DONE:** he can check the files and find it was honest
 
-### B10 — SELF-SCORING
+### B10 — SELF-SCORING ✅ DONE 12 Aug — the fix was in the DAY ROLL: `observe()` used to reset and throw the evidence away, which is exactly why a bad sitting could never change the next one.
 The organism measures HIM constantly and never measures ITSELF in conversation. Without a score
 there is no "evolving according to me" — which is exactly what he asked for and was told no.
 - **IN:** the sitting transcript + the supervisor's flags (B3)
@@ -170,13 +203,13 @@ there is no "evolving according to me" — which is exactly what he asked for an
 - **CONSUMER:** the Gaffer's own instructions next session; the Boot Room as evidence
 - **DONE:** a bad sitting changes the next one without him saying anything
 
-### B11 — SESSION READY BEFORE HE ARRIVES
+### B11 — SESSION READY BEFORE HE ARRIVES ⬜ NOT DONE.
 At 06:00 the machine already knows he has four overdue Re-Jirah rounds. Pre-load so the tab
 opens warm.
 - **IN:** morning state (due rounds, night output, cards) · **OUT:** a warm prepared session
 - **CONSUMER:** him, on open · **DONE:** opening the tab costs no waiting
 
-### B12 — PROACTIVE RECALL
+### B12 — PROACTIVE RECALL ✅ DONE 12 Aug (`e103348`) — as a law, fenced both ways (attempt every turn; stay silent unless it earns the turn).
 `recall_index.jsonl` holds 848 rows, **97 carrying GAFFER-side text**, and `semantic_recall`
 already searches it. The gap is behavioural: **it only looks when asked.** A being that has to
 be told to remember is not remembering. Rule: attempt every turn where a past doubt, win or
@@ -187,7 +220,7 @@ Tuesday" theatre.
 - **CONSUMER:** the live Gaffer, mid-turn
 - **DONE:** it brings back something from weeks ago unprompted — and stays silent when it has nothing
 
-### B13 — PACE, as a law of the WHOLE Gaffer
+### B13 — PACE ✅ DONE 12 Aug (`e103348`) — fenced against the obvious misreading: DHEEMA IS NOT CHHOTA.
 *"you are speaking so fastly I am not understanding a single bit. **Feels like you are talking
 to yourself**"* — said in an ORDINARY conversation, not a teaching one. And *"थोड़ा स्पीड स्लो
 करके बोलिए और डिटेल में मेरे को समझना है हर एक चीज।"* Slow / one-idea / real pauses currently
@@ -196,7 +229,7 @@ live only inside the SAMJHAO laws. **Pace belongs to the being, not to one of it
 - **OUT:** a pace law on every sitting; the supervisor (B3) flags when it slips
 - **CONSUMER:** every spoken turn · **DONE:** he never says "slow down" twice
 
-### B14 — THE ICEBERG: a deep, CURRENT model of him
+### B14 — THE ICEBERG ✅ DONE 12 Aug (`2429650`) — composed ON DEMAND, not on the night lane (free + never stale beats nightly + wrong by breakfast). New tool `get_iceberg`. An EMPTY source now says it is empty: `nikhil_model` has zero edges and a silent drop would rebuild the exact thinness he objected to.
 *"I want you to tell me first of all every single thing you know about me. **Use brain for
 this.**"* → and when it answered thinly, *"I want the entire iceberg and it is more than what
 you was saying so **I want you to keep your knowledge updated. It is not what you think.**"*
@@ -208,7 +241,7 @@ nemesis · learning_state — and **nothing composes them**, and nothing keeps i
 - **CONSUMER:** the Gaffer; the briefing (B4); the supervisor (B3)
 - **DONE:** asked "what do you know about me", it gives the iceberg and names its refresh date
 
-### B15 — MODEL ROUTING PER TASK
+### B15 — MODEL ROUTING PER TASK ✅ DONE 12 Aug — as a law of the mouth.
 A2 routes WATCHING; this routes ANSWERING. Today Flash composes AND speaks every substantive
 reply, and composing is the one thing it is worst at.
 > **Flash is a mouth. Anything with real content behind it is composed elsewhere and handed to
@@ -225,7 +258,7 @@ reply, and composing is the one thing it is worst at.
 > architecture should be done for the entire organism with optimal level of output **not just
 > for gaffer**."* Seventy-five organs, every lane, not the voice surface alone.
 
-### C1 — 🔴 THE ACCOUNTING IS WRONG, AND IT IS STARVING LIVE ORGANS *(do this first)*
+### C1 — THE ACCOUNTING ✅ DONE 12 Aug (`407bfca`) — **the flagged contradiction is RESOLVED and BOTH halves were true, in different lanes, plus a THIRD fault nobody had named.** Under-count: dmn wrote `total_tokens` as the in+out pair on 856+143 rows — 5,86,44,720 metered as 10,19,066 — repaired 9 Aug 18:14, so the memory note was right about a lane already fixed. Over-count: `haiku_pulse` wrote a prompt-LENGTH GUESS as spend on 101 rows (32,90,374 against 72,674 real). Mis-weight (the LIVE one): cache_read was 67.5% of all counted traffic at FULL price. `spendOf()` derives from the four components at READ time, so a lying total is never consulted and the append-only ledger is not rewritten. **Why self-tune never learned:** at the one genuine wall (7 Aug 19:16) the window measured 3,76,992 as-written — it observed 3.77 lakh at the moment the account said no. The same instant measured 27,83,040 cost-weighted; that IS the new ceiling. PROVEN: `cortex consolidate` runs (38 nodes, 62 edges) after failing every day — which also closes **E2**.
 
 Measured 12 Aug off `brain_ledger.jsonl`:
 ```
@@ -251,7 +284,7 @@ not fix one and make the other worse.
 - **CONSUMER:** every budget-gated organ — cortex, nightshift, dmn, brain jobs, the field-probe door
 - **DONE:** ConceptGraph stops failing without anyone touching cortex
 
-### C2 — WHERE THE TOKENS ACTUALLY GO (measure the whole board first)
+### C2 — WHERE THE TOKENS ACTUALLY GO ✅ DONE 12 Aug — **the board is now a COMMAND, not prose: `node scripts/brain.mjs spend [days]`.** The table below is frozen at 11–12 Aug and was already stale; run the command instead. It ranks by cost-weighted spend BESIDE real output, because those two orders differ and the gap IS the optimisation target. First run found what the frozen table could not — the DMN is **64% of all weighted spend**, which led straight to the C3.8 fix below.
 Output tokens by job, 11–12 Aug — the ONLY honest starting point for optimisation:
 ```
 haiku_pulse 64,695 · ns_field_probes 57,247 · dmn_rollout 25,299 · ns_pre_answers 22,851
@@ -283,6 +316,12 @@ optimisation from this table, refreshed — never from a guess about which organ
    pass. Fixed in `637c4c3`; the guard is asserted and must stay.
 8. **EVERY DOOR OBEYS THE GOVERNOR.** A convenience CLI that bypasses the budget can starve the
    organs. Caught within an hour on the field-probe door (`01fcc63`); audit the others.
+   ✅ **THE OTHER ONE IS FOUND AND FIXED, 12 Aug — and it was 64% of the board.** `dmn.mjs`
+   gated on away · tone · FREE-TIER TANK quota and never once on the window; `grep -c` for a
+   brain.mjs import returned 0. Its header still calls that quota "blast radius $0", true when
+   written and false since 17 Jul, when every rollout moved to `claude -p`. A fourth gate now
+   rides the real governor, floored at the DMN's OWN measured median pass (4,00,381 weighted,
+   from five real passes), fail-OPEN if the governor will not load. A gate, not a cut.
 9. **MEASURE BEFORE OPTIMIZING.** Every number in this document came off the ledger or a live
    run. Never tune a threshold from a feeling. (His own standing rule since 1 Aug.)
 10. **OPTIMAL OUTPUT, NOT MINIMAL OUTPUT.** His words: *"optimal level of output"*. The target
@@ -329,24 +368,20 @@ without `gh` (not installed). **NEXT: install `gh`, or have him paste the first 
 NOT guess at a third cause.** This is why card c36 keeps re-dealing to him — *"c36 keeps on
 happening every single time."*
 
-**E2. `ArsenalFC-ConceptGraph` errors daily** — starved by C1. Fix C1, then VERIFY rather than assume.
+**E2. ✅ CLOSED 12 Aug — VERIFIED, not assumed.** C1 was the cause; `cortex consolidate` now exits 0 (38 nodes, 62 edges, 19,159 tok) running the scheduled task's exact command line. **A SECOND daily RED was found beside it and also fixed: `ArsenalFC-Morning-Conductor`.** Two steps blew the flat 180s step budget, neither of them hung — `heartbeat` is a CHAIN OF EIGHT organs each with its own 120s budget inside one 180s box (four of the eight measured 179.4s), and `mirror` is the FIRST step doing a NETWORK fetch on a just-woken laptop (186,377ms cold vs 2s warm; its own scheduled run at 09:20 succeeded in full). Per-step budgets, derived from those measurements. Commit `c74cc83`.
 
 **E3. `projection-stale` (RED, unrepaired).** `OPPONENT_SCOUT.md` was modified after
 `dossier_weights.json` was generated, so **all seven dossier readers run on the old opponent
 model**. Regenerate the projection from the canon doc.
 
-**E4. `sentinel-blind` (RED, never investigated).** Neither a laptop row nor the cloud
-sentinel's fallback appears in today's ntfy history; both cannot be silent on the same day.
-Contract: `setup/CLOUD_SENTINEL.md`.
+**E4. `sentinel-blind` — DID NOT REPRODUCE on a fresh sweep (12 Aug).** The finding came from the 11 Aug 22:15 sweep; re-running `node scripts/watchman.mjs run --no-tier2 --skip-suite` no longer raises it, and `tier2-vanished` self-demoted RED→INFO in the same sweep. **Not declared fixed — declared NOT CURRENTLY REPRODUCING.** If it returns, the contract is `setup/CLOUD_SENTINEL.md` and it has still never been investigated.
 
 **E5. The Tier-2 repair arm is OFF and its work is nobody's.** Disabled 11 Aug on his ruling
 after measuring 5 starts / 0 exits / 0 journal rows since 7 Aug (`637c4c3`; re-arm with
 `ARSENAL_TIER2=1`). Correct call — but E3 and E4 now have **no repair arm at all**. Decide:
 repair by hand, or re-arm with a fix for why the child always vanished.
 
-**E6. `teaching_contract.json` — possible dead wire.** `auto_hits` reads 0 keys while the live
-hook prints "drifted 183× · 183 auto" every turn. Either the count lives elsewhere, or a lane
-is not landing.
+**E6. ✅ NOT A DEAD WIRE — THE AUDIT READ THE WRONG NESTING LEVEL.** `auto_hits` is a **per-rule field inside `rules[]`**, never a top-level key, so `Object.keys(j.auto_hits)` returning 0 is exactly correct. Live 12 Aug: **277 auto-hits across 12 rules**, top one `dheema-not-lamba` at 184 — matching the hook's own print to the digit. Nothing to repair. Verify: `node -e "const j=require('./dressing-room/state/teaching_contract.json');console.log(j.rules.map(r=>[r.id,r.auto_hits]))"`
 
 **E7. `identity_facts.pending.jsonl` has TWO live writers** — `hippocampus.mjs` rewrites the
 whole file, `mcp-memory.mjs` appends. CLAUDE.md names this a REAL breach of the single-writer
@@ -357,6 +392,7 @@ rest, all but four are driven by another organ or a hook. These four run only if
 to type them — precisely the design failure his own ledger entry (`5cea57e8`) names:
 **`python_state` · `shipped` · `widget` · `course`.** Each needs an owner that calls it, or an
 honest decision that it is dormant.
+⚠ **PARTLY WRONG, corrected 12 Aug: `shipped` IS driven** — heartbeat's own chain has run it daily all along (`heartbeat.mjs` DEFAULTS order). Three, not four. Of those three, **`widget` now has a driver**: it joined the forge LOCK-chain, REPORT-ONLY (`list` reads and prints; asserted, so a fail-silent lane can never become a writer of the registry). It already has something to say — 4/4 locked capsules have a widget and only ONE is driven. `python_state` and `course` are **honestly dormant**: he has not started either track, and their un-dormanting event is him starting it, not a driver invented today.
 
 **E9. Two uncommitted organ-state files:** `dressing-room/state/awayday.json` (modified) and
 `dressing-room/state/recital_audit.jsonl` (untracked). The second is a NEW file in a PUBLIC
