@@ -227,6 +227,25 @@ export function measure(opts = {}) {
     }
   } catch { skipped.push("treasury unavailable"); }
 
+  // ── from pulse (12 Aug 2026, ULTRACODE — the ◇≤T liveness law) ───────────
+  // The FULL pulse (reconcile included): this is the DAILY half of the mutual
+  // watch. The watchman's nightly probePulse runs --no-reconcile; this one
+  // walks everything, so a dead WATCHMAN is caught HERE within a day (its
+  // watcher-stale class) exactly as a dead audit is caught by the watchman's
+  // probe. Liveness repairs are never mechanical — a lane that has never
+  // produced needs either its producer fixed or a decision that it is dormant
+  // — so every violation lands as a RULING, ranked by the readers it starves.
+  try {
+    const pj = JSON.parse(sh(process.execPath, [join(HERE, "pulse.mjs"), "json"]));
+    if (pj.measurable) {
+      for (const v of pj.violations || []) {
+        out.push(F(`liveness-${v.class}`, "dressing-room/state", v.name,
+          `${v.name}: ${v.detail || v.class}${v.consumers ? ` — ${v.consumers} wired reader(s) starving` : ""}${v.age_h ? ` (age ${v.age_h}h)` : ""}`,
+          { blast: (v.consumers || 0) + (/never|watcher/.test(v.class) ? 3 : 1), why_ruling: "a dead lane needs its producer fixed or a ruling that it is dormant; neither is mechanically derivable, and the loudest class (NEVER) is precisely the one no assertion can invent a fix for." }));
+      }
+    }
+  } catch { skipped.push("pulse unavailable — every ◇≤T obligation unverified this run"); }
+
   // ── from the docs (§8) ───────────────────────────────────────────────────
   const doc = docClaims();
   for (const d of doc.deadPaths) out.push(F("doc-dead-path", d.doc, d.path, `cites a path that does not exist: ${d.path}`, { blast: 0, autofix: null, why_ruling: CANON.includes(basename(d.doc)) ? "CANON — propose a diff, never write." : "the path may have MOVED rather than vanished; picking the replacement is a judgement." }));

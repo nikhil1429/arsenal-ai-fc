@@ -634,8 +634,30 @@ function sandbox() {
   return d;
 }
 
+// ── 7. ALIVE — the suite's FIRST liveness assertions (12 Aug 2026) ───────────
+// Measured that day: 4,341 assertions in this repo and ZERO said "it actually
+// RAN" — while diary (enabled, nightly, 3 wired readers) had never produced a
+// page. □P without ◇≤T is half a truth. This mode shells pulse.mjs `alive`
+// (the ◇≤T law over schtasks lanes, brain lanes via reconcile, the card queue,
+// and the watchers' own artifacts) and FAILS THE SUITE on any live violation.
+// On a bare checkout pulse answers NOT MEASURABLE and this mode passes — a CI
+// clone cannot testify about his laptop, and pretending it could would be the
+// B6 class in reverse. A RED here is a REAL lane lying dead right now, not a
+// flaky net: fix the lane, never this check.
+function alive() {
+  section("ALIVE — ◇≤T: every lane produced its artifact inside its own deadline");
+  const r = run([join(ROOT, "scripts", "pulse.mjs"), "alive"], { timeout: 300000 });
+  if (/NOT MEASURABLE HERE/.test(r.out)) {
+    assert("ALIVE — bare checkout: pulse answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
+    return;
+  }
+  const reds = r.out.split(/\r?\n/).filter((l) => /\[(NEVER|STALE|QUEUE)\]/.test(l));
+  assert("ALIVE — every measurable lane inside its own deadline (each line below is a lane lying dead RIGHT NOW)", r.code === 0,
+    reds.join("\n         ") || r.out.split(/\r?\n/).slice(-4).join(" | "));
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, alive };
 function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }

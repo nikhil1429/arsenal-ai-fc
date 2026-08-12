@@ -593,6 +593,39 @@ function probeReconcile() {
   }
 }
 
+// THE PULSE RIDE (12 Aug 2026, ULTRACODE liveness law). reconcile's bleeds ride
+// at INFO above — a level that never escalates and never wakes anyone, which is
+// how diary sat NEVER-PRODUCED with three wired readers while every check was
+// green. pulse.mjs owns the ◇≤T law (schtasks lanes, the card queue, and the
+// watchers' own artifacts); this probe runs it nightly WITHOUT the reconcile
+// half (--no-reconcile — probeReconcile above already walks the brain lanes,
+// and pulse re-walking them here would double-report every bleed). Severity is
+// the whole point: a NEVER class is RED — "has never produced" is the loudest
+// fact an organism can state about its own lane — and stale/queue is WARN.
+// pulse failing to run is WARN fail-closed, never silence. The other half of
+// the watch: audit.mjs runs pulse FULL daily at 13:10, so a dead watchman is
+// noticed by audit's pulse and a dead audit by this one — two drivers, no
+// shared code, which is the Byzantine answer to who-watches-the-watchman.
+function probePulse() {
+  try {
+    const r = spawnSync(process.execPath, [join(__dirname, "pulse.mjs"), "json", "--no-reconcile"],
+      { timeout: 120000, encoding: "utf8" });
+    if (r.error || (r.status !== 0 && r.status !== 1)) {
+      return [{ id: "pulse-unrunnable", level: "WARN", finding: "the liveness law could not run — every ◇≤T obligation is unverified tonight", evidence: String(r.error || `exit ${r.status}: ${String(r.stderr || "").slice(0, 200)}`) }];
+    }
+    const j = JSON.parse(String(r.stdout || "{}").trim() || "{}");
+    if (j.measurable === false) return [];   // a bare checkout cannot testify (never fires on his laptop)
+    return (Array.isArray(j.violations) ? j.violations : []).slice(0, 6).map((v) => ({
+      id: `pulse-${v.class}-${String(v.name).replace(/[^A-Za-z0-9_-]/g, "_")}`,
+      level: /never|watcher/.test(v.class) ? "RED" : "WARN",
+      finding: `${v.name}: ${v.detail || v.class}${v.consumers ? ` · ${v.consumers} wired reader(s) starving` : ""}`,
+      evidence: "node scripts/pulse.mjs report — the ◇≤T law, deadline 2x the lane's own cadence",
+    }));
+  } catch (e) {
+    return [{ id: "pulse-unrunnable", level: "WARN", finding: "the liveness law could not run — every ◇≤T obligation is unverified tonight", evidence: String(e) }];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TIER 2 — escalation, per his §7.1/§7.2 rulings. Fires ONLY on non-INFO
 // findings, at most once per local day, detached so the nightly task never
@@ -1157,6 +1190,7 @@ async function run(argv) {
   findings.push(...probeOutwork());
   findings.push(...await probeDaemons());
   findings.push(...probeReconcile());
+  findings.push(...probePulse());          // ULTRACODE 12 Aug — the ◇≤T liveness law (NEVER class = RED)
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch
   findings.push(...probeExpectedTasks()); // LADDER E2 — the schedule diff
   findings.push(...await probeSentinel(w.today)); // LADDER E8 — the sentinel's pulse
