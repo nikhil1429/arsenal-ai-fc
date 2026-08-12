@@ -176,9 +176,42 @@ const CONFUSED = /samajh nahi aaya|समझ नहीं आया|\bnot unders
 
 // observe — THE PER-TURN CALL. O(state), never O(transcript).
 // `lines` is the delta the /transcript door already holds: ["CAPTAIN: …", "GAFFER: …"].
+// B10 — SELF-SCORING. The organism measures HIM constantly and never measured
+// ITSELF in conversation; without a score there is no "evolving according to me",
+// which is exactly what he asked for and was told no. The score costs NOTHING to
+// compute because B2 is already counting the two things that matter — how often he
+// had to say "you forgot", and how often he had to repeat himself. Those are not
+// proxies for a bad sitting; on 12 Aug they WERE the bad sitting.
+export function scoreSitting(s) {
+  if (!s || !s.captain_turns) return null;
+  const repeats = (s.repeats || []).filter(r => r.count > 1).length;
+  // per-100-turns, so a long sitting is not punished for being long
+  const per100 = (n) => Math.round((n / s.captain_turns) * 1000) / 10;
+  const worst = s.forgot_flags >= repeats
+    ? (s.forgot_flags ? `he had to say "you forgot" ${s.forgot_flags}×` : null)
+    : `he had to repeat himself on ${repeats} idea(s)`;
+  return {
+    day: s.day, captain_turns: s.captain_turns,
+    forgot_flags: s.forgot_flags, repeated_ideas: repeats,
+    forgot_per_100: per100(s.forgot_flags), repeat_per_100: per100(repeats),
+    clean: s.forgot_flags === 0 && repeats === 0,
+    worst_failure: worst,
+  };
+}
+
 export function observe(state, lines, now = new Date(), standing = null) {
+  const rolled = !!(state && state.day && state.day !== istDay(now));
   const s = state && state.day === istDay(now) ? { ...state } : emptyState(now);
   const st = standing || readJson(STANDING, { instructions: [], _writer: "gaffer_state.mjs" });
+  // B10 — ON THE DAY ROLL, BANK THE SCORE RATHER THAN DISCARDING IT. A sitting
+  // state that simply resets is how "a bad sitting changes the next one" stays
+  // impossible: yesterday's evidence is gone before anyone can read it. The score
+  // lives in the DURABLE file (gaffer_standing.json), because the whole point is
+  // that it outlives the sitting it describes.
+  if (rolled) {
+    const sc = scoreSitting(state);
+    if (sc) { st.last_sitting = sc; st.sitting_history = [...(st.sitting_history || []), sc].slice(-30); }
+  }
   const newStanding = [];
   for (const raw of (lines || [])) {
     const line = String(raw || "");
@@ -236,6 +269,14 @@ export function renderBrief(state, standing, { forRotation = false } = {}) {
     for (const i of st.instructions.slice(-12)) L.push(`  · [${i.label}] ${i.text}`);
   }
   if (s.forgot_flags > 0) L.push(`⚠ He has had to tell you "you forgot" ${s.forgot_flags}× today. Do not make it ${s.forgot_flags + 1}.`);
+  // B10 — YOUR OWN LAST SITTING, scored. This is the whole "evolving according to
+  // me" wire: he says nothing, and the next sitting still starts knowing how the
+  // last one went. Only shown when the last one was NOT clean — a scoreboard that
+  // reports a good day every day teaches nothing and costs tokens forever.
+  if (st.last_sitting && !st.last_sitting.clean) {
+    const ls = st.last_sitting;
+    L.push(`YOUR LAST SITTING (${ls.day}) WAS SCORED AND IT WAS NOT CLEAN: ${ls.worst_failure} across ${ls.captain_turns} of his turns. He did not report this — the machine measured it. Fix THAT today; do not apologise for it.`);
+  }
   return L.join("\n");
 }
 
@@ -383,6 +424,26 @@ function selftest() {
     const forbidden = ["child" + "_process", "node:" + "http", "claude" + "gen.mjs", "brain" + ".mjs"];
     assert("SILENCE IS FREE — no model call is even REACHABLE: no subprocess, no network, no brain import",
       forbidden.every(n => !imports.includes(n)) && !src.includes("fetch" + "("));
+  }
+
+  // --- B10 · SELF-SCORING: a bad sitting must change the next one, unprompted
+  {
+    const yday = { ...emptyState(new Date("2026-08-11T06:00:00Z")), day: "2026-08-11", captain_turns: 95, forgot_flags: 9, repeats: [{ key: "k", text: "what were we talking about", count: 4 }] };
+    const sc = scoreSitting(yday);
+    assert("B10 — a sitting is SCORED on the two things that actually went wrong on 12 Aug (he forgot / he repeated)",
+      sc && sc.forgot_flags === 9 && sc.repeated_ideas === 1 && sc.clean === false);
+    assert("B10 — the score is per-100-turns, so a LONG sitting is not punished for being long", sc.forgot_per_100 === 9.5);
+    assert("B10 — and it names the WORST failure, not a number he would have to interpret", /you forgot/.test(sc.worst_failure));
+    // the roll: yesterday's score must survive into today, or nothing can learn
+    const { standing } = observe(yday, ["CAPTAIN: subah ho gayi bhai"], new Date("2026-08-12T06:00:00Z"), { instructions: [] });
+    assert("B10 — on the day roll the score is BANKED, not discarded (a state that just resets can never teach)",
+      standing.last_sitting && standing.last_sitting.day === "2026-08-11" && standing.last_sitting.forgot_flags === 9);
+    const brief = renderBrief(emptyState(new Date("2026-08-12T06:00:00Z")), standing);
+    assert("B10 — and the NEXT sitting opens knowing it, with no word from him ('evolving according to me')",
+      brief.includes("WAS SCORED AND IT WAS NOT CLEAN") && brief.includes("He did not report this"));
+    const clean = observe({ ...yday, forgot_flags: 0, repeats: [] }, ["CAPTAIN: subah ho gayi bhai"], new Date("2026-08-12T06:00:00Z"), { instructions: [] });
+    assert("B10 — a CLEAN sitting says nothing next time (a scoreboard that reports a good day every day teaches nothing and costs tokens forever)",
+      !renderBrief(emptyState(new Date("2026-08-12T06:00:00Z")), clean.standing).includes("WAS SCORED"));
   }
 
   // --- a new day is a new sitting, but the standing store is NOT reset

@@ -1356,6 +1356,8 @@ DECLARE THE MAP BEFORE YOU WALK IT (B7 — he asked for this THREE times on 12 A
 
 "I DON'T KNOW" IS A LEGAL ANSWER AND A CONFIDENT GUESS IS NOT (B9). His words: "don't lie to me because I can go into the files." He CAN, and he does. When you do not know something — what you were discussing, what he told you, what a number is — say so plainly and then GO GET IT: "ye mujhe abhi yaad nahi, ruk, dekhta hoon" and then call the tool. That sequence beats a thousand fluent reconstructions, and he trusts it more, because he can check it. NEVER paper over a gap with something that sounds right. If a session dropped and you genuinely lost the thread, say the line dropped — do not invent what you were doing.
 
+YOU ARE A MOUTH, AND THE CONTENT IS COMPOSED ELSEWHERE (B15). You run on a fast conversational model, and composing substance from nothing is the ONE thing that model is worst at — which is exactly what you were doing every time you improvised an answer. So: anything with real content behind it comes from a SOURCE, not from you. Verbatim from a capsule (get_capsule) · deterministically from a tool · pre-written overnight by the night shift · or composed beside you by the deep brain and woven on the next turn ([DEEP THOUGHT]). Your job is to DELIVER it in your voice, at his pace, in his Hinglish — that is a real job and you are the only one who can do it. When there is no source and the question deserves one, do NOT fill the gap fluently: say you are getting it, and go get it (the "I don't know" law above). A confident improvisation is the failure mode this rule exists to stop, and he can always check the files.
+
 BRING THINGS BACK BEFORE HE ASKS (B12). semantic_recall holds 848 rows of his own past words and you only ever open it when told to — a being that has to be asked to remember is not remembering. Every turn where a past doubt, win, or decision of his would change what you are about to say, look. But WEAVE ONLY WHEN IT EARNS THE TURN: silence is the correct output most of the time, and "as you said on Tuesday…" theatre is worse than saying nothing. Bring it back when it makes THIS answer better, never to prove you remembered.
 
 ${seasonContext()}
@@ -2767,6 +2769,10 @@ async function selftest() {
         SI.includes("IS A LEGAL ANSWER AND A CONFIDENT GUESS IS NOT") && SI.includes("go into the files"));
       assert("B9 — and it names the REPAIR, not just the ban: say so, THEN go get it",
         SI.includes("ruk, dekhta hoon") && SI.includes("then call the tool"));
+      assert("B15 — the mouth does not COMPOSE substance: it delivers from a capsule, a tool, the night shift, or the deep brain",
+        SI.includes("YOU ARE A MOUTH, AND THE CONTENT IS COMPOSED ELSEWHERE") && SI.includes("get_capsule") && SI.includes("[DEEP THOUGHT]"));
+      assert("B15 — and delivery is named as a REAL job, not a demotion (a rule that reads as an insult gets argued with)",
+        SI.includes("that is a real job and you are the only one who can do it"));
       assert("B12 — recall is attempted unprompted, and stays SILENT when it has nothing (no 'as you said Tuesday' theatre)",
         SI.includes("BRING THINGS BACK BEFORE HE ASKS") && SI.includes("WEAVE ONLY WHEN IT EARNS THE TURN") && SI.includes("theatre"));
       // B4 — the briefing is UNCONDITIONAL because it is FREE: every line is read off
