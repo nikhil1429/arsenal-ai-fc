@@ -223,7 +223,11 @@ export function docClaims() {
   const walk = (d, depth) => {
     if (depth > 3) return;
     for (const e of readdirSync(d, { withFileTypes: true })) {
-      if (["node_modules", ".git", "brain_out"].includes(e.name)) continue;
+      // `.claude/worktrees/` holds a FULL COPY of the repo's docs from an old
+      // agent worktree. Scanning it doubled EVERY doc finding exactly — 20 from
+      // ORGANISM_REPAIR_PLAN.md and 20 more from its twin. A duplicated corpus
+      // does not make a finding twice as true; it makes the count twice as wrong.
+      if (["node_modules", ".git", "brain_out", "worktrees"].includes(e.name)) continue;
       const p = join(d, e.name);
       if (e.isDirectory()) walk(p, depth + 1);
       else if (e.name.endsWith(".md") && e.name !== "ARSENAL_FC_FULL_REPO_BUNDLE.md") docs.push(p);
@@ -239,8 +243,17 @@ export function docClaims() {
       cited.push({ doc: rel, organ: `${m[1]}.mjs` });
       if (!organs.has(`${m[1]}.mjs`)) deadOrgans.push({ doc: rel, organ: `${m[1]}.mjs` });
     }
-    // path claims of the shape `dressing-room/state/x.json` or `learning-layer/Y.md`
-    for (const m of txt.matchAll(/\b((?:dressing-room|learning-layer|setup|\.claude)[\\/][A-Za-z0-9_\-./]+\.(?:json|jsonl|md|ps1|mjs))/g)) {
+    // Path claims of the shape `dressing-room/state/x.jsonl` or `learning-layer/Y.md`.
+    //
+    // ⚠ THE ALTERNATION ORDER IS LOAD-BEARING, and getting it wrong FABRICATED
+    // MOST OF THIS RULE'S FINDINGS. Regex alternation is leftmost-first, so
+    // `(?:json|jsonl)` matches `reps_log.jsonl` as `reps_log.json` and silently
+    // drops the trailing `l`. Every one of the repo's ~31 .jsonl lanes then read
+    // as "a doc cites a path that does not exist" — reps_log, brain_ledger,
+    // bootroom_log, afferent, presence_log, teaching_audit, all of them, in every
+    // doc that mentions them. `jsonl` MUST come first, and the trailing boundary
+    // makes it explicit rather than relying on order alone.
+    for (const m of txt.matchAll(/\b((?:dressing-room|learning-layer|setup|\.claude)[\\/][A-Za-z0-9_\-./]+\.(?:jsonl|json|md|ps1|mjs))(?![A-Za-z0-9])/g)) {
       const p = m[1].replace(/\\/g, "/");
       if (/[*?<>]/.test(p)) continue;
       if (!existsSync(join(ROOT, p))) deadPaths.push({ doc: rel, path: p });
@@ -350,7 +363,15 @@ function runAudit(opts = {}) {
 
     // ONE HEALTH NUMBER. Deliberately a single scalar: a dashboard is a list,
     // and a list is triage.
-    const health = Math.max(0, Math.round(100 - ranked.reduce((s, c) => s + c.score, 0)));
+    //
+    // ⚠ THE FIRST FORM WAS `100 - Σ(score)`, WHICH SATURATED AT 0 ON THE FIRST
+    // REAL RUN and stayed there. A number that reads 0 whether there are twelve
+    // problems or two hundred carries no information and, worse, can never
+    // IMPROVE visibly — so nobody would ever watch it, which is the whole job.
+    // A bounded decay keeps every reduction visible: halving the burden always
+    // moves the number, at any scale.
+    const burden = ranked.reduce((s, c) => s + c.score, 0);
+    const health = Math.round(100 / (1 + burden / 25));
 
     console.log(`\n${"═".repeat(70)}`);
     console.log(`ARSENAL AUDIT · HEALTH ${health}/100 · ${ranked.length} ruling${ranked.length === 1 ? "" : "s"} waiting`);
