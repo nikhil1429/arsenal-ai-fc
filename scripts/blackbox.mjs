@@ -60,8 +60,21 @@ const toRepoRel = (p, sandboxRoot) => {
   const s = String(p).replace(/\\/g, "/");
   const r = sandboxRoot.replace(/\\/g, "/");
   if (s.toLowerCase().startsWith(r.toLowerCase() + "/")) return s.slice(r.length + 1);
+  // NESTED SANDBOXES ARE REAL AND THEY BROKE THE RECONCILIATION. The audit organs
+  // build their own sandbox, and when blackbox traces THEM that inner sandbox has
+  // a different mkdtemp root — so the same file appeared twice, once relative and
+  // once absolute, and every one of those absolute twins counted as "hidden
+  // coupling the static IR cannot see". 386 hidden edges, mostly one file counted
+  // two ways. Any arsenal-* temp root is folded back to the repo-relative name.
+  const m = /arsenal(?:-audit|-test|_[a-z]+)?-?[A-Za-z0-9_]*\/(.*)$/.exec(s);
+  if (m) return m[1];
   return s;
 };
+
+// THE OBSERVER IS NOT THE OBSERVED. The audit's own organs build sandboxes, read
+// the IR and spawn children by design; including them makes the audit's loudest
+// finding be itself. Excluded by name, and the exclusion is stated, not silent.
+const AUDIT_ORGANS = new Set(["sandbox.mjs", "xray.mjs", "mutagen.mjs", "blackbox.mjs", "treasury.mjs", "herd.mjs", "audit.mjs", "audit_preload.mjs", "organism_test.mjs"]);
 
 const primaryVerb = (organ, ir) => {
   const o = ir.organs[organ];
@@ -110,27 +123,45 @@ export function run(opts = {}) {
 
 // ── THE THREE QUESTIONS ──────────────────────────────────────────────────────
 export function analyse(res, ir) {
+  const runs = res.runs.filter((r) => !AUDIT_ORGANS.has(r.organ));
   // 1. SILENT SUCCESS. Exit 0 is not evidence of work.
-  const silent = res.runs.filter((r) => r.code === 0 && r.reads.length === 0 && r.writes.length === 0 && !r.spawns.length);
+  const silent = runs.filter((r) => r.code === 0 && r.reads.length === 0 && r.writes.length === 0 && !r.spawns.length);
+
   // 2. SWALLOWED ENOENT — exited 0 having failed to find something it opened.
-  //    This is bug class 1's runtime signature, and it is DECIDABLE.
-  const swallowedEnoent = res.runs
+  //    This is bug class 1's runtime signature, and it is DECIDABLE — but it is
+  //    only a DEFECT after the same three-way classification the panic build
+  //    needed. 63 raw rows was not 63 bugs: most were an organ probing for state
+  //    it writes itself (correct), or a deliberate `__no_such_*` negative fixture.
+  const NEGATIVE_PROBE = /__no_such|__[a-z_]+_selftest|no-such-dir|CANARY/i;
+  const writerOf = (p) => { const f = ir.files.find((x) => x.path === p); return f ? f.writers : null; };
+  const swallowedEnoent = runs
     .filter((r) => r.code === 0 && r.enoent.length)
-    .map((r) => ({
-      ...r,
-      // a probe on a file the organ also WRITES is just first-run initialisation
-      real: r.enoent.filter((p) => !r.writes.includes(p) && /dressing-room\/state\//.test(p)),
-    }))
+    .map((r) => {
+      const real = r.enoent
+        .filter((p) => /dressing-room\/state\//.test(p) && !NEGATIVE_PROBE.test(p) && !r.writes.includes(p))
+        .map((p) => {
+          const w = writerOf(p);
+          return {
+            path: p,
+            klass: w === null ? "UNKNOWN" : w.includes(r.organ) ? "SELF-HEALING" : w.length ? "CROSS-ORGAN" : "NO WRITER",
+            writers: w || [],
+          };
+        })
+        // SELF-HEALING is correct design (first run, no state yet), never a finding
+        .filter((x) => x.klass !== "SELF-HEALING");
+      return { ...r, real };
+    })
     .filter((r) => r.real.length);
 
   // 3. STATIC vs RUNTIME
   const staticEdges = new Set();
   for (const [organ, o] of Object.entries(ir.organs)) {
+    if (AUDIT_ORGANS.has(organ)) continue;
     for (const x of o.reads) staticEdges.add(`${organ}|R|${x.path}`);
     for (const x of o.writes) staticEdges.add(`${organ}|W|${x.path}`);
   }
   const runtimeEdges = new Set();
-  for (const r of res.runs) {
+  for (const r of runs) {
     for (const p of r.reads) runtimeEdges.add(`${r.organ}|R|${p}`);
     for (const p of r.writes) runtimeEdges.add(`${r.organ}|W|${p}`);
   }
@@ -143,14 +174,19 @@ function report(opts) {
   const ir = loadIR();
   const res = run(opts);
   const a = analyse(res, ir);
-  const slow = [...res.runs].sort((x, y) => y.ms - x.ms).slice(0, 10);
+  const slow = res.runs.filter((r) => !AUDIT_ORGANS.has(r.organ)).sort((x, y) => y.ms - x.ms).slice(0, 10);
 
   console.log(`── SILENT SUCCESS — exit 0 while touching NOTHING (${a.silent.length})`);
   console.log(`   exit code 0 is not evidence of work; touching the file is.`);
   for (const r of a.silent.slice(0, 20)) console.log(`   ${r.organ} ${r.verb}   ${r.ms}ms`);
   console.log(`\n── SWALLOWED ENOENT — exit 0 having failed to find state it opened (${a.swallowedEnoent.length})`);
   console.log(`   this is the runtime signature of the rejirah_state.json class of bug.`);
-  for (const r of a.swallowedEnoent.slice(0, 20)) console.log(`   ${r.organ} ${r.verb} → ${r.real.slice(0, 3).join(", ")}`);
+  for (const k of ["NO WRITER", "CROSS-ORGAN", "UNKNOWN"]) {
+    const g = a.swallowedEnoent.flatMap((r) => r.real.filter((x) => x.klass === k).map((x) => ({ organ: r.organ, verb: r.verb, ...x })));
+    if (!g.length) continue;
+    console.log(`   ── ${k} (${g.length})`);
+    for (const x of g.slice(0, 12)) console.log(`      ${x.organ} ${x.verb} → ${x.path}${x.writers.length ? `  [written by ${x.writers.join(", ")}]` : ""}`);
+  }
   console.log(`\n── HIDDEN COUPLING — a runtime edge the static IR cannot see (${a.hidden.length})`);
   for (const e of a.hidden.slice(0, 20)) console.log(`   ${e.replace(/\|/g, "  ")}`);
   console.log(`\n── UNEXERCISED — a static edge no run ever touched (${a.unexercised.length})`);
