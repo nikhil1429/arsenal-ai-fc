@@ -92,6 +92,10 @@ import { projectVitals, projectScout, projectDrills, projectTwin } from "./talk.
 import { renderEdge as renderModelEdge } from "./nikhil_model.mjs";   // H3 — the formatter law: every reader renders edges through the owner's own line
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
 import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
+// B1/B2 (12 Aug 2026) — THE ROLLING STATE. gaffer_state.mjs is its SOLE writer;
+// the bridge calls observe() in-process on the /transcript door because that door
+// is already holding the turn delta, which is what makes the update O(1) per turn.
+import { observe as observeTurn, renderBrief as renderGafferBrief } from "./gaffer_state.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI).
 // 11 Aug 2026 dead-wire sweep — `markServed` joins the two readers. It is the OWNER's
 // own writer (examiner.mjs is sole writer of examiner_drill.json and re-reads the file
@@ -1973,6 +1977,11 @@ function execTool(name, args, deps = {}) {
 // is a wire error, the exact bug key-rotation used to trigger).
 // ---------------------------------------------------------------------------
 const SESSION = join(STATE_DIR, "dugout_session.json");
+// B1/B2 — the rolling state's two files. READ here, WRITTEN here only through
+// gaffer_state.mjs's own observe(); that file is the declared sole writer and this
+// bridge is its driver, never a second author of the schema.
+const GSTATE = join(STATE_DIR, "gaffer_state.json");
+const GSTANDING = join(STATE_DIR, "gaffer_standing.json");
 const RESUME_TTL_MIN = 100;                        // handles live ~2h; stay conservative
 function saveSessionHandle(body, deps = {}) {
   const write = deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2)));
@@ -2598,6 +2607,43 @@ async function selftest() {
     assert("key rotation DROPS the handle (per-project law)", PAGE.includes("dropResume('key rotation"));
     assert("resume rejected by the wire → drop + fresh line + rehydrate", PAGE.includes("resumingWith&&!setupDone") && PAGE.includes("dropResume('resume rejected"));
     assert("goAway → proactive stitch at a quiet beat (never mid-word)", PAGE.includes("goAwayAt&&ws&&ws.readyState===1&&setupDone&&!talking&&!liveSrcs.length") && PAGE.includes("stitching=true"));
+
+    // ---- B1 · KEY-ROTATION CONTINUITY (12 Aug 2026, HIS OWN DIAGNOSIS) ----------
+    // "Have you changed your key? Because you forgot what we were doing." The
+    // rotation path was already correct in every respect but one: it re-seeded from
+    // CFG.rehydrate, a snapshot built at PAGE LOAD by buildConfig. These hold the
+    // whole repaired wire — the live door, the page fetching it, the rolling state
+    // riding in FRONT of the tail, and the fallback that keeps a bridge failure from
+    // costing the re-seed itself.
+    // (own read of the source — the suite's shared SRC is declared further down)
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("B1 — the bridge serves a LIVE re-seed door", SRC.includes('req.url.startsWith("/rehydrate")'));
+    assert("B1 — the page re-seeds from that door, NOT from the page-load snapshot", PAGE.includes("fetch('/rehydrate')") && PAGE.includes("seed=j.rehydrate"));
+    assert("B1 — CFG.rehydrate survives as the FALLBACK, so a dead bridge costs the improvement and never the re-seed",
+      PAGE.includes("let seed=CFG.rehydrate") && PAGE.includes("if(!seed||!ws||ws.readyState!==1)return"));
+    assert("B1 — and the log SAYS which of the two it got (a silent downgrade is how the first one hid)",
+      PAGE.includes("the LIVE rolling state") && PAGE.includes("page-load snapshot"));
+    assert("B1 — the rotation path still drops the handle first (per-project law is untouched)",
+      /dropResume\('key rotation/.test(PAGE) && PAGE.includes("rehydrated=false;postHandle"));
+    // B2 — the rolling state is DRIVEN by the door that already holds the delta.
+    // E8 measured four organs that run only when he remembers to type them; his own
+    // ledger calls anything he must remember a design failure. This is not a fifth.
+    assert("B2 — the /transcript door drives the rolling state in-process (nobody has to type it)",
+      SRC.includes("observeTurn(prev, body.lines"));
+    assert("B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema",
+      SRC.includes('from "./gaffer_state.mjs"') && !SRC.includes("gaffer_state.json\", JSON.stringify({"));
+    assert("B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)",
+      /appendFileSync\(join\(OUT_DIR[\s\S]{0,900}?try \{[\s\S]{0,600}?observeTurn[\s\S]{0,400}?\} catch \{ \}/.test(SRC));
+    {
+      // and the door composes the two halves in the order that matters: the PROMISE
+      // (plan + standing instructions) in front of the CHATTER (the transcript tail).
+      // lastIndexOf, not indexOf — the assertion above quotes the same literal, and
+      // indexOf finds THIS test rather than the door it is testing.
+      const at = SRC.lastIndexOf('req.url.startsWith("/rehydrate")');
+      const seg = SRC.slice(at, at + 700);
+      assert("B1 — the rolling state rides IN FRONT of the tail (the tail alone carries chatter, not the promise)",
+        seg.indexOf("renderGafferBrief") < seg.indexOf("buildRehydrate") && seg.includes("[brief, tail].filter(Boolean)"));
+    }
   }
 
   // M1 — THE AFFERENT NERVE + THE ASYNC ARC (the thalamus wiring)
@@ -4097,9 +4143,20 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
  // starts fresh on every (re)connect; mins() zeroes it the moment the wire drops.
  if(m.setupComplete){setupDone=true;setupAt=Date.now();earlyCloses=0;failedSetups=0;t0=Date.now();goAwayAt=0;
   if(resumingWith){log('· session RESUMED server-side (compressed memory intact)');resumingWith=null}
-  if(!resumeHandle&&CFG.rehydrate&&!rehydrated){rehydrated=true;
-   ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'[REHYDRATE — aaj ka match record so far; resume silently, no recap]\\n'+CFG.rehydrate}]}],turnComplete:false}}));
-   log('· rehydrated from today\\'s match record')}
+  // B1 — RE-SEED FROM THE LIVE DOOR, NOT THE PAGE-LOAD SNAPSHOT.
+  // CFG.rehydrate is built once, by buildConfig, when the tab opens. Every reconnect
+  // used it, so a key rotation 40 minutes in re-seeded the Gaffer with the
+  // conversation as it stood 40 minutes ago — his "Have you changed your key?
+  // Because you forgot what we were doing." /rehydrate rebuilds the tail live AND
+  // puts the rolling state (agreed plan, standing instructions, his last unresolved
+  // point) in front of it. CFG.rehydrate stays the fallback, so a bridge that cannot
+  // answer costs us the improvement and never the re-seed itself.
+  if(!resumeHandle&&!rehydrated){rehydrated=true;
+   (async()=>{let seed=CFG.rehydrate,live=false;
+    try{const r=await fetch('/rehydrate');if(r.ok){const j=await r.json();if(j&&j.rehydrate){seed=j.rehydrate;live=true}}}catch(e){}
+    if(!seed||!ws||ws.readyState!==1)return;
+    ws.send(JSON.stringify({clientContent:{turns:[{role:'user',parts:[{text:'[REHYDRATE — aaj ka match record so far; resume silently, no recap]\\n'+seed}]}],turnComplete:false}}));
+    log('· rehydrated from '+(live?'the LIVE rolling state (plan + standing instructions intact)':'today\\'s match record (page-load snapshot — bridge did not answer)'))})()}
   st('🎙 LIVE — talk. (interrupt any time)');flushPending();return}
  if(m.sessionResumptionUpdate&&m.sessionResumptionUpdate.resumable){resumeHandle=m.sessionResumptionUpdate.newHandle;postHandle(resumeHandle)}
  // C2 — usageMetadata arrives FREE on server messages: the token-true gauge
@@ -4544,6 +4601,22 @@ async function main() {
         return send(200, buildConfig(keys, mode));
       }
       if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
+      // B1 — THE LIVE RE-SEED. His own diagnosis: "Have you changed your key?
+      // Because you forgot what we were doing." On quota the page ran
+      //   reportFault → nextKey() → dropResume('key rotation') → connect()
+      // and the fresh socket re-seeded from CFG.rehydrate — a snapshot built ONCE at
+      // PAGE LOAD. Forty minutes into a sitting it re-seeded the Gaffer with the
+      // conversation as it stood when the tab opened, which is exactly the amnesia he
+      // felt. This door rebuilds the tail LIVE (the /transcript door appends every
+      // turn, so "live" here means seconds old) and puts the ROLLING STATE in front of
+      // it: the agreed plan, the standing instructions, his last unresolved point.
+      // The tail alone was never enough — it carries chatter, not the promise.
+      if (req.method === "GET" && req.url.startsWith("/rehydrate")) {
+        const state = readJson(GSTATE), standing = readJson(GSTANDING);
+        const brief = renderGafferBrief(state, standing, { forRotation: true });
+        const tail = buildRehydrate(new Date(), LIVE_TAIL_BUDGET);
+        return send(200, { ok: true, rehydrate: [brief, tail].filter(Boolean).join("\n\n"), had_state: !!state });
+      }
       if (req.method === "GET" && (req.url || "").startsWith("/club/")) {
         // ONE FRONT DOOR — wall/handbook/media/prompts served read-only.
         // Path law: 1–2 clean segments (media/ and prompts/ live one level
@@ -4586,6 +4659,19 @@ async function main() {
         }
         if (req.url === "/transcript") {
           appendFileSync(join(OUT_DIR, localDate() + ".md"), body.lines.join("\n") + "\n");
+          // B2 — THE ROLLING STATE, updated on the turn delta this door already holds.
+          // Deliberately in-process and fail-silent: the rolling state is a comfort,
+          // never a gate, and a bug in it must never cost him a transcript line. It is
+          // ALSO the only thing driving gaffer_state, by design — E8 measured four
+          // organs that run only if he remembers to type them, and his own ledger
+          // (5cea57e8) calls anything he must remember a design failure.
+          try {
+            const prev = readJson(GSTATE);
+            const stand = readJson(GSTANDING) || { instructions: [], _writer: "gaffer_state.mjs" };
+            const r = observeTurn(prev, body.lines, new Date(), stand);
+            writeFileSync(GSTATE, JSON.stringify(r.state, null, 2));
+            if (r.newStanding.length) writeFileSync(GSTANDING, JSON.stringify(r.standing, null, 2));
+          } catch { }
           // THE EAR'S ONE LEGAL SURFACE — hedge-density, scrimmage mode only,
           // counted off-mic, never voiced mid-session (law).
           if (body.mode === "scrimmage") {

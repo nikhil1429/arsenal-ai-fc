@@ -140,6 +140,15 @@ dressing-room/state/dugout_ledger.jsonl
 dressing-room/state/dugout_stamps.jsonl
 dressing-room/state/dugout_scrimmage.jsonl
 dressing-room/state/dugout_reminders.jsonl
+# B1/B2 (12 Aug 2026) — the Gaffer's rolling state + standing instructions.
+# These quote his spoken lines VERBATIM (the agreed plan, his last words, every
+# standing instruction he gave out loud). Their SOURCE — brain_out/ — is already
+# ignored at line 136, so a file that excerpts it belongs on the same side of the
+# line. NOT a reversal of his 5 Aug ruling: that ruling named readiness.json and
+# intake_log.json by name and is untouched. If he wants these public, that is his
+# call to make, the same way the other one was.
+dressing-room/state/gaffer_state.json
+dressing-room/state/gaffer_standing.json
 # the shadow engine (earned proactivity — personal behavioral data)
 dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
