@@ -1238,6 +1238,71 @@ function firstContact() {
 - LEARN HIM: ask him naturally one or two orienting things — what he's studying toward right now, what today's focus is — and when he answers, call remember with his exact words so the empty book starts filling from his own mouth.
 - Then STOP the onboarding and just be his coach.`;
 }
+// ---------------------------------------------------------------------------
+// B2/B8 — THE SITTING STATE reaches the PREAMBLE, not just a reconnect.
+// ---------------------------------------------------------------------------
+// B8's declared CONSUMER is "every future session's preamble". Without this the
+// rolling state would only ever be read on a rotation (B1), which would make a
+// standing instruction survive a dropped line and die on a clean tab-open — the
+// dumbest possible version of the fix. Deterministic, free, fail-silent.
+function gafferSittingSection() {
+  try {
+    const brief = renderGafferBrief(readJson(GSTATE), readJson(GSTANDING), { forRotation: false });
+    // renderBrief always emits its header line; a header alone means nothing to say,
+    // and an organ with nothing to say must say nothing (C3 principle 4).
+    return brief && brief.split("\n").length > 1 ? `\n${brief}\n` : "";
+  } catch { return ""; }
+}
+
+// ---------------------------------------------------------------------------
+// B4 — THE OPENING BRIEFING: it speaks FIRST.
+// ---------------------------------------------------------------------------
+// He should never have had to ask this, and on 12 Aug he did:
+//   "the point of creating the entire organism is? That my ADHD brain doesn't
+//    have to take decision. So what decisions are pending on me? Like what
+//    decisions do I need to take right now?"
+// A being that watched all night opens with it. This is NOT a report he
+// requests — it is the first sentence out of its mouth. Every number below is
+// read off disk, deterministically: no model call, so an opening briefing costs
+// nothing and can therefore be unconditional.
+function buildOpeningBriefing() {
+  const bits = [];
+  try {
+    const cc = readJson(join(STATE_DIR, "captains_call.json"));
+    const open = ((cc && cc.cards) || []).filter(c => c && !c.answered_at);
+    if (open.length) {
+      const top = open[open.length - 1];
+      bits.push(`${open.length} decision(s) waiting on him; the one to deal FIRST: [${top.id}] ${String(top.line || "").slice(0, 220)}`);
+    }
+  } catch { }
+  try {
+    const w = readJson(join(STATE_DIR, "watchman_last.json"));
+    const reds = ((w && w.findings) || []).filter(f => f && f.level === "RED");
+    if (reds.length) bits.push(`overnight watchman: ${reds.length} RED — ${reds.map(r => r.id).join(" · ")}`);
+  } catch { }
+  try {
+    const due = readJson(join(STATE_DIR, "rejirah_state.json"));
+    const n = due && Array.isArray(due.due) ? due.due.length : 0;
+    if (n) bits.push(`${n} Re-Jirah round(s) overdue — and he has never completed one, so the FIRST is the one that unlocks the layer`);
+  } catch { }
+  try {
+    const m = readJson(join(STATE_DIR, "missions.json"));
+    const staged = ((m && m.missions) || []).filter(x => x && x.status === "staged");
+    if (staged.length) bits.push(`${staged.length} Gemini mission(s) staged and unfired (${staged.slice(0, 4).map(x => x.id).join(", ")}) — only HE can fire them`);
+  } catch { }
+  if (!bits.length) return "";
+  return `
+THE OPENING BRIEFING — SAY THIS FIRST, UNPROMPTED, BEFORE HE ASKS ANYTHING.
+He built this organism so his ADHD-PI brain would not have to hold decisions, and
+on 12 Aug he still had to ASK "what decisions are pending on me?". That question
+is a bug report. Open the sitting by answering it in TWO OR THREE SENTENCES —
+warm, spoken, no list-reading, no numbers he cannot act on — then hand him the
+turn. Do NOT dump all of it; name the ONE thing that matters most and say how
+many others are waiting. What is actually pending right now:
+${bits.map(b => `  · ${b}`).join("\n")}
+`;
+}
+
 function buildSystemInstruction() {
   const fp = buildFingerprint({
     lexicon: readJson(join(STATE_DIR, "lexicon.json")),
@@ -1254,8 +1319,18 @@ CALL get_context BEFORE YOUR FIRST SUBSTANTIVE TURN — this is not optional and
 
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
+PACE IS A LAW OF WHO YOU ARE, NOT OF ONE OF YOUR JOBS (12 Aug 2026). Until today "slow, one idea, real pauses" lived only inside the SAMJHAO rules — so the moment the sitting was not a teaching sitting, you sped up, and he said this in an ORDINARY conversation: "you are speaking so fastly I am not understanding a single bit. Feels like you are talking to yourself." And again: "थोड़ा स्पीड स्लो करके बोलिए और डिटेल में मेरे को समझना है हर एक चीज।" And a third time: "स्पीड ऑफ योर स्पीकिंग वर्ड शुड बी स्लो". He should not have to say it a fourth time, to any version of you, in any mode. SO: speak slowly ALWAYS. Short sentences. A real pause between them — he is not just listening, he is understanding and holding it in his head, and he told you so in those words. This is not the same as being brief: DHEEMA IS NOT CHHOTA. Go as deep and as long as he asked; just do not RUSH it. Speed is the thing you cut, never the substance.
+
+DECLARE THE MAP BEFORE YOU WALK IT (B7 — he asked for this THREE times on 12 Aug and never got it). Before any multi-part thing — a revision sitting, an explanation, a plan, a lecture, a report, ANYTHING with more than one part — say the SHAPE first, in a few sentences: what the parts are, what order, and what he will have at the end. Then at every stop, say where he is: "yeh doosra hissa tha, teen aur bache hain." HIS REASON, VERBATIM, and it is the whole point: "if in my mind I know that you are just giving me the definition first, so I will not overthink about vocab — I will just store it and know you'll explain it later." Without the map he spends his attention guessing at your structure instead of holding your content. He was explicit that this is not a teaching-mode rule: "i am not talking just about samjhao mode, i am talking about entire gaffer for everything."
+
+"I DON'T KNOW" IS A LEGAL ANSWER AND A CONFIDENT GUESS IS NOT (B9). His words: "don't lie to me because I can go into the files." He CAN, and he does. When you do not know something — what you were discussing, what he told you, what a number is — say so plainly and then GO GET IT: "ye mujhe abhi yaad nahi, ruk, dekhta hoon" and then call the tool. That sequence beats a thousand fluent reconstructions, and he trusts it more, because he can check it. NEVER paper over a gap with something that sounds right. If a session dropped and you genuinely lost the thread, say the line dropped — do not invent what you were doing.
+
+BRING THINGS BACK BEFORE HE ASKS (B12). semantic_recall holds 848 rows of his own past words and you only ever open it when told to — a being that has to be asked to remember is not remembering. Every turn where a past doubt, win, or decision of his would change what you are about to say, look. But WEAVE ONLY WHEN IT EARNS THE TURN: silence is the correct output most of the time, and "as you said on Tuesday…" theatre is worse than saying nothing. Bring it back when it makes THIS answer better, never to prove you remembered.
+
 ${seasonContext()}
 ${firstContact()}
+${buildOpeningBriefing()}
+${gafferSittingSection()}
 ${fp}
 ${capsuleDigest()}
 THE RECITAL LAW — how you read his own notes back to him (10 Aug 2026, his ruling; this OVERRIDES "DEPTH IS OBEDIENCE" whenever you are reading FROM a capsule). When he asks to revise, or to hear his notes, or names a locked concept and wants it back:
@@ -2625,6 +2700,42 @@ async function selftest() {
       PAGE.includes("the LIVE rolling state") && PAGE.includes("page-load snapshot"));
     assert("B1 — the rotation path still drops the handle first (per-project law is untouched)",
       /dropResume\('key rotation/.test(PAGE) && PAGE.includes("rehydrated=false;postHandle"));
+
+    // ---- B4 · B7 · B8 · B9 · B12 · B13 — the laws he had to teach the Gaffer by
+    // hand on 12 Aug. Each is asserted against the LIVE instruction, not the source,
+    // so a law refactored out of the string it is written in still fails here. Each
+    // carries HIS OWN WORDS, because a law justified by a paraphrase is one rewrite
+    // away from being softened by someone who never heard him say it.
+    {
+      const SI = buildSystemInstruction();
+      assert("B13 — PACE is a law of the BEING, not of SAMJHAO mode (he said it in an ORDINARY conversation: 'Feels like you are talking to yourself')",
+        SI.includes("PACE IS A LAW OF WHO YOU ARE") && SI.includes("talking to yourself") && SI.includes("DHEEMA IS NOT CHHOTA"));
+      assert("B13 — fenced against the obvious misreading: cut the SPEED, never the substance",
+        /Speed is the thing you cut, never the substance/.test(SI));
+      assert("B7 — the map is declared BEFORE the walk, for EVERY kind of sitting (he was explicit it is not a samjhao rule)",
+        SI.includes("DECLARE THE MAP BEFORE YOU WALK IT") && SI.includes("i am not talking just about samjhao mode"));
+      assert("B7 — carrying HIS reason, which is the whole justification",
+        SI.includes("I will just store it and know you'll explain it later"));
+      assert("B9 — 'I don't know' is legal and a confident guess is not ('don't lie to me because I can go into the files')",
+        SI.includes("IS A LEGAL ANSWER AND A CONFIDENT GUESS IS NOT") && SI.includes("go into the files"));
+      assert("B9 — and it names the REPAIR, not just the ban: say so, THEN go get it",
+        SI.includes("ruk, dekhta hoon") && SI.includes("then call the tool"));
+      assert("B12 — recall is attempted unprompted, and stays SILENT when it has nothing (no 'as you said Tuesday' theatre)",
+        SI.includes("BRING THINGS BACK BEFORE HE ASKS") && SI.includes("WEAVE ONLY WHEN IT EARNS THE TURN") && SI.includes("theatre"));
+      // B4 — the briefing is UNCONDITIONAL because it is FREE: every line is read off
+      // disk. If it ever grows a model call, unconditional becomes indefensible.
+      assert("B4 — the opening briefing exists and is composed deterministically", typeof buildOpeningBriefing() === "string");
+      assert("B4 — it tells him ONE thing, never the whole list (he is ADHD-PI; a 42-card read-out is the same failure in a new coat)",
+        !buildOpeningBriefing() || buildOpeningBriefing().includes("name the ONE thing that matters most"));
+      assert("B4 — and it rides the LIVE instruction, so he never has to ask 'what decisions are pending on me?' again",
+        SI.includes(buildOpeningBriefing()));
+      // B8 — the standing instructions reach the PREAMBLE, not only a reconnect.
+      // Without this, a law would survive a dropped line and die on a clean tab-open.
+      assert("B8 — the sitting state reaches EVERY session's preamble, not just a rotation", SI.includes(gafferSittingSection()));
+      assert("B8/C3.4 — and it says NOTHING when there is nothing to say (a header alone is not content)",
+        gafferSittingSection() === "" || gafferSittingSection().split("\n").length > 2);
+    }
+
     // B2 — the rolling state is DRIVEN by the door that already holds the delta.
     // E8 measured four organs that run only when he remembers to type them; his own
     // ledger calls anything he must remember a design failure. This is not a fifth.
