@@ -19,8 +19,8 @@
       "concept": null,
       "file": "dressing-room/missions/M02__audit_rag_cluster.md",
       "staged_at": "2026-08-07T20:55:12.812Z",
-      "ingested_at": null,
-      "report": null
+      "ingested_at": "2026-08-12T23:18:38.465Z",
+      "report": "scout_reports/mission_M02_2026-08-13.md"
     },
     {
       "id": "M03",
@@ -104,6 +104,11 @@
       "ts": "2026-08-10T15:41:16.499Z",
       "kind": "ingest",
       "id": "T-hallucinations"
+    },
+    {
+      "ts": "2026-08-12T23:18:38.465Z",
+      "kind": "ingest",
+      "id": "M02"
     }
   ]
 }
