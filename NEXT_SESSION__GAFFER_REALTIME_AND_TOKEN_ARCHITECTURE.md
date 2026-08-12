@@ -110,6 +110,12 @@ because they were written overnight.
 
 ## PART 2 — THE WORK, IN ORDER, WITH INPUTS AND OUTPUTS
 
+> **Sixteen items (0–15).** Items 12–15 were added after he asked, twice, whether everything
+> had really been captured — and he was right to push: proactive recall, pace as a law of the
+> whole Gaffer, the iceberg, and model routing had all been discussed and finalized and were
+> missing from the first draft. Check this list against his transcript before starting, not
+> against this sentence.
+
 > Every item names what it READS, what it WRITES, and WHO CONSUMES it — on his instruction
 > that everything be connected input/output-wise. An item whose output nobody reads is a
 > dead lane, and this repo has paid for enough of those.
@@ -257,6 +263,75 @@ so the tab opens warm. Latency zero, because the work happened before he got the
 - **OUT:** a warm prepared session
 - **CONSUMER:** him, on open
 - **DONE WHEN:** opening the tab costs no waiting
+
+### 12. PROACTIVE RECALL — it must reach into its own memory unprompted
+
+The index is already there and already holds BOTH sides: `recall_index.jsonl`, 848 rows
+(dugout 246 · claude-code 595 · notes 5 · throw-ins 2), **97 of them carrying GAFFER-side
+text**. `semantic_recall` searches it. The gap is behavioural, not structural: **the Gaffer
+only looks when asked.** A being that has to be told to remember is not remembering.
+
+The rule is the one the whisper lane already proved: recall is woven only when it EARNS the
+turn — never "as you said on Tuesday" theatre. But it must be ATTEMPTED every turn where a
+past doubt, a past win or a past decision would change what it says next.
+
+- **IN:** `recall_index.jsonl` · `semantic_recall` · the live turn
+- **OUT:** an ephemeral, non-spoken hint woven into the answer if it earns its place
+- **CONSUMER:** the live Gaffer, mid-turn
+- **DONE WHEN:** it brings back something he said weeks ago without him prompting it — and stays silent when it has nothing
+
+### 13. PACE — as a law of the WHOLE Gaffer, not one kind of sitting
+
+His words, unprompted, in the middle of an ordinary conversation: *"you are speaking so
+fastly I am not understanding a single bit. **Feels like you are talking to yourself.**"*
+And again later: *"थोड़ा स्पीड स्लो करके बोलिए और डिटेल में मेरे को समझना है हर एक चीज।"*
+
+Slow, one-idea-per-turn, real pauses currently live inside the SAMJHAO laws. **He was
+explicit that he means the entire Gaffer, not a mode** — *"i am not talking just about
+samjhao mode, i am talking about entire gaffer for everything."* Pace belongs to the being,
+not to one of its jobs.
+
+- **IN:** the Gaffer constitution · his standing instructions (item 8)
+- **OUT:** a pace law that applies to every sitting; the supervisor (3) flags when it slips
+- **CONSUMER:** every spoken turn
+- **DONE WHEN:** he never again has to say "slow down" twice
+
+### 14. THE ICEBERG — it must hold a deep, CURRENT picture of him
+
+His ask, verbatim: *"I want you to tell me first of all every single thing you know about
+me. **Use brain for this.**"* — and when it answered thinly: *"It is I want the entire
+iceberg and it is more than what you was saying so **I want you to keep your knowledge
+updated. It is not what you think.**"*
+
+This is not the same as item 0 (identity facts reaching the session) or item 5 (the bus).
+He is asking for a **maintained model of him** that the Gaffer can speak from and that keeps
+growing — his facts, his open threads, his wins, his confusion shapes, his trajectory.
+Pieces exist and are scattered: `identity_facts.json` · `who_he_is` · the Scribe's episodes
+· `nikhil_model.json` (cause→effect edges) · calibration · nemesis · learning_state. Nothing
+composes them into one answer, and the Gaffer has no instruction to keep it current.
+
+- **IN:** hippocampus (facts · who_he_is · episodes) · `nikhil_model.json` · calibration · nemesis · learning_state
+- **OUT:** one composed, dated "who he is right now" the Gaffer can speak from, refreshed on the night lane
+- **CONSUMER:** the Gaffer, the opening briefing (4), the supervisor (3)
+- **DONE WHEN:** asked "what do you know about me", it gives the iceberg and names the date it was last refreshed
+
+### 15. MODEL ROUTING PER TASK — Flash speaks, it does not compose
+
+The cascade in Part 1B routes WATCHING. This routes ANSWERING. Today Flash both composes and
+speaks every substantive reply, and composing is the one thing it is worst at. The rule:
+
+> **Flash is a mouth. Anything with real content behind it is composed elsewhere and handed
+> to it — verbatim from a capsule, deterministically from a tool, pre-written overnight, or
+> composed by Sonnet beside the path (item 3's channel) and woven on the next turn.**
+
+Flash's job is delivery: sub-second, interruptible, in his rhythm. It should be improvising
+CONTENT as rarely as possible. Item 6 does this for teaching sittings; this item generalises
+it to every substantive answer the Gaffer gives.
+
+- **IN:** the tool result / prepared artifact / Sonnet's note
+- **OUT:** the spoken turn, delivered by Flash
+- **CONSUMER:** him
+- **DONE WHEN:** a substantive answer can be traced to a source that is not Flash's improvisation
 
 ---
 
