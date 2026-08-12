@@ -309,14 +309,75 @@ const DOOR_TAIL_ROWS = 200;
 // ---------------------------------------------------------------------------
 // BUDGET GOVERNOR (pure)
 // ---------------------------------------------------------------------------
+// ===========================================================================
+// SPEND — THE ONE DEFINITION (C1, 12 Aug 2026). Read the whole comment before
+// touching a number in it; three separate faults were measured here, and fixing
+// any one alone makes another worse.
+// ===========================================================================
+// The meter used to be `total_tokens`, as written by whichever organ made the
+// call. Measured off 5,153 ledger rows on 12 Aug 2026, that field is wrong in
+// BOTH directions and mis-weighted even when right:
+//
+//   1. UNDER-COUNT (historical, lane repaired 2026-08-09T18:14). dmn_rollout wrote
+//      856 rows and dmn_counter 143 rows whose `total_tokens` was the in+out pair
+//      ONLY. Real four-component sum: 5,86,44,720 recorded as 10,19,066 — a factor
+//      of 57. Verify: rows where total_tokens !== input+output+cache_creation+cache_read.
+//   2. OVER-COUNT (historical, last row 2026-08-04). haiku_pulse wrote 101 rows
+//      carrying a prompt-LENGTH GUESS as spend: 32,90,374 written against 72,674 real.
+//   3. MIS-WEIGHT (LIVE, every correctly-recorded row). cache_read is 67.5% of all
+//      counted traffic since 11 Aug (71,12,389 of 1,05,38,368) and was counted at
+//      FULL price against the ceiling, though it is the cheapest traffic the plan
+//      sells. This is what starved the live organs: `cortex consolidate` failing
+//      daily with "no-headroom (0/50000 needed)", the diary refusing 127 beats.
+//
+// Fault 3 also made the control loop incoherent with its own optimisation rules:
+// C3 principle 1 says put the stable preamble FIRST so it caches — which converts
+// spend into cache_read — and under the old meter, obeying that principle made the
+// governor angrier. A meter that punishes the cheap path is not a meter.
+//
+// THE WEIGHTS are Anthropic's published PRICE RATIOS per base input unit:
+//   input 1 · cache_write 1.25 · cache_read 0.1 · output 5.
+// They are ratios of what the traffic COSTS, not a claim about how Anthropic meters
+// a subscription internally — that is unpublished. This is deliberately the honest
+// half of the guess: the shape is sourced, the ceiling below is MEASURED against it.
+const SPEND_WEIGHTS = { input_tokens: 1, cache_creation_tokens: 1.25, cache_read_tokens: 0.1, output_tokens: 5 };
+
+// spendOf — cost-equivalent tokens for ONE ledger row, derived at READ time.
+// Deriving from the components rather than trusting the written total is what
+// repairs faults 1 and 2 without rewriting a single byte of an append-only ledger.
+// A row with NO components (tokens_estimated: true — the sync fallback's length
+// guess, 8 rows / 13,825 tokens on the whole board) keeps its written total at
+// weight 1; too small to model, and guessing at its shape would be a fourth fault.
+function spendOf(row) {
+  if (!row || typeof row !== "object") return 0;
+  const N = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
+  const four = N(row.input_tokens) + N(row.output_tokens) + N(row.cache_creation_tokens) + N(row.cache_read_tokens);
+  if (four <= 0) return N(row.total_tokens);
+  let s = 0;
+  for (const k in SPEND_WEIGHTS) s += N(row[k]) * SPEND_WEIGHTS[k];
+  return s;
+}
+
+// FROZEN — the engine of record until 12 Aug 2026, kept verbatim per the layering
+// law. It sums `total_tokens` raw. Nothing calls it; it is here so the migration
+// note has something to point at and so a future session can diff the two meters.
+function windowUsageLegacy(ledger, now, hours) {
+  const end = now.getTime();
+  const cutoff = end - hours * 3600000;
+  return ledger.filter(l => { const t = new Date(l.ts).getTime(); return l.engine === "claude" && t >= cutoff && t <= end; })
+    .reduce((a, l) => a + (l.total_tokens || 0), 0);
+}
+
 function windowUsage(ledger, now, hours) {
   const end = now.getTime();
   const cutoff = end - hours * 3600000;
   // E2E audit 25 Jul 2026: the window had NO upper bound, so any row stamped in
   // the future counted as spent-right-now — a clock skew or a replayed ledger
   // could pin the governor at 100% forever. A window has two edges.
-  return ledger.filter(l => { const t = new Date(l.ts).getTime(); return l.engine === "claude" && t >= cutoff && t <= end; })
-    .reduce((a, l) => a + (l.total_tokens || 0), 0);
+  // rounded ONCE at the end, never per row: the weights are fractional (cache_read
+  // ×0.1), and rounding each row would drift on a window carrying hundreds of them.
+  return Math.round(ledger.filter(l => { const t = new Date(l.ts).getTime(); return l.engine === "claude" && t >= cutoff && t <= end; })
+    .reduce((a, l) => a + spendOf(l), 0));
 }
 const weekUsage = (ledger, now) => windowUsage(ledger, now, 24 * 7);
 
@@ -885,7 +946,12 @@ function tokenVitals(cfg, ledger, queueState, now, signals = null) {
     ts: now.toISOString(), phase: h.phase,
     window_5h: { used: win, ceiling, pct: pct(win, ceiling), cap_now: h.cap, allowed_now: h.allowed },
     week_7d: { used: wk, cap: wkCap, pct: pct(wk, wkCap), remaining: Math.max(0, wkCap - wk) },
-    ceiling_source: (queueState && queueState.observed_window_ceiling) ? "observed" : "estimate",
+    // WHICHEVER ACTUALLY WON, not merely whichever is set (C1, 12 Aug 2026). cap0 is
+    // max(estimate, observed), so a stale/low observed value is inert — but this field
+    // still announced "observed" whenever the key existed, which is how a ceiling nobody
+    // was using got reported as the one in force. It matters more since the unit change:
+    // the observed value on disk (1,600,000) is in the OLD raw unit and is now inert.
+    ceiling_source: (queueState && queueState.observed_window_ceiling > est) ? "observed" : "estimate",
     // E2E audit 25 Jul 2026: the fuel gauge showed a brain burning fuel while it
     // was in fact dead (every call failing). Ship the ok-rate WITH the fuel.
     health: failureStreak(ledger),
@@ -3290,6 +3356,39 @@ async function selftest() {
     assert("WINDOW HAS TWO EDGES — a future-dated row never counts as spent", windowUsage(future, now(23, 0), 5) === 300000);
   }
 
+  // C1 (12 Aug 2026) — THE SPEND METER. Three measured faults, one per assertion,
+  // each held BY SOURCE so a future edit that reintroduces any of them goes red.
+  {
+    // fault 1 — UNDER-COUNT: the dmn wrote total_tokens as the in+out pair only, so
+    // 5.86 crore of real traffic metered as 10 lakh. spendOf derives from components,
+    // so a lying total is simply not consulted.
+    const dmnShaped = { engine: "claude", input_tokens: 2, output_tokens: 700, cache_creation_tokens: 20000, cache_read_tokens: 100000, total_tokens: 702 };
+    assert("C1 fault 1 — a row whose total_tokens is the in+out pair only is NOT believed (the dmn under-count)",
+      spendOf(dmnShaped) > 702 && spendOf(dmnShaped) === 2 * 1 + 700 * 5 + 20000 * 1.25 + 100000 * 0.1);
+    // fault 2 — OVER-COUNT: haiku_pulse wrote a prompt-LENGTH GUESS as spend, 32.9 lakh
+    // against 72k of real traffic. Same derivation kills it from the other side.
+    const guessShaped = { engine: "claude", input_tokens: 1, output_tokens: 10, cache_creation_tokens: 0, cache_read_tokens: 0, total_tokens: 999999 };
+    assert("C1 fault 2 — an inflated written total is NOT believed either (the pulse length-guess)", spendOf(guessShaped) === 1 + 50);
+    // fault 3 — MIS-WEIGHT: cache_read was 67.5% of counted traffic at FULL price. It
+    // is the cheapest traffic sold, and counting it dear is what starved cortex.
+    const cacheHeavy = { engine: "claude", input_tokens: 0, output_tokens: 0, cache_creation_tokens: 0, cache_read_tokens: 1000, total_tokens: 1000 };
+    assert("C1 fault 3 — cache_read costs a TENTH against the ceiling, not full price", spendOf(cacheHeavy) === 100);
+    assert("C1 — output is the dear one and outweighs the same count of cache_read 50×",
+      spendOf({ output_tokens: 1000 }) === 50 * spendOf(cacheHeavy));
+    // the fallback: a row with NO components keeps its written total, which is the only
+    // reason every budget assertion written before today still holds.
+    assert("C1 — a component-less row (tokens_estimated) keeps its written total at weight 1", spendOf({ total_tokens: 4242 }) === 4242);
+    assert("C1 — the frozen legacy meter still sums raw, and the two now DISAGREE by design",
+      windowUsageLegacy([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) === 702
+      && windowUsage([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) !== 702);
+    // THE CONSEQUENCE the whole item exists for: a cache-heavy window that read as
+    // exhausted under the raw meter must leave real headroom under the true one.
+    const starving = Array.from({ length: 40 }, (_, i) => ({ ts: now(22, 0).toISOString(), engine: "claude", input_tokens: 2, output_tokens: 500, cache_creation_tokens: 3000, cache_read_tokens: 40000, total_tokens: 43502 }));
+    const rawUsed = windowUsageLegacy(starving, now(23, 0), 5), trueUsed = windowUsage(starving, now(23, 0), 5);
+    assert("C1 — THE STARVATION: a cache-heavy window meters far lower in true cost than raw (cortex's 'no-headroom (0/50000)')",
+      rawUsed > trueUsed * 2 && headroom(cfg, starving, { observed_window_ceiling: null, jobs_run: {} }, now(2, 0)).allowed >= 50000);
+  }
+
   const qEmpty = { observed_window_ceiling: null, jobs_run: {} };
   const hStudy = headroom(cfg, ledger, qEmpty, now(14, 0));
   assert("STUDY HOURS — cap = day_reserve_frac (protect the captain)", hStudy.phase === "study" && hStudy.cap === Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.day_reserve_frac));
@@ -3315,7 +3414,12 @@ async function selftest() {
     assert("LIVE RESERVE — no signal ⇒ unchanged static behavior (selftests safe)", headroom(cfg, [], qEmpty, now(14, 0)).cap === dayCap);
     assert("CEILING EWMA — blends observed toward the running ceiling", blendCeiling(estC * 1.25, estC * 1.75, estC, 0.5) === estC * 1.5);
     assert("CEILING EWMA — floored at the estimate (a low read can't starve)", blendCeiling(null, 1, estC) === estC);
-    assert("CEILING EWMA — self-corrects DOWN (not a one-way ratchet)", blendCeiling(2000000, 900000, estC, 0.5) < 2000000);
+    // DERIVED, NOT HARDCODED (C1, 12 Aug 2026) — this read `blendCeiling(2000000, 900000, estC, 0.5)`,
+    // two literals that only sat above the estimate while the estimate was 1,600,000. The C1
+    // re-fit put the floor above both and the assertion went red measuring the ceiling of the
+    // day it was written instead of the down-correction it names. Both ends now ride estC, so
+    // the pair holds the real law: it corrects DOWN, but the line above still floors it.
+    assert("CEILING EWMA — self-corrects DOWN (not a one-way ratchet)", blendCeiling(estC * 2, estC * 1.1, estC, 0.5) < estC * 2);
     assert("THINKING DEPTH — lean live, deep overnight", maxThinkingFor("study", 1000000).max_thinking_tokens === 16000 && maxThinkingFor("overnight", 1000000).max_thinking_tokens === 48000);
     assert("THINKING DEPTH — never budgets more than the window can pay", maxThinkingFor("overnight", 40000).max_thinking_tokens <= 20000);
     assert("THINKING DEPTH — derives the deep-read headroom floor", maxThinkingFor("overnight", 1000000).min_headroom_tokens === Math.round(48000 * 1.6));
@@ -3579,22 +3683,28 @@ async function selftest() {
   // `diary` (priority 10, 03:00) sat at 0 rows in 4,530. These hold the whole wire —
   // tick → brain_queue.budget_starved → the ledger row → ledgerShiftSummary (the diary's
   // own input) → token_vitals.json (the doctor's step 0) — and go red if any link drops.
-  // The fixture is the MEASURED case, not an invented one: 2,000,000 tokens already spent
-  // against the committed overnight cap (window_capacity_est × overnight_target_frac =
-  // 1,520,000) reproduces the 2026-08-10 03:00 IST reading of 1,999,481/1,520,000.
+  // The fixture is the MEASURED case, not an invented one: it reproduces the 2026-08-10
+  // 03:00 IST reading of 1,999,481 spent against an overnight cap of 1,520,000.
+  // DERIVED, NOT HARDCODED (C1, 12 Aug 2026): the spend used to be the literal 2,000,000,
+  // which measured the ceiling of the day it was written rather than the wire it names —
+  // so the C1 re-fit turned this assertion red for a reason that had nothing to do with
+  // starvation being recorded. Both numbers now come off the config, and the fixture keeps
+  // the same overshoot (cap + 480k ≈ the measured 1.32×) through any future ceiling change.
   {
-    const starvedLedger = [{ ts: now(23, 0).toISOString(), engine: "claude", ok: true, total_tokens: 2000000 }];
+    const ovCap = Math.round(cfg.budget.window_capacity_est_tokens * cfg.budget.overnight_target_frac);
+    const starvedSpend = ovCap + 480000;
+    const starvedLedger = [{ ts: now(23, 0).toISOString(), engine: "claude", ok: true, total_tokens: starvedSpend }];
     const qs = { observed_window_ceiling: null, jobs_run: {} };
     const sCfg = { ...cfg, jobs: inputFree(cfg.jobs) };
     const never = () => { throw new Error("a starved tick must never call the model"); };
     const s1 = await tick(sCfg, { exec: never, gexec: never, now: now(23, 30), dry: true, ledger: starvedLedger, queueState: qs });
     const row = s1.ran[0] && s1.ran[0].ledgerRow;
     assert("STARVED — the budget refusal is RECORDED, not discarded: one ledger row carrying the exact reason",
-      s1.ran.length === 1 && /^budget \(overnight: 2000000\/1520000\)$/.test(s1.ran[0].skipped)
-      && !!row && row.budget_skip === true && row.note.includes("budget:skip — budget (overnight: 2000000/1520000)"));
+      s1.ran.length === 1 && s1.ran[0].skipped === `budget (overnight: ${starvedSpend}/${ovCap})`
+      && !!row && row.budget_skip === true && row.note.includes(`budget:skip — budget (overnight: ${starvedSpend}/${ovCap})`));
     assert("STARVED — the row cannot corrupt the two meters it sits beside: not spend (engine ≠ claude), not health (no boolean ok)",
       row.engine === "budget" && row.total_tokens === 0 && typeof row.ok !== "boolean"
-      && windowUsage(starvedLedger.concat([row]), now(23, 30), 5) === 2000000
+      && windowUsage(starvedLedger.concat([row]), now(23, 30), 5) === starvedSpend
       && failureStreak(starvedLedger.concat([row])).sampled === 1
       && failureStreak(starvedLedger.concat([row])).streak === 0);
     const starvedJob = Object.keys(qs.budget_starved[Object.keys(qs.budget_starved)[0]])[0];
@@ -4999,12 +5109,52 @@ async function main() {
     console.log(`  door      : ${v.door.summary} (last ${v.door.window_hours}h)`);
     return;
   }
+  // ---- C2 · THE BOARD (12 Aug 2026) -------------------------------------------
+  // "Start every optimisation from this table, refreshed — never from a guess about
+  // which organ is expensive." The plan carried the table as PROSE, which is the one
+  // thing this repo has proved rots: the numbers in it were true for two days.
+  // So the table is a COMMAND. `node scripts/brain.mjs spend [days]`.
+  // It reports COST-WEIGHTED spend (the C1 unit — what the governor actually meters)
+  // beside raw output, because those two rank the organs DIFFERENTLY and optimising
+  // the wrong one is how you make an organ cheaper and useless (C3 principle 10).
+  if (mode === "spend") {
+    const days = Math.max(1, Number(process.argv[3]) || 7);
+    const since = new Date(now.getTime() - days * 24 * 3600000);
+    const rows = readLines(LEDGER).filter(r => r && r.ts && new Date(r.ts) >= since && r.engine === "claude");
+    const N = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
+    const by = new Map();
+    for (const r of rows) {
+      const k = r.job || "(nojob)";
+      if (!by.has(k)) by.set(k, { job: k, n: 0, spend: 0, out: 0, cr: 0, cc: 0, inp: 0, fail: 0 });
+      const b = by.get(k);
+      b.n++; b.spend += spendOf(r); b.out += N(r.output_tokens); b.cr += N(r.cache_read_tokens);
+      b.cc += N(r.cache_creation_tokens); b.inp += N(r.input_tokens); if (r.ok === false) b.fail++;
+    }
+    const list = [...by.values()].sort((a, b) => b.spend - a.spend);
+    const total = list.reduce((a, b) => a + b.spend, 0) || 1;
+    const f = (n) => Math.round(n).toLocaleString("en-IN");
+    console.log(`\nSPEND BOARD — last ${days}d · ${rows.length} claude rows · ${f(total)} cost-weighted tokens`);
+    console.log(`(weights: input 1 · cache_write 1.25 · cache_read 0.1 · output 5 — see brain.mjs SPEND)\n`);
+    console.log("JOB".padEnd(24) + "N".padStart(5) + "WEIGHTED".padStart(13) + "%".padStart(7) + "output".padStart(11) + "cache_rd".padStart(12) + "cache_wr".padStart(12) + "  fail");
+    for (const b of list) console.log(
+      b.job.slice(0, 24).padEnd(24) + String(b.n).padStart(5) + f(b.spend).padStart(13)
+      + ((b.spend / total) * 100).toFixed(1).padStart(7) + f(b.out).padStart(11) + f(b.cr).padStart(12) + f(b.cc).padStart(12)
+      + (b.fail ? `  ${b.fail}✗` : ""));
+    // THE RANKING THAT MATTERS FOR C3: the same board sorted by generated output is a
+    // DIFFERENT order, and the difference IS the optimisation target — an organ high on
+    // weighted spend but low on output is paying boot tax, not thinking.
+    const byOut = [...list].sort((a, b) => b.out - a.out).slice(0, 5).map(b => b.job).join(" · ");
+    console.log(`\ntop 5 by WEIGHTED spend : ${list.slice(0, 5).map(b => b.job).join(" · ")}`);
+    console.log(`top 5 by REAL OUTPUT    : ${byOut}`);
+    console.log(`→ an organ high on the first list and absent from the second is paying boot tax, not thinking.\n`);
+    return;
+  }
   if (mode === "status") {
     const ledger = readLines(LEDGER);
     const q = readJson(QUEUE) || {};
     const h = headroom(cfg, ledger, q, now);
     const vm = dugoutMinutesToday(now);
-    console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · voice pool ${vm}min today${cfg.dugout_pool && cfg.dugout_pool.enabled && vm >= cfg.dugout_pool.gemini_defer_threshold_min ? " (daytime gemini deferred)" : ""} · eligible now: ${eligibleJobs(cfg, q, now, vm).map(j => j.id).join(", ") || "none"}`);
+    console.log(`brain: phase=${h.phase} · window ${h.used.toLocaleString()}/${h.cap.toLocaleString()} tokens · week ${weekUsage(ledger, now).toLocaleString()} · ceiling ${q.observed_window_ceiling > cfg.budget.window_capacity_est_tokens ? q.observed_window_ceiling.toLocaleString() + " (observed)" : cfg.budget.window_capacity_est_tokens.toLocaleString() + " (estimate)"} · voice pool ${vm}min today${cfg.dugout_pool && cfg.dugout_pool.enabled && vm >= cfg.dugout_pool.gemini_defer_threshold_min ? " (daytime gemini deferred)" : ""} · eligible now: ${eligibleJobs(cfg, q, now, vm).map(j => j.id).join(", ") || "none"}`);
     // A STALE ARM IS SAID OUT LOUD (11 Aug 2026, dead-wire pass). The gate now
     // ignores an arm from a previous shift, and an ignored thing that reports
     // nothing is how the last one hid for weeks. This is a MACHINE-face line in a
