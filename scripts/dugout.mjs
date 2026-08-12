@@ -95,7 +95,7 @@ import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // B1/B2 (12 Aug 2026) — THE ROLLING STATE. gaffer_state.mjs is its SOLE writer;
 // the bridge calls observe() in-process on the /transcript door because that door
 // is already holding the turn delta, which is what makes the update O(1) per turn.
-import { observe as observeTurn, renderBrief as renderGafferBrief } from "./gaffer_state.mjs";
+import { observe as observeTurn, renderBrief as renderGafferBrief, supervise as superviseTurn } from "./gaffer_state.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI).
 // 11 Aug 2026 dead-wire sweep — `markServed` joins the two readers. It is the OWNER's
 // own writer (examiner.mjs is sole writer of examiner_drill.json and re-reads the file
@@ -211,6 +211,12 @@ function readDeepState(deps = {}) {
   // earns the turn — the same law that keeps [MEMORY SURFACED] from being theatre.
   // Freshness is the poll window, not a new number: anything older than the live
   // sitting is history and belongs to get_context, not to an interruption.
+  // B3 — the supervisor's note, on the same ephemeral/fresh-only/deduped contract
+  // as every other hint here. 60s is the recall lane's own freshness, reused: a
+  // correction that arrives two minutes after the turn it is about would land on a
+  // different conversation and read as a non-sequitur.
+  out.supervisor = (rt.superNote && Date.now() - rt.superNote.ts < 60000)
+    ? { id: rt.superNote.id, kind: rt.superNote.kind, note: rt.superNote.note } : null;
   out.cross_mouth = null;
   try {
     const rows = deps.afferentRows !== undefined ? deps.afferentRows : readLinesTail(join(STATE_DIR, "afferent.jsonl"), 40000);
@@ -2797,7 +2803,7 @@ async function selftest() {
     assert("B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema",
       SRC.includes('from "./gaffer_state.mjs"') && !SRC.includes("gaffer_state.json\", JSON.stringify({"));
     assert("B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)",
-      /appendFileSync\(join\(OUT_DIR[\s\S]{0,900}?try \{[\s\S]{0,600}?observeTurn[\s\S]{0,400}?\} catch \{ \}/.test(SRC));
+      /appendFileSync\(join\(OUT_DIR[\s\S]{0,900}?try \{[\s\S]{0,600}?observeTurn[\s\S]{0,1200}?\} catch \{ \}/.test(SRC));
     {
       // and the door composes the two halves in the order that matters: the PROMISE
       // (plan + standing instructions) in front of the CHATTER (the transcript tail).
@@ -3008,6 +3014,32 @@ async function selftest() {
     assert("bridge /deep carries a FRESH second spotlight (M22); expired ones die", bh.bg_hint && bh.bg_hint.insight.includes("survives") && readDeepState({ workspace: { version: 1, bg_hint: { moment_id: "m3", insight: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {}, queueRows: [] }).bg_hint === null);
     assert("the page injects the second spotlight NON-SPOKEN, deduped", PAGE.includes("SECOND SPOTLIGHT") && PAGE.includes("lastBgHintId"));
 
+    // ---- B3 · THE SUPERVISOR — the keystone of A2/A3, wired to the mouth.
+    // Built FREE and deterministic rather than on Flash: every note A2 asks for is
+    // something the rolling state already knows, so a model asked "did he repeat
+    // himself?" would be guessing at a fact and could miss it. The detectors are
+    // asserted in gaffer_state.mjs; these hold the WIRE — that it runs, that it
+    // rides the fresh-only hint contract, and that it can never block the mouth.
+    {
+      // own read — the suite's shared SRC is declared further down (TDZ)
+      const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      assert("B3 — the supervisor runs on the /transcript delta, right after the state it reads is current",
+        SRC.includes("superviseTurn(r.state, r.standing, body.lines"));
+      assert("B3 — THE BRAIN NEVER BLOCKS THE MOUTH: the note is PARKED for the poll, never sent from the door (which has no socket)",
+        /runtime\.superNote = \{ \.\.\.note/.test(SRC) && !/\/transcript[\s\S]{0,900}ws\.send/.test(SRC));
+      const rt = { superNote: { id: "monologue:7", kind: "monologue", note: "[THAT TURN RAN ~102 SECONDS]", ts: Date.now() } };
+      const fresh = readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: [], runtime: rt }).supervisor;
+      assert("B3 — a fresh note reaches the poll with its kind and id", fresh && fresh.kind === "monologue" && fresh.id === "monologue:7");
+      const stale = readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: [], runtime: { superNote: { ...rt.superNote, ts: Date.now() - 120000 } } }).supervisor;
+      assert("B3 — a STALE note is dropped: a correction arriving two minutes late lands on a different conversation and reads as a non-sequitur", stale === null);
+      assert("B3 — the page injects it NON-SPOKEN and deduped, ahead of the other hints (its notes are about a drift happening RIGHT NOW)",
+        PAGE.includes("d.supervisor&&d.supervisor.id!==lastSuperId") && PAGE.indexOf("d.supervisor&&") < PAGE.indexOf("d.cross_mouth&&"));
+      assert("B3 — and he is never told he is being corrected (a Gaffer that reads its own corrections out is a worse Gaffer)",
+        PAGE.includes("never mention being corrected") && PAGE.includes("never apologise for it"));
+      assert("B3 — the first poll PRIMES rather than replaying a note from before the page opened",
+        /deepPrimed=true;[\s\S]{0,700}?lastSuperId=d\.supervisor\?d\.supervisor\.id:null;return\}/.test(PAGE));
+    }
+
     // ---- B5 · ONE MIND, BOTH MOUTHS — the biggest missing edge in "one organism".
     // Both surfaces have written to the same bus for weeks (measured 12 Aug:
     // claude-code 77 + claude-code-teaching 91 vs voice 130 + dugout 131) and the
@@ -3030,7 +3062,7 @@ async function selftest() {
         CROSS_MOUTH_FRESH_MS === 10 * 60000 && readFileSync(fileURLToPath(import.meta.url), "utf8").includes("SAME TTL deepFresh() already uses"));
       assert("B5 — the page injects it NON-SPOKEN and deduped, exactly like every other hint", PAGE.includes("THE OTHER MOUTH") && PAGE.includes("lastCrossId"));
       assert("B5 — and the FIRST poll PRIMES rather than replaying (no boot-time theatre, the bus_delta law)",
-        /deepPrimed=true;[\s\S]{0,600}?lastCrossId=d\.cross_mouth\?d\.cross_mouth\.id:null;return\}/.test(PAGE));
+        /deepPrimed=true;[\s\S]{0,600}?lastCrossId=d\.cross_mouth\?d\.cross_mouth\.id:null;/.test(PAGE));
       assert("B5 — it never announces the machinery (he must not be told the Gaffer is reading over his shoulder)",
         PAGE.includes("never announce that you can see it"));
     }
@@ -4464,10 +4496,10 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,lastCrossId=null,deepPrimed=false;const seenDeep=new Set();
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,lastCrossId=null,lastSuperId=null,deepPrimed=false;const seenDeep=new Set();
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;lastCrossId=d.cross_mouth?d.cross_mouth.id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;lastCrossId=d.cross_mouth?d.cross_mouth.id:null;lastSuperId=d.supervisor?d.supervisor.id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
@@ -4478,6 +4510,12 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
   log('· memory surfaced (non-spoken hint)');return}
+ // B3 — THE SUPERVISOR speaks first among the hints, because every note it sends is
+ // about a drift happening RIGHT NOW. It is non-spoken like the rest: the Gaffer
+ // acts on it, never reads it out or mentions being corrected.
+ if(d.supervisor&&d.supervisor.id!==lastSuperId){lastSuperId=d.supervisor.id;
+  ws.send(JSON.stringify({realtimeInput:{text:d.supervisor.note+'\\n(Act on this in your NEXT turn. Never read it out, never mention being corrected, never apologise for it — just do the thing.)'}}));
+  log('· supervisor: '+d.supervisor.kind);return}
  // B5 — ONE MIND, BOTH MOUTHS: what he just said in Claude Code reaches this one.
  if(d.cross_mouth&&d.cross_mouth.id!==lastCrossId){lastCrossId=d.cross_mouth.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[THE OTHER MOUTH — he is ALSO working with Claude Code right now, and this just happened there. You and it are one organism, so do not act surprised by it and never announce that you can see it. Use it only if it changes what you were about to say: '+d.cross_mouth.text+']'}}));
@@ -4866,6 +4904,13 @@ async function main() {
             const r = observeTurn(prev, body.lines, new Date(), stand);
             writeFileSync(GSTATE, JSON.stringify(r.state, null, 2));
             if (r.newStanding.length) writeFileSync(GSTANDING, JSON.stringify(r.standing, null, 2));
+            // B3 — THE SUPERVISOR runs on the SAME delta, immediately after the
+            // state it reads is current. It is pure and free (no model call), so
+            // it can run on every turn without a gate. The note is parked in
+            // runtime for the /deep poll to carry — never sent from here, because
+            // this door has no socket and the brain must never block the mouth.
+            const note = superviseTurn(r.state, r.standing, body.lines, new Date());
+            if (note) runtime.superNote = { ...note, ts: Date.now() };
           } catch { }
           // THE EAR'S ONE LEGAL SURFACE — hedge-density, scrimmage mode only,
           // counted off-mic, never voiced mid-session (law).

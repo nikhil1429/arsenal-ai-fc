@@ -13,11 +13,20 @@ Node 22). Agents read/write a JSON **state bus** at `dressing-room/state/*.json`
 the SCHEMA only. Corrected 10 Aug 2026: this read a flat "(single writer per file)" until
 today, so a session reading it as absolute law would have "repaired" a lane the code designs
 on purpose. Evidence: `grep -n "shared append lane" scripts/talk.mjs` ·
-`grep -n "brain_ledger" scripts/organism_test.mjs scripts/dmn.mjs`. Related, and NOT resolved:
-`identity_facts.pending.jsonl` has TWO live writers — `hippocampus.mjs` rewrites the whole
-file, `mcp-memory.mjs` appends to it — which IS a real breach of this law, not an exception.
-Do not "fix" it in code; it needs HIS ruling. Verify:
-`grep -n "identity_facts.pending" scripts/hippocampus.mjs scripts/mcp-memory.mjs`).
+`grep -n "brain_ledger" scripts/organism_test.mjs scripts/dmn.mjs`. Related, and **RESOLVED —
+E7, closed 12 Aug 2026 on his ruling, and the answer was that there was nothing left to fix**:
+this said "`identity_facts.pending.jsonl` has TWO live writers … a real breach of this law …
+do not fix it in code; it needs HIS ruling" from 10 Aug until today. The breach was REAL when
+written and the repair landed **the same day** — `mcp-memory.mjs`'s appender was frozen as
+`rememberFactStagedLegacy`, carrying its own epitaph (*"NO CALLER POINTS HERE; it survives only
+as the record of what the race looked like"*), and the live `rememberFactStaged` shells the
+owner instead. So this paragraph asked a session to hold open a question the code had already
+answered, which is the same rot in the opposite direction to the one it was written to fix.
+**hippocampus.mjs is the SOLE writer.** Verified live, and now held by a test that greps the
+whole `scripts/` tree for a second writer rather than trusting a sentence here —
+`node scripts/mcp-memory.mjs selftest` (search for "E7"). Verify by hand:
+`grep -rn "rememberFactStagedLegacy" scripts/*.mjs` returns only its own definition, export and
+selftest — no production caller anywhere.)
 Scheduling via Windows Task Scheduler (`schtasks`) +
 `ntfy.sh`. LLM calls via `claude -p` (Max subscription — **never** an API key).
 

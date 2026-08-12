@@ -223,7 +223,11 @@ export function observe(state, lines, now = new Date(), standing = null) {
     s.captain_turns++;
     s.last_captain_line = text.slice(0, 400);
     if (FORGOT.test(text)) s.forgot_flags++;
-    if (CONFUSED.test(text)) s.open_question = text.slice(0, 300);
+    // the turn it was raised on is recorded WITH it — B3 needs to fire its
+    // "you moved on" note ONCE, on the next turn, not forever after. Measured:
+    // without this stamp the supervisor fired on 86% of his real sitting, because
+    // an open question that is never cleared re-triggers on every later turn.
+    if (CONFUSED.test(text)) s.open_question = text.slice(0, 300), s.open_question_turn = s.turns;
     if (looksLikePlan(text) && text.length > 25) s.declared_plan = { text: text.slice(0, 600), at: now.toISOString() };
     // repeats — the second time an idea appears, it is a FLAG, not a coincidence
     const k = norm(text).split(" ").slice(0, 12).join(" ");
@@ -245,6 +249,119 @@ export function observe(state, lines, now = new Date(), standing = null) {
   // keep the repeat list bounded — a sitting is a few hundred turns, not a database
   if (s.repeats.length > 200) s.repeats = s.repeats.slice(-200);
   return { state: s, standing: st, newStanding };
+}
+
+// ===========================================================================
+// B3 — THE SUPERVISOR: A SECOND PAIR OF EARS, NOT A DEEP THINKER
+// ===========================================================================
+// His complaints on 12 Aug were about ATTENTION, not depth:
+//   "you forgot what we were doing" · "did you forget the intensity thing?"
+//   "why are you talking to me in a different accent all of a sudden?"
+//   — and saying "samajh nahi aaya" and being walked past.
+// None of that needs a smarter model. It needs SOMETHING WATCHING.
+//
+// THE ARCHITECTURE SAID FLASH; THE MEASUREMENT SAYS NOTHING AT ALL.
+// The worklist's A2 cascade puts the watching on free Gemini Flash. Built that
+// way it would cost a tank, add a round-trip to every turn, and — the part that
+// matters — it could still MISS, because a model asked "did he repeat himself?"
+// is guessing at something the rolling state already KNOWS. Every one of the
+// three notes A2 asks for is deterministic:
+//   "he asked this twice"        → B2's repeat counter
+//   "he said samajh nahi aaya"   → B2's open_question
+//   "you have gone soft"         → B8's standing instructions vs the last turns
+// So this tier is FREE, INSTANT, and cannot hallucinate a drift that did not
+// happen. Flash stays available for the judgement calls that are genuinely
+// semantic; it is not needed to notice that a man said the same thing twice.
+//
+// TWO LAWS, both of which are about him rather than about cost:
+//   · ONE NOTE PER TURN, EVER. A stack of corrections injected mid-sitting is
+//     the quiz-dump failure wearing a new coat. Highest priority wins, the rest
+//     wait for their own turn.
+//   · SILENCE IS THE DEFAULT. Most turns produce nothing. A supervisor that
+//     always has something to say is noise, and noise is what he already gets.
+
+// THE MONOLOGUE THRESHOLD — DERIVED FROM HIS OWN LAW, NOT CHOSEN.
+// The SAMJHAO rules already say: "If you would need more than about forty
+// seconds to say it, it is two turns, not one." Conversational speech runs
+// ~150 words/minute, so forty seconds is ~100 words. That is the whole
+// derivation; no threshold is invented here.
+// MEASURED against his real 12 Aug sitting: 13 of 133 Gaffer turns (10%) broke
+// it, and the longest ran 254 words = 102 SECONDS of continuous speech. That is
+// the turn behind "you are speaking so fastly... Feels like you are talking to
+// yourself." A 10% alarm rate is the right shape — it fires on the real ones and
+// stays quiet on the other 120.
+export const MONOLOGUE_WORDS = 100;
+const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
+
+// supervise — the whole watcher. PURE: state in, at most one note out.
+// `lines` is the same turn delta the /transcript door already holds, so this
+// costs one pass over two or three strings.
+export function supervise(state, standing, lines = [], now = new Date()) {
+  const s = state || emptyState(now);
+  const st = standing || { instructions: [] };
+  const cap = [], gaf = [];
+  for (const raw of lines) {
+    const l = String(raw || "");
+    if (/^CAPTAIN:/i.test(l)) cap.push(l.replace(/^CAPTAIN:\s*/i, "").trim());
+    else if (/^GAFFER:/i.test(l)) gaf.push(l.replace(/^GAFFER(\([a-z]+\))?:\s*/i, "").trim());
+  }
+  const mk = (kind, priority, note) => ({ kind, priority, note, id: `${kind}:${s.turns}` });
+  const found = [];
+
+  // 1 — HE SAID YOU FORGOT. The loudest signal there is; nothing outranks it.
+  if (cap.some(t => FORGOT.test(t))) {
+    found.push(mk("forgot", 100,
+      `[HE JUST TOLD YOU THAT YOU FORGOT — that is the ${s.forgot_flags || 1}${(s.forgot_flags || 1) === 1 ? "st" : "th"} time today. Do NOT apologise and do NOT guess. Say plainly that you are checking, then USE A TOOL to find it. What the state says you were doing: ${s.declared_plan ? s.declared_plan.text.slice(0, 200) : "no agreed plan recorded — say so honestly rather than inventing one"}]`));
+  }
+
+  // 2 — HE SAID SAMAJH NAHI AAYA AND YOU MOVED ON. Canon's own law is that this
+  // is taken literally: stop, restart from zero. Being walked past is the single
+  // failure that ends a sitting.
+  // FIRES ONCE, ON THE NEXT TURN — not forever after. An open question that is
+  // never cleared re-triggers on every later turn; measured against his real
+  // sitting that was 93 notes across 123 turns, i.e. the supervisor becoming the
+  // noise it exists to remove. If he is STILL lost he says so again, and the
+  // repeat detector below is what catches that. The window is one turn-pair
+  // (a CAPTAIN line and the GAFFER line answering it), not a tuned number.
+  const justMovedOn = s.open_question && typeof s.open_question_turn === "number" && (s.turns - s.open_question_turn) <= 2;
+  if (justMovedOn && gaf.length && !cap.some(t => CONFUSED.test(t))) {
+    found.push(mk("unresolved", 90,
+      `[HE SAID HE DID NOT UNDERSTAND AND YOU MOVED ON. Go back to it NOW, smaller, from zero — do not re-say it in the same words. His words were: "${String(s.open_question).slice(0, 180)}"]`));
+  }
+
+  // 3 — HE HAS SAID THIS BEFORE. The second time is the signal (A3: escalation
+  // by his WORDS, never by a score), and it means the first answer did not land.
+  {
+    const rep = (s.repeats || []).filter(r => r.count > 1).sort((a, b) => b.count - a.count)[0];
+    if (rep && cap.length && norm(cap[cap.length - 1]).startsWith(rep.key.slice(0, 20))) {
+      found.push(mk("repeat", 80,
+        `[HE HAS ASKED THIS ${rep.count}× NOW — the earlier answer did not land. Do NOT repeat it in the same shape. Change the approach: smaller, or a different everyday analogy, or ask him which part broke.]`));
+    }
+  }
+
+  // 4 — YOU ARE MONOLOGUING. His #1 complaint, and the one thing here that is
+  // about YOUR turn rather than his.
+  {
+    const longest = gaf.map(words).sort((a, b) => b - a)[0] || 0;
+    if (longest > MONOLOGUE_WORDS) {
+      found.push(mk("monologue", 70,
+        `[THAT TURN RAN ~${Math.round(longest / 150 * 60)} SECONDS OF CONTINUOUS SPEECH (${longest} words). His law is forty seconds — past that it is two turns, not one. Stop, hand him the turn, wait for his word. DHEEMA IS NOT CHHOTA: keep the depth, cut the speed.]`));
+    }
+  }
+
+  // 5 — A STANDING INSTRUCTION IS BEING IGNORED. B8 holds what he said out loud;
+  // this is the only thing that makes those instructions cost anything to break.
+  {
+    const pace = (st.instructions || []).find(i => i.axis === "pace");
+    if (pace && found.some(f => f.kind === "monologue")) {
+      found.push(mk("standing", 60,
+        `[AND HE ALREADY TOLD YOU THIS OUT LOUD: "${String(pace.text).slice(0, 160)}" — he should not have to say it again.]`));
+    }
+  }
+
+  if (!found.length) return null;                       // SILENCE IS THE DEFAULT
+  found.sort((a, b) => b.priority - a.priority);
+  return found[0];                                      // ONE NOTE PER TURN, EVER
 }
 
 // brief — the state rendered for a MACHINE mouth. This is what a rotated session
@@ -424,6 +541,65 @@ function selftest() {
     const forbidden = ["child" + "_process", "node:" + "http", "claude" + "gen.mjs", "brain" + ".mjs"];
     assert("SILENCE IS FREE — no model call is even REACHABLE: no subprocess, no network, no brain import",
       forbidden.every(n => !imports.includes(n)) && !src.includes("fetch" + "("));
+  }
+
+  // --- B3 · THE SUPERVISOR — a second pair of ears. Every fixture is a REAL line.
+  {
+    const S = (st, lines, stand) => supervise(st, stand || { instructions: [] }, lines, T0);
+    // 1 — the loudest signal there is
+    const withPlan = { ...emptyState(T0), forgot_flags: 3, declared_plan: { text: "tokenization → embeddings → inference → context window", at: "x" } };
+    const f = S(withPlan, ["CAPTAIN: Have you changed your key? Because you forgot what we were doing."]);
+    assert("B3 — 'you forgot' is caught, and the note hands back the AGREED PLAN rather than an apology",
+      f && f.kind === "forgot" && /tokenization/.test(f.note) && !/sorry/i.test(f.note));
+    assert("B3 — and it forbids the guess: say you are checking, then USE A TOOL", /USE A TOOL/.test(f.note));
+    const noPlan = S(emptyState(T0), ["CAPTAIN: bhai you forgot again"]);
+    assert("B3 — with NO agreed plan on record it says so honestly instead of inventing one", /no agreed plan recorded/.test(noPlan.note));
+
+    // 2 — walked past. Canon's own law: take it literally, restart from zero.
+    const open = { ...emptyState(T0), open_question: "samajh nahi aaya, phir se batao", open_question_turn: 0, turns: 1 };
+    const u = S(open, ["GAFFER: chalo aage badhte hain, ab embeddings dekhte hain"]);
+    assert("B3 — 'samajh nahi aaya' + the Gaffer moving on = the note that sends it BACK", u && u.kind === "unresolved" && /Go back to it NOW/.test(u.note));
+    assert("B3 — and it bans re-saying it in the same words (canon: restart from zero)", /same words/.test(u.note));
+    const stillAsking = S(open, ["CAPTAIN: abhi bhi samajh nahi aaya"]);
+    assert("B3 — but while he is STILL saying it, no note fires: he is being heard right now, not walked past",
+      !stillAsking || stillAsking.kind !== "unresolved");
+    // THE NOISE BUG, held by source. Without the turn-stamp this note re-fired on
+    // every later turn: measured against his real sitting, 93 notes across 123
+    // turns — the supervisor becoming the noise it exists to remove.
+    const stale = S({ ...open, turns: 40 }, ["GAFFER: aur is tarah embeddings kaam karte hain"]);
+    assert("B3 — an OLD open question does NOT re-fire forever (93 notes in 123 turns before this was fixed)",
+      !stale || stale.kind !== "unresolved");
+
+    // 3 — the second time is the signal (A3), never a score
+    const rep = { ...emptyState(T0), repeats: [{ key: norm("what were we talking about bhai"), text: "what were we talking about", count: 3, last_at: "x" }] };
+    const r = S(rep, ["CAPTAIN: what were we talking about bhai"]);
+    assert("B3 — a REPEATED question is caught on his words alone, and the note says the earlier answer did not land",
+      r && r.kind === "repeat" && /3×/.test(r.note) && /did not land/.test(r.note));
+    assert("B3 — and it forbids repeating the same shape, which is what made him repeat it", /different everyday analogy/.test(r.note));
+
+    // 4 — the monologue. THIS is the turn behind "Feels like you are talking to yourself."
+    const long = "GAFFER: " + Array.from({ length: 254 }, (_, i) => `shabd${i}`).join(" ");
+    const m = S(emptyState(T0), [long]);
+    assert("B3 — a 254-word turn (his real worst, 102 seconds of continuous speech) is caught",
+      m && m.kind === "monologue" && /102 SECONDS/.test(m.note));
+    assert("B3 — and the note carries the fence, so 'fix it' can never be read as 'say less'", /DHEEMA IS NOT CHHOTA/.test(m.note));
+    assert("B3 — the threshold is DERIVED from his own forty-second law at ~150 wpm, not chosen", MONOLOGUE_WORDS === 100);
+    const short = S(emptyState(T0), ["GAFFER: " + Array.from({ length: 42 }, () => "shabd").join(" ")]);
+    assert("B3 — a median-length turn (42 words, his real median) is SILENT", short === null);
+
+    // 5 — a standing instruction being broken costs something, at last
+    const stand = { instructions: [{ axis: "pace", label: "speaking pace", text: "भाई स्पीड हमेशा ही आपकी बोलने की धीरे होनी चाहिए", day: "2026-08-12" }] };
+    const withStanding = supervise(emptyState(T0), stand, [long], T0);
+    assert("B3 — when he has ALREADY said it out loud, the monologue still wins the turn (one note, highest priority)",
+      withStanding.kind === "monologue");
+
+    // THE TWO LAWS
+    const noisy = S({ ...withPlan, open_question: "samajh nahi aaya", repeats: [{ key: norm("what were we talking about"), text: "x", count: 2, last_at: "x" }] },
+      ["CAPTAIN: what were we talking about, you forgot again", long]);
+    assert("B3 — ONE NOTE PER TURN, EVER: four detectors fire at once and exactly one is returned",
+      noisy && typeof noisy.note === "string" && noisy.kind === "forgot");
+    assert("B3 — SILENCE IS THE DEFAULT: an ordinary exchange produces nothing at all",
+      supervise(emptyState(T0), { instructions: [] }, ["CAPTAIN: haan theek hai", "GAFFER: chalo shuru karte hain"], T0) === null);
   }
 
   // --- B10 · SELF-SCORING: a bad sitting must change the next one, unprompted

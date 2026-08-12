@@ -535,6 +535,49 @@ async function selftest() {
   assert("remember_fact: the legacy direct-append path is FROZEN in place, not deleted (layering law)",
     typeof rememberFactStagedLegacy === "function" && /appendLine\(PENDING_FACTS/.test(rememberFactStagedLegacy.toString()));
 
+  // ---- E7 · SINGLE WRITER, PROVED BY SEARCH RATHER THAN BY BELIEF (12 Aug 2026)
+  // CLAUDE.md carried "identity_facts.pending.jsonl has TWO live writers … a real
+  // breach … it needs HIS ruling" from 10 Aug to 12 Aug. The breach was real when
+  // written and the repair landed THE SAME DAY, so canon spent two days asking a
+  // session to hold open a question the code had already answered. He ruled on it
+  // 12 Aug; the finding was that nothing remained to fix.
+  //
+  // The lesson is why this assertion exists at all: a sentence in a doc — or in a
+  // comment — is not evidence about who writes a file. So this SEARCHES the whole
+  // scripts/ tree for a second writer instead of trusting either. It fails the day
+  // someone re-points a caller at the frozen appender, or writes a new one.
+  {
+    const { readdirSync } = await import("node:fs");
+    const files = readdirSync(__dirname).filter(f => f.endsWith(".mjs"));
+    const offenders = [];
+    for (const f of files) {
+      const src = readFileSync(join(__dirname, f), "utf8");
+      // hippocampus.mjs IS the owner; mcp-memory.mjs holds the frozen legacy + its
+      // own selftest, both of which are asserted above to be caller-less.
+      if (f === "hippocampus.mjs" || f === "mcp-memory.mjs") continue;
+      // PER LINE, and the write must TARGET the pending path — "this file mentions
+      // the path somewhere and also writes something somewhere" is not evidence of
+      // anything. Measured while writing this: the coarse version accused
+      // captains_call.mjs and context_manifest.mjs, both of which only READ it.
+      for (const line of src.split(/\r?\n/)) {
+        if (!/(identity_facts\.pending|PENDING_FACTS)/.test(line)) continue;
+        if (/(appendFileSync|appendLine|writeFileSync|renameSync|writeAtomic)\s*\(/.test(line)) offenders.push(`${f}: ${line.trim().slice(0, 90)}`);
+      }
+      if (/rememberFactStagedLegacy\s*\(/.test(src)) offenders.push(`${f} (calls the frozen appender)`);
+    }
+    assert("E7 — hippocampus.mjs is the SOLE writer of identity_facts.pending.jsonl, proved by searching every script, not by a sentence in a doc",
+      offenders.length === 0, offenders.join(", "));
+    // and inside this file, the frozen path must stay caller-less: the ONLY
+    // references may be its definition, its export, and the assertions above.
+    // `function rememberFactStagedLegacy(` matches the call regex too — the
+    // DEFINITION is not a call, and counting it as one is what made this red first.
+    const self = readFileSync(join(__dirname, "mcp-memory.mjs"), "utf8");
+    const calls = (self.match(/(?<!function )rememberFactStagedLegacy\(/g) || []).length;
+    const inTest = (self.slice(self.indexOf("function selftest")).match(/(?<!function )rememberFactStagedLegacy\(/g) || []).length;
+    assert("E7 — and the frozen appender has NO caller outside the selftest (this is what made the two-writer race dead, not the comment saying so)",
+      calls === inTest && calls > 0);
+  }
+
   // JSON-RPC framing — initialize / tools/list / tools/call / notification
   const sent = []; const orig = process.stdout.write.bind(process.stdout);
   process.stdout.write = (s) => { try { sent.push(JSON.parse(String(s).trim())); } catch {} return true; };
