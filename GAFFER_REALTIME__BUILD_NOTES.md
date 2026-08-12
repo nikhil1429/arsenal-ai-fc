@@ -330,6 +330,37 @@ gitignored state — which is the whole point of the away-day lane.
 > reproduction disagrees with a declared fact, suspect the harness before the code. Both
 > false leads here would have sent a session chasing a dependency bug that does not exist.
 
+### What the reproduction actually found — and what it RULED OUT
+
+Once the harness was right, the clean checkout found exactly **five** failing assertions in
+the entire run, and **all five were mine**, added an hour earlier: the B6/B11 tests asserted
+against the LIVE `capsule_map.json`, `weaknesses.json` and `calibration.json`, every one of
+which is **gitignored**. They passed at home and went red on the away-day lane — the 7 Aug
+"DORMANT-SAFE" red repeated exactly, in a file whose own comments describe that failure mode.
+Fixed with an injectable reader and a hermetic fixture *(and the fixture deliberately lists
+the wrong concept FIRST, so the guessed-field-name bug it exists to catch cannot pass it)*.
+
+**After that fix, a fully CI-identical local environment goes GREEN:**
+
+```
+windows-latest (matches the workflow: runs-on windows-latest, node 22)
+git archive HEAD  ->  npm ci  ->  node scripts/awayday.mjs run
+EXIT=0     0 failing assertions
++ re-run WITH a real .git present:  EXIT=0
+```
+
+**So two hypotheses are now DISPROVEN, not merely untested:**
+- **not the platform** — the workflow runs `windows-latest`, same as here
+- **not the missing `.git`** — added one, re-ran, still exit 0
+
+**E1's root cause is therefore something in the GitHub runner that this machine cannot
+reproduce** (network reachability, an env var, or timing). That is a genuinely narrower
+question than the one this item started with, and the next session should read a fresh run
+through §6's `curl` rather than assume any of the above.
+
+> **Do NOT "fix" E1 by guessing.** Three candidate causes have now been eliminated by
+> measurement; a fourth guess is worth less than one look at the next real run.
+
 ---
 
 *Written 12 Aug 2026, at the end of the session that did the work. Every claim in it is
