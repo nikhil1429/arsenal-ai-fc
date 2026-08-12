@@ -55,6 +55,16 @@ const run = (args, opts = {}) => {
 // This file is excluded from its own coverage check: it IS the suite, so it has no
 // `selftest` mode to wire anywhere. Named here rather than filtered silently.
 const SELF = "organism_test.mjs";
+// THE SUITE ROLL, in ONE place (12 Aug 2026). This used to be a literal array
+// repeated in coverage() and suiteMembers(); adding a suite therefore meant
+// editing two lists, and a half-edit would have made the coverage law itself
+// blind — the exact "law written in prose, broken by the next commit" failure
+// this file was built to catch. `audit:selftest` is the third suite: the
+// MEASUREMENT organs (sandbox · xray · blackbox · mutagen · treasury · herd ·
+// audit). They are separated not by importance but by COST — several build a
+// full sandbox and run for minutes, so `npm test` keeps them behind their own
+// name while the coverage law still holds them to the same standard as the rest.
+const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
 // 9 Aug 2026 (launch F1): also match a bare `function selftest(` — claudegen defines
 // one and runs it as its whole CLI, and the quoted-string-only regex was blind to it.
@@ -65,9 +75,9 @@ const hasSelftest = (f) => { const src = readFileSync(join(ROOT, "scripts", f), 
 function coverage() {
   section("COVERAGE LAW — a selftest nobody runs is a hypothesis, not a net");
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  const suiteNames = ["organism:selftest", "squad:selftest"];
-  const suites = suiteNames.map((n) => pkg.scripts[n] || "");
-  assert("both named suites still exist in package.json", suites.every(Boolean));
+  const suites = SUITE_NAMES.map((n) => pkg.scripts[n] || "");
+  assert(`all ${SUITE_NAMES.length} named suites still exist in package.json`, suites.every(Boolean),
+    SUITE_NAMES.filter((n) => !pkg.scripts[n]).join(", "));
 
   const inSuite = new Map();   // file -> how many suites name it
   suites.forEach((s) => {
@@ -104,10 +114,10 @@ function coverage() {
     members.length >= 69, `only ${members.length} members parsed out of the two suites`);
 }
 
-// the two suite strings stay the single membership record; the runner parses them
+// the suite strings stay the single membership record; the runner parses them
 function suiteMembers(pkg) {
   const out = [];
-  for (const n of ["organism:selftest", "squad:selftest"]) {
+  for (const n of SUITE_NAMES) {
     for (const m of (pkg.scripts[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) {
       if (!out.includes(m[1])) out.push(m[1]);
     }
