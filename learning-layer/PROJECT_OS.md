@@ -187,6 +187,15 @@
    file), and the two canon pace-guards WARN but never block. The Drive Progress-Tracker doc and its fileId
    are **NOT VERIFIED** from this repo — treat as a claim, and never as the primary source ahead of the state
    file. Never hand-edit `python_state.json`; the owner script is the only writer.)*
+   *(verified 13 Aug 2026, on his word — card c18 asked whether the Drive tools now exist and the paste-ritual
+   can retire. Measured, both halves: **READ is now live and the fileId RESOLVES** — a Drive MCP metadata call
+   on `1CNMRxOLp5kfOPW255p4Jwm6xc5b0S4QmPknJXuhKehM` returns title "Nikhil — Progress Tracker", owner
+   nikhil.panwar2914@gmail.com, `modifiedTime` **2026-07-06** — so the doc is real and has not been touched in
+   over a month, which is itself the reason the state file and not this doc is the primary source. **APPEND is
+   still impossible**: the connected Drive tools are read/discovery plus `create_file` only — there is no
+   update-or-append-to-an-existing-Doc verb, so a session cannot write the 2-line log itself. **THE PASTE-RITUAL
+   STAYS** and the line above stands as written. Re-check by hand before assuming otherwise: a Drive tool list
+   that contains an append/update verb is the only thing that retires it.)*
    AUR: har Python subtopic-close
    pe Claude CLOSE-PACKET emit kare (GEMINI_LOOP §11 template) — AUTO, Nikhil ko maangna na pade; prompt/drill
    Claude deta (Nikhil ko PLAIN numbered drills, koi Sanskrit-tag nahi), Nikhil execute-only; log Claude
