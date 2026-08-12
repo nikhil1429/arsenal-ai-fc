@@ -1,10 +1,162 @@
 {
- "built_at": "2026-08-12T11:39:10.581Z",
- "organs_parsed": 79,
- "organs_expected": 79,
+ "built_at": "2026-08-12T12:01:37.189Z",
+ "organs_parsed": 84,
+ "organs_expected": 84,
  "parse_errors": [],
- "unresolved_sinks": 4677,
+ "unresolved_sinks": 4755,
  "organs": {
+  "audit.mjs": {
+   "loc": 483,
+   "reads": [
+    {
+     "path": "dressing-room/state/audit_ledger.jsonl",
+     "lines": [
+      76,
+      76,
+      76,
+      76,
+      76,
+      76
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/audit.lock",
+     "lines": [
+      119,
+      121,
+      119,
+      121,
+      119,
+      121
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      148,
+      148,
+      461,
+      461,
+      148,
+      148,
+      461,
+      461,
+      148,
+      148,
+      461,
+      461
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts",
+     "lines": [
+      237,
+      237,
+      237
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts/audit.mjs",
+     "lines": [
+      448,
+      448,
+      448
+     ],
+     "fixture": true
+    },
+    {
+     "path": "dressing-room/state/forge_session.json",
+     "lines": [
+      108,
+      110,
+      108,
+      110
+     ],
+     "fixture": false
+    },
+    {
+     "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
+     "lines": [
+      225
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/audit_ledger.jsonl",
+     "lines": [
+      77,
+      77,
+      77
+     ],
+     "verbs": [
+      "appendFileSync"
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/audit.lock",
+     "lines": [
+      124,
+      125,
+      128,
+      130,
+      124,
+      125,
+      128,
+      130,
+      124,
+      125,
+      128,
+      130
+     ],
+     "verbs": [
+      "unlinkSync",
+      "writeFileSync"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [
+    {
+     "kind": "bin",
+     "bin": "git",
+     "line": 72
+    }
+   ],
+   "swallows": [],
+   "verbs": [
+    "docs",
+    "fix",
+    "ledger",
+    "report",
+    "run",
+    "selftest"
+   ],
+   "header_verbs": [
+    "docs",
+    "fix",
+    "ledger",
+    "report",
+    "run",
+    "selftest"
+   ],
+   "exports": [
+    "assertFixable",
+    "assertNoNewNumber",
+    "docClaims",
+    "fingerprint",
+    "ledger",
+    "measure",
+    "rank"
+   ],
+   "unresolved": 22
+  },
   "audit_preload.mjs": {
    "loc": 320,
    "reads": [],
@@ -144,14 +296,11 @@
    ],
    "swallows": [],
    "verbs": [
-    "RED",
     "check",
     "exposure",
     "list",
-    "organism-selftests",
     "run",
-    "selftest",
-    "selftests"
+    "selftest"
    ],
    "header_verbs": [
     "check",
@@ -320,6 +469,41 @@
     "roundsLine"
    ],
    "unresolved": 97
+  },
+  "blackbox.mjs": {
+   "loc": 307,
+   "reads": [
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      54,
+      54,
+      54,
+      54
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "chaos",
+    "reconcile",
+    "run",
+    "selftest"
+   ],
+   "header_verbs": [
+    "chaos",
+    "reconcile",
+    "run",
+    "selftest"
+   ],
+   "exports": [
+    "analyse",
+    "run"
+   ],
+   "unresolved": 14
   },
   "bootroom.mjs": {
    "loc": 1022,
@@ -1033,7 +1217,6 @@
     }
    ],
    "verbs": [
-    "--daemon",
     "bell",
     "daemon",
     "off",
@@ -1729,22 +1912,10 @@
    ],
    "verbs": [
     "answer",
-    "at-source",
     "deal",
-    "error",
     "file",
-    "forget-dispatch",
-    "gatetune-dispatch",
-    "gem.sync_due",
     "list",
-    "open",
-    "pending-fact-dispatch",
-    "ratify-dispatch",
-    "rejirah.pending",
-    "restart-dispatch",
     "selftest",
-    "sleep",
-    "staged-dispatch",
     "status",
     "sync"
    ],
@@ -2046,9 +2217,7 @@
    ],
    "swallows": [],
    "verbs": [
-    "--tools",
-    "lean",
-    "sonnet"
+    "selftest"
    ],
    "header_verbs": [],
    "exports": [
@@ -2196,15 +2365,11 @@
     }
    ],
    "verbs": [
-    "22:00",
     "bell",
     "evening",
     "morning",
-    "nikhil-model",
     "plan",
-    "scorer",
     "selftest",
-    "setpiece",
     "wallpaper"
    ],
    "header_verbs": [],
@@ -2302,7 +2467,6 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
-    "--daemon",
     "daemon",
     "once",
     "selftest",
@@ -2415,8 +2579,6 @@
     }
    ],
    "verbs": [
-    "footer",
-    "ledger",
     "selftest"
    ],
    "header_verbs": [
@@ -3112,7 +3274,6 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
-    "2026-06-24",
     "all",
     "due",
     "overdue",
@@ -5386,19 +5547,12 @@
     }
    ],
    "verbs": [
-    "brief-brain",
-    "brief-club",
-    "cinematic-tour",
-    "error",
     "fire-reminders",
     "index",
-    "minimal",
     "mint-probe",
     "reminders",
-    "scrimmage",
     "selftest",
-    "shadow-detect",
-    "signing"
+    "shadow-detect"
    ],
    "header_verbs": [
     "index",
@@ -5509,12 +5663,9 @@
    ],
    "swallows": [],
    "verbs": [
-    "attention",
-    "phenomenon",
     "selftest",
     "served",
     "stage",
-    "unrecorded",
     "unserve"
    ],
    "header_verbs": [
@@ -6449,6 +6600,67 @@
     "timeauditBridge"
    ],
    "unresolved": 36
+  },
+  "herd.mjs": {
+   "loc": 224,
+   "reads": [
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      87,
+      87,
+      87,
+      87
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts",
+     "lines": [
+      140,
+      140
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [
+    {
+     "kind": "bin",
+     "bin": "powershell",
+     "line": 66
+    }
+   ],
+   "swallows": [
+    {
+     "line": 64,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    },
+    {
+     "line": 64,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    }
+   ],
+   "verbs": [
+    "collisions",
+    "report",
+    "schedule",
+    "selftest"
+   ],
+   "header_verbs": [
+    "collisions",
+    "report",
+    "schedule",
+    "selftest"
+   ],
+   "exports": [
+    "collisions",
+    "liveSchedule",
+    "model"
+   ],
+   "unresolved": 2
   },
   "hippocampus.mjs": {
    "loc": 1708,
@@ -7397,7 +7609,6 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
-    "derived",
     "human",
     "json",
     "selftest"
@@ -7445,18 +7656,7 @@
    ],
    "swallows": [],
    "verbs": [
-    "\"finish the M1 extraction end-to-end\"",
-    "Introduction",
-    "Partnership",
-    "fallback",
-    "finish the M1 extraction end-to-end",
-    "fresh",
-    "introduction",
-    "llm",
-    "missing",
-    "no",
-    "selftest",
-    "spine: 2/6 fluent"
+    "selftest"
    ],
    "header_verbs": [
     "generate",
@@ -7584,7 +7784,6 @@
     }
    ],
    "verbs": [
-    "ep1",
     "resync",
     "selftest"
    ],
@@ -7660,6 +7859,61 @@
     "sha256"
    ],
    "unresolved": 32
+  },
+  "mutagen.mjs": {
+   "loc": 422,
+   "reads": [
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      155,
+      276,
+      155,
+      276,
+      155,
+      276,
+      155,
+      276
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts",
+     "lines": [
+      381,
+      381,
+      381,
+      381
+     ],
+     "fixture": true
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "code",
+    "panic",
+    "selftest",
+    "state"
+   ],
+   "header_verbs": [
+    "code",
+    "museum",
+    "panic",
+    "selftest",
+    "state"
+   ],
+   "exports": [
+    "CODE_OPS",
+    "OPERATORS",
+    "PANIC_MARK",
+    "panic",
+    "panicGuard",
+    "panicRewrite",
+    "stateMatrix"
+   ],
+   "unresolved": 40
   },
   "nemesis.mjs": {
    "loc": 599,
@@ -8029,12 +8283,10 @@
     "adjudicated_up",
     "capped",
     "field-probes",
-    "fresh doubt",
     "gem-stamp",
     "refractory",
     "selftest",
-    "status",
-    "tiers"
+    "status"
    ],
    "header_verbs": [
     "field-probes",
@@ -8849,7 +9101,6 @@
    ],
    "verbs": [
     "index",
-    "scrimmage",
     "selftest"
    ],
    "header_verbs": [
@@ -9572,8 +9823,6 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
-    "T1",
-    "gate_closed",
     "run",
     "selftest"
    ],
@@ -10369,7 +10618,7 @@
    "unresolved": 3
   },
   "sandbox.mjs": {
-   "loc": 322,
+   "loc": 358,
    "reads": [
     {
      "path": "node_modules",
@@ -10386,9 +10635,9 @@
     {
      "path": "dressing-room/state/CANARY_MUST_NEVER_EXIST.json",
      "lines": [
-      271,
-      271,
-      271
+      307,
+      307,
+      307
      ],
      "fixture": true
     },
@@ -10461,6 +10710,7 @@
     "canary",
     "destroy",
     "ledgerFingerprint",
+    "moneyOracle",
     "readJsonl",
     "runIn"
    ],
@@ -10713,7 +10963,6 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
-    "2026-07-11",
     "ratify",
     "run",
     "selftest"
@@ -11265,8 +11514,7 @@
     "novel",
     "recall",
     "run",
-    "selftest",
-    "voice"
+    "selftest"
    ],
    "header_verbs": [
     "compile",
@@ -12813,12 +13061,8 @@
     }
    ],
    "verbs": [
-    "opus",
-    "pending",
     "selftest",
-    "served",
-    "status",
-    "twin"
+    "status"
    ],
    "header_verbs": [
     "daemon",
@@ -13349,6 +13593,62 @@
     "weakFootRead"
    ],
    "unresolved": 18
+  },
+  "treasury.mjs": {
+   "loc": 224,
+   "reads": [
+    {
+     "path": "dressing-room/state/brain_ledger.jsonl",
+     "lines": [
+      68,
+      69,
+      68,
+      69
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      128,
+      128,
+      219,
+      128,
+      128,
+      219
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "assembly",
+    "meter",
+    "report",
+    "rho",
+    "selftest"
+   ],
+   "header_verbs": [
+    "assembly",
+    "days",
+    "meter",
+    "report",
+    "rho",
+    "selftest"
+   ],
+   "exports": [
+    "W",
+    "assembly",
+    "meter",
+    "partsOf",
+    "rawOf",
+    "rho",
+    "rows",
+    "spendOf"
+   ],
+   "unresolved": 0
   },
   "turnstile.mjs": {
    "loc": 189,
@@ -13925,13 +14225,8 @@
     }
    ],
    "verbs": [
-    "GREEN",
-    "RED",
-    "audit",
-    "invented number 97",
     "run",
-    "selftest",
-    "tokenization"
+    "selftest"
    ],
    "header_verbs": [
     "run",
@@ -14476,81 +14771,81 @@
    "unresolved": 20
   },
   "xray.mjs": {
-   "loc": 1145,
+   "loc": 1172,
    "reads": [
     {
      "path": "package.json",
      "lines": [
-      706,
-      706,
-      706
+      733,
+      733,
+      733
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      872,
-      1035,
-      1113,
-      1131,
-      1132,
-      1134,
-      872,
-      1035,
-      1113,
-      1131,
-      1132,
-      1134,
-      872,
-      1035,
-      1113,
-      1131,
-      1132,
-      1134
+      899,
+      1062,
+      1140,
+      1158,
+      1159,
+      1161,
+      899,
+      1062,
+      1140,
+      1158,
+      1159,
+      1161,
+      899,
+      1062,
+      1140,
+      1158,
+      1159,
+      1161
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      684,
-      685,
-      684,
-      685
+      711,
+      712,
+      711,
+      712
      ],
      "fixture": false
     },
     {
      "path": ".claude/settings.json",
      "lines": [
-      697,
-      698,
-      697,
-      698
+      724,
+      725,
+      724,
+      725
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      743,
-      743
+      770,
+      770
      ],
      "fixture": false
     },
     {
      "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
      "lines": [
-      721
+      748
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      811,
-      812
+      838,
+      839
      ],
      "fixture": false
     }
@@ -14559,11 +14854,11 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      869,
-      868,
-      869,
-      868,
-      869
+      896,
+      895,
+      896,
+      895,
+      896
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -14577,7 +14872,6 @@
    "verbs": [
     "build",
     "list",
-    "q",
     "report",
     "selftest",
     "swallow",
@@ -14877,6 +15171,7 @@
   {
    "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
    "readers": [
+    "audit.mjs",
     "deep.mjs",
     "organism_test.mjs",
     "xray.mjs"
@@ -15206,6 +15501,32 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/audit_ledger.jsonl",
+   "readers": [
+    "audit.mjs"
+   ],
+   "writers": [
+    "audit.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
+   "path": "dressing-room/state/audit.lock",
+   "readers": [
+    "audit.mjs"
+   ],
+   "writers": [
+    "audit.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/awayday.json",
    "readers": [
     "awayday.mjs",
@@ -15295,6 +15616,7 @@
     "sandbox.mjs",
     "scoreboard.mjs",
     "thalamus.mjs",
+    "treasury.mjs",
     "viz.mjs"
    ],
    "writers": [
@@ -16339,6 +16661,7 @@
   {
    "path": "dressing-room/state/forge_session.json",
    "readers": [
+    "audit.mjs",
     "captains_call.mjs",
     "forge_session.mjs",
     "learning_state.mjs",
@@ -17738,6 +18061,11 @@
   {
    "path": "dressing-room/state/xray_graph.json",
    "readers": [
+    "audit.mjs",
+    "blackbox.mjs",
+    "herd.mjs",
+    "mutagen.mjs",
+    "treasury.mjs",
     "xray.mjs"
    ],
    "writers": [
@@ -17908,7 +18236,9 @@
   {
    "path": "scripts",
    "readers": [
+    "audit.mjs",
     "dugout.mjs",
+    "herd.mjs",
     "limits.mjs",
     "organism_test.mjs",
     "reconcile.mjs",
@@ -17918,7 +18248,8 @@
    ],
    "writers": [],
    "fixture_readers": [
-    "mcp-memory.mjs"
+    "mcp-memory.mjs",
+    "mutagen.mjs"
    ],
    "fixture_writers": [],
    "on_disk": false,
@@ -17975,6 +18306,17 @@
    ],
    "writers": [],
    "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "scripts/audit.mjs",
+   "readers": [],
+   "writers": [],
+   "fixture_readers": [
+    "audit.mjs"
+   ],
    "fixture_writers": [],
    "on_disk": false,
    "is_dir": false
@@ -18636,6 +18978,7 @@
   "dressing-room/state/afferent.2026-07.jsonl",
   "dressing-room/state/afferent.jsonl",
   "dressing-room/state/answer_cache.jsonl",
+  "dressing-room/state/audit_ledger.jsonl",
   "dressing-room/state/awayday.json",
   "dressing-room/state/benchmark.json",
   "dressing-room/state/bg_queue.jsonl",
@@ -19124,6 +19467,10 @@
   "dressing-room/state/scout_reports"
  ],
  "declared_sole_writers": [
+  {
+   "organ": "audit.mjs",
+   "file": "audit_ledger.json"
+  },
   {
    "organ": "capsule_bridge.mjs",
    "file": "capsule_map.json"
@@ -22025,6 +22372,36 @@
     "source": "package.json"
    },
    {
+    "script": "xray.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "mutagen.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "blackbox.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "treasury.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "herd.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "audit.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
     "script": "organism_test.mjs",
     "verb": "all",
     "source": "package.json"
@@ -22222,6 +22599,11 @@
    {
     "script": "gate_tune.mjs",
     "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "audit.mjs",
+    "verb": "run",
     "source": "package.json"
    }
   ],

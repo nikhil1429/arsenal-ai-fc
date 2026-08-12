@@ -116,13 +116,25 @@ function analyzeFile(absPath, src) {
   // process.argv is tainted, including array destructuring
   // (`const [cmd,...rest] = process.argv.slice(2)`), and the `|| "default"` arm
   // of the dispatch line is itself a verb.
-  const argvTainted = new Set(["mode", "cmd", "verb", "sub", "action"]);
+  // ⚠ NOTHING IS PRE-SEEDED HERE, AND THAT MATTERS. This set started as the
+  // guessed names {mode, cmd, verb, sub, action}, and the guess `action` was
+  // actively harmful: captains_call.mjs dispatches CARD ACTIONS as
+  // `action.kind === "at-source"`, so every dispatch KIND was harvested as a CLI
+  // verb. The auto-fixer was one dry-run away from writing `at-source`,
+  // `restart-dispatch`, `gem.sync_due` and `RED` into 31 organ headers as if they
+  // were commands. A taint set must be EARNED from process.argv, never assumed
+  // from a variable's name.
+  const argvTainted = new Set();
   const noteArgvTaint = (d) => {
     if (!d.init) return;
     const text = src.slice(d.init.start, d.init.end);
     if (!/process\.argv/.test(text)) {
-      // second hop: `const mode = String(cmd || "list").toLowerCase()` where cmd
-      // is already tainted — the verb lives one assignment further down.
+      // Second hop: `const mode = String(cmd || "list").toLowerCase()` where cmd
+      // is already tainted. Bounded to a SHORT expression on purpose — an
+      // unbounded "does any tainted name appear anywhere in this initialiser"
+      // rule spreads taint through whole objects and harvests unrelated string
+      // literals as verbs.
+      if (text.length > 90) return;
       const ids = [...text.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)].map((m) => m[1]);
       if (!ids.some((i) => argvTainted.has(i))) return;
     }
@@ -620,6 +632,21 @@ function analyzeFile(absPath, src) {
   }
   for (const v of ["node", "scripts", "mjs", "cli", "modes", "usage"]) headerVerbs.delete(v);
   for (const k of dispatchTableKeys) argvVerbs.add(k);
+  // A CLI VERB IS A BARE LOWERCASE WORD. Flags (`--daemon`), dotted keys
+  // (`gem.sync_due`) and SHOUTED status constants (`RED`) are none of them, and
+  // each of those three actually appeared in the first pass. Filtering by SHAPE
+  // is safe here in a way that filtering by name never is.
+  for (const v of [...argvVerbs]) {
+    if (/^-/.test(v) || /[.\s/\\]/.test(v) || v !== v.toLowerCase() || v.length < 2 || v.length > 24) argvVerbs.delete(v);
+    // a date literal is not a verb — deep.mjs compares argv against "2026-06-24"
+    else if (/^[\d-]+$/.test(v)) argvVerbs.delete(v);
+  }
+  // `selftest` is universal in this repo and is dispatched half a dozen ways
+  // (`(arg||"").toLowerCase()===`, `argv.includes`, a bare `if (mode)`). Rather
+  // than chase every shape, take the DEFINITION as the evidence: an organ that
+  // defines `function selftest(` has the verb, full stop. Without this, package
+  // .json's own `oura_coach.mjs selftest` read as a broken edge.
+  if (/\b(?:async\s+)?function\s+selftest\s*\(/.test(src) || /\bselftest\s*=\s*(?:async\s*)?\(/.test(src)) argvVerbs.add("selftest");
 
   // The fixpoint re-walks each function once per parameter binding, so the same
   // physical call site is recorded many times. Deduped by (kind, target, line) —
