@@ -55,7 +55,7 @@ import { sanitizeModelMine, testedEdgeLines, FACTS } from "./nikhil_model.mjs";
 // H5 (10 Aug 2026): the dreams sanitizer resolves concepts through the same
 // alias machinery the scoreboard already carries (capture.mjs's pattern).
 import { loadAliasMap, repLocalDay } from "./scoreboard.mjs";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, isAbsolute } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { runManager } from "./manager.mjs";
@@ -1854,7 +1854,16 @@ function gatherInputsAudited(job, now = new Date(), dateStr = null) {
   const absent = [], required_absent = [], door = [];
   for (const decl of normalizeInputs(job)) {
     const name = decl.path.replace(/TODAY/g, day);   // date-tokened paths (e.g. dugout transcripts)
-    const p = join(STATE_DIR, name);
+    // TOTAL RESOLVER (12 Aug 2026, E1's true final cause). Declared paths are
+    // STATE_DIR-relative — but on Windows, path.relative() across DRIVES cannot
+    // produce a relative path and returns the absolute target instead, which
+    // join(STATE_DIR, ...) then mangles into garbage. That is exactly what the
+    // hermetic selftest fixtures do on the CI runner (workspace D:\a\..., temp
+    // C:\Users\runneradmin\...), so six DOUBLE-CUT/DOOR3 assertions failed on
+    // every runner and passed on every one-drive home machine — unreproducible
+    // until temp was subst-ed onto its own drive. No live config declares an
+    // absolute input; honoring one when it arrives makes the resolver total.
+    const p = isAbsolute(name) ? name : join(STATE_DIR, name);
     const there = existsSync(p);
     // TAIL READ (audit #51): three jobs list presence_log.jsonl, which is unbounded and
     // rolls monthly. Only the last 200 rows were ever used; now only those are read, and
