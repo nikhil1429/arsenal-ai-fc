@@ -1400,14 +1400,34 @@ function buildOpeningBriefing() {
     if (reds.length) bits.push(`overnight watchman: ${reds.length} RED — ${reds.map(r => r.id).join(" · ")}`);
   } catch { }
   try {
-    const due = readJson(join(STATE_DIR, "rejirah_state.json"));
-    const n = due && Array.isArray(due.due) ? due.due.length : 0;
-    if (n) bits.push(`${n} Re-Jirah round(s) overdue — and he has never completed one, so the FIRST is the one that unlocks the layer`);
+    // READ THE SOURCE THAT EXISTS. This was written against `rejirah_state.json`,
+    // a file NOTHING creates — so the line silently pushed nothing, every session,
+    // and the briefing never once mentioned the four overdue rounds. Caught by
+    // sweeping for state files with no reader outside their writer: this one had
+    // no WRITER at all, and `dugout.mjs` was listed as its only toucher.
+    // get_rejirah is the live conductor and it reads fsrs_store.json — same source.
+    const store = readJson(join(STATE_DIR, "fsrs_store.json")) || {};
+    const today = localDate(new Date());
+    const overdue = (Array.isArray(store.cards) ? store.cards : [])
+      .filter(c => c && String(c.due || c.due_date || "").slice(0, 10) <= today);
+    if (overdue.length) {
+      const graded = (Array.isArray(store.cards) ? store.cards : []).some(c => Number(c.rejirah_graded) > 0);
+      bits.push(`${overdue.length} Re-Jirah round(s) overdue${graded ? "" : " — and he has NEVER completed one, so the first is the one that unlocks a whole layer"}. Overdue is RIPE, not late; say it that way.`);
+    }
   } catch { }
   try {
+    // SAME DEAD-WIRE CLASS AS THE LINE ABOVE, and caught in the same sweep: this
+    // filtered on `x.status === "staged"`, and a mission row HAS NO `status` FIELD.
+    // Its real fields are staged_at / fired_at / ingested_at, so the filter matched
+    // nothing and this line never once appeared — while M02, M03 and M04 have sat
+    // un-returned since 8 Aug and are the ONE thing gating benchmark.mjs.
+    // A mission is outstanding when it has not come BACK, whether or not it was fired.
     const m = readJson(join(STATE_DIR, "missions.json"));
-    const staged = ((m && m.missions) || []).filter(x => x && x.status === "staged");
-    if (staged.length) bits.push(`${staged.length} Gemini mission(s) staged and unfired (${staged.slice(0, 4).map(x => x.id).join(", ")}) — only HE can fire them`);
+    const open = ((m && m.missions) || []).filter(x => x && !x.ingested_at);
+    if (open.length) {
+      const unfired = open.filter(x => !x.fired_at);
+      bits.push(`${open.length} Gemini mission(s) still out (${open.slice(0, 4).map(x => x.id).join(", ")})${unfired.length ? ` — ${unfired.length} never even fired` : ""}. ONLY HE can fire them, and the full-syllabus benchmark stays gated until they return.`);
+    }
   } catch { }
   if (!bits.length) return "";
   return `
@@ -1419,6 +1439,18 @@ warm, spoken, no list-reading, no numbers he cannot act on — then hand him the
 turn. Do NOT dump all of it; name the ONE thing that matters most and say how
 many others are waiting. What is actually pending right now:
 ${bits.map(b => `  · ${b}`).join("\n")}
+
+AND THEN TAKE HIS ANSWER — this is the half that did not exist until 12 Aug 2026.
+Measured that day: 27 live cards, every one of them dealt to him at least once
+(one of them twenty times), and NOT A SINGLE ONE EVER ANSWERED. The deck was
+rotating correctly the whole time; what was missing was any way for him to
+answer, because the only path ran through a terminal command with an id in it.
+So: after you name the pending thing, ASK HIM PLAINLY — "haan, na, ya baad?" —
+and the instant he says one of those three words, call answer_card(word) in that
+same turn. Do NOT ask him for the id; his word alone binds to the card he was
+just dealt. Do NOT batch them, do NOT save them for the end of the sitting, and
+NEVER tell him something is handled unless the call came back ok. If he answers
+one, you may offer the next ONE — never a list, never a queue.
 `;
 }
 
@@ -1554,6 +1586,7 @@ const TOOL_DECLS = [
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
   { name: "read_url", description: "SOURCE-GROUNDED READ — fetch and read a PUBLIC http(s) page (docs, papers, articles) and answer FROM it. Use when he names a URL or when teaching deserves the actual source over your priors. NEVER for private/local/personal ground. question = what to extract.", parameters: { type: "OBJECT", properties: { url: { type: "STRING" }, question: { type: "STRING" } }, required: ["url"] } },
+  { name: "answer_card", description: "RECORD HIS DECISION ON A CAPTAIN'S CALL CARD — the ONLY way a pending approval ever gets closed by voice. The opening briefing tells him what is waiting on him; the moment he answers with haan (do it) / na (drop it) / baad (ask me later), call this IMMEDIATELY, in that turn. word is required. id is OPTIONAL and you should usually omit it — his word alone binds to the card he was just dealt, and asking him to repeat an id back to a voice is exactly the friction this exists to remove. Measured 12 Aug 2026: 27 live cards, every one dealt at least once, and ZERO ever answered — because until now the only way to answer was typing a command in a terminal. If he says something that is not one of the three words, ask him which he means; never guess a decision on his behalf, and never tell him a card is closed unless this call returned ok.", parameters: { type: "OBJECT", properties: { word: { type: "STRING" }, id: { type: "STRING" } }, required: ["word"] } },
   { name: "get_iceberg", description: "THE ICEBERG — EVERYTHING the organism holds about HIM, composed from all seven live sources at once (the ledger of self he dictated, the consolidated who-he-is, cause→effect edges, calibration, nemesis, where he is in the work, and every standing instruction he has given out loud), each part carrying its OWN date. Call this whenever he asks what you know about him — 'tell me everything you know about me', 'what do you know about me', 'use brain for this', 'the entire iceberg', 'mere baare mein kya jaante ho'. Do NOT answer that question from memory or from one source: on 12 Aug 2026 he asked, got a thin answer from a single organ, and pushed back — 'I want the entire iceberg and it is more than what you was saying so I want you to keep your knowledge updated.'", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_club_report", description: "THE BOARDROOM BRIEFING — the WHOLE organism's state in one call: body, brain spend, what the gate did today, senses, memory, tanks, night-shift output, what's dormant and why. Call when he asks 'what's happening in the club / sab kuch batao / club report / brief me'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: {} } },
@@ -1816,6 +1849,42 @@ function execTool(name, args, deps = {}) {
       if (args.route_throwins) argv.push("--route", "all");
       const said = sh("postmatch.mjs", argv);
       return { ok: true, said: String(said || "").trim().slice(0, 300) };
+    }
+    if (name === "answer_card") {
+      // ---- THE MISSING HALF OF THE CAPTAIN'S CALL (12 Aug 2026) --------------
+      // MEASURED, and it is the reason the whole lane was dead: 27 live cards,
+      // EVERY ONE dealt at least once (c9 twenty times), and **ZERO EVER
+      // ANSWERED**. The deck was rotating correctly the whole time — the deal
+      // half worked. What did not exist was any way for him to ANSWER.
+      //
+      // The only path was typing `node scripts/captains_call.mjs answer c16 haan`
+      // in a terminal. He is ADHD-PI and talks to this surface BY VOICE, so a
+      // decision that requires him to leave the conversation, open a shell and
+      // remember an id is a decision that never gets made. His own ledger fact
+      // (5cea57e8) says it outright: anything he must REMEMBER to do is a design
+      // failure. 42 unanswered cards is that failure, measured.
+      //
+      // SINGLE-WRITER HONOURED: this SHELLS the owner (same precedent as
+      // approve_genome → bootroom.mjs and route_throwins → postmatch.mjs).
+      // captains_call.mjs stays the sole writer of captains_call.json; the bridge
+      // never opens that file for writing.
+      //
+      // THE ID IS OPTIONAL BY DESIGN — LADDER A1 already made his word alone
+      // bind to the card most recently DEALT, which is the one he just heard.
+      // Asking a man to repeat an id back to a voice is the same failure again.
+      const word = String(args.word || "").trim().toLowerCase();
+      if (!["haan", "na", "baad"].includes(word)) {
+        return { ok: false, error: `"${word}" is not an answer — the only three words are haan (do it) / na (drop it) / baad (ask me later). Ask him which one he means; never guess on his behalf.` };
+      }
+      const id = String(args.id || "").trim();
+      let said = "", failed = null;
+      try { said = String(sh("captains_call.mjs", id ? ["answer", id, word] : ["answer", word]) || "").trim(); }
+      catch (e) { failed = String((e && (e.stdout || e.stderr || e.message)) || e).trim().slice(0, 300); }
+      if (failed) return { ok: false, error: `the card was NOT answered — captains_call.mjs refused: ${failed}. Tell him plainly that it did not land; never say it is done when it is not.` };
+      return {
+        ok: true, answered: word, said: said.slice(0, 400),
+        _use: "Confirm in ONE short line what you just recorded and what it will do — then carry on with what you were doing. Never read the raw output back, never list the other pending cards unless he asks.",
+      };
     }
     if (name === "approve_genome") {
       const id = String(args.id || "").trim();
@@ -2681,7 +2750,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 30);   // 30 since B14 (get_iceberg, 12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 31);   // 30 since B14 (get_iceberg, 12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -2732,7 +2801,7 @@ async function selftest() {
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
-      g.tools[0].functionDeclarations.length === 30
+      g.tools[0].functionDeclarations.length === 31
       && ["get_capsule", "grade_rejirah", "log_reps", "get_organism", "get_club_report", "get_context"]
         .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
@@ -2846,6 +2915,7 @@ async function selftest() {
     // away from being softened by someone who never heard him say it.
     {
       const SI = buildSystemInstruction();
+      const SRCX = readFileSync(fileURLToPath(import.meta.url), "utf8");
       assert("B13 — PACE is a law of the BEING, not of SAMJHAO mode (he said it in an ORDINARY conversation: 'Feels like you are talking to yourself')",
         SI.includes("PACE IS A LAW OF WHO YOU ARE") && SI.includes("talking to yourself") && SI.includes("DHEEMA IS NOT CHHOTA"));
       assert("B13 — fenced against the obvious misreading: cut the SPEED, never the substance",
@@ -2871,6 +2941,48 @@ async function selftest() {
         !buildOpeningBriefing() || buildOpeningBriefing().includes("name the ONE thing that matters most"));
       assert("B4 — and it rides the LIVE instruction, so he never has to ask 'what decisions are pending on me?' again",
         SI.includes(buildOpeningBriefing()));
+
+      // ---- THE ANSWER HALF (12 Aug 2026) — the lane was HALF-BUILT ----------
+      // MEASURED: 27 live cards, EVERY one dealt at least once (c9 twenty
+      // times), and ZERO EVER ANSWERED. The deal half worked the whole time; the
+      // answer half did not exist. The only way to close a card was typing
+      // `captains_call.mjs answer <id> <word>` in a terminal — and he is ADHD-PI
+      // and talks to this surface by VOICE. His own ledger fact 5cea57e8: a thing
+      // he must REMEMBER to do is a design failure.
+      assert("CARD — the Gaffer can finally RECORD a spoken decision (0 of 42 answered before this existed)",
+        TOOL_DECLS.some(t => t.name === "answer_card"));
+      assert("CARD — the id is OPTIONAL, because asking a man to repeat an id back to a voice is the friction this removes",
+        (TOOL_DECLS.find(t => t.name === "answer_card").parameters.required || []).join() === "word");
+      assert("CARD — only his three words are accepted; a fourth is ASKED about, never guessed on his behalf",
+        (await execTool("answer_card", { word: "maybe" })).ok === false
+        && (await execTool("answer_card", {})).ok === false);
+      assert("CARD — SINGLE WRITER: the bridge SHELLS captains_call.mjs and never opens its json for writing",
+        /sh\("captains_call\.mjs"/.test(SRCX) && !/writeFileSync\([^)]*captains_call\.json/.test(SRCX));
+      assert("CARD — a refusal is reported as a REFUSAL: it must never tell him a decision landed when it did not",
+        /the card was NOT answered/.test(SRCX) && /never say it is done when it is not/.test(SRCX));
+      assert("CARD — and the constitution ASKS for the answer, because a tool nobody is told about is a dead tool",
+        SI.includes("haan, na, ya baad?") && SI.includes("answer_card(word)") && SI.includes("NOT A SINGLE ONE EVER ANSWERED"));
+      assert("CARD — one at a time, never a queue (a 27-item read-out is the same failure in a new coat)",
+        SI.includes("you may offer the next ONE — never a list, never a queue"));
+
+      // ---- TWO DEAD WIRES IN MY OWN B4, found by sweeping for state files with
+      // no reader outside their writer (12 Aug 2026). Both failed SILENTLY inside
+      // a try/catch, so the briefing simply never mentioned them:
+      //   · the Re-Jirah line read `rejirah_state.json` — a file NOTHING creates.
+      //     Now reads fsrs_store.json, the same source get_rejirah conducts from.
+      //   · the missions line filtered on `x.status === "staged"` — a mission row
+      //     HAS NO status field (staged_at / fired_at / ingested_at). It matched
+      //     nothing while M02-M04 sat un-returned since 8 Aug, gating benchmark.
+      // A wrong field name inside a try/catch is the quietest bug in this repo.
+      const brief = buildOpeningBriefing();
+      assert("BRIEF — the Re-Jirah line reads a source that EXISTS (it read rejirah_state.json, which nothing creates, and was silently dead)",
+        /Re-Jirah round\(s\) overdue/.test(brief) && !SRCX.includes('readJson(join(STATE_DIR, "rejirah' + '_state.json"))'));
+      assert("BRIEF — and it says overdue is RIPE, not late (his own framing, and the kickoff's)",
+        /RIPE, not late/.test(brief));
+      assert("BRIEF — the missions line reads the REAL field (there is no `status` on a mission row) and names the benchmark gate",
+        /Gemini mission\(s\) still out/.test(brief) && /benchmark stays gated/.test(brief) && !SRCX.includes('x.stat' + 'us === "staged")'));
+      assert("BRIEF — all FOUR sources reach him now: cards · watchman · re-jirah · missions",
+        ["decision(s) waiting", "watchman", "Re-Jirah", "Gemini mission"].every(k => brief.includes(k)));
       // B8 — the standing instructions reach the PREAMBLE, not only a reconnect.
       // Without this, a law would survive a dropped line and die on a clean tab-open.
       assert("B8 — the sitting state reaches EVERY session's preamble, not just a rotation", SI.includes(gafferSittingSection()));
@@ -3401,7 +3513,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("30 club tools now (12 Aug: B14 get_iceberg joined the 11 Aug grade_rejirah)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 30);
+    assert("31 club tools now (12 Aug: answer_card — the half of the captain's call that never existed — joined B14 get_iceberg)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 31);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -3428,7 +3540,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 30 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 31 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
