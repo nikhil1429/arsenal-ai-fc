@@ -185,8 +185,15 @@ async function run(deps = {}) {
     if (out) process.stderr.write(out);
     if (r.error) throw new Error(`spawn failed: ${String(r.error.message || r.error)}`);
     if (r.status !== 0) {
-      const tail = out.trim().split(/\r?\n/).filter((l) => l.trim()).slice(-8).join(" | ").slice(-500);
-      throw new Error(`exit ${r.status} · tail: ${tail || "(no output)"}`);
+      // FAILING LINES FIRST, tail second (12 Aug 2026, round 2): the first tail
+      // was the last 8 lines blind, and brain's selftest prints its FOOTER plus
+      // two standing ntfy warnings after the one ✗ line that matters — so the
+      // annotation carried everything except the failure. A red run's readable
+      // surface must lead with the lines that went red.
+      const lines = out.trim().split(/\r?\n/).filter((l) => l.trim());
+      const red = lines.filter((l) => /✗|(^|\s)FAIL(ED)?\b/u.test(l)).slice(0, 6);
+      const tail = [...red, "· · ·", ...lines.slice(-3)].join(" | ").slice(0, 650);
+      throw new Error(`exit ${r.status} · ${tail || "(no output)"}`);
     }
     return out;
   });
