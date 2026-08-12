@@ -437,10 +437,15 @@ const MUSEUM = [
     story: "a filter on `x.status` where the rows actually carry staged_at/fired_at/ingested_at — it matched NOTHING, silently, for days, while M02–M04 sat un-returned",
     detector: "mutagen state-mutant matrix (the read stops being load-bearing)",
     apply(sb) {
+      // ⚠ THE MUTANT MUST MATCH THE REPO'S ACTUAL IDIOM. The first version
+      // hardcoded the parameter name `c`, and captains_call writes
+      // `rows.filter((r) => r.ingested_at)` and `.filter((x) => …)` — so the
+      // mutant NEVER APPLIED and the exhibit reported MISSED. The detector was
+      // fine; the injection was a no-op. Any single identifier now matches, and
+      // EVERY filter is poisoned so the read cannot survive through another path.
       const p = join(sb.root, "scripts", "captains_call.mjs");
       const s = readFileSync(p, "utf8");
-      // make every card read filter on a field that does not exist
-      writeFileSync(p, s.replace(/\.filter\(\(?c\)? =>/, ".filter((c) => c.status === \"open\" &&"));
+      writeFileSync(p, s.replace(/\.filter\(\((\w+)\) =>/g, '.filter(($1) => $1.status === "open" &&'));
     },
     detect(sb) {
       const target = join(sb.root, "dressing-room", "state", "captains_call.json");
