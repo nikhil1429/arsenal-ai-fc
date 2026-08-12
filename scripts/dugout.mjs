@@ -198,6 +198,32 @@ function readDeepState(deps = {}) {
   out.bg_hint = (ws && ws.bg_hint && new Date(ws.bg_hint.expires) > new Date()) ? ws.bg_hint : null;
   // M3 — the affect firewall's ONLY legal output: an ephemeral mouth-timing hint
   out.mouth_hint = (ws && ws.mouth_hint && new Date(ws.mouth_hint.expires) > new Date()) ? ws.mouth_hint : null;
+  // ---- B5 · ONE MIND, BOTH MOUTHS (12 Aug 2026) ------------------------------
+  // THE BIGGEST MISSING EDGE IN "ONE ORGANISM". He talks to Claude Code for hours
+  // and the Gaffer knows none of it live. Both surfaces already WRITE to the same
+  // afferent bus — measured 12 Aug: claude-code 77 rows + claude-code-teaching 91,
+  // against voice 130 + dugout-gaffer-teaching 131 — and the Gaffer has never once
+  // READ the other side of it mid-conversation. The bus was a diary, not a nerve.
+  //
+  // It rides the recall/pre_answer/bg_hint pattern exactly, and that is the whole
+  // safety argument: EPHEMERAL, NON-SPOKEN, FRESH-ONLY, deduped by the page. No
+  // gate is modified, nothing new is written, and the Gaffer weaves it only if it
+  // earns the turn — the same law that keeps [MEMORY SURFACED] from being theatre.
+  // Freshness is the poll window, not a new number: anything older than the live
+  // sitting is history and belongs to get_context, not to an interruption.
+  out.cross_mouth = null;
+  try {
+    const rows = deps.afferentRows !== undefined ? deps.afferentRows : readLinesTail(join(STATE_DIR, "afferent.jsonl"), 40000);
+    const cutoff = Date.now() - CROSS_MOUTH_FRESH_MS;
+    const other = (rows || []).filter(r => r && typeof r.source === "string"
+      && r.source.startsWith("claude-code")               // the OTHER mouth, both of its lanes
+      && r.ts && new Date(r.ts).getTime() >= cutoff
+      && String(r.text || "").trim().length > 20);        // a fragment is noise, not a mind
+    if (other.length) {
+      const newest = other[other.length - 1];
+      out.cross_mouth = { id: newest.ts, n: other.length, text: String(newest.text).slice(0, 400) };
+    }
+  } catch { }
   // LADDER F2 (9 Aug 2026) — [BUS DELTA]: what CHANGED on the bus since the last
   // poll, as talk.mjs's own PROJECTED FIELDS (never raw envelopes — the :41-51
   // scar). A rep logged at 14:05 reaches the live Gaffer's ground at the next
@@ -367,6 +393,11 @@ const localDayOf = (ts) => {
   return Number.isNaN(d.getTime()) ? s.slice(0, 10) : localDate(d);
 };
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+// B5 — how recent a Claude-Code turn must be to interrupt a live spoken sitting.
+// NOT a tuned threshold: 10 minutes is the SAME TTL deepFresh() already uses for a
+// deep answer, reused deliberately so the two live-injection lanes cannot drift
+// apart. Anything older is history and belongs to get_context, not to a poke.
+const CROSS_MOUTH_FRESH_MS = 10 * 60000;
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
 
 // ---------------------------------------------------------------------------
@@ -2970,6 +3001,33 @@ async function selftest() {
     const bh = readDeepState({ workspace: { version: 1, bg_hint: { moment_id: "m3", concept: "kv", insight: "the suppressed read survives", expires: new Date(Date.now() + 60000).toISOString() } }, wake: null, runtime: {}, queueRows: [] });
     assert("bridge /deep carries a FRESH second spotlight (M22); expired ones die", bh.bg_hint && bh.bg_hint.insight.includes("survives") && readDeepState({ workspace: { version: 1, bg_hint: { moment_id: "m3", insight: "x", expires: new Date(Date.now() - 1000).toISOString() } }, wake: null, runtime: {}, queueRows: [] }).bg_hint === null);
     assert("the page injects the second spotlight NON-SPOKEN, deduped", PAGE.includes("SECOND SPOTLIGHT") && PAGE.includes("lastBgHintId"));
+
+    // ---- B5 · ONE MIND, BOTH MOUTHS — the biggest missing edge in "one organism".
+    // Both surfaces have written to the same bus for weeks (measured 12 Aug:
+    // claude-code 77 + claude-code-teaching 91 vs voice 130 + dugout 131) and the
+    // Gaffer never read the other side of it mid-conversation. The bus was a diary.
+    {
+      const T = (min) => new Date(Date.now() - min * 60000).toISOString();
+      const rows = [
+        { ts: T(2), source: "claude-code", text: "he is refactoring the token governor and asked about cache_read pricing" },
+        { ts: T(400), source: "claude-code", text: "ancient turn from this morning that must NOT interrupt a live sitting" },
+        { ts: T(1), source: "voice", text: "this mouth's own line — never fed back to itself" },
+        { ts: T(1), source: "claude-code-teaching", text: "explained why cache_read counts a tenth against the ceiling" },
+      ];
+      const cm = readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: rows }).cross_mouth;
+      assert("B5 — the live Gaffer can SEE what the other mouth just said (both lanes of it)", !!cm && /cache_read counts a tenth/.test(cm.text) && cm.n === 2);
+      assert("B5 — its OWN lines are never fed back to it (that would be an echo, not a mind)", !!cm && !/this mouth's own line/.test(cm.text));
+      assert("B5 — a stale turn does NOT interrupt a live sitting (history belongs to get_context, not to a poke)", !!cm && cm.n === 2);
+      const none = readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: [{ ts: T(1), source: "claude-code", text: "tiny" }] }).cross_mouth;
+      assert("B5 — a fragment is noise, not a mind: too-short turns are dropped", none === null);
+      assert("B5 — the freshness window is REUSED from deepFresh, never a new tuned number (the two live lanes cannot drift apart)",
+        CROSS_MOUTH_FRESH_MS === 10 * 60000 && readFileSync(fileURLToPath(import.meta.url), "utf8").includes("SAME TTL deepFresh() already uses"));
+      assert("B5 — the page injects it NON-SPOKEN and deduped, exactly like every other hint", PAGE.includes("THE OTHER MOUTH") && PAGE.includes("lastCrossId"));
+      assert("B5 — and the FIRST poll PRIMES rather than replaying (no boot-time theatre, the bus_delta law)",
+        /deepPrimed=true;[\s\S]{0,600}?lastCrossId=d\.cross_mouth\?d\.cross_mouth\.id:null;return\}/.test(PAGE));
+      assert("B5 — it never announces the machinery (he must not be told the Gaffer is reading over his shoulder)",
+        PAGE.includes("never announce that you can see it"));
+    }
   }
 
   // PART C — the Live-API adopts (probed live 15 Jul 2026)
@@ -4400,10 +4458,10 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,deepPrimed=false;const seenDeep=new Set();
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,lastCrossId=null,deepPrimed=false;const seenDeep=new Set();
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;lastCrossId=d.cross_mouth?d.cross_mouth.id:null;return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
@@ -4414,6 +4472,10 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
   log('· memory surfaced (non-spoken hint)');return}
+ // B5 — ONE MIND, BOTH MOUTHS: what he just said in Claude Code reaches this one.
+ if(d.cross_mouth&&d.cross_mouth.id!==lastCrossId){lastCrossId=d.cross_mouth.id;
+  ws.send(JSON.stringify({realtimeInput:{text:'[THE OTHER MOUTH — he is ALSO working with Claude Code right now, and this just happened there. You and it are one organism, so do not act surprised by it and never announce that you can see it. Use it only if it changes what you were about to say: '+d.cross_mouth.text+']'}}));
+  log('· cross-mouth context injected ('+d.cross_mouth.n+' recent Claude Code turn(s))');return}
  if(d.pre_answer&&d.pre_answer.moment_id!==lastPreAnsId){lastPreAnsId=d.pre_answer.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[PRE-ANSWER LOADED — the night shift already answered this exact doubt ('+d.pre_answer.concept+'). Weave it ONLY if it truly answers what he just asked, in your voice, never as a memo:]\\n'+d.pre_answer.answer}}));
   log('· pre-answer attached (night cache — zero latency)');return}
