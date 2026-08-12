@@ -678,6 +678,120 @@ const MUSEUM = [
       try { return JSON.parse(r.out).some((b) => b.job === "museum_lie" && b.kind === "UNDER-COUNT"); } catch { return false; }
     },
   },
+  // ── THE F-FLOOR (12 Aug 2026, ULTRACODE). The brief named ten historical bug
+  // classes as the museum's FLOOR (F1–F10); the six exhibits above cover
+  // F1/F2/F3/F5/F6 plus one beyond the floor (stale canon). These five close
+  // the rest. Same protocol: control-first, one fresh sandbox each, a MISS is
+  // printed and never hidden.
+  {
+    id: "F4-lane-never-fires",
+    story: "diary — enabled, priority 10, scheduled nightly, THREE wired readers — had NEVER produced a page, and the only detector rode at INFO where nothing escalates",
+    detector: "reconcile.mjs (produce-and-consume) — never-produced is its loudest class",
+    apply(sb) {
+      const p = join(sb.root, "dressing-room", "state", "brain_config.json");
+      const cfg = JSON.parse(readFileSync(p, "utf8"));
+      // the minimal job shape reconcile walks: `out` declared, enabled, no artifact ever
+      cfg.jobs.push({ id: "museum_lane", kind: "museum_lane", enabled: true, out: "museum_lane" });
+      writeFileSync(p, JSON.stringify(cfg, null, 1));
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "reconcile.mjs"), "json"], { label: "reconcile", timeout: 120000 });
+      try {
+        const lane = (JSON.parse(r.out).lanes || []).find((l) => l.job === "museum_lane");
+        return !!lane && (lane.bleeds || []).some((b) => /never produced/.test(b));
+      } catch { return false; }
+    },
+  },
+  {
+    id: "F7-queue-mu-zero",
+    story: "42 cards arrived at ~6/day into a deck whose service rate was ZERO — Little's law says that queue diverges by arithmetic, and nothing in the organism did the arithmetic",
+    detector: "pulse.mjs queue law (λ>0 with μ=0 over a rolling week = diverging)",
+    apply(sb) {
+      const now = Date.now();
+      const iso = (hAgo) => new Date(now - hAgo * 3600 * 1000).toISOString();
+      const cards = Array.from({ length: 12 }, (_, i) => ({ id: `q${i}`, line: `museum queue card ${i}`, filed_at: iso(12 + i * 12), dealt: [] }));
+      writeFileSync(join(sb.root, "dressing-room", "state", "captains_call.json"), JSON.stringify({ cards }, null, 1));
+      // measurability seed: pulse needs live-machine evidence; the collar denies its
+      // PowerShell schedule read in here, so the watchman artifact is the witness
+      writeFileSync(join(sb.root, "dressing-room", "state", "watchman_last.json"), JSON.stringify({ at: iso(2), findings: [] }));
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "pulse.mjs"), "json", "--no-reconcile"], { label: "pulse", timeout: 120000 });
+      try { return (JSON.parse(r.out).violations || []).some((v) => v.class === "queue-diverging"); } catch { return false; }
+    },
+  },
+  {
+    id: "F8-healthy-while-empty",
+    story: "Tier-2 stamped 5 STARTs and zero exits, zero journal rows — an organ's own ledger said 'running fine' while it produced NOTHING, and only a human diff noticed",
+    detector: "reconcile.mjs — the artifact-based observer that disbelieves self-reports (Byzantine: no organ vouches for itself)",
+    apply(sb) {
+      // the SELF-REPORT: a fresh ledger row claiming the job ran clean today…
+      const led = join(sb.root, "dressing-room", "state", "brain_ledger.jsonl");
+      const row = { ts: new Date().toISOString(), job: "museum_claim", ok: true, error: null, input_tokens: 10, output_tokens: 10, cache_creation_tokens: 0, cache_read_tokens: 0, total_tokens: 20 };
+      writeFileSync(led, (existsSync(led) ? readFileSync(led, "utf8") : "") + JSON.stringify(row) + "\n");
+      // …and the LANE: declared, enabled, and no artifact anywhere on disk
+      const p = join(sb.root, "dressing-room", "state", "brain_config.json");
+      const cfg = JSON.parse(readFileSync(p, "utf8"));
+      cfg.jobs.push({ id: "museum_claim", kind: "museum_claim", enabled: true, out: "museum_claim" });
+      writeFileSync(p, JSON.stringify(cfg, null, 1));
+    },
+    detect(sb) {
+      // BOTH halves must hold or the exhibit proves nothing: the self-report row
+      // EXISTS and says ok — and the artifact observer still calls the lane dead.
+      const led = join(sb.root, "dressing-room", "state", "brain_ledger.jsonl");
+      const selfReport = existsSync(led) && readFileSync(led, "utf8").split("\n").some((l) => {
+        try { const j = JSON.parse(l); return j.job === "museum_claim" && j.ok === true; } catch { return false; }
+      });
+      if (!selfReport) return false;
+      const r = runIn(sb, [join(sb.root, "scripts", "reconcile.mjs"), "json"], { label: "reconcile", timeout: 120000 });
+      try {
+        const lane = (JSON.parse(r.out).lanes || []).find((l) => l.job === "museum_claim");
+        return !!lane && (lane.bleeds || []).some((b) => /never produced/.test(b));
+      } catch { return false; }
+    },
+  },
+  {
+    id: "F9-day-boundary",
+    story: "five selftest assertions pinned to fixed IST instants — green on every IST machine, red on the UTC runner — kept the away-day lane dead for days while 'E1 CLOSED' was declared off a sandbox that inherits the house clock",
+    detector: "the suite under a shifted clock (TZ=UTC) — the away-day runner IS this detector daily; here it runs in-sandbox",
+    apply(sb) {
+      // re-introduce the EXACT shipped bug (dfaebe7's pre-image): the boundary rep
+      // pinned to a fixed instant that is next-day only in IST
+      const p = join(sb.root, "scripts", "scoreboard.mjs");
+      const s = readFileSync(p, "utf8");
+      const mutated = s.replace(
+        '{ ts: L(10, 1, 0), concept: "context", confidence: "shaky", correct: true }',
+        '{ ts: "2026-08-09T19:30:00.000Z", concept: "context", confidence: "shaky", correct: true }');
+      if (mutated === s) throw new Error("F9 mutant did not apply — the fixture line moved");
+      writeFileSync(p, mutated);
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "scoreboard.mjs"), "selftest"], { label: "scoreboard", timeout: 120000, env: { TZ: "UTC" } });
+      return r.code !== 0;
+    },
+  },
+  {
+    id: "F10-two-writers",
+    story: "identity_facts.pending.jsonl carried TWO live writers for a day — hippocampus rewrote the whole file while mcp-memory appended to it, and writeAtomic's rename made every lost update silent",
+    detector: "xray Q2/Q5 (two writers on one lane / sole-writer header drift)",
+    apply(sb) {
+      // a second writer on doubtminer's lexicon.json, in learnstate's OWN idiom
+      // (join(__dirname, ...) + its imported writeFileSync — the B1 lesson: use
+      // already-resolved constants or the points-to analysis rightly says Unknown)
+      const p = join(sb.root, "scripts", "learnstate.mjs");
+      const src0 = readFileSync(p, "utf8");
+      writeFileSync(p, src0 + `\nexport function __museumClobber() { writeFileSync(join(__dirname, "..", "dressing-room", "state", "lexicon.json"), "{}"); }\n`);
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "xray.mjs"), "q"], { label: "xray", timeout: 300000 });
+      try {
+        const q = JSON.parse(r.out);
+        const q2 = (q.Q2 || []).some((f) => /lexicon\.json/.test(f.path) && f.writers.some((w) => /learnstate/.test(w)));
+        const q5 = (q.Q5 || []).some((f) => /lexicon\.json/.test(f.path) && (f.undeclared || []).some((w) => /learnstate/.test(w)));
+        return q2 || q5;
+      } catch { return false; }
+    },
+  },
   {
     id: "B6-green-at-home-red-on-ci",
     story: "assertions that passed at home and failed on CI, because they read GITIGNORED state that a clean checkout never has",
@@ -699,7 +813,7 @@ const MUSEUM = [
 ];
 
 function museum() {
-  console.log("=== THE BUG MUSEUM — six real historical bugs, re-introduced one at a time ===\n");
+  console.log(`=== THE BUG MUSEUM — ${MUSEUM.length} real historical bugs, re-introduced one at a time ===\n`);
   const results = [];
   for (const ex of MUSEUM) {
     const sb = buildSandbox({ trace: false });
@@ -802,11 +916,15 @@ function selftest() {
     HORIZONS.length >= 4 && HORIZONS.some((h) => /aged/.test(h.id)) && HORIZONS.some((h) => /x\d+/.test(h.id)));
   assert("…and every horizon carries WHY it is worth stretching", HORIZONS.every((h) => h.why && h.file));
 
-  assert("the Bug Museum still holds all six historical bugs", MUSEUM.length === 6, `${MUSEUM.length}`);
+  // 11, not 6, since the ULTRACODE F-floor pass (12 Aug 2026): F1–F10 covered
+  // (B1=F1 · B2=F2 · B3=F3 · B5=F5 · B6=F6 · F4/F7/F8/F9/F10 explicit) plus
+  // B4 stale-canon beyond the floor. The cheap way to fake a full catch is
+  // deleting an exhibit — this guard exists so that fails loudly instead.
+  assert("the Bug Museum still holds all ELEVEN historical bugs (the F1-F10 floor + stale-canon)", MUSEUM.length === 11, `${MUSEUM.length}`);
   assert("…and every exhibit has a story, a named detector, an apply and a detect",
     MUSEUM.every((m) => m.id && m.story && m.detector && typeof m.apply === "function" && typeof m.detect === "function"));
   assert("…and each exhibit's detector is NAMED, so a 'catch' can be traced to the organ that caught it",
-    MUSEUM.every((m) => /xray|treasury|sandbox|mutagen|audit/i.test(m.detector)));
+    MUSEUM.every((m) => /xray|treasury|sandbox|mutagen|audit|reconcile|pulse|suite under a shifted clock/i.test(m.detector)));
 
   const after = ledgerFingerprint();
   const money = moneyOracle(before, after);
