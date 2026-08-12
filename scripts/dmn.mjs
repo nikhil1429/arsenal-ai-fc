@@ -148,6 +148,14 @@ const MAX_ROLLOUTS = 8;                              // legacy engine's cap (fro
 // there is nothing to cluster, so the stadium stands down. Named + surfaced as
 // a have/need counter (#106) instead of a bare inequality.
 const MIN_STADIUM_BUDGET = MAX_ROLLOUTS;
+// C3.8 (12 Aug 2026) — the window floor for ONE dream pass, in the governor's
+// cost-weighted unit. MEASURED, not chosen: five real DMN passes on the ledger of
+// 11–12 Aug (rows grouped by a 10-minute idle gap) cost 2,96,642 · 4,00,381 ·
+// 7,21,643 weighted, median 4,00,381. The floor IS that median, so the gate can
+// only ever refuse a pass the window could not have paid for — it is a guard
+// against dreaming the window dry, never a cut to how much the Rest Room dreams.
+// Re-measure with `node scripts/brain.mjs spend 7` before ever moving it.
+const DMN_PASS_FLOOR = 400000;
 const MAX_ROLLOUTS_NIGHT = 100;                      // the stadium's hard cap (clusters saturate ~100)
 const ROLLOUTS_PER_WEAK = 25;                        // depth per weak point before diminishing returns
 const PERSONAS = ["a brisk recruiter screening for buzzwords", "a staff engineer mid-incident demanding ordered steps", "a principal engineer dissecting line-level mechanism", "a skeptical PM asking why an LLM at all"];
@@ -423,6 +431,35 @@ async function dream(deps = {}) {
   if (!deps.force) {
     const a = deps.awayCheck ? await deps.awayCheck() : await isAway(deps);
     if (!a.away) return { ok: false, skipped: `not away (${a.why}) — the Rest Room only fires when he's gone` };
+  }
+  // ---- C3.8 · THE FOURTH GATE: THE WINDOW (12 Aug 2026) ----------------------
+  // "EVERY DOOR OBEYS THE GOVERNOR." This organ did not, and it is the largest
+  // spender in the whole system. MEASURED off brain_ledger.jsonl over 7 days:
+  //   dmn_rollout  1,57,42,678 cost-weighted  43.6% of ALL spend
+  //   dmn_counter    73,79,502 cost-weighted  20.4%
+  //   → the Rest Room alone is 64% of everything the organism spends.
+  // And it gated on none of it. Its three gates were away · tone · TANK headroom,
+  // where "tank headroom" is the FREE-TIER Gemini quota — this file's own header
+  // still calls it "use-it-or-lose-it quota; blast radius $0". That was TRUE when
+  // written and stopped being true on 17 Jul 2026, when every rollout moved to
+  // `claude -p`; the comment ~230 lines below already says so outright ("Since the
+  // 17 Jul swap every rollout rides claude -p"). So the biggest consumer of the
+  // PAID window has been metering itself against a FREE budget for three and a half
+  // weeks, and `grep -c "from ./brain.mjs" scripts/dmn.mjs` returned 0.
+  //
+  // THIS IS A GATE, NOT A CUT. Dreaming happens while he is away, which is exactly
+  // when the window SHOULD be drained (C3.5 — move work to the night). The floor is
+  // the DMN's OWN measured per-pass cost, so this can only ever refuse a pass it
+  // could not have afforded. Fail-OPEN if the governor will not load: a broken meter
+  // must not silently kill an organ that was running fine without it.
+  if (!deps.skipWindowGate) {
+    try {
+      const brain = await import("./brain.mjs");
+      const cfg = deps.brainCfg || brain.loadConfig();
+      const hr = brain.headroom(cfg, deps.brainLedger || readLines(join(STATE_DIR, "brain_ledger.jsonl")),
+        deps.queueState || readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
+      if (hr.allowed < DMN_PASS_FLOOR) return { ok: false, skipped: `window budget (${Math.round(hr.allowed)}/${DMN_PASS_FLOOR} needed, phase ${hr.phase}) — the Rest Room is 64% of all spend and now answers to the same governor as every other organ` };
+    } catch { /* fail-open — see above */ }
   }
   const weak = deps.weak || weakVector(deps);
   if (!weak.length) return { ok: false, skipped: "no real weak points on the bus — nothing honest to dream about" };
@@ -864,6 +901,34 @@ async function selftest() {
     assert("AFK CLOCK: a stale AFK event is NOT away (never dream over his shoulder)", (await isAway({ fetchFn: mkFetch(stale) })).away === false);
     const atDesk = { timestamp: hoursAgo(0.01), duration: 30, data: { status: "not-afk" } };
     assert("AFK CLOCK: not-afk is present", (await isAway({ fetchFn: mkFetch(atDesk) })).away === false);
+  }
+
+  // ---- C3.8 · THE FOURTH GATE — THE WINDOW (12 Aug 2026) ---------------------
+  // The Rest Room is 64% of all cost-weighted spend (dmn_rollout 43.6% +
+  // dmn_counter 20.4%, measured over 7 days) and gated on NONE of it: its three
+  // gates were away · tone · FREE-TIER tank quota. The header still calls that
+  // quota "blast radius $0", which stopped being true on 17 Jul when every rollout
+  // moved to `claude -p`. These hold the gate, its floor, and its fail-open.
+  {
+    const away = async () => ({ away: true, why: "test" });
+    const base = { force: false, awayCheck: away, tone: { effects: { dmn_allowed: true } }, now: new Date("2026-08-12T02:00:00Z") };
+    const starved = await dream({ ...base, brainCfg: { budget: { window_hours: 5, window_capacity_est_tokens: 2750000, weekly_capacity_est_tokens: 41250000, day_reserve_frac: 0.4, overnight_target_frac: 0.95 }, study_hours: { start: "09:00", end: "22:00" }, overnight: { start: "23:00", end: "07:30" } },
+      brainLedger: [{ ts: "2026-08-12T01:30:00.000Z", engine: "claude", total_tokens: 9999999 }], queueState: {} });
+    assert("C3.8 — a DRY WINDOW now stops the biggest spender in the organism (it never used to look)",
+      starved.ok === false && /window budget/.test(starved.skipped));
+    assert("C3.8 — and the refusal SAYS why, with have/need and the phase (a silent skip is how the last one hid for 3.5 weeks)",
+      /\d+\/400000 needed, phase/.test(starved.skipped));
+    // the floor is the DMN's OWN measured median pass, so the gate can only refuse
+    // a pass the window could not have paid for.
+    assert("C3.8 — the floor is the MEASURED median pass cost, not a chosen number", DMN_PASS_FLOOR === 400000);
+    // FAIL-OPEN: a governor that will not load must not kill an organ that ran fine
+    // without one for three and a half weeks.
+    const noGov = await dream({ ...base, brainCfg: null, brainLedger: [], queueState: {}, weak: [] });
+    assert("C3.8 — FAIL-OPEN: an unreadable governor does not kill the organ, it falls through to the next gate",
+      noGov.ok === false && /no real weak points/.test(noGov.skipped));
+    const bypass = await dream({ ...base, skipWindowGate: true, weak: [] });
+    assert("C3.8 — the gate is injectable so every OTHER dmn assertion stays hermetic (no live ledger in the suite)",
+      bypass.ok === false && /no real weak points/.test(bypass.skipped));
   }
 
   // E2E audit 25 Jul 2026 — the default lane generator must be ASYNC: the sync
