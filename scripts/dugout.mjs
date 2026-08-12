@@ -1292,6 +1292,82 @@ function gafferSittingSection() {
 }
 
 // ---------------------------------------------------------------------------
+// B6 + B11 — THE PREPARED SITTING: the tab opens WARM.
+// ---------------------------------------------------------------------------
+// The worklist asked for these as two night-lane jobs: B6 "overnight, a smart
+// model writes the whole sitting — the plan per axis, the order, where he will
+// stumble", and B11 "at 06:00 the machine already knows he has four overdue
+// Re-Jirah rounds; pre-load so the tab opens warm."
+//
+// MEASURED FIRST, AND THE ANSWER CHANGED THE BUILD: every input those jobs would
+// have generated is ALREADY ON DISK, written by organs that ran weeks ago.
+//   · 4 locked capsules carrying 112 of HIS OWN doubts, 11 traps on tokenization
+//     alone, bridges and interview lines (capsule_map.json)
+//   · the exact due queue, with the overdue count per axis (rejirah)
+//   · where he historically breaks (nemesis) and where he is overconfident
+//     (calibration's danger zone)
+// So the sitting does not need to be WRITTEN overnight. It needs to be ASSEMBLED,
+// and assembly is free and instant — which beats a nightly artifact on both
+// counts, because a prepared sitting generated at 02:40 is already wrong if he
+// closes an axis at 09:00. This is the same call as B14's: compose on demand.
+//
+// WHAT IS THEREFORE *NOT* BUILT, deliberately: no new nightly LLM job. The night
+// lane is already the largest consumer on the board — `ns_pre_answers` alone spent
+// 6,16,346 weighted tokens in the 5h window that starved ConceptGraph — and C3.10
+// says the target is the least spend that still does the job WELL. Generating
+// prose that already exists in his own words would also break B15: the content
+// must come from a SOURCE, and his capsule IS the source.
+function buildPreparedSitting() {
+  try {
+    const map = readJson(join(STATE_DIR, "capsule_map.json"));
+    const locked = ((map && map.concepts) || []).filter(c => c && c.locked_on);
+    if (!locked.length) return "";
+    // the head of the due queue = what tonight is actually FOR. `rejirah` on the
+    // capsule row carries the per-concept state the owner derived; deepest overdue
+    // first, which is the owner's own ordering rule, not one invented here.
+    // READ THE FIELD, DO NOT GUESS ITS NAME. This was written as
+    // `c.rejirah.max_overdue_days`, which does not exist — so every od was 0, the
+    // sort was a no-op, and the live output opened on "Context Window" while the
+    // due queue said Tokenization at 51 days. The owner's real field is
+    // `rejirah.overdue_days` (verify: node -e "…capsule_map.json…concepts[0].rejirah").
+    const withDue = locked
+      .map(c => ({ c, od: Math.max(0, Number((c.rejirah && c.rejirah.overdue_days) || 0)) }))
+      .sort((a, b) => b.od - a.od);
+    const top = withDue[0];
+    if (!top) return "";
+    const t = top.c, n = t.counts || {};
+    const axesLeft = (t.axes_missing || []).length, cracked = (t.axes_cracked || []).length;
+    const L = [];
+    L.push(`THE SITTING IS ALREADY PREPARED — do NOT ask him what to study, and do NOT improvise a plan.`);
+    L.push(`FIRST CONCEPT: ${t.title || t.concept}${top.od ? ` — ${top.od} days overdue, which makes it RIPE, not late. Say it that way.` : ""}`);
+    L.push(`WHAT IS ON DISK FOR IT, IN HIS OWN WORDS (this is your material — B15: never improvise over it): ${n.doubts || 0} doubts · ${n.traps || 0} traps · ${n.bridges || 0} bridges · ${n.interview_lines || 0} interview lines. Call get_capsule and READ them; do not paraphrase them from memory.`);
+    if (cracked) L.push(`AXES HE HAS CRACKED BEFORE (start here — this is where he broke last time): ${(t.axes_cracked || []).join(" · ")}`);
+    if (axesLeft) L.push(`AXES NEVER OPENED: ${(t.axes_missing || []).join(" · ")}`);
+    if (withDue.length > 1) L.push(`THEN, IN ORDER: ${withDue.slice(1, 4).map(x => `${x.c.title || x.c.concept}${x.od ? ` (${x.od}d)` : ""}`).join(" → ")}`);
+    // where he will stumble — from the organs that measured it, never guessed
+    try {
+      // `headline` is an OBJECT ({id, topic, axis, one_line, …}), not a string —
+      // String() on it rendered a literal "[object Object]" into his live preamble.
+      // Take the owner's own one-line rendering; never stringify a shape you have
+      // not opened.
+      const w = readJson(join(STATE_DIR, "weaknesses.json"));
+      const head = w && w.headline && (typeof w.headline === "string" ? w.headline : w.headline.one_line);
+      if (head && !w.low_confidence) L.push(`WHERE HE HISTORICALLY BREAKS (nemesis, measured): ${String(head).slice(0, 220)}`);
+    } catch { }
+    try {
+      // an EMPTY ARRAY IS TRUTHY — this rendered a bare "[]" as if it were a
+      // finding. An organ with nothing to say must say nothing (C3 principle 4).
+      const cal = readJson(join(STATE_DIR, "calibration.json"));
+      const dz = cal && cal.danger_zone;
+      const hasDz = Array.isArray(dz) ? dz.length > 0 : !!dz && Object.keys(dz).length > 0;
+      if (hasDz && !cal.low_confidence) L.push(`WHERE HE IS OVERCONFIDENT (calibration — probe these HARDER, he will say "knew" and be wrong): ${JSON.stringify(dz).slice(0, 200)}`);
+    } catch { }
+    L.push(`DECLARE THIS SHAPE TO HIM FIRST, in two or three sentences, before you start walking it (that is the map law above). Then take ONE axis and stop.`);
+    return `\n${L.join("\n")}\n`;
+  } catch { return ""; }
+}
+
+// ---------------------------------------------------------------------------
 // B4 — THE OPENING BRIEFING: it speaks FIRST.
 // ---------------------------------------------------------------------------
 // He should never have had to ask this, and on 12 Aug he did:
@@ -1369,6 +1445,7 @@ BRING THINGS BACK BEFORE HE ASKS (B12). semantic_recall holds 848 rows of his ow
 ${seasonContext()}
 ${firstContact()}
 ${buildOpeningBriefing()}
+${buildPreparedSitting()}
 ${gafferSittingSection()}
 ${fp}
 ${capsuleDigest()}
@@ -2793,6 +2870,28 @@ async function selftest() {
       assert("B8 — the sitting state reaches EVERY session's preamble, not just a rotation", SI.includes(gafferSittingSection()));
       assert("B8/C3.4 — and it says NOTHING when there is nothing to say (a header alone is not content)",
         gafferSittingSection() === "" || gafferSittingSection().split("\n").length > 2);
+
+      // ---- B6 + B11 · THE PREPARED SITTING ---------------------------------
+      // Built as free ASSEMBLY, not as an overnight generation job, because every
+      // input already exists on disk. Three defects were caught by RUNNING it and
+      // reading the output, not by reasoning about it — all three held here.
+      const ps = buildPreparedSitting();
+      assert("B6/B11 — the sitting is prepared before he arrives, and the Gaffer is told not to improvise a plan",
+        ps.includes("THE SITTING IS ALREADY PREPARED") && ps.includes("do NOT improvise a plan"));
+      assert("B6 — it hands the Gaffer HIS OWN material and forbids paraphrasing it from memory (B15)",
+        ps.includes("IN HIS OWN WORDS") && ps.includes("do not paraphrase them from memory"));
+      assert("B11 — DEFECT 1, held: the due queue is ordered by the OWNER'S REAL FIELD (rejirah.overdue_days). Written as a guessed field name, every value was 0, the sort was a no-op, and it opened on the WRONG concept",
+        /FIRST CONCEPT: Tokenization/.test(ps) && /51 days overdue/.test(ps));
+      assert("B11 — and overdue is framed as RIPE, not late (the kickoff's own framing, and his)",
+        ps.includes("RIPE, not late"));
+      assert("B6 — DEFECT 2, held: weaknesses.headline is an OBJECT; String() on it printed a literal '[object Object]' into his live preamble",
+        !ps.includes("[object Object]"));
+      assert("B6 — DEFECT 3, held: an EMPTY ARRAY IS TRUTHY, so an empty danger_zone rendered a bare '[]' as if it were a finding (C3.4 — silence must be free)",
+        !/OVERCONFIDENT[^\n]*: \[\]/.test(ps));
+      assert("B6/B11 — and it ends by handing the shape to B7's map law rather than starting the walk itself",
+        ps.includes("DECLARE THIS SHAPE TO HIM FIRST") && ps.includes("take ONE axis and stop"));
+      assert("B6/B11 — the whole thing is deterministic assembly: no model call, which is what makes 'prepared before he arrives' free AND never stale",
+        SI.includes(ps) && typeof ps === "string");
     }
 
     // B2 — the rolling state is DRIVEN by the door that already holds the delta.

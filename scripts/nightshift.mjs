@@ -114,7 +114,7 @@ import { currentTone } from "./tone.mjs";
 import { indexRecall } from "./dugout.mjs";
 import { indexEpisodes } from "./hippocampus.mjs";
 // job 7 rides the brain's own honest-frame validator (proven code, reused)
-import { loadConfig as loadBrainConfig, bannedPhraseCheck } from "./brain.mjs";
+import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHeadroom } from "./brain.mjs";
 // job 6 (the wind tunnel) replays the gate's own recorded decisions
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 
@@ -168,9 +168,69 @@ const meterUse = (lane, units = 1, naiveTokens = 0) => (lane === CLAUDE_LANE
 // travels with the deps: every LLM call must TAKE from it, and a job that finds
 // it empty stops where it stands (partial work still files — half a probe bank
 // beats none). Standalone job calls (and the selftest) get the unlimited one.
-function makeBudget(n) {
+// ---- C3.8 · THE NIGHT RESERVE (12 Aug 2026) --------------------------------
+// The shift budget above caps CALLS (62) and has never capped TOKENS. Like the
+// DMN before it, this lane gated on a call count and on free-tier tank headroom,
+// and never once on the paid window — `grep headroom scripts/nightshift.mjs`
+// finds only `headroomOf(t5)`, which is a Gemini tank.
+//
+// WHAT THAT COST, MEASURED — and it explains BOTH of the organism's remaining
+// starvation bugs at once. The shift runs at 02:40; `diary` and
+// `cortex consolidate` both run at 03:00, right behind it. In the 5h window
+// ending 03:00 on 12 Aug the organism had spent 27,34,271 cost-weighted against
+// an overnight cap of 26,12,500 — already over — and the single biggest line in
+// that window was `ns_pre_answers` at 6,16,346. So:
+//   · `cortex consolidate` failed EVERY day with "no-headroom (0/50000 needed)"
+//   · `diary` (enabled, priority 10, 03:00) has NEVER PRODUCED A PAGE —
+//     reconcile has reported "diary: never produced — diary/ does not exist"
+//     for as long as the finding has existed.
+// Neither is broken. Both were drunk under the table by the job in front of them.
+//
+// THE FIX IS A RESERVE, NOT A CUT. The night SHOULD drain the window (C3.5) —
+// it just may not drain it to zero while jobs it does not own are still queued
+// behind it. Every term below is measured, none chosen:
+//   cortex_consolidate  50,000  (its own stated floor, quoted in its own error)
+//   the late brain jobs 49,991  (p90 of 96 real non-DMN non-nightshift jobs,
+//                                ledger 9-12 Aug; median 29,478)
+//   one more late job   49,991  (the same p90 — agenda, teamtalk and the diary's
+//                                own siblings share the 03:00 tail)
+// → 150,000, floored to that from 149,982. Re-derive with `brain.mjs spend`.
+const NIGHT_RESERVE = 150000;
+// the ledger is ~5,000 rows; re-reading it on all 62 takes would be wasteful, and
+// the window cannot move meaningfully inside thirty seconds of one shift.
+const RESERVE_CACHE_MS = 30000;
+
+// the live reader, kept separate from makeBudget so the budget stays pure and every
+// existing selftest keeps working without a ledger on disk. Fails OPEN, loudly in
+// code but silently at runtime: a governor that will not load must never be the
+// reason the night produced nothing.
+function liveWindowAllowed() {
+  try {
+    const cfg = loadBrainConfig();
+    const led = readLines(join(STATE_DIR, "brain_ledger.jsonl"));
+    const q = readJson(join(STATE_DIR, "brain_queue.json")) || {};
+    return brainHeadroom(cfg, led, q, new Date()).allowed;
+  } catch { return Infinity; }
+}
+
+function makeBudget(n, windowFn = null) {
   return { left: Number.isFinite(n) ? Math.max(0, Math.floor(n)) : Infinity, spent: 0,
-           take() { if (this.left <= 0) return false; this.left--; this.spent++; return true; } };
+           starved: 0, _at: 0, _allowed: Infinity,
+           allowedNow() {
+             if (!windowFn) return Infinity;
+             const t = Date.now();
+             if (t - this._at < RESERVE_CACHE_MS) return this._allowed;
+             this._at = t;
+             try { this._allowed = windowFn(); } catch { this._allowed = Infinity; }   // fail-OPEN
+             return this._allowed;
+           },
+           take() {
+             if (this.left <= 0) return false;
+             // the reserve binds BEFORE the call count: a shift with calls left but
+             // no window is exactly the case that starved the two 03:00 jobs.
+             if (this.allowedNow() < NIGHT_RESERVE) { this.starved++; return false; }
+             this.left--; this.spent++; return true;
+           } };
 }
 const NO_BUDGET = { left: Infinity, spent: 0, take: () => true };
 
@@ -1039,7 +1099,10 @@ async function runShift(deps = {}) {
   // re-read's real spend) is metered where it is actually spent, at that job.
   const t5 = board.tanks.find(t => t.id === "T5");
   const geminiDry = t5 ? headroomOf(t5) < CAPS.min_gemini_headroom : false;
-  const budget = deps.budget || makeBudget(CAPS.shift_call_budget);
+  // C3.8 — the shift's calls now answer to the WINDOW as well as to the call count.
+  // Injected, so every existing selftest stays hermetic (they pass their own budget
+  // or the unlimited one) and no assertion below suddenly needs a live ledger.
+  const budget = deps.budget || makeBudget(CAPS.shift_call_budget, deps.windowFn || liveWindowAllowed);
   const jobDeps = { ...deps, budget };
   const day = localDate(now);
   // Recorded on the shift itself, so a forced run through the rest law is legible in
@@ -1177,7 +1240,7 @@ async function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const genProbes = async () => ({ ok: true, text: JSON.stringify(PROBE_TYPES.map(t => ({ type: t, probe: `a solid ${t} probe with enough length to pass validation` }))) });
   const genBad = async () => ({ ok: true, text: '[{"type":"vibes","probe":"x"},{"probe":123}]' });
-  const base = { force: true, tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }),
+  const base = { force: true, windowFn: () => Infinity,   /* C3.8 — the shift now answers to the window; every fixture stays HERMETIC by declaring an unlimited one rather than reading the live ledger */ tone: { arousal: "open", effects: {} }, board: { tanks: [{ id: "T7", quota_est: 250, observed_ceiling: 0, used_today: 0, enabled: true, key_index: 5 }] }, recordUse: () => {}, skipBackfill: true, write: () => {}, ledgerRows: [], concepts: [{ concept: "tokenization", why: "capsule" }], grammar: null, calibration: null, ls: null, who: null, dossier: null, capsuleFiles: ["tokenization.json"], afferents: [], cards: null, bannedPhrases: ["10x"], thalamusCfg: { tiers: { tau0: 0.25, tau1_base: 0.55, epsilon: 0.08, budget_k: 0.35 }, refractory_min: 45, wake_cap_per_day: 15 }, corpus: "", generateHot: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }), generatePro: async () => ({ ok: true, text: "the same words answer every hot sample identically here" }),
     // 11 Aug 2026 — JOB 1c/1d MUST BE STUBBED HERE, and this line is the scar.
     // Shipped without them, `base` fell through to the REAL generators: the suite
     // fired live `claude -p --allowedTools WebSearch` calls, three per run, ~16k
@@ -1398,6 +1461,38 @@ async function selftest() {
     assert("BUDGET: a job STOPS where the budget ends (partial work still files)", pb.spent === 2 && Object.keys(pb.bank).length === 2 && b1.left === 0);
     const rB = await runShift({ ...base, generate: genProbes, budget: makeBudget(1) });
     assert("BUDGET: it travels ACROSS jobs — grading and distractors stop too", rB.jobs.probe_bank.spent === 1 && rB.jobs.probe_bank.grade_spent === 0 && rB.jobs.distractors.spent === 0);
+
+    // ---- C3.8 · THE NIGHT RESERVE — the fix for BOTH remaining starvations ----
+    // The shift capped CALLS and never TOKENS, so it drank the window dry at 02:40
+    // and the two 03:00 jobs behind it starved: `cortex consolidate` failed EVERY
+    // day with "no-headroom (0/50000 needed)", and `diary` — enabled, priority 10 —
+    // has NEVER PRODUCED A PAGE. Measured in the 5h window ending 03:00 on 12 Aug:
+    // 27,34,271 spent against a 26,12,500 cap, biggest line ns_pre_answers 6,16,346.
+    {
+      const rich = makeBudget(10, () => 5000000);
+      assert("C3.8/NIGHT — with the window open, the shift spends its calls exactly as before",
+        rich.take() === true && rich.take() === true && rich.left === 8 && rich.starved === 0);
+      const dry = makeBudget(10, () => NIGHT_RESERVE - 1);
+      assert("C3.8/NIGHT — with the window at the reserve, the shift STOPS even though it has 10 calls left (a call count is not a token budget)",
+        dry.take() === false && dry.left === 10 && dry.starved === 1);
+      assert("C3.8/NIGHT — and the reserve binds BEFORE the call count, which is the exact case that starved the 03:00 jobs",
+        dry.spent === 0);
+      // every term of the reserve is measured; none is chosen.
+      assert("C3.8/NIGHT — the reserve is DERIVED: cortex's own 50,000 floor + two late-job p90s of 49,991 (96 real jobs, ledger 9-12 Aug)",
+        NIGHT_RESERVE === 150000);
+      // FAIL-OPEN: a governor that will not load must never be the reason the night
+      // produced nothing. This is the same contract the DMN's fourth gate carries.
+      const broken = makeBudget(3, () => { throw new Error("brain_ledger.jsonl unreadable"); });
+      assert("C3.8/NIGHT — FAIL-OPEN: an unreadable governor does not silence the night shift", broken.take() === true && broken.left === 2);
+      const none = makeBudget(3);
+      assert("C3.8/NIGHT — and a budget with NO window reader behaves exactly as it always did (every older fixture is untouched)",
+        none.take() === true && none.left === 2 && none.starved === 0);
+      // the reading is cached: 62 takes must not re-parse a 5,000-row ledger 62 times
+      let reads = 0;
+      const cached = makeBudget(5, () => { reads++; return 5000000; });
+      cached.take(); cached.take(); cached.take();
+      assert("C3.8/NIGHT — the window reading is cached for the shift, so the gate costs one ledger read, not one per call", reads === 1);
+    }
   }
   // THE EMBED BACKFILL RACE (E2E audit 25 Jul 2026: indexEpisodes rewrites the
   // whole of episodes.jsonl and ran head-on into the hourly HippoIndex task)

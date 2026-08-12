@@ -33,6 +33,29 @@ import { starvedNightFor } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep 
 // served, and the ONLY thing that would ever tell him is a command he has to remember to
 // run. So it rides the kickoff, above the overdue line: an un-pasted round makes every
 // other Re-Jirah number on this screen wrong, which makes it the more urgent of the two.
+// D / B5-REVERSE — the Gaffer's last spoken sitting, in ONE line, for this mouth.
+// READ-ONLY: gaffer_state.mjs is the sole writer of both files. Deliberately terse
+// and deliberately CONDITIONAL — a sitting that went fine says nothing, because a
+// brief that reports a good day every day is a brief nobody reads.
+function gafferSittingLine(dir, now = Date.now()) {
+  const rd = (p) => { try { return JSON.parse(readFileSync(join(dir, p), "utf8")); } catch { return null; } };
+  const st = rd("gaffer_state.json"), stand = rd("gaffer_standing.json");
+  const bits = [];
+  if (st && st.captain_turns) {
+    const ageH = st.last_turn_at ? Math.round((now - new Date(st.last_turn_at).getTime()) / 3600000) : null;
+    const when = ageH === null ? "" : ageH < 1 ? " (just now)" : ageH < 24 ? ` (${ageH}h ago)` : ` (${Math.round(ageH / 24)}d ago)`;
+    // only the things this mouth can ACT on: an unfinished plan, and a drift count.
+    if (st.declared_plan) bits.push(`plan agreed by voice${when}: ${clip(st.declared_plan.text, 110)}`);
+    if (st.forgot_flags) bits.push(`he had to say "you forgot" ${st.forgot_flags}× in it`);
+    if (st.open_question) bits.push(`left unresolved: ${clip(st.open_question, 90)}`);
+  }
+  // a standing instruction he gave the GAFFER out loud binds THIS mouth too — one
+  // organism, and he should never have to repeat himself to a second surface.
+  const ins = (stand && stand.instructions) || [];
+  if (ins.length) bits.push(`STANDING (he said these out loud, they bind you too): ${ins.slice(-3).map(i => `[${i.label}] ${clip(i.text, 80)}`).join(" · ")}`);
+  return bits.length ? `GAFFER (the voice surface — same organism, same laws): ${bits.join(" · ")}` : null;
+}
+
 function rejirahPendingLine(dir) {
   const caps = loadCapsules(join(dir, "capsules"));
   const rows = readLog(join(dir, "rejirah_log.jsonl"));
@@ -743,6 +766,18 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   try {
     const dueLine = rejirahDueLine(dir, now);   // #108 — the brief's clock, so the age tag is deterministic in test
     if (dueLine) L.push(dueLine);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  // ---- D + B5-REVERSE (12 Aug 2026) — WHAT THE GAFFER DID REACHES THIS MOUTH.
+  // B5 made Claude Code visible to the live Gaffer within seconds. The reverse was
+  // left as "a harness limit" because nothing can inject into a running Claude Code
+  // session — TRUE, and it quietly skipped the half that IS possible: this brief,
+  // at SessionStart. So a spoken sitting was invisible here until someone asked.
+  // ALSO closes a D violation of my own making: gaffer_state.mjs's header declares
+  // learnstate as a consumer, and declaring a consumer without wiring it is exactly
+  // the "built, declared, not wired" defect this repo keeps finding in other files.
+  try {
+    const gl = gafferSittingLine(dir, now);
+    if (gl) L.push(gl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     for (const ol of outwardLines(dir, now)) L.push(ol);   // outward loop (8 Aug 2026)
