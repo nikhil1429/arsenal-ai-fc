@@ -2014,6 +2014,13 @@ function composeRehydrate(cartridge, tail) {
 // 25-line/2000-char guess this function was born with. The cartridge rides in
 // front (composeRehydrate), so callers hand the tail whatever chars the
 // cartridge left of that derived budget.
+// THE LIVE TAIL BUDGET (11 Aug 2026). Only the transcript tail rides into a live
+// session now; the durable cartridge is a get_context call away. 6,000 chars is
+// roughly the last few minutes of a spoken sitting — enough to walk back into a
+// dropped conversation, small enough that it cannot re-fill the window the
+// cartridge just vacated. A constant so the number is greppable, not buried.
+const LIVE_TAIL_BUDGET = 6000;
+
 function buildRehydrate(now = new Date(), charBudget = 2000) {
   const p = join(OUT_DIR, localDate(now) + ".md");
   if (!existsSync(p)) return null;
@@ -2059,96 +2066,9 @@ function buildRehydrateBlock(now = new Date()) {
 // The Gaffer already holds get_organism (full anatomy, every count read live)
 // and get_club_report (whole state, one call), so a static copy could only ever
 // be a second, worse answer. Removed on the captain's call: it asks now.
-// ---------------------------------------------------------------------------
-// TEACH MODE (11 Aug 2026, HIS RULING: "1 - do it, it is of no use").
-//
-// THE MEASUREMENT THAT FORCED THIS. He sat down with the Gaffer to have his own
-// notes explained and it kept losing what he had said seconds earlier — "gaffer
-// thoda weird act karta hain yar, it is annoying me." The dugout log held ZERO
-// errors; nothing was crashing. What was measured instead:
-//     system prompt   31,481 chars
-//     rehydrate       32,772 chars
-//     ------------------------------
-//     64,253 chars of preamble BEFORE he says a word,
-// carried by gemini-3.1-flash-live-preview — a small, fast AUDIO model. The
-// full Gaffer constitution is a general-purpose one: boardroom briefings, the
-// organism lecture, the scrimmage grammar, the shadow gate, reminders,
-// postmatch, the genome. A teaching sitting needs almost none of it, and every
-// clause it does not need is working memory taken away from the conversation he
-// is actually having.
-//
-// So this mode is a SUBTRACTION, not a new personality. Same voice, same laws
-// about HIM, same capsule contract — with the club machinery left at the door.
-// Tools are cut to what a teaching sitting can actually use, which matters twice
-// over: tool declarations are prompt text too, and 29 of them is most of a page.
-//
-// LAYERING: `gaffer` mode is untouched. He still has the full Gaffer for
-// everything else; this is the surface for one job — opening a page he owns but
-// cannot yet recall.
-const TEACH_TOOLS = ["get_capsule", "get_context", "recall_memory", "semantic_recall", "mark_moment", "take_note", "checkpoint"];
-
-function buildTeachInstruction() {
-  const locked = lockedCapsuleIds();
-  return `You are THE GAFFER — the living voice of Arsenal AI FC, in the dugout with your captain, Nikhil (#14). Real-time speech, Hinglish welds natural, warm and direct.
-
-THIS SITTING HAS EXACTLY ONE JOB: open a page he WROTE but cannot yet recall, until he can hold it. Nothing else. No club report, no drills, no scoring, no mock. If he asks for those, tell him in one line that this is the teaching surface and he can switch back.
-
-WHO HE IS: a medicated ADHD-PI engineer training for an AI Product Engineer interview. He cannot see the text — you are his only channel — and he has told you plainly what breaks him: "it is just reading it word to word which is making me difficult to understand it and it is speaking very fast because my brain needs to understand the info as well."
-
-THE PAGES ARE HIS OWN. Call get_capsule for the concept he names${locked.length ? ` (locked right now: ${locked.join(" / ")})` : " (none locked on this machine — say so plainly, never name a capsule you were not given)"}. Every word in there is his, written when he learned it. You are opening HIS prose, never replacing it with your own better version.
-
-TWO MODES, AND HE PICKS. Ask ONCE, in one line: "verbatim padhun ya samjhaun?"
-· PADHO = his prose read EXACTLY as get_capsule returned it — his words, his order, his Hinglish, nothing smoothed. Markdown markup (**, *, ->, #) is FORMATTING: deliver the prose, never pronounce the symbols.
-· SAMJHAO = you TEACH that same page. The laws below govern it.
-
-THE SAMJHAO LAWS — these are the whole point of this surface:
-· ONE IDEA PER TURN. Not one axis — one IDEA. An axis may take three turns. Never run into a second idea in the same breath.
-· SLOW, with real pauses. His brain needs time to UNDERSTAND, not merely to hear. Short sentences. If it would take you more than about forty seconds to say, it is two turns.
-· UNPACK EVERY NEW WORD the first time you speak it, in one line, before you use it in a sentence.
-· HIS ANCHORS STAY — his hook, his analogy, his Hinglish phrasing wherever the capsule has one. Explaining means OPENING his words, never swapping them for better ones. That phrasing is what he will defend in a room.
-· EVERYDAY ANALOGIES ONLY — food, house, shop, city. Never geometry.
-· END EACH UNIT WITH ONE CHECK-QUESTION he answers out loud. Never "samajh aaya?" — a real question that cannot be answered yes/no. If he is wrong or silent, do NOT advance: open the SAME idea again, smaller, in different words.
-· "SAMAJH NAHI AAYA" IS LITERAL. Stop. Restart that idea from zero. Never push forward, never repeat the same sentence louder.
-· NEVER PUT HIS LEVEL ABOVE HIS OWN WORDS. No "ye to aapko pata hai", no "obviously", no "as you know".
-
-YOU DRIVE THE SITTING. He never has to know what to ask for — his own words: "i will not remember to ask anything." Say what is in the capsule and roughly what the whole thing costs, then walk fault-line a through i, ONE at a time. After the nine, offer his doubts, his traps, his three-ways and his interview lines BY NAME — do not wait to be asked for a page he does not know exists. His only job is haan / aage / ruko / aur gehra. If he goes quiet after a unit, ask "aage?" — never sit in silence.
-
-SAY THE PRICE FIRST, EVERY TIME. Each page returns est_seconds. "yeh chhota hai, chalis second" / "yeh do minute ka hai — poora chahiye ya sirf shuruaat?" He cannot see the text; the only other way he learns a read is sixteen minutes long is by enduring sixteen minutes of it.
-
-STOP AND WAIT after every unit. Go on only on his word. Never auto-advance, never "shall I continue" into a monologue.
-
-ALWAYS RE-CALL THE TOOL. Never read a page out of this conversation's memory — a long sitting compresses, and a compressed page comes back as a paraphrase that sounds verbatim. If he asks for an axis again, call get_capsule again in that turn.
-
-WHEN HE CUTS YOU OFF he is the point: stop instantly and answer him. To resume, restart from the START of that unit, never "from where I was" — the audio ran ahead of what he actually heard, and you do not know the last sentence that reached him. Say that plainly rather than pretending.
-
-MEMORY: call get_context at the start, and recall_memory whenever a past doubt of his would change what you say next. Bank a real moment with mark_moment (kind + HIS words) the instant he names a doubt or a win — silently, never mentioned. checkpoint after each substantive reply.
-
-HONEST FRAME, ALWAYS: never hype (no "10x", no "exponential"), never flatter, never invent a number or a fact the capsule does not carry. If something is not in his capsule, say so — do not fill the gap from your own knowledge and let him think it was his.`;
-}
-
 function buildConfig(keys, mode = "gaffer") {
   const prefs = loadPrefs();
   const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
-  // TEACH — the lean sitting. Its whole value is what it LEAVES OUT.
-  if (mode === "teach") {
-    return {
-      model, voice: process.env.DUGOUT_VOICE || prefs.voice || DEFAULT_VOICE,
-      depth: "deep", mode, keys,
-      system: buildTeachInstruction(),
-      // The rehydrate cartridge is the OTHER half of the 64k — and a teaching
-      // sitting does not need his whole durable history in front of it. It has
-      // get_context and recall_memory and can ASK, which is the same principle
-      // that retired the static self-portrait from the full Gaffer in July.
-      rehydrate: null,
-      resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
-      compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
-      tools: [{ functionDeclarations: TOOL_DECLS.filter((t) => TEACH_TOOLS.includes(t.name)) }],
-      thinking: ["minimal", "low", "medium", "high"].includes(prefs.thinking) ? prefs.thinking : "minimal",
-      vad_server: { mode: "aligned", silence_ms: 1500 },
-      vad: { onset_db_over_noise: 11, min_db: -55, hangover_ms: 1400, preroll_ms: 600, idle_disconnect_ms: 90000, batch_ms: 100 },
-      vision: { jpeg_quality: 0.82, max_px: 1280, frame_ms: 2000 },
-    };
-  }
   // THE BRIEFINGS — guest keynotes: NO tools (structural privacy: the model
   // cannot read the bus), no rehydrate, no resume, long idle (she listens).
   if (mode === "brief-club" || mode === "brief-brain" || mode === "signing" || mode === "cinematic-tour") {
@@ -2212,7 +2132,26 @@ function buildConfig(keys, mode = "gaffer") {
     // 11 Aug 2026 — the inline IIFE that used to live here (its budget written
     // as the bare literal `8192 * 4 - cart.length`) is now buildRehydrateBlock,
     // so the selftest can check THE SAME budget instead of a second copy of it.
-    rehydrate: mode === "scrimmage" ? null : buildRehydrateBlock(),
+    // 11 Aug 2026 — THE CARTRIDGE COMES OUT OF THE LIVE SESSION.
+    // Measured the day he said the Gaffer "keeps on forgetting what i just told
+    // him like few seconds ago": the session opened with 75,925 chars of preamble
+    // — 31,481 system + 32,772 rehydrate + 11,672 of tool text — on a small, fast
+    // AUDIO model, with ZERO errors in the log. Nothing was crashing. The window
+    // was simply spent before he spoke.
+    //
+    // The cartridge half of that (identity facts, who-he-is, last episodes) is
+    // exactly what `get_context` returns, LIVE, on demand — the Gaffer has held
+    // that tool since LADDER F1. Handing it the same content twice, once as dead
+    // preamble and once as a callable tool, buys nothing and costs the working
+    // memory of the conversation he is actually in. This is the identical call
+    // the captain made on 29 Jul when organism_self.md came out of every session:
+    // THE GAFFER ASKS INSTEAD OF BEING TOLD.
+    //
+    // The TRANSCRIPT TAIL stays — it is not duplicated by any tool, and it is the
+    // only thing that carries a dropped session back into the conversation it was
+    // having. Capped, because an uncapped tail just re-fills the window the
+    // cartridge vacated.
+    rehydrate: mode === "scrimmage" ? null : buildRehydrate(new Date(), LIVE_TAIL_BUDGET),
     // M0 — a fresh persisted handle lets a reload REJOIN the same server-side
     // session (memory intact, no rehydrate needed); null-safe when stale/absent.
     resume: loadSessionHandle({ model, mode, keyCount: keys.length }),
@@ -2539,34 +2478,35 @@ async function selftest() {
   assert("SAMJHAO — explaining never overwrites his own words (his hook, his analogy, his Hinglish stay)",
     cfg.system.includes("HIS ANCHORS STAY"));
 
-  // --- TEACH MODE (11 Aug 2026) — the lean sitting -------------------------
-  // Measured cause, not a hunch: the full Gaffer serves 75,925 chars of preamble
-  // (31,481 system + 32,772 rehydrate + 11,672 of tool text) to a small, fast
-  // AUDIO model, before he says a word — which is why it lost what he had said
-  // seconds earlier while the dugout log held zero errors. This mode's entire
-  // value is what it LEAVES OUT, so that is what is asserted: the weight, the
-  // laws that must survive the cut, and the fact that the full Gaffer is untouched.
+  // --- ONE DOOR (11 Aug 2026) ------------------------------------------------
+  // A `teach` mode lived here for ninety minutes and he killed it the same
+  // evening: "ek hi gaffer to hain jisse i talk, why tf are you making chaos ...
+  // who told you to do that?" He was right. A second door is a thing he has to
+  // REMEMBER to open, and by the rule this repo holds about him (ledger
+  // 5cea57e8) anything he has to remember is a design failure, not his.
+  //
+  // The leanness it bought was real and it stayed — in the ONE Gaffer. The
+  // measured cause of "it keeps forgetting what i just told him": 75,925 chars
+  // of preamble (31,481 system + 32,772 rehydrate + 11,672 tool text) on a
+  // small, fast AUDIO model, with ZERO errors in the log. The cartridge half of
+  // that rehydrate is exactly what get_context returns LIVE, so handing it over
+  // twice — once as dead preamble, once as a callable tool — bought nothing and
+  // cost the window of the conversation he was actually in.
   {
-    const t = buildConfig(["k1"], "teach");
     const g = buildConfig(["k1"], "gaffer");
-    const weight = (c) => (c.system || "").length + (c.rehydrate || "").length
-      + JSON.stringify((c.tools[0] && c.tools[0].functionDeclarations) || []).length;
-    assert("TEACH — the preamble is a fraction of the full Gaffer's (this IS the fix; anything else is decoration)",
-      weight(t) < weight(g) / 5);
-    assert("TEACH — no rehydrate cartridge: it has get_context and recall_memory and can ASK, the same principle that retired the static self-portrait",
-      !t.rehydrate);
-    assert("TEACH — tools cut to the teaching set (declarations are prompt text too; 29 of them is most of a page)",
-      t.tools[0].functionDeclarations.length === TEACH_TOOLS.length
-      && t.tools[0].functionDeclarations.every((d) => TEACH_TOOLS.includes(d.name))
-      && t.tools[0].functionDeclarations.some((d) => d.name === "get_capsule"));
-    assert("TEACH — every law that makes the sitting work survived the cut",
-      ["ONE IDEA PER TURN", "verbatim padhun ya samjhaun?", "HIS ANCHORS STAY",
-       "SAMAJH NAHI AAYA", "SAY THE PRICE FIRST", "YOU DRIVE THE SITTING",
-       "ALWAYS RE-CALL THE TOOL"].every((k) => t.system.includes(k)));
-    assert("TEACH — it still refuses to invent: a gap in his capsule is NAMED, never filled from the model's own knowledge",
-      /do not fill the gap from your own knowledge/.test(t.system));
-    assert("TEACH — LAYERING: the full Gaffer is byte-for-byte unchanged by this mode existing",
-      g.system.length === 31481 || (g.system.includes("THE BOARDROOM BRIEFING") && g.tools[0].functionDeclarations.length === 29));
+    assert("ONE DOOR — there is no second Gaffer: an unknown mode falls back to the same session, not a different one",
+      buildConfig(["k1"], "teach").system === g.system);
+    assert("ONE DOOR — the cartridge is OUT of the live session (get_context fetches it live instead)",
+      (g.rehydrate || "").length <= LIVE_TAIL_BUDGET);
+    assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
+      typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
+    assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
+      g.tools[0].functionDeclarations.length === 29
+      && ["get_capsule", "grade_rejirah", "log_reps", "get_organism", "get_club_report", "get_context"]
+        .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
+    assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
+      ["ONE IDEA PER TURN", "verbatim padhun ya samjhaun?", "HIS ANCHORS STAY", "SAMJHAO"]
+        .every((k) => g.system.includes(k)));
   }
   assert("his-voice reminder law travels (verbatim, once, no advice)", cfg.system.includes("HIS-VOICE REMINDERS") && cfg.system.includes("Never add advice"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
@@ -2788,8 +2728,14 @@ async function selftest() {
       const cart = buildRehydrateCartridge();
       const cartChars = String(cart || "").length;
       const tail = buildRehydrate(new Date(), rehydrateTailBudget(cartChars));
-      assert(`REHYDRATOR: the live config carries exactly that composition (cartridge ${cart ? "present" : "absent"} · tail ${tail ? "present" : "absent"})`,
-        buildConfig(["k1"]).rehydrate === composeRehydrate(cart, tail));
+      // 11 Aug 2026: the live session no longer carries the CARTRIDGE at all —
+      // get_context returns that same content on demand, and duplicating it as
+      // dead preamble was costing the working memory of the live conversation.
+      // The composition helper is still under test above (a dropped session's
+      // walk-back is the tail, and that contract is unchanged); what changed is
+      // WHICH of the two rides into the socket.
+      assert(`REHYDRATOR: the live config carries the TAIL ONLY (tail ${tail ? "present" : "absent"}; cartridge fetched live via get_context)`,
+        buildConfig(["k1"]).rehydrate === buildRehydrate(new Date(), LIVE_TAIL_BUDGET));
       // …and the budget is the SHIPPED compression window, not a second copy of
       // it. This is the wire that broke: change one number, this goes red.
       assert("REHYDRATOR: the tail budget derives from the very window the page is told to compress at (one number, not two)",
@@ -4571,7 +4517,15 @@ async function main() {
         // first live check: both ?mode=gaffer and ?mode=teach came back at
         // 75,925 chars. The whitelist is the real door; buildConfig is only the
         // builder behind it.
-        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour","teach"].includes(_q) ? _q : "gaffer";
+        // "teach" was added here for ninety minutes on 11 Aug and REMOVED the same
+        // evening, on his word: "ek hi gaffer to hain jisse i talk, why tf are you
+        // making chaos ... who told you to do that?" He was right, and it broke the
+        // rule this repo holds about him (ledger 5cea57e8): a second door is a thing
+        // he has to REMEMBER to open, and anything he has to remember is a design
+        // failure. The leanness it bought was real; it belongs to the ONE Gaffer,
+        // not to a mode beside it. See buildConfig — the cartridge is gone from the
+        // gaffer session itself and get_context fetches it live instead.
+        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour"].includes(_q) ? _q : "gaffer";
         // THE ONE REAL SERVE (11 Aug 2026 dead-wire sweep): a browser asking for the
         // scrimmage config is a mock actually starting — the only event in this repo that
         // means the staged code round reached a surface. buildConfig itself must stay
