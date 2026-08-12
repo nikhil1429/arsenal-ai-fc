@@ -2990,14 +2990,35 @@ async function selftest() {
       //     nothing while M02-M04 sat un-returned since 8 Aug, gating benchmark.
       // A wrong field name inside a try/catch is the quietest bug in this repo.
       const brief = buildOpeningBriefing();
-      assert("BRIEF — the Re-Jirah line reads a source that EXISTS (it read rejirah_state.json, which nothing creates, and was silently dead)",
-        /Re-Jirah round\(s\) overdue/.test(brief) && !SRCX.includes('readJson(join(STATE_DIR, "rejirah' + '_state.json"))'));
-      assert("BRIEF — and it says overdue is RIPE, not late (his own framing, and the kickoff's)",
-        /RIPE, not late/.test(brief));
-      assert("BRIEF — the missions line reads the REAL field (there is no `status` on a mission row) and names the benchmark gate",
-        /Gemini mission\(s\) still out/.test(brief) && /benchmark stays gated/.test(brief) && !SRCX.includes('x.stat' + 'us === "staged")'));
-      assert("BRIEF — all FOUR sources reach him now: cards · watchman · re-jirah · missions",
-        ["decision(s) waiting", "watchman", "Re-Jirah", "Gemini mission"].every(k => brief.includes(k)));
+      // ⚠ THESE FOUR WERE THE AWAY-DAY RED (E1), FOUND 12 AUG BY RUNNING THE
+      // SUITE IN A `git ls-files` SANDBOX WITH THE FOUR LOCALHOST DAEMONS
+      // UNREACHABLE. They assert on the RENDERED briefing, and the briefing is
+      // rendered from fsrs_store.json · captains_call.json · missions.json —
+      // ALL THREE GITIGNORED. So they passed at home and could never pass on a
+      // clean checkout: bug class 6, committed by the very fix that closed the
+      // two dead wires.
+      // The WIRING claim (the thing the 12 Aug fix actually established, and the
+      // thing that must never regress) is asserted UNCONDITIONALLY off the source.
+      // The RENDERED claim needs data, so it is asserted only where data exists,
+      // and its absence is REPORTED rather than silently skipped — a skip that
+      // looks like a pass is what this whole audit exists to remove.
+      const briefSources = ["fsrs_store.json", "captains_call.json", "missions.json"]
+        .filter((f) => existsSync(join(STATE_DIR, f)));
+      const haveData = briefSources.length === 3;
+      assert("BRIEF · WIRING — the Re-Jirah line no longer reads rejirah_state.json, a file NOTHING creates",
+        !SRCX.includes('readJson(join(STATE_DIR, "rejirah' + '_state.json"))'));
+      assert("BRIEF · WIRING — the missions line no longer filters on `status`, a field a mission row has never had",
+        !SRCX.includes('x.stat' + 'us === "staged")'));
+      if (haveData) {
+        assert("BRIEF — the Re-Jirah line renders, and says overdue is RIPE, not late (his framing, and the kickoff's)",
+          /Re-Jirah round\(s\) overdue/.test(brief) && /RIPE, not late/.test(brief));
+        assert("BRIEF — the missions line renders and names the benchmark gate",
+          /Gemini mission\(s\) still out/.test(brief) && /benchmark stays gated/.test(brief));
+        assert("BRIEF — all FOUR sources reach him: cards · watchman · re-jirah · missions",
+          ["decision(s) waiting", "watchman", "Re-Jirah", "Gemini mission"].every(k => brief.includes(k)));
+      } else {
+        console.log(`  ..   BRIEF · rendered checks NOT RUN — this is a clean checkout (missing ${["fsrs_store.json", "captains_call.json", "missions.json"].filter((f) => !existsSync(join(STATE_DIR, f))).join(", ")}). Stated, never silent; the WIRING claims above ran.`);
+      }
       // B8 — the standing instructions reach the PREAMBLE, not only a reconnect.
       // Without this, a law would survive a dropped line and die on a clean tab-open.
       assert("B8 — the sitting state reaches EVERY session's preamble, not just a rotation", SI.includes(gafferSittingSection()));

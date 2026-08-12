@@ -637,3 +637,151 @@ and the suite now asserts all six exhibits still exist for exactly that reason.
   findings in this repo are genuinely RULINGS, and each now carries WHY in its own
   words. The sharpest: "fixing" a header that claims SOLE WRITER to match code that
   disagrees would **paper over a real law breach** — the audit becoming the bug.
+
+---
+
+## 6 — THE SECOND PASS: the four gaps, and what RUNNING them found
+
+`sandbox.mjs canary` proved the collar. These four organs existed but had never
+been RUN end to end. Running them is the whole point — an unrun system is a
+hypothesis, and that includes the audit.
+
+### 6.1 THE STATE-MUTANT INVARIANCE MATRIX — 8 DEAD READS
+
+Corrupt a field an organ claims to read; if its output does not change, the read
+is dead. Measured over the declared lifecycle files × 10 operators:
+
+```
+DEAD  benchmark.mjs   report ← learning_state.json    noticed 0/10
+DEAD  dmn.mjs         status ← learning_state.json    noticed 0/10
+DEAD  captains_call   status ← brain_config.json      noticed 0/9
+DEAD  conductor.mjs   plan   ← readiness.json         noticed 0/10
+DEAD  nikhil_model    report ← readiness.json         noticed 0/10
+DEAD  shadow.mjs      status ← readiness.json         noticed 0/10
+DEAD  benchmark.mjs   report ← missions.json          noticed 0/10
+DEAD  captains_call   status ← missions.json          noticed 0/10
+```
+
+All eight are ALSO **silent feature loss**: DELETE the file entirely and the
+output is byte-identical, with no error. `benchmark.mjs` is the sharpest —
+benchmark is GATED on the missions audit closing, and its own report does not
+react to `missions.json` in any way.
+
+**THE HONEST LIMIT, stated because it changes what these rows mean:** the matrix
+exercises each organ's cheap READ-ONLY verb (`report`/`status`/`plan`). A DEAD row
+therefore proves *this verb's output does not depend on that file* — NOT that
+nothing in the organ does. The organ's writing paths may well use it. That is
+still a real finding (a status verb that ignores its own inputs is a status verb
+that cannot tell you when they break), but it is a narrower claim than "dead code".
+
+**NOT MEASURED, and stated rather than hidden:** 4 lifecycle files are GITIGNORED
+and therefore absent from a `git ls-files` sandbox — which is exactly the CI world,
+so this is a real limit, not an oversight. 23 further readers were capped.
+
+### 6.2 CHAOS — 7 organs LIE when their input is gone
+
+Byte-identical output with the file DELETED *and* with it corrupted:
+`presence ← buckets` · `benchmark ← concepts` · `daemon_watchdog ← conductor` ·
+`watchman ← conductor_evening` · `benchmark ← course` · `benchmark ← dossier_weights`.
+That is not resilience. An organ that says nothing is wrong while its input is
+gone is worse than one that crashes, because the silence is indistinguishable
+from health.
+
+### 6.3 §8 — THE DOCS, EXECUTED
+
+**1,044 cited grep-claims verified GREEN.** 15 genuinely STALE. 139 honestly
+reported UNRUNNABLE. 6 stale global count-claims (`all 75 organs` → 84,
+`all 73 suite members` → 81).
+
+The checker was WRONG THREE TIMES before it was right, each time calling WORKING
+evidence broken — the exact failure it exists to find, committed by the finder:
+JS `^` anchors to the string where grep anchors per LINE; BRE escapes its
+metacharacters BACKWARDS from JS (`\|` is alternation in grep, a literal pipe in
+JS; bare `(` is a literal in BRE, a group in JS); and **not every cited command is
+a hit-claim** — this repo cites `grep -rn -i "haiku" scripts/oura_coach.mjs`
+precisely to prove absence, where returning nothing is the claim being TRUE.
+
+### 6.4 THE BUG MUSEUM — **6 of 6**
+
+B2 reported MISSED for three runs. The detector was fine every time; the
+INJECTION was a no-op, because the mutant hardcoded the filter parameter name as
+`c` while the file writes `.filter((r) => …)`. **That is the fourth time in this
+audit that a MISS was the mutant rather than the detector** — when a negative
+control fails, suspect the control first.
+
+### 6.5 THE TWO SAFETY GAPS, CLOSED
+
+- **WORKTREE**: the fixer now runs on `audit/autofix-<ts>` and cannot reach the
+  live tree. It shipped without this, applied 4 edits directly, 2 were wrong, and
+  only a hand-read of the diff caught them.
+- **QUARANTINE**: `applied_at` on commit, `held_at` only after the WATCHMAN's own
+  overnight verdict shows no new RED; not HELD in 48h ⇒ AUTO-REVERT. Deliberately
+  the watchman's verdict and not a suite run of its own, because "the suite went
+  green" is the weakest evidence in this repo.
+- **THE UNSOUNDNESS RATCHET WAS THE WRONG SHAPE** and could have been silenced
+  forever by DELETING an organ (a smaller repo has fewer sinks). A budget that can
+  be met by removing code is not a budget. It is now PER ORGAN.
+
+---
+
+## 7 — §7(e) THE SEMANTIC PASS, and E1 CLOSED
+
+### 7.1 E1 IS GREEN — cause found, fixed, verified
+
+`node scripts/sandbox.mjs ci` → **`away-day exit code: 0`**. Red since 7 Aug.
+
+**THE CAUSE WAS BUG CLASS 6, COMMITTED BY THE FIX THAT CLOSED THE TWO DEAD WIRES.**
+The 12 Aug B4 repair added four assertions to `dugout.mjs` that check the RENDERED
+opening briefing — and the briefing renders from `fsrs_store.json`,
+`captains_call.json` and `missions.json`, **all three gitignored**. They passed at
+home and could never pass on a clean checkout.
+
+Two things made this findable at last, and neither was available before:
+- the sandbox is built from `git ls-files`, so it IS the CI checkout;
+- the collar denies the network, holding the four localhost daemons
+  (4111/4112/4113/5600) unreachable — the one variable no local reproduction
+  could control "short of stopping his live organism".
+
+The repair splits each assertion: the **WIRING** claim (that the Re-Jirah line no
+longer reads `rejirah_state.json`, that the missions line no longer filters on a
+`status` field that never existed) is asserted UNCONDITIONALLY off the source and
+can never regress. The **RENDERED** claim runs only where the data exists, and its
+absence is PRINTED, never silently skipped.
+
+⚠ Two earlier CI runs failed on the AUDIT'S OWN COLLAR, not on CI: npm needs a
+cache dir outside the sandbox, and `awayday` shells `npm` through cmd.exe. Both
+were fixed by moving npm's dirs INTO the sandbox and allowing the shell for that
+lane only — never by widening the collar, which is how a collar stops being one.
+
+### 7.2 THE SEMANTIC PASS — 13 confirmed, and FIVE were in the audit itself
+
+Five lenses, 30 raw findings, each adversarially refuted by an independent agent:
+**13 CONFIRMED, 17 REFUTED.** This is the only class deterministic measurement
+misses BY CONSTRUCTION, and it paid for itself immediately — **five of the thirteen
+were bugs in the organs built earlier the same day**, every one of which was
+perfectly green under xray, blackbox, mutagen, herd and treasury:
+
+1. **G-FIRST verified the LIVE tree while the fix landed in the WORKTREE.** The
+   safety change silently disabled the entire fixer: every auto-fix was refused
+   with "the oracle stayed RED after the fix" — a refusal plausible enough to read
+   as a finding about the repo.
+2. **THE MONEY ORACLE COULD NOT FAIL.** Both arms were structurally empty (one
+   filtered on `t.allowed`, a field nothing ever sets). A constant `true` wearing
+   the costume of a measurement. It now has a planted-row negative control that
+   proves it can still return false.
+3. **The ONE-OPEN-CARD cap could never reopen** — nothing could write the row it
+   waited for, so after the first card the audit would go silent FOREVER and look
+   healthy doing it. The TTL now closes it, recording his silence as the logged
+   answer the card already promised.
+4. **The forge-session HARD REFUSE read `j.open`** — a field `forge_session.json`
+   has never had. The guard protecting his study time was structurally dead.
+5. **Quarantine logged `reverted` whether or not anything was reverted**, against
+   commits that by construction live on an unmerged worktree branch. A ledger
+   recording intent as outcome is the same near-lie as a card reporting an unread
+   item as handled.
+
+The other eight are in the organism proper and are RULINGS, not auto-fixes. The
+sharpest: **the card the Gaffer reads aloud is not the card his "haan" answers** —
+the briefing names the last unanswered card, while an id-less `answer` binds to
+the most-recently-DEALT card, and nothing makes those two agree. Verified live on
+the 42-card deck: the briefing names c42, the bind resolves to c9.

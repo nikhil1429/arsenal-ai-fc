@@ -104,12 +104,20 @@ function preconditions({ allowDirty = false } = {}) {
   const head = sh("git", ["rev-parse", "HEAD"]).trim();
   // AN OPEN FORGE SESSION IS A HARD REFUSE. He may be mid-study, and the one
   // thing this audit must never do is interrupt the thing the organism is for.
+  // ⚠ READ THE SHAPE OFF DISK. This checked `j.open === true`, and
+  // forge_session.json HAS NO `open` FIELD — it never has. Its real keys are
+  // concept · started_at · step · axes_done · closed_at. So the "HARD REFUSE"
+  // that exists to keep the audit from interrupting him mid-study could never
+  // fire once, and the guard read as present while being structurally dead. The
+  // repo's own law, broken by the file that quotes it.
   const fs_ = join(STATE_DIR, "forge_session.json");
   if (existsSync(fs_)) {
+    let open = false;
     try {
       const j = JSON.parse(readFileSync(fs_, "utf8"));
-      if (j && j.open === true) throw new Error("audit: REFUSING — a forge session is OPEN. He may be mid-study; the audit waits.");
-    } catch (e) { if (/REFUSING/.test(e.message)) throw e; }
+      open = !!(j && j.concept && !j.closed_at);
+    } catch { open = false; }
+    if (open) throw new Error("audit: REFUSING — a forge session is OPEN (a concept is started and not closed). He may be mid-study; the audit waits.");
   }
   return { head, dirty: !!dirty, notes };
 }
@@ -493,11 +501,26 @@ export function quarantine({ apply = false } = {}) {
     } else if (ageH > 48) {
       out.expired.push({ ...r, ageH: +ageH.toFixed(1) });
       if (apply) {
-        // AUTO-REVERT. The fix lives on its own branch and its own commit, so
-        // this destroys nothing else — which is exactly why one finding is one
-        // commit.
-        if (r.sha && r.branch) sh("git", ["revert", "--no-edit", r.sha]);
-        append({ event: "reverted", at: new Date().toISOString(), fp: r.fp, rule: r.rule, file: r.file, sha: r.sha, why: `applied ${ageH.toFixed(0)}h ago and never HELD — no clean night observed` });
+        // ⚠ LOG WHAT HAPPENED, NOT WHAT WAS ATTEMPTED. This wrote the `reverted`
+        // row unconditionally, so a revert that never ran — or ran against a
+        // commit living on a WORKTREE BRANCH that main has never seen, which is
+        // the normal case — was recorded as done. A ledger that records intent as
+        // outcome is the same near-lie as a card reporting an unread item as
+        // handled. The revert is verified, and a failure is recorded AS a failure.
+        let done = false, note = "";
+        if (r.sha) {
+          const known = sh("git", ["cat-file", "-t", r.sha]).trim() === "commit";
+          const onMain = known && sh("git", ["merge-base", "--is-ancestor", r.sha, "HEAD"]) !== null && sh("git", ["branch", "--contains", r.sha]).includes("main");
+          if (!known) note = "the commit is not in this repository (worktree branch pruned)";
+          else if (!onMain) note = `the fix was never merged — it is still only on ${r.branch || "its audit branch"}, so there is nothing on main to revert`;
+          else { const out = sh("git", ["revert", "--no-edit", r.sha]); done = !/error|conflict/i.test(out); note = done ? "reverted on main" : out.slice(0, 140); }
+        } else note = "no sha recorded";
+        append({
+          event: done ? "reverted" : "revert-failed",
+          at: new Date().toISOString(), fp: r.fp, rule: r.rule, file: r.file, sha: r.sha,
+          why: `applied ${ageH.toFixed(0)}h ago and never HELD — no clean night observed`,
+          outcome: note,
+        });
       }
     } else {
       out.pending.push({ ...r, ageH: +ageH.toFixed(1), needs: nightPassed ? `a night with 0 RED (last saw ${reds})` : "one overnight watchman run" });
@@ -543,7 +566,15 @@ function oracleFor(f, treeRoot = ROOT) {
   const organ = basename(f.file);
   const verbs = f.subject.split(",");
   return () => {
-    const src = readFileSync(join(ROOT, "scripts", organ), "utf8");
+    // ⚠ THE ORACLE MUST READ THE TREE THE FIX LANDED IN. This read `ROOT` while
+    // the fix was applied in the WORKTREE, so the "GREEN after" check re-read the
+    // untouched live file, stayed RED, and EVERY auto-fix was refused with the
+    // reason "the oracle stayed RED after the fix". The worktree change — added
+    // for safety — silently disabled the entire fixer, and the refusal message
+    // was plausible enough to read as a finding about the repo rather than a bug
+    // in the audit. Found by the semantic pass, which is the only lens that could
+    // have: every deterministic check was perfectly green.
+    const src = readFileSync(join(treeRoot, "scripts", organ), "utf8");
     const m = /^\/\/\s*CLI:.*$/m.exec(src);
     if (!m) return false;
     // ⚠ THE ORACLE MUST CHECK THE BRACKET, NOT THE LINE. The first version asked
@@ -677,8 +708,26 @@ function deal(res) {
   const seen = ledger();
   const now = Date.now();
   const dealt = seen.filter((r) => r.event === "dealt");
-  const openCards = dealt.filter((d) => !seen.some((r) => (r.event === "closed" || r.event === "answered") && r.fp === d.fp));
-  if (openCards.length >= 1) { console.log(`\ncard: NOT dealt — ${openCards.length} card already open (HARD CAP: one at a time).`); return null; }
+  // ⚠ A CAP THAT CAN NEVER REOPEN IS NOT A CAP, IT IS A SHUTDOWN. Nothing in the
+  // repo could write the `closed`/`answered` row this predicate waited for, so
+  // after the FIRST card the audit could never deal another one — for good. The
+  // organ built so he would never face a queue would instead have gone silent and
+  // looked healthy doing it.
+  // The TTL is what closes a card, and the card SAYS SO: "default if silent:
+  // leave as-is and re-rank in 7 days". His silence is a logged answer, so the
+  // expiry is recorded as one rather than left to rot.
+  const closed = new Set(seen.filter((r) => r.event === "closed" || r.event === "answered").map((r) => r.fp));
+  const openCards = [];
+  for (const d of dealt) {
+    if (closed.has(d.fp)) continue;
+    const ageDays = (now - new Date(d.at).getTime()) / 86400000;
+    if (ageDays > (d.ttl_days || 7)) {
+      append({ event: "closed", at: new Date().toISOString(), fp: d.fp, rule: d.rule, file: d.file, why: `TTL ${d.ttl_days || 7}d expired; the STATED DEFAULT applies — ${d.default_if_silent || "left as-is"}. Silence is a logged answer, not a stall.` });
+      continue;
+    }
+    openCards.push(d);
+  }
+  if (openCards.length >= 1) { console.log(`\ncard: NOT dealt — ${openCards.length} card already open (HARD CAP: one at a time; it closes on its ${openCards[0].ttl_days || 7}d TTL).`); return null; }
   const last7 = dealt.filter((d) => now - new Date(d.at).getTime() < 7 * 86400000);
   if (last7.length >= 2) { console.log(`\ncard: NOT dealt — ${last7.length} already dealt in the last 7 days (HARD CAP: two).`); return null; }
   const top = res.ranked[0];

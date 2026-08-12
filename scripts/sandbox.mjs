@@ -241,10 +241,25 @@ export function moneyOracle(before, after, sb) {
   const added = after.lines.slice(before.rows);
   const parsed = added.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const ours = parsed.filter((r) => AUDIT_JOBS.test(String(r.job || r.kind || "")));
+  // ⚠ THIS ORACLE COULD NOT FAIL, AND THAT IS THE WORST THING A GUARD CAN BE.
+  // It filtered the tripwire for `t.allowed` — a field NOTHING EVER SETS, because
+  // the collar THROWS on a billing spawn and only ever writes denials. So one arm
+  // was structurally empty. The other arm asks whether a new ledger row is
+  // attributable to an audit job, and the audit enqueues no brain jobs, so it was
+  // structurally empty too. Both arms empty ⇒ `ok` was a constant `true` wearing
+  // the costume of a measurement. Found by the semantic pass; no deterministic
+  // check could see it, because a vacuously-true assertion is indistinguishable
+  // from a passing one.
+  // Now the tripwire is read for what it ACTUALLY records: any billing spawn seen
+  // at all must have been DENIED, and the selftest plants a row to prove the
+  // oracle can still return false.
   const trips = sb ? readJsonl(sb.tripwire) : [];
-  const allowedBilling = trips.filter((t) => t.kind === "spawn-billing" && t.allowed);
+  const billingSeen = trips.filter((t) => t.kind === "spawn-billing" || t.kind === "path-shim");
+  const undenied = billingSeen.filter((t) => t.denied === false);
   return {
-    ok: ours.length === 0 && allowedBilling.length === 0,
+    ok: ours.length === 0 && undenied.length === 0,
+    billing_seen: billingSeen.length,
+    undenied: undenied.length,
     added: parsed.length,
     ours: ours.length,
     denied_billing_attempts: trips.filter((t) => t.kind === "spawn-billing").length,
@@ -266,7 +281,17 @@ function ci() {
     assertArmed(sb);
     console.log(`\n=== CI LANE — a git-ls-files checkout with ALL FOUR DAEMONS UNREACHABLE ===`);
     console.log(`sandbox: ${sb.root}  (${sb.tracked} tracked files)\n`);
-    const r = runIn(sb, [join(sb.root, "scripts", "awayday.mjs"), "run"], { label: "awayday", timeout: 600000 });
+    // ⚠ THE SHELL IS ALLOWED HERE, AND ONLY HERE. awayday runs its jobs as
+    // `npm run …`, which on Windows goes through cmd.exe — and the collar denies
+    // shells by default, so the first CI run failed on the AUDIT'S OWN COLLAR and
+    // said nothing whatsoever about CI. A reproduction that fails for a reason the
+    // real runner does not have is not a reproduction.
+    // What stays denied is the thing E1 is actually about: the NETWORK, and with
+    // it the four localhost daemons (4111/4112/4113/5600) that answer on his
+    // laptop and never on a runner. Billing binaries stay denied too.
+    const r = runIn(sb, [join(sb.root, "scripts", "awayday.mjs"), "run"], {
+      label: "awayday", timeout: 900000, env: { ARSENAL_AUDIT_ALLOW_SHELL: "1" },
+    });
     console.log(r.out.split("\n").slice(-60).join("\n"));
     console.log(`\naway-day exit code: ${r.code}`);
     const trips = readJsonl(sb.tripwire);
@@ -331,8 +356,18 @@ function selftest() {
   // simply not carried back here — which is its own small lesson about repairing
   // a class rather than an instance.
   const money = moneyOracle(before, after);
-  assert("THE MONEY ORACLE — no ledger row is attributable to the audit, and zero billing spawns were allowed",
+  assert("THE MONEY ORACLE — no ledger row is attributable to the audit, and no billing spawn went undenied",
     money.ok, money.detail);
+  // ⚠ AND IT MUST BE ABLE TO FAIL. An oracle whose arms are structurally empty
+  // passes forever and proves nothing — which is exactly what this one did until
+  // the semantic pass caught it. Planting a row it MUST reject is the only way to
+  // know the guard is alive. A negative control for the negative control.
+  const planted = moneyOracle(
+    { rows: 0, lines: [] },
+    { rows: 1, lines: [JSON.stringify({ ts: new Date().toISOString(), job: "audit_planted_probe", total_tokens: 999 })] },
+    null,
+  );
+  assert("…and the oracle CAN FAIL — a planted audit-attributed ledger row is rejected", planted.ok === false, JSON.stringify(planted));
   assert("…and brain_out/ gained no FILES (a live daemon may restamp mtimes; it must not create outputs)",
     after.brainOutFiles === before.brainOutFiles,
     `files ${before.brainOutFiles}→${after.brainOutFiles}`);
