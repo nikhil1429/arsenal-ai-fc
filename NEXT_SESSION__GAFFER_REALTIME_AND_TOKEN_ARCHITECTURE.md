@@ -7,8 +7,11 @@
 > disagree, the section is the one that was edited last; check `git log`.
 >
 > **DONE + PROVEN:** C1 · C2 · B1 · B2 · B4 · B5 · B7 · B8 · B9 · B10 · B12 · B13 ·
-> B14 · B15 · E2 · E6 · E8(partly) · C3.8 · the whole of A (it is the architecture
+> B14 · B15 · E6 · E8(partly) · C3.8 · the whole of A (it is the architecture
 > B1–B15 were built to, not separate work).
+> **E2 is PARTLY closed and its section says exactly how far** — the meter was broken
+> AND the night is genuinely full; C1 fixed only the first. Read that line before
+> assuming ConceptGraph is fine.
 >
 > **THREE FINDINGS IN THIS DOCUMENT WERE WRONG, all three caught by measuring:**
 > 1. **C1's flagged contradiction is resolved and BOTH halves were true** — but in
@@ -368,7 +371,7 @@ without `gh` (not installed). **NEXT: install `gh`, or have him paste the first 
 NOT guess at a third cause.** This is why card c36 keeps re-dealing to him — *"c36 keeps on
 happening every single time."*
 
-**E2. ✅ CLOSED 12 Aug — VERIFIED, not assumed.** C1 was the cause; `cortex consolidate` now exits 0 (38 nodes, 62 edges, 19,159 tok) running the scheduled task's exact command line. **A SECOND daily RED was found beside it and also fixed: `ArsenalFC-Morning-Conductor`.** Two steps blew the flat 180s step budget, neither of them hung — `heartbeat` is a CHAIN OF EIGHT organs each with its own 120s budget inside one 180s box (four of the eight measured 179.4s), and `mirror` is the FIRST step doing a NETWORK fetch on a just-woken laptop (186,377ms cold vs 2s warm; its own scheduled run at 09:20 succeeded in full). Per-step budgets, derived from those measurements. Commit `c74cc83`.
+**E2. ⚠ PARTLY CLOSED 12 Aug — and the honest version matters, because the first version of this line OVERCLAIMED.** C1 was A cause, not THE cause. `cortex consolidate` now runs whenever headroom exists — proven twice live, exits 0, 38 nodes / 62 edges / 19,159 tok, via the scheduled task's exact command line. **BUT the task's real slot is DAILY 03:00, and measured at that slot the 5h window carried 27,34,271 weighted against an overnight cap of 26,12,500 — genuinely over.** So it would still have starved this morning. The meter was broken AND the night is genuinely full; C1 fixed the first only. **The remaining pressure is the NIGHTSHIFT lane, not the DMN**: in that window `ns_pre_answers` 6,16,346 · `dmn_counter` 4,12,453 · `dmn_rollout` 3,09,190 · `ns_grade_probes` 2,02,511 — the DMN is only 26% of the window that starved it. NEXT: either move the 03:00 slot off the tail of a saturated night, or measure the nightshift lane the way C3.8 measured the DMN. Do NOT raise the ceiling to make this go away — it is now a MEASURED ceiling. **A SECOND daily RED was found beside it and also fixed: `ArsenalFC-Morning-Conductor`.** Two steps blew the flat 180s step budget, neither of them hung — `heartbeat` is a CHAIN OF EIGHT organs each with its own 120s budget inside one 180s box (four of the eight measured 179.4s), and `mirror` is the FIRST step doing a NETWORK fetch on a just-woken laptop (186,377ms cold vs 2s warm; its own scheduled run at 09:20 succeeded in full). Per-step budgets, derived from those measurements. Commit `c74cc83`.
 
 **E3. `projection-stale` (RED, unrepaired).** `OPPONENT_SCOUT.md` was modified after
 `dossier_weights.json` was generated, so **all seven dossier readers run on the old opponent
