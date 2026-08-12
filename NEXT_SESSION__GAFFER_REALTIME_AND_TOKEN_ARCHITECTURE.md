@@ -6,9 +6,15 @@
 > Statuses are marked inline in every section too. Where this list and a section
 > disagree, the section is the one that was edited last; check `git log`.
 >
-> **DONE + PROVEN:** C1 · C2 · B1 · B2 · B4 · B5 · B7 · B8 · B9 · B10 · B12 · B13 ·
-> B14 · B15 · E6 · E8(partly) · C3.8 · the whole of A (it is the architecture
-> B1–B15 were built to, not separate work).
+> **DONE + PROVEN — ALL OF B (B0–B15), ALL OF C, ALL OF D, and A:** C1 · C2 · C3 ·
+> B0–B15 · D · E2(partly) · E3 · E4 · E6 · E7 · E8 · plus THE_GAFFER.md §9 (canon,
+> on his 12 Aug ruling). **A is not separate work** — it is the architecture B1–B15
+> were built to. The engineering record is `GAFFER_REALTIME__BUILD_NOTES.md`.
+>
+> **THE TWO THINGS THAT NEEDED HIS WORD ARE CLOSED** (he ruled 12 Aug, "do both"):
+> `THE_GAFFER.md` §9 written, and **E7 turned out to need no code at all** — the
+> two-writer breach was real when written on 10 Aug and repaired the SAME DAY; canon
+> had simply never been updated. Now held by a test that greps the whole tree.
 > **E2 is PARTLY closed and its section says exactly how far** — the meter was broken
 > AND the night is genuinely full; C1 fixed only the first. Read that line before
 > assuming ConceptGraph is fine.
@@ -25,10 +31,18 @@
 > 3. **E6 is a misread, not a dead wire** — `auto_hits` is a PER-RULE field inside
 >    `rules[]`, never a top-level key. Live: 277 auto-hits across 12 rules.
 >
-> **STILL OPEN (honest list):** B3 · B6 · B11 · E1 · E3 · E5 · E7 · E9 · E10 · F.
-> **B3 is the biggest remaining piece** and the keystone of A2/A3 — its delivery
-> channel now exists (B5 proved the `realtimeInput` lane end-to-end), so what is
-> left is the Flash watcher itself, not the wiring.
+> **STILL OPEN — and it is now a short, honest list:** **E1** (away-day CI: the
+> failing step is finally IDENTIFIED and reproduced locally with no `gh` install —
+> the public Actions API and a bare-checkout sandbox did it) · **E5** (Tier-2 stays
+> OFF by his ruling; the REDs it existed to repair are resolved) · **E9** (his call —
+> a NEW file in a PUBLIC repo) · **E10** (`wake-economy` needs 8 more cortex rows =
+> time, not work; `forge-stale-open` is HIS study loop) · **F** (M02–M04 are his to
+> fire; nobody else can).
+>
+> **THE ONE THING TO VERIFY NEXT AND NOT ASSUME:** the night reserve predicts that
+> `diary` produces its FIRST EVER page and `cortex consolidate` stops failing, on the
+> next overnight run. Both are now gated at the cause. **Check the artifacts, not the
+> code.**
 >
 > **ONE THING THAT NEEDS HIS WORD:** `THE_GAFFER.md` is canon and was NOT edited.
 > The live constitution in `dugout.mjs` now carries five laws it does not. They
@@ -131,7 +145,7 @@ possible, and the whole loop O(1).**
 - **CONSUMER:** B3, B1's re-seed, B4's briefing, the Gaffer via injection
 - **DONE:** the state answers "where are we?" without reading the transcript
 
-### B3 — THE SUPERVISOR ⬜ **NOT DONE — THE BIGGEST REMAINING PIECE.** Its inputs now all exist (B2's rolling state, B8's standing instructions, B10's score) and B5 proved the `realtimeInput` delivery lane end-to-end. What is missing is only the Flash watcher itself.
+### B3 — THE SUPERVISOR ✅ DONE 12 Aug — **built FREE and deterministic, NOT on Flash, and that is a deliberate departure from A2.** Every note A2 asks for is something the rolling state already KNOWS, so a model asked "did he repeat himself?" would be guessing at a fact it could get wrong, cost a tank, and add a round-trip per turn. Five detectors, priority-ordered. The monologue threshold is DERIVED from his own forty-second law at ~150 wpm (~100 words); measured, 13 of 133 of his real Gaffer turns broke it and the longest ran **102 SECONDS of continuous speech**. Measured → found wrong → fixed → re-measured: the first replay fired on **86%** of turns (open_question never cleared, so "you moved on" re-fired forever) and now fires on **18%**, silent on 82%.
 His complaints were about ATTENTION, not depth: *"you forgot what we were doing"* · *"did you
 forget the intensity thing?"* · *"why are you talking to me in a different accent all of a
 sudden?"* · saying "samajh nahi aaya" and being walked past. It pushes notes through the SAME
@@ -163,7 +177,7 @@ mid-conversation. **The most conspicuously missing wire in "one organism".**
 - **CONSUMER:** the Gaffer and the Claude Code surface, both ways
 - **DONE:** something said HERE is known THERE within seconds, and the reverse
 
-### B6 — PRE-COMPUTE THE INTELLIGENCE ⬜ NOT DONE (night lane).
+### B6 — PRE-COMPUTE THE INTELLIGENCE ✅ DONE 12 Aug — **as ASSEMBLY, not generation, and the measurement is why.** Every input already exists on disk: 4 locked capsules carrying 112 of his own doubts, 11 traps on tokenization alone, the due queue, nemesis, calibration. Assembly is free and instant and cannot be stale — a sitting generated at 02:40 is already wrong if he closes an axis at 09:00. **Deliberately NOT built: a new nightly LLM job** (the night lane is already the largest consumer on the board, and generating prose that exists in his own words would break B15 — his capsule IS the source).
 Overnight, when the budget is idle, a smart model writes the whole sitting: the plan per axis,
 the order, the analogies, where he will stumble and what to say when he does. `pre_answers`
 already predicts his next 15–25 doubts, so the machinery exists. **Flash stays Flash — but the
@@ -206,7 +220,7 @@ there is no "evolving according to me" — which is exactly what he asked for an
 - **CONSUMER:** the Gaffer's own instructions next session; the Boot Room as evidence
 - **DONE:** a bad sitting changes the next one without him saying anything
 
-### B11 — SESSION READY BEFORE HE ARRIVES ⬜ NOT DONE.
+### B11 — SESSION READY BEFORE HE ARRIVES ✅ DONE 12 Aug — same assembly as B6. Three defects caught by RUNNING it and reading the output: a **guessed field name** (`rejirah.max_overdue_days`, which does not exist) made the sort a no-op so it opened on the WRONG concept; `weaknesses.headline` is an OBJECT and printed a literal `[object Object]` into his live preamble; an **empty array is truthy** so an empty danger_zone rendered a bare `[]` as a finding. All three held by assertion.
 At 06:00 the machine already knows he has four overdue Re-Jirah rounds. Pre-load so the tab
 opens warm.
 - **IN:** morning state (due rounds, night output, cards) · **OUT:** a warm prepared session
