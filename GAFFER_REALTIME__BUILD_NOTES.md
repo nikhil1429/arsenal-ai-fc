@@ -326,6 +326,40 @@ starts from a different baseline there. **Still a hypothesis. Read the next real
 > files a selftest could plausibly touch?), and inventing an answer at the end of a long
 > session is how a guessed threshold gets into this repo. It is written down instead.
 
+### 🔴 THE ACTUAL FINDING — E1 FAILS IN SEVEN SECONDS, AND THAT KILLS EVERY HYPOTHESIS ABOVE
+
+Pushed, then read the run back through §6's `curl` method. Run `31575341965`, commit `9b14057`:
+
+```
+JOB:  public-safe-chores -> failure
+STEP: Run node scripts/awayday.mjs run -> failure
+      started 2026-08-12T07:46:11Z
+      ended   2026-08-12T07:46:18Z      <-- SEVEN SECONDS
+```
+
+**The two selftest suites take ~3 MINUTES locally.** A seven-second failure means `awayday.mjs`
+dies at STARTUP, before a single selftest runs. `npm ci` passed, so it is not dependencies.
+
+**That invalidates every hypothesis in this section and in the worklist**, all of which assumed
+a *selftest* was failing:
+- ~~the four localhost daemons~~ — no selftest ever runs
+- ~~the hermeticity race~~ — the suite never starts
+- ~~the platform~~, ~~`.git`~~, ~~`ts-fsrs`~~, ~~`validators.mjs`~~ — already eliminated
+- ~~my B6/B11 assertions~~ — real, fixed, and never the original cause
+
+Two candidates checked and **ruled out** immediately: `ci_manifest.json` IS tracked (so CI has
+it), and the mode dispatch refuses only on an unknown mode, which `run` is not.
+
+**WHERE THE NEXT SESSION SHOULD START — and it is now a small, sharp question:**
+what can make `node scripts/awayday.mjs run` exit non-zero within seven seconds on a clean
+Windows checkout? Look at module-load-time reads and the earliest gates in `main()`, NOT at
+the selftests. The `/logs` endpoint needs auth, so the cheapest read is to add a step that
+echoes the failure, or run `awayday list` / `awayday exposure` in CI where the output is short
+enough to survive.
+
+> **Six candidate causes eliminated by measurement across this session.** The seventh will be
+> found by looking at the first seven seconds, not the next three minutes.
+
 **The one thing to verify next, and not assume:** §1.4 predicts `diary` produces its first
 page and `cortex consolidate` stops failing on the next overnight run. Both are now gated at
 the cause. **Check the artifacts, not the code.**
