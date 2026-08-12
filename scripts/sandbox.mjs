@@ -89,6 +89,9 @@ export function buildSandbox(opts = {}) {
   mkdirSync(join(audit, "shim"), { recursive: true });
   mkdirSync(join(root, ".home"), { recursive: true });
   mkdirSync(join(root, ".appdata", "npm"), { recursive: true });
+  mkdirSync(join(root, ".npm-cache"), { recursive: true });
+  mkdirSync(join(root, ".localappdata"), { recursive: true });
+  writeFileSync(join(root, ".npmrc"), "audit=false\nfund=false\nupdate-notifier=false\n");
 
   const tripwire = join(audit, "tripwire.jsonl");
   const heartbeat = join(audit, "heartbeat.jsonl");
@@ -115,6 +118,17 @@ export function buildSandbox(opts = {}) {
     HOME: join(root, ".home"),
     USERPROFILE: join(root, ".home"),
     APPDATA: join(root, ".appdata"),
+    // npm keeps its cache in %LOCALAPPDATA%\npm-cache, which is OUTSIDE the
+    // sandbox, so `npm run …` inside the collar died on EACCES before running a
+    // single test. Measured on the first CI-lane run, 12 Aug 2026. The fix is to
+    // move npm's own dirs INTO the sandbox rather than to widen the collar —
+    // widening it to make a red go away is how a collar quietly stops being one.
+    npm_config_cache: join(root, ".npm-cache"),
+    npm_config_userconfig: join(root, ".npmrc"),
+    npm_config_update_notifier: "false",
+    npm_config_fund: "false",
+    npm_config_audit: "false",
+    LOCALAPPDATA: join(root, ".localappdata"),
     ANTHROPIC_API_KEY: "sk-ant-SANDBOX-JUNK-refuse-me",
     ARSENAL_AUDIT_COLLAR: root,
     ARSENAL_AUDIT_TRIPWIRE: tripwire,
