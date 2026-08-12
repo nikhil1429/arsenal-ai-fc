@@ -766,7 +766,21 @@ function rootSets() {
   for (const f of mdFiles) {
     if (basename(f) === "ARSENAL_FC_FULL_REPO_BUNDLE.md") continue;  // a generated mirror of the repo; citing it would cite everything
     const txt = readFileSync(f, "utf8");
-    for (const m of txt.matchAll(VERB_AFTER_PATH)) noteDoc(`${m[1]}.mjs`, m[2]);
+    // ⚠ ONLY INSIDE CODE SPANS. Running the verb regex over raw prose harvests
+    // the next ENGLISH WORD after a path: `scripts/conductor.mjs and …` yielded
+    // the verb `and`, and `scripts/course.mjs is …` yielded `is`. 16 doc-cited
+    // "broken edges" of which 10 were sentences. A command in these docs is
+    // always written in backticks or a fence, so that is the only place to look —
+    // which is a rule about how the corpus is WRITTEN, not a stopword list to
+    // maintain forever.
+    const codeSpans = [
+      ...[...txt.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
+      ...[...txt.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((m) => m[1]),
+    ].join("\n");
+    for (const m of codeSpans.matchAll(VERB_AFTER_PATH)) noteDoc(`${m[1]}.mjs`, m[2]);
+    // the ORGAN itself is still counted from the whole document — a doc merely
+    // NAMING an organ is a real citation, even in prose.
+    for (const m of txt.matchAll(VERB_AFTER_PATH)) noteDoc(`${m[1]}.mjs`, null);
   }
 
   return { sched, skills, hooks, docCited, mdFiles };
@@ -1043,6 +1057,21 @@ export function verbGraph(ir) {
     }
   }
 
+  // DOC-CITED BROKEN EDGE — a doc, a skill or a card TELLS HIM to type a verb the
+  // organ cannot take. This is not a documentation nit; it is precisely how the
+  // captain's-call bug reached him. Twenty-seven cards each printed
+  // `captains_call.mjs answer <id>` and nothing on the other end could receive the
+  // word, and no organ→organ edge existed to catch it because the caller was HIM.
+  const docBrokenEdges = [];
+  for (const d of ir.roots.doc_cited) {
+    const k = known(d.script);
+    if (!k || !k.size) continue;
+    for (const verb of d.verbs) {
+      if (!verb || k.has(verb)) continue;
+      docBrokenEdges.push({ caller: "docs/skills", callee: d.script, verb, why: "a doc or skill instructs a verb the organ does not dispatch" });
+    }
+  }
+
   // DANGLING LANE — "27 dealt / 0 answerable", stated as a graph property: a file
   // whose WRITERS are all reachable and whose READERS are all unreachable.
   const dangling = [];
@@ -1055,7 +1084,7 @@ export function verbGraph(ir) {
     if (wOk && !rOk) dangling.push({ path: f.path, writers: f.writers, readers: f.readers });
   }
 
-  return { orphanVerbs, brokenEdges, humanOnly, headerDrift, dangling, invoked: [...invoked].map(([s, v]) => ({ script: s, verbs: [...v] })) };
+  return { orphanVerbs, brokenEdges, docBrokenEdges, humanOnly, headerDrift, dangling, invoked: [...invoked].map(([s, v]) => ({ script: s, verbs: [...v] })) };
 }
 
 // ── the token-spend edges, enumerated ────────────────────────────────────────
@@ -1165,8 +1194,18 @@ function main() {
   if (mode === "selftest") return selftest();
   if (mode === "build") { const ir = build(); save(ir); console.log(`xray: ${ir.organs_parsed} organs · ${ir.files.length} files · ${ir.unresolved_sinks} unresolved → ${relRepo(OUT)}`); return; }
   if (mode === "report") return report();
-  if (mode === "q") { const ir = existsSync(OUT) ? load() : build(); console.log(JSON.stringify(queries(ir), null, 1)); return; }
-  if (mode === "verbs") { const ir = existsSync(OUT) ? load() : build(); console.log(JSON.stringify(verbGraph(ir), null, 1)); return; }
+  // ⚠ QUERIES REBUILD BY DEFAULT. These used to prefer the committed
+  // xray_graph.json whenever it existed, which meant every query answered from a
+  // SNAPSHOT of the tree rather than the tree. It was caught by the Bug Museum:
+  // two exhibits were injected into a sandbox and "not detected", because `q` and
+  // `verbs` were reading the graph committed BEFORE the injection. That is the
+  // repo's own signature failure — a cached artefact confidently answering
+  // questions about code it has never seen — living inside the tool built to find
+  // it. audit.mjs shells both of these, so it was affected too. `--cached` is
+  // available for a deliberate fast read; it is never the default.
+  const cached = process.argv.includes("--cached");
+  if (mode === "q") { const ir = cached && existsSync(OUT) ? load() : build(); console.log(JSON.stringify(queries(ir), null, 1)); return; }
+  if (mode === "verbs") { const ir = cached && existsSync(OUT) ? load() : build(); console.log(JSON.stringify(verbGraph(ir), null, 1)); return; }
   if (mode === "swallow") {
     const ir = existsSync(OUT) ? load() : build();
     const sw = Object.entries(ir.organs).flatMap(([o, x]) => x.swallows.map((s) => ({ organ: o, ...s })));

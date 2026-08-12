@@ -183,6 +183,29 @@ schtasks /Create /F /TN "ArsenalFC-WakeProbe" /TR "wscript.exe `"$repo\setup\hid
 $wp = Get-ScheduledTask -TaskName "ArsenalFC-WakeProbe" -ErrorAction SilentlyContinue
 if ($wp) { $wp.Settings.WakeToRun = $true; $wp.Settings.StartWhenAvailable = $false; $wp | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-WakeProbe (03:52, WakeToRun, NO catch-up — a woken line means a real wake)" }
 
+# ── THE AUDIT ORGANS (12 Aug 2026) ──────────────────────────────────────────
+# An audit that runs once is a hypothesis with a date on it. This repo already
+# has a graveyard of one-off audits (#106/#107/#108) whose findings were stale
+# within days, so the measurement is SCHEDULED or it does not exist.
+#
+# Deliberately NOT in the 22:00-08:00 band. That band already carries 21 tasks,
+# all with StartWhenAvailable, all firing at once on a laptop that sleeps — the
+# catch-up herd this very audit measures. Adding the auditor to the herd it
+# audits would be the joke that writes itself. 13:10 is a waking hour, and
+# StartWhenAvailable is OFF so a missed audit is simply missed rather than
+# stacked onto tomorrow's wake.
+schtasks /Create /F /TN "ArsenalFC-Audit" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\audit.mjs`" run >> $repo\scripts\audit.log 2>&1" /SC DAILY /ST 13:10 | Out-Null
+$au = Get-ScheduledTask -TaskName "ArsenalFC-Audit" -ErrorAction SilentlyContinue
+if ($au) { $au.Settings.StartWhenAvailable = $false; $au | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Audit (13:10 daily, NO catch-up - one health number, at most one card)" }
+
+# THE BUG MUSEUM, weekly. Every real historical bug is re-introduced into a
+# sandbox and the system must still catch it. It costs minutes, so it runs once a
+# week rather than nightly, and Sunday 19:00 is before the Boot Room's 20:00 slot
+# so a regression in the detectors is known before the genome proposal reads them.
+schtasks /Create /F /TN "ArsenalFC-BugMuseum" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\mutagen.mjs`" museum >> $repo\scripts\audit.log 2>&1" /SC WEEKLY /D SUN /ST 19:00 | Out-Null
+$bm = Get-ScheduledTask -TaskName "ArsenalFC-BugMuseum" -ErrorAction SilentlyContinue
+if ($bm) { $bm.Settings.StartWhenAvailable = $false; $bm | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-BugMuseum (SUN 19:00 - six historical bugs, re-caught or the number drops)" }
+
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"
 Write-Host "Post-match stays a human ritual: npm run postmatch (30 seconds, evening)."

@@ -514,3 +514,126 @@ through §6's `curl` rather than assume any of the above.
 
 *Written 12 Aug 2026, at the end of the session that did the work. Every claim in it is
 either a measurement or a pointer to one.*
+
+---
+
+# THE AUDIT ORGANS — what was built, 12 Aug 2026 (session 2)
+
+## 0 — THE ONE-LINE STORY
+
+The repo had a graveyard of one-off audits (#106/#107/#108) whose findings were
+stale within days. This session did not do another one. It built **seven organs
+that measure the organism continuously**, wired them into the suite AND the
+schedule, and proved them by **re-introducing five of this repo's six real
+historical bugs and catching them**.
+
+`node scripts/audit.mjs run` · one health number, at most one card, ever.
+
+## 1 — THE ORGANS
+
+| organ | what it is | sole writer of |
+|---|---|---|
+| `audit_preload.mjs` | the collar + the tracer, via `--import` | — |
+| `sandbox.mjs` | `git ls-files` sandbox, 4 layers, 4 canaries | — |
+| `xray.mjs` | the static IR — points-to, interprocedural | `xray_graph.json` |
+| `mutagen.mjs` | panic build · state mutants · THE BUG MUSEUM | — |
+| `blackbox.mjs` | runtime truth, reconciled against the IR | — |
+| `treasury.mjs` | meter consistency · the ρ table | — |
+| `herd.mjs` | the temporal / contention model | — |
+| `audit.mjs` | THE FRONT DOOR | `audit_ledger.jsonl` |
+
+## 2 — THE MEASURED FINDINGS (all reproducible, none hand-copied)
+
+- **THE CATCH-UP HERD IS REAL.** 26 of 26 enabled tasks carry
+  `StartWhenAvailable`; **21 sit in the 22:00–08:00 band the laptop sleeps
+  through**. On wake they fire simultaneously, in arbitrary order, at the wrong
+  hour — and every `localDate(now)` inside them derives the wrong day-key.
+  `03:44:00 ×6` (brain · distiller · dmn · hippocampus · throwin · touchline).
+  Independently reproduces the brief's figure from a different source.
+- **SILENT LOST UPDATES**: `brain_queue.json` is written by `brain.mjs` AND
+  `conductor.mjs`, both scheduled. writeAtomic makes the clobber invisible.
+- **PANIC BUILD**: 787 swallowing catch sites; 14 production-lane deaths, of
+  which **3 NO-WRITER and 3 CROSS-ORGAN** are real (6 were correct first-run
+  self-healing and are reported as such).
+- **ρ**: `midday_digest_3` at **39.6**, `midday_digest_2` at **31.9**.
+- **13 IR findings** (1 dead read · 3 two-writer · 5 orphan lane · 1 ghost ·
+  3 sole-writer drift), down from **414 raw**.
+
+## 3 — WHERE MEASURING CHANGED THE BUILD (again — this is the part worth keeping)
+
+Every single false-positive collapse below was **my analyzer being wrong**, found
+by checking the shape on disk before asserting. Not one was the repo's fault.
+
+1. **A per-param cap of 8** silently truncated `readJson(p)`, which dugout calls
+   with ~40 distinct paths — so `fsrs_store.json`, a file with **seven readers**,
+   reported as an orphan lane. *A truncation that produces a plausible wrong
+   answer is worse than one that crashes.*
+2. **Default parameter values** (`function ledgerRows(stateDir = STATE_DIR)`) were
+   unmodelled — the house DI idiom — so `harvest.mjs` read as writing a ledger it
+   never reads. A documented design reported as a defect.
+3. **Zero-arg path thunks** (`const LEDGER = () => join(…)`) made `gate_tune`'s own
+   declared-sole-writer file show zero writers.
+4. **Verb extraction was a guessed name list.** 29 BROKEN EDGEs → 0, and none was
+   ever real.
+5. **`\s+` in a doc regex crosses newlines** → the verb `dressing-room`.
+6. **`(?:json|jsonl)` matches `json` first**, truncating every `.jsonl` path → 141
+   fabricated "dead path" findings.
+7. **`.claude/worktrees/` holds a full doc copy** → every doc finding counted twice.
+8. **The health scalar saturated at 0** and could never visibly improve.
+9. **The treasury's outlier gate required n≥3**, so it printed "0 lanes at ρ>25"
+   with 31.9 and 39.6 in the table two lines above it.
+10. **`xray q`/`verbs` preferred the COMMITTED IR** — a cached artefact confidently
+    answering questions about code it had never seen, living inside the tool built
+    to find exactly that. Caught only by the Bug Museum.
+
+**And three where the audit nearly damaged the repo:**
+
+- The taint set was pre-seeded with the guessed name `action`, so
+  `action.kind === "at-source"` was harvested as a CLI verb. The auto-fixer was
+  **one dry-run away** from writing `at-source`, `restart-dispatch` and `RED` into
+  31 organ headers as if they were commands.
+- The auto-fixer **did run** and wrote 4 edits; **2 were wrong** (it extended an
+  OPTION-VALUE bracket: `[--tier T0|brief|packet|…]`) and were reverted by hand.
+  **The deeper fault was the ORACLE** — G-FIRST passed both, because it asked only
+  "does the verb appear on the line". An oracle that cannot tell a good fix from a
+  bad one is not an oracle.
+- The fixer wrote `list|tick` into xray's own header. Those leaked from **xray's
+  own comments**: the `|| "default"` scan covers a whole arrow-function initialiser
+  span, comments included. **The parser read its own documentation as code.**
+
+**And the joke that was also a bug:** the header comment explaining that three
+organs contain literal NUL bytes and are invisible to `grep -rn` was itself
+written **with a literal NUL in it**. `xray.mjs` became the fourth grep-invisible
+file in the repo — its own detector's blind spot, inside its own documentation of
+that blind spot.
+
+## 4 — THE BUG MUSEUM · **5 of 6 CAUGHT** (measured, and the miss is named)
+
+| exhibit | detector | result |
+|---|---|---|
+| B1 dead read (`rejirah_state.json`) | xray Q1 | **CAUGHT** |
+| B2 filter on a field that does not exist | state-mutant matrix | **MISSED** |
+| B3 27 dealt / 0 answerable | xray headerDrift | **CAUGHT** |
+| B4 canon asserting a same-day-fixed defect | docs checker | **CAUGHT** |
+| B5 meter lying about its own components | treasury | **CAUGHT** |
+| B6 green at home, red on CI | the sandbox IS a CI checkout | **CAUGHT** |
+
+**B2 is open and it is the most interesting one.** The mutant applies but no
+detector fires, which means the state-mutant matrix does not yet reach
+`captains_call`'s card filter. Named here rather than quietly dropped, because the
+cheapest way to make a museum read 6-of-6 is to delete the exhibit that misses —
+and the suite now asserts all six exhibits still exist for exactly that reason.
+
+## 5 — WHAT IS STILL OPEN
+
+- **B2** above.
+- **E1 has a lane it never had.** `node scripts/sandbox.mjs ci` runs a
+  `git ls-files` checkout with **all four localhost daemons unreachable by
+  construction** — the one variable no local reproduction could hold constant
+  without stopping his live organism. Not yet run to a conclusion.
+- **`unresolved_sinks` = 4,772**, recorded and asserted non-increasing. That is the
+  analyzer's honest blind spot and it can now only shrink.
+- The auto-fix class is **one rule wide**. Under the four-condition gate, most
+  findings in this repo are genuinely RULINGS, and each now carries WHY in its own
+  words. The sharpest: "fixing" a header that claims SOLE WRITER to match code that
+  disagrees would **paper over a real law breach** — the audit becoming the bug.

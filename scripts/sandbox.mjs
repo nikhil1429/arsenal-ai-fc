@@ -322,10 +322,19 @@ function selftest() {
   } finally { destroy(sb); }
 
   const after = ledgerFingerprint();
-  assert("THE MONEY ORACLE — the live brain_ledger gained ZERO rows during this run",
-    after.rows === before.rows, `before=${before.rows} after=${after.rows}`);
-  assert("…and brain_out/ was not written to either",
-    after.brainOutFiles === before.brainOutFiles && after.brainOutNewest === before.brainOutNewest,
+  // ⚠ THE ORACLE IS ATTRIBUTION, NOT A ROW COUNT — and this assertion is the one
+  // that taught us so. It read `after.rows === before.rows` and went RED on a
+  // full `npm test` (66 → 69) while the collar had denied every spawn: the three
+  // new rows were the LIVE DMN breathing through a multi-minute suite window.
+  // organism_test's own hermeticity check carries the identical scar and calls it
+  // "flapping". The same fix landed in blackbox and mutagen earlier today and was
+  // simply not carried back here — which is its own small lesson about repairing
+  // a class rather than an instance.
+  const money = moneyOracle(before, after);
+  assert("THE MONEY ORACLE — no ledger row is attributable to the audit, and zero billing spawns were allowed",
+    money.ok, money.detail);
+  assert("…and brain_out/ gained no FILES (a live daemon may restamp mtimes; it must not create outputs)",
+    after.brainOutFiles === before.brainOutFiles,
     `files ${before.brainOutFiles}→${after.brainOutFiles}`);
 
   console.log(`\nsandbox: ${pass} passed, ${fail} failed`);

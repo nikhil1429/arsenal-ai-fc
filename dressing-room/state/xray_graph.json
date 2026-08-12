@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-12T12:03:45.395Z",
+ "built_at": "2026-08-12T12:07:42.572Z",
  "organs_parsed": 84,
  "organs_expected": 84,
  "parse_errors": [],
- "unresolved_sinks": 4755,
+ "unresolved_sinks": 4772,
  "organs": {
   "audit.mjs": {
    "loc": 503,
@@ -7861,7 +7861,7 @@
    "unresolved": 32
   },
   "mutagen.mjs": {
-   "loc": 422,
+   "loc": 581,
    "reads": [
     {
      "path": "dressing-room/state/xray_graph.json",
@@ -7880,10 +7880,10 @@
     {
      "path": "scripts",
      "lines": [
-      381,
-      381,
-      381,
-      381
+      539,
+      539,
+      539,
+      539
      ],
      "fixture": true
     }
@@ -7893,6 +7893,7 @@
    "swallows": [],
    "verbs": [
     "code",
+    "museum",
     "panic",
     "selftest",
     "state"
@@ -7906,14 +7907,16 @@
    ],
    "exports": [
     "CODE_OPS",
+    "MUSEUM",
     "OPERATORS",
     "PANIC_MARK",
+    "museum",
     "panic",
     "panicGuard",
     "panicRewrite",
     "stateMatrix"
    ],
-   "unresolved": 40
+   "unresolved": 57
   },
   "nemesis.mjs": {
    "loc": 599,
@@ -14771,7 +14774,7 @@
    "unresolved": 20
   },
   "xray.mjs": {
-   "loc": 1182,
+   "loc": 1211,
    "reads": [
     {
      "path": "package.json",
@@ -14785,24 +14788,24 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      909,
-      1072,
-      1150,
-      1168,
-      1169,
-      1171,
-      909,
-      1072,
-      1150,
-      1168,
-      1169,
-      1171,
-      909,
-      1072,
-      1150,
-      1168,
-      1169,
-      1171
+      923,
+      1101,
+      1179,
+      1197,
+      1198,
+      1200,
+      923,
+      1101,
+      1179,
+      1197,
+      1198,
+      1200,
+      923,
+      1101,
+      1179,
+      1197,
+      1198,
+      1200
      ],
      "fixture": false
     },
@@ -14829,8 +14832,8 @@
     {
      "path": "scripts",
      "lines": [
-      780,
-      780
+      794,
+      794
      ],
      "fixture": false
     },
@@ -14844,8 +14847,8 @@
     {
      "path": "dressing-room/state",
      "lines": [
-      848,
-      849
+      862,
+      863
      ],
      "fixture": false
     }
@@ -14854,11 +14857,11 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      906,
-      905,
-      906,
-      905,
-      906
+      920,
+      919,
+      920,
+      919,
+      920
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -22741,12 +22744,10 @@
    {
     "script": "hippocampus.mjs",
     "verbs": [
-     "buildRehydrateCartridge",
      "cartridge",
      "consolidate",
      "mark",
-     "recall-hint",
-     "whoCartridge"
+     "recall-hint"
     ]
    },
    {
@@ -22771,9 +22772,7 @@
    },
    {
     "script": "setpiece.mjs",
-    "verbs": [
-     "before"
-    ]
+    "verbs": []
    },
    {
     "script": "viz.mjs",
@@ -22784,10 +22783,8 @@
    {
     "script": "conductor.mjs",
     "verbs": [
-     "and",
      "evening",
      "morning",
-     "must",
      "plan",
      "selftest"
     ]
@@ -22832,7 +22829,6 @@
    {
     "script": "thalamus.mjs",
     "verbs": [
-     "and",
      "selftest",
      "status"
     ]
@@ -22843,8 +22839,7 @@
      "brief",
      "json",
      "nextup",
-     "selftest",
-     "splices"
+     "selftest"
     ]
    },
    {
@@ -22857,8 +22852,6 @@
      "at",
      "brief",
      "ingest",
-     "is",
-     "itself",
      "paste",
      "selftest",
      "status"
@@ -22896,14 +22889,12 @@
    {
     "script": "limits.mjs",
     "verbs": [
-     "human",
-     "in"
+     "human"
     ]
    },
    {
     "script": "dmn.mjs",
     "verbs": [
-     "matches",
      "status"
     ]
    },
@@ -22940,8 +22931,7 @@
    {
     "script": "selfknowledge.mjs",
     "verbs": [
-     "consumers",
-     "itself"
+     "consumers"
     ]
    },
    {
@@ -22989,7 +22979,6 @@
    {
     "script": "mcp-memory.mjs",
     "verbs": [
-     "get",
      "resync",
      "selftest"
     ]
@@ -23009,7 +22998,6 @@
    {
     "script": "oura_coach.mjs",
     "verbs": [
-     "has",
      "selftest"
     ]
    },
@@ -23026,9 +23014,7 @@
    },
    {
     "script": "oura_auth.mjs",
-    "verbs": [
-     "has"
-    ]
+    "verbs": []
    },
    {
     "script": "groundsman.mjs",
@@ -23065,7 +23051,6 @@
      "print",
      "reset-turns",
      "selftest",
-     "to",
      "unhit-auto"
     ]
    },
@@ -23092,6 +23077,13 @@
     "verbs": []
    },
    {
+    "script": "capsule_bridge.mjs",
+    "verbs": [
+     "selftest",
+     "show"
+    ]
+   },
+   {
     "script": "distiller.mjs",
     "verbs": [
      "latency",
@@ -23107,18 +23099,7 @@
     "verbs": []
    },
    {
-    "script": "capsule_bridge.mjs",
-    "verbs": [
-     "selftest",
-     "show"
-    ]
-   },
-   {
     "script": "X.mjs",
-    "verbs": []
-   },
-   {
-    "script": "claudegen.mjs",
     "verbs": []
    },
    {
@@ -23126,6 +23107,10 @@
     "verbs": [
      "show"
     ]
+   },
+   {
+    "script": "claudegen.mjs",
+    "verbs": []
    },
    {
     "script": "scoreboard.mjs",

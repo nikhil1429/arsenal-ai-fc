@@ -350,6 +350,188 @@ const CODE_OPS = {
 };
 
 // ============================================================================
+// THE BUG MUSEUM — the single measurement that proves any of this works
+// ============================================================================
+// §10's question, and the only honest answer to "does your detector catch
+// everything": re-introduce each REAL historical bug into the sandbox, one at a
+// time, and show the system catches it. A measured 5-of-6 is worth infinitely
+// more than an unmeasured claim of "complete", so the count is printed either
+// way and a MISS is never hidden.
+//
+// This is deliberately NOT a "mutation score". No equivalent-mutant adjudication
+// happens here, because adjudication is triage and triage is exactly what the
+// captain must never be handed. Each exhibit is a specific bug that really shipped.
+const MUSEUM = [
+  {
+    id: "B1-dead-read",
+    story: "a read of `rejirah_state.json` — a file NOTHING writes — inside a try/catch, so it failed silently forever and the four overdue Re-Jirah rounds were never surfaced",
+    detector: "xray Q1 (dead read)",
+    apply(sb) {
+      // APPENDED at module scope using the organ's OWN already-resolved constants,
+      // so the path is Const to the points-to analysis. The first version injected
+      // BEFORE STATE_DIR was defined, leaving the path Unknown — and xray never
+      // reports on Unknown, by design. The MUTANT was broken, not the detector.
+      const p = join(sb.root, "scripts", "learnstate.mjs");
+      const src0 = readFileSync(p, "utf8");
+      writeFileSync(p, src0 + `\ntry { readFileSync(join(__dirname, "..", "dressing-room", "state", "museum_never_written.json"), "utf8"); } catch {}\n`);
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "xray.mjs"), "q"], { label: "xray", timeout: 300000 });
+      try { return (JSON.parse(r.out).Q1 || []).some((f) => /museum_never_written/.test(f.path)); } catch { return false; }
+    },
+  },
+  {
+    id: "B2-wrong-field",
+    story: "a filter on `x.status` where the rows actually carry staged_at/fired_at/ingested_at — it matched NOTHING, silently, for days, while M02–M04 sat un-returned",
+    detector: "mutagen state-mutant matrix (the read stops being load-bearing)",
+    apply(sb) {
+      const p = join(sb.root, "scripts", "captains_call.mjs");
+      const s = readFileSync(p, "utf8");
+      // make every card read filter on a field that does not exist
+      writeFileSync(p, s.replace(/\.filter\(\(?c\)? =>/, ".filter((c) => c.status === \"open\" &&"));
+    },
+    detect(sb) {
+      const target = join(sb.root, "dressing-room", "state", "captains_call.json");
+      // captains_call.json is gitignored, so a git-ls-files sandbox never has one
+      // and this exhibit reported N/A — an untested exhibit in the very museum
+      // built to stop untested claims. A MINIMAL FIXTURE is seeded instead, in the
+      // sandbox only. Its shape is the one that matters: rows carrying `dealt`
+      // and `filed_at` and NO `status` field, which is exactly the shape the real
+      // bug filtered against.
+      if (!existsSync(target)) {
+        writeFileSync(target, JSON.stringify({
+          cards: [
+            { id: "m1", line: "museum fixture one", filed_at: "2026-08-01T00:00:00Z", dealt: [] },
+            { id: "m2", line: "museum fixture two", filed_at: "2026-08-02T00:00:00Z", dealt: ["2026-08-02"] },
+          ],
+        }, null, 1));
+      }
+      const args = [join(sb.root, "scripts", "captains_call.mjs"), "status"];
+      const base = runIn(sb, args, { label: "cc", timeout: 60000 });
+      const orig = readFileSync(target, "utf8");
+      const mutated = OPERATORS.RENAME_KEY(orig);
+      writeFileSync(target, mutated);
+      const after = runIn(sb, args, { label: "cc", timeout: 60000 });
+      writeFileSync(target, orig);
+      // the read is DEAD when corrupting the real data changes nothing
+      return after.out === base.out;
+    },
+  },
+  {
+    id: "B3-half-built-lane",
+    story: "27 cards correctly DEALT and 0 ever ANSWERABLE — the answering half was never built, and the lane looked perfectly healthy from outside",
+    detector: "xray headerDrift (declared but not dispatched) + docBrokenEdges",
+    apply(sb) {
+      const p = join(sb.root, "scripts", "captains_call.mjs");
+      const s = readFileSync(p, "utf8");
+      // remove the `answer` verb from dispatch while every caller still invokes it
+      writeFileSync(p, s.replace(/(["'`])answer\1/g, "$1answer__removed$1"));
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "xray.mjs"), "verbs"], { label: "xray", timeout: 300000 });
+      try {
+        const v = JSON.parse(r.out);
+        // The lane is DANGLING when something tells him to type a verb the organ
+        // cannot take. Checked across BOTH edge sets — an organ/root caller, and a
+        // DOC-CITED verb, which is how this bug actually reached him: the card
+        // itself printed `captains_call.mjs answer <id>` for 27 cards and nothing
+        // on the other end could receive the word.
+        const edge = [...(v.brokenEdges || []), ...(v.docBrokenEdges || [])]
+          .some((e) => e.callee === "captains_call.mjs" && /^answer/.test(e.verb));
+        // HEADER DRIFT is the detector that actually fits this bug, and finding
+        // that out was worth the two failed attempts. BROKEN EDGE cannot see it
+        // BY DESIGN: its denominator is deliberately generous (built ∪ header ∪
+        // exports) so that a gap in the parser never manufactures a bug — and
+        // captains_call's own header still advertises `answer`. So the organ
+        // "has" the verb as far as that query is concerned. The shape of this bug
+        // is precisely DECLARED-BUT-NOT-DISPATCHED, which is what headerDrift
+        // measures: the organ's own usage line promising something main() cannot
+        // take. Two queries, two different questions; only one of them is this one.
+        const drift = (v.headerDrift || []).some((d) => d.organ === "captains_call.mjs" && d.not_dispatched.some((x) => /^answer/.test(x)));
+        return edge || drift;
+      } catch { return false; }
+    },
+  },
+  {
+    id: "B4-stale-canon",
+    story: "canon asserting a defect that had been FIXED the same day it was written — and the automated .md sweep that caused it",
+    detector: "audit docs checker (doc-dead-path)",
+    apply(sb) {
+      const p = join(sb.root, "OPS_STATE.md");
+      const s = readFileSync(p, "utf8");
+      writeFileSync(p, s + "\n\nMUSEUM: see dressing-room/state/museum_absent_claim.json for the fix.\n");
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "audit.mjs"), "docs"], { label: "audit", timeout: 120000 });
+      try { return (JSON.parse(r.out).deadPaths || []).some((d) => /museum_absent_claim/.test(d.path)); } catch { return false; }
+    },
+  },
+  {
+    id: "B5-meter-lie",
+    story: "a budget governor metering cheap cache-reads at FULL price and self-tuning from a corrupt observation — it starved live organs for weeks",
+    detector: "treasury meter self-consistency",
+    apply(sb) {
+      const p = join(sb.root, "dressing-room", "state", "brain_ledger.jsonl");
+      const row = { ts: new Date("2026-01-01").toISOString(), job: "museum_lie", input_tokens: 500000, output_tokens: 1000, cache_creation_tokens: 0, cache_read_tokens: 0, total_tokens: 501 };
+      writeFileSync(p, (existsSync(p) ? readFileSync(p, "utf8") : "") + JSON.stringify(row) + "\n");
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "treasury.mjs"), "meter"], { label: "treasury", timeout: 120000 });
+      try { return JSON.parse(r.out).some((b) => b.job === "museum_lie" && b.kind === "UNDER-COUNT"); } catch { return false; }
+    },
+  },
+  {
+    id: "B6-green-at-home-red-on-ci",
+    story: "assertions that passed at home and failed on CI, because they read GITIGNORED state that a clean checkout never has",
+    detector: "the sandbox itself — it IS a git-ls-files checkout, so the gap cannot hide",
+    apply(sb) {
+      // The simplest honest form of this bug: an UNGUARDED read of GITIGNORED
+      // state at module scope. The first version spliced an import and a helper
+      // into the middle of the file and produced something that either did not
+      // parse or never ran — again the mutant, not the detector.
+      const p = join(sb.root, "scripts", "validators.mjs");
+      const src0 = readFileSync(p, "utf8");
+      writeFileSync(p, `import { readFileSync as __mR } from "node:fs";\n__mR(new URL("../dressing-room/state/capsules/tokenization.json", import.meta.url), "utf8");\n` + src0);
+    },
+    detect(sb) {
+      const r = runIn(sb, [join(sb.root, "scripts", "validators.mjs"), "selftest"], { label: "validators", timeout: 60000 });
+      return r.code !== 0;   // the CI world exposes it immediately
+    },
+  },
+];
+
+function museum() {
+  console.log("=== THE BUG MUSEUM — six real historical bugs, re-introduced one at a time ===\n");
+  const results = [];
+  for (const ex of MUSEUM) {
+    const sb = buildSandbox({ trace: false });
+    let caught = null, note = "";
+    try {
+      assertArmed(sb);
+      // CONTROL FIRST: the detector must be SILENT on the clean tree, or a "catch"
+      // proves nothing at all. A detector that always fires is not a detector.
+      const controlOk = ex.detect(sb);
+      ex.apply(sb);
+      caught = ex.detect(sb);
+      if (controlOk === true && caught === true) { note = "DETECTOR ALWAYS FIRES — control was already positive, so this catch is meaningless"; caught = null; }
+    } catch (e) { note = String(e.message).slice(0, 120); caught = null; }
+    finally { destroy(sb); }
+    results.push({ ...ex, caught, note });
+    console.log(`  ${caught === true ? "CAUGHT " : caught === false ? "MISSED " : "N/A    "} ${ex.id.padEnd(28)} ${ex.detector}`);
+    if (note) console.log(`          ${note}`);
+  }
+  const caughtN = results.filter((r) => r.caught === true).length;
+  const missed = results.filter((r) => r.caught === false);
+  const na = results.filter((r) => r.caught === null);
+  console.log(`\n  ${caughtN} of ${MUSEUM.length} historical bugs CAUGHT${na.length ? ` · ${na.length} not testable here` : ""}`);
+  if (missed.length) {
+    console.log(`  MISSED — said out loud, not hidden, because an unmeasured claim of "complete" is worth nothing:`);
+    for (const m of missed) console.log(`    · ${m.id}: ${m.story}`);
+  }
+  return { results, caughtN };
+}
+
+// ============================================================================
 // SELFTEST
 // ============================================================================
 function selftest() {
@@ -396,6 +578,17 @@ function selftest() {
   assert("a mutJson operator on a JSONL body is a NO-OP (n/a), never a silent corruption",
     OPERATORS.RENAME_KEY('{"a":1}\n{"a":2}\n') === '{"a":1}\n{"a":2}\n');
 
+  // THE BUG MUSEUM must stay WIRED and WELL-FORMED. The full run takes minutes
+  // and lives on the schedule (`mutagen museum`); what belongs in a selftest is
+  // the structural guarantee that no exhibit has been quietly deleted — because
+  // the cheapest way to make a museum report 6-of-6 is to remove the exhibits
+  // that miss, and that is the exact dishonesty this whole file exists against.
+  assert("the Bug Museum still holds all six historical bugs", MUSEUM.length === 6, `${MUSEUM.length}`);
+  assert("…and every exhibit has a story, a named detector, an apply and a detect",
+    MUSEUM.every((m) => m.id && m.story && m.detector && typeof m.apply === "function" && typeof m.detect === "function"));
+  assert("…and each exhibit's detector is NAMED, so a 'catch' can be traced to the organ that caught it",
+    MUSEUM.every((m) => /xray|treasury|sandbox|mutagen|audit/i.test(m.detector)));
+
   const after = ledgerFingerprint();
   const money = moneyOracle(before, after);
   assert("THE MONEY ORACLE — no ledger row is attributable to the audit, and zero billing spawns were allowed",
@@ -413,9 +606,10 @@ function main() {
   if (mode === "selftest") return selftest();
   if (mode === "panic") { panic({ full }); return; }
   if (mode === "state") { stateMatrix({ full }); return; }
+  if (mode === "museum") { const r = museum(); process.exit(r.caughtN === 0 ? 1 : 0); }
   if (mode === "code") { console.log(Object.keys(CODE_OPS).join("\n")); return; }
-  console.log("mutagen: panic | state | code | selftest  [--full]");
+  console.log("mutagen: panic | state | museum | code | selftest  [--full]");
   process.exit(1);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
-export { panic, stateMatrix, CODE_OPS, OPERATORS, PANIC_MARK, panicGuard };
+export { panic, stateMatrix, museum, MUSEUM, CODE_OPS, OPERATORS, PANIC_MARK, panicGuard };
