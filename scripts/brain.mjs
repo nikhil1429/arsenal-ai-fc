@@ -4909,8 +4909,15 @@ async function selftest() {
     // and the LIVE graph: brain.mjs's real sibling imports must be in it, or a
     // repair landing in one of them would ride a frozen resident unnoticed.
     const live = sourceGraph(fileURLToPath(import.meta.url), (p) => readFileSync(p, "utf8")).map((p) => basename(p));
-    assert("SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/nikhil_model/captains_call)",
-      ["brain.mjs", "validators.mjs", "manager.mjs", "scoreboard.mjs", "nikhil_model.mjs", "captains_call.mjs"].every((f) => live.includes(f)));
+    // SELF-DESCRIBING ON FAILURE (12 Aug 2026, E1): this assertion fails on the CI
+    // runner and passes in every local reproduction (bare env, TZ=UTC, CRLF clone,
+    // shallow clone) — so when it fails it must SAY which sibling the walk missed
+    // and on what machine shape, because the runner's log is the only place the
+    // difference exists and the annotation tail is the only readable surface.
+    const wanted = ["brain.mjs", "validators.mjs", "manager.mjs", "scoreboard.mjs", "nikhil_model.mjs", "captains_call.mjs"];
+    const missing = wanted.filter((f) => !live.includes(f));
+    assert(`SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/nikhil_model/captains_call)${missing.length ? ` — MISSING: ${missing.join("+")} · walked ${live.length}: ${live.sort().join(",").slice(0, 300)} · node ${process.version} · locale ${Intl.DateTimeFormat().resolvedOptions().locale}` : ""}`,
+      missing.length === 0);
   }
 
   const passed = checks.every(c => c[1]);
