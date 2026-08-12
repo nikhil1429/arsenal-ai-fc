@@ -299,6 +299,33 @@ answers, not a test asserting one is up.
 `curl` method. That is a measurement, not another guess — and it is the fourth candidate
 cause, with three already eliminated.
 
+### A FIFTH candidate, found while running the final suite — and it is a RACE
+
+The last local run before pushing went red on **hermeticity**:
+
+```
+· running all 73 selftests leaves live state untouched
+    MODIFIED state\wall_data.json
+```
+
+It is **not** a selftest doing it. Bisected: `viz.mjs` (the file's sole writer) is clean, and
+so are scoreboard · postmatch · manager · learnstate · captains_call · physio · talk · dugout ·
+brain. An immediate re-run went **42/42 green** with nothing changed.
+
+**The suite takes ~3 minutes and his organism is LIVE while it runs.** A scheduled task wrote
+`wall_data.json` inside that window and the hermeticity check — which can only compare
+before/after — blamed the suite. The check cannot distinguish *"a selftest wrote this"* from
+*"a cron wrote this mid-run"*.
+
+That is worth knowing for its own sake, and it is a **strong E1 candidate too**: CI has no
+crons, but it also has no pre-existing gitignored state, so any check comparing before/after
+starts from a different baseline there. **Still a hypothesis. Read the next real run.**
+
+> Left unfixed deliberately: teaching the hermeticity check to tell a cron from a selftest is
+> real work with a real design question behind it (attribute by process? snapshot only the
+> files a selftest could plausibly touch?), and inventing an answer at the end of a long
+> session is how a guessed threshold gets into this repo. It is written down instead.
+
 **The one thing to verify next, and not assume:** §1.4 predicts `diary` produces its first
 page and `cortex consolidate` stops failing on the next overnight run. Both are now gated at
 the cause. **Check the artifacts, not the code.**
