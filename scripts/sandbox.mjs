@@ -210,11 +210,47 @@ export function canary(sb) {
 export function ledgerFingerprint() {
   const f = join(ROOT, "dressing-room", "state", "brain_ledger.jsonl");
   const outDir = join(ROOT, "brain_out");
-  const rows = existsSync(f) ? readFileSync(f, "utf8").split("\n").filter((l) => l.trim()).length : 0;
+  const lines = existsSync(f) ? readFileSync(f, "utf8").split("\n").filter((l) => l.trim()) : [];
   let newest = 0, files = 0;
   const walk = (d) => { if (!existsSync(d)) return; for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else { files++; const s = statSync(p); if (s.mtimeMs > newest) newest = s.mtimeMs; } } };
   walk(outDir);
-  return { rows, brainOutFiles: files, brainOutNewest: newest };
+  return { rows: lines.length, lines, brainOutFiles: files, brainOutNewest: newest };
+}
+
+// ── THE MONEY ORACLE, DONE PROPERLY ──────────────────────────────────────────
+// A RAW ROW-COUNT DELTA IS NOT A VALID ORACLE ON THIS MACHINE, and finding that
+// out was worth more than the assertion it replaced. blackbox's selftest went RED
+// on "zero live ledger rows added" — correctly, in the sense that rows really had
+// been added, and completely wrongly in the sense that implied: the collar had
+// denied every spawn, and the new rows were the LIVE ORGANISM breathing through
+// the test window (a haiku job at 11:45 and another at 11:48, from the daemon on
+// his laptop). organism_test's own hermeticity check has the same scar and calls
+// it "flapping".
+//
+// The honest question is not "did the file grow" but "did anything I RAN spend
+// money". That is answered two ways, both stable:
+//   1. every new row is checked against the audit's window AND its `job` —
+//      the audit never enqueues a brain job, so a row whose job belongs to the
+//      live schedule is not ours.
+//   2. the collar's own count of ALLOWED billing spawns, which must be ZERO.
+//      Denials are fine — a denial is the proof the collar worked.
+// Weakening the assertion to make a red go away is how a guard stops guarding;
+// making it PRECISE is the repair.
+const AUDIT_JOBS = /^(audit|xray|mutagen|blackbox|treasury|herd|sandbox)/i;
+export function moneyOracle(before, after, sb) {
+  const added = after.lines.slice(before.rows);
+  const parsed = added.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const ours = parsed.filter((r) => AUDIT_JOBS.test(String(r.job || r.kind || "")));
+  const trips = sb ? readJsonl(sb.tripwire) : [];
+  const allowedBilling = trips.filter((t) => t.kind === "spawn-billing" && t.allowed);
+  return {
+    ok: ours.length === 0 && allowedBilling.length === 0,
+    added: parsed.length,
+    ours: ours.length,
+    denied_billing_attempts: trips.filter((t) => t.kind === "spawn-billing").length,
+    live_jobs: [...new Set(parsed.map((r) => String(r.job || "?")))],
+    detail: `${parsed.length} row(s) appended during the window, ${ours.length} attributable to the audit; live jobs seen: ${[...new Set(parsed.map((r) => String(r.job || "?")))].join(", ") || "none"}`,
+  };
 }
 
 // ── CI LANE (E1) ─────────────────────────────────────────────────────────────
