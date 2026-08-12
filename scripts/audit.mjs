@@ -114,6 +114,37 @@ function preconditions({ allowDirty = false } = {}) {
   return { head, dirty: !!dirty, notes };
 }
 
+// ── THE WORKTREE — the fixer NEVER edits the live tree ───────────────────────
+// Shipped without this the first time, and it was the right thing to be called
+// out on: the fixer applied four edits directly to the working tree, two of them
+// wrong, and only a hand-read of the diff caught it. A worktree makes that
+// physically impossible instead of merely regrettable — the live tree he studies
+// from is untouched no matter how badly a rule misbehaves, and the branch is
+// there to inspect, merge, or delete without a single `git revert`.
+export function makeWorktree() {
+  const ts = new Date().toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
+  const branch = `audit/autofix-${ts}`;
+  const dir = join(ROOT, ".audit-worktrees", ts);
+  mkdirSync(join(ROOT, ".audit-worktrees"), { recursive: true });
+  const out = sh("git", ["worktree", "add", "-b", branch, dir, "HEAD"]);
+  if (!existsSync(join(dir, "package.json"))) throw new Error(`audit: could not create the worktree — refusing to fall back to the live tree.\n${out}`);
+  return {
+    dir, branch,
+    commit(msg) {
+      sh("git", ["add", "-A"], { cwd: dir });
+      sh("git", ["-c", "user.name=arsenal-audit", "-c", "user.email=audit@localhost", "commit", "-q", "-m", msg], { cwd: dir });
+      return sh("git", ["rev-parse", "HEAD"], { cwd: dir }).trim();
+    },
+    // Left in place on purpose when it holds commits: a branch he can read is
+    // worth more than a tidy tree. Removed only when nothing was written.
+    cleanup(keep) {
+      if (keep) return;
+      sh("git", ["worktree", "remove", "--force", dir]);
+      sh("git", ["branch", "-D", branch]);
+    },
+  };
+}
+
 function lock() {
   mkdirSync(STATE_DIR, { recursive: true });
   if (existsSync(LOCK)) {
@@ -193,6 +224,21 @@ export function measure(opts = {}) {
   for (const d of doc.deadPaths) out.push(F("doc-dead-path", d.doc, d.path, `cites a path that does not exist: ${d.path}`, { blast: 0, autofix: null, why_ruling: CANON.includes(basename(d.doc)) ? "CANON — propose a diff, never write." : "the path may have MOVED rather than vanished; picking the replacement is a judgement." }));
   for (const d of doc.deadOrgans) out.push(F("doc-dead-organ", d.doc, d.organ, `cites \`${d.organ}\`, which does not exist in scripts/`, { blast: 0 }));
 
+  // §8 EXECUTED: a cited command that returns NOTHING, and a count that no longer
+  // holds. Both are STALE CANON, and both are findable ONLY by running the claim.
+  try {
+    const x = docExec();
+    for (const g of x.grep_stale) {
+      out.push(F("doc-command-stale", g.doc, g.cmd,
+        `the doc cites this as EVIDENCE and it ${g.kind === "grep-target-missing" ? "names a file that does not exist" : "matches NOTHING"}: ${g.cmd}`,
+        { blast: 0, why_ruling: "the claim may be right and the CODE may have moved. Choosing which of the two to change is a judgement, not a derivation." }));
+    }
+    for (const c of x.staleCounts) {
+      out.push(F("doc-count-stale", c.doc, c.claim, `claims "${c.claim}" — re-derived live it is ${c.actual}`,
+        { blast: 0, why_ruling: "a corrected count is a NUMBER, and a number this repo has not ruled on is his. Counts also rot fastest, which is the argument for replacing the claim with a COMMAND rather than a new figure." }));
+    }
+  } catch (e) { skipped.push(`doc execution failed: ${String(e.message).slice(0, 80)}`); }
+
   // ── the one genuinely safe AUTO-FIX class ────────────────────────────────
   // An organ's own `// CLI:` header that OMITS a verb the organ demonstrably
   // dispatches. Adding it is derivable (the code is the truth), oracle-verifiable,
@@ -207,7 +253,7 @@ export function measure(opts = {}) {
     if (!missing.length) continue;
     out.push(F("header-verb-undocumented", `scripts/${organ}`, missing.join(","),
       `dispatches ${missing.map((x) => `\`${x}\``).join(", ")} but its own // CLI: header does not list ${missing.length > 1 ? "them" : "it"}`,
-      { blast: 1, silent: false, autofix: (dry) => fixHeaderVerbs(organ, missing, dry) }));
+      { blast: 1, silent: false, autofix: (dry, treeRoot) => fixHeaderVerbs(organ, missing, dry, treeRoot) }));
   }
 
   return { out, skipped, ir };
@@ -261,12 +307,208 @@ export function docClaims() {
   }
   // dedupe
   const uniq = (arr, k) => { const s = new Set(), o = []; for (const x of arr) { const key = k(x); if (!s.has(key)) { s.add(key); o.push(x); } } return o; };
-  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`) };
+  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`), files: docs };
+}
+
+// ── §8, THE EXECUTABLE HALF ──────────────────────────────────────────────────
+// The docs cite ~1,697 RUNNABLE COMMANDS as evidence, which makes most doc
+// verification EXECUTION rather than reading. A cited `grep -n "X" FILE` that
+// returns NOTHING, in prose that plainly implies a hit, is a STALE CANON finding
+// — and this repo's canon is full of exactly that shape ("verify with: grep -n
+// …") precisely so a session can check it.
+//
+// ⚠ THE GREP CLAIMS ARE EVALUATED IN-PROCESS, NEVER BY SHELLING OUT. Shelling
+// `grep` would reproduce the very blindness the whole audit is built around:
+// calibration.mjs, dmn.mjs and rejirah.mjs carry literal NUL bytes and real grep
+// DROPS their lines, so a checker built on grep would confirm a stale claim as
+// GREEN on exactly the three organs where a claim is hardest to verify by eye.
+// readFileSync + RegExp sees straight through them.
+// BASIC REGULAR EXPRESSIONS ESCAPE THEIR METACHARACTERS BACKWARDS FROM JS, and
+// this is the whole reason a grep-claim checker cannot just hand the pattern to
+// `new RegExp`. In BRE:
+//     \( \) \| \{ \} \+ \?   are the METACHARACTERS
+//        (  )  |  {  }  +  ? are LITERALS
+// JS is the exact inverse. So `grep -n "DIAGNOSTIC (pick one)"` — a literal
+// string search — became a JS capture group matching "DIAGNOSTIC pick one",
+// which is nowhere in the file, and a perfectly good piece of canon evidence was
+// reported STALE. Translated in ONE pass, so a converted character is never
+// re-converted by the next rule.
+export function breToJs(pattern) {
+  let out = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === "\\" && i + 1 < pattern.length) {
+      const n = pattern[i + 1];
+      // escaped in BRE ⇒ metacharacter ⇒ BARE in JS
+      if ("(){}|+?".includes(n)) { out += n; i++; continue; }
+      out += c + n; i++; continue;                       // pass \d \s \. through
+    }
+    // bare in BRE ⇒ literal ⇒ ESCAPED in JS
+    if ("(){}|+?".includes(c)) { out += "\\" + c; continue; }
+    out += c;
+  }
+  return out;
+}
+
+export function docExec() {
+  const d = docClaims();
+  const stale = [], ok = [], unrunnable = [];
+  const GREP = /grep\s+(-[a-zA-Z]+\s+)*["']([^"']{2,120})["']\s+([A-Za-z0-9_\-./\\]+)/g;
+
+  for (const f of d.files) {
+    const rel = relative(ROOT, f).replace(/\\/g, "/");
+    const txt = readFileSync(f, "utf8");
+    const spans = [
+      ...[...txt.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
+      ...[...txt.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((m) => m[1]),
+    ].join("\n");
+    for (const m of spans.matchAll(GREP)) {
+      const pattern = m[2], target = m[3].replace(/\\/g, "/");
+      // ⚠ THE TARGET MUST LOOK LIKE A PATH. The character class includes `-`, so
+      // `grep -n "gemSyncDue" -A4` captured `-A4` as the FILE and then reported a
+      // perfectly good command as citing a file that does not exist. A flag is not
+      // a filename, and a claim this checker cannot actually run must be counted
+      // as UNRUNNABLE, never as STALE — reporting "I could not check it" as "it is
+      // wrong" is the same dishonesty as reporting a skip as a pass.
+      if (/^-/.test(target) || !/[./]/.test(target)) { unrunnable.push({ doc: rel, cmd: m[0].slice(0, 100), why: "the command spans more arguments than this checker parses (flag captured as the target)" }); continue; }
+      const abs = join(ROOT, target);
+      if (!existsSync(abs)) { stale.push({ doc: rel, kind: "grep-target-missing", cmd: m[0].slice(0, 100), target }); continue; }
+      let src;
+      try { src = statSync(abs).isDirectory() ? null : readFileSync(abs, "utf8"); } catch { src = null; }
+      if (src === null) { unrunnable.push({ doc: rel, cmd: m[0].slice(0, 100), why: "target is a directory (recursive grep not modelled)" }); continue; }
+      // ⚠ GREP SEMANTICS ARE NOT JS SEMANTICS, and getting this wrong made the
+      // checker call WORKING evidence broken — the exact failure it exists to
+      // find, committed by the finder. Two differences, both load-bearing:
+      //   · `^` and `$` in grep are PER-LINE. In JS they anchor to the whole
+      //     STRING unless the `m` flag is set. Without it, every `grep -n "^// MODES"`
+      //     claim in the repo reported STALE while matching perfectly at line 34.
+      //   · Basic regular expressions escape their metacharacters BACKWARDS:
+      //     `\|` is ALTERNATION in BRE and a LITERAL PIPE in JS. So
+      //     `grep -n "A\|B"` was being tested as the literal string "A|B".
+      //     With -E the pattern is already ERE, which is close enough to JS.
+      const flags = m[1] || "";
+      const extended = /E/.test(flags);
+      const jsPattern = extended ? pattern : breToJs(pattern);
+      let re;
+      try { re = new RegExp(jsPattern, "m" + (/i/.test(flags) ? "i" : "")); }
+      catch { unrunnable.push({ doc: rel, cmd: m[0].slice(0, 100), why: "pattern is not translatable to a JS RegExp" }); continue; }
+      if (re.test(src)) { ok.push({ doc: rel, target, pattern }); continue; }
+      // ⚠ NOT EVERY CITED COMMAND IS A HIT-CLAIM. Some are ABSENCE PROOFS — this
+      // repo cites `grep -rn -i "haiku" scripts/oura_coach.mjs` precisely to show
+      // the model is NOT used there, and `grep … returns only its own definition`
+      // to show a frozen function has no caller. For those, returning nothing is
+      // the claim being TRUE. Reading the surrounding prose is the only way to
+      // tell, so the prose is read rather than assumed.
+      const idx = txt.indexOf(m[0]);
+      const around = idx >= 0 ? txt.slice(Math.max(0, idx - 220), idx + 220) : "";
+      if (/\b(no |never|zero|nothing|absent|returns only|not present|does not|shouldn't|should not|must not)\b/i.test(around)) {
+        ok.push({ doc: rel, target, pattern, kind: "absence-proof-holds" });
+        continue;
+      }
+      stale.push({ doc: rel, kind: "grep-returns-nothing", cmd: m[0].slice(0, 100), target, pattern });
+    }
+  }
+
+  // ── NUMERIC COUNT CLAIMS, RE-DERIVED FROM LIVE DATA ────────────────────────
+  // Counts rot fastest — this repo's own canon says so, and then proves it: a
+  // hardcoded count in the one file every session reads went on misinforming for
+  // days after the thing it described had changed. Only claims whose quantity is
+  // MECHANICALLY DERIVABLE are checked; everything else would be a guess dressed
+  // as a measurement.
+  const derive = {
+    scripts: () => readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs")).length,
+    organs: () => readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs")).length,
+    skills: () => (existsSync(join(ROOT, ".claude", "skills")) ? readdirSync(join(ROOT, ".claude", "skills")).length : 0),
+    "state files": () => readdirSync(STATE_DIR).filter((x) => /\.jsonl?$/.test(x)).length,
+    "suite members": () => {
+      const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+      const s = new Set();
+      for (const n of ["organism:selftest", "squad:selftest", "audit:selftest"]) for (const m of String(pkg.scripts[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) s.add(m[1]);
+      return s.size;
+    },
+  };
+  // ⚠ ONLY CLAIMS OF TOTALITY. A bare `N <noun>` in prose almost never asserts a
+  // repo-wide total: "5 organs read reJirahDone" and "4 state files hold the
+  // sitting" are LOCAL counts, and checking them against the global figure
+  // produced 60 confident, entirely wrong findings — the audit inventing work at
+  // exactly the scale §1 forbids. A claim only counts as global when the sentence
+  // says so: "all N organs", "N scripts in scripts/", "N tracked .md".
+  const counts = [];
+  const nouns = Object.keys(derive).join("|");
+  const CLAIM = new RegExp(
+    `(?:\\ball\\s+(\\d{1,4})\\s+(${nouns})\\b)` +
+    `|(?:\\b(\\d{1,4})\\s+(${nouns})\\s+(?:in\\s+scripts/|in\\s+the\\s+repo|total|altogether|exist))` +
+    `|(?:\\b(\\d{1,4})\\s+tracked\\s+(${nouns}))`, "gi");
+  for (const f of d.files) {
+    const rel = relative(ROOT, f).replace(/\\/g, "/");
+    const txt = readFileSync(f, "utf8");
+    for (const m of txt.matchAll(CLAIM)) {
+      const claimed = +(m[1] || m[3] || m[5]);
+      const key = String(m[2] || m[4] || m[6]).toLowerCase();
+      if (!claimed || !derive[key]) continue;
+      let actual;
+      try { actual = derive[key](); } catch { continue; }
+      // A claim inside an explicitly DATED sentence is a historical record, not a
+      // live assertion — this repo writes those deliberately ("Measured 6 Aug
+      // 2026: …") and flagging them would be flagging its own memory.
+      const around = txt.slice(Math.max(0, m.index - 160), m.index + 160);
+      const dated = /\b(20\d\d)\b|\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(around);
+      counts.push({ doc: rel, claim: m[0], claimed, actual, key, stale: claimed !== actual, dated });
+    }
+  }
+  const staleCounts = counts.filter((c) => c.stale && !c.dated);
+  return { grep_ok: ok.length, grep_stale: stale, grep_unrunnable: unrunnable.length, counts: counts.length, staleCounts };
+}
+
+// ── QUARANTINE — APPLIED ≠ VERIFIED ──────────────────────────────────────────
+// A fix is `applied_at` the moment it commits, and `held_at` only after ONE full
+// nightly suite AND one real overnight run produce no new watchman RED. Anything
+// applied but not HELD within 48h AUTO-REVERTS.
+//
+// This exists because "the suite went green" is the weakest possible evidence in
+// this repo — every bug it has ever shipped was one the suite AGREED WITH. Time
+// on the real machine, with the real daemons and the real herd, is the only
+// oracle that has ever caught those. So a fix is on probation until the organism
+// has actually lived a night with it.
+export function quarantine({ apply = false } = {}) {
+  const rows = ledger();
+  const now = Date.now();
+  const held = new Set(rows.filter((r) => r.event === "held").map((r) => r.fp));
+  const reverted = new Set(rows.filter((r) => r.event === "reverted").map((r) => r.fp));
+  const pending = rows.filter((r) => r.event === "fixed" && !held.has(r.fp) && !reverted.has(r.fp));
+
+  // The night's evidence: the watchman's own verdict, which is the organism
+  // reporting on itself rather than the audit grading its own homework.
+  const wm = join(STATE_DIR, "watchman_last.json");
+  let reds = null, wmAt = null;
+  try { const j = JSON.parse(readFileSync(wm, "utf8")); reds = (j.findings || []).filter((f) => f.level === "RED").length; wmAt = j.at || j.ran_at || null; } catch { /* no watchman verdict yet */ }
+
+  const out = { pending: [], held: [], expired: [] };
+  for (const r of pending) {
+    const ageH = (now - new Date(r.at).getTime()) / 3600000;
+    const nightPassed = wmAt && new Date(wmAt).getTime() > new Date(r.at).getTime();
+    if (nightPassed && reds === 0) {
+      out.held.push({ ...r, ageH: +ageH.toFixed(1) });
+      if (apply) append({ event: "held", at: new Date().toISOString(), fp: r.fp, rule: r.rule, file: r.file, sha: r.sha, evidence: `watchman ${wmAt} reported 0 RED after the fix` });
+    } else if (ageH > 48) {
+      out.expired.push({ ...r, ageH: +ageH.toFixed(1) });
+      if (apply) {
+        // AUTO-REVERT. The fix lives on its own branch and its own commit, so
+        // this destroys nothing else — which is exactly why one finding is one
+        // commit.
+        if (r.sha && r.branch) sh("git", ["revert", "--no-edit", r.sha]);
+        append({ event: "reverted", at: new Date().toISOString(), fp: r.fp, rule: r.rule, file: r.file, sha: r.sha, why: `applied ${ageH.toFixed(0)}h ago and never HELD — no clean night observed` });
+      }
+    } else {
+      out.pending.push({ ...r, ageH: +ageH.toFixed(1), needs: nightPassed ? `a night with 0 RED (last saw ${reds})` : "one overnight watchman run" });
+    }
+  }
+  return { ...out, watchman_reds: reds, watchman_at: wmAt };
 }
 
 // ── THE AUTO-FIX ─────────────────────────────────────────────────────────────
-function fixHeaderVerbs(organ, missing, dry) {
-  const p = join(ROOT, "scripts", organ);
+function fixHeaderVerbs(organ, missing, dry, treeRoot = ROOT) {
+  const p = join(treeRoot, "scripts", organ);
   assertFixable(`scripts/${organ}`);
   const src = readFileSync(p, "utf8");
   const m = /^\/\/\s*CLI:.*$/m.exec(src);
@@ -296,7 +538,7 @@ function fixHeaderVerbs(organ, missing, dry) {
 // This is what converts a fix into permanent coverage, and it is the single
 // thing standing between this and another audit graveyard (#106/#107/#108, all
 // of whose findings were stale within days because nothing held them).
-function oracleFor(f) {
+function oracleFor(f, treeRoot = ROOT) {
   if (f.rule !== "header-verb-undocumented") return null;
   const organ = basename(f.file);
   const verbs = f.subject.split(",");
@@ -347,24 +589,33 @@ function runAudit(opts = {}) {
     const fresh = out.filter((f) => !open.has(f.fp));
     for (const f of fresh) append({ event: "found", at: new Date().toISOString(), fp: f.fp, rule: f.rule, file: f.file, subject: f.subject, detail: f.detail, head: pre.head });
 
-    // GATE + APPLY
+    // GATE + APPLY — inside a WORKTREE, never the live tree.
     const fixed = [], refused = [];
+    let wt = null;
     if (opts.fix) {
-      for (const f of out) {
-        if (!f.autofix) { refused.push({ f, why: f.why_ruling || "no derivable fix" }); continue; }
-        const oracle = oracleFor(f);
-        if (!oracle) { refused.push({ f, why: "G-FIRST: no oracle assertion exists for this rule, so a fix could not be proven. NO RED ASSERTION, NO AUTO-FIX." }); continue; }
-        if (oracle()) { refused.push({ f, why: "the oracle is already GREEN — nothing to fix" }); continue; }
-        try {
-          const r = f.autofix(false);
-          if (!r.ok) { refused.push({ f, why: r.why }); continue; }
-          if (!oracle()) { refused.push({ f, why: "the oracle stayed RED after the fix — reverted" }); continue; }
-          const chk = sh(process.execPath, ["--check", join(ROOT, f.file)]);
-          if (chk.trim()) { refused.push({ f, why: `node --check failed after the fix: ${chk.slice(0, 120)}` }); continue; }
-          fixed.push(f);
-          append({ event: "fixed", at: new Date().toISOString(), fp: f.fp, rule: f.rule, file: f.file, before: r.before, after: r.after });
-        } catch (e) { refused.push({ f, why: String(e.message).slice(0, 200) }); }
-      }
+      wt = makeWorktree();
+      try {
+        for (const f of out) {
+          if (!f.autofix) { refused.push({ f, why: f.why_ruling || "no derivable fix" }); continue; }
+          const oracle = oracleFor(f, wt.dir);
+          if (!oracle) { refused.push({ f, why: "G-FIRST: no oracle assertion exists for this rule, so a fix could not be proven. NO RED ASSERTION, NO AUTO-FIX." }); continue; }
+          if (oracle()) { refused.push({ f, why: "the oracle is already GREEN — nothing to fix" }); continue; }
+          try {
+            const r = f.autofix(false, wt.dir);
+            if (!r.ok) { refused.push({ f, why: r.why }); continue; }
+            // RED BEFORE, GREEN AFTER — checked in the worktree, where a failure
+            // costs nothing.
+            if (!oracle()) { refused.push({ f, why: "the oracle stayed RED after the fix" }); continue; }
+            const chk = sh(process.execPath, ["--check", join(wt.dir, f.file)]);
+            if (chk.trim()) { refused.push({ f, why: `node --check failed after the fix: ${chk.slice(0, 120)}` }); continue; }
+            // ONE FINDING = ONE COMMIT, so `git revert` is per finding and a bad
+            // rule never takes the good fixes down with it.
+            const sha = wt.commit(`autofix(${f.rule}): ${f.file}\n\nfingerprint: ${f.fp}\nred-assertion: oracleFor(${f.rule})\n`);
+            fixed.push({ ...f, sha });
+            append({ event: "fixed", at: new Date().toISOString(), fp: f.fp, rule: f.rule, file: f.file, before: r.before, after: r.after, sha, branch: wt.branch });
+          } catch (e) { refused.push({ f, why: String(e.message).slice(0, 200) }); }
+        }
+      } finally { wt.cleanup(fixed.length > 0); }
     }
 
     // CLUSTER by root cause, then RANK
@@ -396,7 +647,16 @@ function runAudit(opts = {}) {
     console.log(`\n${"═".repeat(70)}`);
     console.log(`ARSENAL AUDIT · HEALTH ${health}/100 · ${ranked.length} ruling${ranked.length === 1 ? "" : "s"} waiting`);
     console.log(`${"═".repeat(70)}`);
-    if (opts.fix) console.log(`auto-fixed ${fixed.length} · refused ${refused.length} (each refusal names its reason)`);
+    if (opts.fix) {
+      console.log(`auto-fixed ${fixed.length} · refused ${refused.length} (each refusal names its reason)`);
+      if (fixed.length) {
+        console.log(`
+the fixes are on BRANCH ${wt.branch} — the live tree was never touched.`);
+        console.log(`  review : git log --oneline main..${wt.branch}`);
+        console.log(`  take it: git merge --ff-only ${wt.branch}`);
+        console.log(`  bin it : git branch -D ${wt.branch}`);
+      }
+    }
     if (skipped.length) { console.log(`\nNOT MEASURED (stated, never silent):`); for (const s of skipped) console.log(`  · ${s}`); }
 
     if (opts.verbose) {
@@ -477,6 +737,29 @@ function selftest() {
   assert("…and it uses readFileSync, never grep (3 organs carry NUL bytes and grep drops their lines)",
     !/execFileSync\(\s*["']grep/.test(src));
 
+  // BRE → JS, with known answers. This translation is what makes 1,000+ cited
+  // commands checkable, and getting it wrong reported WORKING evidence as broken.
+  assert("BRE: bare `(` is a LITERAL, so it must be ESCAPED for JS", breToJs("DIAGNOSTIC (pick one)") === "DIAGNOSTIC \\(pick one\\)");
+  assert("BRE: `\\|` is ALTERNATION, so it must become a bare `|` in JS", breToJs("a\\|b") === "a|b");
+  assert("BRE: `\\(` is a GROUP, so it must become a bare `(` in JS", breToJs("\\(x\\)") === "(x)");
+  assert("…and a character class / escape passes through untouched", breToJs("\\d+x") === "\\d\\+x");
+  assert("the translation is ONE PASS — a converted char is never re-converted", breToJs("\\|(") === "|\\(");
+  // and the grep-semantics fix itself, stated as a test
+  assert("`^` is matched PER LINE, as grep does, not per string",
+    new RegExp(breToJs("^// MODES"), "m").test("line one\n// MODES: a|b\n"));
+
+  // QUARANTINE — applied is not held.
+  const q = quarantine({ apply: false });
+  assert("QUARANTINE reports without applying (a dry read never reverts anything)",
+    q && Array.isArray(q.pending) && Array.isArray(q.held) && Array.isArray(q.expired));
+  assert("…and it derives HELD from the WATCHMAN's verdict, not from its own suite run",
+    /watchman/i.test(readFileSync(fileURLToPath(import.meta.url), "utf8").match(/export function quarantine[\s\S]{0,2200}/)[0]));
+
+  // THE WORKTREE — the fixer must not be able to reach the live tree at all.
+  const srcAll = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  assert("the fixer runs in a git WORKTREE, never the live tree", /makeWorktree\(\)/.test(srcAll) && /git", \["worktree", "add"/.test(srcAll));
+  assert("…and one finding is ONE COMMIT, so `git revert` is per finding", /wt\.commit\(`autofix\(/.test(srcAll));
+
   // the fixer's oracle must be red before and green after, on a real organ
   const ir = existsSync(IR_PATH) ? JSON.parse(readFileSync(IR_PATH, "utf8")) : null;
   assert("the IR is present so measurement can run", !!ir);
@@ -492,6 +775,8 @@ function main() {
   const opts = { deep: process.argv.includes("--deep"), verbose: process.argv.includes("-v") || process.argv.includes("--verbose"), fix: process.argv.includes("--fix"), allowDirty: process.argv.includes("--allow-dirty") };
   if (mode === "selftest") return selftest();
   if (mode === "docs") { console.log(JSON.stringify(docClaims(), null, 1)); return; }
+  if (mode === "docexec") { console.log(JSON.stringify(docExec(), null, 1)); return; }
+  if (mode === "quarantine") { console.log(JSON.stringify(quarantine({ apply: process.argv.includes("--apply") }), null, 1)); return; }
   if (mode === "ledger") { for (const r of ledger()) console.log(JSON.stringify(r)); return; }
   if (mode === "report") { runAudit({ ...opts, verbose: true }); return; }
   if (mode === "fix") { const res = runAudit({ ...opts, fix: true, verbose: true }); deal(res); return; }

@@ -349,6 +349,58 @@ const CODE_OPS = {
   CONST_SCALE: (s) => s.replace(/\b(0\.1|1\.25|180000|120000)\b/, (m) => String(Number(m) * 10)),
 };
 
+// THE RUNNER. Each mutant is VALIDITY-GATED with `node --check` (a mutant that
+// does not parse tests nothing), then the organ's own selftest decides SURVIVED
+// vs KILLED.
+//
+// ⚠ NO "MUTATION SCORE" IS PRINTED, AND THAT IS DELIBERATE. A score invites
+// equivalent-mutant adjudication, and adjudication is triage — the one thing the
+// captain must never be handed. What is printed is the SURVIVOR LIST: the exact
+// edits nobody noticed. A survivor is a question about coverage, not a defect,
+// and it is stated as such.
+export function codeMutants(opts = {}) {
+  const sb = buildSandbox({ trace: false });
+  const rows = [];
+  try {
+    assertArmed(sb);
+    const dir = join(sb.root, "scripts");
+    const ir = JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "xray_graph.json"), "utf8"));
+    // Target the organs the LEARNING LOOP actually rides on, unless --full.
+    const targets = opts.full
+      ? readdirSync(dir).filter((f) => f.endsWith(".mjs"))
+      : ["captains_call.mjs", "rejirah.mjs", "fsrs.mjs", "forge_session.mjs", "learnstate.mjs", "teaching_contract.mjs", "harvest.mjs", "scoreboard.mjs"];
+    console.log("=== CODE MUTANTS — operators drawn from THIS repo's real bug taxonomy ===\n");
+    for (const f of targets) {
+      const p = join(dir, f);
+      if (!existsSync(p)) continue;
+      const original = readFileSync(p, "utf8");
+      for (const [op, fn] of Object.entries(CODE_OPS)) {
+        const mutated = fn(original);
+        if (mutated === original) { rows.push({ organ: f, op, verdict: "n/a" }); continue; }
+        writeFileSync(p, mutated);
+        const parses = runIn(sb, ["--check", p], { label: "check", timeout: 30000 }).code === 0;
+        if (!parses) { writeFileSync(p, original); rows.push({ organ: f, op, verdict: "invalid" }); continue; }
+        const r = runIn(sb, [p, "selftest"], { label: f, timeout: 90000 });
+        writeFileSync(p, original);
+        rows.push({ organ: f, op, verdict: r.code === 0 ? "SURVIVED" : "killed" });
+        process.stdout.write(r.code === 0 ? "!" : ".");
+      }
+    }
+    console.log("\n");
+  } finally { destroy(sb); }
+  const survived = rows.filter((r) => r.verdict === "SURVIVED");
+  const killed = rows.filter((r) => r.verdict === "killed");
+  console.log(`killed ${killed.length} · SURVIVED ${survived.length} · invalid ${rows.filter((r) => r.verdict === "invalid").length} · n/a ${rows.filter((r) => r.verdict === "n/a").length}\n`);
+  console.log(`── SURVIVORS — edits nobody noticed. A survivor is a QUESTION about coverage,`);
+  console.log(`   not a defect, and some are genuinely equivalent. Stated, never adjudicated.`);
+  const byOp = new Map();
+  for (const s of survived) { if (!byOp.has(s.op)) byOp.set(s.op, []); byOp.get(s.op).push(s.organ); }
+  for (const [op, organs] of [...byOp].sort((a, b) => b[1].length - a[1].length)) {
+    console.log(`   ${op.padEnd(16)} ×${String(organs.length).padStart(2)}   ${organs.join(", ")}`);
+  }
+  return { rows, survived, killed };
+}
+
 // ============================================================================
 // THE BUG MUSEUM — the single measurement that proves any of this works
 // ============================================================================

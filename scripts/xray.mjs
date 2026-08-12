@@ -1186,9 +1186,25 @@ function selftest() {
   assert("unresolved_sinks is recorded (never reported ON, always counted)", typeof ir.unresolved_sinks === "number");
   if (existsSync(OUT)) {
     const prev = load();
-    assert(`unresolved_sinks is NON-INCREASING (${prev.unresolved_sinks} → ${ir.unresolved_sinks})`,
-      ir.unresolved_sinks <= prev.unresolved_sinks + 25,
-      "the analysis got blinder — a transfer function regressed, or a new unanalysable idiom landed");
+    // ⚠ THE RATCHET IS PER-ORGAN, AND THE FIRST VERSION WAS NOT — it compared the
+    // repo-wide total against a fixed slack, which is wrong in BOTH directions.
+    // It false-fired the moment ~200 honest lines of new organ landed (4773 →
+    // 4816, all of it the new code's own idioms), and — far worse — it could be
+    // SILENCED FOREVER by deleting an organ, since a smaller repo has fewer
+    // sinks. A budget that can be met by removing code is not a budget.
+    //
+    // So: no EXISTING organ may get blinder. A NEW organ brings its own sinks and
+    // is reported, never failed — it has no previous self to regress against.
+    const worse = [];
+    for (const [organ, o] of Object.entries(ir.organs)) {
+      const before = prev.organs[organ];
+      if (!before) continue;                       // new organ — nothing to regress from
+      if (o.unresolved > before.unresolved) worse.push(`${organ} ${before.unresolved}→${o.unresolved}`);
+    }
+    const fresh = Object.keys(ir.organs).filter((k) => !prev.organs[k]);
+    assert(`unresolved_sinks is NON-INCREASING PER ORGAN (total ${prev.unresolved_sinks} → ${ir.unresolved_sinks}${fresh.length ? `, incl. ${fresh.length} new organ(s)` : ""})`,
+      worse.length === 0,
+      worse.length ? `these organs got BLINDER — a transfer function regressed, or an unanalysable idiom landed: ${worse.join(" · ")}` : "");
   }
 
   console.log(`\nxray: ${pass} passed, ${fail} failed`);
