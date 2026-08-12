@@ -269,7 +269,7 @@ outside — but that half is now built, where before it was simply absent.
 
 | item | state |
 |---|---|
-| **E1** — away-day CI red | needs `gh` installed, or the first error line pasted. **Do NOT guess at a third cause.** |
+| **E1** — away-day CI red | **the `gh` blocker is GONE — see §6.** The failing step is identified. Root cause still open; **do NOT guess at a third cause.** |
 | **E5** — Tier-2 repair arm | OFF by his 11 Aug ruling. The REDs it was meant to repair are resolved; keeping it off is the correct call and its work was done by hand this session. |
 | **E9** — two uncommitted organ-state files | **his call** — `recital_audit.jsonl` is a NEW file in a PUBLIC repo |
 | **E10** — the remaining INFOs | `wake-economy` needs 8 more honest cortex rows (time, not work). `forge-stale-open` is HIS study loop, not an engineering task. `reconcile-bleed-1/2` are §1.4's two starvations — fixed at the cause, **verify on the next night** rather than assuming. |
@@ -278,6 +278,57 @@ outside — but that half is now built, where before it was simply absent.
 **The one thing to verify next, and not assume:** §1.4 predicts `diary` produces its first
 page and `cortex consolidate` stops failing on the next overnight run. Both are now gated at
 the cause. **Check the artifacts, not the code.**
+
+---
+
+---
+
+## 6 — READING CI WITHOUT `gh` (E1's blocker, removed)
+
+E1 has been stuck behind *"the log is unreadable without `gh` (not installed)"* since 11 Aug.
+**`gh` is not needed and does not have to be installed.** The repo is PUBLIC, so the GitHub
+REST API answers unauthenticated:
+
+```bash
+curl -s "https://api.github.com/repos/nikhil1429/arsenal-ai-fc/actions/runs?per_page=3"
+```
+
+That gives run ids and conclusions. Then, for the failing run:
+
+```bash
+curl -s "https://api.github.com/repos/nikhil1429/arsenal-ai-fc/actions/runs/<RUN_ID>/jobs"
+```
+
+which names the **exact failing step**. Done 12 Aug 2026, no install, no auth:
+
+```
+JOB: public-safe-chores -> failure
+   FAILED STEP: Run node scripts/awayday.mjs run
+```
+
+**The `/logs` endpoint DOES still need auth** — that one really is gated. But the step name
+plus a local clean-checkout reproduction is enough, and the reproduction needs no network at
+all.
+
+### The right way to reproduce a CI checkout locally
+
+**Use `git archive`, not a copy loop.** A `cp` loop over `git ls-files` silently dropped
+**12 of 76 scripts** on the first attempt here, and every "failure" that produced was an
+artifact of the sandbox rather than a fact about CI — `ts-fsrs` reported missing when it is a
+declared dependency and installed, `validators.mjs` reported missing when it is tracked. Two
+false leads, both from a bad harness.
+
+```bash
+mkdir -p /tmp/ci && git archive HEAD | tar -x -C /tmp/ci
+cd /tmp/ci && npm ci && node scripts/awayday.mjs run
+```
+
+`git archive HEAD` is *exactly* what a clean checkout contains — tracked files only, no
+gitignored state — which is the whole point of the away-day lane.
+
+> **THE LESSON, and it is the same one as everywhere else in this document:** when a
+> reproduction disagrees with a declared fact, suspect the harness before the code. Both
+> false leads here would have sent a session chasing a dependency bug that does not exist.
 
 ---
 
