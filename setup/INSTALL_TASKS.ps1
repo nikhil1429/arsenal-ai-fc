@@ -206,6 +206,26 @@ schtasks /Create /F /TN "ArsenalFC-BugMuseum" /TR "wscript.exe `"$repo\setup\hid
 $bm = Get-ScheduledTask -TaskName "ArsenalFC-BugMuseum" -ErrorAction SilentlyContinue
 if ($bm) { $bm.Settings.StartWhenAvailable = $false; $bm | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-BugMuseum (SUN 19:00 - six historical bugs, re-caught or the number drops)" }
 
+# §4.2(a) THE STATE-MUTANT MATRIX, on the cadence its own COST dictates. The full
+# 150x10xN sweep is an order of magnitude slower than it looks on Windows, so it
+# is deliberately NOT nightly: a stratified run over the declared lifecycle files
+# goes daily, and the FULL sweep goes weekly. Both sit OUTSIDE the 22:00-08:00
+# sleep band and both have catch-up OFF — putting the organ that measures the
+# catch-up herd INTO the catch-up herd would be the joke that writes itself.
+schtasks /Create /F /TN "ArsenalFC-Mutants" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\mutagen.mjs`" state >> $repo\scripts\audit.log 2>&1" /SC DAILY /ST 13:40 | Out-Null
+$mu = Get-ScheduledTask -TaskName "ArsenalFC-Mutants" -ErrorAction SilentlyContinue
+if ($mu) { $mu.Settings.StartWhenAvailable = $false; $mu | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Mutants (13:40 daily, stratified - dead reads + silent feature loss)" }
+
+schtasks /Create /F /TN "ArsenalFC-MutantsFull" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\mutagen.mjs`" state --full >> $repo\scripts\audit.log 2>&1" /SC WEEKLY /D SAT /ST 18:00 | Out-Null
+$mf = Get-ScheduledTask -TaskName "ArsenalFC-MutantsFull" -ErrorAction SilentlyContinue
+if ($mf) { $mf.Settings.StartWhenAvailable = $false; $mf | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-MutantsFull (SAT 18:00 - the full sweep)" }
+
+# §7(c) LONG-HORIZON — the organism at a scale and an age today's tree has never
+# had. Weekly, because nothing here changes hour to hour.
+schtasks /Create /F /TN "ArsenalFC-Horizon" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\mutagen.mjs`" horizon >> $repo\scripts\audit.log 2>&1" /SC WEEKLY /D SAT /ST 18:40 | Out-Null
+$hz = Get-ScheduledTask -TaskName "ArsenalFC-Horizon" -ErrorAction SilentlyContinue
+if ($hz) { $hz.Settings.StartWhenAvailable = $false; $hz | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Horizon (SAT 18:40 - 10-20x scale, 90 days aged)" }
+
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"
 Write-Host "Post-match stays a human ritual: npm run postmatch (30 seconds, evening)."

@@ -39,7 +39,7 @@
 //   is a RULING, never an auto-fix) · reports MEASURED ratios.
 // WHO ELSE COULD ACT ON THIS OUTPUT? audit.mjs (ranks the ρ outliers and the
 //   meter-inconsistency rows alongside every other finding). Wired.
-// CLI: node scripts/treasury.mjs [report|meter|rho|assembly|selftest] [days]
+// CLI: node scripts/treasury.mjs [report|meter|rho|sensitivity|assembly|selftest] [days]
 // ============================================================================
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -101,6 +101,41 @@ export function rho(rs) {
     .sort((a, b) => b.weighted - a.weighted);
 }
 
+// ── THE SENSITIVITY RATIO — bug class 5, and it needs NO ORACLE ──────────────
+// The budget governor once metered cheap cache-reads at FULL price and then
+// self-tuned from that corrupt observation, starving live organs for weeks. The
+// test for that whole class is a DERIVATIVE, not a value: scale one component
+// ×10 and see how far the verdict moves. If cache_read moves the number as much
+// as input does, the weighting is wrong — and you can say that WITHOUT knowing
+// what the right answer is, which is exactly why this needs no oracle.
+//
+// The expected ratio is the weight ratio itself. cache_read is weighted 0.1 and
+// input 1.0, so a ×10 scale of cache_read must move weighted spend by ONE TENTH
+// as much as the same scale of input. Anything near parity means the meter has
+// silently flattened its own price list.
+export function sensitivity(rs) {
+  const base = rs.reduce((s, r) => s + spendOf(r), 0);
+  const scaled = (key, factor) => rs.reduce((s, r) => {
+    const p = partsOf(r);
+    p[key] = p[key] * factor;
+    return s + p.input * W.input + p.cache_creation * W.cache_creation + p.cache_read * W.cache_read + p.output * W.output;
+  }, 0);
+  const d = (key) => (base ? (scaled(key, 10) - base) / base : 0);
+  const dInput = d("input"), dCacheRead = d("cache_read"), dOutput = d("output"), dCacheWrite = d("cache_creation");
+  // ratio of the OBSERVED sensitivities, against the ratio the weights promise
+  const observed = dInput ? dCacheRead / dInput : null;
+  return {
+    base_weighted: Math.round(base),
+    delta_per_10x: { input: +dInput.toFixed(4), cache_read: +dCacheRead.toFixed(4), cache_write: +dCacheWrite.toFixed(4), output: +dOutput.toFixed(4) },
+    cache_read_vs_input: observed === null ? null : +observed.toFixed(4),
+    // what the declared weights REQUIRE, given this corpus's own component mix
+    healthy: observed === null ? null : observed < 1,
+    note: observed === null ? "no input tokens in range — ratio undefined"
+      : observed < 1 ? "cache_read moves the verdict LESS than input, as the 0.1 weight requires"
+        : "⚠ cache_read moves the verdict as much as or MORE than input — the price list has flattened, which is the exact C1 fault",
+  };
+}
+
 // ── (c) ASSEMBLY VS GENERATION ───────────────────────────────────────────────
 // A candidate is an organ that SPAWNS an LLM and whose own inputs already exist
 // on disk. That is not proof — it is the shortlist a human should look at, and
@@ -159,6 +194,13 @@ function report(days) {
   console.log(`\n   ${outliers.length} lane(s) at ρ > 25 — each is paying to boot, not to think:`);
   for (const e of outliers.slice(0, 10)) console.log(`      ${e.job}  ρ=${e.rho === Infinity ? "∞ (ZERO output tokens)" : e.rho}  (${e.n} run${e.n === 1 ? "" : "s"}, ${Math.round(e.weighted).toLocaleString("en-IN")} weighted)`);
 
+  const sens = sensitivity(rs);
+  console.log(`
+── THE SENSITIVITY RATIO (bug class 5 — needs NO oracle, it is a derivative)`);
+  console.log(`   scale each component ×10 and watch the verdict move:`);
+  for (const [k, v] of Object.entries(sens.delta_per_10x)) console.log(`      ${k.padEnd(13)} +${(v * 100).toFixed(1)}%`);
+  console.log(`   cache_read ÷ input = ${sens.cache_read_vs_input}  →  ${sens.note}`);
+
   const cand = assembly(ir, table).filter((a) => a.candidate);
   console.log(`\n── (c) ASSEMBLY-VS-GENERATION candidates (${cand.length})`);
   console.log(`   an organ that spawns an LLM while its inputs already sit on disk. B6 and B14`);
@@ -201,6 +243,18 @@ function selftest() {
   assert("ρ never consults total_tokens — a lying total cannot poison the table",
     rho([under])[0].weighted === 500000 * 1 + 1000 * 5);
 
+  // THE SENSITIVITY RATIO, with a KNOWN-ANSWER corpus. A row that is ALL
+  // cache_read must move far less than the same scale on input; if this ever
+  // reads ~1, the meter has flattened its price list and self-tune will learn
+  // from a lie, which is precisely what happened for weeks.
+  const mix = [{ input_tokens: 1000, cache_read_tokens: 1000, cache_creation_tokens: 0, output_tokens: 0, total_tokens: 2000 }];
+  const sens = sensitivity(mix);
+  assert("SENSITIVITY — a ×10 on cache_read moves the verdict LESS than a ×10 on input", sens.cache_read_vs_input < 1, JSON.stringify(sens));
+  assert("…and it is the WEIGHT RATIO, measured: 0.1 vs 1.0 ⇒ one tenth the movement",
+    Math.abs(sens.cache_read_vs_input - 0.1) < 0.001, String(sens.cache_read_vs_input));
+  assert("…and the flattened-price-list case is DETECTED, not assumed away",
+    sensitivity([{ input_tokens: 0, cache_read_tokens: 100, output_tokens: 0, cache_creation_tokens: 0 }]).healthy === null);
+
   // the live file must at least parse
   const live = rows(0);
   assert("the live ledger parses", Array.isArray(live));
@@ -216,8 +270,9 @@ function main() {
   if (mode === "report") { report(days); return; }
   if (mode === "meter") { console.log(JSON.stringify(meter(rows(days)), null, 1)); return; }
   if (mode === "rho") { console.log(JSON.stringify(rho(rows(days)), null, 1)); return; }
+  if (mode === "sensitivity") { console.log(JSON.stringify(sensitivity(rows(days)), null, 1)); return; }
   if (mode === "assembly") { const ir = JSON.parse(readFileSync(IR_PATH, "utf8")); console.log(JSON.stringify(assembly(ir, []), null, 1)); return; }
-  console.log("treasury: report | meter | rho | assembly | selftest  [days]");
+  console.log("treasury: report | meter | rho | sensitivity | assembly | selftest  [days]");
   process.exit(1);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

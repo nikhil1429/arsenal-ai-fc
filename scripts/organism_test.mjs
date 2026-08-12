@@ -429,7 +429,19 @@ function hermetic() {
   // distiller.mjs run(), which no selftest calls — distiller's own selftest
   // exercises detectSwitches/measureLatency/latencyReport on fixtures only
   // (same class as the createNucleus two-caller proof above).
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl/;
+  // wall_data.json added 12 Aug 2026, and the PRICE THIS LIST SETS WAS PAID
+  // rather than waved: `viz.mjs selftest` was run with the file stat-ed before
+  // and after — it does NOT touch it — and five neighbouring selftests (scorer ·
+  // setpiece · physio · twin · heartbeat) were run the same way, also clean. The
+  // real writer is the scheduled ArsenalFC-Wall-* task (viz.mjs, twice daily plus
+  // the 30-minute live wall), i.e. a scheduled OWNER writing its OWN state inside
+  // a multi-minute suite window — the same daemon-race signature that already
+  // earned tone.json and daemon_watchdog.json their place here. Excluding it
+  // WITHOUT that scan would be how a real defect gets papered over.
+  // xray_graph.json + audit_ledger.jsonl: the audit organs' own lanes. xray.mjs
+  // is sole writer of the first and audit.mjs of the second, and both are written
+  // by their owner's normal operation, never by another organ's selftest.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

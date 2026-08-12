@@ -1,12 +1,12 @@
 {
- "built_at": "2026-08-12T13:51:34.447Z",
+ "built_at": "2026-08-12T14:03:47.141Z",
  "organs_parsed": 84,
  "organs_expected": 84,
  "parse_errors": [],
- "unresolved_sinks": 4824,
+ "unresolved_sinks": 4868,
  "organs": {
   "audit.mjs": {
-   "loc": 837,
+   "loc": 879,
    "reads": [
     {
      "path": "dressing-room/state/audit_ledger.jsonl",
@@ -37,16 +37,16 @@
      "lines": [
       187,
       187,
-      813,
-      813,
+      855,
+      855,
       187,
       187,
-      813,
-      813,
+      855,
+      855,
       187,
       187,
-      813,
-      813
+      855,
+      855
      ],
      "fixture": false
     },
@@ -98,15 +98,15 @@
     {
      "path": "scripts/audit.mjs",
      "lines": [
-      777,
-      805,
-      808,
-      777,
-      805,
-      808,
-      777,
-      805,
-      808
+      814,
+      842,
+      845,
+      814,
+      842,
+      845,
+      814,
+      842,
+      845
      ],
      "fixture": true
     },
@@ -7917,33 +7917,47 @@
    "unresolved": 32
   },
   "mutagen.mjs": {
-   "loc": 673,
+   "loc": 831,
    "reads": [
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
       155,
       276,
-      367,
+      398,
+      492,
       155,
       276,
-      367,
+      398,
+      492,
       155,
       276,
-      367,
+      398,
+      492,
       155,
       276,
-      367
+      398,
+      492
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      620,
-      620,
-      620,
-      620
+      761,
+      761,
+      761,
+      761
+     ],
+     "fixture": true
+    },
+    {
+     "path": "scripts/mutagen.mjs",
+     "lines": [
+      792,
+      792,
+      792,
+      792
      ],
      "fixture": true
     }
@@ -7953,6 +7967,7 @@
    "swallows": [],
    "verbs": [
     "code",
+    "horizon",
     "museum",
     "panic",
     "selftest",
@@ -7960,6 +7975,7 @@
    ],
    "header_verbs": [
     "code",
+    "horizon",
     "museum",
     "panic",
     "selftest",
@@ -7971,13 +7987,15 @@
     "OPERATORS",
     "PANIC_MARK",
     "codeMutants",
+    "coveredFiles",
+    "horizon",
     "museum",
     "panic",
     "panicGuard",
     "panicRewrite",
     "stateMatrix"
    ],
-   "unresolved": 82
+   "unresolved": 126
   },
   "nemesis.mjs": {
    "loc": 599,
@@ -13659,11 +13677,15 @@
    "unresolved": 18
   },
   "treasury.mjs": {
-   "loc": 224,
+   "loc": 279,
    "reads": [
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
+      68,
+      69,
+      68,
+      69,
       68,
       69,
       68,
@@ -13674,12 +13696,18 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      128,
-      128,
-      219,
-      128,
-      128,
-      219
+      163,
+      163,
+      274,
+      163,
+      163,
+      274,
+      163,
+      163,
+      274,
+      163,
+      163,
+      274
      ],
      "fixture": false
     }
@@ -13692,7 +13720,8 @@
     "meter",
     "report",
     "rho",
-    "selftest"
+    "selftest",
+    "sensitivity"
    ],
    "header_verbs": [
     "assembly",
@@ -13700,7 +13729,8 @@
     "meter",
     "report",
     "rho",
-    "selftest"
+    "selftest",
+    "sensitivity"
    ],
    "exports": [
     "W",
@@ -13710,6 +13740,7 @@
     "rawOf",
     "rho",
     "rows",
+    "sensitivity",
     "spendOf"
    ],
    "unresolved": 0
@@ -18715,6 +18746,17 @@
    "is_dir": false
   },
   {
+   "path": "scripts/mutagen.mjs",
+   "readers": [],
+   "writers": [],
+   "fixture_readers": [
+    "mutagen.mjs"
+   ],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "scripts/nightshift.mjs",
    "readers": [],
    "writers": [],
@@ -19667,6 +19709,24 @@
    },
    {
     "script": "audit.mjs",
+    "verb": null,
+    "source": "INSTALL_TASKS.ps1",
+    "form": "path"
+   },
+   {
+    "script": "mutagen.mjs",
+    "verb": null,
+    "source": "INSTALL_TASKS.ps1",
+    "form": "path"
+   },
+   {
+    "script": "mutagen.mjs",
+    "verb": null,
+    "source": "INSTALL_TASKS.ps1",
+    "form": "path"
+   },
+   {
+    "script": "mutagen.mjs",
     "verb": null,
     "source": "INSTALL_TASKS.ps1",
     "form": "path"

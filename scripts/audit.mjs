@@ -624,7 +624,14 @@ function runAudit(opts = {}) {
     const fixed = [], refused = [];
     let wt = null;
     if (opts.fix) {
+      // THE NUCLEAR RESET. A tag at HEAD-BEFORE, so however badly a batch goes
+      // the whole span is one `git reset --hard` away. Cheap, and the one thing
+      // that makes an automated fixer safe to leave running unattended.
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
+      sh("git", ["tag", "-f", `audit/${stamp}`, pre.head]);
+      console.log(`nuclear reset point: git reset --hard audit/${stamp}   (HEAD before this batch)`);
       wt = makeWorktree();
+      let sinceFullSuite = 0;
       try {
         for (const f of out) {
           if (!f.autofix) { refused.push({ f, why: f.why_ruling || "no derivable fix" }); continue; }
@@ -637,14 +644,44 @@ function runAudit(opts = {}) {
             // RED BEFORE, GREEN AFTER — checked in the worktree, where a failure
             // costs nothing.
             if (!oracle()) { refused.push({ f, why: "the oracle stayed RED after the fix" }); continue; }
+            // THE VERIFICATION CHAIN, in the order §5 sets it: node --check →
+            // that organ's OWN selftest → then, every third commit and at batch
+            // end, the FULL suite. A syntax check alone proves the file parses,
+            // not that the organ still works, and this repo's whole thesis is
+            // that parsing and passing are different questions.
             const chk = sh(process.execPath, ["--check", join(wt.dir, f.file)]);
             if (chk.trim()) { refused.push({ f, why: `node --check failed after the fix: ${chk.slice(0, 120)}` }); continue; }
+            const organPath = join(wt.dir, f.file);
+            const st = sh(process.execPath, [organPath, "selftest"], { cwd: wt.dir });
+            if (/FAIL|failed|Error:/.test(st) && !/0 failed|ALL CHECKS PASSED/.test(st)) {
+              refused.push({ f, why: `the organ's OWN selftest went red after the fix: ${st.split("\n").filter(Boolean).slice(-1)[0]?.slice(0, 140)}` });
+              sh("git", ["checkout", "--", f.file], { cwd: wt.dir });
+              continue;
+            }
             // ONE FINDING = ONE COMMIT, so `git revert` is per finding and a bad
             // rule never takes the good fixes down with it.
             const sha = wt.commit(`autofix(${f.rule}): ${f.file}\n\nfingerprint: ${f.fp}\nred-assertion: oracleFor(${f.rule})\n`);
             fixed.push({ ...f, sha });
             append({ event: "fixed", at: new Date().toISOString(), fp: f.fp, rule: f.rule, file: f.file, before: r.before, after: r.after, sha, branch: wt.branch });
+            // EVERY 3 COMMITS: the full cross-organ suite. A per-organ selftest
+            // cannot see a defect BETWEEN organs, which is the only kind this
+            // repo actually ships.
+            if (++sinceFullSuite >= 3) {
+              sinceFullSuite = 0;
+              const full = sh(process.execPath, [join(wt.dir, "scripts", "organism_test.mjs"), "coverage"], { cwd: wt.dir });
+              if (/failed/.test(full) && !/0 failed/.test(full)) {
+                // NEW RED ⇒ revert to last green and downgrade the whole span.
+                sh("git", ["reset", "--hard", "HEAD~1"], { cwd: wt.dir });
+                const dropped = fixed.pop();
+                refused.push({ f: dropped, why: "the FULL suite went red at the 3-commit checkpoint — reverted to last green, and this span is downgraded to a RULING" });
+              }
+            }
           } catch (e) { refused.push({ f, why: String(e.message).slice(0, 200) }); }
+        }
+        // BATCH END: the full suite once more, on everything together.
+        if (fixed.length) {
+          const full = sh(process.execPath, [join(wt.dir, "scripts", "organism_test.mjs"), "coverage"], { cwd: wt.dir });
+          if (/failed/.test(full) && !/0 failed/.test(full)) console.log("⚠ the full suite is RED at batch end — the branch is NOT safe to merge; read it before touching main.");
         }
       } finally { wt.cleanup(fixed.length > 0); }
     }
@@ -808,6 +845,11 @@ function selftest() {
   const srcAll = readFileSync(fileURLToPath(import.meta.url), "utf8");
   assert("the fixer runs in a git WORKTREE, never the live tree", /makeWorktree\(\)/.test(srcAll) && /git", \["worktree", "add"/.test(srcAll));
   assert("…and one finding is ONE COMMIT, so `git revert` is per finding", /wt\.commit\(`autofix\(/.test(srcAll));
+  assert("a NUCLEAR RESET tag is cut at HEAD-before, so a whole bad batch is one command away", /"tag", "-f"/.test(srcAll));
+  assert("the verification chain is node --check → the ORGAN'S OWN selftest → the FULL suite every 3 commits",
+    /--check/.test(srcAll) && /organ's OWN selftest went red/.test(srcAll) && /3-commit checkpoint/.test(srcAll));
+  assert("…and a new RED reverts to the last green and downgrades the span to a RULING",
+    /reset", "--hard", "HEAD~1"/.test(srcAll) && /downgraded to a RULING/.test(srcAll));
 
   // the fixer's oracle must be red before and green after, on a real organ
   const ir = existsSync(IR_PATH) ? JSON.parse(readFileSync(IR_PATH, "utf8")) : null;

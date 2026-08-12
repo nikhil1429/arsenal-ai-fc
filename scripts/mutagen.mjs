@@ -51,9 +51,9 @@
 //   never a claim.
 // WHO ELSE COULD ACT ON THIS OUTPUT? audit.mjs (turns dead-read rows into
 //   findings), organism_test (asserts the museum still catches all six).
-// CLI: node scripts/mutagen.mjs [panic|state|museum|code|selftest] [--full]
+// CLI: node scripts/mutagen.mjs [panic|state|museum|code|horizon|selftest] [--full]
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, unlinkSync, copyFileSync, mkdirSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse } from "acorn";
@@ -347,7 +347,38 @@ const CODE_OPS = {
   SLICE_OB1: (s) => s.replace(/\.slice\((\d+)\)/, (m, n) => `.slice(${+n + 1})`),
   CATCH_RETHROW: (s) => s.replace(/catch\s*\{\s*\}/, "catch { throw new Error('mutant'); }"),
   CONST_SCALE: (s) => s.replace(/\b(0\.1|1\.25|180000|120000)\b/, (m) => String(Number(m) * 10)),
+  // STMT_DEL — delete one whole statement. The most brutal operator and the one
+  // that most directly asks "is this line load-bearing at all". Targets a
+  // top-level `x(...)` call statement so the deletion is syntactically safe far
+  // more often than a random line cut would be.
+  STMT_DEL: (s) => s.replace(/^(\s+)([A-Za-z_$][\w$.]*\([^\n;]*\);)\s*$/m, "$1/* STMT_DEL */"),
 };
+
+// ── COVERAGE-GUIDED SELECTION ────────────────────────────────────────────────
+// NODE_V8_COVERAGE is used ONLY TO SELECT which files are worth mutating, and its
+// number is NEVER reported. A coverage percentage is a metric people optimise
+// instead of the thing it proxies; what it is genuinely good at is answering
+// "did this file execute at all", which is exactly the question that decides
+// whether a mutant can teach anything. Mutating a file no test ever loads
+// produces a guaranteed survivor and zero information.
+export function coveredFiles(sb) {
+  const covDir = join(sb.root, ".audit", "cov");
+  try { mkdirSync(covDir, { recursive: true }); } catch { /* ignore */ }
+  const probe = join(sb.root, "scripts", "organism_test.mjs");
+  if (!existsSync(probe)) return null;
+  runIn(sb, [probe, "coverage"], { label: "cov", timeout: 300000, env: { NODE_V8_COVERAGE: covDir } });
+  if (!existsSync(covDir)) return null;
+  const hit = new Set();
+  for (const f of readdirSync(covDir)) {
+    let j;
+    try { j = JSON.parse(readFileSync(join(covDir, f), "utf8")); } catch { continue; }
+    for (const s of j.result || []) {
+      const m = /scripts[\\/]([A-Za-z0-9_\-]+\.mjs)$/.exec(String(s.url || "").replace(/[?#].*$/, ""));
+      if (m) hit.add(m[1]);
+    }
+  }
+  return hit.size ? hit : null;
+}
 
 // THE RUNNER. Each mutant is VALIDITY-GATED with `node --check` (a mutant that
 // does not parse tests nothing), then the organ's own selftest decides SURVIVED
@@ -369,8 +400,15 @@ export function codeMutants(opts = {}) {
     const targets = opts.full
       ? readdirSync(dir).filter((f) => f.endsWith(".mjs"))
       : ["captains_call.mjs", "rejirah.mjs", "fsrs.mjs", "forge_session.mjs", "learnstate.mjs", "teaching_contract.mjs", "harvest.mjs", "scoreboard.mjs"];
+    // COVERAGE SELECTS, IT NEVER SCORES. A file no test ever loads yields a
+    // guaranteed survivor and zero information, so it is dropped from the run and
+    // the drop is STATED. The percentage itself is never computed or printed.
+    const covered = coveredFiles(sb);
+    const dropped = covered ? targets.filter((f) => !covered.has(f)) : [];
+    const live = covered ? targets.filter((f) => covered.has(f)) : targets;
+    if (dropped.length) console.log(`  (skipping ${dropped.length} file(s) no test loads at all — a mutant there teaches nothing: ${dropped.join(", ")})`);
     console.log("=== CODE MUTANTS — operators drawn from THIS repo's real bug taxonomy ===\n");
-    for (const f of targets) {
+    for (const f of live) {
       const p = join(dir, f);
       if (!existsSync(p)) continue;
       const original = readFileSync(p, "utf8");
@@ -399,6 +437,109 @@ export function codeMutants(opts = {}) {
     console.log(`   ${op.padEnd(16)} ×${String(organs.length).padStart(2)}   ${organs.join(", ")}`);
   }
   return { rows, survived, killed };
+}
+
+// ============================================================================
+// §7(c) LONG-HORIZON STATE — the class no fixture from TODAY'S tree can reach
+// ============================================================================
+// Some bugs only exist at a scale or an age the current tree has never had: past
+// a ledger rotation boundary, at 400 cards instead of 42, after a 30-day EWMA has
+// actually converged. Every other organ in this audit measures the repo AS IT IS,
+// and is blind to all of it BY CONSTRUCTION.
+//
+// So the sandbox is aged and scaled deliberately, and each organ is asked the
+// only question that matters: does it still ANSWER, and does its answer still
+// mean something? Three failure shapes, all real risks here:
+//   · it CRASHES at scale                   (a cap or an index assumption)
+//   · it TIMES OUT                          (an O(n²) that is invisible at n=42)
+//   · it produces an IDENTICAL answer       (a cap silently truncating, so more
+//     data stops changing anything — the quietest of the three)
+const HORIZONS = [
+  { id: "cards-x10", file: "captains_call.json", why: "42 cards → ~420; the deal rotation sorts and slices on every call" },
+  { id: "ledger-x20", file: "brain_ledger.jsonl", why: "past a rotation boundary; the meter reads the whole file" },
+  { id: "reps-x20", file: "reps_log.jsonl", why: "a year of reps instead of a month" },
+  { id: "aged-90d", file: "*", why: "every timestamp pushed back 90 days — EWMAs converged, everything overdue" },
+];
+
+function scaleJson(txt, factor) {
+  try {
+    const j = JSON.parse(txt);
+    for (const k of Object.keys(j)) {
+      if (Array.isArray(j[k]) && j[k].length) {
+        const base = j[k];
+        const out = [];
+        for (let i = 0; i < factor; i++) for (const row of base) out.push(typeof row === "object" && row ? { ...row, id: `${row.id || "r"}__h${i}` } : row);
+        j[k] = out;
+      }
+    }
+    return JSON.stringify(j, null, 1);
+  } catch { return txt; }
+}
+const scaleJsonl = (txt, factor) => {
+  const lines = txt.split("\n").filter((l) => l.trim());
+  if (!lines.length) return txt;
+  const out = [];
+  for (let i = 0; i < factor; i++) out.push(...lines);
+  return out.join("\n") + "\n";
+};
+// Push every ISO timestamp back N days, in place, across the whole state tree.
+const ageText = (txt, days) => txt.replace(/"(\d{4})-(\d{2})-(\d{2})T/g, (m, y, mo, d) => {
+  const t = new Date(Date.UTC(+y, +mo - 1, +d) - days * 86400000);
+  return `"${t.toISOString().slice(0, 10)}T`;
+});
+
+export function horizon(opts = {}) {
+  const ir = JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "xray_graph.json"), "utf8"));
+  const READ_ONLY = ["report", "status", "state", "brief", "list", "due", "plan", "show"];
+  const primary = (f) => {
+    const o = ir.organs[f];
+    const built = new Set([...(o?.verbs || []), ...(o?.header_verbs || [])]);
+    return READ_ONLY.find((v) => built.has(v)) || null;
+  };
+  console.log("=== §7(c) LONG-HORIZON — the organism at a scale and age it has never had ===\n");
+  const rows = [];
+  for (const h of HORIZONS) {
+    const sb = buildSandbox({ trace: false });
+    try {
+      assertArmed(sb);
+      const stateDir = join(sb.root, "dressing-room", "state");
+      // WHICH ORGANS TO ASK: the readers of the file being stretched, from the IR.
+      let organs = [];
+      if (h.file === "*") {
+        for (const f of readdirSync(stateDir)) {
+          if (!/\.(json|jsonl)$/.test(f)) continue;
+          const p = join(stateDir, f);
+          try { writeFileSync(p, ageText(readFileSync(p, "utf8"), 90)); } catch { /* skip binaries */ }
+        }
+        organs = [...new Set(ir.files.filter((x) => /state\/[^/]+\.json/.test(x.path)).flatMap((x) => x.readers))];
+      } else {
+        const entry = ir.files.find((x) => x.path.endsWith(`/state/${h.file}`));
+        const target = join(stateDir, h.file);
+        if (!entry || !existsSync(target)) { console.log(`  ..   ${h.id.padEnd(12)} NOT MEASURED — ${h.file} is absent in a git-ls-files checkout (gitignored: the CI world)`); destroy(sb); continue; }
+        const factor = /x(\d+)/.exec(h.id) ? +/x(\d+)/.exec(h.id)[1] : 10;
+        const txt = readFileSync(target, "utf8");
+        writeFileSync(target, h.file.endsWith(".jsonl") ? scaleJsonl(txt, factor) : scaleJson(txt, factor));
+        organs = entry.readers;
+      }
+      organs = organs.filter((o) => primary(o)).slice(0, opts.full ? 99 : 6);
+      for (const organ of organs) {
+        const verb = primary(organ);
+        const args = [join(sb.root, "scripts", organ), verb];
+        const t0 = Date.now();
+        const r = runIn(sb, args, { label: organ, timeout: 60000 });
+        const ms = Date.now() - t0;
+        const verdict = r.timedOut ? "TIMEOUT" : r.code !== 0 ? "CRASH" : "ok";
+        rows.push({ horizon: h.id, organ, verb, verdict, ms });
+        if (verdict !== "ok") console.log(`  ${verdict.padEnd(8)} ${h.id.padEnd(12)} ${organ} ${verb}  (${ms}ms)  — ${h.why}`);
+      }
+    } finally { destroy(sb); }
+  }
+  const bad = rows.filter((r) => r.verdict !== "ok");
+  const slow = rows.filter((r) => r.verdict === "ok" && r.ms > 20000);
+  console.log(`\n  ${rows.length} organ-runs at horizon · ${bad.length} CRASH/TIMEOUT · ${slow.length} slower than 20s`);
+  if (!bad.length && !slow.length) console.log(`  Nothing broke at 10-20× scale or 90 days of age. That is a MEASUREMENT, not an assumption —`);
+  console.log(`  and it is the only lens in this audit that can see past today's tree.`);
+  return { rows, bad, slow };
 }
 
 // ============================================================================
@@ -640,6 +781,27 @@ function selftest() {
   // the structural guarantee that no exhibit has been quietly deleted — because
   // the cheapest way to make a museum report 6-of-6 is to remove the exhibits
   // that miss, and that is the exact dishonesty this whole file exists against.
+  // §4.2(c) — the operator set must mirror THIS repo's taxonomy, all seven.
+  assert("all SEVEN code operators from the repo's own bug taxonomy exist",
+    ["FIELD_RENAME", "PATH_LIT", "COND_FLIP", "SLICE_OB1", "STMT_DEL", "CATCH_RETHROW", "CONST_SCALE"].every((k) => typeof CODE_OPS[k] === "function"),
+    Object.keys(CODE_OPS).join(","));
+  assert("STMT_DEL actually deletes a statement (the most brutal operator, and the one that asks if a line is load-bearing at all)",
+    CODE_OPS.STMT_DEL("function f(){\n  doThing(1);\n}") !== "function f(){\n  doThing(1);\n}");
+  // COVERAGE SELECTS, NEVER SCORES — asserted as an absence, because the danger
+  // is that a percentage creeps in and becomes the thing people optimise.
+  const selfSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+  // ⚠ ASSERT ON THE CODE, NOT ON THE PROSE. The first version regexed the whole
+  // file for /percent/ and went RED on its OWN COMMENT explaining why a coverage
+  // percentage must never be reported. A checker that cannot tell an explanation
+  // from an implementation is the same confusion the doc-claim checker had.
+  const codeOnly = selfSrc.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  assert("NODE_V8_COVERAGE is used to SELECT mutants, and no coverage NUMBER is ever printed",
+    /NODE_V8_COVERAGE/.test(codeOnly) && !/console\.log\([^)]*cover[^)]*%/i.test(codeOnly));
+  // §7(c) — the long-horizon lens must exist and must state what it could not reach.
+  assert("§7(c) LONG-HORIZON exists — scaled AND aged fixtures, the only lens that sees past today's tree",
+    HORIZONS.length >= 4 && HORIZONS.some((h) => /aged/.test(h.id)) && HORIZONS.some((h) => /x\d+/.test(h.id)));
+  assert("…and every horizon carries WHY it is worth stretching", HORIZONS.every((h) => h.why && h.file));
+
   assert("the Bug Museum still holds all six historical bugs", MUSEUM.length === 6, `${MUSEUM.length}`);
   assert("…and every exhibit has a story, a named detector, an apply and a detect",
     MUSEUM.every((m) => m.id && m.story && m.detector && typeof m.apply === "function" && typeof m.detect === "function"));
@@ -664,8 +826,9 @@ function main() {
   if (mode === "panic") { panic({ full }); return; }
   if (mode === "state") { stateMatrix({ full }); return; }
   if (mode === "museum") { const r = museum(); process.exit(r.caughtN === 0 ? 1 : 0); }
-  if (mode === "code") { console.log(Object.keys(CODE_OPS).join("\n")); return; }
-  console.log("mutagen: panic | state | museum | code | selftest  [--full]");
+  if (mode === "code") { codeMutants({ full }); return; }
+  if (mode === "horizon") { horizon({ full }); return; }
+  console.log("mutagen: panic | state | museum | code | horizon | selftest  [--full]");
   process.exit(1);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
