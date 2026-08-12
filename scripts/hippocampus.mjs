@@ -757,6 +757,107 @@ function whoStale(who = readJson(WHO), now = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
+// B14 — THE ICEBERG: one composed, DATED model of him.
+// ---------------------------------------------------------------------------
+// 12 Aug 2026, his words: "I want you to tell me first of all every single thing
+// you know about me. Use brain for this." It answered thinly, and he pushed back:
+// "I want the entire iceberg and it is more than what you was saying so I want
+// you to keep your knowledge updated. It is not what you think."
+//
+// He was right, and the reason is structural rather than a failure of recall:
+// SEVEN organs each hold a real piece of him and NOTHING composes them. The
+// identity ledger (facts he dictated), the consolidated who-he-is, the Scribe's
+// episodes, nikhil_model's cause→effect edges, calibration, nemesis and
+// learning_state. Any one of them read alone sounds exactly as thin as the answer
+// he got.
+//
+// COMPOSED ON DEMAND, NOT ON THE NIGHT LANE. The worklist specified a nightly
+// refresh; every source here is a plain disk read, so composing costs nothing and
+// an on-demand build can never be stale — which is strictly better than a nightly
+// artifact that is wrong by breakfast. What the night lane WOULD have given is
+// the dating, so that is done here instead: every section carries its own source
+// date, and a stale source SAYS it is stale rather than being quietly dropped.
+// That is the part he actually asked for — "keep your knowledge updated."
+function icebergSections(now = new Date(), deps = {}) {
+  const R = deps.readJson || readJson;
+  const age = (d) => { const a = ageInDays(d, now); return a === null || a < 0 ? "age unreadable" : a === 0 ? "today" : `${a}d old`; };
+  const out = [];
+  const push = (title, date, body) => { if (body && String(body).trim()) out.push({ title, date: date || null, age: date ? age(date) : "undated", body: String(body).trim() }); };
+
+  const facts = R(FACTS);
+  // the row's date field is `ts` — it was written as `at` here first, which made
+  // the newest section in the whole iceberg render "(undated)". Read live before
+  // trusting a field name: `node -e "…Object.keys(f.facts.at(-1))"` → id,ts,text.
+  push("THE LEDGER OF SELF — facts HE dictated, in his words", (facts && facts.facts && facts.facts.length) ? String(facts.facts[facts.facts.length - 1].ts || "").slice(0, 10) : null,
+    identityCartridge(facts, now));
+  const who = R(WHO);
+  push("WHO HE IS RIGHT NOW — the consolidated read", who && who.date, whoCartridge(who, now));
+
+  try {
+    const m = R(join(STATE_DIR, "nikhil_model.json"));
+    const edges = (m && m.edges) || [];
+    // AN EMPTY SOURCE SAYS IT IS EMPTY. Dropping it silently would rebuild the exact
+    // thinness he objected to — the answer would sound complete while a whole organ
+    // was missing from it, and he would have no way to tell. Measured 12 Aug: zero
+    // edges, all counters at 0, so this organ has never had anything to say yet.
+    push("CAUSE → EFFECT — what actually moves him, learned from his own days", m && m.as_of,
+      edges.length
+        ? edges.slice(0, 8).map(e => `· ${e.cause || e.from} → ${e.effect || e.to}${e.confidence ? ` (${e.confidence})` : ""}`).join("\n")
+        : "NOTHING HERE YET — this organ learns cause→effect from his own logged days and has proposed 0 edges so far. Say that plainly if he asks; do not fill the gap with a guess about what moves him.");
+  } catch { }
+  try {
+    const c = R(join(STATE_DIR, "calibration.json"));
+    if (c && c.total_reps) push("HIS CALIBRATION — how well he knows what he knows", c.date,
+      `gap ${c.calibration_gap} · overconfidence ${c.overconfidence_rate} · trend ${c.trend} · ${c.total_reps} reps${c.low_confidence ? " (LOW CONFIDENCE — too few reps to lean on)" : ""}${c.danger_zone ? `\ndanger zone: ${JSON.stringify(c.danger_zone).slice(0, 200)}` : ""}`);
+  } catch { }
+  try {
+    const w = R(join(STATE_DIR, "weaknesses.json"));
+    if (w && w.headline) push("HIS NEMESIS — where he keeps breaking", w.date,
+      `${w.headline}${w.axis_pattern ? `\npattern: ${w.axis_pattern}` : ""}${w.low_confidence ? "\n(LOW CONFIDENCE — too few reps)" : ""}`);
+  } catch { }
+  try {
+    const l = R(join(STATE_DIR, "learning_state.json"));
+    if (l && l.status) push("WHERE HE IS IN THE WORK", l.date,
+      `${l.status}${l.weak_connection ? `\nweak connection: ${l.weak_connection}` : ""}${l.python_fluency ? `\npython: ${l.python_fluency}` : ""}`);
+  } catch { }
+  // B8's store belongs in the iceberg too: an instruction he gave OUT LOUD is a
+  // fact about him exactly as much as one he dictated to the ledger, and it is
+  // the half no other organ was holding at all.
+  try {
+    const st = R(join(STATE_DIR, "gaffer_standing.json"));
+    const ins = (st && st.instructions) || [];
+    if (ins.length) push("WHAT HE HAS TOLD YOU OUT LOUD — standing, does not expire", ins[ins.length - 1].day,
+      ins.map(i => `· [${i.label}] ${i.text}`).join("\n"));
+  } catch { }
+  return out;
+}
+
+// icebergText — the spoken form. Named separately so the sections stay available
+// as DATA to any organ that wants to render them its own way (the supervisor
+// wants the standing block alone; the briefing wants a headline).
+function icebergText(now = new Date(), deps = {}) {
+  const secs = icebergSections(now, deps);
+  if (!secs.length) return "";
+  const head = `EVERYTHING THE ORGANISM HOLDS ABOUT HIM — composed ${now.toISOString().slice(0, 10)} from ${secs.length} live sources.`;
+  const law = `Say the SHAPE first (how many parts, what they are), then walk them one at a time and STOP between. Name each part's date as you give it — he asked you to keep your knowledge updated, so a source that is old must be delivered as old, never smoothed into the present tense. If he asks for more on one part, go deeper on THAT part; do not restart the list.`;
+  return `${head}\n${law}\n\n` + secs.map(s => `── ${s.title} (${s.age}${s.date ? `, ${s.date}` : ""})\n${s.body}`).join("\n\n");
+}
+
+// B14 SELFTEST HOOK — exported below and asserted in this file's own suite.
+// The three properties that make the iceberg different from what he got on
+// 12 Aug: it is COMPOSED (more than one source), it is DATED per source, and an
+// EMPTY source announces itself instead of vanishing.
+function icebergSelfCheck(now = new Date(), deps = {}) {
+  const secs = icebergSections(now, deps);
+  return {
+    composed: secs.length,
+    all_dated: secs.every(s => typeof s.age === "string" && s.age.length > 0),
+    empties_named: secs.filter(s => /NOTHING HERE YET/.test(s.body)).length,
+    titles: secs.map(s => s.title),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // L4 — THE THALAMIC RECALL REFLEX (per-turn; win-only, never theatre)
 // ---------------------------------------------------------------------------
 async function recallReflex(turnText, deps = {}) {
@@ -1447,6 +1548,35 @@ async function selftest() {
     assert("M10: recall working set = hot only (O(recent) by construction)", writes.HOT.length === 2);
   }
 
+  // ---- B14 · THE ICEBERG (12 Aug 2026) ------------------------------------
+  // He asked "tell me every single thing you know about me. Use brain for this",
+  // got a thin answer, and pushed back: "I want the entire iceberg and it is more
+  // than what you was saying". The three properties below are what makes this
+  // different from the answer he got, and each is asserted on a HERMETIC fixture
+  // so the suite passes on a bare CI checkout that has none of his personal state.
+  {
+    const fixture = (p) => {
+      const s = String(p);
+      if (s.endsWith("identity_facts.json")) return { facts: [{ id: "x", ts: "2026-08-11T10:00:00Z", text: "he ruled X" }] };
+      if (s.endsWith("who_he_is.json")) return { date: "2026-08-12", fingerprint: "he is here", open_threads: [], recent_wins: [], voice_tuning: "slow" };
+      if (s.endsWith("nikhil_model.json")) return { as_of: "2026-08-12", edges: [] };          // deliberately EMPTY
+      if (s.endsWith("calibration.json")) return { date: "2026-08-12", total_reps: 40, calibration_gap: 0.2, overconfidence_rate: 0.3, trend: "flat" };
+      if (s.endsWith("gaffer_standing.json")) return { instructions: [{ axis: "pace", label: "speaking pace", text: "dheere bolo", day: "2026-08-12" }] };
+      return null;
+    };
+    const NOW = new Date("2026-08-12T12:00:00Z");
+    const chk = icebergSelfCheck(NOW, { readJson: fixture });
+    assert("B14 — the iceberg is COMPOSED from many sources, which is the whole complaint (one organ read alone IS the thin answer)", chk.composed >= 4);
+    assert("B14 — EVERY part carries its own age, so a stale source is delivered as stale ('keep your knowledge updated')", chk.all_dated === true);
+    assert("B14 — an EMPTY source SAYS it is empty instead of vanishing (a silent drop rebuilds the exact thinness)", chk.empties_named === 1);
+    assert("B14 — the standing instructions he gave OUT LOUD are part of who he is, and no other organ was holding them",
+      chk.titles.some(t => /OUT LOUD/.test(t)));
+    const txt = icebergText(NOW, { readJson: fixture });
+    assert("B14 — the spoken form leads with the SHAPE and forbids a dump (B7's law, applied to the thing he asked for)",
+      /Say the SHAPE first/.test(txt) && /one at a time and STOP between/.test(txt));
+    assert("B14 — and it names the composition date, so he can tell freshness from folklore", txt.includes("composed 2026-08-12"));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1555,6 +1685,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export {
   markMoment, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact,
   identityCartridge, whoCartridge, whoStale, consolidate, validateWho, recallReflex,
+  // B14 — THE ICEBERG. Sections as DATA and the spoken text, so a reader can take
+  // either (the Gaffer's tool wants the text; a supervisor wants one section).
+  icebergSections, icebergText, icebergSelfCheck,
   bumpRecall, applyRecallBumps, buildRehydrateCartridge, consolidateStore,
   // 10 Aug 2026 — the staging door mcp-memory.mjs now goes through instead of
   // writing identity_facts.pending.jsonl itself (single-writer, his ruling).

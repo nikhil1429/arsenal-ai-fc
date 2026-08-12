@@ -87,7 +87,7 @@ import { buildFingerprint, bannedPhraseCheck, starvedNightFor } from "./brain.mj
 // 02:10 consolidator at :615) — nothing is removed from the organism, only the
 // dead wire into this file. The selftest below now fails on any sibling import
 // this file does not actually call, so it cannot come back quietly.
-import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex } from "./hippocampus.mjs";
+import { identityCartridge, whoCartridge, buildRehydrateCartridge, recallReflex, icebergText, icebergSections } from "./hippocampus.mjs";
 import { projectVitals, projectScout, projectDrills, projectTwin } from "./talk.mjs";   // LADDER F2 — fields, never envelopes (the :41-51 scar)
 import { renderEdge as renderModelEdge } from "./nikhil_model.mjs";   // H3 — the formatter law: every reader renders edges through the owner's own line
 // M3 — fuelboard READS only (usage writes go through the owner via the shell)
@@ -1432,6 +1432,7 @@ const TOOL_DECLS = [
   { name: "forget", description: "LEDGER OF SELF — a SPOKEN GATE: call ONLY when he explicitly asks to forget a held fact. Confirm in one line. id from the ledger shown in your instruction.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
   { name: "run_python", description: "THE CHALKBOARD — run python in a real sandbox and get the ACTUAL output. Use it whenever a claim is checkable: prove an answer, execute his idea mid-drill, verify a number. Never assert what you can run. code = complete runnable python that prints its result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
   { name: "read_url", description: "SOURCE-GROUNDED READ — fetch and read a PUBLIC http(s) page (docs, papers, articles) and answer FROM it. Use when he names a URL or when teaching deserves the actual source over your priors. NEVER for private/local/personal ground. question = what to extract.", parameters: { type: "OBJECT", properties: { url: { type: "STRING" }, question: { type: "STRING" } }, required: ["url"] } },
+  { name: "get_iceberg", description: "THE ICEBERG — EVERYTHING the organism holds about HIM, composed from all seven live sources at once (the ledger of self he dictated, the consolidated who-he-is, cause→effect edges, calibration, nemesis, where he is in the work, and every standing instruction he has given out loud), each part carrying its OWN date. Call this whenever he asks what you know about him — 'tell me everything you know about me', 'what do you know about me', 'use brain for this', 'the entire iceberg', 'mere baare mein kya jaante ho'. Do NOT answer that question from memory or from one source: on 12 Aug 2026 he asked, got a thin answer from a single organ, and pushed back — 'I want the entire iceberg and it is more than what you was saying so I want you to keep your knowledge updated.'", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_club_report", description: "THE BOARDROOM BRIEFING — the WHOLE organism's state in one call: body, brain spend, what the gate did today, senses, memory, tanks, night-shift output, what's dormant and why. Call when he asks 'what's happening in the club / sab kuch batao / club report / brief me'.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: {} } },
 ];
@@ -1756,6 +1757,21 @@ function execTool(name, args, deps = {}) {
       const prefs = { ...loadPrefs(), depth: reg };
       (deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2))))(PREFS, prefs);
       return { ok: true, register: reg, effect: DEPTH_REGISTERS[reg] };
+    }
+    if (name === "get_iceberg") {
+      // B14 — composed at CALL TIME from seven live sources (hippocampus owns the
+      // composer; this is a read). Deterministic and free, so there is no reason to
+      // cache it and every reason not to: a cached iceberg is stale by breakfast,
+      // which is the exact complaint — "keep your knowledge updated."
+      const text = icebergText(new Date());
+      const secs = icebergSections(new Date());
+      if (!text) return { ok: false, note: "the iceberg is EMPTY — no source has anything yet. Say that plainly; do not improvise a description of him." };
+      return {
+        ok: true, composed: new Date().toISOString().slice(0, 10), sources: secs.length,
+        parts: secs.map(s => ({ title: s.title, date: s.date, age: s.age })),
+        iceberg: text,
+        _use: "Speak this as a WALK, not a dump: say how many parts there are, then take them ONE at a time and stop between. Give each part's date with it — a source that is old is delivered as old, never smoothed into the present tense. If a part says it is empty, SAY it is empty; never fill the gap with a plausible guess about him.",
+      };
     }
     if (name === "get_club_report") {
       // THE BOARDROOM BRIEFING — every organ's day, one deterministic sweep.
@@ -2543,7 +2559,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 29);   // 29 since the 11 Aug voice-round wire (grade_rejirah; 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1)
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 30);   // 30 since B14 (get_iceberg, 12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -2594,7 +2610,7 @@ async function selftest() {
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
-      g.tools[0].functionDeclarations.length === 29
+      g.tools[0].functionDeclarations.length === 30
       && ["get_capsule", "grade_rejirah", "log_reps", "get_organism", "get_club_report", "get_context"]
         .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
@@ -3164,7 +3180,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("29 club tools now (11 Aug: grade_rejirah joined H3's get_model)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 29);
+    assert("30 club tools now (12 Aug: B14 get_iceberg joined the 11 Aug grade_rejirah)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 30);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -3191,7 +3207,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 29 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 30 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
