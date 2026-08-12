@@ -368,6 +368,70 @@ the cause. **Check the artifacts, not the code.**
 
 ---
 
+## 5.5 — THE CAPTAIN'S CALL WAS HALF-BUILT (found 12 Aug, after the first push)
+
+He asked — again — why things waiting on his approval never reach him. Measured instead of
+assumed, and the answer was worse than the question:
+
+```
+live cards            27
+dealt at least once   27      (one of them TWENTY times)
+EVER ANSWERED          0
+```
+
+**The deal half worked the whole time.** The rotation is correct — least-dealt-first, rested
+for the day, real deal history on every card. **What did not exist was any way for him to
+ANSWER.** The only path was typing `captains_call.mjs answer <id> <word>` in a terminal, and
+he is ADHD-PI and talks to that surface **by voice**. His own ledger fact `5cea57e8`: a thing
+he must REMEMBER to do is a design failure. **Forty-two unanswered cards is that failure,
+measured.**
+
+**`answer_card` (31st tool).** Shells the owner — same precedent as `approve_genome` →
+bootroom — so `captains_call.mjs` stays sole writer. **The id is OPTIONAL by design:** LADDER
+A1 already binds his bare word to the card most recently dealt, and asking a man to repeat an
+id back to a voice is the friction this exists to remove. Only his three words are accepted;
+a fourth is *asked about*, never guessed. And the constitution now **asks for the answer** —
+a tool nobody is told about is a dead tool.
+
+### …and then the fix nearly became a lie
+
+Measured what `haan` actually *does*, per card:
+
+| dispatch | count | what it means |
+|---|---|---|
+| `open <repo file>` | **12** | a file that still has to be READ |
+| `none` | 10 | hand-filed reminders — haan retires it, and that IS the action |
+| a real dispatch | 5 | forget-fact · at-source · restart-daemon · gate-tune |
+
+The owner's CLI already prints *"read it now and walk him through it"* for an `open` card.
+**The danger was mine:** my first `_use` said *"never read the raw output back"*, which would
+have turned the Gaffer away from that instruction and made it say **"done"** on all twelve.
+It now says plainly that those are not done, names what has to be read, and calls it a desk
+job. Held by assertion.
+
+### Two dead wires in my own B4, same session
+
+Found by sweeping every state file for a reader outside its writer. Both failed **silently
+inside a `try/catch`** — the quietest bug in this repo:
+
+- the Re-Jirah line read **`rejirah_state.json`, a file nothing creates** → the briefing never
+  once mentioned the four overdue rounds. Now reads `fsrs_store.json`, the same source
+  `get_rejirah` conducts from.
+- the missions line filtered on **`x.status === "staged"`, and a mission row has no `status`
+  field** (`staged_at` / `fired_at` / `ingested_at`) → matched nothing while M02–M04 sat
+  un-returned since 8 Aug, gating `benchmark.mjs`.
+
+**All four briefing sources now reach him, verified live:** 42 decisions (with the one to deal
+first) · 1 watchman RED · 4 overdue Re-Jirah rounds framed as RIPE, not late · 3 missions still
+out with the benchmark gate named.
+
+> **THE PATTERN, three times in one session:** a wrong field name inside a `try/catch`, and a
+> grep against the wrong field name (`dealt_at` when the real field is `dealt`) that made me
+> report a working rotation as broken. **Read the shape off disk before asserting anything
+> about it.**
+
+---
+
 ## 6 — READING CI WITHOUT `gh` (E1's blocker, removed)
 
 E1 has been stuck behind *"the log is unreadable without `gh` (not installed)"* since 11 Aug.
