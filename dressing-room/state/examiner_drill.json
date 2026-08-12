@@ -1,6 +1,6 @@
 {
   "date": "2026-08-12",
-  "staged_at": "2026-08-11T21:06:17.571Z",
+  "staged_at": "2026-08-12T16:30:05.301Z",
   "concept": "hallucinations",
   "picked_because": "stalling/regressing in learning_state",
   "shape": "phenomenon",
@@ -12,6 +12,5 @@
     "run it and ask what the number MEANS — a score with no interpretation is not a measurement",
     "ask how many examples his score would need before he would trust it, and why that number",
     "plant one mislabelled example and see whether he notices the score move"
-  ],
-  "night_note": "raat ke coach ne pakda — woh soch raha hai: Jo output usko yaad nahi hai ya verify nahi hota, woh hallucination hai — label truth-value pe lagta hai. · sach: Label is pe lagta hai ki output grounded source se aaya ya generate hua. Gaffer ka purana-kaam recall grounded tha (state: step 3, 8 prior runs); asli fabrication uska palat kar 'fresh season, kuch baat hi nahi hui' kehna tha."
+  ]
 }
