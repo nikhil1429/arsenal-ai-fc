@@ -1881,9 +1881,19 @@ function execTool(name, args, deps = {}) {
       try { said = String(sh("captains_call.mjs", id ? ["answer", id, word] : ["answer", word]) || "").trim(); }
       catch (e) { failed = String((e && (e.stdout || e.stderr || e.message)) || e).trim().slice(0, 300); }
       if (failed) return { ok: false, error: `the card was NOT answered — captains_call.mjs refused: ${failed}. Tell him plainly that it did not land; never say it is done when it is not.` };
+      // WHAT HAPPENS NEXT DEPENDS ON THE CARD, and getting this wrong would make
+      // the Gaffer LIE. Measured across the 27 live cards: 12 carry dispatch
+      // "open" (a repo FILE to be read), 10 carry none (hand-filed reminders —
+      // his haan retires them and that IS the action), and 5 carry a real
+      // dispatch. The owner's CLI already prints the right instruction for each;
+      // the danger is a blanket "never read the raw output back" turning the
+      // Gaffer away from it, which is what the first version of this said.
+      const needsReading = /read it now/i.test(said);
       return {
-        ok: true, answered: word, said: said.slice(0, 400),
-        _use: "Confirm in ONE short line what you just recorded and what it will do — then carry on with what you were doing. Never read the raw output back, never list the other pending cards unless he asks.",
+        ok: true, answered: word, said: said.slice(0, 400), needs_reading: needsReading,
+        _use: needsReading
+          ? "THIS ONE IS NOT DONE YET — his haan means 'walk me through it', and the file named in `said` still has to be READ. You cannot open a repo file from this surface, so say that plainly and honestly: name what has to be read and tell him it is a desk job for the Claude Code side. NEVER say it is handled."
+          : "Confirm in ONE short line what you just recorded and what it now does — then carry straight on with what you were doing. Do not read the raw output back, and do not list the other pending cards unless he asks.",
       };
     }
     if (name === "approve_genome") {
@@ -2964,6 +2974,11 @@ async function selftest() {
         SI.includes("haan, na, ya baad?") && SI.includes("answer_card(word)") && SI.includes("NOT A SINGLE ONE EVER ANSWERED"));
       assert("CARD — one at a time, never a queue (a 27-item read-out is the same failure in a new coat)",
         SI.includes("you may offer the next ONE — never a list, never a queue"));
+      // 12 of the 27 live cards dispatch "open <repo file>" — a thing this surface
+      // CANNOT do. A blanket "never read the raw output back" would have made the
+      // Gaffer answer haan and say "done" on all twelve. It must say the opposite.
+      assert("CARD — an 'open' card is NOT reported as handled: the Gaffer says plainly it still has to be read",
+        SRCX.includes("THIS ONE IS NOT DONE YET") && SRCX.includes("NEVER say it is handled") && SRCX.includes("needs_reading"));
 
       // ---- TWO DEAD WIRES IN MY OWN B4, found by sweeping for state files with
       // no reader outside their writer (12 Aug 2026). Both failed SILENTLY inside
