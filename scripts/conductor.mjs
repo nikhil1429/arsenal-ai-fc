@@ -461,9 +461,34 @@ export function launchDetached(args) {
   c.unref();
 }
 
+// E2/E-chain repair (12 Aug 2026) — A STEP'S BUDGET MAY BE ITS OWN.
+// STEP_TIMEOUT_MS is "3 min per organ", and that is the right default for AN
+// ORGAN. Two steps in MORNING are not organs, and the flat budget failed them
+// EVERY morning (ArsenalFC-Morning-Conductor: result 1, watchman RED task-errors):
+//
+//   heartbeat — is a CHAIN OF EIGHT (capture · fsrs · capsule_bridge · calibration
+//     · nemesis · learning_state · timeaudit · shipped), each with its OWN 120s
+//     budget inside heartbeat.mjs. Eight organs at up to 120s each, inside a 180s
+//     box: structurally impossible, not a hang. Measured off this chain's own log
+//     of 2026-08-12, just FOUR of those eight took 179.4s (fsrs 33.5 · calibration
+//     49.2 · nemesis 31.0 · learningstate 65.7) and the step died at 182,963ms.
+//   mirror — is the chain's FIRST step and its work is a NETWORK fetch of the
+//     gist. At 09:17, seconds after the laptop woke, it stalled to 186,377ms; the
+//     same organ run by hand the same day took 2s, and its own scheduled task at
+//     09:20 succeeded in full. A cold network on the first call after wake, not a
+//     hung organ — so a bigger budget is the honest fix, not a retry that would
+//     re-fetch a gist that was never the problem.
+//
+// The numbers below are DERIVED from those measurements (heartbeat ≈ 2× its own
+// measured four; mirror ≈ 1.6× its measured cold stall), never guessed. Same
+// per-step metadata shape the chain already uses for `daemon` / `writes` /
+// `needs` / `log`, so nothing new is being invented here.
+const STEP_BUDGET = { heartbeat: 420000, mirror: 300000 };
+const budgetFor = (step, opts = {}) => opts.timeoutMs || STEP_BUDGET[step && step.id] || STEP_TIMEOUT_MS;
+
 export async function conduct(chain = MORNING, opts = {}) {
-  const run = opts.run || ((args) => spawnSync(process.execPath, args, {
-    cwd: REPO, timeout: opts.timeoutMs || STEP_TIMEOUT_MS, encoding: "utf8", windowsHide: true,
+  const run = opts.run || ((args, step) => spawnSync(process.execPath, args, {
+    cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true,
   }));
   const arm = opts.arm || armTrigger;
   const tee = opts.logStep || logStep;
@@ -613,9 +638,9 @@ export async function conduct(chain = MORNING, opts = {}) {
     // isolation/timeout/record shape as every node one-shot. Injectable.
     const r = step.exec
       ? (opts.runExec || ((ex) => spawnSync(ex.cmd, ex.args, {
-          cwd: REPO, timeout: opts.timeoutMs || STEP_TIMEOUT_MS, encoding: "utf8", windowsHide: true,
+          cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true,
         })))(step.exec)
-      : run(step.args);
+      : run(step.args, step);
     const ms = Date.now() - t0;
     const timedOut = !!(r && (r.error && /ETIMEDOUT|timed out/i.test(String(r.error.message || r.error))));
 
@@ -696,7 +721,7 @@ export async function conduct(chain = MORNING, opts = {}) {
       // A green row now points at its own evidence. Without this the report is the
       // only thing anyone reads, and it is the one place a soft failure looks fine.
       log: rel(logPath),
-      error: timedOut ? `timed out after ${opts.timeoutMs || STEP_TIMEOUT_MS}ms` : (r && r.error ? String(r.error.message || r.error) : null),
+      error: timedOut ? `timed out after ${budgetFor(step, opts)}ms` : (r && r.error ? String(r.error.message || r.error) : null),
       // stderr is kept SHORT and only on failure: selfknowledge.mjs's whole
       // undiagnosable-failure bug was a runner that threw away e.stderr. WHAT it keeps
       // changed 10 Aug 2026 — the tail-only cut threw away the error MESSAGE, which is
@@ -1070,6 +1095,27 @@ async function selftest() {
   {
     const rep = await conduct([{ id: "hang", args: ["x.mjs"] }], { ...base, timeoutMs: 50, run: () => ({ status: null, error: new Error("spawnSync ETIMEDOUT") }) });
     ok("TIMEOUT — a hung organ is failed and named, never left to block the chain", rep.steps[0].ok === false && /timed out/.test(rep.steps[0].error));
+  }
+
+  // ---- PER-STEP BUDGETS (12 Aug 2026) — the daily Morning-Conductor RED --------
+  // Held by SOURCE, because the failure mode is someone flattening these back to
+  // the shared default and the chain going red again every morning without anyone
+  // connecting the two. Each assertion names WHY that step is not an organ.
+  {
+    ok("BUDGET — heartbeat gets its own, because it is a CHAIN OF EIGHT inside one step (4 of its 8 measured 179.4s against a 180s box)",
+      budgetFor({ id: "heartbeat" }) === 420000 && budgetFor({ id: "heartbeat" }) > STEP_TIMEOUT_MS);
+    ok("BUDGET — mirror gets its own, because it is the FIRST step and its work is a network fetch on a just-woken laptop (measured 186,377ms cold vs 2s warm)",
+      budgetFor({ id: "mirror" }) === 300000 && budgetFor({ id: "mirror" }) > STEP_TIMEOUT_MS);
+    ok("BUDGET — every OTHER step keeps the shared 3-minute default (this is an exception list, never a blanket raise)",
+      budgetFor({ id: "twin" }) === STEP_TIMEOUT_MS && budgetFor({ id: "sheet" }) === STEP_TIMEOUT_MS && budgetFor({}) === STEP_TIMEOUT_MS);
+    ok("BUDGET — an explicit opts.timeoutMs still overrides everything (the selftest above depends on it)",
+      budgetFor({ id: "heartbeat" }, { timeoutMs: 50 }) === 50);
+    ok("BUDGET — the two steps that need one are exactly the two the chain measured failing, no others",
+      Object.keys(STEP_BUDGET).sort().join() === "heartbeat,mirror");
+    // and the budget must reach the RUNNER, not merely exist — this is the wire.
+    let sawTimeout = null;
+    await conduct([{ id: "heartbeat", args: ["heartbeat.mjs"] }], { ...base, run: (a, s) => { sawTimeout = budgetFor(s); return { status: 0, stdout: "" }; } });
+    ok("BUDGET — the per-step budget actually REACHES the runner (a constant nobody passes is decoration)", sawTimeout === 420000);
   }
 
   // arming is a merge, never a clobber

@@ -1535,12 +1535,19 @@ function selftest() {
   // never spawns another organ, so the spawn argv itself is what gets asserted.
   {
     const cmds = chainCommands("hallucinations");
-    assert("lock-chain: exact spawn argv (mission stage-lock + G16's event-driven mirror + capsule_bridge + benchmark run)",
-      cmds.length === 4
+    assert("lock-chain: exact spawn argv (mission stage-lock + G16's event-driven mirror + capsule_bridge + benchmark run + E8's widget list)",
+      cmds.length === 5
       && /scout\.mjs$/.test(cmds[0].args[0]) && cmds[0].args.slice(1).join(" ") === "mission stage-lock hallucinations"
       && /mirror\.mjs$/.test(cmds[1].args[0])
       && /capsule_bridge\.mjs$/.test(cmds[2].args[0]) && cmds[2].args.length === 1
-      && /benchmark\.mjs$/.test(cmds[3].args[0]) && cmds[3].args[1] === "run");
+      && /benchmark\.mjs$/.test(cmds[3].args[0]) && cmds[3].args[1] === "run"
+      && /widget\.mjs$/.test(cmds[4].args[0]) && cmds[4].args[1] === "list");
+    // E8 — the widget leg is REPORT-ONLY and must stay that way: `list` reads and
+    // prints. If a future edit points it at `register`, this lock-chain would start
+    // WRITING the registry from a fail-silent lane, and the widget nobody drove would
+    // become a widget nobody chose. The verb is the whole guarantee.
+    assert("E8 — the widget leg can only ever READ (a lock must never write the registry)",
+      cmds[4].args[1] === "list" && cmds[4].args.length === 2);
 
     // THE DERIVED-MAP WIRE (dead-wire sweep, 11 Aug 2026 — CONSUMER_NO_PRODUCER, live
     // 8→11 Aug). gateLines() below is handed capsule_map.json, and benchmark opens the
@@ -1709,6 +1716,22 @@ function chainCommands(concept) {
     // network round-trip, and this lane has none.
     { name: "capsule_bridge", args: [join(__dirname, "capsule_bridge.mjs")], timeout: 15000 },
     { name: "benchmark", args: [join(__dirname, "benchmark.mjs"), "run"], timeout: 20000 },
+    // E8 (12 Aug 2026) — WIDGET GETS A DRIVER. Measured across all 75 scripts, four
+    // organs were reachable only by him typing their name: python_state · shipped ·
+    // widget · course. `shipped` turned out to be a MISREAD — heartbeat's own chain
+    // runs it daily (heartbeat.mjs DEFAULTS order), so it has had an owner all along.
+    // Of the true three, `widget` is the only one with a live trigger TODAY: the
+    // Visualization Contract is in force by his own 1 Aug ruling ("11 point yes
+    // visuals are important for my adhd pi brain"), and a capsule reaching LOCK is
+    // exactly the moment to ask whether its ONE widget exists. python_state and
+    // course stay honestly dormant — he has not started either track — and their
+    // un-dormanting event is him starting it, not a driver invented today.
+    // REPORT-ONLY by construction: `list` reads and prints, it can neither register
+    // nor generate, so a lock can never be blocked or altered by this lane. Same
+    // fail-silent contract as every other leg, and it runs AFTER the step is saved.
+    // 15000 is the disk-only budget copied from the mission/capsule_bridge lanes
+    // above — `list` makes no network call, exactly like them.
+    { name: "widget", args: [join(__dirname, "widget.mjs"), "list"], timeout: 15000 },
   ];
 }
 
