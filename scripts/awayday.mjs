@@ -47,7 +47,7 @@ import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, renameSync 
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { execSync, execFileSync } from "node:child_process";
+import { execSync, execFileSync, spawnSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MANIFEST = join(__dirname, "..", "ci_manifest.json");
@@ -169,7 +169,27 @@ async function run(deps = {}) {
   // reaches no consumer is the exact defect this repair exists for.
   const exp = deps.exposure !== undefined ? deps.exposure : exposure(deps);
   (deps.log || console.error)(`awayday: ${exp.line}`);
-  const exec = deps.exec || ((cmd) => execSync(cmd, { encoding: "utf8", stdio: "inherit", cwd: join(__dirname, ".."), timeout: 1200000 }));
+  // CAPTURE + RELAY (12 Aug 2026, E1). This was execSync with stdio "inherit", so a red
+  // job's own last lines — the ONLY place the failing selftest is NAMED — existed solely
+  // inside the runner's log, which needs a GitHub sign-in to read. Three E1 causes in a
+  // row had to be reproduced blind at home because of it (and the third, still open when
+  // this landed, is machine-locale-shaped and CANNOT be reproduced at home: Node on this
+  // laptop is en-IN, the runner en-US, and LC_ALL does not override ICU on Windows). The
+  // child's output is captured, relayed verbatim to stderr (the CI log is unchanged), and
+  // on failure its TAIL rides the thrown message one-lined — which dispatchAll records as
+  // `why` and ciAnnotate lifts into the public Annotations panel, the one surface an
+  // unauthenticated curl can already read (proven 12 Aug, commit cd32886).
+  const exec = deps.exec || ((cmd) => {
+    const r = spawnSync(cmd, { shell: true, encoding: "utf8", cwd: join(__dirname, ".."), timeout: 1200000, maxBuffer: 64 * 1024 * 1024 });
+    const out = (r.stdout || "") + (r.stderr || "");
+    if (out) process.stderr.write(out);
+    if (r.error) throw new Error(`spawn failed: ${String(r.error.message || r.error)}`);
+    if (r.status !== 0) {
+      const tail = out.trim().split(/\r?\n/).filter((l) => l.trim()).slice(-8).join(" | ").slice(-500);
+      throw new Error(`exit ${r.status} · tail: ${tail || "(no output)"}`);
+    }
+    return out;
+  });
   const dispatch = deps.dispatch || (DISPATCH === "fail-fast" ? dispatchFailFastLegacy : dispatchAll);
   const d = dispatch(runnable, exec, deps.log || console.error);
   // ONE SHAPE OUT OF EITHER ENGINE. The frozen lane reports `failed` as a single name
@@ -219,7 +239,11 @@ function dispatchAll(runnable, exec, log = console.error) {
   const ran = [], failures = [];
   for (const j of runnable) {
     try { exec(j.run); ran.push(j.name); } catch (e) {
-      const why = String((e && e.message) || e).split("\n")[0].slice(0, 200);
+      // 700, not 200 (12 Aug 2026): the default exec now ends its message with the child's
+      // output TAIL — the failing selftest's own last lines — and a 200-char cap cut that
+      // tail off before the failing member's name. One line either way; the frozen legacy
+      // dispatch below keeps its original 200.
+      const why = String((e && e.message) || e).split("\n")[0].slice(0, 700);
       log(`\naway-day: JOB FAILED — "${j.name}"\n  command : ${j.run}\n  platform: ${process.platform} node ${process.version}\n  error   : ${why}\n  (the remaining job(s) still run — one red job must not hide the rest)`);
       failures.push({ name: j.name, why });
     }
