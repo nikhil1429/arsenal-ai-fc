@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-12T12:07:42.572Z",
+ "built_at": "2026-08-12T13:08:57.165Z",
  "organs_parsed": 84,
  "organs_expected": 84,
  "parse_errors": [],
- "unresolved_sinks": 4772,
+ "unresolved_sinks": 4773,
  "organs": {
   "audit.mjs": {
    "loc": 503,
@@ -79,7 +79,7 @@
      "fixture": false
     },
     {
-     "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
+     "path": ".",
      "lines": [
       225
      ],
@@ -3260,7 +3260,7 @@
      "fixture": false
     },
     {
-     "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
+     "path": ".",
      "lines": [
       123,
       125,
@@ -7861,7 +7861,7 @@
    "unresolved": 32
   },
   "mutagen.mjs": {
-   "loc": 581,
+   "loc": 616,
    "reads": [
     {
      "path": "dressing-room/state/xray_graph.json",
@@ -7880,10 +7880,10 @@
     {
      "path": "scripts",
      "lines": [
-      539,
-      539,
-      539,
-      539
+      563,
+      563,
+      563,
+      563
      ],
      "fixture": true
     }
@@ -7916,7 +7916,7 @@
     "panicRewrite",
     "stateMatrix"
    ],
-   "unresolved": 57
+   "unresolved": 58
   },
   "nemesis.mjs": {
    "loc": 599,
@@ -9168,7 +9168,7 @@
      "fixture": false
     },
     {
-     "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
+     "path": ".",
      "lines": [
       301,
       301,
@@ -10621,7 +10621,7 @@
    "unresolved": 3
   },
   "sandbox.mjs": {
-   "loc": 358,
+   "loc": 367,
    "reads": [
     {
      "path": "node_modules",
@@ -10665,7 +10665,7 @@
    ],
    "writes": [
     {
-     "path": "",
+     "path": ".",
      "lines": [
       101,
       101
@@ -14709,7 +14709,7 @@
      "fixture": false
     },
     {
-     "path": "../../../../nope/none.html",
+     "path": "/nope/none.html",
      "lines": [
       119,
       119,
@@ -14774,81 +14774,81 @@
    "unresolved": 20
   },
   "xray.mjs": {
-   "loc": 1211,
+   "loc": 1229,
    "reads": [
     {
      "path": "package.json",
      "lines": [
-      743,
-      743,
-      743
+      751,
+      751,
+      751
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      923,
-      1101,
-      1179,
-      1197,
-      1198,
-      1200,
-      923,
-      1101,
-      1179,
-      1197,
-      1198,
-      1200,
-      923,
-      1101,
-      1179,
-      1197,
-      1198,
-      1200
+      931,
+      1109,
+      1187,
+      1215,
+      1216,
+      1218,
+      931,
+      1109,
+      1187,
+      1215,
+      1216,
+      1218,
+      931,
+      1109,
+      1187,
+      1215,
+      1216,
+      1218
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      721,
-      722,
-      721,
-      722
+      729,
+      730,
+      729,
+      730
      ],
      "fixture": false
     },
     {
      "path": ".claude/settings.json",
      "lines": [
-      734,
-      735,
-      734,
-      735
+      742,
+      743,
+      742,
+      743
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      794,
-      794
+      802,
+      802
      ],
      "fixture": false
     },
     {
-     "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
+     "path": ".",
      "lines": [
-      758
+      766
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      862,
-      863
+      870,
+      871
      ],
      "fixture": false
     }
@@ -14857,11 +14857,11 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      920,
-      919,
-      920,
-      919,
-      920
+      928,
+      927,
+      928,
+      927,
+      928
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -14899,17 +14899,6 @@
   }
  },
  "files": [
-  {
-   "path": "",
-   "readers": [],
-   "writers": [
-    "sandbox.mjs"
-   ],
-   "fixture_readers": [],
-   "fixture_writers": [],
-   "on_disk": false,
-   "is_dir": false
-  },
   {
    "path": "__no_cfg__",
    "readers": [
@@ -15066,11 +15055,16 @@
    "is_dir": false
   },
   {
-   "path": "../../../../nope/none.html",
+   "path": ".",
    "readers": [
-    "widget.mjs"
+    "audit.mjs",
+    "deep.mjs",
+    "organism_test.mjs",
+    "xray.mjs"
    ],
-   "writers": [],
+   "writers": [
+    "sandbox.mjs"
+   ],
    "fixture_readers": [],
    "fixture_writers": [],
    "on_disk": false,
@@ -15146,6 +15140,17 @@
    "is_dir": false
   },
   {
+   "path": "/nope/none.html",
+   "readers": [
+    "widget.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "ARSENAL_FC_FULL_REPO_BUNDLE.md",
    "readers": [
     "repo_bundle.mjs"
@@ -15162,20 +15167,6 @@
    "path": "brain_out",
    "readers": [
     "sandbox.mjs"
-   ],
-   "writers": [],
-   "fixture_readers": [],
-   "fixture_writers": [],
-   "on_disk": false,
-   "is_dir": false
-  },
-  {
-   "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
-   "readers": [
-    "audit.mjs",
-    "deep.mjs",
-    "organism_test.mjs",
-    "xray.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
@@ -19610,6 +19601,18 @@
     "form": "path"
    },
    {
+    "script": "audit.mjs",
+    "verb": null,
+    "source": "INSTALL_TASKS.ps1",
+    "form": "path"
+   },
+   {
+    "script": "mutagen.mjs",
+    "verb": null,
+    "source": "INSTALL_TASKS.ps1",
+    "form": "path"
+   },
+   {
     "script": "conductor.mjs",
     "verb": "plan",
     "source": "INSTALL_TASKS.ps1",
@@ -23119,6 +23122,18 @@
    {
     "script": "gaffer_state.mjs",
     "verbs": []
+   },
+   {
+    "script": "audit.mjs",
+    "verbs": [
+     "run"
+    ]
+   },
+   {
+    "script": "sandbox.mjs",
+    "verbs": [
+     "ci"
+    ]
    }
   ],
   "md_files": 188

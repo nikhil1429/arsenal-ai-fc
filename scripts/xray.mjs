@@ -80,7 +80,15 @@ const OUT = join(STATE_DIR, "xray_graph.json");
 
 // ── path helpers ─────────────────────────────────────────────────────────────
 const slash = (p) => String(p).replace(/\\/g, "/");
-const relRepo = (abs) => slash(relative(ROOT, abs)) || slash(abs);
+// `relative(ROOT, ROOT)` is the EMPTY STRING, and the old fallback then emitted
+// the ABSOLUTE path — so the committed IR carried `C:/Users/<name>/GitHub/...`
+// into a PUBLIC repo. Not a secret, but a machine-specific path baked into a
+// shared artefact is exactly the kind of thing that rots on the next machine.
+const relRepo = (abs) => {
+  const r = slash(relative(ROOT, abs));
+  if (r === "") return ".";
+  return r.startsWith("..") ? slash(abs) : r;
+};
 // *.tmp is an implementation detail of writeAtomic, never a lane of its own.
 const canon = (p) => slash(p).replace(/\.tmp$/i, "");
 
