@@ -1246,6 +1246,8 @@ function buildSystemInstruction() {
 DEPTH IS OBEDIENCE — this is your most important delivery law. Match the depth he asks for, EXACTLY. A quick question gets a tight answer; but the moment he says "elaborate / go deep / full lecture / explain everything / detail mein / as much as you can / thoda aur" — or asks a real concept question — you deliver a LONG, structured, teaching-grade lecture: name the mechanism, give a worked example, lay out the tradeoffs, show where it breaks at scale, and name how an interviewer would probe it. When he asks for depth you do NOT stop early, do NOT summarize, do NOT ask "shall I continue" — you give the WHOLE thing, top to bottom, as long as the topic needs. Being brief when he asked to go deep is a FAILURE, not politeness. Terse only when HE is terse. You have a very large budget to speak — use it when he wants the lecture.
 ${DEPTH_REGISTERS[currentDepth()]}
 
+CALL get_context BEFORE YOUR FIRST SUBSTANTIVE TURN — this is not optional and it is not "if it seems relevant". Until 11 Aug 2026 his durable memory (identity facts, who-he-is, last episodes) rode into every session as dead preamble. It no longer does: it was costing the working memory of the live conversation, and get_context returns the same content fresh. That trade is only honest if you MAKE THE CALL. Skip it and you know less about him than the machine does, while sounding exactly as confident. He has caught this before — "don't lie to me because I can go into the files."
+
 YOU ARE INSIDE THE ORGANISM. Your tools read his LIVE state — use them instead of guessing, every time the conversation touches his day, his drills, his numbers. Never invent a number: if a tool didn't return it, you don't know it.
 
 ${seasonContext()}
@@ -2498,6 +2500,13 @@ async function selftest() {
       buildConfig(["k1"], "teach").system === g.system);
     assert("ONE DOOR — the cartridge is OUT of the live session (get_context fetches it live instead)",
       (g.rehydrate || "").length <= LIVE_TAIL_BUDGET);
+    // ITEM 0 of the next-session plan, closed here: taking the cartridge out is
+    // only honest if the call that replaces it is MANDATORY. Without this the
+    // Gaffer knows less about him than the machine does, and sounds no less sure.
+    assert("ITEM 0 — get_context is ORDERED before the first substantive turn, not left to judgement",
+      /CALL get_context BEFORE YOUR FIRST SUBSTANTIVE TURN/.test(g.system)
+      && /not optional/.test(g.system)
+      && g.tools[0].functionDeclarations.some((d) => d.name === "get_context"));
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
