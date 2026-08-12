@@ -142,9 +142,19 @@ function analyzeFile(absPath, src) {
       : d.id.type === "ArrayPattern" ? d.id.elements.filter((e) => e && e.type === "Identifier").map((e) => e.name)
         : [];
     for (const n of names) argvTainted.add(n);
-    // the default arm IS a verb: `(process.argv[2] || "tick")`
-    for (const m of text.matchAll(/\|\|\s*"([a-z][a-z0-9\-]*)"/g)) argvVerbs.add(m[1]);
-    for (const m of text.matchAll(/\|\|\s*'([a-z][a-z0-9\-]*)'/g)) argvVerbs.add(m[1]);
+    // The default arm IS a verb: `(process.argv[2] || "tick")`.
+    //
+    // ⚠ BUT NOT INSIDE A FUNCTION-VALUED DECLARATION, AND NOT INSIDE A COMMENT.
+    // `const noteArgvTaint = (d) => { … }` has an init span covering the WHOLE
+    // arrow body, comments included — so this very function's own explanatory
+    // comments (which quote `|| "list"` and `|| "tick"` as examples) were
+    // harvested as xray's CLI verbs, and the auto-fixer then wrote `list|tick`
+    // into xray's own header. A parser reading its own documentation as code is
+    // the purest form of the rot this audit exists to remove.
+    if (d.init.type === "ArrowFunctionExpression" || d.init.type === "FunctionExpression") return;
+    const code = text.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const m of code.matchAll(/\|\|\s*"([a-z][a-z0-9\-]*)"/g)) argvVerbs.add(m[1]);
+    for (const m of code.matchAll(/\|\|\s*'([a-z][a-z0-9\-]*)'/g)) argvVerbs.add(m[1]);
   };
 
   // ctx = the enclosing function name. It is carried because a sink reached ONLY

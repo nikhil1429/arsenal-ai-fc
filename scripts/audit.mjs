@@ -272,7 +272,18 @@ function fixHeaderVerbs(organ, missing, dry) {
   const m = /^\/\/\s*CLI:.*$/m.exec(src);
   if (!m) return { ok: false, why: "no `// CLI:` header line to extend" };
   const line = m[0];
-  if (!/\[/.test(line)) return { ok: false, why: "the CLI header is not in the `[a|b|c]` form; extending it would reformat his prose" };
+  // ⚠ THE SHAPE GUARD, EARNED THE HARD WAY. The first version extended the FIRST
+  // `[...]` on the line, which is only the verb list when the header is the
+  // canonical `node scripts/X.mjs [a|b|c]` form. python_state's header is
+  // `subtopic <name> [--tier T0] | close <name> …` and rejirah's is
+  // `grade <concept> <axis> held|cracked [--gut w]` — in both, the first bracket
+  // is an OPTION VALUE, and the fix produced `[--tier T0|brief|packet|selftest]`.
+  // Real edits, applied and then reverted by hand. APPLIED ≠ VERIFIED, and a fix
+  // that is plausible everywhere and correct only sometimes is worse than none.
+  // Only the unambiguous single-bracket form is auto-fixable now; everything else
+  // is a RULING, which is the honest answer.
+  const canonical = /^\/\/\s*CLI:\s*node\s+scripts\/[A-Za-z0-9_\-]+\.mjs\s*\[[^\]]*\]\s*$/.test(line);
+  if (!canonical) return { ok: false, why: "the CLI header is not the unambiguous `node scripts/X.mjs [a|b|c]` form (its first bracket may be an OPTION VALUE, not the verb list) — extending it would corrupt his usage line" };
   const next = line.replace(/\[([^\]]*)\]/, (_, inner) => `[${inner}|${missing.join("|")}]`);
   assertNoNewNumber(line, next);
   if (dry) return { ok: true, before: line, after: next };
@@ -293,7 +304,16 @@ function oracleFor(f) {
     const src = readFileSync(join(ROOT, "scripts", organ), "utf8");
     const m = /^\/\/\s*CLI:.*$/m.exec(src);
     if (!m) return false;
-    return verbs.every((v) => new RegExp(`[[|\\s]${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\]|\\s]`).test(m[0]));
+    // ⚠ THE ORACLE MUST CHECK THE BRACKET, NOT THE LINE. The first version asked
+    // only "does the verb appear on the CLI line", which was TRUE even when the
+    // fix had inserted it into an option-value bracket — so it went GREEN on two
+    // corrupted headers and the damage was only caught by reading the diff. An
+    // oracle that cannot distinguish a good fix from a bad one is not an oracle,
+    // and G-FIRST is worthless without it.
+    const b = /\[([^\]]*)\]/.exec(m[0]);
+    if (!b) return false;
+    const inner = b[1].split("|").map((s) => s.trim());
+    return verbs.every((v) => inner.includes(v));
   };
 }
 

@@ -1,12 +1,12 @@
 {
- "built_at": "2026-08-12T12:01:37.189Z",
+ "built_at": "2026-08-12T12:03:45.395Z",
  "organs_parsed": 84,
  "organs_expected": 84,
  "parse_errors": [],
  "unresolved_sinks": 4755,
  "organs": {
   "audit.mjs": {
-   "loc": 483,
+   "loc": 503,
    "reads": [
     {
      "path": "dressing-room/state/audit_ledger.jsonl",
@@ -37,16 +37,16 @@
      "lines": [
       148,
       148,
-      461,
-      461,
+      481,
+      481,
       148,
       148,
-      461,
-      461,
+      481,
+      481,
       148,
       148,
-      461,
-      461
+      481,
+      481
      ],
      "fixture": false
     },
@@ -62,9 +62,9 @@
     {
      "path": "scripts/audit.mjs",
      "lines": [
-      448,
-      448,
-      448
+      468,
+      468,
+      468
      ],
      "fixture": true
     },
@@ -14771,81 +14771,81 @@
    "unresolved": 20
   },
   "xray.mjs": {
-   "loc": 1172,
+   "loc": 1182,
    "reads": [
     {
      "path": "package.json",
      "lines": [
-      733,
-      733,
-      733
+      743,
+      743,
+      743
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      899,
-      1062,
-      1140,
-      1158,
-      1159,
-      1161,
-      899,
-      1062,
-      1140,
-      1158,
-      1159,
-      1161,
-      899,
-      1062,
-      1140,
-      1158,
-      1159,
-      1161
+      909,
+      1072,
+      1150,
+      1168,
+      1169,
+      1171,
+      909,
+      1072,
+      1150,
+      1168,
+      1169,
+      1171,
+      909,
+      1072,
+      1150,
+      1168,
+      1169,
+      1171
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      711,
-      712,
-      711,
-      712
+      721,
+      722,
+      721,
+      722
      ],
      "fixture": false
     },
     {
      "path": ".claude/settings.json",
      "lines": [
-      724,
-      725,
-      724,
-      725
+      734,
+      735,
+      734,
+      735
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      770,
-      770
+      780,
+      780
      ],
      "fixture": false
     },
     {
      "path": "C:/Users/nikhi/GitHub/arsenal-ai-fc",
      "lines": [
-      748
+      758
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      838,
-      839
+      848,
+      849
      ],
      "fixture": false
     }
@@ -14854,11 +14854,11 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      896,
-      895,
-      896,
-      895,
-      896
+      906,
+      905,
+      906,
+      905,
+      906
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -14871,11 +14871,9 @@
    "swallows": [],
    "verbs": [
     "build",
-    "list",
     "report",
     "selftest",
     "swallow",
-    "tick",
     "verbs"
    ],
    "header_verbs": [
