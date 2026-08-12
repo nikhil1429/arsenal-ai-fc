@@ -270,10 +270,34 @@ outside — but that half is now built, where before it was simply absent.
 | item | state |
 |---|---|
 | **E1** — away-day CI red | **the `gh` blocker is GONE — see §6.** The failing step is identified. Root cause still open; **do NOT guess at a third cause.** |
-| **E5** — Tier-2 repair arm | OFF by his 11 Aug ruling. The REDs it was meant to repair are resolved; keeping it off is the correct call and its work was done by hand this session. |
-| **E9** — two uncommitted organ-state files | **his call** — `recital_audit.jsonl` is a NEW file in a PUBLIC repo |
-| **E10** — the remaining INFOs | `wake-economy` needs 8 more honest cortex rows (time, not work). `forge-stale-open` is HIS study loop, not an engineering task. `reconcile-bleed-1/2` are §1.4's two starvations — fixed at the cause, **verify on the next night** rather than assuming. |
+| **E5** — Tier-2 repair arm | ✅ **DECIDED — stays OFF.** Measured 5 starts / 0 exits / 0 journal rows since 7 Aug; his 11 Aug ruling switched it off and this session did its work by hand. Every RED it existed to repair is now resolved (`tier2-vanished` self-demoted to INFO the moment the arm went quiet — it was re-arming itself on its own failure). Re-arm with `ARSENAL_TIER2=1` only if a NEW class of red appears that nothing else owns. |
+| **E9** — uncommitted organ-state files | ✅ **CLOSED on his 12 Aug ruling: _"do not care about data on public repo."_** `recital_audit.jsonl` (the machine's own grading of the Gaffer's recitals) and the four modified organ-state files are committed. |
+| **E10** — the remaining INFOs | ✅ `forge-stale-open` **CLOSED** — the `hallucinations` session was closed and its coverage report saved (44h open, step 3/11; the report is the thing closing preserves, and it named 8 steps never run and 0 Jirah moments). `wake-economy` needs 8 more honest cortex rows = **time, not work**. `reconcile-bleed-1/2` are §1.4's two starvations, fixed at the cause — **verify on the next night** rather than assuming. |
 | **F** — the outward loop | M02-M04 are **his** to fire. Nobody else can. |
+
+### E1 — the last untested difference, and it is a good one
+
+`git archive` could not isolate it because it is **machine-level, not directory-level**:
+four localhost daemons run on his laptop and **never** exist on a CI runner.
+
+```
+port 4111 turnstile   OPEN here   never on CI
+port 4112 cortex      OPEN here   never on CI
+port 4113 thalamus    OPEN here   never on CI
+port 5600 ActivityWatch OPEN here never on CI
+```
+
+Every local reproduction — including the "fully CI-identical" one — still ran on a machine
+where those four answered. **That is the one variable no local run can hold constant**, short
+of stopping his live organism, which is not worth doing to test a hypothesis.
+
+No selftest asserts on a live probe directly (`conductor.mjs:900` probes 59999, closed
+everywhere), so if this is the cause it is an organ *behaving differently* when a daemon
+answers, not a test asserting one is up.
+
+**The decisive test is CI itself**, and it is now cheap: push, then read the run through §6's
+`curl` method. That is a measurement, not another guess — and it is the fourth candidate
+cause, with three already eliminated.
 
 **The one thing to verify next, and not assume:** §1.4 predicts `diary` produces its first
 page and `cortex consolidate` stops failing on the next overnight run. Both are now gated at

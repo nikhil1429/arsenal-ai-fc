@@ -1,10 +1,10 @@
 {
-  "started": "2026-08-11T03:45:02.508Z",
-  "finished": "2026-08-11T03:45:20.218Z",
-  "total_ms": 17693,
+  "started": "2026-08-12T03:47:38.578Z",
+  "finished": "2026-08-12T04:03:44.968Z",
+  "total_ms": 962583,
   "ran": 16,
-  "ok": 16,
-  "failed": 0,
+  "ok": 14,
+  "failed": 2,
   "order": [
     "mirror",
     "sprintsync",
@@ -26,14 +26,14 @@
   "steps": [
     {
       "id": "mirror",
-      "ok": true,
-      "ms": 4762,
-      "exit": 0,
+      "ok": false,
+      "ms": 186377,
+      "exit": null,
       "wrote": null,
       "produced": null,
       "stale": null,
       "log": "scripts/mirror.log",
-      "error": null,
+      "error": "timed out after 180000ms",
       "stderr": null,
       "stderr_bytes": null,
       "degraded": null
@@ -41,7 +41,7 @@
     {
       "id": "sprintsync",
       "ok": true,
-      "ms": 1141,
+      "ms": 89021,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -55,28 +55,28 @@
     {
       "id": "thalamus",
       "ok": true,
-      "ms": 50,
+      "ms": 8867,
       "port": 4113,
-      "daemon": "already running (build current)"
+      "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "cortex",
       "ok": true,
-      "ms": 566,
+      "ms": 18820,
       "port": 4112,
-      "daemon": "already running (build current — via process table)"
+      "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "turnstile",
       "ok": true,
-      "ms": 945,
+      "ms": 13916,
       "port": 4111,
-      "daemon": "already running (build current — via process table)"
+      "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "physio",
       "ok": true,
-      "ms": 153,
+      "ms": 43353,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -90,7 +90,7 @@
     {
       "id": "goalkeeper",
       "ok": true,
-      "ms": 1486,
+      "ms": 32518,
       "exit": 0,
       "wrote": "readiness.json",
       "produced": true,
@@ -104,7 +104,7 @@
     {
       "id": "twin",
       "ok": true,
-      "ms": 89,
+      "ms": 35574,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -117,14 +117,14 @@
     },
     {
       "id": "heartbeat",
-      "ok": true,
-      "ms": 1747,
-      "exit": 0,
+      "ok": false,
+      "ms": 182963,
+      "exit": null,
       "wrote": null,
       "produced": null,
       "stale": null,
       "log": "scripts/heartbeat.log",
-      "error": null,
+      "error": "timed out after 180000ms",
       "stderr": null,
       "stderr_bytes": null,
       "degraded": null
@@ -132,7 +132,7 @@
     {
       "id": "fsrs",
       "ok": true,
-      "ms": 95,
+      "ms": 33575,
       "exit": 0,
       "wrote": "cards.json",
       "produced": true,
@@ -146,7 +146,7 @@
     {
       "id": "calibration",
       "ok": true,
-      "ms": 82,
+      "ms": 49217,
       "exit": 0,
       "wrote": "calibration.json",
       "produced": true,
@@ -160,7 +160,7 @@
     {
       "id": "nemesis",
       "ok": true,
-      "ms": 96,
+      "ms": 30976,
       "exit": 0,
       "wrote": "weaknesses.json",
       "produced": true,
@@ -174,7 +174,7 @@
     {
       "id": "learningstate",
       "ok": true,
-      "ms": 100,
+      "ms": 65678,
       "exit": 0,
       "wrote": "learning_state.json",
       "produced": true,
@@ -188,14 +188,14 @@
     {
       "id": "signals",
       "ok": true,
-      "ms": 3,
+      "ms": 183,
       "armed": "morning_signals",
       "error": null
     },
     {
       "id": "sheet",
       "ok": true,
-      "ms": 6202,
+      "ms": 100428,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -209,7 +209,7 @@
     {
       "id": "wall",
       "ok": true,
-      "ms": 176,
+      "ms": 71117,
       "exit": 0,
       "wrote": null,
       "produced": null,

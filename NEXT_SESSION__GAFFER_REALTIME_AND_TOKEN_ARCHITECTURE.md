@@ -31,13 +31,16 @@
 > 3. **E6 is a misread, not a dead wire** — `auto_hits` is a PER-RULE field inside
 >    `rules[]`, never a top-level key. Live: 277 auto-hits across 12 rules.
 >
-> **STILL OPEN — and it is now a short, honest list:** **E1** (away-day CI: the
-> failing step is finally IDENTIFIED and reproduced locally with no `gh` install —
-> the public Actions API and a bare-checkout sandbox did it) · **E5** (Tier-2 stays
-> OFF by his ruling; the REDs it existed to repair are resolved) · **E9** (his call —
-> a NEW file in a PUBLIC repo) · **E10** (`wake-economy` needs 8 more cortex rows =
-> time, not work; `forge-stale-open` is HIS study loop) · **F** (M02–M04 are his to
+> **STILL OPEN — TWO items, and neither is engineering work:**
+> **E1** (away-day CI — FOUR candidate causes now eliminated by measurement, not guessed;
+> the last untested variable is that four localhost daemons run on his laptop and never on a
+> runner, which no local repro can hold constant. The decisive test is a pushed run read
+> through `curl` — see `GAFFER_REALTIME__BUILD_NOTES.md` §6) and **F** (M02–M04 are HIS to
 > fire; nobody else can).
+>
+> **Everything else in E is CLOSED:** E2 · E3 · E4 · E5 (stays off, decided) · E6 · E7 · E8 ·
+> E9 (on his ruling *"do not care about data on public repo"*) · E10 (the stale forge session
+> was closed and its coverage report saved).
 >
 > **THE ONE THING TO VERIFY NEXT AND NOT ASSUME:** the night reserve predicts that
 > `diary` produces its FIRST EVER page and `cortex consolidate` stops failing, on the
