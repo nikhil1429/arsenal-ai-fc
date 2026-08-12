@@ -1459,15 +1459,26 @@ async function selftest() {
     // The double-ask guard, from the other side: when the morning report has
     // ALREADY carded cortex on this pass, the ledger lane must not spawn again.
     calls.length = 0;
-    const bothRep = { started: `${DAY}T03:45:00+05:30`, steps: [{ id: "cortex", ok: false, port: 4112, daemon: "STALE BUILD — running code older than its module graph (via process table)", error: "booted …" }] };
+    // started is built from the MACHINE-LOCAL calendar, not a fixed +05:30 instant:
+    // this test's premise is "a morning report from TODAY", and localDayOf reads the
+    // machine clock — the fixed IST stamp read as YESTERDAY on a UTC runner, the
+    // morning lane voided itself, the ledger lane filed its own card, and the
+    // stand-down leg below went red in CI while green at home (E1, F9 class).
+    const bothRep = { started: new Date(2026, 7, 11, 3, 45, 0).toISOString(), steps: [{ id: "cortex", ok: false, port: 4112, daemon: "STALE BUILD — running code older than its module graph (via process table)", error: "booted …" }] };
     const both = await pass({
       dry: true, cortexRow: OLD, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: bothRep,
       probe: async () => true, procProbe: () => true, launch: () => {},
       procStart: () => Date.parse("2026-08-08T19:47:29.714Z"),
       exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
+    // The expected day is DERIVED with the code's own localDayOf, not written as ${DAY}:
+    // the morning lane keys its card off localDayOf(report.started), and started is
+    // 03:45+05:30 — under a UTC clock that is the PREVIOUS local day, so a literal DAY
+    // here passed at home and failed in CI (E1, F9 class). Date-derivation correctness
+    // is pinned TZ-stably by the fixed-string key assertion above (mid-day input); this
+    // assertion's target is the double-ask guard, which must hold under any clock.
     assert("BUILD WITNESS — both witnesses agreeing is still ONE ask: the morning lane cards it, the ledger lane stands down and says so",
-      calls.length === 1 && calls[0].endsWith(`--key daemon:stale:cortex:${DAY}`)
+      calls.length === 1 && calls[0].endsWith(`--key daemon:stale:cortex:${localDayOf(bothRep.started)}`)
       && /already carded this name on this pass/.test(both.state.ledger_build.card));
   }
 

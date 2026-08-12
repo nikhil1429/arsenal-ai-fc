@@ -437,13 +437,20 @@ function selftest() {
   const ncDir = join(root, "nc");
   mkdirSync(ncDir, { recursive: true });
   const D = "2026-08-09";
+  // EVERY ts in this fixture is built from the MACHINE-LOCAL calendar (L), never a
+  // fixed Z/+05:30 instant. The joins under test read local days off the machine
+  // clock, so a fixed instant lands on different local days on different machines —
+  // "01:00 IST Aug 10" was Aug 10 at home and Aug 9 on the UTC CI runner, and 4
+  // assertions were red in CI while green at home (E1, F9 class). L(day, hour)
+  // pins the LOCAL day everywhere, which is the thing the assertions assert.
+  const L = (day, hour, min = 0) => new Date(2026, 7, day, hour, min, 0).toISOString();
   const aliasMap = new Map([["hallucinations", "hallucinations"], ["context window", "context"], ["embeddings", "embeddings"]]);
   const mkDeps = (over = {}) => ({
-    nowIso: "2026-08-09T17:08:00.000Z", ncDir, outPath, aliasMap, allReps: [],
+    nowIso: L(9, 22, 38), ncDir, outPath, aliasMap, allReps: [],
     reps: [
-      { ts: "2026-08-09T05:00:00.000Z", concept: "hallucinations", confidence: "knew", correct: true },
-      { ts: "2026-08-09T06:00:00.000Z", concept: "hallucinations", confidence: "guessed", correct: false },
-      { ts: "2026-08-09T19:30:00.000Z", concept: "context", confidence: "shaky", correct: true }, // 01:00 IST Aug 10 — local-day law
+      { ts: L(9, 10, 30), concept: "hallucinations", confidence: "knew", correct: true },
+      { ts: L(9, 11, 30), concept: "hallucinations", confidence: "guessed", correct: false },
+      { ts: L(10, 1, 0), concept: "context", confidence: "shaky", correct: true }, // 01:00 local Aug 10 — the NEXT-local-day law
     ],
     slip: [
       { date: D, book: "gaffer", type: "drill:recall", claim: "hallucinations", resolved: false, hit: null, horizon_days: 3 },
@@ -453,7 +460,7 @@ function selftest() {
     mouthSaid: { [D]: "sheet", "2026-08-08": "absence" },
     // the inputs_* quartet is brain.mjs's own row shape since its finding #64 — a
     // sheet built on 2 of 3 declared inputs, saying WHICH one was missing.
-    ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm",
+    ledger: [{ ts: L(9, 6, 54), job: "formation_read", ok: true, note: "sheet source=llm",
       inputs_present: 2, inputs_declared: 3, inputs_absent: 1, inputs_absent_names: ["season.json"] }],
     timeaudit: { date: D, activeMinutes: 252, productiveMinutes: 197, onTrack: false, flags: ["f1"], generatedAt: "2026-08-09T16:30:04.905Z" },
     // JOIN 4 fixture — dmn.mjs's real journal shape (dmn.mjs:522-524), including
@@ -532,7 +539,7 @@ function selftest() {
     rows[0].formation_inputs && rows[0].formation_inputs.present === 2
     && rows[0].formation_inputs.declared === 3 && rows[0].formation_inputs.absent_names[0] === "season.json");
   ok("JOIN3 — a ledger row with NO inputs accounting reads null, never a measured zero (pre-#64 rows and the declares-no-inputs class)",
-    joinSheetDay(D, mkDeps({ ledger: [{ ts: "2026-08-09T01:24:00.000Z", job: "formation_read", ok: true, note: "sheet source=llm" }] }))[0].formation_inputs === null);
+    joinSheetDay(D, mkDeps({ ledger: [{ ts: L(9, 6, 54), job: "formation_read", ok: true, note: "sheet source=llm" }] }))[0].formation_inputs === null);
   ok("JOIN3 — timeaudit camelCase mapped explicitly + generatedAt kept (stale same-date detectable)",
     rows[0].timeaudit && rows[0].timeaudit.active_min === 252 && rows[0].timeaudit.generated_at === "2026-08-09T16:30:04.905Z");
   ok("JOIN3 — an 'absence' morning reads through verbatim; a day timeaudit doesn't cover reads null",
@@ -575,7 +582,7 @@ function selftest() {
     r2.appended === 0 && readLines(outPath).length === n1);
   // back-dated reps (capture's designed flow) flip a verdict → supersede, never rewrite
   const moreReps = mkDeps();
-  moreReps.reps = moreReps.reps.concat([{ ts: "2026-08-09T10:00:00.000Z", concept: "context", confidence: "knew", correct: true }]);
+  moreReps.reps = moreReps.reps.concat([{ ts: L(9, 15, 30), concept: "context", confidence: "knew", correct: true }]);
   let r3 = runDay(D, moreReps);
   const ctxRows = readLines(outPath).filter((r) => r.subject === "context" && r.kind === "misconception");
   ok("RUN — a back-dated rep SUPERSEDES by append (rev 1, untested → held); the original row is never rewritten",
