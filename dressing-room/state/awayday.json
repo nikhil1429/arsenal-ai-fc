@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "checked_at": "2026-08-12T22:15:21.713Z",
+  "checked_at": "2026-08-13T22:15:03.305Z",
   "repo": "nikhil1429/arsenal-ai-fc",
   "workflow": "awayday.yml",
   "state": "green",
   "why": "success",
-  "run_id": 31645796084,
+  "run_id": 31748861378,
   "status": "completed",
   "conclusion": "success",
-  "head_sha": "f9cd94c",
+  "head_sha": "b056bfb",
   "event": "schedule",
-  "ran_at": "2026-08-12T22:10:57Z",
-  "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/31645796084",
+  "ran_at": "2026-08-13T22:11:44Z",
+  "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/31748861378",
   "carded_run_id": 31542773311,
   "unreachable": null
 }

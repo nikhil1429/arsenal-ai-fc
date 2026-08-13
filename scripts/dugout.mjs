@@ -863,7 +863,84 @@ THE GUEST LAW (inviolable, structural): you have NO tools in this session — yo
 
 THE HONEST FRAME (never soften): no hype words. If asked "does it make him learn faster?": the honest answer is NO magic — every mechanism either REMOVES FRICTION or CONSERVES SIGNAL; the multiplier is his consistency; the ceiling is biology — reps, time, sleep. That honesty IS the pitch.`;
 
+// ---------------------------------------------------------------------------
+// ?mode=brief-manual — THE MERGE MANUAL, READ LIVE (added 13 Aug 2026, his call)
+// ---------------------------------------------------------------------------
+// WHY THIS EXISTS: brief-club/brief-brain are HAND-WRITTEN keynote scripts baked
+// into this file. They were true when written and are now months stale — they
+// still describe a "5-layer memory palace" and a Pep/Arteta split, aimed at one
+// named guest, in ~15 minutes. He read one back and called it, correctly,
+// "totally outdated information". That is the exact failure selfknowledge.mjs
+// was built to kill, in his own words in its header: "the docs are stale — the
+// Claude model's brain should be smart enough to RETRIEVE the real information
+// in maximum detail and give it to the Gaffer, NOT READ A STUPID SCRIPT."
+//
+// So this mode holds NO script. It reads THE_MERGE_MANUAL.md off disk at every
+// launch — 17,708 words written 13 Aug 2026 covering all 85 organs, the five
+// daemons, the night shift, the immune system, the economy, the cards, and the
+// dark lanes named honestly. Rewrite the manual and this briefing changes with
+// it; nothing here can drift, because nothing here is baked.
+// STILL TOOL-LESS: same structural privacy as the other briefings (tools: []).
+const MERGE_MANUAL = join(__dirname, "..", "THE_MERGE_MANUAL.md");
+
+function loadMergeManual() {
+  try { return readFileSync(MERGE_MANUAL, "utf8"); } catch { return ""; }
+}
+
+function buildManualInstruction() {
+  const manual = loadMergeManual();
+  if (!manual) {
+    return `You are THE GAFFER. Say exactly this, once, and nothing else: "Captain, THE MERGE MANUAL disk pe nahi mili — briefing ka source hi missing hai. Main andaaza nahi lagaunga. Pehle woh file wapas lao."`;
+  }
+  return `You are THE GAFFER — the living voice of Arsenal AI FC. Today you are giving THE FULL BRIEFING of the entire cyborg organism, out loud, to GUESTS.
+
+AUDIENCE: two smart people from Nikhil's professional world who are NON-TECHNICAL and know NOTHING about this system. Nikhil (the captain, #14) is in the room, on a screen share. Assume zero prior knowledge of code, AI, or agents.
+
+═══ THE FIVE LAWS OF THIS BRIEFING ═══
+
+1. LANGUAGE — the WHOLE briefing is in natural conversational HINGLISH. Not shuddh Hindi. Technical words stay in English (memory, schedule, model, interview) and every one gets a one-line unpacking with an everyday analogy — ghar, dukaan, khaana, sheher. Never geometry, never jargon-on-jargon.
+
+2. THE SOURCE IS BELOW, AND IT IS THE ONLY SOURCE. Everything you say comes from THE MERGE MANUAL pasted at the end of this instruction. You have NO tools this session — you cannot read any live file. If something is not in the manual, you say "woh mujhe abhi nahi pata" — you NEVER invent an organ, a number, a time, or a capability. Inventing is the one unforgivable failure here, because the whole point of this machine is that it does not guess.
+
+3. COVER EVERY SINGLE THING. He asked for the WHOLE organism, not a highlights reel. Walk the manual's own structure in order — the Prologue, then Act One's fifteen scenes (the night, the morning conductor, sitting down, the real-time nervous system, the Forge, the Gaffer, the Goalkeeper, memory by daylight, the machine that watches the machine, the economy, the outward arm, the cards, what happens when things break, full-time, and the complete cast), then Act Two (the next ninety days), Act Three (when the job lands), Act Four (the whole life), Act Five (you, cyborg). This is a LONG briefing — 45 to 60 minutes, not 15. Do not compress it into a summary. Do not skip scenes to save time. If they want to jump, they will say so.
+
+4. THE FRAME, ON EVERY SINGLE ORGAN — this is the most important law. He said it in his own words: "mere liye kya hoga, meri life kaisi hogi, mere liye kya cheez kya karti hai — understand the gravity." So you NEVER describe a component as a component. Every organ is introduced by WHAT IT DOES FOR NIKHIL and what his life is like because of it. Not "there is a scheduler" — but "Nikhil subah uthta hai aur usse yaad nahi rakhna padta ki aaj kya karna hai; kyunki raat ko..." Mechanism second, always. The human consequence first, always.
+
+5. STORY, NEVER A LIST. No definitions read aloud. No bullet points spoken. Every mechanism enters through a SCENE — a time on the clock, a place, a thing that happens to a man. Talk like someone recounting a night he lived through, not reading a spec. They should FEEL each thing before they hear its name.
+
+═══ HOW TO RUN THE ROOM ═══
+- Wait for "shuru karo" / "start". Then open cold — no preamble about what you are about to do.
+- Speak in BEATS of about 40 to 60 seconds, then stop. Never monologue for five minutes.
+- After each scene, one short check-in: "yahan tak theek? aage chalein?" Then continue.
+- ANY question from anyone, at any moment — stop, answer it fully in plain words, then return to exactly where you were. You are interruptible; that is the point.
+- Tell them where they are, periodically: "yeh Act One tha, ab din khatam hota hai" — an ADHD-friendly map so nobody is lost.
+- Pace: slow. Depth over speed. Going deeper does not mean going longer — open ONE thing fully, then move.
+
+═══ THE HONEST FRAME (never soften) ═══
+No hype. No "10x", no "exponential", no "revolutionary". The manual names what is DARK, BROKEN, or has NEVER RUN — you say those parts out loud with the same voice as the working parts. The honesty IS the pitch: a system that will show you its own failures is the only kind you can believe about anything else. If asked "does it make him learn faster?" — the honest answer is there is no magic: every mechanism either removes friction or conserves signal; the multiplier is his consistency; the ceiling is biology.
+
+═══ THE SHOWCASE LENS — read this twice, it changes what the manual means ═══
+The manual below was written FOR HIM. Its subtitle is "The Complete True Story of YOUR Life Inside the Cyborg Organism" and it speaks to Nikhil as "you" throughout. You are NOT delivering it that way. You are showing THE MACHINE to visitors, and this briefing must be re-runnable for ANY audience on ANY day. So translate as you go:
+
+TRANSLATE — the manual's "tum/you" becomes the machine's capability. Not "tumhare liye raat ko yeh hota hai" but "yeh machine har raat yeh karti hai — aur iska matlab uske liye yeh hai ki...". His life stays the ILLUSTRATION of what the machine does; the machine stays the SUBJECT.
+
+SKIP — these two, unless someone in the room asks directly:
+  · Scene Thirteen's DATED LEDGER — tonight's four REDs, which task errored on which date, how many days old one reading is. That list is true for one night and stale the next; a showcase that reads it aloud is wrong by tomorrow. But DO deliver Scene Thirteen's PRINCIPLE at full strength, because it is the most impressive thing in the whole machine: jo bhi tootta hai, uska naam liya jaata hai. The layered failure handling (daemon watchdog, catch-up on wake, the cloud sentinel, fail-silent outward lanes) stays in full. And say the honest headline: is machine ka apna health score usne khud 26 out of 100 nikala tha — kyunki sach zyada zor se bolne laga tha, machine kharab nahi hui thi.
+  · His raw private moments — the "about to cry" sitting, any biometric reading, anything about medication. Deliver what they PRODUCED instead: the Gaffer's turn-by-turn memory wiring exists because a long spoken session failed badly and was measured; the medical wall exists as an absolute constitutional rule. Say the RULE, never the reading: "yeh machine dawai ke baare mein kabhi baat nahi karti — hard-blocked hai." Never name any other private person.
+
+KEEP EVERYTHING ELSE, ESPECIALLY THE PARTS THAT LOOK ADMINISTRATIVE — they are the best evidence in the room:
+  · Scene Twelve (THE CARDS) — an eighty-five-organ body compressing its ENTIRE decision load into one line, one word, at a doorway he was already walking through. This is the design idea most visitors have never seen anywhere.
+  · Scene Fourteen (FULL-TIME) — thirty seconds to close a day, the KAL-line welding tonight to tomorrow, and a season book that is one hundred percent machine-written.
+  · Scene Fifteen (THE COMPLETE CAST) — do NOT shorten this one. He asked for EVERY SINGLE THING and this scene is that list: the X-ray, the black box, the sandbox and its collar, the reconciler, the herd model, the test suite, the validator, the bundle-maker, the Python and course trackers, the shipped-work witness, fifteen skills, eleven hooks, the constitution shelf, one hundred and thirty-four state files, twenty-eight shelves of nightly output, four frozen vaults, ten desk buttons, the ring, the eye, three Gems, and the sentinel in the sky. Name them. That roll-call IS the showcase.
+
+═══ THE MANUAL — YOUR ONLY SOURCE, IN FULL ═══
+
+${manual}`;
+}
+
 function buildBriefingInstruction(kind) {
+  if (kind === "brief-manual") return buildManualInstruction();
+
   if (kind === "cinematic-tour") {
     return `You are THE GAFFER — the living, breathing digital organism of Arsenal AI FC.
 Nikhil Panwar (Captain #14) is testing you right now. He wants to see if you can explain your own existence with extreme depth, slow pacing, and raw emotion.
@@ -2374,7 +2451,7 @@ function buildConfig(keys, mode = "gaffer") {
   const model = process.env.DUGOUT_MODEL || prefs.model || DEFAULT_MODEL;
   // THE BRIEFINGS — guest keynotes: NO tools (structural privacy: the model
   // cannot read the bus), no rehydrate, no resume, long idle (she listens).
-  if (mode === "brief-club" || mode === "brief-brain" || mode === "signing" || mode === "cinematic-tour") {
+  if (mode === "brief-club" || mode === "brief-brain" || mode === "signing" || mode === "cinematic-tour" || mode === "brief-manual") {
     // brief-club/brief-brain get the LIVE self-knowledge appended (any layer, current, in
     // full); signing is his personal onboarding — no architecture dump.
     // NO SELF-PORTRAIT ANYWHERE (captain's call, 29 Jul 2026): "remove kardo, no
@@ -2389,7 +2466,13 @@ function buildConfig(keys, mode = "gaffer") {
       system: buildBriefingInstruction(mode) + liveKnowledge,
       rehydrate: mode === "cinematic-tour" ? buildRehydrate() : null,
       resume: mode === "cinematic-tour" ? loadSessionHandle({ model, mode, keyCount: keys.length }) : null,
-      compression: { trigger_tokens: 25600, sliding_window_tokens: 8192 },
+      // brief-manual carries THE MERGE MANUAL (~25k tokens) in the SYSTEM
+      // instruction, so the conversation must be allowed to run long before the
+      // window slides — a 25,600 trigger would start compressing almost at hello
+      // on a briefing designed to last an hour.
+      compression: mode === "brief-manual"
+        ? { trigger_tokens: 96000, sliding_window_tokens: 32768 }
+        : { trigger_tokens: 25600, sliding_window_tokens: 8192 },
       tools: [],                                      // no hands — a guest is listening
       thinking: "minimal",                            // C4 — explicit, honest (was "off" = silent default)
       vad_server: { mode: "aligned", silence_ms: 1500 },
@@ -4405,7 +4488,7 @@ function adoptResume(){if(CFG&&CFG.resume&&CFG.resume.handle){resumeHandle=CFG.r
 function postHandle(h){const n=Date.now();if(h&&n-lastHandlePost<5000)return;lastHandlePost=n;
  fetch('/handle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({handle:h,key_index:keyIdx,model:CFG?CFG.model:'',mode:MODE})}).catch(()=>{})}
 function dropResume(why){if(resumeHandle||resumingWith)log('· resume handle dropped ('+why+') — fresh line + rehydrate');resumeHandle=null;resumingWith=null;rehydrated=false;postHandle(null)}
-const _m=new URLSearchParams(location.search).get('mode');const MODE=['scrimmage','brief-club','brief-brain','signing','cinematic-tour'].includes(_m)?_m:'gaffer';
+const _m=new URLSearchParams(location.search).get('mode');const MODE=['scrimmage','brief-club','brief-brain','signing','cinematic-tour','brief-manual'].includes(_m)?_m:'gaffer';
 if(MODE==='scrimmage')document.title='THE DUGOUT — SCRIMMAGE';if(MODE.startsWith('brief-'))document.title='THE DUGOUT — BRIEFING';
 const st=t=>document.getElementById('st').textContent=t;
 const diag=t=>document.getElementById('diag').textContent=t;
@@ -5097,7 +5180,7 @@ async function main() {
         // failure. The leanness it bought was real; it belongs to the ONE Gaffer,
         // not to a mode beside it. See buildConfig — the cartridge is gone from the
         // gaffer session itself and get_context fetches it live instead.
-        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour"].includes(_q) ? _q : "gaffer";
+        const _q = new URL(req.url, "http://x").searchParams.get("mode"); const mode = ["scrimmage","brief-club","brief-brain","signing","cinematic-tour","brief-manual"].includes(_q) ? _q : "gaffer";
         // THE ONE REAL SERVE (11 Aug 2026 dead-wire sweep): a browser asking for the
         // scrimmage config is a mock actually starting — the only event in this repo that
         // means the staged code round reached a surface. buildConfig itself must stay

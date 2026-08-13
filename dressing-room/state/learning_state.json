@@ -1,6 +1,6 @@
 {
-  "date": "2026-08-12",
-  "generated_at": "2026-08-12T04:00:32.451Z",
+  "date": "2026-08-13",
+  "generated_at": "2026-08-13T11:22:58.544Z",
   "total_reps": 21,
   "status": "ok",
   "low_confidence": false,
@@ -61,22 +61,22 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 41
+      "overdue_days": 42
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 37
+      "overdue_days": 38
     },
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 25
+      "overdue_days": 26
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 1
+      "overdue_days": 2
     }
   ],
   "core_vs_light": {
@@ -237,30 +237,20 @@
     ]
   },
   "position": {
-    "session_open": true,
-    "concept": "hallucinations",
-    "step": 3,
-    "step_name": "SAMJHAO",
+    "session_open": false,
+    "concept": null,
+    "step": null,
+    "step_name": null,
     "axes_done": [],
     "axes_deferred": [],
-    "axes_left": [
-      "a",
-      "b",
-      "c",
-      "d",
-      "e",
-      "f",
-      "g",
-      "h",
-      "i"
-    ],
+    "axes_left": [],
     "axes_ungraded": [],
-    "started_at": "2026-08-10T10:27:40.579Z",
-    "stale": true,
-    "stale_as_of": "2026-08-12T04:00:32.451Z",
+    "started_at": null,
+    "stale": false,
+    "stale_as_of": null,
     "last_closed": {
       "concept": "hallucinations",
-      "ended_at": "2026-08-10T01:10:49.568Z",
+      "ended_at": "2026-08-12T07:35:01.174Z",
       "steps_ran": [
         0,
         1,
@@ -290,7 +280,7 @@
         "h",
         "i"
       ],
-      "elapsed_min": 1950,
+      "elapsed_min": 2707.3,
       "axis_marks_span_min": null,
       "check_q_refused": 0,
       "core_missing": [
