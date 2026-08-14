@@ -468,6 +468,29 @@ between him and a corrupted archive he still believes.
 
 ## 13. STILL OPEN — needs HIS word, do not decide these for him
 
+> **✅ ALL THREE CLOSED — 14 Aug 2026, by him, hours after this file was sealed. The three
+> items below are kept VERBATIM as the record of what was open; the resolutions are here.
+> DO NOT RE-RAISE ANY OF THEM.**
+>
+> 1. **PRIVACY — RULED.** *"archive HAMESHA repo ke bahar rahega. Code public, data private.
+>    Koi apwaad nahi, kabhi nahi."* Written into canon (`CLAUDE.md` §Secrets & safety) and held
+>    by three code belts, not by prose: `init` refuses a git work tree · `.gitignore` · the
+>    `pre-commit` tripwire.
+> 2. **THE THREE STAGED FACTS — CONFIRMED**, promoted to canon the same day via
+>    `hippocampus.mjs promote --at <ts>`. `identity_facts.pending.jsonl` now has zero pending
+>    rows. Side effect worth knowing: the SessionStart brief's budget could not fit all three
+>    at once, so `context_manifest`'s "THE LIVE QUEUE ARRIVES UNCUT" assertion was RED. It was
+>    never a code bug — **that assertion is a canary for "his unanswered questions have piled
+>    up past their share of the brief"**, and the correct repair is to ANSWER the queue, which
+>    is what closed it.
+> 3. **THE v4 TENSION — PARKED, deliberately and for good.** His ruling: the OPERATIONAL half
+>    is already settled by the five autonomy laws (see the 28 Aug memory file), and the rest
+>    gets MEASURED, never guessed. *"Flag band karo, dobara mat uthao."* Do not re-open it as
+>    an open question; if it ever returns it returns as data, not as a debate.
+>
+> §12's 3-2-1 is a separate matter and is **still genuinely pending**: he has not bought the
+> disk (14 Aug — *"record pe rakho, nagging nahi"*). Say it if asked; never nag.
+
 1. **PRIVACY RULING** — when life-scale data starts flowing, does it go in the PUBLIC repo or a
    private store? This is the second irreversible decision (after capture). Currently the
    archive lives outside the repo, which is safe by construction, but the ruling is unmade.

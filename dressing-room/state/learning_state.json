@@ -1,6 +1,6 @@
 {
-  "date": "2026-08-14",
-  "generated_at": "2026-08-14T03:45:10.990Z",
+  "date": "2026-08-15",
+  "generated_at": "2026-08-14T20:34:18.948Z",
   "total_reps": 21,
   "status": "ok",
   "low_confidence": false,
@@ -71,12 +71,12 @@
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 27
+      "overdue_days": 28
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 3
+      "overdue_days": 4
     }
   ],
   "core_vs_light": {

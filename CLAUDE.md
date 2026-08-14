@@ -113,7 +113,53 @@ Do not start a new agent until the current one is proven (see "unrun" below).
   CLASS on 10 Aug during KAAM 0: `grep -n "dono rehne do" .gitignore`. What is NOT covered by
   that ruling and stays hard-ignored: live credentials — `scripts/oura_secrets.json` ·
   `scripts/oura_tokens.json` — and anything naming OTHER people.)
+- **THE PRIVACY RULING — HIS WORD, 14 Aug 2026, and it is FINAL:**
+  **the archive lives OUTSIDE the repo, always. CODE PUBLIC, DATA PRIVATE. No exception, ever.**
+  His words: *"archive HAMESHA repo ke bahar rahega. Code public, data private. Koi apwaad
+  nahi, kabhi nahi."* This was ARCHIVE__DAY_ONE_SPEC.md §13.1's first open ruling — "the
+  second irreversible decision, after capture" — and it is now closed. Do not re-open it, do
+  not propose a private-repo variant, do not "just for this one lane" it. THREE BELTS hold it
+  and all three are code, not prose: `archivist.mjs init` REFUSES to create the archive inside
+  a git work tree (`grep -n "repoGuard" scripts/archivist.mjs`) · `.gitignore` covers any bag
+  that appears locally (`grep -n "CyborgArchive" .gitignore`) · `hooks/pre-commit` refuses any
+  staged file inside a BagIt bag and any capture lane git has never tracked
+  (`node scripts/archivist.mjs tripwire`). NOTE THE ASYMMETRY, it is deliberate: the tracked
+  biometric files above stay public by HIS earlier ruling; the archive is private by THIS one.
+  Neither ruling generalises to the other — a session that "harmonises" them is reversing a
+  captain's decision.
 - **Glance before every push.**
+
+## THE ARCHIVE — the permanent record (built 14 Aug 2026, his word: *"create every single thing which we need from day 1"*)
+`scripts/archivist.mjs` is the **SOLE WRITER** of `$ARSENAL_ARCHIVE` (default
+`%USERPROFILE%\CyborgArchive`). It TAILS every `*.jsonl` under `dressing-room/` and writes a
+hash-chained, IST-day-partitioned, BagIt-valid permanent record. The full spec is
+`ARCHIVE__DAY_ONE_SPEC.md` at the repo root — 8 laws, the record schema, 13 acceptance tests.
+**That file is now a RECORD of what was approved, not a work order. Do not re-plan it.**
+- **Read the live numbers, never a number from here** — `node scripts/archivist.mjs status`
+  (and `lanes` · `vitals` · `verify`). Any count written into prose rots on the next run.
+- **Never write into `$ARSENAL_ARCHIVE` by hand or from another organ.** The whole integrity
+  argument — a per-lane `seq` counter and a `prev_sha256` chain — assumes exactly one appender.
+  A second writer would not corrupt a file; it would produce a chain that VERIFIES while being
+  wrong about the order of his life. `archivist.mjs selftest` holds this mechanically.
+- **THREE LAWS THAT COST SOMETHING TO LEARN**, all three found by RUNNING it on day one:
+  · **A valid chain is not a correct archive.** The chain proves nothing was ALTERED; it cannot
+    prove nothing was ADDED TWICE. The archive silently doubled once and every chain still
+    verified — only the COUNT showed it. That is why LAW 6's vitals sit BESIDE the fixity check,
+    never behind it.
+  · **A test that mocks the part that breaks is a test of the mock.** Two guards here shipped
+    green and dead (the commit tripwire's `tracked`, §4.5's derived-record check) because their
+    tests injected or re-stated the exact code that was wrong. Both now drive the real door.
+  · **`data/` may hold nothing mutable.** BagIt calls a bag complete only if every file under
+    the payload directory is in `manifest-sha256.txt`, so the writer's own checkpoint lives in
+    `_writer/`, not `data/` — the ONE place the build deviates from the spec's written tree, and
+    it is a correctness fix (approved 14 Aug: *"sahi call"*). Without it every sealed copy on the
+    external disk would fail validation between seals.
+- **3-2-1 IS STILL PENDING AND HE KNOWS.** The archive is copy 1, alone. He has not bought the
+  disk yet (his call, 14 Aug — *"record pe rakho, nagging nahi"*). State it if he asks; do not
+  raise it unprompted.
+- Install/revert: `setup\INSTALL_ARCHIVE.ps1` / `setup\UNINSTALL_ARCHIVE.ps1`. The uninstaller
+  deliberately CANNOT delete the archive — uninstalling the software that feeds a permanent
+  record must never be able to erase it.
 
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
 Before teaching, planning, or answering anything about where he is: call the
