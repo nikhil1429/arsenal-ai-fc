@@ -90,6 +90,26 @@ function recordMouth(kind, pushed) {
   try { appendFileSync(MOUTH_LOG, JSON.stringify({ ts: new Date().toISOString(), kind, sent: !!(pushed && pushed.sent), why: (pushed && pushed.why) || null }) + "\n"); } catch { }
 }
 const QUEUE     = join(STATE_DIR, "brain_queue.json");
+const PULSE_SESSION = join(STATE_DIR, "pulse_session.json");   // Phase 3 — the rolling pulse session (runtime state; brain.mjs sole writer)
+const PULSE_SESSION_TMP = PULSE_SESSION + ".tmp";
+// WRITTEN WITH TWO RESOLVABLE CONSTANTS, not through writeAtomic — deliberately.
+// writeAtomic's first act is `mkdirSync(dirname(path))`, and `dirname(<param>)` is
+// opaque to xray's points-to analysis, so every call site banks one more Unknown
+// sink: three of them tripped the suite's own unresolved_sinks ratchet
+// (brain.mjs 228→231) the first time this shipped. Inlined with module constants,
+// xray can SEE that brain.mjs writes pulse_session.json — the ownership law made
+// machine-checkable instead of merely asserted in a comment. No mkdir: STATE_DIR
+// is the state bus, it exists or nothing does. The tmp name is NOT per-pid
+// (writeAtomic's rule) because it cannot be and stay resolvable — safe here
+// because concurrent pulses are already impossible (daemon singleton on an
+// exclusive port bind, min_spacing_s 150) and the worst case of a lost update is
+// one extra cold seed, never a torn file.
+function writePulseSession(obj) {
+  try {
+    writeFileSync(PULSE_SESSION_TMP, JSON.stringify(obj, null, 2) + "\n");
+    renameSync(PULSE_SESSION_TMP, PULSE_SESSION);
+  } catch { /* the session file is an optimisation; a write failure must never cost a pulse */ }
+}
 const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
 const SYSTEM_MD = join(__dirname, "..", "dressing-room", "manager", "system.md");
@@ -703,7 +723,6 @@ async function defaultAfferentPost(evt) {
 // CONTEXT-BLOAT stops (haiku holds 200k; ~80 turns × ~2k stays well inside).
 // The real spend rails — daily_cap, daily_token_budget, failure backoff and the
 // headroom floor — are all upstream of here and are untouched.
-const PULSE_SESSION = join(STATE_DIR, "pulse_session.json");
 const PULSE_MAX_TURNS = 80;
 export function pulseSessionUsable(s, now, maxTurns = PULSE_MAX_TURNS) {
   if (process.env.PULSE_RESUME_DISABLED) return false;      // one-line rollback
@@ -800,11 +819,12 @@ async function runPulse(cfg, deps = {}) {
   // never a retry inside this tick (that would double-spend a failing lane, the
   // exact thing the failure-backoff rail exists to stop).
   if (!deps.dry) {
-    try {
-      if (resuming && !r.ok) writeAtomic(PULSE_SESSION, { ...session, id: null, dropped_at: now.toISOString(), dropped_why: String(r.error || "resumed call failed").slice(0, 120) });
-      else if (resuming) writeAtomic(PULSE_SESSION, { ...session, turns: (session.turns || 0) + 1, last_afferent_ts: newestSeen || session.last_afferent_ts, last_at: now.toISOString() });
-      else if (r.ok && r.session_id) writeAtomic(PULSE_SESSION, { id: r.session_id, started_at: now.toISOString(), turns: 1, date: localDate(now), last_afferent_ts: newestSeen, last_at: now.toISOString() });
-    } catch { /* the session file is an optimisation; a write failure must never cost a pulse */ }
+    const next =
+      (resuming && !r.ok) ? { ...session, id: null, dropped_at: now.toISOString(), dropped_why: String(r.error || "resumed call failed").slice(0, 120) }
+      : resuming ? { ...session, turns: (session.turns || 0) + 1, last_afferent_ts: newestSeen || session.last_afferent_ts, last_at: now.toISOString() }
+      : (r.ok && r.session_id) ? { id: r.session_id, started_at: now.toISOString(), turns: 1, date: localDate(now), last_afferent_ts: newestSeen, last_at: now.toISOString() }
+      : null;
+    if (next) writePulseSession(next);
   }
   // parse defensively — a malformed pulse is a HOLD, never a crash
   let verdict = { escalate: false, which: "", why: "" };
