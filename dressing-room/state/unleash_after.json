@@ -1,0 +1,28 @@
+{
+ "at": "2026-08-14T02:09:10.238Z",
+ "since": "2026-08-14T00:14:39.408Z",
+ "hours": 1.9,
+ "days": 0.1,
+ "lanes": {
+  "doubt_clusters": {
+   "n": 1,
+   "cw": 24597,
+   "cr": 0,
+   "inp": 2,
+   "out": 3001,
+   "model": "sonnet",
+   "resume_n": 0,
+   "split_n": 1
+  },
+  "gaffer_claim_audit": {
+   "n": 1,
+   "cw": 0,
+   "cr": 0,
+   "inp": 0,
+   "out": 0,
+   "model": null,
+   "resume_n": 0,
+   "split_n": 0
+  }
+ }
+}

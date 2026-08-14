@@ -2067,7 +2067,13 @@ function execTool(name, args, deps = {}) {
       const deck = readJson(join(STATE_DIR, "captains_call.json")) || {};
       const cards = Array.isArray(deck.cards) ? deck.cards : (Array.isArray(deck) ? deck : []);
       const want = String((args && args.id) || "").trim().toLowerCase();
-      const dealt = [...cards].filter(c => c && c.dealt_at).sort((a, b) => String(a.dealt_at).localeCompare(String(b.dealt_at)));
+      // `dealt` is an ARRAY of stamps, one per time the deck dealt this card —
+      // captains_call.mjs's own shape. The first version of this door looked for
+      // a `dealt_at` scalar, found none on any of the 47 live cards, and
+      // answered "no card has ever been dealt" on a machine where every card
+      // has. A door that reads the wrong field is a door onto a wall.
+      const lastDealt = (c) => { const d = c && c.dealt; return Array.isArray(d) ? (d[d.length - 1] || "") : String(d || ""); };
+      const dealt = cards.filter((c) => lastDealt(c)).sort((a, b) => String(lastDealt(a)).localeCompare(String(lastDealt(b))));
       const card = want ? cards.find(c => String(c.id || "").toLowerCase() === want) : dealt[dealt.length - 1];
       if (!card) return { ok: false, why: want ? `no card with id ${want} — say so plainly; do not describe a card you could not open` : "no card has been dealt yet" };
       // the linked report, if the line names a path that exists under the repo
@@ -2080,8 +2086,10 @@ function execTool(name, args, deps = {}) {
           if (got !== null) { report = got; reportPath = m[1]; break; }
         }
       }
-      return { ok: true, id: card.id, line: card.line, filed_at: card.filed_at || null, dealt_at: card.dealt_at || null,
-        answered: card.answer || card.answered_at ? (card.answer || "answered") : null,
+      return { ok: true, id: card.id, line: card.line, filed_at: card.filed_at || null,
+        dealt_at: lastDealt(card) || null, dealt_times: Array.isArray(card.dealt) ? card.dealt.length : null,
+        answered: (card.answer || card.answered_at) ? (card.answer || "answered") : null,
+        retired_at: card.retired_at || null, sleep_until: card.sleep_until || null,
         report_path: reportPath, report };
     }
     if (name === "get_mission") {
@@ -3815,6 +3823,30 @@ async function selftest() {
 
   // THE BOARDROOM — the whole organism in one call, narratable in 5-10 min
   {
+    // ── PHASE 8 · THE DOORS, DRIVEN FOR REAL (14 Aug 2026) ─────────────────
+    // Not "the declaration exists" — the tool is CALLED and its answer checked
+    // against the live deck and the live missions directory. A door is only a
+    // door if something comes back through it.
+    {
+      const c = execTool("get_card", {}, { sh });
+      const deck = readJson(join(STATE_DIR, "captains_call.json")) || {};
+      const cards = Array.isArray(deck.cards) ? deck.cards : (Array.isArray(deck) ? deck : []);
+      if (cards.some((x) => x && (Array.isArray(x.dealt) ? x.dealt.length : x.dealt))) {
+        assert("get_card OPENS a real card: id + his actual line come back, not a shape",
+          c.ok === true && typeof c.line === "string" && c.line.length > 10
+          && cards.some((x) => x.id === c.id));
+      } else {
+        assert("get_card: no card has ever been dealt on this machine — the door says so plainly instead of composing one",
+          c.ok === false && /dealt/.test(String(c.why || "")));
+      }
+      assert("get_card REFUSES an id that does not exist — it never describes a card it could not open",
+        (() => { const r = execTool("get_card", { id: "c-does-not-exist" }, { sh }); return r.ok === false && /no card/.test(String(r.why || "")); })());
+      const m01 = execTool("get_mission", { id: "M01" }, { sh });
+      assert("get_mission OPENS the real M01 brief off disk (the first mission ever staged)",
+        m01.ok === true && m01.files >= 1 && String(m01.parts[0].text || "").length > 200);
+      assert("get_mission REFUSES an unknown id rather than narrating one",
+        (() => { const r = execTool("get_mission", { id: "M99-nope" }, { sh }); return r.ok === false && /no mission file/.test(String(r.why || "")); })());
+    }
     const rep = execTool("get_club_report", {}, { sh });
     assert("club report: body + brain + gate + senses + memory + tanks, one call", rep.body && rep.brain && rep.gate && rep.senses && rep.memory && Array.isArray(rep.tanks.gauge));
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
