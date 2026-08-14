@@ -1,7 +1,7 @@
 {
-  "started": "2026-08-13T16:40:20.236Z",
-  "finished": "2026-08-13T16:40:27.697Z",
-  "total_ms": 7425,
+  "started": "2026-08-14T16:30:01.700Z",
+  "finished": "2026-08-14T16:30:06.401Z",
+  "total_ms": 4688,
   "ran": 11,
   "ok": 11,
   "failed": 0,
@@ -22,7 +22,7 @@
     {
       "id": "bell",
       "ok": true,
-      "ms": 2460,
+      "ms": 2117,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -36,7 +36,7 @@
     {
       "id": "scorer",
       "ok": true,
-      "ms": 368,
+      "ms": 102,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -50,7 +50,7 @@
     {
       "id": "scoreboard",
       "ok": true,
-      "ms": 447,
+      "ms": 175,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -64,7 +64,7 @@
     {
       "id": "nikhil-model",
       "ok": true,
-      "ms": 226,
+      "ms": 95,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -78,7 +78,7 @@
     {
       "id": "setpiece",
       "ok": true,
-      "ms": 446,
+      "ms": 183,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -92,7 +92,7 @@
     {
       "id": "doubtminer",
       "ok": true,
-      "ms": 460,
+      "ms": 164,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -106,7 +106,7 @@
     {
       "id": "physio-pm",
       "ok": true,
-      "ms": 242,
+      "ms": 116,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -120,7 +120,7 @@
     {
       "id": "examiner",
       "ok": true,
-      "ms": 181,
+      "ms": 86,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -134,7 +134,7 @@
     {
       "id": "wall-pm",
       "ok": true,
-      "ms": 407,
+      "ms": 198,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -148,7 +148,7 @@
     {
       "id": "scout",
       "ok": true,
-      "ms": 166,
+      "ms": 104,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -162,7 +162,7 @@
     {
       "id": "wallpaper",
       "ok": true,
-      "ms": 2022,
+      "ms": 1348,
       "exit": 0,
       "wrote": null,
       "produced": null,

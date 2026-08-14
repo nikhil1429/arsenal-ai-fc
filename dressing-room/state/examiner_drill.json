@@ -1,16 +1,16 @@
 {
-  "date": "2026-08-13",
-  "staged_at": "2026-08-13T16:40:25.058Z",
+  "date": "2026-08-14",
+  "staged_at": "2026-08-14T16:30:04.729Z",
   "concept": "hallucinations",
   "picked_because": "stalling/regressing in learning_state",
   "shape": "phenomenon",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "elicit",
-  "task": "Write the SHORTEST prompt-and-script you can that reliably PROVOKES hallucinations from a model, in Python. Talk while you type; the examiner runs it when you say run. A single reproducible case beats a clever one.",
+  "template": "detect",
+  "task": "Write a DETECTOR in Python: given a model output (and whatever grounding you decide it needs), return a judgement about whether hallucinations occurred. You choose the signal; defend it while you type.",
   "hidden_tests": [
-    "run it and confirm hallucinations actually appeared — if it did not, his hypothesis about the cause was wrong; ask what he expected",
-    "ask him to change ONE thing he predicts will make it worse, then run it and compare",
-    "ask what a FALSE POSITIVE would look like here, and whether his script could tell the difference"
+    "run it on one clean case and one hallucinations case — it must separate them",
+    "hand him a case his detector gets WRONG, and ask him to explain the failure before fixing it",
+    "ask for the precision/recall trade-off his threshold implies, and which one he would rather lose here"
   ]
 }

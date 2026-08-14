@@ -357,3 +357,9 @@ bagit.txt
 bag-info.txt
 manifest-sha256.txt
 tagmanifest-sha256.txt
+
+# Git Bash crash dumps. Zero value, and one untracked file is enough to make
+# audit.mjs REFUSE to run (its dirty-tree guard, audit.mjs:103) — which is how
+# the `audit` lane went 52h stale while looking like a scheduling problem.
+# Ignored rather than deleted: it is a crash artifact, not anyone's work.
+*.stackdump
