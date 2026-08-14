@@ -681,6 +681,46 @@ async function defaultAfferentPost(evt) {
     clearTimeout(to); return !!(r && r.ok);
   } catch { return false; }
 }
+// ── THE ROLLING PULSE SESSION (14 Aug 2026, unleash Phase 3) ────────────────
+// dressing-room/state/pulse_session.json — brain.mjs is its SOLE WRITER, and it
+// is RUNTIME STATE, not config: delete it and the next pulse simply seeds a new
+// session. Shape: { id, started_at, turns, date, last_afferent_ts }.
+//
+// WHY. The pulse fires every ~150s while he is at the keyboard and is the No. 1
+// lane on the board by cache writes (19.5 lakh in 7 days). Every one of those
+// calls re-sent the whole preamble and the whole 25-row afferent tail as fresh
+// context. MEASURED on this machine 14 Aug, the exact lane shape (haiku,
+// --tools "", --strict-mcp-config, JSON reply, body on stdin):
+//     seed    cw 7,490  cr 0
+//     resume  cw   521  cr 7,490     ← the whole prior context read at 0.1×
+// ≈10,900 weighted per pulse becomes ≈1,400. And the resumed pulse ANSWERED
+// ABOUT THE NEW MOMENT ONLY ("escalate: true, which: moment 26") — so this is
+// not just cheaper, it is the same amnesia fix as the Gaffer's 6k tail: the
+// watch now remembers the day it is watching instead of meeting it new every
+// 150 seconds.
+//
+// THE TWO NUMBERS ARE GUARDS, NOT BUDGETS: 80 turns and same-day rotation are
+// CONTEXT-BLOAT stops (haiku holds 200k; ~80 turns × ~2k stays well inside).
+// The real spend rails — daily_cap, daily_token_budget, failure backoff and the
+// headroom floor — are all upstream of here and are untouched.
+const PULSE_SESSION = join(STATE_DIR, "pulse_session.json");
+const PULSE_MAX_TURNS = 80;
+export function pulseSessionUsable(s, now, maxTurns = PULSE_MAX_TURNS) {
+  if (process.env.PULSE_RESUME_DISABLED) return false;      // one-line rollback
+  return !!(s && s.id && s.date === localDate(now) && (s.turns || 0) < maxTurns);
+}
+// The DELTA: afferent rows newer than the ones the session has already been
+// shown. Same filters as the cold tail (never its own output — the 1 Aug
+// tail-eating scar), same cap, newest last.
+export function pulseDelta(rows, sinceTs, capN) {
+  const since = Date.parse(sinceTs || 0);
+  return (rows || [])
+    .filter(a => a && a.text && a.modality !== "pulse")
+    .filter(a => !Number.isFinite(since) || Date.parse(a.ts || 0) > since)
+    .slice(-capN)
+    .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+}
+
 async function runPulse(cfg, deps = {}) {
   const now = deps.now || new Date();
   const pc = pulseConfig(cfg);
@@ -723,16 +763,49 @@ async function runPulse(cfg, deps = {}) {
   // so this cost tokens and signal quality rather than false wakes — but it is a feedback
   // loop, and a watch that keeps re-reading its own alarm is not watching him.
   // Filter BEFORE the slice, or excluding rows would silently shrink the window below tail_n.
-  const tail = (deps.tail || readLines(join(STATE_DIR, "afferent.jsonl")))
+  const afferentRows = deps.tail || readLines(join(STATE_DIR, "afferent.jsonl"));
+  const tail = afferentRows
     .filter(a => a && a.text && a.modality !== "pulse")
     .slice(-pc.tail_n)
     .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
   if (!tail.length) return { pulsed: false, skipped: "empty tail" };
-  const prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
+  const ASK = `\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
+  // ---- ROLLING SESSION (Phase 3) -------------------------------------------
+  const session = deps.session !== undefined ? deps.session : readJson(PULSE_SESSION);
+  const resuming = pulseSessionUsable(session, now);
+  // THE NEWEST MOMENT THIS RUN WILL HAVE SEEN — stamped whichever path we take,
+  // so the next delta starts exactly where this one ended.
+  const newestSeen = (() => {
+    let t = null;
+    for (const a of afferentRows) { if (a && a.text && a.modality !== "pulse" && a.ts && (!t || Date.parse(a.ts) > Date.parse(t))) t = a.ts; }
+    return t;
+  })();
+  let prompt, delta = null;
+  if (resuming) {
+    delta = pulseDelta(afferentRows, session.last_afferent_ts, pc.tail_n);
+    // NOTHING NEW ⇒ NOTHING TO JUDGE, and no call. The cold pulse re-read the
+    // same 25 rows and re-answered them every 150s; on a resumed session that is
+    // not just waste, it is the tail-eating loop with extra steps.
+    if (!delta.length) return { pulsed: false, skipped: "no new moments since the last pulse (rolling session)" };
+    prompt = `New moments since your last check (newest last):\n${delta.map((t, i) => `${i + 1}. ${t}`).join("\n")}${ASK}`;
+  } else {
+    prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}${ASK}`;
+  }
   const exec = deps.exec || claudeExec;
   const t0 = Date.now();
-  const r = deps.mockCall ? deps.mockCall(prompt) : exec(prompt, pc.model, [], pc.timeout_ms);
+  const r = deps.mockCall ? deps.mockCall(prompt) : exec(prompt, pc.model, resuming ? ["--resume", session.id] : [], pc.timeout_ms);
   const dur = Date.now() - t0;
+  // ---- PERSIST / ROTATE / FALL BACK ----------------------------------------
+  // A resumed call that FAILED drops the session so the next pulse seeds cold —
+  // never a retry inside this tick (that would double-spend a failing lane, the
+  // exact thing the failure-backoff rail exists to stop).
+  if (!deps.dry) {
+    try {
+      if (resuming && !r.ok) writeAtomic(PULSE_SESSION, { ...session, id: null, dropped_at: now.toISOString(), dropped_why: String(r.error || "resumed call failed").slice(0, 120) });
+      else if (resuming) writeAtomic(PULSE_SESSION, { ...session, turns: (session.turns || 0) + 1, last_afferent_ts: newestSeen || session.last_afferent_ts, last_at: now.toISOString() });
+      else if (r.ok && r.session_id) writeAtomic(PULSE_SESSION, { id: r.session_id, started_at: now.toISOString(), turns: 1, date: localDate(now), last_afferent_ts: newestSeen, last_at: now.toISOString() });
+    } catch { /* the session file is an optimisation; a write failure must never cost a pulse */ }
+  }
   // parse defensively — a malformed pulse is a HOLD, never a crash
   let verdict = { escalate: false, which: "", why: "" };
   try {
@@ -785,7 +858,12 @@ async function runPulse(cfg, deps = {}) {
       posted = (pr && typeof pr === "object") ? !!pr.ok : !!pr;
     } catch { posted = false; }   // a thrown poster is a FAILED delivery, not a lost meter
   }
-  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok), posted };
+  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok), posted,
+    // Phase 3 — WHICH SHAPE THIS PULSE WAS: true = resumed a rolling session and
+    // was shown ONLY the new moments · false = a cold seed (first of the day, a
+    // rotation, or a recovery after a dropped session). Additive; rows before
+    // today read as UNMEASURED, never as a measured "cold".
+    resume: resuming, turns: resuming ? (session.turns || 0) + 1 : 1, delta_n: delta ? delta.length : null };
   (deps.appendLedger || ((o) => { if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(o) + "\n"); }))(row);
   return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap, tokens_today: spent + row.total_tokens, token_budget: pc.daily_token_budget };
 }
@@ -1490,11 +1568,15 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = nu
       ...(splitArgs || (lean ? LEAN_ARGS : [])), ...(Array.isArray(extraArgs) ? extraArgs : [])],
       // G4 — extended thinking via env, same mechanism the cortex has always used
       { input: sp.body, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
-    let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
+    let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false, sessionId = null;
     try {
       const j = JSON.parse(stdout);
       text = j.result !== undefined ? String(j.result) : stdout;
       isErr = j.is_error === true;
+      // the CLI's own conversation id — the ONLY way to resume this context later
+      // (Phase 3). Additive: a caller that does not want a rolling session simply
+      // ignores it, and a reply without one leaves it null rather than inventing one.
+      sessionId = j.session_id ? String(j.session_id) : null;
       if (j.usage) {
         inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null;
         // the cache pair is where the CLI's real spend lives — see usageTotal above
@@ -1510,7 +1592,7 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = nu
     const measured = usageTotal({ input_tokens: inTok, output_tokens: outTok, cache_creation_input_tokens: cacheCreate, cache_read_input_tokens: cacheRead });
     const total = isErr ? measured : (measured || Math.ceil((sentChars + text.length) / 4));
     const limit_hit = isErr && LIMIT_RE.test(text);
-    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null, split: sp.split };
+    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null, split: sp.split, session_id: sessionId };
   } catch (e) {
     const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
     return { ok: false, text: null, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, total_tokens: 0,   // never spawned/never answered ⇒ zero spend
@@ -3579,6 +3661,43 @@ async function selftest() {
       let m2 = [];
       const malformed = await runPulse(pCfg, { ...base, appendLedger: (o) => m2.push(o), mockCall: () => ({ ok: true, text: "not json at all", total_tokens: 200 }) });
       assert("PULSE — malformed reply → HOLD, still metered, never a crash", malformed.pulsed && malformed.escalated === false && m2.length === 1);
+
+      // ---- THE ROLLING SESSION (14 Aug 2026, unleash Phase 3) ----------------
+      // Measured on this machine before building it (haiku, the exact lane shape):
+      // seed cw 7,490 cr 0 → resume cw 521 cr 7,490. Everything below is the
+      // logic around that fact; `dry: true` keeps the session file untouched.
+      {
+        const dated = (h, m, txt, mod = "voice") => ({ modality: mod, text: txt, ts: now(h, m).toISOString() });
+        const rows = [dated(13, 0, "purani baat"), dated(13, 30, "aur purani baat"), dated(14, 0, "nayi baat — attention scaling")];
+        const live = { id: "sid-1", date: localDate(now(14, 0)), turns: 3, last_afferent_ts: now(13, 30).toISOString() };
+        assert("SESSION — usable only for TODAY, under the turn guard, with an id, and never when PULSE_RESUME_DISABLED is set",
+          pulseSessionUsable(live, now(14, 0))
+          && !pulseSessionUsable({ ...live, date: "2020-01-01" }, now(14, 0))
+          && !pulseSessionUsable({ ...live, turns: 80 }, now(14, 0))
+          && !pulseSessionUsable({ ...live, id: null }, now(14, 0))
+          && !pulseSessionUsable(null, now(14, 0)));
+        assert("DELTA — only moments NEWER than the session has seen, own output still filtered out, newest last",
+          pulseDelta([...rows, { modality: "pulse", text: "its own alarm", ts: now(14, 1).toISOString() }], live.last_afferent_ts, 25)
+            .join("|") === "[voice] nayi baat — attention scaling");
+        let m3 = []; let argsSeen = null;
+        const resumed = await runPulse(pCfg, { ...base, tail: rows, session: live, appendLedger: (o) => m3.push(o),
+          exec: (p, model, extra) => { argsSeen = { p, extra }; return { ok: true, text: JSON.stringify({ escalate: false }), total_tokens: 900, session_id: "sid-1" }; } });
+        assert("RESUMED PULSE — spawns with --resume, is shown ONLY the delta (not the whole tail), and says so on its ledger row",
+          resumed.pulsed && argsSeen.extra.join(" ") === "--resume sid-1"
+          && /nayi baat/.test(argsSeen.p) && !/purani baat/.test(argsSeen.p)
+          && m3[0].resume === true && m3[0].delta_n === 1 && m3[0].turns === 4);
+        const quiet = await runPulse(pCfg, { ...base, tail: rows, session: { ...live, last_afferent_ts: now(14, 0).toISOString() },
+          appendLedger: () => { throw new Error("metered a pulse with nothing to judge"); }, exec: () => { throw new Error("called with an empty delta"); } });
+        assert("RESUMED PULSE — nothing new since the last check ⇒ NO CALL AT ALL (the cold lane re-judged the same 25 rows every 150s)",
+          quiet.pulsed === false && /no new moments/.test(quiet.skipped));
+        let m4 = []; let coldSeen = null;
+        const cold = await runPulse(pCfg, { ...base, tail: rows, session: { ...live, date: "2020-01-01" }, appendLedger: (o) => m4.push(o),
+          exec: (p, model, extra) => { coldSeen = { p, extra }; return { ok: true, text: JSON.stringify({ escalate: false }), total_tokens: 900, session_id: "sid-2" }; } });
+        assert("ROTATION — yesterday's session is NOT resumed: the pulse seeds cold with the WHOLE tail, no --resume, and the row says resume:false",
+          cold.pulsed && coldSeen.extra.length === 0
+          && /purani baat/.test(coldSeen.p) && /nayi baat/.test(coldSeen.p) && /continuous PULSE/.test(coldSeen.p)
+          && m4[0].resume === false && m4[0].turns === 1);
+      }
 
       // ---- THE DELIVERY RECEIPT (11 Aug 2026 wiring pass) ---------------------
       // The wire that was dead: `posted` computed in runPulse and dropped, so 205
