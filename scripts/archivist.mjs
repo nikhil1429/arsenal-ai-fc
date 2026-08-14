@@ -918,8 +918,23 @@ export function tripwire(opts = {}) {
     const r = spawnSync("git", ["diff", "--cached", "--name-only"], { cwd: repo, encoding: "utf8" });
     return String(r.stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
   })();
+  // HEAD, NOT `git ls-files` — AND THIS IS A SCAR, caught by live-firing the
+  // tripwire the minute after it was installed (14 Aug 2026). `git ls-files`
+  // reads the INDEX, and `git add -f dressing-room/state/afferent.jsonl` puts the
+  // file IN the index, so by the time the pre-commit hook asks "has git ever
+  // tracked this?" the answer had already become yes — BECAUSE OF THE VERY ACT
+  // BEING CHECKED. The whole bus (1,506 rows of his words) went into a real
+  // commit while the tripwire printed "nothing that may not be published".
+  // Undone locally, nothing pushed. `git ls-tree HEAD` asks what was tracked
+  // BEFORE this commit, which is the question.
+  // The unit tests passed throughout: they INJECTED `tracked`, so they never
+  // exercised the derivation that was wrong. A test that mocks the thing that
+  // breaks is a test of the mock — hence the live-fire case in the selftest,
+  // which builds a real repo and runs the real hook.
+  // A repo with no commits at all fails ls-tree; the empty set is the safe
+  // direction (everything reads as new, everything is refused).
   const tracked = opts.tracked || (() => {
-    const r = spawnSync("git", ["ls-files"], { cwd: repo, encoding: "utf8" });
+    const r = spawnSync("git", ["ls-tree", "-r", "--name-only", "HEAD"], { cwd: repo, encoding: "utf8" });
     return new Set(String(r.stdout || "").split("\n").map((s) => s.trim()).filter(Boolean));
   })();
   const BAG_FILES = new Set(["bagit.txt", "bag-info.txt", "manifest-sha256.txt", "tagmanifest-sha256.txt"]);
@@ -1606,6 +1621,41 @@ function selftest() {
       (() => { process.env.ARSENAL_ALLOW_NEW_LANE = "1"; const a = tw(["scripts/oura_tokens.json"]).ok; const b = tw(["dressing-room/state/afferent.jsonl"]).ok; delete process.env.ARSENAL_ALLOW_NEW_LANE; return a === false && b === true; })(),
       "the override must free a new LANE and never a credential");
     ok("TRIPWIRE · an ordinary code commit passes untouched", tw(["scripts/archivist.mjs", "README.md"]).ok === true);
+
+    // ── LIVE FIRE: a REAL repo, a REAL `git add`, the REAL hook ──────────────
+    // The five assertions above inject `staged` and `tracked`, and they ALL
+    // PASSED on a tripwire that let the entire bus into a commit — the bug was in
+    // the derivation of `tracked`, which injection replaces. A test that mocks
+    // the part that breaks is a test of the mock. This one mocks nothing: it
+    // builds a git repo, commits one ordinary file, stages a brand-new capture
+    // lane with `git add -f` exactly as a careless hand would, and asks the
+    // installed hook. It goes red the moment the tripwire is wrong in the way it
+    // was actually wrong.
+    const g = join(tmp, "livefire");
+    mkdirSync(join(g, "dressing-room", "state"), { recursive: true });
+    mkdirSync(join(g, "scripts"), { recursive: true });
+    const git = (...a) => spawnSync("git", a, { cwd: g, encoding: "utf8", timeout: 30000 });
+    writeFileSync(join(g, ".gitignore"), "dressing-room/state/*.jsonl\n", "utf8");
+    writeFileSync(join(g, "scripts", "thing.mjs"), "// ordinary code\n", "utf8");
+    writeFileSync(join(g, "dressing-room", "state", "reps_log.jsonl"), '{"a":1}\n', "utf8");
+    git("init", "-q");
+    git("config", "user.email", "t@t"); git("config", "user.name", "t"); git("config", "commit.gpgsign", "false");
+    git("add", "scripts/thing.mjs", ".gitignore");
+    git("add", "-f", "dressing-room/state/reps_log.jsonl");        // this lane IS tracked on purpose
+    git("commit", "-q", "-m", "base");
+    writeFileSync(join(g, "dressing-room", "state", "afferent.jsonl"), '{"text":"his words"}\n', "utf8");
+    writeFileSync(join(g, "scripts", "thing.mjs"), "// ordinary code, edited\n", "utf8");
+    git("add", "-f", "dressing-room/state/afferent.jsonl", "scripts/thing.mjs");
+    const live = tripwire({ repo: g, quiet: true });
+    ok("TRIPWIRE LIVE-FIRE · a NEVER-COMMITTED capture lane, staged with `git add -f`, is REFUSED — the exact case that got through on 14 Aug",
+      live.ok === false && live.blocks.some(([f]) => f === "dressing-room/state/afferent.jsonl"),
+      `tripwire said ok=${live.ok}. \`git ls-files\` reads the INDEX, so staging the file is what made it look tracked. It must ask HEAD.`);
+    ok("TRIPWIRE LIVE-FIRE · …and it did NOT red the already-committed lane or the ordinary code beside it",
+      !live.blocks.some(([f]) => /reps_log|thing\.mjs/.test(f)));
+    git("restore", "--staged", "dressing-room/state/afferent.jsonl");
+    const live2 = tripwire({ repo: g, quiet: true });
+    ok("TRIPWIRE LIVE-FIRE · unstaging the lane clears it — the refusal is about THIS commit, not a permanent lock",
+      live2.ok === true);
 
     // ── 13. THE HOOK IS STILL SAFE ──
     const hookRes = hookProbe();
