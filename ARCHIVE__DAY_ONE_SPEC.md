@@ -814,13 +814,33 @@ And for the build itself, done means ALL of:
 
 ---
 
-## 16.7 THE HARNESS THAT FOUND ALL THIS — it is GONE, and that is fine
+## 16.7 THE HARNESS THAT FOUND ALL THIS — IT SURVIVED
 
-It lived at `…\Temp\claude\…\scratchpad\deepcheck.mjs` and the temp tree is disposable.
-**Do not hunt for it.** Everything of value from it is in §16.2, §16.3 and §16.4 — the four
-checks worth keeping, the vectors, and the six corrected laws. Write the organ fresh from this
-section; the harness carried twenty checks, sixteen of which duplicate `verify` and `reconcile`
-and were correctly dropped by his §16.2 scope ruling.
+**CORRECTED within the hour it was written.** This section first said the harness was gone,
+lived only in a temp folder, and "do not hunt for it". That was wrong when written: a parallel
+session had already copied it to **`reference/deepcheck_harness.mjs.txt`** (304 lines, the
+final corrected version — it carries the MULTIPLICITY law, the LOG-not-table fold, the
+snapshot-before-comparing fix and the `23/1, 24/0, 23/1` measurement). It is UNTRACKED, so it
+is on the laptop and not on the public remote. **Read it before writing the organ** — it is the
+only running implementation of the four checks that exist.
+
+It is a REFERENCE, not the plan. It carries ~24 checks; sixteen of them duplicate `verify` and
+`reconcile` and were correctly dropped by his §16.2 scope ruling. Take the four, take the
+comments, leave the rest.
+
+### AND A DUPLICATE WORK ORDER EXISTS — resolve it before building
+
+That same parallel session also wrote **`ARCHIVE_AUDIT__WORK_ORDER.md`** at the repo root
+(~19 KB, untracked), covering this same job. He then instructed, explicitly:
+
+> *"write in the same file where your instructions were written with the work you did, no new file"*
+
+**This section — §16 of this file — is the one he asked for, and it is the one that is
+committed and pushed.** The standalone file is a second description of one job, which is
+precisely the failure mode that killed the predecessor project: JARVIS died of DOCUMENT rot —
+four Bibles with colliding version numbers — not of code. **Two work orders for one organ will
+diverge.** Read it once for anything §16 missed, fold that in here, then delete it. Do not
+maintain both.
 
 ---
 
