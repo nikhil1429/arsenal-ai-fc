@@ -145,6 +145,31 @@ hash-chained, IST-day-partitioned, BagIt-valid permanent record. The full spec i
   Repairs, in order of bluntness: `rebuild <lane>` (re-derive from source — WRONG for a lane
   whose source is rewritten in place, because it deletes superseded history) · `dedupe <lane>`
   (drop only surplus copies, keep everything the source has thrown away).
+- **`scripts/archive_audit.mjs` is the THIRD question — the only one that can catch a drift in
+  the RULE ITSELF** (built 15 Aug 2026 on his §16 ruling; first live pass GREEN over 34,191
+  records). `verify` asks *was anything altered*, `reconcile` asks *was anything added twice* —
+  and BOTH compute their expectation with archivist's own `canon()`, so if the canonical-bytes
+  rule were subtly wrong, records would be written wrong, both checks would agree with the same
+  wrong function, the suite would be GREEN, and a reader in 2046 following the README would get
+  a mismatch and conclude the archive is corrupt. This organ is that reader, rehearsed early: it
+  re-implements the recipe from the archive's published `README.md` and `SCHEMA/v1.json` and
+  checks FOUR things on EVERY record — independent fixity · field order · IST partition (plus
+  `ts_local` being the same INSTANT as `ts_utc`) · schema conformance via a generic JSON-Schema
+  validator. **It imports nothing from `scripts/` and that is the whole guarantee, not a style
+  rule** — `archive_audit.mjs guard` fails the file on any non-`node:` import, and the selftest
+  proves the guard BITES by running a planted copy as a child process. It REPORTS and never
+  writes into the archive (§16.2.7); its one write is `dressing-room/state/archive_audit.jsonl`,
+  of which it is SOLE WRITER, and the archivist's own tail carries that verdict into the archive
+  as lane `archive_audit`. The known-answer test vectors are published in the archive's README so
+  ANY future implementation, in ANY language, can check itself before trusting itself, and `seal`
+  copies the organ into `<archive>/VERIFIER/` — a REFERENCE IMPLEMENTATION, subordinate to the
+  README, because language outlives JavaScript.
+  **THE GATE — his ruling, and it is a DEFINITION OF DONE, not a cadence: any change to the
+  archive's `README.md` recipe, `SCHEMA/v1.json`, `canon()`, `istStamp()` or `buildRecord()` is
+  NOT DONE until `node scripts/archive_audit.mjs run` passes.** Those five are the only things
+  that can make the README insufficient; everything else in the archive changes freely. Monthly
+  (`ArsenalFC-ArchiveAudit`, 1st 04:20) is the FLOOR, never the trigger — and if it goes 90 days
+  silent the watchman raises a RED, because an auditor that silently stops is worse than none.
 - **Not every `*.jsonl` is append-only.** `identity_facts.pending.jsonl` is REWRITTEN when a
   staged fact is promoted. The checkpoint therefore stores a fingerprint of the bytes before its
   offset and re-reads the whole file when they change; the changed rows land as NEW records and

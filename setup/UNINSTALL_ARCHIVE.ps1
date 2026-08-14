@@ -9,7 +9,7 @@
 # ============================================================================
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 
-foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal") {
+foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal","ArsenalFC-ArchiveAudit") {
   schtasks /Delete /F /TN $t 2>$null | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  - $t removed" } else { Write-Host "  . $t was not present" }
 }

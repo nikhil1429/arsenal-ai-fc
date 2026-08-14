@@ -372,6 +372,9 @@ const P = (root) => ({
   schema: join(root, "SCHEMA"),
   lexicon: join(root, "LEXICON"),
   derived: join(root, "derived"),
+  // A TAG directory, never payload: it holds code, and `data/` may hold nothing
+  // but records. Written only at seal time — see sealArchive().
+  verifier: join(root, "VERIFIER"),
   writer: join(root, "_writer"),
   checkpoints: join(root, "_writer", "checkpoints.json"),
   checkpointsLegacy: join(root, "data", "_checkpoints.json"),
@@ -1150,6 +1153,29 @@ export function sealArchive(opts = {}) {
   const lock = takeLock(root, "seal");
   if (!lock.ok) { log(`archivist seal: an archivist is mid-run (pid ${lock.held.pid}) — not sealing a moving tree. The weekly seal will catch it.`); return { sealed: false }; }
   try {
+  // ── THE ARCHIVE CARRIES ITS OWN VERIFIER (spec §16.2.4b) ──────────────────
+  // If the promise is "verify this WITHOUT arsenal-ai-fc", the verifier has to
+  // travel WITH the bag. So the seal copies scripts/archive_audit.mjs in, as a
+  // REFERENCE IMPLEMENTATION that is explicitly SUBORDINATE to README.md: the
+  // README stays the authority because it is language-independent and this code
+  // is a convenience that will not run forever. It lands in VERIFIER/, a TAG
+  // directory covered by tagmanifest-sha256.txt — never under data/, which may
+  // hold nothing but records.
+  // Copied here rather than at `init` on purpose: seal is the moment the bag is
+  // made portable, and a verifier stamped at init would go stale silently every
+  // time the organ changed.
+  const verifierSrc = join(HERE, "archive_audit.mjs");
+  if (existsSync(verifierSrc)) {
+    mkdirSync(P(root).verifier, { recursive: true });
+    writeFileSync(join(P(root).verifier, "archive_audit.mjs"), readFileSync(verifierSrc, "utf8"), "utf8");
+    writeFileSync(join(P(root).verifier, "README.md"), VERIFIER_MD(), "utf8");
+  } else {
+    // Stated, never silent: a bag that lost its verifier must say so, because
+    // "the file is not there" and "the file was never meant to be there" read
+    // identically to someone opening this folder in 2046.
+    log("archivist seal: WARNING — scripts/archive_audit.mjs not found, so VERIFIER/ was not refreshed. The README remains the authority; the bag is still valid.");
+  }
+
   const payload = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp"));
   const oxum = payload.reduce((a, f) => ({ bytes: a.bytes + statSync(f).size, n: a.n + 1 }), { bytes: 0, n: 0 });
   writeFileSync(join(root, "manifest-sha256.txt"), payload.map((f) => `${fileSha(f)}  ${bagPath(root, f)}`).join("\n") + (payload.length ? "\n" : ""), "utf8");
@@ -1162,6 +1188,7 @@ export function sealArchive(opts = {}) {
   const tagFiles = [
     join(root, "bagit.txt"), join(root, "bag-info.txt"), join(root, "manifest-sha256.txt"), join(root, "README.md"),
     ...walkFiles(P(root).schema), ...walkFiles(P(root).lexicon), ...walkFiles(P(root).health), ...walkFiles(P(root).derived), ...walkFiles(P(root).writer),
+    ...walkFiles(P(root).verifier),
   ].filter((f) => existsSync(f) && !f.endsWith(".tmp"));
   writeFileSync(join(root, "tagmanifest-sha256.txt"), tagFiles.map((f) => `${fileSha(f)}  ${bagPath(root, f)}`).join("\n") + "\n", "utf8");
 
@@ -1663,6 +1690,22 @@ function bagInfo(root, oxum) {
   ].join("\n");
 }
 
+// ── THE KNOWN-ANSWER TEST VECTORS (spec §16.2.4a) ────────────────────────────
+// Published in README.md beside their hashes so that ANY future implementation,
+// in ANY language, on ANY machine, can check ITSELF before trusting itself on
+// 34,000 records — the way crypto standards make a spec self-sufficient. They
+// are SYNTHETIC on purpose: `rebuild` re-mints `rid` and `recorded_at`, and a
+// vector that can change is not a vector. FROZEN — never regenerate them.
+// They are also carried, independently, by scripts/archive_audit.mjs. That
+// duplication is deliberate and is the whole design: two implementations that
+// have never shared a line of code both assert the same frozen constants, so a
+// drift in EITHER is caught by the other. Do not make one import the other.
+const TEST_VECTORS = [
+  { n: "V1", what: "a plain live-shaped record, every field populated", sha256: "086f08ee288ff00e5b930052d12eb85a8e622baa8b581eb30f8af305fce87696", line: String.raw`{"rid":"01M000000000000000000000V1","sha256":"086f08ee288ff00e5b930052d12eb85a8e622baa8b581eb30f8af305fce87696","prev_sha256":null,"seq":1,"v":1,"ts_utc":"2026-08-14T04:17:32.123Z","ts_local":"2026-08-14T09:47:32.123+05:30","tz":"Asia/Kolkata","recorded_at":"2026-08-14T04:17:33.001Z","valid_from":null,"valid_to":null,"lane":"afferent","surface":"claude-code","source":"claude-code","modality":"code","session_id":"sess-abc-123","event_id":"evt-1","tier":"private","moment":null,"payload":{"text":"hello","v":3},"derived_from":null,"agent":null,"backfilled":false}` },
+  { n: "V2", what: "exotic bytes — Devanagari, an emoji, a CRLF, a tab, and leading/trailing spaces that must NOT be trimmed", sha256: "ab255f4501a8c07a487bb5b82be1339b5c5bbcd66ddb81492a951a3e26a10922", line: String.raw`{"rid":"01M000000000000000000000V2","sha256":"ab255f4501a8c07a487bb5b82be1339b5c5bbcd66ddb81492a951a3e26a10922","prev_sha256":"0000000000000000000000000000000000000000000000000000000000000000","seq":2,"v":1,"ts_utc":"2026-08-14T20:08:14.198Z","ts_local":"2026-08-15T01:38:14.198+05:30","tz":"Asia/Kolkata","recorded_at":"2026-08-14T20:09:00.000Z","valid_from":null,"valid_to":null,"lane":"afferent","surface":"claude-code","source":"claude-code","modality":"code","session_id":null,"event_id":null,"tier":"private","moment":null,"payload":{"text":"  नमस्ते  🙏\r\n\ttrailing  "},"derived_from":null,"agent":null,"backfilled":true}` },
+  { n: "V3", what: "null clocks (so the day comes from recorded_at), a populated moment, a nested payload, a non-integer number, a relaxed tier", sha256: "7fa088c355802a0a92bfc7ed58f9130a2e7190e9bd1185c91830e7134f4de8ae", line: String.raw`{"rid":"01M000000000000000000000V3","sha256":"7fa088c355802a0a92bfc7ed58f9130a2e7190e9bd1185c91830e7134f4de8ae","prev_sha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","seq":3,"v":1,"ts_utc":null,"ts_local":null,"tz":null,"recorded_at":"2026-08-14T21:00:00.000Z","valid_from":null,"valid_to":null,"lane":"reps_log","surface":"system","source":"reps_log","modality":null,"session_id":null,"event_id":null,"tier":"public","moment":{"sprint_task":"1-04 Hallucinations","forge_step":4,"forge_concept":"hallucinations","readiness":{"verdict":"GREEN","day":"2026-08-04"},"focus_app":null,"cwd":"arsenal-ai-fc"},"payload":{"nested":{"b":2,"a":[1,"x",null]},"n":1.5},"derived_from":null,"agent":null,"backfilled":true}` },
+];
+
 function README_MD() {
   return `# THE ARCHIVE — the permanent record of Nikhil Panwar
 
@@ -1722,6 +1765,39 @@ record's \`sha256\`, \`seq\` must be contiguous from 1, and the first record's
 it found. **Bit rot is real and silent** — a drive in a drawer degrades and nothing tells
 you. That is why those runs exist.
 
+## Known-answer test vectors — check YOUR verifier before you trust it on 34,000 records
+
+If you are writing your own reader, in any language, on any machine: **check it against
+these three records first.** Each one is printed verbatim next to the \`sha256\` it must
+produce. If your implementation does not reproduce all three, your implementation is
+wrong — not the archive. This is how a specification becomes self-sufficient, and it is
+the reason you do not need the program that wrote this folder.
+
+**The rule, stated so it can be implemented from this page alone:** take the record,
+**remove the \`sha256\` and \`prev_sha256\` fields**, serialise what remains with **keys
+sorted recursively** (by Unicode code unit) and **no insignificant whitespace**, encode it
+as **UTF-8**, and **SHA-256** those bytes. Nothing is normalised, trimmed, lowercased or
+re-encoded anywhere in that path.
+
+These three records are **synthetic and frozen** — hand-written for this purpose, never
+sampled from the data, because a record that can be re-derived is not a fixed point.
+
+${TEST_VECTORS.map((v) => `- **${v.n}** — ${v.what}.`).join("\n")}
+
+\`\`\`
+${TEST_VECTORS.map((v) => `sha256 = ${v.sha256}\n${v.line}`).join("\n\n")}
+\`\`\`
+
+**${TEST_VECTORS[1].n} is the one that catches real bugs.** An implementation that trims
+whitespace, rewrites CRLF to LF, collapses the tab, or hashes anything other than UTF-8
+bytes will reproduce V1 and V3 and fail V2.
+
+**What these vectors do NOT cover, measured rather than assumed:** V2's text is
+normalisation-STABLE in all four Unicode forms (NFC, NFD, NFKC and NFKD are each a no-op
+on it), so a reader that Unicode-normalises would still reproduce all three hashes. Test
+that separately if it matters to you. Saying so here is the point of the whole exercise: a
+document that overstates what it proves is worse than one that proves less and says so.
+
 ## The folders
 
 | Folder | What it is |
@@ -1731,6 +1807,7 @@ you. That is why those runs exist.
 | \`LEXICON/\` | **The dictionary of his private language.** Read this before interpreting anything. |
 | \`health/\` | Vital signs: record counts, field-fill rates, silence detection, fixity runs, quarantine. |
 | \`derived/\` | **Disposable.** Anything in here can be deleted and rebuilt from \`data/\`. Nothing here is truth. |
+| \`VERIFIER/\` | A copy of the program that checks this archive, so it can be checked without the repository that made it. **A reference implementation, subordinate to this README** — if they disagree, this file is right. Appears at the first seal. |
 | \`_writer/\` | The writing program's own bookkeeping (how far it had read, a run lock). Also disposable — it can be deleted and re-derived from \`data/\`, and it is kept out of \`data/\` precisely because it changes constantly and \`data/\` must not. |
 
 ## Read the LEXICON before you interpret anything
@@ -1755,8 +1832,9 @@ private, and treat \`sealed\` as a request from the person in these records.
 
 This folder is a [BagIt](https://datatracker.ietf.org/doc/html/rfc8493) bag:
 \`bagit.txt\`, \`bag-info.txt\`, \`manifest-sha256.txt\` (every file in \`data/\`) and
-\`tagmanifest-sha256.txt\` (everything else, including the schema and the lexicon). Any
-BagIt tool from any decade can validate it without knowing anything about this project.
+\`tagmanifest-sha256.txt\` (everything else, including the schema, the lexicon and
+\`VERIFIER/\`). Any BagIt tool from any decade can validate it without knowing anything
+about this project.
 
 ### If a validator says files are MISSING from the manifest, read this before concluding damage
 
@@ -1792,6 +1870,49 @@ copies, on two different kinds of media, one of them kept somewhere else.
 not exist forever. This folder is designed to outlive it — that is the whole point.*
 `;
 }
+
+// The label the copied verifier travels under. Its whole job is to stop a future
+// reader from treating the code as the specification: if the two ever disagree,
+// the README is right and the program is wrong, because the README can be
+// implemented in a language that has not been invented yet.
+const VERIFIER_MD = () => `# VERIFIER/ — a REFERENCE IMPLEMENTATION, subordinate to README.md
+
+\`archive_audit.mjs\` is a copy of the program that audits this archive, placed here at
+seal time so that the bag can be checked **without the repository that produced it**.
+
+**README.md is the authority. This code is a convenience.**
+
+That ordering is deliberate and it is not modesty. The README states the rules in
+language — how a record is hashed, which day file it belongs in, what every field means —
+and language can be implemented in a tool that does not exist yet. This file is
+JavaScript, and it needs a Node runtime that will not be here forever. If the two ever
+disagree, **the README is right and this program is wrong.**
+
+It checks four things, and only four, on every record:
+
+1. **Fixity** — each record's \`sha256\` recomputed from the README's recipe.
+2. **Field order** — every record carries the 23 fields, in the fixed order.
+3. **IST partition** — every record sits in the day file its own clock names, and
+   \`ts_local\` is the same instant as \`ts_utc\`.
+4. **Schema conformance** — every record validates against \`SCHEMA/v1.json\`, read as a
+   document by a generic JSON-Schema validator.
+
+It deliberately does NOT walk the \`prev_sha256\` chain and does NOT compare the archive to
+any source: those belong to the writing program, and duplicating them here would be
+maintenance with no value.
+
+    node VERIFIER/archive_audit.mjs run          # audits the archive this folder is in
+    node VERIFIER/archive_audit.mjs selftest     # checks the verifier itself first
+    node VERIFIER/archive_audit.mjs guard        # proves it imports nothing but Node built-ins
+
+Run \`selftest\` first. It reproduces the three known-answer vectors published in
+README.md; if those do not match, this program is broken and its opinion about the archive
+is worth nothing.
+
+If \`run\` cannot find the archive, point it at one: set \`ARSENAL_ARCHIVE\` to the folder
+containing \`data/\`. It writes nothing into the archive — the writing program is the only
+thing that ever has.
+`;
 
 const DERIVED_MD = () => `# derived/ — EVERYTHING IN HERE IS DISPOSABLE
 
@@ -2337,6 +2458,36 @@ function selftest() {
     ok("SEAL · the writer's own mutable state is OUTSIDE the payload and covered by the TAGmanifest instead",
       existsSync(P(arc).checkpoints) && !existsSync(P(arc).checkpointsLegacy) && tag.some((l) => l.endsWith("_writer/checkpoints.json")));
 
+    // ── §16.2.4b · THE BAG CARRIES ITS OWN VERIFIER ──────────────────────────
+    // Driven through the REAL seal above, not by re-stating the copy here — the
+    // §4.5 scar directly below this block is what that rule cost the first time.
+    // Three separate claims, because each fails differently: the file arrived,
+    // it is TAG not PAYLOAD (data/ may hold nothing but records), and the copy
+    // is byte-identical to the organ in scripts/ rather than a stale snapshot.
+    ok("SEAL · VERIFIER/archive_audit.mjs travels WITH the bag — 'verifiable without arsenal-ai-fc' needs the verifier to leave with it",
+      existsSync(join(arc, "VERIFIER", "archive_audit.mjs")) && existsSync(join(arc, "VERIFIER", "README.md")));
+    ok("SEAL · VERIFIER/ is in the TAGmanifest and NOT in the payload manifest — it is code, and data/ may hold nothing but records",
+      tag.some((l) => l.endsWith("VERIFIER/archive_audit.mjs")) && tag.some((l) => l.endsWith("VERIFIER/README.md"))
+      && !man.some((l) => /VERIFIER/.test(l)));
+    ok("SEAL · the copy is byte-identical to scripts/archive_audit.mjs (a verifier that drifts from the organ is worse than none)",
+      fileSha(join(arc, "VERIFIER", "archive_audit.mjs")) === fileSha(join(HERE, "archive_audit.mjs")));
+    ok("SEAL · the copied VERIFIER/README.md says out loud that it is SUBORDINATE to the archive's README (language outlives JavaScript)",
+      /subordinate to README\.md/i.test(readFileSync(join(arc, "VERIFIER", "README.md"), "utf8"))
+      && /README\.md is the authority/i.test(readFileSync(join(arc, "VERIFIER", "README.md"), "utf8")));
+
+    // ── §16.2.4a · THE KNOWN-ANSWER VECTORS, FROM THIS SIDE ──────────────────
+    // The auditor asserts these too, from its own independent implementation.
+    // That is the design: two programs that share no code both pin the same
+    // frozen constants, so a drift in EITHER canon() is caught by the other.
+    // Here the assertion is specifically that THE WRITER's canon+sha256 — the
+    // one that actually stamped 34,000 records — still reproduces them.
+    ok("VECTORS · the WRITER's own canon()+sha256Hex() reproduce all three published known-answer hashes",
+      TEST_VECTORS.every((v) => { const r = JSON.parse(v.line); const { sha256: _s, prev_sha256: _p, ...body } = r; return sha256Hex(canon(body)) === v.sha256; }));
+    ok("VECTORS · and all three are published VERBATIM in the generated README, each beside its own hash (that is what makes the recipe checkable by a stranger)",
+      TEST_VECTORS.every((v) => README_MD().includes(`sha256 = ${v.sha256}\n${v.line}`)));
+    ok("VECTORS · the README states the recipe in language, not just the hashes — a reader with no JavaScript must be able to implement it",
+      /remove the .*sha256.* and .*prev_sha256.* fields/.test(README_MD()) && /keys\s*\n?sorted recursively/.test(README_MD().replace(/\*\*/g, "")));
+
     // ── §4.5 · THE RESERVATION IS A RULE, NOT A NOTE ──
     // DRIVEN THROUGH buildRecord ITSELF, not by re-stating the check here. The
     // first version of this assertion recomputed the guard's own condition inline
@@ -2503,10 +2654,35 @@ function selftest() {
     // sha256 chain) assumes exactly one process appends. A second writer would not
     // corrupt a file; it would produce a chain that VERIFIES while being wrong
     // about the order of his life, which is worse.
+    // ONE ORGAN IS ALLOWED TO KNOW, AND IT IS A READER: archive_audit.mjs, the
+    // 2046 reader rehearsed early (spec §16). §16.2.7 is explicit that it
+    // REPORTS and never writes into the archive. So the law is NOT relaxed to a
+    // filename whitelist — a name in a list is exactly how a guard goes quietly
+    // dead. Any organ that knows the path must PROVE it is read-only, and the
+    // proof below is dynamic: it runs the thing and diffs the tree.
+    const READERS = new Set(["archive_audit.mjs"]);
     const others = readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== "archivist.mjs"
       && /ARSENAL_ARCHIVE|CyborgArchive/.test(readFileSync(join(ROOT, "scripts", f), "utf8")));
-    ok("SINGLE WRITER · no other organ even knows where the archive lives (a second appender breaks seq and the chain)",
-      others.length === 0, others.join(", "));
+    ok("SINGLE WRITER · no organ other than the archivist and the declared READ-ONLY auditor even knows where the archive lives (a second appender breaks seq and the chain)",
+      others.every((f) => READERS.has(f)), others.filter((f) => !READERS.has(f)).join(", "));
+
+    // …AND THE READER IS PROVEN READ-ONLY BY RUNNING IT, not by trusting its
+    // header. The copy sealed into VERIFIER/ is the one spawned, which settles
+    // three things in one measurement: the bagged verifier actually RUNS from
+    // inside a bag with no repo around it (§16.2.4b's entire promise), it leaves
+    // the archive byte-identical, and with no dressing-room/ beside it, it
+    // journals nothing and says so instead of failing.
+    const treeHash = (dir) => walkFiles(dir).map((f) => `${relative(dir, f).split(sep).join("/")}:${fileSha(f)}`).sort().join("\n");
+    const beforeAudit = treeHash(arc);
+    const auditRun = spawnSync(process.execPath, [join(arc, "VERIFIER", "archive_audit.mjs"), "run"],
+      { encoding: "utf8", env: { ...process.env, ARSENAL_ARCHIVE: arc } });
+    ok("SINGLE WRITER · the sealed VERIFIER runs from inside the bag, with no repo anywhere near it, and comes back GREEN on the archive the writer just built",
+      auditRun.status === 0 && /verifiable from its own README alone/.test(String(auditRun.stdout)),
+      String(auditRun.stdout || "").split("\n").filter((l) => /FAIL|FATAL/.test(l)).slice(0, 3).join(" | ") || String(auditRun.stderr || "").slice(0, 300));
+    ok("SINGLE WRITER · …and the archive is BYTE-IDENTICAL afterwards — the auditor REPORTS and never writes (§16.2.7), proven by diffing the tree, not by reading its header",
+      treeHash(arc) === beforeAudit);
+    ok("SINGLE WRITER · …and with no dressing-room/ beside it, the verdict is printed and the missing journal is NAMED, never silently dropped",
+      /journal: NOT WRITTEN/.test(String(auditRun.stdout)));
 
     // ── THE COMMIT TRIPWIRE (§7.5) ──
     const twTracked = new Set(["dressing-room/state/reps_log.jsonl", "scripts/archivist.mjs"]);

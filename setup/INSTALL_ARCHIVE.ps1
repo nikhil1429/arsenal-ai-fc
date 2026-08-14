@@ -47,6 +47,23 @@ Mk "ArsenalFC-ArchiveFixity" "archivist.mjs verify" @("/SC","MONTHLY","/D","1","
 #    the sleep band and outside his study hours.
 Mk "ArsenalFC-ArchiveSeal"   "archivist.mjs seal"   @("/SC","WEEKLY","/D","SAT","/ST","09:20")
 
+# 5. THE AUDIT (spec §16) - monthly, 1st, 04:20. NOT the same job as fixity, and
+#    the twenty-minute gap is deliberate: 04:00 is taken and two full walks of
+#    34,000 records should not overlap.
+#    FIXITY asks "has anything CHANGED since the seal" using the archive's own
+#    program. THE AUDIT asks the only question nothing else asks: "is the README
+#    still SUFFICIENT" - it recomputes every hash, field order, IST partition and
+#    schema conformance from the PUBLISHED DOCUMENTS, with code that imports
+#    nothing from this repo. If the canonical-bytes rule ever drifts, fixity and
+#    the selftest both stay green (they use the same wrong function twice) and
+#    only this goes red.
+#    MONTHLY IS THE FLOOR, NOT THE TRIGGER - his ruling. The real trigger is an
+#    event: a passing run is part of the definition of done for any change to the
+#    archive README recipe, SCHEMA/v1.json, canon(), istStamp() or buildRecord().
+#    And if it has not run in 90 days the watchman raises it, because an auditor
+#    that silently stops is worse than none - the green memory persists.
+Mk "ArsenalFC-ArchiveAudit"  "archive_audit.mjs run" @("/SC","MONTHLY","/D","1","/ST","04:20")
+
 # POWER + SLEEP CONDITIONS — the same two live findings INSTALL_TASKS.ps1 paid
 # for (12 Jul: battery kill-conditions silently queue or kill the whole organism;
 # 14 Jul: a laptop asleep past a trigger skips it forever without catch-up).
@@ -100,7 +117,7 @@ function HardenViaXml($name) {
     }
   } catch { Write-Host "    ! $name could not be hardened: $($_.Exception.Message)" }
 }
-foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal") {
+foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal","ArsenalFC-ArchiveAudit") {
   $task = Get-ScheduledTask -TaskName $t -ErrorAction SilentlyContinue
   if (-not $task) { continue }
   $task.Settings.DisallowStartIfOnBatteries = $false
@@ -111,7 +128,7 @@ foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-Archiv
 # READ BACK OFF DISK - the lesson INSTALL_EVENING_CONDUCTOR.ps1's disable-loop
 # paid for: an installer that reports what it INTENDED is not a measurement.
 $bad = @(Get-ScheduledTask -TaskName "ArsenalFC-Archiv*" | Where-Object { $_.Settings.DisallowStartIfOnBatteries -or -not $_.Settings.StartWhenAvailable })
-if ($bad.Count -eq 0) { Write-Host "  ~ battery kill-conditions cleared + catch-up-on-wake set on all 4 archive tasks (read back off disk)" }
+if ($bad.Count -eq 0) { Write-Host "  ~ battery kill-conditions cleared + catch-up-on-wake set on all 5 archive tasks (read back off disk)" }
 else { Write-Host ("  ! STILL WRONG on: " + (($bad | ForEach-Object { $_.TaskName }) -join ", ")) }
 
 # ── THE COMMIT TRIPWIRE ──────────────────────────────────────────────────────
@@ -132,11 +149,13 @@ if (Test-Path $src) {
 # loudest class there is. A brand-new task is indistinguishable from an abandoned
 # one until it has run once, so each is fired here and the organism never starts
 # by reporting a red it created itself.
-foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal") {
+foreach ($t in "ArsenalFC-Archivist","ArsenalFC-ArchiveVitals","ArsenalFC-ArchiveFixity","ArsenalFC-ArchiveSeal","ArsenalFC-ArchiveAudit") {
   schtasks /Run /TN $t | Out-Null
   if ($LASTEXITCODE -eq 0) { Write-Host "  > $t fired once (a never-run lane reads as a dead lane)" }
 }
 
 Write-Host ""
-Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArchiveArsenalFC"
+# (the filter below read "ArchiveArsenalFC" until 15 Aug 2026 - a transposition
+#  that matched nothing, so the installer's own verification step printed empty)
+Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC-Archiv"
 node "$repo\scripts\archivist.mjs" status

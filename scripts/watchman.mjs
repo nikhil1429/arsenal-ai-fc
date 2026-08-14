@@ -105,6 +105,13 @@ const LOGJ = join(STATE_DIR, "watchman.jsonl");
 const REPAIR_LOG = join(STATE_DIR, "watchman_repair.log");
 const REPAIR_JOURNAL = join(STATE_DIR, "watchman_repairs.jsonl");
 const TIER2_PROMPT_FILE = join(STATE_DIR, "watchman_tier2_prompt.txt");
+// READ-ONLY here; archive_audit.mjs is its SOLE WRITER (spec §16.5.1). Declared
+// at module level rather than inside gather() for a measured reason: xray.mjs
+// cannot resolve a path bound to a block-local const, so the inline version cost
+// six unresolved sinks and turned the per-organ ratchet red (watchman 32→38).
+// The file's own top-of-module path constants are the idiom that stays analysable.
+const ARCHIVE_AUDIT_JOURNAL = join(STATE_DIR, "archive_audit.jsonl");
+const TASKS_EXPECTED = join(STATE_DIR, "tasks_expected.json");
 
 // Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
 // dropped 9 Aug: it had already rotted once): past this the
@@ -115,6 +122,12 @@ const STALE_HOURS = 18;
 // A CEILING on the selftest sweep, not a judgement — organism_test spawns 60+
 // organs independently; this only stops a hung child from holding the night.
 const SUITE_TIMEOUT_MS = 15 * 60 * 1000;
+// HIS NUMBER, not a guessed threshold (ARCHIVE__DAY_ONE_SPEC.md §16.2.3, 15 Aug
+// 2026). Mirrored from the ruling, the same way STALE_HOURS is mirrored from its
+// owner: the archive auditor's cadence is MONTHLY, so 90 days is three missed
+// runs — long past "the laptop was off that morning" and squarely at "this lane
+// has stopped and the last green is now a memory".
+const AUDIT_SILENT_DAYS = 90;
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
 const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -232,6 +245,35 @@ export function gather(now = new Date()) {
       today_file: existsSync(join(STATE_DIR, "brain_out", "night_coach", `${today}.md`)),
     };
   }
+  // THE ARCHIVE AUDIT'S 90-DAY WATCH (ARCHIVE__DAY_ONE_SPEC.md §16.2.3, his
+  // ruling 15 Aug 2026: "an auditor that silently stops running is worse than
+  // none, because the green memory persists").
+  // NOTE WHAT THIS DELIBERATELY DOES NOT DO: it never names the archive's env
+  // var or its default folder, in any form, not even in a comment. archivist's
+  // SINGLE WRITER guard greps every file in scripts/ for those two names and
+  // fails any organ that knows where the archive lives — and that guard is worth
+  // more than the convenience, so the watchman arms itself off REPO state. This
+  // paragraph was written with the literal names in it and reddened both that
+  // guard and the assertion below within the minute; the guard works.
+  // It is armed by the SCHEDULE CONTRACT: if tasks_expected.json expects
+  // ArsenalFC-ArchiveAudit, the lane is installed on this machine and a silent
+  // journal is a real finding. On a machine without it, this makes no claim —
+  // the physio's NEVER-BORN law, applied to a lane that was never installed.
+  w.archive_audit = { armed: false, journal_exists: false, newest: null, last_ok: null, rows: 0 };
+  try {
+    const te = readJson(TASKS_EXPECTED);
+    w.archive_audit.armed = !!(te && Array.isArray(te.expected_enabled) && te.expected_enabled.includes("ArsenalFC-ArchiveAudit"));
+    if (existsSync(ARCHIVE_AUDIT_JOURNAL)) {
+      w.archive_audit.journal_exists = true;
+      const rows = readFileSync(ARCHIVE_AUDIT_JOURNAL, "utf8").split("\n").filter((l) => l.trim());
+      w.archive_audit.rows = rows.length;
+      // Newest row wins, and a row that will not parse is not a run — an
+      // unreadable journal must never read as a green one.
+      for (let i = rows.length - 1; i >= 0; i--) {
+        try { const r = JSON.parse(rows[i]); if (r && r.ts) { w.archive_audit.newest = r.ts; w.archive_audit.last_ok = r.ok === true; break; } } catch { /* keep walking back */ }
+      }
+    }
+  } catch { /* an unreadable journal claims nothing green; the check below treats it as never-run */ }
   w.outward = { has_desk: existsSync(join(STATE_DIR, "missions.json")), returns7d: 0, benchRuns7d: 0 };
   try {
     const mj = readJson(join(STATE_DIR, "missions.json"));
@@ -437,6 +479,37 @@ export function checks(w) {
         id: "forge-stale-open", level: "INFO",
         finding: `forge session '${w.forge.json.concept}' has been open ${hrs.toFixed(1)}h (pacer calls >${STALE_HOURS}h stale and goes silent; the auditor keeps auditing every session machine-wide until it is closed)`,
         evidence: `started_at ${w.forge.json.started_at} — \`node scripts/forge_session.mjs close\` is the only thing that saves the coverage report`,
+      });
+    }
+  }
+
+  // c12 · THE SILENT AUDITOR (spec §16.2.3). archive_audit.mjs is the only thing
+  // that tests the archive's whole justification for existing — "verifiable from
+  // its own README alone" — and it is the only check that can see a drift in the
+  // canonical-bytes rule, because everything else uses the same function twice
+  // and agrees with itself. Monthly is its FLOOR; the real trigger is a change to
+  // the README recipe, SCHEMA/v1.json, canon(), istStamp() or buildRecord(). This
+  // is the backstop for the case where the lane stops and nobody notices, which
+  // is worse than never having built it — a stale green is read as assurance.
+  if (w.archive_audit && w.archive_audit.armed) {
+    const days = w.archive_audit.newest ? (Date.parse(w.now) - Date.parse(w.archive_audit.newest)) / 86400000 : null;
+    if (days === null) {
+      F.push({
+        id: "archive-audit-never-ran", level: "RED",
+        finding: "the archive auditor is on the schedule contract and has NEVER produced a verdict — the claim that the archive is verifiable from its own README is still a hypothesis",
+        evidence: `${w.archive_audit.journal_exists ? `archive_audit.jsonl exists with ${w.archive_audit.rows} row(s) but none carries a readable ts` : "dressing-room/state/archive_audit.jsonl does not exist"} · run \`node scripts/archive_audit.mjs run\``,
+      });
+    } else if (Number.isFinite(days) && days > AUDIT_SILENT_DAYS) {
+      F.push({
+        id: "archive-audit-silent", level: "RED",
+        finding: `the archive auditor has not run in ${Math.floor(days)} days (his floor is ${AUDIT_SILENT_DAYS}) — an auditor that silently stops is worse than none, because the green memory persists`,
+        evidence: `newest archive_audit.jsonl row: ${w.archive_audit.newest} · monthly task ArsenalFC-ArchiveAudit · run \`node scripts/archive_audit.mjs run\``,
+      });
+    } else if (w.archive_audit.last_ok === false) {
+      F.push({
+        id: "archive-audit-red", level: "RED",
+        finding: "the archive auditor's LAST verdict was RED — the permanent record does not match its own published description, and no other check in this organism can see that",
+        evidence: `newest archive_audit.jsonl row ${w.archive_audit.newest} carries ok:false · \`node scripts/archive_audit.mjs run\` prints which of the four checks failed and on which records`,
       });
     }
   }
@@ -1405,6 +1478,31 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     (() => { const f = checks({ ...base, now: "2026-08-07T18:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
       const under = checks({ ...base, now: "2026-08-06T20:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
       return f && f.level === "INFO" && !under; })());
+
+  // c12 — THE SILENT AUDITOR (spec §16.2.3). Both directions, because the whole
+  // value of this check is that it cannot be quietly satisfied: it must fire on
+  // silence AND stay silent on a healthy lane, or it is one more green memory.
+  const AA = (over) => ({ ...base, archive_audit: { armed: true, journal_exists: true, newest: null, last_ok: null, rows: 0, ...over } });
+  assert("c12 RED — an armed auditor that has never produced a verdict is loud (the 'never born' case §16.2.3 names by hand)",
+    checks(AA({ journal_exists: false })).some((f) => f.id === "archive-audit-never-ran" && f.level === "RED")
+    && checks(AA({ journal_exists: true, rows: 2 })).some((f) => f.id === "archive-audit-never-ran"));
+  assert("c12 RED — 91 days of silence trips his 90-day floor and the finding carries the day count; 89 days does not (the threshold is a threshold)",
+    (() => { const at = (d) => new Date(Date.parse(base.now) - d * 86400000).toISOString();
+      const f = checks(AA({ newest: at(91), last_ok: true })).find((x) => x.id === "archive-audit-silent");
+      return f && f.level === "RED" && /91 days/.test(f.finding)
+        && !checks(AA({ newest: at(89), last_ok: true })).some((x) => x.id === "archive-audit-silent"); })());
+  assert("c12 RED — a RECENT run whose verdict was ok:false is raised too; a recent green run is silent",
+    checks(AA({ newest: base.now, last_ok: false })).some((f) => f.id === "archive-audit-red" && f.level === "RED")
+    && checks(AA({ newest: base.now, last_ok: true })).length === 0);
+  assert("c12 CONDITIONAL — a machine where the audit lane is NOT on the schedule contract makes no claim at all (never-installed is not a wound)",
+    !checks({ ...base, archive_audit: { armed: false, journal_exists: false, newest: null, last_ok: null, rows: 0 } }).some((f) => /^archive-audit/.test(f.id))
+    && !checks(base).some((f) => /^archive-audit/.test(f.id)));
+  // The needle is BUILT, never written literally — spelling it out would put the
+  // forbidden strings into this file and make the assertion accuse itself, which
+  // is the same self-matching trap the auditor's own import guard had to dodge.
+  assert("c12 WIRE — this organ arms off tasks_expected.json and never names the archive's location, so archivist's SINGLE WRITER guard stays green",
+    !new RegExp(["ARSENAL", "ARCHIVE"].join("_") + "|" + "Cyborg" + "Archive")
+      .test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
 
   // LADDER B3 — the claude CLI's login health rides the sweep
   assert("B3 RED — token_vitals health.not_logged_in ⇒ claude-logged-out with the streak; healthy or absent stays silent",
