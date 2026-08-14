@@ -220,6 +220,9 @@ export function measureReality(stateDir = STATE) {
     // so `human()`'s scalar ledger skips it and the CADENCES table prints it on
     // the one row it judges — the distiller's own. See distillerLatency().
     distiller_latency: distillerLatency(readLines(join(stateDir, "distiller_latency.jsonl"))),
+    // Phase 6 (14 Aug 2026): the physio gate rows read their bar from HERE — the
+    // same file physio.mjs merges over its DEFAULTS — instead of a literal copy.
+    physio_config: readJson(join(stateDir, "physio_config.json")),
   };
 }
 
@@ -237,6 +240,24 @@ export function calGateRead(calGate, name) {
 }
 const calHave = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.have : null; };
 const calNeed = (name) => (m) => { const g = calGateRead(m.cal_gate, name); return g ? g.need : null; };
+
+// ── THE PHYSIO GATES, READ LIVE (14 Aug 2026, unleash Phase 6) ──────────────
+// These four rows hardcoded their `need` as a literal (200 / 30 / 8 / 84), which
+// is the exact defect this file exists to catch, one level up: physio.mjs merges
+// physio_config.json over its DEFAULTS on every run, so the moment a gate was
+// tuned this table went on printing the OLD bar — and printed SHUT beside an
+// organ that had just been opened. Found by tuning three of them and watching
+// the table not move. Same rule as the calibration rows above: the number comes
+// from where the ORGAN reads it, never from a copy kept here. Dotted path, so
+// `gates.apni_ghadi.min_cards` resolves without a translation table to rot.
+// Falls back to physio.mjs's own DEFAULTS literal when the config file is
+// missing or the leaf is not a number — the same value physio itself would use.
+const physioNeed = (path, fallback) => (m) => {
+  const cfg = m.physio_config;
+  let v = cfg && cfg.gates;
+  for (const k of String(path).split(".")) { if (!v || typeof v !== "object") { v = null; break; } v = v[k]; }
+  return Number.isFinite(v) ? v : fallback;
+};
 
 // The discard, if any, behind ONE calibration knob. The GATES rows are keyed by the
 // very path calibration.mjs journals ("min_reps" · "window_size" ·
@@ -373,12 +394,12 @@ export const GATES = [
   { organ: "doubtminer",    file: "doubtminer.mjs",    key: "gates.min_doubts",            need: 60,  have: (m) => m.doubts,            origin: "guessed", effect: "no doubt clustering" },
   { organ: "doubtminer",    file: "doubtminer.mjs",    key: "lexicon.min_count",           need: 2,   have: (m) => m.capsules,          origin: "guessed", effect: "an anchor must repeat twice — why filler outranks metaphor" },
   { organ: "doubtminer",    file: "doubtminer.mjs",    key: "tape_room.min_age_days",      need: 14,  have: (m) => m.span_days,         origin: "guessed", effect: "no rematch is old enough to return" },
-  { organ: "boot room",     file: "physio.mjs",        key: "gates.bootroom_min_reps",     need: 200, have: (m) => m.reps,              origin: "guessed", effect: "the genome proposes no mutation" },
+  { organ: "boot room",     file: "physio.mjs",        key: "gates.bootroom_min_reps",     need: physioNeed("bootroom_min_reps", 200), have: (m) => m.reps,              origin: "guessed", effect: "the genome proposes no mutation" },
   // #78: `have` was m.voice_resolutions (dugout_notes.jsonl lines) — the wrong file
   // entirely. It now reads the same thing physio.mjs:457/:502 counts.
-  { organ: "twin",          file: "physio.mjs",        key: "gates.twin_voice_min_resolutions", need: 30, have: (m) => m.twin_resolutions_best_type, origin: "guessed", effect: "no voice-twin read (best single claim-type in slip.jsonl)" },
-  { organ: "apni ghadi",    file: "physio.mjs",        key: "gates.apni_ghadi.min_cards",  need: 8,   have: (m) => m.capsules,          origin: "guessed", effect: "no personal-interval calibration" },
-  { organ: "body archive",  file: "physio.mjs",        key: "gates.body_archive_min_days", need: 84,  have: (m) => m.span_days,         origin: "external", effect: "seasonal body baseline — 12 weeks is a real physiological window" },
+  { organ: "twin",          file: "physio.mjs",        key: "gates.twin_voice_min_resolutions", need: physioNeed("twin_voice_min_resolutions", 30), have: (m) => m.twin_resolutions_best_type, origin: "guessed", effect: "no voice-twin read (best single claim-type in slip.jsonl)" },
+  { organ: "apni ghadi",    file: "physio.mjs",        key: "gates.apni_ghadi.min_cards",  need: physioNeed("apni_ghadi.min_cards", 8),   have: (m) => m.capsules,          origin: "guessed", effect: "no personal-interval calibration" },
+  { organ: "body archive",  file: "physio.mjs",        key: "gates.body_archive_min_days", need: physioNeed("body_archive_min_days", 84),  have: (m) => m.span_days,         origin: "external", effect: "seasonal body baseline — 12 weeks is a real physiological window" },
   { organ: "signal table",  file: "physio.mjs",        key: "signal_table.min_n",          need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no per-signal reliability table" },
   // WIRING AUDIT (11 Aug 2026) — fsrs published an ungate counter (audit #106) that
   // no organ read. Reads the PRODUCER's have/need, exactly as the calibration rows
@@ -813,6 +834,16 @@ function selftest() {
     const rd = (key, m) => { const g = GATES.find(x => x.organ === "calibration" && x.key === key);
       return { have: g.have(m), need: typeof g.need === "function" ? g.need(m) : g.need }; };
     const m = { reps: 21, cal_gate: calGate };
+    // PHASE 6 REGRESSION WITNESS (14 Aug 2026) — the four physio rows carried
+    // their bar as a LITERAL, so tuning a gate moved the organ and not the table:
+    // three gates were opened and this report went on printing SHUT beside the
+    // old number. The bar now comes from where physio.mjs reads it.
+    ok("the physio gates read their bar from physio_config.json, not from a copy kept here",
+      physioNeed("bootroom_min_reps", 200)({ physio_config: { gates: { bootroom_min_reps: 20 } } }) === 20
+      && physioNeed("apni_ghadi.min_cards", 8)({ physio_config: { gates: { apni_ghadi: { min_cards: 4 } } } }) === 4);
+    ok("...and falls back to physio.mjs's OWN default when the file is missing or the leaf is not a number — never to zero",
+      physioNeed("bootroom_min_reps", 200)({}) === 200
+      && physioNeed("bootroom_min_reps", 200)({ physio_config: { gates: { bootroom_min_reps: "20" } } }) === 200);
     ok("the trend gate reads the PRODUCER's 21/40 (2 × window_size) and is SHUT — not the raw rep count against 20",
       rd("window_size", m).have === 21 && rd("window_size", m).need === 40 && rd("window_size", m).have < rd("window_size", m).need);
     ok("danger.min_knew_reps counts KNEW-reps (3/3), never every rep (21/3)",
