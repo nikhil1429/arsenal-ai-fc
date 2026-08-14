@@ -70,11 +70,22 @@
 //   run in 90 days the watchman raises it, because an auditor that silently
 //   stops is worse than none — the green memory persists.
 //
-// MODES: run · selftest · guard
+// MODES: run [--no-journal] · selftest · guard
 //   run       — the full pass over every record in the live archive.
 //   selftest  — hermetic: the known-answer vectors, the validator, the guard.
 //   guard     — the independence door, alone, exiting 0/1. It is a mode ONLY so
 //               the selftest can prove it bites FROM OUTSIDE this process.
+//   --no-journal — audit and print, write nothing. USE THIS FOR ANY DIAGNOSTIC
+//               RUN AGAINST A ROOT THAT IS NOT HIS LIVE ARCHIVE, and the reason
+//               is measured, not theoretical: during this organ's own build a
+//               deliberate `ARSENAL_ARCHIVE=C:/nonexistent run` — a two-second
+//               check that a missing archive is fatal — appended a legitimate
+//               ok:false row, and the watchman then raised archive-audit-red
+//               against a PERFECTLY HEALTHY archive. Every part of that behaved
+//               correctly; the journal simply cannot tell "the record is wrong"
+//               from "I was pointed somewhere else". The lane self-heals on the
+//               next real run, but a red that has to be waited out is a red that
+//               gets ignored.
 // ============================================================================
 
 // Node built-ins ONLY — see THE IMPORT RULE above. `guard` fails this file if
@@ -769,6 +780,35 @@ async function selftest() {
     } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* litter, not a failure */ } }
   }
 
+  // --no-journal, driven through the REAL CLI rather than by re-stating the flag
+  // check here. Both spawns run a COPY of this file inside a throwaway tree with
+  // its own dressing-room/state, so the pair is hermetic: this selftest must
+  // leave live state untouched (organism_test asserts exactly that), and writing
+  // an ok:false row into the real lane on every `npm test` would be the very
+  // disease this flag exists to cure.
+  {
+    const tmp = mkdtempSync(join(process.env.TEMP || process.env.TMPDIR || "/tmp", "arcjrnl-"));
+    try {
+      mkdirSync(join(tmp, "scripts"), { recursive: true });
+      mkdirSync(join(tmp, "dressing-room", "state"), { recursive: true });
+      const copy = join(tmp, "scripts", "archive_audit.mjs");
+      const lane = join(tmp, "dressing-room", "state", "archive_audit.jsonl");
+      writeFileSync(copy, readFileSync(SELF, "utf8"), "utf8");
+      const env = { ...process.env, ARSENAL_ARCHIVE: join(tmp, "no-archive-here") };
+      const size = () => (existsSync(lane) ? readFileSync(lane, "utf8").length : 0);
+
+      const a = spawnSync(process.execPath, [copy, "run", "--no-journal"], { encoding: "utf8", env });
+      ok("JOURNAL · a --no-journal run still prints its verdict and still exits non-zero, and writes NOTHING to the lane the watchman reads",
+        a.status === 1 && /verdict: RED/.test(String(a.stdout)) && /--no-journal/.test(String(a.stdout)) && size() === 0);
+      // The control, and it is the half that gives the assertion above meaning:
+      // WITHOUT the flag the identical run appends. Otherwise "wrote nothing"
+      // could just be a journal that never writes at all.
+      const b = spawnSync(process.execPath, [copy, "run"], { encoding: "utf8", env });
+      ok("JOURNAL · …and WITHOUT the flag the identical run DOES append a row, so the check above is measuring the flag and not a dead writer",
+        b.status === 1 && size() > 0 && JSON.parse(readFileSync(lane, "utf8").trim()).ok === false);
+    } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* litter, not a failure */ } }
+  }
+
   console.log(`\n  ${pass} passed / ${fail} failed\n`);
   return fail === 0;
 }
@@ -786,7 +826,8 @@ async function main() {
     for (const o of v) console.log(`  x line ${o.line}: ${o.spec}   ${o.text}`);
     process.exit(1);
   }
-  if (mode !== "run") { console.log("usage: node scripts/archive_audit.mjs [run|selftest|guard]"); process.exit(2); }
+  if (mode !== "run") { console.log("usage: node scripts/archive_audit.mjs [run [--no-journal]|selftest|guard]"); process.exit(2); }
+  const noJournal = process.argv.includes("--no-journal");
 
   // An auditor whose independence has been quietly removed has no standing to
   // certify anything, so the guard runs BEFORE the pass, not after it.
@@ -794,7 +835,9 @@ async function main() {
   if (v.length) { console.log(`archive_audit run REFUSED: the independence guard is red (${v.map((o) => o.spec).join(", ")}). Run \`guard\` for the detail.`); process.exit(1); }
 
   const res = auditArchive(archiveRoot());
-  const j = journal(res);
+  // The verdict still prints and the exit code is unchanged — --no-journal
+  // suppresses the RECORD, never the answer.
+  const j = noJournal ? { written: false, why: "--no-journal (a diagnostic run: the verdict is printed, and the lane the watchman reads is left alone)" } : journal(res);
   process.exit(report(res, j) ? 0 : 1);
 }
 

@@ -170,6 +170,10 @@ hash-chained, IST-day-partitioned, BagIt-valid permanent record. The full spec i
   that can make the README insufficient; everything else in the archive changes freely. Monthly
   (`ArsenalFC-ArchiveAudit`, 1st 04:20) is the FLOOR, never the trigger — and if it goes 90 days
   silent the watchman raises a RED, because an auditor that silently stops is worse than none.
+  **Any run against a root that is NOT his live archive takes `--no-journal`** — a diagnostic run
+  writes a legitimate `ok:false` row and the watchman then reds a perfectly healthy archive
+  (measured 15 Aug, and every component was behaving correctly: the journal cannot tell "the
+  record is wrong" from "I was pointed somewhere else"). Never repair that by editing the lane.
 - **Not every `*.jsonl` is append-only.** `identity_facts.pending.jsonl` is REWRITTEN when a
   staged fact is promoted. The checkpoint therefore stores a fingerprint of the bytes before its
   offset and re-reads the whole file when they change; the changed rows land as NEW records and

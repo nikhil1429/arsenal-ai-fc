@@ -920,6 +920,28 @@ written would have been a check that passes for the wrong reason, which is exact
 all six laws in §16.4. *A document that overstates what it proves is worse than one that proves
 less and says so.*
 
+### AND TWO MORE THINGS THE SECOND VERIFICATION PASS TURNED UP
+
+- **A DIAGNOSTIC RUN CAN POISON THE LANE THE WATCHMAN READS — `--no-journal` exists because of
+  it.** A two-second check that a missing archive is fatal (`ARSENAL_ARCHIVE=C:/nonexistent
+  archive_audit run`) appended an entirely legitimate `ok:false` row, and c12 then raised
+  `archive-audit-red` against a perfectly healthy archive. **Every component behaved correctly** —
+  that is the interesting part. The journal simply cannot tell *"the record is wrong"* from
+  *"I was pointed somewhere else"*, and only a human knows which run was a probe. So `run` takes
+  `--no-journal`: the verdict still prints, the exit code is unchanged, the lane is left alone.
+  The red row was NOT deleted — the lane self-healed on the next real run and both red rows stay
+  in history, because rewriting a journal to make a graph look better is the thing this whole
+  archive exists to prevent. **Use `--no-journal` for any run against a root that is not his live
+  archive.**
+- **`scripts/watchman.mjs` has NO entrypoint guard** (line ~1825: `const cmd = process.argv[2] ||
+  "run"` at module scope). Importing it — even just for `gather`/`checks`, both of which it
+  EXPORTS — executes the entire nightly job: state written, the whole selftest suite spawned,
+  the Tier-2 arm reachable. Found the hard way: a one-line import meant to read state dirtied
+  four state files mid-`npm test` and false-fired the "selftests leave live state untouched"
+  assertion. Nothing imports it today, so it is latent — and it is NOT this work order's to fix,
+  so it is filed rather than silently patched. `conductor.mjs` carries the correct pattern, and
+  watchman's own line 93 comment praises conductor for having it.
+
 ### FOLDED IN FROM THE DELETED WORK ORDER (§16.7's instruction)
 
 - **A pass that flaps is a pass that lies** (law 6, applied to this organ): acceptance is
