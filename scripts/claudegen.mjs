@@ -139,10 +139,15 @@ const ARG_PROFILE = () => {
 // probe record in brain.mjs above splitPrompt().
 const ARGS = (model, extra = [], systemPrompt = null) => {
   const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
-  const leanPair = (systemPrompt && String(systemPrompt).length <= 26000)
-    ? ["--system-prompt", String(systemPrompt), "--tools", "", "--strict-mcp-config"]
-    : LEAN_ARGS;
-  const chosen = ARG_PROFILE() === "lean" ? [...base, ...leanPair] : base;
+  const profile = ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+  // THE SWAP IS APPLIED AFTER THE PROFILE, NEVER INSIDE IT. limits.mjs asserts
+  // this line's exact shape ("ARGS is still DERIVED from that name") precisely so
+  // the reported lane can never drift from the argv sent — folding the override
+  // into the ternary satisfied the compiler and broke the guard on the first try.
+  // Only the VALUE after --system-prompt changes, and only on the lean lane.
+  const chosen = (systemPrompt && String(systemPrompt).length <= 26000 && ARG_PROFILE() === "lean")
+    ? profile.map((a, i) => (profile[i - 1] === "--system-prompt" ? String(systemPrompt) : a))
+    : profile;
   if (!Array.isArray(extra) || !extra.length) return chosen;
   // A CALLER THAT ASKS FOR A TOOL MUST NOT BE SILENTLY DISARMED (11 Aug 2026).
   // LEAN_ARGS carries `--tools ""` — the organ lane runs tool-less by design — so
