@@ -36,7 +36,12 @@
 //     number here comes from the proposal itself or the ledger; none is
 //     minted in this file.
 //
-// MODES: apply <wind_tunnel_*.json | latest> · score · status · selftest
+// MODES: apply <wind_tunnel_*.json | latest> · score · supersede · status · selftest
+//   supersede <id|live> --why "<the ruling>" — THE THIRD WAY A MUTATION ENDS
+//   (14 Aug 2026): the captain moves the knob before the window is up. It closes
+//   the live mutation WITHOUT claiming a metric verdict (writing `kept` there
+//   would make this ledger report a measured keep on a window nobody measured),
+//   records what the cut-short window had collected, and REQUIRES the ruling.
 // WRITES: thalamus_config.json (tiers, under the ruling above) ·
 //         gate_tune_ledger.jsonl (sole)
 // READS:  brain_out/nightshift/wind_tunnel_*.json · salience_ledger.jsonl
@@ -88,7 +93,17 @@ export function liveMutation(rows) {
   const applied = new Map();
   for (const r of rows || []) {
     if (r.kind === "apply") applied.set(r.id, r);
-    if (["kept", "reverted"].includes(r.kind)) applied.delete(r.id);
+    // THE THIRD WAY A MUTATION ENDS (14 Aug 2026, unleash Phase 7). Until today
+    // a live mutation could only be closed by MEASUREMENT — kept or reverted —
+    // and there is a third thing that really happens: THE CAPTAIN RULES, and the
+    // knob moves before the window is up. That has no honest spelling in this
+    // vocabulary, and the tempting workaround (write `kept`) would make
+    // gate_tune report a measured keep on a window that was never measured —
+    // a lie in the ledger whose entire job is to say what was measured.
+    // `superseded` closes the mutation, carries WHOSE ruling did it, and claims
+    // nothing about the metric. The SERIAL law holds either way: exactly one
+    // live mutation at a time.
+    if (["kept", "reverted", "superseded"].includes(r.kind)) applied.delete(r.id);
     if (r.kind === "extended" && applied.has(r.id)) applied.get(r.id).review_after_days = r.review_after_days;
   }
   const live = [...applied.values()];
@@ -188,6 +203,28 @@ function main() {
     return;
   }
 
+  if (mode === "supersede") {
+    // `supersede <id|live> --why "<his ruling>"` — close a live mutation because
+    // the captain moved the knob, NOT because the window measured it. It writes
+    // the ledger row only; the config edit itself rides the normal `apply` path
+    // right after, so the tier freeze and the receipt stay exactly as they are.
+    const rows = readLines(LEDGER());
+    const live = liveMutation(rows);
+    const want = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "live";
+    const wi = process.argv.indexOf("--why");
+    const why = wi > 0 ? String(process.argv[wi + 1] || "") : "";
+    if (!live) { console.error("gate_tune: nothing live to supersede"); process.exit(1); }
+    if (want !== "live" && want !== live.id) { console.error(`gate_tune: the live mutation is ${live.id}, not ${want}`); process.exit(1); }
+    if (!why) { console.error("gate_tune: --why \"<the ruling that moved it>\" is REQUIRED — a supersede with no ruling is just an untracked edit"); process.exit(1); }
+    const measured = measureWindow([...readLines(SALIENCE() + ".1"), ...readLines(SALIENCE())], live.applied_on, now);
+    appendFileSync(LEDGER(), JSON.stringify({ ts: now.toISOString(), kind: "superseded", id: live.id, why,
+      // what the window HAD collected when it was cut short — recorded, never scored
+      measured_so_far: measured, window_was: live.review_after_days, applied_on: live.applied_on }) + "\n");
+    console.log(`gate_tune: ${live.id} SUPERSEDED — ${why}`);
+    console.log(`gate_tune: its window had ${measured.events} event(s) over ${measured.days} day(s), ${measured.wakes_per_day} wakes/day — RECORDED, NOT SCORED (it never reached ${live.review_after_days}d).`);
+    return;
+  }
+
   if (mode === "score") {
     const rows = readLines(LEDGER());
     const live = liveMutation(rows);
@@ -217,7 +254,7 @@ function main() {
     return;
   }
 
-  console.log("gate_tune.mjs — apply <wind_tunnel_*.json|latest> | score | status | selftest");
+  console.log("gate_tune.mjs — apply <wind_tunnel_*.json|latest> | score | supersede <id|live> --why \"<ruling>\" | status | selftest");
 }
 
 // ── SELFTEST — hermetic, injected, every check can fail ──────────────────────
@@ -247,6 +284,14 @@ function selftest() {
     && a1.cfg._gate_tune_legacy["tiers@2026-08-09"].tau1_base === 0.4
     && /9 Aug 2026 ladder haan/.test(a1.cfg._gate_tune_receipt.ruling)
     && a1.cfg._gate_tune_receipt.window_days === 14 && a1.row.kind === "apply");
+  // THE THIRD WAY A MUTATION ENDS (14 Aug 2026) — his ruling, not a measurement.
+  assert("supersede — a `superseded` row CLOSES the mutation, so the SERIAL law lets the captain's own change land",
+    liveMutation([a1.row]) !== null
+    && liveMutation([a1.row, { kind: "superseded", id: PROP.id, why: "his 14 Aug ruling" }]) === null
+    && applyProposal(PROP, CFG, [a1.row, { kind: "superseded", id: PROP.id, why: "his 14 Aug ruling" }], T0).ok === true);
+  assert("...and it is NOT `kept`: the row carries a REQUIRED ruling and never a metric verdict, so a cut-short window can never read as a measured keep",
+    (() => { const r = { kind: "superseded", id: PROP.id, why: "his 14 Aug ruling", measured_so_far: { events: 3 } };
+      return r.why.length > 0 && !("action" in r) && r.measured_so_far.events === 3; })());
   assert("apply — SERIAL LAW: a second apply refuses while the first sits in its window",
     applyProposal(PROP, a1.cfg, [a1.row], T0).ok === false
     && /SERIAL LAW/.test(applyProposal(PROP, a1.cfg, [a1.row], T0).why));

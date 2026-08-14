@@ -482,6 +482,13 @@ function signalKey(evt) {
 }
 
 // budget coupling — the wake bar rises as the real Claude window drains
+// Phase 7.4 — the two numbers behind the in-conversation floor, named once.
+// HIS_LANES is the same set the SELF component treats as his own turns; the
+// window is "this moment is his and it is fresh", not a clock on the sitting.
+const HIS_LANES = new Set(["voice", "dugout", "code", "note", "gemini"]);
+const IN_CONVERSATION_MS = 3 * 60000;      // the spotlight event is under 3 min old
+const IN_CONVERSATION_FLOOR_S = 60;        // …then one key may wake again after 60s
+
 function tau1Effective(cfg, headroomFrac) {
   return cfg.tiers.tau1_base + cfg.tiers.budget_k * (1 - clamp01(headroomFrac));
 }
@@ -813,7 +820,28 @@ function createNucleus(cfg, deps = {}) {
     // A gated near-miss now simply takes the adjudicator's own fail-closed
     // default (no wake) without paying a CLI cold-start for it.
     const lastWake = N.wakeKeys.get(g.spotlight.key);
-    const inRefractory = lastWake !== undefined && now - lastWake < cfg.refractory_min * 60000;
+    // ── THE IN-CONVERSATION FLOOR (14 Aug 2026, unleash Phase 7.4) ──────────
+    // The refractory is per event-key and 15 minutes long. Between sittings that
+    // is exactly right: it stops one recurring key from waking the deep brain
+    // over and over. INSIDE a live sitting it is the thing that turns "present
+    // through the conversation" into "one thought per quarter hour" — he says
+    // three related things in four minutes and only the first can ever reach
+    // the deep brain, which is the complaint Phase 7 exists to answer.
+    // So: while he is ACTIVELY TALKING (his own turn inside the window), the
+    // floor for a repeat of the same key drops to 60s — the mouth needs about
+    // that long to speak anyway, so it cannot stack. The moment he stops, the
+    // full 15 minutes is back. This narrows a guard in exactly one measurable
+    // condition and never widens the day: wake_cap_per_day is untouched and is
+    // still the hard stop.
+    // TWO EDGES, not one (the windowUsage scar, brain.mjs: "a window has two
+    // edges"). A future-stamped event — clock skew, a replayed row, a bad
+    // sender — has a NEGATIVE age, which a one-sided `age < 3min` test reads as
+    // maximally fresh and would hand the narrowed floor to anything at all.
+    const spotAge = now - Date.parse(g.spotlight.evt.ts || 0);
+    const talking = HIS_LANES.has(String(g.spotlight.evt.modality || ""))
+      && spotAge >= 0 && spotAge < IN_CONVERSATION_MS;
+    const refractoryMs = (talking ? IN_CONVERSATION_FLOOR_S * 1000 : cfg.refractory_min * 60000);
+    const inRefractory = lastWake !== undefined && now - lastWake < refractoryMs;
     const atCap = N.wakesToday >= capToday;
     // ONE-SIDED epsilon (fix 18 Jul): a score already AT/ABOVE the bar wakes
     // outright — it is NEVER handed to the fail-closed adjudicator. The grey
@@ -1365,9 +1393,34 @@ async function selftest() {
     const hot = { modality: "voice", text: "i don't get attention scaling", market_id: "m1", observed: false, event_key: "doubt:attention" };
     await n.ingest({ ...hot }); let r = await n.flush();
     assert("a genuine surprise wakes opus (TIER-2 → wake.json)", r[0].tier === 2 && wr.wakes.length === 1 && wr.wakes[0].status === "pending");
-    tick(5 * 60000);                                  // 5 min later, same signal
-    await n.ingest({ ...hot }); r = await n.flush();
+    // 5 min later, the same signal — but STALE (he stopped talking): the full
+    // 15-minute refractory is in force and the deep brain is NOT re-fired.
+    tick(5 * 60000);
+    const cold = new Date(0).toISOString();          // the rig's clock starts at t=1e6, so epoch IS stale here
+    await n.ingest({ ...hot, ts: cold }); r = await n.flush();
     assert("REFRACTORY: the same surprise cannot re-fire the deep brain", r[0].tier === 1 && r[0].outcome === "refractory" && wr.wakes.length === 1);
+  }
+
+  // (2a) THE IN-CONVERSATION FLOOR (14 Aug 2026, unleash Phase 7.4) — the OTHER
+  // side of the same law, and the reason it was narrowed: while he is actually
+  // talking, a 15-minute lockout means he says three related things in four
+  // minutes and only the first can ever reach the deep brain. Inside a live
+  // sitting (his lane, spotlight under 3 min old) the floor for one key is 60s.
+  // The day's hard stop — wake_cap_per_day — is untouched and still binds.
+  {
+    const { n, wr, tick } = rig({ markets: { m1: 0.9 } });
+    const hot = { modality: "voice", text: "i don't get attention scaling", market_id: "m1", observed: false, event_key: "doubt:attention" };
+    await n.ingest({ ...hot }); let r = await n.flush();
+    assert("IN-CONVERSATION: the first turn wakes, exactly as before", r[0].tier === 2 && wr.wakes.length === 1);
+    tick(5 * 60000);
+    await n.ingest({ ...hot }); r = await n.flush();   // no ts ⇒ ingest stamps the rig's NOW: he is talking
+    assert("IN-CONVERSATION: 5 min later, still talking ⇒ the same key MAY wake again (present through the conversation, not one thought per quarter hour)",
+      r[0].tier === 2 && r[0].outcome === "wake" && wr.wakes.length === 2);
+    // …and the 60s floor is real: a second turn 20 seconds later is still held.
+    tick(20000);
+    await n.ingest({ ...hot }); r = await n.flush();
+    assert("IN-CONVERSATION: …but 20s later it is STILL refractory — the floor is 60s, not zero",
+      r[0].tier === 1 && r[0].outcome === "refractory" && wr.wakes.length === 2);
   }
 
   // (2b) THE WAKE-PATH FIX (18 Jul) — his spoken doubts must reach Opus again
@@ -1806,7 +1859,10 @@ async function selftest() {
     const hot = { modality: "voice", text: "i don't get attention scaling", market_id: "m1", observed: false, event_key: "doubt:attention" };
     await n2.ingest({ ...hot }); await n2.flush();
     t2(5 * 60000);
-    await n2.ingest({ ...hot }); await n2.flush();
+    // STALE spotlight (he stopped talking) so the full refractory is in force —
+    // Phase 7.4 narrowed it only while he is mid-sitting, and this assertion is
+    // about what happens to the THOUGHT when the gate does suppress a wake.
+    await n2.ingest({ ...hot, ts: new Date(0).toISOString() }); await n2.flush();
     assert("a REFRACTORY moment queues its thought too", wr2.bgQueue.some(b => b.status === "queued" && b.reason === "refractory"));
     // the drain folds in THROUGH the nucleus; the shelf is capped
     const fold = n.foldBgDrained({ moment_id: queued[0].moment_id, concept: "attention", insight: "the n-squared cost is the meetings, not the recompute", tokens: ["attention"] });

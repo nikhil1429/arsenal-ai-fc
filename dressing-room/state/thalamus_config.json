@@ -1,119 +1,138 @@
 {
-  "_doc": "THE THALAMUS CANON (CYBORG_BRAIN.md §4) — salience weights, tier thresholds, binding window, refractory, budget coupling. Approval-gated: changing these shapes what the organism ATTENDS to (curriculum-shaping), so edits ride the same human-approval law as the genome. Weights are calibrated so a voiced doubt on a fresh concept, or a confident-wrong rep on a fresh concept, crosses tau1 and wakes Opus — while a Governor flip or a due card alone never does (biometrics weight attention, never drive verdicts). Prosody/emotion/affect are EXCLUDED from scoring by construction (stripped at the door in code, not here).",
-  "_repair_2026_08_04": "ORGANISM REPAIR (issues #1 #2 #6 #9 #10). #1: SELF now gates on PROVENANCE (self_sources / self_deny_sources) instead of modality:'voice' — the mic has been silent since 30 Jul while his typed doubts landed in a scorer that was blind to them (3,099 code moments in salience_ledger, max S 0.000). #2a: base_rates gained a MEASURED 'pulse:*' prefix entry — the 0.5 default made a rare escalation maximally UNSURPRISING and capped the whole pulse lane at 0.24375 against tau0 0.25. #2c: weights.pulse exists and is 0.00 on purpose; see the arithmetic in scripts/thalamus.mjs DEFAULT_CONFIG. #6: whisper.canon_join + whisper.sprint_fallback give the DMN precache a join key that can actually bind. NOTHING in tiers/hab was touched — the wake bar, the epsilon band and habituation are exactly as the captain left them.",
-  "weights": {
-    "pe": 0.35,
-    "nov": 0.2,
-    "gov": 0.25,
-    "err": 0.45,
-    "self": 0.45,
-    "dead": 0.15,
-    "hab": 0.4,
-    "pulse": 0
-  },
-  "tiers": {
-    "tau0": 0.2,
-    "tau1_base": 0.36,
-    "epsilon": 0.04,
-    "budget_k": 0.35
-  },
-  "binding_ms": 900,
-  "refractory_min": 15,
-  "wake_cap_per_day": 15,
-  "hab": {
-    "tau_ms": 600000,
-    "saturation": 4
-  },
-  "pe": {
-    "norm_bits": 4,
-    "_base_rates_doc": "p = how OFTEN this event_key actually happens. Rare => high surprisal => high PE. Keys ending in '*' are prefix wildcards (longest prefix wins). 'default': 0.5 is the coin-flip prior for an event nobody has measured — it is deliberately the WEAKEST possible evidence, and it must never be left standing for an event whose rate IS measurable. NOTE: only 'pulse:*' has been measured so far. 'context:*', 'stall:*', 'rep:*', 'gov:*', 'twin:*' and 'dead:due' are all still on the coin-flip default and all are measurable from the same ledgers — they were left alone deliberately, because changing them shifts scores across every lane at once and that belongs in its own change.",
-    "_base_rates_pulse_derivation": "MEASURED, not chosen. brain_ledger.jsonl: 881 job='haiku_pulse' rows, 131 with escalated=true => p = 131/881 = 0.148695. Arithmetic that follows: surprisal(0.148695, 4 bits) = -log2(0.148695)/4 = 0.68738; base-rate PE is halved as weak evidence => 0.34370; x w_pe 0.35 => 0.12029. With nov=1 the pulse ceiling is now 0.12029 + 0.20 = 0.32029, ABOVE tau0 0.25 (it was 0.04375 + 0.20 = 0.24375, i.e. 0.006 short — every escalation in the organism's life was arithmetically incapable of leaving reflex). Replayed over the 106 historical pulse moments at their own measured nov/hab: 38 now cross tau0 and 36 land inside the epsilon band where the fail-closed Haiku adjudicator can promote them. Was 0 and 0. Re-derive from brain_ledger whenever the pulse's cadence or prompt changes.",
-    "base_rates": {
-      "default": 0.5,
-      "pulse:*": 0.148695
-    }
-  },
-  "adjudicator": {
-    "model": "gemini-flash-lite-latest",
-    "enabled": true
-  },
-  "_self_sources_doc": "#1 — WHO SPOKE, not which pipe. Live voice afferents carry no 'source' field at all (measured across all 271), so a voice modality is its own provenance. 'claude-code' is hooks/afferent-post.mjs UserPromptSubmit = his words; 'organism-memory' is the MCP note tool = his words. The deny list WINS: 'claude-code-teaching' is the Stop hook, i.e. the organism's own answers coming back through the door — scoring the machine's talk about 'confusion' as HIS doubt is the same self-talk scar the capture guard was built to close. Verified on the live bus: of 237 claude-code rows since the 25 Jul capture-guard fix, exactly 6 fire a self_marker and all 6 are genuinely his.",
-  "_gemini_lane_2026_08_09": "P7 of THE PEAK PLAN, his verbatim word: 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required.' The /harvest lane (scripts/harvest.mjs) posts his Gemini study sittings through the door as modality 'gemini' — 'gemini-study' is HIS turns (joins self_sources, or every harvested doubt scores self=0/nov=0, the exact 3,099-moment scar #1 records), 'gemini-study-teaching' is the Gem's answers (joins the deny list, same law as claude-code-teaching). This file is approval-gated; that ruling IS the approval, and this note is the receipt.",
-  "self_sources": [
-    "voice",
-    "claude-code",
-    "organism-memory",
-    "gemini-study"
-  ],
-  "self_deny_sources": [
-    "claude-code-teaching",
-    "gemini-study-teaching",
-    "dugout-gaffer-teaching"
-  ],
-  "_whisper_doc": "#6 — the DMN precache join. legacy_raw is the ORIGINAL word-overlap matcher, kept first and unchanged; it will start firing the day presence.mjs sends real concepts instead of window-title words. canon_join pushes both sides through the same concepts.json registry the dossier already uses. sprint_fallback: when the stall's own words name nothing canonical (the measured everyday case — 0 of 95 stalls matched), the current sprint concept is used as the join key and the whisper records matched_via:'sprint' so the assumption is visible, never smuggled.",
-  "whisper": {
-    "legacy_raw": true,
-    "canon_join": true,
-    "sprint_fallback": true
-  },
-  "_log_doc": "#10 — ArsenalFC-Thalamus runs under setup/hidden_run.vbs with no redirect, so every diagnostic went to a closed handle. max_bytes is DERIVED: salience_ledger.jsonl holds 5,481 bound moments over 16 days = 342.6/day; worst case one ~160-byte line per moment = 54.8 KB/day; 30 days of that worst case = 1,644,480 B. keep:1 bounds the disk cost at ~3.3 MB. scripts/*.log is gitignored.",
-  "log": {
-    "enabled": true,
-    "max_bytes": 1650000,
-    "keep": 1
-  },
-  "deep": {
-    "deadline_ms": 45000,
-    "min_headroom_tokens": 50000,
-    "max_thinking_tokens": 16000,
-    "timeout_ms": 300000
-  },
-  "self_markers": [
-    "i don't get",
-    "don't understand",
-    "samajh nahi",
-    "samajh nahin",
-    "samajh mein nahi",
-    "samajh na",
-    "clear nahi",
-    "confus",
-    "kyun nahi aata",
-    "kaise kaam",
-    "kaise hota",
-    "kya hota",
-    "matlab kya",
-    "stuck hoon",
-    "atka hua",
-    "doubt hai",
-    "doubt aa",
-    "yeh kaise",
-    "wait, why",
-    "wait why",
-    "makes no sense",
-    "समझ नहीं",
-    "समझ में नहीं",
-    "नहीं समझ",
-    "समझा नहीं",
-    "कैसे काम",
-    "क्यों नहीं",
-    "मतलब क्या",
-    "डाउट"
-  ],
-  "_gaffer_lane_2026_08_09": "LADDER F4, 9 Aug 2026, under his blanket ladder haan (same receipt pattern as _gemini_lane): the Gaffer's own spoken turns now post as afferents with source dugout-gaffer-teaching — DENY-listed here so the coach's voice is never mistaken for his (the deny list WINS, per _self_sources_doc #1).",
-  "_g14_pulse_bound_note": "LADDER G14 (9 Aug 2026, blanket ladder haan — receipt like _gemini_lane): THE DERIVED TWO-SIDED BOUND for any future w_pulse. tau1_eff floor = tau1_base 0.4 - budget_k reaches at most 0.03 headroom credit in practice → floor ~0.37; the measured non-pulse salience ceiling on a pulse-flagged moment = 0.32029; so the TRUE weight ceiling = 0.37 - 0.32029 = 0.04971 (the printed 0.07971 used tau1_base raw — wrong side of the budget coupling). Any fitted w_pulse must sit in (0, 0.04971], derived as measured precision × 0.04971. min_headroom is TWO-SIDED for the same reason: a bound that only guards one side lets the other drift. weights.pulse stays 0 until the fit.",
-  "_gate_tune_legacy": {
-    "tiers@2026-08-13": {
-      "tau0": 0.25,
-      "tau1_base": 0.4,
-      "epsilon": 0.1,
-      "budget_k": 0.35
-    }
-  },
-  "_gate_tune_receipt": {
-    "at": "2026-08-12T22:48:52.402Z",
-    "id": "wt-2026-08-13-tau0-tau1_base-epsilon",
-    "ruling": "his 9 Aug 2026 ladder haan (blanket) + the captains_call card answered haan — gate_tune.mjs is the declared owner of this edit",
-    "window_days": 14,
-    "revert": "gate_tune.mjs score auto-reverts if wakes/day sits outside the band after the window"
+ "_doc": "THE THALAMUS CANON (CYBORG_BRAIN.md §4) — salience weights, tier thresholds, binding window, refractory, budget coupling. Approval-gated: changing these shapes what the organism ATTENDS to (curriculum-shaping), so edits ride the same human-approval law as the genome. Weights are calibrated so a voiced doubt on a fresh concept, or a confident-wrong rep on a fresh concept, crosses tau1 and wakes Opus — while a Governor flip or a due card alone never does (biometrics weight attention, never drive verdicts). Prosody/emotion/affect are EXCLUDED from scoring by construction (stripped at the door in code, not here).",
+ "_repair_2026_08_04": "ORGANISM REPAIR (issues #1 #2 #6 #9 #10). #1: SELF now gates on PROVENANCE (self_sources / self_deny_sources) instead of modality:'voice' — the mic has been silent since 30 Jul while his typed doubts landed in a scorer that was blind to them (3,099 code moments in salience_ledger, max S 0.000). #2a: base_rates gained a MEASURED 'pulse:*' prefix entry — the 0.5 default made a rare escalation maximally UNSURPRISING and capped the whole pulse lane at 0.24375 against tau0 0.25. #2c: weights.pulse exists and is 0.00 on purpose; see the arithmetic in scripts/thalamus.mjs DEFAULT_CONFIG. #6: whisper.canon_join + whisper.sprint_fallback give the DMN precache a join key that can actually bind. NOTHING in tiers/hab was touched — the wake bar, the epsilon band and habituation are exactly as the captain left them.",
+ "weights": {
+  "pe": 0.35,
+  "nov": 0.2,
+  "gov": 0.25,
+  "err": 0.45,
+  "self": 0.45,
+  "dead": 0.15,
+  "hab": 0.4,
+  "pulse": 0.02
+ },
+ "tiers": {
+  "tau0": 0.2,
+  "tau1_base": 0.2,
+  "epsilon": 0.04,
+  "budget_k": 0.35
+ },
+ "binding_ms": 900,
+ "refractory_min": 15,
+ "wake_cap_per_day": 15,
+ "hab": {
+  "tau_ms": 600000,
+  "saturation": 4
+ },
+ "pe": {
+  "norm_bits": 4,
+  "_base_rates_doc": "p = how OFTEN this event_key actually happens. Rare => high surprisal => high PE. Keys ending in '*' are prefix wildcards (longest prefix wins). 'default': 0.5 is the coin-flip prior for an event nobody has measured — it is deliberately the WEAKEST possible evidence, and it must never be left standing for an event whose rate IS measurable. NOTE: only 'pulse:*' has been measured so far. 'context:*', 'stall:*', 'rep:*', 'gov:*', 'twin:*' and 'dead:due' are all still on the coin-flip default and all are measurable from the same ledgers — they were left alone deliberately, because changing them shifts scores across every lane at once and that belongs in its own change.",
+  "_base_rates_pulse_derivation": "MEASURED, not chosen. brain_ledger.jsonl: 881 job='haiku_pulse' rows, 131 with escalated=true => p = 131/881 = 0.148695. Arithmetic that follows: surprisal(0.148695, 4 bits) = -log2(0.148695)/4 = 0.68738; base-rate PE is halved as weak evidence => 0.34370; x w_pe 0.35 => 0.12029. With nov=1 the pulse ceiling is now 0.12029 + 0.20 = 0.32029, ABOVE tau0 0.25 (it was 0.04375 + 0.20 = 0.24375, i.e. 0.006 short — every escalation in the organism's life was arithmetically incapable of leaving reflex). Replayed over the 106 historical pulse moments at their own measured nov/hab: 38 now cross tau0 and 36 land inside the epsilon band where the fail-closed Haiku adjudicator can promote them. Was 0 and 0. Re-derive from brain_ledger whenever the pulse's cadence or prompt changes.",
+  "base_rates": {
+   "default": 0.5,
+   "pulse:*": 0.148695
   }
+ },
+ "adjudicator": {
+  "model": "gemini-flash-lite-latest",
+  "enabled": true
+ },
+ "_self_sources_doc": "#1 — WHO SPOKE, not which pipe. Live voice afferents carry no 'source' field at all (measured across all 271), so a voice modality is its own provenance. 'claude-code' is hooks/afferent-post.mjs UserPromptSubmit = his words; 'organism-memory' is the MCP note tool = his words. The deny list WINS: 'claude-code-teaching' is the Stop hook, i.e. the organism's own answers coming back through the door — scoring the machine's talk about 'confusion' as HIS doubt is the same self-talk scar the capture guard was built to close. Verified on the live bus: of 237 claude-code rows since the 25 Jul capture-guard fix, exactly 6 fire a self_marker and all 6 are genuinely his.",
+ "_gemini_lane_2026_08_09": "P7 of THE PEAK PLAN, his verbatim word: 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required.' The /harvest lane (scripts/harvest.mjs) posts his Gemini study sittings through the door as modality 'gemini' — 'gemini-study' is HIS turns (joins self_sources, or every harvested doubt scores self=0/nov=0, the exact 3,099-moment scar #1 records), 'gemini-study-teaching' is the Gem's answers (joins the deny list, same law as claude-code-teaching). This file is approval-gated; that ruling IS the approval, and this note is the receipt.",
+ "self_sources": [
+  "voice",
+  "claude-code",
+  "organism-memory",
+  "gemini-study"
+ ],
+ "self_deny_sources": [
+  "claude-code-teaching",
+  "gemini-study-teaching",
+  "dugout-gaffer-teaching"
+ ],
+ "_whisper_doc": "#6 — the DMN precache join. legacy_raw is the ORIGINAL word-overlap matcher, kept first and unchanged; it will start firing the day presence.mjs sends real concepts instead of window-title words. canon_join pushes both sides through the same concepts.json registry the dossier already uses. sprint_fallback: when the stall's own words name nothing canonical (the measured everyday case — 0 of 95 stalls matched), the current sprint concept is used as the join key and the whisper records matched_via:'sprint' so the assumption is visible, never smuggled.",
+ "whisper": {
+  "legacy_raw": true,
+  "canon_join": true,
+  "sprint_fallback": true
+ },
+ "_log_doc": "#10 — ArsenalFC-Thalamus runs under setup/hidden_run.vbs with no redirect, so every diagnostic went to a closed handle. max_bytes is DERIVED: salience_ledger.jsonl holds 5,481 bound moments over 16 days = 342.6/day; worst case one ~160-byte line per moment = 54.8 KB/day; 30 days of that worst case = 1,644,480 B. keep:1 bounds the disk cost at ~3.3 MB. scripts/*.log is gitignored.",
+ "log": {
+  "enabled": true,
+  "max_bytes": 1650000,
+  "keep": 1
+ },
+ "deep": {
+  "deadline_ms": 45000,
+  "min_headroom_tokens": 50000,
+  "max_thinking_tokens": 16000,
+  "timeout_ms": 300000
+ },
+ "self_markers": [
+  "i don't get",
+  "don't understand",
+  "samajh nahi",
+  "samajh nahin",
+  "samajh mein nahi",
+  "samajh na",
+  "clear nahi",
+  "confus",
+  "kyun nahi aata",
+  "kaise kaam",
+  "kaise hota",
+  "kya hota",
+  "matlab kya",
+  "stuck hoon",
+  "atka hua",
+  "doubt hai",
+  "doubt aa",
+  "yeh kaise",
+  "wait, why",
+  "wait why",
+  "makes no sense",
+  "समझ नहीं",
+  "समझ में नहीं",
+  "नहीं समझ",
+  "समझा नहीं",
+  "कैसे काम",
+  "क्यों नहीं",
+  "मतलब क्या",
+  "डाउट"
+ ],
+ "_gaffer_lane_2026_08_09": "LADDER F4, 9 Aug 2026, under his blanket ladder haan (same receipt pattern as _gemini_lane): the Gaffer's own spoken turns now post as afferents with source dugout-gaffer-teaching — DENY-listed here so the coach's voice is never mistaken for his (the deny list WINS, per _self_sources_doc #1).",
+ "_g14_pulse_bound_note": "LADDER G14 (9 Aug 2026, blanket ladder haan — receipt like _gemini_lane): THE DERIVED TWO-SIDED BOUND for any future w_pulse. tau1_eff floor = tau1_base 0.4 - budget_k reaches at most 0.03 headroom credit in practice → floor ~0.37; the measured non-pulse salience ceiling on a pulse-flagged moment = 0.32029; so the TRUE weight ceiling = 0.37 - 0.32029 = 0.04971 (the printed 0.07971 used tau1_base raw — wrong side of the budget coupling). Any fitted w_pulse must sit in (0, 0.04971], derived as measured precision × 0.04971. min_headroom is TWO-SIDED for the same reason: a bound that only guards one side lets the other drift. weights.pulse stays 0 until the fit.",
+ "_gate_tune_legacy": {
+  "tiers@2026-08-13": {
+   "tau0": 0.25,
+   "tau1_base": 0.4,
+   "epsilon": 0.1,
+   "budget_k": 0.35
+  },
+  "tiers@2026-08-14": {
+   "tau0": 0.2,
+   "tau1_base": 0.36,
+   "epsilon": 0.04,
+   "budget_k": 0.35
+  }
+ },
+ "_gate_tune_receipt": {
+  "at": "2026-08-14T01:11:40.073Z",
+  "id": "wt-2026-08-14-unleash-tau1_base",
+  "ruling": "his 9 Aug 2026 ladder haan (blanket) + the captains_call card answered haan — gate_tune.mjs is the declared owner of this edit",
+  "window_days": 14,
+  "revert": "gate_tune.mjs score auto-reverts if wakes/day sits outside the band after the window"
+ },
+ "_weights_legacy": {
+  "weights@2026-08-14": {
+   "pe": 0.35,
+   "nov": 0.2,
+   "gov": 0.25,
+   "err": 0.45,
+   "self": 0.45,
+   "dead": 0.15,
+   "hab": 0.4,
+   "pulse": 0
+  }
+ },
+ "_pulse_fit_note": "w_pulse 0.00 → 0.02, PROVISIONAL, 14 Aug 2026 · unleash Phase 7 leg 1. RULING: his §0 words in UNLEASH_PLAN__2026-08-14.md ('maximum 24x7 output in the highest intensity possible'), which is this approval-gated file's authorisation, dated, in the file, per the _gemini_lane_2026_08_09 precedent. THE FIT: _g14_pulse_bound_note derives the two-sided bound — any w_pulse must sit in (0, 0.04971], as measured precision × 0.04971. PRECISION IS NOT COMPUTABLE TODAY AND THE REASON IS STRUCTURAL, not missing data: weights.pulse has been 0.00 since the lane opened, so NO pulse escalation has ever moved a salience score, so no wake was ever caused by one, so there is no outcome to score it against. Measuring precision first would require the weight to be non-zero first. So this takes the conservative floor the note allows — 0.02 ≈ 0.4 × ceiling — rather than pretending to a fit. THE ARITHMETIC IT BUYS: a pulse-flagged moment's measured non-pulse ceiling is 0.32029; +0.02 = 0.34029; tau1_eff now floors at tau1_base 0.20 (Phase 7 leg 2) instead of ~0.37, so a pulse-flagged moment CAN cross when there is headroom — which is the first time the pulse's opinion has been able to reach anything at all. It said 'escalate' 120 of 193 times into a lane weighted zero. REFIT at 30d from real wake outcomes (wake_queue served rows vs pulse-flagged moments); the ceiling 0.04971 is the hard bound and is NOT to be exceeded without re-deriving it. REVERT: weights.pulse = 0 (the whole of the old block is frozen verbatim in _weights_legacy['weights@2026-08-14'])."
 }
