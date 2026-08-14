@@ -40,7 +40,7 @@
 // SINGLE WRITER: this organ owns $ARSENAL_ARCHIVE and nothing else. It is
 //   READ-ONLY on dressing-room/ — including its own selftest.
 //
-// MODES: init · run · backfill · verify [--month YYYY-MM] · vitals · seal · lanes · tripwire · status · selftest
+// MODES: init · run · backfill · verify [--month YYYY-MM] · vitals · seal · rebuild <lane> · lanes · tripwire · status · selftest
 //
 // TIME (spec §4): three separate clock facts, all irrecoverable if skipped —
 //   ts_utc (the instant) · ts_local + tz (the WALL CLOCK: "he wrote this at 3am"
@@ -400,6 +400,43 @@ export function laneHead(root, lane) {
   return best || { seq: 0, sha256: null };
 }
 
+// ── THE LOCK, AND THE SCAR THAT PUT IT HERE ──────────────────────────────────
+// Caught by the chain, four hours after the archive was created (14 Aug 2026):
+//   ! seq-gap · brain_ledger · seq 6005 · -1 record(s) missing between 6005 and 6005
+// TWO records with seq 6005, IDENTICAL payloads, recorded_at 119 ms apart. The
+// scheduled ArsenalFC-Archivist (every 15 min) and a manual `run` overlapped:
+// both read the same checkpoint, both computed head+1, both appended. One organ
+// is a SINGLE WRITER by design; nothing stopped it being two PROCESSES.
+// This is the whole argument for the chain in one incident — the damage was
+// invisible in the data (a duplicate row and a bad counter look like ordinary
+// records) and the chain named it, by lane, by seq, within seconds.
+// openSync(…, "wx") is atomic on Windows and POSIX: whoever creates the file
+// wins. A second run EXITS 0 and says so — a scheduled organ that reports failure
+// because another copy of itself was already working teaches everyone to ignore
+// its exit code. A lock older than STALE_LOCK_MS is a crashed run, not a live
+// one; it is taken over and the takeover is journalled, never silent.
+const LOCK_STALE_MS = 10 * 60 * 1000;
+function takeLock(root, mode) {
+  const p = join(P(root).data, "_lock.json");
+  mkdirSync(dirname(p), { recursive: true });
+  const mine = JSON.stringify({ pid: process.pid, mode, at: new Date().toISOString() });
+  try {
+    const fd = openSync(p, "wx");
+    try { writeSync(fd, mine); fsyncSync(fd); } finally { closeSync(fd); }
+    return { ok: true, release: () => { try { rmSync(p, { force: true }); } catch { /* nothing to do */ } } };
+  } catch (e) {
+    if (e && e.code !== "EEXIST") throw e;
+    const held = readJsonSafe(p, {});
+    const age = Date.now() - Date.parse(held.at || 0);
+    if (!(age >= 0 && age < LOCK_STALE_MS)) {
+      appendHealth(root, "quarantine", { kind: "stale-lock-taken", at: new Date().toISOString(), held_by: held, age_ms: age, note: "a previous archivist died holding the lock; taken over. Its inflight claim (if any) is deduped by the normal recovery path." });
+      writeAtomic(p, mine);
+      return { ok: true, release: () => { try { rmSync(p, { force: true }); } catch { /* nothing to do */ } } };
+    }
+    return { ok: false, held, release: () => {} };
+  }
+}
+
 // ── CHECKPOINTS ──────────────────────────────────────────────────────────────
 const emptyCkpt = () => ({ v: 1, updated_at: null, files: {}, lanes: {} });
 const loadCkpt = (root) => readJsonSafe(P(root).checkpoints, emptyCkpt());
@@ -563,6 +600,12 @@ export function runArchive(opts = {}) {
   const force = !!opts.force;
   const log = opts.quiet ? () => {} : console.log;
   if (!existsSync(P(root).data)) { log(`archivist: no archive at ${root} — run \`archivist.mjs init\` first`); return { ok: false, reason: "no-archive" }; }
+  const lock = takeLock(root, force ? "backfill" : "run");
+  if (!lock.ok) {
+    log(`archivist: another archivist is already running (pid ${lock.held.pid}, since ${lock.held.at}) — standing down. The next tick picks up the tail.`);
+    return { ok: true, added: 0, skipped: 0, lanes: [], stood_down: true };
+  }
+  try {
   const now = new Date();
   const ckpt = loadCkpt(root);
   const moment = currentMoment(repo);
@@ -599,6 +642,53 @@ export function runArchive(opts = {}) {
   }
   for (const [b, ls] of byReason) log(`  — NOT ARCHIVED · ${b} ×${ls.length}: ${EXCLUDED_LANES.get(b)}`);
   return { ok: true, added, skipped, lanes: [...lanes], excluded: [...excluded] };
+  } finally { lock.release(); }
+}
+
+// ── REBUILD ONE LANE (the only sanctioned repair) ────────────────────────────
+// A detector with no repair path leaves him with a permanent red, and a check
+// that is always red is a check everyone learns to scroll past. So there is
+// exactly ONE repair, and it is deliberately the blunt one: drop a lane's
+// archived records and re-derive them from the sources they came from.
+//
+// IT REFUSES UNLESS EVERY SOURCE FILE IS STILL ON DISK. That guard is the whole
+// safety argument: if the sources are present, nothing is lost by re-deriving
+// (LAW 8 — structure is disposable, and seq/prev/rid are structure). The moment
+// a source has rolled away, the archive is the only copy and this becomes a
+// DELETE. Then the break stays, and it stays visible, which is correct.
+//
+// What a rebuild costs, stated because it is a real loss: every record gets a new
+// rid and recorded_at, and the whole lane becomes backfilled:true — after a
+// rebuild the lane IS a backfill and saying otherwise would be the §8 lie. The
+// payloads, their timestamps and their provenance are byte-identical.
+// Both the drop and the result are journalled to health/, so a rebuild can never
+// be a silent rewrite of the permanent record.
+export function rebuildLane(lane, opts = {}) {
+  const root = opts.root || archiveRoot();
+  const repo = opts.repo || ROOT;
+  const log = opts.quiet ? () => {} : console.log;
+  const lock = takeLock(root, "rebuild");
+  if (!lock.ok) { log(`archivist rebuild: another archivist holds the lock (pid ${lock.held.pid}) — not touching the archive.`); return { ok: false, reason: "locked" }; }
+  try {
+    const sources = discoverSources(repo).filter((s) => s.lane === lane);
+    if (!sources.length) { log(`archivist rebuild: no source file feeds lane '${lane}' — REFUSED. The archive would be the only copy, so dropping it is a DELETE, not a rebuild.`); return { ok: false, reason: "no-source" }; }
+    const before = [...laneRecords(root, lane)].length;
+    const now = new Date();
+    appendHealth(root, "fixity", { kind: "rebuild-start", at: now.toISOString(), lane, dropping_records: before, from_sources: sources.map((s) => s.rel), why: opts.why || "unspecified — a rebuild without a reason is a rewrite" });
+    rmSync(join(P(root).data, lane), { recursive: true, force: true });
+    const ckpt = loadCkpt(root);
+    for (const s of sources) delete ckpt.files[s.rel];
+    delete ckpt.lanes[lane];
+    saveCkpt(root, ckpt);
+    let added = 0;
+    for (const s of sources) added += archiveOne(root, s, ckpt, { force: true, live: false, moment: null, now, log: () => {} }).added;
+    saveCkpt(root, ckpt);
+    const v = verifyArchive({ root, lane, quiet: true });
+    appendHealth(root, "fixity", { kind: "rebuild-done", at: new Date().toISOString(), lane, dropped: before, rebuilt: added, chain_ok: v.ok, breaks: v.breaks.length });
+    log(`archivist rebuild · ${lane}: ${before} record(s) dropped, ${added} re-derived from ${sources.length} source file(s) — chain ${v.ok ? "INTACT" : `STILL BROKEN (${v.breaks.length})`}`);
+    log(`  every record in this lane is now backfilled:true, with a new rid and recorded_at. Payloads, timestamps and provenance are byte-identical. Journalled to health/fixity-*.jsonl.`);
+    return { ok: v.ok, dropped: before, rebuilt: added };
+  } finally { lock.release(); }
 }
 
 // ── VERIFY (fixity + the chain) ──────────────────────────────────────────────
@@ -745,7 +835,15 @@ const bagPath = (root, p) => relative(root, p).split(sep).join("/");
 export function sealArchive(opts = {}) {
   const root = opts.root || archiveRoot();
   const log = opts.quiet ? () => {} : console.log;
-  const payload = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp"));
+  // SEAL TAKES THE LOCK; verify and vitals deliberately do NOT. A manifest hashed
+  // while a run is appending is a manifest that is wrong the moment it is written
+  // — the one failure a bag validator would then report forever. verify/vitals
+  // only read, and reading a prefix of an append-only file is always consistent,
+  // so a fixity check must never be blocked by a run that happens to overlap it.
+  const lock = takeLock(root, "seal");
+  if (!lock.ok) { log(`archivist seal: an archivist is mid-run (pid ${lock.held.pid}) — not sealing a moving tree. The weekly seal will catch it.`); return { sealed: false }; }
+  try {
+  const payload = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp") && basename(f) !== "_lock.json");
   const oxum = payload.reduce((a, f) => ({ bytes: a.bytes + statSync(f).size, n: a.n + 1 }), { bytes: 0, n: 0 });
   writeFileSync(join(root, "manifest-sha256.txt"), payload.map((f) => `${fileSha(f)}  ${bagPath(root, f)}`).join("\n") + (payload.length ? "\n" : ""), "utf8");
 
@@ -762,7 +860,8 @@ export function sealArchive(opts = {}) {
 
   log(`archivist seal: ${payload.length} payload file(s), ${(oxum.bytes / 1024).toFixed(1)} KB · ${tagFiles.length} tag file(s) — the bag is valid and ready to copy`);
   log(`  3-2-1 (spec §12): this is copy 1. One disk is one copy — that is not a backup, it is a second point of failure.`);
-  return { payload: payload.length, bytes: oxum.bytes, tags: tagFiles.length };
+  return { payload: payload.length, bytes: oxum.bytes, tags: tagFiles.length, sealed: true };
+  } finally { lock.release(); }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
@@ -1481,6 +1580,40 @@ function selftest() {
       rRecover.added === 0 && rRecover.skipped === 5 && countAll() === nAfter);
     ok("CRASH RECOVERY · …and the chain is still intact afterwards", verifyArchive({ root: arc, quiet: true }).ok);
 
+    // ── THE LOCK (the 14 Aug duplicate-seq scar) ──
+    // Two archivists ran 119 ms apart — the 15-minute task and a manual run — and
+    // both assigned seq 6005 to the same brain_ledger row. The chain caught it;
+    // nothing else could have, because a duplicate row and a bad counter look
+    // exactly like ordinary records.
+    const held = takeLock(arc, "test-holder");
+    ok("LOCK · a second archivist STANDS DOWN rather than double-assigning seq (the 14 Aug duplicate-seq scar)",
+      held.ok === true && runArchive({ ...A }).stood_down === true);
+    ok("LOCK · …and it stands down with SUCCESS, not failure — a scheduled organ that reports red because another copy of itself was working teaches everyone to ignore its exit code",
+      runArchive({ ...A }).ok === true);
+    ok("LOCK · seal refuses to hash a moving tree while a run holds the lock", sealArchive({ root: arc, quiet: true }).sealed === false);
+    ok("LOCK · verify is deliberately NOT blocked — reading a prefix of an append-only file is always consistent, and a fixity check must never be startable-only-sometimes",
+      verifyArchive({ root: arc, quiet: true }).ok === true);
+    held.release();
+    ok("LOCK · released, and the next run proceeds normally", runArchive({ ...A }).stood_down === undefined);
+    // a lock older than 10 minutes is a CRASHED run, not a live one
+    writeAtomic(join(arc, "data", "_lock.json"), JSON.stringify({ pid: 999999, mode: "run", at: new Date(Date.now() - 3600000).toISOString() }));
+    const afterStale = runArchive({ ...A });
+    ok("LOCK · a STALE lock (a crashed run) is taken over, and the takeover is journalled — never a silent seizure",
+      afterStale.stood_down === undefined
+      && readdirSync(join(arc, "health")).filter((f) => f.startsWith("quarantine-")).flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse)).some((q) => q.kind === "stale-lock-taken"));
+
+    // ── REBUILD — the only sanctioned repair ──
+    const beforeRb = [...laneRecords(arc, "reps_log")].length;
+    const rb = rebuildLane("reps_log", { root: arc, repo, quiet: true, why: "selftest" });
+    ok("REBUILD · a lane is dropped and re-derived from its sources, and the chain verifies afterwards",
+      rb.ok === true && rb.dropped === beforeRb && rb.rebuilt === beforeRb);
+    ok("REBUILD · after a rebuild the whole lane reads backfilled:true — it IS a backfill, and saying otherwise would be the §8 lie",
+      [...laneRecords(arc, "reps_log")].every(({ rec }) => rec && rec.backfilled === true));
+    ok("REBUILD · it REFUSES a lane with no source on disk — the archive would be the only copy, so dropping it is a DELETE",
+      rebuildLane("no_such_lane_anywhere", { root: arc, repo, quiet: true }).reason === "no-source");
+    ok("REBUILD · both the drop and the result are journalled to health/fixity-*.jsonl (a rebuild may never be a silent rewrite)",
+      readdirSync(join(arc, "health")).filter((f) => f.startsWith("fixity-")).flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse)).filter((r) => r.kind === "rebuild-start" || r.kind === "rebuild-done").length === 2);
+
     // ── 2. TAMPER DETECTION ──
     const tamperFile = join(arc, "data", "afferent", "2026", "08", "14.jsonl");
     const lines = readFileSync(tamperFile, "utf8").split("\n").filter(Boolean);
@@ -1756,12 +1889,17 @@ function main() {
     // fixity break is corruption in the permanent record and must be loud.
     case "vitals": { vitalsArchive(); return process.exit(0); }
     case "seal": { sealArchive(); return process.exit(0); }
+    case "rebuild": {
+      const lane = process.argv[3];
+      if (!lane) { console.log('archivist rebuild <lane> --why "<the reason>"   (drops a lane and re-derives it from source — refuses if any source is gone)'); return process.exit(1); }
+      return process.exit(rebuildLane(lane, { why: arg("--why") }).ok ? 0 : 1);
+    }
     case "lanes": { lanesReport(); return process.exit(0); }
     case "tripwire": return process.exit(tripwire().ok ? 0 : 1);
     case "status": { status(); return process.exit(0); }
     case "selftest": return process.exit(selftest());
     default:
-      console.log("archivist: init | run | backfill | verify [--month YYYY-MM] | vitals | seal | lanes | tripwire | status | selftest");
+      console.log("archivist: init | run | backfill | verify [--month YYYY-MM] | vitals | seal | rebuild <lane> | lanes | tripwire | status | selftest");
       return process.exit(1);
   }
 }
