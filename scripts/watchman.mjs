@@ -84,7 +84,7 @@
 
 import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
 // H0 FLOW AUDIT (10 Aug 2026): the evening chain's declared shape — its last
@@ -112,6 +112,12 @@ const TIER2_PROMPT_FILE = join(STATE_DIR, "watchman_tier2_prompt.txt");
 // The file's own top-of-module path constants are the idiom that stays analysable.
 const ARCHIVE_AUDIT_JOURNAL = join(STATE_DIR, "archive_audit.jsonl");
 const TASKS_EXPECTED = join(STATE_DIR, "tasks_expected.json");
+// Hoisted 15 Aug 2026 for the same measured reason as the two above: bound to a
+// block-local const inside gather(), these two lines cost TWELVE unresolved
+// sinks in xray's IR (two sinks each, counted across three passes) and left the
+// organ that reads them invisible in the static graph. Nothing else changed.
+const GEMINI_QUALITY = join(STATE_DIR, "gemini_quality.jsonl");
+const MOUTH_LOG = join(STATE_DIR, "mouth_log.jsonl");
 
 // Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
 // dropped 9 Aug: it had already rotted once): past this the
@@ -220,8 +226,7 @@ export function gather(now = new Date()) {
   // (HIS ruled 2, never a guess) + gemini_quality's honesty count. Reads only.
   w.gemini_quality = { rows: 0 };
   try {
-    const gq = join(STATE_DIR, "gemini_quality.jsonl");
-    if (existsSync(gq)) w.gemini_quality.rows = readFileSync(gq, "utf8").split("\n").filter((l) => l.trim()).length;
+    if (existsSync(GEMINI_QUALITY)) w.gemini_quality.rows = readFileSync(GEMINI_QUALITY, "utf8").split("\n").filter((l) => l.trim()).length;
   } catch { /* unreadable = 0 recorded — c-gemini stays quiet */ }
   // LADDER B3 (9 Aug 2026) — the claude CLI's login health, as brain.mjs already
   // measures it every tick (failureStreak → token_vitals.json.health). Read-only.
@@ -232,9 +237,8 @@ export function gather(now = new Date()) {
     const bc = readJson(join(STATE_DIR, "brain_config.json"));
     w.mouth = { enabled: !!(bc && bc.ntfy && bc.ntfy.enabled), attempts_today: 0, sent_today: 0 };
     try {
-      const ml = join(STATE_DIR, "mouth_log.jsonl");
-      if (existsSync(ml)) {
-        for (const line of readFileSync(ml, "utf8").split("\n")) {
+      if (existsSync(MOUTH_LOG)) {
+        for (const line of readFileSync(MOUTH_LOG, "utf8").split("\n")) {
           if (!line.trim()) continue;
           try { const r = JSON.parse(line); if (localDayOf(r.ts) === today) { w.mouth.attempts_today++; if (r.sent) w.mouth.sent_today++; } } catch { }
         }
@@ -1817,11 +1821,42 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     /watchman-repair:/.test(P) && /watchman_repairs\.jsonl/.test(P) && /capsules/.test(P)
     && /NEVER confirm\/dismiss staged drifts/.test(P) && /Unrun system = hypothesis/.test(P) && /Do not push/.test(P));
 
+  // ENTRYPOINT GUARD — driven through a REAL child process, never restated here.
+  // The property is "importing this module does nothing", and the only honest way
+  // to test it is to import it somewhere that would show if it did. Both halves
+  // matter: an import must be SILENT, and the CLI must still REACH main(), or the
+  // guard could be satisfied by an organ that no longer runs at all.
+  {
+    const self = fileURLToPath(import.meta.url);
+    const child = spawnSync(process.execPath,
+      ["--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(self).href)});`],
+      { encoding: "utf8", timeout: 60000 });
+    assert("ENTRYPOINT · importing this module runs NOTHING — a bare import used to execute the whole nightly job (state written, suite spawned, Tier-2 reachable)",
+      child.status === 0 && String(child.stdout).trim() === "" && !/finding\(s\)/.test(String(child.stdout)));
+    // join(__dirname, …) rather than `self`: identical path, but it is the idiom
+    // xray can constant-fold, so this spawn stays visible in the static graph.
+    const cli = spawnSync(process.execPath, [join(__dirname, "watchman.mjs"), "__unknown_mode__"], { encoding: "utf8", timeout: 60000 });
+    assert("ENTRYPOINT · …and the CLI still REACHES main(), so the guard cannot be met by an organ that simply stopped dispatching",
+      cli.status === 0 && /watchman: run \[--no-tier2\]/.test(String(cli.stdout)));
+  }
+
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
 }
 
 // ---------------------------------------------------------------------------
+// ENTRYPOINT GUARD (his ruling, 15 Aug 2026 — added inline, not filed).
+// This dispatch ran at MODULE SCOPE, so `import` alone executed the whole
+// nightly job: watchman.jsonl and watchman_last.json written, the full selftest
+// suite spawned, the Tier-2 arm reachable. Measured, not theorised — a one-line
+// `import { gather, checks }` meant only to READ state dirtied four state files
+// mid-`npm test` and false-fired organism_test's leaves-live-state-untouched
+// law. And `gather`/`checks` are both EXPORTED, i.e. importing them is invited.
+// conductor.mjs has carried this exact line for weeks, and line 93 of this file
+// praises it for being import-safe while this file was not.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+
+function main() {
 const cmd = process.argv[2] || "run";
 if (cmd === "run") run(process.argv.slice(3));
 else if (cmd === "brief") {
@@ -1838,3 +1873,4 @@ else if (cmd === "brief") {
 } else if (cmd === "report") report();
 else if (cmd === "selftest") selftest();
 else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | selftest");
+}

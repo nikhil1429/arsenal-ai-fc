@@ -933,14 +933,25 @@ less and says so.*
   in history, because rewriting a journal to make a graph look better is the thing this whole
   archive exists to prevent. **Use `--no-journal` for any run against a root that is not his live
   archive.**
-- **`scripts/watchman.mjs` has NO entrypoint guard** (line ~1825: `const cmd = process.argv[2] ||
-  "run"` at module scope). Importing it — even just for `gather`/`checks`, both of which it
-  EXPORTS — executes the entire nightly job: state written, the whole selftest suite spawned,
-  the Tier-2 arm reachable. Found the hard way: a one-line import meant to read state dirtied
-  four state files mid-`npm test` and false-fired the "selftests leave live state untouched"
-  assertion. Nothing imports it today, so it is latent — and it is NOT this work order's to fix,
-  so it is filed rather than silently patched. `conductor.mjs` carries the correct pattern, and
-  watchman's own line 93 comment praises conductor for having it.
+- **`scripts/watchman.mjs` had NO entrypoint guard — FIXED on his ruling the same hour.** Its
+  dispatch (`const cmd = process.argv[2] || "run"`) ran at MODULE SCOPE, so importing it — even
+  just for `gather`/`checks`, both of which it EXPORTS — executed the entire nightly job: state
+  written, the whole selftest suite spawned, the Tier-2 arm reachable. Found the hard way: a
+  one-line import meant only to READ state dirtied four state files mid-`npm test` and
+  false-fired the "selftests leave live state untouched" law. It is now guarded with the same
+  line `conductor.mjs` has carried for weeks — the one this file's own line 93 praises conductor
+  for having. **Measured both directions**, because a guard that also stops the CLI is worse than
+  no guard: a bare import now takes 44 ms and writes nothing (a real run took ~2 minutes), and a
+  spawned CLI still reaches `main()`. Both are selftest assertions driven through real child
+  processes.
+  **AND IT COST SIX SINKS, WHICH IS ITS OWN LESSON.** Those two spawns are unanalysable to
+  `xray.mjs`, whose per-organ ratchet — *no EXISTING organ may get blinder* — went red at
+  watchman 32→38. The fix was NOT to weaken the ratchet or exempt the file: two pre-existing
+  block-local path bindings (`gemini_quality.jsonl`, `mouth_log.jsonl`) were hoisted to module
+  constants, the CLI spawn was switched to `join(__dirname, …)` so xray can fold it, and watchman
+  came out at **23 — sharper than the baseline it started at**, with three lanes newly visible in
+  the static graph. A ratchet you satisfy by making the organ genuinely more legible is a ratchet
+  doing its job.
 
 ### FOLDED IN FROM THE DELETED WORK ORDER (§16.7's instruction)
 
