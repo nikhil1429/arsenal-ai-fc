@@ -853,6 +853,59 @@ async function probeDaemons() {
 // the question "aapke word se tha?" reaches him at an anchor, once per file per
 // day, never as a list. Injectable for the selftest (no git, no card spawn).
 // ---------------------------------------------------------------------------
+// THE UNLEASH VERDICT, WHEN THE EVIDENCE EXISTS (14 Aug 2026)
+// ---------------------------------------------------------------------------
+// The unleash plan's Phase 10 needs 48h of live ledger before its six checks
+// mean anything, and the obvious way to handle that is to tell the captain
+// "ask me again in two days". HIS OWN LEDGER FACT FORBIDS EXACTLY THAT
+// (5cea57e8, 11 Aug, his words): "my brain will never remember anything when to
+// do what" — anything he has to REMEMBER is a design failure, not his.
+//
+// So the machine carries it. This probe is TIME-BLIND on purpose: it does not
+// count hours, it counts EVIDENCE — runs on the ledger since the baseline was
+// taken, against the same MIN_RUNS_TO_JUDGE floor unleash_verdict.mjs itself
+// uses. Under the floor it says so and files nothing (a card dealt before its
+// own answer exists is worse than no card). At or over it, ONE idempotent card
+// is filed — `--key unleash:verdict:ready`, so re-filing every night mints
+// nothing — and the card asks for the one word that runs the verdict.
+export const UNLEASH_MIN_RUNS = 40;
+export function probeUnleashVerdict(deps = {}) {
+  const baseline = deps.baseline !== undefined ? deps.baseline : readJson(join(STATE_DIR, "unleash_baseline.json"));
+  if (!baseline || !baseline.at) return [];          // no plan in flight — silence is correct
+  const since = Date.parse(baseline.at);
+  // NB the reader is INLINE, not a shared helper: this file has no readLines, and
+  // the first version of this probe called one. The fixture-injected selftest
+  // could not catch that — it passed `rows` and never walked this line — so the
+  // live sweep threw ReferenceError on the very first real run. The witness below
+  // now exercises the UN-injected path for exactly this reason.
+  const rows = deps.rows || (() => {
+    const out = [];
+    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch { }
+    return out;
+  })();
+  const n = rows.filter((r) => r && r.ts && Date.parse(r.ts) >= since).length;
+  const hours = Math.round(((deps.now || Date.now()) - since) / 3600000);
+  if (n < UNLEASH_MIN_RUNS) {
+    return [{ id: "unleash-verdict-waiting", level: "INFO",
+      finding: `the unleash 48h verdict is WAITING on evidence, not on the clock — ${n}/${UNLEASH_MIN_RUNS} runs since the baseline (${hours}h). No card filed: a card dealt before its own answer exists is worse than no card.`,
+      evidence: `brain_ledger rows at-or-after ${baseline.at} · floor = unleash_verdict.mjs's own MIN_RUNS_TO_JUDGE` }];
+  }
+  const fileCard = deps.fileCard || ((line, key) => {
+    try {
+      spawnSync(process.execPath, [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", key],
+        { encoding: "utf8", timeout: 15000, env: { ...process.env, ARSENAL_ORGAN: "" } });
+      return true;
+    } catch { return false; }
+  });
+  const carded = fileCard(
+    `UNLEASH ka 48h VERDICT ab READY hai — ${n} runs jama ho gaye (${hours}h). Haan bolo to \`node scripts/unleash_verdict.mjs\` chalta hai: jo 3 checks PENDING the unka asli jawab, aur Phase 4 ki caching-off list data se.`,
+    "unleash:verdict:ready");
+  return [{ id: "unleash-verdict-ready", level: "INFO",
+    finding: `the unleash verdict has its evidence (${n} runs / ${hours}h) and a card ${carded ? "is filed" : "could NOT be filed"} asking for the one word that runs it`,
+    evidence: `key unleash:verdict:ready (idempotent — re-filing every night mints nothing)` }];
+}
+
+// ---------------------------------------------------------------------------
 export const CANON_FILES = ["OPS_STATE.md", "ARSENAL_AI_FC_MASTERPLAN.md", "THE_MANAGER__Master_Prompt.md", "THE_GAFFER.md"];
 export function probeCanon(today, deps = {}) {
   const git = deps.git || (() => {
@@ -1192,6 +1245,7 @@ async function run(argv) {
   findings.push(...probeReconcile());
   findings.push(...probePulse());          // ULTRACODE 12 Aug — the ◇≤T liveness law (NEVER class = RED)
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch
+  findings.push(...probeUnleashVerdict());  // 14 Aug — files the verdict card the night the evidence exists
   findings.push(...probeExpectedTasks()); // LADDER E2 — the schedule diff
   findings.push(...await probeSentinel(w.today)); // LADDER E8 — the sentinel's pulse
   findings.push(...probeWakeEconomy());   // LADDER G15 — the honest wake re-fit
@@ -1362,6 +1416,29 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
   // LADDER B8 — the canon watch (injected: no git, no card spawn)
   {
     const filed = [];
+    // THE UNLEASH VERDICT PROBE (14 Aug 2026) — evidence-gated, never clock-gated.
+    {
+      const base = { at: "2026-08-14T00:00:00Z" };
+      const mkRows = (n) => Array.from({ length: n }, () => ({ ts: "2026-08-14T06:00:00Z" }));
+      let filed = [];
+      const thin = probeUnleashVerdict({ baseline: base, rows: mkRows(10), fileCard: (l, k) => { filed.push(k); return true; }, now: Date.parse("2026-08-16T00:00:00Z") });
+      assert("UNLEASH — under the evidence floor NOTHING is filed, however many hours have passed (a card dealt before its answer exists is worse than no card)",
+        filed.length === 0 && thin[0].id === "unleash-verdict-waiting" && /10\/40 runs/.test(thin[0].finding));
+      filed = [];
+      const ready = probeUnleashVerdict({ baseline: base, rows: mkRows(60), fileCard: (l, k) => { filed.push(k); return true; }, now: Date.parse("2026-08-16T00:00:00Z") });
+      assert("UNLEASH — at the floor ONE idempotent card is filed, and it asks for the one word that runs the verdict",
+        filed.length === 1 && filed[0] === "unleash:verdict:ready" && ready[0].id === "unleash-verdict-ready");
+      assert("UNLEASH — no baseline on disk ⇒ no plan in flight ⇒ total silence, never a finding about nothing",
+        probeUnleashVerdict({ baseline: null, fileCard: () => { throw new Error("must not file"); } }).length === 0);
+      // THE UN-INJECTED PATH, walked. The three assertions above all pass `rows`,
+      // so none of them touches the live reader — and the first version of it
+      // called a `readLines` this file does not have, which shipped green and
+      // threw ReferenceError on the first real sweep. This walks the default
+      // reader against the REAL ledger (read-only, and fileCard is stubbed so
+      // nothing is ever filed from a test).
+      assert("UNLEASH — the LIVE reader path runs without throwing (the fixture-injected tests above cannot see it)",
+        (() => { try { probeUnleashVerdict({ fileCard: () => true }); return true; } catch (e) { return `threw: ${e.message}`; } })() === true);
+    }
     const f1 = probeCanon(TODAY, {
       git: () => " M OPS_STATE.md\n?? scratch.txt\n M scripts/brain.mjs\n",
       fileCard: (line, key) => { filed.push(key); return true; },

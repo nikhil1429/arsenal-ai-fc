@@ -441,7 +441,31 @@ function hermetic() {
   // xray_graph.json + audit_ledger.jsonl: the audit organs' own lanes. xray.mjs
   // is sole writer of the first and audit.mjs of the second, and both are written
   // by their owner's normal operation, never by another organ's selftest.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl/;
+  // pulse_session.json + cortex_session.json added 14 Aug 2026 (unleash Phase 3
+  // and 7.4), AND THE PRICE THIS LIST SETS WAS PAID, not waved — the daemon
+  // rewrites the pulse session every ~150s while he is at the keyboard, which is
+  // the same scheduled-OWNER-writes-its-own-state race that earned tone.json and
+  // wall_data.json their places. THE PROOF, run before adding them:
+  //   · `brain.mjs selftest` ×3, hashing pulse_session.json either side of each
+  //     run: unchanged, unchanged, unchanged — and 0 new haiku_pulse ledger rows,
+  //     which is the discriminator that makes this airtight. runPulse writes the
+  //     session file and appends its ledger row on the SAME path, so a session
+  //     change with no ledger row would be a selftest write. There were none.
+  //   · `cortex.mjs selftest` ×2: cortex_session.json stayed ABSENT entirely.
+  //   · and by construction: all 14 runPulse calls in brain's selftest carry
+  //     `dry: true`, which is the flag the write is gated on.
+  //
+  // captains_call.json added the same day, and this one is PRE-EXISTING FLAKINESS
+  // this session merely surfaced — nothing in the unleash work writes the deck
+  // (get_card, its new reader, only reads). It was proven at the HIGHEST standard
+  // this list has yet seen: EVERY ONE of the 80+ scripts/*.mjs was run with
+  // `selftest` and the deck stat-ed (size:mtimeMs, the same metric snap() uses)
+  // either side of each — NONE of them touched it. Note the metric: snap() keys on
+  // mtime, so even a byte-IDENTICAL atomic rewrite trips it, and that is exactly
+  // what the deck's owner does on a TTL/retire sweep. The writer is the live
+  // captains_call lane running on its own anchors inside a multi-minute suite
+  // window — the same signature as tone.json and wall_data.json above.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);
