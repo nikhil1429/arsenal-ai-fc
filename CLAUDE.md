@@ -136,7 +136,24 @@ hash-chained, IST-day-partitioned, BagIt-valid permanent record. The full spec i
 `ARCHIVE__DAY_ONE_SPEC.md` at the repo root — 8 laws, the record schema, 13 acceptance tests.
 **That file is now a RECORD of what was approved, not a work order. Do not re-plan it.**
 - **Read the live numbers, never a number from here** — `node scripts/archivist.mjs status`
-  (and `lanes` · `vitals` · `verify`). Any count written into prose rots on the next run.
+  (and `lanes` · `vitals` · `verify` · `reconcile`). Any count written into prose rots on the next run.
+- **`verify` and `reconcile` answer DIFFERENT questions and you need both.** `verify` walks the
+  hash chain: it proves nothing was ALTERED, and it is structurally incapable of seeing anything
+  ADDED TWICE — duplicates appended in seq order chain perfectly. `reconcile` compares the
+  archive to its live SOURCES and is the only thing that can. It caught two real doublings on
+  day one. It rides `vitals` daily, so it no longer depends on anyone thinking to run it.
+  Repairs, in order of bluntness: `rebuild <lane>` (re-derive from source — WRONG for a lane
+  whose source is rewritten in place, because it deletes superseded history) · `dedupe <lane>`
+  (drop only surplus copies, keep everything the source has thrown away).
+- **Not every `*.jsonl` is append-only.** `identity_facts.pending.jsonl` is REWRITTEN when a
+  staged fact is promoted. The checkpoint therefore stores a fingerprint of the bytes before its
+  offset and re-reads the whole file when they change; the changed rows land as NEW records and
+  both versions survive. That is LAW 2 working: the pending version and the promoted version are
+  two facts, and the archive keeps both.
+- **The LEXICON is a LOG, not a table** — a term's state is its LAST row. Never edit a term:
+  `archivist.mjs lexicon retire <t> --why "…"` then `lexicon add <t> --def "…" --source "…"`.
+  The old definition stays readable forever, because WHICH MEANING A WORD HAD WHEN A RECORD WAS
+  WRITTEN is the question the dictionary exists to answer. The CHANGELOG writes itself.
 - **Never write into `$ARSENAL_ARCHIVE` by hand or from another organ.** The whole integrity
   argument — a per-lane `seq` counter and a `prev_sha256` chain — assumes exactly one appender.
   A second writer would not corrupt a file; it would produce a chain that VERIFIES while being

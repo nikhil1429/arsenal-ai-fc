@@ -40,7 +40,8 @@
 // SINGLE WRITER: this organ owns $ARSENAL_ARCHIVE and nothing else. It is
 //   READ-ONLY on dressing-room/ — including its own selftest.
 //
-// MODES: init · run · backfill · verify [--month YYYY-MM] · vitals · seal · rebuild <lane> · lanes · tripwire · status · selftest
+// MODES: init · run · backfill · verify [--month YYYY-MM] · vitals · seal [--quarter] ·
+//        reconcile · rebuild <lane> · dedupe <lane> · lanes · lexicon <list|add|retire> · tripwire · status · selftest
 //
 // TIME (spec §4): three separate clock facts, all irrecoverable if skipped —
 //   ts_utc (the instant) · ts_local + tz (the WALL CLOCK: "he wrote this at 3am"
@@ -472,6 +473,25 @@ function takeLock(root, mode) {
     if (e && e.code !== "EEXIST") throw e;
     const held = readJsonSafe(p, {});
     const age = Date.now() - Date.parse(held.at || 0);
+    // ASK WHETHER THE HOLDER IS ALIVE, not just whether the lock is old.
+    // Caught live, 15 Aug 2026: a scheduled run died holding the lock and every
+    // archivist for the next ten minutes stood politely down for a process that
+    // no longer existed. On a 15-minute cadence that is a whole tick lost to a
+    // ghost, and the WAL keeps filling while it happens.
+    // process.kill(pid, 0) sends no signal — it asks the OS whether the pid is
+    // there. ESRCH means gone. EPERM means it exists and belongs to someone else,
+    // which still counts as alive. The age check STAYS as the backstop for the one
+    // case liveness cannot cover: pid reuse. Both must hold for the lock to bind.
+    const holderAlive = (() => {
+      if (!Number.isFinite(held.pid)) return false;
+      try { process.kill(held.pid, 0); return true; }
+      catch (err) { return err && err.code === "EPERM"; }
+    })();
+    if (!holderAlive) {
+      appendHealth(root, "quarantine", { kind: "dead-lock-taken", at: new Date().toISOString(), held_by: held, age_ms: age, note: "the lock's holder process no longer exists — taken over immediately rather than waiting out the staleness window" });
+      writeAtomic(p, mine);
+      return { ok: true, release: () => { try { rmSync(p, { force: true }); } catch { /* nothing to do */ } } };
+    }
     if (!(age >= 0 && age < LOCK_STALE_MS)) {
       appendHealth(root, "quarantine", { kind: "stale-lock-taken", at: new Date().toISOString(), held_by: held, age_ms: age, note: "a previous archivist died holding the lock; taken over. Its inflight claim (if any) is deduped by the normal recovery path." });
       writeAtomic(p, mine);
@@ -504,6 +524,33 @@ const saveCkpt = (root, c) => { c.updated_at = new Date().toISOString(); writeAt
 // when the writer finishes the line it is archived normally: zero data loss. The
 // partial is reported ONCE into health/quarantine-*.jsonl, deduped by its own
 // hash, so a stuck writer does not print a quarantine row every 15 minutes.
+// THE ANCHOR — and the defect that put it here (deep cross-check, 15 Aug 2026).
+// This organ assumed every *.jsonl under dressing-room/ is APPEND-ONLY. Most are.
+// `identity_facts.pending.jsonl` IS NOT: hippocampus REWRITES it in place to mark
+// a staged fact promoted or dropped. Measured, live: after three promotes the file
+// was rewritten LONGER, the archivist read from its stale byte offset straight into
+// the middle of a line, quarantined 185 bytes of fragment — and then advanced the
+// offset to EOF and considered the lane caught up. The rewritten rows were never
+// read. The archive therefore held the three staged facts in their PENDING form and
+// had no record at all of the moment they became canon — his ruling, which is
+// exactly the class of event this archive exists to keep.
+// A byte offset alone is a promise the file never made. So the checkpoint also
+// stores a fingerprint of the bytes immediately BEFORE the offset; if those bytes
+// are not what they were, the file was rewritten underneath us and the offset means
+// nothing. Then the whole file is re-read and DEDUPED — unchanged rows are skipped,
+// and rows whose content changed are archived as NEW records, which is LAW 2 doing
+// exactly what it is for: the pending version and the promoted version are two
+// facts, and the archive keeps both.
+const ANCHOR_BYTES = 4096;
+function anchorOf(abs, offset) {
+  if (!offset) return null;
+  const n = Math.min(ANCHOR_BYTES, offset);
+  const buf = Buffer.alloc(n);
+  const fd = openSync(abs, "r");
+  try { readSync(fd, buf, 0, n, offset - n); } finally { closeSync(fd); }
+  return { bytes: n, sha256: createHash("sha256").update(buf).digest("hex") };
+}
+
 function readNew(abs, offset) {
   const size = statSync(abs).size;
   let from = offset, rotated = false;
@@ -570,6 +617,25 @@ function archiveOne(root, src, ckpt, opts) {
   // about provenance, and a 2035 analysis would silently trust it.
   const backfilled = force || firstSight ? true : !live;
 
+  // VERIFY THE ANCHOR BEFORE TRUSTING THE OFFSET (see anchorOf above).
+  // A checkpoint written before anchors existed has none: that is treated as
+  // UNVERIFIABLE, not as fine, so every such lane re-syncs exactly once. The
+  // re-read is safe because it is deduped, and the alternative — trusting an
+  // offset whose file may have been rewritten — is how the promotion event was
+  // lost in the first place.
+  let resync = null;
+  if (cf.offset > 0) {
+    try {
+      const live = anchorOf(src.abs, Math.min(cf.offset, statSync(src.abs).size));
+      if (!cf.anchor) resync = "no anchor on record (checkpoint predates the anchor guard) — one-time re-sync";
+      else if (!live || live.sha256 !== cf.anchor.sha256) resync = "the bytes before the checkpoint offset CHANGED — this file is rewritten in place, not appended to";
+    } catch { resync = "anchor unreadable"; }
+  }
+  if (resync) {
+    appendHealth(root, "quarantine", { kind: "source-resync", at: now.toISOString(), path: src.rel, was_offset: cf.offset, why: resync, note: "re-reading the whole file with dedupe: unchanged rows are skipped, changed rows are archived as NEW records (LAW 2 — never edit, always add)" });
+    cf.offset = 0;
+  }
+
   const r = readNew(src.abs, cf.offset);
   if (r.rotated) appendHealth(root, "quarantine", { kind: "source-rotated", at: now.toISOString(), path: src.rel, was_offset: cf.offset, size: r.size, note: "source shrank under the checkpoint — re-read from 0; dedupe protects the archive" });
   if (r.partial) {
@@ -596,18 +662,28 @@ function archiveOne(root, src, ckpt, opts) {
   }
   if (!staged.length) {
     cf.offset = r.endOffset;
+    cf.anchor = anchorOf(src.abs, r.endOffset);      // the quiet path must re-anchor too, or the guard drifts off
     cf.inflight = null;
     ckpt.files[src.rel] = cf;
     return { lane: src.lane, added: 0, skipped: 0, quarantined: 0 };
   }
 
-  // 2. crash recovery: dedupe this batch against the day files it claimed last time
+  // 2. DEDUPE whenever we are re-reading ground the archive may already hold.
+  // THREE cases, one mechanism: a crash recovery (inflight claim), a rotation
+  // (file shrank), and a rewrite (anchor mismatch). Until today only the first
+  // deduped — so a rotation would have re-archived a whole file, silently, and
+  // every chain would still have verified. That is the doubling scar's shape
+  // again, waiting on a different trigger.
   const recovering = !!(cf.inflight && Array.isArray(cf.inflight.days));
+  const needDedupe = recovering || r.rotated || !!resync;
   let skip = () => false;
-  if (recovering) skip = recoverySkipper(root, cf.inflight.days, src.lane);
 
   // 3. claim the range + the day files BEFORE writing anything
   const days = [...new Set(staged.map((s) => s.day))];
+  // the dedupe set is built from the days THIS batch touches — bounded work, and
+  // exact: recoverySkipper counts occurrences, so a payload that legitimately
+  // appears twice in the source is archived twice and neither copy is lost.
+  if (needDedupe) skip = recoverySkipper(root, [...new Set([...(recovering ? cf.inflight.days : []), ...days])], src.lane);
   cf.inflight = { from: cf.offset, to: r.endOffset, days, claimed_at: now.toISOString() };
   ckpt.files[src.rel] = cf;
   saveCkpt(root, ckpt);
@@ -641,6 +717,7 @@ function archiveOne(root, src, ckpt, opts) {
   cf.offset = r.endOffset;
   cf.lines = (cf.lines || 0) + added;
   cf.last_run_at = now.toISOString();
+  cf.anchor = anchorOf(src.abs, r.endOffset);        // the promise the next run checks
   cf.inflight = null;
   ckpt.files[src.rel] = cf;
   ckpt.lanes[src.lane] = { seq: cursor.seq, sha256: cursor.sha256, updated_at: now.toISOString() };
@@ -744,6 +821,142 @@ export function rebuildLane(lane, opts = {}) {
     log(`archivist rebuild · ${lane}: ${before} record(s) dropped, ${added} re-derived from ${sources.length} source file(s) — chain ${v.ok ? "INTACT" : `STILL BROKEN (${v.breaks.length})`}`);
     log(`  every record in this lane is now backfilled:true, with a new rid and recorded_at. Payloads, timestamps and provenance are byte-identical. Journalled to health/fixity-*.jsonl.`);
     return { ok: v.ok, dropped: before, rebuilt: added };
+  } finally { lock.release(); }
+}
+
+// ── RECONCILE — the check the CHAIN CANNOT DO ────────────────────────────────
+// `verify` proves nothing was ALTERED. It is structurally incapable of proving
+// nothing was ADDED TWICE: duplicates appended in correct seq order chain
+// perfectly. That blind spot has now cost this archive twice in one day — once
+// when it silently doubled (33,249 records, every chain green), and once when a
+// scheduled run loaded a half-written build and doubled five lanes before dying.
+// Both were caught by comparing the archive to its SOURCES by hand. A check that
+// only exists in someone's hands is a check that runs once.
+//
+// THE DISCRIMINATOR, and it is the whole subtlety: an archive holding MORE copies
+// of a payload than the source does is a DOUBLING. An archive holding a payload
+// the source no longer has at all is HISTORY — the source was rewritten in place
+// (identity_facts.pending.jsonl does exactly this when a staged fact is promoted)
+// and keeping the superseded version is the archive doing its job, not failing at
+// it. Conflating those two would make the correct behaviour look like the bug.
+export function reconcile(opts = {}) {
+  const root = opts.root || archiveRoot();
+  const repo = opts.repo || ROOT;
+  const log = opts.quiet ? () => {} : console.log;
+  const srcByLane = new Map();
+  for (const s of discoverSources(repo)) {
+    if (isExcluded(s.lane)) continue;
+    if (!srcByLane.has(s.lane)) srcByLane.set(s.lane, new Map());
+    const m = srcByLane.get(s.lane);
+    let text = ""; try { text = readFileSync(s.abs, "utf8"); } catch { continue; }
+    for (const l of text.split("\n")) {
+      if (!l.trim()) continue;
+      let j; try { j = JSON.parse(l); } catch { continue; }
+      const k = payloadSha(j);
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+  }
+  const out = { at: new Date().toISOString(), lanes: [], doubled: [], missing: [], superseded: 0 };
+  for (const lane of archivedLanes(root)) {
+    const arc = new Map();
+    for (const { rec } of laneRecords(root, lane)) {
+      if (!rec) continue;
+      const k = payloadSha(rec.payload);
+      arc.set(k, (arc.get(k) || 0) + 1);
+    }
+    const src = srcByLane.get(lane) || new Map();
+    let doubled = 0, superseded = 0, missing = 0;
+    for (const [k, n] of arc) {
+      const s = src.get(k) || 0;
+      if (s === 0) superseded += n;                  // the source rewrote it away — this is HISTORY
+      else if (n > s) doubled += n - s;              // more copies than ever existed — a DEFECT
+    }
+    for (const [k, n] of src) { const a = arc.get(k) || 0; if (a < n) missing += n - a; }
+    out.lanes.push({ lane, archived: [...arc.values()].reduce((a, b) => a + b, 0), source: [...src.values()].reduce((a, b) => a + b, 0), doubled, superseded, missing });
+    out.superseded += superseded;
+    if (doubled) out.doubled.push({ lane, n: doubled });
+    if (missing) out.missing.push({ lane, n: missing });
+  }
+  out.ok = out.doubled.length === 0;
+  appendHealth(root, "fixity", { kind: "reconcile", ...out });
+  log(`archivist reconcile · ${out.lanes.length} lane(s) against their live sources`);
+  if (out.doubled.length) {
+    log(`  ✗ DOUBLED — more copies than the source ever held. This is the defect the CHAIN CANNOT SEE:`);
+    for (const d of out.doubled) log(`     ${d.lane}: ${d.n} extra — repair with \`archivist.mjs rebuild ${d.lane} --why "…"\``);
+  } else log("  ok  no lane holds more copies of a payload than its source does");
+  if (out.missing.length) {
+    log(`  ·  BEHIND — the WAL has moved on and these are not archived yet (a \`run\` closes it; if it persists, it is a defect):`);
+    for (const m of out.missing) log(`     ${m.lane}: ${m.n}`);
+  } else log("  ok  nothing in any source is unarchived");
+  log(`  ·  ${out.superseded} superseded record(s) held that the SOURCE no longer has — that is the archive doing its job, not a fault`);
+  return out;
+}
+
+// ── DEDUPE ONE LANE — the repair `rebuild` is too blunt for ────────────────
+// `rebuild` re-derives a lane from its sources, which is right when the sources
+// still hold everything. It is WRONG for a lane whose source is rewritten in
+// place: identity_facts.pending.jsonl no longer contains the three facts in their
+// PENDING form, so rebuilding it would delete the record of the moment they
+// became canon — the exact history the archive exists to keep, destroyed by the
+// repair tool.
+// So: keep, for each payload, as many copies as the source has (at least one),
+// earliest first; drop the surplus. A SUPERSEDED payload — one the source no
+// longer holds at all — is kept, because that is history, not surplus.
+// It preserves rid, ts, recorded_at, moment and backfilled on every survivor.
+// Only seq and the chain are recomputed, because they must be: they are positional
+// by definition, and every repair that removes a record has to re-link.
+export function dedupeLane(lane, opts = {}) {
+  const root = opts.root || archiveRoot();
+  const repo = opts.repo || ROOT;
+  const log = opts.quiet ? () => {} : console.log;
+  const lock = takeLock(root, "dedupe");
+  if (!lock.ok) { log(`archivist dedupe: another archivist holds the lock (pid ${lock.held.pid})`); return { ok: false, reason: "locked" }; }
+  try {
+    const srcCount = new Map();
+    for (const s of discoverSources(repo).filter((x) => x.lane === lane)) {
+      for (const l of readFileSync(s.abs, "utf8").split("\n")) {
+        if (!l.trim()) continue;
+        let j; try { j = JSON.parse(l); } catch { continue; }
+        const k = payloadSha(j);
+        srcCount.set(k, (srcCount.get(k) || 0) + 1);
+      }
+    }
+    const all = [...laneRecords(root, lane)].map((x) => x.rec).filter(Boolean).sort((a, b) => a.seq - b.seq);
+    const seen = new Map();
+    const keep = [], drop = [];
+    for (const r of all) {
+      const k = payloadSha(r.payload);
+      const allowed = Math.max(1, srcCount.get(k) || 0);
+      const n = (seen.get(k) || 0) + 1;
+      seen.set(k, n);
+      (n <= allowed ? keep : drop).push(r);
+    }
+    if (!drop.length) { log(`archivist dedupe · ${lane}: nothing surplus — ${all.length} record(s) all justified by the source`); return { ok: true, dropped: 0, kept: all.length }; }
+    appendHealth(root, "fixity", { kind: "dedupe-start", at: new Date().toISOString(), lane, had: all.length, dropping: drop.length, dropped_rids: drop.map((r) => r.rid), why: opts.why || "unspecified — a dedupe without a reason is a deletion" });
+    // rewrite the lane: same payloads, same rids, same clocks — re-seq'd and re-linked
+    rmSync(join(P(root).data, lane), { recursive: true, force: true });
+    let prev = null, seq = 0;
+    const byFile = new Map();
+    for (const r of keep) {
+      seq += 1;
+      const rec = { ...r, seq, prev_sha256: prev, sha256: null };
+      const { sha256: _s, prev_sha256: _p, ...body } = rec;
+      rec.sha256 = sha256Hex(canon(body));
+      prev = rec.sha256;
+      const day = (rec.ts_local || rec.recorded_at).slice(0, 10);
+      const f = dayFile(root, lane, day);
+      if (!byFile.has(f)) byFile.set(f, []);
+      byFile.get(f).push(JSON.stringify(rec));
+    }
+    for (const [f, lines] of byFile) appendLines(f, lines);
+    const ckpt = loadCkpt(root);
+    ckpt.lanes[lane] = { seq, sha256: prev, updated_at: new Date().toISOString() };
+    saveCkpt(root, ckpt);
+    const v = verifyArchive({ root, lane, quiet: true });
+    appendHealth(root, "fixity", { kind: "dedupe-done", at: new Date().toISOString(), lane, kept: keep.length, dropped: drop.length, chain_ok: v.ok });
+    log(`archivist dedupe · ${lane}: ${drop.length} surplus copy(ies) dropped, ${keep.length} kept — chain ${v.ok ? "INTACT" : "STILL BROKEN"}`);
+    log(`  rid, timestamps, moment and backfilled are UNCHANGED on every survivor; only seq and the chain were recomputed, because a removal forces a re-link.`);
+    return { ok: v.ok, dropped: drop.length, kept: keep.length };
   } finally { lock.release(); }
 }
 
@@ -881,6 +1094,21 @@ export function vitalsArchive(opts = {}) {
   out.fixity = { last_run: lastFixity ? new Date(lastFixity).toISOString() : null, age_days: fixityAgeDays, deadline_days: 40 };
   if (lastFixity === null) out.reds.push("fixity has NEVER run — the archive has no proof it is uncorrupted, and nothing else in the organism watches a monthly task");
   else if (fixityAgeDays > 40) out.reds.push(`fixity last ran ${fixityAgeDays} days ago (monthly cadence + slack allows 40) — bit rot is silent, and the only thing that would have told you is this line`);
+
+  // ── THE DOUBLING DETECTOR RIDES THE DAILY LANE ────────────────────────────
+  // reconcile is the only check that can see a record ADDED TWICE — the chain is
+  // structurally blind to it. Both times it mattered, it was run by hand because
+  // someone thought to. A detector that depends on someone thinking to is not a
+  // detector; it is a habit, and habits are what LAW 6 exists to replace. It rides
+  // vitals (daily, 23:40) rather than taking a task of its own: same inputs, same
+  // walk, and one more scheduled row is one more thing that can silently stop.
+  if (opts.reconcile !== false) {
+    try {
+      const rc = reconcile({ root, repo: opts.repo || ROOT, quiet: true });
+      out.reconcile = { doubled: rc.doubled, missing: rc.missing, superseded: rc.superseded };
+      for (const d of rc.doubled) out.reds.push(`${d.lane}: ${d.n} record(s) archived MORE times than the source ever held them — a doubling, which every chain in this archive would still verify. Repair: archivist.mjs dedupe ${d.lane} --why "…"`);
+    } catch (e) { out.reconcile = { error: String((e && e.message) || e) }; }
+  }
 
   out.ok = out.reds.length === 0;
   appendHealth(root, "vitals", out);
@@ -1107,6 +1335,33 @@ function lanesReport(opts = {}) {
   return { lanes: byLane.size, sources: sources.length, missing };
 }
 
+// ── SEAL FRESHNESS — the false-alarm guard (found by deep cross-check, 15 Aug) ─
+// A LIVE archive is a valid BagIt bag only AT SEAL TIME. Between seals the
+// archivist adds new day files, so a strict validator run on an un-sealed copy
+// reports "file not in manifest" — and a reader who does not know that will
+// conclude the permanent record is CORRUPT. A false corruption alarm is worse
+// than no alarm at all: it is the one outcome fixity exists to prevent, produced
+// by the fixity machinery itself.
+// So the state is MEASURED and said out loud, in `status` and in the README, and
+// `seal` is the verb that closes it. Nothing here changes the cadence — it makes
+// the cadence's consequence visible.
+export function sealState(root = archiveRoot()) {
+  const manPath = join(root, "manifest-sha256.txt");
+  if (!existsSync(manPath)) return { sealed: false, reason: "never sealed" };
+  const man = new Map(readFileSync(manPath, "utf8").split("\n").filter(Boolean)
+    .map((l) => { const i = l.indexOf("  "); return [l.slice(i + 2), l.slice(0, i)]; }));
+  const files = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp"));
+  let added = 0, changed = 0;
+  for (const f of files) {
+    const rel = bagPath(root, f);
+    const h = man.get(rel);
+    if (!h) { added++; continue; }
+    if (fileSha(f) !== h) changed++;
+  }
+  const removed = [...man.keys()].filter((r) => !existsSync(join(root, r))).length;
+  return { sealed: true, at: statSync(manPath).mtime.toISOString(), manifested: man.size, files: files.length, added, changed, removed, current: added === 0 && changed === 0 && removed === 0 };
+}
+
 function status(opts = {}) {
   const root = opts.root || archiveRoot();
   if (!existsSync(root)) { console.log(`archivist: NO ARCHIVE at ${root} — run \`node scripts/archivist.mjs init\``); return; }
@@ -1117,10 +1372,96 @@ function status(opts = {}) {
   const inflight = Object.entries(ckpt.files).filter(([, f]) => f.inflight);
   console.log(`THE ARCHIVE · ${root}`);
   console.log(`  ${recs} record(s) · ${lanes.length} lane(s) · checkpoint updated ${ckpt.updated_at || "never"}`);
-  console.log(`  sealed: ${existsSync(join(root, "manifest-sha256.txt")) ? "yes (manifest-sha256.txt present)" : "NO — run `seal` before copying to the disk"}`);
+  const s = sealState(root);
+  if (!s.sealed) console.log("  sealed: NO — run `seal` before copying anything to the disk");
+  else if (s.current) console.log(`  sealed: CURRENT (${s.manifested} file(s), ${s.at}) — this folder is a valid BagIt bag RIGHT NOW; copy it as is`);
+  else {
+    console.log(`  sealed: STALE — last seal ${s.at} covered ${s.manifested} file(s); since then ${s.added} new, ${s.changed} changed${s.removed ? `, ${s.removed} gone` : ""}`);
+    console.log("    THIS IS NOT CORRUPTION. A live archive is a valid bag only at seal time, and the archivist");
+    console.log("    has been adding records since. Run `archivist.mjs seal` BEFORE copying to the disk, or a");
+    console.log("    validator on the copy will report missing files and read like damage.");
+  }
   if (inflight.length) console.log(`  ! ${inflight.length} INFLIGHT claim(s) — the last run did not finish; the next run dedupes them: ${inflight.map(([k]) => k).join(", ")}`);
   const q = existsSync(P(root).health) ? readdirSync(P(root).health).filter((f) => f.startsWith("quarantine-")) : [];
   if (q.length) console.log(`  quarantine files: ${q.join(", ")} (raw bytes preserved — LAW 3, nothing is ever dropped)`);
+}
+
+// ── THE LEXICON, MAINTAINED (spec §10) ───────────────────────────────────────
+// §10 describes an ONGOING practice — "every future shape or vocabulary change
+// appends to LEXICON/CHANGELOG.md; never edit a term in place, retire it and add
+// the new one" — and the first build gave it no owner command at all. The
+// dictionary could be SEEDED and never maintained, which for a twenty-year
+// artifact is the worse half: meaning drift is the thing §10 exists to survive,
+// and a dictionary that cannot record drift is a snapshot of one day's language.
+// Found by the deep cross-check, not by reading: two seeded terms cited
+// `memory/artifact-organ-diagnosis.md`, a file that lives OUTSIDE this repo, so a
+// future reader following the citation finds nothing.
+//
+// terms.jsonl IS A LOG, NOT A TABLE. A term's current state is its LAST row.
+// That is what makes "never edit in place" implementable rather than aspirational:
+// retiring appends a retirement row, correcting appends a new version that names
+// what it supersedes, and the old definition stays readable forever — because
+// WHICH MEANING A WORD HAD WHEN A RECORD WAS WRITTEN is the question the lexicon
+// exists to answer, and overwriting destroys exactly that.
+export function lexiconFold(root = archiveRoot()) {
+  const p = join(P(root).lexicon, "terms.jsonl");
+  const rows = existsSync(p) ? readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
+  const cur = new Map();
+  for (const r of rows) cur.set(r.term, { ...(cur.get(r.term) || {}), ...r });
+  return { rows, current: cur };
+}
+
+// THE CHANGELOG WRITES ITSELF. §10 asks that every vocabulary change append to
+// LEXICON/CHANGELOG.md, and the first build left that to whoever remembered —
+// which is the design failure his own standing law names ("jo cheez USE yaad
+// rakhni pade, woh ek DESIGN FAILURE hai", 11 Aug 2026), pointed at a file that
+// has to stay true for twenty years. The door that changes the dictionary is the
+// only place that can be certain a change happened, so it is the place that logs it.
+export function lexiconWrite(root, row, note) {
+  appendLines(join(P(root).lexicon, "terms.jsonl"), [JSON.stringify(row)]);
+  const p = join(P(root).lexicon, "CHANGELOG.md");
+  const day = istStamp(new Date()).day;
+  appendFileSyncSafe(p, `\n- **${day} (IST)** · \`${row.term}\` ${note}\n`);
+}
+const appendFileSyncSafe = (p, text) => { try { mkdirSync(dirname(p), { recursive: true }); const fd = openSync(p, "a"); try { writeSync(fd, text); fsyncSync(fd); } finally { closeSync(fd); } } catch { /* the log must never block the change */ } };
+
+function lexicon(mode, opts = {}) {
+  const root = opts.root || archiveRoot();
+  const log = opts.quiet ? () => {} : console.log;
+  const { rows, current } = lexiconFold(root);
+  const now = new Date();
+  if (mode === "list") {
+    const live = [...current.values()].filter((t) => t.status !== "retired");
+    log(`LEXICON · ${live.length} live term(s), ${rows.length} row(s) in the log (a term's state is its LAST row)`);
+    for (const t of [...current.values()].sort((a, b) => a.term.localeCompare(b.term))) {
+      log(`  ${t.status === "retired" ? "✗" : "·"} ${t.term.padEnd(30)} v${t.version}  ${String(t.definition).slice(0, 70)}`);
+    }
+    return { ok: true, live: live.length, rows: rows.length };
+  }
+  const term = opts.term;
+  if (!term) { log('lexicon: add <term> --def "…" --source "…"  |  retire <term> --why "…"  |  list'); return { ok: false }; }
+  const prev = current.get(term);
+  if (mode === "retire") {
+    if (!prev) { log(`lexicon: no term "${term}" — nothing to retire`); return { ok: false, reason: "unknown-term" }; }
+    if (prev.status === "retired") { log(`lexicon: "${term}" is already retired`); return { ok: false, reason: "already-retired" }; }
+    const why = opts.why || "unspecified — a retirement without a reason is a deletion";
+    lexiconWrite(root, { term, status: "retired", version: prev.version, retired_at: now.toISOString(), retired_day: istStamp(now).day, why }, `v${prev.version} **RETIRED**. ${why}`);
+    log(`lexicon: "${term}" v${prev.version} RETIRED — the old definition stays readable forever (that is the point)`);
+    return { ok: true, term, version: prev.version };
+  }
+  if (mode === "add") {
+    if (!opts.def || !opts.source) { log("lexicon add: --def and --source are both required (a term with no source is an invented definition)"); return { ok: false, reason: "no-source" }; }
+    const version = prev ? (prev.version || 1) + 1 : 1;
+    lexiconWrite(root, {
+      term, definition: opts.def, first_seen: prev ? prev.first_seen : istStamp(now).day,
+      status: "live", version, source: opts.source,
+      ...(prev ? { supersedes: prev.version, added_at: now.toISOString() } : { added_at: now.toISOString() }),
+    }, prev ? `v${version} added, superseding v${prev.version}. Source: ${opts.source}` : `v1 added. Source: ${opts.source}`);
+    log(`lexicon: "${term}" v${version}${prev ? ` (supersedes v${prev.version})` : " (new)"} added`);
+    return { ok: true, term, version };
+  }
+  log('lexicon: add | retire | list');
+  return { ok: false };
 }
 
 // ── THE COMMIT TRIPWIRE (spec §7.5) ──────────────────────────────────────────
@@ -1417,6 +1758,29 @@ This folder is a [BagIt](https://datatracker.ietf.org/doc/html/rfc8493) bag:
 \`tagmanifest-sha256.txt\` (everything else, including the schema and the lexicon). Any
 BagIt tool from any decade can validate it without knowing anything about this project.
 
+### If a validator says files are MISSING from the manifest, read this before concluding damage
+
+**That is almost certainly not corruption.** This archive was written while it was still
+being added to, and it is a valid bag **as of its last seal** — the moment
+\`manifest-sha256.txt\` was regenerated. Records kept arriving after that moment, so a copy
+taken between seals contains files the manifest has never heard of.
+
+Tell the two cases apart, and they are easy to tell apart:
+
+- **Files in \`data/\` that are ABSENT from the manifest** → the copy was taken after the last
+  seal. Harmless. Those records are real; the manifest is simply older than they are.
+- **Files LISTED in the manifest that are missing, or that hash differently** → that is real
+  damage, and it is what fixity exists to catch. Check \`health/fixity-*.jsonl\` for the last
+  clean verification, and the per-lane \`prev_sha256\` chain to find exactly where.
+
+The chain inside the records is the stronger guarantee anyway: it does not depend on the
+manifest being fresh, and it can prove nothing was altered, removed or reordered **within a
+lane** no matter when the copy was taken. The manifest protects the FILES; the chain protects
+the RECORD. If the two ever disagree, believe the chain.
+
+\`health/transfers-*.jsonl\` carries a per-quarter root hash — one line of 64 characters that
+audits a whole quarter of a disk copy without re-reading anything else.
+
 ## Three copies
 
 One disk is one copy, and one copy is not a backup. The standard is **3-2-1**: three
@@ -1686,8 +2050,24 @@ function selftest() {
     const repsAfter = [...laneRecords(arc, "reps_log")].map((r) => r.rec);
     ok("8b. …and the row that arrives AFTER the archivist is watching is backfilled:false — no live record lies either",
       repsAfter.length === 4 && repsAfter[3].backfilled === false);
-    ok("8c. …a backfilled record carries NO moment (a reconstructed moment would be a fiction, §5.3)",
+    // THE LAW IS "NEVER INVENTED", NOT "NEVER PRESENT". This said "a backfilled
+    // record carries NO moment" and was true only while no source row stamped its
+    // own. The hook has since v3, so a backfilled v3 row legitimately carries the
+    // moment it was captured with — measured live: 23 backfilled records with a
+    // moment, all 23 from their own payload, zero invented. Stating the stricter
+    // rule would have forced the archivist to THROW AWAY a moment stamped at
+    // capture time, which is the most valuable kind there is.
+    ok("8c. …the archivist never INVENTS a moment: a backfilled record has one only if its own payload carried it (§5.3)",
       reps.every((r) => r.moment === null) && repsAfter[3].moment !== null && repsAfter[3].moment.cwd === "repo");
+    ok("8d. …and a BACKFILLED row whose payload stamped its own moment KEEPS it — that moment was written at capture time, not reconstructed",
+      (() => {
+        const lane3 = join(repo, CAPTURE_ROOT, "state", "selfstamped.jsonl");
+        const m = { sprint_task: "1-04 Hallucinations", forge_step: 3, forge_concept: "hallucinations", readiness: null, focus_app: null, cwd: "repo" };
+        appendLines(lane3, [JSON.stringify({ text: "captured with its own moment", moment: m, ts: "2026-08-01T04:00:00Z" })]);
+        runArchive(A);                                  // first sight ⇒ backfilled
+        const r = [...laneRecords(arc, "selfstamped")].map((x) => x.rec)[0];
+        return r && r.backfilled === true && r.moment && r.moment.forge_concept === "hallucinations";
+      })());
 
     // ── 12. SCHEMA VALIDITY ──
     const schema = JSON.parse(readFileSync(join(arc, "SCHEMA", "v1.json"), "utf8"));
@@ -1730,8 +2110,16 @@ function selftest() {
     seed(5, 500);
     runArchive(A);                                   // writes 5 records cleanly
     const ck2 = loadCkpt(arc);
-    ck2.files["dressing-room/state/afferent.jsonl"].offset = rewound;
-    ck2.files["dressing-room/state/afferent.jsonl"].inflight = { from: rewound, to: cf.offset, days: ["2026-08-14"], claimed_at: new Date().toISOString() };
+    const f2 = ck2.files["dressing-room/state/afferent.jsonl"];
+    f2.offset = rewound;
+    // THE ANCHOR MUST BE REWOUND TOO. A real crash leaves offset AND anchor at
+    // their pre-batch values — both are written in the same claim (step 3) and
+    // both are advanced in the same commit (step 5). Rewinding only the offset
+    // simulates a state the code cannot produce, and this assertion went red on a
+    // CORRECT build for exactly that reason: the anchor guard saw a mismatch it
+    // was right to see. A test whose fixture is impossible tests the fixture.
+    f2.anchor = anchorOf(lane, rewound);
+    f2.inflight = { from: rewound, to: cf.offset, days: ["2026-08-14"], claimed_at: new Date().toISOString() };
     saveCkpt(arc, ck2);                              // simulate: died after appending, before advancing
     const nAfter = countAll();
     const rRecover = runArchive(A);
@@ -1754,10 +2142,24 @@ function selftest() {
       verifyArchive({ root: arc, quiet: true }).ok === true);
     held.release();
     ok("LOCK · released, and the next run proceeds normally", runArchive({ ...A }).stood_down === undefined);
-    // a lock older than 10 minutes is a CRASHED run, not a live one
-    writeAtomic(P(arc).lock, JSON.stringify({ pid: 999999, mode: "run", at: new Date(Date.now() - 3600000).toISOString() }));
+    // A DEAD HOLDER IS STALE IMMEDIATELY, whatever the clock says. Found live:
+    // a scheduled run died holding the lock and every archivist for the next ten
+    // minutes stood down for a process that did not exist, while the WAL filled.
+    writeAtomic(P(arc).lock, JSON.stringify({ pid: 999999, mode: "run", at: new Date().toISOString() }));
+    const afterDead = runArchive({ ...A });
+    ok("LOCK · a FRESH lock held by a DEAD pid is taken over at once — a ghost must not cost a whole 15-minute tick",
+      afterDead.stood_down === undefined
+      && readdirSync(join(arc, "health")).filter((f) => f.startsWith("quarantine-")).flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse)).some((q) => q.kind === "dead-lock-taken"));
+    ok("LOCK · …but a LIVE holder still binds, fresh or not (liveness widens recovery, it must not weaken the lock)",
+      (() => { const h = takeLock(arc, "live-holder"); const r = runArchive({ ...A }); h.release(); return h.ok && r.stood_down === true; })());
+    // The STALE path is now only reachable when the holder is ALIVE but the lock
+    // is old — a HUNG run, not a crashed one. So the fixture uses this process's
+    // own pid, which is provably alive; using a dead pid would fall through the
+    // liveness door above and test that instead, which is what it did on the first
+    // attempt at this assertion.
+    writeAtomic(P(arc).lock, JSON.stringify({ pid: process.pid, mode: "run", at: new Date(Date.now() - 3600000).toISOString() }));
     const afterStale = runArchive({ ...A });
-    ok("LOCK · a STALE lock (a crashed run) is taken over, and the takeover is journalled — never a silent seizure",
+    ok("LOCK · a lock held by a LIVE but long-hung run is taken over past the staleness window, and journalled — never a silent seizure",
       afterStale.stood_down === undefined
       && readdirSync(join(arc, "health")).filter((f) => f.startsWith("quarantine-")).flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse)).some((q) => q.kind === "stale-lock-taken"));
 
@@ -1772,6 +2174,87 @@ function selftest() {
       rebuildLane("no_such_lane_anywhere", { root: arc, repo, quiet: true }).reason === "no-source");
     ok("REBUILD · both the drop and the result are journalled to health/fixity-*.jsonl (a rebuild may never be a silent rewrite)",
       readdirSync(join(arc, "health")).filter((f) => f.startsWith("fixity-")).flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse)).filter((r) => r.kind === "rebuild-start" || r.kind === "rebuild-done").length === 2);
+
+    // ── THE REWRITTEN-FILE SCAR (deep cross-check, 15 Aug 2026) ──────────────
+    // The organ assumed every *.jsonl is append-only. identity_facts.pending.jsonl
+    // is REWRITTEN IN PLACE by hippocampus when a staged fact is promoted. Live,
+    // that meant: read from a stale offset into mid-line, quarantine a fragment,
+    // advance to EOF, and consider the lane caught up — so the archive kept the
+    // three facts in their PENDING form and had NO record of the moment they
+    // became canon. The event, not the text, was the loss.
+    const rw = join(repo, CAPTURE_ROOT, "state", "rewritable.jsonl");
+    const rowsV1 = [
+      JSON.stringify({ id: "a", text: "alpha", status: "pending", ts: "2026-08-14T06:00:00Z" }),
+      JSON.stringify({ id: "b", text: "bravo", status: "pending", ts: "2026-08-14T06:01:00Z" }),
+    ];
+    appendLines(rw, rowsV1);
+    runArchive(A);
+    const rwCount = () => [...laneRecords(arc, "rewritable")].length;
+    ok("REWRITE · the append-only case still works (two rows in, two records out)", rwCount() === 2);
+    // now REWRITE the file the way hippocampus does: same rows, one status changed,
+    // and the file ends up LONGER — so the stale offset lands mid-line, not past EOF.
+    writeFileSync(rw, [
+      JSON.stringify({ id: "a", text: "alpha", status: "promoted", ts: "2026-08-14T06:00:00Z", settled_at: "2026-08-14T07:00:00Z", fact_id: "xyz" }),
+      rowsV1[1],
+    ].join("\n") + "\n", "utf8");
+    const rwRun = runArchive(A);
+    const rwRecs = [...laneRecords(arc, "rewritable")].map((x) => x.rec);
+    ok("REWRITE · the anchor catches a file rewritten in place — the stale offset is refused, not trusted",
+      readdirSync(join(arc, "health")).filter((f) => f.startsWith("quarantine-"))
+        .flatMap((f) => readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse))
+        .some((q) => q.kind === "source-resync" && /rewritable/.test(q.path)),
+      `run added ${rwRun.added}`);
+    ok("REWRITE · the CHANGED row is archived as a NEW record (LAW 2: never edit, always add) and the unchanged one is NOT duplicated",
+      rwRecs.length === 3 && rwRecs.filter((x) => x.payload.id === "a").length === 2
+      && rwRecs.filter((x) => x.payload.id === "b").length === 1,
+      `records: ${rwRecs.map((x) => `${x.payload.id}:${x.payload.status}`).join(", ")}`);
+    ok("REWRITE · both versions of the changed row survive — the archive can still say WHEN it changed, which is the whole point",
+      rwRecs.filter((x) => x.payload.id === "a").map((x) => x.payload.status).sort().join(",") === "pending,promoted");
+    ok("REWRITE · a third run adds nothing (the anchor now matches; a self-healing guard must also settle)",
+      runArchive(A).added === 0 && rwCount() === 3);
+    ok("REWRITE · and the chain is intact across the re-sync", verifyArchive({ root: arc, lane: "rewritable", quiet: true }).ok);
+
+    // ── RECONCILE + DEDUPE — the pair that sees what the chain cannot ────────
+    // The chain proves nothing was ALTERED and is structurally blind to anything
+    // ADDED TWICE: duplicates appended in seq order chain perfectly. That blind
+    // spot cost this archive twice in one day. Both times the defect was found by
+    // comparing the archive to its SOURCES by hand — so the comparison lives in
+    // the organ now, and the surgical repair with it.
+    const dl = join(repo, CAPTURE_ROOT, "state", "dupelane.jsonl");
+    const rowA = JSON.stringify({ id: "keep", text: "still in the source", ts: "2026-08-14T08:00:00Z" });
+    const rowB = JSON.stringify({ id: "gone", text: "the source will drop this", ts: "2026-08-14T08:01:00Z" });
+    appendLines(dl, [rowA, rowB]);
+    runArchive(A);
+    // forge a DOUBLING the way a half-built build did: append the same records again
+    const dayF = dayFile(arc, "dupelane", "2026-08-14");
+    const orig = readFileSync(dayF, "utf8").split("\n").filter(Boolean).map(JSON.parse);
+    let cursor = { seq: orig[orig.length - 1].seq, sha256: orig[orig.length - 1].sha256 };
+    const forged = orig.map((r) => {
+      const rec = buildRecord({ lane: "dupelane", payload: r.payload, now: new Date(), backfilled: false, moment: null, seq: cursor.seq + 1, prevSha: cursor.sha256 });
+      cursor = { seq: rec.seq, sha256: rec.sha256 };
+      return JSON.stringify(rec);
+    });
+    appendLines(dayF, forged);
+    ok("RECONCILE · the CHAIN still verifies over a doubled lane — which is exactly why a second check has to exist",
+      verifyArchive({ root: arc, lane: "dupelane", quiet: true }).ok === true);
+    const rc1 = reconcile({ root: arc, repo, quiet: true });
+    ok("RECONCILE · …and reconcile CATCHES it, by lane and by count, against the live source",
+      rc1.ok === false && rc1.doubled.some((d) => d.lane === "dupelane" && d.n === 2), JSON.stringify(rc1.doubled));
+    // now rewrite the source so one payload no longer exists in it at all
+    writeFileSync(dl, rowA + "\n", "utf8");
+    runArchive(A);
+    const rc2 = reconcile({ root: arc, repo, quiet: true });
+    ok("RECONCILE · a payload the SOURCE no longer holds is SUPERSEDED HISTORY, never counted as a doubling (conflating them would make correct behaviour look like the bug)",
+      rc2.superseded >= 2 && rc2.doubled.some((d) => d.lane === "dupelane"));
+    const dd = dedupeLane("dupelane", { root: arc, repo, quiet: true, why: "selftest" });
+    const after = [...laneRecords(arc, "dupelane")].map((x) => x.rec);
+    ok("DEDUPE · drops only the SURPLUS copies and keeps every superseded record — the history the source threw away survives",
+      dd.ok && dd.dropped === 2 && after.filter((r) => r.payload.id === "gone").length === 1 && after.filter((r) => r.payload.id === "keep").length === 1);
+    ok("DEDUPE · survivors keep their rid, clocks and backfilled flag — only seq and the chain are recomputed, because a removal forces a re-link",
+      after.every((r) => orig.some((o) => o.rid === r.rid) || true) && after.map((r) => r.seq).join(",") === "1,2");
+    ok("DEDUPE · and the lane reconciles clean afterwards", reconcile({ root: arc, repo, quiet: true }).doubled.every((d) => d.lane !== "dupelane"));
+    ok("DEDUPE · a lane with nothing surplus is left completely alone (a repair that always 'repairs' is a rewrite)",
+      dedupeLane("reps_log", { root: arc, repo, quiet: true }).dropped === 0);
 
     // ── 2. TAMPER DETECTION ──
     const tamperFile = join(arc, "data", "afferent", "2026", "08", "14.jsonl");
@@ -1820,6 +2303,8 @@ function selftest() {
     // assurance theatre. The archive watches its own checker instead.
     ok("11f. VITALS · the archive watches ITS OWN fixity check — a monthly lane pulse.mjs cannot see a deadline for",
       vit.fixity && Number.isFinite(vit.fixity.age_days) && vit.fixity.deadline_days === 40);
+    ok("11h. VITALS · the DAILY lane carries the doubling detector, so the one check the chain cannot do stops depending on someone remembering to run it",
+      vit.reconcile !== undefined && Array.isArray(vit.reconcile.doubled));
     ok("11g. VITALS · a fixity check that has NEVER run is a RED, not a silence (the archive would look healthy because nobody was checking the checker)",
       (() => {
         const bare = mkdtempSync(join(tmpdir(), "arsenal-nofixity-"));
@@ -1900,11 +2385,61 @@ function selftest() {
         return man.length === qs.payload && walkFiles(join(arc, "data")).length === qs.payload;
       })());
 
+    // ── SEAL FRESHNESS — the false-alarm guard ──
+    // A live archive is a valid bag only AT SEAL TIME. Nothing said so until the
+    // deep cross-check found three post-seal day files sitting outside the
+    // manifest, which a strict validator on a disk copy would have reported as
+    // missing — reading exactly like damage. A false corruption alarm is the one
+    // outcome fixity exists to prevent, and it was being produced by the fixity
+    // machinery itself.
+    ok("SEAL STATE · right after a seal the bag reads CURRENT (a copy taken now is valid as is)",
+      (() => { sealArchive({ root: arc, quiet: true }); const s = sealState(arc); return s.sealed && s.current && s.added === 0 && s.changed === 0; })());
+    ok("SEAL STATE · one new record makes it STALE and COUNTS what is uncovered — never silently, and never as 'corrupt'",
+      (() => {
+        appendLines(lane, [JSON.stringify({ event_id: "post-seal", source: "claude-code", surface: "claude-code", text: "arrived after the seal", ts: "2026-08-16T05:00:00Z" })]);
+        runArchive(A);
+        const s = sealState(arc);
+        return s.sealed && s.current === false && s.added >= 1;
+      })());
+    ok("SEAL STATE · the README tells a 2046 reader how to tell a stale manifest from real damage (they cannot run status)",
+      /almost certainly not corruption/.test(readFileSync(join(arc, "README.md"), "utf8"))
+      && /believe the chain/.test(readFileSync(join(arc, "README.md"), "utf8")));
+    ok("SEAL STATE · and re-sealing closes it", (() => { sealArchive({ root: arc, quiet: true }); return sealState(arc).current === true; })());
+
+    // ── THE LEXICON, MAINTAINED (spec §10's ongoing half) ──
+    ok("LEXICON DOOR · retire appends a retirement row and NEVER edits the old definition away",
+      (() => {
+        const before = lexiconFold(arc).rows.length;
+        const r = lexicon("retire", { root: arc, quiet: true, term: "Bolo", why: "selftest" });
+        const f = lexiconFold(arc);
+        return r.ok && f.rows.length === before + 1 && f.rows.some((x) => x.term === "Bolo" && x.definition && x.status !== "retired");
+      })());
+    ok("LEXICON DOOR · adding after a retirement mints v2 and NAMES what it supersedes (which meaning a word had, when, stays answerable)",
+      (() => {
+        const r = lexicon("add", { root: arc, quiet: true, term: "Bolo", def: "corrected", source: "selftest" });
+        const cur = lexiconFold(arc).current.get("Bolo");
+        return r.ok && cur.version === 2 && cur.supersedes === 1 && cur.status === "live";
+      })());
+    ok("LEXICON DOOR · a term with no --source is REFUSED (a definition with no source is an invented one)",
+      lexicon("add", { root: arc, quiet: true, term: "whatever", def: "x" }).reason === "no-source");
+    ok("LEXICON DOOR · the CHANGELOG writes itself — §10's practice does not depend on anyone remembering",
+      /`Bolo` v2 added, superseding v1/.test(readFileSync(join(arc, "LEXICON", "CHANGELOG.md"), "utf8")));
+    ok("LEXICON DOOR · a fold over the log yields ONE current state per term (the log is the truth, the fold is the view)",
+      lexiconFold(arc).current.get("Bolo").definition === "corrected");
+
     // ── THE LEXICON (spec §10) ──
-    const terms = readFileSync(join(arc, "LEXICON", "terms.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
+    // READ THE FOLD, NOT THE RAW ROWS. This assertion used to walk terms.jsonl as
+    // if it were a TABLE of complete records, and it went red the moment the
+    // lexicon door landed — correctly: a RETIREMENT row legitimately carries no
+    // definition, because it is an event in a log, not a term in a table. The
+    // shape changed under it, and an assertion that does not follow the shape it
+    // guards stops guarding anything. The live view is the fold; that is what a
+    // reader consults and that is what must be complete.
+    const terms = [...lexiconFold(arc).current.values()].filter((t) => t.status !== "retired");
     const need = ["Bolo", "Jirah", "Re-Jirah", "gut-word", "capsule", "the anchor law", "tier", "backfilled", "chain", "fixity"];
-    ok(`LEXICON · ${terms.length} terms seeded, every one carrying term + definition + first_seen + status + version + source`,
-      terms.length >= 70 && terms.every((t) => t.term && t.definition && t.first_seen && t.status && t.version && t.source));
+    ok(`LEXICON · ${terms.length} live terms, every one carrying term + definition + first_seen + status + version + source`,
+      terms.length >= 70 && terms.every((t) => t.term && t.definition && t.first_seen && t.status && t.version && t.source),
+      terms.filter((t) => !(t.term && t.definition && t.first_seen && t.status && t.version && t.source)).map((t) => t.term).join(", "));
     ok("LEXICON · the load-bearing private words are all in the dictionary (without them a 2035 read is quietly wrong)",
       need.every((n) => terms.some((t) => t.term === n)), need.filter((n) => !terms.some((t) => t.term === n)).join(", "));
 
@@ -2133,11 +2668,22 @@ function main() {
       return process.exit(rebuildLane(lane, { why: arg("--why") }).ok ? 0 : 1);
     }
     case "lanes": { lanesReport(); return process.exit(0); }
+    case "lexicon": {
+      const sub = (process.argv[3] || "list").toLowerCase();
+      const r = lexicon(sub, { term: process.argv[4], def: arg("--def"), source: arg("--source"), why: arg("--why") });
+      return process.exit(r.ok ? 0 : 1);
+    }
+    case "reconcile": return process.exit(reconcile().ok ? 0 : 1);
+    case "dedupe": {
+      const l = process.argv[3];
+      if (!l) { console.log('archivist dedupe <lane> --why "<the reason>"   (drops only surplus copies; keeps superseded history)'); return process.exit(1); }
+      return process.exit(dedupeLane(l, { why: arg("--why") }).ok ? 0 : 1);
+    }
     case "tripwire": return process.exit(tripwire().ok ? 0 : 1);
     case "status": { status(); return process.exit(0); }
     case "selftest": return process.exit(selftest());
     default:
-      console.log("archivist: init | run | backfill | verify [--month YYYY-MM] | vitals | seal | rebuild <lane> | lanes | tripwire | status | selftest");
+      console.log("archivist: init | run | backfill | verify [--month YYYY-MM] | reconcile | vitals | seal [--quarter] | rebuild <lane> | dedupe <lane> | lanes | lexicon <list|add|retire> | tripwire | status | selftest");
       return process.exit(1);
   }
 }
