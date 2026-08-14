@@ -125,9 +125,29 @@ const ARG_PROFILE = () => {
 // choice above is untouched and ARGS_LEGACY still agrees argv-for-argv on every
 // existing call (extra defaults to [], and [...x].concat([]) is x). A caller that
 // passes nothing gets exactly the bytes it got yesterday.
-const ARGS = (model, extra = []) => {
+// `systemPrompt` (14 Aug 2026, unleash Phase 1) — the SPLIT's door on this
+// engine. When a caller hands over its own stable head, it REPLACES the 84-char
+// ORGAN_SYSTEM_PROMPT in the lean pair (`--tools ""` and --strict-mcp-config are
+// untouched), so a lane that repeats inside the 5-min TTL can cache-READ its
+// head instead of re-writing it. Nothing calls it yet by design — the plan's
+// step 5 is plumbing so dmn.mjs can adopt the split without touching argv, and
+// dmn's prompts are explicitly out of scope this phase. On the full-CLI lanes it
+// is IGNORED, not smuggled in: those lanes are the shim/revert paths, and a
+// spaced system-prompt through shell:true is exactly what the SHIM GUARD above
+// exists to refuse. NB before wiring a caller: measured 14 Aug, a system block
+// under the model's minimum (sonnet 1024 tokens) is not cached at all — see the
+// probe record in brain.mjs above splitPrompt().
+const ARGS = (model, extra = [], systemPrompt = null) => {
   const base = ["-p", "--output-format", "json", "--model", model || "sonnet"];
-  const chosen = ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+  const profile = ARG_PROFILE() === "lean" ? [...base, ...LEAN_ARGS] : base;
+  // THE SWAP IS APPLIED AFTER THE PROFILE, NEVER INSIDE IT. limits.mjs asserts
+  // this line's exact shape ("ARGS is still DERIVED from that name") precisely so
+  // the reported lane can never drift from the argv sent — folding the override
+  // into the ternary satisfied the compiler and broke the guard on the first try.
+  // Only the VALUE after --system-prompt changes, and only on the lean lane.
+  const chosen = (systemPrompt && String(systemPrompt).length <= 26000 && ARG_PROFILE() === "lean")
+    ? profile.map((a, i) => (profile[i - 1] === "--system-prompt" ? String(systemPrompt) : a))
+    : profile;
   if (!Array.isArray(extra) || !extra.length) return chosen;
   // A CALLER THAT ASKS FOR A TOOL MUST NOT BE SILENTLY DISARMED (11 Aug 2026).
   // LEAN_ARGS carries `--tools ""` — the organ lane runs tool-less by design — so

@@ -44,6 +44,17 @@
 //          rides in reconcile.json and on stdout, where verdicts belong.
 //        · ABSENCE IS NOT FAILURE. A job that has never run is reported as
 //          "never produced", never as "stale" — they are different facts.
+//        · A DECLARED REFUSAL IS NOT A DEAD LANE (14 Aug 2026, the unleash
+//          plan's Phase −1). Some lanes REFUSE BEFORE SPEND by design when
+//          their inventory is empty — `dreams` is the built case: "few axes =
+//          few dreams is honest, none = none" (brain.mjs:2766). Such a lane
+//          RUNS on schedule and correctly writes nothing, so freshness-of-
+//          artifact alone called it STALE and reddened the whole suite through
+//          pulse `alive` for four days. The distinction is measured, never
+//          assumed: the brain ledger's own newest row for that job, inside the
+//          same cadence window, with total_tokens 0 and a note beginning
+//          "skipped before spend" = the lane is ALIVE and EMPTY (a note). Any
+//          other failure, or no run at all in the window, still bleeds STALE.
 //
 // MODES: node scripts/reconcile.mjs [report] · json · selftest
 // ============================================================================
@@ -144,6 +155,46 @@ function expectedMaxAgeHours(job) {
 }
 
 // ---------------------------------------------------------------------------
+// THE LEDGER READ — did the lane RUN, and what did it say? (14 Aug 2026)
+// ---------------------------------------------------------------------------
+// brain_ledger.jsonl is the SHARED APPEND LANE (CLAUDE.md's one documented
+// exception to single-writer); this only ever READS its tail. Fail-silent by
+// design and fail-CLOSED in effect: an unreadable ledger yields no rows, so
+// every stale lane keeps its bleed — the exemption below can only be granted
+// on evidence, never on the absence of it.
+// The path is a module-level CONST, and the selftest injects `deps.ledgerRows`
+// (fixtures, never a file) rather than a path — so xray's points-to analysis
+// resolves this sink instead of banking it as another Unknown.
+const REFUSAL_RE = /^skipped before spend/;
+const LEDGER_PATH = join(STATE_DIR, "brain_ledger.jsonl");
+export function lastRunsByJob(deps = {}) {
+  if (deps.ledgerRows) {
+    const by = {};
+    for (const r of deps.ledgerRows) { if (r && r.job) by[r.job] = r; }   // file order = time order
+    return by;
+  }
+  let lines = [];
+  try { lines = readFileSync(LEDGER_PATH, "utf8").split("\n"); } catch { return {}; }
+  const by = {};
+  // walk the whole file forward; last row per job wins (append-only ⇒ ordered)
+  for (const l of lines) {
+    if (!l.trim()) continue;
+    let r; try { r = JSON.parse(l); } catch { continue; }   // torn row — keep walking
+    if (r && r.job) by[r.job] = r;
+  }
+  return by;
+}
+
+// A row is a DECLARED REFUSAL only if the organ spent nothing AND said so in the
+// shape brain.mjs writes for its two pre-spend returns (required-input-absent,
+// empty inventory). An ordinary failure — timeout, bad JSON, model error — is
+// NOT this, and must keep bleeding.
+export function isRefusalBeforeSpend(row) {
+  return !!row && row.ok === false && (row.total_tokens === 0 || row.total_tokens == null)
+    && REFUSAL_RE.test(String(row.note || ""));
+}
+
+// ---------------------------------------------------------------------------
 // PASS 1 — the brain lanes
 // ---------------------------------------------------------------------------
 // A lane can be consumed in three different ways, and only one of them is a plain
@@ -181,6 +232,7 @@ function reconcileBrainLanes(deps = {}) {
   // bleeds would be noise that buries the real findings (the unread lanes, which are
   // still true while paused). Same law as the disabled-job case: absence ≠ failure.
   const paused = cfg && cfg.paused === true;
+  const lastRuns = lastRunsByJob(deps);
   const rows = [];
 
   for (const job of (cfg && cfg.jobs) || []) {
@@ -240,13 +292,35 @@ function reconcileBrainLanes(deps = {}) {
         notes.push(`re-enable condition MET — disabled, yet ${uniqueConsumers.length} reader(s) reference brain_out/${job.out}: ${uniqueConsumers.slice(0, 4).join(", ")}`);
       }
     } else if (newestMs === null) {
-      bleeds.push(fileCount === 0 && !existsSync(dir)
+      // A LANE YOUNGER THAN ITS OWN CADENCE HAS NOT FAILED — IT HAS NOT BEEN
+      // ASKED YET (14 Aug 2026). "never produced" is this file's loudest class
+      // and it is right to be: diary was enabled, nightly, with three wired
+      // readers and had never written a page. But a job ADDED TODAY is a
+      // different fact wearing the same clothes, and on the day it lands the
+      // suite goes red for a lane that is working exactly as designed — which
+      // trains a reader to ignore the loudest signal in the report.
+      // The birthday is DECLARED, never inferred: a job may carry `_added`
+      // (YYYY-MM-DD). Inside one cadence of that date the absence is a note.
+      // Past it, the bleed returns automatically with no cleanup to remember —
+      // the note cannot rot into a permanent excuse.
+      const born = job._added ? Date.parse(job._added + "T00:00:00") : NaN;
+      const bornHoursAgo = Number.isFinite(born) ? (now.getTime() - born) / 3600000 : null;
+      const notDueYet = bornHoursAgo !== null && bornHoursAgo <= maxAge;
+      const line = fileCount === 0 && !existsSync(dir)
         ? `never produced — ${job.out}/ does not exist`
-        : `never produced — ${job.out}/ is empty`);
+        : `never produced — ${job.out}/ is empty`;
+      if (notDueYet) notes.push(`${line} — but the lane was ADDED ${job._added} (${Math.round(bornHoursAgo)}h ago) and its cadence allows ${Math.round(maxAge)}h: it has not been asked yet, and this becomes a bleed on its own the moment it is late`);
+      else bleeds.push(line);
     } else if (ageHours > maxAge) {
       const line = `newest ${job.out}/ file is ${Math.round(ageHours)}h old, cadence allows ${Math.round(maxAge)}h`;
+      const lastRun = lastRuns[job.id];
+      const lastRunMs = lastRun ? Date.parse(lastRun.ts || 0) : NaN;
+      const ranInWindow = Number.isFinite(lastRunMs) && (now.getTime() - lastRunMs) / 3600000 <= maxAge;
       if (paused) notes.push(`stale, but the brain is PAUSED (brain_config.paused) — expected: ${line}`);
-      else bleeds.push(`stale — ${line}`);
+      else if (ranInWindow && isRefusalBeforeSpend(lastRun)) {
+        // ALIVE AND EMPTY: it ran, it refused before spending, it said why.
+        notes.push(`no artifact, but the lane RAN and refused BEFORE SPEND ${Math.round((now.getTime() - lastRunMs) / 3600000)}h ago — ${String(lastRun.note || lastRun.error || "").slice(0, 120)} (${line})`);
+      } else bleeds.push(`stale — ${line}`);
     }
     if (enabled && !uniqueConsumers.length) {
       // H0 FLOW AUDIT (10 Aug 2026): brain_config's _surface_law defined kind
@@ -465,6 +539,51 @@ function selftest() {
     und("vault_lane") && und("vault_lane").vaulted === true && und("vault_lane").orphan === false);
   ok("PASS 1b — an undeclared dir WITHOUT the marker still surfaces as an orphan",
     und("side_lane") && und("side_lane").orphan === true);
+
+  // --- A NEWBORN LANE HAS NOT FAILED (14 Aug 2026) --------------------------
+  const cfgNew = { jobs: [
+    { id: "newborn",  out: "never_lane", enabled: true, at: "03:10", _added: "2026-08-04" },   // `now` in this selftest IS 2026-08-04
+    { id: "overdue",  out: "never_lane", enabled: true, at: "03:10", _added: "2026-07-01" },
+    { id: "undated",  out: "never_lane", enabled: true, at: "03:10" },
+  ] };
+  const rNew = build({ cfg: cfgNew, corpus: [{ file: "viz.mjs", text: `join("brain_out/never_lane", d);` }], now, outDir, stateDir: join(root, "nostate") });
+  const laneOf = (id) => rNew.lanes.find((x) => x.job === id);
+  ok("a lane ADDED today is NOT-DUE-YET (a note), not 'never produced' (a bleed)",
+    laneOf("newborn").bleeds.length === 0 && laneOf("newborn").notes.some((n) => /has not been asked yet/.test(n)));
+  ok("...and the excuse EXPIRES on its own: a lane added five weeks ago still bleeds",
+    laneOf("overdue").bleeds.some((b) => /never produced/.test(b)));
+  ok("...and a lane with no declared birthday is judged exactly as before (no silent amnesty)",
+    laneOf("undated").bleeds.some((b) => /never produced/.test(b)));
+
+  // --- A DECLARED REFUSAL IS NOT A DEAD LANE (14 Aug 2026) -----------------
+  // The live case that reddened the suite for four days: `dreams` runs nightly,
+  // finds the cracked-axes inventory empty, refuses BEFORE SPEND, and writes no
+  // file — freshness alone called that "stale". Three witnesses, because the
+  // exemption must be exactly as narrow as the fact it encodes.
+  const cfg5 = { jobs: [{ id: "refuser", out: "stale_lane", enabled: true, at: "08:00" }] };
+  const corpus5 = [{ file: "viz.mjs", text: `join("brain_out/stale_lane", d);` }];
+  const staleOf = (rr) => rr.lanes[0].bleeds.filter((b) => /stale/.test(b));
+  const rRefuse = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+    ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 3 * 3600000).toISOString(), ok: false, total_tokens: 0,
+      note: "skipped before spend — the cracked-axes inventory is EMPTY" }] });
+  ok("REFUSAL-BEFORE-SPEND inside the cadence window is a NOTE, not a stale bleed (the lane ran and correctly said nothing)",
+    staleOf(rRefuse).length === 0 && rRefuse.lanes[0].notes.some((n) => /refused BEFORE SPEND/.test(n)));
+  const rFail = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+    ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 3 * 3600000).toISOString(), ok: false, total_tokens: 4210,
+      error: "claude exited 1", note: "model call failed" }] });
+  ok("...but a GENUINE FAILURE in the same window still bleeds STALE — the exemption is for refusals only",
+    staleOf(rFail).length === 1);
+  const rOld = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+    ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 20 * 24 * 3600000).toISOString(), ok: false, total_tokens: 0,
+      note: "skipped before spend — the cracked-axes inventory is EMPTY" }] });
+  ok("...and a lane that STOPPED RUNNING still bleeds, however honest its last refusal was (the window is the test)",
+    staleOf(rOld).length === 1);
+  ok("...and with NO ledger readable at all the bleed stands — the exemption needs evidence, never its absence",
+    staleOf(build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"), ledgerRows: [] })).length === 1);
+  ok("isRefusalBeforeSpend rejects an ok row, a spent row, and a row with no note",
+    !isRefusalBeforeSpend({ ok: true, total_tokens: 0, note: "skipped before spend — x" }) &&
+    !isRefusalBeforeSpend({ ok: false, total_tokens: 9, note: "skipped before spend — x" }) &&
+    !isRefusalBeforeSpend({ ok: false, total_tokens: 0 }));
 
   // --- THE THREE FALSE POSITIVES from the first live run -------------------
   // A reconciler that cries wolf is the exact defect it exists to remove, so each

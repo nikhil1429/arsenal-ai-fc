@@ -90,6 +90,26 @@ function recordMouth(kind, pushed) {
   try { appendFileSync(MOUTH_LOG, JSON.stringify({ ts: new Date().toISOString(), kind, sent: !!(pushed && pushed.sent), why: (pushed && pushed.why) || null }) + "\n"); } catch { }
 }
 const QUEUE     = join(STATE_DIR, "brain_queue.json");
+const PULSE_SESSION = join(STATE_DIR, "pulse_session.json");   // Phase 3 — the rolling pulse session (runtime state; brain.mjs sole writer)
+const PULSE_SESSION_TMP = PULSE_SESSION + ".tmp";
+// WRITTEN WITH TWO RESOLVABLE CONSTANTS, not through writeAtomic — deliberately.
+// writeAtomic's first act is `mkdirSync(dirname(path))`, and `dirname(<param>)` is
+// opaque to xray's points-to analysis, so every call site banks one more Unknown
+// sink: three of them tripped the suite's own unresolved_sinks ratchet
+// (brain.mjs 228→231) the first time this shipped. Inlined with module constants,
+// xray can SEE that brain.mjs writes pulse_session.json — the ownership law made
+// machine-checkable instead of merely asserted in a comment. No mkdir: STATE_DIR
+// is the state bus, it exists or nothing does. The tmp name is NOT per-pid
+// (writeAtomic's rule) because it cannot be and stay resolvable — safe here
+// because concurrent pulses are already impossible (daemon singleton on an
+// exclusive port bind, min_spacing_s 150) and the worst case of a lost update is
+// one extra cold seed, never a torn file.
+function writePulseSession(obj) {
+  try {
+    writeFileSync(PULSE_SESSION_TMP, JSON.stringify(obj, null, 2) + "\n");
+    renameSync(PULSE_SESSION_TMP, PULSE_SESSION);
+  } catch { /* the session file is an optimisation; a write failure must never cost a pulse */ }
+}
 const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
 const SYSTEM_MD = join(__dirname, "..", "dressing-room", "manager", "system.md");
@@ -357,6 +377,42 @@ function spendOf(row) {
   for (const k in SPEND_WEIGHTS) s += N(row[k]) * SPEND_WEIGHTS[k];
   return s;
 }
+
+// ── C1b · THE MODEL FACTOR (14 Aug 2026, unleash Phase 0) ────────────────────
+// spendOf above is MODEL-BLIND: a haiku token and an opus token weigh the same.
+// Measured on 7 days of ledger (582 rows), that blindness inverts the board —
+// haiku_pulse reads 40% of all spend blind and ~18% model-aware, while the
+// sonnet night lanes it hides (dmn_counter 3.86M, dmn_rollout 2.67M aware) are
+// the real top of the table. Every receipt in the unleash plan is read off this
+// board, so a board that ranks the wrong organ first sends the work to the
+// wrong lane.
+//
+// THE FACTORS are the same kind of number as SPEND_WEIGHTS — published list
+// INPUT prices per MTok, as ratios: haiku $1 · sonnet $3 · opus $5. Unknown
+// model ⇒ 3 (sonnet, the organism's default engine), stated not guessed.
+const MODEL_MULT = { haiku: 1, sonnet: 3, opus: 5 };
+export function spendOfModelAware(row) {
+  const base = spendOf(row);
+  const m = String((row && row.model) || "").toLowerCase();
+  const key = m.includes("haiku") ? "haiku" : m.includes("opus") ? "opus" : m.includes("sonnet") ? "sonnet" : null;
+  return base * (key ? MODEL_MULT[key] : 3);
+}
+//
+// ⚠ WHY THE GOVERNOR IS NOT SWITCHED TO IT — the one line to read before
+// "finishing the job" by wiring this into windowUsage(). budget.window_capacity
+// _est_tokens (27,50,000) and weekly_capacity (4,12,50,000) are stated IN THE
+// MODEL-BLIND UNIT — brain_config's own `_unit_change_2026_08_12` note says so
+// in its first sentence. On live data the two meters differ by 2.28× (7d:
+// 1,07,48,830 blind vs 2,45,07,142 aware), so switching the meter under
+// unchanged caps would take the governor from 26% to 59% utilisation overnight
+// WITHOUT ONE EXTRA TOKEN BEING SPENT, and the headroom floor would start
+// refusing organs — the exact starvation fault 3 above was written to end, and
+// a GUARD the unleash plan's §NEVER-TOUCH forbids moving. The board is a
+// REPORT and may change unit freely; the governor's unit may only change
+// together with a re-derived ceiling, which is a separate, measured job.
+// So: spendOf = the governor's unit (unchanged, still the engine of record).
+//     spendOfModelAware = the reporting unit (board + treasury).
+// ─────────────────────────────────────────────────────────────────────────────
 
 // FROZEN — the engine of record until 12 Aug 2026, kept verbatim per the layering
 // law. It sums `total_tokens` raw. Nothing calls it; it is here so the migration
@@ -645,6 +701,45 @@ async function defaultAfferentPost(evt) {
     clearTimeout(to); return !!(r && r.ok);
   } catch { return false; }
 }
+// ── THE ROLLING PULSE SESSION (14 Aug 2026, unleash Phase 3) ────────────────
+// dressing-room/state/pulse_session.json — brain.mjs is its SOLE WRITER, and it
+// is RUNTIME STATE, not config: delete it and the next pulse simply seeds a new
+// session. Shape: { id, started_at, turns, date, last_afferent_ts }.
+//
+// WHY. The pulse fires every ~150s while he is at the keyboard and is the No. 1
+// lane on the board by cache writes (19.5 lakh in 7 days). Every one of those
+// calls re-sent the whole preamble and the whole 25-row afferent tail as fresh
+// context. MEASURED on this machine 14 Aug, the exact lane shape (haiku,
+// --tools "", --strict-mcp-config, JSON reply, body on stdin):
+//     seed    cw 7,490  cr 0
+//     resume  cw   521  cr 7,490     ← the whole prior context read at 0.1×
+// ≈10,900 weighted per pulse becomes ≈1,400. And the resumed pulse ANSWERED
+// ABOUT THE NEW MOMENT ONLY ("escalate: true, which: moment 26") — so this is
+// not just cheaper, it is the same amnesia fix as the Gaffer's 6k tail: the
+// watch now remembers the day it is watching instead of meeting it new every
+// 150 seconds.
+//
+// THE TWO NUMBERS ARE GUARDS, NOT BUDGETS: 80 turns and same-day rotation are
+// CONTEXT-BLOAT stops (haiku holds 200k; ~80 turns × ~2k stays well inside).
+// The real spend rails — daily_cap, daily_token_budget, failure backoff and the
+// headroom floor — are all upstream of here and are untouched.
+const PULSE_MAX_TURNS = 80;
+export function pulseSessionUsable(s, now, maxTurns = PULSE_MAX_TURNS) {
+  if (process.env.PULSE_RESUME_DISABLED) return false;      // one-line rollback
+  return !!(s && s.id && s.date === localDate(now) && (s.turns || 0) < maxTurns);
+}
+// The DELTA: afferent rows newer than the ones the session has already been
+// shown. Same filters as the cold tail (never its own output — the 1 Aug
+// tail-eating scar), same cap, newest last.
+export function pulseDelta(rows, sinceTs, capN) {
+  const since = Date.parse(sinceTs || 0);
+  return (rows || [])
+    .filter(a => a && a.text && a.modality !== "pulse")
+    .filter(a => !Number.isFinite(since) || Date.parse(a.ts || 0) > since)
+    .slice(-capN)
+    .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+}
+
 async function runPulse(cfg, deps = {}) {
   const now = deps.now || new Date();
   const pc = pulseConfig(cfg);
@@ -687,16 +782,50 @@ async function runPulse(cfg, deps = {}) {
   // so this cost tokens and signal quality rather than false wakes — but it is a feedback
   // loop, and a watch that keeps re-reading its own alarm is not watching him.
   // Filter BEFORE the slice, or excluding rows would silently shrink the window below tail_n.
-  const tail = (deps.tail || readLines(join(STATE_DIR, "afferent.jsonl")))
+  const afferentRows = deps.tail || readLines(join(STATE_DIR, "afferent.jsonl"));
+  const tail = afferentRows
     .filter(a => a && a.text && a.modality !== "pulse")
     .slice(-pc.tail_n)
     .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
   if (!tail.length) return { pulsed: false, skipped: "empty tail" };
-  const prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
+  const ASK = `\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
+  // ---- ROLLING SESSION (Phase 3) -------------------------------------------
+  const session = deps.session !== undefined ? deps.session : readJson(PULSE_SESSION);
+  const resuming = pulseSessionUsable(session, now);
+  // THE NEWEST MOMENT THIS RUN WILL HAVE SEEN — stamped whichever path we take,
+  // so the next delta starts exactly where this one ended.
+  const newestSeen = (() => {
+    let t = null;
+    for (const a of afferentRows) { if (a && a.text && a.modality !== "pulse" && a.ts && (!t || Date.parse(a.ts) > Date.parse(t))) t = a.ts; }
+    return t;
+  })();
+  let prompt, delta = null;
+  if (resuming) {
+    delta = pulseDelta(afferentRows, session.last_afferent_ts, pc.tail_n);
+    // NOTHING NEW ⇒ NOTHING TO JUDGE, and no call. The cold pulse re-read the
+    // same 25 rows and re-answered them every 150s; on a resumed session that is
+    // not just waste, it is the tail-eating loop with extra steps.
+    if (!delta.length) return { pulsed: false, skipped: "no new moments since the last pulse (rolling session)" };
+    prompt = `New moments since your last check (newest last):\n${delta.map((t, i) => `${i + 1}. ${t}`).join("\n")}${ASK}`;
+  } else {
+    prompt = `You are the continuous PULSE of a personal learning brain — a cheap always-on watch deciding whether the EXPENSIVE deep brain should look at a moment the fast deterministic reflex may have missed. Recent moments (newest last):\n${tail.map((t, i) => `${i + 1}. ${t}`).join("\n")}${ASK}`;
+  }
   const exec = deps.exec || claudeExec;
   const t0 = Date.now();
-  const r = deps.mockCall ? deps.mockCall(prompt) : exec(prompt, pc.model, [], pc.timeout_ms);
+  const r = deps.mockCall ? deps.mockCall(prompt) : exec(prompt, pc.model, resuming ? ["--resume", session.id] : [], pc.timeout_ms);
   const dur = Date.now() - t0;
+  // ---- PERSIST / ROTATE / FALL BACK ----------------------------------------
+  // A resumed call that FAILED drops the session so the next pulse seeds cold —
+  // never a retry inside this tick (that would double-spend a failing lane, the
+  // exact thing the failure-backoff rail exists to stop).
+  if (!deps.dry) {
+    const next =
+      (resuming && !r.ok) ? { ...session, id: null, dropped_at: now.toISOString(), dropped_why: String(r.error || "resumed call failed").slice(0, 120) }
+      : resuming ? { ...session, turns: (session.turns || 0) + 1, last_afferent_ts: newestSeen || session.last_afferent_ts, last_at: now.toISOString() }
+      : (r.ok && r.session_id) ? { id: r.session_id, started_at: now.toISOString(), turns: 1, date: localDate(now), last_afferent_ts: newestSeen, last_at: now.toISOString() }
+      : null;
+    if (next) writePulseSession(next);
+  }
   // parse defensively — a malformed pulse is a HOLD, never a crash
   let verdict = { escalate: false, which: "", why: "" };
   try {
@@ -749,7 +878,12 @@ async function runPulse(cfg, deps = {}) {
       posted = (pr && typeof pr === "object") ? !!pr.ok : !!pr;
     } catch { posted = false; }   // a thrown poster is a FAILED delivery, not a lost meter
   }
-  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok), posted };
+  const row = { ts: now.toISOString(), job: "haiku_pulse", engine: "claude", model: pc.model, input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens || 0, duration_ms: dur, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, escalated: !!(verdict.escalate && r.ok), posted,
+    // Phase 3 — WHICH SHAPE THIS PULSE WAS: true = resumed a rolling session and
+    // was shown ONLY the new moments · false = a cold seed (first of the day, a
+    // rotation, or a recovery after a dropped session). Additive; rows before
+    // today read as UNMEASURED, never as a measured "cold".
+    resume: resuming, turns: resuming ? (session.turns || 0) + 1 : 1, delta_n: delta ? delta.length : null };
   (deps.appendLedger || ((o) => { if (!deps.dry) appendFileSync(LEDGER, JSON.stringify(o) + "\n"); }))(row);
   return { pulsed: true, escalated: !!(verdict.escalate && r.ok), posted, tokens: row.total_tokens, why: verdict.why, ok: !!r.ok, count: count + 1, cap: pc.daily_cap, tokens_today: spent + row.total_tokens, token_budget: pc.daily_token_budget };
 }
@@ -1379,19 +1513,99 @@ function leanEnabled() {
   return _lean;
 }
 
-function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null) {
+// ── THE SPLIT (14 Aug 2026, unleash Phase 1) ─────────────────────────────────
+// THE FACT THE ORGANISM NEVER SAW. `claude -p` caches the SYSTEM prompt in its
+// own block, with its own breakpoint, and that block SURVIVES a changed body.
+// Probed on this machine 14 Aug, twice (plan §0 and again at pre-flight):
+//     S1 cold   --system-prompt <21.8k stable> + body A → cw 5,026  cr 0
+//     S2 warm   SAME system, DIFFERENT body            → cw   137  cr 4,890
+// The organism could never benefit, because ORGAN_SYSTEM_PROMPT is 84 chars
+// (~21 tokens — under every cache minimum: haiku 4096 / sonnet 1024 / opus 512)
+// while the whole STABLE head — organ preamble, LAWS, quote law, the cognitive
+// fingerprint — sat inside the USER prompt, which is one block that changes
+// every run. So every call cache-WROTE its head at 1.25× and never once read it.
+//
+// WHERE THE CUT IS, and why it needs no new plumbing: every prompt builder in
+// this file (analysis · night coach · dreams · agenda) is literally
+// `head + inputs.map(k => "\n## INPUT " + k + …)`. The first "\n## INPUT " IS
+// the head/body boundary, by construction, in all four. So the split happens
+// HERE, at the one door every builder already goes through, and not one call
+// site or selftest changes shape.
+//
+// ⚠ WHAT THE PLAN ASSUMED, AND WHAT THE MACHINE ACTUALLY DOES (measured 14 Aug,
+// three sonnet probe pairs, before shipping this). READ THIS BEFORE PLANNING
+// ANY WORK ON CACHING — it is the only place these numbers are written down:
+//
+//   A · THE HEAD IS SMALL. The plan assumed analysis heads are "typically 2k–6k
+//       tokens" and therefore clear sonnet's 1024-token minimum. MEASURED, live:
+//       fingerprint 977 chars, whole head 1,625 chars ≈ 406 tokens. Probed at
+//       exactly that size: run 1 cw=0 cr=0 in=823 · run 2 cw=0 cr=0 — the system
+//       block IS NOT CACHED AT ALL below the minimum. At 5,200 chars the same
+//       probe gives cw=2,184 then cw=164 cr=2,026. The mechanism is real; our
+//       head is simply under the bar.
+//   B · CROSS-LANE PREFIX SHARING DOES NOT EXIST. The obvious repair — one
+//       shared cartridge first, each lane's own tail after — was probed with a
+//       4,600-char identical prefix and two different tails: lane A cw=1,712
+//       cr=0, lane B cw=1,712 cr=0. The match is on the WHOLE system block, not
+//       on the longest common prefix. So padding every head to clear the bar
+//       would cost every lane ~900 tokens a run to buy a read that never comes.
+//       (This is also why Phase 2 of the plan — cluster different lanes inside
+//       the 5-min TTL — cannot pay through the head; see §FAILURES in
+//       UNLEASH_PLAN__2026-08-14.md.)
+//   C · WHAT THE SPLIT IS THEREFORE WORTH TODAY: a small, certain win — those
+//       406 head tokens move OUT of a user block that is cache-WRITTEN at 1.25×
+//       and never read (the body changes every run) INTO plain input at 1.0×.
+//       And it is the door Phase 3 needs: the moment a lane repeats inside the
+//       TTL with a head over the bar — pulse on a rolling session, a rehearsal
+//       pair — the read is already wired and stamped on the ledger row.
+//       INERT-BUT-ARMED, honestly labelled, rather than a lever that was sold
+//       as the biggest in the plan and measured as ~2% of one call.
+export const SPLIT_MARK = "\n## INPUT ";
+// Windows CreateProcess caps the whole command line at 32,767 chars. The head
+// rides in argv (the body never does — it goes down stdin, which has no such
+// limit), so an over-long head is sent the OLD way rather than truncated: a
+// clipped system prompt is a silently different instruction, which is worse
+// than an uncached one. Stamped `argv-capped` on the ledger row when it happens.
+const SPLIT_ARGV_MAX = 26000;
+export function splitPrompt(prompt) {
+  const p = String(prompt || "");
+  const i = p.indexOf(SPLIT_MARK);
+  if (i <= 0) return { system: null, body: p, split: null };          // no inputs section ⇒ nothing stable to hoist
+  const head = ORGAN_SYSTEM_PROMPT + "\n\n" + p.slice(0, i);
+  if (head.length > SPLIT_ARGV_MAX) return { system: null, body: p, split: "argv-capped" };
+  return { system: head, body: p.slice(i), split: "system" };
+}
+
+// ── PER-LANE CACHING SWITCH (14 Aug 2026, unleash Phase 4) ──────────────────
+// `noCache` comes from a job's optional `"caching": false` in brain_config.json.
+// WHY IT EXISTS: caching is not free — a written block costs 1.25x and a read
+// costs 0.1x, so a lane that WRITES a cache it never reads pays a 25% surcharge
+// for nothing. Break-even reuse (cr/cw) is 0.278: below that, off is cheaper.
+// WHY IT IS SET NOWHERE YET: which lanes those are is a question for DATA, not
+// for a hunch — the 13 Aug plan named 34 lanes and its own table already showed
+// haiku_pulse at reuse 0.43, comfortably above break-even, on the list. The
+// plumbing lands now and the decision is Phase 10's, off 48h of live ledger.
+function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null, noCache = false) {
   if (lean === null) lean = leanEnabled();
   const t0 = Date.now();
+  // SPLIT_DISABLED=1 in the daemon env restores the single-block call verbatim.
+  const sp = (lean && !process.env.SPLIT_DISABLED) ? splitPrompt(prompt) : { system: null, body: prompt, split: null };
+  const splitArgs = sp.system ? ["--system-prompt", sp.system, "--tools", "", "--strict-mcp-config"] : null;
+  const sentChars = String(prompt || "").length;   // FULL prompt — the no-usage fallback estimate must not shrink just because the head moved to argv
   try {
     const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet",
-      ...(lean ? LEAN_ARGS : []), ...(Array.isArray(extraArgs) ? extraArgs : [])],
+      ...(splitArgs || (lean ? LEAN_ARGS : [])), ...(Array.isArray(extraArgs) ? extraArgs : [])],
       // G4 — extended thinking via env, same mechanism the cortex has always used
-      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
-    let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
+      { input: sp.body, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(noCache ? { DISABLE_PROMPT_CACHING: "1" } : {}), ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
+    let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false, sessionId = null;
     try {
       const j = JSON.parse(stdout);
       text = j.result !== undefined ? String(j.result) : stdout;
       isErr = j.is_error === true;
+      // the CLI's own conversation id — the ONLY way to resume this context later
+      // (Phase 3). Additive: a caller that does not want a rolling session simply
+      // ignores it, and a reply without one leaves it null rather than inventing one.
+      sessionId = j.session_id ? String(j.session_id) : null;
       if (j.usage) {
         inTok = j.usage.input_tokens ?? null; outTok = j.usage.output_tokens ?? null;
         // the cache pair is where the CLI's real spend lives — see usageTotal above
@@ -1405,13 +1619,13 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = nu
     // that never reached the API and throttled the governor against fiction.
     // An unmade call costs nothing; estimate only when the call actually landed.
     const measured = usageTotal({ input_tokens: inTok, output_tokens: outTok, cache_creation_input_tokens: cacheCreate, cache_read_input_tokens: cacheRead });
-    const total = isErr ? measured : (measured || Math.ceil((prompt.length + text.length) / 4));
+    const total = isErr ? measured : (measured || Math.ceil((sentChars + text.length) / 4));
     const limit_hit = isErr && LIMIT_RE.test(text);
-    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null };
+    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null, split: sp.split, session_id: sessionId };
   } catch (e) {
     const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
     return { ok: false, text: null, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, total_tokens: 0,   // never spawned/never answered ⇒ zero spend
-      duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) };
+      duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200), split: sp.split };
   }
 }
 
@@ -2772,7 +2986,7 @@ async function runJob(job, cfg, deps) {
     inputs["known concepts"] = [...new Set([...loadAliasMap(join(STATE_DIR, "concepts.json")).values()])];
     prompt = buildDreamsPrompt(job, inputs, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
-  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
+  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null, job.caching === false);   // G4 — the thinking budget rides through · Phase 4 — and the lane's own caching verdict
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
   // was actually built from — including the failures.
   // …and so does the ELISION accounting (10 Aug 2026 wiring audit). An input that is
@@ -3090,6 +3304,12 @@ async function tick(cfg, deps) {
       cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null,
       total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0,
       ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
+      // HOW THE CALL WAS SENT (14 Aug 2026, unleash Phase 1): "system" = the stable
+      // head rode --system-prompt and can be cache-READ next run · "argv-capped" =
+      // the head was too long for Windows argv and went the old single-block way ·
+      // null = no ## INPUT section, nothing to hoist (or the split is switched off).
+      // Additive: rows written before today read as UNMEASURED, not as a measured no.
+      split: usage.split || null,
       // THE ONE FACT NEEDED TO DEBUG A SILENT MOUTH, finally written down (1 Aug 2026
       // audit): runJob has always built `sheet source=… (reason)`, and the row literal
       // has always dropped it. 0 of 2,811 rows carried it, stdout goes nowhere (the
@@ -3387,6 +3607,16 @@ async function selftest() {
     // the fallback: a row with NO components keeps its written total, which is the only
     // reason every budget assertion written before today still holds.
     assert("C1 — a component-less row (tokens_estimated) keeps its written total at weight 1", spendOf({ total_tokens: 4242 }) === 4242);
+    // C1b (14 Aug 2026) — THE MODEL FACTOR. Two clauses, and the second is the
+    // one that protects a guard: the board sees models, the GOVERNOR does not.
+    assert("C1b — model-aware spend multiplies the same row by haiku 1 / sonnet 3 / opus 5",
+      spendOfModelAware({ ...cacheHeavy, model: "haiku" }) === 100
+      && spendOfModelAware({ ...cacheHeavy, model: "sonnet" }) === 300
+      && spendOfModelAware({ ...cacheHeavy, model: "opus" }) === 500
+      && spendOfModelAware(cacheHeavy) === 300);   // unstated ⇒ sonnet, never free
+    assert("C1b — the GOVERNOR's unit is UNCHANGED: windowUsage never sees the model factor (its caps are stated model-blind)",
+      windowUsage([{ ...cacheHeavy, ts: now(22, 30).toISOString(), model: "opus" }], now(23, 0), 5)
+      === windowUsage([{ ...cacheHeavy, ts: now(22, 30).toISOString(), model: "haiku" }], now(23, 0), 5));
     assert("C1 — the frozen legacy meter still sums raw, and the two now DISAGREE by design",
       windowUsageLegacy([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) === 702
       && windowUsage([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) !== 702);
@@ -3460,6 +3690,43 @@ async function selftest() {
       let m2 = [];
       const malformed = await runPulse(pCfg, { ...base, appendLedger: (o) => m2.push(o), mockCall: () => ({ ok: true, text: "not json at all", total_tokens: 200 }) });
       assert("PULSE — malformed reply → HOLD, still metered, never a crash", malformed.pulsed && malformed.escalated === false && m2.length === 1);
+
+      // ---- THE ROLLING SESSION (14 Aug 2026, unleash Phase 3) ----------------
+      // Measured on this machine before building it (haiku, the exact lane shape):
+      // seed cw 7,490 cr 0 → resume cw 521 cr 7,490. Everything below is the
+      // logic around that fact; `dry: true` keeps the session file untouched.
+      {
+        const dated = (h, m, txt, mod = "voice") => ({ modality: mod, text: txt, ts: now(h, m).toISOString() });
+        const rows = [dated(13, 0, "purani baat"), dated(13, 30, "aur purani baat"), dated(14, 0, "nayi baat — attention scaling")];
+        const live = { id: "sid-1", date: localDate(now(14, 0)), turns: 3, last_afferent_ts: now(13, 30).toISOString() };
+        assert("SESSION — usable only for TODAY, under the turn guard, with an id, and never when PULSE_RESUME_DISABLED is set",
+          pulseSessionUsable(live, now(14, 0))
+          && !pulseSessionUsable({ ...live, date: "2020-01-01" }, now(14, 0))
+          && !pulseSessionUsable({ ...live, turns: 80 }, now(14, 0))
+          && !pulseSessionUsable({ ...live, id: null }, now(14, 0))
+          && !pulseSessionUsable(null, now(14, 0)));
+        assert("DELTA — only moments NEWER than the session has seen, own output still filtered out, newest last",
+          pulseDelta([...rows, { modality: "pulse", text: "its own alarm", ts: now(14, 1).toISOString() }], live.last_afferent_ts, 25)
+            .join("|") === "[voice] nayi baat — attention scaling");
+        let m3 = []; let argsSeen = null;
+        const resumed = await runPulse(pCfg, { ...base, tail: rows, session: live, appendLedger: (o) => m3.push(o),
+          exec: (p, model, extra) => { argsSeen = { p, extra }; return { ok: true, text: JSON.stringify({ escalate: false }), total_tokens: 900, session_id: "sid-1" }; } });
+        assert("RESUMED PULSE — spawns with --resume, is shown ONLY the delta (not the whole tail), and says so on its ledger row",
+          resumed.pulsed && argsSeen.extra.join(" ") === "--resume sid-1"
+          && /nayi baat/.test(argsSeen.p) && !/purani baat/.test(argsSeen.p)
+          && m3[0].resume === true && m3[0].delta_n === 1 && m3[0].turns === 4);
+        const quiet = await runPulse(pCfg, { ...base, tail: rows, session: { ...live, last_afferent_ts: now(14, 0).toISOString() },
+          appendLedger: () => { throw new Error("metered a pulse with nothing to judge"); }, exec: () => { throw new Error("called with an empty delta"); } });
+        assert("RESUMED PULSE — nothing new since the last check ⇒ NO CALL AT ALL (the cold lane re-judged the same 25 rows every 150s)",
+          quiet.pulsed === false && /no new moments/.test(quiet.skipped));
+        let m4 = []; let coldSeen = null;
+        const cold = await runPulse(pCfg, { ...base, tail: rows, session: { ...live, date: "2020-01-01" }, appendLedger: (o) => m4.push(o),
+          exec: (p, model, extra) => { coldSeen = { p, extra }; return { ok: true, text: JSON.stringify({ escalate: false }), total_tokens: 900, session_id: "sid-2" }; } });
+        assert("ROTATION — yesterday's session is NOT resumed: the pulse seeds cold with the WHOLE tail, no --resume, and the row says resume:false",
+          cold.pulsed && coldSeen.extra.length === 0
+          && /purani baat/.test(coldSeen.p) && /nayi baat/.test(coldSeen.p) && /continuous PULSE/.test(coldSeen.p)
+          && m4[0].resume === false && m4[0].turns === 1);
+      }
 
       // ---- THE DELIVERY RECEIPT (11 Aug 2026 wiring pass) ---------------------
       // The wire that was dead: `posted` computed in runPulse and dropped, so 205
@@ -3831,6 +4098,51 @@ async function selftest() {
   assert("fingerprint enters every analysis prompt", buildAnalysisPrompt({ id: "x" }, {}, fp).includes("COGNITIVE FINGERPRINT"));
   assert("empty world → fixed-traits fingerprint only, no crash", buildFingerprint({}).includes("ADHD-PI"));
 
+  // ── THE SPLIT (14 Aug 2026, unleash Phase 1) ───────────────────────────────
+  // The cut must satisfy three things at once, and the third is the one that
+  // makes it safe: the model must receive the SAME BYTES it received yesterday.
+  {
+    const pr = buildAnalysisPrompt({ id: "split_x", _note: "note" }, { "a.json": [{ x: 1 }], "b.json": "hello" }, fp);
+    const s = splitPrompt(pr);
+    assert("SPLIT — the head goes to --system-prompt and the ## INPUT sections stay in the body",
+      s.split === "system" && s.system.includes("COGNITIVE FINGERPRINT") && s.system.includes("Job: split_x")
+      && !s.system.includes("## INPUT a.json") && s.body.startsWith("\n## INPUT a.json") && s.body.includes("## INPUT b.json"));
+    assert("SPLIT — NOTHING IS LOST OR REORDERED: system+body reconstructs the exact prompt, with only the organ preamble added in front",
+      s.system + s.body === ORGAN_SYSTEM_PROMPT + "\n\n" + pr);
+    // NOT an assertion that the head clears the cache minimum — it does not
+    // (1,625 chars ≈ 406 tokens vs sonnet's 1024, measured 14 Aug; see the probe
+    // record above the function). The honest witness is that the SIZE IS
+    // REPORTED, so nobody re-derives the lever's value from prose again.
+    console.log(`         · live analysis head = ${s.system.length} chars ≈ ${Math.round(s.system.length / 4)} tokens (sonnet caches at ≥1024, opus ≥512, haiku ≥4096)`);
+    assert("SPLIT — the body carries the whole variable part and the head carries none of it (that is the only thing that makes the head stable)",
+      !s.system.includes("hello") && s.body.includes("hello"));
+    // the two refusals, both of which must fall back to today's exact call
+    assert("SPLIT — a prompt with no ## INPUT section is NOT split (nothing stable to hoist), and says so with null",
+      splitPrompt("just a question, no inputs").split === null && splitPrompt("just a question, no inputs").body === "just a question, no inputs");
+    const huge = "x".repeat(30000) + "\n## INPUT a\n1";
+    assert("SPLIT — a head over the Windows argv cap is sent WHOLE the old way and stamped argv-capped, never truncated",
+      splitPrompt(huge).split === "argv-capped" && splitPrompt(huge).system === null && splitPrompt(huge).body === huge);
+    assert("SPLIT — a body-first prompt (mark at index 0) is left alone, no empty system prompt",
+      splitPrompt("\n## INPUT a\n1").split === null);
+  }
+
+  // ── PHASE 4 · the per-lane caching switch, PLUMBED AND SET NOWHERE ─────────
+  // Two witnesses: the wire carries a job's own declaration through to the spawn,
+  // and no lane carries it yet — because that answer is Phase 10's, off data.
+  {
+    let sawNoCache = null;
+    const fakeExec = (p, m, x, t, l, th, noCache) => { sawNoCache = noCache; return { ok: true, text: "x", total_tokens: 1 }; };
+    const jdeps = { exec: fakeExec, dry: true, now: now(14, 0) };
+    await runJob({ id: "cache_off", model: "sonnet", caching: false, inputs: [] }, cfg, jdeps);
+    const off = sawNoCache;
+    await runJob({ id: "cache_on", model: "sonnet", inputs: [] }, cfg, jdeps);
+    assert("CACHING SWITCH — a job declaring caching:false reaches the spawn as DISABLE_PROMPT_CACHING; a job that declares nothing does not",
+      off === true && sawNoCache === false);
+    const live = (loadConfig().jobs || []).filter((j) => j.caching === false).map((j) => j.id);
+    assert("CACHING SWITCH — and it is set on NO lane yet: break-even reuse 0.278 is a measurement, not a hunch (the 13 Aug list had haiku_pulse at 0.43 on it)",
+      live.length === 0, live.join(", "));
+  }
+
   // ntfy mouth — secret topic never in committed config; two utterances only
   const cfgNtfyOn = { ...cfg, ntfy: { enabled: true, topic: "", push_after: ["formation_read"] } };
   assert("ntfy topic resolves from env fallback (config stays secret-free)", resolveNtfyTopic({ ntfy: { topic: "" } }, { ARSENAL_NTFY_TOPIC: "sekrit" }) === "sekrit");
@@ -4189,8 +4501,14 @@ async function selftest() {
       const sa = surfaceAudit(liveCfg);
       assert("#63 — EVERY enabled job in the committed config declares a surface (have/need, not a word)",
         sa.have === sa.need && sa.orphans.length === 0 && sa.need > 0);
-      assert("#63 — the four DESIGNED-to-be-human-read jobs are still ON and addressed by file path",
-        ["doubt_clusters", "widget_spec", "market_scan", "drill_forge"].every(id => {
+      // PHASE 9 (14 Aug 2026): widget_spec and drill_forge were TWO of these four
+      // and are now closed — traced end to end on 13 Aug, neither had a reader,
+      // human or machine, and "designed for his eyes" is only true if his eyes
+      // ever arrive. His §0 ruling closed them. The assertion's real subject is
+      // unchanged and still live for the two that remain: a human_file lane must
+      // be ON and addressed BY PATH, never merely declared.
+      assert("#63 — the DESIGNED-to-be-human-read jobs still open are ON and addressed by file path",
+        ["doubt_clusters", "market_scan"].every(id => {
           const j = liveCfg.jobs.find(x => x.id === id);
           return j && j.enabled !== false && jobSurface(j).kind === "human_file" && /brain_out\//.test(jobSurface(j).where || "");
         }));
@@ -5141,26 +5459,34 @@ async function main() {
     const by = new Map();
     for (const r of rows) {
       const k = r.job || "(nojob)";
-      if (!by.has(k)) by.set(k, { job: k, n: 0, spend: 0, out: 0, cr: 0, cc: 0, inp: 0, fail: 0 });
+      if (!by.has(k)) by.set(k, { job: k, n: 0, spend: 0, aware: 0, model: r.model || "?", out: 0, cr: 0, cc: 0, inp: 0, fail: 0 });
       const b = by.get(k);
-      b.n++; b.spend += spendOf(r); b.out += N(r.output_tokens); b.cr += N(r.cache_read_tokens);
+      b.n++; b.spend += spendOf(r); b.aware += spendOfModelAware(r); b.out += N(r.output_tokens); b.cr += N(r.cache_read_tokens);
       b.cc += N(r.cache_creation_tokens); b.inp += N(r.input_tokens); if (r.ok === false) b.fail++;
+      if (r.model) b.model = r.model;
     }
-    const list = [...by.values()].sort((a, b) => b.spend - a.spend);
+    // C1b (14 Aug): SORTED BY THE MODEL-AWARE COLUMN. Both units are printed —
+    // WEIGHTED is what the governor meters, AWARE is what it costs — because the
+    // two rank the organs differently and the difference is the whole point.
+    const list = [...by.values()].sort((a, b) => b.aware - a.aware);
     const total = list.reduce((a, b) => a + b.spend, 0) || 1;
+    const totalAware = list.reduce((a, b) => a + b.aware, 0) || 1;
     const f = (n) => Math.round(n).toLocaleString("en-IN");
-    console.log(`\nSPEND BOARD — last ${days}d · ${rows.length} claude rows · ${f(total)} cost-weighted tokens`);
-    console.log(`(weights: input 1 · cache_write 1.25 · cache_read 0.1 · output 5 — see brain.mjs SPEND)\n`);
-    console.log("JOB".padEnd(24) + "N".padStart(5) + "WEIGHTED".padStart(13) + "%".padStart(7) + "output".padStart(11) + "cache_rd".padStart(12) + "cache_wr".padStart(12) + "  fail");
+    console.log(`\nSPEND BOARD — last ${days}d · ${rows.length} claude rows · ${f(total)} cost-weighted · ${f(totalAware)} model-aware`);
+    console.log(`(weights: input 1 · cache_write 1.25 · cache_read 0.1 · output 5 — see brain.mjs SPEND)`);
+    console.log(`(model factor: haiku 1 · sonnet 3 · opus 5, list input prices. AWARE% is the true cost share; WEIGHTED is the governor's unit)\n`);
+    console.log("JOB".padEnd(24) + "MODEL".padEnd(8) + "N".padStart(5) + "WEIGHTED".padStart(13) + "AWARE".padStart(13) + "A%".padStart(7) + "output".padStart(11) + "cache_rd".padStart(12) + "cache_wr".padStart(12) + "  fail");
     for (const b of list) console.log(
-      b.job.slice(0, 24).padEnd(24) + String(b.n).padStart(5) + f(b.spend).padStart(13)
-      + ((b.spend / total) * 100).toFixed(1).padStart(7) + f(b.out).padStart(11) + f(b.cr).padStart(12) + f(b.cc).padStart(12)
+      b.job.slice(0, 24).padEnd(24) + String(b.model).slice(0, 7).padEnd(8) + String(b.n).padStart(5) + f(b.spend).padStart(13) + f(b.aware).padStart(13)
+      + ((b.aware / totalAware) * 100).toFixed(1).padStart(7) + f(b.out).padStart(11) + f(b.cr).padStart(12) + f(b.cc).padStart(12)
       + (b.fail ? `  ${b.fail}✗` : ""));
     // THE RANKING THAT MATTERS FOR C3: the same board sorted by generated output is a
     // DIFFERENT order, and the difference IS the optimisation target — an organ high on
     // weighted spend but low on output is paying boot tax, not thinking.
     const byOut = [...list].sort((a, b) => b.out - a.out).slice(0, 5).map(b => b.job).join(" · ");
-    console.log(`\ntop 5 by WEIGHTED spend : ${list.slice(0, 5).map(b => b.job).join(" · ")}`);
+    const byBlind = [...list].sort((a, b) => b.spend - a.spend).slice(0, 5).map(b => b.job).join(" · ");
+    console.log(`\ntop 5 by MODEL-AWARE    : ${list.slice(0, 5).map(b => b.job).join(" · ")}`);
+    console.log(`top 5 by WEIGHTED spend : ${byBlind}`);
     console.log(`top 5 by REAL OUTPUT    : ${byOut}`);
     console.log(`→ an organ high on the first list and absent from the second is paying boot tax, not thinking.\n`);
     return;
@@ -5288,6 +5614,7 @@ async function main() {
       const { usage, note, inputs_absent, inputs_declared, inputs_absent_names, inputs_clipped, inputs_rows_dropped, inputs_rows_door_dropped, inputs_door_names } = await runJob(job, cfg, deps);
       if (!deps.dry) {
         appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
+          split: usage.split || null,   // Phase 1 — and the manual row is where the split's own receipt is READ, so it cannot be the row that drops it
           // same input accounting as the scheduled path (finding #64) — a manual run must
           // not be the one place the evidence base goes unrecorded.
           inputs_present: typeof inputs_declared === "number" ? inputs_declared - inputs_absent : null,

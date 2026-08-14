@@ -76,6 +76,66 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const WAKE      = join(STATE_DIR, "wake.json");
 const WQUEUE    = join(STATE_DIR, "wake_queue.jsonl");   // M14 — read-only here; the thalamus is its sole writer
 const RUNTIME   = join(STATE_DIR, "cortex_runtime.json");
+// ── THE CONVERSATION BRAIN (14 Aug 2026, unleash Phase 7.4) ─────────────────
+// HIS ASK, 12 Aug, verbatim: "sonnet not opus to save tokens for gaffer 24x7…
+// so it can remember and recall every single thing actively passively." On
+// 13 Aug that was priced as unaffordable — but that pricing assumed every wake
+// re-pays its whole context. It does not have to. MEASURED on this machine
+// 14 Aug, from the repo root with the same lean flags this file spawns:
+//     cold seed   in 10  cw 12,551  cr 0
+//     resumed     in 10  cw    394  cr 12,551      ← 79% off, same session
+// So the deep brain can STAY ATTACHED to a conversation instead of meeting it
+// new every wake: the second and later wakes of one sitting resume the CLI
+// session, arriving already holding everything said so far.
+//
+// WHAT IS DELIBERATELY *NOT* DONE HERE, and why: the plan also asked to send
+// only the turns since the last wake. The cortex's prompt is built per MOMENT
+// by buildDeepPrompt from the bound context the thalamus hands it — there is no
+// per-conversation transcript in this file to diff against — and the saving is
+// in the RESUMED PREFIX (12.5k), not in the moment's own few hundred tokens. So
+// the prompt builder is untouched (byte-identical cold path, the layering law)
+// and the win is taken where it actually is.
+//
+// THERE IS NO CONVERSATION ID ON THE BUS. Nothing upstream stamps one — the
+// wake row carries moment_id, spotlight and bound_context and no sitting
+// identity at all. So a sitting is DERIVED here and the derivation is stated:
+// consecutive wakes with a gap under CORTEX_SESSION_GAP_MIN belong to one
+// sitting; it rotates at 2h old, 40 turns, or the first gap over that.
+const CORTEX_SESSION = join(STATE_DIR, "cortex_session.json");
+const CORTEX_SESSION_TMP = CORTEX_SESSION + ".tmp";
+const CORTEX_SESSION_MAX_TURNS = 40;
+const CORTEX_SESSION_MAX_AGE_MIN = 120;
+const CORTEX_SESSION_GAP_MIN = 30;
+export function cortexSessionUsable(sess, now, opts = {}) {
+  if (process.env.CORTEX_SESSION_DISABLED) return false;      // one-line rollback
+  if (!sess || !sess.session_id) return false;
+  const t = (x) => Date.parse(x || 0);
+  const maxTurns = opts.maxTurns || CORTEX_SESSION_MAX_TURNS;
+  const maxAge = (opts.maxAgeMin || CORTEX_SESSION_MAX_AGE_MIN) * 60000;
+  const maxGap = (opts.gapMin || CORTEX_SESSION_GAP_MIN) * 60000;
+  if ((sess.turns || 0) >= maxTurns) return false;
+  if (!Number.isFinite(t(sess.started_at)) || now - t(sess.started_at) > maxAge) return false;
+  if (!Number.isFinite(t(sess.last_at)) || now - t(sess.last_at) > maxGap) return false;
+  return true;
+}
+// THE MODEL CHOICE, and the one rule that keeps it honest: sonnet is used ONLY
+// when we can SEE that the moment is an ordinary one (S below 2 x tau1_base)
+// AND the brain is already attached to a live sitting. An unknown S, or a
+// first/cold wake, keeps opus exactly as today — a moment whose depth we cannot
+// measure is never quietly downgraded. That is the difference between saving
+// tokens and dumbing the organ down.
+export function cortexModelFor(wake, cfg, attached) {
+  const S = wake && wake.spotlight && typeof wake.spotlight.S === "number" ? wake.spotlight.S : null;
+  const tau1 = (cfg && cfg.tiers && cfg.tiers.tau1_base) || null;
+  if (!attached || S === null || !tau1) return "opus";
+  return S >= 2 * tau1 ? "opus" : "sonnet";
+}
+function writeCortexSession(obj) {
+  try {
+    writeFileSync(CORTEX_SESSION_TMP, JSON.stringify(obj, null, 2) + "\n");
+    renameSync(CORTEX_SESSION_TMP, CORTEX_SESSION);
+  } catch { /* an optimisation; a write failure must never cost a wake */ }
+}
 // the paid-answer lifeboat: answers that could not be reported back (thalamus
 // down / restarting) wait here instead of evaporating. Drained on the next serve.
 const UNSENT    = join(STATE_DIR, "cortex_unsent.jsonl");
@@ -524,11 +584,16 @@ function claudeDeep(prompt, cfg, deps = {}) {
 // non-blocking so two wakes can think at once. execFile + manual stdin.
 function claudeDeepAsync(prompt, cfg, deps = {}) {
   const t0 = Date.now();
+  // Phase 7.4 — the sitting rides in through opts, never through a global:
+  //   opts.model   "opus" (default, exactly as before) | "sonnet"
+  //   opts.resume  a CLI session id to attach to; absent ⇒ today's cold call
+  const model = deps.model || "opus";
+  const resumeArgs = deps.resume ? ["--resume", String(deps.resume)] : [];
   return new Promise((resolve) => {
-    const fail = (msg) => resolve({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) });
+    const fail = (msg) => resolve({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200), resumed: !!deps.resume, model });
     try {
       const execFn = deps.execAsync || execFile;
-      const child = execFn("claude", ["-p", "--output-format", "json", "--model", "opus", ...CORTEX_LEAN], {   // G0 — same lean flags as the sync lane
+      const child = execFn("claude", ["-p", "--output-format", "json", "--model", model, ...resumeArgs, ...CORTEX_LEAN], {   // G0 — same lean flags as the sync lane
         timeout: cfg.deep.timeout_ms, encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024,
         env: { ...process.env, MAX_THINKING_TOKENS: String(cfg.deep.max_thinking_tokens), ARSENAL_ORGAN: "1" },   // extended thinking
       }, (err, stdout) => {
@@ -541,7 +606,11 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
           // E2E audit 25 Jul 2026: same envelope blindness as claudeDeep above — the
           // async lane is the one the daemon actually uses, so THIS is where a plan
           // limit was being ledgered as limit_hit:false and killing queued wakes.
-          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null });
+          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null,
+            // Phase 7.4 — the CLI's own conversation id, the only way to attach
+            // the next wake of this sitting to this one. Additive; null when the
+            // reply carries none, never invented.
+            session_id: j.session_id ? String(j.session_id) : null, resumed: !!deps.resume, model });
         } catch (e) { fail(String((e && e.message) || e)); }
       });
       if (child && child.stdin) { child.stdin.on("error", () => {}); child.stdin.write(prompt); child.stdin.end(); }
@@ -687,7 +756,16 @@ async function serveOne(wake, deps = {}) {
   // read firing with too little headroom and overshooting into his protected study/live reserve.
   const minHeadroom = Math.max((cfg.deep && cfg.deep.min_headroom_tokens) || 50000, mtf.min_headroom_tokens);
   const deepCfg = { ...cfg, deep: { ...cfg.deep, max_thinking_tokens: mtf.max_thinking_tokens, min_headroom_tokens: minHeadroom } };
-  const call = deps.call || ((prompt) => claudeDeepAsync(prompt, deepCfg));
+  // ── THE SITTING (Phase 7.4) ───────────────────────────────────────────────
+  // Attach to the live sitting if there is one; otherwise this wake seeds it.
+  // Every branch is fail-open: a missing/unreadable session file just means a
+  // cold wake, exactly as before. An optimisation may never cost a thought.
+  const sess = deps.session !== undefined ? deps.session : readJson(CORTEX_SESSION);
+  const attached = cortexSessionUsable(sess, now.getTime());
+  const deepModel = cortexModelFor(wake, cfg, attached);
+  const call = deps.call || ((prompt) => claudeDeepAsync(prompt, deepCfg, {
+    model: deepModel, resume: attached ? sess.session_id : null,
+  }));
   // E2E audit 25 Jul 2026: gate against what is left AFTER the lanes already in flight
   // (see inflightReserve above) — the ledger cannot see a read that has not returned yet.
   const est = Math.max(0, (cfg.deep && cfg.deep.est_tokens_per_wake) || 40000);
@@ -738,6 +816,14 @@ async function serveOne(wake, deps = {}) {
     if (!councilSeats) log(`cortex: THE COUNCIL BROUGHT NOTHING for ${wake.moment_id} — the Bridge proceeds cold${councilNote ? ` (${councilNote})` : ""}`);
     const prompt = buildDeepPrompt(wake, deps.bus || {}, councilSection(council));
     r = await call(prompt);
+    // PERSIST / ROTATE / FALL BACK. A resumed call that FAILED drops the sitting
+    // so the next wake seeds cold — never a retry inside this wake, which would
+    // spend twice on one thought (the same law the re-buy guard above enforces).
+    if (!deps.dry) {
+      if (attached && r && r.ok === false) writeCortexSession({ ...sess, session_id: null, dropped_at: now.toISOString(), dropped_why: String((r && r.error) || "resumed wake failed").slice(0, 160) });
+      else if (attached && r && r.ok) writeCortexSession({ ...sess, turns: (sess.turns || 0) + 1, last_at: now.toISOString(), last_model: deepModel });
+      else if (r && r.ok && r.session_id) writeCortexSession({ conversation_id: `sit_${now.getTime()}`, session_id: r.session_id, turns: 1, started_at: now.toISOString(), last_at: now.toISOString(), last_model: deepModel });
+    }
   } finally { inflightReserve = Math.max(0, inflightReserve - est); }
   // G1 — the cache pair rides; G15's re-fit reads ONLY rows that carry it.
   // council_seats / council_note added 11 Aug 2026 (wiring audit, above): the
@@ -745,7 +831,10 @@ async function serveOne(wake, deps = {}) {
   // the Opus read was actually given. Purely additive — every reader of this
   // lane keys off `job`/`total_tokens`/the cache pair (watchman.mjs:890's
   // honest-row filter, brain.mjs windowUsage) and none of them enumerate fields.
-  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit, council_seats: councilSeats, council_note: councilNote || null });
+  // Phase 7.4 — the row reports the model IT ACTUALLY USED (it was hardcoded
+  // "opus", which was true until this commit and would have quietly lied the
+  // moment a sonnet sitting ran), plus whether the wake resumed a sitting.
+  ledger({ ts: new Date().toISOString(), job: "cortex_wake", engine: "claude", model: (r && r.model) || deepModel || "opus", input_tokens: r.input_tokens, output_tokens: r.output_tokens, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null, total_tokens: r.total_tokens, duration_ms: r.duration_ms, ok: r.ok, error: r.error, limit_hit: r.limit_hit, council_seats: councilSeats, council_note: councilNote || null, resume: !!(r && r.resumed), turns: attached ? (sess.turns || 0) + 1 : 1 });
   if (!r.ok) {
     if (r.limit_hit) {
       // E2E audit 25 Jul 2026: give the attempt BACK and hold the lane. A read that the
@@ -941,6 +1030,31 @@ async function selftest() {
     assert("provenance says opus-extended", out.posts[0].b.provenance === "opus-extended");
     const row = out.rows[0];
     assert("ledger row is brain-shaped (engine claude — the window SEES the spend)", row.job === "cortex_wake" && row.engine === "claude" && row.model === "opus" && row.total_tokens === 1440 && row.ok === true && "limit_hit" in row);
+
+  // ── THE CONVERSATION BRAIN (14 Aug 2026, unleash Phase 7.4) ────────────────
+  // Pure fixtures — no spawn, no file. Measured before building it: a resumed
+  // wake reads its whole prior context at 0.1x (cw 12,551 → cr 12,551).
+  {
+    const T = Date.parse("2026-08-14T20:00:00Z");
+    const live = { session_id: "sid-1", turns: 3, started_at: new Date(T - 20 * 60000).toISOString(), last_at: new Date(T - 2 * 60000).toISOString() };
+    assert("SITTING — usable only with an id, under 40 turns, under 2h old, and under a 30-min gap",
+      cortexSessionUsable(live, T)
+      && !cortexSessionUsable({ ...live, session_id: null }, T)
+      && !cortexSessionUsable({ ...live, turns: 40 }, T)
+      && !cortexSessionUsable({ ...live, started_at: new Date(T - 3 * 3600000).toISOString() }, T)
+      && !cortexSessionUsable({ ...live, last_at: new Date(T - 31 * 60000).toISOString() }, T)
+      && !cortexSessionUsable(null, T));
+    const tcfg = { tiers: { tau1_base: 0.2 } };
+    assert("MODEL — inside a sitting an ordinary moment goes to SONNET, a deep one (S ≥ 2 × tau1) stays OPUS",
+      cortexModelFor({ spotlight: { S: 0.25 } }, tcfg, true) === "sonnet"
+      && cortexModelFor({ spotlight: { S: 0.40 } }, tcfg, true) === "opus"
+      && cortexModelFor({ spotlight: { S: 0.65 } }, tcfg, true) === "opus");
+    assert("MODEL — a COLD wake, or one whose S we cannot see, is NEVER quietly downgraded: it stays OPUS",
+      cortexModelFor({ spotlight: { S: 0.25 } }, tcfg, false) === "opus"
+      && cortexModelFor({ spotlight: {} }, tcfg, true) === "opus"
+      && cortexModelFor({}, tcfg, true) === "opus"
+      && cortexModelFor({ spotlight: { S: 0.25 } }, { tiers: {} }, true) === "opus");
+  }
     assert("attempts recorded (poisoned wakes can't loop)", out.saved[0].attempts.m_1 === 1);
   }
   // budget lock
