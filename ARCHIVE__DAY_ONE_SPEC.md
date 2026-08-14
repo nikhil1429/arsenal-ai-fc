@@ -557,3 +557,273 @@ life."*
 
 *Sealed 14 August 2026, IST. Every law here is traceable to a real failure in one of his two
 projects. Nothing in this spec is speculative, and nothing that can be rebuilt later is in it.*
+
+---
+---
+
+# 16. THE WORK ORDER — `archive_audit.mjs`, HIS DECISION 15 Aug 2026
+## READ THIS WHOLE SECTION BEFORE WRITING A LINE. It is self-contained.
+
+> **§1–§15 above are the SEALED SPEC and are DONE.** This section is the ONE piece of work
+> that remains, decided by him on 15 Aug 2026 after the build was finished, reviewed twice,
+> and pushed. Do not re-plan §1–§15. Do not treat this section as optional.
+
+---
+
+## 16.0 WHERE THINGS STAND (so you do not re-do finished work)
+
+**BUILT, RUN, COMMITTED AND PUSHED** — `3fcce43..46876c1` on `origin/main`, 8 commits:
+
+| commit | what |
+|---|---|
+| `ac3e613` | the archive itself — `scripts/archivist.mjs`, the spec, hook v3, tripwire, installers |
+| `f311f59` | tripwire scar: it read the INDEX, not HEAD |
+| `ea00fe6` | the lock: two archivists ran 119 ms apart |
+| `103ea5c` | the checkpoint leaves the payload directory (`_writer/`) |
+| `65262f3` | runtime state + the crash dump that was jamming `audit.mjs` |
+| `92e7958` | second pass: `seal --quarter`, §4.5's guard made reachable, fixity self-watch |
+| `2805fd7` | his rulings into canon, three watchman REDs closed |
+| `46876c1` | the deep pass: 5 defects, plus `reconcile` + `dedupe` + the lexicon door |
+
+Verified at hand-off: `npm test` 43/0 · `archivist.mjs selftest` 105/0 · spec audit 59/0 ·
+independent deep pass 24/0 (three consecutive runs) · `verify` ALL CHAINS INTACT ·
+`reconcile` clean · bag sealed CURRENT · working tree clean, nothing unpushed.
+
+**Modes that already exist** — do not rebuild any of them:
+`init · run · backfill · verify [--month] · reconcile · vitals · seal [--quarter] ·
+rebuild <lane> · dedupe <lane> · lanes · lexicon <list|add|retire> · tripwire · status · selftest`
+
+---
+
+## 16.1 THE PROBLEM, IN ONE PARAGRAPH
+
+The archive's entire justification for living outside the repo is: **"verifiable from its own
+README alone."** Nothing tests that claim. `archivist.mjs selftest` checks the archive using
+archivist.mjs's OWN `canon()`, `sha256Hex()`, `istStamp()` and `buildRecord()` — so if the
+canonical-bytes rule is subtly wrong, records are written wrong, the test computes the same
+wrong expectation, the suite is GREEN, and a 2046 reader following the README gets a mismatch
+and concludes the archive is corrupt.
+
+**A claim with no check is a hypothesis, and this repo's own law says an unrun system is a
+hypothesis.** His framing, and it is the one that settles the maintenance argument:
+
+> **This is not a test of `archivist.mjs`. It IS the 2046 reader, rehearsed early.**
+
+This already paid off THIS WEEK: an independent harness written during the 15 Aug review found
+**five real defects in one pass**, including one that LOST A RECORD — a mid-line read on the
+rewritten `identity_facts.pending.jsonl` that erased the archive's record of the moment three
+staged facts became canon. None of the five were visible to `verify`, `npm test`, or a spec audit.
+
+---
+
+## 16.2 HIS DECISION — all seven points, none optional
+
+**1. BUILD IT — YES.**
+
+**2. SCOPE — EXACTLY FOUR CHECKS. Not three, not twenty-four.**
+The filter is: **does this check test the DOCUMENT or the DATA?** Document-testing belongs here.
+Data-testing is already covered and duplicating it is maintenance with no value.
+
+- **(a) Independent fixity** — recompute every record's `sha256` from the README's recipe.
+- **(b) Field order, on EVERY record** — the spec fixes field order so a human diff of two
+  archives is readable; nothing else checks more than a sample.
+- **(c) IST partition, on EVERY record** — the record must sit in the day file its own local
+  clock names, AND `ts_local` must be the SAME INSTANT as `ts_utc` (not a second, drifting clock).
+- **(d) SCHEMA conformance, on EVERY record, with a GENERIC JSON-Schema validator — NOT
+  archivist's.** This was missing from the original proposal and it is document-testing: it
+  proves `SCHEMA/v1.json` is a sufficient DESCRIPTION, not merely that the writer agrees with
+  itself.
+
+**DROP everything else.** Chain walking is `verify`'s job. Multiplicity is `reconcile`'s job.
+
+**3. CADENCE — monthly floor, but the real trigger is an EVENT.**
+Time-based cadence is wrong here: what is being tested — "is the README sufficient" — only
+changes when one of FIVE things changes. So:
+- **MONTHLY, with fixity**, as the floor (catches drift nobody noticed). Not weekly — weekly
+  by the clock is wasted runs.
+- **AND a passing `archive_audit` run is part of the DEFINITION OF DONE for any change to:**
+  `README.md` (the recipe) · `SCHEMA/v1.json` · `canon()` · `istStamp()` · `buildRecord()`.
+  *(That rule is written into §16.6 below so it survives.)*
+- **AND if it has not run in 90 days, the watchman raises it.** An auditor that silently stops
+  is worse than none, because the green memory persists.
+
+**4. TWO THINGS MISSING FROM THE PROPOSAL — both matter MORE than the code.**
+- **(a) KNOWN-ANSWER TEST VECTORS IN THE README.** Publish real records verbatim next to their
+  expected `sha256`. Then ANY future implementation, in ANY language, on ANY machine, can check
+  ITSELF against the vectors before trusting itself on 34,000 records. This is how crypto
+  standards make a spec self-sufficient. It is language-independent, costs nothing, and does
+  more for the 2046 claim than any amount of JavaScript. **The auditor's own selftest must
+  verify the vectors still match — that closes the loop.**
+- **(b) THE ARCHIVE CARRIES ITS OWN VERIFIER.** If the promise is "verify without
+  arsenal-ai-fc", the verifier must travel WITH the bag. At `seal`, copy `archive_audit.mjs`
+  into the archive tree, clearly labelled a **REFERENCE IMPLEMENTATION, subordinate to the
+  README**. The README stays the authority because it is language-independent; the code is a
+  convenience. Both in the bag.
+
+**5. THE SIX CORRECTED LAWS ARE THE REAL ASSET — see §16.4. Write each as a comment ABOVE the
+check it governs, with the measurement that disproved the wrong version.** Not a summary at the
+top of the file — attached to the code it protects.
+
+**6. INDEPENDENCE GUARD — keep it and HARDEN it.** The grep-for-`archivist`-import selftest is
+necessary; without it the independence rots the first time someone "removes the duplication".
+Extend it: **fail if the file imports ANY local module from `scripts/`. The only permitted
+imports are Node built-ins.** State that reason in the header so a future reader does not "fix" it.
+
+**7. NOT IN SCOPE — no repair arms.** This organ REPORTS and never writes into the archive.
+`archivist.mjs` remains the SOLE WRITER; a second writer would produce a chain that verifies
+while being wrong about the order of his life.
+
+---
+
+## 16.3 THE TEST VECTORS — ALREADY COMPUTED, USE THESE EXACTLY
+
+Generated 15 Aug 2026 and verified against the live rule. **They are SYNTHETIC on purpose** —
+hand-authored, not sampled from live data, because a `rebuild` re-mints `rid` and `recorded_at`
+and a vector that can change is not a vector. These three cover: a plain live record · exotic
+bytes (Devanagari + emoji + CRLF + tabs + padding, testing that nothing is normalised) · a
+null-clock record with a populated `moment`, a nested payload, a non-integer number, and a
+relaxed `tier`.
+
+Publish all three in the archive's `README.md`, each on one line, with its expected hash.
+
+```
+sha256 = 086f08ee288ff00e5b930052d12eb85a8e622baa8b581eb30f8af305fce87696
+{"rid":"01M000000000000000000000V1","sha256":"086f08ee288ff00e5b930052d12eb85a8e622baa8b581eb30f8af305fce87696","prev_sha256":null,"seq":1,"v":1,"ts_utc":"2026-08-14T04:17:32.123Z","ts_local":"2026-08-14T09:47:32.123+05:30","tz":"Asia/Kolkata","recorded_at":"2026-08-14T04:17:33.001Z","valid_from":null,"valid_to":null,"lane":"afferent","surface":"claude-code","source":"claude-code","modality":"code","session_id":"sess-abc-123","event_id":"evt-1","tier":"private","moment":null,"payload":{"text":"hello","v":3},"derived_from":null,"agent":null,"backfilled":false}
+
+sha256 = ab255f4501a8c07a487bb5b82be1339b5c5bbcd66ddb81492a951a3e26a10922
+{"rid":"01M000000000000000000000V2","sha256":"ab255f4501a8c07a487bb5b82be1339b5c5bbcd66ddb81492a951a3e26a10922","prev_sha256":"0000000000000000000000000000000000000000000000000000000000000000","seq":2,"v":1,"ts_utc":"2026-08-14T20:08:14.198Z","ts_local":"2026-08-15T01:38:14.198+05:30","tz":"Asia/Kolkata","recorded_at":"2026-08-14T20:09:00.000Z","valid_from":null,"valid_to":null,"lane":"afferent","surface":"claude-code","source":"claude-code","modality":"code","session_id":null,"event_id":null,"tier":"private","moment":null,"payload":{"text":"  नमस्ते  🙏\r\n\ttrailing  "},"derived_from":null,"agent":null,"backfilled":true}
+
+sha256 = 7fa088c355802a0a92bfc7ed58f9130a2e7190e9bd1185c91830e7134f4de8ae
+{"rid":"01M000000000000000000000V3","sha256":"7fa088c355802a0a92bfc7ed58f9130a2e7190e9bd1185c91830e7134f4de8ae","prev_sha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","seq":3,"v":1,"ts_utc":null,"ts_local":null,"tz":null,"recorded_at":"2026-08-14T21:00:00.000Z","valid_from":null,"valid_to":null,"lane":"reps_log","surface":"system","source":"reps_log","modality":null,"session_id":null,"event_id":null,"tier":"public","moment":{"sprint_task":"1-04 Hallucinations","forge_step":4,"forge_concept":"hallucinations","readiness":{"verdict":"GREEN","day":"2026-08-04"},"focus_app":null,"cwd":"arsenal-ai-fc"},"payload":{"nested":{"b":2,"a":[1,"x",null]},"n":1.5},"derived_from":null,"agent":null,"backfilled":true}
+```
+
+**The rule they encode, restated so a reader in any language can implement it:** take the
+record, REMOVE the `sha256` and `prev_sha256` fields, serialise what remains with keys sorted
+(UTF-16 code-unit order, recursively) and no insignificant whitespace, encode UTF-8, SHA-256.
+Vector 2 is the important one — if an implementation normalises Unicode, trims whitespace or
+rewrites line endings, it will not match.
+
+> **ALREADY PROVEN, 15 Aug 2026, and this is §16's first real evidence.** All three vectors
+> were recomputed by a fresh implementation written from the paragraph above and NOTHING else —
+> no import of `archivist.mjs`, no copied function. All three reproduced exactly. That is the
+> first time the sentence *"the README alone is sufficient"* has been anything other than a
+> hypothesis. The auditor's selftest must keep re-proving it; if a vector ever stops
+> reproducing, either the rule was edited or the writer drifted, and BOTH are emergencies.
+
+---
+
+## 16.4 THE SIX CORRECTED LAWS — the most expensive knowledge in this file
+
+Each of these is a law the review harness got WRONG before it got right, and every wrong
+version reported a PHANTOM defect. **A checker that cries wolf costs exactly as much as one
+that sleeps.** Attach each as a comment above the check it governs, with its measurement.
+
+1. **"No lane holds the same payload twice" is WRONG.** `salience_ledger`'s SOURCE genuinely
+   contains ten byte-identical payload groups (measured: 8,945 rows, 10 duplicate groups,
+   multiplicities 2–4) — real events that produced identical rows — and LAW 3 forbids the
+   writer to drop either. The right law is **MULTIPLICITY**: archive count == source count.
+   *(That law lives in `reconcile` and is NOT this organ's job — recorded here so nobody
+   re-adds a uniqueness check.)*
+2. **"No backfilled record carries a moment" is WRONG.** A v3 hook row stamps its own `moment`
+   at capture time, so a backfilled row legitimately keeps it. Measured: 23 backfilled records
+   with a moment, all 23 from their own payload, **zero invented**. The right law is: the
+   archivist never INVENTS a moment.
+3. **`LEXICON/terms.jsonl` is a LOG, not a table.** A term's state is its LAST row, and a
+   RETIREMENT row legitimately carries no `definition`. **Fold before judging.** Reading it as
+   a table reported the retired v1 definitions as broken citations.
+4. **A fixture that tests itself tests nothing.** A crash-recovery fixture rewound the
+   checkpoint's `offset` but not its `anchor` — a state the code cannot produce — and went red
+   against a CORRECT build. Same shape as the tripwire's injected `tracked` and §4.5's
+   inline-restated guard.
+5. **"No new file since the seal" ≠ "the seal is current".** Records are appended to EXISTING
+   day files, so a bag goes stale with ZERO new files. Ask `sealState()`'s three numbers
+   (added · changed · removed).
+6. **Source-vs-archive equality on a LIVE writer flaps forever.** Measured on a healthy
+   archive across three consecutive runs: **23/1, 24/0, 23/1**. The organism appends rows every
+   minute, so a green result is just a quiet instant. **Snapshot the sources first, then
+   measure against the snapshot**: everything that existed AT START must be archived; what
+   arrives mid-check belongs to the next tick.
+
+---
+
+## 16.5 THE BUILD — concrete steps, in order
+
+1. **`scripts/archive_audit.mjs`** — new organ.
+   - Header states WHAT / the four checks / the independence rule / MODES.
+   - **Imports: `node:fs`, `node:path`, `node:crypto`, `node:url` ONLY.** No `scripts/*` import,
+     ever, and the header says why.
+   - Reads `$ARSENAL_ARCHIVE` (env, default `%USERPROFILE%\CyborgArchive`).
+   - Implements `canon` + sha256 **from §16.3's written rule**, and the IST offset from the
+     README's stated `+05:30` — NOT by importing anything.
+   - Writes a **generic** JSON-Schema validator (draft-07 subset: `type · enum · const ·
+     required · properties · additionalProperties · items · minimum · minLength · pattern ·
+     if/then`). Do not copy archivist's — that separation is the whole point.
+   - Modes: `run` (full pass over every record) · `selftest`.
+   - Journals its verdict to `health/audit-YYYY-MM.jsonl` in the archive. **Journalling its own
+     result is the ONLY write it makes, and it is a health row, never a data record.** If even
+     that feels like a breach of §16.2.7, have `archivist.mjs` write the row on the auditor's
+     behalf — but do NOT lose the record of when it last ran, because §16.2.3's 90-day rule
+     depends on it.
+2. **Test vectors into the archive README** — extend `README_MD()` in `archivist.mjs` with a
+   section carrying all three vectors from §16.3 and the plain-language rule. Re-run
+   `archivist.mjs init` to regenerate the live README.
+3. **`seal` copies the verifier into the bag** — `archivist.mjs sealArchive()` copies
+   `scripts/archive_audit.mjs` to `<archive>/VERIFIER/archive_audit.mjs` plus a short
+   `VERIFIER/README.md` saying: *this is a REFERENCE IMPLEMENTATION, subordinate to the
+   archive's README; the README is the authority because it is language-independent.* Cover
+   `VERIFIER/` in the **tagmanifest** (not the payload manifest — it is not data).
+4. **Suite membership** — add `node scripts/archive_audit.mjs selftest` to `audit:selftest` in
+   `package.json` (the measurement-organ suite, which exists for costly full walks). The
+   coverage law in `organism_test.mjs` will then hold it automatically.
+5. **Schedule** — add `ArsenalFC-ArchiveAudit` to `setup/INSTALL_ARCHIVE.ps1`, MONTHLY on the
+   1st alongside `ArsenalFC-ArchiveFixity` (04:00 is taken; use 04:20). **It will hit the same
+   `Set-ScheduledTask` refusal every MONTHLY task hits — the XML fallback and the
+   `SetSetting`/`HardenViaXml` helpers are already in that file; reuse them.** Add it to
+   `UNINSTALL_ARCHIVE.ps1` and to `dressing-room/state/tasks_expected.json`'s
+   `expected_enabled` in the SAME commit (that file's own `_doc` asks for this).
+6. **The 90-day watch** — `scripts/watchman.mjs` raises a finding if the newest
+   `health/audit-*.jsonl` row is older than 90 days, or if there has never been one.
+   *(If watchman's shape makes this expensive, the fallback is `archivist.mjs vitals`, which
+   already watches the fixity lane the same way — but watchman is what he asked for. Try it
+   first.)*
+7. **Canon** — add one line to `CLAUDE.md`'s ARCHIVE section naming `archive_audit.mjs`, what it
+   alone proves, and the definition-of-done rule from §16.6.
+
+---
+
+## 16.6 DEFINITION OF DONE — write this rule down, it is the point of §16.2.3
+
+> **Any change to the archive's `README.md` recipe, `SCHEMA/v1.json`, `canon()`, `istStamp()`
+> or `buildRecord()` is NOT DONE until `node scripts/archive_audit.mjs run` passes.**
+> These five are the only things that can make the README insufficient. Everything else in the
+> archive can change freely without re-auditing.
+
+And for the build itself, done means ALL of:
+
+- [ ] `node scripts/archive_audit.mjs selftest` — green, and it verifies the §16.3 vectors
+- [ ] `node scripts/archive_audit.mjs run` — green over the whole live archive
+- [ ] the independence guard fails on a planted `import … from "./archivist.mjs"` (**test that
+      it BITES — do not just write it**; the tripwire shipped green and failed open)
+- [ ] the three vectors are in the live archive's `README.md`
+- [ ] `VERIFIER/` is in the sealed bag and in the tagmanifest
+- [ ] `npm test` green · `archivist.mjs selftest` green · `verify` ALL CHAINS INTACT
+- [ ] `ArsenalFC-ArchiveAudit` exists, battery-conditions cleared, catch-up on, fired once
+      (a never-run lane reads as a dead lane)
+- [ ] `tasks_expected.json` updated in the same commit
+- [ ] glance, commit with the WHY, push
+
+---
+
+## 16.7 THE HARNESS THAT FOUND ALL THIS — it is GONE, and that is fine
+
+It lived at `…\Temp\claude\…\scratchpad\deepcheck.mjs` and the temp tree is disposable.
+**Do not hunt for it.** Everything of value from it is in §16.2, §16.3 and §16.4 — the four
+checks worth keeping, the vectors, and the six corrected laws. Write the organ fresh from this
+section; the harness carried twenty checks, sixteen of which duplicate `verify` and `reconcile`
+and were correctly dropped by his §16.2 scope ruling.
+
+---
+
+*Work order written 15 August 2026, IST, on his decision the same day. §1–§15 are DONE and
+pushed; §16 is the only open work. Talk to him in Hinglish. Never make it longer — always
+make it deeper.*
