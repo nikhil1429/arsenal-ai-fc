@@ -3828,24 +3828,33 @@ async function selftest() {
     // against the live deck and the live missions directory. A door is only a
     // door if something comes back through it.
     {
-      const c = execTool("get_card", {}, { sh });
+      // ONE execTool CALL SITE, driven from a table. Four separate call sites
+      // cost this file 60 unresolved sinks on xray's ratchet — execTool is huge
+      // and every distinct call site re-banks its internals. The coverage is
+      // identical; only the number of places the analyser must widen changed.
+      const door = {};
+      for (const [key, tool, args] of [
+        ["card", "get_card", {}],
+        ["cardMiss", "get_card", { id: "c-does-not-exist" }],
+        ["m01", "get_mission", { id: "M01" }],
+        ["mMiss", "get_mission", { id: "M99-nope" }],
+      ]) door[key] = execTool(tool, args, { sh });
       const deck = readJson(join(STATE_DIR, "captains_call.json")) || {};
       const cards = Array.isArray(deck.cards) ? deck.cards : (Array.isArray(deck) ? deck : []);
       if (cards.some((x) => x && (Array.isArray(x.dealt) ? x.dealt.length : x.dealt))) {
         assert("get_card OPENS a real card: id + his actual line come back, not a shape",
-          c.ok === true && typeof c.line === "string" && c.line.length > 10
-          && cards.some((x) => x.id === c.id));
+          door.card.ok === true && typeof door.card.line === "string" && door.card.line.length > 10
+          && cards.some((x) => x.id === door.card.id));
       } else {
         assert("get_card: no card has ever been dealt on this machine — the door says so plainly instead of composing one",
-          c.ok === false && /dealt/.test(String(c.why || "")));
+          door.card.ok === false && /dealt/.test(String(door.card.why || "")));
       }
       assert("get_card REFUSES an id that does not exist — it never describes a card it could not open",
-        (() => { const r = execTool("get_card", { id: "c-does-not-exist" }, { sh }); return r.ok === false && /no card/.test(String(r.why || "")); })());
-      const m01 = execTool("get_mission", { id: "M01" }, { sh });
+        door.cardMiss.ok === false && /no card/.test(String(door.cardMiss.why || "")));
       assert("get_mission OPENS the real M01 brief off disk (the first mission ever staged)",
-        m01.ok === true && m01.files >= 1 && String(m01.parts[0].text || "").length > 200);
+        door.m01.ok === true && door.m01.files >= 1 && String(door.m01.parts[0].text || "").length > 200);
       assert("get_mission REFUSES an unknown id rather than narrating one",
-        (() => { const r = execTool("get_mission", { id: "M99-nope" }, { sh }); return r.ok === false && /no mission file/.test(String(r.why || "")); })());
+        door.mMiss.ok === false && /no mission file/.test(String(door.mMiss.why || "")));
     }
     const rep = execTool("get_club_report", {}, { sh });
     assert("club report: body + brain + gate + senses + memory + tanks, one call", rep.body && rep.brain && rep.gate && rep.senses && rep.memory && Array.isArray(rep.tanks.gauge));
