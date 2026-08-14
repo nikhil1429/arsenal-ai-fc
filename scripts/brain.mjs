@@ -4501,8 +4501,14 @@ async function selftest() {
       const sa = surfaceAudit(liveCfg);
       assert("#63 — EVERY enabled job in the committed config declares a surface (have/need, not a word)",
         sa.have === sa.need && sa.orphans.length === 0 && sa.need > 0);
-      assert("#63 — the four DESIGNED-to-be-human-read jobs are still ON and addressed by file path",
-        ["doubt_clusters", "widget_spec", "market_scan", "drill_forge"].every(id => {
+      // PHASE 9 (14 Aug 2026): widget_spec and drill_forge were TWO of these four
+      // and are now closed — traced end to end on 13 Aug, neither had a reader,
+      // human or machine, and "designed for his eyes" is only true if his eyes
+      // ever arrive. His §0 ruling closed them. The assertion's real subject is
+      // unchanged and still live for the two that remain: a human_file lane must
+      // be ON and addressed BY PATH, never merely declared.
+      assert("#63 — the DESIGNED-to-be-human-read jobs still open are ON and addressed by file path",
+        ["doubt_clusters", "market_scan"].every(id => {
           const j = liveCfg.jobs.find(x => x.id === id);
           return j && j.enabled !== false && jobSurface(j).kind === "human_file" && /brain_out\//.test(jobSurface(j).where || "");
         }));

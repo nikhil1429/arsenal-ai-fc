@@ -292,9 +292,25 @@ function reconcileBrainLanes(deps = {}) {
         notes.push(`re-enable condition MET — disabled, yet ${uniqueConsumers.length} reader(s) reference brain_out/${job.out}: ${uniqueConsumers.slice(0, 4).join(", ")}`);
       }
     } else if (newestMs === null) {
-      bleeds.push(fileCount === 0 && !existsSync(dir)
+      // A LANE YOUNGER THAN ITS OWN CADENCE HAS NOT FAILED — IT HAS NOT BEEN
+      // ASKED YET (14 Aug 2026). "never produced" is this file's loudest class
+      // and it is right to be: diary was enabled, nightly, with three wired
+      // readers and had never written a page. But a job ADDED TODAY is a
+      // different fact wearing the same clothes, and on the day it lands the
+      // suite goes red for a lane that is working exactly as designed — which
+      // trains a reader to ignore the loudest signal in the report.
+      // The birthday is DECLARED, never inferred: a job may carry `_added`
+      // (YYYY-MM-DD). Inside one cadence of that date the absence is a note.
+      // Past it, the bleed returns automatically with no cleanup to remember —
+      // the note cannot rot into a permanent excuse.
+      const born = job._added ? Date.parse(job._added + "T00:00:00") : NaN;
+      const bornHoursAgo = Number.isFinite(born) ? (now.getTime() - born) / 3600000 : null;
+      const notDueYet = bornHoursAgo !== null && bornHoursAgo <= maxAge;
+      const line = fileCount === 0 && !existsSync(dir)
         ? `never produced — ${job.out}/ does not exist`
-        : `never produced — ${job.out}/ is empty`);
+        : `never produced — ${job.out}/ is empty`;
+      if (notDueYet) notes.push(`${line} — but the lane was ADDED ${job._added} (${Math.round(bornHoursAgo)}h ago) and its cadence allows ${Math.round(maxAge)}h: it has not been asked yet, and this becomes a bleed on its own the moment it is late`);
+      else bleeds.push(line);
     } else if (ageHours > maxAge) {
       const line = `newest ${job.out}/ file is ${Math.round(ageHours)}h old, cadence allows ${Math.round(maxAge)}h`;
       const lastRun = lastRuns[job.id];
@@ -523,6 +539,21 @@ function selftest() {
     und("vault_lane") && und("vault_lane").vaulted === true && und("vault_lane").orphan === false);
   ok("PASS 1b — an undeclared dir WITHOUT the marker still surfaces as an orphan",
     und("side_lane") && und("side_lane").orphan === true);
+
+  // --- A NEWBORN LANE HAS NOT FAILED (14 Aug 2026) --------------------------
+  const cfgNew = { jobs: [
+    { id: "newborn",  out: "never_lane", enabled: true, at: "03:10", _added: "2026-08-04" },   // `now` in this selftest IS 2026-08-04
+    { id: "overdue",  out: "never_lane", enabled: true, at: "03:10", _added: "2026-07-01" },
+    { id: "undated",  out: "never_lane", enabled: true, at: "03:10" },
+  ] };
+  const rNew = build({ cfg: cfgNew, corpus: [{ file: "viz.mjs", text: `join("brain_out/never_lane", d);` }], now, outDir, stateDir: join(root, "nostate") });
+  const laneOf = (id) => rNew.lanes.find((x) => x.job === id);
+  ok("a lane ADDED today is NOT-DUE-YET (a note), not 'never produced' (a bleed)",
+    laneOf("newborn").bleeds.length === 0 && laneOf("newborn").notes.some((n) => /has not been asked yet/.test(n)));
+  ok("...and the excuse EXPIRES on its own: a lane added five weeks ago still bleeds",
+    laneOf("overdue").bleeds.some((b) => /never produced/.test(b)));
+  ok("...and a lane with no declared birthday is judged exactly as before (no silent amnesty)",
+    laneOf("undated").bleeds.some((b) => /never produced/.test(b)));
 
   // --- A DECLARED REFUSAL IS NOT A DEAD LANE (14 Aug 2026) -----------------
   // The live case that reddened the suite for four days: `dreams` runs nightly,

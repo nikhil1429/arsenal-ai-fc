@@ -295,7 +295,7 @@
       "_engine_note": "moved off the starved free pool 17 Jul (cognitive lane rides the Max window)",
       "window": "overnight",
       "priority": 50,
-      "enabled": true,
+      "enabled": false,
       "max_per_day": 1,
       "kind": "analysis",
       "hype_guard": false,
@@ -315,7 +315,8 @@
       "_DISABLED_2026_08_02": "AUDIT #63 — no address. 2,38,210 tokens all-time into brain_out/twin/, which no .mjs opens and no other job lists in `inputs` (6 dated .md files sitting there unread). Distinct from twin.json, which IS read — that is the deterministic organ's own state, written by twin.mjs; this is the LLM's re-read of it, and it lands nowhere. RE-ENABLE WHEN: scripts/twin.mjs reads brain_out/twin/<date>.md as market-tuning evidence (the seam the audit named), OR the captain declares it a read-it-yourself file — in which case flip surface.kind to \"human_file\" with a `where` and set enabled:true, and it will start printing by path in `brain status`. Nothing else here changes.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_disabled_reason": "DISABLED with NO STATED REASON until 6 Aug 2026 — the exact ambiguity brain.mjs:123 warns about (\"no way to tell later which were paused deliberately and which were forgotten\"). Reconstructed from evidence: surface was kind:none and nothing opens brain_out/twin/ (7 files unread), so it fell to the same audit #63 sweep as the other three. Recorded now so it reads as a DECISION, not an oversight. TO ENABLE: give it a reader, then flip enabled:true.",
-      "_g11_note": "G11 (9 Aug 2026): re-enabled on the note's second branch — human_file twin_read, NOT wired into twin.mjs."
+      "_g11_note": "G11 (9 Aug 2026): re-enabled on the note's second branch — human_file twin_read, NOT wired into twin.mjs.",
+      "_closed_note": "CLOSED 14 Aug 2026 under his unleash ruling (§0 of UNLEASH_PLAN__2026-08-14.md). WHY: no reader — traced end to end 13 Aug, the output lands in brain_out/ and nothing, human or machine, has opened it. Not deleted: the lane's code, prompt and every file it ever wrote stay exactly where they are (layering law — disable, never delete). RE-ENABLE WHEN something actually reads it: a job that lists its brain_out/ dir as an input, an organ that opens it, or the captain saying he wants to read it himself — then set enabled:true and nothing else changes. NB the widget.mjs REGISTRY (the Visualization Contract) is NOT this lane and is untouched; only the nightly spec job closes."
     },
     {
       "id": "doubt_clusters",
@@ -390,7 +391,7 @@
       "model": "opus",
       "window": "overnight",
       "priority": 70,
-      "enabled": true,
+      "enabled": false,
       "max_per_day": 1,
       "kind": "analysis",
       "inputs": [
@@ -408,7 +409,8 @@
         "where": "dressing-room/state/brain_out/drill_forge/<date>.md — enrichment the captain reads beside drills.json; `brain status` prints the newest by path"
       },
       "_note": "Phrase tomorrow's compiled drills in the DOSSIER register. drills.json stays complete without this — enrichment only.",
-      "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its config note already said 'enrichment only'; what was missing was any surface naming the file. KEEPS the hype guard (no hype_guard key): this text is written in the register he reads."
+      "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its config note already said 'enrichment only'; what was missing was any surface naming the file. KEEPS the hype guard (no hype_guard key): this text is written in the register he reads.",
+      "_closed_note": "CLOSED 14 Aug 2026 under his unleash ruling (§0 of UNLEASH_PLAN__2026-08-14.md). WHY: no reader — traced end to end 13 Aug, the output lands in brain_out/ and nothing, human or machine, has opened it. Not deleted: the lane's code, prompt and every file it ever wrote stay exactly where they are (layering law — disable, never delete). RE-ENABLE WHEN something actually reads it: a job that lists its brain_out/ dir as an input, an organ that opens it, or the captain saying he wants to read it himself — then set enabled:true and nothing else changes. NB the widget.mjs REGISTRY (the Visualization Contract) is NOT this lane and is untouched; only the nightly spec job closes."
     },
     {
       "id": "wall_insights",
@@ -594,7 +596,7 @@
       "_engine_note": "17 Jul: the painter rides Claude too — the sanitizer never cared who holds the brush",
       "window": "overnight",
       "priority": 22,
-      "enabled": true,
+      "enabled": false,
       "max_per_day": 1,
       "kind": "analysis",
       "inputs": [
@@ -611,7 +613,8 @@
       },
       "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs. Its own note already says 'Proposal only — flows into a Claude-Design/Gem session via the captain'; the missing piece was any surface naming the file. Weekly (Wed), 46,064 tok all-time.",
       "_note": "Resurrects the FORGE's RESERVED viz layer: drafts the per-axis widget/viz spec for the NEWEST locked capsule (mechanism + exact values honored; visual freedom per FORGE_DESIGN). Proposal only — flows into a Claude-Design/Gem session via the captain.",
-      "_g16_note": "G16 (9 Aug 2026): Wed-only → DAILY — a widget spec that arrives weekly serves a layer he studies daily."
+      "_g16_note": "G16 (9 Aug 2026): Wed-only → DAILY — a widget spec that arrives weekly serves a layer he studies daily.",
+      "_closed_note": "CLOSED 14 Aug 2026 under his unleash ruling (§0 of UNLEASH_PLAN__2026-08-14.md). WHY: no reader — traced end to end 13 Aug, the output lands in brain_out/ and nothing, human or machine, has opened it. Not deleted: the lane's code, prompt and every file it ever wrote stay exactly where they are (layering law — disable, never delete). RE-ENABLE WHEN something actually reads it: a job that lists its brain_out/ dir as an input, an organ that opens it, or the captain saying he wants to read it himself — then set enabled:true and nothing else changes. NB the widget.mjs REGISTRY (the Visualization Contract) is NOT this lane and is untouched; only the nightly spec job closes."
     },
     {
       "id": "market_scan",
@@ -986,6 +989,31 @@
         "medium"
       ],
       "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+    },
+    {
+      "id": "gaffer_claim_audit",
+      "kind": "analysis",
+      "engine": "claude",
+      "model": "haiku",
+      "window": "overnight",
+      "at": "03:10",
+      "priority": 12,
+      "enabled": true,
+      "max_per_day": 1,
+      "hype_guard": false,
+      "inputs": [
+        "brain_out/dugout/TODAY.md",
+        "captains_call.json",
+        "missions.json"
+      ],
+      "out": "gaffer_audit",
+      "surface": {
+        "kind": "human_file",
+        "where": "dressing-room/state/brain_out/gaffer_audit/<date>.md — the captain glances it; `brain status` prints the newest by path"
+      },
+      "_note": "PHASE 8.3 (14 Aug 2026, unleash): THE CLAIM AUDITOR. The Gaffer's confabulations had three root causes — no door to the data (fixed: get_card/get_mission), the never-mention-the-machinery law living only in prose (fixed: the unmachine filter), and NO ORGAN CHECKING IT AT ALL. This is the third. Read today's dugout transcript and list every FACTUAL CLAIM it made about a card, a mission, or organism state; mark each CONFIRMED or UNSUPPORTED against the card deck and mission index supplied beside it; <=15 lines. Haiku, ~30-60k tokens a night (<=0.5% of spend) — the cheapest possible answer to 'koi organ nahi jaanchta'. It JUDGES, it never repairs: an UNSUPPORTED line is evidence for the captain, not an automatic anything.",
+      "_effort_note": "no --effort key: effort is unsupported on haiku and setting it would error the lane every night.",
+      "_added": "2026-08-14"
     }
   ],
   "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",
