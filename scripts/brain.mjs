@@ -358,6 +358,42 @@ function spendOf(row) {
   return s;
 }
 
+// ── C1b · THE MODEL FACTOR (14 Aug 2026, unleash Phase 0) ────────────────────
+// spendOf above is MODEL-BLIND: a haiku token and an opus token weigh the same.
+// Measured on 7 days of ledger (582 rows), that blindness inverts the board —
+// haiku_pulse reads 40% of all spend blind and ~18% model-aware, while the
+// sonnet night lanes it hides (dmn_counter 3.86M, dmn_rollout 2.67M aware) are
+// the real top of the table. Every receipt in the unleash plan is read off this
+// board, so a board that ranks the wrong organ first sends the work to the
+// wrong lane.
+//
+// THE FACTORS are the same kind of number as SPEND_WEIGHTS — published list
+// INPUT prices per MTok, as ratios: haiku $1 · sonnet $3 · opus $5. Unknown
+// model ⇒ 3 (sonnet, the organism's default engine), stated not guessed.
+const MODEL_MULT = { haiku: 1, sonnet: 3, opus: 5 };
+export function spendOfModelAware(row) {
+  const base = spendOf(row);
+  const m = String((row && row.model) || "").toLowerCase();
+  const key = m.includes("haiku") ? "haiku" : m.includes("opus") ? "opus" : m.includes("sonnet") ? "sonnet" : null;
+  return base * (key ? MODEL_MULT[key] : 3);
+}
+//
+// ⚠ WHY THE GOVERNOR IS NOT SWITCHED TO IT — the one line to read before
+// "finishing the job" by wiring this into windowUsage(). budget.window_capacity
+// _est_tokens (27,50,000) and weekly_capacity (4,12,50,000) are stated IN THE
+// MODEL-BLIND UNIT — brain_config's own `_unit_change_2026_08_12` note says so
+// in its first sentence. On live data the two meters differ by 2.28× (7d:
+// 1,07,48,830 blind vs 2,45,07,142 aware), so switching the meter under
+// unchanged caps would take the governor from 26% to 59% utilisation overnight
+// WITHOUT ONE EXTRA TOKEN BEING SPENT, and the headroom floor would start
+// refusing organs — the exact starvation fault 3 above was written to end, and
+// a GUARD the unleash plan's §NEVER-TOUCH forbids moving. The board is a
+// REPORT and may change unit freely; the governor's unit may only change
+// together with a re-derived ceiling, which is a separate, measured job.
+// So: spendOf = the governor's unit (unchanged, still the engine of record).
+//     spendOfModelAware = the reporting unit (board + treasury).
+// ─────────────────────────────────────────────────────────────────────────────
+
 // FROZEN — the engine of record until 12 Aug 2026, kept verbatim per the layering
 // law. It sums `total_tokens` raw. Nothing calls it; it is here so the migration
 // note has something to point at and so a future session can diff the two meters.
@@ -3387,6 +3423,16 @@ async function selftest() {
     // the fallback: a row with NO components keeps its written total, which is the only
     // reason every budget assertion written before today still holds.
     assert("C1 — a component-less row (tokens_estimated) keeps its written total at weight 1", spendOf({ total_tokens: 4242 }) === 4242);
+    // C1b (14 Aug 2026) — THE MODEL FACTOR. Two clauses, and the second is the
+    // one that protects a guard: the board sees models, the GOVERNOR does not.
+    assert("C1b — model-aware spend multiplies the same row by haiku 1 / sonnet 3 / opus 5",
+      spendOfModelAware({ ...cacheHeavy, model: "haiku" }) === 100
+      && spendOfModelAware({ ...cacheHeavy, model: "sonnet" }) === 300
+      && spendOfModelAware({ ...cacheHeavy, model: "opus" }) === 500
+      && spendOfModelAware(cacheHeavy) === 300);   // unstated ⇒ sonnet, never free
+    assert("C1b — the GOVERNOR's unit is UNCHANGED: windowUsage never sees the model factor (its caps are stated model-blind)",
+      windowUsage([{ ...cacheHeavy, ts: now(22, 30).toISOString(), model: "opus" }], now(23, 0), 5)
+      === windowUsage([{ ...cacheHeavy, ts: now(22, 30).toISOString(), model: "haiku" }], now(23, 0), 5));
     assert("C1 — the frozen legacy meter still sums raw, and the two now DISAGREE by design",
       windowUsageLegacy([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) === 702
       && windowUsage([{ ...dmnShaped, ts: now(22, 30).toISOString() }], now(23, 0), 5) !== 702);
@@ -5141,26 +5187,34 @@ async function main() {
     const by = new Map();
     for (const r of rows) {
       const k = r.job || "(nojob)";
-      if (!by.has(k)) by.set(k, { job: k, n: 0, spend: 0, out: 0, cr: 0, cc: 0, inp: 0, fail: 0 });
+      if (!by.has(k)) by.set(k, { job: k, n: 0, spend: 0, aware: 0, model: r.model || "?", out: 0, cr: 0, cc: 0, inp: 0, fail: 0 });
       const b = by.get(k);
-      b.n++; b.spend += spendOf(r); b.out += N(r.output_tokens); b.cr += N(r.cache_read_tokens);
+      b.n++; b.spend += spendOf(r); b.aware += spendOfModelAware(r); b.out += N(r.output_tokens); b.cr += N(r.cache_read_tokens);
       b.cc += N(r.cache_creation_tokens); b.inp += N(r.input_tokens); if (r.ok === false) b.fail++;
+      if (r.model) b.model = r.model;
     }
-    const list = [...by.values()].sort((a, b) => b.spend - a.spend);
+    // C1b (14 Aug): SORTED BY THE MODEL-AWARE COLUMN. Both units are printed —
+    // WEIGHTED is what the governor meters, AWARE is what it costs — because the
+    // two rank the organs differently and the difference is the whole point.
+    const list = [...by.values()].sort((a, b) => b.aware - a.aware);
     const total = list.reduce((a, b) => a + b.spend, 0) || 1;
+    const totalAware = list.reduce((a, b) => a + b.aware, 0) || 1;
     const f = (n) => Math.round(n).toLocaleString("en-IN");
-    console.log(`\nSPEND BOARD — last ${days}d · ${rows.length} claude rows · ${f(total)} cost-weighted tokens`);
-    console.log(`(weights: input 1 · cache_write 1.25 · cache_read 0.1 · output 5 — see brain.mjs SPEND)\n`);
-    console.log("JOB".padEnd(24) + "N".padStart(5) + "WEIGHTED".padStart(13) + "%".padStart(7) + "output".padStart(11) + "cache_rd".padStart(12) + "cache_wr".padStart(12) + "  fail");
+    console.log(`\nSPEND BOARD — last ${days}d · ${rows.length} claude rows · ${f(total)} cost-weighted · ${f(totalAware)} model-aware`);
+    console.log(`(weights: input 1 · cache_write 1.25 · cache_read 0.1 · output 5 — see brain.mjs SPEND)`);
+    console.log(`(model factor: haiku 1 · sonnet 3 · opus 5, list input prices. AWARE% is the true cost share; WEIGHTED is the governor's unit)\n`);
+    console.log("JOB".padEnd(24) + "MODEL".padEnd(8) + "N".padStart(5) + "WEIGHTED".padStart(13) + "AWARE".padStart(13) + "A%".padStart(7) + "output".padStart(11) + "cache_rd".padStart(12) + "cache_wr".padStart(12) + "  fail");
     for (const b of list) console.log(
-      b.job.slice(0, 24).padEnd(24) + String(b.n).padStart(5) + f(b.spend).padStart(13)
-      + ((b.spend / total) * 100).toFixed(1).padStart(7) + f(b.out).padStart(11) + f(b.cr).padStart(12) + f(b.cc).padStart(12)
+      b.job.slice(0, 24).padEnd(24) + String(b.model).slice(0, 7).padEnd(8) + String(b.n).padStart(5) + f(b.spend).padStart(13) + f(b.aware).padStart(13)
+      + ((b.aware / totalAware) * 100).toFixed(1).padStart(7) + f(b.out).padStart(11) + f(b.cr).padStart(12) + f(b.cc).padStart(12)
       + (b.fail ? `  ${b.fail}✗` : ""));
     // THE RANKING THAT MATTERS FOR C3: the same board sorted by generated output is a
     // DIFFERENT order, and the difference IS the optimisation target — an organ high on
     // weighted spend but low on output is paying boot tax, not thinking.
     const byOut = [...list].sort((a, b) => b.out - a.out).slice(0, 5).map(b => b.job).join(" · ");
-    console.log(`\ntop 5 by WEIGHTED spend : ${list.slice(0, 5).map(b => b.job).join(" · ")}`);
+    const byBlind = [...list].sort((a, b) => b.spend - a.spend).slice(0, 5).map(b => b.job).join(" · ");
+    console.log(`\ntop 5 by MODEL-AWARE    : ${list.slice(0, 5).map(b => b.job).join(" · ")}`);
+    console.log(`top 5 by WEIGHTED spend : ${byBlind}`);
     console.log(`top 5 by REAL OUTPUT    : ${byOut}`);
     console.log(`→ an organ high on the first list and absent from the second is paying boot tax, not thinking.\n`);
     return;

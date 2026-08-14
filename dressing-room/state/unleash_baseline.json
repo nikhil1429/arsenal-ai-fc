@@ -1,0 +1,310 @@
+{
+ "at": "2026-08-14T00:14:39.408Z",
+ "days": 7,
+ "lanes": {
+  "midday_digest_2": {
+   "n": 2,
+   "cw": 57175,
+   "cr": 0,
+   "inp": 4,
+   "out": 2903,
+   "model": "sonnet"
+  },
+  "haiku_pulse": {
+   "n": 236,
+   "cw": 2088931,
+   "cr": 852349,
+   "inp": 2290,
+   "out": 330537,
+   "model": "haiku"
+  },
+  "midday_digest_3": {
+   "n": 2,
+   "cw": 57158,
+   "cr": 0,
+   "inp": 4,
+   "out": 2445,
+   "model": "sonnet"
+  },
+  "dmn_rollout": {
+   "n": 150,
+   "cw": 294259,
+   "cr": 2159435,
+   "inp": 300,
+   "out": 61426,
+   "model": "sonnet"
+  },
+  "dmn_counter": {
+   "n": 48,
+   "cw": 793126,
+   "cr": 0,
+   "inp": 96,
+   "out": 58910,
+   "model": "sonnet"
+  },
+  "teamtalk_pm": {
+   "n": 4,
+   "cw": 76290,
+   "cr": 0,
+   "inp": 6,
+   "out": 6133,
+   "model": "sonnet"
+  },
+  "evening_voice": {
+   "n": 2,
+   "cw": 54955,
+   "cr": 0,
+   "inp": 4,
+   "out": 3724,
+   "model": "opus"
+  },
+  "deep_reanalysis": {
+   "n": 2,
+   "cw": 55534,
+   "cr": 0,
+   "inp": 4,
+   "out": 3547,
+   "model": "opus"
+  },
+  "night_coach": {
+   "n": 2,
+   "cw": 194601,
+   "cr": 0,
+   "inp": 12,
+   "out": 27261,
+   "model": "opus"
+  },
+  "drill_forge": {
+   "n": 2,
+   "cw": 38526,
+   "cr": 0,
+   "inp": 4,
+   "out": 2563,
+   "model": "opus"
+  },
+  "dugout_digest": {
+   "n": 2,
+   "cw": 82879,
+   "cr": 0,
+   "inp": 4,
+   "out": 6703,
+   "model": "sonnet"
+  },
+  "day_cartridge": {
+   "n": 2,
+   "cw": 40407,
+   "cr": 0,
+   "inp": 4,
+   "out": 3072,
+   "model": "sonnet"
+  },
+  "doubt_clusters": {
+   "n": 2,
+   "cw": 48787,
+   "cr": 0,
+   "inp": 4,
+   "out": 3066,
+   "model": "sonnet"
+  },
+  "teamtalk_am": {
+   "n": 3,
+   "cw": 54430,
+   "cr": 0,
+   "inp": 6,
+   "out": 7694,
+   "model": "sonnet"
+  },
+  "deep_twin": {
+   "n": 2,
+   "cw": 61882,
+   "cr": 0,
+   "inp": 4,
+   "out": 5070,
+   "model": "sonnet"
+  },
+  "lexicon_mine": {
+   "n": 3,
+   "cw": 38883,
+   "cr": 19384,
+   "inp": 6,
+   "out": 4922,
+   "model": "sonnet"
+  },
+  "wall_insights": {
+   "n": 2,
+   "cw": 37907,
+   "cr": 0,
+   "inp": 4,
+   "out": 1847,
+   "model": "sonnet"
+  },
+  "gemini_render": {
+   "n": 2,
+   "cw": 38078,
+   "cr": 0,
+   "inp": 4,
+   "out": 32571,
+   "model": "sonnet"
+  },
+  "scrimmage_staging": {
+   "n": 2,
+   "cw": 39520,
+   "cr": 0,
+   "inp": 4,
+   "out": 1496,
+   "model": "sonnet"
+  },
+  "maidan_poster": {
+   "n": 2,
+   "cw": 36667,
+   "cr": 0,
+   "inp": 4,
+   "out": 16127,
+   "model": "sonnet"
+  },
+  "wall_review": {
+   "n": 2,
+   "cw": 51060,
+   "cr": 0,
+   "inp": 4,
+   "out": 6687,
+   "model": "sonnet"
+  },
+  "widget_spec": {
+   "n": 4,
+   "cw": 40332,
+   "cr": 40360,
+   "inp": 8,
+   "out": 11164,
+   "model": "sonnet"
+  },
+  "capsule_premap": {
+   "n": 6,
+   "cw": 60193,
+   "cr": 60221,
+   "inp": 12,
+   "out": 17482,
+   "model": "sonnet"
+  },
+  "model_mine": {
+   "n": 2,
+   "cw": 39624,
+   "cr": 0,
+   "inp": 4,
+   "out": 2556,
+   "model": "opus"
+  },
+  "dreams": {
+   "n": 6,
+   "cw": 0,
+   "cr": 0,
+   "inp": 0,
+   "out": 0,
+   "model": "sonnet"
+  },
+  "agenda": {
+   "n": 2,
+   "cw": 41099,
+   "cr": 0,
+   "inp": 4,
+   "out": 7205,
+   "model": "opus"
+  },
+  "ns_probe_bank": {
+   "n": 8,
+   "cw": 130730,
+   "cr": 0,
+   "inp": 16,
+   "out": 3983,
+   "model": "sonnet"
+  },
+  "ns_grade_probes": {
+   "n": 27,
+   "cw": 181403,
+   "cr": 168058,
+   "inp": 222,
+   "out": 29010,
+   "model": "haiku"
+  },
+  "ns_distractors": {
+   "n": 4,
+   "cw": 65075,
+   "cr": 0,
+   "inp": 8,
+   "out": 3333,
+   "model": "sonnet"
+  },
+  "ns_pre_answers": {
+   "n": 21,
+   "cw": 344820,
+   "cr": 0,
+   "inp": 42,
+   "out": 20643,
+   "model": "sonnet"
+  },
+  "cortex_consolidate": {
+   "n": 2,
+   "cw": 0,
+   "cr": 0,
+   "inp": 4,
+   "out": 7151,
+   "model": "opus"
+  },
+  "diary": {
+   "n": 2,
+   "cw": 42422,
+   "cr": 0,
+   "inp": 4,
+   "out": 6803,
+   "model": "sonnet"
+  },
+  "formation_read": {
+   "n": 1,
+   "cw": 33113,
+   "cr": 0,
+   "inp": 2,
+   "out": 682,
+   "model": "opus"
+  },
+  "midday_digest": {
+   "n": 1,
+   "cw": 25796,
+   "cr": 0,
+   "inp": 2,
+   "out": 3188,
+   "model": "sonnet"
+  },
+  "midday_cartridge": {
+   "n": 1,
+   "cw": 19136,
+   "cr": 0,
+   "inp": 2,
+   "out": 1966,
+   "model": "sonnet"
+  },
+  "midday_reread": {
+   "n": 1,
+   "cw": 27602,
+   "cr": 0,
+   "inp": 2,
+   "out": 2534,
+   "model": "sonnet"
+  },
+  "council_chair": {
+   "n": 15,
+   "cw": 85109,
+   "cr": 0,
+   "inp": 32,
+   "out": 3014,
+   "model": "haiku"
+  },
+  "cortex_wake": {
+   "n": 5,
+   "cw": 91816,
+   "cr": 0,
+   "inp": 10,
+   "out": 6390,
+   "model": "opus"
+  }
+ }
+}

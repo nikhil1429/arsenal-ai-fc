@@ -63,6 +63,13 @@ export const partsOf = (r) => ({
 });
 export const rawOf = (r) => { const p = partsOf(r); return p.input + p.cache_creation + p.cache_read + p.output; };
 export const spendOf = (r) => { const p = partsOf(r); return p.input * W.input + p.cache_creation * W.cache_creation + p.cache_read * W.cache_read + p.output * W.output; };
+// C1b (14 Aug 2026, unleash Phase 0) — the MODEL factor, brain.mjs's likewise and
+// likewise not this organ's to change: published list input prices as ratios.
+// Reporting only; the governor's ceiling stays in the model-blind unit (the WHY is
+// written out at brain.mjs's spendOfModelAware — moving it would re-scale a guard).
+export const M = { haiku: 1, sonnet: 3, opus: 5 };
+export const modelKey = (r) => { const m = String((r && r.model) || "").toLowerCase(); return m.includes("haiku") ? "haiku" : m.includes("opus") ? "opus" : m.includes("sonnet") ? "sonnet" : null; };
+export const spendOfModelAware = (r) => { const k = modelKey(r); return spendOf(r) * (k ? M[k] : 3); };
 
 export function rows(days) {
   if (!existsSync(LEDGER)) return [];
@@ -93,12 +100,16 @@ export function rho(rs) {
   const by = new Map();
   for (const r of rs) {
     const k = String(r.job || r.kind || "?");
-    if (!by.has(k)) by.set(k, { job: k, n: 0, weighted: 0, output: 0, raw: 0, cache_read: 0 });
+    if (!by.has(k)) by.set(k, { job: k, n: 0, weighted: 0, aware: 0, model: "?", output: 0, raw: 0, cache_read: 0 });
     const e = by.get(k), p = partsOf(r);
-    e.n++; e.weighted += spendOf(r); e.output += p.output; e.raw += rawOf(r); e.cache_read += p.cache_read;
+    e.n++; e.weighted += spendOf(r); e.aware += spendOfModelAware(r); e.output += p.output; e.raw += rawOf(r); e.cache_read += p.cache_read;
+    if (r.model) e.model = r.model;
   }
-  return [...by.values()].map((e) => ({ ...e, rho: e.output ? +(e.weighted / e.output).toFixed(1) : Infinity }))
-    .sort((a, b) => b.weighted - a.weighted);
+  // ρ keeps its published definition (weighted ÷ output) so the boot-tax outlier
+  // rule is unchanged; `rho_aware` is the same ratio in real money, and the table
+  // is ORDERED by model-aware spend — a model-blind order puts the cheap lane first.
+  return [...by.values()].map((e) => ({ ...e, rho: e.output ? +(e.weighted / e.output).toFixed(1) : Infinity, rho_aware: e.output ? +(e.aware / e.output).toFixed(1) : Infinity }))
+    .sort((a, b) => b.aware - a.aware);
 }
 
 // ── THE SENSITIVITY RATIO — bug class 5, and it needs NO ORACLE ──────────────
@@ -180,9 +191,10 @@ function report(days) {
   for (const b of worst) console.log(`   ${b.job} ${b.ts}  claimed ${b.claimed.toLocaleString("en-IN")} vs real ${b.raw.toLocaleString("en-IN")}`);
 
   console.log(`\n── (b) THE ρ TABLE — weighted spend ÷ output. High ρ + low output = BOOT TAX, not thinking.`);
-  console.log(`   ${"job".padEnd(24)} ${"runs".padStart(5)} ${"weighted".padStart(14)} ${"output".padStart(10)} ${"ρ".padStart(9)}`);
+  console.log(`   ordered by MODEL-AWARE spend (haiku ${M.haiku} · sonnet ${M.sonnet} · opus ${M.opus}) — model-blind, a cheap high-volume lane outranks an expensive one.`);
+  console.log(`   ${"job".padEnd(24)} ${"model".padEnd(7)} ${"runs".padStart(5)} ${"weighted".padStart(14)} ${"aware".padStart(14)} ${"output".padStart(10)} ${"ρ".padStart(9)}`);
   for (const e of table.slice(0, 18)) {
-    console.log(`   ${e.job.slice(0, 24).padEnd(24)} ${String(e.n).padStart(5)} ${Math.round(e.weighted).toLocaleString("en-IN").padStart(14)} ${e.output.toLocaleString("en-IN").padStart(10)} ${(e.rho === Infinity ? "∞" : e.rho.toFixed(1)).padStart(9)}`);
+    console.log(`   ${e.job.slice(0, 24).padEnd(24)} ${String(e.model).slice(0, 6).padEnd(7)} ${String(e.n).padStart(5)} ${Math.round(e.weighted).toLocaleString("en-IN").padStart(14)} ${Math.round(e.aware).toLocaleString("en-IN").padStart(14)} ${e.output.toLocaleString("en-IN").padStart(10)} ${(e.rho === Infinity ? "∞" : e.rho.toFixed(1)).padStart(9)}`);
   }
   // ⚠ NO RUN-COUNT GATE. The first version required n >= 3 and therefore printed
   // "0 lanes at ρ > 25" with 31.9 and 39.6 sitting in the table two lines above
@@ -242,6 +254,21 @@ function selftest() {
   // (c) ρ is derived from COMPONENTS, never from the (possibly lying) total
   assert("ρ never consults total_tokens — a lying total cannot poison the table",
     rho([under])[0].weighted === 500000 * 1 + 1000 * 5);
+
+  // (c2) THE MODEL FACTOR (14 Aug 2026) — the blindness that inverted the board.
+  assert("model-aware = weighted × the model's price ratio (haiku 1 · sonnet 3 · opus 5)",
+    spendOfModelAware({ ...r, model: "haiku" }) === spendOf(r) &&
+    spendOfModelAware({ ...r, model: "sonnet" }) === spendOf(r) * 3 &&
+    spendOfModelAware({ ...r, model: "opus" }) === spendOf(r) * 5);
+  assert("an UNSTATED model is charged as sonnet (the default engine), never as free",
+    spendOfModelAware({ ...r }) === spendOf(r) * 3 && modelKey({ model: "claude-opus-5" }) === "opus");
+  // The live inversion in one fixture: a big haiku lane vs a smaller sonnet one.
+  const inv = rho([
+    { job: "pulse_like", model: "haiku", input_tokens: 0, output_tokens: 1000, cache_creation_tokens: 100000, cache_read_tokens: 0 },
+    { job: "night_like", model: "sonnet", input_tokens: 0, output_tokens: 1000, cache_creation_tokens: 60000, cache_read_tokens: 0 },
+  ]);
+  assert("THE INVERSION: model-blind ranks the haiku lane first; the table now ranks the sonnet lane first",
+    inv[0].job === "night_like" && inv[0].weighted < inv[1].weighted && inv[0].aware > inv[1].aware);
 
   // THE SENSITIVITY RATIO, with a KNOWN-ANSWER corpus. A row that is ALL
   // cache_read must move far less than the same scale on input; if this ever
