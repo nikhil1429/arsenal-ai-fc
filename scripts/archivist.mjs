@@ -273,7 +273,13 @@ export function pickTs(payload) {
 
 const TIERS = new Set(["public", "personal", "private", "sealed"]);
 
-export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevSha }) {
+// derivedFrom/agent/validFrom/validTo are accepted BUT UNUSED BY EVERY CALLER
+// TODAY — every raw record passes none of them and gets null, which is §5's shape.
+// They are parameters and not hardcoded nulls for one reason: the §4.5 guard below
+// has to be REACHABLE. A guard that no argument can trigger is a comment with a
+// throw in it, and it would sit here green and dead until the day Phase 1 needed
+// it, which is exactly when it would turn out never to have worked.
+export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevSha, derivedFrom = null, agent = null, validFrom = null, validTo = null }) {
   const tsUtc = pickTs(payload);
   const clock = tsUtc ? istStamp(tsUtc) : null;
   const p = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
@@ -290,8 +296,8 @@ export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevS
     ts_local: clock ? clock.local : null,
     tz: clock ? clock.tz : null,
     recorded_at: now.toISOString(),
-    valid_from: null,
-    valid_to: null,
+    valid_from: validFrom,
+    valid_to: validTo,
     // ── PROVENANCE (LAW 4) ──
     lane,
     surface: typeof p.surface === "string" ? p.surface : "system",
@@ -305,9 +311,9 @@ export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevS
     moment: moment ?? null,
     // ── THE PAYLOAD — EXACT BYTES, NEVER NORMALISED (§5.4) ──
     payload,
-    // ── DERIVATION (LAW 2 / LAW 5) — reserved, null on every raw record ──
-    derived_from: null,
-    agent: null,
+    // ── DERIVATION (LAW 2 / LAW 5) — null on every raw record ──
+    derived_from: derivedFrom,
+    agent: agent,
     // ── BACKFILL HONESTY (§8) ──
     backfilled: !!backfilled,
   };
@@ -315,6 +321,25 @@ export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevS
   // prev_sha256 (§5.1). Excluding the chain link is deliberate: it makes sha256 a
   // STABLE CITATION ID that survives re-chaining, and the chain is verified by the
   // LINKS themselves (a broken link and a seq gap are both reported by `verify`).
+  // §4.5's RESERVATION, ENFORCED — not merely declared. The spec's words: raw
+  // utterances need only recorded_at; DERIVED FACT records require all three, and
+  // the fields are reserved today "so the first derived fact cannot be written
+  // without them". A reservation nothing checks is a comment. This is the guard
+  // that will still be here in Phase 1, when the first belief (LAW 5) is written
+  // by a hand that has never read this file: a claim with no validity interval is
+  // a claim that can never be disconfirmed, which is the one thing the belief
+  // store exists to make possible.
+  // valid_to may be NULL and that is not a missing value — it is the honest "still
+  // true, not yet disconfirmed" end of an open interval. Requiring a date there
+  // would force every live belief to invent an expiry, which is the opposite of
+  // what §4.5 is for. valid_from and recorded_at must be real: WHEN THE BELIEF
+  // BECAME TRUE and WHEN IT WAS WRITTEN are different facts, and losing either
+  // makes the claim unfalsifiable.
+  if (rec.derived_from !== null) {
+    const missing = ["valid_from", "recorded_at"].filter((k) => rec[k] === null || rec[k] === undefined);
+    if (!("valid_to" in rec)) missing.push("valid_to (may be null for an open interval, but must be stated)");
+    if (missing.length) throw new Error(`archivist: a DERIVED record (derived_from set) is missing ${missing.join(", ")} — §4.5 reserves these so a derived fact cannot be written without them. A claim with no validity interval cannot be disconfirmed, and disconfirmation is the whole point of storing beliefs as data.`);
+  }
   const { sha256: _s, prev_sha256: _p, ...body } = rec;
   rec.sha256 = sha256Hex(canon(body));
   return rec;
@@ -835,13 +860,36 @@ export function vitalsArchive(opts = {}) {
     out.lanes.push(row);
     if (sil.state === "RED-silent") out.reds.push(`${lane}: ${sil.note}`);
   }
+  // ── IS THE FIXITY CHECK ITSELF ALIVE? (LAW 6 applied to the checker) ───────
+  // Found by running pulse.mjs after installing the schedule: it emitted
+  //   "note: ArsenalFC-ArchiveFixity — no repetition/daily/weekly trigger
+  //    readable — cannot derive a deadline"
+  // pulse's ◇≤T law covers minute/daily/weekly lanes; a MONTHLY trigger has no
+  // readable period, so the organism's liveness organ is structurally blind to
+  // this one task — and it is the task whose entire job is noticing that bits
+  // rotted. An unmonitored corruption detector is assurance theatre: the archive
+  // would look healthy precisely because nobody was checking whether the checker
+  // ran. The cadence stays monthly (§7.6 sets it); the WATCH moves in here, where
+  // the archive reports its own health, which is what LAW 6 actually asks for.
+  // 40 days = the monthly cadence plus enough slack for a laptop that sleeps
+  // through the 1st; catch-up-on-wake is on, so a genuine miss is a dead lane.
+  const fixityRuns = readdirSync(P(root).health).filter((f) => f.startsWith("fixity-"))
+    .flatMap((f) => readFileSync(join(P(root).health, f), "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }))
+    .filter((r) => r && r.at && (r.lanes || r.kind === "rebuild-done"));
+  const lastFixity = fixityRuns.length ? fixityRuns.map((r) => Date.parse(r.at)).sort((a, b) => b - a)[0] : null;
+  const fixityAgeDays = lastFixity ? Math.round((now.getTime() - lastFixity) / 86400000) : null;
+  out.fixity = { last_run: lastFixity ? new Date(lastFixity).toISOString() : null, age_days: fixityAgeDays, deadline_days: 40 };
+  if (lastFixity === null) out.reds.push("fixity has NEVER run — the archive has no proof it is uncorrupted, and nothing else in the organism watches a monthly task");
+  else if (fixityAgeDays > 40) out.reds.push(`fixity last ran ${fixityAgeDays} days ago (monthly cadence + slack allows 40) — bit rot is silent, and the only thing that would have told you is this line`);
+
   out.ok = out.reds.length === 0;
   appendHealth(root, "vitals", out);
   log(`archivist vitals · ${out.lanes.length} lane(s) · ${out.lanes.reduce((a, l) => a + l.records, 0)} record(s) total`);
   for (const l of out.lanes) {
     log(`  ${l.silence.state === "RED-silent" ? "RED " : "ok  "} ${l.lane.padEnd(20)} ${String(l.records).padStart(7)} rec · ${String(l.days_with_rows).padStart(3)} day(s) · last ${l.silence.last_day || "-"} · ts_local ${l.fill_pct.ts_local ?? "-"}% · session_id ${l.fill_pct.session_id ?? "-"}%`);
   }
-  if (out.reds.length) { log("\n  SILENT LANES (LAW 6 — a lane that stopped and nobody noticed):"); for (const r of out.reds) log(`   · ${r}`); }
+  log(`  fixity: ${out.fixity.last_run ? `last ran ${out.fixity.age_days}d ago (deadline ${out.fixity.deadline_days}d)` : "NEVER RUN"}`);
+  if (out.reds.length) { log("\n  REDS (LAW 6 — what stopped, and nobody noticed):"); for (const r of out.reds) log(`   · ${r}`); }
   return out;
 }
 
@@ -891,6 +939,48 @@ export function sealArchive(opts = {}) {
 
   log(`archivist seal: ${payload.length} payload file(s), ${(oxum.bytes / 1024).toFixed(1)} KB · ${tagFiles.length} tag file(s) — the bag is valid and ready to copy`);
   log(`  3-2-1 (spec §12): this is copy 1. One disk is one copy — that is not a backup, it is a second point of failure.`);
+
+  // ── --quarter · THE TRANSFER RECEIPT ──────────────────────────────────────
+  // §7.1 writes the mode as `seal [--quarter]` and says nothing more, so this is
+  // the reading that does real work rather than nothing: the FULL manifests are
+  // always regenerated (a scoped manifest would make the bag incomplete, which is
+  // the one thing a manifest must never be), and --quarter additionally computes
+  // a QUARTER ROOT — one sha256 over that quarter's sorted per-file hashes.
+  // Why a root and not another copy of the data: §12 asks for 3-2-1, and the
+  // off-site leg is a disk he writes once and puts away. Years later the only
+  // question that matters about that disk is "is this still the quarter I sealed?"
+  // — 64 characters answers it, and a duplicated quarter under the archive would
+  // double storage forever while answering nothing extra.
+  // Write the root on the disk's label. It is the whole audit.
+  if (opts.quarter) {
+    const now = new Date();
+    const qOf = (d) => `${d.slice(0, 4)}-Q${Math.floor((Number(d.slice(5, 7)) - 1) / 3) + 1}`;
+    const want = typeof opts.quarter === "string" ? opts.quarter : qOf(istStamp(now).day);
+    const rows = [];
+    for (const f of payload) {
+      const parts = relative(P(root).data, f).split(sep);          // lane/YYYY/MM/DD.jsonl
+      if (parts.length < 4) continue;
+      const day = `${parts[1]}-${parts[2]}-${parts[3].replace(".jsonl", "")}`;
+      if (qOf(day) !== want) continue;
+      rows.push({ file: bagPath(root, f), sha256: fileSha(f), bytes: statSync(f).size, records: readFileSync(f, "utf8").split("\n").filter((l) => l.trim()).length, lane: parts[0] });
+    }
+    rows.sort((a, b) => a.file.localeCompare(b.file));
+    const root_sha256 = sha256Hex(rows.map((r) => `${r.sha256}  ${r.file}`).join("\n"));
+    const receipt = {
+      kind: "quarter-seal", quarter: want, at: now.toISOString(), day: istStamp(now).day,
+      files: rows.length, records: rows.reduce((a, r) => a + r.records, 0), bytes: rows.reduce((a, r) => a + r.bytes, 0),
+      lanes: [...new Set(rows.map((r) => r.lane))].sort(),
+      root_sha256,
+      how_to_check: "re-hash each listed file, sort by path, sha256 of `<hash>  <path>` lines joined by \\n — it must equal root_sha256",
+      members: rows,
+    };
+    appendHealth(root, "transfers", receipt);
+    log(`\n  QUARTER ${want} · ${rows.length} file(s) · ${receipt.records} record(s) · ${(receipt.bytes / 1024 / 1024).toFixed(2)} MB`);
+    log(`  QUARTER ROOT: ${root_sha256}`);
+    log(`  Write that on the disk's label. Years later it is the whole audit: re-hash the quarter, compare 64 characters.`);
+    log(`  Receipt (with every member file's own hash): health/transfers-${istStamp(now).day.slice(0, 7)}.jsonl`);
+    return { payload: payload.length, bytes: oxum.bytes, tags: tagFiles.length, sealed: true, quarter: want, root_sha256, quarter_files: rows.length };
+  }
   return { payload: payload.length, bytes: oxum.bytes, tags: tagFiles.length, sealed: true };
   } finally { lock.release(); }
 }
@@ -1125,6 +1215,10 @@ export function validate(schema, value, path = "$", errs = []) {
   }
   if (typeof value === "number" && schema.minimum !== undefined && value < schema.minimum) errs.push(`${path}: below minimum ${schema.minimum}`);
   if (Array.isArray(value) && schema.items) for (let i = 0; i < value.length; i++) validate(schema.items, value[i], `${path}[${i}]`, errs);
+  // if/then — the one conditional v1.json needs, for §4.5's derived-record rule.
+  // Kept to the exact subset used: no else, no allOf, no $ref. A 2046 reader who
+  // has to re-implement this validator should be able to do it in an hour.
+  if (schema.if && validate(schema.if, value, path, []).length === 0 && schema.then) validate(schema.then, value, path, errs);
   if (value && typeof value === "object" && !Array.isArray(value)) {
     for (const r of schema.required || []) if (!(r in value)) errs.push(`${path}: missing required field "${r}"`);
     for (const [k, sub] of Object.entries(schema.properties || {})) if (k in value) validate(sub, value[k], `${path}.${k}`, errs);
@@ -1153,6 +1247,19 @@ const RECORD_SCHEMA = {
     "the source row carried no parseable timestamp and recorded_at is the only clock.",
   type: "object",
   additionalProperties: false,
+  // §4.5, as a RULE and not a note: a record that names its sources is a DERIVED
+  // record, and a derived record must carry its full validity interval. Raw
+  // utterances need only recorded_at. Reserved from day one so the first derived
+  // fact ever written cannot be written without them.
+  if: { type: "object", properties: { derived_from: { type: "array" } }, required: ["derived_from"] },
+  then: {
+    properties: {
+      valid_from: { type: "string" },
+      valid_to: { type: ["string", "null"] },
+      recorded_at: { type: "string" },
+    },
+    required: ["valid_from", "valid_to", "recorded_at"],
+  },
   required: ["rid", "sha256", "prev_sha256", "seq", "v", "ts_utc", "ts_local", "tz", "recorded_at",
     "valid_from", "valid_to", "lane", "surface", "source", "modality", "session_id", "event_id",
     "tier", "moment", "payload", "derived_from", "agent", "backfilled"],
@@ -1707,6 +1814,20 @@ function selftest() {
       vit.lanes.length >= 2 && vit.lanes.every((l) => l.records > 0) && readdirSync(join(arc, "health")).some((f) => f.startsWith("vitals-")));
     ok("11e. VITALS · fill rates are real percentages, not a guess (ts_local is 100% on a lane whose rows all carry ts)",
       vit.lanes.find((l) => l.lane === "afferent").fill_pct.ts_local === 100);
+    // pulse.mjs cannot derive a deadline for a MONTHLY task, so the organism's
+    // liveness organ is structurally blind to the fixity lane — the one whose job
+    // is noticing that bits rotted. An unmonitored corruption detector is
+    // assurance theatre. The archive watches its own checker instead.
+    ok("11f. VITALS · the archive watches ITS OWN fixity check — a monthly lane pulse.mjs cannot see a deadline for",
+      vit.fixity && Number.isFinite(vit.fixity.age_days) && vit.fixity.deadline_days === 40);
+    ok("11g. VITALS · a fixity check that has NEVER run is a RED, not a silence (the archive would look healthy because nobody was checking the checker)",
+      (() => {
+        const bare = mkdtempSync(join(tmpdir(), "arsenal-nofixity-"));
+        initArchive({ root: bare, quiet: true });
+        const v = vitalsArchive({ root: bare, quiet: true });
+        rmSync(bare, { recursive: true, force: true });
+        return v.reds.some((r) => /fixity has NEVER run/.test(r));
+      })());
 
     // ── SEAL ──
     const sealed = sealArchive({ root: arc, quiet: true });
@@ -1730,6 +1851,54 @@ function selftest() {
       onDisk.every((f) => manifested.has(f)), onDisk.filter((f) => !manifested.has(f)).join(", "));
     ok("SEAL · the writer's own mutable state is OUTSIDE the payload and covered by the TAGmanifest instead",
       existsSync(P(arc).checkpoints) && !existsSync(P(arc).checkpointsLegacy) && tag.some((l) => l.endsWith("_writer/checkpoints.json")));
+
+    // ── §4.5 · THE RESERVATION IS A RULE, NOT A NOTE ──
+    // DRIVEN THROUGH buildRecord ITSELF, not by re-stating the check here. The
+    // first version of this assertion recomputed the guard's own condition inline
+    // and passed while the guard was UNREACHABLE — buildRecord hardcoded
+    // derived_from: null, so no argument could ever have triggered it. A test that
+    // re-implements the thing it is testing tests nothing.
+    const rawBase = { lane: "t", payload: { a: 1 }, now: new Date(), backfilled: false, moment: null, seq: 1, prevSha: null };
+    const throws = (o) => { try { buildRecord(o); return false; } catch { return true; } };
+    ok("4.5 BITEMPORAL · a DERIVED record with no valid_from is REFUSED at write time (a claim with no validity interval cannot be disconfirmed)",
+      throws({ ...rawBase, derivedFrom: ["01ABC"] }) && !throws(rawBase));
+    ok("4.5 BITEMPORAL · …and a derived record that DOES carry its interval is written normally, with derived_from + agent on it",
+      (() => {
+        const r = buildRecord({ ...rawBase, derivedFrom: ["01ABC"], validFrom: "2026-08-14T00:00:00Z", agent: { model: "opus", at: "2026-08-14T00:00:00Z" } });
+        return r.derived_from[0] === "01ABC" && r.valid_from === "2026-08-14T00:00:00Z" && r.valid_to === null && r.agent.model === "opus";
+      })());
+    ok("4.5 BITEMPORAL · every RAW record still carries the reserved fields as null (§5's shape is unchanged by making the guard reachable)",
+      [...laneRecords(arc, "afferent")].every(({ rec }) => rec && rec.valid_from === null && rec.valid_to === null && rec.derived_from === null && rec.agent === null));
+    ok("4.5 BITEMPORAL · the SCHEMA carries the same rule as an if/then, so a record written by any other tool is caught too",
+      (() => {
+        const s = JSON.parse(readFileSync(join(arc, "SCHEMA", "v1.json"), "utf8"));
+        const rec = { ...JSON.parse(readFileSync(join(arc, "data", "reps_log", "2026", "08", "10.jsonl"), "utf8").split("\n")[0]), derived_from: ["01ABC"], valid_from: null };
+        return s.if && s.then && validate(s, rec).some((e) => /valid_from/.test(e));
+      })(), "the schema's if/then did not catch a derived record with a null valid_from");
+    ok("4.5 BITEMPORAL · valid_to may stay NULL — an open interval is 'still true', not a missing value, and forcing an expiry would be the lie",
+      (() => {
+        const s = JSON.parse(readFileSync(join(arc, "SCHEMA", "v1.json"), "utf8"));
+        const rec = { ...JSON.parse(readFileSync(join(arc, "data", "reps_log", "2026", "08", "10.jsonl"), "utf8").split("\n")[0]), derived_from: ["01ABC"], valid_from: "2026-08-14T00:00:00Z", valid_to: null };
+        return validate(s, rec).length === 0;
+      })());
+
+    // ── SEAL --quarter (§7.1 writes the mode as `seal [--quarter]`) ──
+    const qs = sealArchive({ root: arc, quiet: true, quarter: "2026-Q3" });
+    ok("SEAL --quarter · a quarter gets ONE root hash over its sorted per-file hashes — 64 characters that audit a disk copy years later",
+      qs.quarter === "2026-Q3" && /^[0-9a-f]{64}$/.test(qs.root_sha256 || "") && qs.quarter_files > 0);
+    ok("SEAL --quarter · the receipt names every member file with its own hash, and says how to re-check it without this code",
+      (() => {
+        const f = readdirSync(join(arc, "health")).find((x) => x.startsWith("transfers-"));
+        if (!f) return false;
+        const r = JSON.parse(readFileSync(join(arc, "health", f), "utf8").split("\n").filter(Boolean).pop());
+        return r.members.length === qs.quarter_files && r.members.every((m) => /^[0-9a-f]{64}$/.test(m.sha256)) && /re-hash each listed file/.test(r.how_to_check)
+          && r.root_sha256 === sha256Hex(r.members.map((m) => `${m.sha256}  ${m.file}`).join("\n"));
+      })());
+    ok("SEAL --quarter · it still regenerates the FULL manifests (a scoped manifest would make the bag incomplete, which is the one thing a manifest may never be)",
+      (() => {
+        const man = readFileSync(join(arc, "manifest-sha256.txt"), "utf8").trim().split("\n");
+        return man.length === qs.payload && walkFiles(join(arc, "data")).length === qs.payload;
+      })());
 
     // ── THE LEXICON (spec §10) ──
     const terms = readFileSync(join(arc, "LEXICON", "terms.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
@@ -1951,7 +2120,13 @@ function main() {
     // health/vitals-*.jsonl. `verify` is the opposite case and DOES exit 1: a
     // fixity break is corruption in the permanent record and must be loud.
     case "vitals": { vitalsArchive(); return process.exit(0); }
-    case "seal": { sealArchive(); return process.exit(0); }
+    case "seal": {
+      const i = process.argv.indexOf("--quarter");
+      // `--quarter` alone = the quarter we are in; `--quarter 2026-Q3` = that one
+      const q = i > 0 ? (/^\d{4}-Q[1-4]$/.test(process.argv[i + 1] || "") ? process.argv[i + 1] : true) : false;
+      sealArchive({ quarter: q });
+      return process.exit(0);
+    }
     case "rebuild": {
       const lane = process.argv[3];
       if (!lane) { console.log('archivist rebuild <lane> --why "<the reason>"   (drops a lane and re-derives it from source — refuses if any source is gone)'); return process.exit(1); }
