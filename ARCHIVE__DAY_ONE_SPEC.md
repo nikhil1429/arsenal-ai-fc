@@ -832,6 +832,12 @@ snapshot-before-comparing fix and the `23/1, 24/0, 23/1` measurement). It is UNT
 is on the laptop and not on the public remote. **Read it before writing the organ** — it is the
 only running implementation of the four checks that exist.
 
+*(TRACKED since 15 Aug 2026 — his "commit and push everything" — so the two sentences above are
+true only of the hours before that, and the "not on the public remote" half is now false. It was
+scanned before publishing: no credentials, no personal data, and its one absolute path is
+already in a dozen tracked files. It stays a `.txt` deliberately, so the coverage law and the
+suites never pick it up as an organ.)*
+
 It is a REFERENCE, not the plan. It carries ~24 checks; sixteen of them duplicate `verify` and
 `reconcile` and were correctly dropped by his §16.2 scope ruling. Take the four, take the
 comments, leave the rest.
@@ -852,9 +858,12 @@ maintain both.
 
 **RESOLVED, 15 Aug 2026.** It was read in full, the four things it carried that §16 did not are
 folded into §16.8 below, and the file is DELETED. One work order, in this file, as he asked.
-`reference/deepcheck_harness.mjs.txt` stays UNTRACKED and stays where it is: it was the
-reference for this build, its six laws now live in `archive_audit.mjs`'s comments and in §16.4,
-and it carries sixteen checks his §16.2 scope ruling correctly dropped. Nothing depends on it.
+`reference/deepcheck_harness.mjs.txt` is now TRACKED, on his "commit and push everything" the
+same day (this line read "stays UNTRACKED" for about an hour). It was the reference for this
+build; its six laws now live in `archive_audit.mjs`'s comments and in §16.4, and it carries
+sixteen checks his §16.2 scope ruling correctly dropped. **Nothing depends on it and nothing
+runs it** — it is kept as a `.txt` precisely so no suite ever does, and it is history, not an
+organ. Do not "revive" it: the four checks worth keeping are already a live organ.
 
 ---
 ---

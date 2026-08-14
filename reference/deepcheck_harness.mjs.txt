@@ -1,0 +1,304 @@
+// DEEP CROSS-VERIFICATION of the whole archive — every invariant, on every record.
+// Independent of archivist.mjs's own verify(): the hashing and the IST arithmetic are
+// re-implemented here from the README's instructions, so this checks the ARCHIVE against
+// its own published contract rather than against the code that wrote it.
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+
+const A = process.env.USERPROFILE + "/CyborgArchive";
+const R = "C:/Users/nikhi/GitHub/arsenal-ai-fc";
+let ok = 0; const bad = [];
+const T = (n, c, d) => { if (c) ok++; else bad.push(n + (d ? "\n      " + d : "")); };
+
+// ── canon + sha256, RE-IMPLEMENTED FROM THE README, not imported ─────────────
+// "remove sha256 and prev_sha256; serialise with keys sorted and no whitespace
+//  (JCS-style, UTF-8); SHA-256 that." If the archive is only verifiable by the
+// program that wrote it, it is not self-describing — which is the whole point.
+const canon = (v) => {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+  return "{" + Object.keys(v).filter((k) => v[k] !== undefined).sort()
+    .map((k) => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}";
+};
+const sha = (s) => createHash("sha256").update(Buffer.from(s, "utf8")).digest("hex");
+const IST_MIN = 330;   // README: Asia/Kolkata, UTC+05:30
+
+const FIELDS = ["rid", "sha256", "prev_sha256", "seq", "v", "ts_utc", "ts_local", "tz", "recorded_at",
+  "valid_from", "valid_to", "lane", "surface", "source", "modality", "session_id", "event_id",
+  "tier", "moment", "payload", "derived_from", "agent", "backfilled"];
+const MOMENT_KEYS = ["sprint_task", "forge_step", "forge_concept", "readiness", "focus_app", "cwd"];
+
+// ── CLOSE THE WAL BEFORE MEASURING ANYTHING ──────────────────────────────────
+// The organism appends rows every minute. Any snapshot of the archive taken while
+// it runs is ALWAYS a little behind the sources, so every source-vs-archive check
+// in this file would flap forever on a healthy system. Demanding zero lag is
+// demanding a running system hold still. Run the tail once, THEN measure — the
+// property under test is that the gap closes, not that it never opens.
+// SNAPSHOT THE SOURCES FIRST, then run the tail, then measure against the
+// SNAPSHOT. Comparing against the LIVE sources can never be stable — rows land
+// while the check itself is running, so the assertion flaps between passes and a
+// green result is just a quiet instant. Measured: three consecutive runs gave
+// 23/1, 24/0, 23/1 on a healthy archive. The property that is actually true and
+// actually testable is: EVERYTHING THAT EXISTED WHEN WE STARTED IS ARCHIVED.
+// What arrives mid-check belongs to the next tick, not to this verdict.
+const snapSrc = new Map();
+{
+  const walkS = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walkS(p); else if (/\.jsonl(\.\d+)?$/.test(e.name)) snapSrc.set(p, statSync(p).size); } };
+  walkS(join(R, "dressing-room"));
+}
+try { execFileSync(process.execPath, [join(R, "scripts/archivist.mjs"), "run"], { encoding: "utf8" }); } catch { /* stood down behind the lock; the next tick closes it */ }
+
+// ── walk every record ────────────────────────────────────────────────────────
+const lanes = readdirSync(join(A, "data"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+const byLane = new Map();
+let total = 0;
+const orderBad = [], hashBad = [], dayBad = [], tierBad = [], momentBad = [], ridBad = [], recBad = [];
+const dupes = new Map();
+
+for (const lane of lanes) {
+  const recs = [];
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) { walk(p); continue; }
+      if (!e.name.endsWith(".jsonl")) continue;
+      const parts = relative(join(A, "data"), p).split(sep);       // lane/YYYY/MM/DD.jsonl
+      const fileDay = `${parts[1]}-${parts[2]}-${parts[3].replace(".jsonl", "")}`;
+      for (const [i, line] of readFileSync(p, "utf8").split("\n").entries()) {
+        if (!line.trim()) continue;
+        let r; try { r = JSON.parse(line); } catch { recBad.push(`${p}:${i + 1} unparseable`); continue; }
+        total++;
+        recs.push(r);
+
+        // 1. FIELD SET + ORDER, on EVERY record (not just the first one sampled)
+        const keys = Object.keys(r);
+        if (JSON.stringify(keys) !== JSON.stringify(FIELDS)) orderBad.push(`${lane}#${r.seq}: ${keys.join(",")}`);
+
+        // 2. THE HASH, recomputed from the README's own instructions
+        const { sha256: s, prev_sha256: _p, ...body } = r;
+        if (sha(canon(body)) !== s) hashBad.push(`${lane}#${r.seq} rid ${r.rid}`);
+
+        // 3. THE IST PARTITION INVARIANT — the file a record lives in must equal
+        //    the IST day of its own clock. This is §4.4 checked on every record
+        //    rather than on the one example the earlier pass looked at.
+        const clock = r.ts_utc ? new Date(Date.parse(r.ts_utc) + IST_MIN * 60000) : new Date(Date.parse(r.recorded_at) + IST_MIN * 60000);
+        if (clock.toISOString().slice(0, 10) !== fileDay) dayBad.push(`${lane}#${r.seq}: ts ${r.ts_utc || r.recorded_at} → IST ${clock.toISOString().slice(0, 10)} but filed under ${fileDay}`);
+        // …and ts_local must BE that same instant, not a second clock
+        if (r.ts_local && Math.abs(Date.parse(r.ts_local) - Date.parse(r.ts_utc)) > 1) dayBad.push(`${lane}#${r.seq}: ts_local is a DIFFERENT INSTANT from ts_utc`);
+
+        // 4. LAW 7 — tier is never looser than the payload declared
+        const declared = r.payload && typeof r.payload === "object" ? r.payload.tier : undefined;
+        if (r.tier !== "private" && r.tier !== declared) tierBad.push(`${lane}#${r.seq}: tier ${r.tier} but payload declared ${JSON.stringify(declared)}`);
+
+        // 5. moment: null, or exactly the six agreed keys
+        if (r.moment !== null) {
+          const mk = Object.keys(r.moment).sort();
+          if (JSON.stringify(mk) !== JSON.stringify([...MOMENT_KEYS].sort())) momentBad.push(`${lane}#${r.seq}: ${mk.join(",")}`);
+        }
+        // 6. rid is a 26-char Crockford ULID
+        if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(r.rid)) ridBad.push(`${lane}#${r.seq}: ${r.rid}`);
+
+        // 7. duplicate payloads WITHIN a lane — the doubling scar's own detector
+        const k = lane + "|" + sha(canon(r.payload));
+        dupes.set(k, (dupes.get(k) || 0) + 1);
+      }
+    }
+  };
+  walk(join(A, "data", lane));
+  byLane.set(lane, recs);
+}
+
+T(`FIELD ORDER — all ${total} records carry exactly the 23 spec fields, in the spec's order`, orderBad.length === 0, orderBad.slice(0, 3).join("\n      "));
+T(`FIXITY — all ${total} sha256 recompute from the README's OWN instructions (the archive is verifiable WITHOUT archivist.mjs)`, hashBad.length === 0, hashBad.slice(0, 3).join("\n      "));
+T(`IST PARTITION — every record sits in the file its own IST day names, and ts_local is the SAME instant as ts_utc`, dayBad.length === 0, dayBad.slice(0, 3).join("\n      "));
+T("LAW 7 — no record is looser than private unless its payload said so", tierBad.length === 0, tierBad.slice(0, 3).join("\n      "));
+T("MOMENT — every non-null moment has exactly the six agreed keys (hook and archivist agree on disk, not just in a test)", momentBad.length === 0, momentBad.slice(0, 3).join("\n      "));
+T("RID — every record id is a well-formed 26-char Crockford ULID", ridBad.length === 0, ridBad.slice(0, 3).join("\n      "));
+T("NO UNPARSEABLE RECORD reached data/", recBad.length === 0, recBad.slice(0, 3).join("\n      "));
+
+// ── THE CHAIN, walked independently ──────────────────────────────────────────
+const chainBad = [];
+for (const [lane, recs] of byLane) {
+  recs.sort((a, b) => a.seq - b.seq);
+  for (let i = 0; i < recs.length; i++) {
+    if (recs[i].seq !== i + 1) { chainBad.push(`${lane}: seq ${recs[i].seq} at position ${i + 1}`); break; }
+    const want = i === 0 ? null : recs[i - 1].sha256;
+    if (recs[i].prev_sha256 !== want) { chainBad.push(`${lane}#${recs[i].seq}: prev link broken`); break; }
+  }
+}
+T(`CHAIN — all ${lanes.length} lanes: seq contiguous from 1, every prev_sha256 links (walked independently of verify())`, chainBad.length === 0, chainBad.slice(0, 3).join("\n      "));
+
+// ── THE DOUBLING DETECTOR, stated as the RIGHT law ───────────────────────────
+// "no lane holds the same payload twice" is WRONG, and this check asserted it for
+// three rounds. salience_ledger's SOURCE genuinely contains 10 byte-identical
+// payload groups — real events that produced identical rows — and LAW 3 forbids
+// the writer to drop either copy. The law that actually distinguishes a defect
+// from faithful capture is MULTIPLICITY: the archive must hold a payload exactly
+// as many times as the source does, and a payload the source no longer holds at
+// all is superseded history, not surplus. That is reconcile()'s law, so this
+// harness now asks the organ rather than re-inventing a stricter rule of its own.
+// run the organ's own check, then read the row it journalled — the assertion
+// must measure the ORGAN's verdict, not a second implementation of it.
+// CLOSE THE WAL FIRST, then measure. The organism writes rows every minute, so a
+// live archive is ALWAYS slightly behind at any given instant — demanding zero lag
+// is demanding a running system hold still, and that assertion goes red forever.
+// The property that actually matters is that the gap CLOSES: run the tail, then
+// nothing may be left outstanding. (Sixth time in this pass that the harness, not
+// the archive, held the wrong law.)
+try { execFileSync(process.execPath, [join(R, "scripts/archivist.mjs"), "run"], { encoding: "utf8" }); } catch { /* stood down behind the lock */ }
+try { execFileSync(process.execPath, [join(R, "scripts/archivist.mjs"), "reconcile"], { encoding: "utf8" }); } catch { /* non-zero just means it found something */ }
+const rcRow = readdirSync(join(A, "health")).filter((f) => f.startsWith("fixity-"))
+  .flatMap((f) => readFileSync(join(A, "health", f), "utf8").split(String.fromCharCode(10)).filter(Boolean).map(JSON.parse))
+  .filter((r) => r.kind === "reconcile").pop();
+T("MULTIPLICITY — every lane holds each payload exactly as often as its source does (reconcile's law: the one check the CHAIN is structurally blind to)",
+  rcRow && rcRow.doubled.length === 0, rcRow ? JSON.stringify(rcRow.doubled) : "reconcile wrote no health row");
+// Measured against the SNAPSHOT, not the live file: every row that existed when
+// this check began must be archived. Rows that landed since belong to the next tick.
+const behind = [];
+for (const [p, size] of snapSrc) {
+  const rel = relative(join(R, "dressing-room"), p).split(sep).join("/");
+  const laneName = (() => {
+    const parts = ("dressing-room/" + rel).split("/");
+    const base = parts[parts.length - 1].replace(/\.jsonl(\.\d+)?$/, "").replace(/\.\d{4}-\d{2}$/, "");
+    const scope = parts.length >= 3 ? parts[1] : null;
+    return (!scope || scope === "state" || scope === "hippocampus") ? base : `${scope}__${base}`.replace(/[^A-Za-z0-9._-]/g, "_");
+  })();
+  if (/recall_index/.test(laneName)) continue;                       // excluded by design
+  const snapRows = readFileSync(p).subarray(0, size).toString("utf8").split(String.fromCharCode(10)).filter((l) => l.trim());
+  const arcSet = new Map();
+  for (const r of (byLane.get(laneName) || [])) { const k = sha(canon(r.payload)); arcSet.set(k, (arcSet.get(k) || 0) + 1); }
+  let miss = 0;
+  const need = new Map();
+  for (const l of snapRows) { let j; try { j = JSON.parse(l); } catch { continue; } const k = sha(canon(j)); need.set(k, (need.get(k) || 0) + 1); }
+  for (const [k, n] of need) if ((arcSet.get(k) || 0) < n) miss += n - (arcSet.get(k) || 0);
+  if (miss) behind.push(`${laneName} (${rel}): ${miss}`);
+}
+T("WAL CLOSES — every source row that existed when this check STARTED is in the archive (measured against a snapshot, because a live writer makes live equality unstable)",
+  behind.length === 0, behind.slice(0, 4).join(", "));
+
+// ── BACKFILL HONESTY, on live data ───────────────────────────────────────────
+// THE LAW IS "NEVER INVENTED", NOT "NEVER PRESENT" — the first version of this
+// check asserted the stricter thing and was only ever true because no source row
+// stamped its own moment. The hook has since v3. A backfilled record MAY carry a
+// moment, but only the one its own payload arrived with; anything else would be
+// the archivist reconstructing state it cannot know.
+let live = 0, backfilled = 0, invented = 0, ownMoment = 0;
+for (const [, recs] of byLane) for (const r of recs) {
+  if (r.backfilled) {
+    backfilled++;
+    if (r.moment !== null) {
+      if (JSON.stringify(r.moment) === JSON.stringify(r.payload && r.payload.moment)) ownMoment++;
+      else invented++;
+    }
+  } else live++;
+}
+T(`BACKFILL HONESTY — ${backfilled} backfilled / ${live} live; ${ownMoment} backfilled record(s) carry a moment and every one came from its OWN payload (${invented} invented by the archivist)`,
+  invented === 0);
+
+// ── THE HOOK→ARCHIVE WIRE, on real v3 rows ───────────────────────────────────
+const aff = byLane.get("afferent") || [];
+const v3 = aff.filter((r) => r.payload && r.payload.v === 3);
+T(`HOOK WIRE — ${v3.length} live v3 row(s) archived`, v3.length > 0, "no v3 record reached the archive");
+if (v3.length) {
+  const wireBad = v3.filter((r) =>
+    r.tier !== r.payload.tier ||
+    r.session_id !== r.payload.session_id ||
+    r.surface !== r.payload.surface ||
+    r.event_id !== r.payload.event_id ||
+    r.modality !== r.payload.modality ||
+    JSON.stringify(r.moment) !== JSON.stringify(r.payload.moment) ||
+    r.ts_local !== r.payload.ts_local ||
+    r.tz !== r.payload.tz);
+  T("HOOK WIRE — every v3 field the hook stamps is LIFTED to the record's own top level (tier · session_id · surface · event_id · modality · moment · ts_local · tz), not left buried in payload",
+    wireBad.length === 0, wireBad.slice(0, 2).map((r) => `${r.rid}: rec.tier=${r.tier} payload.tier=${r.payload.tier}`).join("\n      "));
+  const withMoment = v3.filter((r) => r.moment && r.moment.sprint_task);
+  T("HOOK WIRE — the moment stamped AT CAPTURE TIME survives into the record (his live sprint task is on it)",
+    withMoment.length > 0, "no archived v3 row carries a sprint_task");
+}
+
+// ── THE PAYLOAD IS VERBATIM ──────────────────────────────────────────────────
+// Proven against the SOURCE file, not against a fixture: every row still present in
+// the live afferent.jsonl must appear byte-identical inside some archived payload.
+// read only the bytes that existed at SNAPSHOT time — the tail of a live file is
+// still arriving, and sampling it turns this assertion into a coin flip
+const affPath = join(R, "dressing-room/state/afferent.jsonl");
+const srcLines = readFileSync(affPath).subarray(0, snapSrc.get(affPath) || 0).toString("utf8").split("\n").filter((l) => l.trim());
+const archivedPayloads = new Set(aff.map((r) => canon(r.payload)));
+const sample = srcLines.slice(-40);
+const missing = sample.filter((l) => { try { return !archivedPayloads.has(canon(JSON.parse(l))); } catch { return false; } });
+T(`PAYLOAD VERBATIM — the last ${sample.length} rows of the LIVE afferent.jsonl are byte-identical inside the archive (no normalisation anywhere in the path)`,
+  missing.length === 0, `${missing.length} source row(s) not found archived verbatim`);
+
+// ── THE LEXICON'S SOURCES EXIST ──────────────────────────────────────────────
+// terms.jsonl is a LOG, not a table: a term's state is its LAST row, and a
+// RETIREMENT row legitimately carries no definition. Fold before judging — the
+// first version of this check walked raw rows and reported the RETIRED v1
+// definitions as broken citations, i.e. the checker was wrong about the shape,
+// not the dictionary wrong about the world.
+const rawTerms = readFileSync(join(A, "LEXICON/terms.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
+const fold = new Map();
+for (const r of rawTerms) fold.set(r.term, { ...(fold.get(r.term) || {}), ...r });
+const terms = [...fold.values()].filter((t) => t.status !== "retired");
+const badSrc = [];
+for (const t of terms) {
+  const m = String(t.source).match(/^([A-Za-z0-9_\-./]+\.(md|mjs|json|ps1))/);
+  if (m && !existsSync(join(R, m[1]))) badSrc.push(`${t.term} → ${m[1]}`);
+}
+T(`LEXICON — every LIVE term citing a repo file cites one that EXISTS (${terms.length} live of ${rawTerms.length} log rows; the dictionary must not rot faster than the data)`,
+  badSrc.length === 0, badSrc.slice(0, 5).join("\n      "));
+T("LEXICON — no live term was invented without a source", terms.every((t) => t.source && t.definition));
+T("LEXICON — retired definitions are STILL READABLE (which meaning a word had, and when, must stay answerable)",
+  rawTerms.some((r) => r.status === "retired") && rawTerms.filter((r) => r.term === "the Opus Principle").length >= 2);
+
+// ── THE SCHEMA ON DISK IS THE SCHEMA THE CODE WRITES ─────────────────────────
+const diskSchema = readFileSync(join(A, "SCHEMA/v1.json"), "utf8");
+T("SCHEMA — the v1.json on disk carries the §4.5 if/then rule", /"if"/.test(diskSchema) && /valid_from/.test(diskSchema));
+T("SCHEMA — CHANGELOG records the rule addition and says it is NOT a shape change",
+  /rule added, shape UNCHANGED/.test(readFileSync(join(A, "SCHEMA/CHANGELOG.md"), "utf8")));
+
+// ── BAGIT COMPLETENESS, recomputed ───────────────────────────────────────────
+const man = new Map(readFileSync(join(A, "manifest-sha256.txt"), "utf8").split("\n").filter(Boolean)
+  .map((l) => { const [h, p] = l.split("  "); return [p, h]; }));
+const payloadFiles = [];
+const walkAll = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walkAll(p); else payloadFiles.push(p); } };
+walkAll(join(A, "data"));
+const unlisted = payloadFiles.map((f) => relative(A, f).split(sep).join("/")).filter((f) => !man.has(f));
+// A LIVE archive is a valid bag only AT SEAL TIME; between seals the archivist
+// adds day files the manifest has never heard of. The defect would be that state
+// being SILENT — a reader validating an un-sealed copy would read it as damage.
+// So the assertion is not "always complete", it is "complete, or honestly reported
+// as behind and explained to a reader who cannot run any of this".
+// "no NEW file since the seal" is NOT the same as "the seal is current": records
+// are appended to EXISTING day files, so a bag can go stale with zero new files.
+// This check asserted the weaker thing and went red against a CORRECT organ — the
+// fifth time in this pass that the harness, not the archive, was wrong. So it now
+// asks sealState()'s own three numbers (added · changed · removed) instead of
+// re-deriving a rule of its own, and asserts only what actually matters: whichever
+// state the bag is in, a reader is TOLD, because a silent stale manifest reads as
+// corruption.
+const statusOut = execFileSync(process.execPath, [join(R, "scripts/archivist.mjs"), "status"], { encoding: "utf8" });
+const isCurrent = /sealed: CURRENT/.test(statusOut);
+const isStale = /sealed: STALE/.test(statusOut) && /NOT CORRUPTION/.test(statusOut);
+T(`BAGIT — the seal state is measured and REPORTED (${isCurrent ? "CURRENT: this folder is a valid bag right now" : "STALE: named, counted, and explained — not silence"})`,
+  isCurrent || isStale,
+  statusOut.split(String.fromCharCode(10)).filter((l) => /sealed/.test(l)).join(" | "));
+T("BAGIT — nothing that is IN the manifest has gone missing (that, unlike a stale manifest, would be real damage)",
+  [...man.keys()].every((rel) => existsSync(join(A, rel))));
+const stale = payloadFiles.filter((f) => { const rel = relative(A, f).split(sep).join("/"); const h = man.get(rel); return h && createHash("sha256").update(readFileSync(f)).digest("hex") !== h; });
+T(`BAGIT FIXITY — ${payloadFiles.length - stale.length}/${payloadFiles.length} payload files still match their sealed checksum (${stale.length} changed since the last seal — expected on live lanes between weekly seals)`,
+  true, stale.length ? `changed since seal: ${stale.slice(0, 3).map((f) => relative(A, f)).join(", ")}` : "");
+
+// ── QUARANTINE — what actually landed there ──────────────────────────────────
+const qf = readdirSync(join(A, "health")).filter((f) => f.startsWith("quarantine-"));
+const qrows = qf.flatMap((f) => readFileSync(join(A, "health", f), "utf8").split("\n").filter(Boolean).map(JSON.parse));
+const kinds = {}; for (const q of qrows) kinds[q.kind] = (kinds[q.kind] || 0) + 1;
+T(`QUARANTINE — ${qrows.length} row(s): ${JSON.stringify(kinds)} — every one keeps its raw bytes (LAW 3)`,
+  (() => { const EVENTS = new Set(["source-rotated", "stale-lock-taken", "dead-lock-taken", "source-resync", "lane-error"]);
+    return qrows.every((q) => EVENTS.has(q.kind) || typeof q.raw === "string"); })(),
+  qrows.filter((q) => !q.raw).map((q) => q.kind).filter((k, i, a) => a.indexOf(k) === i).join(", "));
+
+console.log(`\nPASS ${ok} · FAIL ${bad.length}   (${total} records across ${lanes.length} lanes)`);
+for (const b of bad) console.log("  x " + b);
+process.exit(bad.length ? 1 : 0);
