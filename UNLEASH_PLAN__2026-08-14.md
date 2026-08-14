@@ -482,4 +482,40 @@ Run after 48h of the branch live (the daemon runs from the working tree):
 
 ## §FAILURES (executor appends here)
 
-*(empty)*
+### F1 · PHASE 1's premise is REFUTED at this repo's real head size (14 Aug, measured)
+
+The split is BUILT, live and correct — but it is worth a fraction of what the phase
+claims, and the reason kills Phase 2 outright. Three sonnet probe pairs, run before
+shipping (scratchpad `probe2.mjs` / `probe3.mjs`):
+
+| probe | system block | run 1 | run 2 (different body) | verdict |
+|---|---|---|---|---|
+| A | 1,625 chars ≈ 406 tok — **the live analysis head** | cw 0 · cr 0 · in 823 | cw 0 · cr 0 | **not cached at all** |
+| B | 5,200 chars ≈ 1,300 tok | cw 2,184 · cr 0 | cw 164 · **cr 2,026** | cached, the split pays |
+| C | 4,600-char **identical prefix**, different lane tails | lane A cw 1,712 · cr 0 | lane B cw 1,712 · **cr 0** | **no prefix sharing** |
+
+1. **The head is 406 tokens, not "2k–6k".** Measured live: fingerprint 977 chars,
+   whole head 1,625. Sonnet's minimum cacheable prefix is 1024 tokens, opus's 512.
+   Probe A says a block under the bar is not cached — it is charged as plain input.
+2. **The obvious repair does not work.** Probe C tested the shared-cartridge idea
+   (one identical block first, each lane's tail after): the second lane wrote its
+   own cache and read nothing. The match is on the WHOLE system block, not on the
+   longest common prefix. So padding heads to clear the bar would cost every lane
+   ~900 tokens a run to buy a read that never arrives.
+3. **Therefore PHASE 2 IS SKIPPED, not deferred** — its entire WHY ("two sonnet
+   lanes 4 minutes apart share the head for one write") is what probe C refutes.
+   Re-timing jobs carries real dependency risk for a measured gain of zero, so the
+   `at:` times are left alone. If a future session wants clustering, the thing to
+   cluster is repeats of ONE lane, not neighbours.
+4. **What Phase 1 IS worth, and why it stays in:** the 406 head tokens move out of
+   a user block that is cache-written at 1.25× and never read, into plain input at
+   1.0× — small and certain. And it is the door Phase 3 needs: the ledger's new
+   `split` field and the `--system-prompt` path are already wired, so the moment a
+   lane repeats inside the TTL with a head over the bar the read costs no new code.
+   Shipped as INERT-BUT-ARMED and labelled that way in the file, rather than left
+   in the plan as the biggest lever when it measures ~1.3% of one call
+   (live receipt: doubt_clusters cw 24,597 body vs 327-token head).
+
+The three probe results are written into `brain.mjs` above `splitPrompt()` — the
+only place in the repo that records them, so the next session does not re-derive
+this lever's value from prose.

@@ -1415,14 +1415,81 @@ function leanEnabled() {
   return _lean;
 }
 
+// ── THE SPLIT (14 Aug 2026, unleash Phase 1) ─────────────────────────────────
+// THE FACT THE ORGANISM NEVER SAW. `claude -p` caches the SYSTEM prompt in its
+// own block, with its own breakpoint, and that block SURVIVES a changed body.
+// Probed on this machine 14 Aug, twice (plan §0 and again at pre-flight):
+//     S1 cold   --system-prompt <21.8k stable> + body A → cw 5,026  cr 0
+//     S2 warm   SAME system, DIFFERENT body            → cw   137  cr 4,890
+// The organism could never benefit, because ORGAN_SYSTEM_PROMPT is 84 chars
+// (~21 tokens — under every cache minimum: haiku 4096 / sonnet 1024 / opus 512)
+// while the whole STABLE head — organ preamble, LAWS, quote law, the cognitive
+// fingerprint — sat inside the USER prompt, which is one block that changes
+// every run. So every call cache-WROTE its head at 1.25× and never once read it.
+//
+// WHERE THE CUT IS, and why it needs no new plumbing: every prompt builder in
+// this file (analysis · night coach · dreams · agenda) is literally
+// `head + inputs.map(k => "\n## INPUT " + k + …)`. The first "\n## INPUT " IS
+// the head/body boundary, by construction, in all four. So the split happens
+// HERE, at the one door every builder already goes through, and not one call
+// site or selftest changes shape.
+//
+// ⚠ WHAT THE PLAN ASSUMED, AND WHAT THE MACHINE ACTUALLY DOES (measured 14 Aug,
+// three sonnet probe pairs, before shipping this). READ THIS BEFORE PLANNING
+// ANY WORK ON CACHING — it is the only place these numbers are written down:
+//
+//   A · THE HEAD IS SMALL. The plan assumed analysis heads are "typically 2k–6k
+//       tokens" and therefore clear sonnet's 1024-token minimum. MEASURED, live:
+//       fingerprint 977 chars, whole head 1,625 chars ≈ 406 tokens. Probed at
+//       exactly that size: run 1 cw=0 cr=0 in=823 · run 2 cw=0 cr=0 — the system
+//       block IS NOT CACHED AT ALL below the minimum. At 5,200 chars the same
+//       probe gives cw=2,184 then cw=164 cr=2,026. The mechanism is real; our
+//       head is simply under the bar.
+//   B · CROSS-LANE PREFIX SHARING DOES NOT EXIST. The obvious repair — one
+//       shared cartridge first, each lane's own tail after — was probed with a
+//       4,600-char identical prefix and two different tails: lane A cw=1,712
+//       cr=0, lane B cw=1,712 cr=0. The match is on the WHOLE system block, not
+//       on the longest common prefix. So padding every head to clear the bar
+//       would cost every lane ~900 tokens a run to buy a read that never comes.
+//       (This is also why Phase 2 of the plan — cluster different lanes inside
+//       the 5-min TTL — cannot pay through the head; see §FAILURES in
+//       UNLEASH_PLAN__2026-08-14.md.)
+//   C · WHAT THE SPLIT IS THEREFORE WORTH TODAY: a small, certain win — those
+//       406 head tokens move OUT of a user block that is cache-WRITTEN at 1.25×
+//       and never read (the body changes every run) INTO plain input at 1.0×.
+//       And it is the door Phase 3 needs: the moment a lane repeats inside the
+//       TTL with a head over the bar — pulse on a rolling session, a rehearsal
+//       pair — the read is already wired and stamped on the ledger row.
+//       INERT-BUT-ARMED, honestly labelled, rather than a lever that was sold
+//       as the biggest in the plan and measured as ~2% of one call.
+export const SPLIT_MARK = "\n## INPUT ";
+// Windows CreateProcess caps the whole command line at 32,767 chars. The head
+// rides in argv (the body never does — it goes down stdin, which has no such
+// limit), so an over-long head is sent the OLD way rather than truncated: a
+// clipped system prompt is a silently different instruction, which is worse
+// than an uncached one. Stamped `argv-capped` on the ledger row when it happens.
+const SPLIT_ARGV_MAX = 26000;
+export function splitPrompt(prompt) {
+  const p = String(prompt || "");
+  const i = p.indexOf(SPLIT_MARK);
+  if (i <= 0) return { system: null, body: p, split: null };          // no inputs section ⇒ nothing stable to hoist
+  const head = ORGAN_SYSTEM_PROMPT + "\n\n" + p.slice(0, i);
+  if (head.length > SPLIT_ARGV_MAX) return { system: null, body: p, split: "argv-capped" };
+  return { system: head, body: p.slice(i), split: "system" };
+}
+
 function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null) {
   if (lean === null) lean = leanEnabled();
   const t0 = Date.now();
+  // SPLIT_DISABLED=1 in the daemon env restores the single-block call verbatim.
+  const sp = (lean && !process.env.SPLIT_DISABLED) ? splitPrompt(prompt) : { system: null, body: prompt, split: null };
+  const splitArgs = sp.system ? ["--system-prompt", sp.system, "--tools", "", "--strict-mcp-config"] : null;
+  const sentChars = String(prompt || "").length;   // FULL prompt — the no-usage fallback estimate must not shrink just because the head moved to argv
   try {
     const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet",
-      ...(lean ? LEAN_ARGS : []), ...(Array.isArray(extraArgs) ? extraArgs : [])],
+      ...(splitArgs || (lean ? LEAN_ARGS : [])), ...(Array.isArray(extraArgs) ? extraArgs : [])],
       // G4 — extended thinking via env, same mechanism the cortex has always used
-      { input: prompt, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
+      { input: sp.body, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
     let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false;
     try {
       const j = JSON.parse(stdout);
@@ -1441,13 +1508,13 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = nu
     // that never reached the API and throttled the governor against fiction.
     // An unmade call costs nothing; estimate only when the call actually landed.
     const measured = usageTotal({ input_tokens: inTok, output_tokens: outTok, cache_creation_input_tokens: cacheCreate, cache_read_input_tokens: cacheRead });
-    const total = isErr ? measured : (measured || Math.ceil((prompt.length + text.length) / 4));
+    const total = isErr ? measured : (measured || Math.ceil((sentChars + text.length) / 4));
     const limit_hit = isErr && LIMIT_RE.test(text);
-    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null };
+    return { ok: !isErr, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cacheCreate, cache_read_tokens: cacheRead, total_tokens: total, duration_ms: Date.now() - t0, limit_hit, error: isErr ? text.slice(0, 200) : null, split: sp.split };
   } catch (e) {
     const msg = String((e.stderr || "") + (e.stdout || "") + e.message);
     return { ok: false, text: null, input_tokens: null, output_tokens: null, cache_creation_tokens: null, cache_read_tokens: null, total_tokens: 0,   // never spawned/never answered ⇒ zero spend
-      duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200) };
+      duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200), split: sp.split };
   }
 }
 
@@ -3126,6 +3193,12 @@ async function tick(cfg, deps) {
       cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null,
       total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0,
       ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit,
+      // HOW THE CALL WAS SENT (14 Aug 2026, unleash Phase 1): "system" = the stable
+      // head rode --system-prompt and can be cache-READ next run · "argv-capped" =
+      // the head was too long for Windows argv and went the old single-block way ·
+      // null = no ## INPUT section, nothing to hoist (or the split is switched off).
+      // Additive: rows written before today read as UNMEASURED, not as a measured no.
+      split: usage.split || null,
       // THE ONE FACT NEEDED TO DEBUG A SILENT MOUTH, finally written down (1 Aug 2026
       // audit): runJob has always built `sheet source=… (reason)`, and the row literal
       // has always dropped it. 0 of 2,811 rows carried it, stdout goes nowhere (the
@@ -3876,6 +3949,34 @@ async function selftest() {
   }
   assert("fingerprint enters every analysis prompt", buildAnalysisPrompt({ id: "x" }, {}, fp).includes("COGNITIVE FINGERPRINT"));
   assert("empty world → fixed-traits fingerprint only, no crash", buildFingerprint({}).includes("ADHD-PI"));
+
+  // ── THE SPLIT (14 Aug 2026, unleash Phase 1) ───────────────────────────────
+  // The cut must satisfy three things at once, and the third is the one that
+  // makes it safe: the model must receive the SAME BYTES it received yesterday.
+  {
+    const pr = buildAnalysisPrompt({ id: "split_x", _note: "note" }, { "a.json": [{ x: 1 }], "b.json": "hello" }, fp);
+    const s = splitPrompt(pr);
+    assert("SPLIT — the head goes to --system-prompt and the ## INPUT sections stay in the body",
+      s.split === "system" && s.system.includes("COGNITIVE FINGERPRINT") && s.system.includes("Job: split_x")
+      && !s.system.includes("## INPUT a.json") && s.body.startsWith("\n## INPUT a.json") && s.body.includes("## INPUT b.json"));
+    assert("SPLIT — NOTHING IS LOST OR REORDERED: system+body reconstructs the exact prompt, with only the organ preamble added in front",
+      s.system + s.body === ORGAN_SYSTEM_PROMPT + "\n\n" + pr);
+    // NOT an assertion that the head clears the cache minimum — it does not
+    // (1,625 chars ≈ 406 tokens vs sonnet's 1024, measured 14 Aug; see the probe
+    // record above the function). The honest witness is that the SIZE IS
+    // REPORTED, so nobody re-derives the lever's value from prose again.
+    console.log(`         · live analysis head = ${s.system.length} chars ≈ ${Math.round(s.system.length / 4)} tokens (sonnet caches at ≥1024, opus ≥512, haiku ≥4096)`);
+    assert("SPLIT — the body carries the whole variable part and the head carries none of it (that is the only thing that makes the head stable)",
+      !s.system.includes("hello") && s.body.includes("hello"));
+    // the two refusals, both of which must fall back to today's exact call
+    assert("SPLIT — a prompt with no ## INPUT section is NOT split (nothing stable to hoist), and says so with null",
+      splitPrompt("just a question, no inputs").split === null && splitPrompt("just a question, no inputs").body === "just a question, no inputs");
+    const huge = "x".repeat(30000) + "\n## INPUT a\n1";
+    assert("SPLIT — a head over the Windows argv cap is sent WHOLE the old way and stamped argv-capped, never truncated",
+      splitPrompt(huge).split === "argv-capped" && splitPrompt(huge).system === null && splitPrompt(huge).body === huge);
+    assert("SPLIT — a body-first prompt (mark at index 0) is left alone, no empty system prompt",
+      splitPrompt("\n## INPUT a\n1").split === null);
+  }
 
   // ntfy mouth — secret topic never in committed config; two utterances only
   const cfgNtfyOn = { ...cfg, ntfy: { enabled: true, topic: "", push_after: ["formation_read"] } };
@@ -5342,6 +5443,7 @@ async function main() {
       const { usage, note, inputs_absent, inputs_declared, inputs_absent_names, inputs_clipped, inputs_rows_dropped, inputs_rows_door_dropped, inputs_door_names } = await runJob(job, cfg, deps);
       if (!deps.dry) {
         appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
+          split: usage.split || null,   // Phase 1 — and the manual row is where the split's own receipt is READ, so it cannot be the row that drops it
           // same input accounting as the scheduled path (finding #64) — a manual run must
           // not be the one place the evidence base goes unrecorded.
           inputs_present: typeof inputs_declared === "number" ? inputs_declared - inputs_absent : null,
