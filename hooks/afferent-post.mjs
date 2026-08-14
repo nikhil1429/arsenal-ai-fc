@@ -67,11 +67,37 @@ async function main() {
   // skip slash-commands on HIS side (control, not cognition); teaching is always cognition
   if (source === "claude-code" && /^\//.test(text)) return die();
 
+  // THE THREAD (14 Aug 2026, his ruling — "resolved from this moment onwards").
+  // Until today a row carried only {modality, source, text, cwd, ts}: the WORDS
+  // but not the THREAD. Measured the same day on the live file — an 8-turn arc
+  // (46 rows, 192,591 chars) sat interleaved with activitywatch + haiku-pulse
+  // rows, and NOTHING in the record said which turn answered which. Storage is
+  // cheap and re-analysis is cheap — you can run any future model over the whole
+  // archive — but PROVENANCE cannot be recovered after the fact. These five
+  // fields are the only part of this plan that is irreversible if skipped, which
+  // is why they landed while the rest of the life-scale build parked to 28 Aug.
+  //   event_id       · this moment's own identity (dedupe, reference, linking)
+  //   session_id     · THE THREAD — which conversation this turn belongs to
+  //   surface        · which BODY it came from. He is about to run four (typed ·
+  //                    gaffer voice · XR glasses · room TV) and in 2028 "what he
+  //                    said out loud" vs "what he typed" are different acts.
+  //   v              · schema version of this hook. When this file changes, the
+  //                    archive still knows which shape each row was written in.
+  //   transcript_path· Claude Code already writes the FULL threaded transcript to
+  //                    disk; naming it costs one string and keeps the complete
+  //                    record reachable. Metadata is the spine, this is the body.
+  // Every field is defensive: a missing hook field degrades to null, never throws
+  // — this nerve must never bite the live editor (see LAWS at the top).
   const evt = {
+    event_id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     modality: "code",
     source,
+    surface: "claude-code",
+    session_id: String(hook.session_id || "") || null,
     text,
     cwd: String(hook.cwd || "").split(/[\\/]/).slice(-1)[0] || null,
+    transcript_path: String(hook.transcript_path || "") || null,
+    v: 2,
     ts: new Date().toISOString(),
   };
   try {
