@@ -37,6 +37,14 @@
           { "type": "command", "command": "node scripts/learnstate.mjs brief" }
         ]
       }
+    ],
+    "_SessionEnd_comment": "THE ARCHIVE'S TAIL (14 Aug 2026, ARCHIVE__DAY_ONE_SPEC.md §7.6). afferent.jsonl is a WRITE-AHEAD LOG and $ARSENAL_ARCHIVE is the durable store behind it, so the gap between 'he said it' and 'it is permanent' is the whole risk. The scheduled ArsenalFC-Archivist covers it every 15 minutes; this closes the last gap, archiving a session's tail the moment the session ends. SessionEnd AND NOT Stop, deliberately: an incremental run measures ~0.6s, which is nothing once at the end of a session and a real tax paid on EVERY turn of a study session. Layering, not replacing — if a session is killed and SessionEnd never fires, the 15-minute task still catches the tail; this only makes it prompt. The archivist is READ-ONLY on dressing-room/ and writes nothing this session can see, so it cannot bite the editor.",
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node scripts/archivist.mjs run" }
+        ]
+      }
     ]
   }
 }

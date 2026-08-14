@@ -1,0 +1,26 @@
+#!/bin/sh
+# ============================================================================
+# hooks/pre-commit · ARSENAL AI FC — THE ARCHIVE TRIPWIRE
+# ----------------------------------------------------------------------------
+# WHY: the repo is PUBLIC and a push cannot be taken back. Forks, clones and
+#   GitHub's dangling-commit cache mean a later delete is not an erase, so the
+#   only place to stop a personal-capture lane or the archive itself is BEFORE
+#   the commit exists.
+# WHAT IT REFUSES: any staged file inside a BagIt bag (i.e. the archive), any
+#   bag file by name, live Oura credentials, and any dressing-room/*.jsonl that
+#   git has NEVER TRACKED (a brand-new capture lane). Lanes already tracked on
+#   purpose keep committing normally — a hook that reds every commit gets
+#   uninstalled, and an uninstalled hook protects nothing.
+# OVERRIDE (new lanes only, never credentials, never the bag):
+#   ARSENAL_ALLOW_NEW_LANE=1 git commit …
+# FAIL-OPEN, DELIBERATELY: if node is missing the commit proceeds and says so.
+#   A tripwire that blocks all work when its runtime is absent gets removed.
+# INSTALL: powershell -File setup\INSTALL_ARCHIVE.ps1   (copies this to
+#   .git/hooks/pre-commit). Re-run it after any clone — .git/hooks is not
+#   versioned, which is exactly why the source of truth is this tracked file.
+# ============================================================================
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found — ARCHIVE TRIPWIRE IS OFF for this commit. Check staged paths by hand."
+  exit 0
+fi
+exec node scripts/archivist.mjs tripwire

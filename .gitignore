@@ -339,3 +339,21 @@ dressing-room/state/dmn_weak_vector.jsonl
 # it — which is exactly what nearly happened).
 # Reversal: delete this line. Nothing reads it from the remote.
 dressing-room/state/oura_auth_state.json
+
+# ============================================================================
+# THE ARCHIVE (14 Aug 2026 — ARCHIVE__DAY_ONE_SPEC.md §7.5)
+# The permanent record lives OUTSIDE the repo by design ($ARSENAL_ARCHIVE,
+# default %USERPROFILE%\CyborgArchive) and `archivist.mjs init` REFUSES to
+# create it inside a git work tree. These lines are the second belt: if a bag
+# ever appears in here — a copy pulled back off the disk to inspect, a mistyped
+# $ARSENAL_ARCHIVE, a restore into the wrong folder — git must not see it.
+# The repo is PUBLIC and a push cannot be taken back.
+# Third belt: hooks/pre-commit (installed by setup\INSTALL_ARCHIVE.ps1) refuses
+# any staged file inside a BagIt bag, and any capture lane git has never tracked.
+# Reversal: delete these lines. Nothing reads them from the remote.
+CyborgArchive/
+**/CyborgArchive/
+bagit.txt
+bag-info.txt
+manifest-sha256.txt
+tagmanifest-sha256.txt
