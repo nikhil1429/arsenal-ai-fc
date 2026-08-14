@@ -323,6 +323,22 @@ export function buildRecord({ lane, payload, now, backfilled, moment, seq, prevS
 const payloadSha = (payload) => sha256Hex(canon(payload));
 
 // ── THE TREE ─────────────────────────────────────────────────────────────────
+// THE ONE PLACE THIS DEVIATES FROM THE SPEC'S WRITTEN TREE, and it is a
+// correctness fix, not a preference. §6 draws the checkpoint as
+// `data/_checkpoints.json`. But BagIt says a bag is COMPLETE only if every file
+// under the payload directory appears in manifest-sha256.txt — and the checkpoint
+// changes every 15 minutes. So the spec's layout forces a permanent choice
+// between two broken bags: list it (and the manifest is wrong within 15 minutes
+// of every seal, so the copy on the external disk fails validation) or omit it
+// (and the bag is incomplete forever). Either way the validator cries wolf about
+// the one file in data/ that is NOT the record.
+// The archive's own LAW 8 settles it: the checkpoint and the lock are the
+// WRITER'S disposable state — delete them and `laneHead()` re-derives everything
+// from the records. Disposable state does not belong inside the sacred payload
+// directory. They move to _writer/, which is a tag directory, covered by the
+// TAGMANIFEST, where a file that legitimately changes belongs.
+// Migration is automatic and one-way; the old path is read once if the new one
+// is absent, so an archive created before this change loses nothing.
 const P = (root) => ({
   root,
   data: join(root, "data"),
@@ -330,7 +346,10 @@ const P = (root) => ({
   schema: join(root, "SCHEMA"),
   lexicon: join(root, "LEXICON"),
   derived: join(root, "derived"),
-  checkpoints: join(root, "data", "_checkpoints.json"),
+  writer: join(root, "_writer"),
+  checkpoints: join(root, "_writer", "checkpoints.json"),
+  checkpointsLegacy: join(root, "data", "_checkpoints.json"),
+  lock: join(root, "_writer", "lock.json"),
 });
 const dayFile = (root, lane, dayKey) => {
   const [y, m, d] = dayKey.split("-");
@@ -417,7 +436,7 @@ export function laneHead(root, lane) {
 // one; it is taken over and the takeover is journalled, never silent.
 const LOCK_STALE_MS = 10 * 60 * 1000;
 function takeLock(root, mode) {
-  const p = join(P(root).data, "_lock.json");
+  const p = P(root).lock;
   mkdirSync(dirname(p), { recursive: true });
   const mine = JSON.stringify({ pid: process.pid, mode, at: new Date().toISOString() });
   try {
@@ -439,7 +458,19 @@ function takeLock(root, mode) {
 
 // ── CHECKPOINTS ──────────────────────────────────────────────────────────────
 const emptyCkpt = () => ({ v: 1, updated_at: null, files: {}, lanes: {} });
-const loadCkpt = (root) => readJsonSafe(P(root).checkpoints, emptyCkpt());
+function loadCkpt(root) {
+  const p = P(root);
+  if (existsSync(p.checkpoints)) return readJsonSafe(p.checkpoints, emptyCkpt());
+  // one-way migration off the spec's data/_checkpoints.json (see P() above)
+  if (existsSync(p.checkpointsLegacy)) {
+    const c = readJsonSafe(p.checkpointsLegacy, emptyCkpt());
+    mkdirSync(p.writer, { recursive: true });
+    writeAtomic(p.checkpoints, JSON.stringify(c, null, 2) + "\n");
+    rmSync(p.checkpointsLegacy, { force: true });
+    appendHealth(root, "fixity", { kind: "checkpoint-moved", at: new Date().toISOString(), from: "data/_checkpoints.json", to: "_writer/checkpoints.json", why: "a file that changes every 15 minutes cannot live inside a BagIt payload directory — the bag would fail validation between seals. LAW 8: the checkpoint is disposable writer state, re-derivable from the records." });
+  }
+  return readJsonSafe(p.checkpoints, emptyCkpt());
+}
 const saveCkpt = (root, c) => { c.updated_at = new Date().toISOString(); writeAtomic(P(root).checkpoints, JSON.stringify(c, null, 2) + "\n"); };
 
 // ── READING A SOURCE LANE ────────────────────────────────────────────────────
@@ -843,7 +874,7 @@ export function sealArchive(opts = {}) {
   const lock = takeLock(root, "seal");
   if (!lock.ok) { log(`archivist seal: an archivist is mid-run (pid ${lock.held.pid}) — not sealing a moving tree. The weekly seal will catch it.`); return { sealed: false }; }
   try {
-  const payload = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp") && basename(f) !== "_lock.json");
+  const payload = walkFiles(P(root).data).filter((f) => !f.endsWith(".tmp"));
   const oxum = payload.reduce((a, f) => ({ bytes: a.bytes + statSync(f).size, n: a.n + 1 }), { bytes: 0, n: 0 });
   writeFileSync(join(root, "manifest-sha256.txt"), payload.map((f) => `${fileSha(f)}  ${bagPath(root, f)}`).join("\n") + (payload.length ? "\n" : ""), "utf8");
 
@@ -854,7 +885,7 @@ export function sealArchive(opts = {}) {
 
   const tagFiles = [
     join(root, "bagit.txt"), join(root, "bag-info.txt"), join(root, "manifest-sha256.txt"), join(root, "README.md"),
-    ...walkFiles(P(root).schema), ...walkFiles(P(root).lexicon), ...walkFiles(P(root).health), ...walkFiles(P(root).derived),
+    ...walkFiles(P(root).schema), ...walkFiles(P(root).lexicon), ...walkFiles(P(root).health), ...walkFiles(P(root).derived), ...walkFiles(P(root).writer),
   ].filter((f) => existsSync(f) && !f.endsWith(".tmp"));
   writeFileSync(join(root, "tagmanifest-sha256.txt"), tagFiles.map((f) => `${fileSha(f)}  ${bagPath(root, f)}`).join("\n") + "\n", "utf8");
 
@@ -889,7 +920,7 @@ export function initArchive(opts = {}) {
     return { ok: false, reason: "inside-git", why: guard.why };
   }
   const p = P(root);
-  for (const d of [root, p.data, p.health, p.schema, p.lexicon, p.derived]) mkdirSync(d, { recursive: true });
+  for (const d of [root, p.data, p.health, p.schema, p.lexicon, p.derived, p.writer]) mkdirSync(d, { recursive: true });
 
   // BagIt declaration — two lines, fixed by the standard.
   writeFileSync(join(root, "bagit.txt"), "BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n", "utf8");
@@ -912,7 +943,17 @@ export function initArchive(opts = {}) {
   let seeded = 0;
   if (!existsSync(terms)) { appendLines(terms, LEXICON_SEED.map((t) => JSON.stringify(t))); seeded = LEXICON_SEED.length; }
   if (!existsSync(join(p.lexicon, "CHANGELOG.md"))) writeFileSync(join(p.lexicon, "CHANGELOG.md"), LEXICON_CHANGELOG(), "utf8");
-  if (!existsSync(p.checkpoints)) saveCkpt(root, emptyCkpt());
+  // THROUGH loadCkpt, NEVER a bare write — and this line cost a doubled archive.
+  // It read `if (!existsSync(p.checkpoints)) saveCkpt(root, emptyCkpt())`, so on
+  // the first init after the checkpoint moved to _writer/, init wrote an EMPTY
+  // checkpoint at the new path; loadCkpt then found that file present, skipped the
+  // migration entirely, and the next `run` re-archived all 33,249 records as
+  // backfill. Every chain still verified — they were appended in seq order — which
+  // is the point worth keeping: A VALID CHAIN IS NOT A CORRECT ARCHIVE. Only the
+  // COUNT gave it away, which is exactly what LAW 6's vital signs are for.
+  // loadCkpt owns the migration, so init must ask it rather than guess.
+  const ck = loadCkpt(root);
+  if (!existsSync(p.checkpoints)) saveCkpt(root, ck);
 
   log(`archivist init: ${root}`);
   log(`  bagit.txt · bag-info.txt · README.md · SCHEMA/v${SCHEMA_V}.json · LEXICON/terms.jsonl${seeded ? ` (${seeded} terms seeded)` : " (kept)"} · data/ · health/ · derived/`);
@@ -1242,6 +1283,7 @@ you. That is why those runs exist.
 | \`LEXICON/\` | **The dictionary of his private language.** Read this before interpreting anything. |
 | \`health/\` | Vital signs: record counts, field-fill rates, silence detection, fixity runs, quarantine. |
 | \`derived/\` | **Disposable.** Anything in here can be deleted and rebuilt from \`data/\`. Nothing here is truth. |
+| \`_writer/\` | The writing program's own bookkeeping (how far it had read, a run lock). Also disposable — it can be deleted and re-derived from \`data/\`, and it is kept out of \`data/\` precisely because it changes constantly and \`data/\` must not. |
 
 ## Read the LEXICON before you interpret anything
 
@@ -1484,6 +1526,16 @@ function selftest() {
     const r2 = runArchive(A);
     const countAll = () => [...laneRecords(arc, "afferent")].length;
     ok("4. IDEMPOTENCY · a second `run` on the same input adds nothing (0 duplicates)", r2.added === 0 && countAll() === 100);
+    // THE DOUBLING SCAR (14 Aug 2026). `init` used to write an EMPTY checkpoint
+    // whenever the file was absent, which on the first init after the checkpoint
+    // moved directories meant the migration never ran and the NEXT run re-archived
+    // the entire archive as backfill — 33,249 records, duplicated, every chain
+    // still verifying perfectly. A valid chain is not a correct archive. Only the
+    // count said so, and only because someone read it.
+    initArchive(A);
+    const afterInit = runArchive(A);
+    ok("4b. IDEMPOTENCY · re-running `init` over a LIVE archive does not lose the checkpoint (the doubling scar: a valid chain is not a correct archive)",
+      afterInit.added === 0 && countAll() === 100, `init lost the read position and re-archived ${afterInit.added} record(s)`);
 
     // ── 6. IST DAY BOUNDARY ──
     // 02:30+05:30 on the 14th is 21:00Z on the 13th. A UTC partition files it
@@ -1596,7 +1648,7 @@ function selftest() {
     held.release();
     ok("LOCK · released, and the next run proceeds normally", runArchive({ ...A }).stood_down === undefined);
     // a lock older than 10 minutes is a CRASHED run, not a live one
-    writeAtomic(join(arc, "data", "_lock.json"), JSON.stringify({ pid: 999999, mode: "run", at: new Date(Date.now() - 3600000).toISOString() }));
+    writeAtomic(P(arc).lock, JSON.stringify({ pid: 999999, mode: "run", at: new Date(Date.now() - 3600000).toISOString() }));
     const afterStale = runArchive({ ...A });
     ok("LOCK · a STALE lock (a crashed run) is taken over, and the takeover is journalled — never a silent seizure",
       afterStale.stood_down === undefined
@@ -1667,6 +1719,17 @@ function selftest() {
       tag.some((l) => l.endsWith("SCHEMA/v1.json")) && tag.some((l) => l.endsWith("LEXICON/terms.jsonl")) && tag.some((l) => l.endsWith("bagit.txt")));
     ok("SEAL · Payload-Oxum is regenerated and TRUE at seal time (a stale oxum is a bag that fails validation)",
       new RegExp(`Payload-Oxum: ${sealed.bytes}\\.${sealed.payload}`).test(readFileSync(join(arc, "bag-info.txt"), "utf8")));
+    // BAGIT COMPLETENESS — the law behind the one place this deviates from §6's
+    // written tree. A bag is complete only if EVERY file under data/ is in the
+    // manifest, so nothing that legitimately changes between seals may live
+    // there: the checkpoint used to, and it changes every 15 minutes, which would
+    // have made the copy on his external disk fail validation permanently.
+    const manifested = new Set(man.map((l) => l.split("  ")[1]));
+    const onDisk = walkFiles(join(arc, "data")).map((f) => relative(arc, f).split(sep).join("/"));
+    ok("SEAL · BAGIT COMPLETENESS — every file under data/ is in manifest-sha256.txt, and nothing mutable lives there",
+      onDisk.every((f) => manifested.has(f)), onDisk.filter((f) => !manifested.has(f)).join(", "));
+    ok("SEAL · the writer's own mutable state is OUTSIDE the payload and covered by the TAGmanifest instead",
+      existsSync(P(arc).checkpoints) && !existsSync(P(arc).checkpointsLegacy) && tag.some((l) => l.endsWith("_writer/checkpoints.json")));
 
     // ── THE LEXICON (spec §10) ──
     const terms = readFileSync(join(arc, "LEXICON", "terms.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
