@@ -480,6 +480,43 @@ Run after 48h of the branch live (the daemon runs from the working tree):
 - The DMN budget (`MAX_ROLLOUTS_NIGHT 100`) — a separate, unfinished conversation; not in scope.
 - Don't "fix" `brain_ledger.jsonl`'s shared-append design or any owners-partition rule.
 
+---
+
+## §EXECUTED — 14 Aug 2026, branch `unleash-14aug`
+
+Every phase ran. Suite green at every commit but two (both caught by the repo's own
+guards, both repaired in the next commit and named there). Receipts live in the commit
+messages; **the numbers below are the ones that changed a decision.**
+
+| phase | state | the one line that matters |
+|---|---|---|
+| −1 suite red | ✅ | `dreams` was not dead — it REFUSES BEFORE SPEND on an empty inventory. reconcile now reads the ledger to tell "alive and empty" from "dead". |
+| 0 meter | ✅ | board sees models (pulse 40.3% blind → 17.5% aware). **The governor deliberately does NOT** — its caps are stated in the blind unit; switching it would move a guard. |
+| 1 split | ⚠️ shipped INERT-BUT-ARMED | premise refuted by probe: the head is **406 tokens**, not the assumed 2k–6k, and a block under the model's minimum is not cached at all. See §FAILURES F1. |
+| 2 clustering | ❌ **SKIPPED** | probe C: **no cross-lane prefix sharing.** Its entire WHY is false. Re-timing jobs = real risk for measured zero. |
+| 3 rolling pulse | ✅ **the big one** | probed 79% off; **LIVE: 28,618 → 7,413 weighted, 59% off** vs the 30-pulse cold baseline, and the resumed pulse saw 1 new moment instead of 25. |
+| 4 caching switch | ✅ plumbed, set nowhere | the decision is data's, in Phase 10. |
+| 5 effort | ✅ | 26 of 26 eligible lanes; no haiku lane (would error). `--effort` verified live before writing config. |
+| 6 gates | ✅ | 5 organs SHUT→OPEN. **And limits.mjs was lying** — 4 physio rows hardcoded their bar and did not move when the gate did. |
+| 7 deep brain | ✅ | tau1_base 0.36 → **0.20 = P90 of his own voice salience** (n=468). w_pulse 0.02 provisional (precision is structurally unmeasurable at weight 0). Conversation brain + in-conversation 60s floor. |
+| 8 gaffer trust | ✅ | 2 doors · the machinery filter · the nightly auditor · the spliced seed. |
+| 9 dead lanes | ✅ | 3 closed, each naming its RE-ENABLE WHEN. |
+| 10 verdict | ✅ as a COMMAND | `node scripts/unleash_verdict.mjs` — the six checks in code, PENDING is a first-class answer. |
+
+**FOUR TIMES THE ORGANISM CAUGHT ITS OWN EXECUTOR**, which is the strongest evidence in
+this document that the guards work: brain.mjs #63 (closing a lane it pinned as ON) ·
+limits.mjs's arg-set guard (an override folded into the wrong place) · xray's
+unresolved-sinks ratchet (twice — once a genuine cost paid down 304→85 and re-baselined
+in public, once four copies of one call site) · the selftest-coverage law (a new organ
+with 9 assertions in no suite).
+
+**WHAT IS STILL PENDING, and why it is not "done":** the 48-hour window. Run
+`node scripts/unleash_verdict.mjs` after 48h — 3 of its 6 checks were still PENDING at
+execution time because the evidence had not accumulated yet, and it says so rather than
+guessing. Do NOT read a PENDING as a pass.
+
+---
+
 ## §FAILURES (executor appends here)
 
 ### F1 · PHASE 1's premise is REFUTED at this repo's real head size (14 Aug, measured)
