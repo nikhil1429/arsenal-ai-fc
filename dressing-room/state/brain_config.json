@@ -92,7 +92,12 @@
       },
       "_note": "HANDBRAKE-OFF (17 Jul): the SAME-DAY memory refresh — mine the morning's voice + behavior at 14:00 so the afternoon Gaffer already knows the morning. Overwrites today's digest with a richer read; the overnight run still does the full mine.",
       "_g16_note": "G16 (9 Aug 2026): the day gets a mind — this job now runs at 12:30 with two clones (midday_digest_2 14:30, midday_digest_3 16:30 — the 12:00-17:00 window in clean thirds). Each overwrites the same out with a richer read; a naive max_per_day 3 would have fired all three back-to-back at the single at-gate.",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is summarise the morning — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is summarise the morning — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "midday_digest_3",
@@ -119,7 +124,12 @@
         "where": "input to midday_cartridge + day_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's system instruction"
       },
       "_g16_note": "G16 clone of midday_digest at 16:30 — same inputs, same out (overwrite-richer), real spacing",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is same, 16:30 — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is same, 16:30 — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "midday_digest_2",
@@ -146,7 +156,12 @@
         "where": "input to midday_cartridge + day_cartridge (brain_out/dugout_digest/TODAY.md) → the Dugout's system instruction"
       },
       "_g16_note": "G16 clone of midday_digest at 14:30 — same inputs, same out (overwrite-richer), real spacing",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is same, 14:30 — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is same, 14:30 — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "midday_cartridge",
@@ -174,7 +189,12 @@
       },
       "_note": "HANDBRAKE-OFF (17 Jul): recompile the Gaffer's briefing from the midday digest — an afternoon Dugout session boots on a cartridge that includes TODAY so far, not just yesterday. Same laws: <=15 lines, second person, no new numbers, no hype.",
       "_g8_note": "G8 FLAGSHIP (9 Aug 2026): this job overwrites the P1-opus day_cartridge every 14:20 via the same out — on sonnet it silently UN-DID P1 for the whole afternoon. Opus now, first of the four flips.",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is pack existing text into a budget — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is pack existing text into a budget — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "formation_read",
@@ -194,7 +214,12 @@
       "_note": "M-3 live: runManager({llm}) — the Manager's own validator rejects any invented number; fallback skeleton guarantees the sheet regardless.",
       "trigger": "morning_signals",
       "trigger_fallback_hm": "09:30",
-      "_trigger_note": "A2 launch worklist 9 Aug 2026: the sheet waits on the conductor morning_signals arm (conductor.mjs:76 — the law its LAWS block always claimed); past 09:30 unarmed the gate opens anyway so a dead conductor delays the sheet but never starves it (brain.mjs eligibleJobs gate)."
+      "_trigger_note": "A2 launch worklist 9 Aug 2026: the sheet waits on the conductor morning_signals arm (conductor.mjs:76 — the law its LAWS block always claimed); past 09:30 unarmed the gate opens anyway so a dead conductor delays the sheet but never starves it (brain.mjs eligibleJobs gate).",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "midday_reread",
@@ -224,7 +249,12 @@
       "_DISABLED_2026_08_02": "AUDIT #63 — THE WORST OFFENDER, disabled. This job is the single most expensive thing the organism does: ~1,59,000 tok/run, 7 runs, 11,21,460 tok since 26 Jul, and ONE run ate 5,60,465 of an 8,00,000-token 5h window — 70% of the whole window — for a file with no reader. `grep -rn brain_out/midday scripts/ .claude/ hooks/ setup/` returns ZERO hits, and no other job lists it in `inputs`. The _note above is itself the lie: 'analysis for the wall and the evening' — the wall reads brain_out/wall_insights (viz.mjs:647), and evening_voice's inputs are twin.json / slip.jsonl / pitch_read.json / pulse.json. Meanwhile formation_read, the sheet he actually reads at priority 100, got 1,03,010 tokens all week. RE-ENABLE WHEN: something opens dressing-room/state/brain_out/midday/<date>.md — either viz.mjs reads it into a wall panel, or evening_voice/day_cartridge lists brain_out/midday/TODAY.md in `inputs` (a one-line config edit, and then set enabled:true and surface.kind to code/job_input). Do NOT re-enable it just to un-quiet the afternoon: it has never reached a human.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63) and kept off 6 Aug. Its output has NO READER: nothing in scripts/ opens brain_out/midday/, and 7 files sit there unread. It was also the #2 all-time spender (2,645,734 tokens). The boot-tax fix of 6 Aug makes it ~9x cheaper, but cheap output nobody reads is still 100% waste. TO ENABLE: give it a consumer first — either list brain_out/midday/TODAY.md as an input to an enabled job, or commit to opening the file yourself, then flip enabled:true.",
-      "_g9_note": "G9 (9 Aug 2026): re-enabled WITH a reader — evening_voice now lists brain_out/midday/TODAY.md in inputs (the one-line edit the 2-Aug disabled-note asked for). Post-lean cost ~0.53%/wk. The day's behaviour finally reaches the evening voice."
+      "_g9_note": "G9 (9 Aug 2026): re-enabled WITH a reader — evening_voice now lists brain_out/midday/TODAY.md in inputs (the one-line edit the 2-Aug disabled-note asked for). Post-lean cost ~0.53%/wk. The day's behaviour finally reaches the evening voice.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "evening_voice",
@@ -251,7 +281,12 @@
         "kind": "job_input",
         "where": "input to day_cartridge (brain_out/evening_voice/TODAY.md) → the Dugout's dawn system instruction"
       },
-      "_hype_guard_note": "AUDIT #62 TRAP: evening_voice has NEITHER speak_to NOR validate, so the obvious gate would have stripped the hype guard from exactly the Opus job that writes in his ear's register. It KEEPS the guard — no hype_guard key here, deliberately."
+      "_hype_guard_note": "AUDIT #62 TRAP: evening_voice has NEITHER speak_to NOR validate, so the obvious gate would have stripped the hype guard from exactly the Opus job that writes in his ear's register. It KEEPS the guard — no hype_guard key here, deliberately.",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "deep_twin",
@@ -308,7 +343,12 @@
       "_note": "Clustering ASSIST over doubtminer's parse — output is a proposal file; captain batch-glances; nothing auto-writes to capsules.",
       "_surface_note": "AUDIT #63: kept ON. This is one of the four jobs DESIGNED to be human-read — wiring a code consumer would be the wrong seam. Its defect was that no surface ever pointed at the file: runJob's `→ brain_out/<out>/<date>.md` note was the only pointer that existed and the ledger row dropped it, while stdout went to a hidden window. Both are fixed; the address is now the note on every ledger row plus the by-path listing in `brain status`.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is cluster doubts — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is cluster doubts — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "lexicon_mine",
@@ -337,7 +377,12 @@
       "_wired_2026_08_02": "AUDIT #5 + #61, both fixed together. (#61) This job was 0-for-115 — 5,48,556 tokens in 7 days, every failure `validator: non-verbatim quote` — and it was UNWINNABLE: the old quotes_only pattern /\"([^\"]{12,})\"/g put the ≥12-char floor INSIDE the pair matcher, so quoting any anchor shorter than 12 chars desynced the pairing and captured the annotation between two phrases as if it were a quote. His own lexicon holds \"one picture\" (11), \"tera finops\" (11), \"naya sawaal\" (11), so doing exactly what the job exists to do guaranteed rejection. scripts/validators.mjs now pairs quotes sequentially, then applies the floor. (#5) Its output had no reader; it now feeds the fingerprint, which is safe by construction because quotes_only means every quoted span is verbatim-present in lexicon.json — the miner cannot invent a phrase into his own voice.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_g7_note": "G7 (9 Aug 2026): opus — this job mines HIS OWN spoken metaphors into the fingerprint at the head of EVERY llm call; the cheapest place to be wrong is not here.",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is extract his terms — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is extract his terms — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "drill_forge",
@@ -390,7 +435,12 @@
       },
       "_serve_note": "AUDIT #65. The write site used to hardcode shiftDay(), which is YESTERDAY for any overnight job run before 07:30 — and the night shift fires 02:40–03:00 IST. viz reads the CALENDAR date with no lookback, so this file, the poster and the Gemini render (~6,75,000 tok/week, 11 successful runs since 26 Jul) all landed in filenames viz can never open; club/poster.svg and club/wall_gemini.html are frozen at 21 Jul. Fixed at the PRODUCER with `serve`, which brain.mjs already proved on the mp3 lane (club/media/teamtalk_<tomorrow>_am.mp3 folds correctly today for exactly this reason). NOT fixed with a viz-side lookback — that fights posterFlag's freshness law and would serve a two-day-old poster as today's. shiftDay REMAINS the ledger/eligibility key; only the filename moves.",
       "_note": "≤3 insight lines; viz.mjs re-validates before rendering. NUMBERS: quote them EXACTLY as they appear in the data — NEVER sum, average, or derive new ones (515 from 402+113 gets the whole output rejected); if a comparison needs arithmetic, describe it in words without the computed figure.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "season_review",
@@ -451,7 +501,12 @@
       "_note": "Exhaustion filler with real value: pre-draft the Daraar-map probe angles for the NEXT unlocked syllabus concepts, seeded where his cracks historically form. Never shown pre-Pehle-Guess; feeds the Gem prompt pack.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/premap/ (5 files unread), and it carried max_per_day 3 — the highest of any job. Its stated value (pre-drafting Daraar-map probe angles) is real but lands nowhere. TO ENABLE: wire it into the Gem prompt pack it claims to feed, then flip enabled:true.",
-      "_g10_note": "G10 (9 Aug 2026): re-enabled — nightshift gemCartridge now reads the newest premap via the viz-style i<=2 day-lookback (premap files land under the shift day, minutes AFTER nightshift's 02:59 write — the lookback is mandatory, not decoration)."
+      "_g10_note": "G10 (9 Aug 2026): re-enabled — nightshift gemCartridge now reads the newest premap via the viz-style i<=2 day-lookback (premap files land under the shift day, minutes AFTER nightshift's 02:59 write — the lookback is mandatory, not decoration).",
+      "extra_args": [
+        "--effort",
+        "medium"
+      ],
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "scrimmage_staging",
@@ -475,7 +530,12 @@
         "where": "scripts/dugout.mjs:364 (?mode=scrimmage) + .claude/skills/scrimmage/SKILL.md step 2"
       },
       "_note": "Runs only when scout.json has a staged scrimmage: builds the full R-late mock brief in idle tokens so it sits ready the morning his numbers arrive.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "gemini_render",
@@ -495,7 +555,12 @@
         "where": "scripts/viz.mjs:666 → club/wall_gemini.html (through the sanitizer) + the wall's 'Gemini render' button"
       },
       "_serve_note": "AUDIT #65 — see wall_insights' _serve_note for the full reasoning. Written at 02:40–03:00 under shiftDay = YESTERDAY while viz reads calendar today; club/wall_gemini.html has been frozen at 21 Jul since the 25 Jul shiftDay change.",
-      "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer."
+      "_note": "Rich visual HTML from viz's auto-written Wall-Painter prompt (which carries the render laws + last night's design-coach critique); viz.mjs folds it into club/wall_gemini.html ONLY through the sanitizer.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "maidan_poster",
@@ -515,7 +580,12 @@
         "where": "scripts/viz.mjs:618 → club/poster.svg + the poster card on club/wall.html (posterFlag freshness law at viz.mjs:335)"
       },
       "_serve_note": "AUDIT #65 — see wall_insights' _serve_note. club/poster.svg is frozen at 21 Jul, the last night the pre-shiftDay calendar stamp still matched; the wall currently prints 'the shelf is empty right now — the night shift stocks it while you sleep', which is false: it stocked it under yesterday's name.",
-      "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly)."
+      "_note": "DAILY match poster (SVG) — high-dopamine visible proof, in his own numbers (captain upgraded from weekly).",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "widget_spec",
@@ -558,7 +628,9 @@
       "kind": "analysis",
       "extra_args": [
         "--allowedTools",
-        "WebSearch"
+        "WebSearch",
+        "--effort",
+        "medium"
       ],
       "inputs": [
         {
@@ -575,7 +647,8 @@
       },
       "_surface_note": "AUDIT #63: kept ON — one of the four designed-to-be-human-read jobs; its own note says 'Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon'. Weekly (Sun). Note the audit's arithmetic was stale here: 2,76,781 tok all-time, not 13,003 — the 1 Aug WebSearch run alone was 2,63,778.",
       "_note": "THE SCOUT resurrected (masterplan P6, DOSSIER §9 closed-loop): weekly live scan — 5 most-requested AI-PE skills in India this week, diff vs his current coverage, 3 real postings, every claim cited. Output is a PROPOSAL for OPPONENT_SCOUT.md; never edits canon. Degrades to a no-op if this claude CLI build rejects the tool flag.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "wall_review",
@@ -601,7 +674,12 @@
       },
       "_serve_note": "AUDIT #65: deliberately NOT given `serve`. wall_review is the one of the four overnight artifacts whose consumer already loops i<=2 over recent dates (viz.mjs:653-656), so it folds correctly today. Changing what is not broken is how the next audit gets written.",
       "_note": "THE CLAUDE↔GEMINI LOOP, closing: critique last night's Gemini render against the captain's design laws (one glance = one story; ≤4 working-memory slots; no walls of text; cold-steel-warm-core palette; no hype/streaks/biometrics). Output = ≤10 concrete render-notes; viz.mjs feeds them into the NEXT night's Gemini prompt pack. The wall improves itself nightly, zero taps from the captain.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "dugout_digest",
@@ -632,7 +710,12 @@
       "_inputs_note": "AUDIT #64, CORRECTED LADDER F8 (9 Aug 2026): brain_out/dugout/TODAY.md is left OPTIONAL on purpose. The old note blamed 'the voice bridge has been silent since 30 Jul' — WRONG twice: the bridge WORKS (dugout.mjs affVoice → thalamus relay; the ~275 recorded voice afferents are its proof), and the TODAY token expands correctly (brain.mjs shift-day law). The file is absent on any day HE does not open the Dugout — an absence of HIS session, not a broken wire. The digest still produces real output from notes + lexicon + presence + timeaudit; marking this required would kill it AND day_cartridge behind it. The absent count rides the ledger row.",
       "_note": "THE METAMORPHOSIS MINER: mine today's Dugout voice transcripts + notes into (a) capsule-doubt PROPOSALS drafted to the cold-reader standard in HIS words (maine-socha-X-phir-Y; batch-'go' at full-time, never auto-written to the gist), (b) spoken-anchor candidates for the lexicon (verbatim only), (c) calibration/genome evidence observations. His conversations become tomorrow's curriculum — both halves of the cyborg evolve overnight.",
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
-      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is overnight full mine of the same material — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert."
+      "_model_note": "OPUS→SONNET, 11 Aug 2026, on his word. His canon: \"Sonnet for routine work, Opus for complex/soul work.\" This job is overnight full mine of the same material — read text, emit shorter/structured text. Moved because 15 of 29 enabled jobs were on Opus and the weekly window was 46% spent. If output quality visibly drops, put it back: that is the whole revert.",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "day_cartridge",
@@ -661,7 +744,12 @@
         "where": "scripts/dugout.mjs:325 loadDayCartridge() → the Dugout voice agent's dawn system instruction, verbatim"
       },
       "_note": "THE DAY CARTRIDGE (L3 — the slow brain programs the fast brain across the sleep boundary): compile tomorrow's briefing for the Live voice, ≤15 lines, written TO the Gaffer in second person: yesterday's thread in 3 lines · what he's circling (from the digest) · today's drill focus · one voiced doubt to listen for · anything he asked to carry over. This text is INJECTED into the Dugout's dawn system instruction verbatim. No new numbers, no hype, no calendar pressure.",
-      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)"
+      "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "teamtalk_am",
@@ -691,7 +779,12 @@
       },
       "_inputs_note": "AUDIT #64 — this is the job the finding was really about: 85 runs at 3-of-4 inputs ABSENT (post_match/TODAY.md, season.json, notebook.json all still nonexistent), ~45k tok each, ok:true every time, with nothing anywhere recording it. They are deliberately left OPTIONAL: the LAWS line does real work — its 1 Aug output reads 'Baaki sab quiet hai — season aur match record se koi naya signal nahi aaya, toh us par kuch bolne ka nahi' — and all three arrive the moment /full-time runs once. drills.json is the one thing a set-piece talk cannot be written without, so that alone is required. A majority-ratio guard would have killed this job at 75%.",
       "_note": "THE MORNING TEAM TALK (media engine): the Gaffer's 90-second spoken team talk for TOMORROW MORNING — plain spoken prose, NO markdown/lists/emoji, ~220 words, coach register, Hinglish welds natural. Open from the KAL-line if present (his own words), name the set pieces waiting, one earned-and-specific note from the record, close on 'kal phir'. Evidence-based motivation ONLY — every number from the data; thin data = say less, never invent.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "teamtalk_pm",
@@ -720,7 +813,12 @@
         "where": "dressing-room/club/media/teamtalk_<date>_pm.mp3 (speak.mjs synthToFile) → announced inside the 22:00 full-time bell"
       },
       "_note": "THE EVENING TEAM TALK (media engine): the Gaffer's 60–90-second spoken reflection BEFORE full-time — plain spoken prose, no markdown/lists/emoji, ~180 words: what today's data actually says (struggle verdict, which bets resolve tonight), then walk him gently into the 30-second full-time ritual. No verdicts on the man, no shame, evidence only; thin data = shorter talk.",
-      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)"
+      "_reassigned": "M13: soul stays Claude, routine soul -> sonnet (brain-rotation law)",
+      "extra_args": [
+        "--effort",
+        "low"
+      ],
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "deep_reanalysis",
@@ -749,7 +847,12 @@
         "where": "dressing-room/state/brain_out/reanalysis/<date>.md — NIGHTLY since 9 Aug 2026 (P1 unleash); the captain reads the newest when he wants the season re-read; `brain status` prints it by path"
       },
       "_inputs_note": "AUDIT #64/#71: 3 of 6 inputs (season.json, notebook.json, mutations.jsonl) have never existed — exactly 50%, which is why the proposed majority-ratio guard would NOT have fired on the very job it was written for. They arrive the moment postmatch runs (it writes season.json and notebook.json unconditionally on every run) and the Boot Room files a mutation, so this is `waiting`, not broken. It has spent ZERO tokens in its life: it is trigger-gated and the only automatic arming path needs matches_played % 30 === 0, which is 30 postmatch runs away. Kept ENABLED for that reason — it cannot spend unless he asks it to.",
-      "_note": "DEEP RE-READ (U4, JARVIS harvest — trigger-only until 9 Aug 2026, nightly since P1 unleash): re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts)."
+      "_note": "DEEP RE-READ (U4, JARVIS harvest — trigger-only until 9 Aug 2026, nightly since P1 unleash): re-read the season whole — what changed structurally since the start, what this phase actually demands, ≤3 concrete adjustments, all PROPOSALS (nothing auto-acts).",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "night_coach",
@@ -778,7 +881,12 @@
         "kind": "code",
         "where": "scripts/setpiece.mjs readNightCoach() → drills.json annotations + night_coach_read receipt · scripts/examiner.mjs stageDrill() → examiner_drill.json enrichment · scripts/learnstate.mjs nightCoachLine() → the kickoff brief · scripts/dugout.mjs loadNightCoach() → the Gaffer's system instruction"
       },
-      "_note": "THE NIGHT COACH (P2 unleash, 9 Aug 2026 — his verbatim 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required'): the machine teaches itself at night, him in the morning. Reads the study day WHOLE — his turns + the coach's answers (runJob swaps in a day-filtered, roll-safe read of the four teaching lanes; the default 200-row tail is neither 'today' nor stable), reps_log gut-words, teaching_audit drift rows — and writes the misconception map + tomorrow's pre-written lesson (SAMJHAO passes · widget gates · ONE check-question, the four-question-moments law) to brain_out/night_coach/<serve-date>.md, plus a DERIVED .json sibling parsed from the same single call (a parse miss degrades to note-only). serve:next_morning names the file for the morning it teaches, which is why no job lists it as a TODAY input — the four consumers read it by calendar lookback. The regex doubtminer catches shapes; this catches MEANING. Proposes only; every consumer treats it as optional icing, never load-bearing."
+      "_note": "THE NIGHT COACH (P2 unleash, 9 Aug 2026 — his verbatim 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required'): the machine teaches itself at night, him in the morning. Reads the study day WHOLE — his turns + the coach's answers (runJob swaps in a day-filtered, roll-safe read of the four teaching lanes; the default 200-row tail is neither 'today' nor stable), reps_log gut-words, teaching_audit drift rows — and writes the misconception map + tomorrow's pre-written lesson (SAMJHAO passes · widget gates · ONE check-question, the four-question-moments law) to brain_out/night_coach/<serve-date>.md, plus a DERIVED .json sibling parsed from the same single call (a parse miss degrades to note-only). serve:next_morning names the file for the morning it teaches, which is why no job lists it as a TODAY input — the four consumers read it by calendar lookback. The regex doubtminer catches shapes; this catches MEANING. Proposes only; every consumer treats it as optional icing, never load-bearing.",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "agenda",
@@ -798,7 +906,12 @@
         "where": "brain.mjs tick agendaAllocationFor() → per-job lean/skip THIS shift · diary lists brain_out/agenda/TODAY.json in inputs"
       },
       "_note": "PHASE H · H2 (10 Aug 2026, his 'let's build everything'): the first thought of the night lane — spend follows surprise. Inputs are ALL code-computed in the runJob branch (salience day-summary with escalation rows as the wake residue — brain_ledger cortex_wake rows carry metering only, refuter-verified; H1's brain_outcomes last-per-key; teaching-drift top rules). Output: ≤25-line reasoning page + a SANITIZED machine sibling — allocations only on enabled OVERNIGHT jobs (any other window's shiftDay never resolves tonight's file: formation_read is unreachable BY CONSTRUCTION, not by demotion), depth ∈ {lean, skip} only ('deep' is a NO-OP — G4 already gives every overnight job the 48k ceiling), night_coach + diary NEVER skippable, and the tick's skip-safety gate demotes any skip whose lane is not <24h fresh (one declared period; reconcile's bleed bar is two, so a legal skip can never bleed). A skip consumes ALL max_per_day slots (the capsule_premap:3 lesson) and writes ONE ok-less ledger row (failureStreak samples boolean-ok rows only — a fake ok:true would reset the dead-brain alarm). at 22:45 DERIVED: H1's scoreboard writes at 22:38 in the evening chain — the agenda reads a post-scoreboard bus; rides the H2 wrap-aware at-gate. priority 95 DERIVED: above deep_reanalysis 85 (the true overnight max — night_coach is 72) and the evening_voice 90 tie, below the sheet's 100.",
-      "_validator_note": "validate is DELIBERATELY absent: the sanitizer in parseAgendaJson IS the validation (structural, deterministic), and no_new_numbers would bounce legal job ids (midday_digest_2) and times. Do not 'harden' this."
+      "_validator_note": "validate is DELIBERATELY absent: the sanitizer in parseAgendaJson IS the validation (structural, deterministic), and no_new_numbers would bounce legal job ids (midday_digest_2) and times. Do not 'harden' this.",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "diary",
@@ -821,7 +934,12 @@
         "where": "scripts/learnstate.mjs diaryLine() → the kickoff brief · scripts/dugout.mjs get_diary tool → the Gaffer"
       },
       "_note": "PHASE H · H6 (10 Aug 2026): the brain's nightly one page in its own hand — attended · believed · tested · was wrong · will change. Inputs: tonight's ledger SUMMARIZED with every count precomputed (the no-derive law: the page may only repeat given counts, never sum or average — no validator, the prompt contract + hype_guard carry it; a computed summary is the whole point), the agenda's sibling (declared input so reconcile sees the pair), H1 outcomes, watchman finding ids, and the coach's misconception CONCEPT NAMES ONLY — the evidence field is his verbatim words, and injecting it makes this a G8 opus lane (model sonnet stands ONLY while inputs stay names-only + machine summaries; revert = model opus). at 03:00 rides the H2 wrap-aware at-gate (after the night writers: nightshift task 02:40, its last write minutes later; a laptop asleep through 03:00-07:30 = no diary that morning, said in the kickoff by absence — acceptable degradation, window stays overnight). ≤25 lines (the analysis head's own cap, brain.mjs buildAnalysisPrompt — cited, not guessed). serve next_morning: the page is named for the morning it is read. Machine sibling {date, will_change} keeps diaryLine/get_diary deterministic; the .md is the him-optional page. NEVER a card, never a push — him reading it is optional by design.",
-      "_metacognition_note": "MEASUREMENT WINDOW (the pulse pattern, G14): metacognition spend = ledger rows job∈{agenda,diary} ÷ overnight total, MEASURED from the G1 honest meter — no cap is set here because no cap has been measured; when the window has rows, the fraction and any cap land in this note AND limits.mjs BUDGETS in the same commit."
+      "_metacognition_note": "MEASUREMENT WINDOW (the pulse pattern, G14): metacognition spend = ledger rows job∈{agenda,diary} ÷ overnight total, MEASURED from the G1 honest meter — no cap is set here because no cap has been measured; when the window has rows, the fraction and any cap land in this note AND limits.mjs BUDGETS in the same commit.",
+      "extra_args": [
+        "--effort",
+        "medium"
+      ],
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "model_mine",
@@ -839,7 +957,12 @@
         "kind": "code",
         "where": "scripts/nikhil_model.mjs ingest (evening chain 22:39) reads brain_out/model_mine/<d>.json — the sanitized sibling is the proposals' ONLY door"
       },
-      "_note": "PHASE H · H3 (10 Aug 2026): the nightly edge PROPOSER — reads the owner's own 14-day fact grid (three-valued: null = UNOBSERVED, never false), currently-tracked edges, and H1 outcomes; proposes ≤3 cause→effect pairs from the CLOSED VOCABULARY (nikhil_model.mjs FACTS — an out-of-vocabulary or medication-flavoured proposal is rejected at the sibling door with the reason recorded). The LLM proposes WHICH edges; nikhil_model.mjs re-derives every NUMBER from the grid (AI proposes · code validates · his galat retires). ONE-NIGHT LAG BY DESIGN: this writes overnight AFTER the 22:39 ingest, so tonight's proposals enter TOMORROW's ingest — recorded in both files so nobody 'fixes' it into a race. The ledger note carries the sibling's edge/rejection counts; the proposer's grid input makes an empty grid VISIBLE (day 1: readiness/timeaudit facts accrue only from launch — the grid journal is born empty and fills at one finalized day per evening)."
+      "_note": "PHASE H · H3 (10 Aug 2026): the nightly edge PROPOSER — reads the owner's own 14-day fact grid (three-valued: null = UNOBSERVED, never false), currently-tracked edges, and H1 outcomes; proposes ≤3 cause→effect pairs from the CLOSED VOCABULARY (nikhil_model.mjs FACTS — an out-of-vocabulary or medication-flavoured proposal is rejected at the sibling door with the reason recorded). The LLM proposes WHICH edges; nikhil_model.mjs re-derives every NUMBER from the grid (AI proposes · code validates · his galat retires). ONE-NIGHT LAG BY DESIGN: this writes overnight AFTER the 22:39 ingest, so tonight's proposals enter TOMORROW's ingest — recorded in both files so nobody 'fixes' it into a race. The ledger note carries the sibling's edge/rejection counts; the proposer's grid input makes an empty grid VISIBLE (day 1: readiness/timeaudit facts accrue only from launch — the grid journal is born empty and fills at one finalized day per evening).",
+      "extra_args": [
+        "--effort",
+        "medium"
+      ],
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
       "id": "dreams",
@@ -857,7 +980,12 @@
         "kind": "code",
         "where": "brain.mjs agenda branch reads brain_out/dreams/<yesterday>.json (the agenda is THE reader — it may dream_pick ONE bridge; night_coach verifies the pick against the same file)"
       },
-      "_note": "PHASE H · H5 (10 Aug 2026): DMN recombination — cracked axes (rejirah grades + scoreboard cracks with axes recovered from that day's own wrong reps) × his lexicon × the concept registry → ≤10 LOW-confidence bridges (the sanitizer stamps confidence:low regardless; from/to must resolve to known concept ids, axis a-i). REFUSES BEFORE SPEND when the inventory is empty — an empty inventory + a model told to dream = invented cracks; few axes = few dreams is honest, none = none (day 1 truth: the inventory IS empty until his Re-Jirah rounds or a measured crack land). THE DREAM LAW: the agenda is the only reader — a bridge it never picks is INERT BY CONSTRUCTION (yesterday's file is the only one ever read again), not deleted; a picked bridge reaches night_coach as an OPTIONAL seed that may color the lesson's fabric, NEVER add a question-moment (the four-question-moments law untouched). Model sonnet: cheap by the map's own word ('cheap low-confidence hypothesis bridges')."
+      "_note": "PHASE H · H5 (10 Aug 2026): DMN recombination — cracked axes (rejirah grades + scoreboard cracks with axes recovered from that day's own wrong reps) × his lexicon × the concept registry → ≤10 LOW-confidence bridges (the sanitizer stamps confidence:low regardless; from/to must resolve to known concept ids, axis a-i). REFUSES BEFORE SPEND when the inventory is empty — an empty inventory + a model told to dream = invented cracks; few axes = few dreams is honest, none = none (day 1 truth: the inventory IS empty until his Re-Jirah rounds or a measured crack land). THE DREAM LAW: the agenda is the only reader — a bridge it never picks is INERT BY CONSTRUCTION (yesterday's file is the only one ever read again), not deleted; a picked bridge reaches night_coach as an OPTIONAL seed that may color the lesson's fabric, NEVER add a question-moment (the four-question-moments law untouched). Model sonnet: cheap by the map's own word ('cheap low-confidence hypothesis bridges').",
+      "extra_args": [
+        "--effort",
+        "medium"
+      ],
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     }
   ],
   "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",

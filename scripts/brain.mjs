@@ -1576,7 +1576,16 @@ export function splitPrompt(prompt) {
   return { system: head, body: p.slice(i), split: "system" };
 }
 
-function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null) {
+// ── PER-LANE CACHING SWITCH (14 Aug 2026, unleash Phase 4) ──────────────────
+// `noCache` comes from a job's optional `"caching": false` in brain_config.json.
+// WHY IT EXISTS: caching is not free — a written block costs 1.25x and a read
+// costs 0.1x, so a lane that WRITES a cache it never reads pays a 25% surcharge
+// for nothing. Break-even reuse (cr/cw) is 0.278: below that, off is cheaper.
+// WHY IT IS SET NOWHERE YET: which lanes those are is a question for DATA, not
+// for a hunch — the 13 Aug plan named 34 lanes and its own table already showed
+// haiku_pulse at reuse 0.43, comfortably above break-even, on the list. The
+// plumbing lands now and the decision is Phase 10's, off 48h of live ledger.
+function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = null, thinkTokens = null, noCache = false) {
   if (lean === null) lean = leanEnabled();
   const t0 = Date.now();
   // SPLIT_DISABLED=1 in the daemon env restores the single-block call verbatim.
@@ -1587,7 +1596,7 @@ function claudeExec(prompt, model, extraArgs = [], timeoutMs = 300000, lean = nu
     const stdout = execFileSync("claude", ["-p", "--output-format", "json", "--model", model || "sonnet",
       ...(splitArgs || (lean ? LEAN_ARGS : [])), ...(Array.isArray(extraArgs) ? extraArgs : [])],
       // G4 — extended thinking via env, same mechanism the cortex has always used
-      { input: sp.body, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
+      { input: sp.body, timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", ...(noCache ? { DISABLE_PROMPT_CACHING: "1" } : {}), ...(Number.isFinite(thinkTokens) && thinkTokens > 0 ? { MAX_THINKING_TOKENS: String(thinkTokens) } : {}) } });
     let text = stdout, inTok = null, outTok = null, cacheCreate = null, cacheRead = null, isErr = false, sessionId = null;
     try {
       const j = JSON.parse(stdout);
@@ -2977,7 +2986,7 @@ async function runJob(job, cfg, deps) {
     inputs["known concepts"] = [...new Set([...loadAliasMap(join(STATE_DIR, "concepts.json")).values()])];
     prompt = buildDreamsPrompt(job, inputs, cfg.guards.banned_phrases);
   } else prompt = buildAnalysisPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
-  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null);   // G4 — the thinking budget rides through
+  const r = job.engine === "gemini" ? gexec(prompt, cfg.gemini.binary) : exec(prompt, job.model, job.extra_args, undefined, null, deps.thinkTokens || null, job.caching === false);   // G4 — the thinking budget rides through · Phase 4 — and the lane's own caching verdict
   // the absent-input accounting rides EVERY outcome, so the ledger shows what a run
   // was actually built from — including the failures.
   // …and so does the ELISION accounting (10 Aug 2026 wiring audit). An input that is
@@ -4115,6 +4124,23 @@ async function selftest() {
       splitPrompt(huge).split === "argv-capped" && splitPrompt(huge).system === null && splitPrompt(huge).body === huge);
     assert("SPLIT — a body-first prompt (mark at index 0) is left alone, no empty system prompt",
       splitPrompt("\n## INPUT a\n1").split === null);
+  }
+
+  // ── PHASE 4 · the per-lane caching switch, PLUMBED AND SET NOWHERE ─────────
+  // Two witnesses: the wire carries a job's own declaration through to the spawn,
+  // and no lane carries it yet — because that answer is Phase 10's, off data.
+  {
+    let sawNoCache = null;
+    const fakeExec = (p, m, x, t, l, th, noCache) => { sawNoCache = noCache; return { ok: true, text: "x", total_tokens: 1 }; };
+    const jdeps = { exec: fakeExec, dry: true, now: now(14, 0) };
+    await runJob({ id: "cache_off", model: "sonnet", caching: false, inputs: [] }, cfg, jdeps);
+    const off = sawNoCache;
+    await runJob({ id: "cache_on", model: "sonnet", inputs: [] }, cfg, jdeps);
+    assert("CACHING SWITCH — a job declaring caching:false reaches the spawn as DISABLE_PROMPT_CACHING; a job that declares nothing does not",
+      off === true && sawNoCache === false);
+    const live = (loadConfig().jobs || []).filter((j) => j.caching === false).map((j) => j.id);
+    assert("CACHING SWITCH — and it is set on NO lane yet: break-even reuse 0.278 is a measurement, not a hunch (the 13 Aug list had haiku_pulse at 0.43 on it)",
+      live.length === 0, live.join(", "));
   }
 
   // ntfy mouth — secret topic never in committed config; two utterances only
