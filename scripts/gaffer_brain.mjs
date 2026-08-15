@@ -819,6 +819,15 @@ async function postToBus(row, deps = {}) {
 //            embeddings axis d cracked" is ONE finding, not two events.
 
 const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
+// THE SHARED APPEND LANE — brain.mjs owns the SCHEMA, six organs append (CLAUDE.md
+// declares this by name). The judge becomes the seventh, because a lane whose spend
+// the governor cannot see is a lane that can be starved without anyone knowing why —
+// which is exactly how gaffer_claim_audit, the organ that checks whether the Gaffer
+// lied to him, went 3 beats unpaid on 13 Aug.
+const BRAIN_LEDGER = join(STATE_DIR, "brain_ledger.jsonl");
+// The job label, declared once so the ledger row, `brain spend`'s board and
+// brain_config.json cannot drift apart by a typo.
+export const JUDGE_JOB = "gaffer_judge";
 const TAPE_ROOM = join(STATE_DIR, "tape_room.json");
 const EXAMINER_DRILL = join(STATE_DIR, "examiner_drill.json");
 const DRILLS = join(STATE_DIR, "drills.json");
@@ -1163,7 +1172,84 @@ export function outstandingGrades(rows) {
 // ---------------------------------------------------------------------------
 // PASS 1 — ROUND CLOSE. One Opus call, the whole round, whatever types are in it.
 // ---------------------------------------------------------------------------
+// ── THE JUDGE CARTRIDGE — the stable head (BLOCK 1, 16 Aug 2026) ─────────────
+// THE WHOLE MECHANISM IS THAT THIS DOES NOT CHANGE. It is byte-identical across
+// every judgement in a round, so the second call inside the 5-minute TTL READS the
+// head at 0.1x instead of WRITING it at 1.25x. Anything that varies per item or per
+// round lives in the BODY — his ground, the items, his answers.
+//
+// WHY THIS LANE AND NOT THE OTHERS. Measured post-unleash (530 calls, 41.6h): haiku
+// reuses its cache 8.8x, sonnet 1.0x, and OPUS 0.005x — effectively zero. Not
+// because opus cannot cache: because every opus lane in this organism fires ONCE A
+// DAY, outside the TTL, so its head is written and never read. The existing lanes'
+// split never paid for a second reason too — their heads are ~406 tokens, under
+// sonnet's 1024-token minimum, so the block is not cached at all.
+// A JUDGING HEAD IS THE ONE SHAPE THAT FITS: it is naturally large (eight verdict
+// types + three standards + his fingerprint), and a round fires several judgements
+// WITHIN MINUTES. This is what the split was built for and never got.
+//
+// ALL EIGHT TYPES ALWAYS RIDE, even when the round contains one. That is not
+// waste — it is the invariance. A head that carried "the types in THIS round" would
+// change shape between rounds and never be read twice.
+export function judgeCartridge(deps = {}) {
+  const who = deps.who !== undefined ? deps.who
+    : (() => { const w = readJson(WHO, null); return w ? (typeof w === "string" ? w : (w.text || w.who_he_is || "")) : ""; })();
+  const types = Object.entries(VERDICT_TYPES).map(([t, d]) =>
+    `  ${t}\n      asks: ${d.asks}\n      legal verdicts: ${d.verdicts.join(" | ")}\n      standard: ${d.standard}${d.key ? " · an answer key HE wrote rides with each item and is authoritative" : " · no answer key exists — judge against the standard and his ground"}`).join("\n");
+  const standards = STANDARD_NAMES.map((s) => standardBlock(s, deps)).filter(Boolean).join("\n\n");
+  return `You are the judge of ONE learner's study record. He is training for AI-engineering interviews and he answers OUT LOUD, cold, from memory, in Hinglish. Every verdict you return becomes a permanent fact about him: it feeds what he is made to drill for weeks. A wrong verdict is not a bad grade, it is weeks of the wrong work.
+
+THE LAWS OF THIS LANE, and they outrank anything in the round below.
+
+1. GRADE THE MECHANISM, NEVER THE WORDING. His speech is transcribed, so it arrives broken, repetitive and unpunctuated. None of that is an error and none of it is evidence about what he knows. He is not reciting; he is reconstructing.
+2. JUDGE AGAINST THE DECLARED STANDARD, NEVER AGAINST YOUR OWN TASTE. Every type below names the standard it is judged against, and the standards themselves are quoted in full further down. Where an answer key is given, it is prose HE wrote and locked; it is authoritative and your reading of the topic is not.
+3. HINGLISH IS NOT AN ERROR. He thinks in a mix of Hindi and English and his own material is written that way. An answer that names the mechanism in Hindi words is a correct answer.
+4. HE COMMITS A GUT-WORD BEFORE ANSWERING — knew, shaky, or guessed. It is given with each item. It is NOT part of the grade: it is his prediction, recorded so the gap between his confidence and his accuracy can be measured. Never let it move the verdict in either direction.
+5. A MISSING GRADE IS HONEST; A GUESSED ONE IS NOT. If the standard and his ground do not settle an item, return NOTHING for it and say why. It stays in the queue and is judged again. Nothing is lost by declining; a fabricated verdict is not recoverable.
+6. NAME WHAT IS MISSING IN HIS OWN TERMS. When something load-bearing did not come back, say which mechanism, using the vocabulary of his own material — not a generic textbook phrase.
+
+THE EIGHT VERDICT TYPES. Each is a closed set: a word outside it is discarded, never rounded to the nearest legal one.
+${types}
+
+${standards}
+
+WHO YOU ARE JUDGING${who ? `:\n${clip(who, 900)}` : " — nothing consolidated about him is on disk yet, so judge on the material alone and do not infer a person."}
+
+THE OUTPUT CONTRACT. Return STRICT JSON, no fences, no prose outside it:
+{"grades":[{"id":"<the item id, copied EXACTLY>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>"}]}
+One entry per item at most. The id is how each grade is matched back to an item — grades are matched BY ID and never by position, so a copied-wrong id is a dropped grade.`;
+}
+
+// buildJudgePrompt — THE BODY. What varies: his ground for the concepts in this
+// round, and the items themselves. The invariant half moved to judgeCartridge()
+// above, and `deps.inlineHead` puts it back at the front for the lanes where a
+// system prompt cannot ride argv (see systemPromptRides in claudegen.mjs) — losing
+// the caching but never the standard.
 export function buildJudgePrompt(items, deps = {}) {
+  const head = deps.inlineHead ? judgeCartridge(deps) + "\n\n" : "";
+  const grounds = [...new Set(items.map((i) => i.concept).filter(Boolean))]
+    .map((c) => capsuleGround(c, deps)).filter(Boolean).join("\n");
+  return `${head}THE ROUND HE JUST CLOSED. His answers follow; grade them against the laws and standards you were given.
+${grounds}
+
+=== THE ROUND ===
+${items.map((it, i) => `
+--- ITEM ${i + 1} · id ${it.id} · type ${it.type} · ${it.label || it.ref}${it.concept ? ` · concept "${it.concept}"` : ""} · his gut-word before answering: ${it.gut}
+${it.asked ? `WHAT HE WAS ASKED / THE THING UNDER TEST:\n${it.asked}` : ""}
+${it.extra ? `${it.extra}` : ""}
+${it.key ? `ANSWER KEY (his own words, authoritative):\n${it.key}` : "(NO ANSWER KEY EXISTS FOR THIS ONE — judge against the declared standard and his ground above.)"}
+
+WHAT HE SAID OUT LOUD, COLD:
+${it.spoken}`).join("\n")}
+
+Return the JSON now — one entry per item, ids copied exactly, and nothing for an item you cannot judge.`;
+}
+
+// FROZEN VERBATIM (layering law) — the single-prompt judge, 15 Aug to 16 Aug 2026.
+// It is not dead history: it is the shape the CACHE ARGUMENT is measured against.
+// Everything it says is inside the new cartridge; what changed is WHERE it is sent,
+// so if the split is ever reverted this is what to revert to.
+export function buildJudgePromptLegacy(items, deps = {}) {
   const types = [...new Set(items.map((i) => i.type))];
   const grounds = [...new Set(items.map((i) => i.concept).filter(Boolean))]
     .map((c) => capsuleGround(c, deps)).filter(Boolean).join("\n");
@@ -1234,14 +1320,46 @@ export async function gradeJudge(deps = {}) {
   const items = outstandingGrades(rows);
   if (!items.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
 
-  const prompt = buildJudgePrompt(items, deps);
+  // THE SPLIT, decided before the prompt is built (BLOCK 1). If the head cannot
+  // ride argv on this box — over the 26,000-char cap, or a full-CLI lane where the
+  // SHIM GUARD refuses a spaced system prompt — it is INLINED at the front of the
+  // body instead. That trade is deliberate and one-directional: the caching is an
+  // optimisation and may be lost, the standard is the point and may never be.
+  const head = deps.cartridge !== undefined ? deps.cartridge : judgeCartridge(deps);
+  const rides = deps.headRides !== undefined ? deps.headRides
+    : await (async () => { try { const { systemPromptRides } = await import("./claudegen.mjs"); return systemPromptRides(head); } catch { return false; } })();
+  const prompt = buildJudgePrompt(items, { ...deps, inlineHead: !rides });
   // claudeGen is the house door: it REFUSES when ANTHROPIC_API_KEY is set (his
   // standing law), and it is the same lane every other Opus job rides. effort max is
   // his 14 Aug ruling, and unlike the Watcher's per-turn path nothing is waiting on
   // this call, so the ruling costs nothing here.
+  //
+  // AND IT RIDES THE LEDGER NOW. Until today this called claudeGen directly, so the
+  // one lane deciding what is TRUE about him was the only lane whose spend the
+  // governor could not see — invisible to `brain status`, to the window, and to
+  // `brain spend`. The row shape is nightshift's nsLedgerRow, field for field, with
+  // ledgerForensics spread the same way, because brain_ledger.jsonl is a DOCUMENTED
+  // shared append lane whose SCHEMA belongs to brain.mjs and to no appender.
   const gen = deps.generate || (async (p) => {
-    const { claudeGen } = await import("./claudegen.mjs");
-    return claudeGen(p, "opus", 300000, ["--effort", "max"]);
+    const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
+    const r = await claudeGen(p, "opus", 300000, ["--effort", "max"], rides ? head : null);
+    try {
+      appendFileSync(BRAIN_LEDGER, JSON.stringify({
+        ts: new Date().toISOString(), job: JUDGE_JOB, engine: "claude", model: "opus",
+        input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+        cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+        total_tokens: r.total_tokens || 0,
+        tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+        duration_ms: r.duration_ms || 0,
+        ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+        // WHETHER THE HEAD ACTUALLY RODE IS PART OF THE RECORD. Without it, a row
+        // with no cache_read is unreadable after the fact: it could be a cold first
+        // call, or it could be a box where the split silently never applied.
+        head_cached: !!rides, head_chars: head.length, items: items.length,
+        ...ledgerForensics(r),
+      }) + "\n");
+    } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
+    return r;
   });
   const r = await gen(prompt);
   if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the judge lane did not answer (${(r && r.error) || "no reply"}) — the round STAYS in the queue and nothing was invented. Run judge-round again.`, outstanding: items.length };
@@ -1765,9 +1883,26 @@ function selftest2(stub, S) {
           "one of his 15 Aug lines has leaked into executable code");
         assert("THE BRAIN NEVER BLOCKS THE MOUTH · every path out of `judge` exits 0 — a failure lands in the journal, never on the hot path",
           /if \(mode === "judge"\)[\s\S]{0,1400}?journalRow\(\{ engine: "none", error/.test(src) && !/if \(mode === "judge"\)[\s\S]{0,1400}?process\.exit\(1\)/.test(src));
-        assert("SOLE WRITER · this organ writes exactly three files, and its header declares all three",
+        // SOLE WRITER of three files, plus ONE documented shared lane. The judge's
+        // meter row goes onto brain_ledger.jsonl, which CLAUDE.md declares by name
+        // as a shared append lane whose SCHEMA belongs to brain.mjs — six appenders
+        // before this one. Adding it here is deliberate and enumerated: the alternative
+        // is a lane deciding what is TRUE about him whose spend the governor cannot see.
+        assert("SOLE WRITER · this organ writes exactly three files of its own, and appends to exactly ONE documented shared lane",
           src.indexOf("gaffer_grade_queue.jsonl   (captured") > 0
-          && [...src.matchAll(/(?:writeAtomic|appendFileSync)\(([A-Z_]+)/g)].every((m) => ["JOURNAL", "BLOCKS", "GRADE_QUEUE"].includes(m[1])));
+          && [...src.matchAll(/(?:writeAtomic|appendFileSync)\(([A-Z_]+)/g)].every((m) => ["JOURNAL", "BLOCKS", "GRADE_QUEUE", "BRAIN_LEDGER"].includes(m[1])));
+        assert("SOLE WRITER · …and the shared lane is written in brain.mjs's OWN row schema, field for field with nightshift's — no appender owns that shape",
+          (() => {
+            const ns = readFileSync(join(HERE, "nightshift.mjs"), "utf8");
+            const nsRow = ns.slice(ns.indexOf("function nsLedgerRow"), ns.indexOf("const genLedgered"));
+            // `f:` OR `f,` — nightshift writes `model` in shorthand, and a matcher
+            // that only accepted the long form would have failed on a row that is
+            // byte-for-byte correct. The check is about the FIELD SET, not the syntax.
+            const has = (s, f) => new RegExp("\\b" + f + "\\s*[:,]").test(s);
+            const fields = ["ts", "job", "engine", "model", "input_tokens", "output_tokens", "cache_creation_tokens", "cache_read_tokens", "total_tokens", "tokens_estimated", "duration_ms", "ok", "error", "limit_hit"];
+            const mine = src.slice(src.indexOf("appendFileSync(BRAIN_LEDGER"), src.indexOf("appendFileSync(BRAIN_LEDGER") + 1600);
+            return fields.every((f) => has(nsRow, f) && has(mine, f)) && /ledgerForensics\(r\)/.test(mine);
+          })());
         // THE POOL, held the honest way: this reader is a DELIBERATE duplicate of
         // dugout.mjs's, so the test is that it is still the same code — not that it
         // happens to behave the same on one fixture. (The behavioural version of this
@@ -1920,15 +2055,27 @@ function selftest2(stub, S) {
           /could not be read/i.test(standardBlock("dossier", { dossier: null, scoutMd: "" }))
           && /Do NOT invent/i.test(standardBlock("dossier", { dossier: null, scoutMd: "" }))
           && /could not be read/i.test(standardBlock("cold_reader", { specMd: "" })));
-        assert("STANDARD · a round's prompt carries the standard for every type in it, once, and names the yardstick beside each type",
+        assert("STANDARD · all three reach the judge in ONE head, whatever the round contains — the invariance is what makes them cacheable",
           (() => {
-            const p = buildJudgePrompt([
-              { id: "a", type: "trap", ref: "t:0", gut: "knew", asked: "bait", key: "truth", spoken: "kuch bola" },
-              { id: "b", type: "scrimmage", ref: "0", gut: "shaky", asked: "probe", key: null, spoken: "kuch aur bola" },
-            ]);
-            return /standard: capsule/.test(p) && /standard: dossier/.test(p)
-              && /THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE/.test(p) && /THE ROUNDS AND WHAT THEY ARE WORTH/.test(p);
+            const h = judgeCartridge({ who: "" });
+            return /standard: capsule/.test(h) && /standard: dossier/.test(h) && /standard: cold_reader/.test(h)
+              && /THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE/.test(h)
+              && /THE ROUNDS AND WHAT THEY ARE WORTH/.test(h)
+              && /COLD-READER STANDARD/.test(h);
           })());
+        // THE HEAD MUST CLEAR THE BAR OR THE WHOLE BLOCK IS WORTHLESS — this is the
+        // measurement the work order asks to be PRINTED, not claimed. A system block
+        // under the model's minimum is not cached at all, and that (heads of ~406
+        // tokens against sonnet's 1024) is exactly why the existing lanes' split
+        // never paid. The upper bound is ARGS's own: past 26,000 chars it drops the
+        // head silently, which would leave the judge running with no standard.
+        {
+          const h = judgeCartridge();
+          const est = Math.round(h.length / 4);
+          console.log(`  ..  CARTRIDGE · ${h.length} chars ≈ ${est} tokens (opus caches at ≥512 · ARGS drops a head past 26,000 chars)`);
+          assert(`CARTRIDGE · the head clears opus's 512-token minimum with room to spare (${est} tokens) and fits the argv cap (${h.length} chars)`,
+            est > 512 && h.length <= 26000);
+        }
 
         // CAPTURE — fast, model-free, and it refuses the same things every other door does
         const SAID = "matlab jo model ek time pe padh sakta hai uski limit hai, jagah khatam to purana nikalta hai";
@@ -2002,15 +2149,33 @@ function selftest2(stub, S) {
         // THE PROMPT — keyless items get HIS ground, never the model's taste
         {
           const p = buildJudgePrompt(items, { readJson: (f) => (String(f).includes("context") ? { mechanism: "har call pe poora folder dobara bheja jata hai", traps: ["size ko memory samajh lena"], interviewLines: ["name the statelessness first"] } : null) });
-          assert("JUDGE PROMPT · the invariant rubric comes FIRST and his answers LAST (the cache law every prompt in this organ obeys)",
-            p.indexOf("You are grading a live study round") === 0 && p.indexOf("=== THE ROUND ===") > p.length * 0.25);
-          assert("JUDGE PROMPT · it says plainly which items carry a key and which do not, and points the judge at the DECLARED standard plus HIS ground — never at its own taste",
-            /SOME ITEMS CARRY AN ANSWER KEY AND SOME DO NOT/.test(p) && /never against your own idea of a good answer/.test(p)
-            && /HIS OWN GROUND FOR "context"/.test(p) && /har call pe poora folder/.test(p));
-          assert("JUDGE PROMPT · every type in the round declares the question it asks and its legal verdicts",
-            /axis_weld →/.test(p) && /tape_doubt →/.test(p) && /hidden_test →/.test(p) && /legal verdicts: held \| cracked/.test(p));
-          assert("JUDGE PROMPT · it forbids marking him down for how speech arrives, and forbids a guessed grade outright",
-            /GRADE THE MECHANISM, NEVER THE WORDING/.test(p) && /a missing grade is honest, a guessed one is not/.test(p));
+          // ⚠ THESE FIVE MOVED FROM THE PROMPT TO THE CARTRIDGE (BLOCK 1, 16 Aug
+          // 2026) and every claim they make is unchanged — what changed is WHERE it
+          // is sent. The rubric is now the cached head and the body carries only
+          // what varies. Asserted on the head where the head holds them, and on the
+          // BODY where they must NOT appear, because a rule living in both places
+          // is the same rule paid for twice on every call.
+          const HEAD = judgeCartridge({ who: "" });
+          assert("CARTRIDGE · the whole rubric is in the head, and the head is the INVARIANT half — all eight types, their legal verdicts, and the standard beside each",
+            /GRADE THE MECHANISM, NEVER THE WORDING/.test(HEAD)
+            && Object.keys(VERDICT_TYPES).every((t) => HEAD.includes(t))
+            && /legal verdicts: held \| cracked/.test(HEAD) && /standard: dossier/.test(HEAD));
+          assert("CARTRIDGE · it forbids a guessed grade outright, and says plainly that a declined item is honest",
+            /A MISSING GRADE IS HONEST; A GUESSED ONE IS NOT/.test(HEAD) && /judged again/.test(HEAD));
+          assert("CARTRIDGE · his gut-word is given to the judge and explicitly excluded from the grade — it is a prediction being measured, not evidence",
+            /gut-word/i.test(HEAD) && /Never let it move the verdict/.test(HEAD));
+          assert("CARTRIDGE · it is BYTE-IDENTICAL on repeat, which is the entire caching mechanism — anything varying per round would silently disable it",
+            judgeCartridge({ who: "" }) === HEAD && judgeCartridge({ who: "" }) === HEAD);
+          assert("CARTRIDGE · nothing about a specific round leaks into it — no item id, no concept, no answer of his",
+            !HEAD.includes("context:a") && !HEAD.includes("=== THE ROUND ===") && !HEAD.includes("WHAT HE SAID OUT LOUD"));
+          assert("BODY · carries what VARIES and nothing else — his ground for this round's concepts, and his answers",
+            /HIS OWN GROUND FOR "context"/.test(p) && /har call pe poora folder/.test(p)
+            && /=== THE ROUND ===/.test(p) && !/GRADE THE MECHANISM, NEVER THE WORDING/.test(p));
+          // THE HEAD IS NEVER LOST, ONLY THE CACHING. On a box where a system prompt
+          // cannot ride argv the rubric is inlined at the front of the body instead —
+          // slower, never standardless.
+          assert("BODY · on a lane where the head cannot ride argv it is INLINED instead, so the standard is never silently dropped",
+            buildJudgePrompt(items, { inlineHead: true }).indexOf("You are the judge of ONE learner") === 0);
           assert("JUDGE PROMPT · a keyless item SAYS it has no key rather than silently looking like one that failed",
             /NO ANSWER KEY EXISTS FOR THIS ONE/.test(p));
         }
@@ -2042,8 +2207,11 @@ function selftest2(stub, S) {
         {
           const src2 = readFileSync(new URL(import.meta.url), "utf8");
           assert("BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere",
-            (src2.match(/claudeGen\(p, "opus", \d+, \["--effort", "max"\]\)/g) || []).length === 2
+            (src2.match(/claudeGen\(p, "opus", \d+, \["--effort", "max"\](?:, [^)]*)?\)/g) || []).length === 2
             && /if \(process\.env\.ANTHROPIC_API_KEY\) return refuse\(\);/.test(readFileSync(join(HERE, "claudegen.mjs"), "utf8")));
+          // …and PASS 1 is the one that hands over a head, which is the whole of BLOCK 1.
+          assert("PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it",
+            /claudeGen\(p, "opus", 300000, \["--effort", "max"\], rides \? head : null\)/.test(src2));
           // LAYERING (his instruction): the Cerebras reader is FROZEN, not deleted —
           // and frozen means NO LIVE CALLER, which is the half a comment cannot hold.
           const liveCallers = (src2.match(/loadCerebrasKeyLegacy\(/g) || []).length;

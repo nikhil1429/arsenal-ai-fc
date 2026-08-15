@@ -168,6 +168,21 @@ const ARGS = (model, extra = [], systemPrompt = null) => {
   }
   return [...stripped, ...extra];
 };
+// DOES A HEAD ACTUALLY RIDE ON THIS BOX? (16 Aug 2026, BLOCK 1.) ARGS drops a
+// systemPrompt in two cases that are both correct and both SILENT: over 26,000
+// chars, and on the full-CLI lanes (shimmed npm box, or ARSENAL_CLAUDEGEN_FULL=1),
+// where a spaced system prompt through shell:true is what the SHIM GUARD exists to
+// refuse. Silent is fine for an OPTIMISATION and fatal for a RUBRIC: the truth
+// layer's judge keeps its whole standard in the head, so a dropped head is not a
+// slower judgement, it is a judgement made with no standard at all — the exact
+// failure the layer was built to end, re-entering through the fast path.
+// DERIVED FROM ARGS, never restated: it asks ARGS the question rather than
+// re-implementing its conditions, so the two can never drift apart.
+function systemPromptRides(systemPrompt) {
+  if (!systemPrompt) return false;
+  return ARGS("sonnet", [], systemPrompt).includes(String(systemPrompt));
+}
+
 // FROZEN VERBATIM (layering law) — the pre-11-Aug chooser. Frozen not because the
 // invocation changed but because the repair's whole claim is that IT DID NOT: only
 // the choice became readable. The selftest asserts the two agree argv-for-argv on
@@ -408,12 +423,23 @@ const claudeGenCatchLegacy = (e, prompt, t0) => parseErr(e, prompt, t0);
 // two: with encoding:"utf8" `resolveChild(null, stdout, …)` IS `parseOut(stdout,
 // …)`, so that lane is unchanged byte-for-byte and the WIRE scan below can pin
 // the whole function on one shape.
-function claudeGen(prompt, model = "sonnet", timeoutMs = 300000, extraArgs = []) {
+// `systemPrompt` (16 Aug 2026, THE TRUTH LAYER BLOCK 1) — the fifth parameter that
+// finally CALLS the door built on 14 Aug. ARGS has taken a stable head since the
+// unleash phase and its own comment said "Nothing calls it yet by design"; claudeGen
+// simply did not forward one, so the split existed and was unreachable from every
+// Opus lane in the organism. The truth layer's judge is the shape it was built for:
+// a head of ~4,000 chars (well past opus's 512-token minimum) that is byte-identical
+// across a round of judgements fired minutes apart, i.e. inside the 5-minute TTL.
+// Measured on this machine, opus is the ONE model not caching — 16 calls, 37,228
+// cache-write and 201 cache-read per call, a reuse of 0.005 — not because it cannot
+// but because every opus lane fires once a day and nothing ever repeats.
+// DEFAULT null, so every existing caller's argv is byte-identical to yesterday's.
+function claudeGen(prompt, model = "sonnet", timeoutMs = 300000, extraArgs = [], systemPrompt = null) {
   if (process.env.ANTHROPIC_API_KEY) return refuse();
   const t0 = Date.now();
   const bin = BIN();
   try {
-    const stdout = execFileSync(bin, ARGS(model, extraArgs), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    const stdout = execFileSync(bin, ARGS(model, extraArgs, systemPrompt), { input: String(prompt), timeout: timeoutMs, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], windowsHide: true, shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1" } });
     return resolveChild(null, stdout, prompt, t0);
   } catch (e) { return resolveChild(e, e.stdout, prompt, t0); }
 }
@@ -640,6 +666,23 @@ async function selftest() {
       && /return resolveChild\(null, stdout, prompt, t0\);/.test(syncBody)
       && /catch \(e\) \{ return resolveChild\(e, e\.stdout, prompt, t0\); \}/.test(syncBody)
       && !/return parseErr\(/.test(syncBody));
+    // THE SPLIT'S DOOR IS ACTUALLY OPEN (16 Aug 2026). ARGS has taken a
+    // systemPrompt since 14 Aug and claudeGen did not forward one, so the whole
+    // mechanism was unreachable from every caller — built, tested, and dead. The
+    // pin is on the FORWARDING, not on the parameter existing: a signature that
+    // accepts a head and drops it on the floor is the exact failure this repairs.
+    assert("WIRE: claudeGen FORWARDS a caller's stable head into ARGS — an accepted parameter that never reaches argv is the door being open on paper only",
+      /function claudeGen\(prompt, model = "sonnet", timeoutMs = 300000, extraArgs = \[\], systemPrompt = null\)/.test(syncBody)
+      && /ARGS\(model, extraArgs, systemPrompt\)/.test(syncBody));
+    // …and it really lands in the argv, on the lean lane, replacing the 84-char
+    // organ prompt rather than being appended beside it.
+    {
+      const HEAD = "X".repeat(3000);
+      const withHead = ARGS("opus", [], HEAD);
+      const i = withHead.indexOf("--system-prompt");
+      assert("WIRE: …and the head REPLACES the lane's default system block rather than riding beside it (lean lane only; the full lanes ignore it by design)",
+        ARG_PROFILE() !== "lean" ? withHead.indexOf(HEAD) === -1 : (i >= 0 && withHead[i + 1] === HEAD && withHead.filter((a) => a === "--system-prompt").length === 1));
+    }
   }
 
   // ── THE UNNAMED ARG-SET — which CLI did this call actually boot? (11 Aug 2026) ─
@@ -768,4 +811,4 @@ async function selftest() {
 import { pathToFileURL } from "node:url";
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) selftest().then(ok => process.exit(ok ? 0 : 1));
 
-export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };
+export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, systemPromptRides, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };

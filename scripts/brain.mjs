@@ -5523,6 +5523,30 @@ async function main() {
     else console.log("brain: starvation — no budget-refused job on record (brain_queue.budget_starved is empty).");
     if (cfg._config_error) console.log(`brain: ⚠⚠ CONFIG BROKEN (${cfg._config_error}) — running on DEFAULTS with zero jobs.`);
 
+    // ---- THE TRUTH LANE (16 Aug 2026, THE TRUTH LAYER BLOCK 1) --------------
+    // The judge decides what is TRUE about him — every rep, every axis, every
+    // scrimmage — and until today it called claudeGen directly, so it was the ONE
+    // lane whose spend nothing here could see. It is on the shared ledger now, and
+    // this line is where it becomes visible in the command he already runs.
+    // REUSE IS PRINTED BESIDE THE SPEND because it is the whole claim of that
+    // block: a judging head is the one shape that repeats inside the 5-minute TTL,
+    // and if reuse stays near zero the split bought nothing and should be said so.
+    // Measured across the whole organism the day this landed: opus reuse 0.005.
+    // Break-even is 0.278 (write 1.25x vs read 0.1x) — below it, caching COSTS.
+    {
+      const jr = ledger.filter((r) => r && r.job === "gaffer_judge");
+      if (!jr.length) {
+        console.log("brain: truth lane (gaffer_judge) — no judgement has been made yet. Nothing about him has been graded by the one judge; that is a fact about the study loop, not a fault here.");
+      } else {
+        const num = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
+        const cw = jr.reduce((a, r) => a + num(r.cache_creation_tokens), 0);
+        const cr = jr.reduce((a, r) => a + num(r.cache_read_tokens), 0);
+        const wt = jr.reduce((a, r) => a + spendOf(r), 0);   // the governor's own unit, never a second one
+        const inl = jr.filter((r) => r.head_cached === false).length;
+        console.log(`brain: truth lane (gaffer_judge) — ${jr.length} judgement call(s) · ${Math.round(wt).toLocaleString()} weighted · cache write ${cw.toLocaleString()} read ${cr.toLocaleString()} · reuse ${cw ? (cr / cw).toFixed(2) : "n/a"} (break-even 0.278)${inl ? ` · ⚠ ${inl} ran with the head INLINED — this box cannot carry a system prompt, so the standard was sent every time and cached never` : ""}`);
+      }
+    }
+
     // ---- SURFACES: where every enabled job's output actually appears (finding #63) ----
     // This IS the address for the four jobs that are designed to be human-read. Their
     // output used to exist only as a file nothing pointed at; it is now one command away,
