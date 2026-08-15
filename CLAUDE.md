@@ -266,10 +266,36 @@ order any more. Do not re-plan it.**
   **PROVEN LIVE 15 Aug, end to end**: capture instant → one Opus call (26.7s) → `cracked` on
   `context` axis a with the four missed load-bearing points named in his own Hinglish → recorded by
   rejirah. Billing law untouched: it rides `claudeGen`, which refuses outright on `ANTHROPIC_API_KEY`.
-  · **CEREBRAS IS GONE, not frozen.** It was chosen for a speed the split made unnecessary, and it
-    never once returned a verdict — measured on his own account, every model it could list answered
-    `402 payment_required`. The layering law protects engines that RAN. (The `csk-`/`gsk_` scrubber
-    patterns STAY — those are about the next key anyone pastes.)
+  · **EIGHT VERDICT TYPES, AND EXACTLY ONE HAS A KEY** — this is the finding the whole grader rests
+    on, and it was found by reading the live state files rather than the plan. `axis_weld`
+    (capsule.faultLines[].weld) is the only one with a right answer on disk. The other seven —
+    `tape_doubt` (his own past confusions, verbatim, 112 queued) · `hidden_test` (open design probes)
+    · `adversarial` (defend-or-concede) · `scrimmage` · `interview` · `trap` · `doubt_quality` — have
+    **nothing to compare against**, so no amount of speed helps a model that cannot form the
+    judgement at all. **Opus is not the better option here, it is the only one.** Read them live:
+    `node -e "import('./scripts/gaffer_brain.mjs').then(m=>console.log(Object.keys(m.VERDICT_TYPES)))"`
+  · **NO KEY IS NOT NO GROUND.** Every keyless verdict still rides HIS material into the prompt
+    (`capsuleGround` — his mechanism, his traps, his interview lines). The judge is never asked what
+    IT thinks a good answer is; it is asked whether what he said holds against what he already wrote.
+    Proven live: on a `hidden_test` it named the limit of its own ground rather than inventing a
+    standard.
+  · **PASS 1 `judge-round`** — grades matched **by id, never by position**; a verdict illegal for its
+    type is refused rather than coerced; an ungraded item stays outstanding. Each verdict is
+    dispatched through its own owner — `rejirah.mjs grade` · `doubtminer.mjs retire` ·
+    `capture.mjs rep` — and **a doubt that still stands is never retired**, because deleting it would
+    erase the evidence he still holds it.
+  · **PASS 2 `judge-night`** — the whole day at once on the night shift's existing lane, because the
+    pattern is invisible inside one round ("axis d cracked on tokenization AND on embeddings" is ONE
+    finding). It may CORRECT Pass 1, and a correction is a **new row that names the old verdict**,
+    never a rewrite. Consumers: nemesis · calibration · rejirah's edgeMap. Proven live: 4 cross-round
+    patterns and one Pass-1 correction from three items, in one call.
+  · **`--dry` MEANS TOUCH NOTHING**, and it did not until 15 Aug — it skipped the settlement write
+    while still dispatching to the owners, so a rehearsal wrote into his real study record. Fixed.
+  · **CEREBRAS: the reader is FROZEN as `loadCerebrasKeyLegacy` with NO live caller** (layering law,
+    his instruction — freeze, do not delete). It never once returned a verdict: 402 on every model
+    its account could list, and its free tier ends 17 Aug 2026. `grep -rn "api.cerebras.ai" scripts/`
+    returns nothing. (The `csk-`/`gsk_` scrubber patterns STAY — those are about the next key anyone
+    pastes.)
 
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
 Before teaching, planning, or answering anything about where he is: call the

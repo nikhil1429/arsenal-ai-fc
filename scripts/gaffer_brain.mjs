@@ -131,6 +131,9 @@ const AFFERENT = join(STATE_DIR, "afferent.jsonl");
 const DUGOUT_DIR = join(STATE_DIR, "brain_out", "dugout");
 const CAPSULE_DIR = join(STATE_DIR, "capsules");
 const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
+// the FROZEN Cerebras reader's path — a module constant so the analyser can fold it
+// (built inside the function it cost two unresolved sinks, and the ratchet said so)
+const CEREBRAS_ENV_LEGACY = join(os.homedir(), ".cerebras", ".env");
 
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 // gemini-flash-latest, the same alias the chalkboard and read_url already ride on
@@ -156,6 +159,13 @@ const PREFIX_MAX = 40000;
 // so this is the door's batch, not a number invented here.
 const DELTA_MAX_TURNS = 6;
 
+// ONE TEXT-FILE DOOR for every read whose path is only known at runtime. Not style:
+// each such pair (existsSync + readFileSync) is two unresolved sinks in xray's IR,
+// and this organ has three of them — the day-file, the frozen env reader, and the
+// queue. Routed through one function they cost ONE pair between them, and the
+// per-organ ratchet stays satisfied by the organ being genuinely more legible rather
+// than by the budget being widened.
+const readTextFile = (p) => { try { return existsSync(p) ? readFileSync(p, "utf8") : ""; } catch { return ""; } };
 const readJson = (p, d = null) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return d; } };
 const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
 const clip = (s, n) => { const t = String(s == null ? "" : s); return t.length > n ? t.slice(0, n) : t; };
@@ -600,10 +610,8 @@ export function deliveryCheck(kind, nextGafferTurns) {
 export function readSince(cursor, deps = {}) {
   const now = deps.now || new Date();
   const day = istDay(now);
-  const file = deps.transcript !== undefined ? null : join(DUGOUT_DIR, day + ".md");
-  let whole = "";
-  if (deps.transcript !== undefined) whole = String(deps.transcript);
-  else { try { whole = existsSync(file) ? readFileSync(file, "utf8") : ""; } catch { whole = ""; } }
+  // ONE DOOR TO A DAY-FILE, shared with the night read below — see readDugoutDay.
+  const whole = deps.transcript !== undefined ? String(deps.transcript) : readDugoutDay(day);
   const bytes = Buffer.byteLength(whole, "utf8");
   // A NEW DAY RESETS THE CURSOR. Without this the first turn of a new sitting is
   // compared against yesterday's byte count and either re-judges the whole of
@@ -768,97 +776,211 @@ async function postToBus(row, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// THE GRADER — TWO HALVES, AND THE SPLIT IS THE WHOLE DESIGN (15 Aug 2026, HIS CALL:
-// "gradeAnswer() ko do hisson mein todo — CAPTURE (turant, bina model) aur JUDGE
-// (Opus, round ke ant mein). Cerebras poora nikal do.")
+// THE JUDGE — CAPTURE, then TWO JUDGING PASSES (his spec, 15 Aug 2026 evening)
 // ---------------------------------------------------------------------------
-// WHY THE SPLIT IS RIGHT, and it is not only about Cerebras. A spoken Re-Jirah round
-// has ONE latency budget that matters and it is between his answer and the next
-// question. Nothing else in the round is in a hurry. The old shape put a live model
-// call inside that gap, which is why it needed a sub-second provider at all — the
-// requirement was manufactured by the design, not by the work.
-//   CAPTURE  runs in the gap. NO MODEL. It reads his own weld off the capsule, banks
-//            his spoken answer beside it, and returns. Microseconds, zero tokens, and
-//            it cannot fail in a way he can feel.
-//   JUDGE    runs when the round is OVER, where there is no latency budget at all —
-//            so it uses the best model in the building, once, on the whole round.
-// One Opus call for nine axes instead of nine calls of anything, and the deep brain
-// is finally in the place it is actually good: reading meaning against his own words.
+// THE DESIGN ERROR THIS REPLACES was not the transport. The first version assumed
+// grading means "his answer vs his weld" — one comparison, one answer key — and
+// therefore that any fast model could do it. Read against the live state files, the
+// Gaffer has EIGHT things to judge and exactly ONE of them has a key:
 //
-// WHAT WAS REMOVED AND WHY, so nobody re-derives it: the Cerebras lane is GONE, not
-// disabled. It was chosen for speed the split has now made unnecessary, and it never
-// once returned a verdict — measured on his own account, every model it could list
-// answered `402 payment_required`. Two accounts, three model names, four commits, and
-// zero grades. A dependency that has never worked and is no longer needed is not
-// layered, it is deleted; the frozen-engine law protects engines that RAN.
-// (The `csk-`/`gsk_` scrubber patterns STAY — those are about the next key anyone
-// pastes, and have nothing to do with this lane.)
+//   1 axis_weld     capsule.faultLines[9].weld                    ← THE ONLY KEY
+//   2 tape_doubt    tape_room.json queue (112 of his own old confusions, verbatim)
+//   3 hidden_test   examiner_drill.json hidden_tests — open design probes
+//   4 adversarial   drills.json modality voice — "I think that's wrong. Defend it."
+//   5 scrimmage     a score out of 25 + the two weakest cracks
+//   6 interview     capsule.interviewLines[10] — is the answer interview-grade?
+//   7 trap          capsule.traps[7] — did he fall into a known pit?
+//   8 doubt_quality FORGE_SPEC Gate 1/Gate 2 — is a new doubt cold-readable?
 //
-// THE BILLING LAW IS UNTOUCHED: JUDGE goes through claudeGen, which REFUSES outright
-// when ANTHROPIC_API_KEY is set. Max subscription, never an API key. Same door every
-// other Opus job in the organism uses.
+// Seven of those have NOTHING TO COMPARE AGAINST. No amount of speed helps a model
+// that cannot form the judgement at all. So Opus is not the better option here, it
+// is the ONLY option — and that is a fact about the WORK, not a preference.
+//
+// NO KEY IS NOT NO GROUND, and this is the part that keeps it honest. Every keyless
+// verdict still rides HIS material into the prompt: the capsule's mechanism, its
+// traps, its interview lines, the doubt in his own words. The judge is never asked
+// what IT thinks a good answer is; it is asked whether what he said holds against
+// what he already wrote.
+//
+// THREE MOMENTS, and each one is placed where its cost is affordable:
+//   CAPTURE  in the gap between his answer and the next question. NO model, NO
+//            network, NO subprocess. This is also the 11 Aug law: a connection that
+//            drops mid-round must not cost him the axes he already defended.
+//   PASS 1   the moment he closes the round. ONE Opus call for the WHOLE round.
+//   PASS 2   at night, over the whole day at once — because the pattern he needs is
+//            invisible inside any single round. "tokenization axis d cracked AND
+//            embeddings axis d cracked" is ONE finding, not two events.
 
-// THE QUEUE — append-only, and settlement is a ROW rather than a rewrite.
-// A queue that is rewritten on settle is a file that can lose a captured answer to a
-// crash between read and write, and his spoken answer is the one thing here that
-// cannot be reproduced. So a capture appends, a settlement appends, and "outstanding"
-// is derived. Same shape the archive already relies on, and the archivist tails it for
-// free because it is a *.jsonl under dressing-room/.
 const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
+const TAPE_ROOM = join(STATE_DIR, "tape_room.json");
+const EXAMINER_DRILL = join(STATE_DIR, "examiner_drill.json");
+const DRILLS = join(STATE_DIR, "drills.json");
 
+// THE EIGHT, declared once. `key` says whether a right answer exists on disk;
+// `owner` is the organ that RECORDS the verdict, because none of them may be
+// written from here. `verdicts` is a closed set — a model returning anything else
+// is discarded, never coerced into the nearest legal word.
+export const VERDICT_TYPES = {
+  axis_weld: { key: true, owner: "rejirah", verdicts: ["held", "cracked"], asks: "Did the load-bearing mechanism of HIS OWN weld come back, in any words at all?" },
+  tape_doubt: { key: false, owner: "doubtminer", verdicts: ["broken", "standing"], asks: "Did he cleanly dismantle his OWN past confusion — not merely restate the right answer beside it?" },
+  hidden_test: { key: false, owner: "capture", verdicts: ["passed", "failed"], asks: "Did he actually satisfy this design probe? It is open-ended on purpose; judge the engineering, not the wording." },
+  adversarial: { key: false, owner: "capture", verdicts: ["defended", "conceded", "collapsed"], asks: "He was told his position was wrong. Did he DEFEND it on the mechanism, CONCEDE the exact place it breaks (also a win), or COLLAPSE without either?" },
+  scrimmage: { key: false, owner: "capture", verdicts: ["passed", "failed"], asks: "Under adversarial time pressure, did this probe hold?" },
+  interview: { key: false, owner: "capture", verdicts: ["interview_grade", "not_yet"], asks: "Would this answer survive a staff engineer asking it in a real loop — mechanism named, trade-off named, limit named?" },
+  trap: { key: false, owner: "capture", verdicts: ["avoided", "fell_in"], asks: "Did he fall into this KNOWN pit, the one his own capsule warns about?" },
+  doubt_quality: { key: false, owner: "none", verdicts: ["cold_readable", "not_cold_readable"], asks: "FORGE_SPEC Gate 1/2: would a cold reader six months from now understand this doubt without the conversation around it?" },
+};
+export const isVerdict = (type, v) => !!VERDICT_TYPES[type] && VERDICT_TYPES[type].verdicts.includes(String(v || "").trim().toLowerCase());
+
+// ONE DOOR TO A CAPSULE, ONE DOOR TO A DAY. Three call sites read a capsule and two
+// read a day-file; each one built its path inside its own function, which is an
+// Unknown to xray and cost this organ four sinks the moment it landed (the per-organ
+// ratchet caught it in the next run: 11 -> 15). Same lesson watchman.mjs paid for
+// this morning: a path assembled in a function is invisible in the static graph.
+function readCapsule(concept, deps = {}) {
+  const read = deps.readJson || readJson;
+  return read(join(CAPSULE_DIR, String(concept).toLowerCase().replace(/[^a-z0-9_-]/g, "") + ".json"), null);
+}
+function readDugoutDay(day) { return readTextFile(join(DUGOUT_DIR, String(day) + ".md")); }
+
+// ⚠ READ THE FIELD, DO NOT GUESS ITS NAME — and this function is the scar, not the
+// warning. It shipped on 15 Aug reading `capsule.axes[axis].weld`, and a capsule has
+// no `axes` key at all: the nine axes live in `faultLines`, an ARRAY of
+// {axis, title, strike, weld, status, deep} (the owner's own reader is
+// `for (const a of c.faultLines || [])` — grep -n "of c.faultLines" scripts/deep.mjs).
+// So it returned "no weld on disk" for every concept and every axis, forever, while
+// its selftest stayed green because the only path exercised was the REFUSAL. The
+// live-capsule assertions below are the fix that matters.
+export function capsuleAnswerKey(concept, axis, deps = {}) {
+  const c = deps.capsule !== undefined ? deps.capsule : readCapsule(concept, deps);
+  if (!c) return null;
+  const want = String(axis || "").trim().toLowerCase();
+  const a = (Array.isArray(c.faultLines) ? c.faultLines : []).find((x) => x && String(x.axis || "").trim().toLowerCase() === want);
+  if (!a) return null;
+  // The KEY is his own weld — the prose he will defend in an interview. `strike` (the
+  // cold question) and `title` ride along so a grader knows what was ASKED; `deep`
+  // deliberately does NOT — grading a forty-second spoken answer against a
+  // four-thousand-word page fails every honest recall.
+  const weld = String(a.weld || "").trim();
+  return weld ? { concept, axis: a.axis, title: a.title || null, strike: a.strike || null, weld: clip(weld, 4000) } : null;
+}
+
+// gradeMaterial — WHAT the judge is given for one captured item. Every branch reads
+// a real file and returns null when it cannot find the thing, so a probe with no
+// material is REFUSED at capture rather than judged against nothing.
+export function gradeMaterial(type, ref, deps = {}) {
+  const read = deps.readJson || readJson;
+  if (type === "axis_weld") {
+    const [concept, axis] = String(ref).split(":");
+    const k = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
+    return k ? { concept, label: `axis ${k.axis}${k.title ? ` (${k.title})` : ""}`, asked: k.strike, key: k.weld } : null;
+  }
+  if (type === "tape_doubt") {
+    const [capsule, idxRaw] = String(ref).split(":");
+    const idx = Number(idxRaw);
+    const tr = deps.tapeRoom !== undefined ? deps.tapeRoom : read(TAPE_ROOM, null);
+    const row = ((tr && tr.queue) || []).find((q) => q && q.capsule === capsule && Number(q.doubt_index) === idx);
+    return row ? { concept: capsule, label: `tape-room doubt #${idx}`, asked: row.q_verbatim, key: null } : null;
+  }
+  if (type === "hidden_test") {
+    const ex = deps.examiner !== undefined ? deps.examiner : read(EXAMINER_DRILL, null);
+    const tests = (ex && ex.hidden_tests) || [];
+    const t = tests[Number(ref)];
+    return t ? { concept: (ex && ex.concept) || null, label: `hidden test #${ref}`, asked: t, key: null, extra: ex && ex.task ? `THE TASK IT SITS ON: ${ex.task}` : null } : null;
+  }
+  if (type === "adversarial" || type === "scrimmage") {
+    const dr = deps.drills !== undefined ? deps.drills : read(DRILLS, null);
+    const d = ((dr && dr.drills) || [])[Number(ref)];
+    return d ? { concept: (d.concepts || [])[0] || null, label: `${d.kind || "drill"} (${d.modality || "?"})`, asked: d.prompt, key: null } : null;
+  }
+  if (type === "interview" || type === "trap") {
+    const [concept, idxRaw] = String(ref).split(":");
+    const c = readCapsule(concept, deps);
+    const list = c ? (type === "interview" ? c.interviewLines : c.traps) || [] : [];
+    const item = list[Number(idxRaw)];
+    return item ? { concept, label: `${type} #${idxRaw}`, asked: typeof item === "string" ? item : (item.line || item.trap || JSON.stringify(item)), key: null } : null;
+  }
+  if (type === "doubt_quality") return { concept: String(ref).split(":")[0] || null, label: "a new doubt he just wrote", asked: null, key: null };
+  return null;
+}
+
+// capsuleGround — HIS material, for the seven verdicts that have no key. This is the
+// difference between "judge it" and "judge it against what he already wrote".
+export function capsuleGround(concept, deps = {}) {
+  if (!concept) return "";
+  const c = readCapsule(concept, deps);
+  if (!c) return "";
+  const L = [];
+  if (c.mechanism) L.push(`MECHANISM (his own): ${clip(c.mechanism, 900)}`);
+  if (Array.isArray(c.traps) && c.traps.length) L.push(`KNOWN TRAPS he wrote for himself: ${c.traps.map((t) => (typeof t === "string" ? t : t.trap || "")).filter(Boolean).slice(0, 7).join(" · ")}`);
+  if (Array.isArray(c.interviewLines) && c.interviewLines.length) L.push(`WHAT HE CALLS INTERVIEW-GRADE here: ${c.interviewLines.map((l) => (typeof l === "string" ? l : l.line || "")).filter(Boolean).slice(0, 4).join(" · ")}`);
+  return L.length ? `\nHIS OWN GROUND FOR "${concept}" (judge against THIS, never against your own idea of a good answer):\n${L.join("\n")}` : "";
+}
+
+// ---------------------------------------------------------------------------
 // CAPTURE — the fast half. NO MODEL, NO NETWORK, NO SUBPROCESS.
+// ---------------------------------------------------------------------------
 // THE GUT-WORD LAW IS HELD AT THIS DOOR TOO. capture.mjs refuses a rep without one
 // and rejirah.mjs refuses a round without one; this is the third writer of the same
 // law and it must give the same answer, or the loosest door becomes the real rule.
-// Canon: "Gut-word nahi -> rep nahi."
-export function gradeCapture({ concept, axis, spoken, gut }, deps = {}) {
+export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}) {
   const now = deps.now || new Date();
+  if (!VERDICT_TYPES[type]) return { ok: false, reason: "unknown-type", say: `gaffer_brain: unknown verdict type "${type}". Legal: ${Object.keys(VERDICT_TYPES).join(", ")}.` };
   const word = String(gut || "").trim().toLowerCase();
-  if (!["knew", "shaky", "guessed"].includes(word)) {
-    return { ok: false, reason: "no-gut", say: "gaffer_brain: --gut is required and must be knew|shaky|guessed, committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep." };
-  }
+  if (!["knew", "shaky", "guessed"].includes(word)) return { ok: false, reason: "no-gut", say: "gaffer_brain: --gut is required and must be knew|shaky|guessed, committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep." };
   const said = String(spoken || "").trim();
-  if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a cracked answer, and guessing which it was is exactly what this lane must never do." };
-  const key = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
-  if (!key) return { ok: false, reason: "no-key-page", say: `gaffer_brain: no locked weld on disk for ${concept} · axis ${axis} — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
+  if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
+  const mat = deps.material !== undefined ? deps.material : gradeMaterial(type, ref, deps);
+  if (!mat) return { ok: false, reason: "no-material", say: `gaffer_brain: nothing on disk for ${type} "${ref}" — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
   const row = {
-    v: 1, kind: "capture",
-    id: `${concept}:${key.axis}:${now.toISOString()}`,
+    v: 2, kind: "capture",
+    id: `${type}:${ref}:${now.toISOString()}`,
     ts: now.toISOString(), day: istDay(now),
-    concept, axis: key.axis, title: key.title, strike: key.strike,
+    type, ref, concept: mat.concept, label: mat.label,
     gut: word,
+    asked: mat.asked ? clip(mat.asked, 1200) : null,
+    key: mat.key ? clip(mat.key, 4000) : null,     // null for seven of the eight, and that is the point
+    extra: mat.extra || null,
     spoken: clip(said, 4000),
-    weld: clip(key.weld, 4000),
   };
   if (!deps.dry) { try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); appendFileSync(GRADE_QUEUE, JSON.stringify(row) + "\n"); } catch { } }
-  return { ok: true, row, captured: row.id, axis: key.axis, weld_chars: key.weld.length };
+  return { ok: true, row, captured: row.id, type, has_key: !!mat.key };
 }
 
-// outstandingGrades — captures with no settlement row after them. Derived, never stored.
+// outstandingGrades — captures with no settlement row after them. Derived, never
+// stored, so a crash between judging and recording cannot lose his spoken answer.
 export function outstandingGrades(rows) {
   const settled = new Set((rows || []).filter((r) => r && r.kind === "settled").map((r) => r.of));
   return (rows || []).filter((r) => r && r.kind === "capture" && !settled.has(r.id));
 }
 
-// THE JUDGE PROMPT — the whole round in ONE call. Cache-ordered like every other
-// prompt this organ builds: the invariant rubric first, his answers last.
-export function buildJudgePrompt(items) {
-  return `You are grading a spoken recall round. The learner wrote every ANSWER KEY below himself, months ago, in his own words; he has just answered each one OUT LOUD from memory, cold.
+// ---------------------------------------------------------------------------
+// PASS 1 — ROUND CLOSE. One Opus call, the whole round, whatever types are in it.
+// ---------------------------------------------------------------------------
+export function buildJudgePrompt(items, deps = {}) {
+  const types = [...new Set(items.map((i) => i.type))];
+  const grounds = [...new Set(items.map((i) => i.concept).filter(Boolean))]
+    .map((c) => capsuleGround(c, deps)).filter(Boolean).join("\n");
+  return `You are grading a live study round for ONE learner. He answered every item below OUT LOUD, cold, from memory.
 
-GRADE THE MECHANISM, NEVER THE WORDING. Speech is transcribed, so it is broken, repetitive and missing punctuation — none of that is an error. He is not reciting; he is reconstructing. Mark "held" when the load-bearing idea is present in any words at all. Mark "cracked" only when the mechanism is absent, or present but WRONG in a way that would mislead him later.
+GRADE THE MECHANISM, NEVER THE WORDING. Speech is transcribed, so it arrives broken, repetitive and unpunctuated — none of that is an error, and none of it is evidence about what he knows. He is not reciting; he is reconstructing.
 
-For each item return the axis, the verdict, what he MISSED that the key has, and one sentence he can act on.
+ONE ITEM HAS AN ANSWER KEY AND MOST DO NOT, DELIBERATELY. Where a key is given, it is prose HE wrote himself and it is authoritative. Where there is none, judge against HIS OWN GROUND below — his mechanism, his traps, his interview lines — never against your own idea of a good answer. If his ground does not settle it, say so in "why" rather than inventing a standard.
+
+THE VERDICT TYPES IN THIS ROUND, and the question each one asks:
+${types.map((t) => `  ${t} → ${VERDICT_TYPES[t].asks}\n      legal verdicts: ${VERDICT_TYPES[t].verdicts.join(" | ")}`).join("\n")}
+${grounds}
 
 Return STRICT JSON, no fences, no prose outside it:
-{"grades":[{"axis":"<the axis letter, exactly as given>","verdict":"held"|"cracked","missing":["<load-bearing point he did not say>"],"why":"<one sentence, plain, to him>"}]}
-Return one entry per item, in the same order, and NOTHING for an axis that was not given to you.
+{"grades":[{"id":"<the item id, copied exactly>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>"}]}
+One entry per item. Copy the id EXACTLY — it is how each grade is matched back. Return NOTHING for an item you cannot judge; a missing grade is honest, a guessed one is not.
 
 === THE ROUND ===
 ${items.map((it, i) => `
---- ITEM ${i + 1} · concept "${it.concept}" · axis ${it.axis}${it.title ? ` (${it.title})` : ""} · his gut-word before answering: ${it.gut}
-${it.strike ? `THE QUESTION HE WAS ASKED: ${it.strike}` : ""}
-ANSWER KEY (his own words, authoritative):
-${it.weld}
+--- ITEM ${i + 1} · id ${it.id} · type ${it.type} · ${it.label || it.ref}${it.concept ? ` · concept "${it.concept}"` : ""} · his gut-word before answering: ${it.gut}
+${it.asked ? `WHAT HE WAS ASKED / THE THING UNDER TEST:\n${it.asked}` : ""}
+${it.extra ? `${it.extra}` : ""}
+${it.key ? `ANSWER KEY (his own words, authoritative):\n${it.key}` : "(NO ANSWER KEY EXISTS FOR THIS ONE — judge against his ground above.)"}
 
 WHAT HE SAID OUT LOUD, COLD:
 ${it.spoken}`).join("\n")}
@@ -866,24 +988,52 @@ ${it.spoken}`).join("\n")}
 Return the JSON now.`;
 }
 
-// JUDGE — the slow half. ONE Opus call for the whole round, at the moment nothing is
-// waiting on it. Deps-injected end to end so the selftest can drive it with no model.
+// THE OWNER TABLE. Nothing here writes another organ's file: each verdict is
+// DISPATCHED through the owner's own CLI, because those organs derive real state
+// from the row they write (rejirah derives nextDue, fluency and the calibration gap;
+// doubtminer guards against phantom retires; capture holds the rep contract).
+export function ownerCommand(s) {
+  const t = VERDICT_TYPES[s.type];
+  if (!t) return null;
+  if (t.owner === "rejirah") {
+    const [concept, axis] = String(s.ref).split(":");
+    return { organ: "rejirah.mjs", argv: ["grade", concept, axis, s.verdict, "--gut", s.gut] };
+  }
+  if (t.owner === "doubtminer") {
+    // ONLY a clean break retires the doubt. "standing" means it survived, and
+    // retiring a doubt he did not dismantle would delete the evidence that he
+    // still holds it — the one thing the tape room exists to remember.
+    if (s.verdict !== "broken") return { organ: null, note: "the doubt still stands — nothing is retired, which is the record staying true" };
+    const [capsule, idx] = String(s.ref).split(":");
+    return { organ: "doubtminer.mjs", argv: ["retire", capsule, String(idx)] };
+  }
+  if (t.owner === "capture") {
+    // A rep is the organism's unit of studied work, and capture.mjs is its only
+    // door. The pass/fail mapping is declared per type rather than inferred, so a
+    // new verdict word can never silently become a "miss he never made".
+    const won = { passed: true, failed: false, defended: true, conceded: true, collapsed: false, interview_grade: true, not_yet: false, avoided: true, fell_in: false }[s.verdict];
+    if (won === undefined) return null;
+    return { organ: "capture.mjs", argv: ["rep", "--concept", s.concept || String(s.ref).split(":")[0], "--q", clip(s.label || s.ref, 160), "--gut", s.gut, "--correct", String(won)] };
+  }
+  // doubt_quality has no owner organ today — the verdict lives in this organ's own
+  // journal and is read by the forge's Gate 1/Gate 2 review. Named, not pretended.
+  return { organ: null, note: "no owner organ for this type — the verdict stays in gaffer_brain.jsonl for the Gate 1/2 review" };
+}
+
 export async function gradeJudge(deps = {}) {
   const now = deps.now || new Date();
-  const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 500);
+  const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
   const items = outstandingGrades(rows);
   if (!items.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
 
-  const prompt = buildJudgePrompt(items);
+  const prompt = buildJudgePrompt(items, deps);
   // claudeGen is the house door: it REFUSES when ANTHROPIC_API_KEY is set (his
-  // standing law), and it is the same lane every other Opus job in the organism
-  // rides. `effort` max and model opus are his 14 Aug ruling: "always make sure you
-  // select the highest thinking model with maximum thinking on" — and unlike the
-  // Watcher's per-turn path, this call is rare and nothing is waiting on it, so the
-  // ruling costs nothing here.
+  // standing law), and it is the same lane every other Opus job rides. effort max is
+  // his 14 Aug ruling, and unlike the Watcher's per-turn path nothing is waiting on
+  // this call, so the ruling costs nothing here.
   const gen = deps.generate || (async (p) => {
     const { claudeGen } = await import("./claudegen.mjs");
-    return claudeGen(p, "opus", 240000, ["--effort", "max"]);
+    return claudeGen(p, "opus", 300000, ["--effort", "max"]);
   });
   const r = await gen(prompt);
   if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the judge lane did not answer (${(r && r.error) || "no reply"}) — the round STAYS in the queue and nothing was invented. Run judge-round again.`, outstanding: items.length };
@@ -893,70 +1043,164 @@ export async function gradeJudge(deps = {}) {
   const grades = (parsed && Array.isArray(parsed.grades)) ? parsed.grades : null;
   if (!grades) return { ok: false, reason: "unparseable", say: "gaffer_brain: the judge answered in a shape this organ will not act on — the round STAYS in the queue.", outstanding: items.length };
 
-  // MATCH BY AXIS, NEVER BY POSITION. A model that returns eight grades for nine
-  // items would otherwise shift every verdict by one and mark the wrong axes — a
-  // silent, plausible, completely wrong round. An item with no grade stays
-  // OUTSTANDING and is judged again next time; it is never guessed.
+  // MATCHED BY ID, NEVER BY POSITION. A model returning eight grades for nine items
+  // would otherwise shift every verdict by one and mark the wrong things — plausible,
+  // silent, and completely wrong. An item with no grade, or with a verdict outside
+  // its type's legal set, stays OUTSTANDING and is judged again; it is never coerced.
   const settled = [], missed = [];
   for (const it of items) {
-    const g = grades.find((x) => x && String(x.axis).trim().toLowerCase() === String(it.axis).trim().toLowerCase());
-    const verdict = g && (g.verdict === "held" || g.verdict === "cracked") ? g.verdict : null;
-    if (!verdict) { missed.push(it.axis); continue; }
+    const g = grades.find((x) => x && String(x.id) === it.id);
+    const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
+    if (!verdict) { missed.push(`${it.type}:${it.ref}`); continue; }
     settled.push({
-      v: 1, kind: "settled", of: it.id, ts: now.toISOString(), day: istDay(now),
-      concept: it.concept, axis: it.axis, gut: it.gut, verdict,
+      v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: istDay(now),
+      type: it.type, ref: it.ref, concept: it.concept, label: it.label, gut: it.gut, verdict,
       missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
-      why: clip(g.why, 300),
-      engine: "opus", latency_ms: Number(r.duration_ms) || null,
+      why: clip(g.why, 300), engine: "opus", pass: 1,
     });
   }
 
-  // THE VERDICT GOES TO THE OWNER, NOT INTO ITS FILE. rejirah.mjs is the sole writer
-  // of rejirah_log.jsonl and it derives nextDue, fluency and the calibration gap from
-  // the row it writes; a second author of that schema would be exactly the breach
-  // CLAUDE.md's single-writer law exists to stop. So the round is DISPATCHED through
-  // its CLI, one axis at a time, and a refusal there (a missing gut-word, an unknown
-  // concept) is reported rather than swallowed.
-  const dispatch = deps.dispatch || ((s) => {
-    try {
-      execFileSync(process.execPath, [join(HERE, "rejirah.mjs"), "grade", s.concept, s.axis, s.verdict, "--gut", s.gut],
-        { encoding: "utf8", timeout: 30000, windowsHide: true });
-      return { ok: true };
-    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
+  // is one line and it is an Unknown to the static analyser — the organ→organ edge
+  // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
+  // Written out, each edge is visible to xray, mutagen and blackbox, which is the
+  // whole point of that budget existing.
+  const dispatch = deps.dispatch || ((cmd) => {
+    if (!cmd || !cmd.organ) return { ok: true, noop: true, note: cmd && cmd.note };
+    const fail = (e) => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) });
+    const opt = { encoding: "utf8", timeout: 30000, windowsHide: true };
+    if (cmd.organ === "rejirah.mjs") {
+      try { execFileSync(process.execPath, [join(HERE, "rejirah.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
+    }
+    if (cmd.organ === "doubtminer.mjs") {
+      try { execFileSync(process.execPath, [join(HERE, "doubtminer.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
+    }
+    if (cmd.organ === "capture.mjs") {
+      try { execFileSync(process.execPath, [join(HERE, "capture.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
+    }
+    return { ok: false, error: `no such owner organ: ${cmd.organ}` };
   });
+  // ⚠ --dry MEANS TOUCH NOTHING, AND IT DID NOT. Until this line `dry` only skipped
+  // the settlement append while STILL dispatching every verdict to rejirah,
+  // doubtminer and capture — so a rehearsal wrote into his real study record. Found
+  // the way these things always are: the acceptance run for this very build put three
+  // fabricated rows into his own rejirah_log, reps_log and tape_room. A flag whose
+  // name promises safety and delivers half of it is worse than no flag at all.
+  // An INJECTED dispatch still runs under dry — that is the selftest's own stub, and
+  // it is the thing being tested.
   const dispatched = [], refused = [];
   for (const s of settled) {
-    const d = dispatch(s);
-    if (d.ok) { dispatched.push(s); } else { refused.push({ axis: s.axis, error: d.error }); }
+    const d = (deps.dry && !deps.dispatch)
+      ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
+      : dispatch(ownerCommand(s));
+    if (d.ok) dispatched.push({ ...s, owner_noop: !!d.noop, owner_note: d.note || null });
+    else refused.push({ ref: `${s.type}:${s.ref}`, error: d.error });
   }
-  // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict rejirah refused is not
-  // a graded axis, and writing a settlement row for it would lose his answer.
+  // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
+  // a graded item, and writing a settlement row for it would lose his spoken answer.
   if (!deps.dry) {
-    try {
-      mkdirSync(dirname(GRADE_QUEUE), { recursive: true });
-      for (const s of dispatched) appendFileSync(GRADE_QUEUE, JSON.stringify(s) + "\n");
-    } catch { }
+    try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); for (const s of dispatched) appendFileSync(GRADE_QUEUE, JSON.stringify(s) + "\n"); } catch { }
   }
-  return { ok: true, graded: dispatched.length, held: dispatched.filter((s) => s.verdict === "held").length, cracked: dispatched.filter((s) => s.verdict === "cracked").length, settled, dispatched, refused, missed, outstanding: items.length - dispatched.length };
+  return { ok: true, graded: dispatched.length, types: [...new Set(dispatched.map((s) => s.type))], settled, dispatched, refused, missed, outstanding: items.length - dispatched.length, calls: 1 };
 }
 
-// fix that matters: it reads a REAL locked capsule off disk, so this cannot rot back.
-export function capsuleAnswerKey(concept, axis, deps = {}) {
-  const read = deps.readJson || readJson;
-  const file = deps.capsulePath || join(CAPSULE_DIR, String(concept).toLowerCase().replace(/[^a-z0-9_-]/g, "") + ".json");
-  const c = read(file, null);
-  if (!c) return null;
-  const want = String(axis || "").trim().toLowerCase();
-  const a = (Array.isArray(c.faultLines) ? c.faultLines : []).find((x) => x && String(x.axis || "").trim().toLowerCase() === want);
-  if (!a) return null;
-  // The KEY is his own weld — the prose he will defend in an interview. Never a
-  // paraphrase and never something the grader wrote. `strike` (the cold question) and
-  // `title` ride along because a grader that knows what was ASKED marks the right
-  // thing; `deep` deliberately does NOT — it is the long form, and grading a
-  // 40-second spoken answer against a 4,000-word page would fail every honest recall.
-  const weld = String(a.weld || "").trim();
-  return weld ? { concept, axis: a.axis, title: a.title || null, strike: a.strike || null, weld: clip(weld, 4000) } : null;
+// ---------------------------------------------------------------------------
+// PASS 2 — THE NIGHT READ. The whole day at once, because a pattern is invisible
+// inside a single round.
+// ---------------------------------------------------------------------------
+// His words: "tokenization axis d cracked AND embeddings axis d cracked" is ONE
+// pattern, not two events — and no round-close pass can ever see it, because each
+// round only holds its own items. This pass also CROSS-CHECKS Pass 1: it is allowed
+// to say a verdict was wrong, and it says so with its reason rather than silently
+// rewriting it (Pass 1's row stays; a correction is a NEW row that names the old one).
+// It rides the night shift's existing lane — no new scheduler.
+export function buildNightPrompt(settled, transcript) {
+  return `You are reading ONE learner's whole day of study at once, at night, after every round is closed. You are looking for what no single round could show.
+
+You are given every verdict recorded today, across every type of probe, plus the day's conversation. Find the PATTERNS THAT CROSS ROUNDS. Examples of the shape (not of the content): the same AXIS failing on two different concepts is one finding about that axis, not two failures. A trap avoided in one concept and fallen into in another is one finding about transfer. A gut-word of "knew" on things that then cracked is one finding about calibration, and it is the most important kind.
+
+You may also CORRECT a verdict from earlier today if the day's whole record shows it was wrong — say which, and why. Do not correct one merely because you would have worded it differently.
+
+Return STRICT JSON, no fences:
+{"patterns":[{"finding":"<one sentence, plain, addressed to him>","evidence":["<the specific items this rests on>"],"kind":"axis"|"transfer"|"calibration"|"pace"|"other","acts_on":"nemesis"|"calibration"|"edgemap"|"none"}],
+ "corrections":[{"of":"<type:ref>","was":"<verdict>","should_be":"<verdict>","why":"<one sentence>"}]}
+Return an EMPTY patterns array if the day genuinely holds no cross-round pattern. A manufactured pattern is worse than none — he will act on it.
+
+=== TODAY'S VERDICTS ===
+${settled.map((s) => `- ${s.type} · ${s.label || s.ref}${s.concept ? ` · concept "${s.concept}"` : ""} · gut ${s.gut} → ${s.verdict}${s.missing && s.missing.length ? ` · missed: ${s.missing.join(" · ")}` : ""}${s.why ? ` · "${s.why}"` : ""}`).join("\n") || "(none)"}
+
+=== TODAY'S CONVERSATION ===
+${clip(transcript || "(no transcript on disk for today)", 30000)}
+
+Return the JSON now.`;
 }
+
+export async function gradeNight(deps = {}) {
+  const now = deps.now || new Date();
+  const day = istDay(now);
+  const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
+  const settled = rows.filter((r) => r && r.kind === "settled" && r.day === day);
+  // TWO IS THE FLOOR AND IT IS NOT A TUNED NUMBER: a cross-round pattern needs at
+  // least two rounds to cross. One verdict cannot hold one.
+  if (settled.length < 2) return { ok: true, skipped: `only ${settled.length} verdict(s) today — a cross-round pattern needs at least two rounds to cross`, patterns: 0 };
+
+  const transcript = deps.transcript !== undefined ? deps.transcript
+    : readDugoutDay(day);
+  const gen = deps.generate || (async (p) => {
+    const { claudeGen } = await import("./claudegen.mjs");
+    return claudeGen(p, "opus", 300000, ["--effort", "max"]);
+  });
+  const r = await gen(buildNightPrompt(settled, transcript));
+  if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the night read did not answer (${(r && r.error) || "no reply"}) — nothing was written and nothing was invented.` };
+  let parsed = null;
+  try { const t = String(r.text); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
+  if (!parsed || !Array.isArray(parsed.patterns)) return { ok: false, reason: "unparseable", say: "gaffer_brain: the night read answered in a shape this organ will not act on — nothing was written." };
+
+  const patterns = parsed.patterns.filter((p) => p && p.finding).map((p) => ({
+    finding: clip(p.finding, 400), evidence: Array.isArray(p.evidence) ? p.evidence.slice(0, 8) : [],
+    kind: ["axis", "transfer", "calibration", "pace", "other"].includes(p.kind) ? p.kind : "other",
+    acts_on: ["nemesis", "calibration", "edgemap", "none"].includes(p.acts_on) ? p.acts_on : "none",
+  }));
+  // A CORRECTION IS A NEW ROW, NEVER A REWRITE. Pass 1's verdict stays on disk with
+  // its timestamp; the night's disagreement sits beside it and names it. That is the
+  // only way a reader can ever tell "the judge changed its mind" from "the judge was
+  // always right", and the second pass is not automatically the better one.
+  const corrections = (Array.isArray(parsed.corrections) ? parsed.corrections : [])
+    .filter((c) => c && c.of && c.should_be)
+    .map((c) => ({ of: String(c.of), was: String(c.was || ""), should_be: String(c.should_be), why: clip(c.why, 300) }));
+
+  const row = { v: 2, kind: "night", ts: now.toISOString(), day, pass: 2, verdicts_read: settled.length, patterns, corrections, engine: "opus" };
+  // Written to THIS organ's own journal. nemesis.mjs, calibration.mjs and rejirah's
+  // edgeMap are the declared consumers — they READ it; nothing is written into their
+  // files from here.
+  if (!deps.dry) { try { mkdirSync(dirname(JOURNAL), { recursive: true }); appendFileSync(JOURNAL, JSON.stringify(row) + "\n"); } catch { } }
+  return { ok: true, row, patterns: patterns.length, corrections: corrections.length, read: settled.length };
+}
+
+// ---------------------------------------------------------------------------
+// FROZEN 15 Aug 2026 — THE CEREBRAS KEY READER (LAYERING law, his instruction:
+// "loadCerebrasKey() ko *Legacy bana ke FREEZE karo, delete nahi").
+// ---------------------------------------------------------------------------
+// NO CALLER POINTS HERE. It survives as the record of a lane that was specced,
+// built, keyed, and never once returned a verdict — every model its account could
+// list answered 402 payment_required, and Cerebras's own notice ends the free tier
+// on 17 Aug 2026. Kept because the layering law is about being able to read what was
+// tried, not about keeping it reachable; and because the NEXT time a fast third-party
+// grader looks obvious, this is the evidence that the speed was never the constraint.
+// The csk-/gsk_ scrubber patterns in hooks/afferent-post.mjs are NOT part of this and
+// stay live — those are about the next key anyone pastes.
+export function loadCerebrasKeyLegacy(envText = null) {
+  if (envText === null && (process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY)) {
+    return String(process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY).trim();
+  }
+  const text = envText !== null ? envText : readTextFile(CEREBRAS_ENV_LEGACY);
+  for (const line of String(text).split("\n")) {
+    const m = line.match(/^\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\s*=\s*(.+)$/);
+    if (m && m[1].trim()) return m[1].trim().replace(/^["']|["']$/g, "");
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -1010,38 +1254,55 @@ async function main() {
   }
   // CAPTURE — the fast half. Runs in the gap between his answer and the next
   // question, so it does exactly one thing and does it without a model.
+  //   capture <type> <ref> --gut <word>      (his spoken answer on stdin)
+  //   ref shapes: axis_weld            concept:axis      · interview/trap  concept:index
+  //               tape_doubt           capsule:doubt_index
+  //               hidden_test          test index        · adversarial/scrimmage  drill index
   if (mode === "capture") {
     const flag = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : undefined; };
-    const r = gradeCapture({ concept: process.argv[3], axis: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") });
+    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") });
     if (!r.ok) { console.log(r.say); process.exit(1); }
-    console.log(`gaffer_brain: captured ${r.row.concept} · axis ${r.axis} · gut ${r.row.gut} · against his ${r.weld_chars}-char weld. Nothing was judged and nothing was spent — run \`judge-round\` when the round is over.`);
+    const ground = r.has_key ? "against his own weld" : "NO answer key exists for this type — it is judged against his own capsule ground";
+    console.log(`gaffer_brain: captured ${r.row.type} · ${r.row.label} · gut ${r.row.gut} · ${ground}. Nothing was judged and nothing was spent.`);
     return;
   }
-  // JUDGE — the slow half. ONE Opus call for the whole round, at the moment nothing
-  // is waiting on it.
+  // PASS 1 — ROUND CLOSE. One Opus call, the whole round, whatever types are in it.
   if (mode === "judge-round") {
     const r = await gradeJudge({ dry: process.argv.includes("--dry") });
-    if (r.skipped) { console.log(`gaffer_brain: ${r.skipped}`); return; }
+    if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
     if (!r.ok) { console.log(r.say); process.exit(1); }
-    console.log(`gaffer_brain: ${r.graded} axis/axes graded · ${r.held} held · ${r.cracked} cracked${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
-    for (const s of r.dispatched) console.log(`  ${s.axis}  ${s.verdict.toUpperCase().padEnd(8)} (gut ${s.gut})  ${s.why}${s.missing.length ? `\n      missed: ${s.missing.join(" · ")}` : ""}`);
-    // A REFUSAL FROM THE OWNER IS NEVER SWALLOWED: the axis stays outstanding and
-    // says why, because a lost spoken answer is the one thing here that cannot be
-    // reproduced.
-    for (const m of r.refused) console.log(`  ${m.axis}  NOT RECORDED — rejirah refused it: ${m.error}`);
-    if (r.missed.length) console.log(`  ${r.missed.join(", ")} — the judge returned no grade for these; they stay in the queue and are judged again next round (never guessed).`);
+    console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    for (const s of r.dispatched) {
+      console.log(`  ${String(s.type).padEnd(13)} ${s.verdict.toUpperCase().padEnd(16)} (gut ${s.gut})  ${s.why}`);
+      if (s.owner_note) console.log(`      ${s.owner_note}`);
+      if (s.missing.length) console.log(`      missed: ${s.missing.join(" · ")}`);
+    }
+    for (const m of r.refused) console.log(`  ${m.ref}  NOT RECORDED — the owner refused it: ${m.error}`);
+    if (r.missed.length) console.log(`  ${r.missed.join(", ")} — no legal verdict came back for these; they stay in the queue and are judged again (never coerced).`);
+    return;
+  }
+  // PASS 2 — THE NIGHT READ. Rides the night shift's existing lane; no new scheduler.
+  if (mode === "judge-night") {
+    const r = await gradeNight({ dry: process.argv.includes("--dry") });
+    if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
+    if (!r.ok) { console.log(r.say); process.exit(1); }
+    console.log(`gaffer_brain: read ${r.read} verdict(s) across today's rounds in ONE Opus call · ${r.patterns} cross-round pattern(s) · ${r.corrections} correction(s)`);
+    for (const pt of r.row.patterns) {
+      console.log(`  [${pt.kind} → ${pt.acts_on}] ${pt.finding}`);
+      if (pt.evidence.length) console.log(`      on: ${pt.evidence.join(" · ")}`);
+    }
+    for (const c of r.row.corrections) console.log(`  CORRECTS ${c.of}: ${c.was} → ${c.should_be} — ${c.why}`);
     return;
   }
   if (mode === "queue") {
-    const out = outstandingGrades(readJournal(GRADE_QUEUE, 500));
-    if (!out.length) { console.log("gaffer_brain: nothing outstanding — every captured axis has been judged and recorded."); return; }
-    console.log(`gaffer_brain: ${out.length} captured axis/axes waiting for \`judge-round\`:`);
-    for (const it of out) console.log(`  ${it.concept} · ${it.axis} · gut ${it.gut} · ${String(it.spoken).length} chars said · captured ${it.ts.slice(11, 16)}`);
+    const out = outstandingGrades(readJournal(GRADE_QUEUE, 800));
+    if (!out.length) { console.log("gaffer_brain: nothing outstanding — every captured item has been judged and recorded."); return; }
+    console.log(`gaffer_brain: ${out.length} captured item(s) waiting for judge-round:`);
+    for (const it of out) console.log(`  ${String(it.type).padEnd(13)} ${it.label || it.ref} · gut ${it.gut} · ${String(it.spoken).length} chars said · ${it.key ? "has a key" : "no key"}`);
     return;
   }
-
   if (mode === "selftest") return selftest();
-  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <concept> <axis> --gut <word>|judge-round|queue|selftest]");
+  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <type> <ref> --gut <word>|judge-round|judge-night|queue|selftest]");
   process.exit(1);
 }
 
@@ -1274,6 +1535,7 @@ function selftest2(stub, S) {
           "^[\"']|[\"']$",                                            // strip quotes off an env value
           "[^a-z0-9_-]",                                              // capsule filename slug
           "\\.json$",                                                 // a capsule FILENAME extension
+          "^\\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\\s*=\\s*(.+)$",      // the FROZEN legacy env reader — no live caller
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -1305,127 +1567,202 @@ function selftest2(stub, S) {
           `mine:   ${mine}\n      theirs: ${theirs}`);
       }
 
-      // ── 9 · THE GRADER, IN TWO HALVES (his call, 15 Aug 2026) ────────────
-      // The whole point of the split is that CAPTURE cannot be slow and JUDGE
-      // cannot be wrong, so each half is tested for its own property.
+      // ── 9 · THE JUDGE — EIGHT VERDICT TYPES, AND ONLY ONE HAS A KEY ──────
+      // This is the finding the whole rewrite rests on, so it is asserted first and
+      // against the LIVE state files, not against a description of them.
       {
-        const WELD = "Context window matlab model ek baar mein kitne tokens dekh sakta hai. Socho ek chhoti table hai — usme utni hi plates aayengi jitni jagah hai. Nayi plate rakhni ho to purani hatani padegi.";
-        const K = { concept: "context", axis: "a", title: "Kya hai + analogy", strike: "context window kya hai?", weld: WELD };
-        const SAID = "matlab jo model ek time pe padh sakta hai uski limit, table wali baat, jagah khatam to purana nikalna padta hai";
+        const KEYED = Object.entries(VERDICT_TYPES).filter(([, t]) => t.key).map(([k]) => k);
+        assert("THE EIGHT · exactly ONE of the eight verdict types has an answer key on disk — that is why Opus is not the better option here but the only one",
+          Object.keys(VERDICT_TYPES).length === 8 && KEYED.length === 1 && KEYED[0] === "axis_weld",
+          `keyed: ${KEYED.join(",")}`);
+        assert("THE EIGHT · every type declares a CLOSED verdict set and the organ that RECORDS it — nothing here writes another organ's file",
+          Object.values(VERDICT_TYPES).every((t) => Array.isArray(t.verdicts) && t.verdicts.length >= 2 && typeof t.owner === "string" && t.asks));
+        assert("THE EIGHT · a verdict outside a type's set is refused, never coerced to the nearest legal word",
+          isVerdict("axis_weld", "held") && !isVerdict("axis_weld", "passed") && !isVerdict("tape_doubt", "held") && isVerdict("adversarial", "conceded"));
 
-        // CAPTURE — instant, and provably model-free
-        const cap = gradeCapture({ concept: "context", axis: "a", gut: "shaky", spoken: SAID }, { dry: true, answerKey: K, now: T0 });
-        assert("CAPTURE · it banks his answer BESIDE his own weld, and returns a row — no model, no network, no subprocess anywhere in this path",
-          cap.ok && cap.row.spoken === SAID && cap.row.weld === WELD && cap.row.gut === "shaky" && cap.row.kind === "capture");
-        assert("CAPTURE · THE GUT-WORD LAW is held at this door too — the third writer of the same law must give the same answer as capture.mjs and rejirah.mjs, or the loosest door becomes the real rule",
-          gradeCapture({ concept: "context", axis: "a", spoken: SAID }, { dry: true, answerKey: K }).reason === "no-gut"
-          && gradeCapture({ concept: "context", axis: "a", gut: "confident", spoken: SAID }, { dry: true, answerKey: K }).reason === "no-gut");
-        assert("CAPTURE · an EMPTY answer is refused, never banked as a crack — 'he said nothing' and 'he said the wrong thing' are different facts",
-          gradeCapture({ concept: "context", axis: "a", gut: "guessed", spoken: "" }, { dry: true, answerKey: K }).reason === "empty");
-        assert("CAPTURE · with no locked weld on disk it REFUSES rather than inventing an answer key",
-          gradeCapture({ concept: "nope", axis: "z", gut: "knew", spoken: SAID }, { dry: true, answerKey: null }).reason === "no-key-page");
+        // MATERIAL — every branch reads a REAL file, and every one is exercised.
+        const TR = { queue: [{ capsule: "tokenization", doubt_index: 0, q_verbatim: "strawberry common fruit hai, phir split kyun hota hai?" }] };
+        const EX = { concept: "hallucinations", task: "build a detector", hidden_tests: ["run it on one clean case and one hallucinations case — it must separate them", "hand him a case his detector gets WRONG"] };
+        const DR = { drills: [{ kind: "rejirah", modality: "voice", concepts: ["hallucinations"], prompt: "You chose your read. I think that's wrong. Defend it — or concede exactly where it breaks." }] };
+        const K = { concept: "context", axis: "a", title: "Kya hai", strike: "context window kya hai?", weld: "Context window matlab model ek baar mein kitne tokens dekh sakta hai." };
+        assert("MATERIAL · axis_weld is the one that carries a KEY, and it is HIS weld",
+          gradeMaterial("axis_weld", "context:a", { answerKey: K }).key === K.weld);
+        assert("MATERIAL · tape_doubt carries his OWN past confusion verbatim, and no key — 'did he dismantle it' has nothing to compare against",
+          gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR }).asked.includes("strawberry") && gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR }).key === null);
+        assert("MATERIAL · hidden_test carries the open design probe AND the task it sits on — this is the path that used to fall over on 'no key'",
+          gradeMaterial("hidden_test", "0", { examiner: EX }).asked.includes("must separate them")
+          && /THE TASK IT SITS ON/.test(gradeMaterial("hidden_test", "0", { examiner: EX }).extra || ""));
+        assert("MATERIAL · adversarial carries the drill that tells him he is wrong and asks him to defend or concede",
+          /Defend it/.test(gradeMaterial("adversarial", "0", { drills: DR }).asked));
+        assert("MATERIAL · a ref with nothing behind it returns null, so it is REFUSED at capture rather than judged against nothing",
+          gradeMaterial("tape_doubt", "nope:99", { tapeRoom: TR }) === null && gradeMaterial("hidden_test", "7", { examiner: EX }) === null);
+
+        // CAPTURE — fast, model-free, and it refuses the same things every other door does
+        const SAID = "matlab jo model ek time pe padh sakta hai uski limit hai, jagah khatam to purana nikalta hai";
+        const cap = gradeCapture({ type: "axis_weld", ref: "context:a", gut: "shaky", spoken: SAID }, { dry: true, material: gradeMaterial("axis_weld", "context:a", { answerKey: K }), now: T0 });
+        assert("CAPTURE · it banks his answer with the material beside it and returns a row — no model, no network, no subprocess in this path",
+          cap.ok && cap.row.spoken === SAID && cap.row.key === K.weld && cap.row.kind === "capture" && cap.has_key === true);
+        const capNoKey = gradeCapture({ type: "hidden_test", ref: "0", gut: "knew", spoken: "maine dono cases pe chalaya, clean wala 0.1 pe aaya aur hallucinated 0.8 pe, to separate ho gaye" }, { dry: true, material: gradeMaterial("hidden_test", "0", { examiner: EX }), now: T0 });
+        assert("CAPTURE · a KEYLESS type captures perfectly well and says so — the old lane could not even represent this",
+          capNoKey.ok && capNoKey.row.key === null && capNoKey.has_key === false);
+        assert("CAPTURE · THE GUT-WORD LAW is held at this door too — third writer of the same law, same answer as capture.mjs and rejirah.mjs",
+          gradeCapture({ type: "axis_weld", ref: "context:a", spoken: SAID }, { dry: true, material: { concept: "c", label: "l" } }).reason === "no-gut"
+          && gradeCapture({ type: "axis_weld", ref: "context:a", gut: "confident", spoken: SAID }, { dry: true, material: { concept: "c", label: "l" } }).reason === "no-gut");
+        assert("CAPTURE · an EMPTY answer is refused, never banked as a failure — 'he said nothing' and 'he said the wrong thing' are different facts",
+          gradeCapture({ type: "axis_weld", ref: "context:a", gut: "guessed", spoken: "" }, { dry: true, material: { concept: "c" } }).reason === "empty");
+        assert("CAPTURE · an unknown verdict type is refused at the door", gradeCapture({ type: "vibes", ref: "x", gut: "knew", spoken: SAID }, { dry: true }).reason === "unknown-type");
         {
           const t0 = process.hrtime.bigint();
-          for (let i = 0; i < 200; i++) gradeCapture({ concept: "context", axis: "a", gut: "knew", spoken: SAID }, { dry: true, answerKey: K });
-          assert("CAPTURE · 200 captures stay trivial — this runs in the gap between his answer and the next question, which is the ONLY latency budget in the round",
+          for (let i = 0; i < 200; i++) gradeCapture({ type: "axis_weld", ref: "context:a", gut: "knew", spoken: SAID }, { dry: true, material: { concept: "context", label: "a", key: K.weld } });
+          assert("CAPTURE · 200 captures stay trivial — this runs in the ONLY latency budget the round has",
             Number(process.hrtime.bigint() - t0) / 1e6 < 250);
         }
 
-        // THE QUEUE — append-only, settlement derived
-        const q = [cap.row, { kind: "capture", id: "x:b:1", concept: "x", axis: "b" }, { kind: "settled", of: "x:b:1" }];
-        assert("THE QUEUE · outstanding is DERIVED from settlement rows, never stored — so a crash between judging and recording loses nothing",
-          outstandingGrades(q).length === 1 && outstandingGrades(q)[0].id === cap.row.id);
+        // THE 11 AUG LAW — a dropped connection must not cost him what he defended
+        {
+          const banked = [cap.row, capNoKey.row];
+          assert("CAPTURE · THE 11 AUG LAW: the round is on disk item by item, so a connection that drops mid-round costs him NOTHING he already defended",
+            outstandingGrades(banked).length === 2
+            && outstandingGrades([...banked, { kind: "settled", of: cap.row.id }]).length === 1);
+        }
 
-        // JUDGE — one call, whole round, and every failure keeps his answer
-        const items = [{ ...cap.row }, { ...cap.row, id: "context:b:2", axis: "b", gut: "knew" }];
-        const genOK = async () => ({ ok: true, duration_ms: 4200, text: JSON.stringify({ grades: [
-          { axis: "b", verdict: "cracked", missing: ["the eviction rule"], why: "mechanism nahi aaya" },
-          { axis: "a", verdict: "held", missing: [], why: "table wali baat sahi hai" }] }) });
-        const sent = [];
-        const jr = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: (s) => { sent.push(s); return { ok: true }; }, now: T0 });
-        assert("JUDGE · ONE call grades the WHOLE round — nine axes cost one Opus call, not nine calls of anything",
-          jr.ok && jr.graded === 2 && jr.held === 1 && jr.cracked === 1);
-        assert("JUDGE · grades are matched BY AXIS, never by position — a model returning them out of order would otherwise mark the wrong axes, silently and plausibly",
-          sent.find((s) => s.axis === "a").verdict === "held" && sent.find((s) => s.axis === "b").verdict === "cracked");
-        assert("JUDGE · the verdict goes to the OWNER through its CLI — rejirah.mjs is sole writer of rejirah_log.jsonl and derives nextDue, fluency and the calibration gap from the row it writes",
-          /join\(HERE, "rejirah\.mjs"\), "grade"/.test(readFileSync(new URL(import.meta.url), "utf8"))
-          && sent.every((s) => s.gut && s.concept && s.axis));
+        // PASS 1 — one call, mixed types, matched BY ID
+        const items = [cap.row, capNoKey.row, { ...cap.row, id: "tape_doubt:tokenization:0:x", type: "tape_doubt", ref: "tokenization:0", concept: "tokenization", label: "tape-room doubt #0", key: null, gut: "knew" }];
+        const genOK = async () => ({ ok: true, text: JSON.stringify({ grades: [
+          { id: items[2].id, verdict: "broken", missing: [], why: "purana bhram saaf toda" },
+          { id: items[1].id, verdict: "passed", missing: ["the failure case"], why: "separation dikhayi" },
+          { id: items[0].id, verdict: "held", missing: [], why: "mechanism aa gaya" }] }) });
+        const cmds = [];
+        const jr = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: (c) => { cmds.push(c); return { ok: true }; }, now: T0 });
+        assert("PASS 1 · THREE DIFFERENT VERDICT TYPES graded in ONE Opus call — not three calls (this is the acceptance his spec asks for)",
+          jr.ok && jr.graded === 3 && jr.calls === 1 && jr.types.length === 3);
+        assert("PASS 1 · the keyless hidden_test really is GRADED — the old lane could not judge it at all, so this is the path that had to work",
+          jr.dispatched.find((s) => s.type === "hidden_test").verdict === "passed");
+        assert("PASS 1 · grades are matched BY ID, never by position — the reply above is deliberately in the WRONG order and every verdict still lands on its own item",
+          jr.dispatched.find((s) => s.type === "axis_weld").verdict === "held"
+          && jr.dispatched.find((s) => s.type === "tape_doubt").verdict === "broken");
+        assert("PASS 1 · each verdict is dispatched through its OWN owner's CLI — rejirah for an axis, doubtminer for a broken doubt, capture for a rep",
+          cmds.find((c) => c.organ === "rejirah.mjs") && cmds.find((c) => c.organ === "doubtminer.mjs") && cmds.find((c) => c.organ === "capture.mjs"));
+        assert("PASS 1 · …and every dispatched argv is the owner's REAL contract, not an invented one",
+          JSON.stringify(cmds.find((c) => c.organ === "rejirah.mjs").argv) === JSON.stringify(["grade", "context", "a", "held", "--gut", "shaky"])
+          && JSON.stringify(cmds.find((c) => c.organ === "doubtminer.mjs").argv) === JSON.stringify(["retire", "tokenization", "0"])
+          && cmds.find((c) => c.organ === "capture.mjs").argv.join(" ").includes("--correct true"));
+        assert("PASS 1 · a doubt that STILL STANDS is never retired — deleting it would erase the evidence he still holds it, which is the one thing the tape room is for",
+          ownerCommand({ type: "tape_doubt", ref: "tokenization:0", verdict: "standing", gut: "knew" }).organ === null);
         {
-          const partial = await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ axis: "a", verdict: "held", why: "ok" }] }) }), dispatch: () => ({ ok: true }), now: T0 });
-          assert("JUDGE · an axis the judge did not grade STAYS OUTSTANDING and is named — it is judged again next round, never guessed",
-            partial.graded === 1 && partial.missed.includes("b") && partial.outstanding === 1);
+          const bad = await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: items[0].id, verdict: "passed", why: "x" }] }) }), dispatch: () => ({ ok: true }), now: T0 });
+          assert("PASS 1 · a verdict ILLEGAL for its type is refused and the item stays outstanding — 'passed' is not a legal answer for an axis weld",
+            bad.graded === 0 && bad.missed.some((m) => m.startsWith("axis_weld")));
         }
         {
-          const refused = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: () => ({ ok: false, error: "rejirah: --gut is required" }), now: T0 });
-          assert("JUDGE · a verdict the OWNER refuses is NOT marked settled and says why — a refused axis is not a graded axis, and his spoken answer is the one thing here that cannot be reproduced",
-            refused.graded === 0 && refused.refused.length === 2 && refused.outstanding === 2);
+          const ref2 = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: () => ({ ok: false, error: "capture: --gut required" }), now: T0 });
+          assert("PASS 1 · a verdict the OWNER refuses is NOT marked settled and says why — his spoken answer is the one thing here that cannot be reproduced",
+            ref2.graded === 0 && ref2.refused.length === 3 && ref2.outstanding === 3);
         }
-        assert("JUDGE · a dead lane keeps the whole round in the queue and invents nothing",
+        assert("PASS 1 · a dead lane keeps the whole round in the queue and invents nothing",
           (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: false, error: "plan wall" }) })).reason === "lane-down");
-        assert("JUDGE · an unparseable answer keeps the round too — junk never becomes a verdict",
-          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure! here you go:" }) })).reason === "unparseable");
-        assert("JUDGE · with nothing captured it does nothing at all — no call, no spend",
+        assert("PASS 1 · an unparseable answer keeps the round too — junk never becomes a verdict",
+          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure!" }) })).reason === "unparseable");
+        assert("PASS 1 · with nothing captured it does nothing at all — no call, no spend",
           (await gradeJudge({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
 
-        // THE PROMPT — cache-ordered, and it grades the MECHANISM not the wording
+        // THE PROMPT — keyless items get HIS ground, never the model's taste
         {
-          const p = buildJudgePrompt(items);
-          assert("JUDGE PROMPT · the invariant rubric comes FIRST and his answers LAST (the same cache law every prompt in this organ obeys)",
-            p.indexOf("You are grading a spoken recall round") === 0 && p.indexOf("=== THE ROUND ===") > p.length * 0.3);
-          assert("JUDGE PROMPT · it forbids marking him down for how speech arrives — transcribed answers are broken, repetitive and unpunctuated, and none of that is an error",
-            /GRADE THE MECHANISM, NEVER THE WORDING/.test(p) && /transcribed/.test(p));
-          assert("JUDGE PROMPT · every item carries his gut-word, the question he was asked, HIS weld and what he actually said",
-            /his gut-word before answering: shaky/.test(p) && /THE QUESTION HE WAS ASKED/.test(p) && p.includes(WELD) && p.includes(SAID));
+          const p = buildJudgePrompt(items, { readJson: (f) => (String(f).includes("context") ? { mechanism: "har call pe poora folder dobara bheja jata hai", traps: ["size ko memory samajh lena"], interviewLines: ["name the statelessness first"] } : null) });
+          assert("JUDGE PROMPT · the invariant rubric comes FIRST and his answers LAST (the cache law every prompt in this organ obeys)",
+            p.indexOf("You are grading a live study round") === 0 && p.indexOf("=== THE ROUND ===") > p.length * 0.25);
+          assert("JUDGE PROMPT · it says plainly that most items have NO key, and points the judge at HIS ground instead of its own standard",
+            /ONE ITEM HAS AN ANSWER KEY AND MOST DO NOT/.test(p) && /never against your own idea of a good answer/.test(p)
+            && /HIS OWN GROUND FOR "context"/.test(p) && /har call pe poora folder/.test(p));
+          assert("JUDGE PROMPT · every type in the round declares the question it asks and its legal verdicts",
+            /axis_weld →/.test(p) && /tape_doubt →/.test(p) && /hidden_test →/.test(p) && /legal verdicts: held \| cracked/.test(p));
+          assert("JUDGE PROMPT · it forbids marking him down for how speech arrives, and forbids a guessed grade outright",
+            /GRADE THE MECHANISM, NEVER THE WORDING/.test(p) && /a missing grade is honest, a guessed one is not/.test(p));
+          assert("JUDGE PROMPT · a keyless item SAYS it has no key rather than silently looking like one that failed",
+            /NO ANSWER KEY EXISTS FOR THIS ONE/.test(p));
         }
 
-        // BILLING — his standing law, held by source
+        // ── PASS 2 · THE NIGHT READ — the pattern no single round can show ──
+        {
+          const dayRows = [
+            { kind: "settled", day: istDay(T0), type: "axis_weld", ref: "tokenization:d", concept: "tokenization", label: "axis d", gut: "knew", verdict: "cracked", missing: ["the boundary rule"], why: "d fir se toota" },
+            { kind: "settled", day: istDay(T0), type: "axis_weld", ref: "embeddings:d", concept: "embeddings", label: "axis d", gut: "knew", verdict: "cracked", missing: ["the boundary rule"], why: "wahi d" },
+          ];
+          const nightGen = async (p) => {
+            assert("PASS 2 · the night prompt carries EVERY verdict of the day plus the day's conversation, in one call",
+              /tokenization:d|axis d/.test(p) && /embeddings/.test(p) && /TODAY'S CONVERSATION/.test(p));
+            return { ok: true, text: JSON.stringify({ patterns: [{ finding: "axis d dono concepts pe toota — ye ek axis ka pattern hai, do alag ghatnaayein nahi", evidence: ["tokenization:d", "embeddings:d"], kind: "axis", acts_on: "nemesis" }], corrections: [{ of: "axis_weld:embeddings:d", was: "cracked", should_be: "held", why: "poori baat-cheet padhne pe wo defend kar chuka tha" }] }) };
+          };
+          const nr = await gradeNight({ dry: true, rows: dayRows, transcript: "CAPTAIN: axis d phir se nahi aaya", generate: nightGen, now: T0 });
+          assert("PASS 2 · it finds the CROSS-ROUND pattern by name — the same axis failing on two concepts is ONE finding, and no round-close pass can ever see it",
+            nr.ok && nr.patterns === 1 && /axis d/.test(nr.row.patterns[0].finding) && nr.row.patterns[0].kind === "axis" && nr.row.patterns[0].acts_on === "nemesis");
+          assert("PASS 2 · it may CORRECT Pass 1, and the correction is a NEW row that names the old verdict — never a rewrite, so a reader can always tell a changed mind from a right one",
+            nr.corrections === 1 && nr.row.corrections[0].was === "cracked" && nr.row.corrections[0].should_be === "held" && nr.row.pass === 2);
+          assert("PASS 2 · one verdict is not a pattern — under two it does nothing at all, and says why rather than calling a single event a trend",
+            (await gradeNight({ dry: true, rows: [dayRows[0]], generate: async () => { throw new Error("must not be called"); }, now: T0 })).skipped !== undefined);
+          assert("PASS 2 · a dead lane or a junk answer writes NOTHING — a manufactured pattern is worse than none, because he acts on it",
+            (await gradeNight({ dry: true, rows: dayRows, generate: async () => ({ ok: false, error: "wall" }), now: T0 })).reason === "lane-down"
+            && (await gradeNight({ dry: true, rows: dayRows, generate: async () => ({ ok: true, text: "hmm" }), now: T0 })).reason === "unparseable");
+        }
+
+        // BILLING + LAYERING, held by source
         {
           const src2 = readFileSync(new URL(import.meta.url), "utf8");
-          assert("JUDGE · it rides claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key",
-            /claudeGen\(p, "opus", \d+, \["--effort", "max"\]\)/.test(src2)
+          assert("BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere",
+            (src2.match(/claudeGen\(p, "opus", \d+, \["--effort", "max"\]\)/g) || []).length === 2
             && /if \(process\.env\.ANTHROPIC_API_KEY\) return refuse\(\);/.test(readFileSync(join(HERE, "claudegen.mjs"), "utf8")));
-          // Checked as CODE, never as prose, and THE NEEDLES ARE BUILT BY
-          // CONCATENATION — the house idiom (gaffer_state's "SILENCE IS FREE" check
-          // and dugout's door-slice both do it). Not decoration: this file explains
-          // the removal at length in its comments, so a whole-file search reports its
-          // own documentation as the thing it forbids; and the version that searched
-          // for the identifiers wholesale matched ITSELF, because the search string is
-          // the earliest occurrence of those names in the file. Both happened today.
-          const goneNames = ["api." + "cerebras.ai", "load" + "CerebrasKey", "CEREBRAS" + "_ENV", "CEREBRAS" + "_API_KEY"];
-          assert("CEREBRAS IS GONE, not disabled — it never once returned a verdict (402 on every model its account could list), and the frozen-engine law protects engines that RAN",
-            goneNames.every((n) => !src2.includes(n))
-            && !existsSync(join(ROOT, "setup", "INSTALL_" + "CEREBRAS.ps1")));
-          assert("…and the scrubber patterns for csk-/gsk_ STAY, because those are about the NEXT key anyone pastes and have nothing to do with this lane",
+          // LAYERING (his instruction): the Cerebras reader is FROZEN, not deleted —
+          // and frozen means NO LIVE CALLER, which is the half a comment cannot hold.
+          const liveCallers = (src2.match(/loadCerebrasKeyLegacy\(/g) || []).length;
+          assert("LAYERING · the Cerebras key reader is FROZEN as *Legacy, not deleted — and it still parses exactly as it did",
+            typeof loadCerebrasKeyLegacy === "function"
+            && loadCerebrasKeyLegacy("CEREBRAS_API_KEY=csk-abc123\n") === "csk-abc123"
+            && loadCerebrasKeyLegacy("GEMINI_API_KEY=nope\n") === null);
+          assert(`LAYERING · …and it is genuinely FROZEN: no production caller anywhere in the file (${liveCallers} reference(s), all in this selftest)`,
+            liveCallers <= 3 && !/loadCerebrasKeyLegacy/.test(src2.slice(0, src2.indexOf("function selftest()"))
+              .replace(/export function loadCerebrasKeyLegacy[\s\S]*$/, "")));
+          const goneNames = ["api." + "cerebras.ai", "INSTALL_" + "CEREBRAS.ps1"];
+          assert("LAYERING · no LIVE Cerebras lane survives anywhere — the endpoint is gone from the tree and the installer is retired",
+            goneNames.every((n) => !src2.includes(n)) && !existsSync(join(ROOT, "setup", "INSTALL_" + "CEREBRAS.ps1")));
+          assert("…and the csk-/gsk_ scrubber patterns STAY, because those are about the NEXT key anyone pastes and were never part of this lane",
             /csk-\[A-Za-z0-9\]\{20,\}/.test(readFileSync(join(ROOT, "hooks", "afferent-post.mjs"), "utf8")));
         }
       }
 
-      // ── 9b · THE LIVE CAPSULE WIRE — the answer key really comes off disk ──
-      // Here because the first version of capsuleAnswerKey read `capsule.axes[axis]`,
-      // a key no capsule has, and returned null for every concept forever while its
-      // selftest stayed green on the refusal path alone. A grader that can only prove
-      // it says no is not a tested grader. DORMANT-SAFE: capsules/ is gitignored, so a
-      // clean checkout reports this skipped rather than reddening the away-day lane.
+      // ── 9b · THE LIVE WIRE — every material branch against the REAL files ──
+      // DORMANT-SAFE: these state files are gitignored, so a clean checkout reports
+      // the check skipped rather than reddening the away-day lane.
       {
-        let names = [];
-        try { names = readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
-        if (!names.length) {
-          console.log("  ..  GRADER · LIVE CAPSULE check NOT RUN — this is a clean checkout (dressing-room/state/capsules/ is gitignored)");
+        const haveCapsule = (() => { try { return readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")); } catch { return []; } })();
+        if (!haveCapsule.length) {
+          console.log("  ..  JUDGE · LIVE check NOT RUN — clean checkout (dressing-room/state/ is gitignored)");
         } else {
-          const c = readJson(join(CAPSULE_DIR, names[0] + ".json"), {});
-          const axes = (Array.isArray(c.faultLines) ? c.faultLines : []).filter((a) => a && a.weld);
-          const k = axes.length ? capsuleAnswerKey(names[0], axes[0].axis) : null;
-          assert(`GRADER · LIVE: the answer key really comes off a locked capsule on disk (${names[0]} · ${axes.length} axis/axes with a weld)`,
-            !!k && k.weld === String(axes[0].weld).trim() && k.axis === axes[0].axis && k.weld.length > 40,
-            k ? `weld ${k.weld.length} chars` : "capsuleAnswerKey returned null");
-          assert("GRADER · LIVE: …and the key is HIS weld, never the long-form `deep` — grading a forty-second spoken answer against a four-thousand-word page fails every honest recall",
-            !!k && (!c.deep || !k.weld.includes(String(c.deep).slice(0, 200))));
-          assert("GRADER · LIVE: an axis that does not exist on that capsule still refuses, so a typo can never grade against the wrong page",
-            capsuleAnswerKey(names[0], "zzz") === null);
-          // …and the two halves really compose on live data
-          const live = gradeCapture({ concept: names[0], axis: axes[0].axis, gut: "knew", spoken: "kuch to bola hi hoga isne yahan par" }, { dry: true });
-          assert("GRADER · LIVE: CAPTURE composes with the live capsule end to end — no injected answer key anywhere in this one",
-            live.ok && live.row.weld === String(axes[0].weld).trim());
+          const name = haveCapsule[0].replace(/\.json$/, "");
+          const c = readJson(join(CAPSULE_DIR, haveCapsule[0]), {});
+          const ax = (c.faultLines || []).find((a) => a && a.weld);
+          assert(`JUDGE · LIVE: the axis key really comes off capsule.faultLines[].weld (${name})`,
+            !!ax && capsuleAnswerKey(name, ax.axis).weld === String(ax.weld).trim());
+          assert("JUDGE · LIVE: an axis that does not exist still refuses, so a typo can never grade against the wrong page",
+            capsuleAnswerKey(name, "zzz") === null);
+          const ground = capsuleGround(name);
+          assert("JUDGE · LIVE: capsuleGround gives the keyless verdicts HIS material — mechanism, traps, interview lines",
+            ground.includes("HIS OWN GROUND") && (!c.mechanism || /MECHANISM/.test(ground)) && (!(c.traps || []).length || /KNOWN TRAPS/.test(ground)));
+          const live = gradeCapture({ type: "axis_weld", ref: `${name}:${ax.axis}`, gut: "knew", spoken: "kuch to bola hi hoga isne yahan par theek se" }, { dry: true });
+          assert("JUDGE · LIVE: CAPTURE composes with the live capsule end to end — nothing injected in this one",
+            live.ok && live.row.key === String(ax.weld).trim());
+          // …and the two KEYLESS live lanes, which are the ones that used to be impossible
+          const tr = readJson(TAPE_ROOM, null), ex = readJson(EXAMINER_DRILL, null);
+          if (tr && (tr.queue || []).length) {
+            const q = tr.queue[0];
+            const m = gradeMaterial("tape_doubt", `${q.capsule}:${q.doubt_index}`);
+            assert(`JUDGE · LIVE: a tape-room doubt loads his OWN past confusion verbatim (${(tr.queue || []).length} queued) — and carries NO key, correctly`,
+              !!m && m.asked === q.q_verbatim && m.key === null);
+          }
+          if (ex && (ex.hidden_tests || []).length) {
+            const m = gradeMaterial("hidden_test", "0");
+            assert(`JUDGE · LIVE: today's examiner hidden_test loads and is judgeable with no key at all (${ex.hidden_tests.length} staged)`,
+              !!m && m.asked === ex.hidden_tests[0] && m.key === null && !!m.concept);
+          }
         }
       }
 
