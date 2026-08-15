@@ -124,6 +124,10 @@ const AFFERENT = join(STATE_DIR, "afferent.jsonl");
 const DUGOUT_DIR = join(STATE_DIR, "brain_out", "dugout");
 const CAPSULE_DIR = join(STATE_DIR, "capsules");
 const CEREBRAS_ENV = join(os.homedir(), ".cerebras", ".env");
+// the installer he runs — a module constant like every other path here, so the
+// static analyser can fold it (a path built inside a function is an Unknown, and
+// the per-organ sink ratchet caught exactly that within one run)
+const INSTALLER = join(ROOT, "setup", "INSTALL_CEREBRAS.ps1");
 const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
 
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
@@ -1272,6 +1276,30 @@ function selftest2(stub, S) {
               !!k && (!c.deep || !k.weld.includes(String(c.deep).slice(0, 200))));
             assert("GRADER · LIVE: an axis that does not exist on that capsule still refuses, so a typo can never grade against the wrong page",
               capsuleAnswerKey(names[0], "zzz") === null);
+          }
+        }
+        // ASCII ONLY — the installer's own bug scar, held by a machine so it cannot
+        // come back. `powershell` on this box is Windows PowerShell 5.1, which reads a
+        // .ps1 as ANSI unless it finds a BOM; the first version was UTF-8 with no BOM
+        // and carried em-dashes in its COMMENTS, the byte drift terminated a string,
+        // and the first thing he ever saw from it was `y/N : The term 'y/N' is not
+        // recognized`. Nothing on that line was wrong. A static parse check had passed
+        // it — because the parser got the file with the right encoding and the shell
+        // did not — which is exactly the "a test that mocks the part that breaks"
+        // shape. This checks BYTES, which no encoding can argue with.
+        {
+          const ps1 = INSTALLER;
+          if (!existsSync(INSTALLER)) {
+            assert("GRADER · the installer he actually runs is on disk", false, ps1);
+          } else {
+            const bytes = readFileSync(INSTALLER);
+            const bad = [];
+            for (let i = 0; i < bytes.length && bad.length < 4; i++) if (bytes[i] > 127) bad.push(i);
+            assert(`GRADER · INSTALL_CEREBRAS.ps1 is 7-bit ASCII throughout (${bytes.length} bytes) — Windows PowerShell 5.1 reads a .ps1 as ANSI with no BOM, and one em-dash in a COMMENT broke a string four lines later`,
+              bad.length === 0, bad.length ? `non-ASCII byte(s) at offset ${bad.join(", ")}` : "");
+            const text = bytes.toString("latin1");
+            assert("GRADER · …and it still does the three things it exists for: masked prompt, writes the env file, then proves the lane",
+              /-AsSecureString/.test(text) && /\.cerebras/.test(text) && /grade --smoke/.test(text));
           }
         }
         assert("GRADER · the environment is read before the file, so a key exported in his shell needs no dotfile at all",
