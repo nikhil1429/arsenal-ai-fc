@@ -130,6 +130,13 @@ const WHO = join(HIPPO_DIR, "who_he_is.json");
 const AFFERENT = join(STATE_DIR, "afferent.jsonl");
 const DUGOUT_DIR = join(STATE_DIR, "brain_out", "dugout");
 const CAPSULE_DIR = join(STATE_DIR, "capsules");
+// THE TWO STANDARDS THIS ORGAN JUDGES AGAINST, as module constants for the same
+// reason as every path above. Both were on disk and unread by this organ until
+// 16 Aug: `grep -c dossier scripts/gaffer_brain.mjs` returned 0 while 17 other
+// organs read the projection, and FORGE_SPEC's cold-reader bar — the declared
+// standard for doubt_quality — reached the judge exactly never.
+const DOSSIER_WEIGHTS = join(STATE_DIR, "dossier_weights.json");
+const OPPONENT_SCOUT = join(ROOT, "learning-layer", "OPPONENT_SCOUT.md");
 const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
 // the FROZEN Cerebras reader's path — a module constant so the analyser can fold it
 // (built inside the function it cost two unresolved sinks, and the ratchet said so)
@@ -816,20 +823,106 @@ const TAPE_ROOM = join(STATE_DIR, "tape_room.json");
 const EXAMINER_DRILL = join(STATE_DIR, "examiner_drill.json");
 const DRILLS = join(STATE_DIR, "drills.json");
 
-// THE EIGHT, declared once. `key` says whether a right answer exists on disk;
-// `owner` is the organ that RECORDS the verdict, because none of them may be
-// written from here. `verdicts` is a closed set — a model returning anything else
-// is discarded, never coerced into the nearest legal word.
+// THE EIGHT, declared once. Three fields, three separate questions, and keeping
+// them separate is LAW 1 of the truth layer — ONE JUDGE, ONE STANDARD, BOTH NAMED:
+//   `key`      — is there a RIGHT ANSWER on disk for an item of this type?
+//   `standard` — the DECLARED yardstick the judgement is made against. Never null:
+//                a verdict with no named standard is the thing this layer exists to
+//                abolish. See STANDARDS below for what each one quotes.
+//   `owner`    — the organ that RECORDS the verdict, because none of them may be
+//                written from here.
+// `verdicts` is a closed set — a model returning anything else is discarded, never
+// coerced into the nearest legal word.
+//
+// ⚠ `key` WAS WRONG ON FOUR OF THE EIGHT UNTIL 16 Aug 2026, and it was wrong in the
+// expensive direction: it said false where the answer was sitting on disk the whole
+// time. `doubts[].a` (26 of 26 on tokenization, 15/15 · 35/35 · 36/36 on the other
+// three), `traps[].truth`, and `interviewLines[]` are all HIS OWN prose, and all
+// three were being judged with `key: null` — i.e. the judge was asked to decide what
+// a good answer looks like on material where he had already written it down.
+// THE TWO STANDARDS DO NOT MERGE, deliberately (the work order says so in as many
+// words): recall verdicts are graded against HIS capsule, interview-facing ones
+// against the DOSSIER. `interview` carries both — his line is the key, the dossier
+// is the bar — and that is not a contradiction, it is the whole point of naming them
+// separately.
 export const VERDICT_TYPES = {
-  axis_weld: { key: true, owner: "rejirah", verdicts: ["held", "cracked"], asks: "Did the load-bearing mechanism of HIS OWN weld come back, in any words at all?" },
-  tape_doubt: { key: false, owner: "doubtminer", verdicts: ["broken", "standing"], asks: "Did he cleanly dismantle his OWN past confusion — not merely restate the right answer beside it?" },
-  hidden_test: { key: false, owner: "capture", verdicts: ["passed", "failed"], asks: "Did he actually satisfy this design probe? It is open-ended on purpose; judge the engineering, not the wording." },
-  adversarial: { key: false, owner: "capture", verdicts: ["defended", "conceded", "collapsed"], asks: "He was told his position was wrong. Did he DEFEND it on the mechanism, CONCEDE the exact place it breaks (also a win), or COLLAPSE without either?" },
-  scrimmage: { key: false, owner: "capture", verdicts: ["passed", "failed"], asks: "Under adversarial time pressure, did this probe hold?" },
-  interview: { key: false, owner: "capture", verdicts: ["interview_grade", "not_yet"], asks: "Would this answer survive a staff engineer asking it in a real loop — mechanism named, trade-off named, limit named?" },
-  trap: { key: false, owner: "capture", verdicts: ["avoided", "fell_in"], asks: "Did he fall into this KNOWN pit, the one his own capsule warns about?" },
-  doubt_quality: { key: false, owner: "none", verdicts: ["cold_readable", "not_cold_readable"], asks: "FORGE_SPEC Gate 1/2: would a cold reader six months from now understand this doubt without the conversation around it?" },
+  axis_weld: { key: true, standard: "capsule", owner: "rejirah", verdicts: ["held", "cracked"], asks: "Did the load-bearing mechanism of HIS OWN weld come back, in any words at all?" },
+  tape_doubt: { key: true, standard: "capsule", owner: "doubtminer", verdicts: ["broken", "standing"], asks: "Did he cleanly dismantle his OWN past confusion — not merely restate the right answer beside it?" },
+  hidden_test: { key: false, standard: "dossier", owner: "capture", verdicts: ["passed", "failed"], asks: "Did he actually satisfy this design probe? It is open-ended on purpose; judge the engineering, not the wording." },
+  adversarial: { key: false, standard: "dossier", owner: "capture", verdicts: ["defended", "conceded", "collapsed"], asks: "He was told his position was wrong. Did he DEFEND it on the mechanism, CONCEDE the exact place it breaks (also a win), or COLLAPSE without either?" },
+  scrimmage: { key: false, standard: "dossier", owner: "capture", verdicts: ["passed", "failed"], asks: "Under adversarial time pressure, did this probe hold?" },
+  interview: { key: true, standard: "dossier", owner: "capture", verdicts: ["interview_grade", "not_yet"], asks: "Would this answer survive a staff engineer asking it in a real loop — mechanism named, trade-off named, limit named?" },
+  trap: { key: true, standard: "capsule", owner: "capture", verdicts: ["avoided", "fell_in"], asks: "Did he fall into this KNOWN pit, the one his own capsule warns about?" },
+  doubt_quality: { key: false, standard: "cold_reader", owner: "none", verdicts: ["cold_readable", "not_cold_readable"], asks: "FORGE_SPEC Gate 1/2: would a cold reader six months from now understand this doubt without the conversation around it?" },
 };
+export const STANDARD_NAMES = ["capsule", "dossier", "cold_reader"];
+
+// ── THE STANDARDS, QUOTED FROM THEIR OWN SOURCE ──────────────────────────────
+// Every one of these is read from the file that OWNS it rather than restated here,
+// because a standard copied into code is a standard that rots the first time he
+// edits the doc — the failure this repo has paid for in prose 954 times. The
+// DOSSIER's weights come from its live projection, its red-flags from the doc the
+// projection itself names as source of truth (`_source.file`), and the cold-reader
+// bar from FORGE_SPEC, which is final on it.
+//
+// A SOURCE THAT DOES NOT PARSE SAYS SO, LOUDLY, IN THE PROMPT. It does not return
+// an empty string: an empty standard reads to a judge exactly like a permissive one,
+// and "he wrote no traps for himself" is precisely the lie the bug below was telling.
+const SPEC_FILE = join(ROOT, "learning-layer", "FORGE_SPEC.md");
+
+function sectionOf(text, startRe, stopRe = /^#{2,3} /m) {
+  const s = String(text || "");
+  const m = startRe.exec(s);
+  if (!m) return "";
+  const rest = s.slice(m.index + m[0].length);
+  const stop = stopRe.exec(rest);
+  return (m[0] + (stop ? rest.slice(0, stop.index) : rest)).trim();
+}
+
+// The §7 table's first column is "what NOT to become"; the second maps it onto his
+// own named risk. Both ride, because the red-flag alone is generic interview advice
+// and the pairing is what makes it about him.
+// THE HEADER ROW IS FOUND BY STRUCTURE, NEVER BY ITS WORDS. An earlier pass here
+// dropped the header with `/Red flag/i` — which is a regex testing English prose in
+// a document, exactly the shape his VOCAB-AGNOSTIC ruling forbids, and it would also
+// have silently started emitting the column titles as a red-flag the day he retitles
+// that column. A markdown table's header is whatever sits above its `|---|` divider;
+// that is a fact about the format, not about the wording.
+function dossierRedFlags(deps = {}) {
+  const md = deps.scoutMd !== undefined ? deps.scoutMd : readTextFile(OPPONENT_SCOUT);
+  const lines = sectionOf(md, /^## 7\. .*$/m).split("\n").map((l) => l.trim()).filter((l) => l.startsWith("|"));
+  const divider = lines.findIndex((l) => /^\|[\s|:-]+\|$/.test(l));
+  const rows = (divider < 0 ? [] : lines.slice(divider + 1))
+    .map((l) => l.split("|").map((c) => c.trim()).filter(Boolean))
+    .filter((c) => c.length >= 2)
+    .map((c) => `  · ${c[0].replace(/\*\*/g, "")}  →  HIS RISK: ${c[1].replace(/\*\*/g, "")}`);
+  return rows.length ? rows.join("\n") : null;
+}
+
+export function standardBlock(name, deps = {}) {
+  if (name === "capsule") {
+    return `THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE. The answer key given with the item is prose HE wrote and locked; it is authoritative and your own view of the topic is not. Grade whether the load-bearing mechanism came back, in ANY words — never whether he matched the phrasing.`;
+  }
+  if (name === "cold_reader") {
+    const sec = sectionOf(deps.specMd !== undefined ? deps.specMd : readTextFile(SPEC_FILE), /^### COLD-READER STANDARD.*$/m);
+    return sec
+      ? `THE STANDARD FOR THIS TYPE: THE COLD-READER STANDARD, quoted verbatim from learning-layer/FORGE_SPEC.md §3, which is final on it. Judge the doubt against THIS bar and nothing else:\n${clip(sec, 4000)}`
+      : `THE STANDARD FOR THIS TYPE: the COLD-READER STANDARD — AND IT COULD NOT BE READ off learning-layer/FORGE_SPEC.md. Do NOT substitute your own quality bar: return no grade for doubt_quality items and say the standard was unavailable.`;
+  }
+  if (name === "dossier") {
+    const d = deps.dossier !== undefined ? deps.dossier : readJson(DOSSIER_WEIGHTS, null);
+    const rounds = ((d && d.rounds) || []).map((r) => `  · ${r.label} — ${r.minutes} min, weight ${r.weight}`).join("\n");
+    const flags = dossierRedFlags(deps);
+    if (!rounds && !flags) {
+      return `THE STANDARD FOR THIS TYPE: THE DOSSIER — AND IT COULD NOT BE READ, neither half (dressing-room/state/dossier_weights.json nor learning-layer/OPPONENT_SCOUT.md). Do NOT invent an interview bar: return no grade for these items and say the standard was unavailable.`;
+    }
+    return `THE STANDARD FOR THIS TYPE: THE DOSSIER — the real 4-hour onsite he is training for, distilled from candidate-reported loops (learning-layer/OPPONENT_SCOUT.md; live projection dressing-room/state/dossier_weights.json). Judge as that panel would, not as a teacher would.
+${rounds ? `THE ROUNDS AND WHAT THEY ARE WORTH (§1 — weight is how much of the loop rides on it):\n${rounds}` : "  (the round weights could not be read — do not weight, and say so)"}
+${flags ? `WHAT SINKS A CANDIDATE (§7 red-flags — each one already mapped onto his own risk):\n${flags}` : "  (the red-flags could not be read — do not invent them, and say so)"}
+THE BAR: mechanism named · trade-off named · limit named · and a claim about reliability backed by how it was MEASURED, never by "the prompt is good".`;
+  }
+  return "";
+}
 export const isVerdict = (type, v) => !!VERDICT_TYPES[type] && VERDICT_TYPES[type].verdicts.includes(String(v || "").trim().toLowerCase());
 
 // ONE DOOR TO A CAPSULE, ONE DOOR TO A DAY. Three call sites read a capsule and two
@@ -837,7 +930,13 @@ export const isVerdict = (type, v) => !!VERDICT_TYPES[type] && VERDICT_TYPES[typ
 // Unknown to xray and cost this organ four sinks the moment it landed (the per-organ
 // ratchet caught it in the next run: 11 -> 15). Same lesson watchman.mjs paid for
 // this morning: a path assembled in a function is invisible in the static graph.
+// `deps.capsule` short-circuits the read so the four branches that need a capsule
+// are all injectable through ONE door (16 Aug 2026). Before this only
+// capsuleAnswerKey took an injection, and it took its own — which is why the
+// tape_doubt, trap and interview branches had no hermetic test at all, and why the
+// missing keys below could sit there for a full commit without anything going red.
 function readCapsule(concept, deps = {}) {
+  if (deps.capsule !== undefined) return deps.capsule;
   const read = deps.readJson || readJson;
   return read(join(CAPSULE_DIR, String(concept).toLowerCase().replace(/[^a-z0-9_-]/g, "") + ".json"), null);
 }
@@ -865,42 +964,125 @@ export function capsuleAnswerKey(concept, axis, deps = {}) {
   return weld ? { concept, axis: a.axis, title: a.title || null, strike: a.strike || null, weld: clip(weld, 4000) } : null;
 }
 
+// THE SEAL — the judge is NEVER shown the answer as part of the question.
+// This is not defensive coding, it is the repair of a shipped bug: on 15 Aug the
+// trap branch below did `JSON.stringify(item)` into `asked`, which put the trap's
+// own `truth` inside the question with `key: null`. Every trap verdict produced
+// that way was meaningless — the model was marking an answer it had just been
+// handed. A leak is refused at the MATERIAL door rather than caught downstream,
+// because by the time a prompt is built the item has already been queued against
+// his name.
+//
+// ⚠ THE TEST IS WHOLE-KEY CONTAINMENT, AND THE FIRST VERSION OF IT WAS WRONG.
+// It compared the key's first 40 characters, and MEASURED ON HIS LIVE FILES that
+// refused a real doubt — tokenization:19, "BPE ek round mein kya karti — …ek saath
+// count karke sabse frequent EK merge, YA ek-ek letter pick karke…". A two-option
+// question necessarily contains one of its own options; FORGE_SPEC's own ✅ example
+// for the FRAGMENT pattern is exactly that shape, so the standard ASKS for questions
+// this guard was refusing.
+//
+// The measurement that settled it, over all 188 live keyed refs on the four locked
+// capsules (longest common contiguous run between `asked` and `key`):
+//     legitimate overlap — max 52 chars (tokenization:19), median 10
+//     shortest WHOLE key the shipped bug could leak — trap truth 53, doubt answer 21
+// The two ranges OVERLAP, so no contiguous-run threshold can separate a leak from a
+// legitimate two-option question. There is no number to tune here and inventing one
+// would trade a loud bug for a quiet one — it would start silently dropping his real
+// doubts out of the queue, which is worse than the leak it replaced, because a
+// refused item looks exactly like an item nobody asked.
+// Whole-key containment has no such ambiguity: a question that contains the ENTIRE
+// answer verbatim is a leak at any length, and that is precisely the shape
+// JSON.stringify produced.
+function sealed(mat) {
+  if (!mat || !mat.key || !mat.asked) return mat;
+  const norm = (s) => String(s).toLowerCase().replace(/\s+/g, " ").trim();
+  return norm(mat.asked).includes(norm(mat.key)) ? null : mat;
+}
+
 // gradeMaterial — WHAT the judge is given for one captured item. Every branch reads
 // a real file and returns null when it cannot find the thing, so a probe with no
 // material is REFUSED at capture rather than judged against nothing.
+//
+// FOUR OF THESE BRANCHES HANDED BACK `key: null` WHILE THE ANSWER SAT ON DISK
+// (repaired 16 Aug 2026, the truth layer's BLOCK 0). Verified live on all four
+// locked capsules before the change: `doubts[].a` present on 112 of 112 rows across
+// tokenization · embeddings · inference · context; `traps[].truth` on every trap;
+// `interviewLines[]` a plain string array. None of it reached the judge.
 export function gradeMaterial(type, ref, deps = {}) {
   const read = deps.readJson || readJson;
+  const std = (VERDICT_TYPES[type] || {}).standard || null;
   if (type === "axis_weld") {
     const [concept, axis] = String(ref).split(":");
     const k = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
-    return k ? { concept, label: `axis ${k.axis}${k.title ? ` (${k.title})` : ""}`, asked: k.strike, key: k.weld } : null;
+    return k ? sealed({ concept, label: `axis ${k.axis}${k.title ? ` (${k.title})` : ""}`, asked: k.strike, key: k.weld, standard: std }) : null;
   }
   if (type === "tape_doubt") {
+    // THE QUESTION IS THE TAPE ROOM'S, THE ANSWER IS THE CAPSULE'S. The queue row
+    // carries `q_verbatim` and a `doubt_index` pointing INTO the capsule — and the
+    // answer this whole type is graded against, `doubts[idx].a`, was one array
+    // lookup away and never taken. `asked` stays q_verbatim only: the row has no
+    // other field and must never grow one, because the doubt's answer living beside
+    // the doubt's question is the trap branch's bug in a different coat.
     const [capsule, idxRaw] = String(ref).split(":");
     const idx = Number(idxRaw);
     const tr = deps.tapeRoom !== undefined ? deps.tapeRoom : read(TAPE_ROOM, null);
     const row = ((tr && tr.queue) || []).find((q) => q && q.capsule === capsule && Number(q.doubt_index) === idx);
-    return row ? { concept: capsule, label: `tape-room doubt #${idx}`, asked: row.q_verbatim, key: null } : null;
+    if (!row) return null;
+    const c = readCapsule(capsule, deps);
+    const d = (c && Array.isArray(c.doubts) ? c.doubts : [])[idx];
+    const a = d && typeof d.a === "string" ? d.a.trim() : "";
+    return sealed({ concept: capsule, label: `tape-room doubt #${idx}`, asked: row.q_verbatim, key: a ? clip(a, 4000) : null, standard: std });
   }
   if (type === "hidden_test") {
     const ex = deps.examiner !== undefined ? deps.examiner : read(EXAMINER_DRILL, null);
     const tests = (ex && ex.hidden_tests) || [];
     const t = tests[Number(ref)];
-    return t ? { concept: (ex && ex.concept) || null, label: `hidden test #${ref}`, asked: t, key: null, extra: ex && ex.task ? `THE TASK IT SITS ON: ${ex.task}` : null } : null;
+    return t ? { concept: (ex && ex.concept) || null, label: `hidden test #${ref}`, asked: t, key: null, standard: std, extra: ex && ex.task ? `THE TASK IT SITS ON: ${ex.task}` : null } : null;
   }
   if (type === "adversarial" || type === "scrimmage") {
     const dr = deps.drills !== undefined ? deps.drills : read(DRILLS, null);
     const d = ((dr && dr.drills) || [])[Number(ref)];
-    return d ? { concept: (d.concepts || [])[0] || null, label: `${d.kind || "drill"} (${d.modality || "?"})`, asked: d.prompt, key: null } : null;
+    return d ? { concept: (d.concepts || [])[0] || null, label: `${d.kind || "drill"} (${d.modality || "?"})`, asked: d.prompt, key: null, standard: std } : null;
   }
-  if (type === "interview" || type === "trap") {
+  if (type === "trap") {
+    // THE BAIT IS THE QUESTION, THE TRUTH IS THE KEY, AND `wrong` IS NEITHER —
+    // it is his note to himself about WHY the bait is tempting, so it belongs on
+    // the judge's side, never in the ask.
     const [concept, idxRaw] = String(ref).split(":");
     const c = readCapsule(concept, deps);
-    const list = c ? (type === "interview" ? c.interviewLines : c.traps) || [] : [];
-    const item = list[Number(idxRaw)];
-    return item ? { concept, label: `${type} #${idxRaw}`, asked: typeof item === "string" ? item : (item.line || item.trap || JSON.stringify(item)), key: null } : null;
+    const t = (c && Array.isArray(c.traps) ? c.traps : [])[Number(idxRaw)];
+    if (!t) return null;
+    const bait = typeof t === "string" ? t : String(t.bait || "").trim();
+    const truth = typeof t === "string" ? "" : String(t.truth || "").trim();
+    const wrong = typeof t === "string" ? "" : String(t.wrong || "").trim();
+    if (!bait) return null;
+    return sealed({
+      concept, label: `trap #${idxRaw}`, asked: bait,
+      key: truth ? clip(truth, 4000) : null, standard: std,
+      extra: wrong ? `WHY THE BAIT IS TEMPTING, in his own words: ${clip(wrong, 400)}` : null,
+    });
   }
-  if (type === "doubt_quality") return { concept: String(ref).split(":")[0] || null, label: "a new doubt he just wrote", asked: null, key: null };
+  if (type === "interview") {
+    // THE INDEX SELECTS THE BAR, NOT THE QUESTION. His interviewLines are ANSWERS,
+    // so showing one as `asked` was the trap leak again — the item handed the model
+    // the very sentence it was grading. The probe is therefore built from the
+    // concept and the DOSSIER's grammar, and his other lines ride as context so an
+    // answer that reaches a DIFFERENT line of his own is never marked as a miss.
+    const [concept, idxRaw] = String(ref).split(":");
+    const c = readCapsule(concept, deps);
+    const lines = (c && Array.isArray(c.interviewLines) ? c.interviewLines : [])
+      .map((l) => (typeof l === "string" ? l : String((l && l.line) || ""))).map((s) => s.trim()).filter(Boolean);
+    const line = lines[Number(idxRaw)];
+    if (!line) return null;
+    const others = lines.filter((_, i) => i !== Number(idxRaw)).slice(0, 6);
+    return sealed({
+      concept, label: `interview line #${idxRaw}`,
+      asked: `A staff engineer asks him about "${concept}" in a real loop. He answers from memory, out loud, with no notes: name the mechanism, the trade-off, and the limit.`,
+      key: clip(line, 4000), standard: std,
+      extra: others.length ? `HIS OTHER INTERVIEW-GRADE LINES FOR THIS CONCEPT — an answer that reaches ANY of these is not a miss:\n${others.map((l) => `  · ${clip(l, 300)}`).join("\n")}` : null,
+    });
+  }
+  if (type === "doubt_quality") return { concept: String(ref).split(":")[0] || null, label: "a new doubt he just wrote", asked: null, key: null, standard: std };
   return null;
 }
 
@@ -912,7 +1094,26 @@ export function capsuleGround(concept, deps = {}) {
   if (!c) return "";
   const L = [];
   if (c.mechanism) L.push(`MECHANISM (his own): ${clip(c.mechanism, 900)}`);
-  if (Array.isArray(c.traps) && c.traps.length) L.push(`KNOWN TRAPS he wrote for himself: ${c.traps.map((t) => (typeof t === "string" ? t : t.trap || "")).filter(Boolean).slice(0, 7).join(" · ")}`);
+  // ⚠ THE FIFTEENTH INSTANCE OF THE SAME DISEASE, found 16 Aug 2026 while wiring
+  // BLOCK 0 and worth more than the branch it sits in. This read `t.trap` — a field
+  // NO CAPSULE HAS. The real shape is `{bait, wrong, truth}` (verified on all four
+  // locked capsules). So the map produced an array of empty strings, `filter(Boolean)`
+  // emptied it, and the line rendered as the bare header
+  //     "KNOWN TRAPS he wrote for himself: "
+  // in every ground block this organ has ever built. Not absent — WORSE than absent:
+  // a judge reading it is told, in his own capsule's voice, that he wrote no traps
+  // for himself. Same class as capsuleAnswerKey's `capsule.axes[axis]`, one function
+  // over, and it survived that repair because nothing asserted the CONTENT of a
+  // ground block, only that one could be built.
+  // THE TRUTH DELIBERATELY DOES NOT RIDE HERE. A round is judged in ONE prompt with
+  // ONE shared ground, so a trap's `truth` in the ground is that trap item's answer
+  // key leaking back in by the side door — the exact bug BLOCK 0 exists to close.
+  // The pit and why it tempts him are ground; the way out is a key, and keys travel
+  // per item.
+  const traps = (Array.isArray(c.traps) ? c.traps : [])
+    .map((t) => (typeof t === "string" ? t : [String((t && t.bait) || "").trim(), String((t && t.wrong) || "").trim()].filter(Boolean).join(" — ")))
+    .map((s) => s.trim()).filter(Boolean).slice(0, 7);
+  if (traps.length) L.push(`KNOWN PITS he wrote for himself (the bait, and why it tempts him — the way OUT is deliberately not here):\n${traps.map((t) => `  · ${clip(t, 300)}`).join("\n")}`);
   if (Array.isArray(c.interviewLines) && c.interviewLines.length) L.push(`WHAT HE CALLS INTERVIEW-GRADE here: ${c.interviewLines.map((l) => (typeof l === "string" ? l : l.line || "")).filter(Boolean).slice(0, 4).join(" · ")}`);
   return L.length ? `\nHIS OWN GROUND FOR "${concept}" (judge against THIS, never against your own idea of a good answer):\n${L.join("\n")}` : "";
 }
@@ -939,7 +1140,12 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     type, ref, concept: mat.concept, label: mat.label,
     gut: word,
     asked: mat.asked ? clip(mat.asked, 1200) : null,
-    key: mat.key ? clip(mat.key, 4000) : null,     // null for seven of the eight, and that is the point
+    // THE STANDARD IS ON THE ROW, not only in the prompt — LAW 1 of the truth layer
+    // says every judgement about him names the yardstick it was made against, and a
+    // yardstick that exists only inside a prompt string is unreadable six months from
+    // now, which is exactly when someone will ask why a verdict said what it said.
+    standard: mat.standard || null,
+    key: mat.key ? clip(mat.key, 4000) : null,     // now non-null for four of the eight — see VERDICT_TYPES
     extra: mat.extra || null,
     spoken: clip(said, 4000),
   };
@@ -965,10 +1171,12 @@ export function buildJudgePrompt(items, deps = {}) {
 
 GRADE THE MECHANISM, NEVER THE WORDING. Speech is transcribed, so it arrives broken, repetitive and unpunctuated — none of that is an error, and none of it is evidence about what he knows. He is not reciting; he is reconstructing.
 
-ONE ITEM HAS AN ANSWER KEY AND MOST DO NOT, DELIBERATELY. Where a key is given, it is prose HE wrote himself and it is authoritative. Where there is none, judge against HIS OWN GROUND below — his mechanism, his traps, his interview lines — never against your own idea of a good answer. If his ground does not settle it, say so in "why" rather than inventing a standard.
+SOME ITEMS CARRY AN ANSWER KEY AND SOME DO NOT, DELIBERATELY. Where a key is given, it is prose HE wrote himself and it is authoritative — your own view of the topic is not. Where there is none, judge against the DECLARED STANDARD for that type and against HIS OWN GROUND below — his mechanism, his pits, his interview lines. If neither settles it, say so in "why" rather than inventing a standard.
 
-THE VERDICT TYPES IN THIS ROUND, and the question each one asks:
-${types.map((t) => `  ${t} → ${VERDICT_TYPES[t].asks}\n      legal verdicts: ${VERDICT_TYPES[t].verdicts.join(" | ")}`).join("\n")}
+THE VERDICT TYPES IN THIS ROUND, the question each one asks, and the standard it is judged against:
+${types.map((t) => `  ${t} → ${VERDICT_TYPES[t].asks}\n      legal verdicts: ${VERDICT_TYPES[t].verdicts.join(" | ")}\n      standard: ${VERDICT_TYPES[t].standard}${VERDICT_TYPES[t].key ? " · an answer key of his own rides with each item" : " · no answer key exists for this type"}`).join("\n")}
+
+${[...new Set(types.map((t) => VERDICT_TYPES[t].standard))].map((s) => standardBlock(s, deps)).filter(Boolean).join("\n\n")}
 ${grounds}
 
 Return STRICT JSON, no fences, no prose outside it:
@@ -1536,6 +1744,18 @@ function selftest2(stub, S) {
           "[^a-z0-9_-]",                                              // capsule filename slug
           "\\.json$",                                                 // a capsule FILENAME extension
           "^\\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\\s*=\\s*(.+)$",      // the FROZEN legacy env reader — no live caller
+          // ── added 16 Aug 2026 with BLOCK 0, deliberately and in the same commit ──
+          // The two STANDARDS are quoted from the documents that own them rather than
+          // restated in code, so this organ now parses markdown STRUCTURE: a heading,
+          // two section anchors, a table divider, and bold markers. Every one of them
+          // is a fact about the file FORMAT — none can test his phrasing, which is
+          // what the ruling is about. The header row of the §7 table is found by its
+          // divider rather than by its column title for exactly this reason.
+          "^#{2,3} ",                                                 // any markdown heading — where a section stops
+          "^## 7\\. .*$",                                             // OPPONENT_SCOUT §7, the red-flags table
+          "^### COLD-READER STANDARD.*$",                             // FORGE_SPEC §3, the doubt-quality bar
+          "^\\|[\\s|:-]+\\|$",                                        // a markdown table's divider row
+          "\\*\\*",                                                   // bold markers, stripped out of a quoted cell
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -1567,16 +1787,33 @@ function selftest2(stub, S) {
           `mine:   ${mine}\n      theirs: ${theirs}`);
       }
 
-      // ── 9 · THE JUDGE — EIGHT VERDICT TYPES, AND ONLY ONE HAS A KEY ──────
-      // This is the finding the whole rewrite rests on, so it is asserted first and
-      // against the LIVE state files, not against a description of them.
+      // ── 9 · THE JUDGE — EIGHT VERDICT TYPES, FOUR WITH A KEY ─────────────
+      // ⚠ THIS ASSERTION USED TO PIN THE OPPOSITE, AND IT WAS PINNING A DEFECT.
+      // Until 16 Aug 2026 it read "exactly ONE of the eight has an answer key",
+      // green, while `doubts[].a` · `traps[].truth` · `interviewLines[]` sat on disk
+      // on all four locked capsules and were passed to the judge as `key: null`. A
+      // test can only ever hold the claim it was written to hold; this one held
+      // "one", so the day someone found the other three it was the test that had to
+      // change. The claim now is the one worth holding: whatever `VERDICT_TYPES`
+      // DECLARES keyed must actually arrive with a key, on his real files.
       {
-        const KEYED = Object.entries(VERDICT_TYPES).filter(([, t]) => t.key).map(([k]) => k);
-        assert("THE EIGHT · exactly ONE of the eight verdict types has an answer key on disk — that is why Opus is not the better option here but the only one",
-          Object.keys(VERDICT_TYPES).length === 8 && KEYED.length === 1 && KEYED[0] === "axis_weld",
+        const KEYED = Object.entries(VERDICT_TYPES).filter(([, t]) => t.key).map(([k]) => k).sort();
+        assert("THE EIGHT · four of the eight have an answer key of his own on disk — and the other four are keyless because nothing is written, not because nobody looked",
+          Object.keys(VERDICT_TYPES).length === 8
+          && KEYED.join(",") === "axis_weld,interview,tape_doubt,trap",
           `keyed: ${KEYED.join(",")}`);
         assert("THE EIGHT · every type declares a CLOSED verdict set and the organ that RECORDS it — nothing here writes another organ's file",
           Object.values(VERDICT_TYPES).every((t) => Array.isArray(t.verdicts) && t.verdicts.length >= 2 && typeof t.owner === "string" && t.asks));
+        // LAW 1 of the truth layer: one judge, one standard, BOTH NAMED. A type with
+        // no declared standard is a judgement made against whatever the model felt
+        // like that day, which is what this whole layer exists to end.
+        assert("THE EIGHT · every type NAMES the standard it is judged against — no verdict is made against an unnamed yardstick",
+          Object.values(VERDICT_TYPES).every((t) => STANDARD_NAMES.includes(t.standard)),
+          Object.entries(VERDICT_TYPES).map(([k, t]) => `${k}:${t.standard}`).join(" "));
+        assert("THE EIGHT · the two standards do NOT merge — recall rides his capsule, interview-facing rides the DOSSIER, and that asymmetry is deliberate",
+          VERDICT_TYPES.axis_weld.standard === "capsule" && VERDICT_TYPES.tape_doubt.standard === "capsule"
+          && VERDICT_TYPES.interview.standard === "dossier" && VERDICT_TYPES.scrimmage.standard === "dossier"
+          && VERDICT_TYPES.doubt_quality.standard === "cold_reader");
         assert("THE EIGHT · a verdict outside a type's set is refused, never coerced to the nearest legal word",
           isVerdict("axis_weld", "held") && !isVerdict("axis_weld", "passed") && !isVerdict("tape_doubt", "held") && isVerdict("adversarial", "conceded"));
 
@@ -1587,15 +1824,111 @@ function selftest2(stub, S) {
         const K = { concept: "context", axis: "a", title: "Kya hai", strike: "context window kya hai?", weld: "Context window matlab model ek baar mein kitne tokens dekh sakta hai." };
         assert("MATERIAL · axis_weld is the one that carries a KEY, and it is HIS weld",
           gradeMaterial("axis_weld", "context:a", { answerKey: K }).key === K.weld);
-        assert("MATERIAL · tape_doubt carries his OWN past confusion verbatim, and no key — 'did he dismantle it' has nothing to compare against",
-          gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR }).asked.includes("strawberry") && gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR }).key === null);
+        // THE DOUBT'S ANSWER WAS ONE ARRAY LOOKUP AWAY AND NEVER TAKEN. The queue row
+        // carries the question and a doubt_index; the capsule carries `a`. Injected
+        // here so the branch is exercised without live files; the live-data assertion
+        // below walks all 112 of his real rows.
+        const CAP_D = { doubts: [{ q: "strawberry common fruit hai, phir split kyun hota hai?", a: "common-FRUIT =/= common-STRING. Tokenizer ko meaning nahi, string-frequency dikhti." }] };
+        assert("MATERIAL · tape_doubt carries his OWN past confusion verbatim, AND the answer he wrote for it — that key was on disk the whole time",
+          gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR, capsule: CAP_D }).asked.includes("strawberry")
+          && gradeMaterial("tape_doubt", "tokenization:0", { tapeRoom: TR, capsule: CAP_D }).key === CAP_D.doubts[0].a);
         assert("MATERIAL · hidden_test carries the open design probe AND the task it sits on — this is the path that used to fall over on 'no key'",
           gradeMaterial("hidden_test", "0", { examiner: EX }).asked.includes("must separate them")
           && /THE TASK IT SITS ON/.test(gradeMaterial("hidden_test", "0", { examiner: EX }).extra || ""));
         assert("MATERIAL · adversarial carries the drill that tells him he is wrong and asks him to defend or concede",
           /Defend it/.test(gradeMaterial("adversarial", "0", { drills: DR }).asked));
         assert("MATERIAL · a ref with nothing behind it returns null, so it is REFUSED at capture rather than judged against nothing",
-          gradeMaterial("tape_doubt", "nope:99", { tapeRoom: TR }) === null && gradeMaterial("hidden_test", "7", { examiner: EX }) === null);
+          gradeMaterial("tape_doubt", "nope:99", { tapeRoom: TR, capsule: CAP_D }) === null && gradeMaterial("hidden_test", "7", { examiner: EX }) === null);
+
+        // ── THE LEAK, AND THE SHAPE THAT CAUSED IT (BLOCK 0, 16 Aug 2026) ────
+        // The 15 Aug trap branch did `JSON.stringify(item)` into `asked`, so the
+        // trap's own `truth` was inside the question with `key: null`. The judge was
+        // marking an answer it had just been handed, and every trap verdict produced
+        // that way was meaningless. Asserted on the three things that were wrong:
+        // the ask is the BAIT alone, the key is the TRUTH, and neither `truth` nor
+        // `wrong` may appear in what he is shown.
+        const CAP_T = { traps: [{ bait: "Subword ka primary faayda = ek tukde se bahut naye words bana sakte.", wrong: "Reuse ek bonus hai, headline nahi.", truth: "Primary = OOV solve + vocab kaabu." }] };
+        const mt = gradeMaterial("trap", "tokenization:0", { capsule: CAP_T });
+        assert("MATERIAL · trap — the BAIT is the question and the TRUTH is the key, which is the exact inversion of what shipped on 15 Aug",
+          mt.asked === CAP_T.traps[0].bait && mt.key === CAP_T.traps[0].truth);
+        assert("MATERIAL · trap — neither the truth nor the 'wrong' note appears in what he is shown; `wrong` rides the judge's side as WHY the bait tempts him",
+          !mt.asked.includes("OOV") && !mt.asked.includes("bonus") && /WHY THE BAIT IS TEMPTING/.test(mt.extra || "") && mt.extra.includes("bonus"));
+        // THE SEAL, driven through the REAL door rather than restated: a fixture
+        // whose bait already contains its own truth must be refused outright.
+        assert("MATERIAL · THE SEAL — material whose question contains the whole answer is REFUSED, not queued against his name",
+          gradeMaterial("trap", "x:0", { capsule: { traps: [{ bait: "kya subword ka faayda yeh hai: Primary = OOV solve + vocab kaabu.", truth: "Primary = OOV solve + vocab kaabu." }] } }) === null);
+        // …and the measured false positive it must NOT fire on: a two-option question
+        // necessarily quotes one of its options, and FORGE_SPEC's own ✅ example for
+        // the FRAGMENT pattern is exactly that shape. Measured on his live files: the
+        // longest legitimate overlap is 52 chars, the shortest whole key is 21, so the
+        // ranges overlap and only whole-key containment can tell them apart.
+        assert("MATERIAL · THE SEAL does NOT bite a two-option question that quotes one of its own options — the standard ASKS for those",
+          !!gradeMaterial("tape_doubt", "t:0", {
+            tapeRoom: { queue: [{ capsule: "t", doubt_index: 0, q_verbatim: "BPE ek round mein saare pairs ek saath count karti, ya ek-ek letter pick karke?" }] },
+            capsule: { doubts: [{ a: "Saare pairs ek saath count → sabse frequent EK merge → repeat → freeze." }] },
+          }));
+
+        // ── interview — the index selects the BAR, never the question ────────
+        const CAP_I = { interviewLines: ["Tokenization is the bridge: text to vocabulary pieces, each with an ID.", "Subword beats word-level, which explodes the vocabulary."] };
+        const mi = gradeMaterial("interview", "tokenization:0", { capsule: CAP_I });
+        assert("MATERIAL · interview — his own line is the KEY and is never shown as the question; showing it was the trap leak in a second coat",
+          mi.key === CAP_I.interviewLines[0] && !mi.asked.includes("bridge") && /staff engineer/.test(mi.asked));
+        assert("MATERIAL · interview — his OTHER lines ride as context, so an answer that reaches a different line of his own is not marked a miss",
+          (mi.extra || "").includes("Subword beats word-level"));
+
+        // ── ACCEPTANCE 3 · A DECLARED KEY MUST ACTUALLY ARRIVE ───────────────
+        // The check the work order asks for, driven through the real door on every
+        // branch: if VERDICT_TYPES says a type is keyed, gradeMaterial must not hand
+        // back key:null for it. This is the guard that would have caught the whole of
+        // BLOCK 0 on the day it shipped.
+        {
+          const FIX = {
+            axis_weld: ["context:a", { answerKey: K }],
+            tape_doubt: ["tokenization:0", { tapeRoom: TR, capsule: CAP_D }],
+            trap: ["tokenization:0", { capsule: CAP_T }],
+            interview: ["tokenization:0", { capsule: CAP_I }],
+            hidden_test: ["0", { examiner: EX }],
+            adversarial: ["0", { drills: DR }],
+            scrimmage: ["0", { drills: DR }],
+            doubt_quality: ["tokenization:new", {}],
+          };
+          const wrong = Object.entries(VERDICT_TYPES).map(([t, decl]) => {
+            const [ref, d] = FIX[t] || [];
+            const mat = ref === undefined ? null : gradeMaterial(t, ref, d);
+            if (!mat) return `${t}: NO MATERIAL`;
+            const has = mat.key != null && String(mat.key).trim().length > 0;
+            return has === !!decl.key ? null : `${t}: declared key=${!!decl.key} but got ${has}`;
+          }).filter(Boolean);
+          assert("ACCEPTANCE 3 · every type DECLARED keyed really arrives with a key, and every keyless one really has none — all eight branches driven, none described",
+            wrong.length === 0, wrong.join(" | "));
+          assert("ACCEPTANCE 3 · …and every branch stamps the standard it will be judged against onto the material itself",
+            Object.entries(FIX).every(([t, [ref, d]]) => {
+              const mat = gradeMaterial(t, ref, d);
+              return mat && mat.standard === VERDICT_TYPES[t].standard;
+            }));
+        }
+
+        // ── THE STANDARDS REACH THE JUDGE (they never did) ───────────────────
+        // `grep -c dossier scripts/gaffer_brain.mjs` returned 0 on 15 Aug while 17
+        // other organs read the projection. The DOSSIER shaped WHICH questions were
+        // asked and never HOW an answer was judged.
+        assert("STANDARD · the DOSSIER reaches the judge — round weights from the live projection AND the §7 red-flags from the doc it names as source",
+          (() => { const b = standardBlock("dossier"); return /THE ROUNDS AND WHAT THEY ARE WORTH/.test(b) && /WHAT SINKS A CANDIDATE/.test(b) && /HIS RISK/.test(b); })());
+        assert("STANDARD · the COLD-READER bar is quoted from FORGE_SPEC, which is final on it — not restated in this file where it would rot",
+          (() => { const b = standardBlock("cold_reader"); return /COLD-READER STANDARD/.test(b) && /ANSWER-HIDDEN/.test(b) && /CRYPTIC/.test(b); })());
+        assert("STANDARD · a source that will not parse SAYS SO and forbids substituting a private bar — an empty standard reads to a judge exactly like a permissive one",
+          /could not be read/i.test(standardBlock("dossier", { dossier: null, scoutMd: "" }))
+          && /Do NOT invent/i.test(standardBlock("dossier", { dossier: null, scoutMd: "" }))
+          && /could not be read/i.test(standardBlock("cold_reader", { specMd: "" })));
+        assert("STANDARD · a round's prompt carries the standard for every type in it, once, and names the yardstick beside each type",
+          (() => {
+            const p = buildJudgePrompt([
+              { id: "a", type: "trap", ref: "t:0", gut: "knew", asked: "bait", key: "truth", spoken: "kuch bola" },
+              { id: "b", type: "scrimmage", ref: "0", gut: "shaky", asked: "probe", key: null, spoken: "kuch aur bola" },
+            ]);
+            return /standard: capsule/.test(p) && /standard: dossier/.test(p)
+              && /THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE/.test(p) && /THE ROUNDS AND WHAT THEY ARE WORTH/.test(p);
+          })());
 
         // CAPTURE — fast, model-free, and it refuses the same things every other door does
         const SAID = "matlab jo model ek time pe padh sakta hai uski limit hai, jagah khatam to purana nikalta hai";
@@ -1671,8 +2004,8 @@ function selftest2(stub, S) {
           const p = buildJudgePrompt(items, { readJson: (f) => (String(f).includes("context") ? { mechanism: "har call pe poora folder dobara bheja jata hai", traps: ["size ko memory samajh lena"], interviewLines: ["name the statelessness first"] } : null) });
           assert("JUDGE PROMPT · the invariant rubric comes FIRST and his answers LAST (the cache law every prompt in this organ obeys)",
             p.indexOf("You are grading a live study round") === 0 && p.indexOf("=== THE ROUND ===") > p.length * 0.25);
-          assert("JUDGE PROMPT · it says plainly that most items have NO key, and points the judge at HIS ground instead of its own standard",
-            /ONE ITEM HAS AN ANSWER KEY AND MOST DO NOT/.test(p) && /never against your own idea of a good answer/.test(p)
+          assert("JUDGE PROMPT · it says plainly which items carry a key and which do not, and points the judge at the DECLARED standard plus HIS ground — never at its own taste",
+            /SOME ITEMS CARRY AN ANSWER KEY AND SOME DO NOT/.test(p) && /never against your own idea of a good answer/.test(p)
             && /HIS OWN GROUND FOR "context"/.test(p) && /har call pe poora folder/.test(p));
           assert("JUDGE PROMPT · every type in the round declares the question it asks and its legal verdicts",
             /axis_weld →/.test(p) && /tape_doubt →/.test(p) && /hidden_test →/.test(p) && /legal verdicts: held \| cracked/.test(p));
@@ -1745,18 +2078,50 @@ function selftest2(stub, S) {
           assert("JUDGE · LIVE: an axis that does not exist still refuses, so a typo can never grade against the wrong page",
             capsuleAnswerKey(name, "zzz") === null);
           const ground = capsuleGround(name);
-          assert("JUDGE · LIVE: capsuleGround gives the keyless verdicts HIS material — mechanism, traps, interview lines",
-            ground.includes("HIS OWN GROUND") && (!c.mechanism || /MECHANISM/.test(ground)) && (!(c.traps || []).length || /KNOWN TRAPS/.test(ground)));
+          assert("JUDGE · LIVE: capsuleGround gives the keyless verdicts HIS material — mechanism, pits, interview lines",
+            ground.includes("HIS OWN GROUND") && (!c.mechanism || /MECHANISM/.test(ground)) && (!(c.traps || []).length || /KNOWN PITS/.test(ground)));
+          // ⚠ THE HEADER IS NOT THE CONTENT, and that gap hid a live bug for the whole
+          // life of this organ: the traps line read `t.trap`, a field no capsule has,
+          // so it rendered as a bare "KNOWN TRAPS he wrote for himself: " — telling the
+          // judge, in his own capsule's voice, that he wrote none. The old assertion
+          // passed on the header. This one requires a real trap's real words.
+          assert("JUDGE · LIVE: the pits line carries his ACTUAL trap text — a header with an empty list is worse than no line at all",
+            !(c.traps || []).length
+            || (() => { const t = (c.traps || []).find((x) => x && x.bait); return !!t && ground.includes(String(t.bait).slice(0, 30)); })());
+          assert("JUDGE · LIVE: …and NO trap's `truth` rides in the shared ground — a round is one prompt, so that would leak the trap items' own key back in",
+            (c.traps || []).every((t) => !t || !t.truth || !ground.includes(String(t.truth).slice(0, 30))));
           const live = gradeCapture({ type: "axis_weld", ref: `${name}:${ax.axis}`, gut: "knew", spoken: "kuch to bola hi hoga isne yahan par theek se" }, { dry: true });
           assert("JUDGE · LIVE: CAPTURE composes with the live capsule end to end — nothing injected in this one",
             live.ok && live.row.key === String(ax.weld).trim());
-          // …and the two KEYLESS live lanes, which are the ones that used to be impossible
+          // …and the lanes that used to be impossible. THE WHOLE QUEUE IS WALKED, not
+          // its first row: the missing keys were uniform, so any single-row check
+          // would have passed on the day the bug shipped and again on the day it was
+          // fixed. Every one of his real doubts must resolve to the answer he wrote.
           const tr = readJson(TAPE_ROOM, null), ex = readJson(EXAMINER_DRILL, null);
           if (tr && (tr.queue || []).length) {
             const q = tr.queue[0];
             const m = gradeMaterial("tape_doubt", `${q.capsule}:${q.doubt_index}`);
-            assert(`JUDGE · LIVE: a tape-room doubt loads his OWN past confusion verbatim (${(tr.queue || []).length} queued) — and carries NO key, correctly`,
-              !!m && m.asked === q.q_verbatim && m.key === null);
+            assert(`JUDGE · LIVE: a tape-room doubt loads his OWN past confusion verbatim (${(tr.queue || []).length} queued) — and now carries the answer HE wrote for it`,
+              !!m && m.asked === q.q_verbatim && typeof m.key === "string" && m.key.length > 0);
+            const walked = (tr.queue || []).map((row) => {
+              const mm = gradeMaterial("tape_doubt", `${row.capsule}:${row.doubt_index}`);
+              const cap = readJson(join(CAPSULE_DIR, String(row.capsule).toLowerCase().replace(/[^a-z0-9_-]/g, "") + ".json"), null);
+              const d = cap && Array.isArray(cap.doubts) ? cap.doubts[Number(row.doubt_index)] : null;
+              if (!d || typeof d.a !== "string" || !d.a.trim()) return null;   // no answer written = not this organ's failure
+              return mm && mm.key ? null : `${row.capsule}:${row.doubt_index}`;
+            }).filter(Boolean);
+            assert(`JUDGE · LIVE: EVERY tape-room doubt with an answer on disk resolves to it — all ${(tr.queue || []).length} walked, not just the first`,
+              walked.length === 0, `no key for: ${walked.slice(0, 6).join(", ")}`);
+            // The other two keyed lanes, over every locked capsule on disk.
+            const missing = [];
+            for (const f of haveCapsule) {
+              const cc = readJson(join(CAPSULE_DIR, f), {});
+              const id = f.replace(/\.json$/, "");
+              (cc.traps || []).forEach((t, i) => { if (t && t.truth && !(gradeMaterial("trap", `${id}:${i}`) || {}).key) missing.push(`trap ${id}:${i}`); });
+              (cc.interviewLines || []).forEach((l, i) => { if (l && !(gradeMaterial("interview", `${id}:${i}`) || {}).key) missing.push(`interview ${id}:${i}`); });
+            }
+            assert(`JUDGE · LIVE: every trap truth and every interview line on every locked capsule arrives as a key (${haveCapsule.length} capsule(s) walked)`,
+              missing.length === 0, missing.slice(0, 6).join(", "));
           }
           if (ex && (ex.hidden_tests || []).length) {
             const m = gradeMaterial("hidden_test", "0");
