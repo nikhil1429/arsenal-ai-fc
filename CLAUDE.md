@@ -247,21 +247,29 @@ order any more. Do not re-plan it.**
   past `MONOLOGUE_WORDS` — his own forty-second law, the same 100.
 - **The card deck is a QUEUE.** It was `open[open.length - 1]`, i.e. LIFO, so seven open cards had
   never been dealt once while c9 was dealt 24 times — six of the seven his own `[his-word]` drift reports.
-- **The Cerebras grader stops honestly.** The key is read from the environment (`CEREBRAS_API_KEY`)
-  first, then `~/.cerebras/.env`, and nowhere else; absent, it prints ONE line and exits 0 — never a
-  non-zero exit, because Task Scheduler's Last Result is how /organism-doctor decides an organ is
-  alive. **He installs it himself: `setup\INSTALL_CEREBRAS.ps1`** (masked prompt in his own terminal,
-  no echo, no shell history, nothing in the repo — handling a live credential in plain text is the
-  one class of work the assistant does not do, however explicitly it is asked).
-  **His ruling, 15 Aug: the key is NOT to be rotated — do not raise it.**
-  **`node scripts/gaffer_brain.mjs grade --smoke` is the proof**, and it grades a real locked axis
-  BOTH ways — his own weld must HOLD and a fluent wrong answer must CRACK, because a grader stuck on
-  "held" passes a one-directional test forever. Verified 15 Aug against the live endpoint with a
-  deliberately invalid key: the request reaches `api.cerebras.ai` and returns a real HTTP 401, so
-  the URL, auth, model, JSON contract and the capsule answer-key read are all proven — only the
-  secret was missing. **And the answer key comes off `capsule.faultLines[].weld`** — the first
-  version read `capsule.axes[axis]`, a key no capsule has, so it returned null for every concept
-  forever while its selftest stayed green on the refusal path alone.
+- **THE GRADER IS TWO HALVES, and the split is the design** (his call, 15 Aug: *"gradeAnswer() ko do
+  hisson mein todo — CAPTURE (turant, bina model) aur JUDGE (Opus, round ke ant mein). Cerebras poora
+  nikal do."*). A spoken Re-Jirah round has exactly ONE latency budget — the gap between his answer
+  and the next question — and nothing else in it is in a hurry.
+  · **`capture <concept> <axis> --gut <word>`** runs in that gap. **No model, no network, no
+    subprocess**: it reads his own weld off `capsule.faultLines[].weld`, banks his spoken answer
+    beside it in `gaffer_grade_queue.jsonl`, returns. THE GUT-WORD LAW is held at this door too —
+    third writer of the same law, same answer as `capture.mjs` and `rejirah.mjs`.
+  · **`judge-round`** runs when the round is OVER, where there is no latency budget at all — so ONE
+    Opus call at `--effort max` grades the WHOLE round. Nine axes cost one call, not nine.
+    Grades are matched **by axis, never by position** (an out-of-order reply would otherwise mark the
+    wrong axes, silently and plausibly), an ungraded axis stays outstanding rather than being
+    guessed, and the verdict is **dispatched through `rejirah.mjs grade`** because that organ is the
+    sole writer of its own log. A verdict rejirah refuses is NOT marked settled.
+  · **`queue`** shows what is captured and not yet judged. Settlement is an appended ROW, never a
+    rewrite, so a crash between judging and recording cannot lose his spoken answer.
+  **PROVEN LIVE 15 Aug, end to end**: capture instant → one Opus call (26.7s) → `cracked` on
+  `context` axis a with the four missed load-bearing points named in his own Hinglish → recorded by
+  rejirah. Billing law untouched: it rides `claudeGen`, which refuses outright on `ANTHROPIC_API_KEY`.
+  · **CEREBRAS IS GONE, not frozen.** It was chosen for a speed the split made unnecessary, and it
+    never once returned a verdict — measured on his own account, every model it could list answered
+    `402 payment_required`. The layering law protects engines that RAN. (The `csk-`/`gsk_` scrubber
+    patterns STAY — those are about the next key anyone pastes.)
 
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
 Before teaching, planning, or answering anything about where he is: call the

@@ -289,7 +289,33 @@ Both are follow-ups, not blockers.
 
 **Items 1 and 2 are CLOSED BY HIS RULING. There are ZERO open questions. Nothing waits on him.**
 
-### 1 · CEREBRAS KEY — **HIS RULING, 15 Aug: DO NOT ROTATE. USE THE KEY HE GAVE.**
+### 0 · ⛔ CEREBRAS IS DEAD — **CORRECTED 15 Aug 2026 EVENING, PROVEN BY LIVE 402.**
+The grader lane was specced on Cerebras's free tier. **That tier no longer exists for new accounts.**
+Live proof from his machine: `402 {"message":"Payment required to access this resource…",
+"type":"payment_required_error","param":"quota","code":"payment_required"}`.
+Cerebras's own announcement: *"The current free API tier will remain available to you until
+August 17, 2026. On that date, your account will be transitioned to the new free credit-based
+experience. You'll be required to add a payment method."* New signups already land on the new system.
+**The original claim came from a third-party blog and was never verified against Cerebras's own
+policy. That is the error.**
+
+**THE REAL CORRECTION IS BIGGER: Cerebras was never needed.**
+It was chosen for 2,600 tok/s. **A grading verdict is ~50 output tokens** (`held`/`cracked` + one
+line of reason). At 50 tokens the gap between 2,600 tok/s and 200 tok/s is ~20ms vs ~250ms — both
+invisible, because the wall-clock is dominated by network round-trip, not generation. **A vendor was
+added for a speed advantage that does not apply at this output size.**
+
+**BUILD ACTION — BLOCK 6 IS REWRITTEN:**
+The grader runs on the **same Gemini Flash REST lane as the Watcher** (`gemini-flash-latest:
+generateContent` via `loadKeys()`), with a different prompt. **No new vendor, no new key, no new
+failure mode, and it works today.** Delete `setup/INSTALL_CEREBRAS.ps1` and any `~/.cerebras/.env`
+dependency. BLOCK 6 no longer blocks on anything.
+**Fallback if vendor independence is ever wanted:** Groq (free tier is real — 14,400 req/day; its
+6,000 TPM ceiling is fine for grading's small prompts, and only breaks on full-transcript calls).
+**The scrubber fix still ships in BLOCK 1** (`csk-`, `gsk_`) — that is about any future key.
+
+### 1 · ~~CEREBRAS KEY~~ — SUPERSEDED BY §11.0 ABOVE. Kept for the record only.
+**HIS RULING, 15 Aug: DO NOT ROTATE. USE THE KEY HE GAVE.**
 His words: *"i am not going to rotate the key. use the one i gave you."* Stated twice, and this is
 final. **Do not raise it again — not in a card, not in a brief, not in a session opener.**
 The facts, recorded once so nobody re-discovers them and re-asks: the key reached `afferent.jsonl`,

@@ -2,8 +2,9 @@
 // ============================================================================
 // gaffer_brain.mjs · ARSENAL AI FC — THE WATCHER: the Gaffer's judgment organ
 // ----------------------------------------------------------------------------
-// SOLE WRITER of: dressing-room/state/gaffer_brain.jsonl   (every judgment, append-only)
-//                 dressing-room/state/gaffer_blocks.json    (the memory blocks + the cursor)
+// SOLE WRITER of: dressing-room/state/gaffer_brain.jsonl        (every judgment, append-only)
+//                 dressing-room/state/gaffer_blocks.json         (the memory blocks + the cursor)
+//                 dressing-room/state/gaffer_grade_queue.jsonl   (captured spoken answers, append-only)
 // Nothing else may write either file. Read them from anywhere.
 //
 // WHY THIS EXISTS — his ruling, 15 Aug 2026, after the Gaffer's Day-One sitting
@@ -93,13 +94,19 @@
 //        node scripts/gaffer_brain.mjs blocks [--raw]   → the memory blocks
 //        node scripts/gaffer_brain.mjs status           → counts, engines, last judgment
 //        node scripts/gaffer_brain.mjs probe            → ONE live Flash call (the free-pool probe)
-//        node scripts/gaffer_brain.mjs grade <concept> <axis>  → the Cerebras lane
+//        node scripts/gaffer_brain.mjs capture <concept> <axis> --gut <word>  → bank ONE spoken answer (no model, instant)
+//        node scripts/gaffer_brain.mjs judge-round        → grade the whole round in ONE Opus call
+//        node scripts/gaffer_brain.mjs queue              → what is captured and not yet judged
 //        node scripts/gaffer_brain.mjs selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, renameSync, statSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import os from "node:os";
+// execFileSync: the JUDGE hands each verdict to rejirah.mjs through its own CLI,
+// because that organ is the sole writer of rejirah_log.jsonl and derives nextDue,
+// fluency and the calibration gap from the row it writes itself.
+import { execFileSync } from "node:child_process";
 // The legacy engine, imported rather than re-implemented: when the Watcher is
 // unavailable this organ returns the SAME verdict the surface had yesterday, so a
 // dry key pool is a degradation and never a regression. gaffer_state.mjs imports
@@ -123,11 +130,6 @@ const WHO = join(HIPPO_DIR, "who_he_is.json");
 const AFFERENT = join(STATE_DIR, "afferent.jsonl");
 const DUGOUT_DIR = join(STATE_DIR, "brain_out", "dugout");
 const CAPSULE_DIR = join(STATE_DIR, "capsules");
-const CEREBRAS_ENV = join(os.homedir(), ".cerebras", ".env");
-// the installer he runs — a module constant like every other path here, so the
-// static analyser can fold it (a path built inside a function is an Unknown, and
-// the per-organ sink ratchet caught exactly that within one run)
-const INSTALLER = join(ROOT, "setup", "INSTALL_CEREBRAS.ps1");
 const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
 
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
@@ -766,46 +768,178 @@ async function postToBus(row, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// THE GRADER (BLOCK 6) — Cerebras, and it stops honestly when the key is absent
+// THE GRADER — TWO HALVES, AND THE SPLIT IS THE WHOLE DESIGN (15 Aug 2026, HIS CALL:
+// "gradeAnswer() ko do hisson mein todo — CAPTURE (turant, bina model) aur JUDGE
+// (Opus, round ke ant mein). Cerebras poora nikal do.")
 // ---------------------------------------------------------------------------
-// Grading is a COMPARISON AGAINST AN ANSWER KEY HE ALREADY WROTE — the capsule's
-// own `weld` on disk — not deep reasoning. That is why it is not Opus and never
-// will be: Opus in the grading path buys nothing and costs the one budget that is
-// actually scarce. Cerebras is free (1M tok/day) and runs at ~2,600 tok/s, so a
-// ~1-2k prompt grades sub-second. Groq was rejected on its 6,000 TPM ceiling,
-// which any full-transcript call breaks.
+// WHY THE SPLIT IS RIGHT, and it is not only about Cerebras. A spoken Re-Jirah round
+// has ONE latency budget that matters and it is between his answer and the next
+// question. Nothing else in the round is in a hurry. The old shape put a live model
+// call inside that gap, which is why it needed a sub-second provider at all — the
+// requirement was manufactured by the design, not by the work.
+//   CAPTURE  runs in the gap. NO MODEL. It reads his own weld off the capsule, banks
+//            his spoken answer beside it, and returns. Microseconds, zero tokens, and
+//            it cannot fail in a way he can feel.
+//   JUDGE    runs when the round is OVER, where there is no latency budget at all —
+//            so it uses the best model in the building, once, on the whole round.
+// One Opus call for nine axes instead of nine calls of anything, and the deep brain
+// is finally in the place it is actually good: reading meaning against his own words.
 //
-// HIS RULING, 15 Aug 2026: the key is NOT to be rotated. It is read from
-// ~/.cerebras/.env and from nowhere else — never from the repo, never from a
-// prompt, never echoed into a log. If the file is absent this prints ONE line and
-// stops. It does not ask him for the key and it does not fall back to a paid lane.
-export function loadCerebrasKey(envText = null) {
-  // THE ENVIRONMENT IS READ FIRST — added 15 Aug 2026 for the same reason
-  // loadGeminiKeys has done it since the day it was written, and its absence here
-  // was an inconsistency, not a decision: a key exported in his shell (or set by a
-  // machine that has no dotfile) simply did not exist to this organ. Only when the
-  // caller passes an explicit fixture is the environment skipped, so the selftest
-  // measures the parser and not this box.
-  if (envText === null && (process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY)) {
-    return String(process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY).trim();
+// WHAT WAS REMOVED AND WHY, so nobody re-derives it: the Cerebras lane is GONE, not
+// disabled. It was chosen for speed the split has now made unnecessary, and it never
+// once returned a verdict — measured on his own account, every model it could list
+// answered `402 payment_required`. Two accounts, three model names, four commits, and
+// zero grades. A dependency that has never worked and is no longer needed is not
+// layered, it is deleted; the frozen-engine law protects engines that RAN.
+// (The `csk-`/`gsk_` scrubber patterns STAY — those are about the next key anyone
+// pastes, and have nothing to do with this lane.)
+//
+// THE BILLING LAW IS UNTOUCHED: JUDGE goes through claudeGen, which REFUSES outright
+// when ANTHROPIC_API_KEY is set. Max subscription, never an API key. Same door every
+// other Opus job in the organism uses.
+
+// THE QUEUE — append-only, and settlement is a ROW rather than a rewrite.
+// A queue that is rewritten on settle is a file that can lose a captured answer to a
+// crash between read and write, and his spoken answer is the one thing here that
+// cannot be reproduced. So a capture appends, a settlement appends, and "outstanding"
+// is derived. Same shape the archive already relies on, and the archivist tails it for
+// free because it is a *.jsonl under dressing-room/.
+const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
+
+// CAPTURE — the fast half. NO MODEL, NO NETWORK, NO SUBPROCESS.
+// THE GUT-WORD LAW IS HELD AT THIS DOOR TOO. capture.mjs refuses a rep without one
+// and rejirah.mjs refuses a round without one; this is the third writer of the same
+// law and it must give the same answer, or the loosest door becomes the real rule.
+// Canon: "Gut-word nahi -> rep nahi."
+export function gradeCapture({ concept, axis, spoken, gut }, deps = {}) {
+  const now = deps.now || new Date();
+  const word = String(gut || "").trim().toLowerCase();
+  if (!["knew", "shaky", "guessed"].includes(word)) {
+    return { ok: false, reason: "no-gut", say: "gaffer_brain: --gut is required and must be knew|shaky|guessed, committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep." };
   }
-  const text = envText !== null ? envText : (existsSync(CEREBRAS_ENV) ? (() => { try { return readFileSync(CEREBRAS_ENV, "utf8"); } catch { return ""; } })() : "");
-  for (const line of String(text).split("\n")) {
-    const m = line.match(/^\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\s*=\s*(.+)$/);
-    if (m && m[1].trim()) return m[1].trim().replace(/^["']|["']$/g, "");
-  }
-  return null;
+  const said = String(spoken || "").trim();
+  if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a cracked answer, and guessing which it was is exactly what this lane must never do." };
+  const key = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
+  if (!key) return { ok: false, reason: "no-key-page", say: `gaffer_brain: no locked weld on disk for ${concept} · axis ${axis} — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
+  const row = {
+    v: 1, kind: "capture",
+    id: `${concept}:${key.axis}:${now.toISOString()}`,
+    ts: now.toISOString(), day: istDay(now),
+    concept, axis: key.axis, title: key.title, strike: key.strike,
+    gut: word,
+    spoken: clip(said, 4000),
+    weld: clip(key.weld, 4000),
+  };
+  if (!deps.dry) { try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); appendFileSync(GRADE_QUEUE, JSON.stringify(row) + "\n"); } catch { } }
+  return { ok: true, row, captured: row.id, axis: key.axis, weld_chars: key.weld.length };
 }
-// ⚠ READ THE FIELD, DO NOT GUESS ITS NAME — and this function is the scar, not the
-// warning. It shipped on 15 Aug reading `capsule.axes[axis].weld`, and a capsule has
-// no `axes` key at all: the nine axes live in `faultLines`, an ARRAY of
-// {axis, title, strike, weld, status, deep} (the owner's own reader is
-// `for (const a of c.faultLines || [])` — grep -n "of c.faultLines" scripts/deep.mjs).
-// So this returned "no locked weld on disk" for every concept and every axis, forever,
-// and the selftest was green because it only ever exercised the REFUSAL path. Exactly
-// the same shape as the two dead wires in buildOpeningBriefing (a state file nothing
-// writes; a `status` field a mission row does not have) — a lane that answers
-// confidently about a field it never found. The live-capsule assertion below is the
+
+// outstandingGrades — captures with no settlement row after them. Derived, never stored.
+export function outstandingGrades(rows) {
+  const settled = new Set((rows || []).filter((r) => r && r.kind === "settled").map((r) => r.of));
+  return (rows || []).filter((r) => r && r.kind === "capture" && !settled.has(r.id));
+}
+
+// THE JUDGE PROMPT — the whole round in ONE call. Cache-ordered like every other
+// prompt this organ builds: the invariant rubric first, his answers last.
+export function buildJudgePrompt(items) {
+  return `You are grading a spoken recall round. The learner wrote every ANSWER KEY below himself, months ago, in his own words; he has just answered each one OUT LOUD from memory, cold.
+
+GRADE THE MECHANISM, NEVER THE WORDING. Speech is transcribed, so it is broken, repetitive and missing punctuation — none of that is an error. He is not reciting; he is reconstructing. Mark "held" when the load-bearing idea is present in any words at all. Mark "cracked" only when the mechanism is absent, or present but WRONG in a way that would mislead him later.
+
+For each item return the axis, the verdict, what he MISSED that the key has, and one sentence he can act on.
+
+Return STRICT JSON, no fences, no prose outside it:
+{"grades":[{"axis":"<the axis letter, exactly as given>","verdict":"held"|"cracked","missing":["<load-bearing point he did not say>"],"why":"<one sentence, plain, to him>"}]}
+Return one entry per item, in the same order, and NOTHING for an axis that was not given to you.
+
+=== THE ROUND ===
+${items.map((it, i) => `
+--- ITEM ${i + 1} · concept "${it.concept}" · axis ${it.axis}${it.title ? ` (${it.title})` : ""} · his gut-word before answering: ${it.gut}
+${it.strike ? `THE QUESTION HE WAS ASKED: ${it.strike}` : ""}
+ANSWER KEY (his own words, authoritative):
+${it.weld}
+
+WHAT HE SAID OUT LOUD, COLD:
+${it.spoken}`).join("\n")}
+
+Return the JSON now.`;
+}
+
+// JUDGE — the slow half. ONE Opus call for the whole round, at the moment nothing is
+// waiting on it. Deps-injected end to end so the selftest can drive it with no model.
+export async function gradeJudge(deps = {}) {
+  const now = deps.now || new Date();
+  const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 500);
+  const items = outstandingGrades(rows);
+  if (!items.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
+
+  const prompt = buildJudgePrompt(items);
+  // claudeGen is the house door: it REFUSES when ANTHROPIC_API_KEY is set (his
+  // standing law), and it is the same lane every other Opus job in the organism
+  // rides. `effort` max and model opus are his 14 Aug ruling: "always make sure you
+  // select the highest thinking model with maximum thinking on" — and unlike the
+  // Watcher's per-turn path, this call is rare and nothing is waiting on it, so the
+  // ruling costs nothing here.
+  const gen = deps.generate || (async (p) => {
+    const { claudeGen } = await import("./claudegen.mjs");
+    return claudeGen(p, "opus", 240000, ["--effort", "max"]);
+  });
+  const r = await gen(prompt);
+  if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the judge lane did not answer (${(r && r.error) || "no reply"}) — the round STAYS in the queue and nothing was invented. Run judge-round again.`, outstanding: items.length };
+
+  let parsed = null;
+  try { const t = String(r.text); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
+  const grades = (parsed && Array.isArray(parsed.grades)) ? parsed.grades : null;
+  if (!grades) return { ok: false, reason: "unparseable", say: "gaffer_brain: the judge answered in a shape this organ will not act on — the round STAYS in the queue.", outstanding: items.length };
+
+  // MATCH BY AXIS, NEVER BY POSITION. A model that returns eight grades for nine
+  // items would otherwise shift every verdict by one and mark the wrong axes — a
+  // silent, plausible, completely wrong round. An item with no grade stays
+  // OUTSTANDING and is judged again next time; it is never guessed.
+  const settled = [], missed = [];
+  for (const it of items) {
+    const g = grades.find((x) => x && String(x.axis).trim().toLowerCase() === String(it.axis).trim().toLowerCase());
+    const verdict = g && (g.verdict === "held" || g.verdict === "cracked") ? g.verdict : null;
+    if (!verdict) { missed.push(it.axis); continue; }
+    settled.push({
+      v: 1, kind: "settled", of: it.id, ts: now.toISOString(), day: istDay(now),
+      concept: it.concept, axis: it.axis, gut: it.gut, verdict,
+      missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
+      why: clip(g.why, 300),
+      engine: "opus", latency_ms: Number(r.duration_ms) || null,
+    });
+  }
+
+  // THE VERDICT GOES TO THE OWNER, NOT INTO ITS FILE. rejirah.mjs is the sole writer
+  // of rejirah_log.jsonl and it derives nextDue, fluency and the calibration gap from
+  // the row it writes; a second author of that schema would be exactly the breach
+  // CLAUDE.md's single-writer law exists to stop. So the round is DISPATCHED through
+  // its CLI, one axis at a time, and a refusal there (a missing gut-word, an unknown
+  // concept) is reported rather than swallowed.
+  const dispatch = deps.dispatch || ((s) => {
+    try {
+      execFileSync(process.execPath, [join(HERE, "rejirah.mjs"), "grade", s.concept, s.axis, s.verdict, "--gut", s.gut],
+        { encoding: "utf8", timeout: 30000, windowsHide: true });
+      return { ok: true };
+    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  });
+  const dispatched = [], refused = [];
+  for (const s of settled) {
+    const d = dispatch(s);
+    if (d.ok) { dispatched.push(s); } else { refused.push({ axis: s.axis, error: d.error }); }
+  }
+  // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict rejirah refused is not
+  // a graded axis, and writing a settlement row for it would lose his answer.
+  if (!deps.dry) {
+    try {
+      mkdirSync(dirname(GRADE_QUEUE), { recursive: true });
+      for (const s of dispatched) appendFileSync(GRADE_QUEUE, JSON.stringify(s) + "\n");
+    } catch { }
+  }
+  return { ok: true, graded: dispatched.length, held: dispatched.filter((s) => s.verdict === "held").length, cracked: dispatched.filter((s) => s.verdict === "cracked").length, settled, dispatched, refused, missed, outstanding: items.length - dispatched.length };
+}
+
 // fix that matters: it reads a REAL locked capsule off disk, so this cannot rot back.
 export function capsuleAnswerKey(concept, axis, deps = {}) {
   const read = deps.readJson || readJson;
@@ -823,87 +957,6 @@ export function capsuleAnswerKey(concept, axis, deps = {}) {
   const weld = String(a.weld || "").trim();
   return weld ? { concept, axis: a.axis, title: a.title || null, strike: a.strike || null, weld: clip(weld, 4000) } : null;
 }
-export async function gradeAnswer({ concept, axis, spoken }, deps = {}) {
-  const secret = deps.key !== undefined ? deps.key : loadCerebrasKey();
-  if (!secret) {
-    return {
-      ok: false, reason: "no-key",
-      say: `gaffer_brain: the Cerebras key is not on this machine. Run  powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1  — it asks in your own terminal, does not echo, and writes ${CEREBRAS_ENV}. (Or export CEREBRAS_API_KEY; the environment is read first.) Nothing is written into the repo either way.`,
-    };
-  }
-  const k = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
-  if (!k) return { ok: false, reason: "no-key-page", say: `gaffer_brain: no locked weld on disk for ${concept} · axis ${axis} — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
-  const fetchFn = deps.fetchFn || fetch;
-  const t0 = Date.now();
-  const prompt = `You are grading a spoken recall answer against the answer key the learner wrote himself.
-${k.strike ? `THE QUESTION HE WAS ASKED: ${k.strike}\n` : ""}ANSWER KEY (his own words, authoritative):
-${k.weld}
-
-HIS SPOKEN ANSWER:
-${clip(spoken, 4000)}
-
-Return STRICT JSON: {"verdict":"held"|"cracked","missing":["the load-bearing points he did not say"],"why":"one sentence"}
-"held" means the load-bearing mechanism is present in his own words, even if the wording differs.
-Wording never counts. Only the mechanism counts.`;
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), deps.deadlineMs || 15000);
-    const r = await fetchFn("https://api.cerebras.ai/v1/chat/completions", {
-      method: "POST", signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
-      body: JSON.stringify({
-        // MEASURED OFF HIS OWN ACCOUNT, 15 Aug 2026 — GET /v1/models returned
-        // gpt-oss-120b · gemma-4-31b · zai-glm-4.7, and nothing else. The first
-        // version defaulted to "llama-3.3-70b", which I had simply assumed, and the
-        // whole lane returned HTTP 404 the moment a real key was installed: auth had
-        // passed, the MODEL did not exist. A guessed name is a guessed number wearing
-        // a different hat, and this repo's rule covers both.
-        model: deps.model || process.env.GAFFER_GRADER_MODEL || "gpt-oss-120b",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0, response_format: { type: "json_object" },
-      }),
-    });
-    clearTimeout(t);
-    if (!r.ok) {
-      // A 404 HERE MEANS THE MODEL, NOT THE KEY — auth has already passed, and that
-      // distinction cost a real debugging round on the day the key was installed. So
-      // the lane ASKS which models the account actually has and says so, once, rather
-      // than handing back a bare status code the next reader has to go and decode.
-      let hint = "";
-      // 402 IS THE ACCOUNT, NOT THE CODE, AND IT IS WORTH SAYING IN WORDS. Measured
-      // 15 Aug 2026 on his own key, all three models it can list:
-      //   {"message":"Payment required to access this resource. Visit your billing
-      //    tab.","type":"payment_required_error","param":"quota"}
-      // The work order assumed "Cerebras (free: 1M tok/day)". That is not true of
-      // this account, and no code change reaches it. Nothing here is broken — the
-      // key is valid, the model exists, the request is well formed, and the lane
-      // stops honestly, which is what it was built to do.
-      if (r.status === 402) {
-        hint = " This is the ACCOUNT, not the code: the key is valid and the model exists, but the Cerebras account has no quota (payment_required on every model it can list). Nothing in this repo can fix that — it is a billing tab. Until then the grader stays down and everything else in the Gaffer runs without it.";
-      }
-      if (r.status === 404) {
-        try {
-          const lr = await fetchFn("https://api.cerebras.ai/v1/models", { headers: { Authorization: `Bearer ${secret}` } });
-          const lj = lr.ok ? await lr.json() : null;
-          const ids = ((lj && lj.data) || []).map((x) => x.id).filter(Boolean);
-          hint = ids.length
-            ? ` The KEY is fine (models listed OK) — the MODEL is not: this account has ${ids.join(", ")}. Set GAFFER_GRADER_MODEL to one of those.`
-            : " The model endpoint 404'd and the model list could not be read either.";
-        } catch { /* the hint is a courtesy; its failure must not change the verdict */ }
-      }
-      return { ok: false, reason: "http-" + r.status, say: `gaffer_brain: the grader lane refused (HTTP ${r.status}).${hint} Say so honestly, never invent a verdict.` };
-    }
-    const j = await r.json();
-    const text = (((j.choices || [])[0] || {}).message || {}).content || "";
-    let parsed = null; try { parsed = JSON.parse(text); } catch { }
-    const verdict = parsed && (parsed.verdict === "held" || parsed.verdict === "cracked") ? parsed.verdict : null;
-    if (!verdict) return { ok: false, reason: "unparseable", say: "gaffer_brain: the grader answered in a shape this organ will not act on." };
-    return { ok: true, verdict, missing: Array.isArray(parsed.missing) ? parsed.missing.slice(0, 8) : [], why: clip(parsed.why, 300), latency_ms: Date.now() - t0, concept, axis };
-  } catch (e) {
-    return { ok: false, reason: "threw", say: "gaffer_brain: the grader lane is unreachable right now — say so honestly, never invent a verdict." };
-  }
-}
-
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -941,7 +994,7 @@ async function main() {
     console.log(`gaffer_brain: ${rows.length} judgment(s) in the journal · engines ${Object.entries(byEngine).map(([k, v]) => `${k}=${v}`).join(" ") || "none"}`);
     console.log(`  blocks filled: ${filled.length ? filled.join(" · ") : "(none)"}   cursor: ${bl.cursor.dugout_day || "—"} @ ${bl.cursor.dugout_bytes}B transcript / ${bl.cursor.afferent_bytes}B bus`);
     if (last) console.log(`  last: ${last.ts} · ${last.engine} · ${last.signals.join(",") || "no signal"}${last.error ? ` · ERROR ${last.error}` : ""}`);
-    console.log(`  keys: gemini pool ${loadGeminiKeys().length} · cerebras ${loadCerebrasKey() ? "present" : "ABSENT — run  powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1  (or export CEREBRAS_API_KEY), then  node scripts/gaffer_brain.mjs grade --smoke"}`);
+    console.log(`  keys: gemini pool ${loadGeminiKeys().length} · grade queue ${outstandingGrades(readJournal(GRADE_QUEUE, 500)).length} axis/axes waiting for judge-round`);
     return;
   }
   if (mode === "probe") {
@@ -955,47 +1008,40 @@ async function main() {
     if (!r.ok) process.exit(1);
     return;
   }
-  if (mode === "grade") {
-    // --smoke — THE ONE COMMAND THAT PROVES THE WHOLE LANE, and it exists because a
-    // grader nobody has ever seen return a verdict is a hypothesis. It grades a REAL
-    // axis off a REAL locked capsule TWICE: once against his own weld (must hold) and
-    // once against a confident, fluent, wrong answer (must crack). One direction
-    // alone proves nothing — a grader stuck on "held" passes the first test forever.
-    if (process.argv.includes("--smoke")) {
-      let names = [];
-      try { names = readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
-      const pick = names.map((n) => ({ n, k: (readJson(join(CAPSULE_DIR, n + ".json"), {}).faultLines || []).find((a) => a && a.weld) }))
-        .find((x) => x.k);
-      if (!pick) { console.log("gaffer_brain: no locked capsule with a weld on this machine — nothing to grade against."); process.exit(1); }
-      const answerKey = capsuleAnswerKey(pick.n, pick.k.axis);
-      console.log(`gaffer_brain smoke · ${pick.n} · axis ${answerKey.axis}${answerKey.title ? " (" + answerKey.title + ")" : ""} · his weld is ${answerKey.weld.length} chars\n`);
-      // THE NO-KEY CASE IS NOT A FAILURE AND MUST NOT EXIT NON-ZERO. Same rule the
-      // archivist's `vitals` follows: Task Scheduler's Last Result is what
-      // /organism-doctor reads to decide whether an ORGAN is alive, so "the key is
-      // not installed yet" must never look like "this organ is broken". One line,
-      // said once — not twice, which is what the first version did.
-      if (!loadCerebrasKey()) {
-        console.log(`  ${(await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: "x" })).say}`);
-        console.log(`\n  Easiest way: powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1`);
-        console.log(`  (it asks in your own terminal, does not echo, and re-runs this smoke test the moment it lands)`);
-        process.exit(0);
-      }
-      const good = await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: answerKey.weld });
-      const bad = await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: "Haan ye toh simple hai — basically the model just looks at the whole thing at once and figures it out, that's the mechanism. It's optimised so it's fast." });
-      const line = (label, r) => console.log(`  ${label.padEnd(26)} ${r.ok ? `${r.verdict.toUpperCase().padEnd(8)} ${r.latency_ms}ms · ${r.why}` : `FAILED (${r.reason}) ${r.say || ""}`}`);
-      line("his own weld →", good);
-      line("a fluent wrong answer →", bad);
-      const pass = good.ok && bad.ok && good.verdict === "held" && bad.verdict === "cracked";
-      console.log(`\n${pass ? "✓ THE GRADER LANE IS LIVE" : "✗ the lane answered, but not in both directions — read the two lines above"}`);
-      process.exit(pass ? 0 : 1);
-    }
-    const r = await gradeAnswer({ concept: process.argv[3], axis: process.argv[4], spoken: readFileSync(0, "utf8") });
-    if (!r.ok) { console.log(r.say); process.exit(r.reason === "no-key" ? 0 : 1); }
-    console.log(JSON.stringify(r));
+  // CAPTURE — the fast half. Runs in the gap between his answer and the next
+  // question, so it does exactly one thing and does it without a model.
+  if (mode === "capture") {
+    const flag = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : undefined; };
+    const r = gradeCapture({ concept: process.argv[3], axis: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") });
+    if (!r.ok) { console.log(r.say); process.exit(1); }
+    console.log(`gaffer_brain: captured ${r.row.concept} · axis ${r.axis} · gut ${r.row.gut} · against his ${r.weld_chars}-char weld. Nothing was judged and nothing was spent — run \`judge-round\` when the round is over.`);
     return;
   }
+  // JUDGE — the slow half. ONE Opus call for the whole round, at the moment nothing
+  // is waiting on it.
+  if (mode === "judge-round") {
+    const r = await gradeJudge({ dry: process.argv.includes("--dry") });
+    if (r.skipped) { console.log(`gaffer_brain: ${r.skipped}`); return; }
+    if (!r.ok) { console.log(r.say); process.exit(1); }
+    console.log(`gaffer_brain: ${r.graded} axis/axes graded · ${r.held} held · ${r.cracked} cracked${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    for (const s of r.dispatched) console.log(`  ${s.axis}  ${s.verdict.toUpperCase().padEnd(8)} (gut ${s.gut})  ${s.why}${s.missing.length ? `\n      missed: ${s.missing.join(" · ")}` : ""}`);
+    // A REFUSAL FROM THE OWNER IS NEVER SWALLOWED: the axis stays outstanding and
+    // says why, because a lost spoken answer is the one thing here that cannot be
+    // reproduced.
+    for (const m of r.refused) console.log(`  ${m.axis}  NOT RECORDED — rejirah refused it: ${m.error}`);
+    if (r.missed.length) console.log(`  ${r.missed.join(", ")} — the judge returned no grade for these; they stay in the queue and are judged again next round (never guessed).`);
+    return;
+  }
+  if (mode === "queue") {
+    const out = outstandingGrades(readJournal(GRADE_QUEUE, 500));
+    if (!out.length) { console.log("gaffer_brain: nothing outstanding — every captured axis has been judged and recorded."); return; }
+    console.log(`gaffer_brain: ${out.length} captured axis/axes waiting for \`judge-round\`:`);
+    for (const it of out) console.log(`  ${it.concept} · ${it.axis} · gut ${it.gut} · ${String(it.spoken).length} chars said · captured ${it.ts.slice(11, 16)}`);
+    return;
+  }
+
   if (mode === "selftest") return selftest();
-  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|grade <concept> <axis>|selftest]");
+  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <concept> <axis> --gut <word>|judge-round|queue|selftest]");
   process.exit(1);
 }
 
@@ -1223,7 +1269,6 @@ function selftest2(stub, S) {
         // Not one of them can test HIS phrasing, which is the whole ruling.
         const MACHINE_ONLY = new Set([
           "^GEMINI_API_KEY(_\\d+)?\\s*=\\s*(.+)$",                    // ~/.gemini/.env lines
-          "^\\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\\s*=\\s*(.+)$",      // ~/.cerebras/.env lines
           "^CAPTAIN:", "^CAPTAIN:\\s*", "^GAFFER", "^GAFFER\\([a-z_]+\\)",  // the bridge's own prefixes
           "\\s+", "\\r?\\n",                                          // whitespace, line splits
           "^[\"']|[\"']$",                                            // strip quotes off an env value
@@ -1238,29 +1283,9 @@ function selftest2(stub, S) {
           "one of his 15 Aug lines has leaked into executable code");
         assert("THE BRAIN NEVER BLOCKS THE MOUTH · every path out of `judge` exits 0 — a failure lands in the journal, never on the hot path",
           /if \(mode === "judge"\)[\s\S]{0,1400}?journalRow\(\{ engine: "none", error/.test(src) && !/if \(mode === "judge"\)[\s\S]{0,1400}?process\.exit\(1\)/.test(src));
-        assert("SOLE WRITER · this organ writes exactly two files, and its header declares both",
-          src.indexOf("SOLE WRITER of: dressing-room/state/gaffer_brain.jsonl") > 0
-          && [...src.matchAll(/(?:writeAtomic|appendFileSync)\(([A-Z_]+)/g)].every((m) => ["JOURNAL", "BLOCKS"].includes(m[1])));
-        // ⚠ TIGHTENED 15 Aug 2026, and it had to be — the first version tested
-        // `!/console\.log\([^)]*key\b/i`, i.e. the WORD "key" anywhere inside a
-        // console.log. That is a prose filter, not a credential guard: it went red on
-        // the smoke test's "his weld is N chars" line and on the sentence that tells
-        // him where to PUT the key, neither of which can leak anything, while a real
-        // leak spelled `${secret}` would have sailed straight past it. So the
-        // credential now has a binding name no prose will ever collide with, and the
-        // guard names it: nothing may PRINT it, APPEND it, or POST it anywhere but
-        // the Authorization header it exists for.
-        const secretUses = [...src.matchAll(/\bsecret\b/g)].length;
-        assert("THE KEY NEVER TOUCHES THE REPO, A LOG OR THE BUS · it is read from the environment or the home directory, and its only use anywhere in this file is the Authorization header",
-          /join\(os\.homedir\(\), "\.cerebras"/.test(src)
-          && /Authorization: `Bearer \$\{secret\}`/.test(src)
-          && !/console\.log\([^)]*\$\{?secret\b/.test(src)
-          && !/appendFileSync\([^)]*secret\b/.test(src)
-          && !/JSON\.stringify\([^)]*\bsecret\b/.test(src)
-          && secretUses >= 3,
-          `secret referenced ${secretUses}×`);
-        assert("THE KEY NEVER TOUCHES THE REPO · and the journal row schema has no field that could carry one (every field is a count, a name or a verdict)",
-          !/journalRow\([\s\S]{0,1200}?secret/.test(src));
+        assert("SOLE WRITER · this organ writes exactly three files, and its header declares all three",
+          src.indexOf("gaffer_grade_queue.jsonl   (captured") > 0
+          && [...src.matchAll(/(?:writeAtomic|appendFileSync)\(([A-Z_]+)/g)].every((m) => ["JOURNAL", "BLOCKS", "GRADE_QUEUE"].includes(m[1])));
         // THE POOL, held the honest way: this reader is a DELIBERATE duplicate of
         // dugout.mjs's, so the test is that it is still the same code — not that it
         // happens to behave the same on one fixture. (The behavioural version of this
@@ -1280,68 +1305,128 @@ function selftest2(stub, S) {
           `mine:   ${mine}\n      theirs: ${theirs}`);
       }
 
-      // ── 9 · THE GRADER stops honestly when the key is absent (his ruling: never ask)
+      // ── 9 · THE GRADER, IN TWO HALVES (his call, 15 Aug 2026) ────────────
+      // The whole point of the split is that CAPTURE cannot be slow and JUDGE
+      // cannot be wrong, so each half is tested for its own property.
       {
-        const noKey = await gradeAnswer({ concept: "tokenization", axis: "a", spoken: "x" }, { key: null });
-        assert("GRADER · with no key it says ONE line naming the file to create, and does not ask him for a key in chat",
-          noKey.ok === false && noKey.reason === "no-key" && noKey.say.includes(".cerebras") && !/paste|enter|give me/i.test(noKey.say));
-        assert("GRADER · with no locked weld on disk it REFUSES rather than inventing an answer key",
-          (await gradeAnswer({ concept: "nothing_here", axis: "a", spoken: "x" }, { key: "csk-fake", answerKey: null })).reason === "no-key-page");
-        // ── THE LIVE CAPSULE WIRE, and it is here because the refusal path above was
-        // the ONLY thing this suite tested, so a reader pointed at a field that does
-        // not exist passed for a full commit. A grader that can only prove it says
-        // "no" is not a tested grader. Reads a REAL locked capsule off disk.
-        // DORMANT-SAFE: capsules/ is gitignored, so a clean checkout has none — the
-        // check reports itself skipped rather than failing the away-day lane, which is
-        // the 7 Aug precedent (context_manifest's own "clean checkout" line).
+        const WELD = "Context window matlab model ek baar mein kitne tokens dekh sakta hai. Socho ek chhoti table hai — usme utni hi plates aayengi jitni jagah hai. Nayi plate rakhni ho to purani hatani padegi.";
+        const K = { concept: "context", axis: "a", title: "Kya hai + analogy", strike: "context window kya hai?", weld: WELD };
+        const SAID = "matlab jo model ek time pe padh sakta hai uski limit, table wali baat, jagah khatam to purana nikalna padta hai";
+
+        // CAPTURE — instant, and provably model-free
+        const cap = gradeCapture({ concept: "context", axis: "a", gut: "shaky", spoken: SAID }, { dry: true, answerKey: K, now: T0 });
+        assert("CAPTURE · it banks his answer BESIDE his own weld, and returns a row — no model, no network, no subprocess anywhere in this path",
+          cap.ok && cap.row.spoken === SAID && cap.row.weld === WELD && cap.row.gut === "shaky" && cap.row.kind === "capture");
+        assert("CAPTURE · THE GUT-WORD LAW is held at this door too — the third writer of the same law must give the same answer as capture.mjs and rejirah.mjs, or the loosest door becomes the real rule",
+          gradeCapture({ concept: "context", axis: "a", spoken: SAID }, { dry: true, answerKey: K }).reason === "no-gut"
+          && gradeCapture({ concept: "context", axis: "a", gut: "confident", spoken: SAID }, { dry: true, answerKey: K }).reason === "no-gut");
+        assert("CAPTURE · an EMPTY answer is refused, never banked as a crack — 'he said nothing' and 'he said the wrong thing' are different facts",
+          gradeCapture({ concept: "context", axis: "a", gut: "guessed", spoken: "" }, { dry: true, answerKey: K }).reason === "empty");
+        assert("CAPTURE · with no locked weld on disk it REFUSES rather than inventing an answer key",
+          gradeCapture({ concept: "nope", axis: "z", gut: "knew", spoken: SAID }, { dry: true, answerKey: null }).reason === "no-key-page");
         {
-          let names = [];
-          try { names = (await import("node:fs")).readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
-          if (!names.length) {
-            console.log("  ..  GRADER · LIVE CAPSULE check NOT RUN — this is a clean checkout (dressing-room/state/capsules/ is gitignored)");
-          } else {
-            const c = readJson(join(CAPSULE_DIR, names[0] + ".json"), {});
-            const axes = (Array.isArray(c.faultLines) ? c.faultLines : []).filter((a) => a && a.weld);
-            const k = axes.length ? capsuleAnswerKey(names[0], axes[0].axis) : null;
-            assert(`GRADER · LIVE: the answer key really comes off a locked capsule on disk (${names[0]} · ${axes.length} axis/axes with a weld) — the first version read capsule.axes[axis], a key no capsule has, and returned null forever`,
-              !!k && k.weld === String(axes[0].weld).trim() && k.axis === axes[0].axis && k.weld.length > 40,
-              k ? `weld ${k.weld.length} chars` : `capsuleAnswerKey returned null for ${names[0]} axis ${axes.length ? axes[0].axis : "?"}`);
-            assert("GRADER · LIVE: …and the key is HIS weld, never the long-form `deep` — grading a 40-second spoken answer against a 4,000-word page fails every honest recall",
-              !!k && (!c.deep || !k.weld.includes(String(c.deep).slice(0, 200))));
-            assert("GRADER · LIVE: an axis that does not exist on that capsule still refuses, so a typo can never grade against the wrong page",
-              capsuleAnswerKey(names[0], "zzz") === null);
-          }
+          const t0 = process.hrtime.bigint();
+          for (let i = 0; i < 200; i++) gradeCapture({ concept: "context", axis: "a", gut: "knew", spoken: SAID }, { dry: true, answerKey: K });
+          assert("CAPTURE · 200 captures stay trivial — this runs in the gap between his answer and the next question, which is the ONLY latency budget in the round",
+            Number(process.hrtime.bigint() - t0) / 1e6 < 250);
         }
-        // ASCII ONLY — the installer's own bug scar, held by a machine so it cannot
-        // come back. `powershell` on this box is Windows PowerShell 5.1, which reads a
-        // .ps1 as ANSI unless it finds a BOM; the first version was UTF-8 with no BOM
-        // and carried em-dashes in its COMMENTS, the byte drift terminated a string,
-        // and the first thing he ever saw from it was `y/N : The term 'y/N' is not
-        // recognized`. Nothing on that line was wrong. A static parse check had passed
-        // it — because the parser got the file with the right encoding and the shell
-        // did not — which is exactly the "a test that mocks the part that breaks"
-        // shape. This checks BYTES, which no encoding can argue with.
+
+        // THE QUEUE — append-only, settlement derived
+        const q = [cap.row, { kind: "capture", id: "x:b:1", concept: "x", axis: "b" }, { kind: "settled", of: "x:b:1" }];
+        assert("THE QUEUE · outstanding is DERIVED from settlement rows, never stored — so a crash between judging and recording loses nothing",
+          outstandingGrades(q).length === 1 && outstandingGrades(q)[0].id === cap.row.id);
+
+        // JUDGE — one call, whole round, and every failure keeps his answer
+        const items = [{ ...cap.row }, { ...cap.row, id: "context:b:2", axis: "b", gut: "knew" }];
+        const genOK = async () => ({ ok: true, duration_ms: 4200, text: JSON.stringify({ grades: [
+          { axis: "b", verdict: "cracked", missing: ["the eviction rule"], why: "mechanism nahi aaya" },
+          { axis: "a", verdict: "held", missing: [], why: "table wali baat sahi hai" }] }) });
+        const sent = [];
+        const jr = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: (s) => { sent.push(s); return { ok: true }; }, now: T0 });
+        assert("JUDGE · ONE call grades the WHOLE round — nine axes cost one Opus call, not nine calls of anything",
+          jr.ok && jr.graded === 2 && jr.held === 1 && jr.cracked === 1);
+        assert("JUDGE · grades are matched BY AXIS, never by position — a model returning them out of order would otherwise mark the wrong axes, silently and plausibly",
+          sent.find((s) => s.axis === "a").verdict === "held" && sent.find((s) => s.axis === "b").verdict === "cracked");
+        assert("JUDGE · the verdict goes to the OWNER through its CLI — rejirah.mjs is sole writer of rejirah_log.jsonl and derives nextDue, fluency and the calibration gap from the row it writes",
+          /join\(HERE, "rejirah\.mjs"\), "grade"/.test(readFileSync(new URL(import.meta.url), "utf8"))
+          && sent.every((s) => s.gut && s.concept && s.axis));
         {
-          const ps1 = INSTALLER;
-          if (!existsSync(INSTALLER)) {
-            assert("GRADER · the installer he actually runs is on disk", false, ps1);
-          } else {
-            const bytes = readFileSync(INSTALLER);
-            const bad = [];
-            for (let i = 0; i < bytes.length && bad.length < 4; i++) if (bytes[i] > 127) bad.push(i);
-            assert(`GRADER · INSTALL_CEREBRAS.ps1 is 7-bit ASCII throughout (${bytes.length} bytes) — Windows PowerShell 5.1 reads a .ps1 as ANSI with no BOM, and one em-dash in a COMMENT broke a string four lines later`,
-              bad.length === 0, bad.length ? `non-ASCII byte(s) at offset ${bad.join(", ")}` : "");
-            const text = bytes.toString("latin1");
-            assert("GRADER · …and it still does the three things it exists for: masked prompt, writes the env file, then proves the lane",
-              /-AsSecureString/.test(text) && /\.cerebras/.test(text) && /grade --smoke/.test(text));
-          }
+          const partial = await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ axis: "a", verdict: "held", why: "ok" }] }) }), dispatch: () => ({ ok: true }), now: T0 });
+          assert("JUDGE · an axis the judge did not grade STAYS OUTSTANDING and is named — it is judged again next round, never guessed",
+            partial.graded === 1 && partial.missed.includes("b") && partial.outstanding === 1);
         }
-        assert("GRADER · the environment is read before the file, so a key exported in his shell needs no dotfile at all",
-          (() => { const old = process.env.CEREBRAS_API_KEY; process.env.CEREBRAS_API_KEY = "csk-from-the-environment"; const got = loadCerebrasKey(); if (old === undefined) delete process.env.CEREBRAS_API_KEY; else process.env.CEREBRAS_API_KEY = old; return got === "csk-from-the-environment"; })());
-        assert("GRADER · the key parser reads CEREBRAS_API_KEY from an env file and nothing else",
-          loadCerebrasKey("# a comment\nCEREBRAS_API_KEY=csk-abc123\n") === "csk-abc123"
-          && loadCerebrasKey('CEREBRAS_KEY="csk-quoted"\n') === "csk-quoted"
-          && loadCerebrasKey("GEMINI_API_KEY=nope\n") === null);
+        {
+          const refused = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: () => ({ ok: false, error: "rejirah: --gut is required" }), now: T0 });
+          assert("JUDGE · a verdict the OWNER refuses is NOT marked settled and says why — a refused axis is not a graded axis, and his spoken answer is the one thing here that cannot be reproduced",
+            refused.graded === 0 && refused.refused.length === 2 && refused.outstanding === 2);
+        }
+        assert("JUDGE · a dead lane keeps the whole round in the queue and invents nothing",
+          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: false, error: "plan wall" }) })).reason === "lane-down");
+        assert("JUDGE · an unparseable answer keeps the round too — junk never becomes a verdict",
+          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure! here you go:" }) })).reason === "unparseable");
+        assert("JUDGE · with nothing captured it does nothing at all — no call, no spend",
+          (await gradeJudge({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
+
+        // THE PROMPT — cache-ordered, and it grades the MECHANISM not the wording
+        {
+          const p = buildJudgePrompt(items);
+          assert("JUDGE PROMPT · the invariant rubric comes FIRST and his answers LAST (the same cache law every prompt in this organ obeys)",
+            p.indexOf("You are grading a spoken recall round") === 0 && p.indexOf("=== THE ROUND ===") > p.length * 0.3);
+          assert("JUDGE PROMPT · it forbids marking him down for how speech arrives — transcribed answers are broken, repetitive and unpunctuated, and none of that is an error",
+            /GRADE THE MECHANISM, NEVER THE WORDING/.test(p) && /transcribed/.test(p));
+          assert("JUDGE PROMPT · every item carries his gut-word, the question he was asked, HIS weld and what he actually said",
+            /his gut-word before answering: shaky/.test(p) && /THE QUESTION HE WAS ASKED/.test(p) && p.includes(WELD) && p.includes(SAID));
+        }
+
+        // BILLING — his standing law, held by source
+        {
+          const src2 = readFileSync(new URL(import.meta.url), "utf8");
+          assert("JUDGE · it rides claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key",
+            /claudeGen\(p, "opus", \d+, \["--effort", "max"\]\)/.test(src2)
+            && /if \(process\.env\.ANTHROPIC_API_KEY\) return refuse\(\);/.test(readFileSync(join(HERE, "claudegen.mjs"), "utf8")));
+          // Checked as CODE, never as prose, and THE NEEDLES ARE BUILT BY
+          // CONCATENATION — the house idiom (gaffer_state's "SILENCE IS FREE" check
+          // and dugout's door-slice both do it). Not decoration: this file explains
+          // the removal at length in its comments, so a whole-file search reports its
+          // own documentation as the thing it forbids; and the version that searched
+          // for the identifiers wholesale matched ITSELF, because the search string is
+          // the earliest occurrence of those names in the file. Both happened today.
+          const goneNames = ["api." + "cerebras.ai", "load" + "CerebrasKey", "CEREBRAS" + "_ENV", "CEREBRAS" + "_API_KEY"];
+          assert("CEREBRAS IS GONE, not disabled — it never once returned a verdict (402 on every model its account could list), and the frozen-engine law protects engines that RAN",
+            goneNames.every((n) => !src2.includes(n))
+            && !existsSync(join(ROOT, "setup", "INSTALL_" + "CEREBRAS.ps1")));
+          assert("…and the scrubber patterns for csk-/gsk_ STAY, because those are about the NEXT key anyone pastes and have nothing to do with this lane",
+            /csk-\[A-Za-z0-9\]\{20,\}/.test(readFileSync(join(ROOT, "hooks", "afferent-post.mjs"), "utf8")));
+        }
+      }
+
+      // ── 9b · THE LIVE CAPSULE WIRE — the answer key really comes off disk ──
+      // Here because the first version of capsuleAnswerKey read `capsule.axes[axis]`,
+      // a key no capsule has, and returned null for every concept forever while its
+      // selftest stayed green on the refusal path alone. A grader that can only prove
+      // it says no is not a tested grader. DORMANT-SAFE: capsules/ is gitignored, so a
+      // clean checkout reports this skipped rather than reddening the away-day lane.
+      {
+        let names = [];
+        try { names = readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
+        if (!names.length) {
+          console.log("  ..  GRADER · LIVE CAPSULE check NOT RUN — this is a clean checkout (dressing-room/state/capsules/ is gitignored)");
+        } else {
+          const c = readJson(join(CAPSULE_DIR, names[0] + ".json"), {});
+          const axes = (Array.isArray(c.faultLines) ? c.faultLines : []).filter((a) => a && a.weld);
+          const k = axes.length ? capsuleAnswerKey(names[0], axes[0].axis) : null;
+          assert(`GRADER · LIVE: the answer key really comes off a locked capsule on disk (${names[0]} · ${axes.length} axis/axes with a weld)`,
+            !!k && k.weld === String(axes[0].weld).trim() && k.axis === axes[0].axis && k.weld.length > 40,
+            k ? `weld ${k.weld.length} chars` : "capsuleAnswerKey returned null");
+          assert("GRADER · LIVE: …and the key is HIS weld, never the long-form `deep` — grading a forty-second spoken answer against a four-thousand-word page fails every honest recall",
+            !!k && (!c.deep || !k.weld.includes(String(c.deep).slice(0, 200))));
+          assert("GRADER · LIVE: an axis that does not exist on that capsule still refuses, so a typo can never grade against the wrong page",
+            capsuleAnswerKey(names[0], "zzz") === null);
+          // …and the two halves really compose on live data
+          const live = gradeCapture({ concept: names[0], axis: axes[0].axis, gut: "knew", spoken: "kuch to bola hi hoga isne yahan par" }, { dry: true });
+          assert("GRADER · LIVE: CAPTURE composes with the live capsule end to end — no injected answer key anywhere in this one",
+            live.ok && live.row.weld === String(axes[0].weld).trim());
+        }
       }
 
       // ── 10 · THE BUS LANE — this is what makes it work with the Gaffer closed

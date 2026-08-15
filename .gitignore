@@ -169,6 +169,9 @@ dressing-room/state/gaffer_standing.json
 # intake_log.json by name and is untouched.
 dressing-room/state/gaffer_brain.jsonl
 dressing-room/state/gaffer_blocks.json
+# …and the grade queue (15 Aug 2026), which holds his SPOKEN ANSWERS verbatim
+# beside his own welds — the most personal thing this organ touches.
+dressing-room/state/gaffer_grade_queue.jsonl
 # …and the bridge's own delivery bookkeeping for the opening briefing. One date,
 # no content — ignored because it is per-machine runtime state, not because it is
 # private (a second laptop must not inherit "already delivered today").
