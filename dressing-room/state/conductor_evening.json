@@ -1,7 +1,7 @@
 {
-  "started": "2026-08-14T16:30:01.700Z",
-  "finished": "2026-08-14T16:30:06.401Z",
-  "total_ms": 4688,
+  "started": "2026-08-15T16:30:02.701Z",
+  "finished": "2026-08-15T16:30:07.265Z",
+  "total_ms": 4477,
   "ran": 11,
   "ok": 11,
   "failed": 0,
@@ -22,7 +22,7 @@
     {
       "id": "bell",
       "ok": true,
-      "ms": 2117,
+      "ms": 1096,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -36,7 +36,7 @@
     {
       "id": "scorer",
       "ok": true,
-      "ms": 102,
+      "ms": 209,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -50,7 +50,7 @@
     {
       "id": "scoreboard",
       "ok": true,
-      "ms": 175,
+      "ms": 493,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -64,7 +64,7 @@
     {
       "id": "nikhil-model",
       "ok": true,
-      "ms": 95,
+      "ms": 160,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -78,7 +78,7 @@
     {
       "id": "setpiece",
       "ok": true,
-      "ms": 183,
+      "ms": 248,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -92,7 +92,7 @@
     {
       "id": "doubtminer",
       "ok": true,
-      "ms": 164,
+      "ms": 161,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -106,7 +106,7 @@
     {
       "id": "physio-pm",
       "ok": true,
-      "ms": 116,
+      "ms": 115,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -134,7 +134,7 @@
     {
       "id": "wall-pm",
       "ok": true,
-      "ms": 198,
+      "ms": 189,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -148,7 +148,7 @@
     {
       "id": "scout",
       "ok": true,
-      "ms": 104,
+      "ms": 87,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -162,7 +162,7 @@
     {
       "id": "wallpaper",
       "ok": true,
-      "ms": 1348,
+      "ms": 1633,
       "exit": 0,
       "wrote": null,
       "produced": null,
