@@ -56,7 +56,34 @@ const writeJson = (p, o) => { mkdirSync(dirname(p), { recursive: true }); writeF
 // one evening to him.
 const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// ⚠ FROZEN 15 Aug 2026 — EVERYTHING FROM HERE TO `looksLikePlan` IS THE LEGACY
+//   WORD-LIST ENGINE. It is kept verbatim (LAYERING law; precedents in this repo:
+//   analyzeLegacy · identityCartridgeLegacy · capsuleProjectionLegacy · the
+//   pendingFactsBlockLegacy door), it still runs, and it is the DEGRADED-MODE
+//   FALLBACK — what answers when the free Gemini pool is dry. THE PLAN OF RECORD
+//   IS scripts/gaffer_brain.mjs, THE WATCHER, which judges MEANING.
+//
+//   WHY IT WAS RETIRED, measured on live files the day it was frozen — it failed
+//   in BOTH directions at once, from the same cause:
+//     UNDER-FIRE  · his five CALM memory corrections on 15 Aug scored
+//                   forgot_flags = 0, so the highest-priority intervention below
+//                   never fired in the sitting it was built for.
+//     OVER-FIRE   · gaffer_standing.json held 13 "standing instructions" and at
+//                   least six were plain conversation ("So what are these papers
+//                   actually?"), each passing via a DIRECTIVE marker plus the
+//                   "don't" inside "I don't know" — and renderBrief injects the
+//                   last twelve into his LIVE window every sitting.
+//   Both are held as assertions in gaffer_brain.mjs's selftest, RUN rather than
+//   restated, so this file's fault can never quietly stop being reproducible.
+//
+//   HIS RULING, 15 Aug 2026, is why the replacement is a model and not a bigger
+//   list: "It should be agnostic. Session agnostic, vocab agnostic." No amount of
+//   tuning a vocabulary fixes a gate that decides by vocabulary.
+//
+//   DO NOT EDIT THE PATTERNS BELOW. If the fallback is wrong, that is evidence
+//   about the fallback; the fix belongs in the Watcher.
+// ===========================================================================
 // STANDING INSTRUCTIONS (B8) — what survives the session
 // ---------------------------------------------------------------------------
 // Today `set_depth` persists and an explicit "remember that…" persists (verified
@@ -67,7 +94,7 @@ const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOSt
 //
 // THE MARKERS ARE HIS OWN WORDS, taken from the transcript — not invented
 // grammar. Each pattern below is followed by the line it was lifted from.
-const PERMANENCE = [
+const PERMANENCE_LEGACY = [
   /\bhamesha\b/i,                    // "स्पीड हमेशा ही आपकी बोलने की धीरे होनी चाहिए"
   /हमेशा/,                            // same, in Devanagari — he switches script mid-sentence
   /\bpermanent(ly)?\b/i,             // "I want you to permanently remember this thing"
@@ -84,13 +111,13 @@ const PERMANENCE = [
 ];
 // A prohibition is a standing instruction even without a permanence marker — he
 // should not have to say "never do X, permanently". "mat karo" is enough.
-const PROHIBITION = [/\bmat karo\b/i, /\bmat\b\s*\w+o\b/i, / मत /, /\bdo ?n[o']?t\b/i, /\bnahi chahiye\b/i, /\bnahi karna\b/i];
+const PROHIBITION_LEGACY = [/\bmat karo\b/i, /\bmat\b\s*\w+o\b/i, / मत /, /\bdo ?n[o']?t\b/i, /\bnahi chahiye\b/i, /\bnahi karna\b/i];
 
 // The AXES a standing instruction can land on. Keeping them named (rather than
 // storing free text alone) is what lets a LATER instruction on the same axis
 // REPLACE an earlier one instead of piling up — he changes his mind out loud and
 // a store that only ever appends would hand the Gaffer two contradictory laws.
-const AXES = [
+const AXES_LEGACY = [
   { id: "pace",      test: /\b(dheere|dheere|slow|speed)\b|धीरे|स्पीड/i,                       label: "speaking pace" },
   { id: "intensity", test: /\bintensit|\bdepth\b|\bbreadth\b|\bbreath\b|इंटेंसिटी|डेप्थ/i,        label: "depth / intensity" },
   { id: "language",  test: /\b(hinglish|english|hindi|accent|british|bihari)\b|एक्सेंट|इंग्लिश/i, label: "language / accent" },
@@ -99,7 +126,7 @@ const AXES = [
   { id: "brain",     test: /\buse brain\b|\bopus\b|\bsonnet\b|\bcall brain\b/i,                 label: "which brain to use" },
   { id: "map",       test: /\bstrategy\b|\bstructure\b|\bplan\b|स्ट्रेटजी|स्ट्रक्चर/i,             label: "declare the map first" },
 ];
-const axisOf = (text) => (AXES.find(a => a.test.test(text)) || { id: "general", label: "general" });
+const axisOf = (text) => (AXES_LEGACY.find(a => a.test.test(text)) || { id: "general", label: "general" });
 
 // A DIRECTIVE marker — the line must actually TELL THE GAFFER to do something.
 // MEASURED, not assumed (12 Aug 2026): permanence-or-prohibition ALONE was run over
@@ -111,7 +138,7 @@ const axisOf = (text) => (AXES.find(a => a.test.test(text)) || { id: "general", 
 // A 40% false-positive rate matters here in a way it would not in a log: this text
 // is INJECTED into his live context window, so noise costs tokens AND dilutes the
 // six real laws sitting beside it. Requiring a directive drops all four.
-const DIRECTIVE = [
+const DIRECTIVE_LEGACY = [
   /\bi want you to\b/i,                     // "I want you to permanently remember this thing"
   /\bnote (it down|karo|kar lo|kar lena)\b/i,// "I want you to note it down permanently"
   /नोट कर/, /\byaad rakh/i, /\bremember (this|that|it)\b/i,
@@ -125,28 +152,81 @@ const DIRECTIVE = [
 ];
 // …and lines that carry a marker but are plainly NOT laws. Each entry is here
 // because it fired on a real line above, not because it might.
-const NOT_A_LAW = [
+const NOT_A_LAW_LEGACY = [
   /\bwe do ?n[o']?t (need|have to)\b/i,   // "we don't need to do it anymore" — momentary, and "we", not "you"
   /\bit was\b/i,                          // "It was so frustrating…" — a report about the past
   /\byou keep on forgetting\b/i,
 ];
 
 // isStanding — does this captain line create a law that must outlive the session?
-export function isStanding(text) {
+export function isStandingLegacy(text) {
   const t = String(text || "").trim();
   if (t.length < 8) return false;                       // "Hello." is not a law
   if (/^(hello|haan|yes|ok|okay|no|nope)\b[.!? ]*$/i.test(t)) return false;
-  if (NOT_A_LAW.some(r => r.test(t))) return false;
-  if (!DIRECTIVE.some(r => r.test(t))) return false;    // it must TELL him something
-  return PERMANENCE.some(r => r.test(t)) || PROHIBITION.some(r => r.test(t));
+  if (NOT_A_LAW_LEGACY.some(r => r.test(t))) return false;
+  if (!DIRECTIVE_LEGACY.some(r => r.test(t))) return false;    // it must TELL him something
+  return PERMANENCE_LEGACY.some(r => r.test(t)) || PROHIBITION_LEGACY.some(r => r.test(t));
 }
 
 // A DECLARED PLAN is him naming the SHAPE of the sitting. B7 is the Gaffer owing
 // him one; this is the machine noticing when one has been agreed, so a rotation
 // cannot lose it. His, verbatim: "टोकेनाइजेशन से स्टार्ट करना ऑब्वियसली टोकेनाइजेशन
 // देन एम्बेडिंग देन इन्फरेंस सैंपलिंग देन कॉन्टेक्स्ट विंडो।"
-const PLAN_MARKERS = [/\bthen\b.*\bthen\b/i, /देन.*देन/, /\bphir\b.*\bphir\b/i, /→/, /\bstart karna\b/i, /\bstart (with|karenge)\b/i, /\bfirst\b.*\bthen\b/i];
-export const looksLikePlan = (t) => PLAN_MARKERS.some(r => r.test(String(t || "")));
+const PLAN_MARKERS_LEGACY = [/\bthen\b.*\bthen\b/i, /देन.*देन/, /\bphir\b.*\bphir\b/i, /→/, /\bstart karna\b/i, /\bstart (with|karenge)\b/i, /\bfirst\b.*\bthen\b/i];
+export const looksLikePlan = (t) => PLAN_MARKERS_LEGACY.some(r => r.test(String(t || "")));
+// ===========================================================================
+// END OF THE FROZEN ENGINE. Everything below is live.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// THE HAND-OFF FROM THE WATCHER (15 Aug 2026)
+// ---------------------------------------------------------------------------
+// This file may NOT import gaffer_brain.mjs, and that is not tidiness — it is a
+// property its own selftest proves: this organ can reach neither the network nor
+// a subprocess, so it can never cost a token or block a turn. The Watcher's
+// verdict therefore arrives as a PLAIN OBJECT handed in by the caller (the
+// /transcript door, which reads it off gaffer_brain.jsonl), and the direction of
+// the dependency stays one-way.
+//
+// FRESHNESS IS CHECKED HERE, NOT TRUSTED FROM THE CALLER: a judgment about a turn
+// two minutes ago lands on a different conversation and reads as a non-sequitur —
+// the same 60s window every hint on the /deep poll obeys, and the same number.
+export const JUDGMENT_FRESH_MS = 60000;
+// The Watcher names a memory BLOCK for each standing instruction; this store has
+// always named an AXIS. They are the same idea under two names, and the mapping is
+// declared HERE — in the store that owns the axes — rather than in the Watcher,
+// so that adding an axis is one edit in the file that defines what an axis is.
+// `general` is the honest answer for the two blocks that are not about behaviour.
+const BLOCK_AXIS = {
+  how_to_speak: { id: "pace", label: "speaking pace" },
+  what_not_to_do: { id: "prohibition", label: "a standing prohibition" },
+  where_we_are: { id: "map", label: "declare the map first" },
+  what_he_asked_for: { id: "general", label: "general" },
+  about_him: { id: "general", label: "general" },
+};
+export function judgmentIsFresh(j, now = new Date()) {
+  if (!j || typeof j !== "object") return false;
+  const t = Date.parse(j.ts || j.at || "");
+  if (!Number.isFinite(t)) return false;
+  return (now.getTime() - t) >= 0 && (now.getTime() - t) <= JUDGMENT_FRESH_MS;
+}
+
+// isStanding — THE PLAN OF RECORD. When the Watcher has judged this turn, its
+// judgment decides; otherwise the frozen word list answers, exactly as before.
+// The signature is backward-compatible on purpose: every existing caller keeps
+// working and simply gets the legacy behaviour until a judgment is passed.
+export function isStanding(text, judgment = null, now = new Date()) {
+  if (judgmentIsFresh(judgment, now) && Array.isArray(judgment.standing)) {
+    const t = String(text || "").trim();
+    // THE WATCHER'S LIST IS AUTHORITATIVE IN BOTH DIRECTIONS. A line it did not
+    // name is NOT a law, even if the word list would have called it one — that is
+    // the whole point: six of the thirteen "laws" in his live store were plain
+    // conversation the word list waved through, and this is what stops the
+    // fourteenth. Silence from a judging organ is a verdict, not an absence.
+    return judgment.standing.some((s) => s && (s.quote === t || (s.quote && t.includes(s.quote)) || (s.text && t.includes(s.text))));
+  }
+  return isStandingLegacy(text);
+}
 
 // ---------------------------------------------------------------------------
 // THE ROLLING STATE
@@ -171,8 +251,8 @@ export function emptyState(now = new Date()) {
 // escalation rides HIS WORDS, not a score. Normalised hard so "what were we
 // talking about?" and "Bhai, what were we talking about?" are the same idea.
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-zऀ-ॿ ]+/g, " ").replace(/\s+/g, " ").trim();
-const FORGOT = /\bforgot|\bforget|bhul (gaye|gaya)|भूल गए|\bdrifting\b|\byaad nahi\b|keep on forgetting/i;
-const CONFUSED = /samajh nahi aaya|समझ नहीं आया|\bnot understanding\b|\bdidn.?t (get|understand)\b|\brepeat\b/i;
+const FORGOT_LEGACY = /\bforgot|\bforget|bhul (gaye|gaya)|भूल गए|\bdrifting\b|\byaad nahi\b|keep on forgetting/i;
+const CONFUSED_LEGACY = /samajh nahi aaya|समझ नहीं आया|\bnot understanding\b|\bdidn.?t (get|understand)\b|\brepeat\b/i;
 
 // observe — THE PER-TURN CALL. O(state), never O(transcript).
 // `lines` is the delta the /transcript door already holds: ["CAPTAIN: …", "GAFFER: …"].
@@ -199,7 +279,13 @@ export function scoreSitting(s) {
   };
 }
 
-export function observe(state, lines, now = new Date(), standing = null) {
+// observe — THE PER-TURN CALL. `judgment`, when a fresh one is handed in, decides
+// which lines are standing instructions AND which axis each lands on; without it
+// the frozen word list decides, exactly as before. Everything else in this
+// function — the turn counters, the plan, the repeat detector, the day roll — is
+// unchanged and still deterministic, because none of it was ever the fault.
+export function observe(state, lines, now = new Date(), standing = null, judgment = null) {
+  const fresh = judgmentIsFresh(judgment, now);
   const rolled = !!(state && state.day && state.day !== istDay(now));
   const s = state && state.day === istDay(now) ? { ...state } : emptyState(now);
   const st = standing || readJson(STANDING, { instructions: [], _writer: "gaffer_state.mjs" });
@@ -222,12 +308,21 @@ export function observe(state, lines, now = new Date(), standing = null) {
     if (!text) continue;
     s.captain_turns++;
     s.last_captain_line = text.slice(0, 400);
-    if (FORGOT.test(text)) s.forgot_flags++;
+    // WHEN THE WATCHER HAS SPOKEN IT COUNTS THESE, because this is the exact
+    // measurement that retired the word list: on 15 Aug his five CALM corrections
+    // produced forgot_flags = 0, and every downstream reader — the brief, the
+    // score, B10's "your last sitting was not clean" line — believed the sitting
+    // had gone fine. A `correction` is counted here too: for this counter's
+    // purpose ("how many times did he have to tell you that you lost something")
+    // a calm correction and an angry one are the same event, which is the whole
+    // finding.
+    const sig = fresh ? (judgment.signals || []).map((x) => x && x.kind) : [];
+    if (fresh ? (sig.includes("forgot") || sig.includes("correction")) : FORGOT_LEGACY.test(text)) s.forgot_flags++;
     // the turn it was raised on is recorded WITH it — B3 needs to fire its
     // "you moved on" note ONCE, on the next turn, not forever after. Measured:
     // without this stamp the supervisor fired on 86% of his real sitting, because
     // an open question that is never cleared re-triggers on every later turn.
-    if (CONFUSED.test(text)) s.open_question = text.slice(0, 300), s.open_question_turn = s.turns;
+    if (fresh ? sig.includes("unresolved") : CONFUSED_LEGACY.test(text)) s.open_question = text.slice(0, 300), s.open_question_turn = s.turns;
     if (looksLikePlan(text) && text.length > 25) s.declared_plan = { text: text.slice(0, 600), at: now.toISOString() };
     // repeats — the second time an idea appears, it is a FLAG, not a coincidence
     const k = norm(text).split(" ").slice(0, 12).join(" ");
@@ -236,9 +331,16 @@ export function observe(state, lines, now = new Date(), standing = null) {
       if (hit) { hit.count++; hit.last_at = now.toISOString(); }
       else s.repeats.push({ key: k, text: text.slice(0, 200), count: 1, last_at: now.toISOString() });
     }
-    if (isStanding(text)) {
-      const ax = axisOf(text);
-      const rec = { axis: ax.id, label: ax.label, text: text.slice(0, 400), at: now.toISOString(), day: istDay(now) };
+    if (isStanding(text, judgment, now)) {
+      // THE AXIS COMES FROM THE WATCHER TOO when it judged this line: it returns
+      // which memory BLOCK the instruction belongs in, and the block names map
+      // one-to-one onto the axes this store already had. Falling back to the word
+      // list's axisOf() here would put a meaning-judged instruction on a
+      // vocabulary-guessed axis, and the axis is what decides which EARLIER law it
+      // replaces — a wrong axis silently keeps two contradictory laws alive.
+      const named = fresh ? (judgment.standing || []).find((x) => x && ((x.quote && text.includes(x.quote)) || (x.text && text.includes(x.text)))) : null;
+      const ax = (named && BLOCK_AXIS[named.block]) || axisOf(text);
+      const rec = { axis: ax.id, label: ax.label, text: (named && named.text ? named.text : text).slice(0, 400), at: now.toISOString(), day: istDay(now), by: fresh ? "watcher" : "legacy" };
       // LATER WINS ON THE SAME AXIS (see AXES above) — but a general instruction
       // never silently swallows another general one; those accumulate.
       if (ax.id !== "general") st.instructions = st.instructions.filter(i => i.axis !== ax.id);
@@ -296,7 +398,16 @@ const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
 // supervise — the whole watcher. PURE: state in, at most one note out.
 // `lines` is the same turn delta the /transcript door already holds, so this
 // costs one pass over two or three strings.
-export function supervise(state, standing, lines = [], now = new Date()) {
+// `brainNote` — THE WATCHER'S NOTE, when there is a fresh one. It WINS, whole:
+// this function does not merge it with a word-list note, does not second-guess it,
+// and does not add a second note beside it, because ONE NOTE PER TURN is the law
+// that survives the change of engine. When there is no fresh note the frozen
+// detectors below run exactly as they always did — that is the degraded mode, and
+// it is the only reason they are still in the file.
+export function supervise(state, standing, lines = [], now = new Date(), brainNote = null) {
+  if (judgmentIsFresh(brainNote, now) && brainNote.note) {
+    return { kind: brainNote.kind, priority: brainNote.priority || 100, note: brainNote.note, id: brainNote.id, by: "watcher" };
+  }
   const s = state || emptyState(now);
   const st = standing || { instructions: [] };
   const cap = [], gaf = [];
@@ -309,7 +420,7 @@ export function supervise(state, standing, lines = [], now = new Date()) {
   const found = [];
 
   // 1 — HE SAID YOU FORGOT. The loudest signal there is; nothing outranks it.
-  if (cap.some(t => FORGOT.test(t))) {
+  if (cap.some(t => FORGOT_LEGACY.test(t))) {
     found.push(mk("forgot", 100,
       `[HE JUST TOLD YOU THAT YOU FORGOT — that is the ${s.forgot_flags || 1}${(s.forgot_flags || 1) === 1 ? "st" : "th"} time today. Do NOT apologise and do NOT guess. Say plainly that you are checking, then USE A TOOL to find it. What the state says you were doing: ${s.declared_plan ? s.declared_plan.text.slice(0, 200) : "no agreed plan recorded — say so honestly rather than inventing one"}]`));
   }
@@ -324,7 +435,7 @@ export function supervise(state, standing, lines = [], now = new Date()) {
   // repeat detector below is what catches that. The window is one turn-pair
   // (a CAPTAIN line and the GAFFER line answering it), not a tuned number.
   const justMovedOn = s.open_question && typeof s.open_question_turn === "number" && (s.turns - s.open_question_turn) <= 2;
-  if (justMovedOn && gaf.length && !cap.some(t => CONFUSED.test(t))) {
+  if (justMovedOn && gaf.length && !cap.some(t => CONFUSED_LEGACY.test(t))) {
     found.push(mk("unresolved", 90,
       `[HE SAID HE DID NOT UNDERSTAND AND YOU MOVED ON. Go back to it NOW, smaller, from zero — do not re-say it in the same words. His words were: "${String(s.open_question).slice(0, 180)}"]`));
   }
@@ -541,6 +652,15 @@ function selftest() {
     const forbidden = ["child" + "_process", "node:" + "http", "claude" + "gen.mjs", "brain" + ".mjs"];
     assert("SILENCE IS FREE — no model call is even REACHABLE: no subprocess, no network, no brain import",
       forbidden.every(n => !imports.includes(n)) && !src.includes("fetch" + "("));
+    // …AND NOT THE WATCHER EITHER (15 Aug 2026). The judgment arrives as a plain
+    // object handed in by the caller, precisely so this stays provable: importing
+    // an organ that talks to a model would put a network call one hop away and the
+    // assertion above would be true while the property was gone. Checked against
+    // the IMPORT LINES, never the whole file — this file NAMES the Watcher in prose
+    // a dozen times now, and a whole-file substring search reports its own
+    // documentation as a violation. (It did, on the first run of this assertion.)
+    assert("SILENCE IS FREE — …and the WATCHER is not imported either: its verdict arrives as a plain object, so the one-way dependency is a fact about the code and not a convention",
+      !imports.includes("gaffer_" + "brain.mjs"));
   }
 
   // --- B3 · THE SUPERVISOR — a second pair of ears. Every fixture is a REAL line.
@@ -620,6 +740,65 @@ function selftest() {
     const clean = observe({ ...yday, forgot_flags: 0, repeats: [] }, ["CAPTAIN: subah ho gayi bhai"], new Date("2026-08-12T06:00:00Z"), { instructions: [] });
     assert("B10 — a CLEAN sitting says nothing next time (a scoreboard that reports a good day every day teaches nothing and costs tokens forever)",
       !renderBrief(emptyState(new Date("2026-08-12T06:00:00Z")), clean.standing).includes("WAS SCORED"));
+  }
+
+  // --- LAYERING (15 Aug 2026): the Watcher is the plan of record, this file is
+  // the degraded-mode fallback. Both halves are asserted, because a fallback that
+  // is never exercised is a hypothesis, and a plan of record that is never
+  // preferred is a decoration.
+  {
+    const fresh = (o) => ({ ...o, ts: new Date(T0.getTime() - 5000).toISOString() });
+    const stale = (o) => ({ ...o, ts: new Date(T0.getTime() - 300000).toISOString() });
+    const GREET = "¿Greet वगैरह करा करो? आई थिंक यू शुड स्टार्ट ग्रीटिंग एंड एवरीथिंग फर्स्ट बिफोर यू जस्ट डंप योर वर्ड्स।";
+    const j = fresh({ signals: [{ kind: "forgot", why: "he checked whether it remembered and it did not" }], standing: [{ text: "Greet him and orient yourself before delivering content.", block: "how_to_speak", quote: GREET }] });
+
+    // 1 — the line the word gate DROPPED is now stored, and on the right axis
+    assert("LAYERING — the 13 Aug greeting instruction dies the FROZEN word gate (this is the fault, still reproducible)",
+      isStandingLegacy(GREET) === false);
+    assert("LAYERING — …and the WATCHER's judgment stores it, which is the whole point of the replacement",
+      isStanding(GREET, j, T0) === true);
+    {
+      const { standing } = observe(emptyState(T0), ["CAPTAIN: " + GREET], T0, { instructions: [] }, j);
+      assert("LAYERING — the stored record carries the WATCHER's axis (how_to_speak → pace), never the word list's guess, because the axis decides what it replaces",
+        standing.instructions.length === 1 && standing.instructions[0].axis === "pace" && standing.instructions[0].by === "watcher");
+    }
+    // 2 — and it is authoritative in BOTH directions: a line the Watcher did NOT
+    // name is not a law, even when the word list would have waved it through.
+    // This is the OVER-fire half, and it is six of his thirteen live "laws".
+    const NOISE = "I want you to explain it in detail. I don't know what we are talking about to be honest.";
+    assert("LAYERING — the frozen gate calls plain conversation a permanent law (the over-fire half of the fault)",
+      isStandingLegacy(NOISE) === true);
+    assert("LAYERING — …and the Watcher's silence about that line is a VERDICT, so it is no longer stored",
+      isStanding(NOISE, j, T0) === false);
+    // 3 — the calm corrections finally COUNT
+    {
+      const calm = "No no no no no. I told you something about 15th of August. Do you remember anything about it?";
+      const legacyRun = observe(emptyState(T0), ["CAPTAIN: " + calm], T0, { instructions: [] });
+      const watchedRun = observe(emptyState(T0), ["CAPTAIN: " + calm], T0, { instructions: [] }, j);
+      assert("LAYERING — a CALM correction scores forgot_flags 0 on the frozen engine and 1 under the Watcher (the measurement that retired the word list)",
+        legacyRun.state.forgot_flags === 0 && watchedRun.state.forgot_flags === 1);
+    }
+    // 4 — the note: the Watcher's wins whole, ONE per turn, and staleness is checked HERE
+    const bn = fresh({ kind: "correction", priority: 95, id: "correction:7", note: "[HE IS CORRECTING YOU…]" });
+    const long = "GAFFER: " + Array.from({ length: 254 }, (_, i) => `shabd${i}`).join(" ");
+    const withBoth = supervise(emptyState(T0), { instructions: [] }, [long], T0, bn);
+    assert("LAYERING — a fresh Watcher note WINS WHOLE: it is not merged with the word list's, and it does not arrive alongside a second note",
+      withBoth.kind === "correction" && withBoth.by === "watcher" && withBoth.note === bn.note);
+    assert("LAYERING — with NO judgment the frozen detectors answer exactly as before (the fallback is exercised, not merely described)",
+      supervise(emptyState(T0), { instructions: [] }, [long], T0).kind === "monologue");
+    assert("LAYERING — a STALE judgment is refused and the fallback answers: a correction two minutes late lands on a different conversation",
+      supervise(emptyState(T0), { instructions: [] }, [long], T0, stale(bn)).kind === "monologue"
+      && isStanding(GREET, stale(j), T0) === false
+      && JUDGMENT_FRESH_MS === 60000);
+    assert("LAYERING — a MALFORMED judgment can never crash the per-turn path; it simply is not fresh",
+      judgmentIsFresh(null) === false && judgmentIsFresh({}) === false && judgmentIsFresh("x") === false
+      && judgmentIsFresh({ ts: "not a date" }) === false && judgmentIsFresh({ ts: new Date(T0.getTime() + 600000).toISOString() }, T0) === false);
+    // 5 — THE ONE-WAY DEPENDENCY is asserted up in the "SILENCE IS FREE" block,
+    // which already reads this file's own source once. It is stated there and not
+    // here for two measured reasons: a second `readFileSync(new URL(import.meta
+    // .url))` costs three unresolved sinks in xray's IR for a string this suite
+    // already holds, and the two properties are the same property — this organ
+    // cannot reach a model, and importing the Watcher would put one a hop away.
   }
 
   // --- a new day is a new sitting, but the standing store is NOT reset

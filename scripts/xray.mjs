@@ -113,7 +113,38 @@ function analyzeFile(absPath, src) {
   const moduleObjects = new Map(); // name -> [keys]  (for `MODES[mode]` dispatch)
   const dispatchTableKeys = new Set(); // keys of shape-recognised dispatch tables
   const exportedNames = new Set();
-  let unresolved = 0;
+  // ⚠ UNRESOLVED SINKS ARE COUNTED AS DISTINCT SITES, NOT AS VISITS (15 Aug 2026).
+  // This was a bare `let unresolved = 0` incremented on every Unknown path argument
+  // the walker met — and the walker meets each one MANY times, because the
+  // interprocedural fixpoint below re-analyses every local function once per known
+  // parameter-value combination, for up to five iterations. So the number was
+  // "unresolved sink VISITS", and it moved whenever the fixpoint ran one more
+  // iteration, which ANY new code can cause without adding a single unanalysable
+  // line.
+  //
+  // MEASURED the day this was fixed: ~600 lines of new code in dugout.mjs took the
+  // count 964 → 998 (+34) while the DISTINCT sites went 71 → 72. One real
+  // regression, thirty-four phantom ones — and the per-organ ratchet in the selftest
+  // fails on exactly this number, so it was about to red on noise and teach the next
+  // session to "fix" code that was already perfectly legible. The same effect would
+  // have fired on any commit that added a `deps = {}` entry point anywhere.
+  //
+  // A budget that moves when you add an unrelated function is not a budget. The set
+  // below keys on line + verb + kind, which is exactly one entry per PLACE in the
+  // source the analyser could not follow — the thing this file's header has always
+  // promised ("UNSOUNDNESS IS A BUDGET, NOT A SECRET"). Every baseline number in the
+  // committed IR therefore changes once, in the commit that made this true.
+  // A SITE THAT IS EVER RESOLVED IS NOT AN UNRESOLVED SITE. This half is not
+  // pedantry — it is most of the number. The fixpoint's FIRST walk runs before any
+  // parameter has a value, so `function readIt(p) { readFileSync(p) }` is Unknown on
+  // that pass and constant on every pass after it; counting the first walk reports
+  // the house dependency-injection idiom as a blind spot in every organ that uses
+  // it, which is all of them. The budget is places the analyser could NEVER follow.
+  const unresolvedSites = new Set();
+  const resolvedSites = new Set();
+  const noteUnresolved = (line, verb, kind) => unresolvedSites.add(`${line}|${verb}|${kind}`);
+  const noteResolved = (line, verb) => resolvedSites.add(`${line}|${verb}`);
+  const trulyUnresolved = () => [...unresolvedSites].filter((s) => !resolvedSites.has(s.split("|").slice(0, 2).join("|"))).length;
   const argvVerbs = new Set();
   // WHICH IDENTIFIERS CARRY THE CLI VERB. This started as a hardcoded name list
   // (mode/cmd/verb/sub/action) and that was wrong in a way that MANUFACTURED
@@ -171,6 +202,7 @@ function analyzeFile(absPath, src) {
   // and reporting that as a dead read would be the audit inventing its own noise.
   let CTX = "module";
   const addSink = (map, p, line, verb) => {
+    noteResolved(line, verb);        // this site DID fold on at least one pass (see trulyUnresolved)
     const key = canon(p);
     if (!map.has(key)) map.set(key, []);
     map.get(key).push({ line, verb, ctx: CTX });
@@ -440,17 +472,17 @@ function analyzeFile(absPath, src) {
               else if (WRITE_FNS.has(name)) addSink(writes, v.v, line, name);
               // mkdir is a directory op — deliberately NOT counted as a writer of
               // a state FILE, or every organ would "write" the whole state dir.
-            } else unresolved++;
+            } else noteUnresolved(line, name, "arg0");
           } else if (name === "renameSync" || name === "rename") {
             // THE writeAtomic RULE. rename IS the write; without this every state
             // file in the repo reads as having zero writers.
             const d = evalNode(n.arguments[1], scope);
             if (isC(d)) addSink(writes, d.v, line, "renameSync→WRITE(dst)");
-            else unresolved++;
+            else noteUnresolved(line, name, "rename-dst");
           } else if (name === "cpSync" || name === "copyFileSync") {
             const s = evalNode(n.arguments[0], scope), d = evalNode(n.arguments[1], scope);
-            if (isC(s)) addSink(reads, s.v, line, name); else unresolved++;
-            if (isC(d)) addSink(writes, d.v, line, name); else unresolved++;
+            if (isC(s)) addSink(reads, s.v, line, name); else noteUnresolved(line, name, "cp-src");
+            if (isC(d)) addSink(writes, d.v, line, name); else noteUnresolved(line, name, "cp-dst");
           } else if (name === "execFileSync" || name === "spawnSync" || name === "execFile" || name === "spawn") {
             recordSpawn(n, scope, line);
           } else if ((name === "includes" || name === "has") && n.arguments.length === 1 && isArgvRooted(n.arguments[0])
@@ -545,7 +577,7 @@ function analyzeFile(absPath, src) {
       // THE ONLY TOKEN-SPEND EDGES IN THE ORGANISM. Enumerated, not estimated.
       if (["claude", "gemini"].includes(b)) spawns.push({ kind: "llm", bin: b, line });
       else spawns.push({ kind: "bin", bin: b, line });
-    } else unresolved++;
+    } else noteUnresolved(line, "spawn", "bin-unknown");
   };
 
   // ── pass 1: module top level ──────────────────────────────────────────────
@@ -676,7 +708,7 @@ function analyzeFile(absPath, src) {
     seenSpawn.add(k); return true;
   });
 
-  return { reads, writes, spawns: spawnsDedup, swallows, unresolved, verbs: [...argvVerbs], headerVerbs: [...headerVerbs], exports: [...exportedNames], loc: src.split("\n").length };
+  return { reads, writes, spawns: spawnsDedup, swallows, unresolved: trulyUnresolved(), verbs: [...argvVerbs], headerVerbs: [...headerVerbs], exports: [...exportedNames], loc: src.split("\n").length };
 }
 
 // ============================================================================
@@ -1184,6 +1216,31 @@ function selftest() {
   // UNSOUNDNESS IS A BUDGET. Recorded, and asserted non-increasing against the
   // committed IR — so the blind spot can only ever shrink.
   assert("unresolved_sinks is recorded (never reported ON, always counted)", typeof ir.unresolved_sinks === "number");
+  // …AND IT COUNTS PLACES, NOT VISITS (15 Aug 2026). Driven on a fixture built to
+  // make the fixpoint re-walk the same line many times: one helper with an Unknown
+  // path, called with several distinct constants so its parameter set grows and the
+  // re-analysis loop runs it once per value. Under the old `unresolved++` this
+  // returned one count per visit — which is how ~600 lines of unrelated code moved
+  // dugout.mjs from 964 to 998 without adding a single unanalysable line, and would
+  // have failed the ratchet below on pure noise. There is exactly ONE place in this
+  // fixture the analyser cannot follow, so the honest answer is 1.
+  {
+    const fixture = `
+import { readFileSync } from "node:fs";
+const A = "/a.json", B = "/b.json", C2 = "/c.json", D = "/d.json";
+function readIt(p) { return readFileSync(p, "utf8"); }
+function opaque(x) { return readFileSync(x.somewhere, "utf8"); }
+readIt(A); readIt(B); readIt(C2); readIt(D);
+opaque({}); opaque({}); opaque({});
+`;
+    const a = analyzeFile(join(ROOT, "scripts", "__fixture__.mjs"), fixture);
+    assert("unresolved_sinks counts DISTINCT SITES, not walker VISITS — a budget that moves when you add an unrelated function is not a budget",
+      a.unresolved === 1, `got ${a.unresolved} for a fixture with exactly one unfollowable line`);
+    // and the resolvable helper really was resolved through the fixpoint, so the 1
+    // above is "one hard case", not "the analyser gave up on everything"
+    assert("…and the four constants really did fold through the helper's parameter (otherwise the 1 above would be meaningless)",
+      [...a.reads.keys()].filter((p) => /\/(a|b|c|d)\.json$/.test(p)).length === 4);
+  }
   if (existsSync(OUT)) {
     const prev = load();
     // ⚠ THE RATCHET IS PER-ORGAN, AND THE FIRST VERSION WAS NOT — it compared the

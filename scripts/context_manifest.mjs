@@ -833,17 +833,78 @@ function selftest() {
         && /pending_facts \d+ \(2 staged, 1 rows UNREADABLE\)/.test(mixedOut.footer));
     } finally { for (const p of [cx, cx + ".empty", cx + ".done", mx]) { try { unlinkSync(p); } catch {} } }
 
-    // THE LIVE WIRE: whatever is staged on disk right now must arrive uncut through the
-    // real assembler. This is the assertion that would have caught the defect on day one.
-    const livePend = pendingFactsBlock();
+    // THE LIVE WIRE: whatever is staged on disk right now must arrive through the real
+    // assembler with NOTHING LOST SILENTLY. This is the assertion that would have caught
+    // the 160-char cut on day one.
+    //
+    // ⚠ REPAIRED 15 Aug 2026, and the repair is the interesting part. Until today this was
+    // ONE assertion — "every staged fact's full text is in the real brief" — and it went RED
+    // on live state the moment his staging queue outgrew what a 12,000-char brief can hold.
+    // MEASURED that morning: 5 staged facts (2,323 chars rendered) against a derived pending
+    // budget of 972, so the footer read `pending_facts 972 (5 staged, 3 NOT SHOWN — budget,
+    // 241 chars CUT — budget)` and the assertion failed. Nothing was broken. The parts were:
+    //   orientation 2,918 · card 1,431 · memory 5,695 · ceiling 12,000
+    // — the queue physically does not fit, and the design already SAYS so: CLAUDE.md calls
+    // this brief "a BUDGETED SNAPSHOT (12k chars, worst-priority-first), not the full store",
+    // the block's own header reserves a `hiddenLine` for exactly this, and the file's other
+    // assertion three above is literally named "A SQUEEZE IS NAMED, NEVER SILENT".
+    //
+    // So the old wording asserted an invariant this module never promised, and it only ever
+    // passed because the queue happened to be short. It also could not tell the two failures
+    // apart — a SILENT code cut (the real defect: the 160-char slice, the `slice(-5)`) and an
+    // ACCOUNTED budget squeeze — which is the same "a test that mocks the part that breaks"
+    // shape this repo keeps finding. Worse, it is UNFALSIFIABLE at home in one direction:
+    // dressing-room/hippocampus/ is gitignored (.gitignore:181), so on the away-day lane the
+    // queue is MISSING, the first clause short-circuits, and CI is green over any regression
+    // here forever. The three assertions below replace it and are collectively STRICTER — the
+    // engine is still held to zero loss of its own, and the budget path, which was never
+    // checked at all, is now held to exact accounting.
+    //
+    // NOT LOST, EITHER: a fact squeezed out of the brief is not gone. It rides the card deck
+    // one card per anchor (captains_call c52/c55 are two of these staged facts, dealt and
+    // waiting on his word) and get_context serves the whole queue live — which is what the
+    // block's own "not shown" line already tells the reader to do.
+    const livePend = pendingFactsBlock();                       // NO budget — the engine alone
     const liveOut = await assemble({});
-    assert("THE LIVE QUEUE ARRIVES UNCUT — every staged fact's full text is in the real brief",
+    const stagedFull = !existsSync(PENDING_FACTS) ? [] :
+      readFileSync(PENDING_FACTS, "utf8").split(/\r?\n/).filter((l) => l.trim())
+        .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+        .filter((j) => j && j.text && (j.status || "pending") === "pending")
+        .map((j) => String(j.text).replace(/\s+/g, " ").trim());
+
+    // (a) THE ENGINE STILL CUTS NOTHING OF ITS OWN. Unbudgeted, every staged fact renders
+    // whole — this is the 160-char / slice(-5) defect's own assertion, and it is the half
+    // that must never be allowed to depend on how many facts happen to be staged.
+    assert("THE ENGINE CUTS NOTHING OF ITS OWN — unbudgeted, every staged fact renders whole (the 160-char cut and the slice(-5) both die here)",
       livePend.state !== "ok"
-      || (livePend.cut === 0 && livePend.hidden === 0
-        && readFileSync(PENDING_FACTS, "utf8").split(/\r?\n/).filter((l) => l.trim())
-          .map((l) => { try { return JSON.parse(l); } catch { return null; } })
-          .filter((j) => j && j.text && (j.status || "pending") === "pending")
-          .every((j) => liveOut.text.includes(String(j.text).replace(/\s+/g, " ").trim()))));
+      || (livePend.cut === 0 && livePend.hidden === 0 && livePend.count === stagedFull.length
+        && stagedFull.every((t) => livePend.text.includes(t))));
+
+    // (b) UNDER THE REAL BUDGET, THE NEWEST RULING ALWAYS ARRIVES WHOLE. Room is spent
+    // newest-first by design; this is what makes a squeeze survivable — the ruling he gave
+    // most recently, the one a session is most likely to need, can never be the one dropped.
+    const liveP = liveOut.manifest.find((m) => m.id === "pending_facts");
+    assert("UNDER THE REAL BUDGET THE NEWEST RULING ARRIVES WHOLE — room is spent newest-first, so a squeeze can never eat the most recent thing he said",
+      liveP.state !== "ok" || !stagedFull.length
+      || liveOut.text.includes(stagedFull[stagedFull.length - 1]));
+
+    // (c) AND WHATEVER THE BUDGET TOOK IS ACCOUNTED EXACTLY, IN BOTH PLACES. The footer's
+    // numbers must equal what the block actually did: N hidden ⇒ the block's own "not shown"
+    // line says N and exactly count−N−(1 if clipped) facts are present WHOLE; K chars cut ⇒
+    // the clip markers in the rendered text sum to K. A drift between the two is the silent
+    // loss this file exists to abolish, wearing the accounting's clothes.
+    {
+      const note = liveP.note || "";
+      const hidden = Number((note.match(/(\d+) NOT SHOWN/) || [])[1] || 0);
+      const cut = Number((note.match(/(\d+) chars CUT/) || [])[1] || 0);
+      const markSum = [...liveOut.text.matchAll(/\(\+(\d+) chars cut/g)].reduce((n, m) => n + Number(m[1]), 0);
+      const whole = stagedFull.filter((t) => liveOut.text.includes(t)).length;
+      assert(`A SQUEEZE IS ACCOUNTED EXACTLY — footer and block agree, and only the budget ever cuts (live: ${stagedFull.length} staged, ${hidden} hidden, ${cut} cut)`,
+        liveP.state !== "ok"
+        || (markSum === cut
+          && (hidden === 0 || liveOut.text.includes(`… ${hidden} older staged fact${hidden === 1 ? "" : "s"} not shown (budget)`))
+          && whole === stagedFull.length - hidden - (cut ? 1 : 0)));
+    }
 
     // ── THE LIVE CARD WIRE (dead-wire sweep, 11 Aug 2026) ────────────────────
     // Every card assertion above runs on a stub. These run on the REAL owner, because the

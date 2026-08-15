@@ -58,8 +58,28 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 const LEDGER = "harvest_log.jsonl";
 
-// same scrub as hooks/afferent-post.mjs — nothing secret leaves for the bus
-const SECRET_RE = /sk-[a-z0-9-]{12,}|api[_-]?key\s*[:=]|password\s*[:=]|secret\s*[:=]|token\s*[:=]|BEGIN [A-Z ]*PRIVATE KEY/i;
+// Nothing secret leaves for the bus.
+//
+// ⚠ THE COMMENT ON THIS LINE SAID "same scrub as hooks/afferent-post.mjs" AND IT
+// HAD NOT BEEN TRUE SINCE 14 Aug 2026 (found 15 Aug, sweeping every writer of the
+// bus rather than only the one the work order named). The hook was rewritten that
+// day — it now REDACTS the credential and keeps his words, across eleven patterns
+// including sb_, JWTs, gh*_, xox*-, AKIA, AIza and ya29. This copy stayed frozen at
+// the pre-rewrite five, so a Gemini sitting harvested through here was scrubbed by
+// a strictly weaker net than a Claude Code turn typed the same minute, and the
+// comment said otherwise. The two prefixes added on 15 Aug (csk-, gsk_) matched
+// NEITHER file until today.
+//
+// THE ASYMMETRY IS DELIBERATE AND IS NOT BEING "HARMONISED": the hook REDACTS and
+// keeps the message, because his 40 words of thinking around a key are the thing
+// the archive exists to keep. This lane DROPS the whole turn and counts it
+// (skipped_scrub), which is the right call here for a different reason — the input
+// is a scraped Gemini transcript, not his own composed message, so the words around
+// a pasted key are usually the Gem's, and a drop that is COUNTED and REPORTED is
+// not a silent loss. What was wrong was never the drop; it was the coverage.
+// (No import unifies them: hooks/afferent-post.mjs calls main() at module scope, so
+// importing it would fire the capture nerve.)
+const SECRET_RE = /sk-(?:ant-)?[A-Za-z0-9_-]{16,}|sk_(?:live|test)_[A-Za-z0-9]{10,}|sb_(?:publishable|secret)_[A-Za-z0-9_-]{10,}|csk-[A-Za-z0-9]{20,}|gsk_[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|ya29\.[0-9A-Za-z_-]{20,}|api[_-]?key\s*[:=]|password\s*[:=]|secret\s*[:=]|token\s*[:=]|BEGIN [A-Z ]*PRIVATE KEY/i;
 const MIN_CHARS = 3;
 const POST_SPACING_MS = 150;
 const POST_TIMEOUT_MS = 400;
@@ -270,6 +290,39 @@ function selftest() {
       { who: "him", text: "mera api_key = sk-abcdefghijklmnop hai kya karu" },
     ] }, { ...deps, fetchFn: noNet, busHashes: new Set() });
     assert("sub-3-char and secret-bearing turns are scrubbed, never posted, never ledgered", d4.posted === 0 && d4.skipped_scrub === 2 && ledgerRows(dir).filter((r) => r.conv === "c3").length === 0);
+    // THE COVERAGE GAP THIS LANE CARRIED UNTIL 15 Aug 2026. Every one of these was
+    // caught by hooks/afferent-post.mjs and MISSED here, while the comment above the
+    // regex claimed the two were the same scrub. One assertion per credential family,
+    // named, so a future divergence fails a test instead of waiting for a paste.
+    const LEAKED = {
+      "supabase (his real 14 Aug paste)": "supabase se connect kar raha hoon, key sb_publishable_AbCdEf0123456789xyz hai",
+      "cerebras (his real 15 Aug paste)": "cerebras chalu karo, csk-abcdefghij0123456789klmnop laga do",
+      "groq": "groq wali gsk_ABCDEFGHIJ0123456789klmnop bhi try karo",
+      "github token": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ012345 se push kar do",
+      "google api key": "AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456 wali key hai",
+      "jwt": "token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk hai",
+      "aws access key id": "AKIAIOSFODNN7EXAMPLE se s3 pe daal do",
+      "slack": "xoxb-1234567890-ABCDEFGHIJ se post karo",
+    };
+    // In its OWN state dir: these probes must not add rows to the ledger the
+    // resync/status assertions below count. (The first draft of this block used the
+    // shared dir and reddened three later assertions — a test that dirties the
+    // fixture its neighbours read is the same class of defect as an organ that
+    // dirties live state on import.)
+    const leakDir = mkdtempSync(join(tmpdir(), "harvest-scrub-"));
+    const leakDeps = { ...deps, stateDir: leakDir, fetchFn: okFetch, busHashes: new Set() };
+    let leakedThrough = [];
+    for (const [name, text] of Object.entries(LEAKED)) {
+      const d = await ingestTurns({ conversation: "c-leak-" + name, turns: [{ who: "him", text }] }, leakDeps);
+      if (d.skipped_scrub !== 1 || d.posted !== 0) leakedThrough.push(name);
+    }
+    assert(`THE GAP THAT WAS REAL · all ${Object.keys(LEAKED).length} credential families the HOOK catches are caught HERE too (this lane's regex had been frozen since before the hook's 14 Aug rewrite, while its comment said "same scrub")`,
+      leakedThrough.length === 0);
+    // …and the floor did not move: an ordinary turn that merely TALKS about keys
+    // still gets through, because a scrubber that eats his thinking is its own defect.
+    const dOk = await ingestTurns({ conversation: "c-nokey", turns: [{ who: "him", text: "mujhe samajhna hai ki api keys rotate kaise karte hain aur kyun zaroori hai" }] }, leakDeps);
+    assert("…and a turn that merely TALKS about keys, carrying none, still reaches the bus (the drop-list must not eat his thinking)",
+      dOk.skipped_scrub === 0 && dOk.posted === 1);
 
     // thalamus down → posted:false in the ledger, then resync delivers
     const d5 = await ingestTurns({ conversation: "c4", turns: [{ who: "him", text: "thalamus so raha tha jab yeh bola" }] }, { ...deps, fetchFn: downFetch, busHashes: new Set() });

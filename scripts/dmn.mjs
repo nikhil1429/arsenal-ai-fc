@@ -405,8 +405,19 @@ function rolloutPrompt(weak, persona) {
   return `Simulate ONE tough interview probe. You are ${persona}. The candidate is an AI Product Engineer applicant whose known soft spot is: "${weak.concept}" (${weak.why}). Output STRICT JSON, no fences: {"stall_point": "<the exact sub-question where such a candidate most plausibly stalls, <=120 chars>", "reframe_15s": "<the 15-second reframe that would un-stick him, spoken, <=200 chars>", "drill": "<one concrete 10-minute drill for tomorrow, <=120 chars>"}`;
 }
 // M16 — the counter-rollout: hostile review before ammunition may be racked
+// CACHE-ORDERED, 15 Aug 2026 — STABLE FIRST, VOLATILE LAST. Measured on the live
+// brain_ledger over the trailing 7 days: dmn_counter, 80 calls, 1,459,093 tokens,
+// cache_creation 1,369,045 and cache_read EXACTLY ZERO. Its sibling dmn_rollout, in
+// the same organ on the same night, read 3,656,892 against 580,023 created — so the
+// lane can cache; this prompt was not shaped to let it. The old wording put the
+// cluster's four varying fields in the middle of the instructions, which leaves no
+// shared prefix to hit. Nothing about the review changes: same three attacks, same
+// verdict contract, and the material now sits last, closest to the judgment.
+// THE SAVING IS A HYPOTHESIS UNTIL THE LEDGER SAYS OTHERWISE, and the ledger will,
+// unprompted: the next night's rows carry cache_read_tokens for job dmn_counter.
 function counterPrompt(c) {
-  return `You are a hostile staff-engineer REVIEWER verifying pre-drafted coaching ammunition before it may ever be served to a learner. Concept: "${c.concept}". Claimed stall-point: "${c.stall_point}". The 15-second reframe: "${c.reframe_15s}". The drill: "${c.drill}". Attack all three: (1) is the reframe TECHNICALLY CORRECT — no subtle wrongness a junior would absorb? (2) is the drill concrete and doable in ~10 minutes? (3) is the stall plausible for an AI Product Engineer candidate? If ALL three hold answer sound, else broken. Output STRICT JSON, no fences: {"verdict":"sound"|"broken","why":"<=100 chars"}`;
+  return `You are a hostile staff-engineer REVIEWER verifying pre-drafted coaching ammunition before it may ever be served to a learner. Attack all three of the claims below: (1) is the reframe TECHNICALLY CORRECT — no subtle wrongness a junior would absorb? (2) is the drill concrete and doable in ~10 minutes? (3) is the stall plausible for an AI Product Engineer candidate? If ALL three hold answer sound, else broken. Output STRICT JSON, no fences: {"verdict":"sound"|"broken","why":"<=100 chars"}
+THE AMMUNITION UNDER REVIEW — concept: "${c.concept}". Claimed stall-point: "${c.stall_point}". The 15-second reframe: "${c.reframe_15s}". The drill: "${c.drill}".`;
 }
 const normKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(w => w.length > 3).sort().slice(0, 6).join("-");
 
@@ -1054,7 +1065,39 @@ async function selftest() {
       // ── #7 · THE SPEND IS ON THE BRAIN WINDOW ────────────────────────────
       const rows = [];
       const rMet = await dream({ ...base, board: fiveLanes, appendLedger: (row) => rows.push(row), recordUse: () => {}, write: () => {} });
-      assert("#7: every rollout AND every counter-rollout lands a brain_ledger row",
+      // CACHE ORDER (15 Aug 2026) — held on the REAL prompt builder, not a copy of it.
+  // MEASURED on the live brain_ledger, trailing 7 days, and the PAIR is the whole
+  // argument: dmn_rollout, 250 calls, read 3,656,892 cached tokens against 580,023
+  // created — while dmn_counter, same organ, same night, same engine, read ZERO
+  // against 1,369,045 created. The lane can cache; this prompt was not shaped to
+  // let it, because the cluster's four varying fields sat in the middle of the
+  // instructions. Stable first, volatile last — the same law the Watcher's prompt
+  // obeys (grep -n "THE CACHE ORDER IS PART OF THE CONTRACT" scripts/gaffer_brain.mjs).
+  {
+    const cc = { concept: "kv cache", stall_point: "why is attention still quadratic", reframe_15s: "the cache saves re-derivation, not the meetings", drill: "hand-count handshakes for n=4" };
+    const cp = counterPrompt(cc);
+    assert("CACHE ORDER — the counter prompt opens with its INVARIANT review instructions and ends with the varying ammunition (this lane read 0 cached tokens across 80 calls with it the other way round)",
+      cp.startsWith("You are a hostile staff-engineer REVIEWER") && cp.indexOf("kv cache") > cp.length * 0.6);
+    assert("CACHE ORDER — and NOTHING was lost in the reorder: all four fields, all three attacks and the verdict contract are still in the prompt",
+      [cc.concept, cc.stall_point, cc.reframe_15s, cc.drill].every((v) => cp.includes(v))
+      && /TECHNICALLY CORRECT/.test(cp) && /doable in ~10 minutes/.test(cp) && /plausible for an AI Product Engineer/.test(cp)
+      && cp.includes('"verdict":"sound"'));
+  }
+  // AND THE ROLLOUTS STAY INDEPENDENT — the work order asked for 250 calls collapsed
+  // into ONE, and the same measurement refutes it twice over. That lane is already
+  // 86% cache-read, so the entire prize is the ~580k it creates; and the VOTES this
+  // organ clusters on are evidence only because the rollouts are separate samples.
+  // One call producing 250 "rollouts" is one model imagining a consensus, and
+  // clusterRollouts would then be counting a single opinion three times. Cheaper,
+  // and wrong about the one thing the organ exists to measure.
+  // Read through __dirname, not `new URL(import.meta.url)` — identical file, but it
+  // is the idiom the static analyser can constant-fold, and the un-foldable form
+  // cost this organ a sink the moment it landed (xray's per-organ ratchet caught it
+  // in the very next run: dmn 3→4). The ratchet doing its job on the same day it
+  // was made honest is worth recording rather than quietly working around.
+  assert("THE ROLLOUTS STAY INDEPENDENT — one call per (weakness x persona), because the votes clusterRollouts counts are only evidence if the samples are separate",
+    /gen\(rolloutPrompt\(job\.w, job\.persona\), lane\)/.test(readFileSync(join(__dirname, "dmn.mjs"), "utf8")));
+  assert("#7: every rollout AND every counter-rollout lands a brain_ledger row",
         rows.length === rMet.rollouts + rMet.entries && rows.filter(x => x.job === "dmn_rollout").length === rMet.rollouts);
       assert("#7: the rows are brain-shaped (engine/model/ok/limit_hit) so windowUsage sees them",
         rows.every(x => x.engine === "claude" && x.model === DMN_MODEL && "ok" in x && "limit_hit" in x && "total_tokens" in x && DMN_JOBS.includes(x.job)));

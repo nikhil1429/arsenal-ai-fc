@@ -7,6 +7,29 @@
 > whether TODAY's sheet spoke — the sentinel therefore polls the **ntfy topic's
 > own JSON history**, which is the only truth about what reached his phone.
 
+## ⚠ CHANNEL STATUS — read by `watchman.mjs`, and it is the ONLY thing that demotes the daily RED
+
+CHANNEL_STATUS: BLOCKED since 2026-08-15 — the cloud routine's own egress policy refuses ntfy.sh (403 from the session proxy gateway). The routine itself fires daily and COMPLETES; it is the CHANNEL that is impossible, not the organ.
+
+**Delete the line above the day the channel works again, and `sentinel-blind` returns to RED in the same
+edit.** It lives here rather than in `watchman.mjs` deliberately: a status frozen inside code is the
+prose-rot this repo keeps finding — a fact still being obeyed long after it stopped being true — and
+this document is the thing that owns the sentinel's contract.
+
+Evidence, from the routine's own run log (`ArsenalFC Cloud Sentinel`, 15 Aug 2026 10:33 IST, *Completed*):
+
+> *"Cloud Sentinel couldn't run today — network egress policy blocked ntfy.sh entirely. Every curl to
+> https://ntfy.sh failed with a 403 policy denial from this session's proxy gateway… a 403/407 is an
+> organization policy block, not a transient error."*
+
+Why this is a demotion and not a deletion: the check is still **correct** — nothing of ours reached the
+topic today — and the LAPTOP half of that is a real signal, owned by `mouth-silent-today`. What changed
+is only the LEVEL, because a RED that can never clear is an alarm he learns to ignore, which is the
+exact failure the watchman exists to prevent. Same call, same reasoning, as `tier2-vanished`.
+
+**The real fix is a channel the cloud environment permits**, and that is its own work order — not a
+line in this one.
+
 ## What it is
 A **claude.ai cloud routine** (not a repo script, not a scheduled task on this
 machine): `ArsenalFC Cloud Sentinel — morning sheet watchdog`, id

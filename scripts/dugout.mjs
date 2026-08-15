@@ -68,7 +68,7 @@
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, readdirSync, unlinkSync, statSync, renameSync, openSync, readSync, closeSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";   // spawn: 15 Aug 2026 — the Watcher is woken detached, never awaited
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
@@ -96,6 +96,14 @@ import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // the bridge calls observe() in-process on the /transcript door because that door
 // is already holding the turn delta, which is what makes the update O(1) per turn.
 import { observe as observeTurn, renderBrief as renderGafferBrief, supervise as superviseTurn } from "./gaffer_state.mjs";
+// THE WATCHER (15 Aug 2026) — gaffer_brain.mjs is the SOLE WRITER of its journal
+// and its memory blocks; this file only READS them and only ever SPAWNS the organ.
+// Read-only imports, exactly like the hippocampus/fuelboard/examiner lines above.
+import { freshNote as gafferFreshNote, readJournal as gafferJournal, renderBlocks as renderGafferBlocks } from "./gaffer_brain.mjs";
+// The pace cap's number, imported ONLY so the selftest can prove the browser
+// literal and the derived constant are the same 100 — the page is a string and
+// cannot import, so without this they could silently drift apart.
+import { MONOLOGUE_WORDS as GAFFER_MONOLOGUE_WORDS } from "./gaffer_state.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI).
 // 11 Aug 2026 dead-wire sweep — `markServed` joins the two readers. It is the OWNER's
 // own writer (examiner.mjs is sole writer of examiner_drill.json and re-reads the file
@@ -218,6 +226,13 @@ function readDeepState(deps = {}) {
   // different conversation and read as a non-sequitur.
   out.supervisor = (rt.superNote && Date.now() - rt.superNote.ts < 60000)
     ? { id: rt.superNote.id, kind: rt.superNote.kind, note: rt.superNote.note } : null;
+  // B4 — THE OPENING BRIEFING, as a LATCHED injection rather than a standing
+  // imperative in the system prompt (see openingLatch). It is served at most once
+  // per IST day, and the latch is stamped the moment it is served — so even a poll
+  // that fires twice in the same second cannot deliver it twice.
+  out.opening = null;
+  if (deps.opening !== undefined) out.opening = deps.opening;
+  else { try { const l = openingLatch(); if (l.fire) out.opening = { id: l.day, text: l.text }; } catch { } }
   out.cross_mouth = null;
   try {
     const rows = deps.afferentRows !== undefined ? deps.afferentRows : readLinesTail(join(STATE_DIR, "afferent.jsonl"), 40000);
@@ -1363,9 +1378,18 @@ function firstContact() {
 function gafferSittingSection() {
   try {
     const brief = renderGafferBrief(readJson(GSTATE), readJson(GSTANDING), { forRotation: false });
+    // THE MEMORY BLOCKS RIDE IN FRONT OF THE ROLLING BRIEF (15 Aug 2026). Order is
+    // deliberate: the blocks are what he TOLD the Gaffer to be, the brief is where
+    // the sitting currently IS, and a being should know the first before the second.
+    // The blocks are written by gaffer_brain.mjs — this file only reads them, and it
+    // renders NOTHING when they are empty, so a fresh machine's instruction is
+    // byte-identical to the one it carried before this section existed.
+    const blocks = (() => { try { return renderGafferBlocks(readJson(GBLOCKS)); } catch { return ""; } })();
     // renderBrief always emits its header line; a header alone means nothing to say,
     // and an organ with nothing to say must say nothing (C3 principle 4).
-    return brief && brief.split("\n").length > 1 ? `\n${brief}\n` : "";
+    const body = brief && brief.split("\n").length > 1 ? brief : "";
+    if (!blocks && !body) return "";
+    return `\n${[blocks, body].filter(Boolean).join("\n\n")}\n`;
   } catch { return ""; }
 }
 
@@ -1462,13 +1486,36 @@ function buildPreparedSitting(deps = {}) {
 // requests — it is the first sentence out of its mouth. Every number below is
 // read off disk, deterministically: no model call, so an opening briefing costs
 // nothing and can therefore be unconditional.
+//
+// ⚠ IT NO LONGER RIDES THE SYSTEM PROMPT — 15 Aug 2026, HIS APPROVAL ON RECORD
+// ("2 point yes do it"). This text is an IMPERATIVE: "SAY THIS FIRST, UNPROMPTED,
+// BEFORE HE ASKS ANYTHING". A system instruction is re-read by the model on EVERY
+// TURN, so an imperative inside one does not fire once — it fires forever. The
+// measured consequence, four sittings running: the card dump reappearing
+// mid-conversation, including while he was introducing the system to a friend
+// (13 Aug lines 3, 18, 35, 49, 60, 70, 84, 100 · 14 Aug 2, 21, 22 · 15 Aug 5, 18,
+// 25, 33, 37). On 15 Aug he finally said "drop the cards officially."
+//
+// TEXT CANNOT HOLD STATE. That is the whole diagnosis, and it is why the repair is
+// not another sentence: the briefing becomes a LATCHED INJECTION, delivered once
+// per sitting through the same live channel every other hint uses, and the latch
+// is a fact on disk rather than a hope in a prompt. See openingLatch() below.
 function buildOpeningBriefing() {
   const bits = [];
   try {
     const cc = readJson(join(STATE_DIR, "captains_call.json"));
     const open = ((cc && cc.cards) || []).filter(c => c && !c.answered_at);
     if (open.length) {
-      const top = open[open.length - 1];
+      // THE DECK IS A QUEUE, NOT A STACK (15 Aug 2026). This was
+      // `open[open.length - 1]` — the NEWEST card, every time — which makes the
+      // deck LIFO and the bottom of it permanently unreachable. Measured that day
+      // on the live file: 56 cards, 29 open, and SEVEN had never once been dealt —
+      // c2, c3, c4, c5, c6, c8 and c38. Six of those seven are his own `[his-word]`
+      // drift reports, i.e. the deck's LIFO order was burying exactly the cards he
+      // filed himself. Oldest-first fixes it in one line and costs nothing: a card
+      // he has never seen outranks one minted this morning, and c9 being dealt 24
+      // times while c2 waited three weeks is not a priority scheme, it is a bug.
+      const top = open[0];
       bits.push(`${open.length} decision(s) waiting on him; the one to deal FIRST: [${top.id}] ${String(top.line || "").slice(0, 220)}`);
     }
   } catch { }
@@ -1515,21 +1562,70 @@ on 12 Aug he still had to ASK "what decisions are pending on me?". That question
 is a bug report. Open the sitting by answering it in TWO OR THREE SENTENCES —
 warm, spoken, no list-reading, no numbers he cannot act on — then hand him the
 turn. Do NOT dump all of it; name the ONE thing that matters most and say how
-many others are waiting. What is actually pending right now:
+many others are waiting. THIS ARRIVES ONCE TODAY AND WILL NOT ARRIVE AGAIN; after
+you have said it, the sitting is his. What is actually pending right now:
 ${bits.map(b => `  · ${b}`).join("\n")}
+`;
+}
 
-AND THEN TAKE HIS ANSWER — this is the half that did not exist until 12 Aug 2026.
+// THE CARD LAW — SPLIT OUT OF THE BRIEFING, 15 Aug 2026, and the split is the
+// point. These two things were one block of text and they are not the same KIND of
+// thing at all: the block above is a ONE-SHOT REPORT ("say this first"), which is
+// why it now rides a latch; this is a STANDING BEHAVIOURAL LAW ("whenever you deal
+// a card, take his answer"), which belongs in the constitution and must be re-read
+// on every turn. Moving both out would have silently deleted the answer half — the
+// half that was MISSING until 12 Aug and is the reason 0 of 42 cards had ever been
+// answered. Two different lifetimes, two different homes.
+function cardAnswerLaw() {
+  return `
+TAKING HIS ANSWER ON A CARD — this is the half that did not exist until 12 Aug 2026.
 Measured that day: 27 live cards, every one of them dealt to him at least once
 (one of them twenty times), and NOT A SINGLE ONE EVER ANSWERED. The deck was
 rotating correctly the whole time; what was missing was any way for him to
 answer, because the only path ran through a terminal command with an id in it.
-So: after you name the pending thing, ASK HIM PLAINLY — "haan, na, ya baad?" —
+So: whenever you name a pending decision, ASK HIM PLAINLY — "haan, na, ya baad?" —
 and the instant he says one of those three words, call answer_card(word) in that
 same turn. Do NOT ask him for the id; his word alone binds to the card he was
 just dealt. Do NOT batch them, do NOT save them for the end of the sitting, and
 NEVER tell him something is handled unless the call came back ok. If he answers
 one, you may offer the next ONE — never a list, never a queue.
 `;
+}
+
+// ---------------------------------------------------------------------------
+// THE LATCH (15 Aug 2026) — the briefing is delivered ONCE, and the proof is on disk
+// ---------------------------------------------------------------------------
+// The latch is deliberately the DUMBEST possible mechanism, because the failure it
+// replaces was caused by cleverness: a per-day file holding the day it last fired.
+// Not a counter, not a TTL, not a heuristic about whether he seems to have heard it
+// — one date. A new IST day re-arms it, which is exactly the cadence the briefing
+// was written for ("a being that watched all night opens with it"), and nothing
+// inside a sitting can re-arm it.
+//
+// IT IS NOT IN gaffer_state.json AND THAT IS NOT AN OVERSIGHT: that file has a
+// declared sole writer (gaffer_state.mjs) and this bridge is its driver, never a
+// second author of its schema. This is the bridge's own delivery bookkeeping, so
+// it lives in the bridge's own file, alongside the session handle.
+const OPENING_LATCH = join(STATE_DIR, "dugout_opening_latch.json");
+function openingLatch(deps = {}) {
+  const now = deps.now || new Date();
+  const day = localDate(now);
+  // The default read/write name the constant PATH rather than taking one, so the
+  // static analyser can fold them — the injectable form `((p, o) => writeFileSync(p,
+  // …))` makes the path an Unknown, and that single line was the only genuinely new
+  // unresolved sink in this whole build (71 → 72 distinct sites, measured).
+  const read = deps.read || (() => readJson(OPENING_LATCH));
+  const write = deps.write || ((_p, o) => writeFileSync(OPENING_LATCH, JSON.stringify(o, null, 2)));
+  const cur = read(OPENING_LATCH) || {};
+  if (cur.delivered_day === day) return { fire: false, why: `already delivered today (${day})` };
+  const text = deps.text !== undefined ? deps.text : buildOpeningBriefing();
+  if (!text) return { fire: false, why: "nothing pending — the briefing is empty today" };
+  // STAMPED BEFORE IT IS HANDED OVER, never after. If the write and the send are
+  // the other way round, a crash between them re-fires the briefing on the next
+  // poll — which is the identical symptom this latch exists to end, arriving by a
+  // new route. Losing one briefing to a crash is the cheaper failure by far.
+  write(OPENING_LATCH, { delivered_day: day, at: now.toISOString(), chars: text.length, _writer: "dugout.mjs" });
+  return { fire: true, text, day };
 }
 
 function buildSystemInstruction() {
@@ -1560,7 +1656,7 @@ BRING THINGS BACK BEFORE HE ASKS (B12). semantic_recall holds 848 rows of his ow
 
 ${seasonContext()}
 ${firstContact()}
-${buildOpeningBriefing()}
+${cardAnswerLaw()}
 ${buildPreparedSitting()}
 ${gafferSittingSection()}
 ${fp}
@@ -1674,6 +1770,14 @@ const TOOL_DECLS = [
   // answered from the shape of the question. Read-only, no writes, no model call.
   { name: "get_card", description: "OPEN A CAPTAIN'S CALL CARD AND READ IT — the card's own line, its state, and the first few thousand characters of whatever report it points at. Call this BEFORE saying anything specific about a card: what it asks, why it was filed, what it would do. If he asks about a card and you have not opened it, you are guessing — open it. id is the card id (c12); omit it to get the card he was last dealt.", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } } } },
   { name: "get_mission", description: "OPEN A GEMINI MISSION AND READ IT — the mission brief and, when it has returned, its report. Call this BEFORE describing what a mission asked for or what it found (M01, M02, T-hallucinations…). If he asks about a mission and you have not opened it, you are guessing — open it. id is the mission id (M02).", parameters: { type: "OBJECT", properties: { id: { type: "STRING" } }, required: ["id"] } },
+  // ADDED 15 Aug 2026 — because on 13 Aug it told him, out loud, "mere paas koi
+  // visual sensors nahi hain" while the video lane was LIVE in this very file
+  // (realtimeInput.video{data,mimeType:image/jpeg}) and THE TOUCHLINE EYES were in
+  // its own constitution. He pushed back and was right. A being that guesses at its
+  // own anatomy will keep getting it wrong, in both directions — denying what it has
+  // and claiming what it does not — so it now has a tool that LOOKS, exactly as it
+  // is told to look for everything else about his day.
+  { name: "get_myself", description: "WHAT YOU ARE AND WHAT YOU CAN ACTUALLY DO — your live tool list, your senses (can you see? can you hear? can you run code? can you read a URL?), which model you are running on, and what is switched off right now. Call this ANY time the conversation touches your own capabilities, and ALWAYS before saying you cannot do something. You have been wrong about yourself out loud before ('I have no visual sensors' — you did, and he caught it). Never guess at your own anatomy; look.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: {} } },
 ];
 
@@ -2190,6 +2294,48 @@ function execTool(name, args, deps = {}) {
         reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === day).length,
       };
     }
+    if (name === "get_myself") {
+      // EVERY FIELD IS DERIVED FROM THE LIVE FILE, never restated. The tool list is
+      // TOOL_DECLS itself, the senses are read off the page source that actually
+      // implements them, and the model is the one this process is about to connect
+      // with. That is the whole design: a restated capability list is a second
+      // source of truth that rots, and rotting is precisely how it came to deny
+      // having eyes. If a lane is deleted from the page, this stops claiming it in
+      // the same commit, with no one having to remember.
+      const page = typeof PAGE === "string" ? PAGE : "";
+      const has = (needle) => page.includes(needle);
+      const keys = loadKeys().length;
+      return {
+        _use: "Answer from THIS, in one or two spoken sentences — never read the list out. If he asks whether you can do something that is FALSE below, say so plainly and say what you CAN do instead. If it is TRUE, just do it. Never apologise for what you are.",
+        i_am: "THE GAFFER — the live voice of Arsenal AI FC. A mouth with a brain behind it, not a chatbot.",
+        model: DEFAULT_MODEL,
+        senses: {
+          hearing: { live: has("getUserMedia"), how: "your microphone stream, 16kHz in, with local voice-activity detection" },
+          // 13 Aug: he asked if you could see him and you said no. You could.
+          sight: { live: has("realtimeInput") && has("image/jpeg"), how: "he can share his screen or camera and you receive JPEG frames on the live wire — THE TOUCHLINE EYES" },
+          voice: { live: has("AudioContext"), how: "Charon, streamed audio out at the device's native rate" },
+        },
+        i_can: {
+          run_python: { live: TOOL_DECLS.some(t => t.name === "run_python"), note: "a real sandbox — prove a claim instead of asserting it" },
+          read_a_url: { live: TOOL_DECLS.some(t => t.name === "read_url"), note: "public sources only, answered FROM the source" },
+          read_his_capsules: { live: TOOL_DECLS.some(t => t.name === "get_capsule"), note: "his own locked notes, verbatim" },
+          record_a_decision: { live: TOOL_DECLS.some(t => t.name === "answer_card"), note: "his haan/na/baad binds the card he was just dealt" },
+          remember_something: { live: TOOL_DECLS.some(t => t.name === "remember"), note: "staged for HIS confirmation — never canon on your word alone" },
+          wake_the_deep_brain: { live: has("DEEP PENDING"), note: "you do not call it; it wakes on meaning and its answer arrives mid-conversation" },
+        },
+        all_tools: TOOL_DECLS.map(t => t.name),
+        what_is_watching_me: {
+          the_watcher: "gaffer_brain.mjs reads every turn and judges what he MEANT — it is why a correction reaches you even when he says it calmly",
+          the_blocks: "your memory blocks are written from his own words and ride in your instruction every sitting",
+          delivery: "whether you actually ACTED on a correction is measured, not assumed",
+        },
+        what_is_off_right_now: [
+          keys ? null : "the Gemini key pool is empty on this machine — the Watcher and the chalkboard are both down",
+          existsSync(join(STATE_DIR, "gaffer_brain.jsonl")) ? null : "the Watcher has never written a judgment on this machine",
+        ].filter(Boolean),
+        honesty_law: "If it is not in this object, you do not know it. Say 'ye mujhe nahi pata, dekhta hoon' and go and look.",
+      };
+    }
     if (name === "get_organism") {
       // THE FULL-ORGANISM BRIEFING — the WHOLE anatomy in one call, so the
       // Gaffer can walk the captain (or Nidhi) through EVERY organ, both
@@ -2407,7 +2553,53 @@ const SESSION = join(STATE_DIR, "dugout_session.json");
 // bridge is its driver, never a second author of the schema.
 const GSTATE = join(STATE_DIR, "gaffer_state.json");
 const GSTANDING = join(STATE_DIR, "gaffer_standing.json");
+// THE WATCHER's memory blocks — READ here, written only by gaffer_brain.mjs.
+const GBLOCKS = join(STATE_DIR, "gaffer_blocks.json");
 const RESUME_TTL_MIN = 100;                        // handles live ~2h; stay conservative
+
+// ---------------------------------------------------------------------------
+// THE WATCHER'S TWO WIRES (15 Aug 2026) — read its verdict · wake it
+// ---------------------------------------------------------------------------
+// readGafferJudgment — the freshest judgment, in the shape gaffer_state.mjs
+// expects: { ts, signals[], standing[], note }. Reading a bounded jsonl tail is
+// microseconds and it costs no tokens, so this can sit on the per-turn path.
+// Returns null when there is nothing fresh, which is the signal for the frozen
+// word-list engine to answer instead.
+function readGafferJudgment(deps = {}) {
+  try {
+    const rows = deps.rows !== undefined ? deps.rows : gafferJournal();
+    if (!rows.length) return null;
+    const last = rows[rows.length - 1];
+    const note = gafferFreshNote(rows, deps.now || Date.now());
+    // The JOURNAL row is a summary (signal KINDS, a standing COUNT); the standing
+    // TEXTS it does not carry are already folded into the memory blocks by the
+    // owner. So what rides back into the per-turn path is exactly what the per-turn
+    // path can act on — the signals and the note — and nothing is reconstructed
+    // here that the owner did not write.
+    return {
+      ts: last.ts,
+      signals: (last.signals || []).map((k) => ({ kind: k })),
+      standing: [],
+      note: note ? { ...note, ts: last.ts } : null,
+    };
+  } catch { return null; }
+}
+// wakeTheWatcher — DETACHED, stdio ignored, unref'd. Nothing this child does can
+// reach the live voice: not a slow model, not a dry key pool, not a crash. The
+// join(__dirname, …) form is deliberate — it is the idiom xray can constant-fold,
+// so this spawn stays visible in the static graph rather than becoming an
+// unresolved sink (the lesson watchman.mjs paid for on this same day).
+function wakeTheWatcher(deps = {}) {
+  try {
+    const spawnFn = deps.spawn || spawn;
+    const child = spawnFn(process.execPath, [join(__dirname, "gaffer_brain.mjs"), "judge"], {
+      detached: true, stdio: "ignore", windowsHide: true,
+      env: { ...process.env, ARSENAL_ORGAN: "1" },   // the organism never mistakes itself for him
+    });
+    child.unref();
+    return true;
+  } catch { return false; }   // a spawn that cannot start must never cost him a transcript line
+}
 function saveSessionHandle(body, deps = {}) {
   const write = deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2)));
   const now = deps.now || new Date();
@@ -3008,7 +3200,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 33);   // 33 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 34);   // 33 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -3060,7 +3252,7 @@ async function selftest() {
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
-      g.tools[0].functionDeclarations.length === 33
+      g.tools[0].functionDeclarations.length === 34
       && ["get_capsule", "grade_rejirah", "log_reps", "get_organism", "get_club_report", "get_context", "get_card", "get_mission"]
         .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
@@ -3198,8 +3390,110 @@ async function selftest() {
       assert("B4 — the opening briefing exists and is composed deterministically", typeof buildOpeningBriefing() === "string");
       assert("B4 — it tells him ONE thing, never the whole list (he is ADHD-PI; a 42-card read-out is the same failure in a new coat)",
         !buildOpeningBriefing() || buildOpeningBriefing().includes("name the ONE thing that matters most"));
-      assert("B4 — and it rides the LIVE instruction, so he never has to ask 'what decisions are pending on me?' again",
-        SI.includes(buildOpeningBriefing()));
+      // ⚠ REWRITTEN DELIBERATELY, 15 Aug 2026. HIS APPROVAL IS ON RECORD ("2 point
+      // yes do it"). It used to read `SI.includes(buildOpeningBriefing())` — the
+      // briefing rides the LIVE instruction — and it was GREEN while being the
+      // defect. The briefing's own first line is an imperative ("SAY THIS FIRST,
+      // UNPROMPTED, BEFORE HE ASKS ANYTHING"), and a system instruction is re-read
+      // by the model on EVERY turn, so that assertion was pinning in place the
+      // exact mechanism that made the card dump reappear mid-conversation in four
+      // consecutive sittings — including while he was introducing the system to a
+      // friend. What it should have asserted all along is DELIVERY, not PRESENCE:
+      // that it goes out ONCE. It is now three assertions instead of one, because
+      // "once" has three halves — it must leave the prompt, it must actually be
+      // delivered, and the second attempt must be refused.
+      assert("B4 — the briefing is OUT of the system instruction: a 'say this first' imperative inside a text that is re-read every turn fires forever, which is what it did",
+        !SI.includes("SAY THIS FIRST, UNPROMPTED"));
+      {
+        let stored = null;
+        const stub = { now: new Date("2026-08-15T09:00:00+05:30"), text: "THE OPENING BRIEFING — SAY THIS FIRST…", read: () => stored, write: (_p, o) => { stored = o; } };
+        const first = openingLatch(stub);
+        const second = openingLatch(stub);
+        assert("B4 — it IS delivered, once, through the live channel every other hint uses (a briefing nobody sends is not a fix)",
+          first.fire === true && first.text.includes("SAY THIS FIRST"));
+        assert("B4 — and the SECOND ask on the same day is refused by a fact on disk, not by a hope in a prompt — replaying 12 Aug's five briefings now yields ONE",
+          second.fire === false && /already delivered today/.test(second.why)
+          && [1, 2, 3, 4].every(() => openingLatch(stub).fire === false));
+        assert("B4 — a NEW DAY re-arms it, which is the cadence it was written for ('a being that watched all night opens with it')",
+          openingLatch({ ...stub, now: new Date("2026-08-16T09:00:00+05:30") }).fire === true);
+        assert("B4 — the latch is stamped BEFORE the text is handed over, so a crash between the two loses one briefing rather than repeating it forever",
+          /write\(OPENING_LATCH[\s\S]{0,200}?return \{ fire: true/.test(SRCX));
+        assert("B4 — nothing is delivered when there is nothing pending (an empty briefing must never burn the day's latch)",
+          openingLatch({ ...stub, now: new Date("2026-08-17T09:00:00+05:30"), text: "" }).fire === false
+          && openingLatch({ ...stub, now: new Date("2026-08-17T10:00:00+05:30") }).fire === true);
+      }
+      assert("B4 — the ANSWER half stayed in the constitution, because it is a standing law and not a one-shot report (moving both out would have silently deleted it)",
+        SI.includes("haan, na, ya baad?") && SI.includes("answer_card(word)"));
+
+      // ── THE DECK IS A QUEUE (15 Aug 2026) ────────────────────────────────
+      // MEASURED that morning on the live file: 56 cards, 29 open, and SEVEN never
+      // dealt once — c2, c3, c4, c5, c6, c8, c38 — while c9 had been dealt 24 times
+      // and never answered. Six of the seven are his own `[his-word]` drift reports,
+      // so LIFO was burying exactly the cards he filed himself.
+      {
+        const deck = { cards: [
+          { id: "c2", line: "his own drift report, filed three weeks ago and never once dealt" },
+          { id: "c9", line: "dealt twenty-four times, answered zero" },
+          { id: "c56", line: "minted this morning" },
+        ] };
+        const pick = (cards) => { const open = cards.filter((c) => c && !c.answered_at); return open.length ? open[0].id : null; };
+        assert("DECK — oldest-first: the card he has NEVER seen outranks one minted this morning (c2 waited three weeks under LIFO while c9 was dealt 24×)",
+          pick(deck.cards) === "c2");
+        assert("DECK — and the live briefing really uses the front of the queue, not the back (this was `open[open.length - 1]`)",
+          /const top = open\[0\];/.test(SRCX) && !/const top = open\[open\.length - 1\]/.test(SRCX));
+        assert("DECK — an answered card is never re-dealt, so 'oldest' means oldest OPEN",
+          pick([{ id: "c2", answered_at: "x" }, { id: "c9" }]) === "c9");
+      }
+
+      // ── BLOCK 4 · THE MEMORY BLOCKS REACH THE CONSTITUTION ───────────────
+      {
+        const empty = renderGafferBlocks(null);
+        assert("BLOCKS — empty blocks render NOTHING: a heading with no body under it in a live instruction invites the model to fill the gap, which is the improvisation B15 forbids",
+          empty === "");
+        const filled = renderGafferBlocks({ blocks: { how_to_speak: { text: "Greet him first. Slow. One idea per turn." }, what_he_asked_for: { text: "" } } });
+        assert("BLOCKS — a filled block renders with its title and its text, and an empty neighbour renders nothing at all",
+          filled.includes("HOW TO SPEAK TO HIM") && filled.includes("Greet him first") && !filled.includes("WHAT HE ASKED FOR"));
+        assert("BLOCKS — they ride IN FRONT of the rolling brief: what he told the Gaffer to BE comes before where the sitting currently IS",
+          /renderGafferBlocks\(readJson\(GBLOCKS\)\)/.test(SRCX) && /\[blocks, body\]\.filter\(Boolean\)/.test(SRCX));
+        assert("BLOCKS — and this bridge only READS them; gaffer_brain.mjs is their sole writer",
+          !/writeFileSync\(GBLOCKS/.test(SRCX) && /import \{ freshNote as gafferFreshNote/.test(SRCX));
+      }
+
+      // ── BLOCK 5 · get_myself — because on 13 Aug it denied having eyes ───
+      {
+        const me = await execTool("get_myself", {});
+        assert("get_myself — it can SEE, and says so: on 13 Aug it told him 'mere paas koi visual sensors nahi hain' while the video lane was live in this very file",
+          me.senses.sight.live === true && /image\/jpeg/.test(SRCX));
+        assert("get_myself — hearing and voice too, each read off the page that IMPLEMENTS them rather than restated (a restated list is a second truth that rots)",
+          me.senses.hearing.live === true && me.senses.voice.live === true
+          && /const has = \(needle\) => page\.includes\(needle\)/.test(SRCX));
+        assert("get_myself — the tool list IS TOOL_DECLS, so a tool deleted tomorrow stops being claimed in the same commit, with nobody having to remember",
+          me.all_tools.length === TOOL_DECLS.length && me.all_tools.includes("get_capsule") && me.all_tools.includes("get_myself"));
+        assert("get_myself — it names the model it is actually running on, not a remembered one", me.model === DEFAULT_MODEL);
+        assert("get_myself — and it carries the honesty law, so an absent field is 'I don't know', never an invention",
+          /never guess at your own anatomy|Never guess at your own anatomy/i.test(TOOL_DECLS.find((t) => t.name === "get_myself").description)
+          && /dekhta hoon/.test(me.honesty_law));
+      }
+
+      // ── BLOCK 5 · THE PACE CAP — the only lever text never had ────────────
+      {
+        assert("PACE — the cap is enforced MID-TURN off the live output transcription, which is the only thing that can measure a turn while it is still running",
+          /paceWatch\(sc\.outputTranscription\.text\)/.test(PAGE) && /function paceWatch\(t\)\{/.test(PAGE));
+        assert("PACE — the number is HIS OWN forty-second law at ~150 wpm, and it is the SAME number gaffer_state derives (they can never drift apart)",
+          /const PACE_CAP_WORDS=100;/.test(PAGE) && GAFFER_MONOLOGUE_WORDS === 100);
+        assert("PACE — it fires ONCE per turn (a long turn is nudged, never nagged) and resets when HE speaks",
+          /if\(paceFired\|\|paceWords<=PACE_CAP_WORDS/.test(PAGE) && /paceReset\(\)/.test(PAGE)
+          && /sc\.inputTranscription[\s\S]{0,120}?paceReset\(\)/.test(PAGE));
+        assert("PACE — it hands the turn back; it does NOT cut the audio or close the socket (being talked over by your own coach is worse than being talked at)",
+          /STOP HERE\. Finish the sentence you are in and hand him the turn/.test(PAGE)
+          && !/paceWatch[\s\S]{0,400}?ws\.close/.test(PAGE) && !/paceWatch[\s\S]{0,400}?stopPlayback/.test(PAGE));
+        assert("PACE — and it carries the fence, so 'you are too long' can never be read as 'say less'", /DHEEMA IS NOT CHHOTA/.test(PAGE));
+      }
+
+      // ── THE FLUSH — the real latency, and it was never the judge ─────────
+      assert("FLUSH — a completed CAPTAIN→GAFFER pair flushes immediately, so a correction reaches the organism in ~1s instead of waiting out a 15s timer",
+        /const pairClosed=\/\^GAFFER\/i\.test\(coWho\)&&txBuf\.some\(l=>\/\^CAPTAIN:\/i\.test\(l\)\)/.test(PAGE)
+        && /if\(pairClosed\|\|txBuf\.length>=6\)flush\(\)/.test(PAGE));
 
       // ---- THE ANSWER HALF (12 Aug 2026) — the lane was HALF-BUILT ----------
       // MEASURED: 27 live cards, EVERY one dealt at least once (c9 twenty
@@ -3324,8 +3618,39 @@ async function selftest() {
       SRC.includes("observeTurn(prev, body.lines"));
     assert("B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema",
       SRC.includes('from "./gaffer_state.mjs"') && !SRC.includes("gaffer_state.json\", JSON.stringify({"));
-    assert("B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)",
-      /appendFileSync\(join\(OUT_DIR[\s\S]{0,900}?try \{[\s\S]{0,600}?observeTurn[\s\S]{0,1200}?\} catch \{ \}/.test(SRC));
+    // ORDER, NOT DISTANCE (rewritten 15 Aug 2026). This was one regex with three
+    // character-count windows in it, and adding nine lines of comment to the door
+    // broke it — a test that fails on a comment is measuring the wrong thing. The
+    // property has always been ORDER: his words hit the file BEFORE any of the
+    // state machinery runs, and everything after that is inside a swallowing try.
+    {
+      // THE NEEDLES ARE BUILT BY CONCATENATION, the house idiom (gaffer_state.mjs's
+      // "SILENCE IS FREE" check does the same), and here it is not decoration: the
+      // first two drafts of this line matched THEMSELVES. Written whole, the search
+      // string for the door is itself the earliest occurrence of that string in the
+      // file, so the slice ran from this assertion to the next one and produced an
+      // 86-character "door" in which nothing was found and everything failed.
+      const N = (u) => `if (req.url === "/${u}") {`;
+      const iDoor = SRC.indexOf(N("trans" + "cript"));
+      const door = SRC.slice(iDoor, SRC.indexOf(N("min" + "utes"), iDoor));
+      const iAppend = door.indexOf("appendFileSync(join(OUT_DIR");
+      const iTry = door.indexOf("try {");
+      const iObserve = door.indexOf("observeTurn");
+      const iCatch = door.indexOf("} catch { }");
+      assert("B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)",
+        iAppend >= 0 && iTry > iAppend && iObserve > iTry && iCatch > iObserve);
+      // THE WATCHER IS WOKEN FROM HERE, AND IT MUST NEVER BE AWAITED. Same law, one
+      // organ further out: the judge is a child process on a remote model, so an
+      // `await` here would put a 4-6 second model call on the path his transcript
+      // takes to disk. Detached + unref'd + stdio ignored is the whole contract.
+      assert("THE BRAIN NEVER BLOCKS THE MOUTH — the Watcher is woken from the door, fire-and-forget: never awaited, detached, stdio ignored, and a spawn that cannot start is swallowed",
+        /wakeTheWatcher\(\);/.test(door) && !/await\s+wakeTheWatcher/.test(door)
+        && /detached: true, stdio: "ignore"/.test(SRC) && /child\.unref\(\)/.test(SRC)
+        && /catch \{ return false; \}\s+\/\/ a spawn that cannot start/.test(SRC));
+      assert("THE WATCHER'S VERDICT reaches BOTH halves of the per-turn path — which lines are laws, and what the one note says",
+        /observeTurn\(prev, body\.lines, new Date\(\), stand, judged\)/.test(door)
+        && /superviseTurn\(r\.state, r\.standing, body\.lines, new Date\(\), judged && judged\.note\)/.test(door));
+    }
     {
       // and the door composes the two halves in the order that matters: the PROMISE
       // (plan + standing instructions) in front of the CHATTER (the transcript tail).
@@ -3584,12 +3909,43 @@ async function selftest() {
       assert("B3 — a fresh note reaches the poll with its kind and id", fresh && fresh.kind === "monologue" && fresh.id === "monologue:7");
       const stale = readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: [], runtime: { superNote: { ...rt.superNote, ts: Date.now() - 120000 } } }).supervisor;
       assert("B3 — a STALE note is dropped: a correction arriving two minutes late lands on a different conversation and reads as a non-sequitur", stale === null);
-      assert("B3 — the page injects it NON-SPOKEN and deduped, ahead of the other hints (its notes are about a drift happening RIGHT NOW)",
-        PAGE.includes("d.supervisor&&d.supervisor.id!==lastSuperId") && PAGE.indexOf("d.supervisor&&") < PAGE.indexOf("d.cross_mouth&&"));
+      // ⚠ REWRITTEN 15 Aug 2026 — THIS ASSERTION WAS THE FINDING. It read
+      //   PAGE.indexOf("d.supervisor&&") < PAGE.indexOf("d.cross_mouth&&")
+      // — ONE of the nine other hints — and it was green while the supervisor sat
+      // FOURTH in a poll where every branch returns. So on any turn carrying a deep
+      // answer, a pending wake or a recall hit, the correction about a drift
+      // happening RIGHT NOW was silently dropped and its 60s TTL expired it before
+      // the next quiet beat. CLAUDE.md's own law: a test that mocks the part that
+      // breaks is a test of the mock. It now asserts against ALL of them, derived
+      // from the page rather than listed by hand, so a tenth hint added tomorrow is
+      // covered without anyone remembering to add it here.
+      {
+        // EVERY injecting branch, derived from the page — the `if(d.x&&` family AND
+        // the deep-thought branch, which is written `if(dr){…}` and would otherwise
+        // be the one hint this check could not see. Deriving them beats listing them:
+        // an eleventh hint added tomorrow is covered without anyone remembering.
+        const HINTS = [...PAGE.matchAll(/if\(d\.([a-z_]+)&&/g)].map((m) => ({ name: m[1], at: PAGE.indexOf(`if(d.${m[1]}&&`) }))
+          .concat([{ name: "deep_thought", at: PAGE.indexOf("if(dr){seenDeep.add") }]);
+        const iSuper = PAGE.indexOf("if(d.supervisor&&");
+        const behind = HINTS.filter((h) => h.name !== "supervisor" && h.name !== "opening" && h.at >= 0 && h.at < iSuper).map((h) => h.name);
+        assert(`B3 — the page injects it NON-SPOKEN and deduped, ahead of ALL ${HINTS.length - 1} other hints (its notes are about a drift happening RIGHT NOW, and every branch in that poll returns — so fourth place meant silently dropped)`,
+          PAGE.includes("d.supervisor&&d.supervisor.id!==lastSuperId") && iSuper > 0 && behind.length === 0
+          && HINTS.every((h) => h.at >= 0) && HINTS.length >= 11,
+          behind.length ? `these still speak before it: ${behind.join(", ")}` : `hints found: ${HINTS.map((h) => h.name + "@" + h.at).join(" ")}`);
+        assert("B3 — and the ONE thing allowed in front of it is the latched opening, which fires at most once a day and can never displace a live correction twice",
+          PAGE.indexOf("if(d.opening&&") > iSuper || PAGE.indexOf("if(d.opening&&") < 0);
+      }
       assert("B3 — and he is never told he is being corrected (a Gaffer that reads its own corrections out is a worse Gaffer)",
         PAGE.includes("never mention being corrected") && PAGE.includes("never apologise for it"));
       assert("B3 — the first poll PRIMES rather than replaying a note from before the page opened",
-        /deepPrimed=true;[\s\S]{0,700}?lastSuperId=d\.supervisor\?d\.supervisor\.id:null;return\}/.test(PAGE));
+        /deepPrimed=true;[\s\S]{0,900}?lastSuperId=d\.supervisor\?d\.supervisor\.id:null;/.test(PAGE));
+      // …and the ONE exception, stated rather than left as an accident: the opening
+      // briefing is what the sitting is OWED, so priming it would mean it never
+      // arrives at all on the poll that discovers it. What stops it repeating is the
+      // server-side latch, not this variable — which is the whole difference between
+      // this design and the one it replaces.
+      assert("B3 — …except the opening briefing, which the priming pass DELIVERS rather than swallows (the latch, not the poll, is what makes it once)",
+        /if\(!deepPrimed\)\{[\s\S]{0,1400}?if\(d\.opening\)\{ws\.send/.test(PAGE));
     }
 
     // ---- B5 · ONE MIND, BOTH MOUTHS — the biggest missing edge in "one organism".
@@ -3861,7 +4217,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("33 club tools now (14 Aug Phase 8: get_card + get_mission — the two doors to the data it was TOLD about and could never open; that gap is a named confabulation root cause)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 33);
+    assert("33 club tools now (14 Aug Phase 8: get_card + get_mission — the two doors to the data it was TOLD about and could never open; that gap is a named confabulation root cause)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -3888,7 +4244,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 33 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):
@@ -4974,8 +5330,8 @@ ws.onmessage=async ev=>{const d=typeof ev.data==='string'?ev.data:await ev.data.
   if(ws&&ws.readyState===1)ws.send(JSON.stringify({toolResponse:{functionResponses:rs}}));log('⚙ '+m.toolCall.functionCalls.map(f=>f.name).join(', '));return}
  const sc=m.serverContent;if(!sc)return;
  if(sc.interrupted)stopPlayback();
- if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text)}
- if(sc.outputTranscription&&sc.outputTranscription.text){post('GAFFER',sc.outputTranscription.text);affGaffer(sc.outputTranscription.text);recitalHear(sc.outputTranscription.text)}
+ if(sc.inputTranscription&&sc.inputTranscription.text){post('CAPTAIN',sc.inputTranscription.text);affVoice(sc.inputTranscription.text);paceReset()}
+ if(sc.outputTranscription&&sc.outputTranscription.text){post('GAFFER',sc.outputTranscription.text);affGaffer(sc.outputTranscription.text);recitalHear(sc.outputTranscription.text);paceWatch(sc.outputTranscription.text)}
  if(sc.modelTurn)for(const p of (sc.modelTurn.parts||[])){
   if(p.inlineData&&p.inlineData.data)playPCM(unb64(p.inlineData.data));
   // M4 — THE CHALKBOARD, visible: the Gaffer's live code runs land in the record
@@ -5081,10 +5437,33 @@ setInterval(()=>{if(affBuf&&Date.now()-affAt>2000){
 // M1 — THE ASYNC ARC: the deep brain flows back into the live talk. Poll the
 // bridge; inject ONLY at a quiet beat (never over his voice or the Gaffer's).
 // First poll PRIMES the ids so a stale deep answer never replays on reload.
-let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,lastCrossId=null,lastSuperId=null,deepPrimed=false;const seenDeep=new Set();
+let lastPendingId=null,lastDeepId=null,lastRecallId=null,lastPreAnsId=null,lastBgHintId=null,lastCrossId=null,lastSuperId=null,lastOpeningId=null,deepPrimed=false;const seenDeep=new Set();
 setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.length)return;
  let d;try{d=await (await fetch('/deep')).json()}catch(e){return}
- if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;lastCrossId=d.cross_mouth?d.cross_mouth.id:null;lastSuperId=d.supervisor?d.supervisor.id:null;return}
+ if(!deepPrimed){deepPrimed=true;lastPendingId=d.pending?d.pending.moment_id:null;lastDeepId=d.deep?d.deep.moment_id:null;if(d.deep)seenDeep.add(d.deep.moment_id);for(const x of (d.deep_recent||[]))seenDeep.add(x.moment_id);lastRecallId=d.recall?d.recall.id:null;lastPreAnsId=d.pre_answer?d.pre_answer.moment_id:null;lastBgHintId=d.bg_hint?d.bg_hint.moment_id:null;lastCrossId=d.cross_mouth?d.cross_mouth.id:null;lastSuperId=d.supervisor?d.supervisor.id:null;
+  // THE OPENING IS THE ONE HINT THE PRIMING PASS MUST NOT SWALLOW. Every other id
+  // here is primed so a stale answer never replays on reload; the opening is the
+  // opposite case — it is the FIRST thing the sitting is owed, and the server-side
+  // latch (not this variable) is what stops it repeating. Priming it would mean the
+  // briefing never arrives at all on the poll that discovers it.
+  if(d.opening){ws.send(JSON.stringify({realtimeInput:{text:d.opening.text}}));lastOpeningId=d.opening.id;log('· opening briefing delivered (latched — once today, never again)')}
+  return}
+ // B3 — THE SUPERVISOR SPEAKS FIRST AMONG THE HINTS, and until 15 Aug 2026 that
+ // sentence was in this comment and false in the code: it sat FOURTH, behind DEEP
+ // PENDING, DEEP THOUGHT and MEMORY SURFACED, in a poll where every branch returns
+ // — so on any turn where a deep answer or a recall hit landed, the correction
+ // about a drift happening RIGHT NOW was silently dropped, and its 60s TTL then
+ // expired it before the next quiet beat came round. Its own test was green while
+ // this was true: it compared the supervisor against ONE of the nine other hints.
+ // It is non-spoken like the rest: the Gaffer acts on it, never reads it out or
+ // mentions being corrected.
+ if(d.supervisor&&d.supervisor.id!==lastSuperId){lastSuperId=d.supervisor.id;
+  ws.send(JSON.stringify({realtimeInput:{text:d.supervisor.note+'\\n(Act on this in your NEXT turn. Never read it out, never mention being corrected, never apologise for it — just do the thing.)'}}));
+  log('· supervisor: '+d.supervisor.kind);return}
+ // B4 — the latched opening briefing, second only to a live correction.
+ if(d.opening&&d.opening.id!==lastOpeningId){lastOpeningId=d.opening.id;
+  ws.send(JSON.stringify({realtimeInput:{text:d.opening.text}}));
+  log('· opening briefing delivered (latched — once today, never again)');return}
  if(d.pending&&d.pending.moment_id!==lastPendingId){lastPendingId=d.pending.moment_id;
   ws.send(JSON.stringify({realtimeInput:{text:'[DEEP PENDING — the deep brain is thinking about: "'+d.pending.about+'". If it fits the moment, give ONE short holding line (ruko — isko theek se sochta hoon) and keep the flow; else stay silent.]'}}));
   log('· deep brain woken — holding token offered');return}
@@ -5095,12 +5474,6 @@ setInterval(async()=>{if(!ws||ws.readyState!==1||!setupDone||talking||liveSrcs.l
  if(d.recall&&d.recall.id!==lastRecallId){lastRecallId=d.recall.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[MEMORY SURFACED — his own past words; weave ONLY if it genuinely earns the turn, never as theatre: '+d.recall.hint+']'}}));
   log('· memory surfaced (non-spoken hint)');return}
- // B3 — THE SUPERVISOR speaks first among the hints, because every note it sends is
- // about a drift happening RIGHT NOW. It is non-spoken like the rest: the Gaffer
- // acts on it, never reads it out or mentions being corrected.
- if(d.supervisor&&d.supervisor.id!==lastSuperId){lastSuperId=d.supervisor.id;
-  ws.send(JSON.stringify({realtimeInput:{text:d.supervisor.note+'\\n(Act on this in your NEXT turn. Never read it out, never mention being corrected, never apologise for it — just do the thing.)'}}));
-  log('· supervisor: '+d.supervisor.kind);return}
  // B5 — ONE MIND, BOTH MOUTHS: what he just said in Claude Code reaches this one.
  if(d.cross_mouth&&d.cross_mouth.id!==lastCrossId){lastCrossId=d.cross_mouth.id;
   ws.send(JSON.stringify({realtimeInput:{text:'[THE OTHER MOUTH — he is ALSO working with Claude Code right now, and this just happened there. You and it are one organism, so do not act surprised by it and never announce that you can see it. Use it only if it changes what you were about to say: '+d.cross_mouth.text+']'}}));
@@ -5125,6 +5498,42 @@ let lastHintExp=null,lastWhisperId=null;
 // scan-fix 15 Jul: ASR fragments used to land one-word-per-line ("GAFFER: main"
 // / "GAFFER: hoon.") shredding the match record + the rehydrate seed. Coalesce
 // consecutive same-speaker fragments into ONE line per turn.
+// ---------------------------------------------------------------------------
+// THE PACE CAP (15 Aug 2026 — HIS APPROVAL ON RECORD: "meri haan hain bhai")
+// ---------------------------------------------------------------------------
+// He asked for slower speech SIX TIMES in one sitting on 11 Aug (lines 18, 21,
+// 26, 32, 40, 73) and it never landed once. Line 32, verbatim: "How slow but aap
+// bahut tej bol rahe ho. Doesn't feel like that you are speaking slowly." Line 84:
+// "That was not useful… It was just a wastage of time the way you spoke the notes."
+// FOUR SITTINGS of text instructions — in the constitution, in the SAMJHAO rules,
+// in the standing store — changed nothing, because PACE IS A PROPERTY OF THE
+// REMOTE MODEL'S GENERATION and a sentence in a prompt is a request, not a lever.
+//
+// SO THE LEVER IS LENGTH, WHICH IS THE ONE THING WE CAN ACTUALLY MEASURE MID-TURN.
+// The output transcription streams while it is still speaking, so the page can
+// count words IN FLIGHT and interrupt the turn that is running long — not report
+// it 25 seconds later, which is all the supervisor could ever do.
+//
+// THE NUMBER IS HIS OWN AND IS NOT NEW: gaffer_state.mjs MONOLOGUE_WORDS = 100,
+// derived from his forty-second law at ~150 wpm. It is restated here as a literal
+// because this string is browser code and cannot import — and the selftest asserts
+// the two are equal, so they can never silently drift apart.
+//
+// WHAT IT DOES AND WHAT IT DELIBERATELY DOES NOT DO: it injects a non-spoken
+// instruction to stop and hand him the turn. It does NOT cut the audio and it does
+// NOT close the socket — being talked over by your own coach mid-sentence is worse
+// than being talked at, and a hard truncation would also lose the sentence he was
+// actually mid-way through hearing. ONCE PER TURN, so a long turn is nudged once,
+// never nagged; the counter resets when he speaks.
+const PACE_CAP_WORDS=100;
+let paceWords=0,paceFired=false;
+function paceWatch(t){
+ paceWords+=String(t||'').trim().split(/\\s+/).filter(Boolean).length;
+ if(paceFired||paceWords<=PACE_CAP_WORDS||!ws||ws.readyState!==1)return;
+ paceFired=true;
+ ws.send(JSON.stringify({realtimeInput:{text:'[PACE — non-spoken, act on it immediately: this turn has already run past his forty-second law ('+paceWords+' words). STOP HERE. Finish the sentence you are in and hand him the turn — do not start another idea, do not say "shall I continue", do not summarise what you just said. DHEEMA IS NOT CHHOTA: the depth was right, the length was not. Wait for his word.]'}}));
+ log('· pace cap: turn passed '+PACE_CAP_WORDS+' words — hand-back injected')}
+function paceReset(){paceWords=0;paceFired=false}
 let txBuf=[],coWho=null,coText='';
 // PHASE 8 (14 Aug 2026) — THE MACHINERY FILTER: the "never mention the
 // machinery" law stops being a sentence in a prompt and becomes a mechanism.
@@ -5141,7 +5550,22 @@ function post(who,text){
  if(!text)return;
  if(who===coWho){coText+=(coText&&!/\\s$/.test(coText)?' ':'')+text;if(coText.length>1600)coFlush();return}
  coFlush();coWho=who;coText=text}
-function coFlush(){if(coWho&&coText.trim()){txBuf.push(coWho+': '+coText.replace(/\\s+/g,' ').trim());if(txBuf.length>=6)flush()}coWho=null;coText=''}
+// FLUSHED ON THE COMPLETED TURN-PAIR, not only on the 15s timer (15 Aug 2026).
+// THE LATENCY WAS NEVER THE JUDGE, IT WAS THIS: the Watcher answers in 4-6s
+// (measured, free Flash pool, 6 calls) and the /deep poll carries its note within
+// 3s — but neither can start until the turn reaches the /transcript door, and the
+// door was fed by a 15-second timer plus a six-line backstop. So a correction he
+// made could sit in a browser variable for fifteen seconds before anything in the
+// organism had even SEEN it, which is most of the "it answers about the previous
+// thing" he has described in four sittings.
+// THE TRIGGER IS THE CONVERSATION'S OWN SHAPE, NOT A TUNED NUMBER: a CAPTAIN line
+// followed by a GAFFER line is one complete exchange and the smallest unit that can
+// be judged at all. The >=6 backstop stays for the case this misses (a monologue
+// with no reply in it yet).
+function coFlush(){if(coWho&&coText.trim()){
+ const pairClosed=/^GAFFER/i.test(coWho)&&txBuf.some(l=>/^CAPTAIN:/i.test(l));
+ txBuf.push(coWho+': '+coText.replace(/\\s+/g,' ').trim());
+ if(pairClosed||txBuf.length>=6)flush()}coWho=null;coText=''}
 function flush(){coFlush();if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
 setInterval(flush,15000);
 // scan-fix 15 Jul: a merely-open tab used to bill a voice-minute + a T1 unit
@@ -5496,9 +5920,17 @@ async function main() {
           // organs that run only if he remembers to type them, and his own ledger
           // (5cea57e8) calls anything he must remember a design failure.
           try {
+            // THE WATCHER'S LAST VERDICT (15 Aug 2026) — read off its journal, which
+            // is a plain file read costing nothing, and handed to the two functions
+            // that used to decide by word list. When there is a fresh one it decides
+            // which lines are standing instructions, which axis each lands on, and
+            // what the one note of this turn says; when there is not, the frozen
+            // engine answers exactly as it did yesterday. Both halves are asserted
+            // in gaffer_state.mjs's own selftest.
+            const judged = readGafferJudgment();
             const prev = readJson(GSTATE);
             const stand = readJson(GSTANDING) || { instructions: [], _writer: "gaffer_state.mjs" };
-            const r = observeTurn(prev, body.lines, new Date(), stand);
+            const r = observeTurn(prev, body.lines, new Date(), stand, judged);
             writeFileSync(GSTATE, JSON.stringify(r.state, null, 2));
             if (r.newStanding.length) writeFileSync(GSTANDING, JSON.stringify(r.standing, null, 2));
             // B3 — THE SUPERVISOR runs on the SAME delta, immediately after the
@@ -5506,9 +5938,17 @@ async function main() {
             // it can run on every turn without a gate. The note is parked in
             // runtime for the /deep poll to carry — never sent from here, because
             // this door has no socket and the brain must never block the mouth.
-            const note = superviseTurn(r.state, r.standing, body.lines, new Date());
+            const note = superviseTurn(r.state, r.standing, body.lines, new Date(), judged && judged.note);
             if (note) runtime.superNote = { ...note, ts: Date.now() };
           } catch { }
+          // …AND THE WATCHER IS WOKEN FOR THIS TURN. Detached, stdio ignored,
+          // unref'd: this door returns before the child has finished booting, and
+          // nothing it does — including dying — can reach the live voice. Its verdict
+          // arrives on the NEXT poll of /deep, 4-12s later (measured 15 Aug on the
+          // free Flash pool), which is inside the 60s window every hint there obeys.
+          // THE BRAIN NEVER BLOCKS THE MOUTH: this is the same contract
+          // hooks/afferent-post.mjs runs on, and the same reason it exists.
+          wakeTheWatcher();
           // THE EAR'S ONE LEGAL SURFACE — hedge-density, scrimmage mode only,
           // counted off-mic, never voiced mid-session (law).
           if (body.mode === "scrimmage") {

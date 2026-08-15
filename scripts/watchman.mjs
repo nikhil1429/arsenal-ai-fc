@@ -118,6 +118,20 @@ const TASKS_EXPECTED = join(STATE_DIR, "tasks_expected.json");
 // organ that reads them invisible in the static graph. Nothing else changed.
 const GEMINI_QUALITY = join(STATE_DIR, "gemini_quality.jsonl");
 const MOUTH_LOG = join(STATE_DIR, "mouth_log.jsonl");
+// 15 Aug 2026 — the Watcher's journal (owner: gaffer_brain.mjs) and the cloud
+// sentinel's own contract file. Module constants for the same measured reason as
+// the two above: bound inside a function these cost unresolved sinks in xray's IR
+// and leave the lanes invisible in the static graph.
+const GAFFER_BRAIN_JOURNAL = join(STATE_DIR, "gaffer_brain.jsonl");
+const GAFFER_STATE = join(STATE_DIR, "gaffer_state.json");
+const SENTINEL_CONTRACT = join(ROOT, "setup", "CLOUD_SENTINEL.md");
+// Two REAL files, used as selftest fixtures below rather than temp files written
+// at test time: one that exists and does NOT carry the declaration, and one that
+// does not exist at all. Same reason as GAFFER_STATE above — writing a temp file
+// from a runtime-built path costs unresolved sinks, and these read better anyway:
+// the demotion is proven against the LIVE contract, not against a mock of it.
+const NOT_A_CONTRACT = join(ROOT, "package.json");
+const NO_SUCH_CONTRACT = join(ROOT, "setup", "__no_such_contract__.md");
 
 // Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
 // dropped 9 Aug: it had already rotted once): past this the
@@ -248,6 +262,43 @@ export function gather(now = new Date()) {
       enabled: !!(((bc && bc.jobs) || []).find((j) => j.id === "night_coach" && j.enabled !== false)),
       today_file: existsSync(join(STATE_DIR, "brain_out", "night_coach", `${today}.md`)),
     };
+  }
+  // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
+  // decides what the Gaffer does next; it is spawned fire-and-forget from the
+  // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
+  // that a broken judge can never bite the live voice. That safety has an exact
+  // cost: NOTHING ELSE WOULD EVER NOTICE IT WAS DEAD. Same shape as
+  // tier2-vanished, same law — an auditor that silently stops is worse than none.
+  // Counts only, read-only, and it never opens the judgments themselves.
+  {
+    w.gaffer_brain = { sitting_turns: 0, judgments_today: 0, engines: {}, last_ts: null, notes_today: 0 };
+    // HIS TURN COUNT COMES FROM THE ORGAN THAT OWNS IT, not from re-parsing the
+    // transcript. gaffer_state.json already holds today's `captain_turns` and
+    // resets on the day roll, so this is both the authoritative number and a
+    // CONSTANT path — which matters here for a second, measured reason: the first
+    // version of this block read brain_out/dugout/<today>.md and cost SIX
+    // unresolved sinks in xray's IR (a path built from a runtime date is an
+    // Unknown to the analyser), pushing this organ past the per-organ ratchet it
+    // cleared four hours earlier. Same lesson as the two hoists above it.
+    try {
+      const gs = readJson(GAFFER_STATE);
+      if (gs && gs.day === today) w.gaffer_brain.sitting_turns = Number(gs.captain_turns) || 0;
+    } catch { /* unreadable state = 0 turns, and 0 turns can never raise this RED */ }
+    try {
+      if (existsSync(GAFFER_BRAIN_JOURNAL)) {
+        for (const line of readFileSync(GAFFER_BRAIN_JOURNAL, "utf8").split("\n")) {
+          if (!line.trim()) continue;
+          try {
+            const r = JSON.parse(line);
+            if (localDayOf(r.ts) !== today) continue;
+            w.gaffer_brain.judgments_today++;
+            w.gaffer_brain.engines[r.engine] = (w.gaffer_brain.engines[r.engine] || 0) + 1;
+            w.gaffer_brain.last_ts = r.ts;
+            if (r.note_kind) w.gaffer_brain.notes_today++;
+          } catch { }
+        }
+      }
+    } catch { /* unreadable journal reads as zero judgments, which is the RED, correctly */ }
   }
   // THE ARCHIVE AUDIT'S 90-DAY WATCH (ARCHIVE__DAY_ONE_SPEC.md §16.2.3, his
   // ruling 15 Aug 2026: "an auditor that silently stops running is worse than
@@ -412,6 +463,43 @@ export function checks(w) {
         ? "the last Tier-2 repair child (before the lane was switched off) left no exit stamp and no journal row — history, not a live fault: the arm is DISABLED by his 11 Aug ruling, so nothing will ever stamp an exit for it"
         : "a Tier-2 repair child started on a previous day and left NO exit stamp and NO journal row — the repair arm died silently mid-run (the maiden-run class: minutes of work, zero bytes of trace)",
       evidence: `last TIER 2 START ${w.tier2_trail.last_start} · no "TIER2 EXIT" line after it in watchman_repair.log · no watchman_repairs.jsonl row at-or-after it${dead ? " · lane OFF (ARSENAL_TIER2 unset) — re-arming it makes this RED again, which is correct" : ""}`,
+    });
+  }
+
+  // c9b · THE WATCHER WENT SILENT (15 Aug 2026). A sitting happened and the organ
+  // that judges it wrote nothing. Precedent: tier2-vanished. Law, in his own
+  // words about the archive auditor and true of every organ that can fail
+  // quietly: "an auditor that silently stops running is worse than none, because
+  // the green memory persists."
+  //
+  // WHY THIS IS RED AND NOT WARN: gaffer_brain is spawned fire-and-forget and
+  // exits 0 on EVERY failure path, deliberately, so that a broken judge can never
+  // bite the live voice. There is therefore no exit code, no stderr anyone reads,
+  // and no user-visible symptom — the Gaffer simply goes back to being governed
+  // by the frozen word list, which is the exact condition this whole build was
+  // done to end. It would look, from the outside, like a sitting that went fine.
+  //
+  // THE FLOOR IS THREE HIS-TURNS, and it is not a tuned number: it is the
+  // smallest sitting that can contain a correction at all (he says something, the
+  // Gaffer answers, he corrects it). Below that there is nothing to judge and a
+  // silent judge is the right answer. Measured against his real sittings: 10-15
+  // Aug run 24-93 captain turns each, so the floor never touches a real day.
+  if (w.gaffer_brain && w.gaffer_brain.sitting_turns >= 3 && w.gaffer_brain.judgments_today === 0) {
+    F.push({
+      id: "gaffer-brain-silent", level: "RED",
+      finding: `a sitting happened today (${w.gaffer_brain.sitting_turns} of his turns) and THE WATCHER wrote not one judgment — the Gaffer spent the day governed by the frozen word list, silently`,
+      evidence: `dressing-room/state/brain_out/dugout/${w.today}.md has ${w.gaffer_brain.sitting_turns} CAPTAIN line(s) · gaffer_brain.jsonl has 0 row(s) dated ${w.today} · run \`node scripts/gaffer_brain.mjs status\` and \`node scripts/gaffer_brain.mjs judge\` to see which half is dead`,
+    });
+  }
+  // …and the DEGRADED case, which is not a fault but must never be invisible: the
+  // Watcher ran and every single judgment fell back to the word list, i.e. the
+  // free Gemini pool is dry. INFO, because the surface still works — it is just
+  // back to yesterday's precision, and the journal is the only place that says so.
+  if (w.gaffer_brain && w.gaffer_brain.judgments_today > 0 && !w.gaffer_brain.engines.flash) {
+    F.push({
+      id: "gaffer-brain-degraded", level: "INFO",
+      finding: `THE WATCHER ran ${w.gaffer_brain.judgments_today}× today and NOT ONCE reached Flash — every judgment came from the frozen word-list fallback (pool dry, or every key refused)`,
+      evidence: `gaffer_brain.jsonl engines today: ${Object.entries(w.gaffer_brain.engines).map(([k, v]) => `${k}=${v}`).join(" ") || "none"} · \`node scripts/gaffer_brain.mjs probe\` says which`,
     });
   }
 
@@ -1086,9 +1174,37 @@ export async function probeSentinel(today, deps = {}) {
   if (rows == null) return [{ id: "sentinel-unmeasurable", level: "INFO", finding: "ntfy history unreachable tonight — the sentinel pulse measured nothing (offline?)", evidence: "GET ntfy.sh/<topic>/json failed" }];
   const ours = (m) => /⚪🔴/.test(String(m.title || "")) || /^=\?UTF-8\?B\?/.test(String(m.title || "")) || /Laptop soya/i.test(`${m.title || ""} ${m.message || ""}`);
   if (!rows.some(ours)) {
-    return [{ id: "sentinel-blind", level: "RED",
-      finding: `today's ntfy history holds NEITHER a laptop row NOR the sentinel's fallback (${rows.length} row(s), none ours) — the mouth and the cloud sentinel cannot both be silent on the same day; check claude.ai/code/routines`,
-      evidence: "ntfy.sh JSON history since local midnight — no ⚪🔴-badged title, no RFC2047 title, no 'Laptop soya'" }];
+    // 15 Aug 2026 — A PERMANENT RED IS AN ALARM HE LEARNS TO IGNORE, which is the
+    // exact failure this organ exists to prevent, and it is the same call already
+    // made for tier2-vanished four hundred lines above.
+    //
+    // DIAGNOSED, not guessed: the routine (`ArsenalFC Cloud Sentinel`) fires daily
+    // and COMPLETES — its own run log for 15 Aug reads "network egress policy
+    // blocked ntfy.sh entirely… a 403/407 is an organization policy block, not a
+    // transient error." So setup/CLOUD_SENTINEL.md's whole contract — poll the
+    // topic, push a fallback — is structurally impossible from that environment,
+    // and this RED would therefore fire every single day, forever, while being
+    // perfectly correct. That is worse than no check.
+    //
+    // THE DEMOTION READS ITS REASON OFF THE CONTRACT FILE, never off a constant
+    // here. One line in setup/CLOUD_SENTINEL.md declares the channel blocked and
+    // dates it; deleting that line restores the RED, in one edit, from the
+    // document that owns the sentinel's contract. A status baked into this file
+    // would be the same prose-rot the repo keeps finding — a fact frozen in code,
+    // still being obeyed long after it stopped being true.
+    const blocked = (() => {
+      try {
+        const m = readFileSync(deps.contractPath || SENTINEL_CONTRACT, "utf8").match(/^CHANNEL_STATUS:\s*BLOCKED\b[^\n]*/m);
+        return m ? m[0].trim() : null;
+      } catch { return null; }
+    })();
+    return [{ id: "sentinel-blind", level: blocked ? "INFO" : "RED",
+      finding: blocked
+        ? `no laptop row and no sentinel fallback on the topic today (${rows.length} row(s), none ours) — and the sentinel's HALF of that is EXPECTED, not a fault: its channel is declared blocked in its own contract. What is still real here is that the LAPTOP said nothing either; mouth-silent-today is the check that owns that half`
+        : `today's ntfy history holds NEITHER a laptop row NOR the sentinel's fallback (${rows.length} row(s), none ours) — the mouth and the cloud sentinel cannot both be silent on the same day; check claude.ai/code/routines`,
+      evidence: blocked
+        ? `ntfy.sh JSON history since local midnight — nothing of ours · setup/CLOUD_SENTINEL.md says: ${blocked} — delete that line the day the channel works and this returns to RED`
+        : "ntfy.sh JSON history since local midnight — no ⚪🔴-badged title, no RFC2047 title, no 'Laptop soya'" }];
   }
   return [];
 }
@@ -1605,14 +1721,59 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     const encRow = JSON.stringify({ event: "message", title: "=?UTF-8?B?4pqq8J+UtA==?=", message: "x" });
     const sentinelRow = JSON.stringify({ event: "message", title: "Laptop soya", message: "mini-brief" });
     const noise = JSON.stringify({ event: "message", title: "someone else", message: "spam" });
+    // The contract path is INJECTED here, in BOTH directions, and that is the
+    // point of the change made on 15 Aug: before it, this assertion read the live
+    // setup/CLOUD_SENTINEL.md, so the day that file declared the channel blocked
+    // the test went red for the right reason and there was no way to hold BOTH
+    // behaviours. A demotion whose off-switch is never exercised is a demotion
+    // nobody can trust to come back.
+    //
+    // THE FIXTURES ARE REAL FILES, NOT WRITTEN ONES: the BLOCKED case reads the
+    // LIVE setup/CLOUD_SENTINEL.md (so this proves the demotion actually in force
+    // tonight, not a mock of it), the "exists but does not declare" case reads
+    // package.json, and the "absent" case reads a path that does not exist. No
+    // temp file is written, which also keeps this organ inside its xray sink
+    // ratchet — a test-time path built at runtime costs three sinks per call site.
     assert("E8 SENTINEL — a badge-signed row, an RFC2047 row, or the fallback each count as proof-of-life; pure noise is RED sentinel-blind",
-      (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sheetRow]) })).length === 0
-      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([encRow]) })).length === 0
-      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sentinelRow]) })).length === 0
-      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]) })).some((f) => f.id === "sentinel-blind" && f.level === "RED"));
+      (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sheetRow]), contractPath: NO_SUCH_CONTRACT })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([encRow]), contractPath: NO_SUCH_CONTRACT })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([sentinelRow]), contractPath: NO_SUCH_CONTRACT })).length === 0
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]), contractPath: NO_SUCH_CONTRACT })).some((f) => f.id === "sentinel-blind" && f.level === "RED"));
+    assert("E8 SENTINEL — with the channel DECLARED BLOCKED in the LIVE contract the same silence is INFO, and the evidence quotes the declaring line back",
+      (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]), contractPath: SENTINEL_CONTRACT }))
+        .some((f) => f.id === "sentinel-blind" && f.level === "INFO" && /CHANNEL_STATUS: BLOCKED/.test(f.evidence) && /mouth-silent-today/.test(f.finding)));
+    assert("E8 SENTINEL — …and the demotion is REVERSIBLE by that one line alone: with the declaration absent it is RED again, from the identical inputs",
+      (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]), contractPath: NO_SUCH_CONTRACT })).some((f) => f.level === "RED"));
+    assert("E8 SENTINEL — a file that EXISTS but does not declare the block never demotes (only the declaration counts, never the file's presence)",
+      existsSync(NOT_A_CONTRACT)
+      && (await probeSentinel(day, { topic: "t", fetchFn: mkFetch([noise]), contractPath: NOT_A_CONTRACT })).some((f) => f.level === "RED"));
     assert("E8 SENTINEL — no topic and a dead fetch are each an honest INFO unknown, never a fake RED",
       (await probeSentinel(day, { topic: null })).some((f) => f.id === "sentinel-unmeasurable")
       && (await probeSentinel(day, { topic: "t", fetchFn: async () => { throw new Error("offline"); } })).some((f) => f.id === "sentinel-unmeasurable"));
+  }
+
+  // c9b — THE WATCHER'S OWN PULSE (15 Aug 2026). Driven on fixtures, both ways,
+  // because the whole value of this check is that it fires when NOTHING ELSE can:
+  // gaffer_brain exits 0 on every failure path on purpose.
+  {
+    // the suite's own `base` world, so this block asserts ONLY its own finding and
+    // inherits every other check's healthy shape rather than re-declaring one
+    const gb = { ...base };
+    const silent = checks({ ...gb, gaffer_brain: { sitting_turns: 24, judgments_today: 0, engines: {}, notes_today: 0 } });
+    assert("c9b — a real sitting with ZERO judgments is RED: the Gaffer spent the day back on the frozen word list and nothing else would ever have said so",
+      silent.some((f) => f.id === "gaffer-brain-silent" && f.level === "RED" && /24 of his turns/.test(f.finding)));
+    const quiet = checks({ ...gb, gaffer_brain: { sitting_turns: 2, judgments_today: 0, engines: {}, notes_today: 0 } });
+    assert("c9b — …but a two-turn day is NOT a sitting (the floor is the smallest exchange that can contain a correction), so it stays silent",
+      !quiet.some((f) => f.id === "gaffer-brain-silent"));
+    const healthy = checks({ ...gb, gaffer_brain: { sitting_turns: 24, judgments_today: 9, engines: { flash: 8, legacy: 1 }, notes_today: 3 } });
+    assert("c9b — a working day is silent, and ONE legacy fallback among eight Flash judgments is not an alarm",
+      !healthy.some((f) => f.id === "gaffer-brain-silent" || f.id === "gaffer-brain-degraded"));
+    const degraded = checks({ ...gb, gaffer_brain: { sitting_turns: 24, judgments_today: 9, engines: { legacy: 9 }, notes_today: 2 } });
+    assert("c9b — but a day where the Watcher NEVER reached Flash is INFO with the engine counts: the surface still works, at yesterday's precision",
+      degraded.some((f) => f.id === "gaffer-brain-degraded" && f.level === "INFO" && /legacy=9/.test(f.evidence))
+      && !degraded.some((f) => f.id === "gaffer-brain-silent"));
+    assert("c9b — and an absent journal on a day with no sitting at all raises nothing (this check can only ever fire on evidence of a real sitting)",
+      !checks({ ...gb, gaffer_brain: { sitting_turns: 0, judgments_today: 0, engines: {}, notes_today: 0 } }).some((f) => String(f.id).startsWith("gaffer-brain")));
   }
 
   // LADDER G15 — the wake-economy re-fit (injected rows + write stub)

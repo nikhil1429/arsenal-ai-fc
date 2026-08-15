@@ -2749,6 +2749,19 @@ function selftest() {
       !!hookRes.secret && !/sb_publishable_[A-Za-z0-9]/.test(hookRes.secret.text) && /REDACTED/.test(hookRes.secret.text)
       && hookRes.secret.text.includes("supabase se connect") && Array.isArray(hookRes.secret.redactions) && hookRes.secret.redactions.length >= 1,
       JSON.stringify(hookRes.secret || {}).slice(0, 300));
+    // 13f — THE SAME CLASS, FOUND AGAIN ON 15 Aug 2026. He pasted a Cerebras key
+    // and it matched NO pattern in the scrubber, so it reached afferent.jsonl,
+    // recall_index.jsonl, workspace.json, teaching_audit_last.json and THIS ARCHIVE
+    // un-redacted. Nothing is public (all four are untracked) and he ruled the key
+    // is not to be rotated — so this assertion is about the NEXT key, not that one.
+    // Driven through the REAL hook against a REAL listener, like 13e: a scrubber
+    // tested by re-stating its own regex is a test of the regex, not of the door.
+    ok("13f. HOOK · a pasted Cerebras (csk-) AND Groq (gsk_) key are both REDACTED, and his words around them SURVIVE",
+      !!hookRes.secret2 && !/csk-[A-Za-z0-9]{20}/.test(hookRes.secret2.text) && !/gsk_[A-Za-z0-9]{20}/.test(hookRes.secret2.text)
+      && /REDACTED:cerebras-key/.test(hookRes.secret2.text) && /REDACTED:groq-key/.test(hookRes.secret2.text)
+      && hookRes.secret2.text.includes("dono try karo")
+      && (hookRes.secret2.redactions || []).includes("cerebras-key") && (hookRes.secret2.redactions || []).includes("groq-key"),
+      JSON.stringify(hookRes.secret2 || {}).slice(0, 400));
 
     console.log(`\narchivist selftest: ${pass} passed, ${fail} failed`);
     return fail === 0 ? 0 : 1;
@@ -2794,8 +2807,9 @@ const fire = (payload) => new Promise((done) => {
 const r1 = await fire({ hook_event_name: "UserPromptSubmit", prompt: "archivist hook probe - kya haal hai", session_id: "probe-sess", cwd: CWD, transcript_path: "C:/x/y.jsonl" });
 const r2 = await fire({ hook_event_name: "UserPromptSubmit", prompt: "archivist hook probe - bare payload with nothing else" });
 const r3 = await fire({ hook_event_name: "UserPromptSubmit", prompt: "supabase se connect kar raha hoon, key sb_publishable_AbCdEf0123456789xyz hai, ab aage kya karun", session_id: "probe-sess" });
+const r4 = await fire({ hook_event_name: "UserPromptSubmit", prompt: "cerebras lane chalu karo, key csk-abcdefghij0123456789klmnop hai aur groq wali gsk_ABCDEFGHIJ0123456789klmnop bhi, dono try karo", session_id: "probe-sess" });
 await new Promise((r) => setTimeout(r, 250));
-console.log(JSON.stringify({ r1, r2, r3, rows }));
+console.log(JSON.stringify({ r1, r2, r3, r4, rows }));
 srv.close();
 process.exit(0);
 `, "utf8");
@@ -2812,6 +2826,8 @@ process.exit(0);
     bareCode: j.r2.code,
     secret: rows.find((x) => /supabase se connect/.test(x.text || "")) || null,
     secretCode: j.r3.code,
+    secret2: rows.find((x) => /cerebras lane chalu/.test(x.text || "")) || null,
+    secret2Code: j.r4.code,
   };
 }
 

@@ -159,6 +159,23 @@ dressing-room/state/dugout_reminders.jsonl
 # call to make, the same way the other one was.
 dressing-room/state/gaffer_state.json
 dressing-room/state/gaffer_standing.json
+# 15 Aug 2026 — THE WATCHER's two files, on the same side of the line and for the
+# same reason, only more so. gaffer_brain.jsonl is a judgment PER TURN, each row
+# carrying his verbatim words as the quote behind the verdict; gaffer_blocks.json
+# is a distilled paragraph of what he has told the Gaffer to be. Both are read
+# straight out of brain_out/ and afferent.jsonl, which are ignored at 136 and 185,
+# so a file that excerpts them belongs here. Same footnote as the two above: this
+# is NOT a reversal of his 5 Aug ruling, which named readiness.json and
+# intake_log.json by name and is untouched.
+dressing-room/state/gaffer_brain.jsonl
+dressing-room/state/gaffer_blocks.json
+# …and the bridge's own delivery bookkeeping for the opening briefing. One date,
+# no content — ignored because it is per-machine runtime state, not because it is
+# private (a second laptop must not inherit "already delivered today").
+dressing-room/state/dugout_opening_latch.json
+# a hand-made backup of a state file, taken before a reversible config change.
+# It is a full copy of live state and it is EXACTLY as private as the original.
+dressing-room/state/*.bak-*
 # the shadow engine (earned proactivity — personal behavioral data)
 dressing-room/state/shadow_log.jsonl
 dressing-room/state/proactivity_ledger.json
@@ -363,3 +380,26 @@ tagmanifest-sha256.txt
 # the `audit` lane went 52h stale while looking like a scheduling problem.
 # Ignored rather than deleted: it is a crash artifact, not anyone's work.
 *.stackdump
+
+# ============================================================================
+# HIS PERSONAL CONTEXT — dressing-room/private/  (added 15 Aug 2026)
+# ----------------------------------------------------------------------------
+# The ChatGPT deep-context export he brought over on 15 Aug 2026, plus anything
+# else of that class. It holds his psychiatric history, medication names,
+# substance-use history, family history and periods of severe distress — in his
+# own account, from ~2 years of conversations elsewhere.
+#
+# WHY IGNORED, even though he said "i do not care much about my data going
+# public": HIS OWN STANDING RULING, 14 Aug 2026, one day earlier —
+#   "archive HAMESHA repo ke bahar rahega. Code public, data private.
+#    Koi apwaad nahi, kabhi nahi."
+# This repo is PUBLIC and a push is irreversible. That ruling covers this file
+# exactly; a later casual "fuck them" is not a reversal of a considered ruling,
+# and the cost of being wrong here is unbounded and permanent. If he wants it
+# public he can say so deliberately and delete these two lines.
+#
+# It is NOT under dressing-room/hippocampus/ because hippocampus.mjs is the
+# SOLE WRITER of that tree; this is a hand-placed reference document with no
+# organ owner, so it gets its own namespace.
+# ============================================================================
+dressing-room/private/

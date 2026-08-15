@@ -965,8 +965,29 @@ Predict the ${CAPS.pre_answer_max} doubts he is MOST LIKELY to voice next — co
   let spent = 1;
   for (const d of predicted) {
     if (!budget.take()) break;                       // E2E audit 25 Jul 2026: the shift-wide budget binds here too
-    const r = await gen(`Answer this learner's doubt COMPLETELY, in the club's DOSSIER grammar. The doubt (his voice): "${d.doubt}" — concept: ${d.concept}.
-Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; (2) one worked micro-example with real small numbers; (3) where it breaks / the limit; (4) the trade-off a staff engineer would name; (5) ONE reframe that dissolves this exact confusion, speakable, Hinglish welds welcome. Honest frame only — never hype, never a shame word. Output STRICT JSON, no fences: {"answer":"<the full answer>"}`);
+    // CACHE-ORDERED, 15 Aug 2026 — STABLE FIRST, VOLATILE LAST. Measured on the
+    // live brain_ledger over the trailing 7 days: ns_pre_answers, 38 calls,
+    // 703,407 tokens, cache_creation 666,729 and cache_read EXACTLY ZERO — every
+    // call re-established a prefix and not one call ever read one back. The old
+    // wording opened with the varying doubt and put the fixed DOSSIER grammar
+    // after it, so there was no shared prefix to cache at all. This is the same
+    // law the Watcher's prompt obeys (scripts/gaffer_brain.mjs, buildWatcherPrompt)
+    // and the same one the work order states: keep stable content at the START,
+    // changing content at the END.
+    // TWO HONEST CAVEATS, both worth writing down rather than discovering twice:
+    //   · the SAVING is a hypothesis until the ledger says otherwise. The verdict
+    //     arrives on the next night run and needs no one to remember it — the rows
+    //     are already there: filter brain_ledger.jsonl for job ns_pre_answers and
+    //     read cache_read_tokens. Zero again means the binding constraint is the
+    //     provider's minimum cacheable prefix, not this ordering, and the next step
+    //     is a bigger shared prefix rather than a different order.
+    //   · the CONTENT is byte-identical — same instructions, same doubt, same
+    //     concept, same output contract. Only the order changed, and putting his
+    //     doubt LAST also puts it closest to the answer, which is the better place
+    //     for it on any reading.
+    const r = await gen(`Answer a learner's doubt COMPLETELY, in the club's DOSSIER grammar.
+Structure (dense, ≤170 words, no preamble): (1) the mechanism, named plainly; (2) one worked micro-example with real small numbers; (3) where it breaks / the limit; (4) the trade-off a staff engineer would name; (5) ONE reframe that dissolves this exact confusion, speakable, Hinglish welds welcome. Honest frame only — never hype, never a shame word. Output STRICT JSON, no fences: {"answer":"<the full answer>"}
+THE DOUBT (his voice): "${d.doubt}" — concept: ${d.concept}.`);
     use(CLAUDE_LANE, 1, 3500); spent++;              // claudeGen — subscription lane, never a Gemini tank
     if (!r.ok) continue;
     try {
@@ -1668,6 +1689,23 @@ async function selftest() {
     const r = await preAnswerEngine({ material, generate: genPA, recordUse: () => uses++, embed: async (ts) => ts.map(() => [1, 0]), writeCache: (rows) => { saved = rows; }, bannedPhrases: ["10x"], now: new Date("2026-07-15T02:50:00") });
     assert("PRE-ANSWER: predicts doubts, answers in DOSSIER grammar, embeds, caches", r.ok && saved.length === 1 && Array.isArray(saved[0].vec) && saved[0].doubt.includes("quadratic") && saved[0].answer.includes("handshakes"));
     assert("PRE-ANSWER: junk predictions rejected per-item (doubt too short)", r.predicted === 1 && r.answered === 1);
+    // CACHE ORDER (15 Aug 2026) — held on the REAL prompt this engine sends, not on
+    // a copy of it. Measured cause: 38 calls, cache_creation 666,729, cache_read 0.
+    // The instructions must come first and HIS doubt last, or there is no shared
+    // prefix for the provider to cache. Asserted structurally so a future reword
+    // cannot quietly put the volatile half back in front.
+    {
+      let answerPrompt = null;
+      await preAnswerEngine({ material, generate: async (p) => { if (!p.includes("Predict the")) answerPrompt = p; return genPA(p); }, recordUse: () => {}, embed: async (ts) => ts.map(() => [1, 0]), writeCache: () => {}, bannedPhrases: [], now: new Date("2026-07-15T02:50:00") });
+      const iDoubt = answerPrompt.indexOf("kv cache hai toh");
+      const iGrammar = answerPrompt.indexOf("DOSSIER grammar");
+      assert("PRE-ANSWER · CACHE ORDER: the stable DOSSIER instructions come FIRST and his volatile doubt LAST (38 calls had cache_read 0 with this the other way round)",
+        iGrammar >= 0 && iDoubt > iGrammar && iDoubt > answerPrompt.length * 0.75);
+      assert("PRE-ANSWER · …and nothing was LOST in the reorder: the doubt, the concept, all five structure points and the output contract are all still in the prompt",
+        /kv cache hai toh/.test(answerPrompt) && /concept: kv cache/.test(answerPrompt)
+        && ["the mechanism", "worked micro-example", "where it breaks", "trade-off", "reframe"].every((s) => answerPrompt.includes(s))
+        && answerPrompt.includes('{"answer":"<the full answer>"}'));
+    }
     assert("PRE-ANSWER: every spend recorded on the free pool", uses === r.spent && r.spent === 2);
     const rB = await preAnswerEngine({ material, generate: async (p) => p.includes("Predict the") ? { ok: true, text: JSON.stringify([{ concept: "c", doubt: "why does this scale so badly here?" }]) } : { ok: true, text: JSON.stringify({ answer: "This will 10x your intuition about scaling, honestly. ".repeat(4) }) }, recordUse: () => {}, embed: async () => null, writeCache: () => { throw new Error("must not write"); }, bannedPhrases: ["10x"], now: new Date("2026-07-15T02:50:00") });
     assert("PRE-ANSWER: banned-phrase answers REJECTED (honest frame or nothing)", rB.ok === false && rB.skipped.includes("validation"));

@@ -207,6 +207,50 @@ hash-chained, IST-day-partitioned, BagIt-valid permanent record. The full spec i
   deliberately CANNOT delete the archive — uninstalling the software that feeds a permanent
   record must never be able to erase it.
 
+## THE WATCHER — the Gaffer's judgment organ (built 15 Aug 2026, his word: *"just fix and implement it"*)
+`scripts/gaffer_brain.mjs` is the **SOLE WRITER** of `gaffer_brain.jsonl` (every judgment,
+append-only) and `gaffer_blocks.json` (the memory blocks). It reads a turn delta off the dugout
+transcript AND the afferent bus, asks Gemini Flash on the free pool **what he MEANT**, and hands
+the verdict back to `gaffer_state.mjs`, which now prefers it over the word list. The work order it
+was built from is `GAFFER_REBUILD__2026-08-15.md` — **a RECORD of what was approved, not a work
+order any more. Do not re-plan it.**
+- **`gaffer_state.mjs`'s six word-lists are FROZEN as `*_LEGACY`** and are now the degraded-mode
+  fallback (what answers when the free pool is dry). They were retired for failing in BOTH
+  directions at once, measured on live files: his five CALM corrections on 15 Aug scored
+  `forgot_flags: 0`, **and** 13 "standing instructions" in `gaffer_standing.json` included six lines
+  of plain conversation ("So what are these papers actually?") that `renderBrief` was injecting into
+  his live window as permanent law every sitting. Both halves are RUN, not restated, in
+  `node scripts/gaffer_brain.mjs selftest`.
+- **Read the numbers live, never from here** — `node scripts/gaffer_brain.mjs status` · `blocks` ·
+  `note`. `probe` fires ONE live Flash call (the free-pool probe; the selftest is hermetic and
+  injects the model, so `probe` is how the lane is proven).
+- **THE BRAIN NEVER BLOCKS THE MOUTH.** The `/transcript` door spawns it detached, stdio ignored,
+  unref'd, and every failure path inside it exits 0 on purpose. That safety has an exact cost —
+  nothing else could notice it had died — which is why `watchman.mjs` carries
+  **`gaffer-brain-silent`, level RED** (a sitting happened, zero judgments) and `gaffer-brain-degraded`,
+  level INFO (it ran but never reached Flash). Precedent: `tier2-vanished`.
+- **The briefing is LATCHED, not prompted.** `buildOpeningBriefing()` came OUT of the system
+  instruction (his approval, "2 point yes do it"): its own first line is *"SAY THIS FIRST,
+  UNPROMPTED"*, and a system prompt is re-read every turn, so the imperative fired forever — the card
+  dump reappearing mid-conversation in four consecutive sittings. It is now delivered once per IST
+  day through the live injection channel, and the latch is a date on disk. The **ANSWER** half
+  (`answer_card`) stayed in the constitution, because that one is a standing law, not a one-shot report.
+- **The supervisor now speaks FIRST** among the eleven live hints (it sat fourth in a poll where every
+  branch returns, so a correction about a drift happening *right now* was silently dropped whenever a
+  deep answer or a recall hit landed). Its old test compared it against ONE of the nine.
+- **`get_myself`** is the tool that ended the guessing about its own anatomy — on 13 Aug it told him
+  *"mere paas koi visual sensors nahi hain"* while the video lane was live in `dugout.mjs`. Every
+  field is derived from `TOOL_DECLS` and from the page that implements the lane, never restated.
+- **The pace cap is a MID-TURN interrupt**, not a sentence: he asked for slower speech six times in
+  one sitting and no text instruction ever changed it, because pace is a property of the remote
+  model's generation. The page counts words on the live output transcription and hands the turn back
+  past `MONOLOGUE_WORDS` — his own forty-second law, the same 100.
+- **The card deck is a QUEUE.** It was `open[open.length - 1]`, i.e. LIFO, so seven open cards had
+  never been dealt once while c9 was dealt 24 times — six of the seven his own `[his-word]` drift reports.
+- **The Cerebras grader stops honestly.** The key is read from `~/.cerebras/.env` and nowhere else;
+  absent, it prints ONE line naming the file and stops. It never asks for a key in chat and never
+  writes one into the repo. **His ruling, 15 Aug: the key is NOT to be rotated — do not raise it.**
+
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
 Before teaching, planning, or answering anything about where he is: call the
 **`organism-memory` MCP tool `get_context`**. It returns his identity facts, the

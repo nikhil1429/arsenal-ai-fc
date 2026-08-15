@@ -61,6 +61,16 @@ const HARD_SECRETS = [
   [/\bAKIA[0-9A-Z]{16}\b/g, "aws-access-key-id"],
   [/\bAIza[0-9A-Za-z_-]{30,}/g, "google-api-key"],
   [/\bya29\.[0-9A-Za-z_-]{20,}/g, "google-oauth-token"],
+  // ADDED 15 Aug 2026, and not hypothetically: he pasted a Cerebras key into a
+  // turn that morning and it matched NONE of the patterns above, so it reached
+  // afferent.jsonl, recall_index.jsonl, workspace.json, teaching_audit_last.json
+  // AND the archive un-redacted. No harm done — all four are untracked, so nothing
+  // is public, and he ruled the same day that THAT key is not to be rotated (do not
+  // raise it again). This is about the NEXT one. Groq (`gsk_`) joins it because it
+  // is the same shape, the same class of paste, and the same silence: neither
+  // prefix appears in any pattern in this file's history.
+  [/\bcsk-[A-Za-z0-9]{20,}/g, "cerebras-key"],
+  [/\bgsk_[A-Za-z0-9]{20,}/g, "groq-key"],
   [/\bBearer\s+[A-Za-z0-9._~+/-]{20,}=*/g, "bearer-token"],
   [/\b(?:api[_-]?key|apikey|secret|password|passwd|token|access[_-]?token|client[_-]?secret)\b\s*[:=]\s*["']?([^\s"',;]{6,})/gi, "key-value"],
 ];
