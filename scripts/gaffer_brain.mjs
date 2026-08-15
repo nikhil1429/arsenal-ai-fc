@@ -852,13 +852,47 @@ Wording never counts. Only the mechanism counts.`;
       method: "POST", signal: ctrl.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({
-        model: deps.model || process.env.GAFFER_GRADER_MODEL || "llama-3.3-70b",
+        // MEASURED OFF HIS OWN ACCOUNT, 15 Aug 2026 — GET /v1/models returned
+        // gpt-oss-120b · gemma-4-31b · zai-glm-4.7, and nothing else. The first
+        // version defaulted to "llama-3.3-70b", which I had simply assumed, and the
+        // whole lane returned HTTP 404 the moment a real key was installed: auth had
+        // passed, the MODEL did not exist. A guessed name is a guessed number wearing
+        // a different hat, and this repo's rule covers both.
+        model: deps.model || process.env.GAFFER_GRADER_MODEL || "gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0, response_format: { type: "json_object" },
       }),
     });
     clearTimeout(t);
-    if (!r.ok) return { ok: false, reason: "http-" + r.status, say: "gaffer_brain: the grader lane refused — say so honestly, never invent a verdict." };
+    if (!r.ok) {
+      // A 404 HERE MEANS THE MODEL, NOT THE KEY — auth has already passed, and that
+      // distinction cost a real debugging round on the day the key was installed. So
+      // the lane ASKS which models the account actually has and says so, once, rather
+      // than handing back a bare status code the next reader has to go and decode.
+      let hint = "";
+      // 402 IS THE ACCOUNT, NOT THE CODE, AND IT IS WORTH SAYING IN WORDS. Measured
+      // 15 Aug 2026 on his own key, all three models it can list:
+      //   {"message":"Payment required to access this resource. Visit your billing
+      //    tab.","type":"payment_required_error","param":"quota"}
+      // The work order assumed "Cerebras (free: 1M tok/day)". That is not true of
+      // this account, and no code change reaches it. Nothing here is broken — the
+      // key is valid, the model exists, the request is well formed, and the lane
+      // stops honestly, which is what it was built to do.
+      if (r.status === 402) {
+        hint = " This is the ACCOUNT, not the code: the key is valid and the model exists, but the Cerebras account has no quota (payment_required on every model it can list). Nothing in this repo can fix that — it is a billing tab. Until then the grader stays down and everything else in the Gaffer runs without it.";
+      }
+      if (r.status === 404) {
+        try {
+          const lr = await fetchFn("https://api.cerebras.ai/v1/models", { headers: { Authorization: `Bearer ${secret}` } });
+          const lj = lr.ok ? await lr.json() : null;
+          const ids = ((lj && lj.data) || []).map((x) => x.id).filter(Boolean);
+          hint = ids.length
+            ? ` The KEY is fine (models listed OK) — the MODEL is not: this account has ${ids.join(", ")}. Set GAFFER_GRADER_MODEL to one of those.`
+            : " The model endpoint 404'd and the model list could not be read either.";
+        } catch { /* the hint is a courtesy; its failure must not change the verdict */ }
+      }
+      return { ok: false, reason: "http-" + r.status, say: `gaffer_brain: the grader lane refused (HTTP ${r.status}).${hint} Say so honestly, never invent a verdict.` };
+    }
     const j = await r.json();
     const text = (((j.choices || [])[0] || {}).message || {}).content || "";
     let parsed = null; try { parsed = JSON.parse(text); } catch { }
