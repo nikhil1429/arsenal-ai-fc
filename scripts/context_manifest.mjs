@@ -89,9 +89,24 @@ export const FOOTER_RESERVE = 260;    // the manifest line must always fit — i
 // path changes: the default IS the old string.
 const MEMO_TAIL = "\n… (truncated — full recall via the organism-memory MCP `get_context`)";
 const CARD_TAIL = "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)";
-const clipTo = (s, n, tail = MEMO_TAIL) => (typeof s === "string" && s.length > n)
-  ? s.slice(0, n) + tail
-  : s;
+// THE TAIL LIVES INSIDE THE CAP (audit 16 Aug 2026 — the baseline RED that stopped the
+// truth layer before its first line). This was `s.slice(0, n) + tail`, i.e. a function
+// called "clip to n" that returns n + tail.length, EVERY time it fires. MEASURED on live
+// state that morning: memCap 5,999 → memory came back 6,070, the brief assembled at
+// 12,005 against a 12,000 ceiling, and the suite went red on the one end-to-end ceiling
+// check this organism owns. The 71 characters were never anybody's to spend: the budget
+// above sets aside FOOTER_RESERVE precisely so the footer fits, and this helper quietly
+// spent past every reservation the caller made.
+// It is the SAME SHAPE as the two defects already recorded in this file — the 6 Aug
+// `trimmed` fix and the 10 Aug `memFull` fix — a cut that misreports its own size, here
+// misreporting it to the BUDGET rather than to the reader. NO NEW ENGINE, nothing frozen:
+// the parts, their order and both tails are byte-identical; only the arithmetic is true.
+// A cap too small to hold the notice takes a hard cut instead — a truncation marker that
+// itself overflows is the same bug in a smaller coat.
+const clipTo = (s, n, tail = MEMO_TAIL) => {
+  if (typeof s !== "string" || s.length <= n) return s;
+  return n <= tail.length ? s.slice(0, Math.max(0, n)) : s.slice(0, n - tail.length) + tail;
+};
 
 // ── PENDING IDENTITY FACTS ───────────────────────────────────────────────────
 // Law 4: remember_fact STAGES, it never writes canon. mcp-memory.mjs surfaces this
@@ -606,6 +621,26 @@ function selftest() {
       pending: { present: false, text: "", count: 0 }, memoryFullLength: 4157, ceiling: 900 });
     assert("A CUT IS ALWAYS NAMED — even when the truncation notice is longer than the overflow",
       /TRIMMED from 4157/.test(tail.manifest.find((m) => m.id === "memory").note || ""));
+    // ── A CLIP THAT OVERSHOOTS ITS CAP IS NOT A CLIP (16 Aug 2026) ───────────
+    // The trap above pinned that the cut is NAMED. Nothing pinned that the cut
+    // FITS — and it did not: `clipTo` returned cap + tail on every call, which is
+    // how a brief budgeted at 12,000 shipped at 12,005. Both tails are asserted,
+    // because the card leg calls the same helper with the other one, and a fix
+    // that held for only one of them would have gone red here in a week.
+    assert("THE CLIP FITS ITS CAP — both tails, at a cap the notice cannot escape",
+      clipTo("M".repeat(9000), 500).length === 500
+      && clipTo("M".repeat(9000), 500, CARD_TAIL).length === 500);
+    assert("…and a cap smaller than the notice takes a hard cut rather than overflowing to fit the notice",
+      clipTo("M".repeat(900), 12).length === 12);
+    assert("…while anything already inside its cap is returned untouched, byte for byte",
+      clipTo("MMM", 500) === "MMM" && clipTo("M".repeat(500), 500).length === 500);
+    // THE END-TO-END LAW, on the LIVE brief rather than a fixture: the number the
+    // footer prints is the number that ships, and it is inside the ceiling. This
+    // is the assertion organism_test owns from the outside; owning it HERE too is
+    // what makes this module's own suite able to catch its own arithmetic.
+    const shipped = await assemble({});
+    assert("THE BRIEF THAT SHIPS IS INSIDE THE CEILING — total is the delivered length, and it fits",
+      shipped.total === shipped.text.length && shipped.total <= shipped.ceiling);
 
     // THE FULL LENGTH IS READ BEFORE THE CUT (audit 10 Aug 2026). Every assertion above
     // injects deps.memoryFullLength — which is exactly why the suite ran green for weeks

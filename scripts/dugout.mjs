@@ -230,9 +230,20 @@ function readDeepState(deps = {}) {
   // imperative in the system prompt (see openingLatch). It is served at most once
   // per IST day, and the latch is stamped the moment it is served — so even a poll
   // that fires twice in the same second cannot deliver it twice.
-  out.opening = null;
-  if (deps.opening !== undefined) out.opening = deps.opening;
-  else { try { const l = openingLatch(); if (l.fire) out.opening = { id: l.day, text: l.text }; } catch { } }
+  //
+  // A READ MUST NOT WRITE (audit 16 Aug 2026 — the second baseline RED). This
+  // branch used to call openingLatch() itself whenever `deps.opening` was absent,
+  // and openingLatch STAMPS THE DAY ON DISK. Every one of the ~20 selftest calls
+  // to readDeepState() passes a deps object without `opening`, so `npm test`
+  // burned the latch — MEASURED: the suite ran at 00:05 IST on 16 Aug and
+  // dugout_opening_latch.json came back `delivered_day: "2026-08-16", chars: 1156`
+  // before he had opened a single sitting. The briefing was not delivered to him;
+  // it was delivered to a test, and the latch cannot tell the two apart. He would
+  // have gone the whole day without the one thing the latch exists to guarantee.
+  // The side effect now belongs to the LIVE ROUTE, which is the only place it was
+  // ever meant to happen (see serveOpeningOnce, beside the /deep handler), and
+  // this function is a read again, as its name says.
+  out.opening = deps.opening !== undefined ? deps.opening : null;
   out.cross_mouth = null;
   try {
     const rows = deps.afferentRows !== undefined ? deps.afferentRows : readLinesTail(join(STATE_DIR, "afferent.jsonl"), 40000);
@@ -1626,6 +1637,19 @@ function openingLatch(deps = {}) {
   // new route. Losing one briefing to a crash is the cheaper failure by far.
   write(OPENING_LATCH, { delivered_day: day, at: now.toISOString(), chars: text.length, _writer: "dugout.mjs" });
   return { fire: true, text, day };
+}
+
+// THE SERVING DOOR — the only caller of openingLatch that is allowed to burn a day.
+// Kept as its own named function rather than inlined at the route so the write has a
+// name a selftest can hold, and so there is exactly ONE of it: the defect this repairs
+// was a second, invisible caller sitting inside a function called `readDeepState`.
+// Fail-silent by the same law as every other hint in this bridge — a bookkeeping throw
+// must never cost him the sitting.
+// The deps pass straight through to openingLatch so the door itself can be exercised
+// against a stubbed disk — the fix above is worthless if proving it costs a real day.
+function serveOpeningOnce(deps = {}) {
+  try { const l = openingLatch(deps); return l.fire ? { id: l.day, text: l.text } : null; }
+  catch { return null; }
 }
 
 function buildSystemInstruction() {
@@ -3422,6 +3446,31 @@ async function selftest() {
           openingLatch({ ...stub, now: new Date("2026-08-17T09:00:00+05:30"), text: "" }).fire === false
           && openingLatch({ ...stub, now: new Date("2026-08-17T10:00:00+05:30") }).fire === true);
       }
+      // ── A READ MUST NOT WRITE (16 Aug 2026) ─────────────────────────────
+      // The three assertions above proved the latch fires ONCE. None of them
+      // proved WHO fires it — and the answer was: this suite. readDeepState()
+      // called openingLatch() on the `deps.opening === undefined` path, which is
+      // every selftest call in this file, so `npm test` stamped the live latch and
+      // his real briefing for the day was consumed by a test run at 00:05. The
+      // state-untouched guard in organism_test.mjs is what caught it; nothing in
+      // dugout's own suite could, because "it fired once" was true — once, to
+      // nobody. Needles are built by concatenation: a guard that greps for a string
+      // it itself contains passes on its own source (this file paid for that lesson
+      // three times in one day, 15 Aug).
+      assert("B4 — readDeepState is a READ: it does not consume the latch, so running the suite cannot eat his briefing",
+        !new RegExp("out\\.opening[\\s\\S]{0,120}?opening" + "Latch\\(\\)").test(SRCX)
+        && readDeepState({ workspace: null, wake: null, queueRows: [], afferentRows: [], runtime: {} }).opening === null);
+      assert("B4 — …and the LIVE /deep route is what serves it, so moving the write did not silently delete the delivery",
+        new RegExp('req\\.url === "/deep"[\\s\\S]{0,120}?serve' + "OpeningOnce\\(\\)").test(SRCX));
+      assert("B4 — the serving door hands back the SHAPE the page consumes, and null when the day is already spent",
+        (() => {
+          let stored = null;
+          const day = localDate(new Date());
+          const o1 = serveOpeningOnce({ read: () => stored, write: (_p, o) => { stored = o; }, text: "BRIEFING BODY" });
+          const o2 = serveOpeningOnce({ read: () => stored, write: (_p, o) => { stored = o; }, text: "BRIEFING BODY" });
+          return o1 && o1.id === day && o1.text === "BRIEFING BODY" && o2 === null;
+        })());
+
       assert("B4 — the ANSWER half stayed in the constitution, because it is a standing law and not a one-shot report (moving both out would have silently deleted it)",
         SI.includes("haan, na, ya baad?") && SI.includes("answer_card(word)"));
 
@@ -3557,8 +3606,29 @@ async function selftest() {
           /Re-Jirah round\(s\) overdue/.test(brief) && /RIPE, not late/.test(brief));
         assert("BRIEF — the missions line renders and names the benchmark gate",
           /Gemini mission\(s\) still out/.test(brief) && /benchmark stays gated/.test(brief));
-        assert("BRIEF — all FOUR sources reach him: cards · watchman · re-jirah · missions",
-          ["decision(s) waiting", "watchman", "Re-Jirah", "Gemini mission"].every(k => brief.includes(k)));
+        // ── THIS ASSERTION USED TO FAIL WHEN THE ORGANISM WAS HEALTHY (16 Aug 2026) ──
+        // It read: all four keys are in the rendered brief, full stop. But three of
+        // the four legs render ONLY when their source has something to say —
+        // `if (reds.length)`, `if (overdue.length)`, `if (open.length)` — so the day
+        // the overnight watchman came back with zero REDs (INFO×3, 16 Aug: tier2-vanished,
+        // unleash-verdict-ready, wake-economy-unmeasured) the brief correctly said nothing
+        // about the watchman and the suite went RED for it. A test that goes red because
+        // nothing is wrong is worse than no test: it trains the reader to expect a red.
+        // The claim it was reaching for is the PAIRING, and that is what is asserted now:
+        // a leg with content renders, a leg without content stays silent. Both halves
+        // matter — the dead-wire class this replaced (a field name nothing writes) shows
+        // up as a source WITH content and a brief WITHOUT the line, and that is still
+        // caught, on every leg, every run. Which legs carried data is printed, because a
+        // check that quietly exercised one of four looks exactly like one that exercised
+        // all four.
+        const legs = [
+          ["cards", "decision(s) waiting", (((readJson(join(STATE_DIR, "captains_call.json")) || {}).cards) || []).some(c => c && !c.answered_at)],
+          ["watchman", "watchman", (((readJson(join(STATE_DIR, "watchman_last.json")) || {}).findings) || []).some(f => f && f.level === "RED")],
+          ["re-jirah", "Re-Jirah", (() => { const s = readJson(join(STATE_DIR, "fsrs_store.json")) || {}; const t = localDate(new Date()); return (Array.isArray(s.cards) ? s.cards : []).some(c => c && String(c.due || c.due_date || "").slice(0, 10) <= t); })()],
+          ["missions", "Gemini mission", (((readJson(join(STATE_DIR, "missions.json")) || {}).missions) || []).some(x => x && !x.ingested_at)],
+        ];
+        assert(`BRIEF — every source with something to say REACHES him, and every source without one stays silent (live today: ${legs.map(([n, , has]) => `${n} ${has ? "has data" : "empty"}`).join(" · ")})`,
+          legs.every(([, key, has]) => brief.includes(key) === has));
       } else {
         console.log(`  ..   BRIEF · rendered checks NOT RUN — this is a clean checkout (missing ${["fsrs_store.json", "captains_call.json", "missions.json"].filter((f) => !existsSync(join(STATE_DIR, f))).join(", ")}). Stated, never silent; the WIRING claims above ran.`);
       }
@@ -5854,7 +5924,13 @@ async function main() {
         if (mode === "scrimmage") { try { markServed("scrimmage-voice"); } catch {} }
         return send(200, buildConfig(keys, mode));
       }
-      if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState());
+      // THE ONE PLACE THE LATCH IS CONSUMED (16 Aug 2026). readDeepState() is a
+      // read and no longer stamps the day itself; the poll that actually reaches
+      // HIS EAR does. Written at the door, in full, so the write is visible to a
+      // reader of the route and to the static analyser — and pinned by a selftest,
+      // because an opt-in side effect that nothing wires is a briefing nobody sends,
+      // which is the failure mode on the other side of the one just fixed.
+      if (req.method === "GET" && req.url === "/deep") return send(200, readDeepState({ opening: serveOpeningOnce() }));
       // B1 — THE LIVE RE-SEED. His own diagnosis: "Have you changed your key?
       // Because you forgot what we were doing." On quota the page ran
       //   reportFault → nextKey() → dropResume('key rotation') → connect()
