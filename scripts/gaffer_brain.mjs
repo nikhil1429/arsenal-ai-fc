@@ -96,7 +96,7 @@
 //        node scripts/gaffer_brain.mjs grade <concept> <axis>  → the Cerebras lane
 //        node scripts/gaffer_brain.mjs selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, renameSync, statSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import os from "node:os";
@@ -776,6 +776,15 @@ async function postToBus(row, deps = {}) {
 // prompt, never echoed into a log. If the file is absent this prints ONE line and
 // stops. It does not ask him for the key and it does not fall back to a paid lane.
 export function loadCerebrasKey(envText = null) {
+  // THE ENVIRONMENT IS READ FIRST — added 15 Aug 2026 for the same reason
+  // loadGeminiKeys has done it since the day it was written, and its absence here
+  // was an inconsistency, not a decision: a key exported in his shell (or set by a
+  // machine that has no dotfile) simply did not exist to this organ. Only when the
+  // caller passes an explicit fixture is the environment skipped, so the selftest
+  // measures the parser and not this box.
+  if (envText === null && (process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY)) {
+    return String(process.env.CEREBRAS_API_KEY || process.env.CEREBRAS_KEY).trim();
+  }
   const text = envText !== null ? envText : (existsSync(CEREBRAS_ENV) ? (() => { try { return readFileSync(CEREBRAS_ENV, "utf8"); } catch { return ""; } })() : "");
   for (const line of String(text).split("\n")) {
     const m = line.match(/^\s*(?:CEREBRAS_API_KEY|CEREBRAS_KEY)\s*=\s*(.+)$/);
@@ -783,25 +792,39 @@ export function loadCerebrasKey(envText = null) {
   }
   return null;
 }
+// ⚠ READ THE FIELD, DO NOT GUESS ITS NAME — and this function is the scar, not the
+// warning. It shipped on 15 Aug reading `capsule.axes[axis].weld`, and a capsule has
+// no `axes` key at all: the nine axes live in `faultLines`, an ARRAY of
+// {axis, title, strike, weld, status, deep} (the owner's own reader is
+// `for (const a of c.faultLines || [])` — grep -n "of c.faultLines" scripts/deep.mjs).
+// So this returned "no locked weld on disk" for every concept and every axis, forever,
+// and the selftest was green because it only ever exercised the REFUSAL path. Exactly
+// the same shape as the two dead wires in buildOpeningBriefing (a state file nothing
+// writes; a `status` field a mission row does not have) — a lane that answers
+// confidently about a field it never found. The live-capsule assertion below is the
+// fix that matters: it reads a REAL locked capsule off disk, so this cannot rot back.
 export function capsuleAnswerKey(concept, axis, deps = {}) {
   const read = deps.readJson || readJson;
   const file = deps.capsulePath || join(CAPSULE_DIR, String(concept).toLowerCase().replace(/[^a-z0-9_-]/g, "") + ".json");
   const c = read(file, null);
   if (!c) return null;
-  const axes = c.axes || c.nine || {};
-  const a = axes[axis] || axes[String(axis).toLowerCase()] || null;
+  const want = String(axis || "").trim().toLowerCase();
+  const a = (Array.isArray(c.faultLines) ? c.faultLines : []).find((x) => x && String(x.axis || "").trim().toLowerCase() === want);
   if (!a) return null;
   // The KEY is his own weld — the prose he will defend in an interview. Never a
-  // paraphrase and never something the grader wrote.
-  const weld = typeof a === "string" ? a : (a.weld || a.text || "");
-  return weld ? { concept, axis, weld: clip(weld, 4000) } : null;
+  // paraphrase and never something the grader wrote. `strike` (the cold question) and
+  // `title` ride along because a grader that knows what was ASKED marks the right
+  // thing; `deep` deliberately does NOT — it is the long form, and grading a
+  // 40-second spoken answer against a 4,000-word page would fail every honest recall.
+  const weld = String(a.weld || "").trim();
+  return weld ? { concept, axis: a.axis, title: a.title || null, strike: a.strike || null, weld: clip(weld, 4000) } : null;
 }
 export async function gradeAnswer({ concept, axis, spoken }, deps = {}) {
-  const key = deps.key !== undefined ? deps.key : loadCerebrasKey();
-  if (!key) {
+  const secret = deps.key !== undefined ? deps.key : loadCerebrasKey();
+  if (!secret) {
     return {
       ok: false, reason: "no-key",
-      say: `gaffer_brain: the Cerebras key is not on this machine. Put it at ${CEREBRAS_ENV} as CEREBRAS_API_KEY=… and this lane comes up. Nothing else is needed and nothing will be written into the repo.`,
+      say: `gaffer_brain: the Cerebras key is not on this machine. Run  powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1  — it asks in your own terminal, does not echo, and writes ${CEREBRAS_ENV}. (Or export CEREBRAS_API_KEY; the environment is read first.) Nothing is written into the repo either way.`,
     };
   }
   const k = deps.answerKey !== undefined ? deps.answerKey : capsuleAnswerKey(concept, axis, deps);
@@ -809,7 +832,7 @@ export async function gradeAnswer({ concept, axis, spoken }, deps = {}) {
   const fetchFn = deps.fetchFn || fetch;
   const t0 = Date.now();
   const prompt = `You are grading a spoken recall answer against the answer key the learner wrote himself.
-ANSWER KEY (his own words, authoritative):
+${k.strike ? `THE QUESTION HE WAS ASKED: ${k.strike}\n` : ""}ANSWER KEY (his own words, authoritative):
 ${k.weld}
 
 HIS SPOKEN ANSWER:
@@ -823,7 +846,7 @@ Wording never counts. Only the mechanism counts.`;
     const t = setTimeout(() => ctrl.abort(), deps.deadlineMs || 15000);
     const r = await fetchFn("https://api.cerebras.ai/v1/chat/completions", {
       method: "POST", signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({
         model: deps.model || process.env.GAFFER_GRADER_MODEL || "llama-3.3-70b",
         messages: [{ role: "user", content: prompt }],
@@ -880,7 +903,7 @@ async function main() {
     console.log(`gaffer_brain: ${rows.length} judgment(s) in the journal · engines ${Object.entries(byEngine).map(([k, v]) => `${k}=${v}`).join(" ") || "none"}`);
     console.log(`  blocks filled: ${filled.length ? filled.join(" · ") : "(none)"}   cursor: ${bl.cursor.dugout_day || "—"} @ ${bl.cursor.dugout_bytes}B transcript / ${bl.cursor.afferent_bytes}B bus`);
     if (last) console.log(`  last: ${last.ts} · ${last.engine} · ${last.signals.join(",") || "no signal"}${last.error ? ` · ERROR ${last.error}` : ""}`);
-    console.log(`  keys: gemini pool ${loadGeminiKeys().length} · cerebras ${loadCerebrasKey() ? "present" : "ABSENT — the grader lane is down until ~/.cerebras/.env exists"}`);
+    console.log(`  keys: gemini pool ${loadGeminiKeys().length} · cerebras ${loadCerebrasKey() ? "present" : "ABSENT — run  powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1  (or export CEREBRAS_API_KEY), then  node scripts/gaffer_brain.mjs grade --smoke"}`);
     return;
   }
   if (mode === "probe") {
@@ -895,6 +918,39 @@ async function main() {
     return;
   }
   if (mode === "grade") {
+    // --smoke — THE ONE COMMAND THAT PROVES THE WHOLE LANE, and it exists because a
+    // grader nobody has ever seen return a verdict is a hypothesis. It grades a REAL
+    // axis off a REAL locked capsule TWICE: once against his own weld (must hold) and
+    // once against a confident, fluent, wrong answer (must crack). One direction
+    // alone proves nothing — a grader stuck on "held" passes the first test forever.
+    if (process.argv.includes("--smoke")) {
+      let names = [];
+      try { names = readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
+      const pick = names.map((n) => ({ n, k: (readJson(join(CAPSULE_DIR, n + ".json"), {}).faultLines || []).find((a) => a && a.weld) }))
+        .find((x) => x.k);
+      if (!pick) { console.log("gaffer_brain: no locked capsule with a weld on this machine — nothing to grade against."); process.exit(1); }
+      const answerKey = capsuleAnswerKey(pick.n, pick.k.axis);
+      console.log(`gaffer_brain smoke · ${pick.n} · axis ${answerKey.axis}${answerKey.title ? " (" + answerKey.title + ")" : ""} · his weld is ${answerKey.weld.length} chars\n`);
+      // THE NO-KEY CASE IS NOT A FAILURE AND MUST NOT EXIT NON-ZERO. Same rule the
+      // archivist's `vitals` follows: Task Scheduler's Last Result is what
+      // /organism-doctor reads to decide whether an ORGAN is alive, so "the key is
+      // not installed yet" must never look like "this organ is broken". One line,
+      // said once — not twice, which is what the first version did.
+      if (!loadCerebrasKey()) {
+        console.log(`  ${(await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: "x" })).say}`);
+        console.log(`\n  Easiest way: powershell -ExecutionPolicy Bypass -File setup\\INSTALL_CEREBRAS.ps1`);
+        console.log(`  (it asks in your own terminal, does not echo, and re-runs this smoke test the moment it lands)`);
+        process.exit(0);
+      }
+      const good = await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: answerKey.weld });
+      const bad = await gradeAnswer({ concept: pick.n, axis: answerKey.axis, spoken: "Haan ye toh simple hai — basically the model just looks at the whole thing at once and figures it out, that's the mechanism. It's optimised so it's fast." });
+      const line = (label, r) => console.log(`  ${label.padEnd(26)} ${r.ok ? `${r.verdict.toUpperCase().padEnd(8)} ${r.latency_ms}ms · ${r.why}` : `FAILED (${r.reason}) ${r.say || ""}`}`);
+      line("his own weld →", good);
+      line("a fluent wrong answer →", bad);
+      const pass = good.ok && bad.ok && good.verdict === "held" && bad.verdict === "cracked";
+      console.log(`\n${pass ? "✓ THE GRADER LANE IS LIVE" : "✗ the lane answered, but not in both directions — read the two lines above"}`);
+      process.exit(pass ? 0 : 1);
+    }
     const r = await gradeAnswer({ concept: process.argv[3], axis: process.argv[4], spoken: readFileSync(0, "utf8") });
     if (!r.ok) { console.log(r.say); process.exit(r.reason === "no-key" ? 0 : 1); }
     console.log(JSON.stringify(r));
@@ -1134,6 +1190,7 @@ function selftest2(stub, S) {
           "\\s+", "\\r?\\n",                                          // whitespace, line splits
           "^[\"']|[\"']$",                                            // strip quotes off an env value
           "[^a-z0-9_-]",                                              // capsule filename slug
+          "\\.json$",                                                 // a capsule FILENAME extension
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -1146,8 +1203,26 @@ function selftest2(stub, S) {
         assert("SOLE WRITER · this organ writes exactly two files, and its header declares both",
           src.indexOf("SOLE WRITER of: dressing-room/state/gaffer_brain.jsonl") > 0
           && [...src.matchAll(/(?:writeAtomic|appendFileSync)\(([A-Z_]+)/g)].every((m) => ["JOURNAL", "BLOCKS"].includes(m[1])));
-        assert("THE KEY NEVER TOUCHES THE REPO OR A LOG · the Cerebras key is read from the home directory and is never printed",
-          /join\(os\.homedir\(\), "\.cerebras"/.test(src) && !/console\.log\([^)]*key\b/i.test(src));
+        // ⚠ TIGHTENED 15 Aug 2026, and it had to be — the first version tested
+        // `!/console\.log\([^)]*key\b/i`, i.e. the WORD "key" anywhere inside a
+        // console.log. That is a prose filter, not a credential guard: it went red on
+        // the smoke test's "his weld is N chars" line and on the sentence that tells
+        // him where to PUT the key, neither of which can leak anything, while a real
+        // leak spelled `${secret}` would have sailed straight past it. So the
+        // credential now has a binding name no prose will ever collide with, and the
+        // guard names it: nothing may PRINT it, APPEND it, or POST it anywhere but
+        // the Authorization header it exists for.
+        const secretUses = [...src.matchAll(/\bsecret\b/g)].length;
+        assert("THE KEY NEVER TOUCHES THE REPO, A LOG OR THE BUS · it is read from the environment or the home directory, and its only use anywhere in this file is the Authorization header",
+          /join\(os\.homedir\(\), "\.cerebras"/.test(src)
+          && /Authorization: `Bearer \$\{secret\}`/.test(src)
+          && !/console\.log\([^)]*\$\{?secret\b/.test(src)
+          && !/appendFileSync\([^)]*secret\b/.test(src)
+          && !/JSON\.stringify\([^)]*\bsecret\b/.test(src)
+          && secretUses >= 3,
+          `secret referenced ${secretUses}×`);
+        assert("THE KEY NEVER TOUCHES THE REPO · and the journal row schema has no field that could carry one (every field is a count, a name or a verdict)",
+          !/journalRow\([\s\S]{0,1200}?secret/.test(src));
         // THE POOL, held the honest way: this reader is a DELIBERATE duplicate of
         // dugout.mjs's, so the test is that it is still the same code — not that it
         // happens to behave the same on one fixture. (The behavioural version of this
@@ -1174,6 +1249,33 @@ function selftest2(stub, S) {
           noKey.ok === false && noKey.reason === "no-key" && noKey.say.includes(".cerebras") && !/paste|enter|give me/i.test(noKey.say));
         assert("GRADER · with no locked weld on disk it REFUSES rather than inventing an answer key",
           (await gradeAnswer({ concept: "nothing_here", axis: "a", spoken: "x" }, { key: "csk-fake", answerKey: null })).reason === "no-key-page");
+        // ── THE LIVE CAPSULE WIRE, and it is here because the refusal path above was
+        // the ONLY thing this suite tested, so a reader pointed at a field that does
+        // not exist passed for a full commit. A grader that can only prove it says
+        // "no" is not a tested grader. Reads a REAL locked capsule off disk.
+        // DORMANT-SAFE: capsules/ is gitignored, so a clean checkout has none — the
+        // check reports itself skipped rather than failing the away-day lane, which is
+        // the 7 Aug precedent (context_manifest's own "clean checkout" line).
+        {
+          let names = [];
+          try { names = (await import("node:fs")).readdirSync(CAPSULE_DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")); } catch { }
+          if (!names.length) {
+            console.log("  ..  GRADER · LIVE CAPSULE check NOT RUN — this is a clean checkout (dressing-room/state/capsules/ is gitignored)");
+          } else {
+            const c = readJson(join(CAPSULE_DIR, names[0] + ".json"), {});
+            const axes = (Array.isArray(c.faultLines) ? c.faultLines : []).filter((a) => a && a.weld);
+            const k = axes.length ? capsuleAnswerKey(names[0], axes[0].axis) : null;
+            assert(`GRADER · LIVE: the answer key really comes off a locked capsule on disk (${names[0]} · ${axes.length} axis/axes with a weld) — the first version read capsule.axes[axis], a key no capsule has, and returned null forever`,
+              !!k && k.weld === String(axes[0].weld).trim() && k.axis === axes[0].axis && k.weld.length > 40,
+              k ? `weld ${k.weld.length} chars` : `capsuleAnswerKey returned null for ${names[0]} axis ${axes.length ? axes[0].axis : "?"}`);
+            assert("GRADER · LIVE: …and the key is HIS weld, never the long-form `deep` — grading a 40-second spoken answer against a 4,000-word page fails every honest recall",
+              !!k && (!c.deep || !k.weld.includes(String(c.deep).slice(0, 200))));
+            assert("GRADER · LIVE: an axis that does not exist on that capsule still refuses, so a typo can never grade against the wrong page",
+              capsuleAnswerKey(names[0], "zzz") === null);
+          }
+        }
+        assert("GRADER · the environment is read before the file, so a key exported in his shell needs no dotfile at all",
+          (() => { const old = process.env.CEREBRAS_API_KEY; process.env.CEREBRAS_API_KEY = "csk-from-the-environment"; const got = loadCerebrasKey(); if (old === undefined) delete process.env.CEREBRAS_API_KEY; else process.env.CEREBRAS_API_KEY = old; return got === "csk-from-the-environment"; })());
         assert("GRADER · the key parser reads CEREBRAS_API_KEY from an env file and nothing else",
           loadCerebrasKey("# a comment\nCEREBRAS_API_KEY=csk-abc123\n") === "csk-abc123"
           && loadCerebrasKey('CEREBRAS_KEY="csk-quoted"\n') === "csk-quoted"

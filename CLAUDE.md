@@ -247,9 +247,21 @@ order any more. Do not re-plan it.**
   past `MONOLOGUE_WORDS` — his own forty-second law, the same 100.
 - **The card deck is a QUEUE.** It was `open[open.length - 1]`, i.e. LIFO, so seven open cards had
   never been dealt once while c9 was dealt 24 times — six of the seven his own `[his-word]` drift reports.
-- **The Cerebras grader stops honestly.** The key is read from `~/.cerebras/.env` and nowhere else;
-  absent, it prints ONE line naming the file and stops. It never asks for a key in chat and never
-  writes one into the repo. **His ruling, 15 Aug: the key is NOT to be rotated — do not raise it.**
+- **The Cerebras grader stops honestly.** The key is read from the environment (`CEREBRAS_API_KEY`)
+  first, then `~/.cerebras/.env`, and nowhere else; absent, it prints ONE line and exits 0 — never a
+  non-zero exit, because Task Scheduler's Last Result is how /organism-doctor decides an organ is
+  alive. **He installs it himself: `setup\INSTALL_CEREBRAS.ps1`** (masked prompt in his own terminal,
+  no echo, no shell history, nothing in the repo — handling a live credential in plain text is the
+  one class of work the assistant does not do, however explicitly it is asked).
+  **His ruling, 15 Aug: the key is NOT to be rotated — do not raise it.**
+  **`node scripts/gaffer_brain.mjs grade --smoke` is the proof**, and it grades a real locked axis
+  BOTH ways — his own weld must HOLD and a fluent wrong answer must CRACK, because a grader stuck on
+  "held" passes a one-directional test forever. Verified 15 Aug against the live endpoint with a
+  deliberately invalid key: the request reaches `api.cerebras.ai` and returns a real HTTP 401, so
+  the URL, auth, model, JSON contract and the capsule answer-key read are all proven — only the
+  secret was missing. **And the answer key comes off `capsule.faultLines[].weld`** — the first
+  version read `capsule.axes[axis]`, a key no capsule has, so it returned null for every concept
+  forever while its selftest stayed green on the refusal path alone.
 
 ## Session start — LOAD HIS MEMORY FIRST (non-negotiable)
 Before teaching, planning, or answering anything about where he is: call the
