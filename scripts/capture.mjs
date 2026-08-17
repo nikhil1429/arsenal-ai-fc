@@ -56,7 +56,12 @@
 //   GATE (10 Aug 2026) below; before it, a single trailing comma in the canon rewrote
 //   every stored concept id into a phantom twin.
 //
-// MODES: paste [file] · rep · pull · quarantine [retry] · quarantine gem [retry] · selftest
+// MODES: paste [file] · rep · correct · pull · quarantine [retry] · quarantine gem [retry] · selftest
+//   correct (17 Aug 2026, TRUTH LAYER BLOCK 4) is THE WAY BACK — a rep whose verdict
+//   was wrong is walked back by a NEW ROW naming the old one (`corrects` + `why`),
+//   never by a rewrite. The log stays append-only; every organ that derives from it
+//   (nemesis · calibration · learning_state · fsrs · this file) skips the superseded
+//   row through the shared supersedeReps() this file exports as sole writer.
 //   quarantine (10 Aug 2026) is the READ end of reps_log.jsonl.quarantine.jsonl —
 //   the sidecar this file has written since 30 Jul and NOTHING in the organism read.
 //   quarantine gem (11 Aug 2026) is the same read+merge end for the OTHER sidecar,
@@ -341,6 +346,24 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
     edge = o.edge;
   }
   if (o.note !== undefined && typeof o.note !== "string") return { ok: false, error: "note not string" };
+  // ── corrects / why (17 Aug 2026, TRUTH LAYER BLOCK 4) ─────────────────────
+  // Every judgement must have a way back. A rep whose verdict was wrong is
+  // corrected by a NEW ROW THAT NAMES THE OLD ONE — never by a rewrite — so the
+  // log stays append-only and what was believed, and when, survives forever.
+  // DECLARED HERE ON PURPOSE: this validator rebuilds `rep` from a fixed field
+  // list, so an undeclared field is silently DROPPED. A correction that lost its
+  // `corrects` pointer would land as a second, contradictory rep about the same
+  // moment — worse than no correction at all.
+  let corrects = null;
+  if (o.corrects !== undefined && o.corrects !== null) {
+    if (typeof o.corrects !== "string" || o.corrects.trim() === "") return { ok: false, error: "corrects not a ts string" };
+    if (Number.isNaN(Date.parse(o.corrects))) return { ok: false, error: `corrects is not a parseable ts (${o.corrects})` };
+    corrects = o.corrects.trim();
+  }
+  // A REASON IS REQUIRED ON A CORRECTION, and only on a correction. Six months from
+  // now this row is the only record that a verdict about him was walked back; without
+  // a why it is indistinguishable from a contradiction.
+  if (corrects && (typeof o.why !== "string" || o.why.trim() === "")) return { ok: false, error: "a correction needs --why: this row is the only record that a verdict was walked back" };
 
   // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged).
   // Through THE REGISTRY GATE since 10 Aug 2026 — an unreadable canon claims nothing.
@@ -354,7 +377,22 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
     ts_claimed: clocks.ts_claimed, observed_at: clocks.observed_at, ts_source: clocks.ts_source,
   };
   if (o.note !== undefined) rep.note = o.note;
+  if (corrects) { rep.corrects = corrects; rep.why = String(o.why).slice(0, 300); }
   return { ok: true, rep };
+}
+
+// ── SUPERSESSION — the corrected rep stops counting, and stays readable ──────
+// (17 Aug 2026, BLOCK 4.) reps_log.jsonl is his lifelong bank and it is APPEND-ONLY:
+// the wrong row keeps its timestamp on disk forever. This is what every organ that
+// DERIVES from it must apply, so a corrected verdict stops compounding through
+// nemesis → FSRS → what he is made to drill.
+// EXPORTED FROM HERE BECAUSE capture.mjs IS THE SOLE WRITER of that log. Four other
+// organs each own a private `loadReps` (nemesis, calibration, learning_state, fsrs)
+// — a correction honoured in one and missed in another is worse than none, because
+// then two organs disagree about him and neither says so.
+export function supersedeReps(rows) {
+  const corrected = new Set((rows || []).map((r) => r && r.corrects).filter(Boolean));
+  return (rows || []).filter((r) => !(r && r.ts && corrected.has(r.ts)));
 }
 
 // DEDUP KEY (audit 30 Jul 2026): was [ts, question] only. A FORGE session logs many
@@ -380,7 +418,11 @@ const keyOf = (r) => JSON.stringify([r.ts_claimed ?? r.ts, r.concept, r.axis ?? 
 // `stats` is an optional out-param: a dropped line used to be invisible at every
 // call site, so a half-written or hand-mangled reps_log silently shrank the corpus
 // every consumer reasoned from. Callers that don't care pass nothing. (audit 30 Jul 2026)
-function loadReps(path, reg = EMPTY_REG, stats = {}) {
+// `opts.raw` returns the log UNSUPERSEDED — for anything that must SHOW the history
+// rather than act on it. The correction door needs it (to find the row being
+// corrected, and to refuse correcting the same row twice), and a correction is only
+// auditable if something can still see what was corrected.
+function loadReps(path, reg = EMPTY_REG, stats = {}, opts = {}) {
   stats.skipped = 0;
   stats.skipped_reasons = [];
   stats.skipped_lines = [];        // the RAW text, so it can be rescued before a rewrite
@@ -396,7 +438,10 @@ function loadReps(path, reg = EMPTY_REG, stats = {}) {
     if (v.ok) out.push(v.rep);
     else { stats.skipped++; stats.skipped_reasons.push(v.error); stats.skipped_lines.push(s); }
   }
-  return out;
+  // BLOCK 4: what this returns is what the organism ACTS on, so a superseded rep is
+  // gone from it. The raw line is still on disk, and `stats` still counts every line
+  // it read, so nothing here hides a row from an auditor.
+  return opts.raw ? out : supersedeReps(out);
 }
 
 // atomic write: temp file → rename (a parse-fail reads as missing, never half-written)
@@ -2244,6 +2289,52 @@ function main() {
   const flags = process.argv.slice(3).filter((a) => a.startsWith("--"));
   const wantsChain = flags.includes("--chain");
   const noChain = flags.includes("--no-chain");
+
+  // ── THE WAY BACK (17 Aug 2026, TRUTH LAYER BLOCK 4) ───────────────────────
+  // A rep whose verdict was wrong is walked back by a NEW ROW NAMING THE OLD ONE.
+  // The log stays append-only — the wrong row keeps its timestamp on disk forever —
+  // and every organ that DERIVES from reps_log stops counting the superseded one,
+  // because supersedeReps() is applied inside each of the five readers.
+  // It rides the SAME door as `rep`: same validator, same dedupe, same ingest. A
+  // correction written through a second, softer path would be the loosest-door
+  // failure this file already refuses everywhere else.
+  if (mode === "correct") {
+    const flag = (n) => { const i = process.argv.indexOf("--" + n); return i >= 0 ? process.argv[i + 1] : undefined; };
+    const ofTs = flag("of");
+    const why = String(flag("why") || "").trim();
+    if (!ofTs || !why) {
+      console.error('correct: --of "<ts of the rep being corrected>" and --why "<what was wrong>" are both required.');
+      console.error('  node scripts/capture.mjs correct --of "2026-08-17T09:00:00.000Z" --correct false --why "the judge marked the wording, not the mechanism"');
+      console.error("  --why is required because this row is the only record that a verdict about him was walked back.");
+      process.exit(1);
+    }
+    const existing = loadReps(REPS_LOG, reg, {}, { raw: true });
+    const orig = existing.find((r) => r && r.ts === ofTs);
+    if (!orig) {
+      console.error(`correct: no rep on record with ts "${ofTs}" — nothing written. Copy the ts exactly from reps_log.jsonl.`);
+      process.exit(1);
+    }
+    if (existing.some((r) => r && r.corrects === ofTs)) {
+      console.error(`correct: ${ofTs} has already been corrected — correct the CORRECTION instead, so the chain stays readable. Nothing written.`);
+      process.exit(1);
+    }
+    // EVERYTHING IS CARRIED FROM THE ORIGINAL EXCEPT THE VERDICT. The gut-word above
+    // all: it was his pre-commitment in a moment that has passed, and re-asking for
+    // it now would fabricate the exact signal the calibration gap is measured from.
+    const fixed = parseCorrectFlag(flag("correct"));
+    if (fixed === undefined) {
+      console.error(`correct: --correct must be literally true or false (got: ${flag("correct") === undefined ? "MISSING" : JSON.stringify(flag("correct"))}). Nothing written.`);
+      process.exit(1);
+    }
+    const row = { ...orig, ts: new Date().toISOString(), correct: fixed, corrects: ofTs, why: why.slice(0, 300) };
+    const v = validateRep(row, reg);
+    if (!v.ok) { console.error(`correct: refused by the rep validator — ${v.error}. Nothing written.`); process.exit(1); }
+    const r = ingest(REPS_LOG, [v.rep], reg);
+    console.log(`capture: CORRECTED ${orig.concept}${orig.axis ? " " + orig.axis : ""} — correct ${orig.correct} → ${fixed} (the original ${ofTs} is untouched on disk)`);
+    console.log(`  why: ${why.slice(0, 300)}`);
+    console.log(`  appended ${r.appended}; every organ that derives from reps_log now skips the superseded row (nemesis · calibration · learning_state · fsrs · this file)`);
+    return;
+  }
 
   if (mode === "paste" || mode === "rep") {
     let cands;

@@ -129,7 +129,21 @@ const nowIso = (d = new Date()) => d.toISOString();
 // below filters on the field it needs — `axisState` on `r.axis`, `confusionPairs` on
 // `r.result` — so a close row is structurally invisible to the axis maths and can never
 // be mistaken for a graded round.
-export function readLog(path = LOG) {
+// ── A CORRECTION IS A NEW ROW THAT NAMES THE OLD ONE (17 Aug 2026, BLOCK 4) ──
+// Every judgement must have a way back, or one wrong verdict compounds through
+// nemesis → FSRS → what he studies, forever. The log stays STRICTLY APPEND-ONLY:
+// the original row survives on disk with its timestamp and is readable forever;
+// a correction carries `corrects: "<the ts of the row it replaces>"`, and readers
+// see the corrected truth. Same shape judge-night already uses for a Pass-1
+// verdict, and the same shape doubtminer's un-retire uses — one law, three organs.
+// Applied INSIDE readLog because that is the single door every consumer of this
+// log already comes through (axisState, the edge map, the calibration gap, the due
+// queue): a correction cannot be honoured in one derivation and missed in another.
+export function supersede(rows) {
+  const corrected = new Set((rows || []).map((r) => r && r.corrects).filter(Boolean));
+  return (rows || []).filter((r) => !(r && r.ts && corrected.has(r.ts)));
+}
+export function readLog(path = LOG, opts = {}) {
   const out = [];
   try {
     if (!existsSync(path)) return out;
@@ -138,7 +152,9 @@ export function readLog(path = LOG) {
       try { const j = JSON.parse(s); if (j && j.concept && (j.axis || j.kind)) out.push(j); } catch {}
     }
   } catch {}
-  return out;
+  // `raw: true` is for anything that must SHOW the history rather than act on it —
+  // the correction is only auditable if something can still see what was corrected.
+  return opts.raw ? out : supersede(out);
 }
 
 export const isGrade = (r) => !!(r && r.axis && !r.kind);
@@ -845,6 +861,43 @@ function selftest() {
   assert("DEFERRED CARRY — junk in, silence out: a garbage axis letter and a missing field never fabricate a row",
     deferredCarry([sess({ axes_deferred: ["zz", 7, null] }), { concept: "x" }], null, [], [], CARRY_NOW).length === 0);
 
+  // ── BLOCK 4 · A CORRECTION IS A NEW ROW THAT NAMES THE OLD ONE ────────────
+  // (17 Aug 2026.) A wrong `cracked` makes him re-drill for weeks something he
+  // already knows; a wrong `held` lets a real crack go quiet. Neither had a way
+  // back, and a verdict that cannot be taken back compounds through nemesis and
+  // FSRS forever. Driven on fixtures through the real functions.
+  {
+    const T1 = "2026-08-10T09:00:00.000Z", T2 = "2026-08-17T09:00:00.000Z";
+    const wrong = { ts: T1, concept: "tokenization", axis: "a", result: "cracked", gut: "knew", cold: true, source: "deep" };
+    const fix = { ts: T2, concept: "tokenization", axis: "a", result: "held", gut: "knew", cold: true, source: "correction", corrects: T1, why: "he named the mechanism; the judge marked the wording" };
+    assert("BLOCK 4 — a corrected round is GONE from what every reader derives from (supersede lives inside the one door they all use)",
+      supersede([wrong, fix]).length === 1 && supersede([wrong, fix])[0].result === "held");
+    // DRIVEN THROUGH THE REAL DOOR ON A REAL FILE, because the claim is about what
+    // survives ON DISK — asserting it on two in-memory objects would prove nothing.
+    assert("BLOCK 4 — …and the ORIGINAL survives on disk, readable, with its own timestamp: the log is append-only and the history is the point",
+      (() => {
+        const d = mkdtempSync(join(tmpdir(), "rejirah-b4-"));
+        const p = join(d, "log.jsonl");
+        append(wrong, p); append(fix, p);
+        const raw = readLog(p, { raw: true }), cooked = readLog(p);
+        return raw.length === 2 && raw[0].ts === T1 && raw[0].result === "cracked" && raw[1].why.length > 0
+          && cooked.length === 1 && cooked[0].result === "held";
+      })());
+    assert("BLOCK 4 — the gut-word is CARRIED from the round being corrected, never re-asked: it was his pre-commitment in a moment that has passed, and inventing one now would fabricate the calibration signal",
+      fix.gut === wrong.gut);
+    assert("BLOCK 4 — an uncorrected log is byte-for-byte what it always was (strictly additive; nothing changes for a history with no corrections)",
+      supersede([wrong]).length === 1 && supersede([]).length === 0 && supersede(null).length === 0);
+    assert("BLOCK 4 — a correction of a correction supersedes the correction, so the chain stays readable rather than branching",
+      supersede([wrong, fix, { ts: "2026-08-18T09:00:00.000Z", concept: "tokenization", axis: "a", result: "cracked", corrects: T2 }]).length === 1);
+    // A DOOR NOBODY IS TOLD ABOUT IS A DEAD DOOR. Read off this file's own source,
+    // needle built by concatenation so the guard cannot pass on itself.
+    assert("BLOCK 4 — the verb is WIRED and DISCOVERABLE: a real mode in main(), and named in the usage the CLI prints",
+      (() => {
+        let src = ""; try { src = readFileSync(fileURLToPath(import.meta.url), "utf8"); } catch { }
+        return src.includes('mode === "cor' + 'rect"') && src.includes("| cor" + "rect <concept> <axis>");
+      })());
+  }
+
   console.log(`\nrejirah selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
@@ -891,6 +944,49 @@ function main() {
       + ` → ${st.fluencyState} · round ${st.rounds} · next due ${st.nextDue || "?"}`
       + (st.escalate ? "  ⛔ OVERCONFIDENT — tighten the interval and bump the mode" : ""));
     if (built.unregistered) console.log(`  ⚠ "${built.row.concept}" is not a locked capsule — say so; concepts.json is hand-curated canon.`);
+    return;
+  }
+
+  // ── THE WAY BACK (BLOCK 4, 17 Aug 2026) ─────────────────────────────────
+  // A wrong `cracked` schedules him to re-drill something he already knows, for
+  // weeks; a wrong `held` lets a real crack go quiet. Neither had a way back.
+  // This APPENDS — the corrected row stays on disk, readable, with its own date —
+  // and every reader honours the correction because supersede() lives inside the
+  // one door they all come through.
+  if (mode === "correct") {
+    const flag = (n) => { const i = rest.indexOf("--" + n); return i >= 0 ? rest[i + 1] : undefined; };
+    const ofTs = flag("of");
+    const why = String(flag("why") || "").trim();
+    if (!ofTs || !why) {
+      console.error('rejirah: correct <concept> <axis> <held|cracked> --of "<ts of the round being corrected>" --why "<what was wrong about it>"');
+      console.error("  --of names the exact row this replaces (copy its ts). --why is REQUIRED: this row is the only record that a verdict about him was walked back.");
+      console.error("  the rounds on record for that axis:");
+      for (const r of readLog(undefined, { raw: true }).filter((x) => isGrade(x) && x.concept === String(rest[0] || "").toLowerCase().trim() && x.axis === String(rest[1] || "").toLowerCase().trim())) {
+        console.error(`    ${r.ts}  ${r.result}${r.gut ? ` (gut ${r.gut})` : ""}${r.corrects ? `  [already a correction of ${r.corrects}]` : ""}`);
+      }
+      process.exit(1);
+    }
+    // THE GUT-WORD IS CARRIED FROM THE ROUND BEING CORRECTED, NEVER RE-ASKED.
+    // It is his pre-commitment from a moment that has passed; inventing a new one
+    // now would fabricate the exact signal the calibration gap is measured from.
+    const raw = readLog(undefined, { raw: true });
+    const orig = raw.find((r) => r && r.ts === ofTs);
+    if (!orig) { console.error(`rejirah: no round on record with ts "${ofTs}" — nothing written. Copy the ts exactly from the list above.`); process.exit(1); }
+    if (raw.some((r) => r && r.corrects === ofTs)) { console.error(`rejirah: ${ofTs} has already been corrected — correct the CORRECTION instead, so the chain stays readable. Nothing written.`); process.exit(1); }
+    const built = buildRow({
+      concept: rest[0] || orig.concept, axis: rest[1] || orig.axis, result: rest[2],
+      gut: orig.gut, cold: orig.cold === false ? false : true, round: orig.round, source: "correction",
+    }, { capsuleIds: caps.map((c) => c.id) });
+    if (!built.ok) { console.error(`rejirah: ${built.why}`); process.exit(1); }
+    if (built.row.concept !== orig.concept || built.row.axis !== orig.axis) {
+      console.error(`rejirah: a correction must name the SAME axis it corrects (${orig.concept} ${orig.axis}). Nothing written.`);
+      process.exit(1);
+    }
+    append({ ...built.row, corrects: ofTs, why: why.slice(0, 300) });
+    const st = axisState(caps.find((c) => c.id === built.row.concept) || { id: built.row.concept }, built.row.axis, readLog(), intervals, now);
+    console.log(`rejirah: CORRECTED ${orig.concept} ${orig.axis} — ${orig.result} → ${built.row.result} (was recorded ${orig.ts})`);
+    console.log(`  why: ${why.slice(0, 300)}`);
+    console.log(`  the original row is untouched on disk; every reader now sees the correction → ${st.fluencyState} · round ${st.rounds} · next due ${st.nextDue || "?"}`);
     return;
   }
 
@@ -1108,6 +1204,7 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
   }
 
   console.log(`rejirah: grade <concept> <axis> held|cracked [--gut knew|shaky|guessed] [--cold false]
+         | correct <concept> <axis> held|cracked --of "<ts>" --why "<reason>"   (galat verdict wapas — purana row zinda rehta hai)
          | close <concept> [--anyway]   (round khatam → gist patch)
          | pending   (closed par gist mein abhi tak nahi)
          | held      (kya PROVEN hai — P7.A ka jawab, evidence se)

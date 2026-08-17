@@ -48,6 +48,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync 
 import { tmpdir } from "node:os";        // selftest fixtures only — the loader is proved on a real file, never on a mock (capture.mjs:1070, fsrs.mjs:747)
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -308,7 +309,15 @@ function loadReps(path, stats = {}) {
     if (validRep(o)) { out.push(o); stats.reps_used++; continue; }
     stats.dropped++; stats.dropped_reasons.push(whyInvalid(o) || "rejected by validRep");
   }
-  return out;
+  // BLOCK 4 (17 Aug 2026) — a corrected verdict must stop counting here too, and the
+  // stakes are highest on this organ: the calibration gap is confidence-vs-accuracy,
+  // so a verdict left standing after it was walked back mis-states how well he knows
+  // himself. reps_log stays append-only; the wrong row keeps its timestamp on disk.
+  // capture.mjs is the SOLE WRITER of that log, so supersession is its definition,
+  // imported rather than re-implemented in each of the four private readers.
+  // `stats` is untouched on purpose: it counts every LINE READ, so the published
+  // corpus figure still reports the whole file and this filter hides nothing.
+  return supersedeReps(out);
 }
 
 // The published read of that loss — counts and reasons only, the same shape as the config

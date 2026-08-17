@@ -66,6 +66,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { fsrs, generatorParameters, createEmptyCard, Rating } from "ts-fsrs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -122,7 +123,11 @@ function loadReps(path) {
     const s = line.trim(); if (!s) continue;
     try { const o = JSON.parse(s); if (validRep(o)) out.push(o); } catch { /* skip */ }
   }
-  return out;
+  // BLOCK 4 (17 Aug 2026) — a corrected verdict must stop counting here too, or a
+  // wrong "incorrect" keeps scheduling him to re-drill something he already knows.
+  // capture.mjs is the SOLE WRITER of reps_log, so supersession is its definition,
+  // imported rather than re-implemented in each of the four private readers.
+  return supersedeReps(out);
 }
 
 function writeAtomic(path, obj) {

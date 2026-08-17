@@ -53,6 +53,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -152,7 +153,14 @@ function loadReps(path) {
     const s = line.trim(); if (!s) continue;
     try { const o = JSON.parse(s); if (validRep(o)) out.push(o); } catch { /* skip */ }
   }
-  return out;
+  // BLOCK 4 (17 Aug 2026) — A CORRECTED VERDICT MUST STOP COUNTING HERE TOO, and
+  // here most of all: this organ calls reps_log its SOLE truth source and ranks what
+  // he drills off it. reps_log stays append-only; a wrong verdict is walked back by
+  // a NEW ROW naming the old one. The filter is capture.mjs's, imported rather than
+  // re-implemented, because capture is the SOLE WRITER of that log and FOUR organs
+  // own a private reader of it — a correction honoured in one and missed in another
+  // leaves two organs disagreeing about him with neither of them saying so.
+  return supersedeReps(out);
 }
 
 function writeAtomic(path, obj) {

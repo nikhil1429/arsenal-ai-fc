@@ -741,8 +741,38 @@ function gate2Flags(capsules, cfg = DEFAULTS, now = new Date()) {
 // ---------------------------------------------------------------------------
 // THE TAPE ROOM — rematch queue + doubts_retired
 // ---------------------------------------------------------------------------
+// ── retired[] IS A LOG, AND A DOUBT'S STATE IS ITS LAST ROW ──────────────────
+// (17 Aug 2026, TRUTH LAYER BLOCK 4 — every judgement must have a way back.)
+// This organ had `retire` and nothing else. A doubt retired on a wrong verdict was
+// gone from the rematch queue permanently, and `doubts_retired` — which the header
+// calls "the one progress bar this brain believes" — had climbed on a lie with no
+// way to walk it back. It was hit for real on 15 Aug.
+// THE SHAPE IS THE HOUSE'S OWN, taken from the archive LEXICON and from
+// judge-night's corrections: a correction is a NEW ROW THAT NAMES THE OLD ONE,
+// never a rewrite, so the record of what was believed and when survives forever.
+// So `retired[]` stops being a set and becomes a log; the state of a doubt is the
+// LAST row for its key. retire → un-retire → retire is a legal, readable history.
+function retireState(retired) {
+  const last = new Map();
+  for (const r of (retired || [])) {
+    if (!r || !r.capsule || r.doubt_index === undefined) continue;
+    last.set(`${r.capsule}#${r.doubt_index}`, r);
+  }
+  return last;
+}
+// A row is an ACTIVE retire unless it carries `unretired_on`. Deliberately NOT
+// "unless it carries retired_on": every row already on disk is a retire, some of
+// them written before that date field existed, and demanding it would have
+// silently un-retired his real history the first time this ran. Strictly additive —
+// with no un-retire rows anywhere, this returns exactly what `new Set(retired.map(…))`
+// used to return, which is what keeps the two assertions below honest.
+function activeRetiredKeys(retired) {
+  const out = new Set();
+  for (const [k, r] of retireState(retired)) if (!r.unretired_on) out.add(k);
+  return out;
+}
 function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
-  const retiredKeys = new Set(retired.map(r => `${r.capsule}#${r.doubt_index}`));
+  const retiredKeys = activeRetiredKeys(retired);
   // #34 — GATE 2 runs BEFORE the queue is built, so every rematch prompt carries
   // the verdict on its own cold-readability. `/rematch` can then refuse to serve a
   // flagged doubt (or serve it with the warning) instead of confronting a cold
@@ -877,8 +907,8 @@ function validateRetireTarget(capsules, capsule, idx) {
 // `selftst` or `retrie` fired the REAL writer against real state while the
 // captain believed he was testing. Modes are an allowlist now; unknown → usage
 // and exit 1, before a single file is touched.
-const MODES = new Set(["run", "retire", "selftest"]);
-const USAGE = "usage: node scripts/doubtminer.mjs [run | retire <capsule> <doubt_index> | selftest]";
+const MODES = new Set(["run", "retire", "un-retire", "selftest"]);
+const USAGE = 'usage: node scripts/doubtminer.mjs [run | retire <capsule> <doubt_index> | un-retire <capsule> <doubt_index> --why "<reason>" | selftest]';
 const resolveMode = (argv2) => { const m = String(argv2 ?? "run").toLowerCase(); return MODES.has(m) ? m : null; };
 
 // ---------------------------------------------------------------------------
@@ -1192,6 +1222,29 @@ async function selftest() {
       t.retire_line === `1/${t.queue.length + 1} doubts retired`);
   }
 
+  // ── BLOCK 4 · THE WAY BACK (17 Aug 2026) ──────────────────────────────────
+  // This organ had `retire` and nothing else, so a doubt retired on a wrong
+  // verdict was gone from the rematch queue forever and doubts_retired — the one
+  // progress bar this brain believes — had climbed on a lie. Driven on fixtures
+  // through the real functions; nothing here touches his tape room.
+  {
+    const RET = { capsule: "tok", doubt_index: 0, retired_on: "2026-07-12" };
+    const UN = { capsule: "tok", doubt_index: 0, retired_on: "2026-07-12", unretired_on: "2026-08-17", why: "he never dismantled it; the verdict was wrong" };
+    const back = buildTapeRoom(caps(3), [RET, UN], cfg, now);
+    assert("BLOCK 4 — an un-retired doubt COMES BACK to the rematch queue, and the counter walks back with it",
+      back.doubts_retired === 0 && back.queue.some(q => q.capsule === "tok" && q.doubt_index === 0));
+    assert("BLOCK 4 — the ORIGINAL retire survives beside the correction, readable, with BOTH dates and the reason",
+      UN.retired_on === "2026-07-12" && UN.unretired_on === "2026-08-17" && UN.why.length > 0
+      && activeRetiredKeys([RET]).has("tok#0"));
+    assert("BLOCK 4 — a doubt's state is its LAST row (the house's own lexicon law), so retire → un-retire → retire is a legal, readable history",
+      activeRetiredKeys([RET, UN]).size === 0
+      && activeRetiredKeys([RET, UN, { capsule: "tok", doubt_index: 0, retired_on: "2026-08-18" }]).has("tok#0"));
+    assert("BLOCK 4 — a row that predates the un-retire field is still a RETIRE: adding the way back must not silently un-retire his real history",
+      activeRetiredKeys([{ capsule: "tok", doubt_index: 0 }]).has("tok#0"));
+    assert("BLOCK 4 — the verb is declared, so `un-retire` is a real mode and not a typo that falls through to a full run",
+      MODES.has("un-retire") && resolveMode("un-retire") === "un-retire" && USAGE.includes("un-retire"));
+  }
+
   // ---- GUARD 4 — THE SILENT CAPSULE DOOR (traced + repaired 11 Aug 2026) -------
   // The fixture is REAL DISK and costs nothing to make: the repo root holds three
   // .json files (package.json · package-lock.json · ci_manifest.json) that parse
@@ -1317,9 +1370,43 @@ async function main() {
       if (target.valid.length) console.error(`  known capsules: ${target.valid.join(", ")}`);
       process.exit(1);
     }
-    if (!retired.some(r => r.capsule === capsule && r.doubt_index === idx)) {
+    // IDEMPOTENT ON THE *ACTIVE* STATE, not on the whole log: after an un-retire,
+    // retiring again must be legal and must append a NEW row rather than be
+    // swallowed as a duplicate — otherwise a corrected verdict could never be
+    // re-applied and the un-retire would be a one-way door of its own.
+    if (!activeRetiredKeys(retired).has(`${capsule}#${idx}`)) {
       retired = retired.concat([{ capsule, doubt_index: idx, retired_on: localDate(now) }]);
     }
+  }
+
+  // ── THE WAY BACK (BLOCK 4) ───────────────────────────────────────────────
+  // A doubt is retired only when he DISMANTLED it. When that verdict was wrong,
+  // this returns it to the rematch queue and walks doubts_retired back — and it
+  // does so by APPENDING, so the original retire and its date stay readable
+  // forever beside the correction and its reason.
+  if (mode === "un-retire") {
+    const capsule = process.argv[3];
+    const idx = parseInt(process.argv[4], 10);
+    const wi = process.argv.indexOf("--why");
+    const why = wi > 0 ? String(process.argv[wi + 1] || "").trim() : "";
+    if (!capsule || Number.isNaN(idx)) { console.log('usage: node scripts/doubtminer.mjs un-retire <capsule> <doubt_index> --why "<what was wrong about the verdict>"'); process.exit(1); }
+    // A REASON IS REQUIRED. An un-retire with no why is indistinguishable, six
+    // months from now, from a mistake — and this row is the only record that the
+    // progress bar was ever walked back.
+    if (!why) { console.error("doubtminer: refusing to un-retire — --why is required. This row is the only record that doubts_retired was walked back; without a reason it is unreadable later."); process.exit(1); }
+    const target = validateRetireTarget(capsules, capsule, idx);   // same GUARD 2 — no phantom un-retires either
+    if (!target.ok) {
+      console.error(`doubtminer: refusing to un-retire — ${target.reason}. Nothing written.`);
+      if (target.valid.length) console.error(`  known capsules: ${target.valid.join(", ")}`);
+      process.exit(1);
+    }
+    const state = retireState(retired).get(`${capsule}#${idx}`);
+    if (!state || !state.retired_on || state.unretired_on) {
+      console.error(`doubtminer: refusing to un-retire — ${capsule}#${idx} is not currently retired${state && state.unretired_on ? ` (un-retired on ${state.unretired_on})` : ""}. Nothing written.`);
+      process.exit(1);
+    }
+    retired = retired.concat([{ capsule, doubt_index: idx, retired_on: state.retired_on, unretired_on: localDate(now), why }]);
+    console.log(`doubtminer: un-retired ${capsule}#${idx} — retired ${state.retired_on}, returned to the queue ${localDate(now)}. The original row is untouched; this is a correction beside it.`);
   }
 
   writeAtomic(GRAMMAR, mineGrammar(capsules, cfg, now));

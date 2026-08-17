@@ -50,6 +50,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -187,7 +188,11 @@ function loadReps(path) {
   if (!existsSync(path)) return [];
   const out = [];
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) { const s = line.trim(); if (!s) continue; try { const o = JSON.parse(s); if (validRep(o)) out.push(o); } catch { /* skip */ } }
-  return out;
+  // BLOCK 4 (17 Aug 2026) — a corrected verdict must stop counting here too, or the
+  // fluency ladder keeps stepping on a verdict that was already taken back.
+  // capture.mjs is the SOLE WRITER of reps_log, so supersession is its definition,
+  // imported rather than re-implemented in each of the four private readers.
+  return supersedeReps(out);
 }
 function loadFsrsCards(path = FSRS_STORE) {
   try { if (existsSync(path)) { const j = JSON.parse(readFileSync(path, "utf8")); if (Array.isArray(j.cards)) return j.cards; } } catch { /* skip */ }
