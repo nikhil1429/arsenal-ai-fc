@@ -157,7 +157,72 @@ const MIN_STADIUM_BUDGET = MAX_ROLLOUTS;
 // Re-measure with `node scripts/brain.mjs spend 7` before ever moving it.
 const DMN_PASS_FLOOR = 400000;
 const MAX_ROLLOUTS_NIGHT = 100;                      // the stadium's hard cap (clusters saturate ~100)
-const ROLLOUTS_PER_WEAK = 25;                        // depth per weak point before diminishing returns
+const ROLLOUTS_PER_WEAK = 25;                        // the CEILING — depth per weak point before diminishing returns
+
+// ── ROLLOUTS ARE PROPORTIONAL TO EVIDENCE (17 Aug 2026, TRUTH LAYER BLOCK 3) ──
+// THE LAW: an organ may only spend in proportion to the evidence it stands on.
+//
+// ROLLOUTS_PER_WEAK was a flat 25 and the planner read
+//     nRoll = min(100, budget - reserve, weak.length * 25)
+// — TWO of those three terms are about how much room there is to SPEND and only
+// one about how much is KNOWN, and that one is multiplied by 25. One thin belief
+// became twenty-five expensive simulations.
+//
+// MEASURED THE DAY THIS LANDED, and every number re-checked live rather than taken
+// from the work order: weakVector() returned EXACTLY ONE point —
+// [{"concept":"hallucinations","why":"trajectory regressing"}] — and the evidence
+// under it was reps_log 21 rows, rejirah_log.jsonl ABSENT (zero Re-Jirah rounds
+// ever), calibration.danger_zone []. So the night was planning 25 rollouts against
+// a concept with ZERO GRADED OBSERVATIONS behind it, at ~2,85,000 weighted per
+// usable drill, while the DMN was ~53% of the whole plan.
+//
+// THE CURVE, and it introduces NO new number — that is the point, because a
+// threshold guessed here would be the same disease in a smaller coat:
+//   FLOOR = PERSONAS.length. The smallest fan-out that asks every angle once;
+//     below it you are not probing a weak point, you are sampling one voice. It is
+//     the file's own existing number, not a new one.
+//   + ONE per GRADED OBSERVATION behind that concept. Graded, not merely recorded:
+//     a Re-Jirah round, or a verdict the judge has settled (truth layer BLOCK 2).
+//     Self-reported reps do not count — the whole reason the judge exists is that
+//     an ungraded rep is not yet evidence about him.
+//   + ONE per danger_zone entry naming it — the design's own "single most valuable
+//     signal" (confident-and-wrong), counted the same way as everything else so
+//     nothing here needs a weight.
+//   capped at ROLLOUTS_PER_WEAK, which keeps its old meaning exactly.
+// It is ADDITIVE and COUNTABLE end to end: every term is a dated observation on
+// disk, so the budget grows on its own as he does reps and they get judged, and
+// nothing has to be re-tuned when he starts. That is BLOCK 3's whole promise —
+// what it spends imagining him is bounded by what it knows about him.
+// _derivation: floor = PERSONAS.length (4) · +1 per graded verdict / Re-Jirah round
+// / danger-zone entry for that concept · cap ROLLOUTS_PER_WEAK (25). Ships
+// provisional per the DAY-0 LAW; re-measure against dmn_precache.json's verified
+// entries once he has a month of judged rounds.
+const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
+const REJIRAH_LOG = join(STATE_DIR, "rejirah_log.jsonl");
+function readRowsFor(path) {
+  try { return readFileSync(path, "utf8").split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); }
+  catch { return []; }
+}
+function gradedEvidence(concept, deps = {}) {
+  const key = String(concept || "").trim().toLowerCase();
+  if (!key) return 0;
+  const same = (v) => String(v || "").trim().toLowerCase() === key;
+  const settled = (deps.gradeRows !== undefined ? deps.gradeRows : readRowsFor(GRADE_QUEUE))
+    .filter((r) => r && r.kind === "settled" && same(r.concept)).length;
+  const rounds = (deps.rejirahRows !== undefined ? deps.rejirahRows : readRowsFor(REJIRAH_LOG))
+    .filter((r) => r && same(r.concept)).length;
+  const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
+  const danger = (((cal && cal.danger_zone) || [])).filter((d) => d && (same(d.topic) || same(d.concept))).length;
+  return settled + rounds + danger;
+}
+function rolloutsFor(weakPoint, deps = {}) {
+  return Math.min(ROLLOUTS_PER_WEAK, PERSONAS.length + gradedEvidence(weakPoint && weakPoint.concept, deps));
+}
+// The whole night's depth, so the planner asks ONE question and the selftest can
+// drive the same function the planner drives.
+function plannedRollouts(weak, deps = {}) {
+  return (weak || []).reduce((a, w) => a + rolloutsFor(w, deps), 0);
+}
 const PERSONAS = ["a brisk recruiter screening for buzzwords", "a staff engineer mid-incident demanding ordered steps", "a principal engineer dissecting line-level mechanism", "a skeptical PM asking why an LLM at all"];
 const PRECACHE_CAP = 6;                              // unchanged — the cap was never the problem
 const WEAK_JOURNAL = join(STATE_DIR, "dmn_weak_vector.jsonl");
@@ -502,7 +567,11 @@ async function dream(deps = {}) {
   // ammunition is worth less than none — and each lane's remaining budget is
   // tracked through BOTH phases (see lane.spent below).
   const verifyReserve = Math.min(8, Math.max(1, Math.floor(totalBudget * 0.25)));
-  const nRoll = Math.min(MAX_ROLLOUTS_NIGHT, Math.max(0, totalBudget - verifyReserve), weak.length * ROLLOUTS_PER_WEAK);
+  // `weak.length * ROLLOUTS_PER_WEAK` until 17 Aug 2026 — a flat 25 per point,
+  // however little stood under it. Now the third term is the EVIDENCE term (see
+  // rolloutsFor above); the other two are unchanged, so the hard cap and the
+  // budget headroom still bound the night exactly as before.
+  const nRoll = Math.min(MAX_ROLLOUTS_NIGHT, Math.max(0, totalBudget - verifyReserve), plannedRollouts(weak, deps));
   // round-robin the rollouts onto lanes, capped by each lane's OWN budget
   const plan = lanes.map(l => ({ ...l, jobs: [], spent: 0 }));
   let placed = 0;
@@ -853,7 +922,11 @@ async function selftest() {
   const genOK = async (p) => ({ ok: true, text: p.includes("hostile staff-engineer") ? JSON.stringify({ verdict: "sound", why: "holds" }) : JSON.stringify({ stall_point: /eval/.test(p) ? "precision recall tradeoff at threshold" : "lost context after compaction", reframe_15s: "start from the confusion matrix, one cell at a time", drill: "hand-compute P/R on 10 rows" }) });
   // appendLedger is injected on every fixture: a selftest must never append a
   // real row to the shared brain_ledger (it would bill his live window for a test)
-  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, appendLedger: () => {}, now: new Date("2026-07-14T15:00:00") };
+  // HERMETIC EVIDENCE (17 Aug 2026, BLOCK 3). Rollout depth is now a function of
+  // GRADED evidence on disk, so a fixture that injects none would read his live
+  // grade queue and this suite's numbers would move every time he answers a
+  // question. Injected empty: the fixture's depth is the FLOOR and nothing else.
+  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, appendLedger: () => {}, gradeRows: [], rejirahRows: [], calibration: null, now: new Date("2026-07-14T15:00:00") };
 
   // the gates (shared by both engines; exercised on the plan of record)
   assert("CONSERVE tone MUTES the dream (a depleted captain rests)", (await dream({ ...base, tone: { effects: { dmn_allowed: false } } })).skipped.includes("conserve"));
@@ -966,7 +1039,38 @@ async function selftest() {
     let saved = null; const spends = {};
     const r = await dream({ ...base, board: stadiumBoard, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, write: (o) => { saved = o; } });
     assert("STADIUM: the away-gate legalizes the borrow — rollouts fan across ALL idle lanes", r.ok && r.lanes.length === 3 && Object.keys(spends).length === 3);
-    assert("STADIUM: 2 weak points × depth 25 = 50 rollouts (was 8 serial)", r.rollouts === 50 && r.rollouts <= MAX_ROLLOUTS_NIGHT);
+    // ⚠ THIS ASSERTION PINNED THE DEFECT (rewritten 17 Aug 2026, BLOCK 3). It
+    // read "2 weak points × depth 25 = 50 rollouts" and it was green while the
+    // depth was a FLAT CONSTANT: a weak point resting on nothing bought exactly as
+    // many expensive simulations as one resting on a month of graded rounds. Depth
+    // is now the evidence term, and with an empty fixture that is the floor.
+    assert(`STADIUM: 2 weak points × the FLOOR (${PERSONAS.length}, one per persona) = ${2 * PERSONAS.length} rollouts — depth is evidence, not appetite`,
+      r.rollouts === 2 * PERSONAS.length && r.rollouts <= MAX_ROLLOUTS_NIGHT);
+
+    // ── BLOCK 3 · AN ORGAN MAY ONLY SPEND IN PROPORTION TO ITS EVIDENCE ──────
+    // Driven through the real functions on injected rows — no live files, so these
+    // numbers cannot drift when he answers a question tonight.
+    const W = { concept: "hallucinations", why: "trajectory regressing" };
+    const noEv = { gradeRows: [], rejirahRows: [], calibration: null };
+    assert(`EVIDENCE · a weak point with NOTHING graded behind it earns the FLOOR (${PERSONAS.length}), never the ceiling (${ROLLOUTS_PER_WEAK}) — this is the whole block in one number`,
+      rolloutsFor(W, noEv) === PERSONAS.length);
+    // The three evidence kinds, each driven separately so a broken one cannot hide
+    // behind the other two.
+    assert("EVIDENCE · a SETTLED verdict counts — the judge's own record is what makes a rep evidence about him",
+      rolloutsFor(W, { ...noEv, gradeRows: [{ kind: "settled", concept: "hallucinations" }, { kind: "settled", concept: "hallucinations" }] }) === PERSONAS.length + 2);
+    assert("EVIDENCE · …but a CAPTURED-and-unjudged answer does NOT: an ungraded rep is not yet evidence, which is the reason the judge exists at all",
+      rolloutsFor(W, { ...noEv, gradeRows: [{ kind: "capture", concept: "hallucinations" }, { kind: "capture", concept: "hallucinations" }] }) === PERSONAS.length);
+    assert("EVIDENCE · a Re-Jirah round counts (the cold proof), and the danger zone counts (confident-and-wrong, the design's most valuable signal)",
+      rolloutsFor(W, { ...noEv, rejirahRows: [{ concept: "hallucinations" }] }) === PERSONAS.length + 1
+      && rolloutsFor(W, { ...noEv, calibration: { danger_zone: [{ topic: "hallucinations" }] } }) === PERSONAS.length + 1);
+    assert("EVIDENCE · another concept's evidence does NOT fund this one's dreams",
+      rolloutsFor(W, { ...noEv, gradeRows: [{ kind: "settled", concept: "embeddings" }] }) === PERSONAS.length);
+    assert(`EVIDENCE · it GROWS as he does reps, and stops at the old ceiling (${ROLLOUTS_PER_WEAK}) — the constant kept its meaning, it just stopped being the floor too`,
+      rolloutsFor(W, { ...noEv, gradeRows: Array.from({ length: 10 }, () => ({ kind: "settled", concept: "hallucinations" })) }) === PERSONAS.length + 10
+      && rolloutsFor(W, { ...noEv, gradeRows: Array.from({ length: 500 }, () => ({ kind: "settled", concept: "hallucinations" })) }) === ROLLOUTS_PER_WEAK);
+    assert("EVIDENCE · the whole night is the sum of its points, so the planner asks ONE question and this suite drives the same function it does",
+      plannedRollouts([W, { concept: "embeddings" }], noEv) === 2 * PERSONAS.length
+      && plannedRollouts([], noEv) === 0);
     // E2E audit 25 Jul 2026: this check was named "never spends past its OWN measured
     // headroom" and then granted "+3" of slack — it asserted the very overspend it
     // claimed to forbid. T5's headroom is exactly floor(50·0.85)−30 = 12, rollouts AND
@@ -1390,7 +1494,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { weakVector, weakVectorLegacy, marketConcept, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP,
+export { weakVector, weakVectorLegacy, marketConcept, isAway, dream, dreamLegacy, drainBg, borrowableTanks, clusterRollouts, rolloutPrompt, counterPrompt, PERSONAS, MAX_ROLLOUTS, MAX_ROLLOUTS_NIGHT, ROLLOUTS_PER_WEAK, BG_DRAIN_CAP, gradedEvidence, rolloutsFor, plannedRollouts,
   // audit 4 Aug 2026 — the new seams, exported so the doctor/other suites can
   // hold the fault-attribution (#8) and the meter (#7) to the same rules
   geminiFault, engineFault, ledgerRow, genSafe, DMN_JOBS, DMN_MODEL, MIN_STADIUM_BUDGET,
