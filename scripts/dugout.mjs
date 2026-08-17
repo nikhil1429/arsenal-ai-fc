@@ -3540,9 +3540,35 @@ async function selftest() {
       }
 
       // ── THE FLUSH — the real latency, and it was never the judge ─────────
-      assert("FLUSH — a completed CAPTAIN→GAFFER pair flushes immediately, so a correction reaches the organism in ~1s instead of waiting out a 15s timer",
-        /const pairClosed=\/\^GAFFER\/i\.test\(coWho\)&&txBuf\.some\(l=>\/\^CAPTAIN:\/i\.test\(l\)\)/.test(PAGE)
-        && /if\(pairClosed\|\|txBuf\.length>=6\)flush\(\)/.test(PAGE));
+      // ⚠ REWRITTEN FROM A SOURCE-SHAPE MATCH TO A BEHAVIOURAL ONE (17 Aug 2026).
+      // This used to assert the literal text `test(coWho)&&txBuf.some(...)` — and
+      // that literal was PRESENT on 16 Aug while the very code containing it blew
+      // the browser's stack on every completed turn. A regex pinning the spelling
+      // of a line cannot see what the line DOES, and it also breaks the moment a
+      // variable is renamed by a genuine fix, which is how it went red today.
+      // It now RUNS the page's own coalescer and asserts the thing that matters:
+      // the pair reaches the door with no timer and no explicit flush.
+      {
+        const from = PAGE.indexOf("function unmachine(");
+        const to = PAGE.indexOf("setInterval(flush,15000)");
+        let early = null;
+        try {
+          // eslint-disable-next-line no-new-func
+          early = new Function(`
+            let coWho=null, coText='', txBuf=[];
+            const MODE='talk', posted=[];
+            const fetch=(u,o)=>{ posted.push(JSON.parse(o.body)); };
+            ${from >= 0 && to > from ? PAGE.slice(from, to) : ""}
+            post('CAPTAIN','uska sawaal');
+            post('GAFFER','gaffer ka jawab');
+            post('CAPTAIN','agla sawaal');
+            return { posted, lines: posted.flatMap(p=>p.lines) };   // NOTHING called flush() here
+          `)();
+        } catch { }
+        assert("FLUSH — a completed CAPTAIN→GAFFER pair reaches the door IMMEDIATELY, with no timer and no explicit flush (a correction lands in ~1s, not after 15s)",
+          !!early && early.posted.length === 1
+          && early.lines.some(l => /^CAPTAIN: uska/.test(l)) && early.lines.some(l => /^GAFFER: gaffer/.test(l)));
+      }
 
       // ---- THE ANSWER HALF (12 Aug 2026) — the lane was HALF-BUILT ----------
       // MEASURED: 27 live cards, EVERY one dealt at least once (c9 twenty
@@ -4172,6 +4198,44 @@ async function selftest() {
     assert("the page injects EVERY unseen deep answer (two lanes, zero loss)", PAGE.includes("seenDeep") && PAGE.includes("deep_recent"));
     // page hygiene
     assert("transcript fragments coalesce per speaker (no more word-salad record)", PAGE.includes("coFlush") && PAGE.includes("coWho"));
+    // ── THE COALESCER IS RUN, NOT GREPPED (17 Aug 2026) ──────────────────────
+    // The assertion directly above is a PRESENCE check, and on 15 Aug a change to
+    // this exact code shipped an infinite mutual recursion behind it: coFlush()
+    // cleared its buffer AFTER calling flush(), flush() calls coFlush(), and the
+    // re-entrant call found the same state and pushed the same line again. It blew
+    // the stack on the second completed turn of every sitting — the surface he
+    // actually talks to — while this assertion stayed green, because "coFlush" was
+    // still in the string. That is the same lesson written thirty lines below about
+    // the page not parsing, paid for a second time in the same file.
+    // So the page's OWN source is extracted and EXECUTED here, against stubs. No
+    // browser globals: fetch and the module-level page state are injected.
+    {
+      const from = PAGE.indexOf("function unmachine(");
+      const to = PAGE.indexOf("setInterval(flush,15000)");
+      const src = from >= 0 && to > from ? PAGE.slice(from, to) : "";
+      let ran = null, err = null;
+      try {
+        // eslint-disable-next-line no-new-func
+        ran = new Function(`
+          let coWho=null, coText='', txBuf=[];
+          const MODE='talk', posted=[];
+          const fetch=(u,o)=>{ posted.push(JSON.parse(o.body)); };
+          ${src}
+          post('CAPTAIN','pehla sawaal');
+          post('GAFFER','uska jawab');
+          post('CAPTAIN','doosra sawaal');   // <- the turn-pair closes HERE; this is what died
+          flush();
+          return { posted, lines: posted.flatMap(p=>p.lines), left: txBuf.length };
+        `)();
+      } catch (e) { err = (e && e.message) || String(e); }
+      assert(`PAGE · a COMPLETED TURN-PAIR flushes without blowing the stack — the crash he hit on 16 Aug, driven through the page's own code${err ? " · " + err : ""}`,
+        !!ran && !err);
+      assert("PAGE · …and each turn reaches the door EXACTLY ONCE — the recursion did not merely crash, it re-pushed the same line every time round",
+        !!ran && ran.lines.length === new Set(ran.lines).size && ran.lines.length === 3
+        && ran.lines[0].startsWith("CAPTAIN: pehla") && ran.lines[1].startsWith("GAFFER: uska") && ran.lines[2].startsWith("CAPTAIN: doosra"));
+      assert("PAGE · …and nothing is left stranded in the buffer after a flush (a turn that never reaches the door is a turn the organism never saw)",
+        !!ran && ran.left === 0);
+    }
     // THE PAGE MUST PARSE (11 Aug 2026 — written the morning after it did not).
     // Every other page assertion in this file is PAGE.includes("...") — a STRING
     // MATCH. A string match cannot tell working code from broken code, and on
@@ -5632,10 +5696,30 @@ function post(who,text){
 // followed by a GAFFER line is one complete exchange and the smallest unit that can
 // be judged at all. The >=6 backstop stays for the case this misses (a monologue
 // with no reply in it yet).
-function coFlush(){if(coWho&&coText.trim()){
- const pairClosed=/^GAFFER/i.test(coWho)&&txBuf.some(l=>/^CAPTAIN:/i.test(l));
- txBuf.push(coWho+': '+coText.replace(/\\s+/g,' ').trim());
- if(pairClosed||txBuf.length>=6)flush()}coWho=null;coText=''}
+// THE BUFFER IS CLEARED BEFORE THE FLUSH, NEVER AFTER (17 Aug 2026). This
+// function used to clear coWho/coText on its LAST line, after calling flush() —
+// and flush()'s first act is to call coFlush(). So the re-entrant call found the
+// same coWho and the same coText still sitting there, pushed the SAME line again,
+// and called flush() again: coFlush -> flush -> coFlush -> flush, until the stack
+// died. "Uncaught RangeError: Maximum call stack size exceeded", thrown out of the
+// txBuf.some(...) scan on the line below as the duplicate lines piled up.
+// IT FIRED ON THE MOST ORDINARY THING THE SURFACE DOES. pairClosed is true the
+// moment a GAFFER turn completes with a CAPTAIN line already buffered — i.e. on
+// every completed exchange — so the page blew up on the second real turn of a
+// sitting, took the transcript door with it, and everything downstream of the door
+// (the Watcher, the supervisor's corrections, the day's digest) simply stopped
+// arriving. Introduced by the 15 Aug turn-pair trigger and never once executed by
+// a test: the assertion guarding this code was a PRESENCE check on the string
+// "coFlush", which is the exact "a string match cannot tell working code from
+// broken code" lesson written thirty lines above it, paid for a second time.
+// Clearing first makes the re-entry a no-op and bounds the recursion at depth two.
+function coFlush(){
+ if(!coWho||!coText.trim()){coWho=null;coText='';return}
+ const who=coWho,text=coText.replace(/\\s+/g,' ').trim();
+ coWho=null;coText='';
+ const pairClosed=/^GAFFER/i.test(who)&&txBuf.some(l=>/^CAPTAIN:/i.test(l));
+ txBuf.push(who+': '+text);
+ if(pairClosed||txBuf.length>=6)flush()}
 function flush(){coFlush();if(!txBuf.length)return;fetch('/transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lines:txBuf.splice(0),mode:MODE})})}
 setInterval(flush,15000);
 // scan-fix 15 Jul: a merely-open tab used to bill a voice-minute + a T1 unit
