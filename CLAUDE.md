@@ -266,14 +266,24 @@ order any more. Do not re-plan it.**
   **PROVEN LIVE 15 Aug, end to end**: capture instant → one Opus call (26.7s) → `cracked` on
   `context` axis a with the four missed load-bearing points named in his own Hinglish → recorded by
   rejirah. Billing law untouched: it rides `claudeGen`, which refuses outright on `ANTHROPIC_API_KEY`.
-  · **EIGHT VERDICT TYPES, AND EXACTLY ONE HAS A KEY** — this is the finding the whole grader rests
-    on, and it was found by reading the live state files rather than the plan. `axis_weld`
-    (capsule.faultLines[].weld) is the only one with a right answer on disk. The other seven —
-    `tape_doubt` (his own past confusions, verbatim, 112 queued) · `hidden_test` (open design probes)
-    · `adversarial` (defend-or-concede) · `scrimmage` · `interview` · `trap` · `doubt_quality` — have
-    **nothing to compare against**, so no amount of speed helps a model that cannot form the
-    judgement at all. **Opus is not the better option here, it is the only one.** Read them live:
-    `node -e "import('./scripts/gaffer_brain.mjs').then(m=>console.log(Object.keys(m.VERDICT_TYPES)))"`
+  · **NINE VERDICT TYPES, FOUR WITH A KEY** — and the sentence this replaces was WRONG in the
+    expensive direction. It read "EIGHT VERDICT TYPES, AND EXACTLY ONE HAS A KEY", called that
+    "the finding the whole grader rests on", and it was **refuted by reading the capsules on
+    17 Aug 2026**: `doubts[].a` is present on 112 of 112 live tape-room rows, `traps[].truth` on
+    all 40 traps, `interviewLines[]` on all 40 lines. Four keys were on disk the whole time and
+    the judge was being handed `key: null` for three of them — and the trap branch put the
+    trap's own `truth` INSIDE the question. Fixed in the truth layer's BLOCK 0. The ninth type,
+    `voice_rep`, was added in BLOCK 2 for what he is actually asked mid-conversation, which is
+    almost never a locked axis. **Never take the count or the keyed set from this page** — it has
+    now been wrong once: `node -e "import('./scripts/gaffer_brain.mjs').then(m=>console.log(Object.entries(m.VERDICT_TYPES).map(([k,v])=>k+':'+(v.key?'KEY':'-')+':'+v.standard).join('\n')))"`
+  · **EVERY TYPE NAMES ITS STANDARD, AND THE TWO DO NOT MERGE** (BLOCK 0). `standard` is
+    `capsule` · `dossier` · `cold_reader`, never null: a verdict against an unnamed yardstick is
+    the thing the truth layer exists to abolish. Recall rides HIS capsule; interview-facing rides
+    the DOSSIER (`dossier_weights.json` rounds + OPPONENT_SCOUT §7 red-flags, which reached this
+    organ ZERO times before that day); doubt quality rides FORGE_SPEC §3's cold-reader bar. All
+    three are QUOTED FROM THE FILE THAT OWNS THEM, and a source that will not parse says so in
+    the prompt instead of shipping an empty standard — an empty standard reads to a judge exactly
+    like a permissive one.
   · **NO KEY IS NOT NO GROUND.** Every keyless verdict still rides HIS material into the prompt
     (`capsuleGround` — his mechanism, his traps, his interview lines). The judge is never asked what
     IT thinks a good answer is; it is asked whether what he said holds against what he already wrote.
@@ -291,6 +301,35 @@ order any more. Do not re-plan it.**
     patterns and one Pass-1 correction from three items, in one call.
   · **`--dry` MEANS TOUCH NOTHING**, and it did not until 15 Aug — it skipped the settlement write
     while still dispatching to the owners, so a rehearsal wrote into his real study record. Fixed.
+  · **NO SURFACE DECIDES WHAT IS TRUE ABOUT HIM ANY MORE** (BLOCK 2, 17 Aug 2026). `log_reps`
+    (`correct: BOOLEAN`), `grade_rejirah` (`result: held|cracked`) and `retire_doubt` (itself a
+    verdict) are GONE from the Gaffer's live tools — frozen as `*_legacy` with no declaration
+    pointing at them — and replaced by **`bank_answer` + `judge_round`**. Capture is instant and
+    model-free; judgement is one Opus call at round close. The same reroute landed in `/forge`,
+    `/learn` and `/scrimmage`, so a scrimmage answered by voice and one answered in a session now
+    get the SAME verdict against the SAME standard. `gaffer_claim_audit` moved haiku → opus and
+    priority 12 → 88 (it was starved 3 beats on 13 Aug; a better model at priority 12 is a better
+    answer that still never runs).
+  · **EVERY JUDGEMENT HAS A WAY BACK** (BLOCK 4). `doubtminer.mjs un-retire` · `rejirah.mjs
+    correct` · `capture.mjs correct`. ONE shape everywhere, and it is the archive LEXICON's law:
+    a correction is a **new row that names the old one**, never a rewrite, and a `--why` is
+    REQUIRED because that row is the only record a verdict was walked back. `reps_log` has
+    **FIFTEEN readers** and all fifteen honour it through `capture.mjs`'s exported
+    `supersedeReps` — capture is the sole writer, so it owns what supersession means. A
+    cross-organ guard in `organism_test.mjs` fails if a sixteenth reader ever forgets.
+  · **THE 💎 IS BUILT** (BLOCK 5) — MASTERPLAN §9's Dual-Judge Jury, for the three verdicts where
+    taste decides (`hidden_test` · `adversarial` · `scrimmage`) and ONLY those: the four keyed
+    types carry his own answer, so a second opinion there buys nothing and doubles the cost. The
+    second read is the free Gemini Flash lane (proven live at 5.3s). AGREE → one verdict naming
+    both judges. DISAGREE → **nothing is recorded** and he gets a card, identities masked and the
+    order derived from the item id. `key_doubt` — the judge doubting HIS OWN key — is a card too,
+    never an edit, and his recall verdict still stands.
+  · **THE SPLIT PAYS, BUT ONLY 8%** — measured A/B, 4 opus calls, same head, same bodies:
+    split 74,769 weighted vs inline 81,397. The head is the ONLY thing producing any cache read
+    (inline scores a flat zero), but ~25,000 tokens of cache_creation happen every call
+    regardless — the CLI's own context, which no caller controls. **The plan's "a cached opus
+    judgement ≈ 15-20k weighted" was 2× optimistic; measured 35-40k.** Read it live, never here:
+    `node scripts/brain.mjs status` prints the truth lane's reuse beside its spend.
   · **CEREBRAS: the reader is FROZEN as `loadCerebrasKeyLegacy` with NO live caller** (layering law,
     his instruction — freeze, do not delete). It never once returned a verdict: 402 on every model
     its account could list, and its free tier ends 17 Aug 2026. `grep -rn "api.cerebras.ai" scripts/`

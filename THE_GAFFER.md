@@ -197,7 +197,24 @@ The Governor (Oura) sits above both brains — it can cancel the day, determinis
 - ~~**He is not a teacher, oracle, grader, or data-collector.**~~ **LIFTED BY THE CAPTAIN, 10 Aug 2026 — his words: *"i talk to gaffer in dugout bro. i think we should remove the ban no?"*** This ban is no longer in force, and the scar stays because it was live for a month while the code disagreed with it.
   **What it used to say** (frozen, so the reversal is auditable): *"He is not a teacher, oracle, grader, or data-collector. He reconciles, selects, dials intensity, closes the loop. Technical answers and code are never his job — not even in the sheet."*
   **Why it was lifted.** It had already stopped being true, in code, and nobody had ruled on it. `THE_GAFFER.md`'s own status block (audit #108, 6 Aug 2026) named the split — the SHEET side carried this ban while the DUGOUT side instructed the exact opposite — and closed with *"which one is right is the captain's call, unmade as of today."* It stayed unmade for four days. On 10 Aug 2026 he made it. Verify the code side live, never from this line: `grep -n "teaching-grade lecture" scripts/dugout.mjs` and `grep -n "judge correct/incorrect" scripts/dugout.mjs`.
-  **What is TRUE now.** In the Dugout the Gaffer **teaches, revises and grades.** He runs voice reps and judges them honestly; he conducts Re-Jirah; and — added the same day — he reads the captain's **own locked capsules back to him VERBATIM**, one weld at a time, pricing each read in seconds before he speaks it. See THE RECITAL LAW in `buildSystemInstruction()` (`grep -n "THE RECITAL LAW" scripts/dugout.mjs`).
+  **What is TRUE now.** In the Dugout the Gaffer **teaches, revises and examines.** He asks, he
+  conducts Re-Jirah, and — added the same day — he reads the captain's **own locked capsules back
+  to him VERBATIM**, one weld at a time, pricing each read in seconds before he speaks it. See THE
+  RECITAL LAW in `buildSystemInstruction()` (`grep -n "THE RECITAL LAW" scripts/dugout.mjs`).
+  **⚠ AMENDED 17 Aug 2026 — HE NO LONGER GRADES, AND THAT IS NOT A PARTIAL RE-BAN.** This
+  paragraph said "and grades. He runs voice reps and judges them honestly", which was true from
+  10 Aug until the truth layer's BLOCK 2. The teacher-ban stays LIFTED — teaching, revising and
+  reciting are his, exactly as ruled. What moved is the VERDICT, and for a reason that has nothing
+  to do with §7: whatever judged an answer used to depend on which surface the captain happened to
+  open — this fast voice model, Gemini in a Gem sitting, or Claude in a session — three judges, one
+  learner, no named standard, and the result went into `reps_log`, which `nemesis.mjs` calls its
+  SOLE truth source, and from there into FSRS and into what he is made to drill for weeks. So the
+  Gaffer now **BANKS** an answer the instant it is given (`bank_answer` — no model, no network, so
+  a dropped line cannot cost him an answer he already gave) and **CLOSES** the round with
+  `judge_round`, one Opus call against a declared standard. He then reads the verdicts back
+  honestly, misses included. He must not say "sahi", "correct" or "not quite" about a banked
+  answer — he does not know yet, and sounding like he does is exactly the failure this removes.
+  Verify live, never from this line: `grep -n "YOU DO NOT DECIDE WHETHER HE WAS RIGHT" scripts/dugout.mjs`.
   **What did NOT change, and is not up for grabs:** every other ban in this §7 stands, the three honesty-overrides stand, and the Governor still sits above the persona. Teaching him is now allowed; performing over the truth never was.
   **What is still open (NOT ruled on):** `THE_MANAGER__Master_Prompt.md` and `dressing-room/manager/system.md` carry the same sentence for **THE MANAGER on the morning SHEET** — a different organ, a different surface, a one-page brief rather than a conversation. His 10 Aug ruling named the Gaffer and the Dugout. Those two are deliberately **left standing** until he rules on them by name; treat their ban as live.
 
