@@ -495,6 +495,15 @@ export async function callWatcher(prompt, deps = {}) {
         const a = text.indexOf("{"), b = text.lastIndexOf("}");
         if (a >= 0 && b > a) { try { parsed = JSON.parse(text.slice(a, b + 1)); } catch { } }
       }
+      // `deps.raw` (17 Aug 2026, BLOCK 5) — hand back the reply UNSHAPED. This lane
+      // exists for the Watcher and coerces every answer into the Watcher's own
+      // judgment schema, which is exactly right for that caller and destroys any
+      // other. The second judge asks a completely different question and needs its
+      // own shape; it reuses this door for the parts that are proven — key rotation,
+      // the 20s deadline, thinking on, the free pool — rather than opening a second
+      // one that would drift. Measured: without this the live probe came back
+      // "unparseable" on a reply that was perfectly good JSON.
+      if (deps.raw) return { ok: true, text, engine: "gemini-flash", model: WATCHER_MODEL, latency_ms: Date.now() - t0 };
       const norm = normalizeJudgment(parsed);
       if (!norm) continue;
       return { ok: true, judgment: norm, engine: "flash", model: WATCHER_MODEL, latency_ms: Date.now() - t0 };
@@ -1276,8 +1285,10 @@ ${standards}
 
 WHO YOU ARE JUDGING${who ? `:\n${clip(who, 900)}` : " — nothing consolidated about him is on disk yet, so judge on the material alone and do not infer a person."}
 
-THE OUTPUT CONTRACT. Return STRICT JSON, no fences, no prose outside it:
-{"grades":[{"id":"<the item id, copied EXACTLY>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>"}]}
+THE OUTPUT CONTRACT. 7. IF HIS OWN ANSWER KEY LOOKS FACTUALLY WRONG, SAY SO — in "key_doubt", on that item, and nowhere else. This is NOT a verdict on his recall: if he reproduced what the key says, the recall HELD and you grade it that way. It is a doubt about the page itself. He wrote those pages and only he edits them, so your doubt becomes a question put to him, never a correction applied behind him. Use it rarely and only for something you believe is factually false — not for wording you would have chosen differently.
+
+Return STRICT JSON, no fences, no prose outside it:
+{"grades":[{"id":"<the item id, copied EXACTLY>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>","key_doubt":"<omit unless his own key looks factually wrong>"}]}
 One entry per item at most. The id is how each grade is matched back to an item — grades are matched BY ID and never by position, so a copied-wrong id is a dropped grade.`;
 }
 
@@ -1341,6 +1352,86 @@ WHAT HE SAID OUT LOUD, COLD:
 ${it.spoken}`).join("\n")}
 
 Return the JSON now.`;
+}
+
+// ===========================================================================
+// BLOCK 5 — THE SECOND JUDGE, AND THE 💎
+// ===========================================================================
+// MASTERPLAN §9's Dual-Judge Jury, finally built for the STUDY layer: "Both AGREE
+// weak → real weakness. Both DISAGREE → 💎 the highest-value signal… The models
+// NEVER resolve disagreements between themselves. Nikhil resolves them. That IS
+// the learning."
+//
+// ONLY WHERE TASTE DECIDES. `axis_weld`, `tape_doubt`, `trap` and `interview` carry
+// an answer HE wrote; a second opinion there buys nothing and doubles the cost, and
+// the work order forbids it in as many words. These three have no key on disk:
+// whether the engineering satisfied the probe, whether the defence held, whether it
+// would survive the room — that is judgement, and a single LLM judge is documented
+// to carry position, verbosity and self-enhancement bias.
+// A DIFFERENT MODEL FAMILY is the whole point: the second read is the Gemini Flash
+// REST lane the Watcher already uses — free, already proven live at 4-12s — so this
+// costs nothing but latency, and it is latency at ROUND CLOSE where nothing waits.
+export const SECOND_JUDGE_TYPES = ["hidden_test", "adversarial", "scrimmage"];
+
+export function buildSecondJudgePrompt(item, deps = {}) {
+  const t = VERDICT_TYPES[item.type] || {};
+  return `You are grading ONE answer a learner gave OUT LOUD, cold, from memory, in Hinglish. He is training for AI-engineering interviews.
+
+You are the SECOND, INDEPENDENT reader. You are deliberately NOT told what anyone else concluded — an opinion anchored on another opinion is not a second opinion.
+
+GRADE THE MECHANISM, NEVER THE WORDING. Speech is transcribed: it arrives broken, repetitive and unpunctuated, and none of that is evidence about what he knows. Hinglish is not an error.
+
+THE QUESTION THIS TYPE ASKS: ${t.asks || "did this hold?"}
+LEGAL VERDICTS (return exactly one of these words): ${(t.verdicts || []).join(" | ")}
+
+${standardBlock(t.standard || "dossier", deps)}
+${capsuleGround(item.concept, deps)}
+
+=== THE ITEM ===
+${item.asked ? `WHAT HE WAS ASKED:\n${item.asked}` : ""}
+${item.extra ? `${item.extra}` : ""}
+
+WHAT HE SAID OUT LOUD, COLD:
+${item.spoken}
+
+Return STRICT JSON, no fences, no prose outside it:
+{"verdict":"<one legal verdict>","why":"<one sentence, plain>"}
+If the standard and his ground do not settle it, return {"verdict":null,"why":"…"} — declining is honest, guessing is not.`;
+}
+
+export async function secondOpinion(item, deps = {}) {
+  const call = deps.callWatcher || callWatcher;
+  const r = await call(buildSecondJudgePrompt(item, deps), { ...deps, raw: true });
+  if (!r || !r.ok) return { ok: false, reason: "lane-down", error: (r && r.error) || "no reply" };
+  let parsed = null;
+  try { const t = String(r.text); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
+  if (!parsed) return { ok: false, reason: "unparseable" };
+  const v = isVerdict(item.type, parsed.verdict) ? String(parsed.verdict).trim().toLowerCase() : null;
+  return { ok: true, verdict: v, why: clip(parsed.why, 300), engine: r.engine || "gemini-flash" };
+}
+
+// ── THE 💎 CARD — identities masked, order randomized ────────────────────────
+// The design names the bias it fights, so the masking is not decoration. HE is the
+// one resolving this, and "Opus said held, Flash said cracked" resolves itself for
+// him before he has read a word of the reasoning. So the two readings arrive as
+// JUDGE A and JUDGE B, and which is which flips per item.
+// THE ORDER IS DERIVED FROM THE ITEM ID, NOT FROM Math.random: same disagreement,
+// same card, every time it is rendered — a card that reshuffles on every read is
+// unciteable, and a test cannot pin it.
+export function disagreementCard(item, first, second) {
+  const id = String(item.id || item.ref || "");
+  let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const flip = (h & 1) === 1;
+  const A = flip ? second : first, B = flip ? first : second;
+  return `💎 DO judge alag-alag bole — ${item.concept || item.ref} (${item.type}). JUDGE A: ${A.verdict} — ${A.why || "no reason given"} · JUDGE B: ${B.verdict} — ${B.why || "no reason given"}. Tera answer tha: "${clip(item.spoken, 220)}". Kaun sahi hai? Ye faisla tera hai, machine ka nahi — aur yahi sabse keemti signal hai.`;
+}
+
+// ── key_doubt — when the judge thinks HIS OWN answer key looks wrong ──────────
+// This is NOT a verdict on his recall, which still stands: he reproduced what he
+// wrote. It is a doubt about the page itself, and only he edits a capsule — the
+// mirror is read-only and the gist is the master. So it is a card, never an edit.
+export function keyDoubtCard(item, doubt) {
+  return `📄 Capsule check — "${item.concept}" ${item.label || item.ref}: judge ko tera apna answer-key hi galat lag raha. Uski wajah: ${clip(doubt, 220)}. Tera recall theek tha, ye page ke baare mein sawaal hai — gist tere haath se hi badalta hai.`;
 }
 
 // THE OWNER TABLE. Nothing here writes another organ's file: each verdict is
@@ -1464,6 +1555,44 @@ export async function gradeJudge(deps = {}) {
     });
   }
 
+  // ── BLOCK 5 · THE SECOND JUDGE, AND THE 💎 ──────────────────────────────
+  // Runs BEFORE dispatch, because a disagreement must never reach an owner. A
+  // verdict two families disagree about is not a fact about him; it is the single
+  // highest-value signal the design names, and it is HIS to resolve.
+  // FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT: if the free pool is dry the first
+  // judgement stands, recorded honestly as one judge. A dead second reader must not
+  // silently discard a real verdict — that would be the truth layer eating truth.
+  const second = deps.secondOpinion || ((it) => secondOpinion(it, deps));
+  const cardFile = deps.fileCard || ((line, key) => {
+    try { execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key], { encoding: "utf8", timeout: 30000, windowsHide: true }); return { ok: true }; }
+    catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  });
+  const diamonds = [], keyDoubts = [];
+  const confirmed = [];
+  for (const s of settled) {
+    // key_doubt rides ANY type and never changes the verdict — see keyDoubtCard.
+    const kd = (grades.find((x) => x && String(x.id) === s.of) || {}).key_doubt;
+    if (kd && String(kd).trim() && !deps.dry) {
+      const c = cardFile(keyDoubtCard(s, String(kd).trim()), `key_doubt:${s.type}:${s.ref}`);
+      keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: !!c.ok });
+    } else if (kd && String(kd).trim()) keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: false, dry: true });
+
+    if (!SECOND_JUDGE_TYPES.includes(s.type)) { confirmed.push(s); continue; }
+    const item = items.find((i) => i.id === s.of) || s;
+    const two = await second(item);
+    if (!two || !two.ok || !two.verdict) {
+      // named on the row, never hidden: "one judge" is a fact about this verdict
+      confirmed.push({ ...s, judges: 1, agreed: null, judge2: null, judge2_note: (two && two.reason) || "no second reading" });
+      continue;
+    }
+    if (two.verdict === s.verdict) { confirmed.push({ ...s, judges: 2, agreed: true, judge2: two.engine, judge2_why: two.why }); continue; }
+    // 💎 — NOT recorded as fact. It becomes his card.
+    const line = disagreementCard(item, { verdict: s.verdict, why: s.why }, { verdict: two.verdict, why: two.why });
+    const c = deps.dry ? { ok: true, dry: true } : cardFile(line, `diamond:${s.type}:${s.ref}`);
+    diamonds.push({ ref: `${s.type}:${s.ref}`, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
+  }
+  settled.length = 0; settled.push(...confirmed);
+
   // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
   // is one line and it is an Unknown to the static analyser — the organ→organ edge
   // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
@@ -1505,7 +1634,12 @@ export async function gradeJudge(deps = {}) {
   if (!deps.dry) {
     try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); for (const s of dispatched) appendFileSync(GRADE_QUEUE, JSON.stringify(s) + "\n"); } catch { }
   }
-  return { ok: true, graded: dispatched.length, types: [...new Set(dispatched.map((s) => s.type))], settled, dispatched, refused, missed, outstanding: items.length - dispatched.length, calls: 1 };
+  return { ok: true, graded: dispatched.length, types: [...new Set(dispatched.map((s) => s.type))], settled, dispatched, refused, missed,
+    // A DISAGREEMENT IS OUTSTANDING, NOT GRADED. It stays in the queue, so if he
+    // resolves it the round can be judged again — and until then nothing about it
+    // has entered his record.
+    diamonds, key_doubts: keyDoubts,
+    outstanding: items.length - dispatched.length, calls: 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -1653,7 +1787,17 @@ async function main() {
       delta: "CAPTAIN: nahi yaar, ye wo nahi tha jo maine bola tha. dubara dekho.",
     }));
     console.log(JSON.stringify({ ok: r.ok, engine: r.engine, model: r.model, latency_ms: r.latency_ms, error: r.error, judgment: r.judgment }, null, 1));
-    if (!r.ok) process.exit(1);
+    // BLOCK 5 · THE SECOND JUDGE RIDES THE SAME PROBE. It is a different QUESTION on
+    // the same free lane, and it takes a different shape back (`raw`), so proving the
+    // Watcher answers proves nothing about it — that gap is how a lane ships dead.
+    // Measured the day it landed: 5.3s, verdict "conceded", legal for its type.
+    const s = await secondOpinion({
+      id: "probe:1", type: "adversarial", ref: "0", concept: "tokenization",
+      asked: "You said subword tokenization exists mainly so you can reuse pieces to build new words. I think that is wrong. Defend it, or concede exactly where it breaks.",
+      spoken: "nahi bhai main maanta hoon ki main galat tha — primary faayda OOV solve karna hai aur vocab ko kaabu mein rakhna, reuse to bas ek bonus hai",
+    });
+    console.log("second judge (BLOCK 5): " + JSON.stringify({ ok: s.ok, engine: s.engine, verdict: s.verdict, legal: isVerdict("adversarial", s.verdict), why: s.why, reason: s.reason }, null, 1));
+    if (!r.ok || !s.ok || !s.verdict) process.exit(1);
     return;
   }
   // CAPTURE — the fast half. Runs in the gap between his answer and the next
@@ -1690,6 +1834,15 @@ async function main() {
     }
     for (const m of r.refused) console.log(`  ${m.ref}  NOT RECORDED — the owner refused it: ${m.error}`);
     if (r.missed.length) console.log(`  ${r.missed.join(", ")} — no legal verdict came back for these; they stay in the queue and are judged again (never coerced).`);
+    // THE 💎 IS THE POINT, SO IT IS SAID OUT LOUD. A disagreement that only exists
+    // as a card he might be dealt later is a signal this lane produced and buried.
+    for (const d of (r.diamonds || [])) {
+      console.log(`  💎 ${d.ref}  TWO FAMILIES DISAGREED (${d.first} vs ${d.second}) — NOTHING was recorded about him.`);
+      console.log(`      ${d.filed ? "filed as a captain's-call card" : d.dry ? "DRY RUN — no card filed" : "⚠ the card could NOT be filed"}: he resolves it, and that IS the learning.`);
+    }
+    for (const k of (r.key_doubts || [])) {
+      console.log(`  📄 ${k.ref}  the judge doubts HIS OWN answer key — ${k.filed ? "filed as a card" : k.dry ? "DRY RUN — no card filed" : "⚠ card NOT filed"}. His recall verdict above stands; only he edits a capsule.`);
+    }
     return;
   }
   // PASS 2 — THE NIGHT READ. Rides the night shift's existing lane; no new scheduler.
@@ -2239,6 +2392,74 @@ function selftest2(stub, S) {
           (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure!" }) })).reason === "unparseable");
         assert("PASS 1 · with nothing captured it does nothing at all — no call, no spend",
           (await gradeJudge({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
+
+        // ── BLOCK 5 · THE SECOND JUDGE, AND THE 💎 (17 Aug 2026) ─────────────
+        // MASTERPLAN §9's Dual-Judge Jury, for the three verdicts where taste
+        // decides. Everything below is driven through gradeJudge with BOTH judges
+        // injected — no network, no spend, and the assertions are about what
+        // reaches HIS RECORD, which is the only thing that matters here.
+        {
+          const cap = (over = {}) => ({ v: 2, kind: "capture", id: "b5:1", ts: T0.toISOString(), day: "2026-08-17",
+            type: "adversarial", ref: "0", concept: "hallucinations", label: "drill", gut: "shaky",
+            asked: "you chose that read; defend it", key: null, standard: "dossier",
+            spoken: "main iske saath khada hoon kyunki detector precision pe tune kiya tha, recall pe nahi", ...over });
+          const grade = (v, extra = {}) => async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "b5:1", verdict: v, missing: [], why: "held on the mechanism", ...extra }] }) });
+
+          // AGREE → the verdict stands, and it SAYS both families read it.
+          const agree = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+            secondOpinion: async () => ({ ok: true, verdict: "defended", why: "same read", engine: "gemini-flash" }) });
+          assert("BLOCK 5 · AGREE — one verdict, recorded, carrying BOTH judges' names (a claim about him that two model families reached separately)",
+            agree.graded === 1 && agree.settled[0].judges === 2 && agree.settled[0].agreed === true
+            && agree.settled[0].engine === "opus" && agree.settled[0].judge2 === "gemini-flash" && agree.diamonds.length === 0);
+
+          // DISAGREE → 💎. NOT a fact about him. A card, and nothing settled.
+          const dis = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+            secondOpinion: async () => ({ ok: true, verdict: "collapsed", why: "he never named where it breaks", engine: "gemini-flash" }) });
+          assert("BLOCK 5 · DISAGREE — the 💎: NOTHING is recorded, nothing reaches an owner, and the item stays outstanding to be judged again",
+            dis.graded === 0 && dis.settled.length === 0 && dis.dispatched.length === 0 && dis.outstanding === 1);
+          assert("BLOCK 5 · …and it becomes HIS card, carrying both readings and his own answer — 'the models NEVER resolve disagreements between themselves'",
+            dis.diamonds.length === 1 && dis.diamonds[0].first === "defended" && dis.diamonds[0].second === "collapsed"
+            && /💎/.test(dis.diamonds[0].line) && /JUDGE A/.test(dis.diamonds[0].line) && /JUDGE B/.test(dis.diamonds[0].line)
+            && dis.diamonds[0].line.includes("precision pe tune"));
+          // IDENTITIES MASKED — the design names the bias it fights, so this is not
+          // decoration: "Opus said held, Flash said cracked" resolves itself for him
+          // before he has read a word of the reasoning.
+          assert("BLOCK 5 · IDENTITIES MASKED — neither model is named on the card, and the order is DERIVED from the item id, so the same disagreement renders the same way every time",
+            !/opus|gemini|flash|claude/i.test(dis.diamonds[0].line)
+            && disagreementCard({ id: "x1", spoken: "s" }, { verdict: "a" }, { verdict: "b" }) === disagreementCard({ id: "x1", spoken: "s" }, { verdict: "a" }, { verdict: "b" }));
+          assert("BLOCK 5 · …and the masking really SWAPS — two different items put the same judge in different slots, or the mask is a label and not a mask",
+            (() => {
+              const seen = new Set();
+              for (const id of ["a", "b", "c", "d", "e", "f"]) seen.add(disagreementCard({ id, spoken: "s" }, { verdict: "FIRST" }, { verdict: "SECOND" }).indexOf("FIRST") < disagreementCard({ id, spoken: "s" }, { verdict: "FIRST" }, { verdict: "SECOND" }).indexOf("SECOND"));
+              return seen.size === 2;
+            })());
+
+          // A KEYED verdict is never double-judged: his own answer is on disk, a
+          // second opinion buys nothing there and doubles the cost.
+          let asked2 = 0;
+          const keyed = await gradeJudge({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
+            generate: grade("held"), secondOpinion: async () => { asked2++; return { ok: true, verdict: "cracked" }; } });
+          assert("BLOCK 5 · a KEYED verdict is NOT second-judged — his own answer is on disk, so a second opinion buys nothing and doubles the cost",
+            asked2 === 0 && keyed.graded === 1 && keyed.settled[0].judges === undefined);
+
+          // FAIL-OPEN ON THE LANE. A dry free pool must not silently eat a verdict.
+          const dry = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+            secondOpinion: async () => ({ ok: false, reason: "lane-down" }) });
+          assert("BLOCK 5 · a DEAD second reader leaves the first verdict standing, recorded honestly as ONE judge — a broken second opinion must never discard a real one",
+            dry.graded === 1 && dry.settled[0].judges === 1 && dry.settled[0].agreed === null && /lane-down/.test(dry.settled[0].judge2_note));
+
+          // key_doubt — a card about the PAGE, never a change to the verdict.
+          const kd = await gradeJudge({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
+            generate: grade("held", { key_doubt: "the weld says BPE merges letters one at a time; it merges the most frequent PAIR" }),
+            secondOpinion: async () => ({ ok: false }) });
+          assert("BLOCK 5 · key_doubt — his recall verdict STILL STANDS and is recorded; the doubt about his own page becomes a card, because only he edits a capsule",
+            kd.graded === 1 && kd.settled[0].verdict === "held" && kd.key_doubts.length === 1
+            && /Capsule check/.test(keyDoubtCard({ concept: "tokenization", label: "axis a" }, "x")));
+          assert("BLOCK 5 · the second-judge prompt is a genuinely INDEPENDENT read — it is never told what the first judge concluded",
+            (() => { const p = buildSecondJudgePrompt(cap()); return /SECOND, INDEPENDENT reader/.test(p) && !/defended|collapsed|conceded/.test(p.split("LEGAL VERDICTS")[0]); })());
+          assert("BLOCK 5 · …and it is a DIFFERENT MODEL FAMILY: the free Flash lane the Watcher already proves live, so a second opinion costs latency and nothing else",
+            SECOND_JUDGE_TYPES.join(",") === "hidden_test,adversarial,scrimmage");
+        }
 
         // THE PROMPT — keyless items get HIS ground, never the model's taste
         {
