@@ -4645,10 +4645,36 @@ async function selftest() {
       } else {
         console.log("  ~ SKIP #64 infra net — dormant checkout (no afferent bus): required personal state is absent here by construction");
       }
+      // ── NOT EVERY brain_out/ DIRECTORY IS PRODUCED BY A JOB (17 Aug 2026) ────
+      // This asked one question — "is there an enabled job whose `out` is this
+      // directory?" — and that was the whole truth until a job declared
+      // `brain_out/dugout/TODAY.md` REQUIRED (the claim auditor, truth layer BLOCK 2:
+      // an audit of a transcript that does not exist is an opus call spent proving
+      // nothing). `brain_out/dugout/` is written by the VOICE SURFACE, not by any job
+      // here, so a correct declaration read as a chain typo.
+      // The second producer is DECLARED IN THE CONFIG, beside the input, as
+      // `produced_by: "<organ>.mjs"`. It is data rather than a code scan on purpose:
+      // scanning every sibling for the string would have meant a directory read with
+      // a runtime path, i.e. a new unresolved sink in xray's static graph, and the
+      // per-organ ratchet is a real budget — the work order's own trap #5 says fix
+      // legibility, never widen the budget. And it is NOT a rubber stamp: the named
+      // organ must exist in this tree, checked below, so a typo in the declaration
+      // fails exactly as loudly as a typo in the path it excuses.
+      const declaredProducer = (j, p) => (j.inputs || []).some((i) => i && typeof i === "object" && i.path === p && i.produced_by);
       const orphanChain = enabledJobs.flatMap((j) => requiredOf(j).filter(p => p.startsWith("brain_out/"))
-        .filter((p) => { const producer = p.split("/")[1]; return !liveCfg.jobs.some(k => k.out === producer && k.enabled !== false); }));
-      assert("#64 — every required brain_out/ input has an ENABLED producer job (a chain typo still fails; a cold pipeline does not)",
-        orphanChain.length === 0);
+        .filter((p) => {
+          const producer = p.split("/")[1];
+          return !liveCfg.jobs.some(k => k.out === producer && k.enabled !== false) && !declaredProducer(j, p);
+        }));
+      assert("#64 — every required brain_out/ input is produced by an ENABLED job, or DECLARES the organ outside the pipeline that writes it (a chain typo still fails; a cold pipeline does not)",
+        orphanChain.length === 0, orphanChain.join(", "));
+      // THE OTHER HALF OF THIS GUARD LIVES IN organism_test.mjs, deliberately: proving
+      // the declared organ really exists needs a read of the scripts directory with a
+      // runtime path, which is a new unresolved sink here (measured: brain.mjs 52->53,
+      // and the ratchet said so within the minute). The cross-organ suite already walks
+      // that directory for every selftest it runs, so the check is free there and costs
+      // nothing in legibility — `grep -n "declared external producer" scripts/organism_test.mjs`.
+      // Trap #5 of the work order, obeyed: move the code, never the budget.
       // concepts.json, not drills.json: the present half must be a TRACKED file so the
       // 1/2-present claim is identical at home and in a fresh checkout (drills.json is
       // gitignored personal state — the exact reason this assert was a clock).

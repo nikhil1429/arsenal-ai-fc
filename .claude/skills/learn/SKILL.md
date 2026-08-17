@@ -300,6 +300,13 @@ When he pastes the `📋 CLAUDE-HANDOFF` (or says "done / bas / khatam"):
    to bank a day's reps on a clean close: `node scripts/capture.mjs rep --concept <c> --axis <a>
    --q "<what was tested>" --gut knew|shaky|guessed --correct true|false` — same validator as
    `paste`, and `--correct` is never defaulted.)*
+   **⚠ BUT YOU DO NOT DECIDE `--correct` ANY MORE (17 Aug 2026, THE TRUTH LAYER BLOCK 2).**
+   Bank his answer and let the one judge grade it, so the verdict stops depending on which
+   surface he happened to open (voice / Gem / here). Per answer, instant and model-free:
+   `node scripts/gaffer_brain.mjs capture voice_rep <concept> --gut <word> --asked "<your question, verbatim>" [--axis <a-i>] <<< "<what he said>"`
+   Once, at the end of the round: `node scripts/gaffer_brain.mjs judge-round` — one Opus call,
+   graded against his own material, dispatched to the owners, and it names what he missed.
+   Full rule and the reasoning: `.claude/skills/forge/SKILL.md`, same step.
 3. Doubts he voiced → `node scripts/hippocampus.mjs mark doubt` with his words on stdin.
 4. **DRAFT** (never write) the 2-line Progress-Tracker LOG — states + watch-list, Progress-Tracker-ready
    — and hand it to him to paste. New JS→Python mappings → flag the NAMES; the Rosetta entry is his to write.

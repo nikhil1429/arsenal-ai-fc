@@ -370,10 +370,29 @@ When he says "session khatam / done / bas":
      fluency ladder and the struggle detector, so a faked number does exactly the damage the line
      warns about. `capture.mjs` also refuses a non-integer or negative `latency_ms` outright
      (`latency_ms not int>=0 or null`). Obey the rule; just don't cite the genome for it.)*
+   **⚠ YOU DO NOT DECIDE `--correct` ANY MORE (17 Aug 2026, THE TRUTH LAYER BLOCK 2).**
+   Whatever judged his answer used to depend on which surface he opened: the Gaffer's fast
+   voice model, Gemini in a Gem sitting, or you here. One learner, one answer, three
+   different judges and no named standard — and the verdict went into `reps_log`, which
+   `nemesis.mjs` calls its SOLE truth source, and from there into FSRS and into what he is
+   made to drill for weeks. **Bank the answer; the judge grades it.** Same law as the voice
+   surface, same door, same cartridge:
+   `node scripts/gaffer_brain.mjs capture voice_rep <concept> --gut <word> --asked "<the question you actually asked, verbatim>" [--axis <a-i>] <<< "<what he actually said>"`
+   (use `axis_weld` instead of `voice_rep`, with `<concept>:<axis>` as the ref, when you probed
+   one of his LOCKED fault-lines — then it is graded against his own weld.)
+   Then, when the round is over — not per rep, once:
+   `node scripts/gaffer_brain.mjs judge-round`
+   It grades everything banked since the last close in ONE Opus call, dispatches each verdict
+   to the organ that owns it (`capture.mjs rep` for reps), and prints what he missed. Read
+   those back to him honestly. An item it reports outstanding was NOT graded — say so; it is
+   judged again rather than guessed at.
    **CAPTURE AS YOU GO, do not bank the whole day on a clean close (added 5 Aug 2026):**
+   the banking half above is instant, model-free and costs nothing, so there is no reason
+   ever to save it up. The direct door
    `node scripts/capture.mjs rep --concept <c> --axis <a> --q "<what was tested>" --gut <word> --correct true|false`
-   Same door, same validator, same dedupe as `paste` — just one rep, stamped when it
-   actually happened. It exists because every rep used to hinge on a perfect close, and
+   still exists and is what the judge itself calls — but calling it BY HAND means you decided
+   the verdict, which is the thing this block removes. Use it only to record something that
+   was never a judgement at all. It exists because every rep used to hinge on a perfect close, and
    the record says closes are not clean: four recorded sessions, `method_clean false` in
    all four, `reps_log` still at **nine lines total** — which is why calibration (gate 20),
    nemesis (20) and learning_state (12) are ALL still dormant.

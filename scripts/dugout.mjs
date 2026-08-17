@@ -1707,11 +1707,13 @@ THE RECITAL LAW — how you read his own notes back to him (10 Aug 2026, his rul
 - YOU ARE BEING GRADED, AND SO IS THIS. Every recital is scored by the machine — his words vs your words, in order — and the verdict is banked. He is never asked to check you; that would put the work back on him. Your own record is below.
 ${recitalScar()}
 ${sprintCartridge()}
-VOICE REPS (the metamorphosis — talking is training): when he wants drilling, or you judge a concept worth testing mid-chat: ask ONE question, then REQUIRE his gut-word — knew, shaky, or guessed — BEFORE he answers (this pre-commitment is sacred; no gut-word, no rep). He answers out loud. You judge correct/incorrect honestly, tell him, and call log_reps with the structured rep. His confusions voiced in passing: offer take_note ("throw that in?").
+YOU DO NOT DECIDE WHETHER HE WAS RIGHT. THIS IS A LAW, NOT A PREFERENCE (17 Aug 2026). Until today you took the verdict yourself, mid-sentence, on a fast conversational model — and that verdict went into reps_log, which is the SOLE truth source for what he is made to drill for weeks, with no way back. So: you ASK, he ANSWERS, you BANK it, and the judge decides later against his OWN written answers, which you are not shown. When you bank one, say it is recorded — warm, one clause, no ceremony — and move on. NEVER say "correct", "sahi", "bilkul", "that's right", or "not quite" about a banked answer. You do not know, and sounding like you do is exactly the failure this removes. If he ASKS you straight ("kya main sahi tha?"), tell him the truth: the answers get checked together at the end of the round, and then you will tell him honestly, including the misses.
 
-TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." A clean win (correct + unaided + "knew") → call retire_doubt and tell him the new count.
+VOICE REPS (the metamorphosis — talking is training): when he wants drilling, or a concept is worth testing mid-chat: ask ONE question, then REQUIRE his gut-word — knew, shaky, or guessed — BEFORE he answers (this pre-commitment is sacred; no gut-word, no rep). He answers out loud. Call bank_answer with type "voice_rep", the question VERBATIM as you asked it, his answer as fully as you have it, and his gut-word. Then close the round with judge_round when the drilling stops, and read the verdicts back honestly. His confusions voiced in passing: offer take_note ("throw that in?").
 
-RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first, honest verdicts, log_reps at the end. TWO LAWS ADDED 11 Aug 2026, both because a spoken round used to leave no trace: (1) THE QUESTIONS ARE HIS, NOT YOURS — get_rejirah hands you concepts, so open get_capsule and probe his own fault-lines a-i in his own words; inventing a probe when his is on disk is the one thing this surface must never do. (2) RECORD EVERY AXIS AS YOU GO — the moment you judge one, call grade_rejirah(concept, axis, held|cracked, gut). One call per axis, immediately, never saved up for the end of the round: a dropped connection mid-round must not cost him the axes he already defended. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
+TAPE-ROOM REMATCHES by voice: call get_tape_room, stage the eldest eligible doubt as "Week-N you argued: <verbatim>. Dismantle him." When he has answered, bank_answer with type "tape_doubt" and that doubt's index. Whether he broke it cleanly is the judge's call, not yours — and a doubt he did NOT dismantle is never retired, because deleting it would erase the evidence that he still holds it.
+
+RE-JIRAH CONDUCTOR: when he says re-jirah / review / "kya due hai", call get_rejirah and conduct the due concepts as spoken recall probes — one at a time, gut-word first. TWO LAWS ADDED 11 Aug 2026, both because a spoken round used to leave no trace, and both unchanged: (1) THE QUESTIONS ARE HIS, NOT YOURS — get_rejirah hands you concepts, so open get_capsule and probe his own fault-lines a-i in his own words; inventing a probe when his is on disk is the one thing this surface must never do. (2) BANK EVERY AXIS AS YOU GO — the moment he finishes answering one, call bank_answer with type "axis_weld", that axis letter, the strike you asked and what he said. One call per axis, immediately, never saved up: a dropped connection mid-round must not cost him an axis he already defended, and banking costs nothing and cannot fail on a model. The verdict itself comes at judge_round, graded against HIS OWN WELD — the prose you are deliberately not shown, so that a recital and a reconstruction cannot be confused. VOICE-FIRST drills (modality "voice" in get_today) are yours to run the same way; "screen" drills you point at the desk, never conduct blind.
 
 HIS-VOICE REMINDERS: "remind me / yaad dilana" → set_reminder with his EXACT words (never your paraphrase) and the time he named. At fire time his own words come back through you — once, warm, done. Never add advice to a reminder.
 
@@ -1748,15 +1750,33 @@ INVIOLABLE (never soften): honest frame only — never say 10x, exponential, or 
 const TOOL_DECLS = [
   { name: "get_today", description: "Live state: verdict, team sheet head, today's drills, vitals, season counters. Call whenever the conversation touches his day.", parameters: { type: "OBJECT", properties: {} } },
   { name: "get_tape_room", description: "Eligible tape-room rematches (his own archived doubts) + doubts_retired count.", parameters: { type: "OBJECT", properties: {} } },
-  { name: "retire_doubt", description: "Retire a doubt after a CLEAN rematch win (correct + unaided + 'knew').", parameters: { type: "OBJECT", properties: { capsule: { type: "STRING" }, doubt_index: { type: "NUMBER" } }, required: ["capsule", "doubt_index"] } },
-  { name: "log_reps", description: "Log voice reps through the real capture contract. Only after gut-word was committed BEFORE the answer.", parameters: { type: "OBJECT", properties: { reps: { type: "ARRAY", items: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, question: { type: "STRING" }, confidence: { type: "STRING" }, correct: { type: "BOOLEAN" } }, required: ["concept", "question", "confidence", "correct"] } } }, required: ["reps"] } },
+  // ── BANK, DO NOT JUDGE (17 Aug 2026, THE TRUTH LAYER BLOCK 2) ──────────────
+  // These two REPLACE log_reps, grade_rejirah and retire_doubt, and the thing they
+  // remove is the point: every one of those took the VERDICT from this surface.
+  // log_reps had `correct: BOOLEAN`, grade_rejirah had `result: held|cracked`,
+  // retire_doubt was itself a judgement ("a clean win"). All three were decided by
+  // a fast conversational model mid-sentence, and all three flowed into reps_log —
+  // which nemesis.mjs declares its SOLE truth source — and then into FSRS and into
+  // what he is made to drill for weeks. A wrong "correct" there is not a bad grade,
+  // it is weeks of the wrong work, and there was no way back.
+  // Capture is INSTANT and MODEL-FREE (his answer is safe the moment he gives it,
+  // even if the line drops); judgement is ONE Opus call at round close, against a
+  // named standard, by the same judge on every surface.
+  { name: "bank_answer", description: "BANK ONE ANSWER HE JUST GAVE — you do NOT decide whether it was right. Call the moment he finishes answering, every time, including mid-conversation. type: voice_rep (a question YOU asked that is not one of his locked axes — the normal case) · axis_weld (a Re-Jirah axis a-i from his own capsule) · tape_doubt (a tape-room rematch) · trap · interview · hidden_test · adversarial · scrimmage. concept = the capsule/topic id · axis = a-i for axis_weld · index = the item number for tape_doubt/trap/interview/hidden_test/adversarial/scrimmage · question = EXACTLY what you asked him, verbatim · answer = what he said, as fully as you have it · gut = the word he committed BEFORE answering (knew|shaky|guessed). NO GUT-WORD, NO REP — ask him for it, then call. Nothing is spent and nothing is decided here. Tell him it is banked; do NOT tell him whether he was right, because you do not know yet and guessing is what this door exists to stop.", parameters: { type: "OBJECT", properties: { type: { type: "STRING" }, concept: { type: "STRING" }, axis: { type: "STRING" }, index: { type: "NUMBER" }, question: { type: "STRING" }, answer: { type: "STRING" }, gut: { type: "STRING" } }, required: ["type", "concept", "question", "answer", "gut"] } },
+  { name: "judge_round", description: "CLOSE THE ROUND AND GET THE VERDICTS — call when the drilling stops (he moves on, or says bas/enough/done, or the sitting ends). ONE call grades everything banked since the last one, against his own answer keys where they exist and his own capsule ground where they do not, and dispatches each verdict to the organ that owns it. It takes ~20 seconds; say you are checking his answers and then read the verdicts back to him honestly, including the ones he missed. If it reports items still outstanding, say so — they are judged again, never guessed at.", parameters: { type: "OBJECT", properties: {} } },
   { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
   { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. Build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'. The queue gives you CONCEPTS, not questions: open his own capsule with get_capsule and probe HIS fault-lines a-i — never invent a question when his is on disk. Record each axis with grade_rejirah the moment you judge it.", parameters: { type: "OBJECT", properties: {} } },
-  { name: "grade_rejirah", description: "RECORD ONE RE-JIRAH AXIS — call the instant you have judged an axis in a spoken round, one call per axis, never batched at the end. concept = the capsule id (embeddings/inference/context/tokenization) · axis = a-i · result = held|cracked · gut = the word he committed BEFORE answering (knew|shaky|guessed). This is what makes the round REAL: log_reps banks the rep, this moves the axis — its round number, its next due date, its fluency streak. Without it the controller believes the round never happened. If he never gave a gut-word, ASK him for it before calling; a grade without one is refused by law.", parameters: { type: "OBJECT", properties: { concept: { type: "STRING" }, axis: { type: "STRING" }, result: { type: "STRING" }, gut: { type: "STRING" } }, required: ["concept", "axis", "result", "gut"] } },
+  // grade_rejirah lived here and carried `result: held|cracked` — this surface
+  // deciding an axis. A Re-Jirah axis is now banked with bank_answer(type
+  // "axis_weld"), judged against HIS OWN WELD (which is on disk, and which this
+  // surface was never shown), and dispatched to rejirah.mjs by the judge. The law it
+  // enforced — record each axis the INSTANT it is answered, never saved up, because
+  // a dropped line must not cost him an axis he already defended — is unchanged and
+  // is now enforced by bank_answer, which spends nothing and cannot fail on a model.
   { name: "set_reminder", description: "HIS-VOICE REMINDER — capture his exact words to echo back at a time he named ('remind me at 15:00 to…' / 'yaad dilana 20 minute mein…'). text = VERBATIM his words; at = HH:MM or in_minutes.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, at: { type: "STRING" }, in_minutes: { type: "NUMBER" } }, required: ["text"] } },
   { name: "ratify_interruption", description: "SPOKEN GATE — the captain's one-time ratification of a PROVEN interruption-type (door must already be open on shadow evidence). Call ONLY after his explicit yes to 'may I start offering this unprompted?'", parameters: { type: "OBJECT", properties: { type: { type: "STRING" } }, required: ["type"] } },
   { name: "semantic_recall", description: "\"When did I last mention X / maine kab bola tha\" — semantic search over HIS OWN past words (transcripts, notes, throw-ins, notebook). Returns dates + verbatim snippets.", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
@@ -1981,12 +2001,67 @@ function execTool(name, args, deps = {}) {
         note: due.length ? "conduct these by voice — HIS nine fault-lines from get_capsule are the round (never invent a probe when his is on disk); gut-word BEFORE each answer; grade_rejirah the moment you judge an axis; log_reps closes the FSRS loop. `field_questions`, where present, are REAL interview questions researched off the live web — use them as the pressure AFTER his own axis is answered, never as a replacement for it." : "nothing due — the decay guard is quiet",
       };
     }
-    if (name === "retire_doubt") {
+    // ── BANK, DO NOT JUDGE (BLOCK 2) ────────────────────────────────────────
+    // The three handlers below this one (retire_doubt_legacy, log_reps_legacy,
+    // grade_rejirah_legacy) are FROZEN VERBATIM per the layering law and have NO
+    // live tool declaration pointing at them. They are kept because they are the
+    // record of what the surface used to decide for itself.
+    if (name === "bank_answer") {
+      const type = String(args.type || "voice_rep").trim();
+      const concept = String(args.concept || "").trim().toLowerCase();
+      const gut = String(args.gut || "").trim().toLowerCase();
+      const question = String(args.question || "").trim();
+      const answer = String(args.answer || "").trim();
+      const axis = String(args.axis || "").trim().toLowerCase();
+      const idx = Number.isFinite(Number(args.index)) ? Math.trunc(Number(args.index)) : null;
+      if (!concept) return { ok: false, error: "concept is required — a rep with no topic cannot be judged or filed" };
+      if (!question) return { ok: false, error: "question is required, VERBATIM as you asked it — a rep whose question nobody recorded cannot be judged by anyone, now or in six months" };
+      if (answer.length < 10) return { ok: false, error: "answer is too short to be his answer — bank what he actually said. 'He said nothing' and 'he said the wrong thing' are different facts and this door must never merge them" };
+      // THE GUT-WORD LAW, held at this door too — the fourth writer of the same law
+      // (capture.mjs, rejirah.mjs, gaffer_brain.mjs are the others), and it must give
+      // the same answer or the loosest door becomes the real rule. It is held HERE,
+      // in front of him, because the Gaffer can still ask for the word while the
+      // sitting is live; an error raised after the round is one he cannot fix.
+      if (!["knew", "shaky", "guessed"].includes(gut)) {
+        return { ok: false, error: "GUT-WORD LAW: gut must be knew|shaky|guessed and he must have committed it BEFORE answering. No gut-word, no rep — ask him, then call again." };
+      }
+      if (type === "axis_weld" && !/^[a-i]$/.test(axis)) return { ok: false, error: "axis_weld needs axis a-i — that is which of HIS OWN fault-lines you probed" };
+      if (["tape_doubt", "trap", "interview", "hidden_test", "adversarial", "scrimmage"].includes(type) && idx === null) {
+        return { ok: false, error: `${type} needs index — which item on disk this was` };
+      }
+      // THE REF GRAMMAR IS BUILT HERE, NOT ASKED FOR. Handing a live conversational
+      // model a "concept:index" string to assemble is a malformed ref waiting to
+      // happen, and a malformed ref is a REFUSED capture — i.e. his answer lost.
+      const ref = type === "axis_weld" ? `${concept}:${axis}`
+        : ["tape_doubt", "trap", "interview"].includes(type) ? `${concept}:${idx}`
+          : ["hidden_test", "adversarial", "scrimmage"].includes(type) ? String(idx)
+            : concept;
+      const rt = deps.runtime || runtime;
+      const note = (deps.mode === "scrimmage" ? "scrimmage-voice" : "dugout-voice") + (rt.last_think_ms ? ` think:${rt.last_think_ms}ms` : "");
+      // ONE MEASUREMENT = ONE ANSWER. Same rule the old batch door held: a voice turn
+      // stamps a single captain_think, so it rides exactly one rep and is cleared on
+      // consumption — a stale stamp re-used on the next answer would be a fabricated
+      // latency, and three gates read that number.
+      const think = Number.isInteger(rt.last_think_ms) && rt.last_think_ms >= 0 ? rt.last_think_ms : null;
+      rt.last_think_ms = null;
+      const argv = ["capture", type, ref, "--gut", gut, "--asked", question, "--note", note];
+      if (/^[a-i]$/.test(axis)) argv.push("--axis", axis);
+      if (think !== null) argv.push("--latency", String(think));
+      const said = String(sh("gaffer_brain.mjs", argv, answer) || "").trim();
+      return { ok: true, banked: true, type, ref, gut, judged: false, said: said.slice(0, 300),
+        tell_him: "banked — say it is recorded and move on. You do NOT know yet whether it was right, and saying so would be the guess this door removes." };
+    }
+    if (name === "judge_round") {
+      const said = String(sh("gaffer_brain.mjs", ["judge-round"]) || "").trim();
+      return { ok: true, verdicts: said.slice(0, 2000),
+        tell_him: "read these back honestly, including the misses. An item reported outstanding was NOT graded — say that plainly rather than filling the gap." };
+    }
+    if (name === "retire_doubt_legacy") {
       sh("doubtminer.mjs", ["retire", String(args.capsule), String(args.doubt_index)]);
       const t = readJson(join(STATE_DIR, "tape_room.json")) || {};
       return { ok: true, doubts_retired: t.doubts_retired };
     }
-    if (name === "log_reps") {
+    if (name === "log_reps_legacy") {
       const valid = (args.reps || []).filter(r => ["knew", "shaky", "guessed"].includes(r.confidence));
       if (!valid.length) return { ok: false, error: "no valid reps (gut-word missing)" };
       const rt = deps.runtime || runtime;
@@ -2149,7 +2224,7 @@ function execTool(name, args, deps = {}) {
     // refuses a grade with no gut-word and this door inherits that refusal
     // verbatim instead of re-implementing it and drifting from it.
     // ------------------------------------------------------------------------
-    if (name === "grade_rejirah") {
+    if (name === "grade_rejirah_legacy") {
       const concept = String(args.concept || "").trim();
       const axis = String(args.axis || "").trim().toLowerCase();
       const result = String(args.result || "").trim().toLowerCase();
@@ -2986,7 +3061,10 @@ async function selftest() {
   // owner has read it, so the suite snapshots the CONTENT here — inside the shell
   // call, exactly where capture.mjs reads it — instead of re-opening a path that
   // (correctly) no longer exists afterwards.
-  const sh = (script, argv, input) => { calls.push({ script, argv, body: (argv && argv[0] === "paste" && argv[1] && existsSync(argv[1])) ? readFileSync(argv[1], "utf8") : null }); return ""; };
+  // `input` is recorded from 17 Aug (BLOCK 2): his spoken answer now travels on
+  // STDIN to gaffer_brain.mjs capture rather than inside a temp JSON file, and a
+  // test that cannot see what was handed over cannot prove the answer survived.
+  const sh = (script, argv, input) => { calls.push({ script, argv, input: input === undefined ? null : String(input), body: (argv && argv[0] === "paste" && argv[1] && existsSync(argv[1])) ? readFileSync(argv[1], "utf8") : null }); return ""; };
   const append = (path, text) => { appends.push({ path, text }); };
 
   const today = execTool("get_today", {}, { sh });
@@ -2994,30 +3072,63 @@ async function selftest() {
   const tape = execTool("get_tape_room", {}, { sh });
   assert("get_tape_room caps at 5 eligible", Array.isArray(tape.eligible) && tape.eligible.length <= 5);
 
-  execTool("retire_doubt", { capsule: "tokenization", doubt_index: 3 }, { sh });
-  assert("retire routes through doubtminer (owner writes)", calls.some(c => c.script === "doubtminer.mjs" && c.argv.join(" ") === "retire tokenization 3"));
+  // ── BLOCK 2 · THIS SURFACE NO LONGER DECIDES WHAT IS TRUE (17 Aug 2026) ────
+  // These assertions REPLACE the ones that proved retire_doubt reached doubtminer
+  // and that log_reps reached `capture.mjs paste`. Both of those were true, and both
+  // were the defect: the verdict inside them came from this surface's own fast model.
+  // Every claim they made about the DATA is re-asserted below on the new lane —
+  // the gut-word law, the think-time, the single-use stamp — because a reroute that
+  // quietly drops a measurement is a worse bug than the one it fixes.
+  assert("BLOCK 2 · the three self-judging doors are GONE from the live declarations — log_reps carried `correct`, grade_rejirah carried `result`, retire_doubt WAS a verdict",
+    !TOOL_DECLS.some(t => ["log_reps", "grade_rejirah", "retire_doubt"].includes(t.name)));
+  assert("BLOCK 2 · …and no live tool takes a verdict from this surface at all — not `correct`, not `result`, under any name",
+    TOOL_DECLS.every(t => {
+      const p = Object.keys(((t.parameters || {}).properties) || {});
+      return !p.includes("correct") && !p.includes("result") && !p.includes("verdict");
+    }));
+  {
+    const self = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("BLOCK 2 · they are FROZEN, not deleted (layering law) — the record of what the surface used to decide for itself",
+      self.includes('name === "log_reps' + '_legacy"') && self.includes('name === "grade_rejirah' + '_legacy"') && self.includes('name === "retire_doubt' + '_legacy"'));
+  }
+  assert("BLOCK 2 · the banking door and the closing door both exist, because capture without judgement is a queue nobody empties",
+    TOOL_DECLS.some(t => t.name === "bank_answer") && TOOL_DECLS.some(t => t.name === "judge_round"));
 
-  const bad = execTool("log_reps", { reps: [{ concept: "x", question: "q", confidence: "maybe", correct: true }] }, { sh });
-  assert("GUT-WORD LAW — rep without knew/shaky/guessed rejected", bad.ok === false);
-  const good = execTool("log_reps", { reps: [{ concept: "embeddings", axis: "c", question: "cosine kyun", confidence: "shaky", correct: true }] }, { sh });
-  assert("voice reps route through capture.mjs paste (the real contract)", good.ok === true && calls.some(c => c.script === "capture.mjs" && c.argv[0] === "paste"));
+  const badGut = execTool("bank_answer", { type: "voice_rep", concept: "x", question: "q", answer: "kuch to bola hi hoga yahan", gut: "maybe" }, { sh });
+  assert("GUT-WORD LAW — an answer without knew/shaky/guessed is rejected AT THIS DOOR, while the Gaffer can still ask him for it", badGut.ok === false);
+  const noQ = execTool("bank_answer", { type: "voice_rep", concept: "x", question: "", answer: "kuch to bola hi hoga yahan", gut: "knew" }, { sh });
+  assert("BLOCK 2 · a rep whose QUESTION nobody recorded is refused — it could never be judged, by anyone, now or in six months", noQ.ok === false);
+  const noA = execTool("bank_answer", { type: "voice_rep", concept: "x", question: "q", answer: "haan", gut: "knew" }, { sh });
+  assert("BLOCK 2 · 'he said nothing' and 'he said the wrong thing' are different facts — a too-short answer is refused, never banked as a miss", noA.ok === false);
+
   const rtOnce = { last_think_ms: 4200 };
-  execTool("log_reps", { reps: [{ concept: "attention", question: "q", confidence: "knew", correct: true }] }, { sh, runtime: rtOnce });
-  const lastPaste = calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop();
-  const pasted = JSON.parse(lastPaste.body);
-  assert("THINK-TIME rides the rep note (true latency, repaired)", pasted[0].note === "dugout-voice think:4200ms");
-  // WIRE GUARD (10 Aug 2026) — the note is prose nobody parses; latency_ms is the
-  // field learning_state.mjs:356 and touchline.mjs:262/290 actually read. Before this
-  // wire, 0 of 21 live reps carried one while the door was measuring it every turn.
-  // These three fail the moment the number stops reaching the gates, gets smeared
-  // across a batch, or gets re-stamped from a stale runtime.
-  assert("THINK-TIME LANDS IN latency_ms — the field the fluency + struggle gates read", pasted[0].latency_ms === 4200);
-  assert("a stamp is consumed ONCE (runtime cleared — no stale latency on the next batch)", rtOnce.last_think_ms === null);
-  execTool("log_reps", { reps: [{ concept: "attention", question: "q1", confidence: "knew", correct: true }, { concept: "attention", question: "q2", confidence: "shaky", correct: true }] }, { sh, runtime: { last_think_ms: 900 } });
-  const pastedPair = JSON.parse(calls.filter(c => c.script === "capture.mjs" && c.argv[0] === "paste").pop().body);
-  assert("ONE measurement is never smeared across a batch (2 reps → latency_ms null)", pastedPair.length === 2 && pastedPair.every(r => r.latency_ms === null));
-  // E2E audit 25 Jul 2026 — his private reps must not linger in the shared %TEMP%
-  assert("the rep hand-off file is DELETED once capture has read it (nothing personal left in %TEMP%)", !existsSync(lastPaste.argv[1]));
+  const good = execTool("bank_answer", { type: "voice_rep", concept: "embeddings", axis: "c", question: "cosine kyun, dot product kyun nahi?", answer: "kyunki cosine sirf direction dekhta hai, length nahi — lambe document ka score bada nahi ho jata", gut: "shaky" }, { sh, runtime: rtOnce });
+  const banked = calls.filter(c => c.script === "gaffer_brain.mjs" && c.argv[0] === "capture").pop();
+  assert("BLOCK 2 · a voice rep goes to the JUDGE's capture door, never straight into his study record",
+    good.ok === true && good.judged === false && !!banked
+    && !calls.some(c => c.script === "capture.mjs" && (c.argv[0] === "paste" || c.argv[0] === "rep")));
+  assert("BLOCK 2 · …carrying his question VERBATIM and his answer WHOLE (the answer travels on stdin, where nothing truncates it)",
+    banked.argv[banked.argv.indexOf("--asked") + 1] === "cosine kyun, dot product kyun nahi?"
+    && String(banked.input).includes("length nahi"));
+  // WIRE GUARD, CARRIED OVER FROM THE OLD DOOR (10 Aug 2026). The note is prose
+  // shadow.mjs regexes; latency_ms is the field learning_state's isColdFast and
+  // touchline's latRising/allFastKnew actually read, and all three treat null as
+  // "no objection" — so a reroute that dropped it would have un-measured the one
+  // number the organism measures, silently, with nothing going red.
+  assert("THINK-TIME rides the rep note (true latency, carried across the reroute)",
+    banked.argv[banked.argv.indexOf("--note") + 1] === "dugout-voice think:4200ms");
+  assert("THINK-TIME LANDS IN --latency — the field the fluency + struggle gates read",
+    banked.argv[banked.argv.indexOf("--latency") + 1] === "4200");
+  assert("a stamp is consumed ONCE (runtime cleared — no stale latency on the next answer)", rtOnce.last_think_ms === null);
+  const axisBank = execTool("bank_answer", { type: "axis_weld", concept: "tokenization", axis: "a", question: "tokenization kya hai?", answer: "text ko tukdon mein todna aur har tukde ko number dena", gut: "knew" }, { sh });
+  const axisCall = calls.filter(c => c.script === "gaffer_brain.mjs" && c.argv[0] === "capture").pop();
+  assert("BLOCK 2 · the ref grammar is built HERE, not asked of a live model — a malformed ref is a refused capture, i.e. his answer lost",
+    axisBank.ok === true && axisCall.argv[1] === "axis_weld" && axisCall.argv[2] === "tokenization:a");
+  assert("BLOCK 2 · an axis_weld with no axis letter is refused rather than filed against the wrong fault-line",
+    execTool("bank_answer", { type: "axis_weld", concept: "tokenization", question: "q", answer: "kuch to bola hi hoga yahan", gut: "knew" }, { sh }).ok === false);
+  execTool("judge_round", {}, { sh });
+  assert("BLOCK 2 · closing the round is ONE call to the judge, and this surface never grades anything itself",
+    calls.some(c => c.script === "gaffer_brain.mjs" && c.argv[0] === "judge-round"));
   assert("unknown tool → error not crash", "error" in execTool("nope", {}, { sh }));
 
   execTool("take_note", { text: "socha tha embeddings deterministic hote" }, { sh, append });
@@ -3061,9 +3172,14 @@ async function selftest() {
   }
   assert("all three personas exist; today's picked deterministically", Object.keys(PERSONAS).length === 3 && PERSONAS[todaysPersona(new Date(2026, 6, 12))] !== undefined);
   assert("hedge counter hears Hinglish + English hedges", countHedges("CAPTAIN: Shayad yeh matlab I think sahi hai") === 3 && countHedges("CAPTAIN: cosine normalizes magnitude, full stop") === 0);
-  execTool("log_reps", { reps: [{ concept: "rag", question: "q", confidence: "guessed", correct: false }] }, { sh, mode: "scrimmage", runtime: { last_think_ms: null } });
-  const scrimPaste = JSON.parse(calls.filter(c => c.script === "capture.mjs").pop().body);
-  assert("scrimmage reps tagged scrimmage-voice (declared surface)", scrimPaste[0].note === "scrimmage-voice");
+  // BLOCK 2 · the scrimmage surface banks like every other one, and the ONE thing
+  // that must survive the reroute is the note: shadow.mjs regexes it for
+  // /scrimmage/i, so losing it would make every voice scrimmage invisible to the
+  // organ that watches his mock performance.
+  execTool("bank_answer", { type: "voice_rep", concept: "rag", question: "chunking kaise karoge?", answer: "overlap ke saath fixed size, phir rerank kar dunga upar se", gut: "guessed" }, { sh, mode: "scrimmage", runtime: { last_think_ms: null } });
+  const scrimCall = calls.filter(c => c.script === "gaffer_brain.mjs" && c.argv[0] === "capture").pop();
+  assert("scrimmage reps tagged scrimmage-voice (declared surface — the tag shadow.mjs actually reads)",
+    scrimCall.argv[scrimCall.argv.indexOf("--note") + 1] === "scrimmage-voice");
   const rep = execTool("scrimmage_report", { total_25: 17, weakest: ["eval metrics", "context handoff"], drill: "reconstruct the eval harness cold", persona: "scenario_bomb" }, { sh, append });
   assert("scrimmage report filed with score + cracks + hedge line", rep.ok === true && appends.some(a => a.text.includes("17/25") && a.text.includes("eval metrics") && a.text.includes("hedge-density")));
   // WIRE GUARD (dead-wire sweep, 11 Aug 2026) — the .md above is the human page
@@ -3224,7 +3340,7 @@ async function selftest() {
   assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 34);   // 33 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 33);   // 33 since BLOCK 2 (17 Aug: -log_reps -grade_rejirah -retire_doubt, +bank_answer +judge_round — this surface stopped deciding what is true); 34 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
   assert("shadow-gate section live in the constitution", cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread + memory law live in the constitution", cfg.system.includes("THE DAY THREAD") && cfg.system.includes("semantic_recall"));
   assert("conductor + modality laws travel in the constitution", cfg.system.includes("RE-JIRAH CONDUCTOR") && cfg.system.includes("never conduct blind"));
@@ -3276,8 +3392,8 @@ async function selftest() {
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
-      g.tools[0].functionDeclarations.length === 34
-      && ["get_capsule", "grade_rejirah", "log_reps", "get_organism", "get_club_report", "get_context", "get_card", "get_mission"]
+      g.tools[0].functionDeclarations.length === 33
+      && ["get_capsule", "bank_answer", "judge_round", "get_organism", "get_club_report", "get_context", "get_card", "get_mission"]
         .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
       ["ONE IDEA PER TURN", "verbatim padhun ya samjhaun?", "HIS ANCHORS STAY", "SAMJHAO"]
@@ -4351,7 +4467,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("33 club tools now (14 Aug Phase 8: get_card + get_mission — the two doors to the data it was TOLD about and could never open; that gap is a named confabulation root cause)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34);
+    assert("33 club tools now (17 Aug BLOCK 2: the three self-judging doors out, bank_answer + judge_round in — 14 Aug Phase 8 added get_card + get_mission, the doors to data it was TOLD about and could never open)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 33);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -4378,7 +4494,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 33 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):

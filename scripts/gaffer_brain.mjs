@@ -863,6 +863,16 @@ export const VERDICT_TYPES = {
   interview: { key: true, standard: "dossier", owner: "capture", verdicts: ["interview_grade", "not_yet"], asks: "Would this answer survive a staff engineer asking it in a real loop — mechanism named, trade-off named, limit named?" },
   trap: { key: true, standard: "capsule", owner: "capture", verdicts: ["avoided", "fell_in"], asks: "Did he fall into this KNOWN pit, the one his own capsule warns about?" },
   doubt_quality: { key: false, standard: "cold_reader", owner: "none", verdicts: ["cold_readable", "not_cold_readable"], asks: "FORGE_SPEC Gate 1/2: would a cold reader six months from now understand this doubt without the conversation around it?" },
+  // THE NINTH, added 17 Aug 2026 with BLOCK 2, and it exists because of what BLOCK 2
+  // takes away. The Gaffer used to ask a question mid-conversation and DECIDE the
+  // answer itself — `log_reps` took a `correct: BOOLEAN` straight from a fast
+  // conversational model, and that boolean entered reps_log, which nemesis.mjs calls
+  // its SOLE truth source. Those questions are not on disk (he is mid-concept, the
+  // capsule is not locked yet), so without a type for them the honest choice would
+  // have been to stop capturing them at all — which would have deleted the lane he
+  // uses most. The question comes from the Gaffer, the GROUND comes from his capsule
+  // when one exists, and the verdict comes from the judge like every other.
+  voice_rep: { key: false, standard: "capsule", owner: "capture", verdicts: ["landed", "missed"], asks: "This was asked out loud, mid-conversation, and it is NOT one of his locked axes — the question is given with the item. Did the answer hold up against his own ground? If there is no ground for this concept, say so rather than grading him against your own idea of the topic." },
 };
 export const STANDARD_NAMES = ["capsule", "dossier", "cold_reader"];
 
@@ -910,7 +920,15 @@ function dossierRedFlags(deps = {}) {
 
 export function standardBlock(name, deps = {}) {
   if (name === "capsule") {
-    return `THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE. The answer key given with the item is prose HE wrote and locked; it is authoritative and your own view of the topic is not. Grade whether the load-bearing mechanism came back, in ANY words — never whether he matched the phrasing.`;
+    // COVERS BOTH HALVES DELIBERATELY (17 Aug 2026). Some capsule-standard items
+    // carry a key he wrote and some carry only his ground — and the third case,
+    // a concept with NO capsule at all, is the one that matters most: he is mid-way
+    // through hallucinations right now and nothing about it is locked. Saying "judge
+    // it anyway" there is how a fast model's taste became a permanent fact about him.
+    return `THE STANDARD FOR THIS TYPE: HIS OWN CAPSULE — never your own view of the topic.
+· If an ANSWER KEY is given with the item, it is prose HE wrote and locked, and it is authoritative. Grade whether the load-bearing mechanism came back, in ANY words; never whether he matched the phrasing.
+· If no key is given, judge against HIS OWN GROUND below — his mechanism, his pits, his interview lines for that concept.
+· If there is NO ground for the concept either, that concept is not locked yet. Say so in "why" and return NO verdict for that item. An ungraded item is honest and is asked again; a verdict invented from your own sense of the subject becomes a permanent fact about him and cannot be undone from here.`;
   }
   if (name === "cold_reader") {
     const sec = sectionOf(deps.specMd !== undefined ? deps.specMd : readTextFile(SPEC_FILE), /^### COLD-READER STANDARD.*$/m);
@@ -1092,6 +1110,16 @@ export function gradeMaterial(type, ref, deps = {}) {
     });
   }
   if (type === "doubt_quality") return { concept: String(ref).split(":")[0] || null, label: "a new doubt he just wrote", asked: null, key: null, standard: std };
+  if (type === "voice_rep") {
+    // THE QUESTION COMES FROM THE CALLER, because this is the one type whose
+    // question is not on disk — the Gaffer asked it live. It is still REQUIRED:
+    // a rep whose question nobody recorded cannot be judged by anyone, now or in
+    // six months, so it is refused at the door rather than banked as a mystery.
+    const asked = String(deps.asked || "").trim();
+    const concept = String(ref || "").split(":")[0].trim();
+    if (!asked || !concept) return null;
+    return { concept, label: `voice rep${deps.axis ? ` · axis ${deps.axis}` : ""}`, asked, key: null, standard: std };
+  }
   return null;
 }
 
@@ -1156,6 +1184,19 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     standard: mat.standard || null,
     key: mat.key ? clip(mat.key, 4000) : null,     // now non-null for four of the eight — see VERDICT_TYPES
     extra: mat.extra || null,
+    // ── WHAT THE OLD DOOR MEASURED MUST SURVIVE THE NEW ONE (BLOCK 2, 17 Aug) ──
+    // dugout's log_reps carried three things into reps_log that no other lane
+    // produces: the AXIS, the free-text NOTE that shadow.mjs regexes for /scrimmage/i,
+    // and latency_ms — the measured gap between the Gaffer's audio ending and his
+    // voice starting. THREE gates read latency_ms (learning_state's isColdFast,
+    // touchline's latRising and allFastKnew) and every one of them treats null as
+    // "no objection", so routing reps through the judge without carrying it would
+    // have silently un-measured the one number the organism actually measures — and
+    // nothing would have gone red, because null is the shape it already tolerates.
+    // Carried here, handed to capture.mjs by ownerCommand at dispatch.
+    axis: /^[a-i]$/.test(String(deps.axis || "")) ? String(deps.axis) : null,
+    latency_ms: Number.isInteger(deps.latencyMs) && deps.latencyMs >= 0 ? deps.latencyMs : null,
+    note: deps.note ? clip(String(deps.note), 300) : null,
     spoken: clip(said, 4000),
   };
   if (!deps.dry) { try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); appendFileSync(GRADE_QUEUE, JSON.stringify(row) + "\n"); } catch { } }
@@ -1187,6 +1228,26 @@ export function outstandingGrades(rows) {
 // A JUDGING HEAD IS THE ONE SHAPE THAT FITS: it is naturally large (eight verdict
 // types + three standards + his fingerprint), and a round fires several judgements
 // WITHIN MINUTES. This is what the split was built for and never got.
+//
+// ⚠ MEASURED A/B, 17 Aug 2026 — SAME head, SAME two bodies, both ways, 4 opus calls.
+// The work order's acceptance asked for "cache_creation far below the first" and
+// THAT DID NOT HAPPEN; what happened is smaller and still worth having:
+//     SPLIT   call 1  cw 29,438  cr     0   ·  call 2  cw 24,803  cr 4,633
+//     INLINE  call 1  cw 29,534  cr     0   ·  call 2  cw 29,532  cr     0
+//     pair totals — split 74,769 weighted · inline 81,397 · SPLIT 8.1% cheaper
+// Two things follow, and both correct the plan rather than confirming it:
+//   1. THE SPLIT IS THE ONLY THING PRODUCING ANY CACHE READ AT ALL. Inlining the
+//      identical head scores a flat ZERO on the second call. So the door being open
+//      is what buys the reuse, and it stays.
+//   2. THE WIN IS 8%, NOT AN ORDER OF MAGNITUDE, because ~25,000 tokens of
+//      cache_creation happen on EVERY call regardless — the CLI's own context, which
+//      no caller here controls. The head is ~2,600 tokens of a ~29,000-token write.
+// AND THE PLAN'S COST FIGURE WAS 2x OPTIMISTIC: it estimated "a cached opus
+// judgement ~15,000-20,000 weighted". Measured: 35,000-40,000. The conclusion it
+// drew still holds — one judgement grades a WHOLE ROUND, and ~13,00,000 freed from
+// the DMN buys ~36 rounds a day, not the ~70-85 it claimed, which is still far more
+// than he can sit through. Read the live figure, never this comment:
+// `node scripts/brain.mjs status` prints the truth lane's reuse beside its spend.
 //
 // ALL EIGHT TYPES ALWAYS RIDE, even when the round contains one. That is not
 // waste — it is the invariance. A head that carried "the types in THIS round" would
@@ -1305,9 +1366,21 @@ export function ownerCommand(s) {
     // A rep is the organism's unit of studied work, and capture.mjs is its only
     // door. The pass/fail mapping is declared per type rather than inferred, so a
     // new verdict word can never silently become a "miss he never made".
-    const won = { passed: true, failed: false, defended: true, conceded: true, collapsed: false, interview_grade: true, not_yet: false, avoided: true, fell_in: false }[s.verdict];
+    const won = { passed: true, failed: false, defended: true, conceded: true, collapsed: false, interview_grade: true, not_yet: false, avoided: true, fell_in: false, landed: true, missed: false }[s.verdict];
     if (won === undefined) return null;
-    return { organ: "capture.mjs", argv: ["rep", "--concept", s.concept || String(s.ref).split(":")[0], "--q", clip(s.label || s.ref, 160), "--gut", s.gut, "--correct", String(won)] };
+    // THE QUESTION HE WAS ACTUALLY ASKED, not a label. For a voice_rep the label is
+    // the generic "voice rep"; reps_log is a lifelong bank and a row reading
+    // "voice rep · knew · true" is unreadable six months from now. `asked` is the
+    // question the Gaffer really put to him, so it is what the rep records.
+    const argv = ["rep", "--concept", s.concept || String(s.ref).split(":")[0],
+      "--q", clip(s.asked || s.label || s.ref, 160), "--gut", s.gut, "--correct", String(won)];
+    // Everything the old direct door carried, carried here too — see gradeCapture's
+    // row: the axis feeds the fluency ladder, latency_ms feeds three gates that read
+    // null as "no objection", and the note is what shadow.mjs scans for /scrimmage/i.
+    if (s.axis) argv.push("--axis", s.axis);
+    if (Number.isInteger(s.latency_ms) && s.latency_ms >= 0) argv.push("--latency", String(s.latency_ms));
+    if (s.note) argv.push("--note", s.note);
+    return { organ: "capture.mjs", argv };
   }
   // doubt_quality has no owner organ today — the verdict lives in this organ's own
   // journal and is read by the forge's Gate 1/Gate 2 review. Named, not pretended.
@@ -1381,6 +1454,11 @@ export async function gradeJudge(deps = {}) {
     settled.push({
       v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: istDay(now),
       type: it.type, ref: it.ref, concept: it.concept, label: it.label, gut: it.gut, verdict,
+      // carried from the CAPTURE row, unchanged, so the owner receives everything the
+      // old direct-to-capture door used to hand it (see the note on gradeCapture's row)
+      axis: it.axis || null, latency_ms: Number.isInteger(it.latency_ms) ? it.latency_ms : null, note: it.note || null,
+      asked: it.asked ? clip(it.asked, 300) : null,
+      standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
       missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
       why: clip(g.why, 300), engine: "opus", pass: 1,
     });
@@ -1586,7 +1664,14 @@ async function main() {
   //               hidden_test          test index        · adversarial/scrimmage  drill index
   if (mode === "capture") {
     const flag = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : undefined; };
-    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") });
+    // --asked is REQUIRED for voice_rep and ignored elsewhere (every other type's
+    // question is on disk). --axis / --latency / --note carry what the old
+    // dugout->capture.mjs door carried, so nothing measured is lost by the reroute.
+    const lat = flag("latency");
+    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") }, {
+      asked: flag("asked"), axis: flag("axis"), note: flag("note"),
+      latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
+    });
     if (!r.ok) { console.log(r.say); process.exit(1); }
     const ground = r.has_key ? "against his own weld" : "NO answer key exists for this type — it is judged against his own capsule ground";
     console.log(`gaffer_brain: captured ${r.row.type} · ${r.row.label} · gut ${r.row.gut} · ${ground}. Nothing was judged and nothing was spent.`);
@@ -1874,6 +1959,12 @@ function selftest2(stub, S) {
           "^### COLD-READER STANDARD.*$",                             // FORGE_SPEC §3, the doubt-quality bar
           "^\\|[\\s|:-]+\\|$",                                        // a markdown table's divider row
           "\\*\\*",                                                   // bold markers, stripped out of a quoted cell
+          // BLOCK 2, 17 Aug 2026 — the axis letter. a-i are the NINE FIXED SLOTS of the
+          // capsule schema (FORGE_SPEC's fault-lines), not words of his; the identical
+          // literal already lives in capture.mjs, rejirah.mjs and dugout.mjs for the same
+          // reason. It validates a slot name the MACHINE assigns and cannot test his
+          // phrasing, which is what the ruling is about.
+          "^[a-i]$",
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -1933,8 +2024,8 @@ function selftest2(stub, S) {
       // DECLARES keyed must actually arrive with a key, on his real files.
       {
         const KEYED = Object.entries(VERDICT_TYPES).filter(([, t]) => t.key).map(([k]) => k).sort();
-        assert("THE EIGHT · four of the eight have an answer key of his own on disk — and the other four are keyless because nothing is written, not because nobody looked",
-          Object.keys(VERDICT_TYPES).length === 8
+        assert("THE NINE · four have an answer key of his own on disk — and the other five are keyless because nothing is written, not because nobody looked",
+          Object.keys(VERDICT_TYPES).length === 9
           && KEYED.join(",") === "axis_weld,interview,tape_doubt,trap",
           `keyed: ${KEYED.join(",")}`);
         assert("THE EIGHT · every type declares a CLOSED verdict set and the organ that RECORDS it — nothing here writes another organ's file",
@@ -2026,6 +2117,9 @@ function selftest2(stub, S) {
             adversarial: ["0", { drills: DR }],
             scrimmage: ["0", { drills: DR }],
             doubt_quality: ["tokenization:new", {}],
+            // the ninth (BLOCK 2): its question is not on disk — the Gaffer asked it
+            // live — so the caller supplies it, and a capture without one is refused.
+            voice_rep: ["hallucinations", { asked: "Hallucination kya hai, ek line mein?" }],
           };
           const wrong = Object.entries(VERDICT_TYPES).map(([t, decl]) => {
             const [ref, d] = FIX[t] || [];
@@ -2034,7 +2128,7 @@ function selftest2(stub, S) {
             const has = mat.key != null && String(mat.key).trim().length > 0;
             return has === !!decl.key ? null : `${t}: declared key=${!!decl.key} but got ${has}`;
           }).filter(Boolean);
-          assert("ACCEPTANCE 3 · every type DECLARED keyed really arrives with a key, and every keyless one really has none — all eight branches driven, none described",
+          assert("ACCEPTANCE 3 · every type DECLARED keyed really arrives with a key, and every keyless one really has none — all nine branches driven, none described",
             wrong.length === 0, wrong.join(" | "));
           assert("ACCEPTANCE 3 · …and every branch stamps the standard it will be judged against onto the material itself",
             Object.entries(FIX).every(([t, [ref, d]]) => {

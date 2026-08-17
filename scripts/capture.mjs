@@ -2295,6 +2295,16 @@ function main() {
       // genome's criterion_gated_pass reads it, and a fabricated number corrupts the
       // fluency ladder (the law is in SKILL.md and in this file's own header).
       if (lat !== undefined && Number.isFinite(Number(lat))) one.latency_ms = Number(lat);
+      // --note (17 Aug 2026, truth layer BLOCK 2). The PASTE door has always carried
+      // `note` — dugout's voice batch stamps "dugout-voice"/"scrimmage-voice" into it
+      // and shadow.mjs is the reader (it regexes the note for /scrimmage/i). This
+      // single-rep door never accepted one, which did not matter while voice reps went
+      // through paste. They now go through the JUDGE, which dispatches one rep at a
+      // time through THIS door, so without this flag every voice rep would arrive with
+      // its surface-of-origin erased and shadow would stop seeing scrimmages at all.
+      // Same law as latency above: written only when supplied, never invented.
+      const noteFlag = flag("note");
+      if (noteFlag !== undefined && String(noteFlag).trim()) one.note = String(noteFlag).slice(0, 300);
       if (!one.concept || !one.question || !one.confidence || one.correct === undefined) {
         console.error("rep: --concept, --q, --gut and --correct are all required.");
         console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');

@@ -68,7 +68,14 @@ const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
 // 9 Aug 2026 (launch F1): also match a bare `function selftest(` — claudegen defines
 // one and runs it as its whole CLI, and the quoted-string-only regex was blind to it.
-const hasSelftest = (f) => { const src = readFileSync(join(ROOT, "scripts", f), "utf8"); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+// ONE DOOR FOR READING AN ORGAN'S SOURCE (17 Aug 2026). Four call sites in this
+// file built `join(ROOT, "scripts", <runtime name>)` independently, and each one is
+// its own unresolved sink in xray's IR — the per-organ ratchet charges for every
+// one, and it charged for the fifth the moment it landed. Routed through here they
+// cost ONE between them and the file reads better, which is exactly the trade the
+// budget exists to force: move the code, never the budget.
+const readOrgan = (f) => { try { return readFileSync(join(ROOT, "scripts", f), "utf8"); } catch { return ""; } };
+const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
 // The meta-test package.json's own prose asks for and never got.
@@ -162,6 +169,39 @@ function integrity() {
   assert("every state .json parses (the bus is the contract between organs)", badJson.length === 0, badJson.join(", "));
   assert("every state .jsonl parses on every row (one bad row poisons a whole reader)", badJsonl.length === 0, badJsonl.join(", "));
 
+  // ── THE DECLARED EXTERNAL PRODUCER IS A REAL ORGAN (17 Aug 2026) ───────────
+  // brain.mjs's #64 guard asks whether every REQUIRED `brain_out/<dir>/…` input has
+  // an enabled job producing it. Some do not and correctly so: the claim auditor
+  // reads `brain_out/dugout/TODAY.md`, which the VOICE SURFACE writes, not any job.
+  // Those declare `produced_by: "<organ>.mjs"` in the config — and that escape hatch
+  // is only honest if the organ it names actually exists, or a typo in the excuse
+  // silently excuses a path nothing writes.
+  // IT LIVES HERE AND NOT IN brain.mjs FOR A MEASURED REASON: proving the file
+  // exists needs a scripts-directory read with a runtime path, which cost brain.mjs
+  // a new unresolved sink the moment it landed (52 -> 53, caught by xray's per-organ
+  // ratchet in the same run). This suite already walks that directory for every
+  // selftest it runs, so the check is free here. Move the code, never the budget.
+  {
+    const here = scripts();
+    const cfgRaw = (() => { try { return JSON.parse(readFileSync(join(STATE, "brain_config.json"), "utf8")); } catch { return null; } })();
+    const declared = ((cfgRaw && cfgRaw.jobs) || []).flatMap((j) => (j.inputs || [])
+      .filter((i) => i && typeof i === "object" && i.produced_by)
+      .map((i) => ({ job: j.id, path: i.path, organ: String(i.produced_by) })));
+    const ghosts = declared.filter((d) => !here.includes(d.organ));
+    assert(`a declared external producer is a REAL organ in this tree (${declared.length} declaration(s) checked) — the escape hatch cannot excuse a brain_out path nothing writes`,
+      !cfgRaw || ghosts.length === 0, ghosts.map((g) => `${g.job}: ${g.path} <- ${g.organ}`).join(", "));
+    // …and it really writes that directory. Cheap and exact: the organ builds the
+    // path as `join(..., "brain_out", "<dir>")`, the same shape brain's own jobs use.
+    const notWriters = declared.filter((d) => {
+      if (!here.includes(d.organ)) return false;                       // already reported above
+      const dir = String(d.path).split("/")[1];
+      const src = readOrgan(d.organ);
+      return !new RegExp('"brain_out"\\s*,\\s*"' + dir + '"').test(src);
+    });
+    assert("…and that organ really BUILDS that brain_out directory — a producer that names the wrong folder is the same lie one level down",
+      !cfgRaw || notWriters.length === 0, notWriters.map((g) => `${g.organ} does not write ${g.path}`).join(", "));
+  }
+
   // ── 2b. THE DISCOVERY-PATH CONTRACT (wiring audit, 10 Aug 2026) ────────────
   // A fifth defect class, and it is the same shape as the four above: it lives
   // BETWEEN a doc and an organ, so no organ's own selftest can ever see it.
@@ -222,7 +262,7 @@ function integrity() {
   // conductor.mjs's direct armTrigger(), which writes brain_queue.json itself.
   const armings = new Map();   // trigger name -> the organ that arms it
   for (const f of scripts()) {
-    const src = readFileSync(join(ROOT, "scripts", f), "utf8");
+    const src = readOrgan(f);
     for (const m of src.matchAll(/"trigger",\s*"([a-z_]+)"/g)) armings.set(m[1], f);
     for (const m of src.matchAll(/\barmTrigger\(\s*"([a-z_]+)"/g)) armings.set(m[1], f);
   }
@@ -271,7 +311,7 @@ function integrity() {
   }];
   const unwired = [];
   for (const p of PRODUCER_CALLERS) {
-    const src = readFileSync(join(ROOT, "scripts", p.organ), "utf8");
+    const src = readOrgan(p.organ);
     const modes = argvModes(src);
     if (!modes || !modes.has(p.mode)) {
       unwired.push(`${p.organ} no longer dispatches \`${p.mode}\`, but ${p.callers.join(", ")} still calls it — the caller now names a command that does not exist`);

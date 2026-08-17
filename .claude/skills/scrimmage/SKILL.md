@@ -86,9 +86,25 @@ not apply here — this is the one place they don't).
    this surface the scoring stays yours. Same for the header's "confessional laws
    do not apply here": the code says it in the same breath, `grep -in "one legal
    surface" scripts/dugout.mjs`.)
-5. Emit the 5 reps as a JSON array (surface "gem", track "concept", axis =
-   probed axis, his pre-stated confidence, correct, note "scrimmage") →
-   save to temp file → `node scripts/capture.mjs paste <tmpfile> --chain`.
+5. **⚠ BANK THE FIVE, DO NOT GRADE THEM (17 Aug 2026, THE TRUTH LAYER BLOCK 2).**
+   A scrimmage answered by voice and the same scrimmage answered here used to get
+   verdicts from two different models against two unwritten standards — the exact
+   "it depends which surface he opened" the truth layer exists to end. Per probe,
+   the instant he finishes:
+   `node scripts/gaffer_brain.mjs capture scrimmage <drill-index> --gut <word> --note scrimmage <<< "<what he said>"`
+   — or `voice_rep <concept> --asked "<the probe, verbatim>"` when the probe is not a
+   staged drill row. Then once, after probe 5:
+   `node scripts/gaffer_brain.mjs judge-round`
+   It grades all five in ONE Opus call against the DOSSIER — the real onsite's rounds
+   and its §7 red-flags, quoted from `OPPONENT_SCOUT.md` — and dispatches each rep to
+   `capture.mjs`. The `/25`, the two weakest and the drill in step 4 stay YOURS: those
+   are the examiner's read of the session, not a per-answer verdict, and nothing in
+   code computes them.
+   *(FROZEN, the pre-BLOCK-2 instruction, kept because it is what the paste door still
+   accepts and what a Gem sitting still uses: emit the 5 reps as a JSON array (surface
+   "gem", track "concept", axis = probed axis, his pre-stated confidence, correct, note
+   "scrimmage") → save to temp file → `node scripts/capture.mjs paste <tmpfile> --chain`.
+   Do NOT use it for a scrimmage you ran yourself — that is you grading him.)*
    (corrected 10 Aug 2026, two things:
    (a) THE FIELD LIST WAS INCOMPLETE, and a rep built from it alone is REJECTED
    at the door — capture's validator also demands `ts` (a string that actually

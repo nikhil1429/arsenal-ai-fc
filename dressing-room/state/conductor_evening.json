@@ -1,7 +1,7 @@
 {
-  "started": "2026-08-16T18:13:25.214Z",
-  "finished": "2026-08-16T18:13:38.870Z",
-  "total_ms": 13544,
+  "started": "2026-08-17T18:26:14.646Z",
+  "finished": "2026-08-17T18:26:28.241Z",
+  "total_ms": 13513,
   "ran": 11,
   "ok": 11,
   "failed": 0,
@@ -22,7 +22,7 @@
     {
       "id": "bell",
       "ok": true,
-      "ms": 756,
+      "ms": 1314,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -36,7 +36,7 @@
     {
       "id": "scorer",
       "ok": true,
-      "ms": 553,
+      "ms": 940,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -50,7 +50,7 @@
     {
       "id": "scoreboard",
       "ok": true,
-      "ms": 1021,
+      "ms": 1818,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -64,7 +64,7 @@
     {
       "id": "nikhil-model",
       "ok": true,
-      "ms": 515,
+      "ms": 703,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -78,7 +78,7 @@
     {
       "id": "setpiece",
       "ok": true,
-      "ms": 913,
+      "ms": 919,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -92,7 +92,7 @@
     {
       "id": "doubtminer",
       "ok": true,
-      "ms": 547,
+      "ms": 798,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -106,7 +106,7 @@
     {
       "id": "physio-pm",
       "ok": true,
-      "ms": 398,
+      "ms": 525,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -120,7 +120,7 @@
     {
       "id": "examiner",
       "ok": true,
-      "ms": 270,
+      "ms": 449,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -134,7 +134,7 @@
     {
       "id": "wall-pm",
       "ok": true,
-      "ms": 728,
+      "ms": 577,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -148,7 +148,7 @@
     {
       "id": "scout",
       "ok": true,
-      "ms": 867,
+      "ms": 329,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -162,7 +162,7 @@
     {
       "id": "wallpaper",
       "ok": true,
-      "ms": 6976,
+      "ms": 5141,
       "exit": 0,
       "wrote": null,
       "produced": null,
