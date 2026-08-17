@@ -169,6 +169,36 @@ function integrity() {
   assert("every state .json parses (the bus is the contract between organs)", badJson.length === 0, badJson.join(", "));
   assert("every state .jsonl parses on every row (one bad row poisons a whole reader)", badJsonl.length === 0, badJsonl.join(", "));
 
+  // ── EVERY READER OF reps_log HONOURS A CORRECTION (17 Aug 2026, BLOCK 4) ──
+  // A verdict about him can now be walked back by a new row naming the old one, and
+  // reps_log stays append-only — so a reader that does NOT filter the superseded row
+  // keeps acting on a judgement that was already taken back. That is a defect BETWEEN
+  // organs, which is exactly the class no organ's own selftest can see: fifteen files
+  // read that log, each with its own reader, and every one of them would stay green.
+  // MEASURED when this landed: 15 files read it; 5 own a private loadReps (capture,
+  // nemesis, calibration, learning_state, fsrs) and 10 read it raw through readLines.
+  // The rule is one line — pass it through capture.mjs's supersedeReps, because
+  // capture is the SOLE WRITER and therefore owns what supersession means.
+  {
+    const readers = scripts().filter((f) => {
+      const src = readOrgan(f);
+      return src.includes("reps_log.jsonl") && !/^\s*\/\//.test(src);
+    }).filter((f) => {
+      const src = readOrgan(f);
+      // only files that actually LOAD rows from it — a mention in a comment, a path
+      // constant used for an existence check, or an archiver tailing bytes is not a
+      // reader of verdicts.
+      return /readLines\(join\(STATE_DIR, "reps_log\.jsonl"\)\)/.test(src) || /function loadReps\(/.test(src);
+    });
+    const deaf = readers.filter((f) => !readOrgan(f).includes("supersedeReps"));
+    assert(`every organ that LOADS reps from reps_log honours a correction (${readers.length} reader(s) found) — a superseded verdict must not keep deciding what he drills`,
+      deaf.length === 0, deaf.length ? `not filtering: ${deaf.join(", ")}` : "");
+    // …and the guard is not vacuous: it must actually be finding the readers.
+    assert("…and this check really found them — capture, nemesis, calibration, learning_state and fsrs are all in the set it walked",
+      ["capture.mjs", "nemesis.mjs", "calibration.mjs", "learning_state.mjs", "fsrs.mjs"].every((f) => readers.includes(f)),
+      `walked: ${readers.join(", ")}`);
+  }
+
   // ── THE DECLARED EXTERNAL PRODUCER IS A REAL ORGAN (17 Aug 2026) ───────────
   // brain.mjs's #64 guard asks whether every REQUIRED `brain_out/<dir>/…` input has
   // an enabled job producing it. Some do not and correctly so: the claim auditor

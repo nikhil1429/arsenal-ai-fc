@@ -72,6 +72,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { marketStats, deadVerdict, laplace, loadConfig as twinConfig } from "./twin.mjs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -385,7 +386,7 @@ const countBy = (edges) => {
 // live fact deps for a given day (snapshot files only count when their OWN day
 // field matches — the three-valued law's mechanical form)
 function liveFactDeps() {
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+  const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
   const outcomes = readLines(join(STATE_DIR, "brain_outcomes.jsonl"));
   const last = new Map();
   for (const r of outcomes) last.set(`${r.day}|${r.kind}|${r.subject}`, r);

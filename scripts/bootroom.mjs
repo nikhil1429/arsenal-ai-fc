@@ -46,6 +46,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
@@ -788,7 +789,7 @@ async function main() {
   const muts = readLines(MUTS);
   const vitals = readJson(join(STATE_DIR, "loop_vitals.json"));
   const gateOpen = !!(vitals && vitals.speak_gates && vitals.speak_gates.bootroom_mutation);
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+  const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
   // ONE number, read from the file that already owns it. physio.mjs:375 decides
   // `bootroom_mutation` with physio_config.json gates.bootroom_min_reps; the
   // counter must be judged against that exact value, never a copy. If the config

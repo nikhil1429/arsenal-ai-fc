@@ -82,6 +82,7 @@ import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import os from "node:os";
 import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ── SANDBOX (E2E audit 25 Jul 2026) ──────────────────────────────────────────
@@ -482,7 +483,7 @@ function execTool(name, args, deps = {}) {
         drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt, modality: d.modality || "voice" })),
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
-        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now)).length,
+        now_reps_today: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === localDate(now)).length,
       };
     }
     if (name === "get_tape_room") {

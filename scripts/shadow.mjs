@@ -32,6 +32,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -485,7 +486,7 @@ async function selftest() {
 const stagedTriggerMet = (s) => s && (s.trigger_met === true || (s.trigger_met === undefined && typeof s.trigger === "string" && s.trigger.trim().length > 0));
 
 function gatherWorld(now) {
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now));
+  const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === localDate(now));
   const lastRep = reps.length ? new Date(reps[reps.length - 1].ts) : null;
   const drills = readJson(join(STATE_DIR, "drills.json")) || {};
   const pr = readJson(join(STATE_DIR, "pitch_read.json")) || {};

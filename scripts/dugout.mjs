@@ -8,8 +8,10 @@
 //        tier), with the GAFFER constitution + the captain's measured
 //        cognitive fingerprint as the system instruction, and TOOLS that
 //        reach into the LIVE BUS mid-sentence:
-//          get_today · get_tape_room · retire_doubt · log_reps (voice reps
-//          through the REAL capture contract!) · take_note · get_calibration
+//          get_today · get_tape_room · bank_answer + judge_round (BLOCK 2, 17 Aug
+//          2026: this surface BANKS an answer and never decides whether it was
+//          right — one judge, one standard, whichever door he walks through)
+//          · take_note · get_calibration
 //          · checkpoint (the match record)
 // SCAR-TABLE (JARVIS harvest), applied EMPIRICALLY — probed live 12 Jul 2026
 //        against gemini-3.1-flash-live-preview on the real v1beta WS:
@@ -113,6 +115,7 @@ import { loadFreshDrill, drillSection, markServed } from "./examiner.mjs";
 import { pendingWakes } from "./thalamus.mjs";
 // M5 — neuromodulation (READS only; tone.mjs owns tone.json)
 import { currentTone } from "./tone.mjs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 // M11 — the Night Shift's artifacts flow into the mouths by themselves:
 // banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
@@ -674,7 +677,7 @@ THE MOCK (run it exactly):
 2. Before EVERY answer he states his gut-word — knew, shaky, or guessed — BEFORE answering. No gut-word, no probe proceeds.
 3. Interrupt him ONCE mid-answer, like a real panel. Stay in persona.
 4. After probe 5: score /25 out loud · name the TWO weakest answers with the exact crack · ONE concrete drill for tomorrow.
-5. Then call log_reps with all 5 reps (his pre-stated gut-words, your honest correct/incorrect) and scrimmage_report with the totals. Both calls, always.
+5. BANK each answer the moment he finishes it — bank_answer with type "voice_rep", the probe VERBATIM, what he said, and the gut-word he committed BEFORE answering. You do NOT decide whether he was right; that is the judge's call and it is made against the DOSSIER, the same standard whichever surface he opened. Then, after probe 5, call judge_round ONCE and read the verdicts back honestly — the misses too. The /25, the two weakest and the drill above stay YOURS: those are the examiner's read of the whole session, not a per-answer verdict. Finally call scrimmage_report with the totals. All of it, always.
 ${brief ? "\nTHE STAGED BRIEF (the organism prepared this door — use it exactly):\n" + brief + "\n" : ""}${drillSection(drill, now)}${(() => { const ns = loadNightshift(now); return ns.probes ? "\nTHE NIGHT SHIFT'S PROBE BANK (drafted overnight in the club's grammar — draw probes from here first, never repeat yesterday's; difficulty is VARIANCE-GRADED and sorted hardest-first — PREFER the high-variance ground, that's where a mock earns the most):\n" + Object.entries(ns.probes).slice(0, 4).map(([c, v]) => `${c}: ${v.probes.map(p => `[${p.type}${p.difficulty !== undefined ? " d=" + p.difficulty : ""}] ${p.probe}`).join(" · ")}`).join("\n") + "\n" : ""; })()}
 WHITEBOARD ROUND: if he turns the camera on, run the heaviest probe as SYSTEM DESIGN ON PAPER — ask for the sketch first, then attack the sketch (the frayed handoff, the missing failure path, "where does this fall over at scale?").
 
@@ -1769,7 +1772,7 @@ const TOOL_DECLS = [
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
   { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. Build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
-  { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, reps via log_reps. Call when he says re-jirah / review / 'kya due hai'. The queue gives you CONCEPTS, not questions: open his own capsule with get_capsule and probe HIS fault-lines a-i — never invent a question when his is on disk. Record each axis with grade_rejirah the moment you judge it.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, each answer banked with bank_answer. Call when he says re-jirah / review / 'kya due hai'. The queue gives you CONCEPTS, not questions: open his own capsule with get_capsule and probe HIS fault-lines a-i — never invent a question when his is on disk. Bank each axis with bank_answer, type axis_weld, the moment he finishes answering it; the verdict comes at judge_round, graded against HIS OWN WELD — the prose you are deliberately not shown.", parameters: { type: "OBJECT", properties: {} } },
   // grade_rejirah lived here and carried `result: held|cracked` — this surface
   // deciding an axis. A Re-Jirah axis is now banked with bank_answer(type
   // "axis_weld"), judged against HIS OWN WELD (which is on disk, and which this
@@ -1927,7 +1930,7 @@ function execTool(name, args, deps = {}) {
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         // E2E audit 25 Jul 2026: localDayOf, not a UTC slice — a 02:00 IST rep is TODAY's
-        now_reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === localDate(now)).length,
+        now_reps_today: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === localDate(now)).length,
         // M11 — the Gaffer can NAME tonight's staged work by voice
         nightshift: (() => { const ns = loadNightshift(now); return { scout_pack_ready: ns.scout_pack, probe_concepts: ns.probes ? Object.keys(ns.probes).length : 0, note: ns.scout_pack ? "a fresh Deep Research scout pack is staged — mention it ONCE at a natural stoppage, never as an upsell; if he's not interested, drop it for the day" : null }; })(),
         // LADDER F7 (9 Aug 2026) — talk.mjs's four PROJECTIONS join get_today:
@@ -1998,7 +2001,7 @@ function execTool(name, args, deps = {}) {
         due_today: summary.due_today ?? due.length, overdue: summary.overdue ?? 0,
         hardest_due: Array.isArray(summary.hardest_due) ? summary.hardest_due.slice(0, 3) : [],
         queue: due,
-        note: due.length ? "conduct these by voice — HIS nine fault-lines from get_capsule are the round (never invent a probe when his is on disk); gut-word BEFORE each answer; grade_rejirah the moment you judge an axis; log_reps closes the FSRS loop. `field_questions`, where present, are REAL interview questions researched off the live web — use them as the pressure AFTER his own axis is answered, never as a replacement for it." : "nothing due — the decay guard is quiet",
+        note: due.length ? "conduct these by voice — HIS nine fault-lines from get_capsule are the round (never invent a probe when his is on disk); gut-word BEFORE each answer; bank_answer the moment he finishes an axis (banking is instant and model-free, so a dropped line cannot cost him one); judge_round at the end closes the FSRS loop. `field_questions`, where present, are REAL interview questions researched off the live web — use them as the pressure AFTER his own axis is answered, never as a replacement for it." : "nothing due — the decay guard is quiet",
       };
     }
     // ── BANK, DO NOT JUDGE (BLOCK 2) ────────────────────────────────────────
@@ -2390,7 +2393,7 @@ function execTool(name, args, deps = {}) {
         proactivity: { earned: Object.entries((led.types || {})).filter(([, e]) => e.voice).map(([t]) => t), awaiting_his_word: Object.entries((led.types || {})).filter(([, e]) => e.eligible && !e.ratified).map(([t]) => t) },
         season: readJson(join(STATE_DIR, "season.json")) || { matches_played: 0 },
         // E2E audit 25 Jul 2026: his LOCAL day, not the UTC slice (see localDayOf)
-        reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === day).length,
+        reps_today: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === day).length,
       };
     }
     if (name === "get_myself") {
@@ -2519,7 +2522,7 @@ function execTool(name, args, deps = {}) {
           "M22 the Second Spotlight — a suppressed moment goes to a background queue, never dies",
           "M23 Difficulty Grading — the bank answers its own probes; the variance IS the difficulty",
         ],
-        live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: readLines(join(STATE_DIR, "reps_log.jsonl")).filter(r => localDayOf(r.ts) === day).length },   // E2E audit 25 Jul 2026: local day, not UTC slice
+        live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === day).length },   // E2E audit 25 Jul 2026: local day, not UTC slice
         dormant_by_law: "The learning half stays correctly quiet until he feeds it: Calibration voices at 20 reps, Nemesis at 20, Learning-State at 12, the Twin's book at 30 scored resolutions. Zero reps today is BY DESIGN, not broken — the machine is built and waiting; the reps are his, and only his.",
       };
     }
@@ -3150,7 +3153,15 @@ async function selftest() {
   const scrim = buildScrimmageInstruction(new Date(2026, 6, 12));
   assert("scrimmage: examiner persona + 5 probes + gut-word law travel", scrim.includes("EXAMINER") && scrim.includes("FIVE probes") && scrim.includes("BEFORE answering"));
   assert("scrimmage: real-panel interruption + honest-never-cruel", scrim.includes("Interrupt him ONCE") && scrim.includes("never cruel"));
-  assert("scrimmage: reps + report both mandatory at the whistle", scrim.includes("log_reps") && scrim.includes("scrimmage_report"));
+  // ⚠ THIS PINNED THE DEFECT UNTIL 17 Aug 2026. It required the scrimmage
+  // constitution to contain "log_reps" — the tool that took "your honest
+  // correct/incorrect" straight from this surface's own fast model — so the
+  // assertion was actively holding in place the thing BLOCK 2 removes. The claim
+  // worth holding is that nothing is LOST at the whistle: every answer is banked,
+  // the round is closed by the one judge, and the report is still filed.
+  assert("scrimmage: every answer BANKED, the round CLOSED by the judge, and the report filed — and this surface grades none of it",
+    scrim.includes("bank_answer") && scrim.includes("judge_round") && scrim.includes("scrimmage_report")
+    && !scrim.includes("your honest correct/incorrect"));
   assert("EAR LAW — the model is never told about hedge counting", !/hedge/i.test(scrim));
   // DEAD-WIRE GUARD (11 Aug 2026) — THE CODE ROUND'S SERVE RECEIPT.
   // examiner.mjs staged a drill every night and nothing on disk ever said whether a

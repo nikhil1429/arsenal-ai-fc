@@ -33,6 +33,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -537,7 +538,7 @@ async function main() {
   const base = process.env[cfg.aw_base_env] || cfg.aw_default;
   const buckets = readJson(join(STATE_DIR, "buckets.json"));
   const cards = readJson(join(STATE_DIR, "cards.json"));
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+  const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
   const repsToday = reps.filter(r => repDayKey(r.ts) === today);   // captain's midnight, not UTC's (E2E audit 25 Jul 2026)
   const history = readLines(HIST);
   const prevSameDay = readJson(OUT);

@@ -77,6 +77,7 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, mkd
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -376,7 +377,7 @@ function liveDeps(now = new Date()) {
   return {
     nowIso: now.toISOString(),
     ncDir: join(STATE_DIR, "brain_out", "night_coach"),
-    reps: readLines(join(STATE_DIR, "reps_log.jsonl")),
+    reps: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))),
     allReps: [],
     aliasMap: loadAliasMap(join(STATE_DIR, "concepts.json")),
     slip: readLines(join(STATE_DIR, "slip.jsonl")),

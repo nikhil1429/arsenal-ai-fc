@@ -106,6 +106,7 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 // costs this daemon nothing at boot. The ENGINE stays lazily imported inside
 // adjudicateLive, exactly as before — only the row SHAPE moves up here.
 import { ledgerForensics } from "./claudegen.mjs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Captured ONCE, at module load — this is the mtime of the code actually running in
@@ -1265,7 +1266,7 @@ const repLocalDay = (ts) => { const d = new Date(ts || NaN); return Number.isNaN
 function createBusWatcher(nucleus, deps = {}) {
   const snap = {
     verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || null,
-    reps: readLines(join(STATE_DIR, "reps_log.jsonl")).length,
+    reps: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).length,
     slip: readLines(join(STATE_DIR, "slip.jsonl")).length,
     due: (readJson(join(STATE_DIR, "cards.json")) || {}).due_today || 0,
   };
@@ -1276,7 +1277,7 @@ function createBusWatcher(nucleus, deps = {}) {
     const v = (r || {}).verdict || null;
     if (v && snap.verdict && v !== snap.verdict) out.push({ modality: "bus", source: "readiness", event_key: `gov:${snap.verdict}->${v}`, gov_from: snap.verdict, gov_to: v });
     if (v) snap.verdict = v;
-    const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+    const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
     if (reps.length > snap.reps) {
       const fresh = reps.slice(snap.reps);
       const firstToday = !reps.slice(0, snap.reps).some(x => repLocalDay(x.ts) === today());   // local-vs-local (see repLocalDay)

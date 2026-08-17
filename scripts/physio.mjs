@@ -30,6 +30,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, statSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -1032,7 +1033,7 @@ function gatherWorld() {
   const readiness = readJson(join(STATE_DIR, "readiness.json"));
   return {
     files,
-    reps: readLines(join(STATE_DIR, "reps_log.jsonl")),
+    reps: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     weaknesses: readJson(wkPath),
     weaknessesMtime: existsSync(wkPath) ? statSync(wkPath).mtimeMs : null,

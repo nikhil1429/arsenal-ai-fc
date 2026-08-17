@@ -33,6 +33,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendF
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { ece } from "./calibration.mjs";
+import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -611,7 +612,7 @@ async function main() {
   const today = dateArg || ledgerDate(now);
   const slip = readLines(SLIP);
   const preds = readLines(join(STATE_DIR, "predictions.jsonl"));
-  const reps = readLines(join(STATE_DIR, "reps_log.jsonl"));
+  const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
   const repsByDate = {};
   // audit #96: the ROW counter, built in the same loop off the same key, so it can never
   // drift from the Set. The Set is untouched — gafferMature needs concept membership.
