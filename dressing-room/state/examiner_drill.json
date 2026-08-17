@@ -1,16 +1,17 @@
 {
-  "date": "2026-08-15",
-  "staged_at": "2026-08-15T16:30:05.335Z",
+  "date": "2026-08-16",
+  "staged_at": "2026-08-16T18:13:30.209Z",
   "concept": "hallucinations",
   "picked_because": "stalling/regressing in learning_state",
   "shape": "phenomenon",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "measure",
-  "task": "Build the smallest honest MEASUREMENT of hallucinations in Python — a tiny labelled set and a score. Ten examples is enough if they are honest. Talk through what the number would have to say to change your mind.",
+  "template": "elicit",
+  "task": "Write the SHORTEST prompt-and-script you can that reliably PROVOKES hallucinations from a model, in Python. Talk while you type; the examiner runs it when you say run. A single reproducible case beats a clever one.",
   "hidden_tests": [
-    "run it and ask what the number MEANS — a score with no interpretation is not a measurement",
-    "ask how many examples his score would need before he would trust it, and why that number",
-    "plant one mislabelled example and see whether he notices the score move"
-  ]
+    "run it and confirm hallucinations actually appeared — if it did not, his hypothesis about the cause was wrong; ask what he expected",
+    "ask him to change ONE thing he predicts will make it worse, then run it and compare",
+    "ask what a FALSE POSITIVE would look like here, and whether his script could tell the difference"
+  ],
+  "night_note": "raat ke coach ne pakda — woh soch raha hai: Pichhli baat-cheet agent ke paas pehle se rakhi hui hai; 'find it out' ek lookup hai jo ya milega ya khaali aayega — aur bas. · sach: Apne aap kuch yaad nahi rehta; us pal sirf wahi maujood hai jo kisi tool ne uthaakar saamne rakha. Kuch rakha na ho to bhi agla shabd nikalna hi hai, toh sabse aam-suna jaane wala jawab nikal aata hai — laaya hua aur bana hua dono ek jaise confident sunai dete hain. Usi subah: pehle 'hum toh M02 ke baare mein baat kar rahe the, right?', phir tool chalne ke baad 'mujhe mil gaya'."
 }

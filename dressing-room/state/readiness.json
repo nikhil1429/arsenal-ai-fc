@@ -21,9 +21,9 @@
     "readiness_raw": 62,
     "oura_sleep_score": 64,
     "deep_7d_h": 1,
-    "deep_base_h": 0.73,
+    "deep_base_h": 0.74,
     "rem_7d_h": 1.05,
-    "rem_base_h": 0.77,
+    "rem_base_h": 0.79,
     "total_sleep_today_h": 6.23,
     "total_sleep_7d_h": 5.86,
     "personal_sleep_need_h": 6.5,
@@ -43,10 +43,10 @@
     },
     "hrv_today": 16,
     "hrv_7d": 22.4,
-    "hrv_60d": 26.8,
-    "SWC": 4.22,
+    "hrv_60d": 25.6,
+    "SWC": 3.39,
     "rhr": 72,
-    "rhr_baseline": 75.6,
+    "rhr_baseline": 76.1,
     "rr": 16,
     "rr_baseline": 15.1,
     "temp_dev": 0.13,
@@ -79,9 +79,7 @@
       "rr_sustained_days": 0,
       "fired": false
     },
-    "low_confidence_med_informational": [
-      "HRV 7d below your own baseline — medication-influenced, low weight (not counted)."
-    ],
+    "low_confidence_med_informational": [],
     "verdict_driver": "no sustained HIGH-confidence deviation — GREEN by default (the grind is honored)"
   },
   "medication": {
