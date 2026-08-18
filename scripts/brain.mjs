@@ -81,6 +81,7 @@ import { classifyLimit } from "./claudegen.mjs";
 import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -93,7 +94,7 @@ const LEDGER    = join(STATE_DIR, "brain_ledger.jsonl");
 // reads today's rows nightly.
 const MOUTH_LOG = join(STATE_DIR, "mouth_log.jsonl");
 function recordMouth(kind, pushed) {
-  try { appendFileSync(MOUTH_LOG, JSON.stringify({ ts: new Date().toISOString(), kind, sent: !!(pushed && pushed.sent), why: (pushed && pushed.why) || null }) + "\n"); } catch { }
+  try { appendFileSync(MOUTH_LOG, JSON.stringify({ ts: new Date().toISOString(), kind, sent: !!(pushed && pushed.sent), why: (pushed && pushed.why) || null }) + "\n"); } catch (e) { swallow("recordMouth: appendFileSync(MOUTH_LOG) unwritable → ignored", e); }
 }
 const QUEUE     = join(STATE_DIR, "brain_queue.json");
 const PULSE_SESSION = join(STATE_DIR, "pulse_session.json");   // Phase 3 — the rolling pulse session (runtime state; brain.mjs sole writer)
@@ -114,7 +115,7 @@ function writePulseSession(obj) {
   try {
     writeFileSync(PULSE_SESSION_TMP, JSON.stringify(obj, null, 2) + "\n");
     renameSync(PULSE_SESSION_TMP, PULSE_SESSION);
-  } catch { /* the session file is an optimisation; a write failure must never cost a pulse */ }
+  } catch (e) { swallow("the session file is an optimisation; a write failure must never cost a pulse", e); }
 }
 const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
@@ -206,10 +207,10 @@ function writeAtomic(path, obj) {
   writeFileSync(tmp, typeof obj === "string" ? obj : JSON.stringify(obj, null, 2) + "\n");
   renameSync(tmp, path);
 }
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
 const readLines = (p) => {
   const out = [];
-  try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch {}
+  try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → out", e);}
   return out;
 };
 
@@ -252,7 +253,7 @@ function tailText(p, n) {
       if ((text.match(/\n/g) || []).length > n) return text.slice(text.indexOf("\n") + 1);
       want = Math.min(size, want * 2);
     }
-  } catch { return null; } finally { if (fd !== null) { try { closeSync(fd); } catch {} } }
+  } catch (e) { swallow("tailText: statSync(p) absent → null", e); return null; } finally { if (fd !== null) { try { closeSync(fd); } catch (e) { swallow("tailText: closeSync(fd) already closed → ignored", e);} } }
 }
 function parseLines(text) {
   const out = [];
@@ -266,7 +267,7 @@ function archiveSiblings(p) {
     const dir = dirname(p), base = basename(p, ".jsonl");
     const re = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[0-9][0-9A-Za-z_-]*\\.jsonl$`);
     return readdirSync(dir).filter(f => re.test(f)).sort().reverse().map(f => join(dir, f));
-  } catch { return []; }
+  } catch (e) { swallow("archiveSiblings: readdirSync(dir) unreadable → []", e); return []; }
 }
 // The public seam: the last n parsed rows of a (possibly rolled) jsonl log, oldest→newest.
 // Returns [] when nothing is readable — and the CALLER is responsible for not rendering
@@ -332,7 +333,7 @@ function liveRowCount(p) {
     }
     if (content) rows++;   // last row, no trailing newline
     return rows;
-  } catch { return null; } finally { if (fd !== null) { try { closeSync(fd); } catch {} } }
+  } catch (e) { swallow("liveRowCount: statSync(p) absent → null", e); return null; } finally { if (fd !== null) { try { closeSync(fd); } catch (e) { swallow("liveRowCount: closeSync(fd) already closed → ignored", e);} } }
 }
 
 // The door's tail width. NOT a new number — this is the literal 200 that has sat
@@ -915,7 +916,7 @@ function liveSignal(now, dir = STATE_DIR) {
     scan(readLinesTail(join(dir, "afferent.jsonl"), 40).filter(a => ["voice", "code", "desktop-study", "note", "context", "gemini"].includes(a.modality)));
     scan(readLinesTail(join(dir, "presence_log.jsonl"), 6).filter(r => r.kind === "focus" && (r.focus_min || 0) > 0));
     scan(readLinesTail(join(dir, "dugout_stamps.jsonl"), 10));
-  } catch {}
+  } catch (e) { swallow("liveSignal: readLinesTail(afferent.jsonl) unreadable → no live signal (idle unknown)", e); }
   return freshest ? { idle_min: Math.max(0, Math.round((now.getTime() - freshest) / 60000)) } : {};
 }
 
@@ -1721,7 +1722,7 @@ export function gateTransition(lane, verdict, deps = {}) {
   };
   if (!deps.dry) {
     if (deps.appendJournal) deps.appendJournal(JSON.stringify(row) + "\n");
-    else { try { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); } catch { } }
+    else { try { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); } catch (e) { swallow("gateTransition: mkdirSync(OUT_DIR) unmakeable → ignored", e); } }
     if (cardable) {
       const args = gateCardArgs(lane, verdict, now, deps.cfg || null);
       // a caller that COLLECTS decides how many cards this becomes (see the batch rule in tick)
@@ -2118,7 +2119,7 @@ function resolveNtfyTopic(cfg, env = process.env) {
   try {
     const p = join(STATE_DIR, "throwin_topic.txt");
     if (existsSync(p)) { const t = readFileSync(p, "utf8").trim(); if (t) return t; }
-  } catch { }
+  } catch (e) { swallow("resolveNtfyTopic: readFileSync(p) unreadable → null", e); }
   return null;
 }
 // HTTP headers are ByteString (every code point ≤ 0xFF) — Node's fetch throws on
@@ -2414,7 +2415,7 @@ function minedAnchors(dir = join(OUT_DIR, "lexicon")) {
     }
     const anchors = raw.filter(p => !raw.some(q => q !== p && q.includes(p)));
     return anchors.length ? { date: newest.replace(/\.md$/, ""), anchors } : null;
-  } catch { return null; }
+  } catch (e) { swallow("minedAnchors: readdirSync(dir) unreadable → null", e); return null; }
 }
 function gatherFingerprint() {
   return buildFingerprint({
@@ -2760,7 +2761,7 @@ function nightCoachAfferentsLegacy(dayStr, dir = STATE_DIR) {
       .filter(a => a && a.text && (LANES.has(a.source) || (a.modality === "voice" && !a.source)))
       .filter(a => { const t = new Date(a.ts || 0); return !isNaN(t.getTime()) && localDate(t) === dayStr; })
       .map(a => ({ t: String(a.ts).slice(11, 16), who: a.source || "voice(him)", text: String(a.text).slice(0, 600) }));
-  } catch { }
+  } catch (e) { swallow("nightCoachAfferentsLegacy: readLinesTail(join(dir, \"afferent.jsonl\")) unreadable → ignored", e); }
   const kept = rows.slice(-120);
   return {
     study_day: dayStr, turns_total: rows.length, turns_shown: kept.length,
@@ -2819,7 +2820,7 @@ function nightCoachAfferents(dayStr, dir = STATE_DIR) {
         if (full.length > TURN_BUDGET) { row.partial = true; row.chars = full.length; }
         return row;
       });
-  } catch { }
+  } catch (e) { swallow("nightCoachAfferents: readLinesTail(join(dir, \"afferent.jsonl\")) unreadable → ignored", e); }
   const kept = rows.slice(-120);
   // counted over the SAMPLE that actually ships, not over the day: turns dropped by
   // the row trim were never shown, and turns_total already names that loss.
@@ -3151,8 +3152,8 @@ export function agendaAllocationFor(job, cfg, now, dir = OUT_DIR) {
 export function laneListing(job, dir = OUT_DIR) {
   const lane = join(dir, job.out || job.id);
   try {
-    return readdirSync(lane).map((f) => { try { return { name: f, mtimeMs: statSync(join(lane, f)).mtimeMs }; } catch { return { name: f, mtimeMs: 0 }; } });
-  } catch { return null; }
+    return readdirSync(lane).map((f) => { try { return { name: f, mtimeMs: statSync(join(lane, f)).mtimeMs }; } catch (e) { swallow("laneListing: statSync(join(lane, f)) absent → { name: f, mtimeMs: 0 }", e); return { name: f, mtimeMs: 0 }; } });
+  } catch (e) { swallow("laneListing: readdirSync(lane) unreadable → null", e); return null; }
 }
 export function laneRestable(job, dir = OUT_DIR, nowMs = Date.now()) {
   const files = laneListing(job, dir);
@@ -3230,7 +3231,7 @@ export function salienceDaySummary(day, dir = STATE_DIR) {
         if (!line.trim()) continue;
         try { const r = JSON.parse(line); if (r.day === day) rows.push(r); } catch { }
       }
-    } catch { }
+    } catch (e) { swallow("salienceDaySummary: readFileSync(f) unreadable → ignored", e); }
   }
   const hist = {}; const tiers = {}; const keys = {};
   let pulseComps = 0;
@@ -3255,7 +3256,7 @@ export function outcomesFor(days, dir = STATE_DIR) {
       if (!line.trim()) continue;
       try { const r = JSON.parse(line); last.set(`${r.day}|${r.kind}|${r.subject}`, r); } catch { }
     }
-  } catch { }
+  } catch (e) { swallow("outcomesFor: readFileSync(brain_outcomes.jsonl) unreadable → the rows read so far", e); }
   return [...last.values()].filter((r) => days.includes(r.day));
 }
 
@@ -3272,7 +3273,7 @@ export function ledgerShiftSummary(shiftDayStr, dir = STATE_DIR) {
         if (!line.trim()) continue;
         try { rows.push(JSON.parse(line)); } catch { }
       }
-    } catch { }
+    } catch (e) { swallow("ledgerShiftSummary: readFileSync(f) unreadable → ignored", e); }
   }
   // the shift = 22:00 of the shift day → now (the diary runs inside the shift)
   const start = new Date(`${shiftDayStr}T22:00:00+05:30`).getTime();
@@ -3448,7 +3449,7 @@ async function runJob(job, cfg, deps) {
           && dj.bridges.find((b) => b.from_concept === pick.from_concept && b.to_concept === pick.to_concept && b.axis === pick.axis);
         if (real) inputs["dream to test (agenda's pick — OPTIONAL seed: weave into the lesson's FABRIC only if it fits in one line; NEVER a new question-moment; drop silently if it does not fit)"] = real;
       }
-    } catch { }
+    } catch (e) { swallow("runJob: readJson(join(OUT_DIR, \"agenda\", today + \".json\")) unreadable → ignored", e); }
     prompt = buildNightCoachPrompt(job, inputs, undefined, cfg.guards.banned_phrases);
   } else if (job.kind === "model_mine") {
     // H3 — the proposer's food: the owner's own grid tail + current edges +
@@ -3515,7 +3516,7 @@ async function runJob(job, cfg, deps) {
         const wj = readJson(join(tdir, wt));
         if (wj) inputs["threshold proposal pending (the wind tunnel — his card decides, never this page)"] = { file: wt, id: wj.id || null, effect: wj.effect || null };
       }
-    } catch { }
+    } catch (e) { swallow("runJob: readdirSync(tdir) unreadable → ignored", e); }
     prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
   } else if (job.kind === "intent_digest") {
     // Block 2 §7.2 — the day's session-intent rows, GROUPED + CLIPPED by the owner
@@ -3761,7 +3762,7 @@ async function tick(cfg, deps) {
   // rollers racing the rename is how a journal loses rows). Tail readers
   // (failureStreak's last-25, the card organ's gemini tail) ride the hot file.
   if (!deps.ledger && !deps.dry) {
-    try { if (statSync(LEDGER).size > 2 * 1024 * 1024) { rmSync(LEDGER + ".1", { force: true }); renameSync(LEDGER, LEDGER + ".1"); } } catch { }
+    try { if (statSync(LEDGER).size > 2 * 1024 * 1024) { rmSync(LEDGER + ".1", { force: true }); renameSync(LEDGER, LEDGER + ".1"); } } catch (e) { swallow("tick: statSync(LEDGER) absent → ignored", e); }
   }
   // HERMETIC-TEST SEAM (E2E audit 25 Jul 2026): tick() used to always read the
   // LIVE ledger/queue, so the selftest's mocked clock saw real rows and the two
@@ -4025,7 +4026,7 @@ async function tick(cfg, deps) {
     // event-triggered re-analysis never happened and nothing reported it. Re-read
     // at write time and keep the disk's triggers, minus the ones we just consumed.
     writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), queueState, consumedTriggers, consumedForces));
-    try { writeAtomic(TOKEN_VITALS, tokenVitals(cfg, readLines(LEDGER), queueState, now, deps.signals)); } catch {}
+    try { writeAtomic(TOKEN_VITALS, tokenVitals(cfg, readLines(LEDGER), queueState, now, deps.signals)); } catch (e) { swallow("tick: writeAtomic(TOKEN_VITALS) unwritable → ignored", e);}
   }
   return { ran, refused: false, gated };
 }
@@ -4047,7 +4048,7 @@ export function armTrigger(name, reason, { queuePath = QUEUE, now = new Date() }
   let q = { observed_window_ceiling: null, jobs_run: {} };   // cold checkout only
   if (existsSync(queuePath)) {
     let disk = null;
-    try { disk = JSON.parse(readFileSync(queuePath, "utf8")); } catch { }
+    try { disk = JSON.parse(readFileSync(queuePath, "utf8")); } catch (e) { swallow("armTrigger: readFileSync(queuePath) unreadable → ignored", e); }
     // `null`, `[]` and `"…"` all parse cleanly and are still not this file's shape —
     // spreading a trigger onto any of them and writing it back is the same wipe.
     if (!disk || typeof disk !== "object" || Array.isArray(disk)) return false;
@@ -5474,7 +5475,7 @@ async function selftest() {
       // and still fails the claim above — which is why it was replaced, not tuned.
       assert("DOUBLE CUT — clipLegacy is FROZEN verbatim and still drops the close (the regression witness)",
         clipLegacy(doc).startsWith(OPEN) && !clipLegacy(doc).includes(CLOSE) && clipLegacy(doc).endsWith("\n…[clipped]"));
-      try { rmSync(tdc, { recursive: true, force: true }); } catch {}
+      try { rmSync(tdc, { recursive: true, force: true }); } catch (e) { swallow("rmSync(tdc) already gone → ignored", e);}
     }
 
     // ---- #65 · the night shift's artifacts land where viz looks ----------
@@ -5707,7 +5708,7 @@ async function selftest() {
       const src3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
       assert("DOOR3 — BOTH ledger row literals (tick + manual `brain run`) write the door lane, so neither path is the one that forgets",
         (src3.match(/inputs_rows_door_dropped: inputs_rows_door_dropped \?\? null/g) || []).length === 2);
-      try { rmSync(td3, { recursive: true, force: true }); } catch {}
+      try { rmSync(td3, { recursive: true, force: true }); } catch (e) { swallow("rmSync(td3) already gone → ignored", e);}
     }
 
     // ---- #106 · status lines are have/need counters ----------------------
@@ -5841,7 +5842,7 @@ async function selftest() {
         assert("TURN CUT — nightCoachAfferentsLegacy is FROZEN verbatim and still eats the close, unmarked (the witness)",
           (aL.turns[0] || {}).text.length === 600 && !aL.turns[0].text.includes(CLOSE)
           && aL.turns_cut === undefined && !/PARTIAL|elided/.test(aL.note));
-        try { rmSync(tdn, { recursive: true, force: true }); } catch { }
+        try { rmSync(tdn, { recursive: true, force: true }); } catch (e) { swallow("rmSync(tdn) already gone → ignored", e); }
       }
       const ncFix = { id: "nc_fixture", kind: "night_coach", inputs: [], out: "nc_fixture", serve: "next_morning", surface: { kind: "code", where: "x" } };
       const rNC = await runJob(ncFix, cfg, { exec: () => ({ ok: true, text: good, total_tokens: 9, duration_ms: 1, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: now(23, 30), dry: true });
@@ -6627,7 +6628,7 @@ async function main() {
       for (const j of sa.human) {
         const d = join(OUT_DIR, j.out || j.id);
         let newest = null;
-        try { const fs2 = readdirSync(d).filter(f => f.endsWith(".md")).sort(); newest = fs2.length ? fs2[fs2.length - 1] : null; } catch {}
+        try { const fs2 = readdirSync(d).filter(f => f.endsWith(".md")).sort(); newest = fs2.length ? fs2[fs2.length - 1] : null; } catch (e) { swallow("readdirSync(d) unreadable → ignored", e);}
         console.log(`  · ${j.id.padEnd(16)} ${newest ? join("dressing-room", "state", "brain_out", j.out || j.id, newest) : `(brain_out/${j.out || j.id}/ — nothing written yet)`}`);
       }
     }

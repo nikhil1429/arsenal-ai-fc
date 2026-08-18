@@ -42,6 +42,7 @@ import { armTrigger as brainArmTrigger } from "./brain.mjs";   // Block 1 (18 Au
 // SLOT; every one-shot it runs takes the chain's day, never its own now(). See
 // daykey.mjs's header for the two measured incidents (12 Aug 02:36 · 15 Aug 02:04).
 import { slotDate, dayKey, launchContext, issueDayKeyToken, stripDayKeyEnv, ENV_TOKEN, readSlots } from "./daykey.mjs";
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 export { slotDate };   // the plan's export lives here too: `import { slotDate } from "./conductor.mjs"`
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -259,7 +260,7 @@ export function logStep(name, cmdline, body, dir = join(REPO, "scripts")) {
   const p = join(dir, `${name}.log`);
   try {
     mkdirSync(dir, { recursive: true });
-    try { if (statSync(p).size > LOG_MAX_BYTES) renameSync(p, `${p}.1`); } catch { }
+    try { if (statSync(p).size > LOG_MAX_BYTES) renameSync(p, `${p}.1`); } catch (e) { swallow("logStep: statSync(p) absent → ignored", e); }
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     // run_logged.cmd's `%DATE% %TIME%` shape on this box, e.g. "10-08-2026 22:00:02".
@@ -269,7 +270,7 @@ export function logStep(name, cmdline, body, dir = join(REPO, "scripts")) {
     // unconditionally for precisely that reason, and a soft failure exits 0.
     appendFileSync(p, `\n== ${stamp} :: ${cmdline}\n${body}${body.endsWith("\n") ? "" : "\n"}`);
     return p;
-  } catch { return null; }
+  } catch (e) { swallow("logStep: mkdirSync(dir) unmakeable → null", e); return null; }
 }
 
 // Arming is a WRITE to brain_queue.json, and brain.mjs's tick re-reads that file at
@@ -369,7 +370,7 @@ export function buildStamp(port, timeoutMs = PROBE_TIMEOUT_MS) {
 // mtime of a repo-relative script path, or null if it cannot be read. Anchored on
 // __dirname's parent so the answer never depends on the caller's CWD.
 export function mtimeOf(relPath) {
-  try { return statSync(join(__dirname, "..", relPath)).mtimeMs; } catch { return null; }
+  try { return statSync(join(__dirname, "..", relPath)).mtimeMs; } catch (e) { swallow("mtimeOf: statSync(join(__dirname, \"..\", relPath)) absent → null", e); return null; }
 }
 
 // mtime of a file a step DECLARED it writes, or null if it is not on disk at all.
@@ -377,7 +378,7 @@ export function mtimeOf(relPath) {
 // answer must never depend on the caller's CWD — and it takes a bare filename because
 // that is exactly what the chain's `writes:` declares ("readiness.json", not a path).
 export function stateMtimeMs(name, dir = STATE_DIR) {
-  try { return statSync(join(dir, name)).mtimeMs; } catch { return null; }
+  try { return statSync(join(dir, name)).mtimeMs; } catch (e) { swallow("stateMtimeMs: statSync(join(dir, name)) absent → null", e); return null; }
 }
 
 // THE IMPORT GRAPH, NOT JUST THE ENTRY FILE (audit #108 verify pass, 6 Aug 2026).
@@ -395,7 +396,7 @@ export function newestGraphMtime(relPath, seen = new Set()) {
   try {
     newest = { ms: statSync(abs).mtimeMs, file: relPath };
     src = readFileSync(abs, "utf8");
-  } catch { return newest; }
+  } catch (e) { swallow("newestGraphMtime: statSync(abs) absent → newest", e); return newest; }
   for (const m of src.matchAll(/from\s+["'](\.\/[^"']+\.mjs)["']/g)) {
     const child = join(dirname(relPath), m[1]).replace(/\\/g, "/");
     const r = newestGraphMtime(child, seen);
@@ -1119,7 +1120,7 @@ async function selftest() {
         // to invent, and it still proves the number moves when the file is rewritten.
         ok("#WIRE — and it reads a REAL mtime off disk that MOVES when the file is rewritten",
           first != null && second != null && second >= first);
-      } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { } }
+      } finally { try { rmSync(dir, { recursive: true, force: true }); } catch (e) { swallow("rmSync(dir) already gone → ignored", e); } }
     }
 
     // (5) ORPHAN GUARD — the declaration must keep matching the organ. A `writes:` is
@@ -1244,7 +1245,7 @@ async function selftest() {
             ok(`ARM REFUSAL — ${shape} parses fine but is not the queue's shape ⇒ refused, file untouched`,
               armTrigger("morning_signals", "x", d2) === false
               && readFileSync(join(d2, "brain_queue.json"), "utf8") === text);
-          } finally { try { rmSync(d2, { recursive: true, force: true }); } catch { } }
+          } finally { try { rmSync(d2, { recursive: true, force: true }); } catch (e) { swallow("rmSync(d2) already gone → ignored", e); } }
         }
 
         // THE WIRE, not just the helper: the refusal has to reach the REPORT, because
@@ -1261,15 +1262,15 @@ async function selftest() {
         ok("ARM REFUSAL — the report NAMES the reason, so a 🔴 arrives with its cause instead of a mystery",
           /brain_queue\.json exists but did not parse/.test(gate.error || "")
           && /queue is intact/.test(gate.error || ""));
-      } finally { try { rmSync(torn, { recursive: true, force: true }); } catch { } }
+      } finally { try { rmSync(torn, { recursive: true, force: true }); } catch (e) { swallow("rmSync(torn) already gone → ignored", e); } }
 
       const liveAfter = existsSync(live) ? readFileSync(live, "utf8") : null;
       ok("ARM — the LIVE queue is byte-for-byte untouched by this selftest (measured, not claimed)",
         liveAfter === liveBefore);
     } finally {
       // no orphan temp survives a pass OR a failure
-      try { rmSync(dir, { recursive: true, force: true }); } catch { }
-      try { rmSync(fresh, { recursive: true, force: true }); } catch { }
+      try { rmSync(dir, { recursive: true, force: true }); } catch (e) { swallow("rmSync(dir) already gone → ignored", e); }
+      try { rmSync(fresh, { recursive: true, force: true }); } catch (e) { swallow("rmSync(fresh) already gone → ignored", e); }
     }
   }
 
@@ -1334,8 +1335,8 @@ async function selftest() {
       ok("VOICE — the LIVE scripts/fsrs.log is byte-for-byte untouched by this selftest (measured, not claimed)",
         liveAfter === liveBefore);
     } finally {
-      try { rmSync(dir, { recursive: true, force: true }); } catch { }
-      try { rmSync(dryDir, { recursive: true, force: true }); } catch { }
+      try { rmSync(dir, { recursive: true, force: true }); } catch (e) { swallow("rmSync(dir) already gone → ignored", e); }
+      try { rmSync(dryDir, { recursive: true, force: true }); } catch (e) { swallow("rmSync(dryDir) already gone → ignored", e); }
     }
   }
 

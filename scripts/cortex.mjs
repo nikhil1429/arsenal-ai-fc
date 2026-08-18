@@ -72,6 +72,7 @@ import { currentWindow, AMBIENT } from "./distiller.mjs";
 import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: ConceptGraph 03:00 keys its SLOT's day in a catch-up burst
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -146,7 +147,7 @@ function writeCortexSession(obj) {
   try {
     writeFileSync(CORTEX_SESSION_TMP, JSON.stringify(obj, null, 2) + "\n");
     renameSync(CORTEX_SESSION_TMP, CORTEX_SESSION);
-  } catch { /* an optimisation; a write failure must never cost a wake */ }
+  } catch (e) { swallow("an optimisation; a write failure must never cost a wake", e); }
 }
 // the paid-answer lifeboat: answers that could not be reported back (thalamus
 // down / restarting) wait here instead of evaporating. Drained on the next serve.
@@ -169,8 +170,8 @@ const defaultPost = async (path, body) => {
   } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 160) }; }
 };
 
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -234,7 +235,7 @@ function findCapsuleLegacy(tokens = [], dir = join(STATE_DIR, "capsules")) {
       const f = files.find(f => f.toLowerCase().includes(t));
       if (f) return { name: f, text: readFileSync(join(dir, f), "utf8").slice(0, 1500) };
     }
-  } catch { }
+  } catch (e) { swallow("findCapsuleLegacy: readdirSync(dir) unreadable → null", e); }
   return null;
 }
 
@@ -289,7 +290,7 @@ function findCapsule(tokens = [], dir = join(STATE_DIR, "capsules")) {
     // a capsule that will not parse still yields what it always yielded (layering)
     if (!src || typeof src !== "object") return { name: hit, id, text: raw.slice(0, 1500), unparsed: true };
     return { name: hit, id, text: capsuleText(src, id) };
-  } catch { }
+  } catch (e) { swallow("findCapsule: readdirSync(dir) unreadable → null", e); }
   return null;
 }
 

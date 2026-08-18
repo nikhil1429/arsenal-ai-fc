@@ -332,6 +332,11 @@ dressing-room/state/mouth_log.jsonl
 # mouth_log.jsonl one line up (its sibling journal, brain_out/gate.jsonl, is already
 # under the brain_out/ rule). Archived by the archivist's tail like every jsonl.
 dressing-room/state/consumption.jsonl
+# BLOCK 7 (overhaul 18 Aug 2026 §14.2 SWALLOW + PANIC): every declared silent
+# catch in the production lanes lands one row per process here (swallow.mjs is the
+# SOLE WRITER; watchman reads it into the caught-silent INFO). Machine-local,
+# rebuilt every run, same class as mouth_log.jsonl above.
+dressing-room/state/swallow_ledger.jsonl
 dressing-room/state/salience_ledger.jsonl.1
 dressing-room/state/brain_ledger.jsonl.1
 dressing-room/state/daemon_watchdog.json

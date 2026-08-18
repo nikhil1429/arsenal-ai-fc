@@ -106,7 +106,7 @@ const genLedgered = async (prompt, model, jobLabel, extraArgs = []) => {
     const { appendFileSync: app } = await import("node:fs");
     const { join: j2 } = await import("node:path");
     app(j2(STATE_DIR, "brain_ledger.jsonl"), JSON.stringify(nsLedgerRow(r, model, jobLabel)) + "\n");
-  } catch { /* an unmetered call is still a made call — never fail the job on the meter */ }
+  } catch (e) { swallow("an unmetered call is still a made call — never fail the job on the meter", e); }
   return r;
 };
 import { loadBoard, headroomOf, recordUse } from "./fuelboard.mjs";
@@ -119,13 +119,14 @@ import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHead
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: NightShift 02:40 keys its SLOT's day in a catch-up burst
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const OUT_DIR   = join(STATE_DIR, "brain_out", "nightshift");
 
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -212,7 +213,7 @@ function liveWindowAllowed() {
     const led = readLines(join(STATE_DIR, "brain_ledger.jsonl"));
     const q = readJson(join(STATE_DIR, "brain_queue.json")) || {};
     return brainHeadroom(cfg, led, q, new Date()).allowed;
-  } catch { return Infinity; }
+  } catch (e) { swallow("liveWindowAllowed: readLines(join(STATE_DIR, \"brain_ledger.jsonl\")) unreadable → Infinity", e); return Infinity; }
 }
 
 function makeBudget(n, windowFn = null) {
@@ -264,7 +265,7 @@ function drillConcepts(deps = {}) {
   try {
     for (const f of (deps.capsuleFiles || readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json"))))
       out.push({ concept: f.replace(".json", ""), why: "locked capsule (decay-guard drilling)" });
-  } catch { }
+  } catch (e) { swallow("drillConcepts: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → ignored", e); }
   const seen = new Set();
   return out.filter(c => c.concept && !seen.has(c.concept) && seen.add(c.concept));
 }
@@ -420,7 +421,7 @@ async function roundRead(deps = {}) {
     const t = deps.transcript !== undefined ? deps.transcript
       : readFileSync(join(STATE_DIR, "brain_out", "dugout", `${day}.md`), "utf8");
     transcript = String(t || "").slice(-12000);
-  } catch { transcript = ""; }
+  } catch (e) { swallow("roundRead: readFileSync(join(STATE_DIR, \"brain_out\", \"dugout\", `$…) unreadable → transcript = \"\"", e); transcript = ""; }
 
   const grid = graded.map((r) => `${r.concept} · axis ${r.axis} · ${r.result} · he said "${r.gut}" BEFORE answering`).join("\n");
   const r = await gen(
@@ -594,7 +595,7 @@ function scoutPack(deps = {}, now = new Date()) {
 function gemCartridge(deps = {}, now = new Date()) {
   const who = deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"));
   const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
-  const caps = deps.capsuleFiles || (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { return []; } })();
+  const caps = deps.capsuleFiles || (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch (e) { swallow("gemCartridge: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → []", e); return []; } })();
   const bank = deps.probeBank || readJson(join(OUT_DIR, `probe_bank_${dayKey(now)}.json`));
   // LADDER G10 (9 Aug 2026): the revived capsule_premap joins the cartridge —
   // the night's repeatable filler. The viz-style i<=2 day-lookback is MANDATORY,
@@ -603,7 +604,7 @@ function gemCartridge(deps = {}, now = new Date()) {
   const premap = deps.premap !== undefined ? deps.premap : (() => {
     for (let i = 0; i <= 2; i++) {
       const dk = addDays(dayKey(now), -i);   // Block 6 — day-key
-      try { const t = readFileSync(join(STATE_DIR, "brain_out", "premap", `${dk}.md`), "utf8"); if (t.trim()) return { day: dk, text: t }; } catch { }
+      try { const t = readFileSync(join(STATE_DIR, "brain_out", "premap", `${dk}.md`), "utf8"); if (t.trim()) return { day: dk, text: t }; } catch (e) { swallow("gemCartridge: readFileSync(join(STATE_DIR, \"brain_out\", \"premap\", `$…) unreadable → ignored", e); }
     }
     return null;
   })();
@@ -1030,7 +1031,7 @@ function seasonCorpus(deps = {}) {
     const dir = join(STATE_DIR, "capsules");
     for (const f of (deps.capsuleFiles || readdirSync(dir).filter(x => x.endsWith(".json"))))
       push(`CAPSULE ${f}`, deps.capsuleText ? deps.capsuleText(f) : readFileSync(join(dir, f), "utf8"));
-  } catch { }
+  } catch (e) { swallow("seasonCorpus: readdirSync(dir) unreadable → ignored", e); }
   push("DOUBT GRAMMAR", JSON.stringify(deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"))));
   const aff = deps.afferents || readLines(join(STATE_DIR, "afferent.jsonl"));
   push("AFFERENTS (his voiced words + machine events)", aff.filter(a => a.text).map(a => `[${String(a.ts || "").slice(0, 10)} ${a.modality}] ${a.text}`).join("\n"));
@@ -1040,7 +1041,7 @@ function seasonCorpus(deps = {}) {
     const lines = [];
     for (const f of files) lines.push(...readFileSync(join(dir, f), "utf8").split("\n").filter(l => l.startsWith("CAPTAIN: ")).map(l => `[${f.replace(".md", "")}] ${l}`));
     push("DUGOUT (his own lines, 3 weeks)", lines.join("\n"));
-  } catch { }
+  } catch (e) { swallow("seasonCorpus: readdirSync(dir) unreadable → ignored", e); }
   const eps = deps.episodes || readLines(join(__dirname, "..", "dressing-room", "hippocampus", "episodes.jsonl"));
   push("EPISODES", eps.map(e => `[${e.day} ${e.kind}] ${e.text}`).join("\n"));
   push("WHO HE IS", JSON.stringify(deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"))));
@@ -1140,7 +1141,7 @@ function newestBankRecord() {
     const names = readdirSync(OUT_DIR).filter((f) => /^probe_bank_\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
     const n = names.pop();
     return n ? { ...(readJson(join(OUT_DIR, n)) || {}), file: n } : null;
-  } catch { return null; }
+  } catch (e) { swallow("newestBankRecord: readdirSync(OUT_DIR) unreadable → null", e); return null; }
 }
 export function lockSinceLastProbeBank({ manifest = readJson(join(STATE_DIR, "mirror_manifest.json")), lastBank = newestBankRecord() } = {}) {
   if (!lastBank) return { armed: true, why: "no probe bank on disk yet (the first bank is every capsule's lock event)" };
@@ -1976,7 +1977,7 @@ async function main() {
         return;
       }
       if (allowed <= 0) console.log(`field-probes: --force — running with ZERO headroom; budgeted organs (cortex/diary/night shift) may starve tonight.`);
-    } catch { /* governor unreadable — do not block the door on the meter */ }
+    } catch (e) { swallow("governor unreadable — do not block the door on the meter", e); }
     const r = await fieldProbes({ concepts, now: new Date() });
     if (Object.keys(r.bank).length) {
       writeAtomic(join(OUT_DIR, FIELD_PROBES_FILE), { updated: new Date().toISOString(), concepts: r.bank });

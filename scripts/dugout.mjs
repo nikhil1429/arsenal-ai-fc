@@ -123,6 +123,7 @@ import { currentTone } from "./tone.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): name, number and voice come from the profile
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 import { portraitStatus, portraitSection } from "./selfknowledge.mjs";   // BLOCK 5.2 — get_organism reads the self-portrait one section at a time (the address that thaws selfknowledge); pure helpers, the organ owns the file
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 // M11 — the Night Shift's artifacts flow into the mouths by themselves:
 // banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
@@ -144,7 +145,7 @@ function loadNightshift(now = new Date()) {
       if (!existsSync(p)) return false;
       const head = readFileSync(p, "utf8").slice(0, 200);
       return days.some(d => head.includes(d));
-    } catch { return false; }
+    } catch (e) { swallow("loadNightshift: readFileSync(p) unreadable → false", e); return false; }
   })();
   return out;
 }
@@ -316,7 +317,7 @@ function readDeepState(deps = {}) {
       rt.busProjection = proj;
       if (changed.length) out.bus_delta = { changed, lines: Object.fromEntries(changed.map((k) => [k, proj[k]])) };
     }
-  } catch { /* a broken projection never breaks the poll */ }
+  } catch (e) { swallow("a broken projection never breaks the poll", e); }
   // M7 — THE EARNED-VOICE GATE at the mouth: the whisper passes ONLY when
   // (1) fresh (the stuck→gone window), (2) wall_breaker is PROVEN + RATIFIED
   // in the shadow ledger, (3) the body verdict is not RED and the tone is not
@@ -404,7 +405,7 @@ async function fireReminders(deps = {}) {
 }
 
 function listAcks() {
-  try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort().map((f, i) => "/ack/" + i); } catch { return []; }
+  try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort().map((f, i) => "/ack/" + i); } catch (e) { swallow("listAcks: readdirSync(ACK_DIR) unreadable → []", e); return []; }
 }
 async function ensureAcks(log = console.log) {
   try {
@@ -472,13 +473,13 @@ const localDayOf = (ts) => {
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? s.slice(0, 10) : localDate(d);
 };
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
 // B5 — how recent a Claude-Code turn must be to interrupt a live spoken sitting.
 // NOT a tuned threshold: 10 minutes is the SAME TTL deepFresh() already uses for a
 // deep answer, reused deliberately so the two live-injection lanes cannot drift
 // apart. Anything older is history and belongs to get_context, not to a poke.
 const CROSS_MOUTH_FRESH_MS = 10 * 60000;
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 
 // ---------------------------------------------------------------------------
 // #51 — THE UNBOUNDED LOG, READ FROM ITS TAIL.
@@ -520,8 +521,8 @@ function readLinesTail(p, maxBytes = PRESENCE_TAIL_BYTES) {
     const lines = buf.toString("utf8").split("\n");
     if (!out.whole) lines.shift();                       // the sliced fragment
     for (const l of lines) { if (!l.trim()) continue; try { out.rows.push(JSON.parse(l)); } catch { } }
-  } catch { /* a torn read degrades to "no rows", never to a wrong count */ }
-  finally { if (fd !== null) { try { closeSync(fd); } catch { } } }
+  } catch (e) { swallow("a torn read degrades to \"no rows\", never to a wrong count", e); }
+  finally { if (fd !== null) { try { closeSync(fd); } catch (e) { swallow("readLinesTail: closeSync(fd) already closed → ignored", e); } } }
   return out;
 }
 
@@ -542,7 +543,7 @@ function readPresenceDay(day, deps = {}) {
   const live = readTail(file);
   const rows = live.rows.filter(r => r && r.day === day);
   let siblings = [];
-  try { siblings = readdirSync(dir).filter(f => f !== base + ".jsonl" && f.startsWith(base) && f.endsWith(".jsonl")).sort(); } catch { }
+  try { siblings = readdirSync(dir).filter(f => f !== base + ".jsonl" && f.startsWith(base) && f.endsWith(".jsonl")).sort(); } catch (e) { swallow("readPresenceDay: readdirSync(dir) unreadable → ignored", e); }
   // PROOF that today's first row is inside what we scanned, in order of strength.
   // Note (a) is what makes this honest on a ROLL DAY: "I read the whole live
   // file" does NOT prove I saw midnight if the file was rolled this morning —
@@ -600,7 +601,7 @@ function loadKeys(envText = null) {
 function loadDayCartridge(now = new Date(), dir = join(STATE_DIR, "brain_out", "day_cartridge")) {
   for (const d of [now, new Date(now.getTime() - 86400000)]) {
     const p = join(dir, localDate(d) + ".md");
-    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1800) }; } catch { } }
+    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1800) }; } catch (e) { swallow("loadDayCartridge: readFileSync(p) unreadable → ignored", e); } }
   }
   return null;
 }
@@ -647,7 +648,7 @@ function loadNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out", "ni
       const text = (cut >= 0 ? raw.slice(0, cut) : raw).trim();
       if (!text) continue;                            // fence-only page: nothing to speak, fall back a day
       return { date: localDate(d), age, text, chars: text.length, machine_block_chars: cut >= 0 ? raw.length - cut : 0 };
-    } catch { }
+    } catch (e) { swallow("loadNightCoach: readFileSync(p) unreadable → ignored", e); }
   }
   return null;
 }
@@ -658,7 +659,7 @@ function loadNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out", "ni
 function loadNightCoachLegacy(now = new Date(), dir = join(STATE_DIR, "brain_out", "night_coach")) {
   for (const d of [now, new Date(now.getTime() - 86400000)]) {
     const p = join(dir, localDate(d) + ".md");
-    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1200) }; } catch { } }
+    if (existsSync(p)) { try { return { date: localDate(d), text: readFileSync(p, "utf8").slice(0, 1200) }; } catch (e) { swallow("loadNightCoachLegacy: readFileSync(p) unreadable → ignored", e); } }
   }
   return null;
 }
@@ -789,7 +790,7 @@ function gatherRecallSources() {
     for (const f of readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)))
       for (const line of readFileSync(join(OUT_DIR, f), "utf8").split("\n"))
         if (line.startsWith("CAPTAIN: ")) items.push({ ts: f.slice(0, 10), source: "dugout", text: line.slice(9) });
-  } catch { }
+  } catch (e) { swallow("gatherRecallSources: readdirSync(OUT_DIR) unreadable → ignored", e); }
   // ── HIS STUDY SURFACE, WHICH RECALL COULD NOT SEE (audit #108, 6 Aug 2026) ──
   // Census on the live index: 137 rows — {dugout: 133, throwin: 2, note: 2} — dated
   // 17/18/19 Jul, one row on 30 Jul, two on 5 Aug. Every source above is a VOICE or
@@ -825,7 +826,7 @@ function gatherRecallSources() {
       if (!his) continue;
       items.push({ ts: r.ts, source: r.source, text: String(r.text) });
     }
-  } catch { }
+  } catch (e) { swallow("gatherRecallSources: readLines(join(STATE_DIR, \"afferent.jsonl\")) unreadable → items", e); }
   return items;
 }
 
@@ -857,13 +858,13 @@ const RECALL_LOCK_STALE_MS = 10 * 60000;             // an embed batch is second
 function acquireRecallLock(file) {
   const lock = file + ".lock";
   const claim = () => { writeFileSync(lock, `${process.pid} ${new Date().toISOString()}`, { flag: "wx" }); return lock; };
-  try { return claim(); } catch { }
+  try { return claim(); } catch (e) { swallow("acquireRecallLock: claim() failed → ignored", e); }
   try {                                               // a crashed run must never wedge the index forever
     if (Date.now() - statSync(lock).mtimeMs > RECALL_LOCK_STALE_MS) { unlinkSync(lock); return claim(); }
-  } catch { }
+  } catch (e) { swallow("acquireRecallLock: statSync(lock) absent → null", e); }
   return null;
 }
-function releaseRecallLock(lock) { if (lock) { try { unlinkSync(lock); } catch { } } }
+function releaseRecallLock(lock) { if (lock) { try { unlinkSync(lock); } catch (e) { swallow("releaseRecallLock: unlinkSync(lock) already gone → ignored", e); } } }
 // a BOUNDED wait, so ordinary contention (nightshift's backfill loop meeting the
 // bridge's hourly tick) just serialises instead of skipping a night's batch
 async function acquireRecallLockWaiting(file, waitMs = 2000, stepMs = 250) {
@@ -961,7 +962,7 @@ THE HONEST FRAME (never soften): no hype words. If asked "does it make him learn
 const MERGE_MANUAL = join(__dirname, "..", "docs", "archive", "THE_MERGE_MANUAL.md");   // Block 1 (18 Aug 2026 §13): records live in docs/archive/
 
 function loadMergeManual() {
-  try { return readFileSync(MERGE_MANUAL, "utf8"); } catch { return ""; }
+  try { return readFileSync(MERGE_MANUAL, "utf8"); } catch (e) { swallow("loadMergeManual: readFileSync(MERGE_MANUAL) unreadable → \"\"", e); return ""; }
 }
 
 function buildManualInstruction() {
@@ -1121,7 +1122,7 @@ STORYTELLING LAW: no definitions, no lists read aloud. This whole briefing is ON
 // Returns [] (not a guess) when capsules/ is absent: it is gitignored, so an
 // away-day clone legitimately has none.
 function lockedCapsuleIds(dir = join(STATE_DIR, "capsules")) {
-  try { return readdirSync(dir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort(); } catch { return []; }
+  try { return readdirSync(dir).filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, "")).sort(); } catch (e) { swallow("lockedCapsuleIds: readdirSync(dir) unreadable → []", e); return []; }
 }
 function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
   try {
@@ -1136,11 +1137,11 @@ function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
         const doubts = Array.isArray(j.doubts) ? j.doubts.length : (j.capsule && Array.isArray(j.capsule.doubts) ? j.capsule.doubts.length : 0);
         const rj = Array.isArray(j.reJirahDone) ? j.reJirahDone.length : (j.reJirahDone ?? 0);
         rows.push(`- ${(j.title || id).toUpperCase()} — LOCKED${j.lockedOn ? " " + String(j.lockedOn).slice(0, 10) : ""}${j.status ? " · " + j.status : ""} · re-jirah ×${rj} · ${doubts} doubt(s) fought through${bolo ? `\n  his bolo: "${bolo}…"` : ""}`);
-      } catch { }
+      } catch (e) { swallow("capsuleDigest: readFileSync(join(dir, f)) unreadable → ignored", e); }
     }
     if (!rows.length) return "";
     return `\nTHE LOCKED BOOK — concepts he has ALREADY MASTERED (his own capsules; never teach these from zero, never act like he doesn't know them — probe for decay, build on them, reference HIS bolo):\n${rows.join("\n")}\nWhen the talk touches any of these, call get_capsule for the full book — his mechanism, fault-lines, and every doubt he already fought.\n`;
-  } catch { return ""; }
+  } catch (e) { swallow("capsuleDigest: readdirSync(dir) unreadable → \"\"", e); return ""; }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1351,7 +1352,7 @@ function recitalScar(n = 24) {
     return `\nYOUR RECITAL RECORD — THE MACHINE GRADED YOU, and this is what it caught (read this before you open any capsule):\n`
       + worst.map(([v, c]) => `- ${v} ×${c} of your last ${scored.length} graded recital(s) — ${FIX[v] || "re-read THE RECITAL LAW."}`).join("\n")
       + (dropped.length ? `\n- Words of HIS you dropped most recently: ${dropped.join(", ")}. Those are the exact places you smoothed him over.\n` : "\n");
-  } catch { return ""; }
+  } catch (e) { swallow("recitalScar: readFileSync(RECITAL) unreadable → \"\"", e); return ""; }
 }
 
 // THE SPRINT — his curriculum (the WHAT). The Gaffer READS SPRINT.md so it coaches
@@ -1382,9 +1383,9 @@ function sprintCartridge() {
           + (nx.length ? `\n- next up: ${nx.join(" · ")}` : "")
           + `\n- Anything the roadmap lists BEFORE ${cur.id} is behind him. Never coach him back onto it.`;
       }
-    } catch { }
+    } catch (e) { swallow("sprintCartridge: readJson(sprint.json) unreadable → the sprint block without its lines", e); }
     return `\nTHE SPRINT (his curriculum — what he is studying toward the AI-PE job). Ground "good morning" / "what should I study" / "aaj kya padhun" HERE: name where he is on the board and the next item, tie today's concept to a sprint task ID. Dates are TARGETS, never deadlines — CONFIRM his real position, never pressure with a date or a countdown:\n${t}\n`;
-  } catch { return ""; }
+  } catch (e) { swallow("sprintCartridge: readFileSync(p) unreadable → \"\"", e); return ""; }
 }
 
 // THE SEASON CONTEXT (anti-confabulation law) — computed from the bus every
@@ -1400,23 +1401,23 @@ function capsWindow() {
   try {
     const dir = join(STATE_DIR, "capsules");
     const days = readdirSync(dir).filter(f => f.endsWith(".json"))
-      .map(f => { try { return readJson(join(dir, f)); } catch { return null; } })
+      .map(f => { try { return readJson(join(dir, f)); } catch (e) { swallow("capsWindow: readJson(join(dir, f)) unreadable → null", e); return null; } })
       .map(c => c && (c.lockedOn || c.locked_on)).filter(Boolean).sort();
     if (!days.length) return "pre-season";
     const fmt = (d) => { const x = new Date(d + "T00:00:00Z"); return Number.isFinite(x.getTime()) ? x.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : d; };
     return days[0] === days[days.length - 1] ? fmt(days[0]) : fmt(days[0]) + "–" + fmt(days[days.length - 1]);
-  } catch { return "pre-season"; }
+  } catch (e) { swallow("capsWindow: readdirSync(dir) unreadable → \"pre-season\"", e); return "pre-season"; }
 }
 function seasonContext() {
-  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
-  const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch { return 0; } })();
+  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch (e) { swallow("seasonContext: readFileSync(join(STATE_DIR, \"reps_log.jsonl\")) unreadable → 0", e); return 0; } })();
+  const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch (e) { swallow("seasonContext: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → 0", e); return 0; } })();
   // shortened 18 Aug 2026 (BLOCK 3, the ≤ 2,000-token constitution) — the three anchors the selftest holds are kept verbatim; the 18 Jul body is frozen below
   return `THE SEASON CONTEXT (live): a FRESH SEASON since 17 Jul 2026 — reps this season: ${reps}.${reps === 0 ? " ZERO sessions have happened; NEVER imply one did." : ""} His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked ${capsWindow()}): a "due" capsule = "your pre-season book has it locked; ripe for a Re-Jirah" — never "the forge session we did". Empty memory → say it is a fresh season and ask; an honest blank beats a confabulated past, every time.`;
 }
 // FROZEN VERBATIM (18 Jul 2026 body) — layering law
 function seasonContextLegacy() {
-  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
-  const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch { return 0; } })();
+  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch (e) { swallow("seasonContextLegacy: readFileSync(join(STATE_DIR, \"reps_log.jsonl\")) unreadable → 0", e); return 0; } })();
+  const caps = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).length; } catch (e) { swallow("seasonContextLegacy: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → 0", e); return 0; } })();
   return `THE SEASON CONTEXT (computed live — this is your epistemic ground truth):
 - This is a FRESH SEASON: the captain wiped the club's behavioral memory on 17 Jul 2026 and started clean. Reps logged THIS season: ${reps}.${reps === 0 ? " ZERO sessions have happened this season — no forge, no scrimmage, no re-jirah has occurred yet. NEVER imply one did." : ""}
 - His ${caps} locked capsule(s) are PRE-SEASON inheritance (locked ${capsWindow()}, before the fresh start). When FSRS says a capsule concept is "due", say it plainly: "your pre-season book has it locked; the schedule says it's ripe for a Re-Jirah" — NEVER "the forge session we did" or any invented shared memory.
@@ -1427,7 +1428,7 @@ function seasonContextLegacy() {
 // the Gaffer opened cold and never introduced itself or learned him. This fires
 // ONLY until his first rep lands, then disappears — he's launched, no re-intros.
 function firstContact() {
-  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
+  const reps = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch (e) { swallow("firstContact: readFileSync(join(STATE_DIR, \"reps_log.jsonl\")) unreadable → 0", e); return 0; } })();
   if (reps > 0) return "";
   return `FIRST CONTACT (he has logged ZERO reps — this may be his very FIRST real session with you; run this ONCE, warmly, then coach normally and never re-introduce yourself):
 - OPEN by greeting him by name and naming the moment honestly: it IS day one, a fresh season, you are meeting properly. Do not pretend you already know him — you don't yet, and he'll respect the honesty.
@@ -1452,13 +1453,13 @@ function gafferSittingSection() {
     // The blocks are written by gaffer_brain.mjs — this file only reads them, and it
     // renders NOTHING when they are empty, so a fresh machine's instruction is
     // byte-identical to the one it carried before this section existed.
-    const blocks = (() => { try { return renderGafferBlocks(readJson(GBLOCKS)); } catch { return ""; } })();
+    const blocks = (() => { try { return renderGafferBlocks(readJson(GBLOCKS)); } catch (e) { swallow("gafferSittingSection: readJson(GBLOCKS) unreadable → \"\"", e); return ""; } })();
     // renderBrief always emits its header line; a header alone means nothing to say,
     // and an organ with nothing to say must say nothing (C3 principle 4).
     const body = brief && brief.split("\n").length > 1 ? brief : "";
     if (!blocks && !body) return "";
     return `\n${[blocks, body].filter(Boolean).join("\n\n")}\n`;
-  } catch { return ""; }
+  } catch (e) { swallow("gafferSittingSection: readJson(GSTATE) unreadable → \"\"", e); return ""; }
 }
 
 // ---------------------------------------------------------------------------
@@ -1494,7 +1495,7 @@ function gafferSittingSection() {
 // this function's first selftest reproduced it within the hour.
 function buildPreparedSitting(deps = {}) {
   try {
-    const readJson = deps.readJson || ((p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch { } return null; });
+    const readJson = deps.readJson || ((p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("buildPreparedSitting: readFileSync(p) unreadable → null", e); } return null; });
     const map = readJson(join(STATE_DIR, "capsule_map.json"));
     const locked = ((map && map.concepts) || []).filter(c => c && c.locked_on);
     if (!locked.length) return "";
@@ -1529,7 +1530,7 @@ function buildPreparedSitting(deps = {}) {
       const w = readJson(join(STATE_DIR, "weaknesses.json"));
       const head = w && w.headline && (typeof w.headline === "string" ? w.headline : w.headline.one_line);
       if (head && !w.low_confidence) L.push(`WHERE HE HISTORICALLY BREAKS (nemesis, measured): ${String(head).slice(0, 220)}`);
-    } catch { }
+    } catch (e) { swallow("buildPreparedSitting: readJson(join(STATE_DIR, \"weaknesses.json\")) unreadable → ignored", e); }
     try {
       // an EMPTY ARRAY IS TRUTHY — this rendered a bare "[]" as if it were a
       // finding. An organ with nothing to say must say nothing (C3 principle 4).
@@ -1537,10 +1538,10 @@ function buildPreparedSitting(deps = {}) {
       const dz = cal && cal.danger_zone;
       const hasDz = Array.isArray(dz) ? dz.length > 0 : !!dz && Object.keys(dz).length > 0;
       if (hasDz && !cal.low_confidence) L.push(`WHERE HE IS OVERCONFIDENT (calibration — probe these HARDER, he will say "knew" and be wrong): ${JSON.stringify(dz).slice(0, 200)}`);
-    } catch { }
+    } catch (e) { swallow("buildPreparedSitting: readJson(join(STATE_DIR, \"calibration.json\")) unreadable → ignored", e); }
     L.push(`DECLARE THIS SHAPE TO HIM FIRST, in two or three sentences, before you start walking it (that is the map law above). Then take ONE axis and stop.`);
     return `\n${L.join("\n")}\n`;
-  } catch { return ""; }
+  } catch (e) { swallow("buildPreparedSitting: readFileSync(p) unreadable → \"\"", e); return ""; }
 }
 
 // ---------------------------------------------------------------------------
@@ -1586,12 +1587,12 @@ function buildOpeningBriefing() {
       const top = open[0];
       bits.push(`${open.length} decision(s) waiting on him; the one to deal FIRST: [${top.id}] ${String(top.line || "").slice(0, 220)}`);
     }
-  } catch { }
+  } catch (e) { swallow("buildOpeningBriefing: readJson(join(STATE_DIR, \"captains_call.json\")) unreadable → ignored", e); }
   try {
     const w = readJson(join(STATE_DIR, "watchman_last.json"));
     const reds = ((w && w.findings) || []).filter(f => f && f.level === "RED");
     if (reds.length) bits.push(`overnight watchman: ${reds.length} RED — ${reds.map(r => r.id).join(" · ")}`);
-  } catch { }
+  } catch (e) { swallow("buildOpeningBriefing: readJson(join(STATE_DIR, \"watchman_last.json\")) unreadable → ignored", e); }
   try {
     // READ THE SOURCE THAT EXISTS. This was written against `rejirah_state.json`,
     // a file NOTHING creates — so the line silently pushed nothing, every session,
@@ -1607,7 +1608,7 @@ function buildOpeningBriefing() {
       const graded = (Array.isArray(store.cards) ? store.cards : []).some(c => Number(c.rejirah_graded) > 0);
       bits.push(`${overdue.length} Re-Jirah round(s) overdue${graded ? "" : " — and he has NEVER completed one, so the first is the one that unlocks a whole layer"}. Overdue is RIPE, not late; say it that way.`);
     }
-  } catch { }
+  } catch (e) { swallow("buildOpeningBriefing: readJson(join(STATE_DIR, \"fsrs_store.json\")) unreadable → ignored", e); }
   try {
     // SAME DEAD-WIRE CLASS AS THE LINE ABOVE, and caught in the same sweep: this
     // filtered on `x.status === "staged"`, and a mission row HAS NO `status` FIELD.
@@ -1621,7 +1622,7 @@ function buildOpeningBriefing() {
       const unfired = open.filter(x => !x.fired_at);
       bits.push(`${open.length} Gemini mission(s) still out (${open.slice(0, 4).map(x => x.id).join(", ")})${unfired.length ? ` — ${unfired.length} never even fired` : ""}. ONLY HE can fire them, and the full-syllabus benchmark stays gated until they return.`);
     }
-  } catch { }
+  } catch (e) { swallow("buildOpeningBriefing: readJson(join(STATE_DIR, \"missions.json\")) unreadable → ignored", e); }
   if (!bits.length) return "";
   return `
 THE OPENING BRIEFING — SAY THIS FIRST, UNPROMPTED, BEFORE HE ASKS ANYTHING.
@@ -2093,7 +2094,7 @@ function execTool(name, args, deps = {}) {
       const id = String((args || {}).id || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
       const p = join(STATE_DIR, "capsules", id + ".json");
       if (!id || !existsSync(p)) {
-        const have = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { return []; } })();
+        const have = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch (e) { swallow("execTool: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → []", e); return []; } })();
         return { ok: false, error: `no locked capsule "${id}"`, locked: have };
       }
       try {
@@ -2102,7 +2103,7 @@ function execTool(name, args, deps = {}) {
         // 10 Aug 2026 — the projection now lives in capsuleProjection() and returns
         // his prose UNCUT. capsuleProjectionLegacy() is frozen beside it (LAYERING).
         return capsuleProjection(src, j, id, (args || {}).open, (args || {}).seg);
-      } catch { return { ok: false, error: "capsule unreadable" }; }
+      } catch (e) { swallow("execTool: readFileSync(p) unreadable → { ok:false, error:capsule unreadable }", e); return { ok: false, error: "capsule unreadable" }; }
     }
     if (name === "get_calibration") {
       const c = readJson(join(STATE_DIR, "calibration.json")) || {};
@@ -2255,7 +2256,7 @@ function execTool(name, args, deps = {}) {
       const tmp = join(os.tmpdir(), `dugout-reps-${Date.now()}-${randomBytes(4).toString("hex")}.json`);
       writeFileSync(tmp, JSON.stringify(batch));
       try { sh("capture.mjs", ["paste", tmp]); }
-      finally { try { unlinkSync(tmp); } catch { } }
+      finally { try { unlinkSync(tmp); } catch (e) { swallow("execTool: unlinkSync(tmp) already gone → ignored", e); } }
       return { ok: true, logged: batch.length };
     }
     if (name === "take_note") {
@@ -2476,7 +2477,7 @@ function execTool(name, args, deps = {}) {
       if (!want) return { ok: false, why: "get_mission needs a mission id (M01, M02, T-hallucinations…)" };
       const hits = [];
       for (const dir of [join(REPO, "dressing-room", "missions"), join(STATE_DIR, "scout_reports")]) {
-        let names = []; try { names = readdirSync(dir); } catch { continue; }
+        let names = []; try { names = readdirSync(dir); } catch (e) { swallow("execTool: readdirSync(dir) unreadable → skip", e); continue; }
         for (const n of names) {
           if (!n.toLowerCase().includes(want.toLowerCase())) continue;
           const body = readByData(join(dir, n), 8000);
@@ -2621,9 +2622,9 @@ function execTool(name, args, deps = {}) {
       // hype — the same law get_club_report lives under.
       const day = localDate(now);
       const dayOf = (r) => r.day || String(r.ts || "").slice(0, 10);
-      let scriptCount = 0; try { scriptCount = readdirSync(__dirname).filter(f => f.endsWith(".mjs")).length; } catch { }
-      let capsuleNames = []; try { capsuleNames = readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { }
-      let skillCount = 0; try { skillCount = readdirSync(join(__dirname, "..", ".claude", "skills")).length; } catch { }
+      let scriptCount = 0; try { scriptCount = readdirSync(__dirname).filter(f => f.endsWith(".mjs")).length; } catch (e) { swallow("execTool: readdirSync(__dirname) unreadable → ignored", e); }
+      let capsuleNames = []; try { capsuleNames = readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch (e) { swallow("execTool: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → ignored", e); }
+      let skillCount = 0; try { skillCount = readdirSync(join(__dirname, "..", ".claude", "skills")).length; } catch (e) { swallow("execTool: readdirSync(join(__dirname, \"..\", \".claude\", \"skills\")) unreadable → ignored", e); }
       const cards = readJson(join(STATE_DIR, "cards.json")) || {};
       const thal = readJson(join(STATE_DIR, "thalamus_config.json")) || {};
       const gate = readLines(join(STATE_DIR, "salience_ledger.jsonl")).filter(r => dayOf(r) === day);
@@ -2754,7 +2755,7 @@ function execTool(name, args, deps = {}) {
         const dir = join(STATE_DIR, "brain_out", "diary");
         const sib = readJson(join(dir, d + ".json"));
         let page = null;
-        try { page = readFileSync(join(dir, d + ".md"), "utf8").slice(0, 6000); } catch { }
+        try { page = readFileSync(join(dir, d + ".md"), "utf8").slice(0, 6000); } catch (e) { swallow("execTool: readFileSync(join(dir, d + \".md\")) unreadable → ignored", e); }
         if (sib || page) {
           // THE GATE (§5.2 "spoken", 18 Aug 2026): he asked, the page is being handed to
           // the mouth — that IS the diary reaching him. Owner-held stamp, fail-silent, and
@@ -3019,9 +3020,9 @@ const DIGEST_DIR = join(STATE_DIR, "brain_out", "dugout_digest");
 // this file, the two door reads alone cost 219 unresolved sinks. Funnelled here
 // the organ has exactly ONE opaque read, which is the true size of the fact
 // "this organ opens files named by data".
-const readByData = (path, cap) => { try { return existsSync(path) ? readFileSync(path, "utf8").slice(0, cap || 8000) : null; } catch { return null; } };
+const readByData = (path, cap) => { try { return existsSync(path) ? readFileSync(path, "utf8").slice(0, cap || 8000) : null; } catch (e) { swallow("readByData: readFileSync(path) unreadable → null", e); return null; } };
 const spliceRead = (p) => readByData(p, 1e9);
-const spliceList = (d) => { try { return readdirSync(d); } catch { return []; } };
+const spliceList = (d) => { try { return readdirSync(d); } catch (e) { swallow("spliceList: readdirSync(d) unreadable → []", e); return []; } };
 export function spliceParts(now) {
   const outDir = OUT_DIR;
   const digestDir = DIGEST_DIR;
@@ -3089,7 +3090,7 @@ function buildRehydrate(now = new Date(), charBudget = 2000) {
   try {
     const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
     return lines.length ? lines.join("\n").slice(-charBudget) : null;
-  } catch { return null; }
+  } catch (e) { swallow("buildRehydrate: readFileSync(p) unreadable → null", e); return null; }
 }
 
 // THE BUDGET, IN ONE PLACE — and THE COMPOSITION, IN ONE PLACE.
@@ -3610,7 +3611,7 @@ async function selftest() {
   assert("constitution (Block 3): DEPTH IS OBEDIENCE is LEGACY — frozen body has it, the live constitution does not, and THE SPEAK LAW rides live", buildSystemInstructionLegacy().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("Never lecture") && buildSystemInstruction().includes("THE SPEAK LAW"));
   assert("SEASON CONTEXT rides the constitution (anti-confabulation: fresh season, pre-season book)", buildSystemInstruction().includes("THE SEASON CONTEXT") && buildSystemInstruction().includes("PRE-SEASON inheritance") && buildSystemInstruction().includes("honest blank beats a confabulated past"));
   {
-    const repsNow = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch { return 0; } })();
+    const repsNow = (() => { try { return readFileSync(join(STATE_DIR, "reps_log.jsonl"), "utf8").split("\n").filter(l => l.trim()).length; } catch (e) { swallow("readFileSync(join(STATE_DIR, \"reps_log.jsonl\")) unreadable → 0", e); return 0; } })();
     const si = buildSystemInstruction();
     assert("FIRST CONTACT: a bloodless season (0 reps) opens with a real hello — greet, orient, learn him; gone after the first rep", repsNow > 0 ? !si.includes("FIRST CONTACT (he has logged ZERO reps") : (si.includes("FIRST CONTACT") && si.includes("next kya") && si.includes("gut-word") && si.includes("LEARN HIM")));
   }
@@ -4410,8 +4411,8 @@ async function selftest() {
       // The old check could only ever exercise TODAY's file, so on a quiet
       // morning it asserted nothing at all — which is how the drift above sat
       // undetected from 9 Aug to 11 Aug while npm test reported the organ red.
-      const tDays = (() => { try { return readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).map(f => f.slice(0, 10)).sort().reverse(); } catch { return []; } })();
-      const tBody = (d) => { try { return readFileSync(join(OUT_DIR, d + ".md"), "utf8").split("\n").filter(Boolean).join("\n"); } catch { return ""; } };
+      const tDays = (() => { try { return readdirSync(OUT_DIR).filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f)).map(f => f.slice(0, 10)).sort().reverse(); } catch (e) { swallow("readdirSync(OUT_DIR) unreadable → []", e); return []; } })();
+      const tBody = (d) => { try { return readFileSync(join(OUT_DIR, d + ".md"), "utf8").split("\n").filter(Boolean).join("\n"); } catch (e) { swallow("tBody: readFileSync(join(OUT_DIR, d + \".md\")) unreadable → \"\"", e); return ""; } };
       const bigDay = tDays.find(d => tBody(d).length > 2000);
       if (bigDay) {
         const full = tBody(bigDay);
@@ -4571,7 +4572,7 @@ async function selftest() {
     // checkout (the away-day runner) is bloodless BY CONSTRUCTION. The suite
     // proves the mechanism in whichever world it wakes in: the full book at
     // home, honest-dormant on an away day — never a phantom capsule invented.
-    const haveCapsules = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).some(f => f.endsWith(".json")); } catch { return false; } })();
+    const haveCapsules = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).some(f => f.endsWith(".json")); } catch (e) { swallow("readdirSync(join(STATE_DIR, \"capsules\")) unreadable → false", e); return false; } })();
     const digest = capsuleDigest();
     if (haveCapsules) {
       // E2E audit (25 Jul 2026): this check was VACUOUS. `?:` binds looser than
@@ -5009,7 +5010,7 @@ async function selftest() {
         assert("#51 a missing log is an honest absence, never a measured zero",
           readLinesTail(join(STATE_DIR, "__no_such_presence_log__.jsonl")).exists === false
           && readPresenceDay(day, { file: join(STATE_DIR, "__no_such_presence_log__.jsonl") }).have_need.note.includes("never written"));
-      } finally { try { unlinkSync(tmp); } catch { } }
+      } finally { try { unlinkSync(tmp); } catch (e) { swallow("unlinkSync(tmp) already gone → ignored", e); } }
     }
     // roll tolerance: today's morning rows sit in the rolled sibling.
     // #51's remedy (a monthly roll) is presence.mjs's to write — this proves the
@@ -5028,7 +5029,7 @@ async function selftest() {
         assert("#51 'I read the whole live file' is not accepted as proof when an archive exists",
           readPresenceDay(day, { file: live }).have_need.covers_midnight === true
           && readLinesTail(live).whole === true);
-      } finally { for (const f of [live, arch]) { try { unlinkSync(f); } catch { } } }
+      } finally { for (const f of [live, arch]) { try { unlinkSync(f); } catch (e) { swallow("unlinkSync(f) already gone → ignored", e); } } }
     }
   }
 
@@ -6600,7 +6601,7 @@ async function main() {
         return res.end(readFileSync(f));
       }
       if (req.method === "GET" && /^\/ack\/\d+$/.test(req.url || "")) {
-        const files = (() => { try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort(); } catch { return []; } })();
+        const files = (() => { try { return readdirSync(ACK_DIR).filter(f => f.endsWith(".mp3")).sort(); } catch (e) { swallow("readdirSync(ACK_DIR) unreadable → []", e); return []; } })();
         const f = files[Number(req.url.split("/")[2])];
         if (!f) return send(404, { error: "no such ack" });
         res.writeHead(200, { "Content-Type": "audio/mpeg" });
@@ -6710,7 +6711,7 @@ async function main() {
           // from a wire fault without re-guessing it. brain.mjs's
           // dugoutMinutesToday sums `l.minutes || 0`, so a minutes-less row here
           // costs the voice-pool arithmetic nothing.
-          try { appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), tank: id || "T?", fault: true, why: String(body.why || "").slice(0, 120) }) + "\n"); } catch { }
+          try { appendFileSync(DLEDGER, JSON.stringify({ ts: new Date().toISOString(), tank: id || "T?", fault: true, why: String(body.why || "").slice(0, 120) }) + "\n"); } catch (e) { swallow("appendFileSync(DLEDGER) unwritable → send(200, { ok: true })", e); }
           return send(200, { ok: true });
         }
         if (req.url === "/handle") {
@@ -6733,7 +6734,7 @@ async function main() {
               spoken_words: Number(body.spoken_words) || 0,
               missing: Array.isArray(body.missing) ? body.missing.slice(0, 12) : [],
             }) + "\n");
-          } catch { }
+          } catch (e) { swallow("appendFileSync(RECITAL) unwritable → send(200, { ok: true })", e); }
           return send(200, { ok: true });
         }
         if (req.url === "/afferent-relay") {

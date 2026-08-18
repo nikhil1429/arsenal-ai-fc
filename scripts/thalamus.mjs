@@ -107,11 +107,12 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 // adjudicateLive, exactly as before — only the row SHAPE moves up here.
 import { ledgerForensics } from "./claudegen.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Captured ONCE, at module load — this is the mtime of the code actually running in
 // this process, which is what /status must report. See the /status handler for why.
-const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch { return null; } })();
+const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch (e) { swallow("statSync(fileURLToPath(import.meta.url)) absent → null", e); return null; } })();
 const BOOTED_AT = new Date().toISOString();
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const CONFIG    = join(STATE_DIR, "thalamus_config.json");
@@ -132,8 +133,8 @@ const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagnostics that had nowhere to land (*.log is gitignored)
 const PORT = 4113;                                  // one below the Dugout's 4114
 
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -258,7 +259,7 @@ function rotateLogIfNeeded(cfg) {
     if (!existsSync(LOGFILE)) return;
     if (statSync(LOGFILE).size < max) return;
     renameSync(LOGFILE, LOGFILE + ".1");             // keep: 1 — one generation back
-  } catch { /* rotation is best-effort; a busy handle must not stop the write */ }
+  } catch (e) { swallow("rotation is best-effort; a busy handle must not stop the write", e); }
 }
 // THE CLOAK AND THE LOGGER FIGHT OVER THE SAME FILE (audit #108 verify pass, 6 Aug 2026).
 // hidden_run.vbs launches each daemon as `cmd /c <cmd> >> "scripts/<organ>.log" 2>&1`,
@@ -279,7 +280,7 @@ function fileLog(cfg, msg, target = LOGFILE) {
     rotateLogIfNeeded(cfg);
     appendFileSync(target, line, "utf8");
     return "file";
-  } catch {
+  } catch (e) { swallow("fileLog: rotateLogIfNeeded(cfg) failed → fall through", e);
     // the file is held (we are running under the cloak, or another process owns it)
     try { process.stdout.write(line); return "stdout"; } catch { return null; }
   }
@@ -611,7 +612,7 @@ function conceptRegistry() {
     const key = `${st.mtimeMs}:${st.size}`;
     if (key !== regCache.key) regCache = { key, reg: loadRegistry(CONCEPTS) };
     return regCache.reg;
-  } catch { return EMPTY_REGISTRY; }
+  } catch (e) { swallow("conceptRegistry: statSync(CONCEPTS) absent → EMPTY_REGISTRY", e); return EMPTY_REGISTRY; }
 }
 // raw token → the canonical dossier key, or null when it is not canon at all.
 // Both vocabularies count: a dossier row is study GROUND, not a track-scoped
@@ -638,7 +639,7 @@ function createNucleus(cfg, deps = {}) {
     // measured precedent, one generation kept. Windowed readers (wind tunnel,
     // gate_tune) read the .1 sibling too, so no 14-day window ever goes hungry.
     appendLedger: deps.appendLedger || ((row) => {
-      try { if (statSync(SLEDGER).size > 2 * 1024 * 1024) { rmSync(SLEDGER + ".1", { force: true }); renameSync(SLEDGER, SLEDGER + ".1"); } } catch { }
+      try { if (statSync(SLEDGER).size > 2 * 1024 * 1024) { rmSync(SLEDGER + ".1", { force: true }); renameSync(SLEDGER, SLEDGER + ".1"); } } catch (e) { swallow("createNucleus: statSync(SLEDGER) absent → ignored", e); }
       appendFileSync(SLEDGER, JSON.stringify(row) + "\n");
     }),
     writeWorkspace: deps.writeWorkspace || ((o) => writeAtomic(WORKSPACE, o)),
@@ -1151,7 +1152,7 @@ function defaultHeadroomFrac() {
     const cfg = loadBrainCfg();
     const hr = headroom(cfg, readLines(join(STATE_DIR, "brain_ledger.jsonl")), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date());
     return hr.cap > 0 ? clamp01((hr.cap - hr.used) / hr.cap) : 0;
-  } catch { return 0.5; }   // unknown budget → lean conservative, not open
+  } catch (e) { swallow("defaultHeadroomFrac: readLines(join(STATE_DIR, \"brain_ledger.jsonl\")) unreadable → 0.5", e); return 0.5; }   // unknown budget → lean conservative, not open
 }
 // M14 — the same guarded accounting, in TOKENS (feeds the live wake cap)
 function defaultAllowedTokens() {
@@ -1161,7 +1162,7 @@ function defaultAllowedTokens() {
     const cfg = loadBrainCfg();
     const hr = headroom(cfg, readLines(join(STATE_DIR, "brain_ledger.jsonl")), readJson(join(STATE_DIR, "brain_queue.json")) || {}, new Date());
     return Math.max(0, hr.allowed || 0);
-  } catch { return 0; }     // unknown budget → the cap floors at wake_cap_min
+  } catch (e) { swallow("defaultAllowedTokens: readLines(join(STATE_DIR, \"brain_ledger.jsonl\")) unreadable → 0", e); return 0; }     // unknown budget → the cap floors at wake_cap_min
 }
 let brainMod = null;
 
@@ -1255,7 +1256,7 @@ function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requ
   };
   // an unmetered call is still a made call — a locked/full ledger must never take
   // the gate down with it (nightshift's genLedgered law, same reason)
-  try { (deps.appendBrainLedger || ((o) => appendFileSync(BLEDGER, JSON.stringify(o) + "\n")))(row); } catch { }
+  try { (deps.appendBrainLedger || ((o) => appendFileSync(BLEDGER, JSON.stringify(o) + "\n")))(row); } catch (e) { swallow("meterAdjudication: appendFileSync(BLEDGER) unwritable → row", e); }
   return row;
 }
 
@@ -2158,7 +2159,7 @@ async function selftest() {
     // was actually HEALTHY, which is the worst possible polarity for a health check.
     const stamp = `selftest heartbeat ${Date.now()}`;
     const tgt = join(tmpdir(), `thalamus_selftest_${process.pid}.log`);
-    try { if (existsSync(tgt)) rmSync(tgt); } catch { }
+    try { if (existsSync(tgt)) rmSync(tgt); } catch (e) { swallow("rmSync(tgt) already gone → ignored", e); }
     const where = fileLog(loadConfig(), stamp, tgt);
     assert("#10 PROOF: a diagnostic written through fileLog actually LANDS on disk (this is the whole of #10)",
       where === "file" && existsSync(tgt) && readFileSync(tgt, "utf8").includes(stamp));
@@ -2166,7 +2167,7 @@ async function selftest() {
     // still reach stdout — which under the cloak is that same file — never vanish.
     {
       const held = join(tmpdir(), "thalamus_selftest_dir_as_file");
-      try { mkdirSync(held, { recursive: true }); } catch { }   // a directory: append always throws
+      try { mkdirSync(held, { recursive: true }); } catch (e) { swallow("mkdirSync(held) unmakeable → ignored", e); }   // a directory: append always throws
       const chunks = [];
       const realWrite = process.stdout.write.bind(process.stdout);
       process.stdout.write = (c) => { chunks.push(String(c)); return true; };
@@ -2174,9 +2175,9 @@ async function selftest() {
       try { fellBackTo = fileLog(loadConfig(), stamp, held); } finally { process.stdout.write = realWrite; }
       assert("#10 a HELD log target falls back to stdout — the diagnostic is never silently dropped",
         fellBackTo === "stdout" && chunks.join("").includes(stamp));
-      try { rmSync(held, { recursive: true, force: true }); } catch { }
+      try { rmSync(held, { recursive: true, force: true }); } catch (e) { swallow("rmSync(held) already gone → ignored", e); }
     }
-    try { rmSync(tgt, { force: true }); } catch { }
+    try { rmSync(tgt, { force: true }); } catch (e) { swallow("rmSync(tgt) already gone → ignored", e); }
   }
 
   // ORGANISM REPAIR — #106 STATUS IS A HAVE/NEED COUNTER
@@ -2246,7 +2247,7 @@ function buildStatus(rows, allRows, w, cfg) {
     + ` · ${adjBought}/${adjBand} ε-band verdict(s) bought lifetime`);
   // #10 — is the log actually landing?
   let logState = "MISSING — no diagnostic has been written yet";
-  try { if (existsSync(LOGFILE)) logState = `${statSync(LOGFILE).size}/${cfg.log.max_bytes} bytes before rotation`; } catch { }
+  try { if (existsSync(LOGFILE)) logState = `${statSync(LOGFILE).size}/${cfg.log.max_bytes} bytes before rotation`; } catch (e) { swallow("buildStatus: statSync(LOGFILE) absent → ignored", e); }
   L.push(`  diagnostics    : ${LOGFILE} — ${logState}`);
   return L.join("\n");
 }
@@ -2285,7 +2286,7 @@ async function main() {
         log(`thalamus: rolled afferent.jsonl → afferent.${m}.jsonl (monthly roll, D10)`);
       }
     }
-  } catch { /* a failed roll never blocks the nerve */ }
+  } catch (e) { swallow("a failed roll never blocks the nerve", e); }
   const nucleus = createNucleus(cfg, { log });
   // boot re-seed: yesterday's tail keeps NOV/HAB honest across restarts
   for (const row of readLines(AFFERENT).slice(-500)) {

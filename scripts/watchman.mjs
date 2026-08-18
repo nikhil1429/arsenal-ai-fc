@@ -92,6 +92,7 @@ import net from "node:net";
 // conductor.mjs is import-safe (main() is argv-guarded, zero side effects).
 import { EVENING } from "./conductor.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared; the ledger feeds caught-silent
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -150,7 +151,7 @@ const SUITE_TIMEOUT_MS = 15 * 60 * 1000;
 // has stopped and the last green is now a memory".
 const AUDIT_SILENT_DAYS = 90;
 
-const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
+const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e); return null; } };
 const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 // A row belongs to the day the captain lived, not the day UTC was having — the
 // same IST lesson physio.mjs learned on 25 Jul (finding 87f8f8da).
@@ -180,8 +181,8 @@ export function gather(now = new Date()) {
     // nightshift, dugout, scorer, forge_session (teaching line), the demo sandbox.
     // mtimeMs of each side, null when absent; the comparison lives in checks().
     scout_pair: {
-      canon_mtime: (() => { try { return statSync(join(ROOT, "learning-layer", "OPPONENT_SCOUT.md")).mtimeMs; } catch { return null; } })(),
-      projection_mtime: (() => { try { return statSync(join(STATE_DIR, "dossier_weights.json")).mtimeMs; } catch { return null; } })(),
+      canon_mtime: (() => { try { return statSync(join(ROOT, "learning-layer", "OPPONENT_SCOUT.md")).mtimeMs; } catch (e) { swallow("gather: statSync(join(ROOT, \"learning-layer\", \"OPPONENT_SC…) absent → null", e); return null; } })(),
+      projection_mtime: (() => { try { return statSync(join(STATE_DIR, "dossier_weights.json")).mtimeMs; } catch (e) { swallow("gather: statSync(join(STATE_DIR, \"dossier_weights.json\")) absent → null", e); return null; } })(),
     },
   };
   // c9's inputs (7 Aug 2026, live-fire). The maiden Tier-2 child worked for six
@@ -204,7 +205,7 @@ export function gather(now = new Date()) {
         }
       }
     }
-  } catch { /* an unreadable trail = no claim */ }
+  } catch (e) { swallow("an unreadable trail = no claim", e); }
   if (w.forge.exists) {
     const j = readJson(FORGE);
     if (j && typeof j === "object" && !Array.isArray(j) && j.concept) w.forge.json = j;
@@ -232,7 +233,7 @@ export function gather(now = new Date()) {
         } catch { /* a mangled line is skipped, never fatal */ }
       }
     }
-  } catch { w.affToday.readable = false; }
+  } catch (e) { swallow("gather: readFileSync(AFFERENT) unreadable → w.affToday.readable = false", e); w.affToday.readable = false; }
   try {
     if (w.auditLogExists) {
       for (const line of readFileSync(AUDIT_LOG, "utf8").split("\n")) {
@@ -240,13 +241,13 @@ export function gather(now = new Date()) {
         try { if (localDayOf(JSON.parse(line).ts) === today) w.auditRowsToday++; } catch {}
       }
     }
-  } catch { /* absent = 0 rows, which is exactly what c1 tests */ }
+  } catch (e) { swallow("absent = 0 rows, which is exactly what c1 tests", e); }
   // THE OUTWARD LOOP (8 Aug 2026, Ruling 5 edges) — the ≥2×/week floor's inputs
   // (HIS ruled 2, never a guess) + gemini_quality's honesty count. Reads only.
   w.gemini_quality = { rows: 0 };
   try {
     if (existsSync(GEMINI_QUALITY)) w.gemini_quality.rows = readFileSync(GEMINI_QUALITY, "utf8").split("\n").filter((l) => l.trim()).length;
-  } catch { /* unreadable = 0 recorded — c-gemini stays quiet */ }
+  } catch (e) { swallow("unreadable = 0 recorded — c-gemini stays quiet", e); }
   // LADDER B3 (9 Aug 2026) — the claude CLI's login health, as brain.mjs already
   // measures it every tick (failureStreak → token_vitals.json.health). Read-only.
   w.token_health = ((readJson(join(STATE_DIR, "token_vitals.json")) || {}).health) || null;
@@ -262,12 +263,17 @@ export function gather(now = new Date()) {
           try { const r = JSON.parse(line); if (localDayOf(r.ts) === today) { w.mouth.attempts_today++; if (r.sent) w.mouth.sent_today++; } } catch { }
         }
       }
-    } catch { /* unreadable log = 0 rows, the check stays honest about counts */ }
+    } catch (e) { swallow("unreadable log = 0 rows, the check stays honest about counts", e); }
     w.night_coach = {
       enabled: !!(((bc && bc.jobs) || []).find((j) => j.id === "night_coach" && j.enabled !== false)),
       today_file: existsSync(join(STATE_DIR, "brain_out", "night_coach", `${today}.md`)),
     };
   }
+  // BLOCK 7 (18 Aug 2026, §14.2) — SILENT CATCHES PER RUN. Every declared swallow in the
+  // production lanes lands in swallow_ledger.jsonl (swallow.mjs, its sole writer); the
+  // reader excludes selftest/sandbox rows by itself. Read-only; a number, never a claim.
+  try { w.caught_silent = swallowLedger({ sinceMs: 24 * 3600 * 1000, now: now.getTime(), top: 5 }); }
+  catch (e) { swallow("gather: swallowLedger() unreadable → no caught-silent line tonight", e); w.caught_silent = null; }
   // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
   // decides what the Gaffer does next; it is spawned fire-and-forget from the
   // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
@@ -288,7 +294,7 @@ export function gather(now = new Date()) {
     try {
       const gs = readJson(GAFFER_STATE);
       if (gs && gs.day === today) w.gaffer_brain.sitting_turns = Number(gs.captain_turns) || 0;
-    } catch { /* unreadable state = 0 turns, and 0 turns can never raise this RED */ }
+    } catch (e) { swallow("unreadable state = 0 turns, and 0 turns can never raise this RED", e); }
     try {
       if (existsSync(GAFFER_BRAIN_JOURNAL)) {
         for (const line of readFileSync(GAFFER_BRAIN_JOURNAL, "utf8").split("\n")) {
@@ -303,7 +309,7 @@ export function gather(now = new Date()) {
           } catch { }
         }
       }
-    } catch { /* unreadable journal reads as zero judgments, which is the RED, correctly */ }
+    } catch (e) { swallow("unreadable journal reads as zero judgments, which is the RED, correctly", e); }
   }
   // THE ARCHIVE AUDIT'S 90-DAY WATCH (ARCHIVE__DAY_ONE_SPEC.md §16.2.3, his
   // ruling 15 Aug 2026: "an auditor that silently stops running is worse than
@@ -333,7 +339,7 @@ export function gather(now = new Date()) {
         try { const r = JSON.parse(rows[i]); if (r && r.ts) { w.archive_audit.newest = r.ts; w.archive_audit.last_ok = r.ok === true; break; } } catch { /* keep walking back */ }
       }
     }
-  } catch { /* an unreadable journal claims nothing green; the check below treats it as never-run */ }
+  } catch (e) { swallow("an unreadable journal claims nothing green; the check below treats it as never-run", e); }
   w.outward = { has_desk: existsSync(join(STATE_DIR, "missions.json")), returns7d: 0, benchRuns7d: 0 };
   try {
     const mj = readJson(join(STATE_DIR, "missions.json"));
@@ -342,7 +348,7 @@ export function gather(now = new Date()) {
     const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= cutoff && t <= now.getTime(); };
     w.outward.returns7d = ((mj && mj.events) || []).filter((e) => (e.kind === "ingest" || e.kind === "audit_close") && inWin(e.ts)).length;
     w.outward.benchRuns7d = ((bj && bj.runs) || []).filter(inWin).length;
-  } catch { /* unreadable desks make no floor claim */ }
+  } catch (e) { swallow("unreadable desks make no floor claim", e); }
   return w;
 }
 
@@ -559,6 +565,21 @@ export function checks(w) {
       id: "mouth-silent-today", level: "INFO",
       finding: `the mouth sent NOTHING today (${w.mouth.attempts_today} attempt(s) recorded, 0 delivered) — expected 1-2 utterances; if the laptop slept the sentinel covered the morning`,
       evidence: "mouth_log.jsonl (brain.mjs records every pushNtfy attempt since LADDER E4)",
+    });
+  }
+
+  // BLOCK 7 · CAUGHT SILENT (§14.2, 18 Aug 2026) — the production lanes' declared
+  // swallows, COUNTED per run over the last 24 h. INFO and never more: a swallow is
+  // design until a death says otherwise (mutagen's panic lane is where deaths are
+  // measured); this line is the number that used to be invisible — 884 catch sites,
+  // 488 empty, and nobody could say how many fired last night. Now it says.
+  // Selftest/sandbox rows are excluded by the reader itself. ONE line, top sites named.
+  if (w.caught_silent && w.caught_silent.n > 0) {
+    const top = (w.caught_silent.top || []).map((t) => `${t.organ.replace(/\.mjs$/, "")} · ${t.why}${t.code ? ` · ${t.code}` : ""}${t.path ? ` ${t.path}` : ""} ×${t.n}`).join(" | ");
+    F.push({
+      id: "caught-silent", level: "INFO",
+      finding: `${w.caught_silent.n} silent catch(es) swallowed across ${w.caught_silent.runs} production run(s) in 24 h — top: ${top || "—"}`,
+      evidence: "swallow_ledger.jsonl (swallow.mjs — one row per process; `node scripts/swallow.mjs status` for the whole board; a NO-WRITER path here is a mutagen finding, not a watchman one)",
     });
   }
 
@@ -990,7 +1011,7 @@ function spawnTier2(findings) {
     child.unref();
     return { started_at: new Date().toISOString(), pid: child.pid };
   } catch (e) {
-    try { appendFileSync(REPAIR_LOG, `TIER 2 SPAWN FAILED: ${String(e)}\n`); } catch {}
+    try { appendFileSync(REPAIR_LOG, `TIER 2 SPAWN FAILED: ${String(e)}\n`); } catch (e) { swallow("spawnTier2: appendFileSync(REPAIR_LOG) unwritable → null", e);}
     return null;
   }
 }
@@ -1094,7 +1115,7 @@ function probeSittingReview() {
       if (!line.trim()) continue;
       try { rows.push(JSON.parse(line)); } catch { /* a mangled line is skipped, never fatal */ }
     }
-  } catch { return []; }   // absent/unreadable = no sitting has closed yet — nothing to say
+  } catch (e) { swallow("probeSittingReview: readFileSync(join(STATE_DIR, \"sitting_reviews.jsonl\")) unreadable → []", e); return []; }   // absent/unreadable = no sitting has closed yet — nothing to say
   const bases = rows.filter((r) => r && r.kind === "sitting_review" && r.sitting_id && Number.isFinite(Date.parse(r.closed_at)));
   if (!bases.length) return [];
   const newest = bases.reduce((a, b) => (Date.parse(b.closed_at) > Date.parse(a.closed_at) ? b : a));
@@ -1143,7 +1164,7 @@ export function probeUnleashVerdict(deps = {}) {
   // now exercises the UN-injected path for exactly this reason.
   const rows = deps.rows || (() => {
     const out = [];
-    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch { }
+    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch (e) { swallow("probeUnleashVerdict: readFileSync(join(STATE_DIR, \"brain_ledger.jsonl\")) unreadable → out", e); }
     return out;
   })();
   const n = rows.filter((r) => r && r.ts && Date.parse(r.ts) >= since).length;
@@ -1276,7 +1297,7 @@ export function probeExpectedTasks(deps = {}) {
 export async function probeSentinel(today, deps = {}) {
   const topic = deps.topic !== undefined ? deps.topic : (() => {
     if (process.env.ARSENAL_NTFY_TOPIC && process.env.ARSENAL_NTFY_TOPIC.trim()) return process.env.ARSENAL_NTFY_TOPIC.trim();
-    try { const t = readFileSync(join(STATE_DIR, "throwin_topic.txt"), "utf8").trim(); if (t) return t; } catch { }
+    try { const t = readFileSync(join(STATE_DIR, "throwin_topic.txt"), "utf8").trim(); if (t) return t; } catch (e) { swallow("probeSentinel: readFileSync(join(STATE_DIR, \"throwin_topic.txt\")) unreadable → ignored", e); }
     const bc = readJson(join(STATE_DIR, "brain_config.json"));
     return (bc && bc.ntfy && bc.ntfy.topic) || null;
   })();
@@ -1318,7 +1339,7 @@ export async function probeSentinel(today, deps = {}) {
       try {
         const m = readFileSync(deps.contractPath || SENTINEL_CONTRACT, "utf8").match(/^CHANNEL_STATUS:\s*BLOCKED\b[^\n]*/m);
         return m ? m[0].trim() : null;
-      } catch { return null; }
+      } catch (e) { swallow("probeSentinel: readFileSync(deps.contractPath || SENTINEL_CONTRACT) unreadable → null", e); return null; }
     })();
     return [{ id: "sentinel-blind", level: blocked ? "INFO" : "RED",
       finding: blocked
@@ -1344,7 +1365,7 @@ export async function probeSentinel(today, deps = {}) {
 export function probeWakeEconomy(deps = {}) {
   const rows = deps.rows !== undefined ? deps.rows : (() => {
     const out = [];
-    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch { }
+    try { for (const l of readFileSync(join(STATE_DIR, "brain_ledger.jsonl"), "utf8").split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { } } } catch (e) { swallow("probeWakeEconomy: readFileSync(join(STATE_DIR, \"brain_ledger.jsonl\")) unreadable → out", e); }
     return out;
   })();
   const honest = rows.filter((r) => r && r.job === "cortex_wake" && r.ok === true && r.cache_read_tokens != null && Number.isFinite(r.total_tokens) && r.total_tokens > 0);
@@ -1364,7 +1385,7 @@ export function probeWakeEconomy(deps = {}) {
     if (prev === f) return { prev, unchanged: true };
     c.deep.est_tokens_per_wake = f;
     c._wake_economy_refit = { at: new Date().toISOString(), n: honest.length, p95, fit: f, prev, by: "watchman probeWakeEconomy (LADDER G15, blanket ladder haan — this probe owns only this key + this receipt)" };
-    try { writeFileSync(p + ".tmp" + process.pid, JSON.stringify(c, null, 1)); renameSync(p + ".tmp" + process.pid, p); return { prev }; } catch { return null; }
+    try { writeFileSync(p + ".tmp" + process.pid, JSON.stringify(c, null, 1)); renameSync(p + ".tmp" + process.pid, p); return { prev }; } catch (e) { swallow("probeWakeEconomy: writeFileSync(p + \".tmp\" + process.pid) unwritable → null", e); return null; }
   });
   const res = write(fit);
   return [{ id: "wake-economy-refit", level: "INFO",
@@ -1430,7 +1451,7 @@ export function probeOutcomes(today, yday, deps = {}) {
         if (!line.trim()) continue;
         try { r.push(JSON.parse(line)); } catch { }
       }
-    } catch { }
+    } catch (e) { swallow("probeOutcomes: readFileSync(join(STATE_DIR, \"brain_outcomes.jsonl\")) unreadable → r", e); }
     return r;
   })();
   const last = new Map();
@@ -1502,7 +1523,7 @@ export function probeRecital(today, deps = {}) {
         if (!line.trim()) continue;
         try { r.push(JSON.parse(line)); } catch { }
       }
-    } catch { /* never born = no recital has ever been graded, which is not a wound */ }
+    } catch (e) { swallow("never born = no recital has ever been graded, which is not a wound", e); }
     return r;
   })();
   const day = rows.filter((r) => r && localDayOf(r.ts) === today);
@@ -1579,8 +1600,8 @@ async function run(argv) {
   const gate = tier2Gate(prevLast, findings, w.today, noTier2, nowHM, win);
   const tier2 = gate.fire ? spawnTier2(findings.filter((f) => f.level !== "INFO")) : null;
 
-  try { mkdirSync(STATE_DIR, { recursive: true }); } catch {}
-  try { appendFileSync(LOGJ, JSON.stringify({ ts: w.now, findings, tier2: gate }) + "\n"); } catch {}
+  try { mkdirSync(STATE_DIR, { recursive: true }); } catch (e) { swallow("run: mkdirSync(STATE_DIR) unmakeable → ignored", e);}
+  try { appendFileSync(LOGJ, JSON.stringify({ ts: w.now, findings, tier2: gate }) + "\n"); } catch (e) { swallow("run: appendFileSync(LOGJ) unwritable → ignored", e);}
   try {
     // C2 (9 Aug 2026): tmp+rename — the SessionStart brief reads this file at every
     // boot; a torn read there means a silent no-brief morning.
@@ -1592,7 +1613,7 @@ async function run(argv) {
       tier2_gate: gate.why,
     }, null, 1));
     renameSync(tmp, LAST);
-  } catch {}
+  } catch (e) { swallow("run: writeFileSync(tmp) unwritable → ignored", e);}
 
   console.log(`watchman: ${findings.length} finding(s) · ${findings.filter((f) => f.level !== "INFO").length} escalation-grade`);
   for (const f of findings) console.log(`  [${f.level}] ${f.id} — ${f.finding}`);
@@ -1649,7 +1670,7 @@ function geminiLane() {
         if (r.ts && (!out.last || r.ts > out.last)) out.last = r.ts;
       }
     }
-  } catch { }
+  } catch (e) { swallow("geminiLane: readdirSync(STATE_DIR) unreadable → out", e); }
   return out;
 }
 
@@ -1828,6 +1849,22 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     && !checks({ ...base, mouth: { enabled: true, attempts_today: 2, sent_today: 1 } }).some((f) => f.id === "mouth-silent-today")
     && !checks({ ...base, mouth: { enabled: false, attempts_today: 0, sent_today: 0 } }).some((f) => f.id === "mouth-silent-today")
     && !checks(base).some((f) => f.id === "mouth-silent-today"));
+
+  // BLOCK 7 — caught silent (INFO, never higher; zero or an unreadable ledger stays quiet)
+  {
+    const cs = { runs: 3, n: 7, organs: { "brain.mjs": 5, "dugout.mjs": 2 }, top: [{ organ: "brain.mjs", why: "readJson: readFileSync(p) unreadable → null", code: "ENOENT", path: "dressing-room/state/x.json", n: 5 }, { organ: "dugout.mjs", why: "listAcks: readdirSync(ACK_DIR) unreadable → []", code: null, path: null, n: 2 }] };
+    const F = checks({ ...base, caught_silent: cs });
+    const f = F.find((x) => x.id === "caught-silent");
+    assert("BLOCK 7 — swallows in the last 24 h ⇒ ONE caught-silent INFO naming count, runs and the top sites (organ · why · code path ×n)",
+      f && f.level === "INFO" && /7 silent catch/.test(f.finding) && /3 production run/.test(f.finding) && /brain · readJson: readFileSync\(p\) unreadable → null · ENOENT dressing-room\/state\/x\.json ×5/.test(f.finding) && /dugout · listAcks/.test(f.finding),
+      f ? f.finding : "no caught-silent finding");
+    assert("…zero swallows, or a ledger the gather could not read (null), makes NO finding — silence about silence is honest here",
+      !checks({ ...base, caught_silent: { runs: 0, n: 0, organs: {}, top: [] } }).some((x) => x.id === "caught-silent")
+      && !checks({ ...base, caught_silent: null }).some((x) => x.id === "caught-silent")
+      && !checks(base).some((x) => x.id === "caught-silent"));
+    assert("…and it never escalates: caught-silent is INFO in every shape (a swallow is design until mutagen's panic lane says otherwise)",
+      f && f.level === "INFO");
+  }
 
   // LADDER E8 — the coach that didn't teach (WARN)
   assert("E8 — night_coach enabled + no lesson file for today ⇒ WARN; file present or job disabled stays quiet",
@@ -2186,7 +2223,7 @@ else if (cmd === "brief") {
       const now = new Date();
       const L = briefLines(readJson(LAST), dayKey(now), addDays(dayKey(now), -1));
       if (L.length) console.log(L.join("\n"));
-    } catch { /* silence is the contract */ }
+    } catch (e) { swallow("silence is the contract", e); }
   }
   return;   // was process.exit(0) — 18 Aug 2026, Block 1 (turn_hook.mjs contract 2): the SessionStart dispatcher runs captains_call after us in the SAME process
 } else if (cmd === "report") report();

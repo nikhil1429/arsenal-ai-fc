@@ -75,20 +75,28 @@ const PANIC_MARK = "__ARSENAL_PANIC_REWRITE__";
 // reporting of any kind. The 1-statement `try{JSON.parse(read())}catch{}` is the
 // intended idiom in this repo, so panic mode still rewrites it — the point of
 // panic mode is precisely to make the intended idiom loud FOR ONE RUN.
+// BLOCK 7 (18 Aug 2026, §14.2): a body that calls `swallow(` is a DECLARED swallow
+// (scripts/swallow.mjs) — it already rethrows under ARSENAL_PANIC, NAMING the site,
+// so it is not rewritten. `rewrote N sites` is therefore the count of UNDECLARED
+// swallows and can only go down as lanes declare theirs (BEFORE Block 7: 1035).
 function isSwallow(src, handler) {
   if (!handler) return false;
   const body = src.slice(handler.body.start, handler.body.end);
   if (/\bthrow\b/.test(body)) return false;
+  if (isDeclared(body)) return false;
   return !/console\.|process\.exit|report|assert|warn\(|error\(/.test(body);
 }
+const isDeclared = (body) => /\bswallow\(/.test(body);
 
 export function panicRewrite(src) {
   let ast;
   try { ast = parse(src, { ecmaVersion: 2023, sourceType: "module", locations: true, allowHashBang: true }); }
-  catch { return { src, count: 0 }; }
+  catch { return { src, count: 0, declared: 0 }; }
   const edits = [];
+  let declared = 0;
   const walk = (n) => {
     if (!n || typeof n.type !== "string") return;
+    if (n.type === "TryStatement" && n.handler && isDeclared(src.slice(n.handler.body.start, n.handler.body.end))) declared++;
     if (n.type === "TryStatement" && n.handler && isSwallow(src, n.handler)) {
       const h = n.handler;
       if (h.param) {
@@ -110,7 +118,7 @@ export function panicRewrite(src) {
   edits.sort((a, b) => b.at - a.at);
   let out = src;
   for (const e of edits) out = out.slice(0, e.at) + e.text + out.slice(e.replaceTo || e.at);
-  return { src: out, count: edits.length };
+  return { src: out, count: edits.length, declared };
 }
 
 // SANDBOX GATE, IN CODE. Not a comment, not a convention — a refusal.
@@ -128,16 +136,18 @@ function panic(opts = {}) {
     assertArmed(sb);
     const dir = join(sb.root, "scripts");
     const files = readdirSync(dir).filter((f) => f.endsWith(".mjs"));
-    let rewritten = 0, sites = 0;
+    let rewritten = 0, sites = 0, declared = 0, declaredOrgans = 0;
     for (const f of files) {
       const p = join(dir, f);
       panicGuard(p, sb.root);
       const src = readFileSync(p, "utf8");
       const r = panicRewrite(src);
       if (r.count) { writeFileSync(p, r.src); rewritten++; sites += r.count; }
+      if (r.declared) { declared += r.declared; declaredOrgans++; }
     }
     console.log(`=== THE PANIC BUILD ===`);
-    console.log(`rewrote ${sites} swallowing catch sites across ${rewritten}/${files.length} organs (SANDBOX ONLY)\n`);
+    console.log(`rewrote ${sites} UNDECLARED swallowing catch sites across ${rewritten}/${files.length} organs (SANDBOX ONLY)`);
+    console.log(`left alone ${declared} DECLARED swallow(…) sites across ${declaredOrgans} organs (swallow.mjs — they rethrow under ARSENAL_PANIC by themselves, naming the site)\n`);
 
     // Every organ that has a selftest gets run twice: once normally (the control)
     // and once with ARSENAL_PANIC=1. An organ that is green normally and DIES
@@ -172,6 +182,14 @@ function panic(opts = {}) {
         if (row.swallowed) {
           const m = /(?:Error|TypeError|SyntaxError|ENOENT|EPERM)[^\n]{0,180}/.exec(pan.out);
           row.first_error = m ? m[0].trim() : (pan.out.split("\n").filter(Boolean).slice(-1)[0] || "").slice(0, 180);
+          // BLOCK 7: a DECLARED swallow dies with its site NAMED — "ARSENAL_PANIC · organ · why · code msg".
+          // Keep the why (it is the whole point), and parse the missing PATH from the WHOLE output, not
+          // the 180-char slice above — the named site pushed the path past that window, which turned
+          // real SELF-HEALING/NO-WRITER deaths into "(path not parsed)" on the first Block-7 run.
+          const site = /ARSENAL_PANIC · [^·\n]+ · ([^·\n]+) ·/.exec(pan.out);
+          row.site = site ? site[1].trim() : null;
+          const pm = /(?:open|scandir|stat|unlink|mkdir|rename|rmdir|readdir)\s+'([^'\n]+)'/.exec(pan.out);
+          row.missing_abs = pm ? pm[1] : null;
         }
         results.push(row);
         process.stdout.write(row.swallowed ? (lane === "production" ? "!" : "?") : (base.code === 0 ? "." : "x"));
@@ -195,8 +213,8 @@ function panic(opts = {}) {
     //                 feature can never fire, and never says so.
     for (const r of swallowing) {
       const m = /(?:open|scandir|stat|unlink)\s+'([^']+)'/.exec(r.first_error || "");
-      const p = m ? m[1].replace(/\\/g, "/") : null;
-      const rel = p ? `dressing-room/state/${p.split("/dressing-room/state/")[1] || ""}` : null;
+      const p = (r.missing_abs || (m ? m[1] : null) || "").replace(/\\/g, "/") || null;
+      const rel = p && p.includes("/dressing-room/state/") ? `dressing-room/state/${p.split("/dressing-room/state/")[1] || ""}` : null;
       const entry = rel ? ir.files.find((f) => f.path === rel) : null;
       r.missing = rel;
       r.klass = !entry ? "UNKNOWN"
@@ -214,15 +232,17 @@ function panic(opts = {}) {
       const g = swallowing.filter((r) => r.klass === k);
       if (!g.length) continue;
       console.log(`  ── ${k} (${g.length})`);
-      for (const r of g) console.log(`     ${r.organ} ${r.verb}  →  ${r.missing || "(path not parsed)"}${r.written_by.length ? `  [written by ${r.written_by.join(", ")}]` : ""}`);
+      for (const r of g) console.log(`     ${r.organ} ${r.verb}  →  ${r.missing || (r.missing_abs ? `(outside state: ${r.missing_abs.replace(/\\/g, "/").split("/").slice(-2).join("/")})` : "(path not parsed)")}${r.written_by.length ? `  [written by ${r.written_by.join(", ")}]` : ""}${r.site ? `\n        site: ${r.site}` : ""}`);
     }
+    const named = swallowing.filter((r) => r.site).length;
+    if (swallowing.length) console.log(`\n   ${named}/${swallowing.length} production deaths died at a DECLARED site (swallow.mjs names it); the rest died at an undeclared catch the panic build armed`);
     console.log("");
     console.log(`\nFIXTURE lane (selftest) — dies under panic: ${fixtureDeaths.length} of ${fix.length}`);
     console.log(`   ↑ mostly NOT defects: a selftest that feeds deliberate garbage to prove a`);
     console.log(`     swallow degrades honestly is SUPPOSED to die once the swallow is armed.`);
     console.log(`     Listed for the record, not as findings:`);
     for (const r of fixtureDeaths) console.log(`  ${r.organ}  ${(r.first_error || "").slice(0, 110)}`);
-    return { results, swallowing, fixtureDeaths, sites, rewritten };
+    return { results, swallowing, fixtureDeaths, sites, rewritten, declared, declaredOrgans };
   } finally { destroy(sb); }
 }
 
@@ -846,6 +866,11 @@ function museum() {
 // ============================================================================
 // SELFTEST
 // ============================================================================
+// ONE read site for "a live organ's source" — the selftest reads scripts by a computed name
+// in two places (the marker sweep, the Block-7 lane law); xray cannot resolve a computed
+// path, so both ride this single helper and the organ's unresolved-sink count stays flat.
+const liveSource = (f) => readFileSync(join(ROOT, "scripts", f), "utf8");
+
 function selftest() {
   console.log("=== mutagen.mjs selftest ===\n");
   const before = ledgerFingerprint();
@@ -862,6 +887,35 @@ function selftest() {
   const r4 = panicRewrite(fx4);
   assert("…and reuses the EXISTING binding name when there is one", /throw err;/.test(r4.src), r4.src);
   assert("the rewritten source still parses", (() => { try { parse(panicRewrite(fx).src, { ecmaVersion: 2023, sourceType: "module" }); return true; } catch { return false; } })());
+  // BLOCK 7 — a DECLARED swallow (scripts/swallow.mjs) is left alone and COUNTED apart:
+  // it rethrows under ARSENAL_PANIC by itself, naming the site, which the mechanical
+  // rewrite never could. Two sites, one declared, one bare → count 1, declared 1.
+  const fx5 = `function f() { try { readFileSync(P); } catch (e) { swallow("readJson(p) unreadable → null", e); return null; } }\ntry { b(); } catch {}\n`;
+  const r5 = panicRewrite(fx5);
+  assert("BLOCK 7 — a catch that calls swallow(…) is DECLARED: not rewritten, counted separately (1 rewritten · 1 declared)",
+    r5.count === 1 && r5.declared === 1 && !/ARSENAL_PANIC\) throw e;/.test(r5.src), JSON.stringify({ count: r5.count, declared: r5.declared }));
+  // …and the eight production lanes of §14.2 carry ZERO undeclared fs-guarding swallows — asserted
+  // on the LIVE files by the same rule the panic build applies (a catch whose try does fs I/O and
+  // whose body neither throws, reports, uses its binding, nor calls swallow). Live-tree read only.
+  {
+    const FS_RE = /\b(readFileSync|writeFileSync|appendFileSync|mkdirSync|readdirSync|statSync|lstatSync|existsSync|unlinkSync|renameSync|copyFileSync|rmSync|openSync|closeSync|readSync|writeSync|mkdtempSync|realpathSync|accessSync|utimesSync)\b/;
+    const bad = [];
+    for (const lane of ["brain", "dugout", "thalamus", "cortex", "nightshift", "dmn", "conductor", "watchman"]) {
+      const src = liveSource(`${lane}.mjs`);
+      let ast; try { ast = parse(src, { ecmaVersion: 2023, sourceType: "module", locations: true, allowHashBang: true }); } catch { bad.push(`${lane}: unparseable`); continue; }
+      const walk = (n) => {
+        if (!n || typeof n.type !== "string") return;
+        if (n.type === "TryStatement" && n.handler && isSwallow(src, n.handler) && FS_RE.test(src.slice(n.block.start, n.block.end))) {
+          const h = n.handler, body = src.slice(h.body.start, h.body.end);
+          const usesParam = h.param && new RegExp(`\\b${src.slice(h.param.start, h.param.end)}\\b`).test(body.slice(1, -1));
+          if (!usesParam) bad.push(`${lane}.mjs:${h.loc.start.line}`);
+        }
+        for (const k of Object.keys(n)) { if (k === "loc" || k === "start" || k === "end" || k === "type") continue; const v = n[k]; if (Array.isArray(v)) v.forEach((x) => x && typeof x.type === "string" && walk(x)); else if (v && typeof v.type === "string") walk(v); }
+      };
+      walk(ast);
+    }
+    assert("BLOCK 7 LAW — the eight production lanes carry ZERO undeclared fs-guarding silent catches (every one is `swallow(\"why\", e)`)", bad.length === 0, bad.join(" · "));
+  }
 
   // THE GATE THAT MUST BE CODE, NOT PROSE
   let refused = false;
@@ -874,7 +928,7 @@ function selftest() {
   // and the live tree must never carry the marker
   const live = readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs"));
   const marked = live.filter((f) => {
-    const src = readFileSync(join(ROOT, "scripts", f), "utf8");
+    const src = liveSource(f);
     // this file NAMES the marker (it defines it); everyone else carrying it is a leak
     return f !== "mutagen.mjs" && src.includes(PANIC_MARK);
   });

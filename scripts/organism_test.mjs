@@ -552,7 +552,17 @@ function hermetic() {
   // file stat-ed (size:mtime) before and after: 7180:1787023950 → 7180:1787023950, UNTOUCHED.
   // intent's own selftest is hermetic by env (ARSENAL_INTENT_STATE_DIR); sitting's records its
   // `intent.mjs close` owner call instead of executing it. Excluding it hides no defect.
-const LIVE_WRITERS = /session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl/;
+  // swallow_ledger.jsonl added 18 Aug 2026 (Block 7, §14.2 SWALLOW + PANIC): swallow.mjs is its
+  // sole writer, ONE row per LIVE process that swallowed anything, appended at exit (daemons:
+  // every 10 min) — i.e. every scheduled organ and every daemon on the box writes it, all day,
+  // straight through a multi-minute suite window (the tone/wall_data signature, at scale).
+  // THE PRICE PAID, BY CONSTRUCTION not by scan: swallow.mjs flush() REFUSES to write when
+  // the process is a fixture — argv verb `selftest`, or any run under the sandbox collar
+  // (ARSENAL_AUDIT_COLLAR) — unless ARSENAL_SWALLOW_LEDGER re-points it at a scratch file;
+  // its own selftest asserts the live ledger's size:mtime is unchanged across a flush AND
+  // across the scratch-pointed child that does write. So no selftest in this sweep can
+  // touch it (they all run with verb `selftest`); only live organs racing the sweep can.
+const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

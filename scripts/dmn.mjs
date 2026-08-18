@@ -61,6 +61,7 @@ import { pendingBg, dossierKey, conceptRegistry } from "./thalamus.mjs";   // M2
 // WAKE does, so it now serves it through the SAME door instead of its own blind cut.
 // Read-only import — cortex.mjs owns that door; see the block above drainBg for why.
 import { momentBlock } from "./cortex.mjs";
+import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 // E2E audit 25 Jul 2026: claudeGen is SYNCHRONOUS (execFileSync) and returns a
 // plain object — calling .catch() on it is a TypeError that kills the whole pass
@@ -131,8 +132,8 @@ const PRECACHE  = join(STATE_DIR, "dmn_precache.json");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");   // #7 — the shared window ledger (append-only; brain.mjs owns the schema)
 const AW = "http://localhost:5600";
 
-const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch {} return o; };
+const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
+const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -201,7 +202,7 @@ const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
 const REJIRAH_LOG = join(STATE_DIR, "rejirah_log.jsonl");
 function readRowsFor(path) {
   try { return readFileSync(path, "utf8").split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); }
-  catch { return []; }
+  catch (e) { swallow("readRowsFor: readFileSync(path) unreadable → []", e); return []; }
 }
 function gradedEvidence(concept, deps = {}) {
   const key = String(concept || "").trim().toLowerCase();
@@ -315,7 +316,7 @@ function journalWeakVector(row) {
   try {
     mkdirSync(dirname(WEAK_JOURNAL), { recursive: true });
     appendFileSync(WEAK_JOURNAL, JSON.stringify(row) + "\n");
-  } catch { }   // fail silent, never loud — a journal must never cost a dream
+  } catch (e) { swallow("journalWeakVector: mkdirSync(dirname(WEAK_JOURNAL)) unmakeable → ignored", e); }   // fail silent, never loud — a journal must never cost a dream
 }
 
 // ---------------------------------------------------------------------------
@@ -535,7 +536,7 @@ async function dream(deps = {}) {
       const hr = brain.headroom(cfg, deps.brainLedger || readLines(join(STATE_DIR, "brain_ledger.jsonl")),
         deps.queueState || readJson(join(STATE_DIR, "brain_queue.json")) || {}, now);
       if (hr.allowed < DMN_PASS_FLOOR) return { ok: false, skipped: `window budget (${Math.round(hr.allowed)}/${DMN_PASS_FLOOR} needed, phase ${hr.phase}) — the Rest Room is 64% of all spend and now answers to the same governor as every other organ` };
-    } catch { /* fail-open — see above */ }
+    } catch (e) { swallow("fail-open — see above", e); }
   }
   const weak = deps.weak || weakVector(deps);
   if (!weak.length) return { ok: false, skipped: "no real weak points on the bus — nothing honest to dream about" };
@@ -574,7 +575,7 @@ async function dream(deps = {}) {
         const failed = ["E", "C", "F"].filter((k) => !v.why[k].ok);
         return { ok: false, asleep: true, skipped: `THE GATE: asleep on ${failed.join("+")} — ${failed.map((k) => `${k}: ${v.why[k].detail}`).join(" · ")} · wakes when: ${v.wakes_when}` };
       }
-    } catch { /* fail-open — see above */ }
+    } catch (e) { swallow("fail-open — see above", e); }
   }
   const board = deps.board || loadBoard();
   const keys = deps.keys || loadHippoKeys();
