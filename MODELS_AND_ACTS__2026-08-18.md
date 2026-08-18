@@ -10,10 +10,10 @@ The next session reads this queue top-down and does the FIRST unfinished item; e
 When 1 is ✅ this file → docs/archive/. **PARKED, NOT IN THE QUEUE (his word 18 Aug 20:15: "that was parked"):** the identity merge — he brings it himself next week with "identity karo" (the 4 pending facts + the Instagram-derived staging; sources: his export in Downloads, the songs file, session 22ccb804 transcript 18 Aug ~18:00–19:10 IST; his corrections stand: pills = ADHD medication (say nothing) · "manic" = hustle · "don't kill yourself" = the dream · NiNi = Nikhil ki Nidhi · GV/GC = GaryVee/Grant Cardone · politics dropped). Do NOT start it on "resume karo".
 
 ## ▶ BUILD LOG
-- ✅ BLOCK 0 · freeze deferred (his ruling) — `b666a1b` 18 Aug ~20:35 IST · ⬜ BLOCK 1 · THE MODEL RESOLVER · ⬜ BLOCK 2 · THE ACT LANE · ⬜ BLOCK 3 · live proofs + suite · ⬜ BLOCK 4 · record + memory
+- ✅ BLOCK 0 · freeze deferred (his ruling) — `b666a1b` 18 Aug ~20:35 IST · ✅ BLOCK 1 · THE MODEL RESOLVER — `3843fed` 18 Aug ~21:05 IST (live: Watcher ok on 3.6-flash · lanes-probe all OK · check 0 literals) · ⬜ BLOCK 2 · THE ACT LANE · ⬜ BLOCK 3 · live proofs + suite · ⬜ BLOCK 4 · record + memory
 
 ## ▶ RESUME HERE
-Block 0 ✅ (b666a1b). Blocks 1–4 unbuilt. Verify first if a new session: `npm test` · `node scripts/sitting.mjs status` (:4117 up; if down `schtasks /Run /TN "ArsenalFC-Daemon-Watchdog"`, never a daemon from the shell) · `node scripts/gaffer_brain.mjs probe` (expected before Block 1: `flash pool dry or every key refused` — that is the bug, §2). Then build in order.
+Blocks 0 ✅ (b666a1b) · 1 ✅ (3843fed). Blocks 2–4 unbuilt. Verify first if a new session: `npm test` · `node scripts/sitting.mjs status` (:4117 up; if down `schtasks /Run /TN "ArsenalFC-Daemon-Watchdog"`, never a daemon from the shell) · `node scripts/gaffer_brain.mjs probe` (expected before Block 1: `flash pool dry or every key refused` — that is the bug, §2). Then build in order.
 
 ---
 
