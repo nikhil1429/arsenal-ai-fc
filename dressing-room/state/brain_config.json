@@ -920,6 +920,34 @@
       "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
     },
     {
+      "id": "intent_digest",
+      "_added": "2026-08-18",
+      "engine": "claude",
+      "model": "sonnet",
+      "window": "overnight",
+      "at": "02:55",
+      "priority": 20,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "intent_digest",
+      "inputs": [
+        {
+          "path": "session_intent.jsonl",
+          "required": true
+        }
+      ],
+      "out": "intent_digest",
+      "surface": {
+        "kind": "code",
+        "where": "scripts/intent.mjs show|brief (joins the digest by session_id) → context_manifest's SESSION INTENTS block in the SessionStart brief"
+      },
+      "gate": {
+        "window_days": 14,
+        "event": null
+      },
+      "_note": "OVERHAUL Block 2 §7.2 (18 Aug 2026): ONE sonnet call a night over the day's session-intent rows — intent.mjs digestInput() (grouped per session, prompt/reply HEADS clipped to 200 chars, ≤12 each) — labelling each session kind / promised / shipped / open. Validated by intent.validateDigest (session_id ⊂ input · no number that is not in the input corpus · short strings; drops are NAMED in the sibling), written as brain_out/intent_digest/<day>.json (SIBLING_PARSERS); the intent lane itself is never written by the brain. THE GATE: E = session_intent.jsonl exists (required input) · C = the brief carried the SESSION INTENTS block (learnstate stamps `briefed`) within 14 days · F = 5 fails. Refuses before spend on a day with no session rows. at 02:55: after consolidate (02:10) and the night shift (02:40), before the diary (03:00), inside the overnight window."
+    },
+    {
       "id": "diary",
       "engine": "claude",
       "model": "sonnet",

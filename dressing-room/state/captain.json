@@ -1,0 +1,14 @@
+{
+  "_comment": "THE CAPTAIN PROFILE (18 Aug 2026, ORGANISM_OVERHAUL §7.3) — config, not organ. Tracked, NO SECRETS (keys_env_file is a POINTER to a gitignored file, never a key). Every organ that used to hardcode the captain's name, number, voice or language reads it through scripts/captain.mjs `captain()` — so a second profile (Nidhi FC) is a second file + its own state dir later; the seam exists now, the second club does not. Edit by hand; nothing writes it.",
+  "name": "Nikhil",
+  "full_name": "Nikhil Panwar",
+  "number": 14,
+  "pronoun": "he/him",
+  "voice": "Charon",
+  "language": "hinglish",
+  "tz": "Asia/Kolkata",
+  "tz_offset_min": 330,
+  "syllabus_root": "learning-layer",
+  "keys_env_file": "scripts/oura_secrets.json",
+  "laws_overrides": {}
+}

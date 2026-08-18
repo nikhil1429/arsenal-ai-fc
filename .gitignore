@@ -297,6 +297,12 @@ dressing-room/state/gem_sync_stamp.json
 dressing-room/state/teaching_audit_last.json
 dressing-room/state/teaching_audit.jsonl
 
+# session-intent memory (18 Aug 2026, OVERHAUL Block 2 §7.2 — scripts/intent.mjs, sole
+# writer). Same class as the two lines above: every Stop hook appends the head of HIS
+# prompt and of the reply, verbatim — his words, never on a public remote ("archive
+# HAMESHA repo ke bahar", 14 Aug). The archivist tails it like every jsonl here.
+dressing-room/state/session_intent.jsonl
+
 # watchman per-run state (7 Aug 2026). Same class: machine-local nightly sweep
 # results, the Tier-2 repair log/journal (they quote session evidence verbatim),
 # and the prompt file handed to the repair child. Public remote gets none of it.

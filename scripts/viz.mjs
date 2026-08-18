@@ -46,6 +46,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // is now exactly one, in validators.mjs, and this file imports it. Do not add a
 // third.
 import { allowedNumbers, noNewNumbers } from "./validators.mjs";
+import { captain } from "./captain.mjs";   // Block 2 §7.3
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -977,7 +978,7 @@ function voiceBrief(d) {
   if (d.twin_voice) L.push(`The book's earned line: ${d.twin_voice}`);
   if (d.bleeds.length) L.push(`Physio note: ${d.bleeds.join(", ")}.`);
   L.push("");
-  L.push("Rules for this conversation: spoken register, one idea at a time, honest frame (compounding, never hype), no calendar pressure, cracks are data never verdicts, rivalry only vs kal-wala-Nikhil. If he Bolos a concept, listen fully, then probe ONE crack, warmly.");
+  L.push("Rules for this conversation: spoken register, one idea at a time, honest frame (compounding, never hype), no calendar pressure, cracks are data never verdicts, rivalry only vs kal-wala-" + captain().name + ". If he Bolos a concept, listen fully, then probe ONE crack, warmly.");
   return L.join("\n") + "\n";
 }
 

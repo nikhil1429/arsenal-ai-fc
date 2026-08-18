@@ -68,6 +68,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { captain } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): bag-info + README + LEXICON name him from the profile
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -1674,7 +1675,7 @@ function bagInfo(root, oxum) {
   const now = new Date();
   return [
     "Source-Organization: Arsenal AI FC (personal)",
-    "Contact-Name: Nikhil Panwar",
+    `Contact-Name: ${captain().full_name}`,
     "External-Identifier: arsenal-ai-fc/cyborg-archive",
     "External-Description: The permanent, self-describing record of one person's words, work and physiology. Raw and append-only. Every derived thing is a NEW record that points at the raw; nothing here is ever edited, summarised in place, reordered or deleted.",
     "Bagging-Date: " + istStamp(now).day,
@@ -1707,7 +1708,7 @@ const TEST_VECTORS = [
 ];
 
 function README_MD() {
-  return `# THE ARCHIVE — the permanent record of Nikhil Panwar
+  return `# THE ARCHIVE — the permanent record of ${captain().full_name}
 
 *Written for a human (or a model) opening this folder years from now, possibly with no
 access to the software that made it. You need nothing but this file to read what is here.*
@@ -2042,7 +2043,7 @@ const LEXICON_SEED = [
   T("the anchor law", "'If a thing needs the captain, it rides an anchor; if it cannot ride an anchor, it does not need the captain.' Never hand him a report to read, a list of asks, or a command to remember.", "CLAUDE.md §THE CAPTAIN'S CALL"),
   T("the wall", "The generated wallpaper/dashboard surface (viz.mjs) — the organism's state as a picture on his screen.", "scripts/viz.mjs · package.json wall"),
   T("SEASON", "dressing-room/SEASON.md — postmatch's logbook. Claude fills 100%, he writes zero.", "CLAUDE.md §THE OUTWARD LOOP"),
-  T("the captain", "Nikhil. Human captain #14 of the club the system is themed as.", "CLAUDE.md"),
+  T("the captain", `${captain().name}. Human captain #${captain().number} of the club the system is themed as.`, "CLAUDE.md · dressing-room/state/captain.json"),
 
   // ── THE LAWS ──
   T("layering, never replace", "When changing an engine, freeze the old one verbatim (e.g. analyzeLegacy) in the same file; the new one is the plan of record. Both stay in the codebase.", "CLAUDE.md §Non-negotiable principles"),

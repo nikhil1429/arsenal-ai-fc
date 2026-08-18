@@ -79,6 +79,7 @@ import { classifyLimit } from "./claudegen.mjs";
 // shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
 // gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
 import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
+import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -2855,8 +2856,34 @@ export function parseDreamsJson(text, _cfg, aliasMap = null) {
   return { date: typeof j.date === "string" ? j.date : null, bridges, ...(dropped.length ? { dropped } : {}) };
 }
 
+// ── INTENT DIGEST (OVERHAUL Block 2 · §7.2, 18 Aug 2026) ────────────────────
+// ONE sonnet call a night over the day's session-intent rows (intent.mjs's grouped,
+// clipped input — never the raw lane): label each session kind / promised / shipped
+// / open. THE FOOD IS COMPUTED, THE VERDICT IS VALIDATED, THE LANE IS NEVER WRITTEN
+// HERE: the sibling lands in brain_out/intent_digest/<day>.json and intent.mjs READS
+// it (show · brief). No-invented-numbers: intent.validateDigest drops any label whose
+// number is not in the input corpus and NAMES the drop. Consumption (§5.2 C): the
+// brief stamps `briefed` when it carries the SESSION INTENTS block (learnstate).
+let intentDigestFood = null;   // the input the running job was built from — its parser validates against exactly that
+function buildIntentDigestPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases) {
+  const head = `You are the INTENT SCRIBE of ARSENAL AI FC — the captain's session memory. Below are TODAY's Claude Code sessions, each as the HEADS of his prompts and of the replies (verbatim, clipped). For EACH session say what he ASKED FOR (promised = what the session said it would do), what it SAID IT SHIPPED (shipped), and what is STILL OPEN (asked, not shipped, or shipped-claim you cannot see evidence for in the heads). Label the session kind: study (he was being taught / drilled / re-jirah) · build (fixing/building the organism) · other.
+
+DO: ≤ 12 lines of reading, then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"sessions": [{"session_id": "<id from the input>", "kind": "study|build|other", "promised": ["<short line>"], "shipped": ["<short line>"], "open": ["<short line>"]}]}
+
+LAWS: session_id ONLY from the input (anything else is dropped). Short lines (≤ 300 chars), in the language he used. EVERY NUMBER must appear in the input heads verbatim — a line with a number not present there is DROPPED mechanically. Empty arrays are honest ("open": [] = nothing left open). No praise, no advice, no plan of your own. NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+export function parseIntentDigestJson(text, _cfg, food = intentDigestFood) {
+  const j = lastJsonBlock(text);
+  const input = food || intentDigestInput({ day: localDate(new Date()) });
+  return intentValidateDigest(j, input);
+}
+
 const SIBLING_PARSERS = {
   night_coach: (text) => parseNightCoachJson(text),
+  intent_digest: (text) => parseIntentDigestJson(text),
   agenda: (text, cfg) => parseAgendaJson(text, cfg),
   diary: (text) => parseDiaryJson(text),
   model_mine: (text) => parseModelMineJson(text),
@@ -3290,6 +3317,20 @@ async function runJob(job, cfg, deps) {
       }
     } catch { }
     prompt = buildDiaryPrompt(job, inputs, cfg.guards.banned_phrases);
+  } else if (job.kind === "intent_digest") {
+    // Block 2 §7.2 — the day's session-intent rows, GROUPED + CLIPPED by the owner
+    // (intent.mjs digestInput), never the raw lane; refuse BEFORE the spend when the
+    // day has no session at all (an empty day labelled by a model = invented asks).
+    const food = intentDigestInput({ day: today });
+    if (!food.sessions.length) {
+      return {
+        usage: { ok: false, total_tokens: 0, duration_ms: 0, limit_hit: false, error: "no session-intent rows for the day" },
+        note: `skipped before spend — session_intent.jsonl has no turn rows for ${today} (nothing to digest; the Stop hook fills it as he works)`,
+      };
+    }
+    intentDigestFood = food;
+    inputs[`session intents (${today} · ${food.sessions.length} session(s), grouped + clipped by intent.mjs — heads of his prompts and the replies)`] = food;
+    prompt = buildIntentDigestPrompt(job, inputs, cfg.guards.banned_phrases);
   } else if (job.kind === "dreams") {
     // H5 — refuse BEFORE the spend when there is nothing to recombine: an
     // empty cracked-axes inventory + a model told to dream anyway = invented
@@ -4779,9 +4820,9 @@ async function selftest() {
     }
 
     // 10. GEMINI SHIM — %APPDATA% with a space is a real machine, not a hypothetical
-    const spaced = geminiCommand("gemini", { platform: "win32", appdata: "C:\\Users\\Nikhil Panwar\\AppData\\Roaming", exists: () => true });
+    const spaced = geminiCommand("gemini", { platform: "win32", appdata: "C:\\Users\\Some Captain\\AppData\\Roaming", exists: () => true });
     assert("GEMINI SHIM — a spaced %APPDATA% path is QUOTED before cmd.exe parses it",
-      spaced.shell === true && spaced.cmd === '"C:\\Users\\Nikhil Panwar\\AppData\\Roaming\\npm\\gemini.cmd"');
+      spaced.shell === true && spaced.cmd === '"C:\\Users\\Some Captain\\AppData\\Roaming\\npm\\gemini.cmd"');
     assert("GEMINI SHIM — no shell ⇒ no quotes (quotes would become part of the filename)",
       geminiCommand("gemini", { platform: "linux", appdata: null, exists: () => false }).cmd === "gemini");
     assert("GEMINI SHIM — a config-supplied binary string can never inject into cmd.exe",

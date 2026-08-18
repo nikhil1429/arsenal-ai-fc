@@ -117,6 +117,7 @@ import { indexEpisodes } from "./hippocampus.mjs";
 import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHeadroom, gateVerdictForLane, gateTransition, gateCardsForTick } from "./brain.mjs";   // gateVerdictForLane/gateTransition: THE GATE (18 Aug 2026) — the verdict is gate.mjs's, the journal and the card stay brain's
 // job 6 (the wind tunnel) replays the gate's own recorded decisions
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
+import { captain } from "./captain.mjs";   // Block 2 §7.3
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -422,7 +423,7 @@ async function roundRead(deps = {}) {
 
   const grid = graded.map((r) => `${r.concept} · axis ${r.axis} · ${r.result} · he said "${r.gut}" BEFORE answering`).join("\n");
   const r = await gen(
-`You are reading ONE Re-Jirah round for Nikhil, an ADHD-PI engineer training for an AI Product Engineer interview. He answered these axes OUT LOUD, cold, notes closed. A machine already gave each axis a live held/cracked verdict; your job is the thing that verdict CANNOT do — read ACROSS the axes for the shared shape.
+`You are reading ONE Re-Jirah round for ${captain().name}, an ADHD-PI engineer training for an AI Product Engineer interview. He answered these axes OUT LOUD, cold, notes closed. A machine already gave each axis a live held/cracked verdict; your job is the thing that verdict CANNOT do — read ACROSS the axes for the shared shape.
 
 THE GRID (axis, live verdict, and the gut-word he committed BEFORE answering):
 ${grid}

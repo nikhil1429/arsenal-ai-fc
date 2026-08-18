@@ -1961,7 +1961,7 @@ function selftest2(stub, S) {
       out = await judgePass({
         dry: true, now: T0, transcript, bus: "", skipBus: true,
         blocks: emptyBlocks(T0), state: { ...emptyState(T0), turns: 12, declared_plan: { text: "all four covered topics, samjhao mode", at: "x" } },
-        standing: { instructions: [] }, who: "he is Nikhil, 31, building a cyborg organism",
+        standing: { instructions: [] }, who: "he is the captain, 31, building a cyborg organism",
         callWatcher: stub,
       });
       assert("THE PASS · the Watcher's verdict is what the surface acts on when it answers", out.engine === "flash");

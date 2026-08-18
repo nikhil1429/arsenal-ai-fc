@@ -422,10 +422,47 @@ export async function assemble(deps = {}) {
       : pend.bad ? `${pend.bad} rows UNREADABLE — nothing parsed` : "0 staged",
     pend.state);
 
+  // 3b. SESSION INTENTS (OVERHAUL Block 2 · §7.2, 18 Aug 2026) — the last five OPEN
+  //     intents (his asks, what shipped, what is still open) from intent.mjs's own
+  //     `briefLines()` — ≤ 6 lines by that owner's contract. Budgeted BEFORE memory
+  //     (an unmet ask outranks background recall that get_context serves whole) and
+  //     AFTER pending facts (his rulings awaiting his word). Its cap is DERIVED from
+  //     the owner's shape, not chosen: 6 lines × the owner's own line width. When the
+  //     ceiling cannot hold every line, whole lines are dropped from the END (never a
+  //     mid-line cut) and the footer says how many. THREE STATES, like every leg:
+  //     EMPTY = nothing open (healthy) · MISSING = the owner is unreachable · ERROR
+  //     = it threw (message in the note). The digest job's consumption stamp rides
+  //     the printed block (learnstate: `intent_digest briefed`), so a squeezed-out
+  //     block is honestly NOT consumption.
+  const INTENTS_MAX_LINES = 6, INTENTS_LINE_WIDTH = 160;   // the owner's shape: ≤6 lines, each ≤ ~160 chars
+  const INTENTS_CAP = INTENTS_MAX_LINES * INTENTS_LINE_WIDTH;
+  let intentsText = "", intentsShown = 0, intentsTotal = 0, intentsErr = null, intentsState = "EMPTY";
+  try {
+    const lines = deps.intents !== undefined ? deps.intents : (await import("./intent.mjs")).briefLines({});
+    if (Array.isArray(lines) && lines.length) {
+      intentsTotal = lines.length;
+      const room = Math.max(0, Math.min(INTENTS_CAP, ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - MEMORY_FLOOR - FOOTER_RESERVE - overhead));
+      const kept = [];
+      let used = 0;
+      for (const l of lines) { if (used + l.length + 1 > room) break; kept.push(l); used += l.length + 1; }
+      // the header alone is not an intent — a block that lost every intent line reads as squeezed out
+      if (kept.length >= 2) { intentsText = kept.join("\n"); intentsShown = kept.length; intentsState = "ok"; }
+      else { intentsShown = 0; intentsState = "ok"; }
+    }
+  } catch (e) { intentsErr = (e && e.message) || String(e); intentsState = "ERROR"; }
+  record("intents", intentsShown > 0, intentsText.length,
+    intentsErr ? `intent.mjs threw (${intentsErr})`
+      : intentsTotal === 0 ? "nothing open"
+      : intentsShown === 0 ? `${intentsTotal - 1} open, NONE SHOWN — budget`
+      : intentsShown < intentsTotal ? `${intentsShown - 1} of ${intentsTotal - 1} open shown — budget`
+      : `${intentsTotal - 1} open`,
+    intentsState);
+
   // 4. MEMORY — gets whatever is left, which today is all of it. THE WHOLE POINT:
   //    the cap is computed from the budget rather than being a constant that silently
   //    ate 47% of the cartridge, and if it ever DOES bite, the footer says so.
   const room = ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length : 0)
+    - (intentsText ? intentsText.length + 1 : 0)   // Block 2: the intents block is spent before memory
     - FOOTER_RESERVE - overhead;
   const memCap = Math.max(0, Math.min(MEMORY_CAP, room));
   let memory = null, memFull = 0, clipped = false, memErr = null;
@@ -523,6 +560,7 @@ export async function assemble(deps = {}) {
   reconcile("memory", memory);
   reconcile("card", card);
   if (pend.present) text += "\n" + pend.text;
+  if (intentsText) text += "\n" + intentsText;   // Block 2 §7.2 — after his rulings, before the footer
 
   // THE NUMBER THAT SHIPS IS THE SIZE THAT SHIPPED (audit 11 Aug 2026). One line, two holes:
   //   (a) `total` was `text.length + FOOTER_RESERVE` — the RESERVE, never the footer. RAN on

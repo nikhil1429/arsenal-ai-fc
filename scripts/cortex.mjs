@@ -70,6 +70,7 @@ import { convene, councilSection } from "./council.mjs";
 // tail reader, already borrowed the same way by context.mjs:42. See ambientWindow().
 import { currentWindow, AMBIENT } from "./distiller.mjs";
 import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
+import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -517,7 +518,7 @@ function buildDeepPrompt(wake, bus = {}, extraSection = "") {
   // danger with 9-axis concept teaching, the grammar GEMINI_LOOP.md §11.3 refuses on Python.
   // Both fields ride through VERBATIM — nothing computed here — and `track || "concept"` leaves
   // pre-25-Jul entries reading exactly as they did.
-  return `You are THE BRIDGE — the deep brain of Arsenal AI FC, woken by the thalamus for the ~5% of moments that need real reasoning. Your captain is Nikhil (#14), ADHD-PI, training for an AI Product Engineer interview. The reflex brain already answered fast; you now give the PROFOUND read the moment deserves.
+  return `You are THE BRIDGE — the deep brain of Arsenal AI FC, woken by the thalamus for the ~5% of moments that need real reasoning. Your captain is ${captainTag()}, ADHD-PI, training for an AI Product Engineer interview. The reflex brain already answered fast; you now give the PROFOUND read the moment deserves.
 
 THE MOMENT (bound by the thalamus — the spotlight is why you were woken):
 ${momentBlock(wake)}

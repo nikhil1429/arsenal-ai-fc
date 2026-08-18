@@ -16,6 +16,7 @@ import { join } from "node:path";
 
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname } from "node:path";
+import { captain } from "./captain.mjs";   // Block 2 §7.3
 // C7 (9 Aug 2026): the whole file is top-level statements — importing it used to
 // silently regenerate the 5MB bundle. A generator with side effects refuses import.
 if (!(process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)) {
@@ -38,7 +39,7 @@ const ANN = {
   "WHAT_CHANGED.md": "Changelog for the organism-final branch: the one-command revert, 14 new organs, added configs/docs, and which existing files stayed untouched.",
   "README.md": "Nearly empty repo readme containing only the project title; carries no operational content.",
   "learning-layer/THE_ORGANISM.md": "Vision draft reimagining the whole system as one self-evolving organism with the human as its heart; organ-by-organ design of a fused human-loop cyborg.",
-  "learning-layer/PROJECT_OS.md": "The canonical operating system (v3.13) for how Nikhil and Claude work: rules, method, syllabus, learning + outwork execution layers, design + Python tracks.",
+  "learning-layer/PROJECT_OS.md": "The canonical operating system (v3.13) for how " + captain().name + " and Claude work: rules, method, syllabus, learning + outwork execution layers, design + Python tracks.",
   "learning-layer/FORGE_SPEC.md": "Frozen schema spec for FORGE learning capsules (9-axis, doubts, cold-reader standard, per-file gist store) that the notes engine reads; drift = blank render.",
   "learning-layer/FORGE_DESIGN.md": "Canonical visual-design + Claude-Design workflow record (cold steel, warm core): 4 non-negotiables, division of labor, completeness contract for the notes app.",
   "learning-layer/FORGE_DEEP_RENDER_BRIEF.md": "Handoff brief for a fresh Claude Design session to render the embedded-but-hidden deep re-learn layer plus every gist field, byte-for-byte without overwhelm.",
@@ -51,7 +52,7 @@ const ANN = {
   "learning-layer/EXECUTION_FINAL_Tier2_Metamorphosis.md": "The canonical grind operating-system: nine operators, ADHD behavior science, five keystones, and the autonomous rig that runs daily execution.",
   "learning-layer/FINOPS_AI_CONCEPTS.md": "Canonical learn-list of every AI concept FinOps Copilot teaches, mapped to build spots, interview value, and honest coverage gaps.",
   "learning-layer/FINOPS_MODULE3_PROCUREMENT_INTEL.md": "Full spec for FinOps Module 3: a vendor-allocation optimizer using real Blinkit procurement data, algorithm, AI mapping, and interview story.",
-  "learning-layer/GEMINI_LOOP.md": "Canonical record of the cyborg loop (Claude teaches/defends, Gemini drills reps, Nikhil generates), with the close-packet rep engine and rhythm.",
+  "learning-layer/GEMINI_LOOP.md": "Canonical record of the cyborg loop (Claude teaches/defends, Gemini drills reps, " + captain().name + " generates), with the close-packet rep engine and rhythm.",
   "learning-layer/GEMINI_RIG_SETUP.md": "One-time 9-step setup guide with canonical paste-prompts for the Gemini rig (2 Docs, 2 Gems, Colab, NotebookLM, Rosetta).",
   "learning-layer/God-Tier_Gemini_Workflow_for_Learning_Python.md": "Research-backed deep-dive on learning Python fast without cognitive offloading, with ready-to-paste Gem and Colab prompts.",
   "learning-layer/OPPONENT_SCOUT.md": "THE DOSSIER: a scouted interview test-set (rubric, time-weights, probe-bank, red-flags) that calibrates all interview drilling against reality.",

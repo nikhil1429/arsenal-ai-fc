@@ -50,6 +50,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync, m
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT      = join(__dirname, "..");
@@ -163,7 +164,7 @@ function gatherMachinery(deps = {}) {
 function buildPrompt(m) {
   const modules = m.modules.map(x => x.desc).join("\n---\n").slice(0, 32000);
   const docs = (m.docs || []).map(d => `## ${d.name}\n${d.text}`).join("\n\n").slice(0, 200000);
-  return `You are writing THE ORGANISM'S PLAIN-LANGUAGE EXPLANATION OF ITSELF — the knowledge THE GAFFER (its living voice) uses whenever someone says "explain the organism", "what is this", "how does my day work", or when Nikhil shows a FRIEND who does NOT code and does NOT care about code. The friend wants to understand, in plain human words: WHAT this thing does, HOW it works, WHERE it happens, and WHY it exists.
+  return `You are writing THE ORGANISM'S PLAIN-LANGUAGE EXPLANATION OF ITSELF — the knowledge THE GAFFER (its living voice) uses whenever someone says "explain the organism", "what is this", "how does my day work", or when ${captain().name} shows a FRIEND who does NOT code and does NOT care about code. The friend wants to understand, in plain human words: WHAT this thing does, HOW it works, WHERE it happens, and WHY it exists.
 
 WHO NIKHIL IS: a person with ADHD-PI training to become an AI Product Engineer. The organism ("Arsenal AI FC") is a football-club-themed system that carries his executive function (starting things, holding context, sense of time) so he can just learn and work. He is the captain, #14.
 

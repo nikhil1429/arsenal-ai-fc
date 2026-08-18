@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync, mkdtempSync } from
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { captain } from "./captain.mjs";   // Block 2 §7.3
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -121,7 +122,7 @@ const MED = {
   hrLowConfidence: true,
   note: "HR signals (RHR/HRV) + single-night temperature are medication-influenced "
       + "(stimulant + caffeine + antipsychotic + SNRI classes) -> treated as "
-      + "LOW-confidence and can never drive a verdict alone. Judged only vs Nikhil's "
+      + "LOW-confidence and can never drive a verdict alone. Judged only vs " + captain().name + "'s "
       + "own medicated baseline, never textbook. Sleep-architecture trends, resilience, "
       + "and sleep-vs-own-baseline carry the weight. This tool never comments on "
       + "medication — see your doctor for that.",

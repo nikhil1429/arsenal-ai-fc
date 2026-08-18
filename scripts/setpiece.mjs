@@ -51,6 +51,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // now reaches its only reader instead of sitting in an export nobody named.
 // (cortex's main() is guarded by the argv[1] check, so this import runs no daemon.)
 import { graphFreshness, CONCEPT_GRAPH_SCHEMA } from "./cortex.mjs";
+import { captain } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): the rematch template names him from the profile, never a literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -79,7 +80,7 @@ const DOSSIER_FLOOR = {
     negative_space: { emoji: "⚫", template: "Would you even use an LLM for {task}? 'A really good prompt' is not an architecture — where does deterministic code win?" },
   },
   contrast_template: "Both cold, back to back: {a} vs {b} — one sentence each, then the ONE difference that decides {differentiator}. Bolo.",
-  rematch_template: "Week-{week} Nikhil argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
+  rematch_template: "Week-{week} {name} argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
   modality_map: { recall: "voice", defend: "voice", novel: "voice", negative_space: "voice", reconstruct: "screen", floor_touch: "voice" },
 };
 const DOSSIER_DEGRADED_NOTE = "probe grammar fell back to the embedded floor — dossier_weights.json is missing or malformed (prompts intact, dossier weighting off; fix the file)";
@@ -464,7 +465,7 @@ function candidates(world, dossier, now = new Date()) {
     const weeks = Number.isFinite(lockedMs) ? Math.max(1, Math.round((nowMs - lockedMs) / (7 * 86400000))) : 2;
     out.push({
       kind: "tape_room", probe_type_emoji: "🟣", concepts: [d.capsule],
-      prompt: fill(dossier && dossier.rematch_template, { week: weeks, doubt_verbatim: d.q_verbatim }),
+      prompt: fill(dossier && dossier.rematch_template, { week: weeks, doubt_verbatim: d.q_verbatim, name: captain().name }),
       source: `archived doubt #${d.doubt_index} on ${d.capsule} (locked ${d.locked_on || "?"})`,
       winnable: false, mode: "defend",
     });
@@ -999,7 +1000,7 @@ async function selftest() {
       negative_space: { emoji: "⚫", template: "Would you even use an LLM for {task}?" },
     },
     contrast_template: "Both cold, back to back: {a} vs {b} — one sentence each, then the ONE difference that decides {differentiator}. Bolo.",
-    rematch_template: "Week-{week} Nikhil argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
+    rematch_template: "Week-{week} {name} argued: \"{doubt_verbatim}\" — he's across the table. Dismantle him. Bolo.",
     modality_map: { recall: "voice", defend: "voice", novel: "voice", negative_space: "voice", reconstruct: "screen", floor_touch: "voice" },
   };
   const now = new Date(2026, 6, 12, 21, 40, 0);

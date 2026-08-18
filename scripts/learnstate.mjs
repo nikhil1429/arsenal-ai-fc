@@ -1398,6 +1398,9 @@ function recordBriefed(text) {
     if (t.includes("🌙 NIGHT COACH")) recordConsumption({ job: "night_coach", kind: "briefed", by: "learnstate brief (SessionStart)" });
     if (t.includes("📔 BRAIN DIARY") && !t.includes("page nahi likhi")) recordConsumption({ job: "diary", kind: "briefed", by: "learnstate brief (SessionStart)" });
     if (t.includes("🧠 ROUND READ")) recordConsumption({ lane: "ns_round_read", kind: "briefed", by: "learnstate brief (SessionStart)" });
+    // Block 2 §7.2 (18 Aug 2026): the SESSION INTENTS block is where the intent_digest
+    // job's labels reach a session — its GATE (C) rides this stamp. Squeezed out = not consumed.
+    if (t.includes("--- SESSION INTENTS")) recordConsumption({ job: "intent_digest", kind: "briefed", by: "learnstate brief (SessionStart)" });
   } catch { /* bookkeeping must never cost the brief */ }
 }
 // NOT `await main()` here, deliberately (18 Aug 2026, Block 1). It was tried for the
