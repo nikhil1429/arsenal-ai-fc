@@ -223,6 +223,10 @@ export function gather(now = new Date()) {
           if (localDayOf(r.ts) === today) {
             w.affToday.total++;
             if (r.source === "claude-code-teaching") w.affToday.teaching++;
+            // 18 Aug 2026 (overhaul Block 0): HIS typed prompts, counted apart — the Stop
+            // hook can only fire on a Claude Code turn, so c4b must key on these, not on
+            // voice/presence/ActivityWatch rows (see the c4b note below).
+            if (r.source === "claude-code") w.affToday.code = (w.affToday.code || 0) + 1;
           }
         } catch { /* a mangled line is skipped, never fatal */ }
       }
@@ -398,11 +402,18 @@ export function checks(w) {
       evidence: `teaching_audit_last.stop.at ${stopAt.at} · afferent rows today: 0 (${w.affToday.readable ? "file readable" : "afferent.jsonl unreadable"})`,
     });
   }
-  if (w.affToday.total > 0 && (!stopAt || localDayOf(stopAt.at) !== w.today)) {
+  // 18 Aug 2026 (overhaul Block 0) — THE FALSE RED. This keyed on ANY afferent today,
+  // and on 17 Aug the day's rows were voice/presence/ActivityWatch with ZERO Claude
+  // Code turns — the Stop hook had nothing to fire on, and the sweep called the wire
+  // dead. A Stop hook fires only when a Claude Code turn ends, so the honest
+  // precondition is a `claude-code` row (his typed prompt) today. Rows written before
+  // this field existed carry no `code` count and read as 0 → no claim, never a guess.
+  const codeToday = typeof w.affToday.code === "number" ? w.affToday.code : 0;
+  if (codeToday > 0 && (!stopAt || localDayOf(stopAt.at) !== w.today)) {
     F.push({
       id: "audit-hook-dead", level: "RED",
-      finding: "afferents landed today but the auditor's Stop hook never wrote its last-run record — the wire from settings.json to teaching_audit.mjs is dead",
-      evidence: `afferent rows today: ${w.affToday.total} · teaching_audit_last.stop.at: ${stopAt ? stopAt.at : "(never written)"}`,
+      finding: "his typed prompts landed today (claude-code afferents) but the auditor's Stop hook never wrote its last-run record — the wire from settings.json to teaching_audit.mjs is dead",
+      evidence: `claude-code afferent rows today: ${codeToday} (all sources: ${w.affToday.total}) · teaching_audit_last.stop.at: ${stopAt ? stopAt.at : "(never written)"}`,
     });
   }
 
@@ -748,14 +759,47 @@ function probeReconcile() {
     for (const o of (Array.isArray(j.orphans) ? j.orphans : [])) {
       rows.push(`orphan state file (no reader): ${typeof o === "string" ? o : (o.file || JSON.stringify(o).slice(0, 100))}`);
     }
-    return rows.slice(0, 5).map((line, i) => ({
+    const out = rows.slice(0, 5).map((line, i) => ({
       id: `reconcile-bleed-${i + 1}`, level: "INFO",
       finding: line,
       evidence: "reconcile.mjs json — full report in dressing-room/state/reconcile.json",
     })).concat(rows.length > 5 ? [{ id: "reconcile-bleed-more", level: "INFO", finding: `${rows.length - 5} more reconcile bleed(s) — read reconcile.json`, evidence: "cap keeps the night readable; nothing is dropped from the file" }] : []);
+    // THE GATE (overhaul §5.3, 18 Aug 2026) rides the same reconcile read: reconcile.json
+    // now carries each lane's journaled gate state + reached-him column.
+    const tv = readJson(join(STATE_DIR, "token_vitals.json"));
+    const starved = new Set((((tv && tv.starved) || {}).jobs || []).map((s) => s && s.id).filter(Boolean));
+    return out.concat(gateFindings(Array.isArray(j.lanes) ? j.lanes : [], starved));
   } catch (e) {
     return [{ id: "reconcile-unrunnable", level: "WARN", finding: "the produce-and-consume reconciliation could not run", evidence: String(e) }];
   }
+}
+// THE GATE's two findings — pure, fixture-driven (overhaul §5.3):
+//   gate-asleep  INFO  — never RED: sleep is health, not disease. ONE finding naming
+//                        every sleeping lane (not one per lane — the night stays readable).
+//   gate-stuck   RED   — a lane the gate says is AWAKE (evidence ∧ consumed ∧ no streak)
+//                        that STILL did not produce inside 2× its cadence, and the budget
+//                        did not starve it: the gate itself, or the runner behind it, is
+//                        broken. This is the one direction the gate cannot see about itself.
+export function gateFindings(lanes, starvedJobs = new Set()) {
+  const F = [];
+  const asleep = (lanes || []).filter((l) => l && l.enabled !== false && l.gate && l.gate.state === "asleep");
+  if (asleep.length) {
+    F.push({
+      id: "gate-asleep", level: "INFO",
+      finding: `${asleep.length} lane(s) asleep by THE GATE — resting by rule (evidence absent, or output never reached him inside its window, or a fail streak); each wakes itself the moment its cause clears`,
+      evidence: asleep.map((l) => `${l.job} (since ${String(l.gate.since || "").slice(0, 10)})`).join(" · ") + " — `node scripts/brain.mjs gate show` for why + what wakes each",
+    });
+  }
+  const stuck = (lanes || []).filter((l) => l && l.enabled !== false && l.gate && l.gate.state === "awake"
+    && (l.bleeds || []).some((b) => /^stale/.test(String(b))) && !starvedJobs.has(l.job));
+  if (stuck.length) {
+    F.push({
+      id: "gate-stuck", level: "RED",
+      finding: `${stuck.length} lane(s) the gate holds AWAKE still produced nothing inside 2× their cadence, and the budget did not starve them — the gate or the runner behind it is broken (this is the one direction the gate cannot see about itself)`,
+      evidence: stuck.map((l) => `${l.job}: ${(l.bleeds || []).find((b) => /^stale/.test(String(b)))}`).join(" · "),
+    });
+  }
+  return F;
 }
 
 // THE PULSE RIDE (12 Aug 2026, ULTRACODE liveness law). reconcile's bleeds ride
@@ -1588,9 +1632,33 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
   assert("c4a RED — audit hook fired today, zero afferents = capture/thalamus down",
     checks({ ...base, affToday: { total: 0, teaching: 0, readable: true }, auditRowsToday: 0 })
       .some((f) => f.id === "capture-dead"));
-  assert("c4b RED — afferents today, audit hook never wrote = the settings.json wire is dead",
-    checks({ ...base, auditLast: null, auditRowsToday: 0, affToday: { total: 12, teaching: 0, readable: true } })
+  assert("c4b RED — HIS typed prompts today, audit hook never wrote = the settings.json wire is dead",
+    checks({ ...base, auditLast: null, auditRowsToday: 0, affToday: { total: 12, teaching: 0, code: 4, readable: true } })
       .some((f) => f.id === "audit-hook-dead"));
+  // 18 Aug 2026 (overhaul Block 0) — the false RED of 17 Aug: a day of voice/presence/AW
+  // rows and ZERO Claude Code turns has nothing for a Stop hook to fire on.
+  assert("c4b CONDITIONAL — afferents today but ZERO claude-code rows (voice/presence/AW only) ⇒ NO wire claim (the Stop hook had nothing to fire on — the 17 Aug false RED)",
+    !checks({ ...base, auditLast: null, auditRowsToday: 0, affToday: { total: 12, teaching: 0, code: 0, readable: true } }).some((f) => f.id === "audit-hook-dead")
+    && !checks({ ...base, auditLast: null, auditRowsToday: 0, affToday: { total: 12, teaching: 0, readable: true } }).some((f) => f.id === "audit-hook-dead"));
+  // THE GATE (overhaul §5.3, 18 Aug 2026) — the two findings, on reconcile.json's own rows
+  {
+    const lanes = [
+      { job: "teamtalk_am", enabled: true, gate: { state: "asleep", since: "2026-08-18T00:10:00Z" }, bleeds: [], notes: ["asleep by THE GATE"] },
+      { job: "dreams", enabled: true, gate: { state: "asleep", since: "2026-08-18T00:10:00Z" }, bleeds: [] },
+      { job: "night_coach", enabled: true, gate: { state: "awake", since: "2026-08-18T00:10:00Z" }, bleeds: ["stale — newest night_coach/ file is 60h old, cadence allows 48h"] },
+      { job: "diary", enabled: true, gate: { state: "awake", since: "2026-08-18T00:10:00Z" }, bleeds: ["stale — newest diary/ file is 60h old, cadence allows 48h"] },
+      { job: "off_job", enabled: false, gate: { state: "asleep" }, bleeds: [] },
+      { job: "fresh", enabled: true, gate: { state: "awake" }, bleeds: [] },
+    ];
+    const gf = gateFindings(lanes, new Set(["diary"]));
+    assert("GATE — asleep lanes are ONE INFO naming every sleeper (never RED, never one-per-lane); disabled lanes are not counted",
+      gf.filter((f) => f.id === "gate-asleep").length === 1 && gf.find((f) => f.id === "gate-asleep").level === "INFO"
+      && /2 lane\(s\) asleep/.test(gf.find((f) => f.id === "gate-asleep").finding) && /teamtalk_am/.test(gf.find((f) => f.id === "gate-asleep").evidence) && !/off_job/.test(gf.find((f) => f.id === "gate-asleep").evidence));
+    assert("GATE-STUCK RED — an AWAKE lane that is still stale and NOT budget-starved is the gate/runner broken; a starved one is the budget's, not the gate's; a fresh awake lane is silence",
+      gf.some((f) => f.id === "gate-stuck" && f.level === "RED" && /night_coach/.test(f.evidence) && !/diary/.test(f.evidence))
+      && gateFindings([{ job: "fresh", enabled: true, gate: { state: "awake" }, bleeds: [] }]).length === 0
+      && gateFindings([]).length === 0);
+  }
   assert("c5 RED — a shapeless forge file and an unreadable contract are both loud (the PROBLEM-1 class)",
     checks({ ...base, forge: { exists: true, json: null, shapeless: true } }).some((f) => f.id === "forge-shapeless")
     && checks({ ...base, contract: { exists: true, json: null, unreadable: true } }).some((f) => f.id === "contract-unreadable"));

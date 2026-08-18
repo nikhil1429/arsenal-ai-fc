@@ -22,7 +22,7 @@ import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the cou
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
-import { starvedNightFor } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine)
+import { starvedNightFor, recordConsumption } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
@@ -1368,12 +1368,37 @@ async function main() {
   // prints a manifest footer naming anything missing or trimmed. If it is unavailable
   // or throws, we fall back to the exact pre-#107 call — a hook must never be the
   // thing that breaks SessionStart.
+  // THE STATE LINE (overhaul §7.1, 18 Aug 2026) — line ONE of every SessionStart and
+  // PreCompact brief: pushed · daemons · suite · sitting · next · needs-you. Read
+  // from state.mjs (deterministic, zero-LLM, read-only), fail-silent — a hook must
+  // never be the thing that breaks SessionStart, and a missing line is not a wrong one.
+  const stateLine = await (async () => { try { const { liveState } = await import("./state.mjs"); return (await liveState()).line; } catch { return null; } })();
+  const withState = (t) => (stateLine ? stateLine + "\n" : "") + t;
   try {
     const { assemble } = await import("./context_manifest.mjs");
     const out = await assemble({ dir: STATE, now: Date.now() });
-    if (out && typeof out.text === "string" && out.text) { console.log(out.text); return; }
+    if (out && typeof out.text === "string" && out.text) { console.log(withState(out.text)); recordBriefed(out.text); return; }
   } catch { /* fall through to the frozen path */ }
-  console.log(brief(STATE, Date.now(), await loadMemory(), loadTeachingCard()));
+  const text = brief(STATE, Date.now(), await loadMemory(), loadTeachingCard());
+  console.log(withState(text));
+  recordBriefed(text);
+}
+// THE GATE (overhaul §5.2 "briefed", 18 Aug 2026). A SessionStart brief that a
+// session actually printed is a place the brain's night work reached — the night
+// coach line, the diary line and the round read ride it into the session that
+// teaches him. Stamped AFTER the print, off the FINAL text (post-manifest budget:
+// a line the assembler trimmed away never reached anyone), through the OWNER
+// (brain.mjs recordConsumption — brain stays the sole writer of consumption.jsonl),
+// fail-silent, and only on this main path — never from brief() itself, which the
+// suite calls against fixture dirs. The diary's starvation line ("page nahi
+// likhi") is the brain explaining an ABSENCE, not the page reaching him.
+function recordBriefed(text) {
+  try {
+    const t = String(text || "");
+    if (t.includes("🌙 NIGHT COACH")) recordConsumption({ job: "night_coach", kind: "briefed", by: "learnstate brief (SessionStart)" });
+    if (t.includes("📔 BRAIN DIARY") && !t.includes("page nahi likhi")) recordConsumption({ job: "diary", kind: "briefed", by: "learnstate brief (SessionStart)" });
+    if (t.includes("🧠 ROUND READ")) recordConsumption({ lane: "ns_round_read", kind: "briefed", by: "learnstate brief (SessionStart)" });
+  } catch { /* bookkeeping must never cost the brief */ }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 // #14 — loadTeachingCard is exported so `get_context` can serve the SAME card

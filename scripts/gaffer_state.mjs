@@ -48,9 +48,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const STATE = join(STATE_DIR, "gaffer_state.json");
 const STANDING = join(STATE_DIR, "gaffer_standing.json");
+// THE FROZEN RECORD (overhaul 18 Aug 2026 §9.2): every standing row the word gate ever
+// promoted, moved here by `standing purge` — appended, never overwritten. This organ
+// is its sole writer too.
+const LEGACY_STANDING = join(STATE_DIR, "gaffer_standing.legacy.json");
 
 const readJson = (p, d = null) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return d; } };
 const writeJson = (p, o) => { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, JSON.stringify(o, null, 2)); };
+// purgeStanding — pure on the in-memory shapes (the CLI does the two writes). Returns
+// the emptied live store, the legacy store to write, and the counts.
+export function purgeStanding(standing, now = new Date(), legacy = readJson(LEGACY_STANDING, null)) {
+  const live = standing || { instructions: [], _writer: "gaffer_state.mjs" };
+  const rows = Array.isArray(live.instructions) ? live.instructions : [];
+  const leg = legacy && typeof legacy === "object" ? JSON.parse(JSON.stringify(legacy)) : { _writer: "gaffer_state.mjs", _why: "FROZEN RECORD (overhaul 18 Aug 2026 §9.2): standing rows the word gate promoted before laws entered only by judgment. Appended by `gaffer_state.mjs standing purge`; never read as law.", purges: [] };
+  leg.purges = Array.isArray(leg.purges) ? leg.purges : [];
+  if (rows.length) leg.purges.push({ at: now.toISOString(), count: rows.length, instructions: rows });
+  const out = { ...live, instructions: [], _purged: { at: now.toISOString(), count: rows.length, to: "gaffer_standing.legacy.json" } };
+  return { standing: out, legacy: leg, moved: rows.length, legacy_total: leg.purges.reduce((a, p) => a + (p.count || 0), 0) };
+}
 // IST is his timeline — he put it in the ledger himself on 12 Aug ("I live in New
 // Delhi so my time line is IST"). A sitting that crosses UTC midnight is still
 // one evening to him.
@@ -331,7 +346,20 @@ export function observe(state, lines, now = new Date(), standing = null, judgmen
       if (hit) { hit.count++; hit.last_at = now.toISOString(); }
       else s.repeats.push({ key: k, text: text.slice(0, 200), count: 1, last_at: now.toISOString() });
     }
-    if (isStanding(text, judgment, now)) {
+    // A LAW ENTERS ONLY BY JUDGMENT (ORGANISM_OVERHAUL 18 Aug 2026 §9.2 — his R5).
+    // Until today this read `isStanding(text, judgment, now)`, whose ELSE branch is
+    // the frozen word list — so whenever the Watcher's verdict was stale or absent
+    // (the common case: it runs DETACHED after the turn, so on the very turn a line
+    // arrives there is never a fresh judgment for it), a vocabulary match promoted
+    // the line to permanent law. Measured on the live store the day this landed:
+    // 14 rows, 13 stamped by no judge, six of them plain conversation ("So what are
+    // these papers actually?", "I don't want to know it right now") — injected into
+    // BOTH mouths as standing law every sitting. The word list stays FROZEN in this
+    // file (isStandingLegacy: exported, selftested, the layering law) — it no longer
+    // makes law. What the Watcher judges as standing lands in gaffer_blocks.json
+    // (its own store) and reaches the constitution through renderBlocks; the
+    // sitting review (overhaul §8, Block 4) is the second and last door.
+    if (fresh && isStanding(text, judgment, now)) {
       // THE AXIS COMES FROM THE WATCHER TOO when it judged this line: it returns
       // which memory BLOCK the instruction belongs in, and the block names map
       // one-to-one onto the axes this store already had. Falling back to the word
@@ -537,7 +565,19 @@ async function main() {
   }
   if (cmd === "reseed") { const s = state || emptyState(); s.reseeds++; save(s, standing); console.log(`gaffer_state: reseed #${s.reseeds} recorded`); return; }
   if (cmd === "standing") {
-    if (!standing.instructions.length) { console.log("gaffer_state: no standing instructions yet — he has not given one out loud since this store was built."); return; }
+    // THE PURGE (overhaul 18 Aug 2026 §9.2, Block 0). `standing purge` moves EVERY row to
+    // gaffer_standing.legacy.json — appended, never overwritten: the layering law, and
+    // the record of what the word gate was injecting into his ear as law. The live file
+    // keeps its shape (instructions: []) so every reader (renderBrief, supervise, the
+    // Dugout's constitution) keeps working; a `_purged` stamp names when and where.
+    if ((process.argv[3] || "").toLowerCase() === "purge") {
+      const r = purgeStanding(standing, new Date());
+      writeJson(LEGACY_STANDING, r.legacy);   // the frozen record FIRST — a crash between the two writes must never lose a row
+      save(state || emptyState(), r.standing);
+      console.log(`gaffer_state: standing PURGED — ${r.moved} row(s) → ${LEGACY_STANDING} (frozen record; ${r.legacy_total} row(s) there now). Live file holds 0 laws; new ones enter ONLY by the Watcher's judgment or the sitting review — never by the word list.`);
+      return;
+    }
+    if (!standing.instructions.length) { console.log(`gaffer_state: no standing instructions${standing._purged ? ` — purged ${standing._purged.at} (${standing._purged.count} row(s) → gaffer_standing.legacy.json)` : " yet — he has not given one out loud since this store was built."}`); return; }
     for (const i of standing.instructions) console.log(`  [${i.axis}] ${i.day} — ${i.text}`);
     return;
   }
@@ -592,11 +632,34 @@ function selftest() {
     isStanding("Mere ko rejeera mat batao. I am saying the your strategy for revising all of the topics"));
 
   // --- the axis rule: later wins, so two contradictory laws can never both stand
+  // (18 Aug 2026, overhaul §9.2: a law enters ONLY by a fresh Watcher judgment, so
+  // the fixture hands one in — the same lines, now JUDGED standing. Without it,
+  // nothing is promoted; that is the second assertion, and it is the whole repair.)
   {
-    let { state, standing } = observe(emptyState(T0), ["CAPTAIN: धीरे बोलो भाई, स्पीड हमेशा धीरे रखो"], T0, { instructions: [] });
-    ({ state, standing } = observe(state, ["CAPTAIN: ab thoda normal speed pe bolo, hamesha"], T0, standing));
+    const J = (quote, block) => ({ ts: T0.toISOString(), signals: [], standing: [{ quote, block, text: quote }] });
+    let { state, standing } = observe(emptyState(T0), ["CAPTAIN: धीरे बोलो भाई, स्पीड हमेशा धीरे रखो"], T0, { instructions: [] }, J("धीरे बोलो भाई, स्पीड हमेशा धीरे रखो", "how_to_speak"));
+    ({ state, standing } = observe(state, ["CAPTAIN: ab thoda normal speed pe bolo, hamesha"], T0, standing, J("ab thoda normal speed pe bolo, hamesha", "how_to_speak")));
     const paceLaws = standing.instructions.filter(i => i.axis === "pace");
-    assert("LATER WINS on one axis — he changes his mind out loud and the store never holds two contradictory laws", paceLaws.length === 1 && /normal speed/.test(paceLaws[0].text));
+    assert("LATER WINS on one axis — he changes his mind out loud and the store never holds two contradictory laws", paceLaws.length === 1 && /normal speed/.test(paceLaws[0].text) && paceLaws[0].by === "watcher");
+    // THE REPAIR ITSELF: the identical line, no fresh judgment ⇒ NOT law. The word list
+    // still RECOGNISES it (isStandingLegacy stays green above); it no longer promotes.
+    const unjudged = observe(emptyState(T0), ["CAPTAIN: धीरे बोलो भाई, स्पीड हमेशा धीरे रखो"], T0, { instructions: [] });
+    const staleJ = observe(emptyState(T0), ["CAPTAIN: धीरे बोलो भाई, स्पीड हमेशा धीरे रखो"], T0, { instructions: [] }, { ts: new Date(T0.getTime() - 3600000 * 24).toISOString(), signals: [], standing: [{ quote: "धीरे बोलो भाई", block: "how_to_speak" }] });
+    assert("§9.2 — the SAME line with NO fresh judgment promotes NOTHING (the word gate is frozen; 13 of the live store's 14 rows entered this way, six of them plain conversation)",
+      unjudged.standing.instructions.length === 0 && unjudged.newStanding.length === 0 && isStandingLegacy("धीरे बोलो भाई, स्पीड हमेशा धीरे रखो")
+      && staleJ.standing.instructions.length === 0);
+    // the purge — pure, appended, never overwritten
+    const live = { instructions: [{ axis: "general", text: "So what are these papers actually?", day: "2026-08-13" }, { axis: "pace", text: "dheere", day: "2026-08-15" }], _writer: "gaffer_state.mjs" };
+    const p1 = purgeStanding(live, T0, null);
+    const p2 = purgeStanding({ instructions: [{ axis: "brain", text: "use opus", day: "2026-08-16" }] }, T0, p1.legacy);
+    assert("PURGE — every live row moves to the legacy record (appended per purge, never overwritten), the live file is emptied but keeps its shape and a _purged stamp",
+      p1.moved === 2 && p1.standing.instructions.length === 0 && p1.standing._writer === "gaffer_state.mjs" && p1.standing._purged.count === 2
+      && p1.legacy.purges.length === 1 && p1.legacy.purges[0].instructions[0].text === "So what are these papers actually?"
+      && p2.legacy.purges.length === 2 && p2.legacy_total === 3);
+    assert("PURGE — an already-empty store purges to zero moved and adds no empty purge record",
+      purgeStanding({ instructions: [] }, T0, p2.legacy).moved === 0 && purgeStanding({ instructions: [] }, T0, p2.legacy).legacy.purges.length === 2);
+    assert("PURGE — renderBrief on the purged store injects NO 'STANDING INSTRUCTIONS' block (the junk stops reaching his ear)",
+      !renderBrief(emptyState(T0), p1.standing).includes("STANDING INSTRUCTIONS"));
   }
 
   // --- the plan survives, which is the whole of B1

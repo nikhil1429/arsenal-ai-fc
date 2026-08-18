@@ -194,7 +194,13 @@ if ($wp) { $wp.Settings.WakeToRun = $true; $wp.Settings.StartWhenAvailable = $fa
 # audits would be the joke that writes itself. 13:10 is a waking hour, and
 # StartWhenAvailable is OFF so a missed audit is simply missed rather than
 # stacked onto tomorrow's wake.
-schtasks /Create /F /TN "ArsenalFC-Audit" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\audit.mjs`" run >> $repo\scripts\audit.log 2>&1" /SC DAILY /ST 13:10 | Out-Null
+# 18 Aug 2026 (overhaul Block 0): this row was written on 12 Aug and the installer
+# was never re-run, so the task sat in this file and NOT in the live scheduler for
+# six days while pulse.mjs's watcher law (audit ledger daily, 48h) reported it RED
+# nightly. Registered live that day in the SAME cloaked run_logged form every other
+# organ uses (the raw `>> audit.log 2>&1` redirect below is what Mk() replaced) —
+# this line now matches what is installed, so a re-run cannot diverge from it.
+schtasks /Create /F /TN "ArsenalFC-Audit" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c $repo\setup\run_logged.cmd scripts\audit.mjs run" /SC DAILY /ST 13:10 | Out-Null
 $au = Get-ScheduledTask -TaskName "ArsenalFC-Audit" -ErrorAction SilentlyContinue
 if ($au) { $au.Settings.StartWhenAvailable = $false; $au | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Audit (13:10 daily, NO catch-up - one health number, at most one card)" }
 

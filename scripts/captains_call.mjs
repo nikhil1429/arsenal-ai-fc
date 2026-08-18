@@ -913,6 +913,17 @@ export function applyAnswer(state, id, word, now = new Date()) {
   if (c.dispatch.kind === "restart-daemon" && word === "haan") {
     return { state: s, action: { kind: "restart-dispatch", name: c.dispatch.name, cardId: c.id } };
   }
+  // THE GATE'S CARD (overhaul §5.3, 18 Aug 2026) — the ONE card whose `na` acts:
+  // "lane X so gaya … haan=sone do · na=jagao". haan = the verdict stands and the
+  // lane wakes itself when its evidence/consumption returns; na = his override,
+  // dispatched through the owner's own door (`brain.mjs gate wake <lane|all>`), a
+  // force for one window — never a switch, never a list.
+  if (c.dispatch.kind === "gate-wake") {
+    if (word === "na") return { state: s, action: { kind: "gate-wake-dispatch", lane: c.dispatch.lane, cardId: c.id } };
+    c.resolution = "haan — sota rahega; evidence/consumption lautte hi khud jaagega (THE GATE)";
+    c.retired_at = ts;
+    return { state: s, action: { kind: "done", resolution: c.resolution } };
+  }
   c.resolution = word === "haan" ? "haan — done on his word (no exec by design, v1)" : "na — retired";
   c.retired_at = ts;
   return { state: s, action: { kind: "done", resolution: c.resolution } };
@@ -1194,6 +1205,12 @@ export function fileGuard(cards, key, keyed) {
 // session reads it and walks him through it. Nothing acts for him.
 // ---------------------------------------------------------------------------
 export function fileDispatch(argv) {
+  // THE GATE (18 Aug 2026): `--gate-wake <lane|all>` — the filing organ (brain.mjs)
+  // names the lane whose `na` should wake it. Same shape as --open: a machine-
+  // supplied locator on the card, and the CLI layer walks the owner's door.
+  const gi = (argv || []).indexOf("--gate-wake");
+  const lane = gi >= 0 ? argv[gi + 1] : "";
+  if (lane && !String(lane).startsWith("--")) return { kind: "gate-wake", lane: String(lane) };
   const oi = (argv || []).indexOf("--open");
   const path = oi >= 0 ? argv[oi + 1] : "";
   if (!path || String(path).startsWith("--")) return { kind: "none" };
@@ -1291,7 +1308,7 @@ function main() {
     // LADDER B — the three owner-CLI dispatches, all on the ratify pattern:
     // success retires the card with the owner's own words; failure keeps the
     // card LIVE (his word must never be consumed by a dispatch that died).
-    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "restart-dispatch"].includes(action.kind)) {
+    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "gate-wake-dispatch", "restart-dispatch"].includes(action.kind)) {
       // 11 Aug 2026: restart-dispatch joins the same pattern. The argv comes from
       // the RESTART_DOOR TABLE keyed by the daemon's name — never from the card —
       // so a hand-edited state file can name a daemon but never a command. An
@@ -1307,9 +1324,11 @@ function main() {
           ? [join(__dirname, "hippocampus.mjs"), "forget", action.id]
           : action.kind === "restart-dispatch"
             ? [join(__dirname, doorArgv[0]), ...doorArgv.slice(1)]
-            : [join(__dirname, "gate_tune.mjs"), "apply", join(__dirname, "..", action.file)];
+            : action.kind === "gate-wake-dispatch"
+              ? [join(__dirname, "brain.mjs"), "gate", "wake", action.lane]   // THE GATE — his `na`, through the owner's door
+              : [join(__dirname, "gate_tune.mjs"), "apply", join(__dirname, "..", action.file)];
       try {
-        const out = execFileSync(process.execPath, argvFor, { encoding: "utf8" });
+        const out = execFileSync(process.execPath, argvFor, { encoding: "utf8", env: action.kind === "gate-wake-dispatch" ? { ...process.env, ARSENAL_GATE_BY: `card ${id} (his na)` } : process.env });
         const c = state.cards.find((x) => x.id === id);
         c.resolution = clip(String(out).trim() || `${word} — dispatched`, 140); c.retired_at = now.toISOString();
         writeAtomic(CALL, state);
@@ -1962,6 +1981,36 @@ function selftest() {
       assert("LOCATOR BACKFILL — no repo in awayday.json ⇒ NOTHING is written (a wrong link is worse than none)",
         deriveCards(old, { awayday: null }, T0).cards[0].dispatch.kind === "none"
         && deriveCards(old, { awayday: { repo: "" } }, T0).cards[0].dispatch.kind === "none");
+    }
+    // ── THE GATE'S CARD (overhaul §5.3, 18 Aug 2026) ────────────────────────
+    // "lane X so gaya … haan=sone do · na=jagao": the ONE hand-filed card whose NA
+    // acts. brain.mjs files it with `--gate-wake <lane|all>`; his na walks the
+    // owner's own door (`brain gate wake`), his haan lets the verdict stand.
+    {
+      assert("GATE CARD — `--gate-wake <lane>` becomes a gate-wake dispatch naming the lane; `all` rides verbatim; a bare flag stays none",
+        fileDispatch(["node", "x", "file", "--line", "l", "--key", "gate:teamtalk_am:2026-08-18", "--gate-wake", "teamtalk_am"]).kind === "gate-wake"
+        && fileDispatch(["node", "x", "file", "--line", "l", "--gate-wake", "teamtalk_am"]).lane === "teamtalk_am"
+        && fileDispatch(["node", "x", "file", "--line", "l", "--gate-wake", "all"]).lane === "all"
+        && fileDispatch(["node", "x", "file", "--line", "l", "--gate-wake"]).kind === "none");
+      const g0 = { ...blank(), next_id: 2, cards: [{
+        id: "c1", key: "gate:teamtalk_am:2026-08-18", source: "hand-filed",
+        line: "teamtalk_am SO GAYA (C: never consumed) · jaagega: its output reaches him · haan=sone do · na=14d jagao",
+        dispatch: { kind: "gate-wake", lane: "teamtalk_am" }, filed_at: "2026-08-18T00:00:00Z",
+        dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null }] };
+      const na = applyAnswer(g0, "c1", "na", new Date("2026-08-18T01:00:00Z"));
+      const ha = applyAnswer(g0, "c1", "haan", new Date("2026-08-18T01:00:00Z"));
+      assert("GATE CARD — his NA hands the CLI a gate-wake-dispatch for that lane (the owner's door runs it; a failed dispatch keeps the card live, same as every owner-CLI dispatch)",
+        na.action.kind === "gate-wake-dispatch" && na.action.lane === "teamtalk_am" && na.state.cards[0].answer === "na");
+      assert("GATE CARD — his HAAN retires the card with the verdict standing (no exec: sleep is a verdict on evidence, and it wakes itself)",
+        ha.action.kind === "done" && /khud jaagega|sota rahega/.test(ha.state.cards[0].resolution) && !!ha.state.cards[0].retired_at);
+      assert("GATE CARD — the CLI's dispatch block routes gate-wake-dispatch to brain.mjs `gate wake <lane>` (grep-held, like restart-dispatch)",
+        /"gate-wake-dispatch", "restart-dispatch"\]\.includes\(action\.kind\)/.test(readFileSync(fileURLToPath(import.meta.url), "utf8"))
+        && /\[join\(__dirname, "brain\.mjs"\), "gate", "wake", action\.lane\]/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
+      // the rolling-key guard makes the card ONE per (lane, sleep episode)
+      const g1 = { ...g0 };
+      assert("GATE CARD — one per (lane, sleep-episode): a second file with the same family while the first is live mints nothing; after his word, a new episode's day-key mints again",
+        fileGuard(g1.cards, "gate:teamtalk_am:2026-08-19", true).mint === false
+        && fileGuard(na.state.cards, "gate:teamtalk_am:2026-08-25", true).mint === true);
     }
   }
 

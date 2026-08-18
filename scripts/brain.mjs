@@ -75,6 +75,10 @@ import { allowedNumbers as allowedNumbersShared, noNewNumbers as noNewNumbersSha
 // definition, imported. claudegen pulls in nothing but node builtins, so this
 // adds no cycle and no side effect at load.
 import { classifyLimit } from "./claudegen.mjs";
+// THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5, LAW L5). One pure verdict function,
+// shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
+// gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
+import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -112,6 +116,14 @@ function writePulseSession(obj) {
 }
 const TOKEN_VITALS = join(STATE_DIR, "token_vitals.json");
 const OUT_DIR   = join(STATE_DIR, "brain_out");
+// THE CONSUMPTION LANE (overhaul §5.2) — SOLE WRITER: brain.mjs, through
+// recordConsumption() below (in-process import) or `brain.mjs consumed …` (CLI).
+// One row per time something the organism made actually reached HIM (spoken ·
+// sat · briefed · carded · opened · pushed). "Some other job read it" is NOT a row.
+const CONSUMPTION = join(STATE_DIR, "consumption.jsonl");
+// THE GATE JOURNAL (overhaul §5.3) — SOLE WRITER: brain.mjs, through gateTransition().
+// One row per TRANSITION (asleep→awake, awake→asleep), never per beat.
+const GATE_JOURNAL = join(OUT_DIR, "gate.jsonl");
 const SYSTEM_MD = join(__dirname, "..", "dressing-room", "manager", "system.md");
 
 const DEFAULTS = {
@@ -1361,6 +1373,313 @@ function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
     }
     return inRange(nowHM, ...(windows[j.window] || windows.any));
   }).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+}
+
+// ---------------------------------------------------------------------------
+// THE GATE — consumption-gated spend, two-way, automatic
+// (ORGANISM_OVERHAUL__2026-08-18.md §5 · LAW L5 · built 18 Aug 2026 on his word)
+// ---------------------------------------------------------------------------
+// WHAT THIS REPLACES. On 18 Aug 2026 this same `status` printed 11 jobs billed on
+// absent evidence and 10 on half-eaten inputs, ~90% of the week's 6.12 crore tokens
+// in the dark lane and ~0% reaching his ear. Every earlier repair here made the
+// LEDGER honest (finding #64's absent count, the elision pair, the starved night)
+// and left the SPEND wired to aliveness. This section wires it to USEFULNESS: a job
+// runs iff its evidence exists (E), its output has reached HIM inside a window (C),
+// and it is not stuck in a failure streak (F) — else it sleeps, journals ONE row,
+// files ONE card, and wakes ITSELF the moment E∧C∧¬F holds again. Nothing is
+// deleted, no list is kept: `brain status` derives who is asleep from the live
+// facts every time it is asked. The verdict function is gate.mjs's `decide()`,
+// shared with nightshift and the DMN, so "asleep" means one thing everywhere.
+//
+// E — evidence: the job's REQUIRED inputs that are NOT the organism's own artifacts.
+//   A required `brain_out/…` path is an UPSTREAM dependency, not evidence about him
+//   (midday_cartridge needs today's digest, which lands at 12:30 — that absence is
+//   a same-day ordering fact, and runJob's own required-absent refusal keeps
+//   handling it exactly as before). Only state HE or the world produced (season.json,
+//   post_match/, slip.jsonl, twin.json …) can put a lane to sleep on E. `dreams`
+//   carries its one computed probe (the cracked-axes inventory) — the same probe
+//   runJob already refuses on before spending.
+// C — consumed by him: the newest row in consumption.jsonl for this job or its
+//   out-lane (spoken · sat · briefed · carded · opened · pushed), PLUS the two
+//   derived sources no organ has to log: a card whose `open` dispatch points into
+//   this lane and he answered haan/na (captains_call.json is READ here, never
+//   written), and — for `job_input` surfaces — the consumption of the job that EATS
+//   this one, transitively (a digest that fed a cartridge that a sitting loaded DID
+//   change a sitting). "Some other job read it" (reconcile's word) is NOT a row.
+//   First-run grace: a job with no boolean-ok ledger row has never had a chance to
+//   be consumed, so it runs once. After that, the window decides.
+// F — a run of `fail_streak` ok:false rows at the tail of this job's ledger.
+//
+// THE TWO WAKE DOORS (his ruling — reversibility, never a gate): the card's `na`
+// dispatches `brain gate wake <lane>`; so does the CLI by hand. Both write ONE
+// force into brain_queue.gate.forced[lane] = { until: +window_days, once: true }.
+// `once` lets a lane through the F guard exactly one run; a success then clears
+// the streak on the ledger by itself. Forces ride the same lost-update-safe merge
+// the triggers ride (mergeTriggers).
+//
+// OWNERSHIP, unchanged: consumption.jsonl and brain_out/gate.jsonl are written HERE
+// and only here (recordConsumption · gateTransition — in-process import or the
+// `consumed` / `gate` CLI doors); the card goes through captains_call's own CLI;
+// brain_queue.json stays this file's. gate.mjs writes nothing.
+// ---------------------------------------------------------------------------
+const CALL_STATE = join(STATE_DIR, "captains_call.json");   // READ ONLY here — the card organ is its sole writer
+
+// ---- the consumption lane (§5.2) -------------------------------------------
+// recordConsumption({job|lane, kind, by, file?, note?}, deps?) → {ok, row|why}
+// Kinds are CLOSED (gate.mjs CONSUMPTION_KINDS): a caller cannot invent a new way
+// of "reaching him" without changing the law in the one place it is written.
+export function recordConsumption(evt = {}, deps = {}) {
+  const { job = null, lane = null, kind, by = null, file = null, note = null } = evt;
+  if (!CONSUMPTION_KINDS.includes(kind)) return { ok: false, why: `unknown consumption kind '${kind}' — one of ${CONSUMPTION_KINDS.join("|")}` };
+  if (!job && !lane) return { ok: false, why: "job or lane required" };
+  const now = deps.now || new Date();
+  const row = { ts: now.toISOString(), job, lane, kind, by, file, note };
+  try {
+    if (deps.append) deps.append(JSON.stringify(row) + "\n");
+    else appendFileSync(CONSUMPTION, JSON.stringify(row) + "\n");
+    return { ok: true, row };
+  } catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 120) }; }
+}
+export function consumptionRows() { return readLines(CONSUMPTION); }
+
+// ---- who eats whom (transitive C for job_input surfaces) --------------------
+// Derived from the CONFIG's own `inputs` declarations + an optional explicit
+// `gate.consumers` list — never a table kept by hand. Disabled downstream jobs
+// cannot consume anything, so they are not consumers.
+export function jobConsumers(cfg, job) {
+  const lane = job.out || job.id;
+  const prefix = `brain_out/${lane}/`;
+  const jobs = (cfg && cfg.jobs) || [];
+  const viaInputs = jobs.filter((j) => j.id !== job.id && j.enabled !== false && normalizeInputs(j).some((d) => d.path.startsWith(prefix)));
+  const explicit = gateConfig(job).consumers.map((id) => jobs.find((j) => j.id === id && j.enabled !== false)).filter(Boolean);
+  return [...new Set([...viaInputs, ...explicit])];
+}
+// A card that opened THIS lane's file and that he answered haan/na = he engaged
+// with the artifact (`baad` is a deferral, not a read). Derived, never logged.
+export function cardConsumption(cards, lane) {
+  let best = null;
+  for (const c of (Array.isArray(cards) ? cards : [])) {
+    if (!c || !c.dispatch || c.dispatch.kind !== "open" || !c.answered_at || !["haan", "na"].includes(c.answer)) continue;
+    const p = String(c.dispatch.path || "").replace(/\\/g, "/");
+    if (!p.includes(`brain_out/${lane}/`)) continue;
+    const t = Date.parse(c.answered_at);
+    if (Number.isFinite(t) && (!best || t > best.t)) best = { t, last_at: c.answered_at, kind: "carded", by: `captains_call ${c.id}` };
+  }
+  return best ? { last_at: best.last_at, kind: best.kind, by: best.by } : null;
+}
+// THE MOUTH IS A CONSUMPTION SOURCE NOBODY HAS TO LOG (§5.2 "pushed"). mouth_log.jsonl
+// (this file's own E4 lane) already records every push ATTEMPT with `sent`; a sent
+// SHEET push carries the sheet's own head in its body, so it IS the sheet reaching
+// his phone — the sheet job (cfg.ntfy.push_after) is consumed at the newest sent
+// `sheet` row. Derived at decision time from a file this organ already owns; nothing
+// new is written.
+// DELIBERATELY NOT a source for the team-talk mp3s (teamtalk_am/pm), and this was
+// weighed and reversed on the day it landed: the first cut counted "announced inside
+// a sent push" (🎙️ line in the sheet push / the full-time bell) as reaching him — but
+// an announcement that an mp3 exists is not the mp3 in his ear. Nothing on this
+// machine records a PLAY. Under §5.2 that is exactly "not consumed", and those two
+// lanes are the poster children of R3 (teamtalk_am 15/15 runs on absent evidence), so
+// letting a weaker signal wake them would put the bleed back through the side door.
+// They sleep until something proves a listen — the postmatch voice lane (§10, Block 5)
+// records `spoken` when it plays one — or his `na`.
+export function mouthConsumption(job, cfg, ctx) {
+  const rows = ctx.mouth !== undefined ? ctx.mouth : readLines(MOUTH_LOG);
+  const pushAfter = (cfg && cfg.ntfy && cfg.ntfy.push_after) || [];
+  if (!pushAfter.includes(job.id)) return null;
+  const sent = rows.filter((r) => r && r.sent === true && r.kind === "sheet" && Number.isFinite(Date.parse(r.ts))).sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
+  return sent[0] ? { last_at: sent[0].ts, kind: "pushed", by: "ntfy sheet push (mouth_log)" } : null;
+}
+export function consumptionForJob(cfg, job, ctx, visited = new Set()) {
+  const none = { last_at: null, kind: null, by: null };
+  if (!job || visited.has(job.id)) return none;
+  visited.add(job.id);
+  const lane = job.out || job.id;
+  const cands = [consumptionOf(ctx.consumption || [], [job.id, lane])];
+  const cc = cardConsumption(ctx.cards, lane);
+  if (cc) cands.push(cc);
+  const mc = mouthConsumption(job, cfg, ctx);
+  if (mc) cands.push(mc);
+  // explicit consumers that are NOT brain jobs (a nightshift lane, a skill) are read
+  // as consumption keys directly — the cross-organ half of the transitive rule.
+  for (const id of gateConfig(job).consumers) {
+    if ((cfg.jobs || []).some((j) => j.id === id)) continue;   // a brain job: walked below
+    const c = consumptionOf(ctx.consumption || [], [id]);
+    if (c.last_at) cands.push({ ...c, by: `${c.by || "?"} ← ${id}` });
+  }
+  for (const d of jobConsumers(cfg, job)) {
+    const dc = consumptionForJob(cfg, d, ctx, visited);
+    if (dc.last_at) cands.push({ ...dc, by: `${dc.by || "?"} ← ${d.id}` });
+  }
+  let best = null;
+  for (const c of cands) { const t = Date.parse(c.last_at || ""); if (Number.isFinite(t) && (!best || t > best.t)) best = { t, ...c }; }
+  return best ? { last_at: best.last_at, kind: best.kind, by: best.by } : none;
+}
+
+// ---- evidence, per job (E) --------------------------------------------------
+// File evidence = REQUIRED inputs outside brain_out/. Computed probes per kind.
+export function gateEvidence(job, cfg, ctx) {
+  const gi = ctx.evidenceFor ? ctx.evidenceFor(job) : gatherInputsAudited(job, ctx.now, shiftDay(job, ctx.now, cfg));
+  const isOwn = (p) => /^brain_out\//.test(String(p).replace(/\\/g, "/"));
+  const required_absent = (gi.required_absent || []).filter((p) => !isOwn(p));
+  const absent = (gi.absent || []).filter((p) => !isOwn(p));
+  const upstream_absent = (gi.required_absent || []).filter(isOwn);
+  let ok = true, detail = null;
+  if (job.kind === "dreams") {
+    const inv = ctx.crackedInv !== undefined ? ctx.crackedInv : crackedAxesInventory();
+    if (!inv.length) { ok = false; detail = "the cracked-axes inventory is EMPTY — dreams need his Re-Jirah rounds or measured scoreboard cracks (a real round or rep restores it)"; }
+    else detail = `${inv.length} cracked axis/axes on record`;
+  }
+  return { ok, required_absent, absent, upstream_absent, detail, declared: gi.declared || 0, present: gi.present || 0 };
+}
+
+// ---- forces (the two wake doors) -------------------------------------------
+export function gateForce(queueState, lane) {
+  const f = queueState && queueState.gate && queueState.gate.forced && queueState.gate.forced[lane];
+  return f && typeof f === "object" ? f : null;
+}
+export function setGateForce(queueState, lane, { until, once = true, by = "cli", now = new Date() } = {}) {
+  queueState.gate = queueState.gate || {};
+  queueState.gate.forced = queueState.gate.forced || {};
+  queueState.gate.forced[lane] = { until: until || null, once: !!once, by, ts: now.toISOString() };
+  return queueState;
+}
+
+// ---- the verdict for one brain job -----------------------------------------
+export function gateVerdictFor(job, cfg, ctx) {
+  const evidence = gateEvidence(job, cfg, ctx);
+  const consumption = consumptionForJob(cfg, job, ctx);
+  const never_ran = !gateEverRan(ctx.ledger || [], job.id);
+  const forced = gateForce(ctx.queueState, job.id);
+  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced });
+  return { ...v, evidence, consumption, never_ran, forced };
+}
+// ---- the verdict for a NON-brain lane (nightshift, DMN) — same law, same journal ----
+// The other gated organs already import this file; they hand their own evidence
+// (they know their inputs) and event arming, and get back the identical verdict
+// shape brain jobs get. Ledger + consumption + forces are read here (their owner),
+// once per call; hermetic callers pass them in. `gate` = the lane's gate config
+// (window/fail_streak/event) — nightshift/dmn declare theirs in code, since they
+// have no brain_config row.
+// `aliases` = the ledger job names this lane's rows carry (the DMN's rows are
+// dmn_rollout/dmn_counter; the shift's are ns_*) — everRan/failStreak read them as ONE.
+export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed, ledger = null, consumption = null, queueState = null, now = new Date(), surface = null, aliases = [] } = {}) {
+  const led = ledger || readLines(LEDGER);
+  const cons = consumption || consumptionRows();
+  const qs = queueState || readJson(QUEUE) || {};
+  const ids = [lane, ...aliases];
+  const c = consumptionOf(cons, [lane]);
+  const never_ran = !gateEverRan(led, ids);
+  const forced = gateForce(qs, lane);
+  const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced });
+  return { ...v, consumption: c, never_ran, forced, evidence };
+}
+// The live context, read ONCE per tick/status. Hermetic callers hand their own.
+function gateContext(deps, now, ledger, queueState) {
+  const hermetic = !!deps.ledger;   // a fixture ledger ⇒ a fixture world (no live consumption/cards/journal)
+  const g = deps.gate || {};
+  const call = hermetic ? null : readJson(CALL_STATE);
+  return {
+    now, ledger, queueState,
+    consumption: g.consumption !== undefined ? g.consumption : (hermetic ? [] : consumptionRows()),
+    cards: g.cards !== undefined ? g.cards : ((call && call.cards) || []),
+    states: g.states !== undefined ? g.states : (hermetic ? new Map() : lastGateStates()),
+    mouth: g.mouth !== undefined ? g.mouth : (hermetic ? [] : readLines(MOUTH_LOG)),
+    mediaExists: g.mediaExists !== undefined ? g.mediaExists : (hermetic ? () => false : undefined),
+    evidenceFor: g.evidenceFor, crackedInv: deps.crackedInv,
+  };
+}
+
+// ---- the journal + the card (transitions only) -----------------------------
+export function lastGateStates() {
+  const m = new Map();
+  for (const r of readLines(GATE_JOURNAL)) if (r && r.lane && r.state) m.set(r.lane, r);
+  return m;
+}
+export function gateJournalRows() { return readLines(GATE_JOURNAL); }
+// The one-line card (≤140 chars after clip): what slept, why, what wakes it, and
+// the two words he can say. `na` dispatches `brain gate wake <lane>` (captains_call
+// carries the dispatch on the card itself: --gate-wake). Idempotent per (lane,
+// sleep-episode) through captains_call's rolling-key guard: gate:<lane>:<day>.
+function gateCardArgs(lane, verdict, now, cfg = null) {
+  const failed = ["E", "C", "F"].filter((k) => !verdict.why[k].ok);
+  const short = (s) => String(s || "").replace(/\s+/g, " ").slice(0, 46);
+  const w = verdict.wakes_when ? String(verdict.wakes_when).split(" · ")[0].replace(/\s+—.*$/, "") : "";
+  const days = gateConfig((cfg && (cfg.jobs || []).find((j) => j.id === lane)) || {}).window_days;
+  const line = `${lane} SO GAYA (${failed.join("")}: ${short(verdict.why[failed[0]].detail)}) · jaagega: ${short(w)} · haan=sone do · na=${days}d jagao`;
+  return ["file", "--line", line, "--key", `gate:${lane}:${localDate(now)}`, "--gate-wake", lane];
+}
+function defaultFileCard(args) {
+  try { execFileSync(process.execPath, [join(__dirname, "captains_call.mjs"), ...args], { encoding: "utf8", timeout: 20000, windowsHide: true }); return true; }
+  catch { return false; }
+}
+// gateTransition(lane, verdict, deps) → {changed, prev, row}. Journals a row and
+// files the card ONLY on a state change; identical state on every beat = silence.
+export function gateTransition(lane, verdict, deps = {}) {
+  const now = deps.now || new Date();
+  const prev = deps.prevState !== undefined ? deps.prevState : (lastGateStates().get(lane) || null);
+  const state = verdict.state;
+  if (prev && prev.state === state) return { changed: false, prev, row: null };
+  const row = {
+    ts: now.toISOString(), lane, state, by: deps.by || "brain",
+    why: { E: verdict.why.E.ok, C: verdict.why.C.ok, F: verdict.why.F.ok },
+    detail: { E: verdict.why.E.detail, C: verdict.why.C.detail, F: verdict.why.F.detail },
+    wakes_when: verdict.wakes_when || null,
+    consumption: verdict.consumption || null,
+  };
+  if (!deps.dry) {
+    if (deps.appendJournal) deps.appendJournal(JSON.stringify(row) + "\n");
+    else { try { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); } catch { } }
+    if (state === "asleep") {
+      const args = gateCardArgs(lane, verdict, now, deps.cfg || null);
+      // a caller that COLLECTS decides how many cards this becomes (see the batch rule in tick)
+      if (Array.isArray(deps.collectCards)) deps.collectCards.push({ lane, args });
+      else (deps.fileCard || defaultFileCard)(args);
+    }
+  }
+  return { changed: true, prev, row };
+}
+// THE BATCH RULE. "One card per (lane, sleep episode)" was written for the steady
+// state — a lane going quiet now and then. The DAY the gate lands, twenty-odd lanes
+// sleep in ONE tick on the same cause (nothing of them ever reached him), and
+// twenty-odd cards at one-per-anchor is a fortnight of the same question — the
+// report-disguised-as-asks shape his 7 Aug ruling forbids. So: more than
+// GATE_BATCH_CARDS sleep-transitions in one tick ⇒ ONE card for the batch, whose
+// `na` wakes them ALL (`brain gate wake all`); at or under it ⇒ the per-lane cards.
+const GATE_BATCH_CARDS = 3;
+// `threshold` — above this many sleepers in one pass, ONE card (nightshift passes 1:
+// its three lanes sleep on the same night for the same reason). `label` names the
+// batch's owner on the card. The batch card's --gate-wake carries the EXACT lanes
+// (comma-joined), so his `na` wakes those and only those; `all` stays a hand door.
+export function gateCardsForTick(collected, now, { fileCard = defaultFileCard, threshold = GATE_BATCH_CARDS, label = "THE GATE" } = {}) {
+  if (!collected.length) return { filed: 0, batch: false };
+  if (collected.length <= threshold) { for (const c of collected) fileCard(c.args); return { filed: collected.length, batch: false }; }
+  const lanes = collected.map((c) => c.lane);
+  const line = `${label}: ${lanes.length} lanes so gaye — output kabhi tum tak nahi pahuncha (list: brain gate show) · haan=theek, khud jaagenge · na=sab 14d jagao`;
+  fileCard(["file", "--line", line, "--key", `gate:batch:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${localDate(now)}`, "--gate-wake", lanes.join(",")]);
+  return { filed: 1, batch: true, lanes };
+}
+// The whole GATE read for `status`/`gate show`: every enabled job's LIVE verdict
+// beside its journaled state, plus the non-brain lanes (ns_*, dmn) that journal here.
+export function gateReport(cfg, ctx) {
+  const jobs = ((cfg && cfg.jobs) || []).filter((j) => j.enabled !== false);
+  const rows = jobs.map((j) => ({ lane: j.id, kind: j.kind, ...gateVerdictFor(j, cfg, ctx), journaled: ctx.states.get(j.id) || null }));
+  const others = [...ctx.states.values()].filter((r) => !jobs.some((j) => j.id === r.lane));
+  return { rows, others, asleep: rows.filter((r) => !r.run), awake: rows.filter((r) => r.run) };
+}
+export function printGate(rep, { verbose = false } = {}) {
+  const asleep = rep.asleep, awake = rep.awake;
+  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=consumed-by-him ≤window · F=fail streak; asleep is health, not disease — it wakes itself)`);
+  for (const r of asleep) {
+    const failed = ["E", "C", "F"].filter((k) => !r.why[k].ok);
+    console.log(`  · ${r.lane.padEnd(18)} ASLEEP on ${failed.join("+")} — ${failed.map((k) => `${k}: ${r.why[k].detail}`).join(" · ")}`);
+    console.log(`    ${"".padEnd(18)} wakes when: ${r.wakes_when}${r.journaled ? ` · journaled ${r.journaled.state} since ${String(r.journaled.ts).slice(0, 16)}Z` : " · not yet journaled (first slot journals it)"}`);
+  }
+  if (verbose || asleep.length === 0) for (const r of awake) console.log(`  · ${r.lane.padEnd(18)} awake — ${r.why.C.detail}${r.forced ? ` · FORCED (${r.forced.by}, until ${r.forced.until})` : ""}`);
+  else {
+    const forcedAwake = awake.filter((r) => r.forced);
+    console.log(`  · awake: ${awake.map((r) => r.lane + (r.never_ran ? "*" : "")).join(", ")}${awake.some((r) => r.never_ran) ? "  (* = first-run grace)" : ""}${forcedAwake.length ? ` · forced: ${forcedAwake.map((r) => r.lane).join(", ")}` : ""}`);
+  }
+  if (rep.others.length) console.log(`  · other lanes journaled here: ${rep.others.map((r) => `${r.lane}=${r.state}`).join(" · ")}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -2839,7 +3158,10 @@ async function runJob(job, cfg, deps) {
         // out (this very push still works: it is fetch, not claude).
         const tvHealth = ((readJson(TOKEN_VITALS) || {}).health) || {};
         const loginLine = tvHealth.not_logged_in === true ? "🔑 claude CLI LOGGED OUT — terminal kholke `claude` → /login, warna raat ka brain andhera." : null;
-        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${loginLine ? "\n\n" + loginLine : ""}${nag ? "\n\n" + nag : ""}${tt ? "\n\n🎙️ " + tt : ""}`, undefined, { tags: "soccer,clipboard" });
+        // THE STATE LINE (overhaul §7.1, 18 Aug 2026) rides the morning push — the one
+        // anchor that reaches his phone. Fail-silent: the sheet must never wait on it.
+        const stateLine = await (async () => { try { const { liveState } = await import("./state.mjs"); return (await liveState()).line; } catch { return null; } })();
+        pushed = await pushNtfy(cfg, SHEET_PUSH_TITLE, `${lead}\n\n${head}\n\n_…full sheet on the Wall (ARSENAL 2)._${loginLine ? "\n\n" + loginLine : ""}${nag ? "\n\n" + nag : ""}${tt ? "\n\n🎙️ " + tt : ""}${stateLine ? "\n\n" + stateLine : ""}`, undefined, { tags: "soccer,clipboard" });
         // marked only on a REAL send, so a network blip retries next beat instead of
         // burning the day's one utterance on a push that never left the machine.
         if (qs && pushed.sent) { qs.mouth_said = qs.mouth_said || {}; qs.mouth_said[today] = "sheet"; }
@@ -3232,7 +3554,24 @@ async function tick(cfg, deps) {
 
   const ran = [];
   const consumedTriggers = [];
+  const consumedForces = [];
+  // THE GATE (overhaul §5) sits BEFORE the headroom check: an asleep lane must never
+  // consume headroom, block the lanes behind it, or burn an attempt. Verdicts are
+  // computed for the ELIGIBLE jobs only (in-window, slot open) — "an asleep lane
+  // re-checks every scheduled slot" — and a transition journals ONE row + files ONE
+  // card through captains_call's own CLI. Same state as last time = silence.
+  const gctx = gateContext(deps, now, ledger, queueState);
+  const awake = [];
+  const sleptNow = [];
+  const gated = [];   // asleep lanes this beat — reported beside `ran`, never inside it (a sleep is not an attempt)
   for (const job of eligibleJobs(cfg, queueState, now, dugoutMinutesToday(now))) {
+    const v = gateVerdictFor(job, cfg, gctx);
+    gateTransition(job.id, v, { now, dry: deps.dry, prevState: gctx.states.get(job.id) || null, collectCards: sleptNow, appendJournal: deps.appendJournal, cfg });
+    if (v.run) awake.push({ job, verdict: v });
+    else gated.push({ job: job.id, why: ["E", "C", "F"].filter((k) => !v.why[k].ok).join("+"), verdict: v });
+  }
+  if (!deps.dry && sleptNow.length) gateCardsForTick(sleptNow, now, deps.fileCard ? { fileCard: deps.fileCard } : {});
+  for (const { job, verdict } of awake) {
     const h = headroom(cfg, ledger.concat(ran.map(r => r.ledgerRow).filter(Boolean)), queueState, now, deps.signals);
     if (h.allowed <= 0) {
       // …and the reason is now KEPT (see recordBudgetBlock above). The row copies the
@@ -3350,6 +3689,14 @@ async function tick(cfg, deps) {
     // re-run on every 75s beat forever at full model cost. A plan-limit backoff is
     // NOT the job's fault, so it doesn't burn an attempt.
     else if (!usage.limit_hit) recordJobFail(queueState, job, now, cfg);
+    // THE GATE — a `once` force is spent by the ATTEMPT (success or failure): it
+    // bought one run through the F guard, and a success clears the streak on the
+    // ledger by itself; a failure means the same failure repeated and F holds again.
+    // `until` (the C force) stays — his 'na' bought the whole window.
+    if (verdict.forced && verdict.forced.once && !usage.limit_hit) {
+      const f = queueState.gate && queueState.gate.forced && queueState.gate.forced[job.id];
+      if (f) { f.once = false; consumedForces.push(job.id); }
+    }
     if (usage.ok && job.trigger && queueState.triggers) { delete queueState.triggers[job.trigger]; consumedTriggers.push(job.trigger); }   // consumed
     if (usage.limit_hit && cfg.budget.self_tune) {
       // a limit event means we spent ~the plan's true capacity — record the
@@ -3410,21 +3757,30 @@ async function tick(cfg, deps) {
     // wrote its armed trigger to disk — and this write silently erased it, so the
     // event-triggered re-analysis never happened and nothing reported it. Re-read
     // at write time and keep the disk's triggers, minus the ones we just consumed.
-    writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), queueState, consumedTriggers));
+    writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), queueState, consumedTriggers, consumedForces));
     try { writeAtomic(TOKEN_VITALS, tokenVitals(cfg, readLines(LEDGER), queueState, now, deps.signals)); } catch {}
   }
-  return { ran, refused: false };
+  return { ran, refused: false, gated };
 }
 
 // the merge itself, pure and testable: brain owns every key EXCEPT `triggers`,
 // which a separate `brain trigger` process arms at any moment. Disk wins on
 // triggers (it is the freshest arming), we win on everything else, and anything
 // this tick consumed stays consumed.
-function mergeTriggers(disk, mine, consumed = []) {
+// THE GATE'S FORCES (18 Aug 2026) ride the same rule: `brain gate wake <lane>` (by
+// hand, or dispatched by his 'na' on a card) writes gate.forced[lane] to disk at any
+// moment, and this tick's whole-object write must not erase it. Disk wins on forces
+// EXCEPT for a `once` this tick just spent (consumedForces) — that stays spent.
+function mergeTriggers(disk, mine, consumed = [], consumedForces = []) {
   if (!disk || typeof disk !== "object") return mine;
   const triggers = { ...(disk.triggers || {}) };
   for (const k of consumed) delete triggers[k];
-  return { ...mine, triggers };
+  const mineForced = (mine.gate && mine.gate.forced) || {};
+  const diskForced = (disk.gate && disk.gate.forced) || {};
+  const forced = { ...mineForced, ...diskForced };
+  for (const lane of consumedForces) if (forced[lane]) forced[lane] = { ...forced[lane], once: false };
+  const gate = { ...(mine.gate || {}), forced };
+  return { ...mine, triggers, gate };
 }
 
 // ---------------------------------------------------------------------------
@@ -3951,7 +4307,10 @@ async function selftest() {
   assert("overnight tick drains multiple jobs", t1.ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length >= 3);
   const limitExec = () => ({ ok: false, text: null, total_tokens: 0, duration_ms: 5, limit_hit: true, error: "You've hit your session limit · resets 7am" });
   const t2 = await tick({ ...cfg, jobs: inputFree(cfg.jobs) }, { exec: limitExec, gexec: () => ({ ok: false }), now: now(23, 30), dry: true, ...hermetic() });
-  assert("SELF-TUNE — limit event stops the tick immediately", t2.ran.filter(r => r.ledgerRow).length === 1 && t2.ran[0].note.includes("LIMIT"));
+  // THE GATE (18 Aug 2026): `ran` now also carries gate-asleep skips (like budget
+  // skips), so the LIMIT row is found by its ledgerRow, not by position.
+  const t2rows = t2.ran.filter(r => r.ledgerRow);
+  assert("SELF-TUNE — limit event stops the tick immediately", t2rows.length === 1 && t2rows[0].note.includes("LIMIT"));
 
   // ---- THE STARVED NIGHT (10 Aug 2026 wiring audit) ------------------------------
   // The refusal at the top of the job loop built its reason and DISCARDED it: no ledger
@@ -5273,6 +5632,169 @@ async function selftest() {
       missing.length === 0);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5.5) — the acceptance fixtures, at
+  // the TICK level: verdict → journal row → card → the next slot wakes it, with
+  // no human action. Everything hermetic: fixture ledger/consumption/cards/mouth,
+  // captured journal + card args, dry executors. Nothing touches the live bus.
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    const T = new Date(2026, 7, 18, 23, 30, 0);   // 18 Aug 2026 23:30 local — overnight window
+    const iso = (dAgo) => new Date(T.getTime() - dAgo * 86400000).toISOString();
+    const J = (id, extra = {}) => ({ id, kind: "analysis", model: "sonnet", engine: "claude", enabled: true, window: "overnight", max_per_day: 1, priority: 50, inputs: [], out: id, surface: { kind: "code", where: "scripts/learnstate.mjs" }, ...extra });
+    const gcfg = { ...cfg, jobs: [
+      J("needs_season", { inputs: [{ path: "season.json", required: true }] }),
+      J("upstream_only", { inputs: [{ path: "brain_out/other/TODAY.md", required: true }] }),
+      J("digest", { surface: { kind: "job_input", where: "input to cartridge" } }),
+      J("cartridge", { inputs: ["brain_out/digest/TODAY.md"], surface: { kind: "code", where: "scripts/dugout.mjs" } }),
+      J("failing"),
+      J("stale_lane"),
+      J("fresh_lane"),
+    ] };
+    const okExec = () => ({ ok: true, text: "Sharp read. 2 drills stand.", total_tokens: 1000, duration_ms: 5, limit_hit: false, error: null });
+    const journal = [], cards = [];
+    const evidenceFor = (job) => {   // fixture disk: season.json is ABSENT, other files present
+      const req = normalizeInputs(job);
+      const absent = req.filter((d) => /season\.json/.test(d.path) || /brain_out\/other/.test(d.path)).map((d) => d.path.replace(/TODAY/g, "2026-08-18"));
+      return { inputs: {}, declared: req.length, absent, required_absent: absent.filter((p) => req.find((d) => d.path.replace(/TODAY/g, "2026-08-18") === p && d.required)), present: req.length - absent.length, door: [], door_dropped: 0 };
+    };
+    // history: every lane except fresh_lane has run before (so first-run grace is off);
+    // `failing` has 5 straight failures; stale_lane was consumed 20d ago, cartridge 2d ago.
+    const hist = [
+      { ts: iso(3), job: "needs_season", engine: "claude", ok: true, total_tokens: 1 },
+      { ts: iso(3), job: "upstream_only", engine: "claude", ok: true, total_tokens: 1 },
+      { ts: iso(3), job: "digest", engine: "claude", ok: true, total_tokens: 1 },
+      { ts: iso(3), job: "cartridge", engine: "claude", ok: true, total_tokens: 1 },
+      { ts: iso(3), job: "stale_lane", engine: "claude", ok: true, total_tokens: 1 },
+      ...Array.from({ length: 5 }, (_, i) => ({ ts: iso(2 - i * 0.1), job: "failing", engine: "claude", ok: false, error: "validator: banned", total_tokens: 1 })),
+    ];
+    const consumption = [
+      { ts: iso(20), job: "stale_lane", kind: "briefed", by: "learnstate" },
+      { ts: iso(2), job: "cartridge", kind: "sat", by: "dugout" },
+      { ts: iso(1), job: "needs_season", kind: "briefed", by: "learnstate" },
+      { ts: iso(1), job: "upstream_only", kind: "briefed", by: "learnstate" },
+      { ts: iso(1), job: "failing", kind: "briefed", by: "learnstate" },
+    ];
+    const gateDeps = (over = {}) => ({
+      exec: okExec, gexec: () => ({ ok: false }), now: T, dry: false,
+      ledger: hist, queueState: { observed_window_ceiling: null, jobs_run: {} },
+      gate: { consumption, cards: [], states: new Map(), mouth: [], mediaExists: () => false, evidenceFor },
+      appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (args) => { cards.push(args); return true; },
+      ...over,
+    });
+    // dry:false is needed for the journal/card path, so every WRITE the tick would do
+    // must be intercepted: the ledger append and the queue write are the two. Both are
+    // guarded by `deps.dry` in tick(); here we keep dry:false but hand tick a fixture
+    // ledger (no roll) and rely on the fact that appendFileSync(LEDGER) happens only
+    // when !deps.dry — so we run the tick against a TEMP copy of the module state by
+    // pointing the two paths at a scratch dir? No such seam exists; instead we run in
+    // dry mode for the ledger and exercise the journal/card seams DIRECTLY below.
+    const gc = gateContext(gateDeps({ dry: true }), T, hist, { jobs_run: {} });
+    const rep = gateReport(gcfg, gc);
+    const by = (id) => rep.rows.find((r) => r.lane === id);
+    assert("§5.5/1 TICK — a REQUIRED input outside brain_out (season.json) absent ⇒ ASLEEP on E, wakes when the file exists again",
+      by("needs_season").run === false && by("needs_season").why.E.ok === false && /season\.json exists again/.test(by("needs_season").wakes_when));
+    assert("§5.5/1 TICK — a REQUIRED input UNDER brain_out is an upstream ordering fact, not evidence: the lane stays AWAKE on E (runJob's own refusal keeps handling the same-day absence)",
+      by("upstream_only").why.E.ok === true && by("upstream_only").run === true && by("upstream_only").evidence.upstream_absent.length === 1);
+    assert("§5.5/2 TICK — five straight ok:false rows ⇒ ASLEEP on F even though it was briefed yesterday; the wake door is named",
+      by("failing").run === false && by("failing").why.F.ok === false && by("failing").why.C.ok === true && /gate wake failing/.test(by("failing").wakes_when));
+    assert("§5.5/3 TICK — consumed (briefed) 20d ago ⇒ ASLEEP on C; consumed (sat) 2d ago ⇒ AWAKE",
+      by("stale_lane").run === false && by("stale_lane").why.C.ok === false && by("cartridge").run === true && /sat/.test(by("cartridge").why.C.detail));
+    assert("TRANSITIVE C — a job_input lane (digest) is consumed when the job that EATS it (cartridge, via its declared input) was consumed: awake, and the chain is named",
+      by("digest").run === true && /← cartridge/.test(by("digest").why.C.detail) && jobConsumers(gcfg, gcfg.jobs.find((j) => j.id === "digest")).map((j) => j.id).join() === "cartridge");
+    assert("FIRST RUN — a lane with no boolean-ok row ever (fresh_lane) is AWAKE on grace, marked as such",
+      by("fresh_lane").run === true && by("fresh_lane").never_ran === true && /first run/.test(by("fresh_lane").why.C.detail));
+    assert("REPORT — asleep/awake partition adds up and every asleep row carries a wakes_when sentence",
+      rep.asleep.length + rep.awake.length === gcfg.jobs.length && rep.asleep.length === 3 && rep.asleep.every((r) => typeof r.wakes_when === "string" && r.wakes_when.length > 10));
+
+    // the transition seam: first sight journals + cards; same state again = silence;
+    // the wake (evidence back / consumption back / force) journals awake, no card.
+    journal.length = 0; cards.length = 0;
+    const vAsleep = by("needs_season");
+    const t1 = gateTransition("needs_season", vAsleep, { now: T, prevState: null, appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (a) => { cards.push(a); return true; }, cfg: gcfg });
+    const t2 = gateTransition("needs_season", vAsleep, { now: T, prevState: journal[0], appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (a) => { cards.push(a); return true; }, cfg: gcfg });
+    assert("JOURNAL — a lane's FIRST asleep verdict writes one row {lane,state,why,detail,wakes_when} and files ONE card; the same verdict on the next beat writes NOTHING",
+      t1.changed === true && journal.length === 1 && journal[0].lane === "needs_season" && journal[0].state === "asleep" && journal[0].why.E === false && cards.length === 1
+      && t2.changed === false && journal.length === 1 && cards.length === 1);
+    assert("CARD — the args are captains_call's own file door: --line names lane+cause+wake+the two words, --key is gate:<lane>:<day> (rolling family = one per episode), --gate-wake carries the lane for his na",
+      cards[0][0] === "file" && /needs_season SO GAYA \(E:/.test(cards[0][2]) && /haan=sone do · na=14d jagao/.test(cards[0][2]) && cards[0][2].length <= 200
+      && cards[0][cards[0].indexOf("--key") + 1] === `gate:needs_season:${localDate(T)}` && cards[0][cards[0].indexOf("--gate-wake") + 1] === "needs_season");
+    // evidence returns ⇒ the SAME machinery journals awake, and no card
+    const gcBack = gateContext(gateDeps({ dry: true, gate: { consumption, cards: [], states: new Map(), mouth: [], mediaExists: () => false, evidenceFor: (job) => ({ inputs: {}, declared: 1, absent: [], required_absent: [], present: 1, door: [], door_dropped: 0 }) } }), T, hist, { jobs_run: {} });
+    const vAwake = gateVerdictFor(gcfg.jobs[0], gcfg, gcBack);
+    const t3 = gateTransition("needs_season", vAwake, { now: T, prevState: journal[0], appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (a) => { cards.push(a); return true; }, cfg: gcfg });
+    assert("WAKE — season.json back ⇒ verdict AWAKE ⇒ one `awake` journal row, NO card, no human action anywhere in the chain",
+      vAwake.run === true && t3.changed === true && journal.length === 2 && journal[1].state === "awake" && cards.length === 1);
+
+    // the two wake doors, through the state the CLI writes
+    const qs = { jobs_run: {} };
+    setGateForce(qs, "failing", { until: iso(-14), once: true, by: "card c1 (his na)", now: T });
+    const vForced = gateVerdictFor(gcfg.jobs.find((j) => j.id === "failing"), gcfg, { ...gc, queueState: qs });
+    assert("FORCE — `gate wake` (or his na) puts a {until,once} force in brain_queue.gate.forced and the F-blocked lane runs ONCE; the force is named in the verdict",
+      vForced.run === true && /ONE run/.test(vForced.why.F.detail) && vForced.forced && vForced.forced.by === "card c1 (his na)");
+    const vStale = gateVerdictFor(gcfg.jobs.find((j) => j.id === "stale_lane"), gcfg, { ...gc, queueState: (() => { const q = { jobs_run: {} }; setGateForce(q, "stale_lane", { until: iso(-14), once: false, now: T }); return q; })() });
+    assert("FORCE — a C-blocked lane with a live `until` force is awake for the window (his na buys 14 days, not one run)",
+      vStale.run === true && /forced awake/.test(vStale.why.C.detail));
+    // lost-update safety: a force written to disk between a tick's read and write survives; a spent `once` stays spent
+    const merged = mergeTriggers({ triggers: {}, gate: { forced: { late: { until: iso(-14), once: true, by: "cli" } } } }, { jobs_run: {}, gate: { forced: { failing: { until: iso(-14), once: false, by: "cli" } } } }, [], ["failing"]);
+    assert("MERGE — a `gate wake` written to disk mid-tick survives the tick's whole-object write; a `once` this tick spent stays spent",
+      merged.gate.forced.late && merged.gate.forced.late.once === true && merged.gate.forced.failing.once === false);
+    const merged2 = mergeTriggers({ triggers: {}, gate: { forced: { x: { until: iso(-14), once: true, by: "cli" } } } }, { jobs_run: {} }, [], []);
+    assert("MERGE — a tick that never touched gate state still carries the disk's forces forward (and triggers merge exactly as before)",
+      merged2.gate.forced.x.once === true && typeof merged2.triggers === "object");
+
+    // the consumption lane's own door
+    const rows = [];
+    const r1 = recordConsumption({ job: "night_coach", kind: "briefed", by: "learnstate" }, { append: (l) => rows.push(JSON.parse(l)), now: T });
+    const r2 = recordConsumption({ job: "night_coach", kind: "glanced-at" }, { append: (l) => rows.push(JSON.parse(l)), now: T });
+    const r3 = recordConsumption({ kind: "briefed" }, { append: (l) => rows.push(JSON.parse(l)), now: T });
+    assert("CONSUMPTION — recordConsumption writes {ts,job,lane,kind,by,file,note}; an unknown kind is REFUSED (the kinds are the law, closed); no job/lane is refused",
+      r1.ok && rows.length === 1 && rows[0].job === "night_coach" && rows[0].kind === "briefed" && rows[0].by === "learnstate" && "file" in rows[0]
+      && r2.ok === false && /unknown consumption kind/.test(r2.why) && r3.ok === false && rows.length === 1);
+    // cards as a derived source
+    const cardsFx = [
+      { id: "c7", dispatch: { kind: "open", path: "dressing-room/state/brain_out/market/2026-08-01.md" }, answer: "haan", answered_at: iso(5) },
+      { id: "c8", dispatch: { kind: "open", path: "dressing-room\\state\\brain_out\\market\\2026-08-08.md" }, answer: "baad", answered_at: iso(1) },
+      { id: "c9", dispatch: { kind: "open", path: "dressing-room/state/brain_out/doubts/2026-08-01.md" }, answer: null, answered_at: null },
+    ];
+    const cc = cardConsumption(cardsFx, "market");
+    assert("CARDED — a card whose `open` dispatch points into the lane and that he answered haan/na counts (Windows path too); `baad` and unanswered do not",
+      cc && cc.kind === "carded" && /c7/.test(cc.by) && cardConsumption(cardsFx, "doubts") === null);
+    // the mouth as a derived source
+    const mouth = [{ ts: iso(1), kind: "sheet", sent: true }, { ts: iso(0.5), kind: "sheet", sent: false, why: "no topic" }, { ts: iso(2), kind: "bell:fulltime", sent: true }];
+    const sheetJob = { id: "formation_read", kind: "manager_m3" };
+    const amJob = { id: "teamtalk_am", speak_to: "teamtalk_DATE_am.mp3" };
+    const pmJob = { id: "teamtalk_pm", speak_to: "teamtalk_DATE_pm.mp3" };
+    const mcfg = { ntfy: { push_after: ["formation_read"] } };
+    const mSheet = mouthConsumption(sheetJob, mcfg, { mouth });
+    const mAm = mouthConsumption(amJob, mcfg, { mouth, mediaExists: () => true });
+    const mPm = mouthConsumption(pmJob, mcfg, { mouth, mediaExists: () => true });
+    assert("PUSHED — the sheet is consumed at the newest SENT sheet push (a failed push is not a reach); the team-talk mp3s are NOT — an announcement is not a listen, and nothing records a play (R3's poster children stay asleep until a play is recorded)",
+      mSheet && mSheet.kind === "pushed" && mSheet.last_at === iso(1) && mAm === null && mPm === null);
+    // the batch rule
+    const filed = [];
+    const many = Array.from({ length: 5 }, (_, i) => ({ lane: `l${i}`, args: ["file", "--line", `l${i}`, "--key", `gate:l${i}:d`, "--gate-wake", `l${i}`] }));
+    const bA = gateCardsForTick(many, T, { fileCard: (a) => filed.push(a) });
+    const afterA = filed.length;
+    const few = many.slice(0, 2);
+    const bB = gateCardsForTick(few, T, { fileCard: (a) => filed.push(a) });
+    assert("BATCH — more than 3 lanes sleeping in ONE tick ⇒ ONE card whose na wakes EXACTLY those lanes (`--gate-wake l0,l1,…`); 3 or fewer ⇒ the per-lane cards; a threshold of 1 batches a 2-lane pass",
+      bA.batch === true && bA.filed === 1 && afterA === 1 && filed[0][filed[0].indexOf("--gate-wake") + 1] === "l0,l1,l2,l3,l4" && /5 lanes so gaye/.test(filed[0][2])
+      && bB.batch === false && filed.length === 3
+      && gateCardsForTick(few, T, { fileCard: () => {}, threshold: 1, label: "nightshift" }).batch === true);
+    // and the tick itself honours the verdict: an asleep lane never reaches the executor
+    {
+      const execd = [];
+      const jr = [], cf = [];
+      const tk = await tick(gcfg, gateDeps({ dry: true, exec: (p, m) => { execd.push(m); return okExec(); }, appendJournal: (l) => jr.push(l), fileCard: (a) => cf.push(a) }));
+      const ranIds = tk.ran.map((r) => r.job);
+      const gatedIds = (tk.gated || []).map((g) => g.job);
+      assert("TICK — asleep lanes are reported in `gated` (never in `ran`, never at the executor); awake lanes run as before; dry writes nothing",
+        gatedIds.sort().join() === "failing,needs_season,stale_lane" && !ranIds.some((id) => gatedIds.includes(id)) && ranIds.includes("cartridge") && ranIds.includes("fresh_lane")
+        && jr.length === 0 && cf.length === 0);
+    }
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -5454,6 +5976,86 @@ async function main() {
     console.log(`brain: trigger '${name}' armed — the next tick fires the matching job once`);
     return;
   }
+  // ---- THE GATE'S DOORS (overhaul §5.3, 18 Aug 2026) --------------------------
+  // `gate show` — the live verdict for every enabled lane (the same section `status`
+  //   prints, alone). `gate wake <lane> [--days N]` — the ONE force: awake for the
+  //   lane's window (or N days) and through the F guard for one run; written to
+  //   brain_queue.gate.forced (lost-update-safe via mergeTriggers). `gate clear <lane>`
+  //   — drop a force. `gate journal [n]` — the last n transitions.
+  //   No `gate sleep`: nothing here can be put to sleep by hand — sleep is a VERDICT
+  //   on the evidence, and a hand-slept lane would be the kill list wearing a new coat.
+  if (mode === "gate") {
+    const sub = (process.argv[3] || "show").toLowerCase();
+    const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+    if (sub === "show") {
+      const ledger = readLines(LEDGER);
+      printGate(gateReport(cfg, gateContext({}, now, ledger, q)), { verbose: process.argv.includes("-v") || process.argv.includes("--verbose") });
+      const forced = (q.gate && q.gate.forced) || {};
+      const live = Object.entries(forced).filter(([, f]) => f && ((f.until && Date.parse(f.until) > now.getTime()) || f.once));
+      if (live.length) console.log(`brain: gate forces live — ${live.map(([l, f]) => `${l} (until ${String(f.until || "-").slice(0, 16)}${f.once ? ", once" : ""}, by ${f.by})`).join(" · ")}`);
+      return;
+    }
+    if (sub === "json") {
+      // the machine face — reconcile.mjs (and any reader) gets the LIVE verdicts without
+      // importing this file: every enabled lane's state, why, detail, wakes_when,
+      // beside its journaled row (if any). Read-only.
+      const ledger = readLines(LEDGER);
+      const rep = gateReport(cfg, gateContext({}, now, ledger, q));
+      console.log(JSON.stringify({
+        at: now.toISOString(),
+        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail }, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
+        others: rep.others.map((r) => ({ lane: r.lane, state: r.state, ts: r.ts, why: r.why || null, detail: r.detail || null, wakes_when: r.wakes_when || null })),
+      }));
+      return;
+    }
+    if (sub === "journal") {
+      const n = Math.max(1, Number(process.argv[4]) || 20);
+      const rows = gateJournalRows().slice(-n);
+      if (!rows.length) console.log("brain: gate journal — no transition recorded yet (the first tick after the gate landed writes the first rows)");
+      for (const r of rows) console.log(`  ${String(r.ts).slice(0, 19)}Z ${r.lane.padEnd(18)} → ${r.state.padEnd(6)} E${r.why.E ? "✓" : "✗"} C${r.why.C ? "✓" : "✗"} F${r.why.F ? "✓" : "✗"}${r.state === "asleep" ? ` · wakes when: ${String(r.wakes_when || "").slice(0, 110)}` : ""}`);
+      return;
+    }
+    const lane = process.argv[4];
+    if (!lane) { console.log("brain: gate show | gate wake <lane> [--days N] | gate clear <lane> | gate journal [n]"); process.exit(1); }
+    if (sub === "wake") {
+      const di = process.argv.indexOf("--days");
+      // `all` = every enabled lane that is ASLEEP right now (a hand door); a comma list
+      // = exactly those lanes (the batch card's `na` carries the lanes that slept together).
+      const lanes = lane === "all"
+        ? gateReport(cfg, gateContext({}, now, readLines(LEDGER), q)).asleep.map((r) => r.lane)
+        : String(lane).split(",").map((s) => s.trim()).filter(Boolean);
+      if (!lanes.length) { console.log("brain: gate wake all — nothing is asleep right now"); return; }
+      for (const l of lanes) {
+        const job = (cfg.jobs || []).find((j) => j.id === l) || {};
+        const days = di >= 0 && Number(process.argv[di + 1]) > 0 ? Number(process.argv[di + 1]) : gateConfig(job).window_days;
+        const until = new Date(now.getTime() + days * 86400000).toISOString();
+        setGateForce(q, l, { until, once: true, by: process.env.ARSENAL_GATE_BY || "cli", now });
+        console.log(`brain: gate wake ${l} — forced awake until ${until.slice(0, 16)}Z (${days}d) and through the fail guard for ONE run; the next eligible slot runs it, and a success clears any streak. Sleeping again after that is a verdict on the evidence, not a switch.`);
+      }
+      writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], []));
+      return;
+    }
+    if (sub === "clear") {
+      if (q.gate && q.gate.forced && q.gate.forced[lane]) { delete q.gate.forced[lane]; writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], [])); console.log(`brain: gate clear ${lane} — force dropped; the live evidence decides again`); }
+      else console.log(`brain: gate clear ${lane} — no force on record`);
+      return;
+    }
+    console.log("brain: gate show | gate wake <lane> [--days N] | gate clear <lane> | gate journal [n]");
+    process.exit(1);
+  }
+  // ---- THE CONSUMPTION DOOR (overhaul §5.2) — for organs that do not import this file
+  //   node scripts/brain.mjs consumed <job-or-lane> --kind spoken|sat|briefed|carded|opened|pushed --by <organ> [--lane] [--file <p>] [--note "…"]
+  if (mode === "consumed") {
+    const target = process.argv[3];
+    const ki = process.argv.indexOf("--kind"), bi = process.argv.indexOf("--by"), fi = process.argv.indexOf("--file"), ni = process.argv.indexOf("--note");
+    const kind = ki >= 0 ? process.argv[ki + 1] : null;
+    if (!target || !kind) { console.log("brain: consumed <job-or-lane> --kind <spoken|sat|briefed|carded|opened|pushed> --by <organ> [--lane] [--file <p>] [--note \"…\"]"); process.exit(1); }
+    const asLane = process.argv.includes("--lane");
+    const r = recordConsumption({ job: asLane ? null : target, lane: asLane ? target : null, kind, by: bi >= 0 ? process.argv[bi + 1] : null, file: fi >= 0 ? process.argv[fi + 1] : null, note: ni >= 0 ? process.argv[ni + 1] : null }, { now });
+    console.log(r.ok ? `brain: consumed — ${target} ${kind}${r.row.by ? " via " + r.row.by : ""} (row on consumption.jsonl)` : `brain: consumed REFUSED — ${r.why}`);
+    if (!r.ok) process.exit(1);
+    return;
+  }
   if (mode === "tokens") {
     const ledger = readLines(LEDGER);
     const q = readJson(QUEUE) || {};
@@ -5548,6 +6150,12 @@ async function main() {
     if (stv) console.log(`brain: ⚠ STARVED — ${stv.summary}${stv.age_min !== null ? ` (last refusal ${stv.age_min} min ago)` : ""}. Nothing was spent and no slot was consumed; each of these retries the moment headroom returns.`);
     else console.log("brain: starvation — no budget-refused job on record (brain_queue.budget_starved is empty).");
     if (cfg._config_error) console.log(`brain: ⚠⚠ CONFIG BROKEN (${cfg._config_error}) — running on DEFAULTS with zero jobs.`);
+
+    // ---- THE GATE (overhaul §5, 18 Aug 2026) — who is asleep, why, what wakes it ----
+    // Derived LIVE from the ledger, the consumption lane, the cards and today's disk
+    // — never a list. Read the journal for history: `brain gate journal`.
+    try { printGate(gateReport(cfg, gateContext({}, now, ledger, q)), { verbose: process.argv.includes("-v") || process.argv.includes("--verbose") }); }
+    catch (e) { console.log(`brain: THE GATE — could not compute (${String((e && e.message) || e).slice(0, 120)})`); }
 
     // ---- THE TRUTH LANE (16 Aug 2026, THE TRUTH LAYER BLOCK 1) --------------
     // The judge decides what is TRUE about him — every rep, every axis, every
@@ -5781,7 +6389,10 @@ async function main() {
           // a window the captain cannot see (hidden_run.vbs). Measured: 1,135 such beats.
           // The skip reasons were already on every `ran` entry; they were simply not read.
           const skips = t.ran.filter(r => r.skipped).map(r => `${r.job}: ${r.skipped}`).join(" · ");
-          console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]${skips ? ` — ${skips}` : ""}`);
+          // THE GATE (18 Aug 2026): asleep lanes are named on the beat line too — a lane
+          // that sleeps by verdict must never be mistaken for a lane that never came up.
+          const gated = (t.gated || []).length ? ` · gate:asleep ${t.gated.map(g => `${g.job}(${g.why})`).join(", ")}` : "";
+          console.log(`brain: beat ${beats} [${pace.phase} · pace ~${pace.pace_tok_per_min.toLocaleString()} tok/min · ${done}/${t.ran.length} ran]${skips ? ` — ${skips}` : ""}${gated}`);
           // the HAIKU PULSE rides every Nth beat — self-gated (engaged + cap + headroom)
           // and metered every fire; skipped when another tick owns the beat (no double-pulse).
           // FREQUENCY HALVED (2 Aug 2026 audit, #67): it used to fire on EVERY beat, so a
@@ -5814,11 +6425,11 @@ async function main() {
   }
 
   // tick (single-instance guarded — won't run concurrently with the resident daemon)
-  const { ran, refused, skipped } = await withTickLock(() => tick(cfg, deps));
+  const { ran, refused, skipped, gated } = await withTickLock(() => tick(cfg, deps));
   if (refused) process.exit(1);
   if (skipped) { console.log(`brain: ${skipped} — skipped this tick`); return; }
   const done = ran.filter(r => r.ledgerRow && r.ledgerRow.ok).length;
-  console.log(`brain: tick — ${done} job(s) ran, ${ran.length - done} skipped/failed [${ran.map(r => r.job + (r.skipped ? ":skip" : "")).join(", ") || "idle"}] → ${LEDGER}`);
+  console.log(`brain: tick — ${done} job(s) ran, ${ran.length - done} skipped/failed [${ran.map(r => r.job + (r.skipped ? ":skip" : "")).join(", ") || "idle"}]${(gated || []).length ? ` · gate:asleep [${gated.map(g => `${g.job}(${g.why})`).join(", ")}]` : ""} → ${LEDGER}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
@@ -5838,4 +6449,7 @@ export { headroom, windowUsage, weekUsage, eligibleJobs, shiftDay, armFresh, val
   allowedNumbers, allowedNumbersLegacy, noNewNumbersLegacy, hypeGuardOn,
   gatherInputsAudited, normalizeInputs, jobSurface, surfaceAudit,
   readLinesTail, archiveSiblings, pulseTokens, conceptVocabulary, PULSE_STOPWORDS,
-  pulseCostToday, minedAnchors, outDate };
+  pulseCostToday, minedAnchors, outDate,
+  // THE GATE (overhaul §5, 18 Aug 2026) — the seams, exported so the selftest, the
+  // reconciler, the watchman and the two other gated organs can hold the wire.
+  gateContext, gateCardArgs };

@@ -8,6 +8,14 @@ description: Morning kickoff in one command — run the sensory pass, show the s
 You are inside ARSENAL AI FC. The captain is #14, ADHD-PI: ONE idea at a time,
 visuals over walls of text, no hype, no calendar pressure, never streaks.
 
+0. **THE STATE LINE FIRST** (overhaul §7.1, 18 Aug 2026): run `node scripts/state.mjs`
+   and put its ONE line at the top of the reply, verbatim — pushed · daemons ·
+   suite · sitting · next · needs-you. That line IS the answer to "is everything
+   working / pushed / can I start?", so he never has to ask it. Then, because
+   opening /matchday is HIM reading the sheet, stamp the consumption that THE
+   GATE (§5.2) meters: `node scripts/brain.mjs consumed formation_read --kind opened --by matchday`
+   (owner's door, one row on consumption.jsonl; a lane nobody reaches sleeps
+   itself — this is how the sheet lane stays awake).
 1. Run: `node scripts/heartbeat.mjs` then `node scripts/brain.mjs status`.
    (added 10 Aug 2026, verified — NOT a change to the two commands, both still
    exist and both still work: `heartbeat.mjs` DOES NOT BUILD THE SHEET, and this

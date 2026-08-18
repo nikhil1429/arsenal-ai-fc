@@ -657,6 +657,9 @@ function createNucleus(cfg, deps = {}) {
     precache: deps.precache || (() => readJson(join(STATE_DIR, "dmn_precache.json"))),
     // M17 — the night's answer cache (read-only; nightshift.mjs owns the file)
     answerCache: deps.answerCache || (() => readLines(ACACHE)),
+    // THE GATE (18 Aug 2026) — the consumption stamp, through brain's CLI door
+    // (detached; see the pre-answer hit below). The suite injects a recorder.
+    consumed: deps.consumed || null,
     // M17 — ONE embed per doubt-shaped moment (free T6 lane, hard timeout;
     // dry/slow → null and the overlap floor serves — never a stall)
     embedText: deps.embedText || (async (text) => {
@@ -947,6 +950,10 @@ function createNucleus(cfg, deps = {}) {
         whisper = { type: "wall_breaker", concept: best.concept, reframe: best.reframe, drill: best.drill, matched_via: via, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
         engWhisper = "hit";
         D.log(`thalamus: stall matched the Rest Room's precache via ${via} on "${best.concept}" — whisper loaded (zero-latency), the mouth gate decides`);
+        // THE GATE (§5.2 "sat", 18 Aug 2026): the Rest Room's ammunition matched a live
+        // stall and entered the workspace — the ONE signal that the DMN's night reached a
+        // sitting. Same door as the pre-answer stamp below (brain's `consumed`, detached).
+        try { (D.consumed || defaultConsumed)("dmn", "sat", `thalamus precache whisper (${via})`); } catch { }
       } else {
         engWhisper = entries.length ? "miss" : "dry";
         D.log(`thalamus: stall found NO precache match (${entries.length} entr${entries.length === 1 ? "y" : "ies"} on offer) — no whisper, never improvise one`);
@@ -973,6 +980,14 @@ function createNucleus(cfg, deps = {}) {
           preAnswer = { type: "pre_answer", concept: hit.entry.concept, doubt: hit.entry.doubt, answer: hit.entry.answer, matched_via: hit.via, score: Math.round(hit.score * 100) / 100, moment_id: momentId, ts: moment.ts, expires: new Date(now + 180000).toISOString() };
           engPre = "hit";
           D.log(`thalamus: doubt matched the night's answer_cache (${hit.via}) — pre-answer attached, zero Opus; the mouth decides`);
+          // THE GATE (overhaul §5.2 "sat", 18 Aug 2026): a pre-answer that MATCHED a live
+          // doubt entered the conversation's working memory — the ns_pre_answers lane's
+          // consumption signal. Through the OWNER'S DOOR (brain.mjs `consumed`, the CLI —
+          // this nucleus imports nothing from brain.mjs and must not: brain imports half
+          // the squad and the thalamus is a resident daemon). Detached, unref'd, fail-
+          // silent: bookkeeping never touches the gate's latency. Injectable (D.consumed)
+          // so the suite never spawns.
+          try { (D.consumed || defaultConsumed)("ns_pre_answers", "sat", `thalamus pre-answer hit (${hit.via})`); } catch { }
         } else {
           engPre = "miss";
           D.log(`thalamus: doubt queried the night's answer_cache (${cache.length} drafted) — NO match, no pre-answer (never improvise an answer)`);
@@ -1111,6 +1126,21 @@ function phashHamming(a, b) {
   return d;
 }
 const roundComps = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, Math.round(v * 100) / 100]));
+
+// THE GATE's consumption stamp, through the OWNER'S CLI (overhaul §5.2, 18 Aug 2026).
+// brain.mjs is the sole writer of consumption.jsonl; this nucleus reaches it the way
+// every other organ reaches an owner it must not import — the door. Detached, unref'd,
+// stdio ignored, fail-silent: a stamp must never cost the gate a millisecond, and a
+// stamp that fails is a missed count, never a missed hint.
+function defaultConsumed(lane, kind, by) {
+  try {
+    import("node:child_process").then(({ spawn }) => {
+      const child = spawn(process.execPath, [join(__dirname, "brain.mjs"), "consumed", lane, "--lane", "--kind", kind, "--by", by], { detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+      child.on("error", () => { });
+      child.unref();
+    }).catch(() => { });
+  } catch { }
+}
 
 // window headroom straight from the brain's guarded budget accounting
 function defaultHeadroomFrac() {
@@ -1367,6 +1397,7 @@ async function selftest() {
       toneBump: () => (over.toneBump !== undefined ? over.toneBump : 0),   // hermetic — the real tone.json never leaks in
       precache: () => (over.precache !== undefined ? over.precache : null),
       answerCache: () => (over.answerCache !== undefined ? over.answerCache : []),   // hermetic — the real cache never leaks in
+      consumed: (lane, kind, by) => { wr.consumed = wr.consumed || []; wr.consumed.push({ lane, kind, by }); },   // THE GATE — hermetic recorder, no spawn
       sprintConcept: () => (over.sprintConcept !== undefined ? over.sprintConcept : null),  // #6 — hermetic; the live sprint.json never leaks in
       // wakesAtEmbed snapshots the wake counter AT the embed await — that await is
       // the window two interleaved flushes used to race through (E2E audit 25 Jul 2026)
@@ -1804,6 +1835,10 @@ async function selftest() {
     const wsp = wr.workspaces[wr.workspaces.length - 1];
     assert("a voiced doubt pulls the night's pre-answer into the workspace (cosine)", wsp.pre_answer && wsp.pre_answer.matched_via === "cosine" && wsp.pre_answer.answer.includes("recompute"));
     assert("the pre-answer expires (the confusion-hot window is 3 minutes)", new Date(wsp.pre_answer.expires) - new Date(wsp.updated_at) === 180000);
+    // THE GATE (18 Aug 2026): a HIT is the ns_pre_answers lane reaching a sitting — stamped
+    // through the injected recorder (the live path spawns brain's `consumed` door, detached)
+    assert("THE GATE — a pre-answer HIT stamps ns_pre_answers `sat` through the owner's door (recorder injected; live = detached brain.mjs consumed)",
+      Array.isArray(wr.consumed) && wr.consumed.length === 1 && wr.consumed[0].lane === "ns_pre_answers" && wr.consumed[0].kind === "sat" && /cosine/.test(wr.consumed[0].by));
     const { n: n2, wr: wr2 } = rig({ answerCache: cache, embedVec: null });
     await n2.ingest({ modality: "voice", text: "i don't get why the kv cache leaves attention quadratic", concept_tokens: ["attention"] });
     await n2.flush();

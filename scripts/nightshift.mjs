@@ -114,7 +114,7 @@ import { currentTone } from "./tone.mjs";
 import { indexRecall } from "./dugout.mjs";
 import { indexEpisodes } from "./hippocampus.mjs";
 // job 7 rides the brain's own honest-frame validator (proven code, reused)
-import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHeadroom } from "./brain.mjs";
+import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHeadroom, gateVerdictForLane, gateTransition, gateCardsForTick } from "./brain.mjs";   // gateVerdictForLane/gateTransition: THE GATE (18 Aug 2026) — the verdict is gate.mjs's, the journal and the card stay brain's
 // job 6 (the wind tunnel) replays the gate's own recorded decisions
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 
@@ -1098,6 +1098,70 @@ ${corpus}`);
 // THE SHIFT
 // ---------------------------------------------------------------------------
 function isOvernight(now = new Date()) { const h = now.getHours(); return h >= 1 && h < 7; }
+// ---------------------------------------------------------------------------
+// THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5.3) — the shift's three LLM lanes
+// answer to the same E∧C∧¬F verdict every brain job answers to. Same helper
+// (gate.mjs via brain.mjs), same journal (brain_out/gate.jsonl), same card door.
+//   ns_probe_bank  · event "lock": a capsule locked since the last bank (or a scrimmage
+//                    drew from the bank inside the window — the Dugout's scrimmage
+//                    /config stamps `sat`) · evidence = concepts to probe
+//   ns_distractors · window: get_rejirah rode them into a voice round (`sat`)
+//                  · evidence = his doubt-grammar shapes + concepts
+//   ns_pre_answers · window: the thalamus matched a pre-answer to a live doubt (`sat`)
+//                  · evidence = real signal on the bus (the engine's own material check)
+// NOT gated, on purpose: field_probes (its own refresh law; the sourced ground §9.1
+// needs), round_read (judge_night — kept unchanged), embed_backfill/scout_pack/
+// gem_cartridge/gate_tune (zero-LLM), season_read (the free T5 pool — free-tier
+// quota is not the paid window; usefulness is metered through the sheet it feeds).
+// An asleep lane prints ONE line into the shift record and spends nothing.
+// ---------------------------------------------------------------------------
+const NS_GATE = {
+  ns_probe_bank: { gate: { event: "lock" }, surface: { kind: "code", where: "scripts/dugout.mjs buildScrimmageInstruction (probe bank) + get_rejirah" } },
+  ns_distractors: { gate: {}, surface: { kind: "code", where: "scripts/dugout.mjs get_rejirah (distractors ride each due concept)" } },
+  ns_pre_answers: { gate: {}, surface: { kind: "code", where: "scripts/thalamus.mjs matchPreAnswer → the mouth's hint" } },
+};
+// "a capsule was locked since the last probe bank" — measured off two mtimes this
+// organ already reads: the newest capsule mirror file vs the newest probe_bank_*.json.
+// No bank yet ⇒ armed (the first bank is the lock event of every capsule so far).
+// "a capsule changed since the last bank" — by CONTENT, not mtime: the mirror's own
+// manifest carries a sha256 per capsule id (mirror.mjs, sole writer), and every bank
+// written under the gate records the shas it saw. Changed sha ⇒ a lock/edit landed ⇒
+// armed. No bank yet, or a pre-gate bank with no fingerprint ⇒ armed (runs once, then
+// gates). Both reads are injectable, so the suite touches no disk.
+export function capsuleShaMap(manifest) {
+  const out = {};
+  for (const [id, r] of Object.entries((manifest && manifest.per_id) || {})) if (r && r.ok && r.sha256) out[id] = r.sha256;
+  return out;
+}
+function newestBankRecord() {
+  try {
+    const names = readdirSync(OUT_DIR).filter((f) => /^probe_bank_\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
+    const n = names.pop();
+    return n ? { ...(readJson(join(OUT_DIR, n)) || {}), file: n } : null;
+  } catch { return null; }
+}
+export function lockSinceLastProbeBank({ manifest = readJson(join(STATE_DIR, "mirror_manifest.json")), lastBank = newestBankRecord() } = {}) {
+  if (!lastBank) return { armed: true, why: "no probe bank on disk yet (the first bank is every capsule's lock event)" };
+  const then = lastBank.capsule_shas && typeof lastBank.capsule_shas === "object" ? lastBank.capsule_shas : null;
+  if (!then) return { armed: true, why: `the last bank (${lastBank.date || lastBank.file}) recorded no capsule fingerprint — first bank under the gate` };
+  const now = capsuleShaMap(manifest);
+  const changed = [...new Set([...Object.keys(now), ...Object.keys(then)])].filter((id) => now[id] !== then[id]);
+  return changed.length
+    ? { armed: true, why: `capsule(s) changed since the last bank (${lastBank.date || lastBank.file}): ${changed.join(", ")}` }
+    : { armed: false, why: `no capsule changed since the last bank (${lastBank.date || lastBank.file})` };
+}
+function nsGate(lane, { evidence, event_armed, deps, now, collect }) {
+  // hermetic seam: the suite hands a verdict function; the live path asks the owner
+  if (deps.gateVerdict) return deps.gateVerdict(lane, { evidence, event_armed });
+  const spec = NS_GATE[lane] || { gate: {}, surface: null };
+  const v = gateVerdictForLane(lane, { evidence, gate: spec.gate, event_armed, now, surface: spec.surface });
+  // journal on transition; the CARD is collected and filed ONCE per shift (below) —
+  // three lanes sleeping on the same night for the same reason is one question, not three
+  try { gateTransition(lane, v, { now, by: "nightshift", collectCards: collect }); } catch { /* the journal must never cost the shift */ }
+  return v;
+}
+const asleepRecord = (v) => ({ asleep: true, why: ["E", "C", "F"].filter((k) => !v.why[k].ok).join("+"), detail: ["E", "C", "F"].filter((k) => !v.why[k].ok).map((k) => `${k}: ${v.why[k].detail}`).join(" · "), wakes_when: v.wakes_when, spent: 0 });
+
 async function runShift(deps = {}) {
   const now = deps.now || new Date();
   const tone = deps.tone || currentTone();
@@ -1131,10 +1195,20 @@ async function runShift(deps = {}) {
   const out = { date: day, jobs: {}, ...(forcedThroughRest ? { forced_through_conserve: true } : {}) };
   const write = deps.write || ((name, content) => writeAtomic(join(OUT_DIR, name), content));
 
-  const pb = await probeBank(jobDeps);
-  const gr = Object.keys(pb.bank).length ? await gradeProbes(pb.bank, jobDeps) : { graded: 0, spent: 0 };   // M23 — grade BEFORE the bank is filed
-  if (Object.keys(pb.bank).length) write(`probe_bank_${day}.json`, { date: day, bank: pb.bank });
-  out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent, graded: gr.graded, grade_spent: gr.spent };
+  const sleptNow = [];   // THE GATE — cards collected across the three lanes, filed ONCE below
+  // THE GATE — probe bank (event "lock" · evidence = concepts to probe)
+  const pbConcepts = deps.concepts || drillConcepts(deps);
+  const lockEv = deps.lockEvent || lockSinceLastProbeBank();
+  const gPB = nsGate("ns_probe_bank", { evidence: pbConcepts.length ? { ok: true, detail: `${pbConcepts.length} concept(s) to probe` } : { ok: false, detail: "no locked/weak concept to probe" }, event_armed: !!lockEv.armed, deps, now, collect: sleptNow });
+  let pb = { bank: {}, spent: 0 };
+  if (!gPB.run) {
+    out.jobs.probe_bank = asleepRecord(gPB);
+  } else {
+    pb = await probeBank(jobDeps);
+    const gr = Object.keys(pb.bank).length ? await gradeProbes(pb.bank, jobDeps) : { graded: 0, spent: 0 };   // M23 — grade BEFORE the bank is filed
+    if (Object.keys(pb.bank).length) write(`probe_bank_${day}.json`, { date: day, bank: pb.bank, capsule_shas: capsuleShaMap(deps.manifest !== undefined ? deps.manifest : readJson(join(STATE_DIR, "mirror_manifest.json"))) });   // THE GATE — the fingerprint the next lock-event check compares against
+    out.jobs.probe_bank = { concepts: Object.keys(pb.bank).length, spent: pb.spent, graded: gr.graded, grade_spent: gr.spent, lock_event: lockEv.why };
+  }
 
   // JOB 1c — the field probes. Written to ONE cumulative file, not a day-stamped
   // one: this bank is the organism's standing memory of what the real world asks,
@@ -1151,9 +1225,18 @@ async function runShift(deps = {}) {
     ? { axes: rr.read.axes, patterns: rr.read.patterns.length, overconfident: rr.read.overconfident, spent: rr.spent, file: `round_read_${day}.json` }
     : { skipped: rr.skipped, spent: rr.spent };
 
-  const db = await distractorBank(jobDeps);
-  if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
-  out.jobs.distractors = { concepts: Object.keys(db.bank).length, spent: db.spent };
+  // THE GATE — distractors (window · evidence = his doubt-grammar shapes + concepts)
+  {
+    const grammar = deps.grammar !== undefined ? deps.grammar : readJson(join(STATE_DIR, "doubt_grammar.json"));
+    const shapes = (grammar && Array.isArray(grammar.clusters)) ? grammar.clusters.length : 0;
+    const gDB = nsGate("ns_distractors", { evidence: shapes && pbConcepts.length ? { ok: true, detail: `${shapes} confusion shape(s) × ${pbConcepts.length} concept(s)` } : { ok: false, detail: shapes ? "no concept to distract on" : "doubt_grammar.json has no clusters — distractors need HIS confusion shapes" }, deps, now, collect: sleptNow });
+    if (!gDB.run) out.jobs.distractors = asleepRecord(gDB);
+    else {
+      const db = await distractorBank(jobDeps);
+      if (Object.keys(db.bank).length) write(`distractor_bank_${day}.json`, { date: day, bank: db.bank });
+      out.jobs.distractors = { concepts: Object.keys(db.bank).length, spent: db.spent };
+    }
+  }
 
   let backfilled = 0;
   if (!deps.skipBackfill) {
@@ -1237,12 +1320,21 @@ async function runShift(deps = {}) {
     }
   }
 
-  const pa = await preAnswerEngine(jobDeps);
-  // #56 — the corpus report rides the record on BOTH paths. "0 of his own turns
-  // in the window" is now a number on a surface, not an unstated assumption.
-  out.jobs.pre_answers = pa.ok
-    ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent, corpus: pa.corpus }
-    : { skipped: pa.skipped, corpus: pa.corpus };
+  // THE GATE — pre-answers (window · evidence = the engine's own material check)
+  {
+    const material = deps.material || preAnswerMaterial(deps, now);
+    const signal = !!(material && ((material.clusters || []).length || (material.voiced || []).length || (material.due || []).length || (material.danger || []).length || (material.threads || []).length));
+    const gPA = nsGate("ns_pre_answers", { evidence: signal ? { ok: true, detail: "real signal on the bus (clusters/voiced/due/danger/threads)" } : { ok: false, detail: "no real signal on the bus — never predict doubts from nothing" }, deps, now, collect: sleptNow });
+    if (!gPA.run) out.jobs.pre_answers = asleepRecord(gPA);
+    else {
+      const pa = await preAnswerEngine({ ...jobDeps, material });
+      // #56 — the corpus report rides the record on BOTH paths. "0 of his own turns
+      // in the window" is now a number on a surface, not an unstated assumption.
+      out.jobs.pre_answers = pa.ok
+        ? { predicted: pa.predicted, answered: pa.answered, embedded: pa.embedded, spent: pa.spent, corpus: pa.corpus }
+        : { skipped: pa.skipped, corpus: pa.corpus };
+    }
+  }
 
   // the season re-read is the shift's ONE genuine Gemini call — it, and only it,
   // answers to T5's headroom (E2E audit 25 Jul 2026: the gate now meters the
@@ -1252,6 +1344,9 @@ async function runShift(deps = {}) {
     : await seasonReRead(jobDeps);
   out.jobs.season_read = sr.ok ? { model: sr.model, contradictions: sr.contradictions, open_threads: sr.open_threads, edges: sr.edges } : { skipped: sr.skipped };
 
+  // THE GATE — one card for the whole shift, however many lanes slept tonight
+  if (sleptNow.length && !deps.gateVerdict) { try { gateCardsForTick(sleptNow, now, { threshold: 1, label: "nightshift" }); } catch { } }
+  out.gate = { asleep: sleptNow.map((c) => c.lane) };
   write(`shift_${day}.json`, out);
   return { ok: true, ...out };
 }
@@ -1274,7 +1369,59 @@ async function selftest() {
     generateField: async () => ({ ok: true, text: JSON.stringify({ questions: [] }) }),
     generateDeep: async () => { throw new Error("selftest: the round read must never reach a live model"); },
     priorField: { concepts: {} }, rejirahRows: [],
+    // THE GATE (18 Aug 2026) — HERMETIC by injection: the fixtures above test the
+    // lanes' own behaviour, so the gate answers AWAKE for them; the gate's own wire
+    // is held by the block below, which injects asleep verdicts and reads the record.
+    // lockEvent is injected too, so no fixture reads live capsule/bank mtimes.
+    gateVerdict: () => ({ run: true, state: "awake", why: { E: { ok: true }, C: { ok: true }, F: { ok: true } }, wakes_when: null }),
+    lockEvent: { armed: true, why: "fixture" },
     now: new Date("2026-07-15T02:45:00") };
+
+  // ── THE GATE (overhaul §5.3) — the three LLM lanes answer to it ─────────────
+  {
+    const asleepV = (k) => ({ run: false, state: "asleep", why: { E: { ok: k !== "E", detail: "e" }, C: { ok: k !== "C", detail: "never consumed" }, F: { ok: k !== "F", detail: "f" } }, wakes_when: "its output reaches him" });
+    const asked = [];
+    let probeCalls = 0, distCalls = 0, paCalls = 0;
+    const r = await runShift({ ...base,
+      generate: async (p) => { if (/probe/i.test(p) && !/distractor/i.test(p)) probeCalls++; else if (/distractor/i.test(p)) distCalls++; else paCalls++; return genProbes(); },
+      gateVerdict: (lane, { evidence, event_armed }) => { asked.push({ lane, evidence, event_armed }); return lane === "ns_probe_bank" ? asleepV("C") : lane === "ns_pre_answers" ? asleepV("E") : { run: true, state: "awake", why: { E: { ok: true }, C: { ok: true }, F: { ok: true } } }; },
+      material: { clusters: [], voiced: [], hotTokens: [], due: [], danger: [], threads: [] },
+    });
+    assert("GATE — every one of the three LLM lanes ASKS the gate, with its own evidence and (probe bank) the lock event",
+      asked.map((a) => a.lane).sort().join() === "ns_distractors,ns_pre_answers,ns_probe_bank"
+      && asked.find((a) => a.lane === "ns_probe_bank").event_armed === true
+      && asked.find((a) => a.lane === "ns_probe_bank").evidence.ok === true
+      && asked.find((a) => a.lane === "ns_pre_answers").evidence.ok === false);
+    assert("GATE — an ASLEEP lane spends nothing and leaves ONE honest line in the shift record (why + wakes_when); an AWAKE lane runs exactly as before",
+      r.jobs.probe_bank.asleep === true && r.jobs.probe_bank.why === "C" && /never consumed/.test(r.jobs.probe_bank.detail) && r.jobs.probe_bank.spent === 0 && probeCalls === 0
+      && r.jobs.pre_answers.asleep === true && r.jobs.pre_answers.why === "E"
+      && r.jobs.distractors.asleep === undefined);
+    assert("GATE — the gem cartridge still builds when the probe bank slept (an asleep upstream is an empty input, never a crash)",
+      r.jobs.gem_cartridge && typeof r.jobs.gem_cartridge.empty === "boolean");
+    // the lock event, on injected reads (no disk: this organ's static footprint stays flat)
+    const M = (shas) => ({ per_id: Object.fromEntries(Object.entries(shas).map(([id, sha]) => [id, { ok: true, sha256: sha }])) });
+    assert("LOCK EVENT — no bank on disk ⇒ armed (the first bank is every capsule's lock event)",
+      lockSinceLastProbeBank({ manifest: M({ tokenization: "a" }), lastBank: null }).armed === true);
+    assert("LOCK EVENT — a pre-gate bank with no fingerprint ⇒ armed once (then it gates)",
+      lockSinceLastProbeBank({ manifest: M({ tokenization: "a" }), lastBank: { date: "2026-07-15", bank: {} } }).armed === true);
+    assert("LOCK EVENT — same shas as the last bank ⇒ NOT armed (nothing locked or edited since)",
+      lockSinceLastProbeBank({ manifest: M({ tokenization: "a", embeddings: "b" }), lastBank: { date: "2026-07-15", capsule_shas: { tokenization: "a", embeddings: "b" } } }).armed === false);
+    assert("LOCK EVENT — a changed sha, a new capsule, or a vanished one ⇒ armed, and the why NAMES the capsule(s)",
+      /embeddings/.test(lockSinceLastProbeBank({ manifest: M({ tokenization: "a", embeddings: "c" }), lastBank: { date: "2026-07-15", capsule_shas: { tokenization: "a", embeddings: "b" } } }).why)
+      && /inference/.test(lockSinceLastProbeBank({ manifest: M({ tokenization: "a", inference: "z" }), lastBank: { date: "2026-07-15", capsule_shas: { tokenization: "a" } } }).why)
+      && lockSinceLastProbeBank({ manifest: M({ tokenization: "a" }), lastBank: { date: "2026-07-15", capsule_shas: { tokenization: "a", embeddings: "b" } } }).armed === true);
+    assert("LOCK EVENT — capsuleShaMap reads only ok rows with a sha; the live default never throws",
+      Object.keys(capsuleShaMap({ per_id: { a: { ok: true, sha256: "x" }, b: { ok: false, sha256: "y" }, c: { ok: true } } })).join() === "a"
+      && typeof lockSinceLastProbeBank().armed === "boolean");
+    // the live path (no injection) reaches the owner's verdict function — grep-held,
+    // because a hermetic suite cannot run it without a live ledger
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("GATE — the live path calls brain's gateVerdictForLane + gateTransition (owner-held journal/card), and the three lanes carry a declared gate/surface",
+      /gateVerdictForLane\(lane, \{ evidence, gate: spec\.gate, event_armed, now, surface: spec\.surface \}\)/.test(src)
+      && /gateTransition\(lane, v, \{ now, by: "nightshift", collectCards: collect \}\)/.test(src)
+      && /gateCardsForTick\(sleptNow, now, \{ threshold: 1, label: "nightshift" \}\)/.test(src)
+      && ["ns_probe_bank", "ns_distractors", "ns_pre_answers"].every((l) => NS_GATE[l] && NS_GATE[l].surface));
+  }
 
   // ── THE LEDGER ROW: the whole honest shape, or the governor is lied to ─────
   // Fixtures are claudegen's own outputs, verbatim in shape (claudegen.mjs:134
@@ -1846,6 +1993,10 @@ async function main() {
     writeFileSync(tmp, JSON.stringify({ at: new Date().toISOString() }, null, 1));
     renameSync(tmp, p);
     console.log(`nightshift: gem sync stamped — ${p}`);
+    // THE GATE (§5.2 "opened", 18 Aug 2026): a gem-sync is HIM pasting the cartridge into
+    // his Gem — the ns_gem_cartridge lane reached him, and with it (gate.consumers on
+    // capsule_premap in brain_config) the premap that fed it. Through the owner's helper.
+    try { const { recordConsumption } = await import("./brain.mjs"); recordConsumption({ lane: "ns_gem_cartridge", kind: "opened", by: "gem-sync (nightshift gem-stamp)" }); } catch { }
     return;
   }
   if (mode === "status") {

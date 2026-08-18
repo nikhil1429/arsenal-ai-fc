@@ -539,6 +539,43 @@ async function dream(deps = {}) {
   }
   const weak = deps.weak || weakVector(deps);
   if (!weak.length) return { ok: false, skipped: "no real weak points on the bus — nothing honest to dream about" };
+  // ---- THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5.3) — E∧C∧¬F, the FIFTH gate ---
+  // The four above (tone · away · window · tank) all ask "CAN the Rest Room afford to
+  // dream". None asks "did the LAST dream reach him" — and measured over its whole
+  // life the answer was never once: 64% of all spend, precache served through the
+  // earned-voice gate, and no row anywhere says a whisper landed. So this lane now
+  // answers to the same verdict every brain job answers to:
+  //   E — REAL EVIDENCE about him: ≥ 1 Re-Jirah round, or ≥ PERSONAS.length real reps
+  //       (reps_log rows that are not test/selftest rows). PERSONAS.length is this
+  //       file's OWN floor (BLOCK 3: "the smallest fan-out that asks every angle
+  //       once"), not a new number: below it there is not one voice per angle to
+  //       dream about, and the plan of record's "N derived from the DMN's own
+  //       divisor" is read as exactly that constant.
+  //   C — the precache reached a sitting: thalamus.mjs stamps `sat` on a whisper HIT
+  //       (lane "dmn"); his `na` on the card / `brain gate wake dmn` opens it 14d.
+  //   F — five straight failed passes.
+  // Verdict + journal + card come from brain.mjs (gateVerdictForLane/gateTransition)
+  // — one law, one journal. Injectable (deps.gateVerdict) so the suite never reads the
+  // live ledger; fail-OPEN like the window gate, for the same reason: a broken meter
+  // must not silently kill an organ that was running fine without it.
+  if (!deps.skipGate) {
+    try {
+      const brain = await import("./brain.mjs");
+      const repsRows = deps.repsRows !== undefined ? deps.repsRows : readRowsFor(join(STATE_DIR, "reps_log.jsonl"));
+      const realReps = repsRows.filter((r) => r && !/test|selftest|fixture/i.test(String(r.surface || r.source || "")) && !r.superseded_by).length;
+      const rounds = (deps.rejirahRows !== undefined ? deps.rejirahRows : readRowsFor(REJIRAH_LOG)).length;
+      const evidence = rounds >= 1 || realReps >= PERSONAS.length
+        ? { ok: true, detail: `${rounds} Re-Jirah round(s) · ${realReps} real rep(s) (floor ${PERSONAS.length})` }
+        : { ok: false, detail: `${rounds} Re-Jirah round(s) and ${realReps} real rep(s) — below the ${PERSONAS.length}-rep floor and no round: nothing real to dream about yet` };
+      // aliases: this organ's ledger rows are dmn_rollout / dmn_counter — those ARE its runs
+      const v = deps.gateVerdict ? deps.gateVerdict("dmn", { evidence }) : brain.gateVerdictForLane("dmn", { evidence, gate: {}, now, aliases: ["dmn_rollout", "dmn_counter"], surface: { kind: "code", where: "scripts/thalamus.mjs precache whisper (dmn_precache.json → the mouth's hint)" } });
+      if (!deps.gateVerdict) { try { brain.gateTransition("dmn", v, { now, by: "dmn" }); } catch { } }
+      if (!v.run) {
+        const failed = ["E", "C", "F"].filter((k) => !v.why[k].ok);
+        return { ok: false, asleep: true, skipped: `THE GATE: asleep on ${failed.join("+")} — ${failed.map((k) => `${k}: ${v.why[k].detail}`).join(" · ")} · wakes when: ${v.wakes_when}` };
+      }
+    } catch { /* fail-open — see above */ }
+  }
   const board = deps.board || loadBoard();
   const keys = deps.keys || loadHippoKeys();
   const lanes = borrowableTanks(board, keys);
@@ -926,7 +963,32 @@ async function selftest() {
   // GRADED evidence on disk, so a fixture that injects none would read his live
   // grade queue and this suite's numbers would move every time he answers a
   // question. Injected empty: the fixture's depth is the FLOOR and nothing else.
-  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, appendLedger: () => {}, gradeRows: [], rejirahRows: [], calibration: null, now: new Date("2026-07-14T15:00:00") };
+  const base = { force: true, tone: { effects: { dmn_allowed: true } }, weak: weakFix, board: boardFix(20), keys: keysFix, generate: genOK, recordUse: () => {}, record429: () => {}, write: () => {}, appendLedger: () => {}, gradeRows: [], rejirahRows: [], calibration: null, now: new Date("2026-07-14T15:00:00"),
+    // THE GATE (18 Aug 2026) — HERMETIC by injection: these fixtures test the stadium,
+    // so the gate answers AWAKE for them and no fixture reads the live ledger/reps. The
+    // gate's own wire is held by the block below.
+    repsRows: [], gateVerdict: () => ({ run: true, state: "awake", why: { E: { ok: true }, C: { ok: true }, F: { ok: true } }, wakes_when: null }) };
+
+  // ── THE GATE (overhaul §5.3) — the FIFTH gate: did the last dream reach him? ──
+  {
+    const asked = [];
+    const asleepC = { run: false, state: "asleep", why: { E: { ok: true, detail: "e" }, C: { ok: false, detail: "never consumed by him" }, F: { ok: true, detail: "f" } }, wakes_when: "a precache whisper reaches a sitting" };
+    let gens = 0;
+    const slept = await dream({ ...base, generate: async (p) => { gens++; return genOK(p); }, repsRows: Array.from({ length: 21 }, () => ({ surface: "gem", concept: "x" })), rejirahRows: [],
+      gateVerdict: (lane, { evidence }) => { asked.push({ lane, evidence }); return asleepC; } });
+    assert("GATE — the Rest Room ASKS the gate as lane `dmn`, with REAL-EVIDENCE counted off reps/rounds (21 gem reps ≥ the PERSONAS floor ⇒ E ok)",
+      asked.length === 1 && asked[0].lane === "dmn" && asked[0].evidence.ok === true && /21 real rep/.test(asked[0].evidence.detail));
+    assert("GATE — ASLEEP on C ⇒ no rollout is generated, the skip names the cause and what wakes it, and it is marked asleep (not a failure)",
+      slept.ok === false && slept.asleep === true && gens === 0 && /asleep on C/.test(slept.skipped) && /never consumed/.test(slept.skipped) && /wakes when/.test(slept.skipped));
+    const askedE = [];
+    await dream({ ...base, repsRows: [{ surface: "gem" }, { surface: "selftest" }, { surface: "gem" }], rejirahRows: [], gateVerdict: (lane, { evidence }) => { askedE.push(evidence); return asleepC; } });
+    assert(`GATE — evidence is HONEST: 2 real reps (a selftest row does not count) + 0 rounds < the ${PERSONAS.length}-rep floor ⇒ E false with the counts named; one Re-Jirah round alone is enough`,
+      askedE[0].ok === false && /2 real rep/.test(askedE[0].detail)
+      && (await (async () => { const a = []; await dream({ ...base, repsRows: [], rejirahRows: [{ concept: "x" }], gateVerdict: (l, { evidence }) => { a.push(evidence); return asleepC; } }); return a[0].ok === true; })()));
+    assert("GATE — skipGate is the injectable bypass (like skipWindowGate), and the live path calls brain's gateVerdictForLane with the DMN's own ledger aliases",
+      (await dream({ ...base, skipGate: true, gateVerdict: undefined, weak: [] })).skipped.includes("nothing honest")
+      && /gateVerdictForLane\("dmn", \{ evidence, gate: \{\}, now, aliases: \["dmn_rollout", "dmn_counter"\]/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
+  }
 
   // the gates (shared by both engines; exercised on the plan of record)
   assert("CONSERVE tone MUTES the dream (a depleted captain rests)", (await dream({ ...base, tone: { effects: { dmn_allowed: false } } })).skipped.includes("conserve"));

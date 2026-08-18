@@ -159,6 +159,10 @@ dressing-room/state/dugout_reminders.jsonl
 # call to make, the same way the other one was.
 dressing-room/state/gaffer_state.json
 dressing-room/state/gaffer_standing.json
+# 18 Aug 2026 (overhaul §9.2) — the FROZEN RECORD of every standing row the word gate
+# ever promoted (`gaffer_state.mjs standing purge`). It is the same verbatim spoken
+# lines as the file above, only older: same side of the line, same footnote.
+dressing-room/state/gaffer_standing.legacy.json
 # 15 Aug 2026 — THE WATCHER's two files, on the same side of the line and for the
 # same reason, only more so. gaffer_brain.jsonl is a judgment PER TURN, each row
 # carrying his verbatim words as the quote behind the verdict; gaffer_blocks.json
@@ -301,6 +305,11 @@ dressing-room/state/outwork_audit_last.json
 # state (D2) — all machine-local, all rebuilt by their owners.
 dressing-room/state/capsule_backups/
 dressing-room/state/mouth_log.jsonl
+# THE GATE (overhaul 18 Aug 2026 §5.2): the consumption lane — one row per time an
+# output reached him. Machine-local outcome journal, brain.mjs's own, same class as
+# mouth_log.jsonl one line up (its sibling journal, brain_out/gate.jsonl, is already
+# under the brain_out/ rule). Archived by the archivist's tail like every jsonl.
+dressing-room/state/consumption.jsonl
 dressing-room/state/salience_ledger.jsonl.1
 dressing-room/state/brain_ledger.jsonl.1
 dressing-room/state/daemon_watchdog.json

@@ -63,6 +63,7 @@ import { readFileSync, existsSync, readdirSync, statSync, writeFileSync, mkdirSy
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";   // THE GATE (18 Aug 2026): the one spawn — brain.mjs `gate json`, read-only
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO      = join(__dirname, "..");
@@ -71,6 +72,7 @@ const OUT_DIR   = join(STATE_DIR, "brain_out");
 const OUT_PATH  = join(STATE_DIR, "reconcile.json");
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
+const readJsonlSafe = (p) => { try { return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -221,12 +223,71 @@ function consumptionMap(cfg) {
   return byOut;
 }
 
+// ---------------------------------------------------------------------------
+// THE GATE'S TWO READS (ORGANISM_OVERHAUL 18 Aug 2026 §5.2/§5.3) — READ ONLY.
+// (a) gate.jsonl — brain.mjs journals every asleep/awake transition there (one row
+//     per transition, per lane). A lane ASLEEP by verdict is resting by rule; its
+//     staleness is a NOTE, never a bleed — the same law as `paused` and the
+//     refused-before-spend row above it. Reporting a sleeping lane as "stale" would
+//     turn the ALIVE suite red on the day the gate did exactly what it exists to do.
+// (b) consumption.jsonl — the lane's REACHED-HIM column. This file's own "consumers"
+//     column answers "does some code read it" (a grep); the plan of record's whole
+//     finding is that this is not the question. reached_him answers "did it get to
+//     HIS ear/brief/card/eye, and when". Both are printed, side by side, because a
+//     lane with five code readers and no reached_him in 14 days IS the bleed.
+// ---------------------------------------------------------------------------
+export function gateStatesFromJournal(rows) {
+  const m = {};
+  for (const r of rows || []) if (r && r.lane && r.state) m[r.lane] = r;
+  return m;
+}
+// The live read: brain.mjs's own verdict for every enabled job (synchronous — the
+// gate helpers are pure folds over rows brain reads itself), overlaid on the journal
+// (which alone knows the non-brain lanes and the `since` instant). Any failure ⇒ the
+// journal alone, never a throw: reconcile's exit-0 law.
+function liveGateStates(cfg, now, outDir) {
+  const journal = gateStatesFromJournal(readJsonlSafe(join(outDir, "gate.jsonl")));
+  try {
+    // brain.mjs's own machine face (`gate json`) — this file never imports brain
+    // (reconcile is spawned BY pulse and the watchman; a heavy import here would
+    // ride every sweep). Kept honest by falling back to the journal on any miss.
+    const out = execFileSync(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), "brain.mjs"), "gate", "json"],
+      { encoding: "utf8", timeout: 60000, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    const j = JSON.parse(String(out).trim() || "{}");
+    const m = { ...journal };
+    for (const r of (Array.isArray(j.lanes) ? j.lanes : [])) {
+      const jr = journal[r.lane];
+      m[r.lane] = { ...r, ts: (jr && jr.state === r.state) ? jr.ts : now.toISOString(), journaled: !!(jr && jr.state === r.state) };
+    }
+    return m;
+  } catch { return journal; }
+}
+export function reachedHimFor(rows, keys, now = new Date()) {
+  const K = new Set(keys.filter(Boolean));
+  let best = null;
+  for (const r of rows || []) {
+    if (!r || !(K.has(r.job) || K.has(r.lane)) || !r.kind) continue;
+    const t = Date.parse(r.ts); if (!Number.isFinite(t)) continue;
+    if (!best || t > best.t) best = { t, ts: r.ts, kind: r.kind, by: r.by || null };
+  }
+  return best ? { at: best.ts, kind: best.kind, by: best.by, age_days: Math.round(((now.getTime() - best.t) / 86400000) * 10) / 10 } : null;
+}
+
 function reconcileBrainLanes(deps = {}) {
   const cfg = deps.cfg !== undefined ? deps.cfg : readJson(join(STATE_DIR, "brain_config.json"));
   const corpus = gatherCorpus(deps);
   const now = deps.now || new Date();
   const outDir = deps.outDir || OUT_DIR;
   const consumedBy = consumptionMap(cfg);
+  // LIVE VERDICT FIRST, JOURNAL SECOND. The journal gains a row only when a lane's
+  // slot comes round (an asleep lane re-checks every scheduled slot); between the
+  // gate landing and a lane's next window the journal is silent while the verdict
+  // is already asleep — and that gap is exactly when the ALIVE suite would call the
+  // lane stale. So the live verdict (brain.mjs gateReport, read-only) is asked
+  // first and the journal fills in for lanes it does not cover; the selftest
+  // injects gateRows and never loads brain.
+  const gateStates = deps.gateRows !== undefined ? gateStatesFromJournal(deps.gateRows) : (deps.gateLive || liveGateStates)(cfg, now, outDir);
+  const consumption = deps.consumptionRows !== undefined ? deps.consumptionRows : readJsonlSafe(join(STATE_DIR, "consumption.jsonl"));
   // THE BRAIN IS PAUSED is a DECISION, not a defect. With cfg.paused === true no job
   // runs at all, so every lane is stale by construction and reporting 16 "stale"
   // bleeds would be noise that buries the real findings (the unread lanes, which are
@@ -316,7 +377,15 @@ function reconcileBrainLanes(deps = {}) {
       const lastRun = lastRuns[job.id];
       const lastRunMs = lastRun ? Date.parse(lastRun.ts || 0) : NaN;
       const ranInWindow = Number.isFinite(lastRunMs) && (now.getTime() - lastRunMs) / 3600000 <= maxAge;
+      const asleep = gateStates[job.id] && gateStates[job.id].state === "asleep" ? gateStates[job.id] : null;
       if (paused) notes.push(`stale, but the brain is PAUSED (brain_config.paused) — expected: ${line}`);
+      else if (asleep) {
+        // ASLEEP BY THE GATE — resting by rule, not lying dead. The note carries the
+        // verdict's own why and what wakes it, so a reader of this report never has to
+        // open the journal to tell sleep from death.
+        const failed = ["E", "C", "F"].filter((k) => asleep.why && asleep.why[k] === false).join("+");
+        notes.push(`asleep by THE GATE since ${String(asleep.ts).slice(0, 16)}Z (on ${failed || "?"}: ${asleep.detail ? failed.split("+").map((k) => asleep.detail[k]).filter(Boolean).join(" · ").slice(0, 160) : ""}) — wakes when: ${String(asleep.wakes_when || "").slice(0, 120)} · (${line})`);
+      }
       else if (ranInWindow && isRefusalBeforeSpend(lastRun)) {
         // ALIVE AND EMPTY: it ran, it refused before spending, it said why.
         notes.push(`no artifact, but the lane RAN and refused BEFORE SPEND ${Math.round((now.getTime() - lastRunMs) / 3600000)}h ago — ${String(lastRun.note || lastRun.error || "").slice(0, 120)} (${line})`);
@@ -346,6 +415,10 @@ function reconcileBrainLanes(deps = {}) {
       age_hours: ageHours === null ? null : Math.round(ageHours * 10) / 10,
       cadence_max_hours: Math.round(maxAge),
       consumers: uniqueConsumers,
+      // THE GATE (§5.2): machine-read (consumers) beside REACHED-HIM — two different
+      // questions, both printed. null = never reached him on any recorded lane.
+      reached_him: reachedHimFor(consumption, [job.id, job.out], now),
+      gate: gateStates[job.id] ? { state: gateStates[job.id].state, since: gateStates[job.id].ts } : null,
       declared_surface: declared ? (declared.where || declared.kind) : null,
       bleeds, notes,
     });
@@ -457,8 +530,14 @@ function printReport(r) {
     console.log(`  ✗ ${l.job} → brain_out/${l.out}`);
     for (const b of l.bleeds) console.log(`      ${b}`);
   }
-  const healthy = r.lanes.filter((x) => !x.bleeds.length && x.enabled);
+  const asleep = r.lanes.filter((x) => x.enabled && x.gate && x.gate.state === "asleep");
+  const healthy = r.lanes.filter((x) => !x.bleeds.length && x.enabled && !(x.gate && x.gate.state === "asleep"));
   if (healthy.length) console.log(`  ✓ ${healthy.length} lane(s) fresh and consumed: ${healthy.map((h) => h.job).join(", ")}`);
+  // THE GATE (18 Aug 2026): sleeping lanes named as such — resting by rule, and the
+  // reached-him column beside them, because that is the whole difference.
+  if (asleep.length) console.log(`  💤 ${asleep.length} lane(s) asleep by THE GATE (not stale, not dead — \`brain gate show\` says why and what wakes each): ${asleep.map((h) => h.job).join(", ")}`);
+  const reached = r.lanes.filter((x) => x.enabled && x.reached_him);
+  console.log(`  reached-him (consumption.jsonl, §5.2): ${reached.length}/${r.lanes.filter((x) => x.enabled).length} enabled lane(s) have EVER reached him${reached.length ? ` — ${reached.map((h) => `${h.job} ${h.reached_him.age_days}d (${h.reached_him.kind})`).join(", ")}` : ""}`);
   const off = r.lanes.filter((x) => !x.enabled);
   if (off.length) console.log(`  · ${off.length} disabled (a decision, not a defect): ${off.map((h) => h.job).join(", ")}`);
   console.log(`\nstate bus: ${r.state_files_checked} artifact(s) · ${r.state_orphans} referenced by nothing`);
@@ -632,6 +711,33 @@ function selftest() {
     build({ cfg: { paused: true, jobs: [{ id: "x", out: "orphan_lane", enabled: true, at: "08:00" }] },
             corpus: [], now, outDir, stateDir: join(root, "nostate") })
       .lanes[0].bleeds.some((b) => /no reader/.test(b)));
+
+  // ── THE GATE (overhaul 18 Aug 2026 §5.2/§5.3) — asleep is a note, reached-him is a column ──
+  {
+    const gateRows = [
+      { ts: "2026-08-03T22:00:00Z", lane: "stale_job", state: "asleep", why: { E: true, C: false, F: true }, detail: { C: "never consumed by him" }, wakes_when: "its output reaches him" },
+      { ts: "2026-08-03T22:00:00Z", lane: "fresh_job", state: "asleep" },
+      { ts: "2026-08-04T02:00:00Z", lane: "fresh_job", state: "awake", why: { E: true, C: true, F: true } },
+    ];
+    const consumptionRows = [
+      { ts: "2026-08-01T10:00:00Z", job: "fresh_job", kind: "briefed", by: "learnstate" },
+      { ts: "2026-08-03T10:00:00Z", lane: "fresh_lane", kind: "sat", by: "dugout" },
+      { ts: "garbage", job: "stale_job", kind: "spoken" },
+    ];
+    const g = build({ cfg, corpus, now, outDir, stateDir: join(root, "nostate"), gateRows, consumptionRows });
+    const gs = g.lanes.find((x) => x.job === "stale_job"), gf = g.lanes.find((x) => x.job === "fresh_job");
+    ok("GATE — a lane ASLEEP by verdict is a NOTE that names why + what wakes it, never a `stale` bleed (resting by rule ≠ lying dead)",
+      gs.gate && gs.gate.state === "asleep" && !gs.bleeds.some((b) => /stale/.test(b)) && gs.notes.some((b) => /asleep by THE GATE/.test(b) && /never consumed/.test(b) && /wakes when/.test(b)));
+    ok("GATE — the LAST journal row wins: a lane that slept then woke reads awake, and its staleness rule is untouched",
+      gf.gate && gf.gate.state === "awake" && gf.bleeds.length === 0);
+    ok("REACHED-HIM — the column comes off consumption.jsonl by job OR out-lane, newest wins, undateable rows ignored; a lane with no row reads null (never reached him) even with code readers",
+      gf.reached_him && gf.reached_him.kind === "sat" && gf.reached_him.age_days === 1.1 && gs.reached_him === null && gs.consumers.length >= 1);
+    ok("REACHED-HIM — the pure fold: keys match job or lane, undateable dropped, null when nothing",
+      reachedHimFor(consumptionRows, ["stale_job", "stale_lane"], now) === null && reachedHimFor(consumptionRows, ["fresh_lane"], now).kind === "sat");
+    ok("GATE — an ASLEEP lane still bleeds `no reader` when nothing references it (sleep hides staleness, never an orphan)",
+      build({ cfg: { jobs: [{ id: "orphan_job", out: "orphan_lane", enabled: true, at: "08:00" }] }, corpus: [], now, outDir, stateDir: join(root, "nostate"),
+        gateRows: [{ ts: "2026-08-03T22:00:00Z", lane: "orphan_job", state: "asleep" }], consumptionRows: [] }).lanes[0].bleeds.some((b) => /no reader/.test(b)));
+  }
 
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "FAILURES: " + fail} (${pass} passed, ${fail} failed)`);
   return fail === 0;

@@ -74,7 +74,7 @@ import { execFileSync, spawn } from "node:child_process";   // spawn: 15 Aug 202
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
-import { buildFingerprint, bannedPhraseCheck, starvedNightFor } from "./brain.mjs";   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words
+import { buildFingerprint, bannedPhraseCheck, starvedNightFor, recordConsumption } from "./brain.mjs";   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words · recordConsumption: THE GATE's "sat" stamp (18 Aug 2026), owner-held
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 // ORPHANED IMPORTS CUT, 10 Aug 2026: this line also pulled `learningArcVerdict`
 // and `conceptVocabulary`, and LADDER F3 (9 Aug) deleted the only caller — the
@@ -1981,7 +1981,12 @@ function execTool(name, args, deps = {}) {
         .map(c => ({ concept: c.concept || c.topic || c.id || c.name || "unnamed", axis: c.axis || null, due: String(c.due || c.due_date || "").slice(0, 10) || null }));
       // M11 — the night shift's personalized distractors ride along per concept
       const ns = loadNightshift(now);
-      for (const q of due) if (ns.distractors && ns.distractors[q.concept]) q.distractors = ns.distractors[q.concept].map(d => d.distractor);
+      let rodeDistractors = 0;
+      for (const q of due) if (ns.distractors && ns.distractors[q.concept]) { q.distractors = ns.distractors[q.concept].map(d => d.distractor); rodeDistractors++; }
+      // THE GATE (§5.2 "sat"): distractors that rode into a LIVE voice round reached a
+      // sitting — the ns_distractors lane's consumption signal. Live route only
+      // (deps.live), through the owner, fail-silent.
+      if (deps.live && rodeDistractors) { try { recordConsumption({ lane: "ns_distractors", kind: "sat", by: `dugout get_rejirah (${rodeDistractors} concept(s))` }); } catch {} }
       // JOB 1c (11 Aug 2026) — THE FIELD PROBES ride too: real interview questions
       // the night shift researched off the live web, each carrying its source. Read
       // from the CUMULATIVE file, not a day-stamped one, so a concept researched
@@ -2558,7 +2563,14 @@ function execTool(name, args, deps = {}) {
         const sib = readJson(join(dir, d + ".json"));
         let page = null;
         try { page = readFileSync(join(dir, d + ".md"), "utf8").slice(0, 6000); } catch { }
-        if (sib || page) return { ok: true, date: d, age: tag, will_change: (sib && sib.will_change) || null, page: page || "(sibling only — the page did not write)" };
+        if (sib || page) {
+          // THE GATE (§5.2 "spoken", 18 Aug 2026): he asked, the page is being handed to
+          // the mouth — that IS the diary reaching him. Owner-held stamp, fail-silent, and
+          // ONLY on the live /tool route (deps.live) — the suite calls execTool too, and a
+          // test run is not a reach (the same lesson markServed learned on 10 Aug).
+          if (deps.live) { try { recordConsumption({ job: "diary", kind: "spoken", by: "dugout get_diary", file: `brain_out/diary/${d}.md` }); } catch {} }
+          return { ok: true, date: d, age: tag, will_change: (sib && sib.will_change) || null, page: page || "(sibling only — the page did not write)" };
+        }
       }
       // #WIRE (11 Aug 2026) — THE EMPTY ANSWER WAS TELLING HIM THE WRONG STORY.
       // This door has returned "the laptop slept through the slot" for its whole life
@@ -6132,7 +6144,27 @@ async function main() {
         // means the staged code round reached a surface. buildConfig itself must stay
         // pure (the suite calls it), so the receipt is stamped here, through the OWNER
         // (examiner.mjs), fail-silent: bookkeeping never costs him the mock.
-        if (mode === "scrimmage") { try { markServed("scrimmage-voice"); } catch {} }
+        if (mode === "scrimmage") {
+          try { markServed("scrimmage-voice"); } catch {}
+          // THE GATE (§5.2 "sat"): a mock starting from the night's probe bank is that
+          // bank reaching a sitting — the ns_probe_bank lane's ONE consumption signal.
+          try { const ns = loadNightshift(); if (ns.probes) recordConsumption({ lane: "ns_probe_bank", kind: "sat", by: "dugout /config (scrimmage mock)", file: `brain_out/nightshift/probe_bank_${ns.day}.json` }); } catch {}
+        }
+        // THE GATE (overhaul §5.2 "sat", 18 Aug 2026): the SAME real serve is where the
+        // brain's night work actually reaches a sitting. The gaffer config's constitution
+        // carries the day cartridge and the night coach (composeCartridgeSection); a
+        // browser asking for it is a session that will speak from them. Stamped here,
+        // through the OWNER (brain.mjs recordConsumption — brain stays the sole writer of
+        // consumption.jsonl), fail-silent, and NEVER inside buildConfig (pure; the suite
+        // calls it). Same shape as the scrimmage receipt one line up. Until this line the
+        // gate could only ever see these two lanes as "never reached him".
+        if (mode === "gaffer") {
+          try {
+            const dc = loadDayCartridge(), nc = loadNightCoach();
+            if (dc) recordConsumption({ job: "day_cartridge", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/day_cartridge/${dc.date}.md` });
+            if (nc) recordConsumption({ job: "night_coach", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/night_coach/${nc.date}.md` });
+          } catch {}
+        }
         return send(200, buildConfig(keys, mode));
       }
       // THE ONE PLACE THE LATCH IS CONSUMED (16 Aug 2026). readDeepState() is a
@@ -6191,7 +6223,7 @@ async function main() {
           if (body.name === "semantic_recall") return send(200, await execRecall(body.args || {}));   // async tool
           if (body.name === "run_python") return send(200, await runPythonSandbox((body.args || {}).code));   // M4 — the Chalkboard (async, REST sandbox)
           if (body.name === "read_url") return send(200, await runReadUrl(body.args || {}));   // C6 — source-grounded read (async, REST urlContext)
-          return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined }));
+          return send(200, execTool(body.name, body.args || {}, { mode: body.mode === "scrimmage" ? "scrimmage" : undefined, live: true }));   // live: the ONE route a real page reaches — THE GATE's consumption stamps key on it
         }
         if (req.url === "/token") {
           // C5 — the mint lane (proven live); the page adopts it the day the

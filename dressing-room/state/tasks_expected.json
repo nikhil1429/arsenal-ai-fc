@@ -1,12 +1,13 @@
 {
   "_doc": "LADDER E2 (9 Aug 2026) — THE SCHEDULE'S EXPECTED SHAPE, snapshotted from the LIVE Task Scheduler after the ladder's D-phase landed (evening conductor + daemon watchdog + groundsman push + wake probe) and E6 deleted SelfKnowledge. The watchman diffs live schtasks against this nightly (probeExpectedTasks): an expected-enabled task MISSING is RED, an expected-disabled task ENABLED is a double-run WARN, an unlisted ArsenalFC-* task is an INFO (a new build not yet recorded here — update this file in the same commit that registers a task). Disabled is a DESIGNED state: the two conductors own those organs now; re-enabling one makes it race its chain. | 14 Aug 2026 — THE ARCHIVE joins the contract in the same commit that registers it, as this doc asks: ArsenalFC-Archivist (15 min, the WAL tail — the only lane whose delay is measured in data loss), ArsenalFC-ArchiveVitals (23:40, LAW 6), ArsenalFC-ArchiveFixity (monthly 1st 04:00, bit rot is silent), ArsenalFC-ArchiveSeal (SAT 09:20, the BagIt bag the external disk copies). All four are expected-ENABLED: none of them is a conductor chain step, so none can be double-run by a chain. Installer + revert: setupINSTALL_ARCHIVE.ps1 / setupUNINSTALL_ARCHIVE.ps1. | 15 Aug 2026 — ArsenalFC-ArchiveAudit joins in the same commit that registers it (spec §16): monthly, 1st, 04:20, twenty minutes after fixity so two full 34k-record walks do not overlap. It is NOT a second fixity lane — fixity asks whether anything CHANGED, using the archive's own program; the audit asks whether the README is still SUFFICIENT, recomputing every hash, field order, IST partition and schema conformance from the PUBLISHED DOCUMENTS with code that imports nothing from this repo. Expected-ENABLED: it is not a conductor chain step, so it cannot be double-run by a chain. A 90-day silence on its journal (dressing-room/state/archive_audit.jsonl) is raised by the watchman, because an auditor that silently stops is worse than none.",
-  "as_of": "2026-08-15",
+  "as_of": "2026-08-18",
   "expected_enabled": [
     "ArsenalFC-ArchiveAudit",
     "ArsenalFC-ArchiveFixity",
     "ArsenalFC-ArchiveSeal",
     "ArsenalFC-ArchiveVitals",
     "ArsenalFC-Archivist",
+    "ArsenalFC-Audit",
     "ArsenalFC-BootRoom",
     "ArsenalFC-BrainDaemon",
     "ArsenalFC-BrainTick",
@@ -65,5 +66,6 @@
     "ArsenalFC-SelfKnowledge": "PERMANENTLY FROZEN by his 7 Aug 2026 ruling and DELETED (LADDER E6, 9 Aug 2026) — its reappearance would mean an installer re-created it against his word",
     "ArsenalFC-Speak": "the pre-neural voice lane VOICE_SETUP.md never installed; SPEAK.ps1 itself was deleted (LADDER E6)",
     "ArsenalFC-Kennel-Heartbeat": "ships only when the Pi arrives (groundsman.mjs header: TRANSPORT)"
-  }
+  },
+  "_audit_note": "18 Aug 2026 (overhaul Block 0): ArsenalFC-Audit added — designed 12 Aug in INSTALL_TASKS.ps1, never installed live, registered today (13:10 daily, no catch-up). ArsenalFC-BugMuseum and ArsenalFC-Mutants stay designed-but-not-installed on purpose (audit-suite cost organs; no check requires them; Block 7 runs mutagen by hand) — an installer re-run would register them, and this file should gain them in that same commit."
 }

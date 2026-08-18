@@ -505,6 +505,8 @@
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/premap/ (5 files unread), and it carried max_per_day 3 — the highest of any job. Its stated value (pre-drafting Daraar-map probe angles) is real but lands nowhere. TO ENABLE: wire it into the Gem prompt pack it claims to feed, then flip enabled:true.",
       "_g10_note": "G10 (9 Aug 2026): re-enabled — nightshift gemCartridge now reads the newest premap via the viz-style i<=2 day-lookback (premap files land under the shift day, minutes AFTER nightshift's 02:59 write — the lookback is mandatory, not decoration).",
+      "gate": { "consumers": ["ns_gem_cartridge"] },
+      "_gate_note": "THE GATE (overhaul §5, 18 Aug 2026): this lane's only reader is nightshift's gem_cartridge, which is a NIGHTSHIFT lane, not a brain job — so the transitive consumption walk (jobConsumers, declared brain_out/ inputs) cannot see it. `gate.consumers` names the cross-organ consumer explicitly: premap counts as reached-him whenever ns_gem_cartridge does (the /gem-sync stamp records that). Every other gate field stays at the defaults (window 14d · fail_streak 5 · no event).",
       "extra_args": [
         "--effort",
         "medium"

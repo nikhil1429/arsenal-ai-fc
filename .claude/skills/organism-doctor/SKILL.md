@@ -5,6 +5,15 @@ description: Full health check of the organism — vitals, brain budget, selftes
 
 # /organism-doctor — the body checks itself
 
+00. **THE STATE LINE** (overhaul §7.1, 18 Aug 2026): `node scripts/state.mjs` — ONE
+    deterministic line (pushed · daemons · suite · sitting · next · needs-you), read
+    off disk, zero LLM. Put it verbatim at the top of the chart; every step below is
+    the detail behind one of its fields. Then `node scripts/brain.mjs gate show` —
+    THE GATE (§5): which LLM lanes are ASLEEP (evidence absent · output never reached
+    him inside its window · fail streak) and what wakes each. Asleep is HEALTH, not
+    disease — never "fix" a sleeping lane by hand; `brain gate wake <lane>` is his
+    override (his `na` on the card), and a wake is a force for one window, never a
+    switch.
 0. FIRST, THE VITAL SIGN THAT HID FOR FOUR DAYS — is the brain actually
    speaking, or only appearing to? Run `node scripts/brain.mjs tokens` and read
    `dressing-room/state/token_vitals.json` → `health`:
