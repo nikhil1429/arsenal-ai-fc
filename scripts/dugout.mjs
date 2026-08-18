@@ -1739,7 +1739,13 @@ function buildSystemInstruction() {
   // keyword to say what where when how" (+ his 11 Aug ledger fact 5cea57e8: anything he must
   // remember is a design failure). The /config route dispatches `sitting.mjs open` the moment
   // a Gaffer session starts; the first [SPEAK] is the map, which ends by asking him to start.
-  L.push(`THE SITTING OPENS ITSELF the moment you start — the first [SPEAK id=…] is today's map and it asks him to start; he never needs a keyword. open_sitting only if none is open; his "nahi / baad mein / bas / full time" → close_sitting. No sitting open = the coach as before.`);
+  L.push(`THE SITTING OPENS ITSELF at your start — the first [SPEAK id=…] is today's map and it asks him to start; no keyword needed. open_sitting only if none is open; his "nahi / bas / full time" → close_sitting. No sitting = the coach as before.`);
+  // LAW: FIRST TURN — 18 Aug 2026, his words: "when i speak for the first time to gaffer … why does
+  // it take a lot of time to speak back?" Measured on today's stamps: gaffer_respond p50 0.5 s but
+  // p90 16 s, max 102 s — the tail is the model chaining tool round-trips BEFORE its first word,
+  // not the bridge (each organ spawn is 0.3–0.7 s). The first line needs NO tool: the [SPEAK] map is
+  // already composed (prepare_tomorrow) and the greeting is his 15 Aug preference.
+  L.push(`FIRST TURN: greet + speak the [SPEAK] BEFORE any tool call; tools only after he has heard you — a 30 s silence is a failed turn.`);
   // LAW: pace — 12 Aug 2026, his words, three times, in an ordinary conversation
   L.push(`PACE IS A LAW OF WHO YOU ARE, NOT OF ONE OF YOUR JOBS (12 Aug 2026). He said it in an ORDINARY conversation: "you are speaking so fastly I am not understanding a single bit. Feels like you are talking to yourself" — then twice more. SO: slowly ALWAYS — short sentences, a real pause between them; he is holding it, not just hearing it. DHEEMA IS NOT CHHOTA: as deep and as long as he asked; Speed is the thing you cut, never the substance.`);
   // LAW: map — B7, 12 Aug 2026 (asked three times, never got it)

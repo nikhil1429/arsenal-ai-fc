@@ -104,9 +104,18 @@ const DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY = 1_500_000;
 // hard line means the window is genuinely at capacity. Still a hypothesis (v1, one
 // measurement), still retunable in state without touching this file; the watchman's
 // nightly data is what will retune it, not a guess.
-const MEASURED_BYTES_PER_TOKEN = 4.1;          // 964,000 / 234,700 — measured, 6 Aug 2026
+// §17-C (OVERHAUL, 18 Aug 2026 — pulled forward from Block 7 on his word): the SECOND measurement
+// disagreed with the first by 60% — 18 Aug: 4,180,000 transcript bytes ↔ 629,300 tokens (the UI
+// read 63% of 1M while this hook printed 107%) = 6.64 bytes/token vs 4.1 on 6 Aug. So bytes ÷
+// bytes-per-token is an ESTIMATE, not a measure: it is printed AS an estimate with its calibration
+// beside it, never as a bare percentage, and the budget is derived from the NEWEST measurement
+// (the session shape that misled him). Retune = the next measured pair, never a typed number.
+const MEASURED_BYTES_PER_TOKEN_LEGACY = 4.1;   // 964,000 / 234,700 — measured, 6 Aug 2026 (frozen for the record)
+const MEASURED_BYTES_PER_TOKEN = 6.64;         // 4,180,000 / 629,300 — measured, 18 Aug 2026
 const CONTEXT_WINDOW_TOKENS = 1_000_000;       // the live session's own readout, same day
+const DEFAULT_TRANSCRIPT_WARN_BYTES_6AUG = Math.round(MEASURED_BYTES_PER_TOKEN_LEGACY * CONTEXT_WINDOW_TOKENS);   // 4,100,000 — the 6–18 Aug default, migrates exactly like the 1.5 MB one
 const DEFAULT_TRANSCRIPT_WARN_BYTES = Math.round(MEASURED_BYTES_PER_TOKEN * CONTEXT_WINDOW_TOKENS);
+const FILL_CALIBRATION = "estimate: bytes ÷ 6.64/token, calibrated 18 Aug (4.18 MB ↔ 629k tok = 63% of 1M); the UI's meter is the truth";
 const SOFT_FRACTION = 0.6;      // a heads-up BEFORE the hard line — he asked to be warned beforehand
 
 // ── SEED ──────────────────────────────────────────────────────────────────────
@@ -634,10 +643,10 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
 
   let warn = null;
   if (fill && fill.pct >= 1) {
-    warn = `  ⛔ CONTEXT WARNING — transcript ${mb(fill.bytes)} (${Math.round(fill.pct * 100)}% of the ${mb(fill.limit)} warn budget).`
+    warn = `  ⛔ CONTEXT WARNING — transcript ${mb(fill.bytes)} ≈ ${Math.round(fill.pct * 100)}% of the window (${FILL_CALIBRATION}).`
       + ` TELL HIM NOW, before the next teaching pass, that context is close to compacting and what will be lost. He asked to be warned BEFOREHAND.`;
   } else if (fill && fill.pct >= SOFT_FRACTION) {
-    warn = `  ⚠ context filling — transcript ${mb(fill.bytes)} (${Math.round(fill.pct * 100)}% of the ${mb(fill.limit)} warn budget). Say it out loud at the next natural break, not mid-idea.`;
+    warn = `  ⚠ context filling — transcript ${mb(fill.bytes)} ≈ ${Math.round(fill.pct * 100)}% of the window (${FILL_CALIBRATION}). Say it out loud at the next natural break, not mid-idea.`;
   } else if (!fill && turn >= warnAt) {
     // FALLBACK ONLY — the transcript was unreadable. Say which number this is: an
     // unanchored counter has counted prompts across sessions and is not this
@@ -703,7 +712,9 @@ function withSeedDefaults(stored, now = new Date()) {
   // carries the frozen 1.5 MB budget — the value derived for the wrong question.
   // Only the EXACT legacy default migrates; any other stored number is a value
   // someone chose on purpose and stored-wins keeps protecting it.
-  if (s.transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY) {
+  // §17-C (18 Aug 2026): the 6 Aug default (4,100,000) migrates the same way — it was the
+  // organism's own derived number, not a chosen one; the 18 Aug measurement supersedes it.
+  if (s.transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY || s.transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES_6AUG) {
     s.transcript_warn_bytes = DEFAULT_TRANSCRIPT_WARN_BYTES;
   }
   return s;
@@ -1163,8 +1174,13 @@ function selftest() {
   assert("§5.8 MIGRATION — the frozen 1.5 MB budget upgrades to the measured-window default, and ONLY the exact legacy value migrates",
     withSeedDefaults({ rules: [], transcript_warn_bytes: DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY }, T0).transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES
     && withSeedDefaults({ rules: [], transcript_warn_bytes: 999999 }, T0).transcript_warn_bytes === 999999);
-  assert("§5.8 — the new budget is DERIVED (bytes/token × window), not typed: 4.1 × 1,000,000",
-    DEFAULT_TRANSCRIPT_WARN_BYTES === Math.round(4.1 * 1_000_000) && DEFAULT_TRANSCRIPT_WARN_BYTES !== DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY);
+  assert("§5.8/§17-C — the budget is DERIVED (bytes/token × window) from the NEWEST measurement, not typed: 6.64 × 1,000,000; the 6 Aug 4.1 default is frozen for the record",
+    DEFAULT_TRANSCRIPT_WARN_BYTES === Math.round(6.64 * 1_000_000) && DEFAULT_TRANSCRIPT_WARN_BYTES_6AUG === Math.round(4.1 * 1_000_000) && DEFAULT_TRANSCRIPT_WARN_BYTES !== DEFAULT_TRANSCRIPT_WARN_BYTES_LEGACY);
+  assert("§17-C — the 6 Aug default (4,100,000) migrates to the new default exactly like the 1.5 MB one; a hand-set value stays",
+    withSeedDefaults({ rules: [], transcript_warn_bytes: DEFAULT_TRANSCRIPT_WARN_BYTES_6AUG }, T0).transcript_warn_bytes === DEFAULT_TRANSCRIPT_WARN_BYTES
+    && withSeedDefaults({ rules: [], transcript_warn_bytes: 999999 }, T0).transcript_warn_bytes === 999999);
+  assert("§17-C — the fill line prints an ESTIMATE with its calibration named and 'the UI's meter is the truth' — never a bare percentage of a 'warn budget'",
+    /estimate: bytes ÷ 6\.64\/token/.test(FILL_CALIBRATION) && /the UI's meter is the truth/.test(FILL_CALIBRATION));
   assert("NEVER RESEED OVER LIVE DATA — save() refuses a state marked _unreadable, so a torn read can no longer wipe his rules",
     save({ _unreadable: true, rules: [] }) === false);
   assert("NO CAP ON WHY — a 300-char self-report survives whole (his 'no limit' ruling; 3 of his 5 live reports were cut mid-word at 240)",
