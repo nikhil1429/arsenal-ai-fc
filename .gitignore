@@ -454,3 +454,6 @@ dressing-room/state/sitting_agenda.jsonl
 # LOAD ZERO BLOCK 1 (19 Aug 2026): the task ledger — tasks.mjs sole writer; append-only events,
 # one row per create/replay/claim/progress/finish/fail. State, not code.
 dressing-room/state/tasks.jsonl
+# LOAD ZERO BLOCK 2 (19 Aug 2026): the samjhao ledger — samjhao.mjs sole writer; append-only
+# events (open/guess/answer/doubt/close). HIS OWN WORDS live in it, so it never leaves the machine.
+dressing-room/state/samjhao.jsonl

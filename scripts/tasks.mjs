@@ -59,7 +59,7 @@ const ROOT = join(__dirname, "..");
 const STATE_DIR = join(ROOT, "dressing-room", "state");
 export const TASKS_LEDGER = process.env.ARSENAL_TASKS_LEDGER || join(STATE_DIR, "tasks.jsonl");
 
-export const KINDS = ["job"];                                   // BLOCK 2 adds `samjhao`; a kind exists only with a RUNNER
+export const KINDS = ["job", "samjhao"];                        // a kind exists only with a RUNNER, or as a declared INTERACTIVE kind
 export const STATES = ["queued", "running", "done", "failed"];
 export const LEGAL = { claim: ["queued"], progress: ["running"], finish: ["running"], fail: ["queued", "running"] };
 const DEFAULT_TTL_H = 24;                                       // the idempotency window: the same ask inside it is a replay
@@ -69,11 +69,19 @@ const DEFAULT_TTL_H = 24;                                       // the idempoten
 // writes the ledger itself — the SOLE WRITER law holds through the child boundary).
 // `keyArgs` DECLARES which args change the work and may therefore enter the idempotency key.
 // For `job` the subject IS the whole ask, so nothing from args enters it (see idempotencyKey).
+//
+// TWO SHAPES OF TASK (LOAD ZERO BLOCK 2, 19 Aug 2026). A kind is either SPAWNED — it names an
+// owner CLI this organ runs as a child — or INTERACTIVE: nothing to spawn, because the work is
+// HIM answering. A samjhao is a sitting, not a job; it still needs a task for the two things the
+// task layer gives it — a durable id it can be resumed by on ANY surface (§4-E) and an
+// idempotency key, so "samjhao tokenization" asked twice RESUMES one session instead of starting
+// a second. `run` refuses to spawn an interactive kind and `execTask` refuses to execute one.
 export const RUNNERS = {
   job: {
     organ: "brain.mjs", timeoutMs: 600000, keyArgs: [],
     argv: (t) => ["run", t.subject, "--by", t.by || "captain", ...(t.args && t.args.act ? ["--act", String(t.args.act)] : []), "--task", t.id],
   },
+  samjhao: { interactive: true, keyArgs: [] },   // driven by samjhao.mjs from HIS answers — no organ spawns it
 };
 
 const clip = (s, n = 300) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
@@ -214,6 +222,7 @@ export function execTask(id, deps = {}) {
   if (!c.ok) return { ok: false, why: c.why };                   // already claimed => this process does NOTHING. The guarantee.
   const t = c.task, r = RUNNERS[t.kind];
   if (!r) { fail(id, `no runner for kind "${t.kind}"`, deps); return { ok: false, why: `no runner for kind "${t.kind}"` }; }
+  if (r.interactive) { return { ok: false, why: `task ${id} is kind "${t.kind}", which is INTERACTIVE — its work is HIM answering, so nothing may execute it on his behalf`, task: t }; }
   const argv = r.argv(t).map(String);
   const t0 = Date.now();
   const out = deps.exec
@@ -240,6 +249,7 @@ export function run(spec = {}, deps = {}) {
   const c = create(spec, deps);
   if (!c.ok) return c;
   if (c.replay) return c;                                        // already alive or already done — nothing is spawned
+  if ((RUNNERS[c.task.kind] || {}).interactive) return { ...c, spawned: false, why: `kind "${c.task.kind}" is INTERACTIVE — the task is the durable handle; the work is HIM answering, so nothing is spawned` };
   if (deps.spawn === false) return c;                            // the caller drives execTask itself
   try {
     const child = (deps.spawnFn || spawn)(process.execPath, [SELF, "_exec", c.task.id], { detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
@@ -387,7 +397,16 @@ function selftest() {
   const stuckRows = readRows(ledger).concat([{ ev: "create", id: "tSTUCK", ts: "2026-08-19T00:00:00Z", key: "k", kind: "job", subject: "hung", args: {} }, { ev: "claim", of: "tSTUCK", ts: "2026-08-19T00:00:00Z" }]);
   assert("a runner that died mid-flight is a NAMED RED (task-stuck), never a silently held key",
     findings(stats(7, stuckRows, Date.parse("2026-08-19T02:00:00Z"))).some((f) => f.id === "task-stuck" && f.level === "RED"));
-  assert("every KIND has a RUNNER (a kind with no owner CLI is work this organ invented)", KINDS.every((k) => RUNNERS[k] && RUNNERS[k].organ));
+  assert("every KIND is either SPAWNED (names an owner CLI) or declared INTERACTIVE — a kind that is neither is work this organ invented",
+    KINDS.every((k) => RUNNERS[k] && (RUNNERS[k].organ || RUNNERS[k].interactive === true)));
+  const inter = create({ kind: "samjhao", subject: "tokenization" }, real);
+  const interRun = run({ kind: "samjhao", subject: "embeddings" }, { ...real, spawnFn: () => { throw new Error("an interactive kind must never be spawned"); } });
+  assert("an INTERACTIVE kind gets its durable id and its key, and NOTHING is spawned for it (the work is HIM answering)",
+    inter.ok && inter.task.state === "queued" && interRun.ok && interRun.spawned === false && /INTERACTIVE/.test(interRun.why || ""), JSON.stringify(interRun.why || ""));
+  assert("...and no executor may run it on his behalf — execTask refuses an interactive kind",
+    !execTask(inter.task.id, { ...real, exec: () => { throw new Error("must not reach the owner"); } }).ok);
+  const interAgain = create({ kind: "samjhao", subject: "tokenization" }, real);
+  assert("...and asking for the SAME samjhao again RESUMES the one session instead of starting a second (§4-E)", interAgain.replay && interAgain.task.id === inter.task.id);
   try { rmSync(dir, { recursive: true, force: true }); } catch { /* tmp */ }
 
   console.log(`\ntasks: ${pass} passed, ${failed} failed`);

@@ -457,6 +457,35 @@ function laws() {
     const k2 = run([join(sb, "scripts", "tasks.mjs"), "claim", i1.id], { cwd: sb, env: tenv });
     assert("LOAD ZERO BLOCK 1 · RUNTIME ASSERTION: an idempotency key may never be executed twice — the SECOND claim exits non-zero",
       k1.code === 0 && k2.code !== 0 && /never be executed twice/.test(k2.out), `exit ${k1.code}/${k2.code} — ${k2.out}`);
+
+    // ── LOAD ZERO BLOCK 2 (19 Aug 2026) — SAMJHAO ───────────────────────────────
+    // THE LAW (§5): a samjhao may not be marked done while ANY doubt in its ledger is open, and
+    // a unit may not assert a fact absent from the source. SAMJHAO is REVISION of his own locked
+    // notes — not FORGE (which teaches from zero and locks a capsule) and not RE-JIRAH (which
+    // tests cold and grades). The gates below are what keep those three from blurring in code.
+    const sam = (...a) => run([join(sb, "scripts", "samjhao.mjs"), ...a], { cwd: sb });
+    const FOUR = ["tokenization", "embeddings", "inference", "context"];
+    const unverified = FOUR.filter((c) => sam("verify", c).code !== 0);
+    assert("LOAD ZERO BLOCK 2 · NO NEW FACTS — every samjhao unit of all four topics asserts only what HIS OWN capsule holds (validators, not vibes)",
+      unverified.length === 0, `${unverified.join(", ")} assert something the capsule does not hold — samjhao revises his notes, it never teaches something new`);
+    assert("LOAD ZERO BLOCK 2 · all four topics are RUNNABLE and every one is a 9-axis revision of a LOCKED capsule",
+      FOUR.every((c) => { const o = sam("plan", c, "--json"); try { const j = JSON.parse(o.out); return j.units.length === 9 && j.doubts.length > 0 && !!j.lockedOn; } catch { return false; } }));
+    assert("LOAD ZERO BLOCK 2 · a concept with no locked capsule is REFUSED — samjhao is REVISION, never teaching from zero (that is FORGE)",
+      sam("plan", "a_concept_he_never_forged").code !== 0);
+
+    const opened = sam("open", "tokenization", "--json");
+    let sid = null;
+    try { sid = JSON.parse(opened.out).id; } catch { /* asserted */ }
+    assert("LOAD ZERO BLOCK 2 · a samjhao takes its id from the TASK layer, so it resumes on any surface (§4-E)", !!sid && /^t/.test(sid), opened.out);
+    const closeEarly = sam("close", sid || "x");
+    assert("LOAD ZERO BLOCK 2 · THE RATCHET: close is REFUSED while units/doubts are open, and it NAMES the count (a feeling becomes a number)",
+      closeEarly.code !== 0 && /baaki|KHULE/.test(closeEarly.out), closeEarly.out);
+    const early = sam("answer", sid || "x", "--unit", "1", "--text", "kuch bhi", "--gut", "knew");
+    assert("LOAD ZERO BLOCK 2 · PREDICT-THEN-REVEAL is a gate: an answer before the guess is refused (what he retrieves sticks, what he reads does not)",
+      early.code !== 0 && /GUESS pehle/.test(early.out), early.out);
+    const noGut = sam("guess", sid || "x", "--unit", "1", "--text", "token = tukda", "--gut", "maybe");
+    assert("LOAD ZERO BLOCK 2 · the GUT-WORD LAW holds here too — samjhao refuses knew|shaky|guessed's absence exactly as capture.mjs does",
+      noGut.code !== 0);
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 

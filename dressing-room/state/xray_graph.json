@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-18T20:15:06.956Z",
- "organs_parsed": 101,
- "organs_expected": 101,
+ "built_at": "2026-08-18T20:51:06.078Z",
+ "organs_parsed": 102,
+ "organs_expected": 102,
  "parse_errors": [],
- "unresolved_sinks": 1292,
+ "unresolved_sinks": 1296,
  "organs": {
   "acts.mjs": {
    "loc": 355,
@@ -1077,7 +1077,7 @@
    "unresolved": 5
   },
   "brain.mjs": {
-   "loc": 6928,
+   "loc": 6938,
    "reads": [
     {
      "path": "dressing-room/manager/system.md",
@@ -1539,22 +1539,22 @@
       3878,
       3908,
       3970,
-      6746,
+      6749,
       904,
       3878,
       3908,
       3970,
-      6746,
+      6749,
       904,
       3878,
       3908,
       3970,
-      6746,
+      6749,
       904,
       3878,
       3908,
       3970,
-      6746
+      6749
      ],
      "verbs": [
       "appendFileSync"
@@ -1649,8 +1649,8 @@
     {
      "kind": "organ",
      "script": "tasks.mjs",
-     "verb": "progress",
-     "line": 6742,
+     "verb": null,
+     "line": 6739,
      "ctx": "main"
     }
    ],
@@ -11103,7 +11103,7 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 830,
+   "loc": 859,
    "reads": [
     {
      "path": "scripts",
@@ -11163,12 +11163,12 @@
     {
      "path": "node_modules",
      "lines": [
-      770,
-      770,
-      770,
-      770,
-      770,
-      770
+      799,
+      799,
+      799,
+      799,
+      799,
+      799
      ],
      "fixture": false
     },
@@ -11192,8 +11192,8 @@
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      615,
-      615
+      644,
+      644
      ],
      "fixture": false
     }
@@ -12815,6 +12815,107 @@
    "header_verbs": [],
    "exports": [],
    "unresolved": 2
+  },
+  "samjhao.mjs": {
+   "loc": 495,
+   "reads": [
+    {
+     "path": "dressing-room/state/samjhao.jsonl",
+     "lines": [
+      84,
+      84,
+      84,
+      84,
+      84,
+      84
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/capsules",
+     "lines": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/samjhao.jsonl",
+     "lines": [
+      179,
+      179,
+      179
+     ],
+     "verbs": [
+      "appendFileSync"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [
+    {
+     "kind": "organ",
+     "script": "tasks.mjs",
+     "verb": null,
+     "line": 173,
+     "ctx": "owner"
+    },
+    {
+     "kind": "organ",
+     "script": "capture.mjs",
+     "verb": null,
+     "line": 173,
+     "ctx": "owner"
+    },
+    {
+     "kind": "organ",
+     "script": "sitting.mjs",
+     "verb": null,
+     "line": 173,
+     "ctx": "owner"
+    }
+   ],
+   "swallows": [],
+   "verbs": [
+    "false",
+    "selftest"
+   ],
+   "header_verbs": [
+    "doubt",
+    "no",
+    "plan",
+    "units"
+   ],
+   "exports": [
+    "CAPSULE_DIR",
+    "GUT_WORDS",
+    "SAMJHAO_LEDGER",
+    "THE_FOUR",
+    "answer",
+    "boardLine",
+    "close",
+    "closeDoubt",
+    "foldSessions",
+    "guess",
+    "loadCapsule",
+    "next",
+    "open",
+    "plan",
+    "planDoubts",
+    "planUnits",
+    "progressOf",
+    "sessionForConcept",
+    "sessionOf",
+    "stats",
+    "verifyPlan"
+   ],
+   "unresolved": 4
   },
   "sandbox.mjs": {
    "loc": 405,
@@ -14733,19 +14834,19 @@
    "unresolved": 3
   },
   "state.mjs": {
-   "loc": 341,
+   "loc": 355,
    "reads": [
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      237
+      241
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      237
+      241
      ],
      "fixture": false
     }
@@ -14755,7 +14856,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 235
+     "line": 239
     }
    ],
    "swallows": [],
@@ -15116,15 +15217,15 @@
    "unresolved": 1
   },
   "tasks.mjs": {
-   "loc": 400,
+   "loc": 461,
    "reads": [
     {
      "path": "dressing-room/state/tasks.jsonl",
      "lines": [
-      83,
-      84,
-      83,
-      84
+      93,
+      94,
+      93,
+      94
      ],
      "fixture": false
     }
@@ -15133,8 +15234,8 @@
     {
      "path": "dressing-room/state/tasks.jsonl",
      "lines": [
-      143,
-      143
+      169,
+      169
      ],
      "verbs": [
       "appendFileSync"
@@ -15147,7 +15248,7 @@
      "kind": "organ",
      "script": "tasks.mjs",
      "verb": null,
-     "line": 325,
+     "line": 377,
      "ctx": "selftest"
     }
    ],
@@ -15156,9 +15257,7 @@
     "selftest"
    ],
    "header_verbs": [
-    "create",
-    "list",
-    "status"
+    "create"
    ],
    "exports": [
     "KINDS",
@@ -19591,6 +19690,7 @@
     "nightshift.mjs",
     "physio.mjs",
     "rejirah.mjs",
+    "samjhao.mjs",
     "shipped.mjs",
     "teaching_audit.mjs",
     "teaching_contract.mjs",
@@ -20996,6 +21096,19 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/samjhao.jsonl",
+   "readers": [
+    "samjhao.mjs"
+   ],
+   "writers": [
+    "samjhao.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/scorer_config.json",
    "readers": [
     "scorer.mjs",
@@ -21290,7 +21403,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23305,6 +23418,7 @@
   "dressing-room/state/brain_out/prepare/2026-08-18.json",
   "dressing-room/state/brain_out/prepare/2026-08-18.md",
   "dressing-room/state/brain_out/prepare_on_request/2026-08-18.md",
+  "dressing-room/state/brain_out/prepare_on_request/2026-08-19.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-09.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-10.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-11.md",
@@ -23600,6 +23714,7 @@
   "dressing-room/state/swallow_ledger.jsonl",
   "dressing-room/state/tanks.json",
   "dressing-room/state/tape_room.json",
+  "dressing-room/state/tasks.jsonl",
   "dressing-room/state/tasks_expected.json",
   "dressing-room/state/teaching_audit.jsonl",
   "dressing-room/state/teaching_audit_last.json",
@@ -23785,6 +23900,10 @@
   {
    "organ": "rejirah.mjs",
    "file": "rejirah_log.json"
+  },
+  {
+   "organ": "samjhao.mjs",
+   "file": "samjhao.json"
   },
   {
    "organ": "scoreboard.mjs",
@@ -26742,6 +26861,11 @@
    },
    {
     "script": "oura_auth.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "samjhao.mjs",
     "verb": "selftest",
     "source": "package.json"
    },
