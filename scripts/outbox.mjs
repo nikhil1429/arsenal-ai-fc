@@ -47,6 +47,9 @@
 //        [--requires-decision --why-code-cannot-decide "..."] [--json]
 //      | ingest [--days n] [--json]      (brain_ledger.jsonl -> rows, idempotent)
 //      | pending [--json] | relay --surface <s> [--max n] [--json] | ack <id>
+//      | brief [--max n]                  (LOAD ZERO BLOCK 6: relay to `code` AND render it, at
+//                                          the SessionStart anchor — the stamp and the seeing are
+//                                          one event. Silent when there is nothing.)
 //      | status | selftest
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, statSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
@@ -427,6 +430,25 @@ if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
     else if (!r.delivered.length) console.log(`outbox: ${r.surface} — kuch naya nahi (sweep recorded)`);
     else { console.log(`outbox: ${r.surface} — ${r.delivered.length} naya${r.held_back ? ` (${r.held_back} aur rukka hai)` : ""}`); r.delivered.forEach((o) => console.log(`  · ${clip(o.subject, 120)}${o.body_ref ? `  → ${o.body_ref}` : ""}`)); }
   }
+  // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD GETS TRAFFIC. Measured that morning: `relay` had
+  // NEVER been called by anything in production — every call site was this CLI, the selftest, or
+  // organism_test. The road was built and nobody drove on it (22 rows posted, 6 delivered, and
+  // those 6 by a hand-run proof). A gate taught to see the road would have seen an empty one after
+  // the 14-day window aged those 6 out, and the cards would have come straight back.
+  // WHY A SEPARATE VERB AND NOT `relay --surface code`: the relay stamp only MEANS "he was shown
+  // it" if the thing that stamps it is the thing that renders it. This verb is the renderer — it
+  // delivers and prints in the same breath, at the SessionStart anchor (turn_hook `start`), so the
+  // stamp and the seeing are the same event. Silent when there is nothing, per L7.
+  else if (mode === "brief") {
+    const r = relay("code", {}, Number(flag("max", DEFAULT_MAX_PER_SWEEP)) || DEFAULT_MAX_PER_SWEEP);
+    if (r.ok && r.delivered.length) {                               // silent otherwise: no road news is not news
+      console.log(`📮 OUTBOX (${r.delivered.length} naya${r.held_back ? ` · ${r.held_back} aur rukka hai` : ""}) — jo ban chuka tha aur tum tak nahi pahuncha tha:`);
+      // close_note is shown only when a close was ATTEMPTED and had something to say. A `material`
+      // or `finding` row carries no close_ref by design, and printing "no close_ref on this row"
+      // beside every line hands him the plumbing instead of the news.
+      r.delivered.forEach((o) => console.log(`  · ${clip(o.subject, 110)}${o.body_ref ? `  → ${o.body_ref}` : ""}${o.close_ref && o.close_note ? `  [${clip(o.close_note, 40)}]` : ""}`));
+    }
+  }
   else if (mode === "pending") {
     const q = pending();
     if (has("json")) console.log(JSON.stringify(q));
@@ -438,5 +460,5 @@ if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
     console.log(boardLine(s));
     findings(s).forEach((f) => console.log(`  ${f.level} ${f.id} — ${f.finding}`));
   }
-  else console.log(`outbox: post --produced-by <o> --kind <k> --subject "..." [--body-ref p --priority n --close-ref r --requires-decision --why-code-cannot-decide "..."] | ingest [--days n] | relay --surface ${SURFACES.join("|")} [--max n] | pending | ack <id> | status | selftest`);
+  else console.log(`outbox: post --produced-by <o> --kind <k> --subject "..." [--body-ref p --priority n --close-ref r --requires-decision --why-code-cannot-decide "..."] | ingest [--days n] | relay --surface ${SURFACES.join("|")} [--max n] | brief [--max n] | pending | ack <id> | status | selftest`);
 }

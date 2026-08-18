@@ -406,7 +406,7 @@ function argvModes(src) {
 
 // ── 3. CROSS-ORGAN LAW CONSISTENCY ───────────────────────────────────────────
 // One law, two writers. Each organ's own selftest is green; the LAW can still be broken.
-function laws() {
+async function laws() {
   section("LAW CONSISTENCY — the same law, held the same way by every writer");
   const sb = sandbox();
   try {
@@ -613,6 +613,120 @@ function laws() {
     for (const org of ["sitting.mjs", "talk.mjs", "captains_call.mjs"]) {
       assert(`LOAD ZERO BLOCK 5 · ${org} asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary`,
         /resolveIntent/.test(readOrgan(org)));
+    }
+
+    // ── LOAD ZERO BLOCK 6 (19 Aug 2026) — THE DECISION GATE + THE ROAD THE GATE CAN SEE ──────────
+    // The block that finally moves the LOAD NUMBER, which rose (36 → 37 → 39) through five green
+    // blocks. Every assertion here is PURE — driven on fixtures, never on the live deck — because a
+    // ratchet whose verdict depends on what the captain did that evening is not a ratchet (this
+    // suite paid for that lesson in red on 19 Aug and pinned two ledgers because of it).
+    {
+      const CC = await import(pathToFileURL(join(ROOT, "scripts", "captains_call.mjs")).href);
+      const BR = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);
+      const GT = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);
+
+      // PART 1 — the gate can see the road. c74 was minted saying gaffer_claim_audit's output never
+      // reached him THIRTY MINUTES after the relay delivered it, because gate.mjs and brain.mjs
+      // between them contained the string "outbox" zero times.
+      assert("LOAD ZERO BLOCK 6 · a DELIVERED outbox row is consumption — the join is produced_by 'brain:<job>', and `acked` outranks `delivered` on the same row",
+        (() => {
+          const rows = [
+            { ev: "post", id: "o1", ts: "2026-08-18T21:00:00.000Z", produced_by: "brain:gaffer_claim_audit", kind: "material", subject: "x" },
+            { ev: "deliver", of: "o1", ts: "2026-08-18T21:10:02.597Z", via: "dugout" },
+            { ev: "post", id: "o2", ts: "2026-08-18T21:00:00.000Z", produced_by: "brain:diary", kind: "material", subject: "y" },
+          ];
+          const hit = BR.outboxConsumption(["gaffer_claim_audit"], { outbox: rows });
+          const miss = BR.outboxConsumption(["night_coach"], { outbox: rows });
+          const pend = BR.outboxConsumption(["diary"], { outbox: rows });
+          const acked = BR.outboxConsumption(["gaffer_claim_audit"], { outbox: [...rows, { ev: "ack", of: "o1", ts: "2026-08-18T22:00:00.000Z" }] });
+          return hit && hit.kind === "delivered" && hit.last_at === "2026-08-18T21:10:02.597Z"
+            && miss === null && pend === null && acked.kind === "acked";
+        })(), "a pending row must NOT count (it is still waiting for a surface); an unrelated job must not match");
+      assert("LOAD ZERO BLOCK 6 · ...and the two kinds are declared in the ONE place the law is written (gate.mjs CONSUMPTION_KINDS), so consumptionOf will actually fold them",
+        GT.CONSUMPTION_KINDS.includes("delivered") && GT.CONSUMPTION_KINDS.includes("acked"));
+      assert("LOAD ZERO BLOCK 6 · BOTH verdict paths read the road — the LANE path (nightshift/dmn/selfknowledge) is the weakest C in the organism and is where the batch cards come from",
+        /outboxConsumption\(/.test(readOrgan("brain.mjs").split("gateVerdictForLane")[1] || ""),
+        "gateVerdictForLane folds consumption by lane name ALONE; wiring only consumptionForJob cures the brain-job cards and leaves the lane cards to be re-minted the same night");
+      assert("LOAD ZERO BLOCK 6 · the road has a DRIVER — `relay` is reached from a real anchor, not only from this suite (it had never once been called in production: 22 posted, 6 delivered, all 6 by a hand-run proof)",
+        /outbox\.mjs", "brief"/.test(readOrgan("turn_hook.mjs")) && /mode === "brief"/.test(readOrgan("outbox.mjs")));
+
+      // PART 2 — the decision gate. An organ may put a thing in HIS lane only if it can say why code
+      // could not decide it; otherwise the code decides and the road carries the DECISION.
+      assert("LOAD ZERO BLOCK 6 · every declared reason is a real sentence — a table of empty strings would be the gate with the teeth filed off",
+        Object.entries(CC.WHY_CODE_CANNOT_DECIDE).every(([k, v]) => k.length > 2 && typeof v === "string" && v.trim().length >= 30));
+      assert("LOAD ZERO BLOCK 6 · ...and the list of things the organism may ask him may only SHRINK (16 declared today)",
+        Object.keys(CC.WHY_CODE_CANNOT_DECIDE).length <= 16, `${Object.keys(CC.WHY_CODE_CANNOT_DECIDE).length} declared — adding one puts something NEW on the captain, which is the opposite of this block`);
+      assert("LOAD ZERO BLOCK 6 · a card with no declared reason is NOT his — it is retired at source and handed to the road; one WITH a reason survives untouched",
+        (() => {
+          const st = { cards: [
+            { id: "c1", key: "trust:ratify:x", line: "ratify?", answer: null, retired_at: null },
+            { id: "c2", key: "gate:dmn:2026-08-18", line: "dmn SO GAYA · haan=sone do", answer: null, retired_at: null },
+            { id: "c3", key: "manual:2026-08-15T01:36:37.336Z", line: "his own note", answer: null, retired_at: null },
+            { id: "c4", key: "gate:x:2026-08-18", line: "already his answer", answer: "haan", retired_at: null },
+          ] };
+          const road = [];
+          const r = CC.decisionGate(st, new Date("2026-08-19T04:00:00Z"), (x) => road.push(x.id));
+          const c = (id) => st.cards.find((x) => x.id === id);
+          return r.kept === 2 && road.length === 1 && road[0] === "c2"
+            && !c("c1").retired_at && !c("c3").retired_at            // declared + hand-filed-by-him survive
+            && /THE DECISION GATE/.test(c("c2").resolution || "")     // routed, with its epitaph
+            && !c("c4").retired_at;                                   // a card HE answered is history, never touched
+        })());
+      assert("LOAD ZERO BLOCK 6 · the hand-filed door carries its OWN reason (--why-code-cannot-decide) and does not REFUSE — 20 filing sites across 9 organs only clip this command's stdout, so an exit 1 would make asks VANISH",
+        /--why-code-cannot-decide/.test(readOrgan("captains_call.mjs")) && /why_code_cannot_decide: why/.test(readOrgan("captains_call.mjs")));
+      // measured against CODE, not prose: the first cut of this assertion was fooled by its own
+      // subject's COMMENT ("this file never writes outbox.jsonl") — the same trap this suite already
+      // paid for on 19 Aug when a regex matched the word "agenda" in a screen it was parsing.
+      assert("LOAD ZERO BLOCK 6 · a routed card reaches him THROUGH the outbox owner's own CLI — this organ names outbox.jsonl in no line of code",
+        (() => {
+          const code = readOrgan("captains_call.mjs").split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+          return /outbox\.mjs"\)/.test(code) && !/outbox\.jsonl/.test(code);
+        })());
+
+      // PART 3 — the stale classes. TEN of the 28 open cards described a condition that was no
+      // longer true, and nothing retired them. Each rule reads the OWNER of the fact, and an absent
+      // source is NO OPINION — never a retire (a liveness check's failure mode is the false positive,
+      // and a naive one scored three-for-three false on 19 Aug).
+      assert("LOAD ZERO BLOCK 6 · a gate card dies when brain's OWN journal says the lane is awake again; a still-asleep lane keeps its card; an ABSENT journal retires nothing",
+        (() => {
+          const deck = () => ({ next_id: 9, cards: [
+            { id: "c74", key: "gate:gaffer_claim_audit:2026-08-19", source: "hand-filed", line: "x", filed_at: "2026-08-18T21:40:00.000Z", dealt: [], answer: null, retired_at: null },
+            { id: "c65", key: "gate:dmn:2026-08-18", source: "hand-filed", line: "y", filed_at: "2026-08-18T21:40:00.000Z", dealt: [], answer: null, retired_at: null },
+          ] });
+          const states = new Map([["gaffer_claim_audit", { lane: "gaffer_claim_audit", state: "awake" }], ["dmn", { lane: "dmn", state: "asleep" }]]);
+          const withJournal = CC.deriveCards(deck(), { gateStates: states }, new Date("2026-08-19T04:00:00Z"));
+          const without = CC.deriveCards(deck(), {}, new Date("2026-08-19T04:00:00Z"));
+          const f = (s, id) => s.cards.find((c) => c.id === id);
+          return /AWAKE again/.test(f(withJournal, "c74").resolution || "") && !f(withJournal, "c65").retired_at
+            && !f(without, "c74").retired_at;
+        })());
+      assert("LOAD ZERO BLOCK 6 · a daemon card dies only on a PROBE THAT CAME BACK UP after the card was filed — a dispatch is not an UP, and an UNKNOWN port retires nothing",
+        (() => {
+          const deck = () => ({ next_id: 9, cards: [
+            { id: "c63", key: "daemon:stuck:sitting:2026-08-18", source: "hand-filed", line: "x", filed_at: "2026-08-18T06:09:27.101Z", dealt: [], answer: null, retired_at: null },
+            { id: "c62", key: "daemon:stuck:brain:2026-08-18", source: "hand-filed", line: "y", filed_at: "2026-08-18T06:09:27.101Z", dealt: [], answer: null, retired_at: null },
+            { id: "c66", key: "daemon:stuck:context:2026-08-18", source: "hand-filed", line: "z", filed_at: "2026-08-18T06:09:27.101Z", dealt: [], answer: null, retired_at: null },
+          ] });
+          const ports = { at: "2026-08-18T22:41:02.242Z", ports: { sitting: true, brain: false, context: null } };
+          const r = CC.deriveCards(deck(), { daemonPorts: ports }, new Date("2026-08-19T04:00:00Z"));
+          const stale = CC.deriveCards(deck(), { daemonPorts: { at: "2026-08-18T05:00:00.000Z", ports: { sitting: true } } }, new Date("2026-08-19T04:00:00Z"));
+          const f = (s, id) => s.cards.find((c) => c.id === id);
+          return /found it UP/.test(f(r, "c63").resolution || "") && !f(r, "c62").retired_at && !f(r, "c66").retired_at
+            && !f(stale, "c63").retired_at;   // a pass OLDER than the card proves nothing
+        })());
+      assert("LOAD ZERO BLOCK 6 · a canon-drift card dies when the watchman's own latest sweep no longer carries that finding — the tree went clean and nobody had to remember",
+        (() => {
+          const deck = () => ({ next_id: 9, cards: [{ id: "c70", key: "canon:OPS_STATE.md:2026-08-18", source: "hand-filed", line: "x", filed_at: "2026-08-18T05:00:00.000Z", dealt: [], answer: null, retired_at: null }] });
+          const clean = CC.deriveCards(deck(), { watchmanLast: { findings: [{ id: "suite-red" }] } }, new Date("2026-08-19T04:00:00Z"));
+          const dirty = CC.deriveCards(deck(), { watchmanLast: { findings: [{ id: "canon-drift-OPS_STATE.md" }] } }, new Date("2026-08-19T04:00:00Z"));
+          return /clean again/.test(clean.cards[0].resolution || "") && !dirty.cards[0].retired_at;
+        })());
+
+      // THE SCOREBOARD ITSELF — by Law 4 it did not exist until it was a code path.
+      const ST = await import(pathToFileURL(join(ROOT, "scripts", "state.mjs")).href);
+      assert("LOAD ZERO BLOCK 6 · the LOAD NUMBER is code, printed on line 1, and it NAMES the part only he can drain (staged facts + overdue Re-Jirah are his by Law 4 — that is the floor, and hiding it would flatter the scoreboard)",
+        typeof ST.loadNumber === "function"
+        && / · load 19 \(10 sirf tum\)$/.test(ST.stateFrom({ cards: { known: true, live: 8, first: null }, load: { known: true, total: 19, his: 10, why: [] } }, new Date("2026-08-19T04:00:00Z")).line));
     }
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
@@ -936,11 +1050,20 @@ function sandbox() {
   const hasCapsule = existsSync(capDir) && readdirSync(capDir).some((f) => f.endsWith(".json"));
   if (!hasCapsule) {
     mkdirSync(capDir, { recursive: true });
-    writeFileSync(join(capDir, "embeddings.json"), JSON.stringify({
-      id: "embeddings", num: "02", title: "Embeddings (CI fixture)", lockedOn: "2026-06-21",
-      reJirahDone: [], status: "tempered",
-      faultLines: "abcdefghi".split("").map((a) => ({ axis: a, title: `axis ${a}`, strike: `fixture strike ${a}?`, weld: "fixture weld", status: "held" })),
-    }, null, 2));
+    // LOAD ZERO BLOCK 6 (19 Aug 2026) — SEED ALL FOUR, not just embeddings. Measured on a real
+    // capsule-less clone: `organism_test.mjs laws` gave 25 passed / 9 FAILED, every failure in the
+    // BLOCK 2 lane, because that lane verifies all four samjhao topics, opens a session on
+    // TOKENIZATION and reads capsules/tokenization.json directly — while this seeder wrote only
+    // embeddings.json. Not a CI red today (ci_manifest runs the two chains, not `npm test`), but a
+    // fresh clone running `npm test` went red, which is the same bug class 6 one level up.
+    for (const id of ["embeddings", "tokenization", "inference", "context"]) {
+      writeFileSync(join(capDir, `${id}.json`), JSON.stringify({
+        id, num: "02", title: `${id} (CI fixture)`, lockedOn: "2026-06-21",
+        reJirahDone: [], status: "tempered", mechanism: "fixture mechanism head",
+        doubts: [{ q: "fixture doubt?", at: "2026-06-21" }],
+        faultLines: "abcdefghi".split("").map((a) => ({ axis: a, title: `axis ${a}`, strike: `fixture strike ${a}?`, weld: "fixture weld", status: "held" })),
+      }, null, 2));
+    }
   }
   return d;
 }
@@ -969,13 +1092,13 @@ function alive() {
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 const MODES = { coverage, integrity, laws, hermetic, path, suites, alive };
-function main() {
+async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
-  for (const c of chosen) MODES[c]();
+  for (const c of chosen) await MODES[c]();   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
   console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed`);
   if (fail) {
     console.log("\nEach RED below is a real defect between organs — not a flaky net:");
@@ -983,4 +1106,4 @@ function main() {
   }
   process.exit(fail ? 1 : 0);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

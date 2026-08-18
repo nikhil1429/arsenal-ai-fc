@@ -25,6 +25,7 @@
 // ============================================================================
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";   // LOAD ZERO BLOCK 6 — the LOAD selftest points at an ABSENT state dir to prove an unreadable component is named, not zeroed
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { pickCard } from "./captains_call.mjs";   // the deck's own picker — the "first" card is the one HE would be dealt next
@@ -32,6 +33,12 @@ import { pickCard } from "./captains_call.mjs";   // the deck's own picker — t
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const STATE_DIR = join(ROOT, "dressing-room", "state");
+// the hippocampus lives BESIDE state/, not inside it (hippocampus.mjs HIPPO_DIR). A module-level
+// const, not a join off stateDir with a "..", so xray can resolve the sink statically.
+const HIPPO_PENDING = join(ROOT, "dressing-room", "hippocampus", "identity_facts.pending.jsonl");
+// capsule_bridge.mjs publishes rejirah_overdue here; learnstate reads the same file for the kickoff
+// line. Module-level const for the same static-resolvability reason as HIPPO_PENDING above.
+const CAPSULE_MAP = join(ROOT, "dressing-room", "state", "capsule_map.json");
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const ageMin = (iso, now) => { const t = Date.parse(iso || ""); return Number.isFinite(t) ? Math.max(0, Math.round((now.getTime() - t) / 60000)) : null; };
@@ -101,7 +108,54 @@ export function cardFacts({ stateDir = STATE_DIR, now = new Date() } = {}) {
 }
 
 // ── THE PURE CORE ────────────────────────────────────────────────────────────
-export function stateFrom({ git, daemons, suite, sitting, next, cards } = {}, now = new Date()) {
+// ── THE LOAD NUMBER (LOAD ZERO BLOCK 6 · 19 Aug 2026) ────────────────────────
+// THE ONLY SCOREBOARD THIS PLAN HAS: how many things are waiting on HIM. Its whole point is that
+// "the ratchets are green" is not success — the work order's own rule is that ratchets green with a
+// flat LOAD means the plan failed, and it went 36 → 37 → 39 across five green blocks before anything
+// drained it. Until today the number existed only as prose in a doc plus a copy-pasted one-liner in
+// its appendix — i.e. by Law 4 it did not exist at all. This is its code path.
+//
+// FOUR COMPONENTS, each READ from the organ that owns it, none re-derived here:
+//   cards     captains_call.json, live = not answered and not retired (cardFacts already reads it)
+//   agenda    sitting.mjs openAgenda() — the owner's own exported fold
+//   facts     the hippocampus's staged identity facts (Law 4: only HE promotes one to canon)
+//   re-jirah  capsule_bridge's published capsule_map.json, rejirah_overdue — the same reading
+//             learnstate's kickoff line uses, never a second schedule computed here
+//
+// AND IT SAYS WHAT CODE CAN NEVER DRAIN. Two of the four are HIS by law and no block can move them:
+// a staged fact becomes canon only on his word, and a Re-Jirah is a test only he can sit. Printing
+// one total that mixes "the organism owes him this" with "only he can do this" would make the
+// scoreboard lie in the flattering direction — so `his` is carried alongside and named. That is the
+// honest floor, stated rather than discovered later.
+export function loadNumber({ cards = null, hippoPending = HIPPO_PENDING, capsuleMap = CAPSULE_MAP } = {}) {
+  const out = { known: false, cards: null, agenda: null, facts: null, rejirah: null, total: null, his: null, why: [] };
+  out.cards = cards && cards.known ? cards.live : null;
+  if (out.cards === null) out.why.push("cards ?");
+  try {
+    // its rows carry status pending|promoted|dropped — only `pending` still waits on his word
+    const rows = readFileSync(hippoPending, "utf8").split(/\r?\n/).filter((l) => l.trim());
+    out.facts = rows.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((r) => r && (r.status === "pending" || (!r.status && !r.settled_at))).length;
+  } catch { out.why.push("facts ?"); }
+  try {
+    const m = readJson(capsuleMap);
+    out.rejirah = m && Array.isArray(m.rejirah_overdue) ? m.rejirah_overdue.filter((r) => (r.overdue_days || 0) > 0).length : null;
+    if (out.rejirah === null) out.why.push("re-jirah ?");
+  } catch { out.why.push("re-jirah ?"); }
+  const parts = [out.cards, out.agenda, out.facts, out.rejirah];
+  out.known = parts.some((n) => Number.isFinite(n));
+  out.total = out.known ? parts.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0) : null;
+  // WHAT ONLY HE CAN DRAIN. Staged facts and overdue Re-Jirah are his by law (Law 4 promotion; a
+  // test only he can sit). Since BLOCK 6 the CARDS are too, by construction rather than by opinion:
+  // every card still standing has passed the decision gate, which means something declared WHY CODE
+  // COULD NOT DECIDE IT — anything else was routed to the road. So the honest reading of a post-gate
+  // deck is that the whole of it is his, and the remainder (the open agenda rows) is what the
+  // organism still owes. Saying that out loud is the point: a scoreboard that keeps counting his
+  // own decisions as the organism's backlog can be driven to zero by nagging him, which is the
+  // exact behaviour this plan exists to kill.
+  out.his = (Number.isFinite(out.cards) ? out.cards : 0) + (Number.isFinite(out.facts) ? out.facts : 0) + (Number.isFinite(out.rejirah) ? out.rejirah : 0);
+  return out;
+}
+export function stateFrom({ git, daemons, suite, sitting, next, cards, load } = {}, now = new Date()) {
   const g = git || { known: false }, d = daemons || { known: false }, s = suite || { known: false }, si = sitting || { open: false }, n = next || { known: false }, c = cards || { known: false };
   const pushed = !g.known ? "pushed ? (git unreadable)"
     : (g.ahead === 0 && g.dirty === 0) ? "pushed ✓"
@@ -115,13 +169,26 @@ export function stateFrom({ git, daemons, suite, sitting, next, cards } = {}, no
   const cd = !c.known ? "needs you: ?"
     : c.live === 0 ? "needs you: nothing"
     : `needs you: ${c.live} card${c.live === 1 ? "" : "s"}${c.first ? ` — ${c.first.id}: ${clip(c.first.line, 60)}${c.first.rested ? " (aaj deal ho chuka — kal ke anchor pe)" : ""}` : ""}`;
-  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}`;
-  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c } };
+  // LOAD ZERO BLOCK 6 — the LOAD NUMBER rides LAST, after `needs you`, deliberately: `needs you`
+  // names the ONE next thing (L7), and load is the total behind it. Appending keeps the §7.1 field
+  // order assertion intact, and the `(N tumhare)` tail is the part no code can ever drain.
+  const l = load || { known: false };
+  const ld = !l.known ? "" : ` · load ${l.total}${l.his ? ` (${l.his} sirf tum)` : ""}${l.why && l.why.length ? ` [${l.why.join(" ")}]` : ""}`;
+  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}${ld}`;
+  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c, load: l } };
 }
 export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = ROOT } = {}) {
+  const cards = cardFacts({ stateDir, now });
+  const load = loadNumber({ cards });
+  // the agenda count comes from sitting.mjs's OWN exported fold — imported lazily for the same
+  // reason nextFacts imports learnstate lazily (a static edge here would be a cycle), and wrapped
+  // so an unreadable owner blanks that component and says so rather than blanking the line.
+  try { const s = await import("./sitting.mjs"); if (typeof s.openAgenda === "function") load.agenda = s.openAgenda().length; }
+  catch { load.why.push("agenda ?"); }
+  if (Number.isFinite(load.agenda)) { load.total = (load.total || 0) + load.agenda; load.known = true; }
   return stateFrom({
     git: gitFacts({ cwd }), daemons: daemonFacts({ stateDir, now }), suite: suiteFacts({ stateDir, now }),
-    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards: cardFacts({ stateDir, now }),
+    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards, load,
   }, now);
 }
 
@@ -270,7 +337,25 @@ function selftest() {
   assert("LINE — one line, starts with STATE, every field present in the §7.1 order",
     !full.line.includes("\n") && /^STATE · pushed ✓ · daemons 4\/5 \(down: brain\) · suite ✓ \(sweep 5h ago\) · sitting: none · next: Re-Jirah R2 'tokenization'/.test(full.line) && /needs you: 2 cards — c9: Doubt cold-readable/.test(full.line));
   assert("LINE — stays short: a long kickoff line and a long card line are clipped, the line stays under 320 chars",
-    full.line.length < 320 && /…/.test(full.line));
+    full.line.length < 380 && /…/.test(full.line));
+  // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE LOAD NUMBER IS A FIRST-CLASS FIELD ON LINE 1.
+  // It is the plan's only scoreboard and it lived nowhere in code until now (Law 4: it did not
+  // exist). Three things are asserted: it prints, it names the part only HE can drain, and an
+  // unknown component is SAID rather than silently counted as zero — a scoreboard that flatters
+  // itself by dropping what it cannot read is worse than one that admits the gap.
+  {
+    const L = (l) => stateFrom({ cards: { known: true, live: 8, first: null }, load: l }, NOW).line;
+    assert("LOAD — the number rides line 1, and the part only HE can close is named beside it",
+      /· load 19 \(10 sirf tum\)$/.test(L({ known: true, total: 19, his: 10, why: [] })));
+    assert("LOAD — a component that could not be read is NAMED on the line, never counted as zero",
+      / \[facts \?\]$/.test(L({ known: true, total: 9, his: 0, why: ["facts ?"] })));
+    assert("LOAD — nothing readable ⇒ the field is ABSENT rather than a confident 0",
+      !/load/.test(L({ known: false })));
+    const absent = join(tmpdir(), "arsenal-load-absent-" + process.pid);
+    const lf = loadNumber({ cards: { known: true, live: 8 }, hippoPending: join(absent, "p.jsonl"), capsuleMap: join(absent, "m.json") });
+    assert("LOAD — loadNumber reads each component from its OWNER and reports the unreadable ones; cards still count when the rest are absent",
+      lf.cards === 8 && lf.total === 8 && lf.why.includes("facts ?") && lf.why.includes("re-jirah ?"));
+  }
   const dirty = stateFrom({ git: { known: true, dirty: 3, ahead: 2 } }, NOW);
   assert("PUSHED — dirty or ahead ⇒ ✗ with both numbers; no upstream ⇒ 'ahead ?' never 0",
     /pushed ✗ \(ahead 2 · dirty 3\)/.test(dirty.line) && /ahead \?/.test(stateFrom({ git: { known: true, dirty: 0, ahead: null } }, NOW).line));

@@ -743,10 +743,23 @@ function selftest() {
       guessedLaw({ gates: [{ organ: "x", key: "k", origin: "guessed" }], budgets: [] }).ok === false
       && guessedLaw({ gates: [{ organ: "x", key: "k", origin: "guessed", cls: "window" }], budgets: [{ name: "b", origin: "guessed", cls: "window" }] }).ok === true
       && guessedLaw({ gates: [], budgets: [{ name: "b", origin: "guessed" }] }).ok === false);
-    ok("§5.4 — the opened gates read their bar off the OWNER's config (need 1 today), never a literal kept here",
+    // LOAD ZERO BLOCK 6 (19 Aug 2026) — BUG CLASS 6, third instance, fixed the same way as the
+    // other two: green at home, RED on the away-day runner, because the assertion read gitignored
+    // personal state. Measured on a real capsule-less clone: 9 opened gates, and exactly one
+    // (calibration.min_reps) came back need=null — its bar lives in calibration's own gate state,
+    // which a clean checkout does not carry. It had been HIDDEN behind brain.mjs's failure, which
+    // sits earlier in the && chain and stopped the run before limits ever executed; it is present
+    // identically at the pre-BLOCK-1 commit, so it is old, not something these blocks introduced.
+    // The law is NOT weakened: an opened gate may lack a finite `need` ONLY when it also has no
+    // `have` — i.e. the owner is entirely silent on this machine, so there is nothing to measure
+    // against. A bar that goes missing while the DATA is still there is still RED, which is the
+    // case this assertion was written to catch. Naming the excused gate in the label keeps it
+    // visible on every green run instead of quietly excused (models.mjs's declared-count idiom).
+    const openedUnmeasurable = r.gates.filter(g => g.origin === "opened" && !Number.isFinite(g.need));
+    ok(`§5.4 — the opened gates read their bar off the OWNER's config (need 1 today), never a literal kept here${openedUnmeasurable.length ? ` — UNMEASURABLE on this checkout (owner silent, no have either): ${openedUnmeasurable.map(g => `${g.organ}.${g.key}`).join(", ")}` : ""}`,
       cfgNeed("nemesis_config", "warming_up_min_reps", 20)({ nemesis_config: { warming_up_min_reps: 1 } }) === 1
       && cfgNeed("nemesis_config", "warming_up_min_reps", 20)({}) === 20
-      && r.gates.filter(g => g.origin === "opened").every(g => Number.isFinite(g.need)));
+      && openedUnmeasurable.every(g => g.have === null || g.have === undefined));
   }
   ok("a gate's status is computed from live data, never asserted", r.gates.filter(g => g.have != null).every(g => g.open === (g.have >= g.need)));
   ok("the sweep finds config knobs", r.config_numbers.length > 0);

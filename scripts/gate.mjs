@@ -55,7 +55,31 @@ export const GATE_DEFAULTS = Object.freeze({
   event: null,              // EVENT-DRIVEN: "lock" | "fulltime" | "sitting_close" | "missions_ingest" | "gem_sync" | … ⇒ C holds by construction
   consumers: [],            // explicit downstream jobs whose consumption counts as this job's (transitive C)
 });
-export const CONSUMPTION_KINDS = Object.freeze(["spoken", "sat", "briefed", "carded", "opened", "pushed"]);
+// THE CLOSED SET (§5.2). A caller cannot invent a new way of "reaching him" without changing the
+// law HERE, in the one place it is written — which is why the two below are an edit to this line
+// and not a string passed in from somewhere else.
+//
+// LOAD ZERO BLOCK 6 (19 Aug 2026) — `delivered` · `acked`. THE ROAD BECAME VISIBLE.
+//   BLOCK 3 built the outbox: a producer never delivers, the relay is the only thing that reaches
+//   him. But this file knew nothing about it — measured 19 Aug, `grep -c outbox gate.mjs` = 0 — so
+//   a lane whose material the relay had ALREADY PUT IN FRONT OF HIM still failed C on "never
+//   consumed by him since the lane began" and minted a card saying so. That is not a hypothetical:
+//   outbox row omsz5p4c87w (produced_by brain:gaffer_claim_audit) was delivered via dugout at
+//   2026-08-18T21:10:02.597Z, and card c74 was minted at 21:40:01.491Z saying nothing of that lane
+//   ever reached him. THIRTY MINUTES. Six of the 28 open cards were that class.
+//   `delivered` = the relay stamped the row onto a surface AS THAT SURFACE WAS BEING RENDERED to
+//   him (relay() is called by the renderer, not by a daemon — that is what makes the stamp mean
+//   "he was shown it" and not merely "it was queued"). It is the SAME standard as `briefed`, which
+//   is already 153 of the 189 live consumption rows.
+//   `acked` = he acted on it. Strictly stronger, and preferred when both exist.
+// WHY THIS IS NOT THE WEAK-SIGNAL MISTAKE THE ORGANISM ALREADY REVERSED ONCE: brain.mjs's
+//   mouthConsumption header records that counting "an mp3 ANNOUNCED inside a sent push" was weighed
+//   and REVERSED — an announcement that a thing exists is not the thing in his ear. The difference
+//   is exact: an announcement names an artifact he must then go and open; a delivered outbox row
+//   CARRIES its own subject line and is rendered in full on the surface he is looking at. Nothing
+//   is left for him to go and fetch. If a future surface ever relays without rendering, that
+//   surface — not this list — is the defect.
+export const CONSUMPTION_KINDS = Object.freeze(["spoken", "sat", "briefed", "carded", "opened", "pushed", "delivered", "acked"]);
 
 export function gateConfig(job) {
   const g = (job && job.gate && typeof job.gate === "object") ? job.gate : {};

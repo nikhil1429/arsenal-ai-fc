@@ -404,39 +404,132 @@ export const boardLine = (s = stats()) => `samjhao ${s.n} session(s) - open ${s.
 let pass = 0, failed = 0;
 const assert = (name, cond, extra = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { failed++; console.log(`  FAIL ${name}${extra ? ` — ${extra}` : ""}`); } };
 
+/**
+ * THE FIXTURE MIRROR — why the STRUCTURAL half may not read his capsules (19 Aug 2026).
+ *
+ * `dressing-room/state/capsules/` is GITIGNORED (.gitignore: "capsule mirror — his learning
+ * content, verbatim"; the gist is master). A clean checkout — which is what a CI runner IS,
+ * forever, by design — therefore has NO capsules, so a selftest that reads the live mirror
+ * crashed there (`tok.units[0]` on `{ok:false}`) while passing at home. That is bug class 6,
+ * named in sandbox.mjs:13-18 — "passes at home, fails on CI, because assertions read gitignored
+ * state" — and organism_test.mjs:928 already fixed this exact class once (the DORMANT-SAFE
+ * MIRROR, 7 Aug 2026, the away-day red): when the sandbox carries no capsule, SEED A MINIMAL
+ * FIXTURE ONE, in the sandbox only, never the live mirror (mirror.mjs stays its sole writer).
+ *
+ * The second reason, and the bigger one: the structural subject here is the LOOP — plan shape,
+ * predict-then-reveal, the ratchet, resumability, the burn — not his content. A ratchet whose
+ * verdict depends on what the captain studied that evening is not a ratchet (LOAD_ZERO, BLOCK 3
+ * PROGRESS). So SET A runs on a fixture mirror in tmpdir: the same SHAPE as his capsules, none
+ * of his words. SET B keeps every assertion that names his actual data, at full strength, and
+ * simply says in one line when the mirror is not on this machine.
+ */
+const FIXTURE_AXES = "abcdefghi".split("");
+const fixtureCapsule = (id, { num = "00", title = null, traps = 11, bridges = 4, doubts = 4 } = {}) => ({
+  id, num, title: title || `${id} (fixture)`, lockedOn: "2026-06-01", status: "tempered", reJirahDone: [],
+  stream: "fixture", source: "fixture mirror", why: "structure ki jaanch, uske content ke bina",
+  mechanism: `FIXTURE MECHANISM (${id}) — nakli capsule ka mechanism head, sirf shape jaanchne ke liye rakha gaya hai.`,
+  faultLines: FIXTURE_AXES.map((a, i) => ({
+    axis: a, title: `fixture axis ${a}`, status: "held",
+    strike: `fixture strike ${a} — yeh axis andar se kaise chalta hai?`,
+    // the LAST axis deliberately carries NO analogy, so the needs[] label has a live case too
+    weld: i === FIXTURE_AXES.length - 1
+      ? `fixture weld ${a}: 1) pehla kadam. 2) doosra kadam. 3) teesra kadam, aur yahin khatam.`
+      : `fixture weld ${a}: 1) pehla kadam. 2) doosra kadam. 3) teesra kadam, aur yahin khatam. Analogy: ek fixture almirah jisme har cheez apni tay jagah par rakhi rehti hai.`,
+  })),
+  traps: Array.from({ length: traps }, (_, i) => ({
+    bait: `fixture bait number ${i + 1} — sunne mein bilkul sahi lagta hai`,
+    wrong: `fixture galti number ${i + 1} — yahan par soch phisal jaati hai`,
+    truth: `fixture sach number ${i + 1} — asli baat yeh hai ki shape hi maayne rakhta hai`,
+  })),
+  bridges: Array.from({ length: bridges }, (_, i) => ({
+    to: `fixture_neighbour_${i + 1}`, conn: `fixture connection number ${i + 1}`,
+    q: `fixture bridge sawaal ${i + 1} — dono cheezein aapas mein kaise judti hain?`,
+    a: `fixture bridge jawab ${i + 1} — dono ek hi shape ke do chehre hain`,
+  })),
+  doubts: Array.from({ length: doubts }, (_, i) => ({
+    q: `fixture doubt number ${i + 1} — yeh baat abhi tak saaf kyun nahi hui?`,
+    a: `fixture doubt jawab number ${i + 1} — jawab capsule ke andar hi likha hai`,
+  })),
+});
+/** builds the fixture mirror in tmpdir and returns its path. NEVER writes near the live mirror. */
+function seedFixtureCapsules() {
+  const dir = mkdtempSync(join(tmpdir(), "arsenal_samjhao_fix_"));
+  const spec = {
+    tokenization: { num: "01", doubts: 26 },                       // 26 = the ratchet's own count, kept identical
+    embeddings: { num: "02", doubts: 7 },
+    inference: { num: "03", doubts: 5 },
+    context: { num: "04", traps: 3, bridges: 6, doubts: 4 },       // fewer traps than axes ⇒ the BRIDGE branch runs
+  };
+  for (const c of THE_FOUR) writeFileSync(join(dir, `${c}.json`), JSON.stringify(fixtureCapsule(c, spec[c]), null, 2));
+  const unlocked = fixtureCapsule("unlockedfixture", { num: "99" });
+  delete unlocked.lockedOn;                                        // samjhao revises LOCKED notes only
+  writeFileSync(join(dir, "unlockedfixture.json"), JSON.stringify(unlocked, null, 2));
+  return dir;
+}
+/** SET B's gate: is his real capsule mirror on THIS machine at all? (gitignored ⇒ often not) */
+export const hasLiveCapsules = (dir = CAPSULE_DIR) => { try { return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith(".json")); } catch { return false; } };
+
 function selftest() {
   console.log("samjhao.mjs selftest — LOAD ZERO BLOCK 2 (SAMJHAO = revision of HIS locked notes)\n");
   const now = new Date("2026-08-19T03:00:00Z");
+  const junk = [];                                   // every tmp dir this run creates, cleaned in the finally
+  try {
+    const FIX = seedFixtureCapsules(); junk.push(FIX);
+    structuralSet(FIX, now, junk);                   // SET A — runs on EVERY machine, bare checkout included
+    if (hasLiveCapsules()) {                         // SET B — his actual content, only where the mirror is
+      const before = pass + failed;
+      liveSet();
+      assert(`the skip line tells the truth — SET B is exactly ${LIVE_ASSERTIONS} live-capsule assertion(s), so the number a bare checkout prints can never drift from the code`,
+        pass + failed - before === LIVE_ASSERTIONS, `SET B ran ${pass + failed - before}`);
+    } else console.log(`  --   ${LIVE_ASSERTIONS} live-capsule assertion(s) SKIPPED — dressing-room/state/capsules/ is gitignored (a clean checkout / CI runner has none); the structural set above ran on a fixture`);
+  } finally {
+    for (const d of junk) { try { rmSync(d, { recursive: true, force: true }); } catch { /* tmp */ } }
+  }
+  console.log(`\nsamjhao: ${pass} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+}
 
-  // 1. the plan, off the REAL capsules — all four topics must be runnable (§5 DoD)
-  const runnable = THE_FOUR.map((c) => ({ c, p: plan(c) }));
-  assert("all four topics have a runnable samjhao (tokenization - embeddings - inference - context)",
+/** SET A · STRUCTURAL — the LOOP, on a fixture mirror. Deterministic on any machine, any day. */
+function structuralSet(FIX, now, junk) {
+  // 1. the plan, off the FIXTURE mirror — the shape of a samjhao, independent of his content
+  const runnable = THE_FOUR.map((c) => ({ c, p: plan(c, FIX) }));
+  assert("STRUCTURE · all four topics plan a 9-unit samjhao with a doubt ledger — proven on a FIXTURE mirror, so a bare checkout says the same thing as his laptop",
     runnable.every((r) => r.p.ok && r.p.units.length === 9 && r.p.doubts.length > 0),
     runnable.map((r) => `${r.c}:${r.p.ok ? r.p.units.length + "u/" + r.p.doubts.length + "d" : r.p.why}`).join(" | "));
   assert("a concept with no locked capsule is REFUSED — samjhao revises HIS notes, it never teaches from zero (that is FORGE)",
-    !plan("quantum_chromodynamics").ok && /FORGE it first/.test(plan("quantum_chromodynamics").why || ""));
+    !plan("quantum_chromodynamics", FIX).ok && /FORGE it first/.test(plan("quantum_chromodynamics", FIX).why || ""));
+  assert("...and an UNLOCKED capsule is refused too — samjhao revises LOCKED notes only",
+    !plan("unlockedfixture", FIX).ok && /not locked/.test(plan("unlockedfixture", FIX).why || ""), JSON.stringify(plan("unlockedfixture", FIX)).slice(0, 160));
 
-  const tok = plan("tokenization");
+  const tok = plan("tokenization", FIX);
   const u1 = tok.units[0];
   assert("a unit is a DATA OBJECT with the 7 parts of HOW_HE_LEARNS in order, and every part names its source (§4-D)",
     u1.n === 1 && u1.axis === "a" && u1.predict.ask && u1.reveal.weld && u1.check && u1.you_are_here === "unit 1 of 9 - 8 baaki" && /faultLines\[0\]/.test(u1.source.from));
-  assert("§4 DECISION — samjhao OPENS mechanism_head (a REJIRAH route withholds it; keeping that here would gut the revision)",
-    !!u1.reveal.mechanism_head && !/withheld/i.test(u1.reveal.mechanism_head) && u1.reveal.mechanism_head.startsWith("AI sirf numbers"));
+  assert("§4 DECISION · STRUCTURE — samjhao OPENS mechanism_head and serves the capsule's OWN head verbatim (a REJIRAH route withholds it; keeping that here would gut the revision)",
+    !!u1.reveal.mechanism_head && !/withheld/i.test(u1.reveal.mechanism_head) && u1.reveal.mechanism_head === clip(tok.capsule.mechanism, 600));
   assert("the predict question is HIS OWN strike and the reveal is HIS OWN weld — nothing is composed by this organ",
     u1.predict.ask === tok.capsule.faultLines[0].strike && u1.reveal.weld === tok.capsule.faultLines[0].weld);
   assert("what the capsule cannot supply is LABELLED in needs[], never invented (§4-F)", u1.needs.includes("js_bridge") && u1.js_bridge === null);
-  assert("the analogy is EXTRACTED from his own weld when he wrote one", typeof u1.reveal.analogy === "string" && /dictionary/.test(u1.reveal.analogy));
-  assert("the doubt ledger is every doubt he ever raised on the topic, numbered (§4-A)", tok.doubts.length === 26 && tok.doubts[0].q && /strawberry/.test(tok.doubts[0].q));
+  assert("the analogy is EXTRACTED from the weld when one was written — this organ never composes one",
+    typeof u1.reveal.analogy === "string" && /fixture almirah/.test(u1.reveal.analogy) && !u1.needs.includes("analogy"));
+  assert("...and a weld with NO analogy is LABELLED in needs[] instead of getting one invented (§4-F)",
+    tok.units[8].reveal.analogy === null && tok.units[8].needs.includes("analogy"));
+  assert("the doubt ledger is every doubt raised on the topic, numbered from 1, each naming its source (§4-A)",
+    tok.doubts.length === 26 && tok.doubts.every((d, i) => d.n === i + 1 && !!d.q) && /doubts\[0\]/.test(tok.doubts[0].source));
+  const ctx = plan("context", FIX);
+  assert("when a capsule holds fewer traps than axes, the later units fall through to its BRIDGES — and the check-question is still the capsule's own, never composed",
+    ctx.ok && ctx.units[0].trap && ctx.units[3].trap === null && !!ctx.units[3].bridge && ctx.units[3].check === ctx.capsule.bridges[0].q && /bridges\[0\]/.test(ctx.units[3].source.from),
+    JSON.stringify({ t0: !!ctx.units[0].trap, t3: ctx.units[3].trap, from: ctx.units[3].source.from }));
 
-  // 2. F · NO NEW FACTS, held by the organism's own validators, on all four
-  const verdicts = THE_FOUR.map((c) => ({ c, v: verifyPlan(plan(c)) }));
-  assert("§4-F NO NEW FACTS — every unit of all four topics asserts only what the capsule holds (noNewNumbers + quotesOnly)",
+  // 2. F · NO NEW FACTS, held by the organism's own validators, on all four plans
+  const verdicts = THE_FOUR.map((c) => ({ c, v: verifyPlan(plan(c, FIX)) }));
+  assert("§4-F NO NEW FACTS — every unit of all four plans asserts only what its capsule holds (noNewNumbers + quotesOnly)",
     verdicts.every((r) => r.v.ok), verdicts.filter((r) => !r.v.ok).map((r) => `${r.c}: ${JSON.stringify(r.v.bad.slice(0, 2))}`).join(" | "));
 
   // 3. the session: gates, the ledger, resumability — against an injected sink and fake owners
   const rows = [];
   const calls = [];
-  const deps = { rows, append: (r) => { rows.push(r); return true; }, now,
+  const deps = { rows, append: (r) => { rows.push(r); return true; }, now, capsuleDir: FIX,
     exec: (organ, argv) => { calls.push({ organ, argv }); return organ === "tasks.mjs" && argv[0] === "create" ? { ok: true, out: '{"ok":true,"id":"tSAMJ01","replay":false,"state":"queued"}' } : { ok: true, out: `${organ} ok` }; } };
   const o = open("tokenization", deps);
   assert("open() takes its id FROM THE TASK LAYER (kind samjhao) so it can be resumed on any surface (§4-E)",
@@ -458,7 +551,7 @@ function selftest() {
   // THE COLDNESS GUARANTEE — the hole this closes was measured the night this organ shipped:
   // deep.mjs served faultLines[].strike verbatim, i.e. the exact question samjhao opens the weld
   // for. Without this, the Re-Jirah AFTER a samjhao would be WARM while calling itself COLD.
-  const burnedNow = burnedAxes("tokenization", rows, CAPSULE_DIR);
+  const burnedNow = burnedAxes("tokenization", rows, FIX);
   assert("a guessed unit BURNS its axis — the fact is stated with a date, so a cold server can refuse to reuse that strike (§4: the Re-Jirah after is FRESH and COLD)",
     burnedNow.length === 1 && burnedNow[0].axis === "a" && !!burnedNow[0].at, JSON.stringify(burnedNow));
   assert("...and an axis he has NOT reached is not burned — only what was actually opened", !burnedNow.some((b) => b.axis === "b"));
@@ -468,7 +561,7 @@ function selftest() {
   assert("ABANDON is an append-only EVENT — nothing is deleted, the session simply stops counting",
     ab.ok && rows.filter((r) => r.ev === "abandon").length === 1 && rows.some((r) => r.ev === "guess"));
   assert("...and an ABANDONED session BURNS NOTHING — the axis is COLD again, so his first samjhao is really his FIRST",
-    burnedAxes("tokenization", rows, CAPSULE_DIR).length === 0);
+    burnedAxes("tokenization", rows, FIX).length === 0);
   assert("...abandoning twice is refused", !abandon("tSAMJ01", "again", deps).ok);
   rows.splice(rows.findIndex((r) => r.ev === "abandon"), 1);   // the rest of this selftest drives the same live session
 
@@ -505,13 +598,13 @@ function selftest() {
   assert("a closed samjhao does not close twice", !close("tSAMJ01", deps).ok);
 
   // 5. resumability across a REAL file, and hermeticity
-  const dir = mkdtempSync(join(tmpdir(), "arsenal_samjhao_"));
+  const dir = mkdtempSync(join(tmpdir(), "arsenal_samjhao_")); junk.push(dir);
   const ledger = join(dir, "samjhao.jsonl");
-  const rdeps = { ledger, now, exec: (organ, argv) => ({ ok: true, out: organ === "tasks.mjs" && argv[0] === "create" ? '{"ok":true,"id":"tSAMJ02","replay":false,"state":"queued"}' : "ok" }) };
+  const rdeps = { ledger, now, capsuleDir: FIX, exec: (organ, argv) => ({ ok: true, out: organ === "tasks.mjs" && argv[0] === "create" ? '{"ok":true,"id":"tSAMJ02","replay":false,"state":"queued"}' : "ok" }) };
   open("embeddings", rdeps);
   guess("tSAMJ02", 1, "vector", "shaky", rdeps);
   answer("tSAMJ02", 1, "meaning-vector", "shaky", true, rdeps);
-  const resumed = next("tSAMJ02", { ledger, capsuleDir: CAPSULE_DIR });   // a DIFFERENT reader, no shared memory
+  const resumed = next("tSAMJ02", { ledger, capsuleDir: FIX });   // a DIFFERENT reader, no shared memory
   assert("E · RESUMABLE — stop after unit 1, and a different surface reading only the ledger picks up at unit 2",
     resumed.ok && resumed.phase === "predict" && resumed.unit.n === 2, JSON.stringify({ phase: resumed.phase, n: resumed.unit && resumed.unit.n }));
   assert("HERMETICITY — the selftest wrote only into tmpdir, never onto the state bus",
@@ -520,10 +613,35 @@ function selftest() {
   // unit is one rep. The guess is what makes the answer worth counting, not a second rep.
   assert("the board line reads in one line, and a guess is NOT counted as a rep — only his answers are",
     /samjhao 1 session\(s\) - open 1 - closed 0 - reps 1/.test(boardLine(stats(readRows(ledger)))), boardLine(stats(readRows(ledger))));
-  try { rmSync(dir, { recursive: true, force: true }); } catch { /* tmp */ }
+}
 
-  console.log(`\nsamjhao: ${pass} passed, ${failed} failed`);
-  process.exit(failed ? 1 : 0);
+/**
+ * SET B · HIS CONTENT — the assertions that name his ACTUAL capsules, at full strength.
+ * They can only run where the mirror is, and the mirror is gitignored (his content, gist =
+ * master), so on a clean checkout / CI runner they do not run — and the selftest says so in one
+ * line rather than pretending. What did not happen gets a line saying what did not happen; it
+ * counts as neither a pass nor a failure. If the mirror IS here but a capsule is missing or
+ * broken, these go RED, exactly as before — the guard is "is the mirror on this machine", never
+ * "is this convenient".
+ */
+const LIVE_ASSERTIONS = 5;   // self-checked below: the skip line's number may not drift from the code
+function liveSet() {
+  const runnable = THE_FOUR.map((c) => ({ c, p: plan(c, CAPSULE_DIR) }));
+  assert("all four topics have a runnable samjhao (tokenization - embeddings - inference - context)",
+    runnable.every((r) => r.p.ok && r.p.units.length === 9 && r.p.doubts.length > 0),
+    runnable.map((r) => `${r.c}:${r.p.ok ? r.p.units.length + "u/" + r.p.doubts.length + "d" : r.p.why}`).join(" | "));
+  const verdicts = THE_FOUR.map((c) => ({ c, v: verifyPlan(plan(c, CAPSULE_DIR)) }));
+  assert("§4-F NO NEW FACTS — every unit of all four topics asserts only what the capsule holds (noNewNumbers + quotesOnly)",
+    verdicts.every((r) => r.v.ok), verdicts.filter((r) => !r.v.ok).map((r) => `${r.c}: ${JSON.stringify(r.v.bad.slice(0, 2))}`).join(" | "));
+
+  const tok = plan("tokenization", CAPSULE_DIR);
+  const u1 = tok.ok ? tok.units[0] : null;            // a broken mirror FAILS here; it never crashes
+  assert("§4 DECISION — samjhao OPENS mechanism_head (a REJIRAH route withholds it; keeping that here would gut the revision)",
+    !!u1 && !!u1.reveal.mechanism_head && !/withheld/i.test(u1.reveal.mechanism_head) && u1.reveal.mechanism_head.startsWith("AI sirf numbers"), tok.ok ? "" : tok.why);
+  assert("the analogy is EXTRACTED from his own weld when he wrote one",
+    !!u1 && typeof u1.reveal.analogy === "string" && /dictionary/.test(u1.reveal.analogy), tok.ok ? "" : tok.why);
+  assert("the doubt ledger is every doubt he ever raised on the topic, numbered (§4-A)",
+    !!tok.ok && tok.doubts.length === 26 && !!tok.doubts[0].q && /strawberry/.test(tok.doubts[0].q), tok.ok ? `${tok.doubts.length} doubt(s)` : tok.why);
 }
 
 // -- CLI ----------------------------------------------------------------------

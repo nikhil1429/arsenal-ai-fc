@@ -81,6 +81,7 @@ import { classifyLimit } from "./claudegen.mjs";
 // shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
 // gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
 import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
+import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // LOAD ZERO BLOCK 6 (19 Aug 2026): THE ROAD, READ — a delivered row is consumption (outboxConsumption below). READ ONLY: outbox.mjs stays the sole writer of outbox.jsonl, and it imports nothing of ours, so there is no cycle.
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
@@ -1495,6 +1496,49 @@ export function mouthConsumption(job, cfg, ctx) {
   const sent = rows.filter((r) => r && r.sent === true && r.kind === "sheet" && Number.isFinite(Date.parse(r.ts))).sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
   return sent[0] ? { last_at: sent[0].ts, kind: "pushed", by: "ntfy sheet push (mouth_log)" } : null;
 }
+// THE ROAD IS A CONSUMPTION SOURCE NOBODY HAS TO LOG (LOAD ZERO BLOCK 6, 19 Aug 2026).
+// BLOCK 3 built the one road to him: a producer never delivers, it posts a row, and the relay is
+// the only thing that reaches him. Nothing told THE GATE. Measured 19 Aug 2026:
+// `grep -ci outbox scripts/gate.mjs scripts/brain.mjs` returned ZERO — so a lane whose material the
+// relay had already put in front of him still failed C on "never consumed by him since the lane
+// began", journaled itself asleep, and minted a card saying its output never reached him. Six of
+// the 28 open cards that morning were that class, and TWO of them (c73, c74) were filed AFTER the
+// road shipped. c74's own line is gate.mjs's "never consumed" string, for gaffer_claim_audit, whose
+// row the relay had delivered via dugout THIRTY MINUTES EARLIER (outbox omsz5p4c87w, 21:10:02.597Z
+// vs the card at 21:40:01.491Z). The road existed and the gate could not see it — which is why five
+// green blocks moved the LOAD number the WRONG WAY.
+//
+// DERIVED, NEVER LOGGED — the same shape as cardConsumption and mouthConsumption directly above:
+// read at decision time, nothing written, no new writer anywhere. outbox.mjs stays the sole writer
+// of outbox.jsonl; consumption.jsonl is untouched (this organ remains its sole writer and records
+// no row for a delivery). Being derived is also what makes it RETROACTIVE: the rows the relay
+// delivered on 18 Aug count the instant this lands, which is what lets the backfill retire the
+// false cards instead of waiting for the next delivery.
+//
+// THE JOIN IS MEASURED, NOT ASSUMED: all 22 live `post` rows carry produced_by = "brain:<job id>",
+// and stripping the organ prefix yields a live brain_config job id in 22 of 22. A row posted by a
+// non-brain organ (`nightshift:ns_distractors`) joins by the same rule, so this works for the lane
+// path below without a second convention.
+// A `deliver` row carries only {ev, of, ts, via} — the produced_by lives on the `post` row — so the
+// fold (outbox.mjs's own) is what makes the pair readable; never match on the deliver row alone.
+export function outboxConsumption(keys, ctx) {
+  const rows = ctx && ctx.outbox !== undefined ? ctx.outbox : outboxRows();
+  if (!rows || !rows.length) return null;
+  const want = new Set((keys || []).filter(Boolean));
+  let best = null;
+  for (const o of outboxFold(rows).values()) {
+    if (!o || (!o.delivered_at && !o.acked_at)) continue;               // pending is NOT consumption — it is a row still waiting for a surface
+    const pb = String(o.produced_by || "");
+    if (!want.has(pb) && !want.has(pb.replace(/^[A-Za-z0-9_.-]+:/, ""))) continue;
+    // acked is strictly stronger than delivered and wins when both exist on the same row
+    const at = o.acked_at || o.delivered_at;
+    const t = Date.parse(at || "");
+    if (!Number.isFinite(t) || (best && t <= best.t)) continue;
+    best = { t, last_at: at, kind: o.acked_at ? "acked" : "delivered",
+      by: `outbox ${o.id}${o.acked_at ? " acked" : ` → ${o.delivered_via || "?"}`}` };
+  }
+  return best ? { last_at: best.last_at, kind: best.kind, by: best.by } : null;
+}
 export function consumptionForJob(cfg, job, ctx, visited = new Set()) {
   const none = { last_at: null, kind: null, by: null };
   if (!job || visited.has(job.id)) return none;
@@ -1505,6 +1549,8 @@ export function consumptionForJob(cfg, job, ctx, visited = new Set()) {
   if (cc) cands.push(cc);
   const mc = mouthConsumption(job, cfg, ctx);
   if (mc) cands.push(mc);
+  const oc = outboxConsumption([job.id, lane], ctx);   // LOAD ZERO BLOCK 6 — the road
+  if (oc) cands.push(oc);
   // explicit consumers that are NOT brain jobs (a nightshift lane, a skill) are read
   // as consumption keys directly — the cross-organ half of the transitive rule.
   for (const id of gateConfig(job).consumers) {
@@ -1648,12 +1694,22 @@ export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
 // have no brain_config row.
 // `aliases` = the ledger job names this lane's rows carry (the DMN's rows are
 // dmn_rollout/dmn_counter; the shift's are ns_*) — everRan/failStreak read them as ONE.
-export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed, ledger = null, consumption = null, queueState = null, now = new Date(), surface = null, aliases = [] } = {}) {
+export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed, ledger = null, consumption = null, queueState = null, now = new Date(), surface = null, aliases = [], outbox = undefined } = {}) {
   const led = ledger || readLines(LEDGER);
   const cons = consumption || consumptionRows();
   const qs = queueState || readJson(QUEUE) || {};
   const ids = [lane, ...aliases];
-  const c = consumptionOf(cons, [lane]);
+  // LOAD ZERO BLOCK 6 — THE ROAD, ON THIS PATH TOO. His law is fix the CLASS, never the instance:
+  // wiring the outbox only into consumptionForJob would have cured c74 (gaffer_claim_audit, a brain
+  // job) and left c73 (a nightshift batch card) to be re-minted from THIS function the same night.
+  // The lane path folds by lane name alone — no card source, no mouth source, no transitive source —
+  // so it is the WEAKEST C in the organism and the one most likely to call a live lane dark.
+  // HONEST LIMIT, named rather than hidden: outbox.ingest() only posts rows for jobs present in
+  // brain_config.json, so the ns_*/dmn_* lanes have no producer on the road YET. This source is
+  // therefore correct-and-empty for them today and starts paying the moment they get an outbox door.
+  const c0 = consumptionOf(cons, [lane]);
+  const oc = outboxConsumption(ids, { outbox: outbox !== undefined ? outbox : (consumption ? [] : undefined) });
+  const c = (oc && (!c0.last_at || Date.parse(oc.last_at) > Date.parse(c0.last_at))) ? oc : c0;
   const never_ran = !gateEverRan(led, ids);
   const forced = gateForce(qs, lane);
   const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced });
@@ -1670,6 +1726,7 @@ function gateContext(deps, now, ledger, queueState) {
     cards: g.cards !== undefined ? g.cards : ((call && call.cards) || []),
     states: g.states !== undefined ? g.states : (hermetic ? new Map() : lastGateStates()),
     mouth: g.mouth !== undefined ? g.mouth : (hermetic ? [] : readLines(MOUTH_LOG)),
+    outbox: g.outbox !== undefined ? g.outbox : (hermetic ? [] : outboxRows()),   // LOAD ZERO BLOCK 6 — read ONCE per tick, like mouth; a fixture ledger ⇒ a fixture world (no live road)
     mediaExists: g.mediaExists !== undefined ? g.mediaExists : (hermetic ? () => false : undefined),
     evidenceFor: g.evidenceFor, crackedInv: deps.crackedInv,
   };
@@ -3416,7 +3473,14 @@ async function runJob(job, cfg, deps) {
   // analysis-class job — render-class jobs use viz's auto-written prompt file
   // (it carries the render laws + the design-coach critique), never the
   // analysis head (which would ask for markdown, not an artifact).
-  const gi = gatherInputsAudited(job, now, today);
+  // LOAD ZERO BLOCK 6 (19 Aug 2026) — a TEST SEAM, same shape as ctx.evidenceFor in the gate above.
+  // WHY: the PREPARE-TOMORROW refusal assertion drove runJob with a fixture `prepareFood` but no
+  // fixture INPUTS, so on a clean checkout (where the gitignored sprint.json does not exist) runJob
+  // refused one step earlier — "required input absent: sprint.json" — and the assertion checking for
+  // the PYTHON-route refusal went red. Measured identical at the pre-BLOCK-1 commit, so this is an
+  // OLD hole, not one BLOCKS 1-5 opened: bug class 6, green at home and red on the away-day runner,
+  // because a test read his personal state instead of controlling its own preconditions.
+  const gi = deps.inputsFor ? deps.inputsFor(job, now, today) : gatherInputsAudited(job, now, today);
   const inputs = gi.inputs;
   // REQUIRED INPUTS (finding #64). Only a config-declared `required: true` can stop a
   // job, and it stops it BEFORE the spend, saying exactly which file is missing —
@@ -5775,7 +5839,11 @@ async function selftest() {
         parsePrepareTomorrowJson("```json\n{\"map\":\"no ask here\",\"units\":[{\"text\":\"x\"}]}\n```", cfg, food, S) === null && /fewer than 2 units/.test(prepareLastRefusal || "")
         && parsePrepareTomorrowJson("no json at all", cfg, food, S) === null && /no fenced json/.test(prepareLastRefusal || ""));
       // refuse BEFORE the spend on a route no voice plan serves — driven through runJob with a fixture food and an exec that must not be called
-      const noSpend = await runJob(pj, cfg, { exec: () => { throw new Error("must not be called"); }, gexec: () => { throw new Error("no"); }, now: new Date("2026-08-18T03:20:00+05:30"), dry: true, prepareFood: { route: "PYTHON", route_why: "sprint ki current task Python track pe hai" } });
+      // inputsFor: the test states its OWN preconditions (all required inputs present) instead of
+      // inheriting whatever gitignored state this machine happens to carry — otherwise a clean
+      // checkout refuses on "required input absent: sprint.json" one step earlier and this
+      // assertion tests the wrong refusal. See the seam's comment at runJob.
+      const noSpend = await runJob(pj, cfg, { exec: () => { throw new Error("must not be called"); }, gexec: () => { throw new Error("no"); }, now: new Date("2026-08-18T03:20:00+05:30"), dry: true, prepareFood: { route: "PYTHON", route_why: "sprint ki current task Python track pe hai" }, inputsFor: () => ({ inputs: {}, absent: [], required_absent: [], declared: 5, present: 5 }) });
       assert("PREPARE TOMORROW — a PYTHON (or SCRIMMAGE) tomorrow is a refusal BEFORE the spend, named — no opus call for a plan no voice sitting will read",
         noSpend && noSpend.usage && noSpend.usage.ok === false && /needs no composed plan/.test(noSpend.usage.error) && /PYTHON/.test(noSpend.note));
     }

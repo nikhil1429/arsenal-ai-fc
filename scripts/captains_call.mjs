@@ -74,6 +74,7 @@ const CALL = join(STATE_DIR, "captains_call.json");
 const CONTRACT = join(STATE_DIR, "teaching_contract.json");
 const FORGE = join(STATE_DIR, "forge_session.json");
 const MARKET_DIR = join(STATE_DIR, "brain_out", "market");
+const GATE_JOURNAL = join(STATE_DIR, "brain_out", "gate.jsonl");   // LOAD ZERO BLOCK 6 — brain.mjs is its SOLE WRITER; this is a read of what that owner published (a module-level const so xray can resolve the sink)
 const CONTRACT_MJS = join(__dirname, "teaching_contract.mjs");
 
 // Mirrored from forge_session.mjs:115 (STALE_HOURS), with the same comment
@@ -277,8 +278,96 @@ export const STALE_DAEMON_KEY = /^daemon:stale:([a-z_]+):\d{4}-\d{2}-\d{2}$/;
 // their deal history and their answers; sources only ADD new cards or RETIRE ones
 // resolved at the source (he confirmed a drift directly — the card must not
 // outlive the thing it asked about).
+// ════════════════════════════════════════════════════════════════════════════
+// THE DECISION GATE — LOAD ZERO BLOCK 6 (19 Aug 2026)
+// ----------------------------------------------------------------------------
+// THE LAW, one sentence: an organ may put a thing in HIS lane only if it can say
+// WHY CODE COULD NOT DECIDE IT. Otherwise the code decides, and the outbox carries the
+// DECISION — never the question.
+//
+// WHY THIS EXISTS. Measured 19 Aug 2026, 03:49 IST: 28 open cards. Triaged one by one against the
+// state each one names — not against its own text — they came out: 10 STALE-FALSE (the condition
+// they describe is no longer true and nothing retires them), 5 DECIDABLE (the card's own `haan`
+// branch IS the code default, e.g. "lane so gaya · haan = sone do", when gate.mjs's header already
+// says "asleep is health, not disease — it wakes itself"), 5 INFORM (a report wearing a card's
+// clothes: it asks nothing, it needs DELIVERY), and 8 HIS-WORD. So 20 of 28 things queued on his
+// memory were never his to decide. That is the LOAD number, and it is why it rose for five straight
+// blocks while every ratchet went green.
+//
+// WHY A DECLARED TABLE AND NOT A FLAG PER CALL SITE. Cards are minted at 20 sites in this file
+// alone. A per-site flag is 20 chances to write "because I said so", and no one place to READ what
+// the organism believes it may ask him. This table IS that one place: it is the complete list of
+// things this organism is permitted to put on the captain, each with the reason, and it is what the
+// suite ratchets. Same shape as the repo's other declared exceptions (xray's MULTI_WRITER_ALLOWLIST,
+// models' LABELS, BLOCK 5's DECLARED_WORD_ROUTING) — a list whose count may only SHRINK.
+//
+// KEYED BY KEY-PREFIX, NOT BY SOURCE, because one source mints both kinds: `missions.desk` mints
+// the FIRE card (his Gemini account, his Chrome — code cannot authenticate as him) and the DIFF
+// card (a 3-line readout that asks nothing). A source-level table would have to lie about one of
+// them.
+//
+// A card that matches nothing here is NOT refused into silence — silence is the disease. It is
+// posted to the road (outbox `finding`) and retired at source with its epitaph, so it still reaches
+// him, once, on the surface he touches next, as news instead of homework.
+export const WHY_CODE_CANNOT_DECIDE = Object.freeze({
+  "gem:sync:":        "the sync writes tonight's cartridge into HIS Gemini account through a Chrome rail only his signed-in browser can open — code cannot authenticate as him",
+  "claude:logout:":   "a login is his hands on his own credentials; code must never enter one",
+  "oura:auth:":       "re-authorising Oura is his account and his consent — code must never enter a credential",
+  "gemini:login:":    "a login is his hands on his own credentials; code must never enter one",
+  "mission:audit-fire": "the fire opens a Deep Research run inside HIS Gemini account through the Chrome rail — code cannot authenticate as him",
+  "mission:audit-close": "closing an audit CHANGES CANON, and canon moves only on his word",
+  "trust:ratify:":    "granting NO-LOOK is a delegation of his own trust — a hit-rate is evidence for the ask, never the answer to it",
+  "fact:":            "a staged identity fact becomes canon only on his confirmation — Law 4 puts the promotion in his hands alone",
+  "fact:forget:":     "forgetting a fact the organism holds about him is his call, never the organism's",
+  "gate2:":           "the doubt text is his own writing inside a locked capsule, and doubts[] is one of the only two paste-writes he owns — code may flag it unreadable but may never reword it",
+  "rejirah:":         "the gist is the capsule's master and HIS Save click is the only write to it — code can prepare the patch, never land it",
+  "canon:":           "canon moves only on his word (PROJECT_OS.md is his method, not the organism's)",
+  "m2:review:":       "a line-by-line review of prose canon is his judgement on wording — code can diff the section but cannot decide what it should say",
+  "drift:":           "his own drift report is his lane alone — the `hits` counter is his and no organ may answer it for him",
+  "secrets:":         "moving a live credential is an action only his hands may take — code must never read, copy or re-enter one",
+  // A card filed with NO --key was typed by a HAND, not minted by a loop: a loop MUST key its card
+  // or fileGuard cannot stop it re-minting on every pass, so an unkeyed card is one he (or someone
+  // acting as him) filed deliberately. Retiring his own note as "news" would be this gate deleting
+  // the very thing it exists to protect. Measured: c56 (his own 18 Aug Instagram reading task) is
+  // the live case, and it is the one card in the deck whose key is `manual:<iso>`.
+  "manual:":          "he filed this himself with no key — it is his own note, and only he can say it is done or move the day",
+});
+// The `file --line` door carries its own reason per call (--why-code-cannot-decide), because a
+// hand-filed ask has no fixed source to key on. `manual:` keys with no stated reason are gated
+// exactly like everything else.
+export function whyForCard(card) {
+  if (!card) return null;
+  if (card.why_code_cannot_decide) return String(card.why_code_cannot_decide);
+  const key = String(card.key || "");
+  let hit = null;
+  for (const p of Object.keys(WHY_CODE_CANNOT_DECIDE)) {
+    if (key.startsWith(p) && (!hit || p.length > hit.length)) hit = p;   // longest prefix wins: fact:forget: beats fact:
+  }
+  return hit ? WHY_CODE_CANNOT_DECIDE[hit] : null;
+}
+// decisionGate(state, now, post) → {kept, routed:[{id, line, key}]}
+// Runs on every sync, over the LIVE deck. A card he has already answered, or one already retired,
+// is history and is never touched (the same rule retireAtSource has always held). `post` is the
+// road — injected so this is testable without a live outbox, and so the owners law holds: this
+// organ never writes outbox.jsonl, it asks outbox.mjs to.
+export function decisionGate(state, now = new Date(), post = null) {
+  const ts = now.toISOString();
+  const routed = [];
+  let kept = 0;
+  for (const c of (state.cards || [])) {
+    if (!c || c.answer || c.retired_at) continue;
+    if (whyForCard(c)) { kept++; continue; }
+    routed.push({ id: c.id, key: c.key, line: c.line, source: c.source });
+    c.retired_at = ts;
+    c.resolution = "resolved-at-source (THE DECISION GATE: nothing here needs HIS word — it went on the road as news, not homework)";
+  }
+  if (post) for (const r of routed) post(r);
+  return { kept, routed };
+}
+
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", marketNoopFiles = [], gate2 = null, missions = null, bench = null, tiers = null,
-  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null } = {}, now = new Date()) {
+  rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null,
+  gateStates = null, daemonPorts = null, watchmanLast = null } = {}, now = new Date()) {
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -584,6 +673,58 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
       if (pred(c) && !c.retired_at && !c.answer) { c.retired_at = ts; c.resolution = `resolved-at-source (${why})`; }
     }
   };
+
+  // ══ LOAD ZERO BLOCK 6 (19 Aug 2026) — THE STALE-CARD CLASSES ════════════════════════════════
+  // Measured 19 Aug 03:49 IST: TEN of the 28 open cards described a condition that WAS NO LONGER
+  // TRUE, and nothing anywhere retired them. Not one of the ten was wrong when it was minted; every
+  // one of them was wrong by the time he read it. That is the disease his 11 Aug ruling names —
+  // "jo bhi cheez USE yaad rakhni pade, woh ek DESIGN FAILURE hai" — because the only thing left
+  // that could close them was his memory.
+  // Each rule below asks the OWNER of the fact, never the card's own text (his 15 Aug law: no organ
+  // may pattern-match the words of the last incident), and each retires ONLY on a POSITIVE reading
+  // — an absent or unreadable source is "no opinion", never "retire". That asymmetry is deliberate:
+  // the failure mode of a liveness check is a false positive (the work order paid for that lesson
+  // three times in one night), so a source that cannot speak leaves the card exactly where it is.
+
+  // 1 · GATE CARDS — "<lane> SO GAYA". brain.mjs's own transition journal is the truth; a lane whose
+  //     newest row reads `awake` is not asleep, so the card is answering a question that closed.
+  //     This is the class BLOCK 6 part 1 just made retirable: three of these lanes woke the moment
+  //     the gate could see the outbox road (16 awake/14 asleep → 19/11, measured).
+  if (gateStates && gateStates.size) {
+    retireAtSource((c) => {
+      const m = /^gate:(?!batch:)([^:]+):/.exec(String(c.key || ""));
+      const row = m && gateStates.get(m[1]);
+      return !!row && row.state === "awake";
+    }, "the lane is AWAKE again on brain's own gate journal — it wakes itself, exactly as L5 says");
+    // a BATCH card ("N lanes so gaye") dies when NO lane is asleep any more; while some still are,
+    // the count in its line is stale but its subject is live, so it stands and the gate routes it.
+    retireAtSource((c) => /^gate:batch:/.test(String(c.key || "")) && ![...gateStates.values()].some((r) => r.state === "asleep"),
+      "every lane in that batch is awake again (brain's gate journal)");
+  }
+  // 2 · DAEMON CARDS — "RELAUNCH NAHI CHADHA" / "STALE BUILD". daemon_watchdog.mjs publishes its own
+  //     probe result; a port reading UP on a pass taken AFTER the card was filed is the proof the
+  //     card was asking for. The watchdog's own header is explicit that a dispatch is not an UP and
+  //     that only the NEXT pass's probe proves it — so this reads the probe, never the dispatch, and
+  //     an UNKNOWN port (neither true nor false) retires nothing.
+  if (daemonPorts && daemonPorts.ports && daemonPorts.at) {
+    retireAtSource((c) => {
+      const m = /^daemon:(?:stale|stuck):([^:]+):/.exec(String(c.key || ""));
+      if (!m || daemonPorts.ports[m[1]] !== true) return false;
+      return Date.parse(daemonPorts.at) > Date.parse(c.filed_at || 0);
+    }, "the watchdog's next probe found it UP — code restarted it, his hands were never needed");
+  }
+  // 3 · CANON-DRIFT CARDS — "<file> mein UNCOMMITTED badlav hai". The watchman re-reads
+  //     `git status --porcelain` every sweep and publishes its findings; the finding disappearing IS
+  //     the tree being clean. Read the published sweep rather than spawning git here — one file read
+  //     on a path that runs at every SessionStart.
+  if (watchmanLast && Array.isArray(watchmanLast.findings)) {
+    const stillDirty = new Set(watchmanLast.findings.filter((f) => f && /^canon-drift-/.test(String(f.id))).map((f) => String(f.id).replace(/^canon-drift-/, "")));
+    retireAtSource((c) => {
+      const m = /^canon:(.+):\d{4}-\d{2}-\d{2}$/.exec(String(c.key || ""));
+      return !!m && !stillDirty.has(m[1]);
+    }, "the working tree is clean again on the watchman's own latest sweep — the change was committed");
+  }
+
 
   // B1 — a Re-Jirah round closed but not in the gist. SERIALIZED (one at a time,
   // oldest close first — the gate2 pattern): the paste is a sit-down moment, not a
@@ -944,6 +1085,20 @@ export function dealGuard({ organEnv, forge, now = new Date() }) {
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
 
+// LOAD ZERO BLOCK 6 — the gate journal's LAST state per lane. brain.mjs is its sole writer; this is
+// a READ of what that owner already published, exactly like the awayday/tiers/missions reads below.
+// A transition journal, so the newest row for a lane IS its current state.
+function liveGateStates() {
+  const m = new Map();
+  try {
+    for (const l of readFileSync(GATE_JOURNAL, "utf8").split(/\r?\n/)) {
+      if (!l.trim()) continue;
+      let r; try { r = JSON.parse(l); } catch { continue; }
+      if (r && r.lane && r.state) m.set(r.lane, r);
+    }
+  } catch { /* no journal = no opinion; a card is never retired on an absent source */ }
+  return m;
+}
 function gatherSources() {
   const contract = readJson(CONTRACT);
   const staged = contract && Array.isArray(contract.staged) ? contract.staged : [];
@@ -1134,11 +1289,46 @@ function gatherSources() {
   const awayday = readJson(join(STATE_DIR, "awayday.json"));
 
   return { staged, marketFile, marketHonest, marketVia, marketNoopFiles, gate2, missions, bench, tiers,
-    rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, gatetuneSource, pendingFacts, m2, canonPatches, staleFacts, model, awayday };
+    rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, gatetuneSource, pendingFacts, m2, canonPatches, staleFacts, model, awayday,
+    // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE THREE STALE-CARD CLASSES, each read from the OWNER's own
+    // published state, read-only, no spawn. See the retire-at-source block in deriveCards for why.
+    gateStates: liveGateStates(), daemonPorts: readJson(join(STATE_DIR, "daemon_watchdog.json")), watchmanLast: readJson(join(STATE_DIR, "watchman_last.json")) };
 }
 
+// LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD, as this organ reaches it. Owners-only: this file
+// never writes outbox.jsonl; it shells outbox.mjs's own `post` door, exactly as it already shells
+// teaching_contract / hippocampus / brain for every dispatch. A road that is down must never cost
+// him a card, so a failed post RE-OPENS nothing and simply leaves the card standing — the gate is
+// re-run on the next sync and will route it then.
+function postToRoad(card, now) {
+  // A routed card is NEWS, and a card's line ends in the two words he could have said
+  // ("· haan=sone do · na=sab 14d jagao"). Delivered as news that tail is an invitation to answer a
+  // question whose door no longer exists — the reader would look for a card that is not there.
+  // This strips the ORGANISM'S OWN card grammar (built by brain.mjs gateCardArgs), never his words:
+  // his 19 Aug law binds code that branches on HIS speech, and this is code reading its own format.
+  const subject = String(card.line || "").replace(/\s*·\s*haan=.*$/i, "").trim().slice(0, 280);
+  const args = ["post", "--produced-by", `captains_call:${card.source || "card"}`, "--kind", "finding",
+    "--subject", subject || String(card.line || "").slice(0, 280), "--key", `card:${card.key || card.id}`];
+  try {
+    const r = execFileSync(process.execPath, [join(__dirname, "outbox.mjs"), ...args],
+      { encoding: "utf8", timeout: 20000, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    return { ok: true, out: String(r || "") };
+  } catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 160) }; }
+}
 function sync(now = new Date()) {
   const next = deriveCards(loadState(), gatherSources(), now);
+  // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
+  // gated in the same pass never reaches his lane at all. It runs BEFORE the write, so the retire
+  // and the road row land together or not at all.
+  const posted = [];
+  decisionGate(next, now, (r) => { const p = postToRoad(r, now); if (p.ok) posted.push(r.id); else r._road_failed = p.why; });
+  for (const r of (next.cards || [])) {
+    // a card whose road post FAILED must not be left retired-with-no-delivery: put it back and let
+    // the next sync try again. Silence is the disease this whole block exists to cure.
+    if (r && r.resolution && /THE DECISION GATE/.test(r.resolution) && !posted.includes(r.id) && r.retired_at === now.toISOString()) {
+      r.retired_at = null; r.resolution = null;
+    }
+  }
   writeAtomic(CALL, next);
   return next;
 }
@@ -1384,10 +1574,20 @@ async function main() {
       console.log(`captains_call: ${guard.why}`);
       return;
     }
+    // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE DECISION GATE at the hand-filed door. A derived card is
+    // keyed and its reason lives in WHY_CODE_CANNOT_DECIDE; a hand-filed one has no fixed key, so
+    // the FILING ORGAN states the reason here, per call. Absent ⇒ this is not a question, and the
+    // decision gate (sync) puts it on the road as news instead of into his lane as homework.
+    // Deliberately NOT a refusal at this door: 20 filing sites across 9 organs only clip this
+    // command's stdout, so an `exit 1` here would make asks VANISH — the exact disease, one level
+    // down. The card is accepted, and the gate decides where it belongs.
+    const wi = process.argv.indexOf("--why-code-cannot-decide");
+    const why = wi >= 0 && process.argv[wi + 1] ? clip(process.argv[wi + 1], 240) : null;
     s.cards.push({
       id: `c${s.next_id++}`, key, source: "hand-filed",
       // `--open` (11 Aug 2026) — the filing organ's own locator, see fileDispatch.
       line: clip(line, 140), dispatch: fileDispatch(process.argv),
+      why_code_cannot_decide: why,
       filed_at: now.toISOString(), dealt: [], answer: null, answered_at: null,
       sleep_until: null, retired_at: null, resolution: null,
     });

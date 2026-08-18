@@ -100,6 +100,15 @@ export async function start(opts = {}) {
   await runOrgan("learnstate.mjs", "brief", { ...opts, call: "hookMain" }, r);
   await runOrgan("forge_session.mjs", "boot", opts, r);
   await runOrgan("watchman.mjs", "brief", opts, r);
+  // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD GETS ITS DRIVER. BLOCK 3 built the outbox and
+  // measured that morning that `relay` had never once been called in production: 22 rows posted,
+  // 6 delivered, and those 6 by a hand-run proof. The road existed and nobody drove on it.
+  // It sits HERE, second-to-last, deliberately: after the watchman (what the machine found) and
+  // before the card (the one thing that needs HIM) — "yeh ban chuka tha aur tum tak nahi pahuncha"
+  // is news, not a question. Bounded at 3 by the outbox itself (L7: never a list), silent when the
+  // road is empty, and the same call that DELIVERS is the call that RENDERS — which is the only
+  // reason gate.mjs is allowed to read a `delivered` stamp as "he was shown it".
+  await runOrgan("outbox.mjs", "brief", opts, r);
   await runOrgan("captains_call.mjs", "deal", opts, r);
   return r;
 }
