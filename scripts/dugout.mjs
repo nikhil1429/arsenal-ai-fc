@@ -122,6 +122,7 @@ import { pendingWakes } from "./thalamus.mjs";
 import { currentTone } from "./tone.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): name, number and voice come from the profile
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { portraitStatus, portraitSection } from "./selfknowledge.mjs";   // BLOCK 5.2 — get_organism reads the self-portrait one section at a time (the address that thaws selfknowledge); pure helpers, the organ owns the file
 
 // M11 — the Night Shift's artifacts flow into the mouths by themselves:
 // banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
@@ -1951,7 +1952,7 @@ const TOOL_DECLS = [
   // and claiming what it does not — so it now has a tool that LOOKS, exactly as it
   // is told to look for everything else about his day.
   { name: "get_myself", description: "WHAT YOU ARE AND WHAT YOU CAN ACTUALLY DO — your live tool list, your senses (can you see? can you hear? can you run code? can you read a URL?), which model you are running on, and what is switched off right now. Call this ANY time the conversation touches your own capabilities, and ALWAYS before saying you cannot do something. You have been wrong about yourself out loud before ('I have no visual sensors' — you did, and he caught it). Never guess at your own anatomy; look.", parameters: { type: "OBJECT", properties: {} } },
-  { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: {} } },
+  { name: "get_organism", description: "THE FULL-ORGANISM LECTURE — the entire ANATOMY in one call: what it is, the two-speed brain, the thalamus/salience gate, the seven tanks, the night shift, the five-layer memory, the learning layer, the outwork layer, the humane laws, and the M14+ cyborg features — architecture facts + LIVE numbers, zero invented — PLUS `portrait`: the organism's own plain-language self-portrait (regenerated from the live code), ONE section at a time with its table of contents; pass `section` ('brain', 'memory', 'learning', 'day', 'night', a heading word) to walk the next part. This is DIFFERENT from get_club_report (which is TODAY's state); get_organism is HOW THE WHOLE MACHINE IS BUILT. Call when he says 'explain the whole organism', 'walk me through the cyborg brain', 'how does all of this work', 'samjhao poora system', or wants to brief someone (Nidhi) on the entire product.", parameters: { type: "OBJECT", properties: { section: { type: "STRING", description: "optional — which part of the self-portrait to bring (a word from its table of contents, e.g. 'brain', 'memory', 'day', 'night'); omit for the opening + the toc" } } } },
 ];
 
 // M4 — THE CHALKBOARD's engine: the REST sandbox (the live socket's own
@@ -2347,7 +2348,18 @@ function execTool(name, args, deps = {}) {
       const due = computeDueAt(args, now);
       if (!due) return { ok: false, error: "no time — need at:'HH:MM' or in_minutes" };
       append(REMINDERS, JSON.stringify({ ts: new Date().toISOString(), due_at: due.toISOString(), text, fired: false }) + "\n");
-      return { ok: true, due_at: due.toISOString(), echo: "his words, verbatim, once" };
+      // EVENT-DRIVEN (OVERHAUL Block 5.2, §12): the bridge that TOOK the reminder arms a timer for the
+      // exact due minute, so his words come back at the time he named — not at the next 30 s poll and not
+      // at the next scheduled tick. The 30 s poll and the 1-min ArsenalFC-DugoutReminders task stay as
+      // the backstops (page closed · bridge restarted). PLAN-vs-CODE: §12 wanted the task slowed to a
+      // 5-min backstop; measured 18 Aug 2026 — `node scripts/dugout.mjs fire-reminders` costs 182 ms wall
+      // (bare node 69 ms), so a 1-min task is ~0.3% of a core and slowing it would only make a late echo
+      // later. Kept at 1 min; the timer is the event. Guarded, unref'd, fail-silent.
+      let timerArmed = false;
+      if (deps.live || deps.fire) {   // the live bridge, or a selftest that hands its own fire — never a real timer from a plain test call
+        try { const ms = due.getTime() - (deps.clock || Date.now)() + 500; if (ms > 0 && ms < 36 * 3600000) { const t = setTimeout(() => { Promise.resolve((deps.fire || fireReminders)()).catch(() => { }); }, ms); if (t && t.unref) t.unref(); timerArmed = true; } } catch { }
+      }
+      return { ok: true, due_at: due.toISOString(), echo: "his words, verbatim, once", timer_armed: timerArmed };
     }
     if (name === "ratify_interruption") {
       const said = sh("shadow.mjs", ["ratify", String(args.type || "")]);
@@ -2621,7 +2633,29 @@ function execTool(name, args, deps = {}) {
       const episodes = readLines(join(hippoDir, "episodes.jsonl")).length;
       const facts = (readJson(join(hippoDir, "identity_facts.json")) || { facts: [] }).facts.length;
       const verdict = (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "unknown";
+      // OVERHAUL Block 5.2 (§11 selfknowledge THAW): the plain-language SELF-PORTRAIT rides here, ONE
+      // section at a time (the file is ~89 KB; a voice tool carries a section + the toc). This read is
+      // the ADDRESS the freeze in selfknowledge.mjs asked for — organism_self.md now has a live reader,
+      // so that organ thaws by its own rule. Serving it is the gate's `sat` (stamped through the owner,
+      // live only); serving a STALE portrait (a module header changed since it was written) dispatches
+      // `selfknowledge.mjs regen-if-changed` DETACHED — the consumer wakes the regen, no schedule.
+      const portrait = (() => {
+        try {
+          const text = deps.portraitText !== undefined ? deps.portraitText : (existsSync(join(STATE_DIR, "organism_self.md")) ? readFileSync(join(STATE_DIR, "organism_self.md"), "utf8") : null);
+          if (!text) return { absent: true, note: "no self-portrait on disk yet — `node scripts/selfknowledge.mjs regen-if-changed` writes it (opus, ~29k tok)" };
+          const status = portraitStatus({ text, currentHash: deps.portraitHash });   // the organ's own pure read (hash of the live tree)
+          const section = portraitSection(text, args && args.section ? String(args.section) : null);
+          if (deps.live) {
+            // the stamp goes through the OWNER; `deps.record` is the selftest's seam (a test run is not a serve — the live lane must never see one)
+            try { (deps.record || recordConsumption)({ lane: "selfknowledge", kind: "sat", by: "dugout get_organism", file: "dressing-room/state/organism_self.md" }); } catch {}
+            if (!status.fresh) { try { const c = (deps.spawnFn || spawn)(process.execPath, [join(__dirname, "selfknowledge.mjs"), "regen-if-changed"], { detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } }); if (c && c.unref) c.unref(); } catch {} }
+          }
+          return { generated_at: status.generated_at, fresh: status.fresh, why: status.why, regenerating: deps.live ? !status.fresh : null, ...section,
+            how_to_use: "lecture THIS section in your own voice (plain words, his pace); the toc is what else you can walk; ask get_organism again with `section` for the next part. Numbers: only from live_snapshot below." };
+        } catch (e) { return { absent: true, note: `portrait unreadable: ${String(e && e.message || e).slice(0, 80)}` }; }
+      })();
       return {
+        portrait,
         _use: "Narrate this as a STRUCTURED 10-MINUTE LECTURE — not a data dump. Walk it top to bottom: what it is → the two-speed brain → the thalamus gate → the seven tanks → the night shift → the five-layer memory → the learning layer → the outwork layer → the humane laws → the M14+ features → and END with what is DORMANT and exactly what un-dormants it. Every number in this object is REAL (read live). Use them; invent nothing; no hype words (never 10x / exponential / on-steroids). If asked only about one part (e.g. 'walk me through the cyborg brain'), lecture that section in depth.",
         what_it_is: `A cognitive prosthesis for one human — the captain, ${captainTag()}, a medicated ADHD-PI builder training for an AI Product Engineer role. It carries the executive functions his cortex under-supplies (initiation, working memory, time-sense, task-switching) so his consistency, not his condition, decides the outcome. Built as a football club: the human is the heart and the only irreplaceable organ; everything else circulates one thing — the rep (a unit of studied, self-tested work). Three nested clocks: the rep, the day, the season. The rival is always kal-wala-${captain().name}.`,
         two_speed_brain: {
@@ -2684,7 +2718,9 @@ function execTool(name, args, deps = {}) {
           "M23 Difficulty Grading — the bank answers its own probes; the variance IS the difficulty",
         ],
         live_snapshot: { scripts: scriptCount, skills: skillCount, capsules: capsuleNames.length, fsrs_cards: cards.total_cards ?? null, fsrs_due_today: cards.due_today ?? null, fsrs_overdue: cards.overdue ?? null, fsrs_hardest_due: Array.isArray(cards.hardest_due) ? cards.hardest_due : [], ports: { thalamus: 4113, cortex: 4112, dugout: 4114 }, body_verdict: verdict, reps_today: supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl"))).filter(r => localDayOf(r.ts) === day).length },   // E2E audit 25 Jul 2026: local day, not UTC slice
-        dormant_by_law: "The learning half stays correctly quiet until he feeds it: Calibration voices at 20 reps, Nemesis at 20, Learning-State at 12, the Twin's book at 30 scored resolutions. Zero reps today is BY DESIGN, not broken — the machine is built and waiting; the reps are his, and only his.",
+        // Block 2 (18 Aug 2026) OPENED the speak-gates this line used to quote (20/20/12/30 → 1, `limits.mjs` §5.4 LAW HOLDS): every
+        // organ speaks on what he has and prints its n. The old sentence stayed here for a day as a calendar gate in prose.
+        dormant_by_law: "Nothing waits for a calendar (his 1 Aug + 13 Aug rulings, made mechanical 18 Aug 2026): calibration, nemesis, learning-state and the twin speak on whatever he has given them and say n out loud; an LLM lane runs only when its output actually reached him inside a window (THE GATE — `brain gate show` says which lanes are asleep and what wakes each). Zero reps today is a fact about today, not a broken machine — the reps are his, and only his.",
       };
     }
     if (name === "mark_moment") {
@@ -2869,6 +2905,23 @@ function wakeTheWatcher(deps = {}) {
     child.unref();
     return true;
   } catch { return false; }   // a spawn that cannot start must never cost him a transcript line
+}
+// wallOpened — the /wall-opened door's body → `opened` rows for the wall's model-authored lanes
+// (and lane `wall` itself, viz's deterministic render — Block 6's Wall-Live gate reads it). Pure
+// given deps.record; live = brain.mjs recordConsumption (the owner). Unknown lanes are dropped
+// and COUNTED, never stamped.
+const WALL_LANES = Object.freeze(["wall_insights", "maidan_poster", "gemini_render"]);
+function wallOpened(body = {}, deps = {}) {
+  const record = deps.record || ((row) => { try { return recordConsumption(row); } catch { return { ok: false }; } });
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(body.day || "")) ? String(body.day) : null;
+  const asked = Array.isArray(body.lanes) ? body.lanes.map(String) : [];
+  const lanes = asked.filter((l) => WALL_LANES.includes(l));
+  const dropped = asked.length - lanes.length;
+  const by = "wall beacon (dugout /wall-opened)";
+  let stamped = 0;
+  for (const lane of lanes) { const r = record({ job: lane, kind: "opened", by, file: day ? `brain_out/${lane === "gemini_render" ? "gemini_wall" : lane === "maidan_poster" ? "poster" : lane}/${day}.md` : null }); if (r && r.ok) stamped++; }
+  const w = record({ lane: "wall", kind: "opened", by, file: "dressing-room/club/wall.html", note: day ? `wall for ${day}${body.red ? " (RED — minimal wall)" : ""}` : null });
+  return { ok: true, stamped: stamped + (w && w.ok ? 1 : 0), lanes, dropped, day };
 }
 function saveSessionHandle(body, deps = {}) {
   const write = deps.writeJson || ((p, o) => writeFileSync(p, JSON.stringify(o, null, 2)));
@@ -3420,6 +3473,16 @@ async function selftest() {
   const remSet = execTool("set_reminder", { text: "paani ke saath dawai", at: "15:30" }, { sh, append, now: nowFix });
   assert("set_reminder stores his words VERBATIM (own file)", remSet.ok === true && appends.some(a => a.path === REMINDERS && a.text.includes("paani ke saath dawai") && a.text.includes('"fired":false')));
   assert("no words → no reminder (verbatim law)", execTool("set_reminder", { text: " ", at: "15:30" }, { sh, append }).ok === false);
+  // OVERHAUL Block 5.2 (§12 event-driven): the bridge that takes the reminder ARMS a timer for its exact due minute
+  {
+    let fired = 0;
+    const T = Date.now();
+    const armed = execTool("set_reminder", { text: "chai peeni hai", in_minutes: 0.02 }, { sh, append, now: new Date(T), clock: () => T, fire: async () => { fired++; return 1; } });   // due in 1.2 s
+    const plain = execTool("set_reminder", { text: "baad mein", in_minutes: 5 }, { sh, append, now: nowFix });   // a plain test call: no live, no fire ⇒ no real timer
+    assert("5.2 EVENT-DRIVEN — set_reminder arms an in-process timer for the exact due minute (timer_armed:true) when live/fire is handed; a plain call arms nothing (hermetic)", armed.ok && armed.timer_armed === true && plain.ok && plain.timer_armed === false && remSet.timer_armed === false);
+    await new Promise((r) => setTimeout(r, 1900));
+    assert("5.2 EVENT-DRIVEN — …and the timer FIRES the reminder lane at the due minute (his words come back at the time he named, not at the next poll)", fired === 1);
+  }
   const remLines = [{ due_at: new Date(nowFix.getTime() - 60000).toISOString(), text: "call the bank", fired: false }, { due_at: new Date(nowFix.getTime() + 9e6).toISOString(), text: "later", fired: false }];
   const spoken = []; let written = null;
   await fireReminders({ read: () => remLines, write: (ls) => { written = ls; }, speak: async (t) => spoken.push(t), now: nowFix });
@@ -3569,10 +3632,16 @@ async function selftest() {
     const r = autoOpenSitting((bin, argv, o) => { spawned.push({ argv, o }); return { unref() { } }; });
     assert("THE SITTING OPENS ITSELF — a Gaffer session start dispatches `sitting.mjs open --surface voice` DETACHED (the owner routes from state and JOINS an open one, never two); no keyword needed",
       r.ok && spawned.length === 1 && /sitting\.mjs$/.test(spawned[0].argv[0]) && spawned[0].argv.slice(1).join(" ") === "open --surface voice" && spawned[0].o.detached === true);
-    const src = readFileSync(new URL(import.meta.url), "utf8");
+    // fileURLToPath(import.meta.url), never `new URL(import.meta.url)`: xray evaluates the first to
+    // this file and cannot evaluate the second — the 18 Aug 10:42 commit wrote the URL form here
+    // and dugout's unresolved-sink ratchet went 57→58 (xray red) for a self-read the suite already
+    // does eleven times in the resolvable form.
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
     const cfgRoute = src.slice(src.lastIndexOf('if (mode === "gaffer") {'), src.lastIndexOf("return send(200, buildConfig(keys, mode));"));   // lastIndexOf: this selftest's own literals sit before the route
-    assert("THE SITTING OPENS ITSELF — …from the /config gaffer branch itself (the same real serve that stamps `sat`), and the constitution tells the mouth the map is the start — his 'nahi / bas / full time' closes",
+    assert("THE SITTING OPENS ITSELF — …from the /config gaffer branch itself, and the constitution tells the mouth the map is the start — his 'nahi / bas / full time' closes",
       /autoOpenSitting\(\);/.test(cfgRoute) && cfg0().system.includes("THE SITTING OPENS ITSELF") && !cfg0().system.includes('"shuru / padhai / aaj ka kaam / sitting kholo / revise / re-jirah" → open_sitting'));
+    assert("THE GATE, honest C (Block 5.2): the /config gaffer branch stamps NO `sat` for day_cartridge/night_coach any more — the ≤2k constitution does not carry them (composeCartridgeSection is Legacy-only), so that row was a lie since Block 3; the sitting's spoken units and the kickoff's `briefed` are the only stamps for those lanes",
+      !/recordConsumption\(\{ job: "(day_cartridge|night_coach)"/.test(cfgRoute) && !cfg0().system.includes("DAY CARTRIDGE") && !/composeCartridgeSection\(/.test(/function buildSystemInstruction\(\) \{[\s\S]*?\n\}/.exec(src)[0]));
   }
   {
     const spawned = [];
@@ -3648,6 +3717,33 @@ async function selftest() {
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
       ["ONE IDEA PER TURN", "verbatim padhun ya samjhaun?", "HIS ANCHORS STAY", "SAMJHAO"]
         .every((k) => g.system.includes(k)));
+  }
+  // OVERHAUL Block 5.2 — get_organism carries the SELF-PORTRAIT one section at a time (the address that thaws selfknowledge)
+  {
+    const fx = "<!-- ORGANISM SELF-PORTRAIT · generated from the LIVE code by selfknowledge.mjs · 2026-08-18T12:00:00.000Z · tree abc123abc123 · do NOT hand-edit — regenerate. -->\n\n# THE TOUR\nOne sentence.\n## The brain\nQuiet decisions, deep thought only for surprise.\n## The memory\nIt remembers the important, forgets the rest on purpose.\n";
+    const spawned = [], recorded = [];
+    const stale = execTool("get_organism", { section: "memory" }, { portraitText: fx, portraitHash: "ffffffffffff", live: true, record: (row) => { recorded.push(row); return { ok: true }; }, spawnFn: (bin, argv, o) => { spawned.push(argv); return { unref() {} }; } });
+    const fresh = execTool("get_organism", {}, { portraitText: fx, portraitHash: "abc123abc123", live: false, spawnFn: (bin, argv) => { spawned.push(argv); return { unref() {} }; } });
+    const none = execTool("get_organism", {}, { portraitText: null });
+    assert("5.2 get_organism · `portrait` rides beside the live counts: the asked section by heading (memory), the toc, generated_at, and fresh:false when the tree moved (the 29 Jul portrait reads stale too)",
+      stale.portrait && stale.portrait.section_title === "The memory" && /forgets the rest/.test(stale.portrait.text) && stale.portrait.toc.length === 3 && stale.portrait.fresh === false && stale.portrait.generated_at === "2026-08-18T12:00:00.000Z");
+    assert("5.2 get_organism · a STALE portrait served LIVE dispatches `selfknowledge.mjs regen-if-changed` DETACHED (the consumer wakes the regen — no schedule) and stamps `sat` lane selfknowledge through the owner's seam (recorded here, never on the live lane); a fresh one dispatches nothing; absent ⇒ named, never a crash",
+      spawned.length === 1 && /selfknowledge\.mjs$/.test(spawned[0][0]) && spawned[0][1] === "regen-if-changed" && stale.portrait.regenerating === true
+      && recorded.length === 1 && recorded[0].lane === "selfknowledge" && recorded[0].kind === "sat"
+      && fresh.portrait.fresh === true && fresh.portrait.regenerating === null && fresh.portrait.section_index === 0 && none.portrait.absent === true);
+    assert("5.2 get_organism · the tool declaration offers `section` and the constitution's lecture law still names get_organism (34 tools — the same door, one more parameter)",
+      TOOL_DECLS.find((t) => t.name === "get_organism").parameters.properties.section && TOOL_DECLS.length === 34);
+  }
+  // OVERHAUL Block 5.2 — THE WALL'S `opened` BEACON lands here and is stamped through the owner
+  {
+    const rows = [];
+    const r = wallOpened({ day: "2026-08-18", lanes: ["wall_insights", "gemini_render", "not_a_lane"], red: false }, { record: (row) => { rows.push(row); return { ok: true }; } });
+    assert("5.2 /wall-opened · the wall's lanes are stamped `opened` (job rows, file named per lane's real out dir) + lane `wall` itself; an unknown lane is DROPPED and counted, never stamped; the answer is a receipt",
+      r.ok && r.stamped === 3 && r.dropped === 1 && rows.filter((x) => x.kind === "opened").length === 3
+      && rows.some((x) => x.job === "wall_insights" && x.file === "brain_out/wall_insights/2026-08-18.md") && rows.some((x) => x.job === "gemini_render" && x.file === "brain_out/gemini_wall/2026-08-18.md")
+      && rows.some((x) => x.lane === "wall" && /wall for 2026-08-18/.test(x.note)) && !rows.some((x) => x.job === "not_a_lane"));
+    const src2 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("5.2 /wall-opened · the door exists on the bridge (POST, always 202) — the page's beacon runs no-cors and never reads the answer", /req\.method === "POST" && req\.url === "\/wall-opened"/.test(src2) && /send\(202, wallOpened\(b\)\)/.test(src2));
   }
   assert("his-voice reminder law travels (verbatim, once, no advice)", cfg.system.includes("HIS-VOICE REMINDERS") && cfg.system.includes("Never add advice"));
   assert("SPOKEN GATES law travels in the constitution", cfg.system.includes("SPOKEN GATES") && cfg.system.includes("no word, no write"));
@@ -6433,20 +6529,17 @@ async function main() {
           // bank reaching a sitting — the ns_probe_bank lane's ONE consumption signal.
           try { const ns = loadNightshift(); if (ns.probes) recordConsumption({ lane: "ns_probe_bank", kind: "sat", by: "dugout /config (scrimmage mock)", file: `brain_out/nightshift/probe_bank_${ns.day}.json` }); } catch {}
         }
-        // THE GATE (overhaul §5.2 "sat", 18 Aug 2026): the SAME real serve is where the
-        // brain's night work actually reaches a sitting. The gaffer config's constitution
-        // carries the day cartridge and the night coach (composeCartridgeSection); a
-        // browser asking for it is a session that will speak from them. Stamped here,
-        // through the OWNER (brain.mjs recordConsumption — brain stays the sole writer of
-        // consumption.jsonl), fail-silent, and NEVER inside buildConfig (pure; the suite
-        // calls it). Same shape as the scrimmage receipt one line up. Until this line the
-        // gate could only ever see these two lanes as "never reached him".
+        // THE GATE (overhaul §5.2 "sat") — THE STAMP THAT WAS HERE IS GONE (Block 5.2, 18 Aug 2026).
+        // Block 0 stamped day_cartridge + night_coach `sat` on every gaffer /config because the
+        // constitution of that day carried them (composeCartridgeSection). Block 3 cut the
+        // constitution to ≤ 2,000 tokens and that section lives ONLY in buildSystemInstructionLegacy
+        // now — so from 18 Aug 09:00 every one of those rows claimed the brain's night work reached a
+        // sitting it never entered (measured: consumption.jsonl 05:52–05:56Z, both lanes, while
+        // buildConfig(keys,"gaffer").system carried neither). A gate wrong in that direction is the
+        // bleed back through the side door. The honest C for both lanes is where it already lives:
+        // sitting.mjs consumeSpoken (a unit with src night_coach SPOKEN to him) and learnstate's
+        // `briefed` (the kickoff's 🌙 line). Nothing else is stamped here; the sitting opens below.
         if (mode === "gaffer") {
-          try {
-            const dc = loadDayCartridge(), nc = loadNightCoach();
-            if (dc) recordConsumption({ job: "day_cartridge", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/day_cartridge/${dc.date}.md` });
-            if (nc) recordConsumption({ job: "night_coach", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/night_coach/${nc.date}.md` });
-          } catch {}
           // THE SITTING OPENS ITSELF (18 Aug 2026, his words: "bro i will never remember any of
           // the keyword to say what where when how"). A Gaffer session starting IS his arrival:
           // the owner's `open` routes from state, JOINS an open sitting (never two), and the
@@ -6485,6 +6578,12 @@ async function main() {
         const tail = buildRehydrate(new Date(), LIVE_TAIL_BUDGET);
         return send(200, { ok: true, rehydrate: [brief, tail].filter(Boolean).join("\n\n"), had_state: !!state });
       }
+      // THE WALL'S `opened` BEACON (OVERHAUL Block 5.2, §5.2 "opened"): wall.html posts here ONCE per
+      // visible load with the day + the model-authored lanes ON that render (viz.mjs openedBeacon).
+      // The stamp goes through the OWNER (brain.mjs recordConsumption); the lanes are checked against
+      // the wall's own three, so a stray body cannot wake an arbitrary job. Always 202 — a beacon is
+      // never an error to the page (it runs no-cors and never reads the answer anyway).
+      if (req.method === "POST" && req.url === "/wall-opened") { let raw = ""; for await (const c of req) raw += c; let b = {}; try { b = JSON.parse(raw || "{}"); } catch { } return send(202, wallOpened(b)); }
       if (req.method === "GET" && (req.url || "").startsWith("/club/")) {
         // ONE FRONT DOOR — wall/handbook/media/prompts served read-only.
         // Path law: 1–2 clean segments (media/ and prompts/ live one level

@@ -134,6 +134,7 @@ const BLOCKS = join(STATE_DIR, "gaffer_blocks.json");
 const GSTATE = join(STATE_DIR, "gaffer_state.json");
 const GSTANDING = join(STATE_DIR, "gaffer_standing.json");
 const WHO = join(HIPPO_DIR, "who_he_is.json");
+const SITTING = join(STATE_DIR, "sitting.json");   // READ ONLY (sitting.mjs is its sole writer) — §11 Block 5.2: THE WATCHER runs only while a sitting is open
 const AFFERENT = join(STATE_DIR, "afferent.jsonl");
 const DUGOUT_DIR = join(STATE_DIR, "brain_out", "dugout");
 const CAPSULE_DIR = join(STATE_DIR, "capsules");
@@ -758,6 +759,16 @@ export function freshNote(rows, now = Date.now()) {
 // ---------------------------------------------------------------------------
 // THE ONE PASS — read what is new, judge it, write the row, update the blocks
 // ---------------------------------------------------------------------------
+// §11 (OVERHAUL Block 5.2, 18 Aug 2026): THE WATCHER RUNS ONLY WHILE A SITTING IS OPEN. A
+// sitting has the brain in-conversation and the mouth under the SPEAK law — that is what the
+// second pair of eyes watches. Outside a sitting the coach talks as before and nothing is
+// spent here. Read off sitting.json (owner: sitting.mjs), never a flag; `--force` (his hand)
+// or deps.force judges anyway. A skipped pass MOVES THE CURSOR past what it did not judge —
+// the next sitting's first pass must read the sitting, not a day of coach chatter.
+export function sittingIsOpen(deps = {}) {
+  const s = deps.sitting !== undefined ? deps.sitting : readJson(SITTING, null);
+  return !!(s && s.id && !s.closed_at);
+}
 export async function judgePass(deps = {}) {
   const now = deps.now || new Date();
   const bl = deps.blocks || loadBlocks(BLOCKS, now);
@@ -765,6 +776,11 @@ export async function judgePass(deps = {}) {
   const bus = deps.skipBus ? { lines: [], bytes: bl.cursor.afferent_bytes } : readBusSince(bl.cursor, deps);
   const delta = [...tx.delta, ...bus.lines];
   if (!delta.length) return { ok: true, skipped: "nothing new since the cursor", engine: "none" };
+  if (!deps.force && !sittingIsOpen(deps)) {
+    const next = { ...bl, cursor: { dugout_day: tx.day, dugout_bytes: tx.bytes, afferent_bytes: bus.bytes } };
+    if (!deps.dry) { try { writeAtomic(BLOCKS, next); } catch { } }
+    return { ok: true, skipped: `no open sitting — THE WATCHER watches sittings (§11 Block 5.2); ${delta.length} line(s) passed unjudged, cursor moved, nothing spent`, engine: "none", blocks: next, unjudged: delta.length };
+  }
 
   const state = deps.state !== undefined ? deps.state : readJson(GSTATE, emptyState(now));
   const standing = deps.standing !== undefined ? deps.standing : (readJson(GSTANDING, null) || { instructions: [] });
@@ -1999,7 +2015,7 @@ async function main() {
     // /transcript door; a non-zero exit there is a stderr line nobody reads and a
     // failure mode on the hot path. The journal is where a failure is recorded.
     try {
-      const r = await judgePass({ dry: process.argv.includes("--dry") });
+      const r = await judgePass({ dry: process.argv.includes("--dry"), force: process.argv.includes("--force") });
       if (r.skipped) console.log(`gaffer_brain: ${r.skipped}`);
       else console.log(`gaffer_brain: ${r.engine} · ${r.row.turns_judged} turn(s) · ${r.row.signals.length ? r.row.signals.join(",") : "no signal"}${r.note ? ` · note ${r.note.kind}` : ""}${r.row.blocks_changed.length ? ` · blocks ${r.row.blocks_changed.join(",")}` : ""} · ${r.row.latency_ms}ms`);
     } catch (e) {
@@ -2215,7 +2231,7 @@ function selftest2(stub, S) {
     const transcript = FIVE.map((t) => "CAPTAIN: " + t).join("\n") + "\n";
     return (async () => {
       out = await judgePass({
-        dry: true, now: T0, transcript, bus: "", skipBus: true,
+        dry: true, now: T0, sitting: { id: "fixture-sitting", closed_at: null }, transcript, bus: "", skipBus: true,
         blocks: emptyBlocks(T0), state: { ...emptyState(T0), turns: 12, declared_plan: { text: "all four covered topics, samjhao mode", at: "x" } },
         standing: { instructions: [] }, who: "he is the captain, 31, building a cyborg organism",
         callWatcher: stub,
@@ -2258,7 +2274,7 @@ function selftest2(stub, S) {
 
       // ── 4 · DEGRADED MODE. The pool dries; the surface must not regress.
       const dry = await judgePass({
-        dry: true, now: T0, transcript: "CAPTAIN: " + FIVE[0] + "\n", bus: "", skipBus: true,
+        dry: true, now: T0, sitting: { id: "fixture-sitting", closed_at: null }, transcript: "CAPTAIN: " + FIVE[0] + "\n", bus: "", skipBus: true,
         blocks: emptyBlocks(T0), state: emptyState(T0), standing: { instructions: [] }, who: "",
         callWatcher: async () => ({ ok: false, engine: "none", error: "pool dry" }),
       });
@@ -2269,6 +2285,22 @@ function selftest2(stub, S) {
       const legacyKept = legacyJudgment(["CAPTAIN: bhai you forgot again, hamesha dheere bolo"], { ...emptyState(T0), forgot_flags: 1 }, { instructions: [] }, T0);
       assert("LAYERING · the degraded path still produces the OLD behaviour it froze — same verdict, same words",
         legacyKept.signals.some((s) => s.kind === "forgot") && legacyKept.standing.length === 1);
+
+      // ── 4b · §11 (OVERHAUL Block 5.2): THE WATCHER RUNS ONLY WHILE A SITTING IS OPEN
+      {
+        let called = 0;
+        const stubCount = async (p, d) => { called++; return stub(p, d); };
+        const tx2 = "CAPTAIN: " + FIVE[0] + "\nGAFFER: theek.\n";
+        const closed = await judgePass({ dry: true, now: T0, sitting: { id: "s1", closed_at: "2026-08-15T10:00:00Z" }, transcript: tx2, bus: "", skipBus: true, blocks: emptyBlocks(T0), state: emptyState(T0), standing: { instructions: [] }, who: "", callWatcher: stubCount });
+        const none = await judgePass({ dry: true, now: T0, sitting: null, transcript: tx2, bus: "", skipBus: true, blocks: emptyBlocks(T0), state: emptyState(T0), standing: { instructions: [] }, who: "", callWatcher: stubCount });
+        assert("§11 SITTING GATE · no open sitting (closed, or none on disk) ⇒ the pass is SKIPPED before the model — nothing spent, the reason names the law, the unjudged count is reported",
+          closed.skipped && /no open sitting/.test(closed.skipped) && none.skipped && called === 0 && closed.unjudged === 2 && closed.engine === "none");
+        assert("§11 SITTING GATE · a skipped pass MOVES THE CURSOR past what it did not judge (the next sitting's first pass reads the sitting, not a day of coach chatter)",
+          closed.blocks && closed.blocks.cursor.dugout_bytes === Buffer.byteLength(tx2, "utf8"));
+        const forced = await judgePass({ dry: true, now: T0, force: true, sitting: null, transcript: tx2, bus: "", skipBus: true, blocks: emptyBlocks(T0), state: emptyState(T0), standing: { instructions: [] }, who: "", callWatcher: stubCount });
+        assert("§11 SITTING GATE · `--force` (his hand) judges anyway; an open sitting judges as before (the fixture above ran with one open)",
+          !forced.skipped && called === 1 && sittingIsOpen({ sitting: { id: "x", closed_at: null } }) === true && sittingIsOpen({ sitting: { id: "x", closed_at: "t" } }) === false && sittingIsOpen({ sitting: null }) === false);
+      }
 
       // ── 5 · ONE NOTE PER TURN, and the priority ladder
       const many = normalizeJudgment({ signals: [
@@ -3076,7 +3108,7 @@ function selftest2(stub, S) {
       // ── 12 · THE JOURNAL is the audit trail, including the silences
       {
         const quiet = await judgePass({
-          dry: true, now: T0, transcript: "CAPTAIN: haan theek hai\nGAFFER: chalo.\n", bus: "", skipBus: true,
+          dry: true, now: T0, sitting: { id: "fixture-sitting", closed_at: null }, transcript: "CAPTAIN: haan theek hai\nGAFFER: chalo.\n", bus: "", skipBus: true,
           blocks: emptyBlocks(T0), state: emptyState(T0), standing: { instructions: [] }, who: "",
           callWatcher: async () => ({ ok: true, engine: "flash", model: "stub", latency_ms: 5, judgment: normalizeJudgment({ signals: [], summary: "nothing happened" }) }),
         });

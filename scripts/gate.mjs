@@ -71,9 +71,32 @@ export function gateConfig(job) {
 const ms = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) ? t : NaN; };
 const DAY = 86400000;
 
+// ── THE FOLD (overhaul §10 · Block 5.2, 18 Aug 2026) — the fourth letter, D ─────
+// A job may declare `folded_into: "<job id>"` in brain_config.json: its work is now
+// done by that TARGET lane (night_coach · day_cartridge · agenda · teamtalk_am ·
+// midday_cartridge · capsule_premap fold into prepare_tomorrow — ONE plan a night is
+// what he meets). His law is THE GATE, never a switch (`enabled:false` would be the
+// kill list in a new coat), so a folded lane stays enabled and SLEEPS BY VERDICT:
+//   D holds (the lane may run) iff it is NOT displaced — no fold declared, or the
+//   fold target has NOT covered the day this lane serves. The RUNNER computes the
+//   fact (brain.mjs foldStatus: the target's artifact for the serve day exists, or the
+//   target is awake and still due for it) and hands it here as `fold`; this file only
+//   turns it into the verdict, like E·C·F. A covered lane sleeps "on D — folded →
+//   prepare_tomorrow"; the night the target fails or misses, D holds again and the
+//   folded lane runs AS THE FALLBACK — nothing deleted, nobody edits a list. His
+//   `na` / `gate wake` (forced.until) opens D too: reversibility beats every letter.
+export function foldOf(job) {
+  const f = job && job.folded_into;
+  return typeof f === "string" && f.trim() ? f.trim() : null;
+}
+
 // ── THE VERDICT ──────────────────────────────────────────────────────────────
-// decide({ job, evidence, consumption, failures, now, forced }) →
-//   { run, state: "awake"|"asleep", why: {E,C,F}, wakes_when, cfg }
+// decide({ job, evidence, consumption, failures, now, forced, fold }) →
+//   { run, state: "awake"|"asleep", why: {E,C,F,D}, wakes_when, cfg }
+//
+//   fold        { target: string, covered: boolean, detail?: string } | null — the
+//               runner's read of the fold (null / absent ⇒ D holds: not folded, or the
+//               fold is open). `covered:true` ⇒ D fails ⇒ ASLEEP unless forced.until.
 //
 //   evidence    { ok?: boolean, required_absent?: string[], absent?: string[], detail?: string }
 //               E holds iff ok !== false AND required_absent is empty. `undefined` ⇒ E
@@ -90,7 +113,7 @@ const DAY = 86400000;
 //               (a wake) overrides F for exactly one run; a success then clears the
 //               streak on the ledger by itself, which is the only clear there is.
 //   forced      { until?: ISO|null, once?: boolean } — the two wake mechanisms.
-export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null } = {}) {
+export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null } = {}) {
   const cfg = gateConfig(job);
   const nowMs = now instanceof Date ? now.getTime() : ms(now);
   const ev = evidence || {};
@@ -99,6 +122,7 @@ export function decide({ job, evidence, consumption, failures, now = new Date(),
   const fz = forced || {};
   const forcedUntilMs = ms(fz.until);
   const forcedLive = Number.isFinite(forcedUntilMs) && forcedUntilMs > nowMs;
+  const foldTarget = (fold && typeof fold === "object" && fold.target) ? String(fold.target) : foldOf(job);
 
   // E — evidence
   const reqAbsent = Array.isArray(ev.required_absent) ? ev.required_absent : [];
@@ -132,23 +156,33 @@ export function decide({ job, evidence, consumption, failures, now = new Date(),
   else if (fz.once) { F = true; Fdetail = `${streak} consecutive failure(s) ≥ ${cfg.fail_streak}, but a wake was asked for — this ONE run is allowed; a success clears the streak`; }
   else Fdetail = `${streak} consecutive failure(s) ≥ ${cfg.fail_streak} guard — the same failure must not repeat unattended`;
 
-  const run = E && C && F;
+  // D — not displaced by a fold (Block 5.2). The runner's fact decides; a live C-force
+  // (his `na` / `gate wake`) opens the fold too — reversibility outranks the design.
+  let D = true, Ddetail;
+  if (!foldTarget) Ddetail = "not folded into another lane";
+  else if (fold && fold.covered === true && forcedLive) { D = true; Ddetail = `folded → ${foldTarget} and covered, but forced awake until ${new Date(forcedUntilMs).toISOString().slice(0, 16)}Z (his na / gate wake) — this lane runs beside the fold`; }
+  else if (fold && fold.covered === true) { D = false; Ddetail = fold.detail || `folded → ${foldTarget}: the fold target covers this lane's day`; }
+  else Ddetail = (fold && fold.detail) ? `folded → ${foldTarget}, fold OPEN — ${fold.detail}` : `folded → ${foldTarget}, but the runner reported no cover — the fold is OPEN and this lane decides on E·C·F`;
+
+  const run = E && C && F && D;
   const state = run ? "awake" : "asleep";
   return {
     run, state, cfg,
-    why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail } },
-    wakes_when: run ? null : wakesWhen({ job, E, C, F, reqAbsent, cfg }),
+    why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail } },
+    fold: foldTarget ? { target: foldTarget, covered: !D } : null,
+    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, reqAbsent, cfg, foldTarget }),
   };
 }
 
 // The sentence on the card and in `brain status`: what has to happen for this lane
 // to wake ITSELF. Derived from the job's own declarations, never a hand-written per-
 // job string (a per-job table is the list this file exists to abolish).
-export function wakesWhen({ job, E, C, F, reqAbsent = [], cfg = gateConfig(job) } = {}) {
+export function wakesWhen({ job, E, C, F, D = true, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job) } = {}) {
   const parts = [];
   if (!E) parts.push(reqAbsent.length ? `${reqAbsent.join(", ")} exists again` : "its evidence exists again");
   if (!C) parts.push(`its output reaches him (${consumptionHint(job)}) — or his 'na' on the card / \`brain gate wake ${job && job.id ? job.id : "<job>"}\` opens it for ${cfg.window_days}d`);
   if (!F) parts.push(`\`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it once (a success clears the ${cfg.fail_streak}-fail streak)`);
+  if (!D) parts.push(`the fold opens by itself the night ${foldTarget || "its fold target"} fails or misses (this lane is the fallback) — or \`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it beside the fold for ${cfg.window_days}d`);
   return parts.join(" · ") || "n/a";
 }
 
@@ -309,6 +343,31 @@ function selftest() {
     everRan([{ job: "dmn_rollout", ok: true }], ["dmn_rollout", "dmn_counter"]) === true
     && everRan([{ job: "dmn_rollout", ok: true }], "dmn") === false
     && failStreakOf([{ job: "dmn_rollout", ok: false }, { job: "dmn_counter", ok: false }], ["dmn_rollout", "dmn_counter"]) === 2);
+
+  // THE FOLD — the fourth letter (Block 5.2)
+  {
+    const NC = J("night_coach", { folded_into: "prepare_tomorrow" });
+    const base = { evidence: {}, consumption: { last_at: iso(1), kind: "briefed" }, failures: {}, now: NOW };
+    const covered = decide({ ...base, job: NC, fold: { target: "prepare_tomorrow", covered: true, detail: "folded → prepare_tomorrow: its artifact for 2026-08-19 exists" } });
+    const open = decide({ ...base, job: NC, fold: { target: "prepare_tomorrow", covered: false, detail: "its run for 2026-08-19 left no artifact (1 attempt, failed)" } });
+    const noFact = decide({ ...base, job: NC });
+    const plain = decide({ ...base, job: J("night_coach") });
+    assert("FOLD — a folded lane whose target COVERED the day sleeps on D alone (E·C·F all hold), and the detail names the fold",
+      covered.run === false && covered.why.E.ok && covered.why.C.ok && covered.why.F.ok && covered.why.D.ok === false
+      && /folded → prepare_tomorrow/.test(covered.why.D.detail) && covered.fold && covered.fold.target === "prepare_tomorrow" && covered.fold.covered === true);
+    assert("FOLD — the night the target fails or misses, D holds and the folded lane RUNS as the fallback (nothing deleted, no list edited); wakes_when says so",
+      open.run === true && open.why.D.ok === true && /fold OPEN/.test(open.why.D.detail) && /left no artifact/.test(open.why.D.detail)
+      && /fold opens by itself the night prepare_tomorrow fails or misses/.test(covered.wakes_when));
+    assert("FOLD — a folded lane with NO runner fact is OPEN (fail-open: an unreadable fold never silences a lane); an unfolded lane says so",
+      noFact.run === true && /fold is OPEN/.test(noFact.why.D.detail) && plain.why.D.ok === true && plain.why.D.detail === "not folded into another lane" && plain.fold === null);
+    assert("FOLD — his `na` / `gate wake` (forced.until live) opens a COVERED fold — reversibility outranks the design; an expired force does not",
+      decide({ ...base, job: NC, fold: { target: "prepare_tomorrow", covered: true }, forced: { until: iso(-14) } }).run === true
+      && decide({ ...base, job: NC, fold: { target: "prepare_tomorrow", covered: true }, forced: { until: iso(1) } }).run === false);
+    assert("FOLD — a covered fold never masks E/C/F: a lane asleep on C AND covered reports both letters",
+      (() => { const v = decide({ job: NC, evidence: {}, consumption: { last_at: iso(30) }, failures: {}, now: NOW, fold: { target: "prepare_tomorrow", covered: true } }); return v.run === false && v.why.C.ok === false && v.why.D.ok === false; })());
+    assert("foldOf — reads the job's own declaration, blanks are not folds",
+      foldOf(NC) === "prepare_tomorrow" && foldOf({ folded_into: "  " }) === null && foldOf({}) === null && foldOf(null) === null);
+  }
 
   // the sentences
   assert("consumptionHint — reads the job's own surface declaration, names the reader organ off its path",

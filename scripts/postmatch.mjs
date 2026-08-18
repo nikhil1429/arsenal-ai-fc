@@ -353,6 +353,15 @@ async function selftest() {
   assert("DECLINED KAL: the old fabricated sentence appears nowhere in the tree's output",
     !/one green ball, first thing/i.test(mdNoKal));
   assert("badge + matchday + COYG present", md.includes(BADGE) && md.includes("Matchday 5") && md.includes("COYG."));
+  // OVERHAUL Block 5.2 — THE FULL-TIME EVENT: the close arms brain's `fulltime` trigger AFTER the record is
+  // written (never before, never on --dry), through the owner's door, inside its own try (best-effort).
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");   // fileURLToPath: xray resolves it; `new URL(...)` it cannot (the ratchet)
+    const armCall = 'execFileSync(process.execPath, [join(__dirname, "brain.mjs"), "trigger", "fulltime"';   // the runtime call, not this selftest's own literals
+    const iWrite = src.lastIndexOf("writeAtomic(SEASON, newSeason)"), iArm = src.lastIndexOf(armCall), iDry = src.lastIndexOf('console.log("--- DRY RUN (nothing written) ---');
+    assert("FULL-TIME EVENT — `brain.mjs trigger fulltime` is armed AFTER season/post_match are written and after the dry-run return (a dry close arms nothing), through the owner's CLI, best-effort",
+      iArm > iWrite && iWrite > iDry && iDry > 0 && /try \{\s*const \{ execFileSync \} = await import\("node:child_process"\);\s*execFileSync\(process\.execPath, \[join\(__dirname, "brain\.mjs"\), "trigger", "fulltime"[^\n]*\n\s*\} catch \{ \}/.test(src));
+  }
   assert("DISCLOSURE LAW — withheld adaptations always render", md.includes("QUIET ADAPTATIONS") && md.includes("nemesis headline withheld"));
   assert("pending throw-ins shown verbatim, never auto-routed", md.includes("dot vs cosine same cheez?") && md.includes("one word routes them"));
   assert("null twin voice renders nothing (win-only respected)", !md.includes("THE BOOK:"));
@@ -667,6 +676,16 @@ async function main() {
       execFileSync(process.execPath, [join(__dirname, "brain.mjs"), "trigger", "reanalysis", `matchday ${newSeason.matches_played} milestone`], { windowsHide: true, timeout: 15000 });
     } catch { }
   }
+  // THE FULL-TIME EVENT (OVERHAUL Block 5.2, 18 Aug 2026 §10): the day is CLOSED by his word — the
+  // one moment the evening voice lanes have something real to speak to. brain_config's teamtalk_pm
+  // and evening_voice declare `trigger: "fulltime"` + `gate.event: "fulltime"`, so they run only
+  // after THIS arm and never on a day he did not close (the arm belongs to this shift; brain.mjs
+  // eligibleJobs · armFresh). Through the OWNER's own door (`brain.mjs trigger`), best-effort:
+  // arming can never block the ritual. Same idiom as the milestone arm above.
+  try {
+    const { execFileSync } = await import("node:child_process");
+    execFileSync(process.execPath, [join(__dirname, "brain.mjs"), "trigger", "fulltime", `full-time ${dateStr} (${hit})`], { windowsHide: true, timeout: 15000 });
+  } catch { }
   // evening shadow-scoring (U3b): resolve today's would-have-spoken moments —
   // owner-writes via shadow.mjs; best-effort, never blocks the ritual
   try {

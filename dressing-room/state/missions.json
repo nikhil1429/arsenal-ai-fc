@@ -30,7 +30,10 @@
       "file": "dressing-room/missions/M03__audit_agents_api_cluster.md",
       "staged_at": "2026-08-07T20:55:12.812Z",
       "ingested_at": null,
-      "report": null
+      "report": null,
+      "claude_report": "scout_reports/mission_M03_2026-08-18_claude.md",
+      "claude_at": "2026-08-18T06:43:53.808Z",
+      "claude_tokens": 965155
     },
     {
       "id": "M04",
@@ -109,6 +112,11 @@
       "ts": "2026-08-12T23:18:38.465Z",
       "kind": "ingest",
       "id": "M02"
+    },
+    {
+      "ts": "2026-08-18T06:43:53.808Z",
+      "kind": "claude_return",
+      "id": "M03"
     }
   ]
 }

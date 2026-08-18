@@ -103,6 +103,16 @@ const RUNTIME   = join(STATE_DIR, "cortex_runtime.json");
 // consecutive wakes with a gap under CORTEX_SESSION_GAP_MIN belong to one
 // sitting; it rotates at 2h old, 40 turns, or the first gap over that.
 const CORTEX_SESSION = join(STATE_DIR, "cortex_session.json");
+// §11 (OVERHAUL Block 5.2, 18 Aug 2026): the deep brain WAKES ONLY WHEN NO SITTING IS OPEN.
+// A sitting has the largest model in-conversation already (sitting.mjs, one child, the SPEAK
+// law) — a cortex wake on the same line would be a second brain answering the mouth. Read off
+// sitting.json (owner: sitting.mjs), fail-open: unreadable/absent = no sitting = the cortex as
+// before. The council (M8) sits inside serveOne AFTER this line, so it is gated by the same fact.
+const SITTING_FILE = join(STATE_DIR, "sitting.json");
+export function sittingOpenNow(deps = {}) {
+  const s = deps.sitting !== undefined ? deps.sitting : readJson(SITTING_FILE);
+  return !!(s && s.id && !s.closed_at);
+}
 const CORTEX_SESSION_TMP = CORTEX_SESSION + ".tmp";
 const CORTEX_SESSION_MAX_TURNS = 40;
 const CORTEX_SESSION_MAX_AGE_MIN = 120;
@@ -682,6 +692,14 @@ async function serveOne(wake, deps = {}) {
   }
   if (!wake || !wake.moment_id || wake.consumed || wake.status !== "pending") return { served: false, idle: true };
 
+  // §11 (Block 5.2) — a sitting is open: the sitting brain holds this conversation. DECLINE the
+  // wake (reported to the thalamus, nothing dangles), burn no attempt, spend nothing.
+  if (sittingOpenNow(deps)) {
+    log(`cortex: a sitting is OPEN — the sitting brain is in-conversation; ${wake.moment_id} declined (sitting-open), no attempt burned`);
+    const s = await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "sitting-open", provenance: "cortex" });
+    return { served: false, declined: "sitting-open", reported: !(s && s.ok === false) };
+  }
+
   // E2E audit 25 Jul 2026 — THE RE-BUY. The lifeboat below spools an answer whose
   // report-back failed, but ONLY the thalamus can close a queue row: with the
   // thalamus still down the wake is STILL pending, and the very next pass walked
@@ -1006,6 +1024,7 @@ async function selftest() {
       out,
       deps: {
         cfg: CFG_FIX, brainCfg, env: {}, readWake: () => wake, bus,
+        sitting: null,                               // hermetic — §11's sitting gate reads the FIXTURE, never live sitting.json (no sitting ⇒ the cortex as before)
         council: null,                               // hermetic — the live council never convenes inside a selftest
         post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
         appendLedger: (r) => out.rows.push(r),
@@ -1022,6 +1041,18 @@ async function selftest() {
     const { deps } = mkDeps({ deps: { env: { ANTHROPIC_API_KEY: "sk-nope" } } });
     const r = await serveWake(deps);
     assert("ANTHROPIC_API_KEY set → REFUSES before anything runs", r.refused === true);
+  }
+  // §11 (OVERHAUL Block 5.2) — the deep brain wakes only when NO sitting is open
+  {
+    let calls = 0;
+    const { deps, out } = mkDeps({ deps: { sitting: { id: "sit_x", closed_at: null }, call: () => { calls++; return { ok: true, text: "x", total_tokens: 1 }; } } });
+    const r = await serveWake(deps);
+    assert("§11 SITTING GATE — a wake arriving while a sitting is OPEN is DECLINED (reason sitting-open, reported to the thalamus — nothing dangles), no model call, no ledger row, NO attempt burned",
+      r.declined === "sitting-open" && r.reported === true && calls === 0 && out.rows.length === 0 && out.posts.length === 1 && out.posts[0].b.declined === true && out.posts[0].b.reason === "sitting-open" && out.saved.length === 0);
+    const { deps: d2 } = mkDeps({ deps: { sitting: { id: "sit_x", closed_at: "2026-08-18T06:07:45Z" } } });
+    const r2 = await serveWake(d2);
+    assert("§11 SITTING GATE — a CLOSED sitting on disk (or none) is no sitting: the wake is served as before; laneResolved treats the decline as an acknowledged close (no busy-loop)",
+      r2.served === true && sittingOpenNow({ sitting: null }) === false && sittingOpenNow({ sitting: { id: "a", closed_at: null } }) === true && laneResolved({ declined: "sitting-open", reported: true }) === true);
   }
   // the happy arc
   {
@@ -1250,7 +1281,7 @@ async function selftest() {
     let reads = 0, boughtP = 0;
     const postsP = [];
     const rPre = await serveWakes({
-      cfg: CFG_FIX, brainCfg, env: {}, now: new Date("2026-07-15T03:00:00Z"), council: null, bus,
+      cfg: CFG_FIX, brainCfg, env: {}, now: new Date("2026-07-15T03:00:00Z"), council: null, bus, sitting: null,
       readQueue: () => [{ moment_id: "m_p", ts: "2026-07-15T02:59:00Z", status: "pending", spotlight: { modality: "voice", text: "doubt", concept_tokens: [], S: 0.7, comps: {} }, bound_context: [] }],
       readWake: () => null,
       runtime: { attempts: { m_p: 1 }, unsent: { m_p: "2026-08-11T00:00:00.000Z" } }, saveRuntime: () => {},
@@ -1283,7 +1314,7 @@ async function selftest() {
       return { ok: true, text: "parallel deep read", input_tokens: 10, output_tokens: 10, total_tokens: 20, duration_ms: 25, limit_hit: false, error: null };
     };
     const mk = (rows) => ({
-      cfg: CFG_FIX, brainCfg, env: {}, now: nowT, council: null, bus,
+      cfg: CFG_FIX, brainCfg, env: {}, now: nowT, council: null, bus, sitting: null,
       readQueue: () => rows, readWake: () => null,
       post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
       appendLedger: (r) => out.rows.push(r), runtime: { attempts: {} }, saveRuntime: () => {},

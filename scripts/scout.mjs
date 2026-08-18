@@ -35,9 +35,11 @@
 //         dressing-room/missions/T-*.md · L-*.md (generated mission prompts; M01–M04 are
 //         hand-authored audit missions this organ only REGISTERS, never rewrites)
 //         dressing-room/state/scout_reports/mission_*.md (ingested returns, verbatim)
-// MODES:  run (default) · selftest · mission <stage-audit|stage-topic|stage-lock|ingest|
-//         audit-close|list> (alias: missions) · outward · chrome-stamp <fire|harvest|
+// MODES:  run (default) · selftest · mission <stage-audit|stage-topic|stage-lock|ingest|fired|
+//         claude|compare|audit-close|list> (alias: missions) · outward · chrome-stamp <fire|harvest|
 //         gem-sync|gist-patch>
+//   `mission claude <ID>` + `mission compare <ID>` — Block 5.3 (18 Aug 2026, §17-B): the Claude
+//   WebSearch leg of a mission and the one-pass merge of the two returns; see the block above auditClose.
 //   `chrome-stamp` (:800) and the `missions` alias (:792) were DISPATCHED and unnamed
 //   here until the wiring audit, 10 Aug 2026. THE_DAILY_LOOP.md:82 (now verbatim at
 //   docs/archive/THE_DAILY_LOOP_2026-08-18.md:82 — Block 1, 18 Aug 2026) sends a session to
@@ -47,7 +49,7 @@
 //   together now — organism_test.mjs, THE DISCOVERY-PATH CONTRACT.
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";   // appendFileSync: Block 5.3, the shared brain-ledger append (mission_<id> rows)
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 // THE BENCHMARK WIRE (10 Aug 2026) — see refreshBenchmark() below. Same
@@ -375,6 +377,80 @@ function fireMission(state, id, now) {
   return { ok: true, state, row };
 }
 
+// ── §17-B MISSIONS AUTOMATIC (OVERHAUL Block 5.3, 18 Aug 2026) ────────────────
+// His 13 Aug 21:11 ruling, on record: "do the same research on what gemini does every time
+// from your end … after getting two researches make a final research document, full
+// permission do M01–M04 by yourself and by gemini as well" — corrected on 18 Aug 08:45 to
+// supersede the 8 Aug "HE fires" law. So a mission now has TWO research legs and one merge:
+//   · GEMINI leg — /fire drives his Chrome, pastes the mission from the PASTE marker and
+//     CLICKS START ITSELF (his own account, reversible, not a publish); the return is
+//     `mission ingest <ID>` (verbatim, unchanged).
+//   · CLAUDE leg — `mission claude <ID>`: the SAME prompt (from the marker) through the §9.1
+//     lane (claudegen claudeGen + `--allowedTools WebSearch`, opus by default), written
+//     verbatim to scout_reports/mission_<ID>_<day>_claude.md, metered on the shared brain
+//     ledger as job `mission_<id>` (gaffer_verify's row shape), stamped on the row
+//     (`claude_report` · `claude_at`). Refuses a second run unless --force (a report is a spend).
+//   · `mission compare <ID>` — ONE opus merge of the two returns into
+//     scout_reports/mission_<ID>_<day>_merged.md: every finding from both kept, agreements
+//     marked with both sources, DISAGREEMENTS NAMED under their own heading, every URL kept,
+//     nothing added that neither report holds. The Gemini return stays the verbatim `report`
+//     (never overwritten); the merged one rides `report_merged` — the diff review reads it.
+//   `benchmark` still opens on `audit-close` (Ruling 6, his word on the diffs; the 4th ingest
+//   deals that card by itself — captains_call mission:audit-close) — PLAN-vs-CODE: §17-B said
+//   "unlocks on ingest"; measuring against a map he has not yet ruled on is the half-lie
+//   Ruling 6 names, so his word stays the gate and the card is what asks for it.
+export function missionPromptFrom(text) {
+  const s = String(text || "");
+  const i = s.indexOf("---- PASTE FROM HERE");
+  const body = i >= 0 ? s.slice(s.indexOf("\n", i) + 1) : s;
+  return body.trim();
+}
+export function buildClaudeMissionPrompt(id, cluster, missionPrompt) {
+  return `You are running RESEARCH MISSION ${id}${cluster ? ` (${cluster})` : ""} for Arsenal AI FC — the same brief a Gemini Deep Research run receives, verbatim below. Use WebSearch as many times as the brief needs. OUTPUT CONTRACT: reply with ONLY the finished research report in markdown — a title line \`# MISSION ${id} — Claude research return\`, then the sections the brief asks for. EVERY factual claim carries a source URL in the same line or paragraph (never a bare claim, never an invented URL — if you could not find a source, write "[no source found]" and keep the claim marked as unverified). Numbers only from sources. No preface, no meta ("I searched…"), no questions back, no tools other than WebSearch. Length: as long as the brief needs; do not pad.\n\n══════ THE MISSION BRIEF (verbatim) ══════\n${missionPrompt}`;
+}
+export function buildCompareMissionPrompt(id, gemini, claude) {
+  return `You are merging TWO independent research returns for RESEARCH MISSION ${id} of Arsenal AI FC: report A (Gemini Deep Research) and report B (Claude + WebSearch). Both answered the SAME brief. Produce ONE MERGED REPORT in markdown, and obey these laws exactly:\n1. NOTHING DROPPED — every finding, number, recommendation and source from A and from B appears in the merge (fold duplicates into one line marked [A+B]; a finding only in one report is marked [A only] or [B only]).\n2. DISAGREEMENTS NAMED — where A and B disagree (a number, a ranking, a claim, a recommendation), put it under a heading \`## DISAGREEMENTS (named, not resolved)\` with both versions and both sources; do NOT pick a winner, do NOT average.\n3. SOURCES KEPT — every URL from either report survives, next to the claim it supports; add no URL that is not in A or B.\n4. ADD NOTHING — no new facts, no opinion, no advice; you are a merger, not a third researcher.\n5. Structure: \`# MISSION ${id} — merged return (A: Gemini · B: Claude)\` · \`## Where they agree\` · \`## DISAGREEMENTS (named, not resolved)\` · \`## Only in A\` · \`## Only in B\` · \`## Sources (all)\`. Reply with ONLY the merged markdown.\n\n══════ REPORT A (Gemini Deep Research, verbatim) ══════\n${gemini}\n\n══════ REPORT B (Claude + WebSearch, verbatim) ══════\n${claude}`;
+}
+export function claudeMissionRow(state, id, reportRelPath, now, meta = {}) {
+  const row = state.missions.find(r => r.id.toLowerCase() === String(id || "").toLowerCase());
+  if (!row) return { ok: false, error: `no mission "${id}" — see: node scripts/scout.mjs mission list` };
+  row.claude_report = reportRelPath;
+  row.claude_at = now.toISOString();
+  if (meta.tokens != null) row.claude_tokens = meta.tokens;
+  state.events.push({ ts: now.toISOString(), kind: "claude_return", id: row.id });
+  return { ok: true, state, row };
+}
+export function compareMissionRow(state, id, mergedRelPath, now, meta = {}) {
+  const row = state.missions.find(r => r.id.toLowerCase() === String(id || "").toLowerCase());
+  if (!row) return { ok: false, error: `no mission "${id}"` };
+  if (!row.report) return { ok: false, error: `${row.id} has no Gemini return yet (mission ingest first) — compare needs BOTH reports` };
+  if (!row.claude_report) return { ok: false, error: `${row.id} has no Claude return yet (mission claude ${row.id} first) — compare needs BOTH reports` };
+  row.report_merged = mergedRelPath;
+  row.merged_at = now.toISOString();
+  if (meta.tokens != null) row.merged_tokens = meta.tokens;
+  state.events.push({ ts: now.toISOString(), kind: "compare", id: row.id });
+  return { ok: true, state, row };
+}
+// the metered call — the §9.1 lane's row shape (gaffer_brain VERIFY_JOB), job mission_<id>
+async function claudeResearchCall(prompt, { model = "opus", timeoutMs = 1200000, job = "mission", search = true, gen = null, meter = null } = {}) {
+  const call = gen || (async (p) => { const { claudeGen } = await import("./claudegen.mjs"); return claudeGen(p, model, timeoutMs, search ? ["--allowedTools", "WebSearch"] : []); });
+  const r = await call(prompt);
+  const row = { ts: new Date().toISOString(), job, engine: "claude", model,
+    input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null, cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+    total_tokens: r.total_tokens || 0, tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+    duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit, search };
+  try { (meter || ((x) => appendFileSync(join(STATE_DIR, "brain_ledger.jsonl"), JSON.stringify(x) + "\n")))(row); } catch { /* an unmetered call is still a made call — never fail the mission on the meter */ }
+  return { ...r, ledger_row: row };
+}
+
+// ONE read site + ONE write site for every mission/report file this organ touches (Block 5.3):
+// the ingest's --file read, the mission brief, both returns and the merge all ride these two,
+// so xray's per-organ unresolved-sink ratchet stays where it was (computed paths are Unknown
+// statically by construction; the number of SITES is what the ratchet counts).
+function readTextAt(absPath) { try { return readFileSync(absPath, "utf8"); } catch { return ""; } }
+function reportAbs(rel) { return /^scout_reports\//.test(String(rel)) ? join(STATE_DIR, rel) : join(__dirname, "..", rel); }
+function writeReport(name, text) { mkdirSync(REPORTS_DIR, { recursive: true }); writeFileSync(join(REPORTS_DIR, name), text, "utf8"); }
+
 // THE BENCHMARK GATE EVENT. Canon edits = his word — the --note carries it.
 // Refuses until all four audit returns are in (event-gate on HIS study).
 function auditClose(state, note, now) {
@@ -610,6 +686,40 @@ async function selftest() {
     assert("missions: prompts are doors, not debts (no owe/should/deadline language)",
       [tMd, lMd].every(m => !/you (should|must|owe)|deadline/i.test(m)));
 
+    // ── §17-B MISSIONS AUTOMATIC (Block 5.3) — the Claude leg + the merge, pure and hermetic ──
+    {
+      const md = "<!-- machine header — not prompt -->\nFire on: Gemini Pro → Deep Research\n---- PASTE FROM HERE (into Gemini) ----\nAUDIT the agents + LLM-API cluster of the syllabus against the live market. List sources.\nSecond line of the brief.";
+      const brief = missionPromptFrom(md);
+      assert("5.3 missionPromptFrom — the brief is everything BELOW the paste marker (machine header never reaches a model); no marker ⇒ the whole text",
+        brief.startsWith("AUDIT the agents") && /Second line/.test(brief) && !/machine header/.test(brief) && missionPromptFrom("plain brief") === "plain brief");
+      const cp = buildClaudeMissionPrompt("M03", "agents + LLM-API cluster", brief);
+      assert("5.3 the Claude leg's prompt carries the brief VERBATIM + the source law (every claim a URL, [no source found] never invented) + WebSearch only + no meta",
+        cp.includes(brief) && /MISSION M03/.test(cp) && /source URL/.test(cp) && /\[no source found\]/.test(cp) && /never an invented URL/.test(cp) && /no tools other than WebSearch/.test(cp) && /no meta/.test(cp));
+      const mp = buildCompareMissionPrompt("M03", "GEMINI SAYS 42 https://a.test", "CLAUDE SAYS 41 https://b.test");
+      assert("5.3 the merge prompt names the FIVE laws — nothing dropped · disagreements NAMED not resolved · sources kept · add nothing · the fixed section list — and carries both returns verbatim",
+        /NOTHING DROPPED/.test(mp) && /DISAGREEMENTS NAMED/.test(mp) && /do NOT pick a winner/.test(mp) && /SOURCES KEPT/.test(mp) && /ADD NOTHING/.test(mp) && /## DISAGREEMENTS \(named, not resolved\)/.test(mp) && mp.includes("GEMINI SAYS 42 https://a.test") && mp.includes("CLAUDE SAYS 41 https://b.test"));
+      const s3 = emptyMissions(); stageAudit(s3, t0);
+      const c0 = compareMissionRow(JSON.parse(JSON.stringify(s3)), "M03", "x", t0);
+      const cr = claudeMissionRow(s3, "m03", "scout_reports/mission_M03_2026-08-18_claude.md", t0, { tokens: 51234 });
+      const c1 = compareMissionRow(JSON.parse(JSON.stringify(s3)), "M03", "x", t0);
+      ingestMission(s3, "M03", "scout_reports/mission_M03_2026-08-18.md", t0);
+      const c2 = compareMissionRow(s3, "M03", "scout_reports/mission_M03_2026-08-18_merged.md", t0, { tokens: 9000 });
+      assert("5.3 claudeMissionRow — stamps claude_report · claude_at · claude_tokens on the row (case-insensitive id) and journals a claude_return event; an unknown id is refused",
+        cr.ok && cr.row.id === "M03" && cr.row.claude_report.endsWith("_claude.md") && cr.row.claude_tokens === 51234 && s3.events.some(e => e.kind === "claude_return" && e.id === "M03") && claudeMissionRow(s3, "M99", "x", t0).ok === false);
+      assert("5.3 compareMissionRow — refuses until BOTH returns exist (names which is missing), then stamps report_merged · merged_at and journals a compare event; the Gemini `report` stays what ingest wrote (verbatim, never overwritten)",
+        c0.ok === false && /no Gemini return/.test(c0.error) && c1.ok === false && /no Gemini return/.test(c1.error)
+        && c2.ok && c2.row.report_merged.endsWith("_merged.md") && c2.row.report === "scout_reports/mission_M03_2026-08-18.md" && c2.row.merged_tokens === 9000 && s3.events.some(e => e.kind === "compare"));
+      const c3 = compareMissionRow((() => { const s = emptyMissions(); stageAudit(s, t0); ingestMission(s, "M04", "r.md", t0); return s; })(), "M04", "x", t0);
+      assert("5.3 compareMissionRow — a Gemini return with no Claude leg yet is refused naming the claude step", c3.ok === false && /no Claude return/.test(c3.error) && /mission claude M04/.test(c3.error));
+      // the metered call: the §9.1 row shape (job mission_<id>), gen + meter injected — no claude, no ledger
+      const metered = [];
+      const rr = await claudeResearchCall("p", { model: "opus", job: "mission_m03", gen: async () => ({ ok: true, text: "# MISSION M03 — Claude research return\n…", input_tokens: 1000, output_tokens: 3000, total_tokens: 4000, duration_ms: 12000, tokens_estimated: false }), meter: (row) => metered.push(row) });
+      assert("5.3 claudeResearchCall — ONE ledger row in gaffer_verify's shape: job mission_<id> · engine claude · model · tokens · duration · ok · search:true; the reply rides back with the row",
+        rr.ok && metered.length === 1 && metered[0].job === "mission_m03" && metered[0].engine === "claude" && metered[0].model === "opus" && metered[0].total_tokens === 4000 && metered[0].search === true && metered[0].ok === true && rr.ledger_row === metered[0]);
+      const rf = await claudeResearchCall("p", { job: "mission_compare_m03", search: false, gen: async () => ({ ok: false, error: "boom", total_tokens: 0 }), meter: (row) => metered.push(row) });
+      assert("5.3 claudeResearchCall — a failed call is STILL metered (ok:false, error kept, search:false for the merge) — an unmetered call is a lie on the spend board", rf.ok === false && metered.length === 2 && metered[1].ok === false && metered[1].error === "boom" && metered[1].search === false);
+    }
+
     const week = outwardWeek(st, { runs: [new Date(2026, 7, 7).toISOString(), new Date(2026, 6, 1).toISOString()] }, new Date(2026, 7, 9));
     assert("missions: outward floor counts only the trailing 7 days (bench 1 of 2 in-window)", week.benchRuns === 1 && week.floor === 2);
     assert("missions: staging is machine prep — only RETURNS count toward the floor",
@@ -761,7 +871,7 @@ function missionCli(mode) {
     if (!id) { console.error("usage: scout.mjs mission ingest <ID> [--file <path>]"); process.exit(1); }
     const file = argAfter("--file");
     let text = "";
-    try { text = file ? readFileSync(file, "utf8") : readFileSync(0, "utf8"); } catch { text = ""; }
+    text = readTextAt(file || 0);   // --file <path>, else stdin (fd 0) — the one read site
     if (!text || text.trim().length < 40) {
       console.error("ingest refused: return is empty/too thin (<40 chars). Pass --file <path> or pipe the Gemini output on stdin.");
       process.exit(1);
@@ -769,8 +879,7 @@ function missionCli(mode) {
     const reportName = `mission_${id.toUpperCase()}_${localDate(now)}.md`;
     const res = ingestMission(state, id, `scout_reports/${reportName}`, now);
     if (!res.ok) { console.error(`ingest refused: ${res.error}`); process.exit(1); }
-    mkdirSync(REPORTS_DIR, { recursive: true });
-    writeFileSync(join(REPORTS_DIR, reportName), text, "utf8");
+    writeReport(reportName, text);
     writeAtomic(MISSIONS, state);
     console.log(`MISSIONS DESK · ${res.row.id} ingested → dressing-room/state/scout_reports/${reportName} (verbatim).`);
     console.log(`  next: diff review rides the next session anchor — canon (OPPONENT_SCOUT/ROADMAP) changes only with his word.`);
@@ -779,6 +888,55 @@ function missionCli(mode) {
     return;
   }
 
+  // §17-B (Block 5.3) — THE CLAUDE LEG: the same brief, through the §9.1 WebSearch lane, verbatim to disk, metered, stamped
+  if (sub === "claude") {
+    const id = process.argv[4];
+    if (!id) { console.error("usage: scout.mjs mission claude <ID> [--model opus|sonnet] [--force] [--dry]"); process.exit(1); }
+    const row = state.missions.find(r => r.id.toLowerCase() === String(id).toLowerCase());
+    if (!row) { console.error(`mission claude refused: no mission "${id}" — see: node scripts/scout.mjs mission list`); process.exit(1); }
+    if (row.claude_report && !process.argv.includes("--force")) { console.error(`mission claude refused: ${row.id} already has a Claude return (${row.claude_report}) — a report is a spend; --force runs it again`); process.exit(1); }
+    const brief = missionPromptFrom(readTextAt(reportAbs(row.file)));
+    if (brief.length < 40) { console.error(`mission claude refused: the mission file is missing on disk or carries no prompt below its PASTE marker (${row.file})`); process.exit(1); }
+    const model = argAfter("--model") || "opus";
+    const prompt = buildClaudeMissionPrompt(row.id, row.cluster || row.concept || null, brief);
+    if (process.argv.includes("--dry")) { console.log(`MISSIONS DESK · ${row.id} claude leg DRY — ${prompt.length} chars would go to ${model} + WebSearch (job mission_${row.id.toLowerCase()}); nothing spent, nothing written.`); return; }
+    console.log(`MISSIONS DESK · ${row.id} claude leg — ${model} + WebSearch on the mission brief (${brief.length} chars). Minutes, not seconds.`);
+    return (async () => {
+      const r = await claudeResearchCall(prompt, { model, job: `mission_${row.id.toLowerCase()}` });
+      if (!r.ok || !String(r.text || "").trim() || String(r.text).trim().length < 400) { console.error(`mission claude FAILED: ${r.error || "empty/too-thin return"} (${r.total_tokens || 0} tok spent, metered)`); process.exit(1); }
+      const reportName = `mission_${row.id.toUpperCase()}_${localDate(now)}_claude.md`;
+      writeReport(reportName, String(r.text).trim() + "\n");
+      const res = claudeMissionRow(state, row.id, `scout_reports/${reportName}`, now, { tokens: r.total_tokens || 0 });
+      writeAtomic(MISSIONS, state);
+      console.log(`MISSIONS DESK · ${res.row.id} CLAUDE RETURN → dressing-room/state/scout_reports/${reportName} (${String(r.text).length.toLocaleString()} chars · ${(r.total_tokens || 0).toLocaleString()} tok · ${Math.round((r.duration_ms || 0) / 1000)} s).`);
+      console.log(row.report ? `  both returns in — merge: node scripts/scout.mjs mission compare ${res.row.id}` : `  Gemini leg still out — when it lands (mission ingest ${res.row.id}), then: mission compare ${res.row.id}`);
+    })();
+  }
+  // §17-B (Block 5.3) — THE MERGE: one opus pass over the two returns; disagreements named, sources kept, nothing dropped
+  if (sub === "compare") {
+    const id = process.argv[4];
+    if (!id) { console.error("usage: scout.mjs mission compare <ID> [--model opus|sonnet] [--dry]"); process.exit(1); }
+    const row = state.missions.find(r => r.id.toLowerCase() === String(id).toLowerCase());
+    if (!row) { console.error(`mission compare refused: no mission "${id}"`); process.exit(1); }
+    const pre = compareMissionRow(JSON.parse(JSON.stringify(state)), row.id, "(dry)", now);   // the refusal rules, without touching state
+    if (!pre.ok) { console.error(`mission compare refused: ${pre.error}`); process.exit(1); }
+    if (row.report_merged && !process.argv.includes("--force")) { console.error(`mission compare refused: ${row.id} is already merged (${row.report_merged}) — --force merges again`); process.exit(1); }
+    const gem = readTextAt(reportAbs(row.report)), cl = readTextAt(reportAbs(row.claude_report));
+    if (gem.trim().length < 40 || cl.trim().length < 40) { console.error(`mission compare refused: a return is empty on disk (gemini ${gem.length} chars · claude ${cl.length} chars)`); process.exit(1); }
+    const model = argAfter("--model") || "opus";
+    const prompt = buildCompareMissionPrompt(row.id, gem, cl);
+    if (process.argv.includes("--dry")) { console.log(`MISSIONS DESK · ${row.id} compare DRY — ${prompt.length} chars would go to ${model} (job mission_compare_${row.id.toLowerCase()}); nothing spent, nothing written.`); return; }
+    console.log(`MISSIONS DESK · ${row.id} compare — merging Gemini (${gem.length.toLocaleString()} chars) + Claude (${cl.length.toLocaleString()} chars) on ${model}…`);
+    return (async () => {
+      const r = await claudeResearchCall(prompt, { model, job: `mission_compare_${row.id.toLowerCase()}`, search: false, timeoutMs: 900000 });
+      if (!r.ok || String(r.text || "").trim().length < 400) { console.error(`mission compare FAILED: ${r.error || "empty/too-thin merge"} (${r.total_tokens || 0} tok spent, metered)`); process.exit(1); }
+      const name = `mission_${row.id.toUpperCase()}_${localDate(now)}_merged.md`;
+      writeReport(name, String(r.text).trim() + "\n");
+      const res = compareMissionRow(state, row.id, `scout_reports/${name}`, now, { tokens: r.total_tokens || 0 });
+      writeAtomic(MISSIONS, state);
+      console.log(`MISSIONS DESK · ${res.row.id} MERGED → dressing-room/state/scout_reports/${name} (${String(r.text).length.toLocaleString()} chars · ${(r.total_tokens || 0).toLocaleString()} tok). Gemini's verbatim return is untouched (${row.report}); the diff review reads the merge.`);
+    })();
+  }
   if (sub === "fired") {
     const id = process.argv[4];
     if (!id) { console.error("usage: scout.mjs mission fired <ID>"); process.exit(1); }
@@ -818,7 +976,9 @@ function missionCli(mode) {
   console.log(`== MISSIONS DESK ==   audit gate: ${state.syllabus_audit.closed_at ? "OPEN (closed on his word)" : state.syllabus_audit.returns_complete_at ? "returns in — awaiting audit-close (his word)" : "gated — audit in flight"}`);
   for (const r of rows) {
     const age = Math.max(0, Math.floor((now.getTime() - new Date(r.staged_at).getTime()) / 86400000));
-    console.log(`  ${r.id.padEnd(22)} ${r.type.padEnd(12)} ${r.ingested_at ? "✓ ingested" : `staged ${age}d`}  ${r.report || r.file}`);
+    // Block 5.3: the three legs read side by side — gemini (fired/ingested) · claude · merged
+    const legs = [r.fired_at && !r.ingested_at ? "fired, in flight" : null, r.claude_report ? "claude ✓" : (r.claude_at ? "claude ?" : "claude —"), r.report_merged ? "merged ✓" : (r.report && r.claude_report ? "merge pending" : null)].filter(Boolean).join(" · ");
+    console.log(`  ${r.id.padEnd(22)} ${r.type.padEnd(12)} ${r.ingested_at ? "✓ ingested" : `staged ${age}d`}  ${r.report || r.file}${legs ? `   [${legs}]` : ""}`);
   }
   for (const l of missionLines(state, now)) console.log(l);
 }

@@ -66,6 +66,7 @@
   },
   "_surface_law": "AUDIT #63 (2 Aug 2026). EVERY job must declare `surface` — where its output actually appears — because eight-to-ten jobs were writing into brain_out dirs no line of code opened: 28,65,782 tokens all-time, ~32,73,067 of one 82,53,985-token week. midday_reread alone ate 5,60,465 of an 8,00,000-token 5h window for a file with no reader, while formation_read (the sheet, priority 100) got 1,03,010 all week. kind ∈ {code, job_input, human_file, media, sheet, none}: `code` = a .mjs opens it (cite file:line); `job_input` = another job here lists it in `inputs`; `human_file` = designed for the captain to read, nothing automated will (brain.mjs prints these by path in `brain status`, and runJob's note — which the ledger row now carries — names the surface on every run); `media` = an mp3/artifact; `sheet` = team_sheet.md. A job with no address is NOT silently blocked — the runtime reports it with a have/need counter and keeps running, because a missing config key must never be able to silence an organ. What is off is off EXPLICITLY below, with the exact re-enable condition named.",
   "_inputs_law": "AUDIT #64 (2 Aug 2026). An input may be a plain string (optional — the original shape, unchanged) or {\"path\": \"...\", \"required\": true}. gatherInputs used to map a missing path to null with no warning and buildAnalysisPrompt rendered the literal `null` under its own `## INPUT season.json` heading; teamtalk_am has produced the morning talk 85 times at 3-of-4 inputs absent at ~45k tok/run, reporting ok:true every time. A REQUIRED input that is absent skips the job BEFORE the spend and names the file. NO RATIO GUARD — a majority rule misses deep_reanalysis at exactly 50% and kills teamtalk_am at 75%, which currently degrades gracefully in words. Every `required: true` set below was verified PRESENT ON DISK on 2026-08-04, so this changes no behaviour today; it is a regression net, not a new gate. The genuinely-absent files (season.json, notebook.json, mutations.jsonl, post_match/, brain_out/dugout/TODAY.md) are left OPTIONAL on purpose — they arrive when /full-time, the Boot Room and the voice bridge run, and the absent count now rides every ledger row so the spend on nulls is finally visible.",
+  "_fold_law": "OVERHAUL Block 5.2 (18 Aug 2026, §10 THE DARK LANE). A job may declare `folded_into: \"<job id>\"`. It stays enabled; the gate (gate.mjs decide — the fourth letter D) sleeps it while brain.mjs foldStatus() reports the target COVERS the day it serves (artifact on disk, or awake and still due for it), and it runs as the fallback the moment the target fails/misses/sleeps. A fold-sleep journals but files NO card (his approved design). reconcile/pulse read `folded_into` so a folded lane is never a NEVER/stale bleed. Six lanes fold into prepare_tomorrow: night_coach · day_cartridge · agenda · teamtalk_am · midday_cartridge · capsule_premap.",
   "jobs": [
     {
       "id": "midday_digest",
@@ -195,7 +196,9 @@
         "--effort",
         "low"
       ],
-      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "formation_read",
@@ -287,7 +290,12 @@
         "--effort",
         "high"
       ],
-      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "trigger": "fulltime",
+      "gate": {
+        "event": "fulltime"
+      },
+      "_fulltime_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): EVENT-GATED to /full-time. postmatch.mjs arms `brain.mjs trigger fulltime` the moment the day is CLOSED by his word (post_match/<day>.md written); this job is eligible only while that arm is fresh for the shift (brain.mjs eligibleJobs · armFresh) and THE GATE reads gate.event=fulltime (C holds by the event). Nothing runs on a day he never closed. The arm is shared by teamtalk_pm + evening_voice and is spent only when both have run (tick consume rule)."
     },
     {
       "id": "deep_twin",
@@ -515,7 +523,9 @@
         "--effort",
         "medium"
       ],
-      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "medium — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "scrimmage_staging",
@@ -759,7 +769,9 @@
         "--effort",
         "low"
       ],
-      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "teamtalk_am",
@@ -794,7 +806,9 @@
         "--effort",
         "low"
       ],
-      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "teamtalk_pm",
@@ -828,7 +842,12 @@
         "--effort",
         "low"
       ],
-      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "low — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "trigger": "fulltime",
+      "gate": {
+        "event": "fulltime"
+      },
+      "_fulltime_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): EVENT-GATED to /full-time. postmatch.mjs arms `brain.mjs trigger fulltime` the moment the day is CLOSED by his word (post_match/<day>.md written); this job is eligible only while that arm is fresh for the shift (brain.mjs eligibleJobs · armFresh) and THE GATE reads gate.event=fulltime (C holds by the event). Nothing runs on a day he never closed. The arm is shared by teamtalk_pm + evening_voice and is spent only when both have run (tick consume rule)."
     },
     {
       "id": "deep_reanalysis",
@@ -896,7 +915,9 @@
         "--effort",
         "high"
       ],
-      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "agenda",
@@ -921,7 +942,9 @@
         "--effort",
         "high"
       ],
-      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair."
+      "_effort_note": "high — unleash Phase 5 (14 Aug 2026): cheapest depth that does the job, both directions — routine digests low, him-facing organs high. His §0 ruling is the authorisation. Revert = delete this pair.",
+      "folded_into": "prepare_tomorrow",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO prepare_tomorrow — the ONE dark-lane job composes tomorrow's ONE sitting and that plan is what he meets. Stays ENABLED (his law is THE GATE, never a switch): brain.mjs foldStatus() reads whether prepare_tomorrow covers the day this lane serves (its plan file exists, or it is awake and still due) and the gate sleeps this lane on D; the night prepare_tomorrow fails or misses, D holds and this lane runs as the FALLBACK. Nothing deleted, no list. `brain status` GATE names it; `brain gate wake <lane>` runs it beside the fold."
     },
     {
       "id": "intent_digest",
@@ -1105,7 +1128,10 @@
         "where": "dressing-room/state/brain_out/gaffer_audit/<date>.md — the captain glances it; `brain status` prints the newest by path"
       },
       "_note": "PHASE 8.3 (14 Aug 2026, unleash): THE CLAIM AUDITOR. The Gaffer's confabulations had three root causes — no door to the data (fixed: get_card/get_mission), the never-mention-the-machinery law living only in prose (fixed: the unmachine filter), and NO ORGAN CHECKING IT AT ALL. This is the third. Read today's dugout transcript and list every FACTUAL CLAIM it made about a card, a mission, or organism state; mark each CONFIRMED or UNSUPPORTED against the card deck and mission index supplied beside it; <=15 lines. Haiku, ~30-60k tokens a night (<=0.5% of spend) — the cheapest possible answer to 'koi organ nahi jaanchta'. It JUDGES, it never repairs: an UNSUPPORTED line is evidence for the captain, not an automatic anything.",
-      "_added": "2026-08-14"
+      "_added": "2026-08-14",
+      "folded_into": "round_read",
+      "fold_artifact": "brain_out/nightshift/round_read_<day>.json",
+      "_folded_note": "OVERHAUL Block 5.2 (18 Aug 2026, §10): FOLDED INTO judge_night — nightshift.mjs round_read (the night's judged read of his rounds) is where the Gaffer's claims are now checked, beside THE WATCHER live and the truth-layer judge (Block 4). Stays ENABLED; the gate sleeps it on D while round_read's artifact for the day exists (fold_artifact names it — a nightshift lane has no brain row, so the file is the proof) and it runs on its own E·C·F the night the shift left nothing. Nothing deleted."
     }
   ],
   "_disabled_law": "AUDIT 6 Aug 2026. Every enabled:false job now carries _disabled_reason naming WHY it is off and WHAT would turn it on. Before this, three of the four carried only a description of what they DO and deep_twin carried nothing at all — so a disabled job was indistinguishable from a forgotten one, which is the failure brain.mjs:123 names in its own comment. Constraint 3 of ORGANISM_ISSUES still holds: never delete an organ because nobody reads its output — give it an ADDRESS. All four now declare their address; each is off because that address has no reader YET, not because the organ is bad.",

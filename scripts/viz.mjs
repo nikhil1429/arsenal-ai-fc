@@ -933,7 +933,26 @@ function renderWall(data, insights) {
   }
   return `<!doctype html><html><head><meta charset="utf-8"><title>THE CLUB WALL</title></head>
 <body style="margin:0;background:${C.bg};font-family:'Segoe UI',system-ui,sans-serif;padding-bottom:30px">${head}${body}
-<footer style="padding:14px 22px;color:${C.dim};font-size:11px">the loop wastes nothing you generate, loses nothing you are · COYG</footer></body></html>`;
+<footer style="padding:14px 22px;color:${C.dim};font-size:11px">the loop wastes nothing you generate, loses nothing you are · COYG</footer>${openedBeacon(data)}</body></html>`;
+}
+
+// THE `?opened` BEACON (OVERHAUL Block 5.2, 18 Aug 2026 · §5.2 "opened"): the wall is the one
+// surface where the model-authored night lanes (wall_insights · maidan_poster · gemini_render)
+// reach his EYE — and until today nothing recorded that he ever looked, so THE GATE read all
+// three as "never consumed" and slept them. This one line of script posts, ONCE per visible
+// page load (a background tab auto-refreshing every 300 s is not him looking), the day and the
+// lanes whose artifacts are ON this render to the Dugout's /wall-opened door — the owner
+// (brain.mjs recordConsumption) stamps `opened`. mode:'no-cors' + text/plain = a simple request:
+// it works from file:// (he double-clicks the wall) and from /club/wall.html alike, and when the
+// Dugout is down it fails silently — a beacon may never cost him the wall. The wall stays
+// offline-first: no asset is fetched, nothing is awaited, nothing renders from the answer.
+export function wallLanes(data) {
+  const m = (data && data.media) || {};
+  return [data && data.insight_prov ? "wall_insights" : null, m.poster ? "maidan_poster" : null, m.gemini_render ? "gemini_render" : null].filter(Boolean);
+}
+export function openedBeacon(data) {
+  const lanes = wallLanes(data);
+  return `<script>(function(){var L=${JSON.stringify(lanes)},D=${JSON.stringify(String((data && data.date) || ""))},s=false;function go(){if(s||document.visibilityState!=='visible')return;s=true;try{fetch('http://127.0.0.1:4114/wall-opened',{method:'POST',mode:'no-cors',keepalive:true,headers:{'content-type':'text/plain'},body:JSON.stringify({day:D,lanes:L,red:${data && data.verdict === "RED" ? "true" : "false"}})}).catch(function(){})}catch(e){}}go();document.addEventListener('visibilitychange',go)})();</script>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1264,6 +1283,16 @@ async function selftest() {
       withProv.includes("for the morning of 2026-08-10") && withProv.includes("maidan_poster"));
     assert("KAAM1 — an artefact written before this pass renders exactly as it did (no regression, no fake stamp)",
       noProv.includes("today's poster") && !noProv.includes("provenance unrecorded"));
+    // OVERHAUL Block 5.2 — THE `opened` BEACON: the wall names the model-authored lanes ON it and posts once per visible load
+    {
+      const dFull = { ...assembleWallData({ ...bus, media: { poster: true, poster_prov: PROV, gemini_render: true, gemini_render_date: "2026-08-10" } }, now), insight_prov: { made_by: "wall_insights (brain, model-authored)", made_at: "2026-08-10T02:00:00.000Z", for_morning: "2026-08-10" } };
+      const html = renderWall(dFull, { lines: ["the book is honest."], rejected: false });
+      const bare = renderWall(assembleWallData(bus, now), null);
+      assert("5.2 BEACON — the wall carries the three model-authored lanes it actually renders (wall_insights · maidan_poster · gemini_render) and posts them ONCE per VISIBLE load to the Dugout's /wall-opened, no-cors, fail-silent",
+        wallLanes(dFull).join() === "wall_insights,maidan_poster,gemini_render" && html.includes('/wall-opened') && html.includes(`"lanes":L`) === false && html.includes("mode:'no-cors'") && html.includes("visibilityState!=='visible'") && html.includes("visibilitychange") && html.includes(JSON.stringify(["wall_insights", "maidan_poster", "gemini_render"])));
+      assert("5.2 BEACON — a wall with no model-authored lane still beacons (lanes []) so viz's own render counts as `opened` for lane wall; the beacon fetches no asset and awaits nothing (offline-first stands)",
+        wallLanes(assembleWallData(bus, now)).length === 0 && bare.includes("L=[]") && !/<script src=|<link |<img src="http/i.test(bare));
+    }
     const gem = renderWall(assembleWallData({ ...bus, media: { gemini_render: true, gemini_render_date: "2026-08-10", gemini_prov: { ...PROV, for_morning: "2026-08-09" } } }, now), null);
     assert("KAAM1 — THE W7 DEFECT: the render button stops saying 'today' off the filename and says the morning the file is actually for",
       gem.includes("the Gemini render · 2026-08-09") && !gem.includes("the Gemini render · 2026-08-10"));

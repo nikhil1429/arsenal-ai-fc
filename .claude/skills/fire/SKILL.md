@@ -1,16 +1,28 @@
 ---
 name: fire
-description: Fire a staged Gemini mission with ZERO copy-paste tax — Claude drives the captain's Chrome to Gemini (Deep Research for the four audit missions, REGULAR Gemini Pro research for the generated T-/L- ones), pastes the mission prompt, he clicks Start (his word stays the trigger); later "le lo" ingests the finished report straight from the browser. Use when he says "fire", "fire M01", "mission chalao", answers haan on a mission fire-card, or says "le lo" / "mission wapas" / "report aa gayi" for the return leg.
+description: Fire a staged mission with ZERO tax and NO click from him (§17-B, his 13 Aug + 18 Aug words) — Claude drives the captain's Chrome to Gemini (Deep Research for the four audit missions, REGULAR Gemini Pro research for the generated T-/L- ones), pastes the mission prompt and CLICKS START ITSELF, then runs the SAME mission through its own WebSearch lane in parallel (`scout.mjs mission claude <ID>`); "le lo" ingests the Gemini report from the browser and `mission compare` merges the two returns (disagreements named). Use when he says "fire", "fire M03", "mission chalao", answers haan on a mission fire-card, or says "le lo" / "mission wapas" / "report aa gayi" for the return leg. Card only if Chrome/Gemini is unreachable.
 ---
 
 # /fire — the outward loop with his hands in his pockets
 
-**THE LAW THIS RIDES (his sealed ruling, 8 Aug 2026):** the machine writes missions,
-**HE fires them.** This skill does not bend that — it moves every mechanical step
-(open file, copy, switch tab, paste, save, run ingest command) onto the machine and
-leaves him exactly TWO human moments: the click that starts the research, and the
-word that brings it home. That is the whole ADHD design: **his word = the trigger,
-the machine = every finger-movement around it.**
+**THE LAW THIS RIDES — CORRECTED 18 Aug 2026 (OVERHAUL §17-B, Block 5.3):** his 13 Aug 21:11 ruling
+was already on record — *"do the same research on what gemini does every time from your end … after
+getting two researches make a final research document, full permission do M01–M04 by yourself and by
+gemini as well"* — and on 18 Aug 08:45 he confirmed it supersedes the 8 Aug "HE fires" law. So:
+**the machine writes missions AND fires them.** This skill moves EVERY step onto the machine — open,
+paste, **click Start** (his own account, reversible, not a publish), the parallel Claude research leg,
+ingest, merge — and leaves him ZERO required moments. He may still say "le lo" to bring a Gemini
+return home early; the 24 h "le lo?" card is the only ask, and only if the return is late. **A card
+is dealt only if Chrome/Gemini is unreachable** (`captains_call.mjs file --line "M03 fire: Chrome
+rail down — /fire again when Chrome is connected"`) — never a manual copy-paste path.
+
+**TWO LEGS + ONE MERGE, always:** Gemini (his Chrome, Deep Research for M01–M04) **and** Claude
+(`node scripts/scout.mjs mission claude <ID>` — opus + WebSearch on the SAME brief, minutes, metered
+as `mission_<id>` on the brain ledger, written verbatim to `scout_reports/mission_<ID>_<day>_claude.md`).
+When both are on disk: `node scripts/scout.mjs mission compare <ID>` → ONE merged report
+(`_merged.md`: agreements with both sources · **DISAGREEMENTS named, not resolved** · only-in-A ·
+only-in-B · every URL kept · nothing added). The Gemini return stays the verbatim `report`; the diff
+review reads the merge. `mission list` shows all three legs per row.
 
 ## FIRE LEG — he said "fire" (or haan on a mission card)
 
@@ -51,9 +63,16 @@ the machine = every finger-movement around it.**
    captain's ruling)"*, T-/L- say *"regular research — NOT Deep Research"*
    (`grep -n "Fire on:" dressing-room/missions/*.md`). Firing T-hallucinations into Deep
    Research would have spent the one-time rig against his own cost ruling.)
-   **DO NOT press send/start.** Say: *"<ID> loaded — Start dabao."* HIS CLICK is
-   the fire (the ruling's letter and its spirit).
-4. THE FIRE STAMP (LADDER C2, 9 Aug 2026): the moment he clicks Start, run
+   **PRESS START YOURSELF** (18 Aug 2026, §17-B — supersedes the old "DO NOT press send/start"
+   line and its "Start dabao"): click the Start / send control on the Gemini page, confirm the
+   research began (the page shows the plan/"Start research" → running state; read_page it), and
+   say one line: *"<ID> fired — Deep Research chal raha hai; Claude leg bhi shuru."* If the page
+   asks to confirm a research PLAN first (Deep Research does), click Start research on that too.
+   His account, reversible, not a publish — his 13 Aug word is the authorization, on record.
+3b. **THE CLAUDE LEG, in parallel, right after the click:** run
+   `node scripts/scout.mjs mission claude <ID>` **in the background** (it takes minutes — opus +
+   WebSearch; never make him wait on it). It refuses a second run for the same ID unless `--force`.
+4. THE FIRE STAMP (LADDER C2, 9 Aug 2026): the moment Start is clicked, run
    `node scripts/scout.mjs mission fired <ID>` — the stamp is what lets the
    return-leg watcher wake ("le lo?" card) if 24h pass with no return. No
    stamp = a fired mission the organism cannot miss. Also press the rail stamp
@@ -72,15 +91,13 @@ the machine = every finger-movement around it.**
    or any day. (That "Deep Research" describes the AUDIT mode only — a T-/L- fire
    went out as regular research per step 3; noted 10 Aug 2026 so the closing line
    does not re-introduce the mode error corrected above.)
-   The browser tools not connected? Fall back honestly: open the mission file
-   content in the chat for a single manual copy, and say that this is the taxed
-   path — reconnect Chrome next time (and still press the fire stamp once he
-   says he pasted it).
-   On that taxed path "the fire stamp" means `mission fired <ID>` and ONLY that —
-   **do not press `chrome-stamp fire`** (clarified 10 Aug 2026: the two stamps are
-   different organs. `mission fired` records HIS click; the rail stamp records that
-   the Chrome drive SUCCEEDED, which on this path it did not — `grep -n "chrome-stamp"
-   scripts/scout.mjs` and the physio reader above.)
+   The browser tools not connected / Gemini unreachable? **Card, never a copy-paste path**
+   (18 Aug 2026): `node scripts/captains_call.mjs file --line "<ID> fire: Chrome rail down —
+   /fire again when Chrome is connected" --key "mission:rail:<ID>"`, still run the Claude leg
+   (step 3b — it needs no browser), and stop. Do NOT press `mission fired` (nothing was fired
+   on Gemini) and do NOT press `chrome-stamp fire` (the two stamps are different organs:
+   `mission fired` records the Gemini fire; the rail stamp records that the Chrome drive
+   SUCCEEDED — `grep -n "chrome-stamp" scripts/scout.mjs` and the physio reader above).
 
 ## RETURN LEG — he said "le lo" / "report aa gayi"
 
@@ -96,8 +113,13 @@ the machine = every finger-movement around it.**
    `mission_<ID>_<YYYY-MM-DD>.md`, so never invent one; and a return under 40 characters is
    REFUSED outright — `grep -n "too thin" scripts/scout.mjs`. `--file` is optional: the same
    door reads the report on stdin.)
-3. Confirm in one line: ingested, diff card will deal at the next anchor
-   (canon changes only on his word — Ruling 6).
+2b. **THE MERGE (18 Aug 2026, §17-B):** if the row already carries `claude_report`
+   (`node scripts/scout.mjs mission list` shows `claude ✓`), run
+   `node scripts/scout.mjs mission compare <ID>` (opus, one pass, ~a minute) — the merged
+   report is what the diff review reads. If the Claude leg is still running / never ran,
+   run `mission claude <ID>` first (background) and compare when it lands; say so in one line.
+3. Confirm in one line: ingested (+ merged, or "merge lands when the Claude leg returns"),
+   diff card will deal at the next anchor (canon changes only on his word — Ruling 6).
    The card is not this skill's to file — the card organ derives one `mission:diff:<ID>` per
    returned mission by itself (`grep -n "mission:diff:" scripts/captains_call.mjs`), so say it
    and stop.
@@ -151,7 +173,8 @@ When he closes a Python subtopic (or says "packet bhejo" / "fire packet"):
    drills themselves are his hands in Gemini, never pre-filled.
 
 ## NEVER
-- Never press Start yourself. Never reword a mission prompt (scout owns them).
+- Never make HIM press Start (18 Aug 2026 — the old "never press Start yourself" is
+  reversed by his word; the machine presses it). Never reword a mission prompt (scout owns them).
   (Precise, 10 Aug 2026: scout GENERATES the T-/L- prompts, but M01–M04 are hand-authored
   and the organ *"only REGISTERS, never rewrites"* them — `grep -n "only REGISTERS" scripts/scout.mjs`.
   The instruction stands either way; the reason differs, and the four audits have no

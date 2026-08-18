@@ -1545,14 +1545,94 @@ export function setGateForce(queueState, lane, { until, once = true, by = "cli",
   return queueState;
 }
 
+// ---- THE FOLD, the runner's fact (overhaul §10 · Block 5.2, 18 Aug 2026) ---------
+// A job with `folded_into: "<target>"` in brain_config.json is DISPLACED by that target
+// (night_coach · day_cartridge · agenda · teamtalk_am · midday_cartridge · capsule_premap
+// → prepare_tomorrow: ONE plan a night is what he meets). Not a switch: the lane stays
+// enabled, and D fails — it sleeps — only while the target COVERS the day this lane
+// serves. Computed here from the same three functions the WRITER uses (outDate ·
+// shiftDay · serveDate), so the fold and the artifact can never spell the day apart:
+//   covered  ⇐ the target's artifact for the day it serves NOW exists on disk
+//              (brain_out/<target.out>/<day>.json|.md — prepare_tomorrow's plan), OR
+//              the target is AWAKE by its own verdict, has made no attempt for that day
+//              yet, and its slot for that day is still ahead (due tonight — the folded
+//              lane waits instead of running first and being overwritten by the plan).
+//   OPEN     ⇐ the target attempted that day and left no artifact (failed, or the plan
+//              was refused by sitting's validator), or its slot passed with no attempt
+//              (laptop asleep), or the target is asleep/disabled/not a job — then D holds
+//              and the folded lane runs AS THE FALLBACK. Nothing deleted, no list.
+// The verdict itself is gate.mjs's (the fourth letter D); this function only reads.
+const nextCalendarDate = (d) => localDate(new Date(new Date(`${d}T12:00:00`).getTime() + 86400000));   // noon-anchored, like prevShiftDate
+export function foldSlotAhead(target, day, now, cfg) {
+  // is the target's run that would serve `day` still in front of `now`? `day` is the
+  // target's outDate (a serve-day for `serve: next_morning`, the shift's evening date
+  // otherwise), so first spell which calendar dates that shift's two halves fall on.
+  const [ws, we] = jobWindows(cfg)[target.window] || jobWindows(cfg).any;
+  const overnight = target.window === "overnight" || ws > we;
+  const morningOf = target.serve === "next_morning" ? day : (overnight ? nextCalendarDate(day) : day);   // the after-midnight half
+  const eveningOf = target.serve === "next_morning" ? prevShiftDate(day) : day;                            // the pre-midnight half
+  const at = target.at || null;
+  let slot;
+  if (at) {
+    // an `at` in the after-midnight half of a wrapped window (prepare_tomorrow 03:20) fires on the
+    // morning; a pre-midnight at (agenda's 22:45 shape) fires the evening before.
+    const evening = overnight && at >= ws;
+    slot = Date.parse(`${evening ? eveningOf : morningOf}T${at}:00`);
+  } else {
+    // no at: the run can still come until the window CLOSES for that shift
+    slot = Date.parse(`${overnight ? morningOf : day}T${we >= "24:00" ? "23:59" : we}:00`);
+  }
+  return Number.isFinite(slot) ? now.getTime() < slot : false;
+}
+export function foldStatus(job, cfg, ctx, visited = new Set()) {
+  const tid = job && typeof job.folded_into === "string" && job.folded_into.trim() ? job.folded_into.trim() : null;
+  if (!tid) return null;
+  const target = ((cfg && cfg.jobs) || []).find((j) => j.id === tid);
+  const now = ctx.now || new Date();
+  if (!target) {
+    // A NON-BRAIN fold target (a nightshift lane: gaffer_claim_audit → round_read, judge_night's home).
+    // The config names the artifact that proves the target covered the day — `fold_artifact:
+    // "brain_out/<lane>/<name>_<day>.json"`, <day> = the calendar date at this slot (nightshift's
+    // own day key). No "still due" for a lane brain does not schedule: covered iff the file exists.
+    const pat = typeof job.fold_artifact === "string" ? job.fold_artifact.replace(/\\/g, "/") : null;
+    const m = pat && /^brain_out\/([^/]+)\/(.+)$/.exec(pat);
+    if (!m) return { target: tid, covered: false, detail: `${tid} is not a brain job and no fold_artifact (brain_out/<lane>/<file with <day>>) names its output — the fold cannot cover anything` };
+    const day = localDate(now);
+    const name = m[2].replace(/<day>/g, day);
+    const exists = ctx.artifactExists ? ctx.artifactExists({ id: tid, out: m[1] }, day, name) : !!(laneListing({ id: tid, out: m[1] }) || []).some((f) => f.name === name);
+    return exists
+      ? { target: tid, covered: true, day, detail: `folded → ${tid}: its artifact for ${day} exists (brain_out/${m[1]}/${name}) — the fold target did this lane's work` }
+      : { target: tid, covered: false, day, detail: `${tid} left no artifact for ${day} (brain_out/${m[1]}/${name}) — the fold is OPEN, this lane decides on its own E·C·F` };
+  }
+  if (target.enabled === false) return { target: tid, covered: false, detail: `${tid} is disabled — the fold cannot cover anything` };
+  if (visited.has(job.id) || tid === job.id) return { target: tid, covered: false, detail: `fold cycle at ${tid} — refused, the fold is open` };
+  const day = outDate(target, now, shiftDay(target, now, cfg));   // the day the target's NEXT artifact serves
+  const lane = target.out || target.id;
+  const exists = ctx.artifactExists ? ctx.artifactExists(target, day) : !!(laneListing(target) || []).some((f) => f.name === `${day}.json` || f.name === `${day}.md`);
+  if (exists) return { target: tid, covered: true, day, detail: `folded → ${tid}: its artifact for ${day} exists (brain_out/${lane}/${day}.*) — the fold target did this lane's work` };
+  // no artifact yet — did the target already TRY for that day? (rows whose own outDate is `day`)
+  const attempts = (ctx.ledger || []).filter((r) => r && r.job === tid && typeof r.ok === "boolean" && !r.limit_hit
+    && Number.isFinite(Date.parse(r.ts)) && outDate(target, new Date(r.ts), shiftDay(target, new Date(r.ts), cfg)) === day);
+  if (attempts.length) {
+    const last = attempts[attempts.length - 1];
+    return { target: tid, covered: false, day, detail: `${tid} ran for ${day} and left no artifact (${attempts.length} attempt(s), last ${last.ok ? "ok but nothing written — its output was refused before the write" : "failed"}) — the fold is OPEN, this lane is the fallback` };
+  }
+  // not yet tried: is the target itself awake, and is its slot for `day` still ahead?
+  const tv = gateVerdictFor(target, cfg, ctx, new Set([...visited, job.id]));
+  if (!tv.run) return { target: tid, covered: false, day, detail: `${tid} is itself ASLEEP (${["E", "C", "F", "D"].filter((k) => tv.why[k] && !tv.why[k].ok).join("+")}) — the fold is OPEN, this lane decides on its own` };
+  if (foldSlotAhead(target, day, now, cfg)) return { target: tid, covered: true, day, detail: `folded → ${tid}: due ${target.at || "in its window"} for ${day} (awake, not yet run) — this lane waits; the fold opens by itself if it fails or misses` };
+  return { target: tid, covered: false, day, detail: `${tid}'s slot for ${day} passed with no attempt — the fold is OPEN, this lane is the fallback` };
+}
+
 // ---- the verdict for one brain job -----------------------------------------
-export function gateVerdictFor(job, cfg, ctx) {
+export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
   const evidence = gateEvidence(job, cfg, ctx);
   const consumption = consumptionForJob(cfg, job, ctx);
   const never_ran = !gateEverRan(ctx.ledger || [], job.id);
   const forced = gateForce(ctx.queueState, job.id);
-  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced });
-  return { ...v, evidence, consumption, never_ran, forced };
+  const fold = ctx.foldFor ? ctx.foldFor(job) : foldStatus(job, cfg, ctx, visited);
+  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold });
+  return { ...v, evidence, consumption, never_ran, forced, fold_status: fold };
 }
 // ---- the verdict for a NON-brain lane (nightshift, DMN) — same law, same journal ----
 // The other gated organs already import this file; they hand their own evidence
@@ -1601,8 +1681,12 @@ export function gateJournalRows() { return readLines(GATE_JOURNAL); }
 // the two words he can say. `na` dispatches `brain gate wake <lane>` (captains_call
 // carries the dispatch on the card itself: --gate-wake). Idempotent per (lane,
 // sleep-episode) through captains_call's rolling-key guard: gate:<lane>:<day>.
+// THE LETTERS a verdict can fail on — E·C·F since Block 0, D (displaced by a fold) since
+// Block 5.2. One list, so the printer, the journal, the card and `gate json` agree.
+const GATE_LETTERS = ["E", "C", "F", "D"];
+const failedLetters = (why) => GATE_LETTERS.filter((k) => why && why[k] && why[k].ok === false);
 function gateCardArgs(lane, verdict, now, cfg = null) {
-  const failed = ["E", "C", "F"].filter((k) => !verdict.why[k].ok);
+  const failed = failedLetters(verdict.why);
   const short = (s) => String(s || "").replace(/\s+/g, " ").slice(0, 46);
   const w = verdict.wakes_when ? String(verdict.wakes_when).split(" · ")[0].replace(/\s+—.*$/, "") : "";
   const days = gateConfig((cfg && (cfg.jobs || []).find((j) => j.id === lane)) || {}).window_days;
@@ -1620,17 +1704,24 @@ export function gateTransition(lane, verdict, deps = {}) {
   const prev = deps.prevState !== undefined ? deps.prevState : (lastGateStates().get(lane) || null);
   const state = verdict.state;
   if (prev && prev.state === state) return { changed: false, prev, row: null };
+  const D = verdict.why.D || { ok: true, detail: null };   // pre-Block-5.2 verdict shapes read as "not folded"
+  // A sleep on D ALONE files NO card: the fold is his approved design (§10 — "do not deal
+  // cards about this plan"), the journal + `brain status` name it, and `brain gate wake`
+  // stays his hand door. A sleep that also fails E/C/F cards as before.
+  const cardable = state === "asleep" && failedLetters(verdict.why).some((k) => k !== "D");
   const row = {
     ts: now.toISOString(), lane, state, by: deps.by || "brain",
-    why: { E: verdict.why.E.ok, C: verdict.why.C.ok, F: verdict.why.F.ok },
-    detail: { E: verdict.why.E.detail, C: verdict.why.C.detail, F: verdict.why.F.detail },
+    why: { E: verdict.why.E.ok, C: verdict.why.C.ok, F: verdict.why.F.ok, D: D.ok },
+    detail: { E: verdict.why.E.detail, C: verdict.why.C.detail, F: verdict.why.F.detail, D: D.detail },
+    fold: verdict.fold || null,
+    card: state === "asleep" ? (cardable ? "filed" : "none (fold — his approved design, journal only)") : null,
     wakes_when: verdict.wakes_when || null,
     consumption: verdict.consumption || null,
   };
   if (!deps.dry) {
     if (deps.appendJournal) deps.appendJournal(JSON.stringify(row) + "\n");
     else { try { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); } catch { } }
-    if (state === "asleep") {
+    if (cardable) {
       const args = gateCardArgs(lane, verdict, now, deps.cfg || null);
       // a caller that COLLECTS decides how many cards this becomes (see the batch rule in tick)
       if (Array.isArray(deps.collectCards)) deps.collectCards.push({ lane, args });
@@ -1663,22 +1754,38 @@ export function gateCardsForTick(collected, now, { fileCard = defaultFileCard, t
 // beside its journaled state, plus the non-brain lanes (ns_*, dmn) that journal here.
 export function gateReport(cfg, ctx) {
   const jobs = ((cfg && cfg.jobs) || []).filter((j) => j.enabled !== false);
-  const rows = jobs.map((j) => ({ lane: j.id, kind: j.kind, ...gateVerdictFor(j, cfg, ctx), journaled: ctx.states.get(j.id) || null }));
+  // an EVENT lane (job.trigger — teamtalk_pm/evening_voice ride `fulltime` since Block 5.2) is awake
+  // by the gate and still WAITS for its arm; the report says which, so `status` never reads
+  // "awake" as "will run tonight" for a lane whose event has not fired.
+  const armed = (j) => { if (!j.trigger) return null; const a = ctx.queueState && ctx.queueState.triggers && ctx.queueState.triggers[j.trigger]; return !!(a && armFresh(j, a, ctx.now, cfg)); };
+  const rows = jobs.map((j) => ({ lane: j.id, kind: j.kind, trigger: j.trigger || null, trigger_armed: armed(j), ...gateVerdictFor(j, cfg, ctx), journaled: ctx.states.get(j.id) || null }));
   const others = [...ctx.states.values()].filter((r) => !jobs.some((j) => j.id === r.lane));
   return { rows, others, asleep: rows.filter((r) => !r.run), awake: rows.filter((r) => r.run) };
 }
 export function printGate(rep, { verbose = false } = {}) {
   const asleep = rep.asleep, awake = rep.awake;
-  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=consumed-by-him ≤window · F=fail streak; asleep is health, not disease — it wakes itself)`);
+  const folded = rep.rows.filter((r) => r.fold && r.fold.target);
+  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=consumed-by-him ≤window · F=fail streak · D=displaced by a fold; asleep is health, not disease — it wakes itself)`);
   for (const r of asleep) {
-    const failed = ["E", "C", "F"].filter((k) => !r.why[k].ok);
-    console.log(`  · ${r.lane.padEnd(18)} ASLEEP on ${failed.join("+")} — ${failed.map((k) => `${k}: ${r.why[k].detail}`).join(" · ")}`);
+    const failed = failedLetters(r.why);
+    const foldTag = r.fold && r.fold.target ? ` · folded → ${r.fold.target}${r.fold.covered ? "" : " (fold OPEN — fallback)"}` : "";
+    console.log(`  · ${r.lane.padEnd(18)} ASLEEP on ${failed.join("+")}${foldTag} — ${failed.map((k) => `${k}: ${r.why[k].detail}`).join(" · ")}`);
     console.log(`    ${"".padEnd(18)} wakes when: ${r.wakes_when}${r.journaled ? ` · journaled ${r.journaled.state} since ${String(r.journaled.ts).slice(0, 16)}Z` : " · not yet journaled (first slot journals it)"}`);
   }
-  if (verbose || asleep.length === 0) for (const r of awake) console.log(`  · ${r.lane.padEnd(18)} awake — ${r.why.C.detail}${r.forced ? ` · FORCED (${r.forced.by}, until ${r.forced.until})` : ""}`);
+  const armTag = (r) => (r.trigger ? (r.trigger_armed ? ` · event ${r.trigger} ARMED` : ` · event ${r.trigger} not armed — waits for the event`) : "");
+  if (verbose || asleep.length === 0) for (const r of awake) console.log(`  · ${r.lane.padEnd(18)} awake — ${r.why.C.detail}${armTag(r)}${r.fold && r.fold.target ? ` · folded → ${r.fold.target} (fold OPEN: ${r.why.D ? r.why.D.detail : "?"})` : ""}${r.forced ? ` · FORCED (${r.forced.by}, until ${r.forced.until})` : ""}`);
   else {
     const forcedAwake = awake.filter((r) => r.forced);
-    console.log(`  · awake: ${awake.map((r) => r.lane + (r.never_ran ? "*" : "")).join(", ")}${awake.some((r) => r.never_ran) ? "  (* = first-run grace)" : ""}${forcedAwake.length ? ` · forced: ${forcedAwake.map((r) => r.lane).join(", ")}` : ""}`);
+    const openFolds = awake.filter((r) => r.fold && r.fold.target);
+    const waiting = awake.filter((r) => r.trigger && !r.trigger_armed);
+    console.log(`  · awake: ${awake.map((r) => r.lane + (r.never_ran ? "*" : "") + (r.trigger && !r.trigger_armed ? "⏳" : "")).join(", ")}${awake.some((r) => r.never_ran) ? "  (* = first-run grace)" : ""}${waiting.length ? `  (⏳ = event lane, ${[...new Set(waiting.map((r) => r.trigger))].join("/")} not armed — runs after the event)` : ""}${forcedAwake.length ? ` · forced: ${forcedAwake.map((r) => r.lane).join(", ")}` : ""}${openFolds.length ? ` · fold OPEN (fallback running): ${openFolds.map((r) => `${r.lane}→${r.fold.target}`).join(", ")}` : ""}`);
+  }
+  // THE FOLDS (Block 5.2) — every folded lane with its target, in one line, so the DoD
+  // ("brain status GATE names every folded lane with its fold target") is read here.
+  if (folded.length) {
+    const byTarget = new Map();
+    for (const r of folded) { const t = r.fold.target; if (!byTarget.has(t)) byTarget.set(t, []); byTarget.get(t).push(`${r.lane}${r.run ? " (OPEN — fallback awake)" : ""}`); }
+    for (const [t, lanes] of byTarget) console.log(`  · folded → ${t}: ${lanes.join(", ")}  (enabled, asleep by verdict while ${t} covers the day; the fold opens by itself the night it fails)`);
   }
   if (rep.others.length) console.log(`  · other lanes journaled here: ${rep.others.map((r) => `${r.lane}=${r.state}`).join(" · ")}`);
 }
@@ -3036,15 +3143,22 @@ export function agendaAllocationFor(job, cfg, now, dir = OUT_DIR) {
 // two periods (48h, its own derivation law) — so a legal skip can never bleed,
 // and every non-agenda cause of a missed night (failed attempts, dead laptop,
 // validator rejects) closes the gate by itself, no proxy needed.
-export function laneRestable(job, dir = OUT_DIR, nowMs = Date.now()) {
+// THE ONE READ OF A LANE'S DIRECTORY (Block 5.2): laneRestable (H2) and foldStatus (the fold's
+// artifact check) both ride this single listing, so brain.mjs's unresolved-sink ratchet stays
+// where it was — one readdir site, one stat site — instead of a new existsSync per caller.
+// null = no lane dir (never produced); else [{name, mtimeMs}].
+export function laneListing(job, dir = OUT_DIR) {
+  const lane = join(dir, job.out || job.id);
   try {
-    const lane = join(dir, job.out || job.id);
-    let newest = 0;
-    for (const f of readdirSync(lane)) {
-      try { const m = statSync(join(lane, f)).mtimeMs; if (m > newest) newest = m; } catch { }
-    }
-    return newest > 0 && (nowMs - newest) < 24 * 3600000;
-  } catch { return false; }   // no lane dir = never produced = never restable
+    return readdirSync(lane).map((f) => { try { return { name: f, mtimeMs: statSync(join(lane, f)).mtimeMs }; } catch { return { name: f, mtimeMs: 0 }; } });
+  } catch { return null; }
+}
+export function laneRestable(job, dir = OUT_DIR, nowMs = Date.now()) {
+  const files = laneListing(job, dir);
+  if (!files) return false;   // no lane dir = never produced = never restable
+  let newest = 0;
+  for (const f of files) if (f.mtimeMs > newest) newest = f.mtimeMs;
+  return newest > 0 && (nowMs - newest) < 24 * 3600000;
 }
 
 function buildAgendaPrompt(job, inputs, cfg, banned = DEFAULTS.guards.banned_phrases) {
@@ -3713,7 +3827,7 @@ async function tick(cfg, deps) {
     const v = gateVerdictFor(job, cfg, gctx);
     gateTransition(job.id, v, { now, dry: deps.dry, prevState: gctx.states.get(job.id) || null, collectCards: sleptNow, appendJournal: deps.appendJournal, cfg });
     if (v.run) awake.push({ job, verdict: v });
-    else gated.push({ job: job.id, why: ["E", "C", "F"].filter((k) => !v.why[k].ok).join("+"), verdict: v });
+    else gated.push({ job: job.id, why: failedLetters(v.why).join("+"), verdict: v });
   }
   if (!deps.dry && sleptNow.length) gateCardsForTick(sleptNow, now, deps.fileCard ? { fileCard: deps.fileCard } : {});
   for (const { job, verdict } of awake) {
@@ -3842,7 +3956,14 @@ async function tick(cfg, deps) {
       const f = queueState.gate && queueState.gate.forced && queueState.gate.forced[job.id];
       if (f) { f.once = false; consumedForces.push(job.id); }
     }
-    if (usage.ok && job.trigger && queueState.triggers) { delete queueState.triggers[job.trigger]; consumedTriggers.push(job.trigger); }   // consumed
+    // consumed — but a trigger SHARED by several jobs (Block 5.2: teamtalk_pm + evening_voice
+    // both ride `fulltime`) is spent only when EVERY enabled job that declares it has run this
+    // shift; the first success used to delete it and starve the second job for the day.
+    if (usage.ok && job.trigger && queueState.triggers) {
+      const siblings = (cfg.jobs || []).filter((j) => j.enabled !== false && j.trigger === job.trigger && j.id !== job.id);
+      const allDone = siblings.every((j) => ((queueState.jobs_run[shiftDay(j, now, cfg)] || {})[j.id] || 0) >= (j.max_per_day || 1));
+      if (allDone) { delete queueState.triggers[job.trigger]; consumedTriggers.push(job.trigger); }
+    }
     if (usage.limit_hit && cfg.budget.self_tune) {
       // a limit event means we spent ~the plan's true capacity — record the
       // ACTUAL window usage, but never below the conservative estimate (a
@@ -4014,6 +4135,31 @@ async function selftest() {
       eligibleJobs(trigCfg, { triggers: { morning_signals: { reason: "no ts at all" } } }, at845_11).some(j => j.id === "t1"));
     assert("A2 — an ABSENT trigger is still closed (armFresh must never answer for undefined)",
       armFresh(trigCfg.jobs[0], null, at845_11, cfg) === true && !eligibleJobs(trigCfg, { triggers: {} }, at845_11).some(j => j.id === "t1"));
+    // OVERHAUL Block 5.2 — THE FULL-TIME EVENT: teamtalk_pm + evening_voice ride ONE trigger
+    // (`fulltime`, armed by postmatch.mjs at his close). A shared arm is spent only when EVERY
+    // job that declares it has run this shift — the first success used to delete it and starve
+    // the second lane for the day.
+    {
+      const ev = cfg.jobs.find((j) => j.id === "evening_voice"), tp = cfg.jobs.find((j) => j.id === "teamtalk_pm");
+      assert("FULL-TIME EVENT — evening_voice + teamtalk_pm declare trigger `fulltime` AND gate.event `fulltime` in canon config (they run only after his close; the arm belongs to that shift)",
+        ev && tp && ev.trigger === "fulltime" && tp.trigger === "fulltime" && ev.gate && ev.gate.event === "fulltime" && tp.gate && tp.gate.event === "fulltime");
+      const ftCfg = { ...cfg, paused: false, jobs: [
+        { id: "ev_fx", engine: "claude", window: "any", priority: 90, trigger: "fulltime", inputs: [] },
+        { id: "tp_fx", engine: "claude", window: "any", priority: 45, trigger: "fulltime", inputs: [], at: "23:50" },
+      ] };
+      const T21 = new Date(2026, 7, 18, 21, 30);
+      const qsFT = { observed_window_ceiling: null, jobs_run: {}, triggers: { fulltime: { ts: new Date(2026, 7, 18, 21, 25).toISOString(), reason: "full-time" } } };
+      const ftDeps = { exec: () => ({ ok: true, text: "Sharp read. 2 drills stand.", total_tokens: 1000, duration_ms: 5, limit_hit: false, error: null }), gexec: () => ({ ok: false }), now: T21, dry: true, ledger: [], queueState: qsFT, gate: { consumption: [], cards: [], states: new Map(), mouth: [], mediaExists: () => false, evidenceFor: () => ({ inputs: {}, declared: 0, absent: [], required_absent: [], present: 0, door: [], door_dropped: 0 }) } };
+      const r1 = await tick(ftCfg, ftDeps);
+      assert("FULL-TIME EVENT — at 21:30 only ev_fx is eligible (tp_fx's at is 23:50); it runs and the SHARED arm is NOT spent (tp_fx has not run this shift)",
+        r1.ran.some((x) => x.job === "ev_fx") && !r1.ran.some((x) => x.job === "tp_fx") && !!qsFT.triggers.fulltime);
+      const r2 = await tick(ftCfg, { ...ftDeps, now: new Date(2026, 7, 18, 23, 55) });
+      assert("FULL-TIME EVENT — at 23:55 tp_fx runs on the same arm, and only THEN is the arm spent (both lanes served by one full-time)",
+        r2.ran.some((x) => x.job === "tp_fx") && !qsFT.triggers.fulltime);
+      const repFT = gateReport(ftCfg, gateContext({ ledger: [], gate: ftDeps.gate }, T21, [], { jobs_run: {}, triggers: {} }));
+      assert("FULL-TIME EVENT — gateReport names an event lane's arm state (trigger + trigger_armed) so `status` never reads 'awake' as 'runs tonight' before his close",
+        repFT.rows.every((r) => r.trigger === "fulltime" && r.trigger_armed === false));
+    }
   }
 
   // PHASE H · H2/H6 (10 Aug 2026) — the wrap-aware at-gate + the agenda's hand
@@ -5952,6 +6098,76 @@ async function selftest() {
     assert("MERGE — a tick that never touched gate state still carries the disk's forces forward (and triggers merge exactly as before)",
       merged2.gate.forced.x.once === true && typeof merged2.triggers === "object");
 
+    // ── THE FOLD (Block 5.2) — the runner's fact, then the fourth letter, then the transition ──
+    {
+      // T = 18 Aug 23:30 (evening half of the overnight shift): prepare_tomorrow (03:20, serve
+      // next_morning) serves 2026-08-19; night_coach (overnight, no at) is folded into it.
+      const fcfg = { ...cfg, jobs: [
+        J("night_coach", { model: "opus", folded_into: "prepare_tomorrow", kind: "night_coach" }),
+        J("agenda", { at: "22:45", folded_into: "prepare_tomorrow", kind: "agenda" }),
+        J("prepare_tomorrow", { at: "03:20", serve: "next_morning", out: "prepare", kind: "prepare_tomorrow" }),
+        J("orphan_fold", { folded_into: "no_such_job" }),
+      ] };
+      const fhist = [
+        { ts: iso(3), job: "night_coach", engine: "claude", ok: true, total_tokens: 1 },
+        { ts: iso(3), job: "agenda", engine: "claude", ok: true, total_tokens: 1 },
+        { ts: iso(3), job: "prepare_tomorrow", engine: "claude", ok: true, total_tokens: 1 },
+        { ts: iso(3), job: "orphan_fold", engine: "claude", ok: true, total_tokens: 1 },
+      ];
+      const fcons = [{ ts: iso(1), job: "night_coach", kind: "briefed", by: "learnstate" }, { ts: iso(1), job: "agenda", kind: "briefed", by: "learnstate" }, { ts: iso(1), job: "prepare_tomorrow", kind: "sat", by: "sitting" }, { ts: iso(1), job: "orphan_fold", kind: "briefed", by: "learnstate" }];
+      const fctx = (over = {}) => ({ ...gateContext(gateDeps({ dry: true, ledger: fhist, gate: { consumption: fcons, cards: [], states: new Map(), mouth: [], mediaExists: () => false, evidenceFor: () => ({ inputs: {}, declared: 0, absent: [], required_absent: [], present: 0, door: [], door_dropped: 0 }) } }), T, fhist, { jobs_run: {} }), ...over });
+      const jobF = (id) => fcfg.jobs.find((j) => j.id === id);
+      // (a) the plan for the day it serves is on disk ⇒ COVERED
+      const fA = foldStatus(jobF("night_coach"), fcfg, fctx({ artifactExists: (t, day) => t.id === "prepare_tomorrow" && day === "2026-08-19" }));
+      assert("FOLD/runner — the target's artifact for the day it serves NOW (23:30 → serves 2026-08-19) exists ⇒ covered, the detail names target + day + path",
+        fA && fA.covered === true && fA.day === "2026-08-19" && /folded → prepare_tomorrow/.test(fA.detail) && /brain_out\/prepare\/2026-08-19/.test(fA.detail));
+      // (b) no plan yet, target awake, its 03:20 slot for the 19th still ahead of 23:30 ⇒ covered (pending)
+      const fB = foldStatus(jobF("night_coach"), fcfg, fctx({ artifactExists: () => false }));
+      assert("FOLD/runner — no artifact yet, target AWAKE and its slot for that day still AHEAD (03:20 tomorrow) ⇒ covered-pending: the folded lane WAITS instead of running first",
+        fB && fB.covered === true && /due 03:20/.test(fB.detail) && /waits/.test(fB.detail));
+      // (c) the target ATTEMPTED that day and left nothing ⇒ OPEN (fallback)
+      const failedRun = { ts: new Date(2026, 7, 19, 3, 21, 0).toISOString(), job: "prepare_tomorrow", engine: "claude", ok: false, error: "x", total_tokens: 1 };
+      const T2 = new Date(2026, 7, 19, 3, 25, 0);
+      const fC = foldStatus(jobF("night_coach"), fcfg, fctx({ now: T2, ledger: [...fhist, failedRun], artifactExists: () => false }));
+      assert("FOLD/runner — the target ran for that day and left no artifact (failed at 03:21) ⇒ the fold is OPEN and the folded lane is the FALLBACK; nothing was deleted, no list edited",
+        fC && fC.covered === false && /left no artifact/.test(fC.detail) && /fallback/.test(fC.detail));
+      // (d) slot passed with no attempt (laptop asleep) ⇒ OPEN
+      const fD = foldStatus(jobF("night_coach"), fcfg, fctx({ now: new Date(2026, 7, 19, 4, 0, 0), artifactExists: () => false }));
+      assert("FOLD/runner — the target's slot passed with NO attempt (a dead night) ⇒ OPEN, named", fD && fD.covered === false && /passed with no attempt/.test(fD.detail));
+      // (e) target itself asleep (F streak) ⇒ OPEN
+      const fE = foldStatus(jobF("night_coach"), fcfg, fctx({ ledger: [...fhist, ...Array.from({ length: 5 }, (_, i) => ({ ts: iso(2 - i * 0.1), job: "prepare_tomorrow", engine: "claude", ok: false, error: "x", total_tokens: 1 }))], artifactExists: () => false }));
+      assert("FOLD/runner — a target that is itself ASLEEP (5-fail streak) cannot cover anything ⇒ OPEN, the folded lane decides on its own E·C·F", fE && fE.covered === false && /itself ASLEEP \(F\)/.test(fE.detail));
+      // (f) a fold to a non-job is OPEN and says so; an unfolded job has no fold fact
+      assert("FOLD/runner — folded_into a job that does not exist (and no fold_artifact) ⇒ OPEN and named; a job with no folded_into ⇒ null (no fact)",
+        foldStatus(jobF("orphan_fold"), fcfg, fctx()).covered === false && /not a brain job/.test(foldStatus(jobF("orphan_fold"), fcfg, fctx()).detail) && foldStatus(jobF("prepare_tomorrow"), fcfg, fctx()) === null);
+      // (f2) a NON-brain target (nightshift round_read) with fold_artifact — covered iff the file for the calendar day exists
+      const gca = J("gaffer_claim_audit", { at: "03:10", folded_into: "round_read", fold_artifact: "brain_out/nightshift/round_read_<day>.json" });
+      const T3 = new Date(2026, 7, 19, 3, 10, 0);
+      const fN1 = foldStatus(gca, { ...fcfg, jobs: [...fcfg.jobs, gca] }, fctx({ now: T3, artifactExists: (t, day, name) => t.id === "round_read" && t.out === "nightshift" && day === "2026-08-19" && name === "round_read_2026-08-19.json" }));
+      const fN0 = foldStatus(gca, { ...fcfg, jobs: [...fcfg.jobs, gca] }, fctx({ now: T3, artifactExists: () => false }));
+      assert("FOLD/runner — a fold into a NON-brain lane (round_read) is decided by the config-named fold_artifact for the calendar day: file there ⇒ covered · absent ⇒ OPEN (no 'still due' — brain does not schedule the shift)",
+        fN1 && fN1.covered === true && /brain_out\/nightshift\/round_read_2026-08-19\.json/.test(fN1.detail) && fN0 && fN0.covered === false && /fold is OPEN/.test(fN0.detail));
+      assert("FOLD/config — gaffer_claim_audit is folded into round_read (judge_night's home) with its fold_artifact named; the six night lanes fold into prepare_tomorrow",
+        (() => { const g = cfg.jobs.find((j) => j.id === "gaffer_claim_audit"); const six = ["night_coach", "day_cartridge", "agenda", "teamtalk_am", "midday_cartridge", "capsule_premap"]; return g && g.folded_into === "round_read" && /round_read_<day>\.json$/.test(g.fold_artifact) && six.every((id) => (cfg.jobs.find((j) => j.id === id) || {}).folded_into === "prepare_tomorrow"); })());
+      // (g) the pre-midnight `at` (agenda 22:45) — its slot for the 19th is the evening of the 18th: at 23:30 it is past ⇒ but the TARGET's slot is what counts (03:20 ahead) ⇒ covered
+      const fG = foldStatus(jobF("agenda"), fcfg, fctx({ artifactExists: () => false }));
+      assert("FOLD/runner — the folded lane's own `at` is irrelevant; the TARGET's slot for the served day decides (agenda at 23:30 waits for prepare_tomorrow's 03:20)", fG && fG.covered === true);
+      // the fourth letter through the whole verdict + the transition (journal row, NO card on D alone)
+      const vFold = gateVerdictFor(jobF("night_coach"), fcfg, fctx({ artifactExists: (t, day) => day === "2026-08-19" }));
+      assert("FOLD/verdict — a covered folded lane is ASLEEP on D ALONE (E·C·F hold), fold.target named, wakes_when says the fold opens by itself the night the target fails",
+        vFold.run === false && vFold.why.E.ok && vFold.why.C.ok && vFold.why.F.ok && vFold.why.D.ok === false && vFold.fold && vFold.fold.target === "prepare_tomorrow" && vFold.fold.covered === true && /fold opens by itself the night prepare_tomorrow fails/.test(vFold.wakes_when));
+      const fj = [], fcards = [];
+      const tF = gateTransition("night_coach", vFold, { now: T, prevState: null, appendJournal: (l) => fj.push(JSON.parse(l)), fileCard: (a) => { fcards.push(a); return true; }, cfg: fcfg });
+      assert("FOLD/transition — a sleep on D alone JOURNALS (why.D false, fold named, card:'none (fold …)') and files NO card — the fold is his approved design, not a lane going quiet",
+        tF.changed && fj.length === 1 && fj[0].why.D === false && fj[0].fold && fj[0].fold.target === "prepare_tomorrow" && /none \(fold/.test(fj[0].card) && fcards.length === 0);
+      const vFoldOpen = gateVerdictFor(jobF("night_coach"), fcfg, fctx({ now: T2, ledger: [...fhist, failedRun], artifactExists: () => false }));
+      assert("FOLD/verdict — the night the target fails, the same lane reads AWAKE (D holds, fold OPEN named in D's detail) — the fallback runs with no human action",
+        vFoldOpen.run === true && vFoldOpen.why.D.ok === true && /fold OPEN/.test(vFoldOpen.why.D.detail) && vFoldOpen.fold && vFoldOpen.fold.covered === false);
+      const repF = gateReport(fcfg, fctx({ artifactExists: (t, day) => day === "2026-08-19" }));
+      assert("FOLD/report — gateReport carries fold on every folded row so `brain status` can print `folded → prepare_tomorrow: night_coach, agenda` (the DoD line)",
+        repF.rows.filter((r) => r.fold && r.fold.target === "prepare_tomorrow").map((r) => r.lane).sort().join() === "agenda,night_coach" && repF.rows.find((r) => r.lane === "prepare_tomorrow").fold === null);
+    }
+
     // the consumption lane's own door
     const rows = [];
     const r1 = recordConsumption({ job: "night_coach", kind: "briefed", by: "learnstate" }, { append: (l) => rows.push(JSON.parse(l)), now: T });
@@ -6215,7 +6431,7 @@ async function main() {
       const rep = gateReport(cfg, gateContext({}, now, ledger, q));
       console.log(JSON.stringify({
         at: now.toISOString(),
-        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail }, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
+        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok, D: r.why.D ? r.why.D.ok : true }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail, D: r.why.D ? r.why.D.detail : null }, fold: r.fold || null, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
         others: rep.others.map((r) => ({ lane: r.lane, state: r.state, ts: r.ts, why: r.why || null, detail: r.detail || null, wakes_when: r.wakes_when || null })),
       }));
       return;

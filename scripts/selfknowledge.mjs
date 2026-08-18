@@ -20,7 +20,20 @@
 //        node scripts/selfknowledge.mjs --model sonnet
 //        node scripts/selfknowledge.mjs consumers  -> who reads organism_self.md, right now
 //        node scripts/selfknowledge.mjs --thaw     -> run anyway (an explicit human act)
+//        node scripts/selfknowledge.mjs status     -> the portrait's freshness: its tree hash vs the live tree (Block 5.2)
+//        node scripts/selfknowledge.mjs regen-if-changed [--model m] -> REGENERATE ON CHANGE, behind THE GATE (Block 5.2):
+//                                                     nothing when the tree hash matches the portrait's; else the gate
+//                                                     (consumed by get_organism ≤ 14d, first-run grace, no fail streak)
+//                                                     decides, and only then the model runs. Dispatched by dugout's
+//                                                     get_organism when it serves a stale portrait — the consumer wakes it.
 //        node scripts/selfknowledge.mjs selftest   -> baked-mock checks (no claude)
+//
+// THAWED (OVERHAUL Block 5.2, 18 Aug 2026 · §11 "selfknowledge: THAW; regenerate on organ-header change
+// (hash), consumed by get_organism/brief-manual"): dugout.mjs get_organism now READS organism_self.md
+// (the plain-language self-portrait, one section at a time) beside its live counts — the address the
+// freeze below asked for, so the freeze lifts itself by its own rule (findConsumers ≥ 1). The regen is
+// event-driven, never a schedule: `regen-if-changed` compares the portrait's stamped TREE HASH (every
+// module's header + package scripts + skills — what the portrait is grounded in) with the live tree.
 //
 // ============================ FROZEN (audit #46, 2026-08-04) ================
 // THE ORGAN IS NOT DELETED AND NOT EDITED AWAY — it is FROZEN, and it says so.
@@ -49,6 +62,7 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 
@@ -64,7 +78,10 @@ const BLEDGER   = join(STATE, "brain_ledger.jsonl");
 // from a full live-code deep-read; supersedes the older story/manual docs, which stay in the repo by the
 // layering law but are no longer the regen source — they had gone stale). The Gaffer's spoken self-knowledge
 // is regenerated FROM this book, so "tell me everything" / "explain just the brain|memory|learning" are grounded in it.
-const FUNCTIONAL_DOCS = ["THE_ORGANISM__EVERYTHING.md"];
+// Block 1 (18 Aug 2026) moved the record to docs/archive/ — the path here was silently absent since
+// (existsSync false ⇒ docs empty ⇒ a portrait with no story). Re-pointed; THE_DAILY_LOOP.md (the
+// 3.1 KB sitting edition, root canon) rides beside it so the day-flow the friend hears is TODAY's.
+const FUNCTIONAL_DOCS = [join("docs", "archive", "THE_ORGANISM__EVERYTHING.md"), "THE_DAILY_LOOP.md"];
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 function writeAtomic(p, txt) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + "." + process.pid + ".tmp"; writeFileSync(tmp, txt); renameSync(tmp, p); }
@@ -272,9 +289,11 @@ function generate(deps = {}) {
     return { ok: false, error: "agentic-meta response, not a portrait — old self-knowledge stands", tokens: r.tokens };
   }
   const stamp = deps.now ? deps.now.toISOString() : new Date().toISOString();
-  const out = `<!-- ORGANISM SELF-PORTRAIT · generated from the LIVE code by selfknowledge.mjs · ${stamp} · do NOT hand-edit — regenerate. -->\n\n${r.text.trim()}\n`;
+  // Block 5.2: the TREE HASH the portrait was grounded in rides the stamp — regen-if-changed reads it back
+  const hash = deps.treeHash !== undefined ? deps.treeHash : treeHash(m);
+  const out = `<!-- ORGANISM SELF-PORTRAIT · generated from the LIVE code by selfknowledge.mjs · ${stamp} · tree ${hash} · do NOT hand-edit — regenerate. -->\n\n${r.text.trim()}\n`;
   (deps.write || ((t) => writeAtomic(SELF, t)))(out);
-  return { ok: true, tokens: r.tokens, modules: m.modules.length, bytes: out.length };
+  return { ok: true, tokens: r.tokens, modules: m.modules.length, bytes: out.length, tree_hash: hash };
 }
 
 // what the Gaffer reads at briefing time (fresh if present; caller falls back to the legacy keynote if absent)
@@ -282,6 +301,64 @@ function loadSelfKnowledge(deps = {}) {
   const p = deps.path || SELF;
   try { if (existsSync(p)) return readFileSync(p, "utf8"); } catch {}
   return null;
+}
+
+// ── REGENERATE ON CHANGE (OVERHAUL Block 5.2, 18 Aug 2026) ────────────────────
+// treeHash — sha256 over exactly what the portrait is GROUNDED in: every module's header
+// (gatherMachinery's own read), the npm script names and the skill names. Sorted, so the
+// order of readdir never moves it. Twelve hex chars are plenty to tell two trees apart.
+function treeHash(m = gatherMachinery()) {
+  const h = createHash("sha256");
+  for (const x of [...(m.modules || [])].sort((a, b) => a.file.localeCompare(b.file))) h.update(`${x.file}\n${x.desc}\n`);
+  h.update("scripts:" + [...(m.npmScripts || [])].sort().join(",") + "\n");
+  h.update("skills:" + [...(m.skills || [])].sort().join(",") + "\n");
+  return h.digest("hex").slice(0, 12);
+}
+// portraitStatus — the stamp's hash vs the live tree. `fresh:false` = a header changed since
+// the portrait was written (or the portrait predates hashing — 29 Jul's stamp has no tree).
+function portraitStatus(deps = {}) {
+  const text = deps.text !== undefined ? deps.text : loadSelfKnowledge(deps);
+  const current = deps.currentHash !== undefined ? deps.currentHash : treeHash(deps.gather ? deps.gather() : gatherMachinery());
+  if (!text) return { exists: false, fresh: false, generated_at: null, tree_hash: null, current_hash: current, bytes: 0, why: "no portrait on disk" };
+  const head = text.slice(0, 400);
+  const at = (head.match(/·\s*(\d{4}-\d{2}-\d{2}T[0-9:.]+Z)/) || [])[1] || null;
+  const th = (head.match(/·\s*tree\s+([0-9a-f]{6,})/) || [])[1] || null;
+  const fresh = !!th && th === current;
+  return { exists: true, fresh, generated_at: at, tree_hash: th, current_hash: current, bytes: text.length,
+    why: fresh ? "the portrait was grounded in this exact tree" : (th ? `the tree changed since the portrait (${th} → ${current})` : "the portrait predates tree hashing (no tree stamp)") };
+}
+// portraitSection — PURE. The portrait is ~89 KB; a voice tool cannot carry it whole. Split on
+// its `## ` headings, return the table of contents and ONE section (fuzzy heading match; the
+// opening section when none is asked), clipped. The Gaffer lectures the section, then offers the toc.
+function portraitSection(text, section = null, { maxChars = 6000 } = {}) {
+  const body = String(text || "").replace(/^<!--[\s\S]*?-->\s*/, "");
+  const parts = body.split(/\n(?=## )/);
+  const toc = parts.map((p) => (p.match(/^##\s+(.+)$/m) || [])[1] || (p.match(/^#\s+(.+)$/m) || [])[1] || "").map((s) => s.trim()).filter(Boolean);
+  let idx = 0;
+  if (section) {
+    const q = String(section).toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+    let best = -1, score = 0;
+    parts.forEach((p, i) => { const head = (toc[i] || "").toLowerCase(); const s = q.reduce((n, w) => n + (head.includes(w) ? 1 : 0), 0); if (s > score) { score = s; best = i; } });
+    if (best >= 0) idx = best;
+  }
+  const chosen = parts[idx] || "";
+  return { toc, section_title: toc[idx] || null, section_index: idx, sections: parts.length, text: chosen.length > maxChars ? chosen.slice(0, maxChars) + "\n\n[… clipped — ask for the next part]" : chosen, clipped: chosen.length > maxChars, matched: !!section && idx > 0 };
+}
+// regenIfChanged — the verb dugout's get_organism dispatches (detached) when it serves a stale
+// portrait, and a hand can run any time. THE GATE (gate.mjs via brain.mjs gateVerdictForLane) is
+// the ONLY thing between "changed" and "spend": C = get_organism served it inside the window
+// (`sat` rows on lane selfknowledge, stamped by dugout through the owner), first-run grace, F.
+async function regenIfChanged(deps = {}) {
+  const st = deps.status || portraitStatus(deps);
+  if (st.exists && st.fresh) return { ok: true, ran: false, why: `fresh — ${st.why} (tree ${st.current_hash})`, status: st };
+  const verdict = deps.verdict || await (async () => {
+    const b = await import("./brain.mjs");
+    return b.gateVerdictForLane("selfknowledge", { evidence: { ok: true, detail: st.exists ? "the tree changed since the portrait" : "no portrait on disk" }, gate: { window_days: 14, fail_streak: 5 }, surface: { kind: "code", where: "scripts/dugout.mjs get_organism" }, aliases: ["selfknowledge"], now: deps.now || new Date() });
+  })();
+  if (!verdict.run) return { ok: true, ran: false, asleep: true, why: `tree changed but ASLEEP by THE GATE (${["E", "C", "F", "D"].filter((k) => verdict.why[k] && !verdict.why[k].ok).join("+")}) — ${verdict.wakes_when}`, status: st, verdict };
+  const freeze = deps.freeze !== undefined ? deps.freeze : freezeCheck(deps);
+  const r = (deps.generate || generate)({ ...deps, freeze, thaw: deps.thaw });
+  return { ok: r.ok, ran: true, result: r, status: st, why: r.ok ? `regenerated — tree ${r.tree_hash}` : `regen FAILED — ${r.error}` };
 }
 
 async function selftest() {
@@ -368,6 +445,49 @@ async function selftest() {
       scanned.count === 0 && scanned.tombstones.length > 0 && scanned.tombstones.every(t => /selfKnowledgeBlock|paste source/.test(t.text)));
   }
 
+  // ---- OVERHAUL Block 5.2 — THAW + REGENERATE ON CHANGE, behind THE GATE ----
+  {
+    const m1 = mockGather();
+    const h1 = treeHash(m1);
+    const m2 = { ...m1, modules: [...m1.modules, { file: "sitting.mjs", desc: "THE SITTING BRAIN — one mind behind every mouth." }] };
+    const h2 = treeHash(m2);
+    const m1b = { ...m1, modules: [...m1.modules].reverse() };
+    assert("5.2 treeHash — 12 hex chars over the module headers + npm scripts + skills; readdir order never moves it; a new header moves it",
+      /^[0-9a-f]{12}$/.test(h1) && h1 === treeHash(m1b) && h1 !== h2 && treeHash({ ...m1, skills: [...m1.skills, "fire"] }) !== h1);
+    let written = null;
+    const g = generate({ freeze: OPEN, gather: () => m1, now: new Date("2026-08-18T12:00:00Z"), call: () => ({ ok: true, text: "# The Organism\n## The brain\nQuiet decisions.\n## The memory\nIt remembers.\n## The day\nMorning to full time.", tokens: 10, ms: 1 }), write: (t) => { written = t; }, meter: () => {} });
+    assert("5.2 generate — the portrait's stamp now carries the TREE HASH it was grounded in (`· tree <hash> ·`)", g.ok && g.tree_hash === h1 && new RegExp(`· tree ${h1} ·`).test(written));
+    const stFresh = portraitStatus({ text: written, currentHash: h1 });
+    const stStale = portraitStatus({ text: written, currentHash: h2 });
+    const stOld = portraitStatus({ text: "<!-- ORGANISM SELF-PORTRAIT · generated from the LIVE code by selfknowledge.mjs · 2026-07-29T14:25:37.735Z · do NOT hand-edit — regenerate. -->\n\n# x", currentHash: h1 });
+    assert("5.2 portraitStatus — same tree ⇒ FRESH; a changed tree ⇒ STALE naming old→new; the 29 Jul portrait (no tree stamp) reads STALE, never fresh by accident; absent ⇒ exists:false",
+      stFresh.fresh === true && stFresh.generated_at === "2026-08-18T12:00:00.000Z" && stStale.fresh === false && /changed since/.test(stStale.why) && stOld.fresh === false && /predates/.test(stOld.why) && portraitStatus({ text: null, currentHash: h1 }).exists === false);
+    const sec = portraitSection(written, "memory");
+    const sec0 = portraitSection(written);
+    const secClip = portraitSection(written, "brain", { maxChars: 12 });
+    assert("5.2 portraitSection — PURE: toc of the `## ` headings; a section by fuzzy heading match; the opening when none asked; clipped with a named cut (a voice tool never carries 89 KB)",
+      sec.toc.join("|") === "The Organism|The brain|The memory|The day" && /It remembers/.test(sec.text) && sec.section_title === "The memory" && sec.matched === true
+      && sec0.section_index === 0 && /# The Organism/.test(sec0.text) && secClip.clipped === true && /clipped/.test(secClip.text));
+    // regenIfChanged: fresh ⇒ nothing; stale + gate ASLEEP ⇒ nothing spent; stale + gate AWAKE ⇒ generate runs (through the freeze, which the reader lifts)
+    let spent = 0;
+    const gen = (d) => { spent++; return generate({ ...d, gather: () => m2, call: () => ({ ok: true, text: "# fresh", tokens: 5, ms: 1 }), write: () => {}, meter: () => {} }); };
+    const rFresh = await regenIfChanged({ status: stFresh, generate: gen });
+    const rAsleep = await regenIfChanged({ status: stStale, verdict: { run: false, why: { E: { ok: true }, C: { ok: false }, F: { ok: true } }, wakes_when: "get_organism serves it" }, generate: gen });
+    const spentBeforeAwake = spent;
+    const rAwake = await regenIfChanged({ status: stStale, verdict: { run: true, why: { E: { ok: true }, C: { ok: true }, F: { ok: true } } }, freeze: OPEN, generate: gen });
+    assert("5.2 regenIfChanged — FRESH ⇒ ran:false, nothing spent · STALE but ASLEEP by THE GATE (C) ⇒ ran:false, nothing spent, the wake named · STALE and AWAKE ⇒ generate runs once",
+      rFresh.ran === false && /fresh/.test(rFresh.why) && rAsleep.ran === false && rAsleep.asleep === true && /ASLEEP by THE GATE \(C\)/.test(rAsleep.why) && spentBeforeAwake === 0
+      && rAwake.ran === true && rAwake.ok === true && spent === 1 && /regenerated — tree/.test(rAwake.why));
+    // the address that thaws it: dugout's get_organism reads the artifact in real code (the freeze's own rule)
+    const liveC = findConsumers();
+    assert("5.2 THAW — dugout.mjs get_organism is a LIVE consumer of organism_self.md (a real code line, not a tombstone) ⇒ the freeze has lifted itself; regen-if-changed can run",
+      liveC.count >= 1 && liveC.live.some((h) => /dugout\.mjs/.test(h.file)) && freezeCheck({ consumers: liveC }).frozen === false);
+    // (a for-of, not .every(): xray folds `for (const d of FUNCTIONAL_DOCS)` per element; a callback would be an unresolved sink)
+    let docsPresent = true;
+    for (const d of FUNCTIONAL_DOCS) { if (!existsSync(join(ROOT, d))) docsPresent = false; }
+    assert("5.2 the story docs the prompt draws on EXIST on disk again (Block 1 archived the record; the path was silently absent)", docsPresent);
+  }
+
   // THE LIVE READING, printed not asserted — honesty over green: the suite must
   // not pin a number that is the captain's to change.
   {
@@ -392,6 +512,19 @@ async function main() {
     for (const h of c.tombstones) console.log(`  tombstone ${h.file}:${h.line}  ${h.text}`);
     console.log(c.count ? "  → the organ is ACTIVE (the freeze lifted itself)." : "  → the organ is FROZEN. Give it a surface and it wakes up on its own.");
     return;
+  }
+
+  // Block 5.2 — the freshness read and the gated regen (both exit 0: a "nothing to do" is not a failure)
+  if (args[0] === "status") {
+    const st = portraitStatus();
+    console.log(`selfknowledge: portrait ${st.exists ? `${st.fresh ? "FRESH" : "STALE"} — ${st.why} · generated ${st.generated_at || "?"} · ${st.bytes.toLocaleString()} bytes` : "ABSENT"} · live tree ${st.current_hash}`);
+    return;
+  }
+  if (args[0] === "regen-if-changed") {
+    const mi2 = args.indexOf("--model");
+    const r = await regenIfChanged({ model: mi2 >= 0 ? args[mi2 + 1] : "opus", thaw: args.includes("--thaw") });
+    console.log(`selfknowledge: regen-if-changed — ${r.ran ? (r.ok ? `RAN · ${r.why} · ${(r.result.tokens || 0).toLocaleString()} tok` : `RAN · ${r.why}`) : r.why}`);
+    process.exit(r.ok ? 0 : 1);
   }
 
   const thaw = args.includes("--thaw");
@@ -421,4 +554,4 @@ async function main() {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { gatherMachinery, buildPrompt, generate, loadSelfKnowledge, moduleHeader, findConsumers, freezeCheck, describeSpawnFailure };
+export { gatherMachinery, buildPrompt, generate, loadSelfKnowledge, moduleHeader, findConsumers, freezeCheck, describeSpawnFailure, treeHash, portraitStatus, portraitSection, regenIfChanged };

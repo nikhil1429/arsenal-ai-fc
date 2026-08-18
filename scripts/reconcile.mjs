@@ -343,6 +343,13 @@ function reconcileBrainLanes(deps = {}) {
 
     const bleeds = [];
     const notes = [];
+    // THE FOLD (overhaul Block 5.2, 18 Aug 2026): a job with `folded_into` is displaced by
+    // that target by design — the gate sleeps it (letter D) while the target covers the day
+    // and wakes it as the fallback the night the target fails. Its staleness, and even a
+    // never-produced dir, is the fold WORKING — a note naming the target, never a bleed;
+    // the same law as `paused`, `asleep by THE GATE` and `_added`. Read off the config,
+    // never a list here.
+    const foldedInto = typeof job.folded_into === "string" && job.folded_into.trim() ? job.folded_into.trim() : null;
     if (!enabled) {
       // a disabled job is not a defect — it is a decision. Recorded, never bled.
       // G13 INVERSE SIGNAL (9 Aug 2026): but the moment a DISABLED job's
@@ -371,6 +378,7 @@ function reconcileBrainLanes(deps = {}) {
         ? `never produced — ${job.out}/ does not exist`
         : `never produced — ${job.out}/ is empty`;
       if (notDueYet) notes.push(`${line} — but the lane was ADDED ${job._added} (${Math.round(bornHoursAgo)}h ago) and its cadence allows ${Math.round(maxAge)}h: it has not been asked yet, and this becomes a bleed on its own the moment it is late`);
+      else if (foldedInto) notes.push(`${line} — but the lane is FOLDED into ${foldedInto} (brain_config folded_into): the target does its work and the gate sleeps it on D; it runs as the fallback the night ${foldedInto} fails, so an empty dir here is the fold working, not a dead lane`);
       else bleeds.push(line);
     } else if (ageHours > maxAge) {
       const line = `newest ${job.out}/ file is ${Math.round(ageHours)}h old, cadence allows ${Math.round(maxAge)}h`;
@@ -382,9 +390,23 @@ function reconcileBrainLanes(deps = {}) {
       else if (asleep) {
         // ASLEEP BY THE GATE — resting by rule, not lying dead. The note carries the
         // verdict's own why and what wakes it, so a reader of this report never has to
-        // open the journal to tell sleep from death.
-        const failed = ["E", "C", "F"].filter((k) => asleep.why && asleep.why[k] === false).join("+");
-        notes.push(`asleep by THE GATE since ${String(asleep.ts).slice(0, 16)}Z (on ${failed || "?"}: ${asleep.detail ? failed.split("+").map((k) => asleep.detail[k]).filter(Boolean).join(" · ").slice(0, 160) : ""}) — wakes when: ${String(asleep.wakes_when || "").slice(0, 120)} · (${line})`);
+        // open the journal to tell sleep from death. D (Block 5.2) = displaced by a fold.
+        const failed = ["E", "C", "F", "D"].filter((k) => asleep.why && asleep.why[k] === false).join("+");
+        notes.push(`asleep by THE GATE since ${String(asleep.ts).slice(0, 16)}Z (on ${failed || "?"}: ${asleep.detail ? failed.split("+").map((k) => asleep.detail[k]).filter(Boolean).join(" · ").slice(0, 160) : ""})${foldedInto ? ` · folded → ${foldedInto}` : ""} — wakes when: ${String(asleep.wakes_when || "").slice(0, 120)} · (${line})`);
+      }
+      else if (foldedInto) {
+        // FOLDED, and the gate has not journaled it yet (its slot has not come round since the
+        // fold landed, or the verdict read is unavailable): the fold is the reason, by config.
+        notes.push(`stale, but FOLDED into ${foldedInto} (brain_config folded_into) — the target does this lane's work; the gate sleeps it on D at its next slot and wakes it as the fallback the night ${foldedInto} fails · (${line})`);
+      }
+      else if (typeof job.trigger === "string" && job.trigger) {
+        // AN EVENT LANE (Block 5.2: teamtalk_pm + evening_voice ride `fulltime`, formation_read rides
+        // `morning_signals`): it runs only when its arm is live, so between events it is idle BY
+        // DESIGN — a note naming the event, never a stale bleed (the ALIVE suite would otherwise go
+        // red every day he did not close). A lane with a `trigger_fallback_hm` still runs daily and
+        // keeps the ordinary staleness rule.
+        if (job.trigger_fallback_hm) bleeds.push(`stale — ${line}`);
+        else notes.push(`stale, but an EVENT lane (brain_config trigger \`${job.trigger}\`): it runs only after the event arms it${job.trigger === "fulltime" ? " (postmatch.mjs at his full-time)" : ""} — idle between events by design · (${line})`);
       }
       else if (ranInWindow && isRefusalBeforeSpend(lastRun)) {
         // ALIVE AND EMPTY: it ran, it refused before spending, it said why.
@@ -419,6 +441,7 @@ function reconcileBrainLanes(deps = {}) {
       // questions, both printed. null = never reached him on any recorded lane.
       reached_him: reachedHimFor(consumption, [job.id, job.out], now),
       gate: gateStates[job.id] ? { state: gateStates[job.id].state, since: gateStates[job.id].ts } : null,
+      folded_into: foldedInto,
       declared_surface: declared ? (declared.where || declared.kind) : null,
       bleeds, notes,
     });
@@ -737,6 +760,31 @@ function selftest() {
     ok("GATE — an ASLEEP lane still bleeds `no reader` when nothing references it (sleep hides staleness, never an orphan)",
       build({ cfg: { jobs: [{ id: "orphan_job", out: "orphan_lane", enabled: true, at: "08:00" }] }, corpus: [], now, outDir, stateDir: join(root, "nostate"),
         gateRows: [{ ts: "2026-08-03T22:00:00Z", lane: "orphan_job", state: "asleep" }], consumptionRows: [] }).lanes[0].bleeds.some((b) => /no reader/.test(b)));
+    // ── THE FOLD (overhaul Block 5.2) — a folded lane is never a NEVER/stale bleed ──
+    {
+      const foldCfg = { jobs: [
+        { id: "stale_job", out: "stale_lane", enabled: true, at: "03:10", folded_into: "prepare_tomorrow" },        // stale on disk, folded, gate journaled it asleep on D
+        { id: "night_lane", out: "never_lane", enabled: true, at: "03:10", folded_into: "prepare_tomorrow" },        // never produced, folded → a note
+        { id: "prepare_tomorrow", out: "prepare", enabled: true, at: "03:20" },
+      ] };
+      const fcorpus = [{ file: "x.mjs", text: 'read("brain_out/stale_lane/x") read("brain_out/never_lane/y") read("brain_out/prepare/z")' }];
+      const f = build({ cfg: foldCfg, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"),
+        gateRows: [{ ts: "2026-08-03T22:00:00Z", lane: "stale_job", state: "asleep", why: { E: true, C: true, F: true, D: false }, detail: { D: "folded → prepare_tomorrow: its artifact for 2026-08-04 exists" }, wakes_when: "the fold opens by itself the night prepare_tomorrow fails" }],
+        consumptionRows: [] });
+      const fs_ = f.lanes.find((x) => x.job === "stale_job"), fn = f.lanes.find((x) => x.job === "night_lane");
+      ok("FOLD — a folded lane the gate journaled asleep on D reads as a note naming the letter AND the fold target (`on D · folded → prepare_tomorrow`), never a stale bleed; the row carries folded_into",
+        fs_.folded_into === "prepare_tomorrow" && !fs_.bleeds.some((b) => /stale/.test(b)) && fs_.notes.some((b) => /asleep by THE GATE/.test(b) && /on D/.test(b) && /folded → prepare_tomorrow/.test(b)));
+      ok("FOLD — a folded lane that NEVER produced (no dir) is a NOTE naming the fold, never the never-produced bleed (the fold working ≠ a dead lane)",
+        fn.folded_into === "prepare_tomorrow" && fn.bleeds.length === 0 && fn.notes.some((b) => /never produced/.test(b) && /FOLDED into prepare_tomorrow/.test(b)));
+      ok("EVENT LANE (Block 5.2) — a stale lane with a `trigger` and no fallback hour is a NOTE naming the event (idle between events by design), a trigger lane WITH a fallback hour still bleeds stale, an unfolded untriggered stale lane bleeds as before",
+        (() => { const g3 = build({ cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "20:40", trigger: "fulltime" }, { id: "sheet", out: "stale_lane", enabled: true, at: "08:45", trigger: "morning_signals", trigger_fallback_hm: "09:30" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
+          const e = g3.lanes.find((x) => x.job === "stale_job"), sh = g3.lanes.find((x) => x.job === "sheet"), pl = g3.lanes.find((x) => x.job === "plain");
+          return e && !e.bleeds.some((x) => /stale/.test(x)) && e.notes.some((x) => /EVENT lane/.test(x) && /fulltime/.test(x)) && sh && sh.bleeds.some((x) => /stale/.test(x)) && pl && pl.bleeds.some((x) => /stale/.test(x)); })());
+      ok("FOLD — a folded lane that is stale with NO journal row yet is still a note (the fold is the reason, by config), while an unfolded stale lane bleeds as before",
+        (() => { const g2 = build({ cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "03:10", folded_into: "prepare_tomorrow" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
+          const a = g2.lanes.find((x) => x.job === "stale_job"), b = g2.lanes.find((x) => x.job === "plain");
+          return a && !a.bleeds.some((x) => /stale/.test(x)) && a.notes.some((x) => /FOLDED into prepare_tomorrow/.test(x)) && b && b.bleeds.some((x) => /stale/.test(x)); })());
+    }
   }
 
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "FAILURES: " + fail} (${pass} passed, ${fail} failed)`);

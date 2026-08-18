@@ -354,15 +354,46 @@ export function createSitting(deps = {}) {
   let session = null;                 // the live claudegen session (voice brain)
   let idleTimer = null;
   let cardedWall = false, saidResume = false;
+  // THE DAEMON DIED UNDER AN OPEN SITTING (found LIVE 18 Aug 2026 11:22 IST — his FIRST real
+  // sitting): every daemon on the box was killed at 11:10 (an outside kill; the watchdog relaunched
+  // this one 10 s later), the sitting on disk read OPEN, `session` was null, and runTurn treated
+  // `!session` as deliver-only — so 13 of his lines in a row got "Pehle gut-word bolo" from the
+  // regex lane and nothing banked. The plan persists on disk and the head is on disk: the ONLY
+  // thing lost was the child, and §6.7's own law for a lost child is ONE re-attach with the same
+  // head. So: a sitting opened WITH a brain (transport stream|resume) whose daemon lost it
+  // RE-ATTACHES on his first line (spawn a fresh child — by session id if one was recorded —
+  // "Ruko, wapas aa raha hoon" once); only a FAILED re-attach falls to deliver-only. Tried once
+  // per daemon lifetime, so a dead lane cannot spawn on every line.
+  let reattachTried = false;
+  if (S && S.id && !S.closed_at) log(`sitting: OPEN ${S.id} found on disk at boot (${S.route} '${S.task}', cursor ${S.cursor}/${(S.plan || []).length}, transport ${S.transport}) — brain not attached yet; ${S.transport === "stream" || S.transport === "resume" ? "it re-attaches on his first line" : "no brain by design"}`);
   const queue = [];                   // serialised turn worker
   let working = false;
   const isOpen = () => !!(S && S.id && !S.closed_at);
   const save = () => { if (S) writeAtomic(F.sitting(), S); };
   const undelivered = () => {
+    // SCOPED TO THE OPEN SITTING (18 Aug 2026, found live): with no sitting open this used to return
+    // every un-acked unit of every CLOSED sitting, and /next handed the mouth 32 stale lines of a
+    // sitting he had already closed. No open sitting ⇒ nothing to speak.
+    if (!S || !S.id) return [];
     const rows = readRows(F.out());
     const acked = new Set(rows.filter((r) => r.kind === "ack").map((r) => r.id));
-    return rows.filter((r) => r.kind === "unit" && (!S || r.sitting_id === S.id) && !acked.has(r.id));
+    return rows.filter((r) => r.kind === "unit" && r.sitting_id === S.id && !acked.has(r.id));
   };
+  // SUPERSEDE STALE DRIVER CHATTER (18 Aug 2026, the same live sitting): when the brain comes back
+  // (daemon boot on an open sitting · re-attach), the mouth's FIFO still holds every degrade line the
+  // driver emitted while it had no child — 24 × "Pehle gut-word bolo" queued behind his ear. A nag
+  // spoken ten minutes late is noise, not content. So: every UNDELIVERED unit whose src is the driver's
+  // own (["driver"]) is acked as SUPERSEDED — an APPEND (the file stays append-only, the row names why),
+  // never a spoken ack (units_delivered untouched, no consumption stamped). Plan units, capsule units and
+  // brain replies stay queued — they are content. Returns how many it retired.
+  const supersedeStaleDriverUnits = (why) => {
+    if (!S) return 0;
+    const stale = undelivered().filter((u) => Array.isArray(u.src) && u.src.length === 1 && u.src[0] === "driver" && u.unit_kind !== "map");
+    for (const u of stale) appendRow(F.out(), { kind: "ack", id: u.id, sitting_id: u.sitting_id, delivered_at: null, superseded_at: now().toISOString(), by: `driver (superseded: ${why})`, superseded: true });
+    if (stale.length) { S.stats.superseded = (S.stats.superseded || 0) + stale.length; log(`sitting: ${stale.length} stale driver unit(s) superseded (${why}) — the mouth's queue is content again`); }
+    return stale.length;
+  };
+  if (isOpen() && ["stream", "resume"].includes(S.transport)) { try { if (supersedeStaleDriverUnits("daemon restart")) save(); } catch (e) { log(`sitting: supersede at boot failed: ${String(e && e.message || e).slice(0, 120)}`); } }
   const emit = (text, { cls = "deliver", est = null, src = [], question = false, planIndex = null, kind = "unit" } = {}) => {
     if (!S) return null;
     S.unit_seq = (S.unit_seq || 0) + 1;
@@ -605,17 +636,48 @@ export function createSitting(deps = {}) {
     logTurn({ turn: n, class: "deliver", surface, chars_in: 0, latency_ms: 0, tokens: null, unit: row.id, why });
     return row;
   };
+  // the daemon-death re-attach (see the boot note above): same head from disk, fresh child, once
+  const reattachBrain = async () => {
+    if (session || reattachTried || !S || !["stream", "resume"].includes(S.transport)) return !!session;
+    reattachTried = true;
+    if (!existsSync(F.head())) {
+      // the head file is gone (a fresh checkout / a cleaned brain_out): re-assemble it from the state this sitting was opened on
+      try { const ctx = await gatherContext({ task: S.task, route: S.route }); ctx.route = S.route; ctx.concept = S.concept; const head = await assembleHead({ ...ctx, plan: S.plan ? { map: S.plan_map, units: S.plan } : null, ctrl_grammar: SITTING_CTRL_GRAMMAR, ceiling: cfg.head_ceiling_chars }); mkdirSync(dirname(F.head()), { recursive: true }); writeFileSync(F.head(), head.text, "utf8"); }
+      catch (e) { log(`sitting: re-attach — head re-assembly failed: ${String(e && e.message || e).slice(0, 160)}`); }
+    }
+    supersedeStaleDriverUnits("brain re-attach");   // the degrade chatter queued while there was no child is noise now
+    if (!saidResume) { saidResume = true; emit("Ruko, wapas aa raha hoon.", { src: ["driver"], est: 3 }); }
+    try { session = await spawnBrain(S.claude_session_id || null); }
+    catch (e) { session = null; log(`sitting: re-attach spawn failed: ${String(e && e.message || e).slice(0, 160)}`); }
+    if (session) { S.reattached = (S.reattached || 0) + 1; S.reattached_at = now().toISOString(); log(`sitting: brain RE-ATTACHED to ${S.id} (${S.claude_session_id ? "resume " + S.claude_session_id : "fresh child, same head"})`); }
+    else { S.transport = "deliver-only"; emit("Dimaag ka child wapas nahi aaya — plan-only mode. 'aage' bolo.", { src: ["driver"] }); }
+    save();
+    return !!session;
+  };
   async function runTurn(job) {
     const cls = classifyTurn(job.text, S);
     if (cls === "deliver") { deliverNext(job.surface, job.n, "continue-word"); save(); return; }
     if (cls === "skip") { skipQuestion(`his word (turn ${job.n})`); logTurn({ turn: job.n, class: "deliver", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, why: "skip-word: question dropped, no rep" }); deliverNext(job.surface, job.n, "after-skip"); save(); return; }
     // RESPOND — his answer or his doubt
+    if (!session && ["stream", "resume"].includes(S.transport)) await reattachBrain();   // a daemon that lost its child gets it back on his first line
     if (S.transport === "deliver-only" || S.transport === "code" || !session) {
-      // no model: bank on the gut-word he says; otherwise ask for it once, or hand him the next unit
+      // no model: bank on the gut-word he says; otherwise ask for it ONCE, then drop the question and hand him the next unit
       if (S.pending_question && S.pending_question.bankable) {
         const g = gutFromText(job.text);
         if (g) { const b = bank(job.text, g, "gut-regex (deliver-only)"); logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, mode: "deliver-only", banked: b.ok, why: b.why }); if (b.ok) { S.stats.by_class.respond++; if (S.cursor < S.plan.length) deliverNext(job.surface, job.n, "after-bank"); else emit("Bank ho gaya. Plan poora — 'full time' bolo.", { src: ["driver"] }); } else emit("Bank nahi hua — phir se: gut-word aur jawab, ek saath.", { src: ["driver"] }); }
-        else { emit("Pehle gut-word bolo — knew, shaky ya guessed — phir jawab. (Chhodna ho to 'skip'.)", { src: ["driver"], est: 5 }); logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, mode: "deliver-only", why: "no gut-word" }); }
+        else if (!S.pending_question.gut_asked) {
+          // ONCE per question. The 18 Aug live sitting got this line 13 times in a row (no model, no gut-word) —
+          // the second gut-less line is an answer he chose to give without the word: the question is DROPPED
+          // (named, not banked — the gut-word law holds) and the plan moves on. Never the same nag twice.
+          S.pending_question.gut_asked = 1;
+          emit("Pehle gut-word bolo — knew, shaky ya guessed — phir jawab. (Chhodna ho to 'skip'.)", { src: ["driver"], est: 5 });
+          logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, mode: "deliver-only", why: "no gut-word (asked once)" });
+        } else {
+          skipQuestion(`no gut-word twice in deliver-only (turn ${job.n}) — not banked, moving on`);
+          logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, mode: "deliver-only", why: "no gut-word twice → question dropped, next unit" });
+          if (S.cursor < S.plan.length) deliverNext(job.surface, job.n, "after-drop (no gut-word twice)");
+          else emit("Theek — bina gut-word ke bank nahi hota; plan poora. 'full time' bolo.", { src: ["driver"] });
+        }
       } else if (S.cursor < S.plan.length) { deliverNext(job.surface, job.n, "deliver-only: no model for a doubt"); }
       else { emit("Abhi model available nahi — plan poora ho gaya. 'full time' bolo, ya doubt Claude Code sitting mein le jao.", { src: ["driver"] }); logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, mode: "deliver-only" }); }
       save(); return;
@@ -682,6 +744,7 @@ export function createSitting(deps = {}) {
     return { ok: true };
   }
   function next() {
+    if (!isOpen()) return { ok: true, speak: null, why: "no open sitting" };   // a closed sitting's leftovers are never spoken
     const u = undelivered();
     if (!u.length) return { ok: true, speak: null };
     const first = u[0];   // FIFO — the mouth speaks in plan order
@@ -1129,6 +1192,55 @@ async function selftest() {
     await P_("/turn", { text: "DIE please", surface: "voice" });
     await flushWork();
     assert("§6.7 child dies → resumed by id ONCE (the resume send answered), 'Ruko, wapas aa raha hoon' emitted once", S.transport === "stream" && readRows(F.out()).filter((r) => r.kind === "unit" && /Ruko, wapas/.test(r.text)).length === 1 && readRows(F.log()).some((r) => r.resumed === true));
+    // ── 6b. THE DAEMON DIES under the open sitting (found live 18 Aug 11:22 IST): a NEW daemon
+    //        instance boots on the same disk state — no session — and his first line RE-ATTACHES a
+    //        child (same head from disk, resume by the recorded id), says 'Ruko' once, and the turn
+    //        goes to the MODEL — never 13× "Pehle gut-word bolo" from the regex lane ──
+    {
+      const fx2 = mkSession(); let resumeArg = "unset";
+      const fx2wrap = (o) => { resumeArg = o.resume; return fx2(o); };
+      // plant the live failure's residue: 3 undelivered driver nags + 1 undelivered PLAN unit in the mouth's queue
+      for (const t of ["Pehle gut-word bolo — knew, shaky ya guessed — phir jawab. (Chhodna ho to 'skip'.)", "Pehle gut-word bolo — knew, shaky ya guessed — phir jawab. (Chhodna ho to 'skip'.)", "Ek second, phir se bolo — reply nahi bana."]) appendRow(F.out(), { kind: "unit", id: `u_${S.id}_stale_${Math.random().toString(36).slice(2, 7)}`, sitting_id: S.id, ts: "2026-08-18T05:57:00.000Z", class: "deliver", unit_kind: "unit", text: t, est_seconds: 5, src: ["driver"], question: false, plan_index: null });
+      appendRow(F.out(), { kind: "unit", id: `u_${S.id}_stale_plan`, sitting_id: S.id, ts: "2026-08-18T05:57:30.000Z", class: "deliver", unit_kind: "unit", text: "Doosra strike: BPE kya karta hai?", est_seconds: 8, src: ["capsule"], question: true, plan_index: 3 });
+      const isDriver = (u) => Array.isArray(u.src) && u.src.length === 1 && u.src[0] === "driver" && u.unit_kind !== "map";
+      const undeliveredBefore = d.undelivered().length;
+      const staleDriverBefore = d.undelivered().filter(isDriver).length;   // the 3 planted + whatever driver chatter §6 left queued (the 'Ruko')
+      const d2 = createSitting({ ...baseDeps, session: fx2wrap });   // reads F.sitting() — OPEN, transport stream, no child
+      const S2 = d2.state;
+      assert("DAEMON RESTART: the new instance loads the OPEN sitting from disk with NO session (the child died with the old process)", !!S2 && S2.id === S.id && S2.transport === "stream" && d2.session === null);
+      assert("DAEMON RESTART: the mouth's queue is CLEANED at boot — every stale driver line (the 3 planted nags included) is acked as SUPERSEDED (append-only ack rows naming why, no spoken ack, no consumption), the PLAN unit stays queued",
+        staleDriverBefore >= 3 && d2.undelivered().length === undeliveredBefore - staleDriverBefore && d2.undelivered().filter(isDriver).length === 0
+        && d2.undelivered().some((u) => /Doosra strike/.test(u.text)) && !d2.undelivered().some((u) => /Pehle gut-word bolo/.test(u.text))
+        && readRows(F.out()).filter((r) => r.kind === "ack" && r.superseded === true && /daemon restart/.test(r.by) && r.delivered_at === null).length === staleDriverBefore && S2.stats.superseded === staleDriverBefore
+        && S2.stats.units_delivered === S.stats.units_delivered && rc().length === rc().length);
+      const rukoBefore = readRows(F.out()).filter((r) => r.kind === "unit" && /Ruko, wapas/.test(r.text)).length;
+      const seenBefore = fx2.seen.length;
+      const bankedBefore6b = S2.stats.banked;
+      d2.turn({ text: "shaky — token ek tukda hai jo model ginta hai", surface: "voice" });
+      await flushWork(); await flushWork();
+      assert("DAEMON RESTART: his first line RE-ATTACHED a child (fixture factory called with the recorded session id), 'Ruko, wapas aa raha hoon' said once, and the turn went to the MODEL (the fixture saw a CAPTAIN: line) — regex-only nagging never happened",
+        d2.session !== null && resumeArg === S.claude_session_id && S2.reattached === 1 && S2.transport === "stream"
+        && readRows(F.out()).filter((r) => r.kind === "unit" && /Ruko, wapas/.test(r.text)).length === rukoBefore + 1
+        && fx2.seen.length === seenBefore + 1 && /CAPTAIN: shaky — token/.test(fx2.seen[fx2.seen.length - 1])
+        && !readRows(F.log()).slice(-2).some((r) => /no gut-word/.test(String(r.why || ""))));
+      assert("DAEMON RESTART: the model's tail bank was honoured through the owner on the re-attached child (banked +1) — the sitting continues as if nothing died", S2.stats.banked === bankedBefore6b + 1);
+      // the deliver-only NAG-ONCE law (the other half of the live failure): with no child at all, a gut-less
+      // line is asked for the gut-word ONCE; the second gut-less line DROPS the question (named) and moves on
+      const d3 = createSitting({ ...baseDeps, session: () => { throw new Error("no child available"); } });
+      const S3 = d3.state;
+      S3.transport = "deliver-only"; S3.pending_question = { unit_id: "u_x", text: "Check: kyun?", axis: "a", asked_at: "2026-08-18T00:00:00Z", bankable: true };
+      const skippedBefore3 = S3.stats.skipped || 0;
+      const seqBefore3 = S3.unit_seq || 0;   // count only the units d3 itself emits (the planted stale nags are older rows)
+      const nagsSince = () => readRows(F.out()).filter((r) => r.kind === "unit" && r.sitting_id === S.id && Number((r.id.match(/_(\d+)$/) || [])[1]) > seqBefore3 && /Pehle gut-word bolo/.test(r.text)).length;
+      d3.turn({ text: "kyunki data mein galti thi", surface: "voice" }); await flushWork();
+      const nag1 = nagsSince();
+      d3.turn({ text: "haan wahi, data ki wajah se", surface: "voice" }); await flushWork();
+      const nag2 = nagsSince();
+      assert("NAG-ONCE (deliver-only): the first gut-less answer is asked for the gut-word ONCE; the second gut-less answer DROPS the question (skipped +1, named, not banked) and the plan moves on — never the same line twice",
+        nag1 === 1 && nag2 === 1 && !S3.pending_question && (S3.stats.skipped || 0) === skippedBefore3 + 1 && readRows(F.log()).some((r) => /no gut-word twice/.test(String(r.why || ""))));
+      // hand the disk back to the FIRST instance's state (d2/d3 shared the file for the scenario)
+      S.stats.turns = Math.max(S.stats.turns, S2.stats.turns, S3.stats.turns); writeAtomic(F.sitting(), S);
+    }
     // ── 7. plan wall → DELIVER-ONLY + ONE keyed card; his gut-word answer still banks by regex ──
     await P_("/turn", { text: "WALL now", surface: "voice" });
     await flushWork();
