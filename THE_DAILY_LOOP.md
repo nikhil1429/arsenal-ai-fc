@@ -21,7 +21,7 @@ Anything that needs your word rides ONE card at an anchor you already hit: `node
 - The surfaces: `ls .claude/skills/` — each `SKILL.md` says when it fires. `/matchday` is the long morning if you want it; the state line is the short one.
 - Which LLM lanes are asleep and why (nothing is deleted; a lane wakes itself on real data): `node scripts/brain.mjs gate show`.
 - The Gaffer: `setup/open_dugout.ps1` (what the DUGOUT icon runs) → `http://localhost:4114`.
-- **The sitting brain — Block 3 of the overhaul, not built as of 18 Aug 2026:** one persistent Claude session behind every mouth (`sitting.mjs`, port 4117, `node scripts/sitting.mjs status`). Until it lands: teaching in `/forge`, Re-Jirah with the Gaffer. `ORGANISM_OVERHAUL__2026-08-18.md` BUILD LOG says which block is done.
+- **The sitting brain — Block 3 of the overhaul, BUILT 18 Aug 2026:** one persistent Claude session behind every mouth (`sitting.mjs`, port 4117, `node scripts/sitting.mjs status`). Until it lands: teaching in `/forge`, Re-Jirah with the Gaffer. `ORGANISM_OVERHAUL__2026-08-18.md` BUILD LOG says which block is done.
 
 ## If you study OUTSIDE a sitting (claude.ai · Colab · a Gem)
 

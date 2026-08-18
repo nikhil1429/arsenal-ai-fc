@@ -1054,6 +1054,28 @@ async function probeDaemons() {
   return out;
 }
 
+// BLOCK 3 (18 Aug 2026): THE SITTING BRAIN — not a DAEMON_PORTS row, because its
+// level is not the uniform WARN every other resident gets. A mouth (dugout,
+// /learn, /forge) with no mind behind it while HE is mid-sitting cannot log
+// the turn or resume the plan — that is a RED. The same daemon down with no
+// sitting open costs nobody anything right now — that is an INFO. So it reads
+// dressing-room/state/sitting.json through this file's own readJson (a sitting
+// is OPEN iff the row has `id` and no `closed_at`) and probes :4117 through
+// this file's own probePort, same as probeDaemons above.
+async function probeSitting() {
+  const s = readJson(join(STATE_DIR, "sitting.json"));
+  const open = !!(s && s.id && !s.closed_at);
+  if (await probePort(4117)) return [];
+  return [{
+    id: "sitting-daemon-down",
+    level: open ? "RED" : "INFO",
+    finding: open
+      ? `the sitting brain (:4117) is not answering while sitting ${s.id} is OPEN — the mouth has no mind until it restarts (the plan persists; \`node scripts/sitting.mjs daemon\` resumes at the cursor)`
+      : "the sitting brain (:4117) is not running (no sitting open — INFO only)",
+    evidence: "TCP connect to 127.0.0.1:4117 failed/timed out · restart: node scripts/sitting.mjs daemon (the watchdog relaunches it on its next pass; the Dugout boots it too)",
+  }];
+}
+
 // ---------------------------------------------------------------------------
 // LADDER B8 (9 Aug 2026) — THE CANON WATCH. The four canonical .md files change
 // only on HIS word (CLAUDE.md's no-auto-approve law), yet nothing ever checked.
@@ -1482,6 +1504,7 @@ async function run(argv) {
   findings.push(...probeTasks(w.today, yday));
   findings.push(...probeOutwork());
   findings.push(...await probeDaemons());
+  findings.push(...await probeSitting());  // BLOCK 3 (18 Aug 2026)
   findings.push(...probeReconcile());
   findings.push(...probePulse());          // ULTRACODE 12 Aug — the ◇≤T liveness law (NEVER class = RED)
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch

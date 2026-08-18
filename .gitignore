@@ -303,6 +303,13 @@ dressing-room/state/teaching_audit.jsonl
 # HAMESHA repo ke bahar", 14 Aug). The archivist tails it like every jsonl here.
 dressing-room/state/session_intent.jsonl
 
+# BLOCK 3 (18 Aug 2026) — THE SITTING BRAIN's study data: his sitting transcript-adjacent rows never land in a tracked file
+# (sitting.json — the bus state with the PLAN, no transcript — stays TRACKED like forge_session.json).
+dressing-room/state/sitting_out.jsonl
+dressing-room/state/sitting_log.jsonl
+dressing-room/state/sitting_reviews.jsonl
+dressing-room/state/brain_out/sitting/
+
 # watchman per-run state (7 Aug 2026). Same class: machine-local nightly sweep
 # results, the Tier-2 repair log/journal (they quote session evidence verbatim),
 # and the prompt file handed to the repair child. Public remote gets none of it.

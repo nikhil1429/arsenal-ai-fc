@@ -416,12 +416,14 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 > apna dispatch apna stdout chhaapta hai (byte-identical saabit: prompt 996 B = 996 B, start 11,804 B =
 > 11,804 B; `node scripts/turn_hook.mjs selftest`). Neeche ki table **kya chalta hai** ke liye aaj bhi
 > sahi hai — bas har row ab apna process nahi, dispatcher ki ek call hai. (2) **THE SITTING BRAIN
-> (Block 3, abhi BUILT NAHI):** `scripts/sitting.mjs` — har muh (Dugout voice · Claude Code `/learn`
+> (Block 3, BUILT 18 Aug 2026):** `scripts/sitting.mjs` — har muh (Dugout voice · Claude Code `/learn`
 > `/forge`) ke peeche EK persistent Claude session; wahi pacer block (`forge_session.mjs contract` +
 > `teaching_contract.mjs print` + recall-hint) har voice turn ke aage lagega jo aaj `turn_hook prompt`
 > Claude Code turn ke aage lagata hai — isliye `sitting.mjs` ko `turn_hook.mjs` ka `runOrgan` hi call
 > karna hai, paanch node dobara nahi. Kaunsa block bana hai: `ORGANISM_OVERHAUL__2026-08-18.md` ka BUILD
-> LOG. Jab tak sitting brain nahi lagta: teaching `/forge` mein, Re-Jirah Gaffer se.
+> LOG. **THE SITTING BRAIN (`scripts/sitting.mjs`, :4117) — one mind behind every mouth;
+> `node scripts/sitting.mjs status`; the mouth (dugout) speaks its units, `/learn` and `/forge`
+> register a code sitting.**
 
 ### 8.1 HOOKS (`.claude/settings.json`) — yeh drift ka structural ilaaj hai
 

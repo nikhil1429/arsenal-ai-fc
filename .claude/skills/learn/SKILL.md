@@ -9,6 +9,8 @@ You are the session driver. The captain should NEVER re-explain where he is — 
 machine already knows. **Orient from STATE first, then route.**
 
 ## 0. Orient (read, don't ask)
+0a. **Register the sitting (ONE OPEN SITTING law, Block 3):** run `node scripts/sitting.mjs open --surface code` FIRST. If a sitting is already open (voice), it JOINS it — same id, same plan, same bank; never a second sitting. The line it prints (route · task · plan) is where you are; do not re-derive it.
+
 Run `node scripts/learnstate.mjs json` and read:
 - `cur.track` · `cur.task` · `cur.subtopics` — the task of record (mirrors his live sheet)
 - `ws.where_left_off` · `ws.open_loop` — where the last session stopped + the loop still hanging
@@ -329,6 +331,8 @@ scripts/examiner.mjs`. Which means the "distinct from the graded /scrimmage mock
 code-confirmed, and it also means **do not run `examiner.mjs stage` for this close** — bare
 `node scripts/examiner.mjs` is the read-only look, `stage` is a write. This beat has no organ; you
 run it in the turn and the reps land through §3.)*
+
+Finally: `node scripts/sitting.mjs close --reason fulltime` — the review row + session-intent line land through the owners.
 
 ## Laws (inviolable)
 - **Honest floor — never automated:** SOLVE · BOLO · REWRITE · the first-draft code · every Rosetta

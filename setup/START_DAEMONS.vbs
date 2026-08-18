@@ -11,7 +11,7 @@
 ' Until 9 Aug this file still used the bare form AND its header claimed the
 ' Startup copy was alive - both false; both fixed here.
 ' Singletons via port locks (:4111 turnstile, :4112 cortex, :4113 thalamus,
-' :4116 brain pacer), so a double start harmlessly stands down.
+' :4116 brain pacer, :4117 sitting), so a double start harmlessly stands down.
 ' The Dugout (:4114) is NOT started here - its launcher kill-then-starts.
 ' ============================================================================
 Dim sh, repo
@@ -25,6 +25,9 @@ WScript.Sleep 2000
 sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\turnstile.mjs", 0, False
 WScript.Sleep 2000
 sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\brain.mjs daemon", 0, False
+WScript.Sleep 2000
+' BLOCK 3 (18 Aug 2026): THE SITTING BRAIN — the resident mind behind every mouth (:4117; sitting.mjs daemon).
+sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\sitting.mjs daemon", 0, False
 WScript.Sleep 2000
 ' D7 (9 Aug 2026): the context bridge is the 5th resident daemon (context.mjs #22).
 sh.Run "wscript.exe """ & repo & "\setup\hidden_run.vbs"" node scripts\context.mjs daemon", 0, False

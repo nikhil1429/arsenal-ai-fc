@@ -49,6 +49,7 @@ runs `forge_session.mjs boot` — `grep -n "forge_session.mjs" .claude/settings.
 
 ```
 node scripts/forge_session.mjs boot                   # read-only; SessionStart runs it for you
+node scripts/sitting.mjs open --surface code --task "<concept>"   # registers the sitting (joins an open one) — ONE OPEN SITTING law
 node scripts/forge_session.mjs start <concept>        # at session open, before anything
 node scripts/forge_session.mjs step <0-11>            # BEFORE each step's first message
 node scripts/forge_session.mjs axis <a-i> now         # the moment you START teaching an axis (declares, completes NOTHING)
@@ -421,6 +422,7 @@ When he says "session khatam / done / bas":
    A twelve-step session in 1.4 minutes is theatre; say the two numbers out loud.
    Show the **COVERAGE** honestly: steps ran /
    steps missed / axes done / axes **deferred** / axes untouched.
+   Then `node scripts/sitting.mjs close --reason his_word` — Block 3, ONE OPEN SITTING law.
 4. Then the DELTA only (≤6 lines): reps in · fluency moves · cards due tomorrow.
 5. One honest close, self-scout register. No praise unless earned and specific.
 

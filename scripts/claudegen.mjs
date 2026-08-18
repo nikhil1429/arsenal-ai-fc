@@ -12,7 +12,7 @@
 //        for daemons (thalamus) — a daemon's event loop never blocks on a CLI.
 // ============================================================================
 
-import { execFileSync, execFile } from "node:child_process";
+import { execFileSync, execFile, spawn } from "node:child_process";   // spawn: the SESSION (Block 3) — one live child, many turns
 import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";   // readFileSync: the selftest's WIRE scan of the callers (10 Aug 2026). The four write/temp calls: the selftest's LIVE shim probe (11 Aug 2026) — a fake %APPDATA%\npm\claude.cmd in a temp dir is the only way to actually walk the npm-install lane on a box that has no shim.
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -456,6 +456,115 @@ function claudeGenAsync(prompt, model = "sonnet", timeoutMs = 300000) {
   });
 }
 
+// ── THE SESSION — one live child, many turns (§14.5 + §6.2, BLOCK 3, 18 Aug 2026) ──
+// The transport law (L6): small/frequent work never pays a per-call `claude -p` boot.
+// A sitting is ~50 turns in an hour, so it rides ONE child speaking stream-json on
+// stdin/stdout, and every turn after the first cache-READS the head instead of
+// re-writing it. PROBED ON HIS MACHINE 18 Aug 2026 (opus, --effort medium, a
+// 21,184-char head, 3 turns on one child):
+//   turn 1  wall 13.7 s (7.7 s boot→init + 6.0 s api) · cache_creation 8,621 · cache_read 0
+//   turn 2  wall  4.1 s                                · cache_creation   166 · cache_read 8,621
+//   turn 3  wall  4.0 s                                · cache_creation   150 · cache_read 8,787
+//   `--resume <id>` per turn instead: 10.5–15.6 s wall EACH (≈7 s of it is boot) — a valid
+//   fallback for a dead child, too slow to be the voice transport. And the head is NOT
+//   persisted inside the session: a resume spawn WITHOUT --system-prompt-file cache-read
+//   only the CLI's default head (4,624) and re-attaching the sitting head afterwards cost
+//   a full 10,032-token write. So the resume path re-passes the SAME head, always.
+//   `--effort` is a per-SPAWN flag (medium/high/max all accepted; one child = one effort).
+//   The account's cache entries are ephemeral_1h — a sitting's pauses keep the head warm.
+// Per-turn `result` events carry THAT turn's usage; `modelUsage` inside them is CUMULATIVE
+// (do not sum it); a haiku side-call (~544 in / 17 out) rides every session — the CLI's own.
+// SHAPE: session({systemPromptFile, model, effort, tools, cwd, resume, timeoutMs, bin, argv})
+//   → { send(text) → Promise<turn>, close(), kill(), alive, session_id, pid, spawned_at, transport }
+//   turn = { ok, text, usage:{input,output,cache_creation,cache_read}, total_tokens, duration_ms,
+//            session_id, is_error, limit_hit, http_status, limit_signal, error, events }
+// `bin`/`argv` are injectable ONLY so a hermetic selftest can drive a fixture child that speaks
+// stream-json (sitting.mjs's selftest does exactly that); the live path builds its own argv.
+// cwd defaults to the OS temp dir ON PURPOSE: a child whose cwd is this repo would run this
+// repo's .claude/settings.json hooks on every turn (a second pacer, Stop rows for a session
+// that is not his keyboard) — the sitting brain prepends its own pacer block, once, itself.
+function sessionArgs(o = {}) {
+  const a = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+    "--model", o.model || "opus", "--effort", o.effort || "high", "--strict-mcp-config"];
+  if (o.systemPromptFile) a.push("--system-prompt-file", String(o.systemPromptFile));
+  if (o.resume) a.push("--resume", String(o.resume));
+  if (Array.isArray(o.allowedTools) && o.allowedTools.length) a.push("--allowedTools", ...o.allowedTools);
+  else a.push("--tools", "");                        // the sitting child composes; the DRIVER writes (owners' CLIs)
+  return a;
+}
+function session(opts = {}) {
+  if (process.env.ANTHROPIC_API_KEY) {
+    const r = refuse();
+    return { send: async () => ({ ...r, text: null, usage: null, events: 0, session_id: null }), close: async () => { }, kill: () => { }, alive: false, session_id: null, pid: null, spawned_at: null, transport: "refused", argv: [], error: r.error };
+  }
+  const bin = opts.bin || BIN();
+  const argv = Array.isArray(opts.argv) ? opts.argv : sessionArgs(opts);
+  const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 120000;
+  const spawnedAt = Date.now();
+  const spawnOpts = { cwd: opts.cwd || tmpdir(), windowsHide: true, stdio: ["pipe", "pipe", "pipe"], shell: needsShell(bin), env: { ...process.env, ARSENAL_ORGAN: "1", ...(opts.env || {}) } };
+  // two spawn sites on purpose: the LIVE one is `spawn(BIN(), …)` — the same resolvable llm edge
+  // claudeGen has (xray's token-spend graph sees it); the fixture one is the selftest's only.
+  const child = opts.bin ? spawn(opts.bin, argv, spawnOpts) : spawn(BIN(), argv, spawnOpts);
+  const S = { alive: true, session_id: opts.resume || null, exit_code: null, stderr: "", buf: "", pending: [], inflight: null, events: 0, chain: Promise.resolve() };
+  const settle = (row) => { const p = S.inflight; S.inflight = null; if (p) { clearTimeout(p.timer); p.resolve(row); } };
+  const onEvent = (ev) => {
+    S.events++;
+    if (ev && ev.type === "system" && ev.subtype === "init" && ev.session_id) S.session_id = ev.session_id;
+    if (ev && ev.type === "result") {
+      const u = ev.usage || {};
+      const lim = classifyLimit(JSON.stringify(ev), ev.result);
+      const inTok = u.input_tokens ?? null, outTok = u.output_tokens ?? null, cc = u.cache_creation_input_tokens ?? null, cr = u.cache_read_input_tokens ?? null;
+      const measured = [inTok, outTok, cc, cr].some((x) => x !== null);
+      settle({
+        ok: !ev.is_error, text: typeof ev.result === "string" ? ev.result : "", session_id: ev.session_id || S.session_id,
+        usage: { input: inTok, output: outTok, cache_creation: cc, cache_read: cr },
+        total_tokens: measured ? (inTok || 0) + (outTok || 0) + (cc || 0) + (cr || 0) : null,
+        duration_ms: S.inflight ? Date.now() - S.inflight.t0 : null, duration_api_ms: ev.duration_api_ms ?? null,
+        is_error: !!ev.is_error, limit_hit: lim.limit_hit, http_status: lim.http_status, limit_signal: lim.limit_signal,
+        error: ev.is_error ? String(ev.result || "").slice(0, ERR_KEEP) : null, events: S.events, num_turns: ev.num_turns ?? null,
+      });
+    }
+  };
+  child.stdout.on("data", (d) => {
+    S.buf += d.toString("utf8");
+    let i;
+    while ((i = S.buf.indexOf("\n")) >= 0) {
+      const line = S.buf.slice(0, i).trim(); S.buf = S.buf.slice(i + 1);
+      if (!line) continue;
+      try { onEvent(JSON.parse(line)); } catch { /* a non-JSON line (a banner) is not an event */ }
+    }
+  });
+  child.stderr.on("data", (d) => { S.stderr = (S.stderr + d.toString("utf8")).slice(-2000); });
+  child.stdin.on("error", () => { });
+  child.on("close", (code) => {
+    S.alive = false; S.exit_code = code;
+    settle({ ok: false, text: null, usage: null, total_tokens: null, duration_ms: null, session_id: S.session_id, is_error: true, limit_hit: false, http_status: null, limit_signal: "none", error: `child exited (code ${code}) before answering${S.stderr ? " · " + S.stderr.slice(-300) : ""}`, events: S.events, exited: true });
+  });
+  child.on("error", (e) => { S.alive = false; settle({ ok: false, text: null, usage: null, total_tokens: null, duration_ms: null, session_id: S.session_id, is_error: true, limit_hit: false, http_status: null, limit_signal: "none", error: `spawn: ${String(e && e.message || e).slice(0, 200)}`, events: S.events, exited: true }); });
+  const sendOne = (text) => new Promise((resolve) => {
+    if (!S.alive) return resolve({ ok: false, text: null, usage: null, total_tokens: null, duration_ms: 0, session_id: S.session_id, is_error: true, limit_hit: false, http_status: null, limit_signal: "none", error: "session is not alive", events: S.events, exited: true });
+    const t0 = Date.now();
+    const timer = setTimeout(() => settle({ ok: false, text: null, usage: null, total_tokens: null, duration_ms: Date.now() - t0, session_id: S.session_id, is_error: true, limit_hit: false, http_status: null, limit_signal: "none", error: `turn timed out after ${timeoutMs} ms`, events: S.events, timed_out: true }), timeoutMs);
+    S.inflight = { resolve, t0, timer };
+    try {
+      child.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: String(text) }] } }) + "\n");
+    } catch (e) { settle({ ok: false, text: null, usage: null, total_tokens: null, duration_ms: 0, session_id: S.session_id, is_error: true, limit_hit: false, http_status: null, limit_signal: "none", error: `stdin: ${String(e && e.message || e).slice(0, 200)}`, events: S.events }); }
+  });
+  // turns are SERIALISED — a second send waits for the first result (one conversation, one order)
+  const send = (text) => { const p = S.chain.then(() => sendOne(text)); S.chain = p.catch(() => { }); return p; };
+  const close = () => new Promise((resolve) => {
+    if (!S.alive) return resolve(S.exit_code);
+    const t = setTimeout(() => { try { child.kill(); } catch { } resolve(null); }, 3000);
+    child.once("close", (code) => { clearTimeout(t); resolve(code); });
+    try { child.stdin.end(); } catch { resolve(null); }
+  });
+  const kill = () => { try { child.kill(); } catch { } };
+  return {
+    send, close, kill, argv, transport: "stream", pid: child.pid || null, spawned_at: new Date(spawnedAt).toISOString(),
+    get alive() { return S.alive; }, get session_id() { return S.session_id; }, get exit_code() { return S.exit_code; }, get stderr() { return S.stderr; },
+  };
+}
+
 async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
@@ -463,7 +572,64 @@ async function selftest() {
   process.env.ANTHROPIC_API_KEY = "sk-test";
   assert("API-KEY LAW — sync refuses with the key set", claudeGen("x").ok === false && claudeGen("x").error.includes("REFUSED"));
   assert("API-KEY LAW — async refuses with the key set", (await claudeGenAsync("x")).error.includes("REFUSED"));
+  assert("API-KEY LAW — session() refuses with the key set (never spawns)", session({}).transport === "refused" && (await session({}).send("x")).error.includes("REFUSED"));
   if (old === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = old;
+  // ── THE SESSION (Block 3): a hermetic fixture child that speaks stream-json ──────
+  {
+    // the fixture child is an INLINE script (`node -e`) — no temp file, no fs sink; it speaks stream-json
+    const FX = [
+      "const { createInterface } = require('node:readline');",
+      "const say = (o) => process.stdout.write(JSON.stringify(o) + '\\n');",
+      "say({ type: 'system', subtype: 'init', session_id: 'sess-fixture-1', model: 'fixture' });",
+      "let n = 0;",
+      "const rl = createInterface({ input: process.stdin });",
+      "rl.on('line', (line) => {",
+      "  let m = null; try { m = JSON.parse(line); } catch { return; }",
+      "  n++;",
+      "  const text = String(m.message?.content?.[0]?.text || '');",
+      "  if (/DIE/.test(text)) process.exit(3);",
+      "  if (/SILENT/.test(text)) return;   // never answers — the caller's timeout must fire",
+      "  if (/WALL/.test(text)) { say({ type: 'result', is_error: true, api_error_status: 429, result: \"You've hit your weekly limit · resets Jul 20\", session_id: 'sess-fixture-1', usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 5000 } }); return; }",
+      "  say({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'echo:' + text }] } });",
+      "  say({ type: 'result', is_error: false, result: 'echo:' + text + ' <<CTRL {\"class\":\"respond\",\"bank\":null,\"unit_done\":true,\"question_asked\":true,\"next\":\"wait\"}>>', session_id: 'sess-fixture-1', num_turns: n, duration_api_ms: 12,",
+      "       usage: { input_tokens: 2, output_tokens: 10 + n, cache_creation_input_tokens: n === 1 ? 5000 : 100, cache_read_input_tokens: n === 1 ? 0 : 5000 } });",
+      "});",
+      "rl.on('close', () => process.exit(0));",
+    ].join("\n");
+    const dir = tmpdir();
+    const s = session({ bin: process.execPath, argv: ["-e", FX], cwd: dir, timeoutMs: 5000 });
+    const t1 = await s.send("turn one");
+    const t2 = await s.send("turn two");
+    assert("SESSION: two turns on ONE child, answers in order (t1 then t2), session_id captured from init",
+      t1.ok && t2.ok && t1.text.startsWith("echo:turn one") && t2.text.startsWith("echo:turn two") && s.session_id === "sess-fixture-1" && t2.session_id === "sess-fixture-1");
+    assert("SESSION: per-turn usage is THAT turn's (head written on t1, READ on t2 — the transport law's whole point)",
+      t1.usage.cache_creation === 5000 && t1.usage.cache_read === 0 && t2.usage.cache_creation === 100 && t2.usage.cache_read === 5000 && t2.total_tokens === 2 + 12 + 100 + 5000);
+    const [p1, p2] = [s.send("a"), s.send("b")];
+    const [r1, r2] = await Promise.all([p1, p2]);
+    assert("SESSION: concurrent sends are SERIALISED (one conversation, one order)", r1.text.startsWith("echo:a") && r2.text.startsWith("echo:b"));
+    const wall = await s.send("WALL please");
+    assert("SESSION: the plan wall is CLASSIFIED (api_error_status 429 → limit_hit, status 429) and the usage still rides", wall.ok === false && wall.limit_hit === true && wall.http_status === 429 && wall.usage.cache_read === 5000);
+    const dead = await s.send("DIE now");
+    assert("SESSION: a child that dies mid-turn answers with an ERROR row (exited:true), never a hang", dead.ok === false && dead.exited === true && /child exited/.test(dead.error) && s.alive === false);
+    const after = await s.send("anything");
+    assert("SESSION: a send after death answers immediately (session is not alive)", after.ok === false && /not alive/.test(after.error));
+    const s2 = session({ bin: process.execPath, argv: ["-e", FX], cwd: dir, timeoutMs: 5000 });
+    await s2.send("x");
+    const code = await s2.close();
+    assert("SESSION: close() ends stdin and the child exits 0", code === 0 && s2.alive === false);
+    const s3 = session({ bin: process.execPath, argv: ["-e", FX], cwd: dir, timeoutMs: 400 });
+    await s3.send("warm");                                    // the child is up
+    const to = await s3.send("SILENT");                       // a turn that never answers → the timeout fires, the mouth is never left waiting
+    assert("SESSION: a turn the child never answers TIMES OUT into an error row (timed_out:true), never a hang", to.ok === false && to.timed_out === true && /timed out/.test(to.error));
+    s3.kill();
+    const argv = sessionArgs({ systemPromptFile: "C:/tmp/head.md", model: "opus", effort: "high", resume: "abc" });
+    assert("SESSION argv: stream-json in+out · --verbose · --model · --effort per spawn · --system-prompt-file · --resume · tools OFF (the driver writes, the child composes)",
+      argv.includes("--input-format") && argv[argv.indexOf("--input-format") + 1] === "stream-json" && argv.includes("--output-format") && argv.includes("--verbose")
+      && argv[argv.indexOf("--effort") + 1] === "high" && argv[argv.indexOf("--system-prompt-file") + 1] === "C:/tmp/head.md" && argv[argv.indexOf("--resume") + 1] === "abc"
+      && argv.includes("--tools") && argv[argv.indexOf("--tools") + 1] === "" && argv.includes("--strict-mcp-config"));
+    assert("SESSION argv: a caller that names tools gets --allowedTools and NOT the `--tools \"\"` disarm (the 11 Aug lesson holds here too)",
+      (() => { const a = sessionArgs({ allowedTools: ["WebSearch"] }); return a.includes("--allowedTools") && !a.includes("--tools"); })());
+  }
   const good = parseOut(JSON.stringify({ result: "answer", is_error: false, usage: { input_tokens: 10, output_tokens: 5 } }), "p", Date.now());
   assert("json result parsed, tokens counted", good.ok && good.text === "answer" && good.total_tokens === 15);
   assert("token SPLIT rides the result (#7 — the ledger cannot bill a lump sum)",
@@ -778,7 +944,7 @@ async function selftest() {
     //    scan with comments stripped, same technique and same reason as the scans
     //    above: a guard a comment can satisfy is not a guard.
     let lsrc = "";
-    try { lsrc = readFileSync(new URL("./limits.mjs", import.meta.url), "utf8"); } catch { }
+    try { lsrc = readFileSync(join(HERE_DIR, "limits.mjs"), "utf8"); } catch { }   // join(HERE_DIR, …) — the idiom xray folds (was `new URL(…)`, an unresolved read)
     const lcode = lsrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     assert("WIRE: limits.mjs still COUNTS the arg-set off the bus (drop the reader and this producer is a black box again)",
       /brain_calls_lean:/.test(lcode) && /brain_calls_full_cli:/.test(lcode) && /arg_profile/.test(lcode));
@@ -808,7 +974,9 @@ async function selftest() {
   return passed;
 }
 
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+const HERE_DIR = dirname(fileURLToPath(import.meta.url));
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) selftest().then(ok => process.exit(ok ? 0 : 1));
 
-export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, systemPromptRides, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };
+export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, systemPromptRides, session, sessionArgs, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };

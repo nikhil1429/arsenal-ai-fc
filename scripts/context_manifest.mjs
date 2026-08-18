@@ -57,6 +57,9 @@
 //        node scripts/context_manifest.mjs footer  → the manifest line only, as prose
 //        node scripts/context_manifest.mjs ledger  → THE SAME ACCOUNTING AS STRUCTURE:
 //                                                    one JSON line, and NEVER the text
+//        node scripts/context_manifest.mjs sitting [--route R] [--concept c]
+//                                                  → the SITTING BRAIN's head (sitting_system.md,
+//                                                    Block 3 §6.4/§16 — assembleSittingSystem below)
 //        node scripts/context_manifest.mjs selftest
 // ============================================================================
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from "node:fs";
@@ -251,6 +254,15 @@ export function pendingFactsBlock(path = PENDING_FACTS, budget = Infinity) {
       break;
     }
     const hidden = i + 1;
+    // THE COLLAPSED FORM (18 Aug 2026, Block 3 — measured on live state that morning: the block
+    // spent 284 chars of a 5,300 ceiling to show ZERO facts — head + foot + "4 not shown" —
+    // and that ceremony was exactly what starved the intents block to nothing). A block that
+    // carries no fact says its count and its pointer in ONE line; the count and the pointer
+    // ARE the whole point of the block, the head/foot frame is not.
+    if (!kept.length) {
+      const one = `--- PENDING IDENTITY FACTS: ${rows.length} staged, none shown here (budget) — get_context serves the whole queue; only he promotes (hippocampus.mjs)${bad ? ` · !! ${bad} row(s) UNREADABLE` : ""} ---`;
+      return { present: true, state: "ok", count: rows.length, shown: 0, hidden: rows.length, cut: 0, bad, collapsed: true, text: one };
+    }
     // A budget too small even for head+foot is pathological (it can only come from an absurd
     // ceiling), and the honest answer there is still to speak: the header count and the
     // "not shown" line are the whole point of the block. The manifest's `assembled X/ceiling`
@@ -405,8 +417,17 @@ export async function assemble(deps = {}) {
   // line + the get_context pointer): his rulings awaiting his word are budgeted BEFORE the
   // background cartridge that get_context serves whole anyway, and memory still always
   // keeps its pointer. Same order of parts, same footer grammar; only the reserve is true.
+  // THE INTENTS FLOOR (18 Aug 2026, Block 3 — the Block-2 DoD "a new session's brief lists
+  // yesterday's open intents" was FAILING on live state the very next session: pending
+  // facts rendered 284 chars to say "4 NOT SHOWN" and intents got 0 (`intents 0 (1 open,
+  // NONE SHOWN — budget)`), because pending was budgeted first and intents had no floor —
+  // the one leg an earlier leg could zero). Like MEMORY_FLOOR: when the owner has intents,
+  // its header + first line are reserved OUT of the pending budget. DERIVED from the
+  // owner's own lines (their measured lengths), never a chosen number.
+  const intentsLinesEarly = await (async () => { try { const l = deps.intents !== undefined ? deps.intents : (await import("./intent.mjs")).briefLines({}); return Array.isArray(l) ? l : []; } catch { return []; } })();
+  const INTENTS_FLOOR = intentsLinesEarly.length >= 2 ? intentsLinesEarly[0].length + 1 + intentsLinesEarly[1].length + 1 : 0;
   const pendBudget = Math.max(0, ceiling - base.length - (card ? card.length : 0)
-    - MEMORY_FLOOR - FOOTER_RESERVE - overhead);
+    - MEMORY_FLOOR - INTENTS_FLOOR - FOOTER_RESERVE - overhead);
   const pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock(PENDING_FACTS, pendBudget);
   // UNREADABLE ROWS RIDE THE FOOTER (audit 10 Aug 2026). The reader can now tell damage from
   // absence, but a classification nobody prints is the producer-with-no-consumer shape all over
@@ -438,7 +459,7 @@ export async function assemble(deps = {}) {
   const INTENTS_CAP = INTENTS_MAX_LINES * INTENTS_LINE_WIDTH;
   let intentsText = "", intentsShown = 0, intentsTotal = 0, intentsErr = null, intentsState = "EMPTY";
   try {
-    const lines = deps.intents !== undefined ? deps.intents : (await import("./intent.mjs")).briefLines({});
+    const lines = intentsLinesEarly;   // read ONCE (above, for the floor); the same rows render here
     if (Array.isArray(lines) && lines.length) {
       intentsTotal = lines.length;
       const room = Math.max(0, Math.min(INTENTS_CAP, ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - MEMORY_FLOOR - FOOTER_RESERVE - overhead));
@@ -631,6 +652,196 @@ export function ledgerOf(r) {
 }
 
 // ── SELFTEST ─────────────────────────────────────────────────────────────────
+// ============================================================================
+// THE SITTING BRAIN's HEAD — sitting_system.md (BLOCK 3, 18 Aug 2026 · §6.4 last bullet, §16)
+// ----------------------------------------------------------------------------
+// The second document this module assembles. The Dugout constitution shrank to persona +
+// honesty + the five delivery laws + SPEAK + card + tool hints (≤ 2,000 tokens, guarded in
+// dugout's selftest); everything a STRONG model should read ONCE and keep cached — the
+// teaching card, THE_GAFFER's persona/honesty/delivery sections, the captain profile, the
+// kickoff, the PLAN, his capsule, the last sitting's review, judged standing, night coach +
+// prepare, the session intents — moves HERE, into the head of the ONE live session
+// sitting.mjs opens per sitting (claudegen.session; the head is cache-READ after turn 1).
+// SAME DISCIPLINE AS THE BRIEF: parts in a fixed order, each with a cap, whole lines dropped
+// from the end of the LOWEST-priority part first, every cut NAMED in a footer that is the
+// last line. CEILING 60,000 chars ≈ 15k tokens (§6.6 hypothesis — sitting.mjs stats prints
+// the measured head from turn-1 cache_creation; Block 9 sets it from data).
+// THE TRUTH-LAYER FENCE RIDES INTO THE HEAD: on a REJIRAH (cold) route the capsule digest
+// carries the STRIKES and withholds the WELDS — a cold round the brain could whisper is not
+// cold. REVISION (samjhao over a locked capsule) gets the welds: there the weld IS the lesson.
+// Nothing here is a law by itself — the pacer block (forge contract · teaching contract ·
+// recall hint) rides at the top of EVERY user turn (sitting.mjs prepends it in-process), and
+// the driver validates every proposal the model makes (its CTRL tail).
+// PURE GIVEN ITS CONTEXT: every state read (kickoff, capsule, standing rows, night coach,
+// prepare, the last review, the intents) is done by the CALLER (sitting.mjs gatherContext —
+// the organ that owns the sitting) and handed in on `ctx`; this file reads only THE_GAFFER.md
+// (a repo file at a constant path) and the teaching card through learnstate's own parser.
+// That keeps the assembler hermetic (its selftest needs no disk) and keeps this organ's
+// xray sink count where it was.
+export const SITTING_CEILING = 60_000;
+export const SITTING_PARTS = Object.freeze([
+  // id · cap (chars) · drop priority (higher = dropped FIRST when the whole exceeds the ceiling)
+  { id: "role", cap: 3_000, drop: 0 },
+  { id: "how_he_learns", cap: 4_000, drop: 1 },
+  { id: "gaffer_law", cap: 18_000, drop: 3 },   // §0+§2+§3+§5+§9 measured 16,168 on 18 Aug 2026 — the cap keeps §9 (the delivery laws) WHOLE
+  { id: "captain", cap: 600, drop: 2 },
+  { id: "kickoff", cap: 3_000, drop: 5 },
+  { id: "plan", cap: 12_000, drop: 4 },
+  { id: "capsule", cap: 14_000, drop: 6 },
+  { id: "review_of_last", cap: 900, drop: 7 },
+  { id: "intents", cap: 900, drop: 8 },
+  { id: "standing", cap: 900, drop: 9 },
+  { id: "night_coach", cap: 4_000, drop: 10 },
+  { id: "pacer_note", cap: 700, drop: 0 },
+]);
+const GAFFER_FILE = join(ROOT, "THE_GAFFER.md");
+const GAFFER_SECTIONS = ["§0", "§2", "§3", "§5", "§9"];   // persona · the bond · the register · honesty overrides · the five delivery laws
+export function gafferLawText(src) {
+  const text = typeof src === "string" ? src : (() => { try { return readFileSync(GAFFER_FILE, "utf8"); } catch { return ""; } })();
+  if (!text) return "";
+  // a section = its `## §N — …` heading line up to the next `## ` heading (the `---` rulers inside stay; a trailing one goes)
+  const heads = [...text.matchAll(/^## [^\n]*/gm)].map((m) => ({ at: m.index, line: m[0] }));
+  const out = [];
+  for (const sec of GAFFER_SECTIONS) {
+    const i = heads.findIndex((h) => h.line.startsWith(`## ${sec} `) || h.line.startsWith(`## ${sec}—`) || h.line.startsWith(`## ${sec} —`));
+    if (i < 0) continue;
+    const end = i + 1 < heads.length ? heads[i + 1].at : text.length;
+    out.push(text.slice(heads[i].at, end).replace(/\n---\s*$/, "").trim());
+  }
+  return out.join("\n\n").trim();
+}
+function takeLines(text, cap) {
+  // whole lines, from the top, up to cap chars; returns {text, cut:boolean, full:number}
+  const s = String(text || "").trim();
+  if (s.length <= cap) return { text: s, cut: false, full: s.length };
+  const lines = s.split("\n");
+  const kept = [];
+  let n = 0;
+  for (const l of lines) { if (n + l.length + 1 > cap) break; kept.push(l); n += l.length + 1; }
+  return { text: kept.join("\n"), cut: true, full: s.length };
+}
+export function capsuleDigestFor(c, route) {
+  if (!c) return "";
+  const L = [`CAPSULE '${c.id}' — ${c.title || c.id} · locked ${c.lockedOn || "?"} · Re-Jirah rounds done: ${(Array.isArray(c.reJirahDone) ? c.reJirahDone : []).join(", ") || "none"}`];
+  if (c.hook) L.push(`HOOK (his): ${String(c.hook).trim()}`);
+  if (route !== "REJIRAH" && c.mechanism) L.push(`MECHANISM (his own words, locked): ${String(c.mechanism).trim()}`);
+  const axes = Array.isArray(c.faultLines) ? c.faultLines : [];
+  if (axes.length) {
+    L.push(route === "REJIRAH"
+      ? `THE NINE AXES — COLD ROUND: strikes only. The welds are WITHHELD on purpose (a cold round you could whisper is not cold); the judge holds them, not you.`
+      : `THE NINE AXES — his strike-question and his LOCKED WELD per axis (the weld is SACRED prose: recite it verbatim when the plan says recital; never re-emit it "improved"):`);
+    for (const a of axes) {
+      if (!a || !a.axis) continue;
+      L.push(`  ${a.axis}) ${a.title || ""} — STRIKE: ${String(a.strike || "").trim() || "(none written)"}${a.status ? ` · status ${a.status}` : ""}`);
+      if (route !== "REJIRAH" && a.weld) L.push(`     WELD: ${String(a.weld).trim()}`);
+    }
+  }
+  if (route !== "REJIRAH") {
+    const traps = (Array.isArray(c.traps) ? c.traps : []).map((t) => (typeof t === "string" ? t : [t && t.bait, t && t.wrong].filter(Boolean).join(" — "))).filter(Boolean).slice(0, 7);
+    if (traps.length) L.push(`KNOWN PITS he wrote for himself (bait — why it tempts him; the way out is not here on purpose):\n${traps.map((t) => `  · ${t}`).join("\n")}`);
+    const bridges = (Array.isArray(c.bridges) ? c.bridges : []).map((b) => (typeof b === "string" ? b : [b && b.to, b && b.line].filter(Boolean).join(": "))).filter(Boolean).slice(0, 6);
+    if (bridges.length) L.push(`BRIDGES to what he already holds:\n${bridges.map((b) => `  · ${b}`).join("\n")}`);
+    if (Array.isArray(c.doubts) && c.doubts.length) L.push(`HIS OWN DOUBTS on this capsule (${c.doubts.length}): ${c.doubts.slice(0, 5).map((d) => (typeof d === "string" ? d : (d && (d.text || d.doubt)) || "")).filter(Boolean).join(" · ")}`);
+  }
+  return L.join("\n");
+}
+export async function assembleSittingSystem(ctx = {}) {
+  const ceiling = Number.isFinite(ctx.ceiling) ? ctx.ceiling : SITTING_CEILING;
+  const learnstate = ctx.learnstate || await import("./learnstate.mjs").catch(() => null);   // the card's OWN parser (single-sourced, its own tail)
+  const route = ctx.route || "FORGE";
+  const spent = [];
+  const parts = {};
+  const record = (id, present, text, note, file) => { spent.push({ id, present, bytes: present ? text.length : 0, note: note || null, file: file || null }); parts[id] = present ? text : ""; };
+  const capOf = (id) => SITTING_PARTS.find((p) => p.id === id).cap;
+  const put = (id, text, file) => {
+    const t = String(text || "").trim();
+    if (!t) return record(id, false, "", "EMPTY", file);
+    const k = takeLines(t, capOf(id));
+    record(id, true, k.text, k.cut ? `TRIMMED from ${k.full} — cap ${capOf(id)}` : null, file);
+  };
+  const cfgWords = Number.isFinite(ctx.unit_max_words) ? ctx.unit_max_words : 110;
+  const seat = Number.isFinite(ctx.seat_words) ? ctx.seat_words : 60;
+  // 1. role
+  put("role", [
+    `You are THE SITTING BRAIN of Arsenal AI FC — the one mind behind every mouth of ${ctx.captain && ctx.captain.tag ? ctx.captain.tag : "the captain"}'s study organism. A voice mouth (THE GAFFER, Gemini Live) speaks EXACTLY the units you compose; you never speak, it never composes.`,
+    `L3 · CODE DRIVES, YOU COMPOSE, HE SPEAKS: the driver (sitting.mjs) runs THE METHOD as a state machine, prepends the PACER BLOCK to every user turn (forge contract · teaching contract · his recalled words) — that block is LAW, obey it before anything here — and executes every write through the owners' CLIs. You never write files, never run tools; you PROPOSE through the control tail and the driver validates.`,
+    `THE UNIT LAW: one reply = ONE unit ≤ ${cfgWords} spoken words (a respond turn ≤ ${seat}), his Hinglish (technical words stay English), ONE idea, everyday-physical analogies only (food, house, shop, city — never geometry), and where THE METHOD allows, ONE check-question at the end that asks for his GUT-WORD first (knew | shaky | guessed).`,
+    `THE MAP LAW (THE_GAFFER §9.2): declare the map before you walk it — parts, order, what he holds at the end — then "you are here" at every stop. DHEEMA IS NOT CHHOTA: slow = one thing, small steps; never longer, always deeper.`,
+    `BANK, DO NOT JUDGE: when he answers a check-question you acknowledge, take the gut-word (ask ONCE if it is missing), set bank in the tail, and move — you never grade him live, never say "correct/galat" as a verdict; the truth layer judges at close. "Samajh nahi aaya" is LITERAL: stop, restart that one idea from zero, do not advance. Never place his level above his own.`,
+    `HONESTY (THE_GAFFER §5, §9.3): "ye mujhe abhi yaad nahi" is a legal answer; a confident guess is not. If the pacer says a step is not yet legal, do not take it.`,
+    `THE CONTROL TAIL — the LAST line of EVERY reply, exactly: ${ctx.ctrl_grammar || '<<CTRL {"class":"respond|compose","bank":{"axis":"a-i","gut":"knew|shaky|guessed"}|null,"unit_done":true|false,"question_asked":true|false,"next":"deliver|wait"}>>'}  · class=compose when you wrote a NEW unit off-plan · bank ONLY when he actually answered the pending check-question with a gut-word · next=deliver when the next pre-composed unit should follow your reply now, wait when you asked something and need his line.`,
+    `WHEN ASKED TO COMPOSE THE PLAN: return ONLY the JSON the driver describes (map + units) — the units are what the mouth will speak in order; write them as spoken Hinglish, each ≤ ${cfgWords} words, from HIS capsule, the pacer's METHOD order and the kickoff below; step numbers never go backwards.`,
+  ].join("\n"));
+  // 2. how he learns — the SAME card learnstate/get_context serve (its own parser + tail)
+  let card = "";
+  try { card = learnstate && learnstate.loadTeachingCard ? learnstate.loadTeachingCard(undefined, capOf("how_he_learns") - 200) : ""; } catch { card = ""; }
+  put("how_he_learns", card ? `HOW HE LEARNS (evidence from his own words — learning-layer/HOW_HE_LEARNS.md; OBSERVED, not preferences he stated; #1 and #12 break him most):\n${card}` : "", "learning-layer/HOW_HE_LEARNS.md");
+  // 3. THE_GAFFER §0-§3/§5/§9 — the same law the mouth's constitution keeps, so two mouths speak one law
+  put("gaffer_law", (() => { const g = gafferLawText(ctx.gafferText); return g ? `THE GAFFER — persona, bond, register, honesty overrides, the five delivery laws (THE_GAFFER.md §0 §2 §3 §5 §9 — the mouth's constitution holds the same; you compose IN this voice):\n${g}` : ""; })(), "THE_GAFFER.md");
+  // 4. captain profile
+  const cp = ctx.captain && ctx.captain.profile ? ctx.captain.profile : {};
+  put("captain", `THE CAPTAIN: ${ctx.captain && ctx.captain.tag ? ctx.captain.tag : "the captain"}${cp.full_name ? ` · ${cp.full_name}` : ""} · tz ${cp.tz || "Asia/Kolkata"} · language ${cp.language || "Hinglish"} · voice ${cp.voice || "—"} · ADHD-PI: one idea per message, "you are here" every turn.`, "dressing-room/state/captain.json");
+  // 5. kickoff (learnstate json + nextup)
+  const k = ctx.kickoff || {};
+  const cur = k.cur || null;
+  const nu = ctx.nextup && ctx.nextup.winner ? ctx.nextup.winner : null;
+  put("kickoff", [
+    `KICKOFF (from state, never from chat) — route ${route}${ctx.concept ? ` · concept '${ctx.concept}'` : ""}${ctx.routeWhy ? ` · why: ${ctx.routeWhy}` : ""}`,
+    cur ? `CURRENT TASK: ${cur.id || ""} ${cur.task || ""} [${cur.track || ""}]${Array.isArray(cur.subtopics) && cur.subtopics.length ? ` — ${cur.subtopics.slice(0, 6).join(" · ")}` : ""}` : "CURRENT TASK: (none on the sprint)",
+    k.modeLine ? `MODE: ${k.modeLine}` : "",
+    nu ? `PEHLA KAAM (kickoff's own ranking): ${nu.line}${nu.why ? ` — kyun: ${nu.why}` : ""}` : "",
+    k.ws && (k.ws.where_left_off || k.ws.open_loop) ? `LAST SESSION: ${k.ws.where_left_off || ""}${k.ws.open_loop ? ` · OPEN LOOP: ${k.ws.open_loop}` : ""}` : "",
+    Array.isArray(k.watch) && k.watch.length ? `WATCH-LIST (his repeat weak spots): ${k.watch.join(" · ")}` : "",
+    ctx.forge && ctx.forge.concept ? `FORGE SESSION ON DISK: '${ctx.forge.concept}' step ${ctx.forge.step} · steps done ${(ctx.forge.steps_done || []).join(",")} · axes done ${(ctx.forge.axes_done || []).join(",") || "none"} · current axis ${ctx.forge.current_axis || "—"}${ctx.forge.closed_at ? " · CLOSED" : ""}` : "",
+  ].filter(Boolean).join("\n"), "learnstate json");
+  // 6. plan
+  const plan = ctx.plan && Array.isArray(ctx.plan.units) ? ctx.plan : null;
+  put("plan", plan
+    ? `THE PLAN (pre-composed${plan.source ? ` · ${plan.source}` : ""}; the driver delivers these in order — you fill gaps, you never re-order):\nMAP: ${plan.map || ""}\n${plan.units.map((u, i) => `  ${i}. [step ${u.step ?? "-"} · axis ${u.axis || "-"} · ${u.kind || "unit"}${u.question ? " · ?" : ""} · ${u.est_seconds || "?"}s] ${u.text}`).join("\n")}`
+    : `THE PLAN: not composed yet — your FIRST turn will ask you to compose it (map + units as JSON). Until then, nothing is spoken.`);
+  // 7. capsule
+  put("capsule", capsuleDigestFor(ctx.capsule, route), ctx.capsule ? `dressing-room/state/capsules/${ctx.capsule.id}.json` : null);
+  // 8. review of last sitting (Block 4 fills what_changes_next)
+  const rv = ctx.lastReview || null;
+  put("review_of_last", rv ? `LAST SITTING (${rv.sitting_id || "?"} · ${rv.route || ""} '${rv.concept || rv.task || ""}' · closed ${rv.closed_at || "?"} · ${rv.reason || ""}): ${rv.turns ?? "?"} turns · ${rv.units_delivered ?? "?"}/${rv.units_composed ?? "?"} units spoken · ${rv.banked ?? "?"} banked${Array.isArray(rv.what_changes_next) && rv.what_changes_next.length ? `\nWHAT CHANGES THIS TIME (its review): ${rv.what_changes_next.join(" · ")}` : "\n(no LLM review yet — Block 4)"}` : "", "dressing-room/state/sitting_reviews.jsonl");
+  // 9. session intents (§7.2)
+  put("intents", Array.isArray(ctx.intents) && ctx.intents.length ? `HIS LAST SESSIONS' ASKS (session-intent memory):\n${ctx.intents.slice(0, 6).join("\n")}` : "", "dressing-room/state/session_intent.jsonl");
+  // 10. judged standing (0 rows after Block 0's purge — a law enters only by a judgment) — rows handed in by the caller
+  const standing = ctx.standing;
+  const rows = standing && Array.isArray(standing.laws) ? standing.laws : (Array.isArray(standing) ? standing : []);
+  put("standing", rows.length ? `STANDING (judged by THE WATCHER, ${rows.length}): ${rows.slice(0, 8).map((r) => (typeof r === "string" ? r : (r && (r.line || r.text || r.law)) || "")).filter(Boolean).join(" · ")}` : "", "dressing-room/state/gaffer_standing.json");
+  // 11. night coach + prepare (the dark lane's output — its `sat` consumption stamps when a unit that carries it is SPOKEN) — text handed in by the caller
+  const day = ctx.day || new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
+  const nc = String(ctx.nightCoachText || "");
+  const pr = String(ctx.prepareText || "");
+  put("night_coach", [nc ? `NIGHT COACH (${day} — the misconceptions the night mapped; a unit that carries one names src "night_coach"):\n${nc.trim()}` : "", pr ? `PREPARED SITTING (${day} — Block 5's prepare_tomorrow; src "prepare"):\n${pr.trim()}` : ""].filter(Boolean).join("\n\n"), `brain_out/night_coach/${day}.md`);
+  // 12. pacer note
+  put("pacer_note", `THE PACER RIDES EVERY TURN: the first lines of every user message are the driver's pacer block — FORGE contract (which METHOD step is legal now, axes, question-moments left), TEACHING CONTRACT (drift-ranked rules), RECALL (his own past words when they earn the turn) — then a [SITTING …] line (cursor, pending question, next unit), then "CAPTAIN: …" (his words), then a [DRIVER: …] note. Obey the pacer over this head when they disagree.`);
+  // ── the whole vs the ceiling: drop from the highest drop-priority part first, whole lines from its end ──
+  const order = [...SITTING_PARTS].sort((a, b) => b.drop - a.drop);
+  const render = () => SITTING_PARTS.map((p) => parts[p.id]).filter(Boolean).join("\n\n");
+  const footerOf = (n) => `[sitting_system: ${spent.map((s) => `${s.id} ${s.present ? s.bytes : "EMPTY"}${s.note && s.note !== "EMPTY" ? ` (${s.note})` : ""}`).join(" · ")} · assembled ${n}/${ceiling}]`;
+  let text = render();
+  for (const p of order) {
+    if (text.length + 1 + footerOf(text.length).length <= ceiling) break;
+    if (!parts[p.id] || p.drop === 0) continue;                 // role + pacer_note never cut (drop 0)
+    const need = text.length + 1 + footerOf(text.length).length - ceiling;
+    const before = parts[p.id].length;
+    const lines = parts[p.id].split("\n");
+    let dropped = 0;
+    while (lines.length && dropped < need) { dropped += lines.pop().length + 1; }   // a part may go to nothing — named, never silent
+    parts[p.id] = lines.join("\n");
+    const s = spent.find((x) => x.id === p.id);
+    if (before - parts[p.id].length > 0) { s.bytes = parts[p.id].length; s.note = `${s.note ? s.note + "; " : ""}CUT ${before - parts[p.id].length} for the ceiling${parts[p.id] ? "" : " (all)"}`; }
+    text = render();
+  }
+  // fixed-point footer (its own length counts)
+  let n = text.length;
+  for (let i = 0; i < 8; i++) { const next = text.length + 1 + footerOf(n).length; if (next === n) break; n = next; }
+  const footer = footerOf(n);
+  return { text: `${text}\n${footer}`, footer, parts: spent, bytes: text.length, ceiling, route };
+}
+
 function selftest() {
   let pass = 0, fail = 0;
   const assert = (n, c) => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}`); } };
@@ -1037,7 +1248,8 @@ function selftest() {
       assert(`A SQUEEZE IS ACCOUNTED EXACTLY — footer and block agree, and only the budget ever cuts (live: ${stagedFull.length} staged, ${hidden} hidden, ${cut} cut)`,
         liveP.state !== "ok"
         || (markSum === cut
-          && (hidden === 0 || liveOut.text.includes(`… ${hidden} older staged fact${hidden === 1 ? "" : "s"} not shown (budget)`))
+          // Block 3 (18 Aug 2026): a block that shows ZERO facts renders the COLLAPSED one-line form — its count is the accounting
+          && (hidden === 0 || liveOut.text.includes(`… ${hidden} older staged fact${hidden === 1 ? "" : "s"} not shown (budget)`) || liveOut.text.includes(`PENDING IDENTITY FACTS: ${hidden} staged, none shown here (budget)`))
           && whole === stagedFull.length - hidden - (cut ? 1 : 0)));
     }
 
@@ -1102,6 +1314,32 @@ function selftest() {
     assert("NO BARE LINE-NUMBER CITATIONS — the form that rotted 14 times in this file is not allowed back in",
       !new RegExp('[a-z_-]+\\' + '.mjs:[0-9]').test(SELF));
 
+    // ── THE SITTING BRAIN's HEAD (Block 3, 18 Aug 2026) — hermetic: fixture state dir, fixture card, fixture GAFFER text ──
+    {
+      // pure given ctx: no disk at all — the state reads are the caller's (sitting.mjs)
+      const gaffer = "# THE GAFFER\n\n## §0 — WHO HE IS\nenergy-giver, not a cheerleader.\n\n---\n\n## §1 — CANON\nnot in the head\n\n## §2 — THE CAPTAIN BOND\nyou are the skipper\n\n## §3 — THE EMOTIONAL REGISTER\nwarmth and standard\n\n## §4 — SEASON\nno\n\n## §5 — THE THREE HONESTY-OVERRIDES\nsay I don't know\n\n## §9 — THE DELIVERY LAWS\n§9.1 PACE · §9.2 DECLARE THE MAP\n";
+      const capsule = { id: "tokenization", title: "Tokenization", lockedOn: "2026-06-15", reJirahDone: ["2026-06-18"], mechanism: "text → tukde → IDs", faultLines: [{ axis: "a", title: "Kya hai", strike: "Token kya hai?", weld: "Token = vocab ka tukda; ID milta hai." }, { axis: "b", title: "BPE", strike: "BPE kaise merge karta hai?", weld: "Frequent pairs merge hote hain." }], traps: [{ bait: "token = word", wrong: "nahi", truth: "subword" }] };
+      const base = { gafferText: gaffer, day: "2026-08-18", nightCoachText: "- misconception: hallucination = bug\n- lesson: rate naapte kaise hain", standing: { laws: [] }, learnstate: { loadTeachingCard: (p, cap) => "1. Give ONE new idea per message." }, captain: { tag: "Nikhil (#14)", profile: { tz: "Asia/Kolkata", language: "Hinglish", voice: "Charon" } },
+        kickoff: { cur: { id: "1-04", task: "Hallucinations", track: "concept" }, modeLine: "FORGE", ws: { where_left_off: "probe turn", open_loop: "push?" }, watch: ["hallucinations (a)"] }, nextup: { winner: { name: "sprint", line: "1-04 Hallucinations", why: "plan of record" } },
+        intents: ["2026-08-18 code · 1 turn · build"], lastReview: null, capsule, ctrl_grammar: "<<CTRL {…}>>", concept: "tokenization" };
+      const rev = await assembleSittingSystem({ ...base, route: "REVISION", plan: { map: "Aaj revision?", source: "capsule", units: [{ step: null, axis: "a", kind: "question", text: "Axis a?", question: true, est_seconds: 10 }] } });
+      assert("SITTING HEAD · parts in ORDER (role → how_he_learns → gaffer_law → captain → kickoff → plan → capsule → … → pacer_note) and the footer is the LAST line, naming every part",
+        rev.text.indexOf("You are THE SITTING BRAIN") < rev.text.indexOf("HOW HE LEARNS") && rev.text.indexOf("HOW HE LEARNS") < rev.text.indexOf("## §0") && rev.text.indexOf("## §0") < rev.text.indexOf("THE CAPTAIN:") && rev.text.indexOf("THE CAPTAIN:") < rev.text.indexOf("KICKOFF") && rev.text.indexOf("KICKOFF") < rev.text.indexOf("THE PLAN (pre-composed") && rev.text.indexOf("THE PLAN (pre-composed") < rev.text.indexOf("CAPSULE 'tokenization'") && rev.text.indexOf("CAPSULE") < rev.text.indexOf("THE PACER RIDES") && rev.text.trim().endsWith("]") && /\[sitting_system: role \d+ · how_he_learns \d+ · gaffer_law \d+ · captain \d+ · kickoff \d+ · plan \d+ · capsule \d+ · review_of_last EMPTY · intents \d+ · standing EMPTY · night_coach \d+ · pacer_note \d+ · assembled \d+\/60000\]$/.test(rev.footer));
+      assert("SITTING HEAD · THE_GAFFER §0 §2 §3 §5 §9 ride and §1/§4 do NOT (the same law the mouth's constitution keeps, nothing more)",
+        rev.text.includes("## §0") && rev.text.includes("## §2") && rev.text.includes("## §3") && rev.text.includes("## §5") && rev.text.includes("## §9") && !rev.text.includes("## §1 ") && !rev.text.includes("## §4"));
+      assert("SITTING HEAD · REVISION carries the WELDS (the weld IS the lesson) and the plan units numbered with step/axis/kind", rev.text.includes("WELD: Token = vocab ka tukda") && /0\. \[step - · axis a · question · \? · 10s\] Axis a\?/.test(rev.text));
+      const cold = await assembleSittingSystem({ ...base, route: "REJIRAH", plan: null });
+      assert("SITTING HEAD · REJIRAH (cold) carries the STRIKES and WITHHOLDS the welds + mechanism + traps — the truth-layer fence rides into the head", cold.text.includes("STRIKE: Token kya hai?") && !cold.text.includes("WELD:") && !cold.text.includes("MECHANISM (his own words") && !cold.text.includes("KNOWN PITS") && /WITHHELD on purpose/.test(cold.text) && /THE PLAN: not composed yet/.test(cold.text));
+      assert("SITTING HEAD · night coach + standing + intents come from ctx (the caller reads state; fixture: night coach present, standing EMPTY named, intents present)", cold.text.includes("NIGHT COACH (2026-08-18") && /standing EMPTY/.test(cold.footer) && cold.text.includes("HIS LAST SESSIONS' ASKS"));
+      const tight = await assembleSittingSystem({ ...base, route: "REVISION", plan: null, ceiling: 3_600 });
+      assert("SITTING HEAD · a tight ceiling CUTS whole lines from the lowest-priority parts first (night_coach/standing/intents before capsule before plan…), NAMES every cut in the footer, lands ≤ ceiling, role + pacer_note never cut",
+        tight.text.length <= 3_600 && /CUT \d+ for the ceiling/.test(tight.footer) && tight.text.includes("You are THE SITTING BRAIN") && tight.text.includes("THE PACER RIDES") && !/role \d+ \(CUT/.test(tight.footer) && !/pacer_note \d+ \(CUT/.test(tight.footer));
+      const bare = await assembleSittingSystem({ gafferText: "", learnstate: { loadTeachingCard: () => "" }, route: "FORGE" });
+      assert("SITTING HEAD · with nothing on disk every absent part is EMPTY in the footer and the head still has role + kickoff + pacer_note (never a blank head)", /how_he_learns EMPTY/.test(bare.footer) && /gaffer_law EMPTY/.test(bare.footer) && bare.text.includes("You are THE SITTING BRAIN") && bare.text.includes("KICKOFF") && bare.text.includes("THE PACER RIDES"));
+      const live = gafferLawText();
+      assert("SITTING HEAD · LIVE THE_GAFFER.md parses into the five sections (a renamed heading here goes red the same second)", /## §0 —/.test(live) && /## §2 —/.test(live) && /## §3 —/.test(live) && /## §5 —/.test(live) && /## §9 —/.test(live) && !/## §1 —/.test(live) && live.length > 5000);
+    }
+
     console.log(`\ncontext_manifest selftest: ${pass} passed, ${fail} failed`);
     process.exit(fail ? 1 : 0);
   })();
@@ -1110,6 +1348,17 @@ function selftest() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const mode = (process.argv[2] || "show").toLowerCase();
   if (mode === "selftest") selftest();
+  else if (mode === "sitting") {
+    // the SITTING BRAIN's head as it would be assembled right now — read-only, gathered by sitting.mjs's own context reader
+    (async () => {
+      const opt = (k) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : undefined; };
+      const sm = await import("./sitting.mjs");
+      const d = sm.createSitting({});
+      const ctx = await d.context({ task: opt("--task") || null, route: opt("--route") || null });
+      const r = await assembleSittingSystem({ ...ctx, plan: null, ctrl_grammar: sm.SITTING_CTRL_GRAMMAR });
+      console.log(r.text);
+    })();
+  }
   // `ledger` is ONE JSON line so a child-spawning consumer can JSON.parse the last line
   // and stop regexing a sentence. `footer` (prose) is untouched — layering, not replacing.
   else assemble().then((r) => console.log(

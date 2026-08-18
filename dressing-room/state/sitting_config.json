@@ -1,0 +1,26 @@
+{
+  "_what": "THE SITTING BRAIN's config (sitting.mjs loadConfig merges this over DEFAULT_CONFIG). Definitions + measured-pending hypotheses, per §5.4 — never a gate.",
+  "model": "opus",
+  "_model_note": "L1: the largest model at contact. `fable` is the literal reading of L1 on this box (the same model that runs his Claude Code) — his call; a config key, no rebuild. Probed 18 Aug 2026 on opus: respond 5.5 s cached / 12.7 s on the head-writing turn.",
+  "effort": {
+    "compose": "high",
+    "respond": "high",
+    "judge": "max"
+  },
+  "_effort_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug 2026); the child runs at effort.compose. §18: if measured respond p50 > 10 s (`node scripts/sitting.mjs stats`), move it down — never before the numbers.",
+  "transport": "stream",
+  "idle_close_min": 20,
+  "turn_timeout_ms": 120000,
+  "unit_max_words": 110,
+  "plan_max_units": 16,
+  "head_ceiling_chars": 60000,
+  "_head_note": "§6.6 hypothesis 15–20k tokens; MEASURED 18 Aug 2026 (REJIRAH tokenization): 28,140 chars assembled → 12,568 tokens written on the first model turn, cache-read after.",
+  "latency_budget_s": {
+    "deliver": 1,
+    "respond": 8,
+    "compose": 25,
+    "judge": 40,
+    "_class": "hypothesis until 3.5's stats print (first live numbers 18 Aug: respond 12.7 s head-write turn, 5.5 s cached)"
+  },
+  "seat_words": 60
+}

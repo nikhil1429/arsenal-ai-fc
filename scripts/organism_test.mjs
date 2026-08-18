@@ -535,7 +535,15 @@ function hermetic() {
   // what the deck's owner does on a TTL/retire sweep. The writer is the live
   // captains_call lane running on its own anchors inside a multi-minute suite
   // window — the same signature as tone.json and wall_data.json above.
-  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json/;
+  // sitting.json + sitting_out/log/reviews.jsonl added 18 Aug 2026 (Block 3):
+  // written by the LIVE sitting daemon (:4117) on open/turn/spoken/close and
+  // by its idle-close timer — a scheduled OWNER writing its OWN state inside
+  // a multi-minute suite window, the same signature as tone.json. PROOF paid:
+  // `sitting.mjs selftest` runs entirely in a temp state dir
+  // (ARSENAL_SITTING_STATE_DIR is not even needed — the selftest re-points
+  // its file table) and asserts the live sitting.json mtime is unchanged
+  // before/after.
+  const LIVE_WRITERS = /afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

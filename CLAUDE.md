@@ -16,7 +16,7 @@ Windows Task Scheduler + `ntfy.sh`. Plan of record for the current build: `ORGAN
 | # | Law | Verify |
 |---|---|---|
 | L1 | Intelligence at contact — the largest model sits in the conversation | `node scripts/brain.mjs spend 7` |
-| L2 | One mind, many mouths — a surface is transport | `node scripts/sitting.mjs status` (Block 3) |
+| L2 | One mind, many mouths — a surface is transport | `node scripts/sitting.mjs status` |
 | L3 | Code drives, model composes, human speaks — no sitting is run by prose | `node scripts/forge_session.mjs contract` |
 | L4 | A law is a code path or it does not exist — never a constitution paragraph | `node scripts/dugout.mjs selftest` |
 | L5 | **THE GATE** — an LLM lane runs iff evidence exists ∧ its output reached HIM inside a window ∧ no fail streak; else it sleeps, journals, cards once, wakes ITSELF. No list, nothing deleted | `node scripts/brain.mjs gate show` · `gate wake <lane>` (his override, one window) |

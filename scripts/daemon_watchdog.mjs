@@ -3,9 +3,11 @@
 // daemon_watchdog.mjs · ARSENAL AI FC — THE DAEMON WATCHDOG (LADDER D2, 9 Aug 2026)
 // ----------------------------------------------------------------------------
 // WHY: the resident daemons carry the organism's nervous system — turnstile
-//   (:4111), cortex (:4112), thalamus (:4113), the brain pacemaker (:4116), and
-//   since 10 Aug 2026 the ambient context bridge (no port — see DAEMONS) —
-//   and until this file, a daemon that died mid-day stayed dead until the NEXT
+//   (:4111), cortex (:4112), thalamus (:4113), the brain pacemaker (:4116),
+//   since 10 Aug 2026 the ambient context bridge (no port — see DAEMONS), and
+//   since 18 Aug 2026 (Block 3) the sitting brain (:4117, THE SITTING BRAIN —
+//   one mind behind every mouth) — and until this file, a daemon that died
+//   mid-day stayed dead until the NEXT
 //   morning conductor (09:15) or a matchday boot. Every afferent in between
 //   fell on the floor. This watchdog runs every 10 minutes: probe → relaunch
 //   DOWN daemons through the same VBS cloak the conductor uses (a visible
@@ -72,6 +74,7 @@ export const DAEMONS = [
   { name: "cortex",    port: 4112, args: ["scripts/cortex.mjs"] },
   { name: "thalamus",  port: 4113, args: ["scripts/thalamus.mjs"] },
   { name: "brain",     port: 4116, args: ["scripts/brain.mjs", "daemon"] },   // :4115 is the tick LOCK; :4116 is the daemon singleton
+  { name: "sitting",   port: 4117, args: ["scripts/sitting.mjs", "daemon"] },   // Block 3 (18 Aug 2026): THE SITTING BRAIN — one mind behind every mouth; NOT excluded like the Dugout, because it is the being, not the mouth
   { name: "context",   port: null, match: "context.mjs daemon", args: ["scripts/context.mjs", "daemon"] },
 ];
 
@@ -910,8 +913,9 @@ async function selftest() {
   const T = (h) => `2026-08-09T${String(h).padStart(2, "0")}:00:00.000Z`;
 
   assert("the dugout (:4114) is EXCLUDED — his surface, never the watchdog's",
-    !DAEMONS.some((d) => d.port === 4114) && DAEMONS.length === 5
-    && DAEMONS.find((d) => d.name === "brain").port === 4116);
+    !DAEMONS.some((d) => d.port === 4114) && DAEMONS.length === 6
+    && DAEMONS.find((d) => d.name === "brain").port === 4116
+    && DAEMONS.find((d) => d.name === "sitting").port === 4117);
 
   // ---- THE 5th RESIDENT (10 Aug 2026 wire repair) --------------------------
   // Every check here fails if the context bridge falls out of the liveness table
@@ -946,23 +950,23 @@ async function selftest() {
     // THE WHOLE POINT, end to end: the armed state that was sitting on his disk, plus one
     // timed-out probe, must produce NO launch. Before this repair it produced a twin.
     {
-      const armed = { ports: { turnstile: true, cortex: true, thalamus: true, brain: true, context: false }, unknown: [], thalamus_down_since: null, resync_pending: false, resyncs: [], launched: [] };
+      const armed = { ports: { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: false }, unknown: [], thalamus_down_since: null, resync_pending: false, resyncs: [], launched: [] };
       const timedOut = processProbe("context.mjs daemon", { platform: "win32", procRead: () => ({ ms: null, looked: false, reason: "ETIMEDOUT" }) });
-      const next = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, context: timedOut }, T(11));
+      const next = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: timedOut }, T(11));
       assert("PROBE HONESTY — the ARMED state on disk (ports.context:false, unknown:[]) + a timed-out probe launches NOTHING, so a live bridge never gets a twin double-POSTing the door",
         timedOut === null && next.actions.launch.length === 0 && next.state.unknown.join(",") === "context");
       // and the genuinely-dark bridge is NOT sacrificed to that caution
-      const reallyDown = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, context: false }, T(12));
+      const reallyDown = decidePass(armed, { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: false }, T(12));
       assert("PROBE HONESTY — a bridge that is genuinely absent on a probe that COMPLETED is still relaunched; the caution costs a delay, never a dark bridge",
         reallyDown.actions.launch.join(",") === "context");
     }
     // An unread probe must never become a launch — that is how a live bridge gets a twin.
-    const unk = decidePass(null, { turnstile: true, cortex: true, thalamus: true, brain: true, context: null }, T(10));
+    const unk = decidePass(null, { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: null }, T(10));
     assert("THE 5th RESIDENT — an UNKNOWN probe launches NOTHING and prints UNKNOWN, not DOWN",
       unk.actions.launch.length === 0 && unk.state.unknown.join(",") === "context"
       && upWord(unk.state, "context") === "UNKNOWN" && upWord(unk.state, "thalamus") === "UP");
     // No EADDRINUSE guard ⇒ one reading is not enough. A port daemon still relaunches at once.
-    const ctxDown = { turnstile: true, cortex: true, thalamus: true, brain: true, context: false };
+    const ctxDown = { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: false };
     const c1 = decidePass(null, ctxDown, T(10));
     const c2 = decidePass(c1.state, ctxDown, T(11));
     assert("THE 5th RESIDENT — a portless daemon takes TWO consecutive DOWN readings to relaunch (a flaky probe must not mint a second bridge)",
@@ -974,7 +978,7 @@ async function selftest() {
       decidePass(null, { ...ctxDown, thalamus: false, context: true }, T(10)).actions.launch.join(",") === "thalamus");
   }
 
-  const allUp = { turnstile: true, cortex: true, thalamus: true, brain: true, context: true };
+  const allUp = { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: true };
   const d1 = decidePass(null, allUp, T(10));
   assert("all up ⇒ no launches, no resync, clean state",
     d1.actions.launch.length === 0 && d1.actions.resync === false && d1.state.resync_pending === false);
@@ -1211,7 +1215,7 @@ async function selftest() {
     assert("DISPATCH ≠ OUTCOME — …and the operator line says THREW; it can no longer print 'relaunched' for a launch that failed",
       /RELAUNCH THREW: thalamus — wscript/.test(launchLine(boom.state))
       && !/DISPATCHED: thalamus/.test(launchLine(boom.state)));
-    assert("DISPATCH ≠ OUTCOME — the receipt is out of the LIVENESS map: `ports` holds the five daemons and nothing else",
+    assert("DISPATCH ≠ OUTCOME — the receipt is out of the LIVENESS map: `ports` holds the six daemons and nothing else",
       Object.keys(boom.state.ports).join(",") === DAEMONS.map((d) => d.name).join(","));
 
     const calls = [];
@@ -1239,7 +1243,7 @@ async function selftest() {
 
     assert("DISPATCH ≠ OUTCOME — a probe we could NOT take is never a stuck verdict (UNKNOWN ≠ failed relaunch)",
       decidePass({ ports: { context: false }, unknown: [], launched: [{ name: "context", ok: true }] },
-        { turnstile: true, cortex: true, thalamus: true, brain: true, context: null }, T(10)).actions.stuck.length === 0);
+        { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: null }, T(10)).actions.stuck.length === 0);
   }
 
   // ---- THE MORNING REPORT'S READ (10 Aug 2026 wire repair) -----------------
