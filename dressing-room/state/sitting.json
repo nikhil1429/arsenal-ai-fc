@@ -1,5 +1,5 @@
 {
-  "id": "sit_20260818_0528_3636",
+  "id": "sit_20260818_1418_38f6",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "voice"
@@ -12,10 +12,10 @@
   "route_why": "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai",
   "claude_session_id": null,
   "transport": "stream",
-  "opened_at": "2026-08-18T05:28:11.867Z",
-  "last_turn_at": "2026-08-18T06:06:39.714Z",
-  "closed_at": "2026-08-18T06:07:45.272Z",
-  "close_reason": "his_word",
+  "opened_at": "2026-08-18T14:18:54.799Z",
+  "last_turn_at": "2026-08-18T16:35:16.550Z",
+  "closed_at": null,
+  "close_reason": null,
   "plan": [
     {
       "i": 0,
@@ -140,8 +140,8 @@
   ],
   "plan_source": "prepare",
   "plan_map": "Aaj Re-Jirah hai — tokenization, jo June mein lock hua tha. Main sirf poochhunga, batauunga kuch nahi. Nau strike, ek-ek axis. Har jawab se pehle ek gut-word bolo, phir poora jawab. Notes band, capsule band. Shuru karo?",
-  "cursor": 2,
-  "unit_seq": 38,
+  "cursor": 1,
+  "unit_seq": 2,
   "pending_question": null,
   "forge_step": 3,
   "forge_axis": "a",
@@ -152,8 +152,8 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 31531,
-  "head_footer": "[sitting_system: role 2490 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · kickoff 1106 · plan 2694 · capsule 2160 · review_of_last EMPTY · intents 661 · standing EMPTY · night_coach 3799 (TRIMMED from 10551 — cap 4000) · pacer_note 437 · assembled 31531/60000]",
+  "head_chars": 32163,
+  "head_footer": "[sitting_system: role 2490 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · kickoff 1106 · plan 2694 · capsule 2160 · review_of_last 545 · intents 748 · standing EMPTY · night_coach 3799 (TRIMMED from 10551 — cap 4000) · pacer_note 437 · assembled 32163/60000]",
   "inputs_read": [
     "brain_out/prepare/2026-08-18.json",
     "learning-layer/HOW_HE_LEARNS.md",
@@ -161,45 +161,35 @@
     "dressing-room/state/captain.json",
     "learnstate json",
     "dressing-room/state/capsules/tokenization.json",
+    "dressing-room/state/sitting_reviews.jsonl",
     "dressing-room/state/session_intent.jsonl",
     "brain_out/night_coach/2026-08-18.md"
   ],
   "stats": {
-    "turns": 36,
+    "turns": 1,
     "by_class": {
-      "deliver": 2,
-      "respond": 7,
+      "deliver": 1,
+      "respond": 0,
       "compose": 0,
       "judge": 0
     },
     "tokens": {
-      "input": 14,
-      "output": 1640,
-      "cache_creation": 20648,
-      "cache_read": 100268
+      "input": 0,
+      "output": 0,
+      "cache_creation": 0,
+      "cache_read": 0
     },
     "latency_ms": {
-      "deliver": [
-        0
-      ],
-      "respond": [
-        34123,
-        4433,
-        4484,
-        3329,
-        3678,
-        5476,
-        7439
-      ],
+      "deliver": [],
+      "respond": [],
       "compose": [],
       "judge": []
     },
-    "units_composed": 38,
-    "units_delivered": 6,
+    "units_composed": 2,
+    "units_delivered": 0,
     "banked": 0,
-    "owner_calls": 1,
-    "head_tokens": 14011
-  },
-  "reattached": 1,
-  "reattached_at": "2026-08-18T06:05:16.933Z"
+    "owner_calls": 0,
+    "head_tokens": null,
+    "superseded": 1
+  }
 }

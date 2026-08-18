@@ -66,7 +66,8 @@
   "deadline_ms": 45000,
   "min_headroom_tokens": 50000,
   "max_thinking_tokens": 16000,
-  "timeout_ms": 300000
+  "timeout_ms": 300000,
+  "est_tokens_per_wake": 74180
  },
  "self_markers": [
   "i don't get",
@@ -134,5 +135,12 @@
    "pulse": 0
   }
  },
- "_pulse_fit_note": "w_pulse 0.00 → 0.02, PROVISIONAL, 14 Aug 2026 · unleash Phase 7 leg 1. RULING: his §0 words in UNLEASH_PLAN__2026-08-14.md ('maximum 24x7 output in the highest intensity possible'), which is this approval-gated file's authorisation, dated, in the file, per the _gemini_lane_2026_08_09 precedent. THE FIT: _g14_pulse_bound_note derives the two-sided bound — any w_pulse must sit in (0, 0.04971], as measured precision × 0.04971. PRECISION IS NOT COMPUTABLE TODAY AND THE REASON IS STRUCTURAL, not missing data: weights.pulse has been 0.00 since the lane opened, so NO pulse escalation has ever moved a salience score, so no wake was ever caused by one, so there is no outcome to score it against. Measuring precision first would require the weight to be non-zero first. So this takes the conservative floor the note allows — 0.02 ≈ 0.4 × ceiling — rather than pretending to a fit. THE ARITHMETIC IT BUYS: a pulse-flagged moment's measured non-pulse ceiling is 0.32029; +0.02 = 0.34029; tau1_eff now floors at tau1_base 0.20 (Phase 7 leg 2) instead of ~0.37, so a pulse-flagged moment CAN cross when there is headroom — which is the first time the pulse's opinion has been able to reach anything at all. It said 'escalate' 120 of 193 times into a lane weighted zero. REFIT at 30d from real wake outcomes (wake_queue served rows vs pulse-flagged moments); the ceiling 0.04971 is the hard bound and is NOT to be exceeded without re-deriving it. REVERT: weights.pulse = 0 (the whole of the old block is frozen verbatim in _weights_legacy['weights@2026-08-14'])."
+ "_pulse_fit_note": "w_pulse 0.00 → 0.02, PROVISIONAL, 14 Aug 2026 · unleash Phase 7 leg 1. RULING: his §0 words in UNLEASH_PLAN__2026-08-14.md ('maximum 24x7 output in the highest intensity possible'), which is this approval-gated file's authorisation, dated, in the file, per the _gemini_lane_2026_08_09 precedent. THE FIT: _g14_pulse_bound_note derives the two-sided bound — any w_pulse must sit in (0, 0.04971], as measured precision × 0.04971. PRECISION IS NOT COMPUTABLE TODAY AND THE REASON IS STRUCTURAL, not missing data: weights.pulse has been 0.00 since the lane opened, so NO pulse escalation has ever moved a salience score, so no wake was ever caused by one, so there is no outcome to score it against. Measuring precision first would require the weight to be non-zero first. So this takes the conservative floor the note allows — 0.02 ≈ 0.4 × ceiling — rather than pretending to a fit. THE ARITHMETIC IT BUYS: a pulse-flagged moment's measured non-pulse ceiling is 0.32029; +0.02 = 0.34029; tau1_eff now floors at tau1_base 0.20 (Phase 7 leg 2) instead of ~0.37, so a pulse-flagged moment CAN cross when there is headroom — which is the first time the pulse's opinion has been able to reach anything at all. It said 'escalate' 120 of 193 times into a lane weighted zero. REFIT at 30d from real wake outcomes (wake_queue served rows vs pulse-flagged moments); the ceiling 0.04971 is the hard bound and is NOT to be exceeded without re-deriving it. REVERT: weights.pulse = 0 (the whole of the old block is frozen verbatim in _weights_legacy['weights@2026-08-14']).",
+ "_wake_economy_refit": {
+  "at": "2026-08-18T16:42:44.283Z",
+  "n": 15,
+  "p95": 37090,
+  "fit": 74180,
+  "by": "watchman probeWakeEconomy (LADDER G15, blanket ladder haan — this probe owns only this key + this receipt)"
+ }
 }
