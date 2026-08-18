@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-18T20:51:06.078Z",
- "organs_parsed": 102,
- "organs_expected": 102,
+ "built_at": "2026-08-18T21:10:01.316Z",
+ "organs_parsed": 103,
+ "organs_expected": 103,
  "parse_errors": [],
- "unresolved_sinks": 1296,
+ "unresolved_sinks": 1301,
  "organs": {
   "acts.mjs": {
    "loc": 355,
@@ -3937,45 +3937,45 @@
    "unresolved": 0
   },
   "deep.mjs": {
-   "loc": 704,
+   "loc": 718,
    "reads": [
     {
      "path": "dressing-room/state/forge_profile.json",
      "lines": [
-      74,
-      74,
-      74,
-      74
+      75,
+      75,
+      75,
+      75
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsules",
      "lines": [
-      123,
-      125,
-      123,
-      125
+      124,
+      126,
+      124,
+      126
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/no-such-dir-here",
      "lines": [
-      123,
-      125,
-      123,
-      125
+      124,
+      126,
+      124,
+      126
      ],
      "fixture": false
     },
     {
      "path": ".",
      "lines": [
-      123,
-      125,
-      123,
-      125
+      124,
+      126,
+      124,
+      126
      ],
      "fixture": false
     }
@@ -11103,7 +11103,7 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 859,
+   "loc": 902,
    "reads": [
     {
      "path": "scripts",
@@ -11163,12 +11163,12 @@
     {
      "path": "node_modules",
      "lines": [
-      799,
-      799,
-      799,
-      799,
-      799,
-      799
+      842,
+      842,
+      842,
+      842,
+      842,
+      842
      ],
      "fixture": false
     },
@@ -11192,8 +11192,8 @@
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      644,
-      644
+      687,
+      687
      ],
      "fixture": false
     }
@@ -11221,7 +11221,7 @@
     "path"
    ],
    "exports": [],
-   "unresolved": 24
+   "unresolved": 26
   },
   "oura_auth.mjs": {
    "loc": 251,
@@ -11454,6 +11454,100 @@
     "mergeTokens"
    ],
    "unresolved": 5
+  },
+  "outbox.mjs": {
+   "loc": 366,
+   "reads": [
+    {
+     "path": "dressing-room/state/brain_config.json",
+     "lines": [
+      191,
+      191
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/brain_ledger.jsonl",
+     "lines": [
+      195,
+      195
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/outbox.jsonl",
+     "lines": [
+      79,
+      79
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/outbox.jsonl.lock",
+     "lines": [
+      93
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/outbox.jsonl.lock",
+     "lines": [
+      90,
+      94,
+      99
+     ],
+     "verbs": [
+      "writeFileSync",
+      "rmSync"
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/outbox.jsonl",
+     "lines": [
+      104
+     ],
+     "verbs": [
+      "appendFileSync"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "selftest"
+   ],
+   "header_verbs": [
+    "pending",
+    "post",
+    "relay",
+    "status"
+   ],
+   "exports": [
+    "BRAIN_CONFIG",
+    "BRAIN_LEDGER",
+    "KINDS",
+    "NOT_FOR_HIM",
+    "OUTBOX_LEDGER",
+    "SURFACES",
+    "ack",
+    "boardLine",
+    "findings",
+    "fold",
+    "forHimJobs",
+    "ingest",
+    "keyOf",
+    "pending",
+    "post",
+    "readRows",
+    "relay",
+    "stats",
+    "sweeps"
+   ],
+   "unresolved": 3
   },
   "outwork_audit.mjs": {
    "loc": 413,
@@ -12817,7 +12911,7 @@
    "unresolved": 2
   },
   "samjhao.mjs": {
-   "loc": 495,
+   "loc": 533,
    "reads": [
     {
      "path": "dressing-room/state/samjhao.jsonl",
@@ -12899,6 +12993,7 @@
     "THE_FOUR",
     "answer",
     "boardLine",
+    "burnedAxes",
     "close",
     "closeDoubt",
     "foldSessions",
@@ -14834,19 +14929,19 @@
    "unresolved": 3
   },
   "state.mjs": {
-   "loc": 355,
+   "loc": 358,
    "reads": [
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      241
+      243
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      241
+      243
      ],
      "fixture": false
     }
@@ -14856,7 +14951,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 239
+     "line": 241
     }
    ],
    "swallows": [],
@@ -17748,65 +17843,56 @@
    "unresolved": 20
   },
   "watchman.mjs": {
-   "loc": 2327,
+   "loc": 2336,
    "reads": [
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      176,
-      158,
-      176,
-      158,
-      176
+      177,
+      159,
+      177,
+      159,
+      177
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      177,
-      158,
-      177,
-      158,
-      177
+      178,
+      159,
+      178,
+      159,
+      178
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      179,
-      225,
-      179,
-      225,
-      179,
-      225
+      180,
+      226,
+      180,
+      226,
+      180,
+      226
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_audit.jsonl",
      "lines": [
-      181,
-      243,
-      181,
-      243,
-      181,
-      243
+      182,
+      244,
+      182,
+      244,
+      182,
+      244
      ],
      "fixture": false
     },
     {
      "path": "learning-layer/OPPONENT_SCOUT.md",
-     "lines": [
-      188,
-      188,
-      188
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/dossier_weights.json",
      "lines": [
       189,
       189,
@@ -17815,263 +17901,272 @@
      "fixture": false
     },
     {
+     "path": "dressing-room/state/dossier_weights.json",
+     "lines": [
+      190,
+      190,
+      190
+     ],
+     "fixture": false
+    },
+    {
      "path": "dressing-room/state/watchman_repair.log",
      "lines": [
-      198,
       199,
-      198,
+      200,
       199,
-      198,
-      199
+      200,
+      199,
+      200
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_repairs.jsonl",
      "lines": [
-      205,
       206,
-      205,
+      207,
       206,
-      205,
-      206
+      207,
+      206,
+      207
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      253,
-      253,
-      253,
-      253,
-      253,
-      253
+      254,
+      254,
+      254,
+      254,
+      254,
+      254
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/mouth_log.jsonl",
      "lines": [
-      264,
       265,
-      264,
+      266,
       265,
-      264,
-      265
+      266,
+      265,
+      266
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_brain.jsonl",
      "lines": [
-      320,
-      321,
-      320,
-      321,
-      320,
-      321
+      325,
+      326,
+      325,
+      326,
+      325,
+      326
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/archive_audit.jsonl",
      "lines": [
-      353,
-      355,
-      353,
-      355,
-      353,
-      355
+      358,
+      360,
+      358,
+      360,
+      358,
+      360
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      364,
-      158,
-      364,
-      158,
-      364
+      369,
+      159,
+      369,
+      159,
+      369
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting_reviews.jsonl",
      "lines": [
-      1164,
-      1164,
-      1164
+      1173,
+      1173,
+      1173
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      1217,
-      1418,
-      1217,
-      1418,
-      1217,
-      1418
+      1226,
+      1427,
+      1226,
+      1427,
+      1226,
+      1427
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/throwin_topic.txt",
      "lines": [
-      1350,
-      1350,
-      1350
+      1359,
+      1359,
+      1359
      ],
      "fixture": true
     },
     {
      "path": "setup/CLOUD_SENTINEL.md",
      "lines": [
-      1390,
-      1390,
-      1390
+      1399,
+      1399,
+      1399
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_outcomes.jsonl",
      "lines": [
-      1500,
-      1500,
-      1500
+      1509,
+      1509,
+      1509
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/recital_audit.jsonl",
      "lines": [
-      1572,
-      1572,
-      1572
+      1581,
+      1581,
+      1581
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      1723,
-      1723,
-      1723
+      1732,
+      1732,
+      1732
      ],
      "fixture": false
     },
     {
      "path": "scripts/watchman.mjs",
      "lines": [
-      1855,
-      1855,
-      1855
+      1864,
+      1864,
+      1864
      ],
      "fixture": true
     },
     {
      "path": "package.json",
      "lines": [
-      2038,
-      2038,
-      2038
+      2047,
+      2047,
+      2047
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/teaching_audit_last.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_state.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tasks_expected.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/unleash_baseline.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/conductor_evening.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      158,
-      158
+      159,
+      159
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/night_coach/2026-08-06.md",
      "lines": [
-      1523
+      1532
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_out/night_coach/2026-08-06.json",
      "lines": [
-      1523
+      1532
      ],
      "fixture": true
     }
@@ -18080,9 +18175,9 @@
     {
      "path": "dressing-room/state/watchman_tier2_prompt.txt",
      "lines": [
-      1049,
-      1049,
-      1049
+      1058,
+      1058,
+      1058
      ],
      "verbs": [
       "writeFileSync"
@@ -18092,12 +18187,12 @@
     {
      "path": "dressing-room/state/watchman_repair.log",
      "lines": [
-      1050,
-      1064,
-      1050,
-      1064,
-      1050,
-      1064
+      1059,
+      1073,
+      1059,
+      1073,
+      1059,
+      1073
      ],
      "verbs": [
       "appendFileSync"
@@ -18107,9 +18202,9 @@
     {
      "path": "dressing-room/state/watchman.jsonl",
      "lines": [
-      1665,
-      1665,
-      1665
+      1674,
+      1674,
+      1674
      ],
      "verbs": [
       "appendFileSync"
@@ -18119,9 +18214,9 @@
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      1676,
-      1676,
-      1676
+      1685,
+      1685,
+      1685
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18134,167 +18229,167 @@
      "kind": "organ",
      "script": "organism_test.mjs",
      "verb": "all",
-     "line": 714,
+     "line": 723,
      "ctx": "probeSuite"
     },
     {
      "kind": "bin",
      "bin": "powershell",
-     "line": 761
+     "line": 770
     },
     {
      "kind": "organ",
      "script": "outwork_audit.mjs",
      "verb": "run",
-     "line": 796,
+     "line": 805,
      "ctx": "probeOutwork"
     },
     {
      "kind": "organ",
      "script": "reconcile.mjs",
      "verb": "json",
-     "line": 817,
+     "line": 826,
      "ctx": "probeReconcile"
     },
     {
      "kind": "organ",
      "script": "pulse.mjs",
      "verb": "json",
-     "line": 892,
+     "line": 901,
      "ctx": "probePulse"
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 1059
+     "line": 1068
     },
     {
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 1229,
+     "line": 1238,
      "ctx": "probeUnleashVerdict"
     },
     {
      "kind": "bin",
      "bin": "git",
-     "line": 1249
+     "line": 1258
     },
     {
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 1254,
+     "line": 1263,
      "ctx": "probeCanon"
     },
     {
      "kind": "bin",
      "bin": "powershell",
-     "line": 1294
+     "line": 1303
     },
     {
      "kind": "organ",
      "script": "models.mjs",
      "verb": "probe",
-     "line": 1631,
+     "line": 1640,
      "ctx": "run"
     },
     {
      "kind": "organ",
      "script": "watchman.mjs",
      "verb": "__unknown_mode__",
-     "line": 2289,
+     "line": 2298,
      "ctx": "selftest"
     }
    ],
    "swallows": [
     {
-     "line": 705,
+     "line": 714,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 760,
+     "line": 769,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 795,
+     "line": 804,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 816,
+     "line": 825,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 891,
+     "line": 900,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1048,
+     "line": 1057,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 705,
+     "line": 714,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 760,
+     "line": 769,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 795,
+     "line": 804,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 816,
+     "line": 825,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 891,
+     "line": 900,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1048,
+     "line": 1057,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 705,
+     "line": 714,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 760,
+     "line": 769,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 795,
+     "line": 804,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 816,
+     "line": 825,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 891,
+     "line": 900,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1048,
+     "line": 1057,
      "try_stmts": 5,
      "catch_stmts": 2
     }
@@ -19374,6 +19469,7 @@
     "captains_call.mjs",
     "models.mjs",
     "organism_test.mjs",
+    "outbox.mjs",
     "reconcile.mjs",
     "unleash_verdict.mjs",
     "viz.mjs",
@@ -19397,6 +19493,7 @@
     "dugout.mjs",
     "limits.mjs",
     "nightshift.mjs",
+    "outbox.mjs",
     "physio.mjs",
     "reconcile.mjs",
     "sandbox.mjs",
@@ -20745,6 +20842,32 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/outbox.jsonl",
+   "readers": [
+    "outbox.mjs"
+   ],
+   "writers": [
+    "outbox.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "dressing-room/state/outbox.jsonl.lock",
+   "readers": [
+    "outbox.mjs"
+   ],
+   "writers": [
+    "outbox.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/outwork_audit_last.json",
    "readers": [
     "outwork_audit.mjs"
@@ -21105,7 +21228,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23687,6 +23810,7 @@
   "dressing-room/state/restart_surfaces.log",
   "dressing-room/state/salience_ledger.jsonl",
   "dressing-room/state/salience_ledger.jsonl.1",
+  "dressing-room/state/samjhao.jsonl",
   "dressing-room/state/scorer_config.json",
   "dressing-room/state/scout.json",
   "dressing-room/state/scout_config.json",
@@ -23892,6 +24016,10 @@
   {
    "organ": "nikhil_model.mjs",
    "file": "nikhil_model_grid.json"
+  },
+  {
+   "organ": "outbox.mjs",
+   "file": "outbox.json"
   },
   {
    "organ": "python_state.mjs",
@@ -26766,6 +26894,11 @@
    },
    {
     "script": "tasks.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "outbox.mjs",
     "verb": "selftest",
     "source": "package.json"
    },

@@ -286,6 +286,36 @@ export function closeDoubt(id, doubtN, text, gut, deps = {}) {
   return { ok: true, doubt: n, session: sessionOf(id, rowsOf(deps)) };
 }
 
+/**
+ * BURNED AXES — the coldness guarantee, as a CODE PATH (19 Aug 2026).
+ *
+ * THE HOLE THIS CLOSES, measured the same night this organ shipped: samjhao OPENS the weld
+ * (§4's explicit decision), and `deep.mjs due` serves the capsule's `faultLines[].strike`
+ * VERBATIM — the exact question samjhao just used as its predict prompt before showing him the
+ * answer. So the Re-Jirah that follows a samjhao would have been WARM, not cold, and §4's
+ * "generated fresh and cold on the re-activated material" was living only in an agenda row's
+ * prose. Law 4: a law is a code path or it does not exist.
+ *
+ * An axis is BURNED from the moment he GUESSES on its unit, because that is the moment `next`
+ * starts returning the weld. Burning is per (concept, axis) and carries the date, so a cold
+ * server can say WHY it will not reuse the old question instead of silently serving it.
+ * This organ only STATES the fact; deep.mjs decides what to serve. Owners stay separate.
+ */
+export function burnedAxes(concept, rows = readRows(), capsuleDir = CAPSULE_DIR) {
+  const want = String(concept || "").toLowerCase();
+  const p = plan(want, capsuleDir);
+  if (!p.ok) return [];
+  const byUnit = new Map(p.units.map((u) => [u.n, u.axis]));
+  const mine = new Set([...foldSessions(rows).values()].filter((s) => s.concept === p.concept).map((s) => s.id));
+  const out = new Map();
+  for (const r of rows || []) {
+    if (!r || r.ev !== "guess" || !mine.has(r.of)) continue;
+    const axis = byUnit.get(Number(r.unit));
+    if (axis && !out.has(axis)) out.set(axis, { axis, at: r.ts });
+  }
+  return [...out.values()];
+}
+
 /** progress — the count that replaces the feeling */
 export function progressOf(id, deps = {}) {
   const s = sessionOf(id, rowsOf(deps));
@@ -377,6 +407,14 @@ function selftest() {
   assert("a real guess lands", guess("tSAMJ01", 1, "token = vocab ka tukda + ID", "shaky", deps).ok);
   const n2 = next("tSAMJ01", deps);
   assert("...and only THEN does next() reveal — the weld, the open mechanism head, the trap and the check-question", n2.phase === "reveal" && n2.unit.reveal.weld && n2.unit.check && n2.unit.trap);
+
+  // THE COLDNESS GUARANTEE — the hole this closes was measured the night this organ shipped:
+  // deep.mjs served faultLines[].strike verbatim, i.e. the exact question samjhao opens the weld
+  // for. Without this, the Re-Jirah AFTER a samjhao would be WARM while calling itself COLD.
+  const burnedNow = burnedAxes("tokenization", rows, CAPSULE_DIR);
+  assert("a guessed unit BURNS its axis — the fact is stated with a date, so a cold server can refuse to reuse that strike (§4: the Re-Jirah after is FRESH and COLD)",
+    burnedNow.length === 1 && burnedNow[0].axis === "a" && !!burnedNow[0].at, JSON.stringify(burnedNow));
+  assert("...and an axis he has NOT reached is not burned — only what was actually opened", !burnedNow.some((b) => b.axis === "b"));
 
   const a1 = answer("tSAMJ01", 1, "text -> tukde -> IDs; kaam ID-list pe khatam", "shaky", true, deps);
   const repCall = calls.find((c) => c.organ === "capture.mjs");

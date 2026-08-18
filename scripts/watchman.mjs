@@ -96,7 +96,8 @@ import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 �
 import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREEZE: commits since FREEZE.md that touched a guarded path without a card ⇒ RED freeze-broken
 import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";
 import { stats as actsStats, findings as actsFindings } from "./acts.mjs";
-import { stats as tasksStats, findings as tasksFindings } from "./tasks.mjs";   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
+import { stats as tasksStats, findings as tasksFindings } from "./tasks.mjs";
+import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -295,6 +296,10 @@ export function gather(now = new Date()) {
   // sits OUTSIDE it: a runner that dies holding an idempotency key must be NAMED, never a silent gap.
   try { w.tasks = tasksStats(7); }
   catch (e) { swallow("gather: tasksStats() unreadable → no tasks line tonight", e); w.tasks = null; }
+  // LOAD ZERO BLOCK 3 (19 Aug 2026): the outbox is the ONE ROAD to him. A silent road is worse
+  // than no road, so the switch lives here, outside the relay it watches.
+  try { w.outbox = outboxStats(); }
+  catch (e) { swallow("gather: outboxStats() unreadable → no outbox line tonight", e); w.outbox = null; }
   // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
   // decides what the Gaffer does next; it is spawned fire-and-forget from the
   // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
@@ -632,6 +637,10 @@ export function checks(w) {
   // finished, past twice its own timeout: the key stays held) · RED task-failed (never retried in
   // 24 h) · INFO tasks-daily. undefined = not modelled by the fixture.
   if (w.tasks) F.push(...tasksFindings(w.tasks));
+  // LOAD ZERO BLOCK 3: RED outbox-undelivered (the relay RAN PAST a row made for him) · RED
+  // relay-never (the road is unwired) · INFO outbox-waiting (he simply has not opened a surface —
+  // never a defect, never a card: BLOCK 9's false-positive ruling applied here from day one).
+  if (w.outbox) F.push(...outboxFindings(w.outbox));
 
   // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
   // morning's lesson file never appeared. The map, the examiner probe, the

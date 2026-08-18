@@ -457,3 +457,6 @@ dressing-room/state/tasks.jsonl
 # LOAD ZERO BLOCK 2 (19 Aug 2026): the samjhao ledger — samjhao.mjs sole writer; append-only
 # events (open/guess/answer/doubt/close). HIS OWN WORDS live in it, so it never leaves the machine.
 dressing-room/state/samjhao.jsonl
+# LOAD ZERO BLOCK 3 (19 Aug 2026): the outbox — outbox.mjs sole writer. THE ONE ROAD TO HIM;
+# append-only events (post/deliver/ack/sweep). Carries what was made FOR HIM, so it stays local.
+dressing-room/state/outbox.jsonl

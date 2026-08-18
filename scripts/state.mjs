@@ -149,7 +149,7 @@ const weighted = (r) => (Number(r.input_tokens) || 0) * WEIGHT.input + (Number(r
 const istHour = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; return ((t + 5.5 * 3600000) % 86400000 + 86400000) % 86400000 / 3600000; };
 const istDay = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; const d = new Date(t + 5.5 * 3600000); return d.toISOString().slice(0, 10); };
 
-export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined, tasks = undefined, samjhao = undefined } = {}) {
+export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined, tasks = undefined, samjhao = undefined, outbox = undefined } = {}) {
   const since = now.getTime() - days * 86400000;
   const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
   // day N of 7
@@ -208,6 +208,7 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
     freeze: freeze ? { armed: !!freeze.armed, deferred: !!freeze.deferred, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
     models: models === undefined ? undefined : (models && models.line ? models.line : null),   // LAW M (18 Aug 2026): models.mjs boardLine — one line, roles → live models, keys ok n/N
     acts: acts === undefined ? undefined : (acts && acts.line ? acts.line : null),               // LAW A (18 Aug 2026): acts.mjs boardLine — acts n · ok · failed · undone · doors
+    outbox: outbox === undefined ? undefined : (outbox && outbox.line ? outbox.line : null),             // LOAD ZERO BLOCK 3 (19 Aug 2026): the one road to him — pending vs delivered vs sweeps
     samjhao: samjhao === undefined ? undefined : (samjhao && samjhao.line ? samjhao.line : null),   // LOAD ZERO BLOCK 2 (19 Aug 2026): units + the DOUBT COUNT — "koi pathar ulta nahi chhoda" as a number
     tasks: tasks === undefined ? undefined : (tasks && tasks.line ? tasks.line : null),           // LOAD ZERO BLOCK 1 (19 Aug 2026): tasks.mjs boardLine — n · done · running · queued · failed · REPLAYED (the runs the lane saved)
     awake: { hours: awakeH === null ? null : +awakeH.toFixed(1), nights, nights_asleep_at_0320: nightsAsleepAtSlot },
@@ -225,6 +226,7 @@ export function weekLines(b) {
   L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
   if (b.models !== undefined) L.push(`  ${b.models || "gemini: never probed — `node scripts/models.mjs probe`"}`);   // LAW M — the model board, one line
   if (b.acts !== undefined) L.push(`  ${b.acts || "acts: none yet (his next explicit ask → a receipt — `node scripts/acts.mjs status`)"}`);   // LAW A — the act lane, one line
+  if (b.outbox !== undefined) L.push(`  ${b.outbox || "outbox: khaali (`node scripts/outbox.mjs status`)"}`);   // LOAD ZERO BLOCK 3
   if (b.samjhao !== undefined) L.push(`  ${b.samjhao || "samjhao: koi revision nahi khuli (`node scripts/samjhao.mjs open tokenization`)"}`);   // LOAD ZERO BLOCK 2
   if (b.tasks !== undefined) L.push(`  ${b.tasks || "tasks: none yet (his next asked-for job → an id he can point at — `node scripts/tasks.mjs list`)"}`);   // LOAD ZERO BLOCK 1 — the task lane, one line
   L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : b.freeze.deferred ? "DEFERRED by his word 18 Aug 2026 (guard dormant · `node scripts/freeze.mjs status`)" : "NOT in force") : "? (git unreadable)"}`);
@@ -232,8 +234,8 @@ export function weekLines(b) {
   return L;
 }
 export async function liveWeek({ days = 7, now = new Date() } = {}) {
-  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }, { stats: tasksStats, boardLine: tasksLine }, { stats: samjhaoStats, boardLine: samjhaoLine }] = await Promise.all([
-    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"), import("./tasks.mjs"), import("./samjhao.mjs"),
+  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }, { stats: tasksStats, boardLine: tasksLine }, { stats: samjhaoStats, boardLine: samjhaoLine }, { stats: outboxStats, boardLine: outboxLine }] = await Promise.all([
+    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"), import("./tasks.mjs"), import("./samjhao.mjs"), import("./outbox.mjs"),
   ]);
   const safe = (f, dflt = null) => { try { return f(); } catch { return dflt; } };
   const freeze = safe(() => { const s = freezeStatus(); if (s && s.since) { try { s.since_at = execFileSync("git", ["show", "-s", "--format=%aI", s.since], { cwd: ROOT, encoding: "utf8", timeout: 8000, windowsHide: true }).trim(); } catch { s.since_at = null; } } return s; });
@@ -248,7 +250,8 @@ export async function liveWeek({ days = 7, now = new Date() } = {}) {
   const acts = safe(() => ({ line: actsLine(actsStats(days)) }), null);       // LAW A (18 Aug 2026)
   const tasks = safe(() => ({ line: tasksLine(tasksStats(days)) }), null);    // LOAD ZERO BLOCK 1 (19 Aug 2026)
   const samjhao = safe(() => ({ line: samjhaoLine(samjhaoStats()) }), null);  // LOAD ZERO BLOCK 2 (19 Aug 2026)
-  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts, tasks, samjhao });
+  const outbox = safe(() => ({ line: outboxLine(outboxStats()) }), null);     // LOAD ZERO BLOCK 3 (19 Aug 2026)
+  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts, tasks, samjhao, outbox });
 }
 
 // ── SELFTEST — fixtures only; no git, no state dir, no network ───────────────

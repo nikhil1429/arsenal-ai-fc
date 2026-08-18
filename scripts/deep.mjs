@@ -65,6 +65,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { burnedAxes } from "./samjhao.mjs";   // LOAD ZERO BLOCK 2 (19 Aug 2026): samjhao OPENS a weld, so that axis's strike can never again be served as a COLD question
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -270,8 +271,21 @@ function due(caps, intervals, now) {
     console.log(`\n${"═".repeat(70)}`);
     console.log(`${c.title || c.id}  ·  round R${r.round}  ·  ${r.overdueDays}d overdue${ripe}`);
     console.log(`${"═".repeat(70)}`);
+    // THE COLDNESS GUARANTEE (19 Aug 2026, LOAD ZERO §4). A samjhao REVISION opens the weld for an
+    // axis, which means that axis's stored `strike` is no longer a cold question — he was shown
+    // its answer, on a date this can name. Serving it anyway would make the round WARM while
+    // calling itself COLD, which is the worst of both. So a burned axis is NOT served: it is
+    // named, with the date, and the round is told to generate a FRESH question on the
+    // re-activated material. samjhao.mjs holds the fact; this screen decides what to serve.
+    let burnedOf = new Map();
+    try { burnedOf = new Map(burnedAxes(c.id).map((b) => [b.axis, b.at])); } catch { burnedOf = new Map(); }
     for (const a of c.faultLines || []) {
       const strike = (a.strike || "").trim();
+      if (burnedOf.has(a.axis)) {
+        console.log(`\n  ${a.axis})  is axis ka strike SAMJHAO mein khul chuka (${String(burnedOf.get(a.axis)).slice(0, 10)}) — purana sawaal ab COLD nahi hai.`);
+        console.log("        FRESH sawaal chahiye, re-activated material pe. Purana strike dobara mat poochho.");
+        continue;
+      }
       console.log(`\n  ${a.axis})  ${strike || "(is axis pe koi strike-sawaal nahi likha)"}`);
     }
     // ── THE RETURN LEG (traced + wired 11 Aug 2026) ────────────────────────

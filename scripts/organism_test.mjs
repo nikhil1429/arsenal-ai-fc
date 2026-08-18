@@ -446,7 +446,7 @@ function laws() {
     assert("LOAD ZERO BLOCK 1 · the act lane's `job` verb names tasks.mjs as its owner (the door he actually speaks through)",
       /job:\s*\{\s*organ:\s*"tasks\.mjs"/.test(readOrgan("acts.mjs")));
 
-    const tenv = { ...process.env, ARSENAL_TASKS_LEDGER: join(sb, "tasks-ratchet.jsonl") };
+    const tenv = { ...process.env, ARSENAL_TASKS_LEDGER: join(sb, "tasks-ratchet.jsonl"), ARSENAL_SWALLOW_LEDGER: join(sb, "swallow-tasks.jsonl") };
     const fire = () => run([join(sb, "scripts", "tasks.mjs"), "create", "--kind", "job", "--subject", "prepare_on_request", "--door", "gaffer", "--json"], { cwd: sb, env: tenv });
     const a1 = fire(), a2 = fire(), a3 = fire();
     let i1 = {}, i2 = {}, i3 = {};
@@ -463,7 +463,24 @@ function laws() {
     // a unit may not assert a fact absent from the source. SAMJHAO is REVISION of his own locked
     // notes — not FORGE (which teaches from zero and locks a capsule) and not RE-JIRAH (which
     // tests cold and grades). The gates below are what keep those three from blurring in code.
-    const sam = (...a) => run([join(sb, "scripts", "samjhao.mjs"), ...a], { cwd: sb });
+    // ISOLATED LEDGERS (19 Aug 2026, learned the hard way). sandbox() copies the live
+    // dressing-room, so a REAL samjhao open on this machine silently became this ratchet's
+    // starting state and flipped two assertions. A ratchet whose verdict depends on what the
+    // captain happened to do that evening is not a ratchet. Both ledgers are pinned into the
+    // sandbox so the law is measured against a KNOWN empty start, on any machine, any day.
+    // EVERY ledger these children could touch is pinned into the sandbox — not only the two this
+    // ratchet reads. The swallow ledger is here for a measured reason: swallow.mjs's own selftest
+    // asserts the LIVE ledger's size:mtime never moves, and this block spawns a dozen extra organs
+    // inside one `npm test`, any of which may swallow. That made swallow go red in a full sweep
+    // while passing 13/0 alone — a test failing because ANOTHER test ran is noise, and noise is
+    // how a real red gets ignored.
+    const samEnv = { ...process.env,
+      ARSENAL_SAMJHAO_LEDGER: join(sb, "samjhao-ratchet.jsonl"),
+      ARSENAL_TASKS_LEDGER: join(sb, "tasks-samjhao.jsonl"),
+      ARSENAL_OUTBOX_LEDGER: join(sb, "outbox-ratchet.jsonl"),
+      ARSENAL_SWALLOW_LEDGER: join(sb, "swallow-ratchet.jsonl") };
+    const sam = (...a) => run([join(sb, "scripts", "samjhao.mjs"), ...a], { cwd: sb, env: samEnv });
+    const deepDue = () => run([join(sb, "scripts", "deep.mjs"), "due"], { cwd: sb, env: samEnv });
     const FOUR = ["tokenization", "embeddings", "inference", "context"];
     const unverified = FOUR.filter((c) => sam("verify", c).code !== 0);
     assert("LOAD ZERO BLOCK 2 · NO NEW FACTS — every samjhao unit of all four topics asserts only what HIS OWN capsule holds (validators, not vibes)",
@@ -486,6 +503,42 @@ function laws() {
     const noGut = sam("guess", sid || "x", "--unit", "1", "--text", "token = tukda", "--gut", "maybe");
     assert("LOAD ZERO BLOCK 2 · the GUT-WORD LAW holds here too — samjhao refuses knew|shaky|guessed's absence exactly as capture.mjs does",
       noGut.code !== 0);
+
+    // ── THE COLDNESS GUARANTEE (19 Aug 2026) — his question: "samjhao ke baad Re-Jirah ke
+    // sawaal WAHI 9 to nahi hain?" Measured that night: they WERE. `deep.mjs due` printed
+    // faultLines[].strike verbatim — the exact question samjhao opens the weld for — so a
+    // post-samjhao Re-Jirah would have been WARM while calling itself COLD. §4's "fresh and
+    // cold on the re-activated material" existed only as prose in an agenda row, and Law 4 says
+    // a law is a code path or it does not exist. This ratchet is that code path's guard: it
+    // reads the REAL strike out of his own capsule and proves the cold screen stops serving it
+    // the moment samjhao opens that axis. Without this in npm test, the hole comes straight back.
+    let strikeA = null;
+    try { strikeA = JSON.parse(readFileSync(join(sb, "dressing-room", "state", "capsules", "tokenization.json"), "utf8")).faultLines[0].strike.trim(); } catch { /* asserted */ }
+    const coldBefore = deepDue();
+    assert("LOAD ZERO BLOCK 2 · before any samjhao, the cold round DOES serve the capsule's own strike (this is the baseline the guard must change)",
+      !!strikeA && coldBefore.out.includes(strikeA), `strike=${String(strikeA).slice(0, 60)}`);
+    sam("guess", sid || "x", "--unit", "1", "--text", "token = vocab ka tukda + ID", "--gut", "shaky");
+    const coldAfter = deepDue();
+    assert("LOAD ZERO BLOCK 2 · THE COLDNESS RATCHET: once samjhao OPENS an axis, the Re-Jirah may never serve that same strike again — it is named as burned and a FRESH question is demanded",
+      !!strikeA && !coldAfter.out.includes(strikeA) && /SAMJHAO mein khul chuka/.test(coldAfter.out) && /FRESH sawaal chahiye/.test(coldAfter.out),
+      `the burned strike is still being served as cold: ${String(strikeA).slice(0, 60)}`);
+    assert("LOAD ZERO BLOCK 2 · ...and an axis he never reached is UNTOUCHED — only what was actually opened is burned",
+      (() => { try { const b = JSON.parse(readFileSync(join(sb, "dressing-room", "state", "capsules", "tokenization.json"), "utf8")).faultLines[1].strike.trim(); return coldAfter.out.includes(b); } catch { return false; } })());
+
+    // ── LOAD ZERO BLOCK 3 (19 Aug 2026) — OUTBOX + RELAY ────────────────────────
+    // THE LAW: a producer never delivers; the relay is the only thing that reaches him; a row
+    // delivered on one surface is GONE from the others. Test per §BLOCK 3: produce output with
+    // no session open, and it must reach the next surface he touches — EXACTLY once.
+    const ob = (...a) => run([join(sb, "scripts", "outbox.mjs"), ...a], { cwd: sb, env: samEnv });
+    ob("post", "--produced-by", "brain:prepare_on_request", "--kind", "material", "--subject", "samjhao material taiyaar", "--body-ref", "brain_out/prepare_on_request/x.md");
+    const firstTouch = ob("relay", "--surface", "code");
+    const secondTouch = ob("relay", "--surface", "dugout");
+    assert("LOAD ZERO BLOCK 3 · output produced with NO session open reaches the next surface he touches — and EXACTLY once (the second surface gets nothing)",
+      /samjhao material taiyaar/.test(firstTouch.out) && !/samjhao material taiyaar/.test(secondTouch.out), `${firstTouch.out} || ${secondTouch.out}`);
+    assert("LOAD ZERO BLOCK 3 · a row that would ASK him for a decision is refused unless it says why code could not decide (BLOCK 6's gate, carried from day one)",
+      ob("post", "--produced-by", "x", "--kind", "ask", "--subject", "kaunsa?", "--requires-decision").code !== 0);
+    assert("LOAD ZERO BLOCK 3 · the dead-man's switch exists and does NOT fire on a road he simply has not walked yet (BLOCK 9's false-positive ruling, applied here)",
+      !/RED outbox-undelivered/.test(ob("status").out));
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 
