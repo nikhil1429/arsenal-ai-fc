@@ -32,7 +32,7 @@
 //        his weaknesses).
 // MODES: node scripts/dmn.mjs            → gate-checked dream pass
 //        node scripts/dmn.mjs --force    → skip the away-check (real-run/test)
-//        node scripts/dmn.mjs status · selftest
+//        node scripts/dmn.mjs status · drain (fold the background queue, by hand) · selftest
 // ============================================================================
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, appendFileSync } from "node:fs";

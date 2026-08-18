@@ -35,7 +35,7 @@
 //                    dressing-room/state/mirror_manifest.json (mirror's receipt —
 //                    GUARD 4b; this organ is its first content-reader anywhere)
 // OUTPUT: doubt_grammar.json · lexicon.json · tape_room.json (sole writer of all 3)
-// MODES:  run (default) · retire <capsule> <doubt_index> · selftest
+// MODES:  run (default) · retire <capsule> <doubt_index> · un-retire <capsule> <doubt_index> --why "<reason>" · selftest
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync } from "node:fs";

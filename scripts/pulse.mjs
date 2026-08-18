@@ -56,6 +56,7 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { awakeModel } from "./herd.mjs";   // Block 8 · §14.3 — a deadline is measured in the LAPTOP'S AWAKE HOURS, never the wall clock
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -97,7 +98,12 @@ export function periodHours(row) {
 }
 
 // One task row → verdict. `now` injected for fixtures.
-export function taskVerdict(row, expectedDisabled, now = Date.now()) {
+// Block 8 · §14.3 (18 Aug 2026): `awake` is herd.awakeModel() — when it is available, a
+// daily-or-slower lane is STALE only if the laptop was AWAKE for at least one full period
+// since its last run and it still did not fire (StartWhenAvailable would have caught it up).
+// A lane that missed its slots because the machine slept is `asleep-laptop`: stated, never a
+// violation. No awake data (CI, a fresh box) ⇒ the clock rule stands and the verdict says so.
+export function taskVerdict(row, expectedDisabled, now = Date.now(), awake = null) {
   if (String(row.state) === "Disabled") {
     return expectedDisabled.has(row.name)
       ? { name: row.name, class: "designed-off" }
@@ -122,7 +128,11 @@ export function taskVerdict(row, expectedDisabled, now = Date.now()) {
       return { name: row.name, class: "abandoned", violation: true, age_h: +ageH.toFixed(1), period_h: p };
     return { name: row.name, class: "alive", age_h: +ageH.toFixed(1), period_h: p };
   }
-  if (ageH > 2 * p) return { name: row.name, class: "stale", violation: true, age_h: +ageH.toFixed(1), period_h: p, deadline_h: 2 * p };
+  if (ageH > 2 * p) {
+    const awakeH = awake && awake.available ? awake.awakeHoursSince(lastMs) : null;
+    if (awakeH !== null && awakeH < p) return { name: row.name, class: "asleep-laptop", age_h: +ageH.toFixed(1), awake_h: +awakeH.toFixed(1), period_h: p, note: `last ran ${ageH.toFixed(0)}h ago by the clock, but the laptop was awake only ${awakeH.toFixed(1)}h of that — under one period (${p}h): no slot was missed, nothing to catch up yet` };
+    return { name: row.name, class: "stale", violation: true, age_h: +ageH.toFixed(1), awake_h: awakeH === null ? null : +awakeH.toFixed(1), period_h: p, deadline_h: 2 * p, detail: awakeH === null ? `${ageH.toFixed(0)}h since last run by the CLOCK (no awake log here — clock rule)` : `${ageH.toFixed(0)}h since last run, of which the laptop was AWAKE ${awakeH.toFixed(1)}h ≥ one period (${p}h) — a catch-up slot came and it did not fire` };
+  }
   return { name: row.name, class: "alive", age_h: +ageH.toFixed(1), period_h: p };
 }
 
@@ -207,7 +217,8 @@ export function model({ skipReconcile = false } = {}) {
   if (!sched.rows && !haveWatchmanState) {
     return { measurable: false, why: `schedule ${sched.source}; no watchman state at ${STATE_DIR} — a bare checkout cannot testify about his laptop`, violations: [] };
   }
-  const tasks = (sched.rows || []).map((r) => taskVerdict(r, expectedDisabled, now));
+  const awake = awakeModel({ sinceMs: now - 21 * 24 * HOUR, now });
+  const tasks = (sched.rows || []).map((r) => taskVerdict(r, expectedDisabled, now, awake));
   const violations = tasks.filter((t) => t.violation);
   if (!sched.rows && haveWatchmanState) {
     violations.push({ name: "schedule", class: "schedule-unreadable", violation: true, detail: `live state present but Get-ScheduledTask failed (${sched.error || "unknown"}) — fail-closed: an unverifiable schedule is not a green one` });
@@ -219,7 +230,7 @@ export function model({ skipReconcile = false } = {}) {
   if (queue.diverging) violations.push({ name: "captains_call", class: "queue-diverging", violation: true, detail: `${queue.open} open · ${queue.filed_7d} filed in 7d · ZERO served in 7d — λ>0 with μ=0 has no steady state` });
   const watchers = watcherVerdicts(STATE_DIR, now);
   violations.push(...watchers.filter((w) => w.violation));
-  return { measurable: true, source: sched.source, tasks, brain, queue, watchers, violations };
+  return { measurable: true, source: sched.source, awake: { source: awake.source, available: awake.available, awake_now: awake.awake_now }, tasks, brain, queue, watchers, violations };
 }
 
 const fmt = (v) => `  [${/never/.test(v.class) ? "NEVER" : v.class === "queue-diverging" ? "QUEUE" : "STALE"}] ${v.name} — ${v.detail || v.class}${v.age_h ? ` (age ${v.age_h}h)` : ""}${v.consumers ? ` · ${v.consumers} wired reader(s)` : ""}`;
@@ -259,6 +270,20 @@ function selftest() {
   assert("THE 2x LAW — a daily lane 50h old is STALE (deadline 48h), 20h old is alive",
     taskVerdict({ name: "D", state: "Ready", last: iso(50), next: iso(-2), rep: "", di: 1, wi: 0 }, ed, NOW).class === "stale"
     && taskVerdict({ name: "D", state: "Ready", last: iso(20), next: iso(-2), rep: "", di: 1, wi: 0 }, ed, NOW).class === "alive");
+  // Block 8 · §14.3 — the deadline is measured in AWAKE hours: a daily lane 50h old whose
+  // laptop was awake only 6h of that is asleep-laptop (no slot missed); awake 30h ⇒ STALE.
+  {
+    const awakeLittle = { available: true, awakeHoursSince: () => 6 };
+    const awakeLots = { available: true, awakeHoursSince: () => 30 };
+    const noLog = { available: false, awakeHoursSince: () => null };
+    const D50 = { name: "D", state: "Ready", last: iso(50), next: iso(-2), rep: "", di: 1, wi: 0 };
+    assert("AWAKE LAW — 50h by the clock but awake 6h (< one 24h period) ⇒ asleep-laptop, stated, NOT a violation",
+      taskVerdict(D50, ed, NOW, awakeLittle).class === "asleep-laptop" && !taskVerdict(D50, ed, NOW, awakeLittle).violation && taskVerdict(D50, ed, NOW, awakeLittle).awake_h === 6);
+    assert("AWAKE LAW — 50h by the clock and awake 30h (≥ one period, a catch-up slot came) ⇒ STALE, and the detail says which hours",
+      taskVerdict(D50, ed, NOW, awakeLots).class === "stale" && /AWAKE 30\.0h/.test(taskVerdict(D50, ed, NOW, awakeLots).detail));
+    assert("AWAKE LAW — no awake log (CI, a fresh box) ⇒ the clock rule stands and the detail SAYS it is the clock rule",
+      taskVerdict(D50, ed, NOW, noLog).class === "stale" && /clock rule/.test(taskVerdict(D50, ed, NOW, noLog).detail) && taskVerdict(D50, ed, NOW).class === "stale");
+  }
   assert("MINUTE-LANES sleep with the laptop — 5h old with a FUTURE next run is alive-pending (catch-up owns it); 5h old with NO next run is ABANDONED",
     taskVerdict({ name: "M", state: "Ready", last: iso(5), next: iso(-1), rep: "PT30M", di: 0, wi: 0 }, ed, NOW).class === "alive"
     && taskVerdict({ name: "M", state: "Ready", last: iso(5), next: "", rep: "PT30M", di: 0, wi: 0 }, ed, NOW).class === "abandoned");

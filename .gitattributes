@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# hooks are POSIX shell scripts run by git-sh: CRLF breaks them (Block 8, 18 Aug 2026)
+hooks/pre-commit text eol=lf
+hooks/commit-msg text eol=lf

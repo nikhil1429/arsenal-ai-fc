@@ -397,7 +397,12 @@ export function newestGraphMtime(relPath, seen = new Set()) {
     newest = { ms: statSync(abs).mtimeMs, file: relPath };
     src = readFileSync(abs, "utf8");
   } catch (e) { swallow("newestGraphMtime: statSync(abs) absent → newest", e); return newest; }
-  for (const m of src.matchAll(/from\s+["'](\.\/[^"']+\.mjs)["']/g)) {
+  // Block 8 (18 Aug 2026 · the "UNKNOWN death" mutagen's panic lane could not classify): the walk
+  // matched `from "./x.mjs"` ANYWHERE in the source — including brain.mjs's selftest FIXTURE STRING
+  // `'import g from "./ghost.mjs"'` — so every graph walk through brain stat'd a phantom
+  // scripts/ghost.mjs (24 swallows/day in swallow_ledger; a death under ARSENAL_PANIC). Only a
+  // real import/export STATEMENT at the start of a line is an edge; a string literal is not.
+  for (const m of src.matchAll(/^\s*(?:import|export)\b[^\n]*?\bfrom\s+["'](\.\/[^"']+\.mjs)["']/gm)) {
     const child = join(dirname(relPath), m[1]).replace(/\\/g, "/");
     const r = newestGraphMtime(child, seen);
     if (r.ms != null && (newest.ms == null || r.ms > newest.ms)) newest = r;

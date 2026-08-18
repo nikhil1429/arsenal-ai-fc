@@ -21,7 +21,7 @@
 //   fixtures and never touches git, the state dir or the network.
 // SOLE WRITER of: nothing. WHO ELSE COULD ACT ON THIS OUTPUT? learnstate.mjs (brief
 //   line 1) · brain.mjs (sheet push body) · the two skills · a future sitting.mjs open.
-// CLI: node scripts/state.mjs [line|json|selftest]
+// CLI: node scripts/state.mjs [line|json|week [days] [--json]|selftest]   (week = the Block 9 board, read-only)
 // ============================================================================
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -125,6 +125,117 @@ export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = 
   }, now);
 }
 
+// ── THE WEEK BOARD (OVERHAUL Block 9 · SEVEN REAL DAYS — measure, no build; 18 Aug 2026) ──
+// ONE read-only verb, `node scripts/state.mjs week [days]`, that prints the seven numbers Block 9
+// exists to measure — every one from an owner's own file, none guessed:
+//   day N of 7        days since the commit that added FREEZE.md (freeze.mjs status → since)
+//   sittings          sitting.mjs stats(days): sittings · turns · latency · weighted
+//   contact_share     L1 — the largest model sits IN THE CONVERSATION: (sitting weighted + the
+//                     Gaffer's own turns in brain_ledger) ÷ (that + every other ledger job)
+//   gate              brain_out/gate.jsonl: wake/sleep transitions per lane in the window
+//   dark spend        brain_ledger rows between 00:00 and 08:00 IST per day, weighted (the
+//                     "≤ 3 lakh dark" line), beside the day total
+//   intents           intent.mjs showLines(days): study vs build vs other
+//   swallow           swallow.mjs ledger(days): rows · top sites
+//   freeze            freeze.mjs status: guarded commits since · broken
+//   awake             herd.mjs awakeModel: awake hours in the window · nights asleep at 03:20 IST
+//                     (the dark lane's slot) — THE KENNEL's numbers (§17-A)
+// Pure over injected rows (`weekBoard`), gathered live by `liveWeek()`; the selftest drives the
+// pure half on fixtures. Everything heavy is imported LAZILY inside liveWeek so `state line`
+// (line 1 of every session) stays as light as it was.
+export const WEIGHT = { input: 1, cache_write: 1.25, cache_read: 0.1, output: 5 };   // brain.mjs SPEND weights, restated
+export const CONTACT_JOBS = /^(gaffer_respond|gaffer_verify|gaffer_judge|gaffer_claim_audit|sitting_|dugout_respond|talk_)/;
+const weighted = (r) => (Number(r.input_tokens) || 0) * WEIGHT.input + (Number(r.cache_creation_tokens) || 0) * WEIGHT.cache_write + (Number(r.cache_read_tokens) || 0) * WEIGHT.cache_read + (Number(r.output_tokens) || 0) * WEIGHT.output;
+const istHour = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; return ((t + 5.5 * 3600000) % 86400000 + 86400000) % 86400000 / 3600000; };
+const istDay = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; const d = new Date(t + 5.5 * 3600000); return d.toISOString().slice(0, 10); };
+
+export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null } = {}) {
+  const since = now.getTime() - days * 86400000;
+  const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
+  // day N of 7
+  let dayN = null, sinceFreeze = null;
+  if (freeze && freeze.armed && freeze.since_at) { const t = Date.parse(freeze.since_at); if (Number.isFinite(t)) { sinceFreeze = t; dayN = Math.floor((now.getTime() - t) / 86400000); } }   // day 0 = the freeze day; the seventh REAL day after it is day 7
+  // ledger: contact vs the rest, dark vs day, per IST day
+  const L = ledger.filter((r) => r && inWin(r.ts));
+  let contactLedger = 0, other = 0, dark = 0, total = 0;
+  const perDay = {};
+  for (const r of L) {
+    const w = weighted(r);
+    total += w;
+    if (CONTACT_JOBS.test(String(r.job || ""))) contactLedger += w; else other += w;
+    const h = istHour(r.ts);
+    const d = istDay(r.ts);
+    if (d) { perDay[d] = perDay[d] || { total: 0, dark: 0, rows: 0 }; perDay[d].total += w; perDay[d].rows++; }
+    if (h !== null && h < 8) { dark += w; if (d) perDay[d].dark += w; }
+  }
+  const sittingW = sitting && Number.isFinite(sitting.weighted) ? sitting.weighted : 0;
+  const contact = contactLedger + sittingW;
+  const denom = contact + other;
+  const contactShare = denom > 0 ? contact / denom : null;
+  // gate transitions per lane
+  const G = gate.filter((r) => r && inWin(r.ts));
+  const lanes = {};
+  for (const r of G) { const k = r.lane || r.job || "?"; lanes[k] = lanes[k] || { awake: 0, asleep: 0 }; if (r.to === "awake" || r.state === "awake") lanes[k].awake++; else if (r.to === "asleep" || r.state === "asleep") lanes[k].asleep++; }
+  const wakes = Object.values(lanes).reduce((a, b) => a + b.awake, 0), sleeps = Object.values(lanes).reduce((a, b) => a + b.asleep, 0);
+  // intents study vs build
+  const kinds = { study: 0, build: 0, other: 0 };
+  for (const l of intents) { const s = String(l); if (/\bstudy\b/i.test(s)) kinds.study++; else if (/\bbuild\b/i.test(s)) kinds.build++; else if (/^\s*20\d\d-\d\d-\d\d/.test(s)) kinds.other++; }
+  // awake + the kennel numbers: nights (00:00–08:00 IST) with < 15 min awake around 03:20 IST
+  let awakeH = null, nightsAsleepAtSlot = null, nights = 0;
+  if (awake && awake.available) {
+    awakeH = awake.awakeHoursSince(since);
+    nightsAsleepAtSlot = 0;
+    for (let i = 0; i <= days; i++) {
+      // 03:20 IST on each night inside the window = 21:50 UTC the previous calendar day
+      const slot = new Date(now.getTime()); slot.setUTCHours(21, 50, 0, 0); slot.setUTCDate(slot.getUTCDate() - i);
+      if (slot.getTime() > now.getTime() || slot.getTime() < since) continue;
+      nights++;
+      const around = awake.awakeHoursSince(slot.getTime() - 15 * 60000) - awake.awakeHoursSince(slot.getTime() + 15 * 60000);
+      if (around < 0.05) nightsAsleepAtSlot++;
+    }
+  }
+  return {
+    at: now.toISOString(), days, dayN, sinceFreeze: sinceFreeze ? new Date(sinceFreeze).toISOString() : null,
+    sitting: sitting ? { sittings: sitting.sittings, turns: sitting.turns, weighted: sitting.weighted, heads: sitting.heads } : null,
+    contact: { share: contactShare, contact_weighted: Math.round(contact), of_which_sitting: Math.round(sittingW), of_which_gaffer_ledger: Math.round(contactLedger), other_weighted: Math.round(other) },
+    ledger: { rows: L.length, weighted: Math.round(total), dark_weighted: Math.round(dark), per_day: perDay },
+    gate: { transitions: G.length, wakes, sleeps, lanes },
+    intents: kinds,
+    swallow: swallow ? { rows: swallow.runs ?? swallow.rows ?? null, n: swallow.n ?? null, top: (swallow.top || []).slice(0, 3) } : null,
+    freeze: freeze ? { armed: !!freeze.armed, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
+    awake: { hours: awakeH === null ? null : +awakeH.toFixed(1), nights, nights_asleep_at_0320: nightsAsleepAtSlot },
+  };
+}
+export function weekLines(b) {
+  const L = [];
+  const lakh = (n) => n === null || n === undefined ? "?" : (n / 100000).toFixed(2) + " lakh";
+  L.push(`WEEK BOARD · ${b.at.slice(0, 16)}Z · last ${b.days} d · ${b.dayN === null ? "freeze not yet committed — day 0" : b.dayN === 0 ? `the freeze day (day 0 of 7 · ${b.sinceFreeze.slice(0, 10)})` : `day ${Math.min(b.dayN, 7)} of 7 since the freeze (${b.sinceFreeze.slice(0, 10)})`}`);
+  L.push(`  sittings   ${b.sitting ? `${b.sitting.sittings} sitting(s) · ${b.sitting.turns} turn row(s) · weighted ${lakh(b.sitting.weighted)} · heads ${b.sitting.heads && b.sitting.heads.length ? b.sitting.heads.join(", ") : "—"}` : "? (sitting log unreadable)"}`);
+  L.push(`  contact    L1 share ${b.contact.share === null ? "? (no spend in window)" : Math.round(b.contact.share * 100) + "%"} — contact ${lakh(b.contact.contact_weighted)} (sitting ${lakh(b.contact.of_which_sitting)} + gaffer ledger ${lakh(b.contact.of_which_gaffer_ledger)}) vs other ${lakh(b.contact.other_weighted)}`);
+  L.push(`  spend      ${b.ledger.rows} ledger row(s) · weighted ${lakh(b.ledger.weighted)} · DARK (00–08 IST) ${lakh(b.ledger.dark_weighted)} · per day: ${Object.entries(b.ledger.per_day).sort().map(([d, v]) => `${d.slice(5)} ${lakh(v.total)}${v.dark ? ` (dark ${lakh(v.dark)})` : ""}`).join(" · ") || "—"}`);
+  L.push(`  gate       ${b.gate.transitions} transition(s) · ${b.gate.wakes} wake · ${b.gate.sleeps} sleep · lanes: ${Object.entries(b.gate.lanes).map(([k, v]) => `${k} ${v.awake}↑${v.asleep}↓`).join(" · ") || "—"}`);
+  L.push(`  intents    study ${b.intents.study} · build ${b.intents.build} · other ${b.intents.other}`);
+  L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
+  L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : "NOT in force") : "? (git unreadable)"}`);
+  L.push(`  awake      ${b.awake.hours === null ? "? (no presence log)" : `${b.awake.hours} h awake in ${b.days} d · nights asleep at the 03:20 IST dark slot: ${b.awake.nights_asleep_at_0320}/${b.awake.nights} — THE KENNEL (§17-A): the dark lane catches up on wake and keys its day by the slot (herd risks 0), so a night asleep costs nothing but latency; default stays "not now" unless a lane must run WHILE he sleeps`}`);
+  return L;
+}
+export async function liveWeek({ days = 7, now = new Date() } = {}) {
+  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }] = await Promise.all([
+    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"),
+  ]);
+  const safe = (f, dflt = null) => { try { return f(); } catch { return dflt; } };
+  const freeze = safe(() => { const s = freezeStatus(); if (s && s.since) { try { s.since_at = execFileSync("git", ["show", "-s", "--format=%aI", s.since], { cwd: ROOT, encoding: "utf8", timeout: 8000, windowsHide: true }).trim(); } catch { s.since_at = null; } } return s; });
+  const sitting = safe(() => sittingStats({ days }));
+  const readL = (p) => { try { return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
+  const ledger = readL(join(STATE_DIR, "brain_ledger.jsonl"));
+  const gate = readL(join(STATE_DIR, "brain_out", "gate.jsonl"));
+  const intents = safe(() => showLines({ days, now }), []);
+  const swallow = safe(() => swallowLedger({ sinceMs: days * 86400000, now: now.getTime(), top: 5 }));
+  const awake = safe(() => awakeModel({ sinceMs: now.getTime() - days * 86400000, now: now.getTime() }));
+  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake });
+}
+
 // ── SELFTEST — fixtures only; no git, no state dir, no network ───────────────
 function selftest() {
   let pass = 0, fail = 0;
@@ -172,6 +283,38 @@ function selftest() {
     gitFacts({ exec: () => { throw new Error("no git"); } }).known === false
     && gitFacts({ exec: (cmd, args) => args[0] === "status" ? " M a.txt\n?? b\n" : "1\n" }).dirty === 2
     && gitFacts({ exec: (cmd, args) => args[0] === "status" ? "" : "1\n" }).ahead === 1);
+  // Block 9 — THE WEEK BOARD on fixtures (pure; the live gatherer is `state week`)
+  {
+    const N = new Date("2026-08-25T10:00:00Z");   // 15:30 IST
+    const iso = (hAgo) => new Date(N.getTime() - hAgo * 3600000).toISOString();
+    const b = weekBoard({
+      now: N, days: 7,
+      freeze: { armed: true, since_at: "2026-08-18T12:30:00+05:30", commits: [{}, {}], broken: [], carded: 1, exempt: 1 },
+      sitting: { sittings: 4, turns: 120, weighted: 200000, heads: [14011, 15000] },
+      ledger: [
+        { ts: iso(2), job: "gaffer_respond", input_tokens: 100, output_tokens: 1000, cache_creation_tokens: 0, cache_read_tokens: 0 },      // 13:30 IST · contact 5100
+        { ts: iso(3), job: "dmn_rollout", input_tokens: 0, output_tokens: 20000, cache_creation_tokens: 0, cache_read_tokens: 0 },        // 12:30 IST · other 100000, day
+        { ts: new Date("2026-08-24T21:00:00Z").toISOString(), job: "night_coach", input_tokens: 0, output_tokens: 10000, cache_creation_tokens: 0, cache_read_tokens: 0 },   // 02:30 IST ⇒ dark 50000
+        { ts: iso(24 * 9), job: "dmn_rollout", input_tokens: 0, output_tokens: 99999999, cache_creation_tokens: 0, cache_read_tokens: 0 }, // outside the window
+      ],
+      gate: [{ ts: iso(5), lane: "dmn", state: "asleep" }, { ts: iso(4), lane: "night_coach", state: "awake" }, { ts: iso(24 * 8), lane: "old", state: "awake" }],
+      intents: ["HIS LAST SESSIONS' ASKS", "2026-08-20 code · study · 3 turns", "2026-08-21 code · build · x", "2026-08-22 voice · study"],
+      swallow: { runs: 3, n: 7, top: [{ organ: "brain.mjs", why: "readJson: x", n: 5 }] },
+      awake: { available: true, awakeHoursSince: (t) => Math.max(0, (N.getTime() - t) / 3600000) * 0.5 },   // awake half of every span ⇒ never asleep at 03:20
+    });
+    assert("WEEK — day N is counted from the commit that added FREEZE.md (18 Aug ⇒ 25 Aug is day 7)", b.dayN === 7);
+    assert("WEEK — contact_share = (sitting + gaffer ledger) ÷ (that + other): (200000+5100)/(205100+150000) ≈ 58%, and the halves are printed",
+      Math.abs(b.contact.share - 205100 / 355100) < 0.001 && b.contact.of_which_sitting === 200000 && b.contact.of_which_gaffer_ledger === 5100 && b.contact.other_weighted === 150000);
+    assert("WEEK — dark spend is the 00–08 IST slice (night_coach at 02:30 IST counts, dmn at 12:30 IST does not) and a row outside the window is ignored",
+      b.ledger.dark_weighted === 50000 && b.ledger.weighted === 155100 && b.ledger.rows === 3);
+    assert("WEEK — gate transitions in the window per lane (1 wake · 1 sleep; the 8-day-old row is out)", b.gate.wakes === 1 && b.gate.sleeps === 1 && b.gate.lanes.dmn.asleep === 1);
+    assert("WEEK — intents study vs build counted off the owner's lines (2 study · 1 build)", b.intents.study === 2 && b.intents.build === 1);
+    assert("WEEK — the kennel numbers: 7 nights checked, 0 asleep at 03:20 when the machine is awake half of every span; freeze 2 guarded/0 broken; swallow 7 across 3",
+      b.awake.nights === 7 && b.awake.nights_asleep_at_0320 === 0 && b.freeze.guarded_commits === 2 && b.freeze.broken === 0 && b.swallow.n === 7);
+    const lines = weekLines(b);
+    assert("WEEK — the board prints nine lines, the first names day 7 of 7, and every unknown reads '?' never a number",
+      lines.length === 9 && /day 7 of 7/.test(lines[0]) && /L1 share 58%/.test(lines[2]) && /\? \(no presence log\)/.test(weekLines(weekBoard({ now: N, awake: { available: false, awakeHoursSince: () => null } })).slice(-1)[0]));
+  }
   assert("READ-ONLY — this file has no write call and no model call (grep-held: the line is a fact, never a product)",
     !/writeFileSync|appendFileSync|renameSync|claude -p|claudeGen/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("READ-ONLY[^\n]*\n[^\n]*/m, "")));
   console.log(`\nstate selftest: ${pass} passed, ${fail} failed`);
@@ -183,5 +326,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (mode === "selftest") process.exit(selftest() ? 0 : 1);
   else if (mode === "json") liveState().then((s) => console.log(JSON.stringify(s.json, null, 1)));
   else if (mode === "line") liveState().then((s) => console.log(s.line));
-  else { console.error(`state: unknown mode "${mode}" — modes: line | json | selftest`); process.exit(1); }
+  else if (mode === "week") liveWeek({ days: Math.max(1, Number(process.argv[3]) || 7) }).then((b) => { if (process.argv.includes("--json")) console.log(JSON.stringify(b, null, 1)); else for (const l of weekLines(b)) console.log(l); });
+  else { console.error(`state: unknown mode "${mode}" — modes: line | json | week [days] | selftest`); process.exit(1); }
 }

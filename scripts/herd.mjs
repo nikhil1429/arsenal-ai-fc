@@ -42,7 +42,7 @@
 //   parameter and therefore his.
 // WHO ELSE COULD ACT ON THIS OUTPUT? audit.mjs (ranks herd findings alongside the
 //   rest and deals at most one card). Wired.
-// CLI: node scripts/herd.mjs [report|schedule|collisions|selftest]
+// CLI: node scripts/herd.mjs [report|schedule|collisions|slots|risks|awake|selftest]
 // ============================================================================
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -286,6 +286,50 @@ function report() {
   return { m, c, d };
 }
 
+// ── THE AWAKE MODEL (OVERHAUL Block 8 · §14.3, 18 Aug 2026) ────────────────────
+// A lane's deadline is measured in the LAPTOP'S OWN AWAKE HOURS, never the wall
+// clock. presence.mjs (sole writer of presence_log.jsonl, a scheduled ONE-MINUTE
+// lane) leaves a dated row every minute the machine is up — 14,757 rows since
+// 31 Jul 2026, median gap 0–1 min. Rows closer than `gapMin` are one awake window;
+// a bigger gap is sleep. So "awake hours since T" is a MEASUREMENT of how many
+// catch-up slots a lane really had, and pulse.mjs / reconcile.mjs charge a lane
+// with STALE only when it was awake for a full period and still did not run.
+// Read-only; the file is read once and the model is a pure function after that.
+const PRESENCE_LOG = join(ROOT, "dressing-room", "state", "presence_log.jsonl");   // presence.mjs is its sole writer; read here at ONE fixed site (xray sink budget)
+export function awakeModel({ gapMin = 10, sinceMs = null, now = Date.now(), lines = null, absent = false } = {}) {
+  const NONE = { source: "absent", available: false, windows: [], awakeHoursSince: () => null, hoursSince: (t) => (now - t) / 3600000 };
+  if (absent) return NONE;   // a caller (or the selftest) modelling a machine with no presence log
+  let rows = lines;
+  if (!rows) {
+    try { rows = readFileSync(PRESENCE_LOG, "utf8").split("\n"); } catch { return NONE; }
+  }
+  const floor = sinceMs == null ? -Infinity : sinceMs - 24 * 3600000;   // one day of context before the question
+  const ts = [];
+  for (const l of rows) {
+    if (!l || l.length < 20) continue;
+    const i = l.indexOf('"ts":"'); if (i < 0) continue;
+    const t = Date.parse(l.slice(i + 6, i + 30).split('"')[0]);
+    if (Number.isFinite(t) && t >= floor && t <= now) ts.push(t);
+  }
+  ts.sort((a, b) => a - b);
+  const windows = [];
+  const gap = gapMin * 60000;
+  for (const t of ts) {
+    const w = windows[windows.length - 1];
+    if (w && t - w.to <= gap) w.to = t; else windows.push({ from: t, to: t });
+  }
+  // the machine is awake NOW if the newest row is inside one gap of now
+  const last = ts.length ? ts[ts.length - 1] : null;
+  if (last !== null && now - last <= gap && windows.length) windows[windows.length - 1].to = now;
+  const awakeHoursSince = (t) => {
+    if (!ts.length) return null;
+    let ms = 0;
+    for (const w of windows) { const a = Math.max(w.from, t), b = w.to; if (b > a) ms += b - a; }
+    return ms / 3600000;
+  };
+  return { source: "presence_log.jsonl", available: ts.length > 0, rows: ts.length, windows: windows.map((w) => ({ from: new Date(w.from).toISOString(), to: new Date(w.to).toISOString(), h: +((w.to - w.from) / 3600000).toFixed(2) })), awakeHoursSince, hoursSince: (t) => (now - t) / 3600000, awake_now: last !== null && now - last <= gap };
+}
+
 // ── SELFTEST ─────────────────────────────────────────────────────────────────
 function selftest() {
   console.log("=== herd.mjs selftest ===\n");
@@ -323,6 +367,22 @@ function selftest() {
   assert("DAY-KEY — brain.mjs's overnight shift/serve day stays WALL-CLOCK by design and is DECLARED (listed, not counted)",
     (() => { const b = d.organs.find((o) => o.organ === "brain.mjs"); return !!b && b.declared.length >= 2 && b.sites.length === 0; })());
   assert("DAY-KEY — interval tasks and daemons are stated as CLOCK by the law itself (never counted as risks)", d.clock_by_design.interval.includes("presence.mjs") && d.clock_by_design.daemon.length >= 1);
+  // Block 8 · §14.3 — THE AWAKE MODEL, on a fixture with known answers (never the live log)
+  {
+    const T0 = Date.parse("2026-08-18T00:00:00Z");
+    const min = (n) => new Date(T0 + n * 60000).toISOString();
+    // awake 00:00–00:30 (rows every minute), asleep, awake 04:00–05:00, then "now" = 05:00
+    const lines = [];
+    for (let i = 0; i <= 30; i++) lines.push(JSON.stringify({ ts: min(i), kind: "focus" }));
+    for (let i = 240; i <= 300; i++) lines.push(JSON.stringify({ ts: min(i), kind: "focus" }));
+    const a = awakeModel({ lines, now: T0 + 300 * 60000, gapMin: 10 });
+    assert("AWAKE — two windows are cut at a gap > gapMin (00:00–00:30 · 04:00–05:00), and the machine is awake NOW", a.available && a.windows.length === 2 && a.awake_now === true, JSON.stringify(a.windows));
+    assert("AWAKE — awake hours since T are the SUM of window overlap, not the clock (since 00:00 → 1.5 h of a 5 h clock span)",
+      Math.abs(a.awakeHoursSince(T0) - 1.5) < 0.02 && Math.abs(a.hoursSince(T0) - 5) < 0.02, `awake ${a.awakeHoursSince(T0)} clock ${a.hoursSince(T0)}`);
+    assert("AWAKE — since a T inside the sleep gap counts only the later window (since 02:00 → 1.0 h)", Math.abs(a.awakeHoursSince(T0 + 120 * 60000) - 1) < 0.02);
+    const none = awakeModel({ absent: true, now: T0 });
+    assert("AWAKE — no log ⇒ available:false and awakeHoursSince() is null (a caller falls back to the clock and SAYS so; never a silent zero)", none.available === false && none.awakeHoursSince(T0) === null);
+  }
   console.log(`\nherd: ${pass} passed, ${fail} failed`);
   if (fail) for (const f of fails) console.log(`  · ${f.n}${f.d ? `\n      ${f.d}` : ""}`);
   process.exit(fail ? 1 : 0);
@@ -331,12 +391,13 @@ function selftest() {
 function main() {
   const mode = (process.argv[2] || "selftest").toLowerCase();
   if (mode === "selftest") return selftest();
+  if (mode === "awake") { const a = awakeModel({ sinceMs: Date.now() - 7 * 86400000 }); console.log(JSON.stringify({ source: a.source, available: a.available, rows: a.rows, awake_now: a.awake_now, awake_h_7d: a.awakeHoursSince(Date.now() - 7 * 86400000), windows: a.windows.slice(-12) }, null, 1)); return; }
   if (mode === "report") { report(); return; }
   if (mode === "schedule") { console.log(JSON.stringify(model().tasks, null, 1)); return; }
   if (mode === "collisions") { const m = model(); console.log(JSON.stringify(collisions(m), null, 1)); return; }
   if (mode === "risks") { console.log(JSON.stringify(dayKeyRisks(model()), null, 1)); return; }
   if (mode === "slots") { const m = model(); if (!m.sched.rows) { console.error(`herd slots: ${m.sched.source} — refusing to print a slot map from anything but the live schedule`); process.exit(2); } console.log(JSON.stringify(slotsMap(m), null, 1)); return; }
-  console.log("herd: report | schedule | collisions | slots | risks | selftest");
+  console.log("herd: report | schedule | collisions | slots | risks | awake | selftest");
   process.exit(1);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

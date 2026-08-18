@@ -1,0 +1,27 @@
+#!/bin/sh
+# ============================================================================
+# hooks/commit-msg · ARSENAL AI FC — THE FREEZE GUARD (OVERHAUL Block 8, 18 Aug 2026)
+# ----------------------------------------------------------------------------
+# WHY: from the commit that landed FREEZE.md the organism is FROZEN — no new
+#   organ, no constitution paragraph, no schedule change without a card he
+#   answered. Changes ride cards. A law is a code path, so the freeze is
+#   scripts/freeze.mjs, and this hook is where it bites.
+# WHAT IT REFUSES: a commit whose STAGED files touch a tracked path under
+#   scripts/ · hooks/ · setup/ while FREEZE.md exists, unless the message carries
+#   a card id (`c<n>` — the card he answered) or the literal `freeze-exempt:<why>`.
+# WHY commit-msg, NOT pre-commit: git runs pre-commit BEFORE the message exists.
+#   The archive tripwire stays on hooks/pre-commit, untouched — this LAYERS beside it.
+# GUARD, NOT GATE: `git commit --no-verify` skips every hook. Nothing here pretends
+#   otherwise — watchman.mjs names any commit that slipped past as RED
+#   `freeze-broken` the next night (`node scripts/freeze.mjs status`).
+# FAIL-OPEN, DELIBERATELY: if node is missing the commit proceeds and says so
+#   (a hook that blocks all work when its runtime is absent gets removed).
+# INSTALL: powershell -File setup\INSTALL_ARCHIVE.ps1 (copies this to
+#   .git/hooks/commit-msg). Re-run it after any clone — .git/hooks is not
+#   versioned, which is exactly why the source of truth is this tracked file.
+# ============================================================================
+if ! command -v node >/dev/null 2>&1; then
+  echo "commit-msg: node not found — THE FREEZE GUARD IS OFF for this commit. Check the message by hand (card id or freeze-exempt:<why>)."
+  exit 0
+fi
+exec node scripts/freeze.mjs guard "$1"

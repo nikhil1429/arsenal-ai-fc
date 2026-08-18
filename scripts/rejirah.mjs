@@ -57,8 +57,8 @@
 //   them) · no LLM · no network · every threshold below is a v0 HYPOTHESIS and is either
 //   taken from an organ that already owns it or derived from canon in the comment beside
 //   it — none is invented.
-// CLI: grade <concept> <axis> held|cracked [--gut w] [--cold false]
-//    | close <concept> [--anyway] | pending | state [concept] | due | selftest
+// CLI: node scripts/rejirah.mjs [grade <concept> <axis> held|cracked [--gut w] [--cold false]|correct <concept> <axis> held|cracked --of <ts> --why "…"|close <concept> [--anyway]|pending|state [concept]|due|selftest]
+//   (correct = a NEW row naming the old one — every verdict has a way back; due is the default)
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";

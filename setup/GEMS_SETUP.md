@@ -7,7 +7,8 @@ Append this block to its system instructions — additive, v3-compatible:
 > *(verified 10 Aug 2026 — the pointer HELD, with one path correction. `MANUAL_WIRING.md`
 > is at the **repo ROOT**, not in `setup/` beside this file — `ls MANUAL_WIRING.md` from the
 > project dir, and `ls setup/MANUAL_WIRING.md` fails. Its §2 really is **"THE DRILL GEM —
-> paste this into the Gem's system instructions"** (`grep -n "THE DRILL GEM" MANUAL_WIRING.md`),
+> paste this into the Gem's system instructions"** (`grep -n "THE DRILL GEM" docs/archive/MANUAL_WIRING.md` —
+> the file was moved to `docs/archive/` on 18 Aug 2026, OVERHAUL Block 1 §13; the §2 block is unchanged),
 > and that block really does end on "output ONLY a fenced JSON array … one object per rep",
 > so "already emits the end-session JSON array" is true. The "v3-compatible" claim is about the
 > optional `confused_with` / `edge` fields §2 introduced, and both are still live optional

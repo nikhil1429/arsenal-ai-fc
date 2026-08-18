@@ -143,6 +143,18 @@ if (Test-Path $src) {
 } else {
   Write-Host "  ! hooks\pre-commit missing - THE TRIPWIRE IS NOT INSTALLED"
 }
+# ── THE FREEZE GUARD (OVERHAUL Block 8, 18 Aug 2026) ────────────────────────
+# hooks/commit-msg is the tracked source; git runs it AFTER the message exists
+# (pre-commit cannot see -m). Layers beside the tripwire, never replaces it.
+$fsrc = "$repo\hooks\commit-msg"
+$fdst = "$repo\.git\hooks\commit-msg"
+if (Test-Path $fsrc) {
+  Copy-Item $fsrc $fdst -Force
+  Write-Host "  + freeze guard installed at .git\hooks\commit-msg"
+  node "$repo\scripts\freeze.mjs" status
+} else {
+  Write-Host "  ! hooks\commit-msg missing - THE FREEZE GUARD IS NOT INSTALLED"
+}
 
 # ── FIRST RUN, so no lane is born already looking dead ───────────────────────
 # pulse.mjs `alive` reads schtasks and calls a task with no run on record the

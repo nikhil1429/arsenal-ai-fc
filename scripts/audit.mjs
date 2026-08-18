@@ -51,7 +51,11 @@
 //   finding · states what it did NOT measure.
 // WHO ELSE COULD ACT ON THIS OUTPUT? captains_call.mjs (the one card), watchman
 //   (the health number), organism_test (asserts the museum + the caps). Wired.
-// CLI: node scripts/audit.mjs [run|report|fix|ledger|docs|selftest] [--deep]
+// CLI: node scripts/audit.mjs [run|report|fix|canon|ledger|docs|docexec|quarantine|selftest] [--deep] [--no-canon]
+//   canon (Block 8, 18 Aug 2026) = the ROOT CANON executed: every cited path, grep
+//   claim and `node scripts/X.mjs verb` in CLAUDE.md · THE_GAFFER.md · ARCHIVE__DAY_ONE_SPEC.md ·
+//   OPS_STATE.md · THE_DAILY_LOOP.md · README.md · FREEZE.md · the learning-layer canon,
+//   run inside the audit sandbox; exit 1 iff a claim there is dead. docs/archive/ = RECORDS.
 // ============================================================================
 import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, mkdirSync, statSync, unlinkSync, openSync, closeSync } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
@@ -70,6 +74,11 @@ let pass = 0, fail = 0; const fails = [];
 const assert = (n, c, d) => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; fails.push({ n, d }); console.log(`  FAIL ${n}${d ? `\n         ${d}` : ""}`); } };
 
 const sh = (cmd, args, opts = {}) => { try { return execFileSync(cmd, args, { cwd: ROOT, encoding: "utf8", timeout: 120000, ...opts }); } catch (e) { return (e.stdout || "") + (e.stderr || ""); } };
+// ONE read site, ONE exists site for every COMPUTED doc path (Block 8, 18 Aug 2026): the
+// xray sink ratchet counts DISTINCT unfollowable sites per organ, so every doc-corpus
+// read funnels through these two rather than each lane paying its own sink.
+const readAt = (p) => readFileSync(p, "utf8");
+const existsAt = (p) => existsSync(p);
 export const fingerprint = (rule, file, subject) => createHash("sha1").update(`${rule}|${file}|${String(subject).trim().toLowerCase()}`).digest("hex").slice(0, 16);
 
 // ── THE LEDGER (sole writer) ─────────────────────────────────────────────────
@@ -251,24 +260,57 @@ export function measure(opts = {}) {
   } catch { skipped.push("pulse unavailable — every ◇≤T obligation unverified this run"); }
 
   // ── from the docs (§8) ───────────────────────────────────────────────────
+  // Block 8 (18 Aug 2026): docs/archive/ is a RECORD — its rot is COUNTED and
+  // stated below, never a finding (see canonExec). Root canon weighs more than
+  // any other doc: a dead claim there misdirects EVERY session that reads it.
   const doc = docClaims();
-  for (const d of doc.deadPaths) out.push(F("doc-dead-path", d.doc, d.path, `cites a path that does not exist: ${d.path}`, { blast: 0, autofix: null, why_ruling: CANON.includes(basename(d.doc)) ? "CANON — propose a diff, never write." : "the path may have MOVED rather than vanished; picking the replacement is a judgement." }));
-  for (const d of doc.deadOrgans) out.push(F("doc-dead-organ", d.doc, d.organ, `cites \`${d.organ}\`, which does not exist in scripts/`, { blast: 0 }));
+  const records = { deadPaths: 0, deadOrgans: 0, staleGreps: 0, staleCounts: 0 };
+  const canonBlast = (rel) => (isRootCanon(rel) ? 3 : 0);
+  for (const d of doc.deadPaths) {
+    if (isRecord(d.doc)) { records.deadPaths++; continue; }
+    out.push(F("doc-dead-path", d.doc, d.path, `cites a path that does not exist: ${d.path}`, { blast: canonBlast(d.doc), autofix: null, why_ruling: CANON.includes(basename(d.doc)) ? "CANON — propose a diff, never write." : "the path may have MOVED rather than vanished; picking the replacement is a judgement." }));
+  }
+  for (const d of doc.deadOrgans) {
+    if (isRecord(d.doc)) { records.deadOrgans++; continue; }
+    out.push(F("doc-dead-organ", d.doc, d.organ, `cites \`${d.organ}\`, which does not exist in scripts/`, { blast: canonBlast(d.doc) }));
+  }
 
   // §8 EXECUTED: a cited command that returns NOTHING, and a count that no longer
   // holds. Both are STALE CANON, and both are findable ONLY by running the claim.
   try {
     const x = docExec();
     for (const g of x.grep_stale) {
+      if (isRecord(g.doc)) { records.staleGreps++; continue; }
       out.push(F("doc-command-stale", g.doc, g.cmd,
         `the doc cites this as EVIDENCE and it ${g.kind === "grep-target-missing" ? "names a file that does not exist" : "matches NOTHING"}: ${g.cmd}`,
-        { blast: 0, why_ruling: "the claim may be right and the CODE may have moved. Choosing which of the two to change is a judgement, not a derivation." }));
+        { blast: canonBlast(g.doc), why_ruling: "the claim may be right and the CODE may have moved. Choosing which of the two to change is a judgement, not a derivation." }));
     }
     for (const c of x.staleCounts) {
+      if (isRecord(c.doc)) { records.staleCounts++; continue; }
       out.push(F("doc-count-stale", c.doc, c.claim, `claims "${c.claim}" — re-derived live it is ${c.actual}`,
-        { blast: 0, why_ruling: "a corrected count is a NUMBER, and a number this repo has not ruled on is his. Counts also rot fastest, which is the argument for replacing the claim with a COMMAND rather than a new figure." }));
+        { blast: canonBlast(c.doc), why_ruling: "a corrected count is a NUMBER, and a number this repo has not ruled on is his. Counts also rot fastest, which is the argument for replacing the claim with a COMMAND rather than a new figure." }));
     }
   } catch (e) { skipped.push(`doc execution failed: ${String(e.message).slice(0, 80)}`); }
+  const recN = records.deadPaths + records.deadOrgans + records.staleGreps + records.staleCounts;
+  if (recN) skipped.push(`docs/archive/: ${recN} record claim(s) point at moved paths/verbs/counts (paths ${records.deadPaths} · organs ${records.deadOrgans} · greps ${records.staleGreps} · counts ${records.staleCounts}) — RECORDS, true as of their date; listed, never a finding`);
+
+  // §8 · Block 8: THE ROOT CANON, EXECUTED — a cited `node scripts/X.mjs verb`
+  // that is DEAD (organ missing · verb rejected · uncaught) is a finding on the
+  // doc that cites it. Runs inside the audit sandbox; the classes that are the
+  // sandbox's shape (collar · sandbox-shape · nonzero · timeout) are stated, not
+  // counted. `opts.canonExec` (a pre-computed result) lets a caller run it once.
+  if (opts.canonExec !== false) {
+    try {
+      const res = opts.canonExec || null;
+      if (res) {
+        for (const r of res.rows.filter((x) => x.klass === "dead")) for (const docRel of r.docs) {
+          out.push(F("doc-command-dead", docRel, r.cmd, `cites \`${r.cmd}\` and it is DEAD: ${r.why}`, { blast: 3, why_ruling: "the DOC may cite a verb that moved, or the CODE may have lost a verb the canon promises. Which one to change is a judgement — never delete the claim." }));
+        }
+        const soft = res.rows.filter((x) => /^(collar|sandbox-shape|nonzero|timeout|not-run|template|unmeasured)$/.test(x.klass)).length;
+        skipped.push(`root canon: ${res.unique} distinct command(s) cited across ${res.docs.length} doc(s) — ${res.by.ok || 0} ok · ${res.by.dead || 0} dead · ${soft} stated-not-counted (${Object.entries(res.by).filter(([k]) => !/^(ok|dead)$/.test(k)).map(([k, n]) => `${k} ${n}`).join(" · ") || "none"}) in ${Math.round(res.ms / 1000)} s`);
+      } else skipped.push("root canon commands NOT executed this run (measure() was called without a canonExec result — `audit canon` runs it)");
+    } catch (e) { skipped.push(`root canon execution failed: ${String(e.message).slice(0, 80)}`); }
+  }
 
   // ── the one genuinely safe AUTO-FIX class ────────────────────────────────
   // An organ's own `// CLI:` header that OMITS a verb the organ demonstrably
@@ -312,7 +354,7 @@ export function docClaims() {
   };
   walk(ROOT, 0);
   const organs = new Set(readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs")));
-  const deadPaths = [], deadOrgans = [], planned = [], cited = [];
+  const deadPaths = [], deadOrgans = [], planned = [], cited = [], unwritten = [];
   // A DECLARED FORWARD REFERENCE IS NOT A DEAD ORGAN (18 Aug 2026, OVERHAUL Block 1).
   // CLAUDE.md and the learning-layer map name `scripts/sitting.mjs` (Block 3) before it
   // exists, and SAY SO on the same line — "(Block 3)", "not built", "BUILT NAHI". A
@@ -321,7 +363,7 @@ export function docClaims() {
   // A bare citation of a missing organ, with no such marker, stays a dead-organ finding.
   const PLANNED_RE = /\(Block \d|not built|BUILT NAHI|NOT BUILT|nahi ban[ai]|abhi banna/i;
   for (const f of docs) {
-    const txt = readFileSync(f, "utf8");
+    const txt = readAt(f);
     const rel = relative(ROOT, f).replace(/\\/g, "/");
     for (const m of txt.matchAll(/scripts[\\/]([A-Za-z0-9_\-]+)\.mjs/g)) {
       cited.push({ doc: rel, organ: `${m[1]}.mjs` });
@@ -345,12 +387,38 @@ export function docClaims() {
     for (const m of txt.matchAll(/\b((?:dressing-room|learning-layer|setup|\.claude)[\\/][A-Za-z0-9_\-./]+\.(?:jsonl|json|md|ps1|mjs))(?![A-Za-z0-9])/g)) {
       const p = m[1].replace(/\\/g, "/");
       if (/[*?<>]/.test(p)) continue;
-      if (!existsSync(join(ROOT, p))) deadPaths.push({ doc: rel, path: p });
+      if (existsAt(join(ROOT, p))) continue;
+      // Block 8 (18 Aug 2026): A PATH WITH AN OWNER IS A LANE, NOT ROT. rejirah_log.jsonl
+      // is not on disk because no Re-Jirah round has ever been graded — and rejirah.mjs
+      // is its declared writer (the IR sees the appendFileSync). The map that names it
+      // as "rejirah.mjs's file" is telling the truth. Such a path is listed under
+      // `unwritten` with its owner, never as dead. Ownership is read from the xray IR
+      // (writes), so the exemption is a measurement, not a wish.
+      const owner = ownersOf(p);
+      if (owner.length) unwritten.push({ doc: rel, path: p, owner });
+      else deadPaths.push({ doc: rel, path: p });
     }
   }
   // dedupe
   const uniq = (arr, k) => { const s = new Set(), o = []; for (const x of arr) { const key = k(x); if (!s.has(key)) { s.add(key); o.push(x); } } return o; };
-  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), planned: uniq(planned, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`), files: docs };
+  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), planned: uniq(planned, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`), unwritten: uniq(unwritten, (x) => `${x.doc}|${x.path}`), files: docs };
+}
+// which organs the IR sees WRITING this repo-relative path (empty ⇒ nobody owns it)
+let _irWriters = null;
+export function ownersOf(relPath) {
+  if (!_irWriters) {
+    _irWriters = new Map();
+    try {
+      const ir = JSON.parse(readFileSync(IR_PATH, "utf8"));
+      for (const [organ, o] of Object.entries(ir.organs || {})) for (const w of o.writes || []) {
+        const k = String(w.path || "").replace(/\\/g, "/");
+        if (!k) continue;
+        if (!_irWriters.has(k)) _irWriters.set(k, []);
+        _irWriters.get(k).push(organ);
+      }
+    } catch { /* ownersOf: IR absent or unreadable → no owners known, every missing path stays dead */ }
+  }
+  return _irWriters.get(String(relPath).replace(/\\/g, "/")) || [];
 }
 
 // ── §8, THE EXECUTABLE HALF ──────────────────────────────────────────────────
@@ -400,7 +468,7 @@ export function docExec() {
 
   for (const f of d.files) {
     const rel = relative(ROOT, f).replace(/\\/g, "/");
-    const txt = readFileSync(f, "utf8");
+    const txt = readAt(f);
     const spans = [
       ...[...txt.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
       ...[...txt.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((m) => m[1]),
@@ -414,10 +482,14 @@ export function docExec() {
       // as UNRUNNABLE, never as STALE — reporting "I could not check it" as "it is
       // wrong" is the same dishonesty as reporting a skip as a pass.
       if (/^-/.test(target) || !/[./]/.test(target)) { unrunnable.push({ doc: rel, cmd: m[0].slice(0, 100), why: "the command spans more arguments than this checker parses (flag captured as the target)" }); continue; }
-      const abs = join(ROOT, target);
-      if (!existsSync(abs)) { stale.push({ doc: rel, kind: "grep-target-missing", cmd: m[0].slice(0, 100), target }); continue; }
+      // Block 8 (18 Aug 2026): a doc INSIDE a folder cites its neighbours by bare name —
+      // FORGE_SPEC.md says `grep -c "…" THE-FORGE.html`, meaning learning-layer/THE-FORGE.html.
+      // Resolving from the repo root alone reported six WORKING claims as stale. Root first
+      // (the repo's convention), then the doc's own directory; only both missing is a finding.
+      const abs = existsAt(join(ROOT, target)) ? join(ROOT, target) : join(dirname(f), target);
+      if (!existsAt(abs)) { stale.push({ doc: rel, kind: "grep-target-missing", cmd: m[0].slice(0, 100), target }); continue; }
       let src;
-      try { src = statSync(abs).isDirectory() ? null : readFileSync(abs, "utf8"); } catch { src = null; }
+      try { src = statSync(abs).isDirectory() ? null : readAt(abs); } catch { src = null; }
       if (src === null) { unrunnable.push({ doc: rel, cmd: m[0].slice(0, 100), why: "target is a directory (recursive grep not modelled)" }); continue; }
       // ⚠ GREP SEMANTICS ARE NOT JS SEMANTICS, and getting this wrong made the
       // checker call WORKING evidence broken — the exact failure it exists to
@@ -444,6 +516,12 @@ export function docExec() {
       // tell, so the prose is read rather than assumed.
       const idx = txt.indexOf(m[0]);
       const around = idx >= 0 ? txt.slice(Math.max(0, idx - 220), idx + 220) : "";
+      // Block 8 (18 Aug 2026): the sharpest absence proof this repo writes is a COUNT —
+      // `grep -c "…" THE-FORGE.html` = 0 — and it was read as a hit-claim: six working
+      // FORGE_SPEC/FORGE_DESIGN claims reported STALE. A `-c` claim followed by `= 0`
+      // asserts the count is zero, and zero is what came back: the claim HOLDS.
+      const after = idx >= 0 ? txt.slice(idx + m[0].length, idx + m[0].length + 24) : "";
+      if (/c/.test(flags) && /^`?\s*(?:=|→|->|:)\s*0\b/.test(after)) { ok.push({ doc: rel, target, pattern, kind: "absence-proof-holds" }); continue; }
       if (/\b(no |never|zero|nothing|absent|returns only|not present|does not|shouldn't|should not|must not)\b/i.test(around)) {
         ok.push({ doc: rel, target, pattern, kind: "absence-proof-holds" });
         continue;
@@ -484,7 +562,7 @@ export function docExec() {
     `|(?:\\b(\\d{1,4})\\s+tracked\\s+(${nouns}))`, "gi");
   for (const f of d.files) {
     const rel = relative(ROOT, f).replace(/\\/g, "/");
-    const txt = readFileSync(f, "utf8");
+    const txt = readAt(f);
     for (const m of txt.matchAll(CLAIM)) {
       const claimed = +(m[1] || m[3] || m[5]);
       const key = String(m[2] || m[4] || m[6]).toLowerCase();
@@ -501,6 +579,165 @@ export function docExec() {
   }
   const staleCounts = counts.filter((c) => c.stale && !c.dated);
   return { grep_ok: ok.length, grep_stale: stale, grep_unrunnable: unrunnable.length, counts: counts.length, staleCounts };
+}
+
+// ── §8 · BLOCK 8 (18 Aug 2026): THE ROOT CANON, EXECUTED ─────────────────────
+// ROOT CANON = the docs a session is TOLD to read and act on (CLAUDE.md's own
+// list + the learning-layer canon it names). A `node scripts/X.mjs verb` cited
+// there is a PROMISE — "verify with:" — and a dead one sends the next session to
+// a verb that no longer exists. So every one is RUN, inside the audit sandbox
+// (sandbox.mjs: git-ls-files tree, collar, no billing, no network, no live
+// state), and classified by what actually came back:
+//   ok            exit 0
+//   dead          the organ is missing · the verb is REJECTED (a usage line came
+//                 back) · an UNCAUGHT exception (a stack, not a report)
+//   collar        the command needed a spawn/net/live write the sandbox denies —
+//                 the sandbox's shape, not the organism's (listed, never counted)
+//   sandbox-shape it died on a path that is gitignored/absent in every sandbox
+//                 but PRESENT live (capsules/, brain_out/…) — same rule mutagen
+//                 applies to its NO-WRITER lane (listed, never counted)
+//   nonzero       a clean non-zero — a status/report verb reporting red on an
+//                 empty tree; the plan's "documented non-zero" (listed)
+//   template      `<lane>` `…` `[a|b]` — a shape, not a command (listed)
+//   not-run       daemons / servers / stdio loops (listed by name)
+//   timeout       ran past its budget (listed — a timeout is not a death)
+// docs/archive/ is a RECORD: a path or verb it cites was true AS OF ITS DATE.
+// Records are listed in the report and NEVER become findings — rewriting a
+// record to keep it "current" is how a record stops being one (CLAUDE.md:
+// "Records, not work orders").
+export const ROOT_CANON = [
+  "CLAUDE.md", "THE_GAFFER.md", "ARCHIVE__DAY_ONE_SPEC.md", "OPS_STATE.md", "THE_DAILY_LOOP.md", "README.md", "FREEZE.md",
+  "learning-layer/LEARNING_LAYER_MAP.md", "learning-layer/PROJECT_OS.md", "learning-layer/FORGE_SPEC.md", "learning-layer/FORGE_DESIGN.md", "learning-layer/HOW_HE_LEARNS.md",
+];
+export const isRecord = (rel) => /^docs[\\/]archive[\\/]/.test(String(rel));
+export const isRootCanon = (rel) => ROOT_CANON.includes(String(rel).replace(/\\/g, "/"));
+// verbs that hold a port, a loop or stdin open — never run from a checker
+const NOT_RUN_VERB = /^(daemon|serve|server|watch|loop|listen|start|repl|talk|mcp|stdio|dugout|open)$/i;
+const NOT_RUN_ORGAN = /^(mcp-memory|talk|speak|dugout_bridge)\.mjs$/i;   // stdio server · voice loop · audio · bridge
+// `<lane>` · `…` · `[--force]` · `[a | b]` · `$VAR` — a SHAPE, not a command
+const TEMPLATE_RE = /<[^>]*>|…|\.\.\.|\[|\$\{|\$[A-Z_]|"…"|'…'|\bX\.mjs\b/;
+// the whole suite (minutes) is `npm test`'s job, not a checker's; its `coverage` verb is quick and stays
+const NOT_RUN_CMD = /^node scripts\/organism_test\.mjs(\s+(all|selftest|alive|ci))?$/;
+
+// args = whitespace-separated tokens up to a pipe/&&/;/paren, a `# comment`, or a `→` arrow —
+// so `node a.mjs x → node b.mjs` yields TWO commands and both get run
+const CMD_RE = /node\s+scripts[\\/]([A-Za-z0-9_\-]+\.mjs)((?:[ \t]+(?!(?:→|->|=>|⇒|#)(?:\s|$))[^\s`|&;)]+)*)/g;
+export function canonCommandsIn(rel, txt) {
+  const cmds = [];
+  const spans = [
+    ...[...txt.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
+    ...[...txt.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].map((m) => m[1]),
+  ].join("\n");
+  for (const m of spans.matchAll(CMD_RE)) {
+    const organ = m[1];
+    // a trailing `# comment` or a `→ next step` is prose riding the code line, not an argument
+    const argText = String(m[2] || "").replace(/\s+#.*$/s, "").replace(/\s+(?:→|->|=>|⇒).*$/s, "").trim();
+    const args = argText.split(/\s+/).filter(Boolean);
+    const cmd = `node scripts/${organ}${args.length ? " " + args.join(" ") : ""}`;
+    cmds.push({ doc: rel, organ, args, cmd });
+  }
+  return cmds;
+}
+export function canonCommands(files) {
+  const cmds = [];
+  for (const f of files) {
+    if (!existsAt(f)) continue;
+    cmds.push(...canonCommandsIn(relative(ROOT, f).replace(/\\/g, "/"), readAt(f)));
+  }
+  return cmds;
+}
+
+export function classifyRun(cmd, r, { organExists = true, liveExists = () => false } = {}) {
+  const out = String(r.out || "");
+  if (!organExists) return { klass: "dead", why: "organ-missing" };
+  if (r.timedOut) return { klass: "timeout", why: "ran past its budget" };
+  if (/ARSENAL COLLAR:/.test(out)) return { klass: "collar", why: (out.match(/ARSENAL COLLAR: [^\n]{0,100}/) || [""])[0] };
+  const enoent = out.match(/ENOENT[^\n]*?['"]?((?:[A-Za-z]:)?[^'"\n]*?(?:dressing-room|capsules|brain_out|learning-layer)[^'"\n]*)/);
+  if (enoent && liveExists(enoent[1])) return { klass: "sandbox-shape", why: `died on ${enoent[1].slice(-80)} — absent in every sandbox, present live` };
+  // a module the organ imports is missing: present live ⇒ the sandbox's shape (an UNTRACKED file —
+  // git ls-files builds the sandbox, so a new organ is invisible until it is `git add`ed); absent
+  // live ⇒ a dead import
+  const mod = out.match(/ERR_MODULE_NOT_FOUND[\s\S]{0,400}?url: '([^']+)'/) || out.match(/Cannot find (?:module|package) '([^']+)'/) || out.match(/Cannot find module ([^\s'"]+)/);
+  if (mod) {
+    const p = String(mod[1]).replace(/^file:\/\/\//, "");
+    return liveExists(p) ? { klass: "sandbox-shape", why: `imports ${p.slice(-60)} — present live, absent in the sandbox (untracked? \`git add\` it)` } : { klass: "dead", why: `imports a module that does not exist: ${p.slice(-80)}` };
+  }
+  const lines = out.split("\n").map((s) => s.trimEnd()).filter((s) => s.trim());
+  const last = lines[lines.length - 1] || "";
+  // a usage line: "audit: run | report | fix …" or "usage: …" or "unknown verb"
+  const usage = /^\s*(usage|Usage|USAGE)\b|unknown (verb|mode|command|sub-?command)|^\s*[a-z_\-]+(\.mjs)?:\s+\S+(\s+\|\s+\S+){2,}/m;
+  if (usage.test(last) && lines.length <= 4) return { klass: "dead", why: `verb REJECTED — the organ answered with its usage line: ${last.slice(0, 120)}` };
+  if (r.code !== 0 && usage.test(out) && lines.length <= 8) return { klass: "dead", why: `verb REJECTED — usage: ${(out.match(usage) || [""])[0].slice(0, 120)}` };
+  const stack = /^\s+at .+\.(mjs|js|cjs):\d+/m.test(out) && /\b(TypeError|ReferenceError|SyntaxError|RangeError|Error):/.test(out);
+  if (stack) return { klass: "dead", why: `UNCAUGHT — ${(out.match(/\b(?:TypeError|ReferenceError|SyntaxError|RangeError|Error):[^\n]{0,140}/) || [""])[0]}` };
+  if (r.code === 0) return { klass: "ok", why: "" };
+  return { klass: "nonzero", why: `exit ${r.code} without a crash — a state-dependent verdict on an empty tree` };
+}
+
+export async function canonExec({ files = null, budgetMs = 8 * 60 * 1000, perCmdMs = 45000, log = () => {} } = {}) {
+  const docs = (files || ROOT_CANON.map((p) => join(ROOT, p))).filter((f) => existsAt(f));
+  const cited = canonCommands(docs);
+  const rows = [];
+  const uniq = new Map();
+  for (const c of cited) {
+    const k = c.cmd;
+    if (!uniq.has(k)) uniq.set(k, { ...c, docs: new Set() });
+    uniq.get(k).docs.add(c.doc);
+  }
+  const organs = new Set(readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs")));
+  const { buildSandbox, runIn, assertArmed, destroy } = await import("./sandbox.mjs");
+  const toRun = [];
+  for (const c of uniq.values()) {
+    const row = { cmd: c.cmd, organ: c.organ, args: c.args, docs: [...c.docs] };
+    if (!organs.has(c.organ)) { rows.push({ ...row, klass: "dead", why: "organ-missing" }); continue; }
+    if (TEMPLATE_RE.test(c.args.join(" "))) { rows.push({ ...row, klass: "template", why: "a shape, not a command" }); continue; }
+    if (NOT_RUN_ORGAN.test(c.organ) || c.args.some((a) => NOT_RUN_VERB.test(a))) { rows.push({ ...row, klass: "not-run", why: "holds a port, a loop or stdin open" }); continue; }
+    if (NOT_RUN_CMD.test(c.cmd)) { rows.push({ ...row, klass: "not-run", why: "the whole suite — `npm test` runs it, minutes long" }); continue; }
+    toRun.push(row);
+  }
+  const t0 = Date.now();
+  let unmeasured = 0;
+  if (toRun.length) {
+    const sb = buildSandbox({ trace: false });
+    try {
+      assertArmed(sb);
+      // a sandbox path → the same path in the LIVE tree (repo-relative from the first known root dir)
+      const liveExists = (p) => { try { const s = String(p).replace(/\\/g, "/"); const m = /(?:^|\/)((?:scripts|dressing-room|capsules|brain_out|learning-layer|setup|hooks|docs)\/.*)$/.exec(s); return m ? existsAt(join(ROOT, m[1])) : false; } catch { return false; } };
+      for (const row of toRun) {
+        if (Date.now() - t0 > budgetMs) { unmeasured++; rows.push({ ...row, klass: "unmeasured", why: "the lane's wall-clock budget ran out before this one" }); continue; }
+        const r = runIn(sb, [join(sb.root, "scripts", row.organ), ...row.args], { label: `canon:${row.organ}`, timeout: perCmdMs, input: "" });
+        const c = classifyRun(row.cmd, r, { organExists: true, liveExists });
+        rows.push({ ...row, klass: c.klass, why: c.why, code: r.code, ms: null });
+        log(`  ${c.klass.padEnd(13)} ${row.cmd}${c.why ? `   ← ${c.why.slice(0, 100)}` : ""}`);
+      }
+    } finally { destroy(sb); }
+  }
+  const by = {};
+  for (const r of rows) by[r.klass] = (by[r.klass] || 0) + 1;
+  return { docs: docs.map((f) => relative(ROOT, f).replace(/\\/g, "/")), cited: cited.length, unique: uniq.size, rows, by, unmeasured, ms: Date.now() - t0 };
+}
+
+// THE ROOT-CANON VERDICT — one call, one honest number per class. This is what
+// Block 8's DoD reads ("0 dead-path / 0 stale-command / 0 dead-command on root
+// canon") and what `measure()` folds into findings.
+export async function canonCheck(opts = {}) {
+  const d = docClaims();
+  const x = docExec();
+  const canonDocs = (rel) => isRootCanon(rel);
+  const deadPaths = d.deadPaths.filter((r) => canonDocs(r.doc));
+  const deadOrgans = d.deadOrgans.filter((r) => canonDocs(r.doc));
+  const staleGreps = x.grep_stale.filter((r) => canonDocs(r.doc));
+  const staleCounts = x.staleCounts.filter((r) => canonDocs(r.doc));
+  const exec = await canonExec(opts);
+  const deadCmds = exec.rows.filter((r) => r.klass === "dead");
+  const unwritten = (d.unwritten || []).filter((r) => canonDocs(r.doc));
+  const records = {
+    deadPaths: d.deadPaths.filter((r) => isRecord(r.doc)).length,
+    deadOrgans: d.deadOrgans.filter((r) => isRecord(r.doc)).length,
+    staleGreps: x.grep_stale.filter((r) => isRecord(r.doc)).length,
+    staleCounts: x.staleCounts.filter((r) => isRecord(r.doc)).length,
+  };
+  return { deadPaths, deadOrgans, staleGreps, staleCounts, deadCmds, unwritten, exec, records };
 }
 
 // ── QUARANTINE — APPLIED ≠ VERIFIED ──────────────────────────────────────────
@@ -637,11 +874,17 @@ export function rank(f, ageDays = 0) {
 }
 
 // ── THE RUN ──────────────────────────────────────────────────────────────────
-function runAudit(opts = {}) {
+async function runAudit(opts = {}) {
   const pre = preconditions(opts);
   const release = lock();
   try {
-    const { out, skipped } = measure(opts);
+    // Block 8: the root canon is EXECUTED once per run (sandbox), then folded in.
+    let canonRes = null;
+    if (opts.canonExec !== false) {
+      try { canonRes = await canonExec({ log: opts.verbose ? (l) => console.log(l) : () => {} }); }
+      catch (e) { canonRes = null; console.log(`root canon lane did not run: ${String(e.message).slice(0, 120)}`); }
+    }
+    const { out, skipped } = measure({ ...opts, canonExec: canonRes });
     const seen = ledger();
     const open = new Map();
     for (const r of seen) {
@@ -890,24 +1133,85 @@ function selftest() {
   const ir = existsSync(IR_PATH) ? JSON.parse(readFileSync(IR_PATH, "utf8")) : null;
   assert("the IR is present so measurement can run", !!ir);
 
+  // ── Block 8 (18 Aug 2026): THE ROOT CANON, EXECUTED ────────────────────────
+  console.log("\n── Block 8 · root canon lane");
+  assert("docs/archive/ is a RECORD, root canon is not", isRecord("docs/archive/CYBORG_BRAIN.md") && !isRecord("CLAUDE.md") && isRootCanon("CLAUDE.md") && isRootCanon("learning-layer/FORGE_SPEC.md") && !isRootCanon("docs/archive/CLAUDE_2026-08-18.md"));
+  // classifyRun — known answers, no process spawned
+  const C = (out, code, extra = {}) => classifyRun("x", { out, code, ...extra }).klass;
+  assert("classify: exit 0 ⇒ ok", C("all good", 0) === "ok");
+  assert("classify: a usage line back ⇒ DEAD (verb rejected), even on exit 0", C("usage: node scripts/x.mjs [a | b | c]", 0) === "dead" && C("audit: run | report | fix | ledger", 1) === "dead");
+  assert("classify: an uncaught stack ⇒ DEAD", C("TypeError: x is not a function\n    at main (file:///C:/r/scripts/x.mjs:12:5)\n", 1) === "dead");
+  assert("classify: the collar's denial ⇒ collar (the sandbox's shape, never counted)", C("Error: ARSENAL COLLAR: network access is denied inside the audit sandbox → http://localhost:5600\n    at f (x.mjs:1:1)", 1) === "collar");
+  assert("classify: ENOENT on a path PRESENT live ⇒ sandbox-shape", C("Error: ENOENT: no such file or directory, open 'C:\\r\\dressing-room\\state\\capsules\\x.json'\n    at f (x.mjs:1:1)", 1, {}) === "dead" && classifyRun("x", { out: "Error: ENOENT: no such file or directory, open 'C:\\r\\dressing-room\\state\\capsules\\x.json'\n    at f (x.mjs:1:1)", code: 1 }, { liveExists: () => true }).klass === "sandbox-shape");
+  assert("classify: a clean non-zero ⇒ nonzero (a verdict on an empty tree, stated not counted)", C("3 lanes RED\n", 1) === "nonzero");
+  assert("classify: a timeout is a timeout, not a death", C("", null, { timedOut: true }) === "timeout");
+  assert("classify: a missing organ ⇒ dead", classifyRun("x", { out: "", code: 1 }, { organExists: false }).why === "organ-missing");
+  // canonCommands — extraction on a planted doc: comments and arrows stripped, templates kept as shapes
+  {
+    const cmds = canonCommandsIn("PLANTED.md", "# planted\n`node scripts/validators.mjs selftest # read-only`\n```bash\nnode scripts/rejirah.mjs close <c> [--anyway]\nnode scripts/capture.mjs paste x.json → node scripts/heartbeat.mjs\n```\n");
+    const byCmd = Object.fromEntries(cmds.map((c) => [c.cmd, c]));
+    assert("extract: a trailing `# comment` is prose, not an argument", !!byCmd["node scripts/validators.mjs selftest"], Object.keys(byCmd).join(" ; "));
+    assert("extract: `→ next step` is cut off the command", !!byCmd["node scripts/capture.mjs paste x.json"] && !!byCmd["node scripts/heartbeat.mjs"], Object.keys(byCmd).join(" ; "));
+    assert("extract: `<c> [--anyway]` survives as the shape it is (classified template later)", !!byCmd["node scripts/rejirah.mjs close <c> [--anyway]"] && TEMPLATE_RE.test("<c> [--anyway]"));
+  }
+  // ownersOf — a path with an owner is a LANE, not rot (read from the IR)
+  assert("ownersOf: rejirah_log.jsonl (never written yet) is OWNED by rejirah.mjs, so the map naming it is not a dead claim", ownersOf("dressing-room/state/rejirah_log.jsonl").includes("rejirah.mjs"), ownersOf("dressing-room/state/rejirah_log.jsonl").join(","));
+  assert("ownersOf: a path nobody writes has no owner", ownersOf("dressing-room/state/NO_SUCH_LANE_EVER.json").length === 0);
+  // THE STATIC HALF OF THE DoD, LIVE ON THIS TREE: root canon carries no dead path, no stale grep claim
+  {
+    const dc = docClaims();
+    const dx = docExec();
+    const dp = dc.deadPaths.filter((r) => isRootCanon(r.doc));
+    const sg = dx.grep_stale.filter((r) => isRootCanon(r.doc));
+    assert("DoD (static): ROOT CANON cites 0 dead paths", dp.length === 0, dp.map((r) => `${r.doc} → ${r.path}`).join(" ; "));
+    assert("DoD (static): ROOT CANON cites 0 stale grep claims (a `-c … = 0` claim is an ABSENCE PROOF and holds)", sg.length === 0, sg.map((r) => `${r.doc} → ${r.cmd}`).join(" ; "));
+    assert("…and the FORGE canon's six `-c … = 0` absence proofs are read as HOLDING, not stale", !dx.grep_stale.some((r) => /FORGE_(SPEC|DESIGN)/.test(r.doc) && /THE-FORGE\.html/.test(r.cmd)));
+  }
+  console.log("  (the EXECUTED half — every cited command run in the sandbox — is `node scripts/audit.mjs canon`; it exits 1 iff root canon carries a dead command)");
+
   console.log(`\naudit: ${pass} passed, ${fail} failed`);
   if (fail) for (const f of fails) console.log(`  · ${f.n}${f.d ? `\n      ${f.d}` : ""}`);
   process.exit(fail ? 1 : 0);
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-function main() {
+// `canon` — Block 8's DoD read-out: the ROOT CANON's claims, executed. Prints
+// every class with its members and exits 1 iff root canon carries a dead path,
+// a stale grep claim or a dead command (a red is a fact about the docs, not a
+// crash of this organ). Records (docs/archive/) are counted on their own line.
+async function canonMain() {
+  console.log("=== audit canon — the ROOT CANON, executed (sandbox: no billing · no network · no live state) ===\n");
+  const c = await canonCheck({ log: (l) => console.log(l) });
+  const list = (title, rows, fmt) => { console.log(`\n${title} (${rows.length})`); for (const r of rows) console.log(`  · ${fmt(r)}`); };
+  list("DEAD PATHS on root canon", c.deadPaths, (r) => `${r.doc} → ${r.path}`);
+  list("DEAD ORGANS on root canon", c.deadOrgans, (r) => `${r.doc} → ${r.organ}`);
+  list("STALE GREP CLAIMS on root canon", c.staleGreps, (r) => `${r.doc} → ${r.cmd} (${r.kind})`);
+  list("STALE COUNTS on root canon", c.staleCounts, (r) => `${r.doc} → "${r.claim}" is ${r.actual}`);
+  list("DEAD COMMANDS on root canon", c.deadCmds, (r) => `${r.docs.join(", ")} → ${r.cmd}   ← ${r.why}`);
+  const soft = c.exec.rows.filter((x) => !/^(ok|dead)$/.test(x.klass));
+  console.log(`\nSTATED, NOT COUNTED (${soft.length + c.unwritten.length}) — the sandbox's shape, a template, or a lane with an owner that has not written yet:`);
+  for (const r of c.unwritten) console.log(`  · ${"unwritten".padEnd(13)} ${r.doc} → ${r.path}   ← owned by ${r.owner.join(", ")}; not on disk yet`);
+  for (const r of soft) console.log(`  · ${r.klass.padEnd(13)} ${r.cmd}${r.why ? `   ← ${String(r.why).slice(0, 110)}` : ""}`);
+  console.log(`\nrecords (docs/archive/, true as of their date — never findings): paths ${c.records.deadPaths} · organs ${c.records.deadOrgans} · greps ${c.records.staleGreps} · counts ${c.records.staleCounts}`);
+  const red = c.deadPaths.length + c.deadOrgans.length + c.staleGreps.length + c.deadCmds.length;
+  console.log(`\nROOT CANON · ${c.exec.docs.length} doc(s) · ${c.exec.unique} distinct command(s) (${c.exec.cited} citations) · ok ${c.exec.by.ok || 0} · dead ${c.exec.by.dead || 0} · ${Math.round(c.exec.ms / 1000)} s`);
+  console.log(red ? `VERDICT: RED — ${red} claim(s) on root canon do not hold (fix the DOC or the CODE; never delete the claim)` : "VERDICT: GREEN — every path, grep claim and command the root canon cites holds");
+  process.exit(red ? 1 : 0);
+}
+
+async function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
-  const opts = { deep: process.argv.includes("--deep"), verbose: process.argv.includes("-v") || process.argv.includes("--verbose"), fix: process.argv.includes("--fix"), allowDirty: process.argv.includes("--allow-dirty") };
+  const opts = { deep: process.argv.includes("--deep"), verbose: process.argv.includes("-v") || process.argv.includes("--verbose"), fix: process.argv.includes("--fix"), allowDirty: process.argv.includes("--allow-dirty"), canonExec: process.argv.includes("--no-canon") ? false : undefined };
   if (mode === "selftest") return selftest();
   if (mode === "docs") { console.log(JSON.stringify(docClaims(), null, 1)); return; }
   if (mode === "docexec") { console.log(JSON.stringify(docExec(), null, 1)); return; }
+  if (mode === "canon") return canonMain();
   if (mode === "quarantine") { console.log(JSON.stringify(quarantine({ apply: process.argv.includes("--apply") }), null, 1)); return; }
   if (mode === "ledger") { for (const r of ledger()) console.log(JSON.stringify(r)); return; }
-  if (mode === "report") { runAudit({ ...opts, verbose: true }); return; }
-  if (mode === "fix") { const res = runAudit({ ...opts, fix: true, verbose: true }); deal(res); return; }
-  if (mode === "run") { const res = runAudit(opts); deal(res); return; }
-  console.log("audit: run | report | fix | ledger | docs | selftest  [--deep] [-v] [--fix]");
+  if (mode === "report") { await runAudit({ ...opts, verbose: true }); return; }
+  if (mode === "fix") { const res = await runAudit({ ...opts, fix: true, verbose: true }); deal(res); return; }
+  if (mode === "run") { const res = await runAudit(opts); deal(res); return; }
+  console.log("audit: run | report | fix | canon | ledger | docs | docexec | quarantine | selftest  [--deep] [-v] [--fix] [--no-canon]");
   process.exit(1);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`audit: ${e.message}`); process.exit(1); });

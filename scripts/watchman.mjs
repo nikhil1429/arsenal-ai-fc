@@ -93,6 +93,7 @@ import net from "node:net";
 import { EVENING } from "./conductor.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared; the ledger feeds caught-silent
+import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREEZE: commits since FREEZE.md that touched a guarded path without a card ⇒ RED freeze-broken
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -274,6 +275,12 @@ export function gather(now = new Date()) {
   // reader excludes selftest/sandbox rows by itself. Read-only; a number, never a claim.
   try { w.caught_silent = swallowLedger({ sinceMs: 24 * 3600 * 1000, now: now.getTime(), top: 5 }); }
   catch (e) { swallow("gather: swallowLedger() unreadable → no caught-silent line tonight", e); w.caught_silent = null; }
+  // BLOCK 8 (18 Aug 2026) — THE FREEZE, WATCHED. freeze.mjs reads git log since the commit
+  // that added FREEZE.md; a commit that touched scripts/ hooks/ setup/ with no card id and
+  // no `freeze-exempt:<why>` is BROKEN. This is the second layer behind the commit-msg guard
+  // (a --no-verify commit, or one from a clone without the hook, is caught HERE by name).
+  try { w.freeze = freezeStatus(); }
+  catch (e) { swallow("gather: freezeStatus() unreadable (no git?) → no freeze line tonight", e); w.freeze = null; }
   // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
   // decides what the Gaffer does next; it is spawned fire-and-forget from the
   // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
@@ -580,6 +587,20 @@ export function checks(w) {
       id: "caught-silent", level: "INFO",
       finding: `${w.caught_silent.n} silent catch(es) swallowed across ${w.caught_silent.runs} production run(s) in 24 h — top: ${top || "—"}`,
       evidence: "swallow_ledger.jsonl (swallow.mjs — one row per process; `node scripts/swallow.mjs status` for the whole board; a NO-WRITER path here is a mutagen finding, not a watchman one)",
+    });
+  }
+
+  // BLOCK 8 · FREEZE-BROKEN (18 Aug 2026) — a commit since the freeze touched a guarded
+  // path (scripts/ hooks/ setup/) with neither a card id nor `freeze-exempt:<why>`. RED,
+  // sha named: the freeze is a code path or it does not exist, and this is the half the
+  // hook cannot enforce (--no-verify, a clone without the hook). Silent when FREEZE.md is
+  // absent, when every guarded commit is carded/exempt, or when git could not be read.
+  if (w.freeze && w.freeze.armed && (w.freeze.broken || []).length) {
+    const b = w.freeze.broken;
+    F.push({
+      id: "freeze-broken", level: "RED",
+      finding: `${b.length} commit(s) since the freeze touched scripts/ hooks/ setup/ with NO card id and NO freeze-exempt — ${b.slice(0, 4).map((c) => `${c.sha.slice(0, 7)} "${c.subject.slice(0, 50)}" (${c.touched} file${c.touched === 1 ? "" : "s"})`).join(" · ")}${b.length > 4 ? ` · +${b.length - 4} more` : ""}`,
+      evidence: `FREEZE.md since ${String(w.freeze.since || "").slice(0, 7)} · \`node scripts/freeze.mjs status\` names each · the guard is hooks/commit-msg (setup/INSTALL_ARCHIVE.ps1 installs it) · the fix is a card he answers (c<n>) or the change reverted — never a rewrite of history`,
     });
   }
 
@@ -1864,6 +1885,20 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       && !checks(base).some((x) => x.id === "caught-silent"));
     assert("…and it never escalates: caught-silent is INFO in every shape (a swallow is design until mutagen's panic lane says otherwise)",
       f && f.level === "INFO");
+  }
+
+  // BLOCK 8 — freeze-broken (RED, sha named; silent when unarmed / clean / unreadable)
+  {
+    const fz = { armed: true, since: "abcdef0123456789", commits: [{ sha: "1111111aaaaaaa", at: "2026-08-19T01:00:00+05:30", subject: "sneaked past the hook", touched: 2, files: ["scripts/x.mjs", "setup/y.ps1"], carded: false, exempt: false, allowed: false }, { sha: "2222222bbbbbbb", at: "2026-08-19T02:00:00+05:30", subject: "carded c12", touched: 1, files: ["scripts/z.mjs"], carded: true, exempt: false, allowed: true }], broken: [{ sha: "1111111aaaaaaa", at: "2026-08-19T01:00:00+05:30", subject: "sneaked past the hook", touched: 2, files: ["scripts/x.mjs", "setup/y.ps1"], carded: false, exempt: false, allowed: false }], carded: 1, exempt: 0 };
+    const f = checks({ ...base, freeze: fz }).find((x) => x.id === "freeze-broken");
+    assert("BLOCK 8 — a guarded commit since the freeze with no card and no exemption ⇒ RED freeze-broken naming the sha, the subject and the file count",
+      f && f.level === "RED" && /1 commit\(s\)/.test(f.finding) && /1111111 "sneaked past the hook" \(2 files\)/.test(f.finding) && /freeze\.mjs status/.test(f.evidence),
+      f ? f.finding : "no freeze-broken finding");
+    assert("…silent when every guarded commit is carded/exempt, when FREEZE.md is absent (unarmed), and when git could not be read (null)",
+      !checks({ ...base, freeze: { ...fz, broken: [] } }).some((x) => x.id === "freeze-broken")
+      && !checks({ ...base, freeze: { armed: false, since: null, commits: [], broken: [], carded: 0, exempt: 0 } }).some((x) => x.id === "freeze-broken")
+      && !checks({ ...base, freeze: null }).some((x) => x.id === "freeze-broken")
+      && !checks(base).some((x) => x.id === "freeze-broken"));
   }
 
   // LADDER E8 — the coach that didn't teach (WARN)

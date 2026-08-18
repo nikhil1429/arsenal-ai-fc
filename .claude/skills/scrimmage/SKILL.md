@@ -134,7 +134,8 @@ not apply here — this is the one place they don't).
    (`grep -n "EAR LAW" scripts/dugout.mjs`). What is NOT complete is the word
    list: those three are examples, not the set. The club's canonical hedge
    regex carries eleven terms across Hinglish and English —
-   `grep -n "const HEDGE_RE" scripts/dugout.mjs` — count against that. The voice
+   `grep -n "const HEDGE_RE" scripts/register.mjs` — count against that (it moved from
+   dugout.mjs to register.mjs so ONE meter counts every mouth; dugout imports it). The voice
    lane banks its count in `dugout_scrimmage.jsonl` and surfaces it only inside
    the filed report, off-mic: `grep -n "the ear's one legal surface, measured
    off-mic" scripts/dugout.mjs`.)

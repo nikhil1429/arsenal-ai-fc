@@ -14,8 +14,9 @@ It is line 1 of every SessionStart brief, rides the morning sheet push, and open
 `/organism-doctor`. Anything this file used to claim (phase, done/pending, next action) is a field there.
 
 ## Where the BUILD is
-`ORGANISM_OVERHAUL__2026-08-18.md` — the plan of record; its BUILD LOG (top of file) marks each block ✅,
-and a RESUME HERE section there means a session stopped mid-block. Read it, do not re-plan it.
+`docs/archive/ORGANISM_OVERHAUL__2026-08-18.md` — the overhaul's RECORD (Blocks 0–8 built 18 Aug 2026; its BUILD LOG
+marks each block ✅; RESUME HERE = Block 9, seven real days). **The organism is FROZEN since Block 8: `FREEZE.md`** —
+changes ride cards; `node scripts/freeze.mjs status` · the week board `node scripts/state.mjs week`. Read, do not re-plan.
 
 ## The other live reads (never a number from a document)
 - `node scripts/brain.mjs gate show` — which LLM lanes are asleep by THE GATE, why, what wakes each

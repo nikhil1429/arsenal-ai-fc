@@ -45,6 +45,8 @@
 // OUTPUT: brain_ledger.jsonl · brain_queue.json · brain_out/<job>/<date>.md
 //         (formation_read writes through manager.mjs's own validated writer)
 // MODES:  tick (default) · run <job_id> · status · selftest
+//         gate [show|wake <lane>|journal [n]] · spend [days] · tokens · consumed <target> [--kind --by --file --note]
+//         bell [fulltime|…] · trigger <name> [off] · pulse (ONE haiku beat) · daemon (the resident pacemaker)
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, openSync, readSync, closeSync, statSync, readdirSync, rmSync } from "node:fs";

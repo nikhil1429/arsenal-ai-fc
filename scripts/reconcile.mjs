@@ -64,6 +64,7 @@ import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";   // THE GATE (18 Aug 2026): the one spawn — brain.mjs `gate json`, read-only
+import { awakeModel } from "./herd.mjs";   // Block 8 · §14.3 — a lane's cadence is measured in the LAPTOP'S AWAKE HOURS, never the wall clock
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO      = join(__dirname, "..");
@@ -294,6 +295,10 @@ function reconcileBrainLanes(deps = {}) {
   // still true while paused). Same law as the disabled-job case: absence ≠ failure.
   const paused = cfg && cfg.paused === true;
   const lastRuns = lastRunsByJob(deps);
+  // Block 8 · §14.3: the awake model (herd.awakeModel over presence_log.jsonl). A lane older than
+  // its cadence BY THE CLOCK is not stale if the laptop was awake for less than one cadence of
+  // that time — its slot never came. deps.awake lets the selftest inject one; null ⇒ clock rule.
+  const awake = deps.awake !== undefined ? deps.awake : awakeModel({ sinceMs: now.getTime() - 21 * 86400000, now: now.getTime() });
   const rows = [];
 
   for (const job of (cfg && cfg.jobs) || []) {
@@ -408,10 +413,15 @@ function reconcileBrainLanes(deps = {}) {
         if (job.trigger_fallback_hm) bleeds.push(`stale — ${line}`);
         else notes.push(`stale, but an EVENT lane (brain_config trigger \`${job.trigger}\`): it runs only after the event arms it${job.trigger === "fulltime" ? " (postmatch.mjs at his full-time)" : ""} — idle between events by design · (${line})`);
       }
+      else if (awake && awake.available && awake.awakeHoursSince(newestMs) !== null && awake.awakeHoursSince(newestMs) < maxAge) {
+        // ASLEEP LAPTOP (Block 8 · §14.3): stale by the clock, but the machine was awake for less than
+        // one cadence of that span — the lane's slot has not come round on a running laptop yet.
+        notes.push(`stale by the CLOCK (${line}) but the laptop was AWAKE only ${awake.awakeHoursSince(newestMs).toFixed(1)}h of it — under one cadence: no slot was missed (herd.mjs awake model)`);
+      }
       else if (ranInWindow && isRefusalBeforeSpend(lastRun)) {
         // ALIVE AND EMPTY: it ran, it refused before spending, it said why.
         notes.push(`no artifact, but the lane RAN and refused BEFORE SPEND ${Math.round((now.getTime() - lastRunMs) / 3600000)}h ago — ${String(lastRun.note || lastRun.error || "").slice(0, 120)} (${line})`);
-      } else bleeds.push(`stale — ${line}`);
+      } else bleeds.push(`stale — ${line}${awake && awake.available && awake.awakeHoursSince(newestMs) !== null ? ` (awake ${awake.awakeHoursSince(newestMs).toFixed(0)}h of it — a slot came and it did not run)` : ""}`);
     }
     if (enabled && !uniqueConsumers.length) {
       // H0 FLOW AUDIT (10 Aug 2026): brain_config's _surface_law defined kind
@@ -607,12 +617,26 @@ function selftest() {
   ] };
   // a fake corpus: only fresh_lane and stale_lane are referenced by anything
   const corpus = [{ file: "viz.mjs", text: `join("brain_out/fresh_lane", d); join("brain_out/stale_lane", d);` }];
-  const r = build({ cfg, corpus, now, outDir, stateDir: join(root, "nostate") });
+  // awake: null ⇒ the CLOCK rule (hermetic — the live presence_log is never read by a selftest)
+  const r = build({ awake: null,  cfg, corpus, now, outDir, stateDir: join(root, "nostate"), awake: null });
 
   const by = (id) => r.lanes.find((x) => x.job === id);
   ok("FRESH + CONSUMED lane bleeds nothing", by("fresh_job").bleeds.length === 0);
   ok("STALE lane is caught, and the message cites its own cadence",
     by("stale_job").bleeds.some((b) => /stale/.test(b) && /cadence allows/.test(b)));
+  // Block 8 · §14.3 — THE AWAKE LAW on the same fixture: 15 days stale by the clock, but a laptop
+  // awake only 6h of it has not reached one cadence ⇒ a NOTE, not a bleed; awake 60h (≥ the 48h cadence) ⇒ still a bleed,
+  // and the bleed now says how many awake hours the slot had.
+  {
+    const rLittle = build({ cfg, corpus, now, outDir, stateDir: join(root, "nostate"), awake: { available: true, awakeHoursSince: () => 6 } });
+    const rLots = build({ cfg, corpus, now, outDir, stateDir: join(root, "nostate"), awake: { available: true, awakeHoursSince: () => 60 } });
+    const sLittle = rLittle.lanes.find((x) => x.job === "stale_job"), sLots = rLots.lanes.find((x) => x.job === "stale_job");
+    ok("AWAKE LAW — stale by the clock but the laptop was awake < one cadence ⇒ a note naming the awake hours, NOT a bleed",
+      !sLittle.bleeds.some((b) => /stale/.test(b)) && sLittle.notes.some((n) => /AWAKE only 6.0h/.test(n)));
+    ok("AWAKE LAW — stale by the clock and awake ≥ one cadence ⇒ still a bleed, and it says the slot came",
+      sLots.bleeds.some((b) => /stale/.test(b) && /awake 60h of it/.test(b)));
+    ok("AWAKE LAW — the fresh lane is untouched by the awake model (only staleness consults it)", rLittle.lanes.find((x) => x.job === "fresh_job").bleeds.length === 0);
+  }
   ok("ORPHAN lane is caught even though it is FRESH (this is the whole point)",
     by("orphan_job").bleeds.some((b) => /no reader/.test(b)));
   ok("a DECLARED surface does not excuse a missing reader (a claim is not proof)",
@@ -648,7 +672,7 @@ function selftest() {
     { id: "overdue",  out: "never_lane", enabled: true, at: "03:10", _added: "2026-07-01" },
     { id: "undated",  out: "never_lane", enabled: true, at: "03:10" },
   ] };
-  const rNew = build({ cfg: cfgNew, corpus: [{ file: "viz.mjs", text: `join("brain_out/never_lane", d);` }], now, outDir, stateDir: join(root, "nostate") });
+  const rNew = build({ awake: null,  cfg: cfgNew, corpus: [{ file: "viz.mjs", text: `join("brain_out/never_lane", d);` }], now, outDir, stateDir: join(root, "nostate") });
   const laneOf = (id) => rNew.lanes.find((x) => x.job === id);
   ok("a lane ADDED today is NOT-DUE-YET (a note), not 'never produced' (a bleed)",
     laneOf("newborn").bleeds.length === 0 && laneOf("newborn").notes.some((n) => /has not been asked yet/.test(n)));
@@ -665,23 +689,23 @@ function selftest() {
   const cfg5 = { jobs: [{ id: "refuser", out: "stale_lane", enabled: true, at: "08:00" }] };
   const corpus5 = [{ file: "viz.mjs", text: `join("brain_out/stale_lane", d);` }];
   const staleOf = (rr) => rr.lanes[0].bleeds.filter((b) => /stale/.test(b));
-  const rRefuse = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+  const rRefuse = build({ awake: null,  cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
     ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 3 * 3600000).toISOString(), ok: false, total_tokens: 0,
       note: "skipped before spend — the cracked-axes inventory is EMPTY" }] });
   ok("REFUSAL-BEFORE-SPEND inside the cadence window is a NOTE, not a stale bleed (the lane ran and correctly said nothing)",
     staleOf(rRefuse).length === 0 && rRefuse.lanes[0].notes.some((n) => /refused BEFORE SPEND/.test(n)));
-  const rFail = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+  const rFail = build({ awake: null,  cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
     ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 3 * 3600000).toISOString(), ok: false, total_tokens: 4210,
       error: "claude exited 1", note: "model call failed" }] });
   ok("...but a GENUINE FAILURE in the same window still bleeds STALE — the exemption is for refusals only",
     staleOf(rFail).length === 1);
-  const rOld = build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
+  const rOld = build({ awake: null,  cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"),
     ledgerRows: [{ job: "refuser", ts: new Date(now.getTime() - 20 * 24 * 3600000).toISOString(), ok: false, total_tokens: 0,
       note: "skipped before spend — the cracked-axes inventory is EMPTY" }] });
   ok("...and a lane that STOPPED RUNNING still bleeds, however honest its last refusal was (the window is the test)",
     staleOf(rOld).length === 1);
   ok("...and with NO ledger readable at all the bleed stands — the exemption needs evidence, never its absence",
-    staleOf(build({ cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"), ledgerRows: [] })).length === 1);
+    staleOf(build({ awake: null,  cfg: cfg5, corpus: corpus5, now, outDir, stateDir: join(root, "nostate"), ledgerRows: [] })).length === 1);
   ok("isRefusalBeforeSpend rejects an ok row, a spent row, and a row with no note",
     !isRefusalBeforeSpend({ ok: true, total_tokens: 0, note: "skipped before spend — x" }) &&
     !isRefusalBeforeSpend({ ok: false, total_tokens: 9, note: "skipped before spend — x" }) &&
@@ -699,7 +723,7 @@ function selftest() {
   mkfile("digest_lane/2026-08-04.md", 2);
   mkfile("eater_lane/2026-08-04.md", 2);
   mkfile("spoken_lane/2026-08-04.md", 2);
-  const r2 = build({ cfg: cfg2, corpus: [], now, outDir, stateDir: join(root, "nostate") });
+  const r2 = build({ awake: null,  cfg: cfg2, corpus: [], now, outDir, stateDir: join(root, "nostate") });
   const by2 = (id) => r2.lanes.find((x) => x.job === id);
   ok("FALSE-POSITIVE 1 FIXED: a lane consumed as ANOTHER JOB'S INPUT is not an orphan",
     by2("produces_digest").bleeds.length === 0 &&
@@ -710,7 +734,7 @@ function selftest() {
 
   // FALSE POSITIVE 3: with the brain PAUSED every lane is stale by construction.
   const cfg3 = { paused: true, jobs: [{ id: "old", out: "stale_lane", enabled: true, at: "08:00" }] };
-  const r3 = build({ cfg: cfg3, corpus: [{ file: "viz.mjs", text: `brain_out/stale_lane` }], now, outDir, stateDir: join(root, "nostate") });
+  const r3 = build({ awake: null,  cfg: cfg3, corpus: [{ file: "viz.mjs", text: `brain_out/stale_lane` }], now, outDir, stateDir: join(root, "nostate") });
   ok("FALSE-POSITIVE 3 FIXED: a PAUSED brain makes staleness a note, never a bleed",
     r3.lanes[0].bleeds.length === 0 && r3.lanes[0].notes.some((n) => /PAUSED/.test(n)));
   ok("...and the paused state is stated out loud, not silently swallowed",
@@ -719,19 +743,19 @@ function selftest() {
   // was reported orphaned because brain.mjs was excluded wholesale.
   const cfg4 = { jobs: [{ id: "lex", out: "lexicon", enabled: true, at: "08:00" }] };
   mkfile("lexicon/2026-08-04.md", 2);
-  const r4 = build({ cfg: cfg4, now, outDir, stateDir: join(root, "nostate"),
+  const r4 = build({ awake: null,  cfg: cfg4, now, outDir, stateDir: join(root, "nostate"),
     corpus: [{ file: "brain.mjs", text: `function minedAnchors(dir = join(OUT_DIR, "brain_out/lexicon")) {}` }] });
   ok("FALSE-POSITIVE 4 FIXED: a lane consumed by brain.mjs itself is not an orphan",
     r4.lanes[0].bleeds.length === 0);
   ok("A COMMENT IS NOT A READER — prose naming the path proves nothing",
-    build({ cfg: cfg4, now, outDir, stateDir: join(root, "nostate"),
+    build({ awake: null,  cfg: cfg4, now, outDir, stateDir: join(root, "nostate"),
       corpus: [{ file: "brain.mjs", text: `// writes brain_out/lexicon every night and NOTHING opened it` }] })
       .lanes[0].bleeds.some((b) => /no reader/.test(b)));
   ok("...and a URL in a comment-stripped file does not corrupt the scan",
     stripComments(`const u = "https://example.com/x"; // note`).includes("https://example.com/x"));
 
   ok("...but a paused brain does NOT hide a genuine no-reader finding",
-    build({ cfg: { paused: true, jobs: [{ id: "x", out: "orphan_lane", enabled: true, at: "08:00" }] },
+    build({ awake: null,  cfg: { paused: true, jobs: [{ id: "x", out: "orphan_lane", enabled: true, at: "08:00" }] },
             corpus: [], now, outDir, stateDir: join(root, "nostate") })
       .lanes[0].bleeds.some((b) => /no reader/.test(b)));
 
@@ -747,7 +771,7 @@ function selftest() {
       { ts: "2026-08-03T10:00:00Z", lane: "fresh_lane", kind: "sat", by: "dugout" },
       { ts: "garbage", job: "stale_job", kind: "spoken" },
     ];
-    const g = build({ cfg, corpus, now, outDir, stateDir: join(root, "nostate"), gateRows, consumptionRows });
+    const g = build({ awake: null,  cfg, corpus, now, outDir, stateDir: join(root, "nostate"), gateRows, consumptionRows });
     const gs = g.lanes.find((x) => x.job === "stale_job"), gf = g.lanes.find((x) => x.job === "fresh_job");
     ok("GATE — a lane ASLEEP by verdict is a NOTE that names why + what wakes it, never a `stale` bleed (resting by rule ≠ lying dead)",
       gs.gate && gs.gate.state === "asleep" && !gs.bleeds.some((b) => /stale/.test(b)) && gs.notes.some((b) => /asleep by THE GATE/.test(b) && /never consumed/.test(b) && /wakes when/.test(b)));
@@ -758,7 +782,7 @@ function selftest() {
     ok("REACHED-HIM — the pure fold: keys match job or lane, undateable dropped, null when nothing",
       reachedHimFor(consumptionRows, ["stale_job", "stale_lane"], now) === null && reachedHimFor(consumptionRows, ["fresh_lane"], now).kind === "sat");
     ok("GATE — an ASLEEP lane still bleeds `no reader` when nothing references it (sleep hides staleness, never an orphan)",
-      build({ cfg: { jobs: [{ id: "orphan_job", out: "orphan_lane", enabled: true, at: "08:00" }] }, corpus: [], now, outDir, stateDir: join(root, "nostate"),
+      build({ awake: null,  cfg: { jobs: [{ id: "orphan_job", out: "orphan_lane", enabled: true, at: "08:00" }] }, corpus: [], now, outDir, stateDir: join(root, "nostate"),
         gateRows: [{ ts: "2026-08-03T22:00:00Z", lane: "orphan_job", state: "asleep" }], consumptionRows: [] }).lanes[0].bleeds.some((b) => /no reader/.test(b)));
     // ── THE FOLD (overhaul Block 5.2) — a folded lane is never a NEVER/stale bleed ──
     {
@@ -768,7 +792,7 @@ function selftest() {
         { id: "prepare_tomorrow", out: "prepare", enabled: true, at: "03:20" },
       ] };
       const fcorpus = [{ file: "x.mjs", text: 'read("brain_out/stale_lane/x") read("brain_out/never_lane/y") read("brain_out/prepare/z")' }];
-      const f = build({ cfg: foldCfg, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"),
+      const f = build({ awake: null,  cfg: foldCfg, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"),
         gateRows: [{ ts: "2026-08-03T22:00:00Z", lane: "stale_job", state: "asleep", why: { E: true, C: true, F: true, D: false }, detail: { D: "folded → prepare_tomorrow: its artifact for 2026-08-04 exists" }, wakes_when: "the fold opens by itself the night prepare_tomorrow fails" }],
         consumptionRows: [] });
       const fs_ = f.lanes.find((x) => x.job === "stale_job"), fn = f.lanes.find((x) => x.job === "night_lane");
@@ -777,11 +801,11 @@ function selftest() {
       ok("FOLD — a folded lane that NEVER produced (no dir) is a NOTE naming the fold, never the never-produced bleed (the fold working ≠ a dead lane)",
         fn.folded_into === "prepare_tomorrow" && fn.bleeds.length === 0 && fn.notes.some((b) => /never produced/.test(b) && /FOLDED into prepare_tomorrow/.test(b)));
       ok("EVENT LANE (Block 5.2) — a stale lane with a `trigger` and no fallback hour is a NOTE naming the event (idle between events by design), a trigger lane WITH a fallback hour still bleeds stale, an unfolded untriggered stale lane bleeds as before",
-        (() => { const g3 = build({ cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "20:40", trigger: "fulltime" }, { id: "sheet", out: "stale_lane", enabled: true, at: "08:45", trigger: "morning_signals", trigger_fallback_hm: "09:30" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
+        (() => { const g3 = build({ awake: null,  cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "20:40", trigger: "fulltime" }, { id: "sheet", out: "stale_lane", enabled: true, at: "08:45", trigger: "morning_signals", trigger_fallback_hm: "09:30" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
           const e = g3.lanes.find((x) => x.job === "stale_job"), sh = g3.lanes.find((x) => x.job === "sheet"), pl = g3.lanes.find((x) => x.job === "plain");
           return e && !e.bleeds.some((x) => /stale/.test(x)) && e.notes.some((x) => /EVENT lane/.test(x) && /fulltime/.test(x)) && sh && sh.bleeds.some((x) => /stale/.test(x)) && pl && pl.bleeds.some((x) => /stale/.test(x)); })());
       ok("FOLD — a folded lane that is stale with NO journal row yet is still a note (the fold is the reason, by config), while an unfolded stale lane bleeds as before",
-        (() => { const g2 = build({ cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "03:10", folded_into: "prepare_tomorrow" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
+        (() => { const g2 = build({ awake: null,  cfg: { jobs: [{ id: "stale_job", out: "stale_lane", enabled: true, at: "03:10", folded_into: "prepare_tomorrow" }, { id: "plain", out: "stale_lane", enabled: true, at: "03:10" }] }, corpus: fcorpus, now, outDir, stateDir: join(root, "nostate"), gateRows: [], consumptionRows: [] });
           const a = g2.lanes.find((x) => x.job === "stale_job"), b = g2.lanes.find((x) => x.job === "plain");
           return a && !a.bleeds.some((x) => /stale/.test(x)) && a.notes.some((x) => /FOLDED into prepare_tomorrow/.test(x)) && b && b.bleeds.some((x) => /stale/.test(x)); })());
     }

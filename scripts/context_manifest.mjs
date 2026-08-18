@@ -425,7 +425,17 @@ export async function assemble(deps = {}) {
   // its header + first line are reserved OUT of the pending budget. DERIVED from the
   // owner's own lines (their measured lengths), never a chosen number.
   const intentsLinesEarly = await (async () => { try { const l = deps.intents !== undefined ? deps.intents : (await import("./intent.mjs")).briefLines({}); return Array.isArray(l) ? l : []; } catch { return []; } })();
-  const INTENTS_FLOOR = intentsLinesEarly.length >= 2 ? intentsLinesEarly[0].length + 1 + intentsLinesEarly[1].length + 1 : 0;
+  // Block 8 (18 Aug 2026, §16 8g): the floor is the header + TWO intent rows (three lines), not one —
+  // measured on the 18 Aug 16:40 IST SessionStart: `intents 0 (5 open, NONE SHOWN — budget)` with a
+  // 1,431-char card and a 2,748-char orientation; a one-row floor reserved out of the PENDING budget
+  // was still zeroed at render because the room there was computed AFTER pending and memory's floor.
+  // So the floor is now also HELD AT RENDER (§3b): the intents leg gets at least this many chars and
+  // memory (budgeted after it, with its own floor) absorbs the difference. Still DERIVED from the
+  // owner's own line lengths, never a chosen number.
+  const INTENTS_FLOOR_ROWS = 2;
+  const INTENTS_FLOOR = intentsLinesEarly.length >= 2
+    ? intentsLinesEarly.slice(0, 1 + INTENTS_FLOOR_ROWS).reduce((n, l) => n + l.length + 1, 0)
+    : 0;
   const pendBudget = Math.max(0, ceiling - base.length - (card ? card.length : 0)
     - MEMORY_FLOOR - INTENTS_FLOOR - FOOTER_RESERVE - overhead);
   const pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock(PENDING_FACTS, pendBudget);
@@ -462,7 +472,8 @@ export async function assemble(deps = {}) {
     const lines = intentsLinesEarly;   // read ONCE (above, for the floor); the same rows render here
     if (Array.isArray(lines) && lines.length) {
       intentsTotal = lines.length;
-      const room = Math.max(0, Math.min(INTENTS_CAP, ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - MEMORY_FLOOR - FOOTER_RESERVE - overhead));
+      // Block 8: the floor is HELD here — header + INTENTS_FLOOR_ROWS rows at least (memory, budgeted after, absorbs it)
+      const room = Math.max(INTENTS_FLOOR, Math.min(INTENTS_CAP, ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - MEMORY_FLOOR - FOOTER_RESERVE - overhead));
       const kept = [];
       let used = 0;
       for (const l of lines) { if (used + l.length + 1 > room) break; kept.push(l); used += l.length + 1; }
@@ -875,6 +886,22 @@ function selftest() {
       tm.bytes < 4157 && /TRIMMED from 4157/.test(tm.note || ""));
     assert("SQUEEZE — orientation survives the squeeze intact (it is the floor)",
       tight.text.includes("KICKOFF") && tight.manifest.find((m) => m.id === "orientation").present === true);
+
+    // Block 8 (18 Aug 2026, 8g) — THE INTENTS FLOOR IS HELD AT RENDER: a fat card + a big
+    // orientation under the live ceiling used to zero the intents leg (`5 open, NONE SHOWN`).
+    // Fixture: 5 open intents, a 1,400-char card, orientation ~2,700, ceiling 5,300 (the live
+    // shape of the 18 Aug 16:40 IST SessionStart) ⇒ header + 2 rows land, memory absorbs, and
+    // the whole thing still sits inside the ceiling.
+    {
+      const fatStub = { ...stub, brief: (d, n, mem, card) => ["KICKOFF " + "o".repeat(2700), mem ? "HIS MEMORY\n" + mem : "", card ? "HOW TO TEACH HIM\n" + card : "", "LAWS:"].filter(Boolean).join("\n"), loadTeachingCard: () => "c".repeat(1400) };
+      const intents = ["HIS LAST SESSIONS' ASKS (session-intent memory):", ...[1, 2, 3, 4, 5].map((i) => `2026-08-1${i} · ask ${i}: ` + "x".repeat(90))];
+      const fl = await assemble({ learnstate: fatStub, pending: { present: true, count: 4, text: "--- PENDING IDENTITY FACTS — 4 staged (4 NOT SHOWN — budget) ---" }, memoryFullLength: 4157, intents, ceiling: 5300 });
+      const im = fl.manifest.find((m) => m.id === "intents");
+      assert("INTENTS FLOOR — with a 1,400-char card and a 2,700-char orientation under a 5,300 ceiling, at least TWO intent rows still land (was: 0 shown)",
+        im && im.present && /(2|3|4|5) of 5 open shown|5 open/.test(im.note || "") && fl.text.includes("ask 1:") && fl.text.includes("ask 2:"), im ? `${im.bytes} ${im.note}` : "no intents row");
+      assert("INTENTS FLOOR — memory absorbs the floor and the brief still lands INSIDE the ceiling (the floor is not an overrun)",
+        fl.total <= 5300 && fl.manifest.find((m) => m.id === "memory").bytes < 4157, `total ${fl.total} memory ${fl.manifest.find((m) => m.id === "memory").bytes}`);
+    }
 
     const noMem = await assemble({ learnstate: stub, memory: null, pending: { present: false, text: "", count: 0 } });
     assert("A MISSING LEG IS NAMED, never silently absent",

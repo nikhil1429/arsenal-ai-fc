@@ -1,16 +1,16 @@
 # CLAUDE.md — Arsenal AI FC
 
 > Read this at the start of EVERY session. Rewritten 18 Aug 2026 (OVERHAUL Block 1) to ≤ 8 KB: every number
-> and location lives in a command, never in prose. The 50 KB predecessor is verbatim at
-> `docs/archive/CLAUDE_2026-08-18.md`. If anything here conflicts with a request, surface it; never silently override.
+> and location lives in a command, never in prose. Predecessor verbatim: `docs/archive/CLAUDE_2026-08-18.md`.
+> If anything here conflicts with a request, surface it; never silently override.
 
 ## What this is
 A football-club-themed multi-agent accountability + execution system for Nikhil (captain #14, ADHD-PI,
 IST). Deterministic Node scripts (`.mjs`, Windows / Node 22) read/write a JSON state bus at
 `dressing-room/state/*.json` under an **owners-only** law. LLM calls ride `claude -p` on the Max
 subscription — **never an API key** (`ANTHROPIC_API_KEY` set ⇒ every organ refuses). Scheduling:
-Windows Task Scheduler + `ntfy.sh`. Plan of record for the current build: `ORGANISM_OVERHAUL__2026-08-18.md`
-(BUILD LOG at its top = which block is done; a RESUME HERE section = a session stopped mid-block).
+Windows Task Scheduler + `ntfy.sh`. **FROZEN since 18 Aug 2026 (Block 8): `FREEZE.md`** — changes ride cards;
+`hooks/commit-msg` refuses a bare commit under `scripts/ hooks/ setup/` (`node scripts/freeze.mjs status`).
 
 ## The ten laws (each is a code path — verify, never recall)
 | # | Law | Verify |
@@ -50,25 +50,25 @@ mechanical check. Never hand-edit a state file.
 - **DAY 1 = 18 Aug 2026:** all earlier data is baseline/test; official learning starts now. Teaching is `samjhao`, never verbatim `padho`.
 
 ## Working style
-Hinglish, direct, honest — not a hype-man; push back on vague/wrong. Business-first framing. Teach from zero. Live Oura runs need the gitignored tokens (`.worktreeinclude` carries them; both in `scripts/`). **Unrun system = hypothesis** — write the test, RUN it, show output. **AI proposes · code validates · human approves.**
+Hinglish, direct, honest — not a hype-man; push back on vague/wrong. Business-first framing. Teach from zero. Live Oura runs need the gitignored tokens in `scripts/` (`.worktreeinclude` carries them). **Unrun system = hypothesis** — write the test, RUN it, show output. **AI proposes · code validates · human approves.**
 
 ## The learning layer (where he actually studies)
-Read `learning-layer/LEARNING_LAYER_MAP.md` first (a MAP; canon wins). Canon in precedence: `PROJECT_OS.md` (THE METHOD, 12 steps, 9 axes) → `FORGE_SPEC.md` (capsule schema, cold-reader bar) → `FORGE_DESIGN.md` → `HOW_HE_LEARNS.md` (evidence + the 17-rule card). Four question-moments only; gut-word before every answer. Surfaces: `ls .claude/skills/`. Re-Jirah: `node scripts/deep.mjs`. Judgement = the truth layer: capture instant + model-free (`bank_answer`), ONE Opus judge at round close (`judge_round`); every verdict has a way back (a new row naming the old).
+Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in precedence: `PROJECT_OS.md` (THE METHOD, 12 steps, 9 axes) → `FORGE_SPEC.md` (capsule schema, cold-reader bar) → `FORGE_DESIGN.md` → `HOW_HE_LEARNS.md` (evidence + the 17-rule card). Four question-moments; gut-word before every answer. Surfaces: `ls .claude/skills/`. Re-Jirah: `node scripts/deep.mjs`. Judgement = the truth layer: bank instant + model-free (`bank_answer`), ONE Opus judge at round close (`judge_round`); every verdict has a way back.
 
 ## Read the numbers live — never from any document
 | Question | Command |
 |---|---|
-| Is everything working / pushed / what next | `node scripts/state.mjs` |
+| Everything working / pushed / next · the week board | `node scripts/state.mjs` · `state.mjs week` |
 | Which LLM lanes are asleep and why | `node scripts/brain.mjs gate show` |
-| Brain jobs, evidence, elision, truth lane | `node scripts/brain.mjs status` · `spend 7` |
+| Brain jobs, evidence, truth lane | `node scripts/brain.mjs status` · `spend 7` |
 | The Watcher | `node scripts/gaffer_brain.mjs status` |
 | The permanent record | `node scripts/archivist.mjs status` · `verify` |
-| Every scheduled organ | `node scripts/pulse.mjs report` · `watchman.mjs report` |
+| Every scheduled organ · the freeze | `node scripts/pulse.mjs report` · `watchman.mjs report` · `freeze.mjs status` |
 | The whole body | `/organism-doctor` |
 | Suite | `npm test` (authority; the chains fail fast) |
 
 ## Files of record
-- `OPS_STATE.md` — a pointer to `state.mjs` (rewritten Block 1). Old bodies: `docs/archive/`.
-- `THE_GAFFER.md` — the Gaffer's spec (root). `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced (root).
-- `docs/archive/` — every record (MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — CYBORG_BRAIN, ORGANISM_ANATOMY, GAFFER_* records, plans, logs, the old CLAUDE.md). Records, not work orders.
+- `OPS_STATE.md` — a pointer to `state.mjs`. Old bodies: `docs/archive/`.
+- `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. `FREEZE.md` — the freeze.
+- `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.

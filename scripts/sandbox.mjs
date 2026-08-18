@@ -151,6 +151,9 @@ export function runIn(sb, args, opts = {}) {
     timeout: opts.timeout || 120000,
     env: { ...sb.env, ARSENAL_AUDIT_LABEL: opts.label || basename(args[0] || "node"), ...(opts.env || {}) },
     windowsHide: true,
+    // Block 8 (18 Aug 2026): a caller may hand the child a closed stdin (`input: ""`)
+    // so a verb that would read a line gets EOF instead of hanging to its timeout.
+    ...(opts.input !== undefined ? { input: opts.input } : {}),
   });
   return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), signal: r.signal, timedOut: r.error && r.error.code === "ETIMEDOUT" };
 }

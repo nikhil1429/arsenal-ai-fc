@@ -96,6 +96,7 @@
 //        node scripts/gaffer_brain.mjs probe            → ONE live Flash call (the free-pool probe)
 //        node scripts/gaffer_brain.mjs capture <concept> <axis> --gut <word>  → bank ONE spoken answer (no model, instant)
 //        node scripts/gaffer_brain.mjs judge-round        → grade the whole round in ONE Opus call
+//        node scripts/gaffer_brain.mjs judge-night        → the night lane: judge what the day left unjudged
 //        node scripts/gaffer_brain.mjs queue              → what is captured and not yet judged
 //        node scripts/gaffer_brain.mjs selftest
 // ============================================================================

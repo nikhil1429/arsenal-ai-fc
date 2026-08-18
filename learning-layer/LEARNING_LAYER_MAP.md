@@ -40,7 +40,8 @@
 
 Learning layer = **ek method (THE FORGE) + ek notes-format (capsule) + ek machine (Claude Code
 hooks + skills + scripts) jo method ko prose se nikaal ke STATE banati hai**, taaki 40-turn
-session ke baad bhi method drown na ho.
+session ke baad bhi method drown na ho. *(18 Aug 2026 se machine ke peeche EK MIND hai — THE SITTING
+BRAIN, `scripts/sitting.mjs`: voice ho ya text, wahi session, wahi pacer, wahi judge; §8 ka head note.)*
 
 Iske do peer hain, teenon alag rehte hain:
 
@@ -418,12 +419,16 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 > sahi hai — bas har row ab apna process nahi, dispatcher ki ek call hai. (2) **THE SITTING BRAIN
 > (Block 3, BUILT 18 Aug 2026):** `scripts/sitting.mjs` — har muh (Dugout voice · Claude Code `/learn`
 > `/forge`) ke peeche EK persistent Claude session; wahi pacer block (`forge_session.mjs contract` +
-> `teaching_contract.mjs print` + recall-hint) har voice turn ke aage lagega jo aaj `turn_hook prompt`
-> Claude Code turn ke aage lagata hai — isliye `sitting.mjs` ko `turn_hook.mjs` ka `runOrgan` hi call
-> karna hai, paanch node dobara nahi. Kaunsa block bana hai: `ORGANISM_OVERHAUL__2026-08-18.md` ka BUILD
-> LOG. **THE SITTING BRAIN (`scripts/sitting.mjs`, :4117) — one mind behind every mouth;
+> `teaching_contract.mjs print` + recall-hint) har voice turn ke aage LAGTA HAI jo `turn_hook prompt`
+> Claude Code turn ke aage lagata hai — `sitting.mjs` `turn_hook.mjs` ka `runOrgan` hi call karta hai,
+> paanch node dobara nahi. **THE SITTING BRAIN (`scripts/sitting.mjs`, :4117) — one mind behind every mouth;
 > `node scripts/sitting.mjs status`; the mouth (dugout) speaks its units, `/learn` and `/forge`
-> register a code sitting.**
+> register a code sitting.** (3) **SITTING KHUD KHULTI HAI (Block 5, 18 Aug):** Gaffer ka page load hote hi
+> sitting open — koi keyword yaad nahi rakhna (uska 10:42 word: "bro i will never remember any of the keyword").
+> (4) **DAY-KEY LAW (Block 6):** raat 12 ke baad chala scheduled organ apna din SLOT se leta hai, clock se nahi
+> (`scripts/daykey.mjs`; `node scripts/herd.mjs risks` = 0). (5) **FREEZE (Block 8):** ab naya organ, naya
+> constitution paragraph ya schedule change sirf card se — `FREEZE.md` root pe; guard `hooks/pre-commit` mein.
+> Overhaul ka poora record: `docs/archive/ORGANISM_OVERHAUL__2026-08-18.md` (BUILD LOG upar).
 
 ### 8.1 HOOKS (`.claude/settings.json`) — yeh drift ka structural ilaaj hai
 
@@ -1070,7 +1075,9 @@ inka exact sequencing ruling ne chhua nahi.
 
 ## 13. EK SESSION — shuru se khatam tak (runbook)
 
-**KHULNA (hooks khud kar dete hain):**
+**KHULNA (hooks khud kar dete hain — aur 18 Aug 2026 se SITTING bhi khud khulti hai: Gaffer ka page load hote hi
+`sitting.mjs` ek sitting kholta hai, Claude Code mein `/learn`/`/forge` usi mind pe code sitting register karte hain;
+`node scripts/sitting.mjs status`. Din ki chaabi: `node scripts/state.mjs` ki EK line — pushed · daemons · suite · sitting · next · needs-you.):**
 1. `learnstate.mjs brief` chalti hai → sprint position · kahan chhoda · open loop · watch-list · next-up ·
    **17-rule cold-start card** · course brief.
 2. `forge_session.mjs boot` chalti hai → koi session **OPEN** to nahi?
@@ -1099,9 +1106,16 @@ inka exact sequencing ruling ne chhua nahi.
 - Har pass ke baad: **"samajh aaya — haan ya nahi?"** aur **RUKO**.
 
 **BAND KARNA** (`"session khatam" / "done" / "bas"`):
-1. Saare reps ka JSON array banao (uske **pre-stated** gut-words, tumhari imaandaar correct/incorrect —
+*(18 Aug 2026, OVERHAUL Block 8 — steps 1-2 neeche ab **FROZEN door** hain, sirf Gem/Colab sitting ke liye jahan
+tum judge nahi the. Claude Code / Gaffer sitting mein THE TRUTH LAYER (17 Aug) chalti hai: har jawaab ke
+turant baad **bank** — `node scripts/gaffer_brain.mjs capture voice_rep <concept> --gut <word> --asked "…"`
+(model-free, instant) — aur round ke ant mein EK judge: `node scripts/gaffer_brain.mjs judge-round` (ONE Opus
+call; har verdict apne owner ko dispatch, `capture.mjs rep` reps ke liye). Tum grade nahi karte, bank karte ho —
+`.claude/skills/forge/SKILL.md` step "Bank the answer; the judge grades it". Sitting khud band hoti hai
+`forge_session.mjs close` pe; voice sitting ka review ONE call — `node scripts/sitting.mjs stats`.)*
+1. ~~Saare reps ka JSON array banao~~ *(FROZEN — sirf Gem/Colab; upar padho)* (uske **pre-stated** gut-words, tumhari imaandaar correct/incorrect —
    **baad mein re-grade kabhi nahi**).
-2. `capture.mjs paste <tmpfile>` → `heartbeat.mjs`. Reject kare to output **verbatim** batao.
+2. ~~`capture.mjs paste <tmpfile>` → `heartbeat.mjs`~~ *(FROZEN door, wahi shart)*. Reject kare to output **verbatim** batao.
 3. Doubts jo usne passing mein bole → `hippocampus.mjs mark doubt`, uske shabd stdin pe.
 4. `forge_session.mjs close` → **method block ke reasons verbatim padho**, `elapsed` aur
    `axis marks spread over` **zor se bolo**. COVERAGE imaandaari se: steps chale / steps miss / axes done /
