@@ -16,6 +16,13 @@
 //                           STRICT schema validator + banned-phrase check
 //                           accepts or the old file stands. Prosody NEVER
 //                           enters it (validator enforces).
+//                           18 Aug 2026 (OVERHAUL Block 4 §9.3): LAYERED — every
+//                           night PUSHES a dated layer (`layers[]`, newest first,
+//                           contradictions kept, never merged); the top-level
+//                           fields stay the newest layer so every old reader is
+//                           untouched; overflow past WHO_LAYERS_MAX moves to
+//                           cold/who_he_is_layers.jsonl (M10: move, never delete).
+//                           `layers` prints them; get_context says "as of" per layer.
 //        L4 RECALL REFLEX   recallReflex(turnText) — embed the turn, cosine vs
 //                           episodes + open threads; ≥ threshold → a NON-SPOKEN
 //                           hint the Gaffer weaves ONLY if it earns the turn
@@ -48,7 +55,7 @@
 //        `stage-pending` door below.
 // MODES: mark <kind>  (text on stdin) · remember (stdin) · forget <id> ·
 //        stage-pending (stdin) · promote --at <ts> · drop-pending --at <ts> ·
-//        index · consolidate [--force] · consolidate-store · cartridge ·
+//        index · consolidate [--force] · layers [--migrate] · consolidate-store · cartridge ·
 //        recall "<text>" · recall-hint "<text>" · selftest
 // AUDIT (4 Aug 2026, organism repair G4 "MEMORY THAT ARRIVES TRUE"):
 //   #13 identityCartridge dropped the stored `ts` at render, so a 17-Jul
@@ -702,14 +709,81 @@ ${JSON.stringify(material).slice(0, 12000)}`;
   } catch { return { ok: false, error: "unparseable JSON — the old who_he_is stands" }; }
   const bad = validateWho(obj);
   if (bad) return { ok: false, error: `validator rejected: ${bad} — the old who_he_is stands` };
-  const out = { date: localDate(now), generated_at: now.toISOString(), ...obj };
+  // §9.3 (18 Aug 2026, OVERHAUL Block 4) — LAYERED, never overwritten. The newest
+  // reading is the top-level fields (every old reader keeps working); the file also
+  // carries `layers[]`, newest first, and tonight's write PUSHES a layer instead of
+  // replacing yesterday's. Overflow moves to the cold shard (M10's law: prune = move,
+  // never delete).
+  const fresh = { date: localDate(now), generated_at: now.toISOString(), ...obj };
+  const { file: out, cold } = layerWho(fresh, old);
   (deps.writeWho || ((o) => writeAtomic(WHO, o)))(out);
+  if (cold.length) (deps.writeCold || ((rows) => { try { mkdirSync(COLD_DIR, { recursive: true }); appendFileSync(WHO_LAYERS_COLD, rows.map((r) => JSON.stringify(r)).join("\n") + "\n"); } catch { } }))(cold);
   return {
     ok: true, date: out.date, threads: obj.open_threads.length,
+    layers: out.layers.length, moved_to_cold: cold.length, same_as_previous: !!out.layers[0].same_as_previous,
     // #106 — what it was actually built from, on the surface a human reads
     have: { episodes: material.episodes.length, captain_lines: material.captain_lines.length, learning_arc: arcRows },
     arc_counter: material.learning_arc_counter || null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// §9.3 (18 Aug 2026, OVERHAUL Block 4) — WHO HE IS, IN DATED LAYERS
+// ---------------------------------------------------------------------------
+// HIS 14 Aug FINDING (parked then, the schema built now): a single "who he is right
+// now" blob overwrites itself every night, so the organism could never say "as of
+// the 10th he was here; as of the 17th, there" — and a contradiction between two
+// nights (a thing he cared about, then said he did not) was silently resolved by
+// whichever night wrote last. Layers keep every reading AS WRITTEN, newest first;
+// nothing is merged, nothing is reconciled, a later layer does not erase an earlier
+// one. The reader is told the date of each and judges for itself.
+//
+// THE SHAPE (layering law — the old single-blob reader keeps working untouched):
+//   { date, generated_at, fingerprint, open_threads, recent_wins, recent_cracks,
+//     voice_tuning, do_not,                     ← the NEWEST layer, flattened (= layers[0])
+//     layers: [ { as_of, generated_at, fingerprint, …, same_as_previous }, … ] }   ← newest first
+// A pre-layer file (no `layers`) reads as ONE layer; the first layered write keeps it
+// as layer 1 — nothing that was on disk is lost by the migration.
+// BOUNDS: WHO_LAYERS_MAX hot layers in the file (it loads at the top of every session);
+// the overflow is appended to cold/who_he_is_layers.jsonl — the same move-never-delete
+// M10 already applies to episodes. `same_as_previous` marks a night whose six fields
+// came back byte-identical: consolidated and unchanged is a different fact from not
+// consolidated, and the top-level `date` says which.
+const WHO_LAYERS_MAX = 8;
+const WHO_LAYERS_SHOWN = 4;                                     // older layers rendered in the cartridge, one line each
+const WHO_LAYERS_COLD = join(COLD_DIR, "who_he_is_layers.jsonl");
+function whoLayerOf(w) {
+  if (!w || typeof w !== "object" || !w.fingerprint) return null;
+  const arr = (k) => (Array.isArray(w[k]) ? w[k].slice() : []);
+  return { as_of: w.as_of || w.date || null, generated_at: w.generated_at || null, fingerprint: String(w.fingerprint),
+    open_threads: arr("open_threads"), recent_wins: arr("recent_wins"), recent_cracks: arr("recent_cracks"),
+    voice_tuning: typeof w.voice_tuning === "string" ? w.voice_tuning : "", do_not: arr("do_not") };
+}
+const sameLayer = (a, b) => !!a && !!b && WHO_KEYS.every((k) => JSON.stringify(a[k] ?? null) === JSON.stringify(b[k] ?? null));
+// whoLayers(who) → the layers, newest first — a layered file's own, or the single blob as one
+function whoLayers(who) {
+  if (!who || typeof who !== "object") return [];
+  if (Array.isArray(who.layers) && who.layers.length) return who.layers.filter((l) => l && l.fingerprint);
+  const one = whoLayerOf(who);
+  return one ? [one] : [];
+}
+// layerWho(fresh, old) → { file, cold } — PURE: fresh = tonight's validated reading
+// (date + generated_at + the six keys); old = whatever was on disk (blob, layered, or null)
+function layerWho(fresh, old) {
+  const top = whoLayerOf(fresh);
+  const prev = whoLayers(old);
+  if (top) top.same_as_previous = sameLayer(prev[0], top);
+  const all = top ? [top, ...prev] : prev;
+  return { file: { ...fresh, layers: all.slice(0, WHO_LAYERS_MAX) }, cold: all.slice(WHO_LAYERS_MAX) };
+}
+// the older layers, one dated line each — appended to whoCartridge below
+function whoLayersLines(who) {
+  const older = whoLayers(who).slice(1);
+  if (!older.length) return "";
+  const shown = older.slice(0, WHO_LAYERS_SHOWN)
+    .map((l) => `  · as of ${l.as_of || "?"}${l.same_as_previous ? " (unchanged that night)" : ""}: ${String(l.fingerprint).slice(0, 160)}`);
+  const rest = older.length - shown.length;
+  return `\nEARLIER LAYERS (kept as written, newest first — a later layer does not erase an earlier one; contradictions included, dates decide):\n${shown.join("\n")}${rest > 0 ? `\n  · (+${rest} older layer(s) in the file)` : ""}`;
 }
 // LEGACY (frozen verbatim, layering law) — the undegraded renderer. It printed
 // "RIGHT NOW" over a file of any age; the date rode along as decoration and
@@ -745,7 +819,8 @@ function whoCartridge(who = readJson(WHO), now = new Date()) {
     ? `WHO HE IS RIGHT NOW (consolidated ${who.date})`
     : `WHO HE IS AS OF ${who.date || "(undated)"} (${age === null || age < 0 ? "age unreadable" : `${age}d old`} — this is HISTORY, verify before acting on it)`;
   const asOf = fresh ? "" : ` (as of ${who.date || "?"} — day-scoped items may have expired)`;
-  return `${head}: ${who.fingerprint}\nOpen threads${asOf}: ${(who.open_threads || []).join(" · ") || "—"}\nRecent wins: ${(who.recent_wins || []).join(" · ") || "—"}\nVoice tuning: ${who.voice_tuning || "—"}${(who.do_not || []).length ? `\nDo not${asOf}: ${who.do_not.join(" · ")}` : ""}`;
+  // §9.3 — the older layers follow, each with its own "as of" (his 14 Aug finding)
+  return `${head}: ${who.fingerprint}\nOpen threads${asOf}: ${(who.open_threads || []).join(" · ") || "—"}\nRecent wins: ${(who.recent_wins || []).join(" · ") || "—"}\nVoice tuning: ${who.voice_tuning || "—"}${(who.do_not || []).length ? `\nDo not${asOf}: ${who.do_not.join(" · ")}` : ""}${whoLayersLines(who)}`;
 }
 // the same verdict as a datum, for any surface that wants a flag rather than a
 // sentence (dugout.mjs:1099 emits `who_he_is_date` bare, seven lines under a
@@ -1325,6 +1400,48 @@ async function selftest() {
     const skip2 = await consolidate({ generate: async () => { throw new Error("must not be called"); }, material: { episodes: [], captain_lines: [], calibration: {}, learning_arc: [], learning_arc_counter: "0/24 of his typed turns are learning-arc (canon vocab: 122 terms)" }, readWho: () => goodWho, writeWho: () => {} });
     assert("CONSOLIDATOR: a skip states WHAT was measured — an honest zero, not a silent one",
       skip2.skipped === true && /0 episodes, 0 captain lines, 0 learning-arc turns/.test(skip2.reason) && /0\/24 of his typed turns/.test(skip2.reason));
+
+    // ── §9.3 (18 Aug 2026, OVERHAUL Block 4) — WHO HE IS, IN DATED LAYERS ────
+    // His 14 Aug finding: one blob overwrote itself nightly, so "as of the 10th"
+    // and "as of the 17th" could never both be true on disk. Now every night is a
+    // layer; nothing is merged away; the old blob reader keeps working untouched.
+    {
+      const blob = { date: "2026-08-10", generated_at: "2026-08-10T02:00:00Z", ...goodWho };                        // the pre-layer file, as it sat on disk
+      const night2 = { ...goodWho, fingerprint: "Hallucinations axis d is the whole focus now; tokenization parked.", open_threads: ["why grounding beats scale"] };
+      let w1 = null;
+      const c1 = await consolidate({ generate: async () => ({ ok: true, text: JSON.stringify(night2) }), material: mat, readWho: () => blob, writeWho: (o) => { w1 = o; }, now: new Date("2026-08-17T02:00:00Z") });
+      assert("LAYERS · the first layered write over an OLD BLOB keeps the blob as layer 1 — nothing that was on disk is lost by the migration",
+        c1.ok && w1.layers.length === 2 && w1.layers[0].as_of === "2026-08-17" && w1.layers[1].as_of === "2026-08-10" && w1.layers[1].fingerprint === goodWho.fingerprint && c1.layers === 2);
+      assert("LAYERS · the top-level fields ARE the newest layer, flattened — every old reader (dugout who.date/open_threads, nightshift, gaffer_brain) reads unchanged",
+        w1.date === "2026-08-17" && w1.fingerprint === night2.fingerprint && JSON.stringify(w1.open_threads) === JSON.stringify(night2.open_threads) && whoStale(w1, new Date("2026-08-17T09:00:00Z")).stale === false);
+      assert("LAYERS · a CONTRADICTION is kept as written — the 10th's fingerprint and the 17th's both stand, dated, and neither erases the other",
+        w1.layers[0].fingerprint !== w1.layers[1].fingerprint && whoLayers(w1).length === 2 && whoLayers(blob).length === 1 && whoLayers(null).length === 0);
+      let w2 = null;
+      const c2 = await consolidate({ generate: async () => ({ ok: true, text: JSON.stringify(night2) }), material: mat, readWho: () => w1, writeWho: (o) => { w2 = o; }, now: new Date("2026-08-18T02:00:00Z") });
+      assert("LAYERS · a night that comes back byte-identical is STILL a layer, marked same_as_previous — 'consolidated and unchanged' is a different fact from 'not consolidated'",
+        c2.ok && w2.layers.length === 3 && w2.layers[0].same_as_previous === true && w2.layers[1].same_as_previous === false && w2.date === "2026-08-18" && c2.same_as_previous === true);
+      // the cartridge — RIGHT NOW/AS OF for the top, "as of <date>" per older layer
+      const cart = whoCartridge(w2, new Date("2026-08-18T09:00:00Z"));
+      assert("LAYERS · get_context's cartridge says RIGHT NOW for today's top layer and 'as of <date>' for EACH older layer (his 14 Aug ask), newest first",
+        /^WHO HE IS RIGHT NOW \(consolidated 2026-08-18\)/.test(cart) && /EARLIER LAYERS/.test(cart) && /as of 2026-08-17( \(unchanged that night\))?:/.test(cart) && /as of 2026-08-10: Deep in attention/.test(cart)
+        && cart.indexOf("as of 2026-08-17") < cart.indexOf("as of 2026-08-10"), cart);
+      // bounds — the file loads at the top of every session
+      let last = w2, coldRows = [];
+      for (let i = 0; i < 9; i++) {
+        const nx = { ...goodWho, fingerprint: `night ${i} reading` };
+        const r = await consolidate({ generate: async () => ({ ok: true, text: JSON.stringify(nx) }), material: mat, readWho: () => last, writeWho: (o) => { last = o; }, writeCold: (rows) => coldRows.push(...rows), now: new Date(Date.UTC(2026, 7, 19 + i, 2)) });
+        if (!r.ok) throw new Error("layer write failed: " + r.error);
+      }
+      assert(`LAYERS · the hot file holds at most ${WHO_LAYERS_MAX} layers; the overflow MOVES to the cold shard (M10's law: prune = move, never delete) — 12 nights → 8 hot + 4 cold, oldest out first`,
+        last.layers.length === WHO_LAYERS_MAX && coldRows.length === 4 && coldRows[0].as_of === "2026-08-10" && last.layers[0].fingerprint === "night 8 reading" && !last.layers.some((l) => l.as_of === "2026-08-10"));
+      const cart2 = whoCartridge(last, new Date("2026-08-27T09:00:00Z"));
+      assert("LAYERS · the cartridge shows at most 4 older layers, one line each, and NAMES how many more the file holds",
+        (cart2.match(/\n  · as of /g) || []).length === 4 && /\+3 older layer\(s\) in the file/.test(cart2), cart2);
+      assert("LAYERS · the pre-layer blob still renders exactly as before — no EARLIER LAYERS block, same first line (layering law: the old reader is untouched)",
+        !/EARLIER LAYERS/.test(whoCartridge(blob, new Date("2026-08-10T09:00:00Z"))) && whoCartridge(blob, new Date("2026-08-10T09:00:00Z")) === whoCartridge({ ...blob, layers: [] }, new Date("2026-08-10T09:00:00Z")));
+      assert("LAYERS · layerWho is PURE and total: no old file → one layer, no cold; junk old → one layer",
+        layerWho({ date: "2026-08-18", ...goodWho }, null).file.layers.length === 1 && layerWho({ date: "2026-08-18", ...goodWho }, "junk").cold.length === 0);
+    }
     // FOUND 4 Aug 2026 (not in the audit): the 12,000-char material budget was
     // being eaten by a single episode's 3,072-float embedding. Measured live:
     // the 31 Jul/1 Aug window stringified to 238,169 chars with the first "vec"
@@ -1663,8 +1780,24 @@ async function main() {
   if (mode === "consolidate") {
     const r = await consolidate({ force: process.argv.includes("--force") });
     const have = r.have ? ` [from ${r.have.episodes} episode(s) · ${r.have.captain_lines} captain line(s) · ${r.have.learning_arc} learning-arc turn(s)]` : "";
-    console.log(`hippocampus: consolidate → ${r.ok ? `who_he_is ${r.date} (${r.threads} open threads)` : (r.reason || r.error)}${have}`);
+    console.log(`hippocampus: consolidate → ${r.ok ? `who_he_is ${r.date} (${r.threads} open threads · ${r.layers} layer(s)${r.same_as_previous ? " · unchanged from the last" : ""}${r.moved_to_cold ? ` · ${r.moved_to_cold} moved to cold` : ""})` : (r.reason || r.error)}${have}`);
     if (r.arc_counter) console.log(`  ${r.arc_counter}`);
+    return;
+  }
+  // §9.3 (18 Aug 2026) — `layers`: his one-line read of who-he-is across nights (L10);
+  // `layers --migrate`: ONE content-preserving rewrite of a pre-layer blob into the
+  // layered shape (layers[0] = the blob, top-level unchanged) — idempotent, no model,
+  // nothing invented; after it every reader sees the new shape without waiting a night.
+  if (mode === "layers") {
+    const who = readJson(WHO);
+    if (!who || !who.fingerprint) { console.log("hippocampus: layers → no consolidated who_he_is on disk yet"); return; }
+    if (process.argv.includes("--migrate")) {
+      if (Array.isArray(who.layers) && who.layers.length) console.log(`hippocampus: layers → already layered (${who.layers.length}) — nothing to migrate`);
+      else { const { file } = layerWho(who, null); writeAtomic(WHO, file); console.log(`hippocampus: layers → migrated the ${who.date || "undated"} blob into layers[0] (content unchanged; top-level fields identical)`); }
+    }
+    const L = whoLayers(readJson(WHO));
+    console.log(`hippocampus: who_he_is · ${L.length} layer(s) (hot, max ${WHO_LAYERS_MAX}; older in ${WHO_LAYERS_COLD})`);
+    for (const l of L) console.log(`  as of ${l.as_of || "?"}${l.same_as_previous ? " (unchanged that night)" : ""}: ${String(l.fingerprint).slice(0, 140)}`);
     return;
   }
   // the arc filter, inspectable on its own — "what would tonight's consolidate
@@ -1708,6 +1841,9 @@ export {
   gatherDayMaterial, learningArcTurns, learningArcVerdict, conceptVocabulary,
   // #18 — the hook-safe reflex. Network-free, and it never touches bumpRecall.
   recallReflexLexical,
+  // §9.3 (18 Aug 2026) — the layered who_he_is: pure helpers, exported for readers
+  // (gaffer_brain's judge head, the selftests) and never for writing.
+  whoLayers, layerWho, whoLayersLines, WHO_LAYERS_MAX,
   // frozen legacies (layering law) — kept readable beside their replacements
   identityCartridgeLegacy, whoCartridgeLegacy, gatherDayMaterialLegacy, NARRATOR_RE_LEGACY,
 };

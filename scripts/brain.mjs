@@ -6252,6 +6252,12 @@ async function main() {
         const inl = jr.filter((r) => r.head_cached === false).length;
         console.log(`brain: truth lane (gaffer_judge) — ${jr.length} judgement call(s) · ${Math.round(wt).toLocaleString()} weighted · cache write ${cw.toLocaleString()} read ${cr.toLocaleString()} · reuse ${cw ? (cr / cw).toFixed(2) : "n/a"} (break-even 0.278)${inl ? ` · ⚠ ${inl} ran with the head INLINED — this box cannot carry a system prompt, so the standard was sent every time and cached never` : ""}`);
       }
+      // OVERHAUL Block 4 §9.1 (18 Aug 2026) — the judge's EXTERNAL CHECK: one sonnet
+      // `--allowedTools WebSearch` call per round that cites a fact (gaffer_brain.mjs
+      // verifyCitedFacts, job `gaffer_verify`). Same ledger, same rule: a lane whose
+      // spend this command cannot see is a lane that can starve unseen.
+      const vr = ledger.filter((r) => r && r.job === "gaffer_verify");
+      if (vr.length) console.log(`brain: truth lane (gaffer_verify) — ${vr.length} external check(s) · ${Math.round(vr.reduce((a, r) => a + spendOf(r), 0)).toLocaleString()} weighted · ${vr.filter((r) => r.ok === false).length} failed`);
     }
 
     // ---- SURFACES: where every enabled job's output actually appears (finding #63) ----

@@ -588,7 +588,7 @@ export async function assemble(deps = {}) {
   //       live state today: body 8,998 · footer 117 · returned string 9,116 · `total` said
   //       9,258. A third number, matching neither the body nor the brief, wrong by 142.
   //   (b) It had NO consumer. The SessionStart path takes `out.text` only —
-  //       grep -n "const out = await assemble(" scripts/learnstate.mjs — and the suite reads the
+  //       grep -n "let out = await assemble(" scripts/learnstate.mjs (a `let` since the 18 Aug BYTE GUARD re-assembles once when the whole brief overruns 6,000 bytes) — and the suite reads the
   //       PRINTED footer: grep -n "reports its byte manifest" scripts/organism_test.mjs
   //       So the wrong estimate was computed and discarded at every SessionStart. And the
   //       printed `assembled` figure was the BODY, footer excluded, which means the one ceiling
@@ -803,7 +803,7 @@ export async function assembleSittingSystem(ctx = {}) {
   put("capsule", capsuleDigestFor(ctx.capsule, route), ctx.capsule ? `dressing-room/state/capsules/${ctx.capsule.id}.json` : null);
   // 8. review of last sitting (Block 4 fills what_changes_next)
   const rv = ctx.lastReview || null;
-  put("review_of_last", rv ? `LAST SITTING (${rv.sitting_id || "?"} · ${rv.route || ""} '${rv.concept || rv.task || ""}' · closed ${rv.closed_at || "?"} · ${rv.reason || ""}): ${rv.turns ?? "?"} turns · ${rv.units_delivered ?? "?"}/${rv.units_composed ?? "?"} units spoken · ${rv.banked ?? "?"} banked${Array.isArray(rv.what_changes_next) && rv.what_changes_next.length ? `\nWHAT CHANGES THIS TIME (its review): ${rv.what_changes_next.join(" · ")}` : "\n(no LLM review yet — Block 4)"}` : "", "dressing-room/state/sitting_reviews.jsonl");
+  put("review_of_last", rv ? `LAST SITTING (${rv.sitting_id || "?"} · ${rv.route || ""} '${rv.concept || rv.task || ""}' · closed ${rv.closed_at || "?"} · ${rv.reason || ""}): ${rv.turns ?? "?"} turns · ${rv.units_delivered ?? "?"}/${rv.units_composed ?? "?"} units spoken · ${rv.banked ?? "?"} banked${Array.isArray(rv.what_changes_next) && rv.what_changes_next.length ? `\nWHAT CHANGES THIS TIME (its review): ${rv.what_changes_next.join(" · ")}` : "\n(no LLM review yet — Block 4)"}${rv.judge && rv.judge.register_line ? `\nTHE ROOM'S WORDS LAST TIME (the judge's register line, §9.4): ${rv.judge.register_line} — say it ONCE, early, then move on; never a lecture on vocabulary.` : ""}` : "", "dressing-room/state/sitting_reviews.jsonl");
   // 9. session intents (§7.2)
   put("intents", Array.isArray(ctx.intents) && ctx.intents.length ? `HIS LAST SESSIONS' ASKS (session-intent memory):\n${ctx.intents.slice(0, 6).join("\n")}` : "", "dressing-room/state/session_intent.jsonl");
   // 10. judged standing (0 rows after Block 0's purge — a law enters only by a judgment) — rows handed in by the caller
@@ -1338,6 +1338,10 @@ function selftest() {
       assert("SITTING HEAD · with nothing on disk every absent part is EMPTY in the footer and the head still has role + kickoff + pacer_note (never a blank head)", /how_he_learns EMPTY/.test(bare.footer) && /gaffer_law EMPTY/.test(bare.footer) && bare.text.includes("You are THE SITTING BRAIN") && bare.text.includes("KICKOFF") && bare.text.includes("THE PACER RIDES"));
       const live = gafferLawText();
       assert("SITTING HEAD · LIVE THE_GAFFER.md parses into the five sections (a renamed heading here goes red the same second)", /## §0 —/.test(live) && /## §2 —/.test(live) && /## §3 —/.test(live) && /## §5 —/.test(live) && /## §9 —/.test(live) && !/## §1 —/.test(live) && live.length > 5000);
+      // §9.4 (18 Aug 2026) — the judge's ONE spoken register line rides the next head off the review row
+      const withReg = await assembleSittingSystem({ ...base, route: "REVISION", plan: null, lastReview: { sitting_id: "s1", route: "REJIRAH", concept: "tokenization", closed_at: "2026-08-18T05:00:00Z", reason: "his_word", turns: 4, units_delivered: 3, units_composed: 5, banked: 2, what_changes_next: ["open every new label first"], judge: { ok: true, out: "…", register_line: `interviewer yeh shabd sunna chahega: "grounding"` } } });
+      assert("SITTING HEAD · review_of_last carries the judge's register line (§9.4) beside what_changes_next — said once, early, never a lecture",
+        /THE ROOM'S WORDS LAST TIME/.test(withReg.text) && withReg.text.includes(`sunna chahega: "grounding"`) && /say it ONCE, early/.test(withReg.text) && withReg.text.includes("WHAT CHANGES THIS TIME (its review): open every new label first"));
     }
 
     console.log(`\ncontext_manifest selftest: ${pass} passed, ${fail} failed`);

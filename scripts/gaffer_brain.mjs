@@ -113,6 +113,13 @@ import { execFileSync } from "node:child_process";
 // nothing from here — the dependency is one-way by design, because its own
 // selftest proves it can reach neither the network nor a subprocess.
 import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isStanding as isStandingLegacy, MONOLOGUE_WORDS } from "./gaffer_state.mjs";
+// THE REGISTER CHECK (18 Aug 2026, OVERHAUL Block 4 §9.4) — a PURE module (reads
+// nothing, writes nothing, spends nothing): the scrimmage's hedge meter, the five
+// interview-facing types, and the validator that keeps the judge's `register` honest
+// against the ground it was given. It lives in its own file, not here, because its
+// hedge regex DOES test his words — a measurement he designed, never a gate — and
+// this file's own law (selftest: "not one regex here tests HIS words") stays whole.
+import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -137,6 +144,14 @@ const CAPSULE_DIR = join(STATE_DIR, "capsules");
 // standard for doubt_quality — reached the judge exactly never.
 const DOSSIER_WEIGHTS = join(STATE_DIR, "dossier_weights.json");
 const OPPONENT_SCOUT = join(ROOT, "learning-layer", "OPPONENT_SCOUT.md");
+// THE FOURTH STANDARD'S SOURCE (18 Aug 2026, OVERHAUL Block 4 §9.1) — the SOURCED
+// field bank nightshift's JOB 1c writes: real interview questions, every one carrying
+// the http(s) URL of the page it was read from (nightshift.mjs `validateFieldItems`
+// drops anything without one). The plan named `ns_probe_bank` here; the code says
+// otherwise — the probe bank is the INVENTED one (his own 11 Aug ruling: "andaaze,
+// asli sawaal nahi"), so it is deliberately NOT ground. A module constant, same
+// reason as every path above (xray's per-organ sink ratchet).
+const FIELD_PROBES = join(STATE_DIR, "brain_out", "nightshift", "field_probes.json");
 const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
 // the FROZEN Cerebras reader's path — a module constant so the analyser can fold it
 // (built inside the function it cost two unresolved sinks, and the ratchet said so)
@@ -183,6 +198,33 @@ function writeAtomic(p, obj) {
   const tmp = p + ".tmp" + process.pid;
   writeFileSync(tmp, JSON.stringify(obj, null, 2));
   renameSync(tmp, p);
+}
+
+// ---------------------------------------------------------------------------
+// §9.3 (18 Aug 2026, OVERHAUL Block 4) — WHO HE IS, read for the Watcher and the judge
+// ---------------------------------------------------------------------------
+// ⚠ A LIVE DEFECT, found while layering: both readers below asked the file for
+// `text` / `who_he_is` — keys the consolidator has NEVER written. hippocampus.mjs
+// writes `fingerprint` (+ open_threads · recent_wins · recent_cracks · voice_tuning ·
+// do_not). So the judge's head has said "nothing consolidated about him is on disk
+// yet" on every judgement since 15 Aug, and the Watcher fell through to
+// JSON.stringify(whole file). Measured 18 Aug on the live file: fingerprint present,
+// head rendered the absence line. This reader takes the consolidator's own keys, and
+// — now that the file is LAYERED (hippocampus §9.3: top-level = the newest layer,
+// `layers[]` newest first, contradictions kept) — names the earlier layers by date
+// only, so a 8-layer file does not ride whole into a cached head.
+export function whoHeIsText(w) {
+  if (!w) return "";
+  if (typeof w === "string") return w;
+  if (typeof w.text === "string" && w.text.trim()) return w.text;                 // legacy shapes, kept readable
+  if (typeof w.who_he_is === "string" && w.who_he_is.trim()) return w.who_he_is;
+  if (typeof w.fingerprint !== "string" || !w.fingerprint.trim()) return "";
+  const L = [`(as of ${w.date || "?"}) ${w.fingerprint.trim()}`];
+  if (Array.isArray(w.open_threads) && w.open_threads.length) L.push(`Open threads: ${w.open_threads.slice(0, 5).join(" · ")}`);
+  if (Array.isArray(w.recent_cracks) && w.recent_cracks.length) L.push(`Recent cracks (as data, never shame): ${w.recent_cracks.slice(0, 5).join(" · ")}`);
+  const older = (Array.isArray(w.layers) ? w.layers.slice(1) : []).filter((l) => l && l.as_of);
+  if (older.length) L.push(`Earlier layers on disk (dated, kept as written, not merged): ${older.slice(0, 4).map((l) => l.as_of).join(" · ")}${older.length > 4 ? ` +${older.length - 4} more` : ""}`);
+  return L.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -726,7 +768,7 @@ export async function judgePass(deps = {}) {
 
   const state = deps.state !== undefined ? deps.state : readJson(GSTATE, emptyState(now));
   const standing = deps.standing !== undefined ? deps.standing : (readJson(GSTANDING, null) || { instructions: [] });
-  const who = deps.who !== undefined ? deps.who : (() => { const w = readJson(WHO, null); return w ? (typeof w === "string" ? w : (w.text || w.who_he_is || JSON.stringify(w))) : ""; })();
+  const who = deps.who !== undefined ? deps.who : whoHeIsText(readJson(WHO, null));   // §9.3 (18 Aug 2026): the layered reader — see whoHeIsText
 
   const prompt = buildWatcherPrompt({ blocks: bl, who, prefix: tx.prefix, delta: delta.join("\n") });
   const call = deps.callWatcher ? await deps.callWatcher(prompt, deps) : await callWatcher(prompt, deps);
@@ -883,7 +925,12 @@ export const VERDICT_TYPES = {
   // when one exists, and the verdict comes from the judge like every other.
   voice_rep: { key: false, standard: "capsule", owner: "capture", verdicts: ["landed", "missed"], asks: "This was asked out loud, mid-conversation, and it is NOT one of his locked axes — the question is given with the item. Did the answer hold up against his own ground? If there is no ground for this concept, say so rather than grading him against your own idea of the topic." },
 };
-export const STANDARD_NAMES = ["capsule", "dossier", "cold_reader"];
+// THE FOURTH NAME (18 Aug 2026, OVERHAUL Block 4 §9.1): `external` is not a type's
+// standard — no VERDICT_TYPES row points at it — it is the GROUND RULE for the five
+// keyless types, and it rides the head so the rule about outside facts is stated once,
+// beside the three yardsticks, and cached with them. What it names as source is read
+// per concept into the BODY by externalGround(), and per item by verifyCitedFacts().
+export const STANDARD_NAMES = ["capsule", "dossier", "cold_reader", "external"];
 
 // ── THE STANDARDS, QUOTED FROM THEIR OWN SOURCE ──────────────────────────────
 // Every one of these is read from the file that OWNS it rather than restated here,
@@ -949,15 +996,54 @@ export function standardBlock(name, deps = {}) {
     const d = deps.dossier !== undefined ? deps.dossier : readJson(DOSSIER_WEIGHTS, null);
     const rounds = ((d && d.rounds) || []).map((r) => `  · ${r.label} — ${r.minutes} min, weight ${r.weight}`).join("\n");
     const flags = dossierRedFlags(deps);
+    // §9.4 (18 Aug 2026) — THE DOSSIER'S GRAMMAR rides too: the probe types the room
+    // uses, in its own templates. It is one of the register's legal sources of
+    // "expected" vocabulary, and it was on disk (dossier_weights.json probe_types)
+    // and never handed to the judge.
+    const grammar = Object.entries((d && d.probe_types) || {})
+      .map(([k, v]) => `  · ${k}${v && v.template ? ` — "${clip(String(v.template), 140)}"` : ""}`).join("\n");
     if (!rounds && !flags) {
       return `THE STANDARD FOR THIS TYPE: THE DOSSIER — AND IT COULD NOT BE READ, neither half (dressing-room/state/dossier_weights.json nor learning-layer/OPPONENT_SCOUT.md). Do NOT invent an interview bar: return no grade for these items and say the standard was unavailable.`;
     }
     return `THE STANDARD FOR THIS TYPE: THE DOSSIER — the real 4-hour onsite he is training for, distilled from candidate-reported loops (learning-layer/OPPONENT_SCOUT.md; live projection dressing-room/state/dossier_weights.json). Judge as that panel would, not as a teacher would.
 ${rounds ? `THE ROUNDS AND WHAT THEY ARE WORTH (§1 — weight is how much of the loop rides on it):\n${rounds}` : "  (the round weights could not be read — do not weight, and say so)"}
 ${flags ? `WHAT SINKS A CANDIDATE (§7 red-flags — each one already mapped onto his own risk):\n${flags}` : "  (the red-flags could not be read — do not invent them, and say so)"}
+${grammar ? `THE PROBE GRAMMAR the room uses (the club's own projection — the words a panel asks in):\n${grammar}` : "  (the probe grammar could not be read)"}
 THE BAR: mechanism named · trade-off named · limit named · and a claim about reliability backed by how it was MEASURED, never by "the prompt is good".`;
   }
+  if (name === "external") {
+    // §9.1 — EXTERNAL GROUND. Two sources, both named by file, and the rule that
+    // matters more than either: it is GROUND for judging HIS answer, never a licence
+    // for the judge's own reading of the field. A source that is unreadable says so.
+    const fp = deps.fieldProbes !== undefined ? deps.fieldProbes : readJson(FIELD_PROBES, null);
+    const n = fp && fp.concepts ? Object.values(fp.concepts).reduce((a, c) => a + ((c && c.questions) || []).length, 0) : 0;
+    const bank = n
+      ? `(a) THE SOURCED FIELD BANK — dressing-room/state/brain_out/nightshift/field_probes.json (${n} question(s) the room has ACTUALLY asked, each with the URL it was read from; written nightly by nightshift's field-probes lane, never invented). The questions for this round's concepts ride in the body under "EXTERNAL GROUND". They tell you what a real panel probes and in which words; they are questions, not answers.`
+      : `(a) THE SOURCED FIELD BANK — dressing-room/state/brain_out/nightshift/field_probes.json — COULD NOT BE READ or holds nothing yet. Do NOT stand in for it from memory: judge on his ground and the other standards, and say the field bank was unavailable if it would have mattered.`;
+    return `EXTERNAL GROUND (for the keyless types — hidden_test · adversarial · scrimmage · voice_rep · doubt_quality — beside their declared standard, never instead of it):
+${bank}
+(b) THE EXTERNAL CHECK — when a hidden_test or adversarial answer CITES a checkable fact (a number, a date, a named system's behaviour, a paper, a limit), ONE web-search verification is run BEFORE you read the round and its result is quoted under that item as "EXTERNAL CHECK", with its sources. Judge HIS answer against that quoted result — a claim the check refutes is a miss on the mechanism the source names, and you say which source. Where no check was run or the check came back "unverifiable", the fact is NEITHER confirmed nor refuted: say so, and do not fill the gap from your own knowledge.
+THE RULE: external ground is something to judge AGAINST, never a reason to grade what you yourself believe about the topic. If neither his ground nor the external ground settles an item, return nothing for it (LAW 5).`;
+  }
   return "";
+}
+
+// externalGround — §9.1, THE BODY HALF: the sourced field questions for ONE concept,
+// each with the first URL it was read from. Read per concept into the round body
+// (like capsuleGround), never into the head — the head is byte-identical by contract
+// and this changes the night a concept is re-fetched. Empty when the bank holds
+// nothing for the concept; the head's standard block already says what silence means.
+export const EXTERNAL_MAX_QS = 8;
+export function externalGround(concept, deps = {}) {
+  if (!concept) return "";
+  const fp = deps.fieldProbes !== undefined ? deps.fieldProbes : readJson(FIELD_PROBES, null);
+  const entry = fp && fp.concepts ? fp.concepts[String(concept).toLowerCase()] : null;
+  const qs = ((entry && entry.questions) || [])
+    .filter((q) => q && typeof q.q === "string" && q.q.trim())
+    .slice(0, EXTERNAL_MAX_QS)
+    .map((q) => `  · ${clip(q.q.trim(), 240)}${Array.isArray(q.sources) && q.sources[0] ? `  [${clip(q.sources[0], 160)}]` : ""}`);
+  if (!qs.length) return "";
+  return `\nEXTERNAL GROUND FOR "${concept}" — questions a real panel has ASKED about it (sourced, fetched ${String(entry.fetched || "?").slice(0, 10)}; the words are the room's, the answers are not here):\n${qs.join("\n")}`;
 }
 export const isVerdict = (type, v) => !!VERDICT_TYPES[type] && VERDICT_TYPES[type].verdicts.includes(String(v || "").trim().toLowerCase());
 
@@ -1207,6 +1293,10 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     latency_ms: Number.isInteger(deps.latencyMs) && deps.latencyMs >= 0 ? deps.latencyMs : null,
     note: deps.note ? clip(String(deps.note), 300) : null,
     spoken: clip(said, 4000),
+    // §9.4 — HEDGES ARE COUNTED HERE, at the moment of capture, by code (register.mjs's
+    // meter — the scrimmage's own). Every banked answer, every surface, no model. The
+    // judge is later told this number exists and is not its to produce.
+    hedges: countHedges(said),
   };
   if (!deps.dry) { try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); appendFileSync(GRADE_QUEUE, JSON.stringify(row) + "\n"); } catch { } }
   return { ok: true, row, captured: row.id, type, has_key: !!mat.key };
@@ -1262,8 +1352,7 @@ export function outstandingGrades(rows) {
 // waste — it is the invariance. A head that carried "the types in THIS round" would
 // change shape between rounds and never be read twice.
 export function judgeCartridge(deps = {}) {
-  const who = deps.who !== undefined ? deps.who
-    : (() => { const w = readJson(WHO, null); return w ? (typeof w === "string" ? w : (w.text || w.who_he_is || "")) : ""; })();
+  const who = deps.who !== undefined ? deps.who : whoHeIsText(readJson(WHO, null));   // §9.3 (18 Aug 2026): the layered reader — see whoHeIsText
   const types = Object.entries(VERDICT_TYPES).map(([t, d]) =>
     `  ${t}\n      asks: ${d.asks}\n      legal verdicts: ${d.verdicts.join(" | ")}\n      standard: ${d.standard}${d.key ? " · an answer key HE wrote rides with each item and is authoritative" : " · no answer key exists — judge against the standard and his ground"}`).join("\n");
   const standards = STANDARD_NAMES.map((s) => standardBlock(s, deps)).filter(Boolean).join("\n\n");
@@ -1286,9 +1375,10 @@ ${standards}
 WHO YOU ARE JUDGING${who ? `:\n${clip(who, 900)}` : " — nothing consolidated about him is on disk yet, so judge on the material alone and do not infer a person."}
 
 THE OUTPUT CONTRACT. 7. IF HIS OWN ANSWER KEY LOOKS FACTUALLY WRONG, SAY SO — in "key_doubt", on that item, and nowhere else. This is NOT a verdict on his recall: if he reproduced what the key says, the recall HELD and you grade it that way. It is a doubt about the page itself. He wrote those pages and only he edits them, so your doubt becomes a question put to him, never a correction applied behind him. Use it rarely and only for something you believe is factually false — not for wording you would have chosen differently.
+8. THE REGISTER — on the interview-facing types ONLY (${REGISTER_TYPES.join(" · ")}), return "register": {"used": [...], "expected": [...]}. "expected" = the industry terms a real panel would want to hear in THIS answer, taken ONLY from the ground you were given — his own interview lines, the DOSSIER's red-flags and probe grammar, the sourced field questions — never from your own vocabulary: code drops any term that is not in that ground. "used" = which of those, and which other key terms, he actually said. Do NOT return "missing" or "hedges": both are computed by code from his transcript. The register never moves the verdict; it is a second, separate reading of the same answer.
 
 Return STRICT JSON, no fences, no prose outside it:
-{"grades":[{"id":"<the item id, copied EXACTLY>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>","key_doubt":"<omit unless his own key looks factually wrong>"}]}
+{"grades":[{"id":"<the item id, copied EXACTLY>","verdict":"<one legal verdict for THAT item's type>","missing":["<what he did not say that his own material has>"],"why":"<one sentence, plain, addressed to him>","key_doubt":"<omit unless his own key looks factually wrong>","register":{"used":["<term he said>"],"expected":["<term the panel wants, from the ground>"]}}]}
 One entry per item at most. The id is how each grade is matched back to an item — grades are matched BY ID and never by position, so a copied-wrong id is a dropped grade.`;
 }
 
@@ -1299,8 +1389,10 @@ One entry per item at most. The id is how each grade is matched back to an item 
 // the caching but never the standard.
 export function buildJudgePrompt(items, deps = {}) {
   const head = deps.inlineHead ? judgeCartridge(deps) + "\n\n" : "";
+  // §9.1 — HIS ground first, the room's ground after, per concept. Both are BODY:
+  // his capsule changes when he locks, the field bank changes when it refreshes.
   const grounds = [...new Set(items.map((i) => i.concept).filter(Boolean))]
-    .map((c) => capsuleGround(c, deps)).filter(Boolean).join("\n");
+    .map((c) => [capsuleGround(c, deps), externalGround(c, deps)].filter(Boolean).join("\n")).filter(Boolean).join("\n");
   return `${head}THE ROUND HE JUST CLOSED. His answers follow; grade them against the laws and standards you were given.
 ${grounds}
 
@@ -1310,11 +1402,125 @@ ${items.map((it, i) => `
 ${it.asked ? `WHAT HE WAS ASKED / THE THING UNDER TEST:\n${it.asked}` : ""}
 ${it.extra ? `${it.extra}` : ""}
 ${it.key ? `ANSWER KEY (his own words, authoritative):\n${it.key}` : "(NO ANSWER KEY EXISTS FOR THIS ONE — judge against the declared standard and his ground above.)"}
-
+${renderExternalCheck(it.external_check)}
 WHAT HE SAID OUT LOUD, COLD:
 ${it.spoken}`).join("\n")}
 
 Return the JSON now — one entry per item, ids copied exactly, and nothing for an item you cannot judge.`;
+}
+
+// ---------------------------------------------------------------------------
+// §9.1 · THE EXTERNAL CHECK — one web-search verification per round, BEFORE the judge
+// ---------------------------------------------------------------------------
+// WHAT IT IS. A hidden_test or adversarial answer sometimes leans on a fact from the
+// world — "GPT-4's window is 8k", "top-p was introduced in 2019", "the paper found
+// 40%". His capsule cannot ground those and the DOSSIER does not try to; until today
+// the judge either graded them from its own memory (LAW 2 forbids exactly that) or
+// declined. So: ONE sonnet call with `--allowedTools WebSearch` — the lane proven on
+// 11 Aug by nightshift's field probes — reads the eligible items, decides itself
+// whether anything checkable was said (NO regex over his words: law 2 of this file),
+// searches, and returns each claim with a verdict and the URLs it read. The result is
+// quoted under the item as ground; the judge still judges HIM against it.
+//
+// THE THREE LIMITS, each deliberate:
+//   · ONE call per round, whatever the round holds — the same invariance argument as
+//     the head. Rounds are small (≤ a dozen items) and the checkable claims in one are
+//     fewer still.
+//   · ONLY hidden_test and adversarial (VERIFY_TYPES): the two open-ended, keyless
+//     types where a cited fact can decide the verdict. A voice_rep is judged against
+//     his own capsule; a scrimmage under time pressure is judged on the mechanism.
+//   · FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT: a dead search lane means the round
+//     is judged as it was yesterday — without external ground — and the row SAYS so
+//     (`external_check: null`, `external_check_note`). It never blocks the round and
+//     it never invents a "true".
+// THE VALIDATOR IS THE PRODUCT (nightshift's `validateFieldItems` law): a claim
+// marked true/false with no http(s) source is DROPPED — a sourceless verdict is the
+// model's prior wearing the word "checked". `unverifiable` needs no source, and is
+// quoted as exactly that.
+// MEASURED LIVE, 18 Aug 2026 (one fixture item, the planted "GPT-4 = 2M tokens"):
+//   34.6 s · REFUTED with two real sources · ledger: cc 46,856 · cr 90,347 · out 671 ·
+//   137,880 total ≈ 71k weighted — about TWO judge calls. The search loop is the cost,
+//   which is why this runs once per round and only when the round holds a checked type.
+export const VERIFY_TYPES = ["hidden_test", "adversarial"];
+export const VERIFY_JOB = "gaffer_verify";
+export const VERIFY_MAX_CLAIMS = 3;
+const isHttpUrl = (s) => typeof s === "string" && /^https?:\/\/\S+$/i.test(s.trim());
+
+export function buildVerifyPrompt(items) {
+  return `You are a fact-checker for ONE learner's spoken interview-practice answers. He answers out loud, in Hinglish, from memory. For EACH item below, decide whether his answer CITES a checkable fact about the world — a number, a date, a limit, a named model's or paper's behaviour, a benchmark result. Vocabulary, opinion, mechanism-in-his-own-words and hedged guesses are NOT facts to check.
+If an item cites nothing checkable, return it with an empty "claims" array — do NOT search for it.
+For each checkable claim (at most ${VERIFY_MAX_CLAIMS} per item), SEARCH THE WEB and return the claim in your words, a verdict, one sentence of evidence, and the URL(s) you actually read. A verdict of "true" or "false" MUST carry at least one URL; if you could not find a source, the verdict is "unverifiable" — never guess from memory.
+
+Return STRICT JSON only, no fences, no prose outside it:
+{"items":[{"id":"<the item id, copied EXACTLY>","claims":[{"claim":"<what he asserted, one line>","verdict":"true|false|unverifiable","evidence":"<one sentence>","sources":["<https url>"]}]}]}
+
+=== THE ITEMS ===
+${items.map((it, i) => `--- ITEM ${i + 1} · id ${it.id} · type ${it.type}${it.concept ? ` · concept "${it.concept}"` : ""}
+${it.asked ? `WHAT HE WAS ASKED:\n${clip(it.asked, 800)}` : ""}
+WHAT HE SAID:\n${clip(it.spoken, 2500)}`).join("\n\n")}
+
+Return the JSON now.`;
+}
+
+// PURE AND TOTAL — any shape in, a map of id → validated claims out (ids not in the
+// round are dropped; claims with an illegal verdict are dropped; a true/false with no
+// http source is dropped and COUNTED, so the row can say how many the validator ate).
+export function parseVerify(text, items) {
+  let parsed = null;
+  try { const t = String(text || ""); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
+  const known = new Set((items || []).map((i) => i.id));
+  const out = {}, droppedById = {}; let dropped = 0;
+  for (const row of (parsed && Array.isArray(parsed.items) ? parsed.items : [])) {
+    if (!row || !known.has(String(row.id))) continue;
+    const id = String(row.id);
+    const claims = [];
+    for (const c of (Array.isArray(row.claims) ? row.claims : []).slice(0, VERIFY_MAX_CLAIMS)) {
+      if (!c || typeof c.claim !== "string" || !c.claim.trim()) continue;
+      const v = String(c.verdict || "").trim().toLowerCase();
+      const sources = (Array.isArray(c.sources) ? c.sources : []).filter(isHttpUrl).map((s) => clip(s.trim(), 200)).slice(0, 3);
+      if (!["true", "false", "unverifiable"].includes(v) || (v !== "unverifiable" && !sources.length)) {
+        dropped++; droppedById[id] = (droppedById[id] || 0) + 1; continue;
+      }
+      claims.push({ claim: clip(c.claim.trim(), 240), verdict: v, evidence: clip(String(c.evidence || "").trim(), 300), sources });
+    }
+    out[id] = claims;
+  }
+  return { ok: !!parsed, checks: out, dropped, droppedById };
+}
+
+export function renderExternalCheck(check) {
+  if (!Array.isArray(check) || !check.length) return "";
+  return `EXTERNAL CHECK of what he cited (web-searched before this round was judged — ground, not your opinion):\n${check.map((c) => `  · "${c.claim}" → ${c.verdict.toUpperCase()}${c.evidence ? ` — ${c.evidence}` : ""}${c.sources.length ? ` [${c.sources.join(" · ")}]` : " [no source — neither confirmed nor refuted]"}`).join("\n")}\n`;
+}
+
+export async function verifyCitedFacts(items, deps = {}) {
+  const eligible = (items || []).filter((i) => i && VERIFY_TYPES.includes(i.type));
+  if (!eligible.length) return { ran: false, why: "no hidden_test/adversarial item in the round", checks: {}, calls: 0 };
+  const gen = deps.verifyGenerate || (async (p) => {
+    const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
+    // 180 s: a search call is slower than a judge call and nothing waits on it but the
+    // round close, which is already the slow moment by design.
+    const r = await claudeGen(p, "sonnet", 180000, ["--allowedTools", "WebSearch"]);
+    try {
+      appendFileSync(BRAIN_LEDGER, JSON.stringify({
+        ts: new Date().toISOString(), job: VERIFY_JOB, engine: "claude", model: "sonnet",
+        input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
+        cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
+        total_tokens: r.total_tokens || 0,
+        tokens_estimated: r.tokens_estimated !== false && !(r.input_tokens || r.output_tokens),
+        duration_ms: r.duration_ms || 0, ok: !!r.ok, error: r.error || null, limit_hit: !!r.limit_hit,
+        items: eligible.length, ...ledgerForensics(r),
+      }) + "\n");
+    } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
+    return r;
+  });
+  const r = await gen(buildVerifyPrompt(eligible));
+  if (!r || !r.ok) return { ran: true, ok: false, why: `search lane did not answer (${(r && r.error) || "no reply"})`, checks: {}, calls: 1 };
+  const p = parseVerify(r.text, eligible);
+  if (!p.ok) return { ran: true, ok: false, why: "search lane answered in a shape this organ will not act on", checks: {}, calls: 1 };
+  return { ran: true, ok: true, checks: p.checks, dropped: p.dropped, droppedById: p.droppedById, calls: 1,
+    claims: Object.values(p.checks).reduce((a, c) => a + c.length, 0),
+    refuted: Object.values(p.checks).reduce((a, c) => a + c.filter((x) => x.verdict === "false").length, 0) };
 }
 
 // FROZEN VERBATIM (layering law) — the single-prompt judge, 15 Aug to 16 Aug 2026.
@@ -1471,6 +1677,12 @@ export function ownerCommand(s) {
     if (s.axis) argv.push("--axis", s.axis);
     if (Number.isInteger(s.latency_ms) && s.latency_ms >= 0) argv.push("--latency", String(s.latency_ms));
     if (s.note) argv.push("--note", s.note);
+    // §9.4 — the register rides the rep through the OWNER's own door (capture.mjs
+    // `rep --register`), because reps_log is where nemesis reads. An axis-free miss
+    // kind: it never touches `correct`; it is a second reading beside it.
+    if (s.register && typeof s.register === "object") {
+      argv.push("--register", JSON.stringify({ used: s.register.used || [], expected: s.register.expected || [], missing: s.register.missing || [], hedges: Number.isInteger(s.register.hedges) ? s.register.hedges : 0 }));
+    }
     return { organ: "capture.mjs", argv };
   }
   // doubt_quality has no owner organ today — the verdict lives in this organ's own
@@ -1481,8 +1693,17 @@ export function ownerCommand(s) {
 export async function gradeJudge(deps = {}) {
   const now = deps.now || new Date();
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
-  const items = outstandingGrades(rows);
-  if (!items.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
+  const queued = outstandingGrades(rows);
+  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
+
+  // §9.1 — THE EXTERNAL CHECK runs FIRST, so its result is ground the judge reads,
+  // never a second opinion it hears afterwards. One search call per round at most;
+  // none at all when the round holds no hidden_test/adversarial item. Its outcome
+  // rides each item as `external_check` (null = not run / lane down / nothing cited).
+  const ext = deps.verify !== undefined
+    ? await deps.verify(queued, deps)
+    : (deps.dry && !deps.verifyGenerate ? { ran: false, why: "DRY RUN — the search lane was not called", checks: {}, calls: 0 } : await verifyCitedFacts(queued, deps));
+  const items = queued.map((it) => ({ ...it, external_check: (ext && ext.checks && ext.checks[it.id] && ext.checks[it.id].length) ? ext.checks[it.id] : null }));
 
   // THE SPLIT, decided before the prompt is built (BLOCK 1). If the head cannot
   // ride argv on this box — over the 26,000-char cap, or a full-CLI lane where the
@@ -1538,6 +1759,10 @@ export async function gradeJudge(deps = {}) {
   // silent, and completely wrong. An item with no grade, or with a verdict outside
   // its type's legal set, stays OUTSTANDING and is judged again; it is never coerced.
   const settled = [], missed = [];
+  // §9.4 — THE CORPUS the judge was given is the only legal source of "expected":
+  // head + body (the head rides again inside the body when inlined; a substring
+  // test does not mind the repeat).
+  const corpus = head + "\n" + prompt;
   for (const it of items) {
     const g = grades.find((x) => x && String(x.id) === it.id);
     const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
@@ -1552,6 +1777,23 @@ export async function gradeJudge(deps = {}) {
       standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
       missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
       why: clip(g.why, 300), engine: "opus", pass: 1,
+      // §9.1 — WHAT GROUND THE VERDICT STOOD ON is part of the record: the checked
+      // claims with their verdicts and sources, or null with the reason (not run,
+      // lane down, nothing cited). Six months from now this is how a reader tells
+      // "the judge knew" from "the judge searched".
+      external_check: it.external_check || null,
+      external_check_note: it.external_check ? null
+        : !VERIFY_TYPES.includes(it.type) ? "not a checked type"
+          : (ext && ext.why) ? ext.why
+            : (ext && ext.droppedById && ext.droppedById[it.id]) ? `${ext.droppedById[it.id]} sourceless verdict(s) dropped by the validator — neither confirmed nor refuted`
+              : (ext && ext.ran ? "nothing checkable cited" : "not run"),
+      // §9.4 — THE REGISTER, on the interview-facing types only. The judge proposes
+      // used/expected; register.mjs holds them against his transcript and the corpus
+      // (invented terms dropped and NAMED in `dropped`), recomputes `missing`, and the
+      // hedge count is the capture row's own (code, at bank time) — never the model's.
+      register: REGISTER_TYPES.includes(it.type)
+        ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(it.spoken) }
+        : null,
     });
   }
 
@@ -1639,7 +1881,14 @@ export async function gradeJudge(deps = {}) {
     // resolves it the round can be judged again — and until then nothing about it
     // has entered his record.
     diamonds, key_doubts: keyDoubts,
-    outstanding: items.length - dispatched.length, calls: 1 };
+    // §9.1 — the external check's own receipt: whether it ran, how many claims it
+    // returned, how many it refuted, how many the validator dropped as sourceless.
+    external: { ran: !!(ext && ext.ran), ok: ext ? ext.ok !== false : false, why: (ext && ext.why) || null, claims: (ext && ext.claims) || 0, refuted: (ext && ext.refuted) || 0, dropped: (ext && ext.dropped) || 0, calls: (ext && ext.calls) || 0 },
+    // §9.4 — THE ONE SPOKEN LINE for the round (null when nothing was missing): the
+    // two terms the room most wanted and did not hear, and the hedge count. Read back
+    // by whichever mouth closed the round; never a card, never a second line.
+    register_line: registerLine(dispatched.map((s) => s.register).filter(Boolean)),
+    outstanding: items.length - dispatched.length, calls: 1 + ((ext && ext.calls) || 0) };
 }
 
 // ---------------------------------------------------------------------------
@@ -1827,11 +2076,18 @@ async function main() {
     if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
     if (!r.ok) { console.log(r.say); process.exit(1); }
     console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    // §9.1 — the external check's receipt is said out loud with the round: ran or
+    // not, and why; what it refuted is printed under the item it belongs to.
+    if (r.external) console.log(`  external check: ${r.external.ran ? (r.external.ok ? `${r.external.claims} claim(s) checked · ${r.external.refuted} refuted${r.external.dropped ? ` · ${r.external.dropped} sourceless verdict(s) dropped by the validator` : ""}` : `LANE DOWN — ${r.external.why}; the round was judged without external ground and every row says so`) : `not run — ${r.external.why}`}`);
     for (const s of r.dispatched) {
       console.log(`  ${String(s.type).padEnd(13)} ${s.verdict.toUpperCase().padEnd(16)} (gut ${s.gut})  ${s.why}`);
       if (s.owner_note) console.log(`      ${s.owner_note}`);
       if (s.missing.length) console.log(`      missed: ${s.missing.join(" · ")}`);
+      for (const c of (s.external_check || [])) console.log(`      ${c.verdict === "false" ? "✗ REFUTED" : c.verdict === "true" ? "✓ confirmed" : "? unverifiable"}: "${c.claim}"${c.sources.length ? ` — ${c.sources[0]}` : ""}`);
+      if (s.register) console.log(`      register: said ${s.register.used.length ? s.register.used.map((t) => `"${t}"`).join(" ") : "—"} · room wanted ${s.register.expected.length ? s.register.expected.map((t) => `"${t}"`).join(" ") : "—"}${s.register.missing.length ? ` · MISSING ${s.register.missing.map((t) => `"${t}"`).join(" ")}` : ""} · hedges ${s.register.hedges}${s.register.dropped.length ? ` · ${s.register.dropped.length} term(s) the judge offered were dropped as ungrounded` : ""}`);
     }
+    // §9.4 — THE ONE SPOKEN LINE, last, so the mouth that reads this back ends on it.
+    if (r.register_line) console.log(`  🗣 ${r.register_line}`);
     for (const m of r.refused) console.log(`  ${m.ref}  NOT RECORDED — the owner refused it: ${m.error}`);
     if (r.missed.length) console.log(`  ${r.missed.join(", ")} — no legal verdict came back for these; they stay in the queue and are judged again (never coerced).`);
     // THE 💎 IS THE POINT, SO IT IS SAID OUT LOUD. A disagreement that only exists
@@ -2118,6 +2374,13 @@ function selftest2(stub, S) {
           // reason. It validates a slot name the MACHINE assigns and cannot test his
           // phrasing, which is what the ruling is about.
           "^[a-i]$",
+          // OVERHAUL Block 4 §9.1, 18 Aug 2026 — the http(s) URL shape. It validates
+          // the SOURCES the search lane returns in its own JSON (nightshift.mjs carries
+          // the identical literal for the identical reason: a verdict with no source is
+          // dropped). A URL is the machine's citation, never his phrasing. NB: the fact
+          // to CHECK is chosen by the search model reading the item, not by any regex
+          // over his words — that is why there is no "digit/date" literal here at all.
+          "^https?:\\/\\/\\S+$",
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -2310,6 +2573,165 @@ function selftest2(stub, S) {
               && /THE ROUNDS AND WHAT THEY ARE WORTH/.test(h)
               && /COLD-READER STANDARD/.test(h);
           })());
+
+        // ── §9.1 · EXTERNAL GROUND (18 Aug 2026, OVERHAUL Block 4) ───────────
+        // The fourth standard rides the head; the sourced field bank rides the body
+        // per concept; and a cited fact is web-checked BEFORE the judge reads the
+        // round. Everything below is hermetic: the bank, the search lane and the
+        // judge are all injected. The plan named the probe bank as the source — the
+        // code says the sourced bank is field_probes.json (nightshift JOB 1c) and the
+        // probe bank is invented by his own 11 Aug ruling; asserted as such.
+        {
+          const FP = { concepts: { context: { fetched: "2026-08-11T22:29:28.089Z", why: "locked", questions: [
+            { q: "How does lost-in-the-middle change where you place retrieved chunks?", sources: ["https://example.org/ai-engineer-interview-guide"] },
+            { q: "What actually happens when the context window overflows?", sources: ["https://example.org/qa-bank"] },
+          ] } } };
+          assert("§9.1 · `external` is the FOURTH standard name — and no verdict TYPE points at it: it is the ground rule for the keyless five, not a new yardstick",
+            STANDARD_NAMES.length === 4 && STANDARD_NAMES.includes("external") && Object.values(VERDICT_TYPES).every((t) => t.standard !== "external"));
+          assert("§9.1 · the external standard NAMES its source by file and by lane, and counts what the bank holds — never a bare 'use external knowledge'",
+            (() => { const b = standardBlock("external", { fieldProbes: FP }); return /field_probes\.json/.test(b) && /2 question\(s\)/.test(b) && /THE EXTERNAL CHECK/.test(b) && /never a reason to grade what you yourself believe/.test(b); })());
+          assert("§9.1 · an unreadable bank SAYS SO and forbids standing in for it from memory (an empty external standard reads like a licence)",
+            /COULD NOT BE READ/.test(standardBlock("external", { fieldProbes: null })) && /Do NOT stand in/.test(standardBlock("external", { fieldProbes: null })));
+          assert("§9.1 · the sourced questions for a concept ride the BODY with their URL, and a concept the bank has nothing on renders NOTHING (the head already says what silence means)",
+            /lost-in-the-middle/.test(externalGround("context", { fieldProbes: FP })) && /https:\/\/example\.org\/ai-engineer-interview-guide/.test(externalGround("context", { fieldProbes: FP }))
+            && externalGround("nope", { fieldProbes: FP }) === "" && externalGround("context", { fieldProbes: null }) === "");
+          assert("§9.1 · the head carries the rule, the body carries the questions — never the other way round (the head is byte-identical by contract)",
+            (() => { const h = judgeCartridge({ who: "", fieldProbes: FP }); const b = buildJudgePrompt([{ id: "x:1", type: "voice_rep", ref: "context", concept: "context", gut: "shaky", spoken: "kuch bola", asked: "q?" }], { fieldProbes: FP, readJson: () => null });
+              return /EXTERNAL GROUND \(for the keyless types/.test(h) && !/lost-in-the-middle/.test(h) && /EXTERNAL GROUND FOR "context"/.test(b) && /lost-in-the-middle/.test(b); })());
+          // (the source-level halves of §9.1 — "field_probes, never probe_bank_" and the
+          // TOOL GRANT argv — sit in the BILLING + LAYERING block below, beside the one
+          // existing read of this file's own source: a second read would be a second
+          // unresolved sink and xray's per-organ ratchet is a real budget.)
+
+          // THE PLANTED FALSE FACT — the acceptance the plan asks for. His answer leans
+          // on a number that is wrong; the (fixture) search lane refutes it with a
+          // source; the judge is shown the refutation as GROUND, under the item, before
+          // it grades; and the record carries the check beside the verdict.
+          const PLANT = { v: 2, kind: "capture", id: "ext:1", ts: T0.toISOString(), day: "2026-08-18", type: "hidden_test", ref: "0", concept: "context", label: "hidden test #0", gut: "knew",
+            asked: "run your detector on a 40-message thread — why did it miss the fact from message 3?", key: null, standard: "dossier",
+            spoken: "kyunki GPT-4 ka context window 2 million tokens hai to lost-in-the-middle ka issue hi nahi aata, detector ne bas retrieval galat kiya" };
+          const OTHER = { ...PLANT, id: "ext:2", type: "voice_rep", ref: "context", label: "voice rep", spoken: "context window matlab ek baar mein kitne tokens" };
+          let verifyPrompt = null, judgePrompt = null;
+          const verifyFx = async (p) => { verifyPrompt = p; return { ok: true, text: JSON.stringify({ items: [
+            { id: "ext:1", claims: [{ claim: "GPT-4's context window is 2 million tokens", verdict: "false", evidence: "GPT-4 shipped at 8k/32k and GPT-4 Turbo at 128k; no GPT-4 model has a 2M window", sources: ["https://platform.openai.com/docs/models"] }] },
+            { id: "ext:2", claims: [] },
+            { id: "not-in-round", claims: [{ claim: "x", verdict: "true", sources: ["https://a.b"] }] },
+          ] }) }; };
+          const judgeFx = async (p) => { judgePrompt = p; return { ok: true, text: JSON.stringify({ grades: [
+            { id: "ext:1", verdict: "failed", missing: ["the real window size, and that lost-in-the-middle is about POSITION not size"], why: "the number you leaned on is refuted by the check — see the source" },
+            { id: "ext:2", verdict: "landed", missing: [], why: "theek" }] }) }; };
+          const pl = await gradeJudge({ dry: true, rows: [PLANT, OTHER], verifyGenerate: verifyFx, generate: judgeFx, dispatch: () => ({ ok: true }), now: T0, fieldProbes: FP, readJson: () => null });
+          assert("§9.1 · THE PLANTED FALSE FACT — the search lane is asked ONLY about the checked types (the voice_rep is not in the verify prompt), and told to return nothing rather than guess",
+            !!verifyPrompt && /ext:1/.test(verifyPrompt) && !/ext:2/.test(verifyPrompt) && /never guess from memory/.test(verifyPrompt) && /SEARCH THE WEB/.test(verifyPrompt));
+          assert("§9.1 · …the refutation reaches the JUDGE as ground UNDER THAT ITEM, verdict and source quoted, before it grades",
+            !!judgePrompt && /EXTERNAL CHECK of what he cited/.test(judgePrompt) && /→ FALSE/.test(judgePrompt) && /platform\.openai\.com/.test(judgePrompt)
+            && judgePrompt.indexOf("EXTERNAL CHECK of what he cited") < judgePrompt.indexOf("kyunki GPT-4 ka context window") && judgePrompt.indexOf("EXTERNAL CHECK of what he cited") > judgePrompt.indexOf("id ext:1"));
+          assert("§9.1 · …and the planted fact is REFUTED on the record: the verdict is failed, the check rides the settled row with its source, and the round's receipt counts one refutation",
+            pl.ok && pl.graded === 2 && pl.settled.find((s) => s.of === "ext:1").verdict === "failed"
+            && pl.settled.find((s) => s.of === "ext:1").external_check[0].verdict === "false"
+            && /platform\.openai\.com/.test(pl.settled.find((s) => s.of === "ext:1").external_check[0].sources[0])
+            && pl.external.ran && pl.external.claims === 1 && pl.external.refuted === 1 && pl.calls === 2);
+          assert("§9.1 · an item the check had nothing on says so on its row ('nothing checkable cited' / 'not a checked type') — null is never silent",
+            pl.settled.find((s) => s.of === "ext:2").external_check === null && pl.settled.find((s) => s.of === "ext:2").external_check_note === "not a checked type");
+          assert("§9.1 · an id the round does not contain is IGNORED — the search lane cannot plant a claim on an item nobody captured",
+            !("not-in-round" in (parseVerify(JSON.stringify({ items: [{ id: "not-in-round", claims: [{ claim: "x", verdict: "true", sources: ["https://a.b"] }] }] }), [PLANT]).checks)));
+          // THE VALIDATOR IS THE PRODUCT: a true/false with no http source is the model's
+          // prior wearing the word "checked" — dropped, counted, and named on the row.
+          const sourceless = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+            verifyGenerate: async () => ({ ok: true, text: JSON.stringify({ items: [{ id: "ext:1", claims: [{ claim: "2M window", verdict: "false", evidence: "trust me", sources: [] }, { claim: "some paper", verdict: "maybe", sources: ["https://x.y"] }, { claim: "unknown thing", verdict: "unverifiable", evidence: "no page found", sources: [] }] }] }) }),
+            generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
+          assert("§9.1 · a SOURCELESS true/false and an illegal verdict are DROPPED and counted; 'unverifiable' needs no source and is kept as exactly that",
+            sourceless.external.dropped === 2 && sourceless.settled[0].external_check.length === 1 && sourceless.settled[0].external_check[0].verdict === "unverifiable"
+            && /no source — neither confirmed nor refuted/.test(renderExternalCheck(sourceless.settled[0].external_check)));
+          const allDropped = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+            verifyGenerate: async () => ({ ok: true, text: JSON.stringify({ items: [{ id: "ext:1", claims: [{ claim: "2M window", verdict: "false", sources: [] }] }] }) }),
+            generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
+          assert("§9.1 · …and when the validator ate every claim the row says THAT, not 'nothing cited'",
+            allDropped.settled[0].external_check === null && /sourceless verdict\(s\) dropped/.test(allDropped.settled[0].external_check_note));
+          // FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT.
+          const down = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+            verifyGenerate: async () => ({ ok: false, error: "plan wall" }),
+            generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
+          assert("§9.1 · a DEAD search lane never blocks the round — it is judged without external ground and every row SAYS so",
+            down.ok && down.graded === 1 && down.external.ran && down.external.ok === false && /did not answer/.test(down.settled[0].external_check_note));
+          let verifyCalls = 0;
+          const noneEligible = await gradeJudge({ dry: true, rows: [OTHER], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+            verifyGenerate: async () => { verifyCalls++; return { ok: true, text: "{}" }; },
+            generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:2", verdict: "landed", missing: [], why: "x" }] }) }) });
+          assert("§9.1 · a round with no hidden_test/adversarial item makes NO search call at all — no spend, and the receipt says why",
+            verifyCalls === 0 && noneEligible.external.ran === false && /no hidden_test\/adversarial/.test(noneEligible.external.why) && noneEligible.calls === 1);
+          assert("§9.1 · the search lane is metered on the shared ledger under its own job name and covers exactly the two open-ended keyless types",
+            VERIFY_JOB === "gaffer_verify" && VERIFY_TYPES.join(",") === "hidden_test,adversarial");
+        }
+
+        // ── §9.4 · THE REGISTER CHECK (18 Aug 2026, OVERHAUL Block 4 — his ask:
+        // "my vocab checked against real-world used vocab") ────────────────────
+        // hedges are CODE's, at capture; expected/used are the JUDGE's but held by
+        // register.mjs against the ground it was given and his transcript; missing is
+        // recomputed; the rep carries it through capture's own door; ONE line closes
+        // the round. All hermetic; the DoD fixture (3 hedges + 1 missing term) is
+        // driven end to end through gradeJudge here, not only in register.mjs.
+        {
+          const H = judgeCartridge({ who: "" });
+          assert("§9.4 · the head carries the register contract for the five interview-facing types — expected ONLY from the ground, and missing/hedges explicitly NOT the model's to return",
+            /8\. THE REGISTER/.test(H) && REGISTER_TYPES.every((t) => H.includes(t)) && /Do NOT return "missing" or "hedges"/.test(H) && /"register":\{"used"/.test(H));
+          assert("§9.4 · the DOSSIER's probe GRAMMAR now reaches the judge (one of the register's legal sources — it was on disk and never handed over)",
+            /THE PROBE GRAMMAR/.test(standardBlock("dossier", { dossier: { rounds: [{ label: "x", minutes: 1, weight: 1 }], probe_types: { defend: { template: "You said {claim}. I think that's wrong." } } }, scoutMd: "" }))
+            && /defend — "You said \{claim\}/.test(standardBlock("dossier", { dossier: { rounds: [{ label: "x", minutes: 1, weight: 1 }], probe_types: { defend: { template: "You said {claim}. I think that's wrong." } } }, scoutMd: "" })));
+          const SP = "shayad model ne bina source ke bola, matlab woh guess kar raha tha, i think hallucination rate naapna padega ek held-out set pe";
+          const capR = gradeCapture({ type: "voice_rep", ref: "hallucinations", gut: "shaky", spoken: SP }, { dry: true, asked: "hallucination rate kaise naapte?", now: T0 });
+          // an axis_weld beside it (a recall type — must get NO register); built here because
+          // the shared `cap` fixture is declared further down this selftest
+          const capW = gradeCapture({ type: "axis_weld", ref: "context:a", gut: "shaky", spoken: "matlab jo model ek time pe padh sakta hai uski limit hai" }, { dry: true, material: gradeMaterial("axis_weld", "context:a", { answerKey: K }), now: T0 });
+          assert("§9.4 · HEDGES are counted at CAPTURE, by code, on the row itself — three hedges (shayad · matlab · i think) before any model has seen the answer",
+            capR.ok && capR.row.hedges === 3);
+          const CAPS = { mechanism: "grounding beats scale", interviewLines: ["measure hallucination rate on a held-out set", "a retrieval-augmented answer cites its source"] };
+          let regPrompt = null;
+          const regGen = async (p) => { regPrompt = p; return { ok: true, text: JSON.stringify({ grades: [
+            { id: capR.row.id, verdict: "landed", missing: [], why: "theek", register: { used: ["hallucination rate", "held-out set", "chain-of-thought"], expected: ["hallucination rate", "held-out set", "grounding", "constitutional ai"] } },
+            { id: capW.row.id, verdict: "held", missing: [], why: "aa gaya", register: { used: ["x"], expected: ["y"] } }] }) }; };
+          const regCmds = [];
+          const rj = await gradeJudge({ dry: true, rows: [capR.row, capW.row], generate: regGen, dispatch: (c) => { regCmds.push(c); return { ok: true }; }, now: T0, readJson: (f) => (String(f).includes("hallucinations") ? CAPS : null), fieldProbes: null });
+          const reg = rj.settled.find((s) => s.of === capR.row.id).register;
+          assert("§9.4 · THE DoD FIXTURE, end to end — three hedges + one missing term yields EXACTLY {hedges:3, missing:['grounding']}: the invented 'constitutional ai' was dropped (not in the ground), the unsaid 'chain-of-thought' was dropped (never said), and missing was recomputed from his transcript",
+            !!reg && reg.hedges === 3 && JSON.stringify(reg.missing) === JSON.stringify(["grounding"])
+            && JSON.stringify(reg.expected) === JSON.stringify(["hallucination rate", "held-out set", "grounding"])
+            && JSON.stringify(reg.used) === JSON.stringify(["hallucination rate", "held-out set"])
+            && reg.dropped.some((d) => d.term === "constitutional ai") && reg.dropped.some((d) => d.term === "chain-of-thought"),
+            JSON.stringify(reg));
+          assert("§9.4 · the register rides the rep through the OWNER's door — capture.mjs `rep … --register <json>` — and never touches --correct",
+            (() => { const c = regCmds.find((c) => c.organ === "capture.mjs"); const i = c.argv.indexOf("--register"); const j = JSON.parse(c.argv[i + 1]);
+              return i > 0 && j.hedges === 3 && JSON.stringify(j.missing) === JSON.stringify(["grounding"]) && c.argv.join(" ").includes("--correct true"); })());
+          assert("§9.4 · a recall type (axis_weld) gets NO register — its row says null and its argv carries no --register (the room does not hear a Re-Jirah recital)",
+            rj.settled.find((s) => s.of === capW.row.id).register === null && !regCmds.find((c) => c.organ === "rejirah.mjs").argv.includes("--register"));
+          assert("§9.4 · THE ONE SPOKEN LINE closes the round — the term the room wanted and did not hear, and the hedge count",
+            rj.register_line === `interviewer yeh shabd sunna chahega: "grounding" — aur 3 hedges (shayad/maybe/i think) kaate ja sakte hain`, rj.register_line);
+          assert("§9.4 · …and a round where nothing was missing speaks NO line (silence over a fabricated ask)",
+            (await gradeJudge({ dry: true, rows: [capR.row], generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capR.row.id, verdict: "landed", missing: [], why: "x", register: { used: ["hallucination rate"], expected: ["hallucination rate"] } }] }) }), dispatch: () => ({ ok: true }), now: T0, readJson: () => CAPS, fieldProbes: null })).register_line === null);
+          assert("§9.4 · a judge that returns NO register block still yields a register on the row — hedges are code's and always present, the lists empty",
+            (() => { const r = validateRegister(undefined, { spoken: SP, corpus: "" }); return r.hedges === 3 && r.expected.length === 0 && r.missing.length === 0; })());
+        }
+
+        // ── §9.3 · WHO HE IS reaches the judge (18 Aug 2026) — the LIVE DEFECT and the layers ──
+        // Both readers asked the file for `text`/`who_he_is`; the consolidator writes
+        // `fingerprint`. So the head said "nothing consolidated about him" on every
+        // judgement since 15 Aug. Held on a fixture in the consolidator's REAL shape, on
+        // the layered shape, and — dormant-safe — on his live file.
+        {
+          const W = { date: "2026-08-17", fingerprint: "Hallucinations axis d is the whole focus.", open_threads: ["grounding vs scale"], recent_wins: [], recent_cracks: ["calibration gap widened"], voice_tuning: "slow", do_not: [],
+            layers: [{ as_of: "2026-08-17", fingerprint: "Hallucinations axis d is the whole focus." }, { as_of: "2026-08-10", fingerprint: "Deep in attention." }, { as_of: "2026-08-03", fingerprint: "x" }] };
+          assert("§9.3 · whoHeIsText reads the consolidator's OWN keys (fingerprint · open threads · cracks), dated 'as of', and names the earlier layers by date only — never the whole layered file into a cached head",
+            (() => { const t = whoHeIsText(W); return /^\(as of 2026-08-17\) Hallucinations axis d/.test(t) && /Open threads: grounding vs scale/.test(t) && /Recent cracks/.test(t) && /Earlier layers on disk .*: 2026-08-10 · 2026-08-03/.test(t) && !t.includes("Deep in attention"); })());
+          assert("§9.3 · …the legacy shapes still read (a string · {text} · {who_he_is}) and nothing/garbage reads as EMPTY, never as a person",
+            whoHeIsText("plain") === "plain" && whoHeIsText({ text: "t" }) === "t" && whoHeIsText({ who_he_is: "w" }) === "w" && whoHeIsText(null) === "" && whoHeIsText({ date: "x" }) === "");
+          assert("§9.3 · the head carries him when a fingerprint exists — 'WHO YOU ARE JUDGING:' followed by the dated fingerprint, not the absence line",
+            (() => { const h = judgeCartridge({ who: whoHeIsText(W) }); return /WHO YOU ARE JUDGING:\n\(as of 2026-08-17\) Hallucinations/.test(h) && !/nothing consolidated about him/.test(h); })());
+          const liveWho = readJson(WHO, null);
+          if (liveWho && liveWho.fingerprint) {
+            assert("§9.3 · LIVE: his real who_he_is.json reaches the judge's head (this was FALSE on every judgement before today — the reader asked for keys the file never had)",
+              /WHO YOU ARE JUDGING:\n\(as of \d{4}-\d{2}-\d{2}\) /.test(judgeCartridge()));
+          } else console.log("  ..  §9.3 · LIVE who_he_is check NOT RUN — no consolidated file on this checkout (dressing-room/hippocampus is gitignored)");
+        }
         // THE HEAD MUST CLEAR THE BAR OR THE WHOLE BLOCK IS WORTHLESS — this is the
         // measurement the work order asks to be PRINTED, not claimed. A system block
         // under the model's minimum is not cached at all, and that (heads of ~406
@@ -2527,6 +2949,12 @@ function selftest2(stub, S) {
           // …and PASS 1 is the one that hands over a head, which is the whole of BLOCK 1.
           assert("PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it",
             /claudeGen\(p, "opus", 300000, \["--effort", "max"\], rides \? head : null\)/.test(src2));
+          // §9.1 (18 Aug 2026) — the two source-level halves of the external check, held
+          // on the SAME read of this file (see the note in the §9.1 block above).
+          assert("§9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor",
+            /claudeGen\(p, "sonnet", 180000, \["--allowedTools", "WebSearch"\]\)/.test(src2));
+          assert("§9.1 · the plan-vs-code correction is HELD, not just written: the source is the SOURCED bank (field_probes.json), and the invented probe_bank_ files are not read here at all",
+            /field_probes\.json/.test(src2.split("function selftest()")[0]) && !/probe_bank_/.test(src2.split("function selftest()")[0]));
           // LAYERING (his instruction): the Cerebras reader is FROZEN, not deleted —
           // and frozen means NO LIVE CALLER, which is the half a comment cannot hold.
           const liveCallers = (src2.match(/loadCerebrasKeyLegacy\(/g) || []).length;

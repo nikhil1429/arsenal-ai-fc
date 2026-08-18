@@ -102,6 +102,10 @@ import { observeAndSave as observeAndSaveTurn, renderBrief as renderGafferBrief,
 // and its memory blocks; this file only READS them and only ever SPAWNS the organ.
 // Read-only imports, exactly like the hippocampus/fuelboard/examiner lines above.
 import { freshNote as gafferFreshNote, readJournal as gafferJournal, renderBlocks as renderGafferBlocks } from "./gaffer_brain.mjs";
+// THE HEDGE METER (18 Aug 2026, OVERHAUL Block 4 §9.4) — the scrimmage's own regex,
+// MOVED to register.mjs so one definition counts hedges here (off-mic) and on every
+// banked answer in the truth layer. Pure module: reads nothing, writes nothing.
+import { countHedges } from "./register.mjs";
 // The pace cap's number, imported ONLY so the selftest can prove the browser
 // literal and the derived constant are the same 100 — the page is a string and
 // cannot import, so without this they could silently drift apart.
@@ -682,8 +686,11 @@ const PERSONAS = {
   scenario_bomb: "THE SCENARIO BOMB — a staff engineer mid-incident. Somewhere in probe 3 or 4, detonate a twist mid-answer ('latency just tripled in prod — what do you check FIRST?'). Wants ordered, falsifiable steps; meets hedging with two seconds of silence, then 'so which is it?'",
   code_autopsy: "THE CODE AUTOPSY — a principal engineer dissecting something he claims to know from his own drills. Line-level why: 'what breaks if I delete this piece?', 'where does this fail at 10k requests?'. No credit for narration; credit for mechanism.",
 };
-const HEDGE_RE = /\b(shayad|matlab|i think|i guess|maybe|probably|sort of|kind of|hopefully|not sure|i feel like)\b/gi;
-const countHedges = (text) => (String(text || "").match(HEDGE_RE) || []).length;
+// THE HEDGE METER MOVED, 18 Aug 2026 (OVERHAUL Block 4 §9.4) — the identical regex now
+// lives in scripts/register.mjs (`HEDGE_RE` / `countHedges`) so the SAME meter counts
+// hedges on every banked answer in the truth layer, not only off-mic here. Layering:
+// moved, not re-typed; the selftest below still asserts the same three-hedge fixture.
+// (imported at the top of this file: `import { countHedges } from "./register.mjs"`)
 function todaysPersona(now = new Date()) {
   const keys = Object.keys(PERSONAS);
   const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);

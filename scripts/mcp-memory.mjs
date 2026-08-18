@@ -352,7 +352,7 @@ function rememberFactStaged(text, deps = {}) {
 const TOOLS = [
   { name: "recall", description: "Semantic recall over the captain's durable memory (his past episodes + his embedded words). Returns his most relevant real moments — doubts, wins, threads — for a query. Read-only.", inputSchema: { type: "object", properties: { query: { type: "string", description: "what to recall about (a concept, a feeling, a thread)" } }, required: ["query"] } },
   { name: "note", description: "Write a salient moment into the shared working memory — a doubt he voiced, a win, a stated preference, an open thread, or a plain note. It is kept locally, routed to the thalamus so it reaches every surface (Code, the Gaffer), and (for doubt/win/preference/thread) written as a durable episode he can be reminded of later. If the reply carries a `warning`, tell him — the live bus did not see it.", inputSchema: { type: "object", properties: { kind: { type: "string", enum: NOTE_KINDS, description: "doubt | win | preference | thread | note" }, text: { type: "string", description: "his words, verbatim where possible" } }, required: ["text"] } },
-  { name: "get_context", description: "Rehydrate where the captain is right now: his identity cartridge (every fact DATED — a fact is true as of its date, not automatically today) + who-he-is (labelled RIGHT NOW only when it was consolidated today, otherwise AS OF its date with its age) + last durable episodes + the distiller's live working set + the teaching card of how he learns. Call at the start of a session so you never ask him to re-explain.", inputSchema: { type: "object", properties: {} } },
+  { name: "get_context", description: "Rehydrate where the captain is right now: his identity cartridge (every fact DATED — a fact is true as of its date, not automatically today) + who-he-is (labelled RIGHT NOW only when it was consolidated today, otherwise AS OF its date with its age; its earlier LAYERS follow, each dated \"as of\", contradictions kept, never merged) + last durable episodes + the distiller's live working set + the teaching card of how he learns. Call at the start of a session so you never ask him to re-explain.", inputSchema: { type: "object", properties: {} } },
   { name: "remember_fact", description: "STAGE a durable identity fact about the captain. It is NOT saved to canon — it waits in a pending file for his explicit confirmation (Law 4). Use for stable truths about who he is, not passing state.", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
 ];
 
@@ -473,6 +473,19 @@ async function selftest() {
   const ctx = getContext({ pending: [], card: null, cartridge: () => "IDENTITY: he is the captain.", ws: { concept_in_motion: "hallucinations", open_loop: "why grounding fails", where_left_off: "detection strategies", next_step: "read the eval doc" } });
   assert("get_context: fuses rehydrate cartridge + the distiller working set", /IDENTITY/.test(ctx) && /hallucinations/.test(ctx) && /WORKING SET/.test(ctx));
   assert("get_context: empty memory → a valid line, never a crash", typeof getContext({ cartridge: () => null, ws: null, pending: [], card: null }) === "string");
+  // §9.3 (18 Aug 2026, OVERHAUL Block 4) — the who_he_is LAYERS reach get_context through
+  // the SAME cartridge builder the live door uses (buildRehydrateCartridge → whoCartridge),
+  // each older layer dated "as of <date>"; a top layer from today still says RIGHT NOW.
+  {
+    const layered = { date: "2026-08-18", generated_at: "2026-08-18T02:00:00Z", fingerprint: "Hallucinations axis d is the whole focus.", open_threads: ["grounding vs scale"], recent_wins: [], recent_cracks: [], voice_tuning: "slow", do_not: [],
+      layers: [
+        { as_of: "2026-08-18", fingerprint: "Hallucinations axis d is the whole focus.", open_threads: ["grounding vs scale"], recent_wins: [], recent_cracks: [], voice_tuning: "slow", do_not: [], same_as_previous: false },
+        { as_of: "2026-08-10", fingerprint: "Deep in attention mechanics, tokenization locked.", open_threads: [], recent_wins: [], recent_cracks: [], voice_tuning: "v", do_not: [], same_as_previous: false },
+      ] };
+    const ctxL = getContext({ pending: [], card: null, ws: null, cartridge: () => buildRehydrateCartridge({ facts: { facts: [] }, who: layered, episodes: [], now: new Date("2026-08-18T09:00:00Z") }) });
+    assert("get_context §9.3: the layered who_he_is prints RIGHT NOW for today's layer and 'as of <date>' for each earlier one — a contradiction between nights is shown dated, never merged away",
+      /WHO HE IS RIGHT NOW \(consolidated 2026-08-18\)/.test(ctxL) && /EARLIER LAYERS/.test(ctxL) && /as of 2026-08-10: Deep in attention/.test(ctxL), ctxL);
+  }
   const ctxP = getContext({ cartridge: () => "IDENTITY: he is the captain.", ws: null, card: null, pending: [
     { ts: "2026-07-12T08:00:00Z", text: "prefers full lectures, not fragments", status: "pending" },
     { ts: "2026-07-12T09:00:00Z", text: "a fact he already ruled on", status: "confirmed" },

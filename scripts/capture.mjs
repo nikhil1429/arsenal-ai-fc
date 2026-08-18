@@ -39,7 +39,10 @@
 //     aided:boolean|null,                   // optional — ONLY track:"skill"
 //     confused_with:string|null,            // v3 optional — canonicalized like concept (feeds confusion-pairs)
 //     edge:string|null,                     // v3 optional — verbatim knowledge-boundary text (feeds edge-map)
-//     note?:string }
+//     note?:string,
+//     register?:{used:[],expected:[],missing:[],hedges:int} }   // 18 Aug 2026, OVERHAUL Block 4 §9.4 — the judge's
+//                                           // vocabulary reading beside the verdict (an axis-free MISS KIND that never
+//                                           // touches `correct`); written only when supplied; nemesis reads it
 //   Enriched-on-write: concept→canonical, unregistered:boolean (unknown concept is
 //   still appended with unregistered:true — SOFT, never hard-rejected), plus the
 //   three clocks (ts_claimed · observed_at · ts_source).
@@ -346,6 +349,22 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
     edge = o.edge;
   }
   if (o.note !== undefined && typeof o.note !== "string") return { ok: false, error: "note not string" };
+  // ── register (18 Aug 2026, OVERHAUL Block 4 §9.4) ──────────────────────────
+  // The judge's VOCABULARY reading, beside the verdict: {used, expected, missing,
+  // hedges}. Optional; validated to shape (four keys, short-string arrays ≤ 8,
+  // hedges int ≥ 0); stored ONLY when supplied — never invented, like latency and
+  // note. DECLARED HERE because this validator rebuilds `rep` from a fixed list and
+  // an undeclared field is silently dropped (the `corrects` lesson two lines down).
+  // It is an axis-free MISS KIND for nemesis to read; it never touches `correct`.
+  let register = null;
+  if (o.register !== undefined && o.register !== null) {
+    const r = o.register;
+    if (!r || typeof r !== "object" || Array.isArray(r)) return { ok: false, error: "register not an object" };
+    const list = (k) => Array.isArray(r[k]) && r[k].every((t) => typeof t === "string" && t.trim().length > 0 && t.length <= 60) && r[k].length <= 8;
+    if (!list("used") || !list("expected") || !list("missing")) return { ok: false, error: "register.used/expected/missing must be arrays of ≤8 short strings" };
+    if (!Number.isInteger(r.hedges) || r.hedges < 0) return { ok: false, error: `register.hedges not int>=0 (${r.hedges})` };
+    register = { used: r.used.map((t) => t.trim()), expected: r.expected.map((t) => t.trim()), missing: r.missing.map((t) => t.trim()), hedges: r.hedges };
+  }
   // ── corrects / why (17 Aug 2026, TRUTH LAYER BLOCK 4) ─────────────────────
   // Every judgement must have a way back. A rep whose verdict was wrong is
   // corrected by a NEW ROW THAT NAMES THE OLD ONE — never by a rewrite — so the
@@ -377,6 +396,7 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
     ts_claimed: clocks.ts_claimed, observed_at: clocks.observed_at, ts_source: clocks.ts_source,
   };
   if (o.note !== undefined) rep.note = o.note;
+  if (register) rep.register = register;
   if (corrects) { rep.corrects = corrects; rep.why = String(o.why).slice(0, 300); }
   return { ok: true, rep };
 }
@@ -1670,6 +1690,20 @@ function selftest() {
   assert("edge null/absent ⇒ null", findQ("ax_a")?.edge === null);
   assert("edge non-string ⇒ reject", ingest(p, [rep({ ts: "2026-07-11T11:16:00Z", question: "egbad", edge: 5 })], reg).rejected === 1);
 
+  // --- §9.4 (18 Aug 2026): register — the judge's vocabulary reading, an axis-free miss kind ---
+  const REG = { used: ["hallucination rate"], expected: ["hallucination rate", "grounding"], missing: ["grounding"], hedges: 3 };
+  ingest(p, [rep({ ts: "2026-07-11T11:17:00Z", question: "reg_ok", register: REG })], reg);
+  assert("register accept: stored WHOLE (used/expected/missing/hedges) — the field is declared, so it survives the rebuild that silently drops undeclared ones",
+    JSON.stringify(findQ("reg_ok")?.register) === JSON.stringify(REG));
+  assert("register absent ⇒ absent (never invented, like latency and note)", !("register" in (findQ("ax_a") || {})));
+  assert("register-reject: a missing list, a non-int hedges, a non-object — each refuses the whole rep (a rep that lost its register would look like one that never had one)",
+    ingest(p, [rep({ ts: "2026-07-11T11:18:00Z", question: "regbad1", register: { used: [], expected: [], hedges: 0 } })], reg).rejected === 1
+    && ingest(p, [rep({ ts: "2026-07-11T11:19:00Z", question: "regbad2", register: { ...REG, hedges: -1 } })], reg).rejected === 1
+    && ingest(p, [rep({ ts: "2026-07-11T11:20:00Z", question: "regbad3", register: "grounding" })], reg).rejected === 1
+    && ingest(p, [rep({ ts: "2026-07-11T11:21:00Z", question: "regbad4", register: { ...REG, missing: [42] } })], reg).rejected === 1);
+  assert("register never touches `correct` — a rep with a missing term is still the correct/incorrect it was judged",
+    findQ("reg_ok")?.correct === true && findQ("reg_ok")?.register.missing.length === 1);
+
   // registry: alias resolves; unknown ⇒ unregistered:true (not dropped)
   ingest(p, [rep({ ts: "2026-07-11T11:10:00Z", question: "alias", concept: "BPE" })], reg);
   assert("registered alias ⇒ canonical + unregistered:false", findQ("alias")?.concept === "tokenization" && findQ("alias")?.unregistered === false);
@@ -2396,6 +2430,16 @@ function main() {
       // Same law as latency above: written only when supplied, never invented.
       const noteFlag = flag("note");
       if (noteFlag !== undefined && String(noteFlag).trim()) one.note = String(noteFlag).slice(0, 300);
+      // --register (18 Aug 2026, OVERHAUL Block 4 §9.4). The judge (gaffer_brain
+      // judge-round) hands its vocabulary reading through THIS door as JSON; the same
+      // validator that guards a pasted rep checks its shape. Unparseable JSON is a
+      // refusal, never a silently dropped field — the rep is refused whole, because a
+      // rep that lost its register would look exactly like one that never had one.
+      const regFlag = flag("register");
+      if (regFlag !== undefined) {
+        try { one.register = JSON.parse(regFlag); }
+        catch { console.error("rep: --register must be JSON like {\"used\":[],\"expected\":[],\"missing\":[],\"hedges\":0}. Nothing written."); process.exit(1); }
+      }
       if (!one.concept || !one.question || !one.confidence || one.correct === undefined) {
         console.error("rep: --concept, --q, --gut and --correct are all required.");
         console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');

@@ -126,6 +126,10 @@ function rejirahDueLine(dir, now = Date.now()) {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE = join(__dirname, "..", "dressing-room", "state");
+// The SessionStart brief's byte bound (overhaul §7.4/§13, "SessionStart brief < 6 KB") —
+// the DoD organism_test measures on the WHOLE printed brief. Held by the BYTE GUARD in
+// the brief's main path (see there), never by a reserve tuned once.
+export const BRIEF_BYTES_BOUND = 6000;
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 
@@ -1375,8 +1379,23 @@ async function main() {
   const stateLine = await (async () => { try { const { liveState } = await import("./state.mjs"); return (await liveState()).line; } catch { return null; } })();
   const withState = (t) => (stateLine ? stateLine + "\n" : "") + t;
   try {
-    const { assemble } = await import("./context_manifest.mjs");
-    const out = await assemble({ dir: STATE, now: Date.now() });
+    const { assemble, CEILING } = await import("./context_manifest.mjs");
+    let out = await assemble({ dir: STATE, now: Date.now() });
+    // THE BYTE GUARD (18 Aug 2026, OVERHAUL Block 4 close). The DoD is measured on the
+    // WHOLE printed brief — `learnstate.mjs brief | wc -c` < 6,000 — but the manifest's
+    // 5,300-char ceiling was DERIVED from two measured, LIVE numbers: the state line
+    // (365 B that morning) and the multibyte inflation (268 B). Both move: on 18 Aug the
+    // state line grew (dirty 14 · 13 cards) and the whole landed at 6,004 bytes — a
+    // reserve tuned once is a budget, and L8 says guards, not budgets. So: measure the
+    // bytes of what will actually print; if the whole is over, ask the assembler ONCE
+    // for exactly the room the overrun took (+64 for the cut region's own multibyte
+    // run). The footer names the ceiling it assembled to, so nothing here is silent.
+    if (out && typeof out.text === "string" && out.text) {
+      const over = Buffer.byteLength(withState(out.text), "utf8") - (BRIEF_BYTES_BOUND - 1);
+      if (over > 0) {
+        try { const tighter = await assemble({ dir: STATE, now: Date.now(), ceiling: Math.max(1000, CEILING - over - 64) }); if (tighter && typeof tighter.text === "string" && tighter.text) out = tighter; } catch { /* keep the first */ }
+      }
+    }
     if (out && typeof out.text === "string" && out.text) { console.log(withState(out.text)); recordBriefed(out.text); return; }
   } catch { /* fall through to the frozen path */ }
   const text = brief(STATE, Date.now(), await loadMemory(), loadTeachingCard());

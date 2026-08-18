@@ -41,6 +41,9 @@
 //   ships its own have/need counter; the gate itself is unchanged).
 //   evidence[] entries are "MM-DD HH:MM axis X type" — one distinguishable receipt per
 //   miss (audit #31). `axis` is a STRICT mode: a tie names no axis and says so.
+//   register{present,reps,misses,hedges,top_missing[{term,n,concepts,last_seen}],line}
+//   (18 Aug 2026, OVERHAUL Block 4 §9.4) — the judge's vocabulary reading, an AXIS-FREE
+//   miss kind read off rep.register (capture writes it); never enters the axis clustering.
 //   id = STABLE topic-derived slug (never positional; grouping is per TRACK+topic, so the id
 //   carries a track suffix ONLY when the same topic exists on both tracks). recurrence = RAW int;
 //   score = weighted float. last_seen / evidence dates are the captain's LOCAL day, like `date`.
@@ -386,7 +389,39 @@ function compute(reps, cfg, reg, now) {
     .sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1) || b.score - a.score || a.id.localeCompare(b.id))
     .map((e) => ({ id: e.id, topic: e.topic, recurrence: e.recurrence, last_seen: e.last_seen, status: e.status, evidence: e.evidence, axis: e.axis, axis_counts: e.axis_counts, score: e.score }));
 
-  return { date, status, ...gateOf(N, cfg), low_confidence, headline, axis_pattern, weaknesses, total_reps: N, generated_at };
+  return { date, status, ...gateOf(N, cfg), low_confidence, headline, axis_pattern, weaknesses, total_reps: N, generated_at,
+    // §9.4 (18 Aug 2026) — the register read rides beside the miss report; additive.
+    register: registerReport(reps) };
+}
+
+// ---------------------------------------------------------------------------
+// §9.4 (18 Aug 2026, OVERHAUL Block 4) — THE REGISTER: an AXIS-FREE MISS KIND
+// ---------------------------------------------------------------------------
+// The judge (gaffer_brain judge-round) now stamps `register:{used,expected,missing,
+// hedges}` on every interview-facing rep through capture's own door. It is a SECOND
+// reading of the same answer — did he speak the room's language — and it never
+// touches `correct`, so it must never enter the axis clustering above (a missing
+// word is not a broken mechanism). It gets its own block: how many reps carried a
+// register, how many of those missed a term the room wanted, the terms he keeps
+// missing (ranked, with the concepts they were missed on), and the hedge load.
+// Zero-LLM, deterministic, empty-safe: no register on any rep ⇒ `present:false`
+// and nothing invented. Nothing here is a threshold; it is a count.
+export function registerReport(reps) {
+  const rows = (reps || []).filter((r) => r && r.register && typeof r.register === "object" && Array.isArray(r.register.expected));
+  if (!rows.length) return { present: false, reps: 0, misses: 0, hedges: 0, top_missing: [], line: "register: no interview-facing rep has carried a register yet" };
+  const misses = rows.filter((r) => Array.isArray(r.register.missing) && r.register.missing.length > 0);
+  const hedges = rows.reduce((a, r) => a + (Number.isInteger(r.register.hedges) ? r.register.hedges : 0), 0);
+  const byTerm = new Map();
+  for (const r of misses) for (const t of r.register.missing) {
+    const k = normText(t);
+    if (!byTerm.has(k)) byTerm.set(k, { term: k, n: 0, concepts: new Set(), last_seen: null });
+    const e = byTerm.get(k); e.n++; if (r.concept) e.concepts.add(String(r.concept));
+    const d = localIsoDate(r.ts); if (!e.last_seen || d > e.last_seen) e.last_seen = d;
+  }
+  const top_missing = [...byTerm.values()].sort((a, b) => b.n - a.n || a.term.localeCompare(b.term)).slice(0, 8)
+    .map((e) => ({ term: e.term, n: e.n, concepts: [...e.concepts].sort(), last_seen: e.last_seen }));
+  const line = `register: ${rows.length} rep(s) read · ${misses.length} missed a term the room wanted · ${hedges} hedge(s)` + (top_missing.length ? ` · most missed: ${top_missing.slice(0, 3).map((e) => `"${e.term}"×${e.n}`).join(" ")}` : "");
+  return { present: true, reps: rows.length, misses: misses.length, hedges, top_missing, line };
 }
 
 // ---------------------------------------------------------------------------
@@ -400,7 +435,7 @@ function selftest() {
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   let T = 0;
   const at = (day) => new Date(Date.parse("2026-07-01T00:00:00Z") + day * 86400000 + (T++) * 60000).toISOString();
-  const mk = (o) => ({ ts: o.ts || at(o.day ?? 0), surface: o.track === "skill" ? "colab" : "gem", track: o.track || "concept", concept: o.concept, axis: ("axis" in o) ? o.axis : (o.track === "skill" ? null : "a"), question: o.q || `q${T}`, confidence: o.confidence || "knew", correct: !!o.correct });
+  const mk = (o) => ({ ts: o.ts || at(o.day ?? 0), surface: o.track === "skill" ? "colab" : "gem", track: o.track || "concept", concept: o.concept, axis: ("axis" in o) ? o.axis : (o.track === "skill" ? null : "a"), question: o.q || `q${T}`, confidence: o.confidence || "knew", correct: !!o.correct, ...(o.register ? { register: o.register } : {}) });
   const find = (w, id) => w.weaknesses.find((e) => e.id === id);
 
   // 1) empty-safe
@@ -573,6 +608,25 @@ function selftest() {
     find(r19, "latenight").last_seen === expLate && find(r19, "earlyam").last_seen === expEarly
     && find(r19, "latenight").evidence[0] === `${expLate.slice(5)} ${expLateHm} axis a knew-wrong`);
 
+  // 20) §9.4 (18 Aug 2026) — THE REGISTER, an axis-free miss kind beside the miss report.
+  //     Three reps carry a register; two missed a term; "grounding" is missed twice across
+  //     two concepts; hedges sum. A CORRECT rep with a missing term is a register miss and
+  //     NOT a weakness (it never enters the axis clustering); no register anywhere ⇒ present:false.
+  const r20 = compute([
+    mk({ concept: "hallucinations", confidence: "knew", correct: true, day: 0, register: { used: ["hallucination rate"], expected: ["hallucination rate", "grounding"], missing: ["grounding"], hedges: 3 } }),
+    mk({ concept: "retrieval", confidence: "shaky", correct: true, day: 1, register: { used: [], expected: ["grounding", "recall@k"], missing: ["grounding", "recall@k"], hedges: 1 } }),
+    mk({ concept: "tokenization", confidence: "knew", correct: true, day: 2, register: { used: ["bpe"], expected: ["bpe"], missing: [], hedges: 0 } }),
+    mk({ concept: "tokenization", confidence: "knew", correct: true, day: 3 }),
+  ], cfg, REG, now);
+  assert("register: counted as its own block — 3 read, 2 missed a term, 4 hedges; 'grounding' ranked first with BOTH concepts named",
+    r20.register.present === true && r20.register.reps === 3 && r20.register.misses === 2 && r20.register.hedges === 4
+    && r20.register.top_missing[0].term === "grounding" && r20.register.top_missing[0].n === 2 && r20.register.top_missing[0].concepts.join(",") === "hallucinations,retrieval"
+    && /most missed: "grounding"×2/.test(r20.register.line));
+  assert("register: a CORRECT rep with a missing term is a register miss and NOT a weakness — a missing word is not a broken mechanism, so it never enters the axis clustering",
+    r20.weaknesses.length === 0 && r20.headline === null);
+  assert("register: no register on any rep ⇒ present:false and nothing invented",
+    compute([mk({ concept: "x", confidence: "knew", correct: true, day: 0 })], cfg, REG, now).register.present === false);
+
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -594,6 +648,7 @@ function main() {
     ? `axis ${out.axis_pattern.axis}×${out.axis_pattern.strength}`
     : `- (needs ${out.gate.reps_have}/${out.gate.reps_need} reps)`;   // audit #106: have/need, never a bare gate word
   console.log(`nemesis: ${out.status_line} — weaknesses ${out.weaknesses.length} · headline ${hl} · axis_pattern ${ap}  →  ${WEAK}`);
+  if (out.register) console.log(`  ${out.register.line}`);
   process.exit(0);
 }
 

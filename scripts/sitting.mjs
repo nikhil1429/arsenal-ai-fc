@@ -679,7 +679,15 @@ export function createSitting(deps = {}) {
     const t0 = Date.now();
     // 1. the judge — ONE opus call through the owner (only if something was banked); the sitting never grades
     let judge = null;
-    if ((S.stats.banked || 0) > 0) { const r = owner("gaffer_brain.mjs", ["judge-round"]); S.stats.owner_calls++; S.stats.by_class.judge++; S.stats.latency_ms.judge.push(Date.now() - t0); judge = { ok: r.ok, out: clip(r.out, 300) }; }
+    if ((S.stats.banked || 0) > 0) {
+      const r = owner("gaffer_brain.mjs", ["judge-round"]); S.stats.owner_calls++; S.stats.by_class.judge++; S.stats.latency_ms.judge.push(Date.now() - t0);
+      // §9.4 (18 Aug 2026) — THE ONE SPOKEN LINE the judge closes a round with (its
+      // last stdout line, prefixed 🗣) is kept WHOLE beside the clipped output, so the
+      // next head can open with it ("pichhli baar interviewer yeh shabd sunna chahta
+      // tha…"). Parsed off the owner's own machine-written prefix, never off his words.
+      const rl = String(r.out || "").split(/\r?\n/).map((l) => l.trim()).find((l) => l.startsWith("🗣"));
+      judge = { ok: r.ok, out: clip(r.out, 300), register_line: rl ? clip(rl.replace(/^🗣\s*/, ""), 240) : null };
+    }
     // 2. the pacer — closed through the owner ONLY when the concept reached its lock (a concept spans sittings; a stale one is boot's call)
     let forgeStatus = null;
     if (S.route === "FORGE") {
@@ -986,7 +994,14 @@ async function selftest() {
   const P = (name) => join(tmp, name);
   F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`);
   const calls = [];
-  const owner = (file, args, input) => { calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) }); return { ok: true, status: 0, out: `${file} ${args[0]} ok`, err: "" }; };
+  const owner = (file, args, input) => {
+    calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) });
+    // the judge's recorded stdout ends on its §9.4 spoken line, like the real owner's does
+    const out = file === "gaffer_brain.mjs" && args[0] === "judge-round" ? `gaffer_brain: 1 item(s) graded in ONE Opus call · types: voice_rep
+  voice_rep     LANDED (gut guessed)  theek
+  🗣 interviewer yeh shabd sunna chahega: "grounding"` : `${file} ${args[0]} ok`;
+    return { ok: true, status: 0, out, err: "" };
+  };
   // fixture session: answers with a plan JSON on the first send, then echo replies with a CTRL tail; DIE/WALL words steer failure modes
   const mkSession = (behaviour = {}) => {
     const seen = []; let spawned = 0;
@@ -1110,6 +1125,7 @@ async function selftest() {
     const c = await P_("/close", { reason: "his_word" });
     assert("close: judge-round ran through the owner (gaffer_brain.mjs judge-round) because reps were banked; the sitting itself never graded", c.body.ok && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round"));
     assert("close: the review row is written (measured fields) and its LLM fields are null AND named as Block 4's", (() => { const r = readRows(F.reviews())[0]; return r && r.sitting_id === S.id && r.turns > 0 && r.drifts === null && /Block 4/.test(r._llm_fields) && r.head_tokens === 9000; })());
+    assert("close (§9.4): the judge's ONE spoken line (🗣, the owner's last stdout line) is kept WHOLE on the review row as judge.register_line — so the next head can open with it", (() => { const r = readRows(F.reviews())[0]; return r && r.judge && r.judge.register_line === `interviewer yeh shabd sunna chahega: "grounding"`; })());
     assert("close: the session-intent line went through intent.mjs close --session <id> --promised … --shipped … --by sitting", calls.some((x) => x.file === "intent.mjs" && x.args[0] === "close" && x.args.includes("--session") && x.args.includes(S.id) && x.args.includes("--by")));
     assert("close: forge NOT closed (concept did not reach lock — a concept spans sittings) · sitting.json closed_at set · state.mjs would read 'none'", !calls.some((x) => x.file === "forge_session.mjs" && x.args[0] === "close") && readJson(F.sitting()).closed_at && (await G_("/status")).body.open === false);
     assert("close twice → 409", (await P_("/close", {})).code === 409);
