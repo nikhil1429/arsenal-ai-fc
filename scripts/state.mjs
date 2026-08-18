@@ -149,7 +149,7 @@ const weighted = (r) => (Number(r.input_tokens) || 0) * WEIGHT.input + (Number(r
 const istHour = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; return ((t + 5.5 * 3600000) % 86400000 + 86400000) % 86400000 / 3600000; };
 const istDay = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; const d = new Date(t + 5.5 * 3600000); return d.toISOString().slice(0, 10); };
 
-export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null } = {}) {
+export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined } = {}) {
   const since = now.getTime() - days * 86400000;
   const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
   // day N of 7
@@ -206,6 +206,7 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
     intents: kinds,
     swallow: swallow ? { rows: swallow.runs ?? swallow.rows ?? null, n: swallow.n ?? null, top: (swallow.top || []).slice(0, 3) } : null,
     freeze: freeze ? { armed: !!freeze.armed, deferred: !!freeze.deferred, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
+    models: models === undefined ? undefined : (models && models.line ? models.line : null),   // LAW M (18 Aug 2026): models.mjs boardLine — one line, roles → live models, keys ok n/N
     awake: { hours: awakeH === null ? null : +awakeH.toFixed(1), nights, nights_asleep_at_0320: nightsAsleepAtSlot },
   };
 }
@@ -219,13 +220,14 @@ export function weekLines(b) {
   L.push(`  gate       ${b.gate.transitions} transition(s) · ${b.gate.wakes} wake · ${b.gate.sleeps} sleep · lanes: ${Object.entries(b.gate.lanes).map(([k, v]) => `${k} ${v.awake}↑${v.asleep}↓`).join(" · ") || "—"}`);
   L.push(`  intents    study ${b.intents.study} · build ${b.intents.build} · other ${b.intents.other}`);
   L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
+  if (b.models !== undefined) L.push(`  ${b.models || "gemini: never probed — `node scripts/models.mjs probe`"}`);   // LAW M — the model board, one line
   L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : b.freeze.deferred ? "DEFERRED by his word 18 Aug 2026 (guard dormant · `node scripts/freeze.mjs status`)" : "NOT in force") : "? (git unreadable)"}`);
   L.push(`  awake      ${b.awake.hours === null ? "? (no presence log)" : `${b.awake.hours} h awake in ${b.days} d · nights asleep at the 03:20 IST dark slot: ${b.awake.nights_asleep_at_0320}/${b.awake.nights} — THE KENNEL (§17-A): the dark lane catches up on wake and keys its day by the slot (herd risks 0), so a night asleep costs nothing but latency; default stays "not now" unless a lane must run WHILE he sleeps`}`);
   return L;
 }
 export async function liveWeek({ days = 7, now = new Date() } = {}) {
-  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }] = await Promise.all([
-    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"),
+  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }] = await Promise.all([
+    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"),
   ]);
   const safe = (f, dflt = null) => { try { return f(); } catch { return dflt; } };
   const freeze = safe(() => { const s = freezeStatus(); if (s && s.since) { try { s.since_at = execFileSync("git", ["show", "-s", "--format=%aI", s.since], { cwd: ROOT, encoding: "utf8", timeout: 8000, windowsHide: true }).trim(); } catch { s.since_at = null; } } return s; });
@@ -236,7 +238,8 @@ export async function liveWeek({ days = 7, now = new Date() } = {}) {
   const intents = safe(() => showLines({ days, now }), []);
   const swallow = safe(() => swallowLedger({ sinceMs: days * 86400000, now: now.getTime(), top: 5 }));
   const awake = safe(() => awakeModel({ sinceMs: now.getTime() - days * 86400000, now: now.getTime() }));
-  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake });
+  const models = safe(() => ({ line: modelsLine(modelsBoard()) }), null);   // LAW M (18 Aug 2026)
+  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models });
 }
 
 // ── SELFTEST — fixtures only; no git, no state dir, no network ───────────────

@@ -1062,7 +1062,7 @@ function validateSeasonRead(obj, banned) {
 
 async function seasonReRead(deps = {}) {
   const now = deps.now || new Date();
-  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-3.1-pro-preview", "gemini-flash-latest"], maxOutputTokens: 16384, json: true }));
+  const gen = deps.generate || ((p) => generatePool(p, { role: "pro", maxOutputTokens: 16384, json: true }));   // LAW M (18 Aug 2026): role pro → falls back to text with a receipt when pro has no free tier
   const use = deps.recordUse || meterUse;            // the ONE genuine Gemini spend of the shift — T5 is billed for real
   const corpus = deps.corpus !== undefined ? deps.corpus : seasonCorpus(deps);
   if (corpus.length < 2000) return { ok: false, skipped: "corpus too thin to re-read — the season is days old, not weeks" };
@@ -1925,8 +1925,8 @@ async function selftest() {
     const goodRead = { contradictions: [{ a: "week 1: kv cache fixes quadratic attention", b: "week 3: attention stays n-squared with the cache", where: "capsule context vs dugout 07-12" }], open_threads: [{ thread: "does compaction lose the capsule anchors?", first_seen: "dugout 07-13" }], confusion_edges: [{ from: "tokenization", to: "embeddings", evidence: "blurred in 3 sessions" }], note: "the season circles context economics." };
     const corpus = "x".repeat(5000);
     let saved = null, spent = 0;
-    const r = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify(goodRead), model: "gemini-flash-latest" }), recordUse: (id, u, naive) => { spent = naive; }, writeRead: (o) => { saved = o; }, bannedPhrases: ["10x"], now: new Date("2026-07-15T03:00:00") });
-    assert("SEASON RE-READ: one long-context call → dated, model-stamped read", r.ok && saved.date === "2026-07-15" && saved.model === "gemini-flash-latest" && saved.contradictions.length === 1);
+    const r = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify(goodRead), model: "gemini-flash-latest" })   /* models-literal-ok: a fixture's stamped model, not a call */, recordUse: (id, u, naive) => { spent = naive; }, writeRead: (o) => { saved = o; }, bannedPhrases: ["10x"], now: new Date("2026-07-15T03:00:00") });
+    assert("SEASON RE-READ: one long-context call → dated, model-stamped read", r.ok && saved.date === "2026-07-15" && saved.model === "gemini-flash-latest" && saved.contradictions.length === 1);   /* models-literal-ok: fixture stamp */
     assert("SEASON RE-READ: the naive-shadow records the real corpus size", spent === Math.round(corpus.length / 4) && saved.corpus_chars === 5000);
     let kept = true;
     const rB = await seasonReRead({ corpus, generate: async () => ({ ok: true, text: JSON.stringify({ ...goodRead, note: "10x season!" }) }), recordUse: () => {}, writeRead: () => { kept = false; }, bannedPhrases: ["10x"] });

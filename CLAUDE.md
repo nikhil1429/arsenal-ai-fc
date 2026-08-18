@@ -11,7 +11,8 @@ IST). Deterministic Node scripts (`.mjs`, Windows / Node 22) read/write a JSON s
 subscription — **never an API key** (`ANTHROPIC_API_KEY` set ⇒ every organ refuses). Scheduling:
 Windows Task Scheduler + `ntfy.sh`. **FREEZE: deferred by his word 18 Aug 2026 until the organism runs fine; the
 guard is built and dormant** (`node scripts/freeze.mjs status`; it arms the day `FREEZE.md` returns to the root —
-record: `docs/archive/FREEZE__deferred-2026-08-18.md`).
+record: `docs/archive/FREEZE__deferred-2026-08-18.md`). **LAW M (18 Aug 2026): no organ names a model — a ROLE; `scripts/models.mjs`
+resolves the live Gemini model + key and says why (`node scripts/models.mjs status` · `check` = 0 literals outside it).
 
 ## The ten laws (each is a code path — verify, never recall)
 | # | Law | Verify |

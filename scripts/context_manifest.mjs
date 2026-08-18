@@ -1323,7 +1323,9 @@ function selftest() {
         liveP.state !== "ok"
         || (markSum === cut
           // Block 3 (18 Aug 2026): a block that shows ZERO facts renders the COLLAPSED one-line form — its count is the accounting
-          && (hidden === 0 || liveOut.text.includes(`… ${hidden} older staged fact${hidden === 1 ? "" : "s"} not shown (budget)`) || liveOut.text.includes(`PENDING IDENTITY FACTS: ${hidden} staged, none shown here (budget)`))
+          && (hidden === 0 || liveOut.text.includes(`… ${hidden} older staged fact${hidden === 1 ? "" : "s"} not shown (budget)`) || liveOut.text.includes(`PENDING IDENTITY FACTS: ${hidden} staged, none shown here (budget)`)
+            // 18 Aug 2026 evening: the collapsed header YIELDED to the intents floor — the footer alone carries the count (`N NOT SHOWN — budget; header yielded to intents`), the block is absent by design
+            || /header yielded to intents/.test(note))
           && whole === stagedFull.length - hidden - (cut ? 1 : 0)));
     }
 

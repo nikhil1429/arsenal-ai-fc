@@ -121,6 +121,7 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // hedge regex DOES test his words — a measurement he designed, never a gate — and
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
+import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -160,9 +161,14 @@ const GEMINI_ENV = join(os.homedir(), ".gemini", ".env");
 const CEREBRAS_ENV_LEGACY = join(os.homedir(), ".cerebras", ".env");
 
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
-// gemini-flash-latest, the same alias the chalkboard and read_url already ride on
-// the free pool. Overridable so a model rename is one env var, never an edit.
-const WATCHER_MODEL = process.env.GAFFER_WATCHER_MODEL || "gemini-flash-latest";
+// THE WATCHER'S MODEL IS A ROLE (LAW M, 18 Aug 2026). This line read
+// `process.env.GAFFER_WATCHER_MODEL || "gemini-flash-latest"` — and on 18 Aug the alias moved
+// onto a paid tier (429 on all 9 keys while gemini-3.5-flash answered on all 9), so the Watcher
+// died at 13:42 IST reading "flash pool dry" and the Gaffer forgot Hinglish, greeting-first,
+// Day 1. The role is `text`; GAFFER_WATCHER_MODEL still leads when set (LEGACY_ENV).
+const WATCHER_ROLE = "text";
+const WATCHER_ENV = "GAFFER_WATCHER_MODEL";
+const watcherModel = () => modelsResolve(WATCHER_ROLE, { env: WATCHER_ENV }).model;   // for display: the model the next call will try FIRST
 // 20s. NOT a guess and NOT a latency target: it is the ceiling past which a
 // judgment is worthless rather than late, because the /deep poll drops any note
 // older than 60s (dugout.mjs's own recall-lane freshness) and the spawn + node
@@ -237,16 +243,7 @@ export function whoHeIsText(w) {
 // and six more into a process that must boot in milliseconds and must never have
 // a reason to touch the bridge's own state. Nine lines are cheaper than that
 // graph, and the shape is asserted against the original in the selftest.
-export function loadGeminiKeys(envText = null) {
-  const keys = [];
-  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY.trim());
-  const text = envText !== null ? envText : (existsSync(GEMINI_ENV) ? readFileSync(GEMINI_ENV, "utf8") : "");
-  for (const line of text.split("\n")) {
-    const m = line.match(/^GEMINI_API_KEY(_\d+)?\s*=\s*(.+)$/);
-    if (m && m[2].trim() && !keys.includes(m[2].trim())) keys.push(m[2].trim());
-  }
-  return keys;
-}
+export function loadGeminiKeys(envText = null) { return modelsLoadKeys(envText); }   // LAW M (18 Aug 2026): ONE key reader for the organism (models.mjs); this name stays for its callers
 
 // ---------------------------------------------------------------------------
 // THE MEMORY BLOCKS — what text could not hold
@@ -494,66 +491,38 @@ export async function callWatcher(prompt, deps = {}) {
   const fetchFn = deps.fetchFn || fetch;
   const t0 = Date.now();
   if (!keys.length) return { ok: false, engine: "none", error: "no key in the pool", latency_ms: 0 };
-  for (const key of keys) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), deps.deadlineMs || WATCHER_DEADLINE_MS);
-      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${WATCHER_MODEL}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          // responseMimeType is the difference between parsing JSON and parsing a
-          // model's idea of JSON.
-          //
-          // THINKING IS ON, AND THE NUMBER IS MEASURED, NOT ASSUMED (15 Aug 2026,
-          // 6 live calls on the free pool, same prompt, same key rotation):
-          //   thinkingBudget -1 (dynamic): 4.0s · 4.5s · 6.0s   ~2,050 tok (~900 thinking)
-          //   …and on a LONGER delta the same lane measured 11.0s and 11.8s, so the
-          //   honest range is 4-12s, not 4-6s. Still an order of magnitude inside the
-          //   60s window, and still behind the transcript flush.
-          //   thinkingBudget  0 (off):     1.2s · 1.7s · 2.3s   ~1,145 tok
-          // Both returned the IDENTICAL verdict on the probe case, so on an easy
-          // turn thinking bought nothing and cost 3× the latency. It stays ON
-          // anyway, and the reasoning is worth writing down rather than re-deriving:
-          // his standing ruling is "always make sure you select the highest thinking
-          // model with maximum thinking on"; the probe case was easy and the hard
-          // cases are exactly the ambiguous ones ("is this calm question a
-          // complaint?") where a classifier without thinking is at its worst; and
-          // 6s is nowhere near the binding constraint — the note has a 60s window
-          // and the transcript flush in front of it is the real latency. The day
-          // that changes, turn it off with GAFFER_WATCHER_MS and re-measure; do not
-          // guess a new budget.
-          generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: -1 } },
-        }),
-      });
-      clearTimeout(t);
-      if (!r.ok) continue;                                  // quota / bad key → the next key
-      const j = await r.json();
-      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-      const text = parts.map((p) => p.text || "").join("").trim();
-      if (!text) continue;
-      let parsed = null;
-      try { parsed = JSON.parse(text); } catch {
-        // A fenced or prefixed reply still carries a valid object; take the outermost
-        // braces rather than discarding a good judgment over punctuation.
-        const a = text.indexOf("{"), b = text.lastIndexOf("}");
-        if (a >= 0 && b > a) { try { parsed = JSON.parse(text.slice(a, b + 1)); } catch { } }
-      }
-      // `deps.raw` (17 Aug 2026, BLOCK 5) — hand back the reply UNSHAPED. This lane
-      // exists for the Watcher and coerces every answer into the Watcher's own
-      // judgment schema, which is exactly right for that caller and destroys any
-      // other. The second judge asks a completely different question and needs its
-      // own shape; it reuses this door for the parts that are proven — key rotation,
-      // the 20s deadline, thinking on, the free pool — rather than opening a second
-      // one that would drift. Measured: without this the live probe came back
-      // "unparseable" on a reply that was perfectly good JSON.
-      if (deps.raw) return { ok: true, text, engine: "gemini-flash", model: WATCHER_MODEL, latency_ms: Date.now() - t0 };
-      const norm = normalizeJudgment(parsed);
-      if (!norm) continue;
-      return { ok: true, judgment: norm, engine: "flash", model: WATCHER_MODEL, latency_ms: Date.now() - t0 };
-    } catch { /* aborted, network, malformed — try the next key */ }
+  // LAW M (18 Aug 2026): the walk (candidates × keys), the classes (model-gone · quota · key-bad ·
+  // demand · net · schema) and the receipt live in models.mjs. This site keeps its body — JSON on
+  // the wire, temperature 0, THINKING ON (measured 15 Aug: 4-12 s dynamic vs 1-2 s off; identical
+  // verdict on the easy case; his standing ruling: highest thinking on) — and its parse.
+  const body = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: -1 } },
+  };
+  const r = await modelsGenerate(WATCHER_ROLE, body, { keys, fetchFn, env: WATCHER_ENV, timeoutMs: deps.deadlineMs || WATCHER_DEADLINE_MS });
+  if (!r.ok) return { ok: false, engine: "none", error: r.why, tried: r.tried, latency_ms: Date.now() - t0 };   // `why` names each candidate's class×count — "pool dry" is retired
+  const text = String(r.text || "").trim();
+  if (!text) return { ok: false, engine: "none", error: `${r.model} answered with no text (schema)`, model: r.model, latency_ms: Date.now() - t0 };
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch {
+    // A fenced or prefixed reply still carries a valid object; take the outermost
+    // braces rather than discarding a good judgment over punctuation.
+    const a = text.indexOf("{"), b = text.lastIndexOf("}");
+    if (a >= 0 && b > a) { try { parsed = JSON.parse(text.slice(a, b + 1)); } catch { } }
   }
-  return { ok: false, engine: "none", error: "flash pool dry or every key refused", latency_ms: Date.now() - t0 };
+  const receipt = { model: r.model, key_index: r.key_index, fell_back_from: r.fell_back_from, fell_back_role: r.fell_back_role };
+  // `deps.raw` (17 Aug 2026, BLOCK 5) — hand back the reply UNSHAPED. This lane
+  // exists for the Watcher and coerces every answer into the Watcher's own
+  // judgment schema, which is exactly right for that caller and destroys any
+  // other. The second judge asks a completely different question and needs its
+  // own shape; it reuses this door for the parts that are proven — key rotation,
+  // the 20s deadline, thinking on, the free pool — rather than opening a second
+  // one that would drift. Measured: without this the live probe came back
+  // "unparseable" on a reply that was perfectly good JSON.
+  if (deps.raw) return { ok: true, text, engine: "gemini-flash", ...receipt, latency_ms: Date.now() - t0 };
+  const norm = normalizeJudgment(parsed);
+  if (!norm) return { ok: false, engine: "none", error: `${r.model} answered but the judgment did not normalize`, ...receipt, latency_ms: Date.now() - t0 };
+  return { ok: true, judgment: norm, engine: "flash", ...receipt, latency_ms: Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -1623,6 +1592,12 @@ If the standard and his ground do not settle it, return {"verdict":null,"why":"�
 }
 
 export async function secondOpinion(item, deps = {}) {
+  // DRY = NO WIRE (18 Aug 2026, LAW M rewire): with `dry:true` and no injected callWatcher this used
+  // to reach the REAL free pool — the selftest's PASS 1 ran a live second judge every time; the dead
+  // alias masked it (9×429 in ~2 s → lane-down → fail-open) and the moment the resolver found a
+  // live model the selftest asked Gemini for verdicts and 💎-carded its own fixture. A dry run is
+  // lane-down, honestly recorded as one judge.
+  if (deps.dry && !deps.callWatcher) return { ok: false, reason: "lane-down", error: "dry run — no wire" };
   const call = deps.callWatcher || callWatcher;
   const r = await call(buildSecondJudgePrompt(item, deps), { ...deps, raw: true });
   if (!r || !r.ok) return { ok: false, reason: "lane-down", error: (r && r.error) || "no reply" };
@@ -2016,7 +1991,14 @@ async function main() {
     // /transcript door; a non-zero exit there is a stderr line nobody reads and a
     // failure mode on the hot path. The journal is where a failure is recorded.
     try {
-      const r = await judgePass({ dry: process.argv.includes("--dry"), force: process.argv.includes("--force") });
+      // --rewind[=N] (LAW M live proof, 18 Aug 2026): re-judge the LAST N bytes of today's transcript
+      // (default 40000) — the cursor had walked past his Day-1 turns under the LEGACY engine while the
+      // Watcher was dead on the retired alias, so nothing "new" was left for the live Watcher to prove
+      // itself on. Owner-side, explicit, one flag; the pass re-bills nothing but this one call.
+      const rw = process.argv.find((a) => /^--rewind(=\d+)?$/.test(a));
+      let blocks;
+      if (rw) { const n = Number((rw.split("=")[1]) || 40000); blocks = loadBlocks(BLOCKS, new Date()); blocks.cursor = { ...blocks.cursor, dugout_bytes: Math.max(0, (Number(blocks.cursor.dugout_bytes) || 0) - n) }; console.log(`gaffer_brain: cursor rewound ${n} B → ${blocks.cursor.dugout_bytes} B`); }
+      const r = await judgePass({ dry: process.argv.includes("--dry"), force: process.argv.includes("--force"), ...(blocks ? { blocks } : {}) });
       if (r.skipped) console.log(`gaffer_brain: ${r.skipped}`);
       else console.log(`gaffer_brain: ${r.engine} · ${r.row.turns_judged} turn(s) · ${r.row.signals.length ? r.row.signals.join(",") : "no signal"}${r.note ? ` · note ${r.note.kind}` : ""}${r.row.blocks_changed.length ? ` · blocks ${r.row.blocks_changed.join(",")}` : ""} · ${r.row.latency_ms}ms`);
     } catch (e) {
@@ -2042,7 +2024,7 @@ async function main() {
     console.log(`gaffer_brain: ${rows.length} judgment(s) in the journal · engines ${Object.entries(byEngine).map(([k, v]) => `${k}=${v}`).join(" ") || "none"}`);
     console.log(`  blocks filled: ${filled.length ? filled.join(" · ") : "(none)"}   cursor: ${bl.cursor.dugout_day || "—"} @ ${bl.cursor.dugout_bytes}B transcript / ${bl.cursor.afferent_bytes}B bus`);
     if (last) console.log(`  last: ${last.ts} · ${last.engine} · ${last.signals.join(",") || "no signal"}${last.error ? ` · ERROR ${last.error}` : ""}`);
-    console.log(`  keys: gemini pool ${loadGeminiKeys().length} · grade queue ${outstandingGrades(readJournal(GRADE_QUEUE, 500)).length} axis/axes waiting for judge-round`);
+    console.log(`  watcher: role text → ${watcherModel()} first (LAW M — models.mjs status for the board) · keys: gemini pool ${loadGeminiKeys().length} · grade queue ${outstandingGrades(readJournal(GRADE_QUEUE, 500)).length} axis/axes waiting for judge-round`);
     return;
   }
   if (mode === "probe") {
@@ -2414,6 +2396,9 @@ function selftest2(stub, S) {
           // to CHECK is chosen by the search model reading the item, not by any regex
           // over his words — that is why there is no "digit/date" literal here at all.
           "^https?:\\/\\/\\S+$",
+          // LAW M live proof, 18 Aug 2026 — the `--rewind[=N]` CLI flag on `judge`. An argv
+          // switch the OPERATOR types, parsed by the machine; never his words.
+          "^--rewind(=\\d+)?$",
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -2422,7 +2407,7 @@ function selftest2(stub, S) {
           !prodCode.includes("15th of August") && !prodCode.includes("Adhikari") && !prodCode.includes("that is a bit weird") && !prodCode.includes("बिफोर"),
           "one of his 15 Aug lines has leaked into executable code");
         assert("THE BRAIN NEVER BLOCKS THE MOUTH · every path out of `judge` exits 0 — a failure lands in the journal, never on the hot path",
-          /if \(mode === "judge"\)[\s\S]{0,1400}?journalRow\(\{ engine: "none", error/.test(src) && !/if \(mode === "judge"\)[\s\S]{0,1400}?process\.exit\(1\)/.test(src));
+          /if \(mode === "judge"\)[\s\S]{0,2400}?journalRow\(\{ engine: "none", error/.test(src) && !/if \(mode === "judge"\)[\s\S]{0,2400}?process\.exit\(1\)/.test(src));
         // SOLE WRITER of three files, plus ONE documented shared lane. The judge's
         // meter row goes onto brain_ledger.jsonl, which CLAUDE.md declares by name
         // as a shared append lane whose SCHEMA belongs to brain.mjs — six appenders
@@ -2457,8 +2442,12 @@ function selftest2(stub, S) {
         };
         const mine = bodyOf(src, "export function loadGeminiKeys(envText = null)");
         const theirs = bodyOf(readFileSync(join(HERE, "dugout.mjs"), "utf8"), "function loadKeys(envText = null)");
-        assert("THE POOL · the key reader is still byte-identical to dugout.mjs loadKeys (duplicated on purpose to keep this organ's import graph tiny — so it must be PROVABLY the same code, not merely similar)",
-          !!mine && !!theirs && mine.replace(/envPath/g, "GEMINI_ENV") === theirs.replace(/const envPath = join\(os\.homedir\(\), "\.gemini", "\.env"\); /, "").replace(/envPath/g, "GEMINI_ENV"),
+        // LAW M (18 Aug 2026): the duplicated reader is GONE — both organs delegate to models.mjs
+        // loadKeys, the ONE key reader (models.mjs imports no organ, so the import graph stays tiny).
+        // The assertion keeps its job: the two readers must be PROVABLY the same code, and now that
+        // means both are the same one-line delegation.
+        assert("THE POOL · the key reader is the ONE in models.mjs — this organ and dugout.mjs both delegate to it (byte-identical delegation bodies), never a private copy",
+          !!mine && !!theirs && /modelsLoadKeys\(envText\)/.test(mine) && mine === theirs,
           `mine:   ${mine}\n      theirs: ${theirs}`);
       }
 

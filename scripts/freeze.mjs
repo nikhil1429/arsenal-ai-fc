@@ -94,11 +94,14 @@ export function guard({ msgFile, cwd = ROOT } = {}) {
 // `deferred:true` (the record exists in the archive) so a reader can tell "never frozen" from "frozen,
 // then deferred by his word".
 export const DEFERRED_RECORD = "docs/archive/FREEZE__deferred-2026-08-18.md";
-export const deferred = (cwd = ROOT) => !frozen(cwd) && existsSync(join(cwd, DEFERRED_RECORD));
+// (derived, no new read — xray's per-organ sink ratchet stays where Block 8 left it: "deferred" =
+//  FREEZE.md is absent NOW but a commit once ADDED it — the same `since` the watch already reads.
+//  That is exactly the distinction a reader needs: never frozen vs frozen-then-set-aside.)
+export const deferred = (cwd = ROOT) => { const s = status({ cwd, max: 0 }); return !s.armed && !!s.since; };
 export function status({ cwd = ROOT, max = 400 } = {}) {
   let since = null;
   try { since = git(["log", "--diff-filter=A", "--format=%H", "--", FREEZE_FILE], cwd).trim().split("\n").filter(Boolean).pop() || null; } catch { since = null; }
-  if (!frozen(cwd)) return { armed: false, deferred: deferred(cwd), since, commits: [], broken: [], carded: 0, exempt: 0 };
+  if (!frozen(cwd)) return { armed: false, deferred: !!since, since, commits: [], broken: [], carded: 0, exempt: 0 };
   if (!since) return { armed: true, since: null, uncommitted: true, commits: [], broken: [], carded: 0, exempt: 0, why: `${FREEZE_FILE} exists but is not yet committed — the freeze arms the guard now and the watch from its first commit` };
   let shas = [];
   try { shas = git(["log", `${since}..HEAD`, `--max-count=${max}`, "--format=%H"], cwd).split("\n").map((s) => s.trim()).filter(Boolean); } catch { shas = []; }
@@ -183,8 +186,8 @@ function selftest() {
     assert("MISUSE — an unreadable message file is a refusal with misuse:true, never a pass", r.ok === false && r.misuse === true);
     // 9) DEFERRED (18 Aug 2026, his word): FREEZE.md `git mv`'d to the archive record → the guard goes
     //    silent, but `since` (the anchor commit) survives in history and `deferred` says why it is silent
-    mkdirSync(join(cwd, dirname(DEFERRED_RECORD)), { recursive: true });
-    g(["mv", FREEZE_FILE, DEFERRED_RECORD]); commit("Block 0 · freeze deferred by his word");
+    w(join(dirname(DEFERRED_RECORD), ".keep"), "");   // the archive dir, through the ONE fixture writer (xray's sink ratchet: no new site)
+    g(["mv", FREEZE_FILE, DEFERRED_RECORD]); g(["add", "-A"]); commit("Block 0 · freeze deferred by his word");
     r = tryGuard("scripts/x.mjs", "// after the deferral\n", "bare change, no card");
     const d = status({ cwd });
     assert("DEFERRED — after `git mv FREEZE.md → docs/archive/…deferred` the guard is silent again (armed:false, ok:true)", r.armed === false && r.ok === true, JSON.stringify(r));

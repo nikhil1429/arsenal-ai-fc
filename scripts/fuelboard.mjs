@@ -31,6 +31,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, rmSync,
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveSync as modelsResolve, SEED } from "./models.mjs";   // LAW M (18 Aug 2026): tanks name roles; the resolver names the model
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -47,15 +48,20 @@ function writeAtomic(path, obj) {
 }
 const localDate = (now = new Date()) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+// LAW M (MODELS + ACTS Block 1, 18 Aug 2026): a tank names a ROLE; the model shown is what the
+// resolver names for that role right now (env → nightly probe → seed) — this file never carries a
+// literal model name (`node scripts/models.mjs check`). Cochlea's is the live role's second seed
+// candidate (the warm-but-shallow native-audio option), still disabled.
+const roleModel = (role) => modelsResolve(role).model;
 const DEFAULT_TANKS = [
-  { id: "T1", name: "Gaffer",      region: "mouth",        key_index: 0,    model: "gemini-3.1-flash-live-preview",       quota_est: 90,   enabled: true },
-  { id: "T2", name: "Watcher",     region: "vision",       key_index: 1,    model: "gemini-3.1-flash-live-preview",       quota_est: 90,   enabled: true },
-  { id: "T3", name: "Cochlea",     region: "ears",         key_index: 2,    model: "gemini-2.5-flash-native-audio-latest", quota_est: 60,  enabled: false },
-  { id: "T4", name: "Bridge",      region: "prefrontal",   key_index: null, model: "opus-via-cortex",                     quota_est: 0,    enabled: true },
-  { id: "T5", name: "Scout",       region: "research",     key_index: 3,    model: "gemini-3.1-pro-preview",              quota_est: 50,   enabled: true },
-  { id: "T6", name: "Hippocampus", region: "memory",       key_index: 4,    model: "gemini-embedding-001",                quota_est: 1000, enabled: true },
-  { id: "T7", name: "DMN",         region: "default-mode", key_index: 5,    model: "gemini-flash-latest",                 quota_est: 250,  enabled: true },
-  { id: "T8", name: "Distiller",   region: "working-set",  key_index: 6,    model: "gemini-flash-latest",                 quota_est: 250,  enabled: true },
+  { id: "T1", name: "Gaffer",      region: "mouth",        key_index: 0,    role: "live",  model: roleModel("live"),                       quota_est: 90,   enabled: true },
+  { id: "T2", name: "Watcher",     region: "vision",       key_index: 1,    role: "live",  model: roleModel("live"),                       quota_est: 90,   enabled: true },
+  { id: "T3", name: "Cochlea",     region: "ears",         key_index: 2,    role: "live",  model: (SEED.live[1] || roleModel("live")),      quota_est: 60,   enabled: false },
+  { id: "T4", name: "Bridge",      region: "prefrontal",   key_index: null, role: null,    model: "opus-via-cortex",                       quota_est: 0,    enabled: true },
+  { id: "T5", name: "Scout",       region: "research",     key_index: 3,    role: "pro",   model: roleModel("pro"),                        quota_est: 50,   enabled: true },
+  { id: "T6", name: "Hippocampus", region: "memory",       key_index: 4,    role: "embed", model: roleModel("embed"),                      quota_est: 1000, enabled: true },
+  { id: "T7", name: "DMN",         region: "default-mode", key_index: 5,    role: "text",  model: roleModel("text"),                       quota_est: 250,  enabled: true },
+  { id: "T8", name: "Distiller",   region: "working-set",  key_index: 6,    role: "text",  model: roleModel("text"),                       quota_est: 250,  enabled: true },
 ];
 function loadTankConfig() {
   const c = readJson(CONFIG);

@@ -929,7 +929,7 @@ async function dreamLegacy(deps = {}) {
   const head = headroomOf(t7);
   if (head < 4) return { ok: false, skipped: `T7 headroom ${head} < 4 — the dream only spends use-it-or-lose-it quota` };
   const nRoll = Math.min(MAX_ROLLOUTS, head, weak.length * 2);
-  const gen = deps.generate || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, json: true }));   // thinking models spend thoughts from the same budget
+  const gen = deps.generate || ((p) => generatePool(p, { role: "text", maxOutputTokens: 2048, json: true }));   /* LAW M (18 Aug 2026): a ROLE, never a model name */   // thinking models spend thoughts from the same budget
   const use = deps.recordUse || recordUse;
   const rollouts = [];
   for (let i = 0; i < nRoll; i++) {

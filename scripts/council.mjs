@@ -509,7 +509,7 @@ async function convene(question, deps = {}) {
   // is gone too. The DECLARED family now picks the engine; an undeclarable one is
   // benched by name and is never quietly given an engine it did not ask for.
   const routeOf = (seat) => gen ? "injected" : familyRoute(seat);
-  const poolGen = deps.pool || ((p) => generatePool(p, { models: ["gemini-flash-latest"], maxOutputTokens: 2048 }));
+  const poolGen = deps.pool || ((p) => generatePool(p, { role: "text", maxOutputTokens: 2048 }));   // LAW M (18 Aug 2026): a ROLE, never a model name — models.mjs picks the live one
   // THE BUS LEAVES ON TIME (live-arc scar, 14 Jul): a chair that misses the
   // deadline is dropped — the deep answer must land in the stuck→gone window,
   // and three perfect drafts 90s late are worth less than one on time.

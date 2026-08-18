@@ -94,6 +94,7 @@ import { EVENING } from "./conductor.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared; the ledger feeds caught-silent
 import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREEZE: commits since FREEZE.md that touched a guarded path without a card ⇒ RED freeze-broken
+import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -281,6 +282,9 @@ export function gather(now = new Date()) {
   // (a --no-verify commit, or one from a clone without the hook, is caught HERE by name).
   try { w.freeze = freezeStatus(); }
   catch (e) { swallow("gather: freezeStatus() unreadable (no git?) → no freeze line tonight", e); w.freeze = null; }
+  // LAW M (18 Aug 2026): the model board — models.json (models.mjs sole writer, probed nightly below)
+  try { w.models = modelsBoard(); }
+  catch (e) { swallow("gather: modelsBoard() unreadable → no model line tonight", e); w.models = null; }
   // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
   // decides what the Gaffer does next; it is spawned fire-and-forget from the
   // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
@@ -603,6 +607,14 @@ export function checks(w) {
       evidence: `FREEZE.md since ${String(w.freeze.since || "").slice(0, 7)} · \`node scripts/freeze.mjs status\` names each · the guard is hooks/commit-msg (setup/INSTALL_ARCHIVE.ps1 installs it) · the fix is a card he answers (c<n>) or the change reverted — never a rewrite of history`,
     });
   }
+
+  // LAW M · THE MODEL BOARD (MODELS + ACTS Block 1, 18 Aug 2026) — models.mjs owns the
+  // findings (pure over the board): RED model-role-dead (a role with zero live candidates on
+  // all keys — every organ on that role is dark) · WARN model-fell-back (a role served by a
+  // lower candidate for > 24 h) · RED embed-dim-changed (every stored vector incomparable) ·
+  // INFO quota-keys. `w.models === undefined` = the fixture did not model it → silent;
+  // null = never probed → models.mjs says WARN model-never-probed.
+  if (w.models !== undefined) F.push(...modelsFindings(w.models));
 
   // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
   // morning's lesson file never appeared. The map, the examiner probe, the
@@ -1592,6 +1604,17 @@ async function run(argv) {
   const noTier2 = argv.includes("--no-tier2");
   const skipSuite = argv.includes("--skip-suite");
   const now = new Date();
+  // LAW M (18 Aug 2026): the nightly MODEL PROBE rides this run as a step — never a new scheduled
+  // row (a schedule change is a card). The OWNER writes: `node scripts/models.mjs probe` in a child
+  // (models.mjs is the sole writer of models.json); skipped when the board is < 20 h old or under
+  // --skip-probe / the sandbox collar (a fixture never touches the wire).
+  if (!argv.includes("--skip-probe") && !process.env.ARSENAL_AUDIT_COLLAR) {
+    const b = (() => { try { return modelsBoard(); } catch { return null; } })();
+    if (!b || b.age_h === null || b.age_h >= 20) {
+      const r = spawnSync(process.execPath, [join(__dirname, "models.mjs"), "probe"], { encoding: "utf8", timeout: 240000, windowsHide: true });
+      console.log(`watchman: model probe ${r.status === 0 ? "ran" : `exit ${r.status}`} — ${String(r.stdout || "").split("\n")[0] || String(r.stderr || "").slice(0, 120)}`);
+    }
+  }
   const w = gather(now);
   const findings = checks(w);
   if (!skipSuite) { const f = probeSuite(); if (f) findings.push(f); }
@@ -1885,6 +1908,16 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       && !checks(base).some((x) => x.id === "caught-silent"));
     assert("…and it never escalates: caught-silent is INFO in every shape (a swallow is design until mutagen's panic lane says otherwise)",
       f && f.level === "INFO");
+  }
+
+  // LAW M (18 Aug 2026) — the model board's findings ride checks() when the fixture models it
+  {
+    const dead = { at: new Date().toISOString(), fresh: true, age_h: 1, keys: { n: 9, ok: [0, 1, 2, 3, 4, 5, 6, 7, 8], quota: [], bad: [] }, roles: { text: { chosen: null, dead: true, candidates: [{ model: "gemini-x-flash", class: "quota" }] } } };   /* models-literal-ok: fixture */
+    const F1 = checks({ ...base, models: dead });
+    assert("LAW M — a role with zero live candidates on all keys ⇒ RED model-role-dead (from models.mjs's own findings) + INFO quota-keys",
+      F1.some((x) => x.id === "model-role-dead" && x.level === "RED") && F1.some((x) => x.id === "quota-keys" && x.level === "INFO"));
+    assert("…silent when the fixture does not model the board (undefined); WARN model-never-probed when the board is null (never probed)",
+      !checks({ ...base }).some((x) => /^model-/.test(x.id)) && checks({ ...base, models: null }).some((x) => x.id === "model-never-probed" && x.level === "WARN"));
   }
 
   // BLOCK 8 — freeze-broken (RED, sha named; silent when unarmed / clean / unreadable)

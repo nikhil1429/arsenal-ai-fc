@@ -445,3 +445,7 @@ dressing-room/private/
 
 # overhaul Block 1 (18 Aug 2026): the on-demand repo bundle now lands in docs/derived/ (repo_bundle.mjs) — same gitignore, new home, out of the root listing
 docs/derived/
+# LAW M (MODELS + ACTS Block 1, 18 Aug 2026): the model board — models.mjs sole writer; status only, never a key. Local, re-probed nightly.
+dressing-room/state/models.json
+# LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the acts ledger — acts.mjs sole writer; his words verbatim.
+dressing-room/state/acts.jsonl

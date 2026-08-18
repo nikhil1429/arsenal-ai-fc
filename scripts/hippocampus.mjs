@@ -82,6 +82,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import os from "node:os";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: Consolidate 02:10 / HippoStore 02:20 key their SLOT's day in a catch-up burst
+import { generate as modelsGenerate, embed as modelsEmbed, loadKeys as modelsLoadKeys } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — no organ names a model; a ROLE, and the resolver picks the live model + key and says why
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -133,17 +134,9 @@ function cosine(a, b) {
 }
 
 // key pool + REST lanes (per-organ helper by repo idiom; rotates on quota)
-function loadKeys(envText = null) {
-  const keys = [];
-  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY.trim());
-  const envPath = join(os.homedir(), ".gemini", ".env");
-  const text = envText !== null ? envText : (existsSync(envPath) ? readFileSync(envPath, "utf8") : "");
-  for (const line of text.split("\n")) {
-    const m = line.match(/^GEMINI_API_KEY(_\d+)?\s*=\s*(.+)$/);
-    if (m && m[2].trim() && !keys.includes(m[2].trim())) keys.push(m[2].trim());
-  }
-  return keys;
-}
+// LAW M (18 Aug 2026): ONE key reader for the whole organism lives in models.mjs; this name stays
+// (every caller and the export at the foot use it) and delegates.
+function loadKeys(envText = null) { return modelsLoadKeys(envText); }
 // E2E audit (25 Jul 2026): this fetch had NO AbortController at all — unlike
 // generatePool's 120s. A stalled endpoint (TCP accepted, never answers) hung it
 // forever, PER KEY, and every caller inherited that hang: the Dugout's scribe
@@ -153,55 +146,29 @@ function loadKeys(envText = null) {
 // leave the timer armed — same class of leak as generatePool below).
 const EMBED_TIMEOUT_MS = Number(process.env.HIPPO_EMBED_TIMEOUT_MS || 15000);
 const EMBED_BATCH_CAP = 100;                        // Gemini batchEmbedContents hard cap: 100 requests/call
+// LAW M (MODELS + ACTS Block 1, 18 Aug 2026): the walk (candidates × keys), the error CLASSES
+// (model-gone · quota · key-bad · demand · net · schema — five facts that used to be one string)
+// and the receipt (model · key_index · latency_ms · fell_back_from) live in models.mjs. This
+// organ names the ROLE `embed` (env HIPPO_EMBED_MODEL still leads); the return shape every
+// caller reads — vectors[] or null — is unchanged.
 async function embedPool(texts, keys = loadKeys(), fetchFn = fetch) {
   if (!texts.length) return [];
-  const model = process.env.HIPPO_EMBED_MODEL || "gemini-embedding-001";
-  for (const key of keys) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), EMBED_TIMEOUT_MS);
-    try {
-      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: String(t).slice(0, 1500) }] } })) }),
-      });
-      if (!r.ok) continue;
-      const j = await r.json();
-      const vecs = (j.embeddings || []).map(e => e.values);
-      if (vecs.length) return vecs;
-    } catch { } finally { clearTimeout(timer); }
-  }
-  return null;
+  const r = await modelsEmbed("embed", texts, { keys, fetchFn, env: "HIPPO_EMBED_MODEL", timeoutMs: EMBED_TIMEOUT_MS });
+  return r.ok && r.vectors.length ? r.vectors : null;
 }
-// models walk a fallback ladder (preview churn law: probed live 14 Jul 2026 —
-// bare "gemini-3.1-flash" is NOT on the wire; the -latest aliases survive churn)
-async function generatePool(prompt, { models, maxOutputTokens = 2048, json = false, keys = loadKeys(), fetchFn = fetch, temperature = 0.4 } = {}) {
-  const ladder = models || [process.env.HIPPO_GEN_MODEL, "gemini-3.1-pro-preview", "gemini-flash-latest"].filter(Boolean);
-  let lastStatus = null;                              // M16 — callers with a PINNED key learn WHY it failed (429 = lane dry)
-  for (const model of ladder) {
-    for (const key of keys) {
-      // E2E audit (25 Jul 2026): the timer was declared INSIDE the try and only
-      // cleared on the success path, so a fetch that throws instantly (Wi-Fi
-      // down → ECONNREFUSED/DNS) left one armed 120s timer per key × per model.
-      // Six orphaned handles kept the event loop alive: the 02:10 consolidate
-      // printed "every key dry" in <1s then sat there for two minutes. Hoisted
-      // out of the try and cleared in `finally`.
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 120000);
-      try {
-        const gc = { maxOutputTokens, temperature };  // M23 — hot sampling for difficulty grading
-        if (json) gc.responseMimeType = "application/json";   // the wire enforces JSON, not the prompt
-        const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
-        });
-        if (!r.ok) { lastStatus = r.status; continue; }
-        const j = await r.json();
-        const text = (((j.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || "").join("");
-        if (text) return { ok: true, text, model, error: null };
-      } catch { } finally { clearTimeout(t); }
-    }
-  }
-  return { ok: false, text: null, error: "every key dry on every model", status: lastStatus };
+// LAW M: `role` (default text; env HIPPO_GEN_MODEL leads) replaces the model ladder — the resolver
+// ranks the live candidates (probed nightly) and falls back with a receipt. `models` (an explicit
+// list) is kept ONLY as the fixture escape hatch (`override`) — a production caller naming a model
+// fails `node scripts/models.mjs check`. Return shape: {ok, text, model, error, status} + the receipt
+// (key_index · latency_ms · fell_back_from · fell_back_role · why · tried).
+async function generatePool(prompt, { models, role = "text", maxOutputTokens = 2048, json = false, keys = loadKeys(), fetchFn = fetch, temperature = 0.4, timeoutMs = 120000 } = {}) {
+  const gc = { maxOutputTokens, temperature };  // M23 — hot sampling for difficulty grading
+  if (json) gc.responseMimeType = "application/json";   // the wire enforces JSON, not the prompt
+  const r = await modelsGenerate(role, { contents: [{ parts: [{ text: prompt }] }], generationConfig: gc },
+    { keys, fetchFn, env: role === "text" ? "HIPPO_GEN_MODEL" : null, timeoutMs, override: Array.isArray(models) && models.length ? models : null });
+  if (r.ok && r.text) return { ok: true, text: r.text, model: r.model, error: null, key_index: r.key_index, latency_ms: r.latency_ms, fell_back_from: r.fell_back_from, fell_back_role: r.fell_back_role, tried: r.tried };
+  const last = (r.tried || []).slice(-1)[0];
+  return { ok: false, text: null, error: r.ok ? `${role}: ${r.model} answered with no text` : r.why, status: last && last.status != null ? last.status : null, why: r.why, tried: r.tried, model: r.model || null };
 }
 
 // ---------------------------------------------------------------------------

@@ -553,7 +553,7 @@ async function defaultGen(prompt) {
   const { generatePool } = await import("./hippocampus.mjs");
   // NOT json-mode: it returned empty on the flash model live; the prompt asks for
   // JSON and parseSet extracts the {…} block from whatever comes back (robust).
-  const r = await generatePool(prompt, { models: ["gemini-flash-latest"], maxOutputTokens: 2048, temperature: 0.2 });
+  const r = await generatePool(prompt, { role: "text", maxOutputTokens: 2048, temperature: 0.2 });   // LAW M (18 Aug 2026): a ROLE, never a model name
   // T8 billing — the header's "registered as fuelboard tank T8" was a claim with
   // no caller until 7 Aug 2026: nothing anywhere recordUse()'d T8, so this organ's
   // daily flash spend was invisible to the gauge (the exact "fuelboard read

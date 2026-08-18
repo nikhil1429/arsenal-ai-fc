@@ -124,6 +124,7 @@ import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 import { portraitStatus, portraitSection } from "./selfknowledge.mjs";   // BLOCK 5.2 — get_organism reads the self-portrait one section at a time (the address that thaws selfknowledge); pure helpers, the organ owns the file
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
+import { generate as modelsGenerate, embed as modelsEmbed, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — this mouth names ROLES (live · text · embed); the resolver picks the live model + key and says why
 
 // M11 — the Night Shift's artifacts flow into the mouths by themselves:
 // banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
@@ -430,8 +431,12 @@ async function ensureAcks(log = console.log) {
 // that also does VISION (the whiteboard/screen eyes). The prettier
 // "native-audio" model is slower, terser, dumber, and blind — wrong trade for
 // a teacher. Swappable any time via DUGOUT_MODEL / dugout_prefs.json; the
-// warm-but-shallow option is "gemini-2.5-flash-native-audio-latest".
-const DEFAULT_MODEL = "gemini-3.1-flash-live-preview";
+// warm-but-shallow option is the seed's second live candidate.
+// LAW M (18 Aug 2026): the name above is now the SEED of models.mjs's `live` role (sticky — a
+// discovered live model is listed, never chosen: the first live probe ranked a TRANSLATE model
+// above the voice by generation). DEFAULT_MODEL is what the resolver names for `live` right now:
+// DUGOUT_MODEL env → probed → seed. The page never carries a literal.
+const DEFAULT_MODEL = modelsResolve("live", { env: "DUGOUT_MODEL" }).model;
 const DEFAULT_VOICE = captain().voice;   // Block 2 §7.3: the profile's voice (defaults to "Charon" — JARVIS's literal voice, continuity for the captain)                    // JARVIS's literal voice — continuity for the captain
 const PREFS = join(STATE_DIR, "dugout_prefs.json"); // {model, voice, depth} — his tuning, gitignored
 
@@ -582,17 +587,7 @@ function readPresenceDay(day, deps = {}) {
 
 // keys: GEMINI_API_KEY env → ~/.gemini/.env (supports GEMINI_API_KEY and
 // GEMINI_API_KEY_2/_3… — the captain's other free projects, rotated on quota)
-function loadKeys(envText = null) {
-  const keys = [];
-  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY.trim());
-  const envPath = join(os.homedir(), ".gemini", ".env");
-  const text = envText !== null ? envText : (existsSync(envPath) ? readFileSync(envPath, "utf8") : "");
-  for (const line of text.split("\n")) {
-    const m = line.match(/^GEMINI_API_KEY(_\d+)?\s*=\s*(.+)$/);
-    if (m && m[2].trim() && !keys.includes(m[2].trim())) keys.push(m[2].trim());
-  }
-  return keys;
-}
+function loadKeys(envText = null) { return modelsLoadKeys(envText); }   // LAW M (18 Aug 2026): ONE key reader for the organism (models.mjs); the name stays for its callers
 
 // ---------------------------------------------------------------------------
 // THE DAY CARTRIDGE (L3) — the slow brain's overnight compile, loaded at dawn.
@@ -764,20 +759,9 @@ const textHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = (
 
 async function embedTexts(texts, keys = loadKeys(), fetchFn = fetch) {
   if (!texts.length) return [];
-  const model = process.env.DUGOUT_EMBED_MODEL || "gemini-embedding-001";   // probed live 12 Jul 2026: text-embedding-004 is 404 on v1beta now
-  for (const key of keys) {
-    try {
-      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: String(t).slice(0, 1500) }] } })) }),
-      });
-      if (!r.ok) continue;                          // quota/key error → rotate pool
-      const j = await r.json();
-      const vecs = (j.embeddings || []).map(e => e.values);
-      if (vecs.length) return vecs;
-    } catch { }
-  }
-  return null;                                      // every key dry → honest null
+  // LAW M (18 Aug 2026): role `embed` (DUGOUT_EMBED_MODEL still leads); the walk + classes + receipt live in models.mjs
+  const r = await modelsEmbed("embed", texts, { keys, fetchFn, env: "DUGOUT_EMBED_MODEL" });
+  return r.ok && r.vectors.length ? r.vectors : null;   // every candidate refused on every key → honest null (r.why names the classes)
 }
 
 function gatherRecallSources() {
@@ -1967,23 +1951,16 @@ async function runPythonSandbox(code, deps = {}) {
   if (hit) return { ok: false, error: `chalkboard firewall: pattern ${hit} refused — the sandbox runs MATH and DEMOS, never files/env/personal data` };
   const keys = deps.keys || loadKeys();
   const fetchFn = deps.fetchFn || fetch;
-  for (const key of keys) {
-    try {
-      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
-      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.CHALKBOARD_MODEL || "gemini-flash-latest"}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({ contents: [{ parts: [{ text: "Execute exactly this python and show the output. Do not modify it beyond what is needed to run it verbatim:\n```python\n" + src + "\n```" }] }], tools: [{ code_execution: {} }] }),
-      });
-      clearTimeout(t);
-      if (!r.ok) continue;
-      const j = await r.json();
-      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-      const res = parts.find(p => p.codeExecutionResult);
-      const ranCode = (parts.find(p => p.executableCode) || { executableCode: {} }).executableCode.code || src;
-      if (res) return { ok: res.codeExecutionResult.outcome === "OUTCOME_OK", outcome: res.codeExecutionResult.outcome, output: String(res.codeExecutionResult.output || "").slice(0, 1500), ran: String(ranCode).slice(0, 1000) };
-    } catch { }
+  // LAW M (18 Aug 2026): role `text` (CHALKBOARD_MODEL still leads); the walk + classes + receipt live in models.mjs
+  const r = await modelsGenerate("text", { contents: [{ parts: [{ text: "Execute exactly this python and show the output. Do not modify it beyond what is needed to run it verbatim:\n```python\n" + src + "\n```" }] }], tools: [{ code_execution: {} }] }, { keys, fetchFn, env: "CHALKBOARD_MODEL", timeoutMs: 30000 });
+  if (r.ok) {
+    const parts = r.parts || [];
+    const res = parts.find(p => p.codeExecutionResult);
+    const ranCode = (parts.find(p => p.executableCode) || { executableCode: {} }).executableCode.code || src;
+    if (res) return { ok: res.codeExecutionResult.outcome === "OUTCOME_OK", outcome: res.codeExecutionResult.outcome, output: String(res.codeExecutionResult.output || "").slice(0, 1500), ran: String(ranCode).slice(0, 1000), model: r.model, key_index: r.key_index };
+    return { ok: false, error: `${r.model} answered without a codeExecutionResult — say so honestly, never fake an output`, model: r.model };
   }
-  return { ok: false, error: "sandbox lane dry (keys/quota) — say so honestly, never fake an output" };
+  return { ok: false, error: `sandbox lane: ${r.why} — say so honestly, never fake an output` };
 }
 
 // C6 — READ_URL: source-grounded teaching on the REST lane (urlContext).
@@ -1998,22 +1975,10 @@ async function runReadUrl(args, deps = {}) {
   if (URLCTX_DENY.some(re => re.test(url) || re.test(q))) return { ok: false, error: "url firewall: personal/local ground never rides a fetch" };
   const keys = deps.keys || loadKeys();
   const fetchFn = deps.fetchFn || fetch;
-  for (const key of keys) {
-    try {
-      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
-      const r = await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.URLCTX_MODEL || "gemini-flash-latest"}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-        body: JSON.stringify({ contents: [{ parts: [{ text: `${q || "Give the load-bearing points, dense, honest"} — read this source and answer FROM it, citing what it actually says: ${url}` }] }], tools: [{ url_context: {} }] }),
-      });
-      clearTimeout(t);
-      if (!r.ok) continue;
-      const j = await r.json();
-      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-      const text = parts.map(p => p.text || "").join("");
-      if (text) return { ok: true, text: text.slice(0, 2000), url, note: "answered FROM the source — quote it, never your priors" };
-    } catch { }
-  }
-  return { ok: false, error: "url lane dry/absent on the free pool right now — say so honestly, never fake a read" };
+  // LAW M (18 Aug 2026): role `text` (URLCTX_MODEL still leads); the walk + classes + receipt live in models.mjs
+  const r = await modelsGenerate("text", { contents: [{ parts: [{ text: `${q || "Give the load-bearing points, dense, honest"} — read this source and answer FROM it, citing what it actually says: ${url}` }] }], tools: [{ url_context: {} }] }, { keys, fetchFn, env: "URLCTX_MODEL", timeoutMs: 30000 });
+  if (r.ok && r.text) return { ok: true, text: r.text.slice(0, 2000), url, note: "answered FROM the source — quote it, never your priors", model: r.model, key_index: r.key_index };
+  return { ok: false, error: `url lane: ${r.ok ? `${r.model} answered with no text` : r.why} — say so honestly, never fake a read` };
 }
 
 // C5 — EPHEMERAL TOKENS: the bridge mints a 30-min single-use token so a LAN
@@ -2660,7 +2625,7 @@ function execTool(name, args, deps = {}) {
         _use: "Narrate this as a STRUCTURED 10-MINUTE LECTURE — not a data dump. Walk it top to bottom: what it is → the two-speed brain → the thalamus gate → the seven tanks → the night shift → the five-layer memory → the learning layer → the outwork layer → the humane laws → the M14+ features → and END with what is DORMANT and exactly what un-dormants it. Every number in this object is REAL (read live). Use them; invent nothing; no hype words (never 10x / exponential / on-steroids). If asked only about one part (e.g. 'walk me through the cyborg brain'), lecture that section in depth.",
         what_it_is: `A cognitive prosthesis for one human — the captain, ${captainTag()}, a medicated ADHD-PI builder training for an AI Product Engineer role. It carries the executive functions his cortex under-supplies (initiation, working memory, time-sense, task-switching) so his consistency, not his condition, decides the outcome. Built as a football club: the human is the heart and the only irreplaceable organ; everything else circulates one thing — the rep (a unit of studied, self-tested work). Three nested clocks: the rep, the day, the season. The rival is always kal-wala-${captain().name}.`,
         two_speed_brain: {
-          reflex: "Gemini Live — free, always-on, the senses. Eyes (vision), ears, and the one mouth (Charon voice, gemini-3.1-flash-live-preview). Sub-second, interruptible, never does deep judgment. Runs all day on the free pool.",
+          reflex: `Gemini Live — free, always-on, the senses. Eyes (vision), ears, and the one mouth (Charon voice, ${DEFAULT_MODEL}). Sub-second, interruptible, never does deep judgment. Runs all day on the free pool.`,
           deep: "Claude Opus 4.8 with extended thinking, via cortex.mjs (:4112). Rare and profound — the ~5% that needs real reasoning: the hard read on his learning, the coaching strategy, the genome mutation, the season's truth. The ONLY place Claude tokens go.",
           bridge: "Mid-conversation the reflex Gaffer defers a hard question to Opus (async through the thalamus), gives a holding token, keeps talking, and folds the profound answer back into the live talk at its next turn — Opus's reasoning spoken in the Gaffer's voice, no silence.",
         },
@@ -3655,7 +3620,7 @@ async function selftest() {
   assert("EARS: VAD hangover long enough to not cut off a thinking pause", cfg0().vad.hangover_ms >= 1200);
   assert("EYES: sharper frames (higher jpeg quality + resolution), config-driven", cfg0().vision.jpeg_quality >= 0.8 && cfg0().vision.max_px >= 1280 && PAGE.includes("VZ.jpeg_quality") && PAGE.includes("VZ.frame_ms"));
   assert("EYES: capture requests HD from the camera + screen", PAGE.includes("height:{ideal:1080}") && PAGE.includes("width:{ideal:1920}"));
-  assert("MODEL: proven-best 3.1-flash-live default, swappable via prefs/env", DEFAULT_MODEL === "gemini-3.1-flash-live-preview" && cfg0().model === "gemini-3.1-flash-live-preview");
+  assert("MODEL: the live role's resolved model is the default (LAW M — the resolver names it, this file never does), swappable via prefs/env", DEFAULT_MODEL === modelsResolve("live", { env: "DUGOUT_MODEL" }).model && /live|audio/.test(DEFAULT_MODEL) && cfg0().model === DEFAULT_MODEL);
 
   const cfg = buildConfig(["k1"]);
   assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 34);   // 34 since BLOCK 3 (18 Aug: -set_depth (legacy) +open_sitting +close_sitting — the sitting door); 33 since BLOCK 2 (17 Aug: -log_reps -grade_rejirah -retire_doubt, +bank_answer +judge_round — this surface stopped deciding what is true); 34 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
@@ -3809,7 +3774,7 @@ async function selftest() {
     const ok = load(mk());
     assert("fresh handle (same model/mode/key slot) is offered back", ok && ok.handle === "h1" && ok.key_index === 1);
     assert("stale handle (> TTL, server side gone) → null", load(mk({ ts: new Date(nowFix - (RESUME_TTL_MIN + 5) * 60000).toISOString() })) === null);
-    assert("handle belongs to ONE model — mismatch → null", load(mk({ model: "gemini-2.5-flash-native-audio-latest" })) === null);
+    assert("handle belongs to ONE model — mismatch → null", load(mk({ model: "some-other-live-model" })) === null);
     assert("a scrimmage never resumes into the Gaffer's skin", load(mk({ mode: "scrimmage" })) === null);
     assert("handle is per-project — key slot out of pool → null", load(mk({ key_index: 7 })) === null);
     assert("no file / cleared → null, never crashes", load(null) === null && load({ handle: null }) === null);
@@ -6398,6 +6363,20 @@ async function main() {
   if ((process.argv[2] || "").toLowerCase() === "index") {
     const n = await indexRecall();
     console.log(`dugout: recall index +${n} new chunk(s) of his words`);
+    return;
+  }
+  if ((process.argv[2] || "").toLowerCase() === "lanes-probe") {
+    // LAW M (MODELS + ACTS Block 1, 18 Aug 2026): ONE live call per REST lane this mouth owns —
+    // chalkboard (code_execution) · read_url (url_context) · embed — each with the resolver's
+    // receipt (model · key · latency · fell_back_from) or its `why` (classes, never "pool dry").
+    const t0 = Date.now();
+    const cb = await runPythonSandbox("print(sum(range(1, 11)))");
+    console.log(`chalkboard: ${cb.ok ? `OK · output ${JSON.stringify(String(cb.output).trim())} · ${cb.model} key ${cb.key_index}` : `✗ ${cb.error}`}`);
+    const ru = await runReadUrl({ url: "https://en.wikipedia.org/wiki/Byte_pair_encoding", question: "In one line: what does BPE merge?" });
+    console.log(`read_url:   ${ru.ok ? `OK · ${JSON.stringify(ru.text.slice(0, 120))}… · ${ru.model} key ${ru.key_index}` : `✗ ${ru.error}`}`);
+    const em = await embedTexts(["tokenization splits text into pieces"]);
+    console.log(`embed:      ${em && em[0] ? `OK · dim ${em[0].length}` : "✗ null (every candidate refused on every key)"}`);
+    console.log(`live role:  ${DEFAULT_MODEL} (what the page config hands the voice) · ${Date.now() - t0} ms total`);
     return;
   }
   if ((process.argv[2] || "").toLowerCase() === "mint-probe") {

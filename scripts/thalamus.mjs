@@ -1629,9 +1629,9 @@ async function selftest() {
       seen.length === 1 && seen[0] === "sonnet" && rows[0].model === "sonnet" && rows[0].model_requested === undefined);
     // the live file's own value on the day of the repair
     const seen2 = [], rows2 = [];
-    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "gemini-flash-lite-latest", enabled: true } }, gen: okGen(seen2), appendBrainLedger: (o) => rows2.push(o) });
+    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "gemini-flash-lite-latest", enabled: true } }, gen: okGen(seen2), appendBrainLedger: (o) => rows2.push(o) });   /* models-literal-ok: the RETIRED name on purpose — this fixture proves the fallback */
     assert("KNOB: a name `claude -p` cannot spawn falls back to the live-proven default — and the row NAMES the substitution instead of hiding it",
-      seen2[0] === "haiku" && rows2[0].model === "haiku" && rows2[0].model_requested === "gemini-flash-lite-latest" && /claude -p/.test(String(rows2[0].model_fallback)));
+      seen2[0] === "haiku" && rows2[0].model === "haiku" && rows2[0].model_requested === "gemini-flash-lite-latest" && /claude -p/.test(String(rows2[0].model_fallback)));   /* models-literal-ok: fixture */
     assert("KNOB: an empty/missing model never blanks the --model flag", resolveAdjModel({ adjudicator: { enabled: true } }).model === "haiku" && resolveAdjModel({}).model === "haiku");
     assert("KNOB: a full claude-* model id passes through untouched (the CLI takes them verbatim)",
       resolveAdjModel({ adjudicator: { model: "claude-haiku-4-5-20251001" } }).model === "claude-haiku-4-5-20251001");
