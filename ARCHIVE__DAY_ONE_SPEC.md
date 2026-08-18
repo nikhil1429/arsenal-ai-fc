@@ -83,7 +83,8 @@ in the raw.**
 ## 3. ARCHITECTURE — HOW THIS FITS THE LIVE ORGANISM
 
 **Do not touch the live path.** `afferent.jsonl` and the thalamus keep working exactly as they
-do; 14 organs read that file. Layering, never replace.
+do; a lot of organs read that file — how many, live: `grep -rl "afferent.jsonl" scripts/*.mjs | wc -l`
+(this line said "14" until 19 Aug 2026, when the command answered 16). Layering, never replace.
 
 ```
   HIS SURFACES  (typed · gaffer voice · activitywatch · pulse · presence · readiness)

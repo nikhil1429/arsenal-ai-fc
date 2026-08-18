@@ -97,7 +97,8 @@ import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREE
 import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";
 import { stats as actsStats, findings as actsFindings } from "./acts.mjs";
 import { stats as tasksStats, findings as tasksFindings } from "./tasks.mjs";
-import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
+import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";
+import { afferentLiveness } from "./thalamus.mjs";   // LOAD ZERO BLOCK 9 (19 Aug 2026): the INBOUND liveness contract — declared states, never a flat age scan (that scored 3 false positives out of 3)   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -641,6 +642,20 @@ export function checks(w) {
   // relay-never (the road is unwired) · INFO outbox-waiting (he simply has not opened a surface —
   // never a defect, never a card: BLOCK 9's false-positive ruling applied here from day one).
   if (w.outbox) F.push(...outboxFindings(w.outbox));
+
+  // LOAD ZERO BLOCK 9 (19 Aug 2026): THE INBOUND HALF. The efferent disease is "made, never
+  // delivered"; the mirror is "a sense stopped and nothing said so". Only a source DECLARED live
+  // can be late — a naive age scan called three sources silent on 19 Aug and all three were false,
+  // which would have RAISED the LOAD number while claiming to protect it. thalamus.mjs holds the
+  // declaration (it is the bus's sole writer); this organ, which sits outside it, does the asking.
+  // the reader is INLINE on purpose: this file has NO readLines/readJsonl helper, and calling one
+  // that does not exist is a ReferenceError the swallow would eat — shipping green while the check
+  // never ran once. This file already carries the scar of exactly that (see the note further down),
+  // and the first cut of THIS line repeated it.
+  F.push(...afferentLiveness((() => {
+    try { return readFileSync(AFFERENT, "utf8").split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); }
+    catch (e) { swallow("findings: afferent.jsonl unreadable → the inbound liveness check has no rows to judge", e); return []; }
+  })(), new Date()));
 
   // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
   // morning's lesson file never appeared. The map, the examiner probe, the

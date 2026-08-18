@@ -723,6 +723,130 @@ async function laws() {
         })());
 
       // THE SCOREBOARD ITSELF — by Law 4 it did not exist until it was a code path.
+    }
+
+    // ── LOAD ZERO BLOCK 7 (19 Aug 2026) — CANON, 66 FILES ───────────────────────────────────────
+    // THE LAW: no canon file may state something a command can produce. A number or a state in
+    // canon prose is a lie by tomorrow — and it lies to HIM, because canon is what he reads when he
+    // wants to know where things stand. `CLAUDE.md` has followed this since the 18 Aug overhaul
+    // ("every number and location lives in a command, never in prose"); this makes it a law.
+    //
+    // PRECISION IS THE WHOLE DESIGN, because the naive version of this check is a card generator.
+    // Measured 19 Aug on all 66 canon files: a loose scan (any number beside any noun) flagged
+    // **216** lines, and the overwhelming majority were false — `claude-in-chrome` matched a
+    // "model literal" pattern, `9 axes` and `12 steps` are DEFINITIONAL constants of THE METHOD
+    // that cannot go stale, and worked teaching examples carry numbers on purpose. Tightened to
+    // what actually rots — a number attached to a noun a COMMAND can count today (organs, suite
+    // members, enabled jobs, open cards, daemons) — the true count was **6**, and three of those
+    // turned out to be dated records whose date sat one line above. The real defects were three:
+    //   · ARCHIVE__DAY_ONE_SPEC.md claimed "14 organs read that file" — the command answered 16
+    //   · THE_DAILY_LOOP.md froze "= 0 organs still guessing" beside the command that prints it
+    //   · gist-patch/SKILL.md handed him a report line with a frozen organ count inside it
+    // THREE EXEMPTIONS, each a real distinction and not a convenience:
+    //   1. a FENCED BLOCK is a command, not a claim — that is the fix, not the disease
+    //   2. a DATED paragraph is a RECORD of what was true then (the repo's own "records, not work
+    //      orders" rule). Scoped to the paragraph, not the line, because the date is usually on the
+    //      sentence above the number. Measured: this exemption hides ZERO extra hits today.
+    //   3. an explicit `<!-- canon-ok: <why> -->` pragma, the same shape models.mjs uses, whose
+    //      reason must be a real sentence — and whose count may only SHRINK.
+    {
+      const canon = spawnSync("git", ["ls-files", "*.md"], { cwd: ROOT, encoding: "utf8" });
+      const files = String(canon.stdout || "").split("\n").filter((f) => f && !f.startsWith("docs/archive/"));
+      const LIVE = /\b\d[\d,]*\s*(?:\/\s*\d+\s*)?(organs?|suite members?|selftests?|enabled jobs?|brain jobs?|open cards?|daemons?|lanes? (?:asleep|awake)|capsules? locked)\b/i;
+      const SUITE = /\b\d+\s+(passed|failed)\b/i;
+      const undeclared = [], declared = [];
+      for (const f of files) {
+        let t; try { t = readFileSync(join(ROOT, f), "utf8"); } catch { continue; }
+        const L = t.split(/\r?\n/);
+        let fence = false;
+        L.forEach((l, i) => {
+          if (/^\s*```/.test(l)) { fence = !fence; return; }
+          if (fence) return;                                              // exemption 1
+          if (!(LIVE.test(l) || SUITE.test(l))) return;
+          const prag = /<!--\s*canon-ok:\s*([^>]*?)\s*-->/.exec(l);
+          if (prag) { declared.push({ at: `${f}:${i + 1}`, why: prag[1] }); return; }   // exemption 3
+          if (/\b20\d\d\b/.test(L.slice(Math.max(0, i - 2), i + 1).join(" "))) return;  // exemption 2
+          undeclared.push(`${f}:${i + 1}`);
+        });
+      }
+      assert(`LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (${files.length} files scanned, ${declared.length} declared)`,
+        undeclared.length === 0 && files.length >= 60,
+        undeclared.length ? `${undeclared.join(", ")} freeze a number that rots. Name the COMMAND instead — CLAUDE.md's shape since 18 Aug. If it is genuinely a record, date it; if it is genuinely fixed by design, say so in a <!-- canon-ok: why --> pragma.` : `only ${files.length} canon files found — git ls-files failed, so this law measured nothing`);
+      assert("LOAD ZERO BLOCK 7 · ...and every canon-ok exemption carries a REAL reason, and the exemptions may only SHRINK (1 today)",
+        declared.length <= 1 && declared.every((d) => d.why && d.why.trim().length >= 30),
+        declared.map((d) => `${d.at}: ${d.why}`).join(" | "));
+    }
+
+    // ── LOAD ZERO BLOCK 8 (19 Aug 2026) — MODEL SEED: NO ROLE MAY BE SILENTLY DARK ──────────────
+    // Measured 19 Aug: LAW M works (99 files, 0 literal model names, the resolver even self-upgraded
+    // mid-session when a quota cleared) — but `image` sat DEAD while SIX image models answered `ok`,
+    // and `models.findings` skipped the role with a bare `if (role === "image") continue`. Unseeded
+    // is a legitimate design state (which model leads a GENERATION role is his taste, not a
+    // measurement); being silent about it is not. The law is the second half only.
+    {
+      const MD = await import(pathToFileURL(join(ROOT, "scripts", "models.mjs")).href);
+      const board = (roles) => ({ fresh: true, age_h: 0.1, keys: { ok: 9, quota: [] }, roles });
+      const dark = MD.findings(board({ image: { chosen: null, dead: true, candidates: [
+        { model: "gemini-x-image", class: "ok" }, { model: "gemini-y-image", class: "ok" }] } }));
+      const seeded = MD.findings(board({ image: { chosen: "gemini-x-image", dead: false, candidates: [{ model: "gemini-x-image", class: "ok" }] } }));
+      const noCands = MD.findings(board({ image: { chosen: null, dead: true, candidates: [{ model: "gemini-x-image", class: "quota" }] } }));
+      const f = dark.find((x) => x.id === "model-role-unseeded");
+      assert("LOAD ZERO BLOCK 8 · a role with live candidates and NO leader is NAMED, never silent — and it says why code cannot pick for him",
+        !!f && f.level === "WARN" && /2 model\(s\)/.test(f.finding) && /gemini-x-image/.test(f.evidence)
+        && typeof f.why_code_cannot_decide === "string" && f.why_code_cannot_decide.length >= 30,
+        JSON.stringify(dark.map((x) => x.id)));
+      assert("LOAD ZERO BLOCK 8 · ...and it does NOT fire once he has named one, nor when there is genuinely nothing live to name (a quota-blocked role is not an unanswered question)",
+        !seeded.some((x) => x.id === "model-role-unseeded") && !noCands.some((x) => x.id === "model-role-unseeded"));
+      assert("LOAD ZERO BLOCK 8 · the skip that hid it is gone — `findings` no longer drops a role out of the loop unexamined",
+        !/if \(role === "image"\) continue;\s*\/\//.test(readOrgan("models.mjs")));
+    }
+
+    // ── LOAD ZERO BLOCK 9 (19 Aug 2026) — AFFERENT LIVENESS ─────────────────────────────────────
+    // The inbound half of the same contract. Its central design constraint is a MEASUREMENT, not a
+    // preference: on 19 Aug a flat "how old is the last row" scan called three sources silent and
+    // ALL THREE WERE FALSE (haiku-pulse retired on purpose, organism-memory never a stream, the
+    // ring not on his finger). Shipped, it would have handed him three more cards — it would have
+    // RAISED the LOAD number while claiming to protect it. So the first assertion below is the
+    // DoD's own test: re-run that scan and it must report ZERO for those three, forever.
+    {
+      const TH = await import(pathToFileURL(join(ROOT, "scripts", "thalamus.mjs")).href);
+      const NOW = new Date("2026-08-19T05:00:00Z");
+      const old = "2026-08-14T05:00:00Z";                 // 120 h back — well past any cadence
+      const rows = [
+        { source: "haiku-pulse", ts: old }, { source: "organism-memory", ts: old }, { source: "readiness", ts: old },
+        { source: "activitywatch", ts: "2026-08-19T04:30:00Z" }, { source: "presence", ts: "2026-08-19T02:00:00Z" },
+        { modality: "voice", ts: old },                   // event-only, keyed by modality (rows carry no source)
+      ];
+      const clean = TH.afferentLiveness(rows, NOW);
+      assert("LOAD ZERO BLOCK 9 · THE 19 AUG FALSE POSITIVES STAY SILENT — retired, never-a-stream and depends-on-him are NOT faults, however old they get",
+        clean.length === 0, JSON.stringify(clean.map((f) => `${f.id}:${f.source}`)));
+      const dead = TH.afferentLiveness([...rows.filter((r) => r.source !== "activitywatch"), { source: "activitywatch", ts: old }], NOW);
+      assert("LOAD ZERO BLOCK 9 · ...and a source DECLARED LIVE that goes past its cadence IS named, with its age and its cadence",
+        dead.length === 1 && dead[0].id === "afferent-silent" && dead[0].source === "activitywatch" && /120\.0 h/.test(dead[0].finding) && dead[0].level === "WARN",
+        JSON.stringify(dead));
+      const ghost = TH.afferentLiveness([...rows, { source: "brand-new-sense", ts: "2026-08-19T04:59:00Z" }], NOW);
+      assert("LOAD ZERO BLOCK 9 · a source posting to the bus and DECLARED NOWHERE is named — a new sense may not wire itself in silently, which is the one thing the registry cannot know about itself",
+        ghost.some((f) => f.id === "afferent-undeclared" && f.source === "brand-new-sense"));
+      assert("LOAD ZERO BLOCK 9 · every declared source carries a legal state and a REAL reason; every `live` one carries a cadence (a state with no reason is a shrug, and a live source with no cadence can never be late)",
+        Object.entries(TH.AFFERENT_SOURCES).every(([, d]) => TH.AFFERENT_STATES.includes(d.state) && typeof d.why === "string" && d.why.trim().length >= 30
+          && (d.state !== "live" || Number.isFinite(d.cadence_h))));
+      assert("LOAD ZERO BLOCK 9 · the watchman ASKS it, and reads the bus with an INLINE reader — this file has no readJsonl/readLines, and calling one it lacks is a ReferenceError the swallow eats (it has shipped green that way before, and the first cut of this wire did it again)",
+        /afferentLiveness\(/.test(readOrgan("watchman.mjs")) && !/readJsonl\(|readLines\(/.test(readOrgan("watchman.mjs")));
+      const OC = await import(pathToFileURL(join(ROOT, "scripts", "oura_coach.mjs")).href);
+      assert("LOAD ZERO BLOCK 9 · ABSENCE IS EXPLICIT — a payload judged on its OWN day says 'no reading' instead of handing a reader a fortnight-old night as last night's (readiness.json: mtime 18 Aug, day inside 2026-08-04)",
+        (() => {
+          const stale = OC.readingFor("2026-08-19", { ok: true, day: "2026-08-04", verdict: "green" });
+          const fresh = OC.readingFor("2026-08-19", { ok: true, day: "2026-08-19", verdict: "green" });
+          const none = OC.readingFor("2026-08-19", null);
+          return stale.fresh === false && /no reading for 2026-08-19/.test(stale.why) && /15 day\(s\) old/.test(stale.why)
+            && fresh.fresh === true && fresh.reading.verdict === "green"
+            && none.fresh === false && none.day === null;
+        })());
+      assert("LOAD ZERO BLOCK 9 · freshness comes from the PAYLOAD's own stamp, never a file mtime — readiness.json has a fresh mtime and a 2026-08-04 day inside, and an old value standing in for a missing one is the bug",
+        !/statSync|mtimeMs|\.mtime\b/.test(String(TH.afferentLiveness).split(/\r?\n/).map((l) => l.replace(/\/\/.*$/, "")).join("\n")));
+    }
+
+    {
       const ST = await import(pathToFileURL(join(ROOT, "scripts", "state.mjs")).href);
       assert("LOAD ZERO BLOCK 6 · the LOAD NUMBER is code, printed on line 1, and it NAMES the part only he can drain (staged facts + overdue Re-Jirah are his by Law 4 — that is the floor, and hiding it would flatter the scoreboard)",
         typeof ST.loadNumber === "function"

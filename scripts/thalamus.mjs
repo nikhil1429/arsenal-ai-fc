@@ -2330,4 +2330,82 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// LOAD ZERO BLOCK 9 (19 Aug 2026) — AFFERENT LIVENESS: the inbound half of the same contract
+// --------------------------------------------------------------------------------------------
+// The efferent disease was "made, never delivered". The mirror is "a sense stopped and nothing
+// said so". Same root: no liveness contract.
+//
+// ⚠ READ THIS BEFORE CHANGING ANY OF IT — THE NAIVE VERSION WAS MEASURED, AND IT WAS 100% WRONG.
+// On 19 Aug a flat "how old is the last row" scan called three sources SILENT: readiness 112 h,
+// organism-memory 99 h, haiku-pulse 87 h. Every single one had a legitimate explanation —
+// haiku-pulse was RETIRED ON PURPOSE (commit 4f94805, "the organism stops paying for silence":
+// 32,480 tok/pulse of which ~31,970 was boot tax, 98% paid for nothing), organism-memory was
+// NEVER A STREAM (2 rows, ever), and the ring simply was not on his finger. THREE FOR THREE.
+// Shipped as-is, that check would have handed him three more cards — it would have RAISED the LOAD
+// number while claiming to protect it. **A naive liveness check is itself a card generator.**
+//
+// So the state is DECLARED, not inferred. Only a `live` source past its cadence is a finding.
+// `retired`, `event-only` and `depends-on-him` are NEVER flagged — an event source that is quiet
+// is a quiet day, not a dead sensor, and that distinction is the entire block.
+// An UNDECLARED source IS named, because that is the one thing the registry cannot know about
+// itself: a new sense wiring itself in silently is how this list rots.
+export const AFFERENT_SOURCES = Object.freeze({
+  // POLLERS — they run on a clock, so silence past the cadence is a real fault
+  activitywatch:            { state: "live", cadence_h: 12, why: "the desktop watcher polls; it is the one sense that should never be quiet while the laptop is on" },
+  presence:                 { state: "live", cadence_h: 36, why: "the presence poller stamps whether he is at the machine" },
+  // EVENT-ONLY — they move when HE moves. A quiet day is a quiet day, never a defect.
+  "claude-code":            { state: "event-only", why: "one row per prompt he types in Claude Code" },
+  "claude-code-teaching":   { state: "event-only", why: "one row per assistant turn — it moves only when a session runs" },
+  "dugout-gaffer-teaching": { state: "event-only", why: "the Gaffer's own turns — silent whenever he is not in the dugout" },
+  "gaffer-brain":           { state: "event-only", why: "the Gaffer's reasoning rows, written only inside a sitting" },
+  voice:                    { state: "event-only", why: "his spoken turns; rows carry no `source`, so the modality IS the key here" },
+  slip:                     { state: "event-only", why: "a slip is logged when one happens — zero slips is the good outcome, not a dead lane" },
+  throwin:                  { state: "event-only", why: "a throw-in arrives when he throws something in" },
+  "organism-memory":        { state: "event-only", why: "NEVER A STREAM — 2 rows ever. Not a source that died; a source that was never periodic (measured 19 Aug 2026)" },
+  // RETIRED — switched off on purpose, with the receipt
+  "haiku-pulse":            { state: "retired", commit: "4f94805", why: "the organism stops paying for silence — 32,480 tok/pulse of which ~31,970 was `claude -p` boot tax, 98% paid for nothing; brain_config.pulse.enabled false" },
+  // DEPENDS ON HIM — the sensor is fine; there is genuinely nothing to send
+  readiness:                { state: "depends-on-him", why: "the Oura ring only speaks when he wears it (his word, 19 Aug 2026). An absent reading is a fact about the night, not a fault in the lane" },
+});
+export const AFFERENT_STATES = Object.freeze(["live", "event-only", "retired", "depends-on-him"]);
+// afferentLiveness(rows, now) → findings[]. PURE over rows the caller has already read — the same
+// shape gate.mjs uses, so the suite can drive it on fixtures with no live bus.
+// FRESHNESS COMES FROM THE PAYLOAD'S OWN TIMESTAMP, never a file mtime: readiness.json has an mtime
+// of 18 Aug (it LOOKS fresh) while the `day` inside reads 2026-08-04. An old value silently standing
+// in for a missing one is the bug — absence must be explicit.
+export function afferentLiveness(rows, now = new Date(), reg = AFFERENT_SOURCES) {
+  const t0 = now instanceof Date ? now.getTime() : Date.parse(now);
+  const last = new Map();
+  for (const r of (rows || [])) {
+    if (!r) continue;
+    const key = r.source || r.modality;                 // a source-less row is keyed by its modality
+    if (!key) continue;
+    const t = Date.parse(r.ts || r.at || "");           // the PAYLOAD's own stamp, never a file mtime
+    if (!Number.isFinite(t)) continue;
+    if (!last.has(key) || t > last.get(key)) last.set(key, t);
+  }
+  const F = [];
+  for (const [key, t] of last) {
+    const d = reg[key];
+    if (!d) {
+      F.push({ id: "afferent-undeclared", level: "WARN", source: key,
+        finding: `afferent source "${key}" is posting to the bus and is declared nowhere — it cannot be judged live or quiet`,
+        evidence: "declare it in thalamus.mjs AFFERENT_SOURCES with a state: live(cadence_h) | event-only | retired | depends-on-him" });
+      continue;
+    }
+    if (d.state !== "live") continue;                   // the whole point: only a POLLER can be late
+    const ageH = (t0 - t) / 3600000;
+    if (ageH > d.cadence_h) F.push({ id: "afferent-silent", level: "WARN", source: key,
+      finding: `afferent source "${key}" has sent nothing for ${ageH.toFixed(1)} h (its cadence is ${d.cadence_h} h) — a sense stopped and nothing said so`,
+      evidence: `${d.why} · \`node scripts/thalamus.mjs status\`` });
+  }
+  // a declared LIVE source that has never posted at all is the same fault, said differently
+  for (const [key, d] of Object.entries(reg)) {
+    if (d.state === "live" && !last.has(key)) F.push({ id: "afferent-silent", level: "WARN", source: key,
+      finding: `afferent source "${key}" is declared live and has NEVER posted a row`, evidence: d.why });
+  }
+  return F;
+}
+
 export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport };

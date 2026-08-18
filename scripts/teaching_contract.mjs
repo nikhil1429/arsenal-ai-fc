@@ -670,7 +670,16 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
   const L = [];
   L.push(`TEACHING CONTRACT (drift-ranked · mutates with the journey) · turn ${turn}/${warnAt}`
     + (anchored ? "" : " · CLOCK UNANCHORED (no session boundary recorded — see reset-turns)")
-    + (fill ? ` · context ${Math.round(fill.pct * 100)}%` : "")
+    // LOAD ZERO BLOCK 8 (19 Aug 2026) — THE TILDE IS THE WHOLE POINT. This printed a bare
+    // `context 37%`, which reads as a MEASUREMENT on line 1 of every turn. It is not one: it is
+    // transcript BYTES ÷ a calibrated bytes-per-token, and the context also holds the system
+    // prompt, tool and MCP schemas, memory and every tool result — none of which are in the
+    // transcript. Measured 19 Aug: this line said 12% while the real readout was 198.3k/1M = 20%.
+    // A confident wrong number is worse than no number, because decisions ride on it — he decides
+    // whether to start a long teaching block from this figure. The longer §17-C line already names
+    // the calibration and says the UI's meter is the truth; this short one had no such caveat and
+    // no room for one, so the caveat is the `~` and the `est`.
+    + (fill ? ` · context ~${Math.round(fill.pct * 100)}% est` : "")
     + ` · rules ${shown.length}/${total}`);
   // Both lanes shown, provenance visible (6 Aug two-lane ruling): "3× · 2 auto"
   // means 1 confirmed by him + 2 measured by code. A bare number would hide who
@@ -1026,9 +1035,14 @@ function selftest() {
     && blockLines(busyState, done, T0, null).some((l) => /CONTEXT WARNING/.test(l)));
   assert("FALLBACK IS LABELLED — with no readable transcript the turn-count warning says it is a PROMPT count",
     blockLines(busyState, done, T0, null).some((l) => /PROMPT count, not a context measure/.test(l)));
-  assert("HEADER — the fill percentage is visible whenever it is known, and absent when it is not",
-    /context 80%/.test(blockLines(quietState, done, T0, fSoft)[0])
-    && !/context \d+%/.test(blockLines(quietState, done, T0, null)[0]));
+  // LOAD ZERO BLOCK 8 (19 Aug 2026): ...and it is visible AS AN ESTIMATE. A bare `context 80%` on
+  // line 1 of every turn reads as a measurement; it is transcript bytes ÷ a calibrated ratio, and
+  // it was measured 8 points wrong on 19 Aug (said 12%, real readout 20%). The `~` and the `est`
+  // are the caveat this line has no room to spell out.
+  assert("HEADER — the fill percentage is visible whenever it is known, MARKED as an estimate, and absent when it is not",
+    /context ~80% est/.test(blockLines(quietState, done, T0, fSoft)[0])
+    && !/context \d+%/.test(blockLines(quietState, done, T0, fSoft)[0])
+    && !/context/.test(blockLines(quietState, done, T0, null)[0]));
   assert("ANTI-WALL HOLDS WITH THE GAUGE ON — still never more than 5 lines, at every show_n and both tiers",
     (() => { let worst = 0;
       for (const f of [fHard, fSoft, fQuiet, null]) for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)

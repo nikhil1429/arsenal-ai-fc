@@ -407,7 +407,24 @@ export function findings(b = board(), now = Date.now()) {
   if (!b) return [{ id: "model-never-probed", level: "WARN", finding: "models.json absent — no role has been measured; every caller rides the seed", evidence: "`node scripts/models.mjs probe`" }];
   for (const role of ROLES) {
     const x = (b.roles || {})[role]; if (!x) continue;
-    if (role === "image") continue;   // unseeded by design
+    // LOAD ZERO BLOCK 8 (19 Aug 2026) — A ROLE MAY BE UNSEEDED BY DESIGN; IT MAY NOT BE SILENT.
+    // This line used to be `if (role === "image") continue;` — the role was skipped out of the
+    // findings loop entirely, so `image` sat DEAD while SIX image models measured `ok` on the live
+    // probe (2.5-flash-image · 3-pro-image-preview · 3-pro-image · 3.1-flash-image-preview ·
+    // 3.1-flash-image · 3.1-flash-lite-image) and nothing anywhere said so. Unseeded IS the design
+    // — which model leads a generation role is HIS call, not a measurement — but "waiting for his
+    // word" and "silently dark" are different states and only one of them is honest.
+    // It is a WARN, not a RED: nothing is broken. And it is shaped as an ASK that can be answered in
+    // one line, because under BLOCK 6 an organ may only put a thing in his lane if it can say why
+    // code cannot decide it — which here it can, and does.
+    if (role === "image") {
+      const ok = (x.candidates || []).filter((c) => c.class === "ok");
+      if (!x.chosen && ok.length) F.push({ id: "model-role-unseeded", level: "WARN",
+        finding: `role image has ${ok.length} model(s) answering OK and NONE may lead — the role is dark until he names one`,
+        why_code_cannot_decide: "which image model leads is a taste call about the pictures it makes, not a measurement — the probe can rank latency but cannot choose the look he wants",
+        evidence: `${ok.map((c) => c.model).join(" · ")} — one-line edit: SEED.image in scripts/models.mjs · \`node scripts/models.mjs status\`` });
+      continue;
+    }
     if (x.dead) F.push({ id: "model-role-dead", level: "RED", finding: `role ${role}: zero live candidates on all keys — every organ on this role is dark`, evidence: `${(x.candidates || []).map((c) => `${c.model} ${c.class}`).join(" · ")} · seed: scripts/models.mjs SEED.${role} · \`node scripts/models.mjs probe\`` });
     else if (x.fell_back_from && x.chosen_since && now - Date.parse(x.chosen_since) > 24 * 3600000) F.push({ id: "model-fell-back", level: "WARN", finding: `role ${role} served by ${x.chosen} (seed top ${x.fell_back_from}) for ${((now - Date.parse(x.chosen_since)) / 3600000).toFixed(0)} h`, evidence: `${(x.candidates || []).filter((c) => c.model === x.fell_back_from).map((c) => `${c.model} ${c.class}`).join("") || "seed top not probed"} · his one-line seed edit or Google's tier — \`node scripts/models.mjs status\`` });
     if (x.dim_changed_from) F.push({ id: "embed-dim-changed", level: "RED", finding: `embed dim changed ${x.dim_changed_from} → ${x.embed_dim} — every stored vector (hippocampus recall index, dugout) is now incomparable`, evidence: `${x.chosen} · re-index or pin the previous model in SEED.embed` });

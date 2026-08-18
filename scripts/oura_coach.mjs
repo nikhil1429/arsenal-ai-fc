@@ -896,6 +896,30 @@ async function fetchNights(lookback = 45) {
 // persistable ONLY if it is a real verdict; otherwise the last real one stands.
 export const isPersistableVerdict = (a) => !!(a && a.ok === true && a.verdict);
 
+// ── LOAD ZERO BLOCK 9 (19 Aug 2026) — ABSENCE MUST BE EXPLICIT ──────────────────────────────
+// THE MEASURED BUG: readiness.json had an mtime of 18 Aug — it LOOKED fresh — while the `day`
+// inside read 2026-08-04. Nothing anywhere said "no reading — the ring was not worn". An old value
+// simply sat there looking current, and every reader that opened the file got a fortnight-old night
+// presented as last night's.
+// THE RULE: a payload carries its own freshness, and it must be able to say I HAVE NOTHING.
+// Freshness is judged on the PAYLOAD'S OWN `day`, never on the file's mtime — an mtime says when
+// something last wrote, not what it wrote.
+// This is a READER-side guard and it is deliberately NOT a watchman finding: `readiness` is declared
+// `depends-on-him` on the afferent bus (thalamus.mjs AFFERENT_SOURCES), so a night with no reading
+// is a fact about his night, not a fault in the lane — flagging it would mint a card every single
+// day he does not wear the ring, which is exactly the false-positive disease BLOCK 9 exists to avoid.
+// (THE GOALKEEPER'S MEDICAL BOUNDARY IS UNTOUCHED: this decides only whether a reading is FOR TODAY.
+//  It never interprets one, never grades one, and never turns absence into a verdict.)
+export function readingFor(day, readiness) {
+  if (!readiness || readiness.ok !== true || !readiness.day) return { fresh: false, why: "no reading on file", day: null };
+  if (String(readiness.day) !== String(day)) {
+    const ageD = Math.round((Date.parse(day) - Date.parse(readiness.day)) / 86400000);
+    return { fresh: false, day: readiness.day,
+      why: `no reading for ${day} — the newest night on file is ${readiness.day}${Number.isFinite(ageD) ? ` (${ageD} day(s) old)` : ""}; the ring was not worn, so there is genuinely nothing to report` };
+  }
+  return { fresh: true, day: readiness.day, reading: readiness };
+}
+
 // LADDER B4 (9 Aug 2026): an auth-FATAL used to exit 1 leaving NO on-disk trace —
 // readiness.json is (correctly) untouched, so the only witness was a console line
 // in a scheduled-task window nobody sees. The captains_call organ needs ONE
