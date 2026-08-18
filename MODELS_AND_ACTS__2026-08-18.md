@@ -1,7 +1,14 @@
 # ▶ NEXT SESSION: START HERE. READ THIS WHOLE FILE, THEN BUILD BLOCK 0 → 4 IN ORDER. DO NOT RE-PLAN.
 > Work order written 18 Aug 2026 ~20:05 IST at the captain's word (three prompts, verbatim in §1). Sibling of the
 > OVERHAUL record (`docs/archive/ORGANISM_OVERHAUL__2026-08-18.md`) — same laws, same build rule (commit + `npm test` +
-> ✅ per block + memory note). When done: this file → `docs/archive/`. He says only **"models aur acts karo"**.
+> ✅ per block + memory note). When done: this file → `docs/archive/`. He says only **"resume karo"** (the queue above).
+
+## ▶ THE RESUME QUEUE — he says ONE thing, ever: **"resume karo"** (his word 18 Aug 20:10: "execute everything by one word")
+The next session reads this queue top-down and does the FIRST unfinished item; each item ends with commit + npm test + ✅ here + memory note. Nothing else is asked of him.
+1. ⬜ **MODELS + ACTS** — Blocks 0→4 of THIS file (freeze deferred · the model resolver · the act lane · proofs · record).
+2. ⬜ **IDENTITY MERGE** — the 4 pending identity facts (hippocampus `identity_facts.pending.jsonl`: MAA = engine · CHINTU · the low-motivation bottleneck · firm compassion) one by one for his haan/na (`hippocampus.mjs promote --at <ts>` / `drop-pending`), THEN the Instagram-derived staging: ~18 dated facts, ~8 nikhil_model hypothesis edges, ~15 lexicon anchors, who_he_is English line dropped — everything STAGED, promoted only on his word (Law 4). Sources: his export `Downloads/instagram-human_experimentt-2026-08-14-trdrWJUe.zip` (DMs never), the songs file `Downloads/instagram-human_experimentt-songs.md`, and this session's analysis (Claude Code session 22ccb804-2a32-475a-b17e-65b61ddf13e2 transcript, 18 Aug ~18:00–19:10 IST — search "Instagram + gaane", "11 lens", "Strange", "God-tier"). His corrections stand: pills = ADHD medication (say nothing about it) · "manic" = his hustle state · "don't kill yourself" = don't kill the dream · NiNi = Nikhil ki Nidhi · GV/GC = GaryVee/Grant Cardone · political lane dropped entirely.
+3. ⬜ **BLOCK 9 keeps measuring** (the overhaul record's RESUME HERE): `node scripts/state.mjs week` each day he sits; 25 Aug = day 7 → numbers into the record + the §19 brainstorm (cards, not builds).
+When 1 and 2 are ✅ this file → docs/archive/ and the queue moves to the overhaul record.
 
 ## ▶ BUILD LOG
 - ⬜ BLOCK 0 · freeze deferred (his ruling) · ⬜ BLOCK 1 · THE MODEL RESOLVER · ⬜ BLOCK 2 · THE ACT LANE · ⬜ BLOCK 3 · live proofs + suite · ⬜ BLOCK 4 · record + memory
@@ -73,4 +80,4 @@ Standing rulings that bind every line below (from CLAUDE.md + the overhaul recor
 - The identity merge (Instagram + 4 pending facts) — a separate session, his "identity karo".
 
 # 7 · WHAT TO SAY NEXT SESSION
-**"models aur acts karo"** — nothing else. The session reads this file top-down, verifies first, builds Blocks 0→4, commits per block, and reports the four DoD lines with their live outputs.
+**"resume karo"** — nothing else. The session reads THE RESUME QUEUE at the top of this file, takes the first unfinished item, verifies first, builds Blocks 0→4, commits per block, and reports the four DoD lines with their live outputs.
