@@ -438,7 +438,23 @@ export async function assemble(deps = {}) {
     : 0;
   const pendBudget = Math.max(0, ceiling - base.length - (card ? card.length : 0)
     - MEMORY_FLOOR - INTENTS_FLOOR - FOOTER_RESERVE - overhead);
-  const pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock(PENDING_FACTS, pendBudget);
+  let pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock(PENDING_FACTS, pendBudget);
+  // A HEADER THAT SHOWS NO FACT YIELDS TO HIS ASKS (18 Aug 2026, evening — the live RED above).
+  // pendingFactsBlock at budget 0 still renders its ~139-char collapsed header ("N staged, none
+  // shown — get_context serves the queue"). That header carries no ruling; the footer prints the
+  // same count and the same pointer. When it is the one thing standing between the intents floor
+  // (his open asks) and the ceiling, the header steps aside — the ledger row stays `pending_facts 0
+  // (N staged, N NOT SHOWN — budget; header yielded to intents)`, present:false so the render below
+  // skips it. Order of parts is untouched: pending still ranks first whenever it shows a fact.
+  let pendYielded = false;
+  if (pend.present && pend.collapsed && INTENTS_FLOOR > 0) {
+    const roomWith = ceiling - base.length - (card ? card.length : 0) - (pend.text.length + 1) - FOOTER_RESERVE - overhead;
+    if (roomWith < INTENTS_FLOOR && roomWith + pend.text.length + 1 >= INTENTS_FLOOR) {
+      pend = { ...pend, present: false, yielded: true, text: "" }; pendYielded = true;
+    }
+  }
+  if (pendYielded) record("pending_facts", true, 0, `${pend.count} staged, ${pend.hidden} NOT SHOWN — budget; header yielded to intents`, "ok");
+  else
   // UNREADABLE ROWS RIDE THE FOOTER (audit 10 Aug 2026). The reader can now tell damage from
   // absence, but a classification nobody prints is the producer-with-no-consumer shape all over
   // again — this footer is the only surface the SessionStart brief actually carries, so the
@@ -473,7 +489,14 @@ export async function assemble(deps = {}) {
     if (Array.isArray(lines) && lines.length) {
       intentsTotal = lines.length;
       // Block 8: the floor is HELD here — header + INTENTS_FLOOR_ROWS rows at least (memory, budgeted after, absorbs it)
-      const room = Math.max(INTENTS_FLOOR, Math.min(INTENTS_CAP, ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - MEMORY_FLOOR - FOOTER_RESERVE - overhead));
+      // 18 Aug 2026 (evening, suite RED on live state: `assembled 5399/5300`): the floor was held
+      // AGAINST THE CEILING — `Math.max(INTENTS_FLOOR, …)` with no upper bound — so once orientation
+      // grew (2,748 → 3,035 chars: the sitting line, the Gaffer lines) the floor pushed the whole brief
+      // past 5,300. Block 8's own words say who absorbs it: MEMORY. So the floor is held against the
+      // room memory would otherwise get (nonMemRoom), never against the ceiling itself: the intents leg
+      // gets min(floor, everything-but-memory) at least, and the ceiling stays the ceiling.
+      const nonMemRoom = ceiling - base.length - (card ? card.length : 0) - (pend.present ? pend.text.length + 1 : 0) - FOOTER_RESERVE - overhead;
+      const room = Math.max(Math.min(INTENTS_FLOOR, nonMemRoom), Math.min(INTENTS_CAP, nonMemRoom - MEMORY_FLOOR));
       const kept = [];
       let used = 0;
       for (const l of lines) { if (used + l.length + 1 > room) break; kept.push(l); used += l.length + 1; }
@@ -592,6 +615,30 @@ export async function assemble(deps = {}) {
   reconcile("memory", memory);
   reconcile("card", card);
   if (pend.present) text += "\n" + pend.text;
+  // THE CEILING IS A HARD GUARANTEE, NOT A BUDGET ESTIMATE (18 Aug 2026, evening). Every budget
+  // above is derived from FOOTER_RESERVE and a measured overhead; when the live parts still add
+  // up past the ceiling (the 5,399/5,300 RED), the last thing added is the first thing trimmed —
+  // whole intent rows from the END, never a mid-line cut, the header last — and the ledger says
+  // how many. Same law the sitting head already applies (grep -n "whole vs the ceiling" below).
+  {
+    const bodyBefore = text;
+    let rows = intentsText ? intentsText.split("\n") : [];
+    const fits = () => {
+      const t = rows.length ? bodyBefore + "\n" + rows.join("\n") : bodyBefore;
+      return t.length + 1 + FOOTER_RESERVE <= ceiling || rows.length === 0;
+    };
+    let droppedRows = 0;
+    while (!fits()) { rows.pop(); droppedRows++; }
+    if (droppedRows) {
+      if (rows.length < 2) { rows = []; }   // the header alone is not an intent
+      intentsText = rows.join("\n");
+      const row = spent.find((s) => s.id === "intents");
+      if (row) {
+        row.bytes = intentsText.length; row.present = rows.length > 0;
+        row.note = rows.length ? `${rows.length - 1} of ${intentsTotal - 1} open shown — ceiling` : `${intentsTotal - 1} open, NONE SHOWN — ceiling`;
+      }
+    }
+  }
   if (intentsText) text += "\n" + intentsText;   // Block 2 §7.2 — after his rulings, before the footer
 
   // THE NUMBER THAT SHIPS IS THE SIZE THAT SHIPPED (audit 11 Aug 2026). One line, two holes:
