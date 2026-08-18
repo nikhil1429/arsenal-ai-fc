@@ -53,6 +53,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const IR_PATH = join(ROOT, "dressing-room", "state", "xray_graph.json");
 
+// ONE fs site for every per-organ source read this file does (the mutex census, the
+// chain-step parse, the day-key metric). xray's sink budget counts DISTINCT unresolved
+// sites per organ and must never grow: reading scripts/<organ> by loop variable is
+// unresolvable by design, so it happens in exactly one place.
+const organSource = (f) => { try { return readFileSync(join(ROOT, "scripts", f), "utf8"); } catch { return null; } };
+
 let pass = 0, fail = 0; const fails = [];
 const assert = (n, c, d) => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; fails.push({ n, d }); console.log(`  FAIL ${n}${d ? `\n         ${d}` : ""}`); } };
 
@@ -62,7 +68,9 @@ export function liveSchedule() {
   // encoded in a way Git Bash mangles, which is why an earlier grep of it
   // returned 0 tasks on a box that has 50.
   try {
-    const ps = `Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $act=($t.Actions | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; args=[string]$act.Arguments; exe=[string]$act.Execute; start=[string]($t.Triggers | Select-Object -First 1).StartBoundary; interval=[string]($t.Triggers | Select-Object -First 1).Repetition.Interval; swa=[bool]$t.Settings.StartWhenAvailable } } | ConvertTo-Json -Compress -Depth 4`;
+    // Block 6 (18 Aug 2026): ALL triggers, not just the first — TimeAuditor-Pulse is
+    // one task with three calendar triggers, and the DAY-KEY law needs every slot.
+    const ps = `Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $act=($t.Actions | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; args=[string]$act.Arguments; exe=[string]$act.Execute; start=[string]($t.Triggers | Select-Object -First 1).StartBoundary; starts=@($t.Triggers | ForEach-Object { [string]$_.StartBoundary }); interval=[string]($t.Triggers | Select-Object -First 1).Repetition.Interval; dow=[int](($t.Triggers | Select-Object -First 1).DaysOfWeek); swa=[bool]$t.Settings.StartWhenAvailable } } | ConvertTo-Json -Compress -Depth 4`;
     const out = execFileSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { encoding: "utf8", timeout: 60000, windowsHide: true });
     const j = JSON.parse(out.trim() || "[]");
     const rows = Array.isArray(j) ? j : [j];
@@ -89,12 +97,42 @@ export function model() {
   if (sched.rows) {
     for (const r of sched.rows) {
       const { organ, verb } = organOf(r.args);
-      tasks.push({ name: r.name, organ, verb, state: r.state, t: hhmm(r.start), interval: r.interval || null, startWhenAvailable: !!r.swa, raw: r.args });
+      const starts = (Array.isArray(r.starts) ? r.starts : [r.start]).map(hhmm).filter(Boolean);
+      // a daemon row is the one that runs through hidden_run.vbs (fire-and-forget)
+      const daemon = /hidden_run\.vbs/i.test(String(r.args || "")) || /\.mjs["\s]+daemon\b/i.test(String(r.args || ""));
+      // a WEEKLY trigger's DaysOfWeek is a bitmask (Sun=1 Mon=2 Tue=4 Wed=8 Thu=16 Fri=32 Sat=64); daily rows read 0
+      const dowMask = Number(r.dow) || 0;
+      const dow = dowMask ? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].filter((_, i) => dowMask & (1 << i)) : null;
+      tasks.push({ name: r.name, organ, verb, state: r.state, t: hhmm(r.start), starts, interval: r.interval || null, dow, daemon, startWhenAvailable: !!r.swa, raw: r.args });
     }
   } else if (ir) {
-    for (const r of ir.roots.scheduled) tasks.push({ name: r.task || r.script, organ: r.script, verb: r.verb, state: "unknown", t: null, interval: null, startWhenAvailable: null, raw: r.source });
+    for (const r of ir.roots.scheduled) tasks.push({ name: r.task || r.script, organ: r.script, verb: r.verb, state: "unknown", t: null, starts: [], interval: null, daemon: false, startWhenAvailable: null, raw: r.source });
   }
   return { sched, ir, tasks };
+}
+
+// ── THE SLOT MAP (Block 6, 18 Aug 2026 — THE DAY-KEY LAW's schedule contract) ──
+// name → { organ, verb, at, interval, daemon, enabled }, straight off the live
+// task list. This is what tasks_expected.json `slots` carries (paste it in, in
+// the same commit that moves a task — the contract's own rule); daykey.mjs reads
+// that snapshot so an organ launched by Task Scheduler in a catch-up burst can
+// key its day to ITS SLOT without a 2–5 s PowerShell spawn per run. herd writes
+// nothing — it PRINTS; the watchman diffs snapshot vs live nightly (task-slot-drift).
+export function slotsMap(m = model()) {
+  const out = {};
+  for (const t of m.tasks) {
+    if (!t.organ) continue;
+    const ats = (t.starts && t.starts.length ? t.starts : t.t ? [t.t] : []).map((x) => x.hm);
+    out[t.name] = {
+      organ: t.organ, verb: t.verb || null,
+      at: ats.length > 1 ? ats : (ats[0] || null),
+      interval: t.interval || null,
+      dow: t.dow && t.dow.length ? t.dow : null,   // weekly rows only — the DAY-KEY law keys a Sunday slot to Sunday even when Monday wakes it
+      daemon: !!t.daemon,
+      enabled: t.state !== "Disabled",
+    };
+  }
+  return out;
 }
 
 // ── THE THREE CONTENTION QUESTIONS ───────────────────────────────────────────
@@ -138,11 +176,72 @@ export function collisions(m) {
   // 4. WHO HAS A MUTEX. Exactly one organ does, and it self-disarms.
   const locks = [];
   for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs"))) {
-    const src = readFileSync(join(ROOT, "scripts", f), "utf8");
+    const src = organSource(f);
+    if (src === null) continue;
     if (/createServer|listen\(\s*41\d\d|LOCK_PORT|singleton|mutex/i.test(src)) locks.push(f);
   }
 
   return { enabled, sameSecond, herd, herdAll, contention, locks };
+}
+
+// ── THE DAY-KEY RISK (Block 6, 18 Aug 2026) ──────────────────────────────────
+// The header above said "~74 localDate(now) sites derive the WRONG DAY-KEY" and
+// nothing could point at one. This can. A wrong-day-key RISK is a scheduled
+// once-a-slot organ (or a conductor chain step, which takes the chain's token)
+// whose source still derives a "today" from now() outside daykey.mjs's resolver:
+//   · `localDate(now)` / `localDate(new Date())` / `localDate()` / `localDate(deps.now…)`
+//   · `new Date().toISOString().slice(0, 10)` (a UTC today-key — wrong twice)
+// A site marked `WALL-CLOCK by design` on its own line is a DECLARED exception
+// (brain.mjs's overnight shift/serve day; physio's freshness reads of real
+// timestamps; scorer's "is the calendar day over") and is listed, not counted;
+// `day-key: fixture` marks a selftest line, which is not a production site. Interval
+// tasks and daemons are CLOCK by the law itself and are stated as such.
+const NOW_KEY_RE = /localDate\(\s*(?:now|new Date\(\)|deps\.now[^)]*|)\s*\)|new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/;
+export function chainStepOrgans() {
+  // read the two chains out of conductor.mjs's SOURCE (no import: conductor pulls brain)
+  try {
+    const src = readFileSync(join(ROOT, "scripts", "conductor.mjs"), "utf8");
+    const out = new Set();
+    // one step object at a time; a step with `daemon:` is launched detached (token stripped) and is NOT a chain step here
+    for (const m of src.matchAll(/\{[^{}]*?\bid:\s*"[a-z-]+"[^{}]*?args:\s*\[\s*"scripts\/([a-z_]+\.mjs)"[^{}]*\}/g)) {
+      if (/\bdaemon:/.test(m[0])) continue;
+      if (organSource(m[1]) !== null) out.add(m[1]);   // a selftest fixture ("x.mjs") is not an organ
+    }
+    // heartbeat.mjs runs its own eight children — they inherit the token
+    if (out.has("heartbeat.mjs")) for (const f of ["capture.mjs", "fsrs.mjs", "capsule_bridge.mjs", "calibration.mjs", "nemesis.mjs", "learning_state.mjs", "timeaudit.mjs", "shipped.mjs"]) out.add(f);
+    return out;
+  } catch { return new Set(); }
+}
+export function dayKeyRisks(m = model()) {
+  const enabled = m.tasks.filter((t) => t.state !== "Disabled" && t.organ);
+  const byClass = { slot: new Set(), interval: new Set(), daemon: new Set() };
+  for (const t of enabled) {
+    if (t.daemon) byClass.daemon.add(t.organ);
+    else if (t.interval) byClass.interval.add(t.organ);
+    else byClass.slot.add(t.organ);
+  }
+  const chain = chainStepOrgans();
+  const inScope = new Set([...byClass.slot, ...chain]);
+  const organs = [];
+  let risks = 0;
+  for (const organ of [...inScope].sort()) {
+    const src = organSource(organ);
+    if (src === null) continue;   // an installer row naming a file not on disk is the watchman's task-vanished, not a day-key site
+    const lines = src.split(/\r?\n/);
+    const resolves = lines.some((l) => /from\s+"\.\/daykey\.mjs"/.test(l) || /\bdayKey\(/.test(l) || /\blaunchContext\(/.test(l));
+    const sites = [], declared = [];
+    lines.forEach((l, i) => {
+      if (/^\s*\/\//.test(l)) return;                            // a comment is not a site
+      if (!NOW_KEY_RE.test(l)) return;
+      if (/const localDate\s*=/.test(l)) return;                 // the helper's own definition
+      if (/day-key: fixture/.test(l)) return;                    // a selftest fixture is not a production site
+      if (/WALL-CLOCK by design/.test(l)) declared.push(i + 1); else sites.push(i + 1);
+    });
+    const why = chain.has(organ) && byClass.slot.has(organ) ? "slot + chain step" : chain.has(organ) ? "chain step (takes the chain's token)" : "once-a-slot task";
+    organs.push({ organ, why, resolves, sites, declared });
+    risks += sites.length + (resolves ? 0 : 0);
+  }
+  return { organs, risks, clock_by_design: { interval: [...byClass.interval].sort(), daemon: [...byClass.daemon].sort() } };
 }
 
 function report() {
@@ -175,7 +274,16 @@ function report() {
   console.log(`\n── MUTEXES (${c.locks.length} organ(s) with any locking construct at all)`);
   for (const l of c.locks) console.log(`   ${l}`);
   console.log(`   Everything not listed above runs with NO exclusion of any kind.`);
-  return { m, c };
+
+  const d = dayKeyRisks(m);
+  console.log(`\n── THE DAY-KEY LAW (Block 6) — wrong-day-key risks: ${d.risks}`);
+  console.log(`   a risk = a once-a-slot task or chain step still deriving "today" from now() outside daykey.mjs`);
+  for (const o of d.organs) {
+    console.log(`   ${o.organ.padEnd(22)} ${o.resolves ? "dayKey ✓" : "no resolver"}  sites ${o.sites.length}${o.sites.length ? " @" + o.sites.join(",") : ""}${o.declared.length ? `  declared wall-clock @${o.declared.join(",")}` : ""}  · ${o.why}`);
+  }
+  console.log(`   CLOCK by the law itself — interval tasks: ${d.clock_by_design.interval.join(" · ") || "—"}`);
+  console.log(`   CLOCK by the law itself — daemons: ${d.clock_by_design.daemon.join(" · ") || "—"}`);
+  return { m, c, d };
 }
 
 // ── SELFTEST ─────────────────────────────────────────────────────────────────
@@ -206,6 +314,15 @@ function selftest() {
   assert("organOf survives the hidden_run.vbs wrapper form",
     organOf(`setup\\hidden_run.vbs cmd /c node C:\\repo\\scripts\\oura_coach.mjs`).organ === "oura_coach.mjs");
 
+  // Block 6 — THE DAY-KEY LAW is measured here (the DoD: 0 wrong-day-key risks for night lanes)
+  const d = dayKeyRisks(m);
+  assert("DAY-KEY — the risk metric is measured over the live once-a-slot organs + the conductor chain steps (not a hand list)", d.organs.length >= 20 && d.organs.every((o) => o.organ.endsWith(".mjs")), `organs=${d.organs.length}`);
+  assert("DAY-KEY — daemons in the chain (thalamus/cortex-daemon/turnstile) are NOT chain steps here (launched detached, token stripped)", !chainStepOrgans().has("thalamus.mjs") && !chainStepOrgans().has("turnstile.mjs"));
+  assert("DAY-KEY — 0 wrong-day-key risks: every once-a-slot organ and every chain step resolves its day through daykey.mjs, and every declared wall-clock site is marked on its line",
+    d.risks === 0, d.organs.filter((o) => o.sites.length).map((o) => `${o.organ}@${o.sites.join(",")}`).join(" · "));
+  assert("DAY-KEY — brain.mjs's overnight shift/serve day stays WALL-CLOCK by design and is DECLARED (listed, not counted)",
+    (() => { const b = d.organs.find((o) => o.organ === "brain.mjs"); return !!b && b.declared.length >= 2 && b.sites.length === 0; })());
+  assert("DAY-KEY — interval tasks and daemons are stated as CLOCK by the law itself (never counted as risks)", d.clock_by_design.interval.includes("presence.mjs") && d.clock_by_design.daemon.length >= 1);
   console.log(`\nherd: ${pass} passed, ${fail} failed`);
   if (fail) for (const f of fails) console.log(`  · ${f.n}${f.d ? `\n      ${f.d}` : ""}`);
   process.exit(fail ? 1 : 0);
@@ -217,7 +334,9 @@ function main() {
   if (mode === "report") { report(); return; }
   if (mode === "schedule") { console.log(JSON.stringify(model().tasks, null, 1)); return; }
   if (mode === "collisions") { const m = model(); console.log(JSON.stringify(collisions(m), null, 1)); return; }
-  console.log("herd: report | schedule | collisions | selftest");
+  if (mode === "risks") { console.log(JSON.stringify(dayKeyRisks(model()), null, 1)); return; }
+  if (mode === "slots") { const m = model(); if (!m.sched.rows) { console.error(`herd slots: ${m.sched.source} — refusing to print a slot map from anything but the live schedule`); process.exit(2); } console.log(JSON.stringify(slotsMap(m), null, 1)); return; }
+  console.log("herd: report | schedule | collisions | slots | risks | selftest");
   process.exit(1);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

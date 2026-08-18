@@ -46,6 +46,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: the Sunday 20:00 Boot Room keys its SLOT's day when the laptop wakes it on Monday
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -213,7 +214,7 @@ function captainProposal(target, value, why, profile, now = new Date()) {
   const slug = String(target).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   return {
     proposal: {
-      id: `mut-${localDate(now)}-captain-${slug}`,
+      id: `mut-${dayKey(now)}-captain-${slug}`,
       kind: "captain_order",
       status: "proposed",
       proposed_at: now.toISOString(),
@@ -251,10 +252,10 @@ function approveMutationLegacy(m, profile, muts, now = new Date()) {
   const spot = resolvePath(profile, m.target);
   const oldValue = spot.node[spot.leaf];
   profile.legacy = profile.legacy || {};
-  profile.legacy[`${m.target}@${localDate(now)}`] = JSON.parse(JSON.stringify(oldValue));  // verbatim, layering law
+  profile.legacy[`${m.target}@${dayKey(now)}`] = JSON.parse(JSON.stringify(oldValue));  // verbatim, layering law
   spot.node[spot.leaf] = m.diff.new;
   profile.version = String(profile.version || "1.0") + "+" + m.id;
-  return { ok: true, profile, mutation: { ...m, status: "live", approved_on: localDate(now), old_value: oldValue } };
+  return { ok: true, profile, mutation: { ...m, status: "live", approved_on: dayKey(now), old_value: oldValue } };
 }
 
 // THE ROUTER (10 Aug 2026). His word on a ruling request RECORDS and applies
@@ -269,7 +270,7 @@ function approveMutation(m, profile, muts, now = new Date()) {
   if (m && m.kind === RECITAL_KIND) {
     const v = validateMutation(m, profile);
     if (!v.ok) return { ok: false, err: v.errs.join("; ") };
-    return { ok: true, ruling: true, profile, mutation: { ...m, status: "ruled", ruled_on: localDate(now) } };
+    return { ok: true, ruling: true, profile, mutation: { ...m, status: "ruled", ruled_on: dayKey(now) } };
   }
   return approveMutationLegacy(m, profile, muts, now);
 }
@@ -285,11 +286,11 @@ function scoreMutation(m, profile, metricValue, eventCount, now = new Date()) {
   const improved = typeof m.metric.improves_when_below === "number"
     ? metricValue < m.metric.improves_when_below
     : metricValue === true;
-  if (improved) return { action: "kept", m: { ...m, status: "kept", scored_on: localDate(now), outcome: metricValue } };
+  if (improved) return { action: "kept", m: { ...m, status: "kept", scored_on: dayKey(now), outcome: metricValue } };
   // AUTO-REVERT by its own revert_diff
   const spot = resolvePath(profile, m.target);
   if (spot) spot.node[spot.leaf] = m.revert_diff.new;
-  return { action: "reverted", m: { ...m, status: "reverted", scored_on: localDate(now), outcome: metricValue }, profile };
+  return { action: "reverted", m: { ...m, status: "reverted", scored_on: dayKey(now), outcome: metricValue }, profile };
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +351,7 @@ function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = n
   const cur = profile.rejirah_intervals_days || [3, 14, 42];
   return {
     proposal: {
-      id: `mut-${localDate(now)}-axis${axis}`,
+      id: `mut-${dayKey(now)}-axis${axis}`,
       target: "rejirah_intervals_days",
       diff: { old: cur, new: [cur[0], Math.max(7, Math.round(cur[1] * 0.75)), Math.max(21, Math.round(cur[2] * 0.66))] },
       evidence: [`${n} late-checkpoint lapses on axis-${axis} (≥14d after first correct)`,
@@ -359,7 +360,7 @@ function proposeFromEvidence(reps, profile, gateOpen, now = new Date(), gate = n
       metric: { name: `axis_${axis}_late_lapse_count`, min_events: 20, window_days: 21, improves_when_below: Math.ceil(n / 2) },
       review_after_days: 21,
       revert_diff: { new: cur },
-      status: "proposed", proposed_on: localDate(now),
+      status: "proposed", proposed_on: dayKey(now),
     },
     reason: null,
   };
@@ -493,7 +494,7 @@ function recitalProposal(p, now = new Date()) {
   if (v === "OVERRUN") evidence.push(`page handed → words spoken on those rows: ${p.rows.map(r => `${Number(r.payload_words) || 0}→${Number(r.spoken_words) || 0}`).join(", ")}`);
   if (v === "NO-PRICE") evidence.push(`priced flag on those rows: ${p.rows.map(r => (r.priced ? "priced" : "unpriced")).join(", ")} — the seconds never landed before your prose began (dugout.mjs:3465)`);
   return {
-    id: `mut-${localDate(now)}-recital-${v.toLowerCase().replace(/[^a-z0-9]+/g, "")}`,
+    id: `mut-${dayKey(now)}-recital-${v.toLowerCase().replace(/[^a-z0-9]+/g, "")}`,
     kind: RECITAL_KIND,
     applies: false,
     pattern_key: `recital:${v}`,
@@ -520,7 +521,7 @@ function recitalProposal(p, now = new Date()) {
     revert_diff: {
       new: "THE RECITAL LAW exactly as it stands today — the read-it-verbatim instruction plus recitalGrade's 85% in-order cut (dugout.mjs:3467). Nothing in forge_profile.json moves, so there is nothing here to roll back; the plan is to revert the ONE commit your change rides in, and the Boot Room cannot do that for you.",
     },
-    status: "proposed", proposed_on: localDate(now),
+    status: "proposed", proposed_on: dayKey(now),
   };
 }
 
@@ -528,7 +529,7 @@ function recitalProposal(p, now = new Date()) {
 // that survives the closing cmd window. Pure builder (selftestable); the append
 // is done by logRun so the fixture path never touches disk.
 function runLogRow(now, mode, outcome, detail = {}) {
-  return { at: now.toISOString(), day: localDate(now), mode, outcome, ...detail };
+  return { at: now.toISOString(), day: dayKey(now), mode, outcome, ...detail };
 }
 function logRun(row, appendFn = appendFileSync, path = RUNLOG) {
   // a health ledger must never be the reason the organ dies
@@ -577,7 +578,7 @@ async function selftest() {
 
   // SCORE: waiting / extended / kept / reverted
   const live = { ...a1.mutation, approved_on: "2026-06-15" };
-  assert("young mutation waits", scoreMutation({ ...live, approved_on: localDate(now) }, p1, 3, 100, now).action === "waiting");
+  assert("young mutation waits", scoreMutation({ ...live, approved_on: dayKey(now) }, p1, 3, 100, now).action === "waiting");
   const ext = scoreMutation(live, p1, 3, 5, now);
   assert("VOLUME GATE — thin events auto-extends window", ext.action === "extended" && ext.m.review_after_days === 28);
   const kept = scoreMutation(live, p1, 3, 100, now);

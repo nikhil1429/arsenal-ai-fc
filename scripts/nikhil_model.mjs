@@ -73,6 +73,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { marketStats, deadVerdict, laplace, loadConfig as twinConfig } from "./twin.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -273,8 +274,8 @@ export function sanitizeModelMine(j, existingEdges = []) {
 // ---------------------------------------------------------------------------
 export function ingest(deps) {
   const now = deps.now || new Date();
-  const today = localDate(now);
-  const yday = localDate(new Date(now.getTime() - 86400000));
+  const today = dayKey(now);                 // Block 6 — day-key
+  const yday = addDays(dayKey(now), -1);
   const cfg = deps.cfg || twinConfig();
   const model = deps.model !== undefined ? deps.model : (readJson(MODEL) || { edges: [], _grid_note: "cells: true/false/null — null is UNOBSERVED, never false" });
   const grid = deps.grid !== undefined ? deps.grid : readLines(GRID);
@@ -520,7 +521,7 @@ async function main() {
   if (mode === "galat") return galat(String(process.argv[3] || ""));
   if (mode === "ingest") {
     const now = new Date();
-    const today = localDate(now), yday = localDate(new Date(now.getTime() - 86400000));
+    const today = dayKey(now), yday = addDays(dayKey(now), -1);   // Block 6 — day-key
     const r = ingest({ now, factDeps: liveFactDeps(),
       proposals: readNewestProposal(join(STATE_DIR, "brain_out", "model_mine"), today, yday) });
     console.log(`nikhil_model ingest: ${r.log.length ? r.log.join(" · ") : "quiet night (nothing to finalize, resolve, propose or seal)"}`);

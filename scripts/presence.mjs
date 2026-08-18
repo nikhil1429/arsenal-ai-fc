@@ -30,6 +30,7 @@ import { currentTone } from "./tone.mjs";
 // rather than growing a third private copy of the canon (the drift the audit killed
 // in validators.mjs). Pure functions over dressing-room/state/concepts.json; no writes.
 import { loadRegistry, canonicalize } from "./capture.mjs";
+import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (sense is an interval lane → clock by design; calibrate has no day key; uniform resolver)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -332,7 +333,7 @@ function rollDue(now = new Date(), deps = {}) {
   const file = deps.file || PLOG;
   const head = deps.head !== undefined ? deps.head : (existsSync(file) ? parseLines(headText(file)) : []);
   const first = head[0];
-  const current_month = localDate(now).slice(0, 7);
+  const current_month = dayKey(now).slice(0, 7);
   if (!first) return { due: false, current_month, reason: "ledger empty — nothing to roll" };
   const m = monthOf(first);
   if (!m) return { due: false, current_month, reason: "first row carries no date — never guess one" };
@@ -345,7 +346,7 @@ function rollDue(now = new Date(), deps = {}) {
 // writes costs a re-run, never a duplicate or a loss.
 function rollPresenceLog(now = new Date(), deps = {}) {
   const file = deps.file || PLOG;
-  const current_month = localDate(now).slice(0, 7);
+  const current_month = dayKey(now).slice(0, 7);
   const rows = deps.rows || (existsSync(file) ? readLines(file) : []);
   if (!rows.length) return { rolled: false, moved: 0, kept: 0, months: [], reason: "ledger empty — nothing to roll" };
   const older = new Map(); const keep = [];
@@ -702,7 +703,7 @@ async function sense(deps = {}) {
       n = rep.need * 2;
     }
   };
-  const row = { ts: now.toISOString(), day: localDate(now), switches: t.switches, rate: Math.round(t.rate_per_min * 10) / 10, span_min: Math.round(t.span_min * 10) / 10, edge, tone: tone.arousal, posted: false };
+  const row = { ts: now.toISOString(), day: dayKey(now), switches: t.switches, rate: Math.round(t.rate_per_min * 10) / 10, span_min: Math.round(t.span_min * 10) / 10, edge, tone: tone.arousal, posted: false };
   // E2E audit 25 Jul 2026 (b6e6a127): the focus lane deduped on onset but this
   // one fired on EVERY matching pass. One continuous 25-min thrash spell spans 3
   // scheduled passes → 3 identical afferents → dossier.stalls_today = 3 off a
@@ -732,7 +733,7 @@ async function sense(deps = {}) {
   const afk = deps.afk !== undefined ? deps.afk : (deps.events !== undefined ? null : await fetchAfkEvents(deps));
   const f = focusRead(events, now, deps.matcher || null, FOCUS, afk);
   const prevFocus = deps.prevFocus !== undefined ? deps.prevFocus : findPrev(r => r && r.kind === "focus");
-  const frow = { ts: now.toISOString(), day: localDate(now), kind: "focus", ...f, tone: tone.arousal, posted: false };
+  const frow = { ts: now.toISOString(), day: dayKey(now), kind: "focus", ...f, tone: tone.arousal, posted: false };
   if (f.break_live && !(prevFocus && prevFocus.break_live) && tone.arousal !== "conserve") {
     // #6, same law on this lane — but NO sprint fallback here. The pull words name
     // what dragged him AWAY ("youtube", "cricket"); calling today's study ground the
@@ -1064,7 +1065,7 @@ async function main() {
   if (mode === "status") {
     // #106: have/need counters, never a status word — and the fit is stated with the
     // population it was fitted on, so a ratcheted bar can be SEEN rather than trusted.
-    const day = localDate();
+    const day = dayKey();
     const d = presenceDayReport(day);
     const rows = d.rows, passes = sensePassRows(rows), edges = passes.filter(r => r.edge);
     const sig = loadSignature(), fitted = readJson(THRESHOLDS);

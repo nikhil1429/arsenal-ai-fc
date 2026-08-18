@@ -78,6 +78,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -634,7 +635,7 @@ async function main() {
     const di = process.argv.indexOf("--days");
     const n = di > -1 ? Math.max(1, parseInt(process.argv[di + 1], 10) || 3) : 3;   // 3 = the map's ruled proof window
     for (let i = n; i >= 1; i--) {
-      const d = localDate(new Date(now.getTime() - i * 86400000));
+      const d = addDays(dayKey(now), -i);   // Block 6 — day-key
       const r = runDay(d, deps);
       console.log(`scoreboard backfill ${d}: ${r.appended} row(s) appended`);
     }
@@ -648,8 +649,8 @@ async function main() {
       return;
     }
     // bare run = today + revisit yesterday (back-dated reps are a designed flow)
-    const today = localDate(now);
-    const yday = localDate(new Date(now.getTime() - 86400000));
+    const today = dayKey(now);                 // Block 6 — day-key
+    const yday = addDays(dayKey(now), -1);
     const ry = runDay(yday, deps);
     const rt = runDay(today, deps);
     console.log(`scoreboard: ${yday} +${ry.appended} · ${today} +${rt.appended} → ${OUT_PATH.replace(ROOT, "").slice(1)}`);

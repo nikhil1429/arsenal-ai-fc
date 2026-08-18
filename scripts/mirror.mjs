@@ -63,6 +63,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -217,7 +218,7 @@ async function pull(cfg, fetchFn, hasLocal, now = new Date()) {
   const shortfall = Object.entries(per_id).filter(([, v]) => !v.ok).map(([k, v]) => `${k}:${v.error}`);
 
   const manifest = {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     status,
     // never render an unmeasured silence as a measured zero: if we could not list
     // the gist, we cannot claim the id set is complete, whatever the fetches said.
@@ -341,7 +342,7 @@ async function main() {
   // beside its mirror, one dated dir per day (an idempotent same-day re-run just
   // rewrites today's). Capsules are KBs; no pruning number is invented here.
   try {
-    const day = new Date().toISOString().slice(0, 10);
+    const day = dayKey();   // Block 6 — day-key (was a UTC day: toISOString().slice(0,10) rolls at 05:30 IST)
     const bdir = join(STATE_DIR, "capsule_backups", day);
     const src = join(STATE_DIR, "capsules");
     if (existsSync(src)) {

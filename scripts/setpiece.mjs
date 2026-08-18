@@ -52,6 +52,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // (cortex's main() is guarded by the argv[1] check, so this import runs no daemon.)
 import { graphFreshness, CONCEPT_GRAPH_SCHEMA } from "./cortex.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): the rematch template names him from the profile, never a literal
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -111,7 +112,7 @@ function hydrateDossier(dossier) {
 }
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-const tomorrowStr = (now) => localDate(new Date(now.getTime() + 86400000));
+const tomorrowStr = (now) => addDays(dayKey(now), 1);   // Block 6 — day-key
 
 function loadConfig(path = CFG_PATH) {
   try {
@@ -153,7 +154,7 @@ const fill = (template, slots) => String(template || "").replace(/\{(\w+)\}/g, (
 // it never decides whether a prompt exists. So the night file ANNOTATES drills
 // and stamps a read-receipt; it sources no drill of its own.
 function readNightCoach(now = new Date(), dir = join(STATE_DIR, "brain_out/night_coach")) {
-  for (const d of [localDate(now), localDate(new Date(now.getTime() - 86400000))]) {
+  for (const d of [dayKey(now), addDays(dayKey(now), -1)]) {   // Block 6 — day-key
     const nc = readJson(join(dir, d + ".json"));
     if (nc && Array.isArray(nc.misconceptions)) return { ...nc, _resolved_date: d };
   }
@@ -493,7 +494,7 @@ function candidates(world, dossier, now = new Date()) {
   //      any night still reached the sheet while the note said it had not — the
   //      lane would have served a week-old simulation as tonight's drill. The
   //      test that says "this branch was never entered" is the one that caught it.
-  const dmn = world.dmn_precache && world.dmn_precache.date === localDate(now) ? world.dmn_precache : null;
+  const dmn = world.dmn_precache && world.dmn_precache.date === dayKey(now) ? world.dmn_precache : null;   // Block 6 — day-key
   const dreamt = dmn && Array.isArray(dmn.entries) ? dmn.entries.filter(e => e.verified && e.drill && e.stall_signature) : [];
   if (dreamt.length) {
     const d = dreamt[0];   // already in cut order: verified → votes → recency
@@ -526,7 +527,7 @@ function candidates(world, dossier, now = new Date()) {
   //      the persona are the producer's own numbers — nothing here re-scores,
   //      re-weights or thresholds on them (no number is invented in this lane:
   //      a mock played today with a drill named IS the whole eligibility rule).
-  const scrims = (world.scrimmage_rows || []).filter(r => r && r.kind === "report" && r.day === localDate(now) && String(r.drill || "").trim());
+  const scrims = (world.scrimmage_rows || []).filter(r => r && r.kind === "report" && r.day === dayKey(now) && String(r.drill || "").trim());   // Block 6 — day-key
   if (scrims.length) {
     const s = scrims[scrims.length - 1];        // the day's most recent grading
     const cracks = (Array.isArray(s.weakest) ? s.weakest : []).map(String).filter(Boolean);
@@ -814,7 +815,7 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
     if (!p) withheld.push("rest room: no dream on disk — it dreams only while you are away");
     // localDate(now), NOT tomorrowStr(now): the sheet is FOR tomorrow but the
     // dream is dreamed TONIGHT, so tonight's date is the one that means "fresh".
-    else if (p.date !== localDate(now)) withheld.push(`rest room: the newest dream is for ${p.date}, not tonight — not served`);
+    else if (p.date !== dayKey(now)) withheld.push(`rest room: the newest dream is for ${p.date}, not tonight — not served`);   // Block 6 — day-key
     else if (!verified.length) withheld.push(`rest room: ${(p.entries || []).length} dream(s) tonight, ZERO survived verification — unverified ammunition is never served`);
   }
   // dead-wire sweep (11 Aug 2026) — the graded mock's lane obeys the same law:
@@ -825,7 +826,7 @@ function compile(world, cfg, ladderCfg, dossier, now = new Date()) {
   // that is a defect worth seeing).
   {
     const reports = (world.scrimmage_rows || []).filter(r => r && r.kind === "report");
-    const today = reports.filter(r => r.day === localDate(now));
+    const today = reports.filter(r => r.day === dayKey(now));   // Block 6 — day-key
     if (!reports.length) withheld.push("graded mock: no scrimmage has ever been filed — the lane fills the first time he plays one");
     else if (!today.length) withheld.push(`graded mock: the newest scrimmage is ${reports[reports.length - 1].day}, not today — its drill was for a session already past`);
     else if (!today.some(r => String(r.drill || "").trim())) withheld.push("graded mock: played today but the report named NO drill — nothing to compile (the examiner's call went half-done)");
@@ -1081,7 +1082,7 @@ async function selftest() {
   // fired. Fixtures that never enter the branch are not coverage.
   {
     const dreamt = (over = {}) => ({
-      date: localDate(now), dreamed_at: "2026-07-14T20:00:00.000Z",
+      date: localDate(now), dreamed_at: "2026-07-14T20:00:00.000Z",   // day-key: fixture
       entries: [{ concept: "hallucinations", stall_signature: "cannot name the measure", drill: "hand-label 10 outputs as grounded/not, then name the measure", votes: 3, verified: true, last_seen: "2026-07-14T20:00:00.000Z" }],
       ...over,
     });
@@ -1116,7 +1117,7 @@ async function selftest() {
   // dugout.mjs's own suite) and this consumer's read of it.
   {
     const report = (over = {}) => ({
-      ts: "2026-07-12T15:40:00.000Z", day: localDate(now), kind: "report", total_25: 17,
+      ts: "2026-07-12T15:40:00.000Z", day: localDate(now), kind: "report", total_25: 17,   // day-key: fixture
       weakest: ["eval metrics", "context handoff"],
       drill: "reconstruct the eval harness cold — every handoff named", persona: "scenario_bomb", ...over,
     });

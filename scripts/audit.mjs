@@ -212,7 +212,11 @@ export function measure(opts = {}) {
       out.push(F("same-second-start", "setup/INSTALL_TASKS.ps1", sec, `${ts.length} tasks trigger at the SAME SECOND (${sec}): ${ts.map((t) => t.organ).join(", ")} — concurrent every day, with no mutex between them`, { blast: ts.length, why_ruling: "a cadence is a free parameter, and INSTALL_TASKS.ps1 is on the never-automate list." }));
     }
     const herdN = (h.herd || []).length;
-    if (herdN) out.push(F("catch-up-herd", "setup/INSTALL_TASKS.ps1", "StartWhenAvailable", `${herdN} overnight tasks carry StartWhenAvailable=true, so on a laptop that sleeps they ALL fire at once, in arbitrary order, at the wrong hour — and every localDate(now) inside them derives the wrong day-key`, { blast: herdN, why_ruling: "the repair is a schedule change (stagger, or a shared mutex, or dropping StartWhenAvailable). All three are free parameters and the file is never-automate." }));
+    // Block 6 (18 Aug 2026): the DAY-KEY LAW is built (daykey.mjs); the herd's day-key half is now MEASURED,
+    // not asserted — `herd risks` counts the once-a-slot/chain organs still deriving today from now().
+    let dk = null; try { dk = JSON.parse(sh(process.execPath, [join(HERE, "herd.mjs"), "risks"])); } catch { }
+    const dkRisks = dk && Number.isFinite(dk.risks) ? dk.risks : null;
+    if (herdN) out.push(F("catch-up-herd", "setup/INSTALL_TASKS.ps1", "StartWhenAvailable", `${herdN} overnight tasks carry StartWhenAvailable=true, so on a laptop that sleeps they ALL fire at once, in arbitrary order, at the wrong hour — their DAY is now the slot's by the DAY-KEY LAW (daykey.mjs); ${dkRisks === null ? "day-key risks UNMEASURED this run" : `${dkRisks} wrong-day-key risk(s) remain`}`, { blast: dkRisks === null ? herdN : dkRisks, why_ruling: "the ORDER half is a schedule change (stagger, or a shared mutex, or dropping StartWhenAvailable) — free parameters, never-automate. The DAY half is code and is measured above." }));
     for (const c of h.contention || []) out.push(F("lost-update-risk", c.path, c.writers.join(","), `${c.writers.join(", ")} are ALL scheduled and all write this file. writeAtomic makes the clobber SILENT — rename is atomic, so nothing corrupts, nothing throws, and one write simply ceases to exist`, { blast: c.writers.length }));
   } catch { skipped.push("herd model unavailable (no live schedule and no installers)"); }
 

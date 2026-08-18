@@ -57,6 +57,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // (chainCommands → execFileSync, fail-silent): the owner is invoked, never
 // bypassed. This file still writes only missions.json + its own outputs.
 import { execFileSync } from "node:child_process";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -202,7 +203,7 @@ const applyWindow = (staged) => ({ open: staged.some(s => s.kind === "finops_mil
 function buildScout(staged, edges, now, war_room = { active: false, mode: null }, readiness = null) {
   const any = staged.length || edges.learn.length || edges.ratify.length || war_room.active;
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     // status stays in the house data-sufficiency vocabulary (manager.mjs:159/:167
     // pattern-matches === "ok"); the have/need counter rides BESIDE it, #106.
     status: any ? "ok" : "awaiting_data",
@@ -281,7 +282,7 @@ function stageAudit(state, now) {
 // Research is reserved for the four audits + rare deep-dives — rig cost rule).
 function topicMissionMd(concept, now) {
   return `# MISSION T-${concept} — topic-open scouting: ${concept}
-<!-- outward loop · Ruling 6 layer 2 (staged at forge start, ${now.toISOString().slice(0, 10)}) -->
+<!-- outward loop · Ruling 6 layer 2 (staged at forge start, ${dayKey(now)}) -->
 <!-- GUARD (his ruling, non-negotiable): missions tune EMPHASIS, never reopen the SYLLABUS. -->
 <!-- Fire on: Gemini Pro (regular research — NOT Deep Research; that is reserved for audits). -->
 <!-- Return door: paste back in a Claude session, or: node scripts/scout.mjs mission ingest T-${concept} --file <path> -->
@@ -306,7 +307,7 @@ Rules: this steers EMPHASIS inside a FIXED syllabus — do NOT propose adding or
 
 function lockMissionMd(concept, now) {
   return `# MISSION L-${concept} — lock-harvest: ${concept} just LOCKED
-<!-- outward loop · Ruling 2 cadence (outward check rides every topic completion, ${now.toISOString().slice(0, 10)}) -->
+<!-- outward loop · Ruling 2 cadence (outward check rides every topic completion, ${dayKey(now)}) -->
 <!-- Fire on: Gemini Pro (regular research — NOT Deep Research). -->
 <!-- Return door: paste back in a Claude session, or: node scripts/scout.mjs mission ingest L-${concept} --file <path> -->
 
@@ -335,7 +336,7 @@ function stageGenerated(state, concept, kind, now) {
   const base = (kind === "topic_open" ? "T-" : "L-") + concept;
   const open = state.missions.find(r => r.id === base && !r.ingested_at);
   if (open) return { state, row: open, skipped: true };
-  const id = state.missions.some(r => r.id === base) ? `${base}@${localDate(now)}` : base;
+  const id = state.missions.some(r => r.id === base) ? `${base}@${dayKey(now)}` : base;   // Block 6 — day-key
   const row = {
     id, type: kind, cluster: null, concept,
     file: `dressing-room/missions/${id}.md`,
@@ -876,7 +877,7 @@ function missionCli(mode) {
       console.error("ingest refused: return is empty/too thin (<40 chars). Pass --file <path> or pipe the Gemini output on stdin.");
       process.exit(1);
     }
-    const reportName = `mission_${id.toUpperCase()}_${localDate(now)}.md`;
+    const reportName = `mission_${id.toUpperCase()}_${dayKey(now)}.md`;   // Block 6 — day-key
     const res = ingestMission(state, id, `scout_reports/${reportName}`, now);
     if (!res.ok) { console.error(`ingest refused: ${res.error}`); process.exit(1); }
     writeReport(reportName, text);
@@ -904,7 +905,7 @@ function missionCli(mode) {
     return (async () => {
       const r = await claudeResearchCall(prompt, { model, job: `mission_${row.id.toLowerCase()}` });
       if (!r.ok || !String(r.text || "").trim() || String(r.text).trim().length < 400) { console.error(`mission claude FAILED: ${r.error || "empty/too-thin return"} (${r.total_tokens || 0} tok spent, metered)`); process.exit(1); }
-      const reportName = `mission_${row.id.toUpperCase()}_${localDate(now)}_claude.md`;
+      const reportName = `mission_${row.id.toUpperCase()}_${dayKey(now)}_claude.md`;   // Block 6 — day-key
       writeReport(reportName, String(r.text).trim() + "\n");
       const res = claudeMissionRow(state, row.id, `scout_reports/${reportName}`, now, { tokens: r.total_tokens || 0 });
       writeAtomic(MISSIONS, state);
@@ -930,7 +931,7 @@ function missionCli(mode) {
     return (async () => {
       const r = await claudeResearchCall(prompt, { model, job: `mission_compare_${row.id.toLowerCase()}`, search: false, timeoutMs: 900000 });
       if (!r.ok || String(r.text || "").trim().length < 400) { console.error(`mission compare FAILED: ${r.error || "empty/too-thin merge"} (${r.total_tokens || 0} tok spent, metered)`); process.exit(1); }
-      const name = `mission_${row.id.toUpperCase()}_${localDate(now)}_merged.md`;
+      const name = `mission_${row.id.toUpperCase()}_${dayKey(now)}_merged.md`;   // Block 6 — day-key
       writeReport(name, String(r.text).trim() + "\n");
       const res = compareMissionRow(state, row.id, `scout_reports/${name}`, now, { tokens: r.total_tokens || 0 });
       writeAtomic(MISSIONS, state);

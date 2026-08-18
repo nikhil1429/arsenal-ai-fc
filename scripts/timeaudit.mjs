@@ -19,6 +19,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: TimeAuditor-Full 22:00 audits its SLOT's day even when the laptop wakes it at 09:00 the next morning
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AW = process.env.AW_API_BASE || "http://localhost:5600";
@@ -432,10 +433,15 @@ function mockData() {
 async function run() {
   const cfg = loadConfig();
   const now = new Date();
-  const dayStart = localDayStart(now);
-  // IST fix (organism U4, captain-approved): local components, never
+  // Block 6 — THE AUDITED DAY is the day-key (the slot's day in a catch-up burst,
+  // the calendar day on time / by hand). Its window is [that day 00:00, now] when
+  // the day is still today, else the WHOLE of that day — so a 22:00 audit fired at
+  // 09:00 the next morning still measures yesterday, not nine hours of today.
+  // IST fix (organism U4, captain-approved) still holds: local components, never
   // toISOString — UTC+5:30 made local midnight stamp YESTERDAY's date.
-  const dateStr = `${dayStart.getFullYear()}-${String(dayStart.getMonth() + 1).padStart(2, "0")}-${String(dayStart.getDate()).padStart(2, "0")}`;
+  const dateStr = dayKey(now);
+  const dayStart = new Date(`${dateStr}T00:00:00`);
+  const dayEnd = dayStart.getTime() === localDayStart(now).getTime() ? now : new Date(`${addDays(dateStr, 1)}T00:00:00`);
 
   let afkEvents, windowEvents, webEvents, dataOk = true, note = "";
   const fetchErrors = []; // per-bucket read failures (E2E audit 25 Jul 2026)
@@ -457,7 +463,7 @@ async function run() {
     }
     const ids = pickBuckets(bucketMap);
     if (!ids.afk || !ids.window) { dataOk = false; note = "window/afk bucket missing — check watchers."; }
-    const s = iso(dayStart), e = iso(now);
+    const s = iso(dayStart), e = iso(dayEnd);
     afkEvents = await fetchEvents(ids.afk, s, e, fetchErrors);
     windowEvents = await fetchEvents(ids.window, s, e, fetchErrors);
     webEvents = [];

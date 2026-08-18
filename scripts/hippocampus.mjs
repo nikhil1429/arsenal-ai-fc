@@ -81,6 +81,7 @@ import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, ren
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import os from "node:os";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: Consolidate 02:10 / HippoStore 02:20 key their SLOT's day in a catch-up burst
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -109,7 +110,7 @@ function ageInDays(stampish, now = new Date()) {
   const day = String(stampish || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const a = Date.parse(day + "T00:00:00Z");
-  const b = Date.parse(localDate(now) + "T00:00:00Z");
+  const b = Date.parse(dayKey(now) + "T00:00:00Z");   // Block 6 — day-key
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   return Math.round((b - a) / DAY_MS);
 }
@@ -251,7 +252,7 @@ async function markMoment(kind, text, deps = {}) {
   // writer must NEVER cause a write to the captain's real episodes.jsonl.
   const patch = deps.patch || (deps.append ? (() => true) : ((row) => patchEpisodeVec(row.id, row.vec)));
   const now = deps.now || new Date();
-  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: localDate(now), kind: k, text: t.slice(0, 500), vec: null, recalls: 0 };
+  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: dayKey(now), kind: k, text: t.slice(0, 500), vec: null, recalls: 0 };
   append(row);                                      // ← the moment is durable from HERE, whatever the network does
   let embedded = false;
   try {
@@ -478,7 +479,7 @@ function validateWho(obj) {
 // its surfaces went dry (dugout transcripts stop 30 Jul; 16 episodes in 16
 // days), which is why who_he_is froze. No caller points here.
 function gatherDayMaterialLegacy(now = new Date(), deps = {}) {
-  const days = [localDate(now), localDate(new Date(now.getTime() - 86400000))];
+  const days = [dayKey(now), addDays(dayKey(now), -1)];   // Block 6 — day-key
   const eps = readLines(deps.episodes || EPISODES).filter(e => days.includes(e.day)).slice(-40);
   const outDir = deps.outDir || join(STATE_DIR, "brain_out", "dugout");
   let talk = [];
@@ -606,7 +607,7 @@ function learningArcVerdict(text, vocab) {
 const ARC_ROW_CHARS = 500;
 const ARC_MAX_ROWS  = 40;
 function learningArcTurns(now = new Date(), deps = {}) {
-  const days = deps.days || [localDate(now), localDate(new Date(now.getTime() - DAY_MS))];
+  const days = deps.days || [dayKey(now), addDays(dayKey(now), -1)];   // Block 6 — day-key
   const rows = deps.afferent || readLines(AFFERENT);
   const vocab = deps.vocab || conceptVocabulary(deps);
   // HIS words only. `claude-code-teaching` / `gemini-study-teaching` are the
@@ -653,7 +654,7 @@ function learningArcTurns(now = new Date(), deps = {}) {
 // about and the whole window fits with room to spare.
 const forPrompt = (e) => ({ day: e.day, kind: e.kind, text: e.text });
 function gatherDayMaterial(now = new Date(), deps = {}) {
-  const days = [localDate(now), localDate(new Date(now.getTime() - DAY_MS))];
+  const days = [dayKey(now), addDays(dayKey(now), -1)];   // Block 6 — day-key: the CONSOLIDATE slot's day, even at 01:00 the day after a >24 h sleep
   const eps = readLines(deps.episodes || EPISODES).filter(e => days.includes(e.day)).slice(-40).map(forPrompt);
   const outDir = deps.outDir || join(STATE_DIR, "brain_out", "dugout");
   let talk = [];
@@ -714,7 +715,7 @@ ${JSON.stringify(material).slice(0, 12000)}`;
   // carries `layers[]`, newest first, and tonight's write PUSHES a layer instead of
   // replacing yesterday's. Overflow moves to the cold shard (M10's law: prune = move,
   // never delete).
-  const fresh = { date: localDate(now), generated_at: now.toISOString(), ...obj };
+  const fresh = { date: dayKey(now), generated_at: now.toISOString(), ...obj };
   const { file: out, cold } = layerWho(fresh, old);
   (deps.writeWho || ((o) => writeAtomic(WHO, o)))(out);
   if (cold.length) (deps.writeCold || ((rows) => { try { mkdirSync(COLD_DIR, { recursive: true }); appendFileSync(WHO_LAYERS_COLD, rows.map((r) => JSON.stringify(r)).join("\n") + "\n"); } catch { } }))(cold);
@@ -968,7 +969,7 @@ async function recallReflex(turnText, deps = {}) {
   // A lexical "thread:" hit is not an episode row — nothing to bump.
   if (!String(best.id).startsWith("thread:")) {
     const bump = deps.bump || (deps.episodes ? (() => false) : bumpRecall);
-    try { bump(best.id, localDate(deps.now || new Date())); } catch { }
+    try { bump(best.id, dayKey(deps.now || new Date())); } catch { }
   }
   return { id: best.id, kind: best.kind, text: best.text, hint: `${best.kind} · ${best.day} · his words: "${best.text}"`, score: Math.round(best.score * 100) / 100 };
 }
@@ -1061,7 +1062,7 @@ function logRecallHint(row, file = RECALL_HINTS) {
 // clobber each other and could drop a freshly marked moment. An O_APPEND line
 // cannot. The hourly `index` sweep (the single writer) folds the journal in.
 const RECALL_BUMPS = join(HIPPO_DIR, "recall_bumps.jsonl");
-function bumpRecall(id, today = localDate(), file = RECALL_BUMPS) {
+function bumpRecall(id, today = dayKey(), file = RECALL_BUMPS) {
   try {
     if (!id || String(id).startsWith("thread:")) return false;   // a thread is not an episode row
     mkdirSync(dirname(file), { recursive: true });
@@ -1123,7 +1124,7 @@ function consolidateStore(deps = {}) {
   const now = deps.now || new Date();
   const rows = deps.episodes || readLines(EPISODES);
   if (!rows.length) return { ok: true, hot: 0, sharded: 0, cold: 0 };
-  const thisMonth = localDate(now).slice(0, 7);
+  const thisMonth = dayKey(now).slice(0, 7);   // Block 6 — the HippoStore slot's month
   const hot = [], byMonth = {}, cold = [];
   for (const e of rows) {
     const strength = memoryStrength(e, now);

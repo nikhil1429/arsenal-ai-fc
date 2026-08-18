@@ -71,6 +71,7 @@ import { convene, councilSection } from "./council.mjs";
 import { currentWindow, AMBIENT } from "./distiller.mjs";
 import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
+import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: ConceptGraph 03:00 keys its SLOT's day in a catch-up burst
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -1897,7 +1898,7 @@ async function runConsolidation(deps = {}) {
   const out = {
     schema_version: CONCEPT_GRAPH_SCHEMA,
     generated_at: now.toISOString(),
-    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    date: dayKey(now),   // Block 6 — day-key
     source: "cortex-consolidate (opus)",
     node_count: nodes.length, edge_count: edges.length,
     nodes, edges, clusters,

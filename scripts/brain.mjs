@@ -79,6 +79,7 @@ import { classifyLimit } from "./claudegen.mjs";
 // shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
 // gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
 import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -605,7 +606,7 @@ function pulseConfig(cfg) {
 }
 // today's pulse rows, parsed-local-date keyed exactly like pulsesToday (see the note there)
 function pulseRowsToday(ledger, now) {
-  const today = localDate(now);
+  const today = dayKey(now);
   return (ledger || []).filter(r => r && r.job === "haiku_pulse" && r.ts && localDate(new Date(r.ts)) === today);
 }
 function pulseTokensToday(ledger, now) {
@@ -634,7 +635,7 @@ function pulseCostToday(ledger, now, budget = null) {
   };
 }
 function pulsesToday(ledger, now) {
-  const today = localDate(now);
+  const today = dayKey(now);
   // count on matching LOCAL dates. r.ts is a UTC ISO stamp — slicing its STRING would
   // mis-bucket every pulse fired before the local UTC offset each night (IST 00:00-05:30
   // maps to the previous UTC day), silently disengaging the hard cap during exactly the
@@ -739,7 +740,7 @@ async function defaultAfferentPost(evt) {
 const PULSE_MAX_TURNS = 80;
 export function pulseSessionUsable(s, now, maxTurns = PULSE_MAX_TURNS) {
   if (process.env.PULSE_RESUME_DISABLED) return false;      // one-line rollback
-  return !!(s && s.id && s.date === localDate(now) && (s.turns || 0) < maxTurns);
+  return !!(s && s.id && s.date === dayKey(now) && (s.turns || 0) < maxTurns);
 }
 // The DELTA: afferent rows newer than the ones the session has already been
 // shown. Same filters as the cold tail (never its own output — the 1 Aug
@@ -835,7 +836,7 @@ async function runPulse(cfg, deps = {}) {
     const next =
       (resuming && !r.ok) ? { ...session, id: null, dropped_at: now.toISOString(), dropped_why: String(r.error || "resumed call failed").slice(0, 120) }
       : resuming ? { ...session, turns: (session.turns || 0) + 1, last_afferent_ts: newestSeen || session.last_afferent_ts, last_at: now.toISOString() }
-      : (r.ok && r.session_id) ? { id: r.session_id, started_at: now.toISOString(), turns: 1, date: localDate(now), last_afferent_ts: newestSeen, last_at: now.toISOString() }
+      : (r.ok && r.session_id) ? { id: r.session_id, started_at: now.toISOString(), turns: 1, date: dayKey(now), last_afferent_ts: newestSeen, last_at: now.toISOString() }
       : null;
     if (next) writePulseSession(next);
   }
@@ -1129,7 +1130,7 @@ const localDayOf = (ts, fallbackNow) => {
 
 // THE THIRD POOL (U3d): live-voice minutes beside Claude-window and Gemini-text
 function dugoutMinutesToday(now, file = join(STATE_DIR, "dugout_ledger.jsonl")) {
-  return readLines(file).filter(l => localDayOf(l.ts) === localDate(now)).reduce((a, l) => a + (l.minutes || 0), 0);
+  return readLines(file).filter(l => localDayOf(l.ts) === dayKey(now)).reduce((a, l) => a + (l.minutes || 0), 0);
 }
 
 // which jobs are eligible now?
@@ -1139,9 +1140,9 @@ const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // 00:00 — it re-ran with TODAY-tokened inputs now pointing at the empty new day
 // and overwrote the good artifacts (the KAL-rich morning talk among them).
 function shiftDay(job, now, cfg) {
-  if (!job || job.window !== "overnight") return localDate(now);
+  if (!job || job.window !== "overnight") return dayKey(now);   // Block 6 — a day job takes the run's day-key; the overnight shift below stays WALL-CLOCK (its window is)
   const endH = Number(String((cfg.overnight && cfg.overnight.end) || "07:30").split(":")[0]);
-  return now.getHours() <= endH ? localDate(new Date(now.getTime() - 86400000)) : localDate(now);
+  return now.getHours() <= endH ? localDate(new Date(now.getTime() - 86400000)) : localDate(now);   // day-key: WALL-CLOCK by design (the overnight window is a clock window)
 }
 // THE PREVIOUS SHIFT'S DATE — the dream lane's key (11 Aug 2026 wiring audit).
 // H5's two readers both asked disk for `localDate(now - 24h)`: CALENDAR yesterday.
@@ -1597,7 +1598,7 @@ export function foldStatus(job, cfg, ctx, visited = new Set()) {
     const pat = typeof job.fold_artifact === "string" ? job.fold_artifact.replace(/\\/g, "/") : null;
     const m = pat && /^brain_out\/([^/]+)\/(.+)$/.exec(pat);
     if (!m) return { target: tid, covered: false, detail: `${tid} is not a brain job and no fold_artifact (brain_out/<lane>/<file with <day>>) names its output — the fold cannot cover anything` };
-    const day = localDate(now);
+    const day = dayKey(now);
     const name = m[2].replace(/<day>/g, day);
     const exists = ctx.artifactExists ? ctx.artifactExists({ id: tid, out: m[1] }, day, name) : !!(laneListing({ id: tid, out: m[1] }) || []).some((f) => f.name === name);
     return exists
@@ -1691,7 +1692,7 @@ function gateCardArgs(lane, verdict, now, cfg = null) {
   const w = verdict.wakes_when ? String(verdict.wakes_when).split(" · ")[0].replace(/\s+—.*$/, "") : "";
   const days = gateConfig((cfg && (cfg.jobs || []).find((j) => j.id === lane)) || {}).window_days;
   const line = `${lane} SO GAYA (${failed.join("")}: ${short(verdict.why[failed[0]].detail)}) · jaagega: ${short(w)} · haan=sone do · na=${days}d jagao`;
-  return ["file", "--line", line, "--key", `gate:${lane}:${localDate(now)}`, "--gate-wake", lane];
+  return ["file", "--line", line, "--key", `gate:${lane}:${dayKey(now)}`, "--gate-wake", lane];
 }
 function defaultFileCard(args) {
   try { execFileSync(process.execPath, [join(__dirname, "captains_call.mjs"), ...args], { encoding: "utf8", timeout: 20000, windowsHide: true }); return true; }
@@ -1747,7 +1748,7 @@ export function gateCardsForTick(collected, now, { fileCard = defaultFileCard, t
   if (collected.length <= threshold) { for (const c of collected) fileCard(c.args); return { filed: collected.length, batch: false }; }
   const lanes = collected.map((c) => c.lane);
   const line = `${label}: ${lanes.length} lanes so gaye — output kabhi tum tak nahi pahuncha (list: brain gate show) · haan=theek, khud jaagenge · na=sab 14d jagao`;
-  fileCard(["file", "--line", line, "--key", `gate:batch:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${localDate(now)}`, "--gate-wake", lanes.join(",")]);
+  fileCard(["file", "--line", line, "--key", `gate:batch:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${dayKey(now)}`, "--gate-wake", lanes.join(",")]);
   return { filed: 1, batch: true, lanes };
 }
 // The whole GATE read for `status`/`gate show`: every enabled job's LIVE verdict
@@ -2491,7 +2492,7 @@ function normalizeInputs(job) {
 }
 function gatherInputsAudited(job, now = new Date(), dateStr = null) {
   const inputs = {};
-  const day = dateStr || localDate(now);
+  const day = dateStr || dayKey(now);
   const absent = [], required_absent = [], door = [];
   for (const decl of normalizeInputs(job)) {
     const name = decl.path.replace(/TODAY/g, day);   // date-tokened paths (e.g. dugout transcripts)
@@ -2984,7 +2985,7 @@ LAWS: session_id ONLY from the input (anything else is dropped). Short lines (�
 }
 export function parseIntentDigestJson(text, _cfg, food = intentDigestFood) {
   const j = lastJsonBlock(text);
-  const input = food || intentDigestInput({ day: localDate(new Date()) });
+  const input = food || intentDigestInput({ day: dayKey() });
   return intentValidateDigest(j, input);
 }
 
@@ -3010,7 +3011,7 @@ export async function gatherPrepareFood(deps = {}) {
   const S = deps.sitting || await import("./sitting.mjs");
   prepareSitting = S;
   const ctx = await S.gatherPlanContext(deps.ctxDeps || {}, deps.now ? Date.parse(deps.now) : Date.now());
-  const day = localDate(deps.now ? new Date(deps.now) : new Date());
+  const day = localDate(deps.now ? new Date(deps.now) : new Date());   // day-key: WALL-CLOCK by design (an overnight lane — the reviews of the day this run closes)
   // today's sitting reviews (base + LLM rows merged per sitting), the last 3 closed
   const rows = deps.reviewRows || readLinesTail(join(STATE_DIR, "sitting_reviews.jsonl"), 60) || [];
   const ids = [...new Set(rows.filter((r) => r && r.kind === "sitting_review" && r.sitting_id).map((r) => r.sitting_id))].slice(-3);
@@ -3457,7 +3458,7 @@ async function runJob(job, cfg, deps) {
     inputs["fact grid (last 14 finalized days — null = UNOBSERVED, never false)"] = grid;
     inputs["edges currently tracked"] = ((readJson(join(STATE_DIR, "nikhil_model.json")) || {}).edges || [])
       .map((e) => ({ id: e.id, status: e.status, n: `${e.n_cooccur}/${e.n_cause_days}` }));
-    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, addDays(today, -1)]);
     prompt = buildModelMinePrompt(job, inputs, cfg.guards.banned_phrases);
   } else if (job.kind === "agenda") {
     // H2: the day's evidence, all code-computed (never a raw ledger dump).
@@ -3471,7 +3472,7 @@ async function runJob(job, cfg, deps) {
     // reader — ledgerShiftSummary().council, the diary's input, wired the same day;
     // do not read this deliberate non-read as "nothing consumes those fields".)
     inputs[`salience day-summary (computed, ${today})`] = salienceDaySummary(today);
-    inputs["brain_outcomes (last-per-key, yesterday+today)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    inputs["brain_outcomes (last-per-key, yesterday+today)"] = outcomesFor([today, addDays(today, -1)]);
     const tc = readJson(join(STATE_DIR, "teaching_contract.json"));
     inputs["teaching drifts (top rules)"] = ((tc && tc.rules) || [])
       .map((r) => ({ id: r.id, hits: (r.hits || 0) + (r.auto_hits || 0) }))
@@ -3492,7 +3493,7 @@ async function runJob(job, cfg, deps) {
     // names ONLY — the evidence field is his verbatim words, and injecting it
     // would make this a G8 opus lane (the _note carries the tripwire).
     inputs[`tonight's ledger (computed, shift ${today})`] = ledgerShiftSummary(today);
-    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, localDate(new Date(now.getTime() - 86400000))]);
+    inputs["brain_outcomes (last-per-key, 2 days)"] = outcomesFor([today, addDays(today, -1)]);
     const wl = readJson(join(STATE_DIR, "watchman_last.json"));
     inputs["watchman findings (last sweep)"] = ((wl && wl.findings) || []).map((f) => ({ id: f.id, level: f.level }));
     const ncServe = readJson(join(OUT_DIR, "night_coach", outDate(job, now, today) + ".json"));
@@ -3719,7 +3720,7 @@ async function runJob(job, cfg, deps) {
 // which date an audio artifact SERVES: overnight-compiled morning talks are
 // for tomorrow (when run in the evening half of the night), else today.
 function serveDate(job, now) {
-  return job.serve === "next_morning" && now.getHours() >= 15 ? localDate(new Date(now.getTime() + 86400000)) : localDate(now);
+  return job.serve === "next_morning" && now.getHours() >= 15 ? localDate(new Date(now.getTime() + 86400000)) : localDate(now);   // day-key: WALL-CLOCK by design (which morning follows THIS run)
 }
 
 // WHICH DATE THE .md ARTIFACT IS FILED UNDER (2 Aug 2026 audit, finding #65).
@@ -3741,7 +3742,7 @@ function outDate(job, now, shiftToday) {
 // "team talk taiyaar" rides INSIDE the two sanctioned utterances (never a
 // third push): the 08:45 sheet gets the am line, the 21:30 bell the pm line.
 function teamtalkLine(slot, now = new Date(), dir = join(STATE_DIR, "..", "club", "media")) {
-  const f = `teamtalk_${localDate(now)}_${slot}.mp3`;
+  const f = `teamtalk_${dayKey(now)}_${slot}.mp3`;
   return existsSync(join(dir, f)) ? `🎙 team talk taiyaar — club/media/${f}` : null;
 }
 
@@ -3768,7 +3769,7 @@ async function tick(cfg, deps) {
   // neither dep and behaves exactly as before.
   const ledger = deps.ledger || readLines(LEDGER);
   const queueState = deps.queueState || readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — the tick's day-key (a chain child = the chain's day)
   queueState.jobs_run = queueState.jobs_run || {};
   queueState.jobs_run[today] = queueState.jobs_run[today] || {};
 

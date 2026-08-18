@@ -35,6 +35,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rename
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(join(__dirname, ".."));
@@ -203,7 +204,7 @@ function writeAtomic(path, obj) {
   catch (e) { try { if (existsSync(tmp)) rmSync(tmp, { force: true }); } catch {} throw e; }
 }
 
-function build(day = localDate(), repos = loadRepos()) {
+function build(day = dayKey(), repos = loadRepos()) {   // Block 6 — day-key
   const per = repos.map(r => readRepo(r, day));
   const live = per.filter(r => r.ok);
   const dark = per.filter(r => !r.ok);
@@ -295,7 +296,7 @@ function selftest() {
     shippedVerdict(null, false).verdict === "awaiting_data");
 
   // the live wiring, exercised for real against this repo — it must never throw
-  const live = build(localDate());
+  const live = build(localDate());   // day-key: fixture
   assert("LIVE — reads this repo without throwing and reports dataOk honestly",
     typeof live.dataOk === "boolean" && live.repos.length >= 1 && typeof live.line === "string");
   assert("LIVE — an unreadable path is reported as unreadable, never as 0 commits",

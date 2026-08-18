@@ -78,6 +78,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";     // #25 — the heartbeat chain (see chainHeartbeat)
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -1020,7 +1021,7 @@ function cardRejectedReps(rejections, deps = {}) {
     // second rejected pull of the same day printed "card filed" while fileGuard had
     // actually minted NOTHING, because `capture:rejected:<day>` was already live. The
     // suppression is correct and wanted; claiming a fresh card for it is not).
-    const said = String(fileCard(line, `capture:rejected:${localDate()}`) || "").trim().split("\n")[0];
+    const said = String(fileCard(line, `capture:rejected:${dayKey()}`) || "").trim().split("\n")[0];   // Block 6 — day-key
     return { carded: true, said: said || null, error: null };
   } catch (e) {
     // NOT recorded as filed. If this is swallowed, the rejection reaches nobody at
@@ -1127,7 +1128,7 @@ export function quarantineTriage(repsPath, reg = EMPTY_REG) {
 // never throws — the reps are already on disk by the time we get here, and a card
 // that could not be filed must not turn a successful ingest into a failure. It must,
 // however, be SAID: an unfiled card means the parked lines reach nobody at all.
-export function cardQuarantine({ count, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+export function cardQuarantine({ count, day = dayKey(), scriptsDir = __dirname, exec = execFileSync } = {}) {   // Block 6 — day-key
   if (!count) return { filed: false, why: "nothing quarantined" };
   const cc = join(scriptsDir, "captains_call.mjs");
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
@@ -1152,7 +1153,7 @@ export function cardQuarantine({ count, day = localDate(), scriptsDir = __dirnam
 // nothing, forever, on a lane (pull) whose stdout nobody reads. `why` is clipped to the
 // error CODE because captains_call trims a card at 140 chars and the code is the part
 // that names the fix; the full text is on the report and on the console line above it.
-export function cardQuarantineStuck({ count, why, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+export function cardQuarantineStuck({ count, why, day = dayKey(), scriptsDir = __dirname, exec = execFileSync } = {}) {   // Block 6 — day-key
   if (!why) return { filed: false, why: "quarantine did not fail" };
   const cc = join(scriptsDir, "captains_call.mjs");
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
@@ -1251,7 +1252,7 @@ export function geminiQuarantineTriage(ledgerPath) {
 // first ask is unanswered). It PROPOSES: the merge itself is `quarantine gem retry`, a
 // command a session runs on HIS word — the machine never quietly rewrites the ledger
 // that his own review will read.
-export function cardGeminiQuarantine({ count, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+export function cardGeminiQuarantine({ count, day = dayKey(), scriptsDir = __dirname, exec = execFileSync } = {}) {   // Block 6 — day-key
   if (!count) return { filed: false, why: "nothing salvaged" };
   const cc = join(scriptsDir, "captains_call.mjs");
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
@@ -1274,7 +1275,7 @@ export function cardGeminiQuarantine({ count, day = localDate(), scriptsDir = __
 // nobody reads is still invisible"). A rolling YYYY-MM-DD key mints at most ONE card a
 // day and mints nothing while the first is unanswered (captains_call.mjs:874), so 14
 // pulls cannot flood the deck. It PROPOSES; it never edits concepts.json.
-export function cardRegistryDown({ why, day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+export function cardRegistryDown({ why, day = dayKey(), scriptsDir = __dirname, exec = execFileSync } = {}) {   // Block 6 — day-key
   if (!why) return { filed: false, why: "registry loaded — nothing to ask" };
   const cc = join(scriptsDir, "captains_call.mjs");
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
@@ -1317,7 +1318,7 @@ export function cardRegistryDown({ why, day = localDate(), scriptsDir = __dirnam
 // honest cost is that a transient EBUSY which clears on the next hourly pull can leave
 // one stale card on the deck — a card he answers "na" to, against an export lost whole.
 // Same shape, same organ, same rolling-day family as cardQuarantine / cardRegistryDown.
-export function cardUnreadableFiles({ failures = [], day = localDate(), scriptsDir = __dirname, exec = execFileSync } = {}) {
+export function cardUnreadableFiles({ failures = [], day = dayKey(), scriptsDir = __dirname, exec = execFileSync } = {}) {   // Block 6 — day-key
   if (!failures.length) return { filed: false, why: "every inbox file was readable — nothing to ask" };
   const cc = join(scriptsDir, "captains_call.mjs");
   if (!existsSync(cc)) return { filed: false, why: `captains_call.mjs not found at ${cc}` };
@@ -2549,7 +2550,7 @@ function main() {
     // it was filed decides whether the rejection reached a human or died in capture.log.
     if (r.rejections && r.rejections.length) {
       console.log(r.carded
-        ? `pull: ⚠ ${r.rejections.length} rejected rep(s) → captains_call (key capture:rejected:${localDate()}): ${r.card_said || "handed to the deck"}`
+        ? `pull: ⚠ ${r.rejections.length} rejected rep(s) → captains_call (key capture:rejected:${dayKey()}): ${r.card_said || "handed to the deck"}`
         : `pull: ⚠ ${r.rejections.length} rejected rep(s) and the card could NOT be filed${r.card_error ? ` (${r.card_error})` : ""} — nothing else reads this lane, so the reasons above are the only record.`);
     }
     // 11 Aug 2026 — THE STRICTLY WORSE CASE THAT HAD THE WEAKER WIRE. A rejection

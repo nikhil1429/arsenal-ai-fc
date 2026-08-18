@@ -91,6 +91,7 @@ import net from "node:net";
 // step's `at` is the moment after which "silent tonight" is a fair claim.
 // conductor.mjs is import-safe (main() is argv-guarded, zero side effects).
 import { EVENING } from "./conductor.mjs";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -164,7 +165,7 @@ const localDayOf = (ts) => {
 // only place Tier 1 touches disk.
 // ---------------------------------------------------------------------------
 export function gather(now = new Date()) {
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — the 23:55 sweep's day is its SLOT's day in a catch-up burst
   const w = {
     now: now.toISOString(), today,
     forge: { exists: existsSync(FORGE), json: null, shapeless: false },
@@ -1215,17 +1216,38 @@ export function probeCanon(today, deps = {}) {
 export function probeExpectedTasks(deps = {}) {
   const expected = deps.expected !== undefined ? deps.expected : readJson(join(STATE_DIR, "tasks_expected.json"));
   if (!expected) return [];                              // no snapshot on this box = no claim
+  // Block 6 (18 Aug 2026): the same read also carries every trigger's HH:MM and
+  // the repetition interval, so the DAY-KEY LAW's slot snapshot can be diffed too.
+  let liveSlots = deps.liveSlots !== undefined ? deps.liveSlots : null;
   const live = deps.live !== undefined ? deps.live : (() => {
     const ps = spawnSync("powershell", ["-NoProfile", "-Command",
-      'Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object { "$($_.TaskName)|$($_.State)" }'],
+      'Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object { $st = @($_.Triggers | ForEach-Object { ([string]$_.StartBoundary) -replace \'^.*T(\\d\\d:\\d\\d).*$\', \'$1\' }) -join \',\'; $ri = [string]($_.Triggers | Select-Object -First 1).Repetition.Interval; "$($_.TaskName)|$($_.State)|$st|$ri" }'],
       { encoding: "utf8", timeout: 30000, windowsHide: true });
     if (ps.status !== 0) return null;
-    const m = new Map();
-    for (const l of String(ps.stdout || "").split("\n")) { const [n, s] = l.trim().split("|"); if (n) m.set(n, s); }
+    const m = new Map(); liveSlots = new Map();
+    for (const l of String(ps.stdout || "").split("\n")) {
+      const [n, s, st, ri] = l.trim().split("|");
+      if (!n) continue;
+      m.set(n, s);
+      liveSlots.set(n, { at: String(st || "").split(",").filter(Boolean).sort(), interval: ri || null });
+    }
     return m;
   })();
   if (!live) return [{ id: "tasks-expected-unrunnable", level: "INFO", finding: "Get-ScheduledTask failed — the schedule diff measured nothing tonight", evidence: "spawnSync powershell Get-ScheduledTask" }];
   const out = [];
+  // THE SLOT SNAPSHOT (Block 6) — daykey.mjs keys a scheduled organ's day off
+  // tasks_expected.json `slots`; a live trigger that moved without the snapshot
+  // moving is a wrong day-key waiting for the next catch-up burst. WARN, named.
+  if (liveSlots && expected.slots && typeof expected.slots === "object") {
+    for (const [n, row] of Object.entries(expected.slots)) {
+      const lv = liveSlots.get(n);
+      if (!lv || !row) continue;                                   // vanished rows are the RED above
+      const snapAt = [].concat(row.at || []).filter(Boolean).sort();
+      const sameAt = snapAt.join(",") === lv.at.join(",");
+      const sameRi = String(row.interval || "") === String(lv.interval || "");
+      if (!sameAt || !sameRi) out.push({ id: `task-slot-drift-${n}`, level: "WARN", finding: `${n} trigger moved: live ${lv.at.join("/") || "—"}${lv.interval ? " every " + lv.interval : ""} ≠ snapshot ${snapAt.join("/") || "—"}${row.interval ? " every " + row.interval : ""} — daykey.mjs keys this organ's catch-up day off the SNAPSHOT; run \`node scripts/herd.mjs slots\`, paste into tasks_expected.json, commit`, evidence: "tasks_expected.json slots vs live Get-ScheduledTask triggers" });
+    }
+  }
   for (const n of expected.expected_enabled || []) {
     if (!live.has(n)) out.push({ id: `task-vanished-${n}`, level: "RED", finding: `${n} is EXPECTED and GONE — a lane the organism counts on no longer exists`, evidence: "tasks_expected.json expected_enabled vs live Get-ScheduledTask" });
     else if (live.get(n) === "Disabled") out.push({ id: `task-darkened-${n}`, level: "WARN", finding: `${n} is expected ENABLED but sits Disabled — its lane is dark`, evidence: "tasks_expected.json vs live state" });
@@ -1531,7 +1553,7 @@ async function run(argv) {
   const w = gather(now);
   const findings = checks(w);
   if (!skipSuite) { const f = probeSuite(); if (f) findings.push(f); }
-  const yday = localDate(new Date(now.getTime() - 24 * 3.6e6));
+  const yday = addDays(w.today, -1);   // Block 6 — day-key
   findings.push(...probeTasks(w.today, yday));
   findings.push(...probeOutwork());
   findings.push(...await probeDaemons());
@@ -1837,6 +1859,17 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       && probeExpectedTasks({ expected: EXP, live: mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"]]) }).length === 0
       && probeExpectedTasks({ expected: null }).length === 0
       && probeExpectedTasks({ expected: EXP, live: null }).some((f) => f.id === "tasks-expected-unrunnable"));
+    // Block 6 (18 Aug 2026) — THE DAY-KEY LAW's slot snapshot is diffed too
+    const EXP6 = { ...EXP, expected_enabled: [...EXP.expected_enabled, "ArsenalFC-Wall-Live", "ArsenalFC-TimeAuditor-Pulse"], slots: { "ArsenalFC-Watchman": { organ: "watchman.mjs", verb: "run", at: "23:55", interval: null }, "ArsenalFC-Wall-Live": { organ: "viz.mjs", verb: null, at: "10:38", interval: "PT1H" }, "ArsenalFC-TimeAuditor-Pulse": { organ: "timeaudit.mjs", verb: "pulse", at: ["12:00", "15:00", "18:00"], interval: null } } };
+    const okLive = mkLive([["ArsenalFC-Watchman", "Ready"], ["ArsenalFC-BrainDaemon", "Ready"], ["ArsenalFC-Scorer", "Disabled"], ["ArsenalFC-Wall-Live", "Ready"], ["ArsenalFC-TimeAuditor-Pulse", "Ready"]]);
+    const slotsOf = (o) => new Map(Object.entries(o).map(([n, v]) => [n, { at: [].concat(v.at).sort(), interval: v.interval || null }]));
+    assert("Block 6 — a live trigger that moved off the slot snapshot is WARN task-slot-drift (time OR interval; multi-trigger rows compare as sets); a matching schedule is silent; a Map without slot info makes no slot claim",
+      probeExpectedTasks({ expected: EXP6, live: okLive, liveSlots: slotsOf({ "ArsenalFC-Watchman": { at: "23:55" }, "ArsenalFC-Wall-Live": { at: "10:38", interval: "PT1H" }, "ArsenalFC-TimeAuditor-Pulse": { at: ["18:00", "12:00", "15:00"] } }) }).length === 0
+      && probeExpectedTasks({ expected: EXP6, live: okLive, liveSlots: slotsOf({ "ArsenalFC-Watchman": { at: "23:50" }, "ArsenalFC-Wall-Live": { at: "10:38", interval: "PT1H" }, "ArsenalFC-TimeAuditor-Pulse": { at: ["12:00", "15:00", "18:00"] } }) })
+        .some((f) => f.id === "task-slot-drift-ArsenalFC-Watchman" && f.level === "WARN" && /23:50/.test(f.finding) && /herd\.mjs slots/.test(f.finding))
+      && probeExpectedTasks({ expected: EXP6, live: okLive, liveSlots: slotsOf({ "ArsenalFC-Watchman": { at: "23:55" }, "ArsenalFC-Wall-Live": { at: "10:38", interval: "PT30M" }, "ArsenalFC-TimeAuditor-Pulse": { at: ["12:00", "15:00", "18:00"] } }) })
+        .some((f) => f.id === "task-slot-drift-ArsenalFC-Wall-Live" && /PT30M/.test(f.finding))
+      && probeExpectedTasks({ expected: EXP6, live: okLive }).length === 0);
   }
 
   // LADDER E8 — the sentinel's pulse (injected fetch)
@@ -2151,8 +2184,7 @@ else if (cmd === "brief") {
   if (process.env.ARSENAL_ORGAN !== "1") {
     try {
       const now = new Date();
-      const y = new Date(now.getTime() - 24 * 3.6e6);
-      const L = briefLines(readJson(LAST), localDate(now), localDate(y));
+      const L = briefLines(readJson(LAST), dayKey(now), addDays(dayKey(now), -1));
       if (L.length) console.log(L.join("\n"));
     } catch { /* silence is the contract */ }
   }

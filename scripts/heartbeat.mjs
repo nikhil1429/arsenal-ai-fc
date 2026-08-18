@@ -31,6 +31,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS   = __dirname;
@@ -266,7 +267,7 @@ function pulseHealth(agents, configured_total) {
 }
 
 function buildPulse({ agents, bus, buckets, ladderCfg, now, configured_total }) {
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — day-key
   const lad = ladderRead(bus.readiness, ladderCfg);
   const health = pulseHealth(agents, configured_total);
   return {

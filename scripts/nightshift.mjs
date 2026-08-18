@@ -118,6 +118,7 @@ import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHead
 // job 6 (the wind tunnel) replays the gate's own recorded decisions
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: NightShift 02:40 keys its SLOT's day in a catch-up burst
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -405,7 +406,7 @@ export function validateRoundRead(o) {
 }
 
 async function roundRead(deps = {}) {
-  const day = deps.day || localDate(deps.now || new Date());
+  const day = deps.day || dayKey(deps.now || new Date());
   const rows = deps.rejirahRows !== undefined ? deps.rejirahRows : readLines(join(STATE_DIR, "rejirah_log.jsonl"));
   const graded = todaysGrades(rows, day);
   if (graded.length < ROUND_READ_MIN_AXES) {
@@ -579,7 +580,7 @@ function scoutPack(deps = {}, now = new Date()) {
   if (threads.length) prompts.push(`Deep-research this open technical question end to end, with primary sources and the 2026 state of the art: ${threads.join(" · ")}. End with the 5-sentence answer a staff engineer would accept.`);
   prompts.push(`Deep-research the current AI Product Engineer interview landscape in India (₹20-25 LPA band, 2026): the live round formats (${rounds}), what changed in the last 6 months, and the 10 most-asked build/eval questions with model answers.`);
   const md = [
-    `# THE SCOUT PACK · ${localDate(now)}`,
+    `# THE SCOUT PACK · ${dayKey(now)}`,
     `*Ready-to-paste DEEP RESEARCH prompts for the Pro account (T5 — a human surface; no API exists, and that's fine: perfect preparation is the machine's half). Run → export/copy the result → throw-in or paste-session it back; the doubtminer and capture take it from there.*`,
     "",
     ...prompts.map((p, i) => `## Prompt ${i + 1}\n\`\`\`\n${p}\n\`\`\`\n`),
@@ -594,15 +595,15 @@ function gemCartridge(deps = {}, now = new Date()) {
   const who = deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"));
   const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
   const caps = deps.capsuleFiles || (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch { return []; } })();
-  const bank = deps.probeBank || readJson(join(OUT_DIR, `probe_bank_${localDate(now)}.json`));
+  const bank = deps.probeBank || readJson(join(OUT_DIR, `probe_bank_${dayKey(now)}.json`));
   // LADDER G10 (9 Aug 2026): the revived capsule_premap joins the cartridge —
   // the night's repeatable filler. The viz-style i<=2 day-lookback is MANDATORY,
   // not decoration: premap files land under the SHIFT day, minutes AFTER this
   // very job's own write, so tonight's cartridge reads the newest of three days.
   const premap = deps.premap !== undefined ? deps.premap : (() => {
     for (let i = 0; i <= 2; i++) {
-      const d = new Date(now); d.setDate(d.getDate() - i);
-      try { const t = readFileSync(join(STATE_DIR, "brain_out", "premap", `${localDate(d)}.md`), "utf8"); if (t.trim()) return { day: localDate(d), text: t }; } catch { }
+      const dk = addDays(dayKey(now), -i);   // Block 6 — day-key
+      try { const t = readFileSync(join(STATE_DIR, "brain_out", "premap", `${dk}.md`), "utf8"); if (t.trim()) return { day: dk, text: t }; } catch { }
     }
     return null;
   })();
@@ -624,7 +625,7 @@ function gemCartridge(deps = {}, now = new Date()) {
   const dzConcept = dz.filter((d) => String(d.track || "concept") !== "skill");
   const dzSkill = dz.filter((d) => String(d.track || "concept") === "skill");
   const md = [
-    `# GEM CARTRIDGE · ${localDate(now)} — paste into your Gem's instructions (your own data → your own Google account)`,
+    `# GEM CARTRIDGE · ${dayKey(now)} — paste into your Gem's instructions (your own data → your own Google account)`,
     "",
     `You are my interview examiner. Locked concepts (probe these for decay): ${caps.join(", ") || "none yet"}.`,
     who && who.fingerprint ? `Where I stand right now: ${who.fingerprint}` : "",
@@ -779,7 +780,7 @@ function windTunnel(rows, thalCfg, opts = {}) {
     // Health is now measured against the band the tunnel itself declares, and
     // "out of band with no config that fixes it" is reported as exactly that.
     const inBand = base.wakes_per_day >= t.band[0] && base.wakes_per_day <= t.band[1];
-    const date = localDate(opts.now || new Date());
+    const date = dayKey(opts.now || new Date());
     const bestLine = best ? `${best.metrics.wakes_per_day} wakes/day (score ${best.score})` : "— (no candidate config cleared the shape rules)";
     const why = inBand
       ? `the gate is IN BAND and near-optimal on ${usable.length} replayed decisions — ${base.wakes_per_day} wakes/day inside [${t.band[0]}, ${t.band[1]}] (current score ${baseScore}, best grid ${best ? best.score : "—"})`
@@ -800,7 +801,7 @@ function windTunnel(rows, thalCfg, opts = {}) {
     ].join("\n");
     return { proposal: null, healthy: inBand, out_of_band: !inBand, why, md, base, best, band: t.band, grid_size: cands.length };
   }
-  const date = localDate(opts.now || new Date());
+  const date = dayKey(opts.now || new Date());
   const changed = Object.keys(cur).filter(k => best.tiers[k] !== cur[k]);
   const proposal = {
     id: `wt-${date}-${changed.join("-") || "tiers"}`,
@@ -841,7 +842,7 @@ function gateTuneReport(rows, now = new Date()) {
   const refr = recent.filter(r => r.outcome === "refractory").length;
   const adjUp = recent.filter(r => r.outcome === "adjudicated_up").length;
   const adjDown = recent.filter(r => r.outcome === "adjudicated_down").length;
-  const lines = [`# GATE TUNE PROPOSAL · ${localDate(now)} (report-only — thalamus_config.json changes are YOURS to approve)`, "", `sample: last ${recent.length} decisions · wakes ${wakes} · capped ${capped} · refractory ${refr} · ε-band ${adjUp + adjDown} (up ${adjUp} / down ${adjDown})`];
+  const lines = [`# GATE TUNE PROPOSAL · ${dayKey(now)} (report-only — thalamus_config.json changes are YOURS to approve)`, "", `sample: last ${recent.length} decisions · wakes ${wakes} · capped ${capped} · refractory ${refr} · ε-band ${adjUp + adjDown} (up ${adjUp} / down ${adjDown})`];
   if (capped > wakes) lines.push(`- the daily wake_cap bound ${capped} genuine surprises — consider wake_cap_per_day +5 OR tau1_base +0.05 (fewer, sharper wakes).`);
   if (refr > wakes * 2) lines.push(`- refractory suppressed ${refr} repeats — the same doubts keep re-firing; that's a CURRICULUM signal (drill them), not a threshold problem.`);
   if (adjDown > 3 * Math.max(1, adjUp)) lines.push(`- the ε-band adjudicator says no ${adjDown}:${adjUp} — tau1_base likely sits ~ε too low; consider +${(0.02).toFixed(2)}.`);
@@ -997,7 +998,7 @@ THE DOUBT (his voice): "${d.doubt}" — concept: ${d.concept}.`);
       const answer = String(obj.answer || "");
       if (answer.length < 80) continue;                        // too thin to pre-load
       if (bannedPhraseCheck(answer, banned).length) continue;  // honest frame or nothing
-      entries.push({ id: `pa_${localDate(now)}_${entries.length}`, date: localDate(now), concept: String(d.concept).slice(0, 80), doubt: String(d.doubt).slice(0, 200), answer: answer.slice(0, 1400), vec: null });
+      entries.push({ id: `pa_${dayKey(now)}_${entries.length}`, date: dayKey(now), concept: String(d.concept).slice(0, 80), doubt: String(d.doubt).slice(0, 200), answer: answer.slice(0, 1400), vec: null });
     } catch { }
   }
   if (!entries.length) return { ok: false, skipped: "every answer failed validation — cache untouched", corpus };
@@ -1085,7 +1086,7 @@ ${corpus}`);
   if (bad) return { ok: false, skipped: `validator rejected: ${bad} — yesterday's read stands` };
   const trim = (arr, keys) => (arr || []).slice(0, SEASON_CAPS.arrays).map(x => Object.fromEntries(keys.map(k => [k, String(x[k] || "").slice(0, SEASON_CAPS.str)])));
   const out = {
-    date: localDate(now), generated_at: now.toISOString(), model: r.model, corpus_chars: corpus.length,
+    date: dayKey(now), generated_at: now.toISOString(), model: r.model, corpus_chars: corpus.length,
     contradictions: trim(obj.contradictions, ["a", "b", "where"]),
     open_threads: trim(obj.open_threads, ["thread", "first_seen"]),
     confusion_edges: trim(obj.confusion_edges, ["from", "to", "evidence"]),
@@ -1190,7 +1191,7 @@ async function runShift(deps = {}) {
   // or the unlimited one) and no assertion below suddenly needs a live ledger.
   const budget = deps.budget || makeBudget(CAPS.shift_call_budget, deps.windowFn || liveWindowAllowed);
   const jobDeps = { ...deps, budget };
-  const day = localDate(now);
+  const day = dayKey(now);   // Block 6 — the SHIFT day = the 02:40 slot's day, not the wake hour's
   // Recorded on the shift itself, so a forced run through the rest law is legible in
   // the filed report months later and can never be mistaken for a normal night.
   const out = { date: day, jobs: {}, ...(forcedThroughRest ? { forced_through_conserve: true } : {}) };
@@ -2001,7 +2002,7 @@ async function main() {
     return;
   }
   if (mode === "status") {
-    const s = readJson(join(OUT_DIR, `shift_${localDate()}.json`));
+    const s = readJson(join(OUT_DIR, `shift_${dayKey()}.json`));
     console.log(s ? `nightshift: last shift ${s.date} — ${JSON.stringify(s.jobs)}` : "nightshift: no shift filed today");
     if (s && s.jobs) {
       // #56 — the pre-answer corpus, in words, every time it is asked

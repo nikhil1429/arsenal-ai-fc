@@ -34,6 +34,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { ece } from "./calibration.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -254,7 +255,7 @@ function firstFocusRead(pr, dateStr, now, cfg) {
   const deadlineMin = parseHHMM(cfg && cfg.first_focus_deadline);
   // unjudgeable before the deadline — unless the ledger day is already over
   // (post-midnight full-time), in which case the morning is long settled.
-  const dayOver = localDate(now) !== dateStr;
+  const dayOver = localDate(now) !== dateStr;   // day-key: WALL-CLOCK by design (is the calendar day already past the ledger day)
   if (!dayOver && now.getHours() * 60 + now.getMinutes() < deadlineMin) return DARK;
   if (!pr || pr.date !== dateStr) return DARK;
   const t = pr.tunnel || {};
@@ -287,8 +288,12 @@ function firstFocusFromTunnelLegacy(pr) {
 // belongs to yesterday's book.
 const LEDGER_DAY_CUTOFF_HOUR = 4;
 function ledgerDate(now, cutoffHour = LEDGER_DAY_CUTOFF_HOUR) {
-  if (now.getHours() >= cutoffHour) return localDate(now);
-  return localDate(new Date(now.getTime() - 86400000));
+  // Block 6 — day-key: a catch-up run (chain token / scheduled slot) is ALREADY keyed to
+  // the day it runs for; the 04:00 cutoff is a wall-clock rule and must not shift it twice.
+  const key = dayKey(now);
+  if (key !== localDate(now)) return key;   // day-key: WALL-CLOCK by design (the comparison IS the guard against a double shift)
+  if (now.getHours() >= cutoffHour) return key;
+  return addDays(key, -1);
 }
 
 // THE RETIRED-RESOLVER QUARANTINE — ORGANISM audit #95 (2026-08-04).
@@ -363,7 +368,7 @@ function computeTiers(slip, cfg, prevTiers, now) {
     };
   });
   return {
-    date: localDate(now), status: tiers.length ? "ok" : "awaiting_data", low_confidence: false,
+    date: dayKey(now), status: tiers.length ? "ok" : "awaiting_data", low_confidence: false,   // Block 6 — day-key
     generated_at: now.toISOString(), tiers,
     quarantined_rows: quarantinedTotal,
   };

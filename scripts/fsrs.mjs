@@ -67,6 +67,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { fsrs, generatorParameters, createEmptyCard, Rating } from "ts-fsrs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -595,7 +596,7 @@ function bucketize(store, now, cfg) {
 function compute(reps, now, cfg, f) {
   const store = buildStore(reps, f, cfg);
   const b = bucketize(store, now, cfg);
-  const date = localDate(now);
+  const date = dayKey(now);   // Block 6 — day-key
   const generated_at = new Date(now).toISOString();
   // #24 — the collapse, summed across every card, so the difference between what he
   // logged and what FSRS scheduled from is a printed number and not an inference.

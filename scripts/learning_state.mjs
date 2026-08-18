@@ -51,6 +51,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -501,7 +502,7 @@ function buildGate(N, th, fluencies) {
 // the bus a hand-shaped `position` that never passed the rules above.
 function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastRow = null) {
   const N = reps.length;
-  const date = localDate(now);
+  const date = dayKey(now);   // Block 6 — day-key
   const generated_at = new Date(now).toISOString();
   const nowMs = (now instanceof Date ? now.getTime() : now);
   const th = cfg.thresholds;

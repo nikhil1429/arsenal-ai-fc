@@ -67,5 +67,505 @@
     "ArsenalFC-Speak": "the pre-neural voice lane VOICE_SETUP.md never installed; SPEAK.ps1 itself was deleted (LADDER E6)",
     "ArsenalFC-Kennel-Heartbeat": "ships only when the Pi arrives (groundsman.mjs header: TRANSPORT)"
   },
-  "_audit_note": "18 Aug 2026 (overhaul Block 0): ArsenalFC-Audit added — designed 12 Aug in INSTALL_TASKS.ps1, never installed live, registered today (13:10 daily, no catch-up). ArsenalFC-BugMuseum and ArsenalFC-Mutants stay designed-but-not-installed on purpose (audit-suite cost organs; no check requires them; Block 7 runs mutagen by hand) — an installer re-run would register them, and this file should gain them in that same commit."
+  "_audit_note": "18 Aug 2026 (overhaul Block 0): ArsenalFC-Audit added — designed 12 Aug in INSTALL_TASKS.ps1, never installed live, registered today (13:10 daily, no catch-up). ArsenalFC-BugMuseum and ArsenalFC-Mutants stay designed-but-not-installed on purpose (audit-suite cost organs; no check requires them; Block 7 runs mutagen by hand) — an installer re-run would register them, and this file should gain them in that same commit.",
+  "_slots_doc": "OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW: name → {organ, verb, at (HH:MM or [HH:MM,…] for multi-trigger rows), interval (ISO-8601, null = once-a-slot), dow ([\"sun\"…] for WEEKLY rows — a Sunday slot woken on Monday keys Sunday; null otherwise), daemon, enabled}, snapshotted from the LIVE Task Scheduler by `node scripts/herd.mjs slots`. daykey.mjs reads THIS map (never a 2–5 s PowerShell spawn per run) so an organ launched by Task Scheduler in a catch-up burst keys its day to ITS SLOT: an ENABLED, ONCE-A-SLOT, NON-DAEMON row → slotDate(at, now); interval rows and daemons stay on the clock by design; a chain child takes the conductor’s token first. The watchman WARNs task-slot-drift when a live trigger no longer matches this map — move a task, re-run `herd slots`, paste, commit together (this file’s own rule).",
+  "slots": {
+    "ArsenalFC-ArchiveAudit": {
+      "organ": "archive_audit.mjs",
+      "verb": "run",
+      "at": "04:20",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-ArchiveFixity": {
+      "organ": "archivist.mjs",
+      "verb": "verify",
+      "at": "04:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-ArchiveSeal": {
+      "organ": "archivist.mjs",
+      "verb": "seal",
+      "at": "09:20",
+      "interval": null,
+      "dow": [
+        "sat"
+      ],
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-ArchiveVitals": {
+      "organ": "archivist.mjs",
+      "verb": "vitals",
+      "at": "23:40",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Archivist": {
+      "organ": "archivist.mjs",
+      "verb": "run",
+      "at": "02:31",
+      "interval": "PT15M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Audit": {
+      "organ": "audit.mjs",
+      "verb": "run",
+      "at": "13:10",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Bell-FullTime": {
+      "organ": "brain.mjs",
+      "verb": "bell",
+      "at": "22:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-BootRoom": {
+      "organ": "bootroom.mjs",
+      "verb": null,
+      "at": "20:00",
+      "interval": null,
+      "dow": [
+        "sun"
+      ],
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-BrainDaemon": {
+      "organ": "brain.mjs",
+      "verb": "daemon",
+      "at": "07:06",
+      "interval": null,
+      "dow": null,
+      "daemon": true,
+      "enabled": true
+    },
+    "ArsenalFC-BrainTick": {
+      "organ": "brain.mjs",
+      "verb": "tick",
+      "at": "03:44",
+      "interval": "PT30M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Calibration": {
+      "organ": "calibration.mjs",
+      "verb": "recompute",
+      "at": "08:42",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-CapturePull": {
+      "organ": "capture.mjs",
+      "verb": "pull",
+      "at": "09:00",
+      "interval": "PT1H",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-ConceptGraph": {
+      "organ": "cortex.mjs",
+      "verb": "consolidate",
+      "at": "03:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Consolidate": {
+      "organ": "hippocampus.mjs",
+      "verb": "consolidate",
+      "at": "02:10",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Cortex": {
+      "organ": "cortex.mjs",
+      "verb": null,
+      "at": "07:02",
+      "interval": null,
+      "dow": null,
+      "daemon": true,
+      "enabled": false
+    },
+    "ArsenalFC-Daemon-Watchdog": {
+      "organ": "daemon_watchdog.mjs",
+      "verb": "pass",
+      "at": "22:31",
+      "interval": "PT10M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Distiller": {
+      "organ": "distiller.mjs",
+      "verb": null,
+      "at": "03:44",
+      "interval": "PT15M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-DMN": {
+      "organ": "dmn.mjs",
+      "verb": null,
+      "at": "03:44",
+      "interval": "PT1H",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Doubtminer": {
+      "organ": "doubtminer.mjs",
+      "verb": null,
+      "at": "22:45",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-DugoutReminders": {
+      "organ": "dugout.mjs",
+      "verb": "fire-reminders",
+      "at": "23:17",
+      "interval": "PT1M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Evening-Conductor": {
+      "organ": "conductor.mjs",
+      "verb": "evening",
+      "at": "22:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Examiner": {
+      "organ": "examiner.mjs",
+      "verb": "stage",
+      "at": "22:55",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-FSRS": {
+      "organ": "fsrs.mjs",
+      "verb": "recompute",
+      "at": "08:40",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Goalkeeper": {
+      "organ": "oura_coach.mjs",
+      "verb": null,
+      "at": "08:30",
+      "interval": null,
+      "dow": null,
+      "daemon": true,
+      "enabled": false
+    },
+    "ArsenalFC-Groundsman-Push": {
+      "organ": "groundsman.mjs",
+      "verb": "push",
+      "at": "03:45",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Heartbeat": {
+      "organ": "heartbeat.mjs",
+      "verb": null,
+      "at": "08:39",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-HippoIndex": {
+      "organ": "hippocampus.mjs",
+      "verb": "index",
+      "at": "03:44",
+      "interval": "PT1H",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-HippoStore": {
+      "organ": "hippocampus.mjs",
+      "verb": "consolidate-store",
+      "at": "02:20",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-LearningState": {
+      "organ": "learning_state.mjs",
+      "verb": "recompute",
+      "at": "08:44",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Mirror": {
+      "organ": "mirror.mjs",
+      "verb": null,
+      "at": "06:55",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Morning-Conductor": {
+      "organ": "conductor.mjs",
+      "verb": "morning",
+      "at": "09:15",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Nemesis": {
+      "organ": "nemesis.mjs",
+      "verb": "recompute",
+      "at": "08:43",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-NightShift": {
+      "organ": "nightshift.mjs",
+      "verb": null,
+      "at": "02:40",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Physio-AM": {
+      "organ": "physio.mjs",
+      "verb": null,
+      "at": "07:30",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Physio-PM": {
+      "organ": "physio.mjs",
+      "verb": null,
+      "at": "22:50",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Presence": {
+      "organ": "presence.mjs",
+      "verb": "sense",
+      "at": "23:17",
+      "interval": "PT1M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-PresenceFit": {
+      "organ": "presence.mjs",
+      "verb": "calibrate",
+      "at": "03:30",
+      "interval": null,
+      "dow": [
+        "sun"
+      ],
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Scorer": {
+      "organ": "scorer.mjs",
+      "verb": null,
+      "at": "22:35",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Scout": {
+      "organ": "scout.mjs",
+      "verb": null,
+      "at": "23:05",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-SetPiece": {
+      "organ": "setpiece.mjs",
+      "verb": null,
+      "at": "22:40",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-ShadowDetect": {
+      "organ": "dugout.mjs",
+      "verb": "shadow-detect",
+      "at": "23:17",
+      "interval": "PT10M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-SprintSync": {
+      "organ": "sprintsync.mjs",
+      "verb": null,
+      "at": "07:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Thalamus": {
+      "organ": "thalamus.mjs",
+      "verb": null,
+      "at": "07:00",
+      "interval": null,
+      "dow": null,
+      "daemon": true,
+      "enabled": false
+    },
+    "ArsenalFC-Throwin": {
+      "organ": "throwin.mjs",
+      "verb": null,
+      "at": "03:44",
+      "interval": "PT15M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-TimeAuditor-Full": {
+      "organ": "timeaudit.mjs",
+      "verb": "full",
+      "at": "22:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-TimeAuditor-Pulse": {
+      "organ": "timeaudit.mjs",
+      "verb": "pulse",
+      "at": [
+        "12:00",
+        "15:00",
+        "18:00"
+      ],
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Tone": {
+      "organ": "tone.mjs",
+      "verb": null,
+      "at": "23:20",
+      "interval": "PT5M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Touchline": {
+      "organ": "touchline.mjs",
+      "verb": null,
+      "at": "03:44",
+      "interval": "PT30M",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Turnstile": {
+      "organ": "turnstile.mjs",
+      "verb": null,
+      "at": "07:04",
+      "interval": null,
+      "dow": null,
+      "daemon": true,
+      "enabled": false
+    },
+    "ArsenalFC-Twin": {
+      "organ": "twin.mjs",
+      "verb": null,
+      "at": "08:35",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Wall-AM": {
+      "organ": "viz.mjs",
+      "verb": null,
+      "at": "08:50",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Wall-Live": {
+      "organ": "viz.mjs",
+      "verb": null,
+      "at": "10:38",
+      "interval": "PT1H",
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    },
+    "ArsenalFC-Wall-PM": {
+      "organ": "viz.mjs",
+      "verb": null,
+      "at": "23:00",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": false
+    },
+    "ArsenalFC-Watchman": {
+      "organ": "watchman.mjs",
+      "verb": "run",
+      "at": "23:55",
+      "interval": null,
+      "dow": null,
+      "daemon": false,
+      "enabled": true
+    }
+  },
+  "slots_as_of": "2026-08-18T10:05:00Z"
 }

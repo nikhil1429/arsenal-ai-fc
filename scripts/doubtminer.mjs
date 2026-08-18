@@ -41,6 +41,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -279,7 +280,7 @@ function mineGrammar(capsules, cfg, now = new Date()) {
   }
   const gated = !(capsules.length >= cfg.gates.min_capsules && total >= cfg.gates.min_doubts);
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     status: total === 0 ? "awaiting_data" : (gated ? "warming_up" : "ok"),
     low_confidence: gated,
     generated_at: now.toISOString(),
@@ -567,7 +568,7 @@ function buildLexicon(capsules, cfg, now = new Date()) {
   const stats = { connectives_filtered: 0, mined: 0, max_anchors: null, dropped_by_cap: [] };
   const anchors = extractAnchors(capsules, cfg, stats);
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     status: anchors.length ? "ok" : "awaiting_data",
     low_confidence: capsules.length < 4,
     generated_at: now.toISOString(),
@@ -817,7 +818,7 @@ function buildTapeRoom(capsules, retired, cfg, now = new Date()) {
   // eldest first — the oldest opponent is the most satisfying rematch
   queue.sort((a, b) => String(a.locked_on || "9999").localeCompare(String(b.locked_on || "9999")));
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     status: queue.length || retired.length ? "ok" : "awaiting_data",
     low_confidence: false,
     generated_at: now.toISOString(),
@@ -1385,7 +1386,7 @@ async function main() {
     // swallowed as a duplicate — otherwise a corrected verdict could never be
     // re-applied and the un-retire would be a one-way door of its own.
     if (!activeRetiredKeys(retired).has(`${capsule}#${idx}`)) {
-      retired = retired.concat([{ capsule, doubt_index: idx, retired_on: localDate(now) }]);
+      retired = retired.concat([{ capsule, doubt_index: idx, retired_on: dayKey(now) }]);   // Block 6 — day-key
     }
   }
 
@@ -1415,8 +1416,8 @@ async function main() {
       console.error(`doubtminer: refusing to un-retire — ${capsule}#${idx} is not currently retired${state && state.unretired_on ? ` (un-retired on ${state.unretired_on})` : ""}. Nothing written.`);
       process.exit(1);
     }
-    retired = retired.concat([{ capsule, doubt_index: idx, retired_on: state.retired_on, unretired_on: localDate(now), why }]);
-    console.log(`doubtminer: un-retired ${capsule}#${idx} — retired ${state.retired_on}, returned to the queue ${localDate(now)}. The original row is untouched; this is a correction beside it.`);
+    retired = retired.concat([{ capsule, doubt_index: idx, retired_on: state.retired_on, unretired_on: dayKey(now), why }]);   // Block 6 — day-key
+    console.log(`doubtminer: un-retired ${capsule}#${idx} — retired ${state.retired_on}, returned to the queue ${dayKey(now)}. The original row is untouched; this is a correction beside it.`);
   }
 
   writeAtomic(GRAMMAR, mineGrammar(capsules, cfg, now));

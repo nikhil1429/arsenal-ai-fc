@@ -45,6 +45,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -202,7 +203,7 @@ const BOOKS = {
 // books price from REAL days, never from a correction counted twice.
 const marketRows = (slip, marketId) => lastWins(slip.filter(s => s.book === "twin" && s.type === marketId && s.resolved === true && typeof s.hit === "boolean"));
 
-function computeMarkets(slip, cfg, todayStr = localDate(new Date())) {
+function computeMarkets(slip, cfg, todayStr = dayKey()) {   // Block 6 — day-key
   return cfg.markets.map(m => {
     const s = marketStats(slip, m.id, cfg.dead_market_min);
     const { alive, beats_base } = deadVerdict(s, cfg);   // E2E audit 25 Jul 2026 (CRITICAL) — honest baseline; deadVerdictLegacy kept frozen above
@@ -368,7 +369,7 @@ function buildTwin(markets, voice, now, shadow = null, proposals = [], cfg = nul
   const anyData = markets.some(m => m.n_resolved > 0);
   const gate = buildGate(markets, c);
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     status: anyData ? (gate.open ? "ok" : "warming_up") : "awaiting_data",
     low_confidence: !gate.open,
     // #105/#106 — the have/need counter, beside the machine status (never replacing
@@ -606,7 +607,7 @@ async function main() {
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const cfg = loadConfig();
   const now = new Date();
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — day-key
   const slip = readLines(SLIP);
   const preds = readLines(PRED);
   const markets = computeMarkets(slip, cfg, today);

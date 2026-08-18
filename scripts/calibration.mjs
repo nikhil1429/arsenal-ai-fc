@@ -49,6 +49,7 @@ import { tmpdir } from "node:os";        // selftest fixtures only — the loade
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -576,7 +577,7 @@ function compute(reps, cfg, reg, now, corpusStats = null) {
   else if (N < cfg.min_reps) { status = "warming_up"; low_confidence = true; danger_zone = []; }
   else { status = "ok"; low_confidence = false; danger_zone = computeDanger(reps, cfg, reg); }
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     calibration_gap: round(gap),
     trend,
     overconfidence_rate,

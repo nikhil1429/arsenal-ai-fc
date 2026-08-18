@@ -64,6 +64,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rename
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";                      // selftest only — the disk exercise (mirror.mjs:315 precedent)
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (this file has its own UTC addDays below — not imported)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -805,7 +806,7 @@ function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") return selftest();
   const { capsules, faults } = loadCapsules();
-  const out = build(capsules, loadIntervals(), localDate(), fsrsDueConcepts(), faults);
+  const out = build(capsules, loadIntervals(), dayKey(), fsrsDueConcepts(), faults);   // Block 6 — day-key
   if (mode === "show") { console.log(JSON.stringify(out, null, 2)); return; }
   // REFUSE TO SHIP A SHORT COUNT (10 Aug 2026 wiring pass; benchmark.mjs:785-810 is the
   // house precedent, word for word). An unreadable capsule does not make the map wrong in

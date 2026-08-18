@@ -148,7 +148,11 @@ if ($gk) {
 Write-Host "Adopting the four orphans (LADDER E1) ..."
 Mk "ArsenalFC-CapturePull"     "capture.mjs pull"   @("/SC","HOURLY","/ST","09:00")
 Mk "ArsenalFC-TimeAuditor-Full" "timeaudit.mjs full" @("/SC","DAILY","/ST","22:00")
-Mk "ArsenalFC-Wall-Live"       "viz.mjs"            @("/SC","MINUTE","/MO","30","/ST","10:38")
+# OVERHAUL Block 6 §12 (18 Aug 2026): 30-min -> HOURLY (live task changed the same
+# day via `schtasks /Change /RI 60`), and viz.mjs GATES this standalone lane by
+# wall-opened (a `wall` opened row in consumption.jsonl inside 14 d -> hourly;
+# else weekly). The two conductor wall steps are not gated and stay daily.
+Mk "ArsenalFC-Wall-Live"       "viz.mjs"            @("/SC","MINUTE","/MO","60","/ST","10:38")
 # TimeAuditor-Pulse = ONE task, THREE calendar triggers (12:00/15:00/18:00 — the
 # 3-bucket day split, ORGANISM_CLOCK.md:48). schtasks /Create cannot express
 # that, so: create at 12:00, then append the 15:00 + 18:00 triggers via XML.

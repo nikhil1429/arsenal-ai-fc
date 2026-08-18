@@ -31,6 +31,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, statSyn
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -166,7 +167,7 @@ const USABLE_TANK_STATES = ["HOT", "WARM"];      // fuelboard.mjs:203, verbatim
 
 function fuelRead(tanksJson, tankRegistry, now) {
   if (!tanksJson || !tanksJson.tanks || typeof tanksJson.tanks !== "object") return null;  // never born ≠ bleeding
-  const today = localDate(now);
+  const today = localDate(now);   // day-key: WALL-CLOCK by design (a freshness read of a real ts, not a day bucket)
   const states = {};
   for (const [id, t] of Object.entries(tanksJson.tanks)) states[id] = (t && typeof t.state === "string") ? t.state : "unknown";
   const reading_is_today = tanksJson.day === today;
@@ -231,7 +232,7 @@ function daemonRead(wd, now) {
   // repLocalDay is reused rather than re-written: the watchdog stamps `at` with
   // a plain toISOString(), the same UTC-vs-IST trap that helper already exists
   // to defuse (a 02:00 IST pass carries yesterday's UTC day).
-  const reading_is_today = !!wd.at && repLocalDay(wd.at) === localDate(now);
+  const reading_is_today = !!wd.at && repLocalDay(wd.at) === localDate(now);   // day-key: WALL-CLOCK by design (a freshness read of a real ts, not a day bucket)
   return {
     at: wd.at || null,
     reading_is_today,
@@ -283,7 +284,7 @@ function restRoomRead(rows, now) {
   // repLocalDay again, for the third time in this file and the same reason:
   // `ts` is ISO-UTC and the captain lives in IST, so a 02:00-local pass carries
   // yesterday's UTC day. dmn.mjs status converts the same way before counting.
-  const today = rows.filter(r => r && repLocalDay(r.ts) === localDate(now));
+  const today = rows.filter(r => r && repLocalDay(r.ts) === localDate(now));   // day-key: WALL-CLOCK by design (a freshness read of a real ts, not a day bucket)
   return {
     at: last.ts || null,
     job: last.job || null,
@@ -410,7 +411,7 @@ function brainFuelRead(vitals, now) {
   if (!vitals || typeof vitals !== "object" || !vitals.ts) return null;   // never ticked ≠ bleeding
   // repLocalDay again — `ts` is ISO-UTC and the captain lives in IST, so the tick
   // that wrote 2026-08-10T23:23Z happened on the morning of the 11th for him.
-  const reading_is_today = repLocalDay(vitals.ts) === localDate(now);
+  const reading_is_today = repLocalDay(vitals.ts) === localDate(now);   // day-key: WALL-CLOCK by design (a freshness read of a real ts, not a day bucket)
   const st = vitals.starved && typeof vitals.starved === "object" ? vitals.starved : null;
   return {
     at: vitals.ts,
@@ -681,7 +682,7 @@ function compute(world, cfg, now = new Date()) {
   //    run must never pair yesterday's minutes with a day that hasn't started
   //    (a false accusation at dawn). No today-stamp ⇒ no accusation, ever.
   const ta = world.timeaudit;
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — day-key
   const learnMin = ta && ta.date === today && ta.buckets && ta.buckets.Learning && typeof ta.buckets.Learning.minutes === "number"
     ? ta.buckets.Learning.minutes : null;
   if (learnMin !== null && learnMin >= cfg.effort_uncaptured.min_learning_minutes) {
@@ -956,7 +957,7 @@ function compute(world, cfg, now = new Date()) {
     : "no bleeds";
 
   return {
-    date: localDate(now),
+    date: dayKey(now),   // Block 6 — day-key
     summary,
     generated_at: now.toISOString(),
     bleeds,
@@ -1261,7 +1262,7 @@ async function selftest() {
 
   // FUEL — ORGANISM AUDIT #93. No health surface read tank state; physio had
   // zero "tank" hits while T1/T2 sat COLD.
-  const tanksToday = (states) => ({ day: localDate(now), tanks: Object.fromEntries(Object.entries(states).map(([k, v]) => [k, { state: v }])) });
+  const tanksToday = (states) => ({ day: localDate(now), tanks: Object.fromEntries(Object.entries(states).map(([k, v]) => [k, { state: v }])) });   // day-key: fixture
   const registry = { tanks: [{ id: "T1", region: "mouth" }, { id: "T2", region: "vision" }, { id: "T7", region: "default-mode" }] };
   const dry = compute({ ...base, tanks: tanksToday({ T1: "COLD", T2: "COLD", T7: "COLD" }), tankRegistry: registry }, cfg, now);
   assert("all tanks cold TODAY → fuel_dry bleeds (the voice has nothing to speak with)",

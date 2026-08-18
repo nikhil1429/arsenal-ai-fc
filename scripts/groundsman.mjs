@@ -33,6 +33,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
+import { slotDate, launchContext, issueDayKeyToken, ENV_TOKEN } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+export { slotDate };   // the plan's export lives here too (the push lane knows its slot)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -126,8 +128,24 @@ function isPublishablePath(p) {
 // ---------------------------------------------------------------------------
 // THE NIGHT LOOP (Kennel side) — pull → lease → tick → push public-safe only
 // ---------------------------------------------------------------------------
+// OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW for the push lane. This lane
+// is scheduled (ArsenalFC-Groundsman-Push 03:45) and runs one-shots of its own
+// (awayday check, brain tick in the night loop): they take THIS lane's day, so a
+// >24 h sleep that lands the 03:45 catch-up at 01:00 the day after keys the
+// slot's day, not the clock's. Resolved once per process (token → slot → clock).
+function laneDay(deps = {}) {
+  if (deps.dayInfo) return deps.dayInfo;
+  const ctx = launchContext({ now: deps.now });
+  return { day: ctx.day, source: ctx.source, why: ctx.why };
+}
+let _laneEnv = null;
+function laneEnv(deps = {}) {
+  if (deps.env) return deps.env;
+  if (!_laneEnv) _laneEnv = { ...process.env, [ENV_TOKEN]: issueDayKeyToken(laneDay(deps).day) };
+  return _laneEnv;
+}
 function sh(cmd, args, deps = {}) {
-  const exec = deps.exec || ((c, a) => execFileSync(c, a, { encoding: "utf8", windowsHide: true, timeout: 120000, cwd: join(__dirname, "..") }));
+  const exec = deps.exec || ((c, a) => execFileSync(c, a, { encoding: "utf8", windowsHide: true, timeout: 120000, cwd: join(__dirname, ".."), env: laneEnv(deps) }));
   try { return { ok: true, out: exec(cmd, args) }; } catch (e) { return { ok: false, out: String(e.message).slice(0, 200) }; }
 }
 async function nightPass(hostId, deps = {}) {
@@ -419,6 +437,7 @@ async function main() {
     // 03:45 — without it the read below is a call whose answer nobody hears.
     if (r.readback) console.log(`groundsman: away-day read-back — ${r.readback.line}`);
     console.log(`groundsman: push-only — ${r.pushed ? "PUSHED (the sentinel's mini-brief reads tonight's truth)" : r.why}`);
+    const d = laneDay(); console.log(`groundsman: day-key ${d.day} (${d.source})`);
     return;
   }
   console.log("groundsman.mjs — heartbeat | night --host <id> | push | status | selftest");

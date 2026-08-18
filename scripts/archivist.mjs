@@ -69,6 +69,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { captain } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): bag-info + README + LEXICON name him from the profile
+import { launchContext, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (vitals 23:40: the SLOT's day in a catch-up burst; IST partitioning untouched otherwise)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -1043,8 +1044,12 @@ export function vitalsArchive(opts = {}) {
   const root = opts.root || archiveRoot();
   const log = opts.quiet ? () => {} : console.log;
   const now = opts.now || new Date();
-  const todayKey = istStamp(now).day;
-  const windowStart = istStamp(new Date(now.getTime() - VITALS_WINDOW_DAYS * 86400000)).day;
+  // Block 6 — the vitals DAY: IST stamp as always (the archive's partition law),
+  // except when Task Scheduler ran this 23:40 lane in a catch-up burst after
+  // midnight — then it is the slot's day, so yesterday's vitals file yesterday.
+  const ctx = launchContext({ now });
+  const todayKey = ctx.source === "clock" ? istStamp(now).day : ctx.day;
+  const windowStart = addDays(todayKey, -VITALS_WINDOW_DAYS);
   const out = { at: now.toISOString(), day: todayKey, window_days: VITALS_WINDOW_DAYS, lanes: [], reds: [] };
   for (const lane of archivedLanes(root)) {
     const counts = new Map();

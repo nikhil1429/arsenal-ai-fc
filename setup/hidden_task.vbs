@@ -56,6 +56,14 @@ On Error Resume Next
 sh.CurrentDirectory = repoDir
 On Error Goto 0
 
+' OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW's marker. Every SCHEDULED row
+' runs through THIS cloak and no daemon does (hidden_run.vbs is theirs), so the
+' one honest place to say "Task Scheduler launched me" is here. The child (cmd →
+' run_logged.cmd → node) inherits it; scripts/daykey.mjs then keys the organ's
+' day to ITS SLOT when the run is a catch-up burst (laptop woke, slot long gone),
+' and to the clock on time. A hand run never carries it — hand runs stay clock.
+sh.Environment("PROCESS")("ARSENAL_SCHEDULED") = "1"
+
 ' 0 = no window, ever.  True = wait, so the code below is the ORGAN's own.
 rc = sh.Run(cmd, 0, True)
 WScript.Quit rc

@@ -38,11 +38,42 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { armTrigger as brainArmTrigger } from "./brain.mjs";   // Block 1 (18 Aug 2026): the OWNER arms brain_queue.json; this chain only asks
+// OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW (§10). The chain KNOWS ITS
+// SLOT; every one-shot it runs takes the chain's day, never its own now(). See
+// daykey.mjs's header for the two measured incidents (12 Aug 02:36 · 15 Aug 02:04).
+import { slotDate, dayKey, launchContext, issueDayKeyToken, stripDayKeyEnv, ENV_TOKEN, readSlots } from "./daykey.mjs";
+export { slotDate };   // the plan's export lives here too: `import { slotDate } from "./conductor.mjs"`
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
 const STATE_DIR = join(REPO, "dressing-room", "state");
 const REPORT = join(STATE_DIR, "conductor.json");
+
+// THE CHAIN'S OWN SLOT — the Task Scheduler trigger each chain runs under
+// (ArsenalFC-Morning-Conductor / ArsenalFC-Evening-Conductor). Declared here so
+// the chain can say what day it is FOR; the selftest asserts these equal the
+// live schedule snapshot (tasks_expected.json `slots`) so a moved trigger can
+// never leave this declaration lying.
+export const CHAIN_SLOT = { morning: "09:15", evening: "22:00" };
+
+// The day this chain run is FOR, and where that came from (token / slot / clock).
+// A hand run at 15:00 is CLOCK (today) — only a Task-Scheduler launch (the
+// hidden_task.vbs marker) resolves through the slot, so `node conductor.mjs
+// evening` by hand never keys yesterday.
+export function chainDay(mode, deps = {}) {
+  const now = deps.now || new Date();
+  const ctx = launchContext({ now, realNow: deps.realNow, env: deps.env, argv: deps.argv, slots: deps.slots });
+  const slot = CHAIN_SLOT[mode] || null;
+  if (ctx.source === "token") return { day: ctx.day, source: "token", why: ctx.why, slot, late_min: null };
+  if (ctx.scheduled && slot) {
+    const day = slotDate(slot, now);
+    // how late is this run past its slot on ITS day (0 on time; 270 for the 12 Aug 02:36 evening)
+    const [h, m] = slot.split(":").map(Number);
+    const slotAt = new Date(`${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+    return { day, source: "slot", why: `scheduled ${mode} chain @ ${slot}`, slot, late_min: Math.max(0, Math.round((now - slotAt) / 60000)) };
+  }
+  return { day: ctx.day, source: "clock", why: ctx.why, slot, late_min: null };
+}
 
 // ---- THE CHAIN — the morning, in dependency order ---------------------------
 // `at` is the wall-clock time the replaced task used to hold; kept purely so this
@@ -443,14 +474,18 @@ export function processStartMs(relPath, deps = {}) {
 // also redirects stdout+stderr to scripts/<name>.log and rolls it (audit #10), so a
 // detached launch is no longer a silent one.
 export function launchDetached(args) {
+  // Block 6: a DAEMON must never inherit the chain's day-key token nor the
+  // scheduled marker — it outlives both by days. stripDayKeyEnv is the belt;
+  // daykey.mjs's 6 h token TTL is the braces.
+  const env = stripDayKeyEnv(process.env);
   const vbs = join(REPO, "setup", "hidden_run.vbs");
   if (existsSync(vbs)) {
-    const c = spawn("wscript.exe", [vbs, "node", ...args], { cwd: REPO, detached: true, stdio: "ignore", windowsHide: true });
+    const c = spawn("wscript.exe", [vbs, "node", ...args], { cwd: REPO, detached: true, stdio: "ignore", windowsHide: true, env });
     c.unref();
     return;
   }
   // No cloak (a non-Windows checkout, or CI): still never block the chain.
-  const c = spawn(process.execPath, args, { cwd: REPO, detached: true, stdio: "ignore" });
+  const c = spawn(process.execPath, args, { cwd: REPO, detached: true, stdio: "ignore", env });
   c.unref();
 }
 
@@ -480,8 +515,17 @@ const STEP_BUDGET = { heartbeat: 420000, mirror: 300000 };
 const budgetFor = (step, opts = {}) => opts.timeoutMs || STEP_BUDGET[step && step.id] || STEP_TIMEOUT_MS;
 
 export async function conduct(chain = MORNING, opts = {}) {
+  // ---- Block 6: THE DAY THIS RUN IS FOR ------------------------------------
+  // Resolved ONCE at chain start (token → slot → clock, see chainDay) and handed
+  // to every one-shot child in its env as a dated token, so scorer/setpiece/
+  // examiner/viz/... all key the SAME day — the slot's — even at 02:36 the next
+  // calendar day. Daemons are launched through launchDetached, which strips it.
+  const mode = opts.mode || (chain === EVENING ? "evening" : "morning");
+  const dayInfo = opts.dayInfo || chainDay(mode);
+  const token = issueDayKeyToken(dayInfo.day);
+  const childEnv = { ...process.env, [ENV_TOKEN]: token };
   const run = opts.run || ((args, step) => spawnSync(process.execPath, args, {
-    cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true,
+    cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true, env: childEnv,
   }));
   const arm = opts.arm || armTrigger;
   const tee = opts.logStep || logStep;
@@ -631,7 +675,7 @@ export async function conduct(chain = MORNING, opts = {}) {
     // isolation/timeout/record shape as every node one-shot. Injectable.
     const r = step.exec
       ? (opts.runExec || ((ex) => spawnSync(ex.cmd, ex.args, {
-          cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true,
+          cwd: REPO, timeout: budgetFor(step, opts), encoding: "utf8", windowsHide: true, env: childEnv,
         })))(step.exec)
       : run(step.args, step);
     const ms = Date.now() - t0;
@@ -733,6 +777,9 @@ export async function conduct(chain = MORNING, opts = {}) {
   const ok = steps.filter(s => s.ok).length;
   const report = {
     started, finished: nowISO(),
+    // Block 6 — which day this run was FOR and how that was decided; `late_min`
+    // is the catch-up lag past the slot (0 on time; the 12 Aug evening was 276)
+    day_key: dayInfo.day, day_source: dayInfo.source, slot: dayInfo.slot, late_min: dayInfo.late_min,
     total_ms: steps.reduce((a, s) => a + s.ms, 0),
     ran: steps.length, ok, failed: steps.length - ok,
     // ORDER IS THE PRODUCT — record it explicitly so a future audit can prove the
@@ -1374,6 +1421,49 @@ async function selftest() {
       && (() => { const s = EVENING.find(x => x.id === "examiner"); return !!s && s.at === "22:55" && (s.needs || []).join() === "setpiece"; })());
   }
 
+  // ---- OVERHAUL Block 6 — THE DAY-KEY LAW through the chain -------------------
+  {
+    const L = (y, mo, d, h, mi, s = 0) => new Date(y, mo - 1, d, h, mi, s);
+    const slots = readSlots();
+    ok("DAY-KEY — CHAIN_SLOT equals the live schedule snapshot for both conductor rows (a moved trigger cannot leave this declaration lying)",
+      !!slots && slots["ArsenalFC-Morning-Conductor"] && slots["ArsenalFC-Morning-Conductor"].at === CHAIN_SLOT.morning
+      && slots["ArsenalFC-Evening-Conductor"] && slots["ArsenalFC-Evening-Conductor"].at === CHAIN_SLOT.evening);
+    // the 12 Aug 02:36 incident, replayed: a SCHEDULED evening chain after midnight keys the slot's day
+    const sched = { ARSENAL_SCHEDULED: "1" };
+    const inc = chainDay("evening", { now: L(2026, 8, 12, 2, 36, 5), realNow: L(2026, 8, 12, 2, 36, 5), env: sched, argv: ["node", "scripts\\conductor.mjs", "evening"], slots });
+    ok("DAY-KEY — the 12 Aug 02:36 evening catch-up keys 2026-08-11 (source slot, 276 min late), not 2026-08-12",
+      inc.day === "2026-08-11" && inc.source === "slot" && inc.late_min === 276);
+    const inc2 = chainDay("morning", { now: L(2026, 8, 15, 2, 4, 8), realNow: L(2026, 8, 15, 2, 4, 8), env: sched, argv: ["node", "scripts\\conductor.mjs", "morning"], slots });
+    ok("DAY-KEY — the 15 Aug 02:04 morning catch-up keys 2026-08-14 (the missed 09:15), 1009 min late",
+      inc2.day === "2026-08-14" && inc2.source === "slot" && inc2.late_min === 1009);
+    const onTime = chainDay("evening", { now: L(2026, 8, 17, 22, 0, 2), realNow: L(2026, 8, 17, 22, 0, 2), env: sched, argv: ["node", "scripts\\conductor.mjs", "evening"], slots });
+    ok("DAY-KEY — on time = the calendar day, 0 min late (nothing changes for a chain that fires when it should)",
+      onTime.day === "2026-08-17" && onTime.late_min === 0);
+    const hand = chainDay("evening", { now: L(2026, 8, 18, 15, 0), realNow: L(2026, 8, 18, 15, 0), env: {}, argv: ["node", "scripts\\conductor.mjs", "evening"], slots });
+    ok("DAY-KEY — a HAND run at 15:00 is CLOCK (today), never the slot's yesterday",
+      hand.day === "2026-08-18" && hand.source === "clock");
+    // every one-shot child receives the dated token; the report says which day and why
+    {
+      const rep = await conduct(
+        [{ id: "a", args: ["a.mjs"] }, { id: "b", args: ["b.mjs"] }],
+        { ...base, dayInfo: { day: "2026-08-11", source: "slot", slot: "22:00", late_min: 276, why: "test" },
+          run: () => ({ status: 0, stdout: "", stderr: "" }) });
+      ok("DAY-KEY — the report carries day_key/day_source/slot/late_min",
+        rep.day_key === "2026-08-11" && rep.day_source === "slot" && rep.slot === "22:00" && rep.late_min === 276);
+    }
+    {
+      // the real seam: run a child through the DEFAULT runner and read what it sees
+      const probe = join(REPO, "scripts", "daykey.mjs");
+      let said = "";
+      await conduct([{ id: "probe", args: [probe, "context"] }],
+        { noReport: true, dayInfo: { day: "2026-08-11", source: "slot", slot: "22:00", late_min: 276, why: "test" }, logStep: (n, c, body) => { said = String(body || ""); return null; }, arm: () => {} });
+      ok("DAY-KEY — a child run through the DEFAULT runner sees the chain's token (daykey context → 'source token', the chain's day)",
+        /2026-08-11/.test(said) && /source token/.test(said));
+    }
+    ok("DAY-KEY — launchDetached's env strips the token and the marker (a daemon never inherits a day)",
+      (() => { const e = stripDayKeyEnv({ ...process.env, ARSENAL_DAY_KEY: "2026-08-11|x", ARSENAL_SCHEDULED: "1" }); return !("ARSENAL_DAY_KEY" in e) && !("ARSENAL_SCHEDULED" in e); })());
+  }
+
   console.log(fail === 0 ? `\nALL CHECKS PASSED (${pass} passed, 0 failed)` : `\n${fail} FAILED (${pass} passed)`);
   return fail === 0;
 }
@@ -1440,9 +1530,11 @@ async function main() {
   // D1 — the evening spine writes its OWN report file; the morning keeps its name.
   const chain = mode === "evening" ? EVENING : MORNING;
   const reportPath = mode === "evening" ? join(STATE_DIR, "conductor_evening.json") : REPORT;
-  const rep = await conduct(chain, { noReport, report: reportPath });
+  const rep = await conduct(chain, { noReport, report: reportPath, mode });
   for (const s of rep.steps) console.log(stepLine(s));
   console.log(`conductor: ${mode} chain — ${rep.ok}/${rep.ran} ok in ${Math.round(rep.total_ms / 1000)}s${noReport ? " (no report written; daemons still probed)" : ` → ${reportPath}`}`);
+  // Block 6 — the day this run was FOR, said out loud (a catch-up names its lag)
+  console.log(`conductor: day-key ${rep.day_key} (${rep.day_source}${rep.slot ? ` · slot ${rep.slot}` : ""}${rep.late_min ? ` · ${rep.late_min} min past the slot — every step keyed the SLOT's day, not the clock's` : ""})`);
   // THE CHAIN CAN NOW SAY NO (audit #108, 6 Aug 2026).
   // This function printed its FAIL lines and then fell off the end, so the process
   // exited 0 no matter what broke. That is the single most expensive silence in the

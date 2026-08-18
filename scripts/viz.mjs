@@ -47,6 +47,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // third.
 import { allowedNumbers, noNewNumbers } from "./validators.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3
+import { dayKey, addDays, launchContext } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (+ the Wall-Live gate reads the launch context)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -221,7 +222,7 @@ function overnightWindow(now, cfg) {
 function weeklyConsistency(history, now) {
   const DAYS = 7;
   const wanted = [];
-  for (let i = DAYS - 1; i >= 0; i--) wanted.push(localDate(new Date(now.getTime() - i * 86400000)));
+  for (let i = DAYS - 1; i >= 0; i--) wanted.push(addDays(dayKey(now), -i));   // Block 6 — day-key (window anchored on the run's day)
   const rows = (history || []).filter(r => r && r.date);
   // HONESTY OVER GREEN: if not one row carries a date we have measured NOTHING.
   // Render "—", never a 0% he did not earn.
@@ -245,7 +246,7 @@ function assembleWallData(bus, now = new Date()) {
   const wall_week_minutes = wc.measured ? wc.minutes : (history || []).slice(-7).reduce((a, d) => a + (d.wall_minutes || 0), 0);
 
   // brain meter from ledger
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — day-key
   const todayCalls = (brainLedger || []).filter(l => tsLocalDay(l.ts) === today);   // local day, not the UTC slice (E2E audit 25 Jul 2026)
   // #88: computed from the FULL ledger slice against a midnight-crossing window,
   // never from todayCalls — that nesting is what made last night unreachable.
@@ -1246,7 +1247,7 @@ async function selftest() {
     readInsights(HANDED, { matchday: 7 }, "").rejected === true);
 
   // === KAAM 1 — THE BODY PANEL KNOWS ITS OWN AGE ===========================
-  const bodyToday = assembleWallData({ ...bus, readiness: { verdict: "AMBER", day: localDate(now) } }, now);
+  const bodyToday = assembleWallData({ ...bus, readiness: { verdict: "AMBER", day: localDate(now) } }, now);   // day-key: fixture
   const bodyStale = assembleWallData({ ...bus, readiness: { verdict: "AMBER", day: "2026-08-04" } }, new Date("2026-08-10T12:00:00+05:30"));
   const bodyNone = assembleWallData({ ...bus, readiness: null }, now);
   assert("KAAM1 — a same-day reading is age 0 and the panel does not cry stale",
@@ -1498,6 +1499,22 @@ async function selftest() {
   assert("newest commitment waits unjudged", cHtml.split("Commitments")[1].split("</section>")[0].includes("·"));
   assert("no commitments → no panel", !renderWall(assembleWallData(bus, now), null).includes("Commitments"));
 
+  // §12 (Block 6) — THE WALL-LIVE GATE, every branch, injected
+  {
+    const T = new Date("2026-08-18T10:00:00");
+    const sched = { scheduled: true, source: "slot", day: "2026-08-18" };
+    const chain = { scheduled: true, source: "token", day: "2026-08-18" };
+    const hand = { scheduled: false, source: "clock", day: "2026-08-18" };
+    const opened = [{ ts: "2026-08-10T05:00:00Z", lane: "wall", kind: "opened", by: "wall beacon (dugout /wall-opened)" }];
+    const stale = [{ ts: "2026-07-01T05:00:00Z", lane: "wall", kind: "opened" }];
+    const dayMs = 86400000;
+    assert("WALL-LIVE GATE — a chain step (token) and a hand run are never gated", !wallLiveGate(T, { ctx: chain, rows: [] }).skip && wallLiveGate(T, { ctx: chain, rows: [] }).branch === null && !wallLiveGate(T, { ctx: hand, rows: [] }).skip);
+    assert("WALL-LIVE GATE — a wall opened inside 14 d → HOURLY branch, renders, names the last open", (() => { const g = wallLiveGate(T, { ctx: sched, rows: opened }); return !g.skip && g.branch === "hourly" && /2026-08-10/.test(g.why); })());
+    assert("WALL-LIVE GATE — no open in 14 d and wall.html 2 d old → WEEKLY branch, SKIPPED, says the chains still render", (() => { const g = wallLiveGate(T, { ctx: sched, rows: stale, wallMtime: T.getTime() - 2 * dayMs }); return g.skip && g.branch === "weekly" && /chains still render/.test(g.why); })());
+    assert("WALL-LIVE GATE — no open in 14 d and wall.html 8 d old (or missing) → WEEKLY branch, renders", !wallLiveGate(T, { ctx: sched, rows: [], wallMtime: T.getTime() - 8 * dayMs }).skip && !wallLiveGate(T, { ctx: sched, rows: [], wallMtime: null }).skip);
+    assert("WALL-LIVE GATE — a `wall` row of another kind, or another lane's `opened`, does not open the gate", wallLiveGate(T, { ctx: sched, rows: [{ ts: "2026-08-17T05:00:00Z", lane: "wall", kind: "briefed" }, { ts: "2026-08-17T05:00:00Z", lane: "wall_insights", kind: "opened" }], wallMtime: T.getTime() - 1 * dayMs }).skip);
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1506,15 +1523,47 @@ async function selftest() {
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
+// §12 (Block 6) — THE WALL-LIVE GATE (pure over its inputs; injectable for the selftest).
+//   · not the scheduled standalone lane (a chain child with a token, or a hand run) → no gate
+//   · a `wall` opened row in consumption.jsonl within 14 d → hourly branch, render
+//   · else weekly: render only if wall.html is missing or ≥ 7 d old
+// The two numbers are the plan's (§12: "gated by wall-opened ≤14 d; else weekly"),
+// not measured here — the beacon has fired 0 times so far (Block 5 built it today).
+export const WALL_OPENED_WINDOW_DAYS = 14;
+export const WALL_WEEKLY_DAYS = 7;
+export function wallLiveGate(now = new Date(), deps = {}) {
+  const ctx = deps.ctx || launchContext({ now });
+  if (!(ctx.scheduled && ctx.source !== "token")) return { skip: false, branch: null, why: "not the standalone Wall-Live lane (chain step or hand run) — no gate" };
+  const rows = deps.rows || (() => { try { return readFileSync(join(STATE_DIR, "consumption.jsonl"), "utf8").split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } })();
+  const since = now.getTime() - WALL_OPENED_WINDOW_DAYS * 86400000;
+  const opened = rows.filter((r) => r && r.lane === "wall" && r.kind === "opened" && Date.parse(r.ts) >= since);
+  if (opened.length) return { skip: false, branch: "hourly", why: `hourly — wall opened ${opened.length}× in the last ${WALL_OPENED_WINDOW_DAYS} d (last ${opened[opened.length - 1].ts})` };
+  const mtime = deps.wallMtime !== undefined ? deps.wallMtime : (() => { try { return statSync(WALL_HTML).mtimeMs; } catch { return null; } })();
+  const ageDays = mtime === null ? null : (now.getTime() - mtime) / 86400000;
+  if (ageDays === null || ageDays >= WALL_WEEKLY_DAYS) return { skip: false, branch: "weekly", why: `weekly — no wall-opened row in ${WALL_OPENED_WINDOW_DAYS} d; wall.html ${ageDays === null ? "missing" : ageDays.toFixed(1) + " d old"} ≥ ${WALL_WEEKLY_DAYS} d, rendering (the beacon is the wall's ?opened → dugout /wall-opened)` };
+  return { skip: true, branch: "weekly", why: `weekly — no wall-opened row in ${WALL_OPENED_WINDOW_DAYS} d and wall.html is ${ageDays.toFixed(1)} d old (< ${WALL_WEEKLY_DAYS}); the morning/evening chains still render daily` };
+}
+
 async function main() {
   const mode = (process.argv[2] || "run").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   const now = new Date();
-  const today = localDate(now);
+  const today = dayKey(now);   // Block 6 — the run's day-key (a chain step keys the CHAIN's day)
+  // ---- §12 (Block 6): THE WALL-LIVE GATE — hourly, gated by wall-opened -------
+  // The standalone ArsenalFC-Wall-Live row (hourly since 18 Aug 2026; was every
+  // 30 min) renders only while the wall is being LOOKED AT: a `wall` opened row
+  // in consumption.jsonl inside 14 days (the ?opened beacon Block 5 built → dugout
+  // /wall-opened). Otherwise it drops to WEEKLY (renders only when wall.html is
+  // ≥ 7 days old). The two chain steps (wall / wall-pm) are NOT gated — a chain
+  // child carries the day-key token, and the morning/evening walls stay daily.
+  // A hand run is never gated. Which branch ran is printed, always.
+  const wallGate = wallLiveGate(now);
+  if (wallGate.skip) { console.log(`viz: Wall-Live gate — ${wallGate.why} · skipped (no render)`); return; }
+  if (wallGate.branch) console.log(`viz: Wall-Live gate — ${wallGate.why}`);
   // KAL-line from yesterday's post-match (the sheet's first-touch law, on the wall too)
   let kal = null;
   for (let i = 0; i <= 1; i++) {
-    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const d = addDays(today, -i);   // Block 6 — day-key
     const p = join(STATE_DIR, "post_match", d + ".md");
     if (existsSync(p)) { const m = readFileSync(p, "utf8").match(/KAL-?LINE\s*→\s*(.+)/i); if (m) { kal = m[1].trim(); break; } }
   }
@@ -1558,13 +1607,13 @@ async function main() {
   // COMMITMENTS (U4): last week of kal-lines + what the next day said
   const commitments = [];
   for (let i = 7; i >= 0; i--) {
-    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const d = addDays(today, -i);   // Block 6 — day-key
     const p = join(STATE_DIR, "post_match", d + ".md");
     if (!existsSync(p)) continue;
     const txt = readFileSync(p, "utf8");
     const km = txt.match(/KAL-?LINE\s*→\s*(.+)/i);
     if (!km) continue;
-    const np = join(STATE_DIR, "post_match", localDate(new Date(now.getTime() - (i - 1) * 86400000)) + ".md");
+    const np = join(STATE_DIR, "post_match", addDays(today, -(i - 1)) + ".md");   // Block 6 — day-key
     let next_result = null;
     if (i > 0 && existsSync(np)) { const rm = readFileSync(np, "utf8").match(/RESULT:\s*(LOAD-MANAGED|HIT|MISS|PARTIAL)/i); if (rm) next_result = rm[1].toUpperCase(); }
     commitments.push({ date: d, kal: km[1].trim(), next_result });
@@ -1635,7 +1684,7 @@ async function main() {
   // one-click lanes can carry the kit + prompt straight to the clipboard.
   let renderNotes = null;
   for (let i = 0; i <= 2; i++) {
-    const d = localDate(new Date(now.getTime() - i * 86400000));
+    const d = addDays(today, -i);   // Block 6 — day-key
     const p = join(STATE_DIR, "brain_out", "wall_review", d + ".md");
     if (existsSync(p)) { renderNotes = readFileSync(p, "utf8"); break; }
   }

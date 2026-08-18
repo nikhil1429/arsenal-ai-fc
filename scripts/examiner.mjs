@@ -38,6 +38,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";                 // selftest only — the traced reader is proved on a REAL corrupt file, never inside dressing-room/state
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";  // selftest only — the mode guard is proved on the REAL CLI, not on the resolver alone
+import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -307,7 +308,7 @@ function pickConcept(deps = {}) {
 // concept, never perturb the family or the day rotation.
 function readNight(now = new Date(), dir = join(STATE_DIR, "brain_out/night_coach")) {
   const ms = now instanceof Date ? now.getTime() : now;
-  for (const d of [localDate(new Date(ms)), localDate(new Date(ms - 86400000))]) {
+  for (const d of [dayKey(new Date(ms)), addDays(dayKey(new Date(ms)), -1)]) {   // Block 6 — day-key
     const nc = readJson(join(dir, d + ".json"));
     if (nc && Array.isArray(nc.misconceptions)) return { ...nc, _resolved_date: d };
   }
@@ -371,11 +372,13 @@ function stageDrill(deps = {}) {
   const { shape, verified, source, canonUnreadable } = conceptShape(concept, deps);
   const bank = FAMILY[shape] || TEMPLATES;
   const kinds = Object.keys(bank);
-  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  // Block 6 — day-key: the rotation follows the day the stage is FOR (noon-anchored key), never the wall clock of a catch-up
+  const dk = new Date(`${dayKey(now)}T12:00:00`);
+  const doy = Math.floor((dk - new Date(dk.getFullYear(), 0, 0)) / 86400000);
   const kind = kinds[doy % kinds.length];                       // rotates daily, deterministic
   const t = bank[kind](concept);
   const drill = {
-    date: localDate(now), staged_at: now.toISOString(), concept, picked_because: why,
+    date: dayKey(now), staged_at: now.toISOString(), concept, picked_because: why,   // Block 6 — day-key
     shape, shape_source: source, shape_unverified: !verified,
     template: kind, task: t.task, hidden_tests: t.hidden_tests,
   };
@@ -420,7 +423,8 @@ function loadFreshDrill(now = new Date(), deps = {}) {
   const d = (deps.read || (() => readJson(DRILL)))();
   if (!d) return null;
   const nowMs = now instanceof Date ? now.getTime() : now;
-  return (d.date === localDate(now) || d.date === localDate(new Date(nowMs - 86400000))) ? d : null;
+  const today = dayKey(new Date(nowMs));   // Block 6 — day-key
+  return (d.date === today || d.date === addDays(today, -1)) ? d : null;
 }
 // the section the scrimmage instruction embeds
 function drillSection(d, now = new Date()) {
@@ -803,7 +807,7 @@ async function selftest() {
   // All of it runs on INJECTED reads/writes; the live examiner_drill.json is never
   // touched by the suite (same rule the traced-reader block above follows).
   {
-    const staged = { date: localDate(now), staged_at: now.toISOString(), concept: "attention", template: "implement", task: "t", hidden_tests: ["a"] };
+    const staged = { date: localDate(now), staged_at: now.toISOString(), concept: "attention", template: "implement", task: "t", hidden_tests: ["a"] };   // day-key: fixture
     let disk = staged; const write = (o) => { disk = o; }; const read = () => disk;
 
     assert("RECEIPT: an unserved fresh drill carries NO served lane — the silence is the honest default",
