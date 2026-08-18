@@ -429,6 +429,34 @@ function laws() {
     // THE FOUR LEGAL QUESTION-MOMENTS (PROJECT_OS / CLAUDE.md: only four exist by design)
     const badMoment = run([join(sb, "scripts", "forge_session.mjs"), "moment", "pop_quiz"], { cwd: sb });
     assert("FOUR-MOMENTS LAW · forge_session refuses a question-moment outside the four", badMoment.code !== 0);
+
+    // ── LOAD ZERO BLOCK 1 (19 Aug 2026) — TASK + IDEMPOTENCY ────────────────────
+    // THE LAW: no organ may spawn work for him outside tasks.mjs, and an idempotency key may
+    // never be executed twice. Both halves are held here — a STATIC scan (nobody but the task
+    // runner builds a brain `run` argv) and a RUNTIME proof (three real processes, one ask).
+    // MEASURED TO BITE, not assumed: this scan returns exactly ONE hit against the commit before
+    // this block (acts.mjs:81 — the direct fire-and-forget call that ran his one ask 3x in four
+    // minutes for ~67,400 tokens, all three overwriting one 5.4 KB file) and ZERO after it.
+    const SPAWNS_BRAIN_RUN = /brain\.mjs["'\s\],)]{0,6}[^\n]{0,90}?["']run["']/;
+    const TASK_RUNNERS = ["tasks.mjs"];   // the ONE organ allowed to spawn a job. A name joins this list only with its reason.
+    const spawners = readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF && !TASK_RUNNERS.includes(f))
+      .filter((f) => readOrgan(f).split("\n").some((l) => SPAWNS_BRAIN_RUN.test(l)));
+    assert("LOAD ZERO BLOCK 1 · no organ spawns work for him OUTSIDE tasks.mjs (a bare call has no id, no key, and no memory that it already ran)",
+      spawners.length === 0, `${spawners.join(", ")} builds a brain \`run\` argv directly — route it through tasks.mjs so his ask gets an id and an idempotency key`);
+    assert("LOAD ZERO BLOCK 1 · the act lane's `job` verb names tasks.mjs as its owner (the door he actually speaks through)",
+      /job:\s*\{\s*organ:\s*"tasks\.mjs"/.test(readOrgan("acts.mjs")));
+
+    const tenv = { ...process.env, ARSENAL_TASKS_LEDGER: join(sb, "tasks-ratchet.jsonl") };
+    const fire = () => run([join(sb, "scripts", "tasks.mjs"), "create", "--kind", "job", "--subject", "prepare_on_request", "--door", "gaffer", "--json"], { cwd: sb, env: tenv });
+    const a1 = fire(), a2 = fire(), a3 = fire();
+    let i1 = {}, i2 = {}, i3 = {};
+    try { i1 = JSON.parse(a1.out); i2 = JSON.parse(a2.out); i3 = JSON.parse(a3.out); } catch { /* asserted below */ }
+    assert("LOAD ZERO BLOCK 1 · THE 18 AUG REPLAY: his one ask fired 3x from 3 processes makes ONE task — 1 run, 3 identical receipts",
+      !!i1.id && i1.id === i2.id && i1.id === i3.id && i1.replay === false && i2.replay === true && i3.replay === true, `${a1.out}${a2.out}${a3.out}`);
+    const k1 = run([join(sb, "scripts", "tasks.mjs"), "claim", i1.id], { cwd: sb, env: tenv });
+    const k2 = run([join(sb, "scripts", "tasks.mjs"), "claim", i1.id], { cwd: sb, env: tenv });
+    assert("LOAD ZERO BLOCK 1 · RUNTIME ASSERTION: an idempotency key may never be executed twice — the SECOND claim exits non-zero",
+      k1.code === 0 && k2.code !== 0 && /never be executed twice/.test(k2.out), `exit ${k1.code}/${k2.code} — ${k2.out}`);
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 

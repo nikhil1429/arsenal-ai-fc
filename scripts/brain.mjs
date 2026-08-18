@@ -6727,13 +6727,24 @@ async function main() {
     // sheet push, and the 08:45 scheduled tick, seeing an empty slot, ran it and
     // pushed AGAIN (double Opus spend, two sheets on his phone). A manual run is
     // still a run: it takes the lock and it spends the slot.
+    const flagOf = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : null; };   // LAW A: `--by captain --act <id>` — his ask, named on the row
+    // LOAD ZERO BLOCK 1 (19 Aug 2026): when this run belongs to a TASK, SAY SO WHILE IT RUNS.
+    // His 18 Aug words were "why is it not done because it's been 20 minutes already" — the run
+    // was alive and had nothing to report itself with. tasks.mjs is the SOLE WRITER of its own
+    // ledger, so brain reports through that organ's CLI and never touches the file. Best-effort
+    // by construction: a task note must never be able to break or delay the spend it narrates.
+    // Declared OUTSIDE withTickLock on purpose: when the lock is already held the callback below
+    // never runs at all, and that is exactly the case the task lane must still hear about.
+    const taskId = flagOf("task");
+    const sayTask = (verb, ...rest) => { if (!taskId) return; try { execFileSync(process.execPath, [join(__dirname, "tasks.mjs"), verb, taskId, ...rest], { encoding: "utf8", timeout: 15000, windowsHide: true, stdio: "ignore" }); } catch { /* the task lane is not the job */ } };
+    const sayProgress = (line) => sayTask("progress", "--note", line);
     const out = await withTickLock(async () => {
       const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
       const sd = shiftDay(job, now, cfg);
       const already = ((q.jobs_run && q.jobs_run[sd]) || {})[job.id] || 0;
       if (already >= (job.max_per_day || 1)) console.warn(`brain: ⚠ ${job.id} already ran ${already}× this shift (${sd}) — running again because you asked; it will spend again.`);
+      sayProgress(`brain: ${job.id} started on ${job.engine || "claude"}${job.model ? ` (${job.model})` : ""}`);
       const { usage, note, inputs_absent, inputs_declared, inputs_absent_names, inputs_clipped, inputs_rows_dropped, inputs_rows_door_dropped, inputs_door_names } = await runJob(job, cfg, deps);
-      const flagOf = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : null; };   // LAW A: `--by captain --act <id>` — his ask, named on the row
       if (!deps.dry) {
         appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, by: flagOf("by"), act: flagOf("act"), input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
           split: usage.split || null,   // Phase 1 — and the manual row is where the split's own receipt is READ, so it cannot be the row that drops it
@@ -6763,7 +6774,14 @@ async function main() {
       console.log(`brain: ${job.id} ${usage.ok ? "OK" : "FAILED"} (${(usage.total_tokens || 0).toLocaleString()} tok) ${note}`);
       return { ran: [], refused: false };
     });
-    if (out && out.skipped) console.log(`brain: ${out.skipped} — 'run' skipped so it can't double-run the job`);
+    if (out && out.skipped) {
+      console.log(`brain: ${out.skipped} — 'run' skipped so it can't double-run the job`);
+      // NO-FAKE-DONE (LAW A) across the task boundary — measured live 19 Aug 2026. A skipped run
+      // exits 0, so the task lane marked it `done` and stamped the SKIP MESSAGE as its receipt:
+      // a task reading "done" that produced nothing. The ask is still open, so the task must FAIL
+      // (which also frees its idempotency key, making the retry legal) rather than lie.
+      sayTask("fail", "--why", `brain: ${out.skipped} — nothing ran, the ask is still open`);
+    }
     return;
   }
   if (mode === "pulse") {

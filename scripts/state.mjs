@@ -149,7 +149,7 @@ const weighted = (r) => (Number(r.input_tokens) || 0) * WEIGHT.input + (Number(r
 const istHour = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; return ((t + 5.5 * 3600000) % 86400000 + 86400000) % 86400000 / 3600000; };
 const istDay = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; const d = new Date(t + 5.5 * 3600000); return d.toISOString().slice(0, 10); };
 
-export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined } = {}) {
+export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined, tasks = undefined } = {}) {
   const since = now.getTime() - days * 86400000;
   const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
   // day N of 7
@@ -208,6 +208,7 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
     freeze: freeze ? { armed: !!freeze.armed, deferred: !!freeze.deferred, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
     models: models === undefined ? undefined : (models && models.line ? models.line : null),   // LAW M (18 Aug 2026): models.mjs boardLine — one line, roles → live models, keys ok n/N
     acts: acts === undefined ? undefined : (acts && acts.line ? acts.line : null),               // LAW A (18 Aug 2026): acts.mjs boardLine — acts n · ok · failed · undone · doors
+    tasks: tasks === undefined ? undefined : (tasks && tasks.line ? tasks.line : null),           // LOAD ZERO BLOCK 1 (19 Aug 2026): tasks.mjs boardLine — n · done · running · queued · failed · REPLAYED (the runs the lane saved)
     awake: { hours: awakeH === null ? null : +awakeH.toFixed(1), nights, nights_asleep_at_0320: nightsAsleepAtSlot },
   };
 }
@@ -223,13 +224,14 @@ export function weekLines(b) {
   L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
   if (b.models !== undefined) L.push(`  ${b.models || "gemini: never probed — `node scripts/models.mjs probe`"}`);   // LAW M — the model board, one line
   if (b.acts !== undefined) L.push(`  ${b.acts || "acts: none yet (his next explicit ask → a receipt — `node scripts/acts.mjs status`)"}`);   // LAW A — the act lane, one line
+  if (b.tasks !== undefined) L.push(`  ${b.tasks || "tasks: none yet (his next asked-for job → an id he can point at — `node scripts/tasks.mjs list`)"}`);   // LOAD ZERO BLOCK 1 — the task lane, one line
   L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : b.freeze.deferred ? "DEFERRED by his word 18 Aug 2026 (guard dormant · `node scripts/freeze.mjs status`)" : "NOT in force") : "? (git unreadable)"}`);
   L.push(`  awake      ${b.awake.hours === null ? "? (no presence log)" : `${b.awake.hours} h awake in ${b.days} d · nights asleep at the 03:20 IST dark slot: ${b.awake.nights_asleep_at_0320}/${b.awake.nights} — THE KENNEL (§17-A): the dark lane catches up on wake and keys its day by the slot (herd risks 0), so a night asleep costs nothing but latency; default stays "not now" unless a lane must run WHILE he sleeps`}`);
   return L;
 }
 export async function liveWeek({ days = 7, now = new Date() } = {}) {
-  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }] = await Promise.all([
-    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"),
+  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }, { stats: tasksStats, boardLine: tasksLine }] = await Promise.all([
+    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"), import("./tasks.mjs"),
   ]);
   const safe = (f, dflt = null) => { try { return f(); } catch { return dflt; } };
   const freeze = safe(() => { const s = freezeStatus(); if (s && s.since) { try { s.since_at = execFileSync("git", ["show", "-s", "--format=%aI", s.since], { cwd: ROOT, encoding: "utf8", timeout: 8000, windowsHide: true }).trim(); } catch { s.since_at = null; } } return s; });
@@ -242,7 +244,8 @@ export async function liveWeek({ days = 7, now = new Date() } = {}) {
   const awake = safe(() => awakeModel({ sinceMs: now.getTime() - days * 86400000, now: now.getTime() }));
   const models = safe(() => ({ line: modelsLine(modelsBoard()) }), null);   // LAW M (18 Aug 2026)
   const acts = safe(() => ({ line: actsLine(actsStats(days)) }), null);       // LAW A (18 Aug 2026)
-  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts });
+  const tasks = safe(() => ({ line: tasksLine(tasksStats(days)) }), null);    // LOAD ZERO BLOCK 1 (19 Aug 2026)
+  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts, tasks });
 }
 
 // ── SELFTEST — fixtures only; no git, no state dir, no network ───────────────
@@ -323,6 +326,14 @@ function selftest() {
     const lines = weekLines(b);
     assert("WEEK — the board prints nine lines, the first names day 7 of 7, and every unknown reads '?' never a number",
       lines.length === 9 && /day 7 of 7/.test(lines[0]) && /L1 share 58%/.test(lines[2]) && /\? \(no presence log\)/.test(weekLines(weekBoard({ now: N, awake: { available: false, awakeHoursSince: () => null } })).slice(-1)[0]));
+    // LOAD ZERO BLOCK 1 (19 Aug 2026): the task lane is OPTIONAL on the board — undefined means the
+    // caller did not model it (the nine-line fixture above), null means the organ was unreadable and
+    // says so rather than printing a number it does not have. Both are held here so the new line
+    // cannot silently vanish the way an unasserted board line does.
+    assert("WEEK — the task lane adds its line when modelled, says so when unreadable, and stays SILENT when not modelled",
+      weekLines(weekBoard({ now: N, tasks: { line: "tasks 3 - done 1 - running 1 - queued 1 - failed 0 - replayed 2 (runs saved)" } })).some((l) => /replayed 2 \(runs saved\)/.test(l))
+      && weekLines(weekBoard({ now: N, tasks: null })).some((l) => /tasks: none yet/.test(l))
+      && !weekLines(weekBoard({ now: N })).some((l) => /tasks/.test(l)));
   }
   assert("READ-ONLY — this file has no write call and no model call (grep-held: the line is a fact, never a product)",
     !/writeFileSync|appendFileSync|renameSync|claude -p|claudeGen/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("READ-ONLY[^\n]*\n[^\n]*/m, "")));

@@ -30,8 +30,9 @@
 //     note → hippocampus mark <kind> (verbatim) · fact → hippocampus stage-pending (Law 4:
 //     staged, he promotes) · pref → gaffer_state standing add (Hinglish, greeting-first)
 //     · rule → teaching_contract add · agenda → sitting agenda add (the next sitting opens
-//     on it) · job → brain run <existing job id> --by captain --act <id> (his ask IS the
-//     gate's C) · card/reminder → captains_call file --key act:<id> · mission → scout
+//     on it) · job → tasks.mjs run --kind job --subject <existing job id> (LOAD ZERO BLOCK 1,
+//     19 Aug 2026 — a TASK with an id and an idempotency key, not a direct call into brain;
+//     his ask IS the gate's C) · card/reminder → captains_call file --key act:<id> · mission → scout
 //     mission stage-topic · rep → gaffer_brain capture · undo → this file (every verb
 //     declares its reverse; a verb with no owner reverse SAYS so).
 //   NO-FAKE-DONE: a receipt is the only "ho gaya". The sitting driver returns a reply that
@@ -78,10 +79,16 @@ export const OWNERS = {
               reverse: (a, r, id, row) => ({ argv: ["drop", (row && row.argv && row.argv[1]) || a.id || ""] }) },
   agenda:   { organ: "sitting.mjs",           argv: (a) => ["agenda", "add", "--text", a.text],
               reverse: (a, r) => { const id = r && /agenda (?:added|row) ([A-Za-z0-9_-]+)/.exec(r); return id ? { argv: ["agenda", "drop", id[1]] } : { argv: null, why: "the agenda row carried no id in its receipt" }; } },
-  job:      { organ: "brain.mjs",             argv: (a, id) => ["run", a.job, "--by", "captain", "--act", id], guard: (a, deps) => {
+  // LOAD ZERO BLOCK 1 (19 Aug 2026): `job` no longer calls brain DIRECTLY. It creates a TASK,
+  // and tasks.mjs is the one organ that spawns the owner. Why the indirection is the whole point:
+  // on 18 Aug this verb was fire-and-forget RPC, so his ask ran 3x in 4 min (~67,400 tok, all
+  // three overwriting one file) and there was no id to answer "is it done?" with. tasks.mjs keys
+  // the ask, replays it instead of re-running it, and hands the id back in the SAME turn.
+  // The guard is unchanged and still bites FIRST: the lane never invents a job id.
+  job:      { organ: "tasks.mjs",             argv: (a, id, door) => ["run", "--kind", "job", "--subject", a.job, "--args", JSON.stringify({ job: a.job, act: id }), "--by", "captain", "--door", door || "cli"], guard: (a, deps) => {
                 const ids = deps.jobIds || jobIds();
                 return ids.includes(a.job) ? null : `job "${a.job}" is not an existing brain job (${ids.length} known — \`node scripts/brain.mjs status\`); the act lane never invents a job`;
-              }, reverse: () => ({ argv: null, why: "a spend cannot be unspent — the job's output stays, its ledger row names --act" }) },
+              }, reverse: () => ({ argv: null, why: "a spend cannot be unspent — the task's output stays; `node scripts/tasks.mjs status <id>` is where it lives" }) },
   card:     { organ: "captains_call.mjs",     argv: (a, id) => ["file", "--line", a.text, "--key", `act:${id}`],
               reverse: () => ({ argv: null, why: "a filed card is answered at an anchor (haan/na/baad), never unfiled" }) },
   reminder: { organ: "captains_call.mjs",     argv: (a, id) => ["file", "--line", a.text, "--key", `act:${id}`],
@@ -94,9 +101,12 @@ export const OWNERS = {
 function jobIds() { try { const c = JSON.parse(readFileSync(join(STATE_DIR, "brain_config.json"), "utf8")); return (c.jobs || []).map((j) => j.id); } catch { return []; } }
 
 // ── the child runner (deps.exec injectable — the selftest never spawns an organ) ──
-// per-verb child budgets: a `job` is ONE Opus call (measured 18 Aug: prepare_on_request 21,469 tok, ~4 min) —
-// the first live dispatch died at the 90 s default ("exit null"); a timeout is now NAMED in the row.
-const OWNER_TIMEOUT_MS = { job: 600000, mission: 180000, rep: 180000 };
+// per-verb child budgets. A `job` USED to need 600 s here because this lane blocked on the whole
+// Opus call (the first live dispatch died at the 90 s default, "exit null"). LOAD ZERO BLOCK 1
+// (19 Aug 2026) moved the spend behind tasks.mjs, which detaches the owner — so this child now
+// only creates-or-replays a task and returns an id, and the default budget is generous for it.
+// A timeout is still NAMED in the row when one bites.
+const OWNER_TIMEOUT_MS = { mission: 180000, rep: 180000 };
 function runOwner(organ, argv, stdin, deps = {}, verb = null) {
   if (deps.exec) return deps.exec(organ, argv, stdin);
   const timeout = deps.timeoutMs || OWNER_TIMEOUT_MS[verb] || 90000;
@@ -134,7 +144,7 @@ export function dispatch(act, deps = {}) {
   const o = OWNERS[v.verb];
   const guardWhy = o.guard ? o.guard(v.args, deps) : null;
   if (guardWhy) { const row = { id, ts: now.toISOString(), door, verb: v.verb, args: v.args, owner: o.organ, argv: null, ok: false, error: guardWhy, ms: 0 }; appendRow(row, deps); return row; }
-  const argv = o.argv(v.args, id).map((x) => String(x));
+  const argv = o.argv(v.args, id, door).map((x) => String(x));   // BLOCK 1: the door rides along — a task records which mouth asked
   const t0 = Date.now();
   const r = runOwner(o.organ, argv, o.stdin ? o.stdin(v.args) : null, deps, v.verb);
   const receipt = clip((r.out || "").trim() || (r.err || "").trim(), 300);
@@ -238,7 +248,12 @@ async function selftest() {
   // job — existing id only
   const j1 = dispatch({ door: "gaffer", verb: "job", args: { job: "prepare_on_request", text: "samjhao ×4" } }, deps);
   const j2 = dispatch({ door: "gaffer", verb: "job", args: { job: "invent_something", text: "x" } }, deps);
-  assert("job → brain run <existing id> --by captain --act <id> (his ask = the gate's C); an UNKNOWN job id is refused at the door — the lane never invents a job", j1.ok && calls[5].argv.slice(0, 4).join(" ") === `run prepare_on_request --by captain` && calls[5].argv[5] === j1.id && !j2.ok && /not an existing brain job/.test(j2.error) && calls.length === 6, JSON.stringify(j2));
+  // LOAD ZERO BLOCK 1 (19 Aug 2026): the owner is tasks.mjs, not brain.mjs — his ask becomes a
+  // TASK with an idempotency key (so the 18 Aug 3x-spend cannot recur) and the id comes back in
+  // this same turn. The act id rides in --args so the task row names which asking made it.
+  assert("job → tasks.mjs run --kind job --subject <existing id> --args {job,act} (his ask = the gate's C); an UNKNOWN job id is still refused at the door — the lane never invents a job",
+    j1.ok && calls[5].organ === "tasks.mjs" && calls[5].argv.slice(0, 5).join(" ") === "run --kind job --subject prepare_on_request" && JSON.parse(calls[5].argv[6]).act === j1.id && JSON.parse(calls[5].argv[6]).job === "prepare_on_request" && calls[5].argv.includes("gaffer")
+    && !j2.ok && /not an existing brain job/.test(j2.error) && calls.length === 6, JSON.stringify({ argv: calls[5] && calls[5].argv, j2: j2.error }));
   // card
   const c1 = dispatch({ door: "gaffer", verb: "card", args: { text: "Kennel: haan/na?" } }, deps);
   assert("card → captains_call file --line --key act:<id> (deals at the next anchor)", c1.ok && calls[6].argv.includes("--key") && calls[6].argv[calls[6].argv.indexOf("--key") + 1] === `act:${c1.id}`);
