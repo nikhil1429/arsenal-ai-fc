@@ -221,6 +221,26 @@ async function readCaptain(deps = {}) {
   try { const m = await import("./captain.mjs"); const c = m.captain({ fresh: true }); return { tag: m.captainTag(c), profile: c }; } catch { return { tag: "the captain", profile: {} }; }
 }
 
+// ── THE PLAN CONTEXT (Block 5.1, 18 Aug 2026) — ONE gather for the route, the concept and
+// the capsule, shared by `open` (below, via gatherContext) and by brain.mjs's
+// prepare_tomorrow job. Exported so the overnight plan is composed for EXACTLY the
+// route/task `open` will compute the next morning — a plan built off a second reader
+// would drift from the sitting and be refused as stale at open (the mismatch guard in
+// attachBrain), which is the safety net, not the design. Read-only; no daemon state.
+export async function gatherPlanContext(deps = {}, nowMs = Date.now()) {
+  const forge = deps.forge !== undefined ? deps.forge : readJson(join(STATE_DIR, "forge_session.json"));
+  const kickoff = readKickoff(deps);
+  const nextup = await readNextup(deps);
+  const capsules = await readCapsules(deps);
+  const scout = deps.scout !== undefined ? deps.scout : readJson(join(STATE_DIR, "scout.json"));
+  const r = routeFor({ forge, nextup, kickoff, scout, capsules }, nowMs);
+  const cur = kickoff && kickoff.cur ? kickoff.cur : null;
+  const concept = r.concept || (cur && cur.track === "concept" ? String(cur.task || "").toLowerCase() : null);
+  const capsule = concept ? capsules.find((c) => String(c.id).toLowerCase() === String(concept).toLowerCase() || String(c.title || "").toLowerCase() === String(concept).toLowerCase()) || null : null;
+  return { forge, kickoff, nextup, capsules, scout, route: r.route, routeWhy: r.why, routeConcept: r.concept || null, concept, capsule,
+    taskTitle: (capsule && capsule.title) || concept || (cur && cur.task) || null, taskId: cur ? cur.id : null, track: cur ? cur.track : null };
+}
+
 // ── ROUTE — the same table /learn drives (§6.3), read from state, never from chat ──
 export function routeFor({ forge, nextup, kickoff, scout, capsules }, now = Date.now()) {
   const forgeOpen = !!(forge && forge.concept && !forge.closed_at);
@@ -533,13 +553,13 @@ export function createSitting(deps = {}) {
   }
 
   async function gatherContext({ task, route } = {}) {
-    const forge = readJson(join(STATE_DIR, "forge_session.json"));
-    const kickoff = readKickoff(deps);
-    const nextup = await readNextup(deps);
-    const capsules = await readCapsules(deps);
-    const scout = readJson(join(STATE_DIR, "scout.json"));
+    // Block 5.1 — the route/concept/capsule gather is the SHARED one (gatherPlanContext,
+    // module-level), so the overnight prepare_tomorrow plan and this open agree by
+    // construction; only the two open-time overrides (route given · task given) live here.
+    const base = await gatherPlanContext(deps, now().getTime());
+    const { forge, kickoff, nextup, capsules, scout } = base;
     const captain = await readCaptain(deps);
-    const r = route && ROUTES.includes(String(route).toUpperCase()) ? { route: String(route).toUpperCase(), concept: null, why: "route given at open" } : routeFor({ forge, nextup, kickoff, scout, capsules }, now().getTime());
+    const r = route && ROUTES.includes(String(route).toUpperCase()) ? { route: String(route).toUpperCase(), concept: null, why: "route given at open" } : { route: base.route, concept: base.routeConcept, why: base.routeWhy };
     const cur = kickoff && kickoff.cur ? kickoff.cur : null;
     let concept = r.concept || (cur && cur.track === "concept" ? String(cur.task || "").toLowerCase() : null);
     if (task && !r.concept) concept = String(task).toLowerCase();

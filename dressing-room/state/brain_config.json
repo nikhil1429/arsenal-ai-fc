@@ -505,7 +505,11 @@
       "_reassigned": "M13: breadth/mining -> free pool (two-speed law)",
       "_disabled_reason": "DISABLED 2 Aug 2026 (audit #63), kept off 6 Aug. No reader: nothing opens brain_out/premap/ (5 files unread), and it carried max_per_day 3 — the highest of any job. Its stated value (pre-drafting Daraar-map probe angles) is real but lands nowhere. TO ENABLE: wire it into the Gem prompt pack it claims to feed, then flip enabled:true.",
       "_g10_note": "G10 (9 Aug 2026): re-enabled — nightshift gemCartridge now reads the newest premap via the viz-style i<=2 day-lookback (premap files land under the shift day, minutes AFTER nightshift's 02:59 write — the lookback is mandatory, not decoration).",
-      "gate": { "consumers": ["ns_gem_cartridge"] },
+      "gate": {
+        "consumers": [
+          "ns_gem_cartridge"
+        ]
+      },
       "_gate_note": "THE GATE (overhaul §5, 18 Aug 2026): this lane's only reader is nightshift's gem_cartridge, which is a NIGHTSHIFT lane, not a brain job — so the transitive consumption walk (jobConsumers, declared brain_out/ inputs) cannot see it. `gate.consumers` names the cross-organ consumer explicitly: premap counts as reached-him whenever ns_gem_cartridge does (the /gem-sync stamp records that). Every other gate field stays at the defaults (window 14d · fail_streak 5 · no event).",
       "extra_args": [
         "--effort",
@@ -948,6 +952,52 @@
       "_note": "OVERHAUL Block 2 §7.2 (18 Aug 2026): ONE sonnet call a night over the day's session-intent rows — intent.mjs digestInput() (grouped per session, prompt/reply HEADS clipped to 200 chars, ≤12 each) — labelling each session kind / promised / shipped / open. Validated by intent.validateDigest (session_id ⊂ input · no number that is not in the input corpus · short strings; drops are NAMED in the sibling), written as brain_out/intent_digest/<day>.json (SIBLING_PARSERS); the intent lane itself is never written by the brain. THE GATE: E = session_intent.jsonl exists (required input) · C = the brief carried the SESSION INTENTS block (learnstate stamps `briefed`) within 14 days · F = 5 fails. Refuses before spend on a day with no session rows. at 02:55: after consolidate (02:10) and the night shift (02:40), before the diary (03:00), inside the overnight window."
     },
     {
+      "id": "prepare_tomorrow",
+      "_added": "2026-08-18",
+      "engine": "claude",
+      "model": "opus",
+      "window": "overnight",
+      "at": "03:20",
+      "priority": 75,
+      "enabled": true,
+      "max_per_day": 1,
+      "kind": "prepare_tomorrow",
+      "serve": "next_morning",
+      "inputs": [
+        {
+          "path": "sprint.json",
+          "required": true
+        },
+        {
+          "path": "forge_session.json"
+        },
+        {
+          "path": "calibration.json"
+        },
+        {
+          "path": "weaknesses.json"
+        },
+        {
+          "path": "dossier_weights.json"
+        }
+      ],
+      "out": "prepare",
+      "surface": {
+        "kind": "code",
+        "where": "scripts/sitting.mjs open → attachBrain prefers brain_out/prepare/<day>.json (plan_source: prepare; task/route re-checked at open) · sitting.mjs plan · the .md is the sitting head's prepareText"
+      },
+      "gate": {
+        "window_days": 14,
+        "event": null
+      },
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "high — the one him-facing plan of the night (unleash Phase 5 rule: him-facing organs high).",
+      "_note": "OVERHAUL Block 5 §10 (18 Aug 2026): THE ONE DARK-LANE JOB — ONE opus call a night composes TOMORROW'S ONE SITTING (map + units) in EXACTLY sitting.mjs's PLAN FILE CONTRACT, from sitting.gatherPlanContext (the same reader `open` runs — route/concept/capsule by construction), today's sitting reviews (what_changes_next · his asks · the judge's register line), calibration + nemesis (register.top_missing = the words the room wanted). Refuses BEFORE spend when tomorrow's route is PYTHON or SCRIMMAGE. The fenced json is validated by sitting's OWN validatePlan; a refused plan writes NOTHING (the note names why) and the sitting composes live at open. Units carry src:[\"prepare_tomorrow\"] so sitting's consumeSpoken stamps `sat` on THIS job the moment a unit is spoken to him (spoken = reached). THE GATE: E = sprint.json (required) · C = a unit spoken within 14 days · F = 5. at 03:20: after consolidate (02:10), the night shift (02:40), intent_digest (02:55), the diary (03:00) — the plan reads their outputs. The night's other lanes (night_coach · day_cartridge · agenda · teamtalk_am · midday_cartridge · capsule_premap) FOLD into this by THE GATE (Block 5.2)."
+    },
+    {
       "id": "diary",
       "engine": "claude",
       "model": "sonnet",
@@ -1034,10 +1084,17 @@
       "enabled": true,
       "max_per_day": 1,
       "hype_guard": false,
-      "extra_args": ["--effort", "high"],
-      "_effort_note": "high — unleash Phase 5's own rule (routine digests low, him-facing organs high) and this one is him-facing: he reads the file. Unavailable on haiku, which is why it carried no effort key until the model moved.",
+      "extra_args": [
+        "--effort",
+        "high"
+      ],
+      "_effort_note": "no --effort key: effort is unsupported on haiku and setting it would error the lane every night.",
       "inputs": [
-        { "path": "brain_out/dugout/TODAY.md", "required": true, "produced_by": "dugout.mjs" },
+        {
+          "path": "brain_out/dugout/TODAY.md",
+          "required": true,
+          "produced_by": "dugout.mjs"
+        },
         "captains_call.json",
         "missions.json"
       ],
@@ -1048,7 +1105,6 @@
         "where": "dressing-room/state/brain_out/gaffer_audit/<date>.md — the captain glances it; `brain status` prints the newest by path"
       },
       "_note": "PHASE 8.3 (14 Aug 2026, unleash): THE CLAIM AUDITOR. The Gaffer's confabulations had three root causes — no door to the data (fixed: get_card/get_mission), the never-mention-the-machinery law living only in prose (fixed: the unmachine filter), and NO ORGAN CHECKING IT AT ALL. This is the third. Read today's dugout transcript and list every FACTUAL CLAIM it made about a card, a mission, or organism state; mark each CONFIRMED or UNSUPPORTED against the card deck and mission index supplied beside it; <=15 lines. Haiku, ~30-60k tokens a night (<=0.5% of spend) — the cheapest possible answer to 'koi organ nahi jaanchta'. It JUDGES, it never repairs: an UNSUPPORTED line is evidence for the captain, not an automatic anything.",
-      "_effort_note": "no --effort key: effort is unsupported on haiku and setting it would error the lane every night.",
       "_added": "2026-08-14"
     }
   ],

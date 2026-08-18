@@ -2881,9 +2881,94 @@ export function parseIntentDigestJson(text, _cfg, food = intentDigestFood) {
   return intentValidateDigest(j, input);
 }
 
+// ── PREPARE TOMORROW (OVERHAUL Block 5 · §10, 18 Aug 2026) — the ONE dark-lane job ──
+// ONE opus call a night that composes TOMORROW'S ONE SITTING: the map + the units, in
+// EXACTLY the shape sitting.mjs's PLAN FILE CONTRACT declares (its header lines 54–56),
+// validated by sitting's OWN validatePlan before a byte is written, and refused when the
+// route it would plan is not a voice route (PYTHON = the CLOSE-PACKET loop in /learn;
+// SCRIMMAGE = the dugout's staged mock). THE ROUTE IS THE SITTING'S ROUTE BY
+// CONSTRUCTION: the food comes from sitting.gatherPlanContext — the same reader `open`
+// runs the next morning — so the plan cannot be composed for a task the sitting will
+// not open (and if state moves overnight, `open`'s task/route guard refuses it as
+// stale rather than serving it). The night's OTHER lanes (night_coach · day_cartridge ·
+// agenda · teamtalk_am · midday_cartridge · capsule_premap) FOLD into this by THE GATE
+// (they stay enabled; E∧C∧¬F sleeps them; `folded_into` names it — Block 5.2), so a
+// night costs ONE plan and the plan is what he actually meets.
+// CONSUMPTION (§5.2 C): the units carry src:["prepare_tomorrow"] — sitting's own
+// consumeSpoken stamps `sat` on the JOB ID the moment a unit is SPOKEN to him (spoken =
+// reached; read ≠ reached), which is the one honest signal that the plan was met.
+let prepareFood = null;      // the food the running job was built from — its parser validates against exactly that route
+let prepareSitting = null;   // the sitting module, loaded once at gather time so the (sync) sibling parser can call its validator
+export async function gatherPrepareFood(deps = {}) {
+  const S = deps.sitting || await import("./sitting.mjs");
+  prepareSitting = S;
+  const ctx = await S.gatherPlanContext(deps.ctxDeps || {}, deps.now ? Date.parse(deps.now) : Date.now());
+  const day = localDate(deps.now ? new Date(deps.now) : new Date());
+  // today's sitting reviews (base + LLM rows merged per sitting), the last 3 closed
+  const rows = deps.reviewRows || readLinesTail(join(STATE_DIR, "sitting_reviews.jsonl"), 60) || [];
+  const ids = [...new Set(rows.filter((r) => r && r.kind === "sitting_review" && r.sitting_id).map((r) => r.sitting_id))].slice(-3);
+  const reviews = ids.map((id) => S.mergeReviewRows(rows, id)).filter(Boolean).map((r) => ({
+    sitting_id: r.sitting_id, closed_at: r.closed_at, route: r.route, concept: r.concept, turns: r.turns, banked: r.banked,
+    units_spoken: `${r.units_delivered}/${r.units_composed}`, drifts: r.drifts || null, what_changes_next: r.what_changes_next || null,
+    register_line: r.judge && r.judge.register_line ? r.judge.register_line : null,
+  }));
+  const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
+  const weak = deps.weaknesses !== undefined ? deps.weaknesses : readJson(join(STATE_DIR, "weaknesses.json"));
+  const cap = ctx.capsule;
+  // THE CAPSULE, by route: REJIRAH gets the STRIKES only (the truth-layer fence — welds are
+  // his to defend, never in a plan he will hear before he answers); REVISION/FORGE get titles
+  // + strikes + the mechanism head; never `deep`.
+  const capsuleFood = cap ? {
+    id: cap.id, title: cap.title, lockedOn: cap.lockedOn || null,
+    axes: (cap.faultLines || []).map((a) => ({ axis: a.axis, title: a.title || null, strike: a.strike || null, status: a.status || null })),
+    mechanism_head: ctx.route === "REJIRAH" ? "(withheld — cold round)" : String(cap.mechanism || "").slice(0, 400) || null,
+    traps: ctx.route === "REJIRAH" ? "(withheld — cold round)" : (cap.traps || []).map((t) => (typeof t === "string" ? t : (t && t.bait) || "")).filter(Boolean).slice(0, 5),
+  } : null;
+  return {
+    for_day: day, route: ctx.route, route_why: ctx.routeWhy, concept: ctx.concept, task_title: ctx.taskTitle, task_id: ctx.taskId, track: ctx.track,
+    plan_max_units: (S.DEFAULT_CONFIG && S.DEFAULT_CONFIG.plan_max_units) || 16, unit_max_words: (S.DEFAULT_CONFIG && S.DEFAULT_CONFIG.unit_max_words) || 110,
+    forge: ctx.forge && ctx.forge.concept && !ctx.forge.closed_at ? { concept: ctx.forge.concept, step: ctx.forge.step, steps_done: ctx.forge.steps_done || [], axes_done: ctx.forge.axes_done || [] } : null,
+    kickoff_line: ctx.kickoff && ctx.kickoff.cur ? `${ctx.kickoff.cur.id || ""} ${ctx.kickoff.cur.task || ""} (${ctx.kickoff.cur.track || ""})`.trim() : null,
+    nextup: ctx.nextup && ctx.nextup.winner ? { name: ctx.nextup.winner.name, line: ctx.nextup.winner.line, why: ctx.nextup.winner.why } : null,
+    capsule: capsuleFood, reviews,
+    calibration: cal ? { gap: cal.calibration_gap ?? null, trend: cal.trend ?? null, overconfidence_rate: cal.overconfidence_rate ?? null, status: cal.status || null } : null,
+    weaknesses: weak ? { headline: weak.headline || null, axis_pattern: weak.axis_pattern || null, register: weak.register || null } : null,
+  };
+}
+export function buildPrepareTomorrowPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases, food = prepareFood) {
+  const f = food || {};
+  const head = `You are THE SITTING BRAIN's night half — you compose TOMORROW'S ONE SITTING for the captain (ADHD-PI, Hinglish, learns by ONE idea per unit, gut-word before every answer). Route ${f.route || "?"}${f.concept ? ` · concept '${f.concept}'` : ""}${f.forge ? ` · forge step ${f.forge.step} (steps done ${(f.forge.steps_done || []).join(",") || "none"}; axes done ${(f.forge.axes_done || []).join(",") || "none"})` : ""} · for ${f.for_day || "tomorrow"}.
+
+WHAT A PLAN IS: a MAP (≤60 words, spoken Hinglish — declare today's map first and END by asking him to start) and 3–${f.plan_max_units || 16} UNITS, each ≤${f.unit_max_words || 110} words of spoken Hinglish carrying ONE idea. Unit 0 IS the map. A question unit ends with '?' and asks for the gut-word first — the gut-word vocabulary is EXACTLY these three English words, knew · shaky · guessed (the bank lane recognises only them; never translate them). FORGE: steps never go backwards (THE METHOD 0-11), open with the map, then Pehle-Guess, then the axes in order; REJIRAH: cold strikes ONLY, one axis per question, NEVER the weld or the answer; REVISION: his one-line first, then a recital unit with the locked weld, then a check-question. Analogies only from everyday physical things (food, house, shop, city). Where the last sitting's review says what changes, CHANGE IT — that is why it rides here. Where his register line says the room wanted a word, plant ONE unit that makes him say it, in context, never a vocabulary lecture.
+
+DO: ≤ 8 lines of reasoning, then END with EXACTLY ONE fenced \`\`\`json block, nothing after it:
+{"map":"<≤60 words, ends by asking him to start>","units":[{"step":0-11|null,"axis":"a-i"|null,"kind":"unit|question|recital","text":"<≤110 words spoken Hinglish, ONE idea>","question":true|false,"est_seconds":n,"src":["prepare_tomorrow"]}]}
+
+LAWS: no markdown inside unit text · no code fences inside text · no numbers he has not met (his own capsule's counts are fine) · never a weld or a trap's truth on a REJIRAH plan · never praise, never hype · NEVER these phrases: ${(banned || []).join(", ")}.`;
+  const body = Object.entries(inputs || {}).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
+let prepareLastRefusal = null;   // why the last reply's plan was refused by sitting's validator (named in the note; nothing written)
+export function parsePrepareTomorrowJson(text, _cfg, food = prepareFood, S = prepareSitting) {
+  prepareLastRefusal = null;
+  const j = lastJsonBlock(text);
+  if (!j || !food || !S) { prepareLastRefusal = !j ? "no fenced json block" : !food ? "no food" : "sitting validator unavailable"; return null; }
+  const v = S.validatePlan(j, { route: food.route });
+  if (!v.ok) { prepareLastRefusal = v.why.join("; "); return null; }
+  return {
+    // task.id is the SPRINT task's id only when the plan is FOR the sprint task (FORGE on
+    // the current concept); a Re-Jirah/revision on another concept carries that concept.
+    task: { id: (food.route === "FORGE" && food.task_id) ? food.task_id : (food.concept || food.task_id || null), title: food.task_title || food.concept || null }, route: food.route, concept: food.concept || null,
+    map: v.plan.map, units: v.plan.units.map((u) => ({ ...u, src: (u.src && u.src.length ? u.src : ["prepare_tomorrow"]).map((s) => (s === "prepare" ? "prepare_tomorrow" : s)) })),
+    source: "prepare_tomorrow", for_day: food.for_day, composed_at: new Date().toISOString(),
+    inputs: { reviews: (food.reviews || []).length, register_line: !!(food.reviews || []).find((r) => r.register_line), forge_step: food.forge ? food.forge.step : null },
+  };
+}
+
 const SIBLING_PARSERS = {
   night_coach: (text) => parseNightCoachJson(text),
   intent_digest: (text) => parseIntentDigestJson(text),
+  prepare_tomorrow: (text, cfg) => parsePrepareTomorrowJson(text, cfg),
   agenda: (text, cfg) => parseAgendaJson(text, cfg),
   diary: (text) => parseDiaryJson(text),
   model_mine: (text) => parseModelMineJson(text),
@@ -3331,6 +3416,23 @@ async function runJob(job, cfg, deps) {
     intentDigestFood = food;
     inputs[`session intents (${today} · ${food.sessions.length} session(s), grouped + clipped by intent.mjs — heads of his prompts and the replies)`] = food;
     prompt = buildIntentDigestPrompt(job, inputs, cfg.guards.banned_phrases);
+  } else if (job.kind === "prepare_tomorrow") {
+    // Block 5 §10 — the food is the SITTING'S OWN gather (route/concept/capsule by
+    // construction) plus today's reviews, the register line, calibration and nemesis.
+    // Refuse BEFORE the spend on a route no voice plan serves: PYTHON (the CLOSE-PACKET
+    // loop lives in /learn) and SCRIMMAGE (the dugout's staged mock composes itself).
+    const food = deps.prepareFood !== undefined ? deps.prepareFood : await gatherPrepareFood({ now: new Date(now).toISOString() });
+    if (!food || !["FORGE", "REJIRAH", "REVISION"].includes(food.route)) {
+      return {
+        usage: { ok: false, total_tokens: 0, duration_ms: 0, limit_hit: false, error: `route ${food ? food.route : "?"} needs no composed plan` },
+        note: `skipped before spend — tomorrow's route is ${food ? food.route : "unknown"} (${food ? food.route_why : "no context"}); a plan is composed only for FORGE · REJIRAH · REVISION`,
+      };
+    }
+    prepareFood = food;
+    inputs[`tomorrow's sitting (route · task · capsule strikes · forge step — sitting.mjs's own gather, for ${food.for_day})`] = { route: food.route, why: food.route_why, concept: food.concept, task: food.task_title, kickoff: food.kickoff_line, nextup: food.nextup, forge: food.forge, capsule: food.capsule };
+    inputs["today's sitting reviews (what changes next · his asks · the room's words)"] = food.reviews.length ? food.reviews : "(no sitting closed today)";
+    inputs["calibration + nemesis (measured — the words the room wanted are register.top_missing)"] = { calibration: food.calibration, weaknesses: food.weaknesses };
+    prompt = buildPrepareTomorrowPrompt(job, inputs, cfg.guards.banned_phrases, food);
   } else if (job.kind === "dreams") {
     // H5 — refuse BEFORE the spend when there is nothing to recombine: an
     // empty cracked-axes inventory + a model told to dream anyway = invented
@@ -3478,9 +3580,11 @@ async function runJob(job, cfg, deps) {
       if (sib && !dry) writeAtomic(join(OUT_DIR, job.out || job.id, outDay + ".json"), sib);
       const detail = sib && job.kind === "night_coach" ? `: ${sib.misconceptions.length} misconception(s)`
         : sib && job.kind === "agenda" ? `: ${Object.keys(sib.allocations).length} allocation(s)${sib.dropped ? `, ${sib.dropped.length} dropped` : ""}`
+        : sib && job.kind === "prepare_tomorrow" ? `: ${sib.route} '${sib.task && sib.task.title}' · ${sib.units.length} unit(s) — sitting.mjs open prefers it tomorrow`
         : "";
       note += sib ? ` + ${outDay}.json (machine sibling${detail})`
-        : " · json sibling ABSENT — no valid fenced json in the reply (degraded, not fatal)";
+        : job.kind === "prepare_tomorrow" ? ` · PLAN REFUSED by sitting's validator (${prepareLastRefusal || "no fenced json"}) — nothing written; the sitting will compose live at open (degraded, not fatal)`
+          : " · json sibling ABSENT — no valid fenced json in the reply (degraded, not fatal)";
     }
     // MEDIA ENGINE: speak_to jobs render their validated text to an mp3 in
     // club/media/ (speak.mjs synthToFile — earClean inside). Offline = honest
@@ -5464,6 +5568,41 @@ async function selftest() {
       const sa = surfaceAudit({ jobs: [{ id: "a", surface: { kind: "code", where: "x" } }, { id: "b" }, { id: "c", enabled: false }] });
       assert("#106 — the surface report is a have/need pair and NAMES the gap, never the bare word 'ok'",
         sa.have === 1 && sa.need === 2 && sa.orphans.length === 1 && sa.orphans[0] === "b");
+    }
+
+    // ---- OVERHAUL Block 5.1 · PREPARE TOMORROW (18 Aug 2026) — the one dark-lane job ----
+    // Hermetic: fixture food, fixture reply, the REAL sitting validator (pure). The live
+    // proof (a real opus run → brain_out/prepare/<day>.json → `sitting.mjs open` prefers
+    // it) is recorded in the plan file's BUILD LOG, never faked here.
+    {
+      const pj = cfg.jobs.find(j => j.id === "prepare_tomorrow");
+      assert("PREPARE TOMORROW — committed job: opus · overnight · at 03:20 · serve next_morning · kind prepare_tomorrow · out prepare · max 1/day · sprint.json REQUIRED · surface names sitting.mjs open",
+        !!pj && pj.model === "opus" && pj.window === "overnight" && pj.at === "03:20" && pj.serve === "next_morning" && pj.kind === "prepare_tomorrow" && pj.out === "prepare"
+        && pj.max_per_day === 1 && pj.enabled === true && (pj.inputs || []).some(i => i && i.path === "sprint.json" && i.required) && /sitting\.mjs open/.test(pj.surface.where) && pj.gate && pj.gate.window_days === 14);
+      const S = await import("./sitting.mjs");
+      const food = { for_day: "2026-08-19", route: "REJIRAH", route_why: "proof purana", concept: "tokenization", task_title: "Tokenization", task_id: "1-04", track: "concept", plan_max_units: 16, unit_max_words: 110,
+        forge: null, kickoff_line: "1-04 Hallucinations (concept)", nextup: { name: "rejirah-due", line: "Re-Jirah R2 'tokenization'", why: "ripe" },
+        capsule: { id: "tokenization", title: "Tokenization", axes: [{ axis: "a", title: "Kya hai", strike: "token kya hai?" }], mechanism_head: "(withheld — cold round)", traps: "(withheld — cold round)" },
+        reviews: [{ sitting_id: "s1", what_changes_next: ["open every new label first"], register_line: `interviewer yeh shabd sunna chahega: "vocabulary"` }], calibration: { gap: 0.09 }, weaknesses: { register: { line: "register: 1 rep(s) read" } } };
+      const pp = buildPrepareTomorrowPrompt(pj, { "tomorrow's sitting": { route: food.route, concept: food.concept } }, ["10x"], food);
+      assert("PREPARE TOMORROW — the prompt is the SITTING BRAIN's night half: route + concept named, the PLAN FILE CONTRACT's json shape, cold-round law (never the weld on REJIRAH), the register line planted as ONE unit, and it ends with the fenced-json order",
+        /Route REJIRAH · concept 'tokenization'/.test(pp) && /"map":"<≤60 words/.test(pp) && /NEVER the weld or the answer/.test(pp) && /register line says the room wanted a word, plant ONE unit/.test(pp) && /EXACTLY ONE fenced/.test(pp) && /NEVER these phrases: 10x/.test(pp));
+      const good = "thinking…\n```json\n" + JSON.stringify({ map: "Aaj Re-Jirah, tokenization — 9 axis, gut-word pehle. Shuru karein?", units: [
+        { step: null, axis: null, kind: "unit", text: "Aaj Re-Jirah, tokenization — 9 axis, gut-word pehle. Shuru karein?", question: true, est_seconds: 15, src: ["prepare"] },
+        { step: null, axis: "a", kind: "question", text: "Axis a — pehle gut-word bolo, phir: token kya hai?", question: true, est_seconds: 12 },
+        { step: null, axis: null, kind: "unit", text: "Round poora — 'full time' bolo.", question: false, est_seconds: 6 }] }) + "\n```";
+      const sib = parsePrepareTomorrowJson(good, cfg, food, S);
+      assert("PREPARE TOMORROW — a valid reply becomes the sibling in EXACTLY sitting.mjs's PLAN FILE CONTRACT ({task:{id,title}, route, map, units[{step,axis,kind,text,question,est_seconds,src}]}), validated by sitting's OWN validatePlan, every unit's src = the job id (so a spoken unit stamps `sat` on prepare_tomorrow)",
+        !!sib && sib.route === "REJIRAH" && sib.task.title === "Tokenization" && sib.task.id === "tokenization" && sib.units.length === 3 && sib.units[0].kind === "map" && sib.units[1].kind === "question" && sib.units[1].axis === "a"
+        && sib.units.every(u => u.src.length && u.src.every(s => s === "prepare_tomorrow")) && sib.source === "prepare_tomorrow" && sib.for_day === "2026-08-19"
+        && S.validatePlan({ map: sib.map, units: sib.units }, { route: "REJIRAH" }).ok);
+      assert("PREPARE TOMORROW — a plan the sitting would refuse (map without the start-ask · one unit) is NOT written: null, and the refusal is NAMED",
+        parsePrepareTomorrowJson("```json\n{\"map\":\"no ask here\",\"units\":[{\"text\":\"x\"}]}\n```", cfg, food, S) === null && /fewer than 2 units/.test(prepareLastRefusal || "")
+        && parsePrepareTomorrowJson("no json at all", cfg, food, S) === null && /no fenced json/.test(prepareLastRefusal || ""));
+      // refuse BEFORE the spend on a route no voice plan serves — driven through runJob with a fixture food and an exec that must not be called
+      const noSpend = await runJob(pj, cfg, { exec: () => { throw new Error("must not be called"); }, gexec: () => { throw new Error("no"); }, now: new Date("2026-08-18T03:20:00+05:30"), dry: true, prepareFood: { route: "PYTHON", route_why: "sprint ki current task Python track pe hai" } });
+      assert("PREPARE TOMORROW — a PYTHON (or SCRIMMAGE) tomorrow is a refusal BEFORE the spend, named — no opus call for a plan no voice sitting will read",
+        noSpend && noSpend.usage && noSpend.usage.ok === false && /needs no composed plan/.test(noSpend.usage.error) && /PYTHON/.test(noSpend.note));
     }
 
     // ---- P2 · THE NIGHT COACH (9 Aug 2026, his unleash word) --------------
