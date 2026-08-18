@@ -1735,7 +1735,11 @@ function buildSystemInstruction() {
   // LAW: speak — the mouth speaks the brain's units EXACTLY; it composes no lesson (§6.4)
   L.push(`THE SPEAK LAW — When a [SPEAK id=…] block arrives, say EXACTLY its text — his Hinglish, his pace, no additions, no summary, no "shall I continue" — then stop and wait. Everything with content comes this way; you never compose a lesson yourself. While a sitting is OPEN ([SITTING OPEN …]), his lines reach the sitting brain by themselves: on his line you give ONLY a short natural ack ("hmm", "theek", "ek second") — never content — and the [SPEAK] that follows is your line. Greeting, acks, get_today/get_capsule on his direct question, reminders, cards, checkpoint stay yours; teaching, depth, what-next and judging do not.`);
   // LAW: sitting — his word opens and closes it; the tools are the only door
-  L.push(`THE SITTING: "shuru / padhai / aaj ka kaam / sitting kholo / revise / re-jirah" → open_sitting (routes from state; joins an open one, never two). "full time / bas / khatam / band karo" → close_sitting. No sitting open = the coach as before.`);
+  // LAW: the sitting OPENS ITSELF — 18 Aug 2026, his words: "bro i will never remember any of the
+  // keyword to say what where when how" (+ his 11 Aug ledger fact 5cea57e8: anything he must
+  // remember is a design failure). The /config route dispatches `sitting.mjs open` the moment
+  // a Gaffer session starts; the first [SPEAK] is the map, which ends by asking him to start.
+  L.push(`THE SITTING OPENS ITSELF the moment you start — the first [SPEAK id=…] is today's map and it asks him to start; he never needs a keyword. open_sitting only if none is open; his "nahi / baad mein / bas / full time" → close_sitting. No sitting open = the coach as before.`);
   // LAW: pace — 12 Aug 2026, his words, three times, in an ordinary conversation
   L.push(`PACE IS A LAW OF WHO YOU ARE, NOT OF ONE OF YOUR JOBS (12 Aug 2026). He said it in an ORDINARY conversation: "you are speaking so fastly I am not understanding a single bit. Feels like you are talking to yourself" — then twice more. SO: slowly ALWAYS — short sentences, a real pause between them; he is holding it, not just hearing it. DHEEMA IS NOT CHHOTA: as deep and as long as he asked; Speed is the thing you cut, never the substance.`);
   // LAW: map — B7, 12 Aug 2026 (asked three times, never got it)
@@ -2032,6 +2036,18 @@ async function mintEphemeralToken(deps = {}) {
 // ---------------------------------------------------------------------------
 // TOOL EXECUTION — every write goes through its owner
 // ---------------------------------------------------------------------------
+// THE SITTING OPENS ITSELF (18 Aug 2026) — the /config gaffer route calls this the moment a
+// session starts. Detached, fail-silent, idempotent: sitting.mjs `open` JOINS an open sitting
+// (never two), so a reconnect re-arriving here costs one no-op join. `spawnFn` is the seam
+// the selftest drives; the literal join(__dirname, "sitting.mjs") + "open" verb is the xray
+// organ→verb idiom (same as the open_sitting tool). Returns what it dispatched, for the log.
+function autoOpenSitting(spawnFn = spawn) {
+  try {
+    const child = spawnFn(process.execPath, [join(__dirname, "sitting.mjs"), "open", "--surface", "voice"], { detached: true, stdio: "ignore", windowsHide: true, cwd: join(__dirname, "..") });
+    if (child && child.unref) child.unref();
+    return { ok: true, dispatched: "sitting.mjs open --surface voice" };
+  } catch (e) { return { ok: false, error: String(e && e.message || e).slice(0, 160) }; }
+}
 function execTool(name, args, deps = {}) {
   const sh = deps.sh || ((script, argv, input) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { input, encoding: "utf8", timeout: 60000, windowsHide: true }));
   const append = deps.append || appendFileSync;
@@ -3538,6 +3554,20 @@ async function selftest() {
   assert("all four depth registers defined (DEPTH_REGISTERS_LEGACY, frozen — Block 3)", ["adaptive", "brief", "deep", "lecture"].every(r => DEPTH_REGISTERS_LEGACY[r]) && DEPTH_REGISTERS === DEPTH_REGISTERS_LEGACY);
   assert("depth lever is LEGACY (Block 3): not in the live constitution, set_depth NOT declared to the mouth, the declaration frozen verbatim, the legacy body still carries the lever", !buildSystemInstruction().includes("DEPTH LEVER") && !TOOL_DECLS.some(t => t.name === "set_depth") && SET_DEPTH_DECL_LEGACY.name === "set_depth" && buildSystemInstructionLegacy().includes("DEPTH LEVER"));
   assert("THE SITTING DOOR (Block 3): open_sitting + close_sitting are declared to the mouth and the constitution names when to call each", TOOL_DECLS.some(t => t.name === "open_sitting") && TOOL_DECLS.some(t => t.name === "close_sitting") && cfg0().system.includes("open_sitting") && cfg0().system.includes("close_sitting"));
+  // THE SITTING OPENS ITSELF (18 Aug 2026, his words: "bro i will never remember any of the keyword
+  // to say what where when how"). Held three ways: the helper dispatches the owner's `open`
+  // detached (fixture spawn), the /config gaffer branch CALLS it (source), and the constitution
+  // says so — no keyword is the door any more.
+  {
+    const spawned = [];
+    const r = autoOpenSitting((bin, argv, o) => { spawned.push({ argv, o }); return { unref() { } }; });
+    assert("THE SITTING OPENS ITSELF — a Gaffer session start dispatches `sitting.mjs open --surface voice` DETACHED (the owner routes from state and JOINS an open one, never two); no keyword needed",
+      r.ok && spawned.length === 1 && /sitting\.mjs$/.test(spawned[0].argv[0]) && spawned[0].argv.slice(1).join(" ") === "open --surface voice" && spawned[0].o.detached === true);
+    const src = readFileSync(new URL(import.meta.url), "utf8");
+    const cfgRoute = src.slice(src.lastIndexOf('if (mode === "gaffer") {'), src.lastIndexOf("return send(200, buildConfig(keys, mode));"));   // lastIndexOf: this selftest's own literals sit before the route
+    assert("THE SITTING OPENS ITSELF — …from the /config gaffer branch itself (the same real serve that stamps `sat`), and the constitution tells the mouth the map is the start — his 'nahi / bas / full time' closes",
+      /autoOpenSitting\(\);/.test(cfgRoute) && cfg0().system.includes("THE SITTING OPENS ITSELF") && !cfg0().system.includes('"shuru / padhai / aaj ka kaam / sitting kholo / revise / re-jirah" → open_sitting'));
+  }
   {
     const spawned = [];
     const os = execTool("open_sitting", { task: "embeddings" }, { spawnFn: (bin, argv, o) => { spawned.push(argv); return { unref() { spawned.detached = !!(o && o.detached); } }; } });
@@ -6411,6 +6441,13 @@ async function main() {
             if (dc) recordConsumption({ job: "day_cartridge", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/day_cartridge/${dc.date}.md` });
             if (nc) recordConsumption({ job: "night_coach", kind: "sat", by: "dugout /config (gaffer session)", file: `brain_out/night_coach/${nc.date}.md` });
           } catch {}
+          // THE SITTING OPENS ITSELF (18 Aug 2026, his words: "bro i will never remember any of
+          // the keyword to say what where when how"). A Gaffer session starting IS his arrival:
+          // the owner's `open` routes from state, JOINS an open sitting (never two), and the
+          // mouth's SPEAK law delivers the map, which ends by asking him to start. Detached,
+          // fail-silent — bookkeeping and the brain never hold the mouth (same idiom as the
+          // open_sitting tool below). His 11 Aug ledger fact 5cea57e8 is the law here.
+          autoOpenSitting();
         }
         return send(200, buildConfig(keys, mode));
       }
