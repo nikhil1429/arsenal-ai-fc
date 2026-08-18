@@ -1,3 +1,8 @@
+> **DEFERRED 18 Aug 2026 ~20:05 IST by his word — *"freeze will be implemented when the entire cyborg organism is working fine not before that"*.**
+> Moved here from the root the same evening (MODELS + ACTS work order, Block 0). The guard (`scripts/freeze.mjs`, `hooks/commit-msg`)
+> stays installed and DORMANT — it arms only when `FREEZE.md` exists at the root again (`node scripts/freeze.mjs status`).
+> Below is the page as it stood while the freeze was in force (Block 8 → Block 0 of MODELS + ACTS, ~2 h). A record, not a work order.
+
 # ❄ FREEZE — the organism is frozen (18 Aug 2026, OVERHAUL Block 8)
 
 > His words, 18 Aug 2026: *"i want to use it from now to study and not fix it. i am tired of wasting my time in fixing it."*

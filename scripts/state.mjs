@@ -154,7 +154,10 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
   const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
   // day N of 7
   let dayN = null, sinceFreeze = null;
-  if (freeze && freeze.armed && freeze.since_at) { const t = Date.parse(freeze.since_at); if (Number.isFinite(t)) { sinceFreeze = t; dayN = Math.floor((now.getTime() - t) / 86400000); } }   // day 0 = the freeze day; the seventh REAL day after it is day 7
+  // 18 Aug 2026 evening (MODELS + ACTS Block 0): the freeze was DEFERRED by his word — FREEZE.md moved to the
+  // archive, guard dormant — but Block 9's seven days keep counting from the SAME anchor (the commit that
+  // added FREEZE.md; freeze.mjs status keeps `since` armed or not). So the day counter reads since_at, not armed.
+  if (freeze && freeze.since_at) { const t = Date.parse(freeze.since_at); if (Number.isFinite(t)) { sinceFreeze = t; dayN = Math.floor((now.getTime() - t) / 86400000); } }   // day 0 = the freeze day; the seventh REAL day after it is day 7
   // ledger: contact vs the rest, dark vs day, per IST day
   const L = ledger.filter((r) => r && inWin(r.ts));
   let contactLedger = 0, other = 0, dark = 0, total = 0;
@@ -202,21 +205,21 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
     gate: { transitions: G.length, wakes, sleeps, lanes },
     intents: kinds,
     swallow: swallow ? { rows: swallow.runs ?? swallow.rows ?? null, n: swallow.n ?? null, top: (swallow.top || []).slice(0, 3) } : null,
-    freeze: freeze ? { armed: !!freeze.armed, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
+    freeze: freeze ? { armed: !!freeze.armed, deferred: !!freeze.deferred, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
     awake: { hours: awakeH === null ? null : +awakeH.toFixed(1), nights, nights_asleep_at_0320: nightsAsleepAtSlot },
   };
 }
 export function weekLines(b) {
   const L = [];
   const lakh = (n) => n === null || n === undefined ? "?" : (n / 100000).toFixed(2) + " lakh";
-  L.push(`WEEK BOARD · ${b.at.slice(0, 16)}Z · last ${b.days} d · ${b.dayN === null ? "freeze not yet committed — day 0" : b.dayN === 0 ? `the freeze day (day 0 of 7 · ${b.sinceFreeze.slice(0, 10)})` : `day ${Math.min(b.dayN, 7)} of 7 since the freeze (${b.sinceFreeze.slice(0, 10)})`}`);
+  L.push(`WEEK BOARD · ${b.at.slice(0, 16)}Z · last ${b.days} d · ${b.dayN === null ? "freeze not yet committed — day 0" : b.dayN === 0 ? `the freeze day (day 0 of 7 · ${b.sinceFreeze.slice(0, 10)})` : `day ${Math.min(b.dayN, 7)} of 7 since the freeze commit (${b.sinceFreeze.slice(0, 10)}${b.freeze && b.freeze.deferred ? " · freeze DEFERRED by his word, the count stands" : ""})`}`);
   L.push(`  sittings   ${b.sitting ? `${b.sitting.sittings} sitting(s) · ${b.sitting.turns} turn row(s) · weighted ${lakh(b.sitting.weighted)} · heads ${b.sitting.heads && b.sitting.heads.length ? b.sitting.heads.join(", ") : "—"}` : "? (sitting log unreadable)"}`);
   L.push(`  contact    L1 share ${b.contact.share === null ? "? (no spend in window)" : Math.round(b.contact.share * 100) + "%"} — contact ${lakh(b.contact.contact_weighted)} (sitting ${lakh(b.contact.of_which_sitting)} + gaffer ledger ${lakh(b.contact.of_which_gaffer_ledger)}) vs other ${lakh(b.contact.other_weighted)}`);
   L.push(`  spend      ${b.ledger.rows} ledger row(s) · weighted ${lakh(b.ledger.weighted)} · DARK (00–08 IST) ${lakh(b.ledger.dark_weighted)} · per day: ${Object.entries(b.ledger.per_day).sort().map(([d, v]) => `${d.slice(5)} ${lakh(v.total)}${v.dark ? ` (dark ${lakh(v.dark)})` : ""}`).join(" · ") || "—"}`);
   L.push(`  gate       ${b.gate.transitions} transition(s) · ${b.gate.wakes} wake · ${b.gate.sleeps} sleep · lanes: ${Object.entries(b.gate.lanes).map(([k, v]) => `${k} ${v.awake}↑${v.asleep}↓`).join(" · ") || "—"}`);
   L.push(`  intents    study ${b.intents.study} · build ${b.intents.build} · other ${b.intents.other}`);
   L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
-  L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : "NOT in force") : "? (git unreadable)"}`);
+  L.push(`  freeze     ${b.freeze ? (b.freeze.armed ? `IN FORCE · ${b.freeze.guarded_commits} guarded commit(s) · carded ${b.freeze.carded} · exempt ${b.freeze.exempt} · BROKEN ${b.freeze.broken}` : b.freeze.deferred ? "DEFERRED by his word 18 Aug 2026 (guard dormant · `node scripts/freeze.mjs status`)" : "NOT in force") : "? (git unreadable)"}`);
   L.push(`  awake      ${b.awake.hours === null ? "? (no presence log)" : `${b.awake.hours} h awake in ${b.days} d · nights asleep at the 03:20 IST dark slot: ${b.awake.nights_asleep_at_0320}/${b.awake.nights} — THE KENNEL (§17-A): the dark lane catches up on wake and keys its day by the slot (herd risks 0), so a night asleep costs nothing but latency; default stays "not now" unless a lane must run WHILE he sleeps`}`);
   return L;
 }

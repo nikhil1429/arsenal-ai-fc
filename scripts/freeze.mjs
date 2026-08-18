@@ -86,10 +86,19 @@ export function guard({ msgFile, cwd = ROOT } = {}) {
 // ── THE WATCH (status) ───────────────────────────────────────────────────────
 // Every commit since the freeze commit that touched a guarded path; those whose
 // message has neither a card nor an exemption are BROKEN. Read-only.
+// DEFERRED, NOT DELETED (18 Aug 2026 ~20:05 IST, his word: "freeze will be implemented when the entire
+// cyborg organism is working fine not before that" — MODELS + ACTS work order, Block 0). FREEZE.md was
+// `git mv`'d to docs/archive/FREEZE__deferred-2026-08-18.md; the guard stays installed and silent. Two
+// things survive the deferral because other organs anchor on them: `since` (the commit that ADDED
+// FREEZE.md — git history keeps it; `state.mjs week` counts day N of 7 from it, armed or not) and
+// `deferred:true` (the record exists in the archive) so a reader can tell "never frozen" from "frozen,
+// then deferred by his word".
+export const DEFERRED_RECORD = "docs/archive/FREEZE__deferred-2026-08-18.md";
+export const deferred = (cwd = ROOT) => !frozen(cwd) && existsSync(join(cwd, DEFERRED_RECORD));
 export function status({ cwd = ROOT, max = 400 } = {}) {
-  if (!frozen(cwd)) return { armed: false, since: null, commits: [], broken: [], carded: 0, exempt: 0 };
   let since = null;
   try { since = git(["log", "--diff-filter=A", "--format=%H", "--", FREEZE_FILE], cwd).trim().split("\n").filter(Boolean).pop() || null; } catch { since = null; }
+  if (!frozen(cwd)) return { armed: false, deferred: deferred(cwd), since, commits: [], broken: [], carded: 0, exempt: 0 };
   if (!since) return { armed: true, since: null, uncommitted: true, commits: [], broken: [], carded: 0, exempt: 0, why: `${FREEZE_FILE} exists but is not yet committed — the freeze arms the guard now and the watch from its first commit` };
   let shas = [];
   try { shas = git(["log", `${since}..HEAD`, `--max-count=${max}`, "--format=%H"], cwd).split("\n").map((s) => s.trim()).filter(Boolean); } catch { shas = []; }
@@ -172,12 +181,21 @@ function selftest() {
     // 8) misuse: unreadable message file ⇒ misuse, never a silent pass
     r = guard({ msgFile: join(tmp, "NOPE"), cwd });
     assert("MISUSE — an unreadable message file is a refusal with misuse:true, never a pass", r.ok === false && r.misuse === true);
+    // 9) DEFERRED (18 Aug 2026, his word): FREEZE.md `git mv`'d to the archive record → the guard goes
+    //    silent, but `since` (the anchor commit) survives in history and `deferred` says why it is silent
+    mkdirSync(join(cwd, dirname(DEFERRED_RECORD)), { recursive: true });
+    g(["mv", FREEZE_FILE, DEFERRED_RECORD]); commit("Block 0 · freeze deferred by his word");
+    r = tryGuard("scripts/x.mjs", "// after the deferral\n", "bare change, no card");
+    const d = status({ cwd });
+    assert("DEFERRED — after `git mv FREEZE.md → docs/archive/…deferred` the guard is silent again (armed:false, ok:true)", r.armed === false && r.ok === true, JSON.stringify(r));
+    assert("…and status keeps the anchor: deferred:true, since = the commit that ADDED FREEZE.md (the week board counts from it), broken []",
+      d.armed === false && d.deferred === true && !!d.since && d.since === s.since && d.broken.length === 0, JSON.stringify({ armed: d.armed, deferred: d.deferred, since: d.since && d.since.slice(0, 7) }));
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 
   // the LIVE tree: is the freeze in force here, and is the hook installed?
   const live = status();
   const hookInstalled = existsSync(join(ROOT, ".git", "hooks", "commit-msg")) && /freeze\.mjs guard/.test((() => { try { return readFileSync(join(ROOT, ".git", "hooks", "commit-msg"), "utf8"); } catch { return ""; } })());
-  console.log(`\n  live: ${live.armed ? `FROZEN since ${live.since ? live.since.slice(0, 7) : "(FREEZE.md uncommitted)"} · ${live.commits.length} guarded commit(s) since · ${live.broken.length} broken` : "not frozen (FREEZE.md absent)"} · commit-msg hook ${hookInstalled ? "INSTALLED" : "NOT installed (setup/INSTALL_ARCHIVE.ps1 copies it)"}`);
+  console.log(`\n  live: ${live.armed ? `FROZEN since ${live.since ? live.since.slice(0, 7) : "(FREEZE.md uncommitted)"} · ${live.commits.length} guarded commit(s) since · ${live.broken.length} broken` : live.deferred ? `DEFERRED (guard dormant · anchor ${live.since ? live.since.slice(0, 7) : "?"})` : "not frozen (FREEZE.md absent)"} · commit-msg hook ${hookInstalled ? "INSTALLED" : "NOT installed (setup/INSTALL_ARCHIVE.ps1 copies it)"}`);
   assert("hooks/commit-msg (tracked) execs this guard", existsSync(join(ROOT, "hooks", "commit-msg")) && /freeze\.mjs guard/.test(readFileSync(join(ROOT, "hooks", "commit-msg"), "utf8")));
 
   console.log(`\nfreeze: ${pass} passed, ${fail} failed`);
@@ -201,7 +219,7 @@ function main() {
   if (mode === "status") {
     const s = status();
     if (process.argv.includes("--json")) { console.log(JSON.stringify(s, null, 1)); return; }
-    if (!s.armed) { console.log("freeze: NOT in force (FREEZE.md absent)"); return; }
+    if (!s.armed) { console.log(s.deferred ? `freeze: DEFERRED by his word 18 Aug 2026 (guard dormant · anchor commit ${s.since ? s.since.slice(0, 7) : "?"} · record ${DEFERRED_RECORD} · it re-arms the day FREEZE.md returns to the root)` : "freeze: NOT in force (FREEZE.md absent)"); return; }
     console.log(`freeze: IN FORCE since ${s.since ? s.since.slice(0, 7) : "(FREEZE.md not yet committed)"} · ${s.commits.length} guarded commit(s) since · carded ${s.carded} · exempt ${s.exempt} · BROKEN ${s.broken.length}`);
     for (const b of s.broken) console.log(`  ✗ ${b.sha.slice(0, 7)} ${b.at.slice(0, 16)} ${b.subject} — ${b.touched} guarded file(s): ${b.files.join(", ")}`);
     return;

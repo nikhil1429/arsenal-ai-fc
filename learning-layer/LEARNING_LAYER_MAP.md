@@ -427,7 +427,7 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 > sitting open — koi keyword yaad nahi rakhna (uska 10:42 word: "bro i will never remember any of the keyword").
 > (4) **DAY-KEY LAW (Block 6):** raat 12 ke baad chala scheduled organ apna din SLOT se leta hai, clock se nahi
 > (`scripts/daykey.mjs`; `node scripts/herd.mjs risks` = 0). (5) **FREEZE (Block 8):** ab naya organ, naya
-> constitution paragraph ya schedule change sirf card se — `FREEZE.md` root pe; guard `hooks/pre-commit` mein.
+> constitution paragraph ya schedule change sirf card se — `FREEZE.md` root pe; guard `hooks/commit-msg` mein. **18 Aug shaam: freeze uske word se DEFERRED** (`node scripts/freeze.mjs status`; record `docs/archive/FREEZE__deferred-2026-08-18.md`) — guard bana hua hai, dormant.
 > Overhaul ka poora record: `docs/archive/ORGANISM_OVERHAUL__2026-08-18.md` (BUILD LOG upar).
 
 ### 8.1 HOOKS (`.claude/settings.json`) — yeh drift ka structural ilaaj hai

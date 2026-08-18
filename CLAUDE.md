@@ -9,8 +9,9 @@ A football-club-themed multi-agent accountability + execution system for Nikhil 
 IST). Deterministic Node scripts (`.mjs`, Windows / Node 22) read/write a JSON state bus at
 `dressing-room/state/*.json` under an **owners-only** law. LLM calls ride `claude -p` on the Max
 subscription — **never an API key** (`ANTHROPIC_API_KEY` set ⇒ every organ refuses). Scheduling:
-Windows Task Scheduler + `ntfy.sh`. **FROZEN since 18 Aug 2026 (Block 8): `FREEZE.md`** — changes ride cards;
-`hooks/commit-msg` refuses a bare commit under `scripts/ hooks/ setup/` (`node scripts/freeze.mjs status`).
+Windows Task Scheduler + `ntfy.sh`. **FREEZE: deferred by his word 18 Aug 2026 until the organism runs fine; the
+guard is built and dormant** (`node scripts/freeze.mjs status`; it arms the day `FREEZE.md` returns to the root —
+record: `docs/archive/FREEZE__deferred-2026-08-18.md`).
 
 ## The ten laws (each is a code path — verify, never recall)
 | # | Law | Verify |
@@ -69,6 +70,6 @@ Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in 
 
 ## Files of record
 - `OPS_STATE.md` — a pointer to `state.mjs`. Old bodies: `docs/archive/`.
-- `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. `FREEZE.md` — the freeze.
+- `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. `MODELS_AND_ACTS__2026-08-18.md` — the live work order (→ archive when ✅).
 - `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.
