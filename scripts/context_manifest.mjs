@@ -743,6 +743,7 @@ export const SITTING_PARTS = Object.freeze([
   { id: "how_he_learns", cap: 4_000, drop: 1 },
   { id: "gaffer_law", cap: 18_000, drop: 3 },   // §0+§2+§3+§5+§9 measured 16,168 on 18 Aug 2026 — the cap keeps §9 (the delivery laws) WHOLE
   { id: "captain", cap: 600, drop: 2 },
+  { id: "agenda", cap: 6_000, drop: 2 },       // LAW A (18 Aug 2026): his explicit asks for THIS sitting + what prepare_on_request prepared for them — served FIRST, dropped late
   { id: "kickoff", cap: 3_000, drop: 5 },
   { id: "plan", cap: 12_000, drop: 4 },
   { id: "capsule", cap: 14_000, drop: 6 },
@@ -843,6 +844,12 @@ export async function assembleSittingSystem(ctx = {}) {
   const k = ctx.kickoff || {};
   const cur = k.cur || null;
   const nu = ctx.nextup && ctx.nextup.winner ? ctx.nextup.winner : null;
+  // 4b. LAW A (MODELS + ACTS Block 2, 18 Aug 2026) — HIS AGENDA: the acts he asked for (acts.mjs verb agenda →
+  //     sitting agenda add) are the FIRST thing this sitting does; the material prepare_on_request (Opus, on his
+  //     ask) prepared for them rides beneath. Rows handed in by the caller (sitting.mjs gatherContext).
+  const ag = Array.isArray(ctx.agenda) ? ctx.agenda : [];
+  const prepd = String(ctx.preparedText || "");
+  put("agenda", ag.length || prepd ? [ag.length ? `HIS AGENDA FOR THIS SITTING (his explicit asks, verbatim — do these FIRST, before the plan; say "ho gaya" only when a receipt exists):\n${ag.map((a, i) => `${i + 1}. ${a.text}`).join("\n")}` : "", prepd ? `PREPARED FOR HIS AGENDA (brain job prepare_on_request, on his ask — use it, do not re-derive):\n${prepd.trim()}` : ""].filter(Boolean).join("\n\n") : "", "dressing-room/state/sitting_agenda.jsonl");
   put("kickoff", [
     `KICKOFF (from state, never from chat) — route ${route}${ctx.concept ? ` · concept '${ctx.concept}'` : ""}${ctx.routeWhy ? ` · why: ${ctx.routeWhy}` : ""}`,
     cur ? `CURRENT TASK: ${cur.id || ""} ${cur.task || ""} [${cur.track || ""}]${Array.isArray(cur.subtopics) && cur.subtopics.length ? ` — ${cur.subtopics.slice(0, 6).join(" · ")}` : ""}` : "CURRENT TASK: (none on the sprint)",
@@ -1400,7 +1407,7 @@ function selftest() {
         intents: ["2026-08-18 code · 1 turn · build"], lastReview: null, capsule, ctrl_grammar: "<<CTRL {…}>>", concept: "tokenization" };
       const rev = await assembleSittingSystem({ ...base, route: "REVISION", plan: { map: "Aaj revision?", source: "capsule", units: [{ step: null, axis: "a", kind: "question", text: "Axis a?", question: true, est_seconds: 10 }] } });
       assert("SITTING HEAD · parts in ORDER (role → how_he_learns → gaffer_law → captain → kickoff → plan → capsule → … → pacer_note) and the footer is the LAST line, naming every part",
-        rev.text.indexOf("You are THE SITTING BRAIN") < rev.text.indexOf("HOW HE LEARNS") && rev.text.indexOf("HOW HE LEARNS") < rev.text.indexOf("## §0") && rev.text.indexOf("## §0") < rev.text.indexOf("THE CAPTAIN:") && rev.text.indexOf("THE CAPTAIN:") < rev.text.indexOf("KICKOFF") && rev.text.indexOf("KICKOFF") < rev.text.indexOf("THE PLAN (pre-composed") && rev.text.indexOf("THE PLAN (pre-composed") < rev.text.indexOf("CAPSULE 'tokenization'") && rev.text.indexOf("CAPSULE") < rev.text.indexOf("THE PACER RIDES") && rev.text.trim().endsWith("]") && /\[sitting_system: role \d+ · how_he_learns \d+ · gaffer_law \d+ · captain \d+ · kickoff \d+ · plan \d+ · capsule \d+ · review_of_last EMPTY · intents \d+ · standing EMPTY · night_coach \d+ · pacer_note \d+ · assembled \d+\/60000\]$/.test(rev.footer));
+        rev.text.indexOf("You are THE SITTING BRAIN") < rev.text.indexOf("HOW HE LEARNS") && rev.text.indexOf("HOW HE LEARNS") < rev.text.indexOf("## §0") && rev.text.indexOf("## §0") < rev.text.indexOf("THE CAPTAIN:") && rev.text.indexOf("THE CAPTAIN:") < rev.text.indexOf("KICKOFF") && rev.text.indexOf("KICKOFF") < rev.text.indexOf("THE PLAN (pre-composed") && rev.text.indexOf("THE PLAN (pre-composed") < rev.text.indexOf("CAPSULE 'tokenization'") && rev.text.indexOf("CAPSULE") < rev.text.indexOf("THE PACER RIDES") && rev.text.trim().endsWith("]") && /\[sitting_system: role \d+ · how_he_learns \d+ · gaffer_law \d+ · captain \d+ · agenda EMPTY · kickoff \d+ · plan \d+ · capsule \d+ · review_of_last EMPTY · intents \d+ · standing EMPTY · night_coach \d+ · pacer_note \d+ · assembled \d+\/60000\]$/.test(rev.footer));
       assert("SITTING HEAD · THE_GAFFER §0 §2 §3 §5 §9 ride and §1/§4 do NOT (the same law the mouth's constitution keeps, nothing more)",
         rev.text.includes("## §0") && rev.text.includes("## §2") && rev.text.includes("## §3") && rev.text.includes("## §5") && rev.text.includes("## §9") && !rev.text.includes("## §1 ") && !rev.text.includes("## §4"));
       assert("SITTING HEAD · REVISION carries the WELDS (the weld IS the lesson) and the plan units numbered with step/axis/kind", rev.text.includes("WELD: Token = vocab ka tukda") && /0\. \[step - · axis a · question · \? · 10s\] Axis a\?/.test(rev.text));

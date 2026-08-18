@@ -110,6 +110,7 @@ export async function stop(opts = {}) {
   const r = { ran: 0, failed: [] };
   await runOrgan("teaching_audit.mjs", "hook", opts, r);
   await runOrgan("intent.mjs", "stop", opts, r);
+  await runOrgan("acts.mjs", "stop", opts, r);   // LAW A door 3 (18 Aug 2026): a `<<ACT {…}>>` tail on the turn → receipts, same anchor, same process
   return r;
 }
 export const SEQUENCES = { prompt, start, stop };

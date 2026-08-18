@@ -1021,6 +1021,49 @@
       "_note": "OVERHAUL Block 5 §10 (18 Aug 2026): THE ONE DARK-LANE JOB — ONE opus call a night composes TOMORROW'S ONE SITTING (map + units) in EXACTLY sitting.mjs's PLAN FILE CONTRACT, from sitting.gatherPlanContext (the same reader `open` runs — route/concept/capsule by construction), today's sitting reviews (what_changes_next · his asks · the judge's register line), calibration + nemesis (register.top_missing = the words the room wanted). Refuses BEFORE spend when tomorrow's route is PYTHON or SCRIMMAGE. The fenced json is validated by sitting's OWN validatePlan; a refused plan writes NOTHING (the note names why) and the sitting composes live at open. Units carry src:[\"prepare_tomorrow\"] so sitting's consumeSpoken stamps `sat` on THIS job the moment a unit is spoken to him (spoken = reached). THE GATE: E = sprint.json (required) · C = a unit spoken within 14 days · F = 5. at 03:20: after consolidate (02:10), the night shift (02:40), intent_digest (02:55), the diary (03:00) — the plan reads their outputs. The night's other lanes (night_coach · day_cartridge · agenda · teamtalk_am · midday_cartridge · capsule_premap) FOLD into this by THE GATE (Block 5.2)."
     },
     {
+        "id": "prepare_on_request",
+        "_added": "2026-08-18",
+        "engine": "claude",
+        "model": "opus",
+        "window": "any",
+        "priority": 80,
+        "enabled": true,
+        "max_per_day": 3,
+        "kind": "prepare_on_request",
+        "serve": "next_sitting",
+        "on_request_only": true,
+        "inputs": [
+          {
+            "path": "sitting_agenda.jsonl",
+            "required": true
+          },
+          {
+            "path": "sprint.json"
+          },
+          {
+            "path": "calibration.json"
+          },
+          {
+            "path": "weaknesses.json"
+          }
+        ],
+        "out": "prepare_on_request",
+        "surface": {
+          "kind": "code",
+          "where": "scripts/sitting.mjs open → gatherContext preparedText (brain_out/prepare_on_request/<day>.md, latest ≤ 36 h) → the head's AGENDA part (context_manifest); consumption `sat` stamped when a sitting opens carrying it"
+        },
+        "gate": {
+          "window_days": 14,
+          "event": null
+        },
+        "extra_args": [
+          "--effort",
+          "high"
+        ],
+        "_effort_note": "high — him-facing material he asked for by name (unleash Phase 5 rule).",
+        "_note": "MODELS + ACTS Block 2 (18 Aug 2026, LAW A): THE ON-REQUEST JOB — runs ONLY on his explicit ask through the act lane (acts.mjs verb job → `brain run prepare_on_request --by captain --act <id>`); it is never ticked (on_request_only). ONE opus call prepares samjhao-ready material for every OPEN agenda row (sitting.mjs openAgenda — his asks verbatim): per row a mechanism in his register, a numbered trace, the one everyday-physical analogy, one check-question, the JS→Python bridge where it applies; capsule welds quoted where a capsule exists (never re-derived). Refuses BEFORE spend when no agenda row is open. Written as brain_out/prepare_on_request/<day>.md; the next sitting's head carries it under HIS AGENDA (context_manifest agenda part) — the sitting stamps `sat` at open. THE GATE: E = sitting_agenda.jsonl (required) · C = a sitting opened carrying it within 14 days · F = 5. His default stands: it runs in the window he asked (night only if he says 'raat ko')."
+    },
+    {
       "id": "diary",
       "engine": "claude",
       "model": "sonnet",

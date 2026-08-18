@@ -124,7 +124,8 @@ import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 import { portraitStatus, portraitSection } from "./selfknowledge.mjs";   // BLOCK 5.2 — get_organism reads the self-portrait one section at a time (the address that thaws selfknowledge); pure helpers, the organ owns the file
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
-import { generate as modelsGenerate, embed as modelsEmbed, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — this mouth names ROLES (live · text · embed); the resolver picks the live model + key and says why
+import { generate as modelsGenerate, embed as modelsEmbed, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";
+import { dispatch as actDispatch } from "./acts.mjs";   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — his explicit word becomes a RECEIPT in the same turn (door 1: the Gaffer's tools)   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — this mouth names ROLES (live · text · embed); the resolver picks the live model + key and says why
 
 // M11 — the Night Shift's artifacts flow into the mouths by themselves:
 // banked probes → the scrimmage · distractors → the Re-Jirah conductor ·
@@ -1835,7 +1836,9 @@ THE MEMORY ORGAN (M2): THE SCRIBE — when a durable moment happens (he names a 
 ${identityCartridge() || ""}
 ${whoCartridge() || ""}
 
-THE CHALKBOARD (run_python — you have a real sandbox, use it): when a claim is CHECKABLE, don't assert it — call run_python, narrate what you're running in one line, and read the REAL output back. "Don't trust me, watch it run." Prove answers, execute his ideas mid-drill, verify your own numbers. Grade the CODE, never the coder: a result is data, win-only voicing on what ran clean, a miss resolves silently. Math and demos only — never his personal data (the sandbox refuses it anyway).
+THE CHALKBOARD (run_python — you have a real sandbox, use it): when a claim is CHECKABLE, don't assert it — call run_python, narrate what you're running in one line, and read the REAL output back.
+
+THE ACT LANE (his word 18 Aug 2026: "what i am explicitly saying should be done right in that moment"): when he ASKS for a thing — note this · remember this · next time start with X · speak Hinglish · add this rule · prepare material · ask me later · research this — you CALL the tool for it IN THAT TURN (take_note · remember · set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission; his words verbatim in text) and you say "ho gaya" ONLY when the tool's receipt came back ✓. A ✗ receipt is said as what could not be done, in one line. Never "note kar liya" with no tool call behind it — a note nobody executes is the exact failure he named. "Don't trust me, watch it run." Prove answers, execute his ideas mid-drill, verify your own numbers. Grade the CODE, never the coder: a result is data, win-only voicing on what ran clean, a miss resolves silently. Math and demos only — never his personal data (the sandbox refuses it anyway).
 
 THE BRIDGE (the two-speed brain): the club has a deep brain that wakes only for the rare moment that needs real reasoning. Mid-conversation you may receive bracketed NON-SPOKEN notes: [DEEP PENDING …] = it is thinking — if it fits the moment, give ONE short holding line ("ruko — isko theek se sochta hoon") and keep the flow, else stay silent; [DEEP THOUGHT …] = its answer — weave it in as your own considered second thought, in YOUR voice, never read like a memo, never mention the machinery.
 
@@ -1870,7 +1873,14 @@ const TOOL_DECLS = [
   // named standard, by the same judge on every surface.
   { name: "bank_answer", description: "BANK ONE ANSWER HE JUST GAVE — you do NOT decide whether it was right. Call the moment he finishes answering, every time, including mid-conversation. type: voice_rep (a question YOU asked that is not one of his locked axes — the normal case) · axis_weld (a Re-Jirah axis a-i from his own capsule) · tape_doubt (a tape-room rematch) · trap · interview · hidden_test · adversarial · scrimmage. concept = the capsule/topic id · axis = a-i for axis_weld · index = the item number for tape_doubt/trap/interview/hidden_test/adversarial/scrimmage · question = EXACTLY what you asked him, verbatim · answer = what he said, as fully as you have it · gut = the word he committed BEFORE answering (knew|shaky|guessed). NO GUT-WORD, NO REP — ask him for it, then call. Nothing is spent and nothing is decided here. Tell him it is banked; do NOT tell him whether he was right, because you do not know yet and guessing is what this door exists to stop.", parameters: { type: "OBJECT", properties: { type: { type: "STRING" }, concept: { type: "STRING" }, axis: { type: "STRING" }, index: { type: "NUMBER" }, question: { type: "STRING" }, answer: { type: "STRING" }, gut: { type: "STRING" } }, required: ["type", "concept", "question", "answer", "gut"] } },
   { name: "judge_round", description: "CLOSE THE ROUND AND GET THE VERDICTS — call when the drilling stops (he moves on, or says bas/enough/done, or the sitting ends). ONE call grades everything banked since the last one, against his own answer keys where they exist and his own capsule ground where they do not, and dispatches each verdict to the organ that owns it. It takes ~20 seconds; say you are checking his answers and then read the verdicts back to him honestly, including the ones he missed. If it reports items still outstanding, say so — they are judged again, never guessed at.", parameters: { type: "OBJECT", properties: {} } },
-  { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM, for evening routing.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+  { name: "take_note", description: "Capture a doubt/thought he voiced, VERBATIM. It is ALSO EXECUTED: the act lane marks it as a hippocampus moment and returns a `receipt` — say 'note ho gaya' ONLY when the receipt came back; a ✗ is said as what could not be done.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, kind: { type: "STRING", description: "doubt | win | preference | thread (default thread)" } }, required: ["text"] } },
+  // LAW A — THE ACT LANE (MODELS + ACTS Block 2, 18 Aug 2026): six THIN tools, each = acts.mjs → an owner's CLI → a receipt in the same turn. His words VERBATIM in text.
+  { name: "set_agenda", description: "HIS EXPLICIT ASK FOR THE NEXT SITTING ('kal pehle 4 concepts samjhao', 'agli baar X se shuru') — lands on the sitting's agenda through its owner; the next sitting OPENS on it. text = his words verbatim. Returns a receipt; say 'agenda pe chadh gaya' only on ✓.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+  { name: "set_preference", description: "A STANDING PREFERENCE he states about how you speak/behave ('Hinglish bolo', 'greeting pehle', 'accent hatao') — a standing row through gaffer_state, read into your constitution. text = his words verbatim; axis = how_to_speak (default) | pace | register. Receipt back.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, axis: { type: "STRING" } }, required: ["text"] } },
+  { name: "add_rule", description: "A TEACHING RULE he adds ('ek message ek idea', 'har baar you-are-here bolo') — through teaching_contract's owner (drift-counted from now on). text = his words; id = a short kebab id. Receipt back.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" }, id: { type: "STRING" } }, required: ["text"] } },
+  { name: "queue_job", description: "HIS ASK FOR PREPARED MATERIAL ('samjhao ke liye 4 concepts taiyaar karo', 'kal ka plan abhi bana do') — runs an EXISTING brain job NOW through brain.mjs on his word (his ask = the gate's evidence): job = 'prepare_on_request' for material that lands in the next sitting's head; never invent a job id. Receipt back.", parameters: { type: "OBJECT", properties: { job: { type: "STRING" }, text: { type: "STRING" } }, required: ["job", "text"] } },
+  { name: "file_card", description: "A DECISION ONLY HE CAN MAKE LATER ('yeh mujhse baad mein poochna', 'kal decide karunga') — one one-line card at the next anchor through captains_call. text = the one line, his words. Receipt back. (Minute-timers stay on set_reminder.)", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+  { name: "fire_mission", description: "RESEARCH HE ASKS FOR ('is topic pe research karo', 'mission chalao X') — stages a topic mission through scout.mjs; firing rides his `fire`. text = the topic, his words. Receipt back.", parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
@@ -2234,8 +2244,20 @@ function execTool(name, args, deps = {}) {
       // it is append-only, VERBATIM, his own words, and this process can append
       // mid-rewrite while he is still talking. Flipping it or dropping the field is
       // a schema call on a verbatim store — HIS, not a session's.
-      append(NOTES, JSON.stringify({ ts: new Date().toISOString(), text: String(args.text), routed: false }) + "\n");
-      return { ok: true };
+      // LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the note is ALSO AN ACT — dispatched to the
+      // owner (hippocampus mark <kind>) in this turn; the row this mouth appends carries
+      // routed = "an act row exists for this" (the flag finally has a setter — set at write
+      // time on a NEW row, never by rewriting an old one; append-only stands). The receipt rides
+      // the tool result so the mouth can say "ho gaya" only when it is true.
+      const act = (deps.act || actDispatch)({ door: "gaffer", verb: "note", args: { text: String(args.text), kind: args.kind } });
+      append(NOTES, JSON.stringify({ ts: new Date().toISOString(), text: String(args.text), routed: !!act.ok, act_id: act.id }) + "\n");
+      return { ok: true, receipt: act.ok ? `✓ ${act.owner} · ${act.receipt}` : `✗ ${act.error}`, act_id: act.id, executed: !!act.ok };
+    }
+    // LAW A — the six thin act tools (door 1). Each is ONE dispatch; the receipt is the answer.
+    if (["set_agenda", "set_preference", "add_rule", "queue_job", "file_card", "fire_mission"].includes(name)) {
+      const verb = { set_agenda: "agenda", set_preference: "pref", add_rule: "rule", queue_job: "job", file_card: "card", fire_mission: "mission" }[name];
+      const act = (deps.act || actDispatch)({ door: "gaffer", verb, args: { text: String(args.text || ""), axis: args.axis, id: args.id, job: args.job } });
+      return { ok: !!act.ok, receipt: act.ok ? `✓ ${act.owner} · ${act.receipt}` : `✗ ${act.error}`, act_id: act.id, executed: !!act.ok, say: act.ok ? "ho gaya — receipt aayi" : "nahi hua — bolo kya nahi ho paya" };
     }
     if (name === "checkpoint") {
       append(join(OUT_DIR, localDate(now) + ".md"), "GAFFER(checkpoint): " + String(args.summary || "").slice(0, 500) + "\n");
@@ -2696,8 +2718,12 @@ function execTool(name, args, deps = {}) {
       return { ok: true, said: String(said || "").trim().slice(0, 200) };
     }
     if (name === "remember") {
+      // LAW A (18 Aug 2026): the spoken gate stays (hippocampus remember — canon after his explicit
+      // "yaad rakhna"); the act lane's row is the RECEIPT and stages the same words on the identity
+      // queue too (Law 4: nothing is canon until he confirms; the queue is where he confirms).
       const said = sh("hippocampus.mjs", ["remember"], String(args.text || ""));
-      return { ok: true, said: String(said || "").trim().slice(0, 200) };
+      const act = (deps.act || actDispatch)({ door: "gaffer", verb: "fact", args: { text: String(args.text || "") } });
+      return { ok: true, said: String(said || "").trim().slice(0, 200), receipt: act.ok ? `✓ staged too · ${act.receipt}` : `staging ✗ ${act.error}`, act_id: act.id };
     }
     if (name === "forget") {
       const said = sh("hippocampus.mjs", ["forget", String(args.id || "")], "");
@@ -3321,8 +3347,16 @@ async function selftest() {
     calls.some(c => c.script === "gaffer_brain.mjs" && c.argv[0] === "judge-round"));
   assert("unknown tool → error not crash", "error" in execTool("nope", {}, { sh }));
 
-  execTool("take_note", { text: "socha tha embeddings deterministic hote" }, { sh, append });
-  assert("take_note appends VERBATIM to dugout_notes (own file)", appends.some(a => a.path === NOTES && a.text.includes("socha tha embeddings deterministic hote") && a.text.includes('"routed":false')));
+  // LAW A (18 Aug 2026): take_note is ALSO an act — the injected `act` stands in for acts.mjs (never the live owner here)
+  const actCalls = [];
+  const actFx = (a) => { actCalls.push(a); return a.verb === "mission" ? { ok: false, id: "afx2", error: "scout lane down" } : { ok: true, id: "afx1", owner: "hippocampus.mjs", receipt: '{"ok":true,"id":"m9"}' }; };
+  const tn = execTool("take_note", { text: "socha tha embeddings deterministic hote" }, { sh, append, act: actFx });
+  assert("take_note appends VERBATIM to dugout_notes (own file) — and the row's routed = an act row exists (LAW A: the flag finally has a setter, at write time)", appends.some(a => a.path === NOTES && a.text.includes("socha tha embeddings deterministic hote") && a.text.includes('"routed":true') && a.text.includes('"act_id":"afx1"')) && actCalls[0].verb === "note" && actCalls[0].door === "gaffer" && /✓ hippocampus/.test(tn.receipt) && tn.executed === true);
+  const tnDry = execTool("take_note", { text: "dry note" }, { sh, append, act: () => ({ ok: false, id: "afx0", error: "owner errored" }) });
+  assert("take_note when the owner errors: routed:false on the row, receipt ✗ with the owner's error — never a fake done", appends.some(a => a.path === NOTES && a.text.includes("dry note") && a.text.includes('"routed":false')) && /✗ owner errored/.test(tnDry.receipt) && tnDry.executed === false);
+  const agx = execTool("set_agenda", { text: "kal pehle 4 samjhao" }, { sh, append, act: actFx });
+  const fm = execTool("fire_mission", { text: "RAG audit" }, { sh, append, act: actFx });
+  assert("the six thin act tools (set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission) are declared and each is ONE dispatch with the receipt as the answer; a ✗ says what could not be done", ["set_agenda", "set_preference", "add_rule", "queue_job", "file_card", "fire_mission"].every((n) => TOOL_DECLS.some((t) => t.name === n)) && actCalls.find((a) => a.verb === "agenda").args.text === "kal pehle 4 samjhao" && agx.ok && /✓/.test(agx.receipt) && !fm.ok && /✗ scout lane down/.test(fm.receipt));
   execTool("checkpoint", { summary: "staged tokenization rematch, he won clean" }, { sh, append });
   assert("checkpoint writes the match record (transcript channel)", appends.some(a => String(a.path).includes("dugout") && a.text.startsWith("GAFFER(checkpoint): staged tokenization")));
 
@@ -3623,7 +3657,7 @@ async function selftest() {
   assert("MODEL: the live role's resolved model is the default (LAW M — the resolver names it, this file never does), swappable via prefs/env", DEFAULT_MODEL === modelsResolve("live", { env: "DUGOUT_MODEL" }).model && /live|audio/.test(DEFAULT_MODEL) && cfg0().model === DEFAULT_MODEL);
 
   const cfg = buildConfig(["k1"]);
-  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 34);   // 34 since BLOCK 3 (18 Aug: -set_depth (legacy) +open_sitting +close_sitting — the sitting door); 33 since BLOCK 2 (17 Aug: -log_reps -grade_rejirah -retire_doubt, +bank_answer +judge_round — this surface stopped deciding what is true); 34 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
+  assert("session config carries GAFFER soul + fingerprint + tools", cfg.system.includes("THE GAFFER") && cfg.system.includes("ADHD-PI") && cfg.tools[0].functionDeclarations.length === 40);   // 34 since BLOCK 3 (18 Aug: -set_depth (legacy) +open_sitting +close_sitting — the sitting door); 33 since BLOCK 2 (17 Aug: -log_reps -grade_rejirah -retire_doubt, +bank_answer +judge_round — this surface stopped deciding what is true); 34 since Phase 8 (get_card + get_mission, 14 Aug — the doors to the data it was told about and could never open); 31 = B14 get_iceberg + answer_card (12 Aug); 29 = the 11 Aug voice-round wire (grade_rejirah), 28 = PHASE H H3 get_model, 27 = H6 get_diary, 26 = LADDER F1
   // BLOCK 3 (18 Aug 2026): the proactivity section and the day thread moved OUT of the live constitution (frozen in the legacy body; the page still injects [EARNED WHISPER] with its own instructions, and the day thread rides the sitting head / talk.mjs). The recall tool hint stays live.
   assert("shadow-gate section is LEGACY (frozen body carries EARNED PROACTIVITY; the live constitution ≤ 2k tokens does not)", buildSystemInstructionLegacy().includes("EARNED PROACTIVITY") && !cfg.system.includes("EARNED PROACTIVITY"));
   assert("day thread is LEGACY (frozen body) — the memory tool hint (semantic_recall) still rides live", buildSystemInstructionLegacy().includes("THE DAY THREAD") && cfg.system.includes("semantic_recall") && typeof buildDayThreadSection() === "string");
@@ -3677,7 +3711,7 @@ async function selftest() {
     assert("ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back",
       typeof buildRehydrate(new Date(), LIVE_TAIL_BUDGET) !== "undefined");
     assert("ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface",
-      g.tools[0].functionDeclarations.length === 34   // 34 since Block 3 (18 Aug): the sitting door (open_sitting + close_sitting) in, set_depth frozen out
+      g.tools[0].functionDeclarations.length === 40   // 34 since Block 3 (18 Aug): the sitting door (open_sitting + close_sitting) in, set_depth frozen out
       && ["get_capsule", "bank_answer", "judge_round", "get_organism", "get_club_report", "get_context", "get_card", "get_mission", "open_sitting", "close_sitting"]
         .every((n) => g.tools[0].functionDeclarations.some((d) => d.name === n)));
     assert("ONE DOOR — and it still carries every teaching law, in the same session he does everything else in",
@@ -3698,7 +3732,7 @@ async function selftest() {
       && recorded.length === 1 && recorded[0].lane === "selfknowledge" && recorded[0].kind === "sat"
       && fresh.portrait.fresh === true && fresh.portrait.regenerating === null && fresh.portrait.section_index === 0 && none.portrait.absent === true);
     assert("5.2 get_organism · the tool declaration offers `section` and the constitution's lecture law still names get_organism (34 tools — the same door, one more parameter)",
-      TOOL_DECLS.find((t) => t.name === "get_organism").parameters.properties.section && TOOL_DECLS.length === 34);
+      TOOL_DECLS.find((t) => t.name === "get_organism").parameters.properties.section && TOOL_DECLS.length === 40);
   }
   // OVERHAUL Block 5.2 — THE WALL'S `opened` BEACON lands here and is stamped through the owner
   {
@@ -4220,7 +4254,7 @@ async function selftest() {
     execTool("mark_moment", { kind: "doubt", text: "kv cache confusion" }, { sh: msh });
     assert("SCRIBE tool routes through hippocampus.mjs (owner writes)", memCalls.some(c => c.script === "hippocampus.mjs" && c.argv.join(" ") === "mark doubt" && c.input === "kv cache confusion"));
     assert("SCRIBE: bad kind rejected at the bridge", execTool("mark_moment", { kind: "vibe", text: "x" }, { sh: msh }).ok === false);
-    execTool("remember", { text: "mornings are my best hours" }, { sh: msh });
+    execTool("remember", { text: "mornings are my best hours" }, { sh: msh, act: () => ({ ok: true, id: "afx", receipt: "staged" }) });   // LAW A: the act row is injected — the live ledger is never touched here
     execTool("forget", { id: "abc123" }, { sh: msh });
     assert("remember/forget route through the owner too", memCalls.some(c => c.argv[0] === "remember" && c.input.includes("mornings")) && memCalls.some(c => c.argv.join(" ") === "forget abc123"));
     const sys = buildSystemInstruction();
@@ -4783,7 +4817,7 @@ async function selftest() {
     assert("club report: the dormant organs explain their own silence", (rep.twin.note || rep.twin.status === "ok") && (rep.calibration.note || rep.calibration.gap !== null));
     assert("club report: what awaits HIS word is named", "awaiting_his_word" in rep.proactivity && "earned" in rep.proactivity);
     assert("BOARDROOM law travels: full briefing, zero invented, dormancy named", buildSystemInstruction().includes("THE BOARDROOM BRIEFING") && buildSystemInstruction().includes("DORMANT") && buildSystemInstruction().includes("zero invented"));
-    assert("34 club tools now (18 Aug BLOCK 3: the sitting door open_sitting + close_sitting in, set_depth frozen out — 17 Aug BLOCK 2: the three self-judging doors out, bank_answer + judge_round in — 14 Aug Phase 8 added get_card + get_mission, the doors to data it was TOLD about and could never open)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34);
+    assert("40 club tools now (18 Aug MODELS + ACTS Block 2: the six LAW A act tools set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission in — was 34: 18 Aug BLOCK 3: the sitting door open_sitting + close_sitting in, set_depth frozen out — 17 Aug BLOCK 2: the three self-judging doors out, bank_answer + judge_round in — 14 Aug Phase 8 added get_card + get_mission, the doors to data it was TOLD about and could never open)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 40);
   }
 
   // M11 — the Night Shift flows into the mouths by itself
@@ -4810,7 +4844,7 @@ async function selftest() {
     assert("briefing idle window is long (she listens, he's quiet)", bc.vad.idle_disconnect_ms >= 300000);
     assert("page whitelists the briefing modes + omits empty tools on the wire", PAGE.includes("'brief-club'") && PAGE.includes("CFG.tools&&CFG.tools.length"));
     assert("a briefing handle can never resume into the Gaffer (mode-fenced bank)", (() => { const s = []; saveSessionHandle({ handle: "h", key_index: 0, model: DEFAULT_MODEL, mode: "brief-club" }, { writeJson: (p, o) => s.push(o) }); return s[0].mode === "brief-club"; })());
-    assert("gaffer + scrimmage modes unchanged by the briefings", buildConfig(["k1"]).tools[0].functionDeclarations.length === 34 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
+    assert("gaffer + scrimmage modes unchanged by the briefings (34 tools + the six LAW A act tools, 18 Aug 2026 = 40)", buildConfig(["k1"]).tools[0].functionDeclarations.length === 40 && buildConfig(["k1"], "scrimmage").system.includes("EXAMINER"));
   }
 
   // SCAR-TABLE, in the served page (probed live 12 Jul 2026 — see header):

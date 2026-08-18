@@ -579,6 +579,22 @@ async function main() {
     save(s, standing); console.log(`gaffer_state: you-are-here → ${s.where}`); return;
   }
   if (cmd === "reseed") { const s = state || emptyState(); s.reseeds++; save(s, standing); console.log(`gaffer_state: reseed #${s.reseeds} recorded`); return; }
+  if (cmd === "standing" && (process.argv[3] || "").toLowerCase() === "add") {
+    // THE ACT LANE'S PREF DOOR (MODELS + ACTS Block 2, 18 Aug 2026 — LAW A): his explicit standing
+    // preference ("Hinglish bolo", "greeting pehle") lands as a standing row through the OWNER, by
+    // `acts.mjs` (verb pref) — the word gate that used to mint these was purged (§9.2); this row is
+    // by:"captain" (his word, in the same turn, with a receipt), never a keyword's guess. Same
+    // shape observe() writes; `forget <axis>` is its declared reverse.
+    const flag = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : undefined; };
+    const axis = String(flag("axis") || "how_to_speak").slice(0, 40), text = String(flag("text") || "").trim().slice(0, 400);
+    if (!text) { console.error("usage: gaffer_state.mjs standing add --axis <axis> --text \"…\""); process.exit(1); }
+    const st = standing || { instructions: [], _writer: "gaffer_state.mjs" };
+    const now = new Date();
+    st.instructions = st.instructions.filter((i) => !(i.axis === axis && i.by === "captain" && i.text === text));   // idempotent on the same word
+    st.instructions.push({ axis, label: axis, text, at: now.toISOString(), day: istDay(now), by: "captain" });
+    save(state || emptyState(), st);
+    console.log(`gaffer_state: standing add [${axis}] by captain — ${text.slice(0, 120)} (${st.instructions.length} standing row(s))`); return;
+  }
   if (cmd === "standing") {
     // THE PURGE (overhaul 18 Aug 2026 §9.2, Block 0). `standing purge` moves EVERY row to
     // gaffer_standing.legacy.json — appended, never overwritten: the layering law, and

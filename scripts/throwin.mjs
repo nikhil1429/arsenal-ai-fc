@@ -626,6 +626,25 @@ async function main() {
   // re-ingests every 15 minutes with a fresh arrival stamp (new dedup key).
   for (const id of priorRepIds) existing.add(id);
   const { balls, reps, maxTime } = ingest(res.text, existing);
+  // LAW A — THE ACT LANE, door 4 (MODELS + ACTS Block 2, 18 Aug 2026): every ball is PARSED by a
+  // `lite` model under a strict schema (acts.mjs parseBall — his words verbatim in args.text;
+  // unparseable / lane down / an invented verb = ONE note, never dropped) and DISPATCHED through
+  // the owners in this run; the ball row this organ appends carries routed = "an act row exists"
+  // (set at write time on the NEW row — the append-only law stands) + the act ids. A ball that
+  // used to lie in loose_balls.jsonl with routed:false forever now executes the moment it lands.
+  if (balls.length && !process.env.ARSENAL_THROWIN_NO_ACTS) {
+    try {
+      const acts = await import("./acts.mjs");
+      for (const b of balls) {
+        const parsed = await acts.parseBall(b.text);
+        const rows = acts.dispatchAll(parsed.acts, "ball");
+        b.routed = rows.some((r) => r.ok);
+        b.acts = rows.map((r) => ({ id: r.id, verb: r.verb, ok: r.ok }));
+        b.parsed_by = parsed.model || null;
+        console.log(`throwin: ball ${b.id} → ${rows.map((r) => `${r.verb} ${r.ok ? "✓" : "✗"}`).join(" · ")}${parsed.parsed ? "" : " (unparsed → note verbatim)"}${parsed.lane_why ? ` · lite lane: ${parsed.lane_why}` : ""}`);
+      }
+    } catch (e) { console.log(`throwin: act lane threw ${String(e && e.message || e).slice(0, 120)} — balls land unrouted (routed:false), nothing lost`); }
+  }
   if (balls.length) {
     mkdirSync(dirname(BALLS), { recursive: true });
     appendFileSync(BALLS, balls.map(b => JSON.stringify(b)).join("\n") + "\n");

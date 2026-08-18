@@ -94,7 +94,8 @@ import { EVENING } from "./conductor.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared; the ledger feeds caught-silent
 import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREEZE: commits since FREEZE.md that touched a guarded path without a card ⇒ RED freeze-broken
-import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
+import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";
+import { stats as actsStats, findings as actsFindings } from "./acts.mjs";   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -285,6 +286,9 @@ export function gather(now = new Date()) {
   // LAW M (18 Aug 2026): the model board — models.json (models.mjs sole writer, probed nightly below)
   try { w.models = modelsBoard(); }
   catch (e) { swallow("gather: modelsBoard() unreadable → no model line tonight", e); w.models = null; }
+  // LAW A (18 Aug 2026): the act ledger's 7-day stats (acts.mjs sole reader of its own file)
+  try { w.acts = actsStats(7); }
+  catch (e) { swallow("gather: actsStats() unreadable → no acts line tonight", e); w.acts = null; }
   // THE WATCHER'S OWN PULSE (15 Aug 2026). gaffer_brain.mjs is the organ that
   // decides what the Gaffer does next; it is spawned fire-and-forget from the
   // /transcript door and every one of its failure paths exits 0 ON PURPOSE, so
@@ -615,6 +619,9 @@ export function checks(w) {
   // INFO quota-keys. `w.models === undefined` = the fixture did not model it → silent;
   // null = never probed → models.mjs says WARN model-never-probed.
   if (w.models !== undefined) F.push(...modelsFindings(w.models));
+  // LAW A · THE ACT LANE (MODELS + ACTS Block 2): acts.mjs owns the findings — RED act-failed (his act
+  // failed at the owner and stayed unfixed > 24 h) · INFO acts-daily (the counts). undefined = not modelled.
+  if (w.acts) F.push(...actsFindings(w.acts));
 
   // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
   // morning's lesson file never appeared. The map, the examiner probe, the
@@ -1910,6 +1917,15 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       f && f.level === "INFO");
   }
 
+  // LAW A (18 Aug 2026) — the act lane's findings ride checks() when the fixture models it
+  {
+    const stale = { days: 7, n: 4, ok: 3, failed: 1, undone: 0, by_door: { gaffer: 4 }, by_verb: { note: 4 }, stale_failed: [{ id: "a1", verb: "mission", error: "scout lane down", ts: "2026-08-17T10:00:00Z" }], last: null };
+    const F2 = checks({ ...base, acts: stale });
+    assert("LAW A — his act failed at the owner and stayed unfixed > 24 h ⇒ RED act-failed (from acts.mjs's own findings) + INFO acts-daily",
+      F2.some((x) => x.id === "act-failed" && x.level === "RED" && /mission/.test(x.finding)) && F2.some((x) => x.id === "acts-daily" && x.level === "INFO"));
+    assert("…silent when the fixture does not model the ledger; INFO only when every act succeeded",
+      !checks({ ...base }).some((x) => /^act/.test(x.id)) && checks({ ...base, acts: { ...stale, failed: 0, stale_failed: [] } }).every((x) => x.id !== "act-failed"));
+  }
   // LAW M (18 Aug 2026) — the model board's findings ride checks() when the fixture models it
   {
     const dead = { at: new Date().toISOString(), fresh: true, age_h: 1, keys: { n: 9, ok: [0, 1, 2, 3, 4, 5, 6, 7, 8], quota: [], bad: [] }, roles: { text: { chosen: null, dead: true, candidates: [{ model: "gemini-x-flash", class: "quota" }] } } };   /* models-literal-ok: fixture */

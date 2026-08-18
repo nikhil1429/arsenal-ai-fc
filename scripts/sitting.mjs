@@ -77,6 +77,8 @@ const F = {
   config: () => join(STATE_DIR, "sitting_config.json"),
   head: () => join(STATE_DIR, "brain_out", "sitting", "sitting_system.md"),
   prepare: (day) => join(STATE_DIR, "brain_out", "prepare", `${day}.json`),
+  agenda: () => join(STATE_DIR, "sitting_agenda.jsonl"),          // LAW A (18 Aug 2026): his explicit asks for the NEXT sitting — this organ's SOLE WRITE (acts.mjs verb agenda rides `agenda add`)
+  prepared: (day) => join(STATE_DIR, "brain_out", "prepare_on_request", `${day}.md`),   // brain job prepare_on_request (Opus, on his ask) — read at open, never written here
 };
 export const PORT = Number(process.env.ARSENAL_SITTING_PORT || 4117);
 export const SITTING_URL = `http://127.0.0.1:${PORT}`;
@@ -87,7 +89,12 @@ const TEXT_LOG = join(HERE, "sitting.log");            // *.log is gitignored; s
 export const GUT_WORDS = Object.freeze(["knew", "shaky", "guessed"]);
 export const ROUTES = Object.freeze(["FORGE", "REJIRAH", "SCRIMMAGE", "PYTHON", "REVISION"]);
 export const TURN_CLASSES = Object.freeze(["deliver", "respond", "compose", "judge"]);
-export const SITTING_CTRL_GRAMMAR = '<<CTRL {"class":"respond|compose","bank":{"axis":"a-i","gut":"knew|shaky|guessed"}|null,"unit_done":true|false,"question_asked":true|false,"next":"deliver|wait"}>>';
+// LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the tail carries `acts` — his explicit asks, dispatched by the
+// driver through acts.mjs BEFORE the next unit (note · fact · pref · rule · agenda · job · card · reminder ·
+// mission; args.text = HIS WORDS VERBATIM) — and `claims_done` (the model DECLARES it told him something is
+// done; schema, never a keyword scan of the reply). claims_done:true with acts:[] = a fake done: the driver
+// hands the reply back ONCE ("act do ya daawa hatao"); a second miss is teaching-contract drift `fake-done`.
+export const SITTING_CTRL_GRAMMAR = '<<CTRL {"class":"respond|compose","bank":{"axis":"a-i","gut":"knew|shaky|guessed"}|null,"unit_done":true|false,"question_asked":true|false,"next":"deliver|wait","acts":[{"verb":"note|fact|pref|rule|agenda|job|card|reminder|mission","args":{"text":"<HIS words verbatim>","kind":"doubt|win|preference|thread","axis":"<pref axis>","job":"<existing brain job id>"}}],"claims_done":true|false}>>';
 const CTRL_RE = /<<CTRL\s*(\{[\s\S]*?\})\s*>>\s*$/;
 const CONTINUE_RE = /^\s*(?:(?:haan|haa|han|ha|ok(?:ay)?|theek|thik|chalo|acha|accha)[,\s]+)?(haan|haa|han|ha|hmm+|hm+|ok(ay)?|theek( hai)?|thik( hai)?|aage( badho)?|next|chalo|continue|go( on)?|bolo|sahi( hai)?|yes|yeah|yep|samajh (aa )?gaya|samjha|got it|done|clear( hai)?|acha|accha|shuru( karo| karein| kar| ho jao)?|start( karo)?|let'?s (go|start))\s*[.!,]*\s*$/i;   // "haan shuru karo" (the live proof's first line) is a continue too
 // while a BANKABLE question is pending, only an explicit skip moves on without an answer (his "aage" = "chhodo")
@@ -126,6 +133,26 @@ function readJson(p) { try { return JSON.parse(readFileSync(p, "utf8")); } catch
 function readRows(p) { try { return readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } }
 function writeAtomic(p, obj) { mkdirSync(dirname(p), { recursive: true }); const tmp = `${p}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify(obj, null, 2)); renameSync(tmp, p); }
 function appendRow(p, row) { mkdirSync(dirname(p), { recursive: true }); appendFileSync(p, JSON.stringify(row) + "\n"); }
+// ── LAW A (MODELS + ACTS Block 2, 18 Aug 2026) — HIS AGENDA for the next sitting ──
+// sitting_agenda.jsonl (this organ's sole write; append-only, his words verbatim): rows
+// {kind:"agenda", id, ts, text, by} · {kind:"served", of, sitting_id, ts} · {kind:"done", of, ts} ·
+// {kind:"drop", of, ts}. acts.mjs verb `agenda` rides `agenda add`; `open` serves every open row
+// into the head (his asks FIRST) and marks them served; `close` marks the served rows done.
+export function agendaRows() { return readRows(F.agenda()); }
+export function openAgenda(rows = agendaRows()) {
+  const closed = new Set(rows.filter((r) => r.kind === "done" || r.kind === "drop").map((r) => r.of));
+  return rows.filter((r) => r.kind === "agenda" && r.id && !closed.has(r.id)).map((r) => ({ id: r.id, ts: r.ts, text: r.text, by: r.by || "captain", served: rows.some((x) => x.kind === "served" && x.of === r.id) }));
+}
+export function agendaAdd(text, { by = "captain", now = new Date() } = {}) {
+  const t = String(text || "").trim().slice(0, 500);
+  if (!t) return { ok: false, why: "agenda needs his words" };
+  const dup = openAgenda().find((r) => r.text === t);
+  if (dup) return { ok: true, id: dup.id, dup: true };
+  const id = `ag${now.getTime().toString(36)}`;
+  appendRow(F.agenda(), { kind: "agenda", id, ts: now.toISOString(), text: t, by });
+  return { ok: true, id };
+}
+export function agendaMark(kind, ids, extra = {}, now = new Date()) { for (const id of ids) appendRow(F.agenda(), { kind, of: id, ts: now.toISOString(), ...extra }); return ids.length; }
 const nowISO = () => new Date().toISOString();
 const istDay = (d = new Date()) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);   // his day is IST (captain profile tz)
 const clip = (s, n) => { s = String(s ?? ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
@@ -502,6 +529,10 @@ export function createSitting(deps = {}) {
     try {
       head = await assembleHead({ ...ctx, plan, ctrl_grammar: SITTING_CTRL_GRAMMAR, ceiling: cfg.head_ceiling_chars });
       mkdirSync(dirname(F.head()), { recursive: true }); writeFileSync(F.head(), head.text, "utf8");
+      // LAW A: the agenda rows this head carries are SERVED (the next sitting opens on them; close marks them done)
+      if (Array.isArray(ctx.agenda) && ctx.agenda.length) { try { agendaMark("served", ctx.agenda.filter((a) => !a.served).map((a) => a.id), { sitting_id: S.id }); S.agenda_ids = ctx.agenda.map((a) => a.id); } catch (e) { log(`sitting: agenda served-mark failed ${clip(e && e.message, 80)}`); } }
+      // LAW A: the head carried prepare_on_request's material → the gate's C for that job is stamped (reached him = the sitting he asked it for opened on it)
+      if (ctx.preparedText) { try { const p = recordConsumption({ job: "prepare_on_request", kind: "sat", by: `sitting ${S.id} (head carries the prepared material)` }); if (p && p.catch) p.catch(() => { }); } catch { /* the stamp is best-effort */ } }
       inputs.push(...(head.parts || []).filter((p) => p && p.present && p.file).map((p) => p.file));
     } catch (e) { log(`sitting: head assembly failed: ${String(e && e.message || e).slice(0, 200)}`); }
     S.head_chars = head ? head.text.length : 0;
@@ -604,6 +635,8 @@ export function createSitting(deps = {}) {
       standing: readJson(join(STATE_DIR, "gaffer_standing.json")),
       nightCoachText: readText(join(STATE_DIR, "brain_out", "night_coach", `${day}.md`)),
       prepareText: readText(join(STATE_DIR, "brain_out", "prepare", `${day}.md`)),
+      agenda: openAgenda(),                                              // LAW A: his explicit asks for THIS sitting (acts.mjs verb agenda) — served first
+      preparedText: readText(F.prepared(day)) || readText(F.prepared(istDay(new Date(now().getTime() - 86400000)))),   // LAW A: what prepare_on_request (Opus, on his ask) prepared — today's, else yesterday's (asked at night, met in the morning)
     };
   }
 
@@ -689,6 +722,7 @@ export function createSitting(deps = {}) {
       pacer.text ? pacer.text : "",
       `[SITTING ${S.id} · turn ${job.n} · surface ${job.surface} · route ${S.route}${S.concept ? ` '${S.concept}'` : ""} · plan ${S.cursor}/${S.plan.length} · pending_question: ${S.pending_question ? "YES (axis " + (S.pending_question.axis || "-") + "): " + clip(S.pending_question.text, 120) : "no"} · next unit: ${nextPreview}]`,
       `CAPTAIN: ${job.text}`,
+      S.last_receipts && S.last_receipts.length ? `[DRIVER · RECEIPTS of your last acts: ${S.last_receipts.join(" · ")} — say "ho gaya" only for a ✓; a ✗ is said as what could not be done]` : "",
       `[DRIVER: reply ≤ ${cfg.seat_words} spoken words, Hinglish, ONE idea; if he answered the pending question — do NOT grade it (bank, do not judge): acknowledge, take his gut-word (ask ONCE if missing), set bank in the tail; if he asked a doubt — answer it small and hand back a micro-question. The pacer lines above are for YOUR compliance — never read them out, never quote their numbers; the ONE exception is a CONTEXT WARNING, which you tell him in one plain sentence. End with the CTRL tail on its own last line: ${SITTING_CTRL_GRAMMAR}]`,
     ].filter(Boolean).join("\n");
     let r = await session.send(msg);
@@ -713,7 +747,26 @@ export function createSitting(deps = {}) {
       logTurn({ turn: job.n, class: "respond", surface: job.surface, chars_in: job.text.length, latency_ms: lat, tokens, model: cfg.model, effort: cfg.effort.compose, session_id: r.session_id || S.claude_session_id, error: clip(r.error, 200), resumed, pacer_failed: pacer.failed });
       save(); return;
     }
-    const { spoken, ctrl, had_tail } = parseCtrl(r.text);
+    let { spoken, ctrl, had_tail } = parseCtrl(r.text);
+    // LAW A (18 Aug 2026) — THE ACT LANE, door 2: his explicit asks in the tail are dispatched NOW,
+    // before the next unit; receipts ride the next DRIVER note. NO-FAKE-DONE: claims_done without an
+    // act → the reply goes back ONCE; a second miss = teaching-contract drift `fake-done` (auto, reversible).
+    let actRows = [];
+    if (ctrl && ctrl.claims_done === true && !(Array.isArray(ctrl.acts) && ctrl.acts.length) && !S.fake_done_retry) {
+      S.fake_done_retry = (S.fake_done_retry || 0) + 1;
+      const r2 = await session.send(`[DRIVER: tumne "ho gaya / kar diya" ka daawa kiya par tail mein koi act nahi — ACT DO ya DAAWA HATAO. Same reply dobara do: ya to acts:[…] mein us kaam ka verb+args (uske shabd verbatim), ya claims_done:false aur wahi baat bina "ho gaya" ke.]`);
+      if (r2.ok) { r = r2; ({ spoken, ctrl, had_tail } = parseCtrl(r.text)); }
+      if (ctrl && ctrl.claims_done === true && !(Array.isArray(ctrl.acts) && ctrl.acts.length)) {
+        try { spawnSync(process.execPath, [join(HERE, "teaching_contract.mjs"), "autohit", "fake-done", "--why", `sitting ${S.id} turn ${job.n}: claimed done twice with no act`], { encoding: "utf8", timeout: 20000, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } }); } catch { /* the drift count is best-effort; the reply still speaks */ }
+        log(`sitting: fake-done — turn ${job.n} claimed done twice with no act (teaching_contract autohit fake-done)`);
+      }
+    }
+    if (ctrl && Array.isArray(ctrl.acts) && ctrl.acts.length) {
+      try { const acts = deps.acts || await import("./acts.mjs"); actRows = acts.dispatchAll(ctrl.acts.slice(0, 6), "sitting"); }
+      catch (e) { log(`sitting: acts dispatch threw ${clip(e && e.message, 120)}`); }
+      S.last_receipts = actRows.map((a) => `${a.verb} ${a.ok ? "✓" : "✗"}${a.ok ? "" : ` (${clip(a.error, 60)})`}`);
+      for (const a of actRows) log(`sitting: act ${a.verb} ${a.ok ? "✓" : "✗"} ${a.id} — ${clip(a.ok ? a.receipt : a.error, 100)}`);
+    }
     const cls2 = ctrl && ctrl.class === "compose" ? "compose" : "respond";
     S.stats.by_class[cls2]++; S.stats.latency_ms[cls2].push(lat);
     let banked = null;
@@ -793,6 +846,7 @@ export function createSitting(deps = {}) {
     // 5. the child + the file
     if (session) { try { await session.close(); } catch { } session = null; }
     S.closed_at = now().toISOString(); S.close_reason = reason; S.pending_question = null;
+    if (Array.isArray(S.agenda_ids) && S.agenda_ids.length) { try { agendaMark("done", S.agenda_ids, { sitting_id: S.id }); } catch (e) { log(`sitting: agenda done-mark failed ${clip(e && e.message, 80)}`); } }   // LAW A: served agenda is done at close
     save();
     log(`sitting: CLOSE ${S.id} (${reason}) — ${shipped}${ir.ok ? "" : " · intent close FAILED"}`);
     // 6. THE REVIEW (§8, Block 4) — one model call in its OWN process (the daemon never blocks on a model);
@@ -1041,6 +1095,19 @@ async function main() {
     case "close": { const r = await post("/close", { reason: opt("--reason") || "his_word" }, 240000); console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
     case "plan": { const r = (await daemonUp()) ? await get("/plan") : { units: (readJson(F.sitting()) || {}).plan || [], map: (readJson(F.sitting()) || {}).plan_map }; console.log(`map: ${r.map || "—"}`); (r.units || []).forEach((u) => console.log(`  ${String(u.i).padStart(2)} ${u.kind.padEnd(8)} s${u.step ?? "-"} ${u.axis || "-"} ${u.question ? "?" : " "} ${u.est_seconds}s · ${clip(u.text, 120)}`)); return; }
     case "stats": { console.log(stats({ days: Number(opt("--days") || 7) }).text); return; }
+    case "agenda": {   // LAW A — his asks for the next sitting (acts.mjs verb agenda rides `add`)
+      const sub = (rest[0] || "list").toLowerCase();
+      if (sub === "init") {   // the lane exists from birth (same law as intent.mjs init): brain_config declares it a REQUIRED input of prepare_on_request — "present, empty" ≠ absent
+        if (existsSync(F.agenda())) { console.log(`sitting: agenda lane present (${openAgenda().length} open) — ${F.agenda()}`); return; }
+        mkdirSync(dirname(F.agenda()), { recursive: true }); writeFileSync(F.agenda(), ""); console.log(`sitting: agenda lane created (empty) — ${F.agenda()}`); return;
+      }
+      if (sub === "add") { const r = agendaAdd(opt("--text") || rest.slice(1).filter((a) => !a.startsWith("--")).join(" ")); console.log(r.ok ? `sitting: agenda added ${r.id}${r.dup ? " (already open — same words)" : ""}` : `sitting: agenda NOT added — ${r.why}`); process.exit(r.ok ? 0 : 1); }
+      if (sub === "drop") { const id = rest[1]; if (!id || !openAgenda().some((r) => r.id === id)) { console.log(`sitting: no open agenda ${id || "(id?)"}`); process.exit(1); } agendaMark("drop", [id]); console.log(`sitting: agenda dropped ${id}`); return; }
+      const open = openAgenda();
+      console.log(open.length ? `sitting: ${open.length} open agenda row(s) — the next sitting opens on them:` : "sitting: no open agenda (his next explicit ask lands here — acts.mjs)");
+      for (const r of open) console.log(`  ${r.id} ${r.ts.slice(0, 16)} ${r.served ? "(served)" : "        "} ${r.text}`);
+      return;
+    }
     case "review": {
       const r = await reviewSitting(opt("--sitting") || null, { force: rest.includes("--force"), dry: rest.includes("--dry") });
       if (!r.ok) { console.log(`sitting: review — ${r.why}`); return; }
@@ -1075,7 +1142,7 @@ async function selftest() {
   const realState = STATE_DIR;
   const F0 = { ...F };
   const P = (name) => join(tmp, name);
-  F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`);
+  F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`); F.agenda = () => P("sitting_agenda.jsonl"); F.prepared = (day) => P(`brain_out/prepare_on_request/${day}.md`);   // LAW A: the two new files re-point too — the live agenda is never touched by a selftest
   const calls = [];
   const owner = (file, args, input) => {
     calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) });
@@ -1339,6 +1406,16 @@ async function selftest() {
     assert("lastReview merges base + LLM rows for the sitting → the NEXT head's review_of_last carries what_changes_next", merged && merged.turns > 0 && Array.isArray(merged.what_changes_next) && merged.what_changes_next[0] === "open every new label first" && merged.drifts.length === 2);
     const rr2 = await reviewSitting(S.id, { gen: async () => { throw new Error("must not call"); } });
     assert("reviewSitting refuses to review the same sitting twice (a way back is a NEW row on --force, never a rewrite)", rr2.ok === false && /already reviewed/.test(rr2.why));
+    // ── 15b. LAW A — HIS AGENDA (18 Aug 2026): add → open (served) → done at close; dedup on the same words; drop ──
+    {
+      const a1 = agendaAdd("kal pehle 4 concepts samjhao", { now: new Date("2026-08-18T20:00:00Z") });
+      const a2 = agendaAdd("kal pehle 4 concepts samjhao", { now: new Date("2026-08-18T20:01:00Z") });
+      assert("AGENDA · add appends his words verbatim with an id; the same words twice = the same open row (dup), never two", a1.ok && a2.ok && a2.dup && a1.id === a2.id && openAgenda().length === 1 && openAgenda()[0].text === "kal pehle 4 concepts samjhao");
+      agendaMark("served", [a1.id], { sitting_id: "sit_x" });
+      assert("AGENDA · served keeps the row OPEN (still his ask) and marks it served", openAgenda().length === 1 && openAgenda()[0].served === true);
+      agendaMark("done", [a1.id], { sitting_id: "sit_x" });
+      assert("AGENDA · done at close closes the row; a new add reopens with a NEW id; drop closes it too", openAgenda().length === 0 && (() => { const a3 = agendaAdd("kuch aur", { now: new Date("2026-08-18T20:02:00Z") }); const one = openAgenda().length === 1 && a3.id !== a1.id; agendaMark("drop", [a3.id]); return one && openAgenda().length === 0; })());
+    }
     // ── 16. HERMETIC — nothing outside tmp was touched ──
     const stateAfter = existsSync(join(realState, "sitting.json")) ? statSync(join(realState, "sitting.json")).mtimeMs : null;
     assert("HERMETIC: the live sitting.json is untouched (all writes went to the temp state dir)", stateBefore === stateAfter);

@@ -1316,6 +1316,7 @@ function eligibleJobs(cfg, queueState, now, voiceMinToday = null) {
   const daytime = inRange(nowHM, cfg.study_hours.start, cfg.study_hours.end);
   return cfg.jobs.filter(j => {
     if (j.enabled === false) return false;
+    if (j.on_request_only) return false;   // LAW A (18 Aug 2026): prepare_on_request runs ONLY on his ask (acts.mjs → `brain run … --by captain --act <id>`), never on a tick
     if ((ranOn(shiftDay(j, now, cfg))[j.id] || 0) >= (j.max_per_day || 1)) return false;
     // RETRY CAP: burned its attempts this shift → sit out (see attemptsOn above)
     if (attemptsOn(queueState, shiftDay(j, now, cfg), j.id) >= (j.max_attempts || maxAttempts)) return false;
@@ -3046,6 +3047,14 @@ export async function gatherPrepareFood(deps = {}) {
     weaknesses: weak ? { headline: weak.headline || null, axis_pattern: weak.axis_pattern || null, register: weak.register || null } : null,
   };
 }
+// LAW A (18 Aug 2026) — the on-request material: samjhao-ready, per agenda row, in HIS register.
+export function buildPrepareOnRequestPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases, agenda = []) {
+  const head = `You are an organ of ARSENAL AI FC — the captain's exocortex. Job: ${job.id}. He ASKED for this material by name (his agenda rows below, verbatim); the next sitting's brain reads it and TEACHES from it — it is never read to him verbatim.
+LAWS: Hinglish (technical words in English); ONE idea at a time; every mechanism as a NUMBERED TRACE he can run by hand; ONE everyday-physical analogy per idea (food, house, shop, city — never geometry); ONE check-question per row; JS→Python bridge where it applies (he knows JS/React); the "you are here, this much is left" line per row; never place his level above his own; quote capsule welds BYTE-FOR-BYTE where a capsule exists (never re-derive a locked weld); honest frame only (never ${(banned || []).map((b) => `"${b}"`).join("/")}); every number from the data below.
+OUTPUT: markdown, ≤ 80 lines total. For EACH agenda row, in order: \`## <row n> — <his words>\` · what it is (≤ 3 lines) · the trace (numbered) · the analogy (1 line) · the JS→Python bridge (if any, 1-2 lines) · the check-question (1 line) · you-are-here (1 line). Nothing else.`;
+  const body = Object.entries(inputs).map(([k, v]) => `\n## INPUT ${k}\n${clip(v)}`).join("\n");
+  return head + body;
+}
 export function buildPrepareTomorrowPrompt(job, inputs, banned = DEFAULTS.guards.banned_phrases, food = prepareFood) {
   const f = food || {};
   const head = `You are THE SITTING BRAIN's night half — you compose TOMORROW'S ONE SITTING for the captain (ADHD-PI, Hinglish, learns by ONE idea per unit, gut-word before every answer). Route ${f.route || "?"}${f.concept ? ` · concept '${f.concept}'` : ""}${f.forge ? ` · forge step ${f.forge.step} (steps done ${(f.forge.steps_done || []).join(",") || "none"}; axes done ${(f.forge.axes_done || []).join(",") || "none"})` : ""} · for ${f.for_day || "tomorrow"}.
@@ -3534,6 +3543,22 @@ async function runJob(job, cfg, deps) {
     intentDigestFood = food;
     inputs[`session intents (${today} · ${food.sessions.length} session(s), grouped + clipped by intent.mjs — heads of his prompts and the replies)`] = food;
     prompt = buildIntentDigestPrompt(job, inputs, cfg.guards.banned_phrases);
+  } else if (job.kind === "prepare_on_request") {
+    // LAW A (MODELS + ACTS Block 2, 18 Aug 2026) — THE ON-REQUEST JOB: material for every OPEN
+    // agenda row (his explicit asks, verbatim — sitting.mjs openAgenda), prepared NOW because
+    // he asked (the gate's C is his ask). Refuse BEFORE the spend when nothing is open.
+    const sittingMod = deps.sittingMod || await import("./sitting.mjs");
+    const agenda = deps.agenda !== undefined ? deps.agenda : sittingMod.openAgenda();
+    if (!agenda.length) {
+      return {
+        usage: { ok: false, total_tokens: 0, duration_ms: 0, limit_hit: false, error: "no open agenda row" },
+        note: "skipped before spend — sitting_agenda.jsonl has no open row (his ask lands there through acts.mjs verb agenda / the Gaffer's set_agenda; nothing to prepare)",
+      };
+    }
+    const food = deps.prepareFood !== undefined ? deps.prepareFood : await gatherPrepareFood({ now: new Date(now).toISOString() }).catch(() => null);
+    inputs["HIS AGENDA (verbatim, sitting_agenda.jsonl — prepare material for EVERY row)"] = agenda.map((a, i) => `${i + 1}. ${a.text}`).join("\n");
+    if (food) inputs["the sitting he will meet (route · concept · capsule strikes/welds where a capsule exists — quote welds, never re-derive)"] = { route: food.route, concept: food.concept, task: food.task_title, capsule: food.capsule || null, calibration: food.calibration, weaknesses: food.weaknesses };
+    prompt = buildPrepareOnRequestPrompt(job, inputs, cfg.guards.banned_phrases, agenda);
   } else if (job.kind === "prepare_tomorrow") {
     // Block 5 §10 — the food is the SITTING'S OWN gather (route/concept/capsule by
     // construction) plus today's reviews, the register line, calibration and nemesis.
@@ -6708,8 +6733,9 @@ async function main() {
       const already = ((q.jobs_run && q.jobs_run[sd]) || {})[job.id] || 0;
       if (already >= (job.max_per_day || 1)) console.warn(`brain: ⚠ ${job.id} already ran ${already}× this shift (${sd}) — running again because you asked; it will spend again.`);
       const { usage, note, inputs_absent, inputs_declared, inputs_absent_names, inputs_clipped, inputs_rows_dropped, inputs_rows_door_dropped, inputs_door_names } = await runJob(job, cfg, deps);
+      const flagOf = (n) => { const i = process.argv.indexOf("--" + n); return i > 0 ? process.argv[i + 1] : null; };   // LAW A: `--by captain --act <id>` — his ask, named on the row
       if (!deps.dry) {
-        appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
+        appendFileSync(LEDGER, JSON.stringify({ ts: now.toISOString(), job: job.id, engine: job.engine || "claude", model: job.model || null, by: flagOf("by"), act: flagOf("act"), input_tokens: usage.input_tokens ?? null, output_tokens: usage.output_tokens ?? null, cache_creation_tokens: usage.cache_creation_tokens ?? null, cache_read_tokens: usage.cache_read_tokens ?? null, total_tokens: usage.total_tokens || 0, duration_ms: usage.duration_ms || 0, ok: usage.ok, error: usage.error || null, limit_hit: !!usage.limit_hit, manual: true, note: note || null,
           split: usage.split || null,   // Phase 1 — and the manual row is where the split's own receipt is READ, so it cannot be the row that drops it
           // same input accounting as the scheduled path (finding #64) — a manual run must
           // not be the one place the evidence base goes unrecorded.
