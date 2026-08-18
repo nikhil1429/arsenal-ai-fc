@@ -52,6 +52,7 @@
 import { readFileSync, appendFileSync, existsSync, mkdirSync, statSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -78,6 +79,13 @@ const clip = (s, n = 300) => String(s == null ? "" : s).replace(/\s+/g, " ").tri
 const newId = (now) => `o${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
 export const readRows = (p = OUTBOX_LEDGER) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 export const keyOf = (producedBy, kind, subject) => createHash("sha1").update(`${producedBy} ${kind} ${clip(subject, 300).toLowerCase()}`).digest("hex").slice(0, 12);
+
+// -- the owners this organ closes THROUGH (never around) — it writes only outbox.jsonl ------
+function owner(organ, argv, deps = {}) {
+  if (deps.exec) return deps.exec(organ, argv);
+  const r = spawnSync(process.execPath, [join(__dirname, organ), ...argv.map(String)], { encoding: "utf8", timeout: 60000, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+  return { ok: r.status === 0, out: String(r.stdout || ""), err: String(r.stderr || ""), status: r.status };
+}
 
 // -- the ledger lock (same idiom as tasks.mjs: a lock we cannot take is stepped over) --------
 const sleepSync = (ms) => { try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch { /* no SAB */ } };
@@ -122,6 +130,39 @@ export const sweeps = (rows) => (rows || []).filter((r) => r && r.ev === "sweep"
 export const pending = (rows = readRows()) => [...fold(rows).values()].filter((o) => !o.delivered_at)
   .sort((a, b) => (b.priority - a.priority) || String(a.created_at).localeCompare(String(b.created_at)));
 
+// -- LOAD ZERO BLOCK 4: CLOSE — delivery closes the originating ask, from ANY door -----------
+// THE BUG (19 Aug 2026, 00:00): the organism could answer an ask and still not CLOSE it, because
+// the only thing that could mark an agenda row done was `sitting.mjs closeSitting()`, and only for
+// rows THAT sitting had served. So a Gaffer-born ask could never be closed by the Gaffer, and a
+// dugout reopen re-served a row the organism had already answered — he was asked the same thing
+// twice by a system that had already done the work.
+// THE RULE: the relay's `delivered` stamp is what closes the originating ask. One road in, one
+// road out. Every close goes THROUGH the ref's owner CLI — this organ writes only outbox.jsonl.
+// A scheme that does NOT close says so out loud rather than pretending: an act's close IS its
+// receipt (append-only, it already exists), and a card is answered by HIM (haan/na/baad) — handing
+// him a card is not answering it, and auto-closing one would silently drop a decision he owns.
+export const CLOSERS = {
+  agenda: { organ: "sitting.mjs", argv: (id) => ["agenda", "done", id, "--by", "outbox"] },
+  task: { organ: "tasks.mjs", argv: (id) => ["finish", id, "--receipt", "delivered to him by the relay"] },
+  act: { closes: false, why: "an act's close IS its receipt — acts.jsonl is append-only and the receipt already exists" },
+  card: { closes: false, why: "a card is ANSWERED by him (haan/na/baad); delivering it is not answering it" },
+};
+export const CLOSE_SCHEMES = Object.keys(CLOSERS);
+export const parseCloseRef = (ref) => { const m = /^([a-z]+):(.+)$/.exec(String(ref || "").trim()); return m && CLOSERS[m[1]] ? { scheme: m[1], id: m[2] } : null; };
+
+/** fire the close for one delivered row, through the ref's OWNER. Never writes another organ's file. */
+export function closeFor(row, deps = {}) {
+  const ref = parseCloseRef(row && row.close_ref);
+  if (!ref) return { ok: false, why: row && row.close_ref ? `close_ref "${row.close_ref}" names no known scheme (${CLOSE_SCHEMES.join("|")})` : "no close_ref on this row" };
+  const c = CLOSERS[ref.scheme];
+  if (c.closes === false) return { ok: true, closed: false, scheme: ref.scheme, why: c.why };
+  const r = owner(c.organ, c.argv(ref.id), deps);
+  const said = clip((r.out || r.err || "").trim(), 200);
+  // a close that FAILED must say why, out loud. Silence here would be the same disease one level
+  // down: the organism thinks it closed the ask, the owner says otherwise, and nobody hears it.
+  return { ok: !!r.ok, closed: !!r.ok, scheme: ref.scheme, id: ref.id, said, why: r.ok ? null : `${c.organ} refused to close ${ref.scheme}:${ref.id} — ${said || "exit " + r.status}` };
+}
+
 /** post — a producer's ONLY move. It never delivers; it appends and forgets. */
 export function post(spec = {}, deps = {}) {
   const now = deps.now || new Date();
@@ -134,13 +175,18 @@ export function post(spec = {}, deps = {}) {
   // BLOCK 6 lands the DECISION GATE; the field is carried from day one so the gate has something
   // to enforce and so a row that ASKS him for something already has to say why code could not decide.
   if (spec.requiresDecision && !clip(spec.whyCodeCannotDecide, 10)) return { ok: false, why: "a row that requires HIS decision must carry --why-code-cannot-decide (BLOCK 6's gate; if code can decide it, code decides it and this row reports the DECISION instead)" };
+  // LOAD ZERO BLOCK 4 — THE RATCHET: no ask may be created without a CLOSE PATH. A row that asks
+  // him for something and cannot be closed is precisely the thing that becomes a card he has to
+  // remember. `material` may carry a close_ref; an `ask`/`reminder` MUST.
+  if (spec.closeRef && !parseCloseRef(spec.closeRef)) return { ok: false, why: `close_ref "${spec.closeRef}" names no known scheme — use ${CLOSE_SCHEMES.map((x) => x + ":<id>").join(" | ")}` };
+  if ((kind === "ask" || kind === "reminder") && !spec.closeRef) return { ok: false, why: `a "${kind}" row must carry --close-ref (${CLOSE_SCHEMES.map((x) => x + ":<id>").join(" | ")}) — an ask with no close path is how a thing ends up living in his memory` };
   const key = spec.key ? String(spec.key) : keyOf(producedBy, kind, subject);
   return withLock(() => {
     const rows = rowsOf(deps);
     const dup = [...fold(rows).values()].find((o) => o.idempotency_key === key && !o.acked_at);
     if (dup) return { ok: true, duplicate: true, row: dup, why: `the same thing is already on the road as ${dup.id} (${dup.delivered_at ? "delivered " + dup.delivered_via : "pending"}) — he is told once, not twice` };
     const id = newId(now);
-    const row = { ev: "post", id, ts: now.toISOString(), produced_by: producedBy, kind, subject, body_ref: spec.bodyRef || null, idempotency_key: key, priority: Number.isFinite(Number(spec.priority)) ? Number(spec.priority) : 50, requires_decision: !!spec.requiresDecision, why_code_cannot_decide: spec.whyCodeCannotDecide || null, close_ref: spec.closeRef || null };
+    const row = { ev: "post", id, ts: now.toISOString(), produced_by: producedBy, kind, subject, body_ref: spec.bodyRef || null, idempotency_key: key, priority: (spec.priority !== null && spec.priority !== undefined && spec.priority !== true && Number.isFinite(Number(spec.priority))) ? Number(spec.priority) : 50, requires_decision: !!spec.requiresDecision, why_code_cannot_decide: spec.whyCodeCannotDecide || null, close_ref: spec.closeRef || null };
     appendRow(row, deps);
     return { ok: true, duplicate: false, row: fold([row]).get(id) };
   }, deps);
@@ -158,7 +204,14 @@ export function relay(surface, deps = {}, max = DEFAULT_MAX_PER_SWEEP) {
   return withLock(() => {
     const queue = pending(rowsOf(deps));
     const take = queue.slice(0, Math.max(0, Number(max) || DEFAULT_MAX_PER_SWEEP));
-    for (const o of take) appendRow({ ev: "deliver", of: o.id, ts: now.toISOString(), via: s }, deps);
+    for (const o of take) {
+      appendRow({ ev: "deliver", of: o.id, ts: now.toISOString(), via: s }, deps);
+      // BLOCK 4: the delivered stamp IS the close. Fired here, from the one road, so an ask born
+      // at ANY door closes — the Gaffer's included. A scheme that does not close says why.
+      const c = closeFor(o, deps);
+      o.closed = c.ok && c.closed !== false ? { scheme: c.scheme, id: c.id } : null;
+      o.close_note = c.ok ? (c.closed === false ? c.why : null) : c.why;
+    }
     appendRow({ ev: "sweep", ts: now.toISOString(), surface: s, n: take.length }, deps);
     return { ok: true, surface: s, delivered: take, held_back: Math.max(0, queue.length - take.length) };
   }, deps);
@@ -251,8 +304,12 @@ function selftest() {
   const dup = post({ producedBy: "brain:prepare_on_request", kind: "material", subject: "samjhao material taiyaar" }, deps);
   assert("the SAME thing posted twice is ONE row — he is told once, not twice", dup.ok && dup.duplicate && dup.row.id === p1.row.id);
   assert("a row that REQUIRES HIS DECISION must say why code could not decide it (BLOCK 6's gate, carried from day one)",
-    !post({ producedBy: "o", kind: "ask", subject: "kaunsa chuno?", requiresDecision: true }, deps).ok
-    && post({ producedBy: "o", kind: "ask", subject: "kaunsa chuno?", requiresDecision: true, whyCodeCannotDecide: "dono legal hain, farak sirf uski marzi ka hai" }, deps).ok);
+    !post({ producedBy: "o", kind: "ask", subject: "kaunsa chuno?", requiresDecision: true, closeRef: "card:c99" }, deps).ok
+    && post({ producedBy: "o", kind: "ask", subject: "kaunsa chuno?", requiresDecision: true, whyCodeCannotDecide: "dono legal hain, farak sirf uski marzi ka hai", closeRef: "card:c99" }, deps).ok);
+  // BLOCK 4 · THE RATCHET: no ask may be created without a CLOSE PATH.
+  assert("BLOCK 4 · an `ask` with NO close_ref is refused — an ask that cannot be closed is how a thing ends up living in his memory",
+    !post({ producedBy: "o", kind: "ask", subject: "bina raaste ka sawaal" }, deps).ok);
+  assert("BLOCK 4 · a close_ref naming an unknown scheme is refused at the door", !post({ producedBy: "o", kind: "material", subject: "x", closeRef: "telepathy:9" }, deps).ok);
 
   post({ producedBy: "watchman", kind: "resolved", subject: "issue: brain daemon gira tha -> kiya: watchdog ne uthaya -> kyun: VBS cloak -> asar: 6/6", priority: 90 }, deps);
   const q = pending(rows);
@@ -271,6 +328,26 @@ function selftest() {
   assert("an unknown surface is refused", !relay("telepathy", deps).ok);
   const r3 = relay("ntfy", deps);
   assert("a relay run with NOTHING to deliver still records a SWEEP — that is what makes 'did the relay run' answerable", r3.ok && r3.delivered.length === 0 && sweeps(rows).length === 3);
+
+  // BLOCK 4 · DELIVERY CLOSES THE ASK, FROM ANY DOOR — the 19 Aug 00:00 repeat, killed.
+  const crows = []; const ccalls = [];
+  const cdeps = { rows: crows, append: (r) => { crows.push(r); return true; }, now,
+    exec: (organ, argv) => { ccalls.push({ organ, argv }); return { ok: true, out: `${organ} ok` }; } };
+  post({ producedBy: "gaffer", kind: "material", subject: "uska poocha hua kaam ho gaya", closeRef: "agenda:agmsyysuqy" }, cdeps);
+  const cr = relay("code", cdeps);
+  assert("BLOCK 4 · the relay's DELIVERED stamp closes the originating ask THROUGH ITS OWNER (sitting.mjs agenda done) — an ask born at the Gaffer is now closable by the Gaffer",
+    cr.ok && ccalls.length === 1 && ccalls[0].organ === "sitting.mjs" && ccalls[0].argv.slice(0, 3).join(" ") === "agenda done agmsyysuqy", JSON.stringify(ccalls));
+  const trows = []; const tcalls = [];
+  const tdeps = { rows: trows, append: (r) => { trows.push(r); return true; }, now, exec: (organ, argv) => { tcalls.push({ organ, argv }); return { ok: true, out: "ok" }; } };
+  post({ producedBy: "brain:x", kind: "material", subject: "task ka output", closeRef: "task:tABC" }, tdeps);
+  relay("code", tdeps);
+  assert("BLOCK 4 · a task-backed ask closes through tasks.mjs, not by this organ writing anything", tcalls.length === 1 && tcalls[0].organ === "tasks.mjs" && tcalls[0].argv[0] === "finish");
+  const nrows = []; const ncalls = [];
+  const ndeps = { rows: nrows, append: (r) => { nrows.push(r); return true; }, now, exec: (organ, argv) => { ncalls.push({ organ, argv }); return { ok: true, out: "ok" }; } };
+  post({ producedBy: "x", kind: "ask", subject: "haan ya na?", requiresDecision: true, whyCodeCannotDecide: "uski marzi", closeRef: "card:c71" }, ndeps);
+  const nr = relay("code", ndeps);
+  assert("BLOCK 4 · a scheme that does NOT close says so out loud — a CARD is answered by HIM, and delivering it is not answering it (auto-closing would silently drop a decision he owns)",
+    ncalls.length === 0 && nr.delivered[0].closed === null && /answered by/i.test(nr.delivered[0].close_note || ""), JSON.stringify(nr.delivered[0] && nr.delivered[0].close_note));
 
   const one = fold(rows).get(p1.row.id);
   assert("a delivered row carries WHEN and VIA — the stamp BLOCK 4 will use to close the originating ask", !!one.delivered_at && one.delivered_via === "code");

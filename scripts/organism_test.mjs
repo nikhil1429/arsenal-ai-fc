@@ -539,6 +539,43 @@ function laws() {
       ob("post", "--produced-by", "x", "--kind", "ask", "--subject", "kaunsa?", "--requires-decision").code !== 0);
     assert("LOAD ZERO BLOCK 3 · the dead-man's switch exists and does NOT fire on a road he simply has not walked yet (BLOCK 9's false-positive ruling, applied here)",
       !/RED outbox-undelivered/.test(ob("status").out));
+
+    // ── LOAD ZERO BLOCK 4 (19 Aug 2026) — CLOSE ─────────────────────────────────
+    // THE 19 AUG 00:00 REPEAT, EXACTLY: an ask was born at the Gaffer, the organism ANSWERED it,
+    // and nothing could close it — because the only thing that could mark an agenda row done was
+    // a sitting, and only for rows THAT sitting had served. So a dugout reopen re-served a row
+    // the organism had already dealt with, and he was asked the same thing twice.
+    const sit = (...a) => run([join(sb, "scripts", "sitting.mjs"), ...a], { cwd: sb, env: samEnv });
+    sit("agenda", "add", "--text", "BLOCK 4 close ka test — gaffer door se aaya ask");
+    const agList = sit("agenda");
+    // pull the id off MY OWN row, not the first "ag…" token in the screen — the word "agenda"
+    // matches a naive /ag[a-z0-9]+/ and the sandbox also carries his real rows.
+    const agId = (/^\s*(ag\S+)\s.*BLOCK 4 close ka test/m.exec(agList.out) || [])[1];
+    assert("LOAD ZERO BLOCK 4 · an ask created at the GAFFER door is open on the agenda", !!agId && /BLOCK 4 close ka test/.test(agList.out), agList.out);
+    ob("post", "--produced-by", "gaffer", "--kind", "material", "--subject", "uska poocha hua kaam ho gaya", "--close-ref", `agenda:${agId}`);
+    ob("relay", "--surface", "code");
+    const afterClose = sit("agenda");
+    assert("LOAD ZERO BLOCK 4 · the relay's DELIVERED stamp CLOSES it — through the owner, from a door that is not the sitting",
+      !!agId && !new RegExp(agId).test(afterClose.out), afterClose.out);
+    assert("LOAD ZERO BLOCK 4 · ...and a dugout REOPEN does not restart it — the row stays closed (this is the 19 Aug 00:00 loop, dead)",
+      !/BLOCK 4 close ka test/.test(sit("agenda").out));
+    assert("LOAD ZERO BLOCK 4 · no ask may be created without a CLOSE PATH — an `ask` with no close_ref is refused at the door",
+      ob("post", "--produced-by", "x", "--kind", "ask", "--subject", "bina raaste ka sawaal").code !== 0);
+
+    // ── HIS ANSWERS ARE HIS (19 Aug 2026, his ruling after a proof-run wrote a guess in his name)
+    // "koi bhi test/proof-run MERI taraf se guess ya answer nahi likh sakta — proof hamesha
+    // sandbox mein, live samjhao mein kabhi nahi." PREDICT-THEN-REVEAL is once-only: a prediction
+    // spent by a test can never be given back, which is why this is absolute and has no override.
+    const collarEnv = { ...process.env, ARSENAL_AUDIT_COLLAR: "1" };   // deliberately NO sandbox ledger: this is the forbidden case
+    delete collarEnv.ARSENAL_SAMJHAO_LEDGER;
+    const liveSamjhao = join(sb, "dressing-room", "state", "samjhao.jsonl");
+    const beforeBytes = existsSync(liveSamjhao) ? statSync(liveSamjhao).size : -1;
+    const forbidden = run([join(sb, "scripts", "samjhao.mjs"), "guess", "tokenization", "--unit", "1", "--text", "a test must never write this", "--gut", "knew"], { cwd: sb, env: collarEnv });
+    const afterBytes = existsSync(liveSamjhao) ? statSync(liveSamjhao).size : -1;
+    assert("HIS ANSWERS ARE HIS · a FIXTURE may NEVER write a guess into his LIVE samjhao — refused, and the live ledger does not move a byte",
+      forbidden.code !== 0 && /FIXTURE/.test(forbidden.out) && beforeBytes === afterBytes, `exit ${forbidden.code} · ${beforeBytes}->${afterBytes} · ${forbidden.out}`);
+    assert("HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs",
+      run([join(sb, "scripts", "samjhao.mjs"), "open", "tokenization"], { cwd: sb, env: samEnv }).code === 0);
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 

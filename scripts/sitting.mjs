@@ -1103,6 +1103,21 @@ async function main() {
       }
       if (sub === "add") { const r = agendaAdd(opt("--text") || rest.slice(1).filter((a) => !a.startsWith("--")).join(" ")); console.log(r.ok ? `sitting: agenda added ${r.id}${r.dup ? " (already open — same words)" : ""}` : `sitting: agenda NOT added — ${r.why}`); process.exit(r.ok ? 0 : 1); }
       if (sub === "drop") { const id = rest[1]; if (!id || !openAgenda().some((r) => r.id === id)) { console.log(`sitting: no open agenda ${id || "(id?)"}`); process.exit(1); } agendaMark("drop", [id]); console.log(`sitting: agenda dropped ${id}`); return; }
+      // LOAD ZERO BLOCK 4 — CLOSE (19 Aug 2026). `done` existed as a ROW KIND and as a writer
+      // (agendaMark) since LAW A, but it had no DOOR: the only caller was closeSitting() below,
+      // and only for rows THAT sitting had served. So an ask born at the Gaffer could never be
+      // closed by the Gaffer — which is exactly the 19 Aug 00:00 repeat, where a dugout reopen
+      // re-served a row the organism had already answered. This verb opens the same writer to
+      // any door THROUGH ITS OWNER: the outbox's relay closes what it delivers, `--by` names who.
+      // No new writer of sitting_agenda.jsonl — this organ is still its sole one.
+      if (sub === "done") {
+        const id = rest[1];
+        if (!id) { console.log("sitting: agenda done <id> — kaunsi row?"); process.exit(1); }
+        if (!openAgenda().some((r) => r.id === id)) { console.log(`sitting: agenda ${id} is not open (already done/dropped, or never existed) — nothing to close`); process.exit(1); }
+        agendaMark("done", [id], { by: opt("--by") || "cli" });
+        console.log(`sitting: agenda done ${id}`);
+        return;
+      }
       const open = openAgenda();
       console.log(open.length ? `sitting: ${open.length} open agenda row(s) — the next sitting opens on them:` : "sitting: no open agenda (his next explicit ask lands here — acts.mjs)");
       for (const r of open) console.log(`  ${r.id} ${r.ts.slice(0, 16)} ${r.served ? "(served)" : "        "} ${r.text}`);

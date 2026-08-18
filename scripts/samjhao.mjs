@@ -80,6 +80,31 @@ export const CAPSULE_DIR = process.env.ARSENAL_CAPSULE_DIR || join(STATE_DIR, "c
 export const GUT_WORDS = ["knew", "shaky", "guessed"];          // his own law — same vocabulary capture.mjs refuses outside of
 export const THE_FOUR = ["tokenization", "embeddings", "inference", "context"];   // §4 scope now; then every future topic
 
+// -- WHO MAY WRITE HIS ANSWERS (19 Aug 2026, on his word) --------------------------------
+// THE INCIDENT: a proof-run of the coldness fix executed `samjhao guess` against the LIVE ledger
+// and wrote a guess IN HIS NAME ("token = vocab ka tukda + ID number", gut shaky). It was not his,
+// and PREDICT-THEN-REVEAL is once-only — that prediction was spent and could never be given back.
+// His ruling: *"koi bhi test/proof-run MERI taraf se guess ya answer nahi likh sakta — proof
+// hamesha sandbox mein, live samjhao mein kabhi nahi."*
+// THE LAW, in two tiers:
+//   1. A FIXTURE (selftest, or the sandbox collar) writing the LIVE ledger is refused outright.
+//      No flag, no override. A test's proof belongs in a sandbox ledger (ARSENAL_SAMJHAO_LEDGER).
+//   2. An AGENT process (AI_AGENT / CLAUDECODE) is refused too, UNLESS it passes --his-words, in
+//      which case the row is stamped `by: "captain-via-agent"` so it is visible and abandonable.
+//      Said plainly: on the Claude Code surface an agent is literally the one typing his words, so
+//      code cannot tell a relay from an invention. What code CAN do is make the accidental case
+//      impossible and the deliberate case AUDITABLE — and `abandon` is the way back either way.
+export const AGENT_MARKERS = ["AI_AGENT", "CLAUDECODE", "CLAUDE_AGENT_SDK_VERSION"];
+export const isFixture = () => (process.argv[2] || "") === "selftest" || !!process.env.ARSENAL_AUDIT_COLLAR;
+export const isAgent = () => AGENT_MARKERS.some((k) => !!process.env[k]);
+export const isLiveLedger = (deps = {}) => !deps.append && !deps.rows && (deps.ledger || SAMJHAO_LEDGER) === join(STATE_DIR, "samjhao.jsonl");
+export function mayWriteHisAnswer(deps = {}, hisWords = false) {
+  if (!isLiveLedger(deps)) return { ok: true, by: hisWords ? "captain-via-agent" : "captain" };
+  if (isFixture()) return { ok: false, why: "a FIXTURE (selftest / audit collar) may never write his LIVE samjhao — point ARSENAL_SAMJHAO_LEDGER at a sandbox file and prove it there" };
+  if (isAgent() && !hisWords) return { ok: false, why: "an AGENT process may not write a guess/answer in his name. This is his prediction and he only gets one. If you are RELAYING his actual words, pass --his-words (the row is stamped captain-via-agent and stays abandonable); if you are PROVING something, use a sandbox ledger (ARSENAL_SAMJHAO_LEDGER)" };
+  return { ok: true, by: isAgent() ? "captain-via-agent" : "captain" };
+}
+
 const clip = (s, n = 4000) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
 const readRows = (p = SAMJHAO_LEDGER) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 
@@ -185,18 +210,19 @@ export function foldSessions(rows) {
   const by = new Map();
   for (const r of rows || []) {
     if (!r || !r.ev) continue;
-    if (r.ev === "open") { if (!by.has(r.id)) by.set(r.id, { id: r.id, concept: r.concept, opened_at: r.ts, units: r.units, doubts: r.doubts, guessed: new Set(), answered: new Set(), closed_doubts: new Set(), reps: 0, closed_at: null }); continue; }
+    if (r.ev === "open") { if (!by.has(r.id)) by.set(r.id, { id: r.id, concept: r.concept, opened_at: r.ts, units: r.units, doubts: r.doubts, guessed: new Set(), answered: new Set(), closed_doubts: new Set(), reps: 0, closed_at: null, abandoned_at: null, abandon_why: null }); continue; }
     const s = by.get(r.of); if (!s) continue;
     if (r.ev === "guess") s.guessed.add(r.unit);
     else if (r.ev === "answer") { s.answered.add(r.unit); s.reps += 1; }
     else if (r.ev === "doubt") { s.closed_doubts.add(r.doubt); s.reps += 1; }
     else if (r.ev === "close") s.closed_at = r.ts;
+    else if (r.ev === "abandon") { s.abandoned_at = r.ts; s.abandon_why = r.why || null; }
   }
   return by;
 }
 export const sessionOf = (id, rows = readRows()) => foldSessions(rows).get(id) || null;
 export function sessionForConcept(concept, rows = readRows()) {
-  const all = [...foldSessions(rows).values()].filter((s) => s.concept === String(concept || "").toLowerCase());
+  const all = [...foldSessions(rows).values()].filter((s) => s.concept === String(concept || "").toLowerCase() && !s.abandoned_at);
   return all.filter((s) => !s.closed_at).slice(-1)[0] || all.slice(-1)[0] || null;
 }
 
@@ -210,6 +236,7 @@ export function open(concept, deps = {}) {
   try { task = JSON.parse((t.out || "").trim().split("\n").slice(-1)[0]); } catch { /* named below */ }
   if (!t.ok || !task || !task.id) return { ok: false, why: `the task layer would not give this samjhao an id (${clip(t.err || t.out, 160)}) — without one it could not be resumed on another surface` };
   const existing = sessionOf(task.id, rowsOf(deps));
+  if (existing && existing.abandoned_at) return { ok: false, why: `samjhao ${task.id} for ${p.concept} was ABANDONED (${existing.abandon_why || "no reason given"}). The task layer keeps handing back the same id for the same ask, so start the clean one with a fresh key: \`node scripts/tasks.mjs create --kind samjhao --subject ${p.concept} --key <new>\`` };
   if (existing) return { ok: true, resumed: true, id: task.id, plan: p, session: existing, why: `samjhao for ${p.concept} is already open as ${task.id} — resuming, not restarting` };
   appendRow({ ev: "open", id: task.id, ts: now.toISOString(), concept: p.concept, units: p.units.length, doubts: p.doubts.length }, deps);
   return { ok: true, resumed: false, id: task.id, plan: p, session: sessionOf(task.id, rowsOf(deps)) };
@@ -238,6 +265,8 @@ export function next(id, deps = {}) {
 const gutOk = (g) => GUT_WORDS.includes(String(g || "").toLowerCase());
 
 export function guess(id, unitN, text, gut, deps = {}) {
+  const may = mayWriteHisAnswer(deps, deps.hisWords === true);
+  if (!may.ok) return { ok: false, why: may.why };
   const now = deps.now || new Date();
   const s = sessionOf(id, rowsOf(deps));
   if (!s) return { ok: false, why: `no samjhao session ${id}` };
@@ -246,12 +275,14 @@ export function guess(id, unitN, text, gut, deps = {}) {
   if (!clip(text, 2)) return { ok: false, why: "guess ka text chahiye — a blank guess is not a prediction" };
   const n = Number(unitN);
   if (s.guessed.has(n)) return { ok: false, why: `unit ${n} ka guess pehle hi aa chuka — ek unit, ek prediction` };
-  appendRow({ ev: "guess", of: id, ts: now.toISOString(), unit: n, text: clip(text, 2000), gut: String(gut).toLowerCase() }, deps);
+  appendRow({ ev: "guess", of: id, ts: now.toISOString(), unit: n, text: clip(text, 2000), gut: String(gut).toLowerCase(), by: may.by }, deps);
   return { ok: true, unit: n, session: sessionOf(id, rowsOf(deps)) };
 }
 
 /** answer — C · EVERY ANSWER IS A REP. Refused before the guess (B is a law, not a suggestion). */
 export function answer(id, unitN, text, gut, correct, deps = {}) {
+  const may = mayWriteHisAnswer(deps, deps.hisWords === true);
+  if (!may.ok) return { ok: false, why: may.why };
   const now = deps.now || new Date();
   const s = sessionOf(id, rowsOf(deps));
   if (!s) return { ok: false, why: `no samjhao session ${id}` };
@@ -265,12 +296,14 @@ export function answer(id, unitN, text, gut, correct, deps = {}) {
   const unit = p.ok ? p.units.find((u) => u.n === n) : null;
   // the rep goes to capture.mjs — this organ never writes a rep, so the gut-word law has ONE writer
   const rep = owner("capture.mjs", ["rep", "--concept", s.concept, "--axis", (unit && unit.axis) || "a", "--q", clip((unit && unit.check) || (unit && unit.predict.ask) || "samjhao unit", 200), "--gut", String(gut).toLowerCase(), "--correct", correct === false ? "false" : "true"], deps);
-  appendRow({ ev: "answer", of: id, ts: now.toISOString(), unit: n, text: clip(text, 2000), gut: String(gut).toLowerCase(), correct: correct !== false, rep_ok: !!rep.ok, rep_said: clip(rep.out || rep.err, 200) }, deps);
+  appendRow({ ev: "answer", of: id, ts: now.toISOString(), unit: n, text: clip(text, 2000), gut: String(gut).toLowerCase(), correct: correct !== false, by: may.by, rep_ok: !!rep.ok, rep_said: clip(rep.out || rep.err, 200) }, deps);
   return { ok: true, unit: n, rep_ok: !!rep.ok, rep_said: clip(rep.out || rep.err, 200), session: sessionOf(id, rowsOf(deps)) };
 }
 
 /** A · a doubt closes ONLY on his own answer */
 export function closeDoubt(id, doubtN, text, gut, deps = {}) {
+  const may = mayWriteHisAnswer(deps, deps.hisWords === true);
+  if (!may.ok) return { ok: false, why: may.why };
   const now = deps.now || new Date();
   const s = sessionOf(id, rowsOf(deps));
   if (!s) return { ok: false, why: `no samjhao session ${id}` };
@@ -282,7 +315,7 @@ export function closeDoubt(id, doubtN, text, gut, deps = {}) {
   if (p.ok && !p.doubts.some((d) => d.n === n)) return { ok: false, why: `doubt ${n} is not in ${s.concept}'s ledger (1..${p.doubts.length})` };
   if (s.closed_doubts.has(n)) return { ok: false, why: `doubt ${n} pehle hi band hai` };
   const rep = owner("capture.mjs", ["rep", "--concept", s.concept, "--axis", "a", "--q", clip((p.ok && (p.doubts.find((d) => d.n === n) || {}).q) || `doubt ${n}`, 200), "--gut", String(gut).toLowerCase(), "--correct", "true"], deps);
-  appendRow({ ev: "doubt", of: id, ts: now.toISOString(), doubt: n, text: clip(text, 2000), gut: String(gut).toLowerCase(), rep_ok: !!rep.ok }, deps);
+  appendRow({ ev: "doubt", of: id, ts: now.toISOString(), doubt: n, text: clip(text, 2000), gut: String(gut).toLowerCase(), by: may.by, rep_ok: !!rep.ok }, deps);
   return { ok: true, doubt: n, session: sessionOf(id, rowsOf(deps)) };
 }
 
@@ -306,7 +339,11 @@ export function burnedAxes(concept, rows = readRows(), capsuleDir = CAPSULE_DIR)
   const p = plan(want, capsuleDir);
   if (!p.ok) return [];
   const byUnit = new Map(p.units.map((u) => [u.n, u.axis]));
-  const mine = new Set([...foldSessions(rows).values()].filter((s) => s.concept === p.concept).map((s) => s.id));
+  // AN ABANDONED SESSION BURNS NOTHING (19 Aug 2026, on his word). A burn means HE was shown the
+  // answer. If the session is abandoned — because the guess was not his — the axis was never
+  // spent, and his first samjhao must really be his first. Append-only: the abandon is a ROW,
+  // nothing is deleted, and the history of what happened stays readable.
+  const mine = new Set([...foldSessions(rows).values()].filter((s) => s.concept === p.concept && !s.abandoned_at).map((s) => s.id));
   const out = new Map();
   for (const r of rows || []) {
     if (!r || r.ev !== "guess" || !mine.has(r.of)) continue;
@@ -314,6 +351,16 @@ export function burnedAxes(concept, rows = readRows(), capsuleDir = CAPSULE_DIR)
     if (axis && !out.has(axis)) out.set(axis, { axis, at: r.ts });
   }
   return [...out.values()];
+}
+
+/** abandon — the way BACK. Append-only: nothing is deleted, the session simply stops counting. */
+export function abandon(id, why, deps = {}) {
+  const now = deps.now || new Date();
+  const s = sessionOf(id, rowsOf(deps));
+  if (!s) return { ok: false, why: `no samjhao session ${id}` };
+  if (s.abandoned_at) return { ok: false, why: `samjhao ${id} already abandoned at ${s.abandoned_at}` };
+  appendRow({ ev: "abandon", of: id, ts: now.toISOString(), why: clip(why, 300) || "no reason given" }, deps);
+  return { ok: true, id, session: sessionOf(id, rowsOf(deps)) };
 }
 
 /** progress — the count that replaces the feeling */
@@ -416,6 +463,20 @@ function selftest() {
     burnedNow.length === 1 && burnedNow[0].axis === "a" && !!burnedNow[0].at, JSON.stringify(burnedNow));
   assert("...and an axis he has NOT reached is not burned — only what was actually opened", !burnedNow.some((b) => b.axis === "b"));
 
+  // ABANDON — the way back, on his word (19 Aug) after a proof-run wrote a guess in HIS name.
+  const ab = abandon("tSAMJ01", "the guess was a proof-run's, not his", deps);
+  assert("ABANDON is an append-only EVENT — nothing is deleted, the session simply stops counting",
+    ab.ok && rows.filter((r) => r.ev === "abandon").length === 1 && rows.some((r) => r.ev === "guess"));
+  assert("...and an ABANDONED session BURNS NOTHING — the axis is COLD again, so his first samjhao is really his FIRST",
+    burnedAxes("tokenization", rows, CAPSULE_DIR).length === 0);
+  assert("...abandoning twice is refused", !abandon("tSAMJ01", "again", deps).ok);
+  rows.splice(rows.findIndex((r) => r.ev === "abandon"), 1);   // the rest of this selftest drives the same live session
+
+  // THE AUTHORSHIP GUARD — his prediction is his, and he only gets one.
+  assert("HIS ANSWERS ARE HIS: a FIXTURE writing the LIVE ledger is refused outright — no flag, no override; a proof belongs in a sandbox ledger",
+    !mayWriteHisAnswer({}, false).ok && /FIXTURE/.test(mayWriteHisAnswer({}, false).why));
+  assert("...and a sandbox ledger is always writable — that is exactly where a proof goes", mayWriteHisAnswer({ ledger: join(tmpdir(), "x.jsonl") }, false).ok);
+
   const a1 = answer("tSAMJ01", 1, "text -> tukde -> IDs; kaam ID-list pe khatam", "shaky", true, deps);
   const repCall = calls.find((c) => c.organ === "capture.mjs");
   assert("C · EVERY ANSWER IS A REP — it goes through capture.mjs (this organ never writes a rep, so the gut-word law keeps ONE writer)",
@@ -502,14 +563,20 @@ if (process.argv[1] && process.argv[1].endsWith("samjhao.mjs")) {
   }
   else if (mode === "guess" || mode === "answer") {
     const id = resolveId(arg);
-    const r = mode === "guess" ? guess(id, flag("unit"), flag("text"), flag("gut"), {})
-      : answer(id, flag("unit"), flag("text"), flag("gut"), flag("correct") === "false" ? false : true, {});
+    const d = { hisWords: has("his-words") };
+    const r = mode === "guess" ? guess(id, flag("unit"), flag("text"), flag("gut"), d)
+      : answer(id, flag("unit"), flag("text"), flag("gut"), flag("correct") === "false" ? false : true, d);
     console.log(r.ok ? `samjhao: ok ${mode} unit ${r.unit}${r.rep_ok === false ? " (⚠ rep capture.mjs tak nahi pahuncha)" : mode === "answer" ? " · rep captured" : ""}` : `samjhao: ${r.why}`);
     process.exit(r.ok ? 0 : 1);
   }
   else if (mode === "doubt") {
-    const r = closeDoubt(resolveId(arg), flag("n"), flag("text"), flag("gut"), {});
+    const r = closeDoubt(resolveId(arg), flag("n"), flag("text"), flag("gut"), { hisWords: has("his-words") });
     console.log(r.ok ? `samjhao: ok doubt ${r.doubt} band` : `samjhao: ${r.why}`);
+    process.exit(r.ok ? 0 : 1);
+  }
+  else if (mode === "abandon") {
+    const r = abandon(resolveId(arg), flag("why"), {});
+    console.log(r.ok ? `samjhao: abandoned ${r.id} — ${r.session.abandon_why}. Iske guesses ab kuch nahi ginte, aur jo axes isne khole the woh dobara COLD hain (append-only: kuch delete nahi hua).` : `samjhao: ${r.why}`);
     process.exit(r.ok ? 0 : 1);
   }
   else if (mode === "status") {
