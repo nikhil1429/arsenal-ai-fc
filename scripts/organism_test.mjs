@@ -576,6 +576,44 @@ function laws() {
       forbidden.code !== 0 && /FIXTURE/.test(forbidden.out) && beforeBytes === afterBytes, `exit ${forbidden.code} · ${beforeBytes}->${afterBytes} · ${forbidden.out}`);
     assert("HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs",
       run([join(sb, "scripts", "samjhao.mjs"), "open", "tokenization"], { cwd: sb, env: samEnv }).code === 0);
+
+    // ── LOAD ZERO BLOCK 5 (19 Aug 2026) — INTENT ────────────────────────────────
+    // HIS LAW: "i can say the same thing in different ways in different words in different tones
+    // anywhere in the entire organism." So no organ may hold a private list of the words he might
+    // use. THE SHAPE THIS SCAN LOOKS FOR is an ANCHORED regex (^…$) carrying his answer-vocabulary
+    // — that is a matcher held against a WHOLE utterance, i.e. a word list for his speech. An
+    // UNANCHORED regex over ids or log lines (twin.mjs's /abandon|fail|dread|quit|stall/ over a
+    // market id) is a different thing and is deliberately not flagged.
+    // A FROZEN matcher is allowed while NOTHING references it (L9: freeze, never delete) — re-wire
+    // one and this goes red. Everything else must be a DECLARED site, and the count may only fall.
+    const VOCAB = /(haan|chhod|theek|thik|chalo|baad|aage|agla|samjha|\bbye\b|\bquit\b|\bskip\b|full time)/i;
+    const ANCHORED = /\/\^(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n])+\$\/[gimsuy]*/g;
+    // The one site still routing on his words, named rather than hidden. It is next after BLOCK 5.
+    const DECLARED_WORD_ROUTING = [{ file: "gaffer_state.mjs", why: "isStandingLegacy — decides if a captain line states a law that outlives the session. Live at gaffer_brain.mjs:546. Same class as the four BLOCK 5 killed; it needs a `standing` intent and is surgery in a hot path, so it is DECLARED and counted here rather than quietly left." }];
+    const wordRouting = [];
+    for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs") && x !== "acts.mjs" && x !== SELF)) {
+      const lines = readOrgan(f).split("\n");
+      lines.forEach((line, i) => {
+        if (/^\s*(\/\/|\*)/.test(line)) return;
+        for (const r of line.match(ANCHORED) || []) {
+          if (!VOCAB.test(r)) continue;
+          const name = (/const\s+([A-Za-z0-9_]+)\s*=/.exec(line) || [])[1] || null;
+          const referenced = !name || lines.some((l, j) => j !== i && new RegExp(`\\b${name}\\b`).test(l) && !/^\s*(\/\/|\*)/.test(l));
+          if (referenced) wordRouting.push(`${f}:${i + 1}`);
+        }
+      });
+    }
+    const undeclared = wordRouting.filter((s) => !DECLARED_WORD_ROUTING.some((d) => s.startsWith(d.file)));
+    assert("LOAD ZERO BLOCK 5 · no organ tests a private word-list against HIS TEXT outside the resolver — every wording, every tone, one typed intent",
+      undeclared.length === 0, `${undeclared.join(", ")} still routes on the words he happened to use. Ask acts.resolveIntent instead — it judges MEANING, and its cache makes the second utterance free.`);
+    assert("LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (1 left: gaffer_state.isStandingLegacy)",
+      wordRouting.length <= DECLARED_WORD_ROUTING.length, `${wordRouting.join(", ")}`);
+    assert("LOAD ZERO BLOCK 5 · the four sites §BLOCK 5 named are gone from the live path — sitting's two are FROZEN and unreferenced, talk and captains_call now ask the resolver",
+      !wordRouting.some((s) => s.startsWith("sitting.mjs") || s.startsWith("talk.mjs") || s.startsWith("captains_call.mjs")), wordRouting.join(", "));
+    for (const org of ["sitting.mjs", "talk.mjs", "captains_call.mjs"]) {
+      assert(`LOAD ZERO BLOCK 5 · ${org} asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary`,
+        /resolveIntent/.test(readOrgan(org)));
+    }
   } finally { rmSync(sb, { recursive: true, force: true }); }
 }
 

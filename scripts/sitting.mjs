@@ -65,6 +65,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import { randomBytes } from "node:crypto";
+import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door — no organ keeps its own word list
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -96,9 +97,14 @@ export const TURN_CLASSES = Object.freeze(["deliver", "respond", "compose", "jud
 // hands the reply back ONCE ("act do ya daawa hatao"); a second miss is teaching-contract drift `fake-done`.
 export const SITTING_CTRL_GRAMMAR = '<<CTRL {"class":"respond|compose","bank":{"axis":"a-i","gut":"knew|shaky|guessed"}|null,"unit_done":true|false,"question_asked":true|false,"next":"deliver|wait","acts":[{"verb":"note|fact|pref|rule|agenda|job|card|reminder|mission","args":{"text":"<HIS words verbatim>","kind":"doubt|win|preference|thread","axis":"<pref axis>","job":"<existing brain job id>"}}],"claims_done":true|false}>>';
 const CTRL_RE = /<<CTRL\s*(\{[\s\S]*?\})\s*>>\s*$/;
-const CONTINUE_RE = /^\s*(?:(?:haan|haa|han|ha|ok(?:ay)?|theek|thik|chalo|acha|accha)[,\s]+)?(haan|haa|han|ha|hmm+|hm+|ok(ay)?|theek( hai)?|thik( hai)?|aage( badho)?|next|chalo|continue|go( on)?|bolo|sahi( hai)?|yes|yeah|yep|samajh (aa )?gaya|samjha|got it|done|clear( hai)?|acha|accha|shuru( karo| karein| kar| ho jao)?|start( karo)?|let'?s (go|start))\s*[.!,]*\s*$/i;   // "haan shuru karo" (the live proof's first line) is a continue too
+// LOAD ZERO BLOCK 5 (19 Aug 2026) — FROZEN, UNREFERENCED. A 30-alternative guess about how he
+// would say "go on". Every such list is wrong the first time he says it a new way. Kept (L9:
+// freeze, never delete) so the shape of the old bug stays readable; classifyTurn now asks
+// acts.resolveIntent, which judges MEANING. The ratchet allows a frozen NL regex ONLY while
+// nothing references it — re-wire it and the suite goes red.
+const CONTINUE_RE_FROZEN = /^\s*(?:(?:haan|haa|han|ha|ok(?:ay)?|theek|thik|chalo|acha|accha)[,\s]+)?(haan|haa|han|ha|hmm+|hm+|ok(ay)?|theek( hai)?|thik( hai)?|aage( badho)?|next|chalo|continue|go( on)?|bolo|sahi( hai)?|yes|yeah|yep|samajh (aa )?gaya|samjha|got it|done|clear( hai)?|acha|accha|shuru( karo| karein| kar| ho jao)?|start( karo)?|let'?s (go|start))\s*[.!,]*\s*$/i;   // "haan shuru karo" (the live proof's first line) is a continue too
 // while a BANKABLE question is pending, only an explicit skip moves on without an answer (his "aage" = "chhodo")
-const SKIP_RE = /^\s*(skip( it)?|chhod(o| do)?|aage( badho)?|next( question)?|agla( sawaal)?|pata nahi[, ]*(aage|next|skip)|move on)\s*[.!,]*\s*$/i;
+const SKIP_RE_FROZEN = /^\s*(skip( it)?|chhod(o| do)?|aage( badho)?|next( question)?|agla( sawaal)?|pata nahi[, ]*(aage|next|skip)|move on)\s*[.!,]*\s*$/i;
 const GUT_RE = /\b(knew|shaky|guessed)\b|(pakka|pata (?:tha|hai)|confident|sure)|(shak|doubt|thoda|halka|kuch kuch)|(guess|andaaz|tukka|pata nahi)/i;
 const gutFromText = (t) => {
   const m = GUT_RE.exec(String(t || ""));
@@ -359,15 +365,20 @@ export function parseCtrl(text) {
   try { ctrl = JSON.parse(m[1]); } catch { ctrl = null; }
   return { spoken: String(text || "").slice(0, m.index).trim(), ctrl, had_tail: !!ctrl };
 }
-export function classifyTurn(text, S) {
+// LOAD ZERO BLOCK 5 (19 Aug 2026): his words, ANY wording, ANY tone -> one typed intent. The
+// caller declares what it can accept and gets one of those back; no word list lives here any more.
+// `unresolved` (the lane down) falls through to "respond", which is the SAFE default on this
+// surface: his line goes to the model and gets banked. A guess here would re-create the bug.
+export async function classifyTurn(text, S, deps = {}) {
   const pq = S && S.pending_question;
   const hasNext = S && Array.isArray(S.plan) && S.cursor < S.plan.length;
+  if (!hasNext) return "respond";
   if (pq && pq.bankable) {                                          // a check-question is on the table
-    if (SKIP_RE.test(String(text || "")) && hasNext) return "skip"; // his explicit "chhodo" — no rep, next unit
-    return "respond";                                               // his answer → the model banks (or the gut-regex in deliver-only)
+    const r = await resolveIntent(text, { expects: ["skip", "other"], surface: "dugout" }, deps);
+    return r.intent === "skip" ? "skip" : "respond";                // only an explicit "leave this one" moves on unanswered
   }
-  if (CONTINUE_RE.test(String(text || "")) && hasNext) return "deliver";   // "haan/aage" with a plan ahead → next unit, no model
-  return "respond";
+  const r = await resolveIntent(text, { expects: ["continue", "other"], surface: "dugout" }, deps);
+  return r.intent === "continue" ? "deliver" : "respond";
 }
 
 // ── THE DAEMON ────────────────────────────────────────────────────────────────
@@ -688,7 +699,7 @@ export function createSitting(deps = {}) {
     return !!session;
   };
   async function runTurn(job) {
-    const cls = classifyTurn(job.text, S);
+    const cls = await classifyTurn(job.text, S, deps.intent || {});
     if (cls === "deliver") { deliverNext(job.surface, job.n, "continue-word"); save(); return; }
     if (cls === "skip") { skipQuestion(`his word (turn ${job.n})`); logTurn({ turn: job.n, class: "deliver", surface: job.surface, chars_in: job.text.length, latency_ms: 0, tokens: null, why: "skip-word: question dropped, no rep" }); deliverNext(job.surface, job.n, "after-skip"); save(); return; }
     // RESPOND — his answer or his doubt
@@ -884,7 +895,7 @@ export function createSitting(deps = {}) {
     });
   }
   function stop() { return new Promise((resolve) => { if (idleTimer) clearTimeout(idleTimer); if (session) { try { session.kill(); } catch { } } if (!server) return resolve(); server.close(() => resolve()); }); }
-  return { open, turn, spoken, next, status, close, plan, serve, stop, context: (o) => gatherContext(o || {}), get state() { return S; }, get session() { return session; }, undelivered, _classify: (t) => classifyTurn(t, S) };
+  return { open, turn, spoken, next, status, close, plan, serve, stop, context: (o) => gatherContext(o || {}), get state() { return S; }, get session() { return session; }, undelivered, _classify: (t) => classifyTurn(t, S, deps.intent || {}) };
 }
 const BOOTED_AT = new Date().toISOString();
 const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch { return null; } })();
@@ -1211,6 +1222,18 @@ async function selftest() {
     pacer: async (text, id, n) => ({ text: `FORGE · step 1/12 · turn ${n}\nTEACHING CONTRACT · turn ${n}/40`, failed: [] }),
     recordConsumption: (row) => { calls.push({ file: "brain.recordConsumption", args: [row.job, row.kind], input: null }); return { ok: true }; },
     reviewer: (id) => { calls.push({ file: "sitting.review", args: [id], input: null }); },
+    // LOAD ZERO BLOCK 5 (19 Aug 2026): a deterministic stand-in for the `lite` intent model, so
+    // these checks stay hermetic and fast. YES, the stand-in matches words — that is exactly what
+    // a fixture is allowed to do and exactly what the LIVE path no longer does. What is under test
+    // here is the SITTING's routing (deliver / skip / respond), not the model's judgement; the
+    // resolver's own proof (5 wordings, 2 languages, one intent) lives in acts.mjs's selftest.
+    intent: { cache: {}, generate: async (p) => {
+      const said = String(p).split("HE SAID:").slice(-1)[0].trim().toLowerCase();
+      const offers = (i) => new RegExp(`^- ${i}:`, "m").test(p);
+      if (offers("skip") && /(skip|chhod|aage|agla|move on)/.test(said)) return { ok: true, text: JSON.stringify({ intent: "skip" }) };
+      if (offers("continue") && /(haan|haa|ha|hmm|ok|theek|thik|chalo|aage|next|continue|go on|bolo|samajh|got it|shuru|start|yes)/.test(said)) return { ok: true, text: JSON.stringify({ intent: "continue" }) };
+      return { ok: true, text: JSON.stringify({ intent: "other" }) };
+    } },
   };
   const rc = (row) => calls.filter((c) => c.file === "brain.recordConsumption");
   const flushWork = async () => { await new Promise((r) => setTimeout(r, 60)); };

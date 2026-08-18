@@ -460,3 +460,6 @@ dressing-room/state/samjhao.jsonl
 # LOAD ZERO BLOCK 3 (19 Aug 2026): the outbox — outbox.mjs sole writer. THE ONE ROAD TO HIM;
 # append-only events (post/deliver/ack/sweep). Carries what was made FOR HIM, so it stays local.
 dressing-room/state/outbox.jsonl
+# LOAD ZERO BLOCK 5 (19 Aug 2026): the intent cache — acts.mjs sole writer. It holds HIS OWN
+# utterances keyed to the verdict this resolver already gave them, so it stays local.
+dressing-room/state/intent_cache.json

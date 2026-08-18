@@ -1,48 +1,62 @@
 {
- "built_at": "2026-08-18T21:28:52.014Z",
+ "built_at": "2026-08-18T22:03:46.776Z",
  "organs_parsed": 103,
  "organs_expected": 103,
  "parse_errors": [],
  "unresolved_sinks": 1306,
  "organs": {
   "acts.mjs": {
-   "loc": 355,
+   "loc": 482,
    "reads": [
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      101,
-      101,
-      101,
-      101
+      104,
+      104,
+      104,
+      104
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/intent_cache.json",
+     "lines": [
+      265,
+      430,
+      265,
+      430,
+      265,
+      430,
+      265,
+      430
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/acts.jsonl",
      "lines": [
-      228,
-      228,
-      304,
-      304,
-      64,
-      64,
-      228,
-      228,
-      304,
-      304,
-      64,
-      64,
-      228,
-      228,
-      304,
-      304,
-      64,
-      64,
-      228,
-      228,
-      304,
-      304
+      319,
+      319,
+      395,
+      395,
+      67,
+      67,
+      319,
+      319,
+      395,
+      395,
+      67,
+      67,
+      319,
+      319,
+      395,
+      395,
+      67,
+      67,
+      319,
+      319,
+      395,
+      395
      ],
      "fixture": false
     }
@@ -51,13 +65,26 @@
     {
      "path": "dressing-room/state/acts.jsonl",
      "lines": [
-      119,
-      119,
-      119,
-      119
+      122,
+      122,
+      122,
+      122
      ],
      "verbs": [
       "appendFileSync"
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/intent_cache.json",
+     "lines": [
+      269,
+      269,
+      269,
+      269
+     ],
+     "verbs": [
+      "writeFileSync"
      ],
      "fixture": false
     }
@@ -65,12 +92,18 @@
    "spawns": [],
    "swallows": [],
    "verbs": [
+    "continue",
+    "defer",
     "do",
+    "no",
+    "other",
     "parse-ball",
     "selftest",
+    "skip",
     "status",
     "stop",
-    "undo"
+    "undo",
+    "yes"
    ],
    "header_verbs": [
     "do",
@@ -81,6 +114,10 @@
     "ACT_TAIL_RE",
     "BALL_SCHEMA",
     "DOORS",
+    "INTENTS",
+    "INTENT_CACHE",
+    "INTENT_MEANING",
+    "INTENT_SCHEMA",
     "OWNERS",
     "VERBS",
     "ballPrompt",
@@ -88,9 +125,13 @@
     "dispatch",
     "dispatchAll",
     "findings",
+    "intentKey",
+    "intentPrompt",
+    "normalizeUtterance",
     "parseActTail",
     "parseBall",
     "parseBallText",
+    "resolveIntent",
     "stats",
     "undo",
     "validateAct"
@@ -2238,219 +2279,219 @@
    "unresolved": 4
   },
   "captains_call.mjs": {
-   "loc": 2024,
+   "loc": 2034,
    "reads": [
     {
      "path": "dressing-room/state/brain_out/market",
      "lines": [
-      958,
-      958,
-      958,
-      958
+      959,
+      959,
+      959,
+      959
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/manager/system.md",
      "lines": [
-      1104,
-      1104,
-      1104,
-      1104
+      1105,
+      1105,
+      1105,
+      1105
      ],
      "fixture": false
     },
     {
      "path": "learning-layer/PROJECT_OS.md",
      "lines": [
-      1111,
-      1111,
-      1111,
-      1111
+      1112,
+      1112,
+      1112,
+      1112
      ],
      "fixture": false
     },
     {
      "path": "scripts/captains_call.mjs",
      "lines": [
-      1877,
-      1940,
-      2007,
-      2008,
-      1877,
-      1940,
-      2007,
-      2008,
-      1877,
-      1940,
-      2007,
-      2008,
-      1877,
-      1940,
-      2007,
-      2008
+      1887,
+      1950,
+      2017,
+      2018,
+      1887,
+      1950,
+      2017,
+      2018,
+      1887,
+      1950,
+      2017,
+      2018,
+      1887,
+      1950,
+      2017,
+      2018
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/captains_call.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tape_room.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/trust_tiers.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gem_sync_stamp.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/oura_auth_state.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/identity_facts.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/nikhil_model.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/awayday.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      84,
-      84,
-      84
+      85,
+      85,
+      85
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/rejirah_log.jsonl",
      "lines": [
-      85,
-      85,
-      85
+      86,
+      86,
+      86
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      85,
-      85,
-      85
+      86,
+      86,
+      86
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gate_tune_ledger.jsonl",
      "lines": [
-      85,
-      85,
-      85
+      86,
+      86,
+      86
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/identity_facts.pending.jsonl",
      "lines": [
-      85,
-      85,
-      85
+      86,
+      86,
+      86
      ],
      "fixture": false
     }
@@ -2459,9 +2500,9 @@
     {
      "path": "dressing-room/state/captains_call.json",
      "lines": [
-      93,
-      93,
-      93
+      94,
+      94,
+      94
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -2474,35 +2515,35 @@
      "kind": "organ",
      "script": "teaching_contract.mjs",
      "verb": null,
-     "line": 1227,
+     "line": 1228,
      "ctx": "runStagedDispatch"
     },
     {
      "kind": "organ",
      "script": "scorer.mjs",
      "verb": "ratify",
-     "line": 1297,
+     "line": 1307,
      "ctx": "main"
     }
    ],
    "swallows": [
     {
-     "line": 1077,
+     "line": 1078,
      "try_stmts": 6,
      "catch_stmts": 0
     },
     {
-     "line": 1077,
+     "line": 1078,
      "try_stmts": 6,
      "catch_stmts": 0
     },
     {
-     "line": 1077,
+     "line": 1078,
      "try_stmts": 6,
      "catch_stmts": 0
     },
     {
-     "line": 1077,
+     "line": 1078,
      "try_stmts": 6,
      "catch_stmts": 0
     }
@@ -11103,17 +11144,20 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 949,
+   "loc": 987,
    "reads": [
     {
      "path": "scripts",
      "lines": [
       68,
       442,
+      594,
       68,
       442,
+      594,
       68,
-      442
+      442,
+      594
      ],
      "fixture": false
     },
@@ -11163,12 +11207,12 @@
     {
      "path": "node_modules",
      "lines": [
-      889,
-      889,
-      889,
-      889,
-      889,
-      889
+      927,
+      927,
+      927,
+      927,
+      927,
+      927
      ],
      "fixture": false
     },
@@ -11192,8 +11236,8 @@
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      734,
-      734
+      772,
+      772
      ],
      "fixture": false
     }
@@ -14225,236 +14269,236 @@
    "unresolved": 5
   },
   "sitting.mjs": {
-   "loc": 1447,
+   "loc": 1470,
    "reads": [
     {
      "path": "scripts/sitting.log",
      "lines": [
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170
      ],
      "fixture": false
     },
     {
      "path": "scripts/sitting.mjs",
      "lines": [
-      890
+      901
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting.json",
      "lines": [
-      1155,
-      1155,
-      1155,
-      1155,
-      1435,
-      1435,
-      1155,
-      1155,
-      1435,
-      1435,
-      1155,
-      1155,
-      1435,
-      1435
+      1166,
+      1166,
+      1166,
+      1166,
+      1458,
+      1458,
+      1166,
+      1166,
+      1458,
+      1458,
+      1166,
+      1166,
+      1458,
+      1458
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      132,
-      132,
-      132
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/scout.json",
      "lines": [
-      132,
-      132,
-      132
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_standing.json",
      "lines": [
-      132,
-      132,
-      132
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      132,
-      132,
-      132
+      138,
+      138,
+      138
      ],
      "fixture": false
     }
@@ -14463,168 +14507,168 @@
     {
      "path": "scripts/sitting.log.1",
      "lines": [
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170
      ],
      "verbs": [
       "rmSync",
@@ -14635,87 +14679,87 @@
     {
      "path": "scripts/sitting.log",
      "lines": [
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164,
-      164
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170,
+      170
      ],
      "verbs": [
       "appendFileSync"
@@ -14728,7 +14772,7 @@
      "kind": "organ",
      "script": "forge_session.mjs",
      "verb": "contract",
-     "line": 213,
+     "line": 219,
      "ctx": "pacerBlock",
      "inproc": true
     },
@@ -14736,7 +14780,7 @@
      "kind": "organ",
      "script": "teaching_contract.mjs",
      "verb": "print",
-     "line": 214,
+     "line": 220,
      "ctx": "pacerBlock",
      "inproc": true
     },
@@ -14744,7 +14788,7 @@
      "kind": "organ",
      "script": "hippocampus.mjs",
      "verb": "recall-hint",
-     "line": 215,
+     "line": 221,
      "ctx": "pacerBlock",
      "inproc": true
     },
@@ -14752,35 +14796,35 @@
      "kind": "organ",
      "script": "learnstate.mjs",
      "verb": "json",
-     "line": 226,
+     "line": 232,
      "ctx": "readKickoff"
     },
     {
      "kind": "organ",
      "script": "intent.mjs",
      "verb": "brief",
-     "line": 244,
+     "line": 250,
      "ctx": "readIntentBrief"
     },
     {
      "kind": "organ",
      "script": "sitting.mjs",
      "verb": "review",
-     "line": 468,
+     "line": 479,
      "ctx": "createSitting"
     },
     {
      "kind": "organ",
      "script": "teaching_contract.mjs",
      "verb": "autohit",
-     "line": 760,
+     "line": 771,
      "ctx": "runTurn"
     },
     {
      "kind": "organ",
      "script": "sitting.mjs",
      "verb": "daemon",
-     "line": 1063,
+     "line": 1074,
      "ctx": "ensureDaemon"
     }
    ],
@@ -15170,105 +15214,105 @@
    "unresolved": 1
   },
   "talk.mjs": {
-   "loc": 296,
+   "loc": 302,
    "reads": [
     {
      "path": "dressing-room/state/tape_room.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/drills.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loop_vitals.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/scout.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/lexicon.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/doubt_grammar.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      37,
-      37,
-      37,
-      37
+      38,
+      38,
+      38,
+      38
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/team_sheet.md",
      "lines": [
-      114,
-      114,
-      114,
-      114
+      115,
+      115,
+      115,
+      115
      ],
      "fixture": false
     }
@@ -15277,9 +15321,9 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      284,
-      284,
-      284
+      290,
+      290,
+      290
      ],
      "verbs": [
       "appendFileSync"
@@ -15291,22 +15335,22 @@
     {
      "kind": "llm",
      "bin": "claude",
-     "line": 144
+     "line": 145
     }
    ],
    "swallows": [
     {
-     "line": 143,
+     "line": 144,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 143,
+     "line": 144,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 143,
+     "line": 144,
      "try_stmts": 4,
      "catch_stmts": 1
     }
@@ -20569,6 +20613,19 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/intent_cache.json",
+   "readers": [
+    "acts.mjs"
+   ],
+   "writers": [
+    "acts.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/ladder_config.json",
    "readers": [
     "heartbeat.mjs",
@@ -23230,6 +23287,8 @@
   "dressing-room/state/brain_out/agenda/2026-08-15.md",
   "dressing-room/state/brain_out/agenda/2026-08-17.json",
   "dressing-room/state/brain_out/agenda/2026-08-17.md",
+  "dressing-room/state/brain_out/agenda/2026-08-18.json",
+  "dressing-room/state/brain_out/agenda/2026-08-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-17.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-21.md",
@@ -23259,6 +23318,8 @@
   "dressing-room/state/brain_out/day_cartridge/2026-08-15.md",
   "dressing-room/state/brain_out/day_cartridge/2026-08-17.allowed.json",
   "dressing-room/state/brain_out/day_cartridge/2026-08-17.md",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-18.allowed.json",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-18.md",
   "dressing-room/state/brain_out/diary/2026-08-13.json",
   "dressing-room/state/brain_out/diary/2026-08-13.md",
   "dressing-room/state/brain_out/diary/2026-08-14.json",
@@ -23269,6 +23330,8 @@
   "dressing-room/state/brain_out/diary/2026-08-16.md",
   "dressing-room/state/brain_out/diary/2026-08-18.json",
   "dressing-room/state/brain_out/diary/2026-08-18.md",
+  "dressing-room/state/brain_out/diary/2026-08-19.json",
+  "dressing-room/state/brain_out/diary/2026-08-19.md",
   "dressing-room/state/brain_out/doubts/2026-07-18.md",
   "dressing-room/state/brain_out/doubts/2026-07-21.md",
   "dressing-room/state/brain_out/doubts/2026-07-29.md",
@@ -23384,6 +23447,8 @@
   "dressing-room/state/brain_out/gemini_wall/2026-08-15.md",
   "dressing-room/state/brain_out/gemini_wall/2026-08-16.md",
   "dressing-room/state/brain_out/gemini_wall/2026-08-18.md",
+  "dressing-room/state/brain_out/intent_digest/2026-08-18.json",
+  "dressing-room/state/brain_out/intent_digest/2026-08-18.md",
   "dressing-room/state/brain_out/lexicon/2026-07-18.md",
   "dressing-room/state/brain_out/lexicon/2026-07-19.md",
   "dressing-room/state/brain_out/lexicon/2026-08-06.md",
@@ -23444,6 +23509,8 @@
   "dressing-room/state/brain_out/night_coach/2026-08-16.md",
   "dressing-room/state/brain_out/night_coach/2026-08-18.json",
   "dressing-room/state/brain_out/night_coach/2026-08-18.md",
+  "dressing-room/state/brain_out/night_coach/2026-08-19.json",
+  "dressing-room/state/brain_out/night_coach/2026-08-19.md",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-07-31.json",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-08-01.json",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-08-06.json",
@@ -23906,6 +23973,7 @@
   "dressing-room/state/brain_out/evening_voice",
   "dressing-room/state/brain_out/gaffer_audit",
   "dressing-room/state/brain_out/gemini_wall",
+  "dressing-room/state/brain_out/intent_digest",
   "dressing-room/state/brain_out/lexicon",
   "dressing-room/state/brain_out/market",
   "dressing-room/state/brain_out/midday",
@@ -23945,6 +24013,10 @@
   {
    "organ": "acts.mjs",
    "file": "acts.json"
+  },
+  {
+   "organ": "acts.mjs",
+   "file": "intent_cache.json"
   },
   {
    "organ": "audit.mjs",

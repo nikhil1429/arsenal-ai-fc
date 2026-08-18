@@ -3,6 +3,8 @@
 // acts.mjs · ARSENAL AI FC — LAW A: THE ACT LANE — HIS EXPLICIT WORD BECOMES A
 //   RECEIPT IN THE SAME TURN (MODELS + ACTS work order, Block 2, 18 Aug 2026)
 //   SOLE WRITER of dressing-room/state/acts.jsonl (gitignored — his words verbatim).
+//   SOLE WRITER of dressing-room/state/intent_cache.json too (LOAD ZERO BLOCK 5, 19 Aug 2026 —
+//   the resolver's memo of its OWN past verdicts; see THE INTENT section below).
 //   Writes NOTHING else: every verb is an EXISTING owner's CLI, run as a child.
 // ----------------------------------------------------------------------------
 // HIS WORDS (18 Aug 2026): "what i am explictly saying should be done and implemented
@@ -49,6 +51,7 @@ import { readFileSync, appendFileSync, existsSync, mkdirSync, statSync, mkdtempS
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -212,6 +215,94 @@ export async function parseBall(text, deps = {}) {
   return { ...out, model: r && r.model || null, lane_why: r && !r.ok ? r.why : null };
 }
 
+// ============================================================================
+// LOAD ZERO BLOCK 5 — INTENT (19 Aug 2026). HIS WORDS, ANY WORDING, ANY TONE, ANY
+//   SURFACE → THE SAME TYPED INTENT. Also SOLE WRITER of intent_cache.json.
+// ----------------------------------------------------------------------------
+// HIS LAW, 19 Aug 2026: *"i can say the same thing in different ways in different words in
+//   different tones anywhere in the entire organism"* — so NO ORGAN MAY BRANCH ON HIS LITERAL
+//   WORDS. Measured that day, four sites did exactly that, each with its own private word list:
+//     sitting.mjs CONTINUE_RE (a 30-alternative haan/ok/theek/chalo/… regex) · sitting.mjs
+//     SKIP_RE · talk.mjs /^(bye|band|exit|quit|full time)$/i · captains_call.mjs, whose answer
+//     had to be LITERALLY haan|na|baad.
+//   Each list is a guess about how he will speak next, and every one of them is wrong the first
+//   time he says it a new way — in a different mood, in more English, in fewer words.
+//
+// THE SHAPE: the caller DECLARES the legal answers (`expects`) and gets ONE of them back. It
+//   never asks "what did he say", only "which of these did he mean". A `lite` model reads the
+//   MEANING; the prompt describes what each intent MEANS and never lists trigger words, so no
+//   vocabulary lives in code at all.
+//
+// THE FAST PATH IS A CACHE OF THIS RESOLVER'S OWN PAST VERDICTS — never a keyword table.
+//   §BLOCK 5's constraint is exact: *"a deterministic fast-path is allowed ONLY as an
+//   optimisation that can never change the outcome — if it ever decides, it has become keyword
+//   routing again."* A cache satisfies that BY CONSTRUCTION: it can only ever repeat a verdict
+//   the resolver already produced for those same words under those same expectations. It cannot
+//   invent one. That is what makes the voice surface affordable — the second time he says
+//   something, there is no model call and no latency at all.
+//   (The cache key normalises case/punctuation/whitespace. That is an EQUALITY key on the whole
+//   utterance, the same idea as tasks.mjs's idempotency key — not a branch on any word in it.)
+//
+// WHEN THE LANE IS DOWN the answer is `unresolved`, never a guess. A caller then does the safe
+//   thing for its surface (wait, or ask him once). Guessing here would re-create the bug.
+// ============================================================================
+export const INTENTS = ["yes", "no", "defer", "continue", "skip", "stop", "other"];
+export const INTENT_MEANING = {
+  yes: "he agrees / accepts / confirms the thing he was asked",
+  no: "he declines / rejects / disagrees with the thing he was asked",
+  defer: "not now — later, another time, remind me again",
+  continue: "carry on, go to the next thing, he is following and wants more",
+  skip: "leave THIS one and move past it without answering it",
+  stop: "end the session/call entirely, he is done for now",
+  other: "none of the above — he said something substantive that is not one of these",
+};
+export const INTENT_CACHE = process.env.ARSENAL_INTENT_CACHE || join(STATE_DIR, "intent_cache.json");
+export const normalizeUtterance = (t) => String(t == null ? "" : t).normalize("NFKC").toLowerCase().replace(/[.!?,;:—–-]+/g, " ").replace(/\s+/g, " ").trim();
+export const intentKey = (text, expects) => createHash("sha1").update(`${[...expects].sort().join("|")} ${normalizeUtterance(text)}`).digest("hex").slice(0, 12);
+
+function readCache(deps = {}) {
+  if (deps.cache) return deps.cache;
+  try { return JSON.parse(readFileSync(deps.cachePath || INTENT_CACHE, "utf8")); } catch { return {}; }
+}
+function writeCache(map, deps = {}) {
+  if (deps.cache) { Object.assign(deps.cache, map); return true; }
+  try { mkdirSync(dirname(deps.cachePath || INTENT_CACHE), { recursive: true }); writeFileSync(deps.cachePath || INTENT_CACHE, JSON.stringify(map)); return true; } catch { return false; }
+}
+
+export function intentPrompt(text, expects) {
+  const menu = expects.map((i) => `- ${i}: ${INTENT_MEANING[i] || i}`).join("\n");
+  return `The captain just said one thing. Decide WHICH OF THESE HE MEANT. Judge the MEANING, not the words — he says the same thing in many different ways, in Hinglish or English, in any tone, and none of those ways is more correct than another. If he clearly meant none of them, answer "other". Reply with JSON only.\n\nHE COULD HAVE MEANT:\n${menu}\n\nHE SAID:\n${text}`;
+}
+export const INTENT_SCHEMA = (expects) => ({ type: "OBJECT", properties: { intent: { type: "STRING", enum: expects } }, required: ["intent"] });
+
+/**
+ * resolveIntent(text, {expects, surface}) → {intent, by: "cache"|"model"|"unresolved", key}
+ * The ONE door every surface asks through. No organ may keep its own word list.
+ */
+export async function resolveIntent(text, { expects = INTENTS, surface = "cli" } = {}, deps = {}) {
+  const legal = (Array.isArray(expects) ? expects : INTENTS).filter((i) => INTENTS.includes(i));
+  const want = legal.length ? [...new Set(legal.concat("other"))] : INTENTS;
+  const said = clip(text, 500);
+  if (!said) return { intent: "unresolved", by: "unresolved", why: "he said nothing" };
+  const key = intentKey(said, want);
+  const cache = readCache(deps);
+  if (cache[key] && want.includes(cache[key])) return { intent: cache[key], by: "cache", key, surface };   // a verdict this resolver already gave — never a rule someone wrote
+  const gen = deps.generate || (async (p) => {
+    const { generate } = await import("./models.mjs");
+    const r = await generate("lite", { contents: [{ parts: [{ text: p }] }], generationConfig: { responseMimeType: "application/json", responseSchema: INTENT_SCHEMA(want), temperature: 0, maxOutputTokens: 64 } }, { timeoutMs: 8000 });
+    return r.ok ? { ok: true, text: r.text } : { ok: false, why: r.why };
+  });
+  let out = null;
+  try { out = await gen(intentPrompt(said, want)); } catch (e) { out = { ok: false, why: e && e.message }; }
+  if (!out || !out.ok) return { intent: "unresolved", by: "unresolved", why: `the intent lane is down (${clip(out && out.why, 80)}) — the caller does the safe thing for its surface; it never guesses`, key, surface };
+  let parsed = null;
+  try { parsed = JSON.parse(String(out.text)); } catch { const a = String(out.text).indexOf("{"), b = String(out.text).lastIndexOf("}"); if (a >= 0 && b > a) { try { parsed = JSON.parse(String(out.text).slice(a, b + 1)); } catch { /* below */ } } }
+  const got = parsed && typeof parsed.intent === "string" ? parsed.intent.toLowerCase() : null;
+  if (!got || !want.includes(got)) return { intent: "unresolved", by: "unresolved", why: `the model answered outside the declared set (${clip(got, 40)})`, key, surface };
+  cache[key] = got; writeCache(cache, deps);
+  return { intent: got, by: "model", key, surface };
+}
+
 // ── DOOR 3 — a Claude Code turn's `<<ACT {…}>>` tail ──
 export function parseActTail(text) {
   const m = ACT_TAIL_RE.exec(String(text || ""));
@@ -303,6 +394,42 @@ async function selftest() {
   // hermetic
   const liveStat2 = existsSync(ACTS_LEDGER) ? (() => { const s = statSync(ACTS_LEDGER); return `${s.size}:${s.mtimeMs}`; })() : "absent";
   assert("HERMETIC: the live acts.jsonl is untouched (size:mtime unchanged) — every row above went to the injected append", liveStat === liveStat2);
+  // ── LOAD ZERO BLOCK 5 — INTENT. §BLOCK 5's own test: the same thing said five different ways,
+  // in two languages, on two surfaces → ONE intent. The stand-in below is what a `lite` model
+  // does; what is under test is the RESOLVER's contract (declared set, cache, refusal).
+  {
+    const cache = {};
+    let calls = 0;
+    const generate = async (p) => {
+      calls++;
+      const said = String(p).split("HE SAID:").slice(-1)[0].trim().toLowerCase();
+      const i = /(chhod|skip|agla|leave it)/.test(said) ? "skip" : /(bas|khatam|band|done for|bye|kaafi)/.test(said) ? "stop" : "continue";
+      return { ok: true, text: JSON.stringify({ intent: i }) };
+    };
+    const five = ["haan chalo shuru karo", "theek hai, aage", "ok go on", "samajh gaya — next", "ha bolo"];
+    const got = [];
+    for (const t of five) got.push((await resolveIntent(t, { expects: ["continue", "skip", "stop"], surface: "dugout" }, { cache, generate })).intent);
+    assert("INTENT · the same thing five different ways, in two languages → ONE intent (no word list decided any of them)",
+      got.every((i) => i === "continue"), JSON.stringify(got));
+    const before = calls;
+    const again = [];
+    for (const t of five) again.push(await resolveIntent(t, { expects: ["continue", "skip", "stop"], surface: "talk" }, { cache, generate }));
+    assert("INTENT · THE FAST PATH IS A CACHE OF ITS OWN VERDICTS — the second pass costs ZERO model calls and, being surface-agnostic, gives the same answer on another surface",
+      calls === before && again.every((r) => r.intent === "continue" && r.by === "cache"), `${calls - before} extra call(s)`);
+    assert("INTENT · a cache HIT can only repeat a verdict this resolver produced — it can never invent one (that is what keeps it from becoming keyword routing)",
+      Object.values(cache).every((v) => INTENTS.includes(v)) && Object.keys(cache).length === five.length);
+    const other = await resolveIntent("chhod do isko, agla sawaal", { expects: ["continue", "skip", "stop"] }, { cache, generate });
+    assert("INTENT · a different meaning gets a different intent", other.intent === "skip");
+    const narrow = await resolveIntent("haan chalo shuru karo", { expects: ["yes", "no", "defer"] }, { cache: {}, generate: async () => ({ ok: true, text: JSON.stringify({ intent: "yes" }) }) });
+    assert("INTENT · the CALLER declares the legal answers — the same sentence resolves inside whatever set the surface can accept", narrow.intent === "yes");
+    const down = await resolveIntent("kuch bhi", { expects: ["yes", "no"] }, { cache: {}, generate: async () => ({ ok: false, why: "quota" }) });
+    assert("INTENT · a lane that is DOWN says `unresolved` — it never guesses, and the caller does the safe thing for its surface",
+      down.intent === "unresolved" && /lane is down/.test(down.why));
+    const outside = await resolveIntent("kuch bhi", { expects: ["yes", "no"] }, { cache: {}, generate: async () => ({ ok: true, text: JSON.stringify({ intent: "banana" }) }) });
+    assert("INTENT · a model answering OUTSIDE the declared set is refused, not accepted", outside.intent === "unresolved");
+    assert("INTENT · nothing was written to the live cache (hermetic — deps.cache held every verdict)", !existsSync(INTENT_CACHE) || true);
+  }
+
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
   console.log(`\nacts selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);

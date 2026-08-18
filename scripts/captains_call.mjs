@@ -64,6 +64,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdir
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_CALL_STATE_DIR is the selftest's seam and NOTHING else's (same pattern
@@ -1234,7 +1235,7 @@ function runStagedDispatch(action) {
   }
 }
 
-function main() {
+async function main() {
   const mode = process.argv[2] || "deal";
   const now = new Date();
 
@@ -1272,10 +1273,19 @@ function main() {
     // LADDER A1 — `answer haan` (id elided) binds to the most recently dealt live card.
     const r = resolveAnswerArgs(loadState(), process.argv[3], process.argv[4]);
     if (r.error) { console.error(`captains_call: ${r.error}`); process.exit(1); }
-    const { id, word } = r;
-    if (!id || !["haan", "na", "baad"].includes(word)) {
-      console.error("captains_call: answer [<id>] <haan|na|baad>"); process.exit(1);
+    const { id, word: raw } = r;
+    // LOAD ZERO BLOCK 5 (19 Aug 2026): the answer had to be LITERALLY haan|na|baad. He does not
+    // speak in a three-word vocabulary — "nahi yaar", "haan kar do", "abhi nahi, kal", "chalega"
+    // were all rejected by a door built for his convenience. The three words stay the FAST path
+    // (they are already the answer, so nothing is spent); anything else is read for MEANING by the
+    // one resolver. A lane that is down refuses rather than guessing — his answer is not a coin toss.
+    let word = raw;
+    if (!["haan", "na", "baad"].includes(word)) {
+      const r = await resolveIntent(raw, { expects: ["yes", "no", "defer"], surface: "card" });
+      word = { yes: "haan", no: "na", defer: "baad" }[r.intent] || null;
+      if (!word) { console.error(`captains_call: "${raw}" ka matlab pakka nahi — haan | na | baad mein se ek bolo (${r.why || r.intent})`); process.exit(1); }
     }
+    if (!id) { console.error("captains_call: answer [<id>] <haan|na|baad — ya apne shabdon mein>"); process.exit(1); }
     const { state, action } = applyAnswer(loadState(), id, word, now);
     if (action.kind === "error") { console.error(`captains_call: ${action.why}`); process.exit(1); }
     if (action.kind === "staged-dispatch") {
@@ -2018,6 +2028,6 @@ function selftest() {
   return fail === 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
 export { loadState, sync };

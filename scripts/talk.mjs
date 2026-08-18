@@ -27,6 +27,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { say } from "./speak.mjs";
 import { buildFingerprint } from "./brain.mjs";
+import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -258,7 +259,12 @@ async function main() {
   for (;;) {
     const line = (await rl.question("\n🎙  > ")).trim();
     if (!line) continue;
-    if (/^(bye|band|exit|quit|full time)$/i.test(line)) break;
+    // LOAD ZERO BLOCK 5 (19 Aug 2026): "bas ho gaya", "chalo phir", "I'm done" — none of those were
+    // in the old five-word list, and each would have been swallowed as a turn instead of ending the
+    // call. The resolver reads MEANING; a lane that is down returns `unresolved`, which keeps the
+    // call OPEN — the safe direction here, because he can always say it again.
+    const stopIntent = await resolveIntent(line, { expects: ["stop", "other"], surface: "talk" });
+    if (stopIntent.intent === "stop") break;
     const prompt = buildTurnPrompt(fingerprint, busSnapshot(), history.slice(-8), line);
     const r = callClaude(prompt, model);
     const reply = r.ok ? clampSpoken(r.text) : "Line dropped — say that again, captain.";
