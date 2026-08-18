@@ -995,6 +995,11 @@ export function stopHook(hook, io) {
 }
 
 async function readStdinText() {
+  // THE STDIN HANDOFF (18 Aug 2026, Block 1 — scripts/turn_hook.mjs contract 1).
+  // Under the one-process dispatcher fd 0 has ALREADY been read once; the payload
+  // is parked on this named global. Standalone (its own process): unset ⇒ read fd 0.
+  const handed = globalThis.__ARSENAL_HOOK_STDIN__;
+  if (typeof handed === "string") return handed;
   // A human at a terminal would hang on a pipe that never ends — same guard and
   // same reason as teaching_contract.mjs:629. Under the hook, stdin is a pipe.
   if (process.stdin.isTTY) return null;

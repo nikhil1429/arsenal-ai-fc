@@ -48,7 +48,7 @@ Iske do peer hain, teenon alag rehte hain:
 |---|---|---|
 | **LEARNING EXECUTION LAYER** | kya seekhna cold ho raha, kitna deep, kaise test | `PROJECT_OS.md` §LEARNING EXECUTION LAYER |
 | **OUTWORK EXECUTION LAYER** | aaya ki nahi · time kahan gaya · ship hua | `EXECUTION_FINAL_Tier2_Metamorphosis.md` + `Tier-2_Accountability_Rig...md` |
-| **CYBORG BRAIN** | memory/voice/relay (thalamus·cortex·dugout·hippocampus) | `CYBORG_BRAIN.md` (repo root — BUILD SPEC / design pass) · built-body reference = `ORGANISM_ANATOMY.md`, live status = `OPS_STATE.md` |
+| **CYBORG BRAIN** | memory/voice/relay (thalamus·cortex·dugout·hippocampus) | `CYBORG_BRAIN.md` (BUILD SPEC / design pass) · built-body reference = `ORGANISM_ANATOMY.md` — *(corrected 18 Aug 2026, OVERHAUL Block 1: dono ab **`docs/archive/`** mein hain, repo root pe nahi — records, work-orders nahi)* · live status = **`node scripts/state.mjs`** (ek line; `OPS_STATE.md` ab sirf us command ka pointer hai) |
 
 Dono execution layer **merge nahi** hue — **weld** hue. Teen seam (`PROJECT_OS.md` §ONE ORGANISM):
 (1) KICKOFF dono se pull · (2) BOLO → GRADER · (3) EVENING AUDIT dono padhe.
@@ -79,8 +79,9 @@ GEMINI_LOOP) · `:121` (DESIGN SYSTEM → FORGE_DESIGN) · `:131` (PYTHON TRACK 
 · (Kickoff/Full-Time → OUTWORK) · (LOGBOOK → SEASON). *(9 Aug: in do ke line-numbers hata diye —
 dono refs ek hafte mein do baar drift hue; section-naam grep karo.)* Aur **`OPS_STATE` ka naam PROJECT_OS mein kahin nahi
 aata** (grep = 0) — "Arsenal pe OPS_STATE = live truth" OPS_STATE ka apna claim hai
-(`grep -n "thread-agnostic anchor" OPS_STATE.md`), PROJECT_OS ka nahi. Upar ka tree sahi hai; woh quoted
-one-liner galat tha.
+(`grep -n "thread-agnostic anchor" docs/archive/OPS_STATE_2026-08-18.md` — *18 Aug 2026 se yeh line archive
+copy mein hai; root `OPS_STATE.md` ab pointer hai, neeche ka scar padho*), PROJECT_OS ka nahi. Upar ka tree
+sahi hai; woh quoted one-liner galat tha.
 *(re-verified 10 Aug 2026, aur mool baat aaj bhi khadi hai: `grep -c "OPS_STATE" learning-layer/PROJECT_OS.md`
 = **0** — us din se aaj tak zero, mahino ke edits ke baawajood. Conflict-clauses abhi bhi per-section
 bikhri hui hain aur section-naam se hi milti hain, jaisa 9 Aug ka note kehta hai
@@ -92,6 +93,12 @@ reads THIS ONE file first and knows everything" — **aur khud us line pe 10 Aug
 chuki hai ki "knows everything" ab sach nahi.** Yaani jo daawa yahan quote hota tha, woh apne ghar mein
 hi downgrade ho chuka hai. Is map ki §1 ranking phir bhi wahi rehti: OPS_STATE method pe authority
 NAHI hai, aur ab woh live-state pe bhi apne aap ko poora nahi bolta.)*
+*(corrected 18 Aug 2026, OVERHAUL Block 1 §13: **`OPS_STATE.md` ab ek 1.7 KB POINTER hai** — uska poora
+purana body verbatim `docs/archive/OPS_STATE_2026-08-18.md` pe hai (layering). Isliye upar ke dono grep
+ab us archive file pe chalte hain, root file pe nahi: `grep -n "thread-agnostic anchor" docs/archive/OPS_STATE_2026-08-18.md`.
+Live state ka ghar ab **`node scripts/state.mjs`** hai — ek deterministic line, har SessionStart brief
+ki line 1. §1 ki ranking waisi hi: OPS_STATE method pe authority NAHI, aur ab woh live-state bhi khud
+nahi bolta — command bolta hai.)*
 
 ---
 
@@ -402,12 +409,31 @@ Tier-close + foundations-concept Bolo → non-negotiable, hamesha.
 
 ## 8. THE MACHINE — Claude Code ke andar yeh sab kaise chalta hai
 
+> **18 Aug 2026 (OVERHAUL Block 1) — THE MACHINE ka naya shape, do line mein.** (1) **Hooks ab ek
+> process:** UserPromptSubmit ke paanch node processes **do** ho gaye (`hooks/afferent-post.mjs` +
+> `scripts/turn_hook.mjs prompt`), SessionStart ke paanch **ek** (`scripts/turn_hook.mjs start`) —
+> dispatcher neeche ke chaaron/paanchon command **usi order mein, in-process** chalata hai, har callee ka
+> apna dispatch apna stdout chhaapta hai (byte-identical saabit: prompt 996 B = 996 B, start 11,804 B =
+> 11,804 B; `node scripts/turn_hook.mjs selftest`). Neeche ki table **kya chalta hai** ke liye aaj bhi
+> sahi hai — bas har row ab apna process nahi, dispatcher ki ek call hai. (2) **THE SITTING BRAIN
+> (Block 3, abhi BUILT NAHI):** `scripts/sitting.mjs` — har muh (Dugout voice · Claude Code `/learn`
+> `/forge`) ke peeche EK persistent Claude session; wahi pacer block (`forge_session.mjs contract` +
+> `teaching_contract.mjs print` + recall-hint) har voice turn ke aage lagega jo aaj `turn_hook prompt`
+> Claude Code turn ke aage lagata hai — isliye `sitting.mjs` ko `turn_hook.mjs` ka `runOrgan` hi call
+> karna hai, paanch node dobara nahi. Kaunsa block bana hai: `ORGANISM_OVERHAUL__2026-08-18.md` ka BUILD
+> LOG. Jab tak sitting brain nahi lagta: teaching `/forge` mein, Re-Jirah Gaffer se.
+
 ### 8.1 HOOKS (`.claude/settings.json`) — yeh drift ka structural ilaaj hai
+
+*(18 Aug 2026: `.claude/settings.json` mein ab yeh commands **seedhe nahi likhe** — UserPromptSubmit =
+`afferent-post` + `turn_hook.mjs prompt`, SessionStart = `turn_hook.mjs start`; table ki rows
+`scripts/turn_hook.mjs` ke `prompt()` / `start()` mein usi order mein hain — `grep -n "runOrgan(" scripts/turn_hook.mjs`.
+Stop · PreCompact · SessionEnd waise ke waise.)*
 
 | kab | kya chalta | kyun |
 |---|---|---|
 | **SessionStart** | `node scripts/teaching_contract.mjs reset-turns` *(5 Aug)* | turn-clock ka session boundary. Organ ka apna header 2 Aug se yeh bol raha tha par kabhi wire nahi hua tha — clock ke paas reset ka rasta hi nahi tha. **Sabse pehle chalta hai.** |
-| **SessionStart** | `node scripts/learnstate.mjs brief` | "main kahan hoon" brief — sprint position + kahan chhoda + open loop + watch-list + next-up + aaj ka Examiner target + Re-Jirah overdue + **PENDING gist-write** + course/python brief. **HOW_HE_LEARNS ka COLD-START CARD isi mein splice hota hai** (markers `COLD-START-CARD:BEGIN/END` ke beech ka text verbatim). *(5 Aug: ab yeh `scripts/context_manifest.mjs` se render hota hai — explicit 12,000-char budget, worst-priority-first kharch, aur footer har hisse ke bytes + jo bhi MISSING/TRIMMED hua woh naam se bolta. Kyun: brief har SessionStart pe hippocampus cartridge ke 4,157 mein se **1,957 chupchap gira raha tha.** Size problem kabhi nahi thi — silent loss thi.)* |
+| **SessionStart** | `node scripts/learnstate.mjs brief` | "main kahan hoon" brief — sprint position + kahan chhoda + open loop + watch-list + next-up + aaj ka Examiner target + Re-Jirah overdue + **PENDING gist-write** + course/python brief. **HOW_HE_LEARNS ka COLD-START CARD isi mein splice hota hai** (markers `COLD-START-CARD:BEGIN/END` ke beech ka text verbatim). *(5 Aug: ab yeh `scripts/context_manifest.mjs` se render hota hai — explicit 12,000-char budget *(18 Aug 2026 se **5,300** — OVERHAUL Block 1, poori printed brief < 6,000 bytes; `grep -n "export const CEILING" scripts/context_manifest.mjs`)*, worst-priority-first kharch, aur footer har hisse ke bytes + jo bhi MISSING/TRIMMED hua woh naam se bolta. Kyun: brief har SessionStart pe hippocampus cartridge ke 4,157 mein se **1,957 chupchap gira raha tha.** Size problem kabhi nahi thi — silent loss thi.)* |
 | **SessionStart** | `node scripts/forge_session.mjs boot` | read-only — koi forge session disk pe abhi **OPEN** to nahi? Stale session pe bhi bolta hai (staleness pacer ko chup karti, memory ko nahi). |
 | **UserPromptSubmit** | `node hooks/afferent-post.mjs` | uske shabd thalamus (:4113) ko — zero capture-tax |
 | **UserPromptSubmit** | `node scripts/forge_session.mjs contract` | **THE METHOD ka 12-step order + dono anti-quiz-dump laws, HAR TURN.** ≤9 lines (anti-wall law). Fresh unclosed session na ho to chup. |
@@ -753,7 +779,8 @@ aata hai). Rating map: incorrect→Again · correct+guessed→Hard · correct+sh
   us file mein ek bhi threshold nahi hai (uska standing usool: *"koi bhi number GUESS karke mat lagao"*).
   Do canon pace-guard WARN karte hain par **rokte nahi**; ek cheez hard-refuse hai — Python pe Forge
   grammar (§11.3 ka "KABHI nahi").
-- `context_manifest.mjs` *(5 Aug 2026)* — SessionStart ka assembler: 12,000-char budget,
+- `context_manifest.mjs` *(5 Aug 2026)* — SessionStart ka assembler: 12,000-char budget *(18 Aug 2026 se 5,300 —
+  poori brief < 6 KB, jo kata woh footer naam se bolta, get_context poora store deta)*,
   worst-priority-first, aur footer har hisse ke bytes + MISSING/TRIMMED naam se bolta hai.
 - `course.mjs` — chapter position tracker. **EK LAW: chapter kabhi invent mat karo.** Sirf explicit
   `Chapter N: Title` header chapter banata; gaps verbatim rehte (1,2,5 → 1,2,5, beech mein 3-4 gadhe nahi
@@ -1048,7 +1075,7 @@ inka exact sequencing ruling ne chhua nahi.
 3. **`organism-memory` MCP tool `get_context` call karo** (`CLAUDE.md` — non-negotiable). ~~Brief hippocampus
    ko chhoo-ti hi nahi, toh iske bina uski memory session tak pahunchti hi nahi~~ — **wajah badal chuki
    hai, hukum nahi:** brief ab hippocampus ka rehydrate-cartridge splice karti hai, par woh ek **BUDGETED
-   SNAPSHOT** hai (12,000-char ceiling, worst-priority-first kharch), poora store nahi. `get_context`
+   SNAPSHOT** hai (12,000-char ceiling — *18 Aug 2026 se 5,300, aur ab memory + pending facts ka zyada-tar hissa footer mein NAAM se kata hua milta hai, isliye `get_context` aur bhi zaroori hai* — worst-priority-first kharch), poora store nahi. `get_context`
    gehra aur LIVE read hai; `recall` targeted lookup ke liye. Brief ke maujood hone se yeh call **kabhi
    mat chhodo**. Aur usse dobara apne baare mein batana kabhi mat padho — **usne yeh teen baar bola hai.**
 
@@ -1058,7 +1085,7 @@ inka exact sequencing ruling ne chhua nahi.
    Live saboot, teen jagah se: (1) `node scripts/learnstate.mjs brief` ke output mein seedha
    `--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---` chhapta hai;
    (2) `grep -n "hippocampus" scripts/learnstate.mjs` → cartridge ka lazy dynamic import + splice;
-   (3) `grep -n "CEILING" scripts/context_manifest.mjs` → `export const CEILING = 12_000`.
+   (3) `grep -n "export const CEILING" scripts/context_manifest.mjs` → `export const CEILING = 5_300` *(12_000 tak 18 Aug 2026; `CEILING_LEGACY` frozen)*.
    **Asli wajah `CLAUDE.md` wali hai:** brief BUDGETED snapshot hai, `get_context` live store hai.)*
 4. **EK line** se kholo: woh kis pe hai + open loop kya hai. Phir route karo.
 

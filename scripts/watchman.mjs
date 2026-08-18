@@ -2101,7 +2101,7 @@ else if (cmd === "brief") {
       if (L.length) console.log(L.join("\n"));
     } catch { /* silence is the contract */ }
   }
-  process.exit(0);
+  return;   // was process.exit(0) — 18 Aug 2026, Block 1 (turn_hook.mjs contract 2): the SessionStart dispatcher runs captains_call after us in the SAME process
 } else if (cmd === "report") report();
 else if (cmd === "selftest") selftest();
 else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | selftest");

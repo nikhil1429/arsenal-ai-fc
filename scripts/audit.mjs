@@ -308,13 +308,25 @@ export function docClaims() {
   };
   walk(ROOT, 0);
   const organs = new Set(readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs")));
-  const deadPaths = [], deadOrgans = [], cited = [];
+  const deadPaths = [], deadOrgans = [], planned = [], cited = [];
+  // A DECLARED FORWARD REFERENCE IS NOT A DEAD ORGAN (18 Aug 2026, OVERHAUL Block 1).
+  // CLAUDE.md and the learning-layer map name `scripts/sitting.mjs` (Block 3) before it
+  // exists, and SAY SO on the same line — "(Block 3)", "not built", "BUILT NAHI". A
+  // citation that announces its own absence is a plan, not rot; it is listed under
+  // `planned` (still visible, never a finding) until the organ lands or the line changes.
+  // A bare citation of a missing organ, with no such marker, stays a dead-organ finding.
+  const PLANNED_RE = /\(Block \d|not built|BUILT NAHI|NOT BUILT|nahi ban[ai]|abhi banna/i;
   for (const f of docs) {
     const txt = readFileSync(f, "utf8");
     const rel = relative(ROOT, f).replace(/\\/g, "/");
     for (const m of txt.matchAll(/scripts[\\/]([A-Za-z0-9_\-]+)\.mjs/g)) {
       cited.push({ doc: rel, organ: `${m[1]}.mjs` });
-      if (!organs.has(`${m[1]}.mjs`)) deadOrgans.push({ doc: rel, organ: `${m[1]}.mjs` });
+      if (!organs.has(`${m[1]}.mjs`)) {
+        const ls = txt.lastIndexOf("\n", m.index) + 1, le = txt.indexOf("\n", m.index);
+        const lineTxt = txt.slice(ls, le < 0 ? undefined : le);
+        if (PLANNED_RE.test(lineTxt)) planned.push({ doc: rel, organ: `${m[1]}.mjs`, line: lineTxt.trim().slice(0, 140) });
+        else deadOrgans.push({ doc: rel, organ: `${m[1]}.mjs` });
+      }
     }
     // Path claims of the shape `dressing-room/state/x.jsonl` or `learning-layer/Y.md`.
     //
@@ -334,7 +346,7 @@ export function docClaims() {
   }
   // dedupe
   const uniq = (arr, k) => { const s = new Set(), o = []; for (const x of arr) { const key = k(x); if (!s.has(key)) { s.add(key); o.push(x); } } return o; };
-  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`), files: docs };
+  return { docs: docs.length, cited: cited.length, deadOrgans: uniq(deadOrgans, (x) => `${x.doc}|${x.organ}`), planned: uniq(planned, (x) => `${x.doc}|${x.organ}`), deadPaths: uniq(deadPaths, (x) => `${x.doc}|${x.path}`), files: docs };
 }
 
 // ── §8, THE EXECUTABLE HALF ──────────────────────────────────────────────────

@@ -1644,7 +1644,10 @@ async function main() {
     // stdin, exactly as hooks/afferent-post.mjs:44-53 reads it — accept that
     // shape so the hook needs no shell quoting (which mangles his Hinglish).
     const stdinText = () => {
-      let raw = ""; try { raw = readFileSync(0, "utf8"); } catch { return ""; }
+      // THE STDIN HANDOFF (18 Aug 2026, Block 1 — scripts/turn_hook.mjs contract 1):
+      // under the one-process dispatcher fd 0 was already read; take the parked copy.
+      const handed = globalThis.__ARSENAL_HOOK_STDIN__;
+      let raw = ""; try { raw = typeof handed === "string" ? handed : readFileSync(0, "utf8"); } catch { return ""; }
       try { const j = JSON.parse(raw || "{}"); return String(j.prompt || j.text || ""); } catch { return raw; }
     };
     const text = argText || stdinText();
@@ -1680,7 +1683,10 @@ async function main() {
   console.log("hippocampus.mjs — mark <kind> | remember | forget <id> | stage-pending [--source <who>] | promote --at <ts> | drop-pending --at <ts> | index | recall \"...\" | recall-hint \"...\" [--explain] | arc | cartridge | consolidate [--force] | consolidate-store | selftest");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// `await` (18 Aug 2026, Block 1 — turn_hook.mjs contract 3): under the one-process
+// hook dispatcher the NEXT callee must not start until this main has printed. A
+// library importer (mcp-memory, dugout, learnstate) never trips this guard.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
 export {
   markMoment, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact,

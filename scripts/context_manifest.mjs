@@ -69,14 +69,42 @@ const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state");
 const PENDING_FACTS = join(ROOT, "dressing-room", "hippocampus", "identity_facts.pending.jsonl");
 
-// THE CEILING — approved 5 Aug 2026 (D2). Derived, not chosen: the assembled brief
-// runs ~7,300 characters ≈ 1,800 tokens ≈ 1% of a 200k context window, so bytes are
-// not the binding constraint here — attention is, and attention is protected by the
-// per-provider caps below plus learnstate's own anti-wall discipline. 12,000 leaves
-// ~4,700 of headroom for growth while still being a real, enforced, reported bound.
-export const CEILING = 12_000;
-export const MEMORY_CAP = 6_000;      // the cartridge is 4,157 today; this is headroom, not a trim
+// THE CEILING — approved 5 Aug 2026 (D2) at 12,000, RE-DERIVED 18 Aug 2026 (OVERHAUL
+// Block 1, §7.4/§13: "SessionStart brief < 6 KB"). The 5 Aug reasoning stands — bytes
+// were never the binding constraint, ATTENTION is — and the overhaul applies it: every
+// session start already calls the organism-memory MCP `get_context` (CLAUDE.md, step 1),
+// which serves the WHOLE cartridge, the whole pending queue and the whole teaching card;
+// the brief's copies of those were a second, budgeted, truncated rendering of the same
+// store. Under 6 KB the brief keeps what get_context does NOT carry — the STATE line
+// (learnstate prepends it OUTSIDE this ceiling) and the ORIENTATION (kickoff) — plus the
+// card at its own cap, and squeezes pending facts and memory worst-priority-first, NAMING
+// every cut in the footer, each cut carrying its own pointer to get_context.
+// DERIVED, in BYTES (the DoD is `learnstate.mjs brief | wc -c` < 6,000): this module
+// counts CHARS, and the brief is Hinglish with `·` `—` `✓` and emoji, so bytes run ahead
+// of chars — MEASURED 18 Aug 2026: 5,507 chars assembled → 5,775 bytes (+268); the STATE
+// line learnstate prepends outside this ceiling was 365 bytes. 6,000 − 400 (state line,
+// one clipped line, measured 365) − 300 (multibyte inflation, measured 268) ⇒ 5,300.
+// MEASURED the morning it changed: 12,000 → assembled 10,708 (orientation 2,762 · card
+// 1,431 · pending 1,127 · memory 4,804) · 5,300 → the footer names what went, and the
+// whole printed brief lands under 6,000 bytes.
+export const CEILING = 5_300;
+export const CEILING_LEGACY = 12_000; // the 5 Aug ceiling, frozen for the record (layering)
 export const FOOTER_RESERVE = 260;    // the manifest line must always fit — it is the point
+// MEMORY under the tight ceiling (18 Aug 2026). Two numbers, both derived, neither a guess:
+//   MEMORY_CAP   — the most the cartridge may take: everything the ceiling leaves after the
+//                  footer reserve. It was 6,000 of 12,000 ("headroom, not a trim"); with a
+//                  live orientation + card the room is now a few hundred chars, and with a
+//                  fixture orientation the whole 4,157-char cartridge still fits — so the
+//                  47%-bug assertion keeps meaning what it meant: NO SILENT CUT, ever.
+//   MEMORY_FLOOR — the least the cartridge keeps when pending facts are budgeted BEFORE it
+//                  (assemble step 3 used to subtract the whole 6,000 cap here, which under
+//                  5,300 would starve the pending queue to zero — a floor larger than the
+//                  whole). Now it reserves exactly the pointer tail plus one head line of
+//                  the ledger, so a squeezed brief always says WHERE the memory went
+//                  (`get_context`) instead of hard-cutting the cartridge mid-word. Defined
+//                  below MEMO_TAIL, from its measured length — no invented number.
+export const MEMORY_CAP = CEILING - FOOTER_RESERVE;
+export const MEMORY_CAP_LEGACY = 6_000;   // the 5 Aug value, frozen for the record
 // …and since 11 Aug 2026 the reserve is MEASURED against, not merely assumed: the printed
 // `assembled N` figure counts the footer itself, so a footer that outgrows 260 (DROPPED +
 // render_probe + UNREADABLE notes stack fast) shows up as N > ceiling instead of hiding.
@@ -89,6 +117,11 @@ export const FOOTER_RESERVE = 260;    // the manifest line must always fit — i
 // path changes: the default IS the old string.
 const MEMO_TAIL = "\n… (truncated — full recall via the organism-memory MCP `get_context`)";
 const CARD_TAIL = "\n… (truncated — full evidence in learning-layer/HOW_HE_LEARNS.md)";
+// The cartridge's first line is its own head — "THE LEDGER OF SELF (facts he told you to
+// hold — ALWAYS present, never guessed):" — 79 chars, measured 18 Aug 2026:
+// grep -n "THE LEDGER OF SELF (facts he told you to hold" scripts/hippocampus.mjs
+// Floor = that head + the pointer tail.
+export const MEMORY_FLOOR = 79 + MEMO_TAIL.length;
 // THE TAIL LIVES INSIDE THE CAP (audit 16 Aug 2026 — the baseline RED that stopped the
 // truth layer before its first line). This was `s.slice(0, n) + tail`, i.e. a function
 // called "clip to n" that returns n + tail.length, EVERY time it fires. MEASURED on live
@@ -361,14 +394,19 @@ export async function assemble(deps = {}) {
 
   // 3. PENDING FACTS — computed before memory so its cost is known to the budget.
   // ITS BUDGET IS DERIVED, NOT CHOSEN (audit 10 Aug 2026, the 160-char cut above): it is
-  // whatever the ceiling still holds once orientation, the card, memory's own MEMORY_CAP
-  // floor and the footer reserve are set aside — every term already a constant in this
-  // file, so no threshold is invented and memory's share cannot be eaten by a growing
-  // queue. RAN 10 Aug on live state: budget 2,551 against a 1,487-char full render of all
-  // 3 staged rows, memory unchanged at 3,856 — nothing is cut today, and the day it is,
-  // the block's own "not shown"/"chars cut" lines and this footer both say so.
+  // whatever the ceiling still holds once orientation, the card, memory's reserved floor
+  // and the footer reserve are set aside — every term already a constant in this file, so
+  // no threshold is invented. RAN 10 Aug on live state: budget 2,551 against a 1,487-char
+  // full render of all 3 staged rows, memory unchanged at 3,856 — nothing was cut then, and
+  // the day it is, the block's own "not shown"/"chars cut" lines and this footer both say so.
+  // 18 Aug 2026 (ceiling 12,000 → 5,300): the term subtracted here was MEMORY_CAP — the
+  // cartridge's whole 6,000 headroom — which under 5,300 exceeds the ceiling and would
+  // budget the pending queue at ZERO forever. It is MEMORY_FLOOR now (the ledger's head
+  // line + the get_context pointer): his rulings awaiting his word are budgeted BEFORE the
+  // background cartridge that get_context serves whole anyway, and memory still always
+  // keeps its pointer. Same order of parts, same footer grammar; only the reserve is true.
   const pendBudget = Math.max(0, ceiling - base.length - (card ? card.length : 0)
-    - MEMORY_CAP - FOOTER_RESERVE - overhead);
+    - MEMORY_FLOOR - FOOTER_RESERVE - overhead);
   const pend = deps.pending !== undefined ? deps.pending : pendingFactsBlock(PENDING_FACTS, pendBudget);
   // UNREADABLE ROWS RIDE THE FOOTER (audit 10 Aug 2026). The reader can now tell damage from
   // absence, but a classification nobody prints is the producer-with-no-consumer shape all over
@@ -496,7 +534,7 @@ export async function assemble(deps = {}) {
   //       So the wrong estimate was computed and discarded at every SessionStart. And the
   //       printed `assembled` figure was the BODY, footer excluded, which means the one ceiling
   //       check this organism owns —
-  //       grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs
+  //       grep -n "stays inside the declared ceiling" scripts/organism_test.mjs
   //       — was measuring the brief MINUS the manifest line: structurally blind to a
   //       FOOTER_RESERVE overrun, i.e. to exactly the failure the reserve exists to prevent.
   // The repair wires the two together instead of adding an organ: the footer prints the TRUE
@@ -532,7 +570,7 @@ export async function assemble(deps = {}) {
 //
 // The proof it stayed unreachable is the shape the ONE would-be consumer had to take: the
 // suite re-parses the PRINTED footer with /assembled (\d+)\/(\d+)/ — a regex over prose —
-// grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs
+// grep -n "stays inside the declared ceiling" scripts/organism_test.mjs
 // — for the single ceiling check this organism owns. It could not do
 // otherwise: that file's own header law is "spawns organs as CHILD PROCESSES (never
 // imports them, so a top-level side effect cannot leak in)", and until today there was no
@@ -682,8 +720,15 @@ function selftest() {
       /TRIMMED from 5000 — cap 1800/.test(bc.note || "") && bc.bytes < BIG_CARD);
     assert("CARD · NO CUT REPORTED AS A CUT FROM ITSELF — a bare loadTeachingCard() call makes this collapse to `from <the clipped size>`",
       Number((/TRIMMED from (\d+)/.exec(bc.note || "") || [])[1]) > bc.bytes);
-    assert("CARD · A CUT MADE HERE POINTS AT THE CARD'S OWN SOURCE, never the memory door",
-      bigCard.text.includes(CARD_TAIL) && !bigCard.text.includes(MEMO_TAIL));
+    // 18 Aug 2026 (ceiling 12,000 → 5,300): with a 1,800-char card the cartridge no longer
+    // fits beside it, so MEMO_TAIL may now legitimately appear ONCE — as memory's OWN named
+    // cut, never as the card's. The law is unchanged: the card's cut points at the card's source.
+    {
+      const bm = bigCard.manifest.find((m) => m.id === "memory");
+      const memoTails = bigCard.text.split(MEMO_TAIL).length - 1;
+      assert("CARD · A CUT MADE HERE POINTS AT THE CARD'S OWN SOURCE, never the memory door (MEMO_TAIL appears only as memory's own named cut, if at all)",
+        bigCard.text.includes(CARD_TAIL) && memoTails === (/TRIMMED/.test(bm.note || "") ? 1 : 0));
+    }
     // NO CAP IS EVER INVENTED: an owner that stops declaring CARD_MAX gets the card whole and
     // a note saying exactly that — never a number this module made up.
     const noCap = await assemble({ learnstate: { ...cardish, CARD_MAX: undefined }, memoryFullLength: 4157,
@@ -761,7 +806,7 @@ function selftest() {
     // The wire that broke: `total` was text.length + FOOTER_RESERVE — an estimate nobody
     // read, of a thing nobody measured — and the PRINTED figure was the body with the footer
     // left out, so the suite's ceiling check could not see a reserve overrun
-    // (grep -n "stays inside the declared 12,000-char ceiling" scripts/organism_test.mjs).
+    // (grep -n "stays inside the declared ceiling" scripts/organism_test.mjs).
     // These run against a healthy assembly, a squeezed one and a note-heavy one (whose footer
     // is longest, which is precisely when the old formula was furthest from the truth).
     for (const [name, x] of [["healthy", r], ["squeezed", tight], ["note-heavy", dropped]]) {
@@ -788,7 +833,7 @@ function selftest() {
     const over = await assemble({ learnstate: stub, memoryFullLength: 4157,
       pending: { present: false, state: "EMPTY", text: "", count: 0 }, ceiling: 100 });
     // The suite check it feeds is named by its own assertion text, not by a line number:
-    // organism_test's 'stays inside the declared 12,000-char ceiling'.
+    // organism_test's 'stays inside the declared ceiling' (named for 12,000 until 18 Aug 2026; the number now rides the footer).
     assert("AN OVERRUN IS VISIBLE — when brief+footer exceeds the ceiling the printed figure exceeds it too, which is what the suite's ceiling check asserts against",
       Number((/assembled (\d+)\/(\d+)/.exec(over.footer) || [])[1]) > 100 && over.total === over.text.length);
 
@@ -915,13 +960,30 @@ function selftest() {
       || (livePend.cut === 0 && livePend.hidden === 0 && livePend.count === stagedFull.length
         && stagedFull.every((t) => livePend.text.includes(t))));
 
-    // (b) UNDER THE REAL BUDGET, THE NEWEST RULING ALWAYS ARRIVES WHOLE. Room is spent
-    // newest-first by design; this is what makes a squeeze survivable — the ruling he gave
-    // most recently, the one a session is most likely to need, can never be the one dropped.
+    // (b) ROOM IS SPENT NEWEST-FIRST. This is what makes a squeeze survivable — the ruling
+    // he gave most recently, the one a session is most likely to need, is the LAST to go.
+    // ⚠ RE-STATED 18 Aug 2026 (OVERHAUL Block 1, ceiling 12,000 → 5,300). Until today this
+    // read "under the REAL budget the newest ruling arrives whole" — and MEASURED that morning
+    // the real budget is orientation 2,762 + card 1,431 + wrapper overhead 419 + footer
+    // reserve 260 + memory floor 149 = 5,021 of 5,300, leaving 279 for the queue: below even
+    // one 400-char ruling with the block's own head/foot. Nothing is broken and nothing is
+    // silent — the block prints `4 staged, 4 NOT SHOWN — budget` with the get_context pointer,
+    // and every staged fact ALSO rides the card deck one per anchor (c52/c55) — but the old
+    // sentence promised an invariant the 6 KB brief cannot keep, so it is now two: (b1) the
+    // newest-first LAW, on a fixture ceiling where it is decidable; (b2) the LIVE brief either
+    // carries the newest ruling whole or NAMES exactly what it could not (the same "accounted,
+    // never silent" clause (c) already holds it to).
     const liveP = liveOut.manifest.find((m) => m.id === "pending_facts");
-    assert("UNDER THE REAL BUDGET THE NEWEST RULING ARRIVES WHOLE — room is spent newest-first, so a squeeze can never eat the most recent thing he said",
-      liveP.state !== "ok" || !stagedFull.length
-      || liveOut.text.includes(stagedFull[stagedFull.length - 1]));
+    {
+      const roomy = pendingFactsBlock(PENDING_FACTS, 3_000);   // a budget the newest ruling always fits
+      assert("ROOM IS SPENT NEWEST-FIRST — under a budget that holds at least one ruling, the NEWEST is the one shown whole (fixture budget 3,000)",
+        roomy.state !== "ok" || !stagedFull.length
+        || roomy.text.includes(stagedFull[stagedFull.length - 1]));
+      const newestWhole = !stagedFull.length || liveOut.text.includes(stagedFull[stagedFull.length - 1]);
+      assert(`UNDER THE REAL BUDGET the newest ruling arrives whole OR its absence is NAMED with the get_context pointer — never silent (live: ${newestWhole ? "whole" : (liveP.note || "").replace(/^\d+ staged/, "not whole —")})`,
+        liveP.state !== "ok" || newestWhole
+        || (/NOT SHOWN|chars CUT/.test(liveP.note || "") && /get_context/.test(liveOut.text)));
+    }
 
     // (c) AND WHATEVER THE BUDGET TOOK IS ACCOUNTED EXACTLY, IN BOTH PLACES. The footer's
     // numbers must equal what the block actually did: N hidden ⇒ the block's own "not shown"

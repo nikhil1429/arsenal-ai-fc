@@ -1400,8 +1400,17 @@ function recordBriefed(text) {
     if (t.includes("🧠 ROUND READ")) recordConsumption({ lane: "ns_round_read", kind: "briefed", by: "learnstate brief (SessionStart)" });
   } catch { /* bookkeeping must never cost the brief */ }
 }
+// NOT `await main()` here, deliberately (18 Aug 2026, Block 1). It was tried for the
+// one-process hook dispatcher and DEADLOCKED: brief() → assemble() → context_manifest
+// dynamically imports ./learnstate.mjs (:281) while this module is still suspended in
+// its own top-level await → "unsettled top-level await", exit 13, ZERO bytes of brief.
+// The dispatcher instead imports this file as a library and awaits `hookMain` below
+// (turn_hook.mjs contract 3, the `call` shape) — same main, same stdout, no cycle.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 // #14 — loadTeachingCard is exported so `get_context` can serve the SAME card
 // from the SAME parser (see the note above it). CARD_MAX rides along so a
 // consumer can state the cap it is honouring instead of inventing its own.
-export { brief, gather, loadTeachingCard, loadMemory, CARD_MAX };
+// hookMain — the CLI's own main, exported for scripts/turn_hook.mjs (SessionStart in
+// ONE process): it reads process.argv[2] exactly as the CLI does, so the dispatcher
+// shims the verb and awaits the print. Nothing else should call it.
+export { brief, gather, loadTeachingCard, loadMemory, CARD_MAX, main as hookMain };

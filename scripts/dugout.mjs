@@ -3339,6 +3339,53 @@ async function selftest() {
     assert("empty index → honest note", (await execRecall({ query: "x" }, { embed: mockEmbed, index: [] })).note.includes("empty"));
   }
 
+  // ── §14.7 THE CONSTITUTION GUARD (18 Aug 2026, OVERHAUL Block 1) ────────────
+  // L4, mechanically: a law is a code path or it does not exist. Two measurements
+  // on the LIVE built instruction, every selftest run:
+  //   (a) SIZE — buildSystemInstruction() ≤ CONSTITUTION_TOKEN_CEILING tokens
+  //       (chars/4). Measured 18 Aug 2026: 41,854 chars ≈ 10,464 tokens (R2 in the
+  //       overhaul: an 11k-token prose constitution rebuilt every connect).
+  //   (b) MARKERS — every line of the built instruction that carries the word LAW
+  //       must originate from a source line in THIS file that has a `// LAW: <id>`
+  //       marker within the three lines above it (the code path that holds the law).
+  //       A LAW line whose source cannot be found (composed dynamically) counts as
+  //       UNMARKED — a law nobody can grep to is a paragraph, not a law.
+  // ARMED = false until BLOCK 3 (§6.4: fingerprint · cartridge · prepared sitting ·
+  // capsule digest · recital scar · day thread · night coach move into the sitting
+  // brain's sitting_system.md; the constitution keeps persona + honesty + the five
+  // delivery laws + SPEAK + card + tool hints, ≤ 2,000 tokens, every law marked).
+  // Until then this guard is a LOUD SKIP: it prints both numbers on every run under
+  // the tag TODO-BLOCK3 and asserts only that it measured — never a silent pass,
+  // never a red that stops the chain before the block that fixes it. Block 3 flips
+  // CONSTITUTION_GUARD_ARMED to true; the two asserts below then bite for real.
+  {
+    const CONSTITUTION_TOKEN_CEILING = 2000;
+    const CONSTITUTION_GUARD_ARMED = false;   // TODO-BLOCK3 — flip to true when §6.4 lands
+    const si = buildSystemInstruction();
+    const tokens = Math.round(si.length / 4);
+    const self = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const srcLines = self.split("\n");
+    const lawLines = si.split("\n").filter((l) => /\bLAW\b/.test(l));
+    const unmarked = [];
+    for (const l of lawLines) {
+      // the emitting source line: match a distinctive head of the built line
+      const head = l.trim().slice(0, 40);
+      const idx = head.length >= 12 ? srcLines.findIndex((s) => s.includes(head)) : -1;
+      const marked = idx >= 0 && srcLines.slice(Math.max(0, idx - 3), idx + 1).some((s) => /\/\/\s*LAW:/.test(s));
+      if (!marked) unmarked.push(l.trim().slice(0, 70));
+    }
+    const sizeOk = tokens <= CONSTITUTION_TOKEN_CEILING;
+    const markersOk = unmarked.length === 0;
+    const verdict = `${sizeOk ? "size OK" : `SIZE OVER — ${tokens} tokens vs ${CONSTITUTION_TOKEN_CEILING} ceiling`} · ${markersOk ? "every LAW marked" : `${unmarked.length}/${lawLines.length} LAW line(s) without a // LAW: marker`}`;
+    if (CONSTITUTION_GUARD_ARMED) {
+      assert(`§14.7 constitution guard (a): buildSystemInstruction() ≤ ${CONSTITUTION_TOKEN_CEILING} tokens — ${tokens} measured`, sizeOk);
+      assert(`§14.7 constitution guard (b): every LAW line has a // LAW: marker in code — ${unmarked.length ? unmarked.join(" | ") : "all marked"}`, markersOk);
+    } else {
+      console.log(`  ⏭ TODO-BLOCK3 · §14.7 CONSTITUTION GUARD SKIPPED (not armed until the sitting brain lands): ${verdict}${unmarked.length ? ` — unmarked: ${unmarked.map((u) => `"${u}…"`).join(" | ")}` : ""}`);
+      assert(`§14.7 constitution guard MEASURED this run (TODO-BLOCK3 skip is loud, never silent): ${tokens} tokens · ${lawLines.length} LAW line(s) · ${unmarked.length} unmarked`, Number.isFinite(tokens) && tokens > 0 && Array.isArray(lawLines));
+    }
+  }
+
   // THE MOUTH UNMUZZLED (depth is obedience) — the empirical fix
   const cfg0 = () => buildConfig(["k1"]);
   assert("constitution: DEPTH IS OBEDIENCE, no more 'never lecture' muzzle", buildSystemInstruction().includes("DEPTH IS OBEDIENCE") && !buildSystemInstruction().includes("Never lecture"));

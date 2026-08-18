@@ -485,6 +485,19 @@ function analyzeFile(absPath, src) {
             if (isC(d)) addSink(writes, d.v, line, name); else noteUnresolved(line, name, "cp-dst");
           } else if (name === "execFileSync" || name === "spawnSync" || name === "execFile" || name === "spawn") {
             recordSpawn(n, scope, line);
+          } else if (name === "runOrgan") {
+            // LAYER B′ — THE IN-PROCESS EDGE (18 Aug 2026, Block 1). turn_hook.mjs
+            // imports a sibling organ with its argv shimmed instead of spawning a
+            // node for it; the callee's OWN dispatch runs, so `runOrgan("x.mjs",
+            // "verb")` IS an organ→verb edge for the verb graph — a process
+            // boundary is not what makes an edge. Without this, the eight hook
+            // verbs the collapse folded (contract · print · hook · recall-hint ·
+            // reset-turns · brief · boot · deal) would read as ORPHAN VERBS the
+            // moment settings.json stopped naming them. Literal args only, the
+            // same discipline as recordSpawn; anything else is counted unresolved.
+            const s = evalNode(n.arguments[0], scope), v = evalNode(n.arguments[1], scope);
+            if (isC(s) && /\.mjs$/i.test(s.v)) spawns.push({ kind: "organ", script: basename(s.v), verb: isC(v) ? v.v : null, line, ctx: CTX, inproc: true });
+            else noteUnresolved(line, name, "inproc-script");
           } else if ((name === "includes" || name === "has") && n.arguments.length === 1 && isArgvRooted(n.arguments[0])
             && n.callee.type === "MemberExpression" && n.callee.object) {
             // `["reminders","fire-reminders"].includes(process.argv[2]…)` —
@@ -1240,6 +1253,28 @@ opaque({}); opaque({}); opaque({});
     // above is "one hard case", not "the analyser gave up on everything"
     assert("…and the four constants really did fold through the helper's parameter (otherwise the 1 above would be meaningless)",
       [...a.reads.keys()].filter((p) => /\/(a|b|c|d)\.json$/.test(p)).length === 4);
+  }
+  // LAYER B′ — the in-process edge (18 Aug 2026, Block 1). turn_hook.mjs runs the
+  // hook callees by import + argv shim, not by spawn; the verb graph must still see
+  // `runOrgan("x.mjs", "verb")` as organ→verb, or the eight folded hook verbs read
+  // as orphans. Held here on a fixture so the recogniser cannot silently rot.
+  {
+    const fixture = `
+export async function prompt() {
+  await runOrgan("forge_session.mjs", "contract");
+  await runOrgan("teaching_contract.mjs", "print", { call: "hookMain" });
+}
+async function runOrgan(file, verb, opts = {}) { return import(file); }
+`;
+    const a = analyzeFile(join(ROOT, "scripts", "__fixture_inproc__.mjs"), fixture);
+    const inproc = a.spawns.filter((s) => s.kind === "organ" && s.inproc);
+    assert("LAYER B′ — a literal `runOrgan(\"x.mjs\", \"verb\")` is an organ→verb edge (in-process dispatch is an edge; a process boundary is not what makes one)",
+      inproc.length === 2 && inproc.some((s) => s.script === "forge_session.mjs" && s.verb === "contract") && inproc.some((s) => s.script === "teaching_contract.mjs" && s.verb === "print"),
+      JSON.stringify(a.spawns));
+    const live = ir.organs["turn_hook.mjs"];
+    assert("…and the LIVE turn_hook.mjs carries the eight folded hook verbs as edges (contract · print · hook · recall-hint · reset-turns · brief · boot · deal)",
+      !!live && ["contract", "print", "hook", "recall-hint", "reset-turns", "brief", "boot", "deal"].every((v) => live.spawns.some((s) => s.kind === "organ" && s.inproc && s.verb === v)),
+      live ? JSON.stringify(live.spawns.map((s) => `${s.script}:${s.verb}`)) : "turn_hook.mjs not in IR");
   }
   if (existsSync(OUT)) {
     const prev = load();

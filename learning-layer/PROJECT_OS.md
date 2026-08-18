@@ -799,7 +799,12 @@ biology, will se compress nahi hoti).
   print` · `teaching_audit.mjs hook` · `hippocampus.mjs recall-hint`. **Stop** → `hooks/afferent-post.mjs` ·
   `teaching_audit.mjs hook`. **PreCompact** → `learnstate.mjs brief`.
   (a) NO GIST CURL at SessionStart — state comes from the local bus the 06:55 mirror fills; the brief is a
-      budgeted 12k-char assembly through `scripts/context_manifest.mjs`.
+      budgeted assembly through `scripts/context_manifest.mjs` — 12k chars until 18 Aug 2026, **5,300 since**
+      (OVERHAUL Block 1: the whole printed brief < 6,000 bytes; `grep -n "export const CEILING" scripts/context_manifest.mjs`).
+  (c) *(18 Aug 2026, OVERHAUL Block 1)* the SAME commands, ONE process: `.claude/settings.json` now names
+      `scripts/turn_hook.mjs prompt` (UserPromptSubmit, beside `hooks/afferent-post.mjs`) and
+      `scripts/turn_hook.mjs start` (SessionStart) — the dispatcher runs the callees listed above in-process, in
+      that order, each printing its own stdout (byte-identical, `node scripts/turn_hook.mjs selftest`).
   (b) THE `exit-2` BLOCK-AT-STOP IS NOT BUILT. `grep -rn "exit(2)" scripts/teaching_audit.mjs hooks/` returns
       NOTHING; `hooks/` contains exactly one file, `afferent-post.mjs`. The Stop hooks OBSERVE (capture the
       turn, audit it, auto-count measured drifts) — they do not refuse to let a session stop. Do not plan

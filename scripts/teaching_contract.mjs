@@ -815,8 +815,12 @@ function hookPayload() {
   if (_payload !== undefined) return _payload;
   _payload = null;
   try {
-    if (process.stdin.isTTY) return _payload;
-    const raw = readFileSync(0, "utf8");
+    // THE STDIN HANDOFF (18 Aug 2026, Block 1 — scripts/turn_hook.mjs contract 1).
+    // Under the one-process dispatcher fd 0 has ALREADY been read; the payload is
+    // parked on this named global. Standalone CLI: the global is unset, fd 0 is read.
+    const handed = globalThis.__ARSENAL_HOOK_STDIN__;
+    if (typeof handed !== "string" && process.stdin.isTTY) return _payload;
+    const raw = typeof handed === "string" ? handed : readFileSync(0, "utf8");
     if (!raw || !raw.trim()) return _payload;
     const j = JSON.parse(raw);
     if (j && typeof j === "object") _payload = j;
@@ -1192,7 +1196,9 @@ switch (cmd) {
     // SELF-INJECTION GUARD — same scar as forge_session.mjs:808. Headless organs run
     // `claude -p` inside this repo; without this they would be handed (and would bump
     // the turn clock of) the captain's teaching contract.
-    if (process.env.ARSENAL_ORGAN === "1") process.exit(0);
+    // `break`, never process.exit, on this hook path (18 Aug 2026, Block 1 —
+    // turn_hook.mjs contract 2): the same process now runs the callees after us.
+    if (process.env.ARSENAL_ORGAN === "1") break;
     try {
       const st = load();
       // PRECEDENCE, resolved once per turn: transcript > Claude Code session id >
@@ -1250,7 +1256,7 @@ switch (cmd) {
       if (!lines.length) { const sl = stagedLine(s); if (sl) lines.push(sl); }
       if (lines.length) console.log(lines.join("\n"));
     } catch { /* silence is the contract */ }
-    process.exit(0);
+    break;                                      // was process.exit(0) — see the guard above
   }
   case "list": {
     const s = load();
@@ -1384,6 +1390,14 @@ switch (cmd) {
     // anchor and lands on turn 1 rather than 2. Transcript first (it survives a plain
     // resume), then the session id, then a local mint — which is unique per invocation,
     // and uniqueness is all a reset needs.
+    // SELF-INJECTION GUARD (18 Aug 2026, Block 1). Every headless `claude -p` the
+    // organism spawns fires SessionStart inside this repo — and until today THIS verb
+    // had no organ guard, so an organ session's transcript became HIS stored anchor
+    // (count 0) and his very next `print` saw a changed anchor and restarted his turn
+    // clock at 1 (bumpTurn: known != known ⇒ fresh). `print`, `boot`, `contract`,
+    // `deal` and `brief` all carried the guard; the reset is now the same: an organ
+    // has no turn clock, so it must not touch his.
+    if (process.env.ARSENAL_ORGAN === "1") break;
     const tx = hookTranscriptPath();
     const cc = hookSessionId();
     const id = tx ? TX_PREFIX + tx : CC_PREFIX + (cc || `local-${new Date().toISOString()}`);

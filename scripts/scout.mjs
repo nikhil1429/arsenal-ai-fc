@@ -39,7 +39,8 @@
 //         audit-close|list> (alias: missions) · outward · chrome-stamp <fire|harvest|
 //         gem-sync|gist-patch>
 //   `chrome-stamp` (:800) and the `missions` alias (:792) were DISPATCHED and unnamed
-//   here until the wiring audit, 10 Aug 2026. THE_DAILY_LOOP.md:82 sends a session to
+//   here until the wiring audit, 10 Aug 2026. THE_DAILY_LOOP.md:82 (now verbatim at
+//   docs/archive/THE_DAILY_LOOP_2026-08-18.md:82 — Block 1, 18 Aug 2026) sends a session to
 //   this exact line for scout's surface, so the verb four Chrome skills must press
 //   after every successful drive (/fire · /harvest · /gem-sync · /gist-patch) was
 //   invisible on the only discovery path the docs name. Header and dispatch are held

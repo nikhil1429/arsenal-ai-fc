@@ -662,8 +662,13 @@ function path() {
     const brief = run([S("learnstate.mjs"), "brief"], { cwd: sb, env: humanEnv });
     assert("BRIEF · SessionStart still assembles and reports its byte manifest",
       brief.code === 0 && /context manifest:/.test(brief.out));
-    assert("BRIEF · the assembled brief stays inside the declared 12,000-char ceiling",
+    // 18 Aug 2026 (OVERHAUL Block 1 §7.4/§13): the declared ceiling is 5,300 chars now (it was
+    // 12,000) so the WHOLE printed brief — state line included — lands under 6,000 BYTES; the
+    // assertion reads the ceiling off the footer, so it holds whichever number the owner declares.
+    assert("BRIEF · the assembled brief stays inside the declared ceiling (read off the footer — 5,300 since 18 Aug 2026)",
       (() => { const m = brief.out.match(/assembled (\d+)\/(\d+)/); return m && Number(m[1]) <= Number(m[2]); })());
+    assert("BRIEF · the WHOLE printed SessionStart brief is under 6,000 bytes (overhaul §7.4/§13 — the state line rides outside the manifest's ceiling)",
+      Buffer.byteLength(brief.out, "utf8") < 6000, `${Buffer.byteLength(brief.out, "utf8")} bytes`);
 
     // ── THE MANIFEST LEDGER'S CONSUMER (dead-wire repair, 11 Aug 2026) ───────
     // assemble() has returned {manifest, bytes, ceiling, total, footer} since 5 Aug and
