@@ -1,14 +1,14 @@
 {
-  "date": "2026-08-17",
-  "generated_at": "2026-08-17T09:42:30.200Z",
+  "date": "2026-08-18",
+  "generated_at": "2026-08-18T01:36:44.601Z",
   "total_reps": 21,
   "status": "ok",
   "low_confidence": false,
   "gate": {
     "have": 21,
-    "need": 12,
+    "need": 1,
     "unit": "reps",
-    "line": "21/12 reps",
+    "line": "21/1 reps",
     "open": true,
     "withheld": [],
     "emitted_regardless": [
@@ -23,17 +23,17 @@
       {
         "name": "weak_connection",
         "have": 21,
-        "need": 12,
+        "need": 1,
         "unit": "reps",
-        "line": "21/12 reps",
+        "line": "21/1 reps",
         "open": true
       },
       {
         "name": "maidan_stage_focus",
         "have": 21,
-        "need": 12,
+        "need": 1,
         "unit": "reps",
-        "line": "21/12 reps",
+        "line": "21/1 reps",
         "open": true
       },
       {
@@ -61,22 +61,22 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 46
+      "overdue_days": 47
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 42
+      "overdue_days": 43
     },
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 30
+      "overdue_days": 31
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 6
+      "overdue_days": 7
     }
   ],
   "core_vs_light": {

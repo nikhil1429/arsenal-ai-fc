@@ -6,7 +6,8 @@
     "guessed": 0.3
   },
   "window_size": 10,
-  "min_reps": 20,
+  "min_reps": 1,
+  "_opened_2026_08_18": "min_reps 20 → 1: calibration_gap and the overconfidence read compute on what he has and carry n. window_size 10 is a WINDOW (the trend needs 2× of it), allowed guessed; danger.min_knew_reps 1 is arithmetic (derived). OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates).",
   "trend_delta": 0.02,
   "danger": {
     "min_knew_reps": 1,

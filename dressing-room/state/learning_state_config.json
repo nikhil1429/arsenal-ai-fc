@@ -6,8 +6,9 @@
     "fluent_streak": 3,
     "latency_fast_ms": 8000,
     "stage_runnable_frac": 0.75,
-    "warming_up_min_reps": 12,
-    "stall_reps": 6
+    "warming_up_min_reps": 1,
+    "stall_reps": 6,
+    "_opened_2026_08_18": "warming_up_min_reps 12 → 1 (fluency states + maidan focus compute on what he has, n printed). held_streak 2 / fluent_streak 3 are the LADDER's DEFINITIONS (🟡 held = 2 consecutive correct, 🟢 fluent = 3 consecutive cold-fast — learning-layer canon), not speak-gates; latency_fast_ms / stage_runnable_frac / stall_reps are definitions too. OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates)."
   },
   "maidan": {
     "stages": [

@@ -223,6 +223,14 @@ export function measureReality(stateDir = STATE) {
     // Phase 6 (14 Aug 2026): the physio gate rows read their bar from HERE — the
     // same file physio.mjs merges over its DEFAULTS — instead of a literal copy.
     physio_config: readJson(join(stateDir, "physio_config.json")),
+    // BLOCK 2 of the overhaul (18 Aug 2026): the four sibling configs whose gates this
+    // table used to MIRROR as literals (`need: 20`, `need: 12`, `need: 60` …). A mirror
+    // rots the moment the owner's file moves — and today every one of them moved. Read
+    // the owner's file, exactly as physio_config has been read since 14 Aug.
+    nemesis_config: readJson(join(stateDir, "nemesis_config.json")),
+    learning_state_config: readJson(join(stateDir, "learning_state_config.json")),
+    doubtminer_config: readJson(join(stateDir, "doubtminer_config.json")),
+    twin_config: readJson(join(stateDir, "twin_config.json")),
   };
 }
 
@@ -255,6 +263,18 @@ const calNeed = (name) => (m) => { const g = calGateRead(m.cal_gate, name); retu
 const physioNeed = (path, fallback) => (m) => {
   const cfg = m.physio_config;
   let v = cfg && cfg.gates;
+  for (const k of String(path).split(".")) { if (!v || typeof v !== "object") { v = null; break; } v = v[k]; }
+  return Number.isFinite(v) ? v : fallback;
+};
+// The same shape for any owner config this ledger carries (BLOCK 2, 18 Aug 2026):
+// `cfgNeed("nemesis_config", "warming_up_min_reps", 20)` reads the OWNER's file off
+// `measure`, and falls back to the organ's own code DEFAULT only when the file is
+// missing — never to a number this table typed. Dotted paths walk nested objects.
+// A BUDGETS row's `value` read off the owner's file — resolved at build() time against
+// `measure`, so a table cell is never a stale copy of a config the owner has moved.
+function cfgValue(cfgKey, path, fallback) { return { __cfg: cfgKey, path, fallback }; }
+const cfgNeed = (cfgKey, path, fallback) => (m) => {
+  let v = m[cfgKey];
   for (const k of String(path).split(".")) { if (!v || typeof v !== "object") { v = null; break; } v = v[k]; }
   return Number.isFinite(v) ? v : fallback;
 };
@@ -366,41 +386,38 @@ export function distillerLatency(lines = []) {
 // ---- THE GATES: numbers that decide whether an organ may SPEAK AT ALL -------
 // Each carries the LIVE reading it is judged against, so "shut" is a fact, not a claim.
 export const GATES = [
-  // The three calibration rows read the PRODUCER's published counter (see cal_gate
-  // above). `need` is a function here for the same reason `have` always was: the
-  // trend gate's denominator is 2 × window_size (calibration.mjs:265), not
-  // window_size — this table hardcoded 20 and so called it OPEN at 21 when the
-  // producer had it SHUT at 21/40. Nothing is guessed; every number arrives from
-  // the organ that owns the threshold, and reads "-  ?" if that organ never ran.
-  { organ: "calibration",   file: "calibration.mjs",   key: "min_reps",                    need: calNeed("__root__"),             have: calHave("__root__"),             origin: "guessed", effect: "no calibration_gap, no overconfidence read" },
-  { organ: "calibration",   file: "calibration.mjs",   key: "window_size",                 need: calNeed("trend"),                have: calHave("trend"),                origin: "guessed", effect: "trend window — the gate is 2 × window_size reps" },
-  { organ: "calibration",   file: "calibration.mjs",   key: "danger.min_knew_reps",        need: calNeed("danger.min_knew_reps"), have: calHave("danger.min_knew_reps"), origin: "guessed", effect: "no danger-zone topics surfaced (counts KNEW-reps, not all reps)" },
-  // WIRING AUDIT (11 Aug 2026) — THE SILENT REGISTRY, given an address. calibration.mjs
-  // swallowed a missing/malformed concepts.json in a bare catch and published nothing:
-  // the run came out byte-identical to a healthy one. It now publishes a `registry` sub
-  // row, and this is its consumer — the two rows above are only as true as the alias
-  // table that canonicalises their keys, so a shut row here means BOTH under-read (each
-  // spelling of a topic becomes its own namespace and falls under gate (a)).
-  // ORIGIN `derived`, not `guessed`, for fsrs's reason directly below: the need is 1
-  // because the file parsed or it did not — arithmetic, not a typed threshold. Tagging
-  // it `guessed` would put a phantom row on his 30-45-60-day re-fit list.
-  { organ: "calibration",   file: "concepts.json",     key: "registry — concepts.json must parse", need: calNeed("registry"),     have: calHave("registry"),             origin: "derived", effect: "aliases stop collapsing: the danger zone and the knew-gate both UNDER-read, and an empty danger_zone reads as acquittal" },
-  { organ: "nemesis",       file: "nemesis.mjs",       key: "warming_up_min_reps",         need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no weakness headline reaches the sheet" },
-  { organ: "nemesis",       file: "nemesis.mjs",       key: "axis_cluster_min_concepts",   need: 3,   have: (m) => m.capsules,          origin: "guessed", effect: "no axis-pattern read" },
-  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.warming_up_min_reps", need: 12, have: (m) => m.reps,           origin: "guessed", effect: "no fluency state, no maidan focus" },
-  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.held_streak",      need: 2,   have: (m) => m.reps,              origin: "guessed", effect: "a concept cannot reach HELD" },
-  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.fluent_streak",    need: 3,   have: (m) => m.reps,              origin: "guessed", effect: "a concept cannot reach FLUENT" },
-  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "gates.min_capsules",          need: 4,   have: (m) => m.capsules,          origin: "guessed", effect: "no doubt clustering" },
-  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "gates.min_doubts",            need: 60,  have: (m) => m.doubts,            origin: "guessed", effect: "no doubt clustering" },
-  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "lexicon.min_count",           need: 2,   have: (m) => m.capsules,          origin: "guessed", effect: "an anchor must repeat twice — why filler outranks metaphor" },
-  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "tape_room.min_age_days",      need: 14,  have: (m) => m.span_days,         origin: "guessed", effect: "no rematch is old enough to return" },
-  { organ: "boot room",     file: "physio.mjs",        key: "gates.bootroom_min_reps",     need: physioNeed("bootroom_min_reps", 200), have: (m) => m.reps,              origin: "guessed", effect: "the genome proposes no mutation" },
+  // ── BLOCK 2 of the overhaul (18 Aug 2026), §5.4 made mechanical ─────────────
+  // Every row now carries a CLASS beside its origin, because "guessed" alone conflated
+  // three different kinds of number: a GATE (may the organ speak at all), a WINDOW (how
+  // far back / how much of the stream — his 1 Aug ruling permits a guessed window) and a
+  // DEFINITION (what a word MEANS: "held" = 2 in a row; a pattern = ≥2 concepts). The
+  // rule the DoD asserts below: NO gate and NO budget may be `guessed`. Every speak-gate
+  // that WAS a guessed volume bar was OPENED to its arithmetic floor (1 — you cannot
+  // compute on an empty set) in the OWNER's config file, each with an
+  // `_opened_2026_08_18` note; origin `opened` records that a human ruling did it, on
+  // which day, and that `n` is now printed instead of a wall. `derived` = arithmetic.
+  // NEED IS READ OFF THE OWNER'S FILE — the literals this table used to mirror rotted the
+  // morning the owners moved.
+  { organ: "calibration",   file: "calibration.mjs",   key: "min_reps",                    need: calNeed("__root__"),             have: calHave("__root__"),             origin: "opened", cls: "gate", effect: "calibration_gap + the overconfidence read, on what he has (n printed)" },
+  { organ: "calibration",   file: "calibration.mjs",   key: "window_size",                 need: calNeed("trend"),                have: calHave("trend"),                origin: "guessed", cls: "window", effect: "trend WINDOW — the trend needs 2 × window_size reps (a lookback, not a wall)" },
+  { organ: "calibration",   file: "calibration.mjs",   key: "danger.min_knew_reps",        need: calNeed("danger.min_knew_reps"), have: calHave("danger.min_knew_reps"), origin: "derived", cls: "gate", effect: "danger-zone topics need ≥1 KNEW-rep to exist — arithmetic" },
+  { organ: "calibration",   file: "concepts.json",     key: "registry — concepts.json must parse", need: calNeed("registry"),     have: calHave("registry"),             origin: "derived", cls: "gate", effect: "aliases stop collapsing: the danger zone and the knew-gate both UNDER-read, and an empty danger_zone reads as acquittal" },
+  { organ: "nemesis",       file: "nemesis.mjs",       key: "warming_up_min_reps",         need: cfgNeed("nemesis_config", "warming_up_min_reps", 20),  have: (m) => m.reps,     origin: "opened", cls: "gate", effect: "the weakness headline reaches the sheet on what he has (n printed)" },
+  { organ: "nemesis",       file: "nemesis.mjs",       key: "axis_cluster_min_concepts",   need: cfgNeed("nemesis_config", "axis_cluster_min_concepts", 3), have: (m) => m.capsules, origin: "derived", cls: "definition", effect: "a cross-concept PATTERN is plural — ≥2 concepts on one axis" },
+  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.warming_up_min_reps", need: cfgNeed("learning_state_config", "thresholds.warming_up_min_reps", 12), have: (m) => m.reps, origin: "opened", cls: "gate", effect: "fluency state + maidan focus, on what he has (n printed)" },
+  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.held_streak",      need: cfgNeed("learning_state_config", "thresholds.held_streak", 2),   have: (m) => m.reps, origin: "guessed", cls: "definition", effect: "the LADDER's word: 🟡 held = this many consecutive correct" },
+  { organ: "learning_state",file: "learning_state.mjs",key: "thresholds.fluent_streak",    need: cfgNeed("learning_state_config", "thresholds.fluent_streak", 3), have: (m) => m.reps, origin: "guessed", cls: "definition", effect: "the LADDER's word: 🟢 fluent = this many consecutive cold-fast" },
+  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "gates.min_capsules",          need: cfgNeed("doubtminer_config", "gates.min_capsules", 4),  have: (m) => m.capsules, origin: "opened", cls: "gate", effect: "doubt clustering over what exists (gate_line prints n)" },
+  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "gates.min_doubts",            need: cfgNeed("doubtminer_config", "gates.min_doubts", 60),   have: (m) => m.doubts,   origin: "opened", cls: "gate", effect: "doubt clustering over what exists (gate_line prints n)" },
+  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "lexicon.min_count",           need: cfgNeed("doubtminer_config", "lexicon.min_count", 2),   have: (m) => m.capsules, origin: "derived", cls: "definition", effect: "an anchor is a phrase that RECURS — once is not recurring" },
+  { organ: "doubtminer",    file: "doubtminer.mjs",    key: "tape_room.min_age_days",      need: cfgNeed("doubtminer_config", "tape_room.min_age_days", 14), have: (m) => m.span_days, origin: "guessed", cls: "window", effect: "rematch spacing WINDOW — a doubt too fresh is not a rematch" },
+  { organ: "boot room",     file: "physio.mjs",        key: "gates.bootroom_min_reps",     need: physioNeed("bootroom_min_reps", 200), have: (m) => m.reps,              origin: "opened", cls: "gate", effect: "the genome proposes on evidence-proportional n (each mutation still carries its own metric.min_events + auto-extending window)" },
   // #78: `have` was m.voice_resolutions (dugout_notes.jsonl lines) — the wrong file
   // entirely. It now reads the same thing physio.mjs:457/:502 counts.
-  { organ: "twin",          file: "physio.mjs",        key: "gates.twin_voice_min_resolutions", need: physioNeed("twin_voice_min_resolutions", 30), have: (m) => m.twin_resolutions_best_type, origin: "guessed", effect: "no voice-twin read (best single claim-type in slip.jsonl)" },
-  { organ: "apni ghadi",    file: "physio.mjs",        key: "gates.apni_ghadi.min_cards",  need: physioNeed("apni_ghadi.min_cards", 8),   have: (m) => m.capsules,          origin: "guessed", effect: "no personal-interval calibration" },
-  { organ: "body archive",  file: "physio.mjs",        key: "gates.body_archive_min_days", need: physioNeed("body_archive_min_days", 84),  have: (m) => m.span_days,         origin: "external", effect: "seasonal body baseline — 12 weeks is a real physiological window" },
-  { organ: "signal table",  file: "physio.mjs",        key: "signal_table.min_n",          need: 20,  have: (m) => m.reps,              origin: "guessed", effect: "no per-signal reliability table" },
+  { organ: "twin",          file: "physio.mjs",        key: "gates.twin_voice_min_resolutions", need: physioNeed("twin_voice_min_resolutions", 30), have: (m) => m.twin_resolutions_best_type, origin: "opened", cls: "gate", effect: "the cold-start gag is now 'beats base rate over what it has' (win-only law untouched; twin_config.voice_min_resolutions moved with it)" },
+  { organ: "apni ghadi",    file: "physio.mjs",        key: "gates.apni_ghadi.min_cards",  need: physioNeed("apni_ghadi.min_cards", 8),   have: (m) => m.capsules,          origin: "opened", cls: "gate", effect: "personal-interval calibration on what he has (min_reps_per_card 4 = the definition of a matured card)" },
+  { organ: "body archive",  file: "physio.mjs",        key: "gates.body_archive_min_days", need: physioNeed("body_archive_min_days", 84),  have: (m) => m.span_days,         origin: "external", cls: "gate", effect: "seasonal body baseline — 12 weeks is a real physiological window" },
+  { organ: "signal table",  file: "physio.mjs",        key: "signal_table.min_n",          need: cfgNeed("physio_config", "signal_table.min_n", 20),  have: (m) => m.reps,   origin: "opened", cls: "gate", effect: "per-signal reliability table on what he has — brier/hit-rate land at n≥1, n printed" },
   // WIRING AUDIT (11 Aug 2026) — fsrs published an ungate counter (audit #106) that
   // no organ read. Reads the PRODUCER's have/need, exactly as the calibration rows
   // do; no cards.json ⇒ both read "?" and the row prints "  ?  ", never an invented
@@ -409,20 +426,33 @@ export const GATES = [
   // already defines `derived` as exactly that. Tagging it `guessed` would put a
   // false row on his 30-45-60-day re-fit list, which is the failure this table exists
   // to prevent (the bundle already caught two rows mis-tagged the other way).
-  { organ: "fsrs",          file: "fsrs.mjs",          key: "gate.need — one card must exist", need: (m) => (m.fsrs_gate ? m.fsrs_gate.need : null), have: (m) => (m.fsrs_gate ? m.fsrs_gate.have : null), origin: "derived", effect: "no due_today, no overdue, no hardest_due — the decay guard says nothing" },
-  { organ: "thalamus",      file: "thalamus_config.json", key: "wake threshold (tau1)",    need: null, have: null,                      origin: "guessed", effect: "TIER-2 wake bar — pulse maxes at 0.244 against a 0.40-0.85 bar" },
+  { organ: "fsrs",          file: "fsrs.mjs",          key: "gate.need — one card must exist", need: (m) => (m.fsrs_gate ? m.fsrs_gate.need : null), have: (m) => (m.fsrs_gate ? m.fsrs_gate.have : null), origin: "derived", cls: "gate", effect: "no due_today, no overdue, no hardest_due — the decay guard says nothing" },
+  // THE THALAMUS WAKE BAR moved to GUARDS (18 Aug 2026): tau1 is a headroom-coupled
+  // spend guard (tau1_eff = tau1_base + budget_k × (1 − headroom)) under a hard
+  // wake_cap_per_day — it stops ONE failure repeating (Opus woken on reflex until the
+  // window is gone), which is this table's definition of a guard, and its live cost is
+  // measured beside it there. It was never a "may the organ speak" gate.
 ];
 
 // ---- BUDGETS: numbers that cap SPEND ---------------------------------------
 export const BUDGETS = [
-  { name: "pulse daily call cap",      where: "brain.mjs pulseConfig.daily_cap",              value: 200,      origin: "guessed",  note: "G3 INVERSION (9 Aug 2026): post-lean (~1.1k/pulse est) this backstop BINDS FIRST — 2.4M/1.1k ≈ 2,180 » 200; crossover at 12k tok/pulse. The old 'can never bind' was 12M-era arithmetic at 32,480 tok/pulse. Re-fit after G14's metered probes" },
-  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.10,     origin: "guessed",  note: "was 0.05 (1 Aug guess); DOUBLED 2 Aug as a MEASUREMENT WINDOW; G3 (9 Aug): 24M-era daily window = 2.4M tok — the split ruling's arithmetic lives in brain.mjs pulseConfig's own header (his verbatim 20x words recorded there)" },
+  // ── BLOCK 2 of the overhaul (18 Aug 2026), §5.4: NO budget may be `guessed`. ─────
+  // Each former guess was re-read against what it actually IS in the code that holds it:
+  //   · the two pulse "caps" are GUARDS by brain.mjs's own words ("NOT a budget — a
+  //     runaway-loop backstop"; "FLOOR DERIVED, NOT GUESSED (#66)") → moved to GUARDS;
+  //   · daily_token_frac is a MEASUREMENT WINDOW ("not a guessed cap") on a lane HE
+  //     stopped 15 Aug ("stop the pulse right now") — a window, allowed guessed;
+  //   · gemini_defer_threshold_min is a WINDOW of voice minutes — allowed guessed;
+  //   · day_reserve / overnight_target are the plan's own Block-9 numbers: "read after
+  //     7 real days; then set defaults from data (his 1 Aug law), never before" → the
+  //     ledger's existing `measured-pending` class, with the exact read named;
+  //   · the lexicon cap was OPENED (25 → 0 = none) — his voice is not a budget.
+  { name: "pulse daily token budget",  where: "brain.mjs pulseConfig.daily_token_frac",       value: 0.10,     origin: "guessed",  cls: "window", note: "a MEASUREMENT WINDOW, not a cap (brain_config pulse._measurement_window_note): what share of the weekly plan the pulse may observe with. The lane is STOPPED by his word since 15 Aug (pulse.enabled=false), so it meters nothing today; G14 unpauses it as a pure instrument. Was 0.05 (1 Aug); doubled 2 Aug." },
   { name: "window capacity estimate",  where: "brain_config.budget.window_capacity_est_tokens", value: 1600000, origin: "measured", note: "SELF-TUNES from observed limit events (observed_window_ceiling); DOUBLED 9 Aug 2026 (P1 unleash, his word) for the doubled plan" },
   { name: "weekly capacity estimate",  where: "brain_config.budget.weekly_capacity_est_tokens", value: 24000000, origin: "external", note: "the Claude Max plan's real wall — not ours to choose; DOUBLED 9 Aug 2026 (P1 unleash) for the doubled plan" },
-  { name: "day reserve fraction",      where: "brain_config.budget.day_reserve_frac",         value: 0.4,      origin: "guessed",  note: "how much of the window is held back during his study hours" },
-  { name: "overnight target fraction", where: "brain_config.budget.overnight_target_frac",    value: 0.95,     origin: "guessed",  note: "how hard the night is allowed to run" },
-  { name: "gemini defer threshold",    where: "brain_config.dugout_pool.gemini_defer_threshold_min", value: 30, origin: "guessed", note: "voice minutes before daytime gemini steps aside" },
-  { name: "pulse min headroom",        where: "brain.mjs pulseConfig.min_headroom_tokens",    value: 20000,    origin: "guessed",  note: "" },
+  { name: "day reserve fraction",      where: "brain_config.budget.day_reserve_frac",         value: 0.4,      origin: "measured-pending", note: "how much of the window is held back during his study hours. BLOCK 9 (ORGANISM_OVERHAUL §15/§16): set from the ledger's 7-real-day read — day-window spend vs the sitting_log contact_share the sitting brain will publish (a `measure` lands on this row the day sitting_log exists) — never before, never by guess. Until then the 9 Aug value stands as the working number, tagged as waiting on that read." },
+  { name: "overnight target fraction", where: "brain_config.budget.overnight_target_frac",    value: 0.95,     origin: "measured-pending", note: "how hard the night is allowed to run. BLOCK 9: the dark-lane share of the same 7-real-day ledger read against overnight.reserve (§10 says the night is THREE jobs now); set from that data, in the same commit as this row." },
+  { name: "gemini defer threshold",    where: "brain_config.dugout_pool.gemini_defer_threshold_min", value: 30, origin: "guessed", cls: "window", note: "a WINDOW of live-voice minutes before daytime gemini jobs step aside (they run overnight regardless) — a lookback, not a spend cap; the sitting brain (§6) retires the Gemini brain lane it protects" },
   // 11 Aug 2026 — this row exists because the knob had NO address at all: the 25
   // was a literal inside doubtminer.mjs's keep-loop, so the config sweep could not
   // see it, this table could not carry it, and the lexicon's own output never said
@@ -431,9 +461,11 @@ export const BUDGETS = [
   // the Gaffer's system prompt via dugout.mjs + talk.mjs) — but its real cost was
   // his voice: on 11 Aug it silently cut 20 of 45 mined anchors, "kv cache" (23×,
   // 2× the top survivor) among them, because the cut ran in DEDUP order (longest
-  // phrase first) instead of by recurrence. The ordering is repaired; the NUMBER is
-  // untouched and stays `guessed` until he reads the data — his 30-45-60-day rule.
-  { name: "lexicon anchor cap",        where: "doubtminer_config.json lexicon.max_anchors",   value: 25,       origin: "guessed",  note: "how many of his mined anchors reach every prompt. What it CUT is named in lexicon.json dropped_by_cap — and READ here rather than pointed at, so the cap's cost arrives with the cap",
+  // phrase first) instead of by recurrence. The ordering was repaired 11 Aug; the
+  // NUMBER was OPENED 18 Aug 2026 (Block 2): max_anchors 0 = no cap, every mined
+  // anchor ships, the connective filter + min_count remain the guards. The measure
+  // beside it now reads dropped 0 — the receipt that the cap is gone.
+  { name: "lexicon anchor cap",        where: "doubtminer_config.json lexicon.max_anchors",   value: cfgValue("doubtminer_config", "lexicon.max_anchors", 25), origin: "opened", note: "0 = NO CAP (18 Aug 2026): how many of his mined anchors reach every prompt — all of them. What a cap CUT is named in lexicon.json dropped_by_cap and READ here, so the receipt travels with the number",
     measure: (m) => m.lexicon_anchors == null ? null : {
       shipped: m.lexicon_anchors, mined: m.lexicon_anchors_mined,
       dropped: m.lexicon_dropped_by_cap, connectives: m.lexicon_connectives_filtered, on: m.lexicon_date } },
@@ -465,6 +497,11 @@ export const GUARDS = [
   { name: "step timeout",             where: "conductor.mjs STEP_TIMEOUT_MS",              value: 180000, earned: "a hung organ must not eat the morning" },
   { name: "heartbeat timeout",        where: "heartbeat.mjs timeout_ms",                   value: 120000, earned: "" },
   { name: "sheet line cap",           where: "manager.mjs LINE_CAP",                       value: 40,     earned: "one glance = one story; a 200-line sheet is not a sheet" },
+  // BLOCK 2 (18 Aug 2026) — three rows that were filed as guessed GATES/BUDGETS and are
+  // guards by the owning code's own words:
+  { name: "pulse daily call cap",     where: "brain.mjs pulseConfig.daily_cap",            value: 200,    earned: "21 Jul: a runaway pulse loop — brain.mjs calls it 'NOT a budget — a runaway-loop backstop, one of the two permitted exceptions'; post-lean it binds first (2.4M/1.1k ≈ 2,180 » 200), which is backstop work. Lane STOPPED by his 15 Aug word anyway." },
+  { name: "pulse min headroom",       where: "brain.mjs pulseConfig.min_headroom_tokens",  value: 20000,  earned: "2 Aug audit #66: 'FLOOR DERIVED, NOT GUESSED' — the live floor is max(20,000, the measured deep-read headroom); it stops a pulse from spending the last of the window a sitting needs" },
+  { name: "thalamus wake bar (tau1)", where: "thalamus_config.tiers (tau1_base + budget_k × (1 − headroom)) under wake_cap_per_day", value: "0.20 + 0.35·(1−h) · cap 15/day", earned: "the Tier-2 wake bar stops Opus being woken on reflex until the window is gone (853 pulses → 0 wakes was the OTHER failure, fixed 4 Aug by the measured pulse base-rate). Live 18 Aug (salience_ledger, 2,447 moments since 11 Aug): S p50 0 · p90 0.20 · p97 0.32 · p99 0.37 · max 0.65 · 13 tier-2 wakes lifetime · 2/15 today. Blocks 3/5 change the game: the sitting brain puts Opus IN the conversation and cortex/council wake only with no sitting open." },
 ];
 
 // ---- LADDER G5 (9 Aug 2026) — CADENCES: every timer the organism runs on, ----
@@ -579,8 +616,25 @@ export function report(stateDir = STATE, m = measureReality(stateDir)) {
   // reason as the cadences above: a capped number whose COST is only reachable by
   // remembering another command is a number nobody re-fits. Rows without `measure`
   // resolve to `measured: null` and are byte-identical to before.
-  const budgets = BUDGETS.map(b => ({ ...b, measured: b.measure ? b.measure(m) : null, measure: undefined }));
-  return { measured: m, gates, budgets, guards: GUARDS, cadences, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults() };
+  // …and a BUDGET row's `value` may be a read off the owner's file (cfgValue, Block 2):
+  // resolved here so the printed cell is the live number, never a stale copy.
+  const budgets = BUDGETS.map(b => {
+    const value = (b.value && typeof b.value === "object" && b.value.__cfg) ? cfgNeed(b.value.__cfg, b.value.path, b.value.fallback)(m) : b.value;
+    return { ...b, value, measured: b.measure ? b.measure(m) : null, measure: undefined };
+  });
+  return { measured: m, gates, budgets, guards: GUARDS, cadences, config_numbers: sweepConfigs(stateDir), script_defaults: sweepScriptDefaults(), law: guessedLaw({ gates, budgets }) };
+}
+
+// ── §5.4 MADE MECHANICAL (BLOCK 2, 18 Aug 2026) ─────────────────────────────
+// "a `guessed` number may only appear as a GUARD or as a WINDOW, never as a BUDGET
+// or a CALENDAR GATE." Pure and exported: the selftest holds it, `human()` prints it,
+// and any future row that re-introduces a guessed gate or budget goes red by name.
+// A row's CLASS defaults to its table: a GATES row is a `gate` unless it says `window`
+// or `definition`; a BUDGETS row is a `budget` unless it says `window`.
+export function guessedLaw({ gates = [], budgets = [] } = {}) {
+  const badGates = gates.filter(g => (g.cls || "gate") === "gate" && g.origin === "guessed").map(g => `${g.organ} ${g.key}`);
+  const badBudgets = budgets.filter(b => (b.cls || "budget") === "budget" && b.origin === "guessed").map(b => b.name);
+  return { ok: badGates.length === 0 && badBudgets.length === 0, guessed_gates: badGates, guessed_budgets: badBudgets };
 }
 
 function human(r) {
@@ -603,7 +657,9 @@ function human(r) {
     console.log(`           DISCARDED  └─ calibration_config.json  ${g.rejected.key} = ${g.rejected.got}  was THROWN AWAY (not a number) — the ${g.need} above is calibration.mjs's built-in default ${g.rejected.using}, NOT his edit`);
   }
   const shut = r.gates.filter(g => g.open === false);
-  console.log(`  → ${shut.length} of ${r.gates.length} gates SHUT. ${r.gates.filter(g => g.origin === "guessed").length} of them are GUESSES.`);
+  const gateRows = r.gates.filter(g => (g.cls || "gate") === "gate");
+  const winRows = r.gates.filter(g => g.cls === "window"), defRows = r.gates.filter(g => g.cls === "definition");
+  console.log(`  → ${shut.length} of ${r.gates.length} rows SHUT · ${gateRows.length} are speak-GATES (${gateRows.filter(g => g.origin === "guessed").length} guessed — the §5.4 law says 0; ${gateRows.filter(g => g.origin === "opened").length} opened 18 Aug 2026 to the arithmetic floor, n printed) · ${winRows.length} WINDOWS + ${defRows.length} DEFINITIONS may stay guessed.`);
   // The rest of the same read: leaves with no gate row (the ECE targets), keys that
   // are pure no-ops, and a config file that could not be parsed at all. Printed only
   // when there is something to say — a line that always prints is a line nobody reads.
@@ -618,7 +674,7 @@ function human(r) {
 
   console.log("\n=== BUDGETS — numbers that cap spend ===");
   for (const b of r.budgets) {
-    console.log(`  ${b.origin.padEnd(9)} ${String(b.value).padStart(9)}  ${b.name}  ·  ${b.where}`);
+    console.log(`  ${b.origin.padEnd(9)} ${String(b.value).padStart(9)}  ${b.name}${b.cls === "window" ? "  [WINDOW]" : ""}  ·  ${b.where}`);
     // What the cap COST, printed where the cap is. A "?" is the honest reading for a
     // producer that has not re-run since it gained the counter — never a 0.
     if (!b.measured) continue;
@@ -634,6 +690,11 @@ function human(r) {
       continue;
     }
     console.log(`           MEASURED  └─ ${n(q.shipped)} of ${n(q.mined)} mined anchors shipped · ${n(q.dropped)} dropped by the cap · ${n(q.connectives)} connective n-gram(s) rejected (#4)${q.mined == null ? "  [lexicon.json " + n(q.on) + " predates the mined/dropped counters — re-run doubtminer]" : ""}`);
+  }
+
+  {
+    const law = r.law || guessedLaw(r);
+    console.log(`  → §5.4 LAW (0 guessed budgets, 0 guessed gates): ${law.ok ? "HOLDS" : "BROKEN — " + [...law.guessed_gates, ...law.guessed_budgets].join(", ")}`);
   }
 
   console.log("\n=== GUARDS — not budgets; they stop one failure repeating ===");
@@ -668,7 +729,25 @@ function selftest() {
   // table has always defined it ("arithmetic from another number, shown") and a
   // gate that is arithmetic must not be filed under `guessed`, or his re-fit list
   // grows a row with nothing to re-fit.
-  ok("every gate declares an origin", r.gates.every(g => ["guessed", "measured", "external", "guard", "derived"].includes(g.origin)));
+  // `opened` joined 18 Aug 2026 (BLOCK 2 of the overhaul): a human ruling opened a speak-
+  // gate to its arithmetic floor and the organ prints n — recorded, dated, re-fittable.
+  ok("every gate declares an origin", r.gates.every(g => ["guessed", "measured", "external", "guard", "derived", "opened"].includes(g.origin)));
+  ok("every gate declares a class — gate | window | definition (Block 2, §5.4)", r.gates.every(g => ["gate", "window", "definition"].includes(g.cls || "gate")));
+  // ── THE §5.4 LAW, HELD HERE (BLOCK 2, 18 Aug 2026) — the DoD of Block 2 ─────────
+  // "limits.mjs shows 0 guessed budgets/gates". Pure over the live tables, named on red.
+  {
+    const law = guessedLaw(r);
+    ok(`§5.4 — NO guessed speak-GATE remains (windows + definitions may): ${law.guessed_gates.length ? law.guessed_gates.join(", ") : "0"}`, law.guessed_gates.length === 0);
+    ok(`§5.4 — NO guessed BUDGET remains (windows may): ${law.guessed_budgets.length ? law.guessed_budgets.join(", ") : "0"}`, law.guessed_budgets.length === 0);
+    ok("§5.4 — the law is pure and would go RED on a re-introduced guessed gate (fixture)",
+      guessedLaw({ gates: [{ organ: "x", key: "k", origin: "guessed" }], budgets: [] }).ok === false
+      && guessedLaw({ gates: [{ organ: "x", key: "k", origin: "guessed", cls: "window" }], budgets: [{ name: "b", origin: "guessed", cls: "window" }] }).ok === true
+      && guessedLaw({ gates: [], budgets: [{ name: "b", origin: "guessed" }] }).ok === false);
+    ok("§5.4 — the opened gates read their bar off the OWNER's config (need 1 today), never a literal kept here",
+      cfgNeed("nemesis_config", "warming_up_min_reps", 20)({ nemesis_config: { warming_up_min_reps: 1 } }) === 1
+      && cfgNeed("nemesis_config", "warming_up_min_reps", 20)({}) === 20
+      && r.gates.filter(g => g.origin === "opened").every(g => Number.isFinite(g.need)));
+  }
   ok("a gate's status is computed from live data, never asserted", r.gates.filter(g => g.have != null).every(g => g.open === (g.have >= g.need)));
   ok("the sweep finds config knobs", r.config_numbers.length > 0);
   ok("the sweep finds script DEFAULTS knobs", r.script_defaults.length > 0);
@@ -689,8 +768,10 @@ function selftest() {
   // whole lesson — doubtminer's own selftest calls a false 0 "the same class of lie").
   {
     const cap = r.budgets.find(b => b.name === "lexicon anchor cap");
-    ok("the lexicon cap is registered as doubtminer.mjs's comment claims (BUDGETS, guessed)",
-      !!cap && cap.origin === "guessed" && /max_anchors/.test(cap.where));
+    // 18 Aug 2026 (Block 2): the cap is OPENED (max_anchors 0 = none) — the row stays,
+    // its origin says so, and its value is READ off doubtminer_config, not copied here.
+    ok("the lexicon cap is registered as doubtminer.mjs's comment claims (BUDGETS) — and OPENED 18 Aug 2026, value read off the owner's config",
+      !!cap && cap.origin === "opened" && /max_anchors/.test(cap.where) && cap.value === 0);
     ok("and it READS the lexicon's own counters — a named cap with no measurement is the address-only defect again",
       !!cap && cap.measured !== undefined
       && (cap.measured === null || Number.isFinite(cap.measured.shipped)));

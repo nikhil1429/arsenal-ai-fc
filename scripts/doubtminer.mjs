@@ -69,8 +69,13 @@ const DEFAULTS = {
   // disk today holds exactly 25 anchors). Naming it here changes nothing about
   // what ships and everything about whether it can be seen and retuned — it was
   // the ONE lexicon knob with no config key, so nothing could audit it and no
-  // output said it had fired. It is registered in limits.mjs BUDGETS as `guessed`
-  // because that is what it is: a typed constant awaiting his 30-45-60-day read.
+  // output said it had fired. It was registered in limits.mjs BUDGETS as `guessed`
+  // because that is what it was: a typed constant awaiting his read.
+  // OPENED 18 Aug 2026 (ORGANISM_OVERHAUL Block 2, §5.4 — his 1 Aug + 13 Aug rulings):
+  // doubtminer_config.json now says max_anchors 0 = NO CAP (selectAnchors treats ≤0 as
+  // none), and limits.mjs carries the row as `opened` with its value read off that
+  // file. This DEFAULT keeps the incumbent 25 as the layered fallback for a config
+  // that lacks the key — the live file has it, so nothing ships capped today.
   lexicon: { min_ngram: 2, max_ngram: 5, min_count: 2, min_content_words: 1, max_anchors: 25 },
   // GATE 2 (#34) — FORGE_SPEC's cold-reader slip-catcher. fragment_max_tokens is
   // MEASURED, not guessed: across the 112 live doubts (4 Aug 2026) the token-count
@@ -1008,8 +1013,13 @@ async function selftest() {
       lexCapped.dropped_by_cap.every(d => d.count <= weakestKept));
     assert("CAP — the lexicon's own line reports the cut (a silent cut is how this survived weeks)",
       /of \d+ mined anchors kept \(cap 3\)/.test(lexCapped.anchor_line) && /\d+ dropped by the cap/.test(lexCapped.anchor_line));
+    // 18 Aug 2026 (OVERHAUL Block 2, §5.4): the DEFAULT stays the incumbent 25 (naming a
+    // knob must not move it — layering), but the LIVE config is OPENED to 0 = no cap on
+    // his ruling; both facts are held here so neither can drift back in silence.
     assert("CAP — the default cap is the incumbent 25, unchanged (naming a knob must not move it)",
-      DEFAULTS.lexicon.max_anchors === 25 && loadConfig().lexicon.max_anchors === 25);
+      DEFAULTS.lexicon.max_anchors === 25);
+    assert("CAP OPENED (18 Aug 2026, his 1 Aug ruling made mechanical) — the live doubtminer_config says 0 = no cap, and selectAnchors treats ≤0 as none",
+      loadConfig().lexicon.max_anchors === 0 && (() => { const st = { connectives_filtered: 0, mined: 0, max_anchors: null, dropped_by_cap: [] }; const all = selectAnchors(capCands, 0, st); return all.length === capCands.length && st.max_anchors === null && st.dropped_by_cap.length === 0; })());
   }
 
   // TAPE ROOM

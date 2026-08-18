@@ -5,6 +5,7 @@
     { "id": "floor_touched", "desc": "the never-zero floor is touched today" },
     { "id": "session_happened", "desc": "a real study session happens today" }
   ],
-  "voice_min_resolutions": 30,
-  "dead_market_min": 30
+  "voice_min_resolutions": 1,
+  "dead_market_min": 30,
+  "_opened_2026_08_18": "voice_min_resolutions 30 → 1: THE COLD-START GAG becomes 'beats base rate over what it has' (ORGANISM_OVERHAUL §5.4, verbatim). The win-only law, the beats-base-rate condition and the dead-market pruning (dead_market_min 30 — a guard against a market that never resolves) are untouched; the twin's line prints n. physio_config.gates.twin_voice_min_resolutions moved with it — one threshold, one source. OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates)."
 }

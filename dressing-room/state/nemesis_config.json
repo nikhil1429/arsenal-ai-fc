@@ -1,8 +1,9 @@
 {
   "_comment": "Canon config for nemesis.mjs (Agent #3) — committable, tunable, NOT PII. axis_cluster_min_concepts = distinct concepts needed on one axis before the cross-concept 'kind of thinking' pattern surfaces. recency_halflife_days = decay for the recency-weighted score (older misses sink). warming_up_min_reps = the single volume gate (below it: low_confidence + axis_pattern suppressed). healed_clean_streak = clean reps on a topic before it closes (beaten opponent). closed_prune_days = drop long-stale closed entries so the list never grows endless. A deliberate SEED — retune from real data. nemesis.mjs READS this only (single-writer preserved); if missing, these same values are the built-in defaults.",
-  "axis_cluster_min_concepts": 3,
+  "axis_cluster_min_concepts": 2,
   "recency_halflife_days": 10,
-  "warming_up_min_reps": 20,
+  "warming_up_min_reps": 1,
+  "_opened_2026_08_18": "warming_up_min_reps 20 → 1 (the weakness read speaks on what he has, n printed) · axis_cluster_min_concepts 3 → 2 (a cross-concept PATTERN is plural by definition — derived, not chosen). healed_clean_streak 3 and closed_prune_days 30 are a definition and a housekeeping window, unchanged. OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates).",
   "healed_clean_streak": 3,
   "closed_prune_days": 30
 }

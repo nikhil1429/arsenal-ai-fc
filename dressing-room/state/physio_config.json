@@ -24,20 +24,22 @@
   },
   "throwin_gap_days": 4,
   "signal_table": {
-    "min_n": 20
+    "min_n": 1,
+    "_opened_2026_08_18": "min_n 20 → 1. Brier / hit-rate now land at n≥1 and every row carries n; below ~20 the reader sees a thin n, not a wall. OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates)."
   },
   "gates": {
-    "twin_voice_min_resolutions": 10,
+    "twin_voice_min_resolutions": 1,
     "doubt_clusters": {
-      "min_capsules": 4,
-      "min_doubts": 60
+      "min_capsules": 1,
+      "min_doubts": 1
     },
-    "bootroom_min_reps": 20,
+    "bootroom_min_reps": 1,
     "apni_ghadi": {
-      "min_cards": 4,
+      "min_cards": 1,
       "min_reps_per_card": 4
     },
     "body_archive_min_days": 84,
+    "_opened_2026_08_18": "twin_voice_min_resolutions 10 → 1 (the twin's cold-start gag becomes 'beats base rate over what it has'; twin_config.voice_min_resolutions moved with it — ONE threshold) · doubt_clusters 4/60 → 1/1 (mirror of doubtminer_config.gates, moved together) · bootroom_min_reps 20 → 1 (the genome proposes on evidence-proportional n; the mutation itself still carries metric.min_events and auto-extends its window) · apni_ghadi.min_cards 4 → 1 (min_reps_per_card 4 is the DEFINITION of a matured card, unchanged). body_archive_min_days 84 stays: external (a 12-week physiological baseline is a wall we do not own). OPENED 18 Aug 2026 — ORGANISM_OVERHAUL §5.4 (his 1 Aug 'why are we setting numerical limits … everything fully opened' + 13 Aug 'I do not have 30 days to wait for data' + 18 Aug 'full permission'): a guessed number may be a GUARD or a WINDOW, never a BUDGET or a CALENDAR GATE. A speak-gate at 1 is arithmetic (you cannot compute on an empty set), not a wall — the organ speaks on what he has and prints n. Verify: node scripts/limits.mjs (0 guessed gates).",
     "_derivation_unleash_14aug": "bootroom_min_reps 200 → 20 (21 reps) · twin_voice_min_resolutions 30 → 10 (19 resolutions) · apni_ghadi.min_cards 8 → 4 (4 cards). opened 14 Aug 2026 on his no-guessed-numbers ruling (§0 of UNLEASH_PLAN__2026-08-14.md): the old value was invented, this one is the smallest that lets the organ SPEAK on the data he actually has while keeping a non-zero floor. REFIT FROM 30d OF REAL DATA — this is a measurement window, not a verdict. UNTOUCHED here and deliberately: body_archive_min_days 84, which is EXTERNAL (sleep science), not a guess of ours."
   }
 }
