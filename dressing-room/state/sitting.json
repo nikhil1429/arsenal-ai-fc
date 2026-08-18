@@ -13,9 +13,9 @@
   "claude_session_id": null,
   "transport": "stream",
   "opened_at": "2026-08-18T14:18:54.799Z",
-  "last_turn_at": "2026-08-18T16:35:16.550Z",
-  "closed_at": null,
-  "close_reason": null,
+  "last_turn_at": "2026-08-18T18:32:54.517Z",
+  "closed_at": "2026-08-18T18:52:55.578Z",
+  "close_reason": "idle",
   "plan": [
     {
       "i": 0,
@@ -140,8 +140,8 @@
   ],
   "plan_source": "prepare",
   "plan_map": "Aaj Re-Jirah hai — tokenization, jo June mein lock hua tha. Main sirf poochhunga, batauunga kuch nahi. Nau strike, ek-ek axis. Har jawab se pehle ek gut-word bolo, phir poora jawab. Notes band, capsule band. Shuru karo?",
-  "cursor": 1,
-  "unit_seq": 2,
+  "cursor": 2,
+  "unit_seq": 21,
   "pending_question": null,
   "forge_step": 3,
   "forge_axis": "a",
@@ -166,30 +166,55 @@
     "brain_out/night_coach/2026-08-18.md"
   ],
   "stats": {
-    "turns": 1,
+    "turns": 17,
     "by_class": {
-      "deliver": 1,
-      "respond": 0,
+      "deliver": 2,
+      "respond": 16,
       "compose": 0,
       "judge": 0
     },
     "tokens": {
-      "input": 0,
-      "output": 0,
-      "cache_creation": 0,
-      "cache_read": 0
+      "input": 32,
+      "output": 5418,
+      "cache_creation": 35641,
+      "cache_read": 280205
     },
     "latency_ms": {
-      "deliver": [],
-      "respond": [],
+      "deliver": [
+        0
+      ],
+      "respond": [
+        34402,
+        4288,
+        4606,
+        10510,
+        10006,
+        6300,
+        8603,
+        7619,
+        6725,
+        32791,
+        7310,
+        6806,
+        8612,
+        7741,
+        9127,
+        5293
+      ],
       "compose": [],
       "judge": []
     },
-    "units_composed": 2,
-    "units_delivered": 0,
+    "units_composed": 21,
+    "units_delivered": 3,
     "banked": 0,
-    "owner_calls": 0,
-    "head_tokens": null,
+    "owner_calls": 1,
+    "head_tokens": 14448,
     "superseded": 1
-  }
+  },
+  "reattached": 2,
+  "reattached_at": "2026-08-18T18:31:00.529Z",
+  "last_receipts": [
+    "note ✓"
+  ],
+  "fake_done_retry": 1
 }
