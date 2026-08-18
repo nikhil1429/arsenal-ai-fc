@@ -1076,6 +1076,37 @@ async function probeSitting() {
   }];
 }
 
+// BLOCK 4 §8 (18 Aug 2026): THE REVIEW WATCH — sitting.mjs `review` runs the LLM
+// judge pass a few seconds-to-minutes after close (spawned, not inline), and
+// nothing before this checked whether it actually landed. A closed sitting with
+// no review row is the teaching-compliance loop silently open: drifts never
+// reached the contract and the next head opens with no what_changes_next. Same
+// shape as gaffer-brain-silent (c9b) — an organ that can fail with zero exit
+// code and zero user-visible symptom needs an outside eye, every time. Reads
+// sitting_reviews.jsonl inline (this file's own jsonl idiom — see gather()):
+// the base row (`kind:"sitting_review"`) is written at close; the model's row
+// (`kind:"sitting_review_llm"`) lands beside it, a few seconds-minutes later.
+function probeSittingReview() {
+  const rows = [];
+  try {
+    for (const line of readFileSync(join(STATE_DIR, "sitting_reviews.jsonl"), "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      try { rows.push(JSON.parse(line)); } catch { /* a mangled line is skipped, never fatal */ }
+    }
+  } catch { return []; }   // absent/unreadable = no sitting has closed yet — nothing to say
+  const bases = rows.filter((r) => r && r.kind === "sitting_review" && r.sitting_id && Number.isFinite(Date.parse(r.closed_at)));
+  if (!bases.length) return [];
+  const newest = bases.reduce((a, b) => (Date.parse(b.closed_at) > Date.parse(a.closed_at) ? b : a));
+  if (rows.some((r) => r && r.kind === "sitting_review_llm" && r.sitting_id === newest.sitting_id)) return [];
+  const ageMin = (Date.now() - Date.parse(newest.closed_at)) / 60000;
+  if (ageMin < 15) return [];   // the review is still in flight — the model call + judge round take a while
+  return [{
+    id: "sitting-review-missing", level: "RED",
+    finding: `sitting ${newest.sitting_id} closed ${Math.round(ageMin)} min ago (${newest.route} '${newest.concept || newest.task || "?"}') and NO review row landed — the teaching-compliance loop (§8) is open: drifts did not reach the contract, the next head has no what_changes_next`,
+    evidence: `sitting_reviews.jsonl has the base row and no sitting_review_llm row · run: node scripts/sitting.mjs review --sitting ${newest.sitting_id} (it refuses a repeat; --force writes a new row) · daemon: node scripts/sitting.mjs status`,
+  }];
+}
+
 // ---------------------------------------------------------------------------
 // LADDER B8 (9 Aug 2026) — THE CANON WATCH. The four canonical .md files change
 // only on HIS word (CLAUDE.md's no-auto-approve law), yet nothing ever checked.
@@ -1505,6 +1536,7 @@ async function run(argv) {
   findings.push(...probeOutwork());
   findings.push(...await probeDaemons());
   findings.push(...await probeSitting());  // BLOCK 3 (18 Aug 2026)
+  findings.push(...probeSittingReview());  // BLOCK 4 §8 (18 Aug 2026)
   findings.push(...probeReconcile());
   findings.push(...probePulse());          // ULTRACODE 12 Aug — the ◇≤T liveness law (NEVER class = RED)
   findings.push(...probeCanon(w.today));   // LADDER B8 — the canon watch

@@ -55,7 +55,7 @@
 //   { "task": {"id","title"}, "route", "map", "units":[{step,axis,kind,text,question,est_seconds,src[]}] }
 //   — re-checked for freshness at open (a task/route mismatch is not served stale).
 // MODES: daemon | status | open [--surface voice|code] [--task "<title>"] [--route R] | turn --text "…" [--surface s]
-//        | next | spoken <id> | close [--reason r] | plan | stats [--days N] | head [--out p] | selftest
+//        | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest
 // CLI:   node scripts/sitting.mjs <mode>   (env: ARSENAL_SITTING_STATE_DIR · ARSENAL_SITTING_PORT — selftest only)
 // ============================================================================
 import http from "node:http";
@@ -211,7 +211,7 @@ function readTopCard(deps = {}) {
   if (deps.topCard !== undefined) return deps.topCard;
   return null;   // the deck's picker is a MUTATING dealer on its own anchors; the sitting reads the STATE line's card via state.mjs at close, not here
 }
-function lastReview() { const rows = readRows(F.reviews()); return rows.length ? rows[rows.length - 1] : null; }
+function lastReview() { return mergeReviewRows(readRows(F.reviews())); }   // base row + the LLM row of the newest sitting, merged (Block 4)
 function readIntentBrief(deps = {}) {
   if (deps.intents) return deps.intents;
   try { const r = spawnSync(process.execPath, [join(HERE, "intent.mjs"), "brief"], { encoding: "utf8", windowsHide: true, timeout: 10000 }); return String(r.stdout || "").trim().split("\n").filter(Boolean).slice(0, 6); } catch { return []; }
@@ -387,6 +387,7 @@ export function createSitting(deps = {}) {
     if (r.ok) { S.stats.banked = (S.stats.banked || 0) + 1; S.pending_question = null; }
     return { ok: r.ok, why: r.ok ? null : (r.err || r.out || `exit ${r.status}`) };
   };
+  const reviewer = deps.reviewer || ((id) => { const c = spawn(process.execPath, [join(HERE, "sitting.mjs"), "review", "--sitting", id], { detached: true, stdio: "ignore", windowsHide: true, cwd: ROOT }); c.unref(); });
   const cardOnce = (line, key) => {
     if (cardedWall) return;
     cardedWall = true;
@@ -703,6 +704,9 @@ export function createSitting(deps = {}) {
     S.closed_at = now().toISOString(); S.close_reason = reason; S.pending_question = null;
     save();
     log(`sitting: CLOSE ${S.id} (${reason}) — ${shipped}${ir.ok ? "" : " · intent close FAILED"}`);
+    // 6. THE REVIEW (§8, Block 4) — one model call in its OWN process (the daemon never blocks on a model);
+    //    the LLM row lands beside the base row and the drifts reach the contract through its owner
+    try { reviewer(S.id); } catch (e) { log(`sitting: review launch failed: ${String(e && e.message || e).slice(0, 120)}`); }
     const out = { ok: true, id: S.id, review, intent_ok: ir.ok };
     return out;
   }
@@ -739,6 +743,143 @@ export function createSitting(deps = {}) {
 }
 const BOOTED_AT = new Date().toISOString();
 const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch { return null; } })();
+
+// ── THE SITTING REVIEW (§8, BLOCK 4, 18 Aug 2026) — the loop he believes exists, closed ──
+// After every close, ONE model call (sonnet by default; opus when the sitting was CRACKED — a
+// judge verdict of cracked/missed on one of its banks) reads WHAT WAS SAID (the units), WHAT HE
+// SAID (his CAPTAIN lines out of the child's own transcript — read-only, never copied into a
+// tracked file), the pacer's coverage and the measured stats, and returns
+//   { drifts:[{rule:<contract id>|"new", line?, why}], his_asks:[…], what_changes_next:[≤3], plan_delta }
+// VALIDATED (rule ids ⊂ the contract's + "new"; short strings; ≤3 changes; a number that is not
+// in the input corpus is DROPPED and NAMED — the intent-digest law), then written as a SECOND row
+// `kind:"sitting_review_llm"` naming the sitting (append-only — a way back is a new row naming
+// the old), and DISPATCHED: each known drift → `teaching_contract.mjs autohit <id> --why` (the
+// existing auto lane, his 7 Aug ruling), each `new` → `teaching_contract.mjs add <slug> <line>`
+// (the contract MUTATES, his 31 Jul requirement). `what_changes_next` reaches the NEXT sitting's
+// head through the assembler's `review_of_last` part (lastReview() merges the two rows).
+// HALF-MAP is DETERMINISTIC and runs before the model (the one he caught 6 Aug): a FORGE step in
+// 3–6 that delivered units and never a check-question is a `half-map` drift — code measured it.
+// Nothing about him is invented: an absent transcript = "his lines unavailable", said in the row.
+export const REVIEW_MODEL = { default: "sonnet", cracked: "opus" };
+export const HALF_MAP_STEPS = Object.freeze([3, 4, 5, 6]);   // forge_session's check_q window (its own law)
+export function halfMapDrifts(units = [], route = "FORGE") {
+  if (route !== "FORGE") return [];
+  const byStep = new Map();
+  for (const u of units) {
+    if (!u || u.kind !== "unit" || u.plan_index == null) continue;
+    const step = u.step; if (!HALF_MAP_STEPS.includes(step)) continue;
+    const s = byStep.get(step) || { units: 0, questions: 0 };
+    s.units++; if (u.question) s.questions++;
+    byStep.set(step, s);
+  }
+  return [...byStep.entries()].filter(([, s]) => s.units > 0 && s.questions === 0).map(([step, s]) => ({ rule: "half-map", why: `step ${step}: ${s.units} unit(s) delivered, no check-question — THE METHOD required one there` }));
+}
+export function hisLinesFromTranscript(path) {
+  // the child's transcript: user rows carry the driver's message; his words are the `CAPTAIN: …` line
+  const out = [];
+  let txt = "";
+  try { txt = readFileSync(path, "utf8"); } catch { return { ok: false, lines: [], why: "transcript unavailable" }; }
+  for (const line of txt.split("\n")) {
+    if (!line.trim()) continue;
+    let j = null; try { j = JSON.parse(line); } catch { continue; }
+    if (!j || j.type !== "user" || !j.message) continue;
+    const parts = Array.isArray(j.message.content) ? j.message.content : [{ type: "text", text: String(j.message.content || "") }];
+    for (const p of parts) {
+      if (!p || p.type !== "text") continue;
+      const m = /^CAPTAIN: (.*)$/m.exec(String(p.text || ""));
+      if (m) out.push(m[1].trim());
+    }
+  }
+  return { ok: true, lines: out, why: null };
+}
+export function validateReview(obj, { ruleIds = [], corpus = "" } = {}) {
+  const why = [];
+  if (!obj || typeof obj !== "object") return { ok: false, why: ["not an object"], review: null };
+  const nums = new Set((String(corpus).match(/\d+(?:[.,]\d+)?/g) || []));
+  const clean = (s, n = 240) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+  const dropped = [];
+  const keepIfNumbersKnown = (s) => { const found = (String(s).match(/\d+(?:[.,]\d+)?/g) || []); const bad = found.filter((x) => !nums.has(x)); if (bad.length) { dropped.push(`${clean(s, 60)} (number ${bad.join(",")} not in the input)`); return false; } return true; };
+  const drifts = (Array.isArray(obj.drifts) ? obj.drifts : []).map((d) => (typeof d === "string" ? { rule: d } : d)).filter((d) => d && d.rule).map((d) => ({ rule: clean(d.rule, 40), line: d.line ? clean(d.line, 200) : null, why: clean(d.why || "", 240) }))
+    .filter((d) => (ruleIds.includes(d.rule) || d.rule === "new") && keepIfNumbersKnown(d.why + " " + (d.line || "")));
+  for (const d of (Array.isArray(obj.drifts) ? obj.drifts : [])) { const r = typeof d === "string" ? d : d && d.rule; if (r && r !== "new" && !ruleIds.includes(String(r))) why.push(`unknown rule '${clean(r, 40)}' dropped`); }
+  const his_asks = (Array.isArray(obj.his_asks) ? obj.his_asks : []).map((s) => clean(s, 200)).filter((s) => s && keepIfNumbersKnown(s)).slice(0, 6);
+  const what_changes_next = (Array.isArray(obj.what_changes_next) ? obj.what_changes_next : []).map((s) => clean(s, 200)).filter((s) => s && keepIfNumbersKnown(s)).slice(0, 3);
+  const plan_delta = obj.plan_delta ? clean(obj.plan_delta, 300) : null;
+  if (Array.isArray(obj.what_changes_next) && obj.what_changes_next.length > 3) why.push("what_changes_next > 3 — the rest dropped");
+  const review = { drifts, his_asks, what_changes_next, plan_delta: plan_delta && keepIfNumbersKnown(plan_delta) ? plan_delta : null, dropped };
+  return { ok: true, why, review };
+}
+export function buildReviewPrompt({ base, units, hisLines, rules, forge, halfMap }) {
+  const U = units.filter((u) => u.kind === "unit").map((u, i) => `  ${i}. [${u.class}${u.question ? " · ?" : ""}${u.step != null ? ` · step ${u.step}` : ""}${u.axis ? ` · axis ${u.axis}` : ""}] ${clip(u.text, 300)}`).join("\n");
+  const H = hisLines.ok ? (hisLines.lines.length ? hisLines.lines.map((l, i) => `  ${i}. ${clip(l, 300)}`).join("\n") : "  (he said nothing beyond continue-words)") : `  (his lines unavailable — ${hisLines.why})`;
+  const R = rules.map((r) => `  ${r.id}: ${clip(r.line, 140)}`).join("\n");
+  return [
+    `You are the SITTING REVIEWER of a study organism. Read one closed sitting and return ONLY JSON — no prose, no fences.`,
+    `THE SITTING: ${base.sitting_id} · route ${base.route} · concept ${base.concept || "-"} · reason ${base.reason} · turns ${base.turns} · units spoken ${base.units_delivered}/${base.units_composed} · banked ${base.banked} · plan ${base.cursor}/${base.plan_len} (${base.plan_source})${forge ? ` · forge step ${forge.step} axes done ${(forge.axes_done || []).join(",") || "none"}` : ""}.`,
+    halfMap.length ? `MEASURED BY CODE ALREADY (do not repeat, do not contradict): ${halfMap.map((h) => h.why).join(" · ")}` : "",
+    `WHAT THE BRAIN SAID (units, in order):\n${U || "  (none)"}`,
+    `WHAT HE SAID (his lines, in order):\n${H}`,
+    `THE TEACHING CONTRACT (rule ids you may name as drifts — anything else is "new"):\n${R}`,
+    `RETURN: {"drifts":[{"rule":"<id>|new","line":"<only for new: the rule in one Hinglish line>","why":"<what happened, quoting his words if any>"}],"his_asks":["<things HE asked for that were not done, verbatim-ish>"],"what_changes_next":["<≤3 concrete changes for the NEXT sitting>"],"plan_delta":"<one line: what the plan should do differently, or null>"}`,
+    `LAWS: name a drift ONLY where the units show it; never invent a number; if his lines are unavailable say so in his_asks as one item; ≤3 what_changes_next; Hinglish OK.`,
+  ].filter(Boolean).join("\n\n");
+}
+export function mergeReviewRows(rows, sittingId = null) {
+  // the base row + the LLM row (later rows override) for the newest sitting, or a named one
+  const R = rows.filter((r) => r && r.sitting_id);
+  const id = sittingId || (R.length ? R[R.length - 1].sitting_id : null);
+  if (!id) return null;
+  return R.filter((r) => r.sitting_id === id).reduce((acc, r) => ({ ...acc, ...r, kind: "sitting_review" }), {});
+}
+export async function reviewSitting(sittingId = null, deps = {}) {
+  const rows = readRows(F.reviews());
+  const base = rows.filter((r) => r.kind === "sitting_review" && (!sittingId || r.sitting_id === sittingId)).pop();
+  if (!base) return { ok: false, why: "no closed sitting to review" };
+  if (rows.some((r) => r.kind === "sitting_review_llm" && r.sitting_id === base.sitting_id) && !deps.force) return { ok: false, why: `${base.sitting_id} already reviewed` };
+  const units = readRows(F.out()).filter((r) => r.sitting_id === base.sitting_id);
+  const sJson = readJson(F.sitting());
+  const claudeSid = sJson && sJson.id === base.sitting_id ? sJson.claude_session_id : null;
+  const hisLines = deps.hisLines || (claudeSid ? hisLinesFromTranscript(childTranscriptPath(claudeSid)) : { ok: false, lines: [], why: "no claude session id on the sitting (code surface or deliver-only)" });
+  const contract = deps.contract || readJson(join(STATE_DIR, "teaching_contract.json"));
+  const rules = (contract && Array.isArray(contract.rules) ? contract.rules : []).map((r) => ({ id: r.id, line: r.line || r.text || "" }));
+  const halfMap = halfMapDrifts(units, base.route);
+  const forge = base.forge || null;
+  const cracked = !!(base.judge && /cracked|missed/i.test(String(base.judge.out || "")));
+  const model = deps.model || (cracked ? REVIEW_MODEL.cracked : REVIEW_MODEL.default);
+  const prompt = buildReviewPrompt({ base, units, hisLines, rules, forge, halfMap });
+  const gen = deps.gen || (async (p, m) => { const cg = await import("./claudegen.mjs"); return cg.claudeGen(p, m, 240000, ["--effort", "medium"]); });
+  const t0 = Date.now();
+  const r = await gen(prompt, model);
+  let obj = null;
+  if (r && r.ok && r.text) { const txt = String(r.text).replace(/^```(?:json)?\s*|\s*```$/g, "").trim(); try { obj = JSON.parse(txt); } catch { const m = /\{[\s\S]*\}/.exec(txt); if (m) { try { obj = JSON.parse(m[0]); } catch { } } } }
+  const v = obj ? validateReview(obj, { ruleIds: rules.map((x) => x.id), corpus: prompt }) : { ok: false, why: [r && r.error ? clip(r.error, 200) : "no JSON from the model"], review: null };
+  const review = v.review || { drifts: [], his_asks: [], what_changes_next: [], plan_delta: null, dropped: [] };
+  // code-measured drifts ride FIRST and are never overruled by the model
+  const drifts = [...halfMap, ...review.drifts.filter((d) => d.rule !== "half-map")];
+  const row = { kind: "sitting_review_llm", sitting_id: base.sitting_id, ts: nowISO(), model, cracked, ok: !!(obj && v.ok), why: v.why || [], dropped: review.dropped,
+    drifts, his_asks: review.his_asks, what_changes_next: review.what_changes_next, plan_delta: review.plan_delta,
+    his_lines: hisLines.ok ? hisLines.lines.length : null, his_lines_why: hisLines.ok ? null : hisLines.why, latency_ms: Date.now() - t0,
+    tokens: r && r.usage ? r.usage : (r ? { input: r.input_tokens, output: r.output_tokens, cache_creation: r.cache_creation_tokens, cache_read: r.cache_read_tokens } : null), error: r && !r.ok ? clip(r.error, 200) : null };
+  if (!deps.dry) appendRow(F.reviews(), row);
+  // DISPATCH through the owner — the contract mutates only by its own CLI
+  const owner = deps.owner || ((file, args, input) => ownerCli(file, args, input));
+  const dispatched = [];
+  const known = new Set(rules.map((x) => x.id));
+  for (const d of drifts) {
+    if (d.rule === "new" && d.line) {
+      const slug = String(d.line).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32) || "sitting-drift";
+      if (known.has(slug)) { const rr = owner("teaching_contract.mjs", ["autohit", slug, "--why", `sitting ${base.sitting_id}: ${d.why}`]); dispatched.push({ verb: "autohit", id: slug, ok: rr.ok }); }
+      else { const rr = owner("teaching_contract.mjs", ["add", slug, d.line]); dispatched.push({ verb: "add", id: slug, ok: rr.ok }); if (rr.ok) known.add(slug); }
+    } else if (known.has(d.rule)) {
+      const rr = owner("teaching_contract.mjs", ["autohit", d.rule, "--why", `sitting ${base.sitting_id}: ${d.why}`]); dispatched.push({ verb: "autohit", id: d.rule, ok: rr.ok });
+    } else if (d.rule === "half-map") {
+      // the code-measured rule may not exist yet in his contract: it enters through the owner, once, then counts
+      const rr = owner("teaching_contract.mjs", ["add", "half-map", "Har unit jahan METHOD check-question maangta hai (step 3–6), bina sawaal ke band nahi hoti — aadha map koi map nahi."]); dispatched.push({ verb: "add", id: "half-map", ok: rr.ok });
+      if (rr.ok) { known.add("half-map"); const r2 = owner("teaching_contract.mjs", ["autohit", "half-map", "--why", `sitting ${base.sitting_id}: ${d.why}`]); dispatched.push({ verb: "autohit", id: "half-map", ok: r2.ok }); }
+    }
+  }
+  return { ok: true, row, dispatched };
+}
 
 // ── STATS — latency per class + tokens, from the ledger (§6.6 / §15: printed, never re-derived) ──
 export function stats({ days = 7, rows = null } = {}) {
@@ -809,6 +950,13 @@ async function main() {
     case "close": { const r = await post("/close", { reason: opt("--reason") || "his_word" }, 240000); console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
     case "plan": { const r = (await daemonUp()) ? await get("/plan") : { units: (readJson(F.sitting()) || {}).plan || [], map: (readJson(F.sitting()) || {}).plan_map }; console.log(`map: ${r.map || "—"}`); (r.units || []).forEach((u) => console.log(`  ${String(u.i).padStart(2)} ${u.kind.padEnd(8)} s${u.step ?? "-"} ${u.axis || "-"} ${u.question ? "?" : " "} ${u.est_seconds}s · ${clip(u.text, 120)}`)); return; }
     case "stats": { console.log(stats({ days: Number(opt("--days") || 7) }).text); return; }
+    case "review": {
+      const r = await reviewSitting(opt("--sitting") || null, { force: rest.includes("--force"), dry: rest.includes("--dry") });
+      if (!r.ok) { console.log(`sitting: review — ${r.why}`); return; }
+      console.log(`sitting: review ${r.row.sitting_id} · ${r.row.model}${r.row.cracked ? " (cracked)" : ""} · ${r.row.ok ? "ok" : "model output refused"} · drifts ${r.row.drifts.length} · his_asks ${r.row.his_asks.length} · changes ${r.row.what_changes_next.length}${r.row.dropped.length ? ` · dropped ${r.row.dropped.length} (invented numbers)` : ""} · dispatched ${r.dispatched.map((d) => `${d.verb}:${d.id}${d.ok ? "" : "!"}`).join(" ") || "—"} · ${r.row.latency_ms} ms`);
+      for (const w of r.row.what_changes_next) console.log(`  → ${w}`);
+      return;
+    }
     case "head": {
       // print the head the brain WOULD get right now (read-only: gathers context, assembles, never opens)
       const d = createSitting();
@@ -821,7 +969,7 @@ async function main() {
     }
     case "selftest": process.exit((await selftest()) ? 0 : 1);
     default:
-      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] | turn --text \"…\" | next | spoken <id> | close [--reason r] | plan | stats [--days N] | head [--out p] | selftest");
+      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] | turn --text \"…\" | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest");
   }
 }
 
@@ -882,6 +1030,7 @@ async function selftest() {
     assembleHead: async (ctx) => ({ text: `HEAD route=${ctx.route} concept=${ctx.concept} plan=${ctx.plan ? ctx.plan.units.length : "none"}\n${ctx.ctrl_grammar}`, footer: "[sitting_system: fixture]", parts: [{ id: "kickoff", present: true, file: "learnstate json" }] }),
     pacer: async (text, id, n) => ({ text: `FORGE · step 1/12 · turn ${n}\nTEACHING CONTRACT · turn ${n}/40`, failed: [] }),
     recordConsumption: (row) => { calls.push({ file: "brain.recordConsumption", args: [row.job, row.kind], input: null }); return { ok: true }; },
+    reviewer: (id) => { calls.push({ file: "sitting.review", args: [id], input: null }); },
   };
   const rc = (row) => calls.filter((c) => c.file === "brain.recordConsumption");
   const flushWork = async () => { await new Promise((r) => setTimeout(r, 60)); };
@@ -1016,10 +1165,36 @@ async function selftest() {
     const pc = parseCtrl('Bolo bhai. <<CTRL {"class":"respond","bank":null,"unit_done":false,"question_asked":true,"next":"wait"}>>');
     assert("parseCtrl: strips the tail, parses JSON; a reply without a tail is spoken whole with ctrl null", pc.spoken === "Bolo bhai." && pc.ctrl.next === "wait" && parseCtrl("plain").ctrl === null && parseCtrl("plain").spoken === "plain");
     assert("gut regex: knew/shaky/guessed and their Hinglish tells; none → null", gutFromText("pakka pata tha") === "knew" && gutFromText("thoda shak hai") === "shaky" && gutFromText("tukka maara") === "guessed" && gutFromText("hmm") === null);
+    // ── 15b. THE REVIEW LOOP (§8, Block 4) — deterministic half-map, his lines from the child's transcript, the model's JSON validated, drifts dispatched through the owner ──
+    assert("close TRIGGERS the review (its own process — recorded here), once per closed sitting", calls.filter((c) => c.file === "sitting.review").length >= 1);
+    const hm = halfMapDrifts([
+      { kind: "unit", plan_index: 1, step: 3, question: false, text: "a" }, { kind: "unit", plan_index: 2, step: 3, question: false, text: "b" },
+      { kind: "unit", plan_index: 3, step: 4, question: false, text: "c" }, { kind: "unit", plan_index: 4, step: 4, question: true, text: "d?" },
+      { kind: "unit", plan_index: 5, step: 7, question: false, text: "e" }, { kind: "unit", plan_index: null, step: 5, question: false, text: "brain reply" },
+    ], "FORGE");
+    assert("half-map is MEASURED BY CODE: a FORGE step in 3–6 with units and no check-question drifts (step 3 yes · step 4 no · step 7 outside the window · a brain reply is not a plan unit)", hm.length === 1 && /step 3/.test(hm[0].why) && hm[0].rule === "half-map" && halfMapDrifts([{ kind: "unit", plan_index: 1, step: 3, question: false }], "REJIRAH").length === 0);
+    const tpath = P("fake_transcript.jsonl");
+    writeFileSync(tpath, [JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: ["FORGE contract line", "[SITTING x]", "CAPTAIN: shaky — token ek tukda hai", "[DRIVER: …]"].join("\n") }] } }), JSON.stringify({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Le liya. <<CTRL {}>>" }] } }), JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: "CAPTAIN: ek doubt — BPE kya hai?" }] } }), "not json"].join("\n"));
+    const hl = hisLinesFromTranscript(tpath);
+    assert("his lines come out of the child's transcript (user rows → the CAPTAIN: line only; the pacer/driver lines never), a torn row is skipped, an absent file says why", hl.ok && hl.lines.length === 2 && hl.lines[0] === "shaky — token ek tukda hai" && hl.lines[1] === "ek doubt — BPE kya hai?" && hisLinesFromTranscript(P("nope.jsonl")).ok === false);
+    const vr = validateReview({ drifts: [{ rule: "one-idea", why: "3 ideas in unit 2" }, { rule: "made-up-rule", why: "x" }, { rule: "new", line: "Har naya shabd pehle kholo", why: "he asked what BPE is" }, "hinglish"], his_asks: ["BPE kya hai", "speed 40% slow karo"], what_changes_next: ["a", "b", "c", "d"], plan_delta: "shorter units, 12 not 16" }, { ruleIds: ["one-idea", "hinglish"], corpus: "unit 2 had 3 ideas · plan 12/16 units" });
+    assert("validateReview: unknown rule DROPPED and named · 'new' with a line kept · a bare id kept · an invented number ('40%') DROPPED and named · what_changes_next clipped to 3 · plan_delta with known numbers kept",
+      vr.review.drifts.length === 3 && vr.review.drifts.some((d) => d.rule === "new" && d.line) && vr.review.drifts.some((d) => d.rule === "hinglish") && vr.why.some((w) => /made-up-rule/.test(w)) && vr.review.his_asks.length === 1 && vr.review.dropped.some((d) => /40/.test(d)) && vr.review.what_changes_next.length === 3 && vr.review.plan_delta === "shorter units, 12 not 16");
+    // a full reviewSitting on the closed fixture sitting: fixture gen returns JSON; owner calls recorded
+    const rcalls = [];
+    const rr = await reviewSitting(S.id, { force: true, dry: false, model: "sonnet", contract: { rules: [{ id: "one-idea", line: "EK idea" }, { id: "hinglish", line: "HINGLISH" }] }, hisLines: { ok: true, lines: ["shaky — model apne aap se galat"], why: null },
+      gen: async (prompt, model) => ({ ok: true, text: JSON.stringify({ drifts: [{ rule: "one-idea", why: "unit 3 carried two ideas" }, { rule: "new", line: "Naya label pehli baar ek line mein kholo", why: "he asked what BPE meant" }], his_asks: ["BPE kya hai"], what_changes_next: ["open every new label first", "one idea per unit"], plan_delta: null }), usage: { input: 10, output: 20, cache_creation: 0, cache_read: 0 } }),
+      owner: (file, args) => { rcalls.push({ file, args }); return { ok: true, status: 0, out: "ok", err: "" }; } });
+    assert("reviewSitting: the LLM row lands beside the base row (append-only, names the sitting), model sonnet (not cracked), his lines counted", rr.ok && rr.row.kind === "sitting_review_llm" && rr.row.sitting_id === S.id && rr.row.model === "sonnet" && rr.row.his_lines === 1 && readRows(F.reviews()).some((r) => r.kind === "sitting_review_llm" && r.sitting_id === S.id));
+    assert("reviewSitting: a KNOWN drift → `teaching_contract.mjs autohit one-idea --why …` (his 7 Aug auto lane); a NEW drift → `teaching_contract.mjs add <slug> <line>` (the contract MUTATES) — both through the OWNER, nothing written to its file", rcalls.some((c) => c.file === "teaching_contract.mjs" && c.args[0] === "autohit" && c.args[1] === "one-idea" && /sitting sit_/.test(c.args[3])) && rcalls.some((c) => c.file === "teaching_contract.mjs" && c.args[0] === "add" && /naya-label/.test(c.args[1]) && /pehli baar/.test(c.args[2])));
+    const merged = mergeReviewRows(readRows(F.reviews()), S.id);
+    assert("lastReview merges base + LLM rows for the sitting → the NEXT head's review_of_last carries what_changes_next", merged && merged.turns > 0 && Array.isArray(merged.what_changes_next) && merged.what_changes_next[0] === "open every new label first" && merged.drifts.length === 2);
+    const rr2 = await reviewSitting(S.id, { gen: async () => { throw new Error("must not call"); } });
+    assert("reviewSitting refuses to review the same sitting twice (a way back is a NEW row on --force, never a rewrite)", rr2.ok === false && /already reviewed/.test(rr2.why));
     // ── 16. HERMETIC — nothing outside tmp was touched ──
     const stateAfter = existsSync(join(realState, "sitting.json")) ? statSync(join(realState, "sitting.json")).mtimeMs : null;
     assert("HERMETIC: the live sitting.json is untouched (all writes went to the temp state dir)", stateBefore === stateAfter);
-    assert("HERMETIC: no live owner was spawned (every owner call was recorded, none executed)", calls.every((c) => c.file.endsWith(".mjs") || c.file === "brain.recordConsumption"));
+    assert("HERMETIC: no live owner was spawned (every owner call was recorded, none executed)", calls.every((c) => c.file.endsWith(".mjs") || c.file === "brain.recordConsumption" || c.file === "sitting.review"));
   } finally {
     Object.assign(F, F0);
     try { rmSync(tmp, { recursive: true, force: true }); } catch { }
