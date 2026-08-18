@@ -16,7 +16,7 @@ It is line 1 of every SessionStart brief, rides the morning sheet push, and open
 ## Where the BUILD is
 `docs/archive/ORGANISM_OVERHAUL__2026-08-18.md` — the overhaul's RECORD (Blocks 0–8 built 18 Aug 2026; its BUILD LOG
 marks each block ✅; RESUME HERE = Block 9, seven real days). **FREEZE deferred by his word 18 Aug 2026** (record `docs/archive/FREEZE__deferred-2026-08-18.md`; guard dormant —
-`node scripts/freeze.mjs status`) · the week board `node scripts/state.mjs week` · the live work order `MODELS_AND_ACTS__2026-08-18.md`. Read, do not re-plan.
+`node scripts/freeze.mjs status`) · the week board `node scripts/state.mjs week` · LAW M + LAW A record `docs/archive/MODELS_AND_ACTS__2026-08-18.md` (`node scripts/models.mjs status` · `acts.mjs status`). Read, do not re-plan.
 
 ## The other live reads (never a number from a document)
 - `node scripts/brain.mjs gate show` — which LLM lanes are asleep by THE GATE, why, what wakes each

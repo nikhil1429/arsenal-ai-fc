@@ -1,19 +1,36 @@
-# ▶ NEXT SESSION: START HERE. READ THIS WHOLE FILE, THEN BUILD BLOCK 0 → 4 IN ORDER. DO NOT RE-PLAN.
+# ▶ MODELS + ACTS — RECORD (Blocks 0–4 BUILT 18 Aug 2026 ~20:30–22:00 IST; moved to docs/archive/ at Block 4). A record, not a work order. The RESUME QUEUE below now has ONE open item: Block 9 keeps measuring.
 > Work order written 18 Aug 2026 ~20:05 IST at the captain's word (three prompts, verbatim in §1). Sibling of the
 > OVERHAUL record (`docs/archive/ORGANISM_OVERHAUL__2026-08-18.md`) — same laws, same build rule (commit + `npm test` +
 > ✅ per block + memory note). When done: this file → `docs/archive/`. He says only **"resume karo"** (the queue above).
 
 ## ▶ THE RESUME QUEUE — he says ONE thing, ever: **"resume karo"** (his word 18 Aug 20:10: "execute everything by one word")
 The next session reads this queue top-down and does the FIRST unfinished item; each item ends with commit + npm test + ✅ here + memory note. Nothing else is asked of him.
-1. ⬜ **MODELS + ACTS** — Blocks 0→4 of THIS file (freeze deferred · the model resolver · the act lane · proofs · record).
+1. ✅ **MODELS + ACTS** — Blocks 0→4 BUILT 18 Aug 2026 (b666a1b · 3843fed · 4bc637d · this commit). What is still HIS to do live is in the DoD below (3 pending-live lines).
 2. ⬜ **BLOCK 9 keeps measuring** (the overhaul record's RESUME HERE): `node scripts/state.mjs week` each day he sits; 25 Aug = day 7 → numbers into the record + the §19 brainstorm (cards, not builds).
 When 1 is ✅ this file → docs/archive/. **PARKED, NOT IN THE QUEUE (his word 18 Aug 20:15: "that was parked"):** the identity merge — he brings it himself next week with "identity karo" (the 4 pending facts + the Instagram-derived staging; sources: his export in Downloads, the songs file, session 22ccb804 transcript 18 Aug ~18:00–19:10 IST; his corrections stand: pills = ADHD medication (say nothing) · "manic" = hustle · "don't kill yourself" = the dream · NiNi = Nikhil ki Nidhi · GV/GC = GaryVee/Grant Cardone · politics dropped). Do NOT start it on "resume karo".
 
 ## ▶ BUILD LOG
-- ✅ BLOCK 0 · freeze deferred (his ruling) — `b666a1b` 18 Aug ~20:35 IST · ✅ BLOCK 1 · THE MODEL RESOLVER — `3843fed` 18 Aug ~21:05 IST (live: Watcher ok on 3.6-flash · lanes-probe all OK · check 0 literals) · ⬜ BLOCK 2 · THE ACT LANE · ⬜ BLOCK 3 · live proofs + suite · ⬜ BLOCK 4 · record + memory
+- ✅ BLOCK 0 · freeze deferred (his ruling) — `b666a1b` 18 Aug ~20:35 IST · ✅ BLOCK 1 · THE MODEL RESOLVER — `3843fed` 18 Aug ~21:05 IST (live: Watcher ok on 3.6-flash · lanes-probe all OK · check 0 literals) · ✅ BLOCK 2 · THE ACT LANE — `4bc637d` 18 Aug ~21:45 IST · ✅ BLOCK 3 · proofs + suite — inside 4bc637d (xray Q2/Q5 0 · ratchet 23/0 · npm test 48/0, 97 members · mutagen NO-WRITER untouched) · ✅ BLOCK 4 · record + memory — this commit (daemons restarted on the new code 21:55 IST via setup/restart_surfaces.ps1 dispatched as a one-off interactive task; 6/6 up)
 
 ## ▶ RESUME HERE
-Blocks 0 ✅ (b666a1b) · 1 ✅ (3843fed). Blocks 2–4 unbuilt. Verify first if a new session: `npm test` · `node scripts/sitting.mjs status` (:4117 up; if down `schtasks /Run /TN "ArsenalFC-Daemon-Watchdog"`, never a daemon from the shell) · `node scripts/gaffer_brain.mjs probe` (expected before Block 1: `flash pool dry or every key refused` — that is the bug, §2). Then build in order.
+ALL FOUR BLOCKS BUILT (18 Aug 2026 evening). Nothing to build here. Verify: `node scripts/models.mjs status` · `node scripts/models.mjs check` · `node scripts/acts.mjs status` · `node scripts/gaffer_brain.mjs probe` (ok:true, model named) · `node scripts/state.mjs week` (the gemini + acts lines) · `npm test`. **The queue's remaining item is BLOCK 9 (measure; 25 Aug = day 7).** Pending HIS live proof (needs him, not a build): (a) in his next VOICE sitting three explicit asks → receipts in the same turn (`acts.mjs status`, doors gaffer/sitting) · (b) his next ntfy ball → `throwin` parses + dispatches (loose_balls newest row `routed:true` + `acts`) · (c) the Gaffer's next take_note → dugout_notes newest row `routed:true`.
+
+## ▶ THE DoD, LINE BY LINE (live outputs 18 Aug 2026 21:00–22:00 IST)
+1. ✅ `node scripts/gaffer_brain.mjs probe` → `ok:true · engine flash · model gemini-3.6-flash · 17.6 s` (before Block 1: "flash pool dry or every key refused"). The Watcher judged the live 18 Aug transcript after the fix (`judge --force --rewind=40000` → flash · 6 turns · where_we_are updated 15:22 IST; blocks how_to_speak = Hinglish + greeting-first, about_him = Day 1).
+2. ✅ `node scripts/models.mjs check` → 0 literal model names outside models.mjs (98 files · 4 declared fixture lines) · brain_config claude aliases ok. `models.mjs status` (probe 21:11 IST, 134 s): text→3.6-flash · lite→3.5-flash-lite · pro→→text (no free tier: 3.1-pro-preview quota×10, pro-latest quota×10) · live→3.1-flash-live-preview (sticky; the first probe had ranked 3.5-live-translate-preview above it — measured, then made a law) · embed→embedding-001 dim 3072 (sticky) · image unseeded (6 listed) · keys ok 7/10 quota 3 (on 3.6-flash) · the classes on today's data: flash-latest quota×10 · 3.7-flash quota×10 · 3.1-flash-lite-image quota×10 · gemini-omni-flash-preview unranked (listed, never chosen). (The plan's "9/9 · 2.5-flash model-gone" line: 10 keys are on this machine now; 2.5-flash is not in the seed so it is not probed — the 404 was measured by hand at 19:40.)
+3. ◐ Receipts through the REAL owners, door `cli` (his sitting's doors are the same dispatcher): note ✓ hippocampus `{"id":"2cd6568","embedded":true,"durable":true}` · pref ✓ gaffer_state `standing add [how_to_speak] by captain — Hinglish bolo, greeting sirf din ki pehli baat pe` · agenda ✓ sitting `agenda added agmsyurld7` · job ✓ brain `prepare_on_request OK (24,266 tok) → brain_out/prepare_on_request/2026-08-18.md` (samjhao material for the 4 concepts he named; the next sitting's head carries it under HIS AGENDA) · a ball parsed LIVE by gemini-3.5-flash-lite: "kal subah pehle tokenization ka rejirah karna hai, aur yaad rakhna mujhe visuals pasand hain" → agenda + pref, his words verbatim. PENDING HIM: the voice-sitting turn, a real ntfy ball, the Gaffer's next take_note (all three code paths are built, selftested and hermetic; the daemons run the new code since 21:55 IST).
+4. ✅ `npm test` 48/0 (97 members: models + acts joined organism:selftest); watchman knows `model-role-dead` · `model-fell-back` · `embed-dim-changed` · `quota-keys` · `act-failed` · `acts-daily` (105/0); `state week` prints the gemini line and the acts line.
+
+## ▶ WHAT THE CODE TAUGHT THE PLAN (corrections, all in the commits)
+- **Sticky roles.** The plan ranked every role by generation; the first live probe put a TRANSLATE model in the Gaffer's mouth. embed · live · image are STICKY (seed order = policy; a discovered name is listed with ok measured, never leads).
+- **The dead alias was hiding a hermeticity hole:** gaffer_brain's selftest hit the REAL free pool at `dry:true` (secondOpinion → callWatcher); 9×429 in ~2 s made it look hermetic. DRY = NO WIRE now.
+- **The pending-facts header yields, and the ceiling is a hard guarantee** (context_manifest 5,399/5,300 RED on live state before Block 0 — fixed first, freeze-exempt).
+- **A `job` act is one Opus call (~4 min):** the 90 s child default killed the first dispatch (`exit null`); per-verb budgets, timeouts named in the row.
+- **claims_done is SCHEMA, not a keyword scan** of the reply (the vocab-agnostic ruling applies to the machine's own tail too).
+- **routed:true is set at WRITE time on the NEW row** (dugout_notes / loose_balls stay append-only, verbatim); postmatch's full-time gate subtracts a routed row exactly as it should.
+- **`freeze.mjs deferred` is DERIVED** (FREEZE.md absent now + a commit once added it) — no new fs sink; xray's per-organ ratchet stays.
+- **The Watcher needed `--rewind`** to prove itself: the cursor had walked past his Day-1 turns under the legacy engine.
+
 
 ---
 

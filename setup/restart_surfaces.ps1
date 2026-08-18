@@ -7,7 +7,10 @@
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 $log = Join-Path $repo "dressing-room\state\restart_surfaces.log"
 "$(Get-Date -Format o) start" | Out-File -FilePath $log -Append -Encoding utf8
-foreach ($port in 4113, 4112) {
+# 18 Aug 2026 ~21:50 IST (MODELS + ACTS Blocks 1-2): the brain pacer (:4116 — LAW M model resolver +
+# the on_request_only tick filter) and the sitting brain (:4117 — LAW A agenda/CTRL acts; its state persists
+# on disk, an open sitting is found at boot) restart on current code too. START_DAEMONS relaunches all four.
+foreach ($port in 4113, 4112, 4116, 4117) {
   Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
     $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
     if ($p -and $p.ProcessName -eq 'node') { "$(Get-Date -Format o) kill :$port pid $($p.Id)" | Out-File -FilePath $log -Append -Encoding utf8; Stop-Process -Id $p.Id -Force -Confirm:$false -ErrorAction SilentlyContinue }
