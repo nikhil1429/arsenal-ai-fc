@@ -97,7 +97,7 @@ import { summary as tankSummary, loadTankConfig } from "./fuelboard.mjs";
 // B1/B2 (12 Aug 2026) — THE ROLLING STATE. gaffer_state.mjs is its SOLE writer;
 // the bridge calls observe() in-process on the /transcript door because that door
 // is already holding the turn delta, which is what makes the update O(1) per turn.
-import { observe as observeTurn, renderBrief as renderGafferBrief, supervise as superviseTurn } from "./gaffer_state.mjs";
+import { observeAndSave as observeAndSaveTurn, renderBrief as renderGafferBrief, supervise as superviseTurn } from "./gaffer_state.mjs";   // Block 1 (18 Aug 2026): the OWNER writes its two files; this bridge only drives
 // THE WATCHER (15 Aug 2026) — gaffer_brain.mjs is the SOLE WRITER of its journal
 // and its memory blocks; this file only READS them and only ever SPAWNS the organ.
 // Read-only imports, exactly like the hippocampus/fuelboard/examiner lines above.
@@ -108,7 +108,8 @@ import { freshNote as gafferFreshNote, readJournal as gafferJournal, renderBlock
 import { MONOLOGUE_WORDS as GAFFER_MONOLOGUE_WORDS } from "./gaffer_state.mjs";
 // M4 — the Live Examiner's staged code round (READS only; staging is its CLI).
 // 11 Aug 2026 dead-wire sweep — `markServed` joins the two readers. It is the OWNER's
-// own writer (examiner.mjs is sole writer of examiner_drill.json and re-reads the file
+// own writer (examiner.mjs OWNS that file — the one organ that writes
+// examiner_drill.json — and re-reads the file
 // itself inside it), so this stays a read-only organ with respect to that file: we can
 // stamp "the drill rode out to the voice mock", we cannot touch a word of the drill.
 import { loadFreshDrill, drillSection, markServed } from "./examiner.mjs";
@@ -911,7 +912,7 @@ THE HONEST FRAME (never soften): no hype words. If asked "does it make him learn
 // dark lanes named honestly. Rewrite the manual and this briefing changes with
 // it; nothing here can drift, because nothing here is baked.
 // STILL TOOL-LESS: same structural privacy as the other briefings (tools: []).
-const MERGE_MANUAL = join(__dirname, "..", "THE_MERGE_MANUAL.md");
+const MERGE_MANUAL = join(__dirname, "..", "docs", "archive", "THE_MERGE_MANUAL.md");   // Block 1 (18 Aug 2026 §13): records live in docs/archive/
 
 function loadMergeManual() {
   try { return readFileSync(MERGE_MANUAL, "utf8"); } catch { return ""; }
@@ -1312,7 +1313,7 @@ function recitalScar(n = 24) {
 // where-you-are); the full board stays in the file. Dates are TARGETS, not deadlines.
 function sprintCartridge() {
   try {
-    const p = join(__dirname, "..", "SPRINT.md");
+    const p = join(__dirname, "..", "docs", "archive", "SPRINT.md");   // Block 1 (18 Aug 2026 §13): records live in docs/archive/
     if (!existsSync(p)) return "";
     let t = readFileSync(p, "utf8");
     const cut = t.indexOf("## THE FULL BOARD");
@@ -3850,9 +3851,12 @@ async function selftest() {
     // E8 measured four organs that run only when he remembers to type them; his own
     // ledger calls anything he must remember a design failure. This is not a fifth.
     assert("B2 — the /transcript door drives the rolling state in-process (nobody has to type it)",
-      SRC.includes("observeTurn(prev, body.lines"));
-    assert("B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema",
-      SRC.includes('from "./gaffer_state.mjs"') && !SRC.includes("gaffer_state.json\", JSON.stringify({"));
+      SRC.includes("observeAndSaveTurn(body.lines"));
+    // Block 1 (18 Aug 2026): the two direct writes of GSTATE / GSTANDING that made this
+    // bridge a second author are GONE — the owner's observeAndSave() writes its own files.
+    assert("B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema (no write to its two files anywhere in this bridge)",
+      SRC.includes('from "./gaffer_state.mjs"') && !SRC.includes("gaffer_state.json\", JSON.stringify({")
+      && !/writeFileSync\(GSTATE/.test(SRC) && !/writeFileSync\(GSTANDING/.test(SRC));
     // ORDER, NOT DISTANCE (rewritten 15 Aug 2026). This was one regex with three
     // character-count windows in it, and adding nine lines of comment to the door
     // broke it — a test that fails on a comment is measuring the wrong thing. The
@@ -3870,7 +3874,7 @@ async function selftest() {
       const door = SRC.slice(iDoor, SRC.indexOf(N("min" + "utes"), iDoor));
       const iAppend = door.indexOf("appendFileSync(join(OUT_DIR");
       const iTry = door.indexOf("try {");
-      const iObserve = door.indexOf("observeTurn");
+      const iObserve = door.indexOf("observeAndSaveTurn");
       const iCatch = door.indexOf("} catch { }");
       assert("B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)",
         iAppend >= 0 && iTry > iAppend && iObserve > iTry && iCatch > iObserve);
@@ -3883,7 +3887,7 @@ async function selftest() {
         && /detached: true, stdio: "ignore"/.test(SRC) && /child\.unref\(\)/.test(SRC)
         && /catch \{ return false; \}\s+\/\/ a spawn that cannot start/.test(SRC));
       assert("THE WATCHER'S VERDICT reaches BOTH halves of the per-turn path — which lines are laws, and what the one note says",
-        /observeTurn\(prev, body\.lines, new Date\(\), stand, judged\)/.test(door)
+        /observeAndSaveTurn\(body\.lines, new Date\(\), judged\)/.test(door)
         && /superviseTurn\(r\.state, r\.standing, body\.lines, new Date\(\), judged && judged\.note\)/.test(door));
     }
     {
@@ -6247,11 +6251,12 @@ async function main() {
             // engine answers exactly as it did yesterday. Both halves are asserted
             // in gaffer_state.mjs's own selftest.
             const judged = readGafferJudgment();
-            const prev = readJson(GSTATE);
-            const stand = readJson(GSTANDING) || { instructions: [], _writer: "gaffer_state.mjs" };
-            const r = observeTurn(prev, body.lines, new Date(), stand, judged);
-            writeFileSync(GSTATE, JSON.stringify(r.state, null, 2));
-            if (r.newStanding.length) writeFileSync(GSTANDING, JSON.stringify(r.standing, null, 2));
+            // OVERHAUL BLOCK 1 (18 Aug 2026, xray Q2/Q5): the two writes that used to sit
+            // here moved INTO the owner — gaffer_state.mjs observeAndSave() reads its own
+            // two files, runs the same observe(), writes them itself. This bridge is the
+            // driver of that schema, never its second author (its own note above said so
+            // and the code contradicted it every turn).
+            const r = observeAndSaveTurn(body.lines, new Date(), judged);
             // B3 — THE SUPERVISOR runs on the SAME delta, immediately after the
             // state it reads is current. It is pure and free (no model call), so
             // it can run on every turn without a gate. The note is parked in

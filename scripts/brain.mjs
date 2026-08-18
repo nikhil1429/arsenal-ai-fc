@@ -3763,6 +3763,35 @@ async function tick(cfg, deps) {
   return { ran, refused: false, gated };
 }
 
+// ---------------------------------------------------------------------------
+// ARMING A TRIGGER — the OWNER's function (overhaul Block 1, 18 Aug 2026; xray Q2).
+// ---------------------------------------------------------------------------
+// conductor.mjs used to write brain_queue.json itself to arm `morning_signals` — a
+// second writer of this file's state, and xray named it a law breach every night. The
+// body below is conductor's own armTrigger, MOVED here verbatim in its rules (a guest
+// may ADD a key, never RESET the file: absent ⇒ create · readable ⇒ merge · present-
+// but-unreadable ⇒ REFUSE, return false, touch nothing) — now called by conductor
+// through this export and by this file's own `trigger` CLI, which until today reset an
+// unreadable queue to a two-key default (the exact wipe conductor's note documents).
+// `queuePath` is a parameter for the same reason conductor's `dir` was: the conductor
+// selftest arms a REAL file in a fresh temp dir. The write rides writeAtomic, whose
+// site is already resolved for the analyser (constant callers), so this adds no sink.
+export function armTrigger(name, reason, { queuePath = QUEUE, now = new Date() } = {}) {
+  let q = { observed_window_ceiling: null, jobs_run: {} };   // cold checkout only
+  if (existsSync(queuePath)) {
+    let disk = null;
+    try { disk = JSON.parse(readFileSync(queuePath, "utf8")); } catch { }
+    // `null`, `[]` and `"…"` all parse cleanly and are still not this file's shape —
+    // spreading a trigger onto any of them and writing it back is the same wipe.
+    if (!disk || typeof disk !== "object" || Array.isArray(disk)) return false;
+    q = disk;
+  }
+  q.triggers = q.triggers || {};
+  q.triggers[name] = { ts: now.toISOString(), reason: reason || null };
+  writeAtomic(queuePath, JSON.stringify(q, null, 2));
+  return true;
+}
+
 // the merge itself, pure and testable: brain owns every key EXCEPT `triggers`,
 // which a separate `brain trigger` process arms at any moment. Disk wins on
 // triggers (it is the freshest arming), we win on everything else, and anything
@@ -5963,16 +5992,19 @@ async function main() {
     // next tick runs the matching job once, then consumes it.
     const name = process.argv[3];
     if (!name) { console.log("brain: trigger <name> [reason]"); process.exit(1); }
-    const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
-    q.triggers = q.triggers || {};
     if ((process.argv[4] || "").toLowerCase() === "off") {
+      const q = readJson(QUEUE);
+      if (!q || typeof q !== "object" || Array.isArray(q)) { console.log(`brain: trigger '${name}' NOT disarmed — brain_queue.json is unreadable and this door will not reset it`); process.exit(1); }
+      q.triggers = q.triggers || {};
       delete q.triggers[name];
       writeAtomic(QUEUE, q);
       console.log(`brain: trigger '${name}' disarmed`);
       return;
     }
-    q.triggers[name] = { ts: now.toISOString(), reason: process.argv.slice(4).join(" ") || null };
-    writeAtomic(QUEUE, q);
+    // the OWNER's arming function (Block 1): absent ⇒ create · readable ⇒ merge ·
+    // present-but-unreadable ⇒ REFUSE (this door used to reset the whole queue here)
+    const armed = armTrigger(name, process.argv.slice(4).join(" ") || null, { now });
+    if (!armed) { console.log(`brain: trigger '${name}' NOT armed — brain_queue.json exists but did not parse; refused to overwrite it (the queue is intact)`); process.exit(1); }
     console.log(`brain: trigger '${name}' armed — the next tick fires the matching job once`);
     return;
   }

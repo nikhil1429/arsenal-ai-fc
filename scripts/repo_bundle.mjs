@@ -10,7 +10,7 @@
 // Out:  ARSENAL_FC_FULL_REPO_BUNDLE.md at the repo root (gitignored — it's a
 //       derived artifact; regenerate any time the repo changes).
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 
@@ -22,7 +22,7 @@ if (!(process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
   throw new Error("repo_bundle.mjs is a CLI generator with top-level effects — run it (npm run bundle), never import it");
 }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT = join(ROOT, "ARSENAL_FC_FULL_REPO_BUNDLE.md");
+const OUT = join(ROOT, "docs", "derived", "ARSENAL_FC_FULL_REPO_BUNDLE.md");   // Block 1 (18 Aug 2026 §13): the derived bundle lands in docs/derived/ (gitignored), out of the root listing
 
 const ANN = {
   "ARSENAL_AI_FC_MASTERPLAN.md": "The canonical v2.1 design bible: full squad, two-brain Manager, recalibrated Governor, philosophy, and architecture. Read for deep/design work.",
@@ -251,6 +251,7 @@ for (const g of GROUPS) {
   }
 }
 
+mkdirSync(dirname(OUT), { recursive: true });   // docs/derived/ may not exist on a fresh clone
 writeFileSync(OUT, out, "utf8");
 const bytes = statSync(OUT).size;
 console.log(`bundle: ${tracked.length} files, ${total.toLocaleString()} lines, ${(bytes/1024/1024).toFixed(2)} MB → ${OUT}`);

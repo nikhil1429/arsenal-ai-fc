@@ -1115,7 +1115,10 @@ export function probeUnleashVerdict(deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
-export const CANON_FILES = ["OPS_STATE.md", "ARSENAL_AI_FC_MASTERPLAN.md", "THE_MANAGER__Master_Prompt.md", "THE_GAFFER.md"];
+// Block 1 (18 Aug 2026 §13): the MASTERPLAN and the Manager's master prompt moved to
+// docs/archive/ (records; the sheet's LLM lane is gated). They stay CANON — a drift in
+// them is still a card — at their new path, which is what `git status --porcelain` prints.
+export const CANON_FILES = ["OPS_STATE.md", "docs/archive/ARSENAL_AI_FC_MASTERPLAN.md", "docs/archive/THE_MANAGER__Master_Prompt.md", "THE_GAFFER.md"];
 export function probeCanon(today, deps = {}) {
   const git = deps.git || (() => {
     const r = spawnSync("git", ["status", "--porcelain", "--", ...CANON_FILES], { cwd: ROOT, encoding: "utf8", timeout: 15000 });
@@ -1737,7 +1740,7 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       && probeCanon(TODAY, { git: () => null, fileCard: () => true })
         .some((f) => f.id === "canon-watch-unrunnable" && f.level === "INFO"));
     assert("B8 — all four canon files are watched (the exact four CLAUDE.md names)",
-      CANON_FILES.length === 4 && CANON_FILES.includes("THE_GAFFER.md")
+      CANON_FILES.length === 4 && CANON_FILES.includes("THE_GAFFER.md") && CANON_FILES.includes("docs/archive/ARSENAL_AI_FC_MASTERPLAN.md")
       && probeCanon(TODAY, { git: () => CANON_FILES.map((f) => ` M ${f}`).join("\n"), fileCard: () => true }).length === 4);
   }
 

@@ -1,5 +1,15 @@
 #!/usr/bin/env node
 // ============================================================================
+// MOVED — scripts/legacy/organism_live_demo.mjs (ORGANISM_OVERHAUL 18 Aug 2026 §11 "MOVE").
+// Kept VERBATIM in logic (the layering law: never delete an organ); the only edits are
+// the three path anchors that let it still run from one directory deeper (two imports,
+// REAL_STATE). It is OUT of every suite (the coverage law scans scripts/*.mjs) and out of
+// xray's organ list (top-level scan) — a demo, runnable by hand:
+//   node scripts/legacy/organism_live_demo.mjs selftest
+// dugout.mjs still points at it by name for the sandboxed-fork history (§11: "reference
+// untouched"). `git log --follow scripts/legacy/organism_live_demo.mjs` carries its life.
+// ============================================================================
+// ============================================================================
 // organism_live_demo.mjs · SANDBOXED FORK of scripts/dugout.mjs — NOT LIVE.
 // ----------------------------------------------------------------------------
 // #58 (ORGANISM audit, Aug 2026): this line used to read "dugout.mjs · ARSENAL
@@ -81,8 +91,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import os from "node:os";
-import { buildFingerprint, bannedPhraseCheck } from "./brain.mjs";
-import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { buildFingerprint, bannedPhraseCheck } from "../brain.mjs";   // MOVED to scripts/legacy/ (overhaul Block 1, 18 Aug 2026) — path anchor only
+import { supersedeReps } from "../capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ── SANDBOX (E2E audit 25 Jul 2026) ──────────────────────────────────────────
@@ -94,7 +104,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // dressed up as a "demo". It now lives in its own sandbox: its own port, its own
 // state dir. Nothing it does can touch the captain's real bus.
 // (The file is kept, not deleted — layering, never replace.)
-const REAL_STATE = join(__dirname, "..", "dressing-room", "state");
+const REAL_STATE = join(__dirname, "..", "..", "dressing-room", "state");   // MOVED to scripts/legacy/ (Block 1): one more ".." — the demo's logic is untouched
 const STATE_DIR = join(REAL_STATE, "demo_sandbox");
 const OUT_DIR   = join(STATE_DIR, "brain_out", "dugout");
 const NOTES     = join(STATE_DIR, "dugout_notes.jsonl");

@@ -80,7 +80,8 @@
 // that can break his session is a worse defect than the drift it catches.
 //
 // WRITES: teaching_audit.jsonl + teaching_audit_last.json (this organ is their
-// single writer). It never touches teaching_contract.json itself — auto-counting
+// single writer). It never touches the contract file itself
+// (teaching_contract.json belongs to teaching_contract.mjs) — auto-counting
 // and the checked_at heartbeat both go through teaching_contract.mjs's own CLI
 // (`autohit` / `checked`), exactly as the owners-only law requires.
 // ---------------------------------------------------------------------------

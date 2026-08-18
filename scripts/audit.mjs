@@ -78,7 +78,7 @@ function append(row) { mkdirSync(STATE_DIR, { recursive: true }); appendFileSync
 
 // ── RULE ZERO, IN CODE ───────────────────────────────────────────────────────
 const STATE_RE = /dressing-room[\\/]state[\\/]/i;
-const CANON = ["CLAUDE.md", "THE_GAFFER.md", "OPS_STATE.md", "ARSENAL_AI_FC_MASTERPLAN.md", "THE_MANAGER__Master_Prompt.md"];
+const CANON = ["CLAUDE.md", "THE_GAFFER.md", "OPS_STATE.md", "docs/archive/ARSENAL_AI_FC_MASTERPLAN.md", "docs/archive/THE_MANAGER__Master_Prompt.md", "ARSENAL_AI_FC_MASTERPLAN.md", "THE_MANAGER__Master_Prompt.md"];   // Block 1 (18 Aug 2026 §13): two canon bodies moved to docs/archive/; both spellings kept so a stray copy at the root is still NEVER automated
 const NEVER_TOUCH = [".gitignore", "setup/INSTALL_TASKS.ps1", ".claude/settings.json", "package-lock.json"];
 export function assertFixable(path) {
   const p = String(path).replace(/\\/g, "/");

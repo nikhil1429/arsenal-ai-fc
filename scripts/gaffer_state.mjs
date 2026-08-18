@@ -541,6 +541,21 @@ export function renderBrief(state, standing, { forRotation = false } = {}) {
 // ---------------------------------------------------------------------------
 function load() { return { state: readJson(STATE, null), standing: readJson(STANDING, { instructions: [], _writer: "gaffer_state.mjs" }) }; }
 function save(state, standing) { writeJson(STATE, state); if (standing) writeJson(STANDING, standing); }
+// THE OWNER'S TURN DOOR (overhaul Block 1, 18 Aug 2026; xray Q2/Q5). The Dugout's
+// /transcript route used to call observe() and then writeFileSync the two files
+// itself — a second writer of gaffer_state.json and gaffer_standing.json, named a law
+// breach nightly. Now the bridge hands the delta HERE and this organ does the two
+// writes it declares itself sole writer of. Same reads, same observe(), same write
+// shape (the standing file only when a law entered), one owner. Returns observe()'s
+// result so the caller's supervisor step is unchanged.
+export function observeAndSave(lines, now = new Date(), judgment = null) {
+  const prev = readJson(STATE, null);
+  const stand = readJson(STANDING, { instructions: [], _writer: "gaffer_state.mjs" });
+  const r = observe(prev, lines, now, stand, judgment);
+  writeJson(STATE, r.state);
+  if (r.newStanding.length) writeJson(STANDING, r.standing);
+  return r;
+}
 
 async function main() {
   const cmd = (process.argv[2] || "brief").toLowerCase();

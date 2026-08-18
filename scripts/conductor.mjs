@@ -37,6 +37,7 @@ import { writeFileSync, appendFileSync, renameSync, readFileSync, existsSync, mk
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { armTrigger as brainArmTrigger } from "./brain.mjs";   // Block 1 (18 Aug 2026): the OWNER arms brain_queue.json; this chain only asks
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
@@ -272,21 +273,13 @@ export function logStep(name, cmdline, body, dir = join(REPO, "scripts")) {
 // is what the organism-doctor skill turns 🔴 off conductor.json and what the cloud sentinel
 // reads. It also means the sheet is NOT told its signals are fresh — correct: an unreadable
 // queue is exactly when brain.mjs must not be handed a permission.
+// OVERHAUL BLOCK 1 (18 Aug 2026, xray Q2 "brain_queue.json ← brain.mjs, conductor.mjs"):
+// the body above lives in brain.mjs now — `armTrigger` there, same three cases, same
+// refusal, same return — because brain_queue.json is brain's file and this chain is its
+// caller, not its second author. This wrapper keeps the signature every caller and the
+// selftest already use (`dir` for the hermetic temp-dir fixture) and does NO write.
 export function armTrigger(name, reason, dir = STATE_DIR) {
-  const p = join(dir, "brain_queue.json");
-  let q = { observed_window_ceiling: null, jobs_run: {} };   // cold checkout only
-  if (existsSync(p)) {
-    let disk = null;
-    try { disk = JSON.parse(readFileSync(p, "utf8")); } catch { }
-    // `null`, `[]` and `"…"` all parse cleanly and are still not this file's shape —
-    // spreading a trigger onto any of them and writing it back is the same wipe.
-    if (!disk || typeof disk !== "object" || Array.isArray(disk)) return false;
-    q = disk;
-  }
-  q.triggers = q.triggers || {};
-  q.triggers[name] = { ts: new Date().toISOString(), reason };
-  writeAtomic(p, JSON.stringify(q, null, 2));
-  return true;
+  return brainArmTrigger(name, reason, { queuePath: join(dir, "brain_queue.json") });
 }
 
 // Is something already listening on this localhost port? A daemon that answers is a
