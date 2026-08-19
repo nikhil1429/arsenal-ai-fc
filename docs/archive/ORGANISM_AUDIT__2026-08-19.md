@@ -628,9 +628,19 @@ per day** even on paid Tier 1, ~250k tokens/minute.
 **WHY HIS DISTRUST STOPS MATTERING:** in every job above, Gemini's output is a **LEAD**, and §4's
 rule already applies to it exactly as it applies to `xray` — which just scored 5 of 5 false. A false
 positive from Gemini costs one deterministic check. **Its recall is the product; its precision is
-not.** And extended thinking is worth little here for the same reason: when everything is verified
-downstream, COVERAGE beats confidence. So do not turn it on for breadth work; it buys depth this
-architecture does not need and cannot use.
+not.**
+
+**EXTENDED THINKING: ON. ALWAYS. BOTH ACCOUNTS. — HIS RULING, 19 Aug 2026**
+> *"use gemini extended thinking on everytime, burn it tokens of both accounts, i don't care about
+> it."*
+An earlier version of THIS SECTION said the opposite — *"do not turn it on for breadth work"* — and
+it survived here after being corrected in `TOOLING_LAW__2026-08-19.md` §3. **Two documents the same
+session reads, saying opposite things, with the stale one contradicting his explicit instruction.**
+Corrected: the argument against it was about COST, and the cost to him is zero, so the argument was
+wrong. More thinking buys better RECALL on hard cross-file questions, and recall is the only thing
+Gemini is here for. **Turn it on for everything Gemini does.**
+This changes nothing about trust: its output is still a LEAD, still verified by TIER 0, exactly as
+he requires.
 
 ---
 
@@ -653,8 +663,8 @@ Researched 19 Aug 2026 (sources in the commit message):
 
 **So PASS 3 changes shape:** do not fan agents out over directories. Fan them out over **concerns**,
 hand each one `xray`'s graph plus the §3 measurements, and require every finding to name the
-cross-file path that produces it. A finding that lives inside one file was probably already caught
-by TIER 0 for free.
+cross-file path that produces it. A finding that lives inside a single file should already have been caught
+by TIER 0 for free — and if it was not, **that TIER 0 gap is the real finding**.
 
 ## §7 · THE ORDER OF WORK — for the session that BUILDS
 
