@@ -53,12 +53,12 @@ one waste LAW T actually forbids:
 
 THREE SOURCES — all COVERED, none skipped. COVERED IS NOT THE SAME AS READ LINE BY
 LINE, and the method is part of the instruction:
-  1. THE CODE — 103 organs, 106,376 lines. **NOBODY READS THESE WITH A MODEL.**
+  1. THE CODE — 103 organs, 106,416 lines. **NOBODY READS THESE WITH A MODEL.**
      Covered by PASS 1's static scan (all 103 organs, mechanically, free) and then by
      PASS 3's agents reasoning over xray's GRAPH at the hot spots PASS 1 named.
      Reading 106k lines is ~1.3M tokens, does not fit any context, and finds fewer
      bugs than the graph does — the bugs here are NON-LOCAL (§6-D).
-  2. THE .md — all 113. Eight intent docs closely by ONE head (PASS 2); the other ~105
+  2. THE .md — all 116. Eight intent docs closely by ONE head (PASS 2); the other ~108
      by Gemini's single whole-canon sweep. Date each before believing it (§4-B); the
      CODE can be wrong too, so when a doc and the code disagree, CLASSIFY, never rank.
   3. THE CHAT HISTORY (§4-D-0) — 7,945 sessions under
@@ -98,7 +98,7 @@ what you found, what you left unread, and what the next session must do FIRST �
 
 ## §0 · HIS INTENT — the north star, written down for the first time
 
-Measured 19 Aug: `grep -riE "bidirectional|24.?7|self.?heal"` across all 113 canon `.md` files returns
+Measured 19 Aug: `grep -riE "bidirectional|24.?7|self.?heal"` across all 116 canon `.md` files returns
 **almost nothing**. The organism has laws, rulings and incident records — and **no stated goal**.
 Everything was built from incidents. That is precisely why the same mechanism got invented four
 times and nailed to one board each time: there was no document saying what CLASSES of problem this
@@ -265,8 +265,21 @@ session do it manually without wasting any tokens."*
 He is right to demand this. §3's numbers are not all the same kind of thing, and the order did not
 say so. **Three classes, and only the first may be relied on:**
 
-**A · MEASURED — a command produced this number in that session. Trust these; §3 says do not re-run.**
-103 organs · 106,376 lines · 66 canon + 47 archive = 113 `.md` · oldest canon 2026-07-11 ·
+**A0 · MEASURED **AND DRIFTING** — these MOVE, and four of them were already wrong within hours.**
+The document counted the world and then became part of the world it counted. **Refresh these before
+using them; each is one command and costs nothing:**
+- code lines `cat scripts/*.mjs | wc -l` — written as 106,376, was **106,416** the same morning
+- canon `.md` `git ls-files '*.md' | grep -vc '^docs/archive/'` — written 66, now **67**
+- archive `.md` `git ls-files 'docs/archive/*.md' | wc -l` — written 47, now **49** (this order and
+  LAW T are two of them)
+- transcript sessions `ls ~/.claude/projects/C--Users-nikhi-GitHub-arsenal-ai-fc/*.jsonl | wc -l`
+  — written 7,945, now **7,947**
+- afferent rows — 3,315 when written, **3,363** hours later. It grows every turn, by design.
+**Nothing downstream breaks when these move** — they size the work, they do not decide it. But do
+not quote them as current without the one command.
+
+**A · MEASURED AND STABLE — a command produced it and it does not drift on its own.**
+103 organs · 106,416 lines · 67 canon + 49 archive = 116 `.md` · oldest canon 2026-07-11 ·
 7,945 transcript sessions · 214,032 rows · 1,313.8 MB store · 81.5 MB dialogue (his 59.9, the
 assistant's 21.6) · **6.20%** · 445 swallowed exceptions · 103 live swallows/24 h · 82 orphan verbs ·
 unresolved sinks 1,310 (**now 1,311** after the IR rebuild) · 253.71 lakh weighted · 108.34 lakh dark
@@ -277,9 +290,9 @@ unresolved sinks 1,310 (**now 1,311** after the IR rebuild) · 253.71 lakh weigh
 **B · CALCULATED BY THE ASSISTANT — arithmetic, NOT a measurement. VERIFY BEFORE RELYING.**
 Each of these came from dividing bytes or lines by an assumed ratio. **They are load-bearing for the
 method (they decide what fits in which context), so verify them first — each costs one command:**
-- **"the code is ~1.3M tokens"** — derived from 106,376 lines. *Verify:* count real tokens over
+- **"the code is ~1.3M tokens"** — derived from 106,416 lines. *Verify:* count real tokens over
   `scripts/*.mjs`, or simply use bytes (`cat scripts/*.mjs | wc -c`) and a measured ratio.
-- **"all 113 `.md` are ~400k tokens and fit in ONE Gemini call"** — derived from ~1.49 MB.
+- **"all 116 `.md` are ~400k tokens and fit in ONE Gemini call"** — derived from ~1.49 MB.
   **The whole PASS 2 split depends on this.** *Verify before sending them to Gemini.*
 - **"the corpus is ~21M tokens raw"** — derived from 81.5 MB ÷ 4.
 - **"59 findings, 19 carrying their own fix command"** — these came from a REGEX over the organs, and
@@ -293,6 +306,53 @@ Gemini 3.x Pro's 1M context, 64K max output (default 8,192), ~250 requests/day �
 > **THE RULE THIS SECTION EXISTS FOR:** where a class-B number decides a method, verify it with ONE
 > command before acting on it. Do not re-derive it by arithmetic, and do not spend a model on it.
 > **A wrong ratio here does not produce a wrong sentence — it produces a wrong PLAN.**
+
+---
+
+## §3-C · CHECK THIS DOCUMENT WITH A COMMAND, NOT BY READING IT
+
+**His question, 19 Aug: *"have you checked the entire file byte by byte that it is 100% correct?"***
+**No reading can prove that, however many times it is done — and four readings of this order each
+found something the previous one missed.** So the answer is not a better promise. It is a check.
+
+Run this. It costs nothing and it settles the question mechanically. **It found four wrong numbers
+on 19 Aug**, all of the same funny kind: *the document counted the world, and then became part of
+the world it counted* (it added itself and LAW T to the `.md` corpus, and the code grew as it was
+being written).
+
+```bash
+node -e "
+const fs=require('fs');const F='docs/archive/ORGANISM_AUDIT__2026-08-19.md';
+const s=fs.readFileSync(F,'utf8');let bad=0;const fail=m=>{bad++;console.log('  X',m)};
+// integrity
+if(Buffer.compare(Buffer.from(s,'utf8'),fs.readFileSync(F))!==0) fail('not valid UTF-8');
+if((s.match(/\uFFFD/g)||[]).length) fail('replacement chars — an edit corrupted bytes');
+if((s.match(/^\`\`\`/gm)||[]).length%2) fail('unbalanced code fence');
+// every section reference resolves
+const H=new Set([...s.matchAll(/^##+\s+§([0-9A-Za-z-]+)/gm)].map(m=>m[1]));
+for(const r of new Set([...s.matchAll(/§([0-9]+(?:-[0-9A-Za-z]+)?)/g)].map(m=>m[1])))
+  if(!H.has(r)) fail('references §'+r+' — no such section');
+// every named repo file exists (ghost.mjs is a FINDING, not a path)
+for(const m of s.matchAll(/\`([A-Za-z0-9_\/.-]+\.(?:mjs|md|json|jsonl|vbs|bat))\`/g))
+  if(m[1].includes('/') && m[1]!=='scripts/ghost.mjs' && !fs.existsSync(m[1])) fail('names missing file '+m[1]);
+// every 'node scripts/X.mjs <verb>' exists AND the organ has that verb
+for(const [,o,v] of s.matchAll(/node scripts\/([a-z_]+)\.mjs ([a-z-]+)/g)){
+  const f='scripts/'+o+'.mjs';
+  if(!fs.existsSync(f)){fail('command names '+f+' — absent');continue}
+  const src=fs.readFileSync(f,'utf8');
+  if(!src.includes(JSON.stringify(v))&&!src.includes(\"'\"+v+\"'\")) fail(o+'.mjs has no verb '+v);
+}
+console.log(bad?bad+' PROBLEM(S)':'document structurally clean');
+"
+```
+
+**Then refresh the DRIFTING numbers (§3-B · A0) with their four one-line commands.** Those are the
+ones that go stale on their own; everything in class A stays put.
+
+**WHAT THIS CHECK CANNOT DO, said plainly so it is not oversold:** it verifies structure, paths,
+commands and integrity. It cannot verify that a SENTENCE is true, that a judgement is sound, or
+that nothing is missing. Those need a reader — which is why the order's last instruction is still
+**say out loud what you left unread, and why.**
 
 ---
 
@@ -465,9 +525,9 @@ mechanism got invented four times, and each was nailed to the one board that had
 > And treat the git history as a primary source — `git log -S "<symbol>"` tells you which incident
 > a mechanism was born from, which is exactly the question the `.md` cannot answer.
 
-## §5 · THE METHOD — how to COVER 106,376 lines without reading them
+## §5 · THE METHOD — how to COVER 106,416 lines without reading them
 
-The surface: **103 organs · 106,376 lines of code · 66 canon `.md` · 47 archive `.md` · plus his
+The surface: **103 organs · 106,416 lines of code · 67 canon `.md` · 49 archive `.md` · plus his
 untracked/private folders.** No single context window can hold that, so a straight read is not
 "expensive" — it is **impossible**, and it would silently skip whatever fell off the end.
 **COVERAGE ≠ READING.** Code is covered by a static pass over all 103 organs plus graph reasoning at
@@ -509,10 +569,10 @@ Everything in §3 came from these. They cost nothing and they are the map.
 **PASS 2 — READ HIS INTENT, NOT HIS CODE. ONE COHERENT READER (Claude). NO FAN-OUT** — separate
 agents each holding one document cannot see a contradiction BETWEEN documents, and contradictions
 are the point of this pass.
-**HOW ALL 113 `.md` GET COVERED WITHOUT READING 113 WITH CLAUDE — this is the split, and skipping
-it means either overpaying or missing 105 files:** these eight carry the DESIGN INTENT and are read
-here, closely, by one head. **The other ~105 are covered by TIER 1 — Gemini's whole-canon sweep
-(§6-C job 1), which holds all 113 in ONE context and reports where intent is stated, which documents
+**HOW ALL 116 `.md` GET COVERED WITHOUT READING 116 WITH CLAUDE — this is the split, and skipping
+it means either overpaying or missing 108 files:** these eight carry the DESIGN INTENT and are read
+here, closely, by one head. **The other ~108 are covered by TIER 1 — Gemini's whole-canon sweep
+(§6-C job 1), which holds all 116 in ONE context and reports where intent is stated, which documents
 contradict each other, and what is declared but never referenced.** Those returns are LEADS (§4);
 anything load-bearing comes back here to be read properly.
 Read these eight in this order:
@@ -523,7 +583,7 @@ Read these eight in this order:
 
 **PASS 3 — TARGETED DEEP READ, and only here spend on agents.**
 
-> ### ⛔ NOBODY READS 106,376 LINES. NOT ONE AGENT, NOT A HUNDRED.
+> ### ⛔ NOBODY READS 106,416 LINES. NOT ONE AGENT, NOT A HUNDRED.
 > An earlier version of this section said *"every file still gets read by someone"*. **That was
 > wrong and it cost him ~800,000 tokens** when a session followed it literally. It also contradicted
 > the sentence directly above it. Both are corrected here, and this is the rule:
@@ -559,7 +619,7 @@ shape with a ratchet so the shape cannot return. §2 is the model.
 **TIER 0 deterministic code (free AND better) · TIER 1 Gemini (breadth only, extended thinking ON,
 never believed without a TIER 0 check) · TIER 2 Claude (judgement only).**
 
-**The gap it fills, measured 19 Aug:** 106,376 lines of code with **ZERO linter, ZERO type-checking,
+**The gap it fills, measured 19 Aug:** 106,416 lines of code with **ZERO linter, ZERO type-checking,
 ZERO coverage, ZERO dead-code analysis** — `devDependencies` is `acorn` + `acorn-walk`, and those
 exist only so `xray.mjs` can hand-roll its own parser. **The highest-value single item is
 `tsc --checkJs` + JSDoc** (no TypeScript rewrite): on 19 Aug a wire called `readJsonl(...)`, a helper
@@ -600,7 +660,7 @@ paid model is genuinely the best instrument, spending is not waste — refusing 
 **TIER 0 — DETERMINISTIC CODE. Free, and BETTER than any model at what it does.**
 Anything that is computation rather than judgement: `eslint no-empty` (the 445 silent catches),
 `tsc --checkJs` (the swallowed-ReferenceError class), `knip` (the 82 orphan verbs), `madge`
-(cycles), `c8` (which of 106,376 lines never runs), Stryker (are the tests real), plus this repo's
+(cycles), `c8` (which of 106,416 lines never runs), Stryker (are the tests real), plus this repo's
 own `xray` / `swallow` / `limits` / `treasury` / `pulse`.
 **Spending a single paid token to hunt for empty catch blocks is the purest form of the waste he
 means.** A model is worse at it AND costs money.
@@ -630,16 +690,16 @@ window**, max output 64K (default 8,192 — must be raised explicitly), and roug
 per day** even on paid Tier 1, ~250k tokens/minute.
 
 **What those numbers actually mean for this repo:**
-- The code is 106,376 lines ≈ **~1.3M tokens. It does NOT fit**, not even in Gemini. Anyone who
+- The code is 106,416 lines ≈ **~1.3M tokens. It does NOT fit**, not even in Gemini. Anyone who
   claims "just give Gemini the whole repo" has not counted.
-- But **all 113 `.md` files are ~400k tokens and DO fit, comfortably, in ONE call.** Claude Code
+- But **all 116 `.md` files are ~400k tokens and DO fit, comfortably, in ONE call.** Claude Code
   cannot hold them without compaction. **This is the one thing Gemini can do here that nothing else
   can.**
 - 250 requests/day means Gemini is for a HANDFUL of enormous questions, never for many small ones.
   That matches its strength exactly.
 
 **GIVE GEMINI EXACTLY THIS — and nothing else:**
-1. **The whole-canon read.** All 113 `.md` in one context: *"where does he state intent about X?
+1. **The whole-canon read.** All 116 `.md` in one context: *"where does he state intent about X?
    which documents contradict each other? what is declared and never referenced anywhere?"* No other
    reader can answer cross-document questions over the whole canon in one pass.
 2. **Whole-subsystem breadth sweeps.** One subsystem's files at a time (not the whole repo):
