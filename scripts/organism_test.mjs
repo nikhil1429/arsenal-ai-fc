@@ -725,6 +725,37 @@ async function laws() {
       // THE SCOREBOARD ITSELF — by Law 4 it did not exist until it was a code path.
     }
 
+    // ── LOAD ZERO, AFTER BLOCK 6 — NO LEDGER LANE MAY BYPASS THE ROAD UNEXAMINED ────────────────
+    // `outbox.ingest` asks brain_config which jobs produce FOR HIM, and silently dropped any lane
+    // brain_config had never heard of. Measured: 15 such lanes in the live ledger, and all 15 are
+    // consumed by ANOTHER ORGAN — so none of them belongs on the road (putting internal plumbing on
+    // the one surface that carries what he needs is the opposite of L7). They are now excluded BY
+    // DECLARATION. This law is the part the declaration cannot do for itself: a NEW lane appearing
+    // in the ledger, in neither brain_config nor the declared list, is NAMED rather than dropped.
+    {
+      const OB = await import(pathToFileURL(join(ROOT, "scripts", "outbox.mjs")).href);
+      const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
+      const ledgerLanes = (() => {
+        try {
+          const seen = new Set();
+          for (const l of readFileSync(join(ROOT, "dressing-room", "state", "brain_ledger.jsonl"), "utf8").split(/\r?\n/)) {
+            if (!l.trim()) continue;
+            try { const r = JSON.parse(l); if (r && r.job) seen.add(r.job); } catch { /* a torn line is not a lane */ }
+          }
+          return [...seen];
+        } catch { return null; }
+      })();
+      if (cfg && ledgerLanes) {
+        const known = new Set((cfg.jobs || []).map((j) => j.id));
+        const undeclared = ledgerLanes.filter((j) => !known.has(j) && !OB.LANES_NOT_IN_CONFIG[j]);
+        assert(`LOAD ZERO · every lane in the brain ledger is either a declared brain_config job or a DECLARED non-road lane (${ledgerLanes.length} lanes, ${Object.keys(OB.LANES_NOT_IN_CONFIG).length} declared off-road)`,
+          undeclared.length === 0,
+          `${undeclared.join(", ")} run(s) and reach the road NOWHERE, and nothing says whether that is right. Declare each in outbox.mjs LANES_NOT_IN_CONFIG with the organ it feeds, or give it a surface in brain_config.`);
+        assert("LOAD ZERO · ...and every off-road declaration NAMES the organ it feeds (a lane excluded with no reason is a shrug, not a decision)",
+          Object.values(OB.LANES_NOT_IN_CONFIG).every((w) => typeof w === "string" && w.trim().length >= 25));
+      }
+    }
+
     // ── LOAD ZERO BLOCK 7 (19 Aug 2026) — CANON, 66 FILES ───────────────────────────────────────
     // THE LAW: no canon file may state something a command can produce. A number or a state in
     // canon prose is a lie by tomorrow — and it lies to HIM, because canon is what he reads when he

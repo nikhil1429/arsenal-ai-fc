@@ -74,7 +74,8 @@ import { execFileSync, spawn } from "node:child_process";   // spawn: 15 Aug 202
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
-import { buildFingerprint, bannedPhraseCheck, starvedNightFor, recordConsumption } from "./brain.mjs";   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words · recordConsumption: THE GATE's "sat" stamp (18 Aug 2026), owner-held
+import { buildFingerprint, bannedPhraseCheck, starvedNightFor, recordConsumption } from "./brain.mjs";
+import { readingFor } from "./oura_coach.mjs";   // LOAD ZERO BLOCK 9 (19 Aug 2026): ABSENCE MUST BE EXPLICIT — a reading is judged on its OWN day, never on the file's mtime. oura_coach imports only node builtins, so this is not a cycle.   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words · recordConsumption: THE GATE's "sat" stamp (18 Aug 2026), owner-held
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 // ORPHANED IMPORTS CUT, 10 Aug 2026: this line also pulled `learningArcVerdict`
 // and `conceptVocabulary`, and LADDER F3 (9 Aug) deleted the only caller — the
@@ -221,6 +222,24 @@ async function relayAfferent(evt, fetchFn = fetch) {
 // M1 — THE ASYNC ARC, read side: the page polls /deep; the bridge reads the
 // thalamus's workspace/wake (READ-only — single-writer law intact) and hands
 // back the pending wake (for the holding token) + any served deep answer.
+
+// ── LOAD ZERO BLOCK 9 (19 Aug 2026) — THE GAFFER MAY NOT INVENT A HEALTH VERDICT ──────────────
+// Four sites here read readiness.json and took `.verdict`, two of them defaulting to "GREEN".
+// Measured 19 Aug: readiness.json had an mtime of 18 Aug (it LOOKED fresh) and `day: 2026-08-04`
+// inside — so the mouth would have spoken a FORTNIGHT-OLD verdict as today's, and on a day with no
+// file at all it would have said "GREEN" about a night nobody measured. Absence became a healthy
+// verdict, which is the one direction this lane must never fail in.
+// THE GOALKEEPER'S BOUNDARY IS THE REASON, NOT AN OBSTACLE: he is a data-analyst, never a
+// prescriber. Refusing to speak a reading that does not exist is the boundary being kept, not
+// crossed — this decides only WHETHER a reading is for today, and never what it means.
+function readinessToday(deps = {}) {
+  const r = deps.readiness !== undefined ? deps.readiness : readJson(join(STATE_DIR, "readiness.json"));
+  const day = (deps.now || new Date()).toISOString().slice(0, 10);
+  const f = readingFor(day, r);
+  return f.fresh ? { verdict: f.reading.verdict || null, fresh: true, why: null }
+                 : { verdict: null, fresh: false, why: f.why };
+}
+
 function readDeepState(deps = {}) {
   const ws = deps.workspace !== undefined ? deps.workspace : readJson(join(STATE_DIR, "workspace.json"));
   const wake = deps.wake !== undefined ? deps.wake : readJson(join(STATE_DIR, "wake.json"));
@@ -328,7 +347,10 @@ function readDeepState(deps = {}) {
   if (ws && ws.whisper && new Date(ws.whisper.expires) > new Date()) {
     const led = deps.ledger !== undefined ? deps.ledger : readJson(join(STATE_DIR, "proactivity_ledger.json"));
     const earned = !!(led && led.types && led.types.wall_breaker && led.types.wall_breaker.voice);
-    const verdict = deps.verdict !== undefined ? deps.verdict : ((readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "GREEN");
+    // absence deliberately does NOT silence the mouth here — the gate only stops a whisper when he
+    // is measurably RED, and "no reading" is not RED. But it is written as an explicit null rather
+    // than a fabricated "GREEN", so nothing downstream can mistake silence for a measurement.
+    const verdict = deps.verdict !== undefined ? deps.verdict : readinessToday(deps).verdict;
     const tone = deps.tone !== undefined ? deps.tone : currentTone().arousal;
     if (earned && verdict !== "RED" && tone !== "conserve") out.whisper = ws.whisper;
   }
@@ -2039,7 +2061,9 @@ function execTool(name, args, deps = {}) {
     if (name === "get_today") {
       const sheetP = join(STATE_DIR, "team_sheet.md");
       return {
-        verdict: (readJson(join(STATE_DIR, "readiness.json")) || {}).verdict || "GREEN",
+        // what the mouth SPEAKS. No reading ⇒ say so; never "GREEN" about a night nobody measured.
+        verdict: readinessToday().verdict,
+        verdict_absent_why: readinessToday().why,
         sheet_head: existsSync(sheetP) ? readFileSync(sheetP, "utf8").split("\n").slice(0, 12).join("\n") : null,
         drills: ((readJson(join(STATE_DIR, "drills.json")) || {}).drills || []).map(d => ({ kind: d.kind, concepts: d.concepts, prompt: d.prompt, modality: d.modality || "voice" })),
         vitals_line: (readJson(join(STATE_DIR, "loop_vitals.json")) || {}).line || null,
@@ -3284,7 +3308,14 @@ async function selftest() {
   const append = (path, text) => { appends.push({ path, text }); };
 
   const today = execTool("get_today", {}, { sh });
-  assert("get_today reads live bus, never crashes bloodless", typeof today.verdict === "string" && "drills" in today);
+  // LOAD ZERO BLOCK 9 (19 Aug 2026): this used to demand `typeof verdict === "string"` — and that
+  // demand is exactly what forced the `|| "GREEN"` default that made the mouth speak a health
+  // verdict about a night nobody measured. "Never crashes bloodless" is about not THROWING, not
+  // about always having an answer. A null verdict is legal now, and must NAME why it is absent.
+  assert("get_today reads live bus, never crashes bloodless — and an ABSENT reading is null WITH its reason, never a fabricated GREEN",
+    "verdict" in today && "drills" in today
+    && (typeof today.verdict === "string" || (today.verdict === null && typeof today.verdict_absent_why === "string" && today.verdict_absent_why.length > 10)),
+    JSON.stringify({ verdict: today.verdict, why: today.verdict_absent_why }));
   const tape = execTool("get_tape_room", {}, { sh });
   assert("get_tape_room caps at 5 eligible", Array.isArray(tape.eligible) && tape.eligible.length <= 5);
 

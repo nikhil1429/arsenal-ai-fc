@@ -75,6 +75,41 @@ export const KINDS = ["material", "resolved", "finding", "ask", "reminder"];
 // a brain job's OWN declared surface.kind. `job_input` feeds another JOB, not him — that job
 // posts if what IT makes is for him. Everything else ends up in front of him somehow.
 export const NOT_FOR_HIM = ["job_input"];
+// ── LOAD ZERO, AFTER BLOCK 6 (19 Aug 2026) — THE LANES BRAIN_CONFIG DOES NOT DECLARE ──────────
+// `ingest` walks brain_ledger.jsonl and asks brain_config which jobs produce FOR HIM. A lane in the
+// ledger that brain_config has never heard of was silently DROPPED — and the BLOCK 6 entry recorded
+// that as an open gap ("ns_*/dmn_* lanes have no outbox door"). Measured properly, the gap is not
+// what it looked like: all 15 such lanes are consumed by ANOTHER ORGAN, none writes a file he reads.
+//   dmn_rollout · dmn_counter          → dmn.mjs · physio.mjs · council.mjs
+//   ns_probe_bank · ns_distractors ·   → nightshift.mjs · dugout.mjs · thalamus.mjs · gaffer_brain.mjs
+//     ns_pre_answers · ns_grade_probes
+//   cortex_wake · cortex_consolidate   → cortex.mjs · council.mjs
+//   thalamus_adjudicator               → thalamus.mjs
+//   council_chair                      → council.mjs
+//   gaffer_judge · gaffer_verify       → gaffer_brain.mjs (they reach him AS THE CONVERSATION, not as a file)
+//   mission_m03                        → scout.mjs (the mission lane has its own road and its own cards)
+//   haiku_pulse                        → RETIRED (commit 4f94805)
+// So giving them a road would put internal plumbing on the one surface that is supposed to carry
+// only what he needs — the opposite of L7. They stay out, BY DECLARATION rather than by accident,
+// and the suite names any ledger lane that is neither in brain_config nor here: a new lane may not
+// slip past the road unexamined, which is the one thing this list cannot notice about itself.
+export const LANES_NOT_IN_CONFIG = Object.freeze({
+  dmn_rollout: "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens",
+  dmn_counter: "feeds dmn.mjs / council.mjs — the counter behind the rollout",
+  ns_probe_bank: "feeds nightshift.mjs / dugout.mjs — he meets it AS a scrimmage, and dugout stamps its consumption",
+  ns_distractors: "feeds nightshift.mjs / dugout.mjs — he meets it inside get_rejirah, which stamps its consumption",
+  ns_pre_answers: "feeds thalamus.mjs / dugout.mjs — pre-answers for the mouth, never read as a file",
+  ns_grade_probes: "feeds nightshift.mjs — the shift grades its own probes",
+  cortex_wake: "feeds cortex.mjs / council.mjs — a wake is machinery, not a message",
+  cortex_consolidate: "feeds cortex.mjs / nightshift.mjs — consolidation is internal",
+  thalamus_adjudicator: "feeds thalamus.mjs — the bus adjudicates its own signals",
+  council_chair: "feeds council.mjs — the council's own chair turn",
+  gaffer_judge: "feeds gaffer_brain.mjs — it reaches him AS the conversation, which is a surface the relay does not own",
+  gaffer_verify: "feeds gaffer_brain.mjs / scout.mjs — same: the Gaffer's own reasoning inside a sitting",
+  mission_m03: "feeds scout.mjs — the mission lane carries its own returns and its own cards",
+  haiku_pulse: "RETIRED on purpose (commit 4f94805) — 98% of 32,480 tok/pulse was boot tax",
+  selfknowledge: "feeds dugout.mjs get_organism, which stamps its consumption directly",
+});
 const DEFAULT_DEADLINE_H = 12;
 const DEFAULT_MAX_PER_SWEEP = 3;                                 // L7: he is never handed a list
 
