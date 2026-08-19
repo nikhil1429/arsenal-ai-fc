@@ -1,36 +1,36 @@
 {
-  "id": "sit_20260819_0135_44cd",
+  "id": "sit_20260820_2159_fa80",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "voice"
   ],
-  "task": "hallucinations",
+  "task": "forge embeddings",
   "task_id": "1-04",
   "track": "concept",
   "route": "FORGE",
   "concept": "hallucinations",
-  "route_why": "sprint ki current task ek concept hai — THE METHOD",
-  "claude_session_id": "6d220838-5d84-4351-9935-39c853a95814",
+  "route_why": "forge session open @ step 1 — resume, kuch dobara nahi",
+  "claude_session_id": "25c136c7-e1d8-44f9-b22d-49c79ae9a9da",
   "transport": "stream",
-  "opened_at": "2026-08-19T01:35:21.184Z",
-  "last_turn_at": "2026-08-19T01:40:41.605Z",
-  "closed_at": "2026-08-19T02:00:42.325Z",
-  "close_reason": "idle",
+  "opened_at": "2026-08-19T21:59:00.725Z",
+  "last_turn_at": "2026-08-19T22:02:48.935Z",
+  "closed_at": null,
+  "close_reason": null,
   "plan": [
     {
       "i": 0,
       "kind": "map",
-      "step": 3,
+      "step": 1,
       "axis": null,
       "question": true,
       "est_seconds": 20,
       "src": [],
-      "text": "Aaj hallucinations — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?"
+      "text": "Aaj hallucinations — THE METHOD ke 12 kadam, step 1 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?"
     },
     {
       "i": 1,
       "kind": "question",
-      "step": 3,
+      "step": 1,
       "axis": null,
       "question": true,
       "est_seconds": 12,
@@ -49,12 +49,18 @@
     }
   ],
   "plan_source": "skeleton",
-  "plan_map": "Aaj hallucinations — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?",
-  "cursor": 1,
-  "unit_seq": 10,
-  "pending_question": null,
-  "forge_step": 3,
-  "forge_axis": null,
+  "plan_map": "Aaj hallucinations — THE METHOD ke 12 kadam, step 1 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?",
+  "cursor": 2,
+  "unit_seq": 6,
+  "pending_question": {
+    "unit_id": "u_sit_20260820_2159_fa80_4",
+    "text": "Pehle-Guess: bina padhe, hallucinations kya hai — apne shabdon mein ek line? Gut-word pehle.",
+    "axis": "a",
+    "asked_at": "2026-08-19T22:01:55.636Z",
+    "bankable": true
+  },
+  "forge_step": 1,
+  "forge_axis": "a",
   "effort": {
     "compose": "high",
     "respond": "high",
@@ -62,54 +68,51 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 31625,
-  "head_footer": "[sitting_system: role 2717 · how_he_learns EMPTY · gaffer_law 16168 · captain 154 · agenda 5971 (TRIMMED from 6614 — cap 6000) · kickoff 683 · plan 125 · capsule EMPTY · review_of_last 329 · intents 801 · standing EMPTY · night_coach 3910 (TRIMMED from 8345 — cap 4000) · pacer_note 437 · assembled 31625/60000]",
+  "head_chars": 29173,
+  "head_footer": "[sitting_system: role 2717 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · agenda 5676 · kickoff 810 · plan 125 · capsule EMPTY · review_of_last 566 · intents 678 · standing EMPTY · night_coach EMPTY · pacer_note 437 · assembled 29173/60000]",
   "inputs_read": [
+    "learning-layer/HOW_HE_LEARNS.md",
     "THE_GAFFER.md",
     "dressing-room/state/captain.json",
     "dressing-room/state/sitting_agenda.jsonl",
     "learnstate json",
     "dressing-room/state/sitting_reviews.jsonl",
-    "dressing-room/state/session_intent.jsonl",
-    "brain_out/night_coach/2026-08-19.md"
+    "dressing-room/state/session_intent.jsonl"
   ],
   "stats": {
-    "turns": 10,
+    "turns": 7,
     "by_class": {
-      "deliver": 1,
-      "respond": 8,
-      "compose": 1,
+      "deliver": 3,
+      "respond": 2,
+      "compose": 2,
       "judge": 0
     },
     "tokens": {
-      "input": 16,
-      "output": 11057,
-      "cache_creation": 34688,
-      "cache_read": 191857
+      "input": 4,
+      "output": 568,
+      "cache_creation": 9661,
+      "cache_read": 32256
     },
     "latency_ms": {
-      "deliver": [],
+      "deliver": [
+        0
+      ],
       "respond": [
-        48766,
-        6598,
-        9532,
-        10417,
-        8950,
-        8452,
-        7122,
-        4099
+        7096,
+        5543
       ],
       "compose": [],
       "judge": []
     },
-    "units_composed": 10,
-    "units_delivered": 2,
+    "units_composed": 6,
+    "units_delivered": 0,
     "banked": 0,
-    "owner_calls": 3,
-    "head_tokens": 13470
+    "owner_calls": 1,
+    "head_tokens": 8024
   },
   "agenda_ids": [
-    "agmsyysuqy"
+    "agmt0bc1jx",
+    "agmt0bf4n6"
   ],
   "last_receipts": [
     "note ✓"
