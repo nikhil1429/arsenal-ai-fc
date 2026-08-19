@@ -1,7 +1,7 @@
 # THE ORGANISM AUDIT — the carry-forward work order
 
 > Written 19 Aug 2026 ~08:00 IST, at the end of a long session, **for the NEXT session to execute**.
-> His words: *"i want to resolve once for all everything. enough is enough now bruh."*
+> His words: *"i want to resolve once for all everything."*
 >
 > **THIS SESSION READS AND PLANS. IT DOES NOT BUILD.** The session after it builds.
 > Read §0 and §1 first. They are the two things that were never written down, and their absence is
@@ -51,16 +51,23 @@ one waste LAW T actually forbids:
           Here, run as many as the work needs.
   PASS 4  One head. This is judgement and it is the session's actual output.
 
-THREE SOURCES, all of them, none skipped:
-  1. ALL 103 organs / 106,376 lines of code
-  2. ALL 113 .md — dated first (§4-B); the CODE can be wrong too, so when a doc and
-     the code disagree, CLASSIFY it, never rank it
-  3. THE ENTIRE CLAUDE CODE CHAT HISTORY (§4-D-0) — 7,945 sessions under
-     ~/.claude/projects/C--Users-nikhi-GitHub-arsenal-ai-fc, BOTH his turns and the
-     assistant's. Only place the WHY lives. TIER 0 filters it first: the dialogue is
-     6.2% of the bytes and the filter is free.
-Also read his untracked/private folders. He has waived the read concern; §8's privacy
-law still governs what may be COMMITTED.
+THREE SOURCES — all COVERED, none skipped. COVERED IS NOT THE SAME AS READ LINE BY
+LINE, and the method is part of the instruction:
+  1. THE CODE — 103 organs, 106,376 lines. **NOBODY READS THESE WITH A MODEL.**
+     Covered by PASS 1's static scan (all 103 organs, mechanically, free) and then by
+     PASS 3's agents reasoning over xray's GRAPH at the hot spots PASS 1 named.
+     Reading 106k lines is ~1.3M tokens, does not fit any context, and finds fewer
+     bugs than the graph does — the bugs here are NON-LOCAL (§6-D).
+  2. THE .md — all 113. Eight intent docs closely by ONE head (PASS 2); the other ~105
+     by Gemini's single whole-canon sweep. Date each before believing it (§4-B); the
+     CODE can be wrong too, so when a doc and the code disagree, CLASSIFY, never rank.
+  3. THE CHAT HISTORY (§4-D-0) — 7,945 sessions under
+     ~/.claude/projects/C--Users-nikhi-GitHub-arsenal-ai-fc, BOTH sides. The only place
+     the WHY lives. FREE CODE FILTERS IT FIRST (dialogue is 6.2% of the bytes), then
+     Gemini reads the filtered dialogue. No agent touches a raw transcript.
+Also his untracked/private folders — INDEX them with bash first (names, sizes, dates),
+then read only what the index shows is relevant. He has waived the read concern; §8's
+privacy law still governs what may be COMMITTED.
 
 Follow §5 and §4-D-0's pipelines in order. Do not re-measure §3. Do not re-discover §4.
 
@@ -415,13 +422,18 @@ mechanism got invented four times, and each was nailed to the one board that had
 > And treat the git history as a primary source — `git log -S "<symbol>"` tells you which incident
 > a mechanism was born from, which is exactly the question the `.md` cannot answer.
 
-## §5 · THE METHOD — how to read 106,376 lines COMPLETELY
+## §5 · THE METHOD — how to COVER 106,376 lines without reading them
 
 The surface: **103 organs · 106,376 lines of code · 66 canon `.md` · 47 archive `.md` · plus his
 untracked/private folders.** No single context window can hold that, so a straight read is not
 "expensive" — it is **impossible**, and it would silently skip whatever fell off the end.
-The passes below exist for COVERAGE, not for economy: this is how a FANG team audits a system it
-cannot hold in one head. **Depth is the constraint here, not tokens. Do not trade rigour for
+**COVERAGE ≠ READING.** Code is covered by a static pass over all 103 organs plus graph reasoning at
+the hot spots; canon is covered by one close read of the eight intent docs plus one whole-canon
+Gemini sweep; the chat corpus is covered by a free filter plus a Gemini extraction. **At no point
+does any model read the codebase line by line, and any instruction that implies it is a defect in
+this order.**
+The passes below exist for COVERAGE, not for economy: a static pass visits every organ, a reading
+pass visits only what it has room for, and only the first one can promise it missed nothing. **Depth is the constraint here, not tokens. Do not trade rigour for
 brevity anywhere in this order.**
 
 ### ⚠ THE INSTRUMENT IS PART OF THE PASS. Using the wrong one is the waste LAW T names.
@@ -467,11 +479,23 @@ Read these eight in this order:
 **`docs/archive/` is records, not orders — with ONE exception: `LOAD_ZERO__2026-08-19.md`.**
 
 **PASS 3 — TARGETED DEEP READ, and only here spend on agents.**
-Do not fan out over the whole repo. Fan out over the **hot spots PASS 1 named**, one agent per
-subject, each returning a compressed structured finding set so the main thread never holds the files.
-A read-only fleet keeps the main thread's context clean while every file still gets read by
-someone — which is the only way to cover 106k lines without losing the thread.
-**Run as many as the work needs. Say out loud what was left unread, and why.**
+
+> ### ⛔ NOBODY READS 106,376 LINES. NOT ONE AGENT, NOT A HUNDRED.
+> An earlier version of this section said *"every file still gets read by someone"*. **That was
+> wrong and it cost him ~800,000 tokens** when a session followed it literally. It also contradicted
+> the sentence directly above it. Both are corrected here, and this is the rule:
+> **THE CODE IS COVERED BY THE GRAPH, NOT BY READING IT.** PASS 1's static scan already visited all
+> 103 organs mechanically and for free. §6-D's research is explicit: chunked file-reading finds
+> NON-LOCAL bugs *worse* than graph reasoning does, and every defect found on 19 Aug was non-local.
+> Agents here reason over `xray`'s IR plus §3's measurements. An agent opens a FILE only when the
+> graph points at a specific line — never to "cover" it.
+
+Fan out over the **CONCERNS** (correctness · dead code · spend · liveness · security · coverage),
+never over directories, and only at the hot spots PASSES 1–2 named. Each agent returns a compressed
+structured finding set, and **every finding must name the cross-file path that produces it** — a
+finding inside a single file should already have been caught by TIER 0 for free, and if it was not,
+**that TIER 0 gap is the real finding**.
+**Scale to the concerns, not to the file count.** Say out loud what was left unexamined, and why.
 
 **PASS 4 — CLASSIFY BY SHAPE, NEVER BY INSTANCE. ONE HEAD (Claude), NOT AGENTS** — this is
 judgement, and it is the whole output of the session.

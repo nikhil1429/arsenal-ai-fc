@@ -3,10 +3,8 @@
 > **STANDING AND UNIVERSAL. This binds every session, every organ, and every future block of work
 > on the cyborg organism, from 19 Aug 2026 onwards. It is not advice and it is not per-task.**
 >
-> His words: *"i want zero token wastage but i want full top priority with the best quality of work
-> possible and highest and deepest level of intensity with maximum speed. FANG level product
-> optimization should be there from now onwards for the entire cyborg organism universally and
-> globally."*
+> His words: *"zero token wastage … best quality of work possible … product optimization should be
+> there from now onwards for the entire cyborg organism universally and globally."*
 
 ---
 
