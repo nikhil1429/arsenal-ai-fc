@@ -231,6 +231,45 @@ very order: his goal *"the organism fixes the issues it finds itself"* is stated
 > **Default to (2), not (1).** A missing feature is invisible: no test fails, no finding fires, no
 > card is minted. A stale doc at least contradicts something. The silent class is the dangerous one.
 
+## §4-D · HIS DESIGN RULINGS HAVE NO LANE — and that is why they keep getting lost
+
+**His question, 19 Aug:** *"should we give all of our claude sessions history of conversations as
+well to make things most secure?"*
+
+**Answer: NO — and the reason is the finding.**
+
+**What already exists (measured, better than assumed):** his words ARE captured and indexed. Today's
+gate correction (§1) is present in `afferent.jsonl` (raw), `recall_index.jsonl` (indexed for recall)
+and `session_intent.jsonl`. `distiller.mjs` keeps a 4-slot working memory current **on the FREE
+Gemini-flash pool — "ZERO Max budget"**. So history is already available as a **QUERY**, which is
+what LAW T wants: pull on demand, never push the whole corpus into a context.
+
+**Why raw history must NOT be fed to sessions:**
+1. It is the single most expensive thing possible (3,780 transcripts; one session alone is 4.4 MB)
+   and a distilled artifact already exists — the exact waste LAW T §1 defines.
+2. **A conversation is, by volume, mostly SUPERSEDED positions.** In this one session alone, four of
+   the assistant's own positions were corrected by him: that peak-power conflicts with no-waste;
+   that findings should carry repairs (a fifth nailed mechanism); that Gemini extended thinking
+   should stay off; that code wins over docs. **A future session reading those intermediate wrong
+   positions as fact is WORSE than one that never read them.** This is §4-B's disease applied to
+   conversation, where the stale-to-current ratio is far worse than in the canon.
+
+**THE ACTUAL GAP — promotion, not access.** Every other kind of his input has an owner:
+- identity FACTS → `hippocampus` (staged; Law 4, only he promotes)
+- explicit ACTS ("note karo") → `acts.mjs`, receipt in the same turn
+- session ASKS → `intent.mjs`
+- study STATE → `distiller`, free pool
+
+**DESIGN RULINGS have no lane at all.** Today's gate correction is one of the most consequential
+design decisions in the organism's life, and the only reason it became law is that a human-driven
+session hand-wrote it into a file. Unwritten, it would have survived as one row among ~951, findable
+by recall but unknown to anyone who did not already know to look.
+
+**THE LAW TO BUILD:** a ruling lane — his word about HOW THE ORGANISM SHOULD WORK is detected,
+staged with its verbatim quote and date, and promoted to canon only by him (Law 4, exactly like
+`hippocampus`). It is the same shape as three lanes that already exist, pointed at a fourth subject.
+**§2's disease, fifth instance — and this one costs the organism its own design memory.**
+
 ## §4-C · HOW THIS ORGANISM WAS ACTUALLY BUILT — the frame the audit must use
 
 **His words, 19 Aug:** *"organism is created in the incremental order — plan, code, use, find
