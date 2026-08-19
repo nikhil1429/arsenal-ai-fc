@@ -231,12 +231,65 @@ very order: his goal *"the organism fixes the issues it finds itself"* is stated
 > **Default to (2), not (1).** A missing feature is invisible: no test fails, no finding fires, no
 > card is minted. A stale doc at least contradicts something. The silent class is the dangerous one.
 
-## §4-D · HIS DESIGN RULINGS HAVE NO LANE — and that is why they keep getting lost
+## §4-D-0 · THE CONVERSATION CORPUS IS A PRIMARY SOURCE — READ IT. (his correction, 19 Aug)
 
-**His question, 19 Aug:** *"should we give all of our claude sessions history of conversations as
-well to make things most secure?"*
+**I first answered a question he did not ask.** He was not asking whether to inject history into
+every session's context (that answer is still no — see §4-D). **He was asking whether the AUDIT
+should read the entire Claude Code chat history as a SOURCE, from the Claude Desktop store rather
+than from the organism's own capture. The answer is YES, and it is the most important source of
+all — because it is the ONLY place the WHY lives.**
 
-**Answer: NO — and the reason is the finding.**
+- **The CODE** says what was built.
+- **The `.md`** says what was intended, at some date (§4-B).
+- **The CONVERSATION says WHY** — the incident, the reasoning, the alternatives weighed and
+  rejected, and every decision that was never written down anywhere else. §4-C's archaeology
+  cannot be done without it: `git log -S` finds WHEN a mechanism was born; only the transcript of
+  that day says WHAT PROBLEM it was born to solve.
+
+**HIS RULING, and it is right:** *"your replies should be analyzed as well along with mine, because
+a lot of times you gave me ideas which i couldn't think, and vice versa."* Design in this project is
+genuinely two-sided. In this one session, the §2 disease framing, the "the WAL sits behind the
+service it protects" insight and the TIER routing all originated in assistant replies, and became
+durable ONLY because they were hand-written into a file. **Extract BOTH sides.**
+He has also explicitly waived any concern about the data being read (*"i do not care any data going
+anywhere"*) — but §8's privacy law still binds what may be COMMITTED. Read freely; publish nothing.
+
+**MEASURED 19 Aug 2026, so the method is grounded and not guessed:**
+- The store for this project alone: **7,945 sessions · 214,032 rows · 1,313.8 MB.**
+- **The actual conversation is only 6.20% of those bytes — 81.5 MB** (his 59.9 MB, the assistant's
+  21.6 MB). **Tool payloads are ~92%.** On the three largest transcripts, real dialogue was **0.2%**.
+- So a purely mechanical strip takes **1.3 GB → ~81 MB**, and dropping hook output and
+  system-reminder blocks (which arrive as `user` rows) cuts it much further again.
+- Raw, it is ~21M tokens — **20× Gemini's context and unreadable by anything.** Filtered, it is a
+  tractable corpus. **The filter is the whole job, and the filter is free.**
+
+**THE PIPELINE — the only affordable shape, and it is TIER 0 doing the heavy lifting:**
+1. **TIER 0, free:** parse all 7,945 `.jsonl`; keep only `role:user` real turns and `role:assistant`
+   text; drop `tool_use`, `tool_result`, hook stdout and `<system-reminder>` blocks.
+2. **TIER 0, free:** build an INDEX per session — date range, files touched (read them out of the
+   `tool_use` inputs before discarding), commits in that window, message counts. **Then JOIN IT TO
+   GIT BY TIMESTAMP**: a commit at time T was produced by the session running at T. That gives, for
+   any organ, the exact conversation that produced it. **This is §4-C's archaeology, mechanised.**
+3. **TIER 1 — Gemini, extended thinking ON:** feed the filtered dialogue in TIME-ORDERED chunks
+   inside its 1M window and extract *decisions · rulings · alternatives rejected and why · promises
+   made*. Breadth is exactly its strength, and every extraction is a LEAD (§4).
+4. **TIER 2 — Claude:** reads only the extracted decision set, verifies each against code and git,
+   and classifies with §4-B (stale doc · missing implementation · silent drift).
+
+**WHAT TO LOOK FOR FIRST — the highest-value query in the whole corpus:**
+> Every place he said *"I want X"* and X was never built, or was built and later silently regressed.
+> §4-B calls this **MISSING IMPLEMENTATION** and names it the most valuable class in the audit,
+> because nothing in a running system ever complains about a feature that was never built.
+> Goal (4) — *the organism fixes its own issues* — is exactly that, and it was found by reading his
+> words, not his code.
+
+---
+
+## §4-D · WHY THE HISTORY IS STILL NOT INJECTED INTO EVERY SESSION
+
+**A different question from §4-D-0, and the answers differ.** Reading the corpus ONCE, in an audit,
+to extract decisions: **yes** (§4-D-0). Injecting raw history into every session as background:
+**no**. Both hold at once and there is no contradiction — one is extraction, the other is dumping.
 
 **What already exists (measured, better than assumed):** his words ARE captured and indexed. Today's
 gate correction (§1) is present in `afferent.jsonl` (raw), `recall_index.jsonl` (indexed for recall)
