@@ -98,6 +98,33 @@ graph, and where it and `xray` disagree, apply the rule below.
 **11 · `typescript-eslint`** — the companion the research names beside ESLint; it is what makes
 `no-unused-vars` / `no-undef` actually understand JSDoc-typed JS. Adopt it WITH layer 2, not later.
 
+### ⚠ CORRECTIONS + ADDITIONS — 20 Aug 2026, verified on the live web (sources at the bottom)
+
+- **Layer 10 correction — RepoAudit does NOT support JavaScript** (C/C++, Java, Python, Go). For
+  this repo it is a METHOD, never a tool. Keep its validator idea, which is the real prize:
+  **every agent finding must carry a machine-checkable WITNESS — the cross-file path as data —
+  validated against `xray`'s IR by free code before anyone believes it.**
+- **Layer 9 scope — agent-audit is Python-framework-centric** (LangChain/CrewAI/AutoGen). On this
+  organism expect real findings on MCP configs, prompts and secrets — not `.mjs` taint analysis.
+- **Layer 5 addition — ast-grep joins semgrep**: Rust-fast, multi-core, YAML rules, first-class
+  JavaScript. The sharper engine for THIS repo's custom laws over `.mjs`; semgrep keeps the
+  security shapes.
+- **§3 correction — the free tier's real bound is ~250k tokens/minute SHARED, plus per-model
+  requests/day (Pro ~100 · Flash ~250 · Flash-Lite ~1,000).** So "all .md in ONE call" was
+  impossible on the free tier regardless of corpus size — whole-canon sweeps run as 6–8 chunks of
+  ≤200k. And the organism's own night lanes EAT THE SAME daily pool — that is why all 10 keys
+  returned 429 on 19 Aug while a 10-hour-old probe said healthy. His two Gemini WEB accounts
+  (extended-thinking toggle, the missions lane) and the 10 API keys are DIFFERENT lanes with
+  different quotas — never conflate them.
+- **Session-side capabilities found the same day** (operative home: the AUDIT ORDER §10-B):
+  Claude Code native OpenTelemetry · JSONL usage accounting (ccusage-class, TIER 0) · PreToolUse
+  permission rails · `node:sqlite` WAL substrate · WinSW/NSSM supervision.
+
+**20 Aug sources:** github.com/PurCL/RepoAudit · github.com/HeadyZhang/agent-audit +
+arxiv.org/html/2603.22853 · ast-grep.github.io · aifreeapi.com + pecollective.com (Gemini free
+tier 2026) · code.claude.com/docs (monitoring-usage · agent-sdk/permissions) · hirenodejs.com
+(node:sqlite, Node 22) · github.com/winsw/winsw · learn.microsoft.com (RestartOnFailure).
+
 ### CONSIDERED AND NOT CHOSEN — recorded so nobody researches them again
 
 - **`Deptrac`, `Nx`** — architectural-layer alternatives to `dependency-cruiser`. Not chosen:

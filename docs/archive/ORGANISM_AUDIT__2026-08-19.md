@@ -14,85 +14,36 @@
 ```
 STATUS (update this block before any session stops — this is the handoff)
 
-  WRITING THE ORDER ............ ☑ DONE (19 Aug 2026, ~08:00-09:30 IST)
-  PASS 1  compress with code ... ☑ DONE  (19 Aug ~10:00 IST · BASH ONLY, 0 model tokens)
-  PASS 2  read INTENT (.md) .... ☐ NOT STARTED  ◀ THE NEXT SESSION STARTS HERE
-                                   (sized only: the 8 intent docs = 465,636 bytes ≈ 116k tok)
-  PASS 2B read the CHAT CORPUS . ◐ FILTER DONE / EXTRACTION BLOCKED
-                                   TIER 0 filter built + verified: 1.38 GB → 9.0 MB.
-                                   TIER 1 extraction CANNOT RUN — Gemini 429 on all 10 keys.
-  PASS 3  targeted deep read ... ◐ PARTIAL — 7 reports landed, WRONG INSTRUMENT for the
-                                   corpus half (subagents, not Gemini). Findings kept, method not.
-  PASS 4  classify BY SHAPE .... ◐ PARTIAL — five shapes below, from verified evidence only.
-  THE BUILD SESSION ............ ☐ blocked until PASS 2 + PASS 4 land
+  ⛔ THE ORGANISM IS SWITCHED OFF — HIS ORDER, 20 Aug 2026 ("nothing burns tokens anywhere").
+     All 56 ArsenalFC-* tasks Disabled · all daemons killed · the Startup launcher renamed
+     ArsenalFC-Brain.bat.disabled-2026-08-20 (restore = rename back). ONE exception on his
+     word: ArsenalFC-Thalamus re-enabled + running (capture only, zero tokens) so nothing of
+     his is lost while we fix. DO NOT re-enable anything else before S12. RED state lines
+     are EXPECTED until then — they are the switch-off, not a defect.
 
-  NOTHING HAS BEEN BUILT FROM THIS ORDER YET. It is a reading order.
+  WRITING THE ORDER ............ ☑ DONE (19 Aug 2026)
+  PASS 1  compress with code ... ☑ DONE (19 Aug · BASH ONLY, 0 model tokens)
+  PASS 2  read INTENT (.md) .... ☐ scheduled as rung S4 of §10-C
+  PASS 2B read the CHAT CORPUS . ◐ filter done (1.38 GB → 9.0 MB) · extraction = rung S5
+  PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S4–S6
+  PASS 4  classify BY SHAPE .... ◐ five shapes in §9 · finalized at rung S6
+  THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
+  ▶ NEXT SESSION ............... S1 · RAILS (§10-C, first ☐). One rung, ~zero spend, no agents.
+
   ⚠ THE READING SESSION OF 19 Aug COST 505.02 LAKH WEIGHTED — ~2× the organism's whole
     week (254.97 lakh). Cause: subagents on the chat corpus, which is PASS 2B's job and
-    belongs to free code + Gemini. See PROGRESS 2026-08-19 at the bottom.
-  Suite at the moment it was written: npm test 108/0 across 100 members. Tree clean, pushed.
+    belongs to free code + Gemini. §10's rails (S1) exist so that class cannot recur.
 ```
 
-**THE PROMPT TO PASTE INTO THE NEXT SESSION** (it is also the whole handoff — this file carries
-the rest):
+**THE PROMPT TO PASTE INTO THE NEXT SESSION — version 3, 20 Aug 2026.** (§10 is the plan and
+the ladder is the handoff. Version 2 — the full READ prompt — lives in git history; its rules
+survive in §5, which rungs S4 and S5 still obey verbatim.)
 
 ```
-Read docs/archive/ORGANISM_AUDIT__2026-08-19.md in full before anything else. Execute it.
-
-This is a READ + PLAN session. Do not build, do not edit code, do not commit fixes.
-
-DEPTH IS THE CONSTRAINT, NOT TOKENS. This is his top priority. Never trade rigour for
-brevity.
-
-THE INSTRUMENT IS PART OF THE JOB — §5 has the table, and getting this wrong is the
-one waste LAW T actually forbids:
-  PASS 1  BASH ONLY. Eight commands. ZERO model tokens.
-          NO subagents, NO Gemini. If you are about to spawn an agent to run
-          `node scripts/xray.mjs report`, you are paying for a free result.
-  PASS 2  ONE coherent reader. No fan-out — separate agents each holding one doc
-          cannot see a contradiction BETWEEN docs, which is the whole point.
-  PASS 2B free code filters the transcripts first (94% of the bytes are tool noise),
-          THEN Gemini reads the filtered dialogue. No agent touches raw transcripts.
-  PASS 3  SUBAGENTS BELONG HERE AND ONLY HERE — by CONCERN, never by directory,
-          over xray's graph, and only after PASSES 1-2 have narrowed the target.
-          Here, run as many as the work needs.
-  PASS 4  One head. This is judgement and it is the session's actual output.
-
-THREE SOURCES — all COVERED, none skipped. COVERED IS NOT THE SAME AS READ LINE BY
-LINE, and the method is part of the instruction:
-  1. THE CODE — 103 organs, 106,416 lines. **NOBODY READS THESE WITH A MODEL.**
-     Covered by PASS 1's static scan (all 103 organs, mechanically, free) and then by
-     PASS 3's agents reasoning over xray's GRAPH at the hot spots PASS 1 named.
-     Reading 106k lines is ~1.3M tokens, does not fit any context, and finds fewer
-     bugs than the graph does — the bugs here are NON-LOCAL (§6-D).
-  2. THE .md — all 116. Eight intent docs closely by ONE head (PASS 2); the other ~108
-     by Gemini's single whole-canon sweep. Date each before believing it (§4-B); the
-     CODE can be wrong too, so when a doc and the code disagree, CLASSIFY, never rank.
-  3. THE CHAT HISTORY (§4-D-0) — 7,945 sessions under
-     ~/.claude/projects/C--Users-nikhi-GitHub-arsenal-ai-fc, BOTH sides. The only place
-     the WHY lives. FREE CODE FILTERS IT FIRST (dialogue is 6.2% of the bytes), then
-     Gemini reads the filtered dialogue. No agent touches a raw transcript.
-Also his untracked/private folders — INDEX them with bash first (names, sizes, dates),
-then read only what the index shows is relevant. He has waived the read concern; §8's
-privacy law still governs what may be COMMITTED.
-
-Follow §5 and §4-D-0's pipelines in order. Do not re-measure §3. Do not re-discover §4.
-
-BUT READ §3-B FIRST: some of §3's numbers were MEASURED and some were CALCULATED by
-the assistant from an assumed ratio. The calculated ones decide what fits in which
-context, so verify each with ONE command before you rely on it — never by arithmetic,
-never with a model. A wrong ratio there produces a wrong PLAN, not a wrong sentence.
-
-Every instrument here is a LEAD, not a fact — §4 shows four raw scans that were each
-majority-false. Verify by RUNNING, not by reading more code.
-
-Hunt hardest for MISSING IMPLEMENTATION: every place he said "I want X" and X was never
-built. Nothing in a running system ever complains about a feature that never existed.
-
-Output: NOT a list of issues. Groups of issues that share a SHAPE, one fix per shape,
-each with a ratchet so the shape cannot return. Write it into that same file and commit.
-
-Say out loud what you left unread, and why.
+Open docs/archive/ORGANISM_AUDIT__2026-08-19.md. Read ▶ RESUME HERE, §10-C and §10-D.
+Execute exactly ONE rung — the first ☐ in §10-C — under its ceiling and §10-D's rules.
+Before stopping: update the ticks honestly, append a PROGRESS entry, run §3-C's check,
+commit. Then tell me: what landed, what it cost, and the one line I must decide (if any).
 ```
 
 **THE HANDOFF RULE — every session that touches this file obeys it.**
@@ -935,6 +886,164 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
 
 ---
 
+## §10 · THE EXECUTION PLAN — his order, 20 Aug 2026. THE LADDER IS THE HANDOFF.
+
+> His words, 20 Aug: *"this product now demands FANG level work of discipline, intensity and
+> everything"* · *"take the first seat and tell me what to do so all future sessions can do work
+> on this issue without loosing the quality of work."*
+> This section supersedes §7's SEQUENCING; §7's build order survives inside rungs S7–S11.
+> **One session = one rung. No session ever does two.**
+
+**GROUND TRUTH THIS PLAN STANDS ON (20 Aug 2026):**
+- **THE ORGANISM IS SWITCHED OFF — his order.** See ▶ RESUME HERE. One exception on his word:
+  thalamus (capture only, zero tokens), because capture was being silently lost while everything
+  was down — the class S8 exists to kill.
+- The hallucinations forge session was CLOSED on his word (history row recorded; he redoes it
+  later, fresh). Instagram/ChatGPT ingestion is ON HOLD on his word — out of this plan.
+- **THE TWO ROOTS every rung serves.** **(A) The organism has no CONTRACT LAYER** — §9's five
+  shapes are one disease seen from five angles: an EDGE (producer→consumer · order→implementation
+  · measurement→decision · code→checker) whose contract is declared nowhere. The fix is ONE
+  registry + declare-or-die, not five patches — the pattern already wins in three places
+  (AFFERENT_SOURCES · WHY_CODE_CANNOT_DECIDE · LANES_NOT_IN_CONFIG); it becomes the substrate.
+  **(B) THE FACTORY IS LESS GUARDED THAN THE PRODUCT** — both token disasters (the 16-agent
+  fleet, the 505-lakh session) happened in SESSIONS, not in the organism. The sessions that build
+  the organism have none of the organism's own discipline, and a work-order `.md` is the most
+  dangerous executable prose in the repo — one self-contradiction cost 505 lakh. Rails come
+  first for exactly that reason.
+
+### §10-B · WHAT EXISTS TODAY THAT 19 AUG DID NOT FIND — verified 20 Aug on the live web
+
+1. **Claude Code native OpenTelemetry.** `CLAUDE_CODE_ENABLE_TELEMETRY=1` + an OTLP/Prometheus
+   exporter emits real-time token/cost/session/tool metrics for HIS OWN sessions. This closes
+   §3's measured blind spot: *"the brain ledger cannot see his Claude Code or Gaffer sessions."*
+2. **The usage objects are already on disk.** Every assistant turn in every session JSONL under
+   `~/.claude/projects/` carries a `usage` block; ccusage-class parsing turns them into per-day /
+   per-session / per-5-hour-block accounting for ZERO tokens. TIER 0. The 505-lakh class becomes
+   a five-minute alarm instead of a Monday post-mortem.
+3. **PreToolUse hooks are RAILS.** A hook may return allow/deny/ask BEFORE permission modes run,
+   even under skip-permissions. LAW T stops being prose: fleet-spawn without a declared ceiling →
+   deny · session editor writing under dressing-room/state → deny (owners law at session level) ·
+   `claude -p` from a session shell → deny. (Deny-ignored bug reports exist upstream — S1
+   verifies the deny actually bites before trusting it.)
+4. **`node:sqlite` ships inside Node 22** (better-sqlite3 the mature alternative), WAL mode:
+   transactional, crash-consistent local store. The torn-write class — the stray
+   `gaffer_blocks.json.tmp6756` in live state is its corpse — ends wherever this substrate is
+   used. L9: NEW lanes only (spool, queues); no rewrite of existing state files.
+5. **ast-grep** — Rust-fast structural search/lint, YAML rules, first-class JavaScript. The
+   sharper engine for the organism's OWN laws over `.mjs`; semgrep keeps the security shapes.
+6. **WinSW / NSSM + Task Scheduler RestartOnFailure** — real supervision for the headless five;
+   session-0 isolation PROVES turnstile/dugout can never be services (logon tasks, honestly).
+7. **CORRECTIONS to the 19 Aug research — recorded in LAW T (single source, dated block):**
+   RepoAudit does NOT support JavaScript (method, not tool — keep its validator idea: **every
+   agent finding carries a machine-checkable WITNESS, the cross-file path as data, validated
+   against xray's IR by free code**) · agent-audit is Python-framework-centric (expect MCP-config
+   /prompt/secret findings, not `.mjs` taint) · the Gemini free tier is bounded by ~250k
+   tokens/minute SHARED plus per-model requests/day (Pro ~100 · Flash ~250 · Lite ~1,000), so the
+   whole-canon sweep is 6–8 chunks of ≤200k, never one call — and the organism's own night lanes
+   EAT THE SAME daily pool, which is why all 10 keys were 429 while a 10-hour-old probe said
+   healthy · his two Gemini WEB accounts and the 10 API keys are DIFFERENT lanes with different
+   quotas — never conflated again.
+
+### §10-C · THE SESSION LADDER — one rung per session, ceilings are HARD STOPS
+
+Ceilings are weighted lakh. At the ceiling the session STOPS and hands off cleanly — that is
+§10-D rule 2, and the meter built in S1 is what makes it enforceable.
+
+```
+☐ S1  RAILS — the factory gets the organism's discipline. ~zero spend, no agents.
+      (a) HIS-SESSION SPEND METER: TIER-0 parse of the usage blocks in the session
+          JSONLs → one line in the state surface ("his sessions today: N lakh") + a
+          Stop hook that prints this session's running total at every stop.
+      (b) PRETOOLUSE RAILS: deny fleet-spawn without an explicit ceiling in the
+          prompt · deny session-editor writes under dressing-room/state · deny
+          claude -p from session shells. PROVE each deny bites (upstream bug reports).
+      (c) the §3-C order-checker runs pre-commit for every order file in docs/archive.
+      DONE-PROOF: spend line visible at a session stop · a ceiling-less fleet call is
+      refused in a live test · suite green, gates stricter only.        CEILING: 5
+☐ S2  TYPE + LINT GATES — tsc --checkJs via @ts-check on the ~12 hottest organs first;
+      eslint + typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103
+      with a FROZEN BASELINE: existing counts may only FALL. Both ride npm test.
+      DONE-PROOF: a planted readJsonl()-class ReferenceError goes RED before runtime,
+      then is removed.                                                  CEILING: 8
+☐ S3  THE LAW PACK — the organism's own laws as ast-grep YAML rules: owners-only ·
+      LAW M no-literal-model-names · THE JUGAD RULE (an order with a universal
+      quantifier may never ship as a literal subject list — Shape 1's ratchet) ·
+      trailing-N reads without a recency compare (Shape 4's ratchet) · bare catch{}.
+      Plus knip (orphan exports as LEADS, replacing the crying-wolf orphan query) and
+      dependency-cruiser (the import half of owners-only, declaratively). Superseded
+      hand-rolled scans are narrowed to organism-only knowledge — LAW T's rule.
+      DONE-PROOF: every new rule proven to BITE on a planted violation.  CEILING: 8
+☐ S4  PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim). Output:
+      contradictions + missing-implementation list, folded into §9.     CEILING: 6
+☐ S5  THE GEMINI SWEEPS — re-check the keys live first; canon in ≤200k chunks
+      (6–8 calls, thinking ON, schema'd output) + corpus extraction in chunks
+      (decisions · rulings · promises · alternatives-rejected). EVERY return is a
+      LEAD; one command verifies each before it may enter §9. API pool dry → his
+      Gemini WEB lane instead.                       CEILING: 2 (Claude side)
+☐ S6  PASS 4 FINAL + THE REGISTRY SPEC — one head, the hardest judgement in the plan.
+      The registry row: {owner · right_consumer · slot · spend_class · trust_tier ·
+      subjects[]}. Migration map for all 12 Shape-1 instances · the rulings lane (a
+      design disposition on the acts substrate — Shape 2) · the MEMORY-index ratchet ·
+      the witness-validation spec for any future agent finding.
+      ⛔ APPROVAL GATE: HE reads the spec and says haan before S7 exists. CEILING: 8
+☐ S7  BUILD · GATE C — his §1 correction lands: the consumer map becomes registry
+      rows; the lane verdict judges by DECLARED consumer. PROOF: re-run the six
+      gate-card class and show the verdicts change for the right reason. Ratchet: no
+      lane runs without a declared consumer.                            CEILING: 8
+☐ S8  BUILD · THE SPOOL — write-ahead in the capture nerve on node:sqlite: local row
+      FIRST, then POST; thalamus drains on boot; event_key dedup = at-least-once +
+      idempotent consumer. PROOF (sandbox): kill thalamus → prompt → spool row →
+      revive → exactly one bus row. Daemon death becomes latency, never loss.
+                                                                        CEILING: 6
+☐ S9  BUILD · OWNERSHIP — WinSW services for the headless five · logon tasks for the
+      desktop two · the watchdog becomes a REPORTER (finding + witness, never a
+      launcher) · the conductor gets per-step fallback (folded_into, generalized).
+      ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
+                                                                        CEILING: 8
+☐ S10 BUILD · THE REGISTRY — un-nail all twelve Shape-1 instances (shadow · bootroom ·
+      gate_tune · trust_tiers · tasks · isFixture · slot-awareness · wall_review ·
+      docClaims · teaching_audit · course · CORE_AXES) onto registry rows; the rulings
+      lane goes live; every memory file indexed or the suite is red. The S3 jugad rule
+      now has teeth everywhere.                                         CEILING: 12
+☐ S11 BUILD · STALENESS / KEYS / CRASH — sha256(inputs) folded into cache keys ·
+      recency gates on trailing-N reads · rotated cards record expired_unanswered ·
+      tmp-file replay on boot (the torn-write class) · ajv JSON-Schema per state file
+      (owners-only says WHO writes; the schema says WHAT).              CEILING: 6
+☐ S12 STAGED REBOOT — dependency-ordered wake: capture → deterministic organs → his
+      surfaces → LLM lanes LAST, each behind the corrected gate AND first_real_row_at
+      (no lane spends until its input class holds real data — §0's headline finding,
+      finally a code path). Watchdog-reporter live. The 7-day measure window restarts.
+      ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.       CEILING: 4
+```
+
+**The whole ladder's ceiling ≈ 81 lakh weighted across ~12 sessions — the one unguarded session
+of 19 Aug burned 505 by itself.** S1–S3 are cheap and mostly deterministic — they fit before
+Monday's quota reset. S6–S11 are judgement-heavy — schedule after Monday 23:30 IST unless the
+week leaves room. His study never waits on any of this; the organism stays off throughout.
+
+### §10-D · THE STANDING RULES — every session, no exceptions
+
+1. Open THIS file first. Execute exactly ONE unticked rung. Never two.
+2. The rung's ceiling is a STOP, not a suggestion — hand off cleanly at it.
+3. No subagents/fleets anywhere except where a rung names them, never without a ceiling.
+4. State files are written by their owner CLIs only — never by a session's editor.
+5. §4's rule binds everything new too: every instrument — S3's tools, every Gemini return, every
+   agent finding — is a LEAD until one run verifies it; agent findings must carry their WITNESS.
+6. A gate may only get stricter. A rung that weakens any gate is refused, whole.
+7. Before stopping: RESUME + ticks (only what is TRUE) · PROGRESS entry · §3-C check · commit.
+8. Speak to him in one short block: what landed · what it cost · the one decision, if any.
+
+### §10-E · THE DRIVER'S CARD — his whole job, nothing else
+
+**Every session, paste exactly the version-3 prompt at the top of this file.** That is all.
+
+**His decision moments (the only ones):** S6 — the registry spec, haan/na · S12 — each reboot
+stage, haan/na · plus any card a rung explicitly raises with its why_code_cannot_decide.
+**His verify line, any time:** `node scripts/state.mjs` — RED lines are EXPECTED until S12; the
+switch-off is deliberate and recorded, not a defect.
+
+---
+
 ### PROGRESS 2026-08-19 ~11:00 IST
 
 **DONE.** PASS 1 complete — bash only, zero model tokens, 8 instrument outputs. PASS 2B's TIER 0
@@ -991,3 +1100,23 @@ cross-verified and are kept; the method is not repeated.
 the eight intent docs, ONE head, no agents**; (3) re-check Gemini with one command and, if it
 answers, the whole-canon sweep in 2–3 calls; (4) finish PASS 4 by folding PASS 2's contradictions
 into the five shapes above. **It does not re-read the corpus and does not re-run the seven reports.**
+*(Superseded 20 Aug: the ladder in §10-C carries this same work as rungs S4–S6 — follow §10.)*
+
+### PROGRESS 2026-08-20 ~05:30 IST
+
+- **HIS ORDER EXECUTED: the entire organism is SWITCHED OFF.** 56 tasks Disabled · 7 daemons + 3
+  cmd wrappers killed · the Startup launcher neutralized by rename · no cloud crons existed.
+  One exception on his word: **thalamus re-enabled + running** (capture only, zero tokens) —
+  because capture WAS being silently lost while everything was down (~03:56–04:55 IST window is
+  gone forever; S8's spool is what makes this class impossible).
+- The hallucinations forge session **closed via its owner** (history row recorded, method_clean
+  false, all axes untouched — it held nothing). He redoes it fresh later. Instagram/ChatGPT
+  ingestion **ON HOLD on his word** — out of the plan.
+- **Both 19 Aug threads read END TO END** (1,274 + 266 messages — every prompt of his, every
+  visible assistant reply) and re-verified against the live repo: §9's five shapes hold; Shape 2's
+  memory claim re-confirmed live (**48 memory files, 10 indexed**); the torn-write corpse
+  (`gaffer_blocks.json.tmp6756`) still in live state — evidence for S11's crash class.
+- **§10 WRITTEN — the execution plan.** Two roots named: (A) no contract layer, (B) the factory
+  is less guarded than the product. §10-B records the 20 Aug research layer; LAW T carries the
+  dated corrections (RepoAudit≠JS · agent-audit scope · Gemini TPM/RPD reality · ast-grep).
+- **THE NEXT SESSION IS S1 · RAILS — and nothing else.**
