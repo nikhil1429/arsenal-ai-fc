@@ -380,7 +380,7 @@ Gemini-flash pool — "ZERO Max budget"**. So history is already available as a 
 what LAW T wants: pull on demand, never push the whole corpus into a context.
 
 **Why raw history must NOT be fed to sessions:**
-1. It is the single most expensive thing possible (3,780 transcripts; one session alone is 4.4 MB)
+1. It is the single most expensive thing possible (7,945 transcripts; one session alone is 4.4 MB)
    and a distilled artifact already exists — the exact waste LAW T §1 defines.
 2. **A conversation is, by volume, mostly SUPERSEDED positions.** In this one session alone, four of
    the assistant's own positions were corrected by him: that peak-power conflicts with no-waste;
@@ -505,55 +505,41 @@ shape with a ratchet so the shape cannot return. §2 is the model.
 
 ---
 
-## §6 · THE TOOLING ANSWER — including what is NOT here yet
+## §6 · THE TOOLING ANSWER — **the authority is `docs/archive/TOOLING_LAW__2026-08-19.md`**
 
-**THE FANG GAP, measured 19 Aug: 106,376 lines of code, and ZERO linter, ZERO type-checking,
-ZERO coverage, ZERO test framework.** `devDependencies` is `acorn` + `acorn-walk` — and those exist
-only so `xray.mjs` can hand-roll its own parser.
+> **DO NOT MAINTAIN A SECOND COPY OF THE TOOL LIST HERE.** An earlier version of this section did,
+> and within hours it had already drifted — it was missing `dependency-cruiser` and `semgrep`, the
+> two that matter most for this organism. **LAW T is the single source; read §2 of it.** That is the
+> §2 disease in miniature and it is not repeated.
 
-**And three of this repo's instruments are hand-rolled versions of tools the industry already
-solved — with far lower false-positive rates than the ones measured here (§4):**
+**LAW T is bound into `CLAUDE.md`, so every session reads it before doing anything.** In one line:
+**TIER 0 deterministic code (free AND better) · TIER 1 Gemini (breadth only, extended thinking ON,
+never believed without a TIER 0 check) · TIER 2 Claude (judgement only).**
 
-- `swallow` + xray's 445 SWALLOWED EXCEPTIONS → **eslint `no-empty` / `no-unused-vars`.** One rule,
-  ~0 false positives, runs in seconds.
-- xray's **82 ORPHAN VERBS** and 5 orphan lanes → **knip** (purpose-built for unused exports, files
-  and deps). xray's own BROKEN EDGE query just scored **5 of 5 false**.
-- `mutagen.mjs` → **Stryker Mutator**, the real mutation-testing engine.
-- circular imports → **madge**. Coverage (which of 106k lines never executes) → **c8**, native to node.
+**The gap it fills, measured 19 Aug:** 106,376 lines of code with **ZERO linter, ZERO type-checking,
+ZERO coverage, ZERO dead-code analysis** — `devDependencies` is `acorn` + `acorn-walk`, and those
+exist only so `xray.mjs` can hand-roll its own parser. **The highest-value single item is
+`tsc --checkJs` + JSDoc** (no TypeScript rewrite): on 19 Aug a wire called `readJsonl(...)`, a helper
+`watchman.mjs` does not have; a `swallow` ate the ReferenceError and it **shipped GREEN while the
+check never ran once**, exactly as that file's own comment records happening before.
 
-**THE SINGLE HIGHEST-VALUE ADDITION: `tsc --checkJs` with JSDoc types. No TypeScript rewrite.**
-Reason, and it is not theoretical: on 19 Aug a wire called `readJsonl(...)`, a helper `watchman.mjs`
-does not have. It was a ReferenceError, it fell straight into a `swallow`, and it **shipped GREEN
-while the check never ran once**. That file's own comment records the SAME thing happening before.
-`tsc --checkJs` catches that entire class statically, at zero runtime cost, before it can be
-swallowed. **In a 106k-line codebase held together by silent catches, this is the biggest single
-safety win available.**
+**Two additions LAW T names that are NOT in this order's older drafts, and both matter here:**
+- **`dependency-cruiser`** — validates dependencies against **rules you write**. This repo's central
+  owners-only law is enforced today by hand-rolled regex; this makes the import-level half of it a
+  declarative, maintained rule set.
+- **`semgrep`** — a semantic pattern engine for the organism's OWN laws (owners-only, LAW M
+  literals, bare `catch {}`, word-routing, canon counts), which are precisely the scans that produce
+  the false positives catalogued in §4.
 
-**HOOKS — one is missing and it is cheap.** A `PostToolUse` hook that runs the edited organ's own
-`selftest` after any write to `scripts/*.mjs`. Test-on-save. The repo already has a mature hook
-dispatcher (`turn_hook.mjs`); this is one more callee.
+**MCP:** the registry was searched on 19 Aug for code-analysis / lint / testing / observability —
+**nothing relevant returned.** Do not invent a need. `organism-memory` is already connected and is
+the right place for durable findings (`note`, `remember_fact`) so the BUILD session does not
+re-derive what this one learns.
 
-**SKILLS** — build `/audit`: it runs PASS 1 and prints the compressed map, making every future audit
-nearly free. The existing skill set is otherwise good and needs no additions.
-
-**MCP — searched the registry on 19 Aug for code-analysis / static-analysis / lint / testing /
-observability: NOTHING RELEVANT RETURNED.** Do not invent a need. The already-connected
-`organism-memory` is the correct and sufficient place for durable findings (`note`,
-`remember_fact`) so the building session does not re-derive what the reading session learned.
-
-**SUBAGENTS** — PASS 3 only (§5), read-only, structured returns, capped, with what was left unread
-said out loud.
-
-**WHAT NOT TO ADD:** no new MCP servers, no new plugins, no LLM-in-the-loop repair. The repo's
-thesis — *AI proposes · code validates · human approves* — is correct and a model that reads
-findings and acts would break it.
-
-**THE ORDER TO ADOPT THEM** (cheapest and highest-value first, each one a gate in `npm test`):
-1. `tsc --checkJs` + JSDoc on the hot organs — kills the swallowed-ReferenceError class
-2. `eslint` with `no-empty` — turns 445 hand-counted silent catches into an enforced rule
-3. `knip` — replaces the 82-orphan-verb query with a tool that does not cry wolf
-4. `c8` coverage — find which of 106,376 lines has never once executed
-5. the `PostToolUse` selftest hook, and the `/audit` skill
+**Also worth building, and neither exists yet:** a `PostToolUse` hook that runs the edited organ's
+own `selftest` after any write to `scripts/*.mjs` (test-on-save, one more callee on the existing
+`turn_hook.mjs` dispatcher), and an **`/audit` skill** that runs PASS 1 and prints the compressed
+map — which makes every future audit nearly free.
 
 ## §6-B · THE ROUTING LAW — his definition of zero waste, made mechanical
 
