@@ -124,13 +124,20 @@ your budget on what is NOT in this list.
   - `dmn.mjs × 6` — ENOENT `rejirah_log.jsonl`.
 
 **Tests that inherit live state — the SAME class, found again on 19 Aug**
-- `sitting.mjs` selftest goes RED the moment a FORGE session is genuinely open. Assertions at
-  `sitting.mjs:1255` and `:1257` both assume *"no forge session on disk"*; with his real session
-  live the code takes the RESUME path instead of the START path and they fail. **Nothing was
-  broken — he was studying.** Deliberately NOT fixed on 19 Aug: he was mid-session at step 3/11 and
-  editing `sitting.mjs`/`forge_session.mjs` under a live sitting risks his study, which is the one
-  thing this organism exists to protect. Fix it when no session is open, by pinning the forge-session
-  path in the selftest the way `ARSENAL_SAMJHAO_LEDGER` and `ARSENAL_TASKS_LEDGER` already are.
+- **A SELFTEST OPENED A REAL FORGE SESSION ON HIS LIVE STATE, and it stayed open for 2.2 hours.**
+  Measured: `forge_session.json` started 2026-08-19T01:35:21Z — during an `npm test` run — with
+  `axes_done: 0`. **He had not started it and said so.** For those 2.2 hours it drove the
+  teaching-contract hook on EVERY turn ("FORGE CONTRACT · STEP 3/11 · META-FREEZE ON"), which
+  silently forbids system work — a test was steering his teaching contract. Closed 03:46Z through
+  the owner's CLI (`forge_session.mjs close`, deterministic, no LLM, does not touch the capsule —
+  the LOCK is step 10 and this sat at step 3), after which `sitting.mjs` selftest went green again.
+  Its two assertions (`sitting.mjs:1255`, `:1257`) assume *"no forge session on disk"*, so they had
+  been failing against the very state a test had created.
+  **This is the exact class of his 19 Aug ruling — *"proof hamesha sandbox mein, live mein kabhi
+  nahi"* — which was enforced for `samjhao` and never generalised. Same disease as §2.**
+  FIX: pin the forge-session path in the selftest the way `ARSENAL_SAMJHAO_LEDGER` and
+  `ARSENAL_TASKS_LEDGER` already are, and extend `samjhao`'s `isFixture()` guard to EVERY organ
+  that writes his study state.
 - This is the fourth instance of *"a ratchet that inherits live state is not a ratchet"* — a lesson
   this repo has now paid for in `samjhao`, `outbox`, `unleash_verdict` and here.
 
@@ -186,6 +193,39 @@ question — `foldSlotAhead` — and the watchman re-implemented it badly. **Tha
 again, fifth instance.**
 
 ---
+
+## §4-B · THE CANON IS OF MIXED VINTAGE — read it as history, not as spec
+
+**His warning, 19 Aug:** *"some .md content might be old so it needs to use its brain on deepest
+rock bottom level to analyze everything first."* He is right, and it is measurable.
+
+**Measured: the oldest canon files date to 2026-07-11** — over a month before most of the organism
+existed (`SYSTEM_BLUEPRINT.md`, `SYSTEM_FOUNDATION.md`, `EXECUTION_FINAL_Tier2_Metamorphosis.md`,
+`FORGE_DEEP_RENDER_BRIEF.md`, `About.md`, and the FINOPS files). Reading any of them as a
+description of the organism TODAY would be wrong in a way nothing in the repo would contradict.
+
+**THE RULE FOR THE READING SESSION:**
+> Date every `.md` before you believe it (`git log -1 --format=%ad -- <file>`). A canon file is a
+> snapshot of intent AT THAT DATE. Where a document and the CODE disagree, **the code is what the
+> organism does** — but the document may still be what he WANTED, and that gap is itself the
+> finding. Never silently prefer one; name the disagreement and its date.
+
+## §4-C · HOW THIS ORGANISM WAS ACTUALLY BUILT — the frame the audit must use
+
+**His words, 19 Aug:** *"organism is created in the incremental order — plan, code, use, find
+issues, then plan, use, find issues, so on and on, and we kept on patching majorly."*
+
+**That is the true history and it explains the §2 disease completely.** Every loop produced an
+excellent solution to the incident in front of it. No loop ever asked *"what else in this organism
+has this shape?"* — because there was no §0 saying what classes of problem exist. So the same
+mechanism got invented four times, and each was nailed to the one board that had just broken.
+
+**THEREFORE THE AUDIT IS NOT A BUG HUNT. It is an ARCHAEOLOGY.**
+> For every issue found, ask: *which incident produced this code, and what was the GENERAL law that
+> incident was an instance of?* The fix is the general law plus a ratchet. The bug is the evidence,
+> never the target.
+> And treat the git history as a primary source — `git log -S "<symbol>"` tells you which incident
+> a mechanism was born from, which is exactly the question the `.md` cannot answer.
 
 ## §5 · THE METHOD — how to read 106,376 lines COMPLETELY
 
