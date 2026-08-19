@@ -410,8 +410,20 @@ The passes below exist for COVERAGE, not for economy: this is how a FANG team au
 cannot hold in one head. **Depth is the constraint here, not tokens. Do not trade rigour for
 brevity anywhere in this order.**
 
-**PASS 1 — COMPRESS WITH CODE.** Not to save money — because a deterministic scan over all 103
-organs is more COMPLETE than any reading pass, and it is repeatable tomorrow.
+### ⚠ THE INSTRUMENT IS PART OF THE PASS. Using the wrong one is the waste LAW T names.
+
+| pass | instrument | FORBIDDEN here |
+|---|---|---|
+| **PASS 1** compress with code | **BASH ONLY — 8 commands.** Zero model tokens. | **NO subagents. NO Gemini.** A subagent to run a shell command is a paid call for a free result. |
+| **PASS 2** read INTENT (.md) | **ONE coherent reader (Claude).** Intent needs one head holding it. | No fan-out — 8 agents each reading one doc cannot notice a contradiction BETWEEN docs. |
+| **PASS 2B** the chat corpus | **TIER 0 filter (free code) → then Gemini** for breadth extraction. | No agent reads raw transcripts; the filter is free and 94% of the bytes are noise. |
+| **PASS 3** targeted deep read | **SUBAGENTS — by CONCERN, over xray's graph.** | Not by directory. Not before PASSES 1–2 have narrowed the target. |
+| **PASS 4** classify by shape | **Claude, one head.** | Not agents — this is judgement, and it is the output of the whole session. |
+
+**PASS 1 — COMPRESS WITH CODE. IT IS EIGHT BASH COMMANDS AND NOTHING ELSE.** Not to save money —
+because a deterministic scan over all 103 organs is more COMPLETE than any reading pass, and it is
+repeatable tomorrow. **If you are about to spawn an agent for this pass, stop: you are paying a
+model to run `node scripts/xray.mjs report`.**
 The organism already turns itself into facts. Run these and read the OUTPUT, not the source:
 ```bash
 node scripts/xray.mjs report          # structure: writers, readers, orphans, dead reads, verbs

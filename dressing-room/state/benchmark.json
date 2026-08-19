@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-13",
+  "date": "2026-08-19",
   "status": "gated_pre_audit",
   "gate": {
     "reason": "Ruling 6 — benchmark ships AFTER the full-syllabus audit refresh (measuring against a stale map is half a lie; DOSSIER researched 29 Jun 2026)",
@@ -8,5 +8,5 @@
   "input_faults": [],
   "blocking_faults": [],
   "runs": [],
-  "generated_at": "2026-08-12T23:18:38.723Z"
+  "generated_at": "2026-08-19T04:29:01.881Z"
 }
