@@ -1119,7 +1119,9 @@ week leaves room. His study never waits on any of this; the organism stays off t
    agent finding — is a LEAD until one run verifies it; agent findings must carry their WITNESS.
 6. A gate may only get stricter. A rung that weakens any gate is refused, whole.
 7. Before stopping: RESUME + ticks (only what is TRUE) · PROGRESS entry · §3-C check · commit.
-8. Speak to him in one short block: what landed · what it cost · the one decision, if any.
+8. Speak to him in one short block: what landed · what it cost · the one decision, if any —
+   **and ALWAYS end by naming the NEXT rung + its MODEL·effort line**, so he selects the right
+   model before pasting the prompt and never has to look anything up.
 9. **THE MICRO-ORDER RULE (first act, before any edit):** write the rung's micro-order into the
    session scratchpad — files to touch · steps · the DONE-proof commands · the rung's FORBIDDEN
    list — and check it against §10-C/§10-D. Only then edit. No micro-order = improvising, refused.
@@ -1180,6 +1182,22 @@ acorn-walk only, until S2 adds the toolchain.
   lane, in a version commit.
 - **After S12:** a quarterly version rung. Ad-hoc bumps stay forbidden — a blind bump is the same
   disease as a blind fleet.
+
+### §10-H · WHEN THE LADDER ENDS — what "finished" actually means
+
+- **S12's last stage flipped on his word = the organism runs again, better than it ever did:**
+  the corrected gate holds every token · the meter sees BOTH sides (his sessions + organism
+  lanes) · every §9 shape is closed under a ratchet that cannot loosen · daemons have owners ·
+  daemon death is latency, never data loss · the registry is live and declare-or-die.
+- **Yes — real code AND real docs get written along the way.** S7–S11 ship working code with
+  tests riding `npm test`. And every doc-vs-code disagreement that S4/S6 surfaced gets its §4-B
+  fix: a STALE DOC is corrected · a MISSING IMPLEMENTATION is built or carded with its why ·
+  SILENT DRIFT goes to him as one line. No document is left lying when the ladder closes.
+- **Then this file CLOSES the way LOAD_ZERO closed:** a final PROGRESS entry, the RESUME block
+  flipped to "record, not order", and CLAUDE.md's pointer updated to say so. The 7-day measure
+  window restarts — his study is the data now — and the standing rhythm afterwards is only this:
+  findings arrive with witnesses → the registry classes them (auto · his · watch) → the
+  quarterly version rung. **New work gets a NEW dated order; a closed record is never edited.**
 
 ---
 
