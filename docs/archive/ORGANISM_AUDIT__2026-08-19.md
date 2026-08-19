@@ -71,6 +71,11 @@ privacy law still governs what may be COMMITTED.
 
 Follow §5 and §4-D-0's pipelines in order. Do not re-measure §3. Do not re-discover §4.
 
+BUT READ §3-B FIRST: some of §3's numbers were MEASURED and some were CALCULATED by
+the assistant from an assumed ratio. The calculated ones decide what fits in which
+context, so verify each with ONE command before you rely on it — never by arithmetic,
+never with a model. A wrong ratio there produces a wrong PLAN, not a wrong sentence.
+
 Every instrument here is a LEAD, not a fact — §4 shows four raw scans that were each
 majority-false. Verify by RUNNING, not by reading more code.
 
@@ -250,6 +255,44 @@ your budget on what is NOT in this list.
   No spool, no retry. **Every prompt and every teaching turn made while the bus is down is lost
   forever.** The WAL (`afferent.jsonl`) lives BEHIND the service it protects, which means it is not
   a write-ahead log at all. This is the only measured **data-loss** bug in the organism.
+
+---
+
+## §3-B · PROVENANCE — which numbers were MEASURED, which the assistant CALCULATED
+
+**His instruction, 19 Aug:** *"do not calculate stuff by yourself where you are not sure, let the new
+session do it manually without wasting any tokens."*
+He is right to demand this. §3's numbers are not all the same kind of thing, and the order did not
+say so. **Three classes, and only the first may be relied on:**
+
+**A · MEASURED — a command produced this number in that session. Trust these; §3 says do not re-run.**
+103 organs · 106,376 lines · 66 canon + 47 archive = 113 `.md` · oldest canon 2026-07-11 ·
+7,945 transcript sessions · 214,032 rows · 1,313.8 MB store · 81.5 MB dialogue (his 59.9, the
+assistant's 21.6) · **6.20%** · 445 swallowed exceptions · 103 live swallows/24 h · 82 orphan verbs ·
+unresolved sinks 1,310 (**now 1,311** after the IR rebuild) · 253.71 lakh weighted · 108.34 lakh dark
+(43%) · contact share 3% · 3,315 afferent rows (92 that day) · 0 of 37 outbox rows are `resolved` ·
+22 gate sleeps that week · 4 capsules locked · `forge_session.json` opened 01:35:21Z with
+`axes_done: 0`.
+
+**B · CALCULATED BY THE ASSISTANT — arithmetic, NOT a measurement. VERIFY BEFORE RELYING.**
+Each of these came from dividing bytes or lines by an assumed ratio. **They are load-bearing for the
+method (they decide what fits in which context), so verify them first — each costs one command:**
+- **"the code is ~1.3M tokens"** — derived from 106,376 lines. *Verify:* count real tokens over
+  `scripts/*.mjs`, or simply use bytes (`cat scripts/*.mjs | wc -c`) and a measured ratio.
+- **"all 113 `.md` are ~400k tokens and fit in ONE Gemini call"** — derived from ~1.49 MB.
+  **The whole PASS 2 split depends on this.** *Verify before sending them to Gemini.*
+- **"the corpus is ~21M tokens raw"** — derived from 81.5 MB ÷ 4.
+- **"59 findings, 19 carrying their own fix command"** — these came from a REGEX over the organs, and
+  a looser regex in the same session returned **78**. The shape of the finding is certain; **the
+  count is parser-dependent.** Treat 59/19 as approximate until a real parse confirms them.
+
+**C · RESEARCHED ON THE WEB — true as of 19 Aug 2026, not verified locally. Re-check if it matters.**
+Gemini 3.x Pro's 1M context, 64K max output (default 8,192), ~250 requests/day · the tool claims for
+`dependency-cruiser`, `knip`, `semgrep`, Stryker · the RepoAudit and Greptile findings in §6-D.
+
+> **THE RULE THIS SECTION EXISTS FOR:** where a class-B number decides a method, verify it with ONE
+> command before acting on it. Do not re-derive it by arithmetic, and do not spend a model on it.
+> **A wrong ratio here does not produce a wrong sentence — it produces a wrong PLAN.**
 
 ---
 
