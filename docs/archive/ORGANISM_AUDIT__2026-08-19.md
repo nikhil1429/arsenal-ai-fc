@@ -1,5 +1,11 @@
 # THE ORGANISM AUDIT — the carry-forward work order
 
+> **CURRENT AS OF 20 Aug 2026.** The filename's date is an ID, not a freshness claim — ONE document,
+> layered by dated PROGRESS entries, because a second "new" document is exactly the drift disease
+> §2/§4-B name (two copies, hours apart, already contradicting — it happened to §6 within a day).
+> **THE OPERATIVE LAYER IS §10** (the execution plan + ladder); §§0–9 are evidence and law, read on
+> demand. Executors follow the version-3 prompt below and nothing else.
+>
 > Written 19 Aug 2026 ~08:00 IST, at the end of a long session, **for the NEXT session to execute**.
 > His words: *"i want to resolve once for all everything."*
 >
@@ -903,6 +909,18 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
   was down — the class S8 exists to kill.
 - The hallucinations forge session was CLOSED on his word (history row recorded; he redoes it
   later, fresh). Instagram/ChatGPT ingestion is ON HOLD on his word — out of this plan.
+- **THE 19-AUG SESSION'S PAID-FOR ARTIFACTS ARE RESCUED AND DURABLE** (they lived in a temp dir
+  Windows could purge): `C:\Users\nikhi\arsenal-audit-artifacts\s2-2026-08-19\` — 115 files,
+  147.7 MB, OUTSIDE the repo (the dialogue is his; §8 privacy law). Contents: pass1/ (all 9
+  instrument outputs) · corpus/ (filter+stage2+stage3+verify scripts · per-day dialogue both
+  sides · out/dialogue.jsonl 94 MB · index.json — the session→git timestamp JOIN) · findings/
+  (the seven kept agent reports A1 A2 A3 A5 A6 A8 A11) · pass4_section.md + findings_raw.json ·
+  gemini/call.mjs. **S4/S5/S6 CONSUME these — nobody re-runs the filter or re-fans agents.**
+  Cross-checked free on 20 Aug, all four load-bearing claims still true: ghost.mjs absent yet
+  named 6× · outbox `resolved` rows still 0 · forge history 11/11 rows jirah:0 · the
+  LANES_NOT_IN_CONFIG consumer map present. **Session-2's own verdict stands: it was NOT
+  complete** — PASS 2 never ran, ~108 .md unswept, six corpus-agent digests lost — and the
+  ladder's S4/S5/S6 are exactly that remainder.
 - **THE TWO ROOTS every rung serves.** **(A) The organism has no CONTRACT LAYER** — §9's five
   shapes are one disease seen from five angles: an EDGE (producer→consumer · order→implementation
   · measurement→decision · code→checker) whose contract is declared nowhere. The fix is ONE
@@ -971,6 +989,8 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       (c) the §3-C order-checker runs pre-commit for every order file in docs/archive.
       (d) verify CLAUDE.md carries the switch-off line + the single §10 pointer
           (written 20 Aug — confirm, do not rewrite).
+      Rails carry a per-rung OVERRIDE, declared in that rung's micro-order — S12's
+      canary runs must never be blocked by S1's own rules.
       FORBIDDEN: OTel infra beyond env vars this rung · refactors · new organs.
       DONE-PROOF: spend line at a session stop · a ceiling-less fleet call refused
       live · suite green, gates stricter only.                          CEILING: 5
@@ -1003,9 +1023,11 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
 ☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       Re-check the keys live first (one command). Canon in ≤200k chunks (6–8 calls,
       thinking ON, schema'd output) + corpus extraction in chunks (decisions ·
-      rulings · promises · alternatives-rejected). EVERY return is a LEAD; one
-      command verifies each before it may enter §9. API pool dry → his Gemini WEB
-      lane instead.
+      rulings · promises · alternatives-rejected). INPUT for the corpus half = the
+      rescued artifacts (path in this section's ground truth) — the filtered per-day
+      dialogue and the git-join index already exist; NEVER re-filter, NEVER re-fan.
+      EVERY return is a LEAD; one command verifies each before it may enter §9. API
+      pool dry → his Gemini WEB lane instead.
       FORBIDDEN: any agent touching a raw transcript · believing an unverified
       return · extra calls without a PROGRESS line saying why.
                                                            CEILING: 2 (Claude side)
@@ -1021,15 +1043,21 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
           spend_class · trust_tier · subjects[]} · migration map for all 12 Shape-1
           instances · the rulings lane (design disposition on acts — Shape 2) · the
           MEMORY-index ratchet · the witness-validation spec for agent findings.
+          A witness the IR cannot resolve validates NOTHING — the finding stays a
+          LEAD, and the IR gap itself becomes a finding.
+      INPUTS, all on disk already: the ~38 unindexed memory files (the approved A–H
+      ladder above all — classify each via §4-B: built/missing/superseded) · the
+      seven rescued agent reports · pass4 raw evidence (rescued-artifacts path).
       MAY spawn at most 4 concern-agents over the graph — ceilinged, witnesses
       mandatory — the ONLY rung with agents.
       ⛔ APPROVAL GATE: HE reads atlas + spec and says haan before S7 exists.
                                                                         CEILING: 8
 ☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
-      His §1 correction lands: the consumer map becomes registry rows; the lane
-      verdict judges by DECLARED consumer. PROOF: re-run the six gate-card class and
-      show the verdicts change for the right reason. Ratchet: no lane runs without a
-      declared consumer.
+      His §1 correction lands: the consumer map becomes a DECLARED consumers table in
+      the S6 row-shape, owned by the gate — S10 folds it into the registry proper, so
+      S7 never waits on S10. The lane verdict judges by DECLARED consumer. PROOF:
+      re-run the six gate-card class and show the verdicts change for the right
+      reason. Ratchet: no lane runs without a declared consumer.
       FORBIDDEN: waking anything (S12 wakes; S7 only corrects the judge). CEILING: 8
 ☐ S8  BUILD · THE SPOOL.                                    MODEL: Opus · effort max
       STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
@@ -1041,10 +1069,11 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       FORBIDDEN: migrating ANY existing state file to sqlite (L9 — new lanes only).
                                                                         CEILING: 6
 ☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
-      WinSW services for the headless five (run as HIS account) · logon tasks +
-      RestartOnFailure + StartWhenAvailable for the desktop two · the watchdog
-      becomes a REPORTER (finding + witness, never a launcher) · the conductor gets
-      per-step fallback (folded_into, generalized).
+      WinSW services for the headless five (run as HIS account — the install asks
+      for HIS credential at HIS console: one card, his hands; a session never touches
+      a password) · logon tasks + RestartOnFailure + StartWhenAvailable for the
+      desktop two · the watchdog becomes a REPORTER (finding + witness, never a
+      launcher) · the conductor gets per-step fallback (folded_into, generalized).
       LAPTOP TRUTH, said once: on a machine that sleeps, honest 24×7 = at-logon +
       catch-up + restart-on-failure. True always-on is a power-plan/lid decision —
       HIS call, one card, never a blocker.
@@ -1105,6 +1134,8 @@ week leaves room. His study never waits on any of this; the organism stays off t
 ### §10-E · THE DRIVER'S CARD — his whole job, nothing else
 
 **Every session, paste exactly the version-3 prompt at the top of this file.** That is all.
+**ONE rung session at a time — never two in parallel.** The RESUME block is a single-writer
+file; two concurrent rungs means one of them is writing a lie.
 
 **His decision moments (the only ones):** S6 — the atlas + registry spec, haan/na · S12 — each
 reboot stage, haan/na · plus any card a rung explicitly raises with its why_code_cannot_decide.
@@ -1248,3 +1279,29 @@ into the five shapes above. **It does not re-read the corpus and does not re-run
 - CLAUDE.md fixed in the same commit: it carried TWO "opens this first" pointers (LOAD_ZERO was
   closed 19 Aug and still claimed it) — now ONE open work order; and the switch-off line now rides
   CLAUDE.md so every future session knows RED is deliberate.
+
+### PROGRESS 2026-08-20 ~07:00 IST — the attack pass + the artifact rescue
+
+- **HIS ORDER: "attack the plan from every angle."** Seven holes found in my own §10, all fixed
+  in place: (1) S7 waited on S10's registry — reworded: S7 builds the DECLARED consumers table in
+  the S6 row-shape now, S10 folds it in later; (2) S1's rails would have blocked S12's own canary
+  runs — rails now carry a per-rung override, declared in the micro-order; (3) S9's service
+  install needs HIS credential — named as one card, his hands, never a session's; (4) an
+  IR-unresolvable witness could have passed as validation — it validates nothing, and the IR gap
+  itself becomes a finding; (5) two parallel rung sessions would race the RESUME block — one rung
+  session at a time, now written; (6) the approved-but-unindexed A–H ladder had no consumer —
+  now an explicit S6 INPUT with §4-B classification; (7) the rescued artifacts had no declared
+  consumer either — now S5/S6 inputs with "never re-filter, never re-fan" in the rung.
+- **SESSION-2 CROSS-CHECKED FREE (four load-bearing claims, all still true 20 Aug):** ghost.mjs
+  absent yet named 6× · outbox resolved rows 0 · forge history 11/11 jirah:0 · consumer map
+  present. **Verdict: session-2 was NOT complete** (PASS 2 unstarted · ~108 .md unswept · six
+  corpus digests lost) — its remainder IS rungs S4/S5/S6; its kept work is consumed, not redone.
+- **THE ARTIFACT RESCUE:** session-2's entire scratchpad (115 files · 147.7 MB · pass1 outputs ·
+  the full filtered corpus + git-join index · seven agent reports · pass4 raw · the Gemini
+  caller) copied out of the purgeable temp dir to
+  `C:\Users\nikhi\arsenal-audit-artifacts\s2-2026-08-19\` — OUTSIDE the repo (his dialogue; §8).
+- **HIS QUESTION answered in the plan's own terms:** "why spend tokens on what the internet does
+  free at the same quality" — that IS LAW T §1, his own session-1 ruling, and this pass is it in
+  action: rescue + four cross-checks + seven fixes cost ~zero model spend.
+- **NO NEW DOCUMENT.** One file, dated layers, §10 operative — a "fresh 20 Aug copy" would be the
+  §2/§4-B two-copies disease within hours. The header now carries CURRENT AS OF 20 Aug.
