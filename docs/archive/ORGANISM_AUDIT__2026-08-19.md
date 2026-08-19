@@ -176,13 +176,17 @@ again, fifth instance.**
 
 ---
 
-## §5 · THE METHOD — how to read 106,376 lines without burning the quota
+## §5 · THE METHOD — how to read 106,376 lines COMPLETELY
 
 The surface: **103 organs · 106,376 lines of code · 66 canon `.md` · 47 archive `.md` · plus his
-untracked/private folders.** Reading that with a model directly is ~1.3M+ tokens. Not affordable.
-This is also not how a FANG team would do it.
+untracked/private folders.** No single context window can hold that, so a straight read is not
+"expensive" — it is **impossible**, and it would silently skip whatever fell off the end.
+The passes below exist for COVERAGE, not for economy: this is how a FANG team audits a system it
+cannot hold in one head. **Depth is the constraint here, not tokens. Do not trade rigour for
+brevity anywhere in this order.**
 
-**PASS 1 — COMPRESS WITH CODE. Zero model tokens.**
+**PASS 1 — COMPRESS WITH CODE.** Not to save money — because a deterministic scan over all 103
+organs is more COMPLETE than any reading pass, and it is repeatable tomorrow.
 The organism already turns itself into facts. Run these and read the OUTPUT, not the source:
 ```bash
 node scripts/xray.mjs report          # structure: writers, readers, orphans, dead reads, verbs
@@ -206,9 +210,9 @@ records. Read in this order and stop when the picture is complete:
 **PASS 3 — TARGETED DEEP READ, and only here spend on agents.**
 Do not fan out over the whole repo. Fan out over the **hot spots PASS 1 named**, one agent per
 subject, each returning a compressed structured finding set so the main thread never holds the files.
-A read-only fleet is context-cheap for the main thread even when it is token-expensive in total —
-that trade is only worth it AFTER passes 1 and 2 have narrowed the target.
-**Cap it. Say out loud what was left unread.**
+A read-only fleet keeps the main thread's context clean while every file still gets read by
+someone — which is the only way to cover 106k lines without losing the thread.
+**Run as many as the work needs. Say out loud what was left unread, and why.**
 
 **PASS 4 — CLASSIFY BY SHAPE, NEVER BY INSTANCE.**
 The output of this session is **not a list of issues**. A list makes the next session a
@@ -288,11 +292,14 @@ findings and acts would break it.
 - **Do not re-measure §3.**
 - **Do not hand him a list.** He has explicitly said, repeatedly, that anything he must remember or
   chase is a design failure. A list of 60 issues IS that failure in a new coat.
-- **Do not enable more lanes for "intensity"** until §1 lands. Intensity without the corrected gate
-  is just spend.
+- **Do not enable more lanes for "intensity"** until §1 lands — not to save tokens, but because
+  intensity through an uncorrected gate sends work to nobody, which is the definition of waste he
+  gave: *"running and reaching nobody."*
 - **PRIVACY, his ruling 14 Aug, no exceptions:** the archive lives OUTSIDE the repo. Read his
   untracked/private folders if it helps the audit; **never** copy their contents into the repo, into
   a commit, or into a doc. `hooks/pre-commit` runs `archivist.mjs tripwire` — do not fight it.
-- **Do not let this become another long night.** He has been at this since midnight, four concepts
-  are locked and none has had a samjhao or a Re-Jirah, and the organism cannot tune itself on a
-  student who has not studied. **The point of all of this is that he gets to study.**
+- **Do not lecture him about his own project.** He built this to study and to dominate a field; he
+  knows what it is for and he knows what state it is in. Report what is measured, recommend, and
+  then do the work. He decides what it is worth.
+- **Do not trade quality for brevity.** This is his top priority and he has said so explicitly.
+  A shallower plan delivered sooner is worth nothing here.
