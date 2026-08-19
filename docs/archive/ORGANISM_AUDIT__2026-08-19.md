@@ -217,19 +217,55 @@ shape with a ratchet so the shape cannot return. §2 is the model.
 
 ---
 
-## §6 · THE TOOLING ANSWER — he asked what to use
+## §6 · THE TOOLING ANSWER — including what is NOT here yet
 
-- **Skills** (`.claude/skills/`) — the right home for anything repeatable. A `/audit` skill that runs
-  PASS 1 and prints the compressed map would make every future audit nearly free. **Build this.**
-- **Subagents** — for PASS 3 only, read-only, structured returns. Never for PASS 1 (code is cheaper)
-  and never for PASS 2 (intent needs one coherent reader).
-- **MCP** — `organism-memory` already exists and is the correct place for durable findings so the
-  session after this one does not re-derive them. Use `note` / `remember_fact`.
-- **What NOT to add:** no new MCP servers, no new plugins, no LLM-in-the-loop repair. This repo's
-  thesis is *AI proposes · code validates · human approves*, and it is the right thesis. A model
-  that reads findings and acts would break it.
+**THE FANG GAP, measured 19 Aug: 106,376 lines of code, and ZERO linter, ZERO type-checking,
+ZERO coverage, ZERO test framework.** `devDependencies` is `acorn` + `acorn-walk` — and those exist
+only so `xray.mjs` can hand-roll its own parser.
 
----
+**And three of this repo's instruments are hand-rolled versions of tools the industry already
+solved — with far lower false-positive rates than the ones measured here (§4):**
+
+- `swallow` + xray's 445 SWALLOWED EXCEPTIONS → **eslint `no-empty` / `no-unused-vars`.** One rule,
+  ~0 false positives, runs in seconds.
+- xray's **82 ORPHAN VERBS** and 5 orphan lanes → **knip** (purpose-built for unused exports, files
+  and deps). xray's own BROKEN EDGE query just scored **5 of 5 false**.
+- `mutagen.mjs` → **Stryker Mutator**, the real mutation-testing engine.
+- circular imports → **madge**. Coverage (which of 106k lines never executes) → **c8**, native to node.
+
+**THE SINGLE HIGHEST-VALUE ADDITION: `tsc --checkJs` with JSDoc types. No TypeScript rewrite.**
+Reason, and it is not theoretical: on 19 Aug a wire called `readJsonl(...)`, a helper `watchman.mjs`
+does not have. It was a ReferenceError, it fell straight into a `swallow`, and it **shipped GREEN
+while the check never ran once**. That file's own comment records the SAME thing happening before.
+`tsc --checkJs` catches that entire class statically, at zero runtime cost, before it can be
+swallowed. **In a 106k-line codebase held together by silent catches, this is the biggest single
+safety win available.**
+
+**HOOKS — one is missing and it is cheap.** A `PostToolUse` hook that runs the edited organ's own
+`selftest` after any write to `scripts/*.mjs`. Test-on-save. The repo already has a mature hook
+dispatcher (`turn_hook.mjs`); this is one more callee.
+
+**SKILLS** — build `/audit`: it runs PASS 1 and prints the compressed map, making every future audit
+nearly free. The existing skill set is otherwise good and needs no additions.
+
+**MCP — searched the registry on 19 Aug for code-analysis / static-analysis / lint / testing /
+observability: NOTHING RELEVANT RETURNED.** Do not invent a need. The already-connected
+`organism-memory` is the correct and sufficient place for durable findings (`note`,
+`remember_fact`) so the building session does not re-derive what the reading session learned.
+
+**SUBAGENTS** — PASS 3 only (§5), read-only, structured returns, capped, with what was left unread
+said out loud.
+
+**WHAT NOT TO ADD:** no new MCP servers, no new plugins, no LLM-in-the-loop repair. The repo's
+thesis — *AI proposes · code validates · human approves* — is correct and a model that reads
+findings and acts would break it.
+
+**THE ORDER TO ADOPT THEM** (cheapest and highest-value first, each one a gate in `npm test`):
+1. `tsc --checkJs` + JSDoc on the hot organs — kills the swallowed-ReferenceError class
+2. `eslint` with `no-empty` — turns 445 hand-counted silent catches into an enforced rule
+3. `knip` — replaces the 82-orphan-verb query with a tool that does not cry wolf
+4. `c8` coverage — find which of 106,376 lines has never once executed
+5. the `PostToolUse` selftest hook, and the `/audit` skill
 
 ## §7 · THE ORDER OF WORK — for the session that BUILDS
 
