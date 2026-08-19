@@ -1248,19 +1248,37 @@ export function probeUnleashVerdict(deps = {}) {
       finding: `the unleash 48h verdict is WAITING on evidence, not on the clock — ${n}/${UNLEASH_MIN_RUNS} runs since the baseline (${hours}h). No card filed: a card dealt before its own answer exists is worse than no card.`,
       evidence: `brain_ledger rows at-or-after ${baseline.at} · floor = unleash_verdict.mjs's own MIN_RUNS_TO_JUDGE` }];
   }
-  const fileCard = deps.fileCard || ((line, key) => {
+  // LOAD ZERO, THE RUNG AFTER BLOCK 6 (19 Aug 2026) — CODE ANSWERS WHAT CODE CAN ANSWER.
+  // This used to file a CARD asking for one word: "haan bolo to `unleash_verdict.mjs` chalta hai".
+  // That card (c54) sat in his deck for days. BLOCK 6's gate would now route it to the road as
+  // news, because it declares no reason code could not decide it — but routing a question nobody
+  // needed to be asked is only half the cure. The verdict is a READ-ONLY JUDGE: its own header
+  // says "IT JUDGES, IT NEVER REPAIRS — nothing here writes to any state file except its own
+  // snapshot, and nothing here flips a config field", and it spends no model tokens. There was
+  // never a decision here. So it RUNS, and what reaches him is the ANSWER.
+  // ACTING on the verdict is still his: the failing checks are reported, never repaired.
+  const runVerdict = deps.runVerdict || (() => {
     try {
-      spawnSync(process.execPath, [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", key],
-        { encoding: "utf8", timeout: 15000, env: { ...process.env, ARSENAL_ORGAN: "" } });
-      return true;
-    } catch { return false; }
+      const r = spawnSync(process.execPath, [join(__dirname, "unleash_verdict.mjs"), "json"],
+        { encoding: "utf8", timeout: 120000, windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+      if (r.status !== 0) return { ok: false, why: `exit ${r.status}` };
+      return { ok: true, ...JSON.parse(String(r.stdout || "{}")) };
+    } catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 120) }; }
   });
-  const carded = fileCard(
-    `UNLEASH ka 48h VERDICT ab READY hai — ${n} runs jama ho gaye (${hours}h). Haan bolo to \`node scripts/unleash_verdict.mjs\` chalta hai: jo 3 checks PENDING the unka asli jawab, aur Phase 4 ki caching-off list data se.`,
-    "unleash:verdict:ready");
-  return [{ id: "unleash-verdict-ready", level: "INFO",
-    finding: `the unleash verdict has its evidence (${n} runs / ${hours}h) and a card ${carded ? "is filed" : "could NOT be filed"} asking for the one word that runs it`,
-    evidence: `key unleash:verdict:ready (idempotent — re-filing every night mints nothing)` }];
+  const v = runVerdict();
+  if (!v || !v.ok) return [{ id: "unleash-verdict-unrunnable", level: "WARN",
+    finding: `the unleash verdict has its evidence (${n} runs / ${hours}h) but could not be RUN — ${(v && v.why) || "no reason given"}`,
+    evidence: "`node scripts/unleash_verdict.mjs report` — it judges and never repairs, so running it needs no word from him" }];
+  // the organ's own shape: { hours, cmp, verdict: [{name, state: "pass"|"fail"|"info", evidence}] }.
+  // `info` rows (the Phase-4 caching list) are DATA for a decision he owns, never a failure.
+  const checks = Array.isArray(v.verdict) ? v.verdict : [];
+  const failed = checks.filter((c) => c && c.state === "fail");
+  const passed = checks.filter((c) => c && c.state === "pass").length;
+  return [{ id: "unleash-verdict", level: failed.length ? "WARN" : "INFO",
+    finding: failed.length
+      ? `UNLEASH verdict (${n} runs / ${hours}h): ${failed.length} of ${passed + failed.length} checks FAILED — ${failed.map((c) => c.name || c.id).join(" · ")}`
+      : `UNLEASH verdict (${n} runs / ${hours}h): every check passed`,
+    evidence: "`node scripts/unleash_verdict.mjs report` for the evidence beside each check — it was RUN, not asked about; acting on a failed check is still his call" }];
 }
 
 // ---------------------------------------------------------------------------
@@ -1897,9 +1915,25 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       assert("UNLEASH — under the evidence floor NOTHING is filed, however many hours have passed (a card dealt before its answer exists is worse than no card)",
         filed.length === 0 && thin[0].id === "unleash-verdict-waiting" && /10\/40 runs/.test(thin[0].finding));
       filed = [];
-      const ready = probeUnleashVerdict({ baseline: base, rows: mkRows(60), fileCard: (l, k) => { filed.push(k); return true; }, now: Date.parse("2026-08-16T00:00:00Z") });
-      assert("UNLEASH — at the floor ONE idempotent card is filed, and it asks for the one word that runs the verdict",
-        filed.length === 1 && filed[0] === "unleash:verdict:ready" && ready[0].id === "unleash-verdict-ready");
+      // LOAD ZERO, THE RUNG AFTER BLOCK 6: at the floor the verdict is RUN and its ANSWER is
+      // carried — NO card, because there was never a decision here. The verdict organ judges and
+      // never repairs, and it spends nothing; asking his permission to run it (card c54, which sat
+      // in his deck for days) was the organism asking a question it could answer itself.
+      const ready = probeUnleashVerdict({ baseline: base, rows: mkRows(60), fileCard: () => { throw new Error("must not file a card"); },
+        runVerdict: () => ({ ok: true, verdict: [{ name: "check A", state: "pass" }, { name: "check B", state: "fail" }, { name: "phase 4 list", state: "info" }] }),
+        now: Date.parse("2026-08-16T00:00:00Z") });
+      assert("UNLEASH — at the floor the verdict is RUN and the ANSWER is carried: no card, the failing checks NAMED, and an `info` row is data he owns rather than a failure",
+        filed.length === 0 && ready[0].id === "unleash-verdict" && ready[0].level === "WARN"
+        && /1 of 2 checks FAILED/.test(ready[0].finding) && /check B/.test(ready[0].finding) && !/phase 4/i.test(ready[0].finding),
+        JSON.stringify(ready[0]));
+      assert("UNLEASH — every check passing is INFO, not a WARN, and still files nothing",
+        (() => { const g = probeUnleashVerdict({ baseline: base, rows: mkRows(60), fileCard: () => { throw new Error("no"); },
+          runVerdict: () => ({ ok: true, verdict: [{ name: "a", state: "pass" }] }), now: Date.parse("2026-08-16T00:00:00Z") });
+          return g[0].id === "unleash-verdict" && g[0].level === "INFO" && /every check passed/.test(g[0].finding); })());
+      assert("UNLEASH — a verdict that cannot RUN says so as a WARN, and still never asks him for a word",
+        (() => { const b = probeUnleashVerdict({ baseline: base, rows: mkRows(60), fileCard: () => { throw new Error("no"); },
+          runVerdict: () => ({ ok: false, why: "exit 1" }), now: Date.parse("2026-08-16T00:00:00Z") });
+          return b[0].id === "unleash-verdict-unrunnable" && b[0].level === "WARN" && /exit 1/.test(b[0].finding); })());
       assert("UNLEASH — no baseline on disk ⇒ no plan in flight ⇒ total silence, never a finding about nothing",
         probeUnleashVerdict({ baseline: null, fileCard: () => { throw new Error("must not file"); } }).length === 0);
       // THE UN-INJECTED PATH, walked. The three assertions above all pass `rows`,
@@ -1908,8 +1942,12 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       // threw ReferenceError on the first real sweep. This walks the default
       // reader against the REAL ledger (read-only, and fileCard is stubbed so
       // nothing is ever filed from a test).
-      assert("UNLEASH — the LIVE reader path runs without throwing (the fixture-injected tests above cannot see it)",
-        (() => { try { probeUnleashVerdict({ fileCard: () => true }); return true; } catch (e) { return `threw: ${e.message}`; } })() === true);
+      // ...and `runVerdict` is stubbed for the SAME reason, learned the same way: the first cut of
+      // this rewire let the witness spawn the REAL unleash_verdict.mjs, which writes its own
+      // snapshot (unleash_after.json) — so `npm test` went red on "running all selftests leaves
+      // live state untouched". A proof may read the live world; it may never move it.
+      assert("UNLEASH — the LIVE reader path runs without throwing (the fixture-injected tests above cannot see it), and it moves NOTHING: the ledger read is real, the verdict spawn is stubbed",
+        (() => { try { probeUnleashVerdict({ fileCard: () => true, runVerdict: () => ({ ok: true, verdict: [] }) }); return true; } catch (e) { return `threw: ${e.message}`; } })() === true);
     }
     const f1 = probeCanon(TODAY, {
       git: () => " M OPS_STATE.md\n?? scratch.txt\n M scripts/brain.mjs\n",
