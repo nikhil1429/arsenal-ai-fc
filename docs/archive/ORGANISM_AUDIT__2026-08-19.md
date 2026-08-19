@@ -204,11 +204,32 @@ existed (`SYSTEM_BLUEPRINT.md`, `SYSTEM_FOUNDATION.md`, `EXECUTION_FINAL_Tier2_M
 `FORGE_DEEP_RENDER_BRIEF.md`, `About.md`, and the FINOPS files). Reading any of them as a
 description of the organism TODAY would be wrong in a way nothing in the repo would contradict.
 
+**HIS CORRECTION, 19 Aug — and it kills the first version of this rule:** *"no, code might be wrong
+too, and it can happen that what i wanted is in the .md files but not in code."*
+He is right. An earlier draft said *"the code is what the organism does"*, which quietly made the
+code the winner. **In an organism built incrementally from incidents (§4-C), the documents very
+often hold the FULLER intent that the code never caught up to.** The clearest proof is in §0 of this
+very order: his goal *"the organism fixes the issues it finds itself"* is stated intent and is
+**NOT BUILT AT ALL** — that gap is a missing feature, not a stale sentence.
+
 **THE RULE FOR THE READING SESSION:**
 > Date every `.md` before you believe it (`git log -1 --format=%ad -- <file>`). A canon file is a
-> snapshot of intent AT THAT DATE. Where a document and the CODE disagree, **the code is what the
-> organism does** — but the document may still be what he WANTED, and that gap is itself the
-> finding. Never silently prefer one; name the disagreement and its date.
+> snapshot of intent AT THAT DATE.
+> **When a document and the code disagree, NEVER resolve it by precedence. CLASSIFY it — there are
+> three cases and they have opposite fixes:**
+> 1. **STALE DOC** — the design was deliberately superseded, and the git history SAYS so. Fix the doc.
+> 2. **MISSING IMPLEMENTATION** — the doc states intent the code never implemented, or implemented
+>    only partly. **This is the most valuable class in the entire audit**, because it is something he
+>    wanted and never got, and nothing in the running system will ever complain about it.
+> 3. **SILENT DRIFT** — neither matches what he wants today. Only he can settle it; it becomes ONE
+>    line carrying `why_code_cannot_decide`.
+>
+> **The mechanical test that separates 1 from 2:** `git log -S "<symbol or phrase>"`. If the code
+> once HAD it and a commit removed it on purpose → stale doc. **If the code NEVER had it → missing
+> implementation**, and the document is the requirement.
+>
+> **Default to (2), not (1).** A missing feature is invisible: no test fails, no finding fires, no
+> card is minted. A stale doc at least contradicts something. The silent class is the dangerous one.
 
 ## §4-C · HOW THIS ORGANISM WAS ACTUALLY BUILT — the frame the audit must use
 
