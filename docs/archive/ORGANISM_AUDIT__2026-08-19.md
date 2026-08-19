@@ -271,6 +271,107 @@ findings and acts would break it.
 4. `c8` coverage — find which of 106,376 lines has never once executed
 5. the `PostToolUse` selftest hook, and the `/audit` skill
 
+## §6-B · THE ROUTING LAW — his definition of zero waste, made mechanical
+
+**His words, 19 Aug:** *"zero token wastage means wasting tokens on something which can be done for
+free with the same best quality of work possible and highest and deepest level of intensity with
+maximum speed."*
+
+So this is **not** an austerity rule. It is a ROUTING rule, and it cuts the other way too: **where a
+paid model is genuinely the best instrument, spending is not waste — refusing to spend there is.**
+
+> **THE LAW: every unit of work goes to the cheapest tier that achieves the SAME quality, depth and
+> speed. Paying above that tier is waste. Paying below it is worse than waste, because the answer
+> has to be redone.**
+
+**TIER 0 — DETERMINISTIC CODE. Free, and BETTER than any model at what it does.**
+Anything that is computation rather than judgement: `eslint no-empty` (the 445 silent catches),
+`tsc --checkJs` (the swallowed-ReferenceError class), `knip` (the 82 orphan verbs), `madge`
+(cycles), `c8` (which of 106,376 lines never runs), Stryker (are the tests real), plus this repo's
+own `xray` / `swallow` / `limits` / `treasury` / `pulse`.
+**Spending a single paid token to hunt for empty catch blocks is the purest form of the waste he
+means.** A model is worse at it AND costs money.
+
+**TIER 1 — GEMINI. Free at his scale, and best at exactly ONE thing: BREADTH.**
+Measured against the real numbers (see §6-C): give it the jobs where the whole point is holding
+more at once than any other reader can, and where being wrong is cheap because TIER 0 verifies it.
+
+**TIER 2 — CLAUDE. Paid, and worth it for exactly three things:** reading his INTENT and deciding
+what he MEANT; deciding the SHAPE of a class of bug; and writing code that has to be right.
+These are irreducibly judgement. Routing them down a tier does not save money, it produces a plan
+that has to be thrown away.
+
+**THE TEST, applied to every task before it starts:** *is this computation, breadth, or judgement?*
+Only judgement may cost Claude tokens.
+
+---
+
+## §6-C · GEMINI — what to trust it with, and what never to
+
+He has two Gemini Pro accounts and says plainly he does not trust Gemini Pro extended thinking.
+**That distrust is correct and it does not need to be argued away — the architecture makes it
+irrelevant.**
+
+**The measured facts (researched 19 Aug 2026):** Gemini 3.x Pro carries a **1M-token context
+window**, max output 64K (default 8,192 — must be raised explicitly), and roughly **250 requests
+per day** even on paid Tier 1, ~250k tokens/minute.
+
+**What those numbers actually mean for this repo:**
+- The code is 106,376 lines ≈ **~1.3M tokens. It does NOT fit**, not even in Gemini. Anyone who
+  claims "just give Gemini the whole repo" has not counted.
+- But **all 113 `.md` files are ~400k tokens and DO fit, comfortably, in ONE call.** Claude Code
+  cannot hold them without compaction. **This is the one thing Gemini can do here that nothing else
+  can.**
+- 250 requests/day means Gemini is for a HANDFUL of enormous questions, never for many small ones.
+  That matches its strength exactly.
+
+**GIVE GEMINI EXACTLY THIS — and nothing else:**
+1. **The whole-canon read.** All 113 `.md` in one context: *"where does he state intent about X?
+   which documents contradict each other? what is declared and never referenced anywhere?"* No other
+   reader can answer cross-document questions over the whole canon in one pass.
+2. **Whole-subsystem breadth sweeps.** One subsystem's files at a time (not the whole repo):
+   *"list EVERY site that does X."* Recall matters here; precision does not, because TIER 0 verifies
+   every hit.
+3. **Deep Research on the outside world** — the lane the organism already has (`/fire`, missions).
+   *"what is the industry standard for Y."*
+
+**NEVER GIVE GEMINI:**
+- any decision that is not verified afterwards by TIER 0
+- the final word on his intent (that is his canon and Claude reads it with him)
+- writing code that ships
+- anything where being confidently wrong is expensive
+
+**WHY HIS DISTRUST STOPS MATTERING:** in every job above, Gemini's output is a **LEAD**, and §4's
+rule already applies to it exactly as it applies to `xray` — which just scored 5 of 5 false. A false
+positive from Gemini costs one deterministic check. **Its recall is the product; its precision is
+not.** And extended thinking is worth little here for the same reason: when everything is verified
+downstream, COVERAGE beats confidence. So do not turn it on for breadth work; it buys depth this
+architecture does not need and cannot use.
+
+---
+
+## §6-D · WHAT THE RESEARCH SAYS — and it validates the shape above
+
+Researched 19 Aug 2026 (sources in the commit message):
+
+- **RepoAudit** (an autonomous LLM agent for repository-level auditing) names this exact failure:
+  *breaking a repository into small pieces and prompting each one falls short for **NON-LOCAL
+  bugs** — bugs that need reasoning across interconnected code spanning multiple functions, classes
+  and files.* **Every single defect found on 19 Aug was non-local:** the gate could not see the
+  outbox (two organs), the WAL sat behind the service it protected (two layers), the mechanism
+  nailed to one board (five organs). A chunked reader would have found NONE of them.
+- The same work pairs the LLM with a static pass (LLMSCAN) that builds the call/flow graph FIRST,
+  and lets the model reason over the GRAPH rather than the raw files. **This repo already has that
+  graph — `xray`'s IR.** It should be the substrate the agents reason over, not the files.
+- Greptile's approach — a pre-indexed code graph for cross-file reasoning — is the same lesson.
+- Multi-agent practice: **specialise agents by CONCERN** (correctness, security, dead code, test
+  coverage, spend), **not by file chunk**, with severity-categorised returns.
+
+**So PASS 3 changes shape:** do not fan agents out over directories. Fan them out over **concerns**,
+hand each one `xray`'s graph plus the §3 measurements, and require every finding to name the
+cross-file path that produces it. A finding that lives inside one file was probably already caught
+by TIER 0 for free.
+
 ## §7 · THE ORDER OF WORK — for the session that BUILDS
 
 1. **§1 THE GATE CORRECTION.** His correction, and it decides every token the organism spends.
