@@ -55,6 +55,16 @@
       "ingested_at": "2026-08-10T15:41:16.499Z",
       "report": "scout_reports/mission_T-HALLUCINATIONS_2026-08-10.md",
       "fired_at": "2026-08-10T11:12:14.462Z"
+    },
+    {
+      "id": "T-hallucinations@2026-08-19",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "hallucinations",
+      "file": "dressing-room/missions/T-hallucinations@2026-08-19.md",
+      "staged_at": "2026-08-19T01:35:21.432Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -117,6 +127,11 @@
       "ts": "2026-08-18T06:43:53.808Z",
       "kind": "claude_return",
       "id": "M03"
+    },
+    {
+      "ts": "2026-08-19T01:35:21.432Z",
+      "kind": "stage_topic",
+      "id": "T-hallucinations@2026-08-19"
     }
   ]
 }

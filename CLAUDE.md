@@ -73,5 +73,10 @@ Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in 
 - `OPS_STATE.md` — a pointer to `state.mjs`. Old bodies: `docs/archive/`.
 - `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. the MODELS + ACTS record: `docs/archive/MODELS_AND_ACTS__2026-08-18.md` (LAW M + LAW A, built 18 Aug 2026).
 - `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
-- **THE OPEN WORK ORDER: `docs/archive/LOAD_ZERO__2026-08-19.md`** — the spine (INTENT · TASK · OUTBOX/RELAY · CLOSE), SAMJHAO, the 66-file canon pass, and the one scoreboard `LOAD 36 → 0`. A NEXT SESSION OPENS THIS FIRST and continues from its `▶ RESUME HERE` pointer. (Unlike everything else in docs/archive/, this one IS a work order.)
+- **THE OPEN WORK ORDER: `docs/archive/ORGANISM_AUDIT__2026-08-19.md`** — the audit + plan order,
+  written 19 Aug at the end of a long night. It carries HIS INTENT (§0, written down for the first
+  time), HIS GATE CORRECTION (§1 — C is "did it reach its RIGHT consumer", not "did it reach him"),
+  what is already measured, what is already known FALSE, and the read-cheap method. **A NEXT SESSION
+  OPENS THIS FIRST.** It READS and PLANS; it does not build.
+- **Its predecessor, now closed: `docs/archive/LOAD_ZERO__2026-08-19.md`** — the spine (INTENT · TASK · OUTBOX/RELAY · CLOSE), SAMJHAO, the 66-file canon pass, and the one scoreboard `LOAD 36 → 0`. A NEXT SESSION OPENS THIS FIRST and continues from its `▶ RESUME HERE` pointer. (Unlike everything else in docs/archive/, this one IS a work order.)
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.

@@ -1,150 +1,60 @@
 {
-  "id": "sit_20260818_1418_38f6",
+  "id": "sit_20260819_0135_44cd",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "voice"
   ],
-  "task": "Tokenization",
+  "task": "hallucinations",
   "task_id": "1-04",
   "track": "concept",
-  "route": "REJIRAH",
-  "concept": "tokenization",
-  "route_why": "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai",
-  "claude_session_id": null,
+  "route": "FORGE",
+  "concept": "hallucinations",
+  "route_why": "sprint ki current task ek concept hai — THE METHOD",
+  "claude_session_id": "6d220838-5d84-4351-9935-39c853a95814",
   "transport": "stream",
-  "opened_at": "2026-08-18T14:18:54.799Z",
-  "last_turn_at": "2026-08-18T18:32:54.517Z",
-  "closed_at": "2026-08-18T18:52:55.578Z",
+  "opened_at": "2026-08-19T01:35:21.184Z",
+  "last_turn_at": "2026-08-19T01:40:41.605Z",
+  "closed_at": "2026-08-19T02:00:42.325Z",
   "close_reason": "idle",
   "plan": [
     {
       "i": 0,
       "kind": "map",
-      "step": null,
+      "step": 3,
       "axis": null,
-      "text": "Aaj Re-Jirah hai — tokenization, jo June mein lock hua tha. Main sirf poochhunga, batauunga kuch nahi. Nau strike, ek-ek axis. Har jawab se pehle ek gut-word bolo, phir poora jawab. Notes band, capsule band. Shuru karo?",
-      "question": false,
-      "est_seconds": 30,
-      "src": [
-        "prepare_tomorrow"
-      ]
+      "question": true,
+      "est_seconds": 20,
+      "src": [],
+      "text": "Aaj hallucinations — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?"
     },
     {
       "i": 1,
       "kind": "question",
-      "step": null,
-      "axis": "a",
-      "text": "Pehla strike, thanda. Token kya hai exactly — aur tokenization ka kaam KAHAN khatam hota hai? Jawab se pehle ek gut-word: pakka, halka, ya andaaza?",
+      "step": 3,
+      "axis": null,
       "question": true,
-      "est_seconds": 150,
-      "src": [
-        "prepare_tomorrow"
-      ]
+      "est_seconds": 12,
+      "src": [],
+      "text": "Pehle-Guess: bina padhe, hallucinations kya hai — apne shabdon mein ek line? Gut-word pehle."
     },
     {
       "i": 2,
-      "kind": "question",
+      "kind": "unit",
       "step": null,
-      "axis": "b",
-      "text": "Word-level toh seedha hai — har word ka ek number, khatam. Toh subword-BPE ki poori jhanjhat kyun paali? Aur tokenization ko poora skip karke seedha text kyun nahi de sakte? Pehle gut-word bolo?",
-      "question": true,
-      "est_seconds": 170,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 3,
-      "kind": "question",
-      "step": null,
-      "axis": "c",
-      "text": "Factory pehle vocab banati hai, freeze kar deti hai, phir tu sirf lookup karta hai. Ab maan le 'COVID' jaisa naya word aaya — jo training ke baad bana, vocab mein tha hi nahi. Model crash karega? Gut-word pehle?",
-      "question": true,
-      "est_seconds": 170,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 4,
-      "kind": "question",
-      "step": null,
-      "axis": "d",
-      "text": "Teri apni hero line: 'Aristo Eco - Rs81,500'. Yeh kitne token banegi? Vocab ka size kitna hota hai? Aur bina tool ke token count ka andaaza kaise lagayega? Gut-word pehle bolo?",
-      "question": true,
-      "est_seconds": 180,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 5,
-      "kind": "question",
-      "step": null,
-      "axis": "e",
-      "text": "Rs81,500 aur Rs81,400 — model ke andar yeh do paas-paas baithenge, ya bilkul ajnabi? Aur isse teri TDS wali decision pe kya farak padta hai? Gut-word pehle?",
-      "question": true,
-      "est_seconds": 180,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 6,
-      "kind": "question",
-      "step": null,
-      "axis": "f",
-      "text": "Badi vocab matlab kam token — sasta bhi, context bhi bachta. Toh sab log seedha bahut badi vocab kyun nahi rakh lete? Kaunsi cheez tootne lagti hai jab dial badhaate ho? Gut-word pehle?",
-      "question": true,
-      "est_seconds": 170,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 7,
-      "kind": "question",
-      "step": null,
-      "axis": "g",
-      "text": "Manager saamne baitha hai: 'Claude itna powerful hai, do percent khud nikaal lega — code mein math likhna over-engineering hai. Convince me.' Bolo. Aur agar wo phir bhi na maane, tu kya karega? Gut-word pehle?",
-      "question": true,
-      "est_seconds": 190,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 8,
-      "kind": "question",
-      "step": null,
-      "axis": "h",
-      "text": "Ek invoice tokenize karna chillar hai. Ab production — ek lakh invoice mahine mein. Kya-kya tootta hai wahan, aur sabse pehle kya tootega? Gut-word pehle bolo?",
-      "question": true,
-      "est_seconds": 180,
-      "src": [
-        "prepare_tomorrow"
-      ]
-    },
-    {
-      "i": 9,
-      "kind": "question",
-      "step": null,
-      "axis": "i",
-      "text": "Hiring manager non-technical hai: 'main technical nahi hoon — tokenization se mujhe, ek business wale ko, kya farak padta hai? Tees second, koi jargon nahi.' Phir uska agla sawaal: 'agar yeh itna basic step hai toh skip kyun nahi kar sakte?' Gut-word pehle?",
-      "question": true,
-      "est_seconds": 200,
-      "src": [
-        "prepare_tomorrow"
-      ]
+      "axis": null,
+      "question": false,
+      "est_seconds": 8,
+      "src": [],
+      "text": "Model abhi upalabdh nahi (window band ya child mar gaya) — main sirf plan ke units de sakta hoon. 'aage' bolo, ya 'full time'."
     }
   ],
-  "plan_source": "prepare",
-  "plan_map": "Aaj Re-Jirah hai — tokenization, jo June mein lock hua tha. Main sirf poochhunga, batauunga kuch nahi. Nau strike, ek-ek axis. Har jawab se pehle ek gut-word bolo, phir poora jawab. Notes band, capsule band. Shuru karo?",
-  "cursor": 2,
-  "unit_seq": 21,
+  "plan_source": "skeleton",
+  "plan_map": "Aaj hallucinations — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?",
+  "cursor": 1,
+  "unit_seq": 10,
   "pending_question": null,
   "forge_step": 3,
-  "forge_axis": "a",
+  "forge_axis": null,
   "effort": {
     "compose": "high",
     "respond": "high",
@@ -152,69 +62,56 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 32163,
-  "head_footer": "[sitting_system: role 2490 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · kickoff 1106 · plan 2694 · capsule 2160 · review_of_last 545 · intents 748 · standing EMPTY · night_coach 3799 (TRIMMED from 10551 — cap 4000) · pacer_note 437 · assembled 32163/60000]",
+  "head_chars": 31625,
+  "head_footer": "[sitting_system: role 2717 · how_he_learns EMPTY · gaffer_law 16168 · captain 154 · agenda 5971 (TRIMMED from 6614 — cap 6000) · kickoff 683 · plan 125 · capsule EMPTY · review_of_last 329 · intents 801 · standing EMPTY · night_coach 3910 (TRIMMED from 8345 — cap 4000) · pacer_note 437 · assembled 31625/60000]",
   "inputs_read": [
-    "brain_out/prepare/2026-08-18.json",
-    "learning-layer/HOW_HE_LEARNS.md",
     "THE_GAFFER.md",
     "dressing-room/state/captain.json",
+    "dressing-room/state/sitting_agenda.jsonl",
     "learnstate json",
-    "dressing-room/state/capsules/tokenization.json",
     "dressing-room/state/sitting_reviews.jsonl",
     "dressing-room/state/session_intent.jsonl",
-    "brain_out/night_coach/2026-08-18.md"
+    "brain_out/night_coach/2026-08-19.md"
   ],
   "stats": {
-    "turns": 17,
+    "turns": 10,
     "by_class": {
-      "deliver": 2,
-      "respond": 16,
-      "compose": 0,
+      "deliver": 1,
+      "respond": 8,
+      "compose": 1,
       "judge": 0
     },
     "tokens": {
-      "input": 32,
-      "output": 5418,
-      "cache_creation": 35641,
-      "cache_read": 280205
+      "input": 16,
+      "output": 11057,
+      "cache_creation": 34688,
+      "cache_read": 191857
     },
     "latency_ms": {
-      "deliver": [
-        0
-      ],
+      "deliver": [],
       "respond": [
-        34402,
-        4288,
-        4606,
-        10510,
-        10006,
-        6300,
-        8603,
-        7619,
-        6725,
-        32791,
-        7310,
-        6806,
-        8612,
-        7741,
-        9127,
-        5293
+        48766,
+        6598,
+        9532,
+        10417,
+        8950,
+        8452,
+        7122,
+        4099
       ],
       "compose": [],
       "judge": []
     },
-    "units_composed": 21,
-    "units_delivered": 3,
+    "units_composed": 10,
+    "units_delivered": 2,
     "banked": 0,
-    "owner_calls": 1,
-    "head_tokens": 14448,
-    "superseded": 1
+    "owner_calls": 3,
+    "head_tokens": 13470
   },
-  "reattached": 2,
-  "reattached_at": "2026-08-18T18:31:00.529Z",
+  "agenda_ids": [
+    "agmsyysuqy"
+  ],
   "last_receipts": [
     "note ✓"
-  ],
-  "fake_done_retry": 1
+  ]
 }
