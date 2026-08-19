@@ -28,6 +28,9 @@ STATUS (update this block before any session stops — this is the handoff)
   PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S4–S6
   PASS 4  classify BY SHAPE .... ◐ five shapes in §9 · finalized at rung S6
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
+                                   Hardened same day to the junior bar: §10-F model routing ·
+                                   §10-G versions+models policy · the FLOW ATLAS (S6a) ·
+                                   §10-D rules 9–12 · per-rung FORBIDDEN lines.
   ▶ NEXT SESSION ............... S1 · RAILS (§10-C, first ☐). One rung, ~zero spend, no agents.
 
   ⚠ THE READING SESSION OF 19 Aug COST 505.02 LAKH WEIGHTED — ~2× the organism's whole
@@ -910,6 +913,10 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
   the organism have none of the organism's own discipline, and a work-order `.md` is the most
   dangerous executable prose in the repo — one self-contradiction cost 505 lakh. Rails come
   first for exactly that reason.
+- **HIS BIDIRECTIONAL GOAL (20 Aug words: data flows fully, him→every part that needs it, and
+  back to him and to every other part) resolves as three layers, in order: MAP → CONTRACT →
+  METER.** SEE it (the flow atlas, S6a — derived by code from the graph) → DECLARE it (the
+  registry — declare-or-die) → PROVE it (the reach-side meter, Shape 3's fix). See, declare, prove.
 
 ### §10-B · WHAT EXISTS TODAY THAT 19 AUG DID NOT FIND — verified 20 Aug on the live web
 
@@ -950,69 +957,121 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
 §10-D rule 2, and the meter built in S1 is what makes it enforceable.
 
 ```
-☐ S1  RAILS — the factory gets the organism's discipline. ~zero spend, no agents.
-      (a) HIS-SESSION SPEND METER: TIER-0 parse of the usage blocks in the session
-          JSONLs → one line in the state surface ("his sessions today: N lakh") + a
-          Stop hook that prints this session's running total at every stop.
-      (b) PRETOOLUSE RAILS: deny fleet-spawn without an explicit ceiling in the
+☐ S1  RAILS — the factory gets the organism's discipline.   MODEL: Opus · effort max
+      (a) HIS-SESSION SPEND METER — TIER-0 parse of the usage blocks in the session
+          JSONLs under ~/.claude/projects (subagent sidechains INCLUDED) → one line
+          in the state surface ("his sessions today: N lakh") + a Stop hook printing
+          this session's running total. ⛔ THE METER RIDES THE STOP HOOK, never
+          turn-start — the 300ms turn_hook law stands; cache file offsets so
+          re-parses stay incremental.
+      (b) PRETOOLUSE RAILS — deny fleet-spawn without an explicit ceiling in the
           prompt · deny session-editor writes under dressing-room/state · deny
-          claude -p from session shells. PROVE each deny bites (upstream bug reports).
+          claude -p from session shells. PROVE each deny bites in a throwaway
+          session (upstream deny-ignored bug reports exist — trust nothing unproven).
       (c) the §3-C order-checker runs pre-commit for every order file in docs/archive.
-      DONE-PROOF: spend line visible at a session stop · a ceiling-less fleet call is
-      refused in a live test · suite green, gates stricter only.        CEILING: 5
-☐ S2  TYPE + LINT GATES — tsc --checkJs via @ts-check on the ~12 hottest organs first;
-      eslint + typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103
-      with a FROZEN BASELINE: existing counts may only FALL. Both ride npm test.
+      (d) verify CLAUDE.md carries the switch-off line + the single §10 pointer
+          (written 20 Aug — confirm, do not rewrite).
+      FORBIDDEN: OTel infra beyond env vars this rung · refactors · new organs.
+      DONE-PROOF: spend line at a session stop · a ceiling-less fleet call refused
+      live · suite green, gates stricter only.                          CEILING: 5
+☐ S2  TYPE + LINT GATES.                                    MODEL: Opus · effort max
+      tsc --checkJs via @ts-check on the ~12 hottest organs first; eslint +
+      typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103 with a
+      FROZEN BASELINE: existing counts may only FALL. Both ride npm test. Pin every
+      new devDependency EXACT (§10-G) and commit the lockfile.
+      FORBIDDEN: hand-fixing all 445 swallows this rung (the baseline freezes them) ·
+      any TypeScript rewrite · touching organ logic beyond what a type error names.
       DONE-PROOF: a planted readJsonl()-class ReferenceError goes RED before runtime,
-      then is removed.                                                  CEILING: 8
-☐ S3  THE LAW PACK — the organism's own laws as ast-grep YAML rules: owners-only ·
-      LAW M no-literal-model-names · THE JUGAD RULE (an order with a universal
-      quantifier may never ship as a literal subject list — Shape 1's ratchet) ·
-      trailing-N reads without a recency compare (Shape 4's ratchet) · bare catch{}.
-      Plus knip (orphan exports as LEADS, replacing the crying-wolf orphan query) and
-      dependency-cruiser (the import half of owners-only, declaratively). Superseded
-      hand-rolled scans are narrowed to organism-only knowledge — LAW T's rule.
-      DONE-PROOF: every new rule proven to BITE on a planted violation.  CEILING: 8
-☐ S4  PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim). Output:
-      contradictions + missing-implementation list, folded into §9.     CEILING: 6
-☐ S5  THE GEMINI SWEEPS — re-check the keys live first; canon in ≤200k chunks
-      (6–8 calls, thinking ON, schema'd output) + corpus extraction in chunks
-      (decisions · rulings · promises · alternatives-rejected). EVERY return is a
-      LEAD; one command verifies each before it may enter §9. API pool dry → his
-      Gemini WEB lane instead.                       CEILING: 2 (Claude side)
-☐ S6  PASS 4 FINAL + THE REGISTRY SPEC — one head, the hardest judgement in the plan.
-      The registry row: {owner · right_consumer · slot · spend_class · trust_tier ·
-      subjects[]}. Migration map for all 12 Shape-1 instances · the rulings lane (a
-      design disposition on the acts substrate — Shape 2) · the MEMORY-index ratchet ·
-      the witness-validation spec for any future agent finding.
-      ⛔ APPROVAL GATE: HE reads the spec and says haan before S7 exists. CEILING: 8
-☐ S7  BUILD · GATE C — his §1 correction lands: the consumer map becomes registry
-      rows; the lane verdict judges by DECLARED consumer. PROOF: re-run the six
-      gate-card class and show the verdicts change for the right reason. Ratchet: no
-      lane runs without a declared consumer.                            CEILING: 8
-☐ S8  BUILD · THE SPOOL — write-ahead in the capture nerve on node:sqlite: local row
-      FIRST, then POST; thalamus drains on boot; event_key dedup = at-least-once +
-      idempotent consumer. PROOF (sandbox): kill thalamus → prompt → spool row →
-      revive → exactly one bus row. Daemon death becomes latency, never loss.
-                                                                        CEILING: 6
-☐ S9  BUILD · OWNERSHIP — WinSW services for the headless five · logon tasks for the
-      desktop two · the watchdog becomes a REPORTER (finding + witness, never a
-      launcher) · the conductor gets per-step fallback (folded_into, generalized).
-      ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
+      then is removed; baseline counts recorded inside the gate.        CEILING: 8
+☐ S3  THE LAW PACK.                                         MODEL: Opus · effort max
+      The organism's own laws as ast-grep YAML rules: owners-only · LAW M
+      no-literal-model-names · THE JUGAD RULE (an order with a universal quantifier
+      may never ship as a literal subject list — Shape 1's ratchet) · trailing-N
+      reads without a recency compare (Shape 4's ratchet) · bare catch{}. Plus knip
+      (orphan exports = LEADS) and dependency-cruiser (the import half of
+      owners-only, declaratively). Superseded hand-rolled scans NARROW to
+      organism-only knowledge — LAW T's rule.
+      FORBIDDEN: deleting any hand-rolled scan outright (L9 — narrow, never delete) ·
+      believing any new tool's findings unverified (§4 binds tools too).
+      DONE-PROOF: every rule proven to BITE on a planted violation, then green.
                                                                         CEILING: 8
-☐ S10 BUILD · THE REGISTRY — un-nail all twelve Shape-1 instances (shadow · bootroom ·
-      gate_tune · trust_tiers · tasks · isFixture · slot-awareness · wall_review ·
-      docClaims · teaching_audit · course · CORE_AXES) onto registry rows; the rulings
-      lane goes live; every memory file indexed or the suite is red. The S3 jugad rule
-      now has teeth everywhere.                                         CEILING: 12
-☐ S11 BUILD · STALENESS / KEYS / CRASH — sha256(inputs) folded into cache keys ·
-      recency gates on trailing-N reads · rotated cards record expired_unanswered ·
-      tmp-file replay on boot (the torn-write class) · ajv JSON-Schema per state file
-      (owners-only says WHO writes; the schema says WHAT).              CEILING: 6
-☐ S12 STAGED REBOOT — dependency-ordered wake: capture → deterministic organs → his
-      surfaces → LLM lanes LAST, each behind the corrected gate AND first_real_row_at
-      (no lane spends until its input class holds real data — §0's headline finding,
-      finally a code path). Watchdog-reporter live. The 7-day measure window restarts.
+☐ S4  PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim).
+                                                            MODEL: Opus · effort max
+      Output: contradictions + missing-implementation list, folded into §9.
+      FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).
+                                                                        CEILING: 6
+☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      Re-check the keys live first (one command). Canon in ≤200k chunks (6–8 calls,
+      thinking ON, schema'd output) + corpus extraction in chunks (decisions ·
+      rulings · promises · alternatives-rejected). EVERY return is a LEAD; one
+      command verifies each before it may enter §9. API pool dry → his Gemini WEB
+      lane instead.
+      FORBIDDEN: any agent touching a raw transcript · believing an unverified
+      return · extra calls without a PROGRESS line saying why.
+                                                           CEILING: 2 (Claude side)
+☐ S6  PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
+                    MODEL: FABLE · effort max (fallback: Opus max + self-review pass)
+      (a) GENERATE THE FLOW ATLAS FIRST — free code over xray's IR + the declared
+          tables (AFFERENT_SOURCES · LANES_NOT_IN_CONFIG · outbox kinds): EVERY edge
+          him→organ, organ→organ, organ→him, each with liveness + consumption stamps.
+          ONE visual page for him (his 1 Aug visuals ruling). The atlas is DERIVED
+          by code, never hand-written — hand-written maps rot (§4-B). This is his
+          20 Aug ask made real: see the WHOLE organism's data flow before designing.
+      (b) THE REGISTRY SPEC on top of the atlas: {owner · right_consumer · slot ·
+          spend_class · trust_tier · subjects[]} · migration map for all 12 Shape-1
+          instances · the rulings lane (design disposition on acts — Shape 2) · the
+          MEMORY-index ratchet · the witness-validation spec for agent findings.
+      MAY spawn at most 4 concern-agents over the graph — ceilinged, witnesses
+      mandatory — the ONLY rung with agents.
+      ⛔ APPROVAL GATE: HE reads atlas + spec and says haan before S7 exists.
+                                                                        CEILING: 8
+☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
+      His §1 correction lands: the consumer map becomes registry rows; the lane
+      verdict judges by DECLARED consumer. PROOF: re-run the six gate-card class and
+      show the verdicts change for the right reason. Ratchet: no lane runs without a
+      declared consumer.
+      FORBIDDEN: waking anything (S12 wakes; S7 only corrects the judge). CEILING: 8
+☐ S8  BUILD · THE SPOOL.                                    MODEL: Opus · effort max
+      STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
+      after; better-sqlite3 is the fallback if node:sqlite misbehaves.
+      Then: write-ahead in the capture nerve on node:sqlite — local row FIRST, then
+      POST; thalamus drains on boot; event_key dedup = at-least-once + idempotent
+      consumer. PROOF (sandbox): kill thalamus → prompt → spool row → revive →
+      exactly one bus row. Daemon death becomes latency, never loss.
+      FORBIDDEN: migrating ANY existing state file to sqlite (L9 — new lanes only).
+                                                                        CEILING: 6
+☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
+      WinSW services for the headless five (run as HIS account) · logon tasks +
+      RestartOnFailure + StartWhenAvailable for the desktop two · the watchdog
+      becomes a REPORTER (finding + witness, never a launcher) · the conductor gets
+      per-step fallback (folded_into, generalized).
+      LAPTOP TRUTH, said once: on a machine that sleeps, honest 24×7 = at-logon +
+      catch-up + restart-on-failure. True always-on is a power-plan/lid decision —
+      HIS call, one card, never a blocker.
+      ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
+      FORBIDDEN: services for turnstile/dugout (session-0 cannot see his desktop).
+                                                                        CEILING: 8
+☐ S10 BUILD · THE REGISTRY.   MODEL: FABLE · effort max (fallback: Opus max + review)
+      Un-nail all twelve Shape-1 instances (shadow · bootroom · gate_tune ·
+      trust_tiers · tasks · isFixture · slot-awareness · wall_review · docClaims ·
+      teaching_audit · course · CORE_AXES) onto registry rows; the rulings lane goes
+      live; every memory file indexed or the suite is red. The S3 jugad rule now has
+      teeth everywhere. His live pain lands here too: note-generation idempotency
+      (the "notes created 7 times" class) rides the same tasks substrate.
+      FORBIDDEN: any NEW mechanism (§2's lesson — new subjects, never new machines).
+                                                                        CEILING: 12
+☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
+      sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
+      rotated cards record expired_unanswered · tmp-file replay on boot (the
+      torn-write class) · ajv JSON-Schema per state file (owners-only says WHO
+      writes; the schema says WHAT) · the model-roster probe gains a freshness gate
+      (a 10-hour-old "keys ok" may never answer for NOW — the 19 Aug 429 lesson).
+                                                                        CEILING: 6
+☐ S12 STAGED REBOOT.                                        MODEL: Opus · effort max
+      Dependency-ordered wake: capture → deterministic organs → his surfaces → LLM
+      lanes LAST, each behind the corrected gate AND first_real_row_at (no lane
+      spends until its input class holds real data — §0's headline finding, finally
+      a code path). Watchdog-reporter live. The 7-day measure window restarts.
       ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.       CEILING: 4
 ```
 
@@ -1032,15 +1091,64 @@ week leaves room. His study never waits on any of this; the organism stays off t
 6. A gate may only get stricter. A rung that weakens any gate is refused, whole.
 7. Before stopping: RESUME + ticks (only what is TRUE) · PROGRESS entry · §3-C check · commit.
 8. Speak to him in one short block: what landed · what it cost · the one decision, if any.
+9. **THE MICRO-ORDER RULE (first act, before any edit):** write the rung's micro-order into the
+   session scratchpad — files to touch · steps · the DONE-proof commands · the rung's FORBIDDEN
+   list — and check it against §10-C/§10-D. Only then edit. No micro-order = improvising, refused.
+10. **THE FAILURE PROTOCOL:** a DONE-proof that stays red = STOP. Record in PROGRESS what failed
+    (exact command + output), leave the tick empty, commit the record, hand off. NEVER push past a
+    red proof; NEVER weaken a proof to pass it.
+11. **VERSIONS MOVE ALONE (§10-G):** a runtime/dependency/model-roster bump is its OWN commit,
+    suite-gated before and after, never mixed into a feature rung.
+12. **MODEL ROUTING BINDS (§10-F):** the rung's MODEL line is part of the rung. Fable-pool dry ⇒
+    use the rung's named fallback; never silently downgrade anything else.
 
 ### §10-E · THE DRIVER'S CARD — his whole job, nothing else
 
 **Every session, paste exactly the version-3 prompt at the top of this file.** That is all.
 
-**His decision moments (the only ones):** S6 — the registry spec, haan/na · S12 — each reboot
-stage, haan/na · plus any card a rung explicitly raises with its why_code_cannot_decide.
+**His decision moments (the only ones):** S6 — the atlas + registry spec, haan/na · S12 — each
+reboot stage, haan/na · plus any card a rung explicitly raises with its why_code_cannot_decide.
 **His verify line, any time:** `node scripts/state.mjs` — RED lines are EXPECTED until S12; the
 switch-off is deliberate and recorded, not a defect.
+
+### §10-F · MODEL & EFFORT ROUTING — LAW T's question, applied INSIDE Claude
+
+**This planning session was Fable 5 · effort max — the architect.** The rungs are executors
+against WRITTEN acceptance. That is the FANG shape: the senior designs once, juniors execute
+against DONE-proofs, and quality lives in the GATES, not in the executor's genius.
+
+- **Fable 5 · effort max** on the two judgement summits ONLY: **S6** (atlas + registry spec) and
+  **S10** (the registry build). Its weekly pool is separate and small — spend it where judgement
+  is the product. Pool dry ⇒ the rung's named fallback (Opus max + a mandatory self-review pass
+  before commit), never a silent downgrade.
+- **Opus 5 · effort max** on every other rung. Opus max + rails + DONE-proofs is ENOUGH — this
+  ladder was designed so that no rung needs genius; needing genius per rung was the old failure.
+- **effort high** only where a rung says so (S5 — mechanical orchestration).
+- **NEVER:** ultracode · fleets (S6's ≤4 ceilinged concern-agents are the single exception) ·
+  any model below Opus writing organism code.
+
+### §10-G · VERSIONS & UPDATE POLICY — "latest" is a POLICY with a gate, never a reflex
+
+**Inventory, measured 20 Aug 2026:** Node **v22.14.0** (node:sqlite loads flag-free but
+EXPERIMENTAL) · npm 10.9.2 · **git 2.38.0.windows.1 — 2022-old, and it emits a credential-manager
+warning on every push** · Claude Code auto-updates (2.1.x line) · devDependencies = acorn +
+acorn-walk only, until S2 adds the toolchain.
+
+- **Runtimes:** Node 22 → **Node 24 LTS at S8 step 0** (24 is the 2026 LTS, support to Apr 2028;
+  22 is maintenance to Apr 2027; sqlite matures there). git-for-Windows updates in the same
+  version commit. Suite green before AND after, own commit (§10-D rule 11).
+- **Tools (S2/S3):** install pinned EXACT, commit the lockfile, record versions in the gate.
+- **LLM MODELS — his ask, 20 Aug: "use every LLM model at its best updated version."** The answer
+  is LAW M, kept honest: **no organ names a model — a ROLE**; `scripts/models.mjs` resolves the
+  live best per role. So "latest models everywhere" = three code facts, not a sweep:
+  (1) the LAW M check stays at 0 literals outside the resolver — then a model bump is ONE roster
+  row, never a code change; (2) the roster's probe gains the S11 freshness gate (a stale "ok" may
+  never answer for now — the 19 Aug lesson: all 10 keys 429 while a 10-hour-old probe said
+  healthy); (3) Claude-side lanes get the same treatment at S10 — role rows resolved at dispatch,
+  re-verified per version rung. New model generations land as roster edits + one canary run per
+  lane, in a version commit.
+- **After S12:** a quarterly version rung. Ad-hoc bumps stay forbidden — a blind bump is the same
+  disease as a blind fleet.
 
 ---
 
@@ -1120,3 +1228,23 @@ into the five shapes above. **It does not re-read the corpus and does not re-run
   is less guarded than the product. §10-B records the 20 Aug research layer; LAW T carries the
   dated corrections (RepoAudit≠JS · agent-audit scope · Gemini TPM/RPD reality · ast-grep).
 - **THE NEXT SESSION IS S1 · RAILS — and nothing else.**
+
+### PROGRESS 2026-08-20 ~06:30 IST — the junior-bar hardening pass
+
+- **HIS BAR:** *"think of a junior on Opus max blindly following this document."* Held §10 to that
+  bar; FOUR gaps found and closed the same hour:
+  1. **§10-F written** — model/effort routing existed nowhere. Now every rung carries a MODEL
+     line; Fable max only on the two judgement summits (S6 · S10) with named fallbacks.
+  2. **§10-G written** — versions policy existed nowhere. Inventory measured live (Node 22.14.0 ·
+     git 2.38-old · node:sqlite experimental · Claude Code 2.1.x): Node 24 LTS lands at S8 step 0;
+     **his 20 Aug model ask** ("every LLM at its best updated version") lands as LAW M kept honest
+     — roster rows + probe freshness, never a code sweep.
+  3. **§10-D rules 9–12** — the micro-order rule (plan before any edit) · the failure protocol
+     (red proof = stop, never weaken) · versions move alone · routing binds. Plus per-rung
+     FORBIDDEN lines — the thread-1 lesson (WHAT without forbidden = 505 lakh) made structural.
+  4. **THE FLOW ATLAS (S6a)** — his bidirectional ask had no artifact. Now: MAP (atlas derived by
+     code from xray's IR + declared tables, one visual page) → CONTRACT (registry) → METER
+     (reach-side proof). See, declare, prove.
+- CLAUDE.md fixed in the same commit: it carried TWO "opens this first" pointers (LOAD_ZERO was
+  closed 19 Aug and still claimed it) — now ONE open work order; and the switch-off line now rides
+  CLAUDE.md so every future session knows RED is deliberate.
