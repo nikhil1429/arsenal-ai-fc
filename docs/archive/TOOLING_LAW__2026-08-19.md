@@ -32,7 +32,7 @@ Refusing to spend Claude tokens on the SHAPE of a bug class is the expensive kin
 
 ## §2 · TIER 0 — THE PERMANENT TOOLCHAIN. Install once, run forever, gate on all of it.
 
-**Measured 19 Aug 2026: 106,376 lines of code across 103 organs, with ZERO linter, ZERO
+**Measured 19 Aug 2026: 106,416 lines of code across 103 organs, with ZERO linter, ZERO
 type-checking, ZERO coverage, ZERO dead-code analysis.** `devDependencies` was `acorn` +
 `acorn-walk`, and those exist only so `xray.mjs` could hand-roll its own parser.
 
@@ -67,17 +67,47 @@ its BROKEN EDGE query scored **5 of 5 FALSE** on 19 Aug.
 This repo's laws are currently enforced by hand-written regex scans inside `organism_test.mjs` and
 `xray.mjs` — which is exactly why they produce false positives. semgrep is a semantic pattern engine
 built for precisely this: write the rule once, match it structurally, low FP.
-**Port to semgrep rules:** owners-only writes · no literal model names (LAW M) · no bare `catch {}` ·
+**Port to semgrep rules (this is the highest-leverage custom-rule work in the repo):** owners-only writes · no literal model names (LAW M) · no bare `catch {}` ·
 no word-routing regex over his speech (BLOCK 5) · no canon file stating a live count (BLOCK 7).
 
 **6 · COVERAGE LAYER — `c8`** (native to node). Answers a question nobody in this repo can answer
-today: **which of the 106,376 lines has never once executed?**
+today: **which of the 106,416 lines has never once executed?**
 
 **7 · MUTATION LAYER — Stryker Mutator**, replacing the hand-rolled `mutagen.mjs`. Answers whether
 the tests are real or merely green.
 
 **8 · SECURITY LAYER — `semgrep` (again) or Snyk Code**, scoped to the credential paths only. The
 repo already has a privacy tripwire; this is belt-and-braces on the code side.
+
+**9 · AGENT-SECURITY LAYER — `agent-audit`. NOTHING COVERS THIS TODAY, AND THIS REPO IS EXACTLY
+ITS TARGET.** A static security scanner built for LLM-agent applications: prompt injection, **MCP
+configuration auditing**, taint analysis, privilege-risk checks — 51 rules mapped to the OWASP
+Agentic Top 10 (2026). This organism runs MCP servers, spawns agents, and takes untrusted text into
+`thalamus` from the clipboard, ntfy and the web. **No layer above looks at any of that.** It was
+found in the same research pass and omitted from the first draft of this law; that omission is the
+gap, not the tool.
+*(github.com/HeadyZhang/agent-audit)*
+
+**10 · REPO-LEVEL AUDIT AGENT — `RepoAudit`, as a TOOL, not only as a citation.** §5 quotes its
+finding about non-local bugs, but it is an actual open-source agent that performs repository-level
+auditing over a static pass (LLMSCAN) that builds the call/flow graph first. **This repo already has
+the equivalent graph in `xray`'s IR**, so the honest use is: run RepoAudit's method against our own
+graph, and where it and `xray` disagree, apply the rule below.
+*(github.com/PurCL/RepoAudit · arxiv 2501.18160)*
+
+**11 · `typescript-eslint`** — the companion the research names beside ESLint; it is what makes
+`no-unused-vars` / `no-undef` actually understand JSDoc-typed JS. Adopt it WITH layer 2, not later.
+
+### CONSIDERED AND NOT CHOSEN — recorded so nobody researches them again
+
+- **`Deptrac`, `Nx`** — architectural-layer alternatives to `dependency-cruiser`. Not chosen:
+  dependency-cruiser already covers this repo's need (rules you write + cycles + orphans) with no
+  monorepo assumptions. Revisit only if the rule language proves too weak.
+- **`SonarQube`, `Snyk Code`** — full quality/security platforms. Not chosen as the DEFAULT: both
+  want a server or an account, and `semgrep` + `agent-audit` cover the same ground locally and free.
+  `Snyk Code` stays named in layer 8 as the paid fallback if `semgrep` misses something real.
+- **`Biome`, `OxcLint`** — faster ESLint replacements. Not chosen NOW: ESLint's ecosystem of rules is
+  the point here, and speed has never been the complaint. Named in layer 2 for the day it is.
 
 ### The rule that makes it permanent
 
@@ -179,14 +209,19 @@ the **GRAPH**, not the raw files (Greptile's pre-indexed code graph is the same 
 Each step ends by becoming a gate in `npm test`. A step is not done until it is a gate.
 
 1. **`tsc --checkJs` + JSDoc** on the hot organs — kills the swallowed-ReferenceError class
+   (adopt `typescript-eslint` in the same step — it is what makes the lint rules read JSDoc types)
 2. **ESLint `no-empty`** — 445 hand-counted silent catches become an enforced rule
 3. **`dependency-cruiser`** — the owners-only law and the import graph, declaratively
 4. **`knip`** — replaces the 82-orphan-verb query with a tool that does not cry wolf
 5. **`semgrep`** — port the organism's own laws off hand-written regex
-6. **`c8`** — find which of 106,376 lines has never executed
-7. **Stryker** — retire `mutagen.mjs` once it agrees
-8. **`PostToolUse` hook** — run the edited organ's selftest on every write (test-on-save)
-9. **`/audit` skill** — one command runs the whole TIER 0 sweep and prints the compressed map
+6. **`c8`** — find which of 106,416 lines has never executed
+7. **`agent-audit`** — the ONLY layer that inspects MCP config, prompt-injection surface and the
+   untrusted text this organism ingests (clipboard · ntfy · web). **Nothing else here covers it.**
+8. **Stryker** — retire `mutagen.mjs` once it agrees
+9. **RepoAudit's method run over `xray`'s graph** — for the NON-LOCAL bugs a file-by-file pass
+   structurally cannot see; where it and `xray` disagree, the rule above decides
+10. **`PostToolUse` hook** — run the edited organ's selftest on every write (test-on-save)
+11. **`/audit` skill** — one command runs the whole TIER 0 sweep and prints the compressed map
 
 **Sources (researched 19 Aug 2026):** RepoAudit (arxiv 2501.18160) · github.com/PurCL/RepoAudit ·
 sourcegraph.com/blog/automated-code-review-tools · npmjs.com/package/dependency-cruiser ·
