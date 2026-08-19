@@ -9,6 +9,67 @@
 
 ---
 
+## ▶ RESUME HERE — read this block first, always
+
+```
+STATUS (update this block before any session stops — this is the handoff)
+
+  WRITING THE ORDER ............ ☑ DONE (19 Aug 2026, ~08:00-09:30 IST)
+  PASS 1  compress with code ... ☐ NOT STARTED   ◀ THE NEXT SESSION STARTS HERE
+  PASS 2  read INTENT (.md) .... ☐ NOT STARTED
+  PASS 2B read the CHAT CORPUS . ☐ NOT STARTED   (§4-D-0 — 7,945 sessions, both sides)
+  PASS 3  targeted deep read ... ☐ NOT STARTED   (agents by CONCERN, over xray's graph)
+  PASS 4  classify BY SHAPE .... ☐ NOT STARTED   (the OUTPUT of the reading session)
+  THE BUILD SESSION ............ ☐ blocked until PASS 4 lands
+
+  NOTHING HAS BEEN BUILT FROM THIS ORDER YET. It is a reading order.
+  Suite at the moment it was written: npm test 108/0 across 100 members. Tree clean, pushed.
+```
+
+**THE PROMPT TO PASTE INTO THE NEXT SESSION** (it is also the whole handoff — this file carries
+the rest):
+
+```
+Read docs/archive/ORGANISM_AUDIT__2026-08-19.md in full before anything else. Execute it.
+
+This is a READ + PLAN session. Do not build, do not edit code, do not commit fixes.
+
+DEPTH IS THE CONSTRAINT, NOT TOKENS. This is his top priority. Never trade rigour for
+brevity. Run as many agents as the work needs.
+
+THREE SOURCES, all of them, none skipped:
+  1. ALL 103 organs / 106,376 lines of code
+  2. ALL 113 .md — dated first (§4-B); the CODE can be wrong too, so when a doc and
+     the code disagree, CLASSIFY it, never rank it
+  3. THE ENTIRE CLAUDE CODE CHAT HISTORY (§4-D-0) — 7,945 sessions under
+     ~/.claude/projects/C--Users-nikhi-GitHub-arsenal-ai-fc, BOTH his turns and the
+     assistant's. Only place the WHY lives. TIER 0 filters it first: the dialogue is
+     6.2% of the bytes and the filter is free.
+Also read his untracked/private folders. He has waived the read concern; §8's privacy
+law still governs what may be COMMITTED.
+
+Follow §5 and §4-D-0's pipelines in order. Do not re-measure §3. Do not re-discover §4.
+
+Every instrument here is a LEAD, not a fact — §4 shows four raw scans that were each
+majority-false. Verify by RUNNING, not by reading more code.
+
+Hunt hardest for MISSING IMPLEMENTATION: every place he said "I want X" and X was never
+built. Nothing in a running system ever complains about a feature that never existed.
+
+Output: NOT a list of issues. Groups of issues that share a SHAPE, one fix per shape,
+each with a ratchet so the shape cannot return. Write it into that same file and commit.
+
+Say out loud what you left unread, and why.
+```
+
+**THE HANDOFF RULE — every session that touches this file obeys it.**
+Before you stop, or when context fills: update the STATUS block above (tick what is really done,
+never what is nearly done), append a `### PROGRESS <date> <time IST>` entry at the bottom saying
+what you found, what you left unread, and what the next session must do FIRST — then commit.
+**The next session opens THIS FILE ONLY and continues from this block.**
+
+---
+
 ## §0 · HIS INTENT — the north star, written down for the first time
 
 Measured 19 Aug: `grep -riE "bidirectional|24.?7|self.?heal"` across all 113 canon `.md` files returns
