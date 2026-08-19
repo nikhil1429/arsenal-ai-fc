@@ -35,7 +35,21 @@ Read docs/archive/ORGANISM_AUDIT__2026-08-19.md in full before anything else. Ex
 This is a READ + PLAN session. Do not build, do not edit code, do not commit fixes.
 
 DEPTH IS THE CONSTRAINT, NOT TOKENS. This is his top priority. Never trade rigour for
-brevity. Run as many agents as the work needs.
+brevity.
+
+THE INSTRUMENT IS PART OF THE JOB — §5 has the table, and getting this wrong is the
+one waste LAW T actually forbids:
+  PASS 1  BASH ONLY. Eight commands. ZERO model tokens.
+          NO subagents, NO Gemini. If you are about to spawn an agent to run
+          `node scripts/xray.mjs report`, you are paying for a free result.
+  PASS 2  ONE coherent reader. No fan-out — separate agents each holding one doc
+          cannot see a contradiction BETWEEN docs, which is the whole point.
+  PASS 2B free code filters the transcripts first (94% of the bytes are tool noise),
+          THEN Gemini reads the filtered dialogue. No agent touches raw transcripts.
+  PASS 3  SUBAGENTS BELONG HERE AND ONLY HERE — by CONCERN, never by directory,
+          over xray's graph, and only after PASSES 1-2 have narrowed the target.
+          Here, run as many as the work needs.
+  PASS 4  One head. This is judgement and it is the session's actual output.
 
 THREE SOURCES, all of them, none skipped:
   1. ALL 103 organs / 106,376 lines of code
@@ -437,8 +451,16 @@ node scripts/mutagen.mjs              # are the tests real, or do they pass on m
 ```
 Everything in §3 came from these. They cost nothing and they are the map.
 
-**PASS 2 — READ HIS INTENT, NOT HIS CODE.** Only these `.md` carry design intent; the rest are
-records. Read in this order and stop when the picture is complete:
+**PASS 2 — READ HIS INTENT, NOT HIS CODE. ONE COHERENT READER (Claude). NO FAN-OUT** — separate
+agents each holding one document cannot see a contradiction BETWEEN documents, and contradictions
+are the point of this pass.
+**HOW ALL 113 `.md` GET COVERED WITHOUT READING 113 WITH CLAUDE — this is the split, and skipping
+it means either overpaying or missing 105 files:** these eight carry the DESIGN INTENT and are read
+here, closely, by one head. **The other ~105 are covered by TIER 1 — Gemini's whole-canon sweep
+(§6-C job 1), which holds all 113 in ONE context and reports where intent is stated, which documents
+contradict each other, and what is declared but never referenced.** Those returns are LEADS (§4);
+anything load-bearing comes back here to be read properly.
+Read these eight in this order:
 `learning-layer/PROJECT_OS.md` (THE METHOD) · `HOW_HE_LEARNS.md` (the 17 rules) ·
 `FORGE_SPEC.md` · `THE_ORGANISM.md` (the organ map) · `THE_GAFFER.md` · `CLAUDE.md` ·
 `SYSTEM_BLUEPRINT.md` · `ARCHIVE__DAY_ONE_SPEC.md`.
@@ -451,7 +473,8 @@ A read-only fleet keeps the main thread's context clean while every file still g
 someone — which is the only way to cover 106k lines without losing the thread.
 **Run as many as the work needs. Say out loud what was left unread, and why.**
 
-**PASS 4 — CLASSIFY BY SHAPE, NEVER BY INSTANCE.**
+**PASS 4 — CLASSIFY BY SHAPE, NEVER BY INSTANCE. ONE HEAD (Claude), NOT AGENTS** — this is
+judgement, and it is the whole output of the session.
 The output of this session is **not a list of issues**. A list makes the next session a
 discovery machine again. The output is **groups of issues that share a shape**, and one fix per
 shape with a ratchet so the shape cannot return. §2 is the model.
