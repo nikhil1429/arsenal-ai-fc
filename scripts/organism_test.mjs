@@ -756,6 +756,46 @@ async function laws() {
       }
     }
 
+    // ── LAW T · THE TOOLING LAW (19 Aug 2026) — record: docs/archive/TOOLING_LAW__2026-08-19.md ──
+    // His standing order: FANG-level optimisation, universally, from now on — and his definition of
+    // waste, which is a ROUTING rule and not an austerity one: never pay a model for what a
+    // deterministic tool does FREE and BETTER. Measured that day: 106,376 lines of code with ZERO
+    // linter, ZERO type-checking, ZERO coverage, ZERO mutation testing — while this repo hand-rolls
+    // its own static analysers, one of which (xray's BROKEN EDGE) scored 5 of 5 FALSE the same
+    // morning. AST tools do not make that class of mistake.
+    // THE LEDGER IS THE LAW: every tool below is declared with the gate that would prove it. The
+    // UNADOPTED count may only SHRINK — a session may adopt one, never add a new unadopted line to
+    // buy itself room. Adoption means the gate runs in `npm test`, not that the package is present.
+    {
+      const TIER0_STACK = [
+        { tool: "tsc --checkJs", gate: "typecheck", why: "kills the swallowed-ReferenceError class: readJsonl() shipped GREEN into a swallow on 19 Aug and the check never ran once" },
+        { tool: "eslint no-empty", gate: "lint", why: "445 swallowed exceptions are one eslint rule, ~0 false positives, instead of a hand-rolled scan" },
+        { tool: "semgrep", gate: "arch", why: "every ratchet here (owners-only, LAW M, BLOCK 5/6/7) is an architectural-constraint scan — that is exactly what semgrep is for, over a real AST" },
+        { tool: "knip", gate: "deadcode", why: "82 ORPHAN VERBS were found by a hand-rolled query with no verification; knip is purpose-built" },
+        { tool: "dependency-cruiser", gate: "boundaries", why: "module-boundary rules as a declared graph rather than prose about layering" },
+        { tool: "c8", gate: "coverage", why: "nothing here can answer which of 106,376 lines has never once executed" },
+        { tool: "stryker", gate: "mutation", why: "proves the suite is load-bearing; mutagen.mjs approximates this" },
+        { tool: "npm audit", gate: "supplychain", why: "dependency CVEs, in the suite rather than in a memory" },
+      ];
+      const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+      const scripts = pkg.scripts || {};
+      const adopted = TIER0_STACK.filter((t) => Object.prototype.hasOwnProperty.call(scripts, t.gate));
+      const unadopted = TIER0_STACK.filter((t) => !Object.prototype.hasOwnProperty.call(scripts, t.gate));
+      assert(`LAW T · the TIER 0 stack is DECLARED with a gate and a reason each (${adopted.length}/${TIER0_STACK.length} adopted) — a tool with no reason is a fashion, not a law`,
+        TIER0_STACK.every((t) => t.tool && t.gate && typeof t.why === "string" && t.why.length >= 40));
+      assert(`LAW T · the UNADOPTED count may only SHRINK (${unadopted.length} left: ${unadopted.map((t) => t.tool).join(", ") || "none"})`,
+        unadopted.length <= 8,
+        "a session may ADOPT a tool (add its gate to package.json scripts) but may never add a new unadopted line to buy itself room");
+      assert("LAW T · every adopted gate actually runs in the suite chain, so adoption cannot mean 'the package is installed and nobody calls it'",
+        adopted.every((t) => String(scripts.test || "").includes(t.gate) || Object.values(scripts).some((v) => String(v).includes(t.gate) && v !== scripts[t.gate])),
+        adopted.map((t) => t.gate).join(", "));
+      // the migration rule, held mechanically: the organism's OWN instruments encode domain truth
+      // (did it reach its consumer · did he study · what did this lane cost) and STAY. What must not
+      // grow is a new hand-rolled scanner asking "does any code do X?" — that is semgrep's job now.
+      assert("LAW T · the organism's domain instruments are NOT replaced by the stack — xray/swallow/limits/treasury/pulse still exist and still run",
+        ["xray.mjs", "swallow.mjs", "limits.mjs", "treasury.mjs", "pulse.mjs"].every((f) => existsSync(join(ROOT, "scripts", f))));
+    }
+
     // ── LOAD ZERO BLOCK 7 (19 Aug 2026) — CANON, 66 FILES ───────────────────────────────────────
     // THE LAW: no canon file may state something a command can produce. A number or a state in
     // canon prose is a lie by tomorrow — and it lies to HIM, because canon is what he reads when he

@@ -28,6 +28,22 @@ resolves the live Gemini model + key and says why (`node scripts/models.mjs stat
 | L9 | Layering, never replace — freeze (`*Legacy`), fold, move; never delete | `git log -S` |
 | L10 | Verifiable to him in one line, every anchor | `node scripts/state.mjs` |
 
+## LAW T — THE TOOLING LAW (19 Aug 2026, standing · universal · binds every session)
+**Record: `docs/archive/TOOLING_LAW__2026-08-19.md`. Read it before proposing any tool, model or agent.**
+His law: *zero token wastage* is **ROUTING, not austerity** — every unit of work goes to the cheapest
+TIER that gives the SAME quality, depth and speed; paying above it is waste, paying below it is worse
+(the answer gets redone). Ask first: **computation, breadth, or judgement?**
+- **TIER 0 · deterministic code — free AND better.** `tsc --checkJs` + JSDoc · ESLint · dependency-cruiser
+  · knip · semgrep (the organism's OWN laws, off hand-written regex) · c8 · Stryker. Each rides `npm test`
+  as a gate, and **a gate may only get stricter**. Where a hand-rolled scan and an industry tool disagree,
+  **the industry tool wins**; the hand-rolled one narrows to what only this organism can know.
+- **TIER 1 · Gemini — BREADTH only.** Extended thinking **ON, always, both accounts** (his ruling; it costs
+  him nothing and buys recall). **Nothing it says is believed without a TIER 0 check** (his ruling too —
+  its RECALL is the product, not its precision). Its one unmatched job: the whole canon in ONE context.
+- **TIER 2 · Claude — judgement only.** His intent · the SHAPE of a bug class · code that must be right.
+- **Agents fan out by CONCERN, never by directory**, over `xray`'s graph, and every finding must name the
+  cross-file path that produces it — the bugs here are non-local, and a chunked reader finds none of them.
+
 ## Session start (non-negotiable)
 1. Call the **`organism-memory` MCP tool `get_context`** before teaching, planning or answering where he is — background context, true WHEN WRITTEN; `recall` for targeted lookups. Never ask him to re-explain what it knows.
 2. Read the **STATE line** (line 1 of the SessionStart brief; `node scripts/state.mjs`) — pushed · daemons · suite · sitting · next · needs-you — so he never asks "is everything working?".
@@ -71,7 +87,7 @@ Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in 
 
 ## Files of record
 - `OPS_STATE.md` — a pointer to `state.mjs`. Old bodies: `docs/archive/`.
-- `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. the MODELS + ACTS record: `docs/archive/MODELS_AND_ACTS__2026-08-18.md` (LAW M + LAW A, built 18 Aug 2026).
+- `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. the MODELS + ACTS record: `docs/archive/MODELS_AND_ACTS__2026-08-18.md` (LAW M + LAW A, built 18 Aug 2026) · **LAW T: `docs/archive/TOOLING_LAW__2026-08-19.md`**.
 - `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
 - **THE OPEN WORK ORDER: `docs/archive/ORGANISM_AUDIT__2026-08-19.md`** — the audit + plan order,
   written 19 Aug at the end of a long night. It carries HIS INTENT (§0, written down for the first
