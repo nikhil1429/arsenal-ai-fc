@@ -123,6 +123,17 @@ your budget on what is NOT in this list.
     checked). His recall degrades silently during conversation.
   - `dmn.mjs × 6` — ENOENT `rejirah_log.jsonl`.
 
+**Tests that inherit live state — the SAME class, found again on 19 Aug**
+- `sitting.mjs` selftest goes RED the moment a FORGE session is genuinely open. Assertions at
+  `sitting.mjs:1255` and `:1257` both assume *"no forge session on disk"*; with his real session
+  live the code takes the RESUME path instead of the START path and they fail. **Nothing was
+  broken — he was studying.** Deliberately NOT fixed on 19 Aug: he was mid-session at step 3/11 and
+  editing `sitting.mjs`/`forge_session.mjs` under a live sitting risks his study, which is the one
+  thing this organism exists to protect. Fix it when no session is open, by pinning the forge-session
+  path in the selftest the way `ARSENAL_SAMJHAO_LEDGER` and `ARSENAL_TASKS_LEDGER` already are.
+- This is the fourth instance of *"a ratchet that inherits live state is not a ratchet"* — a lesson
+  this repo has now paid for in `samjhao`, `outbox`, `unleash_verdict` and here.
+
 **Structure** (`xray report`)
 - 103 organs · **1,310 unresolved sinks** (xray's own blindness — see §4)
 - Q1 dead read 1 · Q2 **0** · Q3 orphan lanes 5 · Q4 ghost state 5 · Q5 **0**
