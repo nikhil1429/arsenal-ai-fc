@@ -383,6 +383,17 @@ very order: his goal *"the organism fixes the issues it finds itself"* is stated
 > **Default to (2), not (1).** A missing feature is invisible: no test fails, no finding fires, no
 > card is minted. A stale doc at least contradicts something. The silent class is the dangerous one.
 
+**⚠ THE CLAUDE-WEB ERA — his word, 20 Aug 2026.** The learning layer (and some early design) was
+built in a Claude WEB project; those conversations DO NOT EXIST in the local transcript store, by
+design, on top of the 8 missing founding days already measured. Therefore:
+> **Absence of a transcript is NEVER evidence against a document.** For Claude-web-era canon —
+> `learning-layer/` above all — the docs themselves ARE the primary intent record. The learning
+> layer is NOT an audit target for removal or rewrite: he has said plainly he likes it and it
+> works. L9 binds (layer, never delete), the capsule-immutability ruling binds, and the only
+> ladder work that touches learning-adjacent code makes it SAFER or MORE general, never smaller:
+> `isFixture()` generalization (tests stop touching his live study state) · `teaching_audit`
+> un-nailed (covers MORE of his teaching turns, not fewer) · `course.mjs`/CORE_AXES generalized.
+
 ## §4-D-0 · THE CONVERSATION CORPUS IS A PRIMARY SOURCE — READ IT. (his correction, 19 Aug)
 
 **I first answered a question he did not ask.** He was not asking whether to inject history into
