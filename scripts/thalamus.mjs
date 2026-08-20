@@ -1635,7 +1635,7 @@ async function selftest() {
       seen2[0] === "haiku" && rows2[0].model === "haiku" && rows2[0].model_requested === "gemini-flash-lite-latest" && /claude -p/.test(String(rows2[0].model_fallback)));   /* models-literal-ok: fixture */
     assert("KNOB: an empty/missing model never blanks the --model flag", resolveAdjModel({ adjudicator: { enabled: true } }).model === "haiku" && resolveAdjModel({}).model === "haiku");
     assert("KNOB: a full claude-* model id passes through untouched (the CLI takes them verbatim)",
-      resolveAdjModel({ adjudicator: { model: "claude-haiku-4-5-20251001" } }).model === "claude-haiku-4-5-20251001");
+      resolveAdjModel({ adjudicator: { model: "claude-haiku-4-5-20251001" } }).model === "claude-haiku-4-5-20251001");   // models-literal-ok — selftest fixture: the CLI takes a full id verbatim, and that is the invariant under test
     // THE LIVE FILE, not a fixture — and stated as an invariant, not a value, so it
     // survives him legitimately turning the knob tomorrow.
     const live = resolveAdjModel(loadConfig());

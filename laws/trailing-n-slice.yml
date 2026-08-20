@@ -1,0 +1,31 @@
+id: trailing-n-slice
+language: JavaScript
+severity: warning
+message: a trailing-N read — §9 SHAPE 4 asks whether anything in this window is still RECENT
+note: |
+  §9 SHAPE 4 · A KEY THAT OMITS THE THING THAT CHANGES. Trailing-N reads with no recency gate:
+  captains_call.mjs:1209 · dugout.mjs:627 takes a median over the last 50 pauses regardless of
+  age. The last N rows of a log are not "the recent rows" — they are the last N rows, and if the
+  lane stopped writing a month ago they are a month old while every reader treats them as now.
+  THIS RULE finds every trailing-N read structurally. scripts/lawpack.mjs decides which ones are
+  findings: a site whose enclosing function also compares a timestamp is already gated, and a
+  site may be waived by a DECLARED marker comment above it — `law-waiver:trailing-n <why>` —
+  the form daemon_watchdog.mjs already carries in prose beside its deliberate .slice(-20).
+rule:
+  any:
+    - pattern: $X.slice(-$N)
+    - pattern: $X.slice(-$N, $$$REST)
+# NARROWED ON ITS FIRST LIVE RUN, before the rule was trusted (§4 binds every new instrument,
+# and gates.mjs had to do exactly this with TS2551/2561 the rung before). `.slice(-1)` is
+# "take the LAST one", which is by definition the freshest thing available — it is not a
+# WINDOW of N rows treated as recent, which is what §9 SHAPE 4 is about. It also fires on
+# every String.split(...).slice(-1) in the repo, e.g. acts.mjs:405 taking the text after
+# "HE SAID:", which is not a log read at all. Verified by reading those sites, then cut.
+constraints:
+  N:
+    regex: '^([2-9]|[1-9][0-9]+)$'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

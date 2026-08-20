@@ -261,7 +261,7 @@ function selftest() {
     spendOfModelAware({ ...r, model: "sonnet" }) === spendOf(r) * 3 &&
     spendOfModelAware({ ...r, model: "opus" }) === spendOf(r) * 5);
   assert("an UNSTATED model is charged as sonnet (the default engine), never as free",
-    spendOfModelAware({ ...r }) === spendOf(r) * 3 && modelKey({ model: "claude-opus-5" }) === "opus");
+    spendOfModelAware({ ...r }) === spendOf(r) * 3 && modelKey({ model: "claude-opus-5" }) === "opus");   // models-literal-ok — selftest fixture: the CLAUDE-side id must map to the weight key
   // The live inversion in one fixture: a big haiku lane vs a smaller sonnet one.
   const inv = rho([
     { job: "pulse_like", model: "haiku", input_tokens: 0, output_tokens: 1000, cache_creation_tokens: 100000, cache_read_tokens: 0 },

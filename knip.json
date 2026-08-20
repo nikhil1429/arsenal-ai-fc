@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "_comment": "THE ORGANISM AUDIT §10-C · rung S3 (20 Aug 2026). knip answers ONE question no other instrument here answers: which exported symbol does nobody import? In an organism whose organs are CLIs, an orphan export is not automatically dead code — it can be a writer another organ is SUPPOSED to call through (CLAUDE.md's owners-only rule names exactly that path) and never does. That is why knip's findings enter as LEADS, never as REDs: §4's rule binds every new instrument, and a lead is a lead until one run verifies it. scripts/lawpack.mjs prints them and counts them; it never fails a build on them.",
+  "entry": [
+    "scripts/*.mjs",
+    "hooks/*.mjs",
+    "build_gemini_wall.cjs"
+  ],
+  "project": [
+    "scripts/**/*.mjs",
+    "hooks/**/*.mjs"
+  ],
+  "ignore": [
+    "node_modules/**",
+    "dressing-room/**",
+    "docs/**",
+    "learning-layer/**",
+    "reference/**",
+    ".audit_tmp/**"
+  ],
+  "ignoreDependencies": [],
+  "includeEntryExports": true
+}

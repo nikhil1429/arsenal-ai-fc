@@ -43,8 +43,13 @@ STATUS (update this block before any session stops — this is the handoff)
   S2  TYPE + LINT GATES ........ ☑ DONE 20 Aug 2026 · tsc --checkJs + eslint, frozen at
                                    their measured baseline and tightening only; both ride
                                    npm test. Toolchain pinned EXACT, lockfile committed.
-  ▶ NEXT SESSION ............... S3 · THE LAW PACK (§10-C, first ☐).
-                                   MODEL: Opus 5 · effort max · CEILING 40.
+  S3  THE LAW PACK ............. ☑ DONE 20 Aug 2026 · the organism's own five laws as
+                                   ast-grep rules over the real AST, plus knip and
+                                   dependency-cruiser. Frozen at the measured baseline,
+                                   tightening only; rides npm test. Every rule proven to
+                                   BITE on a planted violation on EVERY run, not once.
+  ▶ NEXT SESSION ............... S4 · PASS 2 — the eight intent docs, ONE head, no agents
+                                   (§10-C, first ☐). MODEL: Opus 5 · effort max · CEILING 40.
 
   ✔ THE CEILINGS ARE RE-BASELINED — HIS RULING, 20 Aug 2026, taken the same hour the meter
     first read them. Every standard rung 40 · S10 60 · ladder total 500 (was ≈81, guessed).
@@ -1053,7 +1058,14 @@ ruling, 20 Aug 2026. Check the number, never guess it: `node scripts/session_met
       any TypeScript rewrite · touching organ logic beyond what a type error names.
       DONE-PROOF: a planted readJsonl()-class ReferenceError goes RED before runtime,
       then is removed; baseline counts recorded inside the gate.       CEILING: 40
-☐ S3  THE LAW PACK.                                         MODEL: Opus · effort max
+☑ S3  THE LAW PACK — DONE 20 Aug 2026. The organism's own laws are code now.
+      (@ast-grep/cli 0.45.1 · knip 6.32.2 · dependency-cruiser 18.2.0, pinned EXACT,
+       lockfile committed, in their own version commit. laws/*.yml + scripts/lawpack.mjs,
+       riding npm test. BASELINES, read before they were frozen: owners-only 0 ·
+       LAW M 1 (watchman.mjs:1067, a live `claude -p --model claude-opus-5`, which
+       models.mjs's gemini-only regex could never see) · jugad 102 · trailing-N 7 ·
+       bare-catch 38 · depcruise 7 cycles. The five hand-rolled scans NARROWED by
+       addition, none deleted.)                              MODEL: Opus · effort max
       The organism's own laws as ast-grep YAML rules: owners-only · LAW M
       no-literal-model-names · THE JUGAD RULE (an order with a universal quantifier
       may never ship as a literal subject list — Shape 1's ratchet) · trailing-N
@@ -1621,3 +1633,166 @@ on the open order. No gate was weakened; two more were added, and both can only 
 **NEXT: S3 · THE LAW PACK — MODEL: Opus 5 · effort max · CEILING 40.** It inherits a working
 ratchet shape: ast-grep rules join the same gate, prove each rule BITES on a planted violation,
 and the superseded hand-rolled scans NARROW rather than get deleted (L9).
+
+### PROGRESS 2026-08-20 ~09:40 IST — RUNG S3 · THE LAW PACK
+
+**WHAT LANDED — the rung, and nothing outside it.**
+
+- **STEP 0, ITS OWN COMMIT (§10-D rule 11 — versions move alone):** `@ast-grep/cli` **0.45.1** ·
+  `knip` **6.32.2** · `dependency-cruiser` **18.2.0**, pinned EXACT, lockfile committed, `npm test`
+  green on BOTH sides of the install with the rung's own files held out of the tree so the version
+  commit was gated by itself. All three are at LATEST, unlike S2's deliberate typescript pin —
+  nothing here constrains a peer — and each was checked against the RUNTIME first (Node 22.14):
+  knip declares `^20.19 || >=22.12`, dependency-cruiser `^22 || ^24 || >=26`.
+
+- **`laws/` — FIVE RULES, one file each, over the real AST** (`sgconfig.yml` points ast-grep at
+  them): `owners-only-state-write` · `law-m-literal-model` · `jugad-literal-subject-list` ·
+  `trailing-n-slice` · `bare-catch`. Every rule is scoped to exactly what tsc and eslint already
+  scope to (`scripts/**`, `hooks/**`, minus `scripts/legacy/**`), so the four instruments'
+  numbers are comparable to the unit — and they are: see the cross-check below.
+
+- **`scripts/lawpack.mjs` — the judge and the ratchet, SOLE WRITER of NOTHING.** The split is LAW
+  T's rule verbatim: **ast-grep finds the SHAPE, this organ applies the KNOWLEDGE.** Who is the
+  declared SOLE WRITER of which state file · which eight lanes are production · what a waiver
+  looks like · which literals are LABELS (imported from `models.mjs`, never re-listed). The
+  baselines live inside the gate, the gate never edits itself, and the only law is DIRECTION.
+
+- **`.dependency-cruiser.cjs` — the IMPORT half of owners-only, declaratively.** Cycles,
+  unresolvable imports and *a devDependency reaching an organ* are ERRORS (an organ must survive
+  a bare checkout — that is not theoretical here, `gates.mjs`'s NOT-MEASURABLE-HERE path exists
+  for exactly that world). Orphan modules are informational.
+
+- **`knip.json` — orphan exports as LEADS, never REDs.** §4 binds new instruments: in an organism
+  whose organs are CLIs, "nobody imports this" is the NORMAL case, and a gate that fires on the
+  normal case teaches people to ignore it.
+
+- **BOTH RIDE `npm test`** — a new `lawpack` mode in the suite runner, beside S2's `gates`.
+
+**THE DONE-PROOF, AND IT IS NOT A STORY — IT RUNS EVERY TIME.** The rung asks that every rule be
+proven to BITE on a planted violation. A proof that happened once, on the day it was built, is a
+claim. So the proof is a TEST: `lawpack selftest` builds a throwaway project in the OS temp dir
+carrying **the real `laws/` rules** (never a second copy), plants one violation per rule, runs
+ast-grep there, and requires all five to bite. **41 passed, 0 failed.** A rule that stops biting
+fails `npm test`, forever.
+
+**THE INSTRUMENT NARROWED ITSELF THREE TIMES BEFORE IT WAS TRUSTED — §4 binds new tools, and this
+is the third rung in a row that had to do it** (S1's order-checker three times, S2's hard-code
+list once).
+1. **`trailing-n-slice`, 131 raw sites → 7 findings.** `.slice(-1)` is "take the LAST one", which
+   is by definition the freshest thing available — not a WINDOW of N treated as recent. It also
+   fired on every `String.split(...).slice(-1)`, e.g. `acts.mjs:405` taking the text after
+   "HE SAID:", which is not a log read at all. Constrained to N ≥ 2 in the rule itself.
+2. **Then, by READING the survivors:** `audit.mjs:656/663` and `sandbox.mjs:340` truncate a path
+   or a stdout tail into a `why` message — a truncation for display has no age to check. Three
+   shapes cut, each named in code beside the cut.
+3. **The `jugad` rule's first form matched NOTHING** — a `has:`/`field:` constraint that did not
+   bind. The bare pattern was proven against a known instance (`shadow.mjs:47`, §9's row #1)
+   before the constraint was removed, and the all-strings test moved into `lawpack.mjs` where
+   the reasoning is readable.
+
+**THE TWO INSTRUMENTS CROSS-VALIDATED TO THE UNIT, AND THAT IS THE HEADLINE.** ast-grep finds
+**276** empty catch clauses; **9** of them sit in `scripts/legacy/`, which every gate excludes;
+**267 is eslint's frozen `no-empty` count, exactly.** Two independent tools, two different
+engines, one number. Then the organism's own knowledge splits it: **38** of the 267 are inside
+the eight production lanes AND guard fs I/O, which is the declared-swallow law in swallow.mjs's
+own header (OVERHAUL Block 7, its section 14.2 — another document's numbering, named here
+without a section sign so this order does not claim a section it does not have). The other 229
+stay where eslint already froze them.
+
+**LAW T PAID FOR ITSELF ON DAY ONE — ONE REAL DEFECT THE HAND-ROLLED SCAN COULD NEVER SEE.**
+`watchman.mjs:1067` builds a LIVE command line: `claude -p --model claude-opus-5 --effort max`.
+`models.mjs check` has been green on this for weeks because its regex is **gemini-only**; the AST
+rule reads string nodes across the gemini-*, claude-* and gpt-* families and found it immediately.
+It is frozen as `law-m-literal-model: 1` — it can only fall — and the FIX is not this rung's:
+§10-G puts the Claude-side role rows at **S10**. Nine other hits were selftest fixtures and now
+DECLARE themselves with the word this repo already uses (`models-literal-ok`), rather than being
+hidden inside a bigger baseline.
+
+**THE MEASURED BASELINES, frozen 20 Aug 2026, every one READ before it was frozen:**
+
+| law | frozen | what is in it |
+|---|---|---|
+| owners-only-state-write | **0** | 11 write sites reach the state dir by syntax, NONE by a non-owner. 7 more are `mkdirSync(STATE_DIR)` — syntax cannot resolve those to a file, so they are handed to xray's IR (Q2/Q5, both 0), never guessed |
+| law-m-literal-model | **1** | `watchman.mjs:1067`, live — see above |
+| jugad-literal-subject-list | **102** | const-bound arrays of plain names; **74** inside a file with a proposal / critique / ratification lane. §9 SHAPE 1 named twelve by hand — **the shape is ten times bigger** |
+| trailing-n-slice | **7** | row windows with no recency compare: `gaffer_state` ×2 · `touchline:320` · `viz:383` · `postmatch` ×2 · `physio:856` (the weakest — it sorts by date first) |
+| bare-catch | **38** | empty catches guarding fs I/O in the production lanes: dugout 11 · watchman 9 · brain 6 · dmn 5 · cortex 3 · nightshift 2 · thalamus 2 · **conductor 0** |
+| depcruise_errors | **7** | import cycles: `brain↔sitting↔state`, `context_manifest↔learnstate↔brain` |
+
+**TWO OF THE 102 JUGAD FINDINGS ARE IN THE LAW PACK ITSELF** (`RULE_IDS`, `PRODUCTION_LANES`) and
+they are deliberately NOT waived. The law pack is not exempt from the law pack, and
+`PRODUCTION_LANES` is a real §9 Shape-1 instance that has lived in `swallow.mjs`'s header since
+18 Aug — rung S10's registry is where it stops being one.
+
+**THE HAND-ROLLED SCANS NARROWED BY ADDITION — NOT ONE LINE OF BEHAVIOUR REMOVED (L9).** A gate
+may only get stricter, so narrowing a scan's CODE would have been a weakening, whatever LAW T's
+word for it is. What narrowed is each one's CLAIM, written into its own header: `models.mjs` keeps
+the roster, the LABELS allowlist and the declaration word · `xray.mjs` keeps the resolved
+dataflow half, and every site syntax cannot resolve is handed to it · `swallow.mjs` keeps the
+declaration mechanism, the reason string, the panic rethrow and the ledger — *a linter can count
+silence; only `swallow()` can make it speak.* All three still run on every commit.
+
+**LEADS FOUND, RECORDED, NOT ACTED ON** (they belong to S4/S6, and §4 says a lead is a lead until
+one run verifies it):
+<!-- order-check:absent-ok ./speak.mjs -->
+<!-- order-check:absent-ok scripts/legacy/speak.mjs -->
+
+- `scripts/legacy/organism_live_demo.mjs` imports `./speak.mjs`, which resolves to
+  `scripts/legacy/speak.mjs` and **does not exist** — the `ghost.mjs` class, third instance.
+  (Both paths are declared absent-on-purpose just above, the way ghost.mjs is: the gate caught
+  this entry naming them within a minute of it being written, which is the loop closing again.)
+  Excluded from the gate for scope consistency with tsc/eslint, not because it is harmless.
+- **7 import cycles** between the state-line organs. Frozen; a cycle is where "who owns this"
+  stops having an answer.
+- **knip's orphan-export list** — printed by `node scripts/lawpack.mjs leads`, never a RED.
+
+**THE SUITE AND THE LAW.** `npm test` baseline before this rung: **108 passed / 1 failed** (the two
+pre-existing red members, teaching_audit 62/1 and herd 18/1 — unchanged since S2). After:
+****109 passed / 1 failed** — the +1 is the new LAW PACK check, green, and the suite grew from 103 members to 104. The single failing line is the same aggregate as the baseline, naming the same two members and no others**. `node scripts/xray.mjs report`: ****Q2 = 0, Q5 = 0**, 107/107 organs parsed after a rebuild — the new organ declares SOLE WRITER of NOTHING and the IR agrees**. The §3-C order gate is green on the open
+order (5 order files checked, 7 leads in closed records). `node scripts/gates.mjs report`: S2's
+numbers unmoved. **No gate weakened; two more added, and both can only tighten.**
+
+---
+
+**⚠ THE ONE THING HE MUST RULE ON — S1's SPEND METER READS 2× TRUE COST, AND IT IS THE
+INSTRUMENT THAT ENFORCES EVERY CEILING ON THIS LADDER.**
+
+Found while reading this rung's own cost, verified three ways, and **NOT fixed here** — §10-D
+rule 1 says one rung per session, and this is S1's organ.
+
+- **THE EVIDENCE.** This session's transcript holds **229 assistant usage rows but only 118
+  distinct `message.id`s** — 93 ids appear more than once. Claude Code writes one JSONL line per
+  content block of the SAME assistant message; every line carries the same message-level `usage`,
+  the same `message.id` and the same `requestId`, and a DIFFERENT `uuid`.
+- **THE CAUSE, and it is a code-vs-record drift of exactly the §4-B class.** S1's own PROGRESS
+  entry says the meter is *"Deduped by message-id + requestId"*. The code's key is
+  `sha1(message.id | requestId | uuid)` (`session_meter.mjs:119`). The uuid is what differs
+  between those duplicate lines, so the composite key differs and **the dedup never fires** on
+  this shape. The 38,077 rows it did skip on its first sweep were the resumed-session copies —
+  a different, real duplicate class. This one it cannot see.
+- **THE SIZE, measured with the organ's OWN `usageOf()` and `weighted()`:** this session reads
+  **64.62 lakh** as built and **32.21 lakh** deduped on message.id + requestId only —
+  **inflation 2.01×**.
+- **WHAT IT TOUCHES.** Every number the meter has ever produced: S1's own "46.51 lakh", the
+  "his sessions 8,382.49 lakh vs the organism's 204.60" comparison, the daily line in
+  `state.mjs week`, and **the re-baselined ceilings in ▶ RESUME — 40 per rung, 60 for S10, 500
+  for the ladder — because those were sized FROM this meter.** The error is in the SAFE
+  direction (the ceilings are roughly twice as generous as intended, not half), so nothing
+  already done was under-guarded. But a meter that reads 2× is not a meter.
+- **WHY IT IS NOT FIXED IN THIS COMMIT.** It is a one-line change to another rung's organ, it
+  rewrites every historical number in this document, and re-baselining the ceilings a second
+  time is HIS call, exactly as it was on 20 Aug when he chose option 1. A session does not
+  quietly re-cut the numbers its own ceiling is measured against.
+
+**HIS LINE, one word:** *fix the meter and re-baseline the ladder from corrected numbers* — or
+*leave the ceilings where they are and just correct the meter*. Either is one small rung; say
+which, and the next session does it before S4, or S4 goes first and this rides after.
+
+---
+
+**COST.** The meter says this session read **64.62 lakh weighted** against a ceiling of 40. **That number is wrong, and finding out WHY is the one thing in this entry he has to rule on — see the block below.** Corrected, the rung cost **32.21 lakh**, inside its ceiling.
+
+**NEXT: S4 · PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim) — MODEL: Opus 5 ·
+effort max · CEILING 40.** It reads, it does not build; its output is the contradictions +
+missing-implementation list folded into §9. Its FORBIDDEN lines are fan-out, and the other ~108
+`.md` (that is S5's sweep).

@@ -1,0 +1,21 @@
+id: bare-catch
+language: JavaScript
+severity: warning
+message: a catch that swallows with no reason and no count — §14.2 says swallow() or say why
+note: |
+  mutagen.mjs measured it 12 Aug 2026: 884 catch sites in scripts/, 488 completely empty, and
+  every real shipped bug in this repo sat inside one. §14.2's law: in the production lanes a
+  catch that guards fs I/O may swallow ONLY through swallow("one-line reason", e), so the
+  silence is NAMED and COUNTED and ARSENAL_PANIC can make it loud.
+  eslint's no-empty (rung S2) owns the GENERIC count and freezes it at 267 — this rule owns the
+  half only this organism can know, and scripts/lawpack.mjs applies it: a bare catch in a
+  PRODUCTION LANE, guarding fs I/O, that does not declare through swallow(). L9: no catch is
+  ever deleted here; the fix is always catch {} -> catch (e) { swallow("why", e) }.
+rule:
+  kind: catch_clause
+  regex: '^catch\s*(\([A-Za-z0-9_$]*\))?\s*\{\s*\}$'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

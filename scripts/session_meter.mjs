@@ -374,7 +374,7 @@ function selftest() {
   const row = (o) => JSON.stringify({
     type: "assistant", uuid: o.uuid || o.id, requestId: o.req || "req_1", timestamp: o.ts || "2026-08-20T10:00:00.000Z",
     sessionId: o.sid || "S1", entrypoint: o.ep === null ? undefined : (o.ep || "claude-desktop"), isSidechain: !!o.side,
-    message: { id: o.id, model: o.model || "claude-opus-5", usage: { input_tokens: o.i ?? 0, cache_creation_input_tokens: o.cw ?? 0, cache_read_input_tokens: o.cr ?? 0, output_tokens: o.o ?? 0 } },
+    message: { id: o.id, model: o.model || "claude-opus-5", usage: { input_tokens: o.i ?? 0, cache_creation_input_tokens: o.cw ?? 0, cache_read_input_tokens: o.cr ?? 0, output_tokens: o.o ?? 0 } },   // models-literal-ok — selftest fixture: a synthetic usage row needs a model field
   }) + "\n";
 
   // 1. the weights are brain.mjs's, and the arithmetic is the same arithmetic
@@ -390,7 +390,7 @@ function selftest() {
   // 3. `<synthetic>` and all-zero rows cost nothing and are skipped
   assert("USAGE — a <synthetic> turn never hit the API and is skipped",
     usageOf({ type: "assistant", message: { model: "<synthetic>", usage: { output_tokens: 12 } } }) === null);
-  assert("USAGE — an all-zero usage block is skipped", usageOf({ type: "assistant", message: { model: "claude-opus-5", usage: { input_tokens: 0, output_tokens: 0 } } }) === null);
+  assert("USAGE — an all-zero usage block is skipped", usageOf({ type: "assistant", message: { model: "claude-opus-5", usage: { input_tokens: 0, output_tokens: 0 } } }) === null);   // models-literal-ok — selftest fixture: an all-zero usage row needs a model field
 
   // 4. THE SIDECHAIN RULE — a subagent's turns are the 505-lakh class; they must count
   const f1 = join(proj, "s1.jsonl");

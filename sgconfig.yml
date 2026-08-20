@@ -1,0 +1,18 @@
+# ============================================================================
+# sgconfig.yml · ARSENAL AI FC — THE LAW PACK's root config
+#   (THE ORGANISM AUDIT §10-C · rung S3, 20 Aug 2026)
+# ----------------------------------------------------------------------------
+# LAW T, TIER 0: the organism's own laws, expressed as ast-grep YAML rules over the
+# real AST instead of hand-written regex. The rules in laws/ find the SHAPE; the
+# organism's own knowledge — who owns which state file, which lanes are production,
+# what a model roster is — lives in scripts/lawpack.mjs, which reads these matches and
+# judges them. That split IS LAW T's rule: the industry tool wins on structure, and the
+# hand-rolled scan narrows to what only this organism can know.
+#
+# A rule here NEVER edits anything and NEVER fails a build on its own. `ast-grep scan`
+# is a measuring instrument; scripts/lawpack.mjs is the gate, and the gate is a RATCHET
+# (frozen baselines that may only fall) — never a target, because a gate nobody can
+# satisfy gets deleted, and a deleted gate guards nothing.
+# ============================================================================
+ruleDirs:
+  - laws

@@ -1,0 +1,24 @@
+id: law-m-literal-model
+language: JavaScript
+severity: warning
+message: a literal model id in a string — LAW M says no organ names a model, only a ROLE
+note: |
+  LAW M (18 Aug 2026): no organ names a model — a ROLE; scripts/models.mjs resolves the live
+  model per role and says why. Then a model bump is ONE roster row, never a code change.
+  WHY THIS RULE EXISTS BESIDE models.mjs `check`: that scan is a line-based regex that blanks
+  comments heuristically and only knows the gemini-* family. This one matches STRING NODES on
+  the real AST — a model name inside a comment is history and is not a hit, which no regex over
+  source can promise — and it covers the claude-* and gpt-* families too. Where the two
+  disagree, the industry tool wins (LAW T); models.mjs keeps the roster knowledge (its LABELS
+  allowlist, the models-literal-ok declaration, brain_config's claude aliases).
+rule:
+  any:
+    - kind: string
+      regex: '(gemini-(1|2|3|[0-9]+\.[0-9]+|flash|pro|embedding|exp|live)|claude-(opus|sonnet|haiku|fable)-[0-9]|gpt-[0-9])'
+    - kind: template_string
+      regex: '(gemini-(1|2|3|[0-9]+\.[0-9]+|flash|pro|embedding|exp|live)|claude-(opus|sonnet|haiku|fable)-[0-9]|gpt-[0-9])'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

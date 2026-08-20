@@ -1,0 +1,38 @@
+id: owners-only-state-write
+language: JavaScript
+severity: warning
+message: a write call reaching dressing-room/state — the owners-only law says this file has ONE writer
+note: |
+  THE UNIVERSAL RULE (CLAUDE.md): every state file has ONE writer, declared in the organ's
+  own header ("SOLE WRITER of ..."). This rule finds the WRITE SITES structurally — a
+  filesystem mutation whose argument tree reaches the state directory, either by a literal
+  path or through the STATE_DIR idiom every organ uses (912 references measured 20 Aug 2026).
+  It does NOT decide ownership: scripts/lawpack.mjs joins each site to the declared owner
+  map and to xray's IR, because only this organism knows who owns what.
+rule:
+  all:
+    - any:
+        - pattern: writeFileSync($$$ARGS)
+        - pattern: appendFileSync($$$ARGS)
+        - pattern: renameSync($$$ARGS)
+        - pattern: unlinkSync($$$ARGS)
+        - pattern: rmSync($$$ARGS)
+        - pattern: mkdirSync($$$ARGS)
+        - pattern: cpSync($$$ARGS)
+        - pattern: copyFileSync($$$ARGS)
+        - pattern: writeFile($$$ARGS)
+        - pattern: appendFile($$$ARGS)
+    - has:
+        stopBy: end
+        any:
+          - kind: string
+            regex: "dressing-room[\\/]+state"
+          - kind: template_string
+            regex: "dressing-room[\\/]+state"
+          - kind: identifier
+            regex: '^STATE_DIR$'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

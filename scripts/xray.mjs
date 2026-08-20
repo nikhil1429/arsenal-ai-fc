@@ -2,6 +2,13 @@
 // ============================================================================
 // xray.mjs · ARSENAL AI FC — STATIC TRUTH, AS ONE IR (12 Aug 2026)
 //   SOLE WRITER of dressing-room/state/xray_graph.json
+//   NARROWED-BY-ADDITION 20 Aug 2026 (AUDIT §10-C rung S3): the SYNTACTIC half of the
+//   owners-only law — a write call whose argument tree names the state dir — is now
+//   `laws/owners-only-state-write.yml`, judged by scripts/lawpack.mjs. It sees write SITES;
+//   it cannot see through a variable. Everything it cannot resolve is handed HERE, because
+//   resolving `join(STATE_DIR, x)` into a real path is exactly what this IR is for, and Q2
+//   and Q5 remain the law's mechanical check. Neither replaces the other, and an IR gap is
+//   itself a finding (rung S6's witness rule).
 // ----------------------------------------------------------------------------
 // WHY AN IR AND NOT SIX ANALYSES. Every bug class this repo actually suffers is
 // a QUERY over the same two facts: who reads a file, and who calls a verb. Build

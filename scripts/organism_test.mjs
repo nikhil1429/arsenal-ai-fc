@@ -26,7 +26,7 @@
 // LAWS: READ-ONLY on dressing-room/state · spawns organs as CHILD PROCESSES (never
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
-// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path]
+// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack]
 // ============================================================================
 import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -1308,8 +1308,30 @@ function gates() {
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 
+// ── THE LAW PACK (AUDIT §10-C rung S3, 20 Aug 2026) ──────────────────────────
+// The organism's OWN laws, over the real AST: owners-only · LAW M · the jugad rule ·
+// trailing-N reads · bare catches, plus dependency-cruiser's import rules. S2 bought the
+// two universal nets; neither of them knows anything about THIS organism, and every law
+// above is one only this repo has. Same shape as gates(): the baselines live inside
+// lawpack.mjs and the only law is DIRECTION — a frozen count may fall, never rise, and a
+// new rule id arrives with nothing grandfathered.
+// PROVEN ON EVERY RUN, not once on the day it landed: lawpack's selftest builds a throwaway
+// project carrying the REAL laws/ rules, plants one violation per rule, and requires all
+// five to bite. A rule that stops biting fails the suite.
+function lawpack() {
+  section("LAW PACK — the organism's own laws as ast-grep rules, frozen and tightening only");
+  const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: 600000 });
+  if (/NOT MEASURABLE HERE/.test(r.out)) {
+    assert("LAW PACK — bare checkout: the pack answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
+    return;
+  }
+  const reds = r.out.split(/\r?\n/).filter((l) => /^\s*RED\s/.test(l));
+  assert("LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)",
+    r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, alive };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }

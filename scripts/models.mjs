@@ -47,6 +47,16 @@
 //               outside this file (labels allowlisted by exact string; a fixture line
 //               may carry `models-literal-ok` and is counted, not failed). Joins
 //               organism:selftest. Claude side: brain_config names only opus|sonnet|haiku.
+//   · NARROWED 20 Aug 2026 (AUDIT §10-C rung S3, LAW T's rule: the industry tool wins on
+//               shape, the hand-rolled scan keeps what only this organism knows). The
+//               SHAPE half now belongs to `laws/law-m-literal-model.yml`, which matches
+//               STRING NODES on the parsed tree — so a model name inside a comment is
+//               history and not a hit, which no regex over source text can promise — and
+//               which covers the claude-* and gpt-* families this scan never did. It found
+//               watchman.mjs:1067 naming `claude-opus-5` in a LIVE command line on its
+//               first run. THIS scan keeps the KNOWLEDGE: the LABELS allowlist, the
+//               `models-literal-ok` declaration, the roster, and brain_config's aliases.
+//               Both still run, on every commit. Where they disagree, the AST tool wins.
 // LAWS: hermetic in a fixture (selftest / ARSENAL_AUDIT_COLLAR ⇒ probe writes to a
 //   scratch path or nowhere, never the live file) · owners-only (this file is the one
 //   writer of models.json) · never throws from generate/embed/resolve · no key material

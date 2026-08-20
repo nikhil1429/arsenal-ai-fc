@@ -1,0 +1,22 @@
+id: jugad-literal-subject-list
+language: JavaScript
+severity: warning
+message: a subject set shipped as a literal array of names — THE JUGAD RULE says predicate, never list
+note: |
+  HIS LAW, 11 Aug 2026 14:53:42Z, verbatim: "create everything in such a way that it works for
+  the future topics as well automatically, do not create jugad, do permanent stuff."
+  §9 SHAPE 1: he gives a general ruling; the code ships a literal list of the instances that
+  existed the day he gave it; that list becomes the mechanism's permanent ceiling. Twelve
+  instances measured 19 Aug 2026 — shadow.mjs's four interruption types and forge_session's
+  CORE_AXES = ["d"] among them. `grep -rn "jugad" scripts/` → 0.
+  THIS RULE finds the SHAPE: a const bound to an array of string literals. It cannot know which
+  mechanism has a proposal / critique / ratification lane — scripts/lawpack.mjs applies that
+  filter, because that is knowledge only this organism has. A plain enum of states is not a
+  jugad; a SUBJECT list inside a mechanism that ratifies things is.
+rule:
+  pattern: const $NAME = [$$$ITEMS]
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

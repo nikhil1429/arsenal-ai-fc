@@ -30,6 +30,16 @@
 //                           night report, never an escalation (a swallow is design
 //                           until a death says otherwise).
 //
+// NARROWED-BY-ADDITION 20 Aug 2026 (AUDIT §10-C rung S3). Counting empty catches is now
+// two industry instruments' job, and they agree to the unit: eslint's `no-empty` freezes the
+// GENERIC count at 267 across all organs, and `laws/bare-catch.yml` finds the same clauses
+// structurally (276 raw, of which 9 sit in scripts/legacy/, which every gate excludes).
+// scripts/lawpack.mjs then applies the half only this organism knows — a bare catch inside
+// one of the EIGHT PRODUCTION LANES that guards fs I/O, which is this file's law and nothing
+// a linter can express: 38 of the 267. THIS file keeps what neither tool has — the
+// DECLARATION mechanism, the reason string, the panic rethrow and the ledger. A linter can
+// count silence; only swallow() can make it speak.
+//
 // LAYERING (L9): no catch is deleted. `catch {}` → `catch (e) { swallow("why", e) }`;
 // a catch that already REPORTS (console/throw/return-with-why) is not a swallow and
 // is left alone. mutagen's isSwallow treats a body that calls swallow( as DECLARED

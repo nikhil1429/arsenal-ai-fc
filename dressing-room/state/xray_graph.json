@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-20T02:02:02.305Z",
- "organs_parsed": 106,
- "organs_expected": 106,
+ "built_at": "2026-08-20T03:04:18.491Z",
+ "organs_parsed": 107,
+ "organs_expected": 107,
  "parse_errors": [],
- "unresolved_sinks": 1344,
+ "unresolved_sinks": 1356,
  "organs": {
   "acts.mjs": {
    "loc": 482,
@@ -8629,23 +8629,23 @@
    "unresolved": 4
   },
   "gates.mjs": {
-   "loc": 265,
+   "loc": 269,
    "reads": [
     {
      "path": "node_modules/typescript/bin/tsc",
      "lines": [
-      80,
-      80,
-      80
+      84,
+      84,
+      84
      ],
      "fixture": false
     },
     {
      "path": "node_modules/eslint/bin/eslint.js",
      "lines": [
-      80,
-      80,
-      80
+      84,
+      84,
+      84
      ],
      "fixture": false
     }
@@ -9518,6 +9518,173 @@
     "validateDigest"
    ],
    "unresolved": 8
+  },
+  "lawpack.mjs": {
+   "loc": 530,
+   "reads": [
+    {
+     "path": "laws",
+     "lines": [
+      135,
+      383,
+      135,
+      383,
+      135,
+      383
+     ],
+     "fixture": false
+    },
+    {
+     "path": "sgconfig.yml",
+     "lines": [
+      135,
+      384,
+      398,
+      398,
+      135,
+      384,
+      398,
+      398,
+      135,
+      384,
+      398,
+      398
+     ],
+     "fixture": false
+    },
+    {
+     "path": "laws/owners-only-state-write.yml",
+     "lines": [
+      397,
+      491,
+      397,
+      491,
+      397,
+      491
+     ],
+     "fixture": false
+    },
+    {
+     "path": "laws/law-m-literal-model.yml",
+     "lines": [
+      397,
+      491,
+      397,
+      491,
+      397,
+      491
+     ],
+     "fixture": false
+    },
+    {
+     "path": "laws/jugad-literal-subject-list.yml",
+     "lines": [
+      397,
+      491,
+      397,
+      491,
+      397,
+      491
+     ],
+     "fixture": false
+    },
+    {
+     "path": "laws/trailing-n-slice.yml",
+     "lines": [
+      397,
+      491,
+      397,
+      491,
+      397,
+      491
+     ],
+     "fixture": false
+    },
+    {
+     "path": "laws/bare-catch.yml",
+     "lines": [
+      397,
+      491,
+      397,
+      491,
+      397,
+      491
+     ],
+     "fixture": false
+    },
+    {
+     "path": "node_modules/@ast-grep/cli/ast-grep.exe",
+     "lines": [
+      131,
+      131
+     ],
+     "fixture": false
+    },
+    {
+     "path": "node_modules/@ast-grep/cli-win32-x64-msvc/ast-grep.exe",
+     "lines": [
+      131,
+      131
+     ],
+     "fixture": false
+    },
+    {
+     "path": "node_modules/@ast-grep/cli/ast-grep",
+     "lines": [
+      131,
+      131
+     ],
+     "fixture": false
+    },
+    {
+     "path": "node_modules/.bin/ast-grep",
+     "lines": [
+      131,
+      131
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "leads",
+    "report",
+    "rules",
+    "selftest"
+   ],
+   "header_verbs": [
+    "gate",
+    "leads",
+    "report",
+    "rules",
+    "selftest"
+   ],
+   "exports": [
+    "BASELINE",
+    "PLANTS",
+    "PRODUCTION_LANES",
+    "RULE_IDS",
+    "WAIVER",
+    "available",
+    "declaredOwners",
+    "depcruise",
+    "judge",
+    "judgeBareCatch",
+    "judgeJugad",
+    "judgeLawM",
+    "judgeOwners",
+    "judgeTrailingN",
+    "knipLeads",
+    "measure",
+    "parseSg",
+    "plantAndScan",
+    "scan",
+    "sgBin",
+    "srcOf"
+   ],
+   "unresolved": 12
   },
   "learning_state.mjs": {
    "loc": 969,
@@ -10471,45 +10638,45 @@
    "unresolved": 10
   },
   "models.mjs": {
-   "loc": 677,
+   "loc": 687,
    "reads": [
     {
      "path": "dressing-room/state/models.json",
      "lines": [
-      493,
-      493,
-      634,
-      634,
-      165,
-      165,
-      493,
-      493,
-      634,
-      634,
-      165,
-      165,
-      493,
-      493,
-      634,
-      634,
-      165,
-      165,
-      493,
-      493,
-      634,
-      634
+      503,
+      503,
+      644,
+      644,
+      175,
+      175,
+      503,
+      503,
+      644,
+      644,
+      175,
+      175,
+      503,
+      503,
+      644,
+      644,
+      175,
+      175,
+      503,
+      503,
+      644,
+      644
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      165,
-      165,
-      165,
-      165,
-      165,
-      165
+      175,
+      175,
+      175,
+      175,
+      175,
+      175
      ],
      "fixture": false
     }
@@ -10518,22 +10685,22 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 391,
+     "line": 401,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 391,
+     "line": 401,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 391,
+     "line": 401,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 391,
+     "line": 401,
      "try_stmts": 5,
      "catch_stmts": 2
     }
@@ -11234,7 +11401,7 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 1328,
+   "loc": 1350,
    "reads": [
     {
      "path": "scripts",
@@ -11411,6 +11578,7 @@
     "gates",
     "hermetic",
     "integrity",
+    "lawpack",
     "laws",
     "path",
     "selftest",
@@ -11419,8 +11587,10 @@
    "header_verbs": [
     "all",
     "coverage",
+    "gates",
     "hermetic",
     "integrity",
+    "lawpack",
     "laws",
     "path"
    ],
@@ -15396,28 +15566,28 @@
    "unresolved": 3
   },
   "swallow.mjs": {
-   "loc": 302,
+   "loc": 312,
    "reads": [
     {
      "path": "dressing-room/state/swallow_ledger.jsonl",
      "lines": [
-      148,
-      150,
-      169,
-      172,
-      228,
-      148,
-      150,
-      169,
-      172,
-      228,
-      228,
-      148,
-      150,
-      169,
-      172,
-      228,
-      228
+      158,
+      160,
+      179,
+      182,
+      238,
+      158,
+      160,
+      179,
+      182,
+      238,
+      238,
+      158,
+      160,
+      179,
+      182,
+      238,
+      238
      ],
      "fixture": false
     }
@@ -15426,22 +15596,22 @@
     {
      "path": "dressing-room/state/swallow_ledger.jsonl",
      "lines": [
-      137,
-      152,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      152,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      152
+      147,
+      162,
+      147,
+      147,
+      147,
+      147,
+      147,
+      147,
+      162,
+      147,
+      147,
+      147,
+      147,
+      147,
+      147,
+      162
      ],
      "verbs": [
       "appendFileSync",
@@ -15455,94 +15625,94 @@
      "kind": "organ",
      "script": "swallow.mjs",
      "verb": "__probe",
-     "line": 238,
-     "ctx": "selftest"
-    },
-    {
-     "kind": "organ",
-     "script": "swallow.mjs",
-     "verb": "__probe",
-     "line": 245,
-     "ctx": "selftest"
-    },
-    {
-     "kind": "organ",
-     "script": "swallow.mjs",
-     "verb": "__read",
      "line": 248,
      "ctx": "selftest"
     },
     {
      "kind": "organ",
      "script": "swallow.mjs",
-     "verb": "__read",
+     "verb": "__probe",
      "line": 255,
+     "ctx": "selftest"
+    },
+    {
+     "kind": "organ",
+     "script": "swallow.mjs",
+     "verb": "__read",
+     "line": 258,
+     "ctx": "selftest"
+    },
+    {
+     "kind": "organ",
+     "script": "swallow.mjs",
+     "verb": "__read",
+     "line": 265,
      "ctx": "selftest"
     }
    ],
    "swallows": [
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 135,
+     "line": 145,
      "try_stmts": 4,
      "catch_stmts": 0
     }
@@ -18952,96 +19122,96 @@
    "unresolved": 4
   },
   "xray.mjs": {
-   "loc": 1337,
+   "loc": 1344,
    "reads": [
     {
      "path": "package.json",
      "lines": [
-      796,
-      796,
-      796,
-      796
+      803,
+      803,
+      803,
+      803
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      976,
-      1154,
-      1279,
-      1323,
-      1324,
-      1326,
-      976,
-      1154,
-      1279,
-      1323,
-      1324,
-      1326,
-      976,
-      1154,
-      1279,
-      1323,
-      1324,
-      1326,
-      976,
-      1154,
-      1279,
-      1323,
-      1324,
-      1326
+      983,
+      1161,
+      1286,
+      1330,
+      1331,
+      1333,
+      983,
+      1161,
+      1286,
+      1330,
+      1331,
+      1333,
+      983,
+      1161,
+      1286,
+      1330,
+      1331,
+      1333,
+      983,
+      1161,
+      1286,
+      1330,
+      1331,
+      1333
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      774,
-      775,
-      774,
-      775,
-      774,
-      775
+      781,
+      782,
+      781,
+      782,
+      781,
+      782
      ],
      "fixture": false
     },
     {
      "path": ".claude/settings.json",
      "lines": [
-      787,
-      788,
-      787,
-      788,
-      787,
-      788
+      794,
+      795,
+      794,
+      795,
+      794,
+      795
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      847,
-      847,
-      847
+      854,
+      854,
+      854
      ],
      "fixture": false
     },
     {
      "path": ".",
      "lines": [
-      811,
-      811
+      818,
+      818
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      915,
-      916,
-      915,
-      916
+      922,
+      923,
+      922,
+      923
      ],
      "fixture": false
     }
@@ -19050,13 +19220,13 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      973,
-      972,
-      973,
-      972,
-      973,
-      972,
-      973
+      980,
+      979,
+      980,
+      979,
+      980,
+      979,
+      980
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -22518,6 +22688,72 @@
    "is_dir": false
   },
   {
+   "path": "laws",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "laws/bare-catch.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "laws/jugad-literal-subject-list.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "laws/law-m-literal-model.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "laws/owners-only-state-write.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "laws/trailing-n-slice.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "learning-layer/FORGE_SPEC.md",
    "readers": [
     "gaffer_brain.mjs"
@@ -22633,6 +22869,50 @@
    "readers": [
     "organism_test.mjs",
     "sandbox.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "node_modules/.bin/ast-grep",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "node_modules/@ast-grep/cli-win32-x64-msvc/ast-grep.exe",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "node_modules/@ast-grep/cli/ast-grep",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "node_modules/@ast-grep/cli/ast-grep.exe",
+   "readers": [
+    "lawpack.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
@@ -23698,6 +23978,17 @@
    "is_dir": false
   },
   {
+   "path": "sgconfig.yml",
+   "readers": [
+    "lawpack.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "THE_DAILY_LOOP.md",
    "readers": [],
    "writers": [],
@@ -24589,6 +24880,10 @@
   {
    "organ": "intent.mjs",
    "file": "session_intent.json"
+  },
+  {
+   "organ": "lawpack.mjs",
+   "file": "x.json"
   },
   {
    "organ": "manager.mjs",
@@ -27553,6 +27848,11 @@
     "source": "package.json"
    },
    {
+    "script": "lawpack.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
     "script": "capture.mjs",
     "verb": "selftest",
     "source": "package.json"
@@ -28614,6 +28914,12 @@
     "script": "rails.mjs",
     "verbs": [
      "orders"
+    ]
+   },
+   {
+    "script": "gates.mjs",
+    "verbs": [
+     "types"
     ]
    },
    {

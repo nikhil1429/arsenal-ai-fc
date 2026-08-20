@@ -73,7 +73,11 @@ const ESLINT = join(ROOT, "node_modules", "eslint", "bin", "eslint.js");
  *  are PROPERTY checks on an object literal, not symbol lookups, so they belong in the frozen
  *  soft count. Verified by reading the callee before the list was cut, not after. */
 export const HARD_TYPE_CODES = [2304, 2552, 2307, 2686, 2662, 2663];
-export const TYPE_BASELINE = { checked_organs: 13, soft_errors: 303 };
+// TIGHTENED 20 Aug 2026 (rung S3): 13 → 14. `scripts/lawpack.mjs` arrived carrying its own
+// `// @ts-check` and produced ZERO new diagnostics, so the checked list grew and the soft count
+// did not move. The gate ASKED for this constant to be raised and a session raised it, in the
+// same commit — which is the whole design: the gate never edits its own baseline.
+export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 303 };
 export const HARD_LINT_RULES = ["no-undef"];
 export const LINT_BASELINE = { "no-empty": 267, "no-unused-vars": 87, warnings: 2 };
 
