@@ -383,16 +383,23 @@ very order: his goal *"the organism fixes the issues it finds itself"* is stated
 > **Default to (2), not (1).** A missing feature is invisible: no test fails, no finding fires, no
 > card is minted. A stale doc at least contradicts something. The silent class is the dangerous one.
 
-**⚠ THE CLAUDE-WEB ERA — his word, 20 Aug 2026.** The learning layer (and some early design) was
-built in a Claude WEB project; those conversations DO NOT EXIST in the local transcript store, by
-design, on top of the 8 missing founding days already measured. Therefore:
-> **Absence of a transcript is NEVER evidence against a document.** For Claude-web-era canon —
-> `learning-layer/` above all — the docs themselves ARE the primary intent record. The learning
-> layer is NOT an audit target for removal or rewrite: he has said plainly he likes it and it
-> works. L9 binds (layer, never delete), the capsule-immutability ruling binds, and the only
-> ladder work that touches learning-adjacent code makes it SAFER or MORE general, never smaller:
-> `isFixture()` generalization (tests stop touching his live study state) · `teaching_audit`
-> un-nailed (covers MORE of his teaching turns, not fewer) · `course.mjs`/CORE_AXES generalized.
+**⚠ THE UNRECORDED-ERA RULE — his word, 20 Aug 2026, and it is a PREDICATE, not a list.** Parts
+of this organism were designed OUTSIDE the local transcript store: the Claude WEB project era
+(the learning layer, the Gemini loop, and things he himself cannot enumerate — his words: *"i do
+not know what all the things was created on claude web project"*), plus the 8 missing founding
+days already measured. An enumerated protection would be Shape 1 all over again, so the rule is
+general and mechanical:
+> **For ANY canon file whose creation/edit window has no local transcript** — computable for
+> free by joining `git log` dates against the rescued corpus index — **the document itself IS
+> the primary intent record. Absence of a transcript is NEVER evidence against it, and "no WHY
+> found in the corpus" may never justify removing, shrinking or rewriting what it describes.**
+> S4/S6 stamp every canon file's provenance (LOCAL-ERA: WHY recoverable from transcripts ·
+> UNRECORDED-ERA: the doc is the WHY) before classifying anything.
+> L9 binds (layer, never delete) and the capsule-immutability ruling binds on top. Named
+> examples, NOT the ceiling: `learning-layer/` (he likes it, it works, it is not an audit
+> target) and the Gemini loop. The only ladder work touching learning-adjacent code makes it
+> SAFER or MORE general, never smaller: `isFixture()` generalization · `teaching_audit`
+> un-nailed (covers MORE of his turns) · `course.mjs`/CORE_AXES generalized.
 
 ## §4-D-0 · THE CONVERSATION CORPUS IS A PRIMARY SOURCE — READ IT. (his correction, 19 Aug)
 
