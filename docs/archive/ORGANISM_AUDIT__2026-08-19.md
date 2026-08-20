@@ -119,7 +119,11 @@ STATUS (update this block before any session stops — this is the handoff)
     answers and NOTHING that read them — a gate whose verdict was a human squinting at
     two lines. Closed by `probecheck.mjs` (PASS / NEAR=invention / MISS=truncation) and
     `preflight.mjs` (18 checks, run before step A01).
-  ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** Open the folder's
+  ▶ NEXT SESSION ............... **S5-R · THE FABLE REVIEW** (§10-C, inserted 20 Aug on his
+                                   word — his stranded Fable pool expires Monday; audit the
+                                   rails BEFORE the sweep fires on them).
+                                   MODEL: FABLE 5 · effort MAX · CEILING 25.
+                                   THEN: **S5's SWEEP — execution only.** Open the folder's
                                    `README_FOR_ANY_SESSION.md`, then drive `DO_THIS.md`
                                    (39 steps, one paste-file each in `steps/`). Diff every probe
                                    against `probe_expected.json` BEFORE asking a question; save
@@ -1470,6 +1474,29 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       corrections. Two of the eight were named in §5 without their directory; §5 corrected.
       FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).  — both held.
                                                                        CEILING: 40
+☐ S5-R THE FABLE REVIEW — audit the rails before the sweep fires on them.
+      MODEL: FABLE 5 · effort MAX. Inserted 20 Aug on HIS word: his separate Fable weekly
+      pool (~21% left) EXPIRES at Monday's reset either way — a measured exception, not a
+      §10-F routing change. Purpose: S1–S4 are ☑ and S5 is prepared, all by Opus sessions
+      grading their own work against written proofs; ONE stronger, fresh head now re-proves
+      the lot ADVERSARIALLY before the heavy half of the ladder stands on it.
+      SCOPE — every claim is a LEAD until re-proven by RUNNING (§4, applied to the rungs):
+      (a) S1's rails, live-fired fresh: the meter's dedup honesty against a known window ·
+          the deny-rails (including one real ceiling-less fleet call) · the stop-hook's
+          non-TTY fast-refusal in a non-interactive shell.
+      (b) S2/S3's gates, proven to still BITE: plant one violation per gate → red → revert.
+      (c) S5's folder: the prompt files against the architect's twelve rulings (all
+          applied?) · verify.mjs's receipt-diff + item_count checks against planted
+          fixtures · probe_expected.json sanity · DO_THIS.md drivability by a cold reader.
+      (d) THE ORDER ITSELF, end to end: self-contradictions (the class that burned 505
+          lakh), stale ticks, §3-C, and any instruction a literal junior would misread.
+      REPAIRS: rail-class defects may be fixed HERE (a rail may only get stricter);
+      everything else becomes a PROGRESS lead addressed to its owning rung.
+      FORBIDDEN: building anything new · touching S6+ work · re-running the corpus filter ·
+      any agent · any Gemini call — the sweep belongs to S5's executor, not to this rung.
+      DONE-PROOF: a verdict table in PROGRESS — every audited claim → re-proof run → HELD /
+      FIXED / LEAD — plus suite green, and the RESUME router set back to S5's sweep.
+                                                                       CEILING: 25
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -1597,7 +1624,9 @@ cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs aft
 
 ### §10-D · THE STANDING RULES — every session, no exceptions
 
-1. Open THIS file first. Execute exactly ONE unticked rung. Never two.
+1. Open THIS file first. Execute exactly ONE unticked rung. Never two. **The ▶ NEXT SESSION
+   line in the RESUME block is the router; "the first ☐" is its fallback when that line is
+   stale — a ◐ rung's remainder is picked up the same way, by the router line.**
 2. The rung's ceiling is a STOP, not a suggestion — hand off cleanly at it.
 3. No subagents/fleets anywhere except where a rung names them, never without a ceiling.
 4. State files are written by their owner CLIs only — never by a session's editor.
