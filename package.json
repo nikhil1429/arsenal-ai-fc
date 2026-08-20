@@ -72,11 +72,14 @@
     "ts-fsrs": "^5.4.1"
   },
   "devDependencies": {
+    "@ast-grep/cli": "0.45.1",
     "@types/node": "22.20.1",
     "acorn": "^8.18.0",
     "acorn-walk": "^8.3.5",
+    "dependency-cruiser": "18.2.0",
     "eslint": "10.8.1",
     "globals": "17.11.0",
+    "knip": "6.32.2",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0"
   }
