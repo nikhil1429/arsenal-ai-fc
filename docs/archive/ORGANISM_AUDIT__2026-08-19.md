@@ -1676,6 +1676,22 @@ cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs aft
 12. **MODEL ROUTING BINDS (§10-F):** the rung's MODEL line is part of the rung. Fable-pool dry ⇒
     use the rung's named fallback; never silently downgrade anything else.
 13. **THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.**
+    The ARCHITECT SESSION exists and he ferries questions to it gladly — his words: *"i do not
+    mind sending as many questions as all sessions give... i do not want to compromise with the
+    quality intensity of work."* Treat it as your senior engineer.
+    **ESCALATE when the fork is real:** a departure from the written rung · two laws in this file
+    pointing opposite ways · a decision that changes scope, spend, architecture or anything
+    another rung depends on · a judgement call where being wrong is expensive and you are not
+    sure. PAUSE that thread of work; do not guess and continue past it.
+    **DO NOT escalate** what the micro-order already answers, mechanical choices with a
+    conventional default, or anything a DONE-proof can settle by running — that is offloading,
+    not quality. Fix-forward small things; escalate forks.
+    **THE FORMAT (S5's review request is the model, and it worked):** a paste-ready block —
+    context in two lines · the fork · the options with costs · YOUR OWN recommendation and why ·
+    exactly what you need back. Never send a question you have not first tried to answer.
+    The architect's ruling comes back through him, gets recorded in PROGRESS verbatim, and
+    binds the rung.
+13. **THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.**
     An ARCHITECT session exists (Fable, kept open by him for planning and rulings). When a rung
     session hits a genuine fork — a departure from the rung as written, an ambiguity in this
     order, or a judgement call above the rung's grade — it does NOT resolve it in its own favour
