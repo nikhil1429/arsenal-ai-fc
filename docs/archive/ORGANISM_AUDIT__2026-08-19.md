@@ -2661,3 +2661,47 @@ entry claimed. Both reds examined rather than waved through:
 bent: ceilings re-derive only on a proven instrument fault, never on variance.
 The handoff stands exactly as the architect set it — **a FRESH session, Opus 5 · effort HIGH ·
 execution budget 20 corrected lakh**, driving `DO_THIS.md` from the working folder.
+
+### PROGRESS 2026-08-20 ~13:45 IST — S5 · THE SECOND RE-CHECK. TWO MORE DEFECTS, BOTH IN THE GATE ITSELF
+
+He asked a second time whether the architect's rulings were really done. The first re-check tested
+whether each ruling EXISTED in the files; this one tested whether each one WORKS. Two defects, and
+both were in the deep-retrieval probe — the mechanism whose entire job is to stop a bad attachment
+from being trusted. **A broken gate is worse than no gate, because it produces a green light.**
+
+**1. EIGHT OF THE PROBE ANCHORS WERE NOT UNIQUE.** The probe says *"find this line and quote the one
+immediately after it"*. Measured across the corpus batches: one anchor appeared **12 times**, others
+2 to 6 times. With twelve valid answers the probe cannot fail, so it stops being a gate and becomes
+a formality that always passes. The cause was my filter: it required an anchor to be long enough,
+not a heading, not blank — and never required it to be **unique**. Conversation is full of repeated
+lines (boilerplate, re-pasted blocks, identical hook text), so shape alone was never going to be
+enough. Uniqueness is now a hard requirement of the pick, applied to the anchor AND to its expected
+answer, and judged against everything that chat will hold rather than against one file.
+**Verified after the fix: all 24 anchors and all 24 expected answers appear exactly once.**
+
+**2. THE REPLICATION CHAT'S PROBE TESTED THE WRONG FILE.** Ruling (i) adds a fresh chat with the
+canon re-attached, asked Q1 cold, so the anchoring effect of the one-chat run can be measured. That
+chat attaches **all seven** chunks — and it was carrying batch A's probe, which tests the tail of
+`chunk04`. **`chunk07` is the last thing attached and is exactly where truncation would show, and
+it was never gated.** A third probe (`canon_full`) now covers tail-of-chunk07 and middle-of-chunk04.
+
+**EVERYTHING ELSE RE-CHECKED AND CLEAN, mechanically:** every canon prompt asks for `files_covered`
+and the corpus prompt for `days_covered` (the receipts the verifier diffs) · every field
+`verify.mjs` reads is actually requested by the prompt that must produce it — checked field by
+field across all five schemas, because a verifier reading a key no prompt asks for would discard
+every item and call it a recall problem · the fallback's four answer files land in `answers/` where
+the verifier already looks · 39 step files on disk and `DO_THIS.md` says 39 · nine corpus chats in
+both places · the replication regex matches `A03` and `R02` and nothing else.
+
+**THE PATTERN IN ALL THREE ROUNDS OF THIS, worth naming because it is the audit's own subject:**
+every defect found today was in an INSTRUMENT, not in the work the instrument measures — a meter
+that read 2.01× (S3 found it), a verifier that manufactured two findings, a capture path that
+silently destroyed non-ASCII, and now a probe that could not fail. None of them would have thrown.
+All of them would have produced confident output. **§4's rule is not a formality: every instrument
+in this repo is a LEAD until one run verifies it, and that includes the instruments written to
+verify other instruments.**
+
+**COST: ~7 more lakh. Rung total ~128 against a ceiling of 40.** Recorded, not excused. The handoff
+is unchanged: a FRESH session, Opus 5 · effort HIGH · execution budget 20 corrected lakh, driving
+`DO_THIS.md`. **The next rung after that is still S5's own close, NOT S6** — S6 does not open until
+this sweep's returns are verified and folded into §9.
