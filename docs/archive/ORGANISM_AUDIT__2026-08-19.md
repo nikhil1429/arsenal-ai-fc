@@ -91,8 +91,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                      departure) — 30 days to 20 Aug, NOTHING clipped, lane split
                                      by `entrypoint` not by a regex list, full drop ledger.
                                    ☑ the verifier — five checks, every one proven to bite.
-                                   ☑ ARCHITECT-REVIEWED before any call: D1–D6b ruled, all
-                                     applied. Deep-retrieval probes now gate every chat.
+                                   ☑ ARCHITECT-REVIEWED before any call: D1–D6b ruled, then
+                                     RE-CHECKED one by one on his word — five rulings were NOT
+                                     actually applied and all five are now closed (see the
+                                     ~13:15 addendum). Deep-retrieval probes gate every chat;
+                                     the answer-capture path is pre-tested and it caught a
+                                     UTF-8 defect that would have silently voided every
+                                     Hinglish quote in the sweep.
+                                   ☑ `npm test` 108/2 — both reds pre-existing or another
+                                     organ's; session_meter's own selftest 31/0.
   ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** Open the folder's
                                    `README_FOR_ANY_SESSION.md`, then drive `DO_THIS.md`
                                    (39 steps, one paste-file each in `steps/`). Diff every probe
@@ -2573,7 +2580,10 @@ README. The three that changed the design most:
 nothing entered §9. Also not done and deliberately so: IR-witness validation for the edge returns —
 the architect confirmed that is the spec S6 writes, and it must not be built here.
 
-**GATES.** `npm test` was NOT re-run at the close of this entry, and that is said rather than
+**GATES.** [SUPERSEDED by the addendum below — the suite WAS run in full at ~13:15: 108 passed,
+2 failed, both reds examined and neither belonging to this rung. The paragraph below is left as
+written rather than edited, because a record that quietly updates itself is the drift this order
+exists to stop.] `npm test` was NOT re-run at the close of this entry, and that is said rather than
 implied: S5's only code change is `scripts/session_meter.mjs`, whose own selftest is 31/0 with the
 ratchet proven in both directions, and `gates.mjs` and `lawpack.mjs` were both GREEN after the edit.
 The next session runs the full suite before it touches anything. §3-C's checker and
@@ -2597,3 +2607,57 @@ working folder, then drives `DO_THIS.md`: 39 steps, one paste-file each in `step
 being Ctrl+V and Enter. Diff every probe against `probe_expected.json` BEFORE asking a question.
 Save each answer into `answers/`, run `node verify.mjs`, and let ONLY verified items enter §9 — as
 LEADS grouped by shape, never as a list (§8).
+
+### PROGRESS 2026-08-20 ~13:15 IST — S5 ADDENDUM · THE ARCHITECT'S RULINGS RE-CHECKED ONE BY ONE
+
+**He asked for exactly the right thing: *"double check everything is done correctly which the
+ARCHITECT SESSION says to do."* I had reported the rulings as applied. Checking them mechanically
+found FIVE that were not.** All five are closed below. The check itself is the point — a ruling
+recorded as applied and not applied is worse than one never received, because nobody looks again.
+
+| ruling | what I had actually done | now |
+|---|---|---|
+| D2 · *"Probe fails → FALLBACK, pre-written"* | described the fallback in a README. Not written. | `prompts/FALLBACK_canon_split.txt` — the two-half run plus the cross-half prompt, with its own no-resolve and verbatim rules |
+| D2 · *"C1's floors scale per chat"* | one flat set of floors sized for the old big batches | floors are now computed per batch from its day count and baked into each step file (13 days → 39/39/26/26/13 · 1 day → 8/8/5/5/3) |
+| D6b · the on-demand retrieval line | added to `DO_THIS.md` only, not to the ledger it belongs in | now a field in `corpus_live/manifest_live.json`'s drop ledger |
+| (i) · *"verifier unions and dedups"* the two Q1 runs | not implemented at all | `verify.mjs` now unions the in-chat and cold Q1 runs, dedups on the quote pair, and writes `replication.json` with agreed / only-in-chat / **only-cold** counts — the anchoring measurement he asked for |
+| (iii) · the clipboard watcher, *"PRE-TEST it with dummy text"* | not built at all | `capture.mjs` — `selftest` proves the round trip on dummy text, `save <step>` writes an answer to `answers/` and never silently overwrites one |
+
+**AND THE PRE-TEST IMMEDIATELY EARNED ITSELF.** It failed on the first run — 20,119 characters out,
+20,121 back — and the diagnostic said why: **PowerShell's stdout comes back in the console codepage,
+not UTF-8, and it destroys everything outside ASCII.** Measured: `ॐ` → `?`, `🙏🏽` → `????`,
+`§` → a control character, `×` → `x`. ASCII survives untouched, so a casual check passes.
+**This would have been catastrophic in the quietest possible way.** Every item this rung produces is
+a VERBATIM quote, much of it Hinglish, and the verifier greps those quotes back character for
+character. A mangled quote does not throw — it simply fails to match, and a real finding is
+discarded as unverifiable. The sweep would have run, produced numbers, and silently lost exactly
+the Hinglish evidence §4-D-0 says is first-class. Fixed by never letting the text touch stdout.
+
+**THE FINDING UNDERNEATH IT, AND IT IS THE USEFUL HALF.** `scripts/turnstile.mjs:98` already solves
+this — `[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard -Raw`, one line, weeks
+old. **I solved it a second time, worse, and only found turnstile's version afterwards** — this
+project's own §2 disease, committed by me in the middle of auditing it.
+**LEAD for S6, not acted on here (§4 — a lead until one run verifies it):** that guard exists in
+`turnstile.mjs` ALONE. `herd.mjs:74`, `pulse.mjs:80`, `distiller.mjs:763` and
+`watchman.mjs:786/1337` all capture PowerShell stdout without it. Whether any of them carries
+non-ASCII today is UNVERIFIED and stays unverified. But the SHAPE is **§9 SHAPE 1 exactly**: a
+universal need, solved once, nailed to the one organ that happened to hit it.
+
+**THE SUITE, RUN IN FULL AND REPORTED HONESTLY: `npm test` → 108 passed, 2 failed.** The earlier
+entry said the next session would run it; it ran here instead, and the result changes what that
+entry claimed. Both reds examined rather than waved through:
+1. **hermeticity — `MODIFIED state\consumption.jsonl`.** Not mine: `consumption.jsonl`'s sole writer
+   is `brain.mjs` and `session_meter.mjs` does not reference it once (`grep -c consumption` → 0).
+   The file is not dirty in git afterwards. This is the FOURTH instance of the class S1, S2 and the
+   push entry already recorded — a suite member writing live state while the suite watches it — but
+   it is a NEW instance on a NEW file, so it is recorded as a lead rather than folded into the old
+   one. Whichever rung owns `brain.mjs`'s selftest seam should pin it the way `samjhao` was pinned.
+2. **the same two pre-existing red members** — `teaching_audit` 62/1 and `herd` 18/1 — unchanged
+   since S1's baseline and untouched by this rung.
+`session_meter`'s own selftest is 31/0 with the new ratchet proven in both directions.
+
+**COST OF THIS ADDENDUM: the meter moved ~519 → ~536, so ~17 more lakh, and the rung total is now
+~121 against a ceiling of 40.** Recorded, not excused. §10-C's rule is unchanged and is not being
+bent: ceilings re-derive only on a proven instrument fault, never on variance.
+The handoff stands exactly as the architect set it — **a FRESH session, Opus 5 · effort HIGH ·
+execution budget 20 corrected lakh**, driving `DO_THIS.md` from the working folder.
