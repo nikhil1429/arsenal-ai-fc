@@ -58,9 +58,12 @@
 // CLI: node scripts/rails.mjs pretooluse | orders [--quiet] | decide <json> | selftest
 // ============================================================================
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { join, dirname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// THE STDIN DEADLINE (rung S5-R, 20 Aug 2026): session_meter's proven guard, imported —
+// never a second implementation (§2: a universal need solved twice is the disease).
+import { readStdinWithDeadline } from "./session_meter.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -139,11 +142,30 @@ export function decide(payload = {}) {
 }
 
 // THE HOOK — Claude Code's PreToolUse contract: a JSON decision on stdout, exit 0.
+// ⛔ fd 0 IS NEVER READ BLINDLY (rung S5-R, 20 Aug 2026). The first version called
+//   `readFileSync(0)` whenever stdin was not a TTY — the EXACT defect S5 STEP 0 fixed in
+//   session_meter, alive in the rail organ itself, proven live at S5-R: `pretooluse` on a
+//   non-closing pipe blocked the full timeout window (exit 124). The live hook path is
+//   unchanged (Claude Code writes the payload and CLOSES stdin ⇒ the drain returns it);
+//   only the hang case changes, from a forever-block into a LOUD fast refusal that
+//   fail-opens — which is this rail's declared failure mode ("if this organ throws, the
+//   tool proceeds"), now reached in 300 ms instead of never.
 export function pretooluse({ raw = null } = {}) {
   let payload = {};
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
-    const text = raw !== null ? raw : (typeof handed === "string" ? handed : (process.stdin.isTTY ? "" : readFileSync(0, "utf8")));
+    let text;
+    if (raw !== null) text = raw;
+    else if (typeof handed === "string") text = handed;
+    else if (process.stdin.isTTY) text = "";
+    else {
+      const r = readStdinWithDeadline();
+      if (!r.ok) {
+        process.stderr.write(`rails: REFUSED — ${r.why}. No payload ⇒ no decision; the tool call proceeds under the normal permission flow (this rail's declared fail-open). To exercise a rail by hand use \`node scripts/rails.mjs decide '<json>'\`.\n`);
+        return { decision: "allow", rail: null, why: `stdin refusal: ${r.why}` };
+      }
+      text = r.raw;
+    }
     payload = text && text.trim() ? JSON.parse(text) : {};
   } catch { payload = {}; }
   const d = decide(payload);
@@ -358,6 +380,23 @@ function selftest() {
   assert("ORDERS — a path the DOCUMENT declares absent-on-purpose is not a problem", checkOrder(f).problems.length === 0, JSON.stringify(checkOrder(f).problems));
   assert("ORDERS — the predicate finds the planted order in its own dir", orderFiles(tmp).length === 1);
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ }
+
+  // THE HANG, PINNED (rung S5-R, 20 Aug 2026 — session_meter selftest #16's shape, on the
+  // rail organ). `pretooluse` on a non-TTY fd 0 that never closes must REFUSE fast, never
+  // block: the un-guarded read blocked the full timeout window when proven live at S5-R.
+  // If this assertion ever goes red again, the deadline has been removed.
+  const wrap = `const {spawn}=require("node:child_process");
+const c=spawn(process.execPath,[process.env.__RAILS,"pretooluse"],{stdio:["pipe","ignore","ignore"]});
+let done=false;const t0=Date.now();
+c.on("exit",()=>{done=true;console.log(String(Date.now()-t0));process.exit(0)});
+setTimeout(()=>{if(!done){try{c.kill()}catch{}console.log("HUNG");process.exit(0)}},5000);`;
+  const hangProbe = spawnSync(process.execPath, ["-e", wrap], {
+    encoding: "utf8", timeout: 15000, windowsHide: true,
+    env: { ...process.env, __RAILS: fileURLToPath(import.meta.url) },
+  });
+  const hangMs = Number((hangProbe.stdout || "").trim());
+  assert("NO HANG — `pretooluse` on a non-TTY pipe that never closes REFUSES instead of blocking forever (S5-R, pinned)",
+    Number.isFinite(hangMs) && hangMs < 3000, `wrapper said: ${JSON.stringify((hangProbe.stdout || "").trim())}${hangProbe.error ? " · " + hangProbe.error.code : ""}`);
 
   console.log(`rails selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);

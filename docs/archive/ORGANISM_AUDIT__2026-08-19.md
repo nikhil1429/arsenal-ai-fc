@@ -31,7 +31,9 @@ STATUS (update this block before any session stops — this is the handoff)
   PASS 1  compress with code ... ☑ DONE (19 Aug · BASH ONLY, 0 model tokens)
   PASS 2  read INTENT (.md) .... ☑ DONE 20 Aug 2026 at rung S4 — all eight read end to end by
                                    ONE head, no agent. Output folded in as §9-B.
-  PASS 2B read the CHAT CORPUS . ◐ filter done (1.38 GB → 9.0 MB) · extraction = rung S5
+  PASS 2B read the CHAT CORPUS . ◐ re-filtered LIVE at S5 (7,673 files → 8,022 turns · 13.6 MB ·
+                                   NOTHING clipped — supersedes the 19-Aug "9.0 MB" filter) ·
+                                   extraction = S5's sweep
   PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S5–S6
   PASS 4  classify BY SHAPE .... ◐ SIX shapes, all in §9 (S4 added SHAPE 6) · final at rung S6
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
@@ -119,19 +121,37 @@ STATUS (update this block before any session stops — this is the handoff)
     answers and NOTHING that read them — a gate whose verdict was a human squinting at
     two lines. Closed by `probecheck.mjs` (PASS / NEAR=invention / MISS=truncation) and
     `preflight.mjs` (18 checks, run before step A01).
-  ▶ NEXT SESSION ............... **S5-R · THE FABLE REVIEW** (§10-C, inserted 20 Aug on his
-                                   word — his stranded Fable pool expires Monday; audit the
-                                   rails BEFORE the sweep fires on them).
-                                   MODEL: FABLE 5 · effort MAX · CEILING 25.
-                                   THEN: **S5's SWEEP — execution only.** Open the folder's
-                                   `README_FOR_ANY_SESSION.md`, then drive `DO_THIS.md`
-                                   (39 steps, one paste-file each in `steps/`). Diff every probe
-                                   against `probe_expected.json` BEFORE asking a question; save
-                                   each answer into `answers/`; run `node verify.mjs`; only
-                                   verified items enter §9, as LEADS grouped by shape
-                                   (§8: do not hand him a list).
-                                   MODEL: Opus 5 · effort HIGH · EXECUTION BUDGET 20 corrected
-                                   lakh (the architect's number, 20 Aug).
+  S5-R THE FABLE REVIEW ........ ☑ DONE 20 Aug 2026 · one stronger fresh head re-proved S1–S4
+                                   ADVERSARIALLY, by RUNNING. All three rails BIT live again —
+                                   including the ONE REAL ceiling-less Agent call S1 had left
+                                   unproven. Gates re-bitten on fresh plants (types+lint · law
+                                   pack). The meter's dedup EXACT on six settled days by an
+                                   INDEPENDENT recount. The S5 folder: all 12 architect rulings
+                                   verified APPLIED; checkall+preflight+capture GREEN fresh;
+                                   48/48 probe anchors unique, independently.
+                                   ONE RAIL-CLASS DEFECT FIXED: rails.mjs pretooluse carried the
+                                   SAME blocking-stdin defect S5 STEP 0 fixed in session_meter —
+                                   proven live (exit 124 hang) → session_meter's proven guard
+                                   IMPORTED (never a 2nd implementation) → 694 ms loud refusal,
+                                   live deny path byte-identical, pinned + bite-proven (46/0).
+                                   TWO doc-truth defects FIXED at source (README re-filter
+                                   numbers vs manifest; checkall's truth table extended + scoped
+                                   to the claim bullet after the first plant HID behind a
+                                   legitimate historical mention — bite-proven both ways).
+                                   ONE NEW LEAD, S1's organ: claude-desktop transcripts get
+                                   REWRITTEN in place with re-issued ids at unchanged byte size;
+                                   the incremental cache keeps both identities across
+                                   resume-copies ⇒ TODAY's meter line reads ~+16% hot; settled
+                                   days exact; SAFE direction. Full verdict table in PROGRESS.
+  ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** MODEL: Opus 5 · effort HIGH ·
+                                   EXECUTION BUDGET 20 corrected lakh (the architect's number).
+                                   FIRST COMMAND: `node checkall.mjs` in the working folder
+                                   (C:\Users\nikhi\arsenal-audit-artifacts\s5-2026-08-20\) —
+                                   then the README's RUNBOOK drives `DO_THIS.md` (39 steps, one
+                                   paste-file each in `steps/`). Diff every probe against
+                                   `probe_expected.json` BEFORE asking a question; save each
+                                   answer into `answers/`; run `node verify.mjs`; only verified
+                                   items enter §9, as LEADS grouped by shape (§8: no lists).
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -793,9 +813,13 @@ per day** even on paid Tier 1, ~250k tokens/minute.
 **What those numbers actually mean for this repo:**
 - The code is 106,416 lines ≈ **~1.3M tokens. It does NOT fit**, not even in Gemini. Anyone who
   claims "just give Gemini the whole repo" has not counted.
-- But **all 116 `.md` files are ~400k tokens and DO fit, comfortably, in ONE call.** Claude Code
-  cannot hold them without compaction. **This is the one thing Gemini can do here that nothing else
-  can.**
+- But **all 116 `.md` files are ≈1.05M tokens (4,183,248 bytes — MEASURED at rung S5), at the EDGE
+  of the 1M window, not the "~400k, one comfortable call" this line claimed until S5-R corrected it
+  in place.** §3-B flagged exactly this number as class-B and it was wrong by 2.8× — a wrong ratio
+  produces a wrong PLAN, and this one decided the first PASS-2 split. The sweep therefore attaches
+  the canon as 7 chunks with a deep-retrieval probe gating every chat and a pre-written two-half
+  fallback. **Cross-document questions over the whole canon in one context is still the one thing
+  Gemini can do here that nothing else can.**
 - 250 requests/day means Gemini is for a HANDFUL of enormous questions, never for many small ones.
   That matches its strength exactly.
 
@@ -1474,7 +1498,11 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       corrections. Two of the eight were named in §5 without their directory; §5 corrected.
       FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).  — both held.
                                                                        CEILING: 40
-☐ S5-R THE FABLE REVIEW — audit the rails before the sweep fires on them.
+☑ S5-R THE FABLE REVIEW — DONE 20 Aug 2026. Verdict table in PROGRESS: every audited claim →
+      re-proof RUN → HELD / FIXED / LEAD. One rail-class fix (rails.mjs stdin guard, stricter),
+      two doc-truth fixes (README numbers · checkall truth table), one new meter LEAD. Suite
+      108/2 = the S1 baseline's same two members + ONE ALIVE staleness that is the SWITCH-OFF
+      crossing its 48h window mid-rung (expected class, RESUME ⛔). Router reset to S5's sweep.
       MODEL: FABLE 5 · effort MAX. Inserted 20 Aug on HIS word: his separate Fable weekly
       pool (~21% left) EXPIRES at Monday's reset either way — a measured exception, not a
       §10-F routing change. Purpose: S1–S4 are ☑ and S5 is prepared, all by Opus sessions
@@ -2955,3 +2983,81 @@ the same shape §9 SHAPE 1 describes. **Not one of the twenty-two would have thr
 §10-C, variance is not an instrument fault. Handoff unchanged: a fresh session, **Opus 5 · effort
 HIGH · execution budget 20 corrected lakh**, whose first command is now `node checkall.mjs`.
 The next rung is **S5's sweep, not S6.**
+
+### PROGRESS 2026-08-20 ~17:30 IST — RUNG S5-R · THE FABLE REVIEW (Fable 5 · effort max · ceiling 25)
+
+**HIS TWO WORDS MID-RUNG, recorded verbatim, because they govern the cost line below.**
+(1) *"you can go beyond the budget as well but make sure quality is not compromised for what is
+asked from you in the document work"* — the ceiling number does NOT move (§10-C: only an
+instrument fault re-derives it); this session's spend past 25 is his, authorized in advance,
+mid-rung. (2) *"do not burn unnecessarily tokens though, do everything that is required from you
+in the smartest way possible to save tokens but without compromising the quality of work and
+everything which is asked from you should be finished"* — after which the folder review switched
+from reading every tool's source to RUNNING the folder's own gates fresh plus targeted greps,
+which is LAW T's routing applied to the review itself.
+
+**THE VERDICT TABLE — every audited claim → the re-proof that was RUN → HELD / FIXED / LEAD.**
+
+| claim | re-proof run | verdict |
+|---|---|---|
+| S1a · meter dedup honest | INDEPENDENT recount — own walk, own parse, own arithmetic, scratchpad-only — six settled days match TO THE PAISA: 672.42/1083 · 1633.39/3348 · 8.84/15 · 118.05/241 · 1073.62/1268 · 405.54/843 | **HELD** |
+| S1a · meter live-day accuracy | cache-vs-disk key diff: TODAY cache 1,338 keys vs disk 1,122; ten files with PAIRED drift (209/209 · 206/206 · 168/168 · 134/134 …) at UNCHANGED byte size and path — claude-desktop transcripts are REWRITTEN in place with re-issued fixed-width ids (size-invariant by construction); the incremental cache never re-reads (size+mtime guard) and resume-copies then carry the NEW ids into other files, so one real turn lives under two keys. Measured effect: today printed 662.54 while the disk recount said 569.50 (~+16%); settled days exact. Error in the SAFE direction (ceilings trip early) | **LEAD → S1's organ** (meter maintenance; ride S11's staleness/keys rung — sha256-of-inputs is literally that rung's subject) |
+| S1b · fleet deny | ONE REAL ceiling-less Agent call fired at the live hook — denied before spawn (the proof S1 had left as "one line for him") | **HELD** |
+| S1b · state deny | a session-editor Write to dressing-room/state (new filename) — denied; the rail also denied a cp whose SOURCE was a state file, the S4-recorded conservative behaviour, and was OBEYED (cat-redirect used instead), no override | **HELD** |
+| S1b · claude-p deny | `false && claude -p` zero-risk canary — denied | **HELD** |
+| S1b · "no rail loosened since S1" | git log: `scripts/rails.mjs` has exactly ONE commit ever; `node -e` was NEVER in STATE_WRITE_RE — S4's denied node-e compound was the redirect matcher reading an `=>` arrow glued to a state path, i.e. the conservative matcher, intact | **HELD** |
+| S1b · rails' own stdin guard | ADVERSARIAL: `rails.mjs pretooluse` on a non-closing fd 0 PROVEN to hang (exit 124, full timeout window) — the SAME defect class S5 STEP 0 fixed in session_meter, alive in the rail organ itself | **FIXED** — session_meter's `readStdinWithDeadline` IMPORTED (a second implementation would be the §2 disease); hang → 694 ms LOUD refusal that fail-opens (the rail's declared failure mode, reached in 300 ms instead of never); the live hook path re-proven byte-identical (payload → the same deny JSON); pinned as a rails selftest assertion (now 46/0) and bite-proven: planting the old blocking read → "HUNG" red → restore → green |
+| S5 STEP 0 · stop-hook fast refusal | non-closing pipe: REFUSED in 575 ms node-time, exit 0, loud on stderr. (First timing attempt wrapped the whole pipeline and read 30 s — the exact wrapping trap the 12:30 entry documents, re-learned live and discarded) | **HELD** |
+| S2 · type gate bites | planted an undefined-symbol call in watchman.mjs → TS2552 named file+line, exit 1 → reverted → exit 0, working tree byte-identical | **HELD** |
+| S2 · lint gate bites | the same plant tripped no-undef at the same line simultaneously | **HELD** |
+| S3 · law pack bites | planted a literal model name in state.mjs → law-m-literal-model 2 > frozen 1, RED exit 1 → reverted → green; `lawpack selftest` fresh: 41/0 (all five rules bite on planted violations, hermetically, today) | **HELD** |
+| S5 folder · 12 architect rulings applied | `checkall` GREEN FRESH (preflight GO · capture round-trip 20,176/20,176 · all 10 verifier sections kept · the four planted faults REFUSED: invented quote, invented filename, inflated receipt, item-count mismatch · ghost/exists split · replication measured · probe PASS + NEAR-as-invention + fallback printed) — plus targeted greps: probe in 12/12 chat-opener steps · binding rule in 5/5 question prompts · item_count in 5/5 · critic's outside-the-list task · fallback file present · per-batch floors baked, 0 placeholders · drop-ledger field in the manifest | **HELD** |
+| S5 folder · probe_expected sanity | INDEPENDENT uniqueness recount: 48/48 anchor+expected strings appear EXACTLY once in the haystack their chat will hold | **HELD** |
+| S5 folder · DO_THIS drivability | 39 steps on disk = the doc's claim (checkall asserts it); every runbook tool exists; cold read coherent; FOR_FABLE_REVIEW.md deliberately NOT edited (it is the request as ruled on — the folder's own convention, honoured) | **HELD** |
+| S5 folder · README truth | the re-filter numbers were a THIRD stale snapshot (7,736 files/7,836 turns/HIM 2,265/5,571) vs the manifest (7,673/8,022/2,356/5,666) — and checkall's DOCS-vs-DISK asserted only FOUR numbers while the runbook claimed "every number in these docs" | **FIXED** — bullet corrected FROM the manifest (the source), marked in place; checkall's truth table +4 manifest-sourced rows; and the check SCOPED to the claim bullet after the first bite-plant FAILED to bite — whole-file presence was too weak because the README also narrates the number historically. Scoped version bite-proven: planted 9,999 → CHECKALL FAILED exit 1 → restored → GREEN |
+| (d) · the order itself | all 2,957 lines read, one head; §3-C's checker + the commit gate run | **two stale lines FIXED in place**: §6-C's "~400k tokens, ONE comfortable call" (measured 1.05M at S5 — §3-B's exact warning, now corrected where the claim is made) · RESUME's PASS-2B line still carried the 19-Aug "9.0 MB" filter (superseded by the live re-filter). Ticks verified TRUE; router reset to S5's sweep with its first command named |
+
+**THREE INSTRUMENT DEFECTS WERE MINE, said before anyone asks.** The rung's own pattern — every
+defect lives in an instrument — bound this rung's instruments too: my first cache check summed
+per-file rows WITHOUT cross-file dedup and manufactured a 3,306-lakh ghost number (killed by its
+own follow-up); my folder spot-script produced two false zeros (a regex and an exact-string match)
+that direct greps immediately killed; my first stop-hook timing wrapped `sleep` and measured the
+wrapper. Every number above survived a second, independent instrument.
+
+**THE SHAPED LEAD THE RAIL FIX EXPOSES (§9 SHAPE 1, live instance):** the blocking-stdin class is
+wider than the two organs now guarded. Raw `readFileSync(0)` also sits in turn_hook.mjs:157 ·
+teaching_contract.mjs:843 · hippocampus.mjs:1736 · hooks/afferent-post.mjs:167 · intent.mjs:321
+(plus legitimate piped-input readers: course, capture, harvest, gaffer_brain). The deadline guard
+exists in exactly the two organs that already hurt a rung. The general fix is ONE shared import,
+and WHICH organs adopt it is a registry-shaped decision — **S6 names the subjects; no session
+patches five copies** (his 20 Aug ruling on SHAPE 6 sets the precedent).
+
+**ONE MORE LEAD, not this stream's:** docs/archive now holds a SECOND open work order on disk —
+the SAMJHAO order, untracked, another session's stream — while CLAUDE.md still says "the ONLY
+open work order". Verified mechanically: its head reads "§0 · THE RESUME POINTER", not "RESUME
+HERE", so the order-checker's predicate does not see it and it receives ZERO structural checking —
+an order outside the predicate is an order outside the gate. His call, or that stream's, whether
+it adopts the RESUME HERE convention (one line) and whether CLAUDE.md's "ONLY" sentence updates —
+not this rung's edit.
+
+**GATES, all run at close:** §3-C's checker → structurally clean · `node scripts/rails.mjs orders`
+→ open order clean, 7 leads all in closed records · GATES green (undefined-symbol 0 both sides,
+no frozen count rose) · LAW PACK green (no law's count rose) · rails selftest 46/0 ·
+`npm test` → **108 passed / 2 failed, and both reds are known**: (1) the aggregate names the SAME
+two pre-existing members as every baseline since S1 — teaching_audit 62/1 · herd 18/1 — no new
+member, and hermeticity clean this run; (2) ALIVE flags `[STALE] audit — newest audit_ledger row
+49.6h old vs a 48h cadence` — that is THE SWITCH-OFF crossing a time window mid-rung (all tasks
+Disabled on his order; the RESUME block declares this RED class EXPECTED until S12). Recorded as
+the switch-off made visible to one more gate, not as a defect of this rung — and NOT waved into
+the member baseline: S12's wake, not a session, is what clears it.
+
+**COST, from the meter (`node scripts/session_meter.mjs status`), with its OWN new caveat:** the
+day moved 648.97 → ~700 lakh across this rung — call it **~50 corrected lakh against a ceiling of
+25**, authorized past the ceiling by his word (1) above, and an UPPER bound twice over: the meter
+is per-day across all his sessions, and today's line reads ~+16% hot per this rung's own meter
+LEAD. Recorded, not excused; the ceiling number itself does not move.
+
+**NEXT SESSION — S5's SWEEP, execution only. MODEL: Opus 5 · effort HIGH · EXECUTION BUDGET 20
+corrected lakh.** First command: `node checkall.mjs` in the working folder — then the README's
+RUNBOOK drives `DO_THIS.md`. The rung after the sweep closes S5 (returns verified into §9 as
+LEADS by shape); **S6 does not open before that.**
