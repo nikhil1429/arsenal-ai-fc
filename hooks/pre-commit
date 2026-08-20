@@ -23,4 +23,14 @@ if ! command -v node >/dev/null 2>&1; then
   echo "pre-commit: node not found — ARCHIVE TRIPWIRE IS OFF for this commit. Check staged paths by hand."
   exit 0
 fi
-exec node scripts/archivist.mjs tripwire
+# ── BELT 1 · THE ARCHIVE TRIPWIRE (14 Aug 2026) — unchanged, and it still runs FIRST.
+node scripts/archivist.mjs tripwire || exit 1
+# ── BELT 2 · THE ORDER-CHECKER (AUDIT §10-C rung S1c, 20 Aug 2026).
+# §3-C's question — "have you checked the entire file byte by byte?" — cannot be answered
+# by reading it again; four readings each found what the last one missed. So it is a gate:
+# every order file in docs/archive (found by predicate, never by a list) is checked for
+# UTF-8 integrity, balanced fences, dangling §references, named files that do not exist and
+# commands whose organ has no such verb. It BLOCKS on the OPEN order only — a closed record
+# prints LEADS and never holds a commit hostage (§10-H: a record is never edited).
+node scripts/rails.mjs orders --quiet || exit 1
+exit 0

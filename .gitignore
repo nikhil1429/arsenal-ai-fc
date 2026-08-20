@@ -463,3 +463,9 @@ dressing-room/state/outbox.jsonl
 # LOAD ZERO BLOCK 5 (19 Aug 2026): the intent cache — acts.mjs sole writer. It holds HIS OWN
 # utterances keyed to the verdict this resolver already gave them, so it stays local.
 dressing-room/state/intent_cache.json
+# AUDIT §10-C RUNG S1 (20 Aug 2026): the his-session spend meter's OFFSET CACHE —
+# session_meter.mjs sole writer. A derived cache, never state of record: it is rebuilt
+# from his own transcripts by one command (`node scripts/session_meter.mjs sweep`), it
+# names the paths of his private session files, and it is rewritten on every Stop hook
+# — a ~2 MB file churning per turn belongs nowhere near git history.
+dressing-room/state/session_meter.json

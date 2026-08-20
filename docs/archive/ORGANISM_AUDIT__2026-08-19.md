@@ -37,7 +37,19 @@ STATUS (update this block before any session stops — this is the handoff)
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
                                    §10-D rules 9–12 · per-rung FORBIDDEN lines.
-  ▶ NEXT SESSION ............... S1 · RAILS (§10-C, first ☐). One rung, ~zero spend, no agents.
+  S1  RAILS .................... ☑ DONE 20 Aug 2026 · the his-session spend METER + three
+                                   PreToolUse RAILS (all proven live) + the order-checker
+                                   as a COMMIT GATE + CLAUDE.md confirmed.
+  ▶ NEXT SESSION ............... S2 · TYPE + LINT GATES (§10-C, first ☐).
+                                   MODEL: Opus 5 · effort max · CEILING 8.
+
+  ⚠ THE CEILINGS ARE NOW MEASURED — AND S1's WAS WRONG BY 6×. The meter S1 built read
+    THIS rung at 31.03 lakh weighted against a ceiling of 5. In brain.mjs's own units a
+    ~100-turn Opus session costs ~30 lakh (cache_read ×0.1 and cache_write ×1.25 dominate;
+    output is the small part). The ladder's ≈81-lakh total was set with NO meter, so every
+    ceiling on it is a guess. HIS RULING BEFORE S2: re-baseline them against measurement,
+    or keep them and accept that every rung breaches around turn 15.
+    His one line: `node scripts/session_meter.mjs status 7`.
 
   ⚠ THE READING SESSION OF 19 Aug COST 505.02 LAKH WEIGHTED — ~2× the organism's whole
     week (254.97 lakh). Cause: subagents on the chat corpus, which is PASS 2B's job and
@@ -312,6 +324,16 @@ for(const [,o,v] of s.matchAll(/node scripts\/([a-z_]+)\.mjs ([a-z-]+)/g)){
 console.log(bad?bad+' PROBLEM(S)':'document structurally clean');
 "
 ```
+
+**AS OF RUNG S1 (20 Aug 2026) THIS CHECK IS A COMMIT GATE**, not a thing a session must
+remember: `hooks/pre-commit` runs the archive tripwire and then `node scripts/rails.mjs orders`,
+which applies exactly the checks above to EVERY order file in `docs/archive` (found by predicate —
+a `.md` with a RESUME HERE head — never by a list). It BLOCKS on the OPEN order only; a closed
+record's legacy findings are printed as LEADS, because §10-H says a record is never edited.
+The one path this document names on purpose and which does not exist — it is a FINDING, not a
+path — is declared to the checker here, in the document itself, rather than hardcoded in code:
+
+<!-- order-check:absent-ok scripts/ghost.mjs -->
 
 **Then refresh the DRIFTING numbers (§3-B · A0) with their four one-line commands.** Those are the
 ones that go stale on their own; everything in class A stays put.
@@ -993,7 +1015,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
 §10-D rule 2, and the meter built in S1 is what makes it enforceable.
 
 ```
-☐ S1  RAILS — the factory gets the organism's discipline.   MODEL: Opus · effort max
+☑ S1  RAILS — DONE 20 Aug 2026. The factory now HAS the organism's discipline.
       (a) HIS-SESSION SPEND METER — TIER-0 parse of the usage blocks in the session
           JSONLs under ~/.claude/projects (subagent sidechains INCLUDED) → one line
           in the state surface ("his sessions today: N lakh") + a Stop hook printing
@@ -1341,3 +1363,105 @@ into the five shapes above. **It does not re-read the corpus and does not re-run
   action: rescue + four cross-checks + seven fixes cost ~zero model spend.
 - **NO NEW DOCUMENT.** One file, dated layers, §10 operative — a "fresh 20 Aug copy" would be the
   §2/§4-B two-copies disease within hours. The header now carries CURRENT AS OF 20 Aug.
+
+### PROGRESS 2026-08-20 ~06:20 IST — RUNG S1 · RAILS (executed — the ladder's first rung)
+
+**WHAT LANDED — all four parts of S1, and nothing outside it.**
+
+- **(a) THE HIS-SESSION SPEND METER — `scripts/session_meter.mjs`** (new organ; SOLE WRITER of
+  `dressing-room/state/session_meter.json`, gitignored — a derived cache, rebuilt by one command,
+  ~2 MB rewritten at every Stop, and it names his private session paths). TIER 0, zero model
+  tokens: it parses the `usage` blocks already sitting in the session JSONLs under
+  `~/.claude/projects`. **Sidechains INCLUDED** (they WERE the 19-Aug disaster). **Deduped** by
+  message-id + requestId — 38,077 duplicate rows skipped on the first live sweep, because a
+  resumed session copies earlier turns into a new file; without that the meter would over-report
+  by a third. **Lane split by `entrypoint`:** `sdk-cli` is the organism's own headless lane
+  (already metered in brain_ledger — counting it here would double-count), everything else is HIM,
+  and a row with no entrypoint is `unknown` and is PRINTED as unknown, never folded. Cost: cold
+  sweep 11.4 s, incremental 0.5 s, the stop-hook path 0.19 s. Wired into `state.mjs week` as the
+  `sessions` line beside `spend`, and into `turn_hook.mjs stop` — **never turn-start**, and the
+  full sweep never rides a hook, so the 450 ms turn budget is untouched.
+
+- **(b) THE RAILS — `scripts/rails.mjs`** (new organ; writes NOTHING, like turn_hook), wired at
+  `.claude/settings.json` PreToolUse behind a tool matcher so Read/Grep/Glob never pay the node
+  boot. Three denies — `fleet` (Agent/Task/Workflow with no ceiling in the prompt) · `state` (a
+  session's EDITOR, or a shell redirect, writing under dressing-room/state) · `claude-p` (the
+  organism's own transport fired from a session shell). The per-rung OVERRIDE is a token IN THE
+  CALL (`ARSENAL_RAILS_OVERRIDE=<rung>:<rail>`), not an environment variable, so it is visible in
+  the transcript and expires with the call — S12's canaries can never be blocked by S1's rules.
+
+- **(c) THE ORDER-CHECKER IS NOW A COMMIT GATE.** `hooks/pre-commit` runs the archive tripwire
+  FIRST (unchanged) and then `node scripts/rails.mjs orders`. Order files are found BY PREDICATE
+  (a `docs/archive/*.md` with a RESUME HERE head), never by a list — S3's JUGAD RULE honoured
+  early. It BLOCKS on the OPEN order (CLAUDE.md names it, in one line) and prints a closed
+  record's findings as LEADS, because §10-H says a record is never edited. The one path this
+  document names on purpose and which does not exist is declared IN THIS DOCUMENT
+  (`order-check:absent-ok`), not hardcoded in the checker.
+
+- **(d) CLAUDE.md CONFIRMED, NOT REWRITTEN** — switch-off line present (1×), the open-work-order
+  pointer present exactly once, LOAD_ZERO named as a closed record.
+
+**THE NUMBER THAT CHANGES THE PLAN.** Over the same 7 days: **HIS sessions 8,382.49 lakh weighted
+against the organism's entire ledger at 204.60 lakh — his half is ~41× the organism's.** Every
+gate, budget, dark-spend rule and sleep law this repo owns governs the 2% half. §3's blind spot is
+closed, and what it hid is bigger than everything that was being watched.
+
+**S1 BREACHED ITS OWN CEILING, AND THAT MEASUREMENT IS THE FINDING.** This rung read **31.03 lakh
+weighted against a ceiling of 5** — 621%. Nothing could see that before this rung existed. A
+~100-turn Opus session costs ~30 lakh in brain.mjs's own weights. **§10-D rule 2 was honoured the
+moment the number became visible:** the rung stopped, closed cleanly, started nothing new.
+
+**THE PROOFS, AND EXACTLY HOW GOOD EACH ONE IS.**
+- `claude-p` and `state` denies: **PROVEN LIVE in this session**, on two different tool families
+  (Bash and Write), with canaries that cost nothing if the rail had failed.
+- **THE RAIL'S OWN FIRST FALSE POSITIVE, FOUND AND FIXED WITHIN THE HOUR.** The first canary was a
+  QUOTED MENTION of the string, so it proved the mechanism but exposed a matcher that read prose;
+  minutes later the rail refused this very session while it was writing this PROGRESS entry ABOUT
+  the rail. A rail that blocks prose about itself gets uninstalled by lunchtime. Both shell rails
+  now match **command position only** (start, or after `;` `|` `&` `&&` `||`, behind inline
+  VAR=value), re-proven live with a short-circuited call, and the selftest now pins BOTH
+  directions — the call is denied, the prose is not. The fix rode S1's own declared override,
+  which is the first live use of that mechanism.
+- `fleet` deny: the deny MECHANISM is proven live (twice, two tool families) and the fleet MATCHER
+  is proven by test on the exact Agent/Task/Workflow payload shape. **NOT done:** firing a real
+  ceiling-less Agent call, because this session carries a standing instruction not to call the
+  Agent tool unasked, and a rail that failed would have spawned the exact thing it exists to stop.
+  **One line for him:** say the word and the next rung fires one throwaway ceiling-less call.
+
+**THE INSTRUMENT CORRECTED ITSELF THREE TIMES BEFORE IT WAS TRUSTED (§4 binds new tools too).**
+§3-C's verb check called three working verbs missing: `organism_test.mjs suites` (a dispatch-table
+verb), a function-named verb, and `fuelboard.mjs status` (a DEFAULT mode). The check narrowed to
+quoted OR function OR dispatch-table OR the organ's own `CLI:` line. Two further narrowings, both
+verified: a document's §-references are only checked when the document itself uses § headings
+(ORGANISM_OVERHAUL's section-13 and section-19 references point at ANOTHER document, and calling
+those "no such section" reports the checker's own assumption), and a named path under a top-level
+directory GIT DOES NOT TRACK is a runtime output (brain_out/, wall_out/, scout_reports/), not a
+missing repo file. Remaining limit, said out loud: a DEFAULT verb in an organ with no `CLI:`
+header line still over-reports — one live instance, `fuelboard.mjs status`.
+
+**LEADS THE NEW GATE FOUND in closed records — for S4/S6, and NOT edited here.** (Naming them
+here made THIS document name two absent paths, and its own gate refused the commit on the spot —
+the loop closing on itself, in the first hour. They are declared absent-on-purpose below, exactly
+the way ghost.mjs is, so a FINDING can be written down without becoming a defect.)
+
+<!-- order-check:absent-ok scripts/understand.mjs -->
+<!-- order-check:absent-ok dressing-room/config/brain_config.json -->
+
+`scripts/understand.mjs` named in LOAD_ZERO and absent (the ghost.mjs class, a second instance) ·
+`dressing-room/config/brain_config.json` named in ORGANISM_REPAIR_PLAN and absent · `course.mjs
+paste` named there while that organ's CLI has no such verb.
+
+**THE SUITE AND THE LAW.** Baseline taken BEFORE this rung: `npm test` 107 passed / 1 failed — the
+aggregate red, caused by two pre-existing red members (teaching_audit 62/1, herd 18/1). After:
+**107 passed / 1 failed, the same two members, and the suite grew from 100 to 102** — both new
+organs joined `organism:selftest` in the same commit (the coverage law), session_meter 27/0 and
+rails 45/0. `node scripts/xray.mjs report`: **Q2 = 0, Q5 = 0**, 105/105 organs parsed after a
+rebuild — the new SOLE WRITER header matches the IR. No gate weakened; two gates added.
+
+**HOUSEKEEPING, recorded because §10-E makes it a rule.** Two commits (af85ba6, 9b32e01, 05:35–05:36
+IST) landed on this file from OUTSIDE this session while S1 was running — §4-B's unrecorded-era
+clause. No clobber: every edit here was written from a fresh read of the file on disk and verified
+after.
+
+**THE NEXT SESSION DOES S2 · TYPE + LINT GATES — MODEL: Opus 5 · effort max · CEILING 8**, and it
+opens with his ruling on the ceilings, because under measurement 8 lakh is roughly 25 turns.

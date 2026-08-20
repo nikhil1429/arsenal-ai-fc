@@ -216,7 +216,7 @@ const weighted = (r) => (Number(r.input_tokens) || 0) * WEIGHT.input + (Number(r
 const istHour = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; return ((t + 5.5 * 3600000) % 86400000 + 86400000) % 86400000 / 3600000; };
 const istDay = (iso) => { const t = Date.parse(iso); if (!Number.isFinite(t)) return null; const d = new Date(t + 5.5 * 3600000); return d.toISOString().slice(0, 10); };
 
-export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined, tasks = undefined, samjhao = undefined, outbox = undefined } = {}) {
+export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting = null, ledger = [], gate = [], intents = [], swallow = null, awake = null, models = undefined, acts = undefined, tasks = undefined, samjhao = undefined, outbox = undefined, sessions = undefined } = {}) {
   const since = now.getTime() - days * 86400000;
   const inWin = (iso) => { const t = Date.parse(iso || ""); return Number.isFinite(t) && t >= since && t <= now.getTime(); };
   // day N of 7
@@ -273,6 +273,7 @@ export function weekBoard({ now = new Date(), days = 7, freeze = null, sitting =
     intents: kinds,
     swallow: swallow ? { rows: swallow.runs ?? swallow.rows ?? null, n: swallow.n ?? null, top: (swallow.top || []).slice(0, 3) } : null,
     freeze: freeze ? { armed: !!freeze.armed, deferred: !!freeze.deferred, guarded_commits: (freeze.commits || []).length, broken: (freeze.broken || []).length, carded: freeze.carded, exempt: freeze.exempt } : null,
+    sessions: sessions === undefined ? undefined : (sessions && sessions.line ? sessions.line : null),   // AUDIT §10-C S1a (20 Aug 2026): session_meter.mjs boardLine — THE OTHER HALF of the spend, HIS OWN sessions, which the ledger has never been able to see
     models: models === undefined ? undefined : (models && models.line ? models.line : null),   // LAW M (18 Aug 2026): models.mjs boardLine — one line, roles → live models, keys ok n/N
     acts: acts === undefined ? undefined : (acts && acts.line ? acts.line : null),               // LAW A (18 Aug 2026): acts.mjs boardLine — acts n · ok · failed · undone · doors
     outbox: outbox === undefined ? undefined : (outbox && outbox.line ? outbox.line : null),             // LOAD ZERO BLOCK 3 (19 Aug 2026): the one road to him — pending vs delivered vs sweeps
@@ -288,6 +289,9 @@ export function weekLines(b) {
   L.push(`  sittings   ${b.sitting ? `${b.sitting.sittings} sitting(s) · ${b.sitting.turns} turn row(s) · weighted ${lakh(b.sitting.weighted)} · heads ${b.sitting.heads && b.sitting.heads.length ? b.sitting.heads.join(", ") : "—"}` : "? (sitting log unreadable)"}`);
   L.push(`  contact    L1 share ${b.contact.share === null ? "? (no spend in window)" : Math.round(b.contact.share * 100) + "%"} — contact ${lakh(b.contact.contact_weighted)} (sitting ${lakh(b.contact.of_which_sitting)} + gaffer ledger ${lakh(b.contact.of_which_gaffer_ledger)}) vs other ${lakh(b.contact.other_weighted)}`);
   L.push(`  spend      ${b.ledger.rows} ledger row(s) · weighted ${lakh(b.ledger.weighted)} · DARK (00–08 IST) ${lakh(b.ledger.dark_weighted)} · per day: ${Object.entries(b.ledger.per_day).sort().map(([d, v]) => `${d.slice(5)} ${lakh(v.total)}${v.dark ? ` (dark ${lakh(v.dark)})` : ""}`).join(" · ") || "—"}`);
+  // AUDIT §10-C S1a (20 Aug 2026) — beside `spend`, deliberately: the ledger line above is the
+  // ORGANISM's spend, and for a year that was the only half anybody could see. This is his.
+  if (b.sessions !== undefined) L.push(`  ${b.sessions || "sessions   ? (no transcripts readable — `node scripts/session_meter.mjs status`)"}`);
   L.push(`  gate       ${b.gate.transitions} transition(s) · ${b.gate.wakes} wake · ${b.gate.sleeps} sleep · lanes: ${Object.entries(b.gate.lanes).map(([k, v]) => `${k} ${v.awake}↑${v.asleep}↓`).join(" · ") || "—"}`);
   L.push(`  intents    study ${b.intents.study} · build ${b.intents.build} · other ${b.intents.other}`);
   L.push(`  swallow    ${b.swallow ? `${b.swallow.n ?? "?"} silent catch(es) across ${b.swallow.rows ?? "?"} run(s)${b.swallow.top.length ? " — top: " + b.swallow.top.map((t) => `${String(t.organ || "").replace(/\.mjs$/, "")} · ${t.why} ×${t.n}`).join(" | ") : ""}` : "? (ledger unreadable)"}`);
@@ -301,8 +305,8 @@ export function weekLines(b) {
   return L;
 }
 export async function liveWeek({ days = 7, now = new Date() } = {}) {
-  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }, { stats: tasksStats, boardLine: tasksLine }, { stats: samjhaoStats, boardLine: samjhaoLine }, { stats: outboxStats, boardLine: outboxLine }] = await Promise.all([
-    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"), import("./tasks.mjs"), import("./samjhao.mjs"), import("./outbox.mjs"),
+  const [{ status: freezeStatus }, { stats: sittingStats }, { showLines }, { ledger: swallowLedger }, { awakeModel }, { board: modelsBoard, boardLine: modelsLine }, { stats: actsStats, boardLine: actsLine }, { stats: tasksStats, boardLine: tasksLine }, { stats: samjhaoStats, boardLine: samjhaoLine }, { stats: outboxStats, boardLine: outboxLine }, { live: sessionsLive, boardLine: sessionsLine }] = await Promise.all([
+    import("./freeze.mjs"), import("./sitting.mjs"), import("./intent.mjs"), import("./swallow.mjs"), import("./herd.mjs"), import("./models.mjs"), import("./acts.mjs"), import("./tasks.mjs"), import("./samjhao.mjs"), import("./outbox.mjs"), import("./session_meter.mjs"),
   ]);
   const safe = (f, dflt = null) => { try { return f(); } catch { return dflt; } };
   const freeze = safe(() => { const s = freezeStatus(); if (s && s.since) { try { s.since_at = execFileSync("git", ["show", "-s", "--format=%aI", s.since], { cwd: ROOT, encoding: "utf8", timeout: 8000, windowsHide: true }).trim(); } catch { s.since_at = null; } } return s; });
@@ -318,7 +322,8 @@ export async function liveWeek({ days = 7, now = new Date() } = {}) {
   const tasks = safe(() => ({ line: tasksLine(tasksStats(days)) }), null);    // LOAD ZERO BLOCK 1 (19 Aug 2026)
   const samjhao = safe(() => ({ line: samjhaoLine(samjhaoStats()) }), null);  // LOAD ZERO BLOCK 2 (19 Aug 2026)
   const outbox = safe(() => ({ line: outboxLine(outboxStats()) }), null);     // LOAD ZERO BLOCK 3 (19 Aug 2026)
-  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts, tasks, samjhao, outbox });
+  const sessions = safe(() => ({ line: sessionsLine(sessionsLive({ days, now })) }), null);   // AUDIT §10-C S1a (20 Aug 2026): the FULL sweep of his transcripts rides here — a human verb — never a hook
+  return weekBoard({ now, days, freeze, sitting, ledger, gate, intents, swallow, awake, models, acts, tasks, samjhao, outbox, sessions });
 }
 
 // ── SELFTEST — fixtures only; no git, no state dir, no network ───────────────

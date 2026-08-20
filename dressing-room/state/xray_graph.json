@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-19T03:38:11.345Z",
- "organs_parsed": 103,
- "organs_expected": 103,
+ "built_at": "2026-08-20T00:25:10.554Z",
+ "organs_parsed": 105,
+ "organs_expected": 105,
  "parse_errors": [],
- "unresolved_sinks": 1311,
+ "unresolved_sinks": 1339,
  "organs": {
   "acts.mjs": {
    "loc": 482,
@@ -12665,6 +12665,73 @@
    ],
    "unresolved": 6
   },
+  "rails.mjs": {
+   "loc": 374,
+   "reads": [
+    {
+     "path": "docs/archive",
+     "lines": [
+      154,
+      154
+     ],
+     "fixture": false
+    },
+    {
+     "path": "package.json",
+     "lines": [
+      194,
+      194
+     ],
+     "fixture": false
+    },
+    {
+     "path": "CLAUDE.md",
+     "lines": [
+      233,
+      233
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [
+    {
+     "kind": "bin",
+     "bin": "git",
+     "line": 186
+    }
+   ],
+   "swallows": [],
+   "verbs": [
+    "decide",
+    "orders",
+    "pretooluse",
+    "selftest"
+   ],
+   "header_verbs": [
+    "decide",
+    "orders",
+    "pretooluse",
+    "selftest"
+   ],
+   "exports": [
+    "CEILING_RE",
+    "CLAUDE_P_RE",
+    "EDIT_TOOLS",
+    "FLEET_TOOLS",
+    "ORDER_DIR",
+    "STATE_DIR_RE",
+    "checkOrder",
+    "checkOrders",
+    "decide",
+    "hasVerb",
+    "openOrder",
+    "orderFiles",
+    "pretooluse",
+    "tracksTop"
+   ],
+   "unresolved": 8
+  },
   "reconcile.mjs": {
    "loc": 834,
    "reads": [
@@ -13902,6 +13969,114 @@
    ],
    "unresolved": 8
   },
+  "session_meter.mjs": {
+   "loc": 517,
+   "reads": [
+    {
+     "path": "dressing-room/state/session_meter.json",
+     "lines": [
+      148,
+      148,
+      148
+     ],
+     "fixture": false
+    },
+    {
+     "path": ".",
+     "lines": [
+      350,
+      184,
+      350,
+      169,
+      184,
+      350
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/session_meter.json",
+     "lines": [
+      160,
+      160,
+      160
+     ],
+     "verbs": [
+      "renameSync→WRITE(dst)"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [],
+   "swallows": [
+    {
+     "line": 325,
+     "try_stmts": 6,
+     "catch_stmts": 1
+    },
+    {
+     "line": 325,
+     "try_stmts": 6,
+     "catch_stmts": 1
+    },
+    {
+     "line": 325,
+     "try_stmts": 6,
+     "catch_stmts": 1
+    },
+    {
+     "line": 325,
+     "try_stmts": 6,
+     "catch_stmts": 1
+    }
+   ],
+   "verbs": [
+    "json",
+    "line",
+    "report",
+    "selftest",
+    "status",
+    "stop",
+    "sweep",
+    "today"
+   ],
+   "header_verbs": [
+    "days",
+    "line",
+    "report",
+    "selftest",
+    "status",
+    "stop",
+    "sweep",
+    "today"
+   ],
+   "exports": [
+    "LANES",
+    "W",
+    "aggregate",
+    "boardLine",
+    "emptyCache",
+    "foldFile",
+    "istDay",
+    "lakh",
+    "laneOf",
+    "live",
+    "loadCache",
+    "projectsDir",
+    "prune",
+    "rowKey",
+    "saveCache",
+    "scanChunk",
+    "sessionTotal",
+    "stopHook",
+    "stopLine",
+    "sweep",
+    "usageOf",
+    "weighted"
+   ],
+   "unresolved": 20
+  },
   "setpiece.mjs": {
    "loc": 1592,
    "reads": [
@@ -15111,19 +15286,19 @@
    "unresolved": 3
   },
   "state.mjs": {
-   "loc": 443,
+   "loc": 448,
    "reads": [
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      310
+      314
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      310
+      314
      ],
      "fixture": false
     }
@@ -15133,7 +15308,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 308
+     "line": 312
     }
    ],
    "swallows": [],
@@ -17189,14 +17364,14 @@
    "unresolved": 0
   },
   "turn_hook.mjs": {
-   "loc": 355,
+   "loc": 356,
    "reads": [
     {
      "path": ".claude/settings.json",
      "lines": [
-      293,
-      293,
-      293
+      294,
+      294,
+      294
      ],
      "fixture": true
     }
@@ -17309,9 +17484,17 @@
     },
     {
      "kind": "organ",
+     "script": "session_meter.mjs",
+     "verb": "stop",
+     "line": 147,
+     "ctx": "stop",
+     "inproc": true
+    },
+    {
+     "kind": "organ",
      "script": "turn_hook.mjs",
      "verb": null,
-     "line": 318,
+     "line": 319,
      "ctx": "selftest"
     }
    ],
@@ -19018,6 +19201,7 @@
     "audit.mjs",
     "deep.mjs",
     "organism_test.mjs",
+    "session_meter.mjs",
     "xray.mjs"
    ],
    "writers": [
@@ -19145,6 +19329,17 @@
    "is_dir": false
   },
   {
+   "path": "CLAUDE.md",
+   "readers": [
+    "rails.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "CyborgArchive/data",
    "readers": [
     "archive_audit.mjs"
@@ -19170,6 +19365,17 @@
    "path": "CyborgArchive/SCHEMA/v1.json",
    "readers": [
     "archive_audit.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "docs/archive",
+   "readers": [
+    "rails.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
@@ -20761,7 +20967,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -21522,6 +21728,19 @@
    ],
    "writers": [
     "intent.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
+   "path": "dressing-room/state/session_meter.json",
+   "readers": [
+    "session_meter.mjs"
+   ],
+   "writers": [
+    "session_meter.mjs"
    ],
    "fixture_readers": [],
    "fixture_writers": [],
@@ -22383,6 +22602,7 @@
    "readers": [
     "audit.mjs",
     "organism_test.mjs",
+    "rails.mjs",
     "selfknowledge.mjs",
     "xray.mjs"
    ],
@@ -23468,6 +23688,8 @@
   "dressing-room/state/brain_out/agenda/2026-08-17.md",
   "dressing-room/state/brain_out/agenda/2026-08-18.json",
   "dressing-room/state/brain_out/agenda/2026-08-18.md",
+  "dressing-room/state/brain_out/agenda/2026-08-19.json",
+  "dressing-room/state/brain_out/agenda/2026-08-19.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-17.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-21.md",
@@ -23499,6 +23721,8 @@
   "dressing-room/state/brain_out/day_cartridge/2026-08-17.md",
   "dressing-room/state/brain_out/day_cartridge/2026-08-18.allowed.json",
   "dressing-room/state/brain_out/day_cartridge/2026-08-18.md",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-19.allowed.json",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-19.md",
   "dressing-room/state/brain_out/diary/2026-08-13.json",
   "dressing-room/state/brain_out/diary/2026-08-13.md",
   "dressing-room/state/brain_out/diary/2026-08-14.json",
@@ -23511,6 +23735,8 @@
   "dressing-room/state/brain_out/diary/2026-08-18.md",
   "dressing-room/state/brain_out/diary/2026-08-19.json",
   "dressing-room/state/brain_out/diary/2026-08-19.md",
+  "dressing-room/state/brain_out/diary/2026-08-20.json",
+  "dressing-room/state/brain_out/diary/2026-08-20.md",
   "dressing-room/state/brain_out/doubts/2026-07-18.md",
   "dressing-room/state/brain_out/doubts/2026-07-21.md",
   "dressing-room/state/brain_out/doubts/2026-07-29.md",
@@ -23564,6 +23790,7 @@
   "dressing-room/state/brain_out/dugout/2026-08-16.md",
   "dressing-room/state/brain_out/dugout/2026-08-18.md",
   "dressing-room/state/brain_out/dugout/2026-08-19.md",
+  "dressing-room/state/brain_out/dugout/2026-08-20.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-17.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-18.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-21.md",
@@ -23587,6 +23814,7 @@
   "dressing-room/state/brain_out/dugout_digest/2026-08-15.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-17.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-18.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-08-19.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-18.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-29.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-30.md",
@@ -23607,6 +23835,7 @@
   "dressing-room/state/brain_out/gaffer_audit/2026-08-14.md",
   "dressing-room/state/brain_out/gaffer_audit/2026-08-15.md",
   "dressing-room/state/brain_out/gaffer_audit/2026-08-18.md",
+  "dressing-room/state/brain_out/gaffer_audit/2026-08-19.md",
   "dressing-room/state/brain_out/gate.jsonl",
   "dressing-room/state/brain_out/gemini_wall/2026-07-17.md",
   "dressing-room/state/brain_out/gemini_wall/2026-07-18.md",
@@ -23629,6 +23858,8 @@
   "dressing-room/state/brain_out/gemini_wall/2026-08-18.md",
   "dressing-room/state/brain_out/intent_digest/2026-08-18.json",
   "dressing-room/state/brain_out/intent_digest/2026-08-18.md",
+  "dressing-room/state/brain_out/intent_digest/2026-08-19.json",
+  "dressing-room/state/brain_out/intent_digest/2026-08-19.md",
   "dressing-room/state/brain_out/lexicon/2026-07-18.md",
   "dressing-room/state/brain_out/lexicon/2026-07-19.md",
   "dressing-room/state/brain_out/lexicon/2026-08-06.md",
@@ -23659,6 +23890,7 @@
   "dressing-room/state/brain_out/midday/2026-08-13.md",
   "dressing-room/state/brain_out/midday/2026-08-15.md",
   "dressing-room/state/brain_out/midday/2026-08-18.md",
+  "dressing-room/state/brain_out/midday/2026-08-19.md",
   "dressing-room/state/brain_out/model_mine/2026-08-09.md",
   "dressing-room/state/brain_out/model_mine/2026-08-10.json",
   "dressing-room/state/brain_out/model_mine/2026-08-10.md",
@@ -23691,6 +23923,8 @@
   "dressing-room/state/brain_out/night_coach/2026-08-18.md",
   "dressing-room/state/brain_out/night_coach/2026-08-19.json",
   "dressing-room/state/brain_out/night_coach/2026-08-19.md",
+  "dressing-room/state/brain_out/night_coach/2026-08-20.json",
+  "dressing-room/state/brain_out/night_coach/2026-08-20.md",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-07-31.json",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-08-01.json",
   "dressing-room/state/brain_out/nightshift/distractor_bank_2026-08-06.json",
@@ -23725,6 +23959,7 @@
   "dressing-room/state/brain_out/nightshift/gate_tune_2026-08-16.md",
   "dressing-room/state/brain_out/nightshift/gate_tune_2026-08-18.md",
   "dressing-room/state/brain_out/nightshift/gate_tune_2026-08-19.md",
+  "dressing-room/state/brain_out/nightshift/gate_tune_2026-08-20.md",
   "dressing-room/state/brain_out/nightshift/gem_cartridge.md",
   "dressing-room/state/brain_out/nightshift/probe_bank_2026-07-31.json",
   "dressing-room/state/brain_out/nightshift/probe_bank_2026-08-01.json",
@@ -23764,6 +23999,7 @@
   "dressing-room/state/brain_out/nightshift/shift_2026-08-16.json",
   "dressing-room/state/brain_out/nightshift/shift_2026-08-18.json",
   "dressing-room/state/brain_out/nightshift/shift_2026-08-19.json",
+  "dressing-room/state/brain_out/nightshift/shift_2026-08-20.json",
   "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-07-19.json",
   "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-07-20.json",
   "dressing-room/state/brain_out/nightshift/wind_tunnel_2026-07-21.json",
@@ -23807,6 +24043,8 @@
   "dressing-room/state/brain_out/premap/2026-08-17.md",
   "dressing-room/state/brain_out/prepare/2026-08-18.json",
   "dressing-room/state/brain_out/prepare/2026-08-18.md",
+  "dressing-room/state/brain_out/prepare/2026-08-20.json",
+  "dressing-room/state/brain_out/prepare/2026-08-20.md",
   "dressing-room/state/brain_out/prepare_on_request/2026-08-18.md",
   "dressing-room/state/brain_out/prepare_on_request/2026-08-19.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-09.md",
@@ -23818,6 +24056,7 @@
   "dressing-room/state/brain_out/reanalysis/2026-08-15.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-17.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-18.md",
+  "dressing-room/state/brain_out/reanalysis/2026-08-19.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-18.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-21.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-29.md",
@@ -24032,6 +24271,7 @@
   "dressing-room/state/fsrs_store.json",
   "dressing-room/state/fuelboard_config.json",
   "dressing-room/state/gaffer_blocks.json",
+  "dressing-room/state/gaffer_blocks.json.tmp6756",
   "dressing-room/state/gaffer_brain.jsonl",
   "dressing-room/state/gaffer_grade_queue.jsonl",
   "dressing-room/state/gaffer_standing.json",
@@ -24041,6 +24281,7 @@
   "dressing-room/state/gem_sync_stamp.json",
   "dressing-room/state/heartbeat_config.json",
   "dressing-room/state/intake_log.json",
+  "dressing-room/state/intent_cache.json",
   "dressing-room/state/ladder_config.json",
   "dressing-room/state/learning_state.json",
   "dressing-room/state/learning_state_config.json",
@@ -24096,6 +24337,7 @@
   "dressing-room/state/season.json",
   "dressing-room/state/season_read.json",
   "dressing-room/state/session_intent.jsonl",
+  "dressing-room/state/session_meter.json",
   "dressing-room/state/setpiece_config.json",
   "dressing-room/state/shadow_log.jsonl",
   "dressing-room/state/shipped.json",
@@ -24323,6 +24565,10 @@
   {
    "organ": "scorer.mjs",
    "file": "trust_tiers.json"
+  },
+  {
+   "organ": "session_meter.mjs",
+   "file": "session_meter.json"
   },
   {
    "organ": "shipped.mjs",
@@ -26831,6 +27077,11 @@
     "source": "settings.json"
    },
    {
+    "script": "rails.mjs",
+    "verb": "pretooluse",
+    "source": "settings.json"
+   },
+   {
     "script": "hooks/afferent-post.mjs",
     "verb": null,
     "source": "settings.json"
@@ -27207,6 +27458,16 @@
    },
    {
     "script": "captain.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "session_meter.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "rails.mjs",
     "verb": "selftest",
     "source": "package.json"
    },
@@ -28263,6 +28524,12 @@
     "verbs": []
    },
    {
+    "script": "rails.mjs",
+    "verbs": [
+     "orders"
+    ]
+   },
+   {
     "script": "swallow.mjs",
     "verbs": [
      "status"
@@ -28293,6 +28560,6 @@
     "verbs": []
    }
   ],
-  "md_files": 217
+  "md_files": 218
  }
 }

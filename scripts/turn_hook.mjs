@@ -144,6 +144,7 @@ export async function stop(opts = {}) {
   await runOrgan("teaching_audit.mjs", "hook", opts, r);
   await runOrgan("intent.mjs", "stop", opts, r);
   await runOrgan("acts.mjs", "stop", opts, r);   // LAW A door 3 (18 Aug 2026): a `<<ACT {…}>>` tail on the turn → receipts, same anchor, same process
+  await runOrgan("session_meter.mjs", "stop", opts, r);   // AUDIT §10-C S1a (20 Aug 2026): what THIS session has spent, said at the anchor that costs him nothing. Tail-parses ONE transcript; the full sweep rides `state.mjs week`, never a hook
   return r;
 }
 export const SEQUENCES = { prompt, start, stop };
