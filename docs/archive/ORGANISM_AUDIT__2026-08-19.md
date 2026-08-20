@@ -51,10 +51,14 @@ STATUS (update this block before any session stops — this is the handoff)
   ▶ NEXT SESSION ............... S4 · PASS 2 — the eight intent docs, ONE head, no agents
                                    (§10-C, first ☐). MODEL: Opus 5 · effort max · CEILING 40.
 
-  ✔ THE CEILINGS ARE RE-BASELINED — HIS RULING, 20 Aug 2026, taken the same hour the meter
-    first read them. Every standard rung 40 · S10 60 · ladder total 500 (was ≈81, guessed).
-    S1 itself measured 46.51 against its old ceiling of 5. The numbers are now MEASURED, and
-    they stay hard stops against runaway — not budgets for ordinary deep work.
+  ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
+    HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
+    CORRECTED units. S1's meter was reading 2.01× true (its dedup key carried `uuid`,
+    fresh on every content-block line, so dedup never fired); fixed and re-read over the
+    same window: 8,680.72 → 4,244.73 lakh. The numerals held, the UNIT halved, so the
+    real allowance DOUBLED — 40 corrected ≈ 82 of the old inflated lakh.
+    ⛔ CEILINGS RE-DERIVE ONLY WHEN THE METER'S UNIT IS CORRECTED — never on normal
+    variance. A hot rung is data about the rung, not about the ceiling.
     His one line, any time: `node scripts/session_meter.mjs status 7`.
 
   ⚠ THE READING SESSION OF 19 Aug COST 505.02 LAKH WEIGHTED — ~2× the organism's whole
@@ -1017,17 +1021,35 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
 
 ### §10-C · THE SESSION LADDER — one rung per session, ceilings are HARD STOPS
 
-Ceilings are weighted lakh, **re-baselined 20 Aug from the live meter (§3-B's own rule — a
-class-B number lost to a measurement); ceilings remain HARD STOPS against runaway, sized so
-normal single-threaded deep work never trips them.** At the ceiling the session STOPS and hands
-off cleanly — that is §10-D rule 2, and the meter built in S1 is what makes it enforceable.
+Ceilings are weighted lakh, **re-baselined 20 Aug from the CORRECTED meter (dedup-key uuid bug,
+2.01× inflation)**; the same law as the first re-baseline, third application — a number derived
+from a broken instrument re-derives when the instrument is corrected (§3-B). **Ceilings remain
+HARD STOPS against runaway, sized so normal single-threaded deep work never trips them.** At the
+ceiling the session STOPS and hands off cleanly — that is §10-D rule 2, and the meter built in S1
+is what makes it enforceable.
 
-The first numbers on this ladder were written before anything could measure a session, and S1
-proved them wrong on its first read: it spent 46.51 lakh against a ceiling of 5. In brain.mjs's
-own weights a focused Opus session runs ~30–47 lakh, because cache_read (×0.1) and cache_write
-(×1.25) dominate and output is the small part. So the sizing rule is now one sentence: **one
-focused session's measured cost plus small headroom = 40; S10, the biggest build, 60.** His
-ruling, 20 Aug 2026. Check the number, never guess it: `node scripts/session_meter.mjs status 7`.
+**THE RULE THAT STOPS THIS PING-PONGING, and it binds every later rung: ceilings re-derive ONLY
+when the meter's UNIT is corrected — never on normal variance.** A rung that runs hot or cold is
+data about the rung, not about the ceiling; only a proven fault in the instrument that produced
+the number reopens the number. Twice now the instrument was the fault (no meter at all, then a
+meter reading 2.01× true). A third re-baseline needs a third instrument fault, named and proven.
+
+The first numbers here were written before anything could measure a session at all, and S1 proved
+them wrong on its first read. Those replacements were then measured in units that were themselves
+**2.01× too big** — the meter's dedup key carried `uuid`, which is fresh on every line, so a turn
+written as four content-block lines was billed four times. Corrected and re-read over the same
+7-day window: **8,680.72 → 4,244.73 lakh, a factor of 2.045.**
+
+In CORRECTED units a focused Opus session's own numbers are: **S1 measured 22.7 lakh true, S2
+about 37.9.** cache_read (×0.1) and cache_write (×1.25) still dominate; output is the small part.
+So the sizing rule is unchanged in SHAPE and re-derived in VALUE: **one focused session's measured
+TRUE cost plus small headroom = 40; S10, the biggest build, 60.**
+
+**READ THAT CAREFULLY — the numerals did not move, the UNIT did.** 40 corrected lakh is ~82 lakh
+in the inflated units the previous table used, so the real allowance is **2.045× larger** than the
+old "40" ever permitted, and a rung that used to breach at turn ~15 now has room for a whole
+single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
+`node scripts/session_meter.mjs status 7`.
 
 ```
 ☑ S1  RAILS — DONE 20 Aug 2026. The factory now HAS the organism's discipline.
@@ -1166,7 +1188,7 @@ ruling, 20 Aug 2026. Check the number, never guess it: `node scripts/session_met
       ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.      CEILING: 40
 ```
 
-**The whole ladder's ceiling is now 500 lakh weighted across 12 sessions (11 × 40 + S10's 60) —
+**The whole ladder's ceiling is 500 CORRECTED lakh across 12 sessions (11 × 40 + S10's 60) —
 and the one unguarded session of 19 Aug burned 505 by ITSELF, i.e. that single session cost
 more than the entire disciplined ladder is allowed to.** That is the whole argument for the
 rails in one line. S1–S3 stay the cheap deterministic end and S6–S11 the judgement-heavy end;
@@ -1425,6 +1447,11 @@ into the five shapes above. **It does not re-read the corpus and does not re-run
 
 - **(d) CLAUDE.md CONFIRMED, NOT REWRITTEN** — switch-off line present (1×), the open-work-order
   pointer present exactly once, LOAD_ZERO named as a closed record.
+
+**[CORRECTED LATER THE SAME DAY — the meter that produced the number below was reading 2.01× true
+(dedup-key uuid bug). In corrected units the 7-day figure is ~4,100 lakh and the ratio is ~20×, not
+41×. The FINDING is unchanged and still the largest on this ladder: his half dwarfs the half every
+gate in this repo guards. See the meter-correction entry at the end.]**
 
 **THE NUMBER THAT CHANGES THE PLAN.** Over the same 7 days: **HIS sessions 8,382.49 lakh weighted
 against the organism's entire ledger at 204.60 lakh — his half is ~41× the organism's.** Every
@@ -1796,3 +1823,91 @@ which, and the next session does it before S4, or S4 goes first and this rides a
 effort max · CEILING 40.** It reads, it does not build; its output is the contradictions +
 missing-implementation list folded into §9. Its FORBIDDEN lines are fan-out, and the other ~108
 `.md` (that is S5's sweep).
+
+### PROGRESS 2026-08-20 ~09:15 IST — S1–S3 PUSHED, and the pre-push suite's two reds run down
+
+**PUSHED to origin/main (`9b32e01..fdd732f`), six commits: S1 · the ceiling re-baseline · S2 step 0
+· S2 · S3 step 0 · S3.** Pre-push checks, all green before the push: the privacy glance (39 files,
+no secret-shaped path, ZERO key-shaped literals in any added line — the 14 Aug law) · origin had
+not moved, clean fast-forward · the §3-C order gate · the type+lint gate · the law pack.
+
+**THE PRE-PUSH SUITE CAME BACK 108/2, AND NEITHER RED BELONGS TO THE LADDER.**
+1. **hermeticity — `MODIFIED session_meter.json`.** Third instance of the interaction the S1 entry
+   already recorded: this suite ran while a live session's Stop hook fired, and the Stop hook is
+   what writes the meter's cache. The gate is right; the run was contaminated by its own observer.
+2. **`sitting` went red in-suite and is 67/0 GREEN alone.** Its log shows why: *"OPEN
+   sit_20260820_0330_3007 found on disk at boot"* — the member READS the live sitting file at boot,
+   so its result depends on whether a sitting happens to be open. Crucially the hermeticity check
+   flagged ONLY the meter cache, never sitting.json, so **it read live state and wrote none** — this
+   is a determinism defect, not a data one.
+   **LEAD for a later rung (not fixed here — sitting.mjs is untouched by S1–S3):** a selftest whose
+   verdict depends on live state is a selftest that reds at random. Reproduce by opening a sitting
+   and running the member; the fix is the seam every other organ already uses.
+
+**Left deliberately uncommitted, and said out loud rather than tidied:** `dressing-room/state/sitting.json`
+(another organ's live state, mid-flight — §10-D rule 4 says its owner writes it, not a session) and
+the torn-write corpse `gaffer_blocks.json.tmp6756` (S11's evidence; committing it would normalise it).
+
+**STILL OPEN AND STILL HIS:** S3's finding that S1's spend meter reads **2.01× true cost** — every
+ceiling on this ladder was sized from that meter, and the error is in the SAFE direction.
+
+### PROGRESS 2026-08-20 ~09:40 IST — THE METER CORRECTED, AND THE CEILINGS RE-DERIVED FROM IT
+
+**HIS RULING:** *"Fix the meter AND re-baseline — same law, third application: a number derived
+from a broken instrument re-derives when the instrument is corrected (§3-B)."*
+
+**1 · THE BUG, NAMED AND PROVEN ON LIVE DATA.** S1's meter deduped on
+`sha1(message.id | requestId | uuid)`. Its own header always said the key was `message.id |
+requestId` — the doc was right and the code was wrong. Claude Code writes **one JSONL line per
+CONTENT BLOCK** of a single assistant turn (thinking · text · tool_use · tool_use), each line
+carrying a **fresh uuid** and a **repeat of the identical usage block**. So every key was unique,
+the dedup **never fired once**, and a four-block turn was billed four times. Measured on one live
+transcript before the fix: **348 usage rows · 183 distinct `id|requestId` · 348 distinct uuids**,
+and the worst single turn counted **4×**. The four duplicate lines were printed side by side and
+carried byte-identical usage (`in 2 · cw 634 · cr 231704 · out 1634`) — that is what made counting
+once provably correct rather than merely plausible.
+
+**THE FIX:** the uuid is out of the key. A row with NEITHER id NOR requestId falls back to its own
+uuid, so correcting an over-count never becomes a silent under-count — the opposite error, and
+just as wrong. The cache version went 1 → 2, so every cache keyed the broken way is discarded and
+rebuilt rather than trusted.
+
+**PROOF, the same window re-read (his requirement):**
+
+| | before (broken) | after (corrected) | factor |
+|---|---|---|---|
+| HIS spend, 7 days | 8,680.72 lakh | **4,244.73 lakh** | **2.045×** |
+| HIS turns, 7 days | 13,898 | 7,493 | 1.855× |
+| today | 501.19 lakh | 209.50 lakh | 2.39× |
+| organism lanes, today | 11.04 lakh | 5.69 lakh | 1.94× |
+
+**AND THE BUG IS PINNED SO IT CANNOT RETURN:** the selftest now builds one turn as four lines with
+four uuids and asserts it counts **once**, with one turn's weight and not four — plus the mirror
+assertion that two identity-less rows still keep their own weight. 30/0.
+
+**2 · THE CEILINGS, RE-DERIVED IN TRUE UNITS.** Same geometry as his first ruling — one focused
+session's measured TRUE cost plus small headroom for a standard rung, S10 larger.
+Measured in corrected units: **S1 cost 22.7 lakh true, S2 about 37.9** (the two rung SESSIONS read
+67.62 and 79.00, but each carried two or three rungs against the one-rung law, which is exactly
+what a ceiling is meant to stop).
+
+| rung | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | TOTAL |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **first pass — guessed, no meter** | 5 | 8 | 8 | 6 | 2 | 8 | 8 | 6 | 8 | 12 | 6 | 4 | ≈81 |
+| **second — measured, INFLATED units** | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 60 | 40 | 40 | 500 |
+| **third — measured, CORRECTED units** | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | **60** | 40 | 40 | **500** |
+
+**The numerals did not move; the UNIT did, and that is the whole change.** 40 corrected lakh is
+~82 of the inflated lakh the middle row was written in, so the real allowance is **2.045× larger**
+than the previous table ever permitted. A rung that used to breach around turn 15 now has room for
+a complete single-rung session — while a genuine runaway is still caught long before it becomes
+the 19-Aug class.
+
+**3 · THE RULE THAT STOPS THIS PING-PONGING, now written into the legend:** ceilings re-derive
+**ONLY when the meter's UNIT is corrected — never on normal variance.** A rung that runs hot or
+cold is data about the rung, not about the ceiling. Twice the instrument was at fault (no meter;
+then a meter reading 2.01×). A third re-baseline needs a third instrument fault, named and proven.
+
+**NEXT: S4 · PASS 2 — the eight intent docs, ONE head, NO agents (§5 verbatim) — MODEL: Opus 5 ·
+effort max · CEILING 40 (corrected units).** It reads and folds contradictions into §9; it builds
+nothing.

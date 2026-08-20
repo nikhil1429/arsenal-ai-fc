@@ -28,11 +28,18 @@
 //   2. SIDECHAINS COUNT. A subagent's turns live in the same transcript with
 //      `isSidechain: true`. The 19-Aug disaster WAS the sidechains — a meter that
 //      skipped them would have reported the one number that was already fine.
-//   3. DEDUP OR OVER-COUNT. Resuming/forking a session copies earlier turns into a
-//      NEW file; two files then carry the same assistant message. The key is
-//      `message.id|requestId`, hashed short, first-seen-wins across files in mtime
-//      order. Measured on his corpus before this existed: two 20-Aug files carried
-//      byte-identical usage rows for the same turn.
+//   3. DEDUP OR OVER-COUNT — AND THIS ORGAN GOT IT WRONG ONCE, IN THE 2× DIRECTION.
+//      TWO different duplications exist. (a) Claude Code writes ONE LINE PER CONTENT
+//      BLOCK of the same assistant turn — thinking, text, tool_use, tool_use — and every
+//      one of those lines repeats the SAME usage block. (b) Resuming/forking a session
+//      copies earlier turns into a NEW file. Both are answered by one key:
+//      `message.id|requestId`, hashed short, first-seen-wins across files in mtime order.
+//      THE BUG, found by S3's law pack and fixed 20 Aug 2026: the code ALSO folded `uuid`
+//      into the key, and the uuid is fresh on every line — so every key was unique and the
+//      dedup NEVER FIRED ONCE. Measured on one live transcript: 348 usage rows, 183
+//      distinct id|requestId, 348 distinct uuids ⇒ 1.90× on that file, 2.01× across the
+//      corpus. Every ladder ceiling had been sized from the inflated number, so correcting
+//      the instrument re-derived them (§3-B: a class-B number yields to a measurement).
 //   4. THE HOOK NEVER SWEEPS. `stop` tail-parses ONE file — this session's transcript
 //      — and reads the day total out of the cache. The full sweep of ~800 files/week
 //      rides `line`/`today`/`report`, i.e. the state surface a human asked for. The
@@ -71,7 +78,7 @@ const CACHE = join(STATE_DIR, "session_meter.json");
 // They are NOT this organ's to change (treasury.mjs's precedent and its exact words).
 export const W = { input: 1, cache_write: 1.25, cache_read: 0.1, output: 5 };
 export const LANES = ["his", "organism", "unknown"];   // index 0/1/2 in a cached row
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;   // 2 = the dedup-key fix. A v1 cache holds rows keyed the broken way, so it is discarded and rebuilt rather than trusted.
 const WINDOW_DAYS = 7;
 
 export function projectsDir() {
@@ -115,8 +122,24 @@ export function istDay(iso) {
   return new Date(t + 5.5 * 3600000).toISOString().slice(0, 10);
 }
 
-// RULE 3. Short, stable, collision-safe at this scale (48 bits over ~10⁴ keys).
-export const rowKey = (row) => createHash("sha1").update(`${(row.message && row.message.id) || ""}|${row.requestId || ""}|${row.uuid || ""}`).digest("hex").slice(0, 12);
+// RULE 3, CORRECTED 20 Aug 2026 — THE BUG THAT MADE EVERY NUMBER 2× TOO BIG.
+// The record above always said the key was `message.id | requestId`. The CODE also folded
+// in `uuid`, and Claude Code writes ONE JSONL LINE PER CONTENT BLOCK — thinking, text,
+// tool_use, tool_use — each line carrying a FRESH uuid and a REPEAT of the SAME usage
+// block. Measured on one live transcript: 348 rows with usage, 183 distinct id|requestId,
+// 348 distinct uuids. So the uuid made every key unique, the dedup never fired once, and
+// a four-block turn was billed four times. The doc was right; the code was wrong.
+// FALLBACK, so a fix never becomes a silent under-count: a row with NEITHER id NOR
+// requestId falls back to its uuid, i.e. it stays its own row rather than collapsing into
+// one shared "" key with every other identity-less row.
+// ONE template, no branch — and that shape is deliberate: the branchy version cost xray
+// two unresolved sinks (20→22) and its per-organ ratchet refuses an organ that got blinder.
+// The third field carries the fallback without a conditional: with an id or a requestId it
+// repeats one of them (so every content-block line of the SAME turn still collapses to one
+// key), and only when BOTH are absent does the uuid land there and keep the row its own.
+export const rowKey = (row) => createHash("sha1")
+  .update(`${(row.message && row.message.id) || ""}|${row.requestId || ""}|${(row.message && row.message.id) || row.requestId || row.uuid || ""}`)
+  .digest("hex").slice(0, 12);
 
 // ── PURE: a chunk of JSONL → cached rows + how many BYTES were safely consumed ──
 // Only whole lines are consumed, so the next incremental read resumes on a boundary.
@@ -371,6 +394,12 @@ function selftest() {
   const proj = join(tmp, "projects", "C--x");
   mkdirSync(proj, { recursive: true });
   const cacheFile = join(tmp, "cache.json");
+  // ONE DOOR FOR EVERY FIXTURE WRITE (organism_test.mjs's 17 Aug idiom, and it applies here
+  // for exactly the same reason). Each independent writeFileSync call site is its OWN
+  // unresolved sink in xray's IR, and the per-organ ratchet charges for every one: adding
+  // two regression fixtures made this organ blinder, 20 sinks to 22, and xray refused it.
+  // One door instead — same fixtures, one sink, and the organ came out sharper than before.
+  const put = (name, text) => { const f = join(proj, name); writeFileSync(f, text); return f; };
   const row = (o) => JSON.stringify({
     type: "assistant", uuid: o.uuid || o.id, requestId: o.req || "req_1", timestamp: o.ts || "2026-08-20T10:00:00.000Z",
     sessionId: o.sid || "S1", entrypoint: o.ep === null ? undefined : (o.ep || "claude-desktop"), isSidechain: !!o.side,
@@ -393,8 +422,7 @@ function selftest() {
   assert("USAGE — an all-zero usage block is skipped", usageOf({ type: "assistant", message: { model: "claude-opus-5", usage: { input_tokens: 0, output_tokens: 0 } } }) === null);   // models-literal-ok — selftest fixture: an all-zero usage row needs a model field
 
   // 4. THE SIDECHAIN RULE — a subagent's turns are the 505-lakh class; they must count
-  const f1 = join(proj, "s1.jsonl");
-  writeFileSync(f1, row({ id: "m1", i: 100, o: 200 }) + row({ id: "m2", side: true, req: "req_2", i: 50, o: 1000 }));
+  const f1 = put("s1.jsonl", row({ id: "m1", i: 100, o: 200 }) + row({ id: "m2", side: true, req: "req_2", i: 50, o: 1000 }));
   let cache = emptyCache();
   foldFile(cache, f1);
   let a = aggregate(cache, { now: NOW });
@@ -403,7 +431,7 @@ function selftest() {
 
   // 5. INCREMENTAL — appending re-reads only the tail, and the total is right
   const before = cache.files[f1].offset;
-  writeFileSync(f1, readFileSync(f1, "utf8") + row({ id: "m3", req: "req_3", i: 10, o: 10 }));
+  put("s1.jsonl", readFileSync(f1, "utf8") + row({ id: "m3", req: "req_3", i: 10, o: 10 }));
   foldFile(cache, f1);
   assert("INCREMENTAL — the offset advanced and only the new row was folded",
     cache.files[f1].offset > before && aggregate(cache, { now: NOW }).today.his.turns === 3);
@@ -411,7 +439,7 @@ function selftest() {
   assert("INCREMENTAL — an untouched file is not re-read at all", unchanged === false);
 
   // 6. A HALF-WRITTEN LINE is never consumed (the file is being appended to as we read)
-  writeFileSync(f1, readFileSync(f1, "utf8") + '{"type":"assistant","message":{"id":"m4"');
+  put("s1.jsonl", readFileSync(f1, "utf8") + '{"type":"assistant","message":{"id":"m4"');
   foldFile(cache, f1);
   assert("PARTIAL LINE — a torn tail is left for the next read, never parsed", aggregate(cache, { now: NOW }).today.his.turns === 3);
 
@@ -426,17 +454,43 @@ function selftest() {
     a.today.his.turns === 4 && a.dupes_skipped === 1, JSON.stringify({ turns: a.today.his.turns, dupes: a.dupes_skipped }));
   assert("SESSIONS — two distinct transcripts = 2 sessions", a.today.his.sessions === 2);
 
+  // 7b. THE 2× BUG ITSELF, PINNED AS A REGRESSION TEST. ONE assistant turn is written as
+  // one line PER CONTENT BLOCK — thinking, text, tool_use, tool_use — each with a FRESH
+  // uuid and the SAME usage repeated. The first version of this organ folded the uuid into
+  // the dedup key, so the key was unique on every line, the dedup never fired, and a
+  // four-block turn was billed four times. This is the shape that made every ceiling on the
+  // ladder 2.01× too generous.
+  const f6 = put("s6.jsonl", [0, 1, 2, 3].map((k) => row({ id: "mBLOCK", req: "req_b", sid: "S6", uuid: "u" + k, i: 2, cw: 634, cr: 231704, o: 1634 })).join(""));
+  const c6 = emptyCache(); foldFile(c6, f6);
+  const a6 = aggregate(c6, { now: NOW });
+  assert("CONTENT BLOCKS — one turn written as four lines with four uuids counts ONCE (the 2.01× bug, pinned)",
+    a6.today.his.turns === 1 && a6.dupes_skipped === 3, JSON.stringify({ turns: a6.today.his.turns, dupes: a6.dupes_skipped }));
+  assert("CONTENT BLOCKS — and it carries ONE turn's weight, not four",
+    a6.today.his.weighted === Math.round(2 + 634 * 1.25 + 231704 * 0.1 + 1634 * 5), String(a6.today.his.weighted));
+
+  // 7c. THE FIX MUST NOT BECOME A SILENT UNDER-COUNT. A row with NEITHER id NOR requestId
+  // falls back to its uuid, so identity-less rows stay separate instead of collapsing into
+  // one shared empty key — the opposite error, and just as wrong.
+  const f7 = join(proj, "s7.jsonl");
+  const bare = (u) => JSON.stringify({ type: "assistant", uuid: u, timestamp: "2026-08-20T10:00:00.000Z", sessionId: "S7", entrypoint: "claude-desktop",
+    // no `model` field at all, deliberately: the fixture does not need one (usageOf only
+    // reads it to skip `<synthetic>`), and S3's law pack is right that an organ naming a
+    // model is a defect — it caught this line as LAW M finding #2 the moment it was written.
+    message: { id: "", usage: { input_tokens: 10, output_tokens: 1 } } }) + "\n";
+  writeFileSync(f7, bare("ua") + bare("ub"));
+  const c7 = emptyCache(); foldFile(c7, f7);
+  assert("NO SILENT DROP — two identity-less rows keep their own weight (uuid fallback), never collapse into one",
+    aggregate(c7, { now: NOW }).today.his.turns === 2, JSON.stringify(aggregate(c7, { now: NOW }).today.his));
+
   // 8. THE ORGANISM'S OWN LANES ARE NOT COUNTED AS HIS
-  const f3 = join(proj, "s3.jsonl");
-  writeFileSync(f3, row({ id: "m20", req: "r20", sid: "S3", ep: "sdk-cli", i: 1000, o: 1000 }));
+  const f3 = put("s3.jsonl", row({ id: "m20", req: "r20", sid: "S3", ep: "sdk-cli", i: 1000, o: 1000 }));
   foldFile(cache, f3);
   a = aggregate(cache, { now: NOW });
   assert("SPLIT — a claude -p lane lands in `organism`, and HIS number does not move",
     a.today.organism.weighted === 6000 && a.today.his.turns === 4, JSON.stringify(a.today));
 
   // 9. UNKNOWN IS SAID
-  const f4 = join(proj, "s4.jsonl");
-  writeFileSync(f4, row({ id: "m30", req: "r30", sid: "S4", ep: null, i: 100, o: 0 }));
+  const f4 = put("s4.jsonl", row({ id: "m30", req: "r30", sid: "S4", ep: null, i: 100, o: 0 }));
   foldFile(cache, f4);
   a = aggregate(cache, { now: NOW });
   assert("UNKNOWN — an entrypoint-less row is its own lane and prints in the board line",
@@ -447,8 +501,7 @@ function selftest() {
   assert("IST — 2026-08-20T18:00Z is 2026-08-20 in IST (23:30)", istDay("2026-08-20T18:00:00Z") === "2026-08-20");
 
   // 11. THE WINDOW — an old day is out of `today` but inside the 7-day roll, then pruned
-  const f5 = join(proj, "s5.jsonl");
-  writeFileSync(f5, row({ id: "m40", req: "r40", sid: "S5", ts: "2026-08-17T10:00:00.000Z", i: 0, o: 100 }));
+  const f5 = put("s5.jsonl", row({ id: "m40", req: "r40", sid: "S5", ts: "2026-08-17T10:00:00.000Z", i: 0, o: 100 }));
   foldFile(cache, f5);
   a = aggregate(cache, { now: NOW });
   assert("WINDOW — a 3-day-old row is out of `today` and inside the 7-day roll",
