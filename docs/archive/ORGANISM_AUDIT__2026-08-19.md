@@ -143,15 +143,58 @@ STATUS (update this block before any session stops — this is the handoff)
                                    the incremental cache keeps both identities across
                                    resume-copies ⇒ TODAY's meter line reads ~+16% hot; settled
                                    days exact; SAFE direction. Full verdict table in PROGRESS.
-  ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** MODEL: Opus 5 · effort HIGH ·
-                                   EXECUTION BUDGET 20 corrected lakh (the architect's number).
-                                   FIRST COMMAND: `node checkall.mjs` in the working folder
-                                   (C:\Users\nikhi\arsenal-audit-artifacts\s5-2026-08-20\) —
-                                   then the README's RUNBOOK drives `DO_THIS.md` (39 steps, one
-                                   paste-file each in `steps/`). Diff every probe against
-                                   `probe_expected.json` BEFORE asking a question; save each
-                                   answer into `answers/`; run `node verify.mjs`; only verified
-                                   items enter §9, as LEADS grouped by shape (§8: no lists).
+  S5  THE SWEEP OPENED ......... ◐ 20 Aug 2026 ~22:40. TWO PASTES FIRED, BOTH GATES CAUGHT, AND
+                                   THE HAYSTACK TURNED OUT TO BE WRONG. **Still ZERO questions
+                                   asked · nothing verified · nothing in §9.** Full account in the
+                                   PROGRESS entry of 20 Aug ~22:40 — read it, not this summary.
+                                   ☑ checkall 20/20 green, GO.
+                                   ☑ A01 fired (canon chunk01-04, 2.59 MB) → probe FAIL. 95 files
+                                     attached, 57 listed, 38 never mentioned. Fallback UNENTERABLE:
+                                     its own STEP F1 requires the probe that just failed.
+                                   ☑ escalated, not improvised. Architect ruled Path A.
+                                   ☑ keys re-probed LIVE: `pro` DRY on all ten, all three models.
+                                   ☑ D01 (chunk01 alone, 0.64 MB) → probe FAIL too, and its answer
+                                     carried the number: model saw 14 of 18 section headers.
+                                   ⛔ **THE RETRIEVAL CEILING IS MEASURED: Gemini web silently
+                                     truncates EVERY ATTACHED FILE at ~384 KiB — bracketed to
+                                     [388,935 , 400,052] bytes, off four independent chunk reads.**
+                                     It is PER FILE, not per attachment set. So the web lane is NOT
+                                     dead (branch 3's premise is measured false) — the chunks were
+                                     1.7x too big. And the corpus batches at 2.3 MB were ~6x over:
+                                     all 27 corpus steps would have read a fifth of their evidence
+                                     and reported it with an honest-looking coverage receipt.
+                                   ⛔ **AND THE CORPUS WAS NEVER COMPLETE.** The accounting identity
+                                     (the architect's addendum) left **64,309 rows in no ledger
+                                     class**: `refilter.mjs:78-98` reads two row types; the store
+                                     carries FIFTEEN. SHAPE 1 committed inside the audit's own
+                                     instrument. Dedup measure: 17.78 MB truly incremental.
+                                   ☑ FIXED, L9 (refilter.mjs untouched): `refilter2.mjs` —
+                                     declare-or-die by row type, RAISING default on any undeclared
+                                     member (proven to bite, exit 2), totality check on every run.
+                                     **IDENTITY BALANCES TO ZERO: 232,938 = 232,938, remainder 0.**
+                                     Rebuilt at the measured ceiling: 140 batches, largest 193,979 B,
+                                     none over, 12,384 turns / 30 days (was 8,022).
+                                   ✔ HIS RULING, verbatim: *"budget ka issue mat lagao for this...
+                                     getting an incomplete corpus is of no use, i do not care about
+                                     my data either."* Ceiling REPORT-ONLY for this rung only.
+  ▶ NEXT SESSION ............... **S5's SWEEP — still execution, but the inputs must be re-cut
+                                   FIRST.** MODEL: Opus 5 · effort HIGH. Ceiling: back to the
+                                   standard 40 unless he says otherwise (his override was for the
+                                   corpus-completeness work, not a standing change).
+                                   ⛔ **DO NOT re-run `refilter2.mjs`** — the corpus is built and
+                                   the store is LIVE; rebuilding moves the haystack under it.
+                                   ⛔ **DO NOT "fix" `preflight.mjs`/`checkall.mjs` when they go
+                                   red** — they assert `answers/` is empty, which is a pre-START
+                                   gate, and a sweep is in progress. They are telling the truth.
+                                   ORDER: (1) re-cut the CANON to <=194,000 B per file — it is
+                                   still at ~650 KB, 1.7x over the measured cap. (2) `probe_gen.mjs`
+                                   (canon batches declared at line 83; its corpus loop still reads
+                                   `corpus_live/` and must be pointed at `corpus_live2/`), then
+                                   `buildsteps.mjs`. (3) **Settle Gemini web's max attachment COUNT
+                                   with ONE probe chat before spending 40 of his pastes** — four
+                                   files are proven to work; ~10 per chat turns 140 batches into
+                                   ~14 chats. (4) Then the sweep, every chat gated by its own probe.
+                                   **NO ATTACHMENT IS TRUSTED UNTIL ITS OWN PROBE PASSES.**
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -3101,3 +3144,192 @@ LEAD. Recorded, not excused; the ceiling number itself does not move.
 corrected lakh.** First command: `node checkall.mjs` in the working folder — then the README's
 RUNBOOK drives `DO_THIS.md`. The rung after the sweep closes S5 (returns verified into §9 as
 LEADS by shape); **S6 does not open before that.**
+
+### PROGRESS 2026-08-20 ~22:40 IST — RUNG S5 · THE SWEEP OPENED, AND THE HAYSTACK WAS WRONG
+
+**Opus 5 · effort high · execution budget 20 corrected lakh, converted mid-rung to REPORT-ONLY on
+HIS WORD (recorded verbatim below). Zero findings entered §9 — no question was ever asked.**
+The rung opened to drive `DO_THIS.md`'s 39 steps. It got two pastes in before the gates stopped
+it, and what those two gates found is worth more than the sweep they were guarding.
+
+**HIS RULING, verbatim, 20 Aug 2026:** *"budget ka issue mat lagao for this... getting an
+incomplete corpus is of no use, i do not care about my data either."* For THIS RUNG ONLY the
+ceiling converts from HARD-STOP to REPORT-ONLY — the captain's override, not a precedent and not
+a repeal of §10-D rule 2. The meter keeps counting and the spend is reported at close.
+
+#### WHAT RAN
+`node checkall.mjs` → **20/20 green, exit 0.** GO. Then step A01 exactly as written: a fresh
+Gemini chat, Pro Extended, canon chunk01–04 attached (2.59 MB · 95 files), `steps/A01.txt` pasted,
+answer captured by `capture.mjs save A01`, `inputs_frozen.json` written (16 files fingerprinted).
+
+#### FINDING 1 — THE RETRIEVAL CEILING. Measured, and it would have voided the whole corpus half.
+`probecheck A01` → **exit 1**. Middle anchor reproduced verbatim; tail anchor **"ANCHOR 1 NOT
+FOUND"**. A free recount of the model's own file list: **95 files attached, 57 listed, 38 never
+mentioned** — gaps scattered through the middle, not a tail prefix, and the model continued past
+the list to answer the probe, so this was not output truncation.
+
+The pre-written `FALLBACK_canon_split.txt` could not be entered: its STEP F1 requires the
+chunk01–04 probe to PASS, and that is exactly what failed. Escalated rather than improvised.
+**Architect ruled Path A** — a one-chunk diagnostic plus a live key re-probe, together.
+
+- **Keys re-probed LIVE:** 8/10 ok, **`pro` DRY on all ten, all three pro models** (quota). The
+  API lane is still shut. Yesterday's reading held, this time freshly measured.
+- **D01** (`chunk01.txt` alone, 0.64 MB, fresh chat) → **exit 1 as well.** But its answer carried
+  the number that decides everything: the model reported **14** section headers. `chunk01.txt`
+  contains **18**. Files 15–18 are precisely the four also missing from A01, and A01's tail anchor
+  lives in file 18.
+
+Byte offsets of the last file header each chunk was *seen* to contain, read off the A01 answer at
+zero cost:
+
+```
+chunk01   last SEEN @ 390,367     first MISSED @ 502,204
+chunk02   last SEEN @ 388,935     first MISSED @ 400,052    <- the narrow window
+chunk03   last SEEN @ 386,618
+chunk04   last SEEN @ 378,840
+```
+
+**Gemini web silently truncates every attached file at ~384 KiB — bracketed to between 388,935 and
+400,052 bytes.** Three consequences, and the third is the one that matters:
+
+1. **This is not RAG-ification and the web lane is not dead.** Branch 3's premise — *"no chunking
+   fixes it at any size"* — is measured FALSE. The chunks were ~1.7× too big.
+2. **The cap is PER ATTACHED FILE, not per attachment set.** All four chunks were each truncated
+   at their own ~390 KB inside one message, so ~1.55 MB did reach the model. More, smaller files
+   in one chat is a working shape — and it is what makes the paste count survivable.
+3. **The corpus half would have been ~80% blind.** `live_batch*.txt` run to **2.3 MB**, about
+   **6× the cap**. Each of the 27 corpus steps would have read roughly one file-fifth of its batch
+   and returned confident findings with an honest-looking coverage receipt. Nothing except the
+   per-chat probe would have said a word.
+
+#### FINDING 2 — THE CORPUS WAS NEVER COMPLETE. §9 SHAPE 1, inside the audit's own instrument.
+Run on the architect's addendum (prove the fetch by ACCOUNTING IDENTITY, never by re-running it):
+
+```
+raw_rows                    229,262
+− organism_lane (sdk-cli)    34,631
+− tool_payloads_dropped     107,716
+− kept_rows (dialogue)       22,606
+− parse_errors                    0
+= UNACCOUNTED                64,309      <- in NO ledger class
+```
+
+Independently confirmed by a fresh census: non-sdk rows that are neither `user` nor `assistant` =
+65,530 today (store grew ~3,400 rows since the 13:45 filter run — consistent).
+
+**Root cause, located in code: `refilter.mjs:78–98` has exactly two branches, `user` and
+`assistant`. The store carries FIFTEEN row types. The other thirteen fall through both — no
+counter, no `continue`, no ledger class.** So the ledger's own headline —
+`"NOTHING_IS_DELETED: every class below is either inside the dialogue batches or in its own file"`
+— is false as written. A universal order (*"every conversation"*, *"NOTHING clipped"*) shipped as
+a two-item literal list: SHAPE 1 / the S3 JUGAD RULE, committed while auditing for it.
+
+**The dedup measurement (architect ruling 2, free, before any rebuild)** — of the unread
+content-bearing payloads, how much is NOT already in the kept dialogue:
+
+```
+queue-operation.enqueue   52.95 MB raw · 5,560 rows dup ·  5.79 MB incremental
+attachment.file            5.67 MB raw ·     0 dup      ·  5.67 MB incremental
+attachment.edited_text     2.91 MB raw ·     0 dup      ·  2.91 MB incremental
+queue-operation.remove     1.56 MB raw ·    10 dup      ·  1.55 MB incremental
+attachment.queued_command  1.24 MB raw ·    34 dup      ·  1.23 MB incremental
+last-prompt                2.39 MB raw · 10,616 rows dup·  0.64 MB incremental
+TRUE INCREMENTAL: 8,602 rows · 17.78 MB
+```
+
+**An honest correction against my own instrument:** it also reported "candidate HIS WORDS =
+12.38 MB". That number is an OVERCOUNT and the samples prove it — the rows it called
+not-machine-prefixed are dominated by the organism's own composed prompts (`FORGE CONTRACT ·
+hallucinations · STEP 1/11…`, `COMPOSE THE PLAN for this sitting…`). The prefix list missed them.
+It was **not** repaired by lengthening the list — that is the same SHAPE 1 disease — but by a
+structural test at build time instead (below).
+
+#### THE FIX — `refilter2.mjs`, and the identity now balances to ZERO
+L9: `refilter.mjs` is neither edited nor deleted. `refilter2.mjs` is a new lane beside it,
+SOLE WRITER of `corpus_live2/`.
+
+- **Declare-or-die by row type.** All fifteen types and all twenty attachment subtypes are declared
+  to exactly one lane (`dialogue` / `ledger_ondemand` / `ledger_meta` / `tool_dropped` /
+  `organism`), each with its reason in the table. **An undeclared type or subtype exits 2 and
+  refuses to write** — proven to BITE: `mode` removed from the table → `UNDECLARED MEMBER(S) OF AN
+  OPEN SET — type:mode`, exit 2, nothing written.
+- **The totality check runs on every build:** `raw = Σ(lanes) + parse_errors`, remainder must be 0
+  or the program exits 3. **Live result: `232,938 raw = 232,938 classified · REMAINDER 0`.**
+- **Lanes, per architect ruling 3 + his amendment:** his queued words (`queue-operation.content`,
+  `attachment.queued_command`) go INTO the dialogue, marked with their kind. Pasted FILE CONTENT
+  (`attachment.file`, `edited_text_file` — 596 payloads) is **ledgered + on-demand on SIGNAL
+  grounds, not privacy hesitation**, each named with session, day, filename, size and first line.
+  Metadata types are ledgered out with per-type counts (54,805 rows).
+- **Cross-kind dedup**, matched on the first 100 normalised chars: a message he queued and the same
+  message when it ran are two rows with different timestamps and kinds. Full-text matching removed
+  2,020 where the measurement proved 5,560; the signature match removes 5,579. Only a non-`said`
+  row is ever dropped, so no real turn can be collapsed by it.
+- **Batched at the MEASURED ceiling** (194,000 B = 388,935 proven-visible × 0.5, architect ruling 5).
+
+**Result: 140 batches · largest 193,979 B · zero over the ceiling · 23.55 MB · 12,384 turns
+(him 6,586 · Claude 5,798) across 30 days.** Against the old corpus: 8,022 turns / 13.6 MB.
+
+**THREE DEFECTS IN MY OWN BATCHING, each found by reading the output rather than trusting it**, and
+each is the same class this rung exists to kill: (a) packing whole days put a 21.2 MB day into a
+194 KB batch — 109× over, the exact silent-truncation class the ceiling exists to prevent, written
+while fixing it; (b) byte accounting ignored the separator `join` inserts, so 14 batches sat a few
+dozen bytes over an exact ceiling; (c) `HEAD_MAX` was a guessed 4,096 for the day header, but a day
+header carries every commit that landed that day and the busiest day blew past it — now measured
+across the real set, not assumed. `refilter2.mjs` now **exits 4 rather than leave any over-ceiling
+batch on disk**: the instrument refuses instead of warning.
+
+#### THE RATCHET S6 INHERITS — the architect's generalized form, to be carried into §9
+> **"ANY switch over an OPEN SET (row types, file kinds, model roles, lane names) must carry a
+> RAISING default for unknown members AND ship with a TOTALITY CHECK — the accounting identity —
+> as its standing proof."**
+
+It is deliberately the general form, not the incident: it retro-covers this bug, the machine-prefix
+list above, and every Claude Code row type that does not exist yet. Shape 4 is only the symptom
+here; the root is SHAPE 1 and the mechanism is the missing raising default.
+
+#### WHAT IS **NOT** DONE — read this before anything else
+- **No Gemini question has been asked. Nothing is verified. Nothing entered §9.** The only two
+  answers on disk (`answers/A01.txt`, `answers/D01.txt`) are FAILED probes kept as evidence.
+- **The CANON is still cut at ~650 KB per chunk — 1.7× over the measured cap.** It must be re-cut
+  to ≤194 KB the same way the corpus was. `pack.mjs` cut the current seven.
+- **Probes and steps are stale**: `probe_expected.json` still describes the old 7 canon chunks and
+  the old 9 corpus batches. `probe_gen.mjs` and `buildsteps.mjs` must both re-run after the re-cut.
+  (A `canon_diag1` probe and a `D01` mapping were added this rung — additive, and the twelve
+  pre-existing probes were proven byte-identical after regeneration.)
+- **`preflight.mjs` will now FAIL by design** — it asserts `answers/` is empty, which is a
+  pre-START gate and a sweep is in progress. `checkall.mjs` embeds preflight, so it inherits that.
+  Not a regression; recorded so the next session does not "fix" a gate that is telling the truth.
+- **THE PASTE COUNT IS THE OPEN DECISION.** 140 corpus batches at 3 steps each is 420 pastes and is
+  not a plan. The measured per-FILE cap makes the fix obvious — attach ~10 batch files per chat
+  (~1.94 MB), giving **~14 corpus chats ≈ 42 pastes**, close to the original 27. **What is NOT
+  measured is Gemini web's maximum attachment COUNT per message** (four are proven to work). That
+  is one probe, and it decides the whole shape. Architect's standing instruction applies: his hands
+  are a resource the meter cannot see — print the exact count and get his haan before proceeding.
+
+#### THE NEXT SESSION DOES THIS FIRST
+1. `cd C:\Users\nikhi\arsenal-audit-artifacts\s5-2026-08-20` then read this entry and
+   `README_FOR_ANY_SESSION.md`'s RUNBOOK. **Do not re-run `refilter2.mjs`** — the corpus is built
+   and the store is LIVE; rebuilding moves the haystack.
+2. Re-cut the CANON to ≤194,000 B per file, then `node probe_gen.mjs` (canon batches are declared
+   at `probe_gen.mjs:83`; the corpus loop reads `corpus_live/` and must be pointed at
+   `corpus_live2/`), then `node buildsteps.mjs`.
+3. Settle the attachment-count question with ONE probe chat before spending 40 of his pastes.
+4. Then, and only then, the sweep — every chat still gated by its own probe. **NO ATTACHMENT IS
+   TRUSTED UNTIL ITS OWN PROBE PASSES** (architect, this rung, standing).
+
+#### COST
+`node scripts/session_meter.mjs status 7` read **4.94 lakh** for this session at close, by both the
+cached and a cache-bypassed read. **Treat that as a floor, not a figure:** the transcript on disk
+lags the live session, which is the same staleness class S5-R recorded as a LEAD against the meter.
+The honest read is the one taken after this session ends. Ceiling was REPORT-ONLY by his word.
+
+**ONE MORE DOC-TRUTH LEAD, found by running §3-C both ways at this rung's close.** The inline
+snippet printed in §3-C and the gate that superseded it (`rails.mjs orders`, wired at S1) now
+DISAGREE. Run by hand, the snippet reports 7 problems on the open order; the gate reports it
+structurally clean. Both differences are the gate being right: it honours the
+`order-check:absent-ok` declarations the document makes about itself (six of the seven), and it
+does not fault a path that lives OUTSIDE the repo by the 14 Aug privacy law
+(`corpus_live/manifest_live.json`, named at line 2781). **The snippet in §3-C is the stale copy of
+its own successor** — §4-B's exact class, in the section that exists to catch that class. Not
+fixed here: editing §3-C's prose is not this rung's work, and the gate is the authority either way.
+Owner: whichever rung next touches §3-C.
