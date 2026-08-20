@@ -1675,6 +1675,18 @@ cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs aft
     suite-gated before and after, never mixed into a feature rung.
 12. **MODEL ROUTING BINDS (§10-F):** the rung's MODEL line is part of the rung. Fable-pool dry ⇒
     use the rung's named fallback; never silently downgrade anything else.
+13. **THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.**
+    An ARCHITECT session exists (Fable, kept open by him for planning and rulings). When a rung
+    session hits a genuine fork — a departure from the rung as written, an ambiguity in this
+    order, or a judgement call above the rung's grade — it does NOT resolve it in its own favour
+    and does NOT quietly pick the cheaper reading. It writes a PASTE-READY escalation block:
+    the fork stated flat, the options, its own recommendation with reasons, and exactly what it
+    needs back. HE is the courier — he pastes it to the architect and pastes the ruling back;
+    the block must cost him zero thinking. Precedent: S4's SHAPE-6 fork and S5's six-departure
+    review, both of which caught real defects. BOUNDS, so this never becomes noise (L7): only
+    for real forks — never for what the rung, this order, or a DONE-proof already answers;
+    decide everything below the fork yourself; batch multiple questions into ONE block; and
+    record both the escalation and the ruling in PROGRESS, verbatim, so the archaeology holds.
 
 ### §10-E · THE DRIVER'S CARD — his whole job, nothing else
 
