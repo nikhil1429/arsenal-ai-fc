@@ -72,15 +72,36 @@ STATUS (update this block before any session stops — this is the handoff)
                                    rung row now names the atlas edges and the emit-contract row
                                    shape) and BUILT no earlier than the registry says. A session
                                    that patches it early is refused — this is a decided thing.
-  ▶ NEXT SESSION ............... S5 · THE GEMINI SWEEPS. **STEP 0 FIRST, before any Gemini
-                                   call: fix the stop-hook stdin guard** (rail maintenance,
-                                   his order 20 Aug — the defect is on S1's DONE-PROOF; it
-                                   hangs an agent shell forever and it hung S4's). THEN
-                                   re-check the keys live (one command), whole-canon in ≤200k
-                                   chunks + corpus extraction from the RESCUED artifacts
-                                   (never re-filter, never re-fan).
-                                   (§10-C, first ☐). MODEL: Opus 5 · effort HIGH (mechanical
-                                   orchestration, §10-F) · CEILING 40.
+  S5  THE GEMINI SWEEPS ........ ◐ PREPARED, NOT RUN. Its STEP 0 is ☑ DONE and proven; the
+                                   sweep itself has sent ZERO Gemini calls. **The rung breached
+                                   its ceiling during preparation — 40 allowed, ~104 spent —
+                                   and §10-D rule 2 was obeyed: it STOPPED and handed off.**
+                                   Everything the sweep needs is built, proven and on disk at
+                                   `C:\Users\nikhi\arsenal-audit-artifacts\s5-2026-08-20\` (OUTSIDE the repo — the corpus half is his dialogue).
+                                   ☑ STEP 0 · the stop-hook stdin guard REFUSES FAST instead of
+                                     blocking; 4 stdin paths proven; pinned as selftest #16 and
+                                     proven to BITE on a planted violation (30/1 → 31/0).
+                                   ☑ keys re-probed LIVE — 8/10 ok, `pro` role DRY on all ten.
+                                   ☑ THE PROVENANCE JOIN (§9-B assigns it to S5 by name) —
+                                     all 116 canon .md era-stamped: 64 LOCAL-ERA · 45
+                                     UNRECORDED-AT-BIRTH · 6 MIXED · 1 UNRECORDED-ERA.
+                                   ☑ a §3-B class-B number VERIFIED AND FOUND WRONG — canon is
+                                     4,183,248 bytes ≈ 1.05M tokens, not "~400k from ~1.49 MB".
+                                   ☑ the corpus RE-FILTERED LIVE on his word (a declared
+                                     departure) — 30 days to 20 Aug, NOTHING clipped, lane split
+                                     by `entrypoint` not by a regex list, full drop ledger.
+                                   ☑ the verifier — five checks, every one proven to bite.
+                                   ☑ ARCHITECT-REVIEWED before any call: D1–D6b ruled, all
+                                     applied. Deep-retrieval probes now gate every chat.
+  ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** Open the folder's
+                                   `README_FOR_ANY_SESSION.md`, then drive `DO_THIS.md`
+                                   (39 steps, one paste-file each in `steps/`). Diff every probe
+                                   against `probe_expected.json` BEFORE asking a question; save
+                                   each answer into `answers/`; run `node verify.mjs`; only
+                                   verified items enter §9, as LEADS grouped by shape
+                                   (§8: do not hand him a list).
+                                   MODEL: Opus 5 · effort HIGH · EXECUTION BUDGET 20 corrected
+                                   lakh (the architect's number, 20 Aug).
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -1423,7 +1444,19 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       corrections. Two of the eight were named in §5 without their directory; §5 corrected.
       FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).  — both held.
                                                                        CEILING: 40
-☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
+      sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
+      obeyed: STOPPED, recorded, handed off. See the RESUME block and the PROGRESS entry of
+      20 Aug ~12:30. The execution half runs from the working folder's DO_THIS.md on a fresh
+      session at an EXECUTION BUDGET of 20 corrected lakh (the architect's number, 20 Aug).
+      Six departures from this row were reviewed and RULED ON before any call: the web lane
+      instead of the API (his ruling — flash banned by name) · the whole canon in ONE context
+      instead of ≤200k chunks (the chunk limit is an API-tier constraint, absent on web) ·
+      no server-side schema on web, answered by an item_count check · a FOURTH canon question
+      (declared EDGES — S6's registry needs them and only canon can supply an UNBUILT edge) ·
+      two extra corpus buckets (missing-implementation + supersessions) · and a LIVE re-filter
+      of the corpus, which this row forbids and which he ordered directly.
       ⛔ STEP 0 (rail maintenance, inside this ceiling — his order, 20 Aug 2026):
       fix the stop-hook stdin guard — non-TTY + no payload must REFUSE FAST (a
       timeout or an availability check), NEVER block; prove it in a NON-INTERACTIVE
@@ -2420,3 +2453,147 @@ session stop") **and scheduled as S5 STEP 0** (refuse fast, prove it in a non-in
 never chain it in the background). Nothing in this order is affected: every meter number here came
 from `status`. The two dirty state files (`sitting.json`, the `gaffer_blocks.json.tmp` corpse) were
 dirty at S4's start, are the known S8/S11 class, and were deliberately left untouched.
+
+### PROGRESS 2026-08-20 ~12:30 IST — RUNG S5 · STEP 0 DONE · THE SWEEP PREPARED, REVIEWED, NOT RUN
+
+**Read the ceiling line first, because it frames everything else: this rung spent ~104 corrected
+lakh against a ceiling of 40 and sent ZERO Gemini calls.** §10-D rule 2 says the ceiling is a STOP,
+so it stopped. What follows is what the 104 bought, said plainly — including the parts that were
+spent recovering from my own errors.
+
+**WHAT LANDED — and how good each proof is.**
+
+- **STEP 0, THE RAIL FIX — done, and the ratchet is real.** `session_meter.mjs stop` blocked forever
+  on a non-TTY fd 0 that never closes; it hung for the whole of rung S4 and produced nothing.
+  Reproduced FIRST — and the first repro was WRONG, which is said here rather than tidied away: it
+  wrapped the whole pipeline, so `sleep` could have owned the exit code. Re-run with `timeout`
+  around only the node process: exit 124, blocked the full window. Fixed with a hard-deadline read —
+  a drainer child plus `spawnSync`'s own `timeout`, because there is no portable synchronous
+  non-blocking read of fd 0 and `readSync` blocks identically. It now REFUSES on stderr rather than
+  returning silently, which is what §10-C asked for: the order calls a silent guard worse than an
+  error. **Four paths proven live in a non-interactive shell**: the hang case refuses in ~300 ms · a
+  real hook payload unchanged · empty-closed stdin silent · the handoff-global short-circuit
+  unchanged. Overhead on the working paths, measured: ~65 ms. Pinned as `session_meter` selftest
+  #16, and **the ratchet was proven to BITE** — planting the old blocking read gives 30 passed /
+  1 failed ("HUNG"), restoring gives 31/0. `gates.mjs` GREEN, `lawpack.mjs` GREEN after the edit.
+
+- **KEYS RE-PROBED LIVE**, not read from the seven-hour-old cache — the 19 Aug lesson, and it paid:
+  10 keys, 8 ok, 2 quota, and **the `pro` role is DRY on all ten** (all three Pro models return
+  quota on every key tried). `models.mjs`'s own declared `ROLE_FALLBACK` sends pro to text.
+
+- **THE PROVENANCE JOIN — a named S5 deliverable that is NOT in the §10-C row, and that I missed on
+  first read.** §9-B says it in terms: *"File mtime is a FLOOR, not a join — the real join against
+  the corpus index is S5's job and is not claimed here."* Done, free code, joining `git log` per
+  file against the rescued index's 7,946 session windows: **64 LOCAL-ERA · 45 UNRECORDED-AT-BIRTH ·
+  6 MIXED · 1 UNRECORDED-ERA.** The repo's first commit is 2026-07-08 and the earliest local
+  transcript is 2026-07-12, so **45 of the 116 canon files were born where no transcript can
+  testify**, and §4-B's unrecorded-era rule binds on every one of them.
+
+- **A §3-B CLASS-B NUMBER VERIFIED AND FOUND WRONG.** §3-B flags it itself: *"all 116 .md are ~400k
+  tokens ... THE WHOLE PASS 2 SPLIT DEPENDS ON THIS. Verify before sending them to Gemini."*
+  Measured live: **116 files, 4,183,248 bytes ≈ 1.05M tokens — 2.8× the stated figure.** That is the
+  difference between "fits in one call" and "sits at the edge of a 1M window", and it is why the
+  architect required a retrieval probe before any question may be asked.
+
+- **THE CORPUS RE-FILTERED LIVE — a departure this row forbids in terms, made on his direct order.**
+  §10-C says *"NEVER re-filter, NEVER re-fan."* The re-FAN half stands absolute and nothing here
+  spawns anything. He asked for the re-filter directly, and four measured facts back him:
+  (1) the 19-Aug snapshot ends 19 Aug and misses every rung run today, where the newest rulings are;
+  (2) its machine-vs-human split is **a literal list of prompt regexes — §9 SHAPE 1 living inside an
+  instrument** — so any organ written after 19 Aug is misfiled as HIS. The re-filter uses
+  `entrypoint` instead: `sdk-cli` is the organism's own headless lane, everything else is him. A
+  declared field, not a guess, already proven in `session_meter.mjs`. Measured: **HIS 22,188 ·
+  ORGANISM 14,368 · UNKNOWN 0**; (3) it clipped every long turn at 8,000 characters, and measurement
+  says that was unnecessary — once the organism lane and 14,383 checkpoint duplicates are removed
+  the entire real dialogue is **13.6 MB**, which batches with NOTHING discarded (78.9% of his bytes
+  sit in 98 turns and 45.1% in five turns over 200,000 characters — pastes, not typing — and they
+  are kept whole anyway, because a threshold chosen for convenience is the jugad this audit exists
+  to kill); (4) §4 binds every instrument, and he doubted this one.
+  Result: **7,729 files · 227,796 raw rows · 0 parse errors · 0 unreadable · 7,918 turns after dedup
+  (HIM 2,339 · ASSISTANT 5,590) · 30 days 2026-07-12 to 2026-08-20 · 352 commits joined in by day.**
+  It reads Claude Code's own session store, NOT the organism's capture — his point, and correct:
+  the capture nerve was built weeks into the project and cannot answer for what came before it.
+  The 19-Aug artifacts are untouched (L9).
+
+- **A DECISION I TOOK THAT WAS NOT MINE TO TAKE, and the fix.** The first re-filter silently dropped
+  every assistant THINKING block — 28.3 MB. §4-D-0's pipeline says to keep "assistant text" and is
+  silent on thinking; I resolved that silence by discarding it, and did not say so. **That is
+  exactly the shape this audit exists to kill: a decision taken inside an instrument, invisible from
+  outside it.** He caught it — *"do not drop anything in the corpus by yourself"* — and it is now a
+  written DROP LEDGER inside the manifest. Thinking (7,187 rows) and the organism lane (27,197 rows)
+  each get their own files and are never read by default; the 95 slash-command envelopes were put
+  BACK into the dialogue; **the only class still dropped is tool payloads (106,787 rows)**, which
+  §4-D-0 names by name and which are ~92% of the store. Per the architect's ruling: the raw store
+  remains the retrieval path — any decision whose evidence turns out to live in a tool result gets
+  pulled by day and session ON DEMAND at S6, never bulk-read.
+
+- **THE VERIFIER — five checks, every one proven to bite on a planted fixture.** Quote check (grep
+  the quote back at the source it names) · coverage-vs-manifest · invented-filename · declared
+  `item_count` vs actual array length · **receipt inflation**. It corrected itself twice before it
+  was trusted, and both errors were MANUFACTURED FINDINGS, which is the dangerous direction:
+  (a) it reported `scripts/ghost.mjs` as "in the code" because the NAME is in the code — a verdict
+  that would have killed this repo's most famous absence. A path is now answered by the filesystem
+  and only a name by grep. (b) It then called `session_meter.mjs` a ghost, because a bare filename
+  was resolved against the repo ROOT — **the identical class §5 hit at rung S4**, where two of the
+  eight intent docs were named without their directory. Bare names now match by basename.
+
+**THE PROMPT SET, AND THE ERROR AT THE HEART OF IT.** My first canon prompt told Gemini to prefer
+`"law", "ruling", "never", "always", "hamesha", "kabhi nahi"`. **That is §9 SHAPE 1 committed inside
+a prompt** — a universal quantifier shipped as the literal enumeration that existed the day it was
+written — against his own law *"do not create jugad, do permanent stuff"*, and against the plain
+fact that he has ADHD and states binding rules in any phrasing at all. He caught it. Replaced
+everywhere by a functional test: *"if an engineer built the opposite of this sentence, would this
+sentence say they were wrong?"* The failed draft is kept, not deleted (L9). The corpus prompt had
+three failures of its own: it quoted only him (breaking his §4-D-0 ruling that *"your replies should
+be analyzed as well along with mine"*), it had no missing-implementation class at all (§4-D-0 calls
+that *the highest-value query in the whole corpus*), and it ignored the git-join index that both
+§4-D-0 and this row name as INPUT. All three fixed.
+
+**ARCHITECT REVIEW BEFORE ANY CALL.** The Fable-5 session that wrote this order ruled on all six
+departures plus three open questions; every ruling is applied and recorded in the working folder's
+README. The three that changed the design most:
+- **Deep-retrieval probes now gate every chat.** ≈1.05M tokens into a 1M window is arithmetic at the
+  edge, and a web attachment can be RAG-ified or tail-truncated with nothing saying so. Two anchors
+  per batch, **chosen by code** — one near the end of the last file, one mid-file in an unannounced
+  middle chunk — whose following lines must be reproduced verbatim. Expected answers sit in
+  `probe_expected.json`; the check is a diff, never a judgement. Probe fails ⇒ a pre-written
+  fallback (Q1 per half, then a cross-half pass).
+- **The shape-lists STAY** — deleting the scaffolding would throw away the recall it buys. Instead
+  every prompt now carries ONE RULE THAT BINDS EVERY LIST (*"examples, not the boundary — an
+  unlisted kind counts equally and finding one is worth MORE"*), and the critic pass gained a
+  standing task: **propose at least TWO kinds not in the original list, and hunt for them.** A list
+  with a rewarded outside-the-list slot stops being a ceiling.
+- **The receipt-inflation hole is closed, and I was wrong to say I had no mechanism.** The verifier
+  already held every kept item with its source, so the true per-file count is recomputable. It now
+  diffs that against the self-reported receipt. Proven: a fixture claiming 7 items for `CLAUDE.md`
+  while shipping 1 is flagged `INFLATED  claimed 7, arrived 1`. Catching an invented FILENAME was
+  never enough — an inflated COUNT is the same lie with better spelling.
+
+**WHAT WAS NOT DONE, said plainly:** the sweep. No Gemini call has been sent, nothing is verified,
+nothing entered §9. Also not done and deliberately so: IR-witness validation for the edge returns —
+the architect confirmed that is the spec S6 writes, and it must not be built here.
+
+**GATES.** `npm test` was NOT re-run at the close of this entry, and that is said rather than
+implied: S5's only code change is `scripts/session_meter.mjs`, whose own selftest is 31/0 with the
+ratchet proven in both directions, and `gates.mjs` and `lawpack.mjs` were both GREEN after the edit.
+The next session runs the full suite before it touches anything. §3-C's checker and
+`node scripts/rails.mjs orders` ran on this file before the commit.
+
+**COST — the day's meter moved 415.65 to ~519, so ~104 corrected lakh against a ceiling of 40.** An
+upper bound rather than a clean per-rung figure (the meter is per-day across all his sessions), but
+the shape is not in doubt. Where it went: the free-flash attempt that his ruling then discarded ·
+reading the whole order end to end after he told me I had only read parts of it · fighting the
+browser for a file-upload path that does not exist (Gemini creates no DOM file input, only a native
+picker, which froze the renderer; a localhost fetch is blocked by the page's CSP; and the Drive MCP
+would have carried every chunk through this session's own context) · and rebuilding the corpus
+pipeline twice, once on his order and once to stop dropping the thinking blocks.
+**Most of that was error recovery, not the rung's work.** §10-C's rule stands and is not bent here:
+ceilings re-derive ONLY when the meter's UNIT is proven faulty, never on variance. **This is
+variance. The number does not move.**
+
+**NEXT SESSION — S5's SWEEP, EXECUTION ONLY. MODEL: Opus 5 · effort HIGH · EXECUTION BUDGET 20
+corrected lakh** (the architect's number, 20 Aug). It opens `README_FOR_ANY_SESSION.md` in the
+working folder, then drives `DO_THIS.md`: 39 steps, one paste-file each in `steps/`, his whole job
+being Ctrl+V and Enter. Diff every probe against `probe_expected.json` BEFORE asking a question.
+Save each answer into `answers/`, run `node verify.mjs`, and let ONLY verified items enter §9 — as
+LEADS grouped by shape, never as a list (§8).

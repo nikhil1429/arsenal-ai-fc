@@ -67,6 +67,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, openSyn
 import { join, dirname } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -341,14 +342,60 @@ export function stopLine(a, sess, { ceiling = null } = {}) {
 }
 
 // ── THE HOOK PAYLOAD (turn_hook contract 1: the handoff global, then fd 0) ──
+// ⛔ fd 0 IS NEVER READ BLINDLY. THIS IS RUNG S5 STEP 0, and it is rail maintenance on the
+//   organ that measures the rung. The first version read `readFileSync(0, "utf8")` whenever
+//   stdin was not a TTY — correct for a human at a terminal and for a real hook (whose payload
+//   is written and CLOSED), and a FOREVER BLOCK for the only other caller there is: an agent
+//   session's shell, which is non-TTY with a pipe on fd 0 that never closes. Found the way it
+//   will always be found — rung S4's first command chained `stop`, it hung for the whole rung
+//   and produced nothing (recorded on S1's DONE-PROOF in the audit order, 20 Aug 2026).
+//   THE GUARD WAS SILENT WHERE IT SHOULD HAVE REFUSED, and this order calls that worse than an
+//   error. So: the read carries a HARD DEADLINE, and a read that does not land inside it
+//   REFUSES OUT LOUD on stderr instead of hanging. Stricter, never looser (§10-D rule 6).
+//
+//   WHY A CHILD PROCESS AND NOT A FLAG: there is no portable synchronous non-blocking read of
+//   fd 0 (O_NONBLOCK does not apply to Windows pipes, and `readSync` blocks the same way).
+//   A drainer child INHERITS fd 0, reads it to EOF, and `spawnSync`'s own `timeout` is the
+//   deadline the parent cannot give itself. Cost, measured: ~65 ms on the paths that work.
+//   The 300 ms turn_hook law is not touched — this organ rides the STOP hook, by S1's design.
+const STDIN_DEADLINE_MS = 300;
+const STDIN_DRAINER = 'const b=[];process.stdin.on("data",c=>b.push(c));process.stdin.on("end",()=>{process.stdout.write(Buffer.concat(b));process.exit(0)});';
+
+// Returns { ok: true, raw } | { ok: false, why } — never blocks past the deadline.
+export function readStdinWithDeadline(ms = STDIN_DEADLINE_MS) {
+  const r = spawnSync(process.execPath, ["-e", STDIN_DRAINER], { stdio: ["inherit", "pipe", "ignore"], timeout: ms, encoding: "utf8", windowsHide: true });
+  const raw = typeof r.stdout === "string" ? r.stdout : "";
+  // A writer that sends the payload and then holds the pipe open is still ANSWERABLE: if what
+  // arrived before the deadline is a whole JSON object, it is the payload. Only a deadline with
+  // NOTHING usable behind it is a refusal.
+  if (r.error || r.signal) return raw.trim() ? { ok: true, raw, late: true } : { ok: false, why: `no payload on fd 0 within ${ms}ms (non-TTY, stdin never closed)` };
+  if (r.status !== 0) return { ok: false, why: `the fd-0 drain exited ${r.status}` };
+  return { ok: true, raw };
+}
+
 let _payload;
+let _refusal = null;
+export const payloadRefusal = () => _refusal;
 function hookPayload() {
   if (_payload !== undefined) return _payload;
   _payload = null;
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
-    if (typeof handed !== "string" && process.stdin.isTTY) return _payload;
-    const raw = typeof handed === "string" ? handed : readFileSync(0, "utf8");
+    let raw;
+    if (typeof handed === "string") {
+      raw = handed;                              // the handoff global — no read at all
+    } else if (process.stdin.isTTY) {
+      return _payload;                           // a human at a terminal — nothing to read
+    } else {
+      const r = readStdinWithDeadline();
+      if (!r.ok) {
+        _refusal = r.why;
+        process.stderr.write(`session_meter: REFUSED — ${r.why}. Nothing measured; use \`node scripts/session_meter.mjs status 7\` from a session shell.
+`);
+        return _payload;
+      }
+      raw = r.raw;
+    }
     if (!raw || !raw.trim()) return _payload;
     const j = JSON.parse(raw);
     if (j && typeof j === "object") _payload = j;
@@ -539,6 +586,24 @@ function selftest() {
   const c2 = emptyCache();
   const s = sweep(c2, { dir: join(tmp, "projects"), now: NOW, days: 7 });
   assert("SWEEP — walks project dirs and folds every in-window transcript", s.ok && s.seen >= 5 && s.read >= 5, JSON.stringify(s));
+
+  // 16. THE HANG, PINNED AS A REGRESSION TEST (rung S5 step 0, 20 Aug 2026). The organ that
+  //     measures a rung once hung for a WHOLE rung: `stop` on a non-TTY fd 0 that never closes.
+  //     No fixture can express that — it needs a real child with a real open pipe — so the test
+  //     spawns the real CLI through a wrapper that hands it a pipe and NEVER writes or ends it.
+  //     If this assertion ever goes red again, the deadline has been removed.
+  const wrap = `const {spawn}=require("node:child_process");
+const c=spawn(process.execPath,[process.env.__METER,"stop"],{stdio:["pipe","ignore","ignore"]});
+let done=false;const t0=Date.now();
+c.on("exit",()=>{done=true;console.log(String(Date.now()-t0));process.exit(0)});
+setTimeout(()=>{if(!done){try{c.kill()}catch{}console.log("HUNG");process.exit(0)}},5000);`;
+  const hangProbe = spawnSync(process.execPath, ["-e", wrap], {
+    encoding: "utf8", timeout: 15000, windowsHide: true,
+    env: { ...process.env, __METER: fileURLToPath(import.meta.url), ARSENAL_ORGAN: "" },
+  });
+  const hangMs = Number((hangProbe.stdout || "").trim());
+  assert("NO HANG — `stop` on a non-TTY pipe that never closes RETURNS instead of blocking forever (S4's lost rung, pinned)",
+    Number.isFinite(hangMs) && hangMs < 3000, `wrapper said: ${JSON.stringify((hangProbe.stdout || "").trim())}${hangProbe.error ? " · " + hangProbe.error.code : ""}`);
 
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ }
   console.log(`session_meter selftest: ${pass} passed, ${fail} failed`);
