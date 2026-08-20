@@ -2705,3 +2705,75 @@ verify other instruments.**
 is unchanged: a FRESH session, Opus 5 · effort HIGH · execution budget 20 corrected lakh, driving
 `DO_THIS.md`. **The next rung after that is still S5's own close, NOT S6** — S6 does not open until
 this sweep's returns are verified and folded into §9.
+
+### PROGRESS 2026-08-20 ~14:20 IST — S5 · ROUNDS THREE AND FOUR. FIVE MORE DEFECTS, NONE OF THEM VISIBLE TO ROUNDS ONE AND TWO
+
+He asked twice more whether the architect's rulings were really done. Repeating the same greps
+would have proved nothing, so each round asked a different question:
+
+| round | the question it asked | defects found |
+|---|---|---|
+| 1 | does each ruling EXIST in the files? | 5 |
+| 2 | does each mechanism WORK in isolation? | 2 |
+| 3 | does the assembled prompt READ correctly, as the model will see it? | 3 |
+| 4 | does an answer of the shape we ask for SURVIVE the pipeline end to end? | 2 |
+
+**ROUND THREE — reading the assembled steps as the model receives them.**
+
+1. **THE PROBE COULD HAVE BEEN SILENTLY SKIPPED, IN TWELVE OF THE THIRTY-NINE STEPS.** The load
+   prompt ended *"do exactly one thing and nothing else: list every FILE header… No commentary, no
+   analysis"* and the probe appended right after it opened *"Nothing else in this message."* **Two
+   instructions, each claiming to be the whole message.** A model obeys one of them. The likely
+   outcome is the file list, with the probe quietly not answered — and the probe is the ONLY thing
+   standing between a truncated attachment and a sweep that trusts it. It affected `A01`, `R01` and
+   all nine `B*_1`. Both prompts now name **exactly TWO things, in order**, and the probe declares
+   itself part (2) rather than a replacement for part (1).
+2. **THE CORPUS LOAD PROMPT DESCRIBED THE WRONG INPUT.** It still said *"Long pasted blocks were
+   replaced with an ELIDED marker"* — true of the 19-Aug pipeline, false of the live re-filter,
+   which clips nothing. The model would have hunted for markers that do not exist and had no way to
+   know that a 200,000-character turn is real rather than an artefact. It now says NOTHING IS
+   CLIPPED, and says why a handful of turns are enormous.
+3. **IT ALSO PROMISED FIVE MESSAGES AND DELIVERS ONE.** The question list was written before the
+   five corpus buckets were merged into a single extraction; it still announced C1 through C5 as
+   separate turns. Corrected to describe what actually arrives.
+
+**ROUND FOUR — an end-to-end simulation, which nothing before it had attempted.** `simulate.mjs`
+builds one synthetic answer for EVERY schema the sweep will produce, using REAL quotes pulled out
+of the REAL files, plus one deliberately broken answer, and runs the whole pipeline on them.
+**The question none of the earlier rounds asked: does an answer of the shape the prompt requests
+actually survive the verifier?** A section name the verifier does not know, or a field the prompt
+spells differently, does not throw — it discards every item and looks exactly like a model that
+found nothing. That failure would have been blamed on the sweep. It found two:
+
+4. **EVERY CORPUS ANSWER WOULD HAVE BEEN JUDGED AGAINST THE WHOLE CORPUS INSTEAD OF ITS OWN BATCH.**
+   A chat holding 13 days was reported as `13/30 · never mentioned 17`, and the critic pass would
+   have handed back seventeen days that were never in that chat. **The one real signal — a day the
+   chat DID hold and skipped — would have been buried under seventeen false ones, every time.** The
+   coverage check now scopes to the batch the step name identifies. Verified: `13/13 · never
+   mentioned 0`.
+5. **THE REPLICATION MATCH WAS ANCHORED TO THE START OF THE FILENAME**, so any prefix made the
+   measurement silently unavailable — which reads as "the replication was never run" rather than
+   "I could not see it". Matched anywhere now, and proven end to end: the simulation reports
+   `in-chat 1 · cold 2 · agreed 50% · only-cold 1`, which is exactly the anchoring number ruling
+   (i) exists to produce.
+
+**ALSO PROVEN IN ROUND FOUR, and this is the check that had never been run:** every field
+`verify.mjs` reads is a field the prompt that must produce it actually asks for — checked across
+all five schemas, and then exercised for real. All ten sections parse, verify and are kept; the
+deliberately broken answer is caught on all four of its faults (invented quote discarded, invented
+filename flagged NOT IN MANIFEST, two inflated counts named, item_count mismatch raised); the
+existence check separates the GHOST (`scripts/ghost.mjs`, referenced by two programs, file absent)
+from the thing that merely exists.
+
+**THE PATTERN HOLDS AND IS NOW WORTH STATING AS A FINDING OF THIS RUNG.** Twelve defects were found
+today. **Every single one was in an instrument, not in the work the instrument measures** — a meter
+reading 2.01×, a verifier manufacturing two findings, a capture path destroying non-ASCII, a probe
+that could not fail, a coverage check that cried wolf seventeen times per answer, two prompts
+arguing with themselves. **Not one of them would have thrown an error. All of them would have
+produced confident, plausible output.** §4's law — every instrument is a LEAD until one run
+verifies it — is not a formality, and the thing it most needs to bind is the instruments written
+to verify other instruments.
+
+**COST: ~9 more lakh. Rung total ~137 against a ceiling of 40.** Recorded, not excused. The handoff
+is unchanged and the next rung is still **S5's own sweep, not S6** — S6 does not open until these
+returns are verified into §9.
