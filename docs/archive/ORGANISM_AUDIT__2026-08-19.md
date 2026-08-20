@@ -1586,6 +1586,14 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       INPUTS, all on disk already: the ~38 unindexed memory files (the approved A–H
       ladder above all — classify each via §4-B: built/missing/superseded) · the
       seven rescued agent reports · pass4 raw evidence (rescued-artifacts path).
+      ⚠ THE STORE MOVES UNDER THE SWEEP (S5's own finding + his note, 20 Aug): S5
+      sweeps a FROZEN snapshot; everything after the freeze — the ladder sessions'
+      own rulings AND his live samjhao/Re-Jirah — is NOT in it. At S6 open: re-run
+      the free filter once for the post-freeze DELTA (deterministic, ~zero cost;
+      the high-value rulings are double-held in PROGRESS verbatim anyway). And keep
+      the two kinds apart: his samjhao/Re-Jirah rows are STUDY DATA for the learning
+      lanes (first_real_row_at, tuning) — they are NOT design-history corpus; do not
+      sweep them as archaeology.
       MAY spawn at most 4 concern-agents over the graph — ceilinged, witnesses
       mandatory — the ONLY rung with agents.
       ⛔ APPROVAL GATE: HE reads atlas + spec and says haan before S7 exists.
